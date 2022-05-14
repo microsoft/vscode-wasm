@@ -1,0 +1,29 @@
+{
+	"name": "vscode-wasi",
+	"version": "0.0.1",
+	"private": true,
+	"description": "A WASI implementation that uses VS Code's extension host as the implementing API",
+	"main": "index.js",
+	"repository": {
+		"type": "git",
+		"url": "git+https://github.com/microsoft/vscode-wasi.git"
+	},
+	"keywords": [
+		"VSCode",
+		"WASI"
+	],
+	"author": "MS",
+	"license": "MIT",
+	"bugs": {
+		"url": "https://github.com/microsoft/vscode-wasi/issues"
+	},
+	"homepage": "https://github.com/microsoft/vscode-wasi#readme",
+	"scripts": {},
+	"devDependencies": {
+		"@types/node": "^16.11.33",
+		"typescript": "^4.6.4",
+		"@typescript-eslint/eslint-plugin": "^5.23.0",
+		"@typescript-eslint/parser": "^5.23.0",
+		"eslint": "^8.15.0"
+	}
+}
