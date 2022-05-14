@@ -93,7 +93,7 @@ class StdOut {
 }
 
 interface WASI {
-	initialize(instance: WebAssembly.Instance): void;
+	initialize(memory: ArrayBuffer): void;
 	environ_sizes_get(environCount_ptr: ptr, environBufSize_ptr: ptr): Errno;
 	environ_get(environ_ptr: ptr, environBuf_ptr: ptr): Errno;
 	fd_write(fd: wasi_file_handle, iovs_ptr: ptr, iovsLen: u32, bytesWritten_ptr: ptr): Errno;
@@ -102,7 +102,7 @@ interface WASI {
 
 namespace WASI {
 
-	let $instance: WebAssembly.Instance | undefined;
+	let $memory: ArrayBuffer | undefined;
 	let $memoryLength: number = -1;
 	let $memoryView: DataView | undefined;
 
@@ -118,8 +118,8 @@ namespace WASI {
 		};
 	}
 
-	function initialize(instance: WebAssembly.Instance): void {
-		$instance = instance;
+	function initialize(memory: ArrayBuffer): void {
+		$memory = memory;
 	}
 
 	function environ_sizes_get(environCount_ptr: ptr, environBufSize_ptr: ptr): Errno {
@@ -170,21 +170,20 @@ namespace WASI {
 	};
 
 	function memoryView(): DataView {
-		if ($instance === undefined) {
+		if ($memory === undefined) {
 			throw new Error(`WASI layer is not initialized`);
 		}
-		const memory = ($instance.exports.memory as WebAssembly.Memory);
-		if ($memoryView === undefined || $memoryLength === -1 || $memoryLength !== memory.buffer.byteLength) {
-			$memoryView = new DataView(memory.buffer);
-			$memoryLength = memory.buffer.byteLength;
+		if ($memoryView === undefined || $memoryLength === -1 || $memoryLength !== $memory.byteLength) {
+			$memoryView = new DataView($memory);
+			$memoryLength = $memory.byteLength;
 		}
 		return $memoryView;
 	}
 
 	function memoryRaw(): ArrayBuffer {
-		if ($instance === undefined) {
+		if ($memory === undefined) {
 			throw new Error(`WASI layer is not initialized`);
 		}
-		return ($instance.exports.memory as WebAssembly.Memory).buffer;
+		return $memory;
 	}
 }
