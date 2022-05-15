@@ -39,6 +39,7 @@ build/Release
 lib/
 out/
 dist/
+target/
 
 # Dependency directories
 node_modules/
