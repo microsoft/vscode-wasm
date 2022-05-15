@@ -2,7 +2,8 @@
 	"name": "vscode-wasi",
 	"version": "0.0.1",
 	"description": "A WASI implementation that uses VS Code's extension host as the implementing API",
-	"main": "lib/wasi.js",
+	"main": "./lib/common/wasi.js",
+	"typings": "./lib/common/wasi.d.ts",
 	"devDependencies": {},
 	"repository": {
 		"type": "git",

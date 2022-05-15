@@ -4,6 +4,8 @@
 		"tsBuildInfoFile":"../../lib/common/compile.tsbuildInfo",
 		"rootDir": ".",
 		"outDir": "../../lib/common",
+		"module": "commonjs",
+		"moduleResolution": "node",
 		"types": [
 			"vscode",
 			"node"

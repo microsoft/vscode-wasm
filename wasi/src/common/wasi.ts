@@ -92,7 +92,7 @@ class StdOut {
 	}
 }
 
-interface WASI {
+export interface WASI {
 	initialize(memory: ArrayBuffer): void;
 	environ_sizes_get(environCount_ptr: ptr, environBufSize_ptr: ptr): Errno;
 	environ_get(environ_ptr: ptr, environBuf_ptr: ptr): Errno;
@@ -100,7 +100,7 @@ interface WASI {
 	proc_exit(): Errno;
 }
 
-namespace WASI {
+export namespace WASI {
 
 	let $memory: ArrayBuffer | undefined;
 	let $memoryLength: number = -1;

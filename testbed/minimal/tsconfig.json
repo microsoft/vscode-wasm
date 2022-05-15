@@ -3,14 +3,12 @@
 	"compilerOptions": {
 		"noUnusedLocals": true,
 		"noUnusedParameters": true,
-		"tsBuildInfoFile":"./lib/compile.tsbuildInfo",
 		"rootDir": ".",
-		"outDir": "./lib",
-		"types": [
-			"node"
-		]
-	},
-	"include": [
-		"."
-	]
+		"lib": [ "es2020", "webworker"],
+		"types": ["node"],
+		"module": "commonjs",
+		"moduleResolution": "node",
+		"tsBuildInfoFile":"./lib/compile.tsbuildInfo",
+		"outDir": "./lib"
+	}
 }

@@ -6,6 +6,6 @@
 	},
 	"files": [],
 	"references": [
-		{ "path": "./src/common/tsconfig.json" }
+		{ "path": "./src/common/tsconfig.watch.json" }
 	]
 }
