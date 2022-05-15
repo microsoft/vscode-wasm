@@ -5,6 +5,8 @@
 		"noUnusedParameters": false,
 		"assumeChangesOnlyAffectDirectDependencies": true
 	},
+	"files": [],
 	"references": [
+		{ "path": "./wasi/tsconfig.watch.json" }
 	]
 }

@@ -1,0 +1,17 @@
+{
+	"extends": "../../tsconfig.base.json",
+	"compilerOptions": {
+		"tsBuildInfoFile":"../../lib/common/watch.tsbuildInfo",
+		"rootDir": ".",
+		"outDir": "../../lib/common",
+		"types": [
+			"vscode",
+			"node"
+		]
+	},
+	"include": [
+		"."
+	],
+	"references": [
+	]
+}

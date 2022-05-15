@@ -6,6 +6,6 @@
 	},
 	"files": [],
 	"references": [
-		{ "path": "./wasi/tsconfig.json" }
+		{ "path": "./src/common/tsconfig.json" }
 	]
 }
