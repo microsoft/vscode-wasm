@@ -4,7 +4,9 @@
 	"version": "0.0.1",
 	"description": "Minimal WASI example",
 	"scripts": {
-	    "build:rust": "cd rust && cargo build --target wasm32-wasi"
+		"build": "npm run build:rust & npm run build:ts",
+	    "build:rust": "cd rust && cargo build --target wasm32-wasi",
+		"build:ts": "node ../../node_modules/typescript/lib/tsc.js -b tsconfig.json"
 	},
 	"author": "MS",
 	"license": "MIT"

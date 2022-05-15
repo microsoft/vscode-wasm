@@ -17,7 +17,6 @@
 		"url": "https://github.com/microsoft/vscode-wasi/issues"
 	},
 	"homepage": "https://github.com/microsoft/vscode-wasi#readme",
-	"scripts": {},
 	"devDependencies": {
 		"@types/node": "^16.11.33",
 		"@types/vscode": "^1.67.0",
@@ -26,5 +25,10 @@
 		"eslint": "^8.15.0",
 		"typescript": "^4.6.4",
 		"shelljs": "^0.8.5"
+	},
+	"scripts": {
+		"symlink": "node ./build/bin/symlink",
+		"build": "node ./node_modules/typescript/lib/tsc.js -b tsconfig.json",
+		"watch": "node ./node_modules/typescript/lib/tsc.js -b tsconfig.watch.json -w"
 	}
 }

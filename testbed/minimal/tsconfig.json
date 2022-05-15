@@ -1,0 +1,16 @@
+{
+	"extends": "../tsconfig.base.json",
+	"compilerOptions": {
+		"noUnusedLocals": true,
+		"noUnusedParameters": true,
+		"tsBuildInfoFile":"./lib/compile.tsbuildInfo",
+		"rootDir": ".",
+		"outDir": "./lib",
+		"types": [
+			"node"
+		]
+	},
+	"include": [
+		"."
+	]
+}
