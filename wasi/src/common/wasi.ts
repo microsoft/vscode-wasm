@@ -13,7 +13,7 @@ export type Errno = u16;
 
 export type wasi_file_handle = u32;
 
-export const WASI_ESUCCESS: 0 = 0
+export const WASI_ESUCCESS: 0 = 0;
 
 // Same as Unit file descriptors
 export const WASI_STDIN_FD: 0 = 0;
@@ -39,7 +39,7 @@ type Ciovec = {
 	 * The length of the data.
 	 */
 	get bufLen(): u32;
-}
+};
 
 namespace Ciovec {
 	export function create(ptr: ptr, memory: DataView): Ciovec {
@@ -53,7 +53,7 @@ namespace Ciovec {
 			get bufLen(): u32 {
 				return memory.getUint32(ptr + 4, true);
 			}
-		}
+		};
 	}
 }
 
@@ -167,7 +167,7 @@ namespace WASI {
 
 		}
 		return buffers;
-	};
+	}
 
 	function memoryView(): DataView {
 		if ($memory === undefined) {
