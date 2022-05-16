@@ -100,6 +100,8 @@ export interface Environment {
 
 export interface WASI {
 	initialize(memory: ArrayBuffer): void;
+	args_sizes_get(argvCount_ptr: ptr, argvBufSize_ptr: ptr): Errno;
+	args_get(argv_ptr: ptr, argvBuf_ptr: ptr): Errno;
 	environ_sizes_get(environCount_ptr: ptr, environBufSize_ptr: ptr): Errno;
 	environ_get(environ_ptr: ptr, environBuf_ptr: ptr): Errno;
 	fd_write(fd: wasi_file_handle, iovs_ptr: ptr, iovsLen: u32, bytesWritten_ptr: ptr): Errno;
@@ -115,15 +117,20 @@ export namespace WASI {
 	let $encoder: TextEncoder;
 	let $decoder: TextDecoder;
 
+	let $argv: string[];
 	let $env: Environment;
 	const $stdout = new StdOut();
 
-	export function create(env: Environment = {}): WASI {
+	export function create(argv: string[] = [], env: Environment = {}): WASI {
 		$encoder = new TextEncoder();
 		$decoder = new TextDecoder();
+
+		$argv = argv;
 		$env = env;
 		return {
 			initialize: initialize,
+			args_sizes_get: args_sizes_get,
+			args_get: args_get,
 			environ_sizes_get: environ_sizes_get,
 			environ_get: environ_get,
 			fd_write: fd_write,
@@ -133,6 +140,35 @@ export namespace WASI {
 
 	function initialize(memory: ArrayBuffer): void {
 		$memory = memory;
+	}
+
+	function args_sizes_get(argvCount_ptr: ptr, argvBufSize_ptr: ptr): Errno {
+		const memory = memoryView();
+		let count = 0;
+		let size = 0;
+		for (const arg of $argv) {
+			const value = `${arg}\0`;
+			size += $encoder.encode(value).byteLength;
+			count++;
+		}
+		memory.setUint32(argvCount_ptr, count, true);
+		memory.setUint32(argvBufSize_ptr, size, true);
+		return WASI_ESUCCESS;
+	}
+
+	function args_get(argv_ptr: ptr, argvBuf_ptr: ptr): Errno {
+		const memory = memoryView();
+		const memoryBytes = new Uint8Array(memoryRaw());
+		let entryOffset = argv_ptr;
+		let valueOffset = argvBuf_ptr;
+		for (const arg of $argv) {
+			const data = $encoder.encode(`${arg}\0`);
+			memory.setUint32(entryOffset, valueOffset, true);
+			entryOffset += 4;
+			memoryBytes.set(data, valueOffset);
+			valueOffset += data.byteLength;
+		}
+		return WASI_ESUCCESS;
 	}
 
 	function environ_sizes_get(environCount_ptr: ptr, environBufSize_ptr: ptr): Errno {
