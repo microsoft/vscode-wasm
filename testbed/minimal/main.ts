@@ -9,7 +9,7 @@ import { WASI } from 'vscode-wasi';
 
 void (async function main() {
 	const binary = fs.readFileSync('./rust/target/wasm32-wasi/debug/minimal.wasm');
-	const wasi = WASI.create();
+	const wasi = WASI.create({ HOME: '/home/dbaeumer' });
 	const { instance } = await WebAssembly.instantiate(binary, {
 		wasi_snapshot_preview1: wasi
 	});

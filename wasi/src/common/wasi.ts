@@ -3,6 +3,8 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
+import { TextDecoder, TextEncoder } from 'util';
+
 export type u8 = number;
 export type u16 = number;
 export type u32 = number;
@@ -92,6 +94,10 @@ class StdOut {
 	}
 }
 
+export interface Environment {
+	[key: string]: string;
+}
+
 export interface WASI {
 	initialize(memory: ArrayBuffer): void;
 	environ_sizes_get(environCount_ptr: ptr, environBufSize_ptr: ptr): Errno;
@@ -106,9 +112,16 @@ export namespace WASI {
 	let $memoryLength: number = -1;
 	let $memoryView: DataView | undefined;
 
+	let $encoder: TextEncoder;
+	let $decoder: TextDecoder;
+
+	let $env: Environment;
 	const $stdout = new StdOut();
 
-	export function create(): WASI {
+	export function create(env: Environment = {}): WASI {
+		$encoder = new TextEncoder();
+		$decoder = new TextDecoder();
+		$env = env;
 		return {
 			initialize: initialize,
 			environ_sizes_get: environ_sizes_get,
@@ -124,15 +137,30 @@ export namespace WASI {
 
 	function environ_sizes_get(environCount_ptr: ptr, environBufSize_ptr: ptr): Errno {
 		const memory = memoryView();
-		memory.setUint32(environCount_ptr, 0, true);
-		memory.setUint32(environBufSize_ptr, 0, true);
+		let count = 0;
+		let size = 0;
+		for (const entry of Object.entries($env)) {
+			const value = `${entry[0]}=${entry[1]}\0`;
+			size += $encoder.encode(value).byteLength;
+			count++;
+		}
+		memory.setUint32(environCount_ptr, count, true);
+		memory.setUint32(environBufSize_ptr, size, true);
 		return WASI_ESUCCESS;
 	}
 
 	function environ_get(environ_ptr: ptr, environBuf_ptr: ptr): Errno {
 		const memory = memoryView();
-		memory.setUint32(environ_ptr, 0, true);
-		memory.setUint32(environBuf_ptr, 0, true);
+		const memoryBytes = new Uint8Array(memoryRaw());
+		let entryOffset = environBuf_ptr;
+		let valueOffset = environBuf_ptr;
+		for (const entry of Object.entries($env)) {
+			const data = $encoder.encode(`${entry[0]}=${entry[1]}\0`);
+			memory.setUint32(entryOffset, valueOffset, true);
+			entryOffset += 4;
+			memoryBytes.set(data, valueOffset);
+			valueOffset += data.byteLength;
+		}
 		return WASI_ESUCCESS;
 	}
 

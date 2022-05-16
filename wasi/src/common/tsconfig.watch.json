@@ -4,6 +4,8 @@
 		"tsBuildInfoFile":"../../lib/common/watch.tsbuildInfo",
 		"rootDir": ".",
 		"outDir": "../../lib/common",
+		"module": "commonjs",
+		"moduleResolution": "node",
 		"types": [
 			"vscode",
 			"node"
