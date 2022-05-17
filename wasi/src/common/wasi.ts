@@ -3,6 +3,8 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
+import * as fs from 'fs';
+
 import { TextDecoder, TextEncoder } from 'util';
 
 export type u8 = number;
@@ -105,6 +107,7 @@ export interface WASI {
 	environ_sizes_get(environCount_ptr: ptr, environBufSize_ptr: ptr): Errno;
 	environ_get(environ_ptr: ptr, environBuf_ptr: ptr): Errno;
 	fd_write(fd: wasi_file_handle, iovs_ptr: ptr, iovsLen: u32, bytesWritten_ptr: ptr): Errno;
+	fd_read(fd: wasi_file_handle, iovs_ptr: ptr, iovsLen: u32, bytesRead_ptr: ptr): Errno;
 	proc_exit(): Errno;
 }
 
@@ -134,6 +137,7 @@ export namespace WASI {
 			environ_sizes_get: environ_sizes_get,
 			environ_get: environ_get,
 			fd_write: fd_write,
+			fd_read: fd_read,
 			proc_exit: proc_exit
 		};
 	}
@@ -210,6 +214,18 @@ export namespace WASI {
 			}
 			const memory = memoryView();
 			memory.setUint32(bytesWritten_ptr, written, true);
+		}
+		return WASI_ESUCCESS;
+	}
+
+	function fd_read(fd: wasi_file_handle, iovs_ptr: ptr, iovsLen: u32, bytesRead_ptr: ptr): Errno {
+		if (fd === WASI_STDIN_FD) {
+			const buffer = Buffer.alloc(256);
+			process.stdin.resume();
+			const read = fs.readSync(process.stdin.fd, buffer, 0, 256, null);
+			process.stdin.pause();
+			const memory = memoryView();
+			memory.setUint32(bytesRead_ptr, 0, true);
 		}
 		return WASI_ESUCCESS;
 	}

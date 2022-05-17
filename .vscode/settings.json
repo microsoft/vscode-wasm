@@ -42,5 +42,8 @@
 		"Ciovec",
 		"ESUCCESS",
 		"iovs"
-	]
+	],
+	"files.associations": {
+		"iostream": "cpp"
+	}
 }

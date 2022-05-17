@@ -1,0 +1,12 @@
+{
+	"name": "cpp-wasi",
+	"description": "C++ WASI samples",
+	"private": true,
+	"scripts": {
+		"clean": "node ../../node_modules/rimraf/bin.js out",
+		"build": "npm run build:cpp & npm run build:wasi",
+		"build:cpp": "../../node_modules/.bin/make-dir ./out && g++ hello.cpp -o ./out/hello",
+		"build:wasi": "../../node_modules/.bin/make-dir ./out && clang++ hello.cpp -o ./out/hello.wasm",
+		"build:em": "../../node_modules/.bin/make-dir ./out && em++ hello.cpp -o ./out/hello-em.js"
+	}
+}
