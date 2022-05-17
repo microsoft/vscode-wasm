@@ -13,6 +13,6 @@
 		"."
 	],
 	"references": [
-		{ "path": "../common/tsconfig-watch.json" }
+		{ "path": "../common/tsconfig.watch.json" }
 	]
 }

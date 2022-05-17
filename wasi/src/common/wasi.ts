@@ -94,6 +94,8 @@ export type Options = {
 	encoding?: string;
 };
 
+const terminalRegExp = /(\r\n)|(\n)/gm;
+
 export namespace WASI {
 
 	let $memory: ArrayBuffer | undefined;
@@ -115,11 +117,17 @@ export namespace WASI {
 
 		$options = options ?? { };
 
-		const $ptyWriteEmitter = new EventEmitter<string>();
+		$ptyWriteEmitter = new EventEmitter<string>();
 		const pty = {
         	onDidWrite: $ptyWriteEmitter.event,
-         	open: () => $ptyWriteEmitter.fire(`\x1b[31m${name}\x1b[0m`),
-         	close: () => {}
+         	open: () => {
+				$ptyWriteEmitter.fire(`\x1b[31m${name}\x1b[0m\r\n\r\n`);
+			},
+         	close: () => {
+			},
+			handleInput: (data: string) => {
+				$ptyWriteEmitter.fire(data === '\r' ? '\r\n' : data);
+			}
 		};
 		$terminal = window.createTerminal({ name: name, pty: pty });
 
@@ -202,7 +210,16 @@ export namespace WASI {
 			let written = 0;
 			const buffers = readIOvs(iovs_ptr, iovsLen);
 			for (const buffer of buffers) {
-				$ptyWriteEmitter.fire($decoder.decode(buffer));
+				const value = $decoder.decode(buffer).replace(terminalRegExp, (match, m1, m2) => {
+					if (m1) {
+						return m1;
+					} else if (m2) {
+						return '\r\n';
+					} else {
+						return match;
+					}
+				});
+				$ptyWriteEmitter.fire(value);
 				written += buffer.length;
 			}
 			const memory = memoryView();

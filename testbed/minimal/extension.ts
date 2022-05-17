@@ -4,15 +4,23 @@
  *--------------------------------------------------------------------------------------------*/
 
 import * as fs from 'fs';
+import * as path from 'path';
 
-import { WASI } from 'vscode-wasi';
+import { ExtensionContext } from 'vscode';
 
-void (async function main() {
-	const binary = fs.readFileSync('./rust/target/wasm32-wasi/debug/minimal.wasm');
-	const wasi = WASI.create(['Dirk', 'Bäumer'], { HOME: '/home/dbaeumer' });
+import { WASI } from 'vscode-wasi/node';
+
+const wasi = WASI.create('WASI Minimal Example', { argv: ['Dirk', 'Bäumer'], env: { HOME: '/home/dbaeumer' } });
+
+export async function activate(context: ExtensionContext) {
+	const wasmFile = path.join(context.extensionPath, './rust/target/wasm32-wasi/debug/minimal.wasm');
+	const binary = fs.readFileSync(wasmFile);
 	const { instance } = await WebAssembly.instantiate(binary, {
 		wasi_snapshot_preview1: wasi
 	});
 	wasi.initialize((instance.exports.memory as WebAssembly.Memory).buffer);
 	(instance.exports.main as Function)();
-})();
+}
+
+export function deactivate() {
+}

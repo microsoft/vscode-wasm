@@ -7,3 +7,5 @@ import RIL from './ril';
 
 // Install the browser runtime abstract.
 RIL.install();
+
+export { WASI } from '../common/wasi';

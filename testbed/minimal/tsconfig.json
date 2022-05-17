@@ -5,10 +5,10 @@
 		"noUnusedParameters": true,
 		"rootDir": ".",
 		"lib": [ "es2020", "webworker"],
-		"types": ["node"],
+		"types": ["node", "vscode"],
 		"module": "commonjs",
 		"moduleResolution": "node",
-		"tsBuildInfoFile":"./lib/compile.tsbuildInfo",
-		"outDir": "./lib"
+		"tsBuildInfoFile":"./out/compile.tsbuildInfo",
+		"outDir": "./out"
 	}
 }
