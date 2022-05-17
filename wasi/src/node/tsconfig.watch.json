@@ -1,0 +1,19 @@
+{
+	"extends": "../../tsconfig.base.json",
+	"compilerOptions": {
+		"tsBuildInfoFile":"../../lib/node/watch.tsbuildInfo",
+		"rootDir": ".",
+		"outDir": "../../lib/node",
+		"lib": [ "es2020"],
+		"types": [
+			"vscode",
+			"node"
+		]
+	},
+	"include": [
+		"."
+	],
+	"references": [
+		{ "path": "../common/tsconfig-watch.json" }
+	]
+}

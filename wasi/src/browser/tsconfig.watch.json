@@ -1,0 +1,18 @@
+{
+	"extends": "../../tsconfig.base.json",
+	"compilerOptions": {
+		"tsBuildInfoFile":"../../lib/browser/watch.tsbuildInfo",
+		"rootDir": ".",
+		"outDir": "../../lib/browser",
+		"lib": [ "es2020", "webworker"],
+		"types": [
+			"vscode",
+		]
+	},
+	"include": [
+		"."
+	],
+	"references": [
+		{ "path": "../common/tsconfig-watch.json" }
+	]
+}

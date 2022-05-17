@@ -3,9 +3,8 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import * as fs from 'fs';
-
-import { TextDecoder, TextEncoder } from 'util';
+import { EventEmitter, Pseudoterminal, Terminal, window } from 'vscode';
+import RAL from './ral';
 
 export type u8 = number;
 export type u16 = number;
@@ -18,6 +17,8 @@ export type Errno = u16;
 export type wasi_file_handle = u32;
 
 export const WASI_ESUCCESS: 0 = 0;
+export const WASI_EINVAL: 28 = 28;
+export const WASI_EPERM: 63 = 63;
 
 // Same as Unit file descriptors
 export const WASI_STDIN_FD: 0 = 0;
@@ -61,41 +62,6 @@ namespace Ciovec {
 	}
 }
 
-class StdOut {
-
-	private active: Uint8Array | undefined;
-	private rest: Uint8Array[];
-
-	constructor() {
-		this.active = undefined;
-		this.rest = [];
-	}
-
-	public write(buffer: Uint8Array): number {
-		if (this.active === undefined) {
-			this.active = buffer;
-		} else {
-			this.rest.push(buffer);
-		}
-		setImmediate(() => this.work());
-		return buffer.length;
-	}
-
-	private work(): void {
-		if (this.active === undefined) {
-			this.active = this.rest.shift();
-		}
-		if (this.active === undefined) {
-			return;
-		}
-		process.stdout.write(this.active);
-		this.active = undefined;
-		if (this.rest.length > 0) {
-			setImmediate(() => this.work());
-		}
-	}
-}
-
 export interface Environment {
 	[key: string]: string;
 }
@@ -111,25 +77,52 @@ export interface WASI {
 	proc_exit(): Errno;
 }
 
+export type Options = {
+	/**
+	 * Command line arguments accessible in the WASM.
+	 */
+	argv?: string [];
+
+	/**
+	 * The environment accessible in the WASM.
+	 */
+	env?: Environment;
+
+	/**
+	 * The encoding to use.
+	 */
+	encoding?: string;
+};
+
 export namespace WASI {
 
 	let $memory: ArrayBuffer | undefined;
 	let $memoryLength: number = -1;
 	let $memoryView: DataView | undefined;
 
-	let $encoder: TextEncoder;
-	let $decoder: TextDecoder;
+	let $encoder: RAL.TextEncoder;
+	let $decoder: RAL.TextDecoder;
 
-	let $argv: string[];
-	let $env: Environment;
-	const $stdout = new StdOut();
+	let $name: string;
+	let $options: Options;
+	let $terminal: Terminal;
+	let $ptyWriteEmitter: EventEmitter<string>;
 
-	export function create(argv: string[] = [], env: Environment = {}): WASI {
-		$encoder = new TextEncoder();
-		$decoder = new TextDecoder();
+	export function create(name: string, options?: Options): WASI {
+		$name = name;
+		$encoder = RAL().TextEncoder.create(options?.encoding);
+		$decoder = RAL().TextDecoder.create(options?.encoding);
 
-		$argv = argv;
-		$env = env;
+		$options = options ?? { };
+
+		const $ptyWriteEmitter = new EventEmitter<string>();
+		const pty = {
+        	onDidWrite: $ptyWriteEmitter.event,
+         	open: () => $ptyWriteEmitter.fire(`\x1b[31m${name}\x1b[0m`),
+         	close: () => {}
+		};
+		$terminal = window.createTerminal({ name: name, pty: pty });
+
 		return {
 			initialize: initialize,
 			args_sizes_get: args_sizes_get,
@@ -150,7 +143,7 @@ export namespace WASI {
 		const memory = memoryView();
 		let count = 0;
 		let size = 0;
-		for (const arg of $argv) {
+		for (const arg of $options.argv ?? []) {
 			const value = `${arg}\0`;
 			size += $encoder.encode(value).byteLength;
 			count++;
@@ -165,7 +158,7 @@ export namespace WASI {
 		const memoryBytes = new Uint8Array(memoryRaw());
 		let entryOffset = argv_ptr;
 		let valueOffset = argvBuf_ptr;
-		for (const arg of $argv) {
+		for (const arg of $options.argv ?? []) {
 			const data = $encoder.encode(`${arg}\0`);
 			memory.setUint32(entryOffset, valueOffset, true);
 			entryOffset += 4;
@@ -179,7 +172,7 @@ export namespace WASI {
 		const memory = memoryView();
 		let count = 0;
 		let size = 0;
-		for (const entry of Object.entries($env)) {
+		for (const entry of Object.entries($options.env ?? {})) {
 			const value = `${entry[0]}=${entry[1]}\0`;
 			size += $encoder.encode(value).byteLength;
 			count++;
@@ -194,7 +187,7 @@ export namespace WASI {
 		const memoryBytes = new Uint8Array(memoryRaw());
 		let entryOffset = environBuf_ptr;
 		let valueOffset = environBuf_ptr;
-		for (const entry of Object.entries($env)) {
+		for (const entry of Object.entries($options.env ?? {})) {
 			const data = $encoder.encode(`${entry[0]}=${entry[1]}\0`);
 			memory.setUint32(entryOffset, valueOffset, true);
 			entryOffset += 4;
@@ -209,7 +202,7 @@ export namespace WASI {
 			let written = 0;
 			const buffers = readIOvs(iovs_ptr, iovsLen);
 			for (const buffer of buffers) {
-				$stdout.write(buffer);
+				$ptyWriteEmitter.fire($decoder.decode(buffer));
 				written += buffer.length;
 			}
 			const memory = memoryView();
@@ -220,12 +213,12 @@ export namespace WASI {
 
 	function fd_read(fd: wasi_file_handle, iovs_ptr: ptr, iovsLen: u32, bytesRead_ptr: ptr): Errno {
 		if (fd === WASI_STDIN_FD) {
-			const buffer = Buffer.alloc(256);
-			process.stdin.resume();
-			const read = fs.readSync(process.stdin.fd, buffer, 0, 256, null);
-			process.stdin.pause();
+			// Currently we can't read from stdin. In the Web / and VS Code
+			// reading is async which we can't map. In node we could
+			// work around it using readSync but that doesn't work in all cases.
 			const memory = memoryView();
 			memory.setUint32(bytesRead_ptr, 0, true);
+			return WASI_EINVAL;
 		}
 		return WASI_ESUCCESS;
 	}
