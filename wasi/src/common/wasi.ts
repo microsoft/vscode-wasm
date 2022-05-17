@@ -3,7 +3,7 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { EventEmitter, Pseudoterminal, Terminal, window } from 'vscode';
+import { EventEmitter, Terminal, window } from 'vscode';
 import RAL from './ral';
 
 export type u8 = number;
@@ -92,6 +92,11 @@ export type Options = {
 	 * The encoding to use.
 	 */
 	encoding?: string;
+
+	/**
+	 * Terminal to use
+	 */
+	ptyWriteEmitter?: EventEmitter<string>;
 };
 
 const terminalRegExp = /(\r\n)|(\n)/gm;
@@ -107,7 +112,6 @@ export namespace WASI {
 
 	let $name: string;
 	let $options: Options;
-	let $terminal: Terminal;
 	let $ptyWriteEmitter: EventEmitter<string>;
 
 	export function create(name: string, options?: Options): WASI {
@@ -117,19 +121,23 @@ export namespace WASI {
 
 		$options = options ?? { };
 
-		$ptyWriteEmitter = new EventEmitter<string>();
-		const pty = {
-        	onDidWrite: $ptyWriteEmitter.event,
-         	open: () => {
-				$ptyWriteEmitter.fire(`\x1b[31m${name}\x1b[0m\r\n\r\n`);
-			},
-         	close: () => {
-			},
-			handleInput: (data: string) => {
-				$ptyWriteEmitter.fire(data === '\r' ? '\r\n' : data);
-			}
-		};
-		$terminal = window.createTerminal({ name: name, pty: pty });
+		if ($options.ptyWriteEmitter !== undefined) {
+			$ptyWriteEmitter = $options.ptyWriteEmitter;
+		} else {
+			$ptyWriteEmitter = new EventEmitter<string>();
+			const pty = {
+				onDidWrite: $ptyWriteEmitter.event,
+				open: () => {
+					$ptyWriteEmitter.fire(`\x1b[31m${name}\x1b[0m\r\n\r\n`);
+				},
+				close: () => {
+				},
+				handleInput: (data: string) => {
+					$ptyWriteEmitter.fire(data === '\r' ? '\r\n' : data);
+				}
+			};
+			window.createTerminal({ name: name, pty: pty });
+		}
 
 		return {
 			initialize: initialize,
