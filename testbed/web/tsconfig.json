@@ -1,0 +1,14 @@
+{
+	"extends": "../tsconfig.base.json",
+	"compilerOptions": {
+		"noUnusedLocals": true,
+		"noUnusedParameters": true,
+		"rootDir": ".",
+		"lib": [ "es2020", "webworker"],
+		"types": ["vscode"],
+		"module": "commonjs",
+		"moduleResolution": "node",
+		"tsBuildInfoFile":"./out/compile.tsbuildInfo",
+		"outDir": "./out"
+	}
+}

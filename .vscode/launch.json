@@ -9,6 +9,15 @@
 			"args": ["--extensionDevelopmentPath=${workspaceRoot}/testbed/minimal"],
 			"outFiles": ["${workspaceRoot}/testbed/minimal/out/**/*.js"],
 			"sourceMaps": true
+		},
+		{
+			"type": "extensionHost",
+			"request": "launch",
+			"name": "Launch Web Extension",
+			"runtimeExecutable": "${execPath}",
+			"args": ["--extensionDevelopmentPath=${workspaceRoot}/testbed/web"],
+			"outFiles": ["${workspaceRoot}/testbed/web/out/**/*.js"],
+			"sourceMaps": true
 		}
 	]
 }

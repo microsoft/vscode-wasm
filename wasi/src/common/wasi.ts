@@ -3,7 +3,7 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { EventEmitter, Terminal, window } from 'vscode';
+import { EventEmitter, window } from 'vscode';
 import RAL from './ral';
 
 export type u8 = number;
