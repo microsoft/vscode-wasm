@@ -3,27 +3,96 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
+// @todo dirkb
+// The constants come from https://github.com/WebAssembly/WASI/blob/main/phases/snapshot/docs.md
+// We need to clarify how to license them. I was not able to find a license file
+// in the https://github.com/WebAssembly/WASI repository
+
 import { EventEmitter, window } from 'vscode';
+
 import RAL from './ral';
+import Errno from './errno';
 
 export type u8 = number;
 export type u16 = number;
 export type u32 = number;
+export type u64 = number;
 export type ptr<_size = u8> =  number;
 
-export type Size = u32;
-export type Errno = u16;
+export type size = u32;
 
 export type wasi_file_handle = u32;
-
-export const WASI_ESUCCESS: 0 = 0;
-export const WASI_EINVAL: 28 = 28;
-export const WASI_EPERM: 63 = 63;
 
 // Same as Unit file descriptors
 export const WASI_STDIN_FD: 0 = 0;
 export const WASI_STDOUT_FD: 1 = 1;
 export const WASI_STDERR_FD: 2 = 2;
+
+type errno = u16;
+type rights = u64;
+type dircookie = u64;
+
+type fdflags = u16;
+enum FdFlags {
+
+	/**
+	 * Append mode: Data written to the file is always appended to the file's
+	 * end.
+	 */
+	append = 1 << 0,
+
+	/**
+	 * Write according to synchronized I/O data integrity completion. Only the
+	 * data stored in the file is synchronized.
+	 */
+	dsync = 1 << 1,
+
+	/**
+	 * Non-blocking mode.
+	 */
+	nonblock = 1 << 2,
+
+	/**
+	 * Synchronized read I/O operations.
+	 */
+	rsync = 1 << 3,
+
+	/**
+	 * Write according to synchronized I/O file integrity completion. In
+	 * addition to synchronizing the data stored in the file, the
+	 * implementation may also synchronously update the file's metadata.
+	 */
+	sync = 1 << 4
+}
+
+type lookupflags = u32;
+enum LookupFlags {
+	/**
+	 * As long as the resolved path corresponds to a symbolic link, it is expanded.
+	 */
+	symlink_follow = 1 << 0
+}
+
+type oflags = u16;
+enum OFlags {
+	/**
+	 * Create file if it does not exist.
+	 */
+	creat = 1 << 0,
+	/**
+	 * Fail if not a directory.
+	 */
+	directory = 1 << 1,
+	/**
+	 * Fail if file already exists.
+	 */
+	excl = 1 << 2,
+	/**
+	 * Truncate file to size 0.
+	 */
+	trunc = 1 << 3
+
+}
 
 /**
  * C IO vector
@@ -68,13 +137,15 @@ export interface Environment {
 
 export interface WASI {
 	initialize(memory: ArrayBuffer): void;
-	args_sizes_get(argvCount_ptr: ptr, argvBufSize_ptr: ptr): Errno;
-	args_get(argv_ptr: ptr, argvBuf_ptr: ptr): Errno;
-	environ_sizes_get(environCount_ptr: ptr, environBufSize_ptr: ptr): Errno;
-	environ_get(environ_ptr: ptr, environBuf_ptr: ptr): Errno;
-	fd_write(fd: wasi_file_handle, iovs_ptr: ptr, iovsLen: u32, bytesWritten_ptr: ptr): Errno;
-	fd_read(fd: wasi_file_handle, iovs_ptr: ptr, iovsLen: u32, bytesRead_ptr: ptr): Errno;
-	proc_exit(): Errno;
+	args_sizes_get(argvCount_ptr: ptr, argvBufSize_ptr: ptr): errno;
+	args_get(argv_ptr: ptr, argvBuf_ptr: ptr): errno;
+	environ_sizes_get(environCount_ptr: ptr, environBufSize_ptr: ptr): errno;
+	environ_get(environ_ptr: ptr, environBuf_ptr: ptr): errno;
+	path_open(fd: wasi_file_handle, dirflags: lookupflags, path: ptr, pathLen: size, oflags: oflags, fs_rights_base: rights, fs_rights_inheriting: rights, fdflags: fdflags, fd_ptr: ptr): errno;
+	fd_readdir(fd: wasi_file_handle, buf_ptr: ptr, buf_len: size, cookie: dircookie, bufEndPtr: ptr): errno;
+	fd_write(fd: wasi_file_handle, iovs_ptr: ptr, iovsLen: u32, bytesWritten_ptr: ptr): errno;
+	fd_read(fd: wasi_file_handle, iovs_ptr: ptr, iovsLen: u32, bytesRead_ptr: ptr): errno;
+	proc_exit(): errno;
 }
 
 export type Options = {
@@ -145,6 +216,8 @@ export namespace WASI {
 			args_get: args_get,
 			environ_sizes_get: environ_sizes_get,
 			environ_get: environ_get,
+			path_open: path_open,
+			fd_readdir: fd_readdir,
 			fd_write: fd_write,
 			fd_read: fd_read,
 			proc_exit: proc_exit
@@ -155,7 +228,7 @@ export namespace WASI {
 		$memory = memory;
 	}
 
-	function args_sizes_get(argvCount_ptr: ptr, argvBufSize_ptr: ptr): Errno {
+	function args_sizes_get(argvCount_ptr: ptr, argvBufSize_ptr: ptr): errno {
 		const memory = memoryView();
 		let count = 0;
 		let size = 0;
@@ -166,10 +239,10 @@ export namespace WASI {
 		}
 		memory.setUint32(argvCount_ptr, count, true);
 		memory.setUint32(argvBufSize_ptr, size, true);
-		return WASI_ESUCCESS;
+		return Errno.success;
 	}
 
-	function args_get(argv_ptr: ptr, argvBuf_ptr: ptr): Errno {
+	function args_get(argv_ptr: ptr, argvBuf_ptr: ptr): errno {
 		const memory = memoryView();
 		const memoryBytes = new Uint8Array(memoryRaw());
 		let entryOffset = argv_ptr;
@@ -181,10 +254,10 @@ export namespace WASI {
 			memoryBytes.set(data, valueOffset);
 			valueOffset += data.byteLength;
 		}
-		return WASI_ESUCCESS;
+		return Errno.success;
 	}
 
-	function environ_sizes_get(environCount_ptr: ptr, environBufSize_ptr: ptr): Errno {
+	function environ_sizes_get(environCount_ptr: ptr, environBufSize_ptr: ptr): errno {
 		const memory = memoryView();
 		let count = 0;
 		let size = 0;
@@ -195,10 +268,10 @@ export namespace WASI {
 		}
 		memory.setUint32(environCount_ptr, count, true);
 		memory.setUint32(environBufSize_ptr, size, true);
-		return WASI_ESUCCESS;
+		return Errno.success;
 	}
 
-	function environ_get(environ_ptr: ptr, environBuf_ptr: ptr): Errno {
+	function environ_get(environ_ptr: ptr, environBuf_ptr: ptr): errno {
 		const memory = memoryView();
 		const memoryBytes = new Uint8Array(memoryRaw());
 		let entryOffset = environBuf_ptr;
@@ -210,10 +283,18 @@ export namespace WASI {
 			memoryBytes.set(data, valueOffset);
 			valueOffset += data.byteLength;
 		}
-		return WASI_ESUCCESS;
+		return Errno.success;
 	}
 
-	function fd_write(fd: wasi_file_handle, iovs_ptr: ptr, iovsLen: u32, bytesWritten_ptr: ptr): Errno {
+	function path_open(fd: wasi_file_handle, dirflags: lookupflags, path: ptr, pathLen: size, oflags: oflags, fs_rights_base: rights, fs_rights_inheriting: rights, fdflags: fdflags, fd_ptr: ptr): errno {
+		return Errno.success;
+	}
+
+	function fd_readdir(fd: wasi_file_handle, buf_ptr: ptr, buf_len: size, cookie: dircookie, bufEndPtr: ptr): errno {
+		return Errno.success;
+	}
+
+	function fd_write(fd: wasi_file_handle, iovs_ptr: ptr, iovsLen: u32, bytesWritten_ptr: ptr): errno {
 		if (fd === WASI_STDOUT_FD) {
 			let written = 0;
 			const buffers = readIOvs(iovs_ptr, iovsLen);
@@ -233,23 +314,23 @@ export namespace WASI {
 			const memory = memoryView();
 			memory.setUint32(bytesWritten_ptr, written, true);
 		}
-		return WASI_ESUCCESS;
+		return Errno.success;
 	}
 
-	function fd_read(fd: wasi_file_handle, iovs_ptr: ptr, iovsLen: u32, bytesRead_ptr: ptr): Errno {
+	function fd_read(fd: wasi_file_handle, iovs_ptr: ptr, iovsLen: u32, bytesRead_ptr: ptr): errno {
 		if (fd === WASI_STDIN_FD) {
 			// Currently we can't read from stdin. In the Web / and VS Code
 			// reading is async which we can't map. In node we could
 			// work around it using readSync but that doesn't work in all cases.
 			const memory = memoryView();
 			memory.setUint32(bytesRead_ptr, 0, true);
-			return WASI_EINVAL;
+			return Errno.inval;
 		}
-		return WASI_ESUCCESS;
+		return Errno.success;
 	}
 
-	function proc_exit(): Errno {
-		return WASI_ESUCCESS;
+	function proc_exit(): errno {
+		return Errno.success;
 	}
 
 	function readIOvs (iovs: ptr, iovsLen: u32): Uint8Array[] {
