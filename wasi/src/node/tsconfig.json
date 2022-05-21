@@ -6,7 +6,6 @@
 		"outDir": "../../lib/node",
 		"lib": [ "es2020"],
 		"types": [
-			"vscode",
 			"node"
 		]
 	},

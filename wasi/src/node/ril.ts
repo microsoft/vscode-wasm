@@ -2,12 +2,12 @@
  * Copyright (c) Microsoft Corporation. All rights reserved.
  * Licensed under the MIT License. See License.txt in the project root for license information.
  * ------------------------------------------------------------------------------------------ */
-import RAL from '../common/ral';
-
 import { TextDecoder } from 'util';
 
-import { Disposable } from 'vscode';
+import RAL from '../common/ral';
+import { Disposable } from '../common/disposable';
 
+TransferListItem;
 
 interface RIL extends RAL {
 }
@@ -19,7 +19,7 @@ const _ril: RIL = Object.freeze<RIL>({
 				encode(input?: string): Uint8Array {
 					return Buffer.from(input ?? '', encoding);
 				}
-			}
+			};
 		}
 	}),
 	TextDecoder: Object.freeze({

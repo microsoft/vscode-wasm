@@ -3,7 +3,9 @@
  * Licensed under the MIT License. See License.txt in the project root for license information.
  * ------------------------------------------------------------------------------------------ */
 
-import { Disposable } from 'vscode';
+import { Disposable } from './disposable';
+
+type _TransferListItem = ArrayBuffer;
 
 interface _TextEncoder {
 	encode(input?: string): Uint8Array;
@@ -49,6 +51,7 @@ function RAL(): RAL {
 namespace RAL {
 	export type TextEncoder = _TextEncoder;
 	export type TextDecoder = _TextDecoder;
+	export type TransferListItem = _TransferListItem;
 	export function install(ral: RAL): void {
 		if (ral === undefined) {
 			throw new Error(`No runtime abstraction layer provided`);

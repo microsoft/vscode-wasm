@@ -5,9 +5,7 @@
 		"rootDir": ".",
 		"outDir": "../../lib/browser",
 		"lib": [ "es2020", "webworker"],
-		"types": [
-			"vscode",
-		]
+		"types": []
 	},
 	"include": [
 		"."

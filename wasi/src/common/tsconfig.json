@@ -4,9 +4,7 @@
 		"tsBuildInfoFile":"../../lib/common/compile.tsbuildInfo",
 		"rootDir": ".",
 		"outDir": "../../lib/common",
-		"types": [
-			"vscode",
-		]
+		"types": []
 	},
 	"include": [
 		"."

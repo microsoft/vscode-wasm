@@ -4,9 +4,7 @@
 		"tsBuildInfoFile":"../../lib/common/watch.tsbuildInfo",
 		"rootDir": ".",
 		"outDir": "../../lib/common",
-		"types": [
-			"vscode",
-		]
+		"types": []
 	},
 	"include": [
 		"."

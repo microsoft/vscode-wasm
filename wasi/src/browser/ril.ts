@@ -3,9 +3,13 @@
  * Licensed under the MIT License. See License.txt in the project root for license information.
  * ------------------------------------------------------------------------------------------ */
 
-import { Disposable } from 'vscode';
-
 import RAL from '../common/ral';
+
+import { Disposable }  from '../common/disposable';
+
+let x: MessagePort;
+
+let x: TransferListItem;
 
 interface RIL extends RAL {
 }
