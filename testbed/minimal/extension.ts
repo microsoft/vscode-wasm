@@ -7,7 +7,7 @@ import * as path from 'path';
 import { Worker } from 'worker_threads';
 
 import { EventEmitter, ExtensionContext, window } from 'vscode';
-import { Receiver, ApiImpl } from 'vscode-sync-api/node';
+import { ApiService, ServiceConnection } from 'vscode-sync-api/node';
 
 const name = 'WASI Minimal Example';
 const ptyWriteEmitter: EventEmitter<string> = new EventEmitter();
@@ -23,15 +23,16 @@ const terminal = window.createTerminal({ name, pty: {
 }});
 terminal.show();
 
-let receiver: Receiver;
-let apiImpl: ApiImpl;
+let apiService: ApiService;
+let connection: ServiceConnection;
 
 export async function activate(_context: ExtensionContext) {
 	const worker = new Worker(path.join(__dirname, './worker.js'));
-	receiver = new Receiver(worker);
-	apiImpl = new ApiImpl(receiver, ptyWriteEmitter);
+	connection = new ServiceConnection(worker);
+	apiService = new ApiService(connection, ptyWriteEmitter);
+	connection.signalReady({});
 }
 
 export function deactivate() {
-	console.log(receiver, apiImpl);
+	console.log(apiService, connection);
 }

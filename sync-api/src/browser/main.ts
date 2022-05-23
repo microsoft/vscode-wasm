@@ -16,6 +16,14 @@ export class ClientConnection extends BaseClientConnection {
 	constructor(port: MessagePort | Worker) {
 		super();
 		this.port = port;
+		this.port.onmessage = ((event: MessageEvent<string>) => {
+			try {
+				const message: Message = JSON.parse(event.data);
+				this.handleMessage(message);
+			} catch (error) {
+				RIL().console.error(error);
+			}
+		});
 	}
 
 	protected postMessage(sharedArrayBuffer: SharedArrayBuffer) {
