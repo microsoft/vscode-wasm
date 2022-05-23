@@ -8,7 +8,8 @@ import * as fs from 'fs';
 import * as path from 'path';
 import { parentPort  } from 'worker_threads';
 
-import { ClientConnection, ApiClient } from 'vscode-sync-api/node';
+import { ClientConnection } from 'vscode-sync-rpc/node';
+import { ApiClient } from 'vscode-sync-api-client';
 import { WASI } from 'vscode-wasi/node';
 
 

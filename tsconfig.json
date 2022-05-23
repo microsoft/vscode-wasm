@@ -6,7 +6,9 @@
 	},
 	"files": [],
 	"references": [
-		{ "path": "./sync-api/tsconfig.json" },
+		{ "path": "./vscode-sync-rpc/tsconfig.json" },
+		{ "path": "./vscode-sync-api-client/tsconfig.json" },
+		{ "path": "./vscode-sync-api-service/tsconfig.json" },
 		{ "path": "./wasi/tsconfig.json" }
 	]
 }

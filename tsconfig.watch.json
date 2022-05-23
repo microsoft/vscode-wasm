@@ -7,7 +7,9 @@
 	},
 	"files": [],
 	"references": [
-		{ "path": "./sync-api/tsconfig.watch.json" },
+		{ "path": "./vscode-sync-rpc/tsconfig.watch.json" },
+		{ "path": "./vscode-sync-api-client/tsconfig.watch.json" },
+		{ "path": "./vscode-sync-api-service/tsconfig.watch.json" },
 		{ "path": "./wasi/tsconfig.watch.json" }
 	]
 }

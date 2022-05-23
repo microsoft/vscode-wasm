@@ -1,12 +1,9 @@
 {
-	"name": "vscode-sync-api",
+	"name": "vscode-sync-api-service",
 	"version": "0.0.1",
 	"description": "A sync implementation of the VS Code API. Only supported from a web worker",
-	"main": "./lib/node/main.js",
-	"browser": {
-		"./lib/node/main.js": "./lib/browser/main.js"
-	},
-	"typings": "./lib/common/api.d.ts",
+	"main": "./lib/main.js",
+	"typings": "./lib/main.d.ts",
 	"repository": {
 		"type": "git",
 		"url": "git+https://github.com/microsoft/vscode-wasi.git"

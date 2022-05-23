@@ -7,7 +7,9 @@ import * as path from 'path';
 import { Worker } from 'worker_threads';
 
 import { ExtensionContext, Terminal, window } from 'vscode';
-import { ApiService, ServiceConnection } from 'vscode-sync-api/node';
+
+import { ServiceConnection } from 'vscode-sync-rpc/node';
+import { ApiService } from 'vscode-sync-api-service';
 
 const name = 'WASI Minimal Example';
 let apiService: ApiService;

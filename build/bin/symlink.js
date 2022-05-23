@@ -15,9 +15,13 @@ const node_modules = 'node_modules';
 (async function main() {
 	console.log('Symlinking node modules for development setup');
 
-	ln.softLink(path.join(root, 'vscode-sync-rpc'), path.join(root, 'vscode-sync-api-client', node_modules, 'vscode-sync-rpc'))
+	ln.softLink(path.join(root, 'vscode-sync-rpc'), path.join(root, 'vscode-sync-api-client', node_modules, 'vscode-sync-rpc'));
+	ln.softLink(path.join(root, 'vscode-sync-rpc'), path.join(root, 'vscode-sync-api-service', node_modules, 'vscode-sync-rpc'));
+	ln.softLink(path.join(root, 'vscode-sync-api-client'), path.join(root, 'wasi', node_modules, 'vscode-sync-api-client'));
+
 	ln.softLink(path.join(root, 'wasi'), path.join(root, 'testbed', node_modules, 'vscode-wasi'));
-	ln.softLink(path.join(root, 'sync-api'), path.join(root, 'wasi', node_modules, 'vscode-sync-api'))
-	ln.softLink(path.join(root, 'sync-api'), path.join(root, 'testbed', node_modules, 'vscode-sync-api'))
+	ln.softLink(path.join(root, 'vscode-sync-rpc'), path.join(root, 'testbed', node_modules, 'vscode-sync-rpc'));
+	ln.softLink(path.join(root, 'vscode-sync-api-client'), path.join(root, 'testbed', node_modules, 'vscode-sync-api-client'));
+	ln.softLink(path.join(root, 'vscode-sync-api-service'), path.join(root, 'testbed', node_modules, 'vscode-sync-api-service'));
 
 })();

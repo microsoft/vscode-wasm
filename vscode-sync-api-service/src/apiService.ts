@@ -2,11 +2,9 @@
  * Copyright (c) Microsoft Corporation. All rights reserved.
  * Licensed under the MIT License. See License.txt in the project root for license information.
  * ------------------------------------------------------------------------------------------ */
-import RAL from './ral';
-
 import { EventEmitter, Pseudoterminal } from 'vscode';
 
-import { BaseServiceConnection, Params } from './connection';
+import RAL, { BaseServiceConnection, Params } from 'vscode-sync-rpc';
 
 const terminalRegExp = /(\r\n)|(\n)/gm;
 

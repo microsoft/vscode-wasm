@@ -1,12 +1,12 @@
 {
 	"extends": "./tsconfig.base.json",
 	"compilerOptions": {
+		"tsBuildInfoFile":"./lib/compile.tsbuildInfo",
 		"noUnusedLocals": true,
 		"noUnusedParameters": true,
+		"rootDir": "./src",
+		"outDir": "./lib"
 	},
-	"files": [],
 	"references": [
-		{ "path": "./src/browser/tsconfig.json" },
-		{ "path": "./src/node/tsconfig.json" }
 	]
 }

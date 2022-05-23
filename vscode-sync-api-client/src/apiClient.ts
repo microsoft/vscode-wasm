@@ -2,7 +2,7 @@
  * Copyright (c) Microsoft Corporation. All rights reserved.
  * Licensed under the MIT License. See License.txt in the project root for license information.
  * ------------------------------------------------------------------------------------------ */
-import { BaseClientConnection, RAL } from 'vscode-sync-rpc';
+import RAL, { BaseClientConnection } from 'vscode-sync-rpc';
 
 export interface Terminal {
 	write(value: string, encoding?: string): void;
@@ -46,6 +46,6 @@ export class ApiClient {
 	constructor(connection: BaseClientConnection) {
 		this.connection = connection;
 		this.encoder = RAL().TextEncoder.create();
-		this.terminal = new TerminalImpl(connection, this.encoder);
+		this.terminal = new TerminalImpl(this.connection, this.encoder);
 	}
 }

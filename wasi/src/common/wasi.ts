@@ -8,7 +8,7 @@
 // We need to clarify how to license them. I was not able to find a license file
 // in the https://github.com/WebAssembly/WASI repository
 
-import { ApiClient, BaseClientConnection } from 'vscode-sync-api';
+import { ApiClient } from 'vscode-sync-api-client';
 
 import RAL from './ral';
 import Errno from './errno';
