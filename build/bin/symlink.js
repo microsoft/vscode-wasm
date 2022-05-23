@@ -14,5 +14,7 @@ const root = path.dirname(path.dirname(__dirname));
 	console.log('Symlinking node modules for development setup');
 
 	ln.softLink(path.join(root, 'wasi'), path.join(root, 'testbed', 'node_modules', 'vscode-wasi'));
+	ln.softLink(path.join(root, 'sync-api'), path.join(root, 'wasi', 'node_modules', 'vscode-sync-api'))
+	ln.softLink(path.join(root, 'sync-api'), path.join(root, 'testbed', 'node_modules', 'vscode-sync-api'))
 
 })();

@@ -3,12 +3,11 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import * as fs from 'fs';
 import * as path from 'path';
+import { Worker } from 'worker_threads';
 
 import { EventEmitter, ExtensionContext, window } from 'vscode';
-
-import { WASI } from 'vscode-wasi/node';
+import { Receiver, ApiImpl } from 'vscode-sync-api/node';
 
 const name = 'WASI Minimal Example';
 const ptyWriteEmitter: EventEmitter<string> = new EventEmitter();
@@ -24,16 +23,15 @@ const terminal = window.createTerminal({ name, pty: {
 }});
 terminal.show();
 
-export async function activate(context: ExtensionContext) {
-	const wasi = WASI.create(name, { argv: ['Dirk', 'Bäumer'], env: { HOME: '/home/dbaeumer' }, ptyWriteEmitter });
-	const wasmFile = path.join(context.extensionPath, './rust/target/wasm32-wasi/debug/minimal.wasm');
-	const binary = fs.readFileSync(wasmFile);
-	const { instance } = await WebAssembly.instantiate(binary, {
-		wasi_snapshot_preview1: wasi
-	});
-	wasi.initialize((instance.exports.memory as WebAssembly.Memory).buffer);
-	(instance.exports.main as Function)();
+let receiver: Receiver;
+let apiImpl: ApiImpl;
+
+export async function activate(_context: ExtensionContext) {
+	const worker = new Worker(path.join(__dirname, './worker.js'));
+	receiver = new Receiver(worker);
+	apiImpl = new ApiImpl(receiver, ptyWriteEmitter);
 }
 
 export function deactivate() {
+	console.log(receiver, apiImpl);
 }

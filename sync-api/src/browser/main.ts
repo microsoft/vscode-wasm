@@ -5,10 +5,11 @@
 import RIL from './ril';
 RIL.install();
 
-import { BaseReceiver, BaseSender } from '../common/connection';
+import { BaseServiceConnection, BaseClientConnection, Message } from '../common/connection';
 
+export * from '../common/api';
 
-export class Sender extends BaseSender {
+export class ClientConnection extends BaseClientConnection {
 
 	private readonly port: MessagePort | Worker;
 
@@ -22,11 +23,19 @@ export class Sender extends BaseSender {
 	}
 }
 
-export class Receiver extends BaseReceiver {
+export class ServiceConnection extends BaseServiceConnection {
+
+	private readonly worker: Worker;
+
 	constructor(worker: Worker) {
 		super();
-		worker.onmessage = ((event: MessageEvent<SharedArrayBuffer>) => {
-			this.handleRequest(event.data);
+		this.worker = worker;
+		this.worker.onmessage = ((event: MessageEvent<SharedArrayBuffer>) => {
+			this.handleMessage(event.data);
 		});
+	}
+
+	protected postMessage(message: Message): void {
+		this.worker.postMessage(JSON.stringify(message, undefined, 0));
 	}
 }
