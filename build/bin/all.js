@@ -1,20 +1,19 @@
+#!/usr/bin/env node
 /*---------------------------------------------------------------------------------------------
  *  Copyright (c) Microsoft Corporation. All rights reserved.
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
- "use strict";
+"use strict";
 //@ts-check
 
 const path = require('path');
-const ln = require('./linking');
+const child_process = require('child_process')
 
 const root = path.dirname(path.dirname(__dirname));
+const args = process.argv.slice(2);
 
-(async function main() {
-	console.log('Symlinking node modules for development setup');
+const folders = ['sync-api', 'wasi'];
 
-	ln.softLink(path.join(root, 'wasi'), path.join(root, 'testbed', 'node_modules', 'vscode-wasi'));
-	ln.softLink(path.join(root, 'sync-api'), path.join(root, 'wasi', 'node_modules', 'vscode-sync-api'))
-	ln.softLink(path.join(root, 'sync-api'), path.join(root, 'testbed', 'node_modules', 'vscode-sync-api'))
-
-})();
+for (const folder of folders) {
+	child_process.spawnSync(`npm ${args.join(' ')}`, { cwd: path.join(root, folder), shell: true, stdio: 'inherit' });
+}

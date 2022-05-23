@@ -6,7 +6,7 @@
 	},
 	"files": [],
 	"references": [
-		{ "path": "./sync-api/tsconfig.json" },
-		{ "path": "./wasi/tsconfig.json" }
+		{ "path": "./src/browser/tsconfig.watch.json" },
+		{ "path": "./src/node/tsconfig.watch.json" }
 	]
 }

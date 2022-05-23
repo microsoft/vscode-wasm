@@ -32,6 +32,7 @@
 	],
 	"eslint.useESLintClass": true,
 	"eslint.workingDirectories": [
+		"./sync-api",
 		"./wasi",
 		"./testbed/minimal"
 	],
@@ -45,6 +46,7 @@
 		"afnosupport",
 		"badf",
 		"badmsg",
+		"Bäumer",
 		"Ciovec",
 		"connaborted",
 		"connreset",

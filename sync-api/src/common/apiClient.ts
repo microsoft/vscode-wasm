@@ -1,0 +1,45 @@
+/* --------------------------------------------------------------------------------------------
+ * Copyright (c) Microsoft Corporation. All rights reserved.
+ * Licensed under the MIT License. See License.txt in the project root for license information.
+ * ------------------------------------------------------------------------------------------ */
+import RAL from './ral';
+
+import { BaseClientConnection } from './connection';
+
+export interface Terminal {
+	write(value: string, encoding?: string): void;
+	write(value: Uint8Array): void;
+}
+
+class TerminalImpl implements Terminal {
+
+	private readonly connection: BaseClientConnection;
+	private readonly encoder: RAL.TextEncoder;
+
+	constructor(connection: BaseClientConnection, encoder: RAL.TextEncoder) {
+		this.connection = connection;
+		this.encoder = encoder;
+	}
+
+	public write(value: string, encoding?: string): void;
+	public write(value: Uint8Array): void;
+	public write(value: string | Uint8Array, encoding?: string): void {
+		const binary = (typeof value === 'string')
+			? this.encoder.encode(value) : value;
+		this.connection.request('terminal/write', { binary });
+	}
+}
+
+export class ApiClient {
+
+	private readonly connection: BaseClientConnection;
+	private readonly encoder: RAL.TextEncoder;
+
+	public readonly terminal: Terminal;
+
+	constructor(connection: BaseClientConnection) {
+		this.connection = connection;
+		this.encoder = RAL().TextEncoder.create();
+		this.terminal = new TerminalImpl(connection, this.encoder);
+	}
+}

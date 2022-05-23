@@ -19,7 +19,6 @@
 	"homepage": "https://github.com/microsoft/vscode-wasi#readme",
 	"devDependencies": {
 		"@types/node": "^16.11.33",
-		"@types/vscode": "^1.67.0",
 		"@typescript-eslint/eslint-plugin": "^5.23.0",
 		"@typescript-eslint/parser": "^5.23.0",
 		"eslint": "^8.15.0",
@@ -30,8 +29,10 @@
 		"make-dir-cli": "^3.0.0"
 	},
 	"scripts": {
+		"postinstall": "node ./build/bin/all.js install && npm run symlink",
 		"symlink": "node ./build/bin/symlink",
 		"build": "node ./node_modules/typescript/lib/tsc.js -b tsconfig.json",
-		"watch": "node ./node_modules/typescript/lib/tsc.js -b tsconfig.watch.json -w"
+		"watch": "node ./node_modules/typescript/lib/tsc.js -b tsconfig.watch.json -w",
+		"clean": "node ./build/bin/all.js run clean"
 	}
 }

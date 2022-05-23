@@ -8,7 +8,7 @@
 // We need to clarify how to license them. I was not able to find a license file
 // in the https://github.com/WebAssembly/WASI repository
 
-import { EventEmitter, window } from 'vscode';
+import { ApiClient, BaseClientConnection } from 'vscode-sync-api';
 
 import RAL from './ral';
 import Errno from './errno';
@@ -163,14 +163,7 @@ export type Options = {
 	 * The encoding to use.
 	 */
 	encoding?: string;
-
-	/**
-	 * Terminal to use
-	 */
-	ptyWriteEmitter?: EventEmitter<string>;
 };
-
-const terminalRegExp = /(\r\n)|(\n)/gm;
 
 export namespace WASI {
 
@@ -182,33 +175,17 @@ export namespace WASI {
 	let $decoder: RAL.TextDecoder;
 
 	let $name: string;
+	let $apiClient: ApiClient;
 	let $options: Options;
-	let $ptyWriteEmitter: EventEmitter<string>;
 
-	export function create(name: string, options?: Options): WASI {
+	export function create(name: string, apiClient: ApiClient, options?: Options): WASI {
 		$name = name;
+		$apiClient = apiClient;
+
 		$encoder = RAL().TextEncoder.create(options?.encoding);
 		$decoder = RAL().TextDecoder.create(options?.encoding);
 
 		$options = options ?? { };
-
-		if ($options.ptyWriteEmitter !== undefined) {
-			$ptyWriteEmitter = $options.ptyWriteEmitter;
-		} else {
-			$ptyWriteEmitter = new EventEmitter<string>();
-			const pty = {
-				onDidWrite: $ptyWriteEmitter.event,
-				open: () => {
-					$ptyWriteEmitter.fire(`\x1b[31m${name}\x1b[0m\r\n\r\n`);
-				},
-				close: () => {
-				},
-				handleInput: (data: string) => {
-					$ptyWriteEmitter.fire(data === '\r' ? '\r\n' : data);
-				}
-			};
-			window.createTerminal({ name: name, pty: pty });
-		}
 
 		return {
 			initialize: initialize,
@@ -299,16 +276,7 @@ export namespace WASI {
 			let written = 0;
 			const buffers = readIOvs(iovs_ptr, iovsLen);
 			for (const buffer of buffers) {
-				const value = $decoder.decode(buffer).replace(terminalRegExp, (match, m1, m2) => {
-					if (m1) {
-						return m1;
-					} else if (m2) {
-						return '\r\n';
-					} else {
-						return match;
-					}
-				});
-				$ptyWriteEmitter.fire(value);
+				$apiClient.terminal.write(buffer);
 				written += buffer.length;
 			}
 			const memory = memoryView();
