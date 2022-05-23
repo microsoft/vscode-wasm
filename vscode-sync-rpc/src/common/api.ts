@@ -4,6 +4,3 @@
  * ------------------------------------------------------------------------------------------ */
 
 export * from './connection';
-import RAL from './ral';
-
-export default RAL;

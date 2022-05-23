@@ -5,11 +5,11 @@
 import RIL from './ril';
 RIL.install();
 
+import RAL from '../common/ral';
+
 import { MessagePort, Worker } from 'worker_threads';
 
 import { BaseServiceConnection, BaseClientConnection, Message } from '../common/connection';
-
-export * from '../common/api';
 
 export class ClientConnection extends BaseClientConnection {
 
@@ -49,3 +49,6 @@ export class ServiceConnection extends BaseServiceConnection {
 		this.port.postMessage(JSON.stringify(message, undefined, 0));
 	}
 }
+
+export * from '../common/api';
+export default RAL;

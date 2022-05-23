@@ -22,7 +22,7 @@ class TerminalImpl implements Terminal {
 
 	public write(value: string, encoding?: string): void;
 	public write(value: Uint8Array): void;
-	public write(value: string | Uint8Array, encoding?: string): void {
+	public write(value: string | Uint8Array, _encoding?: string): void {
 		const binary = (typeof value === 'string')
 			? this.encoder.encode(value) : value;
 		this.connection.request('terminal/write', { binary });

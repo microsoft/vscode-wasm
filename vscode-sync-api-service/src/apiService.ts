@@ -74,7 +74,7 @@ export class ApiService {
 				this.inputBuffer = [];
 			}
 			const text = data.join('');
-			const bufferSize = (params as { bufferSize: number}).bufferSize;
+			// const bufferSize = (params as { bufferSize: number}).bufferSize;
 			const str = this.textEncoder.encode(text);
 			return { errno: 0, data: str };
 		});

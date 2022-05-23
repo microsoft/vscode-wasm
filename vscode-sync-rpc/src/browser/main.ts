@@ -6,8 +6,7 @@ import RIL from './ril';
 RIL.install();
 
 import { BaseServiceConnection, BaseClientConnection, Message } from '../common/connection';
-
-export * from '../common/api';
+import RAL from '../common/ral';
 
 export class ClientConnection extends BaseClientConnection {
 
@@ -39,7 +38,7 @@ export class ServiceConnection extends BaseServiceConnection {
 		super();
 		this.worker = worker;
 		this.worker.onmessage = ((event: MessageEvent<SharedArrayBuffer>) => {
-			this.handleMessage(event.data);
+			void this.handleMessage(event.data);
 		});
 	}
 
@@ -47,3 +46,6 @@ export class ServiceConnection extends BaseServiceConnection {
 		this.worker.postMessage(JSON.stringify(message, undefined, 0));
 	}
 }
+
+export * from '../common/api';
+export default RAL;
