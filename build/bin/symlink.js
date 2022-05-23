@@ -3,18 +3,21 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
  "use strict";
+const { join } = require('path');
 //@ts-check
 
 const path = require('path');
 const ln = require('./linking');
 
 const root = path.dirname(path.dirname(__dirname));
+const node_modules = 'node_modules';
 
 (async function main() {
 	console.log('Symlinking node modules for development setup');
 
-	ln.softLink(path.join(root, 'wasi'), path.join(root, 'testbed', 'node_modules', 'vscode-wasi'));
-	ln.softLink(path.join(root, 'sync-api'), path.join(root, 'wasi', 'node_modules', 'vscode-sync-api'))
-	ln.softLink(path.join(root, 'sync-api'), path.join(root, 'testbed', 'node_modules', 'vscode-sync-api'))
+	ln.softLink(path.join(root, 'vscode-sync-rpc'), path.join(root, 'vscode-sync-api-client', node_modules, 'vscode-sync-rpc'))
+	ln.softLink(path.join(root, 'wasi'), path.join(root, 'testbed', node_modules, 'vscode-wasi'));
+	ln.softLink(path.join(root, 'sync-api'), path.join(root, 'wasi', node_modules, 'vscode-sync-api'))
+	ln.softLink(path.join(root, 'sync-api'), path.join(root, 'testbed', node_modules, 'vscode-sync-api'))
 
 })();

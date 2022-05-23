@@ -32,6 +32,8 @@
 	],
 	"eslint.useESLintClass": true,
 	"eslint.workingDirectories": [
+		"./vscode-sync-rpc",
+		"./vscode-sync-api-client",
 		"./sync-api",
 		"./wasi",
 		"./testbed/minimal"

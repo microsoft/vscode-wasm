@@ -1,0 +1,16 @@
+{
+	"extends": "../../tsconfig.base.json",
+	"compilerOptions": {
+		"tsBuildInfoFile":"../../lib/browser/compile.tsbuildInfo",
+		"rootDir": ".",
+		"outDir": "../../lib/browser",
+		"lib": [ "es2020", "webworker"],
+		"types": []
+	},
+	"include": [
+		"."
+	],
+	"references": [
+		{ "path": "../common/tsconfig.json" }
+	]
+}
