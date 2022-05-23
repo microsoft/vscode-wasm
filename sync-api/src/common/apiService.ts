@@ -13,10 +13,12 @@ const terminalRegExp = /(\r\n)|(\n)/gm;
 export class ApiService {
 
 	private readonly connection: BaseServiceConnection;
+	private readonly textEncoder: RAL.TextEncoder;
 	private readonly textDecoder: RAL.TextDecoder;
 
 	constructor(receiver: BaseServiceConnection, ptyEventEmitter: EventEmitter<string>) {
 		this.connection = receiver;
+		this.textEncoder = RAL().TextEncoder.create();
 		this.textDecoder = RAL().TextDecoder.create();
 
 		this.connection.onRequest('terminal/write', (params: Params | undefined) => {
@@ -33,6 +35,15 @@ export class ApiService {
 				ptyEventEmitter.fire(str);
 			}
 			return { errno: 0 };
+		});
+
+		this.connection.onRequest('terminal/read', (params: Params | undefined) => {
+			if (params === undefined) {
+				return { errno: -1 };
+			}
+			const bufferSize = (params as { bufferSize: number}).bufferSize;
+			const str = this.textEncoder.encode('Hello Kai !\r\n');
+			return { errno: 0, data: str };
 		});
 	}
 }

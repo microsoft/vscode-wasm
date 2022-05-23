@@ -91,9 +91,9 @@ export abstract class BaseClientConnection<T extends Params = Params> {
 		return this.readyPromise;
 	}
 
-	public request(method: string, params: Params): { errno: number };
-	public request(method: string, params: Params, resultLength: number): { errno: 0; data: Uint8Array };
-	public request(method: string, params: Params, resultLength: number = 0): { errno: 0; data: Uint8Array } | { errno: number } {
+	public request(method: string, params?: Params): { errno: number };
+	public request(method: string, params: Params | undefined, resultLength: number): { errno: 0; data: Uint8Array };
+	public request(method: string, params: Params | undefined, resultLength: number = 0): { errno: 0; data: Uint8Array } | { errno: number } {
 		const request: Request = { id: this.id++, method };
 		if (params !== undefined) {
 			request.params = {};
@@ -105,7 +105,7 @@ export abstract class BaseClientConnection<T extends Params = Params> {
 		}
 
 		const requestData = this.textEncoder.encode(JSON.stringify(request, undefined, 0));
-		const binaryData = params.binary;
+		const binaryData = params?.binary;
 		const binaryDataLength = binaryData !== undefined ? binaryData.byteLength : 0;
 
 		const sharedArrayBufferLength = SyncSize.total + HeaderSize.total + requestData.byteLength + binaryDataLength + resultLength;
@@ -142,7 +142,7 @@ export abstract class BaseClientConnection<T extends Params = Params> {
 		if (errno !== 0) {
 			return { errno };
 		} else {
-			return { errno: 0, data: new Uint8Array(sharedArrayBuffer, header[HeaderIndex.messageOffset], header[HeaderIndex.resultLength]) };
+			return { errno: 0, data: new Uint8Array(sharedArrayBuffer, header[HeaderIndex.resultOffset], header[HeaderIndex.resultLength]) };
 		}
 	}
 
@@ -193,7 +193,8 @@ export abstract class BaseServiceConnection<T extends Params = Params> {
 						const resultLength = header[HeaderIndex.resultLength];
 						if (result.data.byteLength <= requestLength) {
 							header[HeaderIndex.resultLength] = result.data.byteLength;
-							(new Uint8Array(sharedArrayBuffer)).set(result.data, resultOffset);
+							const binary = new Uint8Array(sharedArrayBuffer, resultOffset, result.data.byteLength);
+							binary.set(result.data);
 						} else {
 							header[HeaderIndex.errno] = -4;
 						}

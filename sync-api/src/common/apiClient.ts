@@ -9,6 +9,7 @@ import { BaseClientConnection } from './connection';
 export interface Terminal {
 	write(value: string, encoding?: string): void;
 	write(value: Uint8Array): void;
+	read(bufferSize: number): Uint8Array | undefined;
 }
 
 class TerminalImpl implements Terminal {
@@ -27,6 +28,13 @@ class TerminalImpl implements Terminal {
 		const binary = (typeof value === 'string')
 			? this.encoder.encode(value) : value;
 		this.connection.request('terminal/write', { binary });
+	}
+	public read(bufferSize: number): Uint8Array | undefined {
+		const result = this.connection.request('terminal/read', { bufferSize }, bufferSize + 4);
+		if (result.errno !== 0) {
+			return undefined;
+		}
+		return result.data;
 	}
 }
 

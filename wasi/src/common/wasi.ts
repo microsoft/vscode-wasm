@@ -286,13 +286,20 @@ export namespace WASI {
 	}
 
 	function fd_read(fd: wasi_file_handle, iovs_ptr: ptr, iovsLen: u32, bytesRead_ptr: ptr): errno {
+		const memory = memoryView();
 		if (fd === WASI_STDIN_FD) {
-			// Currently we can't read from stdin. In the Web / and VS Code
-			// reading is async which we can't map. In node we could
-			// work around it using readSync but that doesn't work in all cases.
-			const memory = memoryView();
-			memory.setUint32(bytesRead_ptr, 0, true);
-			return Errno.inval;
+			let bytesRead = 0;
+			const buffers = readIOvs(iovs_ptr, iovsLen);
+			for (const buffer of buffers) {
+				const result = $apiClient.terminal.read(buffer.byteLength);
+				if (result === undefined) {
+					memory.setUint32(bytesRead_ptr, 0, true);
+					return Errno.inval;
+				}
+				bytesRead += result.byteLength;
+				buffer.set(result);
+			}
+			memory.setUint32(bytesRead_ptr, bytesRead, true);
 		}
 		return Errno.success;
 	}
