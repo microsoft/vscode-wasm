@@ -34,7 +34,7 @@ export namespace RequestResult {
 }
 
 export type RequestHandler = {
-	(params?: Params): RequestResult;
+	(params?: Params): RequestResult | Promise<RequestResult>;
 };
 
 export type Notification = Message;
@@ -169,7 +169,7 @@ export abstract class BaseServiceConnection<T extends Params = Params> {
 		this.requestHandlers.set(method, handler);
 	}
 
-	protected handleMessage(sharedArrayBuffer: SharedArrayBuffer): void {
+	protected async handleMessage(sharedArrayBuffer: SharedArrayBuffer): Promise<void> {
 		const header = new Uint32Array(sharedArrayBuffer, SyncSize.total, HeaderSize.total / 4);
 		const requestOffset = header[HeaderIndex.messageOffset];
 		const requestLength = header[HeaderIndex.messageLength];
@@ -186,7 +186,8 @@ export abstract class BaseServiceConnection<T extends Params = Params> {
 				}
 				const handler = this.requestHandlers.get(message.method);
 				if (handler !== undefined) {
-					const result = handler(message.params);
+					const requestResult = handler(message.params);
+					const result = requestResult instanceof Promise ? await requestResult : requestResult;
 					header[HeaderIndex.errno] = result.errno;
 					if (RequestResult.hasData(result)) {
 						const resultOffset = header[HeaderIndex.resultOffset];

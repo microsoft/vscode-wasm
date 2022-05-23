@@ -41,7 +41,7 @@ export class ServiceConnection extends BaseServiceConnection {
 		super();
 		this.port = port;
 		this.port.on('message', (sharedArrayBuffer: SharedArrayBuffer) => {
-			this.handleMessage(sharedArrayBuffer);
+			void this.handleMessage(sharedArrayBuffer);
 		});
 	}
 

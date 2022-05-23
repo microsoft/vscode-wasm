@@ -6,30 +6,21 @@
 import * as path from 'path';
 import { Worker } from 'worker_threads';
 
-import { EventEmitter, ExtensionContext, window } from 'vscode';
+import { ExtensionContext, Terminal, window } from 'vscode';
 import { ApiService, ServiceConnection } from 'vscode-sync-api/node';
 
 const name = 'WASI Minimal Example';
-const ptyWriteEmitter: EventEmitter<string> = new EventEmitter();
-const terminal = window.createTerminal({ name, pty: {
-	onDidWrite: ptyWriteEmitter.event,
-	open: () => {
-		ptyWriteEmitter.fire(`\x1b[31m${name}\x1b[0m\r\n\r\n`);
-	},
-	close: () => {
-	},
-	handleInput: (_data: string) => {
-	}
-}});
-terminal.show();
-
 let apiService: ApiService;
 let connection: ServiceConnection;
+let terminal: Terminal;
 
 export async function activate(_context: ExtensionContext) {
 	const worker = new Worker(path.join(__dirname, './worker.js'));
 	connection = new ServiceConnection(worker);
-	apiService = new ApiService(connection, ptyWriteEmitter);
+	apiService = new ApiService(name, connection);
+
+	terminal = window.createTerminal({ name, pty: apiService.getPty() });
+	terminal.show();
 	connection.signalReady({});
 }
 
