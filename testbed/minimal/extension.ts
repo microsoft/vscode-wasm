@@ -8,17 +8,17 @@ import { Worker } from 'worker_threads';
 
 import { ExtensionContext, Terminal, window } from 'vscode';
 
-import { ServiceConnection } from 'vscode-sync-rpc/node';
+import { ServiceConnection, Requests } from 'vscode-sync-rpc/node';
 import { ApiService } from 'vscode-sync-api-service';
 
 const name = 'WASI Minimal Example';
-let apiService: ApiService;
-let connection: ServiceConnection;
+let apiService: ApiService<Requests>;
+let connection: ServiceConnection<Requests>;
 let terminal: Terminal;
 
 export async function activate(_context: ExtensionContext) {
 	const worker = new Worker(path.join(__dirname, './worker.js'));
-	connection = new ServiceConnection(worker);
+	connection = new ServiceConnection<Requests>(worker);
 	apiService = new ApiService(name, connection);
 
 	terminal = window.createTerminal({ name, pty: apiService.getPty() });

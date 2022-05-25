@@ -4,13 +4,15 @@
  * ------------------------------------------------------------------------------------------ */
 import { EventEmitter, Pseudoterminal } from 'vscode';
 
-import RAL, { BaseServiceConnection, Params } from 'vscode-sync-rpc';
+import RAL, { BaseServiceConnection, Requests } from 'vscode-sync-rpc';
 
 const terminalRegExp = /(\r\n)|(\n)/gm;
 
-export class ApiService {
+type ApiServiceConnection<Ready extends {} | undefined = undefined> = BaseServiceConnection<Requests, Ready>;
 
-	private readonly connection: BaseServiceConnection;
+export class ApiService<Ready extends {} | undefined = undefined> {
+
+	private readonly connection: ApiServiceConnection<Ready>;
 	private readonly textEncoder: RAL.TextEncoder;
 	private readonly textDecoder: RAL.TextDecoder;
 
@@ -19,7 +21,7 @@ export class ApiService {
 	private inputBuffer: string[];
 	private inputAvailable: undefined | ((inputBuffer: string[]) => void);
 
-	constructor(name: string, receiver: BaseServiceConnection) {
+	constructor(name: string, receiver: ApiServiceConnection<Ready>) {
 		this.connection = receiver;
 		this.textEncoder = RAL().TextEncoder.create();
 		this.textDecoder = RAL().TextDecoder.create();
@@ -45,7 +47,7 @@ export class ApiService {
 		};
 		this.inputBuffer = [];
 
-		this.connection.onRequest('terminal/write', (params: Params | undefined) => {
+		this.connection.onRequest('terminal/write', (params) => {
 			if (params !== undefined && params.binary !== undefined) {
 				const str = this.textDecoder.decode(params.binary).replace(terminalRegExp, (match: string, m1: string, m2: string) => {
 					if (m1) {
@@ -61,10 +63,7 @@ export class ApiService {
 			return { errno: 0 };
 		});
 
-		this.connection.onRequest('terminal/read', async (params: Params | undefined) => {
-			if (params === undefined) {
-				return { errno: -1 };
-			}
+		this.connection.onRequest('terminal/read', async (buffer) => {
 			let data: string[];
 			if (this.inputBuffer.length === 0) {
 				const wait = new Promise<string[]>((resolve) => {
@@ -77,8 +76,8 @@ export class ApiService {
 			}
 			const text = data.join('');
 			// const bufferSize = (params as { bufferSize: number}).bufferSize;
-			const str = this.textEncoder.encode(text);
-			return { errno: 0, data: str };
+			buffer.set(this.textEncoder.encode(text));
+			return { errno: 0 };
 		});
 	}
 

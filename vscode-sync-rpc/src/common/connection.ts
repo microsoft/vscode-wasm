@@ -34,7 +34,7 @@ export namespace RequestResult {
 }
 
 export type RequestHandler = {
-	(params?: Params): RequestResult | Promise<RequestResult>;
+	(arg1?: Params | Uint8Array, arg2?: Uint8Array): RequestResult | Promise<RequestResult>;
 };
 
 export type Notification = Message;
@@ -45,6 +45,39 @@ export namespace Notification {
 		return candidate !== undefined && candidate !== null && typeof candidate.method === 'string' && typeof (candidate as Request).id === 'undefined';
 	}
 }
+
+type PromiseCallbacks = {
+	resolve: (response: any) => void;
+	reject: (error: any) => void;
+};
+
+export type MessageType = {
+	method: string;
+	params?: null | object;
+};
+
+export type RequestType = MessageType & ({
+	result?: null | Uint8Array;
+});
+
+type UnionToIntersection<U> =
+	(U extends any ? (k: U) => void : never) extends ((k: infer I) => void) ? I : never;
+
+type MethodKeys<Messages extends MessageType> = {
+	[M in Messages as M['method']]: M['method'];
+};
+
+type _SendRequestSignatures<Requests extends RequestType> = UnionToIntersection<{
+ 	[R in Requests as R['method']]: R['params'] extends null | undefined
+	 	? R['result'] extends null | undefined
+			? (method: R['method']) => RequestResult
+			: (method: R['method'], resultLength: number) => RequestResult
+		: R['result'] extends null | undefined
+			? (method: R['method'], params: R['params']) => RequestResult
+			: (method: R['method'], params: R['params'], resultLength: number) => RequestResult
+}[keyof MethodKeys<Requests>]>;
+
+type SendRequestSignatures<Requests extends RequestType | undefined> = [Requests] extends [RequestType] ? _SendRequestSignatures<Requests> : undefined;
 
 const enum HeaderIndex {
 	messageOffset = 0,
@@ -67,16 +100,11 @@ const enum SyncSize {
 	total = 4
 }
 
-type PromiseCallbacks = {
-	resolve: (response: any) => void;
-	reject: (error: any) => void;
-};
-
-export abstract class BaseClientConnection<T extends Params = Params> {
+export abstract class BaseClientConnection<Requests extends RequestType | undefined = undefined, Ready extends {} | undefined = undefined> {
 
 	private id: number;
 	private readonly textEncoder: RAL.TextEncoder;
-	private readonly readyPromise: Promise<T>;
+	private readonly readyPromise: Promise<Ready>;
 	private readyCallbacks: PromiseCallbacks | undefined;
 
 	constructor() {
@@ -87,14 +115,30 @@ export abstract class BaseClientConnection<T extends Params = Params> {
 		});
 	}
 
-	public serviceReady(): Promise<T> {
+	public serviceReady(): Promise<Ready> {
 		return this.readyPromise;
 	}
 
-	public request(method: string, params?: Params): { errno: number };
-	public request(method: string, params: Params | undefined, resultLength: number): { errno: 0; data: Uint8Array };
-	public request(method: string, params: Params | undefined, resultLength: number = 0): { errno: 0; data: Uint8Array } | { errno: number } {
+	public readonly sendRequest: SendRequestSignatures<Requests> = this._sendRequest as SendRequestSignatures<Requests>;
+
+	private _sendRequest(method: string): { errno: number };
+	private _sendRequest(method: string, params: Params): { errno: number };
+	private _sendRequest(method: string, resultLength: number): { errno: number } | { errno: 0; data: Uint8Array };
+	private _sendRequest(method: string, params: Params, resultLength: number): { errno: number } | { errno: 0; data: Uint8Array };
+
+	private _sendRequest(method: string, arg1?: Params | number, arg2?: number): { errno: 0; data: Uint8Array } | { errno: number } {
+		debugger;
 		const request: Request = { id: this.id++, method };
+		let params: Params | undefined = undefined;
+		let resultLength: number = 0;
+		if (typeof arg1 === 'number') {
+			resultLength = arg1;
+		} else if (arg1 !== undefined || arg1 !== null) {
+			params = arg1;
+		}
+		if (typeof arg2 === 'number') {
+			resultLength = arg2;
+		}
 		if (params !== undefined) {
 			request.params = {};
 			for (const property of Object.keys(params)) {
@@ -155,7 +199,19 @@ export abstract class BaseClientConnection<T extends Params = Params> {
 	}
 }
 
-export abstract class BaseServiceConnection<T extends Params = Params> {
+type _HandleRequestSignatures<Requests extends RequestType> = UnionToIntersection<{
+ 	[R in Requests as R['method']]: R['params'] extends null | undefined
+		? R['result'] extends null | undefined
+			? (method: R['method'], handler: () => { errno: number } | Promise<{ errno: number }>) => void
+			: (method: R['method'], handler: (resultBuffer: R['result']) => { errno: number } | Promise<{ errno: number }>) => void
+		: R['result'] extends null | undefined
+			? (method: R['method'], handler: (params: R['params']) => { errno: number } | Promise<{ errno: number }>) => void
+			: (method: R['method'], handler: (params: R['params'], resultBuffer: R['result']) => { errno: number } | Promise<{ errno: number }>) => void
+}[keyof MethodKeys<Requests>]>;
+
+type HandleRequestSignatures<Requests extends RequestType | undefined> = [Requests] extends [RequestType] ?_HandleRequestSignatures<Requests> : undefined;
+
+export abstract class BaseServiceConnection<RequestHandlers extends RequestType | undefined = undefined, Ready extends {} | undefined = undefined> {
 
 	private readonly textDecoder: RAL.TextDecoder;
 	private readonly requestHandlers: Map<string, RequestHandler>;
@@ -165,7 +221,10 @@ export abstract class BaseServiceConnection<T extends Params = Params> {
 		this.requestHandlers = new Map();
 	}
 
-	onRequest(method: string, handler: RequestHandler): void {
+
+	public readonly onRequest: HandleRequestSignatures<RequestHandlers> = this._onRequest as HandleRequestSignatures<RequestHandlers>;
+
+	private _onRequest(method: string, handler: RequestHandler): void {
 		this.requestHandlers.set(method, handler);
 	}
 
@@ -186,20 +245,12 @@ export abstract class BaseServiceConnection<T extends Params = Params> {
 				}
 				const handler = this.requestHandlers.get(message.method);
 				if (handler !== undefined) {
-					const requestResult = handler(message.params);
+					const resultOffset = header[HeaderIndex.resultOffset];
+					const resultLength = header[HeaderIndex.resultLength];
+					const resultBuffer = resultLength > 0 ? new Uint8Array(sharedArrayBuffer, resultOffset, resultLength) : undefined;
+					const requestResult = message.params !== undefined ? handler(message.params, resultBuffer) : handler(resultBuffer);
 					const result = requestResult instanceof Promise ? await requestResult : requestResult;
 					header[HeaderIndex.errno] = result.errno;
-					if (RequestResult.hasData(result)) {
-						const resultOffset = header[HeaderIndex.resultOffset];
-						const resultLength = header[HeaderIndex.resultLength];
-						if (result.data.byteLength <= requestLength) {
-							header[HeaderIndex.resultLength] = result.data.byteLength;
-							const binary = new Uint8Array(sharedArrayBuffer, resultOffset, result.data.byteLength);
-							binary.set(result.data);
-						} else {
-							header[HeaderIndex.errno] = -4;
-						}
-					}
 				} else {
 					header[HeaderIndex.errno] = - 3;
 				}
@@ -213,7 +264,7 @@ export abstract class BaseServiceConnection<T extends Params = Params> {
 		Atomics.notify(sync, 0);
 	}
 
-	public signalReady(params: T): void {
+	public signalReady(params: Ready): void {
 		const notification: Notification = { method: '$/ready', params };
 		this.postMessage(notification);
 	}

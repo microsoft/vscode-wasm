@@ -6,7 +6,7 @@ import * as fs from 'fs';
 import * as path from 'path';
 import { parentPort  } from 'worker_threads';
 
-import { ClientConnection } from 'vscode-sync-rpc/node';
+import { ClientConnection, Requests } from 'vscode-sync-rpc/node';
 import { ApiClient } from 'vscode-sync-api-client';
 import { WASI } from 'vscode-wasi/node';
 
@@ -15,8 +15,8 @@ if (parentPort === null) {
 	process.exit();
 }
 
-const connection = new ClientConnection(parentPort);
-connection.serviceReady().then(async (_params) => {
+const connection = new ClientConnection<Requests>(parentPort);
+connection.serviceReady().then(async () => {
 	const name = 'WASI Minimal Example';
 	const apiClient = new ApiClient(connection);
 	const wasi = WASI.create(name, apiClient, { argv: ['Dirk', 'Bäumer'], env: { HOME: '/home/dbaeumer' } });

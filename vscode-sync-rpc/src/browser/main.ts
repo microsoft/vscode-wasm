@@ -5,10 +5,10 @@
 import RIL from './ril';
 RIL.install();
 
-import { BaseServiceConnection, BaseClientConnection, Message } from '../common/connection';
+import { BaseServiceConnection, BaseClientConnection, Message, RequestType } from '../common/connection';
 import RAL from '../common/ral';
 
-export class ClientConnection extends BaseClientConnection {
+export class ClientConnection<Requests extends RequestType | undefined = undefined, Ready extends {} | undefined = undefined> extends BaseClientConnection<Requests, Ready> {
 
 	private readonly port: MessagePort | Worker;
 
@@ -30,7 +30,7 @@ export class ClientConnection extends BaseClientConnection {
 	}
 }
 
-export class ServiceConnection extends BaseServiceConnection {
+export class ServiceConnection<RequestHandlers extends RequestType | undefined = undefined, Ready extends {} | undefined = undefined> extends BaseServiceConnection<RequestHandlers, Ready> {
 
 	private readonly worker: Worker;
 
