@@ -8,128 +8,20 @@
 // We need to clarify how to license them. I was not able to find a license file
 // in the https://github.com/WebAssembly/WASI repository
 
+import RAL from './ral';
+
 import { ApiClient } from 'vscode-sync-api-client';
 
-import RAL from './ral';
-import Errno from './errno';
+import { ptr, size, u32 } from './baseTypes';
+import {
+	wasi_file_handle, Errno, errno, lookupflags, oflags, rights, fdflags, dircookie,
+	PreStartDir, Ciovec, FileType
+} from './wasiTypes';
 
-export type u8 = number;
-export type u16 = number;
-export type u32 = number;
-export type u64 = number;
-export type ptr<_size = u8> =  number;
-
-export type size = u32;
-
-export type wasi_file_handle = u32;
-
-// Same as Unit file descriptors
+// Same as Unix file descriptors
 export const WASI_STDIN_FD: 0 = 0;
 export const WASI_STDOUT_FD: 1 = 1;
 export const WASI_STDERR_FD: 2 = 2;
-
-type errno = u16;
-type rights = u64;
-type dircookie = u64;
-
-type fdflags = u16;
-enum FdFlags {
-
-	/**
-	 * Append mode: Data written to the file is always appended to the file's
-	 * end.
-	 */
-	append = 1 << 0,
-
-	/**
-	 * Write according to synchronized I/O data integrity completion. Only the
-	 * data stored in the file is synchronized.
-	 */
-	dsync = 1 << 1,
-
-	/**
-	 * Non-blocking mode.
-	 */
-	nonblock = 1 << 2,
-
-	/**
-	 * Synchronized read I/O operations.
-	 */
-	rsync = 1 << 3,
-
-	/**
-	 * Write according to synchronized I/O file integrity completion. In
-	 * addition to synchronizing the data stored in the file, the
-	 * implementation may also synchronously update the file's metadata.
-	 */
-	sync = 1 << 4
-}
-
-type lookupflags = u32;
-enum LookupFlags {
-	/**
-	 * As long as the resolved path corresponds to a symbolic link, it is expanded.
-	 */
-	symlink_follow = 1 << 0
-}
-
-type oflags = u16;
-enum OFlags {
-	/**
-	 * Create file if it does not exist.
-	 */
-	creat = 1 << 0,
-	/**
-	 * Fail if not a directory.
-	 */
-	directory = 1 << 1,
-	/**
-	 * Fail if file already exists.
-	 */
-	excl = 1 << 2,
-	/**
-	 * Truncate file to size 0.
-	 */
-	trunc = 1 << 3
-
-}
-
-/**
- * C IO vector
- */
-type Ciovec = {
-
-	/**
-	 * The size of a CioVec view in u8
-	 */
-	get $size(): u32;
-
-	/**
-	 * Pointer in memory where the data is stored
-	 */
-	get buf(): ptr;
-
-	/**
-	 * The length of the data.
-	 */
-	get bufLen(): u32;
-};
-
-namespace Ciovec {
-	export function create(ptr: ptr, memory: DataView): Ciovec {
-		return {
-			get $size(): u32 {
-				return 8;
-			},
-			get buf(): ptr {
-				return memory.getUint32(ptr, true);
-			},
-			get bufLen(): u32 {
-				return memory.getUint32(ptr + 4, true);
-			}
-		};
-	}
-}
 
 export interface Environment {
 	[key: string]: string;
@@ -142,9 +34,12 @@ export interface WASI {
 	environ_sizes_get(environCount_ptr: ptr, environBufSize_ptr: ptr): errno;
 	environ_get(environ_ptr: ptr, environBuf_ptr: ptr): errno;
 	path_open(fd: wasi_file_handle, dirflags: lookupflags, path: ptr, pathLen: size, oflags: oflags, fs_rights_base: rights, fs_rights_inheriting: rights, fdflags: fdflags, fd_ptr: ptr): errno;
+	fd_prestat_get(fd: wasi_file_handle, bufPtr: ptr): errno;
+	fd_prestat_dir_name(fd: wasi_file_handle, pathPtr: ptr, pathLen: size): errno;
 	fd_readdir(fd: wasi_file_handle, buf_ptr: ptr, buf_len: size, cookie: dircookie, bufEndPtr: ptr): errno;
 	fd_write(fd: wasi_file_handle, iovs_ptr: ptr, iovsLen: u32, bytesWritten_ptr: ptr): errno;
 	fd_read(fd: wasi_file_handle, iovs_ptr: ptr, iovsLen: u32, bytesRead_ptr: ptr): errno;
+	fd_close(fd: wasi_file_handle): errno;
 	proc_exit(): errno;
 }
 
@@ -165,6 +60,41 @@ export type Options = {
 	encoding?: string;
 };
 
+type FileHandleInfo = {
+	/**
+	 * The WASI file handle
+	 */
+	fd: wasi_file_handle;
+
+	/**
+	 * The real file handle (e.g. the one from Node or VS Code)
+	 */
+	realFd: number;
+
+	/**
+	 * The path name.
+	 */
+	path: string;
+
+	/**
+	 * Whether this is a pre-opened directory.
+	 */
+	preOpened: boolean;
+
+	/**
+	 * The file type
+	 */
+	fileType: FileType;
+};
+
+class WasiError extends Error {
+	public readonly errno: errno;
+	constructor(errno: errno) {
+		super();
+		this.errno = errno;
+	}
+}
+
 export namespace WASI {
 
 	let $memory: ArrayBuffer | undefined;
@@ -178,6 +108,8 @@ export namespace WASI {
 	let $apiClient: ApiClient;
 	let $options: Options;
 
+	const $fileHandles: Map<wasi_file_handle, FileHandleInfo> = new Map();
+
 	export function create(name: string, apiClient: ApiClient, options?: Options): WASI {
 		$name = name;
 		$apiClient = apiClient;
@@ -187,16 +119,23 @@ export namespace WASI {
 
 		$options = options ?? { };
 
+		// Pre opened directories.
+		$fileHandles.set(3, { fd: 3, realFd: -3, preOpened: true, fileType: FileType.directory, path: '.'});
+		$fileHandles.set(4, { fd: 4, realFd: -4, preOpened: true,  fileType: FileType.directory, path: '/'});
+
 		return {
 			initialize: initialize,
 			args_sizes_get: args_sizes_get,
 			args_get: args_get,
 			environ_sizes_get: environ_sizes_get,
 			environ_get: environ_get,
+			fd_prestat_get: fd_prestat_get,
+			fd_prestat_dir_name: fd_prestat_dir_name,
 			path_open: path_open,
 			fd_readdir: fd_readdir,
 			fd_write: fd_write,
 			fd_read: fd_read,
+			fd_close: fd_close,
 			proc_exit: proc_exit
 		};
 	}
@@ -263,11 +202,57 @@ export namespace WASI {
 		return Errno.success;
 	}
 
+	function fd_prestat_get(fd: wasi_file_handle, bufPtr: ptr): errno {
+		try {
+			const fileHandleInfo = $fileHandles.get(fd);
+			if (fileHandleInfo === undefined || !fileHandleInfo.preOpened) {
+				return Errno.badf;
+			}
+			const memory = memoryView();
+			const prestat = PreStartDir.create(bufPtr, memory);
+			prestat.len = $encoder.encode(fileHandleInfo.path).byteLength;
+			return Errno.success;
+		} catch(error) {
+			if (error instanceof WasiError) {
+				return error.errno;
+			}
+			return Errno.perm;
+		}
+	}
+
+	function fd_prestat_dir_name(fd: wasi_file_handle, pathPtr: ptr, pathLen: size): errno {
+		try {
+			const fileHandleInfo = getFileHandleInfo(fd);
+			const memory = new Uint8Array(memoryRaw(), pathPtr);
+			const bytes = $encoder.encode(fileHandleInfo.path);
+			if (bytes.byteLength !== pathLen) {
+				Errno.badmsg;
+			}
+			memory.set(bytes);
+			return Errno.success;
+		} catch (error) {
+			if (error instanceof WasiError) {
+				return error.errno;
+			}
+			return Errno.perm;
+		}
+	}
+
 	function path_open(fd: wasi_file_handle, dirflags: lookupflags, path: ptr, pathLen: size, oflags: oflags, fs_rights_base: rights, fs_rights_inheriting: rights, fdflags: fdflags, fd_ptr: ptr): errno {
-		return Errno.success;
+		try {
+			const memory = memoryView();
+			const name = $decoder.decode(new Uint8Array(memoryRaw(), path, pathLen));
+			return Errno.success;
+		} catch(error) {
+			if (error instanceof WasiError) {
+				return error.errno;
+			}
+			return Errno.perm;
+		}
 	}
 
 	function fd_readdir(fd: wasi_file_handle, buf_ptr: ptr, buf_len: size, cookie: dircookie, bufEndPtr: ptr): errno {
+
 		return Errno.success;
 	}
 
@@ -301,6 +286,10 @@ export namespace WASI {
 			}
 			memory.setUint32(bytesRead_ptr, bytesRead, true);
 		}
+		return Errno.success;
+	}
+
+	function fd_close(fd: wasi_file_handle): errno {
 		return Errno.success;
 	}
 
@@ -339,5 +328,13 @@ export namespace WASI {
 			throw new Error(`WASI layer is not initialized`);
 		}
 		return $memory;
+	}
+
+	function getFileHandleInfo(fd: wasi_file_handle): FileHandleInfo {
+		const result = $fileHandles.get(fd);
+		if (result === undefined) {
+			throw new WasiError(Errno.badf);
+		}
+		return result;
 	}
 }

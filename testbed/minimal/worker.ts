@@ -17,6 +17,7 @@ if (parentPort === null) {
 
 const connection = new ClientConnection<Requests>(parentPort);
 connection.serviceReady().then(async () => {
+	debugger;
 	const name = 'WASI Minimal Example';
 	const apiClient = new ApiClient(connection);
 	const wasi = WASI.create(name, apiClient, { argv: ['Dirk', 'Bäumer'], env: { HOME: '/home/dbaeumer' } });
