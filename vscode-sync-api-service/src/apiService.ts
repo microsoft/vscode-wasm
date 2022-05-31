@@ -2,7 +2,7 @@
  * Copyright (c) Microsoft Corporation. All rights reserved.
  * Licensed under the MIT License. See License.txt in the project root for license information.
  * ------------------------------------------------------------------------------------------ */
-import { EventEmitter, Pseudoterminal } from 'vscode';
+import { EventEmitter, Pseudoterminal, Uri, workspace } from 'vscode';
 
 import RAL, { BaseServiceConnection, Requests } from 'vscode-sync-rpc';
 
@@ -75,8 +75,15 @@ export class ApiService<Ready extends {} | undefined = undefined> {
 				this.inputBuffer = [];
 			}
 			const text = data.join('');
-			// const bufferSize = (params as { bufferSize: number}).bufferSize;
 			buffer.set(this.textEncoder.encode(text));
+			return { errno: 0 };
+		});
+
+		this.connection.onRequest('fileSystem/stat', (params) => {
+			const uri = Uri.from(params.uri);
+			const stat = workspace.fs.stat(uri);
+			const fileSystem =
+
 			return { errno: 0 };
 		});
 	}

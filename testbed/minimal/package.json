@@ -13,13 +13,16 @@
 	"activationEvents": [
 		"*"
 	],
+	"dependencies": {
+		"vscode-uri": "3.0.3"
+	},
+	"devDependencies": {
+		"@types/vscode": "^1.67.0"
+	},
 	"scripts": {
 		"build": "npm run build:rust & npm run build:ts",
 		"build:rust": "cd rust && cargo build --target wasm32-wasi",
 		"build:ts": "node ../../node_modules/typescript/lib/tsc.js -b tsconfig.json",
 		"watch:ts": "node ../../node_modules/typescript/lib/tsc.js -b tsconfig.json -w"
-	},
-	"devDependencies": {
-		"@types/vscode": "^1.67.0"
 	}
 }

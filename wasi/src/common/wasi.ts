@@ -10,12 +10,13 @@
 
 import RAL from './ral';
 
+import { URI } from 'vscode-uri';
 import { ApiClient } from 'vscode-sync-api-client';
 
 import { ptr, size, u32 } from './baseTypes';
 import {
 	wasi_file_handle, Errno, errno, lookupflags, oflags, rights, fdflags, dircookie,
-	PreStartDir, Ciovec, FileType
+	PreStartDir, Ciovec, FileType, Rights
 } from './wasiTypes';
 
 // Same as Unix file descriptors
@@ -44,6 +45,20 @@ export interface WASI {
 }
 
 export type Options = {
+
+	/**
+	 * The workspace folders
+	 */
+	workspaceFolders: {
+		name: string;
+		uri: URI;
+	}[];
+
+	/**
+	 * The encoding to use.
+	 */
+	encoding?: string;
+
 	/**
 	 * Command line arguments accessible in the WASM.
 	 */
@@ -53,39 +68,75 @@ export type Options = {
 	 * The environment accessible in the WASM.
 	 */
 	env?: Environment;
-
-	/**
-	 * The encoding to use.
-	 */
-	encoding?: string;
 };
 
-type FileHandleInfo = {
+class FileHandleInfo {
 	/**
 	 * The WASI file handle
 	 */
-	fd: wasi_file_handle;
-
-	/**
-	 * The real file handle (e.g. the one from Node or VS Code)
-	 */
-	realFd: number;
-
-	/**
-	 * The path name.
-	 */
-	path: string;
-
-	/**
-	 * Whether this is a pre-opened directory.
-	 */
-	preOpened: boolean;
+	public readonly fd: wasi_file_handle;
 
 	/**
 	 * The file type
 	 */
-	fileType: FileType;
-};
+	public readonly fileType: FileType;
+
+	/**
+	 * The path name.
+	 */
+	public readonly path: string;
+
+	/**
+	 * The rights associated with the file descriptor
+	 */
+	public readonly  rights: {
+		/**
+		 * The base rights.
+		 */
+		readonly base: Rights;
+
+		/**
+		 * The inheriting rights
+		 */
+		readonly inheriting: Rights;
+	};
+
+	/**
+	 * The real information in VS Code's file system.
+	 */
+	public readonly real: {
+		/**
+		 * Not all VS Code API is file descriptor based.
+		 */
+		fd: number | undefined;
+
+		/**
+		 * The corresponding VS Code URI
+		 */
+		uri: URI;
+	};
+
+	/**
+	 * Whether this is a pre-opened directory.
+	 */
+	public readonly preOpened: boolean;
+
+	constructor(fd: wasi_file_handle, fileType: FileType, path: string, rights: FileHandleInfo['rights'], real: FileHandleInfo['real'], preOpened: boolean = false) {
+		this.fd = fd;
+		this.fileType = fileType;
+		this.path = path;
+		this.rights = rights;
+		this.real = real;
+		this.preOpened = preOpened;
+	}
+
+	public assertBaseRight(right: Rights): void {
+		if ((this.rights.base & right) === 0) {
+			throw new WasiError(Errno.perm);
+		}
+	}
+}
+
 
 class WasiError extends Error {
 	public readonly errno: errno;
@@ -110,18 +161,26 @@ export namespace WASI {
 
 	const $fileHandles: Map<wasi_file_handle, FileHandleInfo> = new Map();
 
-	export function create(name: string, apiClient: ApiClient, options?: Options): WASI {
+	export function create(name: string, apiClient: ApiClient, options: Options): WASI {
 		$name = name;
 		$apiClient = apiClient;
 
 		$encoder = RAL().TextEncoder.create(options?.encoding);
 		$decoder = RAL().TextDecoder.create(options?.encoding);
 
-		$options = options ?? { };
+		$options = options;
 
-		// Pre opened directories.
-		$fileHandles.set(3, { fd: 3, realFd: -3, preOpened: true, fileType: FileType.directory, path: '.'});
-		$fileHandles.set(4, { fd: 4, realFd: -4, preOpened: true,  fileType: FileType.directory, path: '/'});
+		if ($options.workspaceFolders.length === 1) {
+			const workspace = new FileHandleInfo(3, FileType.directory, '/workspace', { base: Rights.DirectoryBase, inheriting: Rights.DirectoryInheriting}, { fd: undefined, uri: $options.workspaceFolders[0].uri }, true);
+			$fileHandles.set(workspace.fd, workspace);
+ 		} else if ($options.workspaceFolders.length > 1) {
+			let fd = 3;
+			for (const folder of $options.workspaceFolders) {
+				const f = new FileHandleInfo(fd, FileType.directory, `/workspace/${folder.name}`, { base: Rights.DirectoryBase, inheriting: Rights.DirectoryInheriting}, {fd: undefined, uri: folder.uri }, true);
+				$fileHandles.set(f.fd, f);
+				fd++;
+			}
+		}
 
 		return {
 			initialize: initialize,
@@ -240,6 +299,8 @@ export namespace WASI {
 
 	function path_open(fd: wasi_file_handle, dirflags: lookupflags, path: ptr, pathLen: size, oflags: oflags, fs_rights_base: rights, fs_rights_inheriting: rights, fdflags: fdflags, fd_ptr: ptr): errno {
 		try {
+			const fileHandleInfo = getFileHandleInfo(fd);
+			fileHandleInfo.assertBaseRight(Rights.path_open);
 			const memory = memoryView();
 			const name = $decoder.decode(new Uint8Array(memoryRaw(), path, pathLen));
 			return Errno.success;

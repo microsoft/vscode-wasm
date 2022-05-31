@@ -57,7 +57,7 @@ export type MessageType = {
 };
 
 export type RequestType = MessageType & ({
-	result?: null | Uint8Array;
+	result?: Uint8Array | Uint16Array | Uint32Array | Int8Array | Int16Array | Int32Array | object | null;
 });
 
 type UnionToIntersection<U> =
@@ -70,11 +70,15 @@ type MethodKeys<Messages extends MessageType> = {
 type _SendRequestSignatures<Requests extends RequestType> = UnionToIntersection<{
  	[R in Requests as R['method']]: R['params'] extends null | undefined
 	 	? R['result'] extends null | undefined
-			? (method: R['method']) => RequestResult
-			: (method: R['method'], resultLength: number) => RequestResult
+			? (method: R['method']) => { errno: number }
+			: R['result'] extends Uint8Array | Uint16Array | Uint32Array | Int8Array | Int16Array | Int32Array
+				? (method: R['method'], params: R['params'], type: `${R['result'] & string}`, resultLength: number) => { errno: 0; data: R['result'] } | { errno: number }
+				: (method: R['method'], params: R['params']) => { errno: 0; data: R['result'] } | { errno: number }
 		: R['result'] extends null | undefined
-			? (method: R['method'], params: R['params']) => RequestResult
-			: (method: R['method'], params: R['params'], resultLength: number) => RequestResult
+			? (method: R['method'], params: R['params']) => { errno: number }
+			: R['result'] extends Uint8Array | Uint16Array | Uint32Array | Int8Array | Int16Array | Int32Array
+				? (method: R['method'], params: R['params'], type: `${R['result'] & string}`, resultLength: number) => { errno: 0; data: R['result'] } | { errno: number }
+				: (method: R['method'], params: R['params']) => { errno: 0; data: R['result'] } | { errno: number }
 }[keyof MethodKeys<Requests>]>;
 
 type SendRequestSignatures<Requests extends RequestType | undefined> = [Requests] extends [RequestType] ? _SendRequestSignatures<Requests> : undefined;

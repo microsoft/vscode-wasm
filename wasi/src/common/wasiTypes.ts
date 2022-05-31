@@ -407,164 +407,213 @@ export enum Rights {
 	 * The right to invoke fd_datasync. If path_open is set, includes the right
 	 * to invoke path_open with fdflags::dsync.
 	 */
-	fd_datasync = 1 << 0,
+	fd_datasync = 1 << 0, // 1
 
 	/**
 	 * The right to invoke fd_read and sock_recv. If rights::fd_seek is set,
 	 * includes the right to invoke fd_pread.
 	 */
-	fd_read = 1 << 1,
+	fd_read = 1 << 1, // 2
 
 	/**
 	 * The right to invoke fd_seek. This flag implies rights::fd_tell.
 	 */
-	fd_seek = 1 << 2,
+	fd_seek = 1 << 2, // 4
 
 	/**
 	 * The right to invoke fd_fdstat_set_flags.
 	 */
-	fd_fdstat_set_flags = 1 << 3,
+	fd_fdstat_set_flags = 1 << 3, // 8
 
 	/**
 	 * The right to invoke fd_sync. If path_open is set, includes the right to
 	 * invoke path_open with fdflags::rsync and fdflags::dsync.
 	 */
-	fd_sync = 1 << 4,
+	fd_sync = 1 << 4, // 16
 
 	/**
 	 * The right to invoke fd_seek in such a way that the file offset remains
 	 * unaltered (i.e., whence::cur with offset zero), or to invoke fd_tell.
 	 */
-	fd_tell = 1 << 5,
+	fd_tell = 1 << 5, // 32
 
 	/**
 	 * The right to invoke fd_write and sock_send. If rights::fd_seek is set,
 	 * includes the right to invoke fd_pwrite.
 	 */
-	fd_write = 1 << 6,
+	fd_write = 1 << 6, // 64
 
 	/**
 	 * The right to invoke fd_advise.
 	 */
-	fd_advise = 1 << 7,
+	fd_advise = 1 << 7, // 128
 
 	/**
 	 * The right to invoke fd_allocate.
 	 */
-	fd_allocate = 1 << 8,
+	fd_allocate = 1 << 8, // 256
 
 	/**
 	 * The right to invoke path_create_directory.
 	 */
-	path_create_directory = 1 << 9,
+	path_create_directory = 1 << 9, // 512
 
 	/**
 	 * If path_open is set, the right to invoke path_open with oflags::creat.
 	 */
-	path_create_file = 1 << 10,
+	path_create_file = 1 << 10, // 1024
 
 	/**
 	 * The right to invoke path_link with the file descriptor as the source
 	 * directory.
 	 */
-	path_link_source = 1 << 11,
+	path_link_source = 1 << 11, // 2048
 
 	/**
 	 * The right to invoke path_link with the file descriptor as the target
 	 * directory.
 	 */
-	path_link_target = 1 << 12,
+	path_link_target = 1 << 12, // 4096
 
 	/**
 	 * The right to invoke path_open.
 	 */
-	path_open = 1 << 13,
+	path_open = 1 << 13, // 8192
 
 	/**
 	 * The right to invoke fd_readdir.
 	 */
-	fd_readdir = 1 << 14,
+	fd_readdir = 1 << 14, // 16384
 
 	/**
 	 * The right to invoke path_readlink.
 	 */
-	path_readlink = 1 << 15,
+	path_readlink = 1 << 15, // 32768
 
 	/**
 	 * The right to invoke path_rename with the file descriptor as the source
 	 * directory.
 	 */
-	path_rename_source = 1 << 16,
+	path_rename_source = 1 << 16, // 65536
 
 	/**
 	 * The right to invoke path_rename with the file descriptor as the target
 	 * directory.
 	 */
-	path_rename_target = 1 << 17,
+	path_rename_target = 1 << 17, // 131072
 
 	/**
 	 * The right to invoke path_filestat_get.
 	 */
-	path_filestat_get = 1 << 18,
+	path_filestat_get = 1 << 18, // 262144
 
 	/**
 	 * The right to change a file's size (there is no path_filestat_set_size).
 	 * If path_open is set, includes the right to invoke path_open with
 	 * oflags::trunc.
 	 */
-	path_filestat_set_size = 1 << 19,
+	path_filestat_set_size = 1 << 19, // 524288
 
 	/**
 	 * The right to invoke path_filestat_set_times.
 	 */
-	path_filestat_set_times = 1 << 20,
+	path_filestat_set_times = 1 << 20, // 1048576
 
 	/**
 	 * The right to invoke fd_filestat_get.
 	 */
-	fd_filestat_get = 1 << 21,
+	fd_filestat_get = 1 << 21, // 2097152
 
 	/**
 	 * The right to invoke fd_filestat_set_size.
 	 */
-	fd_filestat_set_size = 1 << 22,
+	fd_filestat_set_size = 1 << 22, // 4194304
 
 	/**
 	 * The right to invoke fd_filestat_set_times.
 	 */
-	fd_filestat_set_times = 1 << 23,
+	fd_filestat_set_times = 1 << 23, // 8388608
 
 	/**
 	 * The right to invoke path_symlink.
 	 */
-	path_symlink = 1 << 24,
+	path_symlink = 1 << 24, // 16777216
 
 	/**
 	 * The right to invoke path_remove_directory.
 	 */
-	path_remove_directory = 1 << 25,
+	path_remove_directory = 1 << 25, // 33554432
 
 	/**
 	 * The right to invoke path_unlink_file.
 	 */
-	path_unlink_file = 1 << 26,
+	path_unlink_file = 1 << 26, // 67108864
 
 	/**
 	 * If rights::fd_read is set, includes the right to invoke poll_oneoff to
 	 * subscribe to eventtype::fd_read. If rights::fd_write is set, includes
 	 * the right to invoke poll_oneoff to subscribe to eventtype::fd_write.
 	 */
-	poll_fd_readwrite = 1 << 27,
+	poll_fd_readwrite = 1 << 27, // 134217728
 
 	/**
 	 * The right to invoke sock_shutdown.
 	 */
-	sock_shutdown = 1 << 28,
+	sock_shutdown = 1 << 28, // 268435456
 
 	/**
 	 * The right to invoke sock_accept.
 	 */
-	sock_accept = 1 << 29
+	sock_accept = 1 << 29, // 536870912
+
+	/**
+	 * All rights
+	 */
+	All = fd_datasync | fd_read | fd_seek | fd_fdstat_set_flags | fd_sync |
+		fd_tell | fd_write | fd_advise | fd_allocate | path_create_directory |
+		path_create_file | path_link_source | path_link_target | path_open |
+		fd_readdir | path_readlink | path_rename_source | path_rename_target |
+		path_filestat_get | path_filestat_set_size | path_filestat_set_times |
+		fd_filestat_get | fd_filestat_set_size | fd_filestat_set_times |
+		path_symlink | path_remove_directory | path_unlink_file | poll_fd_readwrite |
+		sock_shutdown | sock_accept,
+
+	/**
+	 * Base rights for block devices.
+	 *
+	 * Note: we don't have block devices in VS Code.
+	 */
+	BlockDeviceBase = 0,
+
+	/**
+	 * Inheriting rights for block devices.
+	 *
+	 * Note: we don't have block devices in VS Code.
+	 */
+	BlockDeviceInheriting = 0,
+
+	/**
+	 * Base rights for directories
+	 */
+	DirectoryBase = path_create_directory | path_create_file | path_open |
+		fd_readdir | path_rename_source | path_rename_target | path_filestat_get |
+		path_filestat_set_size | fd_filestat_get | path_remove_directory |
+		path_unlink_file,
+
+	/**
+	 * Base rights for files
+	 */
+	FileBase = fd_read | fd_seek | fd_write | fd_filestat_get,
+
+	/**
+	 * Inheriting rights for directories
+	 */
+	DirectoryInheriting = DirectoryBase | FileBase,
+
+	/**
+	 * Inheriting rights for files
+	 */
+	FileInheriting = 0
 }
 
 export type dircookie = u64;
