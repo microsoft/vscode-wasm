@@ -67,17 +67,20 @@ type MethodKeys<Messages extends MessageType> = {
 	[M in Messages as M['method']]: M['method'];
 };
 
+type TypeName<T extends Uint8Array | Uint16Array | Uint32Array | Int8Array | Int16Array | Int32Array> =
+	T extends Uint8Array ? 'Uint8Array' : '';
+
 type _SendRequestSignatures<Requests extends RequestType> = UnionToIntersection<{
  	[R in Requests as R['method']]: R['params'] extends null | undefined
 	 	? R['result'] extends null | undefined
 			? (method: R['method']) => { errno: number }
 			: R['result'] extends Uint8Array | Uint16Array | Uint32Array | Int8Array | Int16Array | Int32Array
-				? (method: R['method'], params: R['params'], type: `${R['result'] & string}`, resultLength: number) => { errno: 0; data: R['result'] } | { errno: number }
+				? (method: R['method'], params: R['params'], type: TypeName<R['result']>, resultLength: number) => { errno: 0; data: R['result'] } | { errno: number }
 				: (method: R['method'], params: R['params']) => { errno: 0; data: R['result'] } | { errno: number }
 		: R['result'] extends null | undefined
 			? (method: R['method'], params: R['params']) => { errno: number }
 			: R['result'] extends Uint8Array | Uint16Array | Uint32Array | Int8Array | Int16Array | Int32Array
-				? (method: R['method'], params: R['params'], type: `${R['result'] & string}`, resultLength: number) => { errno: 0; data: R['result'] } | { errno: number }
+				? (method: R['method'], params: R['params'], type: TypeName<R['result']>, resultLength: number) => { errno: 0; data: R['result'] } | { errno: number }
 				: (method: R['method'], params: R['params']) => { errno: 0; data: R['result'] } | { errno: number }
 }[keyof MethodKeys<Requests>]>;
 
