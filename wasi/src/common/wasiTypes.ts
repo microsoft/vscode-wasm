@@ -791,12 +791,6 @@ export namespace PreStartDir {
  * C IO vector
  */
 export type Ciovec = {
-
-	/**
-	 * The size of a CioVec view in u8
-	 */
-	get $size(): u32;
-
 	/**
 	 * Pointer in memory where the data is stored
 	 */
@@ -809,11 +803,9 @@ export type Ciovec = {
 };
 
 export namespace Ciovec {
+	export const size: 8 = 8;
 	export function create(ptr: ptr, memory: DataView): Ciovec {
 		return {
-			get $size(): u32 {
-				return 8;
-			},
 			get buf(): ptr {
 				return memory.getUint32(ptr, true);
 			},

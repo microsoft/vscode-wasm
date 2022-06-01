@@ -47,6 +47,20 @@ export type Stat = {
 	size: u32;
 };
 
+export namespace Stat {
+	export const size = 4 * 4;
+	export function create(memory: DataView): Stat {
+		return {
+			get type() {
+				return memory.getUint32(0);
+			}
+			set type(value: u32) {
+				memory.seetUin32(0);
+			}
+		};
+	}
+}
+
 export type Requests =
 {
 	/**

@@ -2,7 +2,7 @@
  * Copyright (c) Microsoft Corporation. All rights reserved.
  * Licensed under the MIT License. See License.txt in the project root for license information.
  * ------------------------------------------------------------------------------------------ */
-import RAL, { BaseClientConnection, RequestResult, Requests } from 'vscode-sync-rpc';
+import RAL, { BaseClientConnection, Requests, Uint8Length, RequestResult } from 'vscode-sync-rpc';
 
 export interface Terminal {
 	write(value: string, encoding?: string): void;
@@ -30,7 +30,7 @@ class TerminalImpl<Ready extends {} | undefined = undefined> implements Terminal
 		this.connection.sendRequest('terminal/write', { binary });
 	}
 	public read(bufferSize: number): Uint8Array | undefined {
-		const result = this.connection.sendRequest('terminal/read', bufferSize);
+		const result = this.connection.sendRequest('terminal/read', Uint8Length(bufferSize));
 		if (RequestResult.hasData(result)) {
 			return result.data;
 		}

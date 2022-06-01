@@ -393,13 +393,13 @@ export abstract class BaseClientConnection<Requests extends RequestType | undefi
 					if (RequestResult.hasData(lazyResult)) {
 						try {
 							const data = JSON.parse(this.textDecoder.decode(lazyResult.data as Uint8Array));
+							return { errno: 0, data };
 						} catch (error) {
-
+							return { errno: - 5};
 						}
+					} else {
+						return { errno: -5 };
 					}
-
-
-					// send another request to get the result.
 				default:
 					return { errno: 0, data: createResultArray(sharedArrayBuffer, resultKind, resultOffset, resultLength) };
 			}
@@ -432,12 +432,13 @@ type _HandleRequestSignatures<Requests extends RequestType> = UnionToIntersectio
 type HandleRequestSignatures<Requests extends RequestType | undefined> = [Requests] extends [RequestType] ?_HandleRequestSignatures<Requests> : undefined;
 
 type RequestResult = { errno: 0; data: object } | { errno: number };
-namespace RequestResult {
-	export function hasData(result: RequestResult): result is { errno: 0; data: object } {
-		const candidate: { data?: object | null | undefined } = result as { data?: object | null | undefined };
-		return candidate.data !== undefined && candidate.data !== null;
+export namespace RequestResult {
+	export function hasData<T>(value: { errno: number } | { errno: 0; data: T }): value is { errno: 0; data: T } {
+		const candidate: { errno: number; data?: T | null } = value;
+		return candidate.errno === 0 && candidate.data !== undefined && candidate.data !== null;
 	}
 }
+
 type RequestHandler = {
 	(arg1?: Params | ArrayTypes, arg2?: ArrayTypes): RequestResult | Promise<RequestResult>;
 };

@@ -367,7 +367,7 @@ export namespace WASI {
 		for (let i = 0; i < iovsLen; i++) {
 			const ciovec = Ciovec.create(ptr, memory);
 			buffers.push(new Uint8Array(buffer, ciovec.buf, ciovec.bufLen));
-			ptr += ciovec.$size;
+			ptr += Ciovec.size;
 
 		}
 		return buffers;
