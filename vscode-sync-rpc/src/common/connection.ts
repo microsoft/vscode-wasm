@@ -53,7 +53,7 @@ export type RequestType = MessageType & ({
 });
 
 
-class $None {
+export class $None {
 	static readonly kind: 0 = 0;
 	#kind: 0;
 	constructor() {
@@ -64,9 +64,9 @@ class $None {
 	}
 }
 
-const None: $None = new $None();
+export const None: $None = new $None();
 
-class $Uint8Length {
+export class $Uint8Length {
 	static readonly kind: 1 = 1;
 	#kind: 1;
 	#length: number;
@@ -74,7 +74,7 @@ class $Uint8Length {
 		this.#kind = 1;
 		this.#length = length;
 	}
-	get length(): number {
+	get byteLength(): number {
 		return this.#length;
 	}
 	get kind() {
@@ -86,15 +86,18 @@ export function Uint8Length(length: number): $Uint8Length {
 	return new $Uint8Length(length);
 }
 
-class $Uint16Length {
+export class $Uint16Length {
 	static readonly kind: 2 = 2;
 	#kind: 2;
 	#length: number;
 	constructor(length: number) {
+		if (length % 2 !== 0) {
+			throw new Error(`Length must be a multiple of 2, bit got ${length}`);
+		}
 		this.#kind = 2;
 		this.#length = length;
 	}
-	get length(): number {
+	get byteLength(): number {
 		return this.#length;
 	}
 	get kind() {
@@ -106,11 +109,14 @@ export function Uint16Length(length: number): $Uint16Length {
 	return new $Uint16Length(length);
 }
 
-class $Uint32Length {
+export class $Uint32Length {
 	static readonly kind: 3 = 3;
 	#kind: 3;
 	#length: number;
 	constructor(length: number) {
+		if (length % 4 !== 0) {
+			throw new Error(`Length must be a multiple of 4, bit got ${length}`);
+		}
 		this.#kind = 3;
 		this.#length = length;
 	}
@@ -126,7 +132,7 @@ export function Uint32Length(length: number): $Uint32Length {
 	return new $Uint32Length(length);
 }
 
-class $Int8Length {
+export class $Int8Length {
 	static readonly kind: 4 = 4;
 	#kind: 4;
 	#length: number;
@@ -146,11 +152,14 @@ export function Int8Length(length: number): $Int8Length {
 	return new $Int8Length(length);
 }
 
-class $Int16Length {
+export class $Int16Length {
 	static readonly kind: 5 = 5;
 	#kind: 5;
 	#length: number;
 	constructor(length: number) {
+		if (length % 2 !== 0) {
+			throw new Error(`Length must be a multiple of 2, bit got ${length}`);
+		}
 		this.#kind = 5;
 		this.#length = length;
 	}
@@ -166,11 +175,14 @@ export function Int16Length(length: number): $Int16Length {
 	return new $Int16Length(length);
 }
 
-class $Int32Length {
+export class $Int32Length {
 	static readonly kind: 6 = 6;
 	#kind: 6;
 	#length: number;
 	constructor(length: number) {
+		if (length % 4 !== 0) {
+			throw new Error(`Length must be a multiple of 4, bit got ${length}`);
+		}
 		this.#kind = 6;
 		this.#length = length;
 	}
@@ -337,18 +349,19 @@ export abstract class BaseClientConnection<Requests extends RequestType | undefi
 		const resultKind: number = resultType.kind;
 		const resultLength = resultType instanceof $VariableSize || resultType instanceof $None
 			? 0
-			: resultType.length;
+			: resultType.byteLength;
 
 		const requestData = this.textEncoder.encode(JSON.stringify(request, undefined, 0));
 		const binaryData = params?.binary;
 		const binaryDataLength = binaryData !== undefined ? binaryData.byteLength : 0;
-
-		const sharedArrayBufferLength = SyncSize.total + HeaderSize.total + requestData.byteLength + binaryDataLength + resultLength;
-		const sharedArrayBuffer: SharedArrayBuffer = new SharedArrayBuffer(sharedArrayBufferLength);
-
 		const requestOffset = SyncSize.total + HeaderSize.total;
 		const binaryOffset = requestOffset + requestData.byteLength;
-		const resultOffset = binaryOffset + binaryDataLength;
+		// Adjust the offset on a 4 bytes boundary so that all array types fit.
+		const resultPadding = (4 - ((binaryOffset + binaryDataLength) % 4));
+		const resultOffset = (binaryOffset + binaryDataLength) + resultPadding;
+
+		const sharedArrayBufferLength = SyncSize.total + HeaderSize.total + requestData.byteLength + binaryDataLength + resultPadding + resultLength;
+		const sharedArrayBuffer: SharedArrayBuffer = new SharedArrayBuffer(sharedArrayBufferLength);
 
 		const header = new Uint32Array(sharedArrayBuffer, SyncSize.total, HeaderSize.total / 4);
 		header[HeaderIndex.messageOffset] = requestOffset;

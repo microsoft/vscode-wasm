@@ -2,9 +2,9 @@
  * Copyright (c) Microsoft Corporation. All rights reserved.
  * Licensed under the MIT License. See License.txt in the project root for license information.
  * ------------------------------------------------------------------------------------------ */
-import { EventEmitter, Pseudoterminal, Uri, workspace } from 'vscode';
+import * as vscode from 'vscode';
 
-import RAL, { BaseServiceConnection, Requests } from 'vscode-sync-rpc';
+import RAL, { BaseServiceConnection, Requests, Types } from 'vscode-sync-rpc';
 
 const terminalRegExp = /(\r\n)|(\n)/gm;
 
@@ -16,8 +16,8 @@ export class ApiService<Ready extends {} | undefined = undefined> {
 	private readonly textEncoder: RAL.TextEncoder;
 	private readonly textDecoder: RAL.TextDecoder;
 
-	private readonly pty: Pseudoterminal;
-	private readonly ptyWriteEmitter: EventEmitter<string>;
+	private readonly pty: vscode.Pseudoterminal;
+	private readonly ptyWriteEmitter: vscode.EventEmitter<string>;
 	private inputBuffer: string[];
 	private inputAvailable: undefined | ((inputBuffer: string[]) => void);
 
@@ -26,7 +26,7 @@ export class ApiService<Ready extends {} | undefined = undefined> {
 		this.textEncoder = RAL().TextEncoder.create();
 		this.textDecoder = RAL().TextDecoder.create();
 
-		this.ptyWriteEmitter = new EventEmitter<string>();
+		this.ptyWriteEmitter = new vscode.EventEmitter<string>();
 		this.pty = {
 			onDidWrite: this.ptyWriteEmitter.event,
 			open: () => {
@@ -79,16 +79,22 @@ export class ApiService<Ready extends {} | undefined = undefined> {
 			return { errno: 0 };
 		});
 
-		this.connection.onRequest('fileSystem/stat', (params) => {
-			const uri = Uri.from(params.uri);
-			const stat = workspace.fs.stat(uri);
-			const fileSystem =
-
+		this.connection.onRequest('fileSystem/stat', async (params, resultBuffer) => {
+			const uri = vscode.Uri.from(params.uri);
+			const vStat: vscode.FileStat = await vscode.workspace.fs.stat(uri);
+			const stat = Types.Stat.create(new DataView(resultBuffer));
+			stat.type = vStat.type;
+			stat.ctime = vStat.mtime;
+			stat.mtime = vStat.mtime;
+			stat.size = vStat.size;
+			if (vStat.permissions !== undefined) {
+				stat.permission = vStat.permissions;
+			}
 			return { errno: 0 };
 		});
 	}
 
-	public getPty(): Pseudoterminal {
+	public getPty(): vscode.Pseudoterminal {
 		return this.pty;
 	}
 }

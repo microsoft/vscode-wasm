@@ -23,5 +23,5 @@ fn main() {
     // stdout().flush().unwrap();
 
 let _input_file =
-        fs::File::open("/workspace/test1.bat").map_err(|err| format!("error opening input {}: {}", "abc.txt", err)).unwrap();
+        fs::File::open("/workspace/test.bat").map_err(|err| format!("error opening input {}: {}", "abc.txt", err)).unwrap();
 }

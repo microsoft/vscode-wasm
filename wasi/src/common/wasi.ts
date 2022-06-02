@@ -303,6 +303,7 @@ export namespace WASI {
 			fileHandleInfo.assertBaseRight(Rights.path_open);
 			const memory = memoryView();
 			const name = $decoder.decode(new Uint8Array(memoryRaw(), path, pathLen));
+			const stat = $apiClient.fileSystem.stat(getRealUri(fileHandleInfo, name));
 			return Errno.success;
 		} catch(error) {
 			if (error instanceof WasiError) {
@@ -397,5 +398,10 @@ export namespace WASI {
 			throw new WasiError(Errno.badf);
 		}
 		return result;
+	}
+
+	function getRealUri(parentInfo: FileHandleInfo, name: string): URI {
+		const real = parentInfo.real.uri;
+		return real.with({ path: `${real.path}/${name}`});
 	}
 }
