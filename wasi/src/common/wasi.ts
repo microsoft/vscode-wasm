@@ -16,8 +16,9 @@ import { ApiClient } from 'vscode-sync-api-client';
 import { ptr, size, u32 } from './baseTypes';
 import {
 	wasi_file_handle, Errno, errno, lookupflags, oflags, rights, fdflags, dircookie,
-	PreStartDir, Ciovec, FileType, Rights
+	PreStartDir, Ciovec, FileType, Rights, fileSize, advise
 } from './wasiTypes';
+import { code2Wasi } from './converter';
 
 // Same as Unix file descriptors
 export const WASI_STDIN_FD: 0 = 0;
@@ -34,12 +35,13 @@ export interface WASI {
 	args_get(argv_ptr: ptr, argvBuf_ptr: ptr): errno;
 	environ_sizes_get(environCount_ptr: ptr, environBufSize_ptr: ptr): errno;
 	environ_get(environ_ptr: ptr, environBuf_ptr: ptr): errno;
-	path_open(fd: wasi_file_handle, dirflags: lookupflags, path: ptr, pathLen: size, oflags: oflags, fs_rights_base: rights, fs_rights_inheriting: rights, fdflags: fdflags, fd_ptr: ptr): errno;
 	fd_prestat_get(fd: wasi_file_handle, bufPtr: ptr): errno;
 	fd_prestat_dir_name(fd: wasi_file_handle, pathPtr: ptr, pathLen: size): errno;
+	path_open(fd: wasi_file_handle, dirflags: lookupflags, path: ptr, pathLen: size, oflags: oflags, fs_rights_base: rights, fs_rights_inheriting: rights, fdflags: fdflags, fd_ptr: ptr): errno;
+	fd_advise(fd: wasi_file_handle, offset: fileSize, length: fileSize, advise: advise): errno;
 	fd_readdir(fd: wasi_file_handle, buf_ptr: ptr, buf_len: size, cookie: dircookie, bufEndPtr: ptr): errno;
-	fd_write(fd: wasi_file_handle, iovs_ptr: ptr, iovsLen: u32, bytesWritten_ptr: ptr): errno;
 	fd_read(fd: wasi_file_handle, iovs_ptr: ptr, iovsLen: u32, bytesRead_ptr: ptr): errno;
+	fd_write(fd: wasi_file_handle, iovs_ptr: ptr, iovsLen: u32, bytesWritten_ptr: ptr): errno;
 	fd_close(fd: wasi_file_handle): errno;
 	proc_exit(): errno;
 }
@@ -171,14 +173,12 @@ export namespace WASI {
 		$options = options;
 
 		if ($options.workspaceFolders.length === 1) {
-			const workspace = new FileHandleInfo(3, FileType.directory, '/workspace', { base: Rights.DirectoryBase, inheriting: Rights.DirectoryInheriting}, { fd: undefined, uri: $options.workspaceFolders[0].uri }, true);
+			const workspace = new FileHandleInfo(getNextFileHandle(), FileType.directory, '/workspace', { base: Rights.DirectoryBase, inheriting: Rights.DirectoryInheriting}, { fd: undefined, uri: $options.workspaceFolders[0].uri }, true);
 			$fileHandles.set(workspace.fd, workspace);
  		} else if ($options.workspaceFolders.length > 1) {
-			let fd = 3;
 			for (const folder of $options.workspaceFolders) {
-				const f = new FileHandleInfo(fd, FileType.directory, `/workspace/${folder.name}`, { base: Rights.DirectoryBase, inheriting: Rights.DirectoryInheriting}, {fd: undefined, uri: folder.uri }, true);
+				const f = new FileHandleInfo(getNextFileHandle(), FileType.directory, `/workspace/${folder.name}`, { base: Rights.DirectoryBase, inheriting: Rights.DirectoryInheriting}, {fd: undefined, uri: folder.uri }, true);
 				$fileHandles.set(f.fd, f);
-				fd++;
 			}
 		}
 
@@ -191,6 +191,7 @@ export namespace WASI {
 			fd_prestat_get: fd_prestat_get,
 			fd_prestat_dir_name: fd_prestat_dir_name,
 			path_open: path_open,
+			fd_advise: fd_advise,
 			fd_readdir: fd_readdir,
 			fd_write: fd_write,
 			fd_read: fd_read,
@@ -299,11 +300,25 @@ export namespace WASI {
 
 	function path_open(fd: wasi_file_handle, dirflags: lookupflags, path: ptr, pathLen: size, oflags: oflags, fs_rights_base: rights, fs_rights_inheriting: rights, fdflags: fdflags, fd_ptr: ptr): errno {
 		try {
-			const fileHandleInfo = getFileHandleInfo(fd);
-			fileHandleInfo.assertBaseRight(Rights.path_open);
+			const parentHandle = getFileHandleInfo(fd);
+			parentHandle.assertBaseRight(Rights.path_open);
+
 			const memory = memoryView();
 			const name = $decoder.decode(new Uint8Array(memoryRaw(), path, pathLen));
-			const stat = $apiClient.fileSystem.stat(getRealUri(fileHandleInfo, name));
+			const realUri = getRealUri(parentHandle, name);
+			const stat = $apiClient.fileSystem.stat(realUri);
+			if (stat === undefined) {
+				return Errno.noent;
+			}
+			const filetype = code2Wasi.asFileType(stat.type);
+			// If we have a regular file we will call open to retrieve
+			// a real file handle. If it is a directory we don't since the
+			// VS Code API doesn't have support for handles on directories.
+			if (filetype === FileType.regular_file) {
+				
+			}
+			const fileHandleInfo = new FileHandleInfo(getNextFileHandle(), filetype, );
+
 			return Errno.success;
 		} catch(error) {
 			if (error instanceof WasiError) {
@@ -311,6 +326,10 @@ export namespace WASI {
 			}
 			return Errno.perm;
 		}
+	}
+
+	function fd_advise(fd: wasi_file_handle, offset: fileSize, length: fileSize, advise: advise): errno {
+		return Errno.nosys;
 	}
 
 	function fd_readdir(fd: wasi_file_handle, buf_ptr: ptr, buf_len: size, cookie: dircookie, bufEndPtr: ptr): errno {
@@ -403,5 +422,12 @@ export namespace WASI {
 	function getRealUri(parentInfo: FileHandleInfo, name: string): URI {
 		const real = parentInfo.real.uri;
 		return real.with({ path: `${real.path}/${name}`});
+	}
+
+	let $fileHandleCounter: number = 3;
+	function getNextFileHandle(): number {
+		// According to the spec these handles shouldn't monotonically increase.
+		// But since these are not real file handles I keep it that way.
+		return $fileHandleCounter++;
 	}
 }

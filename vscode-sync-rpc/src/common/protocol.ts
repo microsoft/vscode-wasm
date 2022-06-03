@@ -3,7 +3,7 @@
  * Licensed under the MIT License. See License.txt in the project root for license information.
  * ------------------------------------------------------------------------------------------ */
 
-import { Uint32Length } from './connection';
+import { Uint32Result } from './connection';
 
 export type u8 = number;
 export type u16 = number;
@@ -62,39 +62,38 @@ export namespace Types {
 	};
 
 	export namespace Stat {
-		const size = 5 * 4;
-		export const length = Uint32Length(size);
-		export function create(memory: DataView): Stat {
+		export const typedResult = Uint32Result.fromLength(5);
+		export function create(memory: Uint32Array): Stat {
 			return {
 				get type() {
-					return memory.getUint32(0);
+					return memory[0];
 				},
 				set type(value: u32) {
-					memory.setUint32(0, value);
+					memory[0] = value;
 				},
 				get ctime() {
-					return memory.getUint32(4);
+					return memory[1];
 				},
 				set ctime(value: u32) {
-					memory.setUint32(4, value);
+					memory[1] = value;
 				},
 				get mtime() {
-					return memory.getUint32(8);
+					return memory[2];
 				},
 				set mtime(value: u32) {
-					memory.setUint32(8, value);
+					memory[2]= value;
 				},
 				get size() {
-					return memory.getUint32(12);
+					return memory[3];
 				},
 				set size(value: u32) {
-					memory.setUint32(12, value);
+					memory[3]= value;
 				},
 				get permission() {
-					return memory.getUint32(16);
+					return memory[4];
 				},
 				set permission(value: u32) {
-					memory.setUint32(16, value);
+					memory[4]= value;
 				}
 			};
 		}
@@ -128,4 +127,13 @@ export type Requests =
 		uri: Types.UriComponents;
 	};
 	result: Uint32Array;
+} | {
+	/**
+	 * Open a file
+	 */
+	method: 'fileSystem/readFile';
+	params: {
+		uri: Types.UriComponents;
+	};
+	result: Uint8Array;
 };

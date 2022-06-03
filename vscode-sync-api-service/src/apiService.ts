@@ -2,6 +2,8 @@
  * Copyright (c) Microsoft Corporation. All rights reserved.
  * Licensed under the MIT License. See License.txt in the project root for license information.
  * ------------------------------------------------------------------------------------------ */
+/// <reference path="../typings/vscode.proposed.fsChunks.d.ts" />
+
 import * as vscode from 'vscode';
 
 import RAL, { BaseServiceConnection, Requests, Types } from 'vscode-sync-rpc';
@@ -82,7 +84,7 @@ export class ApiService<Ready extends {} | undefined = undefined> {
 		this.connection.onRequest('fileSystem/stat', async (params, resultBuffer) => {
 			const uri = vscode.Uri.from(params.uri);
 			const vStat: vscode.FileStat = await vscode.workspace.fs.stat(uri);
-			const stat = Types.Stat.create(new DataView(resultBuffer));
+			const stat = Types.Stat.create(resultBuffer);
 			stat.type = vStat.type;
 			stat.ctime = vStat.mtime;
 			stat.mtime = vStat.mtime;
@@ -90,6 +92,10 @@ export class ApiService<Ready extends {} | undefined = undefined> {
 			if (vStat.permissions !== undefined) {
 				stat.permission = vStat.permissions;
 			}
+			return { errno: 0 };
+		});
+
+		this.connection.onRequest('fileSystem/readFile', async (params, resultBuffer) => {
 			return { errno: 0 };
 		});
 	}

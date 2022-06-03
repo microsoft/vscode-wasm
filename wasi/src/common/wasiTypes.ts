@@ -765,6 +765,49 @@ export enum FileType {
 	symbolic_link = 7
 }
 
+export type fileSize = u64;
+
+export type advise = u8;
+/**
+ * File or memory access pattern advisory information.
+ */
+export enum Advice {
+	/**
+	 * The application has no advice to give on its behavior with respect to
+	 * the specified data.
+	 */
+	normal = 0,
+
+	/**
+	 * The application expects to access the specified data sequentially from
+	 * lower offsets to higher offsets.
+	 */
+	sequential = 1,
+
+	/**
+	 * The application expects to access the specified data in a random order.
+	 */
+	random = 2,
+
+	/**
+	 * The application expects to access the specified data in the near future.
+	 */
+	willneed = 3,
+
+	/**
+	 * The application expects that it will not access the specified data in
+	 * the near future.
+	 */
+	dontneed = 4,
+
+	/**
+	 *  The application expects to access the specified data once and then not
+	 * reuse it thereafter.
+	 */
+	noreuse = 5
+}
+
+
 /**
  * The contents of a $prestat when type is `PreOpenType.dir`
  */

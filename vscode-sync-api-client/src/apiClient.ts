@@ -5,7 +5,7 @@
 
 import { URI } from 'vscode-uri';
 
-import RAL, { BaseClientConnection, Requests, Uint8Length, RequestResult, Types } from 'vscode-sync-rpc';
+import RAL, { BaseClientConnection, Requests, Uint8Result, RequestResult, Types } from 'vscode-sync-rpc';
 
 import { FileStat } from './vscode';
 
@@ -39,7 +39,7 @@ class TerminalImpl<Ready extends {} | undefined = undefined> implements Terminal
 		this.connection.sendRequest('terminal/write', { binary });
 	}
 	public read(bufferSize: number): Uint8Array | undefined {
-		const result = this.connection.sendRequest('terminal/read', Uint8Length(bufferSize));
+		const result = this.connection.sendRequest('terminal/read', Uint8Result.fromByteLength(bufferSize));
 		if (RequestResult.hasData(result)) {
 			return result.data;
 		}
@@ -56,9 +56,9 @@ class FileSystemImpl<Ready extends {} | undefined = undefined> implements FileSy
 	}
 
 	public stat(uri: URI): FileStat | undefined {
-		const requestResult = this.connection.sendRequest('fileSystem/stat', { uri: uri.toJSON() }, Types.Stat.length);
+		const requestResult = this.connection.sendRequest('fileSystem/stat', { uri: uri.toJSON() }, Types.Stat.typedResult);
 		if (RequestResult.hasData(requestResult)) {
-			const stat = Types.Stat.create(new DataView(requestResult.data));
+			const stat = Types.Stat.create(requestResult.data);
 			const permission = stat.permission;
 			const result: FileStat = {
 				type: stat.type,
@@ -73,6 +73,8 @@ class FileSystemImpl<Ready extends {} | undefined = undefined> implements FileSy
 		}
 		return undefined;
 	}
+
+	public open(uri: URI);
 }
 
 export class ApiClient<Ready extends {} | undefined = undefined> {

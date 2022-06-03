@@ -18,6 +18,9 @@
 		"url": "https://github.com/microsoft/vscode-wasi/issues"
 	},
 	"homepage": "https://github.com/microsoft/vscode-wasi#readme",
+	"enabledApiProposals": [
+		"fsChunks"
+	],
 	"dependencies": {
 		"vscode-uri": "3.0.3"
 	},

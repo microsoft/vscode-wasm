@@ -57,6 +57,7 @@
 		"destaddrreq",
 		"dircookie",
 		"dirflags",
+		"dontneed",
 		"dquot",
 		"ESUCCESS",
 		"eventtype",
@@ -88,6 +89,7 @@
 		"nolck",
 		"nomsg",
 		"noprotoopt",
+		"noreuse",
 		"nospc",
 		"nosys",
 		"notcapable",
@@ -110,6 +112,7 @@
 		"timedout",
 		"toobig",
 		"txtbsy",
+		"willneed",
 		"xdev"
 	],
 	"files.associations": {
