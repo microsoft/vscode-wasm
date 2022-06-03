@@ -407,7 +407,7 @@ export enum Rights {
 	 * The right to invoke fd_datasync. If path_open is set, includes the right
 	 * to invoke path_open with fdflags::dsync.
 	 */
-	fd_datasync = 1 << 0, // 1
+	fd_datasync = 1n << 0n, // 1
 
 	/**
 	 * The right to invoke fd_read and sock_recv. If rights::fd_seek is set,
@@ -720,7 +720,7 @@ export enum PreOpenType {
 	dir = 0
 }
 
-export type fileType = u8;
+export type filetype = u8;
 export enum FileType {
 
 	/**
@@ -765,8 +765,6 @@ export enum FileType {
 	symbolic_link = 7
 }
 
-export type fileSize = u64;
-
 export type advise = u8;
 /**
  * File or memory access pattern advisory information.
@@ -807,6 +805,86 @@ export enum Advice {
 	noreuse = 5
 }
 
+export type filesize = u64;
+export type device = u64;
+export type inode = u64;
+export type linkcount = u64;
+export type timestamp = u64;
+
+export type filestat = {
+
+	/**
+	 * Device ID of device containing the file.
+	 */
+	set dev(value: device);
+
+	/**
+	 * File serial number.
+	 */
+	set ino(value: inode);
+
+	/**
+	 * File type.
+	 */
+	set filetype(value: filetype);
+
+	/**
+	 * Number of hard links to the file.
+	 */
+	set nlink(value: linkcount);
+
+	/**
+	 * For regular files, the file size in bytes. For symbolic links, the
+	 * length in bytes of the pathname contained in the symbolic link.
+	 */
+	set size(value: filesize);
+
+	/**
+	 * Last data access timestamp.
+	 */
+	set atim(value: timestamp);
+
+	/**
+	 * Last data modification timestamp.
+	 */
+	set mtim(value: timestamp);
+
+	/**
+	 * Last file status change timestamp.
+	 */
+	set ctim(value: timestamp);
+};
+
+export namespace filestat {
+	/**
+	 * The size in bytes.
+	 */
+	export const size = 64;
+
+	const offsets = {
+		dev: 0,
+		ino: 8,
+		filetype: 16,
+		nlink: 24,
+		size: 32,
+		atim: 40,
+		mtim: 48,
+		ctim: 56
+	};
+
+	export function create(ptr: ptr, memory: DataView): filestat {
+		return {
+			set dev(value: device) { memory.setBigUint64(ptr + offsets.dev, value, true); },
+			set ino(value: inode) { memory.setBigUint64(ptr + offsets.ino, value, true); },
+			set filetype(value: filetype) { memory.setUint8(ptr + offsets.filetype, value); },
+			set nlink(value: linkcount) { memory.setBigUint64(ptr + offsets.nlink, value, true); },
+			set size(value: filesize) { memory.setBigUint64(ptr + offsets.size, value, true); },
+			set atim(value: timestamp) { memory.setBigUint64(ptr + offsets.atim, value, true); },
+			set mtim(value: timestamp) { memory.setBigUint64(ptr + offsets.mtim, value, true); },
+			set ctim(value: timestamp) { memory.setBigUint64(ptr + offsets.ctim, value, true); }
+		};
+	}
+}
 
 /**
  * The contents of a $prestat when type is `PreOpenType.dir`

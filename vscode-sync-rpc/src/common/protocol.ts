@@ -3,7 +3,7 @@
  * Licensed under the MIT License. See License.txt in the project root for license information.
  * ------------------------------------------------------------------------------------------ */
 
-import { Uint32Result } from './connection';
+import { Uint32Result, VariableResult } from './connection';
 
 export type u8 = number;
 export type u16 = number;
@@ -135,5 +135,5 @@ export type Requests =
 	params: {
 		uri: Types.UriComponents;
 	};
-	result: Uint8Array;
+	result: VariableResult<Uint8Array>;
 };

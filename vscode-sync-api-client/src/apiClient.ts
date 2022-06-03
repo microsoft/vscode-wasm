@@ -5,7 +5,7 @@
 
 import { URI } from 'vscode-uri';
 
-import RAL, { BaseClientConnection, Requests, Uint8Result, RequestResult, Types } from 'vscode-sync-rpc';
+import RAL, { BaseClientConnection, Requests, Uint8Result, RequestResult, Types, VariableResult } from 'vscode-sync-rpc';
 
 import { FileStat } from './vscode';
 
@@ -17,6 +17,7 @@ export interface Terminal {
 
 export interface FileSystem {
 	stat(uri: URI): FileStat | undefined;
+	read(uri: URI): Uint8Array | undefined;
 }
 
 type ApiClientConnection<Ready extends {} | undefined = undefined> = BaseClientConnection<Requests, Ready>;
@@ -74,7 +75,13 @@ class FileSystemImpl<Ready extends {} | undefined = undefined> implements FileSy
 		return undefined;
 	}
 
-	public open(uri: URI);
+	public read(uri: URI): Uint8Array | undefined {
+		const requestResult = this.connection.sendRequest('fileSystem/readFile', { uri: uri.toJSON() }, new VariableResult<Uint8Array>);
+		if (RequestResult.hasData(requestResult)) {
+			return requestResult.data;
+		}
+		return undefined;
+	}
 }
 
 export class ApiClient<Ready extends {} | undefined = undefined> {

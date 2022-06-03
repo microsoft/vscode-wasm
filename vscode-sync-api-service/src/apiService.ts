@@ -95,8 +95,10 @@ export class ApiService<Ready extends {} | undefined = undefined> {
 			return { errno: 0 };
 		});
 
-		this.connection.onRequest('fileSystem/readFile', async (params, resultBuffer) => {
-			return { errno: 0 };
+		this.connection.onRequest('fileSystem/readFile', async (params) => {
+			const uri = vscode.Uri.from(params.uri);
+			const contents = await vscode.workspace.fs.readFile(uri);
+			return { errno: 0, data: contents };
 		});
 	}
 

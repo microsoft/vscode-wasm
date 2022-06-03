@@ -11,7 +11,7 @@ export type Message = {
 	params?: Params;
 };
 
-type ArrayTypes = Uint8Array | Uint16Array | Uint32Array | Int8Array | Int32Array | Int32Array;
+type ArrayTypes = Uint8Array | Int8Array | Uint16Array | Int32Array | Uint32Array | Int32Array | BigUint64Array | BigInt64Array;
 
 export type Params = {
 	[key: string]: null | undefined | number | boolean | string | object | Uint8Array;
@@ -74,27 +74,6 @@ class NoResult {
 	}
 }
 
-class VariableResult {
-	public static readonly kind: 7 = 7;
-	constructor() {
-	}
-	get kind() {
-		return VariableResult.kind;
-	}
-	get byteLength(): number {
-		return 0;
-	}
-	get length(): number {
-		return 0;
-	}
-	getPadding(offset: number): number  {
-		return 0;
-	}
-	createResultArray(sharedArrayBuffer: SharedArrayBuffer, offset: number): Uint8Array {
-		return new Uint8Array(sharedArrayBuffer, offset, 0);
-	}
-}
-
 export class Uint8Result {
 	public static readonly kind: 1 = 1;
 	#length: number;
@@ -124,8 +103,37 @@ export class Uint8Result {
 	}
 }
 
-export class Uint16Result {
+export class Int8Result {
 	public static readonly kind: 2 = 2;
+	#length: number;
+	public static fromLength(length: number): Int8Result {
+		return new Int8Result(length);
+	}
+	public static fromByteLength(byteLength: number): Int8Result {
+		return new Int8Result(byteLength);
+	}
+	private constructor(value: number) {
+		this.#length = value;
+	}
+	get kind() {
+		return Int8Result.kind;
+	}
+	get byteLength(): number {
+		return this.#length * Int8Array.BYTES_PER_ELEMENT;
+	}
+	get length(): number {
+		return this.#length;
+	}
+	getPadding(offset: number): number  {
+		return TypedResult.getPadding(offset);
+	}
+	createResultArray(sharedArrayBuffer: SharedArrayBuffer, offset: number): Int8Array {
+		return new Int8Array(sharedArrayBuffer, offset, this.length);
+	}
+}
+
+export class Uint16Result {
+	public static readonly kind: 3 = 3;
 	#length: number;
 	public static fromLength(length: number): Uint16Result {
 		return new Uint16Result(length);
@@ -156,69 +164,8 @@ export class Uint16Result {
 	}
 }
 
-export class Uint32Result {
-	public static readonly kind: 3 = 3;
-	#length: number;
-	public static fromLength(length: number): Uint32Result {
-		return new Uint32Result(length);
-	}
-	public static fromByteLength(byteLength: number): Uint32Result {
-		if (byteLength % Uint32Array.BYTES_PER_ELEMENT !== 0) {
-			throw new Error(`Byte length must be a multiple of ${Uint32Array.BYTES_PER_ELEMENT} but was ${byteLength}`);
-		}
-		return new Uint32Result(byteLength / Uint32Array.BYTES_PER_ELEMENT);
-	}
-	private constructor(value: number) {
-		this.#length = value;
-	}
-	get kind() {
-		return Uint32Result.kind;
-	}
-	get byteLength(): number {
-		return this.#length * Uint32Array.BYTES_PER_ELEMENT;
-	}
-	get length(): number {
-		return this.#length;
-	}
-	getPadding(offset: number): number  {
-		return TypedResult.getPadding(offset);
-	}
-	createResultArray(sharedArrayBuffer: SharedArrayBuffer, offset: number): Uint32Array {
-		return new Uint32Array(sharedArrayBuffer, offset, this.length);
-	}
-}
-
-export class Int8Result {
-	public static readonly kind: 4 = 4;
-	#length: number;
-	public static fromLength(length: number): Int8Result {
-		return new Int8Result(length);
-	}
-	public static fromByteLength(byteLength: number): Int8Result {
-		return new Int8Result(byteLength);
-	}
-	private constructor(value: number) {
-		this.#length = value;
-	}
-	get kind() {
-		return Int8Result.kind;
-	}
-	get byteLength(): number {
-		return this.#length * Int8Array.BYTES_PER_ELEMENT;
-	}
-	get length(): number {
-		return this.#length;
-	}
-	getPadding(offset: number): number  {
-		return TypedResult.getPadding(offset);
-	}
-	createResultArray(sharedArrayBuffer: SharedArrayBuffer, offset: number): Int8Array {
-		return new Int8Array(sharedArrayBuffer, offset, this.length);
-	}
-}
-
 export class Int16Result {
-	public static readonly kind: 5 = 5;
+	public static readonly kind: 4 = 4;
 	#length: number;
 	public static fromLength(length: number): Int16Result {
 		return new Int16Result(length);
@@ -246,6 +193,38 @@ export class Int16Result {
 	}
 	createResultArray(sharedArrayBuffer: SharedArrayBuffer, offset: number): Int32Array {
 		return new Int32Array(sharedArrayBuffer, offset, this.length);
+	}
+}
+
+export class Uint32Result {
+	public static readonly kind: 5 = 5;
+	#length: number;
+	public static fromLength(length: number): Uint32Result {
+		return new Uint32Result(length);
+	}
+	public static fromByteLength(byteLength: number): Uint32Result {
+		if (byteLength % Uint32Array.BYTES_PER_ELEMENT !== 0) {
+			throw new Error(`Byte length must be a multiple of ${Uint32Array.BYTES_PER_ELEMENT} but was ${byteLength}`);
+		}
+		return new Uint32Result(byteLength / Uint32Array.BYTES_PER_ELEMENT);
+	}
+	private constructor(value: number) {
+		this.#length = value;
+	}
+	get kind() {
+		return Uint32Result.kind;
+	}
+	get byteLength(): number {
+		return this.#length * Uint32Array.BYTES_PER_ELEMENT;
+	}
+	get length(): number {
+		return this.#length;
+	}
+	getPadding(offset: number): number  {
+		return TypedResult.getPadding(offset);
+	}
+	createResultArray(sharedArrayBuffer: SharedArrayBuffer, offset: number): Uint32Array {
+		return new Uint32Array(sharedArrayBuffer, offset, this.length);
 	}
 }
 
@@ -281,24 +260,109 @@ export class Int32Result {
 	}
 }
 
+export class Uint64Result {
+	public static readonly kind: 7 = 7;
+	#length: number;
+	public static fromLength(length: number): Uint64Result {
+		return new Uint64Result(length);
+	}
+	public static fromByteLength(byteLength: number): Uint64Result {
+		if (byteLength % BigUint64Array.BYTES_PER_ELEMENT !== 0) {
+			throw new Error(`Byte length must be a multiple of ${BigUint64Array.BYTES_PER_ELEMENT} but was ${byteLength}`);
+		}
+		return new Uint64Result(byteLength / BigUint64Array.BYTES_PER_ELEMENT);
+	}
+	private constructor(value: number) {
+		this.#length = value;
+	}
+	get kind() {
+		return Uint64Result.kind;
+	}
+	get byteLength(): number {
+		return this.#length * BigUint64Array.BYTES_PER_ELEMENT;
+	}
+	get length(): number {
+		return this.#length;
+	}
+	getPadding(offset: number): number  {
+		return BigUint64Array.BYTES_PER_ELEMENT - (offset % BigUint64Array.BYTES_PER_ELEMENT);
+	}
+	createResultArray(sharedArrayBuffer: SharedArrayBuffer, offset: number): BigUint64Array {
+		return new BigUint64Array(sharedArrayBuffer, offset, this.length);
+	}
+}
+
+export class Int64Result {
+	public static readonly kind: 8 = 8;
+	#length: number;
+	public static fromLength(length: number): Int64Result {
+		return new Int64Result(length);
+	}
+	public static fromByteLength(byteLength: number): Int64Result {
+		if (byteLength % BigInt64Array.BYTES_PER_ELEMENT !== 0) {
+			throw new Error(`Byte length must be a multiple of ${BigInt64Array.BYTES_PER_ELEMENT} but was ${byteLength}`);
+		}
+		return new Int64Result(byteLength / BigInt64Array.BYTES_PER_ELEMENT);
+	}
+	private constructor(value: number) {
+		this.#length = value;
+	}
+	get kind() {
+		return Int64Result.kind;
+	}
+	get byteLength(): number {
+		return this.#length * BigInt64Array.BYTES_PER_ELEMENT;
+	}
+	get length(): number {
+		return this.#length;
+	}
+	getPadding(offset: number): number  {
+		return BigInt64Array.BYTES_PER_ELEMENT - (offset % BigInt64Array.BYTES_PER_ELEMENT);
+	}
+	createResultArray(sharedArrayBuffer: SharedArrayBuffer, offset: number): BigInt64Array {
+		return new BigInt64Array(sharedArrayBuffer, offset, this.length);
+	}
+}
+
+export class VariableResult<T> {
+	public static readonly kind: 8 = 8;
+	public constructor() {
+	}
+	get kind() {
+		return VariableResult.kind;
+	}
+	get byteLength(): number {
+		return 0;
+	}
+	get length(): number {
+		return 0;
+	}
+	getPadding(offset: number): number  {
+		return 0;
+	}
+	createResultArray(sharedArrayBuffer: SharedArrayBuffer, offset: number): Uint8Array {
+		return new Uint8Array(sharedArrayBuffer, offset, 0);
+	}
+}
+
 namespace TypedResult {
 	export function fromByteLength(kind: number, byteLength: number) {
 		switch (kind) {
 			case Uint8Result.kind:
 				return Uint8Result.fromByteLength(byteLength);
-			case Uint16Result.kind:
-				return Uint16Result.fromByteLength(byteLength);
-			case Uint32Result.kind:
-				return Uint32Result.fromByteLength(byteLength);
 			case Int8Result.kind:
 				return Int8Result.fromByteLength(byteLength);
+			case Uint16Result.kind:
+				return Uint16Result.fromByteLength(byteLength);
 			case Int16Result.kind:
 				return Int16Result.fromByteLength(byteLength);
+			case Uint32Result.kind:
+				return Uint32Result.fromByteLength(byteLength);
 			case Int32Result.kind:
 				return Int32Result.fromByteLength(byteLength);
 			case VariableResult.kind:
 				// send another request to get the result.
-				throw new Error(`No result array for variable result type`);
+				throw new Error(`No result array for variable results result type.`);
 			default:
 				throw new Error(`Unknown result kind ${kind}`);
 		}
@@ -312,12 +376,12 @@ namespace TypedResult {
 	}
 }
 
-type ResultType = NoResult | Uint8Result | Uint16Result | Uint32Result | Int8Result | Int16Result | Int32Result | VariableResult;
+type ResultType = NoResult | Uint8Result | Uint16Result | Uint32Result | Int8Result | Int16Result | Int32Result | VariableResult<object>;
 namespace ResultType {
 	export function is(value: any): value is ResultType {
 		return value instanceof Uint8Result || value instanceof Uint16Result || value instanceof Uint32Result ||
-			value instanceof Int8Result || value instanceof Int16Result || value instanceof Int32Result || value instanceof VariableResult ||
-			value instanceof NoResult;
+			value instanceof Int8Result || value instanceof Int16Result || value instanceof Int32Result ||
+			value instanceof VariableResult || value instanceof NoResult;
 	}
 }
 
@@ -328,33 +392,41 @@ type MethodKeys<Messages extends MessageType> = {
 	[M in Messages as M['method']]: M['method'];
 };
 
-type LengthType<T extends Uint8Array | Uint16Array | Uint32Array | Int8Array | Int16Array | Int32Array> =
+type LengthType<T extends ArrayTypes> =
 	T extends Uint8Array
 		? Uint8Result
-		: T extends Uint16Array
-			? Uint16Result
-			: T extends Uint32Array
-				? Uint32Result
-				: T extends Int8Array
-					? Int8Result
-					: T extends Int16Array
-						? Int16Result
+		: T extends Int8Array
+			? Int8Result
+			: T extends Uint16Array
+				? Uint16Result
+				: T extends Int16Array
+					? Int16Result
+					: T extends Uint32Array
+						? Uint32Result
 						: T extends Int32Array
 							? Int32Result
-							: never;
+							: T extends BigUint64Array
+								? Uint64Result
+								: T extends BigInt64Array
+									? Int64Result
+									: never;
 
 type _SendRequestSignatures<Requests extends RequestType> = UnionToIntersection<{
  	[R in Requests as R['method']]: R['params'] extends null | undefined
 	 	? R['result'] extends null | undefined
 			? (method: R['method']) => { errno: number }
-			: R['result'] extends Uint8Array | Uint16Array | Uint32Array | Int8Array | Int16Array | Int32Array
+			: R['result'] extends ArrayTypes
 				? (method: R['method'], resultKind: LengthType<R['result']>) => { errno: 0; data: R['result'] } | { errno: number }
-				: (method: R['method'], resultKind: VariableResult) => { errno: 0; data: R['result'] } | { errno: number }
+				: R['result'] extends VariableResult<infer T>
+					? (method: R['method'], resultKind: VariableResult<T>) => { errno: 0; data: T } | { errno: number }
+					: never
 		: R['result'] extends null | undefined
 			? (method: R['method'], params: R['params']) => { errno: number }
-			: R['result'] extends Uint8Array | Uint16Array | Uint32Array | Int8Array | Int16Array | Int32Array
+			: R['result'] extends ArrayTypes
 				? (method: R['method'], params: R['params'], resultKind: LengthType<R['result']>) => { errno: 0; data: R['result'] } | { errno: number }
-				: (method: R['method'], params: R['params'], resultKind: VariableResult) => { errno: 0; data: R['result'] } | { errno: number }
+				: R['result'] extends VariableResult<infer T>
+					? (method: R['method'], params: R['params'], resultKind: VariableResult<T>) => { errno: 0; data: T } | { errno: number }
+					: never;
 }[keyof MethodKeys<Requests>]>;
 
 type SendRequestSignatures<Requests extends RequestType | undefined> = [Requests] extends [RequestType] ? _SendRequestSignatures<Requests> : undefined;
@@ -511,12 +583,16 @@ type _HandleRequestSignatures<Requests extends RequestType> = UnionToIntersectio
 			? (method: R['method'], handler: () => { errno: number } | Promise<{ errno: number }>) => Disposable
 			: R['result'] extends ArrayTypes
 				? (method: R['method'], handler: (resultBuffer: R['result']) => { errno: number } | Promise<{ errno: number }>) => Disposable
-				: (method: R['method'], handler: () => { errno: number } | { errno: 0; data: R['result'] } | Promise<{ errno: number }| { errno: 0; data: R['result'] }>) => Disposable
+				: R['result'] extends VariableResult<infer T>
+					? (method: R['method'], handler: () => { errno: number } | { errno: 0; data: T } | Promise<{ errno: number }| { errno: 0; data: T }>) => Disposable
+					: never
 		: R['result'] extends null | undefined
 			? (method: R['method'], handler: (params: R['params']) => { errno: number } | Promise<{ errno: number }>) => Disposable
 			: R['result'] extends ArrayTypes
 				? (method: R['method'], handler: (params: R['params'], resultBuffer: R['result']) => { errno: number } | Promise<{ errno: number }>) => Disposable
-				: (method: R['method'], handler: (params: R['params']) => { errno: number } | { errno: 0; data: R['result'] } | Promise<{ errno: number }| { errno: 0; data: R['result'] }>) => Disposable
+				: R['result'] extends VariableResult<infer T>
+					? (method: R['method'], handler: (params: R['params']) => { errno: number } | { errno: 0; data: T } | Promise<{ errno: number }| { errno: 0; data: T }>) => Disposable
+					: never
 }[keyof MethodKeys<Requests>]>;
 
 type HandleRequestSignatures<Requests extends RequestType | undefined> = [Requests] extends [RequestType] ?_HandleRequestSignatures<Requests> : undefined;
