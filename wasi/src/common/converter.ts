@@ -7,16 +7,16 @@ import * as code from 'vscode-sync-api-client';
 import * as wasi from './wasiTypes';
 
 export namespace code2Wasi {
-	export function asFileType(fileType: code.FileType): wasi.FileType {
+	export function asFileType(fileType: code.FileType): wasi.filetype {
 		switch (fileType) {
 			case code.FileType.File:
-				return wasi.FileType.regular_file;
+				return wasi.filetype.regular_file;
 			case code.FileType.Directory:
-				return wasi.FileType.directory;
+				return wasi.filetype.directory;
 			case code.FileType.SymbolicLink:
-				return wasi.FileType.symbolic_link;
+				return wasi.filetype.symbolic_link;
 			default:
-				return wasi.FileType.unknown;
+				return wasi.filetype.unknown;
 		}
 	}
 }

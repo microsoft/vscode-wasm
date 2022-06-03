@@ -15,8 +15,8 @@ import { ApiClient } from 'vscode-sync-api-client';
 
 import { ptr, size, u32 } from './baseTypes';
 import {
-	wasi_file_handle, Errno, errno, lookupflags, oflags, rights, fdflags, dircookie,
-	PreStartDir, Ciovec, FileType, Rights, filesize, advise
+	wasi_file_handle, errno, lookupflags, oflags, rights, fdflags, dircookie,
+	PreStartDir, Ciovec, filetype, Rights, filesize, advise
 } from './wasiTypes';
 import { code2Wasi } from './converter';
 
@@ -82,7 +82,7 @@ class FileHandle {
 	/**
 	 * The file type
 	 */
-	public readonly fileType: FileType;
+	public readonly fileType: filetype;
 
 	/**
 	 * The path name.
@@ -124,7 +124,7 @@ class FileHandle {
 	 */
 	public readonly preOpened: boolean;
 
-	constructor(fd: wasi_file_handle, fileType: FileType, path: string, rights: FileHandle['rights'], real: FileHandle['real'], preOpened: boolean = false) {
+	constructor(fd: wasi_file_handle, fileType: filetype, path: string, rights: FileHandle['rights'], real: FileHandle['real'], preOpened: boolean = false) {
 		this.fd = fd;
 		this.fileType = fileType;
 		this.path = path;
@@ -133,9 +133,9 @@ class FileHandle {
 		this.preOpened = preOpened;
 	}
 
-	public assertBaseRight(right: Rights): void {
-		if ((this.rights.base & right) === 0) {
-			throw new WasiError(Errno.perm);
+	public assertBaseRight(right: rights): void {
+		if ((this.rights.base & right) === 0n) {
+			throw new WasiError(errno.perm);
 		}
 	}
 }
@@ -186,11 +186,11 @@ export namespace WASI {
 		$options = options;
 
 		if ($options.workspaceFolders.length === 1) {
-			const workspace = new FileHandle(getNextFileHandle(), FileType.directory, '/workspace', { base: Rights.DirectoryBase, inheriting: Rights.DirectoryInheriting}, { fd: undefined, uri: $options.workspaceFolders[0].uri }, true);
+			const workspace = new FileHandle(getNextFileHandle(), filetype.directory, '/workspace', { base: Rights.DirectoryBase, inheriting: Rights.DirectoryInheriting}, { fd: undefined, uri: $options.workspaceFolders[0].uri }, true);
 			$fileHandles.set(workspace.fd, workspace);
  		} else if ($options.workspaceFolders.length > 1) {
 			for (const folder of $options.workspaceFolders) {
-				const f = new FileHandle(getNextFileHandle(), FileType.directory, `/workspace/${folder.name}`, { base: Rights.DirectoryBase, inheriting: Rights.DirectoryInheriting}, {fd: undefined, uri: folder.uri }, true);
+				const f = new FileHandle(getNextFileHandle(), filetype.directory, `/workspace/${folder.name}`, { base: Rights.DirectoryBase, inheriting: Rights.DirectoryInheriting}, {fd: undefined, uri: folder.uri }, true);
 				$fileHandles.set(f.fd, f);
 			}
 		}
@@ -229,7 +229,7 @@ export namespace WASI {
 		}
 		memory.setUint32(argvCount_ptr, count, true);
 		memory.setUint32(argvBufSize_ptr, size, true);
-		return Errno.success;
+		return errno.success;
 	}
 
 	function args_get(argv_ptr: ptr, argvBuf_ptr: ptr): errno {
@@ -244,7 +244,7 @@ export namespace WASI {
 			memoryBytes.set(data, valueOffset);
 			valueOffset += data.byteLength;
 		}
-		return Errno.success;
+		return errno.success;
 	}
 
 	function environ_sizes_get(environCount_ptr: ptr, environBufSize_ptr: ptr): errno {
@@ -258,7 +258,7 @@ export namespace WASI {
 		}
 		memory.setUint32(environCount_ptr, count, true);
 		memory.setUint32(environBufSize_ptr, size, true);
-		return Errno.success;
+		return errno.success;
 	}
 
 	function environ_get(environ_ptr: ptr, environBuf_ptr: ptr): errno {
@@ -273,24 +273,24 @@ export namespace WASI {
 			memoryBytes.set(data, valueOffset);
 			valueOffset += data.byteLength;
 		}
-		return Errno.success;
+		return errno.success;
 	}
 
 	function fd_prestat_get(fd: wasi_file_handle, bufPtr: ptr): errno {
 		try {
 			const fileHandleInfo = $fileHandles.get(fd);
 			if (fileHandleInfo === undefined || !fileHandleInfo.preOpened) {
-				return Errno.badf;
+				return errno.badf;
 			}
 			const memory = memoryView();
 			const prestat = PreStartDir.create(bufPtr, memory);
 			prestat.len = $encoder.encode(fileHandleInfo.path).byteLength;
-			return Errno.success;
+			return errno.success;
 		} catch(error) {
 			if (error instanceof WasiError) {
 				return error.errno;
 			}
-			return Errno.perm;
+			return errno.perm;
 		}
 	}
 
@@ -300,20 +300,20 @@ export namespace WASI {
 			const memory = new Uint8Array(memoryRaw(), pathPtr);
 			const bytes = $encoder.encode(fileHandleInfo.path);
 			if (bytes.byteLength !== pathLen) {
-				Errno.badmsg;
+				errno.badmsg;
 			}
 			memory.set(bytes);
-			return Errno.success;
+			return errno.success;
 		} catch (error) {
 			if (error instanceof WasiError) {
 				return error.errno;
 			}
-			return Errno.perm;
+			return errno.perm;
 		}
 	}
 
 	function fd_filestat_get(fd: wasi_file_handle, bufPtr: ptr): errno {
-
+		return errno.success;
 	}
 
 	function path_open(fd: wasi_file_handle, dirflags: lookupflags, path: ptr, pathLen: size, oflags: oflags, fs_rights_base: rights, fs_rights_inheriting: rights, fdflags: fdflags, fd_ptr: ptr): errno {
@@ -326,7 +326,7 @@ export namespace WASI {
 			const realUri = getRealUri(parentHandle, name);
 			const stat = $apiClient.fileSystem.stat(realUri);
 			if (stat === undefined) {
-				return Errno.noent;
+				return errno.noent;
 			}
 			const filetype = code2Wasi.asFileType(stat.type);
 			// Currently VS Code doesn't offer a generic API to open a file
@@ -339,21 +339,21 @@ export namespace WASI {
 			);
 			$fileHandles.set(fileHandleInfo.fd, fileHandleInfo);
 			memory.setUint32(fd_ptr, fileHandleInfo.fd, true);
-			return Errno.success;
+			return errno.success;
 		} catch(error) {
 			if (error instanceof WasiError) {
 				return error.errno;
 			}
-			return Errno.perm;
+			return errno.perm;
 		}
 	}
 
 	function fd_advise(fd: wasi_file_handle, offset: filesize, length: filesize, advise: advise): errno {
-		return Errno.nosys;
+		return errno.nosys;
 	}
 
 	function fd_readdir(fd: wasi_file_handle, buf_ptr: ptr, buf_len: size, cookie: dircookie, bufEndPtr: ptr): errno {
-		return Errno.success;
+		return errno.success;
 	}
 
 	function fd_write(fd: wasi_file_handle, iovs_ptr: ptr, iovsLen: u32, bytesWritten_ptr: ptr): errno {
@@ -366,9 +366,9 @@ export namespace WASI {
 			}
 			const memory = memoryView();
 			memory.setUint32(bytesWritten_ptr, written, true);
-			return Errno.success;
+			return errno.success;
 		}
-		return Errno.success;
+		return errno.success;
 	}
 
 	function fd_read(fd: wasi_file_handle, iovs_ptr: ptr, iovsLen: u32, bytesRead_ptr: ptr): errno {
@@ -380,13 +380,13 @@ export namespace WASI {
 				const result = $apiClient.terminal.read(buffer.byteLength);
 				if (result === undefined) {
 					memory.setUint32(bytesRead_ptr, 0, true);
-					return Errno.inval;
+					return errno.inval;
 				}
 				bytesRead += result.byteLength;
 				buffer.set(result);
 			}
 			memory.setUint32(bytesRead_ptr, bytesRead, true);
-			return Errno.success;
+			return errno.success;
 		}
 		const fileHandle = getFileHandle(fd);
 		fileHandle.assertBaseRight(Rights.fd_read);
@@ -394,7 +394,7 @@ export namespace WASI {
 		if (file === undefined) {
 			const content = $apiClient.fileSystem.read(fileHandle.real.uri);
 			if (content === undefined) {
-				return Errno.noent;
+				return errno.noent;
 			}
 			file = new File(fileHandle.fd, content);
 			$files.set(fileHandle.fd, file);
@@ -403,15 +403,15 @@ export namespace WASI {
 		for (const buffer of buffers) {
 
 		}
-		return Errno.success;
+		return errno.success;
 	}
 
 	function fd_close(fd: wasi_file_handle): errno {
-		return Errno.success;
+		return errno.success;
 	}
 
 	function proc_exit(): errno {
-		return Errno.success;
+		return errno.success;
 	}
 
 	function readIOvs (iovs: ptr, iovsLen: u32): Uint8Array[] {
@@ -450,7 +450,7 @@ export namespace WASI {
 	function getFileHandle(fd: wasi_file_handle): FileHandle {
 		const result = $fileHandles.get(fd);
 		if (result === undefined) {
-			throw new WasiError(Errno.badf);
+			throw new WasiError(errno.badf);
 		}
 		return result;
 	}

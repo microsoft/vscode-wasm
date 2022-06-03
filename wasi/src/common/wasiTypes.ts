@@ -13,684 +13,684 @@ import { ptr, size, u16, u32, u64, u8 } from './baseTypes';
 export type wasi_file_handle = u32;
 
 export type errno = u16;
-export enum Errno {
+export namespace errno {
 	/**
 	 * No error occurred. System call completed successfully.
 	 */
-	success = 0,
+	export const success = 0;
 
 	/**
 	 * Argument list too long.
 	 */
-	toobig = 1,
+	export const toobig = 1;
 
 	/**
 	 *  Permission denied.
 	 */
-	acces = 2,
+	export const acces = 2;
 
 	/**
 	 * Address in use.
 	 */
-	addrinuse = 3,
+	export const addrinuse = 3;
 
 	/**
 	 * Address not available.
 	 */
-	addrnotavail = 4,
+	export const addrnotavail = 4;
 
 	/**
 	 * Address family not supported.
 	 */
-	afnosupport = 5,
+	export const afnosupport = 5;
 
 	/**
 	 * Resource unavailable, or operation would block.
 	 */
-	again = 6,
+	export const again = 6;
 
 	/**
 	 * Connection already in progress.
 	 */
-	already = 7,
+	export const already = 7;
 
 	/**
 	 * Bad file descriptor.
 	 */
-	badf = 8,
+	export const badf = 8;
 
 	/**
 	 * Bad message.
 	 */
-	badmsg = 9,
+	export const badmsg = 9;
 
 	/**
 	 * Device or resource busy.
 	 */
-	busy = 10,
+	export const busy = 10;
 
 	/**
 	 * Operation canceled.
 	 */
-	canceled = 11,
+	export const canceled = 11;
 
 	/**
 	 *  No child processes.
 	 */
-	child = 12,
+	export const child = 12;
 
 	/**
 	 * Connection aborted.
 	 */
-	connaborted = 13,
+	export const connaborted = 13;
 
 	/**
 	 * Connection refused.
 	 */
-	connrefused = 14,
+	export const connrefused = 14;
 
 	/**
 	 * Connection reset.
 	 */
-	connreset = 15,
+	export const connreset = 15;
 
 	/**
 	 * Resource deadlock would occur.
 	 */
-	deadlk = 16,
+	export const deadlk = 16;
 
 	/**
 	 * Destination address required.
 	 */
-	destaddrreq = 17,
+	export const destaddrreq = 17;
 
 	/**
 	 * Mathematics argument out of domain of function.
 	 */
-	dom = 18,
+	export const dom = 18;
 
 	/**
 	 * Reserved.
 	 */
-	dquot = 19,
+	export const dquot = 19;
 
 	/**
 	 * File exists.
 	 */
-	exist = 20,
+	export const exist = 20;
 
 	/**
 	 * Bad address.
 	 */
-	fault = 21,
+	export const fault = 21;
 
 	/**
 	 * File too large.
 	 */
-	fbig = 22,
+	export const fbig = 22;
 
 	/**
 	 * Host is unreachable.
 	 */
-	hostunreach = 23,
+	export const hostunreach = 23;
 
 	/**
 	 * Identifier removed.
 	 */
-	idrm = 24,
+	export const idrm = 24;
 
 	/**
 	 * Illegal byte sequence.
 	 */
-	ilseq = 25,
+	export const ilseq = 25;
 
 	/**
 	 * Operation in progress.
 	 */
-	inprogress = 26,
+	export const inprogress = 26;
 
 	/**
 	 * Interrupted function.
 	 */
-	intr = 27,
+	export const intr = 27;
 
 	/**
 	 * Invalid argument.
 	 */
-	inval = 28,
+	export const inval = 28;
 
 	/**
 	 * I/O error.
 	 */
-	io = 29,
+	export const io = 29;
 
 	/**
 	 * Socket is connected.
 	 */
-	isconn = 30,
+	export const isconn = 30;
 
 	/**
 	 * Is a directory.
 	 */
-	isdir = 31,
+	export const isdir = 31;
 
 	/**
 	 * Too many levels of symbolic links.
 	 */
-	loop = 32,
+	export const loop = 32;
 
 	/**
 	 * File descriptor value too large.
 	 */
-	mfile = 33,
+	export const mfile = 33;
 
 	/**
 	 * Too many links.
 	 */
-	mlink = 34,
+	export const mlink = 34;
 
 	/**
 	 * Message too large.
 	 */
-	msgsize = 35,
+	export const msgsize = 35;
 
 	/**
 	 * Reserved.
 	 */
-	multihop = 36,
+	export const multihop = 36;
 
 	/**
 	 * Filename too long.
 	 */
-	nametoolong = 37,
+	export const nametoolong = 37;
 
 	/**
 	 * Network is down.
 	 */
-	netdown = 38,
+	export const netdown = 38;
 
 	/**
 	 * Connection aborted by network.
 	 */
-	netreset = 39,
+	export const netreset = 39;
 
 	/**
 	 * Network unreachable.
 	 */
-	netunreach = 40,
+	export const netunreach = 40;
 
 	/**
 	 * Too many files open in system.
 	 */
-	nfile = 41,
+	export const nfile = 41;
 
 	/**
 	 * No buffer space available.
 	 */
-	nobufs = 42,
+	export const nobufs = 42;
 
 	/**
 	 * No such device.
 	 */
-	nodev = 43,
+	export const nodev = 43;
 
 	/**
 	 * No such file or directory.
 	 */
-	noent = 44,
+	export const noent = 44;
 
 	/**
 	 * Executable file format error.
 	 */
-	noexec = 45,
+	export const noexec = 45;
 
 	/**
 	 * No locks available.
 	 */
-	nolck = 46,
+	export const nolck = 46;
 
 	/**
 	 * Reserved.
 	 */
-	nolink = 47,
+	export const nolink = 47;
 
 	/**
 	 * Not enough space.
 	 */
-	nomem = 48,
+	export const nomem = 48;
 
 	/**
 	 * No message of the desired type.
 	 */
-	nomsg = 49,
+	export const nomsg = 49;
 
 	/**
 	 * Protocol not available.
 	 */
-	noprotoopt = 50,
+	export const noprotoopt = 50;
 
 	/**
 	 * No space left on device.
 	 */
-	nospc = 51,
+	export const nospc = 51;
 
 	/**
 	 * Function not supported.
 	 */
-	nosys = 52,
+	export const nosys = 52;
 
 	/**
 	 * The socket is not connected.
 	 */
-	notconn = 53,
+	export const notconn = 53;
 
 	/**
 	 * Not a directory or a symbolic link to a directory.
 	 */
-	notdir = 54,
+	export const notdir = 54;
 
 	/**
 	 * Directory not empty.
 	 */
-	notempty = 55,
+	export const notempty = 55;
 
 	/**
 	 * State not recoverable.
 	 */
-	notrecoverable = 56,
+	export const notrecoverable = 56;
 
 	/**
 	 * Not a socket.
 	 */
-	notsock = 57,
+	export const notsock = 57;
 
 	/**
 	 * Not supported, or operation not supported on socket.
 	 */
-	notsup = 58,
+	export const notsup = 58;
 
 	/**
 	 * Inappropriate I/O control operation.
 	 */
-	notty = 59,
+	export const notty = 59;
 
 	/**
 	 * No such device or address.
 	 */
-	nxio = 60,
+	export const nxio = 60;
 
 	/**
 	 * Value too large to be stored in data type.
 	 */
-	overflow = 61,
+	export const overflow = 61;
 
 	/**
 	 * Previous owner died.
 	 */
-	ownerdead = 62,
+	export const ownerdead = 62;
 
 	/**
 	 * Operation not permitted.
 	 */
-	perm = 63,
+	export const perm = 63;
 
 	/**
 	 * Broken pipe.
 	 */
-	pipe = 64,
+	export const pipe = 64;
 
 	/**
 	 * Protocol error.
 	 */
-	proto = 65,
+	export const proto = 65;
 
 	/**
 	 * Protocol not supported.
 	 */
-	protonosupport = 66,
+	export const protonosupport = 66;
 
 	/**
 	 * Protocol wrong type for socket.
 	 */
-	prototype = 67,
+	export const prototype = 67;
 
 	/**
 	 * Result too large.
 	 */
-	range = 68,
+	export const range = 68;
 
 	/**
 	 * Read-only file system.
 	 */
-	rofs = 69,
+	export const rofs = 69;
 
 	/**
 	 * Invalid seek.
 	 */
-	spipe = 70,
+	export const spipe = 70;
 
 	/**
 	 * No such process.
 	 */
-	srch = 71,
+	export const srch = 71;
 
 	/**
 	 * Reserved.
 	 */
-	stale = 72,
+	export const stale = 72;
 
 	/**
 	 * Connection timed out.
 	 */
-	timedout = 73,
+	export const timedout = 73;
 
 	/**
 	 * Text file busy.
 	 */
-	txtbsy = 74,
+	export const txtbsy = 74;
 
 	/**
 	 * Cross-device link.
 	 */
-	xdev = 75,
+	export const xdev = 75;
 
 	/**
 	 * Extension: Capabilities insufficient.
 	 */
-	notcapable = 76
+	export const notcapable = 76;
 }
 
 export type rights = u64;
-export enum Rights {
+export namespace Rights {
 
 	/**
 	 * The right to invoke fd_datasync. If path_open is set, includes the right
 	 * to invoke path_open with fdflags::dsync.
 	 */
-	fd_datasync = 1n << 0n, // 1
+	export const fd_datasync = 1n << 0n; // 1
 
 	/**
 	 * The right to invoke fd_read and sock_recv. If rights::fd_seek is set,
 	 * includes the right to invoke fd_pread.
 	 */
-	fd_read = 1 << 1, // 2
+	export const fd_read = 1n << 1n; // 2
 
 	/**
 	 * The right to invoke fd_seek. This flag implies rights::fd_tell.
 	 */
-	fd_seek = 1 << 2, // 4
+	export const fd_seek = 1n << 2n; // 4
 
 	/**
 	 * The right to invoke fd_fdstat_set_flags.
 	 */
-	fd_fdstat_set_flags = 1 << 3, // 8
+	export const fd_fdstat_set_flags = 1n << 3n; // 8
 
 	/**
 	 * The right to invoke fd_sync. If path_open is set, includes the right to
 	 * invoke path_open with fdflags::rsync and fdflags::dsync.
 	 */
-	fd_sync = 1 << 4, // 16
+	export const fd_sync = 1n << 4n; // 16
 
 	/**
 	 * The right to invoke fd_seek in such a way that the file offset remains
 	 * unaltered (i.e., whence::cur with offset zero), or to invoke fd_tell.
 	 */
-	fd_tell = 1 << 5, // 32
+	export const fd_tell = 1n << 5n; // 32
 
 	/**
 	 * The right to invoke fd_write and sock_send. If rights::fd_seek is set,
 	 * includes the right to invoke fd_pwrite.
 	 */
-	fd_write = 1 << 6, // 64
+	export const fd_write = 1n << 6n; // 64
 
 	/**
 	 * The right to invoke fd_advise.
 	 */
-	fd_advise = 1 << 7, // 128
+	export const fd_advise = 1n << 7n; // 128
 
 	/**
 	 * The right to invoke fd_allocate.
 	 */
-	fd_allocate = 1 << 8, // 256
+	export const fd_allocate = 1n << 8n; // 256
 
 	/**
 	 * The right to invoke path_create_directory.
 	 */
-	path_create_directory = 1 << 9, // 512
+	export const path_create_directory = 1n << 9n; // 512
 
 	/**
 	 * If path_open is set, the right to invoke path_open with oflags::creat.
 	 */
-	path_create_file = 1 << 10, // 1024
+	export const path_create_file = 1n << 10n; // 1024
 
 	/**
 	 * The right to invoke path_link with the file descriptor as the source
 	 * directory.
 	 */
-	path_link_source = 1 << 11, // 2048
+	export const path_link_source = 1n << 11n; // 2048
 
 	/**
 	 * The right to invoke path_link with the file descriptor as the target
 	 * directory.
 	 */
-	path_link_target = 1 << 12, // 4096
+	export const path_link_target = 1n << 12n; // 4096
 
 	/**
 	 * The right to invoke path_open.
 	 */
-	path_open = 1 << 13, // 8192
+	export const path_open = 1n << 13n; // 8192
 
 	/**
 	 * The right to invoke fd_readdir.
 	 */
-	fd_readdir = 1 << 14, // 16384
+	export const fd_readdir = 1n << 14n; // 16384
 
 	/**
 	 * The right to invoke path_readlink.
 	 */
-	path_readlink = 1 << 15, // 32768
+	export const path_readlink = 1n << 15n; // 32768
 
 	/**
 	 * The right to invoke path_rename with the file descriptor as the source
 	 * directory.
 	 */
-	path_rename_source = 1 << 16, // 65536
+	export const path_rename_source = 1n << 16n; // 65536
 
 	/**
 	 * The right to invoke path_rename with the file descriptor as the target
 	 * directory.
 	 */
-	path_rename_target = 1 << 17, // 131072
+	export const path_rename_target = 1n << 17n; // 131072
 
 	/**
 	 * The right to invoke path_filestat_get.
 	 */
-	path_filestat_get = 1 << 18, // 262144
+	export const path_filestat_get = 1n << 18n; // 262144
 
 	/**
 	 * The right to change a file's size (there is no path_filestat_set_size).
 	 * If path_open is set, includes the right to invoke path_open with
 	 * oflags::trunc.
 	 */
-	path_filestat_set_size = 1 << 19, // 524288
+	export const path_filestat_set_size = 1n << 19n; // 524288
 
 	/**
 	 * The right to invoke path_filestat_set_times.
 	 */
-	path_filestat_set_times = 1 << 20, // 1048576
+	export const path_filestat_set_times = 1n << 20n; // 1048576
 
 	/**
 	 * The right to invoke fd_filestat_get.
 	 */
-	fd_filestat_get = 1 << 21, // 2097152
+	export const fd_filestat_get = 1n << 21n; // 2097152
 
 	/**
 	 * The right to invoke fd_filestat_set_size.
 	 */
-	fd_filestat_set_size = 1 << 22, // 4194304
+	export const fd_filestat_set_size = 1n << 22n; // 4194304
 
 	/**
 	 * The right to invoke fd_filestat_set_times.
 	 */
-	fd_filestat_set_times = 1 << 23, // 8388608
+	export const fd_filestat_set_times = 1n << 23n; // 8388608
 
 	/**
 	 * The right to invoke path_symlink.
 	 */
-	path_symlink = 1 << 24, // 16777216
+	export const path_symlink = 1n << 24n; // 16777216
 
 	/**
 	 * The right to invoke path_remove_directory.
 	 */
-	path_remove_directory = 1 << 25, // 33554432
+	export const path_remove_directory = 1n << 25n; // 33554432
 
 	/**
 	 * The right to invoke path_unlink_file.
 	 */
-	path_unlink_file = 1 << 26, // 67108864
+	export const path_unlink_file = 1n << 26n; // 67108864
 
 	/**
 	 * If rights::fd_read is set, includes the right to invoke poll_oneoff to
 	 * subscribe to eventtype::fd_read. If rights::fd_write is set, includes
 	 * the right to invoke poll_oneoff to subscribe to eventtype::fd_write.
 	 */
-	poll_fd_readwrite = 1 << 27, // 134217728
+	export const poll_fd_readwrite = 1n << 27n; // 134217728
 
 	/**
 	 * The right to invoke sock_shutdown.
 	 */
-	sock_shutdown = 1 << 28, // 268435456
+	export const sock_shutdown = 1n << 28n; // 268435456
 
 	/**
 	 * The right to invoke sock_accept.
 	 */
-	sock_accept = 1 << 29, // 536870912
+	export const sock_accept = 1n << 29n; // 536870912
 
 	/**
 	 * All rights
 	 */
-	All = fd_datasync | fd_read | fd_seek | fd_fdstat_set_flags | fd_sync |
+	export const All = fd_datasync | fd_read | fd_seek | fd_fdstat_set_flags | fd_sync |
 		fd_tell | fd_write | fd_advise | fd_allocate | path_create_directory |
 		path_create_file | path_link_source | path_link_target | path_open |
 		fd_readdir | path_readlink | path_rename_source | path_rename_target |
 		path_filestat_get | path_filestat_set_size | path_filestat_set_times |
 		fd_filestat_get | fd_filestat_set_size | fd_filestat_set_times |
 		path_symlink | path_remove_directory | path_unlink_file | poll_fd_readwrite |
-		sock_shutdown | sock_accept,
+		sock_shutdown | sock_accept;
 
 	/**
 	 * Base rights for block devices.
 	 *
 	 * Note: we don't have block devices in VS Code.
 	 */
-	BlockDeviceBase = 0,
+	export const BlockDeviceBase = 0n;
 
 	/**
 	 * Inheriting rights for block devices.
 	 *
 	 * Note: we don't have block devices in VS Code.
 	 */
-	BlockDeviceInheriting = 0,
+	export const BlockDeviceInheriting = 0n;
 
 	/**
 	 * Base rights for directories
 	 */
-	DirectoryBase = path_create_directory | path_create_file | path_open |
+	export const DirectoryBase = path_create_directory | path_create_file | path_open |
 		fd_readdir | path_rename_source | path_rename_target | path_filestat_get |
 		path_filestat_set_size | fd_filestat_get | path_remove_directory |
-		path_unlink_file,
+		path_unlink_file;
 
 	/**
 	 * Base rights for files
 	 */
-	FileBase = fd_read | fd_seek | fd_write | fd_filestat_get,
+	export const FileBase = fd_read | fd_seek | fd_write | fd_filestat_get;
 
 	/**
 	 * Inheriting rights for directories
 	 */
-	DirectoryInheriting = DirectoryBase | FileBase,
+	export const DirectoryInheriting = DirectoryBase | FileBase;
 
 	/**
 	 * Inheriting rights for files
 	 */
-	FileInheriting = 0
+	export const FileInheriting = 0;
 }
 
 export type dircookie = u64;
 
 export type fdflags = u16;
-export enum FdFlags {
+export namespace fdflags {
 
 	/**
 	 * Append mode: Data written to the file is always appended to the file's
 	 * end.
 	 */
-	append = 1 << 0,
+	export const append = 1 << 0;
 
 	/**
 	 * Write according to synchronized I/O data integrity completion. Only the
 	 * data stored in the file is synchronized.
 	 */
-	dsync = 1 << 1,
+	export const dsync = 1 << 1;
 
 	/**
 	 * Non-blocking mode.
 	 */
-	nonblock = 1 << 2,
+	export const nonblock = 1 << 2;
 
 	/**
 	 * Synchronized read I/O operations.
 	 */
-	rsync = 1 << 3,
+	export const rsync = 1 << 3;
 
 	/**
 	 * Write according to synchronized I/O file integrity completion. In
 	 * addition to synchronizing the data stored in the file, the
 	 * implementation may also synchronously update the file's metadata.
 	 */
-	sync = 1 << 4
+	export const sync = 1 << 4;
 }
 
 export type lookupflags = u32;
-export enum LookupFlags {
+export namespace lookupflags {
 	/**
 	 * As long as the resolved path corresponds to a symbolic link, it is
 	 * expanded.
 	 */
-	symlink_follow = 1 << 0
+	export const symlink_follow = 1 << 0;
 }
 
 export type oflags = u16;
-export enum OFlags {
+export namespace oflags {
 
 	/**
 	 * Create file if it does not exist.
 	 */
-	creat = 1 << 0,
+	export const creat = 1 << 0;
 
 	/**
 	 * Fail if not a directory.
 	 */
-	directory = 1 << 1,
+	export const directory = 1 << 1;
 
 	/**
 	 * Fail if file already exists.
 	 */
-	excl = 1 << 2,
+	export const excl = 1 << 2;
 
 	/**
 	 * Truncate file to size 0.
 	 */
-	trunc = 1 << 3
+	export const trunc = 1 << 3;
 }
 
-export type clockId = u32;
-export enum ClockId {
+export type clockid = u32;
+export namespace clockid {
 	/**
 	 * The clock measuring real time. Time value zero corresponds with
 	 * 1970-01-01T00:00:00Z.
 	 */
-	realtime = 0,
+	export const realtime = 0;
 
 	/**
 	 * The store-wide monotonic clock, which is defined as a clock measuring
@@ -698,111 +698,111 @@ export enum ClockId {
 	 * clock jumps. The epoch of this clock is undefined. The absolute time
 	 * value of this clock therefore has no meaning.
 	 */
-	monotonic = 1,
+	export const monotonic = 1;
 
 	/**
 	 * The CPU-time clock associated with the current process.
 	 */
-	process_cputime_id = 2,
+	export const process_cputime_id = 2;
 
 	/**
 	 * The CPU-time clock associated with the current thread.
 	 */
-	thread_cputime_id = 3
+	export const thread_cputime_id = 3;
 }
 
-export type preOpenType = u8;
-export enum PreOpenType {
+export type preopentype = u8;
+export namespace preopentype {
 
 	/**
 	 * A pre-opened directory.
 	 */
-	dir = 0
+	export const dir = 0;
 }
 
 export type filetype = u8;
-export enum FileType {
+export namespace filetype {
 
 	/**
 	 * The type of the file descriptor or file is unknown or is different from
 	 * any of the other types specified.
 	 */
-	unknown = 0,
+	export const unknown = 0;
 
 	/**
 	 * The file descriptor or file refers to a block device inode.
 	 */
-	block_device = 1,
+	export const block_device = 1;
 
 	/**
 	 * The file descriptor or file refers to a character device inode.
 	 */
-	character_device = 2,
+	export const character_device = 2;
 
 	/**
 	 * The file descriptor or file refers to a directory inode.
 	 */
-	directory = 3,
+	export const directory = 3;
 
 	/**
 	 * The file descriptor or file refers to a regular file inode.
 	 */
-	regular_file = 4,
+	export const regular_file = 4;
 
 	/**
 	 * The file descriptor or file refers to a datagram socket.
 	 */
-	socket_dgram = 5,
+	export const socket_dgram = 5;
 
 	/**
 	 * The file descriptor or file refers to a byte-stream socket.
 	 */
-	socket_stream = 6,
+	export const socket_stream = 6;
 
 	/**
 	 * The file refers to a symbolic link inode.
 	 */
-	symbolic_link = 7
+	export const symbolic_link = 7;
 }
 
 export type advise = u8;
 /**
  * File or memory access pattern advisory information.
  */
-export enum Advice {
+export namespace advice {
 	/**
 	 * The application has no advice to give on its behavior with respect to
 	 * the specified data.
 	 */
-	normal = 0,
+	export const normal = 0;
 
 	/**
 	 * The application expects to access the specified data sequentially from
 	 * lower offsets to higher offsets.
 	 */
-	sequential = 1,
+	export const sequential = 1;
 
 	/**
 	 * The application expects to access the specified data in a random order.
 	 */
-	random = 2,
+	export const random = 2;
 
 	/**
 	 * The application expects to access the specified data in the near future.
 	 */
-	willneed = 3,
+	export const willneed = 3;
 
 	/**
 	 * The application expects that it will not access the specified data in
 	 * the near future.
 	 */
-	dontneed = 4,
+	export const dontneed = 4;
 
 	/**
 	 *  The application expects to access the specified data once and then not
 	 * reuse it thereafter.
 	 */
-	noreuse = 5
+	export const noreuse = 5;
 }
 
 export type filesize = u64;
@@ -899,7 +899,7 @@ export type PreStartDir = {
 
 export namespace PreStartDir {
 	export function create(ptr: ptr, memory: DataView): PreStartDir {
-		memory.setUint8(ptr, PreOpenType.dir);
+		memory.setUint8(ptr, preopentype.dir);
 		return {
 			set len(value: size) {
 				memory.setUint32(ptr + 4, value, true);
