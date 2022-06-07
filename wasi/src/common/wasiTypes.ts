@@ -8,7 +8,7 @@
 // We need to clarify how to license them. I was not able to find a license file
 // in the https://github.com/WebAssembly/WASI repository
 
-import { ptr, size, u16, u32, u64, u8 } from './baseTypes';
+import { ptr, size, u16, u32, u64, s64, u8 } from './baseTypes';
 
 export type wasi_file_handle = u32;
 
@@ -887,6 +887,32 @@ export namespace filestat {
 }
 
 /**
+ * Relative offset within a file.
+ */
+export type filedelta = s64;
+
+/**
+ * The position relative to which to set the offset of the file descriptor.
+ */
+export type whence = u8;
+export namespace whence {
+	/**
+	 * Seek relative to start-of-file.
+	 */
+	export const set  = 0;
+
+	/**
+	 * Seek relative to current position.
+	 */
+	export const cur = 1;
+
+	/**
+	 * Seek relative to end-of-file.
+	 */
+	export const end = 2;
+}
+
+/**
  * The contents of a $prestat when type is `PreOpenType.dir`
  */
 export type PreStartDir = {
@@ -909,30 +935,83 @@ export namespace PreStartDir {
 }
 
 /**
- * C IO vector
+ * A region of memory for scatter/gather reads.
  */
-export type Ciovec = {
+export type iovec = {
 	/**
-	 * Pointer in memory where the data is stored
+	 * The address of the buffer to be filled.
 	 */
 	get buf(): ptr;
 
 	/**
-	 * The length of the data.
+	 * The length of the buffer to be filled.
 	 */
-	get bufLen(): u32;
+	get buf_len(): u32;
 };
 
-export namespace Ciovec {
+export namespace iovec {
+
+	/**
+	 * The size in bytes.
+	 */
 	export const size: 8 = 8;
-	export function create(ptr: ptr, memory: DataView): Ciovec {
+
+	const offsets = {
+		buf: 0,
+		buf_len: 4,
+	};
+
+	export function create(ptr: ptr, memory: DataView): ciovec {
 		return {
 			get buf(): ptr {
-				return memory.getUint32(ptr, true);
+				return memory.getUint32(ptr + offsets.buf, true);
 			},
-			get bufLen(): u32 {
-				return memory.getUint32(ptr + 4, true);
+			get buf_len(): u32 {
+				return memory.getUint32(ptr + offsets.buf_len, true);
 			}
 		};
 	}
 }
+
+export type iovec_array = iovec[];
+
+/**
+ * A region of memory for scatter/gather writes.
+ */
+export type ciovec = {
+	/**
+	 * The address of the buffer to be written.
+	 */
+	get buf(): ptr;
+
+	/**
+	 * The length of the buffer to be written.
+	 */
+	get buf_len(): u32;
+};
+
+export namespace ciovec {
+
+	/**
+	 * The size in bytes.
+	 */
+	export const size: 8 = 8;
+
+	const offsets = {
+		buf: 0,
+		buf_len: 4,
+	};
+
+	export function create(ptr: ptr, memory: DataView): ciovec {
+		return {
+			get buf(): ptr {
+				return memory.getUint32(ptr + offsets.buf, true);
+			},
+			get buf_len(): u32 {
+				return memory.getUint32(ptr + offsets.buf_len, true);
+			}
+		};
+	}
+}
+
+export type ciovec_array = iovec[];

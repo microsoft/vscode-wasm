@@ -11,7 +11,34 @@ export type Message = {
 	params?: Params;
 };
 
-type ArrayTypes = Uint8Array | Int8Array | Uint16Array | Int32Array | Uint32Array | Int32Array | BigUint64Array | BigInt64Array;
+type TypedArray = Uint8Array | Int8Array | Uint16Array | Int16Array | Uint32Array | Int32Array | BigUint64Array | BigInt64Array;
+namespace TypedArray {
+	export function is(value: any): value is TypedArray {
+		return value instanceof Uint8Array || value instanceof Int8Array || value instanceof Uint16Array || value instanceof Int16Array ||
+			value instanceof Uint32Array || value instanceof Int32Array || value instanceof BigUint64Array || value instanceof BigInt64Array;
+	}
+	export function set(sharedArrayBuffer: SharedArrayBuffer, offset: number, data: TypedArray): void {
+		if (data instanceof Uint8Array) {
+			new Uint8Array(sharedArrayBuffer, offset, data.length).set(data);
+		} else if (data instanceof Int8Array) {
+			new Int8Array(sharedArrayBuffer, offset, data.length).set(data);
+		} else if (data instanceof Uint16Array) {
+			new Uint16Array(sharedArrayBuffer, offset, data.length).set(data);
+		} else if (data instanceof Int16Array) {
+			new Int16Array(sharedArrayBuffer, offset, data.length).set(data);
+		} else if (data instanceof Uint32Array) {
+			new Uint32Array(sharedArrayBuffer, offset, data.length).set(data);
+		} else if (data instanceof Int32Array) {
+			new Int32Array(sharedArrayBuffer, offset, data.length).set(data);
+		} else if (data instanceof BigUint64Array) {
+			new BigUint64Array(sharedArrayBuffer, offset, data.length).set(data);
+		} else if (data instanceof BigInt64Array) {
+			new BigInt64Array(sharedArrayBuffer, offset, data.length).set(data);
+		} else {
+			throw new Error(`Unknown type array type`);
+		}
+	}
+}
 
 export type Params = {
 	[key: string]: null | undefined | number | boolean | string | object | Uint8Array;
@@ -49,7 +76,7 @@ export type MessageType = {
 };
 
 export type RequestType = MessageType & ({
-	result?: ArrayTypes | object | null;
+	result?: TypedArray | object | null;
 });
 
 
@@ -325,11 +352,16 @@ export class Int64Result {
 }
 
 export class VariableResult<T> {
-	public static readonly kind: 8 = 8;
-	public constructor() {
+	public static readonly kind: 9 = 9;
+	#mode: 'binary' | 'json';
+	public constructor(mode: 'binary' | 'json') {
+		this.#mode = mode;
 	}
 	get kind() {
 		return VariableResult.kind;
+	}
+	get mode() {
+		return this.#mode;
 	}
 	get byteLength(): number {
 		return 0;
@@ -340,13 +372,11 @@ export class VariableResult<T> {
 	getPadding(offset: number): number  {
 		return 0;
 	}
-	createResultArray(sharedArrayBuffer: SharedArrayBuffer, offset: number): Uint8Array {
-		return new Uint8Array(sharedArrayBuffer, offset, 0);
-	}
 }
 
+export type TypedResult = Uint8Result | Int8Result | Uint16Result | Int16Result | Uint32Result | Int32Result | Uint64Result | Int64Result;
 namespace TypedResult {
-	export function fromByteLength(kind: number, byteLength: number) {
+	export function fromByteLength(kind: number, byteLength: number): TypedResult {
 		switch (kind) {
 			case Uint8Result.kind:
 				return Uint8Result.fromByteLength(byteLength);
@@ -360,6 +390,10 @@ namespace TypedResult {
 				return Uint32Result.fromByteLength(byteLength);
 			case Int32Result.kind:
 				return Int32Result.fromByteLength(byteLength);
+			case Uint64Result.kind:
+				return Uint64Result.fromByteLength(byteLength);
+			case Int64Result.kind:
+				return Int64Result.fromByteLength(byteLength);
 			case VariableResult.kind:
 				// send another request to get the result.
 				throw new Error(`No result array for variable results result type.`);
@@ -376,11 +410,12 @@ namespace TypedResult {
 	}
 }
 
-type ResultType = NoResult | Uint8Result | Uint16Result | Uint32Result | Int8Result | Int16Result | Int32Result | VariableResult<object>;
+
+type ResultType = NoResult | Uint8Result  | Int8Result | Uint16Result | Int16Result | Uint32Result | Int32Result | Uint64Result | Int64Result | VariableResult<object | TypedArray>;
 namespace ResultType {
 	export function is(value: any): value is ResultType {
-		return value instanceof Uint8Result || value instanceof Uint16Result || value instanceof Uint32Result ||
-			value instanceof Int8Result || value instanceof Int16Result || value instanceof Int32Result ||
+		return value instanceof Uint8Result || value instanceof Int8Result || value instanceof Uint16Result || value instanceof Int16Result ||
+			value instanceof Uint32Result || value instanceof Int32Result || value instanceof Uint64Result || value instanceof Int64Result ||
 			value instanceof VariableResult || value instanceof NoResult;
 	}
 }
@@ -392,7 +427,7 @@ type MethodKeys<Messages extends MessageType> = {
 	[M in Messages as M['method']]: M['method'];
 };
 
-type LengthType<T extends ArrayTypes> =
+type LengthType<T extends TypedArray> =
 	T extends Uint8Array
 		? Uint8Result
 		: T extends Int8Array
@@ -415,14 +450,14 @@ type _SendRequestSignatures<Requests extends RequestType> = UnionToIntersection<
  	[R in Requests as R['method']]: R['params'] extends null | undefined
 	 	? R['result'] extends null | undefined
 			? (method: R['method']) => { errno: number }
-			: R['result'] extends ArrayTypes
+			: R['result'] extends TypedArray
 				? (method: R['method'], resultKind: LengthType<R['result']>) => { errno: 0; data: R['result'] } | { errno: number }
 				: R['result'] extends VariableResult<infer T>
 					? (method: R['method'], resultKind: VariableResult<T>) => { errno: 0; data: T } | { errno: number }
 					: never
 		: R['result'] extends null | undefined
 			? (method: R['method'], params: R['params']) => { errno: number }
-			: R['result'] extends ArrayTypes
+			: R['result'] extends TypedArray
 				? (method: R['method'], params: R['params'], resultKind: LengthType<R['result']>) => { errno: 0; data: R['result'] } | { errno: number }
 				: R['result'] extends VariableResult<infer T>
 					? (method: R['method'], params: R['params'], resultKind: VariableResult<T>) => { errno: 0; data: T } | { errno: number }
@@ -545,7 +580,7 @@ export abstract class BaseClientConnection<Requests extends RequestType | undefi
 					return { errno: 0 };
 				case VariableResult.kind:
 					const lazyResultLength = header[HeaderIndex.resultByteLength];
-					if (resultByteLength === 0) {
+					if (lazyResultLength === 0) {
 						return { errno: 0 };
 					}
 					const lazyResult = this._sendRequest('$/fetchResult', { resultId: id }, Uint8Result.fromLength(lazyResultLength));
@@ -554,7 +589,9 @@ export abstract class BaseClientConnection<Requests extends RequestType | undefi
 					}
 					if (RequestResult.hasData(lazyResult)) {
 						try {
-							const data = JSON.parse(this.textDecoder.decode(lazyResult.data as Uint8Array));
+							const data = resultType.mode === 'binary'
+								? lazyResult.data
+								: JSON.parse(this.textDecoder.decode(lazyResult.data as Uint8Array));
 							return { errno: 0, data };
 						} catch (error) {
 							return { errno: - 5};
@@ -581,14 +618,14 @@ type _HandleRequestSignatures<Requests extends RequestType> = UnionToIntersectio
  	[R in Requests as R['method']]: R['params'] extends null | undefined
 		? R['result'] extends null | undefined
 			? (method: R['method'], handler: () => { errno: number } | Promise<{ errno: number }>) => Disposable
-			: R['result'] extends ArrayTypes
+			: R['result'] extends TypedArray
 				? (method: R['method'], handler: (resultBuffer: R['result']) => { errno: number } | Promise<{ errno: number }>) => Disposable
 				: R['result'] extends VariableResult<infer T>
 					? (method: R['method'], handler: () => { errno: number } | { errno: 0; data: T } | Promise<{ errno: number }| { errno: 0; data: T }>) => Disposable
 					: never
 		: R['result'] extends null | undefined
 			? (method: R['method'], handler: (params: R['params']) => { errno: number } | Promise<{ errno: number }>) => Disposable
-			: R['result'] extends ArrayTypes
+			: R['result'] extends TypedArray
 				? (method: R['method'], handler: (params: R['params'], resultBuffer: R['result']) => { errno: number } | Promise<{ errno: number }>) => Disposable
 				: R['result'] extends VariableResult<infer T>
 					? (method: R['method'], handler: (params: R['params']) => { errno: number } | { errno: 0; data: T } | Promise<{ errno: number }| { errno: 0; data: T }>) => Disposable
@@ -606,7 +643,7 @@ export namespace RequestResult {
 }
 
 type RequestHandler = {
-	(arg1?: Params | ArrayTypes, arg2?: ArrayTypes): RequestResult | Promise<RequestResult>;
+	(arg1?: Params | TypedArray, arg2?: TypedArray): RequestResult | Promise<RequestResult>;
 };
 
 export abstract class BaseServiceConnection<RequestHandlers extends RequestType | undefined = undefined, Ready extends {} | undefined = undefined> {
@@ -614,7 +651,7 @@ export abstract class BaseServiceConnection<RequestHandlers extends RequestType 
 	private readonly textDecoder: RAL.TextDecoder;
 	private readonly textEncoder: RAL.TextEncoder;
 	private readonly requestHandlers: Map<string, RequestHandler>;
-	private readonly requestResults: Map<number, Uint8Array>;
+	private readonly requestResults: Map<number, TypedArray>;
 
 	constructor() {
 		this.textDecoder = RAL().TextDecoder.create();
@@ -646,7 +683,7 @@ export abstract class BaseServiceConnection<RequestHandlers extends RequestType 
 					const resultOffset = header[HeaderIndex.resultOffset];
 					const resultByteLength = header[HeaderIndex.resultByteLength];
 					if (result !== undefined && result.byteLength === resultByteLength) {
-						(new Uint8Array(sharedArrayBuffer, resultOffset, resultByteLength)).set(result);
+						TypedArray.set(sharedArrayBuffer, resultOffset, result);
 						header[HeaderIndex.errno] = 0;
 					} else {
 						header[HeaderIndex.errno] = - 4;
@@ -679,7 +716,9 @@ export abstract class BaseServiceConnection<RequestHandlers extends RequestType 
 								if (requestResult.errno === 0) {
 									if (RequestResult.hasData(requestResult)) {
 										const data = requestResult.data;
-										const buffer = this.textEncoder.encode(JSON.stringify(data, undefined, 0));
+										const buffer = TypedArray.is(data)
+											? data
+											: this.textEncoder.encode(JSON.stringify(data, undefined, 0));
 										header[HeaderIndex.resultByteLength] = buffer.byteLength;
 										this.requestResults.set(message.id, buffer);
 									}
@@ -688,7 +727,7 @@ export abstract class BaseServiceConnection<RequestHandlers extends RequestType 
 							default:
 								const typedResult = TypedResult.fromByteLength(resultKind, resultByteLength);
 								const resultBuffer = typedResult.createResultArray(sharedArrayBuffer, resultOffset);
-								handlerResult = message.params !== undefined ? handler(message.params, resultBuffer as ArrayTypes) : handler(resultBuffer as ArrayTypes);
+								handlerResult = message.params !== undefined ? handler(message.params, resultBuffer as TypedArray) : handler(resultBuffer as TypedArray);
 								requestResult = handlerResult instanceof Promise ? await handlerResult : handlerResult;
 								header[HeaderIndex.errno] = requestResult.errno;
 						}

@@ -16,7 +16,7 @@ import { ApiClient } from 'vscode-sync-api-client';
 import { ptr, size, u32 } from './baseTypes';
 import {
 	wasi_file_handle, errno, lookupflags, oflags, rights, fdflags, dircookie,
-	PreStartDir, Ciovec, filetype, Rights, filesize, advise
+	PreStartDir, filetype, Rights, filesize, advise, filedelta, whence, filestat, iovec, ciovec
 } from './wasiTypes';
 import { code2Wasi } from './converter';
 
@@ -41,6 +41,7 @@ export interface WASI {
 	path_open(fd: wasi_file_handle, dirflags: lookupflags, path: ptr, pathLen: size, oflags: oflags, fs_rights_base: rights, fs_rights_inheriting: rights, fdflags: fdflags, fd_ptr: ptr): errno;
 	fd_advise(fd: wasi_file_handle, offset: filesize, length: filesize, advise: advise): errno;
 	fd_readdir(fd: wasi_file_handle, buf_ptr: ptr, buf_len: size, cookie: dircookie, bufEndPtr: ptr): errno;
+	fd_seek(fd: wasi_file_handle, offset: filedelta, whence: whence, newOffsetPtr: ptr): errno;
 	fd_read(fd: wasi_file_handle, iovs_ptr: ptr, iovsLen: u32, bytesRead_ptr: ptr): errno;
 	fd_write(fd: wasi_file_handle, iovs_ptr: ptr, iovsLen: u32, bytesWritten_ptr: ptr): errno;
 	fd_close(fd: wasi_file_handle): errno;
@@ -72,6 +73,45 @@ export type Options = {
 	 */
 	env?: Environment;
 };
+
+namespace INodes {
+	const mappings: Map<string, bigint> = new Map();
+	let inodeCounter: bigint = 1n;
+
+	export function get(uri: URI): bigint {
+		let result = mappings.get(uri.toString());
+		if (result === undefined) {
+			result = inodeCounter++;
+			mappings.set(uri.toString(), result);
+		}
+		return result;
+	}
+}
+
+namespace DeviceIds {
+	const deviceIds: Map<string, bigint> = new Map();
+	let deviceIdCounter: bigint = 1n;
+
+	export function get(uri: URI): bigint {
+		const scheme = uri.scheme;
+		let result = deviceIds.get(scheme);
+		if (result === undefined) {
+			result = deviceIdCounter++;
+			deviceIds.set(scheme, result);
+		}
+		return result;
+	}
+}
+
+namespace FileHandles {
+	let fileHandleCounter: number = 3;
+
+	export function next(): number {
+	// According to the spec these handles shouldn't monotonically increase.
+	// But since these are not real file handles I keep it that way.
+		return fileHandleCounter++;
+	}
+}
 
 class FileHandle {
 	/**
@@ -143,11 +183,21 @@ class FileHandle {
 class File  {
 
 	public readonly fd: wasi_file_handle;
-	#content: Uint8Array;
+	readonly #content: Uint8Array;
+	#cursor: number;
+
 
 	constructor(fd: wasi_file_handle, content: Uint8Array) {
 		this.fd = fd;
 		this.#content = content;
+		this.#cursor = 0;
+	}
+
+	public read(bytesToRead: number): Uint8Array {
+		const realRead = Math.min(bytesToRead, this.#content.byteLength - this.#cursor);
+		const result = this.#content.subarray(this.#cursor, this.#cursor + realRead);
+		this.#cursor = this.#cursor + realRead;
+		return result;
 	}
 }
 
@@ -186,11 +236,11 @@ export namespace WASI {
 		$options = options;
 
 		if ($options.workspaceFolders.length === 1) {
-			const workspace = new FileHandle(getNextFileHandle(), filetype.directory, '/workspace', { base: Rights.DirectoryBase, inheriting: Rights.DirectoryInheriting}, { fd: undefined, uri: $options.workspaceFolders[0].uri }, true);
+			const workspace = new FileHandle(FileHandles.next(), filetype.directory, '/workspace', { base: Rights.DirectoryBase, inheriting: Rights.DirectoryInheriting}, { fd: undefined, uri: $options.workspaceFolders[0].uri }, true);
 			$fileHandles.set(workspace.fd, workspace);
  		} else if ($options.workspaceFolders.length > 1) {
 			for (const folder of $options.workspaceFolders) {
-				const f = new FileHandle(getNextFileHandle(), filetype.directory, `/workspace/${folder.name}`, { base: Rights.DirectoryBase, inheriting: Rights.DirectoryInheriting}, {fd: undefined, uri: folder.uri }, true);
+				const f = new FileHandle(FileHandles.next(), filetype.directory, `/workspace/${folder.name}`, { base: Rights.DirectoryBase, inheriting: Rights.DirectoryInheriting}, {fd: undefined, uri: folder.uri }, true);
 				$fileHandles.set(f.fd, f);
 			}
 		}
@@ -207,6 +257,7 @@ export namespace WASI {
 			path_open: path_open,
 			fd_advise: fd_advise,
 			fd_readdir: fd_readdir,
+			fd_seek: fd_seek,
 			fd_write: fd_write,
 			fd_read: fd_read,
 			fd_close: fd_close,
@@ -296,9 +347,9 @@ export namespace WASI {
 
 	function fd_prestat_dir_name(fd: wasi_file_handle, pathPtr: ptr, pathLen: size): errno {
 		try {
-			const fileHandleInfo = getFileHandle(fd);
+			const fileHandle = getFileHandle(fd);
 			const memory = new Uint8Array(memoryRaw(), pathPtr);
-			const bytes = $encoder.encode(fileHandleInfo.path);
+			const bytes = $encoder.encode(fileHandle.path);
 			if (bytes.byteLength !== pathLen) {
 				errno.badmsg;
 			}
@@ -313,7 +364,30 @@ export namespace WASI {
 	}
 
 	function fd_filestat_get(fd: wasi_file_handle, bufPtr: ptr): errno {
-		return errno.success;
+		try {
+			const fileHandle = getFileHandle(fd);
+			fileHandle.assertBaseRight(Rights.fd_filestat_get);
+			const uri = fileHandle.real.uri;
+			const vStat = $apiClient.fileSystem.stat(uri);
+			if (vStat === undefined) {
+				return errno.perm;
+			}
+			const memory = memoryView();
+			const fileStat = filestat.create(bufPtr, memory);
+			fileStat.dev = DeviceIds.get(uri);
+			fileStat.ino = INodes.get(uri);
+			fileStat.filetype = code2Wasi.asFileType(vStat.type);
+			fileStat.nlink = 0n;
+			fileStat.size = BigInt(vStat.size);
+			fileStat.ctim = BigInt(vStat.ctime);
+			fileStat.mtim = BigInt(vStat.mtime);
+			return errno.success;
+		} catch (error) {
+			if (error instanceof WasiError) {
+				return error.errno;
+			}
+			return errno.perm;
+		}
 	}
 
 	function path_open(fd: wasi_file_handle, dirflags: lookupflags, path: ptr, pathLen: size, oflags: oflags, fs_rights_base: rights, fs_rights_inheriting: rights, fdflags: fdflags, fd_ptr: ptr): errno {
@@ -333,7 +407,7 @@ export namespace WASI {
 			// or a directory. Since we were able to stat the file we create
 			// a file handle info for it and lazy get the file content on read.
 			const fileHandleInfo = new FileHandle(
-				getNextFileHandle(), filetype, name,
+				FileHandles.next(), filetype, name,
 				{ base: fs_rights_base, inheriting: fs_rights_inheriting },
 				{ fd: undefined, uri: realUri }
 			);
@@ -356,10 +430,14 @@ export namespace WASI {
 		return errno.success;
 	}
 
+	function fd_seek(fd: wasi_file_handle, offset: filedelta, whence: whence, newOffsetPtr: ptr): errno {
+		return errno.success;
+	}
+
 	function fd_write(fd: wasi_file_handle, iovs_ptr: ptr, iovsLen: u32, bytesWritten_ptr: ptr): errno {
 		if (fd === WASI_STDOUT_FD) {
 			let written = 0;
-			const buffers = readIOvs(iovs_ptr, iovsLen);
+			const buffers = read_ciovs(iovs_ptr, iovsLen);
 			for (const buffer of buffers) {
 				$apiClient.terminal.write(buffer);
 				written += buffer.length;
@@ -375,7 +453,7 @@ export namespace WASI {
 		const memory = memoryView();
 		if (fd === WASI_STDIN_FD) {
 			let bytesRead = 0;
-			const buffers = readIOvs(iovs_ptr, iovsLen);
+			const buffers = read_iovs(iovs_ptr, iovsLen);
 			for (const buffer of buffers) {
 				const result = $apiClient.terminal.read(buffer.byteLength);
 				if (result === undefined) {
@@ -399,10 +477,14 @@ export namespace WASI {
 			file = new File(fileHandle.fd, content);
 			$files.set(fileHandle.fd, file);
 		}
-		const buffers = readIOvs(iovs_ptr, iovsLen);
+		const buffers = read_iovs(iovs_ptr, iovsLen);
+		let bytesRead = 0;
 		for (const buffer of buffers) {
-
+			const result = file.read(buffer.byteLength);
+			bytesRead = result.byteLength;
+			buffer.set(result);
 		}
+		memory.setUint32(bytesRead_ptr, bytesRead, true);
 		return errno.success;
 	}
 
@@ -414,17 +496,30 @@ export namespace WASI {
 		return errno.success;
 	}
 
-	function readIOvs (iovs: ptr, iovsLen: u32): Uint8Array[] {
+	function read_ciovs (iovs: ptr, iovsLen: u32): Uint8Array[] {
 		const memory = memoryView();
 		const buffer = memoryRaw();
 
 		const buffers: Uint8Array[] = [];
 		let ptr: ptr = iovs;
 		for (let i = 0; i < iovsLen; i++) {
-			const ciovec = Ciovec.create(ptr, memory);
-			buffers.push(new Uint8Array(buffer, ciovec.buf, ciovec.bufLen));
-			ptr += Ciovec.size;
+			const vec = ciovec.create(ptr, memory);
+			buffers.push(new Uint8Array(buffer, vec.buf, vec.buf_len));
+			ptr += ciovec.size;
+		}
+		return buffers;
+	}
 
+	function read_iovs (iovs: ptr, iovsLen: u32): Uint8Array[] {
+		const memory = memoryView();
+		const buffer = memoryRaw();
+
+		const buffers: Uint8Array[] = [];
+		let ptr: ptr = iovs;
+		for (let i = 0; i < iovsLen; i++) {
+			const vec = iovec.create(ptr, memory);
+			buffers.push(new Uint8Array(buffer, vec.buf, vec.buf_len));
+			ptr += iovec.size;
 		}
 		return buffers;
 	}
@@ -458,12 +553,5 @@ export namespace WASI {
 	function getRealUri(parentInfo: FileHandle, name: string): URI {
 		const real = parentInfo.real.uri;
 		return real.with({ path: `${real.path}/${name}`});
-	}
-
-	let $fileHandleCounter: number = 3;
-	function getNextFileHandle(): number {
-	// According to the spec these handles shouldn't monotonically increase.
-	// But since these are not real file handles I keep it that way.
-		return $fileHandleCounter++;
 	}
 }

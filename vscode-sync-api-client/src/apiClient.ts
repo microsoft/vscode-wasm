@@ -76,7 +76,7 @@ class FileSystemImpl<Ready extends {} | undefined = undefined> implements FileSy
 	}
 
 	public read(uri: URI): Uint8Array | undefined {
-		const requestResult = this.connection.sendRequest('fileSystem/readFile', { uri: uri.toJSON() }, new VariableResult<Uint8Array>);
+		const requestResult = this.connection.sendRequest('fileSystem/readFile', { uri: uri.toJSON() }, new VariableResult<Uint8Array>('binary'));
 		if (RequestResult.hasData(requestResult)) {
 			return requestResult.data;
 		}
