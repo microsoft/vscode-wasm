@@ -13,7 +13,7 @@ import { ptr, size, u16, u32, u64, s64, u8 } from './baseTypes';
 export type wasi_file_handle = u32;
 
 export type errno = u16;
-export namespace errno {
+export namespace Errno {
 	/**
 	 * No error occurred. System call completed successfully.
 	 */
@@ -619,7 +619,7 @@ export namespace Rights {
 export type dircookie = u64;
 
 export type fdflags = u16;
-export namespace fdflags {
+export namespace Fdflags {
 
 	/**
 	 * Append mode: Data written to the file is always appended to the file's
@@ -652,7 +652,7 @@ export namespace fdflags {
 }
 
 export type lookupflags = u32;
-export namespace lookupflags {
+export namespace Lookupflags {
 	/**
 	 * As long as the resolved path corresponds to a symbolic link, it is
 	 * expanded.
@@ -661,7 +661,7 @@ export namespace lookupflags {
 }
 
 export type oflags = u16;
-export namespace oflags {
+export namespace Oflags {
 
 	/**
 	 * Create file if it does not exist.
@@ -685,7 +685,7 @@ export namespace oflags {
 }
 
 export type clockid = u32;
-export namespace clockid {
+export namespace Clockid {
 	/**
 	 * The clock measuring real time. Time value zero corresponds with
 	 * 1970-01-01T00:00:00Z.
@@ -712,7 +712,7 @@ export namespace clockid {
 }
 
 export type preopentype = u8;
-export namespace preopentype {
+export namespace Preopentype {
 
 	/**
 	 * A pre-opened directory.
@@ -721,7 +721,7 @@ export namespace preopentype {
 }
 
 export type filetype = u8;
-export namespace filetype {
+export namespace Filetype {
 
 	/**
 	 * The type of the file descriptor or file is unknown or is different from
@@ -769,7 +769,7 @@ export type advise = u8;
 /**
  * File or memory access pattern advisory information.
  */
-export namespace advice {
+export namespace Advice {
 	/**
 	 * The application has no advice to give on its behavior with respect to
 	 * the specified data.
@@ -855,7 +855,7 @@ export type filestat = {
 	set ctim(value: timestamp);
 };
 
-export namespace filestat {
+export namespace Filestat {
 	/**
 	 * The size in bytes.
 	 */
@@ -895,7 +895,7 @@ export type filedelta = s64;
  * The position relative to which to set the offset of the file descriptor.
  */
 export type whence = u8;
-export namespace whence {
+export namespace Whence {
 	/**
 	 * Seek relative to start-of-file.
 	 */
@@ -925,7 +925,7 @@ export type PreStartDir = {
 
 export namespace PreStartDir {
 	export function create(ptr: ptr, memory: DataView): PreStartDir {
-		memory.setUint8(ptr, preopentype.dir);
+		memory.setUint8(ptr, Preopentype.dir);
 		return {
 			set len(value: size) {
 				memory.setUint32(ptr + 4, value, true);
@@ -949,7 +949,7 @@ export type iovec = {
 	get buf_len(): u32;
 };
 
-export namespace iovec {
+export namespace Iovec {
 
 	/**
 	 * The size in bytes.
@@ -990,7 +990,7 @@ export type ciovec = {
 	get buf_len(): u32;
 };
 
-export namespace ciovec {
+export namespace Ciovec {
 
 	/**
 	 * The size in bytes.

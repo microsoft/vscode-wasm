@@ -10,13 +10,13 @@ export namespace code2Wasi {
 	export function asFileType(fileType: code.FileType): wasi.filetype {
 		switch (fileType) {
 			case code.FileType.File:
-				return wasi.filetype.regular_file;
+				return wasi.Filetype.regular_file;
 			case code.FileType.Directory:
-				return wasi.filetype.directory;
+				return wasi.Filetype.directory;
 			case code.FileType.SymbolicLink:
-				return wasi.filetype.symbolic_link;
+				return wasi.Filetype.symbolic_link;
 			default:
-				return wasi.filetype.unknown;
+				return wasi.Filetype.unknown;
 		}
 	}
 }
