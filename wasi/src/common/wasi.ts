@@ -215,6 +215,18 @@ export interface WASI {
 	fd_prestat_dir_name(fd: wasi_file_handle, pathPtr: ptr, pathLen: size): errno;
 
 	/**
+	 * Write to a file descriptor, without using and updating the file
+	 * descriptor's offset. Note: This is similar to pwritev in POSIX.
+	 *
+	 * @param fd
+	 * @param ciovs_ptr List of scatter/gather vectors from which to retrieve data.
+	 * @param ciovs_len The length of the iovs.
+	 * @param offset The offset within the file at which to write.
+	 * @param bytesWritten_ptr A memory location to store the bytes written.
+	 */
+	fd_pwrite(fd: wasi_file_handle, ciovs_ptr: ptr, ciovs_len: u32, offset: filesize, bytesWritten_ptr: ptr): errno;
+
+	/**
 	 * Read from a file descriptor. Note: This is similar to readv in POSIX.
 	 *
 	 * @param fd The file descriptor.
@@ -258,11 +270,11 @@ export interface WASI {
 	 * Write to a file descriptor. Note: This is similar to writev in POSIX.
 	 *
 	 * @param fd The file descriptor.
-	 * @param iovs_ptr List of scatter/gather vectors from which to retrieve data.
-	 * @param iovs_len The length of the iovs.
+	 * @param ciovs_ptr List of scatter/gather vectors from which to retrieve data.
+	 * @param ciovs_len The length of the iovs.
 	 * @param bytesWritten_ptr A memory location to store the bytes written.
 	 */
-	fd_write(fd: wasi_file_handle, iovs_ptr: ptr, iovs_len: u32, bytesWritten_ptr: ptr): errno;
+	fd_write(fd: wasi_file_handle, ciovs_ptr: ptr, ciovs_len: u32, bytesWritten_ptr: ptr): errno;
 
 	/**
 	 * Open a file or directory. The returned file descriptor is not guaranteed
@@ -519,6 +531,20 @@ class File  {
 		return this.contentWriter(this.fileHandle.real.uri, this._content);
 	}
 
+	public pwrite(offset: number, bytes: Uint8Array): { errno: errno; bytesWritten: number } {
+		let content = this.content;
+		const total = offset + bytes.byteLength;
+		// Make the file bigger
+		if (total > content.byteLength) {
+			const newContent = new Uint8Array(total);
+			newContent.set(content);
+			this._content = newContent;
+			content = newContent;
+		}
+		content.set(bytes, offset);
+		return { errno: this.write(), bytesWritten: bytes.length };
+	}
+
 	public setFdFlags(fdflags: fdflags): void {
 		this.fdFlags = fdflags;
 	}
@@ -605,6 +631,7 @@ export namespace WASI {
 			fd_pread: fd_pread,
 			fd_prestat_get: fd_prestat_get,
 			fd_prestat_dir_name: fd_prestat_dir_name,
+			fd_pwrite: fd_pwrite,
 			fd_read: fd_read,
 			fd_readdir: fd_readdir,
 			fd_seek: fd_seek,
@@ -878,7 +905,7 @@ export namespace WASI {
 			let bytesRead = 0;
 			for (const buffer of buffers) {
 				const result = file.pread(BigInts.asNumber(offset), buffer.byteLength);
-				bytesRead = result.byteLength;
+				bytesRead = bytesRead + result.byteLength;
 				buffer.set(result);
 			}
 			memoryView().setUint32(bytesRead_ptr, bytesRead, true);
@@ -918,6 +945,30 @@ export namespace WASI {
 				Errno.badmsg;
 			}
 			memory.set(bytes);
+			return Errno.success;
+		} catch (error) {
+			if (error instanceof WasiError) {
+				return error.errno;
+			}
+			return Errno.perm;
+		}
+	}
+
+	function fd_pwrite(fd: wasi_file_handle, ciovs_ptr: ptr, ciovs_len: u32, offset: filesize, bytesWritten_ptr: ptr): errno {
+		try {
+			const fileHandle = getFileHandle(fd);
+			fileHandle.assertBaseRight(Rights.fd_write);
+			const file = getOrCreateFile(fileHandle);
+			const buffers = read_ciovs(ciovs_ptr, ciovs_len);
+			let bytesWritten = 0;
+			for (const buffer of buffers) {
+				const result = file.pwrite(BigInts.asNumber(offset), buffer);
+				if (result.errno !== Errno.success) {
+					return result.errno;
+				}
+				bytesWritten += result.bytesWritten;
+			}
+			memoryView().setUint32(bytesWritten_ptr, bytesWritten, true);
 			return Errno.success;
 		} catch (error) {
 			if (error instanceof WasiError) {
@@ -991,11 +1042,11 @@ export namespace WASI {
 		}
 	}
 
-	function fd_write(fd: wasi_file_handle, iovs_ptr: ptr, iovs_len: u32, bytesWritten_ptr: ptr): errno {
+	function fd_write(fd: wasi_file_handle, ciovs_ptr: ptr, ciovs_len: u32, bytesWritten_ptr: ptr): errno {
 		try {
 			if (fd === WASI_STDOUT_FD) {
 				let written = 0;
-				const buffers = read_ciovs(iovs_ptr, iovs_len);
+				const buffers = read_ciovs(ciovs_ptr, ciovs_len);
 				for (const buffer of buffers) {
 					$apiClient.terminal.write(buffer);
 					written += buffer.length;
