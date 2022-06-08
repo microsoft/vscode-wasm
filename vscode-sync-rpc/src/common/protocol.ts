@@ -144,6 +144,8 @@ export namespace Types {
 			};
 		}
 	}
+
+	export type DirectoryEntries = [string, Types.FileType][];
 }
 
 export type Requests =
@@ -192,4 +194,13 @@ export type Requests =
 		binary: Uint8Array;
 	};
 	result: null;
+} | {
+	/**
+	 * Read a directory
+	 */
+	method: 'fileSystem/readDirectory';
+	params: {
+		uri: Types.UriComponents;
+	};
+	result: VariableResult<Types.DirectoryEntries>;
 };

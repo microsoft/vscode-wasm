@@ -1092,3 +1092,46 @@ export namespace Ciovec {
 }
 
 export type ciovec_array = iovec[];
+
+export type dirnamlen = u32;
+export type dirent = {
+	/**
+	 * The offset of the next directory entry stored in this directory.
+	 */
+	set d_next(value: dircookie);
+
+	/**
+	 * The serial number of the file referred to by this directory entry.
+	 */
+	set d_ino(value: inode);
+
+	/**
+	 * The length of the name of the directory entry.
+	 */
+	set d_namlen(value: dirnamlen);
+
+	/**
+	 * The type of the file referred to by this directory entry.
+	 */
+	set d_type(value: filetype);
+};
+
+export namespace Dirent {
+	export const size = 24 as const;
+
+	const offsets = {
+		d_next: 0,
+		d_ino: 8,
+		d_namlen: 16,
+		d_type: 20
+	};
+
+	export function create(ptr: ptr, memory: DataView): dirent {
+		return {
+			set d_next(value: dircookie) { memory.setBigUint64(ptr + offsets.d_next, value, true); },
+			set d_ino(value: inode) { memory.setBigUint64(ptr + offsets.d_ino, value, true); },
+			set d_namlen(value: dirnamlen) { memory.setUint32(ptr + offsets.d_namlen, value, true); },
+			set d_type(value: filetype) { memory.setUint8(ptr + offsets.d_type, value); }
+		};
+	}
+}

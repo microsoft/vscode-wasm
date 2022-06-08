@@ -19,6 +19,7 @@ export interface FileSystem {
 	stat(uri: URI): FileStat | number;
 	read(uri: URI): Uint8Array | number;
 	write(uri: URI, content: Uint8Array): number;
+	readDirectory(uri: URI): Types.DirectoryEntries | number;
 }
 
 type ApiClientConnection<Ready extends {} | undefined = undefined> = BaseClientConnection<Requests, Ready>;
@@ -87,6 +88,11 @@ class FileSystemImpl<Ready extends {} | undefined = undefined> implements FileSy
 	public write(uri: URI, content: Uint8Array): number {
 		const requestResult = this.connection.sendRequest('fileSystem/writeFile', { uri: uri.toJSON(), binary: content });
 		return requestResult.errno;
+	}
+
+	public readDirectory(uri: URI): Types.DirectoryEntries | number {
+		const requestResult = this.connection.sendRequest('fileSystem/readDirectory', { uri: uri.toJSON() }, new VariableResult<Types.DirectoryEntries>('json'));
+		return RequestResult.hasData(requestResult) ? requestResult.data : requestResult.errno;
 	}
 }
 

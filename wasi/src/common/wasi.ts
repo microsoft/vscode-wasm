@@ -11,7 +11,7 @@
 import RAL from './ral';
 
 import { URI } from 'vscode-uri';
-import { ApiClient, FileType } from 'vscode-sync-api-client';
+import { ApiClient, FileType, Types } from 'vscode-sync-api-client';
 
 import { ptr, size, u32 } from './baseTypes';
 import {
@@ -208,7 +208,7 @@ export interface WASI {
 	 *
 	 * @param fd The file descriptor.
 	 * @param pathPtr A memory location to store the path name.
-	 * @param pathLen The lenght of the path.
+	 * @param pathLen The length of the path.
 	 */
 	fd_prestat_dir_name(fd: wasi_file_handle, pathPtr: ptr, pathLen: size): errno;
 
@@ -589,6 +589,7 @@ export namespace WASI {
 
 	const $fileHandles: Map<wasi_file_handle, FileHandle> = new Map();
 	const $files: Map<wasi_file_handle, File> = new Map();
+	const $directoryEntries: Map<wasi_file_handle, Types.DirectoryEntries> = new Map();
 
 	export function create(name: string, apiClient: ApiClient, options: Options): WASI {
 		$name = name;
@@ -1022,7 +1023,27 @@ export namespace WASI {
 	}
 
 	function fd_readdir(fd: wasi_file_handle, buf_ptr: ptr, buf_len: size, cookie: dircookie, bufEndPtr: ptr): errno {
-		return Errno.success;
+		try {
+			const fileHandle = getFileHandle(fd);
+			fileHandle.assertBaseRight(Rights.fd_readdir);
+			if (cookie === 0n) {
+				const result = $apiClient.fileSystem.readDirectory(fileHandle.real.uri);
+				if (typeof result === 'number') {
+					return code2Wasi.asErrno(result);
+				}
+				$directoryEntries.set(fileHandle.fd, result);
+			}
+			const entries: Types.DirectoryEntries | undefined = $directoryEntries.get(fd);
+			if (entries === undefined) {
+				return Errno.badmsg;
+			}
+			return Errno.success;
+		} catch (error) {
+			if (error instanceof WasiError) {
+				return error.errno;
+			}
+			return Errno.perm;
+		}
 	}
 
 	function fd_seek(fd: wasi_file_handle, _offset: filedelta, whence: whence, newOffsetPtr: ptr): errno {
@@ -1168,6 +1189,8 @@ export namespace WASI {
 		}
 		return result;
 	}
+
+
 
 	function getRealUri(parentInfo: FileHandle, name: string): URI {
 		const real = parentInfo.real.uri;
