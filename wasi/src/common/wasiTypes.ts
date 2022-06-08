@@ -593,7 +593,7 @@ export namespace Rights {
 	export const BlockDeviceInheriting = 0n;
 
 	/**
-	 * Base rights for directories
+	 * Base rights for directories managed in VS Code.
 	 */
 	export const DirectoryBase = path_create_directory | path_create_file | path_open |
 		fd_readdir | path_rename_source | path_rename_target | path_filestat_get |
@@ -601,7 +601,7 @@ export namespace Rights {
 		path_unlink_file;
 
 	/**
-	 * Base rights for files
+	 * Base rights for files managed in VS Code.
 	 */
 	export const FileBase = fd_read | fd_seek | fd_write | fd_filestat_get;
 
@@ -613,7 +613,7 @@ export namespace Rights {
 	/**
 	 * Inheriting rights for files
 	 */
-	export const FileInheriting = 0;
+	export const FileInheriting = 0n;
 }
 
 export type dircookie = u64;
@@ -910,6 +910,55 @@ export namespace Whence {
 	 * Seek relative to end-of-file.
 	 */
 	export const end = 2;
+}
+
+export type fdstat = {
+
+	/**
+	 *  File type.
+	 */
+	set fs_filetype(value: filetype);
+
+	/**
+	 * File descriptor flags.
+	 */
+	set fs_flags(value: fdflags);
+
+	/**
+	 * Rights that apply to this file descriptor.
+	 */
+	set fs_rights_base(value: rights);
+
+	/**
+	 * Maximum set of rights that may be installed on new file descriptors
+	 * that are created through this file descriptor, e.g., through path_open.
+	 */
+	set fs_rights_inheriting(value: rights);
+};
+
+export namespace Fdstat {
+	/**
+	 * The size in bytes.
+	 */
+	export const size = 24;
+
+	const alignment = 8;
+
+	const offsets = {
+		fs_filetype: 0,
+		fs_flags: 2,
+		fs_rights_base: 8,
+		fs_rights_inheriting: 16
+	};
+
+	export function create(ptr: ptr, memory: DataView): fdstat {
+		return {
+			set fs_filetype(value: filetype) { memory.setUint8(ptr + offsets.fs_filetype, value); },
+			set fs_flags(value: fdflags) { memory.setUint16(ptr + offsets.fs_flags, value, true); },
+			set fs_rights_base(value: rights) { memory.setBigUint64(ptr + offsets.fs_rights_base, value, true); },
+			set fs_rights_inheriting(value: rights) { memory.setBigUint64(ptr + offsets.fs_rights_inheriting, value, true); }
+		};
+	}
 }
 
 /**

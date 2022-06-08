@@ -11,12 +11,12 @@
 import RAL from './ral';
 
 import { URI } from 'vscode-uri';
-import { ApiClient } from 'vscode-sync-api-client';
+import { ApiClient, FileType } from 'vscode-sync-api-client';
 
 import { ptr, size, u32 } from './baseTypes';
 import {
 	wasi_file_handle, errno, Errno, lookupflags, oflags, rights, fdflags, dircookie, PreStartDir, filetype, Rights,
-	filesize, advise, filedelta, whence, filestat, iovec, ciovec, Filestat, Whence, Ciovec, Iovec, Filetype, clockid, timestamp, Clockid
+	filesize, advise, filedelta, whence, filestat, iovec, ciovec, Filestat, Whence, Ciovec, Iovec, Filetype, clockid, timestamp, Clockid, Fdstat
 } from './wasiTypes';
 import { code2Wasi } from './converter';
 
@@ -31,7 +31,6 @@ export interface Environment {
 
 
 /** Python requirement.
-  "fd_datasync"
   "fd_fdstat_get"
   "fd_fdstat_set_flags"
   "fd_filestat_get"
@@ -121,6 +120,15 @@ export interface WASI {
 	 * @param fd The file descriptor.
 	 */
 	fd_datasync(fd: wasi_file_handle): errno;
+
+	/**
+	 * Get the attributes of a file descriptor. Note: This returns similar
+	 * flags to fsync(fd, F_GETFL) in POSIX, as well as additional fields.
+	 *
+	 * @param fd The file descriptor.
+	 * @param fdstat_ptr A pointer to store the result.
+	 */
+	fd_fdstat_get(fd: wasi_file_handle, fdstat_ptr: ptr): errno;
 
 	fd_readdir(fd: wasi_file_handle, buf_ptr: ptr, buf_len: size, cookie: dircookie, bufEndPtr: ptr): errno;
 	fd_seek(fd: wasi_file_handle, offset: filedelta, whence: whence, newOffsetPtr: ptr): errno;
@@ -401,6 +409,7 @@ export namespace WASI {
 			fd_advise: fd_advise,
 			fd_allocate: fd_allocate,
 			fd_datasync: fd_datasync,
+			fd_fdstat_get: fd_fdstat_get,
 			fd_readdir: fd_readdir,
 			fd_seek: fd_seek,
 			fd_write: fd_write,
@@ -629,6 +638,41 @@ export namespace WASI {
 				return Errno.success;
 			}
 			return file.write();
+		} catch (error) {
+			if (error instanceof WasiError) {
+				return error.errno;
+			}
+			return Errno.badf;
+		}
+	}
+
+	function fd_fdstat_get(fd: wasi_file_handle, fdstat_ptr: ptr): errno {
+		// This is not available under VS Code.
+		try {
+			const fileHandle = getFileHandle(fd);
+			const uri = fileHandle.real.uri;
+			const vStat = $apiClient.fileSystem.stat(uri);
+			if (typeof vStat === 'number') {
+				return code2Wasi.asErrno(vStat);
+			}
+			const memory = memoryView();
+			const fdstat = Fdstat.create(fdstat_ptr, memory);
+			fdstat.fs_filetype = code2Wasi.asFileType(vStat.type);
+			// No flags. We need to see if some of the tools we want to run
+			// need some and we need to simulate them using local storage.
+			fdstat.fs_flags = 0;
+			if (vStat.type === FileType.File) {
+				fdstat.fs_rights_base = Rights.FileBase;
+				fdstat.fs_rights_inheriting = Rights.FileInheriting;
+			} else if (vStat.type === FileType.Directory) {
+				fdstat.fs_rights_base = Rights.DirectoryBase;
+				fdstat.fs_rights_inheriting = Rights.DirectoryInheriting;
+			} else {
+				// Symbolic link and unknown
+				fdstat.fs_rights_base = 0n;
+				fdstat.fs_rights_inheriting = 0n;
+			}
+			return Errno.success;
 		} catch (error) {
 			if (error instanceof WasiError) {
 				return error.errno;
