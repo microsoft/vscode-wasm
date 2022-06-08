@@ -31,8 +31,6 @@ export interface Environment {
 
 
 /** Python requirement.
-  "fd_fdstat_set_flags"
-  "fd_filestat_get"
   "fd_filestat_set_size"
   "fd_filestat_set_times"
   "fd_pread"
@@ -88,7 +86,14 @@ export interface WASI {
 	clock_time_get(id: clockid, precision: timestamp, timestamp_ptr: ptr): errno;
 	fd_prestat_get(fd: wasi_file_handle, bufPtr: ptr): errno;
 	fd_prestat_dir_name(fd: wasi_file_handle, pathPtr: ptr, pathLen: size): errno;
+
+	/**
+	 * Return the attributes of an open file.
+	 * @param fd The file descriptor.
+	 * @param bufPtr The buffer where the file's attributes are stored.
+	 */
 	fd_filestat_get(fd: wasi_file_handle, bufPtr: ptr): errno;
+
 	path_open(fd: wasi_file_handle, dirflags: lookupflags, path: ptr, pathLen: size, oflags: oflags, fs_rights_base: rights, fs_rights_inheriting: rights, fdflags: fdflags, fd_ptr: ptr): errno;
 
 	/**
@@ -137,6 +142,16 @@ export interface WASI {
 	 * @param fdflags The desired values of the file descriptor flags.
 	 */
 	fd_fdstat_set_flags(fd: wasi_file_handle, fdflags: fdflags): errno;
+
+	/**
+	 * Adjust the size of an open file. If this increases the file's size, the
+	 * extra bytes are filled with zeros. Note: This is similar to ftruncate in
+	 * POSIX.
+	 *
+	 * @param fd The file descriptor.
+	 * @param size: The desired file size.
+	 */
+	fd_filestat_set_size(fd: wasi_file_handle, size: filesize): errno;
 
 	fd_readdir(fd: wasi_file_handle, buf_ptr: ptr, buf_len: size, cookie: dircookie, bufEndPtr: ptr): errno;
 	fd_seek(fd: wasi_file_handle, offset: filedelta, whence: whence, newOffsetPtr: ptr): errno;
@@ -363,6 +378,31 @@ class File  {
 	public setFdFlags(fdflags: fdflags): void {
 		this.fdFlags = fdflags;
 	}
+
+	public setSize(_size: filesize): errno {
+		const size = this.getNumber(_size);
+		const content = this.content;
+		if (content.byteLength === size) {
+			return 0;
+		} else if (content.byteLength < size) {
+			const newContent = new Uint8Array(size);
+			newContent.set(this.content);
+			this._content = newContent;
+		} else if (content.byteLength > size) {
+			const newContent = new Uint8Array(size);
+			newContent.set(this.content.subarray(0, size));
+			this._content = newContent;
+		}
+		return this.contentWriter(this.fileHandle.real.uri, this.content);
+	}
+
+	private static MAX_VALUE_AS_BIGINT = BigInt(Number.MAX_VALUE);
+	private getNumber(value: bigint): number {
+		if (value > File.MAX_VALUE_AS_BIGINT) {
+			throw new WasiError(Errno.fbig);
+		}
+		return Number(value);
+	}
 }
 
 
@@ -426,6 +466,7 @@ export namespace WASI {
 			fd_datasync: fd_datasync,
 			fd_fdstat_get: fd_fdstat_get,
 			fd_fdstat_set_flags: fd_fdstat_set_flags,
+			fd_filestat_set_size: fd_filestat_set_size,
 			fd_readdir: fd_readdir,
 			fd_seek: fd_seek,
 			fd_write: fd_write,
@@ -704,6 +745,20 @@ export namespace WASI {
 			const file = getOrCreateFile(fileHandle);
 			file.setFdFlags(fdflags);
 			return Errno.success;
+		} catch (error) {
+			if (error instanceof WasiError) {
+				return error.errno;
+			}
+			return Errno.badf;
+		}
+	}
+
+	function fd_filestat_set_size(fd: wasi_file_handle, size: filesize): errno {
+		try {
+			const fileHandle = getFileHandle(fd);
+			fileHandle.assertBaseRight(Rights.fd_filestat_set_size);
+			const file = getOrCreateFile(fileHandle);
+			return file.setSize(size);
 		} catch (error) {
 			if (error instanceof WasiError) {
 				return error.errno;
