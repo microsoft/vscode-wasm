@@ -19,4 +19,26 @@ export namespace code2Wasi {
 				return wasi.Filetype.unknown;
 		}
 	}
+	export function asErrno(fileSystemError: code.Types.FileSystemError): wasi.errno {
+		switch (fileSystemError) {
+			case code.Types.FileSystemError.Success:
+				return wasi.Errno.success;
+			case code.Types.FileSystemError.Unknown:
+				return wasi.Errno.noent;
+			case code.Types.FileSystemError.FileNotFound:
+				return wasi.Errno.noent;
+			case code.Types.FileSystemError.FileExists:
+				return wasi.Errno.exist;
+			case code.Types.FileSystemError.FileNotADirectory:
+				return wasi.Errno.notdir;
+			case code.Types.FileSystemError.FileIsADirectory:
+				return wasi.Errno.isdir;
+			case code.Types.FileSystemError.NoPermissions:
+				return wasi.Errno.perm;
+			case code.Types.FileSystemError.Unavailable:
+				return wasi.Errno.busy;
+			default:
+				return wasi.Errno.noent;
+		}
+	}
 }

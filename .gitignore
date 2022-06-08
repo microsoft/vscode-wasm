@@ -106,3 +106,5 @@ dist
 
 # TernJS port file
 .tern-port
+
+testbed/minimal/python

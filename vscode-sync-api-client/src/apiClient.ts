@@ -16,8 +16,9 @@ export interface Terminal {
 }
 
 export interface FileSystem {
-	stat(uri: URI): FileStat | undefined;
-	read(uri: URI): Uint8Array | undefined;
+	stat(uri: URI): FileStat | number;
+	read(uri: URI): Uint8Array | number;
+	write(uri: URI, content: Uint8Array): number;
 }
 
 type ApiClientConnection<Ready extends {} | undefined = undefined> = BaseClientConnection<Requests, Ready>;
@@ -56,7 +57,7 @@ class FileSystemImpl<Ready extends {} | undefined = undefined> implements FileSy
 		this.connection = connection;
 	}
 
-	public stat(uri: URI): FileStat | undefined {
+	public stat(uri: URI): FileStat | number {
 		const requestResult = this.connection.sendRequest('fileSystem/stat', { uri: uri.toJSON() }, Types.Stat.typedResult);
 		if (RequestResult.hasData(requestResult)) {
 			const stat = Types.Stat.create(requestResult.data);
@@ -72,15 +73,20 @@ class FileSystemImpl<Ready extends {} | undefined = undefined> implements FileSy
 			}
 			return result;
 		}
-		return undefined;
+		return requestResult.errno;
 	}
 
-	public read(uri: URI): Uint8Array | undefined {
+	public read(uri: URI): Uint8Array | number {
 		const requestResult = this.connection.sendRequest('fileSystem/readFile', { uri: uri.toJSON() }, new VariableResult<Uint8Array>('binary'));
 		if (RequestResult.hasData(requestResult)) {
 			return requestResult.data;
 		}
-		return undefined;
+		return requestResult.errno;
+	}
+
+	public write(uri: URI, content: Uint8Array): number {
+		const requestResult = this.connection.sendRequest('fileSystem/writeFile', { uri: uri.toJSON(), binary: content });
+		return requestResult.errno;
 	}
 }
 

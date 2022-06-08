@@ -6,9 +6,5 @@
 export * from './connection';
 export * from './protocol';
 
-import { BaseClientConnection } from './connection';
-import { Requests } from './protocol';
 import RAL from './ral';
 export default RAL;
-
-let connection: BaseClientConnection<Requests>;

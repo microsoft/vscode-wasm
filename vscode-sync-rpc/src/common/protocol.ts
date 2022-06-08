@@ -13,6 +13,52 @@ export type size = u32;
 
 export namespace Types {
 
+	export type FileSystemError = u16;
+	export namespace FileSystemError {
+
+		/**
+		 * Operation was successful.
+		 */
+		export const Success = 0;
+
+		/**
+		 * Unknown error happened during file operation.
+		 */
+		export const Unknown = 1;
+
+		/**
+         * Create an error to signal that a file or folder wasn't found.
+		 */
+		export const FileNotFound = 2;
+
+		/**
+         * Create an error to signal that a file or folder already exists, e.g. when
+         * creating but not overwriting a file.
+         */
+		export const FileExists = 3;
+
+		/**
+         * Create an error to signal that a file is not a folder.
+         */
+    	export const FileNotADirectory = 4;
+
+		/**
+         * Create an error to signal that a file is a folder.
+         */
+		export const FileIsADirectory = 5;
+
+		/**
+         * Create an error to signal that an operation lacks required permissions.
+         */
+		export const NoPermissions = 6;
+
+		/**
+         * Create an error to signal that the file system is unavailable or too busy to
+         * complete a request.
+         */
+		export const Unavailable = 7;
+	}
+
 	export type UriComponents = {
 		scheme: string;
 		authority: string;
@@ -129,11 +175,21 @@ export type Requests =
 	result: Uint32Array;
 } | {
 	/**
-	 * Open a file
+	 * Read a file
 	 */
 	method: 'fileSystem/readFile';
 	params: {
 		uri: Types.UriComponents;
 	};
 	result: VariableResult<Uint8Array>;
+} | {
+	/**
+	 * Write a file
+	 */
+	method: 'fileSystem/writeFile';
+	params: {
+		uri: Types.UriComponents;
+		binary: Uint8Array;
+	};
+	result: null;
 };

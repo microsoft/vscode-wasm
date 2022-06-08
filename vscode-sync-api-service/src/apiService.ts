@@ -82,27 +82,73 @@ export class ApiService<Ready extends {} | undefined = undefined> {
 		});
 
 		this.connection.onRequest('fileSystem/stat', async (params, resultBuffer) => {
-			const uri = vscode.Uri.from(params.uri);
-			const vStat: vscode.FileStat = await vscode.workspace.fs.stat(uri);
-			const stat = Types.Stat.create(resultBuffer);
-			stat.type = vStat.type;
-			stat.ctime = vStat.mtime;
-			stat.mtime = vStat.mtime;
-			stat.size = vStat.size;
-			if (vStat.permissions !== undefined) {
-				stat.permission = vStat.permissions;
+			try {
+				const uri = vscode.Uri.from(params.uri);
+				const vStat: vscode.FileStat = await vscode.workspace.fs.stat(uri);
+				const stat = Types.Stat.create(resultBuffer);
+				stat.type = vStat.type;
+				stat.ctime = vStat.mtime;
+				stat.mtime = vStat.mtime;
+				stat.size = vStat.size;
+				if (vStat.permissions !== undefined) {
+					stat.permission = vStat.permissions;
+				}
+				return { errno: 0 };
+			} catch (error) {
+				if (error instanceof vscode.FileSystemError) {
+					return { errno: this.asFileSystemError(error) };
+				}
+				return { errno: Types.FileSystemError.Unknown };
 			}
-			return { errno: 0 };
 		});
 
 		this.connection.onRequest('fileSystem/readFile', async (params) => {
-			const uri = vscode.Uri.from(params.uri);
-			const contents = await vscode.workspace.fs.readFile(uri);
-			return { errno: 0, data: contents };
+			try {
+				const uri = vscode.Uri.from(params.uri);
+				const contents = await vscode.workspace.fs.readFile(uri);
+				return { errno: 0, data: contents };
+			} catch (error) {
+				if (error instanceof vscode.FileSystemError) {
+					return { errno: this.asFileSystemError(error) };
+				}
+				return { errno: Types.FileSystemError.Unknown };
+			}
+		});
+
+		this.connection.onRequest('fileSystem/writeFile', async (params) => {
+			try {
+				const uri = vscode.Uri.from(params.uri);
+				await vscode.workspace.fs.writeFile(uri, params.binary);
+				return { errno: 0 };
+			} catch (error) {
+				if (error instanceof vscode.FileSystemError) {
+					return { errno: this.asFileSystemError(error) };
+				}
+				return { errno: Types.FileSystemError.Unknown };
+			}
 		});
 	}
 
 	public getPty(): vscode.Pseudoterminal {
 		return this.pty;
+	}
+
+	private asFileSystemError(error: vscode.FileSystemError): Types.FileSystemError {
+		switch(error.code) {
+			case 'FileNotFound':
+				return Types.FileSystemError.FileNotFound;
+			case 'FileExists':
+				return Types.FileSystemError.FileExists;
+			case 'FileNotADirectory':
+				return Types.FileSystemError.FileNotADirectory;
+			case 'FileIsADirectory':
+				return Types.FileSystemError.FileIsADirectory;
+			case 'NoPermissions':
+				return Types.FileSystemError.NoPermissions;
+			case 'Unavailable':
+				return Types.FileSystemError.Unavailable;
+			default:
+				return Types.FileSystemError.Unknown;
+		}
 	}
 }

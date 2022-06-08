@@ -30,6 +30,7 @@
 		"eqeqeq": "error",
 		"indent": "off",
 		"@typescript-eslint/indent": ["warn", "tab", { "SwitchCase": 1 } ],
-		"@typescript-eslint/no-floating-promises": "error"
+		"@typescript-eslint/no-floating-promises": "error",
+		"@typescript-eslint/prefer-as-const": "error"
 	}
 }

@@ -21,9 +21,9 @@ import {
 import { code2Wasi } from './converter';
 
 // Same as Unix file descriptors
-export const WASI_STDIN_FD: 0 = 0;
-export const WASI_STDOUT_FD: 1 = 1;
-export const WASI_STDERR_FD: 2 = 2;
+export const WASI_STDIN_FD = 0 as const;
+export const WASI_STDOUT_FD = 1 as const;
+export const WASI_STDERR_FD = 2 as const;
 
 export interface Environment {
 	[key: string]: string;
@@ -31,8 +31,6 @@ export interface Environment {
 
 
 /** Python requirement.
-  "fd_allocate"
-  "fd_close"
   "fd_datasync"
   "fd_fdstat_get"
   "fd_fdstat_set_flags"
@@ -116,10 +114,23 @@ export interface WASI {
 	 */
 	fd_allocate(fd: wasi_file_handle, offset: filesize, len: filesize): errno;
 
+	/**
+	 * Synchronize the data of a file to disk. Note: This is similar to
+	 * fdatasync in POSIX.
+	 *
+	 * @param fd The file descriptor.
+	 */
+	fd_datasync(fd: wasi_file_handle): errno;
+
 	fd_readdir(fd: wasi_file_handle, buf_ptr: ptr, buf_len: size, cookie: dircookie, bufEndPtr: ptr): errno;
 	fd_seek(fd: wasi_file_handle, offset: filedelta, whence: whence, newOffsetPtr: ptr): errno;
 	fd_read(fd: wasi_file_handle, iovs_ptr: ptr, iovsLen: u32, bytesRead_ptr: ptr): errno;
 	fd_write(fd: wasi_file_handle, iovs_ptr: ptr, iovsLen: u32, bytesWritten_ptr: ptr): errno;
+
+	/**
+	 * Close a file descriptor. Note: This is similar to close in POSIX.
+	 * @param fd The file descriptor.
+	 */
 	fd_close(fd: wasi_file_handle): errno;
 	proc_exit(): errno;
 }
@@ -260,16 +271,18 @@ class File  {
 
 	readonly #fileHandle: FileHandle;
 	#content: Uint8Array | undefined;
-	#contentProvider: ((uri: URI) => Uint8Array | undefined) | undefined;
+	#contentProvider: ((uri: URI) => Uint8Array | number) | undefined;
+	#contentWriter: ((uri: URI, content: Uint8Array) => number);
 	#cursor: number;
 
-	constructor(fileHandle: FileHandle, content: Uint8Array | ((uri: URI) => Uint8Array | undefined)) {
+	constructor(fileHandle: FileHandle, content: Uint8Array | ((uri: URI) => Uint8Array | number), contentWriter: (uri: URI, content: Uint8Array) => number) {
 		this.#fileHandle = fileHandle;
 		if (content instanceof Uint8Array) {
 			this.#content = content;
 		} else {
 			this.#contentProvider = content;
 		}
+		this.#contentWriter = contentWriter;
 		this.#cursor = 0;
 	}
 
@@ -285,6 +298,9 @@ class File  {
 			throw new WasiError(Errno.inval);
 		}
 		const content = this.#contentProvider(this.#fileHandle.real.uri);
+		if (typeof content === 'number') {
+			throw new WasiError(code2Wasi.asErrno(content));
+		}
 		if (content === undefined) {
 			throw new WasiError(Errno.inval);
 		}
@@ -316,6 +332,13 @@ class File  {
 		const result = content.subarray(this.#cursor, this.#cursor + realRead);
 		this.#cursor = this.#cursor + realRead;
 		return result;
+	}
+
+	public write(): errno {
+		if (this.#content === undefined) {
+			return Errno.success;
+		}
+		return this.#contentWriter(this.#fileHandle.real.uri, this.#content);
 	}
 }
 
@@ -377,6 +400,7 @@ export namespace WASI {
 			path_open: path_open,
 			fd_advise: fd_advise,
 			fd_allocate: fd_allocate,
+			fd_datasync: fd_datasync,
 			fd_readdir: fd_readdir,
 			fd_seek: fd_seek,
 			fd_write: fd_write,
@@ -512,8 +536,8 @@ export namespace WASI {
 			fileHandle.assertBaseRight(Rights.fd_filestat_get);
 			const uri = fileHandle.real.uri;
 			const vStat = $apiClient.fileSystem.stat(uri);
-			if (vStat === undefined) {
-				return Errno.perm;
+			if (typeof vStat === 'number') {
+				return code2Wasi.asErrno(vStat);
 			}
 			const memory = memoryView();
 			const fileStat = Filestat.create(bufPtr, memory);
@@ -542,8 +566,8 @@ export namespace WASI {
 			const name = $decoder.decode(new Uint8Array(memoryRaw(), path, pathLen));
 			const realUri = getRealUri(parentHandle, name);
 			const stat = $apiClient.fileSystem.stat(realUri);
-			if (stat === undefined) {
-				return Errno.noent;
+			if (typeof stat === 'number') {
+				return code2Wasi.asErrno(stat);
 			}
 			const filetype = code2Wasi.asFileType(stat.type);
 			// Currently VS Code doesn't offer a generic API to open a file
@@ -566,19 +590,51 @@ export namespace WASI {
 	}
 
 	function fd_advise(fd: wasi_file_handle, offset: filesize, length: filesize, advise: advise): errno {
-		const fileHandle = getFileHandle(fd);
-		fileHandle.assertBaseRight(Rights.fd_advise);
+		try {
+			const fileHandle = getFileHandle(fd);
+			fileHandle.assertBaseRight(Rights.fd_advise);
 
-		// We don't have advisory in VS Code. So treat it as successful.
-		return Errno.success;
+			// We don't have advisory in VS Code. So treat it as successful.
+			return Errno.success;
+		} catch (error) {
+			if (error instanceof WasiError) {
+				return error.errno;
+			}
+			return Errno.badf;
+		}
 	}
 
 	function fd_allocate(fd: wasi_file_handle, offset: filesize, len: filesize): errno {
-		const fileHandle = getFileHandle(fd);
-		fileHandle.assertBaseRight(Rights.fd_allocate);
+		try {
+			const fileHandle = getFileHandle(fd);
+			fileHandle.assertBaseRight(Rights.fd_allocate);
 
-		// Filled in by PR
-		return Errno.success;
+			// Filled in by PR
+			return Errno.success;
+		} catch (error) {
+			if (error instanceof WasiError) {
+				return error.errno;
+			}
+			return Errno.badf;
+		}
+	}
+
+	function fd_datasync(fd: wasi_file_handle): errno {
+		try {
+			const fileHandle = getFileHandle(fd);
+			fileHandle.assertBaseRight(Rights.fd_datasync);
+
+			const file = $files.get(fileHandle.fd);
+			if (file === undefined) {
+				return Errno.success;
+			}
+			return file.write();
+		} catch (error) {
+			if (error instanceof WasiError) {
+				return error.errno;
+			}
+			return Errno.badf;
+		}
 	}
 
 	function fd_readdir(fd: wasi_file_handle, buf_ptr: ptr, buf_len: size, cookie: dircookie, bufEndPtr: ptr): errno {
@@ -592,7 +648,7 @@ export namespace WASI {
 			fileHandle.assertBaseRight(Rights.fd_seek);
 			let file = $files.get(fd);
 			if (file === undefined) {
-				file = new File(fileHandle, (uri) => $apiClient.fileSystem.read(uri));
+				file = new File(fileHandle, (uri) => $apiClient.fileSystem.read(uri), (uri, content) => $apiClient.fileSystem.write(uri, content));
 				$files.set(file.fd, file);
 			}
 			return file.seek(offset, whence);
@@ -649,10 +705,10 @@ export namespace WASI {
 			let file = $files.get(fileHandle.fd);
 			if (file === undefined) {
 				const content = $apiClient.fileSystem.read(fileHandle.real.uri);
-				if (content === undefined) {
-					return Errno.noent;
+				if (typeof content === 'number') {
+					return code2Wasi.asErrno(content);
 				}
-				file = new File(fileHandle, content);
+				file = new File(fileHandle, content, (uri, content) => $apiClient.fileSystem.write(uri, content));
 				$files.set(fileHandle.fd, file);
 			}
 			const buffers = read_iovs(iovs_ptr, iovsLen);
@@ -673,7 +729,18 @@ export namespace WASI {
 	}
 
 	function fd_close(fd: wasi_file_handle): errno {
-		return Errno.success;
+		try {
+			const fileHandle = getFileHandle(fd);
+			// Delete the file. Close doesn't flush.
+			$files.delete(fd);
+			$fileHandles.delete(fileHandle.fd);
+			return Errno.success;
+		} catch (error) {
+			if (error instanceof WasiError) {
+				return error.errno;
+			}
+			return Errno.perm;
+		}
 	}
 
 	function proc_exit(): errno {
@@ -728,6 +795,14 @@ export namespace WASI {
 
 	function getFileHandle(fd: wasi_file_handle): FileHandle {
 		const result = $fileHandles.get(fd);
+		if (result === undefined) {
+			throw new WasiError(Errno.badf);
+		}
+		return result;
+	}
+
+	function getFile(fd: wasi_file_handle): File {
+		const result = $files.get(fd);
 		if (result === undefined) {
 			throw new WasiError(Errno.badf);
 		}
