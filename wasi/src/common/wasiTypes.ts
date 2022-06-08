@@ -992,7 +992,7 @@ export namespace Fstflags {
 /**
  * The contents of a $prestat when type is `PreOpenType.dir`
  */
-export type PreStartDir = {
+export type prestat = {
 
 	/**
 	 * Sets the length of the pre opened directory name.
@@ -1000,8 +1000,8 @@ export type PreStartDir = {
 	set len(value: size);
 };
 
-export namespace PreStartDir {
-	export function create(ptr: ptr, memory: DataView): PreStartDir {
+export namespace Prestat {
+	export function create(ptr: ptr, memory: DataView): prestat {
 		memory.setUint8(ptr, Preopentype.dir);
 		return {
 			set len(value: size) {
@@ -1031,7 +1031,7 @@ export namespace Iovec {
 	/**
 	 * The size in bytes.
 	 */
-	export const size: 8 = 8;
+	export const size = 8 as const;
 
 	const offsets = {
 		buf: 0,
@@ -1072,7 +1072,7 @@ export namespace Ciovec {
 	/**
 	 * The size in bytes.
 	 */
-	export const size: 8 = 8;
+	export const size = 8 as const;
 
 	const offsets = {
 		buf: 0,
