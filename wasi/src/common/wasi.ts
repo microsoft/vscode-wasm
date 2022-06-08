@@ -16,7 +16,7 @@ import { ApiClient, FileType } from 'vscode-sync-api-client';
 import { ptr, size, u32 } from './baseTypes';
 import {
 	wasi_file_handle, errno, Errno, lookupflags, oflags, rights, fdflags, dircookie, PreStartDir, filetype, Rights,
-	filesize, advise, filedelta, whence, filestat, iovec, ciovec, Filestat, Whence, Ciovec, Iovec, Filetype, clockid, timestamp, Clockid, Fdstat
+	filesize, advise, filedelta, whence, filestat, iovec, ciovec, Filestat, Whence, Ciovec, Iovec, Filetype, clockid, timestamp, Clockid, Fdstat, fstflags
 } from './wasiTypes';
 import { code2Wasi } from './converter';
 
@@ -31,8 +31,6 @@ export interface Environment {
 
 
 /** Python requirement.
-  "fd_filestat_set_size"
-  "fd_filestat_set_times"
   "fd_pread"
   "fd_prestat_get"
   "fd_prestat_dir_name"
@@ -152,6 +150,17 @@ export interface WASI {
 	 * @param size: The desired file size.
 	 */
 	fd_filestat_set_size(fd: wasi_file_handle, size: filesize): errno;
+
+	/**
+	 * Adjust the timestamps of an open file or directory. Note: This is similar
+	 * to futimens in POSIX.
+	 *
+	 * @param fd The file descriptor.
+	 * @param atim The desired values of the data access timestamp.
+	 * @param mtim The desired values of the data modification timestamp.
+	 * @param fst_flags A bitmask indicating which timestamps to adjust.
+	 */
+	fd_filestat_set_times(fd: wasi_file_handle, atim: timestamp, mtim: timestamp, fst_flags: fstflags): errno;
 
 	fd_readdir(fd: wasi_file_handle, buf_ptr: ptr, buf_len: size, cookie: dircookie, bufEndPtr: ptr): errno;
 	fd_seek(fd: wasi_file_handle, offset: filedelta, whence: whence, newOffsetPtr: ptr): errno;
@@ -467,6 +476,7 @@ export namespace WASI {
 			fd_fdstat_get: fd_fdstat_get,
 			fd_fdstat_set_flags: fd_fdstat_set_flags,
 			fd_filestat_set_size: fd_filestat_set_size,
+			fd_filestat_set_times: fd_filestat_set_times,
 			fd_readdir: fd_readdir,
 			fd_seek: fd_seek,
 			fd_write: fd_write,
@@ -759,6 +769,23 @@ export namespace WASI {
 			fileHandle.assertBaseRight(Rights.fd_filestat_set_size);
 			const file = getOrCreateFile(fileHandle);
 			return file.setSize(size);
+		} catch (error) {
+			if (error instanceof WasiError) {
+				return error.errno;
+			}
+			return Errno.badf;
+		}
+	}
+
+	function fd_filestat_set_times(fd: wasi_file_handle, atim: timestamp, mtim: timestamp, fst_flags: fstflags): errno {
+		try {
+			const fileHandle = getFileHandle(fd);
+			fileHandle.assertBaseRight(Rights.fd_filestat_set_times);
+			// todo@dirkb
+			// For new we do nothing. We could cache the timestamp in memory
+			// But we would loose them during reload. We could also store them
+			// in local storage
+			return Errno.success;
 		} catch (error) {
 			if (error instanceof WasiError) {
 				return error.errno;

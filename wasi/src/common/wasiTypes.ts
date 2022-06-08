@@ -961,6 +961,34 @@ export namespace Fdstat {
 	}
 }
 
+export type fstflags = u16;
+export namespace Fstflags {
+
+	/**
+	 * Adjust the last data access timestamp to the value stored in
+	 * filestat::atim.
+	 */
+	export const atim = 1 << 0;
+
+	/**
+	 * Adjust the last data access timestamp to the time of clock
+	 * clockid::realtime.
+	 */
+	export const atim_now =  1 << 1;
+
+	/**
+	 * Adjust the last data modification timestamp to the value stored in
+	 * filestat::mtim.
+	 */
+	export const mtim = 1 << 2;
+
+	/**
+	 * Adjust the last data modification timestamp to the time of clock
+	 * clockid::realtime.
+	 */
+	export const mtim_now = 1 << 3;
+}
+
 /**
  * The contents of a $prestat when type is `PreOpenType.dir`
  */
