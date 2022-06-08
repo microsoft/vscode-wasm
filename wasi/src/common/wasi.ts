@@ -16,7 +16,7 @@ import { ApiClient } from 'vscode-sync-api-client';
 import { ptr, size, u32 } from './baseTypes';
 import {
 	wasi_file_handle, errno, Errno, lookupflags, oflags, rights, fdflags, dircookie, PreStartDir, filetype, Rights,
-	filesize, advise, filedelta, whence, filestat, iovec, ciovec, Filestat, Whence, Ciovec, Iovec, Filetype
+	filesize, advise, filedelta, whence, filestat, iovec, ciovec, Filestat, Whence, Ciovec, Iovec, Filetype, clockid, timestamp, Clockid
 } from './wasiTypes';
 import { code2Wasi } from './converter';
 
@@ -29,17 +29,93 @@ export interface Environment {
 	[key: string]: string;
 }
 
+
+/** Python requirement.
+  "fd_allocate"
+  "fd_close"
+  "fd_datasync"
+  "fd_fdstat_get"
+  "fd_fdstat_set_flags"
+  "fd_filestat_get"
+  "fd_filestat_set_size"
+  "fd_filestat_set_times"
+  "fd_pread"
+  "fd_prestat_get"
+  "fd_prestat_dir_name"
+  "fd_pwrite"
+  "fd_read"
+  "fd_readdir"
+  "fd_seek"
+  "fd_sync"
+  "fd_tell"
+  "fd_write"
+  "path_create_directory"
+  "path_filestat_get"
+  "path_filestat_set_times"
+  "path_link"
+  "path_open"
+  "path_readlink"
+  "path_remove_directory"
+  "path_rename"
+  "path_symlink"
+  "path_unlink_file"
+  "poll_oneoff"
+  "proc_exit"
+  "sched_yield"
+  "random_get"
+  "sock_accept"
+*/
+
 export interface WASI {
 	initialize(memory: ArrayBuffer): void;
 	args_sizes_get(argvCount_ptr: ptr, argvBufSize_ptr: ptr): errno;
 	args_get(argv_ptr: ptr, argvBuf_ptr: ptr): errno;
 	environ_sizes_get(environCount_ptr: ptr, environBufSize_ptr: ptr): errno;
 	environ_get(environ_ptr: ptr, environBuf_ptr: ptr): errno;
+
+	/**
+	 * Return the resolution of a clock. Implementations are required to provide
+	 * a non-zero value for supported clocks. For unsupported clocks, return
+	 * errno::inval. Note: This is similar to clock_getres in POSIX.
+	 */
+	clock_res_get(id: clockid, timestamp_ptr: ptr): errno;
+
+	/**
+	 * Return the time value of a clock. Note: This is similar to clock_gettime
+	 * in POSIX.
+	 *
+	 * @param id The clock for which to return the time.
+	 * @param precision The maximum lag (exclusive) that the returned time
+	 * value may have, compared to its actual value.
+	 * @param timestamp_ptr: The time value of the clock.
+	 */
+	clock_time_get(id: clockid, precision: timestamp, timestamp_ptr: ptr): errno;
 	fd_prestat_get(fd: wasi_file_handle, bufPtr: ptr): errno;
 	fd_prestat_dir_name(fd: wasi_file_handle, pathPtr: ptr, pathLen: size): errno;
 	fd_filestat_get(fd: wasi_file_handle, bufPtr: ptr): errno;
 	path_open(fd: wasi_file_handle, dirflags: lookupflags, path: ptr, pathLen: size, oflags: oflags, fs_rights_base: rights, fs_rights_inheriting: rights, fdflags: fdflags, fd_ptr: ptr): errno;
+
+	/**
+	 * Provide file advisory information on a file descriptor. Note: This is
+	 * similar to posix_fadvise in POSIX.
+	 *
+	 * @param fd The file descriptor.
+	 * @param offset The offset within the file to which the advisory applies.
+	 * @param length The length of the region to which the advisory applies.
+	 * @param advise The advice.
+	 */
 	fd_advise(fd: wasi_file_handle, offset: filesize, length: filesize, advise: advise): errno;
+
+	/**
+	 * Force the allocation of space in a file. Note: This is similar to
+	 * posix_fallocate in POSIX.
+	 *
+	 * @param fd The file descriptor.
+	 * @param offset The offset at which to start the allocation.
+	 * @param len The length of the area that is allocated.
+	 */
+	fd_allocate(fd: wasi_file_handle, offset: filesize, len: filesize): errno;
+
 	fd_readdir(fd: wasi_file_handle, buf_ptr: ptr, buf_len: size, cookie: dircookie, bufEndPtr: ptr): errno;
 	fd_seek(fd: wasi_file_handle, offset: filedelta, whence: whence, newOffsetPtr: ptr): errno;
 	fd_read(fd: wasi_file_handle, iovs_ptr: ptr, iovsLen: u32, bytesRead_ptr: ptr): errno;
@@ -293,11 +369,14 @@ export namespace WASI {
 			args_get: args_get,
 			environ_sizes_get: environ_sizes_get,
 			environ_get: environ_get,
+			clock_res_get: clock_res_get,
+			clock_time_get: clock_time_get,
 			fd_prestat_get: fd_prestat_get,
 			fd_prestat_dir_name: fd_prestat_dir_name,
 			fd_filestat_get: fd_filestat_get,
 			path_open: path_open,
 			fd_advise: fd_advise,
+			fd_allocate: fd_allocate,
 			fd_readdir: fd_readdir,
 			fd_seek: fd_seek,
 			fd_write: fd_write,
@@ -366,6 +445,28 @@ export namespace WASI {
 			memoryBytes.set(data, valueOffset);
 			valueOffset += data.byteLength;
 		}
+		return Errno.success;
+	}
+
+	function clock_res_get(id: clockid, timestamp_ptr: ptr): errno {
+		const memory = memoryView();
+		switch (id) {
+			case Clockid.realtime:
+				memory.setBigUint64(timestamp_ptr, 1n, true);
+				return Errno.success;
+			default:
+				memory.setBigUint64(timestamp_ptr, 0n, true);
+				return Errno.inval;
+		}
+	}
+
+	function clock_time_get(id: clockid, precision: timestamp, timestamp_ptr: ptr): errno {
+		if (id !== Clockid.realtime) {
+			return Errno.inval;
+		}
+		const value = BigInt(Date.now());
+		const memory = memoryView();
+		memory.setBigUint64(timestamp_ptr, value, true);
 		return Errno.success;
 	}
 
@@ -465,7 +566,19 @@ export namespace WASI {
 	}
 
 	function fd_advise(fd: wasi_file_handle, offset: filesize, length: filesize, advise: advise): errno {
-		return Errno.nosys;
+		const fileHandle = getFileHandle(fd);
+		fileHandle.assertBaseRight(Rights.fd_advise);
+
+		// We don't have advisory in VS Code. So treat it as successful.
+		return Errno.success;
+	}
+
+	function fd_allocate(fd: wasi_file_handle, offset: filesize, len: filesize): errno {
+		const fileHandle = getFileHandle(fd);
+		fileHandle.assertBaseRight(Rights.fd_allocate);
+
+		// Filled in by PR
+		return Errno.success;
 	}
 
 	function fd_readdir(fd: wasi_file_handle, buf_ptr: ptr, buf_len: size, cookie: dircookie, bufEndPtr: ptr): errno {
