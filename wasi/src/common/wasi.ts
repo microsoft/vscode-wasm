@@ -31,7 +31,6 @@ export interface Environment {
 
 
 /** Python requirement.
-  "fd_fdstat_get"
   "fd_fdstat_set_flags"
   "fd_filestat_get"
   "fd_filestat_set_size"
@@ -129,6 +128,15 @@ export interface WASI {
 	 * @param fdstat_ptr A pointer to store the result.
 	 */
 	fd_fdstat_get(fd: wasi_file_handle, fdstat_ptr: ptr): errno;
+
+	/**
+	 * Adjust the flags associated with a file descriptor. Note: This is similar
+	 * to fcntl(fd, F_SETFL, flags) in POSIX.
+	 *
+	 * @param fd The file descriptor.
+	 * @param fdflags The desired values of the file descriptor flags.
+	 */
+	fd_fdstat_set_flags(fd: wasi_file_handle, fdflags: fdflags): errno;
 
 	fd_readdir(fd: wasi_file_handle, buf_ptr: ptr, buf_len: size, cookie: dircookie, bufEndPtr: ptr): errno;
 	fd_seek(fd: wasi_file_handle, offset: filedelta, whence: whence, newOffsetPtr: ptr): errno;
@@ -277,58 +285,61 @@ class FileHandle {
 
 class File  {
 
-	readonly #fileHandle: FileHandle;
-	#content: Uint8Array | undefined;
-	#contentProvider: ((uri: URI) => Uint8Array | number) | undefined;
-	#contentWriter: ((uri: URI, content: Uint8Array) => number);
-	#cursor: number;
+	private readonly fileHandle: FileHandle;
+	private _content: Uint8Array | undefined;
+	private readonly contentProvider: ((uri: URI) => Uint8Array | number) | undefined;
+	private readonly contentWriter: ((uri: URI, content: Uint8Array) => number);
+
+	private cursor: number;
+	private fdFlags: fdflags;
 
 	constructor(fileHandle: FileHandle, content: Uint8Array | ((uri: URI) => Uint8Array | number), contentWriter: (uri: URI, content: Uint8Array) => number) {
-		this.#fileHandle = fileHandle;
+		this.fileHandle = fileHandle;
 		if (content instanceof Uint8Array) {
-			this.#content = content;
+			this._content = content;
 		} else {
-			this.#contentProvider = content;
+			this.contentProvider = content;
 		}
-		this.#contentWriter = contentWriter;
-		this.#cursor = 0;
+		this.contentWriter = contentWriter;
+		this.cursor = 0;
+		this.fdFlags = 0;
 	}
 
 	public get fd() {
-		return this.#fileHandle.fd;
+		return this.fileHandle.fd;
 	}
 
 	private get content(): Uint8Array {
-		if (this.#content !== undefined) {
-			return this.#content;
+		if (this._content !== undefined) {
+			return this._content;
 		}
-		if (this.#contentProvider === undefined) {
+		if (this.contentProvider === undefined) {
 			throw new WasiError(Errno.inval);
 		}
-		const content = this.#contentProvider(this.#fileHandle.real.uri);
+		const content = this.contentProvider(this.fileHandle.real.uri);
 		if (typeof content === 'number') {
 			throw new WasiError(code2Wasi.asErrno(content));
 		}
 		if (content === undefined) {
 			throw new WasiError(Errno.inval);
 		}
-		this.#content = content;
-		return this.#content;
+		this._content = content;
+		return this._content;
 	}
 
 	public seek(offset: number, whence: whence): errno {
 		switch(whence) {
 			case Whence.set:
-				this.#cursor = offset;
+				this.cursor = offset;
 				break;
 			case Whence.cur:
-				this.#cursor = this.#cursor + offset;
+				this.cursor = this.cursor + offset;
 				break;
 			case Whence.end:
-				if (this.#content === undefined) {
+				if (this._content === undefined) {
 					Errno.inval;
 				}
-				this.#cursor = this.content.byteLength - offset;
+				this.cursor = this.content.byteLength - offset;
 				break;
 		}
 		return Errno.success;
@@ -336,17 +347,21 @@ class File  {
 
 	public read(bytesToRead: number): Uint8Array {
 		const content = this.content;
-		const realRead = Math.min(bytesToRead, content.byteLength - this.#cursor);
-		const result = content.subarray(this.#cursor, this.#cursor + realRead);
-		this.#cursor = this.#cursor + realRead;
+		const realRead = Math.min(bytesToRead, content.byteLength - this.cursor);
+		const result = content.subarray(this.cursor, this.cursor + realRead);
+		this.cursor = this.cursor + realRead;
 		return result;
 	}
 
 	public write(): errno {
-		if (this.#content === undefined) {
+		if (this._content === undefined) {
 			return Errno.success;
 		}
-		return this.#contentWriter(this.#fileHandle.real.uri, this.#content);
+		return this.contentWriter(this.fileHandle.real.uri, this._content);
+	}
+
+	public setFdFlags(fdflags: fdflags): void {
+		this.fdFlags = fdflags;
 	}
 }
 
@@ -410,6 +425,7 @@ export namespace WASI {
 			fd_allocate: fd_allocate,
 			fd_datasync: fd_datasync,
 			fd_fdstat_get: fd_fdstat_get,
+			fd_fdstat_set_flags: fd_fdstat_set_flags,
 			fd_readdir: fd_readdir,
 			fd_seek: fd_seek,
 			fd_write: fd_write,
@@ -681,6 +697,21 @@ export namespace WASI {
 		}
 	}
 
+	function fd_fdstat_set_flags(fd: wasi_file_handle, fdflags: fdflags): errno {
+		try {
+			const fileHandle = getFileHandle(fd);
+			fileHandle.assertBaseRight(Rights.fd_fdstat_set_flags);
+			const file = getOrCreateFile(fileHandle);
+			file.setFdFlags(fdflags);
+			return Errno.success;
+		} catch (error) {
+			if (error instanceof WasiError) {
+				return error.errno;
+			}
+			return Errno.badf;
+		}
+	}
+
 	function fd_readdir(fd: wasi_file_handle, buf_ptr: ptr, buf_len: size, cookie: dircookie, bufEndPtr: ptr): errno {
 		return Errno.success;
 	}
@@ -690,11 +721,7 @@ export namespace WASI {
 			const offset = Number(_offset);
 			const fileHandle = getFileHandle(fd);
 			fileHandle.assertBaseRight(Rights.fd_seek);
-			let file = $files.get(fd);
-			if (file === undefined) {
-				file = new File(fileHandle, (uri) => $apiClient.fileSystem.read(uri), (uri, content) => $apiClient.fileSystem.write(uri, content));
-				$files.set(file.fd, file);
-			}
+			const file = getOrCreateFile(fileHandle);
 			return file.seek(offset, whence);
 		} catch (error) {
 			if (error instanceof WasiError) {
@@ -752,8 +779,7 @@ export namespace WASI {
 				if (typeof content === 'number') {
 					return code2Wasi.asErrno(content);
 				}
-				file = new File(fileHandle, content, (uri, content) => $apiClient.fileSystem.write(uri, content));
-				$files.set(fileHandle.fd, file);
+				file = getOrCreateFile(fileHandle, content);
 			}
 			const buffers = read_iovs(iovs_ptr, iovsLen);
 			let bytesRead = 0;
@@ -849,6 +875,15 @@ export namespace WASI {
 		const result = $files.get(fd);
 		if (result === undefined) {
 			throw new WasiError(Errno.badf);
+		}
+		return result;
+	}
+
+	function getOrCreateFile(fileHandle: FileHandle, content?: Uint8Array): File {
+		let result = $files.get(fileHandle.fd);
+		if (result === undefined) {
+			result = new File(fileHandle, content !== undefined ? content : (uri) => $apiClient.fileSystem.read(uri), (uri, content) => $apiClient.fileSystem.write(uri, content));
+			$files.set(result.fd, result);
 		}
 		return result;
 	}
