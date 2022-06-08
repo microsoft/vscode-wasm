@@ -32,8 +32,6 @@ export interface Environment {
 
 
 /** Python requirement.
-  "fd_pwrite"
-  "fd_read"
   "fd_readdir"
   "fd_seek"
   "fd_sync"
@@ -1010,7 +1008,7 @@ export namespace WASI {
 			let bytesRead = 0;
 			for (const buffer of buffers) {
 				const result = file.read(buffer.byteLength);
-				bytesRead = result.byteLength;
+				bytesRead += result.byteLength;
 				buffer.set(result);
 			}
 			memory.setUint32(bytesRead_ptr, bytesRead, true);
