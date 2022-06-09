@@ -146,6 +146,7 @@
 		"SETFL",
 		"spipe",
 		"srch",
+		"symlinkat",
 		"timedout",
 		"toobig",
 		"txtbsy",

@@ -32,8 +32,6 @@ export interface Environment {
 
 
 /** Python requirement.
-  "path_rename"
-  "path_symlink"
   "path_unlink_file"
   "poll_oneoff"
   "sched_yield"
@@ -392,6 +390,19 @@ export interface WASI {
 	 * @param new_path_len: The length of the new path.
 	 */
 	path_rename(fd: fd, old_path_ptr: ptr, old_path_len: size, new_fd: fd, new_path_ptr: ptr, new_path_len: size): errno;
+
+	/**
+	 * Create a symbolic link. Note: This is similar to symlinkat in POSIX.
+	 *
+	 * @param old_path_ptr: A memory location that holds the contents of the
+	 * symbolic link.
+	 * @param old_path_len: The length of the old path.
+	 * @param fd The file descriptor.
+	 * @param new_path_ptr A memory location that holds the destination path
+	 * at which to create the symbolic link.
+	 * @param new_path_len The length of the new path.
+	 */
+	path_symlink(old_path_ptr: ptr, old_path_len: size, fd: fd, new_path_ptr: ptr, new_path_len: size): errno;
 
 	/**
 	 * Terminate the process normally. An exit code of 0 indicates successful
@@ -799,6 +810,7 @@ export namespace WASI {
 			path_readlink: path_readlink,
 			path_remove_directory: path_remove_directory,
 			path_rename: path_rename,
+			path_symlink: path_symlink,
 			proc_exit: proc_exit
 		};
 	}
@@ -1443,6 +1455,18 @@ export namespace WASI {
 
 			const result = $apiClient.fileSystem.rename(oldUri, newUri, { overwrite: false });
 			return code2Wasi.asErrno(result);
+		} catch (error) {
+			return handleError(error);
+		}
+	}
+
+	function path_symlink(old_path_ptr: ptr, old_path_len: size, fd: fd, new_path_ptr: ptr, new_path_len: size): errno {
+		// VS Code has no support to create a symlink.
+		try {
+			const newFileHandle = getFileHandle(fd);
+			newFileHandle.assertBaseRight(Rights.path_symlink);
+			newFileHandle.assertIsDirectory();
+			return Errno.nosys;
 		} catch (error) {
 			return handleError(error);
 		}
