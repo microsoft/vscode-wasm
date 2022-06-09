@@ -139,6 +139,7 @@
 		"Pseudoterminal",
 		"pwrite",
 		"pwritev",
+		"readlinkat",
 		"rofs",
 		"SETFL",
 		"spipe",

@@ -32,8 +32,6 @@ export interface Environment {
 
 
 /** Python requirement.
-  "path_link"
-  "path_open"
   "path_readlink"
   "path_remove_directory"
   "path_rename"
@@ -358,6 +356,19 @@ export interface WASI {
 	 * @param new_path_len: The length of the new path.
 	 */
 	path_link(old_fd: wasi_file_handle, old_flags: lookupflags, old_path_ptr: ptr, old_path_len: size, new_fd: wasi_file_handle, new_path_ptr: ptr, new_path_len: size): errno;
+
+	/**
+	 * Read the contents of a symbolic link. Note: This is similar to readlinkat
+	 * in POSIX.
+	 * @param fd The file descriptor.
+	 * @param path_ptr A memory location that holds the path name.
+	 * @param path_len The length of the path.
+	 * @param buf The buffer to which to write the contents of the symbolic link.
+	 * @param buf_len The size of the buffer
+	 * @param result_size_ptr A memory location to store the number of bytes
+	 * placed in the buffer.
+	 */
+	path_readlink(fd: wasi_file_handle, path_ptr: ptr, path_len: size, buf: ptr, buf_len: size, result_size_ptr: ptr): errno;
 
 	/**
 	 * Terminate the process normally. An exit code of 0 indicates successful
@@ -762,6 +773,7 @@ export namespace WASI {
 			path_filestat_get: path_filestat_get,
 			path_filestat_set_times: path_filestat_set_times,
 			path_link: path_link,
+			path_readlink: path_readlink,
 			proc_exit: proc_exit
 		};
 	}
@@ -1393,7 +1405,7 @@ export namespace WASI {
 			// For now we do nothing. We could cache the timestamp in memory
 			// But we would loose them during reload. We could also store them
 			// in local storage
-			return Errno.success;
+			return Errno.nosys;
 		} catch (error) {
 			if (error instanceof WasiError) {
 				return error.errno;
@@ -1416,7 +1428,26 @@ export namespace WASI {
 			// todo@dirkb
 			// For now we do nothing. If we need to implement this we need
 			// support from the VS Code API.
-			return Errno.success;
+			return Errno.nosys;
+		} catch (error) {
+			if (error instanceof WasiError) {
+				return error.errno;
+			}
+			return Errno.perm;
+		}
+	}
+
+	function path_readlink(fd: wasi_file_handle, path_ptr: ptr, path_len: size, buf: ptr, buf_len: size, result_size_ptr: ptr): errno {
+		// VS Code has no support to follow a symlink.
+		try {
+			const fileHandle = getFileHandle(fd);
+			fileHandle.assertBaseRight(Rights.path_readlink);
+			fileHandle.assertIsDirectory();
+
+			// todo@dirkb
+			// For now we do nothing. If we need to implement this we need
+			// support from the VS Code API.
+			return Errno.nosys;
 		} catch (error) {
 			if (error instanceof WasiError) {
 				return error.errno;
