@@ -331,6 +331,20 @@ export interface WASI {
 	path_filestat_get(fd: wasi_file_handle, flags: lookupflags, path_ptr: ptr, path_len: size, filestat_ptr: ptr): errno;
 
 	/**
+	 * Adjust the timestamps of a file or directory. Note: This is similar to
+	 * utimensat in POSIX.
+	 *
+	 * @param fd The file descriptor.
+	 * @param flags Flags determining the method of how the path is resolved.
+	 * @param path_ptr A memory location that holds the path name.
+	 * @param path_len The length of the path.
+	 * @param atim The desired values of the data access timestamp.
+	 * @param mtim The desired values of the data modification timestamp.
+	 * @param fst_flags A bitmask indicating which timestamps to adjust.
+	 */
+	path_filestat_set_times(fd: wasi_file_handle, flags: lookupflags, path_ptr: ptr, path_len: size, atim: timestamp, mtim: timestamp, fst_flags: fstflags): errno;
+
+	/**
 	 * Terminate the process normally. An exit code of 0 indicates successful
 	 * termination of the program. The meanings of other values is dependent on
 	 * the environment.
@@ -731,6 +745,7 @@ export namespace WASI {
 			path_open: path_open,
 			path_create_directory: path_create_directory,
 			path_filestat_get: path_filestat_get,
+			path_filestat_set_times: path_filestat_set_times,
 			proc_exit: proc_exit
 		};
 	}
@@ -1317,10 +1332,12 @@ export namespace WASI {
 		}
 	}
 
-	function path_filestat_get(fd: wasi_file_handle, flags: lookupflags, path_ptr: ptr, path_len: size, filestat_ptr: ptr): errno {
+	function path_filestat_get(fd: wasi_file_handle, _flags: lookupflags, path_ptr: ptr, path_len: size, filestat_ptr: ptr): errno {
+		// VS Code has not support to follow sym links.
+		// So we ignore lookupflags for now
 		try {
 			const fileHandle = getFileHandle(fd);
-			fileHandle.assertBaseRight(Rights.path_create_directory);
+			fileHandle.assertBaseRight(Rights.path_filestat_get);
 			fileHandle.assertIsDirectory();
 
 			const memory = memoryRaw();
@@ -1339,6 +1356,27 @@ export namespace WASI {
 			fileStat.ctim = BigInt(vStat.ctime);
 			fileStat.mtim = BigInt(vStat.mtime);
 			fileStat.atim = BigInt(vStat.mtime);
+			return Errno.success;
+		} catch (error) {
+			if (error instanceof WasiError) {
+				return error.errno;
+			}
+			return Errno.perm;
+		}
+	}
+
+	function path_filestat_set_times(fd: wasi_file_handle, flags: lookupflags, path_ptr: ptr, path_len: size, atim: timestamp, mtim: timestamp, fst_flags: fstflags): errno {
+		// VS Code has not support to follow sym links.
+		// So we ignore lookupflags for now
+		try {
+			const fileHandle = getFileHandle(fd);
+			fileHandle.assertBaseRight(Rights.path_create_directory);
+			fileHandle.assertIsDirectory();
+
+			// todo@dirkb
+			// For new we do nothing. We could cache the timestamp in memory
+			// But we would loose them during reload. We could also store them
+			// in local storage
 			return Errno.success;
 		} catch (error) {
 			if (error instanceof WasiError) {
