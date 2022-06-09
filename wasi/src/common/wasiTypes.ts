@@ -901,7 +901,7 @@ export namespace Whence {
 	/**
 	 * Seek relative to start-of-file.
 	 */
-	export const set  = 0;
+	export const set = 0;
 
 	/**
 	 * Seek relative to current position.
@@ -1134,6 +1134,135 @@ export namespace Dirent {
 			set d_ino(value: inode) { memory.setBigUint64(ptr + offsets.d_ino, value, true); },
 			set d_namlen(value: dirnamlen) { memory.setUint32(ptr + offsets.d_namlen, value, true); },
 			set d_type(value: filetype) { memory.setUint8(ptr + offsets.d_type, value); }
+		};
+	}
+}
+
+/**
+ * Type of a subscription to an event or its occurrence.
+ */
+export type eventtype = u8;
+export namespace Eventtype {
+	/**
+	 * The time value of clock subscription_clock::id has reached timestamp
+	 * subscription_clock::timeout.
+	 */
+	export const clock = 0;
+
+	/**
+	 * File descriptor subscription_fd_readwrite::file_descriptor has data
+	 * available for reading. This event always triggers for regular files.
+	 */
+	export const fd_read = 1;
+
+	/**
+	 * File descriptor subscription_fd_readwrite::file_descriptor has capacity
+	 * available for writing. This event always triggers for regular files.
+	 */
+	export const fd_write = 2;
+}
+
+/**
+ * The state of the file descriptor subscribed to with eventtype::fd_read or
+ * eventtype::fd_write.
+ */
+export type eventrwflags = u16;
+export namespace Eventrwflags {
+	/**
+	 * The peer of this socket has closed or disconnected.
+	 */
+	export const fd_readwrite_hangup = 1 << 0;
+}
+
+/**
+ * The contents of an event when type is eventtype::fd_read or
+ * eventtype::fd_write.
+ */
+export type event_fd_readwrite = {
+	/**
+	 * The number of bytes available for reading or writing.
+	 */
+	set nbytes(value: filesize);
+
+	/**
+	 * The state of the file descriptor.
+	 */
+	set flags(value: eventrwflags);
+};
+
+export namespace Event_fd_readwrite {
+	export const size = 16;
+
+	export const alignment = 8;
+
+	const offsets = {
+		nbytes: 0,
+		flags: 8
+	};
+
+	export function create(ptr: ptr, memory: DataView): event_fd_readwrite {
+		return {
+			set nbytes(value: filesize) { memory.setBigUint64(ptr + offsets.nbytes, value, true); },
+			set flags(value: eventrwflags) { memory.setUint16(ptr + offsets.flags, value, true); }
+		};
+	}
+}
+
+/**
+ * User-provided value that may be attached to objects that is retained when
+ * extracted from the implementation.
+ */
+export type userdata = u64;
+
+/**
+ * An event that occurred.
+ */
+export type event = {
+	/**
+	 * User-provided value that got attached to subscription::userdata.
+	 */
+	set userdata(value: userdata);
+
+	/**
+	 *  If non-zero, an error that occurred while processing the subscription
+	 * request.
+	 */
+	set error(value: errno);
+
+	/**
+	 * The type of event that occurred.
+	 */
+	set type(value: eventtype);
+
+	/**
+	 * The contents of the event, if it is an eventtype::fd_read or
+	 * eventtype::fd_write. eventtype::clock events ignore this field.
+	 */
+	set fd_readwrite(value: event_fd_readwrite);
+};
+export namespace Event {
+
+	export const size = 32;
+
+	export const alignment = 8;
+
+	const offsets = {
+		userdata: 0,
+		error: 8,
+		type: 10,
+		fd_readwrite: 16
+	};
+
+	export function create(ptr: ptr, memory: DataView): event {
+		return {
+			set userdata(value: userdata) { memory.setBigUint64(ptr + offsets.userdata, value, true); },
+			set error(value: errno) { memory.setUint16(ptr + offsets.error, value, true); },
+			set type(value: eventtype) { memory.setUint8(ptr + offsets.type, value); },
+			set fd_readwrite(value: event_fd_readwrite) {
+				const store = Event_fd_readwrite.create(ptr + offsets.fd_readwrite, memory);
+				store.nbytes = value.nbytes;
+				store.flags = value.flags;
+			}
 		};
 	}
 }
