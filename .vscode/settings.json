@@ -90,6 +90,7 @@
 		"iovs",
 		"isconn",
 		"isdir",
+		"linkat",
 		"linkcount",
 		"lookupflags",
 		"lseek",

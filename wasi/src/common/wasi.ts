@@ -32,7 +32,6 @@ export interface Environment {
 
 
 /** Python requirement.
-  "path_filestat_set_times"
   "path_link"
   "path_open"
   "path_readlink"
@@ -343,6 +342,22 @@ export interface WASI {
 	 * @param fst_flags A bitmask indicating which timestamps to adjust.
 	 */
 	path_filestat_set_times(fd: wasi_file_handle, flags: lookupflags, path_ptr: ptr, path_len: size, atim: timestamp, mtim: timestamp, fst_flags: fstflags): errno;
+
+	/**
+	 * Create a hard link. Note: This is similar to linkat in POSIX.
+	 *
+	 * @param old_fd The file descriptor.
+	 * @param old_flags Flags determining the method of how the path is resolved.
+	 * @param old_path_ptr: A memory location that holds the source path from
+	 * which to link.
+	 * @param old_path_len: The length of the old path.
+	 * @param new_fd The working directory at which the resolution of the new
+	 * path starts.
+	 * @param new_path_ptr: A memory location that holds the destination path
+	 * at which to create the hard link.
+	 * @param new_path_len: The length of the new path.
+	 */
+	path_link(old_fd: wasi_file_handle, old_flags: lookupflags, old_path_ptr: ptr, old_path_len: size, new_fd: wasi_file_handle, new_path_ptr: ptr, new_path_len: size): errno;
 
 	/**
 	 * Terminate the process normally. An exit code of 0 indicates successful
@@ -746,6 +761,7 @@ export namespace WASI {
 			path_create_directory: path_create_directory,
 			path_filestat_get: path_filestat_get,
 			path_filestat_set_times: path_filestat_set_times,
+			path_link: path_link,
 			proc_exit: proc_exit
 		};
 	}
@@ -1370,13 +1386,36 @@ export namespace WASI {
 		// So we ignore lookupflags for now
 		try {
 			const fileHandle = getFileHandle(fd);
-			fileHandle.assertBaseRight(Rights.path_create_directory);
+			fileHandle.assertBaseRight(Rights.path_filestat_set_times);
 			fileHandle.assertIsDirectory();
 
 			// todo@dirkb
-			// For new we do nothing. We could cache the timestamp in memory
+			// For now we do nothing. We could cache the timestamp in memory
 			// But we would loose them during reload. We could also store them
 			// in local storage
+			return Errno.success;
+		} catch (error) {
+			if (error instanceof WasiError) {
+				return error.errno;
+			}
+			return Errno.perm;
+		}
+	}
+
+	function path_link(old_fd: wasi_file_handle, old_flags: lookupflags, old_path_ptr: ptr, old_path_len: size, new_fd: wasi_file_handle, new_path_ptr: ptr, new_path_len: size): errno {
+		// VS Code has not support to create sym links.
+		try {
+			const oldFileHandle = getFileHandle(old_fd);
+			oldFileHandle.assertBaseRight(Rights.path_link_source);
+			oldFileHandle.assertIsDirectory();
+
+			const newFileHandle = getFileHandle(new_fd);
+			newFileHandle.assertBaseRight(Rights.path_link_target);
+			newFileHandle.assertIsDirectory();
+
+			// todo@dirkb
+			// For now we do nothing. If we need to implement this we need
+			// support from the VS Code API.
 			return Errno.success;
 		} catch (error) {
 			if (error instanceof WasiError) {
