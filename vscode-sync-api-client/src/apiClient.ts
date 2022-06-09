@@ -22,6 +22,7 @@ export interface FileSystem {
 	readDirectory(uri: URI): Types.DirectoryEntries | number;
 	createDirectory(uri: URI): number;
 	delete(uri: URI, options?: { recursive?: boolean; useTrash?: boolean }): number;
+	rename(source: URI, target: URI, options?: { overwrite?: boolean }): number;
 }
 
 type ApiClientConnection<Ready extends {} | undefined = undefined> = BaseClientConnection<Requests, Ready>;
@@ -104,6 +105,11 @@ class FileSystemImpl<Ready extends {} | undefined = undefined> implements FileSy
 
 	public delete(uri: URI, options?: { recursive?: boolean; useTrash?: boolean }): number {
 		const requestResult = this.connection.sendRequest('fileSystem/delete', { uri: uri.toJSON(), options });
+		return requestResult.errno;
+	}
+
+	public rename(source: URI, target: URI, options?: { overwrite?: boolean }): number {
+		const requestResult = this.connection.sendRequest('fileSystem/rename', { source: source.toJSON(), target: target.toJSON(), options });
 		return requestResult.errno;
 	}
 }

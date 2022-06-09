@@ -219,4 +219,14 @@ export type Requests =
 		};
 	};
 	result: null;
+} | {
+	method: 'fileSystem/rename';
+	params: {
+		source: Types.UriComponents;
+		target: Types.UriComponents;
+		options?: {
+			overwrite?: boolean;
+		};
+	};
+	result: null;
 };

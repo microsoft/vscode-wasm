@@ -32,7 +32,6 @@ export interface Environment {
 
 
 /** Python requirement.
-  "path_remove_directory"
   "path_rename"
   "path_symlink"
   "path_unlink_file"
@@ -378,6 +377,21 @@ export interface WASI {
 	 * @param path_len The length of the path.
 	 */
 	path_remove_directory(fd: fd, path_ptr: ptr, path_len: size): errno;
+
+	/**
+	 * Rename a file or directory. Note: This is similar to renameat in POSIX.
+	 *
+	 * @param fd The file descriptor.
+	 * @param old_path_ptr: A memory location that holds the source path of the
+	 * file or directory to rename.
+	 * @param old_path_len: The length of the old path.
+	 * @param new_fd The working directory at which the resolution of the new
+	 * path starts.
+	 * @param new_path_ptr: A memory location that holds The destination path to
+	 * which to rename the file or directory.
+	 * @param new_path_len: The length of the new path.
+	 */
+	path_rename(fd: fd, old_path_ptr: ptr, old_path_len: size, new_fd: fd, new_path_ptr: ptr, new_path_len: size): errno;
 
 	/**
 	 * Terminate the process normally. An exit code of 0 indicates successful
@@ -784,6 +798,7 @@ export namespace WASI {
 			path_open: path_open,
 			path_readlink: path_readlink,
 			path_remove_directory: path_remove_directory,
+			path_rename: path_rename,
 			proc_exit: proc_exit
 		};
 	}
@@ -1394,7 +1409,7 @@ export namespace WASI {
 	function path_remove_directory(fd: fd, path_ptr: ptr, path_len: size): errno {
 		try {
 			const fileHandle = getFileHandle(fd);
-			fileHandle.assertBaseRight(Rights.path_readlink);
+			fileHandle.assertBaseRight(Rights.path_remove_directory);
 			fileHandle.assertIsDirectory();
 
 			const memory = memoryRaw();
@@ -1402,6 +1417,31 @@ export namespace WASI {
 			const uri = getRealUri(fileHandle, name);
 
 			const result = $apiClient.fileSystem.delete(uri, { recursive: false, useTrash: true });
+			return code2Wasi.asErrno(result);
+		} catch (error) {
+			return handleError(error);
+		}
+	}
+
+	function path_rename(old_fd: fd, old_path_ptr: ptr, old_path_len: size, new_fd: fd, new_path_ptr: ptr, new_path_len: size): errno {
+		try {
+			const oldFileHandle = getFileHandle(old_fd);
+			oldFileHandle.assertBaseRight(Rights.path_rename_source);
+			oldFileHandle.assertIsDirectory();
+
+			const newFileHandle = getFileHandle(new_fd);
+			newFileHandle.assertBaseRight(Rights.path_rename_target);
+			newFileHandle.assertIsDirectory();
+
+
+			const memory = memoryRaw();
+			const oldName = $decoder.decode(new Uint8Array(memory, old_path_ptr, old_path_len));
+			const oldUri = getRealUri(oldFileHandle, oldName);
+
+			const newName = $decoder.decode(new Uint8Array(memory, new_path_ptr, new_path_len));
+			const newUri = getRealUri(newFileHandle, newName);
+
+			const result = $apiClient.fileSystem.rename(oldUri, newUri, { overwrite: false });
 			return code2Wasi.asErrno(result);
 		} catch (error) {
 			return handleError(error);

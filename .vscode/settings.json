@@ -141,6 +141,7 @@
 		"pwritev",
 		"readlinkat",
 		"REMOVEDIR",
+		"renameat",
 		"rofs",
 		"SETFL",
 		"spipe",

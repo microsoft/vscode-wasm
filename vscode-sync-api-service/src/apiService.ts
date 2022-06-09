@@ -155,6 +155,17 @@ export class ApiService<Ready extends {} | undefined = undefined> {
 				return handleError(error);
 			}
 		});
+
+		this.connection.onRequest('fileSystem/rename', async (params) => {
+			try {
+				const source = vscode.Uri.from(params.source);
+				const target = vscode.Uri.from(params.target);
+				await vscode.workspace.fs.rename(source, target, params.options);
+				return {errno: 0 };
+			} catch (error) {
+				return handleError(error);
+			}
+		});
 	}
 
 	public getPty(): vscode.Pseudoterminal {
