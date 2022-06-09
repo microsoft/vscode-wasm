@@ -17,7 +17,7 @@ import { ptr, size, u32 } from './baseTypes';
 import {
 	wasi_file_handle, errno, Errno, lookupflags, oflags, rights, fdflags, dircookie, prestat, filetype, Rights,
 	filesize, advise, filedelta, whence, Filestat, Whence, Ciovec, Iovec, Filetype, clockid, timestamp, Clockid,
-	Fdstat, fstflags, Prestat
+	Fdstat, fstflags, Prestat, Dirent, dirent
 } from './wasiTypes';
 import { code2Wasi } from './converter';
 
@@ -248,11 +248,11 @@ export interface WASI {
 	 * @param buf_ptr The buffer where directory entries are stored.
 	 * @param buf_len The length of the buffer.
 	 * @param cookie The location within the directory to start reading.
-	 * @param bufEndPtr The number of bytes stored in the read buffer.
+	 * @param buf_used_ptr The number of bytes stored in the read buffer.
 	 * If less than the size of the read buffer, the end of the directory has
 	 * been reached.
 	 */
-	fd_readdir(fd: wasi_file_handle, buf_ptr: ptr, buf_len: size, cookie: dircookie, bufEndPtr: ptr): errno;
+	fd_readdir(fd: wasi_file_handle, buf_ptr: ptr, buf_len: size, cookie: dircookie, buf_used_ptr: ptr): errno;
 
 	/**
 	 * Move the offset of a file descriptor. Note: This is similar to lseek in
@@ -1022,10 +1022,20 @@ export namespace WASI {
 		}
 	}
 
-	function fd_readdir(fd: wasi_file_handle, buf_ptr: ptr, buf_len: size, cookie: dircookie, bufEndPtr: ptr): errno {
+	function fd_readdir(fd: wasi_file_handle, buf_ptr: ptr, buf_len: size, cookie: dircookie, buf_used_ptr: ptr): errno {
 		try {
 			const fileHandle = getFileHandle(fd);
 			fileHandle.assertBaseRight(Rights.fd_readdir);
+			if (fileHandle.fileType !== Filetype.directory) {
+				return Errno.notdir;
+			}
+			const memory = memoryView();
+			const raw = memoryRaw();
+			// We have a cookie > 0 but no directory entries. So return end  of list
+			if (cookie !== 0n && !$directoryEntries.has(fileHandle.fd)) {
+				memory.setUint32(buf_used_ptr, 0, true);
+				return Errno.success;
+			}
 			if (cookie === 0n) {
 				const result = $apiClient.fileSystem.readDirectory(fileHandle.real.uri);
 				if (typeof result === 'number') {
@@ -1037,6 +1047,33 @@ export namespace WASI {
 			if (entries === undefined) {
 				return Errno.badmsg;
 			}
+			let i = Number(cookie);
+			let ptr: ptr = buf_ptr;
+			let spaceLeft = buf_len;
+			for (; i < entries.length && spaceLeft >= Dirent.size; i++) {
+				const entry = entries[i];
+				const filetype: filetype = code2Wasi.asFileType(entry[1]);
+				const name = entry[0];
+				const uri = getRealUri(fileHandle, name);
+				const nameBytes = $encoder.encode(name);
+				const dirent: dirent = Dirent.create(ptr, memory);
+				dirent.d_next = BigInt(i + 1);
+				dirent.d_ino = INodes.get(uri);
+				dirent.d_type = filetype;
+				dirent.d_namlen = nameBytes.byteLength;
+				spaceLeft -= Dirent.size;
+				const spaceForName = Math.min(spaceLeft, nameBytes.byteLength);
+				(new Uint8Array(raw, ptr + Dirent.size, spaceForName)).set(nameBytes.subarray(0, spaceForName));
+				ptr += Dirent.size + spaceForName;
+				spaceLeft -= spaceForName;
+			}
+			if (i === entries.length) {
+				memory.setUint32(buf_used_ptr, ptr - buf_ptr, true);
+				$directoryEntries.delete(fileHandle.fd);
+			} else {
+				memory.setUint32(buf_used_ptr, buf_len, true);
+			}
+			const check = new Uint8Array(raw, buf_ptr, buf_len);
 			return Errno.success;
 		} catch (error) {
 			if (error instanceof WasiError) {
@@ -1194,6 +1231,9 @@ export namespace WASI {
 
 	function getRealUri(parentInfo: FileHandle, name: string): URI {
 		const real = parentInfo.real.uri;
+		if (name === '.') {
+			return real;
+		}
 		return real.with({ path: `${real.path}/${name}`});
 	}
 }

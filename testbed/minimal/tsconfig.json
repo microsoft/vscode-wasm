@@ -4,6 +4,7 @@
 		"noUnusedLocals": true,
 		"noUnusedParameters": true,
 		"rootDir": ".",
+		"skipLibCheck": true,
 		"lib": [ "es2020", "webworker"],
 		"types": ["node", "vscode"],
 		"module": "commonjs",

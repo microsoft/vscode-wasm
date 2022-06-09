@@ -25,7 +25,11 @@ fn main() {
 // let _input_file =
 //         fs::File::open("/workspace/test.bat").map_err(|err| format!("error opening input {}: {}", "abc.txt", err)).unwrap();
 
-    let contents =
-        fs::read_to_string("/workspace/test.bat").expect("Something went wrong reading the file");
-    println!("Content:\n{}", contents);
+    // let contents =
+    //     fs::read_to_string("/workspace/test.bat").expect("Something went wrong reading the file");
+    // println!("Content:\n{}", contents);
+
+    for file in fs::read_dir("./workspace").unwrap() {
+        println!("{}", file.unwrap().path().display());
+    }
 }
