@@ -15,7 +15,7 @@ import { ApiClient, FileType, Types } from 'vscode-sync-api-client';
 
 import { ptr, size, u32 } from './baseTypes';
 import {
-	wasi_file_handle, errno, Errno, lookupflags, oflags, rights, fdflags, dircookie, prestat, filetype, Rights,
+	fd, errno, Errno, lookupflags, oflags, rights, fdflags, dircookie, prestat, filetype, Rights,
 	filesize, advise, filedelta, whence, Filestat, Whence, Ciovec, Iovec, Filetype, clockid, timestamp, Clockid,
 	Fdstat, fstflags, Prestat, Dirent, dirent, exitcode
 } from './wasiTypes';
@@ -32,7 +32,6 @@ export interface Environment {
 
 
 /** Python requirement.
-  "path_readlink"
   "path_remove_directory"
   "path_rename"
   "path_symlink"
@@ -101,7 +100,7 @@ export interface WASI {
 	 * @param length The length of the region to which the advisory applies.
 	 * @param advise The advice.
 	 */
-	fd_advise(fd: wasi_file_handle, offset: filesize, length: filesize, advise: advise): errno;
+	fd_advise(fd: fd, offset: filesize, length: filesize, advise: advise): errno;
 
 	/**
 	 * Force the allocation of space in a file. Note: This is similar to
@@ -111,13 +110,13 @@ export interface WASI {
 	 * @param offset The offset at which to start the allocation.
 	 * @param len The length of the area that is allocated.
 	 */
-	fd_allocate(fd: wasi_file_handle, offset: filesize, len: filesize): errno;
+	fd_allocate(fd: fd, offset: filesize, len: filesize): errno;
 
 	/**
 	 * Close a file descriptor. Note: This is similar to close in POSIX.
 	 * @param fd The file descriptor.
 	 */
-	fd_close(fd: wasi_file_handle): errno;
+	fd_close(fd: fd): errno;
 
 	/**
 	 * Synchronize the data of a file to disk. Note: This is similar to
@@ -125,7 +124,7 @@ export interface WASI {
 	 *
 	 * @param fd The file descriptor.
 	 */
-	fd_datasync(fd: wasi_file_handle): errno;
+	fd_datasync(fd: fd): errno;
 
 	/**
 	 * Get the attributes of a file descriptor. Note: This returns similar
@@ -134,7 +133,7 @@ export interface WASI {
 	 * @param fd The file descriptor.
 	 * @param fdstat_ptr A pointer to store the result.
 	 */
-	fd_fdstat_get(fd: wasi_file_handle, fdstat_ptr: ptr): errno;
+	fd_fdstat_get(fd: fd, fdstat_ptr: ptr): errno;
 
 	/**
 	 * Adjust the flags associated with a file descriptor. Note: This is similar
@@ -143,14 +142,14 @@ export interface WASI {
 	 * @param fd The file descriptor.
 	 * @param fdflags The desired values of the file descriptor flags.
 	 */
-	fd_fdstat_set_flags(fd: wasi_file_handle, fdflags: fdflags): errno;
+	fd_fdstat_set_flags(fd: fd, fdflags: fdflags): errno;
 
 	/**
 	 * Return the attributes of an open file.
 	 * @param fd The file descriptor.
 	 * @param filestat_ptr The buffer where the file's attributes are stored.
 	 */
-	fd_filestat_get(fd: wasi_file_handle, filestat_ptr: ptr): errno;
+	fd_filestat_get(fd: fd, filestat_ptr: ptr): errno;
 
 	/**
 	 * Adjust the size of an open file. If this increases the file's size, the
@@ -160,7 +159,7 @@ export interface WASI {
 	 * @param fd The file descriptor.
 	 * @param size: The desired file size.
 	 */
-	fd_filestat_set_size(fd: wasi_file_handle, size: filesize): errno;
+	fd_filestat_set_size(fd: fd, size: filesize): errno;
 
 	/**
 	 * Adjust the timestamps of an open file or directory. Note: This is similar
@@ -171,7 +170,7 @@ export interface WASI {
 	 * @param mtim The desired values of the data modification timestamp.
 	 * @param fst_flags A bitmask indicating which timestamps to adjust.
 	 */
-	fd_filestat_set_times(fd: wasi_file_handle, atim: timestamp, mtim: timestamp, fst_flags: fstflags): errno;
+	fd_filestat_set_times(fd: fd, atim: timestamp, mtim: timestamp, fst_flags: fstflags): errno;
 
 	/**
 	 * Read from a file descriptor, without using and updating the file
@@ -182,7 +181,7 @@ export interface WASI {
 	 * @param offset The offset within the file at which to read.
 	 * @param bytesRead_ptr A memory location to store the bytes read.
 	 */
-	fd_pread(fd: wasi_file_handle, iovs_ptr: ptr, iovs_len: u32, offset: filesize, bytesRead_ptr: ptr): errno;
+	fd_pread(fd: fd, iovs_ptr: ptr, iovs_len: u32, offset: filesize, bytesRead_ptr: ptr): errno;
 
 	/**
 	 * Return a description of the given preopened file descriptor.
@@ -190,7 +189,7 @@ export interface WASI {
 	 * @param fd The file descriptor.
 	 * @param bufPtr A pointer to store the pre stat information.
 	 */
-	fd_prestat_get(fd: wasi_file_handle, bufPtr: ptr): errno;
+	fd_prestat_get(fd: fd, bufPtr: ptr): errno;
 
 	/**
 	 * Return a description of the given preopened file descriptor.
@@ -199,7 +198,7 @@ export interface WASI {
 	 * @param pathPtr A memory location to store the path name.
 	 * @param pathLen The length of the path.
 	 */
-	fd_prestat_dir_name(fd: wasi_file_handle, pathPtr: ptr, pathLen: size): errno;
+	fd_prestat_dir_name(fd: fd, pathPtr: ptr, pathLen: size): errno;
 
 	/**
 	 * Write to a file descriptor, without using and updating the file
@@ -211,7 +210,7 @@ export interface WASI {
 	 * @param offset The offset within the file at which to write.
 	 * @param bytesWritten_ptr A memory location to store the bytes written.
 	 */
-	fd_pwrite(fd: wasi_file_handle, ciovs_ptr: ptr, ciovs_len: u32, offset: filesize, bytesWritten_ptr: ptr): errno;
+	fd_pwrite(fd: fd, ciovs_ptr: ptr, ciovs_len: u32, offset: filesize, bytesWritten_ptr: ptr): errno;
 
 	/**
 	 * Read from a file descriptor. Note: This is similar to readv in POSIX.
@@ -221,7 +220,7 @@ export interface WASI {
 	 * @param iovs_len The length of the iovs.
 	 * @param bytesRead_ptr A memory location to store the bytes read.
 	 */
-	fd_read(fd: wasi_file_handle, iovs_ptr: ptr, iovs_len: u32, bytesRead_ptr: ptr): errno;
+	fd_read(fd: fd, iovs_ptr: ptr, iovs_len: u32, bytesRead_ptr: ptr): errno;
 
 	/**
 	 * Read directory entries from a directory. When successful, the contents of
@@ -241,7 +240,7 @@ export interface WASI {
 	 * If less than the size of the read buffer, the end of the directory has
 	 * been reached.
 	 */
-	fd_readdir(fd: wasi_file_handle, buf_ptr: ptr, buf_len: size, cookie: dircookie, buf_used_ptr: ptr): errno;
+	fd_readdir(fd: fd, buf_ptr: ptr, buf_len: size, cookie: dircookie, buf_used_ptr: ptr): errno;
 
 	/**
 	 * Move the offset of a file descriptor. Note: This is similar to lseek in
@@ -251,7 +250,7 @@ export interface WASI {
 	 * @param whence The base from which the offset is relative.
 	 * @param new_offset_ptr A memory location to store the new offset.
 	 */
-	fd_seek(fd: wasi_file_handle, offset: filedelta, whence: whence, new_offset_ptr: ptr): errno;
+	fd_seek(fd: fd, offset: filedelta, whence: whence, new_offset_ptr: ptr): errno;
 
 	/**
 	 * Synchronize the data and metadata of a file to disk. Note: This is
@@ -259,7 +258,7 @@ export interface WASI {
 	 *
 	 * @param fd The file descriptor.
 	 */
-	fd_sync(fd: wasi_file_handle): errno;
+	fd_sync(fd: fd): errno;
 
 	/**
 	 * Return the current offset of a file descriptor. Note: This is similar
@@ -269,7 +268,7 @@ export interface WASI {
 	 * @param offset_ptr A memory location to store the current offset of the
 	 * file descriptor, relative to the start of the file.
 	 */
-	fd_tell(fd: wasi_file_handle, offset_ptr: ptr): errno;
+	fd_tell(fd: fd, offset_ptr: ptr): errno;
 
 	/**
 	 * Write to a file descriptor. Note: This is similar to writev in POSIX.
@@ -279,7 +278,56 @@ export interface WASI {
 	 * @param ciovs_len The length of the iovs.
 	 * @param bytesWritten_ptr A memory location to store the bytes written.
 	 */
-	fd_write(fd: wasi_file_handle, ciovs_ptr: ptr, ciovs_len: u32, bytesWritten_ptr: ptr): errno;
+	fd_write(fd: fd, ciovs_ptr: ptr, ciovs_len: u32, bytesWritten_ptr: ptr): errno;
+
+	/**
+	 * Create a directory. Note: This is similar to mkdirat in POSIX.
+	 * @param fd The file descriptor.
+	 * @param path_ptr A memory location that holds the path name.
+	 * @param path_len The length of the path
+	 */
+	path_create_directory(fd: fd, path_ptr: ptr, path_len: size): errno;
+
+	/**
+	 * Return the attributes of a file or directory. Note: This is similar to
+	 * stat in POSIX.
+	 * @param fd The file descriptor.
+	 * @param flags Flags determining the method of how the path is resolved.
+	 * @param path_ptr A memory location that holds the path name.
+	 * @param path_len The length of the path
+	 * @param filestat_ptr A memory location to store the file stat.
+	 */
+	path_filestat_get(fd: fd, flags: lookupflags, path_ptr: ptr, path_len: size, filestat_ptr: ptr): errno;
+
+	/**
+	 * Adjust the timestamps of a file or directory. Note: This is similar to
+	 * utimensat in POSIX.
+	 *
+	 * @param fd The file descriptor.
+	 * @param flags Flags determining the method of how the path is resolved.
+	 * @param path_ptr A memory location that holds the path name.
+	 * @param path_len The length of the path.
+	 * @param atim The desired values of the data access timestamp.
+	 * @param mtim The desired values of the data modification timestamp.
+	 * @param fst_flags A bitmask indicating which timestamps to adjust.
+	 */
+	path_filestat_set_times(fd: fd, flags: lookupflags, path_ptr: ptr, path_len: size, atim: timestamp, mtim: timestamp, fst_flags: fstflags): errno;
+
+	/**
+	 * Create a hard link. Note: This is similar to linkat in POSIX.
+	 *
+	 * @param old_fd The file descriptor.
+	 * @param old_flags Flags determining the method of how the path is resolved.
+	 * @param old_path_ptr: A memory location that holds the source path from
+	 * which to link.
+	 * @param old_path_len: The length of the old path.
+	 * @param new_fd The working directory at which the resolution of the new
+	 * path starts.
+	 * @param new_path_ptr: A memory location that holds the destination path
+	 * at which to create the hard link.
+	 * @param new_path_len: The length of the new path.
+	 */
+	path_link(old_fd: fd, old_flags: lookupflags, old_path_ptr: ptr, old_path_len: size, new_fd: fd, new_path_ptr: ptr, new_path_len: size): errno;
 
 	/**
 	 * Open a file or directory. The returned file descriptor is not guaranteed
@@ -306,56 +354,7 @@ export interface WASI {
 	 * @param fdflags The fd flags.
 	 * @param fd_ptr A memory location to store the opened file descriptor.
 	 */
-	path_open(fd: wasi_file_handle, dirflags: lookupflags, path: ptr, pathLen: size, oflags: oflags, fs_rights_base: rights, fs_rights_inheriting: rights, fdflags: fdflags, fd_ptr: ptr): errno;
-
-	/**
-	 * Create a directory. Note: This is similar to mkdirat in POSIX.
-	 * @param fd The file descriptor.
-	 * @param path_ptr A memory location that holds the path name.
-	 * @param path_len The length of the path
-	 */
-	path_create_directory(fd: wasi_file_handle, path_ptr: ptr, path_len: size): errno;
-
-	/**
-	 * Return the attributes of a file or directory. Note: This is similar to
-	 * stat in POSIX.
-	 * @param fd The file descriptor.
-	 * @param flags Flags determining the method of how the path is resolved.
-	 * @param path_ptr A memory location that holds the path name.
-	 * @param path_len The length of the path
-	 * @param filestat_ptr A memory location to store the file stat.
-	 */
-	path_filestat_get(fd: wasi_file_handle, flags: lookupflags, path_ptr: ptr, path_len: size, filestat_ptr: ptr): errno;
-
-	/**
-	 * Adjust the timestamps of a file or directory. Note: This is similar to
-	 * utimensat in POSIX.
-	 *
-	 * @param fd The file descriptor.
-	 * @param flags Flags determining the method of how the path is resolved.
-	 * @param path_ptr A memory location that holds the path name.
-	 * @param path_len The length of the path.
-	 * @param atim The desired values of the data access timestamp.
-	 * @param mtim The desired values of the data modification timestamp.
-	 * @param fst_flags A bitmask indicating which timestamps to adjust.
-	 */
-	path_filestat_set_times(fd: wasi_file_handle, flags: lookupflags, path_ptr: ptr, path_len: size, atim: timestamp, mtim: timestamp, fst_flags: fstflags): errno;
-
-	/**
-	 * Create a hard link. Note: This is similar to linkat in POSIX.
-	 *
-	 * @param old_fd The file descriptor.
-	 * @param old_flags Flags determining the method of how the path is resolved.
-	 * @param old_path_ptr: A memory location that holds the source path from
-	 * which to link.
-	 * @param old_path_len: The length of the old path.
-	 * @param new_fd The working directory at which the resolution of the new
-	 * path starts.
-	 * @param new_path_ptr: A memory location that holds the destination path
-	 * at which to create the hard link.
-	 * @param new_path_len: The length of the new path.
-	 */
-	path_link(old_fd: wasi_file_handle, old_flags: lookupflags, old_path_ptr: ptr, old_path_len: size, new_fd: wasi_file_handle, new_path_ptr: ptr, new_path_len: size): errno;
+	path_open(fd: fd, dirflags: lookupflags, path: ptr, pathLen: size, oflags: oflags, fs_rights_base: rights, fs_rights_inheriting: rights, fdflags: fdflags, fd_ptr: ptr): errno;
 
 	/**
 	 * Read the contents of a symbolic link. Note: This is similar to readlinkat
@@ -368,7 +367,17 @@ export interface WASI {
 	 * @param result_size_ptr A memory location to store the number of bytes
 	 * placed in the buffer.
 	 */
-	path_readlink(fd: wasi_file_handle, path_ptr: ptr, path_len: size, buf: ptr, buf_len: size, result_size_ptr: ptr): errno;
+	path_readlink(fd: fd, path_ptr: ptr, path_len: size, buf: ptr, buf_len: size, result_size_ptr: ptr): errno;
+
+	/**
+	 * Remove a directory. Return errno::notempty if the directory is not empty.
+	 * Note: This is similar to unlinkat(fd, path, AT_REMOVEDIR) in POSIX.
+	 *
+	 * @param fd The file descriptor.
+	 * @param path_ptr  A memory location that holds the path name.
+	 * @param path_len The length of the path.
+	 */
+	path_remove_directory(fd: fd, path_ptr: ptr, path_len: size): errno;
 
 	/**
 	 * Terminate the process normally. An exit code of 0 indicates successful
@@ -459,7 +468,7 @@ class FileHandle {
 	/**
 	 * The WASI file handle
 	 */
-	public readonly fd: wasi_file_handle;
+	public readonly fd: fd;
 
 	/**
 	 * The file type
@@ -506,7 +515,7 @@ class FileHandle {
 	 */
 	public readonly preOpened: boolean;
 
-	constructor(fd: wasi_file_handle, fileType: filetype, path: string, rights: FileHandle['rights'], real: FileHandle['real'], preOpened: boolean = false) {
+	constructor(fd: fd, fileType: filetype, path: string, rights: FileHandle['rights'], real: FileHandle['real'], preOpened: boolean = false) {
 		this.fd = fd;
 		this.fileType = fileType;
 		this.path = path;
@@ -718,9 +727,9 @@ export namespace WASI {
 	let $apiClient: ApiClient;
 	let $options: Options;
 
-	const $fileHandles: Map<wasi_file_handle, FileHandle> = new Map();
-	const $files: Map<wasi_file_handle, File> = new Map();
-	const $directoryEntries: Map<wasi_file_handle, Types.DirectoryEntries> = new Map();
+	const $fileHandles: Map<fd, FileHandle> = new Map();
+	const $files: Map<fd, File> = new Map();
+	const $directoryEntries: Map<fd, Types.DirectoryEntries> = new Map();
 
 	export function create(name: string, apiClient: ApiClient, options: Options): WASI {
 		$name = name;
@@ -768,12 +777,13 @@ export namespace WASI {
 			fd_sync: fd_sync,
 			fd_tell: fd_tell,
 			fd_write: fd_write,
-			path_open: path_open,
 			path_create_directory: path_create_directory,
 			path_filestat_get: path_filestat_get,
 			path_filestat_set_times: path_filestat_set_times,
 			path_link: path_link,
+			path_open: path_open,
 			path_readlink: path_readlink,
+			path_remove_directory: path_remove_directory,
 			proc_exit: proc_exit
 		};
 	}
@@ -862,7 +872,7 @@ export namespace WASI {
 		return Errno.success;
 	}
 
-	function fd_advise(fd: wasi_file_handle, offset: filesize, length: filesize, advise: advise): errno {
+	function fd_advise(fd: fd, offset: filesize, length: filesize, advise: advise): errno {
 		try {
 			const fileHandle = getFileHandle(fd);
 			fileHandle.assertBaseRight(Rights.fd_advise);
@@ -870,28 +880,22 @@ export namespace WASI {
 			// We don't have advisory in VS Code. So treat it as successful.
 			return Errno.success;
 		} catch (error) {
-			if (error instanceof WasiError) {
-				return error.errno;
-			}
-			return Errno.badf;
+			return handleError(error);
 		}
 	}
 
-	function fd_allocate(fd: wasi_file_handle, offset: filesize, len: filesize): errno {
+	function fd_allocate(fd: fd, offset: filesize, len: filesize): errno {
 		try {
 			const fileHandle = getFileHandle(fd);
 			fileHandle.assertBaseRight(Rights.fd_allocate);
 			const file = getOrCreateFile(fileHandle);
 			return file.alloc(offset, len);
 		} catch (error) {
-			if (error instanceof WasiError) {
-				return error.errno;
-			}
-			return Errno.badf;
+			return handleError(error);
 		}
 	}
 
-	function fd_close(fd: wasi_file_handle): errno {
+	function fd_close(fd: fd): errno {
 		try {
 			const fileHandle = getFileHandle(fd);
 			// Delete the file. Close doesn't flush.
@@ -899,14 +903,11 @@ export namespace WASI {
 			$fileHandles.delete(fileHandle.fd);
 			return Errno.success;
 		} catch (error) {
-			if (error instanceof WasiError) {
-				return error.errno;
-			}
-			return Errno.perm;
+			return handleError(error);
 		}
 	}
 
-	function fd_datasync(fd: wasi_file_handle): errno {
+	function fd_datasync(fd: fd): errno {
 		try {
 			const fileHandle = getFileHandle(fd);
 			fileHandle.assertBaseRight(Rights.fd_datasync);
@@ -917,14 +918,11 @@ export namespace WASI {
 			}
 			return file.sync();
 		} catch (error) {
-			if (error instanceof WasiError) {
-				return error.errno;
-			}
-			return Errno.badf;
+			return handleError(error);
 		}
 	}
 
-	function fd_fdstat_get(fd: wasi_file_handle, fdstat_ptr: ptr): errno {
+	function fd_fdstat_get(fd: fd, fdstat_ptr: ptr): errno {
 		// This is not available under VS Code.
 		try {
 			const fileHandle = getFileHandle(fd);
@@ -952,14 +950,11 @@ export namespace WASI {
 			}
 			return Errno.success;
 		} catch (error) {
-			if (error instanceof WasiError) {
-				return error.errno;
-			}
-			return Errno.badf;
+			return handleError(error);
 		}
 	}
 
-	function fd_fdstat_set_flags(fd: wasi_file_handle, fdflags: fdflags): errno {
+	function fd_fdstat_set_flags(fd: fd, fdflags: fdflags): errno {
 		try {
 			const fileHandle = getFileHandle(fd);
 			fileHandle.assertBaseRight(Rights.fd_fdstat_set_flags);
@@ -967,14 +962,11 @@ export namespace WASI {
 			file.setFdFlags(fdflags);
 			return Errno.success;
 		} catch (error) {
-			if (error instanceof WasiError) {
-				return error.errno;
-			}
-			return Errno.badf;
+			return handleError(error);
 		}
 	}
 
-	function fd_filestat_get(fd: wasi_file_handle, filestat_ptr: ptr): errno {
+	function fd_filestat_get(fd: fd, filestat_ptr: ptr): errno {
 		try {
 			const fileHandle = getFileHandle(fd);
 			fileHandle.assertBaseRight(Rights.fd_filestat_get);
@@ -995,28 +987,22 @@ export namespace WASI {
 			fileStat.atim = BigInt(vStat.mtime);
 			return Errno.success;
 		} catch (error) {
-			if (error instanceof WasiError) {
-				return error.errno;
-			}
-			return Errno.perm;
+			return handleError(error, Errno.perm);
 		}
 	}
 
-	function fd_filestat_set_size(fd: wasi_file_handle, size: filesize): errno {
+	function fd_filestat_set_size(fd: fd, size: filesize): errno {
 		try {
 			const fileHandle = getFileHandle(fd);
 			fileHandle.assertBaseRight(Rights.fd_filestat_set_size);
 			const file = getOrCreateFile(fileHandle);
 			return file.setSize(size);
 		} catch (error) {
-			if (error instanceof WasiError) {
-				return error.errno;
-			}
-			return Errno.badf;
+			return handleError(error);
 		}
 	}
 
-	function fd_filestat_set_times(fd: wasi_file_handle, atim: timestamp, mtim: timestamp, fst_flags: fstflags): errno {
+	function fd_filestat_set_times(fd: fd, atim: timestamp, mtim: timestamp, fst_flags: fstflags): errno {
 		try {
 			const fileHandle = getFileHandle(fd);
 			fileHandle.assertBaseRight(Rights.fd_filestat_set_times);
@@ -1026,14 +1012,11 @@ export namespace WASI {
 			// in local storage
 			return Errno.success;
 		} catch (error) {
-			if (error instanceof WasiError) {
-				return error.errno;
-			}
-			return Errno.badf;
+			return handleError(error);
 		}
 	}
 
-	function fd_pread(fd: wasi_file_handle, iovs_ptr: ptr, iovs_len: u32, offset: filesize, bytesRead_ptr: ptr): errno {
+	function fd_pread(fd: fd, iovs_ptr: ptr, iovs_len: u32, offset: filesize, bytesRead_ptr: ptr): errno {
 		try {
 			const fileHandle = getFileHandle(fd);
 			fileHandle.assertBaseRight(Rights.fd_read);
@@ -1048,14 +1031,11 @@ export namespace WASI {
 			memoryView().setUint32(bytesRead_ptr, bytesRead, true);
 			return Errno.success;
 		} catch (error) {
-			if (error instanceof WasiError) {
-				return error.errno;
-			}
-			return Errno.badf;
+			return handleError(error);
 		}
 	}
 
-	function fd_prestat_get(fd: wasi_file_handle, bufPtr: ptr): errno {
+	function fd_prestat_get(fd: fd, bufPtr: ptr): errno {
 		try {
 			const fileHandleInfo = $fileHandles.get(fd);
 			if (fileHandleInfo === undefined || !fileHandleInfo.preOpened) {
@@ -1066,14 +1046,11 @@ export namespace WASI {
 			prestat.len = $encoder.encode(fileHandleInfo.path).byteLength;
 			return Errno.success;
 		} catch(error) {
-			if (error instanceof WasiError) {
-				return error.errno;
-			}
-			return Errno.perm;
+			return handleError(error);
 		}
 	}
 
-	function fd_prestat_dir_name(fd: wasi_file_handle, pathPtr: ptr, pathLen: size): errno {
+	function fd_prestat_dir_name(fd: fd, pathPtr: ptr, pathLen: size): errno {
 		try {
 			const fileHandle = getFileHandle(fd);
 			const memory = new Uint8Array(memoryRaw(), pathPtr);
@@ -1084,14 +1061,11 @@ export namespace WASI {
 			memory.set(bytes);
 			return Errno.success;
 		} catch (error) {
-			if (error instanceof WasiError) {
-				return error.errno;
-			}
-			return Errno.perm;
+			return handleError(error);
 		}
 	}
 
-	function fd_pwrite(fd: wasi_file_handle, ciovs_ptr: ptr, ciovs_len: u32, offset: filesize, bytesWritten_ptr: ptr): errno {
+	function fd_pwrite(fd: fd, ciovs_ptr: ptr, ciovs_len: u32, offset: filesize, bytesWritten_ptr: ptr): errno {
 		try {
 			const fileHandle = getFileHandle(fd);
 			fileHandle.assertBaseRight(Rights.fd_write);
@@ -1108,14 +1082,11 @@ export namespace WASI {
 			memoryView().setUint32(bytesWritten_ptr, bytesWritten, true);
 			return Errno.success;
 		} catch (error) {
-			if (error instanceof WasiError) {
-				return error.errno;
-			}
-			return Errno.perm;
+			return handleError(error);
 		}
 	}
 
-	function fd_read(fd: wasi_file_handle, iovs_ptr: ptr, iovs_len: u32, bytesRead_ptr: ptr): errno {
+	function fd_read(fd: fd, iovs_ptr: ptr, iovs_len: u32, bytesRead_ptr: ptr): errno {
 		try {
 			const memory = memoryView();
 			if (fd === WASI_STDIN_FD) {
@@ -1153,14 +1124,11 @@ export namespace WASI {
 			memory.setUint32(bytesRead_ptr, bytesRead, true);
 			return Errno.success;
 		} catch (error) {
-			if (error instanceof WasiError) {
-				return error.errno;
-			}
-			return Errno.perm;
+			return handleError(error);
 		}
 	}
 
-	function fd_readdir(fd: wasi_file_handle, buf_ptr: ptr, buf_len: size, cookie: dircookie, buf_used_ptr: ptr): errno {
+	function fd_readdir(fd: fd, buf_ptr: ptr, buf_len: size, cookie: dircookie, buf_used_ptr: ptr): errno {
 		try {
 			const fileHandle = getFileHandle(fd);
 			fileHandle.assertBaseRight(Rights.fd_readdir);
@@ -1222,14 +1190,11 @@ export namespace WASI {
 			const check = new Uint8Array(raw, buf_ptr, buf_len);
 			return Errno.success;
 		} catch (error) {
-			if (error instanceof WasiError) {
-				return error.errno;
-			}
-			return Errno.perm;
+			return handleError(error);
 		}
 	}
 
-	function fd_seek(fd: wasi_file_handle, _offset: filedelta, whence: whence, new_offset_ptr: ptr): errno {
+	function fd_seek(fd: fd, _offset: filedelta, whence: whence, new_offset_ptr: ptr): errno {
 		try {
 			const offset = Number(_offset);
 			const fileHandle = getFileHandle(fd);
@@ -1237,14 +1202,11 @@ export namespace WASI {
 			const file = getOrCreateFile(fileHandle);
 			return file.seek(offset, whence);
 		} catch (error) {
-			if (error instanceof WasiError) {
-				return error.errno;
-			}
-			return Errno.perm;
+			return handleError(error);
 		}
 	}
 
-	function fd_sync(fd: wasi_file_handle): errno {
+	function fd_sync(fd: fd): errno {
 		try {
 			const fileHandle = getFileHandle(fd);
 			fileHandle.assertBaseRight(Rights.fd_sync);
@@ -1254,14 +1216,11 @@ export namespace WASI {
 			}
 			return file.sync();
 		} catch (error) {
-			if (error instanceof WasiError) {
-				return error.errno;
-			}
-			return Errno.perm;
+			return handleError(error);
 		}
 	}
 
-	function fd_tell(fd: wasi_file_handle, offset_ptr: ptr): errno {
+	function fd_tell(fd: fd, offset_ptr: ptr): errno {
 		try {
 			const fileHandle = getFileHandle(fd);
 			fileHandle.assertBaseRight(Rights.fd_sync);
@@ -1271,14 +1230,11 @@ export namespace WASI {
 			memory.setBigUint64(offset_ptr, BigInt(offset), true);
 			return Errno.success;
 		} catch (error) {
-			if (error instanceof WasiError) {
-				return error.errno;
-			}
-			return Errno.perm;
+			return handleError(error);
 		}
 	}
 
-	function fd_write(fd: wasi_file_handle, ciovs_ptr: ptr, ciovs_len: u32, bytesWritten_ptr: ptr): errno {
+	function fd_write(fd: fd, ciovs_ptr: ptr, ciovs_len: u32, bytesWritten_ptr: ptr): errno {
 		try {
 			if (fd === WASI_STDOUT_FD || fd === WASI_STDERR_FD) {
 				let written = 0;
@@ -1303,14 +1259,11 @@ export namespace WASI {
 			memory.setUint32(bytesWritten_ptr, result.bytesWritten, true);
 			return Errno.success;
 		} catch (error) {
-			if (error instanceof WasiError) {
-				return error.errno;
-			}
-			return Errno.perm;
+			return handleError(error);
 		}
 	}
 
-	function path_open(fd: wasi_file_handle, dirflags: lookupflags, path: ptr, pathLen: size, oflags: oflags, fs_rights_base: rights, fs_rights_inheriting: rights, fdflags: fdflags, fd_ptr: ptr): errno {
+	function path_open(fd: fd, dirflags: lookupflags, path: ptr, pathLen: size, oflags: oflags, fs_rights_base: rights, fs_rights_inheriting: rights, fdflags: fdflags, fd_ptr: ptr): errno {
 		try {
 			const parentHandle = getFileHandle(fd);
 			parentHandle.assertBaseRight(Rights.path_open);
@@ -1335,14 +1288,11 @@ export namespace WASI {
 			memory.setUint32(fd_ptr, fileHandleInfo.fd, true);
 			return Errno.success;
 		} catch(error) {
-			if (error instanceof WasiError) {
-				return error.errno;
-			}
-			return Errno.perm;
+			return handleError(error);
 		}
 	}
 
-	function path_create_directory(fd: wasi_file_handle, path_ptr: ptr, path_len: size): errno {
+	function path_create_directory(fd: fd, path_ptr: ptr, path_len: size): errno {
 		try {
 			const fileHandle = getFileHandle(fd);
 			fileHandle.assertBaseRight(Rights.path_create_directory);
@@ -1353,14 +1303,11 @@ export namespace WASI {
 			const result = $apiClient.fileSystem.createDirectory(getRealUri(fileHandle, name));
 			return code2Wasi.asErrno(result);
 		} catch (error) {
-			if (error instanceof WasiError) {
-				return error.errno;
-			}
-			return Errno.perm;
+			return handleError(error);
 		}
 	}
 
-	function path_filestat_get(fd: wasi_file_handle, _flags: lookupflags, path_ptr: ptr, path_len: size, filestat_ptr: ptr): errno {
+	function path_filestat_get(fd: fd, _flags: lookupflags, path_ptr: ptr, path_len: size, filestat_ptr: ptr): errno {
 		// VS Code has not support to follow sym links.
 		// So we ignore lookupflags for now
 		try {
@@ -1386,14 +1333,11 @@ export namespace WASI {
 			fileStat.atim = BigInt(vStat.mtime);
 			return Errno.success;
 		} catch (error) {
-			if (error instanceof WasiError) {
-				return error.errno;
-			}
-			return Errno.perm;
+			return handleError(error);
 		}
 	}
 
-	function path_filestat_set_times(fd: wasi_file_handle, flags: lookupflags, path_ptr: ptr, path_len: size, atim: timestamp, mtim: timestamp, fst_flags: fstflags): errno {
+	function path_filestat_set_times(fd: fd, flags: lookupflags, path_ptr: ptr, path_len: size, atim: timestamp, mtim: timestamp, fst_flags: fstflags): errno {
 		// VS Code has not support to follow sym links.
 		// So we ignore lookupflags for now
 		try {
@@ -1407,14 +1351,11 @@ export namespace WASI {
 			// in local storage
 			return Errno.nosys;
 		} catch (error) {
-			if (error instanceof WasiError) {
-				return error.errno;
-			}
-			return Errno.perm;
+			return handleError(error);
 		}
 	}
 
-	function path_link(old_fd: wasi_file_handle, old_flags: lookupflags, old_path_ptr: ptr, old_path_len: size, new_fd: wasi_file_handle, new_path_ptr: ptr, new_path_len: size): errno {
+	function path_link(old_fd: fd, old_flags: lookupflags, old_path_ptr: ptr, old_path_len: size, new_fd: fd, new_path_ptr: ptr, new_path_len: size): errno {
 		// VS Code has not support to create sym links.
 		try {
 			const oldFileHandle = getFileHandle(old_fd);
@@ -1430,14 +1371,11 @@ export namespace WASI {
 			// support from the VS Code API.
 			return Errno.nosys;
 		} catch (error) {
-			if (error instanceof WasiError) {
-				return error.errno;
-			}
-			return Errno.perm;
+			return handleError(error);
 		}
 	}
 
-	function path_readlink(fd: wasi_file_handle, path_ptr: ptr, path_len: size, buf: ptr, buf_len: size, result_size_ptr: ptr): errno {
+	function path_readlink(fd: fd, path_ptr: ptr, path_len: size, buf: ptr, buf_len: size, result_size_ptr: ptr): errno {
 		// VS Code has no support to follow a symlink.
 		try {
 			const fileHandle = getFileHandle(fd);
@@ -1449,14 +1387,35 @@ export namespace WASI {
 			// support from the VS Code API.
 			return Errno.nosys;
 		} catch (error) {
-			if (error instanceof WasiError) {
-				return error.errno;
-			}
-			return Errno.perm;
+			return handleError(error);
+		}
+	}
+
+	function path_remove_directory(fd: fd, path_ptr: ptr, path_len: size): errno {
+		try {
+			const fileHandle = getFileHandle(fd);
+			fileHandle.assertBaseRight(Rights.path_readlink);
+			fileHandle.assertIsDirectory();
+
+			const memory = memoryRaw();
+			const name = $decoder.decode(new Uint8Array(memory, path_ptr, path_len));
+			const uri = getRealUri(fileHandle, name);
+
+			const result = $apiClient.fileSystem.delete(uri, { recursive: false, useTrash: true });
+			return code2Wasi.asErrno(result);
+		} catch (error) {
+			return handleError(error);
 		}
 	}
 
 	function proc_exit(_rval: exitcode) {
+	}
+
+	function handleError(error: any, def: errno = Errno.badf): errno {
+		if (error instanceof WasiError) {
+			return error.errno;
+		}
+		return def;
 	}
 
 	function read_ciovs (iovs: ptr, iovsLen: u32): Uint8Array[] {
@@ -1505,7 +1464,7 @@ export namespace WASI {
 		return $memory;
 	}
 
-	function getFileHandle(fd: wasi_file_handle): FileHandle {
+	function getFileHandle(fd: fd): FileHandle {
 		const result = $fileHandles.get(fd);
 		if (result === undefined) {
 			throw new WasiError(Errno.badf);
@@ -1513,7 +1472,7 @@ export namespace WASI {
 		return result;
 	}
 
-	function getFile(fd: wasi_file_handle): File {
+	function getFile(fd: fd): File {
 		const result = $files.get(fd);
 		if (result === undefined) {
 			throw new WasiError(Errno.badf);

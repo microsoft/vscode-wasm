@@ -209,4 +209,14 @@ export type Requests =
 		uri: Types.UriComponents;
 	};
 	result: null;
+} | {
+	method: 'fileSystem/delete';
+	params: {
+		uri: Types.UriComponents;
+		options?: {
+			recursive?: boolean;
+			useTrash?: boolean;
+		};
+	};
+	result: null;
 };

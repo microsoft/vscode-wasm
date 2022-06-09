@@ -48,6 +48,14 @@ export class ApiService<Ready extends {} | undefined = undefined> {
 		};
 		this.inputBuffer = [];
 
+		const handleError = (error: any): { errno: number } => {
+			if (error instanceof vscode.FileSystemError) {
+				return { errno: this.asFileSystemError(error) };
+			}
+			return { errno: Types.FileSystemError.Unknown };
+
+		};
+
 		this.connection.onRequest('terminal/write', (params) => {
 			if (params !== undefined && params.binary !== undefined) {
 				const str = this.textDecoder.decode(params.binary).replace(terminalRegExp, (match: string, m1: string, m2: string) => {
@@ -94,10 +102,7 @@ export class ApiService<Ready extends {} | undefined = undefined> {
 				}
 				return { errno: 0 };
 			} catch (error) {
-				if (error instanceof vscode.FileSystemError) {
-					return { errno: this.asFileSystemError(error) };
-				}
-				return { errno: Types.FileSystemError.Unknown };
+				return handleError(error);
 			}
 		});
 
@@ -107,10 +112,7 @@ export class ApiService<Ready extends {} | undefined = undefined> {
 				const contents = await vscode.workspace.fs.readFile(uri);
 				return { errno: 0, data: contents };
 			} catch (error) {
-				if (error instanceof vscode.FileSystemError) {
-					return { errno: this.asFileSystemError(error) };
-				}
-				return { errno: Types.FileSystemError.Unknown };
+				return handleError(error);
 			}
 		});
 
@@ -120,10 +122,7 @@ export class ApiService<Ready extends {} | undefined = undefined> {
 				await vscode.workspace.fs.writeFile(uri, params.binary);
 				return { errno: 0 };
 			} catch (error) {
-				if (error instanceof vscode.FileSystemError) {
-					return { errno: this.asFileSystemError(error) };
-				}
-				return { errno: Types.FileSystemError.Unknown };
+				return handleError(error);
 			}
 		});
 
@@ -133,10 +132,7 @@ export class ApiService<Ready extends {} | undefined = undefined> {
 				const entries = await vscode.workspace.fs.readDirectory(uri);
 				return { errno: 0, data: entries };
 			} catch (error) {
-				if (error instanceof vscode.FileSystemError) {
-					return { errno: this.asFileSystemError(error) };
-				}
-				return { errno: Types.FileSystemError.Unknown };
+				return handleError(error);
 			}
 		});
 
@@ -146,10 +142,17 @@ export class ApiService<Ready extends {} | undefined = undefined> {
 				await vscode.workspace.fs.createDirectory(uri);
 				return {errno: 0 };
 			} catch (error) {
-				if (error instanceof vscode.FileSystemError) {
-					return { errno: this.asFileSystemError(error) };
-				}
-				return { errno: Types.FileSystemError.Unknown };
+				return handleError(error);
+			}
+		});
+
+		this.connection.onRequest('fileSystem/delete', async (params) => {
+			try {
+				const uri = vscode.Uri.from(params.uri);
+				await vscode.workspace.fs.delete(uri, params.options);
+				return {errno: 0 };
+			} catch (error) {
+				return handleError(error);
 			}
 		});
 	}

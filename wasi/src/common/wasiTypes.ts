@@ -10,7 +10,7 @@
 
 import { ptr, size, u16, u32, u64, s64, u8 } from './baseTypes';
 
-export type wasi_file_handle = u32;
+export type fd = u32;
 
 export type exitcode = u32;
 

@@ -140,6 +140,7 @@
 		"pwrite",
 		"pwritev",
 		"readlinkat",
+		"REMOVEDIR",
 		"rofs",
 		"SETFL",
 		"spipe",
@@ -147,6 +148,7 @@
 		"timedout",
 		"toobig",
 		"txtbsy",
+		"unlinkat",
 		"utimensat",
 		"willneed",
 		"xdev"
