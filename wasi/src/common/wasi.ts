@@ -17,7 +17,7 @@ import { ptr, size, u32 } from './baseTypes';
 import {
 	wasi_file_handle, errno, Errno, lookupflags, oflags, rights, fdflags, dircookie, prestat, filetype, Rights,
 	filesize, advise, filedelta, whence, Filestat, Whence, Ciovec, Iovec, Filetype, clockid, timestamp, Clockid,
-	Fdstat, fstflags, Prestat, Dirent, dirent
+	Fdstat, fstflags, Prestat, Dirent, dirent, exitcode
 } from './wasiTypes';
 import { code2Wasi } from './converter';
 
@@ -32,8 +32,6 @@ export interface Environment {
 
 
 /** Python requirement.
-  "fd_tell"
-  "fd_write"
   "path_create_directory"
   "path_filestat_get"
   "path_filestat_set_times"
@@ -315,7 +313,14 @@ export interface WASI {
 	 */
 	path_open(fd: wasi_file_handle, dirflags: lookupflags, path: ptr, pathLen: size, oflags: oflags, fs_rights_base: rights, fs_rights_inheriting: rights, fdflags: fdflags, fd_ptr: ptr): errno;
 
-	proc_exit(): errno;
+	/**
+	 * Terminate the process normally. An exit code of 0 indicates successful
+	 * termination of the program. The meanings of other values is dependent on
+	 * the environment.
+	 *
+	 * @param rval The exit code returned by the process.
+	 */
+	proc_exit(rval: exitcode): void;
 }
 
 export type Options = {
@@ -518,7 +523,7 @@ class File  {
 		newContent.set(content.subarray(offset, content.byteLength), offset + len);
 		this._content = newContent;
 
-		return this.contentWriter(this.fileHandle.real.uri, this.content);
+		return this.doWrite();
 	}
 
 	public pread(offset: number, bytesToRead: number): Uint8Array {
@@ -538,7 +543,7 @@ class File  {
 			content = newContent;
 		}
 		content.set(bytes, offset);
-		return { errno: this.write(), bytesWritten: bytes.length };
+		return { errno: this.doWrite(), bytesWritten: bytes.length };
 	}
 
 	public seek(offset: number, whence: whence): errno {
@@ -577,11 +582,11 @@ class File  {
 			newContent.set(this.content.subarray(0, size));
 			this._content = newContent;
 		}
-		return this.contentWriter(this.fileHandle.real.uri, this.content);
+		return this.doWrite();
 	}
 
 	public sync(): errno {
-		return this.write();
+		return this.doWrite();
 	}
 
 	public tell(): number {
@@ -596,11 +601,35 @@ class File  {
 		return result;
 	}
 
-	public write(): errno {
+	public write(buffers: Uint8Array[]): { errno: errno; bytesWritten: number } {
+		let content = this.content;
+
+		let bytesToWrite = 0;
+		for (const bytes of buffers) {
+			bytesToWrite += bytes.byteLength;
+		}
+
+		// Do we need to increase the buffer
+		if (this.cursor + bytesToWrite > content.byteLength) {
+			const newContent = new Uint8Array(this.cursor + bytesToWrite);
+			newContent.set(content);
+			this._content = newContent;
+			content = newContent;
+		}
+
+		for (const bytes of buffers) {
+			content.set(bytes, this.cursor);
+			this.cursor += bytes.length;
+		}
+
+		return { errno: this.doWrite(), bytesWritten: bytesToWrite };
+	}
+
+	private doWrite(): errno {
 		if (this._content === undefined) {
 			return Errno.success;
 		}
-		return this.contentWriter(this.fileHandle.real.uri, this._content);
+		return code2Wasi.asErrno(this.contentWriter(this.fileHandle.real.uri, this._content));
 	}
 }
 
@@ -818,7 +847,7 @@ export namespace WASI {
 			if (file === undefined) {
 				return Errno.success;
 			}
-			return file.write();
+			return file.sync();
 		} catch (error) {
 			if (error instanceof WasiError) {
 				return error.errno;
@@ -1182,7 +1211,7 @@ export namespace WASI {
 
 	function fd_write(fd: wasi_file_handle, ciovs_ptr: ptr, ciovs_len: u32, bytesWritten_ptr: ptr): errno {
 		try {
-			if (fd === WASI_STDOUT_FD) {
+			if (fd === WASI_STDOUT_FD || fd === WASI_STDERR_FD) {
 				let written = 0;
 				const buffers = read_ciovs(ciovs_ptr, ciovs_len);
 				for (const buffer of buffers) {
@@ -1193,6 +1222,16 @@ export namespace WASI {
 				memory.setUint32(bytesWritten_ptr, written, true);
 				return Errno.success;
 			}
+			const fileHandle = getFileHandle(fd);
+			fileHandle.assertBaseRight(Rights.fd_write);
+			const file = getOrCreateFile(fileHandle);
+			const buffers = read_ciovs(ciovs_ptr, ciovs_len);
+			const result = file.write(buffers);
+			if (result.errno !== 0) {
+				return result.errno;
+			}
+			const memory = memoryView();
+			memory.setUint32(bytesWritten_ptr, result.bytesWritten, true);
 			return Errno.success;
 		} catch (error) {
 			if (error instanceof WasiError) {
@@ -1234,8 +1273,7 @@ export namespace WASI {
 		}
 	}
 
-	function proc_exit(): errno {
-		return Errno.success;
+	function proc_exit(_rval: exitcode) {
 	}
 
 	function read_ciovs (iovs: ptr, iovsLen: u32): Uint8Array[] {
