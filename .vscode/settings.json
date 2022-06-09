@@ -94,6 +94,7 @@
 		"lookupflags",
 		"lseek",
 		"mfile",
+		"mkdirat",
 		"mlink",
 		"msgsize",
 		"mtim",

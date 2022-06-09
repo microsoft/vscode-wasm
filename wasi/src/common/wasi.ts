@@ -32,8 +32,6 @@ export interface Environment {
 
 
 /** Python requirement.
-  "path_create_directory"
-  "path_filestat_get"
   "path_filestat_set_times"
   "path_link"
   "path_open"
@@ -153,9 +151,9 @@ export interface WASI {
 	/**
 	 * Return the attributes of an open file.
 	 * @param fd The file descriptor.
-	 * @param bufPtr The buffer where the file's attributes are stored.
+	 * @param filestat_ptr The buffer where the file's attributes are stored.
 	 */
-	fd_filestat_get(fd: wasi_file_handle, bufPtr: ptr): errno;
+	fd_filestat_get(fd: wasi_file_handle, filestat_ptr: ptr): errno;
 
 	/**
 	 * Adjust the size of an open file. If this increases the file's size, the
@@ -320,6 +318,17 @@ export interface WASI {
 	 * @param path_len The length of the path
 	 */
 	path_create_directory(fd: wasi_file_handle, path_ptr: ptr, path_len: size): errno;
+
+	/**
+	 * Return the attributes of a file or directory. Note: This is similar to
+	 * stat in POSIX.
+	 * @param fd The file descriptor.
+	 * @param flags Flags determining the method of how the path is resolved.
+	 * @param path_ptr A memory location that holds the path name.
+	 * @param path_len The length of the path
+	 * @param filestat_ptr A memory location to store the file stat.
+	 */
+	path_filestat_get(fd: wasi_file_handle, flags: lookupflags, path_ptr: ptr, path_len: size, filestat_ptr: ptr): errno;
 
 	/**
 	 * Terminate the process normally. An exit code of 0 indicates successful
@@ -721,6 +730,7 @@ export namespace WASI {
 			fd_write: fd_write,
 			path_open: path_open,
 			path_create_directory: path_create_directory,
+			path_filestat_get: path_filestat_get,
 			proc_exit: proc_exit
 		};
 	}
@@ -921,7 +931,7 @@ export namespace WASI {
 		}
 	}
 
-	function fd_filestat_get(fd: wasi_file_handle, bufPtr: ptr): errno {
+	function fd_filestat_get(fd: wasi_file_handle, filestat_ptr: ptr): errno {
 		try {
 			const fileHandle = getFileHandle(fd);
 			fileHandle.assertBaseRight(Rights.fd_filestat_get);
@@ -931,7 +941,7 @@ export namespace WASI {
 				return code2Wasi.asErrno(vStat);
 			}
 			const memory = memoryView();
-			const fileStat = Filestat.create(bufPtr, memory);
+			const fileStat = Filestat.create(filestat_ptr, memory);
 			fileStat.dev = DeviceIds.get(uri);
 			fileStat.ino = INodes.get(uri);
 			fileStat.filetype = code2Wasi.asFileType(vStat.type);
@@ -939,6 +949,7 @@ export namespace WASI {
 			fileStat.size = BigInt(vStat.size);
 			fileStat.ctim = BigInt(vStat.ctime);
 			fileStat.mtim = BigInt(vStat.mtime);
+			fileStat.atim = BigInt(vStat.mtime);
 			return Errno.success;
 		} catch (error) {
 			if (error instanceof WasiError) {
@@ -1293,11 +1304,42 @@ export namespace WASI {
 			const fileHandle = getFileHandle(fd);
 			fileHandle.assertBaseRight(Rights.path_create_directory);
 			fileHandle.assertIsDirectory();
-			
+
 			const memory = memoryRaw();
 			const name = $decoder.decode(new Uint8Array(memory, path_ptr, path_len));
 			const result = $apiClient.fileSystem.createDirectory(getRealUri(fileHandle, name));
 			return code2Wasi.asErrno(result);
+		} catch (error) {
+			if (error instanceof WasiError) {
+				return error.errno;
+			}
+			return Errno.perm;
+		}
+	}
+
+	function path_filestat_get(fd: wasi_file_handle, flags: lookupflags, path_ptr: ptr, path_len: size, filestat_ptr: ptr): errno {
+		try {
+			const fileHandle = getFileHandle(fd);
+			fileHandle.assertBaseRight(Rights.path_create_directory);
+			fileHandle.assertIsDirectory();
+
+			const memory = memoryRaw();
+			const name = $decoder.decode(new Uint8Array(memory, path_ptr, path_len));
+			const uri = getRealUri(fileHandle, name);
+			const vStat = $apiClient.fileSystem.stat(uri);
+			if (typeof vStat === 'number') {
+				return code2Wasi.asErrno(vStat);
+			}
+			const fileStat = Filestat.create(filestat_ptr, memoryView());
+			fileStat.dev = DeviceIds.get(uri);
+			fileStat.ino = INodes.get(uri);
+			fileStat.filetype = code2Wasi.asFileType(vStat.type);
+			fileStat.nlink = 0n;
+			fileStat.size = BigInt(vStat.size);
+			fileStat.ctim = BigInt(vStat.ctime);
+			fileStat.mtim = BigInt(vStat.mtime);
+			fileStat.atim = BigInt(vStat.mtime);
+			return Errno.success;
 		} catch (error) {
 			if (error instanceof WasiError) {
 				return error.errno;
