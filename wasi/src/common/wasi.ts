@@ -508,6 +508,25 @@ class File  {
 		return Errno.success;
 	}
 
+	public alloc(_offset: filesize, _len: filesize): errno {
+		const offset = BigInts.asNumber(_offset);
+		const len = BigInts.asNumber(_len);
+		const content = this.content;
+
+		if (offset > content.byteLength) {
+			return Errno.acces;
+		}
+
+		let content_new: Uint8Array = new Uint8Array(content.byteLength + len);
+
+		content_new.set(content.subarray(0, offset), 0);
+		content_new.set(content.subarray(offset, content.byteLength), offset + len);
+
+		this._content = content_new;
+
+		return this.contentWriter(this.fileHandle.real.uri, this.content);
+	}
+
 	public read(bytesToRead: number): Uint8Array {
 		const content = this.content;
 		const realRead = Math.min(bytesToRead, content.byteLength - this.cursor);
@@ -744,8 +763,8 @@ export namespace WASI {
 			const fileHandle = getFileHandle(fd);
 			fileHandle.assertBaseRight(Rights.fd_allocate);
 
-			// Filled in by PR
-			return Errno.success;
+			const file = getOrCreateFile(fileHandle);
+			return file.alloc(offset, len);
 		} catch (error) {
 			if (error instanceof WasiError) {
 				return error.errno;
