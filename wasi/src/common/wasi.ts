@@ -32,7 +32,6 @@ export interface Environment {
 
 
 /** Python requirement.
-  "path_unlink_file"
   "poll_oneoff"
   "sched_yield"
   "random_get"
@@ -403,6 +402,16 @@ export interface WASI {
 	 * @param new_path_len The length of the new path.
 	 */
 	path_symlink(old_path_ptr: ptr, old_path_len: size, fd: fd, new_path_ptr: ptr, new_path_len: size): errno;
+
+	/**
+	 * Unlink a file. Return errno::isdir if the path refers to a directory.
+	 * Note: This is similar to unlinkat(fd, path, 0) in POSIX.
+	 *
+	 * @param fd The file descriptor.
+	 * @param path_ptr  A memory location that holds the path name.
+	 * @param path_len The length of the path.
+	 */
+	path_unlink_file(fd: fd, path_ptr: ptr, path_len: size): errno;
 
 	/**
 	 * Terminate the process normally. An exit code of 0 indicates successful
@@ -811,6 +820,7 @@ export namespace WASI {
 			path_remove_directory: path_remove_directory,
 			path_rename: path_rename,
 			path_symlink: path_symlink,
+			path_unlink_file: path_unlink_file,
 			proc_exit: proc_exit
 		};
 	}
@@ -1467,6 +1477,31 @@ export namespace WASI {
 			newFileHandle.assertBaseRight(Rights.path_symlink);
 			newFileHandle.assertIsDirectory();
 			return Errno.nosys;
+		} catch (error) {
+			return handleError(error);
+		}
+	}
+
+	function path_unlink_file(fd: fd, path_ptr: ptr, path_len: size): errno {
+		try {
+			const fileHandle = getFileHandle(fd);
+			fileHandle.assertBaseRight(Rights.path_unlink_file);
+			fileHandle.assertIsDirectory();
+
+			const memory = memoryRaw();
+			const name = $decoder.decode(new Uint8Array(memory, path_ptr, path_len));
+			const uri = getRealUri(fileHandle, name);
+
+			const vStat = $apiClient.fileSystem.stat(uri);
+			if (typeof vStat === 'number') {
+				return vStat;
+			}
+			if (vStat.type !== Types.FileType.File) {
+				return Errno.isdir;
+			}
+
+			const result = $apiClient.fileSystem.delete(uri, { recursive: false, useTrash: true });
+			return code2Wasi.asErrno(result);
 		} catch (error) {
 			return handleError(error);
 		}
