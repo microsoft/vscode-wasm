@@ -139,6 +139,19 @@ export class ApiService<Ready extends {} | undefined = undefined> {
 				return { errno: Types.FileSystemError.Unknown };
 			}
 		});
+
+		this.connection.onRequest('fileSystem/createDirectory', async (params) => {
+			try {
+				const uri = vscode.Uri.from(params.uri);
+				await vscode.workspace.fs.createDirectory(uri);
+				return {errno: 0 };
+			} catch (error) {
+				if (error instanceof vscode.FileSystemError) {
+					return { errno: this.asFileSystemError(error) };
+				}
+				return { errno: Types.FileSystemError.Unknown };
+			}
+		});
 	}
 
 	public getPty(): vscode.Pseudoterminal {

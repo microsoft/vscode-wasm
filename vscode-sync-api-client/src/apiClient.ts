@@ -20,6 +20,7 @@ export interface FileSystem {
 	read(uri: URI): Uint8Array | number;
 	write(uri: URI, content: Uint8Array): number;
 	readDirectory(uri: URI): Types.DirectoryEntries | number;
+	createDirectory(uri: URI): number;
 }
 
 type ApiClientConnection<Ready extends {} | undefined = undefined> = BaseClientConnection<Requests, Ready>;
@@ -93,6 +94,11 @@ class FileSystemImpl<Ready extends {} | undefined = undefined> implements FileSy
 	public readDirectory(uri: URI): Types.DirectoryEntries | number {
 		const requestResult = this.connection.sendRequest('fileSystem/readDirectory', { uri: uri.toJSON() }, new VariableResult<Types.DirectoryEntries>('json'));
 		return RequestResult.hasData(requestResult) ? requestResult.data : requestResult.errno;
+	}
+
+	public createDirectory(uri: URI): number {
+		const requestResult = this.connection.sendRequest('fileSystem/createDirectory', { uri: uri.toJSON() });
+		return requestResult.errno;
 	}
 }
 

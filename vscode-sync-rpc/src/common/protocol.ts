@@ -203,4 +203,10 @@ export type Requests =
 		uri: Types.UriComponents;
 	};
 	result: VariableResult<Types.DirectoryEntries>;
+} | {
+	method: 'fileSystem/createDirectory';
+	params: {
+		uri: Types.UriComponents;
+	};
+	result: null;
 };

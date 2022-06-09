@@ -314,6 +314,14 @@ export interface WASI {
 	path_open(fd: wasi_file_handle, dirflags: lookupflags, path: ptr, pathLen: size, oflags: oflags, fs_rights_base: rights, fs_rights_inheriting: rights, fdflags: fdflags, fd_ptr: ptr): errno;
 
 	/**
+	 * Create a directory. Note: This is similar to mkdirat in POSIX.
+	 * @param fd The file descriptor.
+	 * @param path_ptr A memory location that holds the path name.
+	 * @param path_len The length of the path
+	 */
+	path_create_directory(fd: wasi_file_handle, path_ptr: ptr, path_len: size): errno;
+
+	/**
 	 * Terminate the process normally. An exit code of 0 indicates successful
 	 * termination of the program. The meanings of other values is dependent on
 	 * the environment.
@@ -461,6 +469,12 @@ class FileHandle {
 	public assertBaseRight(right: rights): void {
 		if ((this.rights.base & right) === 0n) {
 			throw new WasiError(Errno.perm);
+		}
+	}
+
+	public assertIsDirectory(): void {
+		if (this.fileType !== Filetype.directory) {
+			throw new WasiError(Errno.notdir);
 		}
 	}
 }
@@ -706,6 +720,7 @@ export namespace WASI {
 			fd_tell: fd_tell,
 			fd_write: fd_write,
 			path_open: path_open,
+			path_create_directory: path_create_directory,
 			proc_exit: proc_exit
 		};
 	}
@@ -1266,6 +1281,24 @@ export namespace WASI {
 			memory.setUint32(fd_ptr, fileHandleInfo.fd, true);
 			return Errno.success;
 		} catch(error) {
+			if (error instanceof WasiError) {
+				return error.errno;
+			}
+			return Errno.perm;
+		}
+	}
+
+	function path_create_directory(fd: wasi_file_handle, path_ptr: ptr, path_len: size): errno {
+		try {
+			const fileHandle = getFileHandle(fd);
+			fileHandle.assertBaseRight(Rights.path_create_directory);
+			fileHandle.assertIsDirectory();
+			
+			const memory = memoryRaw();
+			const name = $decoder.decode(new Uint8Array(memory, path_ptr, path_len));
+			const result = $apiClient.fileSystem.createDirectory(getRealUri(fileHandle, name));
+			return code2Wasi.asErrno(result);
+		} catch (error) {
 			if (error instanceof WasiError) {
 				return error.errno;
 			}
