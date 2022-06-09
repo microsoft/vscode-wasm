@@ -32,7 +32,6 @@ export interface Environment {
 
 
 /** Python requirement.
-  "fd_sync"
   "fd_tell"
   "fd_write"
   "path_create_directory"
@@ -46,7 +45,6 @@ export interface Environment {
   "path_symlink"
   "path_unlink_file"
   "poll_oneoff"
-  "proc_exit"
   "sched_yield"
   "random_get"
   "sock_accept"
@@ -258,9 +256,9 @@ export interface WASI {
 	 * @param fd The file descriptor.
 	 * @param offset The number of bytes to move.
 	 * @param whence The base from which the offset is relative.
-	 * @param newOffsetPtr A memory location to store the new offset.
+	 * @param new_offset_ptr A memory location to store the new offset.
 	 */
-	fd_seek(fd: wasi_file_handle, offset: filedelta, whence: whence, newOffsetPtr: ptr): errno;
+	fd_seek(fd: wasi_file_handle, offset: filedelta, whence: whence, new_offset_ptr: ptr): errno;
 
 	/**
 	 * Synchronize the data and metadata of a file to disk. Note: This is
@@ -269,6 +267,16 @@ export interface WASI {
 	 * @param fd The file descriptor.
 	 */
 	fd_sync(fd: wasi_file_handle): errno;
+
+	/**
+	 * Return the current offset of a file descriptor. Note: This is similar
+	 * to lseek(fd, 0, SEEK_CUR) in POSIX.
+	 *
+	 * @param fd The file descriptor.
+	 * @param offset_ptr A memory location to store the current offset of the
+	 * file descriptor, relative to the start of the file.
+	 */
+	fd_tell(fd: wasi_file_handle, offset_ptr: ptr): errno;
 
 	/**
 	 * Write to a file descriptor. Note: This is similar to writev in POSIX.
@@ -576,6 +584,10 @@ class File  {
 		return this.write();
 	}
 
+	public tell(): number {
+		return this.cursor;
+	}
+
 	public read(bytesToRead: number): Uint8Array {
 		const content = this.content;
 		const realRead = Math.min(bytesToRead, content.byteLength - this.cursor);
@@ -662,6 +674,7 @@ export namespace WASI {
 			fd_readdir: fd_readdir,
 			fd_seek: fd_seek,
 			fd_sync: fd_sync,
+			fd_tell: fd_tell,
 			fd_write: fd_write,
 			path_open: path_open,
 			proc_exit: proc_exit
@@ -1118,7 +1131,7 @@ export namespace WASI {
 		}
 	}
 
-	function fd_seek(fd: wasi_file_handle, _offset: filedelta, whence: whence, newOffsetPtr: ptr): errno {
+	function fd_seek(fd: wasi_file_handle, _offset: filedelta, whence: whence, new_offset_ptr: ptr): errno {
 		try {
 			const offset = Number(_offset);
 			const fileHandle = getFileHandle(fd);
@@ -1142,6 +1155,23 @@ export namespace WASI {
 				return Errno.success;
 			}
 			return file.sync();
+		} catch (error) {
+			if (error instanceof WasiError) {
+				return error.errno;
+			}
+			return Errno.perm;
+		}
+	}
+
+	function fd_tell(fd: wasi_file_handle, offset_ptr: ptr): errno {
+		try {
+			const fileHandle = getFileHandle(fd);
+			fileHandle.assertBaseRight(Rights.fd_sync);
+			const file = $files.get(fileHandle.fd);
+			const offset = file === undefined ? 0 : file.tell();
+			const memory = memoryView();
+			memory.setBigUint64(offset_ptr, BigInt(offset), true);
+			return Errno.success;
 		} catch (error) {
 			if (error instanceof WasiError) {
 				return error.errno;
