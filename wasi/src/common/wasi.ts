@@ -32,8 +32,6 @@ export interface Environment {
 
 
 /** Python requirement.
-  "fd_readdir"
-  "fd_seek"
   "fd_sync"
   "fd_tell"
   "fd_write"
@@ -265,6 +263,14 @@ export interface WASI {
 	fd_seek(fd: wasi_file_handle, offset: filedelta, whence: whence, newOffsetPtr: ptr): errno;
 
 	/**
+	 * Synchronize the data and metadata of a file to disk. Note: This is
+	 * similar to fsync in POSIX.
+	 *
+	 * @param fd The file descriptor.
+	 */
+	fd_sync(fd: wasi_file_handle): errno;
+
+	/**
 	 * Write to a file descriptor. Note: This is similar to writev in POSIX.
 	 *
 	 * @param fd The file descriptor.
@@ -490,6 +496,43 @@ class File  {
 		return this._content;
 	}
 
+	public alloc(_offset: filesize, _len: filesize): errno {
+		const offset = BigInts.asNumber(_offset);
+		const len = BigInts.asNumber(_len);
+		const content = this.content;
+
+		if (offset > content.byteLength) {
+			return Errno.inval;
+		}
+
+		const newContent: Uint8Array = new Uint8Array(content.byteLength + len);
+		newContent.set(content.subarray(0, offset), 0);
+		newContent.set(content.subarray(offset, content.byteLength), offset + len);
+		this._content = newContent;
+
+		return this.contentWriter(this.fileHandle.real.uri, this.content);
+	}
+
+	public pread(offset: number, bytesToRead: number): Uint8Array {
+		const content = this.content;
+		const realRead = Math.min(bytesToRead, content.byteLength - offset);
+		return content.subarray(offset, offset + realRead);
+	}
+
+	public pwrite(offset: number, bytes: Uint8Array): { errno: errno; bytesWritten: number } {
+		let content = this.content;
+		const total = offset + bytes.byteLength;
+		// Make the file bigger
+		if (total > content.byteLength) {
+			const newContent = new Uint8Array(total);
+			newContent.set(content);
+			this._content = newContent;
+			content = newContent;
+		}
+		content.set(bytes, offset);
+		return { errno: this.write(), bytesWritten: bytes.length };
+	}
+
 	public seek(offset: number, whence: whence): errno {
 		switch(whence) {
 			case Whence.set:
@@ -506,60 +549,6 @@ class File  {
 				break;
 		}
 		return Errno.success;
-	}
-
-	public alloc(_offset: filesize, _len: filesize): errno {
-		const offset = BigInts.asNumber(_offset);
-		const len = BigInts.asNumber(_len);
-		const content = this.content;
-
-		if (offset > content.byteLength) {
-			return Errno.acces;
-		}
-
-		let content_new: Uint8Array = new Uint8Array(content.byteLength + len);
-
-		content_new.set(content.subarray(0, offset), 0);
-		content_new.set(content.subarray(offset, content.byteLength), offset + len);
-
-		this._content = content_new;
-
-		return this.contentWriter(this.fileHandle.real.uri, this.content);
-	}
-
-	public read(bytesToRead: number): Uint8Array {
-		const content = this.content;
-		const realRead = Math.min(bytesToRead, content.byteLength - this.cursor);
-		const result = content.subarray(this.cursor, this.cursor + realRead);
-		this.cursor = this.cursor + realRead;
-		return result;
-	}
-
-	public pread(offset: number, bytesToRead: number): Uint8Array {
-		const content = this.content;
-		const realRead = Math.min(bytesToRead, content.byteLength - offset);
-		return content.subarray(offset, offset + realRead);
-	}
-
-	public write(): errno {
-		if (this._content === undefined) {
-			return Errno.success;
-		}
-		return this.contentWriter(this.fileHandle.real.uri, this._content);
-	}
-
-	public pwrite(offset: number, bytes: Uint8Array): { errno: errno; bytesWritten: number } {
-		let content = this.content;
-		const total = offset + bytes.byteLength;
-		// Make the file bigger
-		if (total > content.byteLength) {
-			const newContent = new Uint8Array(total);
-			newContent.set(content);
-			this._content = newContent;
-			content = newContent;
-		}
-		content.set(bytes, offset);
-		return { errno: this.write(), bytesWritten: bytes.length };
 	}
 
 	public setFdFlags(fdflags: fdflags): void {
@@ -581,6 +570,25 @@ class File  {
 			this._content = newContent;
 		}
 		return this.contentWriter(this.fileHandle.real.uri, this.content);
+	}
+
+	public sync(): errno {
+		return this.write();
+	}
+
+	public read(bytesToRead: number): Uint8Array {
+		const content = this.content;
+		const realRead = Math.min(bytesToRead, content.byteLength - this.cursor);
+		const result = content.subarray(this.cursor, this.cursor + realRead);
+		this.cursor = this.cursor + realRead;
+		return result;
+	}
+
+	public write(): errno {
+		if (this._content === undefined) {
+			return Errno.success;
+		}
+		return this.contentWriter(this.fileHandle.real.uri, this._content);
 	}
 }
 
@@ -653,6 +661,7 @@ export namespace WASI {
 			fd_read: fd_read,
 			fd_readdir: fd_readdir,
 			fd_seek: fd_seek,
+			fd_sync: fd_sync,
 			fd_write: fd_write,
 			path_open: path_open,
 			proc_exit: proc_exit
@@ -762,7 +771,6 @@ export namespace WASI {
 		try {
 			const fileHandle = getFileHandle(fd);
 			fileHandle.assertBaseRight(Rights.fd_allocate);
-
 			const file = getOrCreateFile(fileHandle);
 			return file.alloc(offset, len);
 		} catch (error) {
@@ -1051,6 +1059,14 @@ export namespace WASI {
 			const memory = memoryView();
 			const raw = memoryRaw();
 			// We have a cookie > 0 but no directory entries. So return end  of list
+			// todo@dirkb this is actually speced different. According to the spec if
+			// the used buffer size is less than the provided buffer size then no
+			// additional readdir call should happen. However at least under Rust we
+			// receive another call.
+			//
+			// Also unclear whether we have to include '.' and '..'
+			//
+			// See also https://github.com/WebAssembly/wasi-filesystem/issues/3
 			if (cookie !== 0n && !$directoryEntries.has(fileHandle.fd)) {
 				memory.setUint32(buf_used_ptr, 0, true);
 				return Errno.success;
@@ -1109,6 +1125,23 @@ export namespace WASI {
 			fileHandle.assertBaseRight(Rights.fd_seek);
 			const file = getOrCreateFile(fileHandle);
 			return file.seek(offset, whence);
+		} catch (error) {
+			if (error instanceof WasiError) {
+				return error.errno;
+			}
+			return Errno.perm;
+		}
+	}
+
+	function fd_sync(fd: wasi_file_handle): errno {
+		try {
+			const fileHandle = getFileHandle(fd);
+			fileHandle.assertBaseRight(Rights.fd_sync);
+			const file = $files.get(fileHandle.fd);
+			if (file === undefined) {
+				return Errno.success;
+			}
+			return file.sync();
 		} catch (error) {
 			if (error instanceof WasiError) {
 				return error.errno;
