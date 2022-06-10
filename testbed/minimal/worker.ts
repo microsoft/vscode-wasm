@@ -29,7 +29,7 @@ connection.serviceReady().then(async (_params) => {
 	mapDir.push({ name: '/', uri: root });
 	const wasi = WASI.create(name, apiClient, {
 		mapDir,
-		argv: ['app.py'],
+		argv: ['-v', 'app.py'],
 		env: { PYTHONPATH: '/build/lib.wasi-wasm32-3.12' }
 	});
 	const wasmFile = path.join(__dirname, '..', 'python', 'python.wasm');

@@ -463,110 +463,110 @@ export namespace Rights {
 	/**
 	 * If path_open is set, the right to invoke path_open with oflags::creat.
 	 */
-	export const path_create_file = 1n << 10n; // 1024
+	export const path_create_file = 1n << 10n; // 1'024
 
 	/**
 	 * The right to invoke path_link with the file descriptor as the source
 	 * directory.
 	 */
-	export const path_link_source = 1n << 11n; // 2048
+	export const path_link_source = 1n << 11n; // 2'048
 
 	/**
 	 * The right to invoke path_link with the file descriptor as the target
 	 * directory.
 	 */
-	export const path_link_target = 1n << 12n; // 4096
+	export const path_link_target = 1n << 12n; // 4'096
 
 	/**
 	 * The right to invoke path_open.
 	 */
-	export const path_open = 1n << 13n; // 8192
+	export const path_open = 1n << 13n; // 8'192
 
 	/**
 	 * The right to invoke fd_readdir.
 	 */
-	export const fd_readdir = 1n << 14n; // 16384
+	export const fd_readdir = 1n << 14n; // 16'384
 
 	/**
 	 * The right to invoke path_readlink.
 	 */
-	export const path_readlink = 1n << 15n; // 32768
+	export const path_readlink = 1n << 15n; // 32'768
 
 	/**
 	 * The right to invoke path_rename with the file descriptor as the source
 	 * directory.
 	 */
-	export const path_rename_source = 1n << 16n; // 65536
+	export const path_rename_source = 1n << 16n; // 65'536
 
 	/**
 	 * The right to invoke path_rename with the file descriptor as the target
 	 * directory.
 	 */
-	export const path_rename_target = 1n << 17n; // 131072
+	export const path_rename_target = 1n << 17n; // 131'072
 
 	/**
 	 * The right to invoke path_filestat_get.
 	 */
-	export const path_filestat_get = 1n << 18n; // 262144
+	export const path_filestat_get = 1n << 18n; // 262'144
 
 	/**
 	 * The right to change a file's size (there is no path_filestat_set_size).
 	 * If path_open is set, includes the right to invoke path_open with
 	 * oflags::trunc.
 	 */
-	export const path_filestat_set_size = 1n << 19n; // 524288
+	export const path_filestat_set_size = 1n << 19n; // 524'288
 
 	/**
 	 * The right to invoke path_filestat_set_times.
 	 */
-	export const path_filestat_set_times = 1n << 20n; // 1048576
+	export const path_filestat_set_times = 1n << 20n; // 1'048'576
 
 	/**
 	 * The right to invoke fd_filestat_get.
 	 */
-	export const fd_filestat_get = 1n << 21n; // 2097152
+	export const fd_filestat_get = 1n << 21n; // 2'097'152
 
 	/**
 	 * The right to invoke fd_filestat_set_size.
 	 */
-	export const fd_filestat_set_size = 1n << 22n; // 4194304
+	export const fd_filestat_set_size = 1n << 22n; // 4'194'304
 
 	/**
 	 * The right to invoke fd_filestat_set_times.
 	 */
-	export const fd_filestat_set_times = 1n << 23n; // 8388608
+	export const fd_filestat_set_times = 1n << 23n; // 8'388'608
 
 	/**
 	 * The right to invoke path_symlink.
 	 */
-	export const path_symlink = 1n << 24n; // 16777216
+	export const path_symlink = 1n << 24n; // 16'777'216
 
 	/**
 	 * The right to invoke path_remove_directory.
 	 */
-	export const path_remove_directory = 1n << 25n; // 33554432
+	export const path_remove_directory = 1n << 25n; // 33'554'432
 
 	/**
 	 * The right to invoke path_unlink_file.
 	 */
-	export const path_unlink_file = 1n << 26n; // 67108864
+	export const path_unlink_file = 1n << 26n; // 67'108'864
 
 	/**
 	 * If rights::fd_read is set, includes the right to invoke poll_oneoff to
 	 * subscribe to eventtype::fd_read. If rights::fd_write is set, includes
 	 * the right to invoke poll_oneoff to subscribe to eventtype::fd_write.
 	 */
-	export const poll_fd_readwrite = 1n << 27n; // 134217728
+	export const poll_fd_readwrite = 1n << 27n; // 134'217'728
 
 	/**
 	 * The right to invoke sock_shutdown.
 	 */
-	export const sock_shutdown = 1n << 28n; // 268435456
+	export const sock_shutdown = 1n << 28n; // 268'435'456
 
 	/**
 	 * The right to invoke sock_accept.
 	 */
-	export const sock_accept = 1n << 29n; // 536870912
+	export const sock_accept = 1n << 29n; // 536'870'912
 
 	/**
 	 * All rights
@@ -600,7 +600,7 @@ export namespace Rights {
 		path_filestat_get | path_filestat_set_size | path_filestat_set_times |
 		path_link_source | path_link_target | path_open | path_readlink |
 		path_remove_directory | path_rename_source | path_rename_target |
-		path_symlink | path_unlink_file;
+		path_symlink | path_unlink_file | fd_readdir;
 
 	/**
 	 * Base rights for files managed in VS Code.
@@ -618,6 +618,38 @@ export namespace Rights {
 	 * Inheriting rights for files
 	 */
 	export const FileInheriting = 0n;
+
+	/**
+	 * Base rights for character devices
+	 */
+	export const CharacterDeviceBase = fd_read | fd_fdstat_set_flags | fd_write |
+		fd_filestat_get | poll_fd_readwrite;
+
+	/**
+	 * Inheriting rights for character devices
+	 */
+	export const CharacterDeviceInheriting = 0n;
+
+	/**
+	 * Base rights for stdin
+	 */
+	export const StdinBase = fd_read | fd_filestat_get | poll_fd_readwrite;
+
+	/**
+	 * Inheriting rights for stdout / stderr
+	 */
+	export const StdinInheriting = 0n;
+
+	/**
+	 * Base rights for stdout / stderr
+	 */
+	export const StdoutBase = fd_fdstat_set_flags | fd_write |
+		fd_filestat_get | poll_fd_readwrite;
+
+	/**
+	 * Inheriting rights for stdout / stderr
+	 */
+	export const StdoutInheriting = 0n;
 }
 
 export type dircookie = u64;

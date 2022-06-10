@@ -17,7 +17,7 @@ import { ptr, size, u32 } from './baseTypes';
 import {
 	fd, errno, Errno, lookupflags, oflags, rights, fdflags, dircookie, filetype, Rights,
 	filesize, advise, filedelta, whence, Filestat, Whence, Ciovec, Iovec, Filetype, clockid, timestamp, Clockid,
-	Fdstat, fstflags, Prestat, Dirent, dirent, exitcode
+	Fdstat, fstflags, Prestat, Dirent, dirent, exitcode, Fdflags
 } from './wasiTypes';
 import { code2Wasi } from './converter';
 
@@ -484,6 +484,10 @@ namespace INodes {
 	const mappings: Map<string, bigint> = new Map();
 	let inodeCounter: bigint = 1n;
 
+	export const stdin = inodeCounter++;
+	export const stdout = inodeCounter++;
+	export const stderr = inodeCounter++;
+
 	export function get(uri: URI): bigint {
 		let result = mappings.get(uri.toString());
 		if (result === undefined) {
@@ -497,6 +501,8 @@ namespace INodes {
 namespace DeviceIds {
 	const deviceIds: Map<string, bigint> = new Map();
 	let deviceIdCounter: bigint = 1n;
+
+	export const system = deviceIdCounter++;
 
 	export function get(uri: URI): bigint {
 		const scheme = uri.scheme;
@@ -1004,6 +1010,24 @@ export namespace WASI {
 	function fd_fdstat_get(fd: fd, fdstat_ptr: ptr): errno {
 		// This is not available under VS Code.
 		try {
+			if (fd === WASI_STDIN_FD || fd === WASI_STDOUT_FD || fd === WASI_STDERR_FD) {
+				const memory = memoryView();
+				const fdstat = Fdstat.create(fdstat_ptr, memory);
+				fdstat.fs_filetype = Filetype.character_device;
+				fdstat.fs_flags = 0;
+				switch (fd) {
+					case WASI_STDIN_FD:
+						fdstat.fs_rights_base = Rights.StdinBase;
+						fdstat.fs_rights_inheriting = Rights.StdinInheriting;
+						break;
+					case WASI_STDOUT_FD:
+					case WASI_STDERR_FD:
+						fdstat.fs_rights_base = Rights.StdoutBase;
+						fdstat.fs_rights_inheriting = Rights.StdoutInheriting;
+						break;
+				}
+				return Errno.success;
+			}
 			const fileHandle = getFileHandle(fd);
 			const uri = fileHandle.real.uri;
 			const vStat = $apiClient.fileSystem.stat(uri);
@@ -1047,6 +1071,30 @@ export namespace WASI {
 
 	function fd_filestat_get(fd: fd, filestat_ptr: ptr): errno {
 		try {
+			const memory = memoryView();
+			if (fd === WASI_STDIN_FD || fd === WASI_STDOUT_FD || fd === WASI_STDERR_FD) {
+				const fileStat = Filestat.create(filestat_ptr, memory);
+				fileStat.dev = DeviceIds.system;
+				switch(fd) {
+					case WASI_STDIN_FD:
+						fileStat.ino = INodes.stdin;
+						break;
+					case WASI_STDOUT_FD:
+						fileStat.ino = INodes.stdout;
+						break;
+					case WASI_STDERR_FD:
+						fileStat.ino = INodes.stderr;
+						break;
+				}
+				fileStat.filetype = Filetype.character_device;
+				fileStat.nlink = 0n;
+				fileStat.size = 101n;
+				const now = BigInt(Date.now());
+				fileStat.atim = now;
+				fileStat.ctim = now;
+				fileStat.mtim = now;
+				return Errno.success;
+			}
 			const fileHandle = getFileHandle(fd);
 			fileHandle.assertBaseRight(Rights.fd_filestat_get);
 			const uri = fileHandle.real.uri;
@@ -1054,16 +1102,15 @@ export namespace WASI {
 			if (typeof vStat === 'number') {
 				return code2Wasi.asErrno(vStat);
 			}
-			const memory = memoryView();
 			const fileStat = Filestat.create(filestat_ptr, memory);
 			fileStat.dev = DeviceIds.get(uri);
 			fileStat.ino = INodes.get(uri);
 			fileStat.filetype = code2Wasi.asFileType(vStat.type);
 			fileStat.nlink = 0n;
 			fileStat.size = BigInt(vStat.size);
+			fileStat.atim = BigInt(vStat.mtime);
 			fileStat.ctim = BigInt(vStat.ctime);
 			fileStat.mtim = BigInt(vStat.mtime);
-			fileStat.atim = BigInt(vStat.mtime);
 			return Errno.success;
 		} catch (error) {
 			return handleError(error, Errno.perm);
@@ -1306,7 +1353,7 @@ export namespace WASI {
 	function fd_tell(fd: fd, offset_ptr: ptr): errno {
 		try {
 			const fileHandle = getFileHandle(fd);
-			fileHandle.assertBaseRight(Rights.fd_sync);
+			fileHandle.assertBaseRight(Rights.fd_tell);
 			const file = $files.get(fileHandle.fd);
 			const offset = file === undefined ? 0 : file.tell();
 			const memory = memoryView();
@@ -1362,9 +1409,19 @@ export namespace WASI {
 			// Currently VS Code doesn't offer a generic API to open a file
 			// or a directory. Since we were able to stat the file we create
 			// a file handle info for it and lazy get the file content on read.
+			const base = filetype === Filetype.directory
+				? fs_rights_base | Rights.DirectoryBase
+				: filetype === Filetype.regular_file
+					? fs_rights_base | Rights.FileBase
+					: fs_rights_base;
+			const inheriting = Filetype.directory
+				? fs_rights_inheriting | Rights.DirectoryInheriting
+				: filetype === Filetype.regular_file
+					? fs_rights_inheriting | Rights.FileInheriting
+					: fs_rights_inheriting;
 			const fileHandleInfo = new FileHandle(
 				FileHandles.next(), filetype, name,
-				{ base: fs_rights_base, inheriting: fs_rights_inheriting },
+				{ base: base, inheriting: inheriting },
 				{ fd: undefined, uri: realUri }
 			);
 			$fileHandles.set(fileHandleInfo.fd, fileHandleInfo);
