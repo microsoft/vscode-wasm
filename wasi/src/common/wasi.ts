@@ -414,6 +414,17 @@ export interface WASI {
 	path_unlink_file(fd: fd, path_ptr: ptr, path_len: size): errno;
 
 	/**
+	 * Concurrently poll for the occurrence of a set of events.
+	 *
+	 * @param input A memory location pointing to the events to which to subscribe.
+	 * @param output A memory location to store the events that have occurred.
+	 * @param nsubscriptions Both the number of subscriptions and events.
+	 * @param result_size_ptr The number of events stored.
+	 */
+	poll_oneoff(input: ptr, output: ptr, nsubscriptions: size, result_size_ptr: ptr): errno;
+
+
+	/**
 	 * Terminate the process normally. An exit code of 0 indicates successful
 	 * termination of the program. The meanings of other values is dependent on
 	 * the environment.
@@ -421,6 +432,7 @@ export interface WASI {
 	 * @param rval The exit code returned by the process.
 	 */
 	proc_exit(rval: exitcode): void;
+
 }
 
 export type Options = {
@@ -821,6 +833,7 @@ export namespace WASI {
 			path_rename: path_rename,
 			path_symlink: path_symlink,
 			path_unlink_file: path_unlink_file,
+			poll_oneoff: poll_oneoff,
 			proc_exit: proc_exit
 		};
 	}
@@ -1505,6 +1518,10 @@ export namespace WASI {
 		} catch (error) {
 			return handleError(error);
 		}
+	}
+
+	function poll_oneoff(input: ptr, output: ptr, nsubscriptions: size, result_size_ptr: ptr): errno {
+		return Errno.nosys;
 	}
 
 	function proc_exit(_rval: exitcode) {

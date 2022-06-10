@@ -1266,3 +1266,136 @@ export namespace Event {
 		};
 	}
 }
+
+export type subclockflags = u16;
+export namespace Subclockflags {
+	/**
+	 * If set, treat the timestamp provided in subscription_clock::timeout as an
+	 * absolute timestamp of clock subscription_clock::id. If clear, treat the
+	 * timestamp provided in subscription_clock::timeout relative to the current
+	 * time value of clock subscription_clock::id.
+	 */
+	export const subscription_clock_abstime = 1 << 0;
+}
+
+/**
+ * The contents of a subscription when type is eventtype::clock.
+ */
+export type subscription_clock = {
+	/**
+	 * The clock against which to compare the timestamp.
+	 */
+	get id(): clockid;
+
+	/**
+	 * The absolute or relative timestamp.
+	 */
+	get timeout(): timestamp;
+
+	/**
+	 * The amount of time that the implementation may wait additionally to
+	 * coalesce with other events.
+	 */
+	get precision(): timestamp;
+
+	/**
+	 * Flags specifying whether the timeout is absolute or relative.
+	 */
+	get flags(): subclockflags;
+};
+export namespace Subscription_clock {
+	export const size = 32;
+	export const alignment = 8;
+	const offsets = {
+		id: 0,
+		timeout: 8,
+		precision: 16,
+		flags: 24
+	};
+	export function create(ptr: ptr, memory: DataView): subscription_clock {
+		return {
+			get id(): clockid { return memory.getUint32(ptr + offsets.id, true); },
+			get timeout(): timestamp { return memory.getBigUint64(ptr + offsets.timeout, true); },
+			get precision(): timestamp { return memory.getBigUint64(ptr + offsets.precision, true); },
+			get flags(): subclockflags { return memory.getUint16(ptr + offsets.flags, true); }
+		};
+	}
+}
+
+/**
+ * The contents of a subscription when type is type is eventtype::fd_read
+ * or eventtype::fd_write.
+ */
+export type subscription_fd_readwrite = {
+	/**
+	 * The file descriptor on which to wait for it to become ready for
+	 * reading or writing.
+	 */
+	get file_descriptor(): fd;
+};
+
+export namespace Subscription_fd_readwrite {
+	export const size = 4;
+	export const alignment = 4;
+	const offsets = {
+		file_descriptor: 0
+	};
+	export function create(ptr: ptr, memory: DataView): subscription_fd_readwrite {
+		return {
+			get file_descriptor(): fd { return memory.getUint32(ptr + offsets.file_descriptor, true); }
+		};
+	}
+}
+
+export type subscription_u = {
+	get clock(): subscription_clock;
+	get fd_read(): subscription_fd_readwrite;
+	get fd_write(): subscription_fd_readwrite;
+};
+
+export namespace Subscription_u {
+	export const size = 40;
+	export const alignment = 8;
+	const offsets = {
+		clock: 0,
+		fd_read: 0,
+		fd_write: 0
+	};
+	export function create(ptr: ptr, memory: DataView): subscription_u {
+		return {
+			get clock(): subscription_clock { return Subscription_clock.create(ptr + offsets.clock, memory); },
+			get fd_read(): subscription_fd_readwrite { return Subscription_fd_readwrite.create(ptr + offsets.fd_read, memory); },
+			get fd_write(): subscription_fd_readwrite { return Subscription_fd_readwrite.create(ptr + offsets.fd_write, memory); }
+		};
+	}
+}
+
+/**
+ * Subscription to an event.
+ */
+export type subscription = {
+	/**
+	 * User-provided value that is attached to the subscription in the
+	 * implementation and returned through event::userdata.
+	 */
+	get userdata(): userdata;
+
+	/**
+	 * The type of the event to which to subscribe, and its contents
+	 */
+	get u(): subscription_u;
+};
+export namespace Subscription {
+	export const size = 48;
+	export const alignment = 8;
+	const offsets = {
+		userdata: 0,
+		u: 8,
+	};
+	export function create(ptr: ptr, memory: DataView): subscription {
+		return {
+			get userdata(): userdata { return memory.getBigUint64(ptr + offsets.userdata, true); },
+			get u(): subscription_u { return Subscription_u.create(ptr + offsets.u, memory); }
+		};
+	}
+}
