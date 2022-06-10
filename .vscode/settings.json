@@ -146,6 +146,7 @@
 		"REMOVEDIR",
 		"renameat",
 		"rofs",
+		"sched",
 		"SETFL",
 		"spipe",
 		"srch",

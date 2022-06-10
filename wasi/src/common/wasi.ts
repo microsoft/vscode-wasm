@@ -32,8 +32,6 @@ export interface Environment {
 
 
 /** Python requirement.
-  "poll_oneoff"
-  "sched_yield"
   "random_get"
   "sock_accept"
 */
@@ -423,7 +421,6 @@ export interface WASI {
 	 */
 	poll_oneoff(input: ptr, output: ptr, nsubscriptions: size, result_size_ptr: ptr): errno;
 
-
 	/**
 	 * Terminate the process normally. An exit code of 0 indicates successful
 	 * termination of the program. The meanings of other values is dependent on
@@ -433,6 +430,11 @@ export interface WASI {
 	 */
 	proc_exit(rval: exitcode): void;
 
+	/**
+	 * Temporarily yield execution of the calling thread. Note: This is similar
+	 * to sched_yield in POSIX.
+	 */
+	sched_yield(): errno;
 }
 
 export type Options = {
@@ -834,7 +836,8 @@ export namespace WASI {
 			path_symlink: path_symlink,
 			path_unlink_file: path_unlink_file,
 			poll_oneoff: poll_oneoff,
-			proc_exit: proc_exit
+			proc_exit: proc_exit,
+			sched_yield: sched_yield
 		};
 	}
 
@@ -1527,6 +1530,10 @@ export namespace WASI {
 	function proc_exit(_rval: exitcode) {
 	}
 
+	function sched_yield(): errno {
+		return Errno.nosys;
+	}
+
 	function handleError(error: any, def: errno = Errno.badf): errno {
 		if (error instanceof WasiError) {
 			return error.errno;
@@ -1604,8 +1611,6 @@ export namespace WASI {
 		}
 		return result;
 	}
-
-
 
 	function getRealUri(parentInfo: FileHandle, name: string): URI {
 		const real = parentInfo.real.uri;
