@@ -31,11 +31,6 @@ export interface Environment {
 }
 
 
-/** Python requirement.
-  "random_get"
-  "sock_accept"
-*/
-
 export interface WASI {
 	initialize(memory: ArrayBuffer): void;
 
@@ -435,6 +430,28 @@ export interface WASI {
 	 * to sched_yield in POSIX.
 	 */
 	sched_yield(): errno;
+
+	/**
+	 * Write high-quality random data into a buffer. This function blocks when
+	 * the implementation is unable to immediately provide sufficient high-quality
+	 * random data. This function may execute slowly, so when large mounts of
+	 * random data are required, it's advisable to use this function to seed
+	 * a pseudo-random number generator, rather than to provide the random data
+	 * directly.
+	 *
+	 * @param buf The buffer to fill with random data.
+	 * @param buf_len The size of the buffer.
+	 */
+	random_get(buf: ptr, buf_len: size): errno;
+
+	/**
+	 * Accept a new incoming connection. Note: This is similar to accept in
+	 * POSIX.
+	 * @param fd The listening socket.
+	 * @param flags The desired values of the file descriptor flags.
+	 * @param result_fd_ptr A memory location to store the new socket connection.
+	 */
+	sock_accept(fd: fd, flags: fdflags, result_fd_ptr: ptr): errno;
 }
 
 export type Options = {
@@ -837,7 +854,9 @@ export namespace WASI {
 			path_unlink_file: path_unlink_file,
 			poll_oneoff: poll_oneoff,
 			proc_exit: proc_exit,
-			sched_yield: sched_yield
+			sched_yield: sched_yield,
+			random_get: random_get,
+			sock_accept: sock_accept
 		};
 	}
 
@@ -1531,6 +1550,14 @@ export namespace WASI {
 	}
 
 	function sched_yield(): errno {
+		return Errno.nosys;
+	}
+
+	function random_get(buf: ptr, buf_len: size): errno {
+		return Errno.nosys;
+	}
+
+	function sock_accept(fd: fd, flags: fdflags, result_fd_ptr: ptr): errno {
 		return Errno.nosys;
 	}
 
