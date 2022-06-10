@@ -142,6 +142,7 @@
 		"Pseudoterminal",
 		"pwrite",
 		"pwritev",
+		"PYTHONPATH",
 		"readlinkat",
 		"REMOVEDIR",
 		"renameat",

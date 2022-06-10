@@ -571,14 +571,13 @@ export namespace Rights {
 	/**
 	 * All rights
 	 */
-	export const All = fd_datasync | fd_read | fd_seek | fd_fdstat_set_flags | fd_sync |
-		fd_tell | fd_write | fd_advise | fd_allocate | path_create_directory |
-		path_create_file | path_link_source | path_link_target | path_open |
-		fd_readdir | path_readlink | path_rename_source | path_rename_target |
-		path_filestat_get | path_filestat_set_size | path_filestat_set_times |
-		fd_filestat_get | fd_filestat_set_size | fd_filestat_set_times |
-		path_symlink | path_remove_directory | path_unlink_file | poll_fd_readwrite |
-		sock_shutdown | sock_accept;
+	export const All = Rights.fd_advise | Rights.fd_allocate | Rights.fd_datasync | Rights.fd_fdstat_set_flags |
+		Rights.fd_filestat_get | Rights.fd_filestat_set_size | Rights.fd_filestat_set_times | Rights.fd_read |
+		Rights.fd_readdir | Rights.fd_seek | Rights.fd_sync | Rights.fd_tell | Rights.fd_write | Rights.path_create_directory |
+		Rights.path_create_file | Rights.path_filestat_get | Rights.path_filestat_set_size | Rights.path_filestat_set_times |
+		Rights.path_link_source | Rights.path_link_target | Rights.path_open | Rights.path_readlink | Rights.path_remove_directory |
+		Rights.path_rename_source | Rights.path_rename_target | Rights.path_symlink | Rights.path_unlink_file | Rights.poll_fd_readwrite |
+		Rights.sock_accept | Rights.sock_shutdown;
 
 	/**
 	 * Base rights for block devices.
@@ -597,15 +596,18 @@ export namespace Rights {
 	/**
 	 * Base rights for directories managed in VS Code.
 	 */
-	export const DirectoryBase = path_create_directory | path_create_file | path_open |
-		fd_readdir | path_rename_source | path_rename_target | path_filestat_get |
-		path_filestat_set_size | fd_filestat_get | path_remove_directory |
-		path_unlink_file;
+	export const DirectoryBase = path_create_directory | path_create_file |
+		path_filestat_get | path_filestat_set_size | path_filestat_set_times |
+		path_link_source | path_link_target | path_open | path_readlink |
+		path_remove_directory | path_rename_source | path_rename_target |
+		path_symlink | path_unlink_file;
 
 	/**
 	 * Base rights for files managed in VS Code.
 	 */
-	export const FileBase = fd_read | fd_seek | fd_write | fd_filestat_get;
+	export const FileBase = fd_read | fd_seek | fd_write | fd_filestat_get |
+		fd_advise | fd_allocate | fd_datasync | fd_fdstat_set_flags |
+		fd_filestat_set_size | fd_filestat_set_times | fd_sync | fd_tell;
 
 	/**
 	 * Inheriting rights for directories

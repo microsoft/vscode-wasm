@@ -15,7 +15,7 @@ import { ApiClient, FileType, Types } from 'vscode-sync-api-client';
 
 import { ptr, size, u32 } from './baseTypes';
 import {
-	fd, errno, Errno, lookupflags, oflags, rights, fdflags, dircookie, prestat, filetype, Rights,
+	fd, errno, Errno, lookupflags, oflags, rights, fdflags, dircookie, filetype, Rights,
 	filesize, advise, filedelta, whence, Filestat, Whence, Ciovec, Iovec, Filetype, clockid, timestamp, Clockid,
 	Fdstat, fstflags, Prestat, Dirent, dirent, exitcode
 } from './wasiTypes';
@@ -457,9 +457,9 @@ export interface WASI {
 export type Options = {
 
 	/**
-	 * The workspace folders
+	 * Directory mappings
 	 */
-	workspaceFolders: {
+	mapDir: {
 		name: string;
 		uri: URI;
 	}[];
@@ -609,8 +609,8 @@ class File  {
 	private readonly contentProvider: ((uri: URI) => Uint8Array | number) | undefined;
 	private readonly contentWriter: ((uri: URI, content: Uint8Array) => number);
 
-	private cursor: number;
-	private fdFlags: fdflags;
+	private _cursor: number;
+	private _fdFlags: fdflags;
 
 	constructor(fileHandle: FileHandle, content: Uint8Array | ((uri: URI) => Uint8Array | number), contentWriter: (uri: URI, content: Uint8Array) => number) {
 		this.fileHandle = fileHandle;
@@ -620,8 +620,8 @@ class File  {
 			this.contentProvider = content;
 		}
 		this.contentWriter = contentWriter;
-		this.cursor = 0;
-		this.fdFlags = 0;
+		this._cursor = 0;
+		this._fdFlags = 0;
 	}
 
 	public get fd() {
@@ -644,6 +644,10 @@ class File  {
 		}
 		this._content = content;
 		return this._content;
+	}
+
+	public get cursor(): number {
+		return this._cursor;
 	}
 
 	public alloc(_offset: filesize, _len: filesize): errno {
@@ -686,23 +690,27 @@ class File  {
 	public seek(offset: number, whence: whence): errno {
 		switch(whence) {
 			case Whence.set:
-				this.cursor = offset;
+				this._cursor = offset;
 				break;
 			case Whence.cur:
-				this.cursor = this.cursor + offset;
+				this._cursor = this._cursor + offset;
 				break;
 			case Whence.end:
 				if (this._content === undefined) {
 					Errno.inval;
 				}
-				this.cursor = this.content.byteLength - offset;
+				this._cursor = this.content.byteLength - offset;
 				break;
 		}
 		return Errno.success;
 	}
 
-	public setFdFlags(fdflags: fdflags): void {
-		this.fdFlags = fdflags;
+	public set fdflags(value: fdflags) {
+		this._fdFlags = value;
+	}
+
+	public get fdflags(): fdflags {
+		return this._fdFlags;
 	}
 
 	public setSize(_size: filesize): errno {
@@ -727,14 +735,14 @@ class File  {
 	}
 
 	public tell(): number {
-		return this.cursor;
+		return this._cursor;
 	}
 
 	public read(bytesToRead: number): Uint8Array {
 		const content = this.content;
-		const realRead = Math.min(bytesToRead, content.byteLength - this.cursor);
-		const result = content.subarray(this.cursor, this.cursor + realRead);
-		this.cursor = this.cursor + realRead;
+		const realRead = Math.min(bytesToRead, content.byteLength - this._cursor);
+		const result = content.subarray(this._cursor, this._cursor + realRead);
+		this._cursor = this._cursor + realRead;
 		return result;
 	}
 
@@ -747,16 +755,16 @@ class File  {
 		}
 
 		// Do we need to increase the buffer
-		if (this.cursor + bytesToWrite > content.byteLength) {
-			const newContent = new Uint8Array(this.cursor + bytesToWrite);
+		if (this._cursor + bytesToWrite > content.byteLength) {
+			const newContent = new Uint8Array(this._cursor + bytesToWrite);
 			newContent.set(content);
 			this._content = newContent;
 			content = newContent;
 		}
 
 		for (const bytes of buffers) {
-			content.set(bytes, this.cursor);
-			this.cursor += bytes.length;
+			content.set(bytes, this._cursor);
+			this._cursor += bytes.length;
 		}
 
 		return { errno: this.doWrite(), bytesWritten: bytesToWrite };
@@ -788,7 +796,6 @@ export namespace WASI {
 	let $encoder: RAL.TextEncoder;
 	let $decoder: RAL.TextDecoder;
 
-	let $name: string;
 	let $apiClient: ApiClient;
 	let $options: Options;
 
@@ -796,8 +803,7 @@ export namespace WASI {
 	const $files: Map<fd, File> = new Map();
 	const $directoryEntries: Map<fd, Types.DirectoryEntries> = new Map();
 
-	export function create(name: string, apiClient: ApiClient, options: Options): WASI {
-		$name = name;
+	export function create(_name: string, apiClient: ApiClient, options: Options): WASI {
 		$apiClient = apiClient;
 
 		$encoder = RAL().TextEncoder.create(options?.encoding);
@@ -805,14 +811,15 @@ export namespace WASI {
 
 		$options = options;
 
-		if ($options.workspaceFolders.length === 1) {
-			const workspace = new FileHandle(FileHandles.next(), Filetype.directory, '/workspace', { base: Rights.DirectoryBase, inheriting: Rights.DirectoryInheriting}, { fd: undefined, uri: $options.workspaceFolders[0].uri }, true);
-			$fileHandles.set(workspace.fd, workspace);
- 		} else if ($options.workspaceFolders.length > 1) {
-			for (const folder of $options.workspaceFolders) {
-				const f = new FileHandle(FileHandles.next(), Filetype.directory, `/workspace/${folder.name}`, { base: Rights.DirectoryBase, inheriting: Rights.DirectoryInheriting}, {fd: undefined, uri: folder.uri }, true);
-				$fileHandles.set(f.fd, f);
-			}
+		for (const entry of $options.mapDir) {
+			const fileHandle = new FileHandle(
+				FileHandles.next(),
+				Filetype.directory, entry.name,
+				{ base: Rights.All, inheriting: Rights.All },
+				{fd: undefined, uri: entry.uri },
+				true
+			);
+			$fileHandles.set(fileHandle.fd, fileHandle);
 		}
 
 		return {
@@ -910,7 +917,7 @@ export namespace WASI {
 	function environ_get(environ_ptr: ptr, environBuf_ptr: ptr): errno {
 		const memory = memoryView();
 		const memoryBytes = new Uint8Array(memoryRaw());
-		let entryOffset = environBuf_ptr;
+		let entryOffset = environ_ptr;
 		let valueOffset = environBuf_ptr;
 		for (const entry of Object.entries($options.env ?? {})) {
 			const data = $encoder.encode(`${entry[0]}=${entry[1]}\0`);
@@ -934,17 +941,17 @@ export namespace WASI {
 		}
 	}
 
-	function clock_time_get(id: clockid, precision: timestamp, timestamp_ptr: ptr): errno {
-		if (id !== Clockid.realtime) {
-			return Errno.inval;
-		}
+	function clock_time_get(_id: clockid, _precision: timestamp, timestamp_ptr: ptr): errno {
+		// if (id !== Clockid.realtime) {
+		// 	return Errno.inval;
+		// }
 		const value = BigInt(Date.now());
 		const memory = memoryView();
 		memory.setBigUint64(timestamp_ptr, value, true);
 		return Errno.success;
 	}
 
-	function fd_advise(fd: fd, offset: filesize, length: filesize, advise: advise): errno {
+	function fd_advise(fd: fd, _offset: filesize, _length: filesize, _advise: advise): errno {
 		try {
 			const fileHandle = getFileHandle(fd);
 			fileHandle.assertBaseRight(Rights.fd_advise);
@@ -1031,7 +1038,7 @@ export namespace WASI {
 			const fileHandle = getFileHandle(fd);
 			fileHandle.assertBaseRight(Rights.fd_fdstat_set_flags);
 			const file = getOrCreateFile(fileHandle);
-			file.setFdFlags(fdflags);
+			file.fdflags = fdflags;
 			return Errno.success;
 		} catch (error) {
 			return handleError(error);
@@ -1074,7 +1081,7 @@ export namespace WASI {
 		}
 	}
 
-	function fd_filestat_set_times(fd: fd, atim: timestamp, mtim: timestamp, fst_flags: fstflags): errno {
+	function fd_filestat_set_times(fd: fd, _atim: timestamp, _mtim: timestamp, _fst_flags: fstflags): errno {
 		try {
 			const fileHandle = getFileHandle(fd);
 			fileHandle.assertBaseRight(Rights.fd_filestat_set_times);
@@ -1259,7 +1266,6 @@ export namespace WASI {
 			} else {
 				memory.setUint32(buf_used_ptr, buf_len, true);
 			}
-			const check = new Uint8Array(raw, buf_ptr, buf_len);
 			return Errno.success;
 		} catch (error) {
 			return handleError(error);
@@ -1272,7 +1278,12 @@ export namespace WASI {
 			const fileHandle = getFileHandle(fd);
 			fileHandle.assertBaseRight(Rights.fd_seek);
 			const file = getOrCreateFile(fileHandle);
-			return file.seek(offset, whence);
+			const result = file.seek(offset, whence);
+			if (result !== Errno.success) {
+				return result;
+			}
+			memoryView().setBigUint64(new_offset_ptr, BigInt(file.cursor), true);
+			return Errno.success;
 		} catch (error) {
 			return handleError(error);
 		}
@@ -1335,7 +1346,7 @@ export namespace WASI {
 		}
 	}
 
-	function path_open(fd: fd, dirflags: lookupflags, path: ptr, pathLen: size, oflags: oflags, fs_rights_base: rights, fs_rights_inheriting: rights, fdflags: fdflags, fd_ptr: ptr): errno {
+	function path_open(fd: fd, _dirflags: lookupflags, path: ptr, pathLen: size, _oflags: oflags, fs_rights_base: rights, fs_rights_inheriting: rights, _fdflags: fdflags, fd_ptr: ptr): errno {
 		try {
 			const parentHandle = getFileHandle(fd);
 			parentHandle.assertBaseRight(Rights.path_open);
@@ -1409,7 +1420,7 @@ export namespace WASI {
 		}
 	}
 
-	function path_filestat_set_times(fd: fd, flags: lookupflags, path_ptr: ptr, path_len: size, atim: timestamp, mtim: timestamp, fst_flags: fstflags): errno {
+	function path_filestat_set_times(fd: fd, _flags: lookupflags, _path_ptr: ptr, _path_len: size, _atim: timestamp, _mtim: timestamp, _fst_flags: fstflags): errno {
 		// VS Code has not support to follow sym links.
 		// So we ignore lookupflags for now
 		try {
@@ -1427,7 +1438,7 @@ export namespace WASI {
 		}
 	}
 
-	function path_link(old_fd: fd, old_flags: lookupflags, old_path_ptr: ptr, old_path_len: size, new_fd: fd, new_path_ptr: ptr, new_path_len: size): errno {
+	function path_link(old_fd: fd, _old_flags: lookupflags, _old_path_ptr: ptr, _old_path_len: size, new_fd: fd, _new_path_ptr: ptr, _new_path_len: size): errno {
 		// VS Code has not support to create sym links.
 		try {
 			const oldFileHandle = getFileHandle(old_fd);
@@ -1447,17 +1458,20 @@ export namespace WASI {
 		}
 	}
 
-	function path_readlink(fd: fd, path_ptr: ptr, path_len: size, buf: ptr, buf_len: size, result_size_ptr: ptr): errno {
+	function path_readlink(fd: fd, path_ptr: ptr, path_len: size, _buf: ptr, _buf_len: size, _result_size_ptr: ptr): errno {
 		// VS Code has no support to follow a symlink.
 		try {
 			const fileHandle = getFileHandle(fd);
 			fileHandle.assertBaseRight(Rights.path_readlink);
 			fileHandle.assertIsDirectory();
 
+			const name = $decoder.decode(new Uint8Array(memoryRaw(), path_ptr, path_len));
+			const realUri = getRealUri(fileHandle, name);
+
 			// todo@dirkb
 			// For now we do nothing. If we need to implement this we need
 			// support from the VS Code API.
-			return Errno.nosys;
+			return Errno.noent;
 		} catch (error) {
 			return handleError(error);
 		}
@@ -1505,7 +1519,7 @@ export namespace WASI {
 		}
 	}
 
-	function path_symlink(old_path_ptr: ptr, old_path_len: size, fd: fd, new_path_ptr: ptr, new_path_len: size): errno {
+	function path_symlink(_old_path_ptr: ptr, _old_path_len: size, fd: fd, _new_path_ptr: ptr, _new_path_len: size): errno {
 		// VS Code has no support to create a symlink.
 		try {
 			const newFileHandle = getFileHandle(fd);
@@ -1542,11 +1556,12 @@ export namespace WASI {
 		}
 	}
 
-	function poll_oneoff(input: ptr, output: ptr, nsubscriptions: size, result_size_ptr: ptr): errno {
+	function poll_oneoff(_input: ptr, _output: ptr, _nsubscriptions: size, _result_size_ptr: ptr): errno {
 		return Errno.nosys;
 	}
 
 	function proc_exit(_rval: exitcode) {
+		return undefined;
 	}
 
 	function sched_yield(): errno {
@@ -1554,10 +1569,16 @@ export namespace WASI {
 	}
 
 	function random_get(buf: ptr, buf_len: size): errno {
-		return Errno.nosys;
+		const data =  [152, 199,   1, 117, 201, 192, 127, 110, 123,  76, 187, 213, 148, 140, 31,  92, 129,  18,  20, 172,  13, 49, 109, 124];
+		const memory = memoryRaw();
+		const result = new Uint8Array(memory, buf, buf_len);
+		for (let i = 0; i < data.length; i++) {
+			result[i] = data[i];
+		}
+		return Errno.success;
 	}
 
-	function sock_accept(fd: fd, flags: fdflags, result_fd_ptr: ptr): errno {
+	function sock_accept(_fd: fd, _flags: fdflags, _result_fd_ptr: ptr): errno {
 		return Errno.nosys;
 	}
 
@@ -1616,14 +1637,6 @@ export namespace WASI {
 
 	function getFileHandle(fd: fd): FileHandle {
 		const result = $fileHandles.get(fd);
-		if (result === undefined) {
-			throw new WasiError(Errno.badf);
-		}
-		return result;
-	}
-
-	function getFile(fd: fd): File {
-		const result = $files.get(fd);
 		if (result === undefined) {
 			throw new WasiError(Errno.badf);
 		}
