@@ -39,6 +39,14 @@ const _ril: RIL = Object.freeze<RIL>({
 			const handle = setInterval(callback, ms, ...args);
 			return { dispose: () => clearInterval(handle) };
 		}
+	}),
+	clock: Object.freeze({
+		monotonic(): bigint {
+			return process.hrtime.bigint();
+		},
+		realtime(): bigint {
+			return BigInt(Date.now());
+		}
 	})
 });
 

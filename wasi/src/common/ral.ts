@@ -35,6 +35,11 @@ interface RAL {
 		setImmediate(callback: (...args: any[]) => void, ...args: any[]): Disposable;
 		setInterval(callback: (...args: any[]) => void, ms: number, ...args: any[]): Disposable;
 	};
+
+	readonly clock: {
+		monotonic(): bigint;
+		realtime(): bigint;
+	};
 }
 
 let _ral: RAL | undefined;

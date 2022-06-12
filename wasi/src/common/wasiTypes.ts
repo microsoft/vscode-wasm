@@ -978,7 +978,7 @@ export namespace Fdstat {
 	 */
 	export const size = 24;
 
-	const alignment = 8;
+	export const alignment = 8;
 
 	const offsets = {
 		fs_filetype: 0,

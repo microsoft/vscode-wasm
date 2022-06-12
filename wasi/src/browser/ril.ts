@@ -16,12 +16,12 @@ const decoder: RAL.TextDecoder = new TextDecoder();
 
 const _ril: RIL = Object.freeze<RIL>({
 	TextEncoder: Object.freeze({
-		create(encoding: string = 'utf-8'): RAL.TextEncoder {
+		create(_encoding: string = 'utf-8'): RAL.TextEncoder {
 			return encoder;
 		}
 	}),
 	TextDecoder: Object.freeze({
-		create(encoding: string = 'utf-8'): RAL.TextDecoder {
+		create(_encoding: string = 'utf-8'): RAL.TextDecoder {
 			return decoder;
 		}
 	}),
@@ -39,6 +39,17 @@ const _ril: RIL = Object.freeze<RIL>({
 			const handle =  setInterval(callback, ms, ...args);
 			return { dispose: () => clearInterval(handle) };
 		},
+	}),
+	clock: Object.freeze({
+		monotonic(): bigint {
+			const now = self.performance.now();
+			const ms = Math.trunc(now);
+			const msf = now - ms;
+			return BigInt(ms) * 1000n + BigInt(Math.round(msf * 1000));
+		},
+		realtime(): bigint {
+			return BigInt(Date.now());
+		}
 	})
 });
 

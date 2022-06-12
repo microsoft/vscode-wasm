@@ -17,7 +17,7 @@ import { ptr, size, u32 } from './baseTypes';
 import {
 	fd, errno, Errno, lookupflags, oflags, rights, fdflags, dircookie, filetype, Rights,
 	filesize, advise, filedelta, whence, Filestat, Whence, Ciovec, Iovec, Filetype, clockid, timestamp, Clockid,
-	Fdstat, fstflags, Prestat, Dirent, dirent, exitcode, Fdflags
+	Fdstat, fstflags, Prestat, Dirent, dirent, exitcode
 } from './wasiTypes';
 import { code2Wasi } from './converter';
 
@@ -941,19 +941,34 @@ export namespace WASI {
 			case Clockid.realtime:
 				memory.setBigUint64(timestamp_ptr, 1n, true);
 				return Errno.success;
+			case Clockid.monotonic:
+				memory.setBigUint64(timestamp_ptr, 1n, true);
+				return Errno.success;
 			default:
 				memory.setBigUint64(timestamp_ptr, 0n, true);
 				return Errno.inval;
 		}
 	}
 
-	function clock_time_get(_id: clockid, _precision: timestamp, timestamp_ptr: ptr): errno {
-		// if (id !== Clockid.realtime) {
-		// 	return Errno.inval;
-		// }
-		const value = BigInt(Date.now());
+	const $thread_start = RAL().clock.realtime();
+	function clock_time_get(id: clockid, _precision: timestamp, timestamp_ptr: ptr): errno {
+		let time: bigint;
+		switch(id) {
+			case Clockid.realtime:
+				time = RAL().clock.realtime();
+				break;
+			case Clockid.monotonic:
+				time = RAL().clock.monotonic();
+				break;
+			case Clockid.process_cputime_id:
+			case Clockid.thread_cputime_id:
+				time = RAL().clock.monotonic() - $thread_start;
+				break;
+			default:
+				return Errno.inval;
+		}
 		const memory = memoryView();
-		memory.setBigUint64(timestamp_ptr, value, true);
+		memory.setBigUint64(timestamp_ptr, time, true);
 		return Errno.success;
 	}
 
@@ -1515,16 +1530,15 @@ export namespace WASI {
 		}
 	}
 
-	function path_readlink(fd: fd, path_ptr: ptr, path_len: size, _buf: ptr, _buf_len: size, _result_size_ptr: ptr): errno {
+	function path_readlink(fd: fd, _path_ptr: ptr, _path_len: size, _buf: ptr, _buf_len: size, _result_size_ptr: ptr): errno {
 		// VS Code has no support to follow a symlink.
 		try {
 			const fileHandle = getFileHandle(fd);
 			fileHandle.assertBaseRight(Rights.path_readlink);
 			fileHandle.assertIsDirectory();
 
-			const name = $decoder.decode(new Uint8Array(memoryRaw(), path_ptr, path_len));
-			const realUri = getRealUri(fileHandle, name);
-
+			// const name = $decoder.decode(new Uint8Array(memoryRaw(), path_ptr, path_len));
+			// const realUri = getRealUri(fileHandle, name);
 			// todo@dirkb
 			// For now we do nothing. If we need to implement this we need
 			// support from the VS Code API.

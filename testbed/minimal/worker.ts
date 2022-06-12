@@ -21,7 +21,6 @@ if (parentPort === null) {
 
 const connection = new ClientConnection<Requests, Ready>(parentPort);
 connection.serviceReady().then(async (_params) => {
-	debugger;
 	const name = 'WASI Minimal Example';
 	const apiClient = new ApiClient(connection);
 	const mapDir: Options['mapDir'] = [];
