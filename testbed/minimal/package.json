@@ -13,6 +13,16 @@
 	"activationEvents": [
 		"*"
 	],
+	"contributes": {
+		"commands": [
+			{
+				"command": "testbed.runPython",
+				"category": "wasm",
+				"title": "Run Python File",
+				"enablement": "editorLangId == python"
+			}
+		]
+	},
 	"dependencies": {
 		"vscode-uri": "3.0.3"
 	},

@@ -8,7 +8,7 @@ import { parentPort  } from 'worker_threads';
 
 import { URI } from 'vscode-uri';
 
-import { ClientConnection, Requests } from 'vscode-sync-rpc/node';
+import { ClientConnection, ProcExitRequest, Requests } from 'vscode-sync-rpc/node';
 import { ApiClient } from 'vscode-sync-api-client';
 import { WASI } from 'vscode-wasi/node';
 
@@ -19,14 +19,17 @@ if (parentPort === null) {
 	process.exit();
 }
 
-const connection = new ClientConnection<Requests, Ready>(parentPort);
+const connection = new ClientConnection<Requests | ProcExitRequest, Ready>(parentPort);
 connection.serviceReady().then(async (_params) => {
 	const name = 'WASI Minimal Example';
 	const apiClient = new ApiClient(connection);
 	const mapDir: Options['mapDir'] = [];
 	const root = URI.file(path.join(__dirname, '..', 'python'));
 	mapDir.push({ name: '/', uri: root });
-	const wasi = WASI.create(name, apiClient, {
+	const exitHandler = (rval: number): void => {
+		apiClient.procExit(rval);
+	};
+	const wasi = WASI.create(name, apiClient, exitHandler, {
 		mapDir,
 		argv: ['-v', 'app.py'],
 		env: { PYTHONPATH: '/build/lib.wasi-wasm32-3.12' }
@@ -39,4 +42,5 @@ connection.serviceReady().then(async (_params) => {
 	});
 	wasi.initialize((instance.exports.memory as WebAssembly.Memory).buffer);
 	(instance.exports._start as Function)();
+	apiClient.procExit(0);
 }).catch(console.error);

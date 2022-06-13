@@ -5,7 +5,7 @@
 
 import { URI } from 'vscode-uri';
 
-import RAL, { BaseClientConnection, Requests, Uint8Result, RequestResult, Types, VariableResult } from 'vscode-sync-rpc';
+import RAL, { BaseClientConnection, Requests, Uint8Result, RequestResult, Types, VariableResult, ProcExitRequest } from 'vscode-sync-rpc';
 
 import { FileStat } from './vscode';
 
@@ -25,7 +25,7 @@ export interface FileSystem {
 	rename(source: URI, target: URI, options?: { overwrite?: boolean }): number;
 }
 
-type ApiClientConnection<Ready extends {} | undefined = undefined> = BaseClientConnection<Requests, Ready>;
+type ApiClientConnection<Ready extends {} | undefined = undefined> = BaseClientConnection<Requests | ProcExitRequest, Ready>;
 
 class TerminalImpl<Ready extends {} | undefined = undefined> implements Terminal {
 
@@ -127,5 +127,9 @@ export class ApiClient<Ready extends {} | undefined = undefined> {
 		this.encoder = RAL().TextEncoder.create();
 		this.terminal = new TerminalImpl(this.connection, this.encoder);
 		this.fileSystem = new FileSystemImpl(this.connection, this.encoder);
+	}
+
+	procExit(rval: number): void {
+		this.connection.sendRequest('$/proc_exit', { rval: rval });
 	}
 }

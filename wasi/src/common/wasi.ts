@@ -803,18 +803,20 @@ export namespace WASI {
 	let $decoder: RAL.TextDecoder;
 
 	let $apiClient: ApiClient;
+	let $exitHandler: (rval: number) => void;
 	let $options: Options;
 
 	const $fileHandles: Map<fd, FileHandle> = new Map();
 	const $files: Map<fd, File> = new Map();
 	const $directoryEntries: Map<fd, Types.DirectoryEntries> = new Map();
 
-	export function create(_name: string, apiClient: ApiClient, options: Options): WASI {
+	export function create(_name: string, apiClient: ApiClient, exitHandler: (rval: number) => void, options: Options): WASI {
 		$apiClient = apiClient;
 
 		$encoder = RAL().TextEncoder.create(options?.encoding);
 		$decoder = RAL().TextDecoder.create(options?.encoding);
 
+		$exitHandler = exitHandler;
 		$options = options;
 
 		for (const entry of $options.mapDir) {
@@ -1631,8 +1633,8 @@ export namespace WASI {
 		return Errno.nosys;
 	}
 
-	function proc_exit(_rval: exitcode) {
-		return undefined;
+	function proc_exit(rval: exitcode) {
+		$exitHandler(rval);
 	}
 
 	function sched_yield(): errno {

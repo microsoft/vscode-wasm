@@ -5,15 +5,16 @@
 
 import * as vscode from 'vscode';
 
-import RAL, { BaseServiceConnection, Requests, Types } from 'vscode-sync-rpc';
+import RAL, { BaseServiceConnection, ProcExitRequest, Requests, Types } from 'vscode-sync-rpc';
 
 const terminalRegExp = /(\r\n)|(\n)/gm;
 
-type ApiServiceConnection<Ready extends {} | undefined = undefined> = BaseServiceConnection<Requests, Ready>;
+type ApiServiceConnection<Ready extends {} | undefined = undefined> = BaseServiceConnection<Requests | ProcExitRequest, Ready>;
 
 export class ApiService<Ready extends {} | undefined = undefined> {
 
 	private readonly connection: ApiServiceConnection<Ready>;
+	private readonly exitHandler: (rval: number) => void;
 	private readonly textEncoder: RAL.TextEncoder;
 	private readonly textDecoder: RAL.TextDecoder;
 
@@ -22,8 +23,9 @@ export class ApiService<Ready extends {} | undefined = undefined> {
 	private inputBuffer: string[];
 	private inputAvailable: undefined | ((inputBuffer: string[]) => void);
 
-	constructor(name: string, receiver: ApiServiceConnection<Ready>) {
+	constructor(name: string, receiver: ApiServiceConnection<Ready>, exitHandler: (rval: number) => void) {
 		this.connection = receiver;
+		this.exitHandler = exitHandler;
 		this.textEncoder = RAL().TextEncoder.create();
 		this.textDecoder = RAL().TextDecoder.create();
 
@@ -165,6 +167,11 @@ export class ApiService<Ready extends {} | undefined = undefined> {
 			} catch (error) {
 				return handleError(error);
 			}
+		});
+
+		this.connection.onRequest('$/proc_exit', (params) => {
+			this.exitHandler(params.rval);
+			return { errno: 0};
 		});
 	}
 
