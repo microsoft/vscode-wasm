@@ -20,18 +20,25 @@ if (parentPort === null) {
 }
 
 const connection = new ClientConnection<Requests | ProcExitRequest, Ready>(parentPort);
-connection.serviceReady().then(async (_params) => {
+connection.serviceReady().then(async (params) => {
 	const name = 'WASI Minimal Example';
 	const apiClient = new ApiClient(connection);
 	const mapDir: Options['mapDir'] = [];
-	const root = URI.file(path.join(__dirname, '..', 'python'));
-	mapDir.push({ name: '/', uri: root });
+	if (params.workspaceFolders.length === 1) {
+		mapDir.push({ name: path.posix.join(path.posix.sep, 'workspace'), uri: URI.revive(params.workspaceFolders[0].uri) });
+	} else {
+		for (const folder of params.workspaceFolders) {
+			mapDir.push({ name: path.posix.join(path.posix.sep, 'workspaces', folder.name), uri: URI.revive(folder.uri) });
+		}
+	}
+	const root = URI.file(path.posix.join(__dirname, '..', 'python'));
+	mapDir.push({ name: path.posix.sep, uri: root });
 	const exitHandler = (rval: number): void => {
 		apiClient.procExit(rval);
 	};
 	const wasi = WASI.create(name, apiClient, exitHandler, {
 		mapDir,
-		argv: ['-v', 'app.py'],
+		argv: ['-v', path.posix.join(path.posix.sep, 'workspace', 'app.py')],
 		env: { PYTHONPATH: '/build/lib.wasi-wasm32-3.12' }
 	});
 	const wasmFile = path.join(__dirname, '..', 'python', 'python.wasm');

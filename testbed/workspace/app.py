@@ -1,2 +1,3 @@
-print('Hello, World!')
-print('Hello, Dirk!')
+import hello
+
+hello.say_hello()
