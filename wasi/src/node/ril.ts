@@ -3,6 +3,7 @@
  * Licensed under the MIT License. See License.txt in the project root for license information.
  * ------------------------------------------------------------------------------------------ */
 import { TextDecoder } from 'util';
+import * as crypto from 'crypto';
 
 import RAL from '../common/ral';
 import { Disposable } from '../common/disposable';
@@ -46,6 +47,13 @@ const _ril: RIL = Object.freeze<RIL>({
 		},
 		realtime(): bigint {
 			return BigInt(Date.now());
+		}
+	}),
+	crypto: Object.freeze({
+		randomGet(size: number): Uint8Array {
+			const result = new Uint8Array(size);
+			crypto.randomFillSync(result);
+			return result;
 		}
 	})
 });

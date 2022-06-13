@@ -50,6 +50,13 @@ const _ril: RIL = Object.freeze<RIL>({
 		realtime(): bigint {
 			return BigInt(Date.now());
 		}
+	}),
+	crypto: Object.freeze({
+		randomGet(size: number): Uint8Array {
+			const result = new Uint8Array(size);
+			self.crypto.getRandomValues(result);
+			return result;
+		}
 	})
 });
 

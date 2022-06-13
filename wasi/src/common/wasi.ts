@@ -1640,12 +1640,9 @@ export namespace WASI {
 	}
 
 	function random_get(buf: ptr, buf_len: size): errno {
-		const data =  [152, 199,   1, 117, 201, 192, 127, 110, 123,  76, 187, 213, 148, 140, 31,  92, 129,  18,  20, 172,  13, 49, 109, 124];
+		const random = RAL().crypto.randomGet(buf_len);
 		const memory = memoryRaw();
-		const result = new Uint8Array(memory, buf, buf_len);
-		for (let i = 0; i < data.length; i++) {
-			result[i] = data[i];
-		}
+		new Uint8Array(memory, buf, buf_len).set(random);
 		return Errno.success;
 	}
 

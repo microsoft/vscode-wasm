@@ -40,6 +40,10 @@ interface RAL {
 		monotonic(): bigint;
 		realtime(): bigint;
 	};
+
+	readonly crypto: {
+		randomGet(size: number): Uint8Array;
+	};
 }
 
 let _ral: RAL | undefined;
