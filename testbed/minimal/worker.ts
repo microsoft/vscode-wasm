@@ -24,8 +24,14 @@ connection.serviceReady().then(async (params) => {
 	const name = 'WASI Minimal Example';
 	const apiClient = new ApiClient(connection);
 	const mapDir: Options['mapDir'] = [];
+	let toRun: string | undefined;
 	if (params.workspaceFolders.length === 1) {
-		mapDir.push({ name: path.posix.join(path.posix.sep, 'workspace'), uri: URI.revive(params.workspaceFolders[0].uri) });
+		const folderUri = URI.revive(params.workspaceFolders[0].uri);
+		mapDir.push({ name: path.posix.join(path.posix.sep, 'workspace'), uri: folderUri });
+		const file =  URI.revive(params.pythonFile);
+		if (file.toString().startsWith(folderUri.toString())) {
+			toRun = path.posix.join(path.posix.sep, 'workspace', file.toString().substring(folderUri.toString().length));
+		}
 	} else {
 		for (const folder of params.workspaceFolders) {
 			mapDir.push({ name: path.posix.join(path.posix.sep, 'workspaces', folder.name), uri: URI.revive(folder.uri) });
@@ -38,8 +44,8 @@ connection.serviceReady().then(async (params) => {
 	};
 	const wasi = WASI.create(name, apiClient, exitHandler, {
 		mapDir,
-		argv: ['-v', path.posix.join(path.posix.sep, 'workspace', 'app.py')],
-		env: { PYTHONPATH: '/build/lib.wasi-wasm32-3.12' }
+		argv: toRun !== undefined ? ['-v', toRun] : [],
+		env: { PYTHONPATH: '/build/lib.wasi-wasm32-3.12:/Lib' }
 	});
 	const wasmFile = path.join(__dirname, '..', 'python', 'python.wasm');
 	// const wasmFile = path.join(__dirname, '../rust/target/wasm32-wasi/debug/minimal.wasm');
