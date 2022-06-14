@@ -31,7 +31,7 @@ connection.serviceReady().then(async (params) => {
 			mapDir.push({ name: path.posix.join(path.posix.sep, 'workspaces', folder.name), uri: URI.revive(folder.uri) });
 		}
 	}
-	const root = URI.file(path.posix.join(__dirname, '..', 'python'));
+	const root = URI.file(path.join(__dirname, '..', 'python'));
 	mapDir.push({ name: path.posix.sep, uri: root });
 	const exitHandler = (rval: number): void => {
 		apiClient.procExit(rval);
