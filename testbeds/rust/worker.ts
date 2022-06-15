@@ -21,17 +21,13 @@ if (parentPort === null) {
 
 const connection = new ClientConnection<Requests | ProcExitRequest, Ready>(parentPort);
 connection.serviceReady().then(async (params) => {
-	const name = 'Python Shell';
+	const name = 'Run Rust';
 	const apiClient = new ApiClient(connection);
 	const mapDir: Options['mapDir'] = [];
 	let toRun: string | undefined;
 	if (params.workspaceFolders.length === 1) {
 		const folderUri = URI.revive(params.workspaceFolders[0].uri);
 		mapDir.push({ name: path.posix.join(path.posix.sep, 'workspace'), uri: folderUri });
-		const file =  URI.revive(params.pythonFile);
-		if (file.toString().startsWith(folderUri.toString())) {
-			toRun = path.posix.join(path.posix.sep, 'workspace', file.toString().substring(folderUri.toString().length));
-		}
 	} else {
 		for (const folder of params.workspaceFolders) {
 			mapDir.push({ name: path.posix.join(path.posix.sep, 'workspaces', folder.name), uri: URI.revive(folder.uri) });
@@ -42,16 +38,13 @@ connection.serviceReady().then(async (params) => {
 	};
 	const wasi = WASI.create(name, apiClient, exitHandler, {
 		mapDir,
-		argv: toRun !== undefined ? ['-v', toRun] : [],
-		env: { PYTHONPATH: '/build/lib.wasi-wasm32-3.12:/Lib' }
 	});
-	const wasmFile = path.join(__dirname, '..', 'bin', 'python.wasm');
-	// const wasmFile = path.join(__dirname, '../rust/target/wasm32-wasi/debug/minimal.wasm');
+	const wasmFile = path.join(__dirname, '..', 'target', 'wasm32-wasi', 'debug', 'rust-example.wasm');
 	const binary = fs.readFileSync(wasmFile);
 	const { instance } = await WebAssembly.instantiate(binary, {
 		wasi_snapshot_preview1: wasi
 	});
 	wasi.initialize((instance.exports.memory as WebAssembly.Memory).buffer);
-	(instance.exports._start as Function)();
+	(instance.exports.main as Function)();
 	apiClient.procExit(0);
 }).catch(console.error);

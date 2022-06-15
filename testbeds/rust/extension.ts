@@ -21,11 +21,6 @@ let terminal: Terminal;
 export async function activate(_context: ExtensionContext) {
 
 	commands.registerCommand('testbed-rust.run', () => {
-		const activeDocument = window.activeTextEditor?.document;
-		if (activeDocument === undefined || activeDocument.languageId !== 'python') {
-			return;
-		}
-
 		const worker = new Worker(path.join(__dirname, './worker.js'));
 		connection = new ServiceConnection<Requests | ProcExitRequest, Ready>(worker);
 		apiService = new ApiService<Ready>(name, connection, (_rval) => {
@@ -41,8 +36,7 @@ export async function activate(_context: ExtensionContext) {
 			}
 		}
 		connection.signalReady({
-			workspaceFolders,
-			pythonFile: activeDocument.uri.toJSON()
+			workspaceFolders
 		});
 	});
 }

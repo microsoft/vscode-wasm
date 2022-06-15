@@ -13,6 +13,15 @@
 		{
 			"type": "extensionHost",
 			"request": "launch",
+			"name": "Rust Testbed",
+			"runtimeExecutable": "${execPath}",
+			"args": ["--extensionDevelopmentPath=${workspaceRoot}/testbeds/rust"],
+			"outFiles": ["${workspaceRoot}/testbeds/rust/out/**/*.js"],
+			"sourceMaps": true
+		},
+		{
+			"type": "extensionHost",
+			"request": "launch",
 			"name": "Launch Web Extension",
 			"runtimeExecutable": "${execPath}",
 			"args": ["--extensionDevelopmentPath=${workspaceRoot}/testbed/web"],
