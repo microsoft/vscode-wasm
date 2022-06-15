@@ -686,6 +686,7 @@ export abstract class BaseServiceConnection<RequestHandlers extends RequestType 
 				if (message.method === '$/fetchResult') {
 					const resultId: number = message.params!.resultId as number;
 					const result = this.requestResults.get(resultId);
+					this.requestResults.delete(resultId);
 					const resultOffset = header[HeaderIndex.resultOffset];
 					const resultByteLength = header[HeaderIndex.resultByteLength];
 					if (result !== undefined && result.byteLength === resultByteLength) {
