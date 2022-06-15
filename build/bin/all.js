@@ -12,7 +12,7 @@ const child_process = require('child_process')
 const root = path.dirname(path.dirname(__dirname));
 const args = process.argv.slice(2);
 
-const folders = ['vscode-sync-rpc', 'vscode-sync-api-client', 'vscode-sync-api-service', 'wasi'];
+const folders = ['vscode-sync-rpc', 'vscode-sync-api-client', 'vscode-sync-api-service', 'wasi', 'testbeds'];
 
 for (const folder of folders) {
 	child_process.spawnSync(`npm ${args.join(' ')}`, { cwd: path.join(root, folder), shell: true, stdio: 'inherit' });
