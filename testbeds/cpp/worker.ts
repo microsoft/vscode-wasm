@@ -21,7 +21,7 @@ if (parentPort === null) {
 
 const connection = new ClientConnection<Requests | ProcExitRequest, Ready>(parentPort);
 connection.serviceReady().then(async (params) => {
-	const name = 'Run Rust';
+	const name = 'Run C++';
 	const apiClient = new ApiClient(connection);
 	const mapDir: Options['mapDir'] = [];
 	let toRun: string | undefined;

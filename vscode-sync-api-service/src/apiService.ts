@@ -21,7 +21,7 @@ export class ApiService<Ready extends {} | undefined = undefined> {
 	private readonly pty: vscode.Pseudoterminal;
 	private readonly ptyWriteEmitter: vscode.EventEmitter<string>;
 	private inputBuffer: string[];
-	private inputAvailable: undefined | ((inputBuffer: string[]) => void);
+	private lineAvailable: undefined | (() => void);
 
 	constructor(name: string, receiver: ApiServiceConnection<Ready>, exitHandler: (rval: number) => void) {
 		this.connection = receiver;
@@ -39,12 +39,19 @@ export class ApiService<Ready extends {} | undefined = undefined> {
 			},
 			handleInput: (data: string) => {
 				// Echo the data
-				this.ptyWriteEmitter.fire(data === '\r' ? '\r\n' : data);
-				this.inputBuffer.push(data === '\r' ? '\n' : data);
-				if (this.inputAvailable !== undefined) {
-					this.inputAvailable(this.inputBuffer);
-					this.inputBuffer = [];
-					this.inputAvailable = undefined;
+				if (data === '\r') {
+					data = '\n';
+				}
+				if (data.charCodeAt(0) === 127) {
+					// Delete last character
+					this.ptyWriteEmitter.fire('\x1b[D\x1b[P');
+					this.inputBuffer.splice(this.inputBuffer.length - 1, 1);
+				} else {
+					this.ptyWriteEmitter.fire(data === '\n' ? '\r\n' : data);
+					this.inputBuffer.push(data);
+				}
+				if (data === '\n' && this.lineAvailable !== undefined) {
+					this.lineAvailable();
 				}
 			}
 		};
@@ -74,19 +81,21 @@ export class ApiService<Ready extends {} | undefined = undefined> {
 			return { errno: 0 };
 		});
 
-		this.connection.onRequest('terminal/read', async (buffer) => {
-			let data: string[];
-			if (this.inputBuffer.length === 0) {
-				const wait = new Promise<string[]>((resolve) => {
-					this.inputAvailable = resolve;
-				});
-				data = await wait;
-			} else {
-				data = this.inputBuffer;
-				this.inputBuffer = [];
+		this.connection.onRequest('terminal/readline', async (buffer) => {
+			let line = this.getLine();
+			if (line !== undefined) {
+				buffer.set(this.textEncoder.encode(line));
+				return { errno : 0};
 			}
-			const text = data.join('');
-			buffer.set(this.textEncoder.encode(text));
+			const wait = new Promise<void>((resolve) => {
+				this.lineAvailable = resolve;
+			});
+			await wait;
+			line = this.getLine();
+			if (line === undefined) {
+				return { errno: -1 };
+			}
+			buffer.set(this.textEncoder.encode(line));
 			return { errno: 0 };
 		});
 
@@ -196,5 +205,17 @@ export class ApiService<Ready extends {} | undefined = undefined> {
 			default:
 				return Types.FileSystemError.Unknown;
 		}
+	}
+
+	private getLine(): string | undefined {
+		if (this.inputBuffer.length === 0) {
+			return undefined;
+		}
+		for (let i = 0; i < this.inputBuffer.length; i++) {
+			if (this.inputBuffer[i] === '\n') {
+				return this.inputBuffer.splice(0, i + 1).join('');
+			}
+		}
+		return undefined;
 	}
 }

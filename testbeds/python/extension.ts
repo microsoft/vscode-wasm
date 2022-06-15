@@ -13,11 +13,6 @@ import { ApiService } from 'vscode-sync-api-service';
 
 import { Ready, WorkspaceFolder } from './ready';
 
-const name = 'Python Shell';
-let apiService: ApiService<Requests | ProcExitRequest>;
-let connection: ServiceConnection<Requests | ProcExitRequest, Ready>;
-let terminal: Terminal;
-
 export async function activate(_context: ExtensionContext) {
 
 	commands.registerCommand('testbed-python.runFile', () => {
@@ -27,11 +22,11 @@ export async function activate(_context: ExtensionContext) {
 		}
 
 		const worker = new Worker(path.join(__dirname, './worker.js'));
-		connection = new ServiceConnection<Requests | ProcExitRequest, Ready>(worker);
-		apiService = new ApiService<Ready>(name, connection, (_rval) => {
+		const connection = new ServiceConnection<Requests | ProcExitRequest, Ready>(worker);
+		const apiService = new ApiService<Ready>('Python Run', connection, (_rval) => {
 			process.nextTick(() => worker.terminate());
 		});
-		terminal = window.createTerminal({ name, pty: apiService.getPty() });
+		const terminal = window.createTerminal({ name: 'Python Run', pty: apiService.getPty() });
 		terminal.show();
 
 		const workspaceFolders: WorkspaceFolder[] = [];
@@ -43,6 +38,26 @@ export async function activate(_context: ExtensionContext) {
 		connection.signalReady({
 			workspaceFolders,
 			pythonFile: activeDocument.uri.toJSON()
+		});
+	});
+
+	commands.registerCommand('testbed-python.runInteractive', () => {
+		const worker = new Worker(path.join(__dirname, './worker.js'));
+		const connection = new ServiceConnection<Requests | ProcExitRequest, Ready>(worker);
+		const apiService = new ApiService<Ready>('Python Shell', connection, (_rval) => {
+			process.nextTick(() => worker.terminate());
+		});
+		const terminal = window.createTerminal({ name: 'Python Shell', pty: apiService.getPty() });
+		terminal.show();
+
+		const workspaceFolders: WorkspaceFolder[] = [];
+		if (workspace.workspaceFolders !== undefined) {
+			for (const folder of workspace.workspaceFolders) {
+				workspaceFolders.push({ name: folder.name, uri: folder.uri.toJSON() });
+			}
+		}
+		connection.signalReady({
+			workspaceFolders,
 		});
 	});
 }

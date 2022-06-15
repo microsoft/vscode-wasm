@@ -1233,15 +1233,20 @@ export namespace WASI {
 		try {
 			const memory = memoryView();
 			if (fd === WASI_STDIN_FD) {
-				let bytesRead = 0;
+				let bytesRead =0;
 				const buffers = read_iovs(iovs_ptr, iovs_len);
 				for (const buffer of buffers) {
-					const result = $apiClient.terminal.read(buffer.byteLength);
+					const result = $apiClient.terminal.readline(buffer.byteLength);
 					if (result === undefined) {
 						memory.setUint32(bytesRead_ptr, 0, true);
 						return Errno.inval;
 					}
-					bytesRead += result.byteLength;
+					for (const byte of result) {
+						if (byte === 0) {
+							break;
+						}
+						bytesRead ++;
+					}
 					buffer.set(result);
 				}
 				memory.setUint32(bytesRead_ptr, bytesRead, true);

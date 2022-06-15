@@ -28,9 +28,11 @@ connection.serviceReady().then(async (params) => {
 	if (params.workspaceFolders.length === 1) {
 		const folderUri = URI.revive(params.workspaceFolders[0].uri);
 		mapDir.push({ name: path.posix.join(path.posix.sep, 'workspace'), uri: folderUri });
-		const file =  URI.revive(params.pythonFile);
-		if (file.toString().startsWith(folderUri.toString())) {
-			toRun = path.posix.join(path.posix.sep, 'workspace', file.toString().substring(folderUri.toString().length));
+		if (params.pythonFile) {
+			const file =  URI.revive(params.pythonFile);
+			if (file.toString().startsWith(folderUri.toString())) {
+				toRun = path.posix.join(path.posix.sep, 'workspace', file.toString().substring(folderUri.toString().length));
+			}
 		}
 	} else {
 		for (const folder of params.workspaceFolders) {
@@ -44,11 +46,10 @@ connection.serviceReady().then(async (params) => {
 	};
 	const wasi = WASI.create(name, apiClient, exitHandler, {
 		mapDir,
-		argv: toRun !== undefined ? ['-v', toRun] : [],
+		argv: toRun !== undefined ? ['python', '-X', 'utf8', '-B', toRun] : ['python', '-X', 'utf8', '-B'],
 		env: { PYTHONPATH: '/build/lib.wasi-wasm32-3.12:/Lib' }
 	});
 	const wasmFile = path.join(__dirname, '..', 'bin', 'python.wasm');
-	// const wasmFile = path.join(__dirname, '../rust/target/wasm32-wasi/debug/minimal.wasm');
 	const binary = fs.readFileSync(wasmFile);
 	const { instance } = await WebAssembly.instantiate(binary, {
 		wasi_snapshot_preview1: wasi

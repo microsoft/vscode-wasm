@@ -20,6 +20,11 @@
 				"category": "wasm",
 				"title": "Run Python File",
 				"enablement": "editorLangId == python"
+			},
+			{
+				"command": "testbed-python.runInteractive",
+				"category": "wasm",
+				"title": "Run Interactive Python Shell"
 			}
 		]
 	},

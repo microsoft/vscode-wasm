@@ -18,5 +18,5 @@ export type WorkspaceFolder = {
 
 export type Ready = {
 	workspaceFolders: WorkspaceFolder[];
-	pythonFile: UriComponents;
+	pythonFile?: UriComponents;
 };

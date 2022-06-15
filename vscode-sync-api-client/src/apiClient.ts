@@ -12,7 +12,7 @@ import { FileStat } from './vscode';
 export interface Terminal {
 	write(value: string, encoding?: string): void;
 	write(value: Uint8Array): void;
-	read(bufferSize: number): Uint8Array | undefined;
+	readline(bufferSize: number): Uint8Array | undefined;
 }
 
 export interface FileSystem {
@@ -44,8 +44,8 @@ class TerminalImpl<Ready extends {} | undefined = undefined> implements Terminal
 			? this.encoder.encode(value) : value;
 		this.connection.sendRequest('terminal/write', { binary });
 	}
-	public read(bufferSize: number): Uint8Array | undefined {
-		const result = this.connection.sendRequest('terminal/read', Uint8Result.fromByteLength(bufferSize));
+	public readline(bufferSize: number): Uint8Array | undefined {
+		const result = this.connection.sendRequest('terminal/readline', Uint8Result.fromByteLength(bufferSize));
 		if (RequestResult.hasData(result)) {
 			return result.data;
 		}
@@ -56,12 +56,19 @@ class TerminalImpl<Ready extends {} | undefined = undefined> implements Terminal
 class FileSystemImpl<Ready extends {} | undefined = undefined> implements FileSystem {
 
 	private readonly connection: ApiClientConnection<Ready>;
+	// todo@dirkb this is temporary. We need to improve this by bundling the
+	// Python lib into the worker code.
+	private statCache: Map<string, FileStat> = new Map();
 
 	constructor(connection: ApiClientConnection<Ready>, _encoder: RAL.TextEncoder) {
 		this.connection = connection;
 	}
 
 	public stat(uri: URI): FileStat | number {
+		const cached = this.statCache.get(uri.toString());
+		if (cached !== undefined) {
+			return cached;
+		}
 		const requestResult = this.connection.sendRequest('fileSystem/stat', { uri: uri.toJSON() }, Types.Stat.typedResult);
 		if (RequestResult.hasData(requestResult)) {
 			const stat = Types.Stat.create(requestResult.data);
@@ -75,6 +82,7 @@ class FileSystemImpl<Ready extends {} | undefined = undefined> implements FileSy
 			if (permission !== 0) {
 				result.permissions = permission;
 			}
+			this.statCache.set(uri.toString(), result);
 			return result;
 		}
 		return requestResult.errno;

@@ -160,10 +160,9 @@ export type Requests =
 	result: null;
 } | {
 	/**
-	 * Read from the terminal and provide the data as
-	 * a string encoded using UTF8
+	 * Reads a line from the terminal
 	 */
-	method: 'terminal/read';
+	method: 'terminal/readline';
 	params: null;
 	result: Uint8Array;
 } | {

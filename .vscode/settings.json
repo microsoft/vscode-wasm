@@ -36,7 +36,9 @@
 		"./vscode-sync-api-client",
 		"./vscode-sync-api-service",
 		"./wasi",
-		"./testbed/minimal"
+		"./testbeds/python",
+		"./testbeds/rust",
+		"./testbeds/cpp"
 	],
 	"editor.codeActionsOnSave": {
 		"source.fixAll.eslint": true
