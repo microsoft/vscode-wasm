@@ -4,10 +4,10 @@
 		{
 			"type": "extensionHost",
 			"request": "launch",
-			"name": "Launch TestBed Minimal",
+			"name": "Python Testbed",
 			"runtimeExecutable": "${execPath}",
-			"args": ["--extensionDevelopmentPath=${workspaceRoot}/testbed/minimal"],
-			"outFiles": ["${workspaceRoot}/testbed/minimal/out/**/*.js"],
+			"args": ["--extensionDevelopmentPath=${workspaceRoot}/testbeds/python"],
+			"outFiles": ["${workspaceRoot}/testbeds/python/out/**/*.js"],
 			"sourceMaps": true
 		},
 		{

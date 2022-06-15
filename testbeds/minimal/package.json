@@ -1,9 +1,9 @@
 {
-	"name": "minimal-example",
+	"name": "testbed-python",
 	"private": "true",
 	"publisher": "ms-vscode",
 	"version": "0.0.1",
-	"description": "Minimal WASI example",
+	"description": "Python Example",
 	"author": "MS",
 	"license": "MIT",
 	"engines": {
@@ -16,7 +16,7 @@
 	"contributes": {
 		"commands": [
 			{
-				"command": "testbed.runPython",
+				"command": "testbed-python.runFile",
 				"category": "wasm",
 				"title": "Run Python File",
 				"enablement": "editorLangId == python"

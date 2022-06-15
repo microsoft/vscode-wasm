@@ -107,4 +107,5 @@ dist
 # TernJS port file
 .tern-port
 
-testbed/minimal/python
+testbeds/python/bin
+testbeds/python/python.tar

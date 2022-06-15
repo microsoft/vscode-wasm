@@ -19,9 +19,9 @@ const node_modules = 'node_modules';
 	ln.softLink(path.join(root, 'vscode-sync-rpc'), path.join(root, 'vscode-sync-api-service', node_modules, 'vscode-sync-rpc'));
 	ln.softLink(path.join(root, 'vscode-sync-api-client'), path.join(root, 'wasi', node_modules, 'vscode-sync-api-client'));
 
-	ln.softLink(path.join(root, 'wasi'), path.join(root, 'testbed', node_modules, 'vscode-wasi'));
-	ln.softLink(path.join(root, 'vscode-sync-rpc'), path.join(root, 'testbed', node_modules, 'vscode-sync-rpc'));
-	ln.softLink(path.join(root, 'vscode-sync-api-client'), path.join(root, 'testbed', node_modules, 'vscode-sync-api-client'));
-	ln.softLink(path.join(root, 'vscode-sync-api-service'), path.join(root, 'testbed', node_modules, 'vscode-sync-api-service'));
+	ln.softLink(path.join(root, 'wasi'), path.join(root, 'testbeds', node_modules, 'vscode-wasi'));
+	ln.softLink(path.join(root, 'vscode-sync-rpc'), path.join(root, 'testbeds', node_modules, 'vscode-sync-rpc'));
+	ln.softLink(path.join(root, 'vscode-sync-api-client'), path.join(root, 'testbeds', node_modules, 'vscode-sync-api-client'));
+	ln.softLink(path.join(root, 'vscode-sync-api-service'), path.join(root, 'testbeds', node_modules, 'vscode-sync-api-service'));
 
 })();

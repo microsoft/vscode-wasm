@@ -21,7 +21,7 @@ if (parentPort === null) {
 
 const connection = new ClientConnection<Requests | ProcExitRequest, Ready>(parentPort);
 connection.serviceReady().then(async (params) => {
-	const name = 'WASI Minimal Example';
+	const name = 'Python Shell';
 	const apiClient = new ApiClient(connection);
 	const mapDir: Options['mapDir'] = [];
 	let toRun: string | undefined;
@@ -37,7 +37,7 @@ connection.serviceReady().then(async (params) => {
 			mapDir.push({ name: path.posix.join(path.posix.sep, 'workspaces', folder.name), uri: URI.revive(folder.uri) });
 		}
 	}
-	const root = URI.file(path.join(__dirname, '..', 'python'));
+	const root = URI.file(path.join(__dirname, '..', 'bin'));
 	mapDir.push({ name: path.posix.sep, uri: root });
 	const exitHandler = (rval: number): void => {
 		apiClient.procExit(rval);
@@ -47,7 +47,7 @@ connection.serviceReady().then(async (params) => {
 		argv: toRun !== undefined ? ['-v', toRun] : [],
 		env: { PYTHONPATH: '/build/lib.wasi-wasm32-3.12:/Lib' }
 	});
-	const wasmFile = path.join(__dirname, '..', 'python', 'python.wasm');
+	const wasmFile = path.join(__dirname, '..', 'bin', 'python.wasm');
 	// const wasmFile = path.join(__dirname, '../rust/target/wasm32-wasi/debug/minimal.wasm');
 	const binary = fs.readFileSync(wasmFile);
 	const { instance } = await WebAssembly.instantiate(binary, {
