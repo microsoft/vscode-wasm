@@ -8,7 +8,8 @@
 			"runtimeExecutable": "${execPath}",
 			"args": ["--extensionDevelopmentPath=${workspaceRoot}/testbeds/python"],
 			"outFiles": ["${workspaceRoot}/testbeds/python/out/**/*.js"],
-			"sourceMaps": true
+			"sourceMaps": true,
+			"preLaunchTask": "Build Python Example"
 		},
 		{
 			"type": "extensionHost",
@@ -29,15 +30,6 @@
 			"outFiles": ["${workspaceRoot}/testbeds/cpp/out/**/*.js"],
 			"sourceMaps": true,
 			"preLaunchTask": "Build C++ Example"
-		},
-		{
-			"type": "extensionHost",
-			"request": "launch",
-			"name": "Launch Web Extension",
-			"runtimeExecutable": "${execPath}",
-			"args": ["--extensionDevelopmentPath=${workspaceRoot}/testbed/web"],
-			"outFiles": ["${workspaceRoot}/testbed/web/out/**/*.js"],
-			"sourceMaps": true
 		}
 	]
 }

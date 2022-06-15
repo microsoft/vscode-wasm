@@ -22,6 +22,20 @@
 			]
 		},
 		{
+			"label": "Build Python Example",
+			"type": "npm",
+			"script": "build",
+			"path": "testbeds/python",
+			"group": "build",
+			"presentation": {
+				"panel": "dedicated",
+				"reveal": "never"
+			},
+			"problemMatcher": [
+				"$tsc"
+			]
+		},
+		{
 			"label": "Build C++ Example",
 			"type": "npm",
 			"script": "build",
