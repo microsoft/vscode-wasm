@@ -1,0 +1,31 @@
+{
+	"name": "testbed-python",
+	"private": "true",
+	"publisher": "ms-vscode",
+	"version": "0.0.1",
+	"description": "Python Example",
+	"author": "MS",
+	"license": "MIT",
+	"engines": {
+		"vscode": "^1.67.0"
+	},
+	"main": "./out/extension.js",
+	"activationEvents": [
+		"*"
+	],
+	"contributes": {
+		"commands": [
+			{
+				"command": "testbed-rust.run",
+				"category": "wasm",
+				"title": "Run Rust Program"
+			}
+		]
+	},
+	"scripts": {
+		"build": "npm run compile:ts && npm run build:rust",
+		"compile:ts": "node ../../node_modules/typescript/lib/tsc.js -b tsconfig.json",
+		"watch:ts": "node ../../node_modules/typescript/lib/tsc.js -b tsconfig.json -w",
+		"build:rust": "cargo build --target wasm32-wasi"
+	}
+}
