@@ -17,7 +17,18 @@
 			"runtimeExecutable": "${execPath}",
 			"args": ["--extensionDevelopmentPath=${workspaceRoot}/testbeds/rust"],
 			"outFiles": ["${workspaceRoot}/testbeds/rust/out/**/*.js"],
-			"sourceMaps": true
+			"sourceMaps": true,
+			"preLaunchTask": "Build Rust Example"
+		},
+		{
+			"type": "extensionHost",
+			"request": "launch",
+			"name": "C++ Testbed",
+			"runtimeExecutable": "${execPath}",
+			"args": ["--extensionDevelopmentPath=${workspaceRoot}/testbeds/cpp"],
+			"outFiles": ["${workspaceRoot}/testbeds/cpp/out/**/*.js"],
+			"sourceMaps": true,
+			"preLaunchTask": "Build C++ Example"
 		},
 		{
 			"type": "extensionHost",

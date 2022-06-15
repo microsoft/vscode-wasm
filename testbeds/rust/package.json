@@ -1,9 +1,9 @@
 {
-	"name": "testbed-python",
+	"name": "testbed-rust",
 	"private": "true",
 	"publisher": "ms-vscode",
 	"version": "0.0.1",
-	"description": "Python Example",
+	"description": "Rust Example",
 	"author": "MS",
 	"license": "MIT",
 	"engines": {

@@ -22,22 +22,31 @@
 			]
 		},
 		{
-			"label": "npm: watch:ts - testbed/minimal",
-			"detail": "node ../../node_modules/typescript/lib/tsc.js -b tsconfig.json -w",
+			"label": "Build C++ Example",
 			"type": "npm",
-			"script": "watch:ts",
-			"path": "testbed/minimal",
+			"script": "build",
+			"path": "testbeds/cpp",
 			"group": "build",
-			"runOptions": {
-				"runOn": "folderOpen"
-			},
-			"isBackground": true,
 			"presentation": {
 				"panel": "dedicated",
 				"reveal": "never"
 			},
 			"problemMatcher": [
-				"$tsc-watch"
+				"$tsc"
+			]
+		},
+		{
+			"label": "Build Rust Example",
+			"type": "npm",
+			"script": "build",
+			"path": "testbeds/rust",
+			"group": "build",
+			"presentation": {
+				"panel": "dedicated",
+				"reveal": "never"
+			},
+			"problemMatcher": [
+				"$tsc"
 			]
 		}
 	]

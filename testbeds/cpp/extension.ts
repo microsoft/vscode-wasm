@@ -13,19 +13,14 @@ import { ApiService } from 'vscode-sync-api-service';
 
 import { Ready, WorkspaceFolder } from './ready';
 
-const name = 'Python Execution Shell';
+const name = 'Run Rust';
 let apiService: ApiService<Requests | ProcExitRequest>;
 let connection: ServiceConnection<Requests | ProcExitRequest, Ready>;
 let terminal: Terminal;
 
 export async function activate(_context: ExtensionContext) {
 
-	commands.registerCommand('testbed.runPython', () => {
-		const activeDocument = window.activeTextEditor?.document;
-		if (activeDocument === undefined || activeDocument.languageId !== 'python') {
-			return;
-		}
-
+	commands.registerCommand('testbed-cpp.run', () => {
 		const worker = new Worker(path.join(__dirname, './worker.js'));
 		connection = new ServiceConnection<Requests | ProcExitRequest, Ready>(worker);
 		apiService = new ApiService<Ready>(name, connection, (_rval) => {
@@ -41,8 +36,7 @@ export async function activate(_context: ExtensionContext) {
 			}
 		}
 		connection.signalReady({
-			workspaceFolders,
-			pythonFile: activeDocument.uri.toJSON()
+			workspaceFolders
 		});
 	});
 }
