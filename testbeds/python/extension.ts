@@ -13,6 +13,8 @@ import { ApiService } from 'vscode-sync-api-service';
 
 import { Ready, WorkspaceFolder } from './ready';
 
+const connectionState: Map<number, [Worker, ServiceConnection<Requests | ProcExitRequest, Ready>, ApiService, Terminal]> = new Map();
+
 export async function activate(_context: ExtensionContext) {
 
 	commands.registerCommand('testbed-python.runFile', () => {
@@ -21,13 +23,17 @@ export async function activate(_context: ExtensionContext) {
 			return;
 		}
 
+		const key = Date.now();
 		const worker = new Worker(path.join(__dirname, './worker.js'));
 		const connection = new ServiceConnection<Requests | ProcExitRequest, Ready>(worker);
 		const apiService = new ApiService<Ready>('Python Run', connection, (_rval) => {
+			connectionState.delete(key);
 			process.nextTick(() => worker.terminate());
 		});
 		const terminal = window.createTerminal({ name: 'Python Run', pty: apiService.getPty() });
 		terminal.show();
+
+		connectionState.set(key, [worker, connection, apiService, terminal]);
 
 		const workspaceFolders: WorkspaceFolder[] = [];
 		if (workspace.workspaceFolders !== undefined) {
@@ -42,14 +48,17 @@ export async function activate(_context: ExtensionContext) {
 	});
 
 	commands.registerCommand('testbed-python.runInteractive', () => {
+		const key = Date.now();
 		const worker = new Worker(path.join(__dirname, './worker.js'));
 		const connection = new ServiceConnection<Requests | ProcExitRequest, Ready>(worker);
 		const apiService = new ApiService<Ready>('Python Shell', connection, (_rval) => {
+			connectionState.delete(key);
 			process.nextTick(() => worker.terminate());
 		});
 		const terminal = window.createTerminal({ name: 'Python Shell', pty: apiService.getPty() });
 		terminal.show();
 
+		connectionState.set(key, [worker, connection, apiService, terminal]);
 		const workspaceFolders: WorkspaceFolder[] = [];
 		if (workspace.workspaceFolders !== undefined) {
 			for (const folder of workspace.workspaceFolders) {
