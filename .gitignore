@@ -108,4 +108,4 @@ dist
 .tern-port
 
 testbeds/python/bin
-testbeds/python/python.tar
+testbeds/python/bin.tar
