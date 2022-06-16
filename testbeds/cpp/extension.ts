@@ -13,7 +13,7 @@ import { ApiService } from 'vscode-sync-api-service';
 
 import { Ready, WorkspaceFolder } from './ready';
 
-const name = 'Run Rust';
+const name = 'Run C++';
 let apiService: ApiService<Requests | ProcExitRequest>;
 let connection: ServiceConnection<Requests | ProcExitRequest, Ready>;
 let terminal: Terminal;

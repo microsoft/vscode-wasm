@@ -44,7 +44,7 @@ connection.serviceReady().then(async (params) => {
 	const { instance } = await WebAssembly.instantiate(binary, {
 		wasi_snapshot_preview1: wasi
 	});
-	wasi.initialize((instance.exports.memory as WebAssembly.Memory).buffer);
+	wasi.initialize(instance);
 	(instance.exports.main as Function)();
 	apiClient.procExit(0);
 }).catch(console.error);

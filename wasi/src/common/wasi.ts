@@ -30,9 +30,37 @@ export interface Environment {
 	[key: string]: string;
 }
 
+namespace WebAssembly {
 
+	interface Global {
+		value: any;
+		valueOf(): any;
+	}
+	interface Table {
+		readonly length: number;
+		get(index: number): any;
+		grow(delta: number, value?: any): number;
+		set(index: number, value?: any): void;
+	}
+	interface Memory {
+		readonly buffer: ArrayBuffer;
+		grow(delta: number): number;
+	}
+	type ExportValue = Function | Global | Memory | Table;
+
+	export interface Instance {
+		readonly exports: Record<string, ExportValue>;
+	}
+
+	export interface $Instance {
+		readonly exports: {
+			memory: Memory;
+		} & Record<string, ExportValue>;
+	}
+}
 export interface WASI {
-	initialize(memory: ArrayBuffer): void;
+
+	initialize(instance: WebAssembly.Instance): void;
 
 	/**
 	 * Return command-line argument data sizes.
@@ -795,9 +823,7 @@ class WasiError extends Error {
 
 export namespace WASI {
 
-	let $memory: ArrayBuffer | undefined;
-	let $memoryLength: number = -1;
-	let $memoryView: DataView | undefined;
+	let $instance: WebAssembly.$Instance;
 
 	let $encoder: RAL.TextEncoder;
 	let $decoder: RAL.TextDecoder;
@@ -875,8 +901,8 @@ export namespace WASI {
 		};
 	}
 
-	function initialize(memory: ArrayBuffer): void {
-		$memory = memory;
+	function initialize(instance: WebAssembly.Instance): void {
+		$instance = instance as WebAssembly.$Instance;
 	}
 
 	function args_sizes_get(argvCount_ptr: ptr, argvBufSize_ptr: ptr): errno {
@@ -1343,6 +1369,9 @@ export namespace WASI {
 
 	function fd_seek(fd: fd, _offset: filedelta, whence: whence, new_offset_ptr: ptr): errno {
 		try {
+			if (fd === WASI_STDIN_FD || fd === WASI_STDOUT_FD || fd === WASI_STDERR_FD) {
+				return Errno.success;
+			}
 			const offset = Number(_offset);
 			const fileHandle = getFileHandle(fd);
 			fileHandle.assertBaseRight(Rights.fd_seek);
@@ -1693,21 +1722,17 @@ export namespace WASI {
 	}
 
 	function memoryView(): DataView {
-		if ($memory === undefined) {
-			throw new Error(`WASI layer is not initialized`);
+		if ($instance === undefined) {
+			throw new Error(`WASI layer is not initialized. Missing WebAssembly instance.`);
 		}
-		if ($memoryView === undefined || $memoryLength === -1 || $memoryLength !== $memory.byteLength) {
-			$memoryView = new DataView($memory);
-			$memoryLength = $memory.byteLength;
-		}
-		return $memoryView;
+		return new DataView($instance.exports.memory.buffer);
 	}
 
 	function memoryRaw(): ArrayBuffer {
-		if ($memory === undefined) {
-			throw new Error(`WASI layer is not initialized`);
+		if ($instance === undefined) {
+			throw new Error(`WASI layer is not initialized. Missing WebAssembly instance.`);
 		}
-		return $memory;
+		return $instance.exports.memory.buffer;
 	}
 
 	function getFileHandle(fd: fd): FileHandle {
