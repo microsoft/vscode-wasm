@@ -47,7 +47,10 @@ connection.serviceReady().then(async (params) => {
 	const wasi = WASI.create(name, apiClient, exitHandler, {
 		mapDir,
 		argv: toRun !== undefined ? ['python', '-X', 'utf8', '-B', toRun] : ['python', '-X', 'utf8', '-B'],
-		env: { PYTHONPATH: '/build/lib.wasi-wasm32-3.12:/Lib:/workspace' }
+		env: {
+			TMP: '/tmp',
+			PYTHONPATH: '/build/lib.wasi-wasm32-3.12:/Lib:/workspace'
+		}
 	});
 	const wasmFile = path.join(__dirname, '..', 'bin', 'python.wasm');
 	const binary = fs.readFileSync(wasmFile);

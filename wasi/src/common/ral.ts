@@ -44,6 +44,10 @@ interface RAL {
 	readonly crypto: {
 		randomGet(size: number): Uint8Array;
 	};
+
+	readonly path: {
+		dirname(path: string): string;
+	};
 }
 
 let _ral: RAL | undefined;

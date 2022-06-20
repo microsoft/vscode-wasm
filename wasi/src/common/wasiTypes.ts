@@ -718,6 +718,26 @@ export namespace Oflags {
 	 * Truncate file to size 0.
 	 */
 	export const trunc = 1 << 3;
+
+	export function creatOn(value: oflags): boolean {
+		return (value & creat) !== 0;
+	}
+
+	export function creatOff(value: oflags): boolean {
+		return (value & creat) === 0;
+	}
+
+	export function directoryOn(value: oflags): boolean {
+		return (value & directory) !== 0;
+	}
+
+	export function exclOn(value: oflags): boolean {
+		return (value & excl) !== 0;
+	}
+
+	export function truncOn(value: oflags): boolean {
+		return (value & trunc) !== 0;
+	}
 }
 
 export type clockid = u32;

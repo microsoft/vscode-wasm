@@ -6,6 +6,7 @@
 import RAL from '../common/ral';
 
 import { Disposable }  from '../common/disposable';
+import * as path from './path';
 
 interface RIL extends RAL {
 }
@@ -56,6 +57,11 @@ const _ril: RIL = Object.freeze<RIL>({
 			const result = new Uint8Array(size);
 			self.crypto.getRandomValues(result);
 			return result;
+		}
+	}),
+	path: Object.freeze({
+		dirname(dir: string): string {
+			return path.dirname(dir);
 		}
 	})
 });

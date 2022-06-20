@@ -3,6 +3,7 @@
  * Licensed under the MIT License. See License.txt in the project root for license information.
  * ------------------------------------------------------------------------------------------ */
 import { TextDecoder } from 'util';
+import * as path from 'path';
 import * as crypto from 'crypto';
 
 import RAL from '../common/ral';
@@ -54,6 +55,11 @@ const _ril: RIL = Object.freeze<RIL>({
 			const result = new Uint8Array(size);
 			crypto.randomFillSync(result);
 			return result;
+		}
+	}),
+	path: Object.freeze({
+		dirname(dir: string): string {
+			return path.posix.dirname(dir);
 		}
 	})
 });

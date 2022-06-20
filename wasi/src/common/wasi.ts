@@ -17,7 +17,7 @@ import { ptr, size, u32 } from './baseTypes';
 import {
 	fd, errno, Errno, lookupflags, oflags, rights, fdflags, dircookie, filetype, Rights,
 	filesize, advise, filedelta, whence, Filestat, Whence, Ciovec, Iovec, Filetype, clockid, timestamp, Clockid,
-	Fdstat, fstflags, Prestat, Dirent, dirent, exitcode
+	Fdstat, fstflags, Prestat, Dirent, dirent, exitcode, Oflags
 } from './wasiTypes';
 import { code2Wasi } from './converter';
 
@@ -1444,7 +1444,7 @@ export namespace WASI {
 		}
 	}
 
-	function path_open(fd: fd, _dirflags: lookupflags, path: ptr, pathLen: size, _oflags: oflags, fs_rights_base: rights, fs_rights_inheriting: rights, _fdflags: fdflags, fd_ptr: ptr): errno {
+	function path_open(fd: fd, _dirflags: lookupflags, path: ptr, pathLen: size, oflags: oflags, fs_rights_base: rights, fs_rights_inheriting: rights, _fdflags: fdflags, fd_ptr: ptr): errno {
 		try {
 			const parentHandle = getFileHandle(fd);
 			parentHandle.assertBaseRight(Rights.path_open);
@@ -1453,10 +1453,40 @@ export namespace WASI {
 			const name = $decoder.decode(new Uint8Array(memoryRaw(), path, pathLen));
 			const realUri = getRealUri(parentHandle, name);
 			const stat = $apiClient.fileSystem.stat(realUri);
-			if (typeof stat === 'number') {
-				return code2Wasi.asErrno(stat);
+			const entryExists = typeof stat !== 'number';
+			if (entryExists) {
+				if (Oflags.exclOn(oflags)) {
+					return Errno.exist;
+				} else if (Oflags.directoryOn(oflags) && stat.type !== FileType.Directory) {
+					return Errno.notdir;
+				}
+			} else {
+				// Entry does not exist;
+				if (Oflags.creatOff(oflags)) {
+					return Errno.noent;
+				}
 			}
-			const filetype = code2Wasi.asFileType(stat.type);
+			let filetype: filetype;
+			let createFile: boolean = false;
+			if (Oflags.creatOn(oflags) && !entryExists) {
+				// Ensure parent handle is directory
+				parentHandle.assertIsDirectory();
+				const dirname = RAL().path.dirname(name);
+				// The name has a directory part. Ensure that the directory exists
+				if (dirname !== '.') {
+					const dirStat = $apiClient.fileSystem.stat(getRealUri(parentHandle, dirname));
+					if (typeof dirStat === 'number' || dirStat.type !== FileType.Directory) {
+						return Errno.noent;
+					}
+				}
+				filetype = Filetype.regular_file;
+				createFile = true;
+			} else {
+				if (typeof stat === 'number') {
+					return code2Wasi.asErrno(stat);
+				}
+				filetype = code2Wasi.asFileType(stat.type);
+			}
 			// Currently VS Code doesn't offer a generic API to open a file
 			// or a directory. Since we were able to stat the file we create
 			// a file handle info for it and lazy get the file content on read.
@@ -1470,13 +1500,17 @@ export namespace WASI {
 				: filetype === Filetype.regular_file
 					? fs_rights_inheriting | Rights.FileInheriting
 					: fs_rights_inheriting;
-			const fileHandleInfo = new FileHandle(
+			const fileHandle = new FileHandle(
 				FileHandles.next(), filetype, name,
 				{ base: base, inheriting: inheriting },
 				{ fd: undefined, uri: realUri }
 			);
-			$fileHandles.set(fileHandleInfo.fd, fileHandleInfo);
-			memory.setUint32(fd_ptr, fileHandleInfo.fd, true);
+			$fileHandles.set(fileHandle.fd, fileHandle);
+			memory.setUint32(fd_ptr, fileHandle.fd, true);
+			if (createFile || Oflags.truncOn(oflags)) {
+				const file = createFile ? getOrCreateFile(fileHandle, new Uint8Array(0)) : getOrCreateFile(fileHandle);
+				file.write([new Uint8Array(0)]);
+			}
 			return Errno.success;
 		} catch(error) {
 			return handleError(error);

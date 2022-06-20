@@ -535,10 +535,11 @@ export abstract class BaseClientConnection<Requests extends RequestType | undefi
 			for (const property of Object.keys(params)) {
 				if (property !== 'binary') {
 					request.params[property] = params[property];
+				} else {
+					(request.params['binary'] as unknown) = null;
 				}
 			}
 		}
-
 
 		const requestData = this.textEncoder.encode(JSON.stringify(request, undefined, 0));
 		const binaryData = params?.binary;
@@ -587,7 +588,7 @@ export abstract class BaseClientConnection<Requests extends RequestType | undefi
 				case VariableResult.kind:
 					const lazyResultLength = header[HeaderIndex.resultByteLength];
 					if (lazyResultLength === 0) {
-						return { errno: 0 };
+						return { errno: 0, data: resultType.mode === 'binary' ? new Uint8Array(0) : '' };
 					}
 					const lazyResult = this._sendRequest('$/fetchResult', { resultId: id }, Uint8Result.fromLength(lazyResultLength));
 					if (lazyResult.errno !== 0) {
@@ -600,7 +601,7 @@ export abstract class BaseClientConnection<Requests extends RequestType | undefi
 								: JSON.parse(this.textDecoder.decode(lazyResult.data as Uint8Array));
 							return { errno: 0, data };
 						} catch (error) {
-							return { errno: - 5};
+							return { errno: -5 };
 						}
 					} else {
 						return { errno: -5 };
@@ -696,8 +697,8 @@ export abstract class BaseServiceConnection<RequestHandlers extends RequestType 
 						header[HeaderIndex.errno] = - 4;
 					}
 				} else {
-					const binaryParamsLength = header[HeaderIndex.binaryParamByteLength];
-					if (binaryParamsLength > 0) {
+					if (message.params?.binary === null) {
+						const binaryParamsLength = header[HeaderIndex.binaryParamByteLength];
 						const binaryParamsOffset = header[HeaderIndex.binaryParamOffset];
 						const binary = new Uint8Array(sharedArrayBuffer, binaryParamsOffset, binaryParamsLength);
 						message.params = message.params ?? { };
@@ -727,7 +728,11 @@ export abstract class BaseServiceConnection<RequestHandlers extends RequestType 
 											? data
 											: this.textEncoder.encode(JSON.stringify(data, undefined, 0));
 										header[HeaderIndex.resultByteLength] = buffer.byteLength;
-										this.requestResults.set(message.id, buffer);
+										// We only need to keep a result which is greater than zero.
+										// If it is zero we can create an empty array on the other side.
+										if (buffer.byteLength > 0) {
+											this.requestResults.set(message.id, buffer);
+										}
 									}
 								}
 								break;
