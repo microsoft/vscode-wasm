@@ -685,20 +685,7 @@ class File  {
 	}
 
 	public alloc(_offset: filesize, _len: filesize): errno {
-		const offset = BigInts.asNumber(_offset);
-		const len = BigInts.asNumber(_len);
-		const content = this.content;
-
-		if (offset > content.byteLength) {
-			return Errno.inval;
-		}
-
-		const newContent: Uint8Array = new Uint8Array(content.byteLength + len);
-		newContent.set(content.subarray(0, offset), 0);
-		newContent.set(content.subarray(offset, content.byteLength), offset + len);
-		this._content = newContent;
-
-		return this.doWrite();
+		return Errno.nosys;
 	}
 
 	public pread(offset: number, bytesToRead: number): Uint8Array {
