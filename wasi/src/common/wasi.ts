@@ -695,7 +695,7 @@ class File  {
 
 		const newContent: Uint8Array = new Uint8Array(content.byteLength + len);
 		newContent.set(content.subarray(0, offset), 0);
-		newContent.set(content.subarray(offset, content.byteLength), offset + len);
+		newContent.set(content.subarray(offset), offset + len);
 		this._content = newContent;
 
 		return this.doWrite();
