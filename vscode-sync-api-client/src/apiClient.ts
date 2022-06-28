@@ -106,7 +106,7 @@ class FileSystemImpl<Ready extends {} | undefined = undefined> implements FileSy
 	public readDirectory(uri: URI): Types.DirectoryEntries {
 		const requestResult = this.connection.sendRequest('fileSystem/readDirectory', { uri: uri.toJSON() }, new VariableResult<Types.DirectoryEntries>('json'));
 		if (RequestResult.hasData(requestResult)) {
-			requestResult.data;
+			return requestResult.data;
 		 }
 		 throw this.asFileSystemError(requestResult.errno, uri);
 	}

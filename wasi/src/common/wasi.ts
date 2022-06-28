@@ -11,7 +11,7 @@
 import RAL from './ral';
 
 import { URI } from 'vscode-uri';
-import { ApiClient, FileType, RPCError, Types } from 'vscode-sync-api-client';
+import { ApiClient, FileSystemError, FileType, RPCError, Types } from 'vscode-sync-api-client';
 
 import { ptr, size, u32 } from './baseTypes';
 import {
@@ -1747,6 +1747,8 @@ export namespace WASI {
 	function handleError(error: any, def: errno = Errno.badf): errno {
 		if (error instanceof WasiError) {
 			return error.errno;
+		} else if (error instanceof FileSystemError) {
+			return code2Wasi.asErrno(error.code);
 		} else if (error instanceof RPCError) {
 			return code2Wasi.asErrno(error.errno);
 		}

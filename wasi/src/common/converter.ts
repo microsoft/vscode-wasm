@@ -19,23 +19,25 @@ export namespace code2Wasi {
 				return wasi.Filetype.unknown;
 		}
 	}
-	export function asErrno(errno: code.RPCErrno): wasi.errno {
+	export function asErrno(errno: code.RPCErrno): wasi.errno;
+	export function asErrno(code: string): wasi.errno;
+	export function asErrno(errno: code.RPCErrno | string): wasi.errno {
 		switch (errno) {
 			case code.RPCErrno.Success:
 				return wasi.Errno.success;
 			case code.RPCErrno.UnknownError:
 				return wasi.Errno.inval;
-			case code.Types.FileSystemError.FileNotFound:
+			case 'FileNotFound':
 				return wasi.Errno.noent;
-			case code.Types.FileSystemError.FileExists:
+			case 'FileExists':
 				return wasi.Errno.exist;
-			case code.Types.FileSystemError.FileNotADirectory:
+			case 'FileNotADirectory':
 				return wasi.Errno.notdir;
-			case code.Types.FileSystemError.FileIsADirectory:
+			case 'FileIsADirectory':
 				return wasi.Errno.isdir;
-			case code.Types.FileSystemError.NoPermissions:
+			case 'NoPermissions':
 				return wasi.Errno.perm;
-			case code.Types.FileSystemError.Unavailable:
+			case 'Unavailable':
 				return wasi.Errno.busy;
 			default:
 				return wasi.Errno.inval;

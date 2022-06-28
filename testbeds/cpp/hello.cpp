@@ -1,11 +1,12 @@
 #include <iostream>
+#include <string>
 
 using namespace std;
 
 int main() {
     cout << "Hello World!" << endl;
     string input;
-    char ch = getchar();
-    cout << ch << endl;
+    getline(cin, input);
+    cout << input << endl;
     return 0;
 }
