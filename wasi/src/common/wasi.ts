@@ -17,7 +17,7 @@ import { ptr, size, u32 } from './baseTypes';
 import {
 	fd, errno, Errno, lookupflags, oflags, rights, fdflags, dircookie, filetype, Rights,
 	filesize, advise, filedelta, whence, Filestat, Whence, Ciovec, Iovec, Filetype, clockid, timestamp, Clockid,
-	Fdstat, fstflags, Prestat, Dirent, dirent, exitcode, Oflags
+	Fdstat, fstflags, Prestat, Dirent, dirent, exitcode, Oflags, Subscription, WasiError, Eventtype, Event, Subscription_u, subscription_u, event, Subclockflags
 } from './wasiTypes';
 import { code2Wasi } from './converter';
 
@@ -719,6 +719,10 @@ class File implements IOComponent {
 		return this._cursor;
 	}
 
+	public bytesAvailable(): filesize {
+		return BigInt(this.content.byteLength - this.cursor);
+	}
+
 	public alloc(_offset: filesize, _len: filesize): void {
 		const offset = BigInts.asNumber(_offset);
 		const len = BigInts.asNumber(_len);
@@ -848,15 +852,6 @@ class File implements IOComponent {
 	}
 }
 
-
-class WasiError extends Error {
-	public readonly errno: errno;
-	constructor(errno: errno) {
-		super();
-		this.errno = errno;
-	}
-}
-
 export namespace WASI {
 
 	let $instance: WebAssembly.$Instance;
@@ -974,6 +969,43 @@ export namespace WASI {
 		return Errno.success;
 	}
 
+	function clock_res_get(id: clockid, timestamp_ptr: ptr): errno {
+		const memory = memoryView();
+		switch (id) {
+			case Clockid.realtime:
+				memory.setBigUint64(timestamp_ptr, 1n, true);
+				return Errno.success;
+			case Clockid.monotonic:
+				memory.setBigUint64(timestamp_ptr, 1n, true);
+				return Errno.success;
+			default:
+				memory.setBigUint64(timestamp_ptr, 0n, true);
+				return Errno.inval;
+		}
+	}
+
+	const $thread_start = RAL().clock.realtime();
+	function clock_time_get(id: clockid, precision: timestamp, timestamp_ptr: ptr): errno {
+		const time: bigint = now(id, precision);
+		const memory = memoryView();
+		memory.setBigUint64(timestamp_ptr, time, true);
+		return Errno.success;
+	}
+
+	function now(id: clockid, _precision: timestamp): bigint {
+		switch(id) {
+			case Clockid.realtime:
+				return RAL().clock.realtime();
+			case Clockid.monotonic:
+				return RAL().clock.monotonic();
+			case Clockid.process_cputime_id:
+			case Clockid.thread_cputime_id:
+				return RAL().clock.monotonic() - $thread_start;
+			default:
+				throw new WasiError(Errno.inval);
+		}
+	}
+
 	function environ_sizes_get(environCount_ptr: ptr, environBufSize_ptr: ptr): errno {
 		const memory = memoryView();
 		let count = 0;
@@ -1000,43 +1032,6 @@ export namespace WASI {
 			memoryBytes.set(data, valueOffset);
 			valueOffset += data.byteLength;
 		}
-		return Errno.success;
-	}
-
-	function clock_res_get(id: clockid, timestamp_ptr: ptr): errno {
-		const memory = memoryView();
-		switch (id) {
-			case Clockid.realtime:
-				memory.setBigUint64(timestamp_ptr, 1n, true);
-				return Errno.success;
-			case Clockid.monotonic:
-				memory.setBigUint64(timestamp_ptr, 1n, true);
-				return Errno.success;
-			default:
-				memory.setBigUint64(timestamp_ptr, 0n, true);
-				return Errno.inval;
-		}
-	}
-
-	const $thread_start = RAL().clock.realtime();
-	function clock_time_get(id: clockid, _precision: timestamp, timestamp_ptr: ptr): errno {
-		let time: bigint;
-		switch(id) {
-			case Clockid.realtime:
-				time = RAL().clock.realtime();
-				break;
-			case Clockid.monotonic:
-				time = RAL().clock.monotonic();
-				break;
-			case Clockid.process_cputime_id:
-			case Clockid.thread_cputime_id:
-				time = RAL().clock.monotonic() - $thread_start;
-				break;
-			default:
-				return Errno.inval;
-		}
-		const memory = memoryView();
-		memory.setBigUint64(timestamp_ptr, time, true);
 		return Errno.success;
 	}
 
@@ -1721,8 +1716,89 @@ export namespace WASI {
 		}
 	}
 
-	function poll_oneoff(_input: ptr, _output: ptr, _nsubscriptions: size, _result_size_ptr: ptr): errno {
-		return Errno.nosys;
+	function poll_oneoff(input: ptr, output: ptr, subscriptions: size, result_size_ptr: ptr): errno {
+		try {
+			let subscription_offset: ptr = input;
+			let event_offset = output;
+			let events: size = 0;
+			const memory = memoryView();
+			let timeout: bigint | undefined;
+			let needsTimeOut = false;
+			for (let i = 0; i < subscriptions; i++) {
+				const subscription = Subscription.create(subscription_offset, memory);
+				const u = subscription.u;
+				const event = Event.create(event_offset, memory);
+				event.userdata = subscription.userdata;
+				switch (u.type) {
+					case Eventtype.clock:
+						timeout = handleClock(u, event);
+						break;
+					case Eventtype.fd_read:
+						needsTimeOut = needsTimeOut || handleReadEvent(u, event);
+						break;
+					case Eventtype.fd_write:
+						needsTimeOut = needsTimeOut || handleWriteEvent(u, event);
+						break;
+				}
+				subscription_offset += Subscription.size;
+				event_offset += Event.size;
+			}
+			if (needsTimeOut && timeout !== undefined) {
+
+			}
+			memory.setUint32(result_size_ptr, events);
+			return Errno.success;
+		} catch (error) {
+			return handleError(error);
+		}
+	}
+
+	function handleClock(u: subscription_u, event: event): bigint {
+		const clock = u.clock;
+		event.type = Eventtype.clock;
+		event.error = Errno.success;
+		// Timeout is in ns.
+		const timeout =  clock.timeout;
+		if ((clock.flags & Subclockflags.subscription_clock_abstime) !== 0) {
+			const time = now(Clockid.realtime, 0n);
+			return BigInt(Math.max(0, BigInts.asNumber(time - timeout)));
+		} else {
+			return timeout;
+		}
+	}
+
+	function handleReadEvent(u: subscription_u, event: event): boolean {
+		try {
+			event.type = Eventtype.fd_read;
+			const fd = u.fd_read.file_descriptor;
+			const fileHandle = getFileHandle(fd);
+			fileHandle.assertBaseRight(Rights.fd_read);
+			const file = getOrCreateFile(fileHandle);
+			const available = file.bytesAvailable();
+			const read = event.fd_readwrite;
+			read.nbytes = available;
+			event.error = Errno.success;
+			return false;
+		} catch (error) {
+			event.error = handleError(error);
+			return true;
+		}
+	}
+
+	function handleWriteEvent(u: subscription_u, event: event): boolean {
+		try {
+			event.type = Eventtype.fd_write;
+			const fd = u.fd_write.file_descriptor;
+			const fileHandle = getFileHandle(fd);
+			fileHandle.assertBaseRight(Rights.fd_write);
+			const read = event.fd_readwrite;
+			read.nbytes = 0n;
+			event.error = Errno.success;
+			return false;
+		} catch (error) {
+			event.error = handleError(error);
+			return true;
+		}
 	}
 
 	function proc_exit(rval: exitcode) {

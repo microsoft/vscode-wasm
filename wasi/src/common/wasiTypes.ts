@@ -402,6 +402,14 @@ export namespace Errno {
 	export const notcapable = 76;
 }
 
+export class WasiError extends Error {
+	public readonly errno: errno;
+	constructor(errno: errno) {
+		super();
+		this.errno = errno;
+	}
+}
+
 export type rights = u64;
 export namespace Rights {
 
@@ -1292,7 +1300,7 @@ export type event = {
 	 * The contents of the event, if it is an eventtype::fd_read or
 	 * eventtype::fd_write. eventtype::clock events ignore this field.
 	 */
-	set fd_readwrite(value: event_fd_readwrite);
+	get fd_readwrite(): event_fd_readwrite;
 };
 export namespace Event {
 
@@ -1312,10 +1320,8 @@ export namespace Event {
 			set userdata(value: userdata) { memory.setBigUint64(ptr + offsets.userdata, value, true); },
 			set error(value: errno) { memory.setUint16(ptr + offsets.error, value, true); },
 			set type(value: eventtype) { memory.setUint8(ptr + offsets.type, value); },
-			set fd_readwrite(value: event_fd_readwrite) {
-				const store = Event_fd_readwrite.create(ptr + offsets.fd_readwrite, memory);
-				store.nbytes = value.nbytes;
-				store.flags = value.flags;
+			get fd_readwrite(): event_fd_readwrite {
+				return Event_fd_readwrite.create(ptr + offsets.fd_readwrite, memory);
 			}
 		};
 	}
@@ -1342,7 +1348,7 @@ export type subscription_clock = {
 	get id(): clockid;
 
 	/**
-	 * The absolute or relative timestamp.
+	 * The absolute or relative timestamp in ns.
 	 */
 	get timeout(): timestamp;
 
@@ -1402,6 +1408,7 @@ export namespace Subscription_fd_readwrite {
 }
 
 export type subscription_u = {
+	get type(): eventtype;
 	get clock(): subscription_clock;
 	get fd_read(): subscription_fd_readwrite;
 	get fd_write(): subscription_fd_readwrite;
@@ -1410,16 +1417,38 @@ export type subscription_u = {
 export namespace Subscription_u {
 	export const size = 40;
 	export const alignment = 8;
+	export const tag_size = 1;
+
+	// The first byte is the tag to decide whether we have a clock, read or
+	// write poll. So the actual offset of the data struct starts at 8 since
+	// we have an alignment of 8.
 	const offsets = {
-		clock: 0,
-		fd_read: 0,
-		fd_write: 0
+		type: 0,
+		clock: 8,
+		fd_read: 8,
+		fd_write: 8
 	};
 	export function create(ptr: ptr, memory: DataView): subscription_u {
 		return {
-			get clock(): subscription_clock { return Subscription_clock.create(ptr + offsets.clock, memory); },
-			get fd_read(): subscription_fd_readwrite { return Subscription_fd_readwrite.create(ptr + offsets.fd_read, memory); },
-			get fd_write(): subscription_fd_readwrite { return Subscription_fd_readwrite.create(ptr + offsets.fd_write, memory); }
+			get type(): eventtype { return memory.getUint8(ptr + offsets.type); },
+			get clock(): subscription_clock {
+				if (memory.getInt8(ptr + offsets.type) !== Eventtype.clock) {
+					throw new WasiError(Errno.inval);
+				}
+				return Subscription_clock.create(ptr + offsets.clock, memory);
+			},
+			get fd_read(): subscription_fd_readwrite {
+				if (memory.getInt8(ptr + offsets.type) !== Eventtype.fd_read) {
+					throw new WasiError(Errno.inval);
+				}
+				return Subscription_fd_readwrite.create(ptr + offsets.fd_read, memory);
+			},
+			get fd_write(): subscription_fd_readwrite {
+				if (memory.getInt8(ptr + offsets.type) !== Eventtype.fd_write) {
+					throw new WasiError(Errno.inval);
+				}
+				return Subscription_fd_readwrite.create(ptr + offsets.fd_write, memory);
+			}
 		};
 	}
 }

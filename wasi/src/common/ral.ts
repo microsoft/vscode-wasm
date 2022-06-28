@@ -37,8 +37,15 @@ interface RAL {
 	};
 
 	readonly clock: {
-		monotonic(): bigint;
+		/**
+		 * Real time (since epoch) in nanoseconds
+		 */
 		realtime(): bigint;
+
+		/**
+		 * Monotonic time in nanoseconds.
+		 */
+		monotonic(): bigint;
 	};
 
 	readonly crypto: {

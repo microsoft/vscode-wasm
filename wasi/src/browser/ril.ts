@@ -42,15 +42,18 @@ const _ril: RIL = Object.freeze<RIL>({
 		},
 	}),
 	clock: Object.freeze({
+		realtime(): bigint {
+			// Date.now is in ms but clock API is in ns.
+			return BigInt(Date.now()) * 1000000n;
+		},
 		monotonic(): bigint {
+			// digits are ms, decimal places are fractions of ms.
 			const now = self.performance.now();
 			const ms = Math.trunc(now);
 			const msf = now - ms;
-			return BigInt(ms) * 1000n + BigInt(Math.round(msf * 1000));
+			// We need to convert everything into nanoseconds
+			return BigInt(ms) * 1000000n + BigInt(Math.round(msf * 1000000));
 		},
-		realtime(): bigint {
-			return BigInt(Date.now());
-		}
 	}),
 	crypto: Object.freeze({
 		randomGet(size: number): Uint8Array {

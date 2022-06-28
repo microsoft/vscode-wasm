@@ -43,11 +43,13 @@ const _ril: RIL = Object.freeze<RIL>({
 		}
 	}),
 	clock: Object.freeze({
-		monotonic(): bigint {
-			return process.hrtime.bigint();
-		},
 		realtime(): bigint {
-			return BigInt(Date.now());
+			// Date.now is in ms but clock API is in ns.
+			return BigInt(Date.now()) * 1000000n;
+		},
+		monotonic(): bigint {
+			// hrtime is already in ns.
+			return process.hrtime.bigint();
 		}
 	}),
 	crypto: Object.freeze({
