@@ -3,60 +3,44 @@
  * Licensed under the MIT License. See License.txt in the project root for license information.
  * ------------------------------------------------------------------------------------------ */
 
-import { Uint32Result, VariableResult } from './connection';
-
-export type u8 = number;
-export type u16 = number;
-export type u32 = number;
-export type u64 = number;
-export type size = u32;
+import { RPCErrno, Uint32Result, VariableResult, u32 } from './connection';
 
 export namespace Types {
 
-	export type FileSystemError = u16;
+	export type FileSystemError = u32;
 	export namespace FileSystemError {
-
-		/**
-		 * Operation was successful.
-		 */
-		export const Success = 0;
-
-		/**
-		 * Unknown error happened during file operation.
-		 */
-		export const Unknown = 1;
 
 		/**
          * Create an error to signal that a file or folder wasn't found.
 		 */
-		export const FileNotFound = 2;
+		export const FileNotFound = RPCErrno.$Custom;
 
 		/**
          * Create an error to signal that a file or folder already exists, e.g. when
          * creating but not overwriting a file.
          */
-		export const FileExists = 3;
+		export const FileExists = FileNotFound + 1;
 
 		/**
          * Create an error to signal that a file is not a folder.
          */
-    	export const FileNotADirectory = 4;
+    	export const FileNotADirectory = FileExists + 1;
 
 		/**
          * Create an error to signal that a file is a folder.
          */
-		export const FileIsADirectory = 5;
+		export const FileIsADirectory = FileNotADirectory + 1;
 
 		/**
          * Create an error to signal that an operation lacks required permissions.
          */
-		export const NoPermissions = 6;
+		export const NoPermissions = FileIsADirectory + 1;
 
 		/**
          * Create an error to signal that the file system is unavailable or too busy to
          * complete a request.
          */
-		export const Unavailable = 7;
+		export const Unavailable = NoPermissions + 1;
 	}
 
 	export type UriComponents = {
@@ -162,9 +146,9 @@ export type Requests =
 	/**
 	 * Reads a line from the terminal
 	 */
-	method: 'terminal/readline';
+	method: 'terminal/read';
 	params: null;
-	result: Uint8Array;
+	result: VariableResult<Uint8Array>;
 } | {
 	/**
 	 * Stat a file / directory

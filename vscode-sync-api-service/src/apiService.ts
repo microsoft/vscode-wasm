@@ -5,7 +5,7 @@
 
 import * as vscode from 'vscode';
 
-import RAL, { BaseServiceConnection, ProcExitRequest, Requests, Types } from 'vscode-sync-rpc';
+import RAL, { BaseServiceConnection, ProcExitRequest, Requests, Types, RPCErrno } from 'vscode-sync-rpc';
 
 const terminalRegExp = /(\r\n)|(\n)/gm;
 
@@ -61,7 +61,7 @@ export class ApiService<Ready extends {} | undefined = undefined> {
 			if (error instanceof vscode.FileSystemError) {
 				return { errno: this.asFileSystemError(error) };
 			}
-			return { errno: Types.FileSystemError.Unknown };
+			return { errno: RPCErrno.UnknownError };
 
 		};
 
@@ -81,11 +81,10 @@ export class ApiService<Ready extends {} | undefined = undefined> {
 			return { errno: 0 };
 		});
 
-		this.connection.onRequest('terminal/readline', async (buffer) => {
+		this.connection.onRequest('terminal/read', async () => {
 			let line = this.getLine();
 			if (line !== undefined) {
-				buffer.set(this.textEncoder.encode(line));
-				return { errno : 0};
+				return { errno : 0, data: this.textEncoder.encode(line) };
 			}
 			const wait = new Promise<void>((resolve) => {
 				this.lineAvailable = resolve;
@@ -95,8 +94,7 @@ export class ApiService<Ready extends {} | undefined = undefined> {
 			if (line === undefined) {
 				return { errno: -1 };
 			}
-			buffer.set(this.textEncoder.encode(line));
-			return { errno: 0 };
+			return { errno: 0, data: this.textEncoder.encode(line) };
 		});
 
 		this.connection.onRequest('fileSystem/stat', async (params, resultBuffer) => {
@@ -203,7 +201,7 @@ export class ApiService<Ready extends {} | undefined = undefined> {
 			case 'Unavailable':
 				return Types.FileSystemError.Unavailable;
 			default:
-				return Types.FileSystemError.Unknown;
+				return RPCErrno.UnknownError;
 		}
 	}
 

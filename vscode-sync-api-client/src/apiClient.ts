@@ -5,24 +5,24 @@
 
 import { URI } from 'vscode-uri';
 
-import RAL, { BaseClientConnection, Requests, Uint8Result, RequestResult, Types, VariableResult, ProcExitRequest } from 'vscode-sync-rpc';
+import RAL, { BaseClientConnection, Requests, RequestResult, Types, VariableResult, ProcExitRequest, RPCErrno, RPCError } from 'vscode-sync-rpc';
 
-import { FileStat } from './vscode';
+import * as vscode from './vscode';
 
 export interface Terminal {
 	write(value: string, encoding?: string): void;
 	write(value: Uint8Array): void;
-	readline(bufferSize: number): Uint8Array | undefined;
+	read(): Uint8Array;
 }
 
 export interface FileSystem {
-	stat(uri: URI): FileStat | number;
-	read(uri: URI): Uint8Array | number;
-	write(uri: URI, content: Uint8Array): number;
-	readDirectory(uri: URI): Types.DirectoryEntries | number;
-	createDirectory(uri: URI): number;
-	delete(uri: URI, options?: { recursive?: boolean; useTrash?: boolean }): number;
-	rename(source: URI, target: URI, options?: { overwrite?: boolean }): number;
+	stat(uri: URI): vscode.FileStat;
+	read(uri: URI): Uint8Array;
+	write(uri: URI, content: Uint8Array): void;
+	readDirectory(uri: URI): Types.DirectoryEntries;
+	createDirectory(uri: URI): void;
+	delete(uri: URI, options?: { recursive?: boolean; useTrash?: boolean }): void;
+	rename(source: URI, target: URI, options?: { overwrite?: boolean }): void;
 }
 
 type ApiClientConnection<Ready extends {} | undefined = undefined> = BaseClientConnection<Requests | ProcExitRequest, Ready>;
@@ -44,12 +44,12 @@ class TerminalImpl<Ready extends {} | undefined = undefined> implements Terminal
 			? this.encoder.encode(value) : value;
 		this.connection.sendRequest('terminal/write', { binary });
 	}
-	public readline(bufferSize: number): Uint8Array | undefined {
-		const result = this.connection.sendRequest('terminal/readline', Uint8Result.fromByteLength(bufferSize));
+	public read(): Uint8Array {
+		const result = this.connection.sendRequest('terminal/read', new VariableResult<Uint8Array>('binary'));
 		if (RequestResult.hasData(result)) {
 			return result.data;
 		}
-		return undefined;
+		throw new RPCError(result.errno, `Should never happen`);
 	}
 }
 
@@ -58,13 +58,13 @@ class FileSystemImpl<Ready extends {} | undefined = undefined> implements FileSy
 	private readonly connection: ApiClientConnection<Ready>;
 	// todo@dirkb this is temporary. We need to improve this by bundling the
 	// Python lib into the worker code.
-	private statCache: Map<string, FileStat> = new Map();
+	private statCache: Map<string, vscode.FileStat> = new Map();
 
 	constructor(connection: ApiClientConnection<Ready>, _encoder: RAL.TextEncoder) {
 		this.connection = connection;
 	}
 
-	public stat(uri: URI): FileStat | number {
+	public stat(uri: URI): vscode.FileStat {
 		const cached = this.statCache.get(uri.toString());
 		if (cached !== undefined) {
 			return cached;
@@ -73,7 +73,7 @@ class FileSystemImpl<Ready extends {} | undefined = undefined> implements FileSy
 		if (RequestResult.hasData(requestResult)) {
 			const stat = Types.Stat.create(requestResult.data);
 			const permission = stat.permission;
-			const result: FileStat = {
+			const result: vscode.FileStat = {
 				type: stat.type,
 				ctime: stat.ctime,
 				mtime: stat.mtime,
@@ -85,40 +85,69 @@ class FileSystemImpl<Ready extends {} | undefined = undefined> implements FileSy
 			this.statCache.set(uri.toString(), result);
 			return result;
 		}
-		return requestResult.errno;
+		throw this.asFileSystemError(requestResult.errno, uri);
 	}
 
-	public read(uri: URI): Uint8Array | number {
+	public read(uri: URI): Uint8Array {
 		const requestResult = this.connection.sendRequest('fileSystem/readFile', { uri: uri.toJSON() }, new VariableResult<Uint8Array>('binary'));
 		if (RequestResult.hasData(requestResult)) {
 			return requestResult.data;
 		}
-		return requestResult.errno;
+		throw this.asFileSystemError(requestResult.errno, uri);
 	}
 
-	public write(uri: URI, content: Uint8Array): number {
+	public write(uri: URI, content: Uint8Array): void {
 		const requestResult = this.connection.sendRequest('fileSystem/writeFile', { uri: uri.toJSON(), binary: content });
-		return requestResult.errno;
+		if (requestResult.errno !== RPCErrno.Success) {
+			throw this.asFileSystemError(requestResult.errno, uri);
+		}
 	}
 
-	public readDirectory(uri: URI): Types.DirectoryEntries | number {
+	public readDirectory(uri: URI): Types.DirectoryEntries {
 		const requestResult = this.connection.sendRequest('fileSystem/readDirectory', { uri: uri.toJSON() }, new VariableResult<Types.DirectoryEntries>('json'));
-		return RequestResult.hasData(requestResult) ? requestResult.data : requestResult.errno;
+		if (RequestResult.hasData(requestResult)) {
+			requestResult.data;
+		 }
+		 throw this.asFileSystemError(requestResult.errno, uri);
 	}
 
-	public createDirectory(uri: URI): number {
+	public createDirectory(uri: URI): void {
 		const requestResult = this.connection.sendRequest('fileSystem/createDirectory', { uri: uri.toJSON() });
-		return requestResult.errno;
+		if (requestResult.errno !== RPCErrno.Success) {
+			throw this.asFileSystemError(requestResult.errno, uri);
+		}
 	}
 
-	public delete(uri: URI, options?: { recursive?: boolean; useTrash?: boolean }): number {
+	public delete(uri: URI, options?: { recursive?: boolean; useTrash?: boolean }): void {
 		const requestResult = this.connection.sendRequest('fileSystem/delete', { uri: uri.toJSON(), options });
-		return requestResult.errno;
+		if (requestResult.errno !== RPCErrno.Success) {
+			throw this.asFileSystemError(requestResult.errno, uri);
+		}
 	}
 
-	public rename(source: URI, target: URI, options?: { overwrite?: boolean }): number {
+	public rename(source: URI, target: URI, options?: { overwrite?: boolean }): void {
 		const requestResult = this.connection.sendRequest('fileSystem/rename', { source: source.toJSON(), target: target.toJSON(), options });
-		return requestResult.errno;
+		if (requestResult.errno !== RPCErrno.Success) {
+			throw this.asFileSystemError(requestResult.errno, `${source.toString()} -> ${target.toString()}`);
+		}
+	}
+
+	private asFileSystemError(errno: RPCErrno, uri: URI | string): vscode.FileSystemError {
+		switch(errno) {
+			case Types.FileSystemError.FileNotFound:
+				return vscode.FileSystemError.FileNotFound(uri);
+			case Types.FileSystemError.FileExists:
+				return vscode.FileSystemError.FileExists(uri);
+			case Types.FileSystemError.FileNotADirectory:
+				return vscode.FileSystemError.FileNotADirectory(uri);
+			case Types.FileSystemError.FileIsADirectory:
+				return vscode.FileSystemError.FileIsADirectory(uri);
+			case Types.FileSystemError.NoPermissions:
+				return vscode.FileSystemError.NoPermissions(uri);
+			case Types.FileSystemError.Unavailable:
+				return vscode.FileSystemError.Unavailable(uri);
+		}
+		return vscode.FileSystemError.Unavailable(uri);
 	}
 }
 

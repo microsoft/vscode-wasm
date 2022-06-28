@@ -6,6 +6,12 @@
 import RAL from './ral';
 import { Disposable } from './disposable';
 
+export type u8 = number;
+export type u16 = number;
+export type u32 = number;
+export type u64 = number;
+export type size = u32;
+
 export type Message = {
 	method: string;
 	params?: Params;
@@ -455,18 +461,18 @@ type LengthType<T extends TypedArray> =
 type _SendRequestSignatures<Requests extends RequestType> = UnionToIntersection<{
  	[R in Requests as R['method']]: R['params'] extends null | undefined
 	 	? R['result'] extends null | undefined
-			? (method: R['method']) => { errno: number }
+			? (method: R['method']) => { errno: RPCErrno }
 			: R['result'] extends TypedArray
-				? (method: R['method'], resultKind: LengthType<R['result']>) => { errno: 0; data: R['result'] } | { errno: number }
+				? (method: R['method'], resultKind: LengthType<R['result']>) => { errno: 0; data: R['result'] } | { errno: RPCErrno }
 				: R['result'] extends VariableResult<infer T>
-					? (method: R['method'], resultKind: VariableResult<T>) => { errno: 0; data: T } | { errno: number }
+					? (method: R['method'], resultKind: VariableResult<T>) => { errno: 0; data: T } | { errno: RPCErrno }
 					: never
 		: R['result'] extends null | undefined
-			? (method: R['method'], params: R['params']) => { errno: number }
+			? (method: R['method'], params: R['params']) => { errno: RPCErrno }
 			: R['result'] extends TypedArray
-				? (method: R['method'], params: R['params'], resultKind: LengthType<R['result']>) => { errno: 0; data: R['result'] } | { errno: number }
+				? (method: R['method'], params: R['params'], resultKind: LengthType<R['result']>) => { errno: 0; data: R['result'] } | { errno: RPCErrno }
 				: R['result'] extends VariableResult<infer T>
-					? (method: R['method'], params: R['params'], resultKind: VariableResult<T>) => { errno: 0; data: T } | { errno: number }
+					? (method: R['method'], params: R['params'], resultKind: VariableResult<T>) => { errno: 0; data: T } | { errno: RPCErrno }
 					: never;
 }[keyof MethodKeys<Requests>]>;
 
@@ -494,6 +500,53 @@ const enum SyncSize {
 	total = 4
 }
 
+/**
+ * Errno numbers specific to the sync RPC calls. We start at 16384 to not collide
+ * with POSIX error numbers.
+ */
+export namespace RPCErrno {
+
+	/**
+	 * No error occurred. RPC  call completed successfully.
+	 */
+	export const Success = 0;
+
+	/**
+	 * A unknown error has occurred.
+	 */
+	export const UnknownError = 16384;
+
+	/**
+	 * Fetching the lazy result from the service failed.
+	 */
+	export const LazyResultFailed = UnknownError + 1;
+
+	/**
+	 * No handler on the service side found.
+	 */
+	export const NoHandlerFound = LazyResultFailed + 1;
+
+	/**
+	 * Invalid message format.
+	 */
+	export const InvalidMessageFormat = NoHandlerFound + 1;
+
+	/**
+	 * Start of the custom error number range.
+	 */
+	export const $Custom = 32768;
+}
+export type RPCErrno = u32;
+
+export class RPCError extends Error {
+	public readonly errno: RPCErrno;
+
+	public constructor(errno: RPCErrno, message?: string) {
+		super(message);
+		this.errno = errno;
+	}
+}
+
 export abstract class BaseClientConnection<Requests extends RequestType | undefined = undefined, Ready extends {} | undefined = undefined> {
 
 	private id: number;
@@ -517,7 +570,7 @@ export abstract class BaseClientConnection<Requests extends RequestType | undefi
 
 	public readonly sendRequest: SendRequestSignatures<Requests> = this._sendRequest as SendRequestSignatures<Requests>;
 
-	private _sendRequest(method: string, arg1?: Params | ResultType, arg2?: ResultType): { errno: 0; data: any } | { errno: number } {
+	private _sendRequest(method: string, arg1?: Params | ResultType, arg2?: ResultType): { errno: 0; data: any } | { errno: RPCErrno } {
 		const id = this.id++;
 		const request: Request = { id: id, method };
 		let params: Params | undefined = undefined;
@@ -559,7 +612,7 @@ export abstract class BaseClientConnection<Requests extends RequestType | undefi
 		header[HeaderIndex.messageByteLength] = requestData.byteLength;
 		header[HeaderIndex.binaryParamOffset] = binaryOffset;
 		header[HeaderIndex.binaryParamByteLength] = binaryDataLength;
-		header[HeaderIndex.errno] = 0;
+		header[HeaderIndex.errno] = RPCErrno.Success;
 		header[HeaderIndex.resultKind] = resultType.kind;
 		header[HeaderIndex.resultOffset] = resultOffset;
 		header[HeaderIndex.resultByteLength] = resultByteLength;
@@ -578,7 +631,7 @@ export abstract class BaseClientConnection<Requests extends RequestType | undefi
 		// Wait for the answer
 		Atomics.wait(sync, 0, 0);
 
-		const errno: number = header[HeaderIndex.errno];
+		const errno: RPCErrno = header[HeaderIndex.errno];
 		if (errno !== 0) {
 			return { errno };
 		} else {
@@ -601,10 +654,10 @@ export abstract class BaseClientConnection<Requests extends RequestType | undefi
 								: JSON.parse(this.textDecoder.decode(lazyResult.data as Uint8Array));
 							return { errno: 0, data };
 						} catch (error) {
-							return { errno: -5 };
+							return { errno: RPCErrno.LazyResultFailed };
 						}
 					} else {
-						return { errno: -5 };
+						return { errno: RPCErrno.LazyResultFailed };
 					}
 				default:
 					return { errno: 0, data: resultType.createResultArray(sharedArrayBuffer, resultOffset) };
@@ -624,27 +677,27 @@ export abstract class BaseClientConnection<Requests extends RequestType | undefi
 type _HandleRequestSignatures<Requests extends RequestType> = UnionToIntersection<{
  	[R in Requests as R['method']]: R['params'] extends null | undefined
 		? R['result'] extends null | undefined
-			? (method: R['method'], handler: () => { errno: number } | Promise<{ errno: number }>) => Disposable
+			? (method: R['method'], handler: () => { errno: RPCErrno } | Promise<{ errno: RPCErrno }>) => Disposable
 			: R['result'] extends TypedArray
-				? (method: R['method'], handler: (resultBuffer: R['result']) => { errno: number } | Promise<{ errno: number }>) => Disposable
+				? (method: R['method'], handler: (resultBuffer: R['result']) => { errno: RPCErrno } | Promise<{ errno: RPCErrno }>) => Disposable
 				: R['result'] extends VariableResult<infer T>
-					? (method: R['method'], handler: () => { errno: number } | { errno: 0; data: T } | Promise<{ errno: number }| { errno: 0; data: T }>) => Disposable
+					? (method: R['method'], handler: () => { errno: RPCErrno } | { errno: 0; data: T } | Promise<{ errno: RPCErrno }| { errno: 0; data: T }>) => Disposable
 					: never
 		: R['result'] extends null | undefined
-			? (method: R['method'], handler: (params: R['params']) => { errno: number } | Promise<{ errno: number }>) => Disposable
+			? (method: R['method'], handler: (params: R['params']) => { errno: RPCErrno } | Promise<{ errno: RPCErrno }>) => Disposable
 			: R['result'] extends TypedArray
-				? (method: R['method'], handler: (params: R['params'], resultBuffer: R['result']) => { errno: number } | Promise<{ errno: number }>) => Disposable
+				? (method: R['method'], handler: (params: R['params'], resultBuffer: R['result']) => { errno: RPCErrno } | Promise<{ errno: RPCErrno }>) => Disposable
 				: R['result'] extends VariableResult<infer T>
-					? (method: R['method'], handler: (params: R['params']) => { errno: number } | { errno: 0; data: T } | Promise<{ errno: number }| { errno: 0; data: T }>) => Disposable
+					? (method: R['method'], handler: (params: R['params']) => { errno: RPCErrno } | { errno: 0; data: T } | Promise<{ errno: RPCErrno }| { errno: 0; data: T }>) => Disposable
 					: never
 }[keyof MethodKeys<Requests>]>;
 
 type HandleRequestSignatures<Requests extends RequestType | undefined> = [Requests] extends [RequestType] ?_HandleRequestSignatures<Requests> : undefined;
 
-type RequestResult = { errno: 0; data: object } | { errno: number };
+type RequestResult = { errno: 0; data: object } | { errno: RPCErrno };
 export namespace RequestResult {
-	export function hasData<T>(value: { errno: number } | { errno: 0; data: T }): value is { errno: 0; data: T } {
-		const candidate: { errno: number; data?: T | null } = value;
+	export function hasData<T>(value: { errno: RPCErrno } | { errno: 0; data: T }): value is { errno: 0; data: T } {
+		const candidate: { errno: RPCErrno; data?: T | null } = value;
 		return candidate.errno === 0 && candidate.data !== undefined && candidate.data !== null;
 	}
 }
@@ -692,9 +745,9 @@ export abstract class BaseServiceConnection<RequestHandlers extends RequestType 
 					const resultByteLength = header[HeaderIndex.resultByteLength];
 					if (result !== undefined && result.byteLength === resultByteLength) {
 						TypedArray.set(sharedArrayBuffer, resultOffset, result);
-						header[HeaderIndex.errno] = 0;
+						header[HeaderIndex.errno] = RPCErrno.Success;
 					} else {
-						header[HeaderIndex.errno] = - 4;
+						header[HeaderIndex.errno] = RPCErrno.LazyResultFailed;
 					}
 				} else {
 					if (message.params?.binary === null) {
@@ -744,14 +797,14 @@ export abstract class BaseServiceConnection<RequestHandlers extends RequestType 
 								header[HeaderIndex.errno] = requestResult.errno;
 						}
 					} else {
-						header[HeaderIndex.errno] = - 3;
+						header[HeaderIndex.errno] = RPCErrno.NoHandlerFound;
 					}
 				}
 			} else {
-				header[HeaderIndex.errno] = -2;
+				header[HeaderIndex.errno] = RPCErrno.InvalidMessageFormat;
 			}
 		} catch (error) {
-			header[HeaderIndex.errno] = -1;
+			header[HeaderIndex.errno] = RPCErrno.UnknownError;
 		}
 		const sync = new Int32Array(sharedArrayBuffer, 0, 1);
 		Atomics.notify(sync, 0);

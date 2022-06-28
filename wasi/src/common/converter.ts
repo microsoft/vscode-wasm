@@ -19,12 +19,12 @@ export namespace code2Wasi {
 				return wasi.Filetype.unknown;
 		}
 	}
-	export function asErrno(fileSystemError: code.Types.FileSystemError): wasi.errno {
-		switch (fileSystemError) {
-			case code.Types.FileSystemError.Success:
+	export function asErrno(errno: code.RPCErrno): wasi.errno {
+		switch (errno) {
+			case code.RPCErrno.Success:
 				return wasi.Errno.success;
-			case code.Types.FileSystemError.Unknown:
-				return wasi.Errno.noent;
+			case code.RPCErrno.UnknownError:
+				return wasi.Errno.inval;
 			case code.Types.FileSystemError.FileNotFound:
 				return wasi.Errno.noent;
 			case code.Types.FileSystemError.FileExists:
@@ -38,7 +38,7 @@ export namespace code2Wasi {
 			case code.Types.FileSystemError.Unavailable:
 				return wasi.Errno.busy;
 			default:
-				return wasi.Errno.noent;
+				return wasi.Errno.inval;
 		}
 	}
 }

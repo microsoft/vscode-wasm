@@ -30,6 +30,16 @@
 			"outFiles": ["${workspaceRoot}/testbeds/cpp/out/**/*.js"],
 			"sourceMaps": true,
 			"preLaunchTask": "Build C++ Example"
+		},
+		{
+			"type": "extensionHost",
+			"request": "launch",
+			"name": "CoreUtils Testbed",
+			"runtimeExecutable": "${execPath}",
+			"args": ["--extensionDevelopmentPath=${workspaceRoot}/testbeds/coreutils"],
+			"outFiles": ["${workspaceRoot}/testbeds/coreutils/out/**/*.js"],
+			"sourceMaps": true,
+			"preLaunchTask": "Build CoreUtils Example"
 		}
 	]
 }

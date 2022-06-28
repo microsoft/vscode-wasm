@@ -62,6 +62,20 @@
 			"problemMatcher": [
 				"$tsc"
 			]
+		},
+		{
+			"label": "Build CoreUtils Example",
+			"type": "npm",
+			"script": "build",
+			"path": "testbeds/coreutils",
+			"group": "build",
+			"presentation": {
+				"panel": "dedicated",
+				"reveal": "never"
+			},
+			"problemMatcher": [
+				"$tsc"
+			]
 		}
 	]
 }
