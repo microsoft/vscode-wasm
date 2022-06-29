@@ -17,7 +17,8 @@ import { ptr, size, u32 } from './baseTypes';
 import {
 	fd, errno, Errno, lookupflags, oflags, rights, fdflags, dircookie, filetype, Rights,
 	filesize, advise, filedelta, whence, Filestat, Whence, Ciovec, Iovec, Filetype, clockid, timestamp, Clockid,
-	Fdstat, fstflags, Prestat, Dirent, dirent, exitcode, Oflags, Subscription, WasiError, Eventtype, Event, Subscription_u, subscription_u, event, Subclockflags, Literal, subscription
+	Fdstat, fstflags, Prestat, Dirent, dirent, exitcode, Oflags, Subscription, WasiError, Eventtype, Event, event,
+	Subclockflags, Literal, subscription
 } from './wasiTypes';
 import { code2Wasi } from './converter';
 
