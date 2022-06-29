@@ -1432,19 +1432,19 @@ export namespace Subscription_u {
 		return {
 			get type(): eventtype { return memory.getUint8(ptr + offsets.type); },
 			get clock(): subscription_clock {
-				if (memory.getInt8(ptr + offsets.type) !== Eventtype.clock) {
+				if (memory.getUint8(ptr + offsets.type) !== Eventtype.clock) {
 					throw new WasiError(Errno.inval);
 				}
 				return Subscription_clock.create(ptr + offsets.clock, memory);
 			},
 			get fd_read(): subscription_fd_readwrite {
-				if (memory.getInt8(ptr + offsets.type) !== Eventtype.fd_read) {
+				if (memory.getUint8(ptr + offsets.type) !== Eventtype.fd_read) {
 					throw new WasiError(Errno.inval);
 				}
 				return Subscription_fd_readwrite.create(ptr + offsets.fd_read, memory);
 			},
 			get fd_write(): subscription_fd_readwrite {
-				if (memory.getInt8(ptr + offsets.type) !== Eventtype.fd_write) {
+				if (memory.getUint8(ptr + offsets.type) !== Eventtype.fd_write) {
 					throw new WasiError(Errno.inval);
 				}
 				return Subscription_fd_readwrite.create(ptr + offsets.fd_write, memory);
@@ -1482,3 +1482,7 @@ export namespace Subscription {
 		};
 	}
 }
+
+export type Literal<T> = {
+	[P in keyof T]: T[P];
+};

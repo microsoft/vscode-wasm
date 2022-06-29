@@ -17,7 +17,7 @@ import { ptr, size, u32 } from './baseTypes';
 import {
 	fd, errno, Errno, lookupflags, oflags, rights, fdflags, dircookie, filetype, Rights,
 	filesize, advise, filedelta, whence, Filestat, Whence, Ciovec, Iovec, Filetype, clockid, timestamp, Clockid,
-	Fdstat, fstflags, Prestat, Dirent, dirent, exitcode, Oflags, Subscription, WasiError, Eventtype, Event, Subscription_u, subscription_u, event, Subclockflags
+	Fdstat, fstflags, Prestat, Dirent, dirent, exitcode, Oflags, Subscription, WasiError, Eventtype, Event, Subscription_u, subscription_u, event, Subclockflags, Literal, subscription
 } from './wasiTypes';
 import { code2Wasi } from './converter';
 
@@ -1718,86 +1718,140 @@ export namespace WASI {
 
 	function poll_oneoff(input: ptr, output: ptr, subscriptions: size, result_size_ptr: ptr): errno {
 		try {
-			let subscription_offset: ptr = input;
-			let event_offset = output;
-			let events: size = 0;
 			const memory = memoryView();
-			let timeout: bigint | undefined;
-			let needsTimeOut = false;
-			for (let i = 0; i < subscriptions; i++) {
-				const subscription = Subscription.create(subscription_offset, memory);
-				const u = subscription.u;
+			let { events, needsTimeOut, timeout } = handleSubscriptions(memory, input, subscriptions);
+			if (needsTimeOut && timeout !== undefined && timeout !== 0n) {
+				// Timeout is in ns but sleep API is in ms.
+				$apiClient.timer.sleep(BigInts.asNumber(timeout / 1000000n));
+				// Reread the events. Timer will not change however the rest could have.
+				events = handleSubscriptions(memory, input, subscriptions).events;
+			}
+			let event_offset = output;
+			for (const item of events) {
 				const event = Event.create(event_offset, memory);
-				event.userdata = subscription.userdata;
-				switch (u.type) {
-					case Eventtype.clock:
-						timeout = handleClock(u, event);
-						break;
-					case Eventtype.fd_read:
-						needsTimeOut = needsTimeOut || handleReadEvent(u, event);
-						break;
-					case Eventtype.fd_write:
-						needsTimeOut = needsTimeOut || handleWriteEvent(u, event);
-						break;
-				}
-				subscription_offset += Subscription.size;
+				event.userdata = item.userdata;
+				event.type = item.type;
+				event.error = item.error;
+				event.fd_readwrite.nbytes = item.fd_readwrite.nbytes;
+				event.fd_readwrite.flags = item.fd_readwrite.flags;
 				event_offset += Event.size;
 			}
-			if (needsTimeOut && timeout !== undefined) {
-
-			}
-			memory.setUint32(result_size_ptr, events);
+			memory.setUint32(result_size_ptr, events.length, true);
 			return Errno.success;
 		} catch (error) {
 			return handleError(error);
 		}
 	}
 
-	function handleClock(u: subscription_u, event: event): bigint {
-		const clock = u.clock;
-		event.type = Eventtype.clock;
-		event.error = Errno.success;
-		// Timeout is in ns.
-		const timeout =  clock.timeout;
-		if ((clock.flags & Subclockflags.subscription_clock_abstime) !== 0) {
-			const time = now(Clockid.realtime, 0n);
-			return BigInt(Math.max(0, BigInts.asNumber(time - timeout)));
-		} else {
-			return timeout;
+	function handleSubscriptions(memory: DataView, input: ptr, subscriptions: size) {
+		let subscription_offset: ptr = input;
+		const events: Literal<event>[] = [];
+		let timeout: bigint | undefined;
+		let needsTimeOut = false;
+		for (let i = 0; i < subscriptions; i++) {
+			const subscription = Subscription.create(subscription_offset, memory);
+			const u = subscription.u;
+			switch (u.type) {
+				case Eventtype.clock:
+					const clockResult = handleClockSubscription(subscription);
+					timeout = clockResult.timeout;
+					events.push(clockResult.event);
+					break;
+				case Eventtype.fd_read:
+					const readEvent = handleReadSubscription(subscription);
+					events.push(readEvent);
+					if (readEvent.error !== Errno.success || readEvent.fd_readwrite.nbytes === 0n) {
+						needsTimeOut = true;
+					}
+					break;
+				case Eventtype.fd_write:
+					const writeEvent = handleWriteSubscription(subscription);
+					events.push(writeEvent);
+					if (writeEvent.error !== Errno.success) {
+						needsTimeOut = true;
+					}
+					break;
+			}
+			subscription_offset += Subscription.size;
 		}
+		return { events, needsTimeOut, timeout };
 	}
 
-	function handleReadEvent(u: subscription_u, event: event): boolean {
+	function handleClockSubscription(subscription: subscription): { event: Literal<event>; timeout: bigint } {
+		const result: Literal<event> = {
+			userdata: subscription.userdata,
+			type: Eventtype.clock,
+			error: Errno.success,
+			fd_readwrite: {
+				nbytes: 0n,
+				flags: 0
+			}
+		};
+		const clock = subscription.u.clock;
+		// Timeout is in ns.
+		let timeout: bigint;
+		if ((clock.flags & Subclockflags.subscription_clock_abstime) !== 0) {
+			const time = now(Clockid.realtime, 0n);
+			timeout = BigInt(Math.max(0, BigInts.asNumber(time - clock.timeout)));
+		} else {
+			timeout  = clock.timeout;
+		}
+		return { event: result, timeout };
+	}
+
+	function handleReadSubscription(subscription: subscription): Literal<event> {
+		const fd = subscription.u.fd_read.file_descriptor;
 		try {
-			event.type = Eventtype.fd_read;
-			const fd = u.fd_read.file_descriptor;
 			const fileHandle = getFileHandle(fd);
 			fileHandle.assertBaseRight(Rights.fd_read);
 			const file = getOrCreateFile(fileHandle);
 			const available = file.bytesAvailable();
-			const read = event.fd_readwrite;
-			read.nbytes = available;
-			event.error = Errno.success;
-			return false;
+			return {
+				userdata: subscription.userdata,
+				type: Eventtype.fd_read,
+				error: Errno.success,
+				fd_readwrite: {
+					nbytes: available,
+					flags: 0
+				}
+			};
 		} catch (error) {
-			event.error = handleError(error);
-			return true;
+			return {
+				userdata: subscription.userdata,
+				type: Eventtype.fd_read,
+				error: handleError(error),
+				fd_readwrite: {
+					nbytes: 0n,
+					flags: 0
+				}
+			};
 		}
 	}
 
-	function handleWriteEvent(u: subscription_u, event: event): boolean {
+	function handleWriteSubscription(subscription: subscription): Literal<event> {
+		const fd = subscription.u.fd_write.file_descriptor;
 		try {
-			event.type = Eventtype.fd_write;
-			const fd = u.fd_write.file_descriptor;
 			const fileHandle = getFileHandle(fd);
 			fileHandle.assertBaseRight(Rights.fd_write);
-			const read = event.fd_readwrite;
-			read.nbytes = 0n;
-			event.error = Errno.success;
-			return false;
+			return {
+				userdata: subscription.userdata,
+				type: Eventtype.fd_write,
+				error: Errno.success,
+				fd_readwrite: {
+					nbytes: 0n,
+					flags: 0
+				}
+			};
 		} catch (error) {
-			event.error = handleError(error);
-			return true;
+			return {
+				userdata: subscription.userdata,
+				type: Eventtype.fd_write,
+				error: handleError(error),
+				fd_readwrite: {
+					nbytes: 0n,
+					flags: 0
+				}
+			};
 		}
 	}
 

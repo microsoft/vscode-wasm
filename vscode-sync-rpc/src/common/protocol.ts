@@ -135,6 +135,15 @@ export namespace Types {
 export type Requests =
 {
 	/**
+	 * Sleep for the amount of ms.
+	 */
+	method: 'timer/sleep';
+	params: {
+		ms: number;
+	};
+	result: null;
+} | {
+	/**
 	 * Write a string encoded using UTF8 to the terminal
 	 */
 	method: 'terminal/write';

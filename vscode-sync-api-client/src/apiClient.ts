@@ -9,6 +9,10 @@ import RAL, { BaseClientConnection, Requests, RequestResult, Types, VariableResu
 
 import * as vscode from './vscode';
 
+export interface Timer {
+	sleep(ms: number): void;
+}
+
 export interface Terminal {
 	write(value: string, encoding?: string): void;
 	write(value: Uint8Array): void;
@@ -26,6 +30,19 @@ export interface FileSystem {
 }
 
 type ApiClientConnection<Ready extends {} | undefined = undefined> = BaseClientConnection<Requests | ProcExitRequest, Ready>;
+
+class TimerImpl<Ready extends {} | undefined = undefined> implements Timer {
+
+	private readonly connection: ApiClientConnection<Ready>;
+
+	constructor(connection: ApiClientConnection<Ready>) {
+		this.connection = connection;
+	}
+
+	public sleep(ms: number): void {
+		this.connection.sendRequest('timer/sleep', { ms });
+	}
+}
 
 class TerminalImpl<Ready extends {} | undefined = undefined> implements Terminal {
 
@@ -156,12 +173,14 @@ export class ApiClient<Ready extends {} | undefined = undefined> {
 	private readonly connection: ApiClientConnection<Ready>;
 	private readonly encoder: RAL.TextEncoder;
 
+	public readonly timer: Timer;
 	public readonly terminal: Terminal;
 	public readonly fileSystem: FileSystem;
 
 	constructor(connection: ApiClientConnection<Ready>) {
 		this.connection = connection;
 		this.encoder = RAL().TextEncoder.create();
+		this.timer = new TimerImpl(this.connection);
 		this.terminal = new TerminalImpl(this.connection, this.encoder);
 		this.fileSystem = new FileSystemImpl(this.connection, this.encoder);
 	}

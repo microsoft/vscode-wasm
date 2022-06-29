@@ -65,6 +65,13 @@ export class ApiService<Ready extends {} | undefined = undefined> {
 
 		};
 
+		this.connection.onRequest('timer/sleep', async (params) => {
+			await new Promise((resolve) => {
+				RAL().timer.setTimeout(resolve, params.ms);
+			});
+			return { errno: 0 };
+		});
+
 		this.connection.onRequest('terminal/write', (params) => {
 			if (params !== undefined && params.binary !== undefined) {
 				const str = this.textDecoder.decode(params.binary).replace(terminalRegExp, (match: string, m1: string, m2: string) => {
