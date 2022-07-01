@@ -5,7 +5,15 @@
 
 import { RPCErrno, Uint32Result, VariableResult, u32 } from './connection';
 
-export namespace Types {
+export namespace DTOs {
+
+	export type UriComponents = {
+		scheme: string;
+		authority: string;
+		path: string;
+		query: string;
+		fragment: string;
+	};
 
 	export type FileSystemError = u32;
 	export namespace FileSystemError {
@@ -42,14 +50,6 @@ export namespace Types {
          */
 		export const Unavailable = NoPermissions + 1;
 	}
-
-	export type UriComponents = {
-		scheme: string;
-		authority: string;
-		path: string;
-		query: string;
-		fragment: string;
-	};
 
 	export type fileType = u32;
 	export enum FileType {
@@ -129,7 +129,17 @@ export namespace Types {
 		}
 	}
 
-	export type DirectoryEntries = [string, Types.FileType][];
+	export type DirectoryEntries = [string, DTOs.FileType][];
+
+	export interface WorkspaceFolder {
+		readonly uri: UriComponents;
+		readonly name: string;
+		readonly index: number;
+	}
+
+	export interface TextDocument {
+		uri: UriComponents;
+	}
 }
 
 export type Requests =
@@ -142,6 +152,20 @@ export type Requests =
 		ms: number;
 	};
 	result: null;
+} | {
+	/**
+	 * Retrieve the activeTextDocument
+	 */
+	method: 'window/activeTextDocument';
+	params: null;
+	result: VariableResult<DTOs.TextDocument | null>;
+} | {
+	/**
+	 * Retrieve the set of workspace folders
+	 */
+	method: 'workspace/workspaceFolders';
+	params: null;
+	result: VariableResult<DTOs.WorkspaceFolder[]>;
 } | {
 	/**
 	 * Write a string encoded using UTF8 to the terminal
@@ -164,7 +188,7 @@ export type Requests =
 	 */
 	method: 'fileSystem/stat';
 	params: {
-		uri: Types.UriComponents;
+		uri: DTOs.UriComponents;
 	};
 	result: Uint32Array;
 } | {
@@ -173,7 +197,7 @@ export type Requests =
 	 */
 	method: 'fileSystem/readFile';
 	params: {
-		uri: Types.UriComponents;
+		uri: DTOs.UriComponents;
 	};
 	result: VariableResult<Uint8Array>;
 } | {
@@ -182,7 +206,7 @@ export type Requests =
 	 */
 	method: 'fileSystem/writeFile';
 	params: {
-		uri: Types.UriComponents;
+		uri: DTOs.UriComponents;
 		binary: Uint8Array;
 	};
 	result: null;
@@ -192,19 +216,19 @@ export type Requests =
 	 */
 	method: 'fileSystem/readDirectory';
 	params: {
-		uri: Types.UriComponents;
+		uri: DTOs.UriComponents;
 	};
-	result: VariableResult<Types.DirectoryEntries>;
+	result: VariableResult<DTOs.DirectoryEntries>;
 } | {
 	method: 'fileSystem/createDirectory';
 	params: {
-		uri: Types.UriComponents;
+		uri: DTOs.UriComponents;
 	};
 	result: null;
 } | {
 	method: 'fileSystem/delete';
 	params: {
-		uri: Types.UriComponents;
+		uri: DTOs.UriComponents;
 		options?: {
 			recursive?: boolean;
 			useTrash?: boolean;
@@ -214,8 +238,8 @@ export type Requests =
 } | {
 	method: 'fileSystem/rename';
 	params: {
-		source: Types.UriComponents;
-		target: Types.UriComponents;
+		source: DTOs.UriComponents;
+		target: DTOs.UriComponents;
 		options?: {
 			overwrite?: boolean;
 		};

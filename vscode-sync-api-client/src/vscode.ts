@@ -155,3 +155,29 @@ export class FileSystemError extends Error {
      */
 	readonly code: string;
 }
+
+export interface WorkspaceFolder {
+
+	/**
+      * The associated uri for this workspace folder.
+      *
+      * *Note:* The {@link Uri}-type was intentionally chosen such that future releases of the editor can support
+      * workspace folders that are not stored on the local disk, e.g. `ftp://server/workspaces/foo`.
+      */
+	readonly uri: URI;
+
+	/**
+      * The name of this workspace folder. Defaults to
+      * the basename of its {@link Uri.path uri-path}
+      */
+	readonly name: string;
+
+	/**
+      * The ordinal number of this workspace folder.
+      */
+	readonly index: number;
+}
+
+export interface TextDocument {
+	uri: URI;
+}

@@ -5,12 +5,31 @@
 
 import { URI } from 'vscode-uri';
 
-import RAL, { BaseClientConnection, Requests, RequestResult, Types, VariableResult, ProcExitRequest, RPCErrno, RPCError } from 'vscode-sync-rpc';
+import RAL, { BaseClientConnection, Requests, RequestResult, DTOs, VariableResult, ProcExitRequest, RPCErrno, RPCError } from 'vscode-sync-rpc';
 
 import * as vscode from './vscode';
 
 export interface Timer {
 	sleep(ms: number): void;
+}
+
+export interface FileSystem {
+	stat(uri: URI): vscode.FileStat;
+	read(uri: URI): Uint8Array;
+	write(uri: URI, content: Uint8Array): void;
+	readDirectory(uri: URI): DTOs.DirectoryEntries;
+	createDirectory(uri: URI): void;
+	delete(uri: URI, options?: { recursive?: boolean; useTrash?: boolean }): void;
+	rename(source: URI, target: URI, options?: { overwrite?: boolean }): void;
+}
+
+export interface Window {
+	activeTextDocument: vscode.TextDocument | undefined;
+}
+
+export interface Workspace {
+	workspaceFolders: vscode.WorkspaceFolder[];
+	fileSystem: FileSystem;
 }
 
 export interface Terminal {
@@ -19,23 +38,14 @@ export interface Terminal {
 	read(): Uint8Array;
 }
 
-export interface FileSystem {
-	stat(uri: URI): vscode.FileStat;
-	read(uri: URI): Uint8Array;
-	write(uri: URI, content: Uint8Array): void;
-	readDirectory(uri: URI): Types.DirectoryEntries;
-	createDirectory(uri: URI): void;
-	delete(uri: URI, options?: { recursive?: boolean; useTrash?: boolean }): void;
-	rename(source: URI, target: URI, options?: { overwrite?: boolean }): void;
-}
+export type APIRequests = Requests | ProcExitRequest;
+type ApiClientConnection = BaseClientConnection<APIRequests>;
 
-type ApiClientConnection<Ready extends {} | undefined = undefined> = BaseClientConnection<Requests | ProcExitRequest, Ready>;
+class TimerImpl implements Timer {
 
-class TimerImpl<Ready extends {} | undefined = undefined> implements Timer {
+	private readonly connection: ApiClientConnection;
 
-	private readonly connection: ApiClientConnection<Ready>;
-
-	constructor(connection: ApiClientConnection<Ready>) {
+	constructor(connection: ApiClientConnection) {
 		this.connection = connection;
 	}
 
@@ -44,12 +54,12 @@ class TimerImpl<Ready extends {} | undefined = undefined> implements Timer {
 	}
 }
 
-class TerminalImpl<Ready extends {} | undefined = undefined> implements Terminal {
+class TerminalImpl implements Terminal {
 
-	private readonly connection: ApiClientConnection<Ready>;
+	private readonly connection: ApiClientConnection;
 	private readonly encoder: RAL.TextEncoder;
 
-	constructor(connection: ApiClientConnection<Ready>, encoder: RAL.TextEncoder) {
+	constructor(connection: ApiClientConnection, encoder: RAL.TextEncoder) {
 		this.connection = connection;
 		this.encoder = encoder;
 	}
@@ -70,14 +80,14 @@ class TerminalImpl<Ready extends {} | undefined = undefined> implements Terminal
 	}
 }
 
-class FileSystemImpl<Ready extends {} | undefined = undefined> implements FileSystem {
+class FileSystemImpl implements FileSystem {
 
-	private readonly connection: ApiClientConnection<Ready>;
+	private readonly connection: ApiClientConnection;
 	// todo@dirkb this is temporary. We need to improve this by bundling the
 	// Python lib into the worker code.
 	private statCache: Map<string, vscode.FileStat> = new Map();
 
-	constructor(connection: ApiClientConnection<Ready>, _encoder: RAL.TextEncoder) {
+	constructor(connection: ApiClientConnection) {
 		this.connection = connection;
 	}
 
@@ -86,9 +96,9 @@ class FileSystemImpl<Ready extends {} | undefined = undefined> implements FileSy
 		if (cached !== undefined) {
 			return cached;
 		}
-		const requestResult = this.connection.sendRequest('fileSystem/stat', { uri: uri.toJSON() }, Types.Stat.typedResult);
+		const requestResult = this.connection.sendRequest('fileSystem/stat', { uri: uri.toJSON() }, DTOs.Stat.typedResult);
 		if (RequestResult.hasData(requestResult)) {
-			const stat = Types.Stat.create(requestResult.data);
+			const stat = DTOs.Stat.create(requestResult.data);
 			const permission = stat.permission;
 			const result: vscode.FileStat = {
 				type: stat.type,
@@ -120,8 +130,8 @@ class FileSystemImpl<Ready extends {} | undefined = undefined> implements FileSy
 		}
 	}
 
-	public readDirectory(uri: URI): Types.DirectoryEntries {
-		const requestResult = this.connection.sendRequest('fileSystem/readDirectory', { uri: uri.toJSON() }, new VariableResult<Types.DirectoryEntries>('json'));
+	public readDirectory(uri: URI): DTOs.DirectoryEntries {
+		const requestResult = this.connection.sendRequest('fileSystem/readDirectory', { uri: uri.toJSON() }, new VariableResult<DTOs.DirectoryEntries>('json'));
 		if (RequestResult.hasData(requestResult)) {
 			return requestResult.data;
 		 }
@@ -151,38 +161,79 @@ class FileSystemImpl<Ready extends {} | undefined = undefined> implements FileSy
 
 	private asFileSystemError(errno: RPCErrno, uri: URI | string): vscode.FileSystemError {
 		switch(errno) {
-			case Types.FileSystemError.FileNotFound:
+			case DTOs.FileSystemError.FileNotFound:
 				return vscode.FileSystemError.FileNotFound(uri);
-			case Types.FileSystemError.FileExists:
+			case DTOs.FileSystemError.FileExists:
 				return vscode.FileSystemError.FileExists(uri);
-			case Types.FileSystemError.FileNotADirectory:
+			case DTOs.FileSystemError.FileNotADirectory:
 				return vscode.FileSystemError.FileNotADirectory(uri);
-			case Types.FileSystemError.FileIsADirectory:
+			case DTOs.FileSystemError.FileIsADirectory:
 				return vscode.FileSystemError.FileIsADirectory(uri);
-			case Types.FileSystemError.NoPermissions:
+			case DTOs.FileSystemError.NoPermissions:
 				return vscode.FileSystemError.NoPermissions(uri);
-			case Types.FileSystemError.Unavailable:
+			case DTOs.FileSystemError.Unavailable:
 				return vscode.FileSystemError.Unavailable(uri);
 		}
 		return vscode.FileSystemError.Unavailable(uri);
 	}
 }
 
-export class ApiClient<Ready extends {} | undefined = undefined> {
+class WorkspaceImpl implements Workspace {
 
-	private readonly connection: ApiClientConnection<Ready>;
+	private readonly connection: ApiClientConnection;
+	public readonly fileSystem: FileSystem;
+
+	constructor(connection: ApiClientConnection) {
+		this.connection = connection;
+		this.fileSystem = new FileSystemImpl(this.connection);
+	}
+
+	public get workspaceFolders(): vscode.WorkspaceFolder[] {
+		const requestResult = this.connection.sendRequest('workspace/workspaceFolders', new VariableResult<DTOs.WorkspaceFolder[]>('json'));
+		if (RequestResult.hasData(requestResult)) {
+			return requestResult.data.map(folder => { return { uri: URI.from(folder.uri), name: folder.name, index: folder.index }; } );
+		}
+		throw new RPCError(RPCErrno.UnknownError);
+	}
+}
+
+class WindowImpl implements Window {
+
+	private readonly connection: ApiClientConnection;
+
+	constructor(connection: ApiClientConnection) {
+		this.connection = connection;
+	}
+
+	get activeTextDocument(): vscode.TextDocument | undefined {
+		const requestResult = this.connection.sendRequest('window/activeTextDocument', new VariableResult<DTOs.TextDocument | null>('json'));
+		if (RequestResult.hasData(requestResult)) {
+			if (requestResult.data === null) {
+				return undefined;
+			}
+			return { uri: URI.from(requestResult.data.uri ) };
+		}
+		throw new RPCError(RPCErrno.UnknownError);
+	}
+}
+
+export class ApiClient {
+
+	private readonly connection: ApiClientConnection;
 	private readonly encoder: RAL.TextEncoder;
 
 	public readonly timer: Timer;
 	public readonly terminal: Terminal;
-	public readonly fileSystem: FileSystem;
+	public readonly window: Window;
+	public readonly workspace: Workspace;
 
-	constructor(connection: ApiClientConnection<Ready>) {
+	constructor(connection: ApiClientConnection) {
 		this.connection = connection;
 		this.encoder = RAL().TextEncoder.create();
 		this.timer = new TimerImpl(this.connection);
 		this.terminal = new TerminalImpl(this.connection, this.encoder);
-		this.fileSystem = new FileSystemImpl(this.connection, this.encoder);
+		this.window = new WindowImpl(this.connection);
+		this.workspace = new WorkspaceImpl(this.connection);
 	}
 
 	procExit(rval: number): void {

@@ -547,12 +547,12 @@ export class RPCError extends Error {
 	}
 }
 
-export abstract class BaseClientConnection<Requests extends RequestType | undefined = undefined, Ready extends {} | undefined = undefined> {
+export abstract class BaseClientConnection<Requests extends RequestType | undefined = undefined> {
 
 	private id: number;
 	private readonly textEncoder: RAL.TextEncoder;
 	private readonly textDecoder: RAL.TextDecoder;
-	private readonly readyPromise: Promise<Ready>;
+	private readonly readyPromise: Promise<void>;
 	private readyCallbacks: PromiseCallbacks | undefined;
 
 	constructor() {
@@ -564,7 +564,7 @@ export abstract class BaseClientConnection<Requests extends RequestType | undefi
 		});
 	}
 
-	public serviceReady(): Promise<Ready> {
+	public serviceReady(): Promise<void> {
 		return this.readyPromise;
 	}
 
@@ -698,7 +698,7 @@ type RequestResult = { errno: 0; data: object } | { errno: RPCErrno };
 export namespace RequestResult {
 	export function hasData<T>(value: { errno: RPCErrno } | { errno: 0; data: T }): value is { errno: 0; data: T } {
 		const candidate: { errno: RPCErrno; data?: T | null } = value;
-		return candidate.errno === 0 && candidate.data !== undefined && candidate.data !== null;
+		return candidate.errno === 0 && candidate.data !== undefined;
 	}
 }
 
@@ -706,7 +706,7 @@ type RequestHandler = {
 	(arg1?: Params | TypedArray, arg2?: TypedArray): RequestResult | Promise<RequestResult>;
 };
 
-export abstract class BaseServiceConnection<RequestHandlers extends RequestType | undefined = undefined, Ready extends {} | undefined = undefined> {
+export abstract class BaseServiceConnection<RequestHandlers extends RequestType | undefined = undefined> {
 
 	private readonly textDecoder: RAL.TextDecoder;
 	private readonly textEncoder: RAL.TextEncoder;
@@ -810,8 +810,8 @@ export abstract class BaseServiceConnection<RequestHandlers extends RequestType 
 		Atomics.notify(sync, 0);
 	}
 
-	public signalReady(params: Ready): void {
-		const notification: Notification = { method: '$/ready', params };
+	public signalReady(): void {
+		const notification: Notification = { method: '$/ready' };
 		this.postMessage(notification);
 	}
 

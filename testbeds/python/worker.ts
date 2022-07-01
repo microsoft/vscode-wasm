@@ -8,35 +8,37 @@ import { parentPort  } from 'worker_threads';
 
 import { URI } from 'vscode-uri';
 
-import { ClientConnection, ProcExitRequest, Requests } from 'vscode-sync-rpc/node';
-import { ApiClient } from 'vscode-sync-api-client';
+import { ClientConnection } from 'vscode-sync-rpc/node';
+import { ApiClient, APIRequests } from 'vscode-sync-api-client';
 import { WASI } from 'vscode-wasi/node';
 
-import { Ready } from './ready';
 import { Options } from 'vscode-wasi';
 
 if (parentPort === null) {
 	process.exit();
 }
 
-const connection = new ClientConnection<Requests | ProcExitRequest, Ready>(parentPort);
+const connection = new ClientConnection<APIRequests>(parentPort);
 connection.serviceReady().then(async (params) => {
+	debugger;
 	const name = 'Python Shell';
 	const apiClient = new ApiClient(connection);
+	const workspaceFolders = apiClient.workspace.workspaceFolders;
+	const activeTextDocument = apiClient.window.activeTextDocument;
 	const mapDir: Options['mapDir'] = [];
 	let toRun: string | undefined;
-	if (params.workspaceFolders.length === 1) {
-		const folderUri = URI.revive(params.workspaceFolders[0].uri);
+	if (workspaceFolders.length === 1) {
+		const folderUri = workspaceFolders[0].uri;
 		mapDir.push({ name: path.posix.join(path.posix.sep, 'workspace'), uri: folderUri });
-		if (params.pythonFile) {
-			const file =  URI.revive(params.pythonFile);
+		if (activeTextDocument !== undefined) {
+			const file =  activeTextDocument.uri;
 			if (file.toString().startsWith(folderUri.toString())) {
 				toRun = path.posix.join(path.posix.sep, 'workspace', file.toString().substring(folderUri.toString().length));
 			}
 		}
 	} else {
-		for (const folder of params.workspaceFolders) {
-			mapDir.push({ name: path.posix.join(path.posix.sep, 'workspaces', folder.name), uri: URI.revive(folder.uri) });
+		for (const folder of workspaceFolders) {
+			mapDir.push({ name: path.posix.join(path.posix.sep, 'workspaces', folder.name), uri: folder.uri });
 		}
 	}
 	const root = URI.file(path.join(__dirname, '..', 'bin'));

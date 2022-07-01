@@ -11,7 +11,7 @@ import { MessagePort, Worker } from 'worker_threads';
 
 import { BaseServiceConnection, BaseClientConnection, Message, RequestType } from '../common/connection';
 
-export class ClientConnection<Requests extends RequestType | undefined = undefined, Ready extends {} | undefined = undefined> extends BaseClientConnection<Requests, Ready> {
+export class ClientConnection<Requests extends RequestType | undefined = undefined> extends BaseClientConnection<Requests> {
 
 	private readonly port: MessagePort | Worker;
 
@@ -33,7 +33,7 @@ export class ClientConnection<Requests extends RequestType | undefined = undefin
 	}
 }
 
-export class ServiceConnection<RequestHandlers extends RequestType | undefined = undefined, Ready extends {} = {}> extends BaseServiceConnection<RequestHandlers, Ready> {
+export class ServiceConnection<RequestHandlers extends RequestType | undefined = undefined> extends BaseServiceConnection<RequestHandlers> {
 
 	private readonly port: MessagePort | Worker;
 

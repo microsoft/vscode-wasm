@@ -11,7 +11,7 @@
 import RAL from './ral';
 
 import { URI } from 'vscode-uri';
-import { ApiClient, FileSystemError, FileType, RPCError, Types } from 'vscode-sync-api-client';
+import { ApiClient, FileSystemError, FileType, RPCError, DTOs } from 'vscode-sync-api-client';
 
 import { ptr, size, u32 } from './baseTypes';
 import {
@@ -440,10 +440,10 @@ export interface WASI {
 	 *
 	 * @param input A memory location pointing to the events to which to subscribe.
 	 * @param output A memory location to store the events that have occurred.
-	 * @param nsubscriptions Both the number of subscriptions and events.
+	 * @param subscriptions Both the number of subscriptions and events.
 	 * @param result_size_ptr The number of events stored.
 	 */
-	poll_oneoff(input: ptr, output: ptr, nsubscriptions: size, result_size_ptr: ptr): errno;
+	poll_oneoff(input: ptr, output: ptr, subscriptions: size, result_size_ptr: ptr): errno;
 
 	/**
 	 * Terminate the process normally. An exit code of 0 indicates successful
@@ -712,7 +712,7 @@ class File implements IOComponent {
 		if (this._content !== undefined) {
 			return this._content;
 		}
-		this._content = this.apiClient.fileSystem.read(this.fileHandle.uri);
+		this._content = this.apiClient.workspace.fileSystem.read(this.fileHandle.uri);
 		return this._content;
 	}
 
@@ -849,7 +849,7 @@ class File implements IOComponent {
 		if (this._content === undefined) {
 			return;
 		}
-		this.apiClient.fileSystem.write(this.fileHandle.uri, this._content);
+		this.apiClient.workspace.fileSystem.write(this.fileHandle.uri, this._content);
 	}
 }
 
@@ -868,7 +868,7 @@ export namespace WASI {
 
 	const $fileHandles: Map<fd, FileHandle> = new Map();
 	const $files: Map<fd, File> = new Map();
-	const $directoryEntries: Map<fd, Types.DirectoryEntries> = new Map();
+	const $directoryEntries: Map<fd, DTOs.DirectoryEntries> = new Map();
 
 	export function create(_name: string, apiClient: ApiClient, exitHandler: (rval: number) => void, options: Options): WASI {
 		$apiClient = apiClient;
@@ -1111,7 +1111,7 @@ export namespace WASI {
 			}
 			const fileHandle = getFileHandle(fd);
 			const uri = fileHandle.uri;
-			const vStat = $apiClient.fileSystem.stat(uri);
+			const vStat = $apiClient.workspace.fileSystem.stat(uri);
 			if (typeof vStat === 'number') {
 				return code2Wasi.asErrno(vStat);
 			}
@@ -1179,7 +1179,7 @@ export namespace WASI {
 			const fileHandle = getFileHandle(fd);
 			fileHandle.assertBaseRight(Rights.fd_filestat_get);
 			const uri = fileHandle.uri;
-			const vStat = $apiClient.fileSystem.stat(uri);
+			const vStat = $apiClient.workspace.fileSystem.stat(uri);
 			if (typeof vStat === 'number') {
 				return code2Wasi.asErrno(vStat);
 			}
@@ -1304,7 +1304,7 @@ export namespace WASI {
 			fileHandle.assertBaseRight(Rights.fd_read);
 			let file = $files.get(fileHandle.fd);
 			if (file === undefined) {
-				const content = $apiClient.fileSystem.read(fileHandle.uri);
+				const content = $apiClient.workspace.fileSystem.read(fileHandle.uri);
 				if (typeof content === 'number') {
 					return code2Wasi.asErrno(content);
 				}
@@ -1334,7 +1334,7 @@ export namespace WASI {
 			const memory = memoryView();
 			const raw = memoryRaw();
 			// We have a cookie > 0 but no directory entries. So return end  of list
-			// todo@dirkb this is actually speced different. According to the spec if
+			// todo@dirkb this is actually specified different. According to the spec if
 			// the used buffer size is less than the provided buffer size then no
 			// additional readdir call should happen. However at least under Rust we
 			// receive another call.
@@ -1347,13 +1347,13 @@ export namespace WASI {
 				return Errno.success;
 			}
 			if (cookie === 0n) {
-				const result = $apiClient.fileSystem.readDirectory(fileHandle.uri);
+				const result = $apiClient.workspace.fileSystem.readDirectory(fileHandle.uri);
 				if (typeof result === 'number') {
 					return code2Wasi.asErrno(result);
 				}
 				$directoryEntries.set(fileHandle.fd, result);
 			}
-			const entries: Types.DirectoryEntries | undefined = $directoryEntries.get(fd);
+			const entries: DTOs.DirectoryEntries | undefined = $directoryEntries.get(fd);
 			if (entries === undefined) {
 				return Errno.badmsg;
 			}
@@ -1472,7 +1472,7 @@ export namespace WASI {
 			const memory = memoryView();
 			const name = $decoder.decode(new Uint8Array(memoryRaw(), path, pathLen));
 			const realUri = getRealUri(parentHandle, name);
-			const stat = $apiClient.fileSystem.stat(realUri);
+			const stat = $apiClient.workspace.fileSystem.stat(realUri);
 			const entryExists = typeof stat !== 'number';
 			if (entryExists) {
 				if (Oflags.exclOn(oflags)) {
@@ -1494,7 +1494,7 @@ export namespace WASI {
 				const dirname = RAL().path.dirname(name);
 				// The name has a directory part. Ensure that the directory exists
 				if (dirname !== '.') {
-					const dirStat = $apiClient.fileSystem.stat(getRealUri(parentHandle, dirname));
+					const dirStat = $apiClient.workspace.fileSystem.stat(getRealUri(parentHandle, dirname));
 					if (typeof dirStat === 'number' || dirStat.type !== FileType.Directory) {
 						return Errno.noent;
 					}
@@ -1545,7 +1545,7 @@ export namespace WASI {
 
 			const memory = memoryRaw();
 			const name = $decoder.decode(new Uint8Array(memory, path_ptr, path_len));
-			$apiClient.fileSystem.createDirectory(getRealUri(fileHandle, name));
+			$apiClient.workspace.fileSystem.createDirectory(getRealUri(fileHandle, name));
 			return Errno.success;
 		} catch (error) {
 			return handleError(error);
@@ -1563,7 +1563,7 @@ export namespace WASI {
 			const memory = memoryRaw();
 			const name = $decoder.decode(new Uint8Array(memory, path_ptr, path_len));
 			const uri = getRealUri(fileHandle, name);
-			const vStat = $apiClient.fileSystem.stat(uri);
+			const vStat = $apiClient.workspace.fileSystem.stat(uri);
 			if (typeof vStat === 'number') {
 				return code2Wasi.asErrno(vStat);
 			}
@@ -1648,7 +1648,7 @@ export namespace WASI {
 			const name = $decoder.decode(new Uint8Array(memory, path_ptr, path_len));
 			const uri = getRealUri(fileHandle, name);
 
-			$apiClient.fileSystem.delete(uri, { recursive: false, useTrash: true });
+			$apiClient.workspace.fileSystem.delete(uri, { recursive: false, useTrash: true });
 			return Errno.success;
 		} catch (error) {
 			return handleError(error);
@@ -1673,7 +1673,7 @@ export namespace WASI {
 			const newName = $decoder.decode(new Uint8Array(memory, new_path_ptr, new_path_len));
 			const newUri = getRealUri(newFileHandle, newName);
 
-			$apiClient.fileSystem.rename(oldUri, newUri, { overwrite: false });
+			$apiClient.workspace.fileSystem.rename(oldUri, newUri, { overwrite: false });
 			return Errno.success;
 		} catch (error) {
 			return handleError(error);
@@ -1702,15 +1702,15 @@ export namespace WASI {
 			const name = $decoder.decode(new Uint8Array(memory, path_ptr, path_len));
 			const uri = getRealUri(fileHandle, name);
 
-			const vStat = $apiClient.fileSystem.stat(uri);
+			const vStat = $apiClient.workspace.fileSystem.stat(uri);
 			if (typeof vStat === 'number') {
 				return vStat;
 			}
-			if (vStat.type !== Types.FileType.File) {
+			if (vStat.type !== DTOs.FileType.File) {
 				return Errno.isdir;
 			}
 
-			$apiClient.fileSystem.delete(uri, { recursive: false, useTrash: true });
+			$apiClient.workspace.fileSystem.delete(uri, { recursive: false, useTrash: true });
 			return Errno.success;
 		} catch (error) {
 			return handleError(error);

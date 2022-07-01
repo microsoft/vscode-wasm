@@ -5,15 +5,16 @@
 
 import * as vscode from 'vscode';
 
-import RAL, { BaseServiceConnection, ProcExitRequest, Requests, Types, RPCErrno } from 'vscode-sync-rpc';
+import RAL, { BaseServiceConnection, ProcExitRequest, Requests, DTOs, RPCErrno } from 'vscode-sync-rpc';
 
 const terminalRegExp = /(\r\n)|(\n)/gm;
 
-type ApiServiceConnection<Ready extends {} | undefined = undefined> = BaseServiceConnection<Requests | ProcExitRequest, Ready>;
+export type APIRequests = Requests | ProcExitRequest;
+type ApiServiceConnection = BaseServiceConnection<APIRequests>;
 
-export class ApiService<Ready extends {} | undefined = undefined> {
+export class ApiService {
 
-	private readonly connection: ApiServiceConnection<Ready>;
+	private readonly connection: ApiServiceConnection;
 	private readonly exitHandler: (rval: number) => void;
 	private readonly textEncoder: RAL.TextEncoder;
 	private readonly textDecoder: RAL.TextDecoder;
@@ -23,7 +24,7 @@ export class ApiService<Ready extends {} | undefined = undefined> {
 	private inputBuffer: string[];
 	private lineAvailable: undefined | (() => void);
 
-	constructor(name: string, receiver: ApiServiceConnection<Ready>, exitHandler: (rval: number) => void) {
+	constructor(name: string, receiver: ApiServiceConnection, exitHandler: (rval: number) => void) {
 		this.connection = receiver;
 		this.exitHandler = exitHandler;
 		this.textEncoder = RAL().TextEncoder.create();
@@ -108,7 +109,7 @@ export class ApiService<Ready extends {} | undefined = undefined> {
 			try {
 				const uri = vscode.Uri.from(params.uri);
 				const vStat: vscode.FileStat = await vscode.workspace.fs.stat(uri);
-				const stat = Types.Stat.create(resultBuffer);
+				const stat = DTOs.Stat.create(resultBuffer);
 				stat.type = vStat.type;
 				stat.ctime = vStat.mtime;
 				stat.mtime = vStat.mtime;
@@ -183,6 +184,19 @@ export class ApiService<Ready extends {} | undefined = undefined> {
 			}
 		});
 
+		this.connection.onRequest('window/activeTextDocument', () => {
+			const activeEditor = vscode.window.activeTextEditor;
+			if (activeEditor === undefined) {
+				return { errno: 0, data: null };
+			}
+			return { errno: 0, data: { uri: activeEditor.document.uri.toJSON() } };
+		});
+
+		this.connection.onRequest('workspace/workspaceFolders', () => {
+			const folders = vscode.workspace.workspaceFolders ?? [];
+			return { errno: 0, data: folders.map(folder => { return { uri: folder.uri.toJSON(), name: folder.name, index: folder.index }; } )};
+		});
+
 		this.connection.onRequest('$/proc_exit', (params) => {
 			this.exitHandler(params.rval);
 			return { errno: 0};
@@ -193,20 +207,20 @@ export class ApiService<Ready extends {} | undefined = undefined> {
 		return this.pty;
 	}
 
-	private asFileSystemError(error: vscode.FileSystemError): Types.FileSystemError {
+	private asFileSystemError(error: vscode.FileSystemError): DTOs.FileSystemError {
 		switch(error.code) {
 			case 'FileNotFound':
-				return Types.FileSystemError.FileNotFound;
+				return DTOs.FileSystemError.FileNotFound;
 			case 'FileExists':
-				return Types.FileSystemError.FileExists;
+				return DTOs.FileSystemError.FileExists;
 			case 'FileNotADirectory':
-				return Types.FileSystemError.FileNotADirectory;
+				return DTOs.FileSystemError.FileNotADirectory;
 			case 'FileIsADirectory':
-				return Types.FileSystemError.FileIsADirectory;
+				return DTOs.FileSystemError.FileIsADirectory;
 			case 'NoPermissions':
-				return Types.FileSystemError.NoPermissions;
+				return DTOs.FileSystemError.NoPermissions;
 			case 'Unavailable':
-				return Types.FileSystemError.Unavailable;
+				return DTOs.FileSystemError.Unavailable;
 			default:
 				return RPCErrno.UnknownError;
 		}
