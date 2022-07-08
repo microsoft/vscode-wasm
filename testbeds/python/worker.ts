@@ -20,7 +20,6 @@ if (parentPort === null) {
 
 const connection = new ClientConnection<APIRequests>(parentPort);
 connection.serviceReady().then(async (params) => {
-	debugger;
 	const name = 'Python Shell';
 	const apiClient = new ApiClient(connection);
 	const workspaceFolders = apiClient.workspace.workspaceFolders;

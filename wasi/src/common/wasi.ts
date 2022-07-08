@@ -509,24 +509,6 @@ export type Options = {
 	env?: Environment;
 };
 
-namespace INodes {
-	const mappings: Map<string, bigint> = new Map();
-	let inodeCounter: bigint = 1n;
-
-	export const stdin = inodeCounter++;
-	export const stdout = inodeCounter++;
-	export const stderr = inodeCounter++;
-
-	export function get(uri: URI): bigint {
-		let result = mappings.get(uri.toString());
-		if (result === undefined) {
-			result = inodeCounter++;
-			mappings.set(uri.toString(), result);
-		}
-		return result;
-	}
-}
-
 namespace DeviceIds {
 	const deviceIds: Map<string, bigint> = new Map();
 	let deviceIdCounter: bigint = 1n;
@@ -629,10 +611,6 @@ class FileHandle {
 
 
 interface IOComponent {
-	/**
-	 * The file handle number;
-	 */
-	fd: fd;
 }
 
 class Stdin implements IOComponent {
@@ -688,15 +666,15 @@ class Stdin implements IOComponent {
 class File implements IOComponent {
 
 	private readonly apiClient: ApiClient;
-	private readonly fileHandle: FileHandle;
+	private readonly uri: URI;
 	private _content: Uint8Array | undefined;
 
 	private _cursor: number;
 	private _fdFlags: fdflags;
 
-	constructor(apiClient: ApiClient, fileHandle: FileHandle, content?: Uint8Array) {
+	constructor(apiClient: ApiClient, uri: URI, content?: Uint8Array) {
 		this.apiClient = apiClient;
-		this.fileHandle = fileHandle;
+		this.uri = uri;
 		if (content instanceof Uint8Array) {
 			this._content = content;
 		}
@@ -704,15 +682,11 @@ class File implements IOComponent {
 		this._fdFlags = 0;
 	}
 
-	public get fd() {
-		return this.fileHandle.fd;
-	}
-
 	private get content(): Uint8Array {
 		if (this._content !== undefined) {
 			return this._content;
 		}
-		this._content = this.apiClient.workspace.fileSystem.read(this.fileHandle.uri);
+		this._content = this.apiClient.workspace.fileSystem.read(this.uri);
 		return this._content;
 	}
 
@@ -849,7 +823,7 @@ class File implements IOComponent {
 		if (this._content === undefined) {
 			return;
 		}
-		this.apiClient.workspace.fileSystem.write(this.fileHandle.uri, this._content);
+		this.apiClient.workspace.fileSystem.write(this.uri, this._content);
 	}
 }
 
@@ -864,10 +838,97 @@ export namespace WASI {
 	let $exitHandler: (rval: number) => void;
 	let $options: Options;
 
+	namespace Files {
+		const $files: Map<string, FileInfo> = new Map();
+
+		type FileInfo = {
+			inode: bigint;
+		} | {
+			inode: bigint;
+			file: File;
+			refs: number;
+		};
+
+		namespace FileInfo {
+			export function hasFile(fileInfo: FileInfo): fileInfo is { inode: bigint; file: File; refs: number } {
+				const candidate = fileInfo as { inode: bigint; file?: File; refs?: number };
+				return candidate.file !== undefined && candidate.refs !== undefined;
+			}
+		}
+
+		let inodeCounter: bigint = 1n;
+
+		export const stdinINode = inodeCounter++;
+		export const stdoutINode = inodeCounter++;
+		export const stderrINode = inodeCounter++;
+
+		export function getINode(uri: URI): bigint {
+			const key = uri.toString();
+			let fileInfo = $files.get(key);
+			if (fileInfo !== undefined) {
+				return fileInfo.inode;
+			}
+			fileInfo = { inode: inodeCounter++ };
+			$files.set(key, fileInfo);
+			return fileInfo.inode;
+		}
+
+		export function hasFile(fileHandle: FileHandle): boolean {
+			const key = fileHandle.uri.toString();
+			let fileInfo = $files.get(key);
+			if (fileInfo === undefined) {
+				return false;
+			}
+			return FileInfo.hasFile(fileInfo);
+		}
+
+		export function peekFile(fileHandle: FileHandle): File | undefined {
+			const key = fileHandle.uri.toString();
+			let fileInfo = $files.get(key);
+			if (fileInfo === undefined) {
+				return undefined;
+			}
+			return FileInfo.hasFile(fileInfo) ? fileInfo.file : undefined;
+		}
+
+		export function getOrCreateFile(fileHandle: FileHandle, content?: Uint8Array): File {
+			const key = fileHandle.uri.toString();
+			let fileInfo = $files.get(key);
+			if (fileInfo === undefined) {
+				fileInfo = { inode: inodeCounter++ };
+				$files.set(key, fileInfo);
+			}
+			if (FileInfo.hasFile(fileInfo)) {
+				fileInfo.refs++;
+				return fileInfo.file;
+			}
+			const fullInfo: { inode: bigint; file?: File; refs?: number } = fileInfo;
+			fullInfo.file = new File($apiClient, fileHandle.uri, content);
+			fullInfo.refs = 1;
+			return fullInfo.file;
+		}
+
+		export function releaseFile(fileHandle: FileHandle): void {
+			const key = fileHandle.uri.toString();
+			const fileInfo = $files.get(key);
+			if (fileInfo === undefined || !FileInfo.hasFile(fileInfo)) {
+				throw new WasiError(Errno.badf);
+			}
+			fileInfo.refs--;
+			if (fileInfo.refs === 0) {
+				// We can't delete the file info from the map since we need
+				// to keep the inode stable.
+				const fullInfo: { inode: bigint; file?: File; refs?: number } = fileInfo;
+				fullInfo.file = undefined;
+				fullInfo.refs = undefined;
+			}
+		}
+	}
+
+
 	let $stdin: Stdin;
 
 	const $fileHandles: Map<fd, FileHandle> = new Map();
-	const $files: Map<fd, File> = new Map();
 	const $directoryEntries: Map<fd, DTOs.DirectoryEntries> = new Map();
 
 	export function create(_name: string, apiClient: ApiClient, exitHandler: (rval: number) => void, options: Options): WASI {
@@ -1052,7 +1113,7 @@ export namespace WASI {
 		try {
 			const fileHandle = getFileHandle(fd);
 			fileHandle.assertBaseRight(Rights.fd_allocate);
-			const file = getOrCreateFile(fileHandle);
+			const file = Files.getOrCreateFile(fileHandle);
 			file.alloc(offset, len);
 			return Errno.success;
 		} catch (error) {
@@ -1063,8 +1124,8 @@ export namespace WASI {
 	function fd_close(fd: fd): errno {
 		try {
 			const fileHandle = getFileHandle(fd);
-			// Delete the file. Close doesn't flush.
-			$files.delete(fd);
+			// Release the file.
+			Files.releaseFile(fileHandle);
 			$fileHandles.delete(fileHandle.fd);
 			return Errno.success;
 		} catch (error) {
@@ -1077,7 +1138,7 @@ export namespace WASI {
 			const fileHandle = getFileHandle(fd);
 			fileHandle.assertBaseRight(Rights.fd_datasync);
 
-			const file = $files.get(fileHandle.fd);
+			const file = Files.peekFile(fileHandle);
 			if (file === undefined) {
 				return Errno.success;
 			}
@@ -1142,7 +1203,7 @@ export namespace WASI {
 		try {
 			const fileHandle = getFileHandle(fd);
 			fileHandle.assertBaseRight(Rights.fd_fdstat_set_flags);
-			const file = getOrCreateFile(fileHandle);
+			const file = Files.getOrCreateFile(fileHandle);
 			file.fdflags = fdflags;
 			return Errno.success;
 		} catch (error) {
@@ -1158,13 +1219,13 @@ export namespace WASI {
 				fileStat.dev = DeviceIds.system;
 				switch(fd) {
 					case WASI_STDIN_FD:
-						fileStat.ino = INodes.stdin;
+						fileStat.ino = Files.stdinINode;
 						break;
 					case WASI_STDOUT_FD:
-						fileStat.ino = INodes.stdout;
+						fileStat.ino = Files.stdoutINode;
 						break;
 					case WASI_STDERR_FD:
-						fileStat.ino = INodes.stderr;
+						fileStat.ino = Files.stderrINode;
 						break;
 				}
 				fileStat.filetype = Filetype.character_device;
@@ -1185,7 +1246,7 @@ export namespace WASI {
 			}
 			const fileStat = Filestat.create(filestat_ptr, memory);
 			fileStat.dev = DeviceIds.get(uri);
-			fileStat.ino = INodes.get(uri);
+			fileStat.ino = Files.getINode(uri);
 			fileStat.filetype = code2Wasi.asFileType(vStat.type);
 			fileStat.nlink = 0n;
 			fileStat.size = BigInt(vStat.size);
@@ -1202,7 +1263,7 @@ export namespace WASI {
 		try {
 			const fileHandle = getFileHandle(fd);
 			fileHandle.assertBaseRight(Rights.fd_filestat_set_size);
-			const file = getOrCreateFile(fileHandle);
+			const file = Files.getOrCreateFile(fileHandle);
 			file.setSize(size);
 			return Errno.success;
 		} catch (error) {
@@ -1228,7 +1289,7 @@ export namespace WASI {
 		try {
 			const fileHandle = getFileHandle(fd);
 			fileHandle.assertBaseRight(Rights.fd_read);
-			const file = getOrCreateFile(fileHandle);
+			const file = Files.getOrCreateFile(fileHandle);
 			const buffers = read_iovs(iovs_ptr, iovs_len);
 			let bytesRead = 0;
 			for (const buffer of buffers) {
@@ -1277,7 +1338,7 @@ export namespace WASI {
 		try {
 			const fileHandle = getFileHandle(fd);
 			fileHandle.assertBaseRight(Rights.fd_write);
-			const file = getOrCreateFile(fileHandle);
+			const file = Files.getOrCreateFile(fileHandle);
 			const buffers = read_ciovs(ciovs_ptr, ciovs_len);
 			let bytesWritten = 0;
 			for (const buffer of buffers) {
@@ -1302,13 +1363,13 @@ export namespace WASI {
 			}
 			const fileHandle = getFileHandle(fd);
 			fileHandle.assertBaseRight(Rights.fd_read);
-			let file = $files.get(fileHandle.fd);
+			let file = Files.peekFile(fileHandle);
 			if (file === undefined) {
 				const content = $apiClient.workspace.fileSystem.read(fileHandle.uri);
 				if (typeof content === 'number') {
 					return code2Wasi.asErrno(content);
 				}
-				file = getOrCreateFile(fileHandle, content);
+				file = Files.getOrCreateFile(fileHandle, content);
 			}
 			const buffers = read_iovs(iovs_ptr, iovs_len);
 			let bytesRead = 0;
@@ -1368,7 +1429,7 @@ export namespace WASI {
 				const nameBytes = $encoder.encode(name);
 				const dirent: dirent = Dirent.create(ptr, memory);
 				dirent.d_next = BigInt(i + 1);
-				dirent.d_ino = INodes.get(uri);
+				dirent.d_ino = Files.getINode(uri);
 				dirent.d_type = filetype;
 				dirent.d_namlen = nameBytes.byteLength;
 				spaceLeft -= Dirent.size;
@@ -1397,7 +1458,7 @@ export namespace WASI {
 			const offset = Number(_offset);
 			const fileHandle = getFileHandle(fd);
 			fileHandle.assertBaseRight(Rights.fd_seek);
-			const file = getOrCreateFile(fileHandle);
+			const file = Files.getOrCreateFile(fileHandle);
 			const result = file.seek(offset, whence);
 			if (result !== Errno.success) {
 				return result;
@@ -1413,7 +1474,7 @@ export namespace WASI {
 		try {
 			const fileHandle = getFileHandle(fd);
 			fileHandle.assertBaseRight(Rights.fd_sync);
-			const file = $files.get(fileHandle.fd);
+			const file = Files.peekFile(fileHandle);
 			if (file === undefined) {
 				return Errno.success;
 			}
@@ -1428,7 +1489,7 @@ export namespace WASI {
 		try {
 			const fileHandle = getFileHandle(fd);
 			fileHandle.assertBaseRight(Rights.fd_tell);
-			const file = $files.get(fileHandle.fd);
+			const file = Files.peekFile(fileHandle);
 			const offset = file === undefined ? 0 : file.tell();
 			const memory = memoryView();
 			memory.setBigUint64(offset_ptr, BigInt(offset), true);
@@ -1453,7 +1514,7 @@ export namespace WASI {
 			}
 			const fileHandle = getFileHandle(fd);
 			fileHandle.assertBaseRight(Rights.fd_write);
-			const file = getOrCreateFile(fileHandle);
+			const file = Files.getOrCreateFile(fileHandle);
 			const buffers = read_ciovs(ciovs_ptr, ciovs_len);
 			const bytesWritten: size = file.write(buffers);
 			const memory = memoryView();
@@ -1528,7 +1589,7 @@ export namespace WASI {
 			$fileHandles.set(fileHandle.fd, fileHandle);
 			memory.setUint32(fd_ptr, fileHandle.fd, true);
 			if (createFile || Oflags.truncOn(oflags)) {
-				const file = createFile ? getOrCreateFile(fileHandle, new Uint8Array(0)) : getOrCreateFile(fileHandle);
+				const file = createFile ? Files.getOrCreateFile(fileHandle, new Uint8Array(0)) : Files.getOrCreateFile(fileHandle);
 				file.write([new Uint8Array(0)]);
 			}
 			return Errno.success;
@@ -1569,7 +1630,7 @@ export namespace WASI {
 			}
 			const fileStat = Filestat.create(filestat_ptr, memoryView());
 			fileStat.dev = DeviceIds.get(uri);
-			fileStat.ino = INodes.get(uri);
+			fileStat.ino = Files.getINode(uri);
 			fileStat.filetype = code2Wasi.asFileType(vStat.type);
 			fileStat.nlink = 0n;
 			fileStat.size = BigInt(vStat.size);
@@ -1805,7 +1866,7 @@ export namespace WASI {
 		try {
 			const fileHandle = getFileHandle(fd);
 			fileHandle.assertBaseRight(Rights.fd_read);
-			const file = getOrCreateFile(fileHandle);
+			const file = Files.getOrCreateFile(fileHandle);
 			const available = file.bytesAvailable();
 			return {
 				userdata: subscription.userdata,
@@ -1932,15 +1993,6 @@ export namespace WASI {
 		const result = $fileHandles.get(fd);
 		if (result === undefined) {
 			throw new WasiError(Errno.badf);
-		}
-		return result;
-	}
-
-	function getOrCreateFile(fileHandle: FileHandle, content?: Uint8Array): File {
-		let result = $files.get(fileHandle.fd);
-		if (result === undefined) {
-			result = new File($apiClient, fileHandle, content);
-			$files.set(result.fd, result);
 		}
 		return result;
 	}
