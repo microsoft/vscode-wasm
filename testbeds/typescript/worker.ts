@@ -17,6 +17,14 @@ connection.serviceReady().then(() => {
 
 	const [workspaceFolder] = apiClient.workspace.workspaceFolders;
 
+	type FileSystemEntries = {
+		readonly files: readonly string[];
+		readonly directories: readonly string[];
+	}
+	type TSExt = typeof ts & {
+		matchFiles(path: string, extensions: readonly string[] | undefined, excludes: readonly string[] | undefined, includes: readonly string[] | undefined, useCaseSensitiveFileNames: boolean, currentDirectory: string, depth: number | undefined, getFileSystemEntries: (path: string) => FileSystemEntries, realpath: (path: string) => string): string[];
+	}
+
 	const host = new class implements ts.ParseConfigFileHost {
 
 		// -- ParseConfigFileHost
@@ -28,23 +36,29 @@ connection.serviceReady().then(() => {
 		}
 
 		readDirectory(rootDir: string, extensions: readonly string[], excludes: readonly string[] | undefined, includes: readonly string[], depth?: number | undefined): readonly string[] {
-			const result: string[] = [];
-			this._readDirectory(rootDir, extensions, excludes, includes, depth ?? 0, result);
-			return result;
+			return (<TSExt>ts).matchFiles(
+				rootDir, extensions, excludes, includes, false, this.getCurrentDirectory(), depth,
+				path => this._getFileSystemEntries(path),
+				path => path
+			)
 		}
 
-		_readDirectory(rootDir: string, extensions: readonly string[], excludes: readonly string[] | undefined, includes: readonly string[], depth: number, bucket: string[]) {
-			const uri = Utils.joinPath(workspaceFolder.uri, rootDir)
+		private _getFileSystemEntries(path: string): FileSystemEntries {
+			const uri = Utils.joinPath(workspaceFolder.uri, path)
 			const entries = apiClient.workspace.fileSystem.readDirectory(uri);
+			const files: string[] = [];
+			const directories: string[] = [];
 			for (const [name, type] of entries) {
-				const path = `${rootDir}/${name}`;
-				if (extensions.some(ext => name.endsWith(ext))) {
-					bucket.push(path)
-				}
-				if (depth > 0 && type === DTOs.FileType.Directory) {
-					this._readDirectory(path, extensions, excludes, includes, depth - 1, bucket)
+				switch (type) {
+					case DTOs.FileType.Directory:
+						directories.push(name);
+						break;
+					case DTOs.FileType.File:
+						files.push(name);
+						break;
 				}
 			}
+			return { files, directories }
 		}
 
 		fileExists(path: string): boolean {
