@@ -2,7 +2,7 @@
 	"name": "zzzzz-testbed-typescript",
 	"private": "true",
 	"publisher": "ms-vscode",
-	"version": "0.0.1",
+	"version": "0.0.3",
 	"description": "TypeScript Example",
 	"author": "MS",
 	"license": "MIT",

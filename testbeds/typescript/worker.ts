@@ -73,7 +73,7 @@ connection.serviceReady().then(() => {
 
 	try {
 		const parsed = ts.getParsedCommandLineOfConfigFile('ts/tsconfig.json', undefined, host)
-		console.log(parsed)
+		console.log(JSON.stringify(parsed, undefined, 4))
 	} catch (error) {
 		console.error(error)
 	}
