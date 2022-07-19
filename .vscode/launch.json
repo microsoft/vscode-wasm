@@ -6,8 +6,12 @@
 			"request": "launch",
 			"name": "Python Testbed",
 			"runtimeExecutable": "${execPath}",
-			"args": ["--extensionDevelopmentPath=${workspaceRoot}/testbeds/python"],
-			"outFiles": ["${workspaceRoot}/testbeds/python/out/**/*.js"],
+			"args": [
+				"--extensionDevelopmentPath=${workspaceRoot}/testbeds/python"
+			],
+			"outFiles": [
+				"${workspaceRoot}/testbeds/python/out/**/*.js"
+			],
 			"sourceMaps": true,
 			"preLaunchTask": "Build Python Example"
 		},
@@ -16,18 +20,40 @@
 			"request": "launch",
 			"name": "Rust Testbed",
 			"runtimeExecutable": "${execPath}",
-			"args": ["--extensionDevelopmentPath=${workspaceRoot}/testbeds/rust"],
-			"outFiles": ["${workspaceRoot}/testbeds/rust/out/**/*.js"],
+			"args": [
+				"--extensionDevelopmentPath=${workspaceRoot}/testbeds/rust"
+			],
+			"outFiles": [
+				"${workspaceRoot}/testbeds/rust/out/**/*.js"
+			],
 			"sourceMaps": true,
-			"preLaunchTask": "Build Rust Example"
+			"preLaunchTask": "Build Typescript Example"
+		},
+		{
+			"type": "extensionHost",
+			"request": "launch",
+			"name": "Typescript Testbed",
+			"runtimeExecutable": "${execPath}",
+			"args": [
+				"--extensionDevelopmentPath=${workspaceRoot}/testbeds/typescript"
+			],
+			"outFiles": [
+				"${workspaceRoot}/testbeds/typescript/out/**/*.js"
+			],
+			"sourceMaps": true,
+			"preLaunchTask": "Build Typescript Example"
 		},
 		{
 			"type": "extensionHost",
 			"request": "launch",
 			"name": "C++ Testbed",
 			"runtimeExecutable": "${execPath}",
-			"args": ["--extensionDevelopmentPath=${workspaceRoot}/testbeds/cpp"],
-			"outFiles": ["${workspaceRoot}/testbeds/cpp/out/**/*.js"],
+			"args": [
+				"--extensionDevelopmentPath=${workspaceRoot}/testbeds/cpp"
+			],
+			"outFiles": [
+				"${workspaceRoot}/testbeds/cpp/out/**/*.js"
+			],
 			"sourceMaps": true,
 			"preLaunchTask": "Build C++ Example"
 		},
@@ -36,8 +62,12 @@
 			"request": "launch",
 			"name": "CoreUtils Testbed",
 			"runtimeExecutable": "${execPath}",
-			"args": ["--extensionDevelopmentPath=${workspaceRoot}/testbeds/coreutils"],
-			"outFiles": ["${workspaceRoot}/testbeds/coreutils/out/**/*.js"],
+			"args": [
+				"--extensionDevelopmentPath=${workspaceRoot}/testbeds/coreutils"
+			],
+			"outFiles": [
+				"${workspaceRoot}/testbeds/coreutils/out/**/*.js"
+			],
 			"sourceMaps": true,
 			"preLaunchTask": "Build CoreUtils Example"
 		}

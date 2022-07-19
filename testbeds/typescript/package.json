@@ -1,0 +1,39 @@
+{
+	"name": "zzzzz-testbed-typescript",
+	"private": "true",
+	"publisher": "ms-vscode",
+	"version": "0.0.1",
+	"description": "TypeScript Example",
+	"author": "MS",
+	"license": "MIT",
+	"engines": {
+		"vscode": "^1.67.0"
+	},
+	"browser": "./dist/extension.js",
+	"activationEvents": [
+		"*"
+	],
+	"contributes": {
+		"commands": [
+			{
+				"command": "testbed-typescript.run",
+				"title": "Run ts.getParsedCommandLineOfConfigFile(..)",
+				"category": "TypeScript"
+			}
+		]
+	},
+	"dependencies": {
+		"typescript": "4.7.4"
+	},
+	"devDependencies": {
+		"esbuild": "0.14.49"
+	},
+	"scripts": {
+		"build": "npm run compile:ts",
+		"bundle": "npm run bundle:ext && npm run bundle:worker",
+		"bundle:ext": "npx esbuild --bundle extension.ts  --sourcemap --outfile=dist/extension.js --external:vscode --target=es2021 --format=cjs",
+		"bundle:worker": "npx esbuild --bundle worker.ts  --sourcemap --outfile=dist/worker.js --target=es2021 --format=iife",
+		"compile:ts": "node ../../node_modules/typescript/lib/tsc.js -b tsconfig.json",
+		"watch:ts": "node ../../node_modules/typescript/lib/tsc.js -b tsconfig.json -w"
+	}
+}

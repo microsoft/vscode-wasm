@@ -50,6 +50,20 @@
 			]
 		},
 		{
+			"label": "Build Typescript Example",
+			"type": "npm",
+			"script": "build",
+			"path": "testbeds/typescript",
+			"group": "build",
+			"presentation": {
+				"panel": "dedicated",
+				"reveal": "never"
+			},
+			"problemMatcher": [
+				"$tsc"
+			]
+		},
+		{
 			"label": "Build Rust Example",
 			"type": "npm",
 			"script": "build",
