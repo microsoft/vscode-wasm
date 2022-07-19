@@ -651,9 +651,11 @@ export abstract class BaseClientConnection<Requests extends RequestType | undefi
 						try {
 							const data = resultType.mode === 'binary'
 								? lazyResult.data
-								: JSON.parse(this.textDecoder.decode(lazyResult.data as Uint8Array));
+								: JSON.parse(this.textDecoder.decode((lazyResult.data as Uint8Array).slice()));
+
 							return { errno: 0, data };
 						} catch (error) {
+							RAL().console.error(error);
 							return { errno: RPCErrno.LazyResultFailed };
 						}
 					} else {
@@ -735,7 +737,7 @@ export abstract class BaseServiceConnection<RequestHandlers extends RequestType 
 		const requestLength = header[HeaderIndex.messageByteLength];
 
 		try {
-			const message = JSON.parse(this.textDecoder.decode(new Uint8Array(sharedArrayBuffer, requestOffset, requestLength)));
+			const message = JSON.parse(this.textDecoder.decode(new Uint8Array(sharedArrayBuffer, requestOffset, requestLength).slice()));
 			if (Request.is(message)) {
 				if (message.method === '$/fetchResult') {
 					const resultId: number = message.params!.resultId as number;
@@ -804,6 +806,7 @@ export abstract class BaseServiceConnection<RequestHandlers extends RequestType 
 				header[HeaderIndex.errno] = RPCErrno.InvalidMessageFormat;
 			}
 		} catch (error) {
+			RAL().console.error(error);
 			header[HeaderIndex.errno] = RPCErrno.UnknownError;
 		}
 		const sync = new Int32Array(sharedArrayBuffer, 0, 1);
