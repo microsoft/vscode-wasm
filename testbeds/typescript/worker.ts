@@ -6,12 +6,11 @@
 import * as ts from 'typescript';
 import { ApiClient, APIRequests } from 'vscode-sync-api-client';
 import { ClientConnection, DTOs } from 'vscode-sync-rpc/browser';
-import { URI, Utils } from 'vscode-uri';
+import { Utils } from 'vscode-uri';
 
 const connection = new ClientConnection<APIRequests>(<Worker><any>globalThis);
 
 connection.serviceReady().then(() => {
-	ts.parseJsonConfigFileContent
 
 	const apiClient = new ApiClient(connection);
 
