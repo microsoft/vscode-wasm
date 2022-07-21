@@ -10,8 +10,8 @@ import { Utils } from 'vscode-uri';
 
 
 let host: ts.ParseConfigFileHost | undefined
-
-self.onmessage = event => {
+let init: Promise<any> | undefined
+self.onmessage = async event => {
 
 	const { data } = event;
 
@@ -20,10 +20,16 @@ self.onmessage = event => {
 	// for commands or other things
 	if (data instanceof MessagePort) {
 		const connection = new ClientConnection<APIRequests>(data);
-		connection.serviceReady().then(() => _initTsConfigHost(connection))
+		init = connection.serviceReady().then(() => _initTsConfigHost(connection))
 		return;
 	}
 
+	if (!init) {
+		console.error('INIT message not yet received');
+		return;
+	}
+
+	await init
 
 	// every other message is a parse-ts-config-request
 	if (!host) {
