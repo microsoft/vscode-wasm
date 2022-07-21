@@ -48,7 +48,6 @@ self.onmessage = event => {
 function _initTsConfigHost(connection: ClientConnection<APIRequests>) {
 
 	const apiClient = new ApiClient(connection);
-	const [workspaceFolder] = apiClient.workspace.workspaceFolders;
 
 	type FileSystemEntries = {
 		readonly files: readonly string[];
@@ -77,7 +76,7 @@ function _initTsConfigHost(connection: ClientConnection<APIRequests>) {
 		}
 
 		private _getFileSystemEntries(path: string): FileSystemEntries {
-			const uri = Utils.joinPath(workspaceFolder.uri, path)
+			const uri = Utils.joinPath(apiClient.workspace.workspaceFolders[0].uri, path)
 			const entries = apiClient.workspace.fileSystem.readDirectory(uri);
 			const files: string[] = [];
 			const directories: string[] = [];
@@ -96,7 +95,7 @@ function _initTsConfigHost(connection: ClientConnection<APIRequests>) {
 
 		fileExists(path: string): boolean {
 			try {
-				const uri = Utils.joinPath(workspaceFolder.uri, path)
+				const uri = Utils.joinPath(apiClient.workspace.workspaceFolders[0].uri, path)
 				apiClient.workspace.fileSystem.stat(uri)
 				return true;
 			} catch (error) {
@@ -105,7 +104,7 @@ function _initTsConfigHost(connection: ClientConnection<APIRequests>) {
 		}
 
 		readFile(path: string): string | undefined {
-			const uri = Utils.joinPath(workspaceFolder.uri, path)
+			const uri = Utils.joinPath(apiClient.workspace.workspaceFolders[0].uri, path)
 			const bytes = apiClient.workspace.fileSystem.read(uri);
 			return new TextDecoder().decode(new Uint8Array(bytes).slice())
 		}
