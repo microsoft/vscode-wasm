@@ -32,9 +32,9 @@ export class ClientConnection<Requests extends RequestType | undefined = undefin
 
 export class ServiceConnection<RequestHandlers extends RequestType | undefined = undefined> extends BaseServiceConnection<RequestHandlers> {
 
-	private readonly worker: Worker;
+	private readonly worker: MessagePort | Worker;
 
-	constructor(worker: Worker) {
+	constructor(worker: MessagePort | Worker) {
 		super();
 		this.worker = worker;
 		this.worker.onmessage = ((event: MessageEvent<SharedArrayBuffer>) => {

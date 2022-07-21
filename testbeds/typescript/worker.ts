@@ -8,12 +8,46 @@ import { ApiClient, APIRequests } from 'vscode-sync-api-client';
 import { ClientConnection, DTOs } from 'vscode-sync-rpc/browser';
 import { Utils } from 'vscode-uri';
 
-const connection = new ClientConnection<APIRequests>(<Worker><any>globalThis);
 
-connection.serviceReady().then(() => {
+let host: ts.ParseConfigFileHost | undefined
+
+self.onmessage = event => {
+
+	const { data } = event;
+
+	// when receiving a message port use it to create the sync-rpc
+	// connection. continue to listen to "normal" message events
+	// for commands or other things
+	if (data instanceof MessagePort) {
+		const connection = new ClientConnection<APIRequests>(data);
+		connection.serviceReady().then(() => _initTsConfigHost(connection))
+		return;
+	}
+
+
+	// every other message is a parse-ts-config-request
+	if (!host) {
+		console.error('NOT READY', data);
+		return
+	}
+
+	if (typeof data !== 'string') {
+		console.error('UNKNOWN DATA', data);
+		return;
+	}
+
+	try {
+		const parsed = ts.getParsedCommandLineOfConfigFile(data, undefined, host)
+		console.log(JSON.stringify(parsed, undefined, 4))
+	} catch (error) {
+		console.error(error)
+	}
+}
+
+
+function _initTsConfigHost(connection: ClientConnection<APIRequests>) {
 
 	const apiClient = new ApiClient(connection);
-
 	const [workspaceFolder] = apiClient.workspace.workspaceFolders;
 
 	type FileSystemEntries = {
@@ -24,7 +58,7 @@ connection.serviceReady().then(() => {
 		matchFiles(path: string, extensions: readonly string[] | undefined, excludes: readonly string[] | undefined, includes: readonly string[] | undefined, useCaseSensitiveFileNames: boolean, currentDirectory: string, depth: number | undefined, getFileSystemEntries: (path: string) => FileSystemEntries, realpath: (path: string) => string): string[];
 	}
 
-	const host = new class implements ts.ParseConfigFileHost {
+	host = new class implements ts.ParseConfigFileHost {
 
 		// -- ParseConfigFileHost
 
@@ -83,13 +117,4 @@ connection.serviceReady().then(() => {
 			console.error('FATAL', d)
 		}
 	}
-
-	try {
-		const parsed = ts.getParsedCommandLineOfConfigFile('ts/tsconfig.json', undefined, host)
-		console.log(JSON.stringify(parsed, undefined, 4))
-	} catch (error) {
-		console.error(error)
-	}
-
-	apiClient.procExit(0)
-})
+}

@@ -20,7 +20,15 @@
 				"title": "Run ts.getParsedCommandLineOfConfigFile(..)",
 				"category": "TypeScript"
 			}
-		]
+		],
+		"menus": {
+			"explorer/context": [
+				{
+					"command": "testbed-typescript.run",
+					"when": "resourceFilename == tsconfig.json"
+				}
+			]
+		}
 	},
 	"dependencies": {
 		"typescript": "4.7.4"
