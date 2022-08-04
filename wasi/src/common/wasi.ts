@@ -911,8 +911,11 @@ export namespace WASI {
 		export function releaseFile(fileHandle: FileHandle): void {
 			const key = fileHandle.uri.toString();
 			const fileInfo = $files.get(key);
-			if (fileInfo === undefined || !FileInfo.hasFile(fileInfo)) {
+			if (fileInfo === undefined) {
 				throw new WasiError(Errno.badf);
+			}
+			if (!FileInfo.hasFile(fileInfo)) {
+				return;
 			}
 			fileInfo.refs--;
 			if (fileInfo.refs === 0) {
