@@ -1,5 +1,5 @@
 {
-	"name": "vscode-sync-api-client",
+	"name": "@vscode/sync-api-client",
 	"version": "0.0.1",
 	"description": "A client that calls VS Code API in a web worker in synchrony.",
 	"private": true,

@@ -1,5 +1,5 @@
 {
-	"name": "vscode-sync-api-service",
+	"name": "@vscode/sync-api-service",
 	"version": "0.0.1",
 	"description": "A sync implementation of the VS Code API. Only supported from a web worker",
 	"private": "true",
