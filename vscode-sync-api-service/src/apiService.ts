@@ -5,7 +5,7 @@
 
 import * as vscode from 'vscode';
 
-import RAL, { BaseServiceConnection, ProcExitRequest, Requests, DTOs, RPCErrno } from 'vscode-sync-rpc';
+import RAL, { BaseServiceConnection, ProcExitRequest, Requests, DTOs, RPCErrno } from '@vscode/sync-rpc';
 
 const terminalRegExp = /(\r\n)|(\n)/gm;
 

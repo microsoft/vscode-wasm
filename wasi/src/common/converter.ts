@@ -3,7 +3,7 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import * as code from 'vscode-sync-api-client';
+import * as code from '@vscode/sync-api-client';
 import * as wasi from './wasiTypes';
 
 export namespace code2Wasi {

@@ -11,7 +11,7 @@
 import RAL from './ral';
 
 import { URI } from 'vscode-uri';
-import { ApiClient, FileSystemError, FileType, RPCError, DTOs } from 'vscode-sync-api-client';
+import { ApiClient, FileSystemError, FileType, RPCError, DTOs } from '@vscode/sync-api-client';
 
 import { ptr, size, u32 } from './baseTypes';
 import {

@@ -3,6 +3,6 @@
  * Licensed under the MIT License. See License.txt in the project root for license information.
  * ------------------------------------------------------------------------------------------ */
 
-export * from 'vscode-sync-rpc';
+export * from '@vscode/sync-rpc';
 export * from './apiClient';
 export * from './vscode';

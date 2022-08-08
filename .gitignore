@@ -107,7 +107,7 @@ dist
 # TernJS port file
 .tern-port
 
-testbeds/python/bin
+testbeds/python/bin*
 testbeds/python/bin.tar
 testbeds/python/python.tar
 testbeds/coreutils/coreutils.wasm

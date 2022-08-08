@@ -22,11 +22,11 @@
 		"@typescript-eslint/eslint-plugin": "^5.23.0",
 		"@typescript-eslint/parser": "^5.23.0",
 		"eslint": "^8.15.0",
-		"typescript": "^4.7.2",
-		"shelljs": "^0.8.5",
+		"make-dir-cli": "^3.0.0",
 		"rimraf": "^3.0.2",
+		"shelljs": "^0.8.5",
 		"shx": "^0.3.4",
-		"make-dir-cli": "^3.0.0"
+		"typescript": "^4.7.2"
 	},
 	"scripts": {
 		"postinstall": "node ./build/bin/all.js install && npm run symlink",
@@ -35,5 +35,8 @@
 		"compile": "node ./node_modules/typescript/lib/tsc.js -b tsconfig.json",
 		"watch": "node ./node_modules/typescript/lib/tsc.js -b tsconfig.watch.json -w",
 		"clean": "node ./build/bin/all.js run clean"
+	},
+	"dependencies": {
+		"@vscode/test-electron": "^2.1.5"
 	}
 }
