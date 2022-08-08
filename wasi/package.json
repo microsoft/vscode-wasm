@@ -2,6 +2,7 @@
 	"name": "vscode-wasi",
 	"version": "0.0.1",
 	"description": "A WASI implementation that uses VS Code's extension host as the implementing API",
+	"private": true,
 	"main": "./lib/node/main.js",
 	"browser": {
 		"./lib/node/main.js": "./lib/browser/main.js"
