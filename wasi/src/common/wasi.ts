@@ -745,10 +745,7 @@ class File implements IOComponent {
 				this._cursor = this._cursor + offset;
 				break;
 			case Whence.end:
-				if (this._content === undefined) {
-					Errno.inval;
-				}
-				this._cursor = this.content.byteLength - offset;
+				this._cursor = this.content.byteLength + offset;
 				break;
 		}
 		return Errno.success;
