@@ -8,6 +8,7 @@ import * as crypto from 'crypto';
 
 import RAL from '../common/ral';
 import { Disposable } from '../common/disposable';
+import { join } from 'path';
 
 interface RIL extends RAL {
 }
@@ -62,6 +63,9 @@ const _ril: RIL = Object.freeze<RIL>({
 	path: Object.freeze({
 		dirname(dir: string): string {
 			return path.posix.dirname(dir);
+		},
+		join(...paths: string[]): string {
+			return path.posix.join(...paths);
 		}
 	})
 });

@@ -510,20 +510,9 @@ export type Options = {
 };
 
 namespace DeviceIds {
-	const deviceIds: Map<string, bigint> = new Map();
 	let deviceIdCounter: bigint = 1n;
 
 	export const system = deviceIdCounter++;
-
-	export function get(uri: URI): bigint {
-		const scheme = uri.scheme;
-		let result = deviceIds.get(scheme);
-		if (result === undefined) {
-			result = deviceIdCounter++;
-			deviceIds.set(scheme, result);
-		}
-		return result;
-	}
 }
 
 namespace FileHandles {
@@ -665,16 +654,20 @@ class Stdin implements IOComponent {
 
 class File implements IOComponent {
 
+	/** VS Code state */
 	private readonly apiClient: ApiClient;
 	private readonly uri: URI;
-	private _content: Uint8Array | undefined;
 
+	/** POSIX file system state */
+	public readonly path: string;
+	private _content: Uint8Array | undefined;
 	private _cursor: number;
 	private _fdFlags: fdflags;
 
-	constructor(apiClient: ApiClient, uri: URI, content?: Uint8Array) {
+	constructor(apiClient: ApiClient, uri: URI, path: string, content?: Uint8Array) {
 		this.apiClient = apiClient;
 		this.uri = uri;
+		this.path = path;
 		if (content instanceof Uint8Array) {
 			this._content = content;
 		}
@@ -859,20 +852,20 @@ export namespace WASI {
 		export const stdoutINode = inodeCounter++;
 		export const stderrINode = inodeCounter++;
 
-		export function getINode(uri: URI): bigint {
-			const key = uri.toString();
-			let fileInfo = $files.get(key);
+		export function getINode(fileHandleOrPath: FileHandle | string): bigint {
+			const filepath = typeof fileHandleOrPath === 'string' ? fileHandleOrPath : fileHandleOrPath.path;
+			let fileInfo = $files.get(filepath);
 			if (fileInfo !== undefined) {
 				return fileInfo.inode;
 			}
 			fileInfo = { inode: inodeCounter++ };
-			$files.set(key, fileInfo);
+			$files.set(filepath, fileInfo);
 			return fileInfo.inode;
 		}
 
 		export function hasFile(fileHandle: FileHandle): boolean {
-			const key = fileHandle.uri.toString();
-			let fileInfo = $files.get(key);
+			const filepath = fileHandle.path;
+			let fileInfo = $files.get(filepath);
 			if (fileInfo === undefined) {
 				return false;
 			}
@@ -880,8 +873,8 @@ export namespace WASI {
 		}
 
 		export function peekFile(fileHandle: FileHandle): File | undefined {
-			const key = fileHandle.uri.toString();
-			let fileInfo = $files.get(key);
+			const filepath = fileHandle.path;
+			let fileInfo = $files.get(filepath);
 			if (fileInfo === undefined) {
 				return undefined;
 			}
@@ -889,25 +882,25 @@ export namespace WASI {
 		}
 
 		export function getOrCreateFile(fileHandle: FileHandle, content?: Uint8Array): File {
-			const key = fileHandle.uri.toString();
-			let fileInfo = $files.get(key);
+			const filepath = fileHandle.path;
+			let fileInfo = $files.get(filepath);
 			if (fileInfo === undefined) {
 				fileInfo = { inode: inodeCounter++ };
-				$files.set(key, fileInfo);
+				$files.set(filepath, fileInfo);
 			}
 			if (FileInfo.hasFile(fileInfo)) {
 				fileInfo.refs++;
 				return fileInfo.file;
 			}
 			const fullInfo: { inode: bigint; file?: File; refs?: number } = fileInfo;
-			fullInfo.file = new File($apiClient, fileHandle.uri, content);
+			fullInfo.file = new File($apiClient, fileHandle.uri, filepath, content);
 			fullInfo.refs = 1;
 			return fullInfo.file;
 		}
 
 		export function releaseFile(fileHandle: FileHandle): void {
-			const key = fileHandle.uri.toString();
-			const fileInfo = $files.get(key);
+			const filepath = fileHandle.path;
+			const fileInfo = $files.get(filepath);
 			if (fileInfo === undefined) {
 				throw new WasiError(Errno.badf);
 			}
@@ -1239,14 +1232,13 @@ export namespace WASI {
 			}
 			const fileHandle = getFileHandle(fd);
 			fileHandle.assertBaseRight(Rights.fd_filestat_get);
-			const uri = fileHandle.uri;
-			const vStat = $apiClient.workspace.fileSystem.stat(uri);
+			const vStat = $apiClient.workspace.fileSystem.stat(fileHandle.uri);
 			if (typeof vStat === 'number') {
 				return code2Wasi.asErrno(vStat);
 			}
 			const fileStat = Filestat.create(filestat_ptr, memory);
-			fileStat.dev = DeviceIds.get(uri);
-			fileStat.ino = Files.getINode(uri);
+			fileStat.dev = DeviceIds.system;
+			fileStat.ino = Files.getINode(fileHandle);
 			fileStat.filetype = code2Wasi.asFileType(vStat.type);
 			fileStat.nlink = 0n;
 			fileStat.size = BigInt(vStat.size);
@@ -1429,7 +1421,7 @@ export namespace WASI {
 				const nameBytes = $encoder.encode(name);
 				const dirent: dirent = Dirent.create(ptr, memory);
 				dirent.d_next = BigInt(i + 1);
-				dirent.d_ino = Files.getINode(uri);
+				dirent.d_ino = Files.getINode(RAL().path.join(fileHandle, name));
 				dirent.d_type = filetype;
 				dirent.d_namlen = nameBytes.byteLength;
 				spaceLeft -= Dirent.size;
@@ -1629,8 +1621,8 @@ export namespace WASI {
 				return code2Wasi.asErrno(vStat);
 			}
 			const fileStat = Filestat.create(filestat_ptr, memoryView());
-			fileStat.dev = DeviceIds.get(uri);
-			fileStat.ino = Files.getINode(uri);
+			fileStat.dev = DeviceIds.system;
+			fileStat.ino = Files.getINode(fileHandle);
 			fileStat.filetype = code2Wasi.asFileType(vStat.type);
 			fileStat.nlink = 0n;
 			fileStat.size = BigInt(vStat.size);

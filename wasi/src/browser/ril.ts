@@ -65,6 +65,9 @@ const _ril: RIL = Object.freeze<RIL>({
 	path: Object.freeze({
 		dirname(dir: string): string {
 			return path.dirname(dir);
+		},
+		join(...paths: string[]): string {
+			return path.join(...paths);
 		}
 	})
 });
