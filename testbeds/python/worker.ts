@@ -10,9 +10,7 @@ import { URI } from 'vscode-uri';
 
 import { ClientConnection } from '@vscode/sync-rpc/node';
 import { ApiClient, APIRequests } from '@vscode/sync-api-client';
-import { WASI } from '@vscode/wasi/node';
-
-import { Options } from '@vscode/wasi';
+import { WASI, Options } from '@vscode/wasi/node';
 
 if (parentPort === null) {
 	process.exit();
