@@ -8,10 +8,11 @@
 // We need to clarify how to license them. I was not able to find a license file
 // in the https://github.com/WebAssembly/WASI repository
 
-import RAL from './ral';
-
 import { URI } from 'vscode-uri';
 import { ApiClient, FileSystemError, FileType, RPCError, DTOs } from '@vscode/sync-api-client';
+
+import RAL from './ral';
+const paths = RAL().path;
 
 import { ptr, size, u32 } from './baseTypes';
 import {
@@ -547,11 +548,6 @@ class FileHandle {
 	public readonly fileType: filetype;
 
 	/**
-	 * The path name.
-	 */
-	public readonly path: string;
-
-	/**
 	 * The rights associated with the file descriptor
 	 */
 	public readonly  rights: {
@@ -567,21 +563,26 @@ class FileHandle {
 	};
 
 	/**
-	 * The corresponding VS Code URI
+	 * The absolute path used to create this file handle.
 	 */
-	public readonly uri: URI;
+	public readonly path: string;
+
+	/**
+	 * The inode id this file handle is pointing to.
+	 */
+	public readonly inode: bigint;
 
 	/**
 	 * Whether this is a pre-opened directory.
 	 */
 	public readonly preOpened: boolean;
 
-	constructor(fd: fd, fileType: filetype, path: string, rights: FileHandle['rights'], uri: URI, preOpened: boolean = false) {
+	constructor(fd: fd, fileType: filetype, rights: FileHandle['rights'], path: string, inode: bigint, preOpened: boolean = false) {
 		this.fd = fd;
 		this.fileType = fileType;
-		this.path = path;
 		this.rights = rights;
-		this.uri = uri;
+		this.path = path;
+		this.inode = inode;
 		this.preOpened = preOpened;
 	}
 
@@ -829,6 +830,58 @@ export namespace WASI {
 	let $options: Options;
 
 	namespace Files {
+
+		let inodeCounter: bigint = 1n;
+
+		export const stdinINode = inodeCounter++;
+		export const stdoutINode = inodeCounter++;
+		export const stderrINode = inodeCounter++;
+
+		type INode = {
+			/**
+			 * The inode Id.
+			 */
+			id: bigint;
+
+			/**
+			 * The corresponding VS Code URI
+			 */
+			uri: URI;
+
+			refs: number;
+		};
+
+		const $path2INode: Map<string, INode> = new Map();
+		const $inodes: Map<bigint, INode> = new Map();
+
+		export function getINodeByPath(filepath: string, uri: URI): INode {
+			let result = $path2INode.get(filepath);
+			if (result !== undefined) {
+				return result;
+			}
+			result = { id: inodeCounter++, uri, refs: 0 };
+			$path2INode.set(filepath, result);
+			$inodes.set(result.id, result);
+			return result;
+		}
+
+		export function getINodeById(id: bigint): INode {
+			const result = $inodes.get(id);
+			if (result === undefined) {
+				throw new WasiError(Errno.badf);
+			}
+			return result;
+		}
+
+		export function releaseINode(filePath: string): void {
+
+		}
+
+		export function remapINode(oldPath: string, newPath: string): void {
+
+		}
+
+
 		const $files: Map<string, FileInfo> = new Map();
 
 		type FileInfo = {
@@ -846,13 +899,8 @@ export namespace WASI {
 			}
 		}
 
-		let inodeCounter: bigint = 1n;
 
-		export const stdinINode = inodeCounter++;
-		export const stdoutINode = inodeCounter++;
-		export const stderrINode = inodeCounter++;
-
-		export function getINode(fileHandleOrPath: FileHandle | string): bigint {
+		export function getINode2(fileHandleOrPath: FileHandle | string): bigint {
 			const filepath = typeof fileHandleOrPath === 'string' ? fileHandleOrPath : fileHandleOrPath.path;
 			let fileInfo = $files.get(filepath);
 			if (fileInfo !== undefined) {
@@ -1421,7 +1469,7 @@ export namespace WASI {
 				const nameBytes = $encoder.encode(name);
 				const dirent: dirent = Dirent.create(ptr, memory);
 				dirent.d_next = BigInt(i + 1);
-				dirent.d_ino = Files.getINode(RAL().path.join(fileHandle, name));
+				dirent.d_ino = Files.getINode(path.join(fileHandle, name));
 				dirent.d_type = filetype;
 				dirent.d_namlen = nameBytes.byteLength;
 				spaceLeft -= Dirent.size;
@@ -1521,11 +1569,14 @@ export namespace WASI {
 		try {
 			const parentHandle = getFileHandle(fd);
 			parentHandle.assertBaseRight(Rights.path_open);
+			const parentINode = Files.getINodeById(parentHandle.inode);
 
 			const memory = memoryView();
 			const name = $decoder.decode(new Uint8Array(memoryRaw(), path, pathLen));
-			const realUri = getRealUri(parentHandle, name);
-			const stat = $apiClient.workspace.fileSystem.stat(realUri);
+			const filepath = paths.join(parentHandle.path, name);
+			const fileUri = uriJoin(parentINode.uri, name);
+
+			const stat = $apiClient.workspace.fileSystem.stat(fileUri);
 			const entryExists = typeof stat !== 'number';
 			if (entryExists) {
 				if (Oflags.exclOn(oflags)) {
@@ -1544,10 +1595,10 @@ export namespace WASI {
 			if (Oflags.creatOn(oflags) && !entryExists) {
 				// Ensure parent handle is directory
 				parentHandle.assertIsDirectory();
-				const dirname = RAL().path.dirname(name);
+				const dirname = paths.dirname(name);
 				// The name has a directory part. Ensure that the directory exists
 				if (dirname !== '.') {
-					const dirStat = $apiClient.workspace.fileSystem.stat(getRealUri(parentHandle, dirname));
+					const dirStat = $apiClient.workspace.fileSystem.stat(uriJoin(parentINode.uri, dirname));
 					if (typeof dirStat === 'number' || dirStat.type !== FileType.Directory) {
 						return Errno.noent;
 					}
@@ -1573,10 +1624,11 @@ export namespace WASI {
 				: filetype === Filetype.regular_file
 					? fs_rights_inheriting | Rights.FileInheriting
 					: fs_rights_inheriting;
+			const iNode = Files.getINodeByPath(filepath, fileUri);
 			const fileHandle = new FileHandle(
-				FileHandles.next(), filetype, name,
+				FileHandles.next(), filetype,
 				{ base: base, inheriting: inheriting },
-				realUri
+				filepath, iNode.id
 			);
 			$fileHandles.set(fileHandle.fd, fileHandle);
 			memory.setUint32(fd_ptr, fileHandle.fd, true);
@@ -1596,9 +1648,10 @@ export namespace WASI {
 			fileHandle.assertBaseRight(Rights.path_create_directory);
 			fileHandle.assertIsDirectory();
 
+			const iNode = Files.getINodeById(fileHandle.inode);
 			const memory = memoryRaw();
 			const name = $decoder.decode(new Uint8Array(memory, path_ptr, path_len));
-			$apiClient.workspace.fileSystem.createDirectory(getRealUri(fileHandle, name));
+			$apiClient.workspace.fileSystem.createDirectory(uriJoin(iNode.uri, name));
 			return Errno.success;
 		} catch (error) {
 			return handleError(error);
@@ -1613,16 +1666,18 @@ export namespace WASI {
 			fileHandle.assertBaseRight(Rights.path_filestat_get);
 			fileHandle.assertIsDirectory();
 
+			const iNode = Files.getINodeById(fileHandle.inode);
 			const memory = memoryRaw();
 			const name = $decoder.decode(new Uint8Array(memory, path_ptr, path_len));
-			const uri = getRealUri(fileHandle, name);
-			const vStat = $apiClient.workspace.fileSystem.stat(uri);
+			const filePath = paths.join(fileHandle.path, name);
+			const fileUri = uriJoin(iNode.uri, name);
+			const vStat = $apiClient.workspace.fileSystem.stat(fileUri);
 			if (typeof vStat === 'number') {
 				return code2Wasi.asErrno(vStat);
 			}
 			const fileStat = Filestat.create(filestat_ptr, memoryView());
 			fileStat.dev = DeviceIds.system;
-			fileStat.ino = Files.getINode(fileHandle);
+			fileStat.ino = Files.getINodeByPath(filePath, fileUri).id;
 			fileStat.filetype = code2Wasi.asFileType(vStat.type);
 			fileStat.nlink = 0n;
 			fileStat.size = BigInt(vStat.size);
@@ -1697,11 +1752,14 @@ export namespace WASI {
 			fileHandle.assertBaseRight(Rights.path_remove_directory);
 			fileHandle.assertIsDirectory();
 
+			const iNode = Files.getINodeById(fileHandle.inode);
 			const memory = memoryRaw();
 			const name = $decoder.decode(new Uint8Array(memory, path_ptr, path_len));
-			const uri = getRealUri(fileHandle, name);
+			const filePath = paths.join(fileHandle.path, name);
+			const fileUri = uriJoin(iNode.uri, name);
 
-			$apiClient.workspace.fileSystem.delete(uri, { recursive: false, useTrash: true });
+			$apiClient.workspace.fileSystem.delete(fileUri, { recursive: false, useTrash: true });
+			Files.releaseINode(filePath);
 			return Errno.success;
 		} catch (error) {
 			return handleError(error);
@@ -1721,12 +1779,15 @@ export namespace WASI {
 
 			const memory = memoryRaw();
 			const oldName = $decoder.decode(new Uint8Array(memory, old_path_ptr, old_path_len));
-			const oldUri = getRealUri(oldFileHandle, oldName);
+			const oldINode = Files.getINodeById(oldFileHandle.inode);
+			const oldUri = uriJoin(oldINode.uri, oldName);
 
 			const newName = $decoder.decode(new Uint8Array(memory, new_path_ptr, new_path_len));
-			const newUri = getRealUri(newFileHandle, newName);
+			const newINode = Files.getINodeById(newFileHandle.inode);
+			const newUri = uriJoin(newINode.uri, newName);
 
 			$apiClient.workspace.fileSystem.rename(oldUri, newUri, { overwrite: false });
+			Files.remapINode(paths.join(oldFileHandle.path, oldName), paths.join(newFileHandle.path, newName));
 			return Errno.success;
 		} catch (error) {
 			return handleError(error);
@@ -1751,11 +1812,12 @@ export namespace WASI {
 			fileHandle.assertBaseRight(Rights.path_unlink_file);
 			fileHandle.assertIsDirectory();
 
+			const iNode = Files.getINodeById(fileHandle.inode);
 			const memory = memoryRaw();
 			const name = $decoder.decode(new Uint8Array(memory, path_ptr, path_len));
-			const uri = getRealUri(fileHandle, name);
+			const fileUri = uriJoin(iNode.uri, name);
 
-			const vStat = $apiClient.workspace.fileSystem.stat(uri);
+			const vStat = $apiClient.workspace.fileSystem.stat(fileUri);
 			if (typeof vStat === 'number') {
 				return vStat;
 			}
@@ -1763,7 +1825,8 @@ export namespace WASI {
 				return Errno.isdir;
 			}
 
-			$apiClient.workspace.fileSystem.delete(uri, { recursive: false, useTrash: true });
+			$apiClient.workspace.fileSystem.delete(fileUri, { recursive: false, useTrash: true });
+			Files.releaseINode(paths.join(fileHandle.path, name));
 			return Errno.success;
 		} catch (error) {
 			return handleError(error);
@@ -1989,11 +2052,10 @@ export namespace WASI {
 		return result;
 	}
 
-	function getRealUri(parentInfo: FileHandle, name: string): URI {
-		const real = parentInfo.uri;
+	function uriJoin(uri: URI, name: string): URI {
 		if (name === '.') {
-			return real;
+			return uri;
 		}
-		return real.with({ path: `${real.path}/${name}`});
+		return uri.with( { path: RAL().path.join(uri.path, name)} );
 	}
 }
