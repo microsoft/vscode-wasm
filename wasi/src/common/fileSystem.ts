@@ -4,16 +4,213 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { URI } from 'vscode-uri';
-import { Errno, fdflags, WasiError } from './wasiTypes';
 
+import { ApiClient, DTOs, FileType } from '@vscode/sync-api-client';
+
+import RAL from './ral';
+const paths = RAL().path;
+
+import { ptr, size } from './baseTypes';
+import { dircookie, dirent, Dirent, errno, Errno, fd, fdflags, Fdstat, filedelta, filesize, Filestat, Filetype, filetype, Rights, rights, WasiError, Whence, whence } from './wasiTypes';
+import { BigInts, code2Wasi } from './converter';
+
+export namespace DeviceIds {
+	let deviceIdCounter: bigint = 1n;
+	export const system = deviceIdCounter++;
+}
+
+export class FileDescriptor {
+
+	// 0, 1, 2 are reserved for stdin, stdout and stderr.
+	private static fileDescriptorCounter: fd = 3;
+
+	private static next(): fd {
+		// According to the spec these handles shouldn't monotonically increase.
+		// But since these are not real file handles I keep it that way.
+		return this.fileDescriptorCounter++;
+	}
+
+	/**
+	 * The WASI file handle
+	 */
+	public readonly fd: fd;
+
+	/**
+	 * The inode id this file handle is pointing to.
+	 */
+	public readonly inode: bigint;
+
+	/**
+	 * The file type
+	 */
+	public readonly fileType: filetype;
+
+	/**
+	 * The rights associated with the file descriptor
+	 */
+	public readonly rights: {
+		/**
+		 * The base rights.
+		 */
+		readonly base: rights;
+
+		/**
+		 * The inheriting rights
+		 */
+		readonly inheriting: rights;
+	};
+
+	/**
+	 * The file descriptor flags.
+	 */
+	public fdflags: fdflags;
+
+	/**
+	 * The absolute path used to create this file handle.
+	 */
+	public readonly path: string;
+
+	/**
+	 * Whether this is a pre-opened directory.
+	 */
+	public readonly preOpened: boolean;
+
+	/**
+	 * The cursor into the file's content;
+	 */
+	private _cursor: number;
+
+	constructor(inode: bigint, fileType: filetype, rights: FileDescriptor['rights'], fdflags: fdflags, path: string, preOpened: boolean = false) {
+		this.fd = FileDescriptor.next();
+		this.inode = inode;
+		this.fileType = fileType;
+		this.rights = rights;
+		this.fdflags = fdflags;
+		this.path = path;
+		this.preOpened = preOpened;
+		this._cursor = 0;
+	}
+
+	public assertBaseRight(right: rights): void {
+		if ((this.rights.base & right) === 0n) {
+			throw new WasiError(Errno.perm);
+		}
+	}
+
+	public assertIsDirectory(): void {
+		if (this.fileType !== Filetype.directory) {
+			throw new WasiError(Errno.notdir);
+		}
+	}
+
+	public get cursor(): number {
+		return this._cursor;
+	}
+
+	public seek(offset: number, whence: whence): void {
+		switch(whence) {
+			case Whence.set:
+				this._cursor = offset;
+				break;
+			case Whence.cur:
+				// Even if this.cursor < 0 we can add the delta.
+				// (e.g. -22 + 4 = -18 from end; so the cursor moved
+				// 4 up.)
+				this._cursor = this._cursor + offset;
+				break;
+			case Whence.end:
+				// In this case offset is a negative number. So we
+				// can adjust the offset when we are actually accessing
+				// the files content and know the length
+				this._cursor = offset;
+				break;
+		}
+	}
+
+	public read(content: Uint8Array, bytesToRead: number): Uint8Array {
+		// We have a negative cursor so we need to adjust according to the
+		// end of the content.
+		if (this._cursor < 0) {
+			this._cursor = Math.max(0, content.byteLength + this._cursor);
+		}
+		const realRead = Math.min(bytesToRead, content.byteLength - this._cursor);
+		const result = content.subarray(this._cursor, this._cursor + realRead);
+		this._cursor = this._cursor + realRead;
+		return result;
+	}
+
+	public write(content: Uint8Array, buffers: Uint8Array[]): [Uint8Array, size] {
+		// We have a negative cursor so we need to adjust according to the
+		// end of the content.
+		if (this._cursor < 0) {
+			this._cursor = Math.max(0, content.byteLength + this._cursor);
+		}
+
+		let bytesToWrite: size = 0;
+		for (const bytes of buffers) {
+			bytesToWrite += bytes.byteLength;
+		}
+
+		// Do we need to increase the buffer
+		if (this._cursor + bytesToWrite > content.byteLength) {
+			const newContent = new Uint8Array(this._cursor + bytesToWrite);
+			newContent.set(content);
+			content = newContent;
+		}
+
+		for (const bytes of buffers) {
+			content.set(bytes, this._cursor);
+			this._cursor += bytes.length;
+		}
+
+		return [content, bytesToWrite];
+	}
+
+	public adjustCursor(content: Uint8Array): number {
+		if (this._cursor >= 0) {
+			return this._cursor;
+		}
+		this._cursor = Math.max(0, content.byteLength + this._cursor);
+		return this._cursor;
+	}
+}
+
+export interface MemoryProvider {
+	memoryView(): DataView;
+	memoryRaw(): ArrayBuffer;
+}
+
+export interface FileSystem {
+
+	readonly stdinINode: bigint;
+	readonly stdoutINode: bigint;
+	readonly stderrINode: bigint;
+
+	resolveINode(filepath: string, uri: URI): bigint;
+	releaseINode(fileDescriptor: FileDescriptor): void;
+	remapINode(oldPath: string, newPath: string): void;
+
+	seek(fileDescriptor: FileDescriptor, offset: filedelta, whence: whence): bigint;
+	fdstat(fileDescriptor: FileDescriptor, fdstat_ptr: ptr): void;
+	stat(fileDescriptor: FileDescriptor, filestat_ptr: ptr): void;
+	path_stat(fileDescriptor: FileDescriptor, name: string, filestat_ptr: ptr): void;
+	bytesAvailable(fileDescriptor: FileDescriptor): filesize;
+	tell(fileDescriptor: FileDescriptor): number;
+	setSize(fileDescriptor: FileDescriptor, size: filesize): void;
+	allocate(fileDescriptor: FileDescriptor, offset: filesize, len: filesize): void;
+	read(fileDescriptor: FileDescriptor, bytesToRead: number): Uint8Array;
+	pread(fileDescriptor: FileDescriptor, offset: number, bytesToRead: number): Uint8Array;
+	write(fileDescriptor: FileDescriptor, buffers: Uint8Array[]): size;
+	pwrite(fileDescriptor: FileDescriptor, offset: number, bytes: Uint8Array): size;
+	sync(fileDescriptor: FileDescriptor): void;
+
+	path_filetype(fileDescriptor: FileDescriptor, name: string): filetype | undefined;
+
+	readdir(fileDescriptor: FileDescriptor, buf_ptr: ptr, buf_len: size, cookie: dircookie, buf_used_ptr: ptr): void;
+	createDirectory(fileDescriptor: FileDescriptor, name: string): void;
+}
 
 export namespace FileSystem {
-
-	let inodeCounter: bigint = 1n;
-
-	export const stdinINode = inodeCounter++;
-	export const stdoutINode = inodeCounter++;
-	export const stderrINode = inodeCounter++;
 
 	type INode = {
 		/**
@@ -28,42 +225,285 @@ export namespace FileSystem {
 		 */
 		uri: URI;
 
-		fdFlags: fdflags;
-
-
 		/**
 		 * The loaded file content if available.
 		 */
-		content: Uint8Array | undefined;
+		content?: Uint8Array;
 	};
 
-	const $path2INode: Map<string, INode> = new Map();
-	const $inodes: Map<bigint, INode> = new Map();
-
-	export function getINodeByPath(filepath: string, uri: URI): INode {
-		let result = $path2INode.get(filepath);
-		if (result !== undefined) {
-			return result;
+	namespace INode {
+		export function hasContent(inode: INode): inode is INode & { content: Uint8Array } {
+			return inode.content !== undefined;
 		}
-		result = { id: inodeCounter++, uri, refs: 0, content: undefined };
-		$path2INode.set(filepath, result);
-		$inodes.set(result.id, result);
-		return result;
 	}
 
-	export function getINodeById(id: bigint): INode {
-		const result = $inodes.get(id);
-		if (result === undefined) {
-			throw new WasiError(Errno.badf);
+	export function create(apiClient: ApiClient, memoryProvider: MemoryProvider, textEncoder: RAL.TextEncoder, textDecoder: RAL.TextDecoder): FileSystem {
+
+		let inodeCounter: bigint = 1n;
+
+		const path2INode: Map<string, INode> = new Map();
+		const inodes: Map<bigint, INode> = new Map();
+		const directoryEntries: Map<fd, DTOs.DirectoryEntries> = new Map();
+		const memoryView = memoryProvider.memoryView;
+		const memoryRaw = memoryProvider.memoryRaw;
+
+		const fileSystem: FileSystem = {
+			stdinINode: inodeCounter++,
+			stdoutINode: inodeCounter++,
+			stderrINode: inodeCounter++,
+			resolveINode: (filepath, uri) => {
+				let result = path2INode.get(filepath);
+				if (result !== undefined) {
+					return result.id;
+				}
+				result = { id: inodeCounter++, uri, refs: 0, content: undefined };
+				path2INode.set(filepath, result);
+				inodes.set(result.id, result);
+				return result.id;
+			},
+			releaseINode: (fileDescriptor): void => {
+
+			},
+			remapINode: (oldPath, newPath): void => {
+
+			},
+			seek: (fileDescriptor, offset, whence): bigint => {
+				fileDescriptor.seek(BigInts.asNumber(offset), whence);
+				const cursor = fileDescriptor.cursor;
+				if (cursor >= 0) {
+					return BigInt(cursor);
+				}
+				const inode = getResolvedINode(fileDescriptor.inode);
+				return BigInt(fileDescriptor.adjustCursor(inode.content));
+			},
+			fdstat: (fileDescriptor, fdstat_ptr): void => {
+				const inode = getINode(fileDescriptor.inode);
+				const vStat = apiClient.workspace.fileSystem.stat(inode.uri);
+				const fdstat = Fdstat.create(fdstat_ptr, memoryView());
+				fdstat.fs_filetype = code2Wasi.asFileType(vStat.type);
+				// No flags. We need to see if some of the tools we want to run
+				// need some and we need to simulate them using local storage.
+				fdstat.fs_flags = 0;
+				if (vStat.type === FileType.File) {
+					fdstat.fs_rights_base = Rights.FileBase;
+					fdstat.fs_rights_inheriting = Rights.FileInheriting;
+				} else if (vStat.type === FileType.Directory) {
+					fdstat.fs_rights_base = Rights.DirectoryBase;
+					fdstat.fs_rights_inheriting = Rights.DirectoryInheriting;
+				} else {
+					// Symbolic link and unknown
+					fdstat.fs_rights_base = 0n;
+					fdstat.fs_rights_inheriting = 0n;
+				}
+			},
+			stat: (fileDescriptor, filestat_ptr): void => {
+				const inode = getINode(fileDescriptor.inode);
+				doStat(fileDescriptor.path, inode.uri, filestat_ptr);
+			},
+			path_stat: (fileDescriptor, name, filestat_ptr): void => {
+				const inode = getINode(fileDescriptor.inode);
+				const filePath = paths.join(fileDescriptor.path, name);
+				const fileUri = uriJoin(inode.uri, name);
+				doStat(filePath, fileUri, filestat_ptr);
+			},
+			bytesAvailable: (fileDescriptor): filesize => {
+				const inode = getResolvedINode(fileDescriptor.inode);
+				const cursor = fileDescriptor.adjustCursor(inode.content);
+				return BigInt(inode.content.byteLength - cursor);
+			},
+			tell: (fileDescriptor): number => {
+				const cursor = fileDescriptor.cursor;
+				if (cursor >= 0) {
+					return cursor;
+				}
+				const inode = getResolvedINode(fileDescriptor.inode);
+				return fileDescriptor.adjustCursor(inode.content);
+			},
+			setSize: (fileDescriptor, _size): void => {
+				const size = BigInts.asNumber(_size);
+				const inode = getResolvedINode(fileDescriptor.inode);
+				const content = inode.content;
+				if (content.byteLength === size) {
+					return;
+				} else if (content.byteLength < size) {
+					const newContent = new Uint8Array(size);
+					newContent.set(content);
+					inode.content = newContent;
+				} else if (content.byteLength > size) {
+					const newContent = new Uint8Array(size);
+					newContent.set(content.subarray(0, size));
+					inode.content = newContent;
+				}
+				return writeContent(inode);
+			},
+			allocate: (fileDescriptor, _offset, _len): void => {
+				const offset = BigInts.asNumber(_offset);
+				const len = BigInts.asNumber(_len);
+
+				const inode = getResolvedINode(fileDescriptor.inode);
+				const content = inode.content;
+				if (offset > content.byteLength) {
+					throw new WasiError(Errno.inval);
+				}
+
+				const newContent: Uint8Array = new Uint8Array(content.byteLength + len);
+				newContent.set(content.subarray(0, offset), 0);
+				newContent.set(content.subarray(offset), offset + len);
+				inode.content = newContent;
+				writeContent(inode);
+
+			},
+			read: (fileDescriptor, bytesToRead): Uint8Array => {
+				const content = getResolvedINode(fileDescriptor.inode).content;
+				return fileDescriptor.read(content, bytesToRead);
+			},
+			pread: (fileDescriptor, offset, bytesToRead): Uint8Array => {
+				const content = getResolvedINode(fileDescriptor.inode).content;
+				const realRead = Math.min(bytesToRead, content.byteLength - offset);
+				return content.subarray(offset, offset + realRead);
+			},
+			write: (fileDescriptor, buffers): number => {
+				const inode = getResolvedINode(fileDescriptor.inode);
+				const [content, bytesWritten] = fileDescriptor.write(inode.content, buffers);
+				inode.content = content;
+				writeContent(inode);
+				return bytesWritten;
+			},
+			pwrite: (fileDescriptor, offset, bytes): size => {
+				const inode = getResolvedINode(fileDescriptor.inode);
+				let content = inode.content;
+				const total = offset + bytes.byteLength;
+				// Make the file bigger
+				if (total > content.byteLength) {
+					const newContent = new Uint8Array(total);
+					newContent.set(content);
+					content = newContent;
+					inode.content = newContent;
+				}
+				content.set(bytes, offset);
+				writeContent(inode);
+				return bytes.length;
+			},
+			sync: (fileDescriptor): void => {
+				const inode = getINode(fileDescriptor.inode);
+				if (!INode.hasContent(inode)) {
+					return;
+				}
+				writeContent(inode);
+			},
+			path_filetype: (fileDescriptor, name): filetype | undefined => {
+				const inode = getINode(fileDescriptor.inode);
+				const fileUri = uriJoin(inode.uri, name);
+				try {
+					const stat = apiClient.workspace.fileSystem.stat(fileUri);
+					return code2Wasi.asFileType(stat.type);
+				} catch {
+					return undefined;
+				}
+			},
+			readdir: (fileDescriptor, buf_ptr, buf_len, cookie, buf_used_ptr): void => {
+				const memory = memoryView();
+				const raw = memoryRaw();
+				const inode = getINode(fileDescriptor.inode);
+
+				// We have a cookie > 0 but no directory entries. So return end  of list
+				// todo@dirkb this is actually specified different. According to the spec if
+				// the used buffer size is less than the provided buffer size then no
+				// additional readdir call should happen. However at least under Rust we
+				// receive another call.
+				//
+				// Also unclear whether we have to include '.' and '..'
+				//
+				// See also https://github.com/WebAssembly/wasi-filesystem/issues/3
+				if (cookie !== 0n && !directoryEntries.has(fileDescriptor.fd)) {
+					memory.setUint32(buf_used_ptr, 0, true);
+					return;
+				}
+				if (cookie === 0n) {
+					const result = apiClient.workspace.fileSystem.readDirectory(inode.uri);
+					directoryEntries.set(fileDescriptor.fd, result);
+				}
+				const entries: DTOs.DirectoryEntries | undefined = directoryEntries.get(fileDescriptor.fd);
+				if (entries === undefined) {
+					throw new WasiError(Errno.badmsg);
+				}
+				let i = Number(cookie);
+				let ptr: ptr = buf_ptr;
+				let spaceLeft = buf_len;
+				for (; i < entries.length && spaceLeft >= Dirent.size; i++) {
+					const entry = entries[i];
+					const filetype: filetype = code2Wasi.asFileType(entry[1]);
+					const name = entry[0];
+					const filePath = paths.join(fileDescriptor.path, name);
+					const fileUri = uriJoin(inode.uri, name);
+					const nameBytes = textEncoder.encode(name);
+					const dirent: dirent = Dirent.create(ptr, memory);
+					dirent.d_next = BigInt(i + 1);
+					dirent.d_ino = fileSystem.resolveINode(filePath, fileUri);
+					dirent.d_type = filetype;
+					dirent.d_namlen = nameBytes.byteLength;
+					spaceLeft -= Dirent.size;
+					const spaceForName = Math.min(spaceLeft, nameBytes.byteLength);
+					(new Uint8Array(raw, ptr + Dirent.size, spaceForName)).set(nameBytes.subarray(0, spaceForName));
+					ptr += Dirent.size + spaceForName;
+					spaceLeft -= spaceForName;
+				}
+				if (i === entries.length) {
+					memory.setUint32(buf_used_ptr, ptr - buf_ptr, true);
+					directoryEntries.delete(fileDescriptor.fd);
+				} else {
+					memory.setUint32(buf_used_ptr, buf_len, true);
+				}
+			},
+			createDirectory: (fileDescriptor: FileDescriptor, name: string): void => {
+				const inode = getINode(fileDescriptor.inode);
+				apiClient.workspace.fileSystem.createDirectory(uriJoin(inode.uri, name));
+			}
+		};
+
+		function getINode(id: bigint): INode {
+			const inode: INode | undefined = inodes.get(id);
+			if (inode === undefined) {
+				throw new WasiError(Errno.badf);
+			}
+			return inode;
 		}
-		return result;
-	}
 
-	export function releaseINode(filePath: string): void {
+		function getResolvedINode(id: bigint): Required<INode> {
+			const inode: INode | undefined = inodes.get(id);
+			if (inode === undefined) {
+				throw new WasiError(Errno.badf);
+			}
+			if (inode.content !== undefined) {
+				inode.content = apiClient.workspace.fileSystem.read(inode.uri);
+			}
+			return inode as Required<INode>;
+		}
 
-	}
+		function writeContent(inode: Required<INode>) {
+			apiClient.workspace.fileSystem.write(inode.uri, inode.content);
+		}
 
-	export function remapINode(oldPath: string, newPath: string): void {
+		function uriJoin(uri: URI, name: string): URI {
+			if (name === '.') {
+				return uri;
+			}
+			return uri.with( { path: RAL().path.join(uri.path, name)} );
+		}
 
+		function doStat(filePath: string, uri: URI, filestat_ptr: ptr): void {
+			const vStat = apiClient.workspace.fileSystem.stat(uri);
+			const fileStat = Filestat.create(filestat_ptr, memoryView());
+			fileStat.dev = DeviceIds.system;
+			fileStat.ino = fileSystem.resolveINode(filePath, uri);
+			fileStat.filetype = code2Wasi.asFileType(vStat.type);
+			fileStat.nlink = 0n;
+			fileStat.size = BigInt(vStat.size);
+			fileStat.atim = BigInt(vStat.mtime);
+			fileStat.ctim = BigInt(vStat.ctime);
+			fileStat.mtim = BigInt(vStat.mtime);
+		}
+
+		return fileSystem;
 	}
 }

@@ -44,3 +44,13 @@ export namespace code2Wasi {
 		}
 	}
 }
+
+export namespace BigInts {
+	const MAX_VALUE_AS_BIGINT = BigInt(Number.MAX_VALUE);
+	export function asNumber(value: bigint): number {
+		if (value > MAX_VALUE_AS_BIGINT) {
+			throw new wasi.WasiError(wasi.Errno.fbig);
+		}
+		return Number(value);
+	}
+}
