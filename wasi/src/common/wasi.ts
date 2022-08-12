@@ -8,24 +8,21 @@
 // We need to clarify how to license them. I was not able to find a license file
 // in the https://github.com/WebAssembly/WASI repository
 
-import RAL from './ral';
-
 import { URI } from 'vscode-uri';
-import { ApiClient, FileSystemError, FileType, RPCError, DTOs } from '@vscode/sync-api-client';
+import { ApiClient, FileSystemError, RPCError } from '@vscode/sync-api-client';
+
+import RAL from './ral';
+const paths = RAL().path;
 
 import { ptr, size, u32 } from './baseTypes';
 import {
 	fd, errno, Errno, lookupflags, oflags, rights, fdflags, dircookie, filetype, Rights,
-	filesize, advise, filedelta, whence, Filestat, Whence, Ciovec, Iovec, Filetype, clockid, timestamp, Clockid,
-	Fdstat, fstflags, Prestat, Dirent, dirent, exitcode, Oflags, Subscription, WasiError, Eventtype, Event, event,
-	Subclockflags, Literal, subscription
+	filesize, advise, filedelta, whence, Filestat, Ciovec, Iovec, Filetype, clockid, timestamp, Clockid,
+	Fdstat, fstflags, Prestat, exitcode, Oflags, Subscription, WasiError, Eventtype, Event, event,
+	Subclockflags, Literal, subscription, Fdflags
 } from './wasiTypes';
-import { code2Wasi } from './converter';
-
-// Same as Unix file descriptors
-export const WASI_STDIN_FD = 0 as const;
-export const WASI_STDOUT_FD = 1 as const;
-export const WASI_STDERR_FD = 2 as const;
+import { BigInts, code2Wasi } from './converter';
+import { DeviceIds, FileDescriptor, FileSystem } from './fileSystem';
 
 export interface Environment {
 	[key: string]: string;
@@ -509,107 +506,6 @@ export type Options = {
 	env?: Environment;
 };
 
-namespace DeviceIds {
-	const deviceIds: Map<string, bigint> = new Map();
-	let deviceIdCounter: bigint = 1n;
-
-	export const system = deviceIdCounter++;
-
-	export function get(uri: URI): bigint {
-		const scheme = uri.scheme;
-		let result = deviceIds.get(scheme);
-		if (result === undefined) {
-			result = deviceIdCounter++;
-			deviceIds.set(scheme, result);
-		}
-		return result;
-	}
-}
-
-namespace FileHandles {
-	let fileHandleCounter: number = 3;
-
-	export function next(): number {
-	// According to the spec these handles shouldn't monotonically increase.
-	// But since these are not real file handles I keep it that way.
-		return fileHandleCounter++;
-	}
-}
-
-namespace BigInts {
-	const MAX_VALUE_AS_BIGINT = BigInt(Number.MAX_VALUE);
-	export function asNumber(value: bigint): number {
-		if (value > MAX_VALUE_AS_BIGINT) {
-			throw new WasiError(Errno.fbig);
-		}
-		return Number(value);
-	}
-}
-
-class FileHandle {
-	/**
-	 * The WASI file handle
-	 */
-	public readonly fd: fd;
-
-	/**
-	 * The file type
-	 */
-	public readonly fileType: filetype;
-
-	/**
-	 * The path name.
-	 */
-	public readonly path: string;
-
-	/**
-	 * The rights associated with the file descriptor
-	 */
-	public readonly  rights: {
-		/**
-		 * The base rights.
-		 */
-		readonly base: rights;
-
-		/**
-		 * The inheriting rights
-		 */
-		readonly inheriting: rights;
-	};
-
-	/**
-	 * The corresponding VS Code URI
-	 */
-	public readonly uri: URI;
-
-	/**
-	 * Whether this is a pre-opened directory.
-	 */
-	public readonly preOpened: boolean;
-
-	constructor(fd: fd, fileType: filetype, path: string, rights: FileHandle['rights'], uri: URI, preOpened: boolean = false) {
-		this.fd = fd;
-		this.fileType = fileType;
-		this.path = path;
-		this.rights = rights;
-		this.uri = uri;
-		this.preOpened = preOpened;
-	}
-
-	public assertBaseRight(right: rights): void {
-		if ((this.rights.base & right) === 0n) {
-			throw new WasiError(Errno.perm);
-		}
-	}
-
-	public assertIsDirectory(): void {
-		if (this.fileType !== Filetype.directory) {
-			throw new WasiError(Errno.notdir);
-		}
-	}
-}
-
-
 interface IOComponent {
 }
 
@@ -623,7 +519,7 @@ class Stdin implements IOComponent {
 	}
 
 	public get fd() {
-		return WASI_STDIN_FD;
+		return 0;
 	}
 
 	/**
@@ -663,1345 +559,834 @@ class Stdin implements IOComponent {
 	}
 }
 
-class File implements IOComponent {
-
-	private readonly apiClient: ApiClient;
-	private readonly uri: URI;
-	private _content: Uint8Array | undefined;
-
-	private _cursor: number;
-	private _fdFlags: fdflags;
-
-	constructor(apiClient: ApiClient, uri: URI, content?: Uint8Array) {
-		this.apiClient = apiClient;
-		this.uri = uri;
-		if (content instanceof Uint8Array) {
-			this._content = content;
-		}
-		this._cursor = 0;
-		this._fdFlags = 0;
-	}
-
-	private get content(): Uint8Array {
-		if (this._content !== undefined) {
-			return this._content;
-		}
-		this._content = this.apiClient.workspace.fileSystem.read(this.uri);
-		return this._content;
-	}
-
-	public get cursor(): number {
-		return this._cursor;
-	}
-
-	public bytesAvailable(): filesize {
-		return BigInt(this.content.byteLength - this.cursor);
-	}
-
-	public alloc(_offset: filesize, _len: filesize): void {
-		const offset = BigInts.asNumber(_offset);
-		const len = BigInts.asNumber(_len);
-		const content = this.content;
-
-		if (offset > content.byteLength) {
-			throw new WasiError(Errno.inval);
-		}
-
-		const newContent: Uint8Array = new Uint8Array(content.byteLength + len);
-		newContent.set(content.subarray(0, offset), 0);
-		newContent.set(content.subarray(offset), offset + len);
-		this._content = newContent;
-
-		return this.doWrite();
-	}
-
-	public pread(offset: number, bytesToRead: number): Uint8Array {
-		const content = this.content;
-		const realRead = Math.min(bytesToRead, content.byteLength - offset);
-		return content.subarray(offset, offset + realRead);
-	}
-
-	public pwrite(offset: number, bytes: Uint8Array): size{
-		let content = this.content;
-		const total = offset + bytes.byteLength;
-		// Make the file bigger
-		if (total > content.byteLength) {
-			const newContent = new Uint8Array(total);
-			newContent.set(content);
-			this._content = newContent;
-			content = newContent;
-		}
-		content.set(bytes, offset);
-		this.doWrite();
-		return bytes.length;
-	}
-
-	public seek(offset: number, whence: whence): errno {
-		switch(whence) {
-			case Whence.set:
-				this._cursor = offset;
-				break;
-			case Whence.cur:
-				this._cursor = this._cursor + offset;
-				break;
-			case Whence.end:
-				this._cursor = this.content.byteLength + offset;
-				break;
-		}
-		return Errno.success;
-	}
-
-	public set fdflags(value: fdflags) {
-		this._fdFlags = value;
-	}
-
-	public get fdflags(): fdflags {
-		return this._fdFlags;
-	}
-
-	public setSize(_size: filesize): void {
-		const size = BigInts.asNumber(_size);
-		const content = this.content;
-		if (content.byteLength === size) {
-			return;
-		} else if (content.byteLength < size) {
-			const newContent = new Uint8Array(size);
-			newContent.set(this.content);
-			this._content = newContent;
-		} else if (content.byteLength > size) {
-			const newContent = new Uint8Array(size);
-			newContent.set(this.content.subarray(0, size));
-			this._content = newContent;
-		}
-		return this.doWrite();
-	}
-
-	public sync(): void {
-		return this.doWrite();
-	}
-
-	public tell(): number {
-		return this._cursor;
-	}
-
-	public read(bytesToRead: number): Uint8Array {
-		const content = this.content;
-		const realRead = Math.min(bytesToRead, content.byteLength - this._cursor);
-		const result = content.subarray(this._cursor, this._cursor + realRead);
-		this._cursor = this._cursor + realRead;
-		return result;
-	}
-
-	public write(buffers: Uint8Array[]): size {
-		let content = this.content;
-
-		let bytesToWrite: size = 0;
-		for (const bytes of buffers) {
-			bytesToWrite += bytes.byteLength;
-		}
-
-		// Do we need to increase the buffer
-		if (this._cursor + bytesToWrite > content.byteLength) {
-			const newContent = new Uint8Array(this._cursor + bytesToWrite);
-			newContent.set(content);
-			this._content = newContent;
-			content = newContent;
-		}
-
-		for (const bytes of buffers) {
-			content.set(bytes, this._cursor);
-			this._cursor += bytes.length;
-		}
-
-		return bytesToWrite;
-	}
-
-	private doWrite(): void {
-		if (this._content === undefined) {
-			return;
-		}
-		this.apiClient.workspace.fileSystem.write(this.uri, this._content);
-	}
-}
-
 export namespace WASI {
 
-	let $instance: WebAssembly.$Instance;
-
-	let $encoder: RAL.TextEncoder;
-	let $decoder: RAL.TextDecoder;
-
-	let $apiClient: ApiClient;
-	let $exitHandler: (rval: number) => void;
-	let $options: Options;
-
-	namespace Files {
-		const $files: Map<string, FileInfo> = new Map();
-
-		type FileInfo = {
-			inode: bigint;
-		} | {
-			inode: bigint;
-			file: File;
-			refs: number;
-		};
-
-		namespace FileInfo {
-			export function hasFile(fileInfo: FileInfo): fileInfo is { inode: bigint; file: File; refs: number } {
-				const candidate = fileInfo as { inode: bigint; file?: File; refs?: number };
-				return candidate.file !== undefined && candidate.refs !== undefined;
-			}
-		}
-
-		let inodeCounter: bigint = 1n;
-
-		export const stdinINode = inodeCounter++;
-		export const stdoutINode = inodeCounter++;
-		export const stderrINode = inodeCounter++;
-
-		export function getINode(uri: URI): bigint {
-			const key = uri.toString();
-			let fileInfo = $files.get(key);
-			if (fileInfo !== undefined) {
-				return fileInfo.inode;
-			}
-			fileInfo = { inode: inodeCounter++ };
-			$files.set(key, fileInfo);
-			return fileInfo.inode;
-		}
-
-		export function hasFile(fileHandle: FileHandle): boolean {
-			const key = fileHandle.uri.toString();
-			let fileInfo = $files.get(key);
-			if (fileInfo === undefined) {
-				return false;
-			}
-			return FileInfo.hasFile(fileInfo);
-		}
-
-		export function peekFile(fileHandle: FileHandle): File | undefined {
-			const key = fileHandle.uri.toString();
-			let fileInfo = $files.get(key);
-			if (fileInfo === undefined) {
-				return undefined;
-			}
-			return FileInfo.hasFile(fileInfo) ? fileInfo.file : undefined;
-		}
-
-		export function getOrCreateFile(fileHandle: FileHandle, content?: Uint8Array): File {
-			const key = fileHandle.uri.toString();
-			let fileInfo = $files.get(key);
-			if (fileInfo === undefined) {
-				fileInfo = { inode: inodeCounter++ };
-				$files.set(key, fileInfo);
-			}
-			if (FileInfo.hasFile(fileInfo)) {
-				fileInfo.refs++;
-				return fileInfo.file;
-			}
-			const fullInfo: { inode: bigint; file?: File; refs?: number } = fileInfo;
-			fullInfo.file = new File($apiClient, fileHandle.uri, content);
-			fullInfo.refs = 1;
-			return fullInfo.file;
-		}
-
-		export function releaseFile(fileHandle: FileHandle): void {
-			const key = fileHandle.uri.toString();
-			const fileInfo = $files.get(key);
-			if (fileInfo === undefined) {
-				throw new WasiError(Errno.badf);
-			}
-			if (!FileInfo.hasFile(fileInfo)) {
-				return;
-			}
-			fileInfo.refs--;
-			if (fileInfo.refs === 0) {
-				// We can't delete the file info from the map since we need
-				// to keep the inode stable.
-				const fullInfo: { inode: bigint; file?: File; refs?: number } = fileInfo;
-				fullInfo.file = undefined;
-				fullInfo.refs = undefined;
-			}
-		}
-	}
-
-
-	let $stdin: Stdin;
-
-	const $fileHandles: Map<fd, FileHandle> = new Map();
-	const $directoryEntries: Map<fd, DTOs.DirectoryEntries> = new Map();
-
 	export function create(_name: string, apiClient: ApiClient, exitHandler: (rval: number) => void, options: Options): WASI {
-		$apiClient = apiClient;
+		let instance: WebAssembly.$Instance;
 
-		$encoder = RAL().TextEncoder.create(options?.encoding);
-		$decoder = RAL().TextDecoder.create(options?.encoding);
+		const thread_start = RAL().clock.realtime();
+		const fileDescriptors: Map<fd, FileDescriptor> = new Map();
+		const encoder: RAL.TextEncoder = RAL().TextEncoder.create(options?.encoding);
+		const decoder: RAL.TextDecoder = RAL().TextDecoder.create(options?.encoding);
+		const stdin = new Stdin(apiClient);
+		const fileSystem = FileSystem.create(apiClient, { memoryView: memoryView, memoryRaw: memoryRaw }, encoder);
+		fileDescriptors.set(fileSystem.stdin.fd, fileSystem.stdin);
+		fileDescriptors.set(fileSystem.stdout.fd, fileSystem.stdout);
+		fileDescriptors.set(fileSystem.stderr.fd, fileSystem.stderr);
 
-		$exitHandler = exitHandler;
-		$options = options;
-
-		$stdin = new Stdin($apiClient);
-
-		for (const entry of $options.mapDir) {
-			const fileHandle = new FileHandle(
-				FileHandles.next(),
-				Filetype.directory, entry.name,
-				{ base: Rights.All, inheriting: Rights.All },
-				entry.uri,
-				true
+		for (const entry of options.mapDir) {
+			const fileDescriptor = fileSystem.createPreOpenedFileDescriptor(
+				entry.name, entry.uri, Filetype.directory,
+				{ base: Rights.All, inheriting: Rights.All }, Fdflags.sync
 			);
-			$fileHandles.set(fileHandle.fd, fileHandle);
+			fileDescriptors.set(fileDescriptor.fd, fileDescriptor);
 		}
 
-		return {
-			initialize: initialize,
-			args_sizes_get: args_sizes_get,
-			args_get: args_get,
-			environ_sizes_get: environ_sizes_get,
-			environ_get: environ_get,
-			clock_res_get: clock_res_get,
-			clock_time_get: clock_time_get,
-			fd_advise: fd_advise,
-			fd_allocate: fd_allocate,
-			fd_close: fd_close,
-			fd_datasync: fd_datasync,
-			fd_fdstat_get: fd_fdstat_get,
-			fd_fdstat_set_flags: fd_fdstat_set_flags,
-			fd_filestat_get: fd_filestat_get,
-			fd_filestat_set_size: fd_filestat_set_size,
-			fd_filestat_set_times: fd_filestat_set_times,
-			fd_pread: fd_pread,
-			fd_prestat_get: fd_prestat_get,
-			fd_prestat_dir_name: fd_prestat_dir_name,
-			fd_pwrite: fd_pwrite,
-			fd_read: fd_read,
-			fd_readdir: fd_readdir,
-			fd_seek: fd_seek,
-			fd_sync: fd_sync,
-			fd_tell: fd_tell,
-			fd_write: fd_write,
-			path_create_directory: path_create_directory,
-			path_filestat_get: path_filestat_get,
-			path_filestat_set_times: path_filestat_set_times,
-			path_link: path_link,
-			path_open: path_open,
-			path_readlink: path_readlink,
-			path_remove_directory: path_remove_directory,
-			path_rename: path_rename,
-			path_symlink: path_symlink,
-			path_unlink_file: path_unlink_file,
-			poll_oneoff: poll_oneoff,
-			proc_exit: proc_exit,
-			sched_yield: sched_yield,
-			random_get: random_get,
-			sock_accept: sock_accept
-		};
-	}
-
-	function initialize(instance: WebAssembly.Instance): void {
-		$instance = instance as WebAssembly.$Instance;
-	}
-
-	function args_sizes_get(argvCount_ptr: ptr, argvBufSize_ptr: ptr): errno {
-		const memory = memoryView();
-		let count = 0;
-		let size = 0;
-		for (const arg of $options.argv ?? []) {
-			const value = `${arg}\0`;
-			size += $encoder.encode(value).byteLength;
-			count++;
-		}
-		memory.setUint32(argvCount_ptr, count, true);
-		memory.setUint32(argvBufSize_ptr, size, true);
-		return Errno.success;
-	}
-
-	function args_get(argv_ptr: ptr, argvBuf_ptr: ptr): errno {
-		const memory = memoryView();
-		const memoryBytes = new Uint8Array(memoryRaw());
-		let entryOffset = argv_ptr;
-		let valueOffset = argvBuf_ptr;
-		for (const arg of $options.argv ?? []) {
-			const data = $encoder.encode(`${arg}\0`);
-			memory.setUint32(entryOffset, valueOffset, true);
-			entryOffset += 4;
-			memoryBytes.set(data, valueOffset);
-			valueOffset += data.byteLength;
-		}
-		return Errno.success;
-	}
-
-	function clock_res_get(id: clockid, timestamp_ptr: ptr): errno {
-		const memory = memoryView();
-		switch (id) {
-			case Clockid.realtime:
-				memory.setBigUint64(timestamp_ptr, 1n, true);
-				return Errno.success;
-			case Clockid.monotonic:
-				memory.setBigUint64(timestamp_ptr, 1n, true);
-				return Errno.success;
-			default:
-				memory.setBigUint64(timestamp_ptr, 0n, true);
-				return Errno.inval;
-		}
-	}
-
-	const $thread_start = RAL().clock.realtime();
-	function clock_time_get(id: clockid, precision: timestamp, timestamp_ptr: ptr): errno {
-		const time: bigint = now(id, precision);
-		const memory = memoryView();
-		memory.setBigUint64(timestamp_ptr, time, true);
-		return Errno.success;
-	}
-
-	function now(id: clockid, _precision: timestamp): bigint {
-		switch(id) {
-			case Clockid.realtime:
-				return RAL().clock.realtime();
-			case Clockid.monotonic:
-				return RAL().clock.monotonic();
-			case Clockid.process_cputime_id:
-			case Clockid.thread_cputime_id:
-				return RAL().clock.monotonic() - $thread_start;
-			default:
-				throw new WasiError(Errno.inval);
-		}
-	}
-
-	function environ_sizes_get(environCount_ptr: ptr, environBufSize_ptr: ptr): errno {
-		const memory = memoryView();
-		let count = 0;
-		let size = 0;
-		for (const entry of Object.entries($options.env ?? {})) {
-			const value = `${entry[0]}=${entry[1]}\0`;
-			size += $encoder.encode(value).byteLength;
-			count++;
-		}
-		memory.setUint32(environCount_ptr, count, true);
-		memory.setUint32(environBufSize_ptr, size, true);
-		return Errno.success;
-	}
-
-	function environ_get(environ_ptr: ptr, environBuf_ptr: ptr): errno {
-		const memory = memoryView();
-		const memoryBytes = new Uint8Array(memoryRaw());
-		let entryOffset = environ_ptr;
-		let valueOffset = environBuf_ptr;
-		for (const entry of Object.entries($options.env ?? {})) {
-			const data = $encoder.encode(`${entry[0]}=${entry[1]}\0`);
-			memory.setUint32(entryOffset, valueOffset, true);
-			entryOffset += 4;
-			memoryBytes.set(data, valueOffset);
-			valueOffset += data.byteLength;
-		}
-		return Errno.success;
-	}
-
-	function fd_advise(fd: fd, _offset: filesize, _length: filesize, _advise: advise): errno {
-		try {
-			const fileHandle = getFileHandle(fd);
-			fileHandle.assertBaseRight(Rights.fd_advise);
-
-			// We don't have advisory in VS Code. So treat it as successful.
-			return Errno.success;
-		} catch (error) {
-			return handleError(error);
-		}
-	}
-
-	function fd_allocate(fd: fd, offset: filesize, len: filesize): errno {
-		try {
-			const fileHandle = getFileHandle(fd);
-			fileHandle.assertBaseRight(Rights.fd_allocate);
-			const file = Files.getOrCreateFile(fileHandle);
-			file.alloc(offset, len);
-			return Errno.success;
-		} catch (error) {
-			return handleError(error);
-		}
-	}
-
-	function fd_close(fd: fd): errno {
-		try {
-			const fileHandle = getFileHandle(fd);
-			// Release the file.
-			Files.releaseFile(fileHandle);
-			$fileHandles.delete(fileHandle.fd);
-			return Errno.success;
-		} catch (error) {
-			return handleError(error);
-		}
-	}
-
-	function fd_datasync(fd: fd): errno {
-		try {
-			const fileHandle = getFileHandle(fd);
-			fileHandle.assertBaseRight(Rights.fd_datasync);
-
-			const file = Files.peekFile(fileHandle);
-			if (file === undefined) {
-				return Errno.success;
-			}
-			file.sync();
-			return Errno.success;
-		} catch (error) {
-			return handleError(error);
-		}
-	}
-
-	function fd_fdstat_get(fd: fd, fdstat_ptr: ptr): errno {
-		// This is not available under VS Code.
-		try {
-			if (fd === WASI_STDIN_FD || fd === WASI_STDOUT_FD || fd === WASI_STDERR_FD) {
+		const wasi: WASI = {
+			initialize: (inst: WebAssembly.Instance): void => {
+				instance = inst as WebAssembly.$Instance;
+			},
+			args_sizes_get: (argvCount_ptr: ptr, argvBufSize_ptr: ptr): errno => {
 				const memory = memoryView();
-				const fdstat = Fdstat.create(fdstat_ptr, memory);
-				fdstat.fs_filetype = Filetype.character_device;
-				fdstat.fs_flags = 0;
-				switch (fd) {
-					case WASI_STDIN_FD:
-						fdstat.fs_rights_base = Rights.StdinBase;
-						fdstat.fs_rights_inheriting = Rights.StdinInheriting;
-						break;
-					case WASI_STDOUT_FD:
-					case WASI_STDERR_FD:
-						fdstat.fs_rights_base = Rights.StdoutBase;
-						fdstat.fs_rights_inheriting = Rights.StdoutInheriting;
-						break;
+				let count = 0;
+				let size = 0;
+				for (const arg of options.argv ?? []) {
+					const value = `${arg}\0`;
+					size += encoder.encode(value).byteLength;
+					count++;
 				}
+				memory.setUint32(argvCount_ptr, count, true);
+				memory.setUint32(argvBufSize_ptr, size, true);
 				return Errno.success;
-			}
-			const fileHandle = getFileHandle(fd);
-			const uri = fileHandle.uri;
-			const vStat = $apiClient.workspace.fileSystem.stat(uri);
-			if (typeof vStat === 'number') {
-				return code2Wasi.asErrno(vStat);
-			}
-			const memory = memoryView();
-			const fdstat = Fdstat.create(fdstat_ptr, memory);
-			fdstat.fs_filetype = code2Wasi.asFileType(vStat.type);
-			// No flags. We need to see if some of the tools we want to run
-			// need some and we need to simulate them using local storage.
-			fdstat.fs_flags = 0;
-			if (vStat.type === FileType.File) {
-				fdstat.fs_rights_base = Rights.FileBase;
-				fdstat.fs_rights_inheriting = Rights.FileInheriting;
-			} else if (vStat.type === FileType.Directory) {
-				fdstat.fs_rights_base = Rights.DirectoryBase;
-				fdstat.fs_rights_inheriting = Rights.DirectoryInheriting;
-			} else {
-				// Symbolic link and unknown
-				fdstat.fs_rights_base = 0n;
-				fdstat.fs_rights_inheriting = 0n;
-			}
-			return Errno.success;
-		} catch (error) {
-			return handleError(error);
-		}
-	}
-
-	function fd_fdstat_set_flags(fd: fd, fdflags: fdflags): errno {
-		try {
-			const fileHandle = getFileHandle(fd);
-			fileHandle.assertBaseRight(Rights.fd_fdstat_set_flags);
-			const file = Files.getOrCreateFile(fileHandle);
-			file.fdflags = fdflags;
-			return Errno.success;
-		} catch (error) {
-			return handleError(error);
-		}
-	}
-
-	function fd_filestat_get(fd: fd, filestat_ptr: ptr): errno {
-		try {
-			const memory = memoryView();
-			if (fd === WASI_STDIN_FD || fd === WASI_STDOUT_FD || fd === WASI_STDERR_FD) {
-				const fileStat = Filestat.create(filestat_ptr, memory);
-				fileStat.dev = DeviceIds.system;
-				switch(fd) {
-					case WASI_STDIN_FD:
-						fileStat.ino = Files.stdinINode;
-						break;
-					case WASI_STDOUT_FD:
-						fileStat.ino = Files.stdoutINode;
-						break;
-					case WASI_STDERR_FD:
-						fileStat.ino = Files.stderrINode;
-						break;
-				}
-				fileStat.filetype = Filetype.character_device;
-				fileStat.nlink = 0n;
-				fileStat.size = 101n;
-				const now = BigInt(Date.now());
-				fileStat.atim = now;
-				fileStat.ctim = now;
-				fileStat.mtim = now;
-				return Errno.success;
-			}
-			const fileHandle = getFileHandle(fd);
-			fileHandle.assertBaseRight(Rights.fd_filestat_get);
-			const uri = fileHandle.uri;
-			const vStat = $apiClient.workspace.fileSystem.stat(uri);
-			if (typeof vStat === 'number') {
-				return code2Wasi.asErrno(vStat);
-			}
-			const fileStat = Filestat.create(filestat_ptr, memory);
-			fileStat.dev = DeviceIds.get(uri);
-			fileStat.ino = Files.getINode(uri);
-			fileStat.filetype = code2Wasi.asFileType(vStat.type);
-			fileStat.nlink = 0n;
-			fileStat.size = BigInt(vStat.size);
-			fileStat.atim = BigInt(vStat.mtime);
-			fileStat.ctim = BigInt(vStat.ctime);
-			fileStat.mtim = BigInt(vStat.mtime);
-			return Errno.success;
-		} catch (error) {
-			return handleError(error, Errno.perm);
-		}
-	}
-
-	function fd_filestat_set_size(fd: fd, size: filesize): errno {
-		try {
-			const fileHandle = getFileHandle(fd);
-			fileHandle.assertBaseRight(Rights.fd_filestat_set_size);
-			const file = Files.getOrCreateFile(fileHandle);
-			file.setSize(size);
-			return Errno.success;
-		} catch (error) {
-			return handleError(error);
-		}
-	}
-
-	function fd_filestat_set_times(fd: fd, _atim: timestamp, _mtim: timestamp, _fst_flags: fstflags): errno {
-		try {
-			const fileHandle = getFileHandle(fd);
-			fileHandle.assertBaseRight(Rights.fd_filestat_set_times);
-			// todo@dirkb
-			// For new we do nothing. We could cache the timestamp in memory
-			// But we would loose them during reload. We could also store them
-			// in local storage
-			return Errno.success;
-		} catch (error) {
-			return handleError(error);
-		}
-	}
-
-	function fd_pread(fd: fd, iovs_ptr: ptr, iovs_len: u32, offset: filesize, bytesRead_ptr: ptr): errno {
-		try {
-			const fileHandle = getFileHandle(fd);
-			fileHandle.assertBaseRight(Rights.fd_read);
-			const file = Files.getOrCreateFile(fileHandle);
-			const buffers = read_iovs(iovs_ptr, iovs_len);
-			let bytesRead = 0;
-			for (const buffer of buffers) {
-				const result = file.pread(BigInts.asNumber(offset), buffer.byteLength);
-				bytesRead = bytesRead + result.byteLength;
-				buffer.set(result);
-			}
-			memoryView().setUint32(bytesRead_ptr, bytesRead, true);
-			return Errno.success;
-		} catch (error) {
-			return handleError(error);
-		}
-	}
-
-	function fd_prestat_get(fd: fd, bufPtr: ptr): errno {
-		try {
-			const fileHandleInfo = $fileHandles.get(fd);
-			if (fileHandleInfo === undefined || !fileHandleInfo.preOpened) {
-				return Errno.badf;
-			}
-			const memory = memoryView();
-			const prestat = Prestat.create(bufPtr, memory);
-			prestat.len = $encoder.encode(fileHandleInfo.path).byteLength;
-			return Errno.success;
-		} catch(error) {
-			return handleError(error);
-		}
-	}
-
-	function fd_prestat_dir_name(fd: fd, pathPtr: ptr, pathLen: size): errno {
-		try {
-			const fileHandle = getFileHandle(fd);
-			const memory = new Uint8Array(memoryRaw(), pathPtr);
-			const bytes = $encoder.encode(fileHandle.path);
-			if (bytes.byteLength !== pathLen) {
-				Errno.badmsg;
-			}
-			memory.set(bytes);
-			return Errno.success;
-		} catch (error) {
-			return handleError(error);
-		}
-	}
-
-	function fd_pwrite(fd: fd, ciovs_ptr: ptr, ciovs_len: u32, offset: filesize, bytesWritten_ptr: ptr): errno {
-		try {
-			const fileHandle = getFileHandle(fd);
-			fileHandle.assertBaseRight(Rights.fd_write);
-			const file = Files.getOrCreateFile(fileHandle);
-			const buffers = read_ciovs(ciovs_ptr, ciovs_len);
-			let bytesWritten = 0;
-			for (const buffer of buffers) {
-				bytesWritten += file.pwrite(BigInts.asNumber(offset), buffer);
-			}
-			memoryView().setUint32(bytesWritten_ptr, bytesWritten, true);
-			return Errno.success;
-		} catch (error) {
-			return handleError(error);
-		}
-	}
-
-	function fd_read(fd: fd, iovs_ptr: ptr, iovs_len: u32, bytesRead_ptr: ptr): errno {
-		try {
-			const memory = memoryView();
-			if (fd === WASI_STDIN_FD) {
-				let bytesRead = 0;
-				const buffers = read_iovs(iovs_ptr, iovs_len);
-				bytesRead += $stdin.read(buffers);
-				memory.setUint32(bytesRead_ptr, bytesRead, true);
-				return Errno.success;
-			}
-			const fileHandle = getFileHandle(fd);
-			fileHandle.assertBaseRight(Rights.fd_read);
-			let file = Files.peekFile(fileHandle);
-			if (file === undefined) {
-				const content = $apiClient.workspace.fileSystem.read(fileHandle.uri);
-				if (typeof content === 'number') {
-					return code2Wasi.asErrno(content);
-				}
-				file = Files.getOrCreateFile(fileHandle, content);
-			}
-			const buffers = read_iovs(iovs_ptr, iovs_len);
-			let bytesRead = 0;
-			for (const buffer of buffers) {
-				const result = file.read(buffer.byteLength);
-				bytesRead += result.byteLength;
-				buffer.set(result);
-			}
-			memory.setUint32(bytesRead_ptr, bytesRead, true);
-			return Errno.success;
-		} catch (error) {
-			return handleError(error);
-		}
-	}
-
-	function fd_readdir(fd: fd, buf_ptr: ptr, buf_len: size, cookie: dircookie, buf_used_ptr: ptr): errno {
-		try {
-			const fileHandle = getFileHandle(fd);
-			fileHandle.assertBaseRight(Rights.fd_readdir);
-			if (fileHandle.fileType !== Filetype.directory) {
-				return Errno.notdir;
-			}
-			const memory = memoryView();
-			const raw = memoryRaw();
-			// We have a cookie > 0 but no directory entries. So return end  of list
-			// todo@dirkb this is actually specified different. According to the spec if
-			// the used buffer size is less than the provided buffer size then no
-			// additional readdir call should happen. However at least under Rust we
-			// receive another call.
-			//
-			// Also unclear whether we have to include '.' and '..'
-			//
-			// See also https://github.com/WebAssembly/wasi-filesystem/issues/3
-			if (cookie !== 0n && !$directoryEntries.has(fileHandle.fd)) {
-				memory.setUint32(buf_used_ptr, 0, true);
-				return Errno.success;
-			}
-			if (cookie === 0n) {
-				const result = $apiClient.workspace.fileSystem.readDirectory(fileHandle.uri);
-				if (typeof result === 'number') {
-					return code2Wasi.asErrno(result);
-				}
-				$directoryEntries.set(fileHandle.fd, result);
-			}
-			const entries: DTOs.DirectoryEntries | undefined = $directoryEntries.get(fd);
-			if (entries === undefined) {
-				return Errno.badmsg;
-			}
-			let i = Number(cookie);
-			let ptr: ptr = buf_ptr;
-			let spaceLeft = buf_len;
-			for (; i < entries.length && spaceLeft >= Dirent.size; i++) {
-				const entry = entries[i];
-				const filetype: filetype = code2Wasi.asFileType(entry[1]);
-				const name = entry[0];
-				const uri = getRealUri(fileHandle, name);
-				const nameBytes = $encoder.encode(name);
-				const dirent: dirent = Dirent.create(ptr, memory);
-				dirent.d_next = BigInt(i + 1);
-				dirent.d_ino = Files.getINode(uri);
-				dirent.d_type = filetype;
-				dirent.d_namlen = nameBytes.byteLength;
-				spaceLeft -= Dirent.size;
-				const spaceForName = Math.min(spaceLeft, nameBytes.byteLength);
-				(new Uint8Array(raw, ptr + Dirent.size, spaceForName)).set(nameBytes.subarray(0, spaceForName));
-				ptr += Dirent.size + spaceForName;
-				spaceLeft -= spaceForName;
-			}
-			if (i === entries.length) {
-				memory.setUint32(buf_used_ptr, ptr - buf_ptr, true);
-				$directoryEntries.delete(fileHandle.fd);
-			} else {
-				memory.setUint32(buf_used_ptr, buf_len, true);
-			}
-			return Errno.success;
-		} catch (error) {
-			return handleError(error);
-		}
-	}
-
-	function fd_seek(fd: fd, _offset: filedelta, whence: whence, new_offset_ptr: ptr): errno {
-		try {
-			if (fd === WASI_STDIN_FD || fd === WASI_STDOUT_FD || fd === WASI_STDERR_FD) {
-				return Errno.success;
-			}
-			const offset = Number(_offset);
-			const fileHandle = getFileHandle(fd);
-			fileHandle.assertBaseRight(Rights.fd_seek);
-			const file = Files.getOrCreateFile(fileHandle);
-			const result = file.seek(offset, whence);
-			if (result !== Errno.success) {
-				return result;
-			}
-			memoryView().setBigUint64(new_offset_ptr, BigInt(file.cursor), true);
-			return Errno.success;
-		} catch (error) {
-			return handleError(error);
-		}
-	}
-
-	function fd_sync(fd: fd): errno {
-		try {
-			const fileHandle = getFileHandle(fd);
-			fileHandle.assertBaseRight(Rights.fd_sync);
-			const file = Files.peekFile(fileHandle);
-			if (file === undefined) {
-				return Errno.success;
-			}
-			file.sync();
-			return Errno.success;
-		} catch (error) {
-			return handleError(error);
-		}
-	}
-
-	function fd_tell(fd: fd, offset_ptr: ptr): errno {
-		try {
-			const fileHandle = getFileHandle(fd);
-			fileHandle.assertBaseRight(Rights.fd_tell);
-			const file = Files.peekFile(fileHandle);
-			const offset = file === undefined ? 0 : file.tell();
-			const memory = memoryView();
-			memory.setBigUint64(offset_ptr, BigInt(offset), true);
-			return Errno.success;
-		} catch (error) {
-			return handleError(error);
-		}
-	}
-
-	function fd_write(fd: fd, ciovs_ptr: ptr, ciovs_len: u32, bytesWritten_ptr: ptr): errno {
-		try {
-			if (fd === WASI_STDOUT_FD || fd === WASI_STDERR_FD) {
-				let written = 0;
-				const buffers = read_ciovs(ciovs_ptr, ciovs_len);
-				for (const buffer of buffers) {
-					$apiClient.terminal.write(buffer);
-					written += buffer.length;
-				}
+			},
+			args_get: (argv_ptr: ptr, argvBuf_ptr: ptr): errno => {
 				const memory = memoryView();
-				memory.setUint32(bytesWritten_ptr, written, true);
-				return Errno.success;
-			}
-			const fileHandle = getFileHandle(fd);
-			fileHandle.assertBaseRight(Rights.fd_write);
-			const file = Files.getOrCreateFile(fileHandle);
-			const buffers = read_ciovs(ciovs_ptr, ciovs_len);
-			const bytesWritten: size = file.write(buffers);
-			const memory = memoryView();
-			memory.setUint32(bytesWritten_ptr, bytesWritten, true);
-			return Errno.success;
-		} catch (error) {
-			return handleError(error);
-		}
-	}
-
-	function path_open(fd: fd, _dirflags: lookupflags, path: ptr, pathLen: size, oflags: oflags, fs_rights_base: rights, fs_rights_inheriting: rights, _fdflags: fdflags, fd_ptr: ptr): errno {
-		try {
-			const parentHandle = getFileHandle(fd);
-			parentHandle.assertBaseRight(Rights.path_open);
-
-			const memory = memoryView();
-			const name = $decoder.decode(new Uint8Array(memoryRaw(), path, pathLen));
-			const realUri = getRealUri(parentHandle, name);
-			const stat = $apiClient.workspace.fileSystem.stat(realUri);
-			const entryExists = typeof stat !== 'number';
-			if (entryExists) {
-				if (Oflags.exclOn(oflags)) {
-					return Errno.exist;
-				} else if (Oflags.directoryOn(oflags) && stat.type !== FileType.Directory) {
-					return Errno.notdir;
+				const memoryBytes = new Uint8Array(memoryRaw());
+				let entryOffset = argv_ptr;
+				let valueOffset = argvBuf_ptr;
+				for (const arg of options.argv ?? []) {
+					const data = encoder.encode(`${arg}\0`);
+					memory.setUint32(entryOffset, valueOffset, true);
+					entryOffset += 4;
+					memoryBytes.set(data, valueOffset);
+					valueOffset += data.byteLength;
 				}
-			} else {
-				// Entry does not exist;
-				if (Oflags.creatOff(oflags)) {
+				return Errno.success;
+			},
+			clock_res_get: (id: clockid, timestamp_ptr: ptr): errno => {
+				const memory = memoryView();
+				switch (id) {
+					case Clockid.realtime:
+						memory.setBigUint64(timestamp_ptr, 1n, true);
+						return Errno.success;
+					case Clockid.monotonic:
+						memory.setBigUint64(timestamp_ptr, 1n, true);
+						return Errno.success;
+					default:
+						memory.setBigUint64(timestamp_ptr, 0n, true);
+						return Errno.inval;
+				}
+			},
+			clock_time_get: (id: clockid, precision: timestamp, timestamp_ptr: ptr): errno => {
+				const time: bigint = now(id, precision);
+				const memory = memoryView();
+				memory.setBigUint64(timestamp_ptr, time, true);
+				return Errno.success;
+			},
+			environ_sizes_get: (environCount_ptr: ptr, environBufSize_ptr: ptr): errno => {
+				const memory = memoryView();
+				let count = 0;
+				let size = 0;
+				for (const entry of Object.entries(options.env ?? {})) {
+					const value = `${entry[0]}=${entry[1]}\0`;
+					size += encoder.encode(value).byteLength;
+					count++;
+				}
+				memory.setUint32(environCount_ptr, count, true);
+				memory.setUint32(environBufSize_ptr, size, true);
+				return Errno.success;
+			},
+			environ_get: (environ_ptr: ptr, environBuf_ptr: ptr): errno => {
+				const memory = memoryView();
+				const memoryBytes = new Uint8Array(memoryRaw());
+				let entryOffset = environ_ptr;
+				let valueOffset = environBuf_ptr;
+				for (const entry of Object.entries(options.env ?? {})) {
+					const data = encoder.encode(`${entry[0]}=${entry[1]}\0`);
+					memory.setUint32(entryOffset, valueOffset, true);
+					entryOffset += 4;
+					memoryBytes.set(data, valueOffset);
+					valueOffset += data.byteLength;
+				}
+				return Errno.success;
+			},
+			fd_advise: (fd: fd, _offset: filesize, _length: filesize, _advise: advise): errno => {
+				try {
+					const fileHandle = getFileDescriptor(fd);
+					fileHandle.assertBaseRight(Rights.fd_advise);
+
+					// We don't have advisory in VS Code. So treat it as successful.
+					return Errno.success;
+				} catch (error) {
+					return handleError(error);
+				}
+			},
+			fd_allocate: (fd: fd, offset: filesize, len: filesize): errno => {
+				try {
+					const fileDescriptor = getFileDescriptor(fd);
+					fileDescriptor.assertBaseRight(Rights.fd_allocate);
+					fileSystem.allocate(fileDescriptor, offset, len);
+					return Errno.success;
+				} catch (error) {
+					return handleError(error);
+				}
+			},
+			fd_close: (fd: fd): errno => {
+				try {
+					const fileDescriptor = getFileDescriptor(fd);
+					fileSystem.releaseFileDescriptor(fileDescriptor);
+					fileDescriptors.delete(fileDescriptor.fd);
+					return Errno.success;
+				} catch (error) {
+					return handleError(error);
+				}
+			},
+			fd_datasync: (fd: fd): errno => {
+				try {
+					const fileDescriptor = getFileDescriptor(fd);
+					fileDescriptor.assertBaseRight(Rights.fd_datasync);
+					fileSystem.sync(fileDescriptor);
+					return Errno.success;
+				} catch (error) {
+					return handleError(error);
+				}
+			},
+			fd_fdstat_get: (fd: fd, fdstat_ptr: ptr): errno => {
+				// This is not available under VS Code.
+				try {
+					const fileDescriptor = getFileDescriptor(fd);
+					const memory = memoryView();
+					if (fileDescriptor.isStd()) {
+						const fdstat = Fdstat.create(fdstat_ptr, memory);
+						fdstat.fs_filetype = Filetype.character_device;
+						fdstat.fs_flags = 0;
+						if (fileDescriptor.isStdin()) {
+							fdstat.fs_rights_base = Rights.StdinBase;
+							fdstat.fs_rights_inheriting = Rights.StdinInheriting;
+						} else {
+							fdstat.fs_rights_base = Rights.StdoutBase;
+							fdstat.fs_rights_inheriting = Rights.StdoutInheriting;
+						}
+						return Errno.success;
+					}
+					fileSystem.fdstat(fileDescriptor, fdstat_ptr);
+					return Errno.success;
+				} catch (error) {
+					return handleError(error);
+				}
+			},
+			fd_fdstat_set_flags: (fd: fd, fdflags: fdflags): errno => {
+				try {
+					const fileDescriptor = getFileDescriptor(fd);
+					fileDescriptor.assertBaseRight(Rights.fd_fdstat_set_flags);
+					fileDescriptor.fdflags = fdflags;
+					return Errno.success;
+				} catch (error) {
+					return handleError(error);
+				}
+			},
+			fd_filestat_get: (fd: fd, filestat_ptr: ptr): errno => {
+				try {
+					const fileDescriptor = getFileDescriptor(fd);
+					const memory = memoryView();
+					if (fileDescriptor.isStd()) {
+						const fileStat = Filestat.create(filestat_ptr, memory);
+						fileStat.dev = DeviceIds.system;
+						fileStat.ino = fileDescriptor.inode;
+						fileStat.filetype = Filetype.character_device;
+						fileStat.nlink = 0n;
+						fileStat.size = 101n;
+						const now = BigInt(Date.now());
+						fileStat.atim = now;
+						fileStat.ctim = now;
+						fileStat.mtim = now;
+						return Errno.success;
+					}
+					fileDescriptor.assertBaseRight(Rights.fd_filestat_get);
+					fileSystem.stat(fileDescriptor, filestat_ptr);
+					return Errno.success;
+				} catch (error) {
+					return handleError(error, Errno.perm);
+				}
+			},
+			fd_filestat_set_size: (fd: fd, size: filesize): errno => {
+				try {
+					const fileDescriptor = getFileDescriptor(fd);
+					fileDescriptor.assertBaseRight(Rights.fd_filestat_set_size);
+					fileSystem.setSize(fileDescriptor, size);
+					return Errno.success;
+				} catch (error) {
+					return handleError(error);
+				}
+			},
+			fd_filestat_set_times: (fd: fd, _atim: timestamp, _mtim: timestamp, _fst_flags: fstflags): errno => {
+				try {
+					const fileHandle = getFileDescriptor(fd);
+					fileHandle.assertBaseRight(Rights.fd_filestat_set_times);
+					// todo@dirkb
+					// For new we do nothing. We could cache the timestamp in memory
+					// But we would loose them during reload. We could also store them
+					// in local storage
+					return Errno.success;
+				} catch (error) {
+					return handleError(error);
+				}
+			},
+			fd_pread: (fd: fd, iovs_ptr: ptr, iovs_len: u32, offset: filesize, bytesRead_ptr: ptr): errno => {
+				try {
+					const fileDescriptor = getFileDescriptor(fd);
+					fileDescriptor.assertBaseRight(Rights.fd_read);
+					const buffers = read_iovs(iovs_ptr, iovs_len);
+					let bytesRead = 0;
+					for (const buffer of buffers) {
+						const result = fileSystem.pread(fileDescriptor, BigInts.asNumber(offset), buffer.byteLength);
+						bytesRead = bytesRead + result.byteLength;
+						buffer.set(result);
+					}
+					memoryView().setUint32(bytesRead_ptr, bytesRead, true);
+					return Errno.success;
+				} catch (error) {
+					return handleError(error);
+				}
+			},
+			fd_prestat_get: (fd: fd, bufPtr: ptr): errno => {
+				try {
+					const fileDescriptor = fileDescriptors.get(fd);
+					if (fileDescriptor === undefined || !fileDescriptor.preOpened) {
+						return Errno.badf;
+					}
+					const memory = memoryView();
+					const prestat = Prestat.create(bufPtr, memory);
+					prestat.len = encoder.encode(fileDescriptor.path).byteLength;
+					return Errno.success;
+				} catch(error) {
+					return handleError(error);
+				}
+			},
+			fd_prestat_dir_name: (fd: fd, pathPtr: ptr, pathLen: size): errno => {
+				try {
+					const fileDescriptor = getFileDescriptor(fd);
+					const memory = new Uint8Array(memoryRaw(), pathPtr);
+					const bytes = encoder.encode(fileDescriptor.path);
+					if (bytes.byteLength !== pathLen) {
+						Errno.badmsg;
+					}
+					memory.set(bytes);
+					return Errno.success;
+				} catch (error) {
+					return handleError(error);
+				}
+			},
+			fd_pwrite: (fd: fd, ciovs_ptr: ptr, ciovs_len: u32, offset: filesize, bytesWritten_ptr: ptr): errno => {
+				try {
+					const fileDescriptor = getFileDescriptor(fd);
+					fileDescriptor.assertBaseRight(Rights.fd_write);
+					const buffers = read_ciovs(ciovs_ptr, ciovs_len);
+					let bytesWritten = 0;
+					for (const buffer of buffers) {
+						bytesWritten += fileSystem.pwrite(fileDescriptor, BigInts.asNumber(offset), buffer);
+					}
+					memoryView().setUint32(bytesWritten_ptr, bytesWritten, true);
+					return Errno.success;
+				} catch (error) {
+					return handleError(error);
+				}
+			},
+			fd_read: (fd: fd, iovs_ptr: ptr, iovs_len: u32, bytesRead_ptr: ptr): errno => {
+				try {
+					const memory = memoryView();
+					const fileDescriptor = getFileDescriptor(fd);
+					if (fileDescriptor.isStdin()) {
+						let bytesRead = 0;
+						const buffers = read_iovs(iovs_ptr, iovs_len);
+						bytesRead += stdin.read(buffers);
+						memory.setUint32(bytesRead_ptr, bytesRead, true);
+						return Errno.success;
+					}
+					fileDescriptor.assertBaseRight(Rights.fd_read);
+					const buffers = read_iovs(iovs_ptr, iovs_len);
+					let bytesRead = 0;
+					for (const buffer of buffers) {
+						const result = fileSystem.read(fileDescriptor, buffer.byteLength);
+						bytesRead += result.byteLength;
+						buffer.set(result);
+					}
+					memory.setUint32(bytesRead_ptr, bytesRead, true);
+					return Errno.success;
+				} catch (error) {
+					return handleError(error);
+				}
+			},
+			fd_readdir: (fd: fd, buf_ptr: ptr, buf_len: size, cookie: dircookie, buf_used_ptr: ptr): errno => {
+				try {
+					const fileDescriptor = getFileDescriptor(fd);
+					fileDescriptor.assertBaseRight(Rights.fd_readdir);
+					if (fileDescriptor.fileType !== Filetype.directory) {
+						return Errno.notdir;
+					}
+					fileSystem.readdir(fileDescriptor, buf_ptr, buf_len, cookie, buf_used_ptr);
+					return Errno.success;
+				} catch (error) {
+					return handleError(error);
+				}
+			},
+			fd_seek: (fd: fd, offset: filedelta, whence: whence, new_offset_ptr: ptr): errno => {
+				try {
+					const fileDescriptor = getFileDescriptor(fd);
+					if (fileDescriptor.isStd()) {
+						return Errno.success;
+					}
+					fileDescriptor.assertBaseRight(Rights.fd_seek);
+					const newOffset = fileSystem.seek(fileDescriptor, offset, whence);
+					memoryView().setBigUint64(new_offset_ptr, BigInt(newOffset), true);
+					return Errno.success;
+				} catch (error) {
+					return handleError(error);
+				}
+			},
+			fd_sync: (fd: fd): errno => {
+				try {
+					const fileDescriptor = getFileDescriptor(fd);
+					fileDescriptor.assertBaseRight(Rights.fd_sync);
+					fileSystem.sync(fileDescriptor);
+					return Errno.success;
+				} catch (error) {
+					return handleError(error);
+				}
+			},
+			fd_tell: (fd: fd, offset_ptr: ptr): errno => {
+				try {
+					const fileDescriptor = getFileDescriptor(fd);
+					fileDescriptor.assertBaseRight(Rights.fd_tell);
+					const offset = fileSystem.tell(fileDescriptor);
+					const memory = memoryView();
+					memory.setBigUint64(offset_ptr, BigInt(offset), true);
+					return Errno.success;
+				} catch (error) {
+					return handleError(error);
+				}
+			},
+			fd_write: (fd: fd, ciovs_ptr: ptr, ciovs_len: u32, bytesWritten_ptr: ptr): errno => {
+				try {
+					const fileDescriptor = getFileDescriptor(fd);
+					if (fileDescriptor.isStdout() || fileDescriptor.isStderr()) {
+						let written = 0;
+						const buffers = read_ciovs(ciovs_ptr, ciovs_len);
+						for (const buffer of buffers) {
+							apiClient.terminal.write(buffer);
+							written += buffer.length;
+						}
+						const memory = memoryView();
+						memory.setUint32(bytesWritten_ptr, written, true);
+						return Errno.success;
+					}
+					fileDescriptor.assertBaseRight(Rights.fd_write);
+
+					const buffers = read_ciovs(ciovs_ptr, ciovs_len);
+					const bytesWritten: size = fileSystem.write(fileDescriptor, buffers);
+					const memory = memoryView();
+					memory.setUint32(bytesWritten_ptr, bytesWritten, true);
+					return Errno.success;
+				} catch (error) {
+					return handleError(error);
+				}
+			},
+			path_create_directory: (fd: fd, path_ptr: ptr, path_len: size): errno => {
+				try {
+					const fileDescriptor = getFileDescriptor(fd);
+					fileDescriptor.assertBaseRight(Rights.path_create_directory);
+					fileDescriptor.assertIsDirectory();
+
+					const memory = memoryRaw();
+					const name = decoder.decode(new Uint8Array(memory, path_ptr, path_len));
+					fileSystem.createDirectory(fileDescriptor, name);
+					return Errno.success;
+				} catch (error) {
+					return handleError(error);
+				}
+			},
+			path_filestat_get: (fd: fd, _flags: lookupflags, path_ptr: ptr, path_len: size, filestat_ptr: ptr): errno => {
+				// VS Code has not support to follow sym links.
+				// So we ignore lookupflags for now
+				try {
+					const fileDescriptor = getFileDescriptor(fd);
+					fileDescriptor.assertBaseRight(Rights.path_filestat_get);
+					fileDescriptor.assertIsDirectory();
+
+					const memory = memoryRaw();
+					const name = decoder.decode(new Uint8Array(memory, path_ptr, path_len));
+					fileSystem.path_stat(fileDescriptor, name, filestat_ptr);
+					return Errno.success;
+				} catch (error) {
+					return handleError(error);
+				}
+			},
+			path_filestat_set_times: (fd: fd, _flags: lookupflags, _path_ptr: ptr, _path_len: size, _atim: timestamp, _mtim: timestamp, _fst_flags: fstflags): errno => {
+				// VS Code has not support to follow sym links.
+				// So we ignore lookupflags for now
+				try {
+					const fileHandle = getFileDescriptor(fd);
+					fileHandle.assertBaseRight(Rights.path_filestat_set_times);
+					fileHandle.assertIsDirectory();
+
+					// todo@dirkb
+					// For now we do nothing. We could cache the timestamp in memory
+					// But we would loose them during reload. We could also store them
+					// in local storage
+					return Errno.nosys;
+				} catch (error) {
+					return handleError(error);
+				}
+			},
+			path_link: (old_fd: fd, _old_flags: lookupflags, _old_path_ptr: ptr, _old_path_len: size, new_fd: fd, _new_path_ptr: ptr, _new_path_len: size): errno => {
+				// VS Code has not support to create sym links.
+				try {
+					const oldFileHandle = getFileDescriptor(old_fd);
+					oldFileHandle.assertBaseRight(Rights.path_link_source);
+					oldFileHandle.assertIsDirectory();
+
+					const newFileHandle = getFileDescriptor(new_fd);
+					newFileHandle.assertBaseRight(Rights.path_link_target);
+					newFileHandle.assertIsDirectory();
+
+					// todo@dirkb
+					// For now we do nothing. If we need to implement this we need
+					// support from the VS Code API.
+					return Errno.nosys;
+				} catch (error) {
+					return handleError(error);
+				}
+			},
+			path_open: (fd: fd, _dirflags: lookupflags, path: ptr, pathLen: size, oflags: oflags, fs_rights_base: rights, fs_rights_inheriting: rights, fdflags: fdflags, fd_ptr: ptr): errno => {
+				try {
+					const parentDescriptor = getFileDescriptor(fd);
+					parentDescriptor.assertBaseRight(Rights.path_open);
+
+					const memory = memoryView();
+					const name = decoder.decode(new Uint8Array(memoryRaw(), path, pathLen));
+
+					let filetype: filetype | undefined = fileSystem.path_filetype(parentDescriptor, name);
+					const entryExists: boolean = filetype !== undefined;
+					if (entryExists) {
+						if (Oflags.exclOn(oflags)) {
+							return Errno.exist;
+						} else if (Oflags.directoryOn(oflags) && filetype !== Filetype.directory) {
+							return Errno.notdir;
+						}
+					} else {
+						// Entry does not exist;
+						if (Oflags.creatOff(oflags)) {
+							return Errno.noent;
+						}
+					}
+					let createFile: boolean = false;
+					if (Oflags.creatOn(oflags) && !entryExists) {
+						// Ensure parent handle is directory
+						parentDescriptor.assertIsDirectory();
+						const dirname = paths.dirname(name);
+						// The name has a directory part. Ensure that the directory exists
+						if (dirname !== '.') {
+							const dirFiletype = fileSystem.path_filetype(parentDescriptor, dirname);
+							if (dirFiletype === undefined || dirFiletype !== Filetype.directory) {
+								return Errno.noent;
+							}
+						}
+						filetype = Filetype.regular_file;
+						createFile = true;
+					} else {
+						if (filetype === undefined) {
+							return Errno.noent;
+						}
+					}
+					// Currently VS Code doesn't offer a generic API to open a file
+					// or a directory. Since we were able to stat the file we create
+					// a file descriptor for it and lazy get the file content on read.
+					const base = filetype === Filetype.directory
+						? fs_rights_base | Rights.DirectoryBase
+						: filetype === Filetype.regular_file
+							? fs_rights_base | Rights.FileBase
+							: fs_rights_base;
+					const inheriting = Filetype.directory
+						? fs_rights_inheriting | Rights.DirectoryInheriting
+						: filetype === Filetype.regular_file
+							? fs_rights_inheriting | Rights.FileInheriting
+							: fs_rights_inheriting;
+					const fileDescriptor = fileSystem.createFileDescriptor(
+						parentDescriptor, name,
+						filetype, { base: base, inheriting: inheriting }, fdflags,
+					);
+					fileDescriptors.set(fileDescriptor.fd, fileDescriptor);
+					memory.setUint32(fd_ptr, fileDescriptor.fd, true);
+					if (createFile || Oflags.truncOn(oflags)) {
+						fileSystem.write(fileDescriptor, [new Uint8Array(0)]);
+					}
+					return Errno.success;
+				} catch(error) {
+					return handleError(error);
+				}
+			},
+			path_readlink: (fd: fd, _path_ptr: ptr, _path_len: size, _buf: ptr, _buf_len: size, _result_size_ptr: ptr): errno => {
+				// VS Code has no support to follow a symlink.
+				try {
+					const fileHandle = getFileDescriptor(fd);
+					fileHandle.assertBaseRight(Rights.path_readlink);
+					fileHandle.assertIsDirectory();
+
+					// const name = $decoder.decode(new Uint8Array(memoryRaw(), path_ptr, path_len));
+					// const realUri = getRealUri(fileHandle, name);
+					// todo@dirkb
+					// For now we do nothing. If we need to implement this we need
+					// support from the VS Code API.
 					return Errno.noent;
+				} catch (error) {
+					return handleError(error);
 				}
-			}
-			let filetype: filetype;
-			let createFile: boolean = false;
-			if (Oflags.creatOn(oflags) && !entryExists) {
-				// Ensure parent handle is directory
-				parentHandle.assertIsDirectory();
-				const dirname = RAL().path.dirname(name);
-				// The name has a directory part. Ensure that the directory exists
-				if (dirname !== '.') {
-					const dirStat = $apiClient.workspace.fileSystem.stat(getRealUri(parentHandle, dirname));
-					if (typeof dirStat === 'number' || dirStat.type !== FileType.Directory) {
+			},
+			path_remove_directory: (fd: fd, path_ptr: ptr, path_len: size): errno => {
+				try {
+					const fileDescriptor = getFileDescriptor(fd);
+					fileDescriptor.assertBaseRight(Rights.path_remove_directory);
+					fileDescriptor.assertIsDirectory();
+
+					const memory = memoryRaw();
+					const name = decoder.decode(new Uint8Array(memory, path_ptr, path_len));
+					fileSystem.path_remove_directory(fileDescriptor, name);
+					return Errno.success;
+				} catch (error) {
+					return handleError(error);
+				}
+			},
+			path_rename: (old_fd: fd, old_path_ptr: ptr, old_path_len: size, new_fd: fd, new_path_ptr: ptr, new_path_len: size): errno => {
+				try {
+					const oldFileDescriptor = getFileDescriptor(old_fd);
+					oldFileDescriptor.assertBaseRight(Rights.path_rename_source);
+					oldFileDescriptor.assertIsDirectory();
+
+					const newFileDescriptor = getFileDescriptor(new_fd);
+					newFileDescriptor.assertBaseRight(Rights.path_rename_target);
+					newFileDescriptor.assertIsDirectory();
+
+					const memory = memoryRaw();
+					const oldName = decoder.decode(new Uint8Array(memory, old_path_ptr, old_path_len));
+					const newName = decoder.decode(new Uint8Array(memory, new_path_ptr, new_path_len));
+					fileSystem.path_rename(oldFileDescriptor, oldName, newFileDescriptor, newName);
+					return Errno.success;
+				} catch (error) {
+					return handleError(error);
+				}
+			},
+			path_symlink: (_old_path_ptr: ptr, _old_path_len: size, fd: fd, _new_path_ptr: ptr, _new_path_len: size): errno => {
+				// VS Code has no support to create a symlink.
+				try {
+					const fileDescriptor = getFileDescriptor(fd);
+					fileDescriptor.assertBaseRight(Rights.path_symlink);
+					fileDescriptor.assertIsDirectory();
+					return Errno.nosys;
+				} catch (error) {
+					return handleError(error);
+				}
+			},
+			path_unlink_file: (fd: fd, path_ptr: ptr, path_len: size): errno => {
+				try {
+					const fileDescriptor = getFileDescriptor(fd);
+					fileDescriptor.assertBaseRight(Rights.path_unlink_file);
+					fileDescriptor.assertIsDirectory();
+
+					const memory = memoryRaw();
+					const name = decoder.decode(new Uint8Array(memory, path_ptr, path_len));
+
+					const filetype = fileSystem.path_filetype(fileDescriptor, name);
+					if (filetype === undefined) {
 						return Errno.noent;
 					}
-				}
-				filetype = Filetype.regular_file;
-				createFile = true;
-			} else {
-				if (typeof stat === 'number') {
-					return code2Wasi.asErrno(stat);
-				}
-				filetype = code2Wasi.asFileType(stat.type);
-			}
-			// Currently VS Code doesn't offer a generic API to open a file
-			// or a directory. Since we were able to stat the file we create
-			// a file handle info for it and lazy get the file content on read.
-			const base = filetype === Filetype.directory
-				? fs_rights_base | Rights.DirectoryBase
-				: filetype === Filetype.regular_file
-					? fs_rights_base | Rights.FileBase
-					: fs_rights_base;
-			const inheriting = Filetype.directory
-				? fs_rights_inheriting | Rights.DirectoryInheriting
-				: filetype === Filetype.regular_file
-					? fs_rights_inheriting | Rights.FileInheriting
-					: fs_rights_inheriting;
-			const fileHandle = new FileHandle(
-				FileHandles.next(), filetype, name,
-				{ base: base, inheriting: inheriting },
-				realUri
-			);
-			$fileHandles.set(fileHandle.fd, fileHandle);
-			memory.setUint32(fd_ptr, fileHandle.fd, true);
-			if (createFile || Oflags.truncOn(oflags)) {
-				const file = createFile ? Files.getOrCreateFile(fileHandle, new Uint8Array(0)) : Files.getOrCreateFile(fileHandle);
-				file.write([new Uint8Array(0)]);
-			}
-			return Errno.success;
-		} catch(error) {
-			return handleError(error);
-		}
-	}
-
-	function path_create_directory(fd: fd, path_ptr: ptr, path_len: size): errno {
-		try {
-			const fileHandle = getFileHandle(fd);
-			fileHandle.assertBaseRight(Rights.path_create_directory);
-			fileHandle.assertIsDirectory();
-
-			const memory = memoryRaw();
-			const name = $decoder.decode(new Uint8Array(memory, path_ptr, path_len));
-			$apiClient.workspace.fileSystem.createDirectory(getRealUri(fileHandle, name));
-			return Errno.success;
-		} catch (error) {
-			return handleError(error);
-		}
-	}
-
-	function path_filestat_get(fd: fd, _flags: lookupflags, path_ptr: ptr, path_len: size, filestat_ptr: ptr): errno {
-		// VS Code has not support to follow sym links.
-		// So we ignore lookupflags for now
-		try {
-			const fileHandle = getFileHandle(fd);
-			fileHandle.assertBaseRight(Rights.path_filestat_get);
-			fileHandle.assertIsDirectory();
-
-			const memory = memoryRaw();
-			const name = $decoder.decode(new Uint8Array(memory, path_ptr, path_len));
-			const uri = getRealUri(fileHandle, name);
-			const vStat = $apiClient.workspace.fileSystem.stat(uri);
-			if (typeof vStat === 'number') {
-				return code2Wasi.asErrno(vStat);
-			}
-			const fileStat = Filestat.create(filestat_ptr, memoryView());
-			fileStat.dev = DeviceIds.get(uri);
-			fileStat.ino = Files.getINode(uri);
-			fileStat.filetype = code2Wasi.asFileType(vStat.type);
-			fileStat.nlink = 0n;
-			fileStat.size = BigInt(vStat.size);
-			fileStat.ctim = BigInt(vStat.ctime);
-			fileStat.mtim = BigInt(vStat.mtime);
-			fileStat.atim = BigInt(vStat.mtime);
-			return Errno.success;
-		} catch (error) {
-			return handleError(error);
-		}
-	}
-
-	function path_filestat_set_times(fd: fd, _flags: lookupflags, _path_ptr: ptr, _path_len: size, _atim: timestamp, _mtim: timestamp, _fst_flags: fstflags): errno {
-		// VS Code has not support to follow sym links.
-		// So we ignore lookupflags for now
-		try {
-			const fileHandle = getFileHandle(fd);
-			fileHandle.assertBaseRight(Rights.path_filestat_set_times);
-			fileHandle.assertIsDirectory();
-
-			// todo@dirkb
-			// For now we do nothing. We could cache the timestamp in memory
-			// But we would loose them during reload. We could also store them
-			// in local storage
-			return Errno.nosys;
-		} catch (error) {
-			return handleError(error);
-		}
-	}
-
-	function path_link(old_fd: fd, _old_flags: lookupflags, _old_path_ptr: ptr, _old_path_len: size, new_fd: fd, _new_path_ptr: ptr, _new_path_len: size): errno {
-		// VS Code has not support to create sym links.
-		try {
-			const oldFileHandle = getFileHandle(old_fd);
-			oldFileHandle.assertBaseRight(Rights.path_link_source);
-			oldFileHandle.assertIsDirectory();
-
-			const newFileHandle = getFileHandle(new_fd);
-			newFileHandle.assertBaseRight(Rights.path_link_target);
-			newFileHandle.assertIsDirectory();
-
-			// todo@dirkb
-			// For now we do nothing. If we need to implement this we need
-			// support from the VS Code API.
-			return Errno.nosys;
-		} catch (error) {
-			return handleError(error);
-		}
-	}
-
-	function path_readlink(fd: fd, _path_ptr: ptr, _path_len: size, _buf: ptr, _buf_len: size, _result_size_ptr: ptr): errno {
-		// VS Code has no support to follow a symlink.
-		try {
-			const fileHandle = getFileHandle(fd);
-			fileHandle.assertBaseRight(Rights.path_readlink);
-			fileHandle.assertIsDirectory();
-
-			// const name = $decoder.decode(new Uint8Array(memoryRaw(), path_ptr, path_len));
-			// const realUri = getRealUri(fileHandle, name);
-			// todo@dirkb
-			// For now we do nothing. If we need to implement this we need
-			// support from the VS Code API.
-			return Errno.noent;
-		} catch (error) {
-			return handleError(error);
-		}
-	}
-
-	function path_remove_directory(fd: fd, path_ptr: ptr, path_len: size): errno {
-		try {
-			const fileHandle = getFileHandle(fd);
-			fileHandle.assertBaseRight(Rights.path_remove_directory);
-			fileHandle.assertIsDirectory();
-
-			const memory = memoryRaw();
-			const name = $decoder.decode(new Uint8Array(memory, path_ptr, path_len));
-			const uri = getRealUri(fileHandle, name);
-
-			$apiClient.workspace.fileSystem.delete(uri, { recursive: false, useTrash: true });
-			return Errno.success;
-		} catch (error) {
-			return handleError(error);
-		}
-	}
-
-	function path_rename(old_fd: fd, old_path_ptr: ptr, old_path_len: size, new_fd: fd, new_path_ptr: ptr, new_path_len: size): errno {
-		try {
-			const oldFileHandle = getFileHandle(old_fd);
-			oldFileHandle.assertBaseRight(Rights.path_rename_source);
-			oldFileHandle.assertIsDirectory();
-
-			const newFileHandle = getFileHandle(new_fd);
-			newFileHandle.assertBaseRight(Rights.path_rename_target);
-			newFileHandle.assertIsDirectory();
-
-
-			const memory = memoryRaw();
-			const oldName = $decoder.decode(new Uint8Array(memory, old_path_ptr, old_path_len));
-			const oldUri = getRealUri(oldFileHandle, oldName);
-
-			const newName = $decoder.decode(new Uint8Array(memory, new_path_ptr, new_path_len));
-			const newUri = getRealUri(newFileHandle, newName);
-
-			$apiClient.workspace.fileSystem.rename(oldUri, newUri, { overwrite: false });
-			return Errno.success;
-		} catch (error) {
-			return handleError(error);
-		}
-	}
-
-	function path_symlink(_old_path_ptr: ptr, _old_path_len: size, fd: fd, _new_path_ptr: ptr, _new_path_len: size): errno {
-		// VS Code has no support to create a symlink.
-		try {
-			const newFileHandle = getFileHandle(fd);
-			newFileHandle.assertBaseRight(Rights.path_symlink);
-			newFileHandle.assertIsDirectory();
-			return Errno.nosys;
-		} catch (error) {
-			return handleError(error);
-		}
-	}
-
-	function path_unlink_file(fd: fd, path_ptr: ptr, path_len: size): errno {
-		try {
-			const fileHandle = getFileHandle(fd);
-			fileHandle.assertBaseRight(Rights.path_unlink_file);
-			fileHandle.assertIsDirectory();
-
-			const memory = memoryRaw();
-			const name = $decoder.decode(new Uint8Array(memory, path_ptr, path_len));
-			const uri = getRealUri(fileHandle, name);
-
-			const vStat = $apiClient.workspace.fileSystem.stat(uri);
-			if (typeof vStat === 'number') {
-				return vStat;
-			}
-			if (vStat.type !== DTOs.FileType.File) {
-				return Errno.isdir;
-			}
-
-			$apiClient.workspace.fileSystem.delete(uri, { recursive: false, useTrash: true });
-			return Errno.success;
-		} catch (error) {
-			return handleError(error);
-		}
-	}
-
-	function poll_oneoff(input: ptr, output: ptr, subscriptions: size, result_size_ptr: ptr): errno {
-		try {
-			const memory = memoryView();
-			let { events, needsTimeOut, timeout } = handleSubscriptions(memory, input, subscriptions);
-			if (needsTimeOut && timeout !== undefined && timeout !== 0n) {
-				// Timeout is in ns but sleep API is in ms.
-				$apiClient.timer.sleep(BigInts.asNumber(timeout / 1000000n));
-				// Reread the events. Timer will not change however the rest could have.
-				events = handleSubscriptions(memory, input, subscriptions).events;
-			}
-			let event_offset = output;
-			for (const item of events) {
-				const event = Event.create(event_offset, memory);
-				event.userdata = item.userdata;
-				event.type = item.type;
-				event.error = item.error;
-				event.fd_readwrite.nbytes = item.fd_readwrite.nbytes;
-				event.fd_readwrite.flags = item.fd_readwrite.flags;
-				event_offset += Event.size;
-			}
-			memory.setUint32(result_size_ptr, events.length, true);
-			return Errno.success;
-		} catch (error) {
-			return handleError(error);
-		}
-	}
-
-	function handleSubscriptions(memory: DataView, input: ptr, subscriptions: size) {
-		let subscription_offset: ptr = input;
-		const events: Literal<event>[] = [];
-		let timeout: bigint | undefined;
-		let needsTimeOut = false;
-		for (let i = 0; i < subscriptions; i++) {
-			const subscription = Subscription.create(subscription_offset, memory);
-			const u = subscription.u;
-			switch (u.type) {
-				case Eventtype.clock:
-					const clockResult = handleClockSubscription(subscription);
-					timeout = clockResult.timeout;
-					events.push(clockResult.event);
-					break;
-				case Eventtype.fd_read:
-					const readEvent = handleReadSubscription(subscription);
-					events.push(readEvent);
-					if (readEvent.error !== Errno.success || readEvent.fd_readwrite.nbytes === 0n) {
-						needsTimeOut = true;
+					if (filetype === Filetype.directory) {
+						return Errno.isdir;
 					}
-					break;
-				case Eventtype.fd_write:
-					const writeEvent = handleWriteSubscription(subscription);
-					events.push(writeEvent);
-					if (writeEvent.error !== Errno.success) {
-						needsTimeOut = true;
+					fileSystem.path_unlink_file(fileDescriptor, name);
+					return Errno.success;
+				} catch (error) {
+					return handleError(error);
+				}
+			},
+			poll_oneoff: (input: ptr, output: ptr, subscriptions: size, result_size_ptr: ptr): errno => {
+				try {
+					const memory = memoryView();
+					let { events, needsTimeOut, timeout } = handleSubscriptions(memory, input, subscriptions);
+					if (needsTimeOut && timeout !== undefined && timeout !== 0n) {
+						// Timeout is in ns but sleep API is in ms.
+						apiClient.timer.sleep(BigInts.asNumber(timeout / 1000000n));
+						// Reread the events. Timer will not change however the rest could have.
+						events = handleSubscriptions(memory, input, subscriptions).events;
 					}
-					break;
-			}
-			subscription_offset += Subscription.size;
-		}
-		return { events, needsTimeOut, timeout };
-	}
-
-	function handleClockSubscription(subscription: subscription): { event: Literal<event>; timeout: bigint } {
-		const result: Literal<event> = {
-			userdata: subscription.userdata,
-			type: Eventtype.clock,
-			error: Errno.success,
-			fd_readwrite: {
-				nbytes: 0n,
-				flags: 0
+					let event_offset = output;
+					for (const item of events) {
+						const event = Event.create(event_offset, memory);
+						event.userdata = item.userdata;
+						event.type = item.type;
+						event.error = item.error;
+						event.fd_readwrite.nbytes = item.fd_readwrite.nbytes;
+						event.fd_readwrite.flags = item.fd_readwrite.flags;
+						event_offset += Event.size;
+					}
+					memory.setUint32(result_size_ptr, events.length, true);
+					return Errno.success;
+				} catch (error) {
+					return handleError(error);
+				}
+			},
+			proc_exit: (rval: exitcode) => {
+				exitHandler(rval);
+			},
+			sched_yield: (): errno => {
+				return Errno.nosys;
+			},
+			random_get: (buf: ptr, buf_len: size): errno => {
+				const random = RAL().crypto.randomGet(buf_len);
+				const memory = memoryRaw();
+				new Uint8Array(memory, buf, buf_len).set(random);
+				return Errno.success;
+			},
+			sock_accept: (_fd: fd, _flags: fdflags, _result_fd_ptr: ptr): errno => {
+				return Errno.nosys;
 			}
 		};
-		const clock = subscription.u.clock;
-		// Timeout is in ns.
-		let timeout: bigint;
-		if ((clock.flags & Subclockflags.subscription_clock_abstime) !== 0) {
-			const time = now(Clockid.realtime, 0n);
-			timeout = BigInt(Math.max(0, BigInts.asNumber(time - clock.timeout)));
-		} else {
-			timeout  = clock.timeout;
-		}
-		return { event: result, timeout };
-	}
 
-	function handleReadSubscription(subscription: subscription): Literal<event> {
-		const fd = subscription.u.fd_read.file_descriptor;
-		try {
-			const fileHandle = getFileHandle(fd);
-			fileHandle.assertBaseRight(Rights.fd_read);
-			const file = Files.getOrCreateFile(fileHandle);
-			const available = file.bytesAvailable();
-			return {
+		function now(id: clockid, _precision: timestamp): bigint {
+			switch(id) {
+				case Clockid.realtime:
+					return RAL().clock.realtime();
+				case Clockid.monotonic:
+					return RAL().clock.monotonic();
+				case Clockid.process_cputime_id:
+				case Clockid.thread_cputime_id:
+					return RAL().clock.monotonic() - thread_start;
+				default:
+					throw new WasiError(Errno.inval);
+			}
+		}
+
+		function memoryView(): DataView {
+			if (instance === undefined) {
+				throw new Error(`WASI layer is not initialized. Missing WebAssembly instance.`);
+			}
+			return new DataView(instance.exports.memory.buffer);
+		}
+
+		function memoryRaw(): ArrayBuffer {
+			if (instance === undefined) {
+				throw new Error(`WASI layer is not initialized. Missing WebAssembly instance.`);
+			}
+			return instance.exports.memory.buffer;
+		}
+
+		function handleSubscriptions(memory: DataView, input: ptr, subscriptions: size) {
+			let subscription_offset: ptr = input;
+			const events: Literal<event>[] = [];
+			let timeout: bigint | undefined;
+			let needsTimeOut = false;
+			for (let i = 0; i < subscriptions; i++) {
+				const subscription = Subscription.create(subscription_offset, memory);
+				const u = subscription.u;
+				switch (u.type) {
+					case Eventtype.clock:
+						const clockResult = handleClockSubscription(subscription);
+						timeout = clockResult.timeout;
+						events.push(clockResult.event);
+						break;
+					case Eventtype.fd_read:
+						const readEvent = handleReadSubscription(subscription);
+						events.push(readEvent);
+						if (readEvent.error !== Errno.success || readEvent.fd_readwrite.nbytes === 0n) {
+							needsTimeOut = true;
+						}
+						break;
+					case Eventtype.fd_write:
+						const writeEvent = handleWriteSubscription(subscription);
+						events.push(writeEvent);
+						if (writeEvent.error !== Errno.success) {
+							needsTimeOut = true;
+						}
+						break;
+				}
+				subscription_offset += Subscription.size;
+			}
+			return { events, needsTimeOut, timeout };
+		}
+
+		function handleClockSubscription(subscription: subscription): { event: Literal<event>; timeout: bigint } {
+			const result: Literal<event> = {
 				userdata: subscription.userdata,
-				type: Eventtype.fd_read,
+				type: Eventtype.clock,
 				error: Errno.success,
 				fd_readwrite: {
-					nbytes: available,
-					flags: 0
-				}
-			};
-		} catch (error) {
-			return {
-				userdata: subscription.userdata,
-				type: Eventtype.fd_read,
-				error: handleError(error),
-				fd_readwrite: {
 					nbytes: 0n,
 					flags: 0
 				}
 			};
+			const clock = subscription.u.clock;
+			// Timeout is in ns.
+			let timeout: bigint;
+			if ((clock.flags & Subclockflags.subscription_clock_abstime) !== 0) {
+				const time = now(Clockid.realtime, 0n);
+				timeout = BigInt(Math.max(0, BigInts.asNumber(time - clock.timeout)));
+			} else {
+				timeout  = clock.timeout;
+			}
+			return { event: result, timeout };
 		}
-	}
 
-	function handleWriteSubscription(subscription: subscription): Literal<event> {
-		const fd = subscription.u.fd_write.file_descriptor;
-		try {
-			const fileHandle = getFileHandle(fd);
-			fileHandle.assertBaseRight(Rights.fd_write);
-			return {
-				userdata: subscription.userdata,
-				type: Eventtype.fd_write,
-				error: Errno.success,
-				fd_readwrite: {
-					nbytes: 0n,
-					flags: 0
-				}
-			};
-		} catch (error) {
-			return {
-				userdata: subscription.userdata,
-				type: Eventtype.fd_write,
-				error: handleError(error),
-				fd_readwrite: {
-					nbytes: 0n,
-					flags: 0
-				}
-			};
+		function handleReadSubscription(subscription: subscription): Literal<event> {
+			const fd = subscription.u.fd_read.file_descriptor;
+			try {
+				const fileDescriptor = getFileDescriptor(fd);
+				fileDescriptor.assertBaseRight(Rights.fd_read);
+				const available = fileSystem.bytesAvailable(fileDescriptor);
+				return {
+					userdata: subscription.userdata,
+					type: Eventtype.fd_read,
+					error: Errno.success,
+					fd_readwrite: {
+						nbytes: available,
+						flags: 0
+					}
+				};
+			} catch (error) {
+				return {
+					userdata: subscription.userdata,
+					type: Eventtype.fd_read,
+					error: handleError(error),
+					fd_readwrite: {
+						nbytes: 0n,
+						flags: 0
+					}
+				};
+			}
 		}
-	}
 
-	function proc_exit(rval: exitcode) {
-		$exitHandler(rval);
-	}
-
-	function sched_yield(): errno {
-		return Errno.nosys;
-	}
-
-	function random_get(buf: ptr, buf_len: size): errno {
-		const random = RAL().crypto.randomGet(buf_len);
-		const memory = memoryRaw();
-		new Uint8Array(memory, buf, buf_len).set(random);
-		return Errno.success;
-	}
-
-	function sock_accept(_fd: fd, _flags: fdflags, _result_fd_ptr: ptr): errno {
-		return Errno.nosys;
-	}
-
-	function handleError(error: any, def: errno = Errno.badf): errno {
-		if (error instanceof WasiError) {
-			return error.errno;
-		} else if (error instanceof FileSystemError) {
-			return code2Wasi.asErrno(error.code);
-		} else if (error instanceof RPCError) {
-			return code2Wasi.asErrno(error.errno);
+		function handleWriteSubscription(subscription: subscription): Literal<event> {
+			const fd = subscription.u.fd_write.file_descriptor;
+			try {
+				const fileHandle = getFileDescriptor(fd);
+				fileHandle.assertBaseRight(Rights.fd_write);
+				return {
+					userdata: subscription.userdata,
+					type: Eventtype.fd_write,
+					error: Errno.success,
+					fd_readwrite: {
+						nbytes: 0n,
+						flags: 0
+					}
+				};
+			} catch (error) {
+				return {
+					userdata: subscription.userdata,
+					type: Eventtype.fd_write,
+					error: handleError(error),
+					fd_readwrite: {
+						nbytes: 0n,
+						flags: 0
+					}
+				};
+			}
 		}
-		return def;
-	}
 
-	function read_ciovs (iovs: ptr, iovsLen: u32): Uint8Array[] {
-		const memory = memoryView();
-		const buffer = memoryRaw();
-
-		const buffers: Uint8Array[] = [];
-		let ptr: ptr = iovs;
-		for (let i = 0; i < iovsLen; i++) {
-			const vec = Ciovec.create(ptr, memory);
-			buffers.push(new Uint8Array(buffer, vec.buf, vec.buf_len));
-			ptr += Ciovec.size;
+		function handleError(error: any, def: errno = Errno.badf): errno {
+			if (error instanceof WasiError) {
+				return error.errno;
+			} else if (error instanceof FileSystemError) {
+				return code2Wasi.asErrno(error.code);
+			} else if (error instanceof RPCError) {
+				return code2Wasi.asErrno(error.errno);
+			}
+			return def;
 		}
-		return buffers;
-	}
 
-	function read_iovs (iovs: ptr, iovsLen: u32): Uint8Array[] {
-		const memory = memoryView();
-		const buffer = memoryRaw();
+		function read_ciovs (iovs: ptr, iovsLen: u32): Uint8Array[] {
+			const memory = memoryView();
+			const buffer = memoryRaw();
 
-		const buffers: Uint8Array[] = [];
-		let ptr: ptr = iovs;
-		for (let i = 0; i < iovsLen; i++) {
-			const vec = Iovec.create(ptr, memory);
-			buffers.push(new Uint8Array(buffer, vec.buf, vec.buf_len));
-			ptr += Iovec.size;
+			const buffers: Uint8Array[] = [];
+			let ptr: ptr = iovs;
+			for (let i = 0; i < iovsLen; i++) {
+				const vec = Ciovec.create(ptr, memory);
+				buffers.push(new Uint8Array(buffer, vec.buf, vec.buf_len));
+				ptr += Ciovec.size;
+			}
+			return buffers;
 		}
-		return buffers;
-	}
 
-	function memoryView(): DataView {
-		if ($instance === undefined) {
-			throw new Error(`WASI layer is not initialized. Missing WebAssembly instance.`);
-		}
-		return new DataView($instance.exports.memory.buffer);
-	}
+		function read_iovs (iovs: ptr, iovsLen: u32): Uint8Array[] {
+			const memory = memoryView();
+			const buffer = memoryRaw();
 
-	function memoryRaw(): ArrayBuffer {
-		if ($instance === undefined) {
-			throw new Error(`WASI layer is not initialized. Missing WebAssembly instance.`);
+			const buffers: Uint8Array[] = [];
+			let ptr: ptr = iovs;
+			for (let i = 0; i < iovsLen; i++) {
+				const vec = Iovec.create(ptr, memory);
+				buffers.push(new Uint8Array(buffer, vec.buf, vec.buf_len));
+				ptr += Iovec.size;
+			}
+			return buffers;
 		}
-		return $instance.exports.memory.buffer;
-	}
 
-	function getFileHandle(fd: fd): FileHandle {
-		const result = $fileHandles.get(fd);
-		if (result === undefined) {
-			throw new WasiError(Errno.badf);
+		function getFileDescriptor(fd: fd): FileDescriptor {
+			const result = fileDescriptors.get(fd);
+			if (result === undefined) {
+				throw new WasiError(Errno.badf);
+			}
+			return result;
 		}
-		return result;
-	}
 
-	function getRealUri(parentInfo: FileHandle, name: string): URI {
-		const real = parentInfo.uri;
-		if (name === '.') {
-			return real;
-		}
-		return real.with({ path: `${real.path}/${name}`});
+		return wasi;
 	}
 }

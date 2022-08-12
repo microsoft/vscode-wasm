@@ -168,5 +168,6 @@
 	],
 	"files.associations": {
 		"iostream": "cpp"
-	}
+	},
+	"task.allowAutomaticTasks": true
 }
