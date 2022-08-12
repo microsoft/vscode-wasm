@@ -187,15 +187,13 @@ export class FileDescriptorImpl implements FileDescriptor {
 	}
 
 	public set cursor(value: number) {
+		if (value < 0) {
+			throw new WasiError(Errno.inval);
+		}
 		this._cursor = value;
 	}
 
 	public read(content: Uint8Array, bytesToRead: number): Uint8Array {
-		// We have a negative cursor so we need to adjust according to the
-		// end of the content.
-		if (this._cursor < 0) {
-			this._cursor = Math.max(0, content.byteLength + this._cursor);
-		}
 		const realRead = Math.min(bytesToRead, content.byteLength - this._cursor);
 		const result = content.subarray(this._cursor, this._cursor + realRead);
 		this._cursor = this._cursor + realRead;
@@ -203,12 +201,6 @@ export class FileDescriptorImpl implements FileDescriptor {
 	}
 
 	public write(content: Uint8Array, buffers: Uint8Array[]): [Uint8Array, size] {
-		// We have a negative cursor so we need to adjust according to the
-		// end of the content.
-		if (this._cursor < 0) {
-			this._cursor = Math.max(0, content.byteLength + this._cursor);
-		}
-
 		let bytesToWrite: size = 0;
 		for (const bytes of buffers) {
 			bytesToWrite += bytes.byteLength;
