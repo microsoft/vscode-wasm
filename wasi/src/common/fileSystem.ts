@@ -83,13 +83,6 @@ export interface FileDescriptor {
 	assertIsDirectory(): void;
 
 	/**
-	 * Set the cursor
-	 * @param offset the offset
-	 * @param whence the whence
-	 */
-	seek(offset: number, whence: whence): void;
-
-	/**
 	 * Reads the number of bytes from the given content using the
 	 * file descriptor cursor.
 	 * @param content the content to read from.
@@ -103,14 +96,6 @@ export interface FileDescriptor {
 	 * @param buffers the content to write
 	 */
 	write(content: Uint8Array, buffers: Uint8Array[]): [Uint8Array, size];
-
-	/**
-	 * Adjusts the cursor to the given content. Only changes the cursor
-	 * if it points relative to the end of the file.
-	 *
-	 * @param content The content to use.
-	 */
-	adjustCursor(content: Uint8Array): number;
 }
 
 export class FileDescriptorImpl implements FileDescriptor {
@@ -201,24 +186,8 @@ export class FileDescriptorImpl implements FileDescriptor {
 		return this._cursor;
 	}
 
-	public seek(offset: number, whence: whence): void {
-		switch(whence) {
-			case Whence.set:
-				this._cursor = offset;
-				break;
-			case Whence.cur:
-				// Even if this.cursor < 0 we can add the delta.
-				// (e.g. -22 + 4 = -18 from end; so the cursor moved
-				// 4 up.)
-				this._cursor = this._cursor + offset;
-				break;
-			case Whence.end:
-				// In this case offset is a negative number. So we
-				// can adjust the offset when we are actually accessing
-				// the files content and know the length
-				this._cursor = offset;
-				break;
-		}
+	public set cursor(value: number) {
+		this._cursor = value;
 	}
 
 	public read(content: Uint8Array, bytesToRead: number): Uint8Array {
@@ -363,14 +332,21 @@ export namespace FileSystem {
 			releaseFileDescriptor: (fileDescriptor) => {
 				unrefINode(fileDescriptor.inode);
 			},
-			seek: (fileDescriptor, offset, whence): bigint => {
-				fileDescriptor.seek(BigInts.asNumber(offset), whence);
-				const cursor = fileDescriptor.cursor;
-				if (cursor >= 0) {
-					return BigInt(cursor);
+			seek: (fileDescriptor, _offset, whence): bigint => {
+				const offset = BigInts.asNumber(_offset);
+				switch(whence) {
+					case Whence.set:
+						fileDescriptor.cursor = offset;
+						break;
+					case Whence.cur:
+						fileDescriptor.cursor = fileDescriptor.cursor + offset;
+						break;
+					case Whence.end:
+						const inode = getResolvedINode(fileDescriptor.inode);
+						fileDescriptor.cursor = Math.max(0, inode.content.byteLength + offset);
+						break;
 				}
-				const inode = getResolvedINode(fileDescriptor.inode);
-				return BigInt(fileDescriptor.adjustCursor(inode.content));
+				return BigInt(fileDescriptor.cursor);
 			},
 			fdstat: (fileDescriptor, fdstat_ptr): void => {
 				const inode = getINode(fileDescriptor.inode);
@@ -398,16 +374,11 @@ export namespace FileSystem {
 			},
 			bytesAvailable: (fileDescriptor): filesize => {
 				const inode = getResolvedINode(fileDescriptor.inode);
-				const cursor = fileDescriptor.adjustCursor(inode.content);
-				return BigInt(inode.content.byteLength - cursor);
+				const cursor = fileDescriptor.cursor;
+				return BigInt(Math.max(0,inode.content.byteLength - cursor));
 			},
 			tell: (fileDescriptor): number => {
-				const cursor = fileDescriptor.cursor;
-				if (cursor >= 0) {
-					return cursor;
-				}
-				const inode = getResolvedINode(fileDescriptor.inode);
-				return fileDescriptor.adjustCursor(inode.content);
+				return fileDescriptor.cursor;
 			},
 			setSize: (fileDescriptor, _size): void => {
 				const size = BigInts.asNumber(_size);
