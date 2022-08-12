@@ -24,11 +24,6 @@ import {
 import { BigInts, code2Wasi } from './converter';
 import { DeviceIds, FileDescriptor, FileSystem } from './fileSystem';
 
-// Same as Unix file descriptors
-export const WASI_STDIN_FD = 0 as const;
-export const WASI_STDOUT_FD = 1 as const;
-export const WASI_STDERR_FD = 2 as const;
-
 export interface Environment {
 	[key: string]: string;
 }
@@ -524,7 +519,7 @@ class Stdin implements IOComponent {
 	}
 
 	public get fd() {
-		return WASI_STDIN_FD;
+		return 0;
 	}
 
 	/**
@@ -575,6 +570,9 @@ export namespace WASI {
 		const decoder: RAL.TextDecoder = RAL().TextDecoder.create(options?.encoding);
 		const stdin = new Stdin(apiClient);
 		const fileSystem = FileSystem.create(apiClient, { memoryView: memoryView, memoryRaw: memoryRaw }, encoder);
+		fileDescriptors.set(fileSystem.stdin.fd, fileSystem.stdin);
+		fileDescriptors.set(fileSystem.stdout.fd, fileSystem.stdout);
+		fileDescriptors.set(fileSystem.stderr.fd, fileSystem.stderr);
 
 		for (const entry of options.mapDir) {
 			const fileDescriptor = fileSystem.createPreOpenedFileDescriptor(
@@ -706,25 +704,22 @@ export namespace WASI {
 			fd_fdstat_get: (fd: fd, fdstat_ptr: ptr): errno => {
 				// This is not available under VS Code.
 				try {
+					const fileDescriptor = getFileDescriptor(fd);
 					const memory = memoryView();
-					if (fd === WASI_STDIN_FD || fd === WASI_STDOUT_FD || fd === WASI_STDERR_FD) {
+					if (fileDescriptor.isStd()) {
 						const fdstat = Fdstat.create(fdstat_ptr, memory);
 						fdstat.fs_filetype = Filetype.character_device;
 						fdstat.fs_flags = 0;
-						switch (fd) {
-							case WASI_STDIN_FD:
-								fdstat.fs_rights_base = Rights.StdinBase;
-								fdstat.fs_rights_inheriting = Rights.StdinInheriting;
-								break;
-							case WASI_STDOUT_FD:
-							case WASI_STDERR_FD:
-								fdstat.fs_rights_base = Rights.StdoutBase;
-								fdstat.fs_rights_inheriting = Rights.StdoutInheriting;
-								break;
+						if (fileDescriptor.isStdin()) {
+							fdstat.fs_rights_base = Rights.StdinBase;
+							fdstat.fs_rights_inheriting = Rights.StdinInheriting;
+						} else {
+							fdstat.fs_rights_base = Rights.StdoutBase;
+							fdstat.fs_rights_inheriting = Rights.StdoutInheriting;
 						}
 						return Errno.success;
 					}
-					fileSystem.fdstat(getFileDescriptor(fd), fdstat_ptr);
+					fileSystem.fdstat(fileDescriptor, fdstat_ptr);
 					return Errno.success;
 				} catch (error) {
 					return handleError(error);
@@ -742,21 +737,12 @@ export namespace WASI {
 			},
 			fd_filestat_get: (fd: fd, filestat_ptr: ptr): errno => {
 				try {
+					const fileDescriptor = getFileDescriptor(fd);
 					const memory = memoryView();
-					if (fd === WASI_STDIN_FD || fd === WASI_STDOUT_FD || fd === WASI_STDERR_FD) {
+					if (fileDescriptor.isStd()) {
 						const fileStat = Filestat.create(filestat_ptr, memory);
 						fileStat.dev = DeviceIds.system;
-						switch(fd) {
-							case WASI_STDIN_FD:
-								fileStat.ino = fileSystem.stdinINode;
-								break;
-							case WASI_STDOUT_FD:
-								fileStat.ino = fileSystem.stdoutINode;
-								break;
-							case WASI_STDERR_FD:
-								fileStat.ino = fileSystem.stderrINode;
-								break;
-						}
+						fileStat.ino = fileDescriptor.inode;
 						fileStat.filetype = Filetype.character_device;
 						fileStat.nlink = 0n;
 						fileStat.size = 101n;
@@ -766,7 +752,6 @@ export namespace WASI {
 						fileStat.mtim = now;
 						return Errno.success;
 					}
-					const fileDescriptor = getFileDescriptor(fd);
 					fileDescriptor.assertBaseRight(Rights.fd_filestat_get);
 					fileSystem.stat(fileDescriptor, filestat_ptr);
 					return Errno.success;
@@ -860,14 +845,14 @@ export namespace WASI {
 			fd_read: (fd: fd, iovs_ptr: ptr, iovs_len: u32, bytesRead_ptr: ptr): errno => {
 				try {
 					const memory = memoryView();
-					if (fd === WASI_STDIN_FD) {
+					const fileDescriptor = getFileDescriptor(fd);
+					if (fileDescriptor.isStdin()) {
 						let bytesRead = 0;
 						const buffers = read_iovs(iovs_ptr, iovs_len);
 						bytesRead += stdin.read(buffers);
 						memory.setUint32(bytesRead_ptr, bytesRead, true);
 						return Errno.success;
 					}
-					const fileDescriptor = getFileDescriptor(fd);
 					fileDescriptor.assertBaseRight(Rights.fd_read);
 					const buffers = read_iovs(iovs_ptr, iovs_len);
 					let bytesRead = 0;
@@ -897,10 +882,10 @@ export namespace WASI {
 			},
 			fd_seek: (fd: fd, offset: filedelta, whence: whence, new_offset_ptr: ptr): errno => {
 				try {
-					if (fd === WASI_STDIN_FD || fd === WASI_STDOUT_FD || fd === WASI_STDERR_FD) {
+					const fileDescriptor = getFileDescriptor(fd);
+					if (fileDescriptor.isStd()) {
 						return Errno.success;
 					}
-					const fileDescriptor = getFileDescriptor(fd);
 					fileDescriptor.assertBaseRight(Rights.fd_seek);
 					const newOffset = fileSystem.seek(fileDescriptor, offset, whence);
 					memoryView().setBigUint64(new_offset_ptr, BigInt(newOffset), true);
@@ -933,7 +918,8 @@ export namespace WASI {
 			},
 			fd_write: (fd: fd, ciovs_ptr: ptr, ciovs_len: u32, bytesWritten_ptr: ptr): errno => {
 				try {
-					if (fd === WASI_STDOUT_FD || fd === WASI_STDERR_FD) {
+					const fileDescriptor = getFileDescriptor(fd);
+					if (fileDescriptor.isStdout() || fileDescriptor.isStderr()) {
 						let written = 0;
 						const buffers = read_ciovs(ciovs_ptr, ciovs_len);
 						for (const buffer of buffers) {
@@ -944,7 +930,6 @@ export namespace WASI {
 						memory.setUint32(bytesWritten_ptr, written, true);
 						return Errno.success;
 					}
-					const fileDescriptor = getFileDescriptor(fd);
 					fileDescriptor.assertBaseRight(Rights.fd_write);
 
 					const buffers = read_ciovs(ciovs_ptr, ciovs_len);

@@ -96,12 +96,32 @@ export interface FileDescriptor {
 	 * @param buffers the content to write
 	 */
 	write(content: Uint8Array, buffers: Uint8Array[]): [Uint8Array, size];
+
+	/**
+	 * Tests if this is a std* file descriptor.
+	 */
+	isStd(): boolean;
+
+	/**
+	 * Tests if this is the stdin file descriptor.
+	 */
+	isStdin(): boolean;
+
+	/**
+	 * Tests if this is the stdout file descriptor.
+	 */
+	isStdout(): boolean;
+
+	/**
+	 * Tests if this is the stderr file descriptor.
+	 */
+	isStderr(): boolean;
 }
 
 export class FileDescriptorImpl implements FileDescriptor {
 
 	// 0, 1, 2 are reserved for stdin, stdout and stderr.
-	private static fileDescriptorCounter: fd = 3;
+	private static fileDescriptorCounter: fd = 0;
 
 	private static next(): fd {
 		// According to the spec these handles shouldn't monotonically increase.
@@ -221,12 +241,20 @@ export class FileDescriptorImpl implements FileDescriptor {
 		return [content, bytesToWrite];
 	}
 
-	public adjustCursor(content: Uint8Array): number {
-		if (this._cursor >= 0) {
-			return this._cursor;
-		}
-		this._cursor = Math.max(0, content.byteLength + this._cursor);
-		return this._cursor;
+	isStd(): boolean {
+		return this.fd >= 0 && this.fd <= 2;
+	}
+
+	isStdin(): boolean {
+		return this.fd === 0;
+	}
+
+	isStdout(): boolean {
+		return this.fd === 1;
+	}
+
+	isStderr(): boolean {
+		return this.fd === 2;
 	}
 }
 
@@ -237,9 +265,9 @@ export interface MemoryProvider {
 
 export interface FileSystem {
 
-	readonly stdinINode: bigint;
-	readonly stdoutINode: bigint;
-	readonly stderrINode: bigint;
+	readonly stdin: FileDescriptor;
+	readonly stdout: FileDescriptor;
+	readonly stderr: FileDescriptor;
 
 	createPreOpenedFileDescriptor(path: string, uri: URI, fileType: filetype, rights: FileDescriptor['rights'], fdflags: fdflags): FileDescriptor;
 	createFileDescriptor(parent: FileDescriptor, path: string, fileType: filetype, rights: FileDescriptor['rights'], fdflags: fdflags): FileDescriptor;
@@ -306,10 +334,95 @@ export namespace FileSystem {
 		const memoryView = memoryProvider.memoryView;
 		const memoryRaw = memoryProvider.memoryRaw;
 
+		function refINode(filepath: string, uri: URI): INode {
+			let result = path2INode.get(filepath);
+			if (result !== undefined) {
+				result.refs++;
+				return result;
+			}
+			result = { id: inodeCounter++, uri, refs: 1, content: undefined };
+			path2INode.set(filepath, result);
+			inodes.set(result.id, result);
+			return result;
+		}
+
+		function unrefINode(id: bigint): void {
+			let inode = inodes.get(id);
+			if (inode === undefined) {
+				inode = deletedINode.get(id);
+			}
+			if (inode === undefined) {
+				throw new WasiError(Errno.badf);
+			}
+			inode.refs--;
+			if (inode.refs === 0) {
+				inode.content = undefined;
+				deletedINode.delete(id);
+			}
+		}
+
+		function getINode(id: bigint): INode {
+			const inode: INode | undefined = inodes.get(id);
+			if (inode === undefined) {
+				throw new WasiError(Errno.badf);
+			}
+			return inode;
+		}
+
+		function markINodeAsDeleted(filepath: string): void {
+			const inode = path2INode.get(filepath);
+			if (inode === undefined) {
+				return;
+			}
+			path2INode.delete(filepath);
+			if (!deletedINode.has(inode.id)) {
+				deletedINode.set(inode.id, inode);
+			}
+		}
+
+		function getResolvedINode(id: bigint): Required<INode> {
+			const inode: INode | undefined = inodes.get(id);
+			if (inode === undefined) {
+				throw new WasiError(Errno.badf);
+			}
+			if (inode.content === undefined) {
+				inode.content = apiClient.workspace.fileSystem.read(inode.uri);
+			}
+			return inode as Required<INode>;
+		}
+
+		function writeContent(inode: Required<INode>) {
+			apiClient.workspace.fileSystem.write(inode.uri, inode.content);
+		}
+
+		function uriJoin(uri: URI, name: string): URI {
+			if (name === '.') {
+				return uri;
+			}
+			return uri.with( { path: RAL().path.join(uri.path, name)} );
+		}
+
 		const fileSystem: FileSystem = {
-			stdinINode: inodeCounter++,
-			stdoutINode: inodeCounter++,
-			stderrINode: inodeCounter++,
+			stdin: new FileDescriptorImpl(
+				refINode('/dev/stdin', URI.from({ scheme: 'wasi-terminal', path:'/dev/stdin' })).id,
+				Filetype.character_device,
+				{ base: Rights.StdinBase, inheriting: Rights.StdinInheriting },
+				0, '/dev/stdin', true
+			),
+
+			stdout: new FileDescriptorImpl(
+				refINode('/dev/stdout', URI.from({ scheme: 'wasi-terminal', path:'/dev/stdout' })).id,
+				Filetype.character_device,
+				{ base: Rights.StdoutBase, inheriting: Rights.StdoutInheriting },
+				0, '/dev/stdout', true
+			),
+
+			stderr: new FileDescriptorImpl(
+				refINode('/dev/stderr', URI.from({ scheme: 'wasi-terminal', path:'/dev/stderr' })).id,
+				Filetype.character_device,
+				{ base: Rights.StdoutBase, inheriting: Rights.StdoutInheriting },
+				0, '/dev/stderr', true
+			),
 
 			createPreOpenedFileDescriptor: (path, uri, fileType, rights, fdflags) => {
 				const inode = refINode(path, uri);
@@ -551,74 +664,6 @@ export namespace FileSystem {
 				apiClient.workspace.fileSystem.delete(fileUri, { recursive: false, useTrash: true });
 			}
 		};
-
-		function refINode(filepath: string, uri: URI): INode {
-			let result = path2INode.get(filepath);
-			if (result !== undefined) {
-				result.refs++;
-				return result;
-			}
-			result = { id: inodeCounter++, uri, refs: 1, content: undefined };
-			path2INode.set(filepath, result);
-			inodes.set(result.id, result);
-			return result;
-		}
-
-		function unrefINode(id: bigint): void {
-			let inode = inodes.get(id);
-			if (inode === undefined) {
-				inode = deletedINode.get(id);
-			}
-			if (inode === undefined) {
-				throw new WasiError(Errno.badf);
-			}
-			inode.refs--;
-			if (inode.refs === 0) {
-				inode.content = undefined;
-				deletedINode.delete(id);
-			}
-		}
-
-		function getINode(id: bigint): INode {
-			const inode: INode | undefined = inodes.get(id);
-			if (inode === undefined) {
-				throw new WasiError(Errno.badf);
-			}
-			return inode;
-		}
-
-		function markINodeAsDeleted(filepath: string): void {
-			const inode = path2INode.get(filepath);
-			if (inode === undefined) {
-				return;
-			}
-			path2INode.delete(filepath);
-			if (!deletedINode.has(inode.id)) {
-				deletedINode.set(inode.id, inode);
-			}
-		}
-
-		function getResolvedINode(id: bigint): Required<INode> {
-			const inode: INode | undefined = inodes.get(id);
-			if (inode === undefined) {
-				throw new WasiError(Errno.badf);
-			}
-			if (inode.content === undefined) {
-				inode.content = apiClient.workspace.fileSystem.read(inode.uri);
-			}
-			return inode as Required<INode>;
-		}
-
-		function writeContent(inode: Required<INode>) {
-			apiClient.workspace.fileSystem.write(inode.uri, inode.content);
-		}
-
-		function uriJoin(uri: URI, name: string): URI {
-			if (name === '.') {
-				return uri;
-			}
-			return uri.with( { path: RAL().path.join(uri.path, name)} );
-		}
 
 		function doStat(filePath: string, uri: URI, filestat_ptr: ptr): void {
 			const vStat = apiClient.workspace.fileSystem.stat(uri);
