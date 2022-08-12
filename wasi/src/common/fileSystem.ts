@@ -640,7 +640,7 @@ export namespace FileSystem {
 			if (inode === undefined) {
 				throw new WasiError(Errno.badf);
 			}
-			if (inode.content !== undefined) {
+			if (inode.content === undefined) {
 				inode.content = apiClient.workspace.fileSystem.read(inode.uri);
 			}
 			return inode as Required<INode>;

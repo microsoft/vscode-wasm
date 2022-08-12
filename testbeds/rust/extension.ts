@@ -6,10 +6,10 @@
 import * as path from 'path';
 import { Worker } from 'worker_threads';
 
-import { commands, ExtensionContext, Terminal, window, workspace } from 'vscode';
+import { commands, ExtensionContext, Terminal, window } from 'vscode';
 
-import { ServiceConnection } from 'vscode-sync-rpc/node';
-import { ApiService, APIRequests } from 'vscode-sync-api-service';
+import { ServiceConnection } from '@vscode/sync-rpc/node';
+import { ApiService, APIRequests } from '@vscode/sync-api-service';
 
 const name = 'Run Rust';
 let apiService: ApiService;

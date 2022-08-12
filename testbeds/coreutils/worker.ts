@@ -6,13 +6,9 @@ import * as fs from 'fs';
 import * as path from 'path';
 import { parentPort  } from 'worker_threads';
 
-import { URI } from 'vscode-uri';
-
-import { ClientConnection, ProcExitRequest, Requests } from 'vscode-sync-rpc/node';
-import { ApiClient, APIRequests } from 'vscode-sync-api-client';
-import { WASI } from 'vscode-wasi/node';
-
-import { Options } from 'vscode-wasi';
+import { ClientConnection } from '@vscode/sync-rpc/node';
+import { ApiClient, APIRequests } from '@vscode/sync-api-client';
+import { WASI, Options } from '@vscode/wasi/node';
 
 if (parentPort === null) {
 	process.exit();

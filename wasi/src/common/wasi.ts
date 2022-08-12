@@ -585,8 +585,8 @@ export namespace WASI {
 		}
 
 		const wasi: WASI = {
-			initialize: (instance: WebAssembly.Instance): void => {
-				instance = instance as WebAssembly.$Instance;
+			initialize: (inst: WebAssembly.Instance): void => {
+				instance = inst as WebAssembly.$Instance;
 			},
 			args_sizes_get: (argvCount_ptr: ptr, argvBufSize_ptr: ptr): errno => {
 				const memory = memoryView();
