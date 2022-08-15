@@ -19,7 +19,7 @@ import {
 	fd, errno, Errno, lookupflags, oflags, rights, fdflags, dircookie, filetype, Rights,
 	filesize, advise, filedelta, whence, Filestat, Ciovec, Iovec, Filetype, clockid, timestamp, Clockid,
 	Fdstat, fstflags, Prestat, exitcode, Oflags, Subscription, WasiError, Eventtype, Event, event,
-	Subclockflags, Literal, subscription, Fdflags
+	Subclockflags, Literal, subscription, Fdflags, riflags, siflags, sdflags
 } from './wasiTypes';
 import { BigInts, code2Wasi } from './converter';
 import { DeviceIds, FileDescriptor, FileSystem } from './fileSystem';
@@ -478,6 +478,40 @@ export interface WASI {
 	 * @param result_fd_ptr A memory location to store the new socket connection.
 	 */
 	sock_accept(fd: fd, flags: fdflags, result_fd_ptr: ptr): errno;
+
+	/**
+	 * Receive a message from a socket. Note: This is similar to recv in POSIX,
+	 * though it also supports reading the data into multiple buffers in the
+	 * manner of readv.
+	 * @param fd The listening socket.
+	 * @param ri_data_ptr List of scatter/gather vectors in which to store data.
+	 * @param ri_data_len The length of the iovs.
+	 * @param ri_flags Message flags.
+	 * @param ro_datalen_ptr: A memory location to store the size of the returned
+	 * data
+	 * @param roflags_ptr: A memory location to store the return flags.
+	 */
+	sock_recv(fd: fd, ri_data_ptr: ptr, ri_data_len: u32, ri_flags: riflags, ro_datalen_ptr: ptr, roflags_ptr: ptr): errno;
+
+	/**
+	 * Send a message on a socket. Note: This is similar to send in POSIX,
+	 * though it also supports writing the data from multiple buffers in the
+	 * manner of writev.
+	 * @param fd The socket to write to.
+	 * @param si_data_ptr List of scatter/gather vectors to which to retrieve
+	 * data.
+	 * @param si_data_len: The length of the ciovs.
+	 * @param si_flags Message flags.
+	 * @param si_datalen_ptr
+	 */
+	sock_send(fd: fd, si_data_ptr: ptr, si_data_len: u32, si_flags: siflags, si_datalen_ptr: ptr): errno;
+
+	/**
+	 * Shut down socket send and receive channels. Note: This is similar to shutdown in POSIX.
+	 * @param fd The socket to shut down.
+	 * @param sdflags Which channels on the socket to shut down.
+	 */
+	sock_shutdown(fd: fd, sdflags: sdflags): errno;
 }
 
 export type Options = {
@@ -1197,6 +1231,15 @@ export namespace WASI {
 				return Errno.success;
 			},
 			sock_accept: (_fd: fd, _flags: fdflags, _result_fd_ptr: ptr): errno => {
+				return Errno.nosys;
+			},
+			sock_recv: (_fd: fd, _ri_data_ptr: ptr, _ri_data_len: u32, _ri_flags: riflags, _ro_datalen_ptr: ptr, _roflags_ptr: ptr): errno => {
+				return Errno.nosys;
+			},
+			sock_send: (_fd: fd, _si_data_ptr: ptr, _si_data_len: u32, _si_flags: siflags, _si_datalen_ptr: ptr): errno => {
+				return Errno.nosys;
+			},
+			sock_shutdown: (_fd: fd, _sdflags: sdflags): errno => {
 				return Errno.nosys;
 			}
 		};
