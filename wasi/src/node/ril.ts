@@ -8,7 +8,6 @@ import * as crypto from 'crypto';
 
 import RAL from '../common/ral';
 import { Disposable } from '../common/disposable';
-import { join } from 'path';
 
 interface RIL extends RAL {
 }
