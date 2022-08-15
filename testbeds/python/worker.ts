@@ -38,17 +38,18 @@ connection.serviceReady().then(async (params) => {
 			mapDir.push({ name: path.posix.join(path.posix.sep, 'workspaces', folder.name), uri: folder.uri });
 		}
 	}
+	// const pythonRoot = URI.file('/home/dirkb/Projects/dbaeumer/python-3.11.0rc'); //  URI.parse('vscode-vfs://github/dbaeumer/python-3.11.0rc');
 	const pythonRoot = URI.parse('vscode-vfs://github/dbaeumer/python-3.11.0rc');
-	mapDir.push({ name: path.posix.join(path.posix.sep, 'python'), uri: pythonRoot });
+	mapDir.push({ name: path.posix.sep, uri: pythonRoot });
 	const exitHandler = (rval: number): void => {
 		apiClient.procExit(rval);
 	};
 	const wasi = WASI.create(name, apiClient, exitHandler, {
 		mapDir,
-		argv: toRun !== undefined ? ['python', '-X', 'utf8', '-B', toRun] : ['python', '-X', 'utf8', '-B'],
+		argv: toRun !== undefined ? ['/usr/python', '-X', 'utf8', '-B', toRun] : ['python', '-X', 'utf8', '-B'],
 		env: {
-			TMP: '/tmp',
-			PYTHONPATH: '/python:/python/lib:/workspace'
+			// TMP: '/tmp',
+			PYTHONPATH: '/workspace'
 		}
 	});
 	const wasmFile = pythonRoot.with( { path: path.posix.join(pythonRoot.path, 'python.wasm') });
