@@ -12,6 +12,9 @@
 	"include": [
 		"."
 	],
+	"exclude": [
+		"test"
+	],
 	"references": [
 		{ "path": "../common/tsconfig.watch.json" }
 	]

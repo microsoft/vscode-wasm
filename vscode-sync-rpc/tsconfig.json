@@ -7,6 +7,7 @@
 	"files": [],
 	"references": [
 		{ "path": "./src/browser/tsconfig.json" },
-		{ "path": "./src/node/tsconfig.json" }
+		{ "path": "./src/node/tsconfig.json" },
+		{ "path": "./src/node/test/tsconfig.json" }
 	]
 }

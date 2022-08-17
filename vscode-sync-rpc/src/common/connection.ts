@@ -93,7 +93,7 @@ export type ProcExitRequest = {
 
 
 class NoResult {
-	public static readonly kind: 0 = 0;
+	public static readonly kind = 0 as const;
 	constructor() {
 	}
 	get kind() {
@@ -114,7 +114,7 @@ class NoResult {
 }
 
 export class Uint8Result {
-	public static readonly kind: 1 = 1;
+	public static readonly kind = 1 as const;
 	#length: number;
 	public static fromLength(length: number): Uint8Result {
 		return new Uint8Result(length);
@@ -143,7 +143,7 @@ export class Uint8Result {
 }
 
 export class Int8Result {
-	public static readonly kind: 2 = 2;
+	public static readonly kind = 2 as const;
 	#length: number;
 	public static fromLength(length: number): Int8Result {
 		return new Int8Result(length);
@@ -172,7 +172,7 @@ export class Int8Result {
 }
 
 export class Uint16Result {
-	public static readonly kind: 3 = 3;
+	public static readonly kind = 3 as const;
 	#length: number;
 	public static fromLength(length: number): Uint16Result {
 		return new Uint16Result(length);
@@ -204,7 +204,7 @@ export class Uint16Result {
 }
 
 export class Int16Result {
-	public static readonly kind: 4 = 4;
+	public static readonly kind = 4 as const;
 	#length: number;
 	public static fromLength(length: number): Int16Result {
 		return new Int16Result(length);
@@ -236,7 +236,7 @@ export class Int16Result {
 }
 
 export class Uint32Result {
-	public static readonly kind: 5 = 5;
+	public static readonly kind = 5 as const;
 	#length: number;
 	public static fromLength(length: number): Uint32Result {
 		return new Uint32Result(length);
@@ -268,7 +268,7 @@ export class Uint32Result {
 }
 
 export class Int32Result {
-	public static readonly kind: 6 = 6;
+	public static readonly kind = 6 as const;
 	#length: number;
 	public static fromLength(length: number): Int32Result {
 		return new Int32Result(length);
@@ -300,7 +300,7 @@ export class Int32Result {
 }
 
 export class Uint64Result {
-	public static readonly kind: 7 = 7;
+	public static readonly kind = 7 as const;
 	#length: number;
 	public static fromLength(length: number): Uint64Result {
 		return new Uint64Result(length);
@@ -332,7 +332,7 @@ export class Uint64Result {
 }
 
 export class Int64Result {
-	public static readonly kind: 8 = 8;
+	public static readonly kind = 8 as const;
 	#length: number;
 	public static fromLength(length: number): Int64Result {
 		return new Int64Result(length);
@@ -364,7 +364,7 @@ export class Int64Result {
 }
 
 export class VariableResult<T> {
-	public static readonly kind: 9 = 9;
+	public static readonly kind = 9 as const;
 	#mode: 'binary' | 'json';
 	public constructor(mode: 'binary' | 'json') {
 		this.#mode = mode;
