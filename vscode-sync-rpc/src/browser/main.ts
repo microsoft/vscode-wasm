@@ -32,18 +32,18 @@ export class ClientConnection<Requests extends RequestType | undefined = undefin
 
 export class ServiceConnection<RequestHandlers extends RequestType | undefined = undefined> extends BaseServiceConnection<RequestHandlers> {
 
-	private readonly worker: Worker;
+	private readonly port: MessagePort | Worker;
 
-	constructor(worker: Worker) {
+	constructor(port: MessagePort | Worker) {
 		super();
-		this.worker = worker;
-		this.worker.onmessage = ((event: MessageEvent<SharedArrayBuffer>) => {
+		this.port = port;
+		this.port.onmessage = ((event: MessageEvent<SharedArrayBuffer>) => {
 			void this.handleMessage(event.data);
 		});
 	}
 
 	protected postMessage(message: Message): void {
-		this.worker.postMessage(JSON.stringify(message, undefined, 0));
+		this.port.postMessage(JSON.stringify(message, undefined, 0));
 	}
 }
 
