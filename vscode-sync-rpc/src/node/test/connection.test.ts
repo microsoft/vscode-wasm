@@ -17,7 +17,7 @@ export type Requests = {
 } | {
 	method: 'varUint8array';
 	params: undefined;
-	result: VariableResult<Uint8Result>;
+	result: VariableResult<Uint8Array>;
 };
 
 function assertData<T>(value: { errno: RPCErrno } | { errno: 0; data: T }): asserts value is { errno: 0; data: T } {
@@ -50,5 +50,6 @@ suite('Connection', () => {
 		assert.strictEqual(result.errno, 0);
 		assertData(result);
 		assert.strictEqual(result.data.length, 32);
+		assert.strict(new TextDecoder().decode(result.data), '1'.repeat(32));
 	});
 });
