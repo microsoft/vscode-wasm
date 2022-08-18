@@ -18,10 +18,6 @@ export type Requests = {
 	};
 	result: Uint8Array;
 } | {
-	method: 'varUint8array';
-	params: undefined;
-	result: VariableResult<Uint8Array>;
-} | {
 	method: 'int8array';
 	params: undefined;
 	result: Int8Array;
@@ -49,6 +45,14 @@ export type Requests = {
 	method: 'int64array';
 	params: undefined;
 	result: BigInt64Array;
+} | {
+	method: 'varUint8array';
+	params: undefined;
+	result: VariableResult<Uint8Array>;
+}| {
+	method: 'varJSON';
+	params: undefined;
+	result: VariableResult<{ name: string; age: number }>;
 };
 
 function assertData<T>(value: { errno: RPCErrno } | { errno: 0; data: T }): asserts value is { errno: 0; data: T } {
@@ -148,11 +152,23 @@ suite('Connection', () => {
 		const worker = new Worker(path.join(__dirname, './workers/varUint8array.js'));
 		const connection = new ClientConnection<Requests>(worker);
 		await connection.serviceReady();
-		const result = connection.sendRequest('varUint8array', new VariableResult<Uint8Array>('binary'));
+		const result = connection.sendRequest('varUint8array', new VariableResult('binary'));
 		await worker.terminate();
 		assert.strictEqual(result.errno, 0);
 		assertData(result);
 		assert.strictEqual(result.data.length, 32);
 		assert.strict(new TextDecoder().decode(result.data), '1'.repeat(32));
+	});
+
+	test('Variable JSON result', async () => {
+		const worker = new Worker(path.join(__dirname, './workers/varJson.js'));
+		const connection = new ClientConnection<Requests>(worker);
+		await connection.serviceReady();
+		const result = connection.sendRequest('varJSON', new VariableResult('json'));
+		await worker.terminate();
+		assert.strictEqual(result.errno, 0);
+		assertData(result);
+		assert.strictEqual(result.data.name, 'vscode');
+		assert.strictEqual(result.data.age, 70);
 	});
 });

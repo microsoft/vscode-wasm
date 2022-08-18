@@ -387,7 +387,7 @@ export class Int64Result {
 	}
 }
 
-export class VariableResult<T> {
+export class VariableResult<_T = undefined> {
 	public static readonly kind = 9 as const;
 	#mode: 'binary' | 'json';
 	public constructor(mode: 'binary' | 'json') {
@@ -405,7 +405,7 @@ export class VariableResult<T> {
 	get length(): number {
 		return 0;
 	}
-	getPadding(offset: number): number  {
+	getPadding(_offset: number): number  {
 		return 0;
 	}
 }
