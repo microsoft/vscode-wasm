@@ -653,7 +653,9 @@ export abstract class BaseClientConnection<Requests extends RequestType | undefi
 		this.postMessage(sharedArrayBuffer);
 
 		// Wait for the answer
+		RAL().console.log(`Start waiting fore result`);
 		Atomics.wait(sync, 0, 0);
+		RAL().console.log(`Continue after wait`);
 
 		const errno: RPCErrno = header[HeaderIndex.errno];
 		if (errno !== 0) {
