@@ -1,7 +1,7 @@
 {
 	"name": "@vscode/sync-rpc",
-	"version": "0.0.1",
-	"description": "An RPC implementation between Web workers that works sync",
+	"version": "0.1.0",
+	"description": "An RPC implementation between Web and NodeJS workers that works sync",
 	"private": true,
 	"main": "./lib/node/main.js",
 	"browser": {
@@ -14,16 +14,15 @@
 	},
 	"keywords": [
 		"VSCode",
-		"API"
+		"rpc",
+		"sync"
 	],
 	"author": "MS",
 	"license": "MIT",
 	"bugs": {
-		"url": "https://github.com/microsoft/vscode-wasi/issues"
+		"url": "https://github.com/microsoft/vscode-wasm/issues"
 	},
-	"homepage": "https://github.com/microsoft/vscode-wasi#readme",
-	"devDependencies": {
-	},
+	"homepage": "https://github.com/microsoft/vscode-wasm/blob/main/vscode-sync-rpc/README.MD",
 	"scripts": {
 		"compile": "node ../node_modules/typescript/lib/tsc.js -b ./tsconfig.json",
 		"watch": "node ../node_modules/typescript/lib/tsc.js -b ./tsconfig.watch.json -w",
