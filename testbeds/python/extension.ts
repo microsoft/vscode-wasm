@@ -62,6 +62,7 @@ async function preloadPython(): Promise<void> {
 		if (remoteHub !== undefined) {
 			const remoteHubApi = await remoteHub.activate();
 			if (remoteHubApi.loadWorkspaceContents !== undefined) {
+				console.log(`Preloading Python binaries`);
 				await remoteHubApi.loadWorkspaceContents(Uri.parse('vscode-vfs://github/dbaeumer/python-3.11.0rc'));
 			}
 		}

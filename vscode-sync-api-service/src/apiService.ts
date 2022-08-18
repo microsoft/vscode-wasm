@@ -108,7 +108,9 @@ export class ApiService {
 		this.connection.onRequest('fileSystem/stat', async (params, resultBuffer) => {
 			try {
 				const uri = vscode.Uri.from(params.uri);
+				const start = Date.now();
 				const vStat: vscode.FileStat = await vscode.workspace.fs.stat(uri);
+				RAL().console.log(`Stat file ${uri.toString()} took ${Date.now() - start}ms`);
 				const stat = DTOs.Stat.create(resultBuffer);
 				stat.type = vStat.type;
 				stat.ctime = vStat.mtime;
@@ -126,7 +128,9 @@ export class ApiService {
 		this.connection.onRequest('fileSystem/readFile', async (params) => {
 			try {
 				const uri = vscode.Uri.from(params.uri);
+				const start = Date.now();
 				const contents = await vscode.workspace.fs.readFile(uri);
+				RAL().console.log(`Reading file ${uri.toString()} took ${Date.now() - start}ms`);
 				return { errno: 0, data: contents };
 			} catch (error) {
 				return handleError(error);
