@@ -66,11 +66,8 @@ function assertData<T>(value: { errno: RPCErrno } | { errno: 0; data: T }): asse
 
 async function createConnection(filename: string): Promise<[ClientConnection<Requests>, Worker]> {
 	const worker = new Worker(path.join(__dirname, filename));
-	console.log(`Worker created ${filename}`);
 	const connection = new ClientConnection<Requests>(worker);
-	console.log(`Connection created`);
 	await connection.serviceReady();
-	console.log(`Service is ready`);
 	return [connection, worker];
 }
 
@@ -88,11 +85,8 @@ suite('Connection', () => {
 
 	test('UInt8Array', async () => {
 		const [connection, worker] = await createConnection('./workers/uint8array.js');
-		console.log(`Got connection and worker`);
 		const result = connection.sendRequest('uint8array', { p1: '12345678' }, Uint8Result.fromLength(8));
-		console.log(`Received result`);
 		await worker.terminate();
-		console.log(`Terminated worker`);
 		assert.strictEqual(result.errno, 0);
 		assertData(result);
 		assert.ok(result.data instanceof Uint8Array);

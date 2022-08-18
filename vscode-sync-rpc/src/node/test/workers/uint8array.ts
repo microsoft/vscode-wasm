@@ -14,9 +14,7 @@ if (parentPort === null) {
 
 const connection = new ServiceConnection<Requests>(parentPort);
 connection.onRequest('uint8array', (params, resultBuffer) => {
-	console.log(`Received request uint8array`);
 	resultBuffer.set(new TextEncoder().encode(params.p1));
-	console.log(`Returning result`);
 	return { errno: 0 };
 });
 connection.signalReady();
