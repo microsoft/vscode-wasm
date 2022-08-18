@@ -18,6 +18,12 @@ export type Requests = {
 	method: 'varUint8array';
 	params: undefined;
 	result: VariableResult<Uint8Array>;
+} | {
+	method: 'uint8array';
+	params: {
+		p1: string;
+	};
+	result: Uint8Array;
 };
 
 function assertData<T>(value: { errno: RPCErrno } | { errno: 0; data: T }): asserts value is { errno: 0; data: T } {
@@ -52,4 +58,17 @@ suite('Connection', () => {
 		assert.strictEqual(result.data.length, 32);
 		assert.strict(new TextDecoder().decode(result.data), '1'.repeat(32));
 	});
+
+	test('Int8Array', async () => {
+		const worker = new Worker(path.join(__dirname, './workers/uint8array.js'));
+		const connection = new ClientConnection<Requests>(worker);
+		await connection.serviceReady();
+		const result = connection.sendRequest('uint8array', { p1: '12345678' }, Uint8Result.fromLength(8));
+		await worker.terminate();
+		assert.strictEqual(result.errno, 0);
+		assertData(result);
+		const str = new TextDecoder().decode(result.data);
+		assert.strictEqual(str, '12345678');
+	});
+
 });

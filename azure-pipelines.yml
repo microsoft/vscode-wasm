@@ -4,18 +4,30 @@
 # https://docs.microsoft.com/azure/devops/pipelines/languages/javascript
 
 trigger:
-- main
+  batch: true
+  branches:
+    include: [ '*' ]
+  tags:
+    include: [ 'release/*/*' ]
+pr:
+  branches:
+    include: [ 'main', 'release/*' ]
 
-pool:
-  vmImage: ubuntu-latest
+jobs:
+- job: Windows
+  pool:
+    vmImage: 'windows-latest'
+  steps:
+  - template: build/azure-pipelines/win32/build.yml
 
-steps:
-- task: NodeTool@0
-  inputs:
-    versionSpec: '10.x'
-  displayName: 'Install Node.js'
+- job: Linux
+  pool:
+    vmImage: 'ubuntu-latest'
+  steps:
+  - template: build/azure-pipelines/linux/build.yml
 
-- script: |
-    npm install
-    npm run build
-  displayName: 'npm install and build'
+- job: macOS
+  pool:
+    vmImage: macOS-latest
+  steps:
+  - template: build/azure-pipelines/darwin/build.yml

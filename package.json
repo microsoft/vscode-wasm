@@ -37,7 +37,9 @@
 		"build": "node ./node_modules/typescript/lib/tsc.js -b tsconfig.json",
 		"compile": "node ./node_modules/typescript/lib/tsc.js -b tsconfig.json",
 		"watch": "node ./node_modules/typescript/lib/tsc.js -b tsconfig.watch.json -w",
-		"clean": "node ./build/bin/all.js run clean"
+		"clean": "node ./build/bin/all.js run clean",
+		"lint": "echo linting",
+		"test": "cd vscode-sync-rpc && npm run test && cd .."
 	},
 	"dependencies": {
 		"@vscode/test-electron": "^2.1.5"

@@ -1,0 +1,30 @@
+steps:
+- task: NodeTool@0
+  inputs:
+    versionSpec: '16.14.2'
+  displayName: 'Install Node.js'
+
+- script: |
+    npm install
+  displayName: 'Install Dependencies'
+
+- script: |
+    npm run compile
+  displayName: 'Compile'
+
+- script: |
+    npm run lint
+  displayName: 'Hygiene Checks'
+
+- script: |
+    set PATHEXT=.COM;.EXE;.BAT;.CMD;
+    npm run test
+  displayName: 'Unit Tests'
+
+# - task: RichCodeNavIndexer@0
+#   displayName: VS Rich Code Navigation Upload
+#   inputs:
+#     languages: typescript
+#     typescriptVersion: 0.6.0-next.21
+#     configFiles: .lsifrc.json
+#   continueOnError: true

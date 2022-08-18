@@ -1,0 +1,21 @@
+steps:
+- task: NodeTool@0
+  inputs:
+    versionSpec: '16.14.2'
+  displayName: 'Install Node.js'
+
+- script: |
+    npm install
+  displayName: 'Install Dependencies'
+
+- script: |
+    npm run compile
+  displayName: 'Compile'
+
+- script: |
+    npm run lint
+  displayName: 'Hygiene Checks'
+
+- script: |
+    npm run test
+  displayName: 'Unit Tests'
