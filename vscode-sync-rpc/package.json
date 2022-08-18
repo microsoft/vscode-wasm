@@ -10,7 +10,7 @@
 	"typings": "./lib/common/api.d.ts",
 	"repository": {
 		"type": "git",
-		"url": "git+https://github.com/microsoft/vscode-wasi.git"
+		"url": "git+https://github.com/microsoft/vscode-wasm.git"
 	},
 	"keywords": [
 		"VSCode",

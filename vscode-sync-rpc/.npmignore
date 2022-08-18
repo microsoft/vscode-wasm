@@ -1,0 +1,13 @@
+.vscode/
+dist/
+lib/**/test/
+lib/**/*.map
+lib/**/*.tsbuildInfo
+src/
+test/
+.eslintrc*
+.eslintignore
+.mocharc*
+.gitignore
+tsconfig*.json
+metaModel.json
