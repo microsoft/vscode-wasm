@@ -673,11 +673,17 @@ export abstract class BaseClientConnection<Requests extends RequestType | undefi
 					}
 					if (RequestResult.hasData(lazyResult)) {
 						try {
+							// We need to slice the Uint8Array we received since it is a view onto a
+							// shared array buffer and in the browser the text decoder throws when
+							// reading from a Uint8Array. Since this seems to be the correct behavior
+							// anyways (the array could otherwise change underneath) we do the same
+							// for NodeJS
 							const data = resultType.mode === 'binary'
 								? lazyResult.data
-								: JSON.parse(this.textDecoder.decode(lazyResult.data as Uint8Array));
+								: JSON.parse(this.textDecoder.decode((lazyResult.data as Uint8Array).slice()));
 							return { errno: 0, data };
 						} catch (error) {
+							RAL().console.error(error);
 							return { errno: RPCErrno.LazyResultFailed };
 						}
 					} else {
@@ -759,7 +765,8 @@ export abstract class BaseServiceConnection<RequestHandlers extends RequestType 
 		const requestLength = header[HeaderIndex.messageByteLength];
 
 		try {
-			const message = JSON.parse(this.textDecoder.decode(new Uint8Array(sharedArrayBuffer, requestOffset, requestLength)));
+			// See above why we need to slice the Uint8Array.
+			const message = JSON.parse(this.textDecoder.decode(new Uint8Array(sharedArrayBuffer, requestOffset, requestLength).slice()));
 			if (Request.is(message)) {
 				if (message.method === '$/fetchResult') {
 					const resultId: number = message.params!.resultId as number;
@@ -828,6 +835,7 @@ export abstract class BaseServiceConnection<RequestHandlers extends RequestType 
 				header[HeaderIndex.errno] = RPCErrno.InvalidMessageFormat;
 			}
 		} catch (error) {
+			RAL().console.error(error);
 			header[HeaderIndex.errno] = RPCErrno.UnknownError;
 		}
 		const sync = new Int32Array(sharedArrayBuffer, 0, 1);
