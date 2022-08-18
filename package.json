@@ -40,8 +40,5 @@
 		"clean": "node ./build/bin/all.js run clean",
 		"lint": "echo linting",
 		"test": "cd vscode-sync-rpc && npm run test && cd .."
-	},
-	"dependencies": {
-		"@vscode/test-electron": "^2.1.5"
 	}
 }
