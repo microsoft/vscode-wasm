@@ -485,18 +485,18 @@ type LengthType<T extends TypedArray> =
 type _SendRequestSignatures<Requests extends RequestType> = UnionToIntersection<{
  	[R in Requests as R['method']]: R['params'] extends null | undefined
 	 	? R['result'] extends null | undefined
-			? (method: R['method']) => { errno: RPCErrno }
+			? (method: R['method'], timeout?: number) => { errno: RPCErrno }
 			: R['result'] extends TypedArray
-				? (method: R['method'], resultKind: LengthType<R['result']>) => { errno: 0; data: R['result'] } | { errno: RPCErrno }
+				? (method: R['method'], resultKind: LengthType<R['result']>, timeout?: number) => { errno: 0; data: R['result'] } | { errno: RPCErrno }
 				: R['result'] extends VariableResult<infer T>
-					? (method: R['method'], resultKind: VariableResult<T>) => { errno: 0; data: T } | { errno: RPCErrno }
+					? (method: R['method'], resultKind: VariableResult<T>, timeout?: number) => { errno: 0; data: T } | { errno: RPCErrno }
 					: never
 		: R['result'] extends null | undefined
-			? (method: R['method'], params: R['params']) => { errno: RPCErrno }
+			? (method: R['method'], params: R['params'], timeout?: number) => { errno: RPCErrno }
 			: R['result'] extends TypedArray
-				? (method: R['method'], params: R['params'], resultKind: LengthType<R['result']>) => { errno: 0; data: R['result'] } | { errno: RPCErrno }
+				? (method: R['method'], params: R['params'], resultKind: LengthType<R['result']>, timeout?: number) => { errno: 0; data: R['result'] } | { errno: RPCErrno }
 				: R['result'] extends VariableResult<infer T>
-					? (method: R['method'], params: R['params'], resultKind: VariableResult<T>) => { errno: 0; data: T } | { errno: RPCErrno }
+					? (method: R['method'], params: R['params'], resultKind: VariableResult<T>, timeout?: number) => { errno: 0; data: T } | { errno: RPCErrno }
 					: never;
 }[keyof MethodKeys<Requests>]>;
 
@@ -534,6 +534,11 @@ export namespace RPCErrno {
 	 * No error occurred. RPC  call completed successfully.
 	 */
 	export const Success = 0;
+
+	/**
+	 * The sync RPC called timed out.
+	 */
+	export const TimedOut = 1;
 
 	/**
 	 * A unknown error has occurred.
@@ -594,18 +599,26 @@ export abstract class BaseClientConnection<Requests extends RequestType | undefi
 
 	public readonly sendRequest: SendRequestSignatures<Requests> = this._sendRequest as SendRequestSignatures<Requests>;
 
-	private _sendRequest(method: string, arg1?: Params | ResultType, arg2?: ResultType): { errno: 0; data: any } | { errno: RPCErrno } {
+	private _sendRequest(method: string, arg1?: Params | ResultType | number, arg2?: ResultType | number, arg3?: number): { errno: 0; data: any } | { errno: RPCErrno } {
 		const id = this.id++;
 		const request: Request = { id: id, method };
 		let params: Params | undefined = undefined;
-		let resultType : ResultType = new NoResult();
+		let resultType: ResultType = new NoResult();
+		let timeout: number | undefined = undefined;
 		if (ResultType.is(arg1)) {
 			resultType = arg1;
+		} else if (typeof arg1 === 'number') {
+			timeout = arg1;
 		} else if (arg1 !== undefined || arg1 !== null) {
 			params = arg1;
 		}
-		if (arg2 !== undefined) {
+		if (typeof arg2 === 'number') {
+			timeout = arg2;
+		} else if (arg2 !== undefined) {
 			resultType = arg2;
+		}
+		if (typeof arg3 === 'number') {
+			timeout = arg3;
 		}
 		if (params !== undefined) {
 			request.params = {};
@@ -653,9 +666,19 @@ export abstract class BaseClientConnection<Requests extends RequestType | undefi
 		this.postMessage(sharedArrayBuffer);
 
 		// Wait for the answer
-		RAL().console.log(`Start waiting fore result`);
-		Atomics.wait(sync, 0, 0);
-		RAL().console.log(`Continue after wait`);
+		const result = Atomics.wait(sync, 0, 0, timeout);
+		switch (result) {
+			case 'timed-out':
+				return { errno: RPCErrno.TimedOut };
+			case 'not-equal':
+				const value = Atomics.load(sync, 0);
+				// If the value === 1 the service has already
+				// provided the result. Otherwise we actually
+				// don't know what happened :-(.
+				if (value !== 1) {
+					return { errno: RPCErrno.UnknownError };
+				}
+		}
 
 		const errno: RPCErrno = header[HeaderIndex.errno];
 		if (errno !== 0) {
@@ -669,7 +692,7 @@ export abstract class BaseClientConnection<Requests extends RequestType | undefi
 					if (lazyResultLength === 0) {
 						return { errno: 0, data: resultType.mode === 'binary' ? new Uint8Array(0) : '' };
 					}
-					const lazyResult = this._sendRequest('$/fetchResult', { resultId: id }, Uint8Result.fromLength(lazyResultLength));
+					const lazyResult = this._sendRequest('$/fetchResult', { resultId: id }, Uint8Result.fromLength(lazyResultLength), timeout);
 					if (lazyResult.errno !== 0) {
 						return { errno: lazyResult.errno };
 					}
@@ -841,6 +864,7 @@ export abstract class BaseServiceConnection<RequestHandlers extends RequestType 
 			header[HeaderIndex.errno] = RPCErrno.UnknownError;
 		}
 		const sync = new Int32Array(sharedArrayBuffer, 0, 1);
+		Atomics.store(sync, 0, 1);
 		Atomics.notify(sync, 0);
 	}
 

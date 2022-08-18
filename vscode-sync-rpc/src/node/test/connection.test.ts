@@ -72,7 +72,7 @@ async function createConnection(filename: string): Promise<[ClientConnection<Req
 }
 
 function assertResult(result: { errno: 0; data: TypedArray } | { errno: RPCErrno }, resultType: TypedArrayResult, length: number, factor: number) {
-	assert.strictEqual(result.errno, 0);
+	assert.strictEqual(result.errno, 0, 'Request was successful');
 	assertData(result);
 	assert.ok(resultType.is(result.data));
 	assert.strictEqual(result.data.length, length);
@@ -85,7 +85,7 @@ suite('Connection', () => {
 
 	test('UInt8Array', async () => {
 		const [connection, worker] = await createConnection('./workers/uint8array.js');
-		const result = connection.sendRequest('uint8array', { p1: '12345678' }, Uint8Result.fromLength(8));
+		const result = connection.sendRequest('uint8array', { p1: '12345678' }, Uint8Result.fromLength(8), 50);
 		await worker.terminate();
 		assert.strictEqual(result.errno, 0);
 		assertData(result);
@@ -97,7 +97,7 @@ suite('Connection', () => {
 	test('Int8Array', async () => {
 		const [connection, worker] = await createConnection('./workers/int8array.js');
 		const resultType = Int8Result.fromLength(8);
-		const result = connection.sendRequest('int8array', resultType);
+		const result = connection.sendRequest('int8array', resultType, 50);
 		await worker.terminate();
 		assertResult(result, resultType, 8, -1);
 	});
@@ -105,7 +105,7 @@ suite('Connection', () => {
 	test('Uint16Array', async () => {
 		const [connection, worker] = await createConnection('./workers/uint16array.js');
 		const resultType = Uint16Result.fromLength(16);
-		const result = connection.sendRequest('uint16array', resultType);
+		const result = connection.sendRequest('uint16array', resultType, 50);
 		await worker.terminate();
 		assertResult(result, resultType, 16, 1);
 	});
@@ -113,7 +113,7 @@ suite('Connection', () => {
 	test('Int16Array', async () => {
 		const [connection, worker] = await createConnection('./workers/int16array.js');
 		const resultType = Int16Result.fromLength(16);
-		const result = connection.sendRequest('int16array', resultType);
+		const result = connection.sendRequest('int16array', resultType, 50);
 		await worker.terminate();
 		assertResult(result, resultType, 16, -1);
 	});
@@ -121,7 +121,7 @@ suite('Connection', () => {
 	test('Uint32Array', async () => {
 		const [connection, worker] = await createConnection('./workers/uint32array.js');
 		const resultType = Uint32Result.fromLength(32);
-		const result = connection.sendRequest('uint32array', resultType);
+		const result = connection.sendRequest('uint32array', resultType, 50);
 		await worker.terminate();
 		assertResult(result, resultType, 32, 1);
 	});
@@ -129,7 +129,7 @@ suite('Connection', () => {
 	test('Int32Array', async () => {
 		const [connection, worker] = await createConnection('./workers/int32array.js');
 		const resultType = Int32Result.fromLength(32);
-		const result = connection.sendRequest('int32array', resultType);
+		const result = connection.sendRequest('int32array', resultType, 50);
 		await worker.terminate();
 		assertResult(result, resultType, 32, -1);
 	});
@@ -137,7 +137,7 @@ suite('Connection', () => {
 	test('Uint64Array', async () => {
 		const [connection, worker] = await createConnection('./workers/uint64array.js');
 		const resultType = Uint64Result.fromLength(64);
-		const result = connection.sendRequest('uint64array', resultType);
+		const result = connection.sendRequest('uint64array', resultType, 50);
 		await worker.terminate();
 		assertResult(result, resultType, 64, 1);
 	});
@@ -145,7 +145,7 @@ suite('Connection', () => {
 	test('Int64Array', async () => {
 		const [connection, worker] = await createConnection('./workers/int64array.js');
 		const resultType = Int64Result.fromLength(64);
-		const result = connection.sendRequest('int64array', resultType);
+		const result = connection.sendRequest('int64array', resultType, 50);
 		await worker.terminate();
 		assertResult(result, resultType, 64, -1);
 	});
@@ -154,9 +154,9 @@ suite('Connection', () => {
 		const worker = new Worker(path.join(__dirname, './workers/varUint8array.js'));
 		const connection = new ClientConnection<Requests>(worker);
 		await connection.serviceReady();
-		const result = connection.sendRequest('varUint8array', new VariableResult('binary'));
+		const result = connection.sendRequest('varUint8array', new VariableResult('binary'), 50);
 		await worker.terminate();
-		assert.strictEqual(result.errno, 0);
+		assert.strictEqual(result.errno, 0, 'Request was successful');
 		assertData(result);
 		assert.strictEqual(result.data.length, 32);
 		assert.strict(new TextDecoder().decode(result.data), '1'.repeat(32));
@@ -166,9 +166,9 @@ suite('Connection', () => {
 		const worker = new Worker(path.join(__dirname, './workers/varJson.js'));
 		const connection = new ClientConnection<Requests>(worker);
 		await connection.serviceReady();
-		const result = connection.sendRequest('varJSON', new VariableResult('json'));
+		const result = connection.sendRequest('varJSON', new VariableResult('json'), 50);
 		await worker.terminate();
-		assert.strictEqual(result.errno, 0);
+		assert.strictEqual(result.errno, 0, 'Request was successful');
 		assertData(result);
 		assert.strictEqual(result.data.name, 'vscode');
 		assert.strictEqual(result.data.age, 70);
