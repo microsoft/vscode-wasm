@@ -17,7 +17,7 @@ export type Message = {
 	params?: Params;
 };
 
-type TypedArray = Uint8Array | Int8Array | Uint16Array | Int16Array | Uint32Array | Int32Array | BigUint64Array | BigInt64Array;
+export type TypedArray = Uint8Array | Int8Array | Uint16Array | Int16Array | Uint32Array | Int32Array | BigUint64Array | BigInt64Array;
 namespace TypedArray {
 	export function is(value: any): value is TypedArray {
 		return value instanceof Uint8Array || value instanceof Int8Array || value instanceof Uint16Array || value instanceof Int16Array ||
@@ -135,10 +135,13 @@ export class Uint8Result {
 		return this.#length;
 	}
 	getPadding(offset: number): number  {
-		return TypedResult.getPadding(offset);
+		return TypedArrayResult.getPadding(offset);
 	}
 	createResultArray(sharedArrayBuffer: SharedArrayBuffer, offset: number): Uint8Array {
 		return new Uint8Array(sharedArrayBuffer, offset, this.length);
+	}
+	is(value: any): value is Uint8Array {
+		return value instanceof Uint8Array;
 	}
 }
 
@@ -164,10 +167,13 @@ export class Int8Result {
 		return this.#length;
 	}
 	getPadding(offset: number): number  {
-		return TypedResult.getPadding(offset);
+		return TypedArrayResult.getPadding(offset);
 	}
 	createResultArray(sharedArrayBuffer: SharedArrayBuffer, offset: number): Int8Array {
 		return new Int8Array(sharedArrayBuffer, offset, this.length);
+	}
+	is(value: any): value is Int8Array {
+		return value instanceof Int8Array;
 	}
 }
 
@@ -196,10 +202,13 @@ export class Uint16Result {
 		return this.#length;
 	}
 	getPadding(offset: number): number  {
-		return TypedResult.getPadding(offset);
+		return TypedArrayResult.getPadding(offset);
 	}
 	createResultArray(sharedArrayBuffer: SharedArrayBuffer, offset: number): Uint16Array {
 		return new Uint16Array(sharedArrayBuffer, offset, this.length);
+	}
+	is(value: any): value is Uint16Array {
+		return value instanceof Uint16Array;
 	}
 }
 
@@ -228,10 +237,13 @@ export class Int16Result {
 		return this.#length;
 	}
 	getPadding(offset: number): number  {
-		return TypedResult.getPadding(offset);
+		return TypedArrayResult.getPadding(offset);
 	}
-	createResultArray(sharedArrayBuffer: SharedArrayBuffer, offset: number): Int32Array {
-		return new Int32Array(sharedArrayBuffer, offset, this.length);
+	createResultArray(sharedArrayBuffer: SharedArrayBuffer, offset: number): Int16Array {
+		return new Int16Array(sharedArrayBuffer, offset, this.length);
+	}
+	is(value: any): value is Int16Array {
+		return value instanceof Int16Array;
 	}
 }
 
@@ -260,10 +272,13 @@ export class Uint32Result {
 		return this.#length;
 	}
 	getPadding(offset: number): number  {
-		return TypedResult.getPadding(offset);
+		return TypedArrayResult.getPadding(offset);
 	}
 	createResultArray(sharedArrayBuffer: SharedArrayBuffer, offset: number): Uint32Array {
 		return new Uint32Array(sharedArrayBuffer, offset, this.length);
+	}
+	is(value: any): value is Uint32Array {
+		return value instanceof Uint32Array;
 	}
 }
 
@@ -292,10 +307,13 @@ export class Int32Result {
 		return this.#length;
 	}
 	getPadding(offset: number): number  {
-		return TypedResult.getPadding(offset);
+		return TypedArrayResult.getPadding(offset);
 	}
 	createResultArray(sharedArrayBuffer: SharedArrayBuffer, offset: number): Int32Array {
 		return new Int32Array(sharedArrayBuffer, offset, this.length);
+	}
+	is(value: any): value is Int32Array {
+		return value instanceof Int32Array;
 	}
 }
 
@@ -329,6 +347,9 @@ export class Uint64Result {
 	createResultArray(sharedArrayBuffer: SharedArrayBuffer, offset: number): BigUint64Array {
 		return new BigUint64Array(sharedArrayBuffer, offset, this.length);
 	}
+	is(value: any): value is BigUint64Array {
+		return value instanceof BigUint64Array;
+	}
 }
 
 export class Int64Result {
@@ -361,6 +382,9 @@ export class Int64Result {
 	createResultArray(sharedArrayBuffer: SharedArrayBuffer, offset: number): BigInt64Array {
 		return new BigInt64Array(sharedArrayBuffer, offset, this.length);
 	}
+	is(value: any): value is BigInt64Array {
+		return value instanceof BigInt64Array;
+	}
 }
 
 export class VariableResult<T> {
@@ -386,9 +410,9 @@ export class VariableResult<T> {
 	}
 }
 
-export type TypedResult = Uint8Result | Int8Result | Uint16Result | Int16Result | Uint32Result | Int32Result | Uint64Result | Int64Result;
-namespace TypedResult {
-	export function fromByteLength(kind: number, byteLength: number): TypedResult {
+export type TypedArrayResult = Uint8Result | Int8Result | Uint16Result | Int16Result | Uint32Result | Int32Result | Uint64Result | Int64Result;
+namespace TypedArrayResult {
+	export function fromByteLength(kind: number, byteLength: number): TypedArrayResult {
 		switch (kind) {
 			case Uint8Result.kind:
 				return Uint8Result.fromByteLength(byteLength);
@@ -423,7 +447,7 @@ namespace TypedResult {
 }
 
 
-type ResultType = NoResult | Uint8Result  | Int8Result | Uint16Result | Int16Result | Uint32Result | Int32Result | Uint64Result | Int64Result | VariableResult<object | TypedArray>;
+export type ResultType = NoResult | TypedArrayResult | VariableResult<object | TypedArray>;
 namespace ResultType {
 	export function is(value: any): value is ResultType {
 		return value instanceof Uint8Result || value instanceof Int8Result || value instanceof Uint16Result || value instanceof Int16Result ||
@@ -790,7 +814,7 @@ export abstract class BaseServiceConnection<RequestHandlers extends RequestType 
 								}
 								break;
 							default:
-								const typedResult = TypedResult.fromByteLength(resultKind, resultByteLength);
+								const typedResult = TypedArrayResult.fromByteLength(resultKind, resultByteLength);
 								const resultBuffer = typedResult.createResultArray(sharedArrayBuffer, resultOffset);
 								handlerResult = message.params !== undefined ? handler(message.params, resultBuffer as TypedArray) : handler(resultBuffer as TypedArray);
 								requestResult = handlerResult instanceof Promise ? await handlerResult : handlerResult;
