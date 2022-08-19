@@ -8,7 +8,7 @@ import { parentPort  } from 'worker_threads';
 
 import { URI } from 'vscode-uri';
 
-import { ClientConnection } from '@vscode/sync-rpc/node';
+import { ClientConnection } from '@vscode/sync-api-common/node';
 import { ApiClient, APIRequests } from '@vscode/sync-api-client';
 import { WASI, Options } from '@vscode/wasi/node';
 

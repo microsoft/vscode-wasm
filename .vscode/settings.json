@@ -32,7 +32,7 @@
 	],
 	"eslint.useESLintClass": true,
 	"eslint.workingDirectories": [
-		"./vscode-sync-rpc",
+		"./vscode-sync-api-common",
 		"./vscode-sync-api-client",
 		"./vscode-sync-api-service",
 		"./wasi",

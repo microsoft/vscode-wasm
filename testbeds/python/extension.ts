@@ -8,7 +8,7 @@ import { Worker } from 'worker_threads';
 
 import { commands, ExtensionContext, Terminal, window, workspace } from 'vscode';
 
-import { ServiceConnection } from '@vscode/sync-rpc/node';
+import { ServiceConnection } from '@vscode/sync-api-common/node';
 import { APIRequests, ApiService } from '@vscode/sync-api-service';
 
 const connectionState: Map<number, [Worker, ServiceConnection<APIRequests>, ApiService, Terminal]> = new Map();

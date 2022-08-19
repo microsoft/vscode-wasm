@@ -8,7 +8,7 @@ import { Worker } from 'worker_threads';
 
 import { commands, ExtensionContext, Terminal, window } from 'vscode';
 
-import { ServiceConnection } from '@vscode/sync-rpc/node';
+import { ServiceConnection } from '@vscode/sync-api-common/node';
 import { ApiService, APIRequests } from '@vscode/sync-api-service';
 
 const name = 'Core Utils [base32 test.bat]';

@@ -6,7 +6,7 @@ import * as fs from 'fs';
 import * as path from 'path';
 import { parentPort  } from 'worker_threads';
 
-import { ClientConnection } from '@vscode/sync-rpc/node';
+import { ClientConnection } from '@vscode/sync-api-common/node';
 import { ApiClient, APIRequests } from '@vscode/sync-api-client';
 import { WASI, Options } from '@vscode/wasi/node';
 

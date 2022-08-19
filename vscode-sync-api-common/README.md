@@ -13,7 +13,7 @@ Main worker offers an API `getValue(arg: number): Promise<string>` which you wan
 A common file were the sync RPC requests are defined (e.g. `requests.ts`).
 
 ```ts
-import { VariableResult } from '@vscode/sync-rpc';
+import { VariableResult } from '@vscode/sync-api-common';
 
 export type Requests = {
 	method: 'getValue';
@@ -27,7 +27,7 @@ export type Requests = {
 The setup in the worker looks like this:
 
 ```ts
-import { ClientConnection } from '@vscode/sync-rpc/node';
+import { ClientConnection } from '@vscode/sync-api-common/node';
 import { Requests } from './requests';
 
 const connection = new ClientConnection<Requests>(parentPort);
@@ -46,7 +46,7 @@ const value = requestResult.data.value;
 The main side looks like this:
 
 ```ts
-import { ServiceConnection } from '@vscode/sync-rpc';
+import { ServiceConnection } from '@vscode/sync-api-common';
 import { Requests } from './requests';
 
 // The worker to access API in sync from.
@@ -64,4 +64,4 @@ connection.onRequest('getValue', async (params) => {
 connection.signalReady();
 ```
 
-For code executed in the browser exchange the import `@vscode/sync-rpc/node` with `@vscode/sync-rpc/browser`.
+For code executed in the browser exchange the import `@vscode/sync-api-common/node` with `@vscode/sync-api-common/browser`.

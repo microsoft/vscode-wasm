@@ -39,6 +39,6 @@
 		"watch": "node ./node_modules/typescript/lib/tsc.js -b tsconfig.watch.json -w",
 		"clean": "node ./build/bin/all.js run clean",
 		"lint": "echo linting",
-		"test": "cd vscode-sync-rpc && npm run test && cd .."
+		"test": "cd vscode-sync-api-common && npm run test && cd .."
 	}
 }
