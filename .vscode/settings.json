@@ -137,6 +137,7 @@
 		"oneoff",
 		"openat",
 		"ownerdead",
+		"postpublish",
 		"pread",
 		"preadv",
 		"preopened",
