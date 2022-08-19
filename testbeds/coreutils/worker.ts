@@ -18,7 +18,7 @@ const connection = new ClientConnection<APIRequests>(parentPort);
 connection.serviceReady().then(async (params) => {
 	const name = 'Run base32 test.bat';
 	const apiClient = new ApiClient(connection);
-	const workspaceFolders = apiClient.workspace.workspaceFolders;
+	const workspaceFolders = apiClient.vscode.workspace.workspaceFolders;
 	const mapDir: Options['mapDir'] = [];
 	let toRun: string | undefined;
 	if (workspaceFolders.length === 1) {
@@ -29,7 +29,7 @@ connection.serviceReady().then(async (params) => {
 		}
 	}
 	const exitHandler = (rval: number): void => {
-		apiClient.procExit(rval);
+		apiClient.process.procExit(rval);
 	};
 	const wasi = WASI.create(name, apiClient, exitHandler, {
 		mapDir,
@@ -47,5 +47,5 @@ connection.serviceReady().then(async (params) => {
 	});
 	wasi.initialize(instance);
 	(instance.exports._start as Function)();
-	apiClient.procExit(0);
+	apiClient.process.procExit(0);
 }).catch(console.error);

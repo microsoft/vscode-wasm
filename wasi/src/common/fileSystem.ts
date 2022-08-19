@@ -330,6 +330,7 @@ export namespace FileSystem {
 		const inodes: Map<bigint, INode> = new Map();
 		const deletedINode: Map<bigint, INode> = new Map();
 		const directoryEntries: Map<fd, DTOs.DirectoryEntries> = new Map();
+		const vscode_fs = apiClient.vscode.workspace.fileSystem;
 
 		const memoryView = memoryProvider.memoryView;
 		const memoryRaw = memoryProvider.memoryRaw;
@@ -386,13 +387,13 @@ export namespace FileSystem {
 				throw new WasiError(Errno.badf);
 			}
 			if (inode.content === undefined) {
-				inode.content = apiClient.workspace.fileSystem.read(inode.uri);
+				inode.content = vscode_fs.read(inode.uri);
 			}
 			return inode as Required<INode>;
 		}
 
 		function writeContent(inode: Required<INode>) {
-			apiClient.workspace.fileSystem.write(inode.uri, inode.content);
+			vscode_fs.write(inode.uri, inode.content);
 		}
 
 		function uriJoin(uri: URI, name: string): URI {
@@ -455,7 +456,7 @@ export namespace FileSystem {
 			},
 			fdstat: (fileDescriptor, fdstat_ptr): void => {
 				const inode = getINode(fileDescriptor.inode);
-				const vStat = apiClient.workspace.fileSystem.stat(inode.uri);
+				const vStat = vscode_fs.stat(inode.uri);
 				const fdstat = Fdstat.create(fdstat_ptr, memoryView());
 				fdstat.fs_filetype = code2Wasi.asFileType(vStat.type);
 				// No flags. We need to see if some of the tools we want to run
@@ -576,7 +577,7 @@ export namespace FileSystem {
 					return;
 				}
 				if (cookie === 0n) {
-					const result = apiClient.workspace.fileSystem.readDirectory(inode.uri);
+					const result = vscode_fs.readDirectory(inode.uri);
 					directoryEntries.set(fileDescriptor.fd, result);
 				}
 				const entries: DTOs.DirectoryEntries | undefined = directoryEntries.get(fileDescriptor.fd);
@@ -613,7 +614,7 @@ export namespace FileSystem {
 			},
 			createDirectory: (fileDescriptor: FileDescriptor, name: string): void => {
 				const inode = getINode(fileDescriptor.inode);
-				apiClient.workspace.fileSystem.createDirectory(uriJoin(inode.uri, name));
+				vscode_fs.createDirectory(uriJoin(inode.uri, name));
 			},
 			path_stat: (fileDescriptor, name, filestat_ptr): void => {
 				const inode = getINode(fileDescriptor.inode);
@@ -625,7 +626,7 @@ export namespace FileSystem {
 				const inode = getINode(fileDescriptor.inode);
 				const fileUri = uriJoin(inode.uri, name);
 				try {
-					const stat = apiClient.workspace.fileSystem.stat(fileUri);
+					const stat = vscode_fs.stat(fileUri);
 					return code2Wasi.asFileType(stat.type);
 				} catch {
 					return undefined;
@@ -634,7 +635,7 @@ export namespace FileSystem {
 			path_remove_directory: (fileDescriptor, name): void => {
 				const parentINode = getINode(fileDescriptor.inode);
 				const fileUri = uriJoin(parentINode.uri, name);
-				apiClient.workspace.fileSystem.delete(fileUri, { recursive: false, useTrash: true });
+				vscode_fs.delete(fileUri, { recursive: false, useTrash: true });
 				markINodeAsDeleted(paths.join(fileDescriptor.path, name));
 			},
 			path_rename: (oldFileDescriptor, oldName, newFileDescriptor, newName): void => {
@@ -643,7 +644,7 @@ export namespace FileSystem {
 
 				const oldUri = uriJoin(oldParentINode.uri, oldName);
 				const newUri = uriJoin(newParentINode.uri, newName);
-				apiClient.workspace.fileSystem.rename(oldUri, newUri, { overwrite: false });
+				vscode_fs.rename(oldUri, newUri, { overwrite: false });
 
 				// todo@dirkb unclear what really happens in posix. We need to understand if
 				// an old file descriptor could still read the directory under its new location.
@@ -661,12 +662,12 @@ export namespace FileSystem {
 			path_unlink_file: (fileDescriptor, name): void => {
 				const inode = getINode(fileDescriptor.inode);
 				const fileUri = uriJoin(inode.uri, name);
-				apiClient.workspace.fileSystem.delete(fileUri, { recursive: false, useTrash: true });
+				vscode_fs.delete(fileUri, { recursive: false, useTrash: true });
 			}
 		};
 
 		function doStat(filePath: string, uri: URI, filestat_ptr: ptr): void {
-			const vStat = apiClient.workspace.fileSystem.stat(uri);
+			const vStat = vscode_fs.stat(uri);
 			const fileStat = Filestat.create(filestat_ptr, memoryView());
 			fileStat.dev = DeviceIds.system;
 			fileStat.ino = refINode(filePath, uri).id;

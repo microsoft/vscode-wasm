@@ -532,7 +532,7 @@ class Stdin implements IOComponent {
 			bytesRead += this.storeInBuffers(buffers, this.rest);
 			return bytesRead;
 		}
-		const result = this.apiClient.terminal.read();
+		const result = this.apiClient.vscode.terminal.read();
 		bytesRead += this.storeInBuffers(buffers, result);
 		return bytesRead;
 	}
@@ -923,7 +923,7 @@ export namespace WASI {
 						let written = 0;
 						const buffers = read_ciovs(ciovs_ptr, ciovs_len);
 						for (const buffer of buffers) {
-							apiClient.terminal.write(buffer);
+							apiClient.vscode.terminal.write(buffer);
 							written += buffer.length;
 						}
 						const memory = memoryView();

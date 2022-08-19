@@ -20,8 +20,8 @@ const connection = new ClientConnection<APIRequests>(parentPort);
 connection.serviceReady().then(async (params) => {
 	const name = 'Python Shell';
 	const apiClient = new ApiClient(connection);
-	const workspaceFolders = apiClient.workspace.workspaceFolders;
-	const activeTextDocument = apiClient.window.activeTextDocument;
+	const workspaceFolders = apiClient.vscode.workspace.workspaceFolders;
+	const activeTextDocument = apiClient.vscode.window.activeTextDocument;
 	const mapDir: Options['mapDir'] = [];
 	let toRun: string | undefined;
 	if (workspaceFolders.length === 1) {
@@ -41,7 +41,7 @@ connection.serviceReady().then(async (params) => {
 	const root = URI.file(path.join(__dirname, '..', 'bin'));
 	mapDir.push({ name: path.posix.sep, uri: root });
 	const exitHandler = (rval: number): void => {
-		apiClient.procExit(rval);
+		apiClient.process.procExit(rval);
 	};
 	const wasi = WASI.create(name, apiClient, exitHandler, {
 		mapDir,
@@ -58,5 +58,5 @@ connection.serviceReady().then(async (params) => {
 	});
 	wasi.initialize(instance);
 	(instance.exports._start as Function)();
-	apiClient.procExit(0);
+	apiClient.process.procExit(0);
 }).catch(console.error);

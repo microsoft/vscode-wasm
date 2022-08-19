@@ -13,6 +13,10 @@ export interface Timer {
 	sleep(ms: number): void;
 }
 
+export interface Process {
+	procExit(rval: number): void;
+}
+
 export interface FileSystem {
 	stat(uri: URI): vscode.FileStat;
 	read(uri: URI): Uint8Array;
@@ -51,6 +55,18 @@ class TimerImpl implements Timer {
 
 	public sleep(ms: number): void {
 		this.connection.sendRequest('timer/sleep', { ms });
+	}
+}
+
+class ProcessImpl implements Process {
+	private readonly connection: ApiClientConnection;
+
+	constructor(connection: ApiClientConnection) {
+		this.connection = connection;
+	}
+
+	public procExit(rval: number): void {
+		this.connection.sendRequest('$/proc_exit', { rval: rval });
 	}
 }
 
@@ -223,20 +239,22 @@ export class ApiClient {
 	private readonly encoder: RAL.TextEncoder;
 
 	public readonly timer: Timer;
-	public readonly terminal: Terminal;
-	public readonly window: Window;
-	public readonly workspace: Workspace;
+	public readonly process: Process;
+	public readonly vscode: {
+		readonly terminal: Terminal;
+		readonly window: Window;
+		readonly workspace: Workspace;
+	};
 
 	constructor(connection: ApiClientConnection) {
 		this.connection = connection;
 		this.encoder = RAL().TextEncoder.create();
 		this.timer = new TimerImpl(this.connection);
-		this.terminal = new TerminalImpl(this.connection, this.encoder);
-		this.window = new WindowImpl(this.connection);
-		this.workspace = new WorkspaceImpl(this.connection);
-	}
-
-	procExit(rval: number): void {
-		this.connection.sendRequest('$/proc_exit', { rval: rval });
+		this.process = new ProcessImpl(this.connection);
+		this.vscode = {
+			terminal: new TerminalImpl(this.connection, this.encoder),
+			window: new WindowImpl(this.connection),
+			workspace: new WorkspaceImpl(this.connection)
+		};
 	}
 }
