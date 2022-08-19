@@ -21,7 +21,6 @@
 	},
 	"homepage": "https://github.com/microsoft/vscode-wasm/blob/main/sync-api-client/README.md",
 	"dependencies": {
-		"@vscode/sync-api-common": "0.1.0",
 		"vscode-uri": "3.0.3"
 	},
 	"devDependencies": {
