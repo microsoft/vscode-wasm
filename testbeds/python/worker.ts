@@ -2,7 +2,6 @@
  *  Copyright (c) Microsoft Corporation. All rights reserved.
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
-import * as fs from 'fs';
 import * as path from 'path';
 import { parentPort  } from 'worker_threads';
 
@@ -18,6 +17,7 @@ if (parentPort === null) {
 
 const connection = new ClientConnection<APIRequests>(parentPort);
 connection.serviceReady().then(async (params) => {
+	debugger;
 	const name = 'Python Shell';
 	const apiClient = new ApiClient(connection);
 	const workspaceFolders = apiClient.vscode.workspace.workspaceFolders;
@@ -38,21 +38,19 @@ connection.serviceReady().then(async (params) => {
 			mapDir.push({ name: path.posix.join(path.posix.sep, 'workspaces', folder.name), uri: folder.uri });
 		}
 	}
-	const root = URI.file(path.join(__dirname, '..', 'bin'));
-	mapDir.push({ name: path.posix.sep, uri: root });
+	const pythonRoot = URI.file(`/home/dirkb/Projects/dbaeumer/python-3.11.0rc`);
+	mapDir.push({ name: path.posix.sep, uri: pythonRoot });
 	const exitHandler = (rval: number): void => {
 		apiClient.process.procExit(rval);
 	};
 	const wasi = WASI.create(name, apiClient, exitHandler, {
 		mapDir,
-		argv: toRun !== undefined ? ['python', '-X', 'utf8', '-B', toRun] : ['python', '-X', 'utf8', '-B'],
+		argv: toRun !== undefined ? ['python', '-X', 'utf8', toRun] : ['python', '-X', 'utf8'],
 		env: {
-			TMP: '/tmp',
-			PYTHONPATH: '/build/lib.wasi-wasm32-3.12:/Lib:/workspace'
+			PYTHONPATH: '/workspace'
 		}
 	});
-	const wasmFile = path.join(__dirname, '..', 'bin', 'python.wasm');
-	const binary = fs.readFileSync(wasmFile);
+	const binary = apiClient.vscode.workspace.fileSystem.read(pythonRoot.with({ path: path.join(pythonRoot.path, 'python.wasm') }));
 	const { instance } = await WebAssembly.instantiate(binary, {
 		wasi_snapshot_preview1: wasi
 	});

@@ -282,6 +282,7 @@ export interface FileSystem {
 	allocate(fileDescriptor: FileDescriptor, offset: filesize, len: filesize): void;
 	read(fileDescriptor: FileDescriptor, bytesToRead: number): Uint8Array;
 	pread(fileDescriptor: FileDescriptor, offset: number, bytesToRead: number): Uint8Array;
+	createOrTruncate(fileDescriptor: FileDescriptor): void;
 	write(fileDescriptor: FileDescriptor, buffers: Uint8Array[]): size;
 	pwrite(fileDescriptor: FileDescriptor, offset: number, bytes: Uint8Array): size;
 	sync(fileDescriptor: FileDescriptor): void;
@@ -528,6 +529,12 @@ export namespace FileSystem {
 				const content = getResolvedINode(fileDescriptor.inode).content;
 				const realRead = Math.min(bytesToRead, content.byteLength - offset);
 				return content.subarray(offset, offset + realRead);
+			},
+			createOrTruncate: (fileDescriptor): void => {
+				const inode = getINode(fileDescriptor.inode);
+				inode.content = new Uint8Array(0);
+				fileDescriptor.cursor = 0;
+				writeContent(inode as Required<INode>);
 			},
 			write: (fileDescriptor, buffers): number => {
 				const inode = getResolvedINode(fileDescriptor.inode);

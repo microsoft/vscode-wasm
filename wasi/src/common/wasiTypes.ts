@@ -1486,3 +1486,62 @@ export namespace Subscription {
 export type Literal<T> = {
 	[P in keyof T]: T[P];
 };
+
+/**
+ * Flags provided to sock_recv.
+ */
+export type riflags = u16;
+
+/**
+ * Flags provided to sock_recv.
+ */
+export namespace Riflags {
+
+	/**
+	 * Returns the message without removing it from the socket's receive queue.
+	 */
+	export const recv_peek = 1 << 0;
+
+	/**
+	 * On byte-stream sockets, block until the full amount of data can be returned.
+	 */
+	export const recv_waitall = 1 << 1;
+}
+
+/**
+ * Flags returned by sock_recv.
+ */
+export type roflags = u16;
+
+export namespace Roflags {
+	/**
+	 * Returned by sock_recv: Message data has been truncated.
+	 */
+	export const recv_data_truncated = 1 << 0;
+}
+
+/**
+ * Flags provided to sock_send. As there are currently no flags defined, it
+ * must be set to zero.
+ */
+export type siflags = u16;
+
+export namespace Siflags {
+}
+
+/**
+ * Which channels on a socket to shut down.
+ */
+export type sdflags = u8;
+
+export namespace Sdflags {
+	/**
+	 * Disables further receive operations.
+	 */
+	export const rd = 1 << 0;
+
+	/**
+	 * Disables further send operations.
+	 */
+	export const wr = 1 << 1;
+}
