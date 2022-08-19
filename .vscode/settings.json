@@ -32,9 +32,9 @@
 	],
 	"eslint.useESLintClass": true,
 	"eslint.workingDirectories": [
-		"./vscode-sync-api-common",
-		"./vscode-sync-api-client",
-		"./vscode-sync-api-service",
+		"./sync-api-common",
+		"./sync-api-client",
+		"./sync-api-service",
 		"./wasi",
 		"./testbeds/python",
 		"./testbeds/rust",
