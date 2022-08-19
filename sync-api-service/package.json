@@ -3,6 +3,9 @@
 	"version": "0.1.0",
 	"description": "A sync implementation of the VS Code API. Only supported from a worker in NodeJS and browser",
 	"private": "true",
+	"engines": {
+		"node": ">=16.15.1"
+	},
 	"main": "./lib/main.js",
 	"typings": "./lib/main.d.ts",
 	"repository": {
@@ -13,7 +16,7 @@
 		"VSCode",
 		"API"
 	],
-	"author": "MS",
+	"author": "Visual Studio Code Team",
 	"license": "MIT",
 	"bugs": {
 		"url": "https://github.com/microsoft/vscode-wasm/issues"

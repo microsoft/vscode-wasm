@@ -2,7 +2,10 @@
 	"name": "@vscode/sync-api-client",
 	"version": "0.1.0",
 	"description": "A client that calls VS Code API from a non extension host worker in sync fashion.",
-	"private": true,
+	"private": "true",
+	"engines": {
+		"node": ">=16.15.1"
+	},
 	"main": "./lib/main.js",
 	"typings": "./lib/main.d.ts",
 	"repository": {
@@ -14,7 +17,7 @@
 		"API",
 		"sync"
 	],
-	"author": "MS",
+	"author": "Visual Studio Code Team",
 	"license": "MIT",
 	"bugs": {
 		"url": "https://github.com/microsoft/vscode-wasm/issues"

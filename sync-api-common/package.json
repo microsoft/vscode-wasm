@@ -2,7 +2,10 @@
 	"name": "@vscode/sync-api-common",
 	"version": "0.1.0",
 	"description": "An RPC implementation between Web and NodeJS workers that works sync",
-	"private": true,
+	"private": "true",
+	"engines": {
+		"node": ">=16.15.1"
+	},
 	"main": "./lib/node/main.js",
 	"browser": {
 		"./lib/node/main.js": "./lib/browser/main.js"
@@ -17,7 +20,7 @@
 		"rpc",
 		"sync"
 	],
-	"author": "MS",
+	"author": "Visual Studio Code Team",
 	"license": "MIT",
 	"bugs": {
 		"url": "https://github.com/microsoft/vscode-wasm/issues"
