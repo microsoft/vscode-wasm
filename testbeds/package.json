@@ -8,6 +8,7 @@
 		"@types/vscode": "^1.67.0"
 	},
 	"scripts": {
-		"postinstall": "cd .. && npm run symlink"
+		"postinstall": "cd .. && npm run symlink",
+		"lint": "node ../node_modules/eslint/bin/eslint.js --ext ts coreutils cpp python rust"
 	}
 }

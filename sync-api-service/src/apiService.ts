@@ -15,7 +15,7 @@ type ApiServiceConnection = BaseServiceConnection<APIRequests>;
 export class ApiService {
 
 	private readonly connection: ApiServiceConnection;
-	private readonly exitHandler: (rval: number) => void;
+	private readonly exitHandler: ((rval: number) => void) | undefined;
 	private readonly textEncoder: RAL.TextEncoder;
 	private readonly textDecoder: RAL.TextDecoder;
 
@@ -24,7 +24,7 @@ export class ApiService {
 	private inputBuffer: string[];
 	private lineAvailable: undefined | (() => void);
 
-	constructor(name: string, receiver: ApiServiceConnection, exitHandler: (rval: number) => void) {
+	constructor(name: string, receiver: ApiServiceConnection, exitHandler?: (rval: number) => void) {
 		this.connection = receiver;
 		this.exitHandler = exitHandler;
 		this.textEncoder = RAL().TextEncoder.create();
@@ -198,7 +198,9 @@ export class ApiService {
 		});
 
 		this.connection.onRequest('$/proc_exit', (params) => {
-			this.exitHandler(params.rval);
+			if (this.exitHandler !== undefined) {
+				this.exitHandler(params.rval);
+			}
 			return { errno: 0};
 		});
 	}
