@@ -22,7 +22,7 @@
 	"bugs": {
 		"url": "https://github.com/microsoft/vscode-wasm/issues"
 	},
-	"homepage": "https://github.com/microsoft/vscode-wasm/blob/main/sync-api-common/README.MD",
+	"homepage": "https://github.com/microsoft/vscode-wasm/blob/main/sync-api-common/README.md",
 	"scripts": {
 		"compile": "node ../node_modules/typescript/lib/tsc.js -b ./tsconfig.json",
 		"watch": "node ../node_modules/typescript/lib/tsc.js -b ./tsconfig.watch.json -w",

@@ -1,24 +1,25 @@
 {
 	"name": "@vscode/sync-api-client",
-	"version": "0.0.1",
-	"description": "A client that calls VS Code API in a web worker in synchrony.",
+	"version": "0.1.0",
+	"description": "A client that calls VS Code API from a non extension host worker in sync fashion.",
 	"private": true,
 	"main": "./lib/main.js",
 	"typings": "./lib/main.d.ts",
 	"repository": {
 		"type": "git",
-		"url": "git+https://github.com/microsoft/vscode-wasi.git"
+		"url": "git+https://github.com/microsoft/vscode-wasm.git"
 	},
 	"keywords": [
 		"VSCode",
-		"API"
+		"API",
+		"sync"
 	],
 	"author": "MS",
 	"license": "MIT",
 	"bugs": {
-		"url": "https://github.com/microsoft/vscode-wasi/issues"
+		"url": "https://github.com/microsoft/vscode-wasm/issues"
 	},
-	"homepage": "https://github.com/microsoft/vscode-wasi#readme",
+	"homepage": "https://github.com/microsoft/vscode-wasm/blob/main/sync-api-client/README.md",
 	"dependencies": {
 		"vscode-uri": "3.0.3"
 	},
