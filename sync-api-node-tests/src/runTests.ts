@@ -49,6 +49,7 @@ async function go() {
 			extensionDevelopmentPath,
 			extensionTestsPath,
 			launchArgs: [
+				'--inspect-brk-extensions',
 				'--user-data-dir', userDataDir,
 				'--extensions-dir', extensionDir,
 				'--enable-proposed-api', 'ms-vscode.sync-api-node-tests',
