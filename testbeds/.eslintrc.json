@@ -1,7 +1,7 @@
 {
 	"extends": "../.eslintrc.base.json",
 	"parserOptions": {
-		"project": ["../coreutils/tsconfig.json", "../cpp/tsconfig.json", "../python/tsconfig.json", "../rust/tsconfig.json"]
+		"project": ["./coreutils/tsconfig.json", "./cpp/tsconfig.json", "./python/tsconfig.json", "./rust/tsconfig.json"]
 	},
 	"rules": {
 		"@typescript-eslint/no-floating-promises": "error"

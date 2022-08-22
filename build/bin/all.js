@@ -12,7 +12,7 @@ const child_process = require('child_process')
 const root = path.dirname(path.dirname(__dirname));
 const args = process.argv.slice(2);
 
-const folders = ['sync-api-common', 'sync-api-client', 'sync-api-service', 'wasi', 'testbeds'];
+const folders = ['sync-api-common', 'sync-api-client', 'sync-api-service', 'wasm-wasi', 'testbeds'];
 
 for (const folder of folders) {
 	child_process.spawnSync(`npm ${args.join(' ')}`, { cwd: path.join(root, folder), shell: true, stdio: 'inherit' });
