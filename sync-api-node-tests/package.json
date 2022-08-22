@@ -29,7 +29,7 @@
 	"devDependencies": {
 		"@vscode/test-electron": "^2.1.5",
 		"@types/uuid": "^8.3.4",
-		"@types/vscode": "^1.70.0",
+		"@types/vscode": "1.67.0",
 		"@types/glob": "^7.2.0",
 		"uuid": "^8.3.2",
 		"glob": "^8.0.3"

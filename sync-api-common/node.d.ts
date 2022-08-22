@@ -3,4 +3,6 @@
  * Licensed under the MIT License. See License.txt in the project root for license information.
  * ----------------------------------------------------------------------------------------- */
 
+import RAL from './lib/node/main';
 export * from './lib/node/main';
+export default RAL;

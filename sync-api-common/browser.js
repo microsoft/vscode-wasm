@@ -4,4 +4,7 @@
  * ----------------------------------------------------------------------------------------- */
 'use strict';
 
+const ral = require("./lib/common/ral");
+
 module.exports = require('./lib/browser/main');
+module.exports.default = ral.default;

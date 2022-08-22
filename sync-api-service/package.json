@@ -30,7 +30,7 @@
 		"@vscode/sync-api-common": "0.1.0"
 	},
 	"devDependencies": {
-		"@types/vscode": "^1.67.0"
+		"@types/vscode": "1.67.0"
 	},
 	"scripts": {
 		"compile": "node ../node_modules/typescript/lib/tsc.js -b ./tsconfig.json",
