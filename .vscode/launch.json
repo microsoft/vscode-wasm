@@ -46,7 +46,10 @@
 			"request": "launch",
 			"name": "test:service",
 			"runtimeExecutable": "${execPath}",
-			"args": ["--extensionDevelopmentPath=${workspaceFolder}/sync-api-node-tests", "--extensionTestsPath=${workspaceFolder}/sync-api-node-tests/lib" ],
+			"args": [
+				"--extensionDevelopmentPath=${workspaceFolder}/sync-api-node-tests",
+				"--extensionTestsPath=${workspaceFolder}/sync-api-node-tests/lib"
+			],
 			"sourceMaps": true,
 			"outFiles": ["${workspaceRoot}/sync-api-node-tests/lib/**/*.js"],
 			"preLaunchTask": "npm: watch"

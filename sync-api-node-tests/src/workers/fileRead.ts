@@ -4,27 +4,11 @@
  *--------------------------------------------------------------------------------------------*/
 
 import path from 'path';
-import { parentPort  } from 'worker_threads';
 import assert from 'assert';
+import RAL from '@vscode/sync-api-common/node';
+import runSingle from './tests';
 
-import RAL, { ClientConnection } from '@vscode/sync-api-common/node';
-import { ApiClient, APIRequests } from '@vscode/sync-api-client';
-import { TestRequests } from '../testSupport';
-
-if (parentPort === null) {
-	process.exit();
-}
-
-const connection = new ClientConnection<APIRequests | TestRequests>(parentPort);
-const client = new ApiClient(connection);
-connection.serviceReady().then(() => {
-	debugger;
-	const workspaceFolders = client.vscode.workspace.workspaceFolders;
-	const folder = workspaceFolders[0];
+void runSingle(async (client, folder) => {
 	const content = RAL().TextDecoder.create().decode(client.vscode.workspace.fileSystem.readFile(folder.uri.with( { path: path.join(folder.uri.path, 'test.txt') })));
-	assert.strictEqual(content, 'test conttent');
-	client.process.procExit(0);
-}).catch((error: Error) => {
-	connection.sendRequest('testing/setMessage', { message: error.message });
-	client.process.procExit(1);
+	assert.strictEqual(content, 'test content');
 });

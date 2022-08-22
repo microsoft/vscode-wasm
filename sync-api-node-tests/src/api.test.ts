@@ -3,7 +3,7 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import assert from 'assert';
+import assert, { AssertionError } from 'assert';
 import path from 'path';
 import vscode from 'vscode';
 
@@ -11,7 +11,7 @@ import { Worker } from 'worker_threads';
 import { APIRequests, ApiService } from '@vscode/sync-api-service';
 import { ServiceConnection } from '@vscode/sync-api-common/node';
 
-import { TestRequests } from './testSupport';
+import { AssertionErrorData, ErrorData, TestRequests } from './tests';
 
 function getFolder(): vscode.WorkspaceFolder {
 	const folders = vscode.workspace.workspaceFolders;
@@ -21,26 +21,43 @@ function getFolder(): vscode.WorkspaceFolder {
 	return folder;
 }
 
-suite('API Tests', () => {
+async function runTest(name: string, filename: string) {
+	const worker = new Worker(path.join(__dirname, filename));
+	const connection = new ServiceConnection<APIRequests | TestRequests>(worker);
 
+	let assertionError: AssertionErrorData | undefined;
+	let error: ErrorData | undefined;
+
+	connection.onRequest('testing/assertionError', (params) => {
+		assertionError = params;
+		return { errno: 0 };
+	});
+	connection.onRequest('testing/error', (params) => {
+		error = params;
+		return { errno: 0 };
+	});
+
+	const errno = await new Promise<number>((resolve) => {
+		new ApiService(name, connection, (rval) => {
+			worker.terminate().catch(console.error);
+			resolve(rval);
+		});
+		connection.signalReady();
+	});
+	if (assertionError !== undefined) {
+		throw new AssertionError(assertionError);
+	}
+	if (error !== undefined) {
+		throw new Error(error.message);
+	}
+	assert.strictEqual(errno, 0);
+}
+
+suite('API Tests', () => {
 	test('File access', async () => {
 		const folder = getFolder();
 		const fileUri = folder.uri.with( { path: path.join(folder.uri.path, 'test.txt') });
-		vscode.workspace.fs.writeFile(fileUri, Buffer.from('test content'));
-
-		const worker = new Worker(path.join(__dirname, './workers/fileRead.js'));
-		const connection = new ServiceConnection<APIRequests | TestRequests>(worker);
-		connection.onRequest('testing/setMessage', (params) => {
-			console.error(params.message);
-			return { errno: 0 };
-		});
-		const errno = await new Promise<number>((resolve) => {
-			new ApiService('File access', connection, (rval) => {
-				worker.terminate().catch(console.error);
-				resolve(rval);
-			});
-			connection.signalReady();
-		});
-		assert.strictEqual(errno, 0);
+		await vscode.workspace.fs.writeFile(fileUri, Buffer.from('test content'));
+		await runTest('File access', './workers/fileRead.js');
 	});
 });

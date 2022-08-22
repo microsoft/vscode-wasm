@@ -40,6 +40,7 @@ async function go() {
 		fs.mkdirSync(extensionDir);
 		const workspaceFolder = path.join(testDir, 'workspace');
 		fs.mkdirSync(workspaceFolder);
+		console.log(workspaceFolder);
 
 		/**
 		 * Basic usage
@@ -49,7 +50,6 @@ async function go() {
 			extensionDevelopmentPath,
 			extensionTestsPath,
 			launchArgs: [
-				'--inspect-brk-extensions',
 				'--user-data-dir', userDataDir,
 				'--extensions-dir', extensionDir,
 				'--enable-proposed-api', 'ms-vscode.sync-api-node-tests',
