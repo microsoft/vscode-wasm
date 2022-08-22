@@ -9,6 +9,7 @@
 		{ "path": "./sync-api-common/tsconfig.json" },
 		{ "path": "./sync-api-client/tsconfig.json" },
 		{ "path": "./sync-api-service/tsconfig.json" },
+		{ "path": "./sync-api-node-tests/tsconfig.json" },
 		{ "path": "./wasm-wasi/tsconfig.json" }
 	]
 }

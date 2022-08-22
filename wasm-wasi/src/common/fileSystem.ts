@@ -388,13 +388,13 @@ export namespace FileSystem {
 				throw new WasiError(Errno.badf);
 			}
 			if (inode.content === undefined) {
-				inode.content = vscode_fs.read(inode.uri);
+				inode.content = vscode_fs.readFile(inode.uri);
 			}
 			return inode as Required<INode>;
 		}
 
 		function writeContent(inode: Required<INode>) {
-			vscode_fs.write(inode.uri, inode.content);
+			vscode_fs.writeFile(inode.uri, inode.content);
 		}
 
 		function uriJoin(uri: URI, name: string): URI {

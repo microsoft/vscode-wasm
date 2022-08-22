@@ -35,6 +35,7 @@
 		"./sync-api-common",
 		"./sync-api-client",
 		"./sync-api-service",
+		"./sync-api-node-tests",
 		"./wasm-wasi",
 		"./testbeds"
 	],

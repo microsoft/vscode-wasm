@@ -19,8 +19,8 @@ export interface Process {
 
 export interface FileSystem {
 	stat(uri: URI): vscode.FileStat;
-	read(uri: URI): Uint8Array;
-	write(uri: URI, content: Uint8Array): void;
+	readFile(uri: URI): Uint8Array;
+	writeFile(uri: URI, content: Uint8Array): void;
 	readDirectory(uri: URI): DTOs.DirectoryEntries;
 	createDirectory(uri: URI): void;
 	delete(uri: URI, options?: { recursive?: boolean; useTrash?: boolean }): void;
@@ -131,7 +131,7 @@ class FileSystemImpl implements FileSystem {
 		throw this.asFileSystemError(requestResult.errno, uri);
 	}
 
-	public read(uri: URI): Uint8Array {
+	public readFile(uri: URI): Uint8Array {
 		const requestResult = this.connection.sendRequest('fileSystem/readFile', { uri: uri.toJSON() }, new VariableResult<Uint8Array>('binary'));
 		if (RequestResult.hasData(requestResult)) {
 			return requestResult.data;
@@ -139,7 +139,7 @@ class FileSystemImpl implements FileSystem {
 		throw this.asFileSystemError(requestResult.errno, uri);
 	}
 
-	public write(uri: URI, content: Uint8Array): void {
+	public writeFile(uri: URI, content: Uint8Array): void {
 		const requestResult = this.connection.sendRequest('fileSystem/writeFile', { uri: uri.toJSON(), binary: content });
 		if (requestResult.errno !== RPCErrno.Success) {
 			throw this.asFileSystemError(requestResult.errno, uri);

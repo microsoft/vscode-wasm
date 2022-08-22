@@ -1,0 +1,12 @@
+{
+	"extends": "./tsconfig.base.json",
+	"compilerOptions": {
+		"tsBuildInfoFile":"./lib/watch.tsbuildInfo",
+		"noUnusedLocals": false,
+		"noUnusedParameters": false,
+		"rootDir": "./src",
+		"outDir": "./lib"
+	},
+	"references": [
+	]
+}

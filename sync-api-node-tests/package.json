@@ -1,0 +1,37 @@
+{
+	"name": "sync-api-node-tests",
+	"publisher": "ms-vscode",
+	"private": true,
+	"description": "Test cases for the sync vscode API",
+	"version": "0.1.0",
+	"engines": {
+		"vscode": "^1.67.0"
+	},
+	"categories": [
+		"Other"
+	],
+	"activationEvents": [
+		"*"
+	],
+	"main": "./extension.js",
+	"contributes": {},
+	"scripts": {
+		"clean": "node ../node_modules/rimraf/bin.js lib",
+		"compile": "node ../node_modules/typescript/lib/tsc.js -b ./tsconfig.json",
+		"watch": "node .../node_modules/typescript/lib/tsc.js -b ./tsconfig-watch.json -w",
+		"lint": "node ../node_modules/eslint/bin/eslint.js --ext ts src",
+		"test": "node lib/runTests.js"
+	},
+	"dependencies": {
+		"@vscode/sync-api-service": "0.1.0",
+		"@vscode/sync-api-client": "0.1.0"
+	},
+	"devDependencies": {
+		"@vscode/test-electron": "^2.1.5",
+		"@types/uuid": "^8.3.4",
+		"@types/vscode": "^1.70.0",
+		"@types/glob": "^7.2.0",
+		"uuid": "^8.3.2",
+		"glob": "^8.0.3"
+	}
+}

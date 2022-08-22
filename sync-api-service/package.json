@@ -3,7 +3,8 @@
 	"version": "0.1.0",
 	"description": "A sync implementation of the VS Code API. Only supported from a worker in NodeJS and browser",
 	"engines": {
-		"node": ">=16.15.1"
+		"node": ">=16.15.1",
+		"vscode": "^1.67.0"
 	},
 	"main": "./lib/main.js",
 	"typings": "./lib/main.d.ts",
