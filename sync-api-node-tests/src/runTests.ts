@@ -28,6 +28,9 @@ function rimraf(location: string) {
 
 
 async function go() {
+	if (process.platform === 'win32') {
+		return;
+	}
 	try {
 		const extensionDevelopmentPath = path.resolve(__dirname, '..');
 		const extensionTestsPath = __dirname;
