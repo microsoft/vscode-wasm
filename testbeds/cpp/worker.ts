@@ -8,7 +8,7 @@ import { parentPort  } from 'worker_threads';
 
 import { ClientConnection } from '@vscode/sync-api-common/node';
 import { ApiClient, APIRequests } from '@vscode/sync-api-client';
-import { WASI, Options } from '@vscode/wasi/node';
+import { WASI, Options } from '@vscode/wasm-wasi/node';
 
 if (parentPort === null) {
 	process.exit();

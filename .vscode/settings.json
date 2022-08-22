@@ -35,10 +35,11 @@
 		"./sync-api-common",
 		"./sync-api-client",
 		"./sync-api-service",
-		"./wasi",
+		"./wasm-wasi",
+		"./testbeds/core-utils",
+		"./testbeds/cpp",
 		"./testbeds/python",
-		"./testbeds/rust",
-		"./testbeds/cpp"
+		"./testbeds/rust"
 	],
 	"editor.codeActionsOnSave": {
 		"source.fixAll.eslint": true

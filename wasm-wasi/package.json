@@ -1,5 +1,5 @@
 {
-	"name": "@vscode/wasi",
+	"name": "@vscode/wasm-wasi",
 	"version": "0.0.1",
 	"description": "A WASI implementation that uses VS Code's extension host as the implementing API",
 	"private": true,
@@ -10,7 +10,7 @@
 	"typings": "./lib/common/wasi.d.ts",
 	"repository": {
 		"type": "git",
-		"url": "git+https://github.com/microsoft/vscode-wasi.git"
+		"url": "git+https://github.com/microsoft/vscode-wasm.git"
 	},
 	"keywords": [
 		"VSCode",
@@ -19,9 +19,9 @@
 	"author": "MS",
 	"license": "MIT",
 	"bugs": {
-		"url": "https://github.com/microsoft/vscode-wasi/issues"
+		"url": "https://github.com/microsoft/vscode-wasm/issues"
 	},
-	"homepage": "https://github.com/microsoft/vscode-wasi#readme",
+	"homepage": "https://github.com/microsoft/vscode-wasm#readme",
 	"dependencies": {
 		"vscode-uri": "3.0.3"
 	},

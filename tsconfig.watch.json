@@ -10,6 +10,6 @@
 		{ "path": "./sync-api-common/tsconfig.watch.json" },
 		{ "path": "./sync-api-client/tsconfig.watch.json" },
 		{ "path": "./sync-api-service/tsconfig.watch.json" },
-		{ "path": "./wasi/tsconfig.watch.json" }
+		{ "path": "./wasm-wasi/tsconfig.watch.json" }
 	]
 }
