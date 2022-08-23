@@ -55,12 +55,14 @@ async function runTest(name: string, filename: string) {
 }
 
 suite('API Tests', () => {
+	const folder = getFolder();
+	const textFile = path.join(folder.uri.fsPath, 'test.txt');
+	const toDelete = path.join(folder.uri.fsPath, 'toDelete.txt');
+
 	// Setting up test files in workspace
 	suiteSetup(async () => {
-		const folder = getFolder();
-		const textFile = path.join(folder.uri.fsPath, 'test.txt');
-		const fileUri = vscode.Uri.file(textFile);
-		await vscode.workspace.fs.writeFile(fileUri, Buffer.from('test content'));
+		await vscode.workspace.fs.writeFile(vscode.Uri.file(textFile), Buffer.from('test content'));
+		await vscode.workspace.fs.writeFile(vscode.Uri.file(toDelete), Buffer.from(''));
 	});
 
 	test('File stat', async () => {
@@ -69,5 +71,17 @@ suite('API Tests', () => {
 
 	test('File access', async () => {
 		await runTest('File access', './workers/fileRead.js');
+	});
+
+	test('Delete File', async () => {
+		await runTest('File access', './workers/deleteFile.js');
+		let notFound = false;
+		try {
+			await vscode.workspace.fs.stat(vscode.Uri.file(toDelete));
+		} catch (error) {
+			assert.ok(error instanceof vscode.FileSystemError);
+			notFound = error.code === 'FileNotFound';
+		}
+		assert.strictEqual(notFound, true, 'Delete file failed');
 	});
 });
