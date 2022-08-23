@@ -55,11 +55,19 @@ async function runTest(name: string, filename: string) {
 }
 
 suite('API Tests', () => {
-	test('File access', async () => {
+	// Setting up test files in workspace
+	suiteSetup(async () => {
 		const folder = getFolder();
 		const textFile = path.join(folder.uri.fsPath, 'test.txt');
 		const fileUri = vscode.Uri.file(textFile);
 		await vscode.workspace.fs.writeFile(fileUri, Buffer.from('test content'));
+	});
+
+	test('File stat', async () => {
+		await runTest('File access', './workers/fileStat.js');
+	});
+
+	test('File access', async () => {
 		await runTest('File access', './workers/fileRead.js');
 	});
 });
