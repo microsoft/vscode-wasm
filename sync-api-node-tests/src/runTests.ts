@@ -28,14 +28,11 @@ function rimraf(location: string) {
 
 
 async function go() {
-	if (process.platform === 'win32') {
-		return;
-	}
+	const testDir = path.join(os.tmpdir(), uuid.v4());
 	try {
 		const extensionDevelopmentPath = path.resolve(__dirname, '..');
 		const extensionTestsPath = __dirname;
 
-		const testDir = path.join(os.tmpdir(), uuid.v4());
 		fs.mkdirSync(testDir, { recursive: true });
 		const userDataDir = path.join(testDir, 'userData');
 		fs.mkdirSync(userDataDir);
@@ -59,10 +56,11 @@ async function go() {
 				workspaceFolder
 			]
 		});
-		rimraf(testDir);
 	} catch (err) {
 		console.error('Failed to run tests');
 		process.exitCode = 1;
+	} finally {
+		rimraf(testDir);
 	}
 }
 
