@@ -7,7 +7,8 @@ import path from 'path';
 import { URI } from 'vscode-uri';
 import runSingle from './tests';
 
-void runSingle(async (client, folder) => {
-	const filename = path.join(folder.uri.fsPath, 'toDelete.txt');
-	await client.vscode.workspace.fileSystem.delete(URI.file(filename));
+void runSingle((client, folder) => {
+	const oldName = path.join(folder.uri.fsPath, 'directory');
+	const newName = path.join(folder.uri.fsPath, 'directory_new');
+	client.vscode.workspace.fileSystem.rename(URI.file(oldName), URI.file(newName));
 });

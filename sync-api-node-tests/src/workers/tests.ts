@@ -16,14 +16,14 @@ if (parentPort === null) {
 }
 const pp: MessagePort = parentPort;
 
-export default async function runSingle<T>(test: (client: ApiClient, folder: WorkspaceFolder) => Promise<T>): Promise<void> {
+export default async function runSingle(test: (client: ApiClient, folder: WorkspaceFolder) => void): Promise<void> {
 	const connection = new ClientConnection<APIRequests | TestRequests>(pp);
 	const client = new ApiClient(connection);
 	await connection.serviceReady();
 	const workspaceFolders = client.vscode.workspace.workspaceFolders;
 	const folder = workspaceFolders[0];
 	try {
-		await test(client, folder);
+		test(client, folder);
 		client.process.procExit(0);
 	} catch (error) {
 		if (error instanceof AssertionError) {

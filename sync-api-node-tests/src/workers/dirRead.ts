@@ -10,8 +10,13 @@ import { FileType } from '@vscode/sync-api-client';
 import runSingle from './tests';
 
 void runSingle((client, folder) => {
-	const filename = path.join(folder.uri.fsPath, 'test.txt');
-	const stat = client.vscode.workspace.fileSystem.stat(URI.file(filename));
-	assert.strictEqual(stat.type, FileType.File);
-	assert.strictEqual(stat.size, 12);
+	const dirname = path.join(folder.uri.fsPath, 'directory');
+	const entries = client.vscode.workspace.fileSystem.readDirectory(URI.file(dirname));
+	const valid = new Set<string>(['entry1.txt', 'entry2.txt', 'entry3.txt']);
+	for (const entry of entries) {
+		assert.ok(valid.has(entry[0]));
+		assert.strictEqual(entry[1], FileType.File);
+		valid.delete(entry[0]);
+	}
+	assert.strictEqual(valid.size, 0);
 });
