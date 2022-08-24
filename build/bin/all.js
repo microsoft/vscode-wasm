@@ -3,11 +3,12 @@
  *  Copyright (c) Microsoft Corporation. All rights reserved.
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
-"use strict";
 //@ts-check
 
+'use strict';
+
 const path = require('path');
-const child_process = require('child_process')
+const child_process = require('child_process');
 
 const root = path.dirname(path.dirname(__dirname));
 const args = process.argv.slice(2);

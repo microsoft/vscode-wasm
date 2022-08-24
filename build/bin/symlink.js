@@ -2,10 +2,11 @@
  *  Copyright (c) Microsoft Corporation. All rights reserved.
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
- "use strict";
-const { join } = require('path');
 //@ts-check
 
+'use strict';
+
+const { join } = require('path');
 const path = require('path');
 const ln = require('./linking');
 

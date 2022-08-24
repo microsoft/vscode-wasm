@@ -3,17 +3,17 @@
 	"compilerOptions": {
 		"tsBuildInfoFile":"../../lib/browser/watch.tsbuildInfo",
 		"rootDir": ".",
-		"outDir": "../../lib/browser",
+		"outDir": "../../../lib/browser/test",
 		"lib": [ "es2020", "webworker"],
-		"types": []
+		"types": [
+			"mocha"
+		]
 	},
 	"include": [
 		"."
 	],
-	"exclude": [
-		"test"
-	],
 	"references": [
-		{ "path": "../common/tsconfig.watch.json" }
+		{ "path": "../tsconfig.watch.json" },
+		{ "path": "../../common/test/tsconfig.watch.json" }
 	]
 }
