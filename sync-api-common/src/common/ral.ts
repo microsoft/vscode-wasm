@@ -4,6 +4,7 @@
  * ------------------------------------------------------------------------------------------ */
 
 import { Disposable } from './disposable';
+import type { RequestType, ClientConnection, ServiceConnection } from './connection';
 
 interface _TextEncoder {
 	encode(input?: string): Uint8Array;
@@ -34,6 +35,16 @@ interface RAL {
 		setTimeout(callback: (...args: any[]) => void, ms: number, ...args: any[]): Disposable;
 		setImmediate(callback: (...args: any[]) => void, ...args: any[]): Disposable;
 		setInterval(callback: (...args: any[]) => void, ms: number, ...args: any[]): Disposable;
+	};
+
+	readonly $testing: {
+		readonly ClientConnection: {
+			create<Requests extends RequestType | undefined = undefined>(port?: unknown): ClientConnection<Requests> | undefined;
+		};
+		readonly ServiceConnection: {
+			create<RequestHandlers extends RequestType | undefined = undefined>(port?: unknown): ServiceConnection<RequestHandlers> | undefined;
+		};
+		readonly workerTest: string;
 	};
 }
 

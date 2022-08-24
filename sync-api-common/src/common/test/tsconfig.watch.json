@@ -1,0 +1,19 @@
+{
+	"extends": "./tsconfig.json",
+	"compilerOptions": {
+		"tsBuildInfoFile":"../../../lib/common/test/watch.tsbuildInfo",
+		"rootDir": ".",
+		"outDir": "../../../lib/common/test",
+		"lib": [ "es2020"],
+		"types": [
+			"node",
+			"mocha"
+		]
+	},
+	"include": [
+		"."
+	],
+	"references": [
+		{ "path": "../tsconfig.watch.json" }
+	]
+}

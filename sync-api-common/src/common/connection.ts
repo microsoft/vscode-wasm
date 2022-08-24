@@ -576,7 +576,12 @@ export class RPCError extends Error {
 	}
 }
 
-export abstract class BaseClientConnection<Requests extends RequestType | undefined = undefined> {
+export interface ClientConnection<Requests extends RequestType | undefined = undefined> {
+	readonly sendRequest: SendRequestSignatures<Requests>;
+	serviceReady(): Promise<void>;
+}
+
+export abstract class BaseClientConnection<Requests extends RequestType | undefined = undefined> implements ClientConnection<Requests> {
 
 	private id: number;
 	private readonly textEncoder: RAL.TextEncoder;
@@ -761,7 +766,12 @@ type RequestHandler = {
 	(arg1?: Params | TypedArray, arg2?: TypedArray): RequestResult | Promise<RequestResult>;
 };
 
-export abstract class BaseServiceConnection<RequestHandlers extends RequestType | undefined = undefined> {
+export interface ServiceConnection<RequestHandlers extends RequestType | undefined = undefined> {
+	readonly onRequest: HandleRequestSignatures<RequestHandlers>;
+	signalReady(): void;
+}
+
+export abstract class BaseServiceConnection<RequestHandlers extends RequestType | undefined = undefined> implements ServiceConnection<RequestHandlers> {
 
 	private readonly textDecoder: RAL.TextDecoder;
 	private readonly textEncoder: RAL.TextEncoder;

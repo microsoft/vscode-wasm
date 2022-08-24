@@ -5,7 +5,9 @@
 
 import RAL from '../common/ral';
 
-import { Disposable }  from '../common/disposable';
+import type { Disposable }  from '../common/disposable';
+import type { RequestType } from '../common/connection';
+import { ClientConnection, ServiceConnection } from './main';
 
 interface RIL extends RAL {
 }
@@ -39,6 +41,29 @@ const _ril: RIL = Object.freeze<RIL>({
 			const handle =  setInterval(callback, ms, ...args);
 			return { dispose: () => clearInterval(handle) };
 		},
+	}),
+	$testing: Object.freeze({
+		ClientConnection: Object.freeze({
+			create<Requests extends RequestType | undefined = undefined>(port?: MessagePort | Worker) {
+				const p = port ?? self;
+				if (p === undefined || p === null) {
+					return undefined;
+				}
+				return new ClientConnection<Requests>(p);
+			}
+		}),
+		ServiceConnection: Object.freeze({
+			create<RequestHandlers extends RequestType | undefined = undefined>(port?: MessagePort | Worker) {
+				const p = port ?? self;
+				if (p === undefined || p === null) {
+					return undefined;
+				}
+				return new ServiceConnection<RequestHandlers>(p);
+			}
+		}),
+		get workerTest() {
+			return '';
+		}
 	})
 });
 

@@ -8,54 +8,12 @@ import * as assert from 'assert';
 import * as path from 'path';
 import { TextDecoder } from 'util';
 import { Worker } from 'worker_threads';
+import { Requests } from '../../common/test/tests';
 import {
 	ClientConnection, Uint8Result, RPCErrno, VariableResult, Int8Result, Uint16Result, TypedArrayResult,
 	TypedArray, Int16Result, Uint32Result, Int32Result, Uint64Result, Int64Result
 } from '../main';
 
-export type Requests = {
-	method: 'uint8array';
-	params: {
-		p1: string;
-	};
-	result: Uint8Array;
-} | {
-	method: 'int8array';
-	params: undefined;
-	result: Int8Array;
-} | {
-	method: 'uint16array';
-	params: undefined;
-	result: Uint16Array;
-} | {
-	method: 'int16array';
-	params: undefined;
-	result: Int16Array;
-} | {
-	method: 'uint32array';
-	params: undefined;
-	result: Uint32Array;
-} | {
-	method: 'int32array';
-	params: undefined;
-	result: Int32Array;
-} | {
-	method: 'uint64array';
-	params: undefined;
-	result: BigUint64Array;
-} | {
-	method: 'int64array';
-	params: undefined;
-	result: BigInt64Array;
-} | {
-	method: 'varUint8array';
-	params: undefined;
-	result: VariableResult<Uint8Array>;
-}| {
-	method: 'varJSON';
-	params: undefined;
-	result: VariableResult<{ name: string; age: number }>;
-};
 
 function assertData<T>(value: { errno: RPCErrno } | { errno: 0; data: T }): asserts value is { errno: 0; data: T } {
 	const candidate: { errno: RPCErrno; data?: T | null } = value;
@@ -65,7 +23,8 @@ function assertData<T>(value: { errno: RPCErrno } | { errno: 0; data: T }): asse
 }
 
 async function createConnection(filename: string): Promise<[ClientConnection<Requests>, Worker]> {
-	const worker = new Worker(path.join(__dirname, filename));
+	const bootstrap = path.join(__dirname, './workers/main.js');
+	const worker = new Worker(bootstrap, { argv: [path.join(__dirname, filename)] });
 	const connection = new ClientConnection<Requests>(worker);
 	await connection.serviceReady();
 	return [connection, worker];
@@ -84,7 +43,7 @@ function assertResult(result: { errno: 0; data: TypedArray } | { errno: RPCErrno
 suite('Connection', () => {
 
 	test('UInt8Array', async () => {
-		const [connection, worker] = await createConnection('./workers/uint8array.js');
+		const [connection, worker] = await createConnection('../../common/test/workers/uint8array.js');
 		const result = connection.sendRequest('uint8array', { p1: '12345678' }, Uint8Result.fromLength(8), 50);
 		await worker.terminate();
 		assert.strictEqual(result.errno, 0);
@@ -95,7 +54,7 @@ suite('Connection', () => {
 	});
 
 	test('Int8Array', async () => {
-		const [connection, worker] = await createConnection('./workers/int8array.js');
+		const [connection, worker] = await createConnection('../../common/test/workers/int8array.js');
 		const resultType = Int8Result.fromLength(8);
 		const result = connection.sendRequest('int8array', resultType, 50);
 		await worker.terminate();
@@ -103,7 +62,7 @@ suite('Connection', () => {
 	});
 
 	test('Uint16Array', async () => {
-		const [connection, worker] = await createConnection('./workers/uint16array.js');
+		const [connection, worker] = await createConnection('../../common/test/workers/uint16array.js');
 		const resultType = Uint16Result.fromLength(16);
 		const result = connection.sendRequest('uint16array', resultType, 50);
 		await worker.terminate();
@@ -111,7 +70,7 @@ suite('Connection', () => {
 	});
 
 	test('Int16Array', async () => {
-		const [connection, worker] = await createConnection('./workers/int16array.js');
+		const [connection, worker] = await createConnection('../../common/test//workers/int16array.js');
 		const resultType = Int16Result.fromLength(16);
 		const result = connection.sendRequest('int16array', resultType, 50);
 		await worker.terminate();
@@ -119,7 +78,7 @@ suite('Connection', () => {
 	});
 
 	test('Uint32Array', async () => {
-		const [connection, worker] = await createConnection('./workers/uint32array.js');
+		const [connection, worker] = await createConnection('../../common/test/workers/uint32array.js');
 		const resultType = Uint32Result.fromLength(32);
 		const result = connection.sendRequest('uint32array', resultType, 50);
 		await worker.terminate();
@@ -127,7 +86,7 @@ suite('Connection', () => {
 	});
 
 	test('Int32Array', async () => {
-		const [connection, worker] = await createConnection('./workers/int32array.js');
+		const [connection, worker] = await createConnection('../../common/test/workers/int32array.js');
 		const resultType = Int32Result.fromLength(32);
 		const result = connection.sendRequest('int32array', resultType, 50);
 		await worker.terminate();
@@ -135,7 +94,7 @@ suite('Connection', () => {
 	});
 
 	test('Uint64Array', async () => {
-		const [connection, worker] = await createConnection('./workers/uint64array.js');
+		const [connection, worker] = await createConnection('../../common/test/workers/uint64array.js');
 		const resultType = Uint64Result.fromLength(64);
 		const result = connection.sendRequest('uint64array', resultType, 50);
 		await worker.terminate();
@@ -143,7 +102,7 @@ suite('Connection', () => {
 	});
 
 	test('Int64Array', async () => {
-		const [connection, worker] = await createConnection('./workers/int64array.js');
+		const [connection, worker] = await createConnection('../../common/test/workers/int64array.js');
 		const resultType = Int64Result.fromLength(64);
 		const result = connection.sendRequest('int64array', resultType, 50);
 		await worker.terminate();
@@ -151,7 +110,7 @@ suite('Connection', () => {
 	});
 
 	test('Variable UInt8Array', async () => {
-		const worker = new Worker(path.join(__dirname, './workers/varUint8array.js'));
+		const worker = new Worker(path.join(__dirname, './workers/main.js'), { argv: [path.join(__dirname, '../../common/test/workers/varUint8array.js')] });
 		const connection = new ClientConnection<Requests>(worker);
 		await connection.serviceReady();
 		const result = connection.sendRequest('varUint8array', new VariableResult('binary'), 50);
@@ -163,7 +122,7 @@ suite('Connection', () => {
 	});
 
 	test('Variable JSON result', async () => {
-		const worker = new Worker(path.join(__dirname, './workers/varJson.js'));
+		const worker = new Worker(path.join(__dirname, './workers/main.js'), { argv: [path.join(__dirname, '../../common/test/workers/varJson.js')] });
 		const connection = new ClientConnection<Requests>(worker);
 		await connection.serviceReady();
 		const result = connection.sendRequest('varJSON', new VariableResult('json'), 50);

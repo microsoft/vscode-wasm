@@ -2,25 +2,25 @@
  * Copyright (c) Microsoft Corporation. All rights reserved.
  * Licensed under the MIT License. See License.txt in the project root for license information.
  * ------------------------------------------------------------------------------------------ */
-import RIL from './ril';
-RIL.install();
 
-import { BaseServiceConnection, BaseClientConnection, Message, RequestType } from '../common/connection';
+import { MessagePort, Worker } from 'worker_threads';
+
 import RAL from '../common/ral';
+import { BaseServiceConnection, BaseClientConnection, Message, RequestType } from '../common/connection';
 
 export class ClientConnection<Requests extends RequestType | undefined = undefined> extends BaseClientConnection<Requests> {
 
-	private readonly port: MessagePort | Worker | DedicatedWorkerGlobalScope;
+	private readonly port: MessagePort | Worker;
 
-	constructor(port: MessagePort | Worker | DedicatedWorkerGlobalScope) {
+	constructor(port: MessagePort | Worker) {
 		super();
 		this.port = port;
-		this.port.onmessage = ((event: MessageEvent<string>) => {
+		this.port.on('message', (data: string) => {
 			try {
-				const message: Message = JSON.parse(event.data);
+				const message: Message = JSON.parse(data);
 				this.handleMessage(message);
 			} catch (error) {
-				RIL().console.error(error);
+				RAL().console.error(error);
 			}
 		});
 	}
@@ -32,13 +32,13 @@ export class ClientConnection<Requests extends RequestType | undefined = undefin
 
 export class ServiceConnection<RequestHandlers extends RequestType | undefined = undefined> extends BaseServiceConnection<RequestHandlers> {
 
-	private readonly port: MessagePort | Worker | DedicatedWorkerGlobalScope;
+	private readonly port: MessagePort | Worker;
 
-	constructor(port: MessagePort | Worker | DedicatedWorkerGlobalScope) {
+	constructor(port: MessagePort | Worker) {
 		super();
 		this.port = port;
-		this.port.onmessage = ((event: MessageEvent<SharedArrayBuffer>) => {
-			void this.handleMessage(event.data);
+		this.port.on('message', (sharedArrayBuffer: SharedArrayBuffer) => {
+			void this.handleMessage(sharedArrayBuffer);
 		});
 	}
 
@@ -46,6 +46,3 @@ export class ServiceConnection<RequestHandlers extends RequestType | undefined =
 		this.port.postMessage(JSON.stringify(message, undefined, 0));
 	}
 }
-
-export * from '../common/api';
-export default RAL;

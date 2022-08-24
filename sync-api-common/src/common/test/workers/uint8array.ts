@@ -3,18 +3,13 @@
  * Licensed under the MIT License. See License.txt in the project root for license information.
  * ------------------------------------------------------------------------------------------ */
 /* eslint-disable no-console */
-import { TextEncoder } from 'util';
-import { parentPort  } from 'worker_threads';
-import { ServiceConnection } from '../../main';
-import type { Requests } from '../connection.test';
 
-if (parentPort === null) {
-	process.exit();
-}
+import RAL from '../../ral';
+import type { Requests } from '../tests';
 
-const connection = new ServiceConnection<Requests>(parentPort);
+const connection = RAL().$testing.ServiceConnection.create<Requests>()!;
 connection.onRequest('uint8array', (params, resultBuffer) => {
-	resultBuffer.set(new TextEncoder().encode(params.p1));
+	resultBuffer.set(RAL().TextEncoder.create().encode(params.p1));
 	return { errno: 0 };
 });
 connection.signalReady();
