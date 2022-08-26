@@ -4,9 +4,9 @@
  * ------------------------------------------------------------------------------------------ */
 
 import RAL from '../../ral';
-import type { Requests } from '../tests';
+import type { TestRequests } from '../tests';
 
-const connection = RAL().$testing.ServiceConnection.create<Requests>()!;
+const connection = RAL().$testing.ServiceConnection.create<TestRequests>()!;
 connection.onRequest('int16array', (resultBuffer) => {
 	const result = new Int16Array(16);
 	for (let i = 0; i < result.length; i++) {

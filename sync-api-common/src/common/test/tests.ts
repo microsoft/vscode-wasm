@@ -5,7 +5,20 @@
 
 import { VariableResult } from '../connection';
 
-export type Requests = {
+export type AssertionErrorData = {
+	message: string;
+	actual: unknown;
+	expected: unknown;
+	operator: string;
+	generatedMessage: boolean;
+	code: string;
+};
+
+export type ErrorData = {
+	message: string;
+};
+
+export type TestRequests = {
 	method: 'uint8array';
 	params: {
 		p1: string;
@@ -47,4 +60,16 @@ export type Requests = {
 	method: 'varJSON';
 	params: undefined;
 	result: VariableResult<{ name: string; age: number }>;
+} | {
+	method: 'testing/assertionError';
+	params: AssertionErrorData;
+	result: null;
+} | {
+	method: 'testing/error';
+	params: ErrorData;
+	result: null;
+} | {
+	method: 'testing/done';
+	params: undefined;
+	result: undefined;
 };
