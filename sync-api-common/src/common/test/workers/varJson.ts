@@ -4,9 +4,9 @@
  * ------------------------------------------------------------------------------------------ */
 
 import RAL from '../../ral';
-import type { Requests } from '../tests';
+import type { TestRequests } from '../tests';
 
-const connection = RAL().$testing.ServiceConnection.create<Requests>()!;
+const connection = RAL().$testing.ServiceConnection.create<TestRequests>()!;
 connection.onRequest('varJSON', () => {
 	return { errno: 0, data: { name: 'vscode', age: 70 } };
 });

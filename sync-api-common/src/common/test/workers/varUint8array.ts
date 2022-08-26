@@ -4,9 +4,9 @@
  * ------------------------------------------------------------------------------------------ */
 
 import RAL from '../../ral';
-import type { Requests } from '../tests';
+import type { TestRequests } from '../tests';
 
-const connection = RAL().$testing.ServiceConnection.create<Requests>()!;
+const connection = RAL().$testing.ServiceConnection.create<TestRequests>()!;
 connection.onRequest('varUint8array', () => {
 	return { errno: 0, data: RAL().TextEncoder.create().encode('1'.repeat(32)) };
 });

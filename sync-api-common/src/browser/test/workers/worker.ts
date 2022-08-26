@@ -4,16 +4,11 @@
  * ------------------------------------------------------------------------------------------ */
 /* eslint-disable no-console */
 
-import type { Requests } from '../../../common/test/tests';
-import { ServiceConnection } from '../../main';
+import { Int8Result } from '../../main';
+import { runSingle, assertResult } from './tests';
 
-const connection = new ServiceConnection<Requests>(self);
-connection.onRequest('int8array', (resultBuffer) => {
-	const result = new Int8Array(8);
-	for (let i = 0; i < result.length; i++) {
-		result[i] = (i + 1) * -1;
-	}
-	resultBuffer.set(result);
-	return { errno: 0 };
-});
-connection.signalReady();
+runSingle((connection) => {
+	const resultType = Int8Result.fromLength(8);
+	const result = connection.sendRequest('int8array', resultType, 50);
+	assertResult(result, resultType, 8, -1);
+}).catch(console.error);

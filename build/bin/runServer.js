@@ -19,7 +19,8 @@ async function runServer() {
 			headers: {
 				'Cross-Origin-Opener-Policy': 'same-origin',
 				'Cross-Origin-Embedder-Policy': 'require-corp'
-			}
+			},
+			cache: 0
 		});
 		server.listen(8080, '127.0.0.1');
 	});

@@ -67,7 +67,7 @@
 			runner.on('fail', (test, err) => window.mocha_report('fail', serializeRunnable(test), serializeError(err)));
 			runner.on('pending', test => window.mocha_report('pending', serializeRunnable(test)));
 		};
-		// mocha.reporter(PlaywrightReporter);
+		mocha.reporter(PlaywrightReporter);
 		mocha.run();
 	</script>
 </body>

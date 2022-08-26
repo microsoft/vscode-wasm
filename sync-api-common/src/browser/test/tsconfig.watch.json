@@ -1,7 +1,7 @@
 {
-	"extends": "../../tsconfig.base.json",
+	"extends": "../../../tsconfig.base.json",
 	"compilerOptions": {
-		"tsBuildInfoFile":"../../lib/browser/watch.tsbuildInfo",
+		"tsBuildInfoFile":"../../lib/browser/test/watch.tsbuildInfo",
 		"rootDir": ".",
 		"outDir": "../../../lib/browser/test",
 		"lib": [ "es2020", "webworker"],

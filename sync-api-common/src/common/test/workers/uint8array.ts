@@ -5,9 +5,9 @@
 /* eslint-disable no-console */
 
 import RAL from '../../ral';
-import type { Requests } from '../tests';
+import type { TestRequests } from '../tests';
 
-const connection = RAL().$testing.ServiceConnection.create<Requests>()!;
+const connection = RAL().$testing.ServiceConnection.create<TestRequests>()!;
 connection.onRequest('uint8array', (params, resultBuffer) => {
 	resultBuffer.set(RAL().TextEncoder.create().encode(params.p1));
 	return { errno: 0 };

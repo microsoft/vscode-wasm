@@ -8,7 +8,7 @@ import * as assert from 'assert';
 import * as path from 'path';
 import { TextDecoder } from 'util';
 import { Worker } from 'worker_threads';
-import { Requests } from '../../common/test/tests';
+import { TestRequests } from '../../common/test/tests';
 import {
 	ClientConnection, Uint8Result, RPCErrno, VariableResult, Int8Result, Uint16Result, TypedArrayResult,
 	TypedArray, Int16Result, Uint32Result, Int32Result, Uint64Result, Int64Result
@@ -22,10 +22,10 @@ function assertData<T>(value: { errno: RPCErrno } | { errno: 0; data: T }): asse
 	}
 }
 
-async function createConnection(filename: string): Promise<[ClientConnection<Requests>, Worker]> {
+async function createConnection(filename: string): Promise<[ClientConnection<TestRequests>, Worker]> {
 	const bootstrap = path.join(__dirname, './workers/main.js');
 	const worker = new Worker(bootstrap, { argv: [path.join(__dirname, filename)] });
-	const connection = new ClientConnection<Requests>(worker);
+	const connection = new ClientConnection<TestRequests>(worker);
 	await connection.serviceReady();
 	return [connection, worker];
 }
@@ -111,7 +111,7 @@ suite('Connection', () => {
 
 	test('Variable UInt8Array', async () => {
 		const worker = new Worker(path.join(__dirname, './workers/main.js'), { argv: [path.join(__dirname, '../../common/test/workers/varUint8array.js')] });
-		const connection = new ClientConnection<Requests>(worker);
+		const connection = new ClientConnection<TestRequests>(worker);
 		await connection.serviceReady();
 		const result = connection.sendRequest('varUint8array', new VariableResult('binary'), 50);
 		await worker.terminate();
@@ -123,7 +123,7 @@ suite('Connection', () => {
 
 	test('Variable JSON result', async () => {
 		const worker = new Worker(path.join(__dirname, './workers/main.js'), { argv: [path.join(__dirname, '../../common/test/workers/varJson.js')] });
-		const connection = new ClientConnection<Requests>(worker);
+		const connection = new ClientConnection<TestRequests>(worker);
 		await connection.serviceReady();
 		const result = connection.sendRequest('varJSON', new VariableResult('json'), 50);
 		await worker.terminate();

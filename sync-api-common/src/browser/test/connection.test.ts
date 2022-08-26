@@ -4,44 +4,59 @@
  * ------------------------------------------------------------------------------------------ */
 
 // Ensure we have RIL installed.
+import '../main';
 
 import * as assert from 'assert';
+import { AssertionErrorData, ErrorData, TestRequests } from '../../common/test/tests';
+import { ServiceConnection } from '../main';
 
-import { Requests } from '../../common/test/tests';
-import { Int8Result, RPCErrno, TypedArray, TypedArrayResult } from '../../common/connection';
+async function runTest(url: string, test: (connection: ServiceConnection<TestRequests>) => void) {
+	const worker = new Worker(url);
+	const connection = new ServiceConnection<TestRequests>(worker);
 
-import { ClientConnection } from '../main';
+	let assertionError: AssertionErrorData | undefined;
+	let error: ErrorData | undefined;
 
-async function createConnection(): Promise<[ClientConnection<Requests>, Worker]> {
-	const worker = new Worker('/sync-api-common/dist/worker.js');
-	const connection = new ClientConnection<Requests>(worker);
-	await connection.serviceReady();
-	return [connection, worker];
-}
+	connection.onRequest('testing/assertionError', (params) => {
+		assertionError = params;
+		return { errno: 0 };
+	});
 
-function assertData<T>(value: { errno: RPCErrno } | { errno: 0; data: T }): asserts value is { errno: 0; data: T } {
-	const candidate: { errno: RPCErrno; data?: T | null } = value;
-	if (candidate.data === undefined) {
-		throw new Error(`Request result has no data`);
+	connection.onRequest('testing/error', (params) => {
+		error = params;
+		return { errno: 0 };
+	});
+
+	test(connection);
+
+	await new Promise<void>((resolve) => {
+		connection.onRequest('testing/done', () => {
+			resolve();
+			return { errno: 0 };
+		});
+		connection.signalReady();
+	});
+
+	worker.terminate();
+
+	if (assertionError !== undefined) {
+		throw new assert.AssertionError(assertionError);
+	}
+	if (error !== undefined) {
+		throw new Error(error.message);
 	}
 }
-
-function assertResult(result: { errno: 0; data: TypedArray } | { errno: RPCErrno }, resultType: TypedArrayResult, length: number, factor: number) {
-	assert.strictEqual(result.errno, 0, 'Request was successful');
-	assertData(result);
-	assert.ok(resultType.is(result.data));
-	assert.strictEqual(result.data.length, length);
-	for (let i = 0; i < result.data.length; i++) {
-		assert.equal(result.data[i], (i + 1) * factor);
-	}
-}
-
 suite('Connection', () => {
 	test('Int8Array', async () => {
-		const [connection, worker] = await createConnection();
-		const resultType = Int8Result.fromLength(8);
-		const result = connection.sendRequest('int8array', resultType, 50);
-		await worker.terminate();
-		assertResult(result, resultType, 8, -1);
+		await runTest('/sync-api-common/dist/worker.js', (connection) => {
+			connection.onRequest('int8array', (resultBuffer) => {
+				const result = new Int8Array(8);
+				for (let i = 0; i < result.length; i++) {
+					result[i] = (i + 1) * -1;
+				}
+				resultBuffer.set(result);
+				return { errno: 0 };
+			});
+		});
 	});
 });
