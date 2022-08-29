@@ -3,9 +3,9 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import path from 'path';
-import Mocha from 'mocha';
-import glob from 'glob';
+import * as path from 'path';
+import * as Mocha from 'mocha';
+import * as glob from 'glob';
 
 export function run(testsRoot: string, cb: (error: any, failures?: number) => void): void {
 	// Create the mocha test

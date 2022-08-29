@@ -3,8 +3,8 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import path from 'path';
-import assert from 'assert';
+import * as path from 'path';
+import * as assert from 'assert';
 import { URI } from 'vscode-uri';
 import RAL from '@vscode/sync-api-common/node';
 import runSingle from './tests';

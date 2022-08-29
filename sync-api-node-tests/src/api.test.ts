@@ -3,9 +3,9 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import assert, { AssertionError } from 'assert';
-import path from 'path';
-import vscode from 'vscode';
+import * as assert from 'assert';
+import * as path from 'path';
+import * as vscode from 'vscode';
 
 import { Worker } from 'worker_threads';
 import { APIRequests, ApiService } from '@vscode/sync-api-service';
@@ -46,7 +46,7 @@ async function runTest(name: string, filename: string) {
 		connection.signalReady();
 	});
 	if (assertionError !== undefined) {
-		throw new AssertionError(assertionError);
+		throw new assert.AssertionError(assertionError);
 	}
 	if (error !== undefined) {
 		throw new Error(error.message);
