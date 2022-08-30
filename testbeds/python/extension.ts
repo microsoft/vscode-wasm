@@ -6,7 +6,7 @@
 import * as path from 'path';
 import { Worker } from 'worker_threads';
 
-import { commands, ExtensionContext, Terminal, window, workspace } from 'vscode';
+import { commands, ExtensionContext, Terminal, window, extensions, Uri } from 'vscode';
 
 import { ServiceConnection } from '@vscode/sync-api-common/node';
 import { APIRequests, ApiService } from '@vscode/sync-api-service';
@@ -15,7 +15,8 @@ const connectionState: Map<number, [Worker, ServiceConnection<APIRequests>, ApiS
 
 export async function activate(_context: ExtensionContext) {
 
-	commands.registerCommand('testbed-python.runFile', () => {
+	commands.registerCommand('testbed-python.runFile', async () => {
+		await preloadPython();
 		const activeDocument = window.activeTextEditor?.document;
 		if (activeDocument === undefined || activeDocument.languageId !== 'python') {
 			return;
@@ -36,7 +37,8 @@ export async function activate(_context: ExtensionContext) {
 		connection.signalReady();
 	});
 
-	commands.registerCommand('testbed-python.runInteractive', () => {
+	commands.registerCommand('testbed-python.runInteractive', async () => {
+		await preloadPython();
 		const key = Date.now();
 		const worker = new Worker(path.join(__dirname, './worker.js'));
 		const connection = new ServiceConnection<APIRequests>(worker);
@@ -53,4 +55,28 @@ export async function activate(_context: ExtensionContext) {
 }
 
 export function deactivate() {
+}
+
+async function preloadPython(): Promise<void> {
+	try {
+		const remoteHub = getRemoteHubExtension();
+		if (remoteHub !== undefined) {
+			const remoteHubApi = await remoteHub.activate();
+			if (remoteHubApi.loadWorkspaceContents !== undefined) {
+				await remoteHubApi.loadWorkspaceContents(Uri.parse('vscode-vfs://github/dbaeumer/python-3.11.0rc'));
+			}
+		}
+	} catch (error) {
+		console.log(error);
+	}
+}
+
+function getRemoteHubExtension() {
+
+	type RemoteHubApiStub = { loadWorkspaceContents?(workspaceUri: Uri): Promise<boolean> };
+	const remoteHub = extensions.getExtension<RemoteHubApiStub>('ms-vscode.remote-repositories')
+		?? extensions.getExtension<RemoteHubApiStub>('GitHub.remoteHub')
+		?? extensions.getExtension<RemoteHubApiStub>('GitHub.remoteHub-insiders');
+
+	return remoteHub;
 }
