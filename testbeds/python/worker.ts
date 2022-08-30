@@ -17,7 +17,6 @@ if (parentPort === null) {
 
 const connection = new ClientConnection<APIRequests>(parentPort);
 connection.serviceReady().then(async (params) => {
-	debugger;
 	const name = 'Python Shell';
 	const apiClient = new ApiClient(connection);
 	const workspaceFolders = apiClient.vscode.workspace.workspaceFolders;
@@ -38,7 +37,7 @@ connection.serviceReady().then(async (params) => {
 			mapDir.push({ name: path.posix.join(path.posix.sep, 'workspaces', folder.name), uri: folder.uri });
 		}
 	}
-	const pythonRoot = URI.file(`/home/dirkb/Projects/dbaeumer/python-3.11.0rc`);
+	const pythonRoot = URI.parse('vscode-vfs://github/dbaeumer/python-3.11.0rc');
 	mapDir.push({ name: path.posix.sep, uri: pythonRoot });
 	const exitHandler = (rval: number): void => {
 		apiClient.process.procExit(rval);
@@ -50,7 +49,8 @@ connection.serviceReady().then(async (params) => {
 			PYTHONPATH: '/workspace'
 		}
 	});
-	const binary = apiClient.vscode.workspace.fileSystem.readFile(pythonRoot.with({ path: path.join(pythonRoot.path, 'python.wasm') }));
+	const wasmUri = pythonRoot.with({ path: path.posix.join(pythonRoot.path, 'python.wasm') });
+	const binary = apiClient.vscode.workspace.fileSystem.readFile(wasmUri);
 	const { instance } = await WebAssembly.instantiate(binary, {
 		wasi_snapshot_preview1: wasi
 	});
