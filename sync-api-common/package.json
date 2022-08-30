@@ -37,7 +37,7 @@
 		"webpack:test:silent": "node ../build/bin/webpack --no-stats --mode none --config ./src/browser/test/webpack.config.js",
 		"test": "npm run test:node && npm run test:browser",
 		"test:node": "node ../node_modules/mocha/bin/_mocha",
-		"test:browser": "node ../build/bin/runBrowserTests.js  http://127.0.0.1:8080/sync-api-common/src/browser/test/",
-		"test:runServer": "node ../build/bin/runServer.js"
+		"test:browser": "npm run webpack:test:silent && node ../build/bin/runBrowserTests.js  http://127.0.0.1:8080/sync-api-common/src/browser/test/",
+		"test:runServer": "npm run webpack:test:silent && node ../build/bin/runServer.js"
 	}
 }
