@@ -39,11 +39,11 @@ module.exports = [{
 		extensions: ['.js']
 	},
 	entry: {
-		extension: '../../../lib/browser/test/workers/worker.js',
+		extension: '../../../lib/browser/test/workers/main.js',
 	},
 	devtool: 'source-map',
 	output: {
-		filename: 'worker.js'
+		filename: 'workerMain.js'
 	}
 
 }];

@@ -4,12 +4,17 @@
  * ------------------------------------------------------------------------------------------ */
 /* eslint-disable no-console */
 
-import RAL from '../../ral';
-import type { TestRequests } from '../tests';
+import * as assert from 'assert';
+import RAL, { Uint8Result } from '../../api';
+import { assertData, runSingle } from './tests';
 
-const connection = RAL().$testing.ServiceConnection.create<TestRequests>()!;
-connection.onRequest('uint8array', (params, resultBuffer) => {
-	resultBuffer.set(RAL().TextEncoder.create().encode(params.p1));
-	return { errno: 0 };
-});
-connection.signalReady();
+export function run(): void {
+	runSingle((connection) => {
+		const result = connection.sendRequest('uint8array', { p1: '12345678' }, Uint8Result.fromLength(8), 50);
+		assert.strictEqual(result.errno, 0);
+		assertData(result);
+		assert.ok(result.data instanceof Uint8Array);
+		const str = RAL().TextDecoder.create().decode(result.data.slice());
+		assert.strictEqual(str, '12345678');
+	}).catch(RAL().console.error);
+}

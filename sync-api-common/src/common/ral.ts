@@ -14,6 +14,10 @@ interface _TextDecoder {
 	decode(input?: Uint8Array): string;
 }
 
+interface _TestServiceConnection<RequestHandlers extends RequestType | undefined = undefined> extends ServiceConnection<RequestHandlers> {
+	terminate(): Promise<number>;
+}
+
 interface RAL {
 
 	readonly TextEncoder: {
@@ -39,12 +43,12 @@ interface RAL {
 
 	readonly $testing: {
 		readonly ClientConnection: {
-			create<Requests extends RequestType | undefined = undefined>(port?: unknown): ClientConnection<Requests> | undefined;
+			create<Requests extends RequestType | undefined = undefined>(): ClientConnection<Requests>;
 		};
 		readonly ServiceConnection: {
-			create<RequestHandlers extends RequestType | undefined = undefined>(port?: unknown): ServiceConnection<RequestHandlers> | undefined;
+			create<RequestHandlers extends RequestType | undefined = undefined>(testCase: string): _TestServiceConnection<RequestHandlers>;
 		};
-		readonly workerTest: string;
+		readonly testCase: string;
 	};
 }
 

@@ -2,8 +2,9 @@
  * Copyright (c) Microsoft Corporation. All rights reserved.
  * Licensed under the MIT License. See License.txt in the project root for license information.
  * ------------------------------------------------------------------------------------------ */
+import * as path from 'path';
 import { TextDecoder } from 'util';
-import { MessagePort, parentPort, Worker } from 'worker_threads';
+import { parentPort, Worker } from 'worker_threads';
 
 import RAL from '../common/ral';
 import type { Disposable } from '../common/disposable';
@@ -11,6 +12,19 @@ import type { RequestType } from '../common/connection';
 import { ClientConnection, ServiceConnection } from './connection';
 
 interface RIL extends RAL {
+}
+
+class TestServiceConnection<RequestHandlers extends RequestType | undefined = undefined> extends ServiceConnection<RequestHandlers> {
+	private readonly  worker: Worker;
+	constructor(testCase: string) {
+		const bootstrap = path.join(__dirname, './test/workers/main.js');
+		const worker = new Worker(bootstrap, { argv: [testCase] });
+		super(worker);
+		this.worker = worker;
+	}
+	public terminate(): Promise<number> {
+		return this.worker.terminate();
+	}
 }
 
 const _ril: RIL = Object.freeze<RIL>({
@@ -45,24 +59,19 @@ const _ril: RIL = Object.freeze<RIL>({
 	}),
 	$testing: Object.freeze({
 		ClientConnection: Object.freeze({
-			create<Requests extends RequestType | undefined = undefined>(port?: MessagePort | Worker) {
-				const p = port ?? parentPort;
-				if (p === undefined || p === null) {
-					return undefined;
+			create<Requests extends RequestType | undefined = undefined>() {
+				if (!parentPort) {
+					throw new Error(`No parent port defined. Shouldn't happen in test setup`);
 				}
-				return new ClientConnection<Requests>(p);
+				return new ClientConnection<Requests>(parentPort);
 			}
 		}),
 		ServiceConnection: Object.freeze({
-			create<RequestHandlers extends RequestType | undefined = undefined>(port?: MessagePort | Worker) {
-				const p = port ?? parentPort;
-				if (p === undefined || p === null) {
-					return undefined;
-				}
-				return new ServiceConnection<RequestHandlers>(p);
+			create<RequestHandlers extends RequestType | undefined = undefined>(testCase: string) {
+				return new TestServiceConnection<RequestHandlers>(testCase);
 			}
 		}),
-		get workerTest() {
+		get testCase() {
 			return process.argv[2];
 		}
 	})

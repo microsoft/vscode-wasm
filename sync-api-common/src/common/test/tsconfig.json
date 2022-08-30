@@ -6,7 +6,6 @@
 		"outDir": "../../../lib/common/test",
 		"lib": [ "es2020"],
 		"types": [
-			"node",
 			"mocha"
 		]
 	},

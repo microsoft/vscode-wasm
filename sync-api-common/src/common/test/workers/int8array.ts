@@ -2,17 +2,15 @@
  * Copyright (c) Microsoft Corporation. All rights reserved.
  * Licensed under the MIT License. See License.txt in the project root for license information.
  * ------------------------------------------------------------------------------------------ */
+/* eslint-disable no-console */
 
-import RAL from '../../ral';
-import type { TestRequests } from '../tests';
+import RAL, { Int8Result } from '../../api';
+import { assertResult, runSingle } from './tests';
 
-const connection = RAL().$testing.ServiceConnection.create<TestRequests>()!;
-connection.onRequest('int8array', (resultBuffer) => {
-	const result = new Int8Array(8);
-	for (let i = 0; i < result.length; i++) {
-		result[i] = (i + 1) * -1;
-	}
-	resultBuffer.set(result);
-	return { errno: 0 };
-});
-connection.signalReady();
+export function run(): void {
+	runSingle((connection) => {
+		const resultType = Int8Result.fromLength(8);
+		const result = connection.sendRequest('int8array', resultType, 50);
+		assertResult(result, resultType, 8, -1);
+	}).catch(RAL().console.error);
+}

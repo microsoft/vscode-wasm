@@ -7,7 +7,7 @@ import RAL from '../common/ral';
 
 import type { Disposable }  from '../common/disposable';
 import type { RequestType } from '../common/connection';
-import { ClientConnection, ServiceConnection } from './main';
+import { ClientConnection, ServiceConnection } from './connection';
 
 interface RIL extends RAL {
 }
@@ -15,6 +15,20 @@ interface RIL extends RAL {
 // In Browser environments we can only encode / decode utf-8
 const encoder: RAL.TextEncoder = new TextEncoder();
 const decoder: RAL.TextDecoder = new TextDecoder();
+
+class TestServiceConnection<RequestHandlers extends RequestType | undefined = undefined> extends ServiceConnection<RequestHandlers> {
+	private readonly  worker: Worker;
+	constructor(testCase: string) {
+		const url = `/sync-api-common/dist/workerMain.js?toRun=${testCase}`;
+		const worker = new Worker(url);
+		super(worker);
+		this.worker = worker;
+	}
+	public terminate(): Promise<number> {
+		this.worker.terminate();
+		return Promise.resolve(0);
+	}
+}
 
 const _ril: RIL = Object.freeze<RIL>({
 	TextEncoder: Object.freeze({
@@ -44,25 +58,19 @@ const _ril: RIL = Object.freeze<RIL>({
 	}),
 	$testing: Object.freeze({
 		ClientConnection: Object.freeze({
-			create<Requests extends RequestType | undefined = undefined>(port?: MessagePort | Worker) {
-				const p = port ?? self;
-				if (p === undefined || p === null) {
-					return undefined;
-				}
-				return new ClientConnection<Requests>(p);
+			create<Requests extends RequestType | undefined = undefined>() {
+				return new ClientConnection<Requests>(self);
 			}
 		}),
 		ServiceConnection: Object.freeze({
-			create<RequestHandlers extends RequestType | undefined = undefined>(port?: MessagePort | Worker) {
-				const p = port ?? self;
-				if (p === undefined || p === null) {
-					return undefined;
-				}
-				return new ServiceConnection<RequestHandlers>(p);
+			create<RequestHandlers extends RequestType | undefined = undefined>(testCase: string) {
+				return new TestServiceConnection<RequestHandlers>(testCase);
 			}
 		}),
-		get workerTest() {
-			return '';
+		get testCase() {
+			const location = self.location;
+			const search = location.search;
+			return search.substring('?toRun='.length);
 		}
 	})
 });

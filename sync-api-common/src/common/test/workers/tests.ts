@@ -5,8 +5,8 @@
 
 import * as assert from 'assert';
 
-import type { TestRequests } from '../../../common/test/tests';
-import { ClientConnection, RPCErrno, TypedArray, TypedArrayResult } from '../../main';
+import type { TestRequests } from '../tests';
+import RAL, { ClientConnection, RPCErrno, TypedArray, TypedArrayResult } from '../../api';
 
 export function assertData<T>(value: { errno: RPCErrno } | { errno: 0; data: T }): asserts value is { errno: 0; data: T } {
 	const candidate: { errno: RPCErrno; data?: T | null } = value;
@@ -26,7 +26,7 @@ export function assertResult(result: { errno: 0; data: TypedArray } | { errno: R
 }
 
 export async function runSingle(test: (connection: ClientConnection<TestRequests>) => void): Promise<void> {
-	const connection = new ClientConnection<TestRequests>(self);
+	const connection = RAL().$testing.ClientConnection.create<TestRequests>()!;
 	await connection.serviceReady();
 	try {
 		test(connection);
