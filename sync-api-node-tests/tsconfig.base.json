@@ -8,8 +8,8 @@
 		"stripInternal": true,
 		"target": "es2020",
 		"lib": [ "es2020" ],
-		"module": "CommonJS",
-		"moduleResolution": "node",
+		"module": "Node16",
+		"moduleResolution": "Node16",
 		"types": [
 			"node",
 			"mocha"
