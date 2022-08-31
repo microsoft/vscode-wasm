@@ -32,12 +32,10 @@
 		"lint": "node ../node_modules/eslint/bin/eslint.js --ext ts src",
 		"prepublishOnly": "git clean -xfd . && npm install && npm run clean && npm run compile && npm test",
 		"postpublish": "node ../build/npm/post-publish.js",
-		"webpack": "node ../build/bin/webpack  --mode none --config ./webpack.config.js",
-		"webpack:test": "node ../build/bin/webpack --mode none --config ./src/browser/test/webpack.config.js",
-		"webpack:test:silent": "node ../build/bin/webpack --no-stats --mode none --config ./src/browser/test/webpack.config.js",
+		"esbuild": "node ./bin/esbuild.js",
 		"test": "npm run test:node && npm run test:browser",
 		"test:node": "node ../node_modules/mocha/bin/_mocha",
-		"test:browser": "npm run webpack:test:silent && node ../build/bin/runBrowserTests.js  http://127.0.0.1:8080/sync-api-common/src/browser/test/",
-		"test:runServer": "npm run webpack:test:silent && node ../build/bin/runServer.js"
+		"test:browser": "npm run esbuild && node ../build/bin/runBrowserTests.js  http://127.0.0.1:8080/sync-api-common/src/browser/test/",
+		"test:runServer": "npm run esbuild && node ../build/bin/runServer.js"
 	}
 }
