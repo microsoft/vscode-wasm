@@ -39,7 +39,7 @@ const apiClient = new ApiClient(connection);
 const workspaceFolders = apiClient.vscode.workspace.workspaceFolders;
 
 // Read a file for a given uri
-const content = apiClient.vscode.workspace.filesystem.read(uri);
+const content = apiClient.vscode.workspace.filesystem.readFile(uri);
 ```
 
 For code executed in the browser exchange the import `@vscode/sync-api-common/node` with `@vscode/sync-api-common/browser`.

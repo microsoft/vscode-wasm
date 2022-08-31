@@ -5,7 +5,7 @@
 
 import { URI } from 'vscode-uri';
 
-import RAL, { BaseClientConnection, Requests, RequestResult, DTOs, VariableResult, ProcExitRequest, RPCErrno, RPCError } from '@vscode/sync-api-common';
+import { RAL, BaseClientConnection, Requests, RequestResult, DTOs, VariableResult, ProcExitRequest, RPCErrno, RPCError } from '@vscode/sync-api-common';
 
 import * as vscode from './vscode';
 
