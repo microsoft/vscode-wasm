@@ -4,7 +4,7 @@
  * ------------------------------------------------------------------------------------------ */
 /* eslint-disable no-console */
 
-import RAL from '../../api';
+import { RAL } from '../../api';
 
 import type { TestRequests } from '../tests';
 

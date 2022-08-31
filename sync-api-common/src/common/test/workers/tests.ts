@@ -6,7 +6,7 @@
 import * as assert from 'assert';
 
 import type { TestRequests } from '../tests';
-import RAL, { ClientConnection, RPCErrno, TypedArray, TypedArrayResult } from '../../api';
+import { RAL, ClientConnection, RPCErrno, TypedArray, TypedArrayResult } from '../../api';
 
 export function assertData<T>(value: { errno: RPCErrno } | { errno: 0; data: T }): asserts value is { errno: 0; data: T } {
 	const candidate: { errno: RPCErrno; data?: T | null } = value;

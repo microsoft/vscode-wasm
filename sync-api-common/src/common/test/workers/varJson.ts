@@ -4,8 +4,8 @@
  * ------------------------------------------------------------------------------------------ */
 /* eslint-disable no-console */
 
-import * as assert from 'assert';
-import RAL, { VariableResult } from '../../api';
+import assert from 'assert';
+import { RAL, VariableResult } from '../../api';
 import { assertData, runSingle } from './tests';
 
 export function run(): void {

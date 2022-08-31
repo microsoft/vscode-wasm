@@ -4,8 +4,8 @@
  * ------------------------------------------------------------------------------------------ */
 /* eslint-disable no-console */
 
-import * as assert from 'assert';
-import RAL, { VariableResult } from '../../api';
+import assert from 'assert';
+import { RAL, VariableResult } from '../../api';
 import { assertData, runSingle } from './tests';
 
 export function run(): void {
@@ -14,6 +14,6 @@ export function run(): void {
 		assert.strictEqual(result.errno, 0, 'Request was successful');
 		assertData(result);
 		assert.strictEqual(result.data.length, 32);
-		assert.strict(RAL().TextDecoder.create().decode(result.data.slice()), '1'.repeat(32));
+		assert.strictEqual(RAL().TextDecoder.create().decode(result.data.slice()), '1'.repeat(32));
 	}).catch(RAL().console.error);
 }

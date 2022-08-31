@@ -7,4 +7,4 @@ export * from './connection';
 export * from './protocol';
 
 import RAL from './ral';
-export default RAL;
+export { RAL };

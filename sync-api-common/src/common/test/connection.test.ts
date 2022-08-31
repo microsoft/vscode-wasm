@@ -6,7 +6,7 @@
 
 import * as assert from 'assert';
 import { TestRequests, AssertionErrorData, ErrorData } from './tests';
-import RAL, { ServiceConnection } from '../api';
+import { RAL, ServiceConnection } from '../api';
 
 async function runTest(testCase: string, test: (connection: ServiceConnection<TestRequests>) => void) {
 	const connection = RAL().$testing.ServiceConnection.create<TestRequests>(testCase);

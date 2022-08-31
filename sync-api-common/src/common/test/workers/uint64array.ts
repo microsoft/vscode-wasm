@@ -4,7 +4,7 @@
  * ------------------------------------------------------------------------------------------ */
 /* eslint-disable no-console */
 
-import RAL, { Uint64Result } from '../../api';
+import { RAL, Uint64Result } from '../../api';
 import { assertResult, runSingle } from './tests';
 
 export function run(): void {

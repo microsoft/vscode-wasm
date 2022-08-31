@@ -4,7 +4,7 @@
  * ------------------------------------------------------------------------------------------ */
 /* eslint-disable no-console */
 
-import RAL, { Int16Result } from '../../api';
+import { RAL, Int16Result } from '../../api';
 import { assertResult, runSingle } from './tests';
 
 export function run(): void {
