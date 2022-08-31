@@ -3,7 +3,7 @@
 	"publisher": "ms-vscode",
 	"private": true,
 	"description": "Test cases for the sync vscode API",
-	"version": "0.1.0",
+	"version": "0.2.0",
 	"engines": {
 		"vscode": "^1.67.0"
 	},
@@ -23,8 +23,8 @@
 		"test": "node lib/runTests.js"
 	},
 	"dependencies": {
-		"@vscode/sync-api-service": "0.1.0",
-		"@vscode/sync-api-client": "0.1.0"
+		"@vscode/sync-api-service": "0.2.0",
+		"@vscode/sync-api-client": "0.2.0"
 	},
 	"devDependencies": {
 		"@vscode/test-electron": "^2.1.5",
