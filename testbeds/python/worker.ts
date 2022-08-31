@@ -50,7 +50,7 @@ connection.serviceReady().then(async (params) => {
 			PYTHONPATH: '/workspace'
 		}
 	});
-	const binary = apiClient.vscode.workspace.fileSystem.read(pythonRoot.with({ path: path.join(pythonRoot.path, 'python.wasm') }));
+	const binary = apiClient.vscode.workspace.fileSystem.readFile(pythonRoot.with({ path: path.join(pythonRoot.path, 'python.wasm') }));
 	const { instance } = await WebAssembly.instantiate(binary, {
 		wasi_snapshot_preview1: wasi
 	});
