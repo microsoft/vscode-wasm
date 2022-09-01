@@ -7,19 +7,22 @@
 const esbuild = require('esbuild');
 
 const workerTests = esbuild.build({
-	entryPoints: ['lib/browser/test/workers/main.js'],
-	outfile: 'dist/workerMain.js',
+	entryPoints: ['lib/workers/dirDelete.js', 'lib/workers/dirRead.js'],
+	outdir: 'dist/workers',
 	bundle: true,
+	format: 'esm',
+	splitting: true,
 	define: { process: '{"env":{}}' },
 	target: 'es2020'
 }).catch(console.error);
 
 const testFixture = esbuild.build({
-	entryPoints: ['lib/browser/test/connection.test.js'],
-	outfile: 'dist/connection.test.js',
+	entryPoints: ['lib/web/index.js'],
+	outfile: 'dist/web/index.js',
 	bundle: true,
+	format: 'cjs',
 	define: { process: '{"env":{}}' },
-	target: 'es2020'
+	target: 'es2020',
 }).catch(console.error);
 
-Promise.all([workerTests, testFixture]).catch(console.error);
+Promise.all([testFixture]).catch(console.error);

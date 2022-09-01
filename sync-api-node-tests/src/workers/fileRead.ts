@@ -9,8 +9,10 @@ import { URI } from 'vscode-uri';
 import RAL from '@vscode/sync-api-common/node';
 import runSingle from './tests';
 
-void runSingle((client, folder) => {
-	const filename = path.join(folder.uri.fsPath, 'test.txt');
-	const content = RAL().TextDecoder.create().decode(client.vscode.workspace.fileSystem.readFile(URI.file(filename)));
-	assert.strictEqual(content, 'test content');
-});
+export function run() {
+	return runSingle((client, folder) => {
+		const filename = path.join(folder.uri.fsPath, 'test.txt');
+		const content = RAL().TextDecoder.create().decode(client.vscode.workspace.fileSystem.readFile(URI.file(filename)));
+		assert.strictEqual(content, 'test content');
+	});
+}

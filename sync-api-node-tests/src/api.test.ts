@@ -3,9 +3,9 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import * as assert from 'assert';
-import * as path from 'path';
-import * as vscode from 'vscode';
+import assert from 'assert';
+import path from 'path';
+import vscode from 'vscode';
 
 import { Worker } from 'worker_threads';
 import { APIRequests, ApiService } from '@vscode/sync-api-service';
