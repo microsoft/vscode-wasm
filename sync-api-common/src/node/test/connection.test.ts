@@ -3,5 +3,8 @@
  * Licensed under the MIT License. See License.txt in the project root for license information.
  * ------------------------------------------------------------------------------------------ */
 
+import path from 'path';
 import '../main';
-import '../../common/test/connection.test';
+import * as tests from '../../common/test/connection.test';
+
+tests.setScript(path.join(__dirname, './workers/main.js'));

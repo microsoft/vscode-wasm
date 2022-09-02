@@ -18,7 +18,14 @@ interface _TestServiceConnection<RequestHandlers extends RequestType | undefined
 	terminate(): Promise<number>;
 }
 
+export enum _RALType {
+	Browser = 1,
+	Node = 2
+}
+
 interface RAL {
+
+	readonly type: _RALType;
 
 	readonly TextEncoder: {
 		create(encoding?: string): _TextEncoder;
@@ -46,7 +53,7 @@ interface RAL {
 			create<Requests extends RequestType | undefined = undefined>(): ClientConnection<Requests>;
 		};
 		readonly ServiceConnection: {
-			create<RequestHandlers extends RequestType | undefined = undefined>(testCase: string): _TestServiceConnection<RequestHandlers>;
+			create<RequestHandlers extends RequestType | undefined = undefined>(script: string, testCase?: string): _TestServiceConnection<RequestHandlers>;
 		};
 		readonly testCase: string;
 	};
@@ -62,6 +69,7 @@ function RAL(): RAL {
 }
 
 namespace RAL {
+	export const Type = _RALType;
 	export type TextEncoder = _TextEncoder;
 	export type TextDecoder = _TextDecoder;
 	export function install(ral: RAL): void {

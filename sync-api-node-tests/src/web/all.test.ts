@@ -3,4 +3,8 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import '../api.test';
+import * as apiTests from '../api.test';
+
+apiTests.contribute((testCase) => {
+	return `http://localhost:3000/static/devextensions/dist/workers/${testCase}.js?vscode-coi=3`;
+}, 'vscode-test-web');

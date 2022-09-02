@@ -4,15 +4,14 @@
  *--------------------------------------------------------------------------------------------*/
 
 import * as path from 'path';
-import * as assert from 'assert';
+import assert from 'assert';
+
 import { URI } from 'vscode-uri';
 import { FileType } from '@vscode/sync-api-client';
 import runSingle from './tests';
 
-export function run() {
-	return runSingle((client, folder) => {
-		const dirname = path.join(folder.uri.fsPath, 'directory');
-		const stat = client.vscode.workspace.fileSystem.stat(URI.file(dirname));
-		assert.strictEqual(stat.type, FileType.Directory);
-	});
-}
+runSingle((client, folder) => {
+	const dirname = path.join(folder.uri.fsPath, 'directory');
+	const stat = client.vscode.workspace.fileSystem.stat(URI.file(dirname));
+	assert.strictEqual(stat.type, FileType.Directory);
+}).catch(console.error);

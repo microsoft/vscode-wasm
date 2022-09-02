@@ -16,6 +16,7 @@ export function run(): Promise<void> {
 			reporter: undefined
 		});
 
+		require('./all.test');
 		suite('Simple', () => {
 			test('One', () => {
 				assert.strictEqual(1, 1);

@@ -4,12 +4,11 @@
  *--------------------------------------------------------------------------------------------*/
 
 import * as path from 'path';
+
 import { URI } from 'vscode-uri';
 import runSingle from './tests';
 
-export function run() {
-	return runSingle((client, folder) => {
-		const dirname = path.join(folder.uri.fsPath, 'directory_new');
-		client.vscode.workspace.fileSystem.delete(URI.file(dirname), { recursive: true });
-	});
-}
+runSingle((client, folder) => {
+	const dirname = path.join(folder.uri.fsPath, 'directory_new');
+	client.vscode.workspace.fileSystem.delete(URI.file(dirname), { recursive: true });
+}).catch(console.error);

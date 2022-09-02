@@ -26,16 +26,18 @@
 		"test:web": "node ./bin/esbuild.js && node lib/web/runTests.js"
 	},
 	"dependencies": {
-		"@vscode/sync-api-service": "0.2.0",
-		"@vscode/sync-api-client": "0.2.0"
+		"@vscode/sync-api-client": "0.2.0",
+		"@vscode/sync-api-service": "0.2.0"
 	},
 	"devDependencies": {
-		"@vscode/test-electron": "^2.1.5",
-		"@vscode/test-web": "0.0.29",
+		"@types/glob": "^7.2.0",
+		"@types/path-browserify": "^1.0.0",
 		"@types/uuid": "^8.3.4",
 		"@types/vscode": "1.67.0",
-		"@types/glob": "^7.2.0",
-		"uuid": "^8.3.2",
-		"glob": "^8.0.3"
+		"@vscode/test-electron": "^2.1.5",
+		"@vscode/test-web": "0.0.29",
+		"glob": "^8.0.3",
+		"path-browserify": "^1.0.1",
+		"uuid": "^8.3.2"
 	}
 }

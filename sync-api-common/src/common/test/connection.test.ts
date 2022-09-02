@@ -4,12 +4,24 @@
  * ------------------------------------------------------------------------------------------ */
 /* eslint-disable no-console */
 
-import * as assert from 'assert';
+import assert from 'assert';
+
 import { TestRequests, AssertionErrorData, ErrorData } from './tests';
 import { RAL, ServiceConnection } from '../api';
 
+let script: string = '';
+
+export function setScript(value: string): void {
+	script = value;
+}
+
 async function runTest(testCase: string, test: (connection: ServiceConnection<TestRequests>) => void) {
-	const connection = RAL().$testing.ServiceConnection.create<TestRequests>(testCase);
+
+	if (script === '') {
+		throw new Error(`No worker script installed`);
+	}
+
+	const connection = RAL().$testing.ServiceConnection.create<TestRequests>(script, testCase);
 
 	let assertionError: AssertionErrorData | undefined;
 	let error: ErrorData | undefined;

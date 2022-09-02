@@ -18,8 +18,8 @@ const decoder: RAL.TextDecoder = new TextDecoder();
 
 class TestServiceConnection<RequestHandlers extends RequestType | undefined = undefined> extends ServiceConnection<RequestHandlers> {
 	private readonly  worker: Worker;
-	constructor(testCase: string) {
-		const url = `/sync-api-common/dist/workerMain.js?toRun=${testCase}`;
+	constructor(script: string, testCase?: string) {
+		const url = testCase !== undefined ? `${script}?toRun=${testCase}` : script;
 		const worker = new Worker(url);
 		super(worker);
 		this.worker = worker;
@@ -31,6 +31,7 @@ class TestServiceConnection<RequestHandlers extends RequestType | undefined = un
 }
 
 const _ril: RIL = Object.freeze<RIL>({
+	type: RAL.Type.Browser,
 	TextEncoder: Object.freeze({
 		create(encoding: string = 'utf-8'): RAL.TextEncoder {
 			return encoder;
@@ -63,8 +64,8 @@ const _ril: RIL = Object.freeze<RIL>({
 			}
 		}),
 		ServiceConnection: Object.freeze({
-			create<RequestHandlers extends RequestType | undefined = undefined>(testCase: string) {
-				return new TestServiceConnection<RequestHandlers>(testCase);
+			create<RequestHandlers extends RequestType | undefined = undefined>(script: string, testCase?: string) {
+				return new TestServiceConnection<RequestHandlers>(script, testCase);
 			}
 		}),
 		get testCase() {
