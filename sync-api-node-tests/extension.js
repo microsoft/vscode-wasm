@@ -4,6 +4,7 @@
  *--------------------------------------------------------------------------------------------*/
 
 function activate(context) {
+	console.log(`Extension URI: ${context.extensionUri}`);
 }
 exports.activate = activate;
 

@@ -9,12 +9,18 @@ require('mocha/mocha');
 
 export function run(): Promise<void> {
 	return new Promise((resolve, reject) => {
+		// debugger;
 		// Create the mocha test
 		mocha.setup({
 			ui: 'tdd',
 			color: true,
 			reporter: undefined
 		});
+
+		// // @ts-ignore
+		// fetch('http://localhost:3000/static/devextensions/dist/workers/fileStat.js').then((content) => {
+		// 	console.log(content);
+		// }).catch(console.error);
 
 		require('./all.test');
 		suite('Simple', () => {

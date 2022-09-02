@@ -80,7 +80,7 @@ export function contribute(workerResolver: (testCase: string) => string, scheme:
 
 		test('File stat', async () => {
 			await runTest('File access', 'fileStat');
-		});
+		}).timeout(10000000);
 
 		test('File read', async () => {
 			await runTest('File read', 'fileRead');

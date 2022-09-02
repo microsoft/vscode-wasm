@@ -22,6 +22,7 @@
 		"watch": "node .../node_modules/typescript/lib/tsc.js -b ./tsconfig-watch.json -w",
 		"lint": "node ../node_modules/eslint/bin/eslint.js --ext ts src",
 		"esbuild": "node ./bin/esbuild.js",
+		"test": "npm run test:desktop",
 		"test:desktop": "node lib/desktop/runTests.js",
 		"test:web": "node ./bin/esbuild.js && node lib/web/runTests.js"
 	},

@@ -38,6 +38,7 @@ const workerTests = esbuild.build({
 		process: '{"env":{}}'
 	},
 	plugins: [ pathResolvePlugin ],
+	format: 'iife',
 	target: 'es2020',
 	platform: 'browser'
 }).catch(console.error);
@@ -46,10 +47,10 @@ const testFixture = esbuild.build({
 	entryPoints: ['lib/web/index.js'],
 	outfile: 'dist/web/index.js',
 	bundle: true,
-	format: 'cjs',
 	define: { process: '{"env":{}}' },
 	external: ['vscode'],
 	plugins: [ pathResolvePlugin ],
+	format: 'cjs',
 	target: 'es2020',
 	platform: 'browser'
 }).catch(console.error);
