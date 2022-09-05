@@ -4,20 +4,16 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { AssertionError } from 'assert';
-import { MessagePort, parentPort  } from 'worker_threads';
 
-import { ClientConnection } from '@vscode/sync-api-common/node';
+import { RAL } from '@vscode/sync-api-common/';
 import { ApiClient, APIRequests, WorkspaceFolder } from '@vscode/sync-api-client';
 
 import { TestRequests } from '../tests';
 
-if (parentPort === null) {
-	process.exit();
-}
-const pp: MessagePort = parentPort;
+export type Requests = APIRequests | TestRequests;
 
 export default async function runSingle(test: (client: ApiClient, folder: WorkspaceFolder) => void): Promise<void> {
-	const connection = new ClientConnection<APIRequests | TestRequests>(pp);
+	const connection = RAL().$testing.ClientConnection.create<Requests>();
 	const client = new ApiClient(connection);
 	await connection.serviceReady();
 	const workspaceFolders = client.vscode.workspace.workspaceFolders;

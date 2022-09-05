@@ -10,7 +10,7 @@
 		{ "path": "./sync-api-common/tsconfig.watch.json" },
 		{ "path": "./sync-api-client/tsconfig.watch.json" },
 		{ "path": "./sync-api-service/tsconfig.watch.json" },
-		{ "path": "./sync-api-node-tests/tsconfig.watch.json" },
+		{ "path": "./sync-api-tests/tsconfig.watch.json" },
 		{ "path": "./wasm-wasi/tsconfig.watch.json" }
 	]
 }

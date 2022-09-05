@@ -43,6 +43,6 @@
 		"watch": "node ./node_modules/typescript/lib/tsc.js -b tsconfig.watch.json -w",
 		"clean": "node ./build/bin/all.js run clean",
 		"lint": "node ./build/bin/all.js run lint",
-		"test": "cd sync-api-common && npm run test && cd ../sync-api-node-tests && npm run test && cd .."
+		"test": "cd sync-api-common && npm run test && cd ../sync-api-tests && npm run test && cd .."
 	}
 }

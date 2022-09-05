@@ -3,9 +3,9 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import * as path from 'path';
-import * as fs from 'fs';
-import * as os from 'os';
+import path from 'path';
+import fs from 'fs';
+import os from 'os';
 import * as uuid from 'uuid';
 
 import { runTests } from '@vscode/test-electron';
@@ -30,7 +30,7 @@ function rimraf(location: string) {
 async function go() {
 	const testDir = path.join(os.tmpdir(), uuid.v4());
 	try {
-		const extensionDevelopmentPath = path.resolve(__dirname, '..');
+		const extensionDevelopmentPath = path.join(__dirname, '..', '..');
 		const extensionTestsPath = __dirname;
 
 		fs.mkdirSync(testDir, { recursive: true });
@@ -40,7 +40,6 @@ async function go() {
 		fs.mkdirSync(extensionDir);
 		const workspaceFolder = path.join(testDir, 'workspace');
 		fs.mkdirSync(workspaceFolder);
-		console.log(workspaceFolder);
 
 		/**
 		 * Basic usage
@@ -52,7 +51,7 @@ async function go() {
 			launchArgs: [
 				'--user-data-dir', userDataDir,
 				'--extensions-dir', extensionDir,
-				'--enable-proposed-api', 'ms-vscode.sync-api-node-tests',
+				'--enable-proposed-api', 'ms-vscode.sync-api-tests',
 				workspaceFolder
 			]
 		});

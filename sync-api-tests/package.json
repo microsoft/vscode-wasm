@@ -1,5 +1,5 @@
 {
-	"name": "sync-api-node-tests",
+	"name": "sync-api-tests",
 	"publisher": "ms-vscode",
 	"private": true,
 	"description": "Test cases for the sync vscode API",
@@ -14,24 +14,31 @@
 		"*"
 	],
 	"main": "./extension.js",
+	"browser": "./extension.js",
 	"contributes": {},
 	"scripts": {
 		"clean": "node ../node_modules/rimraf/bin.js lib",
 		"compile": "node ../node_modules/typescript/lib/tsc.js -b ./tsconfig.json",
 		"watch": "node .../node_modules/typescript/lib/tsc.js -b ./tsconfig-watch.json -w",
 		"lint": "node ../node_modules/eslint/bin/eslint.js --ext ts src",
-		"test": "node lib/runTests.js"
+		"esbuild": "node ./bin/esbuild.js",
+		"test": "npm run test:desktop && npm run test:web",
+		"test:desktop": "node lib/desktop/runTests.js",
+		"test:web": "node ./bin/esbuild.js && node lib/web/runTests.js"
 	},
 	"dependencies": {
-		"@vscode/sync-api-service": "0.2.0",
-		"@vscode/sync-api-client": "0.2.0"
+		"@vscode/sync-api-client": "0.2.0",
+		"@vscode/sync-api-service": "0.2.0"
 	},
 	"devDependencies": {
-		"@vscode/test-electron": "^2.1.5",
+		"@types/glob": "^7.2.0",
+		"@types/path-browserify": "^1.0.0",
 		"@types/uuid": "^8.3.4",
 		"@types/vscode": "1.67.0",
-		"@types/glob": "^7.2.0",
-		"uuid": "^8.3.2",
-		"glob": "^8.0.3"
+		"@vscode/test-electron": "^2.1.5",
+		"@vscode/test-web": "0.0.30",
+		"glob": "^8.0.3",
+		"path-browserify": "^1.0.1",
+		"uuid": "^8.3.2"
 	}
 }

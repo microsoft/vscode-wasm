@@ -3,11 +3,12 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import * as path from 'path';
-import { URI } from 'vscode-uri';
+import * as _path from 'path';
+const path = _path.posix;
+
 import runSingle from './tests';
 
-void runSingle((client, folder) => {
-	const dirname = path.join(folder.uri.fsPath, 'directory_new');
-	client.vscode.workspace.fileSystem.delete(URI.file(dirname), { recursive: true });
-});
+runSingle((client, folder) => {
+	const filename = folder.uri.with({ path: path.join(folder.uri.path, 'toDelete.txt') });
+	client.vscode.workspace.fileSystem.delete(filename);
+}).catch(console.error);

@@ -22,4 +22,4 @@ const testFixture = esbuild.build({
 	target: 'es2020'
 }).catch(console.error);
 
-Promise.all([workerTests, testFixture]);
+Promise.all([workerTests, testFixture]).catch(console.error);

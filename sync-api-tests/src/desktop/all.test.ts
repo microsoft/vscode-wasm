@@ -3,12 +3,9 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import * as path from 'path';
-import { URI } from 'vscode-uri';
-import runSingle from './tests';
+import path from 'path';
+import * as apiTests from '../api.test';
 
-void runSingle((client, folder) => {
-	const oldName = path.join(folder.uri.fsPath, 'directory');
-	const newName = path.join(folder.uri.fsPath, 'directory_new');
-	client.vscode.workspace.fileSystem.rename(URI.file(oldName), URI.file(newName));
-});
+apiTests.contribute((testCase) => {
+	return path.join(__dirname, '..', 'workers', `${testCase}.js`);
+}, 'file');

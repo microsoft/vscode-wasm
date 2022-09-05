@@ -2,15 +2,16 @@
  *  Copyright (c) Microsoft Corporation. All rights reserved.
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
+import * as _path from 'path';
+const path = _path.posix;
+import assert from 'assert';
 
-import * as path from 'path';
-import * as assert from 'assert';
-import { URI } from 'vscode-uri';
 import { FileType } from '@vscode/sync-api-client';
 import runSingle from './tests';
 
-void runSingle((client, folder) => {
-	const dirname = path.join(folder.uri.fsPath, 'directory');
-	const stat = client.vscode.workspace.fileSystem.stat(URI.file(dirname));
-	assert.strictEqual(stat.type, FileType.Directory);
-});
+runSingle((client, folder) => {
+	const filename = folder.uri.with({ path: path.join(folder.uri.path, 'test.txt') });
+	const stat = client.vscode.workspace.fileSystem.stat(filename);
+	assert.strictEqual(stat.type, FileType.File);
+	assert.strictEqual(stat.size, 12);
+}).catch(console.error);

@@ -5,12 +5,12 @@
 
 import * as vscode from 'vscode';
 
-import { RAL, BaseServiceConnection, ProcExitRequest, Requests, DTOs, RPCErrno } from '@vscode/sync-api-common';
+import { RAL, ServiceConnection, ProcExitRequest, Requests, DTOs, RPCErrno } from '@vscode/sync-api-common';
 
 const terminalRegExp = /(\r\n)|(\n)/gm;
 
 export type APIRequests = Requests | ProcExitRequest;
-type ApiServiceConnection = BaseServiceConnection<APIRequests>;
+type ApiServiceConnection = ServiceConnection<APIRequests>;
 
 export class ApiService {
 

@@ -16,9 +16,8 @@ interface RIL extends RAL {
 
 class TestServiceConnection<RequestHandlers extends RequestType | undefined = undefined> extends ServiceConnection<RequestHandlers> {
 	private readonly  worker: Worker;
-	constructor(testCase: string) {
-		const bootstrap = path.join(__dirname, './test/workers/main.js');
-		const worker = new Worker(bootstrap, { argv: [testCase] });
+	constructor(script: string, testCase?: string) {
+		const worker = new Worker(script, testCase !== undefined ? { argv: [testCase] } : undefined);
 		super(worker);
 		this.worker = worker;
 	}
@@ -28,6 +27,7 @@ class TestServiceConnection<RequestHandlers extends RequestType | undefined = un
 }
 
 const _ril: RIL = Object.freeze<RIL>({
+	type: RAL.Type.Node,
 	TextEncoder: Object.freeze({
 		create(encoding: BufferEncoding = 'utf-8'): RAL.TextEncoder {
 			return {
@@ -67,8 +67,8 @@ const _ril: RIL = Object.freeze<RIL>({
 			}
 		}),
 		ServiceConnection: Object.freeze({
-			create<RequestHandlers extends RequestType | undefined = undefined>(testCase: string) {
-				return new TestServiceConnection<RequestHandlers>(testCase);
+			create<RequestHandlers extends RequestType | undefined = undefined>(script: string, testCase?: string) {
+				return new TestServiceConnection<RequestHandlers>(script, testCase);
 			}
 		}),
 		get testCase() {

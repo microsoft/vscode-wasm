@@ -4,4 +4,5 @@
  * ------------------------------------------------------------------------------------------ */
 
 import '../main';
-import '../../common/test/connection.test';
+import * as tests from  '../../common/test/connection.test';
+tests.setScript('/sync-api-common/dist/workerMain.js');
