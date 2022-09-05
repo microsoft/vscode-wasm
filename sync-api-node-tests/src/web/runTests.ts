@@ -42,8 +42,8 @@ async function go() {
 			extensionDevelopmentPath,
 			extensionTestsPath,
 			folderPath: testDir,
-			devTools: true,
-			headless: false,
+			devTools: false,
+			headless: true,
 			coi: true
 		});
 	} catch (err) {

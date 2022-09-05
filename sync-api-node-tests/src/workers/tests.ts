@@ -16,7 +16,6 @@ export default async function runSingle(test: (client: ApiClient, folder: Worksp
 	const connection = RAL().$testing.ClientConnection.create<Requests>();
 	const client = new ApiClient(connection);
 	await connection.serviceReady();
-	// debugger;
 	const workspaceFolders = client.vscode.workspace.workspaceFolders;
 	const folder = workspaceFolders[0];
 	try {

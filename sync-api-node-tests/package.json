@@ -22,7 +22,7 @@
 		"watch": "node .../node_modules/typescript/lib/tsc.js -b ./tsconfig-watch.json -w",
 		"lint": "node ../node_modules/eslint/bin/eslint.js --ext ts src",
 		"esbuild": "node ./bin/esbuild.js",
-		"test": "npm run test:desktop",
+		"test": "npm run test:desktop && npm run test:web",
 		"test:desktop": "node lib/desktop/runTests.js",
 		"test:web": "node ./bin/esbuild.js && node lib/web/runTests.js"
 	},
@@ -36,7 +36,7 @@
 		"@types/uuid": "^8.3.4",
 		"@types/vscode": "1.67.0",
 		"@vscode/test-electron": "^2.1.5",
-		"@vscode/test-web": "0.0.29",
+		"@vscode/test-web": "0.0.30",
 		"glob": "^8.0.3",
 		"path-browserify": "^1.0.1",
 		"uuid": "^8.3.2"

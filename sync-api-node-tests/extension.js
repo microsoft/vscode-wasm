@@ -3,8 +3,7 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-function activate(context) {
-	console.log(`Extension URI: ${context.extensionUri}`);
+function activate() {
 }
 exports.activate = activate;
 

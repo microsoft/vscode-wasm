@@ -4,7 +4,7 @@
  *--------------------------------------------------------------------------------------------*/
 
 import assert from 'assert';
-import path from 'path';
+import { posix as path } from 'path';
 import vscode, { Uri } from 'vscode';
 
 import { APIRequests, ApiService } from '@vscode/sync-api-service';
@@ -54,14 +54,18 @@ export function contribute(workerResolver: (testCase: string) => string, scheme:
 		assert.strictEqual(errno, 0);
 	}
 
+	function joinPath(uri: Uri, value: string): Uri {
+		return uri.with({ path: path.join(uri.path, value) });
+	}
+
 	suite('API Tests', () => {
 		const folder = getFolder();
-		const textFile: Uri = folder.uri.with({ path: path.posix.join(folder.uri.path, 'test.txt') });
-		const toDelete: Uri = folder.uri.with({ path: path.posix.join(folder.uri.path, 'toDelete.txt') });
-		const directory: Uri = folder.uri.with({ path: path.posix.join(folder.uri.path, 'directory') });
-		const entry1 = directory.with({ path: path.posix.join(directory.path, 'entry1.txt') });
-		const entry2 = directory.with({ path: path.posix.join(directory.path, 'entry2.txt') });
-		const entry3 = directory.with({ path: path.posix.join(directory.path, 'entry3.txt') });
+		const textFile: Uri = joinPath(folder.uri, 'test.txt');
+		const toDelete: Uri = joinPath(folder.uri, 'toDelete.txt');
+		const directory: Uri = joinPath(folder.uri, 'directory');
+		const entry1 = joinPath(directory, 'entry1.txt');
+		const entry2 = joinPath(directory, 'entry2.txt');
+		const entry3 = joinPath(directory, 'entry3.txt');
 
 		const encoder = RAL().TextEncoder.create();
 		const empty = encoder.encode('');
@@ -69,7 +73,6 @@ export function contribute(workerResolver: (testCase: string) => string, scheme:
 		// Setting up test files in workspace
 		suiteSetup(async () => {
 			const fileSystem = vscode.workspace.fs;
-			console.log(textFile.toString(true));
 			await fileSystem.writeFile(textFile, encoder.encode('test content'));
 			await fileSystem.writeFile(toDelete, empty);
 			await fileSystem.createDirectory(directory);
@@ -80,7 +83,7 @@ export function contribute(workerResolver: (testCase: string) => string, scheme:
 
 		test('File stat', async () => {
 			await runTest('File access', 'fileStat');
-		}).timeout(10000000);
+		});
 
 		test('File read', async () => {
 			await runTest('File read', 'fileRead');
@@ -88,9 +91,9 @@ export function contribute(workerResolver: (testCase: string) => string, scheme:
 
 		test('File rename', async () => {
 			await runTest('File rename', 'fileRename');
-			const newName = path.join(folder.uri.fsPath, 'testNew.txt');
+			const newName =  joinPath(folder.uri, 'testNew.txt');
 			assert.doesNotThrow(async () => {
-				await vscode.workspace.fs.stat(vscode.Uri.file(newName));
+				await vscode.workspace.fs.stat(newName);
 			});
 		});
 
@@ -116,18 +119,18 @@ export function contribute(workerResolver: (testCase: string) => string, scheme:
 
 		test('Directory rename', async () => {
 			await runTest('Directory rename', 'dirRename');
-			const newName = path.join(folder.uri.fsPath, 'directory_new');
+			const newName = joinPath(folder.uri, 'directory_new');
 			assert.doesNotThrow(async () => {
-				await vscode.workspace.fs.stat(vscode.Uri.file(newName));
+				await vscode.workspace.fs.stat(newName);
 			});
 		});
 
 		test('Directory delete', async () => {
 			await runTest('Directory delete', 'dirDelete');
-			const dirToDelete = path.join(folder.uri.fsPath, 'directory_new');
+			const dirToDelete = joinPath(folder.uri, 'directory_new');
 			let notFound = false;
 			try {
-				await vscode.workspace.fs.stat(vscode.Uri.file(dirToDelete));
+				await vscode.workspace.fs.stat(dirToDelete);
 			} catch (error) {
 				assert.ok(error instanceof vscode.FileSystemError);
 				notFound = error.code === 'FileNotFound';

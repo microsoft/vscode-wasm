@@ -3,15 +3,15 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import * as path from 'path';
+import * as _path from 'path';
+const path = _path.posix;
 import assert from 'assert';
 
-import { URI } from 'vscode-uri';
 import { FileType } from '@vscode/sync-api-client';
 import runSingle from './tests';
 
 runSingle((client, folder) => {
-	const dirname = path.join(folder.uri.fsPath, 'directory');
-	const stat = client.vscode.workspace.fileSystem.stat(URI.file(dirname));
+	const dirname = folder.uri.with( { path: path.join(folder.uri.path, 'directory') });
+	const stat = client.vscode.workspace.fileSystem.stat(dirname);
 	assert.strictEqual(stat.type, FileType.Directory);
 }).catch(console.error);

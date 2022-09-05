@@ -6,5 +6,5 @@
 import * as apiTests from '../api.test';
 
 apiTests.contribute((testCase) => {
-	return `http://localhost:3000/static/devextensions/dist/workers/${testCase}.js?vscode-coi=2`;
+	return `http://localhost:3000/static/devextensions/dist/workers/${testCase}.js?vscode-coi=3`;
 }, 'vscode-test-web');

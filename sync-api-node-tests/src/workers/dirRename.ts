@@ -3,13 +3,13 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import * as path from 'path';
+import * as _path from 'path';
+const path = _path.posix;
 
-import { URI } from 'vscode-uri';
 import runSingle from './tests';
 
 runSingle((client, folder) => {
-	const oldName = path.join(folder.uri.fsPath, 'directory');
-	const newName = path.join(folder.uri.fsPath, 'directory_new');
-	client.vscode.workspace.fileSystem.rename(URI.file(oldName), URI.file(newName));
+	const oldName = folder.uri.with({ path: path.join(folder.uri.path, 'directory') });
+	const newName = folder.uri.with({ path: path.join(folder.uri.path, 'directory_new')});
+	client.vscode.workspace.fileSystem.rename(oldName, newName);
 }).catch(console.error);
