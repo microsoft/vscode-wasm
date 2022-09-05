@@ -62,12 +62,12 @@
 			"name": "test:service",
 			"runtimeExecutable": "${execPath}",
 			"args": [
-				"--extensionDevelopmentPath=${workspaceFolder}/sync-api-node-tests",
-				"--extensionTestsPath=${workspaceFolder}/sync-api-node-tests/lib",
+				"--extensionDevelopmentPath=${workspaceFolder}/sync-api-tests",
+				"--extensionTestsPath=${workspaceFolder}/sync-api-tests/lib",
 				"${workspaceFolder}/tmp"
 			],
 			"sourceMaps": true,
-			"outFiles": ["${workspaceRoot}/sync-api-node-tests/lib/**/*.js"],
+			"outFiles": ["${workspaceRoot}/sync-api-tests/lib/**/*.js"],
 			"preLaunchTask": "npm: watch"
 		}
 	]

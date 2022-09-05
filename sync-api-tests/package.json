@@ -1,5 +1,5 @@
 {
-	"name": "sync-api-node-tests",
+	"name": "sync-api-tests",
 	"publisher": "ms-vscode",
 	"private": true,
 	"description": "Test cases for the sync vscode API",

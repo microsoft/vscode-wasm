@@ -37,7 +37,7 @@
 		"watch": "node ../node_modules/typescript/lib/tsc.js -b ./tsconfig.watch.json -w",
 		"clean": "node ../node_modules/rimraf/bin.js lib && node ../node_modules/rimraf/bin.js dist",
 		"lint": "node ../node_modules/eslint/bin/eslint.js --ext ts src",
-		"test": "cd ../sync-api-node-tests && npm test",
+		"test": "cd ../sync-api-tests && npm test",
 		"prepublishOnly": "git clean -xfd . && npm install && npm run clean && npm run compile",
 		"postpublish": "node ../build/npm/post-publish.js"
 	}
