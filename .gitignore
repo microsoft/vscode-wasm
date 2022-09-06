@@ -113,4 +113,6 @@ testbeds/python/python.tar
 testbeds/coreutils/coreutils.wasm
 sync-api-tests/.vscode-test
 sync-api-tests/.vscode-test-web
+*.wasm
+*.wat
 tmp/
