@@ -1,10 +1,10 @@
 #include <stdio.h>
 
-int func1();
-int func2();
+int foo();
+int bar();
 
 int main() {
-	int result = func1() + func2();
+	int result = foo() + bar();
 	printf("The result is %i\n", result);
 	return 0;
 }

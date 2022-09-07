@@ -115,4 +115,5 @@ sync-api-tests/.vscode-test
 sync-api-tests/.vscode-test-web
 *.wasm
 *.wat
+*.o
 tmp/

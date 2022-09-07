@@ -1,3 +1,3 @@
-int func2() {
+int bar() {
 	return 2;
 }
