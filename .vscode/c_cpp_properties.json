@@ -1,0 +1,19 @@
+{
+    "configurations": [
+        {
+            "name": "Linux",
+            "includePath": [
+                "${workspaceFolder}/**",
+                "/home/dirkb/bin/emsdk/upstream/emscripten/cache/sysroot/include"
+                // "/home/dirkb/bin/wasi-sdk/share/wasi-sysroot/include"
+            ],
+            "defines": [],
+            "compilerPath": "/home/dirkb/bin/emsdk/upstream/emscripten/emcc",
+            // "compilerPath": "/home/dirkb/bin/wasi-sdk/bin/clang",
+            "cStandard": "c17",
+            "cppStandard": "c++14",
+            "intelliSenseMode": "linux-clang-x64"
+        }
+    ],
+    "version": 4
+}

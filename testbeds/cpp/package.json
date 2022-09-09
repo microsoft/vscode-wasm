@@ -28,7 +28,7 @@
 		"watch:ts": "node ../../node_modules/typescript/lib/tsc.js -b tsconfig.json -w",
 		"build": "npm run compile:ts && npm run build:cpp && npm run build:wasi",
 		"build:cpp": "../../node_modules/.bin/make-dir ./out && g++ hello.cpp -o ./out/hello",
-		"build:wasi": "../../node_modules/.bin/make-dir ./out && clang++ hello.cpp -o ./out/hello.wasm",
+		"build:wasi": "../../node_modules/.bin/make-dir ./out && ~/bin/wasi-sdk/bin/clang++ hello.cpp -o ./out/hello.wasm",
 		"build:em": "../../node_modules/.bin/make-dir ./out && em++ hello.cpp -o ./out/hello-em.js"
 	}
 }
