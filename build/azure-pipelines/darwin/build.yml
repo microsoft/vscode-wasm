@@ -17,5 +17,13 @@ steps:
   displayName: 'Hygiene Checks'
 
 - script: |
+    npm run esbuild:apiTests
+  displayName: 'ESBuild API Test'
+
+- script: |
+    npm run test:apiWebTests
+  displayName: 'Run API Tests'
+
+- script: |
     npm run test
   displayName: 'Unit Tests'
