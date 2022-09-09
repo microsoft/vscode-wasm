@@ -1,10 +1,11 @@
 #include <stdio.h>
 
-int foo();
-int bar();
+int bar() {
+	return 2;
+}
 
 int main() {
-	int result = foo() + bar();
+	int result = bar() + bar();
 	printf("The result is %i\n", result);
 	return 0;
 }
