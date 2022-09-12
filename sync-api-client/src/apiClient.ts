@@ -99,19 +99,12 @@ class TerminalImpl implements Terminal {
 class FileSystemImpl implements FileSystem {
 
 	private readonly connection: ApiClientConnection;
-	// todo@dirkb this is temporary. We need to improve this by bundling the
-	// Python lib into the worker code.
-	private statCache: Map<string, vscode.FileStat> = new Map();
 
 	constructor(connection: ApiClientConnection) {
 		this.connection = connection;
 	}
 
 	public stat(uri: URI): vscode.FileStat {
-		const cached = this.statCache.get(uri.toString());
-		if (cached !== undefined) {
-			return cached;
-		}
 		const requestResult = this.connection.sendRequest('fileSystem/stat', { uri: uri.toJSON() }, DTOs.Stat.typedResult);
 		if (RequestResult.hasData(requestResult)) {
 			const stat = DTOs.Stat.create(requestResult.data);
@@ -125,7 +118,6 @@ class FileSystemImpl implements FileSystem {
 			if (permission !== 0) {
 				result.permissions = permission;
 			}
-			this.statCache.set(uri.toString(), result);
 			return result;
 		}
 		throw this.asFileSystemError(requestResult.errno, uri);
