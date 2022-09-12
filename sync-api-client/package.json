@@ -1,6 +1,6 @@
 {
 	"name": "@vscode/sync-api-client",
-	"version": "0.2.0",
+	"version": "0.2.1",
 	"description": "A client that calls VS Code API from a non extension host worker in sync fashion.",
 	"engines": {
 		"node": ">=16.15.1"
