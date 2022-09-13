@@ -15,9 +15,8 @@ export class ClientConnection<Requests extends RequestType | undefined = undefin
 	constructor(port: MessagePort | Worker) {
 		super();
 		this.port = port;
-		this.port.on('message', (data: string) => {
+		this.port.on('message', (message: Message) => {
 			try {
-				const message: Message = JSON.parse(data);
 				this.handleMessage(message);
 			} catch (error) {
 				RAL().console.error(error);
@@ -37,12 +36,16 @@ export class ServiceConnection<RequestHandlers extends RequestType | undefined =
 	constructor(port: MessagePort | Worker) {
 		super();
 		this.port = port;
-		this.port.on('message', (sharedArrayBuffer: SharedArrayBuffer) => {
-			void this.handleMessage(sharedArrayBuffer);
+		this.port.on('message', async (sharedArrayBuffer: SharedArrayBuffer) => {
+			try {
+				await this.handleMessage(sharedArrayBuffer);
+			} catch (error) {
+				RAL().console.error(error);
+			}
 		});
 	}
 
 	protected postMessage(message: Message): void {
-		this.port.postMessage(JSON.stringify(message, undefined, 0));
+		this.port.postMessage(message);
 	}
 }
