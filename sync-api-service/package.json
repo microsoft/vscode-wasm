@@ -1,6 +1,6 @@
 {
 	"name": "@vscode/sync-api-service",
-	"version": "0.3.0",
+	"version": "0.5.0",
 	"description": "A sync implementation of the VS Code API. Only supported from a worker in NodeJS and browser",
 	"engines": {
 		"node": ">=16.15.1",
