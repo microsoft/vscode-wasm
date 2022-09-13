@@ -1,12 +1,12 @@
 /*---------------------------------------------------------------------------------------------
  *  Copyright (c) Microsoft Corporation. All rights reserved.
  *  Licensed under the MIT License. See License.txt in the project root for license information.
+ *
+ * The TypeScript interfaces and type definitions together with their corresponding namespaces
+ * are derived from the WASI specification hosted here:
+ *
+ * https://github.com/WebAssembly/WASI/blob/main/phases/snapshot/docs.md
  *--------------------------------------------------------------------------------------------*/
-
-// @todo dirkb
-// The constants come from https://github.com/WebAssembly/WASI/blob/main/phases/snapshot/docs.md
-// We need to clarify how to license them. I was not able to find a license file
-// in the https://github.com/WebAssembly/WASI repository
 
 import { ptr, size, u16, u32, u64, s64, u8 } from './baseTypes';
 
@@ -1548,6 +1548,7 @@ export namespace Sdflags {
 
 /**
  * Return command-line argument data sizes.
+ *
  * @param argvCount_ptr A memory location to store the number of args.
  * @param argvBufSize_ptr A memory location to store the needed buffer size.
  */
@@ -1556,11 +1557,15 @@ export type args_sizes_get = (argvCount_ptr: ptr, argvBufSize_ptr: ptr) => errno
 /**
  * Read command-line argument data. The size of the array should match that
  * returned by args_sizes_get. Each argument is expected to be \0 terminated.
+ *
+ * @params argv_ptr A memory location to store the argv value offsets
+ * @params argvBuf_ptr A memory location to store the actual argv value.
  */
 export type args_get = (argv_ptr: ptr, argvBuf_ptr: ptr) => errno;
 
 /**
  * Return environment variable data sizes.
+ *
  * @param environCount_ptr A memory location to store the number of vars.
  * @param environBufSize_ptr  A memory location to store the needed buffer size.
  */
@@ -1570,6 +1575,9 @@ export type environ_sizes_get = (environCount_ptr: ptr, environBufSize_ptr: ptr)
  * Read environment variable data. The sizes of the buffers should match
  * that returned by environ_sizes_get. Key/value pairs are expected to
  * be joined with =s, and terminated with \0s.
+ *
+ * @params environ_ptr A memory location to store the env value offsets
+ * @params environBuf_ptr A memory location to store the actual env value.
  */
 export type environ_get = (environ_ptr: ptr, environBuf_ptr: ptr) => errno;
 
@@ -1577,6 +1585,9 @@ export type environ_get = (environ_ptr: ptr, environBuf_ptr: ptr) => errno;
  * Return the resolution of a clock. Implementations are required to provide
  * a non-zero value for supported clocks. For unsupported clocks, return
  * errno::inval. Note: This is similar to clock_getres in POSIX.
+ *
+ * @param id The clock for which to return the resolution.
+ * @param timestamp_ptr A memory location to store the actual result.
  */
 export type clock_res_get = (id: clockid, timestamp_ptr: ptr) => errno;
 
@@ -1614,6 +1625,7 @@ export type fd_allocate = (fd: fd, offset: filesize, len: filesize) => errno;
 
 /**
  * Close a file descriptor. Note: This is similar to close in POSIX.
+ *
  * @param fd The file descriptor.
  */
 export type fd_close = (fd: fd) => errno;
@@ -1646,6 +1658,7 @@ export type fd_fdstat_set_flags = (fd: fd, fdflags: fdflags) => errno;
 
 /**
  * Return the attributes of an open file.
+ *
  * @param fd The file descriptor.
  * @param filestat_ptr The buffer where the file's attributes are stored.
  */
@@ -1675,6 +1688,7 @@ export type fd_filestat_set_times = (fd: fd, atim: timestamp, mtim: timestamp, f
 /**
  * Read from a file descriptor, without using and updating the file
  * descriptor's offset. Note: This is similar to preadv in POSIX.
+ *
  * @param fd The file descriptor.
  * @param iovs_ptr List of scatter/gather vectors in which to store data.
  * @param iovs_len The length of the iovs.
@@ -1731,6 +1745,7 @@ export type fd_read = (fd: fd, iovs_ptr: ptr, iovs_len: u32, bytesRead_ptr: ptr)
  * directory entry. This allows the caller to grow its read buffer size in
  * case it's too small to fit a single large directory entry, or skip the
  * oversized directory entry.
+ *
  * @param fd The file descriptor.
  * @param buf_ptr The buffer where directory entries are stored.
  * @param buf_len The length of the buffer.
@@ -1744,6 +1759,7 @@ export type fd_readdir = (fd: fd, buf_ptr: ptr, buf_len: size, cookie: dircookie
 /**
  * Move the offset of a file descriptor. Note: This is similar to lseek in
  * POSIX.
+ *
  * @param fd The file descriptor.
  * @param offset The number of bytes to move.
  * @param whence The base from which the offset is relative.
@@ -1781,6 +1797,7 @@ export type fd_write = (fd: fd, ciovs_ptr: ptr, ciovs_len: u32, bytesWritten_ptr
 
 /**
  * Create a directory. Note: This is similar to mkdirat in POSIX.
+ *
  * @param fd The file descriptor.
  * @param path_ptr A memory location that holds the path name.
  * @param path_len The length of the path
@@ -1790,6 +1807,7 @@ export type path_create_directory = (fd: fd, path_ptr: ptr, path_len: size) => e
 /**
  * Return the attributes of a file or directory. Note: This is similar to
  * stat in POSIX.
+ *
  * @param fd The file descriptor.
  * @param flags Flags determining the method of how the path is resolved.
  * @param path_ptr A memory location that holds the path name.
@@ -1858,6 +1876,7 @@ export type path_open = (fd: fd, dirflags: lookupflags, path: ptr, pathLen: size
 /**
  * Read the contents of a symbolic link. Note: This is similar to readlinkat
  * in POSIX.
+ *
  * @param fd The file descriptor.
  * @param path_ptr A memory location that holds the path name.
  * @param path_len The length of the path.
@@ -1957,6 +1976,7 @@ export type random_get = (buf: ptr, buf_len: size) => errno;
 /**
  * Accept a new incoming connection. Note: This is similar to accept in
  * POSIX.
+ *
  * @param fd The listening socket.
  * @param flags The desired values of the file descriptor flags.
  * @param result_fd_ptr A memory location to store the new socket connection.
@@ -1967,6 +1987,7 @@ export type sock_accept = (fd: fd, flags: fdflags, result_fd_ptr: ptr) => errno;
  * Receive a message from a socket. Note: This is similar to recv in POSIX,
  * though it also supports reading the data into multiple buffers in the
  * manner of readv.
+ *
  * @param fd The listening socket.
  * @param ri_data_ptr List of scatter/gather vectors in which to store data.
  * @param ri_data_len The length of the iovs.
@@ -1981,6 +2002,7 @@ export type sock_recv = (fd: fd, ri_data_ptr: ptr, ri_data_len: u32, ri_flags: r
  * Send a message on a socket. Note: This is similar to send in POSIX,
  * though it also supports writing the data from multiple buffers in the
  * manner of writev.
+ *
  * @param fd The socket to write to.
  * @param si_data_ptr List of scatter/gather vectors to which to retrieve
  * data.
@@ -1991,7 +2013,9 @@ export type sock_recv = (fd: fd, ri_data_ptr: ptr, ri_data_len: u32, ri_flags: r
 export type sock_send = (fd: fd, si_data_ptr: ptr, si_data_len: u32, si_flags: siflags, si_datalen_ptr: ptr) => errno;
 
 /**
- * Shut down socket send and receive channels. Note: This is similar to shutdown in POSIX.
+ * Shut down socket send and receive channels. Note: This is similar to shutdown
+ * in POSIX.
+ *
  * @param fd The socket to shut down.
  * @param sdflags Which channels on the socket to shut down.
  */

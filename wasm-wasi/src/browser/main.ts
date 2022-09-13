@@ -5,4 +5,4 @@
 import RIL from './ril';
 RIL.install();
 
-export { WASI } from '../common/wasi';
+export { WASI, Options } from '../common/wasi';
