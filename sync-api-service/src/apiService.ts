@@ -75,7 +75,7 @@ export class ApiService {
 
 		this.connection.onRequest('terminal/write', (params) => {
 			if (params !== undefined && params.binary !== undefined) {
-				const str = this.textDecoder.decode(params.binary).replace(terminalRegExp, (match: string, m1: string, m2: string) => {
+				const str = this.textDecoder.decode(params.binary.slice()).replace(terminalRegExp, (match: string, m1: string, m2: string) => {
 					if (m1) {
 						return m1;
 					} else if (m2) {
