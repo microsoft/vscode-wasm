@@ -5,12 +5,11 @@
 
 import * as vscode from 'vscode';
 
-import { RAL, ServiceConnection, ProcExitRequest, Requests, DTOs, RPCErrno } from '@vscode/sync-api-common';
+import { RAL, ServiceConnection, Requests, DTOs, RPCErrno } from '@vscode/sync-api-common';
 
 const terminalRegExp = /(\r\n)|(\n)/gm;
 
-export type APIRequests = Requests | ProcExitRequest;
-type ApiServiceConnection = ServiceConnection<APIRequests>;
+type ApiServiceConnection = ServiceConnection<Requests>;
 
 export class ApiService {
 
@@ -197,7 +196,7 @@ export class ApiService {
 			return { errno: 0, data: folders.map(folder => { return { uri: folder.uri.toJSON(), name: folder.name, index: folder.index }; } )};
 		});
 
-		this.connection.onRequest('$/proc_exit', (params) => {
+		this.connection.onRequest('process/proc_exit', (params) => {
 			if (this.exitHandler !== undefined) {
 				this.exitHandler(params.rval);
 			}

@@ -5,7 +5,7 @@
 
 import { URI } from 'vscode-uri';
 
-import { RAL, ClientConnection, Requests, RequestResult, DTOs, VariableResult, ProcExitRequest, RPCErrno, RPCError } from '@vscode/sync-api-common';
+import { RAL, ClientConnection, Requests, RequestResult, DTOs, VariableResult, RPCErrno, RPCError } from '@vscode/sync-api-common';
 
 import * as vscode from './vscode';
 
@@ -42,8 +42,7 @@ export interface Terminal {
 	read(): Uint8Array;
 }
 
-export type APIRequests = Requests | ProcExitRequest;
-type ApiClientConnection = ClientConnection<APIRequests>;
+type ApiClientConnection = ClientConnection<Requests>;
 
 class TimerImpl implements Timer {
 
@@ -66,7 +65,7 @@ class ProcessImpl implements Process {
 	}
 
 	public procExit(rval: number): void {
-		this.connection.sendRequest('$/proc_exit', { rval: rval });
+		this.connection.sendRequest('process/proc_exit', { rval: rval });
 	}
 }
 

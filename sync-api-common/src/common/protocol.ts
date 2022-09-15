@@ -142,8 +142,17 @@ export namespace DTOs {
 	}
 }
 
-export type Requests =
-{
+export type Requests = {
+	/**
+	 * The WebAssembly execution has existed.
+	 */
+	method: 'process/proc_exit';
+	params: {
+		rval: number;
+	};
+	result: null;
+
+} | {
 	/**
 	 * Sleep for the amount of ms.
 	 */

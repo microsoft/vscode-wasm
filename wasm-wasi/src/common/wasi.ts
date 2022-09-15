@@ -25,10 +25,6 @@ import {
 import { BigInts, code2Wasi } from './converter';
 import { DeviceIds, FileDescriptor, FileSystem } from './fileSystem';
 
-export interface Environment {
-	[key: string]: string;
-}
-
 namespace WebAssembly {
 
 	interface Global {
@@ -59,31 +55,6 @@ namespace WebAssembly {
 }
 
 
-export type Options = {
-
-	/**
-	 * Directory mappings
-	 */
-	mapDir: {
-		name: string;
-		uri: URI;
-	}[];
-
-	/**
-	 * The encoding to use.
-	 */
-	encoding?: string;
-
-	/**
-	 * Command line arguments accessible in the WASM.
-	 */
-	argv?: string [];
-
-	/**
-	 * The environment accessible in the WASM.
-	 */
-	env?: Environment;
-};
 
 interface IOComponent {
 }
@@ -200,6 +171,36 @@ export interface WASI {
 	sock_send: sock_send;
 	sock_shutdown: sock_shutdown;
 }
+
+export interface Environment {
+	[key: string]: string;
+}
+
+export type Options = {
+
+	/**
+	 * Directory mappings
+	 */
+	mapDir: {
+		name: string;
+		uri: URI;
+	}[];
+
+	/**
+	 * The encoding to use.
+	 */
+	encoding?: string;
+
+	/**
+	 * Command line arguments accessible in the WASM.
+	 */
+	argv?: string [];
+
+	/**
+	 * The environment accessible in the WASM.
+	 */
+	env?: Environment;
+};
 
 export namespace WASI {
 

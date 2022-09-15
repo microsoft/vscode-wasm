@@ -85,13 +85,6 @@ export type RequestType = MessageType & ({
 	result?: TypedArray | object | null;
 });
 
-export type ProcExitRequest = {
-	method: '$/proc_exit';
-	params: { rval: number };
-	result: null;
-};
-
-
 class NoResult {
 	public static readonly kind = 0 as const;
 	constructor() {
