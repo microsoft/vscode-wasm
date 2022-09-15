@@ -5,15 +5,15 @@
 
 import { AssertionError } from 'assert';
 
-import { RAL } from '@vscode/sync-api-common/';
-import { ApiClient, APIRequests, WorkspaceFolder } from '@vscode/sync-api-client';
+import { RAL } from '@vscode/sync-api-common';
+import { ApiClient, Requests, WorkspaceFolder } from '@vscode/sync-api-client';
 
 import { TestRequests } from '../tests';
 
-export type Requests = APIRequests | TestRequests;
+export type AllRequests = Requests | TestRequests;
 
 export default async function runSingle(test: (client: ApiClient, folder: WorkspaceFolder) => void): Promise<void> {
-	const connection = RAL().$testing.ClientConnection.create<Requests>();
+	const connection = RAL().$testing.ClientConnection.create<AllRequests>();
 	const client = new ApiClient(connection);
 	await connection.serviceReady();
 	const workspaceFolders = client.vscode.workspace.workspaceFolders;

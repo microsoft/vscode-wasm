@@ -7,8 +7,8 @@ import assert from 'assert';
 import { posix as path } from 'path';
 import vscode, { Uri } from 'vscode';
 
-import { APIRequests, ApiService } from '@vscode/sync-api-service';
-import { RAL } from '@vscode/sync-api-common/';
+import { Requests, ApiService } from '@vscode/sync-api-service';
+import { RAL } from '@vscode/sync-api-common';
 
 import { AssertionErrorData, ErrorData, TestRequests } from './tests';
 
@@ -25,7 +25,7 @@ export function contribute(workerResolver: (testCase: string) => string, scheme:
 
 	async function runTest(name: string, testCase: string) {
 
-		const connection = RAL().$testing.ServiceConnection.create<APIRequests | TestRequests>(workerResolver(testCase));
+		const connection = RAL().$testing.ServiceConnection.create<Requests | TestRequests>(workerResolver(testCase));
 		let assertionError: AssertionErrorData | undefined;
 		let error: ErrorData | undefined;
 
