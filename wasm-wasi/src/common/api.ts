@@ -10,4 +10,3 @@ export {
 };
 
 export * from '@vscode/sync-api-client';
-export * from '@vscode/sync-api-service';
