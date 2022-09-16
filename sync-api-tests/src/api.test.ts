@@ -39,9 +39,11 @@ export function contribute(workerResolver: (testCase: string) => string, scheme:
 		});
 
 		const errno = await new Promise<number>((resolve) => {
-			new ApiService(name, connection, (rval) => {
-				connection.terminate().catch(console.error);
-				resolve(rval);
+			new ApiService(name, connection, {
+				exitHandler: (rval) => {
+					connection.terminate().catch(console.error);
+					resolve(rval);
+				}
 			});
 			connection.signalReady();
 		});
