@@ -9,20 +9,22 @@ import { Worker } from 'worker_threads';
 import { commands, ExtensionContext, Terminal, window } from 'vscode';
 
 import { ServiceConnection } from '@vscode/sync-api-common/node';
-import { ApiService, APIRequests } from '@vscode/sync-api-service';
+import { ApiService, Requests } from '@vscode/sync-api-service';
 
 const name = 'Run C++';
 let apiService: ApiService;
-let connection: ServiceConnection<APIRequests>;
+let connection: ServiceConnection<Requests>;
 let terminal: Terminal;
 
 export async function activate(_context: ExtensionContext) {
 
 	commands.registerCommand('testbed-cpp.run', () => {
 		const worker = new Worker(path.join(__dirname, './worker.js'));
-		connection = new ServiceConnection<APIRequests>(worker);
-		apiService = new ApiService(name, connection, (_rval) => {
-			process.nextTick(() => worker.terminate());
+		connection = new ServiceConnection<Requests>(worker);
+		apiService = new ApiService(name, connection, {
+			exitHandler: (_rval) => {
+				process.nextTick(() => worker.terminate());
+			}
 		});
 		terminal = window.createTerminal({ name, pty: apiService.getPty() });
 		terminal.show();
