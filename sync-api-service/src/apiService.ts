@@ -11,10 +11,16 @@ const terminalRegExp = /(\r\n)|(\n)/gm;
 
 type ApiServiceConnection = ServiceConnection<Requests>;
 
+export type Options = {
+	exitHandler?: (rval: number) => void;
+	/** Whether to echon the service name in the terminal */
+	echoName?: boolean;
+};
+
 export class ApiService {
 
 	private readonly connection: ApiServiceConnection;
-	private readonly exitHandler: ((rval: number) => void) | undefined;
+	private readonly options: Options | undefined;
 	private readonly textEncoder: RAL.TextEncoder;
 	private readonly textDecoder: RAL.TextDecoder;
 
@@ -23,9 +29,9 @@ export class ApiService {
 	private inputBuffer: string[];
 	private lineAvailable: undefined | (() => void);
 
-	constructor(name: string, receiver: ApiServiceConnection, exitHandler?: (rval: number) => void) {
+	constructor(name: string, receiver: ApiServiceConnection, options?: Options) {
 		this.connection = receiver;
-		this.exitHandler = exitHandler;
+		this.options = options;
 		this.textEncoder = RAL().TextEncoder.create();
 		this.textDecoder = RAL().TextDecoder.create();
 
@@ -33,7 +39,9 @@ export class ApiService {
 		this.pty = {
 			onDidWrite: this.ptyWriteEmitter.event,
 			open: () => {
-				this.ptyWriteEmitter.fire(`\x1b[31m${name}\x1b[0m\r\n\r\n`);
+				if (options?.echoName) {
+					this.ptyWriteEmitter.fire(`\x1b[31m${name}\x1b[0m\r\n\r\n`);
+				}
 			},
 			close: () => {
 			},
@@ -197,8 +205,8 @@ export class ApiService {
 		});
 
 		this.connection.onRequest('process/proc_exit', (params) => {
-			if (this.exitHandler !== undefined) {
-				this.exitHandler(params.rval);
+			if (this.options?.exitHandler !== undefined) {
+				this.options.exitHandler(params.rval);
 			}
 			return { errno: 0};
 		});
