@@ -1,5 +1,9 @@
 // Place your settings in this file to overwrite default and user settings.
 {
+	"git.branchProtection": [
+		"main"
+	],
+	"git.branchProtectionPrompt": "alwaysCommitToNewBranch",
 	"editor.insertSpaces": false,
 	"[markdown][typescript]": {
 		"editor.rulers": [
