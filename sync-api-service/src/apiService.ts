@@ -12,9 +12,21 @@ const terminalRegExp = /(\r\n)|(\n)/gm;
 type ApiServiceConnection = ServiceConnection<Requests>;
 
 export type Options = {
+	/**
+	 * A handler that is called when the WASM exists
+	 */
 	exitHandler?: (rval: number) => void;
-	/** Whether to echon the service name in the terminal */
+
+	/**
+	 * Whether to echo the service name in the terminal
+	 */
 	echoName?: boolean;
+
+	/**
+	 * The pty to use. If not provided a very simple PTY implementation that
+	 * only supports backspace is used.
+	 */
+	pty?: vscode.Pseudoterminal;
 };
 
 export class ApiService {
@@ -36,7 +48,7 @@ export class ApiService {
 		this.textDecoder = RAL().TextDecoder.create();
 
 		this.ptyWriteEmitter = new vscode.EventEmitter<string>();
-		this.pty = {
+		this.pty = options?.pty ?? {
 			onDidWrite: this.ptyWriteEmitter.event,
 			open: () => {
 				if (options?.echoName) {
