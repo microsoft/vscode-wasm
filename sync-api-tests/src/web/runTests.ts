@@ -44,6 +44,8 @@ async function go() {
 			folderPath: testDir,
 			devTools: false,
 			headless: true,
+			verbose: true,
+			printServerLog: true,
 			coi: true
 		});
 	} catch (err) {

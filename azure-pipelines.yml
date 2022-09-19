@@ -26,8 +26,8 @@ jobs:
   steps:
   - template: build/azure-pipelines/linux/build.yml
 
-# - job: macOS
-#   pool:
-#     vmImage: macOS-latest
-#   steps:
-#   - template: build/azure-pipelines/darwin/build.yml
+- job: macOS
+  pool:
+    vmImage: macOS-latest
+  steps:
+  - template: build/azure-pipelines/darwin/build.yml
