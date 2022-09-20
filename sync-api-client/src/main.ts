@@ -6,4 +6,3 @@
 export * from '@vscode/sync-api-common';
 export * from './apiClient';
 export * from './vscode';
-export { retrieveCancellationCheck } from './messageCancellation';

@@ -5,4 +5,3 @@
 
 export * from '@vscode/sync-api-common';
 export * from './apiService';
-export { addCancellationData } from './messageCancellation';
