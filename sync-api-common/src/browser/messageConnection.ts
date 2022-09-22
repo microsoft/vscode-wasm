@@ -5,9 +5,9 @@
 
 import RAL from '../common/ral';
 
-import { BaseMessageConnection, RequestType, NotificationType } from '../common/messageConnection';
+import { BaseMessageConnection } from '../common/messageConnection';
 
-export class MessageConnection <Requests extends RequestType | undefined, Notifications extends NotificationType | undefined, RequestHandlers extends RequestType | undefined = undefined, NotificationHandlers extends NotificationType | undefined = undefined> extends BaseMessageConnection<Transferable, Requests, Notifications, RequestHandlers, NotificationHandlers> {
+export class MessageConnection <Requests extends BaseMessageConnection.RequestType | undefined, Notifications extends BaseMessageConnection.NotificationType | undefined, RequestHandlers extends BaseMessageConnection.RequestType | undefined = undefined, NotificationHandlers extends BaseMessageConnection.NotificationType | undefined = undefined> extends BaseMessageConnection<Transferable, Requests, Notifications, RequestHandlers, NotificationHandlers> {
 
 	private readonly port: MessagePort | Worker | DedicatedWorkerGlobalScope;
 
@@ -16,12 +16,12 @@ export class MessageConnection <Requests extends RequestType | undefined, Notifi
 		this.port = port;
 	}
 
-	protected postMessage(message: any, transferList?: Transferable[]): void {
+	protected postMessage(message: BaseMessageConnection.Message, transferList?: Transferable[]): void {
 		transferList !== undefined ? this.port.postMessage(message, transferList) : this.port.postMessage(message);
 	}
 
 	public listen(): void {
-		this.port.onmessage = (event: MessageEvent<any>) => {
+		this.port.onmessage = (event: MessageEvent<BaseMessageConnection.Message>) => {
 			this.handleMessage(event.data).catch(RAL().console.error);
 		};
 	}

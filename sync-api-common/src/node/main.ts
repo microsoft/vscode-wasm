@@ -5,9 +5,7 @@
 import RIL from './ril';
 RIL.install();
 
-import RAL from '../common/ral';
-import { ServiceConnection, ClientConnection } from './connection';
-
 export * from '../common/api';
-export { ServiceConnection, ClientConnection };
-export default RAL;
+
+export { ServiceConnection, ClientConnection } from './connection';
+export { MessageConnection } from './messageConnection';
