@@ -7,7 +7,7 @@ import RAL from '../common/ral';
 
 import { BaseMessageConnection } from '../common/messageConnection';
 
-export class MessageConnection <Requests extends BaseMessageConnection.RequestType | undefined, Notifications extends BaseMessageConnection.NotificationType | undefined, RequestHandlers extends BaseMessageConnection.RequestType | undefined = undefined, NotificationHandlers extends BaseMessageConnection.NotificationType | undefined = undefined> extends BaseMessageConnection<Transferable, Requests, Notifications, RequestHandlers, NotificationHandlers> {
+export class MessageConnection <Requests extends BaseMessageConnection.RequestType | undefined, Notifications extends BaseMessageConnection.NotificationType | undefined, RequestHandlers extends BaseMessageConnection.RequestType | undefined = undefined, NotificationHandlers extends BaseMessageConnection.NotificationType | undefined = undefined> extends BaseMessageConnection<Requests, Notifications, RequestHandlers, NotificationHandlers, Transferable> {
 
 	private readonly port: MessagePort | Worker | DedicatedWorkerGlobalScope;
 
@@ -16,8 +16,8 @@ export class MessageConnection <Requests extends BaseMessageConnection.RequestTy
 		this.port = port;
 	}
 
-	protected postMessage(message: BaseMessageConnection.Message, transferList?: Transferable[]): void {
-		transferList !== undefined ? this.port.postMessage(message, transferList) : this.port.postMessage(message);
+	protected postMessage(message: BaseMessageConnection.Message, transfer?: Transferable[]): void {
+		transfer !== undefined ? this.port.postMessage(message, transfer) : this.port.postMessage(message);
 	}
 
 	public listen(): void {

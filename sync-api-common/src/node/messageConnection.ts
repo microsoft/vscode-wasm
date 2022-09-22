@@ -5,10 +5,10 @@
 
 import RAL from '../common/ral';
 
-import { MessagePort, Worker, TransferListItem } from 'worker_threads';
+import { MessagePort, Worker, TransferListItem, parentPort } from 'worker_threads';
 import { BaseMessageConnection } from '../common/messageConnection';
 
-export class MessageConnection <Requests extends BaseMessageConnection.RequestType | undefined, Notifications extends BaseMessageConnection.NotificationType | undefined, RequestHandlers extends BaseMessageConnection.RequestType | undefined = undefined, NotificationHandlers extends BaseMessageConnection.NotificationType | undefined = undefined> extends BaseMessageConnection<TransferListItem, Requests, Notifications, RequestHandlers, NotificationHandlers> {
+export class MessageConnection <Requests extends BaseMessageConnection.RequestType | undefined, Notifications extends BaseMessageConnection.NotificationType | undefined, RequestHandlers extends BaseMessageConnection.RequestType | undefined = undefined, NotificationHandlers extends BaseMessageConnection.NotificationType | undefined = undefined> extends BaseMessageConnection<Requests, Notifications, RequestHandlers, NotificationHandlers, TransferListItem> {
 
 	private readonly port: MessagePort | Worker;
 
@@ -27,3 +27,5 @@ export class MessageConnection <Requests extends BaseMessageConnection.RequestTy
 		});
 	}
 }
+
+new MessageConnection<undefined, undefined, undefined, undefined>(parentPort!);

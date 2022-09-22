@@ -8,13 +8,10 @@ type _MessageType = {
 	params?: null | object;
 };
 
-type _RequestType = _MessageType & ({
-	result: null | any;
+type _RequestType = _MessageType & {
+	result: null | undefined | void | any;
 	error?: undefined;
-} | {
-	result?: undefined;
-	error: null | any;
-});
+};
 
 type _NotificationType = _MessageType;
 
@@ -77,15 +74,15 @@ type MethodKeys<Messages extends _MessageType> = {
 };
 
 type _SendRequestSignatures<Requests extends _RequestType, TLI> = UnionToIntersection<{
- 	[R in Requests as R['method']]: R['params'] extends null | undefined
+ 	[R in Requests as R['method']]: R['params'] extends null | undefined | void
 	 	? (method: R['method']) => Promise<R['result'] extends null | undefined ? void : R['result']>
-		: (method: R['method'], params: R['params'], ...transferList: ReadonlyArray<TLI>) => Promise<R['result'] extends null | undefined ? void : R['result']>;
+		: (method: R['method'], params: R['params'], transferList?: ReadonlyArray<TLI>) => Promise<R['result'] extends null | undefined ? void : R['result']>;
 }[keyof MethodKeys<Requests>]>;
 
 type SendRequestSignatures<Requests extends _RequestType | undefined, TLI> = [Requests] extends [_RequestType] ? _SendRequestSignatures<Requests, TLI> : undefined;
 
 type _HandleRequestSignatures<Requests extends _RequestType> = UnionToIntersection<{
- 	[R in Requests as R['method']]: R['params'] extends null | undefined
+ 	[R in Requests as R['method']]: R['params'] extends null | undefined | void
 	 	? (method: R['method'], handler: () => Promise<R['result'] extends null | undefined ? void : R['result']>) => void
 		: (method: R['method'], handler: (params: R['params']) => Promise<R['result'] extends null | undefined ? void : R['result']>) => void;
 }[keyof MethodKeys<Requests>]>;
@@ -93,22 +90,22 @@ type _HandleRequestSignatures<Requests extends _RequestType> = UnionToIntersecti
 type HandleRequestSignatures<Requests extends _RequestType | undefined> = [Requests] extends [_RequestType] ?_HandleRequestSignatures<Requests> : undefined;
 
 type _SendNotificationSignatures<Notifications extends _NotificationType, TLI> = UnionToIntersection<{
-	[N in Notifications as N['method']]: N['params'] extends null | undefined
+	[N in Notifications as N['method']]: N['params'] extends null | undefined | void
 		? (method: N['method']) => void
-		: (method: N['method'], params: N['params'], ...transferList: ReadonlyArray<TLI>) => void;
+		: (method: N['method'], params: N['params'], transferList?: ReadonlyArray<TLI>) => void;
 }[keyof MethodKeys<Notifications>]>;
 
 type SendNotificationSignatures<Notifications extends _NotificationType | undefined, TLI> = [Notifications] extends [_NotificationType] ? _SendNotificationSignatures<Notifications, TLI> : undefined;
 
 type _HandleNotificationSignatures<Notifications extends _NotificationType> = UnionToIntersection<{
-	[N in Notifications as N['method']]: N['params'] extends null | undefined
+	[N in Notifications as N['method']]: N['params'] extends null | undefined | void
 		? (method: N['method'], handler: () => void) => void
 		: (method: N['method'], handler: (params: N['params']) => void) => void;
 }[keyof MethodKeys<Notifications>]>;
 
 type HandleNotificationSignatures<Notifications extends _NotificationType | undefined> = [Notifications] extends [_NotificationType] ? _HandleNotificationSignatures<Notifications> : undefined;
 
-export abstract class BaseMessageConnection<TLI, Requests extends _RequestType | undefined, Notifications extends _NotificationType | undefined, RequestHandlers extends _RequestType | undefined = undefined, NotificationHandlers extends _NotificationType | undefined = undefined> {
+export abstract class BaseMessageConnection<Requests extends _RequestType | undefined, Notifications extends _NotificationType | undefined, RequestHandlers extends _RequestType | undefined = undefined, NotificationHandlers extends _NotificationType | undefined = undefined, TLI = unknown> {
 
 	private id: number;
 	private readonly responsePromises: Map<number, ResponsePromise>;
@@ -169,6 +166,8 @@ export abstract class BaseMessageConnection<TLI, Requests extends _RequestType |
 		}
 		this.notificationHandlers.set(method, handler);
 	}
+
+	public abstract listen(): void;
 
 	protected abstract postMessage(message: _Message | _Response, transferList?: ReadonlyArray<TLI>): void;
 
