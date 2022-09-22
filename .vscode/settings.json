@@ -169,6 +169,7 @@
 		"symlinkat",
 		"timedout",
 		"toobig",
+		"tsbuild",
 		"txtbsy",
 		"unlinkat",
 		"userdata",
