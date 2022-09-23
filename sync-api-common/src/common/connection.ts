@@ -661,6 +661,7 @@ export abstract class BaseClientConnection<Requests extends RequestType | undefi
 		// Send the shard array buffer to the other worker
 		const sync = new Int32Array(sharedArrayBuffer, 0, 1);
 		Atomics.store(sync, 0, 0);
+		// Send the shared array buffer to the extension host worker
 		this.postMessage(sharedArrayBuffer);
 
 		// Wait for the answer
