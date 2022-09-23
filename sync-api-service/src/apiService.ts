@@ -11,6 +11,208 @@ const terminalRegExp = /(\r\n)|(\n)/gm;
 
 type ApiServiceConnection = ServiceConnection<Requests>;
 
+class LineBuffer {
+
+	private cursor: number;
+	private content: string[];
+	constructor() {
+		this.cursor = 0;
+		this.content = [];
+	}
+
+	public clear(): void {
+		this.cursor = 0;
+		this.content = [];
+	}
+
+	public getLine(): string {
+		return this.content.join('');
+	}
+
+	public getCursor(): number {
+		return this.cursor;
+	}
+
+	public isCursorAtEnd(): boolean {
+		return this.cursor === this.content.length;
+	}
+
+	public isCursorAtBeginning(): boolean {
+		return this.cursor === 0;
+	}
+
+	public insert(char: string) {
+		this.content.splice(this.cursor, 0, char);
+		this.cursor++;
+	}
+
+	public del(): boolean {
+		if (this.cursor === this.content.length) {
+			return false;
+		}
+		this.content.splice(this.cursor, 1);
+		return true;
+	}
+
+	public backspace(): boolean {
+		if (this.cursor === 0) {
+			return false;
+		}
+		this.cursor -= 1;
+		this.content.splice(this.cursor, 1);
+		return true;
+	}
+
+	public moveCursorRelative(characters: number): boolean {
+		const newValue = this.cursor + characters;
+		if (newValue < 0 || newValue > this.content.length) {
+			return false;
+		}
+		this.cursor = newValue;
+		return true;
+	}
+
+	public moveCursorStartOfLine(): boolean {
+		if (this.cursor === 0) {
+			return false;
+		}
+		this.cursor = 0;
+		return true;
+	}
+
+	public moveCursorEndOfLine(): boolean {
+		if (this.cursor === this.content.length) {
+			return false;
+		}
+		this.cursor = this.content.length;
+		return true;
+	}
+}
+
+export interface ServiceTerminal extends vscode.Pseudoterminal {
+	write(str: string): void;
+	readline(): Promise<string>;
+}
+
+class ServiceTerminalImpl implements ServiceTerminal {
+
+	private lines: string[];
+	private lineBuffer: LineBuffer;
+	private readonly _onDidWrite: vscode.EventEmitter<string>;
+	private readlineCallback: ((value: string ) => void) | undefined;
+
+	constructor() {
+		this.lines = [];
+		this.lineBuffer = new LineBuffer();
+		this._onDidWrite = new vscode.EventEmitter<string>();
+		this.onDidWrite = this._onDidWrite.event;
+	}
+
+	public onDidWrite: vscode.Event<string>;
+
+	public open(): void {
+		// this.ptyWriteEmitter.fire(`\x1b[31m${name}\x1b[0m\r\n\r\n`);
+	}
+
+	public close(): void {
+	}
+
+	public readline(): Promise<string> {
+		if (this.readlineCallback !== undefined) {
+			throw new Error(`Already in readline mode`);
+		}
+		if (this.lines.length > 0) {
+			return Promise.resolve(this.lines.shift()!);
+		}
+		return new Promise((resolve) => {
+			this.readlineCallback = resolve;
+		});
+	}
+
+	write(str: string): void {
+		this._onDidWrite.fire(str);
+	}
+
+	public handleInput(data: string): void {
+		const currentCursor = this.lineBuffer.getCursor();
+		switch (data) {
+			case '\x06': // ctrl+f
+			case '\x1b[C': // right
+				this.adjustCursor(this.lineBuffer.moveCursorRelative(1), currentCursor, this.lineBuffer.getCursor());
+				break;
+			case '\x02': // ctrl+b
+			case '\x1b[D': // left
+				this.adjustCursor(this.lineBuffer.moveCursorRelative(-1), currentCursor, this.lineBuffer.getCursor());
+				break;
+			case '\x01': // ctrl+a
+			case '\x1b[H': // home
+				this.adjustCursor(this.lineBuffer.moveCursorStartOfLine(), currentCursor, this.lineBuffer.getCursor());
+				break;
+			case '\x05': // ctrl+e
+			case '\x1b[F': // end
+				this.adjustCursor(this.lineBuffer.moveCursorEndOfLine(), currentCursor, this.lineBuffer.getCursor());
+				break;
+			case '\x1b[A': // up
+				this.bell();
+				break;
+			case '\x1b[B': // down
+				this.bell();
+				break;
+			case '\x08': // shift+backspace
+			case '\x7F': // backspace
+				this.bellIfFalse(this.lineBuffer.backspace());
+				this._onDidWrite.fire('\x1b[D\x1b[P');
+				break;
+			case '\x1b[3~': // delete key
+				this.bellIfFalse(this.lineBuffer.del());
+				this._onDidWrite.fire('\x1b[P');
+				break;
+			case '\r': // enter
+				this.handleEnter();
+				break;
+			default:
+				this.lineBuffer.insert(data);
+				if (!this.lineBuffer.isCursorAtEnd()) {
+					this._onDidWrite.fire('\x1b[@');
+				}
+				this._onDidWrite.fire(data);
+		}
+	}
+
+	private handleEnter(): void {
+		this._onDidWrite.fire('\r\n');
+		const line = this.lineBuffer.getLine();
+		this.lineBuffer.clear();
+		this.lines.push(line);
+		if (this.readlineCallback !== undefined) {
+			this.readlineCallback(`${this.lines.shift()!}\n`);
+			this.readlineCallback = undefined;
+		}
+	}
+
+	private adjustCursor(success: boolean, oldCursor: number, newCursor: number): void {
+		if (!success) {
+			this.bell();
+			return;
+		}
+
+		const change = oldCursor - newCursor;
+	    const code = change > 0 ? 'D' : 'C';
+		const sequence = `\x1b[${code}`.repeat(Math.abs(change));
+		this._onDidWrite.fire(sequence);
+	}
+
+	private bellIfFalse(success: boolean) {
+		if (!success) {
+			this.bell();
+		}
+	}
+
+	private bell() {
+		this._onDidWrite.fire('\x07');
+	}
+}
+
 export type Options = {
 	/**
 	 * A handler that is called when the WASM exists
@@ -26,7 +228,7 @@ export type Options = {
 	 * The pty to use. If not provided a very simple PTY implementation that
 	 * only supports backspace is used.
 	 */
-	pty?: vscode.Pseudoterminal;
+	pty?: ServiceTerminal;
 };
 
 export class ApiService {
@@ -36,46 +238,15 @@ export class ApiService {
 	private readonly textEncoder: RAL.TextEncoder;
 	private readonly textDecoder: RAL.TextDecoder;
 
-	private readonly pty: vscode.Pseudoterminal;
-	private readonly ptyWriteEmitter: vscode.EventEmitter<string>;
-	private inputBuffer: string[];
-	private lineAvailable: undefined | (() => void);
+	private readonly pty: ServiceTerminal;
 
-	constructor(name: string, receiver: ApiServiceConnection, options?: Options) {
+	constructor(_name: string, receiver: ApiServiceConnection, options?: Options) {
 		this.connection = receiver;
 		this.options = options;
 		this.textEncoder = RAL().TextEncoder.create();
 		this.textDecoder = RAL().TextDecoder.create();
 
-		this.ptyWriteEmitter = new vscode.EventEmitter<string>();
-		this.pty = options?.pty ?? {
-			onDidWrite: this.ptyWriteEmitter.event,
-			open: () => {
-				if (options?.echoName) {
-					this.ptyWriteEmitter.fire(`\x1b[31m${name}\x1b[0m\r\n\r\n`);
-				}
-			},
-			close: () => {
-			},
-			handleInput: (data: string) => {
-				// Echo the data
-				if (data === '\r') {
-					data = '\n';
-				}
-				if (data.charCodeAt(0) === 127) {
-					// Delete last character
-					this.ptyWriteEmitter.fire('\x1b[D\x1b[P');
-					this.inputBuffer.splice(this.inputBuffer.length - 1, 1);
-				} else {
-					this.ptyWriteEmitter.fire(data === '\n' ? '\r\n' : data);
-					this.inputBuffer.push(data);
-				}
-				if (data === '\n' && this.lineAvailable !== undefined) {
-					this.lineAvailable();
-				}
-			}
-		};
-		this.inputBuffer = [];
+		this.pty = options?.pty ?? new ServiceTerminalImpl();
 
 		const handleError = (error: any): { errno: number } => {
 			if (error instanceof vscode.FileSystemError) {
@@ -103,24 +274,13 @@ export class ApiService {
 						return match;
 					}
 				});
-				this.ptyWriteEmitter.fire(str);
+				this.pty.write(str);
 			}
 			return { errno: 0 };
 		});
 
 		this.connection.onRequest('terminal/read', async () => {
-			let line = this.getLine();
-			if (line !== undefined) {
-				return { errno : 0, data: this.textEncoder.encode(line) };
-			}
-			const wait = new Promise<void>((resolve) => {
-				this.lineAvailable = resolve;
-			});
-			await wait;
-			line = this.getLine();
-			if (line === undefined) {
-				return { errno: -1 };
-			}
+			const line = await this.pty.readline();
 			return { errno: 0, data: this.textEncoder.encode(line) };
 		});
 
@@ -245,17 +405,5 @@ export class ApiService {
 			default:
 				return RPCErrno.UnknownError;
 		}
-	}
-
-	private getLine(): string | undefined {
-		if (this.inputBuffer.length === 0) {
-			return undefined;
-		}
-		for (let i = 0; i < this.inputBuffer.length; i++) {
-			if (this.inputBuffer[i] === '\n') {
-				return this.inputBuffer.splice(0, i + 1).join('');
-			}
-		}
-		return undefined;
 	}
 }
