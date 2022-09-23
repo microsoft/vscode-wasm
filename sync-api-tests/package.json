@@ -28,8 +28,8 @@
 		"test:runWebTests": "node lib/web/runTests.js"
 	},
 	"dependencies": {
-		"@vscode/sync-api-client": "0.6.0",
-		"@vscode/sync-api-service": "0.6.2"
+		"@vscode/sync-api-client": "0.7.0",
+		"@vscode/sync-api-service": "0.7.0"
 	},
 	"devDependencies": {
 		"@types/glob": "^7.2.0",
