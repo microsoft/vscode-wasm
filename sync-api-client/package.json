@@ -1,6 +1,6 @@
 {
 	"name": "@vscode/sync-api-client",
-	"version": "0.6.0",
+	"version": "0.7.0",
 	"description": "A client that calls VS Code API from a non extension host worker in sync fashion.",
 	"engines": {
 		"node": ">=16.15.1"
@@ -24,7 +24,7 @@
 	"homepage": "https://github.com/microsoft/vscode-wasm/blob/main/sync-api-client/README.md",
 	"dependencies": {
 		"vscode-uri": "3.0.3",
-		"@vscode/sync-api-common": "0.6.0"
+		"@vscode/sync-api-common": "0.7.0"
 	},
 	"devDependencies": {
 	},
