@@ -41,9 +41,11 @@ class LineBuffer {
 		return this.cursor === 0;
 	}
 
-	public insert(char: string) {
-		this.content.splice(this.cursor, 0, char);
-		this.cursor++;
+	public insert(value: String) {
+		for (const char of value) {
+			this.content.splice(this.cursor, 0, char);
+			this.cursor++;
+		}
 	}
 
 	public del(): boolean {
@@ -85,6 +87,74 @@ class LineBuffer {
 			return false;
 		}
 		this.cursor = this.content.length;
+		return true;
+	}
+
+	public moveCursorWordLeft(): boolean {
+		if (this.cursor === 0) {
+			return false;
+		}
+		let index: number;
+		// check if we are at the beginning of a word
+		if (this.content[this.cursor - 1] === ' ') {
+			index = this.cursor - 2;
+			while (index > 0) {
+				if (this.content[index] === ' ') {
+					index--;
+				} else {
+					break;
+				}
+			}
+		} else {
+			index = this.cursor;
+		}
+		if (index === 0) {
+			this.cursor = index;
+			return true;
+		}
+		// On the first character that is not space
+		while (index > 0) {
+			if (this.content[index] === ' ') {
+				index++;
+				break;
+			} else {
+				index--;
+			}
+		}
+		this.cursor = index;
+		return true;
+	}
+
+	public moveCursorWordRight(): boolean {
+		if (this.cursor === this.content.length) {
+			return false;
+		}
+		let index: number;
+		if (this.content[this.cursor] === ' ') {
+			index = this.cursor + 1;
+			while (index < this.content.length) {
+				if (this.content[index] === ' ') {
+					index++;
+				} else {
+					break;
+				}
+			}
+		} else {
+			index = this.cursor;
+		}
+		if (index === this.content.length) {
+			this.cursor = index;
+			return true;
+		}
+
+		while (index < this.content.length) {
+			if (this.content[index] === ' ') {
+				break;
+			} else {
+				index++;
+			}
+		}
+		this.cursor = index;
 		return true;
 	}
 }
@@ -134,23 +204,31 @@ class ServiceTerminalImpl implements ServiceTerminal {
 	}
 
 	public handleInput(data: string): void {
-		const currentCursor = this.lineBuffer.getCursor();
+		const previousCursor = this.lineBuffer.getCursor();
 		switch (data) {
 			case '\x06': // ctrl+f
 			case '\x1b[C': // right
-				this.adjustCursor(this.lineBuffer.moveCursorRelative(1), currentCursor, this.lineBuffer.getCursor());
+				this.adjustCursor(this.lineBuffer.moveCursorRelative(1), previousCursor, this.lineBuffer.getCursor());
+				break;
+			case '\x1bf': // alt+f
+			case '\x1b[1;5C': // ctrl+right
+				this.adjustCursor(this.lineBuffer.moveCursorWordRight(), previousCursor, this.lineBuffer.getCursor());
 				break;
 			case '\x02': // ctrl+b
 			case '\x1b[D': // left
-				this.adjustCursor(this.lineBuffer.moveCursorRelative(-1), currentCursor, this.lineBuffer.getCursor());
+				this.adjustCursor(this.lineBuffer.moveCursorRelative(-1), previousCursor, this.lineBuffer.getCursor());
+				break;
+			case '\x1bb': // alt+b
+			case '\x1b[1;5D': // ctrl+left
+				this.adjustCursor(this.lineBuffer.moveCursorWordLeft(), previousCursor, this.lineBuffer.getCursor());
 				break;
 			case '\x01': // ctrl+a
 			case '\x1b[H': // home
-				this.adjustCursor(this.lineBuffer.moveCursorStartOfLine(), currentCursor, this.lineBuffer.getCursor());
+				this.adjustCursor(this.lineBuffer.moveCursorStartOfLine(), previousCursor, this.lineBuffer.getCursor());
 				break;
 			case '\x05': // ctrl+e
 			case '\x1b[F': // end
-				this.adjustCursor(this.lineBuffer.moveCursorEndOfLine(), currentCursor, this.lineBuffer.getCursor());
+				this.adjustCursor(this.lineBuffer.moveCursorEndOfLine(), previousCursor, this.lineBuffer.getCursor());
 				break;
 			case '\x1b[A': // up
 				this.bell();
