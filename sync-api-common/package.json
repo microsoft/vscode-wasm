@@ -1,6 +1,6 @@
 {
 	"name": "@vscode/sync-api-common",
-	"version": "0.7.0",
+	"version": "0.7.1",
 	"description": "An RPC implementation between Web and NodeJS workers that works sync",
 	"engines": {
 		"node": ">=16.15.1"
