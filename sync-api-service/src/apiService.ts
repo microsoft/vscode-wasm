@@ -159,26 +159,41 @@ class LineBuffer {
 	}
 }
 
-export interface ServiceTerminal extends vscode.Pseudoterminal {
+export interface ServicePseudoTerminal extends vscode.Pseudoterminal {
+	onDidClose: vscode.Event<void>;
 	write(str: string): void;
 	readline(): Promise<string>;
+	data: any;
 }
 
-class ServiceTerminalImpl implements ServiceTerminal {
+export namespace ServicePseudoTerminal {
+	export function create(): ServicePseudoTerminal {
+		return new ServiceTerminalImpl();
+	}
+}
+
+class ServiceTerminalImpl implements ServicePseudoTerminal {
 
 	private lines: string[];
 	private lineBuffer: LineBuffer;
+	private readonly _onDidClose: vscode.EventEmitter<void>;
 	private readonly _onDidWrite: vscode.EventEmitter<string>;
 	private readlineCallback: ((value: string ) => void) | undefined;
+
+	public data: any;
 
 	constructor() {
 		this.lines = [];
 		this.lineBuffer = new LineBuffer();
+		this._onDidClose = new vscode.EventEmitter();
+		this.onDidClose = this._onDidClose.event;
 		this._onDidWrite = new vscode.EventEmitter<string>();
 		this.onDidWrite = this._onDidWrite.event;
 	}
 
 	public onDidWrite: vscode.Event<string>;
+
+	public onDidClose: vscode.Event<void>;
 
 	public open(): void {
 		// this.ptyWriteEmitter.fire(`\x1b[31m${name}\x1b[0m\r\n\r\n`);
@@ -306,7 +321,7 @@ export type Options = {
 	 * The pty to use. If not provided a very simple PTY implementation that
 	 * only supports backspace is used.
 	 */
-	pty?: ServiceTerminal;
+	pty?: ServicePseudoTerminal;
 };
 
 export class ApiService {
@@ -316,7 +331,7 @@ export class ApiService {
 	private readonly textEncoder: RAL.TextEncoder;
 	private readonly textDecoder: RAL.TextDecoder;
 
-	private readonly pty: ServiceTerminal;
+	private readonly pty: ServicePseudoTerminal;
 
 	constructor(_name: string, receiver: ApiServiceConnection, options?: Options) {
 		this.connection = receiver;
