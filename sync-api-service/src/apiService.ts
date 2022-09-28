@@ -159,47 +159,107 @@ class LineBuffer {
 	}
 }
 
-export interface ServicePseudoTerminal extends vscode.Pseudoterminal {
-	onDidClose: vscode.Event<void>;
+export enum TerminalMode {
+	idle = 1,
+	inUse = 2
+}
+
+export interface ServicePseudoTerminal<D = any> extends vscode.Pseudoterminal {
+	readonly onDidCtrlC: vscode.Event<void>;
+	readonly onDidClose: vscode.Event<void>;
+	readonly onAnyKey: vscode.Event<void>;
+
+	setMode(mode: TerminalMode): void;
+	setName(name: string): void;
 	write(str: string): void;
 	readline(): Promise<string>;
-	data: any;
+	data: D;
 }
 
 export namespace ServicePseudoTerminal {
-	export function create(): ServicePseudoTerminal {
-		return new ServiceTerminalImpl();
+	export function create<D = any>(mode: TerminalMode): ServicePseudoTerminal<D> {
+		return new ServiceTerminalImpl(mode);
 	}
 }
 
 class ServiceTerminalImpl implements ServicePseudoTerminal {
 
-	private lines: string[];
-	private lineBuffer: LineBuffer;
+	private mode: TerminalMode;
+
 	private readonly _onDidClose: vscode.EventEmitter<void>;
 	private readonly _onDidWrite: vscode.EventEmitter<string>;
+	private readonly _onDidChangeName: vscode.EventEmitter<string>;
+	private readonly _onDidCtrlC: vscode.EventEmitter<void>;
+	private readonly _onAnyKey: vscode.EventEmitter<void>;
+
+	private lines: string[];
+	private lineBuffer: LineBuffer;
 	private readlineCallback: ((value: string ) => void) | undefined;
+
+	private isOpen: boolean;
+	private nameBuffer: string | undefined;
+	private writeBuffer: string[] | undefined;
 
 	public data: any;
 
-	constructor() {
-		this.lines = [];
-		this.lineBuffer = new LineBuffer();
+	constructor(mode: TerminalMode) {
+		this.mode = mode;
+
 		this._onDidClose = new vscode.EventEmitter();
 		this.onDidClose = this._onDidClose.event;
 		this._onDidWrite = new vscode.EventEmitter<string>();
 		this.onDidWrite = this._onDidWrite.event;
+		this._onDidChangeName = new vscode.EventEmitter<string>;
+		this.onDidChangeName = this._onDidChangeName.event;
+		this._onDidCtrlC = new vscode.EventEmitter<void>;
+		this.onDidCtrlC = this._onDidCtrlC.event;
+		this._onAnyKey = new vscode.EventEmitter<void>;
+		this.onAnyKey = this._onAnyKey.event;
+
+		this.lines = [];
+		this.lineBuffer = new LineBuffer();
+
+		this.isOpen = false;
 	}
 
-	public onDidWrite: vscode.Event<string>;
+	public readonly onDidClose: vscode.Event<void>;
 
-	public onDidClose: vscode.Event<void>;
+	public readonly onDidWrite: vscode.Event<string>;
+
+	public readonly onDidChangeName: vscode.Event<string>;
+
+	public readonly onDidCtrlC: vscode.Event<void>;
+
+	public readonly onAnyKey: vscode.Event<void>;
+
+	public setMode(mode: TerminalMode): void {
+		this.mode = mode;
+	}
+
+	public setName(name: string): void {
+		if (this.isOpen) {
+			this._onDidChangeName.fire(name);
+		} else {
+			this.nameBuffer = name;
+		}
+	}
 
 	public open(): void {
-		// this.ptyWriteEmitter.fire(`\x1b[31m${name}\x1b[0m\r\n\r\n`);
+		this.isOpen = true;
+		if (this.nameBuffer !== undefined) {
+			this._onDidChangeName.fire(this.nameBuffer);
+			this.nameBuffer = undefined;
+		}
+		if (this.writeBuffer !== undefined) {
+			for (const item of this.writeBuffer) {
+				this._onDidWrite.fire(item);
+			}
+			this.writeBuffer = undefined;
+		}
 	}
 
 	public close(): void {
+		this._onDidClose.fire();
 	}
 
 	public readline(): Promise<string> {
@@ -215,12 +275,26 @@ class ServiceTerminalImpl implements ServicePseudoTerminal {
 	}
 
 	write(str: string): void {
-		this._onDidWrite.fire(str);
+		if (this.isOpen) {
+			this._onDidWrite.fire(str);
+		} else {
+			if (this.writeBuffer === undefined) {
+				this.writeBuffer = [];
+			}
+			this.writeBuffer.push(str);
+		}
 	}
 
 	public handleInput(data: string): void {
+		if (this.mode === TerminalMode.idle) {
+			this._onAnyKey.fire();
+			return;
+		}
 		const previousCursor = this.lineBuffer.getCursor();
 		switch (data) {
+			case '\x03': // ctrl+C
+				this._onDidCtrlC.fire();
+				break;
 			case '\x06': // ctrl+f
 			case '\x1b[C': // right
 				this.adjustCursor(this.lineBuffer.moveCursorRelative(1), previousCursor, this.lineBuffer.getCursor());
@@ -339,7 +413,7 @@ export class ApiService {
 		this.textEncoder = RAL().TextEncoder.create();
 		this.textDecoder = RAL().TextDecoder.create();
 
-		this.pty = options?.pty ?? new ServiceTerminalImpl();
+		this.pty = options?.pty ?? new ServiceTerminalImpl(TerminalMode.inUse);
 
 		const handleError = (error: any): { errno: number } => {
 			if (error instanceof vscode.FileSystemError) {
