@@ -367,12 +367,6 @@ class ServiceTerminalImpl implements ServicePseudoTerminal {
 		this._onDidWrite.fire(sequence);
 	}
 
-	private bellIfFalse(success: boolean) {
-		if (!success) {
-			this.bell();
-		}
-	}
-
 	private bell() {
 		this._onDidWrite.fire('\x07');
 	}
