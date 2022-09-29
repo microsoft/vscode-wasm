@@ -327,12 +327,10 @@ class ServiceTerminalImpl implements ServicePseudoTerminal {
 				break;
 			case '\x08': // shift+backspace
 			case '\x7F': // backspace
-				this.bellIfFalse(this.lineBuffer.backspace());
-				this._onDidWrite.fire('\x1b[D\x1b[P');
+				this.lineBuffer.backspace() ? this._onDidWrite.fire('\x1b[D\x1b[P') : this.bell();
 				break;
 			case '\x1b[3~': // delete key
-				this.bellIfFalse(this.lineBuffer.del());
-				this._onDidWrite.fire('\x1b[P');
+				this.lineBuffer.del() ? this._onDidWrite.fire('\x1b[P'): this.bell();
 				break;
 			case '\r': // enter
 				this.handleEnter();
