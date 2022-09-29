@@ -29,7 +29,7 @@
 	},
 	"dependencies": {
 		"@vscode/sync-api-client": "0.7.1",
-		"@vscode/sync-api-service": "0.7.1"
+		"@vscode/sync-api-service": "0.7.2"
 	},
 	"devDependencies": {
 		"@types/glob": "^7.2.0",
