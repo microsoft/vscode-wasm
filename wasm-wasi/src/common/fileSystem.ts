@@ -85,10 +85,11 @@ export interface FileDescriptor {
 	/**
 	 * Reads the number of bytes from the given content using the
 	 * file descriptor cursor.
-	 * @param content the content to read from.
-	 * @param bytesToRead the number of bytes to read.
+	 * @param content The content to read from.
+	 * @param resultBuffer The buffer the contains the result.
+	 * @returns The actual number of bytes read
 	 */
-	read(content: Uint8Array, bytesToRead: number): Uint8Array;
+	read(content: Uint8Array, resultBuffer: Uint8Array): size;
 
 	/**
 	 * Writes the given bytes into the content
@@ -213,11 +214,11 @@ export class FileDescriptorImpl implements FileDescriptor {
 		this._cursor = value;
 	}
 
-	public read(content: Uint8Array, bytesToRead: number): Uint8Array {
-		const realRead = Math.min(bytesToRead, content.byteLength - this._cursor);
-		const result = content.subarray(this._cursor, this._cursor + realRead);
+	public read(content: Uint8Array, resultBuffer: Uint8Array): size {
+		const realRead = Math.min(resultBuffer.length, content.byteLength - this._cursor);
+		resultBuffer.set(content.subarray(this._cursor, this._cursor + realRead));
 		this._cursor = this._cursor + realRead;
-		return result;
+		return realRead;
 	}
 
 	public write(content: Uint8Array, buffers: Uint8Array[]): [Uint8Array, size] {
@@ -263,6 +264,11 @@ export interface MemoryProvider {
 	memoryRaw(): ArrayBuffer;
 }
 
+export interface CharacterDevices {
+	read(fd: FileDescriptor, maxBytesToRead: number): Uint8Array;
+	write(fd: FileDescriptor, bytes: Uint8Array): void;
+}
+
 export interface FileSystem {
 
 	readonly stdin: FileDescriptor;
@@ -271,25 +277,27 @@ export interface FileSystem {
 
 	createPreOpenedFileDescriptor(path: string, uri: URI, fileType: filetype, rights: FileDescriptor['rights'], fdflags: fdflags): FileDescriptor;
 	createFileDescriptor(parent: FileDescriptor, path: string, fileType: filetype, rights: FileDescriptor['rights'], fdflags: fdflags): FileDescriptor;
-	releaseFileDescriptor(fileDescriptor: FileDescriptor): void;
 
-	seek(fileDescriptor: FileDescriptor, offset: filedelta, whence: whence): bigint;
-	fdstat(fileDescriptor: FileDescriptor, fdstat_ptr: ptr): void;
-	stat(fileDescriptor: FileDescriptor, filestat_ptr: ptr): void;
 	bytesAvailable(fileDescriptor: FileDescriptor): filesize;
-	tell(fileDescriptor: FileDescriptor): number;
-	setSize(fileDescriptor: FileDescriptor, size: filesize): void;
-	allocate(fileDescriptor: FileDescriptor, offset: filesize, len: filesize): void;
-	read(fileDescriptor: FileDescriptor, bytesToRead: number): Uint8Array;
-	pread(fileDescriptor: FileDescriptor, offset: number, bytesToRead: number): Uint8Array;
 	createOrTruncate(fileDescriptor: FileDescriptor): void;
-	write(fileDescriptor: FileDescriptor, buffers: Uint8Array[]): size;
-	pwrite(fileDescriptor: FileDescriptor, offset: number, bytes: Uint8Array): size;
-	sync(fileDescriptor: FileDescriptor): void;
-	readdir(fileDescriptor: FileDescriptor, buf_ptr: ptr, buf_len: size, cookie: dircookie, buf_used_ptr: ptr): void;
-	createDirectory(fileDescriptor: FileDescriptor, name: string): void;
 
-	path_stat(fileDescriptor: FileDescriptor, name: string, filestat_ptr: ptr): void;
+	fd_close(fileDescriptor: FileDescriptor): void;
+	fd_seek(fileDescriptor: FileDescriptor, offset: filedelta, whence: whence): bigint;
+	fd_fdstat_get(fileDescriptor: FileDescriptor, fdstat_ptr: ptr): void;
+	fd_filestat_get(fileDescriptor: FileDescriptor, filestat_ptr: ptr): void;
+	fd_tell(fileDescriptor: FileDescriptor): number;
+	fd_filestat_set_size(fileDescriptor: FileDescriptor, size: filesize): void;
+	fd_allocate(fileDescriptor: FileDescriptor, offset: filesize, len: filesize): void;
+	fd_pread(fileDescriptor: FileDescriptor, offset: number, bytesToRead: number): Uint8Array;
+
+	fd_read(fileDescriptor: FileDescriptor, buffers: Uint8Array[]): size;
+	fd_write(fileDescriptor: FileDescriptor, buffers: Uint8Array[]): size;
+	fd_pwrite(fileDescriptor: FileDescriptor, offset: number, bytes: Uint8Array): size;
+	fd_sync(fileDescriptor: FileDescriptor): void;
+	fd_readdir(fileDescriptor: FileDescriptor, buf_ptr: ptr, buf_len: size, cookie: dircookie, buf_used_ptr: ptr): void;
+
+	path_create_directory(fileDescriptor: FileDescriptor, name: string): void;
+	path_filestat_get(fileDescriptor: FileDescriptor, name: string, filestat_ptr: ptr): void;
 	path_filetype(fileDescriptor: FileDescriptor, name: string): filetype | undefined;
 	path_remove_directory(fileDescriptor: FileDescriptor, name: string): void;
 	path_rename(oldFileDescriptor: FileDescriptor, oldName: string, newFileDescriptor: FileDescriptor, newName: string): void;
@@ -323,7 +331,7 @@ export namespace FileSystem {
 		}
 	}
 
-	export function create(apiClient: ApiClient, memoryProvider: MemoryProvider, textEncoder: RAL.TextEncoder): FileSystem {
+	export function create(apiClient: ApiClient, memoryProvider: MemoryProvider, textEncoder: RAL.TextEncoder, std: { stdin: URI; stdout: URI; stderr: URI }): FileSystem {
 
 		let inodeCounter: bigint = 1n;
 
@@ -332,6 +340,7 @@ export namespace FileSystem {
 		const deletedINode: Map<bigint, INode> = new Map();
 		const directoryEntries: Map<fd, DTOs.DirectoryEntries> = new Map();
 		const vscode_fs = apiClient.vscode.workspace.fileSystem;
+		const vscode_cd = apiClient.vscode.workspace.characterDevice;
 
 		const memoryView = memoryProvider.memoryView;
 		const memoryRaw = memoryProvider.memoryRaw;
@@ -406,21 +415,21 @@ export namespace FileSystem {
 
 		const fileSystem: FileSystem = {
 			stdin: new FileDescriptorImpl(
-				refINode('/dev/stdin', URI.from({ scheme: 'wasi-terminal', path:'/dev/stdin' })).id,
+				refINode('/dev/tty', std.stdin).id,
 				Filetype.character_device,
 				{ base: Rights.StdinBase, inheriting: Rights.StdinInheriting },
 				0, '/dev/stdin', true
 			),
 
 			stdout: new FileDescriptorImpl(
-				refINode('/dev/stdout', URI.from({ scheme: 'wasi-terminal', path:'/dev/stdout' })).id,
+				refINode('/dev/tty', std.stdout).id,
 				Filetype.character_device,
 				{ base: Rights.StdoutBase, inheriting: Rights.StdoutInheriting },
 				0, '/dev/stdout', true
 			),
 
 			stderr: new FileDescriptorImpl(
-				refINode('/dev/stderr', URI.from({ scheme: 'wasi-terminal', path:'/dev/stderr' })).id,
+				refINode('/dev/tty', std.stderr).id,
 				Filetype.character_device,
 				{ base: Rights.StdoutBase, inheriting: Rights.StdoutInheriting },
 				0, '/dev/stderr', true
@@ -436,10 +445,10 @@ export namespace FileSystem {
 				const inode = refINode(filePath, uriJoin(parentINode.uri, name));
 				return new FileDescriptorImpl(inode.id, fileType, rights, fdflags, filePath);
 			},
-			releaseFileDescriptor: (fileDescriptor) => {
+			fd_close: (fileDescriptor) => {
 				unrefINode(fileDescriptor.inode);
 			},
-			seek: (fileDescriptor, _offset, whence): bigint => {
+			fd_seek: (fileDescriptor, _offset, whence): bigint => {
 				const offset = BigInts.asNumber(_offset);
 				switch(whence) {
 					case Whence.set:
@@ -455,39 +464,67 @@ export namespace FileSystem {
 				}
 				return BigInt(fileDescriptor.cursor);
 			},
-			fdstat: (fileDescriptor, fdstat_ptr): void => {
-				const inode = getINode(fileDescriptor.inode);
-				const vStat = vscode_fs.stat(inode.uri);
-				const fdstat = Fdstat.create(fdstat_ptr, memoryView());
-				fdstat.fs_filetype = code2Wasi.asFileType(vStat.type);
-				// No flags. We need to see if some of the tools we want to run
-				// need some and we need to simulate them using local storage.
-				fdstat.fs_flags = 0;
-				if (vStat.type === FileType.File) {
-					fdstat.fs_rights_base = Rights.FileBase;
-					fdstat.fs_rights_inheriting = Rights.FileInheriting;
-				} else if (vStat.type === FileType.Directory) {
-					fdstat.fs_rights_base = Rights.DirectoryBase;
-					fdstat.fs_rights_inheriting = Rights.DirectoryInheriting;
+			fd_fdstat_get: (fileDescriptor, fdstat_ptr): void => {
+				const memory = memoryView();
+				if (fileDescriptor.isStd()) {
+					const fdstat = Fdstat.create(fdstat_ptr, memory);
+					fdstat.fs_filetype = Filetype.character_device;
+					fdstat.fs_flags = 0;
+					if (fileDescriptor.isStdin()) {
+						fdstat.fs_rights_base = Rights.StdinBase;
+						fdstat.fs_rights_inheriting = Rights.StdinInheriting;
+					} else {
+						fdstat.fs_rights_base = Rights.StdoutBase;
+						fdstat.fs_rights_inheriting = Rights.StdoutInheriting;
+					}
 				} else {
-					// Symbolic link and unknown
-					fdstat.fs_rights_base = 0n;
-					fdstat.fs_rights_inheriting = 0n;
+					const inode = getINode(fileDescriptor.inode);
+					const vStat = vscode_fs.stat(inode.uri);
+					const fdstat = Fdstat.create(fdstat_ptr, memory);
+					fdstat.fs_filetype = code2Wasi.asFileType(vStat.type);
+					// No flags. We need to see if some of the tools we want to run
+					// need some and we need to simulate them using local storage.
+					fdstat.fs_flags = 0;
+					if (vStat.type === FileType.File) {
+						fdstat.fs_rights_base = Rights.FileBase;
+						fdstat.fs_rights_inheriting = Rights.FileInheriting;
+					} else if (vStat.type === FileType.Directory) {
+						fdstat.fs_rights_base = Rights.DirectoryBase;
+						fdstat.fs_rights_inheriting = Rights.DirectoryInheriting;
+					} else {
+						// Symbolic link and unknown
+						fdstat.fs_rights_base = 0n;
+						fdstat.fs_rights_inheriting = 0n;
+					}
 				}
 			},
-			stat: (fileDescriptor, filestat_ptr): void => {
-				const inode = getINode(fileDescriptor.inode);
-				doStat(fileDescriptor.path, inode.uri, filestat_ptr);
+			fd_filestat_get: (fileDescriptor, filestat_ptr): void => {
+				const memory = memoryView();
+				if (fileDescriptor.isStd()) {
+					const fileStat = Filestat.create(filestat_ptr, memory);
+					fileStat.dev = DeviceIds.system;
+					fileStat.ino = fileDescriptor.inode;
+					fileStat.filetype = Filetype.character_device;
+					fileStat.nlink = 0n;
+					fileStat.size = 101n;
+					const now = BigInt(Date.now());
+					fileStat.atim = now;
+					fileStat.ctim = now;
+					fileStat.mtim = now;
+				} else {
+					const inode = getINode(fileDescriptor.inode);
+					doStat(fileDescriptor.path, inode.uri, filestat_ptr);
+				}
 			},
 			bytesAvailable: (fileDescriptor): filesize => {
 				const inode = getResolvedINode(fileDescriptor.inode);
 				const cursor = fileDescriptor.cursor;
 				return BigInt(Math.max(0,inode.content.byteLength - cursor));
 			},
-			tell: (fileDescriptor): number => {
+			fd_tell: (fileDescriptor): number => {
 				return fileDescriptor.cursor;
 			},
-			setSize: (fileDescriptor, _size): void => {
+			fd_filestat_set_size: (fileDescriptor, _size): void => {
 				const size = BigInts.asNumber(_size);
 				const inode = getResolvedINode(fileDescriptor.inode);
 				const content = inode.content;
@@ -504,7 +541,7 @@ export namespace FileSystem {
 				}
 				return writeContent(inode);
 			},
-			allocate: (fileDescriptor, _offset, _len): void => {
+			fd_allocate: (fileDescriptor, _offset, _len): void => {
 				const offset = BigInts.asNumber(_offset);
 				const len = BigInts.asNumber(_len);
 
@@ -519,13 +556,41 @@ export namespace FileSystem {
 				newContent.set(content.subarray(offset), offset + len);
 				inode.content = newContent;
 				writeContent(inode);
-
 			},
-			read: (fileDescriptor, bytesToRead): Uint8Array => {
-				const content = getResolvedINode(fileDescriptor.inode).content;
-				return fileDescriptor.read(content, bytesToRead);
+			fd_read: (fileDescriptor, buffers): size => {
+				if (buffers.length === 0) {
+					return 0;
+				}
+				if (fileDescriptor.fileType === Filetype.character_device) {
+					const maxBytesToRead = buffers.reduce<number>((prev, current) => prev + current.length, 0);
+					const inode = getINode(fileDescriptor.inode);
+					const result = vscode_cd.read(inode.uri, maxBytesToRead);
+					let offset = 0;
+					let totalBytesRead = 0;
+					for (const buffer of buffers) {
+						const toCopy = Math.min(buffer.length, result.length - offset);
+						buffer.set(result.subarray(offset, toCopy));
+						offset += toCopy;
+						totalBytesRead += toCopy;
+						if (toCopy < buffer.length) {
+							break;
+						}
+					}
+					return totalBytesRead;
+				} else {
+					const content = getResolvedINode(fileDescriptor.inode).content;
+					let totalBytesRead = 0;
+					for (const buffer of buffers) {
+						const bytesRead = fileDescriptor.read(content, buffer);
+						totalBytesRead += bytesRead;
+						if (bytesRead === 0) {
+							break;
+						}
+					}
+					return totalBytesRead;
+				}
 			},
-			pread: (fileDescriptor, offset, bytesToRead): Uint8Array => {
+			fd_pread: (fileDescriptor, offset, bytesToRead): Uint8Array => {
 				const content = getResolvedINode(fileDescriptor.inode).content;
 				const realRead = Math.min(bytesToRead, content.byteLength - offset);
 				return content.subarray(offset, offset + realRead);
@@ -536,14 +601,35 @@ export namespace FileSystem {
 				fileDescriptor.cursor = 0;
 				writeContent(inode as Required<INode>);
 			},
-			write: (fileDescriptor, buffers): number => {
-				const inode = getResolvedINode(fileDescriptor.inode);
-				const [content, bytesWritten] = fileDescriptor.write(inode.content, buffers);
-				inode.content = content;
-				writeContent(inode);
-				return bytesWritten;
+			fd_write: (fileDescriptor, buffers): number => {
+				if (buffers.length === 0) {
+					return 0;
+				}
+				if (fileDescriptor.fileType === Filetype.character_device) {
+					const inode = getINode(fileDescriptor.inode);
+					let buffer: Uint8Array;
+					if (buffers.length === 1) {
+						buffer = buffers[0];
+					} else {
+						const byteLength: number = buffers.reduce<number>((prev, current) => prev + current.length, 0);
+						buffer = new Uint8Array(byteLength);
+						let offset = 0;
+						for (const item of buffers) {
+							buffer.set(item, offset);
+							offset = item.byteLength;
+						}
+					}
+					vscode_cd.write(inode.uri, buffer);
+					return buffer.byteLength;
+				} else {
+					const inode = getResolvedINode(fileDescriptor.inode);
+					const [content, bytesWritten] = fileDescriptor.write(inode.content, buffers);
+					inode.content = content;
+					writeContent(inode);
+					return bytesWritten;
+				}
 			},
-			pwrite: (fileDescriptor, offset, bytes): size => {
+			fd_pwrite: (fileDescriptor, offset, bytes): size => {
 				const inode = getResolvedINode(fileDescriptor.inode);
 				let content = inode.content;
 				const total = offset + bytes.byteLength;
@@ -558,14 +644,14 @@ export namespace FileSystem {
 				writeContent(inode);
 				return bytes.length;
 			},
-			sync: (fileDescriptor): void => {
+			fd_sync: (fileDescriptor): void => {
 				const inode = getINode(fileDescriptor.inode);
 				if (!INode.hasContent(inode)) {
 					return;
 				}
 				writeContent(inode);
 			},
-			readdir: (fileDescriptor, buf_ptr, buf_len, cookie, buf_used_ptr): void => {
+			fd_readdir: (fileDescriptor, buf_ptr, buf_len, cookie, buf_used_ptr): void => {
 				const memory = memoryView();
 				const raw = memoryRaw();
 				const inode = getINode(fileDescriptor.inode);
@@ -619,11 +705,11 @@ export namespace FileSystem {
 					memory.setUint32(buf_used_ptr, buf_len, true);
 				}
 			},
-			createDirectory: (fileDescriptor: FileDescriptor, name: string): void => {
+			path_create_directory: (fileDescriptor: FileDescriptor, name: string): void => {
 				const inode = getINode(fileDescriptor.inode);
 				vscode_fs.createDirectory(uriJoin(inode.uri, name));
 			},
-			path_stat: (fileDescriptor, name, filestat_ptr): void => {
+			path_filestat_get: (fileDescriptor, name, filestat_ptr): void => {
 				const inode = getINode(fileDescriptor.inode);
 				const filePath = paths.join(fileDescriptor.path, name);
 				const fileUri = uriJoin(inode.uri, name);

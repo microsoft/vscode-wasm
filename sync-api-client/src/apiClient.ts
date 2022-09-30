@@ -5,7 +5,7 @@
 
 import { URI } from 'vscode-uri';
 
-import { RAL, ClientConnection, Requests, RequestResult, DTOs, VariableResult, RPCErrno, RPCError } from '@vscode/sync-api-common';
+import { ClientConnection, Requests, RequestResult, DTOs, VariableResult, RPCErrno, RPCError, Uint8Result } from '@vscode/sync-api-common';
 
 import * as vscode from './vscode';
 
@@ -34,12 +34,12 @@ export interface Window {
 export interface Workspace {
 	workspaceFolders: vscode.WorkspaceFolder[];
 	fileSystem: FileSystem;
+	characterDevice: CharacterDevice;
 }
 
-export interface Terminal {
-	write(value: string, encoding?: string): void;
-	write(value: Uint8Array): void;
-	read(): Uint8Array;
+export interface CharacterDevice {
+	write(uri: URI, value: Uint8Array): void;
+	read(uri: URI, maxBytesToRead: number): Uint8Array;
 }
 
 type ApiClientConnection = ClientConnection<Requests>;
@@ -69,25 +69,20 @@ class ProcessImpl implements Process {
 	}
 }
 
-class TerminalImpl implements Terminal {
+class CharacterDeviceImpl implements CharacterDevice {
 
 	private readonly connection: ApiClientConnection;
-	private readonly encoder: RAL.TextEncoder;
 
-	constructor(connection: ApiClientConnection, encoder: RAL.TextEncoder) {
+	constructor(connection: ApiClientConnection) {
 		this.connection = connection;
-		this.encoder = encoder;
 	}
 
-	public write(value: string, encoding?: string): void;
-	public write(value: Uint8Array): void;
-	public write(value: string | Uint8Array, _encoding?: string): void {
-		const binary = (typeof value === 'string')
-			? this.encoder.encode(value) : value;
-		this.connection.sendRequest('terminal/write', { binary });
+	public write(uri: URI, binary: Uint8Array): void {
+		this.connection.sendRequest('characterDevice/write', { uri: uri.toJSON(), binary });
 	}
-	public read(): Uint8Array {
-		const result = this.connection.sendRequest('terminal/read', new VariableResult<Uint8Array>('binary'));
+
+	public read(uri: URI, maxBytesToRead: number): Uint8Array {
+		const result = this.connection.sendRequest('characterDevice/read', { uri: uri.toJSON(), maxBytesToRead }, Uint8Result.fromByteLength(maxBytesToRead));
 		if (RequestResult.hasData(result)) {
 			return result.data;
 		}
@@ -189,10 +184,12 @@ class WorkspaceImpl implements Workspace {
 
 	private readonly connection: ApiClientConnection;
 	public readonly fileSystem: FileSystem;
+	public readonly characterDevice: CharacterDevice;
 
 	constructor(connection: ApiClientConnection) {
 		this.connection = connection;
 		this.fileSystem = new FileSystemImpl(this.connection);
+		this.characterDevice = new CharacterDeviceImpl(this.connection);
 	}
 
 	public get workspaceFolders(): vscode.WorkspaceFolder[] {
@@ -204,47 +201,21 @@ class WorkspaceImpl implements Workspace {
 	}
 }
 
-class WindowImpl implements Window {
-
-	private readonly connection: ApiClientConnection;
-
-	constructor(connection: ApiClientConnection) {
-		this.connection = connection;
-	}
-
-	get activeTextDocument(): vscode.TextDocument | undefined {
-		const requestResult = this.connection.sendRequest('window/activeTextDocument', new VariableResult<DTOs.TextDocument | null>('json'));
-		if (RequestResult.hasData(requestResult)) {
-			if (requestResult.data === null) {
-				return undefined;
-			}
-			return { uri: URI.from(requestResult.data.uri ) };
-		}
-		throw new RPCError(RPCErrno.UnknownError);
-	}
-}
-
 export class ApiClient {
 
 	private readonly connection: ApiClientConnection;
-	private readonly encoder: RAL.TextEncoder;
 
 	public readonly timer: Timer;
 	public readonly process: Process;
 	public readonly vscode: {
-		readonly terminal: Terminal;
-		readonly window: Window;
 		readonly workspace: Workspace;
 	};
 
 	constructor(connection: ApiClientConnection) {
 		this.connection = connection;
-		this.encoder = RAL().TextEncoder.create();
 		this.timer = new TimerImpl(this.connection);
 		this.process = new ProcessImpl(this.connection);
 		this.vscode = {
-			terminal: new TerminalImpl(this.connection, this.encoder),
-			window: new WindowImpl(this.connection),
 			workspace: new WorkspaceImpl(this.connection)
 		};
 	}

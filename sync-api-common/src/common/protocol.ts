@@ -54,23 +54,23 @@ export namespace DTOs {
 	export type fileType = u32;
 	export enum FileType {
 		/**
-		* The file type is unknown.
-		*/
+		 * The file type is unknown.
+		 */
 		Unknown = 0,
 
 		/**
-		* A regular file.
-		*/
+		 * A regular file.
+		 */
 		File = 1,
 
 		/**
-		* A directory.
-		*/
+		 * A directory.
+		 */
 		Directory = 2,
 
 		/**
-		* A symbolic link to a file.
-		*/
+		 * A symbolic link to a file.
+		 */
 		SymbolicLink = 64
 	}
 
@@ -163,13 +163,6 @@ export type Requests = {
 	result: null;
 } | {
 	/**
-	 * Retrieve the activeTextDocument
-	 */
-	method: 'window/activeTextDocument';
-	params: null;
-	result: VariableResult<DTOs.TextDocument | null>;
-} | {
-	/**
 	 * Retrieve the set of workspace folders
 	 */
 	method: 'workspace/workspaceFolders';
@@ -179,8 +172,9 @@ export type Requests = {
 	/**
 	 * Write a string encoded using UTF8 to the terminal
 	 */
-	method: 'terminal/write';
+	method: 'characterDevice/write';
 	params: {
+		uri: DTOs.UriComponents;
 		binary: Uint8Array;
 	};
 	result: null;
@@ -188,9 +182,12 @@ export type Requests = {
 	/**
 	 * Reads a line from the terminal
 	 */
-	method: 'terminal/read';
-	params: null;
-	result: VariableResult<Uint8Array>;
+	method: 'characterDevice/read';
+	params: {
+		uri: DTOs.UriComponents;
+		maxBytesToRead: number;
+	};
+	result: Uint8Array;
 } | {
 	/**
 	 * Stat a file / directory

@@ -12,8 +12,8 @@ const paths = RAL().path;
 import { ptr, size, u32 } from './baseTypes';
 import {
 	fd, errno, Errno, lookupflags, oflags, rights, fdflags, dircookie, filetype, Rights,
-	filesize, advise, filedelta, whence, Filestat, Ciovec, Iovec, Filetype, clockid, timestamp, Clockid,
-	Fdstat, fstflags, Prestat, exitcode, Oflags, Subscription, WasiError, Eventtype, Event, event,
+	filesize, advise, filedelta, whence, Ciovec, Iovec, Filetype, clockid, timestamp, Clockid,
+	fstflags, Prestat, exitcode, Oflags, Subscription, WasiError, Eventtype, Event, event,
 	Subclockflags, Literal, subscription, Fdflags, riflags, siflags, sdflags,
 	args_sizes_get, args_get, environ_sizes_get, environ_get, clock_res_get, clock_time_get, fd_advise,
 	fd_allocate, fd_close, fd_datasync, fd_fdstat_get, fd_fdstat_set_flags, fd_filestat_get, fd_filestat_set_size,
@@ -23,7 +23,7 @@ import {
 	poll_oneoff, proc_exit, random_get, sched_yield, sock_accept, sock_recv, sock_send, sock_shutdown
 } from './wasiTypes';
 import { BigInts, code2Wasi } from './converter';
-import { DeviceIds, FileDescriptor, FileSystem } from './fileSystem';
+import { FileDescriptor, FileSystem } from './fileSystem';
 
 namespace WebAssembly {
 
@@ -51,61 +51,6 @@ namespace WebAssembly {
 		readonly exports: {
 			memory: Memory;
 		} & Record<string, ExportValue>;
-	}
-}
-
-
-
-interface IOComponent {
-}
-
-class Stdin implements IOComponent {
-
-	private readonly apiClient: ApiClient;
-	private rest: Uint8Array | undefined;
-
-	public constructor(apiClient: ApiClient) {
-		this.apiClient = apiClient;
-	}
-
-	public get fd() {
-		return 0;
-	}
-
-	/**
-	 * Reads from stdin. Depending on the mode the terminal is in this
-	 * reads a line or a single character.
-	 */
-	public read(buffers: Uint8Array[]): size {
-		let bytesRead: size = 0;
-		if (this.rest !== undefined) {
-			bytesRead += this.storeInBuffers(buffers, this.rest);
-			return bytesRead;
-		}
-		const result = this.apiClient.vscode.terminal.read();
-		bytesRead += this.storeInBuffers(buffers, result);
-		return bytesRead;
-	}
-
-	private storeInBuffers(buffers: Uint8Array[], value: Uint8Array): size {
-		let bytesRead: size = 0;
-		let current: Uint8Array | undefined = value;
-		for (let i = 0; i < buffers.length && current !== undefined; i++) {
-			const buffer = buffers[i];
-			if (current.byteLength <= buffer.byteLength) {
-				buffer.set(current);
-				bytesRead += value.byteLength;
-				current = undefined;
-			} else {
-				buffer.set(current.subarray(0, buffer.byteLength));
-				current = current.subarray(buffer.byteLength);
-				bytesRead += buffer.byteLength;
-			}
-		}
-		if (current !== undefined) {
-			this.rest = new Uint8Array(current);
-		}
-		return bytesRead;
 	}
 }
 
@@ -179,6 +124,15 @@ export interface Environment {
 export type Options = {
 
 	/**
+	 * Stdin, stdout and stderr URIs to use
+	 */
+	std: {
+		stdin: URI;
+		stdout: URI;
+		stderr: URI;
+	};
+
+	/**
 	 * Directory mappings
 	 */
 	mapDir: {
@@ -211,8 +165,7 @@ export namespace WASI {
 		const fileDescriptors: Map<fd, FileDescriptor> = new Map();
 		const encoder: RAL.TextEncoder = RAL().TextEncoder.create(options?.encoding);
 		const decoder: RAL.TextDecoder = RAL().TextDecoder.create(options?.encoding);
-		const stdin = new Stdin(apiClient);
-		const fileSystem = FileSystem.create(apiClient, { memoryView: memoryView, memoryRaw: memoryRaw }, encoder);
+		const fileSystem = FileSystem.create(apiClient, { memoryView: memoryView, memoryRaw: memoryRaw }, encoder, options.std);
 		fileDescriptors.set(fileSystem.stdin.fd, fileSystem.stdin);
 		fileDescriptors.set(fileSystem.stdout.fd, fileSystem.stdout);
 		fileDescriptors.set(fileSystem.stderr.fd, fileSystem.stderr);
@@ -318,7 +271,7 @@ export namespace WASI {
 				try {
 					const fileDescriptor = getFileDescriptor(fd);
 					fileDescriptor.assertBaseRight(Rights.fd_allocate);
-					fileSystem.allocate(fileDescriptor, offset, len);
+					fileSystem.fd_allocate(fileDescriptor, offset, len);
 					return Errno.success;
 				} catch (error) {
 					return handleError(error);
@@ -327,7 +280,7 @@ export namespace WASI {
 			fd_close: (fd: fd): errno => {
 				try {
 					const fileDescriptor = getFileDescriptor(fd);
-					fileSystem.releaseFileDescriptor(fileDescriptor);
+					fileSystem.fd_close(fileDescriptor);
 					fileDescriptors.delete(fileDescriptor.fd);
 					return Errno.success;
 				} catch (error) {
@@ -338,7 +291,8 @@ export namespace WASI {
 				try {
 					const fileDescriptor = getFileDescriptor(fd);
 					fileDescriptor.assertBaseRight(Rights.fd_datasync);
-					fileSystem.sync(fileDescriptor);
+					// Currently same as fd_sync
+					fileSystem.fd_sync(fileDescriptor);
 					return Errno.success;
 				} catch (error) {
 					return handleError(error);
@@ -348,21 +302,7 @@ export namespace WASI {
 				// This is not available under VS Code.
 				try {
 					const fileDescriptor = getFileDescriptor(fd);
-					const memory = memoryView();
-					if (fileDescriptor.isStd()) {
-						const fdstat = Fdstat.create(fdstat_ptr, memory);
-						fdstat.fs_filetype = Filetype.character_device;
-						fdstat.fs_flags = 0;
-						if (fileDescriptor.isStdin()) {
-							fdstat.fs_rights_base = Rights.StdinBase;
-							fdstat.fs_rights_inheriting = Rights.StdinInheriting;
-						} else {
-							fdstat.fs_rights_base = Rights.StdoutBase;
-							fdstat.fs_rights_inheriting = Rights.StdoutInheriting;
-						}
-						return Errno.success;
-					}
-					fileSystem.fdstat(fileDescriptor, fdstat_ptr);
+					fileSystem.fd_fdstat_get(fileDescriptor, fdstat_ptr);
 					return Errno.success;
 				} catch (error) {
 					return handleError(error);
@@ -381,22 +321,8 @@ export namespace WASI {
 			fd_filestat_get: (fd: fd, filestat_ptr: ptr): errno => {
 				try {
 					const fileDescriptor = getFileDescriptor(fd);
-					const memory = memoryView();
-					if (fileDescriptor.isStd()) {
-						const fileStat = Filestat.create(filestat_ptr, memory);
-						fileStat.dev = DeviceIds.system;
-						fileStat.ino = fileDescriptor.inode;
-						fileStat.filetype = Filetype.character_device;
-						fileStat.nlink = 0n;
-						fileStat.size = 101n;
-						const now = BigInt(Date.now());
-						fileStat.atim = now;
-						fileStat.ctim = now;
-						fileStat.mtim = now;
-						return Errno.success;
-					}
 					fileDescriptor.assertBaseRight(Rights.fd_filestat_get);
-					fileSystem.stat(fileDescriptor, filestat_ptr);
+					fileSystem.fd_filestat_get(fileDescriptor, filestat_ptr);
 					return Errno.success;
 				} catch (error) {
 					return handleError(error, Errno.perm);
@@ -406,7 +332,7 @@ export namespace WASI {
 				try {
 					const fileDescriptor = getFileDescriptor(fd);
 					fileDescriptor.assertBaseRight(Rights.fd_filestat_set_size);
-					fileSystem.setSize(fileDescriptor, size);
+					fileSystem.fd_filestat_set_size(fileDescriptor, size);
 					return Errno.success;
 				} catch (error) {
 					return handleError(error);
@@ -432,7 +358,7 @@ export namespace WASI {
 					const buffers = read_iovs(iovs_ptr, iovs_len);
 					let bytesRead = 0;
 					for (const buffer of buffers) {
-						const result = fileSystem.pread(fileDescriptor, BigInts.asNumber(offset), buffer.byteLength);
+						const result = fileSystem.fd_pread(fileDescriptor, BigInts.asNumber(offset), buffer.byteLength);
 						bytesRead = bytesRead + result.byteLength;
 						buffer.set(result);
 					}
@@ -477,7 +403,7 @@ export namespace WASI {
 					const buffers = read_ciovs(ciovs_ptr, ciovs_len);
 					let bytesWritten = 0;
 					for (const buffer of buffers) {
-						bytesWritten += fileSystem.pwrite(fileDescriptor, BigInts.asNumber(offset), buffer);
+						bytesWritten += fileSystem.fd_pwrite(fileDescriptor, BigInts.asNumber(offset), buffer);
 					}
 					memoryView().setUint32(bytesWritten_ptr, bytesWritten, true);
 					return Errno.success;
@@ -489,21 +415,9 @@ export namespace WASI {
 				try {
 					const memory = memoryView();
 					const fileDescriptor = getFileDescriptor(fd);
-					if (fileDescriptor.isStdin()) {
-						let bytesRead = 0;
-						const buffers = read_iovs(iovs_ptr, iovs_len);
-						bytesRead += stdin.read(buffers);
-						memory.setUint32(bytesRead_ptr, bytesRead, true);
-						return Errno.success;
-					}
 					fileDescriptor.assertBaseRight(Rights.fd_read);
 					const buffers = read_iovs(iovs_ptr, iovs_len);
-					let bytesRead = 0;
-					for (const buffer of buffers) {
-						const result = fileSystem.read(fileDescriptor, buffer.byteLength);
-						bytesRead += result.byteLength;
-						buffer.set(result);
-					}
+					const bytesRead = fileSystem.fd_read(fileDescriptor, buffers);
 					memory.setUint32(bytesRead_ptr, bytesRead, true);
 					return Errno.success;
 				} catch (error) {
@@ -517,7 +431,7 @@ export namespace WASI {
 					if (fileDescriptor.fileType !== Filetype.directory) {
 						return Errno.notdir;
 					}
-					fileSystem.readdir(fileDescriptor, buf_ptr, buf_len, cookie, buf_used_ptr);
+					fileSystem.fd_readdir(fileDescriptor, buf_ptr, buf_len, cookie, buf_used_ptr);
 					return Errno.success;
 				} catch (error) {
 					return handleError(error);
@@ -530,7 +444,7 @@ export namespace WASI {
 						return Errno.success;
 					}
 					fileDescriptor.assertBaseRight(Rights.fd_seek);
-					const newOffset = fileSystem.seek(fileDescriptor, offset, whence);
+					const newOffset = fileSystem.fd_seek(fileDescriptor, offset, whence);
 					memoryView().setBigUint64(new_offset_ptr, BigInt(newOffset), true);
 					return Errno.success;
 				} catch (error) {
@@ -541,7 +455,7 @@ export namespace WASI {
 				try {
 					const fileDescriptor = getFileDescriptor(fd);
 					fileDescriptor.assertBaseRight(Rights.fd_sync);
-					fileSystem.sync(fileDescriptor);
+					fileSystem.fd_sync(fileDescriptor);
 					return Errno.success;
 				} catch (error) {
 					return handleError(error);
@@ -551,7 +465,7 @@ export namespace WASI {
 				try {
 					const fileDescriptor = getFileDescriptor(fd);
 					fileDescriptor.assertBaseRight(Rights.fd_tell);
-					const offset = fileSystem.tell(fileDescriptor);
+					const offset = fileSystem.fd_tell(fileDescriptor);
 					const memory = memoryView();
 					memory.setBigUint64(offset_ptr, BigInt(offset), true);
 					return Errno.success;
@@ -562,21 +476,10 @@ export namespace WASI {
 			fd_write: (fd: fd, ciovs_ptr: ptr, ciovs_len: u32, bytesWritten_ptr: ptr): errno => {
 				try {
 					const fileDescriptor = getFileDescriptor(fd);
-					if (fileDescriptor.isStdout() || fileDescriptor.isStderr()) {
-						let written = 0;
-						const buffers = read_ciovs(ciovs_ptr, ciovs_len);
-						for (const buffer of buffers) {
-							apiClient.vscode.terminal.write(buffer);
-							written += buffer.length;
-						}
-						const memory = memoryView();
-						memory.setUint32(bytesWritten_ptr, written, true);
-						return Errno.success;
-					}
-					fileDescriptor.assertBaseRight(Rights.fd_write);
 
+					fileDescriptor.assertBaseRight(Rights.fd_write);
 					const buffers = read_ciovs(ciovs_ptr, ciovs_len);
-					const bytesWritten: size = fileSystem.write(fileDescriptor, buffers);
+					const bytesWritten: size = fileSystem.fd_write(fileDescriptor, buffers);
 					const memory = memoryView();
 					memory.setUint32(bytesWritten_ptr, bytesWritten, true);
 					return Errno.success;
@@ -592,7 +495,7 @@ export namespace WASI {
 
 					const memory = memoryRaw();
 					const name = decoder.decode(new Uint8Array(memory, path_ptr, path_len));
-					fileSystem.createDirectory(fileDescriptor, name);
+					fileSystem.path_create_directory(fileDescriptor, name);
 					return Errno.success;
 				} catch (error) {
 					return handleError(error);
@@ -608,7 +511,7 @@ export namespace WASI {
 
 					const memory = memoryRaw();
 					const name = decoder.decode(new Uint8Array(memory, path_ptr, path_len));
-					fileSystem.path_stat(fileDescriptor, name, filestat_ptr);
+					fileSystem.path_filestat_get(fileDescriptor, name, filestat_ptr);
 					return Errno.success;
 				} catch (error) {
 					return handleError(error);
@@ -1005,13 +908,13 @@ export namespace WASI {
 
 		function read_ciovs (iovs: ptr, iovsLen: u32): Uint8Array[] {
 			const memory = memoryView();
-			const buffer = memoryRaw();
+			const rawMemory = memoryRaw();
 
 			const buffers: Uint8Array[] = [];
 			let ptr: ptr = iovs;
 			for (let i = 0; i < iovsLen; i++) {
 				const vec = Ciovec.create(ptr, memory);
-				buffers.push(new Uint8Array(buffer, vec.buf, vec.buf_len));
+				buffers.push(new Uint8Array(rawMemory, vec.buf, vec.buf_len));
 				ptr += Ciovec.size;
 			}
 			return buffers;
@@ -1019,13 +922,13 @@ export namespace WASI {
 
 		function read_iovs (iovs: ptr, iovsLen: u32): Uint8Array[] {
 			const memory = memoryView();
-			const buffer = memoryRaw();
+			const rawMemory = memoryRaw();
 
 			const buffers: Uint8Array[] = [];
 			let ptr: ptr = iovs;
 			for (let i = 0; i < iovsLen; i++) {
 				const vec = Iovec.create(ptr, memory);
-				buffers.push(new Uint8Array(buffer, vec.buf, vec.buf_len));
+				buffers.push(new Uint8Array(rawMemory, vec.buf, vec.buf_len));
 				ptr += Iovec.size;
 			}
 			return buffers;
