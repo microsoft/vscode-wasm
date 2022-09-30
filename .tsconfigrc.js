@@ -73,6 +73,13 @@ const node = {
 	include: ['.']
 };
 
+/** @type SharableOptions */
+const referenced = {
+	compilerOptions: {
+		composite: true
+	},
+}
+
 /** @type ProjectDescription */
 const sync_api_common = {
 	name: 'sync-api-common',
@@ -101,7 +108,7 @@ const sync_api_common = {
 		{
 			path: './src/browser/test',
 			extends: [ browser, testMixin ],
-			references: [ '..' ]
+			references: [ '../../common/test', '..' ]
 		},
 		{
 			path: './src/node',
@@ -112,7 +119,7 @@ const sync_api_common = {
 		{
 			path: './src/node/test',
 			extends: [ node, testMixin ],
-			references: [ '..' ]
+			references: [ '../../common/test', '..' ]
 		}
 	]
 };
@@ -121,7 +128,7 @@ const sync_api_common = {
 const sync_api_client = {
 	name: 'sync-api-client',
 	path: './sync-api-client',
-	extends: [ common ],
+	extends: [ common, referenced ],
 	out: {
 		dir: './lib',
 		buildInfoFile: '${buildInfoFile}.tsbuildInfo'
@@ -138,7 +145,7 @@ const sync_api_client = {
 const sync_api_service = {
 	name: 'sync-api-service',
 	path: './sync-api-service',
-	extends: [ common, vscodeMixin ],
+	extends: [ common, vscodeMixin, referenced ],
 	out: {
 		dir: './lib',
 		buildInfoFile: '${buildInfoFile}.tsbuildInfo'
@@ -190,6 +197,9 @@ const wasm_wasi = {
 			extends: [ node ],
 			references: [ '../common' ]
 		}
+	],
+	references: [
+		sync_api_client
 	]
 };
 

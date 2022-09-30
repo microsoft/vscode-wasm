@@ -6,6 +6,9 @@
     "files": [],
     "references": [
         {
+            "path": "./../sync-api-client/tsconfig.watch.json"
+        },
+        {
             "path": "./src/common/tsconfig.watch.json"
         },
         {
