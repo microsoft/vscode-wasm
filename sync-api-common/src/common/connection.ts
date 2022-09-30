@@ -98,7 +98,7 @@ class NoResult {
 	get length(): number {
 		return 0;
 	}
-	getPadding(offset: number): number  {
+	getPadding(_offset: number): number  {
 		return 0;
 	}
 	createResultArray(sharedArrayBuffer: SharedArrayBuffer, offset: number): Uint8Array {

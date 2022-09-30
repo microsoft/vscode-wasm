@@ -1,15 +1,27 @@
 {
-	"extends": "./tsconfig.base.json",
-	"compilerOptions": {
-		"noUnusedLocals": true,
-		"noUnusedParameters": true,
-	},
-	"files": [],
-	"references": [
-		{ "path": "./src/browser/tsconfig.watch.json" },
-		{ "path": "./src/node/tsconfig.watch.json" },
-		{ "path": "./src/common/test/tsconfig.watch.json" },
-		{ "path": "./src/browser/test/tsconfig.watch.json" },
-		{ "path": "./src/node/test/tsconfig.watch.json" }
-	]
+    "compilerOptions": {
+        "incremental": true,
+        "composite": true
+    },
+    "files": [],
+    "references": [
+        {
+            "path": "./src/common/tsconfig.watch.json"
+        },
+        {
+            "path": "./src/common/test/tsconfig.watch.json"
+        },
+        {
+            "path": "./src/browser/tsconfig.watch.json"
+        },
+        {
+            "path": "./src/browser/test/tsconfig.watch.json"
+        },
+        {
+            "path": "./src/node/tsconfig.watch.json"
+        },
+        {
+            "path": "./src/node/test/tsconfig.watch.json"
+        }
+    ]
 }

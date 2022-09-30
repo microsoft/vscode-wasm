@@ -33,12 +33,12 @@ class TestServiceConnection<RequestHandlers extends RequestType | undefined = un
 const _ril: RIL = Object.freeze<RIL>({
 	type: RAL.Type.Browser,
 	TextEncoder: Object.freeze({
-		create(encoding: string = 'utf-8'): RAL.TextEncoder {
+		create(_encoding: string = 'utf-8'): RAL.TextEncoder {
 			return encoder;
 		}
 	}),
 	TextDecoder: Object.freeze({
-		create(encoding: string = 'utf-8'): RAL.TextDecoder {
+		create(_encoding: string = 'utf-8'): RAL.TextDecoder {
 			return decoder;
 		}
 	}),
