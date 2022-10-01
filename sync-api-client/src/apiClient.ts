@@ -5,7 +5,7 @@
 
 import { URI } from 'vscode-uri';
 
-import { ClientConnection, Requests, RequestResult, DTOs, VariableResult, RPCErrno, RPCError, Uint8Result } from '@vscode/sync-api-common';
+import { ClientConnection, Requests, RequestResult, DTOs, VariableResult, RPCErrno, RPCError, Uint8Result, RAL } from '@vscode/sync-api-common';
 
 import * as vscode from './vscode';
 
@@ -15,6 +15,11 @@ export interface Timer {
 
 export interface Process {
 	procExit(rval: number): void;
+}
+
+export interface Console {
+	log(message?: any, ...optionalParams: any[]): void;
+	error(message?: any, ...optionalParams: any[]): void;
 }
 
 export interface FileSystem {
@@ -66,6 +71,30 @@ class ProcessImpl implements Process {
 
 	public procExit(rval: number): void {
 		this.connection.sendRequest('process/proc_exit', { rval: rval });
+	}
+}
+
+class ConsoleImpl implements Console {
+
+	private readonly connection: ApiClientConnection;
+	private readonly encoder: RAL.TextEncoder;
+
+	private static stdout = URI.from( { scheme: 'sync-api-console', path: 'stdout'} );
+	private static stderr = URI.from( { scheme: 'sync-api-console', path: 'stderr'} );
+
+	constructor(connection: ApiClientConnection, encoder: RAL.TextEncoder) {
+		this.connection = connection;
+		this.encoder = encoder;
+	}
+
+	log(message?: string): void {
+		message = message === undefined ? '\n' : `${message}\n`;
+		this.connection.sendRequest('characterDevice/write', { uri: ConsoleImpl.stdout.toJSON(), binary: this.encoder.encode(message) });
+	}
+
+	error(message?: string): void {
+		message = message === undefined ? '\n' : `${message}\n`;
+		this.connection.sendRequest('characterDevice/write', { uri: ConsoleImpl.stderr.toJSON(), binary: this.encoder.encode(message) });
 	}
 }
 
@@ -204,17 +233,21 @@ class WorkspaceImpl implements Workspace {
 export class ApiClient {
 
 	private readonly connection: ApiClientConnection;
+	private readonly encoder: RAL.TextEncoder;
 
 	public readonly timer: Timer;
 	public readonly process: Process;
+	public readonly console: Console;
 	public readonly vscode: {
 		readonly workspace: Workspace;
 	};
 
 	constructor(connection: ApiClientConnection) {
 		this.connection = connection;
+		this.encoder = RAL().TextEncoder.create();
 		this.timer = new TimerImpl(this.connection);
 		this.process = new ProcessImpl(this.connection);
+		this.console = new ConsoleImpl(this.connection, this.encoder);
 		this.vscode = {
 			workspace: new WorkspaceImpl(this.connection)
 		};

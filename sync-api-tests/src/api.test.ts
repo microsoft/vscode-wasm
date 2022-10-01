@@ -23,7 +23,7 @@ export function contribute(workerResolver: (testCase: string) => string, scheme:
 		return folder;
 	}
 
-	async function runTest(name: string, testCase: string) {
+	async function runTest(name: string, testCase: string, serviceHook?: (apiService: ApiService) => void) {
 
 		const connection = RAL().$testing.ServiceConnection.create<Requests | TestRequests>(workerResolver(testCase));
 		let assertionError: AssertionErrorData | undefined;
@@ -39,12 +39,15 @@ export function contribute(workerResolver: (testCase: string) => string, scheme:
 		});
 
 		const errno = await new Promise<number>((resolve) => {
-			new ApiService(name, connection, {
+			const service = new ApiService(name, connection, {
 				exitHandler: (rval) => {
 					connection.terminate().catch(console.error);
 					resolve(rval);
 				}
 			});
+			if (serviceHook !== undefined) {
+				serviceHook(service);
+			}
 			connection.signalReady();
 		});
 		if (assertionError !== undefined) {
@@ -138,6 +141,24 @@ export function contribute(workerResolver: (testCase: string) => string, scheme:
 				notFound = error.code === 'FileNotFound';
 			}
 			assert.strictEqual(notFound, true, 'Directory delete failed');
+		});
+
+		test('Character Device', async() => {
+			let writeReceived: boolean = false;
+			await runTest('Character Device', 'charDevice', (service) => {
+				service.registerCharacterDeviceProvider('test-charDevice', {
+					read: function (): Promise<Uint8Array> {
+						throw new Error(`Not tested`);
+					},
+					write: function (uri: vscode.Uri, bytes: Uint8Array): Promise<void> {
+						if (uri.scheme === 'test-charDevice' && RAL().TextDecoder.create().decode(bytes.slice()) === 'hello') {
+							writeReceived = true;
+						}
+						return Promise.resolve();
+					}
+				});
+			});
+			assert.strictEqual(writeReceived, true);
 		});
 	});
 }

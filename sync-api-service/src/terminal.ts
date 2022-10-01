@@ -383,7 +383,7 @@ const terminalRegExp = /(\r\n)|(\n)/gm;
 
 export class PseudoTerminalProvider implements CharacterDeviceProvider {
 
-	public static scheme = 'wasm-terminal' as const;
+	public static scheme = 'sync-api-terminal' as const;
 
 	private terminals: Map<string, ServicePseudoTerminal>;
 	private readonly encoder: RAL.TextEncoder;

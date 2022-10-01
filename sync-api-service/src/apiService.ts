@@ -23,6 +23,31 @@ export type Options = {
 	echoName?: boolean;
 };
 
+class ConsoleCharacterDeviceProvider implements CharacterDeviceProvider {
+	public static scheme = 'sync-api-console' as const;
+
+	private readonly decoder: RAL.TextDecoder;
+
+	constructor() {
+		this.decoder = RAL().TextDecoder.create();
+	}
+
+	read(_uri: vscode.Uri, _maxBytesToRead: number): Promise<Uint8Array> {
+		throw new Error(`Can't read from console device`);
+	}
+
+	write(uri: vscode.Uri, bytes: Uint8Array): Promise<void> {
+		const path = uri.path;
+		const str = this.decoder.decode(bytes);
+		if (path === 'stderr') {
+			RAL().console.error(str);
+		} else {
+			RAL().console.log(str);
+		}
+		return Promise.resolve();
+	}
+}
+
 export class ApiService {
 
 	private readonly connection: ApiServiceConnection;
@@ -33,6 +58,7 @@ export class ApiService {
 	constructor(_name: string, receiver: ApiServiceConnection, options?: Options) {
 		this.connection = receiver;
 		this.characterDeviceProviders = new Map();
+		this.characterDeviceProviders.set(ConsoleCharacterDeviceProvider.scheme, new ConsoleCharacterDeviceProvider());
 		this.options = options;
 
 		const handleError = (error: any): { errno: number } => {
