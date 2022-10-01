@@ -418,21 +418,21 @@ export namespace FileSystem {
 				refINode('/dev/tty', std.stdin).id,
 				Filetype.character_device,
 				{ base: Rights.StdinBase, inheriting: Rights.StdinInheriting },
-				0, '/dev/stdin', true
+				0, '/dev/tty', true
 			),
 
 			stdout: new FileDescriptorImpl(
 				refINode('/dev/tty', std.stdout).id,
 				Filetype.character_device,
 				{ base: Rights.StdoutBase, inheriting: Rights.StdoutInheriting },
-				0, '/dev/stdout', true
+				0, '/dev/tty', true
 			),
 
 			stderr: new FileDescriptorImpl(
 				refINode('/dev/tty', std.stderr).id,
 				Filetype.character_device,
 				{ base: Rights.StdoutBase, inheriting: Rights.StdoutInheriting },
-				0, '/dev/stderr', true
+				0, '/dev/tty', true
 			),
 
 			createPreOpenedFileDescriptor: (path, uri, fileType, rights, fdflags) => {
