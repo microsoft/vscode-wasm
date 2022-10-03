@@ -25,7 +25,7 @@ class ConsoleCharacterDeviceProvider implements CharacterDeviceProvider {
 	write(uri: vscode.Uri, bytes: Uint8Array): Promise<void> {
 		const path = uri.path;
 		const str = this.decoder.decode(bytes);
-		if (path === 'stderr') {
+		if (path === '/stderr') {
 			RAL().console.error(str);
 		} else {
 			RAL().console.log(str);
