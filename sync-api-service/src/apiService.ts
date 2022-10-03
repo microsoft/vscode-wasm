@@ -9,20 +9,6 @@ import { RAL, ServiceConnection, Requests, DTOs, RPCErrno } from '@vscode/sync-a
 
 import { CharacterDeviceProvider } from './types';
 
-type ApiServiceConnection = ServiceConnection<Requests>;
-
-export type Options = {
-	/**
-	 * A handler that is called when the WASM exists
-	 */
-	exitHandler?: (rval: number) => void;
-
-	/**
-	 * Whether to echo the service name in the terminal
-	 */
-	echoName?: boolean;
-};
-
 class ConsoleCharacterDeviceProvider implements CharacterDeviceProvider {
 	public static scheme = 'sync-api-console' as const;
 
@@ -47,6 +33,34 @@ class ConsoleCharacterDeviceProvider implements CharacterDeviceProvider {
 		return Promise.resolve();
 	}
 }
+
+export type ApiServiceConnection = ServiceConnection<Requests, {
+	stdio?: {
+		stdin?: string;
+		stdout?: string;
+		stderr?: string;
+	};
+}>;
+
+export type ReadyParams = {
+	stdio?: {
+		stdin?: vscode.Uri;
+		stdout?: vscode.Uri;
+		stderr?: vscode.Uri;
+	};
+};
+
+export type Options = {
+	/**
+	 * A handler that is called when the WASM exists
+	 */
+	exitHandler?: (rval: number) => void;
+
+	/**
+	 * Whether to echo the service name in the terminal
+	 */
+	echoName?: boolean;
+};
 
 export class ApiService {
 
@@ -190,6 +204,19 @@ export class ApiService {
 
 	public registerCharacterDeviceProvider(scheme: string, provider: CharacterDeviceProvider): void {
 		this.characterDeviceProviders.set(scheme, provider);
+	}
+
+	public signalReady(params?: ReadyParams): void {
+		const p = params?.stdio !== undefined
+			? {
+				stdio: {
+					stdin: params.stdio.stdin?.toString(true),
+					stdout: params.stdio.stdout?.toString(true),
+					stderr: params.stdio.stderr?.toString(true)
+				}
+			  }
+			: undefined;
+		this.connection.signalReady(p);
 	}
 
 	private asFileSystemError(error: vscode.FileSystemError): DTOs.FileSystemError {

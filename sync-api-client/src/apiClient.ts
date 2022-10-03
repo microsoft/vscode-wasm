@@ -47,7 +47,17 @@ export interface CharacterDevice {
 	read(uri: URI, maxBytesToRead: number): Uint8Array;
 }
 
-type ApiClientConnection = ClientConnection<Requests>;
+export namespace ApiClientConnection {
+	export type ReadyParams = {
+		stdio?: {
+			stdin?: DTOs.UriComponents;
+			stdout?: DTOs.UriComponents;
+			stderr?: DTOs.UriComponents;
+		};
+	};
+}
+
+export type ApiClientConnection = ClientConnection<Requests, ApiClientConnection.ReadyParams>;
 
 class TimerImpl implements Timer {
 
@@ -230,6 +240,14 @@ class WorkspaceImpl implements Workspace {
 	}
 }
 
+export type ReadyParams = {
+	stdio?: {
+		stdin?: URI;
+		stdout?: URI;
+		stderr?: URI;
+	};
+};
+
 export class ApiClient {
 
 	private readonly connection: ApiClientConnection;
@@ -251,5 +269,18 @@ export class ApiClient {
 		this.vscode = {
 			workspace: new WorkspaceImpl(this.connection)
 		};
+	}
+
+	public async serviceReady(): Promise<ReadyParams> {
+		const params = await this.connection.serviceReady();
+		if (params === undefined || params.stdio === undefined) {
+			return {};
+		}
+
+		return { stdio: {
+			stdin: params.stdio.stdin !== undefined ? URI.from(params.stdio.stdin) : undefined,
+			stdout: params.stdio.stdout !== undefined ? URI.from(params.stdio.stdout) : undefined,
+			stderr: params.stdio.stderr !== undefined ? URI.from(params.stdio.stderr) : undefined
+		}};
 	}
 }

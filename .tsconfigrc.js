@@ -78,7 +78,20 @@ const referenced = {
 	compilerOptions: {
 		composite: true
 	},
-}
+};
+
+/** @type SharableOptions */
+const testbedOptions = {
+	compilerOptions: {
+		rootDir: ".",
+		skipLibCheck: true,
+		lib: [ "es2020", "webworker"],
+		types: ["node", "vscode"],
+		module: "Node16",
+		moduleResolution: "Node16",
+		outDir: "./out"
+	}
+};
 
 /** @type ProjectDescription */
 const sync_api_common = {
@@ -158,6 +171,7 @@ const sync_api_service = {
 	]
 };
 
+/** @type ProjectDescription */
 const sync_api_tests = {
 	name: 'sync-api-tests',
 	path: './sync-api-tests',
@@ -202,6 +216,33 @@ const wasm_wasi = {
 		sync_api_client
 	]
 };
+
+/** @type ProjectDescription */
+const testbed_coreutils = {
+	name: "coreutils",
+	path: './testbeds/coreutils',
+	extends: [ testbedOptions ],
+	out:  {
+		dir: './out'
+	}
+}
+
+/** @type ProjectDescription */
+const testbed_rust = {
+	name: "rust",
+	path: './testbeds/rust',
+	extends: [ testbedOptions ],
+	out:  {
+		dir: './out'
+	}
+}
+
+/** @type ProjectDescription */
+const testbeds = {
+	name: 'testbeds',
+	path: './testbeds',
+	references: [ testbed_coreutils, testbed_rust ]
+}
 
 /** @type ProjectDescription */
 const root = {
@@ -273,7 +314,10 @@ const projects = [
 	[ sync_api_service, [ compileProjectOptions, watchProjectOptions ] ],
 	[ sync_api_tests, [ compileProjectOptions, watchProjectOptions ] ],
 	[ wasm_wasi, [ compileProjectOptions, watchProjectOptions ] ],
-	[ root, [compileProjectOptions, watchProjectOptions ]]
+	[ root, [compileProjectOptions, watchProjectOptions ] ],
+	[ testbed_coreutils, [ compileProjectOptions ] ],
+	[ testbed_rust, [ compileProjectOptions ] ],
+	[ testbeds, [ compileProjectOptions ] ]
 ];
 
 module.exports = projects;

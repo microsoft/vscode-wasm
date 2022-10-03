@@ -7,13 +7,13 @@ import { parentPort, Worker } from 'worker_threads';
 
 import RAL from '../common/ral';
 import type { Disposable } from '../common/disposable';
-import type { RequestType } from '../common/connection';
+import type { Params, RequestType } from '../common/connection';
 import { ClientConnection, ServiceConnection } from './connection';
 
 interface RIL extends RAL {
 }
 
-class TestServiceConnection<RequestHandlers extends RequestType | undefined = undefined> extends ServiceConnection<RequestHandlers> {
+class TestServiceConnection<RequestHandlers extends RequestType | undefined = undefined, ReadyParams extends Params | undefined = undefined> extends ServiceConnection<RequestHandlers, ReadyParams> {
 	private readonly  worker: Worker;
 	constructor(script: string, testCase?: string) {
 		const worker = new Worker(script, testCase !== undefined ? { argv: [testCase] } : undefined);
@@ -58,16 +58,16 @@ const _ril: RIL = Object.freeze<RIL>({
 	}),
 	$testing: Object.freeze({
 		ClientConnection: Object.freeze({
-			create<Requests extends RequestType | undefined = undefined>() {
+			create<Requests extends RequestType | undefined = undefined, ReadyParams extends Params | undefined = undefined>() {
 				if (!parentPort) {
 					throw new Error(`No parent port defined. Shouldn't happen in test setup`);
 				}
-				return new ClientConnection<Requests>(parentPort);
+				return new ClientConnection<Requests, ReadyParams>(parentPort);
 			}
 		}),
 		ServiceConnection: Object.freeze({
-			create<RequestHandlers extends RequestType | undefined = undefined>(script: string, testCase?: string) {
-				return new TestServiceConnection<RequestHandlers>(script, testCase);
+			create<RequestHandlers extends RequestType | undefined = undefined, ReadyParams extends Params | undefined = undefined>(script: string, testCase?: string) {
+				return new TestServiceConnection<RequestHandlers, ReadyParams>(script, testCase);
 			}
 		}),
 		get testCase() {

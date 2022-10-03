@@ -7,17 +7,16 @@ import * as path from 'path';
 import { parentPort  } from 'worker_threads';
 
 import { ClientConnection } from '@vscode/sync-api-common/node';
-import { ApiClient, Requests } from '@vscode/sync-api-client';
+import { ApiClient, ApiClientConnection, Requests } from '@vscode/sync-api-client';
 import { WASI, Options } from '@vscode/wasm-wasi/node';
 
 if (parentPort === null) {
 	process.exit();
 }
 
-const connection = new ClientConnection<Requests>(parentPort);
-connection.serviceReady().then(async (params) => {
+const apiClient = new ApiClient(new ClientConnection<Requests, ApiClientConnection.ReadyParams>(parentPort));
+apiClient.serviceReady().then(async (params) => {
 	const name = 'Run Rust';
-	const apiClient = new ApiClient(connection);
 	const workspaceFolders = apiClient.vscode.workspace.workspaceFolders;
 	const mapDir: Options['mapDir'] = [];
 	let toRun: string | undefined;

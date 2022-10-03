@@ -4,9 +4,9 @@
  * ------------------------------------------------------------------------------------------ */
 
 import RAL from '../common/ral';
-import { BaseServiceConnection, BaseClientConnection, Message, RequestType } from '../common/connection';
+import { BaseServiceConnection, BaseClientConnection, Message, RequestType, Params } from '../common/connection';
 
-export class ClientConnection<Requests extends RequestType | undefined = undefined> extends BaseClientConnection<Requests> {
+export class ClientConnection<Requests extends RequestType | undefined = undefined, ReadyParams extends Params | undefined = undefined> extends BaseClientConnection<Requests, ReadyParams> {
 
 	private readonly port: MessagePort | Worker | DedicatedWorkerGlobalScope;
 
@@ -23,7 +23,7 @@ export class ClientConnection<Requests extends RequestType | undefined = undefin
 	}
 }
 
-export class ServiceConnection<RequestHandlers extends RequestType | undefined = undefined> extends BaseServiceConnection<RequestHandlers> {
+export class ServiceConnection<RequestHandlers extends RequestType | undefined = undefined, ReadyParams extends Params | undefined = undefined> extends BaseServiceConnection<RequestHandlers, ReadyParams> {
 
 	private readonly port: MessagePort | Worker | DedicatedWorkerGlobalScope;
 

@@ -126,10 +126,10 @@ export type Options = {
 	/**
 	 * Stdin, stdout and stderr URIs to use
 	 */
-	std: {
-		stdin: URI;
-		stdout: URI;
-		stderr: URI;
+	stdio?: {
+		stdin?: URI;
+		stdout?: URI;
+		stderr?: URI;
 	};
 
 	/**
@@ -158,14 +158,14 @@ export type Options = {
 
 export namespace WASI {
 
-	export function create(_name: string, apiClient: ApiClient, exitHandler: (rval: number) => void, options: Options): WASI {
+	export function create(name: string, apiClient: ApiClient, exitHandler: (rval: number) => void, options: Options): WASI {
 		let instance: WebAssembly.$Instance;
 
 		const thread_start = RAL().clock.realtime();
 		const fileDescriptors: Map<fd, FileDescriptor> = new Map();
 		const encoder: RAL.TextEncoder = RAL().TextEncoder.create(options?.encoding);
 		const decoder: RAL.TextDecoder = RAL().TextDecoder.create(options?.encoding);
-		const fileSystem = FileSystem.create(apiClient, { memoryView: memoryView, memoryRaw: memoryRaw }, encoder, options.std);
+		const fileSystem = FileSystem.create(apiClient, { memoryView: memoryView, memoryRaw: memoryRaw }, encoder, options.stdio);
 		fileDescriptors.set(fileSystem.stdin.fd, fileSystem.stdin);
 		fileDescriptors.set(fileSystem.stdout.fd, fileSystem.stdout);
 		fileDescriptors.set(fileSystem.stderr.fd, fileSystem.stderr);
@@ -186,10 +186,14 @@ export namespace WASI {
 				const memory = memoryView();
 				let count = 0;
 				let size = 0;
-				for (const arg of options.argv ?? []) {
-					const value = `${arg}\0`;
+				function processValue(str: string): void {
+					const value = `${str}\0`;
 					size += encoder.encode(value).byteLength;
 					count++;
+				}
+				processValue(name);
+				for (const arg of options.argv ?? []) {
+					processValue(arg);
 				}
 				memory.setUint32(argvCount_ptr, count, true);
 				memory.setUint32(argvBufSize_ptr, size, true);
@@ -200,12 +204,18 @@ export namespace WASI {
 				const memoryBytes = new Uint8Array(memoryRaw());
 				let entryOffset = argv_ptr;
 				let valueOffset = argvBuf_ptr;
-				for (const arg of options.argv ?? []) {
-					const data = encoder.encode(`${arg}\0`);
+
+				function processValue(str: string): void {
+					const data = encoder.encode(`${str}\0`);
 					memory.setUint32(entryOffset, valueOffset, true);
 					entryOffset += 4;
 					memoryBytes.set(data, valueOffset);
 					valueOffset += data.byteLength;
+
+				}
+				processValue(name);
+				for (const arg of options.argv ?? []) {
+					processValue(arg);
 				}
 				return Errno.success;
 			},

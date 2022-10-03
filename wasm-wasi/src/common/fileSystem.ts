@@ -331,7 +331,7 @@ export namespace FileSystem {
 		}
 	}
 
-	export function create(apiClient: ApiClient, memoryProvider: MemoryProvider, textEncoder: RAL.TextEncoder, std: { stdin: URI; stdout: URI; stderr: URI }): FileSystem {
+	export function create(apiClient: ApiClient, memoryProvider: MemoryProvider, textEncoder: RAL.TextEncoder, stdio: { stdin?: URI; stdout?: URI; stderr?: URI } | undefined): FileSystem {
 
 		let inodeCounter: bigint = 1n;
 
@@ -413,23 +413,27 @@ export namespace FileSystem {
 			return uri.with( { path: RAL().path.join(uri.path, name)} );
 		}
 
+		const stdin = stdio?.stdin ?? URI.from({ scheme: 'sync-api-console', path: 'stdin'});
+		const stdout = stdio?.stdin ?? URI.from({ scheme: 'sync-api-console', path: 'stdout'});
+		const stderr = stdio?.stdin ?? URI.from({ scheme: 'sync-api-console', path: 'stderr'});
+
 		const fileSystem: FileSystem = {
 			stdin: new FileDescriptorImpl(
-				refINode('/dev/tty', std.stdin).id,
+				refINode('/dev/tty', stdin).id,
 				Filetype.character_device,
 				{ base: Rights.StdinBase, inheriting: Rights.StdinInheriting },
 				0, '/dev/tty', true
 			),
 
 			stdout: new FileDescriptorImpl(
-				refINode('/dev/tty', std.stdout).id,
+				refINode('/dev/tty', stdout).id,
 				Filetype.character_device,
 				{ base: Rights.StdoutBase, inheriting: Rights.StdoutInheriting },
 				0, '/dev/tty', true
 			),
 
 			stderr: new FileDescriptorImpl(
-				refINode('/dev/tty', std.stderr).id,
+				refINode('/dev/tty', stderr).id,
 				Filetype.character_device,
 				{ base: Rights.StdoutBase, inheriting: Rights.StdoutInheriting },
 				0, '/dev/tty', true

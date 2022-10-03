@@ -4,7 +4,7 @@
  * ------------------------------------------------------------------------------------------ */
 
 import { Disposable } from './disposable';
-import type { RequestType, ClientConnection, ServiceConnection } from './connection';
+import type { RequestType, ClientConnection, ServiceConnection, Params } from './connection';
 
 interface _TextEncoder {
 	encode(input?: string): Uint8Array;
@@ -14,7 +14,7 @@ interface _TextDecoder {
 	decode(input?: Uint8Array): string;
 }
 
-interface _TestServiceConnection<RequestHandlers extends RequestType | undefined = undefined> extends ServiceConnection<RequestHandlers> {
+interface _TestServiceConnection<RequestHandlers extends RequestType | undefined = undefined, ReadyParams extends Params | undefined = undefined> extends ServiceConnection<RequestHandlers, ReadyParams> {
 	terminate(): Promise<number>;
 }
 
@@ -50,10 +50,10 @@ interface RAL {
 
 	readonly $testing: {
 		readonly ClientConnection: {
-			create<Requests extends RequestType | undefined = undefined>(): ClientConnection<Requests>;
+			create<Requests extends RequestType | undefined = undefined, ReadyParams extends Params | undefined = undefined>(): ClientConnection<Requests, ReadyParams>;
 		};
 		readonly ServiceConnection: {
-			create<RequestHandlers extends RequestType | undefined = undefined>(script: string, testCase?: string): _TestServiceConnection<RequestHandlers>;
+			create<RequestHandlers extends RequestType | undefined = undefined, ReadyParams extends Params | undefined = undefined>(script: string, testCase?: string): _TestServiceConnection<RequestHandlers, ReadyParams>;
 		};
 		readonly testCase: string;
 	};

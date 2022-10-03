@@ -71,8 +71,8 @@ export namespace Notification {
 	}
 }
 
-type PromiseCallbacks = {
-	resolve: (response: any) => void;
+type PromiseCallbacks<T> = {
+	resolve: (response: T) => void;
 	reject: (error: any) => void;
 };
 
@@ -569,29 +569,29 @@ export class RPCError extends Error {
 	}
 }
 
-export interface ClientConnection<Requests extends RequestType | undefined = undefined> {
+export interface ClientConnection<Requests extends RequestType | undefined = undefined, ReadyParams extends Params | undefined = undefined> {
 	readonly sendRequest: SendRequestSignatures<Requests>;
-	serviceReady(): Promise<void>;
+	serviceReady(): Promise<ReadyParams>;
 }
 
-export abstract class BaseClientConnection<Requests extends RequestType | undefined = undefined> implements ClientConnection<Requests> {
+export abstract class BaseClientConnection<Requests extends RequestType | undefined = undefined,ReadyParams extends Params | undefined = undefined> implements ClientConnection<Requests, ReadyParams> {
 
 	private id: number;
 	private readonly textEncoder: RAL.TextEncoder;
 	private readonly textDecoder: RAL.TextDecoder;
-	private readonly readyPromise: Promise<void>;
-	private readyCallbacks: PromiseCallbacks | undefined;
+	private readonly readyPromise: Promise<ReadyParams>;
+	private readyCallbacks: PromiseCallbacks<ReadyParams> | undefined;
 
 	constructor() {
 		this.id = 1;
 		this.textEncoder = RAL().TextEncoder.create();
 		this.textDecoder = RAL().TextDecoder.create();
-		this.readyPromise = new Promise((resolve, reject) => {
+		this.readyPromise = new Promise<ReadyParams>((resolve, reject) => {
 			this.readyCallbacks = { resolve, reject };
 		});
 	}
 
-	public serviceReady(): Promise<void> {
+	public serviceReady(): Promise<ReadyParams> {
 		return this.readyPromise;
 	}
 
@@ -723,7 +723,7 @@ export abstract class BaseClientConnection<Requests extends RequestType | undefi
 
 	protected handleMessage(message: Message): void {
 		if (message.method === '$/ready') {
-			this.readyCallbacks!.resolve(message.params);
+			this.readyCallbacks!.resolve(message.params as ReadyParams);
 		}
 	}
 }
@@ -760,12 +760,12 @@ type RequestHandler = {
 	(arg1?: Params | TypedArray, arg2?: TypedArray): RequestResult | Promise<RequestResult>;
 };
 
-export interface ServiceConnection<RequestHandlers extends RequestType | undefined = undefined> {
+export interface ServiceConnection<RequestHandlers extends RequestType | undefined = undefined, ReadyParams extends Params | undefined = undefined> {
 	readonly onRequest: HandleRequestSignatures<RequestHandlers>;
-	signalReady(): void;
+	signalReady(params?: ReadyParams): void;
 }
 
-export abstract class BaseServiceConnection<RequestHandlers extends RequestType | undefined = undefined> implements ServiceConnection<RequestHandlers> {
+export abstract class BaseServiceConnection<RequestHandlers extends RequestType | undefined = undefined, ReadyParams extends Params | undefined = undefined> implements ServiceConnection<RequestHandlers, ReadyParams> {
 
 	private readonly textDecoder: RAL.TextDecoder;
 	private readonly textEncoder: RAL.TextEncoder;
@@ -872,8 +872,8 @@ export abstract class BaseServiceConnection<RequestHandlers extends RequestType 
 		Atomics.notify(sync, 0);
 	}
 
-	public signalReady(): void {
-		const notification: Notification = { method: '$/ready' };
+	public signalReady(params?: ReadyParams): void {
+		const notification: Notification = { method: '$/ready', params };
 		this.postMessage(notification);
 	}
 

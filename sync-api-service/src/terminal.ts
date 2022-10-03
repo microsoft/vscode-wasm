@@ -169,6 +169,7 @@ export interface ServicePseudoTerminal extends Pseudoterminal {
 	readonly onDidClose: Event<void>;
 	readonly onAnyKey: Event<void>;
 
+	getStdioConfiguration(): { stdin: Uri; stdout: Uri; stderr: Uri };
 	setMode(mode: TerminalMode): void;
 	setName(name: string): void;
 	write(str: string): void;
@@ -232,7 +233,7 @@ class ServiceTerminalImpl implements ServicePseudoTerminal {
 
 	public readonly onAnyKey: Event<void>;
 
-	public getUris(): { stdin: Uri; stdout: Uri; stderr: Uri } {
+	public getStdioConfiguration(): { stdin: Uri; stdout: Uri; stderr: Uri } {
 		return {
 			stdin: this.uri.with({ path: 'stdin'}),
 			stdout: this.uri.with({ path: 'stdout'}),

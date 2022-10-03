@@ -6,16 +6,16 @@
 import { AssertionError } from 'assert';
 
 import { RAL } from '@vscode/sync-api-common';
-import { ApiClient, Requests, WorkspaceFolder } from '@vscode/sync-api-client';
+import { ApiClient, ApiClientConnection, Requests, WorkspaceFolder } from '@vscode/sync-api-client';
 
 import { TestRequests } from '../tests';
 
 export type AllRequests = Requests | TestRequests;
 
 export default async function runSingle(test: (client: ApiClient, folder: WorkspaceFolder) => void): Promise<void> {
-	const connection = RAL().$testing.ClientConnection.create<AllRequests>();
+	const connection = RAL().$testing.ClientConnection.create<AllRequests, ApiClientConnection.ReadyParams>();
 	const client = new ApiClient(connection);
-	await connection.serviceReady();
+	await client.serviceReady();
 	const workspaceFolders = client.vscode.workspace.workspaceFolders;
 	const folder = workspaceFolders[0];
 	try {

@@ -6,7 +6,7 @@
 import RAL from '../common/ral';
 
 import type { Disposable }  from '../common/disposable';
-import type { RequestType } from '../common/connection';
+import type { Params, RequestType } from '../common/connection';
 import { ClientConnection, ServiceConnection } from './connection';
 
 interface RIL extends RAL {
@@ -16,7 +16,7 @@ interface RIL extends RAL {
 const encoder: RAL.TextEncoder = new TextEncoder();
 const decoder: RAL.TextDecoder = new TextDecoder();
 
-class TestServiceConnection<RequestHandlers extends RequestType | undefined = undefined> extends ServiceConnection<RequestHandlers> {
+class TestServiceConnection<RequestHandlers extends RequestType | undefined = undefined, ReadyParams extends Params | undefined = undefined> extends ServiceConnection<RequestHandlers, ReadyParams> {
 	private readonly  worker: Worker;
 	constructor(script: string, testCase?: string) {
 		const url = testCase !== undefined ? `${script}?toRun=${testCase}` : script;
@@ -59,13 +59,13 @@ const _ril: RIL = Object.freeze<RIL>({
 	}),
 	$testing: Object.freeze({
 		ClientConnection: Object.freeze({
-			create<Requests extends RequestType | undefined = undefined>() {
-				return new ClientConnection<Requests>(self);
+			create<Requests extends RequestType | undefined = undefined, ReadyParams extends Params | undefined = undefined>() {
+				return new ClientConnection<Requests, ReadyParams>(self);
 			}
 		}),
 		ServiceConnection: Object.freeze({
-			create<RequestHandlers extends RequestType | undefined = undefined>(script: string, testCase?: string) {
-				return new TestServiceConnection<RequestHandlers>(script, testCase);
+			create<RequestHandlers extends RequestType | undefined = undefined, ReadyParams extends Params | undefined = undefined>(script: string, testCase?: string) {
+				return new TestServiceConnection<RequestHandlers, ReadyParams>(script, testCase);
 			}
 		}),
 		get testCase() {

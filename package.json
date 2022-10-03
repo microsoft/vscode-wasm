@@ -46,5 +46,8 @@
 		"esbuild:apiTests": "cd sync-api-tests && npm run esbuild && cd ..",
 		"test": "cd sync-api-common && npm run test && cd ../sync-api-tests && npm run test && cd ..",
 		"test:apiWebTests": "cd sync-api-tests && npm run test:runWebTests && cd .."
+	},
+	"dependencies": {
+		"@vscode/tsconfig-gen": "file:../../LanguageServer/Node/tsconfig-gen/vscode-tsconfig-gen-0.1.0.tgz"
 	}
 }

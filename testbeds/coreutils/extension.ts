@@ -6,29 +6,28 @@
 import * as path from 'path';
 import { Worker } from 'worker_threads';
 
-import { commands, ExtensionContext, Terminal, window } from 'vscode';
+import { commands, ExtensionContext, window } from 'vscode';
 
 import { ServiceConnection } from '@vscode/sync-api-common/node';
-import { ApiService, Requests } from '@vscode/sync-api-service';
-
-const name = 'Core Utils [base32 test.bat]';
-let apiService: ApiService;
-let connection: ServiceConnection<Requests>;
-let terminal: Terminal;
+import { ApiService, Requests, PseudoTerminalProvider, ApiServiceConnection } from '@vscode/sync-api-service';
 
 export async function activate(_context: ExtensionContext) {
 
 	commands.registerCommand('testbed-coreutils.run', () => {
+		const name = 'Core Utils [base32 test.bat]';
 		const worker = new Worker(path.join(__dirname, './worker.js'));
-		connection = new ServiceConnection<Requests>(worker);
-		apiService = new ApiService(name, connection, {
+		const connection: ApiServiceConnection = new ServiceConnection<Requests>(worker);
+		const apiService = new ApiService(name, connection, {
 			exitHandler: (_rval) => {
 				process.nextTick(() => worker.terminate());
 			}
 		});
-		terminal = window.createTerminal({ name, pty: apiService.getPty() });
+		const ptp = new PseudoTerminalProvider();
+		apiService.registerCharacterDeviceProvider(PseudoTerminalProvider.scheme, ptp);
+		const pty = ptp.createAndRegisterPseudoTerminal();
+		const terminal = window.createTerminal({ name, pty: pty });
 		terminal.show();
-		connection.signalReady();
+		apiService.signalReady({ stdio: pty.getStdioConfiguration() });
 	});
 }
 
