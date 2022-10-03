@@ -6,6 +6,7 @@ lib/**/*.map
 lib/**/*.tsbuildInfo
 src/
 test/
+example/
 .eslintrc*
 .eslintignore
 .mocharc*
