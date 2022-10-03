@@ -414,26 +414,26 @@ export namespace FileSystem {
 		}
 
 		const stdin = stdio?.stdin ?? URI.from({ scheme: 'sync-api-console', path: 'stdin'});
-		const stdout = stdio?.stdin ?? URI.from({ scheme: 'sync-api-console', path: 'stdout'});
-		const stderr = stdio?.stdin ?? URI.from({ scheme: 'sync-api-console', path: 'stderr'});
+		const stdout = stdio?.stdout ?? URI.from({ scheme: 'sync-api-console', path: 'stdout'});
+		const stderr = stdio?.stderr ?? URI.from({ scheme: 'sync-api-console', path: 'stderr'});
 
 		const fileSystem: FileSystem = {
 			stdin: new FileDescriptorImpl(
-				refINode('/dev/tty', stdin).id,
+				refINode('/dev/tty[stdin]', stdin).id,
 				Filetype.character_device,
 				{ base: Rights.StdinBase, inheriting: Rights.StdinInheriting },
 				0, '/dev/tty', true
 			),
 
 			stdout: new FileDescriptorImpl(
-				refINode('/dev/tty', stdout).id,
+				refINode('/dev/tty[stdout]', stdout).id,
 				Filetype.character_device,
 				{ base: Rights.StdoutBase, inheriting: Rights.StdoutInheriting },
 				0, '/dev/tty', true
 			),
 
 			stderr: new FileDescriptorImpl(
-				refINode('/dev/tty', stderr).id,
+				refINode('/dev/tty[stderr]', stderr).id,
 				Filetype.character_device,
 				{ base: Rights.StdoutBase, inheriting: Rights.StdoutInheriting },
 				0, '/dev/tty', true

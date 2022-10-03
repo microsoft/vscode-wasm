@@ -19,7 +19,6 @@ apiClient.serviceReady().then(async (params) => {
 	const name = 'Run Rust';
 	const workspaceFolders = apiClient.vscode.workspace.workspaceFolders;
 	const mapDir: Options['mapDir'] = [];
-	let toRun: string | undefined;
 	if (workspaceFolders.length === 1) {
 		mapDir.push({ name: path.posix.join(path.posix.sep, 'workspace'), uri: workspaceFolders[0].uri });
 	} else {
@@ -31,6 +30,7 @@ apiClient.serviceReady().then(async (params) => {
 		apiClient.process.procExit(rval);
 	};
 	const wasi = WASI.create(name, apiClient, exitHandler, {
+		stdio: params.stdio,
 		mapDir,
 	});
 	const wasmFile = path.join(__dirname, '..', 'target', 'wasm32-wasi', 'debug', 'rust-example.wasm');

@@ -34,13 +34,17 @@ class ConsoleCharacterDeviceProvider implements CharacterDeviceProvider {
 	}
 }
 
-export type ApiServiceConnection = ServiceConnection<Requests, {
-	stdio?: {
-		stdin?: string;
-		stdout?: string;
-		stderr?: string;
+export namespace ApiServiceConnection {
+	export type ReadyParams = {
+		stdio?: {
+			stdin?: DTOs.UriComponents;
+			stdout?: DTOs.UriComponents;
+			stderr?: DTOs.UriComponents;
+		};
 	};
-}>;
+}
+
+export type ApiServiceConnection = ServiceConnection<Requests, ApiServiceConnection.ReadyParams>;
 
 export type ReadyParams = {
 	stdio?: {
@@ -207,12 +211,12 @@ export class ApiService {
 	}
 
 	public signalReady(params?: ReadyParams): void {
-		const p = params?.stdio !== undefined
+		const p: ApiServiceConnection.ReadyParams | undefined = params?.stdio !== undefined
 			? {
 				stdio: {
-					stdin: params.stdio.stdin?.toString(true),
-					stdout: params.stdio.stdout?.toString(true),
-					stderr: params.stdio.stderr?.toString(true)
+					stdin: params.stdio.stdin?.toJSON(),
+					stdout: params.stdio.stdout?.toJSON(),
+					stderr: params.stdio.stderr?.toJSON()
 				}
 			  }
 			: undefined;

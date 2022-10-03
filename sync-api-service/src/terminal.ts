@@ -203,7 +203,7 @@ class ServiceTerminalImpl implements ServicePseudoTerminal {
 	private writeBuffer: string[] | undefined;
 
 	constructor(scheme: string = PseudoTerminalProvider.scheme) {
-		this.uri = Uri.parse(`${scheme}://${uuid.v4()}/`);
+		this.uri = Uri.from({ scheme: scheme, authority: uuid.v4() });
 		this.mode = TerminalMode.inUse;
 
 		this._onDidClose = new EventEmitter();
@@ -235,9 +235,9 @@ class ServiceTerminalImpl implements ServicePseudoTerminal {
 
 	public getStdioConfiguration(): { stdin: Uri; stdout: Uri; stderr: Uri } {
 		return {
-			stdin: this.uri.with({ path: 'stdin'}),
-			stdout: this.uri.with({ path: 'stdout'}),
-			stderr: this.uri.with({ path: 'stderr '})
+			stdin: this.uri.with({ path: '/stdin'}),
+			stdout: this.uri.with({ path: '/stdout'}),
+			stderr: this.uri.with({ path: '/stderr'})
 		};
 	}
 
@@ -406,7 +406,7 @@ export class PseudoTerminalProvider implements CharacterDeviceProvider {
 	}
 
 	public async read(uri: Uri, _maxBytesToRead: number): Promise<Uint8Array> {
-		const key = uri.with({ path: undefined, query: undefined, fragment: undefined }).toString(true);
+		const key = Uri.from({ scheme: uri.scheme, authority: uri.authority }).toString(true);
 		const terminal = this.terminals.get(key);
 		if (terminal === undefined) {
 			throw new Error(`No terminal found for ${key}`);
@@ -415,7 +415,7 @@ export class PseudoTerminalProvider implements CharacterDeviceProvider {
 	}
 
 	public write(uri: Uri, binary: Uint8Array): Promise<void> {
-		const key = uri.with({ path: undefined, query: undefined, fragment: undefined }).toString(true);
+		const key = Uri.from({ scheme: uri.scheme, authority: uri.authority }).toString(true);
 		const terminal = this.terminals.get(key);
 		if (terminal === undefined) {
 			RAL().console.log(this.decoder.decode(binary));
