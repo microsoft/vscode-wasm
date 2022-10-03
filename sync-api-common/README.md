@@ -27,7 +27,7 @@ export type Requests = {
 The setup in the worker looks like this:
 
 ```ts
-import { ClientConnection } from '@vscode/sync-api-common/node';
+import { ClientConnection } from '@vscode/sync-api-common/browser';
 import { Requests } from './requests';
 
 const connection = new ClientConnection<Requests>(parentPort);
@@ -64,4 +64,4 @@ connection.onRequest('getValue', async (params) => {
 connection.signalReady();
 ```
 
-For code executed in the browser exchange the import `@vscode/sync-api-common/node` with `@vscode/sync-api-common/browser`.
+For code executed in the desktop exchange the import `@vscode/sync-api-common/browser` with `@vscode/sync-api-common/node`.

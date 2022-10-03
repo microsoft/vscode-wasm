@@ -24,6 +24,15 @@
 		{
 			"type": "extensionHost",
 			"request": "launch",
+			"name": "C Testbed",
+			"runtimeExecutable": "${execPath}",
+			"args": ["--extensionDevelopmentPath=${workspaceRoot}/wasm-wasi/example"],
+			"outFiles": ["${workspaceRoot}/wasm-wasi/example/**/*.js"],
+			"sourceMaps": true
+		},
+		{
+			"type": "extensionHost",
+			"request": "launch",
 			"name": "C++ Testbed",
 			"runtimeExecutable": "${execPath}",
 			"args": ["--extensionDevelopmentPath=${workspaceRoot}/testbeds/cpp"],

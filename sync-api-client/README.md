@@ -16,7 +16,7 @@ depends on `@vscode/syc-api-common`.
 Extension host worker that offers access to VS Code extension host API. The setup in the extension host code looks like this:
 
 ```ts
-import { ServiceConnection } from '@vscode/sync-api-common/node';
+import { ServiceConnection } from '@vscode/sync-api-common/browser';
 import { APIRequests, ApiService } from '@vscode/sync-api-service';
 
 const worker = new Worker(...);
@@ -34,7 +34,7 @@ connection.signalReady();
 The worker side looks as follows:
 
 ```ts
-import { ClientConnection } from '@vscode/sync-api-common/node';
+import { ClientConnection } from '@vscode/sync-api-common/browser';
 import { ApiClient, APIRequests } from '@vscode/sync-api-client';
 
 const connection = new ClientConnection<APIRequests>(parentPort);
@@ -48,4 +48,4 @@ const workspaceFolders = apiClient.vscode.workspace.workspaceFolders;
 const content = apiClient.vscode.workspace.filesystem.readFile(uri);
 ```
 
-For code executed in the browser exchange the import `@vscode/sync-api-common/node` with `@vscode/sync-api-common/browser`.
+For code executed in the desktop exchange the import `@vscode/sync-api-common/browser` with `@vscode/sync-api-common/node`.
