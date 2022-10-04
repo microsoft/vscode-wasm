@@ -309,7 +309,6 @@ export namespace WASI {
 				}
 			},
 			fd_fdstat_get: (fd: fd, fdstat_ptr: ptr): errno => {
-				// This is not available under VS Code.
 				try {
 					const fileDescriptor = getFileDescriptor(fd);
 					fileSystem.fd_fdstat_get(fileDescriptor, fdstat_ptr);
@@ -319,6 +318,7 @@ export namespace WASI {
 				}
 			},
 			fd_fdstat_set_flags: (fd: fd, fdflags: fdflags): errno => {
+				// This is not available under VS Code.
 				try {
 					const fileDescriptor = getFileDescriptor(fd);
 					fileDescriptor.assertBaseRight(Rights.fd_fdstat_set_flags);

@@ -170,24 +170,24 @@ export type Requests = {
 	result: VariableResult<DTOs.WorkspaceFolder[]>;
 } | {
 	/**
-	 * Write a string encoded using UTF8 to the terminal
+	 * Writes bytes to a sink
 	 */
-	method: 'characterDevice/write';
+	method: 'byteTransfer/write';
 	params: {
 		uri: DTOs.UriComponents;
 		binary: Uint8Array;
 	};
-	result: null;
+	result: Uint32Array;
 } | {
 	/**
-	 * Reads a line from the terminal
+	 * Reads bytes from a source
 	 */
-	method: 'characterDevice/read';
+	method: 'byteTransfer/read';
 	params: {
 		uri: DTOs.UriComponents;
 		maxBytesToRead: number;
 	};
-	result: Uint8Array;
+	result: VariableResult<Uint8Array>;
 } | {
 	/**
 	 * Stat a file / directory

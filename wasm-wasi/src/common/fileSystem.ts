@@ -470,37 +470,11 @@ export namespace FileSystem {
 			},
 			fd_fdstat_get: (fileDescriptor, fdstat_ptr): void => {
 				const memory = memoryView();
-				if (fileDescriptor.isStd()) {
-					const fdstat = Fdstat.create(fdstat_ptr, memory);
-					fdstat.fs_filetype = Filetype.character_device;
-					fdstat.fs_flags = 0;
-					if (fileDescriptor.isStdin()) {
-						fdstat.fs_rights_base = Rights.StdinBase;
-						fdstat.fs_rights_inheriting = Rights.StdinInheriting;
-					} else {
-						fdstat.fs_rights_base = Rights.StdoutBase;
-						fdstat.fs_rights_inheriting = Rights.StdoutInheriting;
-					}
-				} else {
-					const inode = getINode(fileDescriptor.inode);
-					const vStat = vscode_fs.stat(inode.uri);
-					const fdstat = Fdstat.create(fdstat_ptr, memory);
-					fdstat.fs_filetype = code2Wasi.asFileType(vStat.type);
-					// No flags. We need to see if some of the tools we want to run
-					// need some and we need to simulate them using local storage.
-					fdstat.fs_flags = 0;
-					if (vStat.type === FileType.File) {
-						fdstat.fs_rights_base = Rights.FileBase;
-						fdstat.fs_rights_inheriting = Rights.FileInheriting;
-					} else if (vStat.type === FileType.Directory) {
-						fdstat.fs_rights_base = Rights.DirectoryBase;
-						fdstat.fs_rights_inheriting = Rights.DirectoryInheriting;
-					} else {
-						// Symbolic link and unknown
-						fdstat.fs_rights_base = 0n;
-						fdstat.fs_rights_inheriting = 0n;
-					}
-				}
+				const fdstat = Fdstat.create(fdstat_ptr, memory);
+				fdstat.fs_filetype = fileDescriptor.fileType;
+				fdstat.fs_flags = fileDescriptor.fdflags;
+				fdstat.fs_rights_base = fileDescriptor.rights.base;
+				fdstat.fs_rights_inheriting = fileDescriptor.rights.inheriting;
 			},
 			fd_filestat_get: (fileDescriptor, filestat_ptr): void => {
 				const memory = memoryView();

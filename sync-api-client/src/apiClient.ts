@@ -5,7 +5,7 @@
 
 import { URI } from 'vscode-uri';
 
-import { ClientConnection, Requests, RequestResult, DTOs, VariableResult, RPCErrno, RPCError, Uint8Result, RAL } from '@vscode/sync-api-common';
+import { ClientConnection, Requests, RequestResult, DTOs, VariableResult, RPCErrno, RPCError, RAL, Uint32Result } from '@vscode/sync-api-common';
 
 import * as vscode from './vscode';
 
@@ -39,11 +39,10 @@ export interface Window {
 export interface Workspace {
 	workspaceFolders: vscode.WorkspaceFolder[];
 	fileSystem: FileSystem;
-	characterDevice: CharacterDevice;
 }
 
-export interface CharacterDevice {
-	write(uri: URI, value: Uint8Array): void;
+export interface ByteTransfer {
+	write(uri: URI, value: Uint8Array): number;
 	read(uri: URI, maxBytesToRead: number): Uint8Array;
 }
 
@@ -84,31 +83,9 @@ class ProcessImpl implements Process {
 	}
 }
 
-class ConsoleImpl implements Console {
+class ByteTransferImpl implements ByteTransfer {
 
-	private readonly connection: ApiClientConnection;
-	private readonly encoder: RAL.TextEncoder;
-
-	private static stdout = URI.from( { scheme: 'sync-api-console', path: 'stdout'} );
-	private static stderr = URI.from( { scheme: 'sync-api-console', path: 'stderr'} );
-
-	constructor(connection: ApiClientConnection, encoder: RAL.TextEncoder) {
-		this.connection = connection;
-		this.encoder = encoder;
-	}
-
-	log(message?: string): void {
-		message = message === undefined ? '\n' : `${message}\n`;
-		this.connection.sendRequest('characterDevice/write', { uri: ConsoleImpl.stdout.toJSON(), binary: this.encoder.encode(message) });
-	}
-
-	error(message?: string): void {
-		message = message === undefined ? '\n' : `${message}\n`;
-		this.connection.sendRequest('characterDevice/write', { uri: ConsoleImpl.stderr.toJSON(), binary: this.encoder.encode(message) });
-	}
-}
-
-class CharacterDeviceImpl implements CharacterDevice {
+	public static scheme = 'byteTransfer' as const;
 
 	private readonly connection: ApiClientConnection;
 
@@ -116,16 +93,46 @@ class CharacterDeviceImpl implements CharacterDevice {
 		this.connection = connection;
 	}
 
-	public write(uri: URI, binary: Uint8Array): void {
-		this.connection.sendRequest('characterDevice/write', { uri: uri.toJSON(), binary });
-	}
-
 	public read(uri: URI, maxBytesToRead: number): Uint8Array {
-		const result = this.connection.sendRequest('characterDevice/read', { uri: uri.toJSON(), maxBytesToRead }, Uint8Result.fromByteLength(maxBytesToRead));
+		const result = this.connection.sendRequest('byteTransfer/read', { uri: uri.toJSON(), maxBytesToRead }, new VariableResult<Uint8Array>('binary'));
 		if (RequestResult.hasData(result)) {
 			return result.data;
 		}
 		throw new RPCError(result.errno, `Should never happen`);
+	}
+
+	public write(uri: URI, value: Uint8Array): number {
+		const result = this.connection.sendRequest('byteTransfer/write', { uri: uri.toJSON(), binary: value }, Uint32Result.fromByteLength(1));
+		if (RequestResult.hasData(result)) {
+			return result.data[0];
+		}
+		throw new RPCError(result.errno, `Should never happen`);
+	}
+}
+
+class ConsoleImpl implements Console {
+
+	private static authority = 'console' as const;
+	private static stdout = URI.from( { scheme: ByteTransferImpl.scheme, authority: ConsoleImpl.authority, path: 'stdout'} );
+	private static stderr = URI.from( { scheme: ByteTransferImpl.scheme, authority: ConsoleImpl.authority, path: 'stderr'} );
+
+	private readonly byteTransfer: ByteTransfer;
+	private readonly encoder: RAL.TextEncoder;
+
+
+	constructor(byteTransfer: ByteTransfer, encoder: RAL.TextEncoder) {
+		this.byteTransfer = byteTransfer;
+		this.encoder = encoder;
+	}
+
+	log(message?: string): void {
+		message = message === undefined ? '\n' : `${message}\n`;
+		this.byteTransfer.write(ConsoleImpl.stdout, this.encoder.encode(message));
+	}
+
+	error(message?: string): void {
+		message = message === undefined ? '\n' : `${message}\n`;
+		this.byteTransfer.write(ConsoleImpl.stderr, this.encoder.encode(message));
 	}
 }
 
@@ -223,12 +230,10 @@ class WorkspaceImpl implements Workspace {
 
 	private readonly connection: ApiClientConnection;
 	public readonly fileSystem: FileSystem;
-	public readonly characterDevice: CharacterDevice;
 
 	constructor(connection: ApiClientConnection) {
 		this.connection = connection;
 		this.fileSystem = new FileSystemImpl(this.connection);
-		this.characterDevice = new CharacterDeviceImpl(this.connection);
 	}
 
 	public get workspaceFolders(): vscode.WorkspaceFolder[] {
@@ -255,6 +260,7 @@ export class ApiClient {
 
 	public readonly timer: Timer;
 	public readonly process: Process;
+	public readonly byteTransfer: ByteTransfer;
 	public readonly console: Console;
 	public readonly vscode: {
 		readonly workspace: Workspace;
@@ -265,7 +271,8 @@ export class ApiClient {
 		this.encoder = RAL().TextEncoder.create();
 		this.timer = new TimerImpl(this.connection);
 		this.process = new ProcessImpl(this.connection);
-		this.console = new ConsoleImpl(this.connection, this.encoder);
+		this.byteTransfer = new ByteTransferImpl(this.connection);
+		this.console = new ConsoleImpl(this.byteTransfer, this.encoder);
 		this.vscode = {
 			workspace: new WorkspaceImpl(this.connection)
 		};
