@@ -6,6 +6,7 @@
 import { Uri } from 'vscode';
 
 export interface Source {
+
 	/**
 	 * A unique URI representing the byte source.
 	 */
@@ -21,6 +22,7 @@ export interface Source {
 }
 
 export interface Sink {
+
 	/**
 	 * A unique URI representing the byte sink.
 	 */
@@ -33,5 +35,19 @@ export interface Sink {
 	 * @result The actual number of bytes written.
 	 */
 	write(bytes: Uint8Array): Promise<number>;
+}
 
+export namespace Stdio {
+
+	export const scheme = 'stdio' as const;
+
+	export function createUri(components: { readonly authority?: string; readonly path?: string; readonly query?: string; readonly fragment?: string }): Uri {
+		return Uri.from(Object.assign({ scheme: scheme}, components));
+	}
+}
+
+export interface Stdio {
+	stdin: Source;
+	stdout: Sink;
+	stderr: Sink;
 }

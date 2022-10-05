@@ -43,7 +43,7 @@ async function runTest(testCase: string, test: (connection: ServiceConnection<Te
 			resolve();
 			return { errno: 0 };
 		});
-		connection.signalReady();
+		connection.signalReady(undefined);
 	});
 
 	await connection.terminate();

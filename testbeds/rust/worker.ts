@@ -16,6 +16,7 @@ if (parentPort === null) {
 
 const apiClient = new ApiClient(new ClientConnection<Requests, ApiClientConnection.ReadyParams>(parentPort));
 apiClient.serviceReady().then(async (params) => {
+	debugger;
 	const name = 'Run Rust';
 	const workspaceFolders = apiClient.vscode.workspace.workspaceFolders;
 	const mapDir: Options['mapDir'] = [];

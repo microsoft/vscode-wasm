@@ -7,14 +7,14 @@ import * as vscode from 'vscode';
 
 import { RAL, ServiceConnection, Requests, DTOs, RPCErrno } from '@vscode/sync-api-common';
 
-import { Sink, Source } from './bytes';
+import { Stdio, Source, Sink } from './stdio';
 
 export namespace ApiServiceConnection {
 	export type ReadyParams = {
-		stdio?: {
-			stdin?: DTOs.UriComponents;
-			stdout?: DTOs.UriComponents;
-			stderr?: DTOs.UriComponents;
+		stdio: {
+			stdin: DTOs.UriComponents;
+			stdout: DTOs.UriComponents;
+			stderr: DTOs.UriComponents;
 		};
 	};
 }
@@ -33,16 +33,6 @@ export type Options = {
 	echoName?: boolean;
 };
 
-export interface StdioProvider {
-	stdin: Source;
-	stdout: Sink;
-	stderr: Sink;
-}
-
-export namespace ByteTransfer {
-	export const scheme = 'byteTransfer' as const;
-}
-
 export class ApiService {
 
 	private readonly connection: ApiServiceConnection;
@@ -50,7 +40,7 @@ export class ApiService {
 
 	private readonly byteSources: Map<string, Source>;
 	private readonly byteSinks: Map<string, Sink>;
-	private defaultStdioProvider: StdioProvider | undefined;
+	private defaultStdio: Stdio;
 
 	constructor(_name: string, receiver: ApiServiceConnection, options?: Options) {
 		this.connection = receiver;
@@ -59,7 +49,9 @@ export class ApiService {
 		this.byteSinks = new Map();
 		this.options = options;
 
-		this.registerStdioProvider(new Console(), true);
+		const console = new ConsoleTerminal();
+		this.defaultStdio = console;
+		this.registerTTY(console, false);
 
 		const handleError = (error: any): { errno: number } => {
 			if (error instanceof vscode.FileSystemError) {
@@ -190,25 +182,31 @@ export class ApiService {
 		});
 	}
 
-	public registerStdioProvider(provider: StdioProvider, isDefault: boolean = false): void {
+	public registerTTY(stdio: Stdio, isDefault: boolean = true): void {
 		if (isDefault === true) {
-			this.defaultStdioProvider = provider;
+			this.defaultStdio = stdio;
 		}
-		this.byteSources.set(provider.stdin.uri.toString(true), provider.stdin);
-		this.byteSinks.set(provider.stdout.uri.toString(true), provider.stdout);
-		this.byteSinks.set(provider.stderr.uri.toString(true), provider.stderr);
+		this.byteSources.set(stdio.stdin.uri.toString(true), stdio.stdin);
+		this.byteSinks.set(stdio.stdout.uri.toString(true), stdio.stdout);
+		this.byteSinks.set(stdio.stderr.uri.toString(true), stdio.stderr);
+	}
+
+	public registerByteSource(source: Source): void {
+		this.byteSources.set(source.uri.toString(true), source);
+	}
+
+	public registerByteSink(sink: Sink): void {
+		this.byteSinks.set(sink.uri.toString(true), sink);
 	}
 
 	public signalReady(): void {
-		const p: ApiServiceConnection.ReadyParams | undefined = this.defaultStdioProvider !== undefined
-			? {
-				stdio: {
-					stdin: this.defaultStdioProvider.stdin.uri.toJSON(),
-					stdout: this.defaultStdioProvider.stdout.uri.toJSON(),
-					stderr: this.defaultStdioProvider.stderr.uri.toJSON()
-				}
-			  }
-			: undefined;
+		const p: ApiServiceConnection.ReadyParams = {
+			stdio: {
+				stdin: this.defaultStdio.stdin.uri.toJSON(),
+				stdout: this.defaultStdio.stdout.uri.toJSON(),
+				stderr: this.defaultStdio.stderr.uri.toJSON()
+			}
+		};
 		this.connection.signalReady(p);
 	}
 
@@ -232,7 +230,7 @@ export class ApiService {
 	}
 }
 
-class Console {
+class ConsoleTerminal implements Stdio {
 
 	private static authority = 'console' as const;
 
@@ -243,20 +241,20 @@ class Console {
 	constructor() {
 		const decoder = RAL().TextDecoder.create();
 		this.stdin = {
-			uri: vscode.Uri.from({ scheme: ByteTransfer.scheme, authority: Console.authority, path: '/stdin' }),
+			uri: Stdio.createUri({ authority: ConsoleTerminal.authority, path: '/stdin' }),
 			read(): Promise<Uint8Array> {
 				throw vscode.FileSystemError.Unavailable(`Can't read from console`);
 			}
 		};
 		this.stdout = {
-			uri: vscode.Uri.from({ scheme: ByteTransfer.scheme, authority: Console.authority, path: '/stdout' }),
+			uri: Stdio.createUri({ authority: ConsoleTerminal.authority, path: '/stdout' }),
 			write(bytes: Uint8Array): Promise<number> {
 				RAL().console.log(decoder.decode(bytes.slice()));
 				return Promise.resolve(bytes.byteLength);
 			}
 		};
 		this.stderr = {
-			uri: vscode.Uri.from({ scheme: ByteTransfer.scheme, authority: Console.authority, path: '/stderr' }),
+			uri: Stdio.createUri({ authority: ConsoleTerminal.authority, path: '/stderr' }),
 			write(bytes: Uint8Array): Promise<number> {
 				RAL().console.error(decoder.decode(bytes.slice()));
 				return Promise.resolve(bytes.byteLength);

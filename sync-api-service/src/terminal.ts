@@ -3,13 +3,12 @@
  * Licensed under the MIT License. See License.txt in the project root for license information.
  * ------------------------------------------------------------------------------------------ */
 
-import { Event, EventEmitter, Pseudoterminal, Uri } from 'vscode';
+import { Event, EventEmitter, Pseudoterminal } from 'vscode';
 
 import * as uuid from 'uuid';
 
 import { RAL } from '@vscode/sync-api-common';
-
-import { CharacterDeviceProvider } from './types';
+import { Sink, Source, Stdio } from './stdio';
 
 class LineBuffer {
 
@@ -164,12 +163,11 @@ export enum TerminalMode {
 	inUse = 2
 }
 
-export interface ServicePseudoTerminal extends Pseudoterminal {
+export interface ServicePseudoTerminal extends Pseudoterminal, Stdio {
 	readonly onDidCtrlC: Event<void>;
 	readonly onDidClose: Event<void>;
 	readonly onAnyKey: Event<void>;
 
-	getStdioConfiguration(): { stdin: Uri; stdout: Uri; stderr: Uri };
 	setMode(mode: TerminalMode): void;
 	setName(name: string): void;
 	write(str: string): void;
@@ -182,17 +180,26 @@ export namespace ServicePseudoTerminal {
 	}
 }
 
-class ServiceTerminalImpl implements ServicePseudoTerminal {
+const terminalRegExp = /(\r\n)|(\n)/gm;
 
-	public readonly uri: Uri;
+class ServiceTerminalImpl implements ServicePseudoTerminal, Stdio {
 
 	private mode: TerminalMode;
 
 	private readonly _onDidClose: EventEmitter<void>;
+	public readonly onDidClose: Event<void>;
+
 	private readonly _onDidWrite: EventEmitter<string>;
+	public readonly onDidWrite: Event<string>;
+
 	private readonly _onDidChangeName: EventEmitter<string>;
+	public readonly onDidChangeName: Event<string>;
+
 	private readonly _onDidCtrlC: EventEmitter<void>;
+	public readonly onDidCtrlC: Event<void>;
+
 	private readonly _onAnyKey: EventEmitter<void>;
+	public readonly onAnyKey: Event<void>;
 
 	private lines: string[];
 	private lineBuffer: LineBuffer;
@@ -202,8 +209,11 @@ class ServiceTerminalImpl implements ServicePseudoTerminal {
 	private nameBuffer: string | undefined;
 	private writeBuffer: string[] | undefined;
 
-	constructor(scheme: string = PseudoTerminalProvider.scheme) {
-		this.uri = Uri.from({ scheme: scheme, authority: uuid.v4() });
+	public readonly stdin: Source;
+	public readonly stdout: Sink;
+	public readonly stderr: Sink;
+
+	constructor() {
 		this.mode = TerminalMode.inUse;
 
 		this._onDidClose = new EventEmitter();
@@ -217,28 +227,49 @@ class ServiceTerminalImpl implements ServicePseudoTerminal {
 		this._onAnyKey = new EventEmitter<void>;
 		this.onAnyKey = this._onAnyKey.event;
 
+		const id = uuid.v4();
+		const encoder = RAL().TextEncoder.create();
+		const decoder = RAL().TextDecoder.create();
+		const terminal = this;
+		function getString(bytes: Uint8Array): string {
+			return decoder.decode(bytes.slice()).replace(terminalRegExp, (match: string, m1: string, m2: string) => {
+				if (m1) {
+					return m1;
+				} else if (m2) {
+					return '\r\n';
+				} else {
+					return match;
+				}
+			});
+		}
+		this.stdin = {
+			uri: Stdio.createUri({ authority: 'terminal', path: `/${id}/stdin`}),
+			async read(_maxBytesToRead: number): Promise<Uint8Array> {
+				const value = await terminal.readline();
+				return encoder.encode(value);
+			}
+		};
+		this.stdout = {
+			uri: Stdio.createUri({ authority: 'terminal', path: `/${id}/stdout`}),
+			write(bytes: Uint8Array): Promise<number> {
+				terminal.write(getString(bytes));
+				return Promise.resolve(bytes.byteLength);
+			},
+		};
+
+		this.stderr = {
+			uri: Stdio.createUri({ authority: 'terminal', path: `/${id}/stderr`}),
+			write(bytes: Uint8Array): Promise<number> {
+				// We can think about chancing the color for error output
+				terminal.write(getString(bytes));
+				return Promise.resolve(bytes.byteLength);
+			},
+		};
+
 		this.lines = [];
 		this.lineBuffer = new LineBuffer();
 
 		this.isOpen = false;
-	}
-
-	public readonly onDidClose: Event<void>;
-
-	public readonly onDidWrite: Event<string>;
-
-	public readonly onDidChangeName: Event<string>;
-
-	public readonly onDidCtrlC: Event<void>;
-
-	public readonly onAnyKey: Event<void>;
-
-	public getStdioConfiguration(): { stdin: Uri; stdout: Uri; stderr: Uri } {
-		return {
-			stdin: this.uri.with({ path: '/stdin'}),
-			stdout: this.uri.with({ path: '/stdout'}),
-			stderr: this.uri.with({ path: '/stderr'})
-		};
 	}
 
 	public setMode(mode: TerminalMode): void {
@@ -283,7 +314,7 @@ class ServiceTerminalImpl implements ServicePseudoTerminal {
 		});
 	}
 
-	write(str: string): void {
+	public write(str: string): void {
 		if (this.isOpen) {
 			this._onDidWrite.fire(str);
 		} else {
@@ -378,62 +409,5 @@ class ServiceTerminalImpl implements ServicePseudoTerminal {
 
 	private bell() {
 		this._onDidWrite.fire('\x07');
-	}
-}
-const terminalRegExp = /(\r\n)|(\n)/gm;
-
-export class PseudoTerminalProvider implements CharacterDeviceProvider {
-
-	public static scheme = 'sync-api-terminal' as const;
-
-	private terminals: Map<string, ServicePseudoTerminal>;
-	private readonly encoder: RAL.TextEncoder;
-	private readonly decoder: RAL.TextDecoder;
-
-	constructor() {
-		this.terminals = new Map();
-		this.encoder = RAL().TextEncoder.create();
-		this.decoder = RAL().TextDecoder.create();
-	}
-
-	createAndRegisterPseudoTerminal(): ServicePseudoTerminal {
-		const terminal = new ServiceTerminalImpl();
-		terminal.onDidClose(() => {
-			this.terminals.delete(terminal.uri.toString(true));
-		});
-		this.terminals.set(terminal.uri.toString(true), terminal);
-		return terminal;
-	}
-
-	public async read(uri: Uri, _maxBytesToRead: number): Promise<Uint8Array> {
-		const key = Uri.from({ scheme: uri.scheme, authority: uri.authority }).toString(true);
-		const terminal = this.terminals.get(key);
-		if (terminal === undefined) {
-			throw new Error(`No terminal found for ${key}`);
-		}
-		return this.encoder.encode(await terminal.readline());
-	}
-
-	public write(uri: Uri, binary: Uint8Array): Promise<void> {
-		const key = Uri.from({ scheme: uri.scheme, authority: uri.authority }).toString(true);
-		const terminal = this.terminals.get(key);
-		if (terminal === undefined) {
-			RAL().console.log(this.decoder.decode(binary));
-			return Promise.resolve();
-		}
-		// todo@dirkb
-		// We should check for stdout versus stderr and have different
-		// write method indicating some color to use.
-		const str = this.decoder.decode(binary.slice()).replace(terminalRegExp, (match: string, m1: string, m2: string) => {
-			if (m1) {
-				return m1;
-			} else if (m2) {
-				return '\r\n';
-			} else {
-				return match;
-			}
-		});
-		terminal.write(str);
-		return Promise.resolve();
 	}
 }

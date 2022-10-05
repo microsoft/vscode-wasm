@@ -41,17 +41,17 @@ export interface Workspace {
 	fileSystem: FileSystem;
 }
 
-export interface ByteTransfer {
+export interface TTY {
 	write(uri: URI, value: Uint8Array): number;
 	read(uri: URI, maxBytesToRead: number): Uint8Array;
 }
 
 export namespace ApiClientConnection {
 	export type ReadyParams = {
-		stdio?: {
-			stdin?: DTOs.UriComponents;
-			stdout?: DTOs.UriComponents;
-			stderr?: DTOs.UriComponents;
+		stdio: {
+			stdin: DTOs.UriComponents;
+			stdout: DTOs.UriComponents;
+			stderr: DTOs.UriComponents;
 		};
 	};
 }
@@ -83,9 +83,7 @@ class ProcessImpl implements Process {
 	}
 }
 
-class ByteTransferImpl implements ByteTransfer {
-
-	public static scheme = 'byteTransfer' as const;
+class ByteTransfer {
 
 	private readonly connection: ApiClientConnection;
 
@@ -102,7 +100,7 @@ class ByteTransferImpl implements ByteTransfer {
 	}
 
 	public write(uri: URI, value: Uint8Array): number {
-		const result = this.connection.sendRequest('byteTransfer/write', { uri: uri.toJSON(), binary: value }, Uint32Result.fromByteLength(1));
+		const result = this.connection.sendRequest('byteTransfer/write', { uri: uri.toJSON(), binary: value }, Uint32Result.fromLength(1));
 		if (RequestResult.hasData(result)) {
 			return result.data[0];
 		}
@@ -112,9 +110,10 @@ class ByteTransferImpl implements ByteTransfer {
 
 class ConsoleImpl implements Console {
 
+	private static scheme = 'stdio' as const;
 	private static authority = 'console' as const;
-	private static stdout = URI.from( { scheme: ByteTransferImpl.scheme, authority: ConsoleImpl.authority, path: 'stdout'} );
-	private static stderr = URI.from( { scheme: ByteTransferImpl.scheme, authority: ConsoleImpl.authority, path: 'stderr'} );
+	private static stdout = URI.from( { scheme: ConsoleImpl.scheme, authority: ConsoleImpl.authority, path: '/stdout'} );
+	private static stderr = URI.from( { scheme: ConsoleImpl.scheme, authority: ConsoleImpl.authority, path: '/stderr'} );
 
 	private readonly byteTransfer: ByteTransfer;
 	private readonly encoder: RAL.TextEncoder;
@@ -246,10 +245,10 @@ class WorkspaceImpl implements Workspace {
 }
 
 export type ReadyParams = {
-	stdio?: {
-		stdin?: URI;
-		stdout?: URI;
-		stderr?: URI;
+	stdio: {
+		stdin: URI;
+		stdout: URI;
+		stderr: URI;
 	};
 };
 
@@ -257,11 +256,12 @@ export class ApiClient {
 
 	private readonly connection: ApiClientConnection;
 	private readonly encoder: RAL.TextEncoder;
+	private readonly byteTransfer: ByteTransfer;
 
 	public readonly timer: Timer;
 	public readonly process: Process;
-	public readonly byteTransfer: ByteTransfer;
 	public readonly console: Console;
+	public readonly tty: TTY;
 	public readonly vscode: {
 		readonly workspace: Workspace;
 	};
@@ -271,8 +271,9 @@ export class ApiClient {
 		this.encoder = RAL().TextEncoder.create();
 		this.timer = new TimerImpl(this.connection);
 		this.process = new ProcessImpl(this.connection);
-		this.byteTransfer = new ByteTransferImpl(this.connection);
+		this.byteTransfer = new ByteTransfer(this.connection);
 		this.console = new ConsoleImpl(this.byteTransfer, this.encoder);
+		this.tty = this.byteTransfer;
 		this.vscode = {
 			workspace: new WorkspaceImpl(this.connection)
 		};
@@ -280,14 +281,10 @@ export class ApiClient {
 
 	public async serviceReady(): Promise<ReadyParams> {
 		const params = await this.connection.serviceReady();
-		if (params === undefined || params.stdio === undefined) {
-			return {};
-		}
-
 		return { stdio: {
-			stdin: params.stdio.stdin !== undefined ? URI.from(params.stdio.stdin) : undefined,
-			stdout: params.stdio.stdout !== undefined ? URI.from(params.stdio.stdout) : undefined,
-			stderr: params.stdio.stderr !== undefined ? URI.from(params.stdio.stderr) : undefined
+			stdin: URI.from(params.stdio.stdin),
+			stdout: URI.from(params.stdio.stdout),
+			stderr: URI.from(params.stdio.stderr)
 		}};
 	}
 }

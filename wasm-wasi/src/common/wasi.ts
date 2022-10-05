@@ -126,10 +126,10 @@ export type Options = {
 	/**
 	 * Stdin, stdout and stderr URIs to use
 	 */
-	stdio?: {
-		stdin?: URI;
-		stdout?: URI;
-		stderr?: URI;
+	stdio: {
+		stdin: URI;
+		stdout: URI;
+		stderr: URI;
 	};
 
 	/**

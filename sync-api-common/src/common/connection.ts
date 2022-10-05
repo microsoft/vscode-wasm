@@ -762,7 +762,7 @@ type RequestHandler = {
 
 export interface ServiceConnection<RequestHandlers extends RequestType | undefined = undefined, ReadyParams extends Params | undefined = undefined> {
 	readonly onRequest: HandleRequestSignatures<RequestHandlers>;
-	signalReady(params?: ReadyParams): void;
+	signalReady(params: ReadyParams): void;
 }
 
 export abstract class BaseServiceConnection<RequestHandlers extends RequestType | undefined = undefined, ReadyParams extends Params | undefined = undefined> implements ServiceConnection<RequestHandlers, ReadyParams> {
@@ -872,7 +872,7 @@ export abstract class BaseServiceConnection<RequestHandlers extends RequestType 
 		Atomics.notify(sync, 0);
 	}
 
-	public signalReady(params?: ReadyParams): void {
+	public signalReady(params: ReadyParams): void {
 		const notification: Notification = { method: '$/ready', params };
 		this.postMessage(notification);
 	}

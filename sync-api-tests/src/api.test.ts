@@ -7,7 +7,7 @@ import assert from 'assert';
 import { posix as path } from 'path';
 import vscode, { Uri } from 'vscode';
 
-import { Requests, ApiService } from '@vscode/sync-api-service';
+import { Requests, ApiService, ApiServiceConnection } from '@vscode/sync-api-service';
 import { RAL } from '@vscode/sync-api-common';
 
 import { AssertionErrorData, ErrorData, TestRequests } from './tests';
@@ -25,7 +25,7 @@ export function contribute(workerResolver: (testCase: string) => string, scheme:
 
 	async function runTest(name: string, testCase: string, serviceHook?: (apiService: ApiService) => void) {
 
-		const connection = RAL().$testing.ServiceConnection.create<Requests | TestRequests>(workerResolver(testCase));
+		const connection = RAL().$testing.ServiceConnection.create<Requests | TestRequests, ApiServiceConnection.ReadyParams>(workerResolver(testCase));
 		let assertionError: AssertionErrorData | undefined;
 		let error: ErrorData | undefined;
 
@@ -48,7 +48,7 @@ export function contribute(workerResolver: (testCase: string) => string, scheme:
 			if (serviceHook !== undefined) {
 				serviceHook(service);
 			}
-			connection.signalReady();
+			service.signalReady();
 		});
 		if (assertionError !== undefined) {
 			throw new assert.AssertionError(assertionError);
@@ -143,18 +143,16 @@ export function contribute(workerResolver: (testCase: string) => string, scheme:
 			assert.strictEqual(notFound, true, 'Directory delete failed');
 		});
 
-		test('Character Device', async() => {
+		test('Byte Transfer', async() => {
 			let writeReceived: boolean = false;
-			await runTest('Character Device', 'charDevice', (service) => {
-				service.registerCharacterDeviceProvider('test-charDevice', {
-					read: function (): Promise<Uint8Array> {
-						throw new Error(`Not tested`);
-					},
-					write: function (uri: vscode.Uri, bytes: Uint8Array): Promise<void> {
-						if (uri.scheme === 'test-charDevice' && RAL().TextDecoder.create().decode(bytes.slice()) === 'hello') {
+			await runTest('Byte Transfer', 'byteTransfer', (service) => {
+				service.registerByteSink({
+					uri: Uri.from({ scheme: 'byteTransfer', authority: 'byteTransfer', path: '/write' }),
+					write (bytes: Uint8Array): Promise<number> {
+						if (RAL().TextDecoder.create().decode(bytes.slice()) === 'hello') {
 							writeReceived = true;
 						}
-						return Promise.resolve();
+						return Promise.resolve(bytes.byteLength);
 					}
 				});
 			});

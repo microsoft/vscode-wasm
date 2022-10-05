@@ -5,7 +5,7 @@
 
 import { URI } from 'vscode-uri';
 
-import { ApiClient, DTOs, FileType } from '@vscode/sync-api-client';
+import { ApiClient, DTOs } from '@vscode/sync-api-client';
 
 import RAL from './ral';
 const paths = RAL().path;
@@ -13,6 +13,7 @@ const paths = RAL().path;
 import { ptr, size } from './baseTypes';
 import { dircookie, dirent, Dirent, Errno, fd, fdflags, Fdstat, filedelta, filesize, Filestat, Filetype, filetype, Rights, rights, WasiError, Whence, whence } from './wasiTypes';
 import { BigInts, code2Wasi } from './converter';
+import { isatty } from 'tty';
 
 export namespace DeviceIds {
 	let deviceIdCounter: bigint = 1n;
@@ -331,7 +332,7 @@ export namespace FileSystem {
 		}
 	}
 
-	export function create(apiClient: ApiClient, memoryProvider: MemoryProvider, textEncoder: RAL.TextEncoder, stdio: { stdin?: URI; stdout?: URI; stderr?: URI } | undefined): FileSystem {
+	export function create(apiClient: ApiClient, memoryProvider: MemoryProvider, textEncoder: RAL.TextEncoder, stdio: { stdin: URI; stdout: URI; stderr: URI }): FileSystem {
 
 		let inodeCounter: bigint = 1n;
 
@@ -340,7 +341,6 @@ export namespace FileSystem {
 		const deletedINode: Map<bigint, INode> = new Map();
 		const directoryEntries: Map<fd, DTOs.DirectoryEntries> = new Map();
 		const vscode_fs = apiClient.vscode.workspace.fileSystem;
-		const vscode_cd = apiClient.vscode.workspace.characterDevice;
 
 		const memoryView = memoryProvider.memoryView;
 		const memoryRaw = memoryProvider.memoryRaw;
@@ -413,27 +413,30 @@ export namespace FileSystem {
 			return uri.with( { path: RAL().path.join(uri.path, name)} );
 		}
 
-		const stdin = stdio?.stdin ?? URI.from({ scheme: 'sync-api-console', path: 'stdin'});
-		const stdout = stdio?.stdout ?? URI.from({ scheme: 'sync-api-console', path: 'stdout'});
-		const stderr = stdio?.stderr ?? URI.from({ scheme: 'sync-api-console', path: 'stderr'});
+		function isatty(fileDescriptor: FileDescriptor) {
+			return fileDescriptor.fileType === Filetype.character_device && (fileDescriptor.rights.base & (Rights.fd_seek | Rights.fd_tell)) === 0n;
+		}
 
 		const fileSystem: FileSystem = {
+			// todo@dirkb we need to have a file descriptor without an inode for
+			// transferring bytes so that we don't need a unique path like
+			// /dev/tty[stdin] and /dev/tty[stdout]
 			stdin: new FileDescriptorImpl(
-				refINode('/dev/tty[stdin]', stdin).id,
+				refINode('/dev/tty[stdin]', stdio.stdin).id,
 				Filetype.character_device,
 				{ base: Rights.StdinBase, inheriting: Rights.StdinInheriting },
 				0, '/dev/tty', true
 			),
 
 			stdout: new FileDescriptorImpl(
-				refINode('/dev/tty[stdout]', stdout).id,
+				refINode('/dev/tty[stdout]', stdio.stdout).id,
 				Filetype.character_device,
 				{ base: Rights.StdoutBase, inheriting: Rights.StdoutInheriting },
 				0, '/dev/tty', true
 			),
 
 			stderr: new FileDescriptorImpl(
-				refINode('/dev/tty[stderr]', stderr).id,
+				refINode('/dev/tty[stderr]', stdio.stderr).id,
 				Filetype.character_device,
 				{ base: Rights.StdoutBase, inheriting: Rights.StdoutInheriting },
 				0, '/dev/tty', true
@@ -539,10 +542,10 @@ export namespace FileSystem {
 				if (buffers.length === 0) {
 					return 0;
 				}
-				if (fileDescriptor.fileType === Filetype.character_device) {
-					const maxBytesToRead = buffers.reduce<number>((prev, current) => prev + current.length, 0);
+				if (isatty(fileDescriptor)) {
 					const inode = getINode(fileDescriptor.inode);
-					const result = vscode_cd.read(inode.uri, maxBytesToRead);
+					const maxBytesToRead = buffers.reduce<number>((prev, current) => prev + current.length, 0);
+					const result = apiClient.tty.read(inode.uri, maxBytesToRead);
 					let offset = 0;
 					let totalBytesRead = 0;
 					for (const buffer of buffers) {
@@ -555,18 +558,17 @@ export namespace FileSystem {
 						}
 					}
 					return totalBytesRead;
-				} else {
-					const content = getResolvedINode(fileDescriptor.inode).content;
-					let totalBytesRead = 0;
-					for (const buffer of buffers) {
-						const bytesRead = fileDescriptor.read(content, buffer);
-						totalBytesRead += bytesRead;
-						if (bytesRead === 0) {
-							break;
-						}
-					}
-					return totalBytesRead;
 				}
+				const content = getResolvedINode(fileDescriptor.inode).content;
+				let totalBytesRead = 0;
+				for (const buffer of buffers) {
+					const bytesRead = fileDescriptor.read(content, buffer);
+					totalBytesRead += bytesRead;
+					if (bytesRead === 0) {
+						break;
+					}
+				}
+				return totalBytesRead;
 			},
 			fd_pread: (fileDescriptor, offset, bytesToRead): Uint8Array => {
 				const content = getResolvedINode(fileDescriptor.inode).content;
@@ -583,7 +585,7 @@ export namespace FileSystem {
 				if (buffers.length === 0) {
 					return 0;
 				}
-				if (fileDescriptor.fileType === Filetype.character_device) {
+				if (isatty(fileDescriptor)) {
 					const inode = getINode(fileDescriptor.inode);
 					let buffer: Uint8Array;
 					if (buffers.length === 1) {
@@ -597,15 +599,14 @@ export namespace FileSystem {
 							offset = item.byteLength;
 						}
 					}
-					vscode_cd.write(inode.uri, buffer);
+					apiClient.tty.write(inode.uri, buffer);
 					return buffer.byteLength;
-				} else {
-					const inode = getResolvedINode(fileDescriptor.inode);
-					const [content, bytesWritten] = fileDescriptor.write(inode.content, buffers);
-					inode.content = content;
-					writeContent(inode);
-					return bytesWritten;
 				}
+				const inode = getResolvedINode(fileDescriptor.inode);
+				const [content, bytesWritten] = fileDescriptor.write(inode.content, buffers);
+				inode.content = content;
+				writeContent(inode);
+				return bytesWritten;
 			},
 			fd_pwrite: (fileDescriptor, offset, bytes): size => {
 				const inode = getResolvedINode(fileDescriptor.inode);
