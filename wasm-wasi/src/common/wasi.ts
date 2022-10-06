@@ -141,6 +141,25 @@ export type Options = {
 	}[];
 
 	/**
+	 * File mappings
+	 */
+	mapFile?: {
+		/**
+		 * The full path of the files
+		 */
+		name: string;
+		fileDescriptor: {
+			uri: URI;
+			filetype: filetype;
+			fdflags: fdflags;
+			rights: {
+				base: rights;
+				inheriting: rights;
+			};
+		};
+	}[];
+
+	/**
 	 * The encoding to use.
 	 */
 	encoding?: string;
@@ -176,6 +195,20 @@ export namespace WASI {
 				{ base: Rights.All, inheriting: Rights.All }, Fdflags.sync
 			);
 			fileDescriptors.set(fileDescriptor.fd, fileDescriptor);
+		}
+
+		if (options.mapFile !== undefined) {
+			for (const entry of options.mapFile) {
+				const filetype = entry.fileDescriptor.filetype;
+				// Currently we only have support for regular files and character devices
+				if (filetype === Filetype.character_device || filetype === Filetype.regular_file) {
+					const data = entry.fileDescriptor;
+					const fileDescriptor = fileSystem.createPreOpenedFileDescriptor(
+						entry.name, data.uri, filetype, data.rights, data.fdflags
+					);
+					fileDescriptors.set(fileDescriptor.fd, fileDescriptor);
+				}
+			}
 		}
 
 		const wasi: WASI = {

@@ -8,8 +8,8 @@ import { URI } from 'vscode-uri';
 
 import runSingle from './tests';
 
-const uri = URI.from({ scheme: 'byteTransfer', authority: 'byteTransfer', path: '/write' });
+const uri = URI.from({ scheme: 'byteSink', authority: 'byteSink', path: '/write' });
 
 runSingle((client) => {
-	client.byteTransfer.write(uri, RAL().TextEncoder.create().encode('hello'));
+	client.byteSink.write(uri, RAL().TextEncoder.create().encode('hello'));
 }).catch(console.error);

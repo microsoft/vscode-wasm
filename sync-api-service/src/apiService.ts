@@ -68,7 +68,7 @@ export class ApiService {
 			return { errno: 0 };
 		});
 
-		this.connection.onRequest('byteTransfer/read', async (params) => {
+		this.connection.onRequest('byteSource/read', async (params) => {
 			const uri: vscode.Uri = vscode.Uri.from(params.uri);
 			const source = this.byteSources.get(uri.toString(true));
 			if (source === undefined) {
@@ -78,7 +78,7 @@ export class ApiService {
 			return {errno: 0, data: contents };
 		});
 
-		this.connection.onRequest('byteTransfer/write', async (params) => {
+		this.connection.onRequest('byteSink/write', async (params) => {
 			const uri: vscode.Uri = vscode.Uri.from(params.uri);
 			const sink = this.byteSinks.get(uri.toString(true));
 			if (sink === undefined) {

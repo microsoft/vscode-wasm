@@ -13,7 +13,6 @@ const paths = RAL().path;
 import { ptr, size } from './baseTypes';
 import { dircookie, dirent, Dirent, Errno, fd, fdflags, Fdstat, filedelta, filesize, Filestat, Filetype, filetype, Rights, rights, WasiError, Whence, whence } from './wasiTypes';
 import { BigInts, code2Wasi } from './converter';
-import { isatty } from 'tty';
 
 export namespace DeviceIds {
 	let deviceIdCounter: bigint = 1n;

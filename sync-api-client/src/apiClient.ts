@@ -17,6 +17,14 @@ export interface Process {
 	procExit(rval: number): void;
 }
 
+export interface ByteSource {
+	read(uri: URI, maxBytesToRead: number): Uint8Array;
+}
+
+export interface ByteSink {
+	write(uri: URI, value: Uint8Array): number;
+}
+
 export interface Console {
 	log(message?: any, ...optionalParams: any[]): void;
 	error(message?: any, ...optionalParams: any[]): void;
@@ -83,7 +91,7 @@ class ProcessImpl implements Process {
 	}
 }
 
-class ByteTransfer {
+class ByteSourceImpl implements ByteSource {
 
 	private readonly connection: ApiClientConnection;
 
@@ -92,15 +100,24 @@ class ByteTransfer {
 	}
 
 	public read(uri: URI, maxBytesToRead: number): Uint8Array {
-		const result = this.connection.sendRequest('byteTransfer/read', { uri: uri.toJSON(), maxBytesToRead }, new VariableResult<Uint8Array>('binary'));
+		const result = this.connection.sendRequest('byteSource/read', { uri: uri.toJSON(), maxBytesToRead }, new VariableResult<Uint8Array>('binary'));
 		if (RequestResult.hasData(result)) {
 			return result.data;
 		}
 		throw new RPCError(result.errno, `Should never happen`);
 	}
+}
+
+class ByteSinkImpl implements ByteSink {
+
+	private readonly connection: ApiClientConnection;
+
+	constructor(connection: ApiClientConnection) {
+		this.connection = connection;
+	}
 
 	public write(uri: URI, value: Uint8Array): number {
-		const result = this.connection.sendRequest('byteTransfer/write', { uri: uri.toJSON(), binary: value }, Uint32Result.fromLength(1));
+		const result = this.connection.sendRequest('byteSink/write', { uri: uri.toJSON(), binary: value }, Uint32Result.fromLength(1));
 		if (RequestResult.hasData(result)) {
 			return result.data[0];
 		}
@@ -115,12 +132,12 @@ class ConsoleImpl implements Console {
 	private static stdout = URI.from( { scheme: ConsoleImpl.scheme, authority: ConsoleImpl.authority, path: '/stdout'} );
 	private static stderr = URI.from( { scheme: ConsoleImpl.scheme, authority: ConsoleImpl.authority, path: '/stderr'} );
 
-	private readonly byteTransfer: ByteTransfer;
+	private readonly byteTransfer: ByteSink;
 	private readonly encoder: RAL.TextEncoder;
 
 
-	constructor(byteTransfer: ByteTransfer, encoder: RAL.TextEncoder) {
-		this.byteTransfer = byteTransfer;
+	constructor(byteSink: ByteSink, encoder: RAL.TextEncoder) {
+		this.byteTransfer = byteSink;
 		this.encoder = encoder;
 	}
 
@@ -256,10 +273,11 @@ export class ApiClient {
 
 	private readonly connection: ApiClientConnection;
 	private readonly encoder: RAL.TextEncoder;
-	private readonly byteTransfer: ByteTransfer;
 
 	public readonly timer: Timer;
 	public readonly process: Process;
+	public readonly byteSource: ByteSource;
+	public readonly byteSink: ByteSink;
 	public readonly console: Console;
 	public readonly tty: TTY;
 	public readonly vscode: {
@@ -271,9 +289,17 @@ export class ApiClient {
 		this.encoder = RAL().TextEncoder.create();
 		this.timer = new TimerImpl(this.connection);
 		this.process = new ProcessImpl(this.connection);
-		this.byteTransfer = new ByteTransfer(this.connection);
-		this.console = new ConsoleImpl(this.byteTransfer, this.encoder);
-		this.tty = this.byteTransfer;
+		const byteSource = this.byteSource = new ByteSourceImpl(this.connection);
+		const byteSink = this.byteSink = new ByteSinkImpl(this.connection);
+		this.console = new ConsoleImpl(byteSink, this.encoder);
+		this.tty = {
+			read(uri, maxBytesToRead) {
+				return byteSource.read(uri, maxBytesToRead);
+			},
+			write(uri, value) {
+				return byteSink.write(uri, value);
+			},
+		};
 		this.vscode = {
 			workspace: new WorkspaceImpl(this.connection)
 		};

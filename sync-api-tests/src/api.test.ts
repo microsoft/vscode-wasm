@@ -143,11 +143,11 @@ export function contribute(workerResolver: (testCase: string) => string, scheme:
 			assert.strictEqual(notFound, true, 'Directory delete failed');
 		});
 
-		test('Byte Transfer', async() => {
+		test('Byte Sink', async() => {
 			let writeReceived: boolean = false;
-			await runTest('Byte Transfer', 'byteTransfer', (service) => {
+			await runTest('Byte Sink', 'byteSink', (service) => {
 				service.registerByteSink({
-					uri: Uri.from({ scheme: 'byteTransfer', authority: 'byteTransfer', path: '/write' }),
+					uri: Uri.from({ scheme: 'byteSink', authority: 'byteSink', path: '/write' }),
 					write (bytes: Uint8Array): Promise<number> {
 						if (RAL().TextDecoder.create().decode(bytes.slice()) === 'hello') {
 							writeReceived = true;

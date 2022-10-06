@@ -172,7 +172,7 @@ export type Requests = {
 	/**
 	 * Writes bytes to a sink
 	 */
-	method: 'byteTransfer/write';
+	method: 'byteSink/write';
 	params: {
 		uri: DTOs.UriComponents;
 		binary: Uint8Array;
@@ -182,7 +182,7 @@ export type Requests = {
 	/**
 	 * Reads bytes from a source
 	 */
-	method: 'byteTransfer/read';
+	method: 'byteSource/read';
 	params: {
 		uri: DTOs.UriComponents;
 		maxBytesToRead: number;
