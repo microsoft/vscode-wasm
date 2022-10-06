@@ -164,6 +164,7 @@ export enum TerminalMode {
 }
 
 export interface ServicePseudoTerminal extends Pseudoterminal, Stdio {
+	readonly id: string;
 	readonly onDidCtrlC: Event<void>;
 	readonly onDidClose: Event<void>;
 	readonly onAnyKey: Event<void>;
@@ -185,6 +186,8 @@ const terminalRegExp = /(\r\n)|(\n)/gm;
 class ServiceTerminalImpl implements ServicePseudoTerminal, Stdio {
 
 	private mode: TerminalMode;
+
+	public readonly id: string;
 
 	private readonly _onDidClose: EventEmitter<void>;
 	public readonly onDidClose: Event<void>;
@@ -227,7 +230,7 @@ class ServiceTerminalImpl implements ServicePseudoTerminal, Stdio {
 		this._onAnyKey = new EventEmitter<void>;
 		this.onAnyKey = this._onAnyKey.event;
 
-		const id = uuid.v4();
+		const id = this.id = uuid.v4();
 		const encoder = RAL().TextEncoder.create();
 		const decoder = RAL().TextDecoder.create();
 		const terminal = this;

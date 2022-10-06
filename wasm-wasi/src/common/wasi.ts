@@ -603,6 +603,10 @@ export namespace WASI {
 
 					const memory = memoryView();
 					const name = decoder.decode(new Uint8Array(memoryRaw(), path, pathLen));
+					const preOpened = fileSystem.getPreopened(name);
+					if (preOpened) {
+						return preOpened.fd;
+					}
 
 					let filetype: filetype | undefined = fileSystem.path_filetype(parentDescriptor, name);
 					const entryExists: boolean = filetype !== undefined;

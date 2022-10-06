@@ -276,6 +276,7 @@ export interface FileSystem {
 	readonly stderr: FileDescriptor;
 
 	createPreOpenedFileDescriptor(path: string, uri: URI, fileType: filetype, rights: FileDescriptor['rights'], fdflags: fdflags): FileDescriptor;
+	getPreopened(path: string): FileDescriptor | undefined;
 	createFileDescriptor(parent: FileDescriptor, path: string, fileType: filetype, rights: FileDescriptor['rights'], fdflags: fdflags): FileDescriptor;
 
 	bytesAvailable(fileDescriptor: FileDescriptor): filesize;
@@ -335,6 +336,7 @@ export namespace FileSystem {
 
 		let inodeCounter: bigint = 1n;
 
+		const preOpened: Map<string, FileDescriptor> = new Map();
 		const path2INode: Map<string, INode> = new Map();
 		const inodes: Map<bigint, INode> = new Map();
 		const deletedINode: Map<bigint, INode> = new Map();
@@ -443,7 +445,12 @@ export namespace FileSystem {
 
 			createPreOpenedFileDescriptor: (path, uri, fileType, rights, fdflags) => {
 				const inode = refINode(path, uri);
-				return new FileDescriptorImpl(inode.id, fileType, rights, fdflags, path, true);
+				const result = new FileDescriptorImpl(inode.id, fileType, rights, fdflags, path, true);
+				preOpened.set(path, result);
+				return result;
+			},
+			getPreopened: (path) => {
+				return preOpened.get(path);
 			},
 			createFileDescriptor: (parent, name, fileType, rights, fdflags) => {
 				const parentINode = getINode(parent.inode);
