@@ -413,7 +413,7 @@ export namespace WASI {
 			},
 			fd_prestat_get: (fd: fd, bufPtr: ptr): errno => {
 				try {
-					const fileDescriptor = fileDescriptors.get(fd);
+					const fileDescriptor = fileSystem.getPreopenedDirectory(fd);
 					if (fileDescriptor === undefined || !fileDescriptor.preOpened) {
 						return Errno.badf;
 					}
@@ -603,7 +603,7 @@ export namespace WASI {
 
 					const memory = memoryView();
 					const name = decoder.decode(new Uint8Array(memoryRaw(), path, pathLen));
-					const preOpened = fileSystem.getPreopened(name);
+					const preOpened = fileSystem.getPreopened(parentDescriptor, name);
 					if (preOpened) {
 						return preOpened.fd;
 					}
