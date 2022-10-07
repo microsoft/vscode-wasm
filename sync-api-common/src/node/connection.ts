@@ -3,49 +3,51 @@
  * Licensed under the MIT License. See License.txt in the project root for license information.
  * ------------------------------------------------------------------------------------------ */
 
-import { MessagePort, Worker } from 'worker_threads';
+import { BroadcastChannel, isMainThread, threadId } from 'worker_threads';
 
 import RAL from '../common/ral';
-import { BaseServiceConnection, BaseClientConnection, Message, RequestType } from '../common/connection';
+import { BaseServiceConnection, BaseClientConnection, Message, RequestType, BroadcastChannelName, KnownConnectionIds } from '../common/connection';
 
 export class ClientConnection<Requests extends RequestType | undefined = undefined> extends BaseClientConnection<Requests> {
 
-	private readonly port: MessagePort | Worker;
+	private readonly channel: BroadcastChannel;
 
-	constructor(port: MessagePort | Worker) {
-		super();
-		this.port = port;
-		this.port.on('message', (message: Message) => {
+	constructor() {
+		super(isMainThread ? KnownConnectionIds.Main : threadId.toString());
+		this.channel = new BroadcastChannel(BroadcastChannelName);
+		this.channel.onmessage = (message: any) => {
 			try {
-				this.handleMessage(message);
+				if (message.data.dest === this.connectionId || message.data.dest === KnownConnectionIds.All) {
+					this.handleMessage(message.data);
+				}
 			} catch (error) {
 				RAL().console.error(error);
 			}
-		});
+		};
 	}
 
 	protected postMessage(sharedArrayBuffer: SharedArrayBuffer) {
-		this.port.postMessage(sharedArrayBuffer);
+		this.channel.postMessage(sharedArrayBuffer);
 	}
 }
 
 export class ServiceConnection<RequestHandlers extends RequestType | undefined = undefined> extends BaseServiceConnection<RequestHandlers> {
 
-	private readonly port: MessagePort | Worker;
+	private readonly channel: BroadcastChannel;
 
-	constructor(port: MessagePort | Worker) {
-		super();
-		this.port = port;
-		this.port.on('message', async (sharedArrayBuffer: SharedArrayBuffer) => {
+	constructor() {
+		super(isMainThread ? KnownConnectionIds.Main : threadId.toString());
+		this.channel = new BroadcastChannel(BroadcastChannelName);
+		this.channel.onmessage = async (message: any) => {
 			try {
-				await this.handleMessage(sharedArrayBuffer);
+				await this.handleMessage(message.data as SharedArrayBuffer);
 			} catch (error) {
 				RAL().console.error(error);
 			}
-		});
+		};
 	}
 
-	protected postMessage(message: Message): void {
-		this.port.postMessage(message);
+	protected postMessage(message: Message) {
+		this.channel.postMessage(message);
 	}
 }

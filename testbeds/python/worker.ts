@@ -15,7 +15,7 @@ if (parentPort === null) {
 	process.exit();
 }
 
-const connection = new ClientConnection<Requests>(parentPort);
+const connection = new ClientConnection<Requests>();
 connection.serviceReady().then(async (params) => {
 	const name = 'Python Shell';
 	const apiClient = new ApiClient(connection);

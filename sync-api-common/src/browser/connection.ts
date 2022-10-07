@@ -4,42 +4,48 @@
  * ------------------------------------------------------------------------------------------ */
 
 import RAL from '../common/ral';
-import { BaseServiceConnection, BaseClientConnection, Message, RequestType } from '../common/connection';
+import { BaseServiceConnection, BaseClientConnection, Message, RequestType, KnownConnectionIds, BroadcastChannelName } from '../common/connection';
 
 export class ClientConnection<Requests extends RequestType | undefined = undefined> extends BaseClientConnection<Requests> {
 
-	private readonly port: MessagePort | Worker | DedicatedWorkerGlobalScope;
+	private readonly channel: BroadcastChannel;
 
-	constructor(port: MessagePort | Worker | DedicatedWorkerGlobalScope) {
-		super();
-		this.port = port;
-		this.port.onmessage = ((event: MessageEvent<Message>) => {
-			this.handleMessage(event.data);
-		});
-	}
-
-	protected postMessage(sharedArrayBuffer: SharedArrayBuffer) {
-		this.port.postMessage(sharedArrayBuffer);
-	}
-}
-
-export class ServiceConnection<RequestHandlers extends RequestType | undefined = undefined> extends BaseServiceConnection<RequestHandlers> {
-
-	private readonly port: MessagePort | Worker | DedicatedWorkerGlobalScope;
-
-	constructor(port: MessagePort | Worker | DedicatedWorkerGlobalScope) {
-		super();
-		this.port = port;
-		this.port.onmessage = (async (event: MessageEvent<SharedArrayBuffer>) => {
+	constructor() {
+		super(self.location.pathname);
+		this.channel = new BroadcastChannel(BroadcastChannelName);
+		this.channel.addEventListener('message', (ev: MessageEvent) => {
 			try {
-				await this.handleMessage(event.data);
+				if (ev.data.dest === this.connectionId || ev.data.dest === KnownConnectionIds.All) {
+					this.handleMessage(ev.data);
+				}
 			} catch (error) {
 				RAL().console.error(error);
 			}
 		});
 	}
 
-	protected postMessage(message: Message): void {
-		this.port.postMessage(message);
+	protected postMessage(sharedArrayBuffer: SharedArrayBuffer) {
+		this.channel.postMessage(sharedArrayBuffer);
+	}
+}
+
+export class ServiceConnection<RequestHandlers extends RequestType | undefined = undefined> extends BaseServiceConnection<RequestHandlers> {
+
+	private readonly channel: BroadcastChannel;
+
+	constructor() {
+		super(KnownConnectionIds.Main);
+		this.channel = new BroadcastChannel(BroadcastChannelName);
+		this.channel.addEventListener('message', async (ev: MessageEvent) => {
+			try {
+				await this.handleMessage(ev.data);
+			} catch (error) {
+				RAL().console.error(error);
+			}
+		});
+	}
+
+	protected postMessage(message: Message) {
+		this.channel.postMessage(message);
 	}
 }

@@ -13,6 +13,7 @@ export type u64 = number;
 export type size = u32;
 
 export type Message = {
+	dest: string;
 	method: string;
 	params?: Params;
 };
@@ -53,6 +54,8 @@ export type Params = {
 
 export type Request = {
 	id: number;
+	src: string;
+	dest: string;
 } & Message;
 
 export namespace Request {
@@ -84,6 +87,13 @@ export type MessageType = {
 export type RequestType = MessageType & ({
 	result?: TypedArray | object | null;
 });
+
+export const BroadcastChannelName = `@vscode/sync-api`;
+
+export enum KnownConnectionIds {
+	Main = 'main',
+	All = 'all'
+}
 
 class NoResult {
 	public static readonly kind = 0 as const;
@@ -582,7 +592,7 @@ export abstract class BaseClientConnection<Requests extends RequestType | undefi
 	private readonly readyPromise: Promise<void>;
 	private readyCallbacks: PromiseCallbacks | undefined;
 
-	constructor() {
+	constructor(protected connectionId: string) {
 		this.id = 1;
 		this.textEncoder = RAL().TextEncoder.create();
 		this.textDecoder = RAL().TextDecoder.create();
@@ -592,6 +602,7 @@ export abstract class BaseClientConnection<Requests extends RequestType | undefi
 	}
 
 	public serviceReady(): Promise<void> {
+		this._sendRequest('$/checkready');
 		return this.readyPromise;
 	}
 
@@ -599,7 +610,7 @@ export abstract class BaseClientConnection<Requests extends RequestType | undefi
 
 	private _sendRequest(method: string, arg1?: Params | ResultType | number, arg2?: ResultType | number, arg3?: number): { errno: 0; data: any } | { errno: RPCErrno } {
 		const id = this.id++;
-		const request: Request = { id: id, method };
+		const request: Request = { id: id, dest: 'main', src: this.connectionId, method };
 		let params: Params | undefined = undefined;
 		let resultType: ResultType = new NoResult();
 		let timeout: number | undefined = undefined;
@@ -658,7 +669,7 @@ export abstract class BaseClientConnection<Requests extends RequestType | undefi
 			raw.set(binaryData, binaryOffset);
 		}
 
-		// Send the shard array buffer to the other worker
+		// Send the shared array buffer to the other worker
 		const sync = new Int32Array(sharedArrayBuffer, 0, 1);
 		Atomics.store(sync, 0, 0);
 		// Send the shared array buffer to the extension host worker
@@ -771,8 +782,9 @@ export abstract class BaseServiceConnection<RequestHandlers extends RequestType 
 	private readonly textEncoder: RAL.TextEncoder;
 	private readonly requestHandlers: Map<string, RequestHandler>;
 	private readonly requestResults: Map<number, TypedArray>;
+	private sentReady = false;
 
-	constructor() {
+	constructor(protected readonly connectionId: string) {
 		this.textDecoder = RAL().TextDecoder.create();
 		this.textEncoder = RAL().TextEncoder.create();
 		this.requestHandlers = new Map();
@@ -808,6 +820,11 @@ export abstract class BaseServiceConnection<RequestHandlers extends RequestType 
 						header[HeaderIndex.errno] = RPCErrno.Success;
 					} else {
 						header[HeaderIndex.errno] = RPCErrno.LazyResultFailed;
+					}
+				} else if (message.method === '$/checkready') {
+					// Client may not have been active when ready signal was sent. Send it again
+					if (this.sentReady) {
+						this.signalReady();
 					}
 				} else {
 					if (message.params?.binary === null) {
@@ -873,7 +890,8 @@ export abstract class BaseServiceConnection<RequestHandlers extends RequestType 
 	}
 
 	public signalReady(): void {
-		const notification: Notification = { method: '$/ready' };
+		this.sentReady = true;
+		const notification: Notification = { method: '$/ready', dest: KnownConnectionIds.All };
 		this.postMessage(notification);
 	}
 
