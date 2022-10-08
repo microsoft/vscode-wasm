@@ -37,7 +37,7 @@ connection.serviceReady().then(async (params) => {
 			mapDir.push({ name: path.posix.join(path.posix.sep, 'workspaces', folder.name), uri: folder.uri });
 		}
 	}
-	const pythonRoot = URI.file(`/home/dirkb/Projects/dbaeumer/python-3.11.0rc`);
+	const pythonRoot = URI.file(`/home/rich/Python-3.11.0b5-wasm32-wasi-16`);
 	mapDir.push({ name: path.posix.sep, uri: pythonRoot });
 	const exitHandler = (rval: number): void => {
 		apiClient.process.procExit(rval);
