@@ -12,6 +12,7 @@ export type AssertionErrorData = {
 	operator: string;
 	generatedMessage: boolean;
 	code: string;
+	stack?: string;
 };
 
 export type ErrorData = {

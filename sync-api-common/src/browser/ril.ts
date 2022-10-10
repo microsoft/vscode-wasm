@@ -26,6 +26,7 @@ class TestServiceConnection<RequestHandlers extends RequestType | undefined = un
 	}
 	public terminate(): Promise<number> {
 		this.worker.terminate();
+		this.dispose();
 		return Promise.resolve(0);
 	}
 }

@@ -2,7 +2,6 @@
  * Copyright (c) Microsoft Corporation. All rights reserved.
  * Licensed under the MIT License. See License.txt in the project root for license information.
  * ------------------------------------------------------------------------------------------ */
-import * as path from 'path';
 import { TextDecoder } from 'util';
 import { parentPort, Worker } from 'worker_threads';
 
@@ -22,6 +21,7 @@ class TestServiceConnection<RequestHandlers extends RequestType | undefined = un
 		this.worker = worker;
 	}
 	public terminate(): Promise<number> {
+		this.dispose();
 		return this.worker.terminate();
 	}
 }

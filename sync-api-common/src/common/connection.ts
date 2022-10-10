@@ -582,6 +582,7 @@ export class RPCError extends Error {
 export interface ClientConnection<Requests extends RequestType | undefined = undefined> {
 	readonly sendRequest: SendRequestSignatures<Requests>;
 	serviceReady(): Promise<void>;
+	dispose(): void;
 }
 
 export abstract class BaseClientConnection<Requests extends RequestType | undefined = undefined> implements ClientConnection<Requests> {
@@ -732,6 +733,8 @@ export abstract class BaseClientConnection<Requests extends RequestType | undefi
 
 	protected abstract postMessage(sharedArrayBuffer: SharedArrayBuffer): any;
 
+	abstract dispose(): void;
+
 	protected handleMessage(message: Message): void {
 		if (message.method === '$/ready') {
 			this.readyCallbacks!.resolve(message.params);
@@ -774,6 +777,7 @@ type RequestHandler = {
 export interface ServiceConnection<RequestHandlers extends RequestType | undefined = undefined> {
 	readonly onRequest: HandleRequestSignatures<RequestHandlers>;
 	signalReady(): void;
+	dispose(): void;
 }
 
 export abstract class BaseServiceConnection<RequestHandlers extends RequestType | undefined = undefined> implements ServiceConnection<RequestHandlers> {
@@ -896,4 +900,6 @@ export abstract class BaseServiceConnection<RequestHandlers extends RequestType 
 	}
 
 	protected abstract postMessage(message: Message): void;
+
+	abstract dispose(): void;
 }

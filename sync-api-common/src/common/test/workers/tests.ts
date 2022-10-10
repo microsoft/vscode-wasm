@@ -38,7 +38,8 @@ export async function runSingle(test: (connection: ClientConnection<TestRequests
 				expected: error.expected,
 				operator: error.operator,
 				generatedMessage: error.generatedMessage,
-				code: error.code
+				code: error.code,
+				stack: error.stack
 			});
 		} else if (error instanceof Error) {
 			connection.sendRequest('testing/error', {
@@ -51,5 +52,6 @@ export async function runSingle(test: (connection: ClientConnection<TestRequests
 		}
 	} finally {
 		connection.sendRequest('testing/done');
+		connection.dispose();
 	}
 }

@@ -17,13 +17,18 @@ export class ClientConnection<Requests extends RequestType | undefined = undefin
 		this.channel = new BroadcastChannel(BroadcastChannelName);
 		this.channel.onmessage = (message: any) => {
 			try {
-				if (message.data.dest === this.connectionId || message.data.dest === KnownConnectionIds.All) {
+				if (message.data?.dest === this.connectionId || message.data?.dest === KnownConnectionIds.All) {
 					this.handleMessage(message.data);
 				}
 			} catch (error) {
 				RAL().console.error(error);
 			}
 		};
+	}
+
+	dispose() {
+		this.channel.onmessage = () => {};
+		this.channel.close();
 	}
 
 	protected postMessage(sharedArrayBuffer: SharedArrayBuffer) {
@@ -40,11 +45,19 @@ export class ServiceConnection<RequestHandlers extends RequestType | undefined =
 		this.channel = new BroadcastChannel(BroadcastChannelName);
 		this.channel.onmessage = async (message: any) => {
 			try {
-				await this.handleMessage(message.data as SharedArrayBuffer);
+				// Skip broadcast messages that aren't SharedArrayBuffers
+				if (message.data?.byteLength) {
+					await this.handleMessage(message.data as SharedArrayBuffer);
+				}
 			} catch (error) {
 				RAL().console.error(error);
 			}
 		};
+	}
+
+	dispose() {
+		this.channel.onmessage = () => {};
+		this.channel.close();
 	}
 
 	protected postMessage(message: Message) {

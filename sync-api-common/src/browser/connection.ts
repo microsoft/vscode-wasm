@@ -13,19 +13,26 @@ export class ClientConnection<Requests extends RequestType | undefined = undefin
 	constructor() {
 		super(self.location.pathname);
 		this.channel = new BroadcastChannel(BroadcastChannelName);
-		this.channel.addEventListener('message', (ev: MessageEvent) => {
-			try {
-				if (ev.data.dest === this.connectionId || ev.data.dest === KnownConnectionIds.All) {
-					this.handleMessage(ev.data);
-				}
-			} catch (error) {
-				RAL().console.error(error);
-			}
-		});
+		this.channel.addEventListener('message', this._handleMessageEvent.bind(this));
+	}
+
+	dispose() {
+		this.channel.removeEventListener('message', this._handleMessageEvent.bind(this));
+		this.channel.close();
 	}
 
 	protected postMessage(sharedArrayBuffer: SharedArrayBuffer) {
 		this.channel.postMessage(sharedArrayBuffer);
+	}
+
+	_handleMessageEvent(ev: MessageEvent) {
+		try {
+			if (ev.data.dest === this.connectionId || ev.data.dest === KnownConnectionIds.All) {
+				this.handleMessage(ev.data);
+			}
+		} catch (error) {
+			RAL().console.error(error);
+		}
 	}
 }
 
@@ -36,16 +43,23 @@ export class ServiceConnection<RequestHandlers extends RequestType | undefined =
 	constructor() {
 		super(KnownConnectionIds.Main);
 		this.channel = new BroadcastChannel(BroadcastChannelName);
-		this.channel.addEventListener('message', async (ev: MessageEvent) => {
-			try {
-				await this.handleMessage(ev.data);
-			} catch (error) {
-				RAL().console.error(error);
-			}
-		});
+		this.channel.addEventListener('message', this._handleMessageEvent.bind(this));
+	}
+
+	dispose() {
+		this.channel.removeEventListener('message', this._handleMessageEvent.bind(this));
+		this.channel.close();
 	}
 
 	protected postMessage(message: Message) {
 		this.channel.postMessage(message);
+	}
+
+	async _handleMessageEvent(ev: MessageEvent) {
+		try {
+			await this.handleMessage(ev.data);
+		} catch (error) {
+			RAL().console.error(error);
+		}
 	}
 }
