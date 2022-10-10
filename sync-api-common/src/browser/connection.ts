@@ -10,9 +10,9 @@ export class ClientConnection<Requests extends RequestType | undefined = undefin
 
 	private readonly channel: BroadcastChannel;
 
-	constructor() {
+	constructor(channelName: string = BroadcastChannelName) {
 		super(self.location.pathname);
-		this.channel = new BroadcastChannel(BroadcastChannelName);
+		this.channel = new BroadcastChannel(channelName);
 		this.channel.addEventListener('message', this._handleMessageEvent.bind(this));
 	}
 
@@ -40,9 +40,9 @@ export class ServiceConnection<RequestHandlers extends RequestType | undefined =
 
 	private readonly channel: BroadcastChannel;
 
-	constructor() {
+	constructor(channelName: string = BroadcastChannelName) {
 		super(KnownConnectionIds.Main);
-		this.channel = new BroadcastChannel(BroadcastChannelName);
+		this.channel = new BroadcastChannel(channelName);
 		this.channel.addEventListener('message', this._handleMessageEvent.bind(this));
 	}
 

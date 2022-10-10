@@ -12,9 +12,9 @@ export class ClientConnection<Requests extends RequestType | undefined = undefin
 
 	private readonly channel: BroadcastChannel;
 
-	constructor() {
+	constructor(channelName: string = BroadcastChannelName) {
 		super(isMainThread ? KnownConnectionIds.Main : threadId.toString());
-		this.channel = new BroadcastChannel(BroadcastChannelName);
+		this.channel = new BroadcastChannel(channelName);
 		this.channel.onmessage = (message: any) => {
 			try {
 				if (message.data?.dest === this.connectionId || message.data?.dest === KnownConnectionIds.All) {
@@ -40,9 +40,9 @@ export class ServiceConnection<RequestHandlers extends RequestType | undefined =
 
 	private readonly channel: BroadcastChannel;
 
-	constructor() {
+	constructor(channelName: string = BroadcastChannelName) {
 		super(isMainThread ? KnownConnectionIds.Main : threadId.toString());
-		this.channel = new BroadcastChannel(BroadcastChannelName);
+		this.channel = new BroadcastChannel(channelName);
 		this.channel.onmessage = async (message: any) => {
 			try {
 				// Skip broadcast messages that aren't SharedArrayBuffers

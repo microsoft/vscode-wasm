@@ -88,7 +88,7 @@ export type RequestType = MessageType & ({
 	result?: TypedArray | object | null;
 });
 
-export const BroadcastChannelName = `@vscode/sync-api`;
+export const BroadcastChannelName = `@vscode/sync-api/default`;
 
 export enum KnownConnectionIds {
 	Main = 'main',
