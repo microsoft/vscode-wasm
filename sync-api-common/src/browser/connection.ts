@@ -57,7 +57,9 @@ export class ServiceConnection<RequestHandlers extends RequestType | undefined =
 
 	async _handleMessageEvent(ev: MessageEvent) {
 		try {
-			await this.handleMessage(ev.data);
+			if (ev.data?.byteLength) {
+				await this.handleMessage(ev.data);
+			}
 		} catch (error) {
 			RAL().console.error(error);
 		}
