@@ -19,7 +19,10 @@ export class ClientConnection<Requests extends RequestType | undefined = undefin
 		this.messageChannel = new MessageChannel();
 		this.sendPort = this.messageChannel.port1;
 		this.sendPort.addEventListener('message', this._handleMessage.bind(this));
-		this.broadcastChannel.postMessage(this.createPortBroadcastMessage(this.messageChannel.port2));
+
+		// Need to send the port as transfer item, but official api doesn't support that.
+		const postMessageFunc = this.broadcastChannel.postMessage.bind(this.broadcastChannel) as any;
+		postMessageFunc(this.createPortBroadcastMessage(this.messageChannel.port2), [this.messageChannel.port2]);
 	}
 
 	dispose() {
@@ -65,13 +68,26 @@ export class ServiceConnection<RequestHandlers extends RequestType | undefined =
 	}
 
 	protected postMessage(message: Message) {
-		const clientPort = this.clientPorts.get(message.dest);
-		clientPort?.postMessage(message);
+		if (message.dest === KnownConnectionIds.All) {
+			const clientPorts = [...this.clientPorts.values()];
+			clientPorts.forEach(c => c.postMessage(message));
+		} else {
+			const clientPort = this.clientPorts.get(message.dest);
+			clientPort?.postMessage(message);
+		}
 	}
 
 	protected onBroadcastPort(message: Message): void {
 		if (message.params && message.src && message.params.port) {
+			const messagePort = message.params.port as MessagePort;
+			messagePort.addEventListener('message', this._handleClientMessage.bind(this));
 			this.clientPorts.set(message.src, message.params.port as MessagePort);
+		}
+	}
+
+	private _handleClientMessage(ev: MessageEvent) {
+		if (ev.data?.byteLength) {
+			this.handleMessage(ev.data);
 		}
 	}
 }
