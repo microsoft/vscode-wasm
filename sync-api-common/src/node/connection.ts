@@ -21,10 +21,11 @@ export class ClientConnection<Requests extends RequestType | undefined = undefin
 		this.sendPort = this.messageChannel.port1;
 		this.sendPort.on('message', this._handleMessage.bind(this));
 
-		// Need to send the port as transfer item, but official api doesn't support that. Make it type unsafe
-		// to send the extra data
-		const broadcastMessage = this.broadcastChannel.postMessage.bind(this.broadcastChannel) as any;
-		broadcastMessage(this.createPortBroadcastMessage(this.messageChannel.port2), [this.messageChannel.port2]);
+		// Need to send the port as transfer item, but official api doesn't support that. Do a big hack
+		// to pull the MessagePort out of the broadcastchannel
+		const symbols = Object.getOwnPropertySymbols(this.broadcastChannel);
+		const port = (this.broadcastChannel as any)[symbols[5]] as MessagePort;
+		port.postMessage(this.createPortBroadcastMessage(this.messageChannel.port2), [this.messageChannel.port2]);
 	}
 
 	dispose() {
@@ -37,10 +38,10 @@ export class ClientConnection<Requests extends RequestType | undefined = undefin
 		this.sendPort.postMessage(sharedArrayBuffer);
 	}
 
-	private _handleMessage(message: any) {
+	private _handleMessage(message: Message) {
 		try {
-			if (message.data?.dest === this.connectionId || message.data?.dest === KnownConnectionIds.All) {
-				this.handleMessage(message.data);
+			if (message.dest === this.connectionId || message.dest === KnownConnectionIds.All) {
+				this.handleMessage(message);
 			}
 		} catch (error) {
 			RAL().console.error(error);
@@ -68,12 +69,19 @@ export class ServiceConnection<RequestHandlers extends RequestType | undefined =
 	}
 
 	protected postMessage(message: Message) {
-		const clientPort = this.clientPorts.get(message.dest);
-		clientPort?.postMessage(message);
+		if (message.dest === KnownConnectionIds.All) {
+			const clientPorts = [...this.clientPorts.values()];
+			clientPorts.forEach(c => c.postMessage(message));
+		} else {
+			const clientPort = this.clientPorts.get(message.dest);
+			clientPort?.postMessage(message);
+		}
 	}
 
 	protected onBroadcastPort(message: Message): void {
 		if (message.params && message.src && message.params.port) {
+			const messagePort = message.params.port as MessagePort;
+			messagePort.on('message', this.handleMessage.bind(this));
 			this.clientPorts.set(message.src, message.params.port as MessagePort);
 		}
 	}
