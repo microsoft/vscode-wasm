@@ -22,7 +22,8 @@ export class ClientConnection<Requests extends RequestType | undefined = undefin
 		this.sendPort.on('message', this._handleMessage.bind(this));
 
 		// Need to send the port as transfer item, but official api doesn't support that. Do a big hack
-		// to pull the MessagePort out of the broadcastchannel
+		// to pull the MessagePort out of the broadcastchannel. Note this is very specific to Node's code:
+		// https://github.dev/nodejs/node/blob/214354fc9f3eed8cbd1a1916e1fde100f13f3254/lib/internal/worker/io.js#L432
 		const symbols = Object.getOwnPropertySymbols(this.broadcastChannel);
 		const port = (this.broadcastChannel as any)[symbols[5]] as MessagePort;
 		port.postMessage(this.createPortBroadcastMessage(this.messageChannel.port2), [this.messageChannel.port2]);
