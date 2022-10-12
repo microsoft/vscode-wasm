@@ -14,6 +14,7 @@ export type size = u32;
 
 export type Message = {
 	dest: string;
+	src: string;
 	method: string;
 	params?: Params;
 };
@@ -592,7 +593,6 @@ export abstract class BaseClientConnection<Requests extends RequestType | undefi
 	private readonly textDecoder: RAL.TextDecoder;
 	private readonly readyPromise: Promise<void>;
 	private readyCallbacks: PromiseCallbacks | undefined;
-
 	constructor(protected connectionId: string) {
 		this.id = 1;
 		this.textEncoder = RAL().TextEncoder.create();
@@ -605,6 +605,10 @@ export abstract class BaseClientConnection<Requests extends RequestType | undefi
 	public serviceReady(): Promise<void> {
 		this._sendRequest('$/checkready');
 		return this.readyPromise;
+	}
+
+	protected createPortBroadcastMessage(receivePort: object) {
+		return { method: '$/broadcastport', src: this.connectionId, dest: KnownConnectionIds.Main, params: {port: receivePort}};
 	}
 
 	public readonly sendRequest: SendRequestSignatures<Requests> = this._sendRequest as SendRequestSignatures<Requests>;
@@ -674,6 +678,7 @@ export abstract class BaseClientConnection<Requests extends RequestType | undefi
 		const sync = new Int32Array(sharedArrayBuffer, 0, 1);
 		Atomics.store(sync, 0, 0);
 		// Send the shared array buffer to the extension host worker
+		console.log(`Client sending sharedArrayBuffer with length ${sharedArrayBuffer.byteLength}`);
 		this.postMessage(sharedArrayBuffer);
 
 		// Wait for the answer
@@ -731,7 +736,7 @@ export abstract class BaseClientConnection<Requests extends RequestType | undefi
 		}
 	}
 
-	protected abstract postMessage(sharedArrayBuffer: SharedArrayBuffer): any;
+	protected abstract postMessage(sharedArrayBuffer: SharedArrayBuffer): void;
 
 	abstract dispose(): void;
 
@@ -804,6 +809,13 @@ export abstract class BaseServiceConnection<RequestHandlers extends RequestType 
 		};
 	}
 
+	protected handleBroadcastMessage(ev: any) {
+		const message = ev.data as Notification;
+		if (message?.method === '$/broadcastport' && message?.params && message?.dest === KnownConnectionIds.Main) {
+			this.onBroadcastPort(message);
+		}
+	}
+
 	protected async handleMessage(sharedArrayBuffer: SharedArrayBuffer): Promise<void> {
 		const header = new Uint32Array(sharedArrayBuffer, SyncSize.total, HeaderSize.total / 4);
 		const requestOffset = header[HeaderIndex.messageOffset];
@@ -811,7 +823,9 @@ export abstract class BaseServiceConnection<RequestHandlers extends RequestType 
 
 		try {
 			// See above why we need to slice the Uint8Array.
-			const message = JSON.parse(this.textDecoder.decode(new Uint8Array(sharedArrayBuffer, requestOffset, requestLength).slice()));
+			const data = this.textDecoder.decode(new Uint8Array(sharedArrayBuffer, requestOffset, requestLength).slice());
+			console.log(`Handling message ${header.length} ${data}`);
+			const message = JSON.parse(data);
 			if (Request.is(message)) {
 				if (message.method === '$/fetchResult') {
 					const resultId: number = message.params!.resultId as number;
@@ -895,11 +909,13 @@ export abstract class BaseServiceConnection<RequestHandlers extends RequestType 
 
 	public signalReady(): void {
 		this.sentReady = true;
-		const notification: Notification = { method: '$/ready', dest: KnownConnectionIds.All };
+		const notification: Notification = { method: '$/ready', src: this.connectionId, dest: KnownConnectionIds.All };
 		this.postMessage(notification);
 	}
 
 	protected abstract postMessage(message: Message): void;
+
+	protected abstract onBroadcastPort(message: Notification): void;
 
 	abstract dispose(): void;
 }

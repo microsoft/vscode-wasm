@@ -25,6 +25,7 @@ class TestServiceConnection<RequestHandlers extends RequestType | undefined = un
 		this.worker = worker;
 	}
 	public terminate(): Promise<number> {
+		console.log('terminating service connection');
 		this.worker.terminate();
 		this.dispose();
 		return Promise.resolve(0);

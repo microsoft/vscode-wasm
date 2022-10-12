@@ -4,7 +4,7 @@
 		"tsBuildInfoFile":"../../../lib/common/test/compile.tsbuildInfo",
 		"rootDir": ".",
 		"outDir": "../../../lib/common/test",
-		"lib": [ "es2020"],
+		"lib": [ "es2020", "DOM"],
 		"types": [
 			"mocha"
 		]

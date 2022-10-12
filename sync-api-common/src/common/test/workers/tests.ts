@@ -27,8 +27,9 @@ export function assertResult(result: { errno: 0; data: TypedArray } | { errno: R
 
 export async function runSingle(test: (connection: ClientConnection<TestRequests>) => void): Promise<void> {
 	const connection = RAL().$testing.ClientConnection.create<TestRequests>()!;
-	await connection.serviceReady();
 	try {
+		console.log('Awaiting ready in the client');
+		await connection.serviceReady();
 		test(connection);
 	} catch (error) {
 		if (error instanceof assert.AssertionError) {

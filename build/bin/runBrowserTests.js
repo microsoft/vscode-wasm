@@ -77,9 +77,10 @@ async function runTests(location) {
 		});
 		server.listen(8080, '127.0.0.1', async () => {
 			let failCount = 0;
-			const browser = await playwright['chromium'].launch({ headless: true, devtools: false });
+			const browser = await playwright['chromium'].launch({ headless: true, devtools: true });
 			const context = await browser.newContext();
 			const page = await context.newPage();
+			page.on('console', msg => console.log('LOG FROM INSIDE PAGE: ', msg))
 			const emitter = new events.EventEmitter();
 			emitter.on('fail', () => {
 				failCount++;
