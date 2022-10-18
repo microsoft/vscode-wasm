@@ -4,47 +4,34 @@ import { DebugProtocol } from '@vscode/debugprotocol';
 import { TextDecoder, TextEncoder } from 'util';
 import { ProcessEnvOptions, ChildProcess, spawn } from 'child_process';
 
-const StackFrameRegex = /^[>,\s]+(.+)\((\d+)\)(.*)$/;
+const StackFrameRegex = /^[>,\s]+(.+)\((\d+)\)(.*)\(\)$/;
 const ScrapeOutputRegex = /(.*)\r*\n\(Pdb\)\s*$/;
+const BreakpointRegex = /Breakpoint (\d+) at (.+):(\d+)/;
 
-class DebugTerminal implements vscode.Pseudoterminal {
-	_writeEventEmitter = new vscode.EventEmitter<string>();
-	public get onDidWrite(): vscode.Event<string> {
-		return this._writeEventEmitter.event;
-	}
-	onDidOverrideDimensions?: vscode.Event<vscode.TerminalDimensions | undefined> | undefined;
-	onDidClose?: vscode.Event<number | void> | undefined;
-	onDidChangeName?: vscode.Event<string> | undefined;
-	open(initialDimensions: vscode.TerminalDimensions | undefined): void {
-
-	}
-	close(): void {
-
-	}
-	writeOutput(output: string): void {
-		this._writeEventEmitter.fire(`${output}\r\n`);
-	}
-}
 
 class DebugAdapter implements vscode.DebugAdapter {
 	private _pythonFile: string | undefined;
 	private _textDecoder = new TextDecoder();
 	private _sequence = 0;
-	private static _terminal: vscode.Terminal | undefined;
-	private static _debugTerminal: DebugTerminal | undefined;
 	private _debuggee: ChildProcess | undefined;
 	private _outputChain: Promise<string> | undefined;
-	private _outputQueue: ((s: string) => void)[] = [];
+	private _outputEmitter = new vscode.EventEmitter<string>();
+	private _stopped = true;
+	private _stopOnEntry = false;
+	private _workspaceFolder: vscode.WorkspaceFolder | undefined;
+	private _boundBreakpoints: DebugProtocol.Breakpoint[] = [];
 
 	private _didSendMessageEmitter: vscode.EventEmitter<DebugProtocol.Response | DebugProtocol.Event> =
 		new vscode.EventEmitter<DebugProtocol.Response | DebugProtocol.Event>();
 
 	constructor(
-		private readonly session: vscode.DebugSession,
-		private readonly context: vscode.ExtensionContext
+		readonly session: vscode.DebugSession,
+		readonly context: vscode.ExtensionContext
 	) {
 		this._pythonFile = session.configuration.program;
-		DebugAdapter.createTerminalIfNecessary();
+		this._stopOnEntry = session.configuration.stopOnEntry;
+		this._workspaceFolder = session.workspaceFolder ||
+			(vscode.workspace.workspaceFolders ? vscode.workspace.workspaceFolders[0] : undefined);
 	}
 	get onDidSendMessage(): vscode.Event<DebugProtocol.ProtocolMessage> {
 		return this._didSendMessageEmitter.event;
@@ -87,27 +74,27 @@ class DebugAdapter implements vscode.DebugAdapter {
 				void this._handleVariablesRequest(message as DebugProtocol.VariablesRequest);
 				break;
 
+			case 'setBreakpoints':
+				void this._handleSetBreakpointsRequest(message as DebugProtocol.SetBreakpointsRequest);
+				break;
+
+			case 'configurationDone':
+				this._handleConfigurationDone(message as DebugProtocol.ConfigurationDoneRequest);
+				break;
+
+			case 'continue':
+				this._handleContinue(message as DebugProtocol.ContinueRequest);
+				break;
+
 			default:
 				console.log(`Unknown debugger command ${message.command}`);
 				break;
 		}
 	}
-	static createTerminalIfNecessary() {
-		if (!DebugAdapter._terminal) {
-			DebugAdapter._debugTerminal = new DebugTerminal();
-			DebugAdapter._terminal = vscode.window.createTerminal({ name: 'Python PDB', isTransient: true, pty: DebugAdapter._debugTerminal });
-		}
-		DebugAdapter._terminal.show();
-	}
 
 	_handleStdout(data: Buffer) {
 		const str = this._textDecoder.decode(data);
-		const resolveFunc = this._outputQueue.shift();
-		if (resolveFunc) {
-			resolveFunc(str);
-		} else {
-			this._sendOutputEvent(str);
-		}
+		this._outputEmitter.fire(str);
 	}
 
 	_handleStderr(data: Buffer) {
@@ -125,18 +112,44 @@ class DebugAdapter implements vscode.DebugAdapter {
 		this._didSendMessageEmitter.fire({...event, seq: this._sequence});
 	}
 
+	_sendStoppedEvent(reason: string, breakpointHit?: DebugProtocol.Breakpoint) {
+		if (breakpointHit && breakpointHit.id) {
+			this._sendEvent<DebugProtocol.StoppedEvent>({
+				type: 'event',
+				seq: 1,
+				event: 'stopped',
+				body: {
+					reason: 'breakpoint',
+					threadId: 1,
+					allThreadsStopped: true,
+					hitBreakpointIds: [breakpointHit.id]
+				}
+			});
+		} else {
+			this._sendEvent<DebugProtocol.StoppedEvent>({
+				type: 'event',
+				seq: 1,
+				event: 'stopped',
+				body: {
+					reason,
+					threadId: 1,
+					allThreadsStopped: true,
+				}
+			});
+		}
+	}
+
 	async _handleLaunch(message: DebugProtocol.LaunchRequest) {
 		if (this._pythonFile && !this._debuggee) {
 			// Startup pdb for the main file
-			DebugAdapter.writeOutput(`python -m pdb ${this._pythonFile}`);
 
 			// Wait for debuggee to emit first bit of output before continuing
-			await this.waitForOutput(this._launchpdb.bind(this));
+			await this._waitForPdbOutput(this._launchpdb.bind(this));
 
 			// PDB should have stopped at the entry point and printed out the first line
 
 			// Show in the debugger that we are debugging
-			this._sendOutputEvent(`python ${this._pythonFile}`);
+			this._sendOutputEvent(`python -m pdb ${this._pythonFile}`);
 
 			// Send back the response
 			this._sendResponse<DebugProtocol.LaunchResponse>({
@@ -146,30 +159,25 @@ class DebugAdapter implements vscode.DebugAdapter {
 				command: message.command,
 				seq: 1
 			});
-
-			// Send back the stopped location. This should cause
-			// VS code to ask for the stack frame
-			this._sendEvent<DebugProtocol.StoppedEvent>({
-				type: 'event',
-				seq: 1,
-				event: 'stopped',
-				body: {
-					reason: 'entry',
-					threadId: 1,
-					allThreadsStopped: true
-				}
-			});
-
-		} else {
-			DebugAdapter.writeOutput(`Cannot start debugging as no python file or debugger already running`);
 		}
 	}
 
-	_handleDisconnect(message: DebugProtocol.DisconnectRequest) {
+	_terminate() {
 		if (this._debuggee) {
 			this._debuggee.stdin?.write(`exit\n`);
 			this._debuggee = undefined;
 		}
+	}
+
+	_handleDisconnect(message: DebugProtocol.DisconnectRequest) {
+		this._terminate();
+		this._sendResponse<DebugProtocol.DisconnectResponse>({
+			type: 'response',
+			request_seq: message.seq,
+			success: true,
+			command: message.command,
+			seq: 1,
+		});
 	}
 
 	_handleInitialize(message: DebugProtocol.InitializeRequest) {
@@ -181,10 +189,16 @@ class DebugAdapter implements vscode.DebugAdapter {
 			command: message.command,
 			seq: 1,
 			body: {
-				supportsBreakpointLocationsRequest: true,
 				supportsConditionalBreakpoints: true,
-				supportsSingleThreadExecutionRequests: true
+				supportsConfigurationDoneRequest: true
 			}
+		});
+
+		// Send back the initialized event to indicate ready to receive breakpoint requests
+		this._sendEvent<DebugProtocol.InitializedEvent>({
+			type: 'event',
+			event: 'initialized',
+			seq: 1
 		});
 	}
 
@@ -208,54 +222,82 @@ class DebugAdapter implements vscode.DebugAdapter {
 		});
 	}
 
-	async waitForOutput(generator: () => void): Promise<string> {
-		if (this._outputChain) {
-			await this._outputChain;
+	async _waitForStopped() {
+		if (!this._stopped && this._outputChain) {
+			// If we're not currently stopped, then we must be waiting for output
+			return this._outputChain;
 		}
-		this._outputChain = new Promise<string>((resolve, reject) => {
-			this._outputQueue.push(resolve);
-			generator();
+		return undefined;
+	}
+
+	_waitForPdbOutput(generator: () => void): Promise<string> {
+		const current = this._outputChain ?? Promise.resolve('');
+		this._outputChain = current.then(() => {
+			return new Promise<string>((resolve, reject) => {
+				const disposable = this._outputEmitter.event((str) => {
+					// We are finished when the output ends with `(Pdb) `
+					if (str.includes(`(Pdb) `)) {
+						disposable.dispose();
+						this._stopped = true;
+						resolve(str);
+					} else {
+						// Otherwise actual output from the process, send to the debug console
+						this._sendOutputEvent(str);
+					}
+				});
+				this._stopped = false;
+				generator();
+			});
 		});
 		return this._outputChain;
+	}
+
+	_parseStackFrames(frames: string): DebugProtocol.StackFrame[] {
+		const result: DebugProtocol.StackFrame[] = [];
+
+		// Split frames into lines
+		const lines = frames.replace(/\r/g, '').split('\n');
+
+		// Go through each line
+		lines.forEach((line, index) => {
+			const frameParts = StackFrameRegex.exec(line);
+			if (frameParts) {
+				// Insert at the front so last frame is on front of list
+				result.splice(0, 0, {
+					id: lines.length - index,
+					source: {
+						name: path.basename(frameParts[1]),
+						path: frameParts[1],
+						sourceReference: 0 // Don't retrieve source from pdb
+					},
+					name: frameParts[3],
+					line: parseInt(frameParts[2]),
+					column: 0
+				});
+			}
+		});
+		return result;
 	}
 
 	async _handleStackTrace(message: DebugProtocol.StackTraceRequest) {
 		// Ask PDB for the current frame
 		const frames = await this._sendtopdb('where');
 
-		// Split frames into lines
-		const lines = frames.replace(/\r/g, '').split('\n');
+		// Parse the frames
+		const stackFrames = this._parseStackFrames(frames);
 
-		// Find the line with the > on it
-		const current = lines.find(l => l.startsWith('> '));
-		const frameParts = current ? StackFrameRegex.exec(current): null;
-
-		if (current && frameParts) {
-			// Return the stack trace
-			this._sendResponse<DebugProtocol.StackTraceResponse>({
-				success: true,
-				command: message.command,
-				type: 'response',
-				seq: 1,
-				request_seq: message.seq,
-				body: {
-					totalFrames: 1,
-					stackFrames: [
-						{
-							id: 1,
-							source: {
-								name: path.basename(frameParts[1]),
-								path: frameParts[1],
-								sourceReference: 0 // Don't retrieve source from pdb
-							},
-							name: frameParts[3],
-							line: parseInt(frameParts[2]),
-							column: 0
-						}
-					]
-				}
-			});
-		}
+		// Return the stack trace
+		this._sendResponse<DebugProtocol.StackTraceResponse>({
+			success: true,
+			command: message.command,
+			type: 'response',
+			seq: 1,
+			request_seq: message.seq,
+			body: {
+				totalFrames: stackFrames.length,
+				stackFrames
+			}
+		});
 	}
 
 	_handleScopesRequest(message: DebugProtocol.ScopesRequest) {
@@ -318,20 +360,165 @@ class DebugAdapter implements vscode.DebugAdapter {
 		});
 	}
 
+	_handleConfigurationDone(message: DebugProtocol.ConfigurationDoneRequest) {
+		this._sendResponse<DebugProtocol.ConfigurationDoneResponse>({
+			success: true,
+			command: message.command,
+			type: 'response',
+			seq: 1,
+			request_seq: message.seq,
+		});
+
+		if (this._stopOnEntry) {
+			// Send back the stopped location. This should cause
+			// VS code to ask for the stack frame
+			this._sendStoppedEvent('entry');
+		} else if (this._stopped) {
+			// Not stopping, tell pdb to continue. We should have
+			// gotten any breakpoint requests already
+			void this._continue();
+		}
+
+	}
+
+	async _handleSetBreakpointsRequest(message: DebugProtocol.SetBreakpointsRequest) {
+		// Need to not be running in order to set breakpoints. Wait for being stopped
+		await this._waitForStopped();
+
+		const results: DebugProtocol.Breakpoint[] = [];
+
+		// Use the 'b' command to create breakpoints
+		if (message.arguments.breakpoints) {
+			await Promise.all(message.arguments.breakpoints.map(async (b) => {
+				const result = await this._sendtopdb(`b ${message.arguments.source.path}:${b.line}`);
+				const parsed = BreakpointRegex.exec(result);
+				if (parsed) {
+					const breakpoint: DebugProtocol.Breakpoint = {
+						id: parseInt(parsed[1]),
+						line: parseInt(parsed[3]),
+						source: {
+							path: parsed[2]
+						},
+						verified: true
+					};
+					this._boundBreakpoints.push(breakpoint);
+					results.push(breakpoint);
+				}
+			}));
+		}
+
+		this._sendResponse<DebugProtocol.SetBreakpointsResponse>({
+			success: true,
+			command: message.command,
+			type: 'response',
+			seq: 1,
+			request_seq: message.seq,
+			body: {
+				breakpoints: results
+			}
+		});
+	}
+
 	_launchpdb() {
 		this._debuggee = spawn(`python` , ['-m' ,'pdb', this._pythonFile!], { cwd: path.dirname(this._pythonFile!)});
 		this._debuggee!.stdout?.on('data', this._handleStdout.bind(this));
 		this._debuggee!.stderr?.on('data', this._handleStderr.bind(this));
 		this._debuggee!.on('exit', (code) => {
-			DebugAdapter.writeOutput(`process exited with ${code}`);
-			this._sendEvent({event: 'stopped', seq: 1, type: 'event', body: { description: 'Process exited'}});
+			this._sendOutputEvent(`Process exited with ${code}`);
+			this._sendStoppedEvent('exit');
 		});
 
 	}
 
+	_isMyCode(file: string): boolean {
+		// Determine if this file is in the current workspace or not
+		if (this._workspaceFolder) {
+			const root = this._workspaceFolder.uri.fsPath.toLowerCase();
+			return file.toLowerCase().startsWith(root);
+		} else {
+			// Otherwise no workspace folder and just a loose file. Use the starting file
+			const root = path.dirname(this._pythonFile!).toLowerCase();
+			return file.toLowerCase().startsWith(root);
+		}
+	}
+
+	_handleProgramFinished() {
+		// Program finished. Disconnect
+		this._terminate();
+		this._sendEvent<DebugProtocol.TerminatedEvent>({
+			type: 'event',
+			event: 'terminated',
+			seq: 1,
+		});
+	}
+
+	_handleUncaughtException() {
+		this._sendStoppedEvent('exception');
+	}
+
+	async _handleStopped(output: string) {
+		// Parse the output. It should have the frames in it
+		const frames = this._parseStackFrames(output);
+
+		// The topmost frame needs to be 'my code' or we should step
+		if (frames.length > 0 && !this._isMyCode(frames[0].source!.path!)) {
+			return this._executerun('s');
+		}
+
+		// Otherwise we stopped. See if this location matches one of
+		// our current breakpoints
+		const match = this._boundBreakpoints.find(
+			b => b.line === frames[0].line && b.source?.path === frames[0].source?.path);
+		this._sendStoppedEvent('step', match);
+	}
+
+	async _executerun(runcommand: string) {
+		const output = await this._sendtopdb(runcommand);
+
+		// We should be stopped now. Depends upon why
+		if (output.includes('The program finished and will be restarted')) {
+			this._handleProgramFinished();
+		} else if (output.includes('Uncaught exception. Entering post mortem debugging')) {
+			this._handleUncaughtException();
+		} else {
+			await this._handleStopped(output);
+		}
+	}
+
+	async _stepInto() {
+
+	}
+
+	async _stepOver() {
+
+	}
+
+	async _stepOutOf() {
+
+	}
+
+	_handleContinue(message: DebugProtocol.ContinueRequest) {
+		this._sendResponse<DebugProtocol.ContinueResponse>({
+			success: true,
+			command: message.command,
+			type: 'response',
+			seq: 1,
+			request_seq: message.seq,
+			body: {
+				allThreadsContinued: true
+			}
+		});
+		void this._continue();
+	}
+
+	async _continue() {
+		// Send a continue command. Waiting for the first output.
+		return this._executerun('c');
+	}
+
 	_sendtopdb(command: string): Promise<string> {
 		// Chain requests together
-		return this.waitForOutput(() => {
+		return this._waitForPdbOutput(() => {
 			// Write command to stdin
 			const result = this._debuggee?.stdin?.write(`${command}\n`);
 			if (!result) {
@@ -349,14 +536,9 @@ class DebugAdapter implements vscode.DebugAdapter {
 			seq: 1,
 			event: 'output',
 			body: {
-				output: data
+				output: `${data}\n`
 			}
 		});
-	}
-
-	static writeOutput(output: string) {
-		DebugAdapter.createTerminalIfNecessary();
-		DebugAdapter._debugTerminal?.writeOutput(output);
 	}
 }
 
