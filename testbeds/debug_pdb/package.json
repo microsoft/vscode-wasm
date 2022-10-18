@@ -1,0 +1,43 @@
+{
+	"name": "testbed-debug_pdb",
+	"private": "true",
+	"publisher": "ms-vscode",
+	"version": "0.0.1",
+	"description": "Translate DAP to pdb commands",
+	"author": "MS",
+	"license": "MIT",
+	"engines": {
+		"vscode": "^1.67.0"
+	},
+	"main": "./out/extension.js",
+	"activationEvents": [
+		"onLanguage:python"
+	],
+	"contributes": {
+		"commands": [
+			{
+				"command": "testbed-debug_pdb.debugFile",
+				"category": "wasm",
+				"title": "Debug Python File with pdb",
+				"enablement": "editorLangId == python"
+			}
+		],
+		"debuggers": [
+			{
+			  "label": "Python PDB",
+			  "languages": [
+				"python"
+			  ],
+			  "type": "python-pdb"
+			}
+		  ]
+	},
+	"scripts": {
+		"build": "npm run compile",
+		"compile": "node ../../node_modules/typescript/lib/tsc.js -b tsconfig.json",
+		"watch": "node ../../node_modules/typescript/lib/tsc.js -b tsconfig.json -w"
+	},
+	"dependencies": {
+		"@vscode/debugprotocol": "^1.57.0"
+	}
+}

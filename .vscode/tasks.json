@@ -36,6 +36,20 @@
 			]
 		},
 		{
+			"label": "Build PDB Example",
+			"type": "npm",
+			"script": "build",
+			"path": "testbeds/debug_pdb",
+			"group": "build",
+			"presentation": {
+				"panel": "dedicated",
+				"reveal": "never"
+			},
+			"problemMatcher": [
+				"$tsc"
+			]
+		},
+		{
 			"label": "Build C++ Example",
 			"type": "npm",
 			"script": "build",
