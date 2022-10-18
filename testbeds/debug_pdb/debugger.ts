@@ -258,10 +258,10 @@ class DebugAdapter implements vscode.DebugAdapter {
 		// Split frames into lines
 		const lines = frames.replace(/\r/g, '').split('\n');
 
-		// Go through each line
+		// Go through each line and return frames that are user code
 		lines.forEach((line, index) => {
 			const frameParts = StackFrameRegex.exec(line);
-			if (frameParts) {
+			if (frameParts && this._isMyCode(frameParts[1])) {
 				// Insert at the front so last frame is on front of list
 				result.splice(0, 0, {
 					id: lines.length - index,
