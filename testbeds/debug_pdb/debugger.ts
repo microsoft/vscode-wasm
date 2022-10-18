@@ -86,6 +86,22 @@ class DebugAdapter implements vscode.DebugAdapter {
 				this._handleContinue(message as DebugProtocol.ContinueRequest);
 				break;
 
+			case 'terminate':
+				this._handleTerminate(message as DebugProtocol.TerminateRequest);
+				break;
+
+			case 'next':
+				void this._handleNext(message as DebugProtocol.NextRequest);
+				break;
+
+			case 'stepIn':
+				void this._handleStepIn(message as DebugProtocol.StepInRequest);
+				break;
+
+			case 'stepOut':
+				void this._handleStepOut(message as DebugProtocol.StepOutRequest);
+				break;
+
 			default:
 				console.log(`Unknown debugger command ${message.command}`);
 				break;
@@ -190,7 +206,8 @@ class DebugAdapter implements vscode.DebugAdapter {
 			seq: 1,
 			body: {
 				supportsConditionalBreakpoints: true,
-				supportsConfigurationDoneRequest: true
+				supportsConfigurationDoneRequest: true,
+				supportsSteppingGranularity: true
 			}
 		});
 
@@ -261,7 +278,7 @@ class DebugAdapter implements vscode.DebugAdapter {
 		// Go through each line and return frames that are user code
 		lines.forEach((line, index) => {
 			const frameParts = StackFrameRegex.exec(line);
-			if (frameParts && this._isMyCode(frameParts[1])) {
+			if (frameParts) {
 				// Insert at the front so last frame is on front of list
 				result.splice(0, 0, {
 					id: lines.length - index,
@@ -284,7 +301,8 @@ class DebugAdapter implements vscode.DebugAdapter {
 		const frames = await this._sendtopdb('where');
 
 		// Parse the frames
-		const stackFrames = this._parseStackFrames(frames);
+		const stackFrames = this._parseStackFrames(frames)
+			.filter(f => f.source?.path && this._isMyCode(f.source?.path));
 
 		// Return the stack trace
 		this._sendResponse<DebugProtocol.StackTraceResponse>({
@@ -378,7 +396,17 @@ class DebugAdapter implements vscode.DebugAdapter {
 			// gotten any breakpoint requests already
 			void this._continue();
 		}
+	}
 
+	_handleTerminate(message: DebugProtocol.TerminateRequest) {
+		this._terminate();
+		this._sendResponse<DebugProtocol.TerminateResponse>({
+			success: true,
+			command: message.command,
+			type: 'response',
+			seq: 1,
+			request_seq: message.seq,
+		});
 	}
 
 	async _handleSetBreakpointsRequest(message: DebugProtocol.SetBreakpointsRequest) {
@@ -460,15 +488,16 @@ class DebugAdapter implements vscode.DebugAdapter {
 		// Parse the output. It should have the frames in it
 		const frames = this._parseStackFrames(output);
 
-		// The topmost frame needs to be 'my code' or we should step
+		// The topmost frame needs to be 'my code' or we should step out of the current
+		// frame
 		if (frames.length > 0 && !this._isMyCode(frames[0].source!.path!)) {
-			return this._executerun('s');
+			return this._stepOutOf();
 		}
 
 		// Otherwise we stopped. See if this location matches one of
 		// our current breakpoints
-		const match = this._boundBreakpoints.find(
-			b => b.line === frames[0].line && b.source?.path === frames[0].source?.path);
+		const match = frames.length > 0 ? this._boundBreakpoints.find(
+			b => b.line === frames[0].line && b.source?.path === frames[0].source?.path) : undefined;
 		this._sendStoppedEvent('step', match);
 	}
 
@@ -480,21 +509,24 @@ class DebugAdapter implements vscode.DebugAdapter {
 			this._handleProgramFinished();
 		} else if (output.includes('Uncaught exception. Entering post mortem debugging')) {
 			this._handleUncaughtException();
+		} else if (output.startsWith('--Return--')) {
+			// Return from a function call. Step one more time
+			await this._executerun('s');
 		} else {
 			await this._handleStopped(output);
 		}
 	}
 
 	async _stepInto() {
-
+		return this._executerun('s');
 	}
 
 	async _stepOver() {
-
+		return this._executerun('unt');
 	}
 
 	async _stepOutOf() {
-
+		return this._executerun('r');
 	}
 
 	_handleContinue(message: DebugProtocol.ContinueRequest) {
@@ -509,6 +541,48 @@ class DebugAdapter implements vscode.DebugAdapter {
 			}
 		});
 		void this._continue();
+	}
+
+	_handleNext(message: DebugProtocol.NextRequest) {
+		this._sendResponse<DebugProtocol.NextResponse>({
+			success: true,
+			command: message.command,
+			type: 'response',
+			seq: 1,
+			request_seq: message.seq,
+			body: {
+				allThreadsContinued: true
+			}
+		});
+		void this._stepOver();
+	}
+
+	_handleStepIn(message: DebugProtocol.StepInRequest) {
+		this._sendResponse<DebugProtocol.StepInResponse>({
+			success: true,
+			command: message.command,
+			type: 'response',
+			seq: 1,
+			request_seq: message.seq,
+			body: {
+				allThreadsContinued: true
+			}
+		});
+		void this._stepInto();
+	}
+
+	_handleStepOut(message: DebugProtocol.StepOutRequest) {
+		this._sendResponse<DebugProtocol.StepOutResponse>({
+			success: true,
+			command: message.command,
+			type: 'response',
+			seq: 1,
+			request_seq: message.seq,
+			body: {
+				allThreadsContinued: true
+			}
+		});
+		void this._stepOutOf();
 	}
 
 	async _continue() {
