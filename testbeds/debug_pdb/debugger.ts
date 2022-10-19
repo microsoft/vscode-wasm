@@ -110,7 +110,7 @@ class DebugAdapter implements vscode.DebugAdapter {
 
 	_handleStdout(data: Buffer) {
 		const str = this._textDecoder.decode(data);
-		this._outputEmitter.fire(str);
+		this._outputEmitter.fire(str.replace(/\r/g, ''));
 	}
 
 	_handleStderr(data: Buffer) {
@@ -207,7 +207,8 @@ class DebugAdapter implements vscode.DebugAdapter {
 			body: {
 				supportsConditionalBreakpoints: true,
 				supportsConfigurationDoneRequest: true,
-				supportsSteppingGranularity: true
+				supportsSteppingGranularity: true,
+				supportsTerminateRequest: true
 			}
 		});
 
@@ -400,6 +401,11 @@ class DebugAdapter implements vscode.DebugAdapter {
 
 	_handleTerminate(message: DebugProtocol.TerminateRequest) {
 		this._terminate();
+		this._sendEvent<DebugProtocol.TerminatedEvent>({
+			type: 'event',
+			event: 'terminated',
+			seq: 1,
+		});
 		this._sendResponse<DebugProtocol.TerminateResponse>({
 			success: true,
 			command: message.command,
@@ -480,11 +486,31 @@ class DebugAdapter implements vscode.DebugAdapter {
 		});
 	}
 
-	_handleUncaughtException() {
+	_handleUncaughtException(output: string) {
+		const uncaughtIndex = output.indexOf('\nUncaught exception. Entering post mortem debugging');
+		if (uncaughtIndex >= 0) {
+			this._sendOutputEvent(output.slice(0, uncaughtIndex));
+		}
 		this._sendStoppedEvent('exception');
 	}
 
+	_handleFunctionReturn(output: string) {
+		const returnIndex = output.indexOf('--Return--');
+		if (returnIndex > 0) {
+			this._sendOutputEvent(output.slice(0, returnIndex - 1));
+		}
+		return this._executerun('s');
+	}
+
 	async _handleStopped(output: string) {
+		// Filter out non 'frame' output. Send it to the output as
+		// it should be output from the process.
+		const nonFrameIndex = output.indexOf('\n> ');
+		if (nonFrameIndex >= 0) {
+			this._sendOutputEvent(output.slice(0, nonFrameIndex));
+			output = output.slice(nonFrameIndex);
+		}
+
 		// Parse the output. It should have the frames in it
 		const frames = this._parseStackFrames(output);
 
@@ -508,10 +534,9 @@ class DebugAdapter implements vscode.DebugAdapter {
 		if (output.includes('The program finished and will be restarted')) {
 			this._handleProgramFinished();
 		} else if (output.includes('Uncaught exception. Entering post mortem debugging')) {
-			this._handleUncaughtException();
-		} else if (output.startsWith('--Return--')) {
-			// Return from a function call. Step one more time
-			await this._executerun('s');
+			this._handleUncaughtException(output);
+		} else if (output.includes('--Return--')) {
+			await this._handleFunctionReturn(output);
 		} else {
 			await this._handleStopped(output);
 		}
@@ -522,7 +547,7 @@ class DebugAdapter implements vscode.DebugAdapter {
 	}
 
 	async _stepOver() {
-		return this._executerun('unt');
+		return this._executerun('n');
 	}
 
 	async _stepOutOf() {
