@@ -34,6 +34,6 @@ b d:\\Source\\Testing\\Testing_Pyright\\test_longoutput.py:3
 ```
 
 # Left to do
-- Switch stack frames
 - Evaling
+- Removing breakpoints
 - Exception handling (uncaught and caught)

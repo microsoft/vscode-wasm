@@ -18,6 +18,7 @@ class DebugAdapter implements vscode.DebugAdapter {
 	private _outputEmitter = new vscode.EventEmitter<string>();
 	private _stopped = true;
 	private _stopOnEntry = false;
+	private _currentFrame = 1;
 	private _workspaceFolder: vscode.WorkspaceFolder | undefined;
 	private _boundBreakpoints: DebugProtocol.Breakpoint[] = [];
 
@@ -67,7 +68,7 @@ class DebugAdapter implements vscode.DebugAdapter {
 				break;
 
 			case 'scopes':
-				this._handleScopesRequest(message as DebugProtocol.ScopesRequest);
+				void this._handleScopesRequest(message as DebugProtocol.ScopesRequest);
 				break;
 
 			case 'variables':
@@ -271,7 +272,7 @@ class DebugAdapter implements vscode.DebugAdapter {
 	}
 
 	_parseStackFrames(frames: string): DebugProtocol.StackFrame[] {
-		const result: DebugProtocol.StackFrame[] = [];
+		let result: DebugProtocol.StackFrame[] = [];
 
 		// Split frames into lines
 		const lines = frames.replace(/\r/g, '').split('\n');
@@ -282,7 +283,7 @@ class DebugAdapter implements vscode.DebugAdapter {
 			if (frameParts) {
 				// Insert at the front so last frame is on front of list
 				result.splice(0, 0, {
-					id: lines.length - index,
+					id: result.length+1,
 					source: {
 						name: path.basename(frameParts[1]),
 						path: frameParts[1],
@@ -293,6 +294,14 @@ class DebugAdapter implements vscode.DebugAdapter {
 					column: 0
 				});
 			}
+		});
+
+		// Reverse the ids
+		result = result.map((v, i) => {
+			return {
+				...v,
+				id: i + 1,
+			};
 		});
 		return result;
 	}
@@ -319,7 +328,11 @@ class DebugAdapter implements vscode.DebugAdapter {
 		});
 	}
 
-	_handleScopesRequest(message: DebugProtocol.ScopesRequest) {
+	async _handleScopesRequest(message: DebugProtocol.ScopesRequest) {
+		// When the scopes request comes in, it has the frame that is being requested
+		// If not the same as our current frame, move up or down
+		await this._switchCurrentFrame(message.arguments.frameId);
+
 		// For now have just a single scope all the time. PDB doesn't
 		// really have a way other than asking for 'locals()' or 'globals()'
 		// but then we have to figure out the difference.
@@ -332,7 +345,7 @@ class DebugAdapter implements vscode.DebugAdapter {
 			body: {
 				scopes: [
 					{
-						name: 'Global',
+						name: 'locals',
 						variablesReference: 1,
 						expensive: false
 					}
@@ -502,6 +515,14 @@ class DebugAdapter implements vscode.DebugAdapter {
 		return this._executerun('s');
 	}
 
+	_handleCall(output:string) {
+		const callIndex = output.indexOf('--Call--');
+		if (callIndex > 0) {
+			this._sendOutputEvent(output.slice(0, callIndex - 1));
+		}
+		return this._executerun('s');
+	}
+
 	async _handleStopped(output: string) {
 		// Filter out non 'frame' output. Send it to the output as
 		// it should be output from the process.
@@ -527,7 +548,21 @@ class DebugAdapter implements vscode.DebugAdapter {
 		this._sendStoppedEvent('step', match);
 	}
 
+	async _switchCurrentFrame(newFrame: number) {
+		if (this._currentFrame !== newFrame) {
+			const count = newFrame - this._currentFrame;
+			const frameCommand = count > 0 ? 'u' : 'd';
+			await this._sendtopdb(`${frameCommand} ${Math.abs(count)}`);
+			this._currentFrame = newFrame;
+		}
+	}
+
 	async _executerun(runcommand: string) {
+		// If the current frame isn't the topmost, force it to the topmost.
+		// This is how debugpy works. It always steps the topmost frame
+		await this._switchCurrentFrame(1);
+
+		// Then execute our run command
 		const output = await this._sendtopdb(runcommand);
 
 		// We should be stopped now. Depends upon why
@@ -536,6 +571,8 @@ class DebugAdapter implements vscode.DebugAdapter {
 		} else if (output.includes('Uncaught exception. Entering post mortem debugging')) {
 			this._handleUncaughtException(output);
 		} else if (output.includes('--Return--')) {
+			await this._handleFunctionReturn(output);
+		} else if (output.includes('--Call--')) {
 			await this._handleFunctionReturn(output);
 		} else {
 			await this._handleStopped(output);
