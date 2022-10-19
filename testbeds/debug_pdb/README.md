@@ -34,5 +34,9 @@ b d:\\Source\\Testing\\Testing_Pyright\\test_longoutput.py:3
 ```
 
 # Left to do
-- Removing breakpoints
-- Exception handling (uncaught and caught)
+- Test more examples
+  - Multiple files involved
+  - recursion and stack changing
+  - taking input from user
+- Exception handling (caught)
+- Abstract out process (for testing and for fitting with wasi process)
