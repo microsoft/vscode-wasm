@@ -34,6 +34,5 @@ b d:\\Source\\Testing\\Testing_Pyright\\test_longoutput.py:3
 ```
 
 # Left to do
-- Evaling
 - Removing breakpoints
 - Exception handling (uncaught and caught)

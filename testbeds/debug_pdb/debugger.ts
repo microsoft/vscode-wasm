@@ -103,6 +103,10 @@ class DebugAdapter implements vscode.DebugAdapter {
 				void this._handleStepOut(message as DebugProtocol.StepOutRequest);
 				break;
 
+			case 'evaluate':
+				void this._handleEvaluate(message as DebugProtocol.EvaluateRequest);
+				break;
+
 			default:
 				console.log(`Unknown debugger command ${message.command}`);
 				break;
@@ -648,6 +652,49 @@ class DebugAdapter implements vscode.DebugAdapter {
 			}
 		});
 		void this._stepOutOf();
+	}
+
+	async _handleEvaluate(message: DebugProtocol.EvaluateRequest) {
+		// Have to wait for stopped. Can't eval unless we're stopped
+		await this._waitForStopped();
+
+		// Might have to switch frames
+		const startingFrame = this._currentFrame;
+		if (message.arguments.frameId && message.arguments.frameId !== this._currentFrame) {
+			await this._switchCurrentFrame(message.arguments.frameId);
+		}
+
+		// Special case `print(` to just call print. Otherwise we get
+		// the return value of 'None' in the output, and it's unlikely the user
+		// wanted that
+		const command = message.arguments.expression.startsWith(`print(`)
+			? message.arguments.expression
+			: `p ${message.arguments.expression}`;
+		let output = await this._sendtopdb(command);
+
+		// Remove the final line from the output (it should say `(Pdb) `)
+		const finalLine = output.lastIndexOf('\n');
+		if (finalLine > 0) {
+			output = output.slice(0, finalLine);
+		}
+
+		// Switch back to the starting frame if necessary
+		if (this._currentFrame !== startingFrame) {
+			await this._switchCurrentFrame(startingFrame);
+		}
+
+		// Send the response with our result
+		this._sendResponse<DebugProtocol.EvaluateResponse>({
+			success: true,
+			command: message.command,
+			type: 'response',
+			seq: 1,
+			request_seq: message.seq,
+			body: {
+				result: output,
+				variablesReference: 0
+			}
+		});
 	}
 
 	async _continue() {
