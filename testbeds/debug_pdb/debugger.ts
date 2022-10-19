@@ -543,14 +543,17 @@ class DebugAdapter implements vscode.DebugAdapter {
 	}
 
 	async _stepInto() {
+		// see https://docs.python.org/3/library/pdb.html#pdbcommand-step
 		return this._executerun('s');
 	}
 
 	async _stepOver() {
+		// see https://docs.python.org/3/library/pdb.html#pdbcommand-next
 		return this._executerun('n');
 	}
 
 	async _stepOutOf() {
+		// see https://docs.python.org/3/library/pdb.html#pdbcommand-return
 		return this._executerun('r');
 	}
 
