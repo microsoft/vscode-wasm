@@ -34,6 +34,6 @@ b d:\\Source\\Testing\\Testing_Pyright\\test_longoutput.py:3
 ```
 
 # Left to do
-- Step Over/Step Into/Step Out of. Stepping just steps into my code
 - Switch stack frames
+- Evaling
 - Exception handling (uncaught and caught)
