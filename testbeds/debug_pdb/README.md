@@ -38,5 +38,5 @@ b d:\\Source\\Testing\\Testing_Pyright\\test_longoutput.py:3
   - Multiple files involved
   - recursion and stack changing
   - taking input from user
-- Exception handling (caught)
 - Abstract out process (for testing and for fitting with wasi process)
+- Exception handling (stop on caught)
