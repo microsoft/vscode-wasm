@@ -1,9 +1,9 @@
 import * as path from 'path';
 import * as vscode from 'vscode';
 import { DebugProtocol } from '@vscode/debugprotocol';
-import { TextDecoder, TextEncoder } from 'util';
-import { ProcessEnvOptions, ChildProcess, spawn } from 'child_process';
-import { send } from 'process';
+import { TextDecoder } from 'util';
+import { ChildProcess, spawn } from 'child_process';
+import { ServicePseudoTerminal, TerminalMode } from '@vscode/sync-api-service';
 
 const StackFrameRegex = /^[>,\s]+(.+)\((\d+)\)(.*)\(\)$/;
 const ScrapeDirOutputRegex = /\[(.*)\]$/;
@@ -14,8 +14,6 @@ const PrintExceptionTraceback = `debug_pdb_print_exc_traceback`;
 const SetupExceptionTraceback = `alias debug_pdb_print_exc_traceback !import traceback; import sys; traceback.print_exception(*sys.exc_info())`;
 const PdbTerminator = `(Pdb) `;
 const PdbTerminatorLineFeed = `\n(Pdb) `;
-const TracebackFileRegex = /^\s+File\s+"(.*)",\s+line\s+(\d+),(.*)$/gm;
-
 
 class DebugAdapter implements vscode.DebugAdapter {
 	private _pythonFile: string | undefined;
@@ -30,9 +28,19 @@ class DebugAdapter implements vscode.DebugAdapter {
 	private _uncaughtException = false;
 	private _workspaceFolder: vscode.WorkspaceFolder | undefined;
 	private _boundBreakpoints: DebugProtocol.Breakpoint[] = [];
-
 	private _didSendMessageEmitter: vscode.EventEmitter<DebugProtocol.Response | DebugProtocol.Event> =
 		new vscode.EventEmitter<DebugProtocol.Response | DebugProtocol.Event>();
+
+	private static _terminal: vscode.Terminal | undefined;
+	private static _debugTerminal: ServicePseudoTerminal | undefined;
+
+	static createTerminalIfNecessary() {
+		if (!DebugAdapter._terminal) {
+			DebugAdapter._debugTerminal = ServicePseudoTerminal.create(TerminalMode.inUse);
+			DebugAdapter._terminal = vscode.window.createTerminal({ name: 'Python PDB', isTransient: true, pty: DebugAdapter._debugTerminal });
+		}
+		DebugAdapter._terminal.show();
+	}
 
 	constructor(
 		readonly session: vscode.DebugSession,
@@ -42,6 +50,7 @@ class DebugAdapter implements vscode.DebugAdapter {
 		this._stopOnEntry = session.configuration.stopOnEntry;
 		this._workspaceFolder = session.workspaceFolder ||
 			(vscode.workspace.workspaceFolders ? vscode.workspace.workspaceFolders[0] : undefined);
+		DebugAdapter.createTerminalIfNecessary();
 	}
 	get onDidSendMessage(): vscode.Event<DebugProtocol.ProtocolMessage> {
 		return this._didSendMessageEmitter.event;
@@ -185,10 +194,13 @@ class DebugAdapter implements vscode.DebugAdapter {
 			await this._executecommand(SetupExceptionMessage);
 			await this._executecommand(SetupExceptionTraceback);
 
+			// Setup listening to user input
+			void this._handleUserInput();
+
 			// PDB should have stopped at the entry point and printed out the first line
 
 			// Show in the debugger that we are debugging
-			this._sendOutputEvent(`python -m pdb ${this._pythonFile}`);
+			this._sendToUserConsole(`python -m pdb ${this._pythonFile}`);
 
 			// Send back the response
 			this._sendResponse<DebugProtocol.LaunchResponse>({
@@ -281,7 +293,7 @@ class DebugAdapter implements vscode.DebugAdapter {
 						resolve(output);
 					} else if (mode === 'run') {
 						// In run mode, send to console
-						this._sendOutputEvent(str);
+						this._sendToUserConsole(str);
 					} else {
 						// In command mode, save
 						output = `${output}${str}`;
@@ -507,7 +519,7 @@ class DebugAdapter implements vscode.DebugAdapter {
 		this._debuggee!.stdout?.on('data', this._handleStdout.bind(this));
 		this._debuggee!.stderr?.on('data', this._handleStderr.bind(this));
 		this._debuggee!.on('exit', (code) => {
-			this._sendOutputEvent(`Process exited with ${code}`);
+			this._sendToUserConsole(`Process exited with ${code}`);
 			this._sendStoppedEvent('exit');
 		});
 
@@ -526,18 +538,18 @@ class DebugAdapter implements vscode.DebugAdapter {
 	}
 
 	_handleProgramFinished(output: string) {
-		const finishedIndex = output.indexOf('\nThe program finished and will be restarted');
+		const finishedIndex = output.indexOf('The program finished and will be restarted');
 		if (finishedIndex >= 0) {
-			this._sendOutputEvent(output.slice(0, finishedIndex));
+			this._sendToUserConsole(output.slice(0, finishedIndex));
 		}
 		// Program finished. Disconnect
 		this._sendTerminated();
 	}
 
 	async _handleUncaughtException(output: string) {
-		const uncaughtIndex = output.indexOf('\nUncaught exception. Entering post mortem debugging');
+		const uncaughtIndex = output.indexOf('Uncaught exception. Entering post mortem debugging');
 		if (uncaughtIndex >= 0) {
-			this._sendOutputEvent(output.slice(0, uncaughtIndex));
+			this._sendToUserConsole(output.slice(0, uncaughtIndex));
 		}
 
 		// Uncaught exception. Don't let any run commands be executed
@@ -550,7 +562,7 @@ class DebugAdapter implements vscode.DebugAdapter {
 	_handleFunctionReturn(output: string) {
 		const returnIndex = output.indexOf('--Return--');
 		if (returnIndex > 0) {
-			this._sendOutputEvent(output.slice(0, returnIndex - 1));
+			this._sendToUserConsole(output.slice(0, returnIndex - 1));
 		}
 		return this._executerun('s');
 	}
@@ -558,7 +570,7 @@ class DebugAdapter implements vscode.DebugAdapter {
 	_handleCall(output:string) {
 		const callIndex = output.indexOf('--Call--');
 		if (callIndex > 0) {
-			this._sendOutputEvent(output.slice(0, callIndex - 1));
+			this._sendToUserConsole(output.slice(0, callIndex - 1));
 		}
 		return this._executerun('s');
 	}
@@ -568,7 +580,7 @@ class DebugAdapter implements vscode.DebugAdapter {
 		// it should be output from the process.
 		const nonFrameIndex = output.indexOf('\n> ');
 		if (nonFrameIndex >= 0) {
-			this._sendOutputEvent(output.slice(0, nonFrameIndex));
+			this._sendToUserConsole(output.slice(0, nonFrameIndex+1));
 			output = output.slice(nonFrameIndex);
 		}
 
@@ -595,6 +607,16 @@ class DebugAdapter implements vscode.DebugAdapter {
 			await this._executecommand(`${frameCommand} ${Math.abs(count)}`);
 			this._currentFrame = newFrame;
 		}
+	}
+
+	async _handleUserInput() {
+		const output = await DebugAdapter._debugTerminal!.readline();
+		if (!this._stopped) {
+			// User typed something in, send it to the program
+			this._writetostdin(output);
+		}
+		// Recurse
+		void this._handleUserInput();
 	}
 
 	async _executerun(runcommand: string) {
@@ -778,15 +800,9 @@ class DebugAdapter implements vscode.DebugAdapter {
 		return this._waitForPdbOutput('command', () => this._writetostdin(command));
 	}
 
-	_sendOutputEvent(data: string) {
-		this._sendEvent<DebugProtocol.OutputEvent>({
-			type: 'event',
-			seq: 1,
-			event: 'output',
-			body: {
-				output: `${data}\n`
-			}
-		});
+	_sendToUserConsole(data: string) {
+		DebugAdapter.createTerminalIfNecessary();
+		DebugAdapter._debugTerminal?.write(data);
 	}
 }
 
@@ -841,7 +857,6 @@ export async function debugFile(file: string) {
 		program: file,
 		name: 'Debug python using pdb',
 		stopOnEntry: true,
-		request: 'launch',
-		console: 'integratedTerminal',
+		request: 'launch'
 	});
 }
