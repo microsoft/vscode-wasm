@@ -16,7 +16,8 @@ const SetupExceptionTraceback = `alias debug_pdb_print_exc_traceback !import tra
 const PdbTerminator = `(Pdb) `;
 
 class DebugAdapter implements vscode.DebugAdapter {
-	private _pythonFile: string | undefined;
+	private _launcher: () => void;
+	private _cwd: string | undefined;
 	private _textDecoder = new TextDecoder();
 	private _sequence = 0;
 	private _debuggee: ChildProcess | undefined;
@@ -39,14 +40,15 @@ class DebugAdapter implements vscode.DebugAdapter {
 		readonly session: vscode.DebugSession,
 		readonly context: vscode.ExtensionContext
 	) {
-		this._pythonFile = session.configuration.program;
 		this._stopOnEntry = session.configuration.stopOnEntry;
 		this._workspaceFolder = session.workspaceFolder ||
 			(vscode.workspace.workspaceFolders ? vscode.workspace.workspaceFolders[0] : undefined);
+		this._cwd = session.configuration.cwd || this._workspaceFolder;
 		if (!DebugAdapter._debugTerminal) {
 			DebugAdapter._debugTerminal = ServicePseudoTerminal.create(TerminalMode.idle);
 			DebugAdapter._terminal = vscode.window.createTerminal({ name: 'Python PDB', pty: DebugAdapter._debugTerminal });
 		}
+		this._launcher = this._computeLauncher(session.configuration);
 	}
 	get onDidSendMessage(): vscode.Event<DebugProtocol.ProtocolMessage> {
 		return this._didSendMessageEmitter.event;
@@ -63,6 +65,18 @@ class DebugAdapter implements vscode.DebugAdapter {
 			DebugAdapter._debugTerminal?.handleInput!('\r');
 			(DebugAdapter._debugTerminal as any).lines.clear();
 			DebugAdapter._debugTerminal?.setMode(TerminalMode.idle);
+		}
+	}
+
+	_computeLauncher(config: vscode.DebugConfiguration) {
+		if (!config.module) {
+			return () => {
+				void this._launchpdbforfile(config.file, this._cwd || config.cwd, config.args || []);
+			};
+		} else {
+			return () => {
+				void this._launchpdbformodule(config.module, this._cwd || config.cwd, config.args || []);
+			};
 		}
 	}
 
@@ -186,11 +200,11 @@ class DebugAdapter implements vscode.DebugAdapter {
 	}
 
 	async _handleLaunch(message: DebugProtocol.LaunchRequest) {
-		if (this._pythonFile && !this._debuggee) {
+		if (!this._debuggee) {
 			// Startup pdb for the main file
 
 			// Wait for debuggee to emit first bit of output before continuing
-			await this._waitForPdbOutput('command', this._launchpdb.bind(this));
+			await this._waitForPdbOutput('command', this._launcher);
 
 			// Setup an alias for printing exc info
 			await this._executecommand(SetupExceptionMessage);
@@ -200,9 +214,6 @@ class DebugAdapter implements vscode.DebugAdapter {
 			void this._handleUserInput();
 
 			// PDB should have stopped at the entry point and printed out the first line
-
-			// Show in the terminal that we are running
-			this._sendToUserConsole(`python ${this._pythonFile}\r\n`);
 
 			// Send back the response
 			this._sendResponse<DebugProtocol.LaunchResponse>({
@@ -517,7 +528,7 @@ class DebugAdapter implements vscode.DebugAdapter {
 		});
 	}
 
-	async _launchpdb() {
+	async _computePythonPath() {
 		// Use the python extension's current python if available
 		const python = vscode.extensions.getExtension('ms-python.python');
 		let pythonPath = `python`;
@@ -528,7 +539,25 @@ class DebugAdapter implements vscode.DebugAdapter {
 				pythonPath = details.execCommand[0];
 			}
 		}
-		this._debuggee = spawn(pythonPath , ['-m' ,'pdb', this._pythonFile!], { cwd: path.dirname(this._pythonFile!)});
+		return pythonPath;
+	}
+
+	async _launchpdbforfile(file: string, cwd: string, args: string[]) {
+		const pythonPath = await this._computePythonPath();
+		this._sendToUserConsole(`${pythonPath} ${file} ${args.join(' ')}\r\n`);
+		this._debuggee = spawn(pythonPath , ['-m' ,'pdb', file, ...args], { cwd });
+		this._debuggee!.stdout?.on('data', this._handleStdout.bind(this));
+		this._debuggee!.stderr?.on('data', this._handleStderr.bind(this));
+		this._debuggee!.on('exit', (code) => {
+			this._sendStoppedEvent('exit');
+		});
+
+	}
+
+	async _launchpdbformodule(module: string, cwd: string, args: string[]) {
+		const pythonPath = await this._computePythonPath();
+		this._sendToUserConsole(`${pythonPath} -m ${module} ${args.join(' ')}\r\n`);
+		this._debuggee = spawn(pythonPath , ['-m' ,'pdb', '-m', module, ...args], { cwd });
 		this._debuggee!.stdout?.on('data', this._handleStdout.bind(this));
 		this._debuggee!.stderr?.on('data', this._handleStderr.bind(this));
 		this._debuggee!.on('exit', (code) => {
@@ -544,8 +573,8 @@ class DebugAdapter implements vscode.DebugAdapter {
 			return file.toLowerCase().startsWith(root);
 		} else {
 			// Otherwise no workspace folder and just a loose file. Use the starting file
-			const root = path.dirname(this._pythonFile!).toLowerCase();
-			return file.toLowerCase().startsWith(root);
+			const root = this._cwd?.toLowerCase();
+			return root ? file.toLowerCase().startsWith(root) : false;
 		}
 	}
 
@@ -866,25 +895,9 @@ export class DebugConfigurationProvider implements DebugConfigurationProvider {
 				config.console = 'integratedTerminal';
 			}
 		}
-
-		if (!config.program) {
-			await vscode.window.showInformationMessage(
-				'Cannot find a Python file to debug'
-			);
-			return undefined;
+		if (config.stopOnEntry === undefined) {
+			config.stopOnEntry = true;
 		}
-
 		return config;
 	}
-}
-
-export async function debugFile(file: string) {
-	return vscode.debug.startDebugging(undefined, {
-		type: 'python-pdb',
-		program: file,
-		name: 'Debug python using pdb',
-		stopOnEntry: true,
-		request: 'launch',
-		console: 'integratedTerminal'
-	});
 }
