@@ -6,7 +6,7 @@ import { ChildProcess, spawn } from 'child_process';
 import { ServicePseudoTerminal, TerminalMode } from '@vscode/sync-api-service';
 
 const StackFrameRegex = /^[>,\s]+(.+)\((\d+)\)(.*)\(\)/;
-const ScrapeDirOutputRegex = /\[(.*)\]$/;
+const ScrapeDirOutputRegex = /\[(.*)\]/;
 const BreakpointRegex = /Breakpoint (\d+) at (.+):(\d+)/;
 const PossibleStepExceptionRegex = /^\w+:\s+.*\r*\n>/;
 const PrintExceptionMessage = `debug_pdb_print_exc_message`;
@@ -218,6 +218,7 @@ class DebugAdapter implements vscode.DebugAdapter {
 	_terminate() {
 		if (this._debuggee) {
 			this._writetostdin('exit\n');
+			this._debuggee.kill();
 			this._debuggee = undefined;
 		}
 	}
@@ -516,12 +517,21 @@ class DebugAdapter implements vscode.DebugAdapter {
 		});
 	}
 
-	_launchpdb() {
-		this._debuggee = spawn(`python` , ['-m' ,'pdb', this._pythonFile!], { cwd: path.dirname(this._pythonFile!)});
+	async _launchpdb() {
+		// Use the python extension's current python if available
+		const python = vscode.extensions.getExtension('ms-python.python');
+		let pythonPath = `python`;
+		if (python) {
+			const api = await python.activate();
+			if (api.settings?.getExecutionDetails) {
+				const details = api.settings.getExecutionDetails();
+				pythonPath = details.execCommand[0];
+			}
+		}
+		this._debuggee = spawn(pythonPath , ['-m' ,'pdb', this._pythonFile!], { cwd: path.dirname(this._pythonFile!)});
 		this._debuggee!.stdout?.on('data', this._handleStdout.bind(this));
 		this._debuggee!.stderr?.on('data', this._handleStderr.bind(this));
 		this._debuggee!.on('exit', (code) => {
-			this._sendToUserConsole(`Process exited with ${code}\r\n`);
 			this._sendStoppedEvent('exit');
 		});
 
