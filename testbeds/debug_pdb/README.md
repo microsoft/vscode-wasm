@@ -34,9 +34,9 @@ b d:\\Source\\Testing\\Testing_Pyright\\test_longoutput.py:3
 ```
 
 # Left to do
-- Test more examples
+- Test to write
   - Multiple files involved
   - recursion and stack changing
   - taking input from user
-- Abstract out process (for testing and for fitting with wasi process)
+  - what happens with threads
 - Exception handling (stop on caught)

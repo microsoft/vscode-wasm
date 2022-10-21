@@ -1,9 +1,8 @@
-import * as path from 'path';
 import * as vscode from 'vscode';
 import { DebugProtocol } from '@vscode/debugprotocol';
 import { TextDecoder } from 'util';
-import { ChildProcess, spawn } from 'child_process';
 import { ServicePseudoTerminal, TerminalMode } from '@vscode/sync-api-service';
+import { IChildProcess, IChildProcessSpawner } from './types';
 
 const StackFrameRegex = /^[>,\s]+(.+)\((\d+)\)(.*)\(\)/;
 const ScrapeDirOutputRegex = /\[(.*)\]/;
@@ -20,7 +19,8 @@ class DebugAdapter implements vscode.DebugAdapter {
 	private _cwd: string | undefined;
 	private _textDecoder = new TextDecoder();
 	private _sequence = 0;
-	private _debuggee: ChildProcess | undefined;
+	private _debuggee: IChildProcess | undefined;
+	private _disposables: vscode.Disposable[] = [];
 	private _outputChain: Promise<string> | undefined;
 	private _outputEmitter = new vscode.EventEmitter<string>();
 	private _stopped = true;
@@ -38,7 +38,8 @@ class DebugAdapter implements vscode.DebugAdapter {
 
 	constructor(
 		readonly session: vscode.DebugSession,
-		readonly context: vscode.ExtensionContext
+		readonly context: vscode.ExtensionContext,
+		private readonly _spawner: IChildProcessSpawner
 	) {
 		this._stopOnEntry = session.configuration.stopOnEntry;
 		this._workspaceFolder = session.workspaceFolder ||
@@ -210,6 +211,9 @@ class DebugAdapter implements vscode.DebugAdapter {
 			await this._executecommand(SetupExceptionMessage);
 			await this._executecommand(SetupExceptionTraceback);
 
+			// Send a message to the debug console to indicate started debugging
+			this._sendToDebugConsole(`PDB debugger connected.\r\n`);
+
 			// Setup listening to user input
 			void this._handleUserInput();
 
@@ -330,11 +334,13 @@ class DebugAdapter implements vscode.DebugAdapter {
 		lines.forEach((line, index) => {
 			const frameParts = StackFrameRegex.exec(line);
 			if (frameParts) {
+				const sepIndex = frameParts[1].replace(/\\/g, '/').lastIndexOf('/');
+				const name = sepIndex >= 0 ? frameParts[1].slice(sepIndex) : frameParts[1];
 				// Insert at the front so last frame is on front of list
 				result.splice(0, 0, {
 					id: result.length+1,
 					source: {
-						name: path.basename(frameParts[1]),
+						name,
 						path: frameParts[1],
 						sourceReference: 0 // Don't retrieve source from pdb
 					},
@@ -542,28 +548,24 @@ class DebugAdapter implements vscode.DebugAdapter {
 		return pythonPath;
 	}
 
-	async _launchpdbforfile(file: string, cwd: string, args: string[]) {
+	async _launchpdb(args: string[], cwd: string) {
 		const pythonPath = await this._computePythonPath();
-		this._sendToUserConsole(`${pythonPath} ${file} ${args.join(' ')}\r\n`);
-		this._debuggee = spawn(pythonPath , ['-m' ,'pdb', file, ...args], { cwd });
-		this._debuggee!.stdout?.on('data', this._handleStdout.bind(this));
-		this._debuggee!.stderr?.on('data', this._handleStderr.bind(this));
-		this._debuggee!.on('exit', (code) => {
+		this._debuggee = this._spawner.spawn(pythonPath , args, cwd);
+		this._disposables.push(this._debuggee!.stdout(this._handleStdout.bind(this)));
+		this._disposables.push(this._debuggee!.stderr(this._handleStderr.bind(this)));
+		this._disposables.push(this._debuggee!.exit((_code) => {
 			this._sendStoppedEvent('exit');
-		});
+		}));
+	}
 
+	async _launchpdbforfile(file: string, cwd: string, args: string[]) {
+		this._sendToUserConsole(`python ${file} ${args.join(' ')}\r\n`);
+		return this._launchpdb( ['-m' ,'pdb', file, ...args], cwd);
 	}
 
 	async _launchpdbformodule(module: string, cwd: string, args: string[]) {
-		const pythonPath = await this._computePythonPath();
-		this._sendToUserConsole(`${pythonPath} -m ${module} ${args.join(' ')}\r\n`);
-		this._debuggee = spawn(pythonPath , ['-m' ,'pdb', '-m', module, ...args], { cwd });
-		this._debuggee!.stdout?.on('data', this._handleStdout.bind(this));
-		this._debuggee!.stderr?.on('data', this._handleStderr.bind(this));
-		this._debuggee!.on('exit', (code) => {
-			this._sendStoppedEvent('exit');
-		});
-
+		this._sendToUserConsole(`python -m ${module} ${args.join(' ')}\r\n`);
+		return this._launchpdb( ['-m' ,'pdb', '-m', module, ...args], cwd);
 	}
 
 	_isMyCode(file: string): boolean {
@@ -835,13 +837,7 @@ class DebugAdapter implements vscode.DebugAdapter {
 	}
 
 	_writetostdin(text: string) {
-		const result = this._debuggee?.stdin?.write(text);
-		if (!result) {
-			// Need to wait for drain
-			this._debuggee?.stdin?.once('drain', () => {
-				this._debuggee?.stdin?.write(text);
-			});
-		}
+		this._debuggee?.stdin(text);
 	}
 
 	async _executecommand(command: string): Promise<string> {
@@ -859,17 +855,28 @@ class DebugAdapter implements vscode.DebugAdapter {
 		DebugAdapter._terminal.show();
 		DebugAdapter._debugTerminal.write(data);
 	}
+
+	_sendToDebugConsole(data: string) {
+		this._sendEvent<DebugProtocol.OutputEvent>({
+			type: 'event',
+			seq: 1,
+			event: 'output',
+			body: {
+				output: data
+			}
+		});
+	}
 }
 
 export class DebugAdapterDescriptorFactory
 implements vscode.DebugAdapterDescriptorFactory
 {
-	constructor(private readonly context: vscode.ExtensionContext) {}
+	constructor(private readonly context: vscode.ExtensionContext, private readonly processSpawner: IChildProcessSpawner) {}
 	async createDebugAdapterDescriptor(
 		session: vscode.DebugSession
 	): Promise<vscode.DebugAdapterDescriptor> {
 		return new vscode.DebugAdapterInlineImplementation(
-			new DebugAdapter(session, this.context)
+			new DebugAdapter(session, this.context, this.processSpawner)
 		);
 	}
 }
