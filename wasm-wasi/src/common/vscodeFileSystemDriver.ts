@@ -7,7 +7,7 @@ import { URI } from 'vscode-uri';
 
 import { ApiClient, size } from '@vscode/sync-api-client';
 
-import { BigInts } from './converter';
+import { BigInts, code2Wasi } from './converter';
 import { BaseFileDescriptor, DeviceDriver, FileDescriptor, NoSysDeviceDriver, DeviceIds } from './deviceDriver';
 import { fdstat, filestat, Literal, dirent, Rights, fd, rights, fdflags, Filetype, WasiError, Errno } from './wasiTypes';
 
@@ -21,8 +21,9 @@ class FileFileDescriptor extends BaseFileDescriptor {
 	 */
 	private _cursor: number;
 
-	constructor(fd: fd, inode: bigint, rights_base: rights, rights_inheriting: rights, fdflags: fdflags) {
-		super(fd, inode, Filetype.regular_file, rights_base, rights_inheriting, fdflags);
+	constructor(fd: fd, rights_base: rights, rights_inheriting: rights, fdflags: fdflags, inode: bigint) {
+		super(fd, Filetype.regular_file, rights_base, rights_inheriting, fdflags);
+		this.inode = inode;
 		this._cursor = 0;
 	}
 
@@ -67,8 +68,8 @@ class FileFileDescriptor extends BaseFileDescriptor {
 }
 
 class DirectoryFileDescriptor extends BaseFileDescriptor {
-	constructor(fd: fd, inode: bigint, rights_base: rights, rights_inheriting: rights, fdflags: fdflags) {
-		super(fd, inode, Filetype.directory, rights_base, rights_inheriting, fdflags);
+	constructor(fd: fd, rights_base: rights, rights_inheriting: rights, fdflags: fdflags) {
+		super(fd, Filetype.directory, rights_base, rights_inheriting, fdflags);
 	}
 }
 
@@ -110,6 +111,8 @@ export default function create(apiClient: ApiClient, textEncoder: RAL.TextEncode
 	const inodes: Map<bigint, INode> = new Map();
 	const deletedINode: Map<bigint, INode> = new Map();
 
+	const deviceId = DeviceIds.next();
+
 	function getINode(id: bigint): INode {
 		const inode: INode | undefined = inodes.get(id);
 		if (inode === undefined) {
@@ -129,19 +132,48 @@ export default function create(apiClient: ApiClient, textEncoder: RAL.TextEncode
 		return inode as Required<INode>;
 	}
 
+	function unrefINode(id: bigint): void {
+		let inode = inodes.get(id);
+		if (inode === undefined) {
+			inode = deletedINode.get(id);
+		}
+		if (inode === undefined) {
+			throw new WasiError(Errno.badf);
+		}
+		inode.openFds--;
+		if (inode.openFds === 0) {
+			inode.content = undefined;
+			deletedINode.delete(id);
+		}
+	}
+
+	function doStat(inode: INode, result: filestat): void {
+		const vStat = vscode_fs.stat(inode.uri);
+		result.dev = deviceId;
+		result.ino = inode.id;
+		result.filetype = code2Wasi.asFileType(vStat.type);
+		result.nlink = 0n;
+		result.size = BigInt(vStat.size);
+		result.atim = BigInt(vStat.mtime);
+		result.ctim = BigInt(vStat.ctime);
+		result.mtim = BigInt(vStat.mtime);
+	}
+
+	function writeContent(inode: Required<INode>) {
+		vscode_fs.writeFile(inode.uri, inode.content);
+	}
 
 	return Object.assign({}, NoSysDeviceDriver, {
-		id: DeviceIds.next(),
-		fd_advise(fd: FileDescriptor, _offset: bigint, _length: bigint, _advise: number): void {
-			fd.assertBaseRight(Rights.fd_advise);
+		id: deviceId,
+		fd_advise(fileDescriptor: FileDescriptor, _offset: bigint, _length: bigint, _advise: number): void {
+			fileDescriptor.assertBaseRight(Rights.fd_advise);
 			// We don't have advisory in VS Code. So treat it as successful.
 			return;
 		},
-		fd_allocate(fd: FileDescriptor, _offset: bigint, _len: bigint): void {
-			if (!(fd instanceof FileFileDescriptor)) {
+		fd_allocate(fileDescriptor: FileDescriptor, _offset: bigint, _len: bigint): void {
+			if (!(fileDescriptor instanceof FileFileDescriptor)) {
 				throw new WasiError(Errno.badf);
 			}
-			fd.assertBaseRight(Rights.fd_allocate);
 
 			const offset = BigInts.asNumber(_offset);
 			const len = BigInts.asNumber(_len);
@@ -158,7 +190,57 @@ export default function create(apiClient: ApiClient, textEncoder: RAL.TextEncode
 			inode.content = newContent;
 			writeContent(inode);
 
+		},
+		fd_close(fileDescriptor: FileDescriptor): void {
+			unrefINode(fileDescriptor.inode);
+		},
+		fd_datasync(fileDescriptor: FileDescriptor): void {
+			if (!(fileDescriptor instanceof FileFileDescriptor)) {
+				throw new WasiError(Errno.badf);
+			}
+			const inode = getINode(fileDescriptor.inode);
+			if (!INode.hasContent(inode)) {
+				return;
+			}
+			writeContent(inode);
+		},
+		fd_fdstat_get(fileDescriptor: FileDescriptor, result: fdstat): void {
+			result.fs_filetype = fileDescriptor.fileType;
+			result.fs_flags = fileDescriptor.fdflags;
+			result.fs_rights_base = fileDescriptor.rights_base;
+			result.fs_rights_inheriting = fileDescriptor.rights_inheriting;
+		},
+		fd_fdstat_set_flags(fileDescriptor: FileDescriptor, fdflags: number): void {
+			fileDescriptor.fdflags = fdflags;
+		},
+		fd_filestat_get(fileDescriptor: FileDescriptor, result: filestat): void {
+			if (!(fileDescriptor instanceof FileFileDescriptor)) {
+				throw new WasiError(Errno.badf);
+			}
+			const inode = getINode(fileDescriptor.inode);
+			doStat(inode, result);
+		},
+		fd_filestat_set_size(fileDescriptor: FileDescriptor, _size: bigint): void {
+			if (!(fileDescriptor instanceof FileFileDescriptor)) {
+				throw new WasiError(Errno.badf);
+			}
+			const size = BigInts.asNumber(_size);
+			const inode = getResolvedINode(fileDescriptor.inode);
+			const content = inode.content;
+			if (content.byteLength === size) {
+				return;
+			} else if (content.byteLength < size) {
+				const newContent = new Uint8Array(size);
+				newContent.set(content);
+				inode.content = newContent;
+			} else if (content.byteLength > size) {
+				const newContent = new Uint8Array(size);
+				newContent.set(content.subarray(0, size));
+				inode.content = newContent;
+			}
+			writeContent(inode);
 		}
+
 	});
 }
 
@@ -175,21 +257,6 @@ export class VSCodeFileSystemDriver implements DeviceDriver {
 		this.mountPoint = mountPoint;
 	}
 
-	fd_close(fd: FileDescriptor): void {
-		throw new Error('Method not implemented.');
-	}
-	fd_datasync(fd: FileDescriptor): void {
-		throw new Error('Method not implemented.');
-	}
-	fd_fdstat_get(fd: FileDescriptor, result: fdstat): void {
-		throw new Error('Method not implemented.');
-	}
-	fd_fdstat_set_flags(fd: FileDescriptor, fdflags: number): void {
-		throw new Error('Method not implemented.');
-	}
-	fd_filestat_get(fd: FileDescriptor, result: filestat): void {
-		throw new Error('Method not implemented.');
-	}
 	fd_filestat_set_size(fd: FileDescriptor, size: bigint): void {
 		throw new Error('Method not implemented.');
 	}

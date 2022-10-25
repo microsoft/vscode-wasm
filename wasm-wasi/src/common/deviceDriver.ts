@@ -27,11 +27,6 @@ export interface FileDescriptor {
 	readonly fd: fd;
 
 	/**
-	 * The inode id this file handle is pointing to.
-	 */
-	readonly inode: bigint;
-
-	/**
 	 * The file type
 	 */
 	readonly fileType: filetype;
@@ -52,6 +47,11 @@ export interface FileDescriptor {
 	fdflags: fdflags;
 
 	/**
+	 * 
+	 */
+	readonly inode: bigint;
+
+	/**
 	 * Asserts the given base rights.
 
 	 * @param right the rights to assert.
@@ -68,34 +68,34 @@ export type DeviceDriver = {
 
 	id: bigint;
 
-	fd_advise(fd: FileDescriptor, offset: filesize, length: filesize, advise: advise): void;
-	fd_allocate(fd: FileDescriptor, offset: filesize, len: filesize): void;
-	fd_close(fd: FileDescriptor): void;
-	fd_datasync(fd: FileDescriptor): void;
-	fd_fdstat_get(fd: FileDescriptor, result: fdstat): void;
-	fd_fdstat_set_flags(fd: FileDescriptor, fdflags: fdflags): void;
-	fd_filestat_get(fd: FileDescriptor, result: filestat): void;
-	fd_filestat_set_size(fd: FileDescriptor, size: filesize): void;
-	fd_filestat_set_times(fd: FileDescriptor, atim: timestamp, mtim: timestamp, fst_flags: fstflags): void;
-	fd_pread(fd: FileDescriptor, offset: number, bytesToRead: number): Uint8Array;
-	fd_pwrite(fd: FileDescriptor, offset: number, bytes: Uint8Array): size;
-	fd_read(fd: FileDescriptor, buffers: Uint8Array[]): size;
-	fd_readdir(fd: FileDescriptor): Literal<dirent>[];
-	fd_seek(fd: FileDescriptor, offset: filedelta, whence: whence, new_offset_ptr: ptr): void;
-	fd_sync(fd: FileDescriptor): void;
-	fd_tell(fd: FileDescriptor, offset_ptr: ptr): void;
-	fd_write(fd: FileDescriptor, buffers: Uint8Array[]): size;
+	fd_advise(fileDescriptor: FileDescriptor, offset: filesize, length: filesize, advise: advise): void;
+	fd_allocate(fileDescriptor: FileDescriptor, offset: filesize, len: filesize): void;
+	fd_close(fileDescriptor: FileDescriptor): void;
+	fd_datasync(fileDescriptor: FileDescriptor): void;
+	fd_fdstat_get(fileDescriptor: FileDescriptor, result: fdstat): void;
+	fd_fdstat_set_flags(fileDescriptor: FileDescriptor, fdflags: fdflags): void;
+	fd_filestat_get(fileDescriptor: FileDescriptor, result: filestat): void;
+	fd_filestat_set_size(fileDescriptor: FileDescriptor, size: filesize): void;
+	fd_filestat_set_times(fileDescriptor: FileDescriptor, atim: timestamp, mtim: timestamp, fst_flags: fstflags): void;
+	fd_pread(fileDescriptor: FileDescriptor, offset: number, bytesToRead: number): Uint8Array;
+	fd_pwrite(fileDescriptor: FileDescriptor, offset: number, bytes: Uint8Array): size;
+	fd_read(fileDescriptor: FileDescriptor, buffers: Uint8Array[]): size;
+	fd_readdir(fileDescriptor: FileDescriptor): Literal<dirent>[];
+	fd_seek(fileDescriptor: FileDescriptor, offset: filedelta, whence: whence, new_offset_ptr: ptr): void;
+	fd_sync(fileDescriptor: FileDescriptor): void;
+	fd_tell(fileDescriptor: FileDescriptor, offset_ptr: ptr): void;
+	fd_write(fileDescriptor: FileDescriptor, buffers: Uint8Array[]): size;
 
-	path_create_directory(fd: FileDescriptor, path: string): void;
-	path_filestat_get(fd: FileDescriptor, flags: lookupflags, path: string, result: filestat): void;
-	path_filestat_set_times(fd: FileDescriptor, flags: lookupflags, path: string, atim: timestamp, mtim: timestamp, fst_flags: fstflags): void;
+	path_create_directory(fileDescriptor: FileDescriptor, path: string): void;
+	path_filestat_get(fileDescriptor: FileDescriptor, flags: lookupflags, path: string, result: filestat): void;
+	path_filestat_set_times(fileDescriptor: FileDescriptor, flags: lookupflags, path: string, atim: timestamp, mtim: timestamp, fst_flags: fstflags): void;
 	path_link(old_fd: FileDescriptor, old_flags: lookupflags, old_path: string, new_fd: FileDescriptor, new_path: string): void;
-	path_open(fd: FileDescriptor, dirflags: lookupflags, path: string, oflags: oflags, fs_rights_base: rights, fs_rights_inheriting: rights, fdflags: fdflags): FileDescriptor;
-	path_readlink(fd: FileDescriptor, path: string): string;
-	path_remove_directory(fd: FileDescriptor, path: string): void;
-	path_rename(fd: FileDescriptor, old_path: string, new_fd: fd, new_path: string): void;
-	path_symlink(old_path: string, fd: FileDescriptor, new_path: string): void;
-	path_unlink_file(fd: FileDescriptor, path: string): void;
+	path_open(fileDescriptor: FileDescriptor, dirflags: lookupflags, path: string, oflags: oflags, fs_rights_base: rights, fs_rights_inheriting: rights, fdflags: fdflags): FileDescriptor;
+	path_readlink(fileDescriptor: FileDescriptor, path: string): string;
+	path_remove_directory(fileDescriptor: FileDescriptor, path: string): void;
+	path_rename(fileDescriptor: FileDescriptor, old_path: string, new_fileDescriptor: fd, new_path: string): void;
+	path_symlink(old_path: string, fileDescriptor: FileDescriptor, new_path: string): void;
+	path_unlink_file(fileDescriptor: FileDescriptor, path: string): void;
 };
 
 export const NoSysDeviceDriver: Omit<DeviceDriver, 'id'> = {
@@ -186,8 +186,6 @@ export abstract class BaseFileDescriptor implements FileDescriptor {
 
 	public readonly fd: fd;
 
-	public readonly inode: bigint;
-
 	public readonly fileType: filetype;
 
 	public readonly rights_base: rights;
@@ -196,9 +194,8 @@ export abstract class BaseFileDescriptor implements FileDescriptor {
 
 	public fdflags: fdflags;
 
-	constructor(fd: fd, inode: bigint, fileType: filetype, rights_base: rights, rights_inheriting: rights, fdflags: fdflags) {
+	constructor(fd: fd, fileType: filetype, rights_base: rights, rights_inheriting: rights, fdflags: fdflags) {
 		this.fd = fd;
-		this.inode = inode;
 		this.fileType = fileType;
 		this.rights_base = rights_base;
 		this.rights_inheriting = rights_inheriting;
