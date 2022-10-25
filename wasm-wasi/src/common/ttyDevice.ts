@@ -5,10 +5,10 @@
 
 import { } from './wasiTypes';
 
-import { Device, DeviceIds, FileDescriptor, NoSysDevice } from './device';
+import { DeviceDriver, DeviceIds, FileDescriptor, NoSysDevice } from './device';
 import { ApiClient } from '@vscode/sync-api-client';
 
-export class TTYDevice extends NoSysDevice implements Device {
+export class TTYDevice extends NoSysDevice implements DeviceDriver {
 
 	public readonly id: bigint;
 

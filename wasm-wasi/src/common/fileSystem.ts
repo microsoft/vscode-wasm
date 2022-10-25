@@ -16,7 +16,9 @@ import { BigInts, code2Wasi } from './converter';
 
 export namespace DeviceIds {
 	let deviceIdCounter: bigint = 1n;
-	export const system = deviceIdCounter++;
+	export function next(): bigint {
+		return deviceIdCounter++;
+	}
 }
 
 export interface FileDescriptor {
