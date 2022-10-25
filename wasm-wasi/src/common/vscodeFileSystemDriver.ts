@@ -3,11 +3,16 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { size } from '@vscode/sync-api-client';
 import { URI } from 'vscode-uri';
-import { BaseFileDescriptor, DeviceDriver, FileDescriptor, NoSysDeviceDriver } from './deviceDriver';
-import { DeviceIds } from './fileSystem';
+
+import { ApiClient, size } from '@vscode/sync-api-client';
+
+import { BigInts } from './converter';
+import { BaseFileDescriptor, DeviceDriver, FileDescriptor, NoSysDeviceDriver, DeviceIds } from './deviceDriver';
 import { fdstat, filestat, Literal, dirent, Rights, fd, rights, fdflags, Filetype, WasiError, Errno } from './wasiTypes';
+
+import RAL from './ral';
+const paths = RAL().path;
 
 class FileFileDescriptor extends BaseFileDescriptor {
 
@@ -95,21 +100,35 @@ namespace INode {
 	export function hasContent(inode: INode): inode is INode & { content: Uint8Array } {
 		return inode.content !== undefined;
 	}
+}
 
-	export function getINode(id: bigint): INode {
+export default function create(apiClient: ApiClient, textEncoder: RAL.TextEncoder): DeviceDriver {
+
+	const vscode_fs = apiClient.vscode.workspace.fileSystem;
+
+	const path2INode: Map<string, INode> = new Map();
+	const inodes: Map<bigint, INode> = new Map();
+	const deletedINode: Map<bigint, INode> = new Map();
+
+	function getINode(id: bigint): INode {
 		const inode: INode | undefined = inodes.get(id);
 		if (inode === undefined) {
 			throw new WasiError(Errno.badf);
 		}
 		return inode;
 	}
-}
 
-export default function create(): DeviceDriver {
+	function getResolvedINode(id: bigint): Required<INode> {
+		const inode: INode | undefined = inodes.get(id);
+		if (inode === undefined) {
+			throw new WasiError(Errno.badf);
+		}
+		if (inode.content === undefined) {
+			inode.content = vscode_fs.readFile(inode.uri);
+		}
+		return inode as Required<INode>;
+	}
 
-	const path2INode: Map<string, INode> = new Map();
-	const inodes: Map<bigint, INode> = new Map();
-	const deletedINode: Map<bigint, INode> = new Map();
 
 	return Object.assign({}, NoSysDeviceDriver, {
 		id: DeviceIds.next(),
@@ -118,8 +137,27 @@ export default function create(): DeviceDriver {
 			// We don't have advisory in VS Code. So treat it as successful.
 			return;
 		},
-		fd_allocate(fd: FileDescriptor, offset: bigint, len: bigint): void {
-			throw new Error('Method not implemented.');
+		fd_allocate(fd: FileDescriptor, _offset: bigint, _len: bigint): void {
+			if (!(fd instanceof FileFileDescriptor)) {
+				throw new WasiError(Errno.badf);
+			}
+			fd.assertBaseRight(Rights.fd_allocate);
+
+			const offset = BigInts.asNumber(_offset);
+			const len = BigInts.asNumber(_len);
+
+			const inode = getResolvedINode(fileDescriptor.inode);
+			const content = inode.content;
+			if (offset > content.byteLength) {
+				throw new WasiError(Errno.inval);
+			}
+
+			const newContent: Uint8Array = new Uint8Array(content.byteLength + len);
+			newContent.set(content.subarray(0, offset), 0);
+			newContent.set(content.subarray(offset), offset + len);
+			inode.content = newContent;
+			writeContent(inode);
+
 		}
 	});
 }
