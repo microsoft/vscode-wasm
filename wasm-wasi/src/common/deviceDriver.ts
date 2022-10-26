@@ -5,7 +5,7 @@
 
 import { size } from '@vscode/sync-api-client';
 
-import { ptr } from './baseTypes';
+import { ptr, u64 } from './baseTypes';
 import {
 	advise, dirent, Errno, errno, fd, fdflags, fdstat,filedelta, filesize, filestat, Filetype, filetype,
 	fstflags, Literal, lookupflags, oflags, rights, timestamp, WasiError, whence
@@ -47,7 +47,7 @@ export interface FileDescriptor {
 	fdflags: fdflags;
 
 	/**
-	 * 
+	 * The inode the file descriptor is pointing to.
 	 */
 	readonly inode: bigint;
 
@@ -63,6 +63,8 @@ export interface FileDescriptor {
 	 */
 	assertIsDirectory(): void;
 }
+
+export type ReaddirEntry = { d_ino: bigint; d_type: filetype; d_name: Uint8Array };
 
 export type DeviceDriver = {
 
@@ -80,10 +82,10 @@ export type DeviceDriver = {
 	fd_pread(fileDescriptor: FileDescriptor, offset: number, bytesToRead: number): Uint8Array;
 	fd_pwrite(fileDescriptor: FileDescriptor, offset: number, bytes: Uint8Array): size;
 	fd_read(fileDescriptor: FileDescriptor, buffers: Uint8Array[]): size;
-	fd_readdir(fileDescriptor: FileDescriptor): Literal<dirent>[];
-	fd_seek(fileDescriptor: FileDescriptor, offset: filedelta, whence: whence, new_offset_ptr: ptr): void;
+	fd_readdir(fileDescriptor: FileDescriptor): ReaddirEntry[];
+	fd_seek(fileDescriptor: FileDescriptor, offset: filedelta, whence: whence): bigint;
 	fd_sync(fileDescriptor: FileDescriptor): void;
-	fd_tell(fileDescriptor: FileDescriptor, offset_ptr: ptr): void;
+	fd_tell(fileDescriptor: FileDescriptor): u64;
 	fd_write(fileDescriptor: FileDescriptor, buffers: Uint8Array[]): size;
 
 	path_create_directory(fileDescriptor: FileDescriptor, path: string): void;
@@ -135,16 +137,16 @@ export const NoSysDeviceDriver: Omit<DeviceDriver, 'id'> = {
 	fd_read(): size {
 		throw new WasiError(Errno.nosys);
 	},
-	fd_readdir(): Literal<dirent>[] {
+	fd_readdir(): ReaddirEntry[] {
 		throw new WasiError(Errno.nosys);
 	},
-	fd_seek(): void {
+	fd_seek(): bigint {
 		throw new WasiError(Errno.nosys);
 	},
 	fd_sync(): void {
 		throw new WasiError(Errno.nosys);
 	},
-	fd_tell(): void {
+	fd_tell(): u64 {
 		throw new WasiError(Errno.nosys);
 	},
 	fd_write(): size {
@@ -194,12 +196,15 @@ export abstract class BaseFileDescriptor implements FileDescriptor {
 
 	public fdflags: fdflags;
 
-	constructor(fd: fd, fileType: filetype, rights_base: rights, rights_inheriting: rights, fdflags: fdflags) {
+	public readonly inode: bigint;
+
+	constructor(fd: fd, fileType: filetype, rights_base: rights, rights_inheriting: rights, fdflags: fdflags, inode: bigint) {
 		this.fd = fd;
 		this.fileType = fileType;
 		this.rights_base = rights_base;
 		this.rights_inheriting = rights_inheriting;
 		this.fdflags = fdflags;
+		this.inode = inode;
 	}
 
 	public assertBaseRight(right: rights): void {
