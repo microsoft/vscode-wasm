@@ -9,7 +9,7 @@ import { ApiClient, size } from '@vscode/sync-api-client';
 
 import { BigInts, code2Wasi } from './converter';
 import { BaseFileDescriptor, DeviceDriver, FileDescriptor, NoSysDeviceDriver, DeviceIds, ReaddirEntry } from './deviceDriver';
-import { fdstat, filestat, dirent, Rights, fd, rights, fdflags, Filetype, WasiError, Errno, filetype, Whence, lookupflags, timestamp, fstflags, oflags, Oflags } from './wasiTypes';
+import { fdstat, filestat, Rights, fd, rights, fdflags, Filetype, WasiError, Errno, filetype, Whence, lookupflags, timestamp, fstflags, oflags, Oflags } from './wasiTypes';
 
 import RAL from './ral';
 import { u64 } from './baseTypes';
@@ -185,6 +185,16 @@ export default function create(apiClient: ApiClient, textEncoder: RAL.TextEncode
 		return uri.with( { path: paths.join(uri.path, name)} );
 	}
 
+	function doGetFiletype(fileDescriptor: FileFileDescriptor | DirectoryFileDescriptor, path: string): filetype | undefined {
+		const inode = getINode(fileDescriptor.inode);
+		const fileUri = uriJoin(inode.uri, path);
+		try {
+			const stat = vscode_fs.stat(fileUri);
+			return code2Wasi.asFileType(stat.type);
+		} catch {
+			return undefined;
+		}
+	}
 
 	function doStat(inode: INode, result: filestat): void {
 		const vStat = vscode_fs.stat(inode.uri);
@@ -407,8 +417,11 @@ export default function create(apiClient: ApiClient, textEncoder: RAL.TextEncode
 			// support from the VS Code API.
 		},
 		path_open(parentDescriptor: FileDescriptor, dirflags: lookupflags, path: string, oflags: oflags, fs_rights_base: rights, fs_rights_inheriting: rights, fdflags: fdflags): FileDescriptor {
+			if (!(parentDescriptor instanceof FileFileDescriptor) && !(parentDescriptor instanceof DirectoryFileDescriptor)) {
+				throw new WasiError(Errno.badf);
+			}
 
-			let filetype: filetype | undefined = fileSystem.path_filetype(parentDescriptor, name);
+			let filetype: filetype | undefined = doGetFiletype(parentDescriptor, path);
 			const entryExists: boolean = filetype !== undefined;
 			if (entryExists) {
 				if (Oflags.exclOn(oflags)) {
@@ -426,21 +439,30 @@ export default function create(apiClient: ApiClient, textEncoder: RAL.TextEncode
 			if (Oflags.creatOn(oflags) && !entryExists) {
 				// Ensure parent handle is directory
 				parentDescriptor.assertIsDirectory();
-				const dirname = paths.dirname(name);
+				const dirname = paths.dirname(path);
 				// The name has a directory part. Ensure that the directory exists
 				if (dirname !== '.') {
-					const dirFiletype = fileSystem.path_filetype(parentDescriptor, dirname);
+					const dirFiletype = doGetFiletype(parentDescriptor, dirname);
 					if (dirFiletype === undefined || dirFiletype !== Filetype.directory) {
-						return Errno.noent;
+						throw new WasiError(Errno.noent);
 					}
 				}
 				filetype = Filetype.regular_file;
 				createFile = true;
 			} else {
 				if (filetype === undefined) {
-					return Errno.noent;
+					throw new WasiError(Errno.noent);
 				}
 			}
+
+			// VS Code file system has only files and directories
+			if (filetype !== Filetype.regular_file && filetype !== Filetype.directory) {
+				throw new WasiError(Errno.badf);
+			}
+			const result = filetype === Filetype.regular_file
+				? new FileFileDescriptor()
+				: new DirectoryFileDescriptor();
+
 			// Currently VS Code doesn't offer a generic API to open a file
 			// or a directory. Since we were able to stat the file we create
 			// a file descriptor for it and lazy get the file content on read.
@@ -454,6 +476,8 @@ export default function create(apiClient: ApiClient, textEncoder: RAL.TextEncode
 				: filetype === Filetype.regular_file
 					? fs_rights_inheriting | Rights.FileInheriting
 					: fs_rights_inheriting;
+
+			const result = filetype =
 			const fileDescriptor = fileSystem.createFileDescriptor(
 				parentDescriptor, name,
 				filetype, { base: base, inheriting: inheriting }, fdflags,

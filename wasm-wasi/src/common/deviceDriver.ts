@@ -5,17 +5,23 @@
 
 import { size } from '@vscode/sync-api-client';
 
-import { ptr, u64 } from './baseTypes';
+import { u64 } from './baseTypes';
 import {
-	advise, dirent, Errno, errno, fd, fdflags, fdstat,filedelta, filesize, filestat, Filetype, filetype,
-	fstflags, Literal, lookupflags, oflags, rights, timestamp, WasiError, whence
+	advise, Errno, errno, fd, fdflags, fdstat,filedelta, filesize, filestat, Filetype, filetype,
+	fstflags, lookupflags, oflags, rights, timestamp, WasiError, whence
 } from './wasiTypes';
 
 export namespace DeviceIds {
-	let deviceIdCounter: bigint = 1n;
-	export const system = deviceIdCounter++;
+	let counter: bigint = 1n;
 	export function next(): bigint {
-		return deviceIdCounter++;
+		return counter++;
+	}
+}
+
+export namespace FileDescriptors {
+	let counter: fd = 1;
+	export function next(): fd {
+		return counter++;
 	}
 }
 
