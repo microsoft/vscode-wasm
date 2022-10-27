@@ -8,7 +8,7 @@ import { URI } from 'vscode-uri';
 import { ApiClient, size } from '@vscode/sync-api-client';
 
 import { BigInts, code2Wasi } from './converter';
-import { BaseFileDescriptor, DeviceDriver, FileDescriptor, NoSysDeviceDriver, DeviceIds, ReaddirEntry } from './deviceDriver';
+import { BaseFileDescriptor, DeviceDriver, FileDescriptor, NoSysDeviceDriver, DeviceIds, ReaddirEntry, FileDescriptors } from './deviceDriver';
 import { fdstat, filestat, Rights, fd, rights, fdflags, Filetype, WasiError, Errno, filetype, Whence, lookupflags, timestamp, fstflags, oflags, Oflags } from './wasiTypes';
 
 import RAL from './ral';
@@ -110,13 +110,12 @@ interface INode {
 }
 
 namespace INode {
-
 	export function hasContent(inode: INode): inode is INode & { content: Uint8Array } {
 		return inode.content !== undefined;
 	}
 }
 
-export default function create(apiClient: ApiClient, textEncoder: RAL.TextEncoder): DeviceDriver {
+export default function create(apiClient: ApiClient, textEncoder: RAL.TextEncoder, baseUri: URI, mountPoint: string): DeviceDriver {
 
 	const vscode_fs = apiClient.vscode.workspace.fileSystem;
 
@@ -126,6 +125,38 @@ export default function create(apiClient: ApiClient, textEncoder: RAL.TextEncode
 	const deletedINode: Map<bigint, INode> = new Map();
 
 	const deviceId = DeviceIds.next();
+
+	function createFileDescriptor(parentDescriptor: DirectoryFileDescriptor, rights_base: rights, rights_inheriting: rights, fdflags: fdflags, path: string): FileFileDescriptor {
+		const parentINode = getINode(parentDescriptor.inode);
+		const filePath = paths.join(parentDescriptor.path, path);
+		const fileUri = uriJoin(parentINode.uri, path);
+		return new FileFileDescriptor(FileDescriptors.next(), rights_base, rights_inheriting, fdflags, getOrCreateINode(filePath, fileUri, true).id, filePath);
+	}
+
+	function assertFileDescriptor(fileDescriptor: FileDescriptor): asserts fileDescriptor is FileFileDescriptor {
+		if (!(fileDescriptor instanceof FileFileDescriptor)) {
+			throw new WasiError(Errno.badf);
+		}
+	}
+
+	function createDirectoryDescriptor(parentDescriptor: DirectoryFileDescriptor, rights_base: rights, rights_inheriting: rights, fdflags: fdflags, path: string): DirectoryFileDescriptor {
+		const parentINode = getINode(parentDescriptor.inode);
+		const filePath = paths.join(parentDescriptor.path, path);
+		const fileUri = uriJoin(parentINode.uri, path);
+		return new DirectoryFileDescriptor(FileDescriptors.next(), rights_base, rights_inheriting, fdflags, getOrCreateINode(filePath, fileUri, true).id, filePath);
+	}
+
+	function assertDirectoryDescriptor(fileDescriptor: FileDescriptor): asserts fileDescriptor is DirectoryFileDescriptor {
+		if (!(fileDescriptor instanceof FileFileDescriptor)) {
+			throw new WasiError(Errno.badf);
+		}
+	}
+
+	function assertFileOrDirectoryDescriptor(fileDescriptor: FileDescriptor): asserts fileDescriptor is (FileFileDescriptor | DirectoryFileDescriptor) {
+		if (!(fileDescriptor instanceof FileFileDescriptor) && !(fileDescriptor instanceof DirectoryFileDescriptor)) {
+			throw new WasiError(Errno.badf);
+		}
+	}
 
 	function getOrCreateINode(filepath: string, uri: URI, ref: boolean): INode {
 		let result = path2INode.get(filepath);
@@ -178,6 +209,17 @@ export default function create(apiClient: ApiClient, textEncoder: RAL.TextEncode
 		}
 	}
 
+	function markINodeAsDeleted(filepath: string): void {
+		const inode = path2INode.get(filepath);
+		if (inode === undefined) {
+			return;
+		}
+		path2INode.delete(filepath);
+		if (!deletedINode.has(inode.id)) {
+			deletedINode.set(inode.id, inode);
+		}
+	}
+
 	function uriJoin(uri: URI, name: string): URI {
 		if (name === '.') {
 			return uri;
@@ -208,6 +250,13 @@ export default function create(apiClient: ApiClient, textEncoder: RAL.TextEncode
 		result.mtim = BigInt(vStat.mtime);
 	}
 
+	function createOrTruncate(fileDescriptor: FileFileDescriptor): void {
+		const inode = getINode(fileDescriptor.inode);
+		inode.content = new Uint8Array(0);
+		fileDescriptor.cursor = 0;
+		writeContent(inode as Required<INode>);
+	}
+
 	function writeContent(inode: Required<INode>) {
 		vscode_fs.writeFile(inode.uri, inode.content);
 	}
@@ -220,9 +269,7 @@ export default function create(apiClient: ApiClient, textEncoder: RAL.TextEncode
 			return;
 		},
 		fd_allocate(fileDescriptor: FileDescriptor, _offset: bigint, _len: bigint): void {
-			if (!(fileDescriptor instanceof FileFileDescriptor)) {
-				throw new WasiError(Errno.badf);
-			}
+			assertFileDescriptor(fileDescriptor);
 
 			const offset = BigInts.asNumber(_offset);
 			const len = BigInts.asNumber(_len);
@@ -244,9 +291,8 @@ export default function create(apiClient: ApiClient, textEncoder: RAL.TextEncode
 			unrefINode(fileDescriptor.inode);
 		},
 		fd_datasync(fileDescriptor: FileDescriptor): void {
-			if (!(fileDescriptor instanceof FileFileDescriptor)) {
-				throw new WasiError(Errno.badf);
-			}
+			assertFileDescriptor(fileDescriptor);
+
 			const inode = getINode(fileDescriptor.inode);
 			if (!INode.hasContent(inode)) {
 				return;
@@ -263,16 +309,14 @@ export default function create(apiClient: ApiClient, textEncoder: RAL.TextEncode
 			fileDescriptor.fdflags = fdflags;
 		},
 		fd_filestat_get(fileDescriptor: FileDescriptor, result: filestat): void {
-			if (!(fileDescriptor instanceof FileFileDescriptor)) {
-				throw new WasiError(Errno.badf);
-			}
+			assertFileDescriptor(fileDescriptor);
+
 			const inode = getINode(fileDescriptor.inode);
 			doStat(inode, result);
 		},
 		fd_filestat_set_size(fileDescriptor: FileDescriptor, _size: bigint): void {
-			if (!(fileDescriptor instanceof FileFileDescriptor)) {
-				throw new WasiError(Errno.badf);
-			}
+			assertFileDescriptor(fileDescriptor);
+
 			const size = BigInts.asNumber(_size);
 			const inode = getResolvedINode(fileDescriptor.inode);
 			const content = inode.content;
@@ -318,9 +362,8 @@ export default function create(apiClient: ApiClient, textEncoder: RAL.TextEncode
 			if (buffers.length === 0) {
 				return 0;
 			}
-			if (!(fileDescriptor instanceof FileFileDescriptor)) {
-				throw new WasiError(Errno.badf);
-			}
+			assertFileDescriptor(fileDescriptor);
+
 			const content = getResolvedINode(fileDescriptor.inode).content;
 			let totalBytesRead = 0;
 			for (const buffer of buffers) {
@@ -333,9 +376,8 @@ export default function create(apiClient: ApiClient, textEncoder: RAL.TextEncode
 			return totalBytesRead;
 		},
 		fd_readdir(fileDescriptor: FileDescriptor): ReaddirEntry[] {
-			if (!(fileDescriptor instanceof DirectoryFileDescriptor)) {
-				throw new WasiError(Errno.badf);
-			}
+			assertDirectoryDescriptor(fileDescriptor);
+
 			// Also unclear whether we have to include '.' and '..'
 			// See also https://github.com/WebAssembly/wasi-filesystem/issues/3
 			const inode = getINode(fileDescriptor.inode);
@@ -350,9 +392,8 @@ export default function create(apiClient: ApiClient, textEncoder: RAL.TextEncode
 			return result;
 		},
 		fd_seek(fileDescriptor: FileDescriptor, _offset: bigint, whence: number): bigint {
-			if (!(fileDescriptor instanceof FileFileDescriptor)) {
-				throw new WasiError(Errno.badf);
-			}
+			assertFileDescriptor(fileDescriptor);
+
 			const offset = BigInts.asNumber(_offset);
 			switch(whence) {
 				case Whence.set:
@@ -376,18 +417,16 @@ export default function create(apiClient: ApiClient, textEncoder: RAL.TextEncode
 			writeContent(inode);
 		},
 		fd_tell(fileDescriptor: FileDescriptor): u64 {
-			if (!(fileDescriptor instanceof FileFileDescriptor)) {
-				throw new WasiError(Errno.badf);
-			}
+			assertFileDescriptor(fileDescriptor);
+
 			return BigInt(fileDescriptor.cursor);
 		},
 		fd_write(fileDescriptor: FileDescriptor, buffers: Uint8Array[]): number {
 			if (buffers.length === 0) {
 				return 0;
 			}
-			if (!(fileDescriptor instanceof FileFileDescriptor)) {
-				throw new WasiError(Errno.badf);
-			}
+			assertFileDescriptor(fileDescriptor);
+
 			const inode = getResolvedINode(fileDescriptor.inode);
 			const [content, bytesWritten] = fileDescriptor.write(inode.content, buffers);
 			inode.content = content;
@@ -399,9 +438,8 @@ export default function create(apiClient: ApiClient, textEncoder: RAL.TextEncode
 			vscode_fs.createDirectory(uriJoin(inode.uri, path));
 		},
 		path_filestat_get(fileDescriptor: FileDescriptor, _flags: lookupflags, path: string, result: filestat): void {
-			if (!(fileDescriptor instanceof FileFileDescriptor) && !(fileDescriptor instanceof DirectoryFileDescriptor)) {
-				throw new WasiError(Errno.badf);
-			}
+			assertFileOrDirectoryDescriptor(fileDescriptor);
+
 			const inode = getINode(fileDescriptor.inode);
 			const filePath = paths.join(fileDescriptor.path, path);
 			const fileUri = uriJoin(inode.uri, path);
@@ -416,10 +454,8 @@ export default function create(apiClient: ApiClient, textEncoder: RAL.TextEncode
 			// For now we do nothing. If we need to implement this we need
 			// support from the VS Code API.
 		},
-		path_open(parentDescriptor: FileDescriptor, dirflags: lookupflags, path: string, oflags: oflags, fs_rights_base: rights, fs_rights_inheriting: rights, fdflags: fdflags): FileDescriptor {
-			if (!(parentDescriptor instanceof FileFileDescriptor) && !(parentDescriptor instanceof DirectoryFileDescriptor)) {
-				throw new WasiError(Errno.badf);
-			}
+		path_open(parentDescriptor: FileDescriptor, _dirflags: lookupflags, path: string, oflags: oflags, fs_rights_base: rights, fs_rights_inheriting: rights, fdflags: fdflags): FileDescriptor {
+			assertDirectoryDescriptor(parentDescriptor);
 
 			let filetype: filetype | undefined = doGetFiletype(parentDescriptor, path);
 			const entryExists: boolean = filetype !== undefined;
@@ -459,69 +495,67 @@ export default function create(apiClient: ApiClient, textEncoder: RAL.TextEncode
 			if (filetype !== Filetype.regular_file && filetype !== Filetype.directory) {
 				throw new WasiError(Errno.badf);
 			}
-			const result = filetype === Filetype.regular_file
-				? new FileFileDescriptor()
-				: new DirectoryFileDescriptor();
 
 			// Currently VS Code doesn't offer a generic API to open a file
 			// or a directory. Since we were able to stat the file we create
 			// a file descriptor for it and lazy get the file content on read.
-			const base = filetype === Filetype.directory
-				? fs_rights_base | Rights.DirectoryBase
-				: filetype === Filetype.regular_file
-					? fs_rights_base | Rights.FileBase
-					: fs_rights_base;
-			const inheriting = Filetype.directory
-				? fs_rights_inheriting | Rights.DirectoryInheriting
-				: filetype === Filetype.regular_file
-					? fs_rights_inheriting | Rights.FileInheriting
-					: fs_rights_inheriting;
+			const result = filetype === Filetype.regular_file
+				? createFileDescriptor(parentDescriptor, fs_rights_base | Rights.FileBase, fs_rights_inheriting | Rights.FileInheriting, fdflags, path)
+				: createDirectoryDescriptor(parentDescriptor, fs_rights_base | Rights.DirectoryBase, fs_rights_inheriting | Rights.DirectoryInheriting, fdflags, path);
 
-			const result = filetype =
-			const fileDescriptor = fileSystem.createFileDescriptor(
-				parentDescriptor, name,
-				filetype, { base: base, inheriting: inheriting }, fdflags,
-			);
-			fileDescriptors.set(fileDescriptor.fd, fileDescriptor);
-			memory.setUint32(fd_ptr, fileDescriptor.fd, true);
-			if (createFile || Oflags.truncOn(oflags)) {
-				fileSystem.createOrTruncate(fileDescriptor);
+			if (result instanceof FileFileDescriptor && (createFile || Oflags.truncOn(oflags))) {
+				createOrTruncate(result);
 			}
+			return result;
+		},
+		path_readlink(_fileDescriptor: FileDescriptor, _path: string): string {
+			// For now we do nothing. If we need to implement this we need
+			// support from the VS Code API.
+			throw new WasiError(Errno.noent);
+		},
+		path_remove_directory(fileDescriptor: FileDescriptor, path: string): void {
+			assertFileOrDirectoryDescriptor(fileDescriptor);
+
+			const parentINode = getINode(fileDescriptor.inode);
+			const fileUri = uriJoin(parentINode.uri, path);
+			vscode_fs.delete(fileUri, { recursive: false, useTrash: true });
+			// todo@dirkb Need to think about whether we need to mark sub inodes as deleted as well.
+			markINodeAsDeleted(paths.join(fileDescriptor.path, path));
+		},
+		path_rename(oldFileDescriptor: FileDescriptor, oldPath: string, newFileDescriptor: FileDescriptor, newPath: string): void {
+			assertDirectoryDescriptor(oldFileDescriptor);
+			assertDirectoryDescriptor(newFileDescriptor);
+
+			const oldParentINode = getINode(oldFileDescriptor.inode);
+			const newParentINode = getINode(newFileDescriptor.inode);
+
+			const oldUri = uriJoin(oldParentINode.uri, oldPath);
+			const newUri = uriJoin(newParentINode.uri, newPath);
+			vscode_fs.rename(oldUri, newUri, { overwrite: false });
+
+			// todo@dirkb unclear what really happens in posix. We need to understand if
+			// an old file descriptor could still read the directory under its new location.
+			const oldINode = path2INode.get(paths.join(oldFileDescriptor.path, oldPath));
+			if (oldINode === undefined) {
+				return;
+			}
+			const newFilePath = paths.join(newFileDescriptor.path, newPath);
+			const newINode = path2INode.get(newFilePath);
+			if (newINode !== undefined) {
+				throw new WasiError(Errno.badf);
+			}
+			path2INode.set(newFilePath, oldINode);
+		},
+		path_symlink(_oldPath: string, _fileDescriptor: FileDescriptor, _newPath: string): void {
+			throw new WasiError(Errno.nosys);
+		},
+		path_unlink_file(fileDescriptor: FileDescriptor, path: string): void {
+			assertDirectoryDescriptor(fileDescriptor);
+			const inode = getINode(fileDescriptor.inode);
+			const filePath = paths.join(fileDescriptor.path, path);
+			const fileUri = uriJoin(inode.uri, path);
+			vscode_fs.delete(fileUri, { recursive: false, useTrash: true });
+			markINodeAsDeleted(filePath);
 		}
-
 	});
-}
-
-export class VSCodeFileSystemDriver implements DeviceDriver {
-
-	public readonly id: bigint;
-	private readonly uri: URI;
-	private readonly mountPoint: string;
-
-
-	constructor(uri: URI, mountPoint: string) {
-		this.id = DeviceIds.next();
-		this.uri = uri;
-		this.mountPoint = mountPoint;
-	}
-
-	path_open(fd: FileDescriptor, dirflags: number, path: string, oflags: number, fs_rights_base: bigint, fs_rights_inheriting: bigint, fdflags: number): FileDescriptor {
-		throw new Error('Method not implemented.');
-	}
-	path_readlink(fd: FileDescriptor, path: string): string {
-		throw new Error('Method not implemented.');
-	}
-	path_remove_directory(fd: FileDescriptor, path: string): void {
-		throw new Error('Method not implemented.');
-	}
-	path_rename(fd: FileDescriptor, old_path: string, new_fd: number, new_path: string): void {
-		throw new Error('Method not implemented.');
-	}
-	path_symlink(old_path: string, fd: FileDescriptor, new_path: string): void {
-		throw new Error('Method not implemented.');
-	}
-	path_unlink_file(fd: FileDescriptor, path: string): void {
-		throw new Error('Method not implemented.');
-	}
-
 }

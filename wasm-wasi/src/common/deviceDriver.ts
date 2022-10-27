@@ -101,7 +101,7 @@ export type DeviceDriver = {
 	path_open(fileDescriptor: FileDescriptor, dirflags: lookupflags, path: string, oflags: oflags, fs_rights_base: rights, fs_rights_inheriting: rights, fdflags: fdflags): FileDescriptor;
 	path_readlink(fileDescriptor: FileDescriptor, path: string): string;
 	path_remove_directory(fileDescriptor: FileDescriptor, path: string): void;
-	path_rename(fileDescriptor: FileDescriptor, old_path: string, new_fileDescriptor: fd, new_path: string): void;
+	path_rename(oldFileDescriptor: FileDescriptor, old_path: string, newFileDescriptor: FileDescriptor, new_path: string): void;
 	path_symlink(old_path: string, fileDescriptor: FileDescriptor, new_path: string): void;
 	path_unlink_file(fileDescriptor: FileDescriptor, path: string): void;
 };
