@@ -18,14 +18,9 @@ export namespace DeviceIds {
 	}
 }
 
-export namespace FileDescriptors {
-	let counter: fd = 1;
-	export function next(): fd {
-		return counter++;
-	}
-}
-
 export interface FileDescriptor {
+
+	readonly deviceId: bigint;
 
 	/**
 	 * The WASI file descriptor id
@@ -70,9 +65,48 @@ export interface FileDescriptor {
 	assertIsDirectory(): void;
 }
 
+export abstract class BaseFileDescriptor implements FileDescriptor {
+
+	public readonly deviceId: bigint;
+
+	public readonly fd: fd;
+
+	public readonly fileType: filetype;
+
+	public readonly rights_base: rights;
+
+	public readonly rights_inheriting: rights;
+
+	public fdflags: fdflags;
+
+	public readonly inode: bigint;
+
+	constructor(deviceId: bigint, fd: fd, fileType: filetype, rights_base: rights, rights_inheriting: rights, fdflags: fdflags, inode: bigint) {
+		this.deviceId = deviceId;
+		this.fd = fd;
+		this.fileType = fileType;
+		this.rights_base = rights_base;
+		this.rights_inheriting = rights_inheriting;
+		this.fdflags = fdflags;
+		this.inode = inode;
+	}
+
+	public assertBaseRight(right: rights): void {
+		if ((this.rights_base & right) === 0n) {
+			throw new WasiError(Errno.perm);
+		}
+	}
+
+	public assertIsDirectory(): void {
+		if (this.fileType !== Filetype.directory) {
+			throw new WasiError(Errno.notdir);
+		}
+	}
+}
+
 export type ReaddirEntry = { d_ino: bigint; d_type: filetype; d_name: Uint8Array };
 
-export type DeviceDriver = {
+export interface DeviceDriver {
 
 	id: bigint;
 
@@ -86,6 +120,7 @@ export type DeviceDriver = {
 	fd_filestat_set_size(fileDescriptor: FileDescriptor, size: filesize): void;
 	fd_filestat_set_times(fileDescriptor: FileDescriptor, atim: timestamp, mtim: timestamp, fst_flags: fstflags): void;
 	fd_pread(fileDescriptor: FileDescriptor, offset: number, bytesToRead: number): Uint8Array;
+	fd_prestat_get(fd: fd): [string, FileDescriptor] | undefined;
 	fd_pwrite(fileDescriptor: FileDescriptor, offset: number, bytes: Uint8Array): size;
 	fd_read(fileDescriptor: FileDescriptor, buffers: Uint8Array[]): size;
 	fd_readdir(fileDescriptor: FileDescriptor): ReaddirEntry[];
@@ -104,7 +139,15 @@ export type DeviceDriver = {
 	path_rename(oldFileDescriptor: FileDescriptor, old_path: string, newFileDescriptor: FileDescriptor, new_path: string): void;
 	path_symlink(old_path: string, fileDescriptor: FileDescriptor, new_path: string): void;
 	path_unlink_file(fileDescriptor: FileDescriptor, path: string): void;
-};
+}
+
+export interface FileSystemDeviceDriver extends DeviceDriver {
+	createStdioFileDescriptor(fd: 0 | 1 | 2, rights_base: rights, rights_inheriting: rights, fdflags: fdflags, path: string): FileDescriptor;
+}
+
+export interface CharacterDeviceDriver extends DeviceDriver {
+	createStdioFileDescriptor(fd: 0 | 1 | 2): FileDescriptor;
+}
 
 export const NoSysDeviceDriver: Omit<DeviceDriver, 'id'> = {
 	fd_advise(): void {
@@ -136,6 +179,9 @@ export const NoSysDeviceDriver: Omit<DeviceDriver, 'id'> = {
 	},
 	fd_pread(): Uint8Array {
 		throw new WasiError(Errno.nosys);
+	},
+	fd_prestat_get(): undefined {
+		return undefined;
 	},
 	fd_pwrite(): size {
 		throw new WasiError(Errno.nosys);
@@ -189,39 +235,3 @@ export const NoSysDeviceDriver: Omit<DeviceDriver, 'id'> = {
 		throw new WasiError(Errno.nosys);
 	}
 };
-
-export abstract class BaseFileDescriptor implements FileDescriptor {
-
-	public readonly fd: fd;
-
-	public readonly fileType: filetype;
-
-	public readonly rights_base: rights;
-
-	public readonly rights_inheriting: rights;
-
-	public fdflags: fdflags;
-
-	public readonly inode: bigint;
-
-	constructor(fd: fd, fileType: filetype, rights_base: rights, rights_inheriting: rights, fdflags: fdflags, inode: bigint) {
-		this.fd = fd;
-		this.fileType = fileType;
-		this.rights_base = rights_base;
-		this.rights_inheriting = rights_inheriting;
-		this.fdflags = fdflags;
-		this.inode = inode;
-	}
-
-	public assertBaseRight(right: rights): void {
-		if ((this.rights_base & right) === 0n) {
-			throw new WasiError(Errno.perm);
-		}
-	}
-
-	public assertIsDirectory(): void {
-		if (this.fileType !== Filetype.directory) {
-			throw new WasiError(Errno.notdir);
-		}
-	}
-}

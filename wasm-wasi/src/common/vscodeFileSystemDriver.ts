@@ -8,7 +8,7 @@ import { URI } from 'vscode-uri';
 import { ApiClient, size } from '@vscode/sync-api-client';
 
 import { BigInts, code2Wasi } from './converter';
-import { BaseFileDescriptor, DeviceDriver, FileDescriptor, NoSysDeviceDriver, DeviceIds, ReaddirEntry, FileDescriptors } from './deviceDriver';
+import { BaseFileDescriptor, DeviceDriver, FileDescriptor, NoSysDeviceDriver, DeviceIds, ReaddirEntry, FileSystemDeviceDriver } from './deviceDriver';
 import { fdstat, filestat, Rights, fd, rights, fdflags, Filetype, WasiError, Errno, filetype, Whence, lookupflags, timestamp, fstflags, oflags, Oflags } from './wasiTypes';
 
 import RAL from './ral';
@@ -27,8 +27,8 @@ class FileFileDescriptor extends BaseFileDescriptor {
 	 */
 	public readonly path: string;
 
-	constructor(fd: fd, rights_base: rights, rights_inheriting: rights, fdflags: fdflags, inode: bigint, path: string) {
-		super(fd, Filetype.regular_file, rights_base, rights_inheriting, fdflags, inode);
+	constructor(deviceId: bigint, fd: fd, rights_base: rights, rights_inheriting: rights, fdflags: fdflags, inode: bigint, path: string) {
+		super(deviceId, fd, Filetype.regular_file, rights_base, rights_inheriting, fdflags, inode);
 		this._cursor = 0;
 		this.path = path;
 	}
@@ -80,8 +80,8 @@ class DirectoryFileDescriptor extends BaseFileDescriptor {
 	 */
 	public readonly path: string;
 
-	constructor(fd: fd, rights_base: rights, rights_inheriting: rights, fdflags: fdflags, inode: bigint, path: string) {
-		super(fd, Filetype.directory, rights_base, rights_inheriting, fdflags, inode);
+	constructor(deviceId: bigint, fd: fd, rights_base: rights, rights_inheriting: rights, fdflags: fdflags, inode: bigint, path: string) {
+		super(deviceId, fd, Filetype.directory, rights_base, rights_inheriting, fdflags, inode);
 		this.path = path;
 	}
 }
@@ -115,8 +115,9 @@ namespace INode {
 	}
 }
 
-export default function create(apiClient: ApiClient, textEncoder: RAL.TextEncoder, baseUri: URI, mountPoint: string): DeviceDriver {
+export default function create(apiClient: ApiClient, textEncoder: RAL.TextEncoder, fileDescriptorId: { next(): number }, baseUri: URI, mountPoint: string): FileSystemDeviceDriver {
 
+	const deviceId = DeviceIds.next();
 	const vscode_fs = apiClient.vscode.workspace.fileSystem;
 
 	let inodeCounter: bigint = 1n;
@@ -124,13 +125,13 @@ export default function create(apiClient: ApiClient, textEncoder: RAL.TextEncode
 	const inodes: Map<bigint, INode> = new Map();
 	const deletedINode: Map<bigint, INode> = new Map();
 
-	const deviceId = DeviceIds.next();
+	const preOpenDirectories = [mountPoint];
 
 	function createFileDescriptor(parentDescriptor: DirectoryFileDescriptor, rights_base: rights, rights_inheriting: rights, fdflags: fdflags, path: string): FileFileDescriptor {
 		const parentINode = getINode(parentDescriptor.inode);
 		const filePath = paths.join(parentDescriptor.path, path);
 		const fileUri = uriJoin(parentINode.uri, path);
-		return new FileFileDescriptor(FileDescriptors.next(), rights_base, rights_inheriting, fdflags, getOrCreateINode(filePath, fileUri, true).id, filePath);
+		return new FileFileDescriptor(deviceId, fileDescriptorId.next(), rights_base, rights_inheriting, fdflags, getOrCreateINode(filePath, fileUri, true).id, filePath);
 	}
 
 	function assertFileDescriptor(fileDescriptor: FileDescriptor): asserts fileDescriptor is FileFileDescriptor {
@@ -143,7 +144,7 @@ export default function create(apiClient: ApiClient, textEncoder: RAL.TextEncode
 		const parentINode = getINode(parentDescriptor.inode);
 		const filePath = paths.join(parentDescriptor.path, path);
 		const fileUri = uriJoin(parentINode.uri, path);
-		return new DirectoryFileDescriptor(FileDescriptors.next(), rights_base, rights_inheriting, fdflags, getOrCreateINode(filePath, fileUri, true).id, filePath);
+		return new DirectoryFileDescriptor(deviceId, fileDescriptorId.next(), rights_base, rights_inheriting, fdflags, getOrCreateINode(filePath, fileUri, true).id, filePath);
 	}
 
 	function assertDirectoryDescriptor(fileDescriptor: FileDescriptor): asserts fileDescriptor is DirectoryFileDescriptor {
@@ -263,6 +264,18 @@ export default function create(apiClient: ApiClient, textEncoder: RAL.TextEncode
 
 	return Object.assign({}, NoSysDeviceDriver, {
 		id: deviceId,
+		createStdioFileDescriptor(fd: 0 | 1 | 2, rights_base: rights, rights_inheriting: rights, fdflags: fdflags, path: string): FileDescriptor {
+			if (path.length === 0) {
+				throw new WasiError(Errno.inval);
+			}
+			if (path[0] !== '/') {
+				path = `/${path}`;
+			}
+
+			const fileUri = uriJoin(baseUri, path);
+			const inode = getOrCreateINode(path, fileUri, true);
+			return new FileFileDescriptor(deviceId, fd, rights_base, rights_inheriting, fdflags, inode.id, path);
+		},
 		fd_advise(fileDescriptor: FileDescriptor, _offset: bigint, _length: bigint, _advise: number): void {
 			fileDescriptor.assertBaseRight(Rights.fd_advise);
 			// We don't have advisory in VS Code. So treat it as successful.
@@ -342,6 +355,16 @@ export default function create(apiClient: ApiClient, textEncoder: RAL.TextEncode
 			const content = getResolvedINode(fileDescriptor.inode).content;
 			const realRead = Math.min(bytesToRead, content.byteLength - offset);
 			return content.subarray(offset, offset + realRead);
+		},
+		fd_prestat_get(fd: fd): [string, FileDescriptor] | undefined {
+			const next = preOpenDirectories.shift();
+			if (next === undefined) {
+				return undefined;
+			}
+			return [
+				next,
+				new DirectoryFileDescriptor(deviceId, fd, Rights.DirectoryBase, Rights.DirectoryInheriting, 0, getOrCreateINode('/', baseUri, true).id, '/')
+			];
 		},
 		fd_pwrite(fileDescriptor: FileDescriptor, offset: number, bytes: Uint8Array): number {
 			const inode = getResolvedINode(fileDescriptor.inode);
