@@ -11,6 +11,7 @@ import {
 	fstflags, lookupflags, oflags, rights, timestamp, WasiError, whence
 } from './wasiTypes';
 
+export type DeviceId = bigint;
 export namespace DeviceIds {
 	let counter: bigint = 1n;
 	export function next(): bigint {
@@ -20,7 +21,7 @@ export namespace DeviceIds {
 
 export interface FileDescriptor {
 
-	readonly deviceId: bigint;
+	readonly deviceId: DeviceId;
 
 	/**
 	 * The WASI file descriptor id
@@ -104,7 +105,7 @@ export abstract class BaseFileDescriptor implements FileDescriptor {
 	}
 }
 
-export type ReaddirEntry = { d_ino: bigint; d_type: filetype; d_name: Uint8Array };
+export type ReaddirEntry = { d_ino: bigint; d_type: filetype; d_name: string };
 
 export interface DeviceDriver {
 
@@ -119,9 +120,9 @@ export interface DeviceDriver {
 	fd_filestat_get(fileDescriptor: FileDescriptor, result: filestat): void;
 	fd_filestat_set_size(fileDescriptor: FileDescriptor, size: filesize): void;
 	fd_filestat_set_times(fileDescriptor: FileDescriptor, atim: timestamp, mtim: timestamp, fst_flags: fstflags): void;
-	fd_pread(fileDescriptor: FileDescriptor, offset: number, bytesToRead: number): Uint8Array;
+	fd_pread(fileDescriptor: FileDescriptor, offset: filesize, bytesToRead: number): Uint8Array;
 	fd_prestat_get(fd: fd): [string, FileDescriptor] | undefined;
-	fd_pwrite(fileDescriptor: FileDescriptor, offset: number, bytes: Uint8Array): size;
+	fd_pwrite(fileDescriptor: FileDescriptor, offset: filesize, bytes: Uint8Array): size;
 	fd_read(fileDescriptor: FileDescriptor, buffers: Uint8Array[]): size;
 	fd_readdir(fileDescriptor: FileDescriptor): ReaddirEntry[];
 	fd_seek(fileDescriptor: FileDescriptor, offset: filedelta, whence: whence): bigint;

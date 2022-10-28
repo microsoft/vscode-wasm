@@ -9,7 +9,7 @@ import { ApiClient, size } from '@vscode/sync-api-client';
 
 import { BigInts, code2Wasi } from './converter';
 import { BaseFileDescriptor, DeviceDriver, FileDescriptor, NoSysDeviceDriver, DeviceIds, ReaddirEntry, FileSystemDeviceDriver } from './deviceDriver';
-import { fdstat, filestat, Rights, fd, rights, fdflags, Filetype, WasiError, Errno, filetype, Whence, lookupflags, timestamp, fstflags, oflags, Oflags } from './wasiTypes';
+import { fdstat, filestat, Rights, fd, rights, fdflags, Filetype, WasiError, Errno, filetype, Whence, lookupflags, timestamp, fstflags, oflags, Oflags, filesize } from './wasiTypes';
 
 import RAL from './ral';
 import { u64 } from './baseTypes';
@@ -115,7 +115,7 @@ namespace INode {
 	}
 }
 
-export default function create(apiClient: ApiClient, textEncoder: RAL.TextEncoder, fileDescriptorId: { next(): number }, baseUri: URI, mountPoint: string): FileSystemDeviceDriver {
+export function create(apiClient: ApiClient, textEncoder: RAL.TextEncoder, fileDescriptorId: { next(): number }, baseUri: URI, mountPoint: string): FileSystemDeviceDriver {
 
 	const deviceId = DeviceIds.next();
 	const vscode_fs = apiClient.vscode.workspace.fileSystem;
@@ -351,7 +351,8 @@ export default function create(apiClient: ApiClient, textEncoder: RAL.TextEncode
 			// But we would loose them during reload. We could also store them
 			// in local storage
 		},
-		fd_pread(fileDescriptor: FileDescriptor, offset: number, bytesToRead: number): Uint8Array {
+		fd_pread(fileDescriptor: FileDescriptor, _offset: filesize, bytesToRead: number): Uint8Array {
+			const offset = BigInts.asNumber(_offset);
 			const content = getResolvedINode(fileDescriptor.inode).content;
 			const realRead = Math.min(bytesToRead, content.byteLength - offset);
 			return content.subarray(offset, offset + realRead);
@@ -366,7 +367,7 @@ export default function create(apiClient: ApiClient, textEncoder: RAL.TextEncode
 				new DirectoryFileDescriptor(deviceId, fd, Rights.DirectoryBase, Rights.DirectoryInheriting, 0, getOrCreateINode('/', baseUri, true).id, '/')
 			];
 		},
-		fd_pwrite(fileDescriptor: FileDescriptor, offset: number, bytes: Uint8Array): number {
+		fd_pwrite(fileDescriptor: FileDescriptor, _offset: filesize, bytes: Uint8Array): number {
 			const inode = getResolvedINode(fileDescriptor.inode);
 			let content = inode.content;
 			const total = offset + bytes.byteLength;
@@ -410,7 +411,7 @@ export default function create(apiClient: ApiClient, textEncoder: RAL.TextEncode
 				const name = entry[0];
 				const filePath = paths.join(fileDescriptor.path, name);
 				const fileUri = uriJoin(inode.uri, name);
-				result.push({ d_ino: getOrCreateINode(filePath, fileUri, false).id, d_type: code2Wasi.asFileType(entry[1]), d_name: textEncoder.encode(entry[0]) });
+				result.push({ d_ino: getOrCreateINode(filePath, fileUri, false).id, d_type: code2Wasi.asFileType(entry[1]), d_name: entry[0] });
 			}
 			return result;
 		},

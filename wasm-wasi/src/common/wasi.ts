@@ -14,16 +14,19 @@ import {
 	fd, errno, Errno, lookupflags, oflags, rights, fdflags, dircookie, filetype, Rights,
 	filesize, advise, filedelta, whence, Ciovec, Iovec, Filetype, clockid, timestamp, Clockid,
 	fstflags, Prestat, exitcode, Oflags, Subscription, WasiError, Eventtype, Event, event,
-	Subclockflags, Literal, subscription, Fdflags, riflags, siflags, sdflags,
+	Subclockflags, Literal, subscription, riflags, siflags, sdflags, Dirent,
 	args_sizes_get, args_get, environ_sizes_get, environ_get, clock_res_get, clock_time_get, fd_advise,
 	fd_allocate, fd_close, fd_datasync, fd_fdstat_get, fd_fdstat_set_flags, fd_filestat_get, fd_filestat_set_size,
 	fd_filestat_set_times, fd_pread, fd_prestat_dir_name, fd_prestat_get, fd_pwrite, fd_read, fd_readdir,
 	fd_seek, fd_sync, fd_tell, fd_write, path_create_directory, path_filestat_get, path_filestat_set_times,
 	path_link, path_open, path_readlink, path_remove_directory, path_rename, path_symlink, path_unlink_file,
-	poll_oneoff, proc_exit, random_get, sched_yield, sock_accept, sock_recv, sock_send, sock_shutdown
+	poll_oneoff, proc_exit, random_get, sched_yield, sock_accept, sock_recv, sock_send, sock_shutdown, Fdstat, Filestat, dirent
 } from './wasiTypes';
 import { BigInts, code2Wasi } from './converter';
-import { FileDescriptor, FileSystem } from './fileSystem';
+import { CharacterDeviceDriver, DeviceDriver, DeviceId, FileDescriptor, FileSystemDeviceDriver, ReaddirEntry } from './deviceDriver';
+import * as vscfs from './vscodeFileSystemDriver';
+import * as ConsoleDriver from './consoleDriver';
+import * as ttyDriver from './ttyDriver';
 
 namespace WebAssembly {
 
@@ -121,43 +124,29 @@ export interface Environment {
 	[key: string]: string;
 }
 
+export type DeviceDescription = {
+	kind: 'fileSystem';
+	uri: URI;
+	mountPoint: string;
+} | {
+	kind: 'tty';
+	uri: URI;
+} | {
+	kind: 'custom';
+	uri: URI;
+	driver: DeviceDriver;
+};
+
+export type StdioDescription = {
+	kind: 'tty';
+	uri: URI;
+} | {
+	kind: 'fileSystem';
+	uri: URI;
+	path: string;
+};
+
 export type Options = {
-
-	/**
-	 * Stdin, stdout and stderr URIs to use
-	 */
-	stdio: {
-		stdin: URI;
-		stdout: URI;
-		stderr: URI;
-	};
-
-	/**
-	 * Directory mappings
-	 */
-	mapDir: {
-		name: string;
-		uri: URI;
-	}[];
-
-	/**
-	 * File mappings
-	 */
-	mapFile?: {
-		/**
-		 * The full path of the files
-		 */
-		name: string;
-		fileDescriptor: {
-			uri: URI;
-			filetype: filetype;
-			fdflags: fdflags;
-			rights: {
-				base: rights;
-				inheriting: rights;
-			};
-		};
-	}[];
 
 	/**
 	 * The encoding to use.
@@ -177,39 +166,73 @@ export type Options = {
 
 export namespace WASI {
 
-	export function create(name: string, apiClient: ApiClient, exitHandler: (rval: number) => void, options: Options): WASI {
+	export function create(name: string, apiClient: ApiClient, exitHandler: (rval: number) => void, devices: DeviceDescription[], stdio: { stdin: StdioDescription; stdout: StdioDescription; stderr: StdioDescription }, options: Options): WASI {
 		let instance: WebAssembly.$Instance;
 
 		const thread_start = RAL().clock.realtime();
 		const fileDescriptors: Map<fd, FileDescriptor> = new Map();
+		let fileDescriptorCounter: number = 0;
+		let fileDescriptorMode: 'init' | 'running' = 'init';
+		const fileDescriptorId = {
+			next(): number {
+				if (fileDescriptorMode === 'init') {
+					throw new WasiError(Errno.inval);
+				}
+				return fileDescriptorCounter++;
+			}
+		};
 		const encoder: RAL.TextEncoder = RAL().TextEncoder.create(options?.encoding);
 		const decoder: RAL.TextDecoder = RAL().TextDecoder.create(options?.encoding);
-		const fileSystem = FileSystem.create(apiClient, { memoryView: memoryView, memoryRaw: memoryRaw }, encoder, options.stdio);
-		fileDescriptors.set(fileSystem.stdin.fd, fileSystem.stdin);
-		fileDescriptors.set(fileSystem.stdout.fd, fileSystem.stdout);
-		fileDescriptors.set(fileSystem.stderr.fd, fileSystem.stderr);
 
-		for (const entry of options.mapDir) {
-			const fileDescriptor = fileSystem.createPreOpenedFileDescriptor(
-				entry.name, entry.uri, Filetype.directory,
-				{ base: Rights.All, inheriting: Rights.All }, Fdflags.sync
-			);
-			fileDescriptors.set(fileDescriptor.fd, fileDescriptor);
-		}
+		const deviceDrivers: Map<DeviceId, DeviceDriver> = new Map();
+		let uri2Driver: Map<string, DeviceDriver> | undefined = new Map();
 
-		if (options.mapFile !== undefined) {
-			for (const entry of options.mapFile) {
-				const filetype = entry.fileDescriptor.filetype;
-				// Currently we only have support for regular files and character devices
-				if (filetype === Filetype.character_device || filetype === Filetype.regular_file) {
-					const data = entry.fileDescriptor;
-					const fileDescriptor = fileSystem.createPreOpenedFileDescriptor(
-						entry.name, data.uri, filetype, data.rights, data.fdflags
-					);
-					fileDescriptors.set(fileDescriptor.fd, fileDescriptor);
-				}
+		for (const device of devices) {
+			let driver: DeviceDriver | undefined;
+			switch (device.kind) {
+				case 'fileSystem':
+					driver = vscfs.create(apiClient, encoder, fileDescriptorId, device.uri, device.mountPoint);
+					break;
+				case 'tty':
+					driver = ttyDriver.create(apiClient, device.uri);
+					break;
+				case 'custom':
+					driver = device.driver;
+					break;
+			}
+			if (driver !== undefined) {
+				deviceDrivers.set(driver.id, driver);
+				uri2Driver.set(device.uri.toString(true), driver);
 			}
 		}
+
+		// Add the standard console driver;
+		const consoleUri: URI = URI.from({ scheme: 'stdio', authority: 'console'});
+		const consoleDriver = ConsoleDriver.create(apiClient, decoder, consoleUri);
+		deviceDrivers.set(consoleDriver.id, consoleDriver);
+		uri2Driver.set(consoleUri.toString(true), consoleDriver);
+
+		function createStdio(fd: 0 | 1 | 2, stdio: StdioDescription): FileDescriptor {
+			let result: FileDescriptor;
+			if (stdio.kind === 'fileSystem') {
+				const driver = uri2Driver!.get(stdio.uri.toString(true)) as FileSystemDeviceDriver;
+				result = driver.createStdioFileDescriptor(fd, Rights.FileBase, Rights.FileInheriting, 0, stdio.path);
+			} else if (stdio.kind === 'tty') {
+				const driver = uri2Driver!.get(stdio.uri.toString(true)) as CharacterDeviceDriver;
+				result = driver.createStdioFileDescriptor(fd);
+			} else {
+				result = consoleDriver.createStdioFileDescriptor(fd);
+			}
+			fileDescriptors.set(fd, result);
+			return result;
+		}
+
+		createStdio(0, stdio.stdin);
+		createStdio(1, stdio.stdin);
+		createStdio(2, stdio.stdin);
+		uri2Driver = undefined;
+
+		const directoryEntries: Map<fd, ReaddirEntry[]> = new Map();
 
 		const wasi: WASI = {
 			initialize: (inst: WebAssembly.Instance): void => {
@@ -299,12 +322,11 @@ export namespace WASI {
 				}
 				return Errno.success;
 			},
-			fd_advise: (fd: fd, _offset: filesize, _length: filesize, _advise: advise): errno => {
+			fd_advise: (fd: fd, offset: filesize, length: filesize, advise: advise): errno => {
 				try {
-					const fileHandle = getFileDescriptor(fd);
-					fileHandle.assertBaseRight(Rights.fd_advise);
-
-					// We don't have advisory in VS Code. So treat it as successful.
+					const fileDescriptor = getFileDescriptor(fd);
+					fileDescriptor.assertBaseRight(Rights.fd_advise);
+					getDeviceDriver(fileDescriptor).fd_advise(fileDescriptor, offset, length, advise);
 					return Errno.success;
 				} catch (error) {
 					return handleError(error);
@@ -314,7 +336,7 @@ export namespace WASI {
 				try {
 					const fileDescriptor = getFileDescriptor(fd);
 					fileDescriptor.assertBaseRight(Rights.fd_allocate);
-					fileSystem.fd_allocate(fileDescriptor, offset, len);
+					getDeviceDriver(fileDescriptor).fd_allocate(fileDescriptor, offset, len);
 					return Errno.success;
 				} catch (error) {
 					return handleError(error);
@@ -323,7 +345,7 @@ export namespace WASI {
 			fd_close: (fd: fd): errno => {
 				try {
 					const fileDescriptor = getFileDescriptor(fd);
-					fileSystem.fd_close(fileDescriptor);
+					getDeviceDriver(fileDescriptor).fd_close(fileDescriptor);
 					fileDescriptors.delete(fileDescriptor.fd);
 					return Errno.success;
 				} catch (error) {
@@ -334,8 +356,7 @@ export namespace WASI {
 				try {
 					const fileDescriptor = getFileDescriptor(fd);
 					fileDescriptor.assertBaseRight(Rights.fd_datasync);
-					// Currently same as fd_sync
-					fileSystem.fd_sync(fileDescriptor);
+					getDeviceDriver(fileDescriptor).fd_datasync(fileDescriptor);
 					return Errno.success;
 				} catch (error) {
 					return handleError(error);
@@ -344,18 +365,17 @@ export namespace WASI {
 			fd_fdstat_get: (fd: fd, fdstat_ptr: ptr): errno => {
 				try {
 					const fileDescriptor = getFileDescriptor(fd);
-					fileSystem.fd_fdstat_get(fileDescriptor, fdstat_ptr);
+					getDeviceDriver(fileDescriptor).fd_fdstat_get(fileDescriptor, Fdstat.create(fdstat_ptr, memoryView()));
 					return Errno.success;
 				} catch (error) {
 					return handleError(error);
 				}
 			},
 			fd_fdstat_set_flags: (fd: fd, fdflags: fdflags): errno => {
-				// This is not available under VS Code.
 				try {
 					const fileDescriptor = getFileDescriptor(fd);
 					fileDescriptor.assertBaseRight(Rights.fd_fdstat_set_flags);
-					fileDescriptor.fdflags = fdflags;
+					getDeviceDriver(fileDescriptor).fd_fdstat_set_flags(fileDescriptor, fdflags);
 					return Errno.success;
 				} catch (error) {
 					return handleError(error);
@@ -365,7 +385,7 @@ export namespace WASI {
 				try {
 					const fileDescriptor = getFileDescriptor(fd);
 					fileDescriptor.assertBaseRight(Rights.fd_filestat_get);
-					fileSystem.fd_filestat_get(fileDescriptor, filestat_ptr);
+					getDeviceDriver(fileDescriptor).fd_filestat_get(fileDescriptor, Filestat.create(filestat_ptr, memoryView()));
 					return Errno.success;
 				} catch (error) {
 					return handleError(error, Errno.perm);
@@ -375,20 +395,17 @@ export namespace WASI {
 				try {
 					const fileDescriptor = getFileDescriptor(fd);
 					fileDescriptor.assertBaseRight(Rights.fd_filestat_set_size);
-					fileSystem.fd_filestat_set_size(fileDescriptor, size);
+					getDeviceDriver(fileDescriptor).fd_filestat_set_size(fileDescriptor, size);
 					return Errno.success;
 				} catch (error) {
 					return handleError(error);
 				}
 			},
-			fd_filestat_set_times: (fd: fd, _atim: timestamp, _mtim: timestamp, _fst_flags: fstflags): errno => {
+			fd_filestat_set_times: (fd: fd, atim: timestamp, mtim: timestamp, fst_flags: fstflags): errno => {
 				try {
-					const fileHandle = getFileDescriptor(fd);
-					fileHandle.assertBaseRight(Rights.fd_filestat_set_times);
-					// todo@dirkb
-					// For new we do nothing. We could cache the timestamp in memory
-					// But we would loose them during reload. We could also store them
-					// in local storage
+					const fileDescriptor = getFileDescriptor(fd);
+					fileDescriptor.assertBaseRight(Rights.fd_filestat_set_times);
+					getDeviceDriver(fileDescriptor).fd_filestat_set_times(fileDescriptor, atim, mtim, fst_flags);
 					return Errno.success;
 				} catch (error) {
 					return handleError(error);
@@ -398,12 +415,17 @@ export namespace WASI {
 				try {
 					const fileDescriptor = getFileDescriptor(fd);
 					fileDescriptor.assertBaseRight(Rights.fd_read);
+					const driver = getDeviceDriver(fileDescriptor);
 					const buffers = read_iovs(iovs_ptr, iovs_len);
 					let bytesRead = 0;
 					for (const buffer of buffers) {
-						const result = fileSystem.fd_pread(fileDescriptor, BigInts.asNumber(offset), buffer.byteLength);
+						const result = driver.fd_pread(fileDescriptor, offset, buffer.byteLength);
 						bytesRead = bytesRead + result.byteLength;
 						buffer.set(result);
+						if (result.byteLength < buffer.byteLength) {
+							break;
+						}
+						offset = offset + BigInt(result.byteLength);
 					}
 					memoryView().setUint32(bytesRead_ptr, bytesRead, true);
 					return Errno.success;
@@ -413,6 +435,7 @@ export namespace WASI {
 			},
 			fd_prestat_get: (fd: fd, bufPtr: ptr): errno => {
 				try {
+
 					const fileDescriptor = fileSystem.getPreopenedDirectory(fd);
 					if (fileDescriptor === undefined || !fileDescriptor.preOpened) {
 						return Errno.badf;
@@ -443,10 +466,16 @@ export namespace WASI {
 				try {
 					const fileDescriptor = getFileDescriptor(fd);
 					fileDescriptor.assertBaseRight(Rights.fd_write);
+					const driver = getDeviceDriver(fileDescriptor);
 					const buffers = read_ciovs(ciovs_ptr, ciovs_len);
 					let bytesWritten = 0;
 					for (const buffer of buffers) {
-						bytesWritten += fileSystem.fd_pwrite(fileDescriptor, BigInts.asNumber(offset), buffer);
+						const written = driver.fd_pwrite(fileDescriptor, offset, buffer);
+						bytesWritten+= written;
+						if (written < buffer.byteLength) {
+							break;
+						}
+						offset = offset + BigInt(written);
 					}
 					memoryView().setUint32(bytesWritten_ptr, bytesWritten, true);
 					return Errno.success;
@@ -459,8 +488,9 @@ export namespace WASI {
 					const memory = memoryView();
 					const fileDescriptor = getFileDescriptor(fd);
 					fileDescriptor.assertBaseRight(Rights.fd_read);
+					const driver = getDeviceDriver(fileDescriptor);
 					const buffers = read_iovs(iovs_ptr, iovs_len);
-					const bytesRead = fileSystem.fd_read(fileDescriptor, buffers);
+					const bytesRead = driver.fd_read(fileDescriptor, buffers);
 					memory.setUint32(bytesRead_ptr, bytesRead, true);
 					return Errno.success;
 				} catch (error) {
@@ -471,10 +501,56 @@ export namespace WASI {
 				try {
 					const fileDescriptor = getFileDescriptor(fd);
 					fileDescriptor.assertBaseRight(Rights.fd_readdir);
-					if (fileDescriptor.fileType !== Filetype.directory) {
-						return Errno.notdir;
+					fileDescriptor.assertIsDirectory();
+
+					const driver = getDeviceDriver(fileDescriptor);
+					const memory = memoryView();
+					const raw = memoryRaw();
+
+					// We have a cookie > 0 but no directory entries. So return end  of list
+					// todo@dirkb this is actually specified different. According to the spec if
+					// the used buffer size is less than the provided buffer size then no
+					// additional readdir call should happen. However at least under Rust we
+					// receive another call.
+					//
+					// Also unclear whether we have to include '.' and '..'
+					//
+					// See also https://github.com/WebAssembly/wasi-filesystem/issues/3
+					if (cookie !== 0n && !directoryEntries.has(fileDescriptor.fd)) {
+						memory.setUint32(buf_used_ptr, 0, true);
+						return Errno.success;
 					}
-					fileSystem.fd_readdir(fileDescriptor, buf_ptr, buf_len, cookie, buf_used_ptr);
+					if (cookie === 0n) {
+						directoryEntries.set(fileDescriptor.fd, driver.fd_readdir(fileDescriptor));
+					}
+					const entries: ReaddirEntry[] | undefined = directoryEntries.get(fileDescriptor.fd);
+					if (entries === undefined) {
+						throw new WasiError(Errno.badmsg);
+					}
+					let i = Number(cookie);
+					let ptr: ptr = buf_ptr;
+					let spaceLeft = buf_len;
+					for (; i < entries.length && spaceLeft >= Dirent.size; i++) {
+						const entry = entries[i];
+						const name = entry.d_name;
+						const nameBytes = encoder.encode(name);
+						const dirent: dirent = Dirent.create(ptr, memory);
+						dirent.d_next = BigInt(i + 1);
+						dirent.d_ino = entry.d_ino;
+						dirent.d_type = entry.d_type;
+						dirent.d_namlen = nameBytes.byteLength;
+						spaceLeft -= Dirent.size;
+						const spaceForName = Math.min(spaceLeft, nameBytes.byteLength);
+						(new Uint8Array(raw, ptr + Dirent.size, spaceForName)).set(nameBytes.subarray(0, spaceForName));
+						ptr += Dirent.size + spaceForName;
+						spaceLeft -= spaceForName;
+					}
+					if (i === entries.length) {
+						memory.setUint32(buf_used_ptr, ptr - buf_ptr, true);
+						directoryEntries.delete(fileDescriptor.fd);
+					} else {
+						memory.setUint32(buf_used_ptr, buf_len, true);
+					}
 					return Errno.success;
 				} catch (error) {
 					return handleError(error);
@@ -483,11 +559,8 @@ export namespace WASI {
 			fd_seek: (fd: fd, offset: filedelta, whence: whence, new_offset_ptr: ptr): errno => {
 				try {
 					const fileDescriptor = getFileDescriptor(fd);
-					if (fileDescriptor.isStd()) {
-						return Errno.success;
-					}
 					fileDescriptor.assertBaseRight(Rights.fd_seek);
-					const newOffset = fileSystem.fd_seek(fileDescriptor, offset, whence);
+					const newOffset = getDeviceDriver(fileDescriptor).fd_seek(fileDescriptor, offset, whence);
 					memoryView().setBigUint64(new_offset_ptr, BigInt(newOffset), true);
 					return Errno.success;
 				} catch (error) {
@@ -498,7 +571,7 @@ export namespace WASI {
 				try {
 					const fileDescriptor = getFileDescriptor(fd);
 					fileDescriptor.assertBaseRight(Rights.fd_sync);
-					fileSystem.fd_sync(fileDescriptor);
+					getDeviceDriver(fileDescriptor).fd_sync(fileDescriptor);
 					return Errno.success;
 				} catch (error) {
 					return handleError(error);
@@ -508,7 +581,7 @@ export namespace WASI {
 				try {
 					const fileDescriptor = getFileDescriptor(fd);
 					fileDescriptor.assertBaseRight(Rights.fd_tell);
-					const offset = fileSystem.fd_tell(fileDescriptor);
+					const offset = getDeviceDriver(fileDescriptor).fd_tell(fileDescriptor);
 					const memory = memoryView();
 					memory.setBigUint64(offset_ptr, BigInt(offset), true);
 					return Errno.success;
@@ -535,134 +608,72 @@ export namespace WASI {
 					const fileDescriptor = getFileDescriptor(fd);
 					fileDescriptor.assertBaseRight(Rights.path_create_directory);
 					fileDescriptor.assertIsDirectory();
-
 					const memory = memoryRaw();
-					const name = decoder.decode(new Uint8Array(memory, path_ptr, path_len));
-					fileSystem.path_create_directory(fileDescriptor, name);
+					const path = decoder.decode(new Uint8Array(memory, path_ptr, path_len));
+					getDeviceDriver(fileDescriptor).path_create_directory(fileDescriptor, path);
 					return Errno.success;
 				} catch (error) {
 					return handleError(error);
 				}
 			},
-			path_filestat_get: (fd: fd, _flags: lookupflags, path_ptr: ptr, path_len: size, filestat_ptr: ptr): errno => {
-				// VS Code has not support to follow sym links.
-				// So we ignore lookupflags for now
+			path_filestat_get: (fd: fd, flags: lookupflags, path_ptr: ptr, path_len: size, filestat_ptr: ptr): errno => {
 				try {
 					const fileDescriptor = getFileDescriptor(fd);
 					fileDescriptor.assertBaseRight(Rights.path_filestat_get);
 					fileDescriptor.assertIsDirectory();
-
 					const memory = memoryRaw();
-					const name = decoder.decode(new Uint8Array(memory, path_ptr, path_len));
-					fileSystem.path_filestat_get(fileDescriptor, name, filestat_ptr);
+					const path = decoder.decode(new Uint8Array(memory, path_ptr, path_len));
+					getDeviceDriver(fileDescriptor).path_filestat_get(fileDescriptor, flags, path, Filestat.create(filestat_ptr, memoryView()));
 					return Errno.success;
 				} catch (error) {
 					return handleError(error);
 				}
 			},
-			path_filestat_set_times: (fd: fd, _flags: lookupflags, _path_ptr: ptr, _path_len: size, _atim: timestamp, _mtim: timestamp, _fst_flags: fstflags): errno => {
-				// VS Code has not support to follow sym links.
-				// So we ignore lookupflags for now
+			path_filestat_set_times: (fd: fd, flags: lookupflags, path_ptr: ptr, path_len: size, atim: timestamp, mtim: timestamp, fst_flags: fstflags): errno => {
 				try {
-					const fileHandle = getFileDescriptor(fd);
-					fileHandle.assertBaseRight(Rights.path_filestat_set_times);
-					fileHandle.assertIsDirectory();
-
-					// todo@dirkb
-					// For now we do nothing. We could cache the timestamp in memory
-					// But we would loose them during reload. We could also store them
-					// in local storage
-					return Errno.nosys;
+					const fileDescriptor = getFileDescriptor(fd);
+					fileDescriptor.assertBaseRight(Rights.path_filestat_set_times);
+					fileDescriptor.assertIsDirectory();
+					const path = decoder.decode(new Uint8Array(memoryRaw(), path_ptr, path_len));
+					getDeviceDriver(fileDescriptor).path_filestat_set_times(fileDescriptor, flags, path, atim, mtim, fst_flags);
+					return Errno.success;
 				} catch (error) {
 					return handleError(error);
 				}
 			},
-			path_link: (old_fd: fd, _old_flags: lookupflags, _old_path_ptr: ptr, _old_path_len: size, new_fd: fd, _new_path_ptr: ptr, _new_path_len: size): errno => {
-				// VS Code has not support to create sym links.
+			path_link: (old_fd: fd, old_flags: lookupflags, old_path_ptr: ptr, old_path_len: size, new_fd: fd, new_path_ptr: ptr, new_path_len: size): errno => {
 				try {
-					const oldFileHandle = getFileDescriptor(old_fd);
-					oldFileHandle.assertBaseRight(Rights.path_link_source);
-					oldFileHandle.assertIsDirectory();
+					const oldFileDescriptor = getFileDescriptor(old_fd);
+					oldFileDescriptor.assertBaseRight(Rights.path_link_source);
+					oldFileDescriptor.assertIsDirectory();
 
-					const newFileHandle = getFileDescriptor(new_fd);
-					newFileHandle.assertBaseRight(Rights.path_link_target);
-					newFileHandle.assertIsDirectory();
+					const newFileDescriptor = getFileDescriptor(new_fd);
+					newFileDescriptor.assertBaseRight(Rights.path_link_target);
+					newFileDescriptor.assertIsDirectory();
 
-					// todo@dirkb
-					// For now we do nothing. If we need to implement this we need
-					// support from the VS Code API.
-					return Errno.nosys;
+					if (oldFileDescriptor.deviceId !== newFileDescriptor.deviceId) {
+						// currently we have no support to link across devices
+						return Errno.nosys;
+					}
+
+					const memory = memoryRaw();
+					const oldPath = decoder.decode(new Uint8Array(memory, old_path_ptr, old_path_len));
+					const newPath = decoder.decode(new Uint8Array(memory, new_path_ptr, new_path_len));
+					getDeviceDriver(oldFileDescriptor).path_link(oldFileDescriptor, old_flags, oldPath, newFileDescriptor, newPath);
+					return Errno.success;
 				} catch (error) {
 					return handleError(error);
 				}
 			},
-			path_open: (fd: fd, _dirflags: lookupflags, path: ptr, pathLen: size, oflags: oflags, fs_rights_base: rights, fs_rights_inheriting: rights, fdflags: fdflags, fd_ptr: ptr): errno => {
+			path_open: (fd: fd, dirflags: lookupflags, path_ptr: ptr, path_len: size, oflags: oflags, fs_rights_base: rights, fs_rights_inheriting: rights, fdflags: fdflags, fd_ptr: ptr): errno => {
 				try {
-					const parentDescriptor = getFileDescriptor(fd);
-					parentDescriptor.assertBaseRight(Rights.path_open);
+					const fileDescriptor = getFileDescriptor(fd);
+					fileDescriptor.assertBaseRight(Rights.path_open);
+					const path = decoder.decode(new Uint8Array(memoryRaw(), path_ptr, path_len));
 
-					const memory = memoryView();
-					const name = decoder.decode(new Uint8Array(memoryRaw(), path, pathLen));
-					const preOpened = fileSystem.getPreopened(parentDescriptor, name);
-					if (preOpened) {
-						return preOpened.fd;
-					}
-
-					let filetype: filetype | undefined = fileSystem.path_filetype(parentDescriptor, name);
-					const entryExists: boolean = filetype !== undefined;
-					if (entryExists) {
-						if (Oflags.exclOn(oflags)) {
-							return Errno.exist;
-						} else if (Oflags.directoryOn(oflags) && filetype !== Filetype.directory) {
-							return Errno.notdir;
-						}
-					} else {
-						// Entry does not exist;
-						if (Oflags.creatOff(oflags)) {
-							return Errno.noent;
-						}
-					}
-					let createFile: boolean = false;
-					if (Oflags.creatOn(oflags) && !entryExists) {
-						// Ensure parent handle is directory
-						parentDescriptor.assertIsDirectory();
-						const dirname = paths.dirname(name);
-						// The name has a directory part. Ensure that the directory exists
-						if (dirname !== '.') {
-							const dirFiletype = fileSystem.path_filetype(parentDescriptor, dirname);
-							if (dirFiletype === undefined || dirFiletype !== Filetype.directory) {
-								return Errno.noent;
-							}
-						}
-						filetype = Filetype.regular_file;
-						createFile = true;
-					} else {
-						if (filetype === undefined) {
-							return Errno.noent;
-						}
-					}
-					// Currently VS Code doesn't offer a generic API to open a file
-					// or a directory. Since we were able to stat the file we create
-					// a file descriptor for it and lazy get the file content on read.
-					const base = filetype === Filetype.directory
-						? fs_rights_base | Rights.DirectoryBase
-						: filetype === Filetype.regular_file
-							? fs_rights_base | Rights.FileBase
-							: fs_rights_base;
-					const inheriting = Filetype.directory
-						? fs_rights_inheriting | Rights.DirectoryInheriting
-						: filetype === Filetype.regular_file
-							? fs_rights_inheriting | Rights.FileInheriting
-							: fs_rights_inheriting;
-					const fileDescriptor = fileSystem.createFileDescriptor(
-						parentDescriptor, name,
-						filetype, { base: base, inheriting: inheriting }, fdflags,
-					);
-					fileDescriptors.set(fileDescriptor.fd, fileDescriptor);
-					memory.setUint32(fd_ptr, fileDescriptor.fd, true);
-					if (createFile || Oflags.truncOn(oflags)) {
-						fileSystem.createOrTruncate(fileDescriptor);
-					}
+					const result = getDeviceDriver(fileDescriptor).path_open(fileDescriptor, dirflags, path, oflags, fs_rights_base, fs_rights_inheriting, fdflags);
+					fileDescriptors.set(result.fd, result);
+					memoryView().setUint32(fd_ptr, result.fd, true);
 					return Errno.success;
 				} catch(error) {
 					return handleError(error);
@@ -979,6 +990,14 @@ export namespace WASI {
 				ptr += Iovec.size;
 			}
 			return buffers;
+		}
+
+		function getDeviceDriver(fileDescriptor: FileDescriptor): DeviceDriver {
+			const result = deviceDrivers.get(fileDescriptor.deviceId);
+			if (result === undefined) {
+				throw new WasiError(Errno.badf);
+			}
+			return result;
 		}
 
 		function getFileDescriptor(fd: fd): FileDescriptor {
