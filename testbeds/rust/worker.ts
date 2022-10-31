@@ -31,9 +31,9 @@ apiClient.serviceReady().then(async (params) => {
 			devices.push({ kind: 'fileSystem',  uri: folder.uri, mountPoint: path.posix.join(path.posix.sep, 'workspaces', folder.name) });
 		}
 	}
-	const stdin: StdioDescription = { kind: 'tty', uri: params.stdio.stdin }
-	const stdout: StdioDescription = { kind: 'tty', uri: params.stdio.stdout }
-	const stderr: StdioDescription = { kind: 'tty', uri: params.stdio.stderr }
+	const stdin: StdioDescription = { kind: 'tty', uri: params.stdio.stdin };
+	const stdout: StdioDescription = { kind: 'tty', uri: params.stdio.stdout };
+	const stderr: StdioDescription = { kind: 'tty', uri: params.stdio.stderr };
 	const wasi = WASI.create(name, apiClient, exitHandler, devices, {stdin, stdout, stderr}, {});
 	const wasmFile = path.join(__dirname, '..', 'target', 'wasm32-wasi', 'debug', 'rust-example.wasm');
 	const binary = fs.readFileSync(wasmFile);

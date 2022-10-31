@@ -37,17 +37,44 @@ export interface Sink {
 	write(bytes: Uint8Array): Promise<number>;
 }
 
-export namespace Stdio {
+export type FileDescriptorDescription = {
+	kind: 'fileSystem';
+	uri: Uri;
+	path: string;
+} | {
+	kind: 'terminal';
+	uri: Uri;
+} | {
+	kind: 'console';
+	uri: Uri;
+};
 
-	export const scheme = 'stdio' as const;
+export interface CharacterDeviceDriver {
 
-	export function createUri(components: { readonly authority?: string; readonly path?: string; readonly query?: string; readonly fragment?: string }): Uri {
-		return Uri.from(Object.assign({ scheme: scheme}, components));
-	}
-}
+	/**
+	 * A unique URI representing the character device.
+	 */
+	readonly uri: Uri;
 
-export interface Stdio {
-	stdin: Source;
-	stdout: Sink;
-	stderr: Sink;
+	/**
+	 * Returns a file descriptor description that can
+	 * be used to identify the device on the WASI side.
+	 */
+	readonly fileDescriptor: FileDescriptorDescription;
+
+	/**
+	 * Write the bytes to the character device
+	 *
+	 * @param The bytes to write.
+	 * @result The actual number of bytes written.
+	 */
+	write(bytes: Uint8Array): Promise<number>;
+
+	/**
+	 * Reads bytes from the character device.
+	 *
+	 * @param maxBytesToRead The maximal number of bytes to read.
+	 * @result the bytes read. Can be less than `maxBytesToRead`
+	 */
+	read(maxBytesToRead: number): Promise<Uint8Array>;
 }

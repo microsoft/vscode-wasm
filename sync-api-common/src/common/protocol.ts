@@ -15,6 +15,18 @@ export namespace DTOs {
 		fragment: string;
 	};
 
+	export type FileDescriptorDescription = {
+		kind: 'fileSystem';
+		uri: UriComponents;
+		path: string;
+	} | {
+		kind: 'terminal';
+		uri: UriComponents;
+	} | {
+		kind: 'console';
+		uri: UriComponents;
+	};
+
 	export type FileSystemError = u32;
 	export namespace FileSystemError {
 

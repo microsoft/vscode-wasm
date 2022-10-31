@@ -54,12 +54,24 @@ export interface TTY {
 	read(uri: URI, maxBytesToRead: number): Uint8Array;
 }
 
+export type FileDescriptorDescription = {
+	kind: 'fileSystem';
+	uri: URI;
+	path: string;
+} | {
+	kind: 'terminal';
+	uri: URI;
+} | {
+	kind: 'console';
+	uri: URI;
+};
+
 export namespace ApiClientConnection {
 	export type ReadyParams = {
 		stdio: {
-			stdin: DTOs.UriComponents;
-			stdout: DTOs.UriComponents;
-			stderr: DTOs.UriComponents;
+			stdin: FileDescriptorDescription;
+			stdout: FileDescriptorDescription;
+			stderr: FileDescriptorDescription;
 		};
 	};
 }
@@ -261,14 +273,6 @@ class WorkspaceImpl implements Workspace {
 	}
 }
 
-export type ReadyParams = {
-	stdio: {
-		stdin: URI;
-		stdout: URI;
-		stderr: URI;
-	};
-};
-
 export class ApiClient {
 
 	private readonly connection: ApiClientConnection;
@@ -305,12 +309,23 @@ export class ApiClient {
 		};
 	}
 
-	public async serviceReady(): Promise<ReadyParams> {
+	public async serviceReady(): Promise<ApiClientConnection.ReadyParams> {
 		const params = await this.connection.serviceReady();
 		return { stdio: {
-			stdin: URI.from(params.stdio.stdin),
-			stdout: URI.from(params.stdio.stdout),
-			stderr: URI.from(params.stdio.stderr)
+			stdin: this.asFileDescriptorDescription(params.stdio.stdin),
+			stdout: this.asFileDescriptorDescription(params.stdio.stdout),
+			stderr: this.asFileDescriptorDescription(params.stdio.stderr),
 		}};
+	}
+
+	private asFileDescriptorDescription(fileDescriptor: DTOs.FileDescriptorDescription): FileDescriptorDescription {
+		switch (fileDescriptor.kind) {
+			case 'fileSystem':
+				return { kind: fileDescriptor.kind, uri: URI.from(fileDescriptor.uri), path: fileDescriptor.path };
+			case 'terminal':
+				return { kind: fileDescriptor.kind, uri: URI.from(fileDescriptor.uri) };
+			case 'console':
+				return { kind: fileDescriptor.kind, uri: URI.from(fileDescriptor.uri) };
+		}
 	}
 }

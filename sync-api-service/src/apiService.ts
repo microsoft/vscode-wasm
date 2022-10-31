@@ -7,14 +7,14 @@ import * as vscode from 'vscode';
 
 import { RAL, ServiceConnection, Requests, DTOs, RPCErrno } from '@vscode/sync-api-common';
 
-import { Stdio, Source, Sink } from './stdio';
+import { CharacterDeviceDriver, Source, Sink, FileDescriptorDescription } from './device';
 
 export namespace ApiServiceConnection {
 	export type ReadyParams = {
 		stdio: {
-			stdin: DTOs.UriComponents;
-			stdout: DTOs.UriComponents;
-			stderr: DTOs.UriComponents;
+			stdin: DTOs.FileDescriptorDescription;
+			stdout: DTOs.FileDescriptorDescription;
+			stderr: DTOs.FileDescriptorDescription;
 		};
 	};
 }
@@ -40,7 +40,12 @@ export class ApiService {
 
 	private readonly byteSources: Map<string, Source>;
 	private readonly byteSinks: Map<string, Sink>;
-	private defaultStdio: Stdio;
+
+	private stdio!: {
+		stdin: FileDescriptorDescription;
+		stdout: FileDescriptorDescription;
+		stderr: FileDescriptorDescription;
+	};
 
 	constructor(_name: string, receiver: ApiServiceConnection, options?: Options) {
 		this.connection = receiver;
@@ -49,9 +54,7 @@ export class ApiService {
 		this.byteSinks = new Map();
 		this.options = options;
 
-		const console = new ConsoleTerminal();
-		this.defaultStdio = console;
-		this.registerTTY(console, false);
+		this.registerCharacterDeviceDriver(new ConsoleTerminal(), true);
 
 		const handleError = (error: any): { errno: number } => {
 			if (error instanceof vscode.FileSystemError) {
@@ -182,13 +185,24 @@ export class ApiService {
 		});
 	}
 
-	public registerTTY(stdio: Stdio, isDefault: boolean = true): void {
-		if (isDefault === true) {
-			this.defaultStdio = stdio;
+	public registerCharacterDeviceDriver(deviceDriver: CharacterDeviceDriver, useAsDefaultStdio: boolean = true): void {
+		if (useAsDefaultStdio === true) {
+			this.setStdio(deviceDriver.fileDescriptor, deviceDriver.fileDescriptor, deviceDriver.fileDescriptor);
 		}
-		this.byteSources.set(stdio.stdin.uri.toString(true), stdio.stdin);
-		this.byteSinks.set(stdio.stdout.uri.toString(true), stdio.stdout);
-		this.byteSinks.set(stdio.stderr.uri.toString(true), stdio.stderr);
+		this.byteSources.set(deviceDriver.uri.toString(true), deviceDriver);
+		this.byteSinks.set(deviceDriver.uri.toString(true), deviceDriver);
+	}
+
+	public setStdio(stdin: FileDescriptorDescription | undefined, stdout: FileDescriptorDescription | undefined, stderr: FileDescriptorDescription | undefined): void {
+		if (stdin !== undefined) {
+			this.stdio.stdin = stdin;
+		}
+		if (stdout !== undefined) {
+			this.stdio.stdout = stdout;
+		}
+		if (stderr !== undefined) {
+			this.stdio.stderr = stderr;
+		}
 	}
 
 	public registerByteSource(source: Source): void {
@@ -202,9 +216,9 @@ export class ApiService {
 	public signalReady(): void {
 		const p: ApiServiceConnection.ReadyParams = {
 			stdio: {
-				stdin: this.defaultStdio.stdin.uri.toJSON(),
-				stdout: this.defaultStdio.stdout.uri.toJSON(),
-				stderr: this.defaultStdio.stderr.uri.toJSON()
+				stdin: this.asFileDescriptorDescription(this.stdio.stdin),
+				stdout: this.asFileDescriptorDescription(this.stdio.stdout),
+				stderr: this.asFileDescriptorDescription(this.stdio.stderr),
 			}
 		};
 		this.connection.signalReady(p);
@@ -228,37 +242,39 @@ export class ApiService {
 				return RPCErrno.UnknownError;
 		}
 	}
+
+	private asFileDescriptorDescription(fileDescriptor: FileDescriptorDescription): DTOs.FileDescriptorDescription {
+		switch (fileDescriptor.kind) {
+			case 'fileSystem':
+				return { kind: fileDescriptor.kind, uri: fileDescriptor.uri.toJSON(), path: fileDescriptor.path };
+			case 'terminal':
+				return { kind: fileDescriptor.kind, uri: fileDescriptor.uri.toJSON() };
+			case 'console':
+				return { kind: fileDescriptor.kind, uri: fileDescriptor.uri.toJSON() };
+		}
+	}
 }
 
-class ConsoleTerminal implements Stdio {
+class ConsoleTerminal implements CharacterDeviceDriver {
 
-	private static authority = 'console' as const;
+	private static authority = 'global' as const;
 
-	public readonly stdin: Source;
-	public readonly stdout: Sink;
-	public readonly stderr: Sink;
+	private decoder: RAL.TextDecoder;
+	public readonly uri: vscode.Uri;
+	public readonly fileDescriptor: FileDescriptorDescription;
 
 	constructor() {
-		const decoder = RAL().TextDecoder.create();
-		this.stdin = {
-			uri: Stdio.createUri({ authority: ConsoleTerminal.authority, path: '/stdin' }),
-			read(): Promise<Uint8Array> {
-				throw vscode.FileSystemError.Unavailable(`Can't read from console`);
-			}
-		};
-		this.stdout = {
-			uri: Stdio.createUri({ authority: ConsoleTerminal.authority, path: '/stdout' }),
-			write(bytes: Uint8Array): Promise<number> {
-				RAL().console.log(decoder.decode(bytes.slice()));
-				return Promise.resolve(bytes.byteLength);
-			}
-		};
-		this.stderr = {
-			uri: Stdio.createUri({ authority: ConsoleTerminal.authority, path: '/stderr' }),
-			write(bytes: Uint8Array): Promise<number> {
-				RAL().console.error(decoder.decode(bytes.slice()));
-				return Promise.resolve(bytes.byteLength);
-			}
-		};
+		this.decoder = RAL().TextDecoder.create();
+		this.uri =  vscode.Uri.from({ scheme: 'console', authority: ConsoleTerminal.authority });
+		this.fileDescriptor = { kind: 'console', uri: this.uri };
+	}
+
+	read(): Promise<Uint8Array> {
+		throw vscode.FileSystemError.Unavailable(`Can't read from console`);
+	}
+
+	write(bytes: Uint8Array): Promise<number> {
+		RAL().console.log(this.decoder.decode(bytes.slice()));
+		return Promise.resolve(bytes.byteLength);
 	}
 }

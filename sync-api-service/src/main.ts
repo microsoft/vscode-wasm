@@ -5,5 +5,5 @@
 
 export * from '@vscode/sync-api-common';
 export * from './apiService';
-export * from './stdio';
+export * from './device';
 export * from './terminal';

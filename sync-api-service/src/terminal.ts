@@ -3,12 +3,12 @@
  * Licensed under the MIT License. See License.txt in the project root for license information.
  * ------------------------------------------------------------------------------------------ */
 
-import { Event, EventEmitter, Pseudoterminal } from 'vscode';
+import { Event, EventEmitter, Pseudoterminal, Uri } from 'vscode';
 
 import * as uuid from 'uuid';
 
 import { RAL } from '@vscode/sync-api-common';
-import { Sink, Source, Stdio } from './stdio';
+import { CharacterDeviceDriver, FileDescriptorDescription } from './device';
 
 class LineBuffer {
 
@@ -163,7 +163,7 @@ export enum TerminalMode {
 	inUse = 2
 }
 
-export interface ServicePseudoTerminal extends Pseudoterminal, Stdio {
+export interface ServicePseudoTerminal extends Pseudoterminal, CharacterDeviceDriver {
 	readonly id: string;
 	readonly onDidCtrlC: Event<void>;
 	readonly onDidClose: Event<void>;
@@ -171,7 +171,7 @@ export interface ServicePseudoTerminal extends Pseudoterminal, Stdio {
 
 	setMode(mode: TerminalMode): void;
 	setName(name: string): void;
-	write(str: string): void;
+	writeStr(str: string): void;
 	readline(): Promise<string>;
 }
 
@@ -183,7 +183,7 @@ export namespace ServicePseudoTerminal {
 
 const terminalRegExp = /(\r\n)|(\n)/gm;
 
-class ServiceTerminalImpl implements ServicePseudoTerminal, Stdio {
+class ServiceTerminalImpl implements ServicePseudoTerminal, CharacterDeviceDriver {
 
 	private mode: TerminalMode;
 
@@ -211,10 +211,12 @@ class ServiceTerminalImpl implements ServicePseudoTerminal, Stdio {
 	private isOpen: boolean;
 	private nameBuffer: string | undefined;
 	private writeBuffer: string[] | undefined;
+	private encoder: RAL.TextEncoder;
+	private decoder: RAL.TextDecoder;
 
-	public readonly stdin: Source;
-	public readonly stdout: Sink;
-	public readonly stderr: Sink;
+	public readonly uri: Uri;
+	public readonly fileDescriptor: FileDescriptorDescription;
+
 
 	constructor() {
 		this.mode = TerminalMode.inUse;
@@ -231,43 +233,11 @@ class ServiceTerminalImpl implements ServicePseudoTerminal, Stdio {
 		this.onAnyKey = this._onAnyKey.event;
 
 		const id = this.id = uuid.v4();
-		const encoder = RAL().TextEncoder.create();
-		const decoder = RAL().TextDecoder.create();
-		const terminal = this;
-		function getString(bytes: Uint8Array): string {
-			return decoder.decode(bytes.slice()).replace(terminalRegExp, (match: string, m1: string, m2: string) => {
-				if (m1) {
-					return m1;
-				} else if (m2) {
-					return '\r\n';
-				} else {
-					return match;
-				}
-			});
-		}
-		this.stdin = {
-			uri: Stdio.createUri({ authority: 'terminal', path: `/${id}/stdin`}),
-			async read(_maxBytesToRead: number): Promise<Uint8Array> {
-				const value = await terminal.readline();
-				return encoder.encode(value);
-			}
-		};
-		this.stdout = {
-			uri: Stdio.createUri({ authority: 'terminal', path: `/${id}/stdout`}),
-			write(bytes: Uint8Array): Promise<number> {
-				terminal.write(getString(bytes));
-				return Promise.resolve(bytes.byteLength);
-			},
-		};
+		this.encoder = RAL().TextEncoder.create();
+		this.decoder = RAL().TextDecoder.create();
 
-		this.stderr = {
-			uri: Stdio.createUri({ authority: 'terminal', path: `/${id}/stderr`}),
-			write(bytes: Uint8Array): Promise<number> {
-				// We can think about chancing the color for error output
-				terminal.write(getString(bytes));
-				return Promise.resolve(bytes.byteLength);
-			},
-		};
+		this.uri =  Uri.from({ scheme: 'terminal', authority: id });
+		this.fileDescriptor = { kind: 'terminal', uri: this.uri };
 
 		this.lines = [];
 		this.lineBuffer = new LineBuffer();
@@ -305,6 +275,11 @@ class ServiceTerminalImpl implements ServicePseudoTerminal, Stdio {
 		this._onDidClose.fire();
 	}
 
+	public async read(_maxBytesToRead: number): Promise<Uint8Array> {
+		const value = await this.readline();
+		return this.encoder.encode(value);
+	}
+
 	public readline(): Promise<string> {
 		if (this.readlineCallback !== undefined) {
 			throw new Error(`Already in readline mode`);
@@ -317,7 +292,12 @@ class ServiceTerminalImpl implements ServicePseudoTerminal, Stdio {
 		});
 	}
 
-	public write(str: string): void {
+	public write(bytes: Uint8Array): Promise<number> {
+		this.writeStr(this.getString(bytes));
+		return Promise.resolve(bytes.byteLength);
+	}
+
+	public writeStr(str: string): void {
 		if (this.isOpen) {
 			this._onDidWrite.fire(str);
 		} else {
@@ -412,5 +392,17 @@ class ServiceTerminalImpl implements ServicePseudoTerminal, Stdio {
 
 	private bell() {
 		this._onDidWrite.fire('\x07');
+	}
+
+	private getString(bytes: Uint8Array): string {
+		return this.decoder.decode(bytes.slice()).replace(terminalRegExp, (match: string, m1: string, m2: string) => {
+			if (m1) {
+				return m1;
+			} else if (m2) {
+				return '\r\n';
+			} else {
+				return match;
+			}
+		});
 	}
 }

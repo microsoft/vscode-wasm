@@ -430,6 +430,8 @@ export namespace WASI {
 				try {
 					while (true) {
 						if (preStatProviders.length === 0) {
+							fileDescriptorCounter = fd;
+							fileDescriptorMode = 'running';
 							return Errno.badf;
 						}
 						const current = preStatProviders[0];
