@@ -8,7 +8,7 @@ import { URI } from 'vscode-uri';
 import { ApiClient, size } from '@vscode/sync-api-client';
 
 import { BigInts, code2Wasi } from './converter';
-import { BaseFileDescriptor, DeviceDriver, FileDescriptor, NoSysDeviceDriver, DeviceIds, ReaddirEntry, FileSystemDeviceDriver } from './deviceDriver';
+import { BaseFileDescriptor, FileDescriptor, NoSysDeviceDriver, DeviceIds, ReaddirEntry, FileSystemDeviceDriver } from './deviceDriver';
 import { fdstat, filestat, Rights, fd, rights, fdflags, Filetype, WasiError, Errno, filetype, Whence, lookupflags, timestamp, fstflags, oflags, Oflags, filesize } from './wasiTypes';
 
 import RAL from './ral';
@@ -115,7 +115,7 @@ namespace INode {
 	}
 }
 
-export function create(apiClient: ApiClient, textEncoder: RAL.TextEncoder, fileDescriptorId: { next(): number }, baseUri: URI, mountPoint: string): FileSystemDeviceDriver {
+export function create(apiClient: ApiClient, _textEncoder: RAL.TextEncoder, fileDescriptorId: { next(): number }, baseUri: URI, mountPoint: string): FileSystemDeviceDriver {
 
 	const deviceId = DeviceIds.next();
 	const vscode_fs = apiClient.vscode.workspace.fileSystem;
@@ -251,6 +251,42 @@ export function create(apiClient: ApiClient, textEncoder: RAL.TextEncoder, fileD
 		result.mtim = BigInt(vStat.mtime);
 	}
 
+	function read(content: Uint8Array, offset: number, buffers: Uint8Array[]): size {
+		let totalBytesRead = 0;
+		for (const buffer of buffers) {
+			const toRead = Math.min(buffer.length, content.byteLength - offset);
+			buffer.set(content.subarray(offset, offset + toRead));
+			totalBytesRead += toRead;
+			if (toRead < buffer.length) {
+				break;
+			}
+			offset += toRead;
+		}
+		return totalBytesRead;
+	}
+
+	function write(content: Uint8Array, offset: number, buffers: Uint8Array[]): [Uint8Array, size] {
+		let bytesToWrite: size = 0;
+		for (const bytes of buffers) {
+			bytesToWrite += bytes.byteLength;
+		}
+
+		// Do we need to increase the buffer
+		if (offset + bytesToWrite > content.byteLength) {
+			const newContent = new Uint8Array(offset + bytesToWrite);
+			newContent.set(content);
+			content = newContent;
+		}
+
+		for (const bytes of buffers) {
+			content.set(bytes, offset);
+			offset += bytes.length;
+		}
+
+		return [content, bytesToWrite];
+	}
+
+
 	function createOrTruncate(fileDescriptor: FileFileDescriptor): void {
 		const inode = getINode(fileDescriptor.inode);
 		inode.content = new Uint8Array(0);
@@ -351,11 +387,10 @@ export function create(apiClient: ApiClient, textEncoder: RAL.TextEncoder, fileD
 			// But we would loose them during reload. We could also store them
 			// in local storage
 		},
-		fd_pread(fileDescriptor: FileDescriptor, _offset: filesize, bytesToRead: number): Uint8Array {
+		fd_pread(fileDescriptor: FileDescriptor, _offset: filesize, buffers: Uint8Array[]): size {
 			const offset = BigInts.asNumber(_offset);
 			const content = getResolvedINode(fileDescriptor.inode).content;
-			const realRead = Math.min(bytesToRead, content.byteLength - offset);
-			return content.subarray(offset, offset + realRead);
+			return read(content, offset, buffers);
 		},
 		fd_prestat_get(fd: fd): [string, FileDescriptor] | undefined {
 			const next = preOpenDirectories.shift();
@@ -367,20 +402,14 @@ export function create(apiClient: ApiClient, textEncoder: RAL.TextEncoder, fileD
 				new DirectoryFileDescriptor(deviceId, fd, Rights.DirectoryBase, Rights.DirectoryInheriting, 0, getOrCreateINode('/', baseUri, true).id, '/')
 			];
 		},
-		fd_pwrite(fileDescriptor: FileDescriptor, _offset: filesize, bytes: Uint8Array): number {
+		fd_pwrite(fileDescriptor: FileDescriptor, _offset: filesize, buffers: Uint8Array[]): number {
+			const offset = BigInts.asNumber(_offset);
 			const inode = getResolvedINode(fileDescriptor.inode);
-			let content = inode.content;
-			const total = offset + bytes.byteLength;
-			// Make the file bigger
-			if (total > content.byteLength) {
-				const newContent = new Uint8Array(total);
-				newContent.set(content);
-				content = newContent;
-				inode.content = newContent;
-			}
-			content.set(bytes, offset);
+
+			const [newContent, bytesWritten] = write(inode.content, offset, buffers);
+			inode.content = newContent;
 			writeContent(inode);
-			return bytes.length;
+			return bytesWritten;
 		},
 		fd_read(fileDescriptor: FileDescriptor, buffers: Uint8Array[]): number {
 			if (buffers.length === 0) {
@@ -389,14 +418,9 @@ export function create(apiClient: ApiClient, textEncoder: RAL.TextEncoder, fileD
 			assertFileDescriptor(fileDescriptor);
 
 			const content = getResolvedINode(fileDescriptor.inode).content;
-			let totalBytesRead = 0;
-			for (const buffer of buffers) {
-				const bytesRead = fileDescriptor.read(content, buffer);
-				totalBytesRead += bytesRead;
-				if (bytesRead === 0) {
-					break;
-				}
-			}
+			const offset = fileDescriptor.cursor;
+			const totalBytesRead = read(content, offset, buffers);
+			fileDescriptor.cursor = fileDescriptor.cursor + totalBytesRead;
 			return totalBytesRead;
 		},
 		fd_readdir(fileDescriptor: FileDescriptor): ReaddirEntry[] {
@@ -452,8 +476,8 @@ export function create(apiClient: ApiClient, textEncoder: RAL.TextEncoder, fileD
 			assertFileDescriptor(fileDescriptor);
 
 			const inode = getResolvedINode(fileDescriptor.inode);
-			const [content, bytesWritten] = fileDescriptor.write(inode.content, buffers);
-			inode.content = content;
+			const [newContent, bytesWritten] = fileDescriptor.write(inode.content, buffers);
+			inode.content = newContent;
 			writeContent(inode);
 			return bytesWritten;
 		},
@@ -580,6 +604,13 @@ export function create(apiClient: ApiClient, textEncoder: RAL.TextEncoder, fileD
 			const fileUri = uriJoin(inode.uri, path);
 			vscode_fs.delete(fileUri, { recursive: false, useTrash: true });
 			markINodeAsDeleted(filePath);
+		},
+		bytesAvailable(fileDescriptor: FileDescriptor): filesize {
+			assertFileDescriptor(fileDescriptor);
+
+			const inode = getResolvedINode(fileDescriptor.inode);
+			const cursor = fileDescriptor.cursor;
+			return BigInt(Math.max(0,inode.content.byteLength - cursor));
 		}
 	});
 }

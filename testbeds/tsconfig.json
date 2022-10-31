@@ -9,6 +9,12 @@
             "path": "./../testbeds/coreutils/tsconfig.json"
         },
         {
+            "path": "./../testbeds/cpp/tsconfig.json"
+        },
+        {
+            "path": "./../testbeds/python/tsconfig.json"
+        },
+        {
             "path": "./../testbeds/rust/tsconfig.json"
         }
     ]

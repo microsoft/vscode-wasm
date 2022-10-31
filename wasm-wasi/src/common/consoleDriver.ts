@@ -17,7 +17,7 @@ class ConsoleFileDescriptor extends BaseFileDescriptor {
 	}
 }
 
-export function create(apiClient: ApiClient, decoder: RAL.TextDecoder, uri: URI): CharacterDeviceDriver {
+export function create(apiClient: ApiClient, decoder: RAL.TextDecoder, _uri: URI): CharacterDeviceDriver {
 
 	const deviceId = DeviceIds.next();
 	let inodeCounter: bigint = 0n;

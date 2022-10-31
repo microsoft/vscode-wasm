@@ -120,9 +120,9 @@ export interface DeviceDriver {
 	fd_filestat_get(fileDescriptor: FileDescriptor, result: filestat): void;
 	fd_filestat_set_size(fileDescriptor: FileDescriptor, size: filesize): void;
 	fd_filestat_set_times(fileDescriptor: FileDescriptor, atim: timestamp, mtim: timestamp, fst_flags: fstflags): void;
-	fd_pread(fileDescriptor: FileDescriptor, offset: filesize, bytesToRead: number): Uint8Array;
+	fd_pread(fileDescriptor: FileDescriptor, offset: filesize, buffers: Uint8Array[]): size;
 	fd_prestat_get(fd: fd): [string, FileDescriptor] | undefined;
-	fd_pwrite(fileDescriptor: FileDescriptor, offset: filesize, bytes: Uint8Array): size;
+	fd_pwrite(fileDescriptor: FileDescriptor, offset: filesize, buffers: Uint8Array[]): size;
 	fd_read(fileDescriptor: FileDescriptor, buffers: Uint8Array[]): size;
 	fd_readdir(fileDescriptor: FileDescriptor): ReaddirEntry[];
 	fd_seek(fileDescriptor: FileDescriptor, offset: filedelta, whence: whence): bigint;
@@ -140,6 +140,8 @@ export interface DeviceDriver {
 	path_rename(oldFileDescriptor: FileDescriptor, old_path: string, newFileDescriptor: FileDescriptor, new_path: string): void;
 	path_symlink(old_path: string, fileDescriptor: FileDescriptor, new_path: string): void;
 	path_unlink_file(fileDescriptor: FileDescriptor, path: string): void;
+
+	fd_bytesAvailable(fileDescriptor: FileDescriptor): filesize;
 }
 
 export interface FileSystemDeviceDriver extends DeviceDriver {
@@ -178,7 +180,7 @@ export const NoSysDeviceDriver: Omit<DeviceDriver, 'id'> = {
 	fd_filestat_set_times(): void {
 		throw new WasiError(Errno.nosys);
 	},
-	fd_pread(): Uint8Array {
+	fd_pread(): size {
 		throw new WasiError(Errno.nosys);
 	},
 	fd_prestat_get(): undefined {
@@ -233,6 +235,9 @@ export const NoSysDeviceDriver: Omit<DeviceDriver, 'id'> = {
 		throw new WasiError(Errno.nosys);
 	},
 	path_unlink_file(): void {
+		throw new WasiError(Errno.nosys);
+	},
+	fd_bytesAvailable(): filesize {
 		throw new WasiError(Errno.nosys);
 	}
 };

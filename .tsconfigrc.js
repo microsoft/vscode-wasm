@@ -228,6 +228,26 @@ const testbed_coreutils = {
 }
 
 /** @type ProjectDescription */
+const testbed_cpp = {
+	name: "cpp",
+	path: './testbeds/cpp',
+	extends: [ testbedOptions ],
+	out:  {
+		dir: './out'
+	}
+}
+
+/** @type ProjectDescription */
+const testbed_python = {
+	name: "python",
+	path: './testbeds/python',
+	extends: [ testbedOptions ],
+	out:  {
+		dir: './out'
+	}
+}
+
+/** @type ProjectDescription */
 const testbed_rust = {
 	name: "rust",
 	path: './testbeds/rust',
@@ -241,7 +261,7 @@ const testbed_rust = {
 const testbeds = {
 	name: 'testbeds',
 	path: './testbeds',
-	references: [ testbed_coreutils, testbed_rust ]
+	references: [ testbed_coreutils, testbed_cpp, testbed_python, testbed_rust ]
 }
 
 /** @type ProjectDescription */
@@ -316,6 +336,8 @@ const projects = [
 	[ wasm_wasi, [ compileProjectOptions, watchProjectOptions ] ],
 	[ root, [compileProjectOptions, watchProjectOptions ] ],
 	[ testbed_coreutils, [ compileProjectOptions ] ],
+	[ testbed_cpp, [ compileProjectOptions ] ],
+	[ testbed_python, [ compileProjectOptions ] ],
 	[ testbed_rust, [ compileProjectOptions ] ],
 	[ testbeds, [ compileProjectOptions ] ]
 ];

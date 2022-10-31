@@ -7,13 +7,12 @@ import { URI } from 'vscode-uri';
 import { ApiClient, FileSystemError, RPCError } from '@vscode/sync-api-client';
 
 import RAL from './ral';
-const paths = RAL().path;
 
 import { ptr, size, u32 } from './baseTypes';
 import {
-	fd, errno, Errno, lookupflags, oflags, rights, fdflags, dircookie, filetype, Rights,
-	filesize, advise, filedelta, whence, Ciovec, Iovec, Filetype, clockid, timestamp, Clockid,
-	fstflags, Prestat, exitcode, Oflags, Subscription, WasiError, Eventtype, Event, event,
+	fd, errno, Errno, lookupflags, oflags, rights, fdflags, dircookie, Rights,
+	filesize, advise, filedelta, whence, Ciovec, Iovec, clockid, timestamp, Clockid,
+	fstflags, Prestat, exitcode, Subscription, WasiError, Eventtype, Event, event,
 	Subclockflags, Literal, subscription, riflags, siflags, sdflags, Dirent,
 	args_sizes_get, args_get, environ_sizes_get, environ_get, clock_res_get, clock_time_get, fd_advise,
 	fd_allocate, fd_close, fd_datasync, fd_fdstat_get, fd_fdstat_set_flags, fd_filestat_get, fd_filestat_set_size,
@@ -186,6 +185,8 @@ export namespace WASI {
 
 		const deviceDrivers: Map<DeviceId, DeviceDriver> = new Map();
 		let uri2Driver: Map<string, DeviceDriver> | undefined = new Map();
+		const preStatProviders: DeviceDriver[] = [];
+		const preStatDirnames: Map<fd, string> = new Map();
 
 		for (const device of devices) {
 			let driver: DeviceDriver | undefined;
@@ -203,6 +204,7 @@ export namespace WASI {
 			if (driver !== undefined) {
 				deviceDrivers.set(driver.id, driver);
 				uri2Driver.set(device.uri.toString(true), driver);
+				preStatProviders.push(driver);
 			}
 		}
 
@@ -415,18 +417,9 @@ export namespace WASI {
 				try {
 					const fileDescriptor = getFileDescriptor(fd);
 					fileDescriptor.assertBaseRight(Rights.fd_read);
-					const driver = getDeviceDriver(fileDescriptor);
+
 					const buffers = read_iovs(iovs_ptr, iovs_len);
-					let bytesRead = 0;
-					for (const buffer of buffers) {
-						const result = driver.fd_pread(fileDescriptor, offset, buffer.byteLength);
-						bytesRead = bytesRead + result.byteLength;
-						buffer.set(result);
-						if (result.byteLength < buffer.byteLength) {
-							break;
-						}
-						offset = offset + BigInt(result.byteLength);
-					}
+					const bytesRead = getDeviceDriver(fileDescriptor).fd_pread(fileDescriptor, offset, buffers);
 					memoryView().setUint32(bytesRead_ptr, bytesRead, true);
 					return Errno.success;
 				} catch (error) {
@@ -435,15 +428,25 @@ export namespace WASI {
 			},
 			fd_prestat_get: (fd: fd, bufPtr: ptr): errno => {
 				try {
-
-					const fileDescriptor = fileSystem.getPreopenedDirectory(fd);
-					if (fileDescriptor === undefined || !fileDescriptor.preOpened) {
-						return Errno.badf;
+					while (true) {
+						if (preStatProviders.length === 0) {
+							return Errno.badf;
+						}
+						const current = preStatProviders[0];
+						const result = current.fd_prestat_get(fd);
+						// The current provider doesn't have predefined directories anymore.
+						if (result === undefined) {
+							preStatProviders.shift();
+						} else {
+							const [mountPoint, fileDescriptor] = result;
+							fileDescriptors.set(fileDescriptor.fd, fileDescriptor);
+							preStatDirnames.set(fileDescriptor.fd, mountPoint);
+							const memory = memoryView();
+							const prestat = Prestat.create(bufPtr, memory);
+							prestat.len = encoder.encode(mountPoint).byteLength;
+							return Errno.success;
+						}
 					}
-					const memory = memoryView();
-					const prestat = Prestat.create(bufPtr, memory);
-					prestat.len = encoder.encode(fileDescriptor.path).byteLength;
-					return Errno.success;
 				} catch(error) {
 					return handleError(error);
 				}
@@ -451,8 +454,12 @@ export namespace WASI {
 			fd_prestat_dir_name: (fd: fd, pathPtr: ptr, pathLen: size): errno => {
 				try {
 					const fileDescriptor = getFileDescriptor(fd);
+					const dirname = preStatDirnames.get(fileDescriptor.fd);
+					if (dirname === undefined) {
+						return Errno.badf;
+					}
 					const memory = new Uint8Array(memoryRaw(), pathPtr);
-					const bytes = encoder.encode(fileDescriptor.path);
+					const bytes = encoder.encode(dirname);
 					if (bytes.byteLength !== pathLen) {
 						Errno.badmsg;
 					}
@@ -466,17 +473,9 @@ export namespace WASI {
 				try {
 					const fileDescriptor = getFileDescriptor(fd);
 					fileDescriptor.assertBaseRight(Rights.fd_write);
-					const driver = getDeviceDriver(fileDescriptor);
+
 					const buffers = read_ciovs(ciovs_ptr, ciovs_len);
-					let bytesWritten = 0;
-					for (const buffer of buffers) {
-						const written = driver.fd_pwrite(fileDescriptor, offset, buffer);
-						bytesWritten+= written;
-						if (written < buffer.byteLength) {
-							break;
-						}
-						offset = offset + BigInt(written);
-					}
+					const bytesWritten = getDeviceDriver(fileDescriptor).fd_pwrite(fileDescriptor, offset, buffers);
 					memoryView().setUint32(bytesWritten_ptr, bytesWritten, true);
 					return Errno.success;
 				} catch (error) {
@@ -488,6 +487,7 @@ export namespace WASI {
 					const memory = memoryView();
 					const fileDescriptor = getFileDescriptor(fd);
 					fileDescriptor.assertBaseRight(Rights.fd_read);
+
 					const driver = getDeviceDriver(fileDescriptor);
 					const buffers = read_iovs(iovs_ptr, iovs_len);
 					const bytesRead = driver.fd_read(fileDescriptor, buffers);
@@ -592,10 +592,10 @@ export namespace WASI {
 			fd_write: (fd: fd, ciovs_ptr: ptr, ciovs_len: u32, bytesWritten_ptr: ptr): errno => {
 				try {
 					const fileDescriptor = getFileDescriptor(fd);
-
 					fileDescriptor.assertBaseRight(Rights.fd_write);
+
 					const buffers = read_ciovs(ciovs_ptr, ciovs_len);
-					const bytesWritten: size = fileSystem.fd_write(fileDescriptor, buffers);
+					const bytesWritten = getDeviceDriver(fileDescriptor).fd_write(fileDescriptor, buffers);
 					const memory = memoryView();
 					memory.setUint32(bytesWritten_ptr, bytesWritten, true);
 					return Errno.success;
@@ -669,8 +669,8 @@ export namespace WASI {
 				try {
 					const fileDescriptor = getFileDescriptor(fd);
 					fileDescriptor.assertBaseRight(Rights.path_open);
-					const path = decoder.decode(new Uint8Array(memoryRaw(), path_ptr, path_len));
 
+					const path = decoder.decode(new Uint8Array(memoryRaw(), path_ptr, path_len));
 					const result = getDeviceDriver(fileDescriptor).path_open(fileDescriptor, dirflags, path, oflags, fs_rights_base, fs_rights_inheriting, fdflags);
 					fileDescriptors.set(result.fd, result);
 					memoryView().setUint32(fd_ptr, result.fd, true);
@@ -679,19 +679,22 @@ export namespace WASI {
 					return handleError(error);
 				}
 			},
-			path_readlink: (fd: fd, _path_ptr: ptr, _path_len: size, _buf: ptr, _buf_len: size, _result_size_ptr: ptr): errno => {
+			path_readlink: (fd: fd, path_ptr: ptr, path_len: size, buf_ptr: ptr, buf_len: size, result_size_ptr: ptr): errno => {
 				// VS Code has no support to follow a symlink.
 				try {
-					const fileHandle = getFileDescriptor(fd);
-					fileHandle.assertBaseRight(Rights.path_readlink);
-					fileHandle.assertIsDirectory();
+					const fileDescriptor = getFileDescriptor(fd);
+					fileDescriptor.assertBaseRight(Rights.path_readlink);
+					fileDescriptor.assertIsDirectory();
 
-					// const name = $decoder.decode(new Uint8Array(memoryRaw(), path_ptr, path_len));
-					// const realUri = getRealUri(fileHandle, name);
-					// todo@dirkb
-					// For now we do nothing. If we need to implement this we need
-					// support from the VS Code API.
-					return Errno.noent;
+					const path = decoder.decode(new Uint8Array(memoryRaw(), path_ptr, path_len));
+					const result = encoder.encode(getDeviceDriver(fileDescriptor).path_readlink(fileDescriptor, path));
+					if (result.byteLength > buf_len) {
+						return Errno.inval;
+					}
+
+					new Uint8Array(memoryRaw(), buf_ptr, buf_len).set(result);
+					memoryView().setUint32(result_size_ptr, result.byteLength, true);
+					return Errno.success;
 				} catch (error) {
 					return handleError(error);
 				}
@@ -702,9 +705,8 @@ export namespace WASI {
 					fileDescriptor.assertBaseRight(Rights.path_remove_directory);
 					fileDescriptor.assertIsDirectory();
 
-					const memory = memoryRaw();
-					const name = decoder.decode(new Uint8Array(memory, path_ptr, path_len));
-					fileSystem.path_remove_directory(fileDescriptor, name);
+					const path = decoder.decode(new Uint8Array(memoryRaw(), path_ptr, path_len));
+					getDeviceDriver(fileDescriptor).path_remove_directory(fileDescriptor, path);
 					return Errno.success;
 				} catch (error) {
 					return handleError(error);
@@ -721,21 +723,26 @@ export namespace WASI {
 					newFileDescriptor.assertIsDirectory();
 
 					const memory = memoryRaw();
-					const oldName = decoder.decode(new Uint8Array(memory, old_path_ptr, old_path_len));
-					const newName = decoder.decode(new Uint8Array(memory, new_path_ptr, new_path_len));
-					fileSystem.path_rename(oldFileDescriptor, oldName, newFileDescriptor, newName);
+					const oldPath = decoder.decode(new Uint8Array(memory, old_path_ptr, old_path_len));
+					const newPath = decoder.decode(new Uint8Array(memory, new_path_ptr, new_path_len));
+					getDeviceDriver(oldFileDescriptor).path_rename(oldFileDescriptor, oldPath, newFileDescriptor, newPath);
 					return Errno.success;
 				} catch (error) {
 					return handleError(error);
 				}
 			},
-			path_symlink: (_old_path_ptr: ptr, _old_path_len: size, fd: fd, _new_path_ptr: ptr, _new_path_len: size): errno => {
+			path_symlink: (old_path_ptr: ptr, old_path_len: size, fd: fd, new_path_ptr: ptr, new_path_len: size): errno => {
 				// VS Code has no support to create a symlink.
 				try {
 					const fileDescriptor = getFileDescriptor(fd);
 					fileDescriptor.assertBaseRight(Rights.path_symlink);
 					fileDescriptor.assertIsDirectory();
-					return Errno.nosys;
+
+					const memory = memoryRaw();
+					const oldPath = decoder.decode(new Uint8Array(memory, old_path_ptr, old_path_len));
+					const newPath = decoder.decode(new Uint8Array(memory, new_path_ptr, new_path_len));
+					getDeviceDriver(fileDescriptor).path_symlink(oldPath, fileDescriptor, newPath);
+					return Errno.success;
 				} catch (error) {
 					return handleError(error);
 				}
@@ -747,16 +754,8 @@ export namespace WASI {
 					fileDescriptor.assertIsDirectory();
 
 					const memory = memoryRaw();
-					const name = decoder.decode(new Uint8Array(memory, path_ptr, path_len));
-
-					const filetype = fileSystem.path_filetype(fileDescriptor, name);
-					if (filetype === undefined) {
-						return Errno.noent;
-					}
-					if (filetype === Filetype.directory) {
-						return Errno.isdir;
-					}
-					fileSystem.path_unlink_file(fileDescriptor, name);
+					const path = decoder.decode(new Uint8Array(memory, path_ptr, path_len));
+					getDeviceDriver(fileDescriptor).path_unlink_file(fileDescriptor, path);
 					return Errno.success;
 				} catch (error) {
 					return handleError(error);
@@ -903,7 +902,8 @@ export namespace WASI {
 			try {
 				const fileDescriptor = getFileDescriptor(fd);
 				fileDescriptor.assertBaseRight(Rights.fd_read);
-				const available = fileSystem.bytesAvailable(fileDescriptor);
+
+				const available = getDeviceDriver(fileDescriptor).fd_bytesAvailable(fileDescriptor);
 				return {
 					userdata: subscription.userdata,
 					type: Eventtype.fd_read,
