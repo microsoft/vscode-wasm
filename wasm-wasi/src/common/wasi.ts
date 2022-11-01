@@ -25,7 +25,7 @@ import { BigInts, code2Wasi } from './converter';
 import { CharacterDeviceDriver, DeviceDriver, DeviceId, FileDescriptor, FileSystemDeviceDriver, ReaddirEntry } from './deviceDriver';
 import * as vscfs from './vscodeFileSystemDriver';
 import * as ConsoleDriver from './consoleDriver';
-import * as ttyDriver from './ttyDriver';
+import * as terminalDriver from './terminalDriver';
 
 namespace WebAssembly {
 
@@ -128,9 +128,12 @@ export type DeviceDescription = {
 	uri: URI;
 	mountPoint: string;
 } | {
-	kind: 'tty';
+	kind: 'terminal';
 	uri: URI;
-} | {
+}  | {
+	kind: 'console';
+	uri: URI;
+}| {
 	kind: 'custom';
 	uri: URI;
 	driver: DeviceDriver;
@@ -191,14 +194,23 @@ export namespace WASI {
 		const preStatProviders: DeviceDriver[] = [];
 		const preStatDirnames: Map<fd, string> = new Map();
 
+		// Add the standard console driver;
+		const consoleUri: URI = URI.from({ scheme: 'console', authority: 'global'});
+		const consoleDriver = ConsoleDriver.create(apiClient, decoder, consoleUri);
+		deviceDrivers.set(consoleDriver.id, consoleDriver);
+		uri2Driver.set(consoleUri.toString(true), consoleDriver);
+
 		for (const device of devices) {
 			let driver: DeviceDriver | undefined;
 			switch (device.kind) {
 				case 'fileSystem':
 					driver = vscfs.create(apiClient, encoder, fileDescriptorId, device.uri, device.mountPoint);
 					break;
-				case 'tty':
-					driver = ttyDriver.create(apiClient, device.uri);
+				case 'terminal':
+					driver = terminalDriver.create(apiClient, device.uri);
+					break;
+				case 'console':
+					// We always have a console driver;
 					break;
 				case 'custom':
 					driver = device.driver;
@@ -211,22 +223,26 @@ export namespace WASI {
 			}
 		}
 
-		// Add the standard console driver;
-		const consoleUri: URI = URI.from({ scheme: 'stdio', authority: 'console'});
-		const consoleDriver = ConsoleDriver.create(apiClient, decoder, consoleUri);
-		deviceDrivers.set(consoleDriver.id, consoleDriver);
-		uri2Driver.set(consoleUri.toString(true), consoleDriver);
-
 		function createStdio(fd: 0 | 1 | 2, description: FileDescriptorDescription): FileDescriptor {
 			let result: FileDescriptor;
 			if (description.kind === 'fileSystem') {
-				const driver = uri2Driver!.get(description.uri.toString(true)) as FileSystemDeviceDriver;
+				const driver = uri2Driver!.get(description.uri.toString(true)) as (FileSystemDeviceDriver | undefined);
+				if (driver === undefined) {
+					throw new Error(`No filesystem found for stdio descriptor: [${description.uri.toString(true)},${description.path}]`);
+				}
 				result = driver.createStdioFileDescriptor(fd, Rights.FileBase, Rights.FileInheriting, 0, description.path);
 			} else if (description.kind === 'terminal') {
-				const driver = uri2Driver!.get(description.uri.toString(true)) as CharacterDeviceDriver;
+				let driver = uri2Driver!.get(description.uri.toString(true)) as (CharacterDeviceDriver | undefined);
+				if (driver === undefined) {
+					driver = terminalDriver.create(apiClient, description.uri);
+					deviceDrivers.set(driver.id, driver);
+					uri2Driver!.set(description.uri.toString(true), driver);
+					preStatProviders.push(driver);
+				}
 				result = driver.createStdioFileDescriptor(fd);
 			} else if (description.kind === 'console') {
-				result = consoleDriver.createStdioFileDescriptor(fd);
+				const driver = uri2Driver!.get(description.uri.toString(true)) as CharacterDeviceDriver;
+				result = driver.createStdioFileDescriptor(fd);
 			} else {
 				result = consoleDriver.createStdioFileDescriptor(fd);
 			}

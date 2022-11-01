@@ -148,7 +148,7 @@ export function create(apiClient: ApiClient, _textEncoder: RAL.TextEncoder, file
 	}
 
 	function assertDirectoryDescriptor(fileDescriptor: FileDescriptor): asserts fileDescriptor is DirectoryFileDescriptor {
-		if (!(fileDescriptor instanceof FileFileDescriptor)) {
+		if (!(fileDescriptor instanceof DirectoryFileDescriptor)) {
 			throw new WasiError(Errno.badf);
 		}
 	}
@@ -435,7 +435,7 @@ export function create(apiClient: ApiClient, _textEncoder: RAL.TextEncoder, file
 				const name = entry[0];
 				const filePath = paths.join(fileDescriptor.path, name);
 				const fileUri = uriJoin(inode.uri, name);
-				result.push({ d_ino: getOrCreateINode(filePath, fileUri, false).id, d_type: code2Wasi.asFileType(entry[1]), d_name: entry[0] });
+				result.push({ d_ino: getOrCreateINode(filePath, fileUri, false).id, d_type: code2Wasi.asFileType(entry[1]), d_name: name });
 			}
 			return result;
 		},
@@ -505,6 +505,9 @@ export function create(apiClient: ApiClient, _textEncoder: RAL.TextEncoder, file
 		path_open(parentDescriptor: FileDescriptor, _dirflags: lookupflags, path: string, oflags: oflags, fs_rights_base: rights, fs_rights_inheriting: rights, fdflags: fdflags): FileDescriptor {
 			assertDirectoryDescriptor(parentDescriptor);
 
+			if (path === '.') {
+				path = parentDescriptor.path;
+			}
 			let filetype: filetype | undefined = doGetFiletype(parentDescriptor, path);
 			const entryExists: boolean = filetype !== undefined;
 			if (entryExists) {
