@@ -136,13 +136,16 @@ export type DeviceDescription = {
 	driver: DeviceDriver;
 };
 
-export type StdioDescription = {
-	kind: 'tty';
-	uri: URI;
-} | {
+export type FileDescriptorDescription = {
 	kind: 'fileSystem';
 	uri: URI;
 	path: string;
+} | {
+	kind: 'terminal';
+	uri: URI;
+} | {
+	kind: 'console';
+	uri: URI;
 };
 
 export type Options = {
@@ -165,7 +168,7 @@ export type Options = {
 
 export namespace WASI {
 
-	export function create(name: string, apiClient: ApiClient, exitHandler: (rval: number) => void, devices: DeviceDescription[], stdio: { stdin: StdioDescription; stdout: StdioDescription; stderr: StdioDescription }, options: Options): WASI {
+	export function create(name: string, apiClient: ApiClient, exitHandler: (rval: number) => void, devices: DeviceDescription[], stdio: { stdin: FileDescriptorDescription; stdout: FileDescriptorDescription; stderr: FileDescriptorDescription }, options: Options): WASI {
 		let instance: WebAssembly.$Instance;
 
 		const thread_start = RAL().clock.realtime();
@@ -214,14 +217,16 @@ export namespace WASI {
 		deviceDrivers.set(consoleDriver.id, consoleDriver);
 		uri2Driver.set(consoleUri.toString(true), consoleDriver);
 
-		function createStdio(fd: 0 | 1 | 2, stdio: StdioDescription): FileDescriptor {
+		function createStdio(fd: 0 | 1 | 2, description: FileDescriptorDescription): FileDescriptor {
 			let result: FileDescriptor;
-			if (stdio.kind === 'fileSystem') {
-				const driver = uri2Driver!.get(stdio.uri.toString(true)) as FileSystemDeviceDriver;
-				result = driver.createStdioFileDescriptor(fd, Rights.FileBase, Rights.FileInheriting, 0, stdio.path);
-			} else if (stdio.kind === 'tty') {
-				const driver = uri2Driver!.get(stdio.uri.toString(true)) as CharacterDeviceDriver;
+			if (description.kind === 'fileSystem') {
+				const driver = uri2Driver!.get(description.uri.toString(true)) as FileSystemDeviceDriver;
+				result = driver.createStdioFileDescriptor(fd, Rights.FileBase, Rights.FileInheriting, 0, description.path);
+			} else if (description.kind === 'terminal') {
+				const driver = uri2Driver!.get(description.uri.toString(true)) as CharacterDeviceDriver;
 				result = driver.createStdioFileDescriptor(fd);
+			} else if (description.kind === 'console') {
+				result = consoleDriver.createStdioFileDescriptor(fd);
 			} else {
 				result = consoleDriver.createStdioFileDescriptor(fd);
 			}

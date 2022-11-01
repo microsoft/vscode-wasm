@@ -9,7 +9,7 @@ import { parentPort  } from 'worker_threads';
 import { ClientConnection } from '@vscode/sync-api-common/node';
 import { ApiClient, ApiClientConnection, Requests } from '@vscode/sync-api-client';
 import { WASI } from '@vscode/wasm-wasi/node';
-import { DeviceDescription, StdioDescription } from '@vscode/wasm-wasi';
+import { DeviceDescription } from '@vscode/wasm-wasi';
 
 if (parentPort === null) {
 	process.exit();
@@ -31,10 +31,7 @@ apiClient.serviceReady().then(async (params) => {
 			devices.push({ kind: 'fileSystem',  uri: folder.uri, mountPoint: path.posix.join(path.posix.sep, 'workspaces', folder.name) });
 		}
 	}
-	const stdin: StdioDescription = { kind: 'tty', uri: params.stdio.stdin };
-	const stdout: StdioDescription = { kind: 'tty', uri: params.stdio.stdout };
-	const stderr: StdioDescription = { kind: 'tty', uri: params.stdio.stderr };
-	const wasi = WASI.create(name, apiClient, exitHandler, devices, {stdin, stdout, stderr}, {});
+	const wasi = WASI.create(name, apiClient, exitHandler, devices, params.stdio, {});
 	const wasmFile = path.join(__dirname, '..', 'target', 'wasm32-wasi', 'debug', 'rust-example.wasm');
 	const binary = fs.readFileSync(wasmFile);
 	const { instance } = await WebAssembly.instantiate(binary, {

@@ -22,7 +22,7 @@ export async function activate(_context: ExtensionContext) {
 			}
 		});
 		const pty = ServicePseudoTerminal.create();
-		apiService.registerTTY(pty);
+		apiService.registerCharacterDeviceDriver(pty);
 		const terminal = window.createTerminal({ name, pty: pty });
 		terminal.show();
 		apiService.signalReady();

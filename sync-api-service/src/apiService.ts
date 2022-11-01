@@ -41,7 +41,7 @@ export class ApiService {
 	private readonly byteSources: Map<string, Source>;
 	private readonly byteSinks: Map<string, Sink>;
 
-	private stdio!: {
+	private stdio: {
 		stdin: FileDescriptorDescription;
 		stdout: FileDescriptorDescription;
 		stderr: FileDescriptorDescription;
@@ -54,7 +54,13 @@ export class ApiService {
 		this.byteSinks = new Map();
 		this.options = options;
 
-		this.registerCharacterDeviceDriver(new ConsoleTerminal(), true);
+		const console = new ConsoleTerminal();
+		this.stdio = {
+			stdin: console.fileDescriptor,
+			stdout: console.fileDescriptor,
+			stderr: console.fileDescriptor
+		};
+		this.registerCharacterDeviceDriver(console, false);
 
 		const handleError = (error: any): { errno: number } => {
 			if (error instanceof vscode.FileSystemError) {
