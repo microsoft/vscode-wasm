@@ -8,43 +8,32 @@ import { parentPort  } from 'worker_threads';
 import { URI } from 'vscode-uri';
 
 import { ClientConnection } from '@vscode/sync-api-common/node';
-import { ApiClient, Requests } from '@vscode/sync-api-client';
-import { WASI, Options } from '@vscode/wasm-wasi/node';
+import { ApiClient, ApiClientConnection, Requests } from '@vscode/sync-api-client';
+import { WASI, DeviceDescription } from '@vscode/wasm-wasi/node';
 
 if (parentPort === null) {
 	process.exit();
 }
 
-const connection = new ClientConnection<Requests>(parentPort);
-connection.serviceReady().then(async (params) => {
-	const name = 'Python Shell';
-	const apiClient = new ApiClient(connection);
-	const workspaceFolders = apiClient.vscode.workspace.workspaceFolders;
-	const activeTextDocument = apiClient.vscode.window.activeTextDocument;
-	const mapDir: Options['mapDir'] = [];
-	let toRun: string | undefined;
-	if (workspaceFolders.length === 1) {
-		const folderUri = workspaceFolders[0].uri;
-		mapDir.push({ name: path.posix.join(path.posix.sep, 'workspace'), uri: folderUri });
-		if (activeTextDocument !== undefined) {
-			const file =  activeTextDocument.uri;
-			if (file.toString().startsWith(folderUri.toString())) {
-				toRun = path.posix.join(path.posix.sep, 'workspace', file.toString().substring(folderUri.toString().length));
-			}
-		}
-	} else {
-		for (const folder of workspaceFolders) {
-			mapDir.push({ name: path.posix.join(path.posix.sep, 'workspaces', folder.name), uri: folder.uri });
-		}
-	}
-	const pythonRoot = URI.file(`/home/dirkb/Projects/dbaeumer/python-3.11.0rc`);
-	mapDir.push({ name: path.posix.sep, uri: pythonRoot });
+const apiClient = new ApiClient(new ClientConnection<Requests, ApiClientConnection.ReadyParams>(parentPort));
+apiClient.serviceReady().then(async (params) => {
 	const exitHandler = (rval: number): void => {
 		apiClient.process.procExit(rval);
 	};
-	const wasi = WASI.create(name, apiClient, exitHandler, {
-		mapDir,
-		argv: toRun !== undefined ? ['python', '-X', 'utf8', toRun] : ['python', '-X', 'utf8'],
+	const workspaceFolders = apiClient.vscode.workspace.workspaceFolders;
+	let toRun: string | undefined;
+	const devices: DeviceDescription[] = [];
+	if (workspaceFolders.length === 1) {
+		devices.push({ kind: 'fileSystem',  uri: workspaceFolders[0].uri, mountPoint: path.posix.join(path.posix.sep, 'workspace') });
+	} else {
+		for (const folder of workspaceFolders) {
+			devices.push({ kind: 'fileSystem',  uri: folder.uri, mountPoint: path.posix.join(path.posix.sep, 'workspaces', folder.name) });
+		}
+	}
+	const pythonRoot = URI.file(`/home/dirkb/Projects/dbaeumer/python-3.11.0rc`);
+	devices.push({ kind: 'fileSystem', uri: pythonRoot, mountPoint: path.posix.sep });
+	const wasi = WASI.create(name, apiClient, exitHandler, devices, params.stdio, {
+		args: toRun !== undefined ? ['-X', 'utf8', toRun] : ['-X', 'utf8'],
 		env: {
 			PYTHONPATH: '/workspace'
 		}

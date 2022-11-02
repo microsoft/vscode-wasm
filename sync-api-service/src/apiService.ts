@@ -47,7 +47,7 @@ export class ApiService {
 		stderr: FileDescriptorDescription;
 	};
 
-	constructor(_name: string, receiver: ApiServiceConnection, options?: Options) {
+	constructor(_id: string, receiver: ApiServiceConnection, options?: Options) {
 		this.connection = receiver;
 
 		this.byteSources = new Map();

@@ -8,8 +8,7 @@ import { parentPort  } from 'worker_threads';
 
 import { ClientConnection } from '@vscode/sync-api-common/node';
 import { ApiClient, ApiClientConnection, Requests } from '@vscode/sync-api-client';
-import { WASI } from '@vscode/wasm-wasi/node';
-import { DeviceDescription } from '@vscode/wasm-wasi';
+import { WASI, DeviceDescription } from '@vscode/wasm-wasi/node';
 
 if (parentPort === null) {
 	process.exit();
@@ -17,8 +16,6 @@ if (parentPort === null) {
 
 const apiClient = new ApiClient(new ClientConnection<Requests, ApiClientConnection.ReadyParams>(parentPort));
 apiClient.serviceReady().then(async (params) => {
-	debugger;
-	const name = 'Run Rust';
 	const exitHandler = (rval: number): void => {
 		apiClient.process.procExit(rval);
 	};
@@ -31,7 +28,7 @@ apiClient.serviceReady().then(async (params) => {
 			devices.push({ kind: 'fileSystem',  uri: folder.uri, mountPoint: path.posix.join(path.posix.sep, 'workspaces', folder.name) });
 		}
 	}
-	const wasi = WASI.create(name, apiClient, exitHandler, devices, params.stdio, {});
+	const wasi = WASI.create('rust-example', apiClient, exitHandler, devices, params.stdio);
 	const wasmFile = path.join(__dirname, '..', 'target', 'wasm32-wasi', 'debug', 'rust-example.wasm');
 	const binary = fs.readFileSync(wasmFile);
 	const { instance } = await WebAssembly.instantiate(binary, {

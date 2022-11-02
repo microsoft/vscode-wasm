@@ -6,12 +6,12 @@
 import * as path from 'path';
 import { Worker } from 'worker_threads';
 
-import { commands, ExtensionContext, Terminal, window, workspace } from 'vscode';
+import { commands, ExtensionContext, Terminal, window } from 'vscode';
 
 import { ServiceConnection } from '@vscode/sync-api-common/node';
-import { Requests, ApiService } from '@vscode/sync-api-service';
+import { Requests, ApiService, ApiServiceConnection, ServicePseudoTerminal } from '@vscode/sync-api-service';
 
-const connectionState: Map<number, [Worker, ServiceConnection<Requests>, ApiService, Terminal]> = new Map();
+const connectionState: Map<number, [Worker, ApiServiceConnection, ApiService, Terminal]> = new Map();
 
 export async function activate(_context: ExtensionContext) {
 
@@ -23,36 +23,37 @@ export async function activate(_context: ExtensionContext) {
 
 		const key = Date.now();
 		const worker = new Worker(path.join(__dirname, './worker.js'));
-		const connection = new ServiceConnection<Requests>(worker);
-		const apiService = new ApiService('Python Run', connection, {
+		const connection: ApiServiceConnection = new ServiceConnection<Requests, ApiServiceConnection.ReadyParams>(worker);
+		const apiService = new ApiService('python', connection, {
 			exitHandler: (_rval) => {
 				connectionState.delete(key);
 				process.nextTick(() => worker.terminate());
 			}
 		});
-		const terminal = window.createTerminal({ name: 'Python Run', pty: apiService.getPty() });
+		const pty = ServicePseudoTerminal.create();
+		apiService.registerCharacterDeviceDriver(pty);
+		const terminal = window.createTerminal({ name: 'Run Python', pty: pty });
 		terminal.show();
-
 		connectionState.set(key, [worker, connection, apiService, terminal]);
-
-		connection.signalReady();
+		apiService.signalReady();
 	});
 
 	commands.registerCommand('testbed-python.runInteractive', () => {
 		const key = Date.now();
 		const worker = new Worker(path.join(__dirname, './worker.js'));
-		const connection = new ServiceConnection<Requests>(worker);
-		const apiService = new ApiService('Python Shell', connection, {
+		const connection: ApiServiceConnection = new ServiceConnection<Requests, ApiServiceConnection.ReadyParams>(worker);
+		const apiService = new ApiService('python', connection, {
 			exitHandler: (_rval) => {
 				connectionState.delete(key);
 				process.nextTick(() => worker.terminate());
 			}
 		});
-		const terminal = window.createTerminal({ name: 'Python Shell', pty: apiService.getPty() });
+		const pty = ServicePseudoTerminal.create();
+		apiService.registerCharacterDeviceDriver(pty);
+		const terminal = window.createTerminal({ name: 'Python Shell', pty: pty });
 		terminal.show();
-
 		connectionState.set(key, [worker, connection, apiService, terminal]);
-		connection.signalReady();
+		apiService.signalReady();
 	});
 }
 

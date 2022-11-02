@@ -3,10 +3,10 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { WASI, Options, Environment } from './wasi';
+import { WASI, Options, Environment, DeviceDescription, FileDescriptorDescription } from './wasi';
 
 export {
-	WASI, Options, Environment
+	WASI, Options, Environment, DeviceDescription, FileDescriptorDescription
 };
 
 export * from '@vscode/sync-api-client';

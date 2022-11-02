@@ -161,7 +161,7 @@ export type Options = {
 	/**
 	 * Command line arguments accessible in the WASM.
 	 */
-	argv?: string [];
+	args?: string [];
 
 	/**
 	 * The environment accessible in the WASM.
@@ -171,7 +171,18 @@ export type Options = {
 
 export namespace WASI {
 
-	export function create(name: string, apiClient: ApiClient, exitHandler: (rval: number) => void, devices: DeviceDescription[], stdio: { stdin: FileDescriptorDescription; stdout: FileDescriptorDescription; stderr: FileDescriptorDescription }, options: Options): WASI {
+	/**
+	 * Creates a new WASI implementation.
+
+	 * @param programName The program name (used as argv[0]).
+	 * @param apiClient The API client.
+	 * @param exitHandler The handler called when the execution exists.
+	 * @param devices The device to use
+	 * @param stdio The stdio configuration
+	 * @param options Additional options.
+	 * @returns The WASI implementation instance.
+	 */
+	export function create(programName: string, apiClient: ApiClient, exitHandler: (rval: number) => void, devices: DeviceDescription[], stdio: { stdin: FileDescriptorDescription; stdout: FileDescriptorDescription; stderr: FileDescriptorDescription }, options: Options = {}): WASI {
 		let instance: WebAssembly.$Instance;
 
 		const thread_start = RAL().clock.realtime();
@@ -262,7 +273,6 @@ export namespace WASI {
 				instance = inst as WebAssembly.$Instance;
 			},
 			args_sizes_get: (argvCount_ptr: ptr, argvBufSize_ptr: ptr): errno => {
-				const memory = memoryView();
 				let count = 0;
 				let size = 0;
 				function processValue(str: string): void {
@@ -270,10 +280,11 @@ export namespace WASI {
 					size += encoder.encode(value).byteLength;
 					count++;
 				}
-				processValue(name);
-				for (const arg of options.argv ?? []) {
+				processValue(programName);
+				for (const arg of options.args ?? []) {
 					processValue(arg);
 				}
+				const memory = memoryView();
 				memory.setUint32(argvCount_ptr, count, true);
 				memory.setUint32(argvBufSize_ptr, size, true);
 				return Errno.success;
@@ -292,8 +303,8 @@ export namespace WASI {
 					valueOffset += data.byteLength;
 
 				}
-				processValue(name);
-				for (const arg of options.argv ?? []) {
+				processValue(programName);
+				for (const arg of options.args ?? []) {
 					processValue(arg);
 				}
 				return Errno.success;
@@ -314,12 +325,10 @@ export namespace WASI {
 			},
 			clock_time_get: (id: clockid, precision: timestamp, timestamp_ptr: ptr): errno => {
 				const time: bigint = now(id, precision);
-				const memory = memoryView();
-				memory.setBigUint64(timestamp_ptr, time, true);
+				memoryView().setBigUint64(timestamp_ptr, time, true);
 				return Errno.success;
 			},
 			environ_sizes_get: (environCount_ptr: ptr, environBufSize_ptr: ptr): errno => {
-				const memory = memoryView();
 				let count = 0;
 				let size = 0;
 				for (const entry of Object.entries(options.env ?? {})) {
@@ -327,6 +336,7 @@ export namespace WASI {
 					size += encoder.encode(value).byteLength;
 					count++;
 				}
+				const memory = memoryView();
 				memory.setUint32(environCount_ptr, count, true);
 				memory.setUint32(environBufSize_ptr, size, true);
 				return Errno.success;
@@ -349,6 +359,7 @@ export namespace WASI {
 				try {
 					const fileDescriptor = getFileDescriptor(fd);
 					fileDescriptor.assertBaseRight(Rights.fd_advise);
+
 					getDeviceDriver(fileDescriptor).fd_advise(fileDescriptor, offset, length, advise);
 					return Errno.success;
 				} catch (error) {
@@ -359,6 +370,7 @@ export namespace WASI {
 				try {
 					const fileDescriptor = getFileDescriptor(fd);
 					fileDescriptor.assertBaseRight(Rights.fd_allocate);
+
 					getDeviceDriver(fileDescriptor).fd_allocate(fileDescriptor, offset, len);
 					return Errno.success;
 				} catch (error) {
@@ -368,6 +380,7 @@ export namespace WASI {
 			fd_close: (fd: fd): errno => {
 				try {
 					const fileDescriptor = getFileDescriptor(fd);
+
 					getDeviceDriver(fileDescriptor).fd_close(fileDescriptor);
 					fileDescriptors.delete(fileDescriptor.fd);
 					return Errno.success;
@@ -379,6 +392,7 @@ export namespace WASI {
 				try {
 					const fileDescriptor = getFileDescriptor(fd);
 					fileDescriptor.assertBaseRight(Rights.fd_datasync);
+
 					getDeviceDriver(fileDescriptor).fd_datasync(fileDescriptor);
 					return Errno.success;
 				} catch (error) {
@@ -388,6 +402,7 @@ export namespace WASI {
 			fd_fdstat_get: (fd: fd, fdstat_ptr: ptr): errno => {
 				try {
 					const fileDescriptor = getFileDescriptor(fd);
+
 					getDeviceDriver(fileDescriptor).fd_fdstat_get(fileDescriptor, Fdstat.create(fdstat_ptr, memoryView()));
 					return Errno.success;
 				} catch (error) {
@@ -398,6 +413,7 @@ export namespace WASI {
 				try {
 					const fileDescriptor = getFileDescriptor(fd);
 					fileDescriptor.assertBaseRight(Rights.fd_fdstat_set_flags);
+
 					getDeviceDriver(fileDescriptor).fd_fdstat_set_flags(fileDescriptor, fdflags);
 					return Errno.success;
 				} catch (error) {
@@ -408,6 +424,7 @@ export namespace WASI {
 				try {
 					const fileDescriptor = getFileDescriptor(fd);
 					fileDescriptor.assertBaseRight(Rights.fd_filestat_get);
+
 					getDeviceDriver(fileDescriptor).fd_filestat_get(fileDescriptor, Filestat.create(filestat_ptr, memoryView()));
 					return Errno.success;
 				} catch (error) {
@@ -418,6 +435,7 @@ export namespace WASI {
 				try {
 					const fileDescriptor = getFileDescriptor(fd);
 					fileDescriptor.assertBaseRight(Rights.fd_filestat_set_size);
+
 					getDeviceDriver(fileDescriptor).fd_filestat_set_size(fileDescriptor, size);
 					return Errno.success;
 				} catch (error) {
@@ -428,6 +446,7 @@ export namespace WASI {
 				try {
 					const fileDescriptor = getFileDescriptor(fd);
 					fileDescriptor.assertBaseRight(Rights.fd_filestat_set_times);
+
 					getDeviceDriver(fileDescriptor).fd_filestat_set_times(fileDescriptor, atim, mtim, fst_flags);
 					return Errno.success;
 				} catch (error) {
@@ -481,11 +500,11 @@ export namespace WASI {
 					if (dirname === undefined) {
 						return Errno.badf;
 					}
-					const memory = new Uint8Array(memoryRaw(), pathPtr);
 					const bytes = encoder.encode(dirname);
 					if (bytes.byteLength !== pathLen) {
 						Errno.badmsg;
 					}
+					const memory = new Uint8Array(memoryRaw(), pathPtr);
 					memory.set(bytes);
 					return Errno.success;
 				} catch (error) {
@@ -507,14 +526,12 @@ export namespace WASI {
 			},
 			fd_read: (fd: fd, iovs_ptr: ptr, iovs_len: u32, bytesRead_ptr: ptr): errno => {
 				try {
-					const memory = memoryView();
 					const fileDescriptor = getFileDescriptor(fd);
 					fileDescriptor.assertBaseRight(Rights.fd_read);
 
-					const driver = getDeviceDriver(fileDescriptor);
 					const buffers = read_iovs(iovs_ptr, iovs_len);
-					const bytesRead = driver.fd_read(fileDescriptor, buffers);
-					memory.setUint32(bytesRead_ptr, bytesRead, true);
+					const bytesRead = getDeviceDriver(fileDescriptor).fd_read(fileDescriptor, buffers);
+					memoryView().setUint32(bytesRead_ptr, bytesRead, true);
 					return Errno.success;
 				} catch (error) {
 					return handleError(error);
@@ -583,6 +600,7 @@ export namespace WASI {
 				try {
 					const fileDescriptor = getFileDescriptor(fd);
 					fileDescriptor.assertBaseRight(Rights.fd_seek);
+
 					const newOffset = getDeviceDriver(fileDescriptor).fd_seek(fileDescriptor, offset, whence);
 					memoryView().setBigUint64(new_offset_ptr, BigInt(newOffset), true);
 					return Errno.success;
@@ -594,6 +612,7 @@ export namespace WASI {
 				try {
 					const fileDescriptor = getFileDescriptor(fd);
 					fileDescriptor.assertBaseRight(Rights.fd_sync);
+
 					getDeviceDriver(fileDescriptor).fd_sync(fileDescriptor);
 					return Errno.success;
 				} catch (error) {
@@ -604,9 +623,9 @@ export namespace WASI {
 				try {
 					const fileDescriptor = getFileDescriptor(fd);
 					fileDescriptor.assertBaseRight(Rights.fd_tell);
+
 					const offset = getDeviceDriver(fileDescriptor).fd_tell(fileDescriptor);
-					const memory = memoryView();
-					memory.setBigUint64(offset_ptr, BigInt(offset), true);
+					memoryView().setBigUint64(offset_ptr, BigInt(offset), true);
 					return Errno.success;
 				} catch (error) {
 					return handleError(error);
@@ -619,8 +638,7 @@ export namespace WASI {
 
 					const buffers = read_ciovs(ciovs_ptr, ciovs_len);
 					const bytesWritten = getDeviceDriver(fileDescriptor).fd_write(fileDescriptor, buffers);
-					const memory = memoryView();
-					memory.setUint32(bytesWritten_ptr, bytesWritten, true);
+					memoryView().setUint32(bytesWritten_ptr, bytesWritten, true);
 					return Errno.success;
 				} catch (error) {
 					return handleError(error);
@@ -631,8 +649,8 @@ export namespace WASI {
 					const fileDescriptor = getFileDescriptor(fd);
 					fileDescriptor.assertBaseRight(Rights.path_create_directory);
 					fileDescriptor.assertIsDirectory();
-					const memory = memoryRaw();
-					const path = decoder.decode(new Uint8Array(memory, path_ptr, path_len));
+
+					const path = decoder.decode(new Uint8Array(memoryRaw(), path_ptr, path_len));
 					getDeviceDriver(fileDescriptor).path_create_directory(fileDescriptor, path);
 					return Errno.success;
 				} catch (error) {
@@ -644,8 +662,8 @@ export namespace WASI {
 					const fileDescriptor = getFileDescriptor(fd);
 					fileDescriptor.assertBaseRight(Rights.path_filestat_get);
 					fileDescriptor.assertIsDirectory();
-					const memory = memoryRaw();
-					const path = decoder.decode(new Uint8Array(memory, path_ptr, path_len));
+
+					const path = decoder.decode(new Uint8Array(memoryRaw(), path_ptr, path_len));
 					getDeviceDriver(fileDescriptor).path_filestat_get(fileDescriptor, flags, path, Filestat.create(filestat_ptr, memoryView()));
 					return Errno.success;
 				} catch (error) {
@@ -657,6 +675,7 @@ export namespace WASI {
 					const fileDescriptor = getFileDescriptor(fd);
 					fileDescriptor.assertBaseRight(Rights.path_filestat_set_times);
 					fileDescriptor.assertIsDirectory();
+
 					const path = decoder.decode(new Uint8Array(memoryRaw(), path_ptr, path_len));
 					getDeviceDriver(fileDescriptor).path_filestat_set_times(fileDescriptor, flags, path, atim, mtim, fst_flags);
 					return Errno.success;
@@ -709,13 +728,14 @@ export namespace WASI {
 					fileDescriptor.assertBaseRight(Rights.path_readlink);
 					fileDescriptor.assertIsDirectory();
 
-					const path = decoder.decode(new Uint8Array(memoryRaw(), path_ptr, path_len));
+					const memory = memoryRaw();
+					const path = decoder.decode(new Uint8Array(memory, path_ptr, path_len));
 					const result = encoder.encode(getDeviceDriver(fileDescriptor).path_readlink(fileDescriptor, path));
 					if (result.byteLength > buf_len) {
 						return Errno.inval;
 					}
 
-					new Uint8Array(memoryRaw(), buf_ptr, buf_len).set(result);
+					new Uint8Array(memory, buf_ptr, buf_len).set(result);
 					memoryView().setUint32(result_size_ptr, result.byteLength, true);
 					return Errno.success;
 				} catch (error) {
@@ -776,8 +796,7 @@ export namespace WASI {
 					fileDescriptor.assertBaseRight(Rights.path_unlink_file);
 					fileDescriptor.assertIsDirectory();
 
-					const memory = memoryRaw();
-					const path = decoder.decode(new Uint8Array(memory, path_ptr, path_len));
+					const path = decoder.decode(new Uint8Array(memoryRaw(), path_ptr, path_len));
 					getDeviceDriver(fileDescriptor).path_unlink_file(fileDescriptor, path);
 					return Errno.success;
 				} catch (error) {
@@ -818,8 +837,7 @@ export namespace WASI {
 			},
 			random_get: (buf: ptr, buf_len: size): errno => {
 				const random = RAL().crypto.randomGet(buf_len);
-				const memory = memoryRaw();
-				new Uint8Array(memory, buf, buf_len).set(random);
+				new Uint8Array(memoryRaw(), buf, buf_len).set(random);
 				return Errno.success;
 			},
 			sock_accept: (_fd: fd, _flags: fdflags, _result_fd_ptr: ptr): errno => {

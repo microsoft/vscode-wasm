@@ -8,7 +8,7 @@ import { parentPort  } from 'worker_threads';
 
 import { ClientConnection } from '@vscode/sync-api-common/node';
 import { ApiClient, ApiClientConnection, Requests } from '@vscode/sync-api-client';
-import { WASI, Options } from '@vscode/wasm-wasi/node';
+import { WASI, DeviceDescription } from '@vscode/wasm-wasi/node';
 
 if (parentPort === null) {
 	process.exit();
@@ -16,28 +16,20 @@ if (parentPort === null) {
 
 const apiClient = new ApiClient(new ClientConnection<Requests, ApiClientConnection.ReadyParams>(parentPort));
 apiClient.serviceReady().then(async (params) => {
-	const name = 'Run base32 test.bat';
-	const workspaceFolders = apiClient.vscode.workspace.workspaceFolders;
-	const mapDir: Options['mapDir'] = [];
-
-	if (workspaceFolders.length === 1) {
-		mapDir.push({ name: path.posix.join(path.posix.sep, 'workspace'), uri: workspaceFolders[0].uri });
-	} else {
-		for (const folder of workspaceFolders) {
-			mapDir.push({ name: path.posix.join(path.posix.sep, 'workspaces', folder.name), uri: folder.uri });
-		}
-	}
 	const exitHandler = (rval: number): void => {
 		apiClient.process.procExit(rval);
 	};
-	const wasi = WASI.create(name, apiClient, exitHandler, {
-		stdio: params.stdio,
-		mapDir,
-		argv: ['coreutils.wasm', 'base32', 'workspace/test.bat'],
-		env: {
-			TMP: '/tmp',
-			PYTHONPATH: '/build/lib.wasi-wasm32-3.12:/Lib:/workspace'
+	const workspaceFolders = apiClient.vscode.workspace.workspaceFolders;
+	const devices: DeviceDescription[] = [];
+	if (workspaceFolders.length === 1) {
+		devices.push({ kind: 'fileSystem',  uri: workspaceFolders[0].uri, mountPoint: path.posix.join(path.posix.sep, 'workspace') });
+	} else {
+		for (const folder of workspaceFolders) {
+			devices.push({ kind: 'fileSystem',  uri: folder.uri, mountPoint: path.posix.join(path.posix.sep, 'workspaces', folder.name) });
 		}
+	}
+	const wasi = WASI.create('coreutils', apiClient, exitHandler, devices, params.stdio, {
+		args: ['base32', 'workspace/test.bat'],
 	});
 	const wasmFile = path.join(__dirname, '..', 'coreutils.wasm');
 	const binary = fs.readFileSync(wasmFile);

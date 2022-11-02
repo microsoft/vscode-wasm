@@ -13,17 +13,16 @@ import { ApiService, ApiServiceConnection, ServicePseudoTerminal, Requests } fro
 
 export async function activate(_context: ExtensionContext) {
 	commands.registerCommand('testbed-rust.run', () => {
-		const name = 'Run Rust';
 		const worker = new Worker(path.join(__dirname, './worker.js'));
 		const connection: ApiServiceConnection = new ServiceConnection<Requests, ApiServiceConnection.ReadyParams>(worker);
-		const apiService = new ApiService(name, connection, {
+		const apiService = new ApiService('rust', connection, {
 			exitHandler: (_rval) => {
 				process.nextTick(() => worker.terminate());
 			}
 		});
 		const pty = ServicePseudoTerminal.create();
 		apiService.registerCharacterDeviceDriver(pty);
-		const terminal = window.createTerminal({ name, pty: pty });
+		const terminal = window.createTerminal({ name: 'Run Rust', pty: pty });
 		terminal.show();
 		apiService.signalReady();
 	});
