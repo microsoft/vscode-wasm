@@ -31,7 +31,7 @@ export async function activate(_context: ExtensionContext) {
 			}
 		});
 		const pty = ServicePseudoTerminal.create();
-		apiService.registerCharacterDeviceDriver(pty);
+		apiService.registerCharacterDeviceDriver(pty, true);
 		const terminal = window.createTerminal({ name: 'Run Python', pty: pty });
 		terminal.show();
 		connectionState.set(key, [worker, connection, apiService, terminal]);
@@ -49,7 +49,7 @@ export async function activate(_context: ExtensionContext) {
 			}
 		});
 		const pty = ServicePseudoTerminal.create();
-		apiService.registerCharacterDeviceDriver(pty);
+		apiService.registerCharacterDeviceDriver(pty, true);
 		const terminal = window.createTerminal({ name: 'Python Shell', pty: pty });
 		terminal.show();
 		connectionState.set(key, [worker, connection, apiService, terminal]);

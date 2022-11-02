@@ -191,7 +191,7 @@ export class ApiService {
 		});
 	}
 
-	public registerCharacterDeviceDriver(deviceDriver: CharacterDeviceDriver, useAsDefaultStdio: boolean = true): void {
+	public registerCharacterDeviceDriver(deviceDriver: CharacterDeviceDriver, useAsDefaultStdio: boolean): void {
 		if (useAsDefaultStdio === true) {
 			this.setStdio(deviceDriver.fileDescriptor, deviceDriver.fileDescriptor, deviceDriver.fileDescriptor);
 		}

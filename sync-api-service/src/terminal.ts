@@ -171,7 +171,7 @@ export interface ServicePseudoTerminal extends Pseudoterminal, CharacterDeviceDr
 
 	setMode(mode: TerminalMode): void;
 	setName(name: string): void;
-	writeStr(str: string): void;
+	writeString(str: string): void;
 	readline(): Promise<string>;
 }
 
@@ -293,11 +293,11 @@ class ServiceTerminalImpl implements ServicePseudoTerminal, CharacterDeviceDrive
 	}
 
 	public write(bytes: Uint8Array): Promise<number> {
-		this.writeStr(this.getString(bytes));
+		this.writeString(this.getString(bytes));
 		return Promise.resolve(bytes.byteLength);
 	}
 
-	public writeStr(str: string): void {
+	public writeString(str: string): void {
 		if (this.isOpen) {
 			this._onDidWrite.fire(str);
 		} else {

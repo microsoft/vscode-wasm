@@ -21,7 +21,7 @@ export async function activate(_context: ExtensionContext) {
 			}
 		});
 		const pty = ServicePseudoTerminal.create();
-		apiService.registerCharacterDeviceDriver(pty);
+		apiService.registerCharacterDeviceDriver(pty, true);
 		const terminal = window.createTerminal({ name: 'Run Rust', pty: pty });
 		terminal.show();
 		apiService.signalReady();
