@@ -6,7 +6,7 @@
 	"browser": {
 		"./lib/node/main.js": "./lib/browser/main.js"
 	},
-	"typings": "./lib/common/wasi.d.ts",
+	"typings": "./lib/common/api.d.ts",
 	"repository": {
 		"type": "git",
 		"url": "git+https://github.com/microsoft/vscode-wasm.git"

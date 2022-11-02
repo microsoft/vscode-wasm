@@ -5,8 +5,11 @@
 
 import { WASI, Options, Environment, DeviceDescription, FileDescriptorDescription } from './wasi';
 
+export * from '@vscode/sync-api-client';
+
 export {
 	WASI, Options, Environment, DeviceDescription, FileDescriptorDescription
 };
 
-export * from '@vscode/sync-api-client';
+export * from './wasiTypes';
+export * from './deviceDriver';

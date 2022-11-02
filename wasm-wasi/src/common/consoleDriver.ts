@@ -8,7 +8,7 @@ import { ApiClient } from '@vscode/sync-api-client';
 
 import RAL from './ral';
 import { size } from './baseTypes';
-import { fd, fdflags, filestat, Filetype, Rights, rights } from './wasiTypes';
+import { fd, fdflags, fdstat, filestat, Filetype, Rights, rights } from './wasiTypes';
 import { BaseFileDescriptor, CharacterDeviceDriver, DeviceIds, FileDescriptor, NoSysDeviceDriver } from './deviceDriver';
 
 class ConsoleFileDescriptor extends BaseFileDescriptor {
