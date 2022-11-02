@@ -7,7 +7,7 @@ import { URI } from 'vscode-uri';
 import { ApiClient } from '@vscode/sync-api-client';
 
 import { size } from './baseTypes';
-import { fd, fdflags, Filetype, Rights, rights } from './wasiTypes';
+import { fd, fdflags, fdstat, filestat, Filetype, Rights, rights } from './wasiTypes';
 import { BaseFileDescriptor, CharacterDeviceDriver, DeviceIds, FileDescriptor, NoSysDeviceDriver } from './deviceDriver';
 
 class TerminalFileDescriptor extends BaseFileDescriptor {
@@ -29,6 +29,23 @@ export function create(apiClient: ApiClient, uri: URI): CharacterDeviceDriver {
 		id: deviceId,
 		createStdioFileDescriptor(fd: 0 | 1 | 2): FileDescriptor {
 			return createTerminalFileDescriptor(fd);
+		},
+		fd_fdstat_get(fileDescriptor: FileDescriptor, result: fdstat): void {
+			result.fs_filetype = fileDescriptor.fileType;
+			result.fs_flags = fileDescriptor.fdflags;
+			result.fs_rights_base = fileDescriptor.rights_base;
+			result.fs_rights_inheriting = fileDescriptor.rights_inheriting;
+		},
+		fd_filestat_get(fileDescriptor: FileDescriptor, result: filestat): void {
+			result.dev = fileDescriptor.deviceId;
+			result.ino = fileDescriptor.inode;
+			result.filetype = Filetype.character_device;
+			result.nlink = 0n;
+			result.size = 101n;
+			const now = BigInt(Date.now());
+			result.atim = now;
+			result.ctim = now;
+			result.mtim = now;
 		},
 		fd_read(_fileDescriptor: FileDescriptor, buffers: Uint8Array[]): size {
 			if (buffers.length === 0) {
