@@ -136,7 +136,7 @@ export type DeviceDescription = {
 }| {
 	kind: 'custom';
 	uri: URI;
-	driver: DeviceDriver;
+	factory: (apiClient: ApiClient, encoder: RAL.TextEncoder, decoder: RAL.TextDecoder, fileDescriptorId: { next(): number }) => DeviceDriver;
 };
 
 export type FileDescriptorDescription = {
@@ -224,7 +224,7 @@ export namespace WASI {
 					// We always have a console driver;
 					break;
 				case 'custom':
-					driver = device.driver;
+					driver = device.factory(apiClient, encoder, decoder, fileDescriptorId);
 					break;
 			}
 			if (driver !== undefined) {
