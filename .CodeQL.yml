@@ -1,0 +1,6 @@
+path_classifiers:
+  tests:
+    - testbeds
+    - sync-api-tests
+  library:
+    - "node_modules/**"
