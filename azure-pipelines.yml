@@ -13,6 +13,9 @@ pr:
   branches:
     include: [ 'main', 'release/*' ]
 
+variables:
+  Codeql.Enabled: true
+
 jobs:
 - job: Windows
   pool:
