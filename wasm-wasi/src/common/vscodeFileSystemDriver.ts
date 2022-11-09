@@ -43,34 +43,6 @@ class FileFileDescriptor extends BaseFileDescriptor {
 		}
 		this._cursor = value;
 	}
-
-	public read(content: Uint8Array, resultBuffer: Uint8Array): size {
-		const realRead = Math.min(resultBuffer.length, content.byteLength - this._cursor);
-		resultBuffer.set(content.subarray(this._cursor, this._cursor + realRead));
-		this._cursor = this._cursor + realRead;
-		return realRead;
-	}
-
-	public write(content: Uint8Array, buffers: Uint8Array[]): [Uint8Array, size] {
-		let bytesToWrite: size = 0;
-		for (const bytes of buffers) {
-			bytesToWrite += bytes.byteLength;
-		}
-
-		// Do we need to increase the buffer
-		if (this._cursor + bytesToWrite > content.byteLength) {
-			const newContent = new Uint8Array(this._cursor + bytesToWrite);
-			newContent.set(content);
-			content = newContent;
-		}
-
-		for (const bytes of buffers) {
-			content.set(bytes, this._cursor);
-			this._cursor += bytes.length;
-		}
-
-		return [content, bytesToWrite];
-	}
 }
 
 class DirectoryFileDescriptor extends BaseFileDescriptor {
@@ -452,7 +424,7 @@ export function create(apiClient: ApiClient, _textEncoder: RAL.TextEncoder, file
 					break;
 				case Whence.end:
 					const inode = getResolvedINode(fileDescriptor.inode);
-					fileDescriptor.cursor = Math.max(0, inode.content.byteLength + offset);
+					fileDescriptor.cursor = Math.max(0, inode.content.byteLength - offset);
 					break;
 			}
 			return BigInt(fileDescriptor.cursor);
@@ -476,9 +448,10 @@ export function create(apiClient: ApiClient, _textEncoder: RAL.TextEncoder, file
 			assertFileDescriptor(fileDescriptor);
 
 			const inode = getResolvedINode(fileDescriptor.inode);
-			const [newContent, bytesWritten] = fileDescriptor.write(inode.content, buffers);
+			const [newContent, bytesWritten] = write(inode.content, fileDescriptor.cursor, buffers);
 			inode.content = newContent;
 			writeContent(inode);
+			fileDescriptor.cursor = fileDescriptor.cursor + bytesWritten;
 			return bytesWritten;
 		},
 		path_create_directory(fileDescriptor: FileDescriptor, path: string): void {
