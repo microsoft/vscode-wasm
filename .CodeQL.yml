@@ -1,0 +1,7 @@
+path_classifiers:
+  tests:
+    - sync-api-tests
+    - testbeds
+    - "**/src/**/test/"
+  library:
+    - "node_modules/**"
