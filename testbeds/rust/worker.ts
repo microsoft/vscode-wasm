@@ -7,33 +7,28 @@ import * as path from 'path';
 import { parentPort  } from 'worker_threads';
 
 import { ClientConnection } from '@vscode/sync-api-common/node';
-import { ApiClient, Requests } from '@vscode/sync-api-client';
-import { WASI, Options } from '@vscode/wasm-wasi/node';
+import { ApiClient, ApiClientConnection, Requests } from '@vscode/sync-api-client';
+import { WASI, DeviceDescription } from '@vscode/wasm-wasi/node';
 
 if (parentPort === null) {
 	process.exit();
 }
 
-const connection = new ClientConnection<Requests>(parentPort);
-connection.serviceReady().then(async (params) => {
-	const name = 'Run Rust';
-	const apiClient = new ApiClient(connection);
-	const workspaceFolders = apiClient.vscode.workspace.workspaceFolders;
-	const mapDir: Options['mapDir'] = [];
-	let toRun: string | undefined;
-	if (workspaceFolders.length === 1) {
-		mapDir.push({ name: path.posix.join(path.posix.sep, 'workspace'), uri: workspaceFolders[0].uri });
-	} else {
-		for (const folder of workspaceFolders) {
-			mapDir.push({ name: path.posix.join(path.posix.sep, 'workspaces', folder.name), uri: folder.uri });
-		}
-	}
+const apiClient = new ApiClient(new ClientConnection<Requests, ApiClientConnection.ReadyParams>(parentPort));
+apiClient.serviceReady().then(async (params) => {
 	const exitHandler = (rval: number): void => {
 		apiClient.process.procExit(rval);
 	};
-	const wasi = WASI.create(name, apiClient, exitHandler, {
-		mapDir,
-	});
+	const workspaceFolders = apiClient.vscode.workspace.workspaceFolders;
+	const devices: DeviceDescription[] = [];
+	if (workspaceFolders.length === 1) {
+		devices.push({ kind: 'fileSystem',  uri: workspaceFolders[0].uri, mountPoint: path.posix.join(path.posix.sep, 'workspace') });
+	} else {
+		for (const folder of workspaceFolders) {
+			devices.push({ kind: 'fileSystem',  uri: folder.uri, mountPoint: path.posix.join(path.posix.sep, 'workspaces', folder.name) });
+		}
+	}
+	const wasi = WASI.create('rust-example', apiClient, exitHandler, devices, params.stdio);
 	const wasmFile = path.join(__dirname, '..', 'target', 'wasm32-wasi', 'debug', 'rust-example.wasm');
 	const binary = fs.readFileSync(wasmFile);
 	const { instance } = await WebAssembly.instantiate(binary, {

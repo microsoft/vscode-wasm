@@ -1,15 +1,24 @@
 {
-	"extends": "./tsconfig.base.json",
-	"compilerOptions": {
-		"noUnusedLocals": true,
-		"noUnusedParameters": true,
-	},
-	"files": [],
-	"references": [
-		{ "path": "./sync-api-common/tsconfig.json" },
-		{ "path": "./sync-api-client/tsconfig.json" },
-		{ "path": "./sync-api-service/tsconfig.json" },
-		{ "path": "./sync-api-tests/tsconfig.json" },
-		{ "path": "./wasm-wasi/tsconfig.json" }
-	]
+    "compilerOptions": {
+        "incremental": true,
+        "composite": true
+    },
+    "files": [],
+    "references": [
+        {
+            "path": "./sync-api-common/tsconfig.json"
+        },
+        {
+            "path": "./sync-api-client/tsconfig.json"
+        },
+        {
+            "path": "./sync-api-service/tsconfig.json"
+        },
+        {
+            "path": "./sync-api-tests/tsconfig.json"
+        },
+        {
+            "path": "./wasm-wasi/tsconfig.json"
+        }
+    ]
 }

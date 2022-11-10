@@ -1,9 +1,0 @@
-{
-	"compilerOptions": {
-		"strict": true,
-		"noImplicitAny": true,
-		"noImplicitReturns": true,
-		"noImplicitThis": true,
-		"types": []
-	}
-}

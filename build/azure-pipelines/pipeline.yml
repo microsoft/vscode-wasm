@@ -1,0 +1,160 @@
+###############################################################################################
+#  Copyright (c) Microsoft Corporation. All rights reserved.
+#  Licensed under the MIT License. See License.txt in the project root for license information.
+###############################################################################################
+name: $(Date:yyyyMMdd)$(Rev:.r)
+
+pr: none
+
+resources:
+  repositories:
+    - repository: templates
+      type: github
+      name: microsoft/vscode-engineering
+      ref: main
+      endpoint: Monaco
+
+parameters:
+  - name: quality
+    displayName: Quality
+    type: string
+    default: latest
+    values:
+      - latest
+      - next
+  - name: publishSyncApiCommon
+    displayName: 🚀 Publish sync-api-common
+    type: boolean
+    default: false
+  - name: publishSyncApiClient
+    displayName: 🚀 Publish sync-api-client
+    type: boolean
+    default: false
+  - name: publishSyncApiService
+    displayName: 🚀 Publish sync-api-service
+    type: boolean
+    default: false
+  - name: publishWasmWasi
+    displayName: 🚀 Publish wasm-wasi
+    type: boolean
+    default: false
+
+extends:
+  template: azure-pipelines/npm-package/pipeline.yml@templates
+  parameters:
+    npmPackages:
+      - name: sync-api-common
+        generateNotice: true
+        testPlatforms:
+          - name: Linux
+            nodeVersions:
+              - 16.14.2
+          - name: MacOS
+            nodeVersions:
+              - 16.14.2
+          - name: Windows
+            nodeVersions:
+              - 16.14.2
+        testSteps:
+          - template: /build/azure-pipelines/templates/test-steps.yml@self
+            parameters:
+              package: sync-api-common
+        buildSteps:
+          - template: /build/azure-pipelines/templates/pack-steps.yml@self
+            parameters:
+              package: sync-api-common
+        tag: ${{ parameters.quality }}
+        publishPackage: ${{ parameters.publishSyncApiCommon }}
+        postPublishSteps:
+          - template: /build/azure-pipelines/templates/postPublish-steps.yml@self
+            parameters:
+              package: sync-api-common
+              quality: ${{ parameters.quality }}
+        workingDirectory: $(Build.SourcesDirectory)/sync-api-common
+
+      - name: sync-api-client
+        generateNotice: true
+        testPlatforms:
+          - name: Linux
+            nodeVersions:
+              - 16.14.2
+          - name: MacOS
+            nodeVersions:
+              - 16.14.2
+          - name: Windows
+            nodeVersions:
+              - 16.14.2
+        testSteps:
+          - template: /build/azure-pipelines/templates/test-steps.yml@self
+            parameters:
+              package: sync-api-client
+        buildSteps:
+          - template: /build/azure-pipelines/templates/pack-steps.yml@self
+            parameters:
+              package: sync-api-client
+        tag: ${{ parameters.quality }}
+        publishPackage: ${{ parameters.publishSyncApiClient }}
+        postPublishSteps:
+          - template: /build/azure-pipelines/templates/postPublish-steps.yml@self
+            parameters:
+              package: sync-api-client
+              quality: ${{ parameters.quality }}
+        workingDirectory: $(Build.SourcesDirectory)/sync-api-client
+
+      - name: sync-api-service
+        generateNotice: true
+        testPlatforms:
+          - name: Linux
+            nodeVersions:
+              - 16.14.2
+          - name: MacOS
+            nodeVersions:
+              - 16.14.2
+          - name: Windows
+            nodeVersions:
+              - 16.14.2
+        testSteps:
+          - template: /build/azure-pipelines/templates/test-steps.yml@self
+            parameters:
+              package: sync-api-service
+        buildSteps:
+          - template: /build/azure-pipelines/templates/pack-steps.yml@self
+            parameters:
+              package: sync-api-service
+        tag: ${{ parameters.quality }}
+        publishPackage: ${{ parameters.publishSyncApiService }}
+        postPublishSteps:
+          - template: /build/azure-pipelines/templates/postPublish-steps.yml@self
+            parameters:
+              package: sync-api-service
+              quality: ${{ parameters.quality }}
+        workingDirectory: $(Build.SourcesDirectory)/sync-api-service
+
+      - name: wasm-wasi
+        generateNotice: true
+        testPlatforms:
+          - name: Linux
+            nodeVersions:
+              - 16.14.2
+          - name: MacOS
+            nodeVersions:
+              - 16.14.2
+          - name: Windows
+            nodeVersions:
+              - 16.14.2
+        testSteps:
+          - template: /build/azure-pipelines/templates/test-steps.yml@self
+            parameters:
+              package: wasm-wasi
+        buildSteps:
+          - template: /build/azure-pipelines/templates/pack-steps.yml@self
+            parameters:
+              package: wasm-wasi
+        tag: ${{ parameters.quality }}
+        publishPackage: ${{ parameters.publishSyncApiService }}
+        postPublishSteps:
+          - template: /build/azure-pipelines/templates/postPublish-steps.yml@self
+            parameters:
+              package: wasm-wasi
+              quality: ${{ parameters.quality }}
+        workingDirectory: $(Build.SourcesDirectory)/wasm-wasi

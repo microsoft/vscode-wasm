@@ -27,7 +27,7 @@
 	"typescript.format.placeOpenBraceOnNewLineForFunctions": false,
 	"typescript.format.placeOpenBraceOnNewLineForControlBlocks": false,
 
-	"javascript.validate.enable": false,
+	"javascript.validate.enable": true,
 
 	"eslint.format.enable": true,
 	"eslint.enable": true,

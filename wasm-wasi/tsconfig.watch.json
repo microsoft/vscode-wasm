@@ -1,12 +1,21 @@
 {
-	"extends": "./tsconfig.base.json",
-	"compilerOptions": {
-		"noUnusedLocals": false,
-		"noUnusedParameters": false,
-	},
-	"files": [],
-	"references": [
-		{ "path": "./src/browser/tsconfig.watch.json" },
-		{ "path": "./src/node/tsconfig.watch.json" }
-	]
+    "compilerOptions": {
+        "incremental": true,
+        "composite": true
+    },
+    "files": [],
+    "references": [
+        {
+            "path": "./../sync-api-client/tsconfig.watch.json"
+        },
+        {
+            "path": "./src/common/tsconfig.watch.json"
+        },
+        {
+            "path": "./src/browser/tsconfig.watch.json"
+        },
+        {
+            "path": "./src/node/tsconfig.watch.json"
+        }
+    ]
 }

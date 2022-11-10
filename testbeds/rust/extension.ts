@@ -6,29 +6,25 @@
 import * as path from 'path';
 import { Worker } from 'worker_threads';
 
-import { commands, ExtensionContext, Terminal, window } from 'vscode';
+import { commands, ExtensionContext, window } from 'vscode';
 
 import { ServiceConnection } from '@vscode/sync-api-common/node';
-import { ApiService, Requests } from '@vscode/sync-api-service';
-
-const name = 'Run Rust';
-let apiService: ApiService;
-let connection: ServiceConnection<Requests>;
-let terminal: Terminal;
+import { ApiService, ApiServiceConnection, ServicePseudoTerminal, Requests } from '@vscode/sync-api-service';
 
 export async function activate(_context: ExtensionContext) {
-
 	commands.registerCommand('testbed-rust.run', () => {
 		const worker = new Worker(path.join(__dirname, './worker.js'));
-		connection = new ServiceConnection<Requests>(worker);
-		apiService = new ApiService(name, connection, {
+		const connection: ApiServiceConnection = new ServiceConnection<Requests, ApiServiceConnection.ReadyParams>(worker);
+		const apiService = new ApiService('rust', connection, {
 			exitHandler: (_rval) => {
 				process.nextTick(() => worker.terminate());
 			}
 		});
-		terminal = window.createTerminal({ name, pty: apiService.getPty() });
+		const pty = ServicePseudoTerminal.create();
+		apiService.registerCharacterDeviceDriver(pty, true);
+		const terminal = window.createTerminal({ name: 'Run Rust', pty: pty });
 		terminal.show();
-		connection.signalReady();
+		apiService.signalReady();
 	});
 }
 

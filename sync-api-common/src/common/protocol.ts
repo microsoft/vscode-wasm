@@ -15,6 +15,18 @@ export namespace DTOs {
 		fragment: string;
 	};
 
+	export type FileDescriptorDescription = {
+		kind: 'fileSystem';
+		uri: UriComponents;
+		path: string;
+	} | {
+		kind: 'terminal';
+		uri: UriComponents;
+	} | {
+		kind: 'console';
+		uri: UriComponents;
+	};
+
 	export type FileSystemError = u32;
 	export namespace FileSystemError {
 
@@ -54,23 +66,23 @@ export namespace DTOs {
 	export type fileType = u32;
 	export enum FileType {
 		/**
-		* The file type is unknown.
-		*/
+		 * The file type is unknown.
+		 */
 		Unknown = 0,
 
 		/**
-		* A regular file.
-		*/
+		 * A regular file.
+		 */
 		File = 1,
 
 		/**
-		* A directory.
-		*/
+		 * A directory.
+		 */
 		Directory = 2,
 
 		/**
-		* A symbolic link to a file.
-		*/
+		 * A symbolic link to a file.
+		 */
 		SymbolicLink = 64
 	}
 
@@ -163,13 +175,6 @@ export type Requests = {
 	result: null;
 } | {
 	/**
-	 * Retrieve the activeTextDocument
-	 */
-	method: 'window/activeTextDocument';
-	params: null;
-	result: VariableResult<DTOs.TextDocument | null>;
-} | {
-	/**
 	 * Retrieve the set of workspace folders
 	 */
 	method: 'workspace/workspaceFolders';
@@ -177,19 +182,23 @@ export type Requests = {
 	result: VariableResult<DTOs.WorkspaceFolder[]>;
 } | {
 	/**
-	 * Write a string encoded using UTF8 to the terminal
+	 * Writes bytes to a sink
 	 */
-	method: 'terminal/write';
+	method: 'byteSink/write';
 	params: {
+		uri: DTOs.UriComponents;
 		binary: Uint8Array;
 	};
-	result: null;
+	result: Uint32Array;
 } | {
 	/**
-	 * Reads a line from the terminal
+	 * Reads bytes from a source
 	 */
-	method: 'terminal/read';
-	params: null;
+	method: 'byteSource/read';
+	params: {
+		uri: DTOs.UriComponents;
+		maxBytesToRead: number;
+	};
 	result: VariableResult<Uint8Array>;
 } | {
 	/**

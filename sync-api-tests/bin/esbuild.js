@@ -22,6 +22,7 @@ const pathResolvePlugin = {
 
 const workerTests = esbuild.build({
 	entryPoints: [
+		'lib/workers/byteSink.js',
 		'lib/workers/dirDelete.js',
 		'lib/workers/dirRead.js',
 		'lib/workers/dirRename.js',

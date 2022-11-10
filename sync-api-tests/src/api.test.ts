@@ -7,7 +7,7 @@ import assert from 'assert';
 import { posix as path } from 'path';
 import vscode, { Uri } from 'vscode';
 
-import { Requests, ApiService } from '@vscode/sync-api-service';
+import { Requests, ApiService, ApiServiceConnection } from '@vscode/sync-api-service';
 import { RAL } from '@vscode/sync-api-common';
 
 import { AssertionErrorData, ErrorData, TestRequests } from './tests';
@@ -23,9 +23,9 @@ export function contribute(workerResolver: (testCase: string) => string, scheme:
 		return folder;
 	}
 
-	async function runTest(name: string, testCase: string) {
+	async function runTest(name: string, testCase: string, serviceHook?: (apiService: ApiService) => void) {
 
-		const connection = RAL().$testing.ServiceConnection.create<Requests | TestRequests>(workerResolver(testCase));
+		const connection = RAL().$testing.ServiceConnection.create<Requests | TestRequests, ApiServiceConnection.ReadyParams>(workerResolver(testCase));
 		let assertionError: AssertionErrorData | undefined;
 		let error: ErrorData | undefined;
 
@@ -39,13 +39,16 @@ export function contribute(workerResolver: (testCase: string) => string, scheme:
 		});
 
 		const errno = await new Promise<number>((resolve) => {
-			new ApiService(name, connection, {
+			const service = new ApiService(name, connection, {
 				exitHandler: (rval) => {
 					connection.terminate().catch(console.error);
 					resolve(rval);
 				}
 			});
-			connection.signalReady();
+			if (serviceHook !== undefined) {
+				serviceHook(service);
+			}
+			service.signalReady();
 		});
 		if (assertionError !== undefined) {
 			throw new assert.AssertionError(assertionError);
@@ -138,6 +141,22 @@ export function contribute(workerResolver: (testCase: string) => string, scheme:
 				notFound = error.code === 'FileNotFound';
 			}
 			assert.strictEqual(notFound, true, 'Directory delete failed');
+		});
+
+		test('Byte Sink', async() => {
+			let writeReceived: boolean = false;
+			await runTest('Byte Sink', 'byteSink', (service) => {
+				service.registerByteSink({
+					uri: Uri.from({ scheme: 'byteSink', authority: 'byteSink', path: '/write' }),
+					write (bytes: Uint8Array): Promise<number> {
+						if (RAL().TextDecoder.create().decode(bytes.slice()) === 'hello') {
+							writeReceived = true;
+						}
+						return Promise.resolve(bytes.byteLength);
+					}
+				});
+			});
+			assert.strictEqual(writeReceived, true);
 		});
 	});
 }

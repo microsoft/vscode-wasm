@@ -1,16 +1,24 @@
 {
-	"extends": "./tsconfig.json",
-	"compilerOptions": {
-		"noUnusedLocals": false,
-		"noUnusedParameters": false,
-		"assumeChangesOnlyAffectDirectDependencies": true
-	},
-	"files": [],
-	"references": [
-		{ "path": "./sync-api-common/tsconfig.watch.json" },
-		{ "path": "./sync-api-client/tsconfig.watch.json" },
-		{ "path": "./sync-api-service/tsconfig.watch.json" },
-		{ "path": "./sync-api-tests/tsconfig.watch.json" },
-		{ "path": "./wasm-wasi/tsconfig.watch.json" }
-	]
+    "compilerOptions": {
+        "incremental": true,
+        "composite": true
+    },
+    "files": [],
+    "references": [
+        {
+            "path": "./sync-api-common/tsconfig.watch.json"
+        },
+        {
+            "path": "./sync-api-client/tsconfig.watch.json"
+        },
+        {
+            "path": "./sync-api-service/tsconfig.watch.json"
+        },
+        {
+            "path": "./sync-api-tests/tsconfig.watch.json"
+        },
+        {
+            "path": "./wasm-wasi/tsconfig.watch.json"
+        }
+    ]
 }

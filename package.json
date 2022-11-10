@@ -33,10 +33,10 @@
 		"rimraf": "^3.0.2",
 		"shelljs": "^0.8.5",
 		"shx": "^0.3.4",
-		"typescript": "^4.8.2"
+		"typescript": "^4.8.4"
 	},
 	"scripts": {
-		"postinstall": "node ./build/bin/all.js install && npm run symlink",
+		"postinstall": "node ./build/bin/all.js install",
 		"symlink": "node ./build/bin/symlink",
 		"build": "node ./node_modules/typescript/lib/tsc.js -b tsconfig.json",
 		"compile": "node ./node_modules/typescript/lib/tsc.js -b tsconfig.json",

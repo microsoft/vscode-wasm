@@ -5,6 +5,12 @@
 This npm module implements a client that allows accessing VS Code API in sync from from a worker different than the extension host worker. The actually implementation
 depends on `@vscode/syc-api-common`.
 
+## History
+
+### 0.8.0
+
+- replaced `terminal/read` and `terminal/write` with `characterDevice/read` and `characterDevice/write` to support character devices in general and not only ttys.
+
 ## Example
 
 Extension host worker that offers access to VS Code extension host API. The setup in the extension host code looks like this:
