@@ -56,4 +56,8 @@ async function go() {
 	}
 }
 
+process.on('uncaughtException', (error: any) => {
+	console.error(error);
+});
+
 go().catch(console.error);
