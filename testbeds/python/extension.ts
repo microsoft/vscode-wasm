@@ -23,7 +23,7 @@ export async function activate(_context: ExtensionContext) {
 
 		const key = Date.now();
 		const worker = new Worker(path.join(__dirname, './worker.js'));
-		const connection = new ServiceConnection<Requests>(worker);
+		const connection = new ServiceConnection<Requests>();
 		const apiService = new ApiService('Python Run', connection, {
 			exitHandler: (_rval) => {
 				connectionState.delete(key);
@@ -41,7 +41,7 @@ export async function activate(_context: ExtensionContext) {
 	commands.registerCommand('testbed-python.runInteractive', () => {
 		const key = Date.now();
 		const worker = new Worker(path.join(__dirname, './worker.js'));
-		const connection = new ServiceConnection<Requests>(worker);
+		const connection = new ServiceConnection<Requests>();
 		const apiService = new ApiService('Python Shell', connection, {
 			exitHandler: (_rval) => {
 				connectionState.delete(key);

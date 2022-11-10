@@ -21,11 +21,13 @@ class TestServiceConnection<RequestHandlers extends RequestType | undefined = un
 	constructor(script: string, testCase?: string) {
 		const url = testCase !== undefined ? `${script}?toRun=${testCase}` : script;
 		const worker = new Worker(url);
-		super(worker);
+		super();
 		this.worker = worker;
 	}
 	public terminate(): Promise<number> {
+		console.log('terminating service connection');
 		this.worker.terminate();
+		this.dispose();
 		return Promise.resolve(0);
 	}
 }
@@ -60,7 +62,7 @@ const _ril: RIL = Object.freeze<RIL>({
 	$testing: Object.freeze({
 		ClientConnection: Object.freeze({
 			create<Requests extends RequestType | undefined = undefined>() {
-				return new ClientConnection<Requests>(self);
+				return new ClientConnection<Requests>();
 			}
 		}),
 		ServiceConnection: Object.freeze({

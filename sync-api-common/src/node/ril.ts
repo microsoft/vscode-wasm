@@ -2,7 +2,6 @@
  * Copyright (c) Microsoft Corporation. All rights reserved.
  * Licensed under the MIT License. See License.txt in the project root for license information.
  * ------------------------------------------------------------------------------------------ */
-import * as path from 'path';
 import { TextDecoder } from 'util';
 import { parentPort, Worker } from 'worker_threads';
 
@@ -18,10 +17,11 @@ class TestServiceConnection<RequestHandlers extends RequestType | undefined = un
 	private readonly  worker: Worker;
 	constructor(script: string, testCase?: string) {
 		const worker = new Worker(script, testCase !== undefined ? { argv: [testCase] } : undefined);
-		super(worker);
+		super();
 		this.worker = worker;
 	}
 	public terminate(): Promise<number> {
+		this.dispose();
 		return this.worker.terminate();
 	}
 }
@@ -63,7 +63,7 @@ const _ril: RIL = Object.freeze<RIL>({
 				if (!parentPort) {
 					throw new Error(`No parent port defined. Shouldn't happen in test setup`);
 				}
-				return new ClientConnection<Requests>(parentPort);
+				return new ClientConnection<Requests>();
 			}
 		}),
 		ServiceConnection: Object.freeze({

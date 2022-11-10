@@ -47,6 +47,9 @@ export function contribute(workerResolver: (testCase: string) => string, scheme:
 			});
 			connection.signalReady();
 		});
+
+		connection.terminate();
+
 		if (assertionError !== undefined) {
 			throw new assert.AssertionError(assertionError);
 		}

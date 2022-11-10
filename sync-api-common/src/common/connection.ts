@@ -13,6 +13,8 @@ export type u64 = number;
 export type size = u32;
 
 export type Message = {
+	dest: string;
+	src: string;
 	method: string;
 	params?: Params;
 };
@@ -53,6 +55,8 @@ export type Params = {
 
 export type Request = {
 	id: number;
+	src: string;
+	dest: string;
 } & Message;
 
 export namespace Request {
@@ -84,6 +88,13 @@ export type MessageType = {
 export type RequestType = MessageType & ({
 	result?: TypedArray | object | null;
 });
+
+export const BroadcastChannelName = `@vscode/sync-api/default`;
+
+export enum KnownConnectionIds {
+	Main = 'main',
+	All = 'all'
+}
 
 class NoResult {
 	public static readonly kind = 0 as const;
@@ -572,6 +583,7 @@ export class RPCError extends Error {
 export interface ClientConnection<Requests extends RequestType | undefined = undefined> {
 	readonly sendRequest: SendRequestSignatures<Requests>;
 	serviceReady(): Promise<void>;
+	dispose(): void;
 }
 
 export abstract class BaseClientConnection<Requests extends RequestType | undefined = undefined> implements ClientConnection<Requests> {
@@ -581,8 +593,7 @@ export abstract class BaseClientConnection<Requests extends RequestType | undefi
 	private readonly textDecoder: RAL.TextDecoder;
 	private readonly readyPromise: Promise<void>;
 	private readyCallbacks: PromiseCallbacks | undefined;
-
-	constructor() {
+	constructor(protected connectionId: string) {
 		this.id = 1;
 		this.textEncoder = RAL().TextEncoder.create();
 		this.textDecoder = RAL().TextDecoder.create();
@@ -592,14 +603,19 @@ export abstract class BaseClientConnection<Requests extends RequestType | undefi
 	}
 
 	public serviceReady(): Promise<void> {
+		this._sendRequest('$/checkready');
 		return this.readyPromise;
+	}
+
+	protected createPortBroadcastMessage(receivePort: object) {
+		return { method: '$/broadcastport', src: this.connectionId, dest: KnownConnectionIds.Main, params: {port: receivePort}};
 	}
 
 	public readonly sendRequest: SendRequestSignatures<Requests> = this._sendRequest as SendRequestSignatures<Requests>;
 
 	private _sendRequest(method: string, arg1?: Params | ResultType | number, arg2?: ResultType | number, arg3?: number): { errno: 0; data: any } | { errno: RPCErrno } {
 		const id = this.id++;
-		const request: Request = { id: id, method };
+		const request: Request = { id: id, dest: 'main', src: this.connectionId, method };
 		let params: Params | undefined = undefined;
 		let resultType: ResultType = new NoResult();
 		let timeout: number | undefined = undefined;
@@ -658,10 +674,11 @@ export abstract class BaseClientConnection<Requests extends RequestType | undefi
 			raw.set(binaryData, binaryOffset);
 		}
 
-		// Send the shard array buffer to the other worker
+		// Send the shared array buffer to the other worker
 		const sync = new Int32Array(sharedArrayBuffer, 0, 1);
 		Atomics.store(sync, 0, 0);
 		// Send the shared array buffer to the extension host worker
+		console.log(`Client sending sharedArrayBuffer with length ${sharedArrayBuffer.byteLength}`);
 		this.postMessage(sharedArrayBuffer);
 
 		// Wait for the answer
@@ -719,7 +736,9 @@ export abstract class BaseClientConnection<Requests extends RequestType | undefi
 		}
 	}
 
-	protected abstract postMessage(sharedArrayBuffer: SharedArrayBuffer): any;
+	protected abstract postMessage(sharedArrayBuffer: SharedArrayBuffer): void;
+
+	abstract dispose(): void;
 
 	protected handleMessage(message: Message): void {
 		if (message.method === '$/ready') {
@@ -763,6 +782,7 @@ type RequestHandler = {
 export interface ServiceConnection<RequestHandlers extends RequestType | undefined = undefined> {
 	readonly onRequest: HandleRequestSignatures<RequestHandlers>;
 	signalReady(): void;
+	dispose(): void;
 }
 
 export abstract class BaseServiceConnection<RequestHandlers extends RequestType | undefined = undefined> implements ServiceConnection<RequestHandlers> {
@@ -771,8 +791,9 @@ export abstract class BaseServiceConnection<RequestHandlers extends RequestType 
 	private readonly textEncoder: RAL.TextEncoder;
 	private readonly requestHandlers: Map<string, RequestHandler>;
 	private readonly requestResults: Map<number, TypedArray>;
+	private sentReady = false;
 
-	constructor() {
+	constructor(protected readonly connectionId: string) {
 		this.textDecoder = RAL().TextDecoder.create();
 		this.textEncoder = RAL().TextEncoder.create();
 		this.requestHandlers = new Map();
@@ -788,6 +809,13 @@ export abstract class BaseServiceConnection<RequestHandlers extends RequestType 
 		};
 	}
 
+	protected handleBroadcastMessage(ev: any) {
+		const message = ev.data as Notification;
+		if (message?.method === '$/broadcastport' && message?.params && message?.dest === KnownConnectionIds.Main) {
+			this.onBroadcastPort(message);
+		}
+	}
+
 	protected async handleMessage(sharedArrayBuffer: SharedArrayBuffer): Promise<void> {
 		const header = new Uint32Array(sharedArrayBuffer, SyncSize.total, HeaderSize.total / 4);
 		const requestOffset = header[HeaderIndex.messageOffset];
@@ -795,7 +823,9 @@ export abstract class BaseServiceConnection<RequestHandlers extends RequestType 
 
 		try {
 			// See above why we need to slice the Uint8Array.
-			const message = JSON.parse(this.textDecoder.decode(new Uint8Array(sharedArrayBuffer, requestOffset, requestLength).slice()));
+			const data = this.textDecoder.decode(new Uint8Array(sharedArrayBuffer, requestOffset, requestLength).slice());
+			console.log(`Handling message ${header.length} ${data}`);
+			const message = JSON.parse(data);
 			if (Request.is(message)) {
 				if (message.method === '$/fetchResult') {
 					const resultId: number = message.params!.resultId as number;
@@ -808,6 +838,11 @@ export abstract class BaseServiceConnection<RequestHandlers extends RequestType 
 						header[HeaderIndex.errno] = RPCErrno.Success;
 					} else {
 						header[HeaderIndex.errno] = RPCErrno.LazyResultFailed;
+					}
+				} else if (message.method === '$/checkready') {
+					// Client may not have been active when ready signal was sent. Send it again
+					if (this.sentReady) {
+						this.signalReady();
 					}
 				} else {
 					if (message.params?.binary === null) {
@@ -873,9 +908,14 @@ export abstract class BaseServiceConnection<RequestHandlers extends RequestType 
 	}
 
 	public signalReady(): void {
-		const notification: Notification = { method: '$/ready' };
+		this.sentReady = true;
+		const notification: Notification = { method: '$/ready', src: this.connectionId, dest: KnownConnectionIds.All };
 		this.postMessage(notification);
 	}
 
 	protected abstract postMessage(message: Message): void;
+
+	protected abstract onBroadcastPort(message: Notification): void;
+
+	abstract dispose(): void;
 }

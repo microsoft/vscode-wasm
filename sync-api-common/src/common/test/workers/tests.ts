@@ -27,8 +27,8 @@ export function assertResult(result: { errno: 0; data: TypedArray } | { errno: R
 
 export async function runSingle(test: (connection: ClientConnection<TestRequests>) => void): Promise<void> {
 	const connection = RAL().$testing.ClientConnection.create<TestRequests>()!;
-	await connection.serviceReady();
 	try {
+		await connection.serviceReady();
 		test(connection);
 	} catch (error) {
 		if (error instanceof assert.AssertionError) {
@@ -38,7 +38,8 @@ export async function runSingle(test: (connection: ClientConnection<TestRequests
 				expected: error.expected,
 				operator: error.operator,
 				generatedMessage: error.generatedMessage,
-				code: error.code
+				code: error.code,
+				stack: error.stack
 			});
 		} else if (error instanceof Error) {
 			connection.sendRequest('testing/error', {
@@ -51,5 +52,6 @@ export async function runSingle(test: (connection: ClientConnection<TestRequests
 		}
 	} finally {
 		connection.sendRequest('testing/done');
+		connection.dispose();
 	}
 }
