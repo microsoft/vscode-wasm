@@ -10,7 +10,7 @@ parameters:
   default: 'all'
 
 steps:
-  - script: npm install
+  - script: npm install --publish-pipeline
     workingDirectory: $(Build.SourcesDirectory)
     displayName: Install dependencies
   - bash: |
