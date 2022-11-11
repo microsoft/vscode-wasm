@@ -33,6 +33,7 @@
 		"rimraf": "^3.0.2",
 		"shelljs": "^0.8.5",
 		"shx": "^0.3.4",
+		"@vscode/tsconfig-gen": "0.1.0",
 		"typescript": "^4.8.4"
 	},
 	"scripts": {

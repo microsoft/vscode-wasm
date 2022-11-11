@@ -1,7 +1,10 @@
 {
 	"name": "@vscode/wasm-wasi",
-	"version": "0.7.2",
+	"version": "0.8.0",
 	"description": "A WASI implementation that uses VS Code's extension host as the implementing API",
+	"engines": {
+		"vscode": "^1.71.0"
+	},
 	"main": "./lib/node/main.js",
 	"browser": {
 		"./lib/node/main.js": "./lib/browser/main.js"
@@ -23,8 +26,8 @@
 	},
 	"homepage": "https://github.com/microsoft/vscode-wasm#readme",
 	"dependencies": {
-		"vscode-uri": "3.0.3",
-		"@vscode/sync-api-client": "0.7.2"
+		"vscode-uri": "^3.0.6",
+		"@vscode/sync-api-client": "0.8.0"
 	},
 	"devDependencies": {},
 	"scripts": {
