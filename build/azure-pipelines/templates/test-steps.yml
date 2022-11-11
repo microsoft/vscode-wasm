@@ -18,7 +18,7 @@ steps:
       echo ">>> Started xvfb"
     displayName: Start xvfb
     condition: eq(variables['Agent.OS'], 'Linux')
-  - script: npm run install
+  - script: npm install
     workingDirectory: $(Build.SourcesDirectory)/${{ parameters.package }}
     displayName: Verify package
   - script: npm run ${{ parameters.script }}
