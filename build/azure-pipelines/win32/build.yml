@@ -1,7 +1,7 @@
 steps:
 - task: NodeTool@0
   inputs:
-    versionSpec: '16.15.1'
+    versionSpec: '16.14.2'
   displayName: 'Install Node.js'
 
 - script: |

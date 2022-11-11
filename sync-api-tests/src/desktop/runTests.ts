@@ -62,5 +62,8 @@ async function go() {
 		rimraf(testDir);
 	}
 }
+process.on('uncaughtException', (error: any) => {
+	console.error(error);
+});
 
 go().catch(console.error);
