@@ -117,6 +117,7 @@ extends:
           - template: /build/azure-pipelines/templates/test-steps.yml@self
             parameters:
               package: sync-api-service
+              script: all:pack
         buildSteps:
           - template: /build/azure-pipelines/templates/pack-steps.yml@self
             parameters:
