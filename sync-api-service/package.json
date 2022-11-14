@@ -36,13 +36,14 @@
 	},
 	"scripts": {
 		"prepublishOnly": "echo \"⛔ Can only publish from a secure pipeline ⛔\" && node ../build/npm/fail",
-		"prepack": "git clean -xfd . && npm install && npm run all:pack",
+		"prepack": "npm run all:publish",
 		"compile": "node ../node_modules/typescript/lib/tsc.js -b ./tsconfig.json",
+		"compile:publish": "node ../node_modules/typescript/lib/tsc.js -b ./tsconfig.publish.json",
 		"watch": "node ../node_modules/typescript/lib/tsc.js -b ./tsconfig.watch.json -w",
 		"clean": "node ../node_modules/rimraf/bin.js lib && node ../node_modules/rimraf/bin.js dist",
 		"lint": "node ../node_modules/eslint/bin/eslint.js --ext ts src",
 		"test": "cd ../sync-api-tests && npm test",
 		"all": "npm run clean && npm run compile && npm run lint && npm run test",
-		"all:pack": "npm run clean && npm run compile && npm run lint && cd ../sync-api-tests && npm run all:pack && cd .."
+		"all:publish": "git clean -xfd . && npm install && npm run compile:publish && npm run lint && cd ../sync-api-tests && npm run all:publish && cd .."
 	}
 }

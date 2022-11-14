@@ -7,7 +7,7 @@ parameters:
   type: string
 - name: script
   type: string
-  default: 'all'
+  default: 'all:publish'
 
 steps:
   - script: npm install --publish-pipeline

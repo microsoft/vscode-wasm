@@ -15,6 +15,17 @@ const { CompilerOptions } = require('@vscode/tsconfig-gen');
  * @typedef {import('@vscode/tsconfig-gen').Projects} Projects
  */
 
+/**
+ *
+ * @param {ProjectDescription} projectDescription The project description
+ * @returns {ProjectDescription} The project description without project references
+ */
+function createPublishProjectDescription(projectDescription) {
+	const result = Object.assign({}, projectDescription);
+	delete result.references;
+	return result
+}
+
 /** @type SharableOptions */
 const general = {
 	/**
@@ -330,10 +341,14 @@ const publishProjectOptions = {
 /** @type Projects */
 const projects = [
 	[ sync_api_common, [ compileProjectOptions, watchProjectOptions ] ],
+	[ createPublishProjectDescription(sync_api_common), [ publishProjectOptions] ],
 	[ sync_api_client, [ compileProjectOptions, watchProjectOptions ] ],
+	[ createPublishProjectDescription(sync_api_client), [ publishProjectOptions ] ],
 	[ sync_api_service, [ compileProjectOptions, watchProjectOptions ] ],
+	[ createPublishProjectDescription(sync_api_service), [ publishProjectOptions ] ],
 	[ sync_api_tests, [ compileProjectOptions, watchProjectOptions ] ],
 	[ wasm_wasi, [ compileProjectOptions, watchProjectOptions ] ],
+	[ createPublishProjectDescription(wasm_wasi), [ publishProjectOptions ] ],
 	[ root, [compileProjectOptions, watchProjectOptions ] ],
 	[ testbed_coreutils, [ compileProjectOptions ] ],
 	[ testbed_cpp, [ compileProjectOptions ] ],
