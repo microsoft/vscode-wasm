@@ -43,6 +43,6 @@
 		"lint": "node ../node_modules/eslint/bin/eslint.js --ext ts src",
 		"test": "cd ../sync-api-tests && npm test",
 		"all": "npm run clean && npm run compile && npm run lint && npm run test",
-		"all:pack": "npm run clean && npm run compile && npm run lint && cd ../sync-api-service && npm run all:pack && cd .."
+		"all:pack": "npm run clean && npm run compile && npm run lint && cd ../sync-api-tests && npm run all:pack && cd .."
 	}
 }
