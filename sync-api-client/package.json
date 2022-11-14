@@ -35,6 +35,7 @@
 		"watch": "node ../node_modules/typescript/lib/tsc.js -b ./tsconfig.watch.json -w",
 		"clean": "node ../node_modules/rimraf/bin.js lib && node ../node_modules/rimraf/bin.js dist",
 		"lint": "node ../node_modules/eslint/bin/eslint.js --ext ts src",
-		"all": "npm run clean && npm run compile && npm run lint"
+		"all": "npm run clean && npm run compile && npm run lint",
+		"all:pack": "git clean -xfd . && npm install && npm run all"
 	}
 }

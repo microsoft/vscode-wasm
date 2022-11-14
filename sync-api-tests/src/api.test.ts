@@ -7,8 +7,7 @@ import assert from 'assert';
 import { posix as path } from 'path';
 import vscode, { Uri } from 'vscode';
 
-import { Requests, ApiService, ApiServiceConnection } from '@vscode/sync-api-service';
-import { RAL } from '@vscode/sync-api-common';
+import { Requests, ApiService, ApiServiceConnection, RAL } from '@vscode/sync-api-service';
 
 import { AssertionErrorData, ErrorData, TestRequests } from './tests';
 
