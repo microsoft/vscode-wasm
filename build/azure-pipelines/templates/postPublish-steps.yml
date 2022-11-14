@@ -15,5 +15,4 @@ steps:
         command: custom
         customCommand: dist-tag add $(SetPackageSpec.PACKAGE_SPEC) next
         customEndpoint: NPM (vscode-bot)
-        workingDir: $(Build.SourcesDirectory)/${{ parameters.package }}
       displayName: npm dist-tag
