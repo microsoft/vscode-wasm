@@ -7,6 +7,7 @@ import path from 'path';
 import fs from 'fs';
 import os from 'os';
 import * as uuid from 'uuid';
+import find = require('find-process');
 
 import { runTests } from '@vscode/test-electron';
 
