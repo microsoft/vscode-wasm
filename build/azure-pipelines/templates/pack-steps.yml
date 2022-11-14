@@ -6,7 +6,7 @@ parameters:
 - name: package
 
 steps:
-  - script: npm install --publish-pipeline
+  - script: npm install --root-only
     workingDirectory: $(Build.SourcesDirectory)
     displayName: Install root dependencies
   - script: npm install

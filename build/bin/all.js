@@ -19,7 +19,7 @@ function main() {
 	// When we install in a package pipeline then we don't want to call install in
 	// the project directories since we need to call install there to ensure proper
 	// dependency management.
-	if (args[0] === 'install' && process.env['npm_config_publish_pipeline'] === 'true') {
+	if (args[0] === 'install' && process.env['npm_config_root_only'] === 'true') {
 		return;
 	}
 
