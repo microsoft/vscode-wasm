@@ -25,11 +25,12 @@
 		"test": "npm run test:desktop && npm run test:web",
 		"test:desktop": "node lib/desktop/runTests.js",
 		"test:web": "node ./bin/esbuild.js && node lib/web/runTests.js",
-		"test:runWebTests": "node lib/web/runTests.js"
+		"test:runWebTests": "node lib/web/runTests.js",
+		"symlink:pack": "node ../build/bin/symlink-sync-api-tests-publish.js",
+		"all:pack": "git clean -xfd . && npm install && npm run symlink:pack && npm run clean && npm run compile && npm run lint && npm run test"
 	},
 	"dependencies": {
-		"@vscode/sync-api-client": "0.7.2",
-		"@vscode/sync-api-service": "0.7.3",
+		"@vscode/sync-api-client": "0.8.1",
 		"vscode-uri": "3.0.6"
 	},
 	"devDependencies": {

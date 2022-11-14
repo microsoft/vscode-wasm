@@ -1,6 +1,6 @@
 {
 	"name": "@vscode/sync-api-service",
-	"version": "0.8.0",
+	"version": "0.8.1",
 	"description": "A sync implementation of the VS Code API. Only supported from a worker in NodeJS and browser",
 	"engines": {
 		"node": ">=16.14.2",
@@ -28,7 +28,7 @@
 	"dependencies": {
 		"uuid": "^9.0.0",
 		"vscode-uri": "^3.0.6",
-		"@vscode/sync-api-common": "0.8.0"
+		"@vscode/sync-api-common": "0.8.1"
 	},
 	"devDependencies": {
 		"@types/vscode": "1.71.0",
@@ -42,6 +42,7 @@
 		"clean": "node ../node_modules/rimraf/bin.js lib && node ../node_modules/rimraf/bin.js dist",
 		"lint": "node ../node_modules/eslint/bin/eslint.js --ext ts src",
 		"test": "cd ../sync-api-tests && npm test",
-		"all": "npm run clean && npm run compile && npm run lint && npm run test"
+		"all": "npm run clean && npm run compile && npm run lint && npm run test",
+		"all:pack": "npm run clean && npm run compile && npm run lint && cd ../sync-api-service && npm run all:pack && cd .."
 	}
 }
