@@ -347,6 +347,7 @@ const projects = [
 	[ sync_api_service, [ compileProjectOptions, watchProjectOptions ] ],
 	[ createPublishProjectDescription(sync_api_service), [ publishProjectOptions ] ],
 	[ sync_api_tests, [ compileProjectOptions, watchProjectOptions ] ],
+	[ createPublishProjectDescription(sync_api_tests), [ publishProjectOptions ] ],
 	[ wasm_wasi, [ compileProjectOptions, watchProjectOptions ] ],
 	[ createPublishProjectDescription(wasm_wasi), [ publishProjectOptions ] ],
 	[ root, [compileProjectOptions, watchProjectOptions ] ],
