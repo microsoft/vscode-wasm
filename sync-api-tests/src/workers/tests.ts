@@ -5,8 +5,7 @@
 
 import { AssertionError } from 'assert';
 
-import { RAL } from '@vscode/sync-api-common';
-import { ApiClient, ApiClientConnection, Requests, WorkspaceFolder } from '@vscode/sync-api-client';
+import { ApiClient, ApiClientConnection, Requests, WorkspaceFolder, RAL } from '@vscode/sync-api-client';
 
 import { TestRequests } from '../tests';
 

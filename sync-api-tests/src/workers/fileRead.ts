@@ -7,7 +7,7 @@ import * as _path from 'path';
 const path = _path.posix;
 import assert from 'assert';
 
-import { RAL } from '@vscode/sync-api-common/node';
+import { RAL } from '@vscode/sync-api-client';
 import runSingle from './tests';
 
 runSingle((client, folder) => {
