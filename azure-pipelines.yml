@@ -29,11 +29,8 @@ jobs:
   steps:
   - template: build/azure-pipelines/linux/build.yml
 
-# Disable MacOS pipeline since the web tests are constantly failing
-# with and exception in the framework.
-# See https://github.com/microsoft/vscode-test-web/issues/43
-# - job: macOS
-#   pool:
-#     vmImage: macOS-latest
-#   steps:
-#   - template: build/azure-pipelines/darwin/build.yml
+- job: macOS
+  pool:
+    vmImage: macOS-latest
+  steps:
+  - template: build/azure-pipelines/darwin/build.yml

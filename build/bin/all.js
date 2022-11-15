@@ -15,6 +15,19 @@ const args = process.argv.slice(2);
 
 const folders = ['sync-api-common', 'sync-api-client', 'sync-api-service', 'sync-api-tests', 'wasm-wasi', 'testbeds'];
 
-for (const folder of folders) {
-	child_process.spawnSync(`npm ${args.join(' ')}`, { cwd: path.join(root, folder), shell: true, stdio: 'inherit' });
+function main() {
+	// When we install in a package pipeline then we don't want to call install in
+	// the project directories since we need to call install there to ensure proper
+	// dependency management.
+	if (args[0] === 'install' && process.env['npm_config_root_only'] === 'true') {
+		return;
+	}
+
+	for (const folder of folders) {
+		child_process.spawnSync(`npm ${args.join(' ')}`, { cwd: path.join(root, folder), shell: true, stdio: 'inherit' });
+	}
+}
+
+if (require.main === module) {
+	main();
 }
