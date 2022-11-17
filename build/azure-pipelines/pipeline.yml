@@ -44,7 +44,6 @@ extends:
   parameters:
     npmPackages:
       - name: sync-api-common
-        generateNotice: true
         testPlatforms:
           - name: Linux
             nodeVersions:
@@ -73,7 +72,6 @@ extends:
         workingDirectory: $(Build.SourcesDirectory)/sync-api-common
 
       - name: sync-api-client
-        generateNotice: true
         testPlatforms:
           - name: Linux
             nodeVersions:
@@ -102,7 +100,6 @@ extends:
         workingDirectory: $(Build.SourcesDirectory)/sync-api-client
 
       - name: sync-api-service
-        generateNotice: true
         testPlatforms:
           - name: Linux
             nodeVersions:
@@ -131,7 +128,6 @@ extends:
         workingDirectory: $(Build.SourcesDirectory)/sync-api-service
 
       - name: wasm-wasi
-        generateNotice: true
         testPlatforms:
           - name: Linux
             nodeVersions:
