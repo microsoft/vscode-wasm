@@ -16,6 +16,8 @@ const { CompilerOptions } = require('@vscode/tsconfig-gen');
  */
 
 /**
+ * Creates a publish project description from a normal project description by removing
+ * any project reference from it since it has to come via a npm dependency during publish.
  *
  * @param {ProjectDescription} projectDescription The project description
  * @returns {ProjectDescription} The project description without project references
