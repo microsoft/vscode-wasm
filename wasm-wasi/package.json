@@ -1,6 +1,6 @@
 {
 	"name": "@vscode/wasm-wasi",
-	"version": "0.8.1",
+	"version": "0.8.2",
 	"description": "A WASI implementation that uses VS Code's extension host as the implementing API",
 	"engines": {
 		"vscode": "^1.71.0"
