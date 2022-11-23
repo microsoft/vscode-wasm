@@ -25,7 +25,7 @@ import { BigInts, code2Wasi } from './converter';
 import { CharacterDeviceDriver, DeviceDriver, DeviceId, FileDescriptor, FileSystemDeviceDriver, ReaddirEntry } from './deviceDriver';
 import * as vscfs from './vscodeFileSystemDriver';
 import * as ConsoleDriver from './consoleDriver';
-import * as terminalDriver from './terminalDriver';
+import * as TerminalDriver from './terminalDriver';
 
 namespace WebAssembly {
 
@@ -206,8 +206,8 @@ export namespace WASI {
 		const preStatDirnames: Map<fd, string> = new Map();
 
 		// Add the standard console driver;
-		const consoleUri: URI = URI.from({ scheme: 'console', authority: 'global'});
-		const consoleDriver = ConsoleDriver.create(apiClient, decoder, consoleUri);
+		const consoleUri: URI = URI.from({ scheme: 'console', authority: 'developerTools'});
+		const consoleDriver = ConsoleDriver.create(apiClient, consoleUri, decoder);
 		deviceDrivers.set(consoleDriver.id, consoleDriver);
 		uri2Driver.set(consoleUri.toString(true), consoleDriver);
 
@@ -218,7 +218,7 @@ export namespace WASI {
 					driver = vscfs.create(apiClient, encoder, fileDescriptorId, device.uri, device.mountPoint);
 					break;
 				case 'terminal':
-					driver = terminalDriver.create(apiClient, device.uri);
+					driver = TerminalDriver.create(apiClient, device.uri);
 					break;
 				case 'console':
 					// We always have a console driver;
@@ -245,14 +245,20 @@ export namespace WASI {
 			} else if (description.kind === 'terminal') {
 				let driver = uri2Driver!.get(description.uri.toString(true)) as (CharacterDeviceDriver | undefined);
 				if (driver === undefined) {
-					driver = terminalDriver.create(apiClient, description.uri);
+					driver = TerminalDriver.create(apiClient, description.uri);
 					deviceDrivers.set(driver.id, driver);
 					uri2Driver!.set(description.uri.toString(true), driver);
 					preStatProviders.push(driver);
 				}
 				result = driver.createStdioFileDescriptor(fd);
 			} else if (description.kind === 'console') {
-				const driver = uri2Driver!.get(description.uri.toString(true)) as CharacterDeviceDriver;
+				let driver = uri2Driver!.get(description.uri.toString(true)) as CharacterDeviceDriver;
+				if (driver === undefined) {
+					driver = ConsoleDriver.create(apiClient, description.uri, decoder);
+					deviceDrivers.set(driver.id, driver);
+					uri2Driver!.set(description.uri.toString(true), driver);
+					preStatProviders.push(driver);
+				}
 				result = driver.createStdioFileDescriptor(fd);
 			} else {
 				result = consoleDriver.createStdioFileDescriptor(fd);

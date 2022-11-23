@@ -17,7 +17,7 @@ class ConsoleFileDescriptor extends BaseFileDescriptor {
 	}
 }
 
-export function create(apiClient: ApiClient, decoder: RAL.TextDecoder, _uri: URI): CharacterDeviceDriver {
+export function create(apiClient: ApiClient, uri: URI, decoder: RAL.TextDecoder): CharacterDeviceDriver {
 
 	const deviceId = DeviceIds.next();
 	let inodeCounter: bigint = 0n;
@@ -61,10 +61,14 @@ export function create(apiClient: ApiClient, decoder: RAL.TextDecoder, _uri: URI
 					offset = item.byteLength;
 				}
 			}
-			if (fileDescriptor.fd === 2) {
-				apiClient.console.error(decoder.decode(buffer));
+			if (uri.authority === 'developerTools') {
+				if (fileDescriptor.fd === 2) {
+					apiClient.console.error(decoder.decode(buffer));
+				} else {
+					apiClient.console.log(decoder.decode(buffer));
+				}
 			} else {
-				apiClient.console.log(decoder.decode(buffer));
+				apiClient.byteSink.write(uri, buffer);
 			}
 			return buffer.byteLength;
 		}
