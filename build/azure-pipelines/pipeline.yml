@@ -147,7 +147,7 @@ extends:
             parameters:
               package: wasm-wasi
         tag: ${{ parameters.quality }}
-        publishPackage: ${{ parameters.publishSyncApiService }}
+        publishPackage: ${{ parameters.publishWasmWasi }}
         postPublishSteps:
           - template: /build/azure-pipelines/templates/postPublish-steps.yml@self
             parameters:
