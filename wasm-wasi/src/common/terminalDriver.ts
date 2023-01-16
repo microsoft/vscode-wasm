@@ -4,7 +4,8 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { URI } from 'vscode-uri';
-import { ApiClient } from '@vscode/sync-api-client';
+
+import { ApiShape } from '@vscode/sync-api-client';
 
 import { size } from './baseTypes';
 import { fd, fdflags, fdstat, filestat, Filetype, Rights, rights } from './wasiTypes';
@@ -16,7 +17,7 @@ class TerminalFileDescriptor extends BaseFileDescriptor {
 	}
 }
 
-export function create(apiClient: ApiClient, uri: URI): CharacterDeviceDriver {
+export function create(apiClient: ApiShape, uri: URI): CharacterDeviceDriver {
 
 	const deviceId = DeviceIds.next();
 	let inodeCounter: bigint = 0n;

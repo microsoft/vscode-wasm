@@ -34,7 +34,7 @@
 		"shelljs": "^0.8.5",
 		"shx": "^0.3.4",
 		"@vscode/tsconfig-gen": "0.1.0",
-		"typescript": "^4.8.4"
+		"typescript": "^4.9.4"
 	},
 	"scripts": {
 		"postinstall": "node ./build/bin/all.js install",

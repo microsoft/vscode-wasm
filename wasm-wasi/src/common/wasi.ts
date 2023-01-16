@@ -4,7 +4,7 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { URI } from 'vscode-uri';
-import { ApiClient, FileSystemError, RPCError } from '@vscode/sync-api-client';
+import { ApiShape, FileSystemError, RPCError } from '@vscode/sync-api-client';
 
 import RAL from './ral';
 
@@ -136,7 +136,7 @@ export type DeviceDescription = {
 }| {
 	kind: 'custom';
 	uri: URI;
-	factory: (apiClient: ApiClient, encoder: RAL.TextEncoder, decoder: RAL.TextDecoder, fileDescriptorId: { next(): number }) => DeviceDriver;
+	factory: (apiClient: ApiShape, encoder: RAL.TextEncoder, decoder: RAL.TextDecoder, fileDescriptorId: { next(): number }) => DeviceDriver;
 };
 
 export type FileDescriptorDescription = {
@@ -182,7 +182,7 @@ export namespace WASI {
 	 * @param options Additional options.
 	 * @returns The WASI implementation instance.
 	 */
-	export function create(programName: string, apiClient: ApiClient, exitHandler: (rval: number) => void, devices: DeviceDescription[], stdio: { stdin: FileDescriptorDescription; stdout: FileDescriptorDescription; stderr: FileDescriptorDescription }, options: Options = {}): WASI {
+	export function create(programName: string, apiClient: ApiShape, exitHandler: (rval: number) => void, devices: DeviceDescription[], stdio: { stdin: FileDescriptorDescription; stdout: FileDescriptorDescription; stderr: FileDescriptorDescription }, options: Options = {}): WASI {
 		let instance: WebAssembly.$Instance;
 
 		const thread_start = RAL().clock.realtime();

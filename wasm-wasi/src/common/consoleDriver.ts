@@ -4,7 +4,8 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { URI } from 'vscode-uri';
-import { ApiClient } from '@vscode/sync-api-client';
+
+import { ApiShape } from '@vscode/sync-api-client';
 
 import RAL from './ral';
 import { size } from './baseTypes';
@@ -17,7 +18,7 @@ class ConsoleFileDescriptor extends BaseFileDescriptor {
 	}
 }
 
-export function create(apiClient: ApiClient, uri: URI, decoder: RAL.TextDecoder): CharacterDeviceDriver {
+export function create(apiClient: ApiShape, uri: URI, decoder: RAL.TextDecoder): CharacterDeviceDriver {
 
 	const deviceId = DeviceIds.next();
 	let inodeCounter: bigint = 0n;

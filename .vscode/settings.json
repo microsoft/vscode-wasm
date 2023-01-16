@@ -41,6 +41,7 @@
 		"./sync-api-service",
 		"./sync-api-tests",
 		"./wasm-wasi",
+		"./wasm-wasi-tests",
 		"./testbeds"
 	],
 	"editor.codeActionsOnSave": {

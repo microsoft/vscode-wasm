@@ -5,7 +5,7 @@
 
 import { URI } from 'vscode-uri';
 
-import { ApiClient, size } from '@vscode/sync-api-client';
+import { ApiShape, size } from '@vscode/sync-api-client';
 
 import { BigInts, code2Wasi } from './converter';
 import { BaseFileDescriptor, FileDescriptor, NoSysDeviceDriver, DeviceIds, ReaddirEntry, FileSystemDeviceDriver } from './deviceDriver';
@@ -87,7 +87,7 @@ namespace INode {
 	}
 }
 
-export function create(apiClient: ApiClient, _textEncoder: RAL.TextEncoder, fileDescriptorId: { next(): number }, baseUri: URI, mountPoint: string): FileSystemDeviceDriver {
+export function create(apiClient: ApiShape, _textEncoder: RAL.TextEncoder, fileDescriptorId: { next(): number }, baseUri: URI, mountPoint: string): FileSystemDeviceDriver {
 
 	const deviceId = DeviceIds.next();
 	const vscode_fs = apiClient.vscode.workspace.fileSystem;
