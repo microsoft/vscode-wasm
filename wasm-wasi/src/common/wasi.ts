@@ -307,7 +307,6 @@ export namespace WASI {
 					entryOffset += 4;
 					memoryBytes.set(data, valueOffset);
 					valueOffset += data.byteLength;
-
 				}
 				processValue(programName);
 				for (const arg of options.args ?? []) {

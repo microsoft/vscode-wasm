@@ -3,12 +3,16 @@
  * Licensed under the MIT License. See License.txt in the project root for license information.
  * ------------------------------------------------------------------------------------------ */
 
+import { TextDecoder } from 'util';
+import * as path from 'path';
+import * as fs from 'fs';
+
 import { URI } from 'vscode-uri';
 
-import { ApiShape, ByteSink, ByteSource, Process, Timer, TTY, Workspace, Console, FileSystem, FileStat, DTOs, WorkspaceFolder } from '@vscode/wasm-wasi';
+import { ApiShape, ByteSink, ByteSource, Process, Timer, TTY, Workspace, Console, FileSystem, FileStat, DTOs, WorkspaceFolder, FileType, FilePermission } from '@vscode/wasm-wasi';
 
 class TimerImpl implements Timer {
-	sleep(_ms: number): void {
+	public sleep(_ms: number): void {
 	}
 }
 
@@ -16,11 +20,11 @@ class ProcessImpl implements Process {
 
 	private readonly api: TestApi;
 
-	constructor(api: TestApi) {
+	public constructor(api: TestApi) {
 		this.api = api;
 	}
 
-	procExit(rval: number): void {
+	public procExit(rval: number): void {
 		this.api.rval = rval;
 	}
 }
@@ -32,61 +36,122 @@ class ByteSourceImpl implements ByteSource {
 }
 
 class ByteSinkImpl implements ByteSink {
-	write(_uri: URI, value: Uint8Array): number {
+	public write(_uri: URI, value: Uint8Array): number {
 		return value.byteLength;
 	}
 }
 
 class ConsoleImpl implements Console {
 
-	log(message?: any, ...optionalParams: any[]): void {
+	public log(message?: any, ...optionalParams: any[]): void {
 		console.log(message, ...optionalParams);
 	}
 
-	error(message?: any, ...optionalParams: any[]): void {
+	public error(message?: any, ...optionalParams: any[]): void {
 		console.error(message, ...optionalParams);
 	}
 }
 
 class TTYImpl implements TTY {
 
-	write(_uri: URI, value: Uint8Array): number {
+	private readonly decoder: TextDecoder;
+
+	public constructor(decoder: TextDecoder) {
+		this.decoder = decoder;
+	}
+
+	public write(_uri: URI, value: Uint8Array): number {
+		console.info(this.decoder.decode(value));
 		return value.byteLength;
 	}
 
-	read(_uri: URI, _maxBytesToRead: number): Uint8Array {
-		return new Uint8Array();
+	public read(_uri: URI, _maxBytesToRead: number): Uint8Array {
+		throw new Error(`TTY read is not supported`);
 	}
 }
 
 class FileSystemImpl implements FileSystem {
 
-	stat(uri: URI): FileStat {
-		throw new Error('Not yet implemented');
+	public constructor() {
 	}
 
-	readFile(uri: URI): Uint8Array {
-		throw new Error('Not yet implemented');
+	public stat(uri: URI): FileStat {
+		if (uri.scheme !== 'file') {
+			throw new Error(`Only file schemes are supported, but got ${uri.scheme}`);
+		}
+		return this.convertToFileStat(fs.statSync(uri.fsPath));
 	}
 
-	writeFile(uri: URI, content: Uint8Array): void {
-		throw new Error('Not yet implemented');
+	public readFile(uri: URI): Uint8Array {
+		if (uri.scheme !== 'file') {
+			throw new Error(`Only file schemes are supported, but got ${uri.scheme}`);
+		}
+		return fs.readFileSync(uri.fsPath);
 	}
 
-	readDirectory(uri: URI): DTOs.DirectoryEntries {
-		throw new Error('Not yet implemented');
+	public writeFile(uri: URI, content: Uint8Array): void {
+		if (uri.scheme !== 'file') {
+			throw new Error(`Only file schemes are supported, but got ${uri.scheme}`);
+		}
+		fs.writeFileSync(uri.fsPath, content);
 	}
 
-	createDirectory(uri: URI): void {
-		throw new Error('Not yet implemented');
+	public readDirectory(uri: URI): DTOs.DirectoryEntries {
+		if (uri.scheme !== 'file') {
+			throw new Error(`Only file schemes are supported, but got ${uri.scheme}`);
+		}
+		const fsPath = uri.fsPath;
+		const entries = fs.readdirSync(fsPath);
+		const result: DTOs.DirectoryEntries = new Array(entries.length);
+		for (const entry of entries) {
+			result.push([entry, this.getFileType(fs.statSync(path.join(fsPath, entry)))]);
+		}
+		return result;
 	}
 
-	delete(uri: URI, options?: { recursive?: boolean; useTrash?: boolean }): void {
-		throw new Error('Not yet implemented');
+	public createDirectory(uri: URI): void {
+		if (uri.scheme !== 'file') {
+			throw new Error(`Only file schemes are supported, but got ${uri.scheme}`);
+		}
+		// We need to understand what Posix does here in terms of recursive dire creation.
+		fs.mkdirSync(uri.fsPath);
 	}
 
-	rename(source: URI, target: URI, options?: { overwrite?: boolean }): void {
-		throw new Error('Not yet implemented');
+	public delete(uri: URI, options?: { recursive?: boolean; useTrash?: boolean }): void {
+		if (uri.scheme !== 'file') {
+			throw new Error(`Only file schemes are supported, but got ${uri.scheme}`);
+		}
+		if (options?.recursive === true) {
+			throw new Error(`Posix has no support for recursive deletion`);
+		}
+		fs.unlinkSync(uri.fsPath);
+	}
+
+	public rename(source: URI, target: URI, options?: { overwrite?: boolean }): void {
+		if (source.scheme !== 'file') {
+			throw new Error(`Only file schemes are supported for source, but got ${source.scheme}`);
+		}
+		if (target.scheme !== 'file') {
+			throw new Error(`Only file schemes are supported for target, but got ${target.scheme}`);
+		}
+		if (options?.overwrite === true) {
+			throw new Error(`Posix has no support for overwrites in renames`);
+		}
+		fs.renameSync(source.fsPath, target.fsPath);
+	}
+
+	private convertToFileStat(stat: fs.Stats): FileStat {
+		return {
+			type: stat.isFile() ? FileType.File : stat.isDirectory() ? FileType.Directory : stat.isSymbolicLink() ? FileType.SymbolicLink : FileType.Unknown,
+			size: stat.size,
+			ctime: stat.ctime.valueOf(),
+			mtime: stat.mtime.valueOf(),
+			permissions: (stat.mode & fs.constants.S_IWUSR) === 0 ? FilePermission.Readonly : undefined
+		};
+	}
+
+	private getFileType(stat: fs.Stats): DTOs.FileType {
+		return stat.isFile() ? DTOs.FileType.File : stat.isDirectory() ? DTOs.FileType.Directory : stat.isSymbolicLink() ? DTOs.FileType.SymbolicLink : DTOs.FileType.Unknown;
 	}
 }
 
@@ -100,7 +165,7 @@ class WorkspaceImpl implements Workspace {
 	}
 }
 
-class TestApi implements ApiShape {
+export class TestApi implements ApiShape {
 
 	public rval: number | undefined;
 
@@ -115,12 +180,13 @@ class TestApi implements ApiShape {
 	};
 
 	public constructor() {
+		const decoder = new TextDecoder('utf8');
 		this.timer = new TimerImpl();
 		this.process = new ProcessImpl(this);
 		this.byteSource = new ByteSourceImpl();
 		this.byteSink = new ByteSinkImpl();
 		this.console = new ConsoleImpl();
-		this.tty = new TTYImpl();
+		this.tty = new TTYImpl(decoder);
 		this.vscode = {
 			workspace: new WorkspaceImpl()
 		};
