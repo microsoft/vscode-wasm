@@ -318,9 +318,9 @@ export namespace WASI {
 				const memory = memoryView();
 				switch (id) {
 					case Clockid.realtime:
-						memory.setBigUint64(timestamp_ptr, 1n, true);
-						return Errno.success;
 					case Clockid.monotonic:
+					case Clockid.process_cputime_id:
+					case Clockid.thread_cputime_id:
 						memory.setBigUint64(timestamp_ptr, 1n, true);
 						return Errno.success;
 					default:
