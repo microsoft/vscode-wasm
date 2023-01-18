@@ -880,42 +880,50 @@ export type filestat = {
 	/**
 	 * Device ID of device containing the file.
 	 */
+	get dev(): device;
 	set dev(value: device);
 
 	/**
 	 * File serial number.
 	 */
+	get ino(): inode;
 	set ino(value: inode);
 
 	/**
 	 * File type.
 	 */
+	get filetype(): filetype;
 	set filetype(value: filetype);
 
 	/**
 	 * Number of hard links to the file.
 	 */
+	get nlink(): linkcount;
 	set nlink(value: linkcount);
 
 	/**
 	 * For regular files, the file size in bytes. For symbolic links, the
 	 * length in bytes of the pathname contained in the symbolic link.
 	 */
+	get size(): filesize;
 	set size(value: filesize);
 
 	/**
 	 * Last data access timestamp.
 	 */
+	get atim(): timestamp;
 	set atim(value: timestamp);
 
 	/**
 	 * Last data modification timestamp.
 	 */
+	get mtim(): timestamp;
 	set mtim(value: timestamp);
 
 	/**
 	 * Last file status change timestamp.
 	 */
+	get ctim(): timestamp;
 	set ctim(value: timestamp);
 };
 
@@ -938,13 +946,21 @@ export namespace Filestat {
 
 	export function create(ptr: ptr, memory: DataView): filestat {
 		return {
+			get dev(): device { return memory.getBigUint64(ptr + offsets.dev, true); },
 			set dev(value: device) { memory.setBigUint64(ptr + offsets.dev, value, true); },
+			get ino(): inode { return memory.getBigUint64(ptr + offsets.ino, true); },
 			set ino(value: inode) { memory.setBigUint64(ptr + offsets.ino, value, true); },
+			get filetype(): filetype { return memory.getUint8(ptr + offsets.filetype); },
 			set filetype(value: filetype) { memory.setUint8(ptr + offsets.filetype, value); },
+			get nlink(): linkcount { return memory.getBigUint64(ptr + offsets.nlink, true); },
 			set nlink(value: linkcount) { memory.setBigUint64(ptr + offsets.nlink, value, true); },
+			get size(): filesize { return memory.getBigUint64(ptr + offsets.size, true); },
 			set size(value: filesize) { memory.setBigUint64(ptr + offsets.size, value, true); },
+			get atim(): timestamp { return memory.getBigUint64(ptr + offsets.atim, true); },
 			set atim(value: timestamp) { memory.setBigUint64(ptr + offsets.atim, value, true); },
+			get mtim(): timestamp { return memory.getBigUint64(ptr + offsets.mtim, true); },
 			set mtim(value: timestamp) { memory.setBigUint64(ptr + offsets.mtim, value, true); },
+			get ctim(): timestamp { return memory.getBigUint64(ptr + offsets.ctim, true); },
 			set ctim(value: timestamp) { memory.setBigUint64(ptr + offsets.ctim, value, true); }
 		};
 	}
@@ -981,22 +997,26 @@ export type fdstat = {
 	/**
 	 *  File type.
 	 */
+	get fs_filetype(): filetype;
 	set fs_filetype(value: filetype);
 
 	/**
 	 * File descriptor flags.
 	 */
+	get fs_flags(): fdflags;
 	set fs_flags(value: fdflags);
 
 	/**
 	 * Rights that apply to this file descriptor.
 	 */
+	get fs_rights_base(): rights;
 	set fs_rights_base(value: rights);
 
 	/**
 	 * Maximum set of rights that may be installed on new file descriptors
 	 * that are created through this file descriptor, e.g., through path_open.
 	 */
+	get fs_rights_inheriting(): rights;
 	set fs_rights_inheriting(value: rights);
 };
 
@@ -1017,9 +1037,13 @@ export namespace Fdstat {
 
 	export function create(ptr: ptr, memory: DataView): fdstat {
 		return {
+			get fs_filetype(): filetype { return memory.getUint8(ptr + offsets.fs_filetype); },
 			set fs_filetype(value: filetype) { memory.setUint8(ptr + offsets.fs_filetype, value); },
+			get fs_flags(): fdflags { return memory.getUint16(ptr + offsets.fs_flags, true); },
 			set fs_flags(value: fdflags) { memory.setUint16(ptr + offsets.fs_flags, value, true); },
+			get fs_rights_base(): rights { return memory.getBigUint64(ptr + offsets.fs_rights_base, true); },
 			set fs_rights_base(value: rights) { memory.setBigUint64(ptr + offsets.fs_rights_base, value, true); },
+			get fs_rights_inheriting(): rights { return memory.getBigUint64(ptr + offsets.fs_rights_inheriting, true); },
 			set fs_rights_inheriting(value: rights) { memory.setBigUint64(ptr + offsets.fs_rights_inheriting, value, true); }
 		};
 	}
@@ -1059,17 +1083,44 @@ export namespace Fstflags {
 export type prestat = {
 
 	/**
+	 * Gets the pre-open type.
+	 */
+	get preopentype(): preopentype;
+
+	/**
+	 * Gets the length of the pre opened directory name.
+	 */
+	get len(): size;
+
+	/**
 	 * Sets the length of the pre opened directory name.
 	 */
 	set len(value: size);
 };
 
 export namespace Prestat {
+	/**
+	 * The size in bytes.
+	 */
+	export const size = 8 as const;
+
+	export const alignment = 4 as const;
+
+	const offsets = {
+		tag: 0,
+		len: 4
+	};
 	export function create(ptr: ptr, memory: DataView): prestat {
 		memory.setUint8(ptr, Preopentype.dir);
 		return {
+			get preopentype(): preopentype {
+				return memory.getUint8(ptr + offsets.tag);
+			},
+			get len(): size {
+				return memory.getUint32(ptr + offsets.len, true);
+			},
 			set len(value: size) {
-				memory.setUint32(ptr + 4, value, true);
+				memory.setUint32(ptr + offsets.len, value, true);
 			}
 		};
 	}

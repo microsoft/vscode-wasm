@@ -78,6 +78,21 @@
 			"sourceMaps": true,
 			"outFiles": ["${workspaceRoot}/sync-api-tests/lib/**/*.js"],
 			"preLaunchTask": "npm: watch"
+		},
+		{
+			"request": "launch",
+			"type": "node",
+			"name": "test:wasm-wasi",
+			"program": "${workspaceRoot}/node_modules/mocha/bin/_mocha",
+			"stopOnEntry": false,
+			"args": ["--timeout", "999999"],
+			"cwd": "${workspaceRoot}/wasm-wasi-tests",
+			"runtimeExecutable": null,
+			"runtimeArgs": [],
+			"env": { },
+			"sourceMaps": true,
+			"outFiles": ["${workspaceRoot}/wasm-wasi-tests/lib/**/*.js"],
+			"preLaunchTask": "npm: watch"
 		}
 	]
 }

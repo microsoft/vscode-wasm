@@ -3,12 +3,16 @@
  * Licensed under the MIT License. See License.txt in the project root for license information.
  * ------------------------------------------------------------------------------------------ */
 import assert from 'assert';
+import path from 'path';
+import fs from 'fs';
+import os from 'os';
+import * as uuid from 'uuid';
+import { TextDecoder, TextEncoder } from 'util';
 
-import { DeviceDescription, Environment, WASI, Clockid, Errno } from '@vscode/wasm-wasi';
+import { DeviceDescription, Environment, WASI, Clockid, Errno, Prestat, fd, Oflags, Rights, Fdflags, Fdstat, Filestat } from '@vscode/wasm-wasi';
 import { URI } from 'vscode-uri';
 
 import { TestApi } from './testApi';
-import { TextDecoder, TextEncoder } from 'util';
 
 const decoder = new TextDecoder();
 const encoder = new TextEncoder();
@@ -25,9 +29,10 @@ function getStringLength(buffer: ArrayBuffer, start: number): number {
 	return -1;
 }
 
+const consoleUri = URI.from({ scheme: 'console', authority: 'developerTools' });
+
 suite('Configurations', () => {
 
-	const consoleUri = URI.from({ scheme: 'console', authority: 'developerTools' });
 
 	function createWASI(programName: string, fileLocation?: string, args?: string[], env?: Environment): [WASI, ArrayBuffer, DataView] {
 		const devices: DeviceDescription[] = [
@@ -145,5 +150,115 @@ suite('Configurations', () => {
 			assert.strictEqual(values.length, 2);
 			assert.strictEqual(env[values[0]], values[1]);
 		}
+	});
+});
+
+suite ('Filesystem', () => {
+
+	function createWASI(programName: string, fileLocation: string): [WASI, ArrayBuffer, DataView] {
+		const devices: DeviceDescription[] = [
+			{ kind: 'fileSystem', uri: URI.parse(`file://${fileLocation}`), mountPoint: '/' },
+			{ kind: 'console', uri:  consoleUri }
+		];
+
+		const wasi = WASI.create(programName, new TestApi(), (_rval) => { }, devices, {
+			stdin: { kind: 'console', uri: consoleUri },
+			stdout: { kind: 'console', uri: consoleUri },
+			stderr: { kind: 'console', uri: consoleUri },
+		}, {
+		});
+		const buffer = new ArrayBuffer(65536);
+		const memory = new DataView(buffer);
+		wasi.initialize({ exports: { memory: {
+			buffer: buffer,
+			grow: () => { return 65536; }
+		}}});
+		return [wasi, buffer, memory];
+	}
+
+	function rimraf(location: string) {
+		const stat = fs.lstatSync(location);
+		if (stat) {
+			if (stat.isDirectory() && !stat.isSymbolicLink()) {
+				for (const dir of fs.readdirSync(location)) {
+					rimraf(path.join(location, dir));
+				}
+				fs.rmdirSync(location);
+			} else {
+				fs.unlinkSync(location);
+			}
+		}
+	}
+
+	const memory_location_0 = 0 as const;
+	const memory_location_256 = 256 as const;
+	const memory_location_512 = 512 as const;
+	const memory_location_1024 = 1024 as const;
+
+	function runTestWithFilesystem(callback: (wasi: WASI, rawMemory: ArrayBuffer, memory: DataView, rootFd: fd) => void): void {
+		const tempDir = os.tmpdir();
+		const directory = path.join(tempDir, 'wasm-wasi-tests', uuid.v4());
+		try {
+			fs.mkdirSync(directory, { recursive: true });
+			const [wasi, rawMemory, memory] = createWASI('fileTest', directory);
+			let errno = wasi.fd_prestat_get(3, memory_location_0);
+			assert.strictEqual(errno, Errno.success);
+			const pathLength = Prestat.create(memory_location_0, memory).len;
+			// We only have one prestat dir. So this must not succeed.
+			errno = wasi.fd_prestat_get(4, memory_location_0);
+			assert.strictEqual(errno, Errno.badf);
+
+			errno = wasi.fd_prestat_dir_name(3, memory_location_0, pathLength);
+			assert.strictEqual(errno, Errno.success);
+			const mountPoint = decoder.decode(new Uint8Array(rawMemory, memory_location_0, pathLength));
+			assert.strictEqual(mountPoint, '/');
+			callback(wasi, rawMemory, memory, 3);
+		} finally {
+			try {
+				rimraf(directory);
+			} catch (error) {
+				console.error(error);
+				throw error;
+			}
+		}
+	}
+
+	test('filesystem setup', () => {
+		runTestWithFilesystem((_wasi, _rawMemory, _memory, rootFd) => {
+			assert.strictEqual(rootFd, 3);
+		});
+	});
+
+	test('path_open', () => {
+		runTestWithFilesystem((wasi, rawMemory, memory, rootFd) => {
+			const name = 'test.txt';
+			memory.setUint32(memory_location_256, 0);
+			(new Uint8Array(rawMemory)).set(encoder.encode(name), memory_location_512);
+			let errno = wasi.path_open(rootFd, 0, memory_location_512, name.length, Oflags.creat, Rights.FileBase, Rights.FileInheriting, 0, memory_location_256);
+			assert.strictEqual(errno, Errno.success);
+			const fd = memory.getUint32(memory_location_256, true);
+			assert.notStrictEqual(fd, 0);
+			errno = wasi.fd_close(fd);
+			assert.strictEqual(errno, Errno.success);
+		});
+	});
+
+	test('fd_filestat_get', () => {
+		runTestWithFilesystem((wasi, rawMemory, memory, rootFd) => {
+			const name = 'test.txt';
+			memory.setUint32(memory_location_256, 0);
+			(new Uint8Array(rawMemory)).set(encoder.encode(name), memory_location_512);
+			let errno = wasi.path_open(rootFd, 0, memory_location_512, name.length, Oflags.creat, Rights.fd_filestat_get, 0n, 0, memory_location_256);
+			assert.strictEqual(errno, Errno.success);
+			const fd = memory.getUint32(memory_location_256, true);
+			assert.notStrictEqual(fd, 0);
+			errno = wasi.fd_filestat_get(fd, memory_location_1024);
+			assert.strictEqual(errno, Errno.success);
+			const filestat = Filestat.create(memory_location_1024, memory);
+			assert.strictEqual(filestat.size, 0n);
+			assert.strictEqual(filestat.nlink, 0n);
+			errno = wasi.fd_close(fd);
+			assert.strictEqual(errno, Errno.success);
+		});
 	});
 });
