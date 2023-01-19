@@ -878,6 +878,11 @@ export type timestamp = u64;
 export type filestat = {
 
 	/**
+	 * The memory location of the allocated struct.
+	 */
+	get $ptr(): ptr;
+
+	/**
 	 * Device ID of device containing the file.
 	 */
 	get dev(): device;
@@ -946,6 +951,7 @@ export namespace Filestat {
 
 	export function create(ptr: ptr, memory: DataView): filestat {
 		return {
+			get $ptr(): ptr { return ptr; },
 			get dev(): device { return memory.getBigUint64(ptr + offsets.dev, true); },
 			set dev(value: device) { memory.setBigUint64(ptr + offsets.dev, value, true); },
 			get ino(): inode { return memory.getBigUint64(ptr + offsets.ino, true); },
@@ -1083,6 +1089,11 @@ export namespace Fstflags {
 export type prestat = {
 
 	/**
+	 * The memory location.
+	 */
+	get $ptr(): ptr;
+
+	/**
 	 * Gets the pre-open type.
 	 */
 	get preopentype(): preopentype;
@@ -1113,6 +1124,7 @@ export namespace Prestat {
 	export function create(ptr: ptr, memory: DataView): prestat {
 		memory.setUint8(ptr, Preopentype.dir);
 		return {
+			get $ptr(): ptr { return ptr; },
 			get preopentype(): preopentype {
 				return memory.getUint8(ptr + offsets.tag);
 			},
