@@ -9,7 +9,7 @@ import os from 'os';
 import * as uuid from 'uuid';
 import { TextDecoder, TextEncoder } from 'util';
 
-import { DeviceDescription, Environment, WASI, Clockid, Errno, Prestat, fd, Oflags, Rights, Filestat, Iovec, Ciovec } from '@vscode/wasm-wasi';
+import { DeviceDescription, Environment, WASI, Clockid, Errno, Prestat, fd, Oflags, Rights, Filestat, Iovec, Ciovec, Advice } from '@vscode/wasm-wasi';
 import { URI } from 'vscode-uri';
 
 import { TestApi } from './testApi';
@@ -358,18 +358,16 @@ suite ('Filesystem', () => {
 	}
 
 	function createFileWithContent(wasi: WASI, memory: Memory, parentFd: fd, name: string, content: string): fd {
-		const fd = memory.allocUint32(0);
-		const path = memory.allocString(name);
-		let errno = wasi.path_open(parentFd, 0, path.$ptr, path.byteLength, Oflags.creat, Rights.FileBase, Rights.FileInheriting, 0, fd.$ptr);
-		assert.strictEqual(errno, Errno.success);
+		const fd = createFile(wasi, memory, parentFd, name);
 		const ciovecs = memory.allocStructArray(1, Ciovec);
-		const bytes = encoder.encode(content);
-		const data = memory.allocBytes(bytes);
-		ciovecs.get(0).buf = data.$ptr;
-		ciovecs.get(0).buf_len = data.byteLength;
+		const bytes = memory.allocBytes(encoder.encode(content));
+		ciovecs.get(0).buf = bytes.$ptr;
+		ciovecs.get(0).buf_len = bytes.byteLength;
 		const bytesWritten = memory.allocUint32();
-		wasi.fd_write(fd.$ptr, ciovecs.$ptr, 1, bytesWritten.$ptr);
-		return fd.value;
+		let errno = wasi.fd_write(fd, ciovecs.$ptr, 1, bytesWritten.$ptr);
+		assert.strictEqual(errno, Errno.success);
+		assert.strictEqual(bytesWritten.value, bytes.byteLength);
+		return fd;
 	}
 
 	test('filesystem setup', () => {
@@ -467,8 +465,57 @@ suite ('Filesystem', () => {
 		});
 	});
 
-	test('fd_advise', () => {
-		runTestWithFilesystem((wasi, memory, rootFd, testLocation) => {
+	test('fd_advise - normal', () => {
+		runTestWithFilesystem((wasi, memory, rootFd) => {
+			const fd = createFileWithContent(wasi, memory, rootFd, 'test.txt', 'Hello World');
+			// VS Code has no advise support. So all advises should result in success
+			const errno = wasi.fd_advise(fd, 0n, 3n, Advice.normal);
+			assert.strictEqual(errno, Errno.success);
+		});
+	});
+
+	test('fd_advise - sequential', () => {
+		runTestWithFilesystem((wasi, memory, rootFd) => {
+			const fd = createFileWithContent(wasi, memory, rootFd, 'test.txt', 'Hello World');
+			// VS Code has no advise support. So all advises should result in success
+			const errno = wasi.fd_advise(fd, 0n, 3n, Advice.sequential);
+			assert.strictEqual(errno, Errno.success);
+		});
+	});
+
+	test('fd_advise - random', () => {
+		runTestWithFilesystem((wasi, memory, rootFd) => {
+			const fd = createFileWithContent(wasi, memory, rootFd, 'test.txt', 'Hello World');
+			// VS Code has no advise support. So all advises should result in success
+			const errno = wasi.fd_advise(fd, 0n, 3n, Advice.random);
+			assert.strictEqual(errno, Errno.success);
+		});
+	});
+
+	test('fd_advise - willneed', () => {
+		runTestWithFilesystem((wasi, memory, rootFd) => {
+			const fd = createFileWithContent(wasi, memory, rootFd, 'test.txt', 'Hello World');
+			// VS Code has no advise support. So all advises should result in success
+			const errno = wasi.fd_advise(fd, 0n, 3n, Advice.willneed);
+			assert.strictEqual(errno, Errno.success);
+		});
+	});
+
+	test('fd_advise - dontneed', () => {
+		runTestWithFilesystem((wasi, memory, rootFd) => {
+			const fd = createFileWithContent(wasi, memory, rootFd, 'test.txt', 'Hello World');
+			// VS Code has no advise support. So all advises should result in success
+			const errno = wasi.fd_advise(fd, 0n, 3n, Advice.dontneed);
+			assert.strictEqual(errno, Errno.success);
+		});
+	});
+
+	test('fd_advise - noreuse', () => {
+		runTestWithFilesystem((wasi, memory, rootFd) => {
+			const fd = createFileWithContent(wasi, memory, rootFd, 'test.txt', 'Hello World');
+			// VS Code has no advise support. So all advises should result in success
+			const errno = wasi.fd_advise(fd, 0n, 3n, Advice.noreuse);
+			assert.strictEqual(errno, Errno.success);
 		});
 	});
 
@@ -509,6 +556,8 @@ suite ('Filesystem', () => {
 			assert.strictEqual(errno, Errno.success);
 			assert.strictEqual(bytesWritten.value, content.byteLength);
 			assert.strictEqual(fs.readFileSync(path.join(testLocation, 'test.txt'), { encoding: 'utf8' }), hw);
+			errno = wasi.fd_close(fd);
+			assert.strictEqual(errno, Errno.success);
 		});
 	});
 
@@ -529,6 +578,8 @@ suite ('Filesystem', () => {
 			assert.strictEqual(errno, Errno.success);
 			assert.strictEqual(bytesWritten.value, contentLength);
 			assert.strictEqual(fs.readFileSync(path.join(testLocation, 'test.txt'), { encoding: 'utf8' }), hw.join(''));
+			errno = wasi.fd_close(fd);
+			assert.strictEqual(errno, Errno.success);
 		});
 	});
 });
