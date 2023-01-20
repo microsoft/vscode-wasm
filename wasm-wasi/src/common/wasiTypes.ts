@@ -863,7 +863,7 @@ export namespace Advice {
 	export const dontneed = 4;
 
 	/**
-	 *  The application expects to access the specified data once and then not
+	 * The application expects to access the specified data once and then not
 	 * reuse it thereafter.
 	 */
 	export const noreuse = 5;
@@ -1142,15 +1142,23 @@ export namespace Prestat {
  * A region of memory for scatter/gather reads.
  */
 export type iovec = {
+
+	/**
+	 * The memory location of the allocated struct.
+	 */
+	get $ptr(): ptr;
+
 	/**
 	 * The address of the buffer to be filled.
 	 */
 	get buf(): ptr;
+	set buf(value: ptr);
 
 	/**
 	 * The length of the buffer to be filled.
 	 */
 	get buf_len(): u32;
+	set buf_len(value: u32);
 };
 
 export namespace Iovec {
@@ -1165,14 +1173,13 @@ export namespace Iovec {
 		buf_len: 4,
 	};
 
-	export function create(ptr: ptr, memory: DataView): ciovec {
+	export function create(ptr: ptr, memory: DataView): iovec {
 		return {
-			get buf(): ptr {
-				return memory.getUint32(ptr + offsets.buf, true);
-			},
-			get buf_len(): u32 {
-				return memory.getUint32(ptr + offsets.buf_len, true);
-			}
+			get $ptr(): ptr { return ptr; },
+			get buf(): ptr { return memory.getUint32(ptr + offsets.buf, true); },
+			set buf(value: ptr) { memory.setUint32(ptr + offsets.buf, value, true); },
+			get buf_len(): u32 { return memory.getUint32(ptr + offsets.buf_len, true); },
+			set buf_len(value: u32) { memory.setUint32(ptr + offsets.buf_len, value, true); }
 		};
 	}
 }
@@ -1184,14 +1191,21 @@ export type iovec_array = iovec[];
  */
 export type ciovec = {
 	/**
+	 * The memory location of the allocated struct.
+	 */
+	get $ptr(): ptr;
+
+	/**
 	 * The address of the buffer to be written.
 	 */
 	get buf(): ptr;
+	set buf(value: ptr);
 
 	/**
 	 * The length of the buffer to be written.
 	 */
 	get buf_len(): u32;
+	set buf_len(value: u32);
 };
 
 export namespace Ciovec {
@@ -1208,12 +1222,11 @@ export namespace Ciovec {
 
 	export function create(ptr: ptr, memory: DataView): ciovec {
 		return {
-			get buf(): ptr {
-				return memory.getUint32(ptr + offsets.buf, true);
-			},
-			get buf_len(): u32 {
-				return memory.getUint32(ptr + offsets.buf_len, true);
-			}
+			get $ptr(): ptr { return ptr; },
+			get buf(): ptr { return memory.getUint32(ptr + offsets.buf, true); },
+			set buf(value: ptr) { memory.setUint32(ptr + offsets.buf, value, true); },
+			get buf_len(): u32 { return memory.getUint32(ptr + offsets.buf_len, true); },
+			set buf_len(value: u32) { memory.setUint32(ptr + offsets.buf_len, value, true); }
 		};
 	}
 }
@@ -1846,7 +1859,7 @@ export type fd_sync = (fd: fd) => errno;
  * @param offset_ptr A memory location to store the current offset of the
  * file descriptor, relative to the start of the file.
  */
-export type fd_tell = (fd: fd, offset_ptr: ptr) => errno;
+export type fd_tell = (fd: fd, offset_ptr: ptr<u64>) => errno;
 
 /**
  * Write to a file descriptor. Note: This is similar to writev in POSIX.
@@ -1856,7 +1869,7 @@ export type fd_tell = (fd: fd, offset_ptr: ptr) => errno;
  * @param ciovs_len The length of the iovs.
  * @param bytesWritten_ptr A memory location to store the bytes written.
  */
-export type fd_write = (fd: fd, ciovs_ptr: ptr, ciovs_len: u32, bytesWritten_ptr: ptr) => errno;
+export type fd_write = (fd: fd, ciovs_ptr: ptr<ciovec>, ciovs_len: u32, bytesWritten_ptr: ptr<u32>) => errno;
 
 /**
  * Create a directory. Note: This is similar to mkdirat in POSIX.

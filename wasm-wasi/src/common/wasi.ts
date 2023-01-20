@@ -8,7 +8,7 @@ import { ApiShape, FileSystemError, RPCError } from '@vscode/sync-api-client';
 
 import RAL from './ral';
 
-import { ptr, size, u32 } from './baseTypes';
+import { ptr, size, u32, u64 } from './baseTypes';
 import {
 	fd, errno, Errno, lookupflags, oflags, rights, fdflags, dircookie, Rights,
 	filesize, advise, filedelta, whence, Ciovec, Iovec, clockid, timestamp, Clockid,
@@ -19,7 +19,7 @@ import {
 	fd_filestat_set_times, fd_pread, fd_prestat_dir_name, fd_prestat_get, fd_pwrite, fd_read, fd_readdir,
 	fd_seek, fd_sync, fd_tell, fd_write, path_create_directory, path_filestat_get, path_filestat_set_times,
 	path_link, path_open, path_readlink, path_remove_directory, path_rename, path_symlink, path_unlink_file,
-	poll_oneoff, proc_exit, random_get, sched_yield, sock_accept, sock_recv, sock_send, sock_shutdown, Fdstat, Filestat, dirent
+	poll_oneoff, proc_exit, random_get, sched_yield, sock_accept, sock_recv, sock_send, sock_shutdown, Fdstat, Filestat, dirent, ciovec
 } from './wasiTypes';
 import { BigInts, code2Wasi } from './converter';
 import { CharacterDeviceDriver, DeviceDriver, DeviceId, FileDescriptor, FileSystemDeviceDriver, ReaddirEntry } from './deviceDriver';
@@ -624,7 +624,7 @@ export namespace WASI {
 					return handleError(error);
 				}
 			},
-			fd_tell: (fd: fd, offset_ptr: ptr): errno => {
+			fd_tell: (fd: fd, offset_ptr: ptr<u64>): errno => {
 				try {
 					const fileDescriptor = getFileDescriptor(fd);
 					fileDescriptor.assertBaseRight(Rights.fd_tell);
@@ -636,7 +636,7 @@ export namespace WASI {
 					return handleError(error);
 				}
 			},
-			fd_write: (fd: fd, ciovs_ptr: ptr, ciovs_len: u32, bytesWritten_ptr: ptr): errno => {
+			fd_write: (fd: fd, ciovs_ptr: ptr<ciovec>, ciovs_len: u32, bytesWritten_ptr: ptr<u32>): errno => {
 				try {
 					const fileDescriptor = getFileDescriptor(fd);
 					fileDescriptor.assertBaseRight(Rights.fd_write);
