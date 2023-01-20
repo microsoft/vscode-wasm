@@ -9,7 +9,7 @@ import os from 'os';
 import * as uuid from 'uuid';
 import { TextDecoder, TextEncoder } from 'util';
 
-import { DeviceDescription, Environment, WASI, Clockid, Errno, Prestat, fd, Oflags, Rights, Filestat, ApiShape } from '@vscode/wasm-wasi';
+import { DeviceDescription, Environment, WASI, Clockid, Errno, Prestat, fd, Oflags, Rights, Filestat } from '@vscode/wasm-wasi';
 import { URI } from 'vscode-uri';
 
 import { TestApi } from './testApi';
@@ -240,14 +240,13 @@ suite('Configurations', () => {
 
 suite ('Filesystem', () => {
 
-	function createWASI(programName: string, fileLocation: string): [WASI, Memory, ApiShape] {
+	function createWASI(programName: string, fileLocation: string): [WASI, Memory] {
 		const devices: DeviceDescription[] = [
 			{ kind: 'fileSystem', uri: URI.parse(`file://${fileLocation}`), mountPoint: '/' },
 			{ kind: 'console', uri:  consoleUri }
 		];
 
-		const apiClient = new TestApi();
-		const wasi = WASI.create(programName, apiClient, (_rval) => { }, devices, {
+		const wasi = WASI.create(programName, new TestApi(), (_rval) => { }, devices, {
 			stdin: { kind: 'console', uri: consoleUri },
 			stdout: { kind: 'console', uri: consoleUri },
 			stderr: { kind: 'console', uri: consoleUri },
@@ -258,7 +257,7 @@ suite ('Filesystem', () => {
 			buffer: memory.getRaw(),
 			grow: () => { return 65536; }
 		}}});
-		return [wasi, memory, apiClient];
+		return [wasi, memory];
 	}
 
 	function rimraf(location: string) {
@@ -275,12 +274,12 @@ suite ('Filesystem', () => {
 		}
 	}
 
-	function runTestWithFilesystem(callback: (wasi: WASI, memory: Memory, rootFd: fd, apiClient: ApiShape) => void): void {
+	function runTestWithFilesystem(callback: (wasi: WASI, memory: Memory, rootFd: fd, testLocation: string) => void): void {
 		const tempDir = os.tmpdir();
 		const directory = path.join(tempDir, 'wasm-wasi-tests', uuid.v4());
 		try {
 			fs.mkdirSync(directory, { recursive: true });
-			const [wasi, memory, apiClient] = createWASI('fileTest', directory);
+			const [wasi, memory] = createWASI('fileTest', directory);
 			const prestat = memory.allocStruct(Prestat);
 			let errno = wasi.fd_prestat_get(3, prestat.$ptr);
 			assert.strictEqual(errno, Errno.success);
@@ -295,7 +294,7 @@ suite ('Filesystem', () => {
 			const mountPoint = stringBuffer.value;
 			assert.strictEqual(mountPoint, '/');
 
-			callback(wasi, memory, 3, apiClient);
+			callback(wasi, memory, 3, directory);
 		} finally {
 			try {
 				rimraf(directory);
@@ -336,16 +335,18 @@ suite ('Filesystem', () => {
 	});
 
 	test('path_open - truncate file', () => {
-		runTestWithFilesystem((wasi, memory, rootFd, apiClient) => {
-			apiClient.vscode.workspace.fileSystem.
+		runTestWithFilesystem((wasi, memory, rootFd, testLocation) => {
 			const name = 'test.txt';
+			fs.writeFileSync(path.join(testLocation, name), 'Hello World');
 			const fd = memory.allocUint32(0);
-			const path = memory.allocString(name);
-			let errno = wasi.path_open(rootFd, 0, path.$ptr, path.byteLength, Oflags.creat, Rights.FileBase, Rights.FileInheriting, 0, fd.$ptr);
+			const p = memory.allocString(name);
+			let errno = wasi.path_open(rootFd, 0, p.$ptr, p.byteLength, Oflags.trunc, Rights.FileBase, Rights.FileInheriting, 0, fd.$ptr);
 			assert.strictEqual(errno, Errno.success);
 			assert.notStrictEqual(fd.value, 0);
 			errno = wasi.fd_close(fd.value);
 			assert.strictEqual(errno, Errno.success);
+			const stat = fs.statSync(path.join(testLocation, name));
+			assert.strictEqual(stat.size, 0);
 		});
 	});
 

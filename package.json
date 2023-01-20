@@ -45,7 +45,7 @@
 		"clean": "node ./build/bin/all.js run clean",
 		"lint": "node ./build/bin/all.js run lint",
 		"esbuild:apiTests": "cd sync-api-tests && npm run esbuild && cd ..",
-		"test": "cd sync-api-common && npm run test && cd ../sync-api-tests && npm run test && cd ..",
+		"test": "cd sync-api-common && npm run test && cd ../sync-api-tests && npm run test && cd ../wasm-wasi-tests && npm run test && cd ..",
 		"test:apiWebTests": "cd sync-api-tests && npm run test:runWebTests && cd ..",
 		"tsconfig-gen": "tsconfig-gen --file .tsconfigrc.js",
 		"update:lock": "git clean -xfd . && npm install"
