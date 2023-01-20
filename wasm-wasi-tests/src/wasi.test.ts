@@ -4,12 +4,12 @@
  * ------------------------------------------------------------------------------------------ */
 import assert from 'assert';
 import path from 'path';
-import fs, { open } from 'fs';
+import fs from 'fs';
 import os from 'os';
 import * as uuid from 'uuid';
 import { TextDecoder, TextEncoder } from 'util';
 
-import { DeviceDescription, Environment, WASI, Clockid, Errno, Prestat, fd, Oflags, Rights, Filestat, Iovec, Ciovec, Advice } from '@vscode/wasm-wasi';
+import { DeviceDescription, Environment, WASI, Clockid, Errno, Prestat, fd, Oflags, Rights, Filestat, Ciovec, Advice } from '@vscode/wasm-wasi';
 import { URI } from 'vscode-uri';
 
 import { TestApi } from './testApi';
@@ -370,6 +370,11 @@ suite ('Filesystem', () => {
 		return fd;
 	}
 
+	function closeFile(wasi: WASI, fd: fd): void {
+		const errno = wasi.fd_close(fd);
+		assert.strictEqual(errno, Errno.success);
+	}
+
 	test('filesystem setup', () => {
 		runTestWithFilesystem((_wasi, _memory, rootFd) => {
 			assert.strictEqual(rootFd, 3);
@@ -395,8 +400,7 @@ suite ('Filesystem', () => {
 			let errno = wasi.path_open(rootFd, 0, p.$ptr, p.byteLength, 0, Rights.FileBase, Rights.FileInheriting, 0, fd.$ptr);
 			assert.strictEqual(errno, Errno.success);
 			assert.notStrictEqual(fd.value, 0);
-			errno = wasi.fd_close(fd.value);
-			assert.strictEqual(errno, Errno.success);
+			closeFile(wasi, fd.value);
 		});
 	});
 
@@ -408,8 +412,7 @@ suite ('Filesystem', () => {
 			let errno = wasi.path_open(rootFd, 0, path.$ptr, path.byteLength, Oflags.creat, Rights.FileBase, Rights.FileInheriting, 0, fd.$ptr);
 			assert.strictEqual(errno, Errno.success);
 			assert.notStrictEqual(fd.value, 0);
-			errno = wasi.fd_close(fd.value);
-			assert.strictEqual(errno, Errno.success);
+			closeFile(wasi, fd.value);
 		});
 	});
 
@@ -422,8 +425,7 @@ suite ('Filesystem', () => {
 			let errno = wasi.path_open(rootFd, 0, p.$ptr, p.byteLength, Oflags.trunc, Rights.FileBase, Rights.FileInheriting, 0, fd.$ptr);
 			assert.strictEqual(errno, Errno.success);
 			assert.notStrictEqual(fd.value, 0);
-			errno = wasi.fd_close(fd.value);
-			assert.strictEqual(errno, Errno.success);
+			closeFile(wasi, fd.value);
 			const stat = fs.statSync(path.join(testLocation, name));
 			assert.strictEqual(stat.size, 0);
 		});
@@ -460,8 +462,7 @@ suite ('Filesystem', () => {
 			let errno = wasi.path_open(rootFd, 0, p.$ptr, p.byteLength, Oflags.directory, Rights.FileBase, Rights.FileInheriting, 0, fd.$ptr);
 			assert.strictEqual(errno, Errno.success);
 			assert.notStrictEqual(fd.value, 0);
-			errno = wasi.fd_close(fd.value);
-			assert.strictEqual(errno, Errno.success);
+			closeFile(wasi, fd.value);
 		});
 	});
 
@@ -471,6 +472,7 @@ suite ('Filesystem', () => {
 			// VS Code has no advise support. So all advises should result in success
 			const errno = wasi.fd_advise(fd, 0n, 3n, Advice.normal);
 			assert.strictEqual(errno, Errno.success);
+			closeFile(wasi, fd);
 		});
 	});
 
@@ -480,6 +482,7 @@ suite ('Filesystem', () => {
 			// VS Code has no advise support. So all advises should result in success
 			const errno = wasi.fd_advise(fd, 0n, 3n, Advice.sequential);
 			assert.strictEqual(errno, Errno.success);
+			closeFile(wasi, fd);
 		});
 	});
 
@@ -489,6 +492,7 @@ suite ('Filesystem', () => {
 			// VS Code has no advise support. So all advises should result in success
 			const errno = wasi.fd_advise(fd, 0n, 3n, Advice.random);
 			assert.strictEqual(errno, Errno.success);
+			closeFile(wasi, fd);
 		});
 	});
 
@@ -498,6 +502,7 @@ suite ('Filesystem', () => {
 			// VS Code has no advise support. So all advises should result in success
 			const errno = wasi.fd_advise(fd, 0n, 3n, Advice.willneed);
 			assert.strictEqual(errno, Errno.success);
+			closeFile(wasi, fd);
 		});
 	});
 
@@ -507,6 +512,7 @@ suite ('Filesystem', () => {
 			// VS Code has no advise support. So all advises should result in success
 			const errno = wasi.fd_advise(fd, 0n, 3n, Advice.dontneed);
 			assert.strictEqual(errno, Errno.success);
+			closeFile(wasi, fd);
 		});
 	});
 
@@ -516,6 +522,17 @@ suite ('Filesystem', () => {
 			// VS Code has no advise support. So all advises should result in success
 			const errno = wasi.fd_advise(fd, 0n, 3n, Advice.noreuse);
 			assert.strictEqual(errno, Errno.success);
+			closeFile(wasi, fd);
+		});
+	});
+
+	test('fd_allocate', () => {
+		runTestWithFilesystem((wasi, memory, rootFd) => {
+			const fd = createFileWithContent(wasi, memory, rootFd, 'test.txt', 'Hello World');
+			// VS Code has no advise support. So all advises should result in success
+			const errno = wasi.fd_allocate(fd, 5n, 11n);
+			assert.strictEqual(errno, Errno.success);
+			closeFile(wasi, fd);
 		});
 	});
 
