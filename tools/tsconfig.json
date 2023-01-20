@@ -1,9 +1,5 @@
 {
     "compilerOptions": {
-        "types": [
-            "node",
-            "mocha"
-        ],
         "module": "Node16",
         "moduleResolution": "Node16",
         "target": "es2020",
@@ -11,6 +7,9 @@
             "es2020"
         ],
         "rootDir": "./src",
+        "types": [
+            "node"
+        ],
         "strict": true,
         "noImplicitAny": true,
         "noImplicitReturns": true,
@@ -26,11 +25,5 @@
     },
     "include": [
         "."
-    ],
-    "files": [],
-    "references": [
-        {
-            "path": "./../wasm-wasi/tsconfig.json"
-        }
     ]
 }

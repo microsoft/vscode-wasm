@@ -15,6 +15,5 @@ const node_modules = 'node_modules';
 (async function main() {
 	console.log('Symlinking node modules for sync-api-tests');
 
-	ln.softLink(path.join(root, 'sync-api-service'), path.join(root, 'sync-api-tests', node_modules, '@vscode', 'sync-api-service'));
-	ln.softLink(path.join(root, 'sync-api-client'), path.join(root, 'sync-api-tests', node_modules, '@vscode', 'sync-api-client'));
+	ln.softLink(path.join(root, 'wasm-wasi'), path.join(root, 'wasm-wasi-tests', node_modules, '@vscode', 'wasm-wasi'));
 })();

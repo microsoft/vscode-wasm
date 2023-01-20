@@ -1,12 +1,22 @@
 {
-	"name": "wasm-wasi-tests",
-	"publisher": "ms-vscode",
+	"name": "@vscode/wasm-wasi-tests",
 	"private": true,
-	"description": "Test cases for the WASM WASI API",
 	"version": "0.1.0",
+	"author": "MS",
+	"license": "MIT",
+	"publisher": "ms-vscode",
+	"description": "Test cases for the WASM WASI API",
 	"categories": [
 		"Other"
 	],
+	"repository": {
+		"type": "git",
+		"url": "git+https://github.com/microsoft/vscode-wasm.git"
+	},
+	"bugs": {
+		"url": "https://github.com/microsoft/vscode-wasm/issues"
+	},
+	"homepage": "https://github.com/microsoft/vscode-wasm#readme",
 	"scripts": {
 		"clean": "node ../node_modules/rimraf/bin.js lib",
 		"compile": "node ../node_modules/typescript/lib/tsc.js -b ./tsconfig.json",
@@ -14,7 +24,10 @@
 		"watch": "node ../node_modules/typescript/lib/tsc.js -b ./tsconfig.watch.json -w",
 		"lint": "node ../node_modules/eslint/bin/eslint.js --ext ts src",
 		"test": "npm run test:node",
-		"test:node": "node ../node_modules/mocha/bin/_mocha"
+		"test:node": "node ../node_modules/mocha/bin/_mocha",
+		"symlink:publish": "node ../build/bin/symlink-wasm-wasi-tests-publish.js",
+		"all:publish": "git clean -xfd . && npm install && npm run symlink:publish && npm run compile:publish && npm run lint && npm run test"
+
 	},
 	"dependencies": {
 		"@vscode/wasm-wasi": "0.8.2",

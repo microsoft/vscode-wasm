@@ -248,6 +248,20 @@ const wasm_wasi_tests = {
 };
 
 /** @type ProjectDescription */
+const tools = {
+	name: 'tools',
+	path: './tools',
+	extends: [ node ],
+	out: {
+		dir: './lib',
+		buildInfoFile: '${buildInfoFile}.tsbuildInfo'
+	},
+	compilerOptions: {
+		rootDir: './src'
+	}
+};
+
+/** @type ProjectDescription */
 const testbed_coreutils = {
 	name: "coreutils",
 	path: './testbeds/coreutils',
@@ -298,7 +312,7 @@ const testbeds = {
 const root = {
 	name: 'root',
 	path: './',
-	references: [ sync_api_common, sync_api_client, sync_api_service, sync_api_tests, wasm_wasi, wasm_wasi_tests ]
+	references: [ sync_api_common, sync_api_client, sync_api_service, sync_api_tests, wasm_wasi, wasm_wasi_tests, tools ]
 };
 
 /** @type CompilerOptions */
@@ -371,6 +385,7 @@ const projects = [
 	[ createPublishProjectDescription(wasm_wasi), [ publishProjectOptions ] ],
 	[ wasm_wasi_tests, [ compileProjectOptions, watchProjectOptions ] ],
 	[ createPublishProjectDescription(wasm_wasi_tests), [ publishProjectOptions ] ],
+	[ tools, [ compileProjectOptions, watchProjectOptions ] ],
 	[ root, [compileProjectOptions, watchProjectOptions ] ],
 	[ testbed_coreutils, [ compileProjectOptions ] ],
 	[ testbed_cpp, [ compileProjectOptions ] ],

@@ -48,6 +48,7 @@
 		"test": "cd sync-api-common && npm run test && cd ../sync-api-tests && npm run test && cd ../wasm-wasi-tests && npm run test && cd ..",
 		"test:apiWebTests": "cd sync-api-tests && npm run test:runWebTests && cd ..",
 		"tsconfig-gen": "tsconfig-gen --file .tsconfigrc.js",
+		"validate:versions": "node ./tools/lib/validate-versions.js",
 		"update:lock": "git clean -xfd . && npm install"
 	}
 }
