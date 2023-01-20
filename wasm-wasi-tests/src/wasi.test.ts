@@ -121,6 +121,12 @@ class Memory {
 	}
 }
 
+namespace Timestamp {
+	export function inNanoseconds(timeInMilliseconds: number): bigint {
+		return BigInt(timeInMilliseconds) * 1000000n;
+	}
+}
+
 suite('Configurations', () => {
 
 	function createWASI(programName: string, fileLocation?: string, args?: string[], env?: Environment): [WASI, Memory] {
@@ -321,6 +327,20 @@ suite ('Filesystem', () => {
 		});
 	});
 
+	test('path_open - file exists', () => {
+		runTestWithFilesystem((wasi, memory, rootFd, testLocation) => {
+			const name = 'test.txt';
+			fs.writeFileSync(path.join(testLocation, name), 'Hello World');
+			const fd = memory.allocUint32(0);
+			const p = memory.allocString(name);
+			let errno = wasi.path_open(rootFd, 0, p.$ptr, p.byteLength, 0, Rights.FileBase, Rights.FileInheriting, 0, fd.$ptr);
+			assert.strictEqual(errno, Errno.success);
+			assert.notStrictEqual(fd.value, 0);
+			errno = wasi.fd_close(fd.value);
+			assert.strictEqual(errno, Errno.success);
+		});
+	});
+
 	test('path_open - create file', () => {
 		runTestWithFilesystem((wasi, memory, rootFd) => {
 			const name = 'test.txt';
@@ -350,19 +370,61 @@ suite ('Filesystem', () => {
 		});
 	});
 
-	test('fd_filestat_get', () => {
-		runTestWithFilesystem((wasi, memory, rootFd) => {
+	test('path_open - fail if file exists', () => {
+		runTestWithFilesystem((wasi, memory, rootFd, testLocation) => {
 			const name = 'test.txt';
+			fs.writeFileSync(path.join(testLocation, name), 'Hello World');
 			const fd = memory.allocUint32(0);
-			const path = memory.allocString(name);
-			let errno = wasi.path_open(rootFd, 0, path.$ptr, path.byteLength, Oflags.creat, Rights.fd_filestat_get, 0n, 0, fd.$ptr);
+			const p = memory.allocString(name);
+			let errno = wasi.path_open(rootFd, 0, p.$ptr, p.byteLength, Oflags.excl, Rights.FileBase, Rights.FileInheriting, 0, fd.$ptr);
+			assert.strictEqual(errno, Errno.exist);
+		});
+	});
+
+	test('path_open - fail if not directory', () => {
+		runTestWithFilesystem((wasi, memory, rootFd, testLocation) => {
+			const name = 'test.txt';
+			fs.writeFileSync(path.join(testLocation, name), 'Hello World');
+			const fd = memory.allocUint32(0);
+			const p = memory.allocString(name);
+			let errno = wasi.path_open(rootFd, 0, p.$ptr, p.byteLength, Oflags.directory, Rights.FileBase, Rights.FileInheriting, 0, fd.$ptr);
+			assert.strictEqual(errno, Errno.notdir);
+		});
+	});
+
+	test('path_open - is directory', () => {
+		runTestWithFilesystem((wasi, memory, rootFd, testLocation) => {
+			const name = 'folder';
+			fs.mkdirSync(path.join(testLocation, name));
+			const fd = memory.allocUint32(0);
+			const p = memory.allocString(name);
+			let errno = wasi.path_open(rootFd, 0, p.$ptr, p.byteLength, Oflags.directory, Rights.FileBase, Rights.FileInheriting, 0, fd.$ptr);
+			assert.strictEqual(errno, Errno.success);
+			assert.notStrictEqual(fd.value, 0);
+			errno = wasi.fd_close(fd.value);
+			assert.strictEqual(errno, Errno.success);
+		});
+	});
+
+	test('fd_filestat_get', () => {
+		runTestWithFilesystem((wasi, memory, rootFd, testLocation) => {
+			const name = 'test.txt';
+			fs.writeFileSync(path.join(testLocation, name), 'Hello World');
+			const fd = memory.allocUint32(0);
+			const p = memory.allocString(name);
+			let errno = wasi.path_open(rootFd, 0, p.$ptr, p.byteLength, Oflags.creat, Rights.fd_filestat_get, 0n, 0, fd.$ptr);
 			assert.strictEqual(errno, Errno.success);
 			assert.notStrictEqual(fd.value, 0);
 			const filestat = memory.allocStruct(Filestat);
 			errno = wasi.fd_filestat_get(fd.value, filestat.$ptr);
 			assert.strictEqual(errno, Errno.success);
-			assert.strictEqual(filestat.size, 0n);
-			assert.strictEqual(filestat.nlink, 0n);
+			const stat = fs.statSync(path.join(testLocation, name));
+			assert.strictEqual(filestat.size, BigInt(stat.size));
+			assert.strictEqual(filestat.nlink, BigInt(stat.nlink));
+			assert.strictEqual(filestat.ctim, Timestamp.inNanoseconds(stat.ctime.valueOf()));
+			assert.strictEqual(filestat.mtim, Timestamp.inNanoseconds(stat.mtime.valueOf()));
+			// VS Code has no API for atime. So we use the mtime.
+			assert.strictEqual(filestat.atim, Timestamp.inNanoseconds(stat.mtime.valueOf()));
 			errno = wasi.fd_close(fd.value);
 			assert.strictEqual(errno, Errno.success);
 		});

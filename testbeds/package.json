@@ -8,6 +8,7 @@
 		"@types/vscode": "^1.71.0"
 	},
 	"scripts": {
+		"clean": "cd ./coreutils && npm run clean",
 		"postinstall": "cd .. && npm run symlink",
 		"lint": "node ../node_modules/eslint/bin/eslint.js --ext ts coreutils cpp python rust"
 	}

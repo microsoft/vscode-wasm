@@ -216,11 +216,18 @@ export function create(apiClient: ApiShape, _textEncoder: RAL.TextEncoder, fileD
 		result.dev = deviceId;
 		result.ino = inode.id;
 		result.filetype = code2Wasi.asFileType(vStat.type);
-		result.nlink = 0n;
+		// nlink denotes the number of hard links (not soft links)
+		// Since VS Code doesn't support hard links on files we
+		// always return 1.
+		result.nlink = 1n;
 		result.size = BigInt(vStat.size);
-		result.atim = BigInt(vStat.mtime);
-		result.ctim = BigInt(vStat.ctime);
-		result.mtim = BigInt(vStat.mtime);
+		result.atim = timeInNanoseconds(vStat.mtime);
+		result.ctim = timeInNanoseconds(vStat.ctime);
+		result.mtim = timeInNanoseconds(vStat.mtime);
+	}
+
+	function timeInNanoseconds(timeInMilliseconds: number): bigint {
+		return BigInt(timeInMilliseconds) * 1000000n;
 	}
 
 	function read(content: Uint8Array, offset: number, buffers: Uint8Array[]): size {

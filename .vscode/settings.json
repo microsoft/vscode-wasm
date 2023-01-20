@@ -48,6 +48,12 @@
 	"editor.codeActionsOnSave": {
 		"source.fixAll.eslint": true
 	},
+	"mochaExplorer.files": [
+		"sync-api-common/lib/node/test/*.test.js",
+		"wasm-wasi-tests/lib/*.test.js"
+	],
+	"mochaExplorer.ui": "tdd",
+	"mochaExplorer.require": "source-map-support/register",
 	"cSpell.words": [
 		"abstime",
 		"acces",
