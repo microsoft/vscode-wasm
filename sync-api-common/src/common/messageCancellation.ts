@@ -61,7 +61,7 @@ export namespace Cancellation {
 	 */
 	export function retrieveCheck(message: object): () => boolean {
 		const candidate = message as MessageWithCancellationData;
-		if (!(candidate instanceof SharedArrayBuffer)) {
+		if (!(candidate.$cancellationData instanceof SharedArrayBuffer)) {
 			return () => false;
 		}
 		const typedArray = new Int32Array(candidate.$cancellationData, 0, 1);
