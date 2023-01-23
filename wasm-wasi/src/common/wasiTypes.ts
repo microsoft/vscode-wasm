@@ -1800,7 +1800,7 @@ export type fd_prestat_dir_name = (fd: fd, pathPtr: ptr, pathLen: size) => errno
  * @param offset The offset within the file at which to write.
  * @param bytesWritten_ptr A memory location to store the bytes written.
  */
-export type fd_pwrite = (fd: fd, ciovs_ptr: ptr, ciovs_len: u32, offset: filesize, bytesWritten_ptr: ptr) => errno;
+export type fd_pwrite = (fd: fd, ciovs_ptr: ptr<ciovec>, ciovs_len: u32, offset: filesize, bytesWritten_ptr: ptr<u32>) => errno;
 
 /**
  * Read from a file descriptor. Note: This is similar to readv in POSIX.
@@ -1810,7 +1810,7 @@ export type fd_pwrite = (fd: fd, ciovs_ptr: ptr, ciovs_len: u32, offset: filesiz
  * @param iovs_len The length of the iovs.
  * @param bytesRead_ptr A memory location to store the bytes read.
  */
-export type fd_read = (fd: fd, iovs_ptr: ptr, iovs_len: u32, bytesRead_ptr: ptr) => errno;
+export type fd_read = (fd: fd, iovs_ptr: ptr<iovec>, iovs_len: u32, bytesRead_ptr: ptr<u32>) => errno;
 
 /**
  * Read directory entries from a directory. When successful, the contents of

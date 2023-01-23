@@ -9,7 +9,7 @@ import os from 'os';
 import * as uuid from 'uuid';
 import { TextDecoder, TextEncoder } from 'util';
 
-import { DeviceDescription, Environment, WASI, Clockid, Errno, Prestat, fd, Oflags, Rights, Filestat, Ciovec, Advice } from '@vscode/wasm-wasi';
+import { DeviceDescription, Environment, WASI, Clockid, Errno, Prestat, fd, Oflags, Rights, Filestat, Ciovec, Advice, filestat, Iovec } from '@vscode/wasm-wasi';
 import { URI } from 'vscode-uri';
 
 import { TestApi } from './testApi';
@@ -129,6 +129,14 @@ class Memory {
 		};
 	}
 
+	public readString(ptr: ptr): string {
+		const length = this.getStringLength(ptr);
+		if (length === -1) {
+			throw new Error(`No null terminate character found`);
+		}
+		return decoder.decode(new Uint8Array(this.raw, ptr, length));
+	}
+
 	public allocBytes(bytes: Uint8Array): wasi.Bytes {
 		const ptr = this.alloc(bytes.length);
 		(new Uint8Array(this.raw)).set(bytes, ptr);
@@ -138,12 +146,8 @@ class Memory {
 		};
 	}
 
-	public readString(ptr: ptr): string {
-		const length = this.getStringLength(ptr);
-		if (length === -1) {
-			throw new Error(`No null terminate character found`);
-		}
-		return decoder.decode(new Uint8Array(this.raw, ptr, length));
+	public readBytes(ptr: ptr, length: number): Uint8Array {
+		return new Uint8Array(this.raw, ptr, length);
 	}
 
 	private getStringLength(start: ptr): number {
@@ -349,6 +353,14 @@ suite ('Filesystem', () => {
 		}
 	}
 
+	function openFile(wasi: WASI, memory: Memory, parentFd: fd, name: string): fd {
+		const fd = memory.allocUint32(0);
+		const path = memory.allocString(name);
+		let errno = wasi.path_open(parentFd, 0, path.$ptr, path.byteLength, 0, Rights.FileBase, Rights.FileInheriting, 0, fd.$ptr);
+		assert.strictEqual(errno, Errno.success);
+		return fd.value;
+	}
+
 	function createFile(wasi: WASI, memory: Memory, parentFd: fd, name: string): fd {
 		const fd = memory.allocUint32(0);
 		const path = memory.allocString(name);
@@ -368,6 +380,13 @@ suite ('Filesystem', () => {
 		assert.strictEqual(errno, Errno.success);
 		assert.strictEqual(bytesWritten.value, bytes.byteLength);
 		return fd;
+	}
+
+	function statFile(wasi: WASI, memory: Memory, fd: fd): filestat {
+		const filestat = memory.allocStruct(Filestat);
+		const errno = wasi.fd_filestat_get(fd, filestat.$ptr);
+		assert.strictEqual(errno, Errno.success);
+		return filestat;
 	}
 
 	function closeFile(wasi: WASI, fd: fd): void {
@@ -526,12 +545,26 @@ suite ('Filesystem', () => {
 		});
 	});
 
+	test('fd_allocate - start', () => {
+		runTestWithFilesystem((wasi, memory, rootFd) => {
+			const fd = createFileWithContent(wasi, memory, rootFd, 'test.txt', 'Hello World');
+			const before = statFile(wasi, memory, fd);
+			const errno = wasi.fd_allocate(fd, 5n, 11n);
+			assert.strictEqual(errno, Errno.success);
+			const after = statFile(wasi, memory, fd);
+			assert.strictEqual(before.size + 11n, after.size);
+			closeFile(wasi, fd);
+		});
+	});
+
 	test('fd_allocate', () => {
 		runTestWithFilesystem((wasi, memory, rootFd) => {
 			const fd = createFileWithContent(wasi, memory, rootFd, 'test.txt', 'Hello World');
-			// VS Code has no advise support. So all advises should result in success
+			const before = statFile(wasi, memory, fd);
 			const errno = wasi.fd_allocate(fd, 5n, 11n);
 			assert.strictEqual(errno, Errno.success);
+			const after = statFile(wasi, memory, fd);
+			assert.strictEqual(before.size + 11n, after.size);
 			closeFile(wasi, fd);
 		});
 	});
@@ -557,6 +590,53 @@ suite ('Filesystem', () => {
 			assert.strictEqual(filestat.atim, Timestamp.inNanoseconds(stat.mtime.valueOf()));
 			errno = wasi.fd_close(fd.value);
 			assert.strictEqual(errno, Errno.success);
+		});
+	});
+
+	test('fd_read - single iovec', () => {
+		runTestWithFilesystem((wasi, memory, rootFd, testLocation) => {
+			const name = 'test.txt';
+			const content = 'Hello World';
+			fs.writeFileSync(path.join(testLocation, name), content);
+			const fd = openFile(wasi, memory, rootFd, name);
+			const stat = statFile(wasi, memory, fd);
+			const iovecs = memory.allocStructArray(1, Iovec);
+			const buffer = memory.alloc(1024);
+			iovecs.get(0).buf = buffer;
+			iovecs.get(0).buf_len = 1024;
+			const bytesRead = memory.allocUint32();
+			let errno = wasi.fd_read(fd, iovecs.$ptr, iovecs.size, bytesRead.$ptr);
+			assert.strictEqual(errno, Errno.success);
+			assert.strictEqual(BigInt(bytesRead.value), stat.size);
+			assert.strictEqual(decoder.decode(memory.readBytes(buffer, bytesRead.value)), content);
+		});
+	});
+
+	test('fd_read - multiple iovec', () => {
+		runTestWithFilesystem((wasi, memory, rootFd, testLocation) => {
+			const name = 'test.txt';
+			const content = '1'.repeat(3000);
+			fs.writeFileSync(path.join(testLocation, name), content);
+			const fd = openFile(wasi, memory, rootFd, name);
+			const stat = statFile(wasi, memory, fd);
+			assert.strictEqual(stat.size, 3000n);
+			const iovecs = memory.allocStructArray(3, Iovec);
+			for (let i = 0; i < iovecs.size; i++) {
+				const buffer = memory.alloc(1024);
+				iovecs.get(i).buf = buffer;
+				iovecs.get(i).buf_len = 1024;
+			}
+			const bytesRead = memory.allocUint32();
+			let errno = wasi.fd_read(fd, iovecs.$ptr, iovecs.size, bytesRead.$ptr);
+			assert.strictEqual(errno, Errno.success);
+			assert.strictEqual(BigInt(bytesRead.value), stat.size);
+			let rest = 3000;
+			for (let i = 0; i < iovecs.size; i++) {
+				const iovec = iovecs.get(i);
+				const toRead = rest >= 1024 ? 1024 : rest;
+				assert.strictEqual(decoder.decode(memory.readBytes(iovec.buf, toRead)), '1'.repeat(toRead));
+				rest -= toRead;
+			}
 		});
 	});
 
