@@ -177,7 +177,7 @@ suite('Configurations', () => {
 			{ kind: 'console', uri:  consoleUri }
 		];
 		if (fileLocation !== undefined) {
-			devices.push({ kind: 'fileSystem', uri: URI.parse(`file://${fileLocation}`), mountPoint: '/' },);
+			devices.push({ kind: 'fileSystem', uri: URI.file(fileLocation), mountPoint: '/' },);
 		}
 		const wasi = WASI.create(programName, new TestApi(), (_rval) => { }, devices, {
 			stdin: { kind: 'console', uri: consoleUri },
@@ -291,7 +291,7 @@ suite ('Filesystem', () => {
 
 	function createWASI(programName: string, fileLocation: string): [WASI, Memory] {
 		const devices: DeviceDescription[] = [
-			{ kind: 'fileSystem', uri: URI.parse(`file://${fileLocation}`), mountPoint: '/' },
+			{ kind: 'fileSystem', uri: URI.file(fileLocation), mountPoint: '/' },
 			{ kind: 'console', uri:  consoleUri }
 		];
 
