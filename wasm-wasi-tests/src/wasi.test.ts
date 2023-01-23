@@ -8,6 +8,7 @@ import fs from 'fs';
 import os from 'os';
 import * as uuid from 'uuid';
 import { TextDecoder, TextEncoder } from 'util';
+import { setTimeout } from 'node:timers/promises';
 
 import { DeviceDescription, Environment, WASI, Clockid, Errno, Prestat, fd, Oflags, Rights, Filestat, Ciovec, Advice, filestat, Iovec } from '@vscode/wasm-wasi';
 import { URI } from 'vscode-uri';
@@ -593,6 +594,25 @@ suite ('Filesystem', () => {
 				assert.strictEqual(buffer[i], 0);
 			}
 			closeFile(wasi, fd);
+		});
+	});
+
+	test('fd_datasync', (done) => {
+		// In VS Code data sync writes `blindly` to disk since no other
+		// options are available.
+		runTestWithFilesystem((wasi, memory, rootFd) => {
+			const fd = createFileWithContent(wasi, memory, rootFd, 'test.txt', 'Hello World');
+			const before = statFile(wasi, memory, fd);
+			setTimeout(5).then(() => {
+				const errno = wasi.fd_datasync(fd);
+				const after = statFile(wasi, memory, fd);
+				assert.strictEqual(errno, Errno.success);
+				assert.ok(before.mtim < after.mtim);
+			}).catch(() => {
+				assert.ok(false, 'setTimeout failed');
+			}).finally(() => {
+				done();
+			});
 		});
 	});
 
