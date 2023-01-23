@@ -546,25 +546,52 @@ suite ('Filesystem', () => {
 	});
 
 	test('fd_allocate - start', () => {
-		runTestWithFilesystem((wasi, memory, rootFd) => {
+		runTestWithFilesystem((wasi, memory, rootFd, testLocation) => {
 			const fd = createFileWithContent(wasi, memory, rootFd, 'test.txt', 'Hello World');
 			const before = statFile(wasi, memory, fd);
-			const errno = wasi.fd_allocate(fd, 5n, 11n);
+			const errno = wasi.fd_allocate(fd, 0n, 5n);
 			assert.strictEqual(errno, Errno.success);
 			const after = statFile(wasi, memory, fd);
-			assert.strictEqual(before.size + 11n, after.size);
+			assert.strictEqual(before.size + 5n, after.size);
+			const buffer = fs.readFileSync(path.join(testLocation, 'test.txt'));
+			for (let i = 0; i < 5; i++) {
+				assert.strictEqual(buffer[i], 0);
+			}
+			assert.notStrictEqual(buffer[5], 0);
 			closeFile(wasi, fd);
 		});
 	});
 
-	test('fd_allocate', () => {
-		runTestWithFilesystem((wasi, memory, rootFd) => {
+	test('fd_allocate - middle', () => {
+		runTestWithFilesystem((wasi, memory, rootFd, testLocation) => {
 			const fd = createFileWithContent(wasi, memory, rootFd, 'test.txt', 'Hello World');
 			const before = statFile(wasi, memory, fd);
 			const errno = wasi.fd_allocate(fd, 5n, 11n);
 			assert.strictEqual(errno, Errno.success);
 			const after = statFile(wasi, memory, fd);
 			assert.strictEqual(before.size + 11n, after.size);
+			const buffer = fs.readFileSync(path.join(testLocation, 'test.txt'));
+			for (let i = 5; i < 5 + 11; i++) {
+				assert.strictEqual(buffer[i], 0);
+			}
+			assert.notStrictEqual(buffer[5 + 11], 0);
+			closeFile(wasi, fd);
+		});
+	});
+
+	test('fd_allocate - end', () => {
+		runTestWithFilesystem((wasi, memory, rootFd, testLocation) => {
+			const fd = createFileWithContent(wasi, memory, rootFd, 'test.txt', 'Hello World');
+			const before = statFile(wasi, memory, fd);
+			const errno = wasi.fd_allocate(fd, 11n, 7n);
+			assert.strictEqual(errno, Errno.success);
+			const after = statFile(wasi, memory, fd);
+			assert.strictEqual(before.size + 7n, after.size);
+			const buffer = fs.readFileSync(path.join(testLocation, 'test.txt'));
+			assert.strictEqual(buffer.length, 11 + 7);
+			for (let i = 11; i < 11 + 7; i++) {
+				assert.strictEqual(buffer[i], 0);
+			}
 			closeFile(wasi, fd);
 		});
 	});
