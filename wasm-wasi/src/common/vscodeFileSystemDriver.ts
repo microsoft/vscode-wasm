@@ -9,7 +9,7 @@ import { ApiShape, size } from '@vscode/sync-api-client';
 
 import { BigInts, code2Wasi } from './converter';
 import { BaseFileDescriptor, FileDescriptor, NoSysDeviceDriver, DeviceIds, ReaddirEntry, FileSystemDeviceDriver } from './deviceDriver';
-import { fdstat, filestat, Rights, fd, rights, fdflags, Filetype, WasiError, Errno, filetype, Whence, lookupflags, timestamp, fstflags, oflags, Oflags, filesize } from './wasiTypes';
+import { fdstat, filestat, Rights, fd, rights, fdflags, Filetype, WasiError, Errno, filetype, Whence, lookupflags, timestamp, fstflags, oflags, Oflags, filesize, Fdflags } from './wasiTypes';
 
 import RAL from './ral';
 import { u64 } from './baseTypes';
@@ -534,8 +534,14 @@ export function create(apiClient: ApiShape, _textEncoder: RAL.TextEncoder, fileD
 				? createFileDescriptor(parentDescriptor, fs_rights_base | Rights.FileBase, fs_rights_inheriting | Rights.FileInheriting, fdflags, path)
 				: createDirectoryDescriptor(parentDescriptor, fs_rights_base | Rights.DirectoryBase, fs_rights_inheriting | Rights.DirectoryInheriting, fdflags, path);
 
-			if (result instanceof FileFileDescriptor && (createFile || Oflags.truncOn(oflags))) {
-				createOrTruncate(result);
+			if (result instanceof FileFileDescriptor) {
+				if (createFile || Oflags.truncOn(oflags)) {
+					createOrTruncate(result);
+				}
+				if ((fdflags & Fdflags.append) !== 0) {
+					const inode = getResolvedINode(result.inode);
+					result.cursor = inode.content.byteLength;
+				}
 			}
 			return result;
 		},

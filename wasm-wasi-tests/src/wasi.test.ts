@@ -10,7 +10,7 @@ import * as uuid from 'uuid';
 import { TextDecoder, TextEncoder } from 'util';
 import { setTimeout } from 'node:timers/promises';
 
-import { DeviceDescription, Environment, WASI, Clockid, Errno, Prestat, fd, Oflags, Rights, Filestat, Ciovec, Advice, filestat, Iovec } from '@vscode/wasm-wasi';
+import { DeviceDescription, Environment, WASI, Clockid, Errno, Prestat, fd, Oflags, Rights, Filestat, Ciovec, Advice, filestat, Iovec, fdstat, Fdstat, Filetype } from '@vscode/wasm-wasi';
 import { URI } from 'vscode-uri';
 
 import { TestApi } from './testApi';
@@ -613,6 +613,17 @@ suite ('Filesystem', () => {
 			}).finally(() => {
 				done();
 			});
+		});
+	});
+
+	test('fd_fdstat_get', () => {
+		runTestWithFilesystem((wasi, memory, rootFd) => {
+			const fd = createFileWithContent(wasi, memory, rootFd, 'test.txt', 'Hello World');
+			const fdstat: fdstat = memory.allocStruct(Fdstat);
+			const errno = wasi.fd_fdstat_get(fd, fdstat.$ptr);
+			assert.strictEqual(errno, Errno.success);
+			assert.strictEqual(fdstat.fs_filetype, Filetype.regular_file);
+			assert.strictEqual(fdstat.fs_flags, 0);
 		});
 	});
 

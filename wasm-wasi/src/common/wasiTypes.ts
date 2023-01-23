@@ -1001,6 +1001,11 @@ export namespace Whence {
 export type fdstat = {
 
 	/**
+	 * The memory location.
+	 */
+	get $ptr(): ptr<fdstat>;
+
+	/**
 	 *  File type.
 	 */
 	get fs_filetype(): filetype;
@@ -1043,6 +1048,7 @@ export namespace Fdstat {
 
 	export function create(ptr: ptr, memory: DataView): fdstat {
 		return {
+			get $ptr(): ptr<fdstat> { return ptr; },
 			get fs_filetype(): filetype { return memory.getUint8(ptr + offsets.fs_filetype); },
 			set fs_filetype(value: filetype) { memory.setUint8(ptr + offsets.fs_filetype, value); },
 			get fs_flags(): fdflags { return memory.getUint16(ptr + offsets.fs_flags, true); },
@@ -1721,7 +1727,7 @@ export type fd_datasync = (fd: fd) => errno;
  * @param fd The file descriptor.
  * @param fdstat_ptr A pointer to store the result.
  */
-export type fd_fdstat_get = (fd: fd, fdstat_ptr: ptr) => errno;
+export type fd_fdstat_get = (fd: fd, fdstat_ptr: ptr<fdstat>) => errno;
 
 /**
  * Adjust the flags associated with a file descriptor. Note: This is similar
@@ -1738,7 +1744,7 @@ export type fd_fdstat_set_flags = (fd: fd, fdflags: fdflags) => errno;
  * @param fd The file descriptor.
  * @param filestat_ptr The buffer where the file's attributes are stored.
  */
-export type fd_filestat_get = (fd: fd, filestat_ptr: ptr) => errno;
+export type fd_filestat_get = (fd: fd, filestat_ptr: ptr<filestat>) => errno;
 
 /**
  * Adjust the size of an open file. If this increases the file's size, the
