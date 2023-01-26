@@ -10,7 +10,7 @@ import * as uuid from 'uuid';
 import { TextDecoder, TextEncoder } from 'util';
 import { setTimeout } from 'node:timers/promises';
 
-import { DeviceDescription, Environment, WASI, Clockid, Errno, Prestat, fd, Oflags, Rights, Filestat, Ciovec, Advice, filestat, Iovec, fdstat, Fdstat, Filetype } from '@vscode/wasm-wasi';
+import { DeviceDescription, Environment, WASI, Clockid, Errno, Prestat, fd, Oflags, Rights, Filestat, Ciovec, Advice, filestat, Iovec, fdstat, Fdstat, Filetype, Fdflags } from '@vscode/wasm-wasi';
 import { URI } from 'vscode-uri';
 
 import { TestApi } from './testApi';
@@ -390,6 +390,17 @@ suite ('Filesystem', () => {
 		return filestat;
 	}
 
+	function writeToFile(wasi: WASI,memory: Memory, fd: fd, str: string) {
+		const ciovecs = memory.allocStructArray(1, Ciovec);
+		const content = memory.allocBytes(encoder.encode(str));
+		ciovecs.get(0).buf = content.$ptr;
+		ciovecs.get(0).buf_len = content.byteLength;
+		const bytesWritten = memory.allocUint32();
+		const errno = wasi.fd_write(fd, ciovecs.$ptr, 1, bytesWritten.$ptr);
+		assert.strictEqual(errno, Errno.success);
+		assert.strictEqual(bytesWritten.value, content.byteLength);
+	}
+
 	function closeFile(wasi: WASI, fd: fd): void {
 		const errno = wasi.fd_close(fd);
 		assert.strictEqual(errno, Errno.success);
@@ -468,7 +479,7 @@ suite ('Filesystem', () => {
 			fs.writeFileSync(path.join(testLocation, name), 'Hello World');
 			const fd = memory.allocUint32(0);
 			const p = memory.allocString(name);
-			let errno = wasi.path_open(rootFd, 0, p.$ptr, p.byteLength, Oflags.directory, Rights.FileBase, Rights.FileInheriting, 0, fd.$ptr);
+			const errno = wasi.path_open(rootFd, 0, p.$ptr, p.byteLength, Oflags.directory, Rights.FileBase, Rights.FileInheriting, 0, fd.$ptr);
 			assert.strictEqual(errno, Errno.notdir);
 		});
 	});
@@ -479,10 +490,24 @@ suite ('Filesystem', () => {
 			fs.mkdirSync(path.join(testLocation, name));
 			const fd = memory.allocUint32(0);
 			const p = memory.allocString(name);
-			let errno = wasi.path_open(rootFd, 0, p.$ptr, p.byteLength, Oflags.directory, Rights.FileBase, Rights.FileInheriting, 0, fd.$ptr);
+			const errno = wasi.path_open(rootFd, 0, p.$ptr, p.byteLength, Oflags.directory, Rights.FileBase, Rights.FileInheriting, 0, fd.$ptr);
 			assert.strictEqual(errno, Errno.success);
 			assert.notStrictEqual(fd.value, 0);
 			closeFile(wasi, fd.value);
+		});
+	});
+
+	test('path_open - append mode', () => {
+		runTestWithFilesystem((wasi, memory, rootFd, testLocation) => {
+			const name = 'test.txt';
+			fs.writeFileSync(path.join(testLocation, name), 'Hello');
+			const fd = memory.allocUint32(0);
+			const p = memory.allocString(name);
+			let errno = wasi.path_open(rootFd, 0, p.$ptr, p.byteLength, 0, Rights.FileBase, Rights.FileInheriting, Fdflags.append, fd.$ptr);
+			assert.strictEqual(errno, Errno.success);
+			writeToFile(wasi, memory, fd.value, ' World');
+			closeFile(wasi, fd.value);
+			assert.strictEqual(fs.readFileSync(path.join(testLocation, name), { encoding: 'utf8'}), 'Hello World');
 		});
 	});
 
