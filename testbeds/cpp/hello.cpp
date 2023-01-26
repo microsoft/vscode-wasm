@@ -1,12 +1,10 @@
-#include <iostream>
-#include <string>
+#include <stdio.h>
+#include <stdlib.h>
 
 using namespace std;
 
 int main() {
-    cout << "Hello World!" << endl;
-    string input;
-    getline(cin, input);
-    cout << input << endl;
-    return 0;
+    FILE *fptr;
+    fptr = fopen("/workspace/app.py", "a");
+    fclose(fptr);
 }
