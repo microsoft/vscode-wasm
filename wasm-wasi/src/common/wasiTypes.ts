@@ -670,22 +670,34 @@ export namespace Fdflags {
 	 * end.
 	 */
 	export const append = 1 << 0;
+	export function appendOn(value: fdflags): boolean {
+		return (value & append) !== 0;
+	}
 
 	/**
 	 * Write according to synchronized I/O data integrity completion. Only the
 	 * data stored in the file is synchronized.
 	 */
 	export const dsync = 1 << 1;
+	export function dsyncOn(value: fdflags): boolean {
+		return (value & dsync) !== 0;
+	}
 
 	/**
 	 * Non-blocking mode.
 	 */
 	export const nonblock = 1 << 2;
+	export function nonblockOn(value: fdflags): boolean {
+		return (value & nonblock) !== 0;
+	}
 
 	/**
 	 * Synchronized read I/O operations.
 	 */
 	export const rsync = 1 << 3;
+	export function rsyncOn(value: fdflags): boolean {
+		return (value & rsync) !== 0;
+	}
 
 	/**
 	 * Write according to synchronized I/O file integrity completion. In
@@ -693,6 +705,9 @@ export namespace Fdflags {
 	 * implementation may also synchronously update the file's metadata.
 	 */
 	export const sync = 1 << 4;
+	export function syncOn(value: fdflags): boolean {
+		return (value & sync) !== 0;
+	}
 }
 
 export type lookupflags = u32;
@@ -711,38 +726,33 @@ export namespace Oflags {
 	 * Create file if it does not exist.
 	 */
 	export const creat = 1 << 0;
+	export function creatOn(value: oflags): boolean {
+		return (value & creat) !== 0;
+	}
+	export function creatOff(value: oflags): boolean {
+		return (value & creat) === 0;
+	}
 
 	/**
 	 * Fail if not a directory.
 	 */
 	export const directory = 1 << 1;
+	export function directoryOn(value: oflags): boolean {
+		return (value & directory) !== 0;
+	}
 
 	/**
 	 * Fail if file already exists.
 	 */
 	export const excl = 1 << 2;
+	export function exclOn(value: oflags): boolean {
+		return (value & excl) !== 0;
+	}
 
 	/**
 	 * Truncate file to size 0.
 	 */
 	export const trunc = 1 << 3;
-
-	export function creatOn(value: oflags): boolean {
-		return (value & creat) !== 0;
-	}
-
-	export function creatOff(value: oflags): boolean {
-		return (value & creat) === 0;
-	}
-
-	export function directoryOn(value: oflags): boolean {
-		return (value & directory) !== 0;
-	}
-
-	export function exclOn(value: oflags): boolean {
-		return (value & excl) !== 0;
-	}
-
 	export function truncOn(value: oflags): boolean {
 		return (value & trunc) !== 0;
 	}

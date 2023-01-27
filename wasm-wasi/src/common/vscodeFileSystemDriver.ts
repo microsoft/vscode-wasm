@@ -455,6 +455,11 @@ export function create(apiClient: ApiShape, _textEncoder: RAL.TextEncoder, fileD
 			assertFileDescriptor(fileDescriptor);
 
 			const inode = getResolvedINode(fileDescriptor.inode);
+			// We have append mode on. According to POSIX we need to
+			// move the cursor to the end of the file on every write
+			if (Fdflags.appendOn(fileDescriptor.fdflags)) {
+				fileDescriptor.cursor = inode.content.byteLength;
+			}
 			const [newContent, bytesWritten] = write(inode.content, fileDescriptor.cursor, buffers);
 			inode.content = newContent;
 			writeContent(inode);
@@ -534,14 +539,8 @@ export function create(apiClient: ApiShape, _textEncoder: RAL.TextEncoder, fileD
 				? createFileDescriptor(parentDescriptor, fs_rights_base | Rights.FileBase, fs_rights_inheriting | Rights.FileInheriting, fdflags, path)
 				: createDirectoryDescriptor(parentDescriptor, fs_rights_base | Rights.DirectoryBase, fs_rights_inheriting | Rights.DirectoryInheriting, fdflags, path);
 
-			if (result instanceof FileFileDescriptor) {
-				if (createFile || Oflags.truncOn(oflags)) {
-					createOrTruncate(result);
-				}
-				if ((fdflags & Fdflags.append) !== 0) {
-					const inode = getResolvedINode(result.inode);
-					result.cursor = inode.content.byteLength;
-				}
+			if (result instanceof FileFileDescriptor && (createFile || Oflags.truncOn(oflags))) {
+				createOrTruncate(result);
 			}
 			return result;
 		},

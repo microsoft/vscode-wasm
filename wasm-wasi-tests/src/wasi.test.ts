@@ -10,7 +10,7 @@ import * as uuid from 'uuid';
 import { TextDecoder, TextEncoder } from 'util';
 import { setTimeout } from 'node:timers/promises';
 
-import { DeviceDescription, Environment, WASI, Clockid, Errno, Prestat, fd, Oflags, Rights, Filestat, Ciovec, Advice, filestat, Iovec, fdstat, Fdstat, Filetype, Fdflags } from '@vscode/wasm-wasi';
+import { DeviceDescription, Environment, WASI, Clockid, Errno, Prestat, fd, Oflags, Rights, Filestat, Ciovec, Advice, filestat, Iovec, fdstat, Fdstat, Filetype, Fdflags, fdflags } from '@vscode/wasm-wasi';
 import { URI } from 'vscode-uri';
 
 import { TestApi } from './testApi';
@@ -649,6 +649,28 @@ suite ('Filesystem', () => {
 			assert.strictEqual(errno, Errno.success);
 			assert.strictEqual(fdstat.fs_filetype, Filetype.regular_file);
 			assert.strictEqual(fdstat.fs_flags, 0);
+			assert.strictEqual(fdstat.fs_rights_base, Rights.FileBase);
+			assert.strictEqual(fdstat.fs_rights_inheriting, Rights.FileInheriting);
+			closeFile(wasi, fd);
+		});
+	});
+
+	test('fd_fdstat_set_flags', () => {
+		function setFlags(wasi: WASI, memory: Memory, fd: fd, flags: fdflags) {
+			let errno = wasi.fd_fdstat_set_flags(fd, flags);
+			assert.strictEqual(errno, Errno.success);
+			const fdstat: fdstat = memory.allocStruct(Fdstat);
+			errno = wasi.fd_fdstat_get(fd, fdstat.$ptr);
+			assert.strictEqual(errno, Errno.success);
+			assert.strictEqual(fdstat.fs_flags, flags);
+		}
+		runTestWithFilesystem((wasi, memory, rootFd) => {
+			const fd = createFile(wasi, memory, rootFd, 'test.txt');
+			setFlags(wasi, memory, fd, Fdflags.dsync);
+			setFlags(wasi, memory, fd, Fdflags.nonblock);
+			setFlags(wasi, memory, fd, Fdflags.rsync);
+			setFlags(wasi, memory, fd, Fdflags.sync);
+			closeFile(wasi, fd);
 		});
 	});
 
