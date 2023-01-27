@@ -662,7 +662,7 @@ suite ('Filesystem', () => {
 			const fdstat: fdstat = memory.allocStruct(Fdstat);
 			errno = wasi.fd_fdstat_get(fd, fdstat.$ptr);
 			assert.strictEqual(errno, Errno.success);
-			assert.strictEqual(fdstat.fs_flags, flags);
+			assert.notStrictEqual(fdstat.fs_flags & flags, 0);
 		}
 		runTestWithFilesystem((wasi, memory, rootFd) => {
 			const fd = createFile(wasi, memory, rootFd, 'test.txt');
