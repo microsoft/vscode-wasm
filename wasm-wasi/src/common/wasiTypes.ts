@@ -585,7 +585,7 @@ export namespace Rights {
 		Rights.path_create_file | Rights.path_filestat_get | Rights.path_filestat_set_size | Rights.path_filestat_set_times |
 		Rights.path_link_source | Rights.path_link_target | Rights.path_open | Rights.path_readlink | Rights.path_remove_directory |
 		Rights.path_rename_source | Rights.path_rename_target | Rights.path_symlink | Rights.path_unlink_file | Rights.poll_fd_readwrite |
-		Rights.sock_accept | Rights.sock_shutdown;
+		Rights.sock_accept | Rights.sock_shutdown | Rights.sock_accept;
 
 	/**
 	 * Base rights for block devices.
@@ -605,10 +605,10 @@ export namespace Rights {
 	 * Base rights for directories managed in VS Code.
 	 */
 	export const DirectoryBase = path_create_directory | path_create_file |
-		path_filestat_get | path_filestat_set_size | path_filestat_set_times |
-		path_link_source | path_link_target | path_open | path_readlink |
-		path_remove_directory | path_rename_source | path_rename_target |
-		path_symlink | path_unlink_file | fd_readdir;
+		path_filestat_get | path_filestat_set_times | path_link_source |
+		path_link_target | path_open | path_readlink | path_remove_directory |
+		path_rename_source | path_rename_target | path_symlink | path_unlink_file |
+		fd_readdir;
 
 	/**
 	 * Base rights for files managed in VS Code.

@@ -27,8 +27,8 @@ class FileFileDescriptor extends BaseFileDescriptor {
 	 */
 	public readonly path: string;
 
-	constructor(deviceId: bigint, fd: fd, rights_base: rights, rights_inheriting: rights, fdflags: fdflags, inode: bigint, path: string) {
-		super(deviceId, fd, Filetype.regular_file, rights_base, rights_inheriting, fdflags, inode);
+	constructor(deviceId: bigint, fd: fd, rights_base: rights, fdflags: fdflags, inode: bigint, path: string) {
+		super(deviceId, fd, Filetype.regular_file, rights_base, 0n, fdflags, inode);
 		this._cursor = 0;
 		this.path = path;
 	}
@@ -55,6 +55,14 @@ class DirectoryFileDescriptor extends BaseFileDescriptor {
 	constructor(deviceId: bigint, fd: fd, rights_base: rights, rights_inheriting: rights, fdflags: fdflags, inode: bigint, path: string) {
 		super(deviceId, fd, Filetype.directory, rights_base, rights_inheriting, fdflags, inode);
 		this.path = path;
+	}
+
+	childDirectoryRights(requested_rights: rights): rights {
+		return (this.rights_inheriting | requested_rights) & ~Rights.FileBase;
+	}
+
+	childFileRights(requested_rights: rights): rights {
+		return (this.rights_inheriting | requested_rights) & ~Rights.DirectoryBase;
 	}
 }
 
@@ -99,11 +107,11 @@ export function create(apiClient: ApiShape, _textEncoder: RAL.TextEncoder, fileD
 
 	const preOpenDirectories = [mountPoint];
 
-	function createFileDescriptor(parentDescriptor: DirectoryFileDescriptor, rights_base: rights, rights_inheriting: rights, fdflags: fdflags, path: string): FileFileDescriptor {
+	function createFileDescriptor(parentDescriptor: DirectoryFileDescriptor, rights_base: rights, fdflags: fdflags, path: string): FileFileDescriptor {
 		const parentINode = getINode(parentDescriptor.inode);
 		const filePath = paths.join(parentDescriptor.path, path);
 		const fileUri = uriJoin(parentINode.uri, path);
-		return new FileFileDescriptor(deviceId, fileDescriptorId.next(), rights_base, rights_inheriting, fdflags, getOrCreateINode(filePath, fileUri, true).id, filePath);
+		return new FileFileDescriptor(deviceId, fileDescriptorId.next(), rights_base, fdflags, getOrCreateINode(filePath, fileUri, true).id, filePath);
 	}
 
 	function assertFileDescriptor(fileDescriptor: FileDescriptor): asserts fileDescriptor is FileFileDescriptor {
@@ -279,7 +287,7 @@ export function create(apiClient: ApiShape, _textEncoder: RAL.TextEncoder, fileD
 
 	return Object.assign({}, NoSysDeviceDriver, {
 		id: deviceId,
-		createStdioFileDescriptor(fd: 0 | 1 | 2, rights_base: rights, rights_inheriting: rights, fdflags: fdflags, path: string): FileDescriptor {
+		createStdioFileDescriptor(fd: 0 | 1 | 2, rights_base: rights, _rights_inheriting: rights, fdflags: fdflags, path: string): FileDescriptor {
 			if (path.length === 0) {
 				throw new WasiError(Errno.inval);
 			}
@@ -289,7 +297,7 @@ export function create(apiClient: ApiShape, _textEncoder: RAL.TextEncoder, fileD
 
 			const fileUri = uriJoin(baseUri, path);
 			const inode = getOrCreateINode(path, fileUri, true);
-			return new FileFileDescriptor(deviceId, fd, rights_base, rights_inheriting, fdflags, inode.id, path);
+			return new FileFileDescriptor(deviceId, fd, rights_base, fdflags, inode.id, path);
 		},
 		fd_advise(fileDescriptor: FileDescriptor, _offset: bigint, _length: bigint, _advise: number): void {
 			fileDescriptor.assertBaseRight(Rights.fd_advise);
@@ -536,8 +544,8 @@ export function create(apiClient: ApiShape, _textEncoder: RAL.TextEncoder, fileD
 			// or a directory. Since we were able to stat the file we create
 			// a file descriptor for it and lazy get the file content on read.
 			const result = filetype === Filetype.regular_file
-				? createFileDescriptor(parentDescriptor, fs_rights_base | Rights.FileBase, fs_rights_inheriting | Rights.FileInheriting, fdflags, path)
-				: createDirectoryDescriptor(parentDescriptor, fs_rights_base | Rights.DirectoryBase, fs_rights_inheriting | Rights.DirectoryInheriting, fdflags, path);
+				? createFileDescriptor(parentDescriptor, parentDescriptor.childFileRights(fs_rights_base), fdflags, path)
+				: createDirectoryDescriptor(parentDescriptor, parentDescriptor.childDirectoryRights(fs_rights_base), fs_rights_inheriting | Rights.DirectoryInheriting, fdflags, path);
 
 			if (result instanceof FileFileDescriptor && (createFile || Oflags.truncOn(oflags))) {
 				createOrTruncate(result);

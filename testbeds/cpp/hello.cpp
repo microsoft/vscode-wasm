@@ -5,6 +5,6 @@ using namespace std;
 
 int main() {
     FILE *fptr;
-    fptr = fopen("/workspace/app.py", "a");
+    fptr = fopen("/workspace/app.py", "r");
     fclose(fptr);
 }
