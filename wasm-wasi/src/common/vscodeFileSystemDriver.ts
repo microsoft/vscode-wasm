@@ -9,7 +9,7 @@ import { ApiShape, size } from '@vscode/sync-api-client';
 
 import { BigInts, code2Wasi } from './converter';
 import { BaseFileDescriptor, FileDescriptor, NoSysDeviceDriver, DeviceIds, ReaddirEntry, FileSystemDeviceDriver } from './deviceDriver';
-import { fdstat, filestat, Rights, fd, rights, fdflags, Filetype, WasiError, Errno, filetype, Whence, lookupflags, timestamp, fstflags, oflags, Oflags, filesize, Fdflags } from './wasiTypes';
+import { fdstat, filestat, Rights, fd, rights, fdflags, Filetype, WasiError, Errno, filetype, Whence, lookupflags, timestamp, fstflags, oflags, Oflags, filesize, Fdflags, Lookupflags } from './wasiTypes';
 
 import RAL from './ral';
 import { u64 } from './baseTypes';
@@ -364,8 +364,6 @@ export function create(apiClient: ApiShape, _textEncoder: RAL.TextEncoder, fileD
 			fileDescriptor.fdflags = fdflags;
 		},
 		fd_filestat_get(fileDescriptor: FileDescriptor, result: filestat): void {
-			assertFileDescriptor(fileDescriptor);
-
 			const inode = getINode(fileDescriptor.inode);
 			doStat(inode, result);
 		},
@@ -515,8 +513,11 @@ export function create(apiClient: ApiShape, _textEncoder: RAL.TextEncoder, fileD
 			// For now we do nothing. If we need to implement this we need
 			// support from the VS Code API.
 		},
-		path_open(parentDescriptor: FileDescriptor, _dirflags: lookupflags, path: string, oflags: oflags, fs_rights_base: rights, fs_rights_inheriting: rights, fdflags: fdflags): FileDescriptor {
+		path_open(parentDescriptor: FileDescriptor, dirflags: lookupflags, path: string, oflags: oflags, fs_rights_base: rights, fs_rights_inheriting: rights, fdflags: fdflags): FileDescriptor {
 			assertDirectoryDescriptor(parentDescriptor);
+			if ((dirflags & Lookupflags.symlink_follow) !== 0) {
+				throw new WasiError(Errno.inval);
+			}
 
 			if (path === '.') {
 				path = parentDescriptor.path;

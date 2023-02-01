@@ -12,13 +12,14 @@ import { setTimeout } from 'node:timers/promises';
 
 import {
 	ptr, DeviceDescription, Environment, WASI, Clockid, Errno, Prestat, fd, Oflags, Rights, Filestat, Ciovec, Advice, filestat, Iovec,
-	fdstat, Fdstat, Filetype, Fdflags, fdflags, Fstflags, VSCodeFS, Dirent, Whence
+	fdstat, Fdstat, Filetype, Fdflags, fdflags, Fstflags, VSCodeFS, Dirent, Whence, Lookupflags
 } from '@vscode/wasm-wasi';
 import { URI } from 'vscode-uri';
 
 import { TestApi } from './testApi';
 
 const FileRights = VSCodeFS.FileRights;
+const DirectoryRights = VSCodeFS.DirectoryRights;
 
 const decoder = new TextDecoder();
 const encoder = new TextEncoder();
@@ -984,6 +985,20 @@ suite ('Filesystem', () => {
 			assert.strictEqual(fs.readFileSync(path.join(testLocation, 'test.txt'), { encoding: 'utf8' }), hw.join(''));
 			errno = wasi.fd_close(fd);
 			assert.strictEqual(errno, Errno.success);
+		});
+	});
+
+	test('path_create_directory', () => {
+		runTestWithFilesystem((wasi, memory, rootFd) => {
+			const path = memory.allocString('dirOne');
+			let errno = wasi.path_create_directory(rootFd, path.$ptr, path.byteLength);
+			assert.strictEqual(errno, Errno.success);
+			const fd = memory.allocUint32(0);
+			errno = wasi.path_open(rootFd, Lookupflags.none, path.$ptr, path.byteLength, Oflags.directory, DirectoryRights.base, DirectoryRights.inheriting, Fdflags.none, fd.$ptr);
+			assert.strictEqual(errno, Errno.success);
+			const stat = statFile(wasi, memory, fd.value);
+			assert.strictEqual(stat.filetype, Filetype.directory);
+			closeFile(wasi, fd.value);
 		});
 	});
 });

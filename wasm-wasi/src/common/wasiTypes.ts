@@ -681,6 +681,12 @@ export namespace Fdflags {
 
 export type lookupflags = u32;
 export namespace Lookupflags {
+
+	/**
+	 * No flags.
+	 */
+	export const none = 0;
+
 	/**
 	 * As long as the resolved path corresponds to a symbolic link, it is
 	 * expanded.
