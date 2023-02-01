@@ -8,7 +8,7 @@ import { ApiShape, FileSystemError, RPCError } from '@vscode/sync-api-client';
 
 import RAL from './ral';
 
-import { ptr, size, u32, u64 } from './baseTypes';
+import { cstring, ptr, size, u32, u64, u8 } from './baseTypes';
 import {
 	fd, errno, Errno, lookupflags, oflags, rights, fdflags, dircookie, Rights,
 	filesize, advise, filedelta, whence, Ciovec, Iovec, clockid, timestamp, Clockid,
@@ -19,7 +19,7 @@ import {
 	fd_filestat_set_times, fd_pread, fd_prestat_dir_name, fd_prestat_get, fd_pwrite, fd_read, fd_readdir,
 	fd_seek, fd_sync, fd_tell, fd_write, path_create_directory, path_filestat_get, path_filestat_set_times,
 	path_link, path_open, path_readlink, path_remove_directory, path_rename, path_symlink, path_unlink_file,
-	poll_oneoff, proc_exit, random_get, sched_yield, sock_accept, sock_recv, sock_send, sock_shutdown, Fdstat, Filestat, dirent, ciovec, iovec, fdstat, filestat, Whence
+	poll_oneoff, proc_exit, random_get, sched_yield, sock_accept, sock_recv, sock_send, sock_shutdown, Fdstat, Filestat, dirent, ciovec, iovec, fdstat, filestat, Whence, prestat
 } from './wasiTypes';
 import { BigInts, code2Wasi } from './converter';
 import { CharacterDeviceDriver, DeviceDriver, DeviceId, FileDescriptor, FileSystemDeviceDriver, ReaddirEntry } from './deviceDriver';
@@ -278,7 +278,7 @@ export namespace WASI {
 			initialize: (inst: WebAssembly.Instance): void => {
 				instance = inst as WebAssembly.$Instance;
 			},
-			args_sizes_get: (argvCount_ptr: ptr, argvBufSize_ptr: ptr): errno => {
+			args_sizes_get: (argvCount_ptr: ptr<u32>, argvBufSize_ptr: ptr<u32>): errno => {
 				let count = 0;
 				let size = 0;
 				function processValue(str: string): void {
@@ -295,7 +295,7 @@ export namespace WASI {
 				memory.setUint32(argvBufSize_ptr, size, true);
 				return Errno.success;
 			},
-			args_get: (argv_ptr: ptr, argvBuf_ptr: ptr): errno => {
+			args_get: (argv_ptr: ptr<u32[]>, argvBuf_ptr: ptr<cstring>): errno => {
 				const memory = memoryView();
 				const memoryBytes = new Uint8Array(memoryRaw());
 				let entryOffset = argv_ptr;
@@ -328,12 +328,12 @@ export namespace WASI {
 						return Errno.inval;
 				}
 			},
-			clock_time_get: (id: clockid, precision: timestamp, timestamp_ptr: ptr): errno => {
+			clock_time_get: (id: clockid, precision: timestamp, timestamp_ptr: ptr<u64>): errno => {
 				const time: bigint = now(id, precision);
 				memoryView().setBigUint64(timestamp_ptr, time, true);
 				return Errno.success;
 			},
-			environ_sizes_get: (environCount_ptr: ptr, environBufSize_ptr: ptr): errno => {
+			environ_sizes_get: (environCount_ptr: ptr<u32>, environBufSize_ptr: ptr<u32>): errno => {
 				let count = 0;
 				let size = 0;
 				for (const entry of Object.entries(options.env ?? {})) {
@@ -346,7 +346,7 @@ export namespace WASI {
 				memory.setUint32(environBufSize_ptr, size, true);
 				return Errno.success;
 			},
-			environ_get: (environ_ptr: ptr, environBuf_ptr: ptr): errno => {
+			environ_get: (environ_ptr: ptr<u32>, environBuf_ptr: ptr<cstring>): errno => {
 				const memory = memoryView();
 				const memoryBytes = new Uint8Array(memoryRaw());
 				let entryOffset = environ_ptr;
@@ -458,7 +458,7 @@ export namespace WASI {
 					return handleError(error);
 				}
 			},
-			fd_pread: (fd: fd, iovs_ptr: ptr, iovs_len: u32, offset: filesize, bytesRead_ptr: ptr): errno => {
+			fd_pread: (fd: fd, iovs_ptr: ptr<iovec>, iovs_len: u32, offset: filesize, bytesRead_ptr: ptr<u32>): errno => {
 				try {
 					const fileDescriptor = getFileDescriptor(fd);
 					fileDescriptor.assertBaseRights(Rights.fd_read | Rights.fd_seek);
@@ -471,7 +471,7 @@ export namespace WASI {
 					return handleError(error);
 				}
 			},
-			fd_prestat_get: (fd: fd, bufPtr: ptr): errno => {
+			fd_prestat_get: (fd: fd, bufPtr: ptr<prestat>): errno => {
 				try {
 					while (true) {
 						if (preStatProviders.length === 0) {
@@ -498,7 +498,7 @@ export namespace WASI {
 					return handleError(error);
 				}
 			},
-			fd_prestat_dir_name: (fd: fd, pathPtr: ptr, pathLen: size): errno => {
+			fd_prestat_dir_name: (fd: fd, pathPtr: ptr<u8[]>, pathLen: size): errno => {
 				try {
 					const fileDescriptor = getFileDescriptor(fd);
 					const dirname = preStatDirnames.get(fileDescriptor.fd);
@@ -542,7 +542,7 @@ export namespace WASI {
 					return handleError(error);
 				}
 			},
-			fd_readdir: (fd: fd, buf_ptr: ptr, buf_len: size, cookie: dircookie, buf_used_ptr: ptr): errno => {
+			fd_readdir: (fd: fd, buf_ptr: ptr<dirent>, buf_len: size, cookie: dircookie, buf_used_ptr: ptr<u32>): errno => {
 				try {
 					const fileDescriptor = getFileDescriptor(fd);
 					fileDescriptor.assertBaseRights(Rights.fd_readdir);
@@ -601,7 +601,7 @@ export namespace WASI {
 					return handleError(error);
 				}
 			},
-			fd_seek: (fd: fd, offset: filedelta, whence: whence, new_offset_ptr: ptr): errno => {
+			fd_seek: (fd: fd, offset: filedelta, whence: whence, new_offset_ptr: ptr<u64>): errno => {
 				try {
 					const fileDescriptor = getFileDescriptor(fd);
 					if (whence === Whence.cur && offset === 0n && !fileDescriptor.containsBaseRights(Rights.fd_seek) && !fileDescriptor.containsBaseRights(Rights.fd_tell)) {
@@ -653,7 +653,7 @@ export namespace WASI {
 					return handleError(error);
 				}
 			},
-			path_create_directory: (fd: fd, path_ptr: ptr, path_len: size): errno => {
+			path_create_directory: (fd: fd, path_ptr: ptr<u8[]>, path_len: size): errno => {
 				try {
 					const fileDescriptor = getFileDescriptor(fd);
 					fileDescriptor.assertBaseRights(Rights.path_create_directory);
@@ -666,7 +666,7 @@ export namespace WASI {
 					return handleError(error);
 				}
 			},
-			path_filestat_get: (fd: fd, flags: lookupflags, path_ptr: ptr, path_len: size, filestat_ptr: ptr): errno => {
+			path_filestat_get: (fd: fd, flags: lookupflags, path_ptr: ptr<u8[]>, path_len: size, filestat_ptr: ptr): errno => {
 				try {
 					const fileDescriptor = getFileDescriptor(fd);
 					fileDescriptor.assertBaseRights(Rights.path_filestat_get);
@@ -679,7 +679,7 @@ export namespace WASI {
 					return handleError(error);
 				}
 			},
-			path_filestat_set_times: (fd: fd, flags: lookupflags, path_ptr: ptr, path_len: size, atim: timestamp, mtim: timestamp, fst_flags: fstflags): errno => {
+			path_filestat_set_times: (fd: fd, flags: lookupflags, path_ptr: ptr<u8[]>, path_len: size, atim: timestamp, mtim: timestamp, fst_flags: fstflags): errno => {
 				try {
 					const fileDescriptor = getFileDescriptor(fd);
 					fileDescriptor.assertBaseRights(Rights.path_filestat_set_times);
@@ -692,7 +692,7 @@ export namespace WASI {
 					return handleError(error);
 				}
 			},
-			path_link: (old_fd: fd, old_flags: lookupflags, old_path_ptr: ptr, old_path_len: size, new_fd: fd, new_path_ptr: ptr, new_path_len: size): errno => {
+			path_link: (old_fd: fd, old_flags: lookupflags, old_path_ptr: ptr<u8[]>, old_path_len: size, new_fd: fd, new_path_ptr: ptr<u8[]>, new_path_len: size): errno => {
 				try {
 					const oldFileDescriptor = getFileDescriptor(old_fd);
 					oldFileDescriptor.assertBaseRights(Rights.path_link_source);
@@ -716,7 +716,7 @@ export namespace WASI {
 					return handleError(error);
 				}
 			},
-			path_open: (fd: fd, dirflags: lookupflags, path_ptr: ptr, path_len: size, oflags: oflags, fs_rights_base: rights, fs_rights_inheriting: rights, fdflags: fdflags, fd_ptr: ptr): errno => {
+			path_open: (fd: fd, dirflags: lookupflags, path_ptr: ptr<u8[]>, path_len: size, oflags: oflags, fs_rights_base: rights, fs_rights_inheriting: rights, fdflags: fdflags, fd_ptr: ptr<fd>): errno => {
 				try {
 					const fileDescriptor = getFileDescriptor(fd);
 					fileDescriptor.assertBaseRights(Rights.path_open);
@@ -732,7 +732,7 @@ export namespace WASI {
 					return handleError(error);
 				}
 			},
-			path_readlink: (fd: fd, path_ptr: ptr, path_len: size, buf_ptr: ptr, buf_len: size, result_size_ptr: ptr): errno => {
+			path_readlink: (fd: fd, path_ptr: ptr<u8[]>, path_len: size, buf_ptr: ptr, buf_len: size, result_size_ptr: ptr<u32>): errno => {
 				// VS Code has no support to follow a symlink.
 				try {
 					const fileDescriptor = getFileDescriptor(fd);
@@ -753,7 +753,7 @@ export namespace WASI {
 					return handleError(error);
 				}
 			},
-			path_remove_directory: (fd: fd, path_ptr: ptr, path_len: size): errno => {
+			path_remove_directory: (fd: fd, path_ptr: ptr<u8[]>, path_len: size): errno => {
 				try {
 					const fileDescriptor = getFileDescriptor(fd);
 					fileDescriptor.assertBaseRights(Rights.path_remove_directory);
@@ -766,7 +766,7 @@ export namespace WASI {
 					return handleError(error);
 				}
 			},
-			path_rename: (old_fd: fd, old_path_ptr: ptr, old_path_len: size, new_fd: fd, new_path_ptr: ptr, new_path_len: size): errno => {
+			path_rename: (old_fd: fd, old_path_ptr: ptr<u8[]>, old_path_len: size, new_fd: fd, new_path_ptr: ptr<u8[]>, new_path_len: size): errno => {
 				try {
 					const oldFileDescriptor = getFileDescriptor(old_fd);
 					oldFileDescriptor.assertBaseRights(Rights.path_rename_source);
@@ -785,7 +785,7 @@ export namespace WASI {
 					return handleError(error);
 				}
 			},
-			path_symlink: (old_path_ptr: ptr, old_path_len: size, fd: fd, new_path_ptr: ptr, new_path_len: size): errno => {
+			path_symlink: (old_path_ptr: ptr<u8[]>, old_path_len: size, fd: fd, new_path_ptr: ptr<u8[]>, new_path_len: size): errno => {
 				// VS Code has no support to create a symlink.
 				try {
 					const fileDescriptor = getFileDescriptor(fd);
@@ -801,7 +801,7 @@ export namespace WASI {
 					return handleError(error);
 				}
 			},
-			path_unlink_file: (fd: fd, path_ptr: ptr, path_len: size): errno => {
+			path_unlink_file: (fd: fd, path_ptr: ptr<u8[]>, path_len: size): errno => {
 				try {
 					const fileDescriptor = getFileDescriptor(fd);
 					fileDescriptor.assertBaseRights(Rights.path_unlink_file);
@@ -814,7 +814,7 @@ export namespace WASI {
 					return handleError(error);
 				}
 			},
-			poll_oneoff: (input: ptr, output: ptr, subscriptions: size, result_size_ptr: ptr): errno => {
+			poll_oneoff: (input: ptr<subscription>, output: ptr<event[]>, subscriptions: size, result_size_ptr: ptr<u32>): errno => {
 				try {
 					const memory = memoryView();
 					let { events, needsTimeOut, timeout } = handleSubscriptions(memory, input, subscriptions);
@@ -846,12 +846,12 @@ export namespace WASI {
 			sched_yield: (): errno => {
 				return Errno.nosys;
 			},
-			random_get: (buf: ptr, buf_len: size): errno => {
+			random_get: (buf: ptr<u8[]>, buf_len: size): errno => {
 				const random = RAL().crypto.randomGet(buf_len);
 				new Uint8Array(memoryRaw(), buf, buf_len).set(random);
 				return Errno.success;
 			},
-			sock_accept: (_fd: fd, _flags: fdflags, _result_fd_ptr: ptr): errno => {
+			sock_accept: (_fd: fd, _flags: fdflags, _result_fd_ptr: ptr<u32>): errno => {
 				return Errno.nosys;
 			},
 			sock_recv: (_fd: fd, _ri_data_ptr: ptr, _ri_data_len: u32, _ri_flags: riflags, _ro_datalen_ptr: ptr, _roflags_ptr: ptr): errno => {

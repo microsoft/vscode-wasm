@@ -8,7 +8,7 @@
  * https://github.com/WebAssembly/WASI/blob/main/phases/snapshot/docs.md
  *--------------------------------------------------------------------------------------------*/
 
-import { ptr, size, u16, u32, u64, s64, u8 } from './baseTypes';
+import { ptr, size, u16, u32, u64, s64, u8, cstring } from './baseTypes';
 
 export type fd = u32;
 
@@ -1618,7 +1618,7 @@ export namespace Sdflags {
  * @param argvCount_ptr A memory location to store the number of args.
  * @param argvBufSize_ptr A memory location to store the needed buffer size.
  */
-export type args_sizes_get = (argvCount_ptr: ptr, argvBufSize_ptr: ptr) => errno;
+export type args_sizes_get = (argvCount_ptr: ptr<u32>, argvBufSize_ptr: ptr<u32>) => errno;
 
 /**
  * Read command-line argument data. The size of the array should match that
@@ -1627,25 +1627,7 @@ export type args_sizes_get = (argvCount_ptr: ptr, argvBufSize_ptr: ptr) => errno
  * @params argv_ptr A memory location to store the argv value offsets
  * @params argvBuf_ptr A memory location to store the actual argv value.
  */
-export type args_get = (argv_ptr: ptr, argvBuf_ptr: ptr) => errno;
-
-/**
- * Return environment variable data sizes.
- *
- * @param environCount_ptr A memory location to store the number of vars.
- * @param environBufSize_ptr  A memory location to store the needed buffer size.
- */
-export type environ_sizes_get = (environCount_ptr: ptr, environBufSize_ptr: ptr) => errno;
-
-/**
- * Read environment variable data. The sizes of the buffers should match
- * that returned by environ_sizes_get. Key/value pairs are expected to
- * be joined with =s, and terminated with \0s.
- *
- * @params environ_ptr A memory location to store the env value offsets
- * @params environBuf_ptr A memory location to store the actual env value.
- */
-export type environ_get = (environ_ptr: ptr, environBuf_ptr: ptr) => errno;
+export type args_get = (argv_ptr: ptr<u32[]>, argvBuf_ptr: ptr<cstring>) => errno;
 
 /**
  * Return the resolution of a clock. Implementations are required to provide
@@ -1666,7 +1648,25 @@ export type clock_res_get = (id: clockid, timestamp_ptr: ptr) => errno;
  * value may have, compared to its actual value.
  * @param timestamp_ptr: The time value of the clock.
  */
-export type clock_time_get = (id: clockid, precision: timestamp, timestamp_ptr: ptr) => errno;
+export type clock_time_get = (id: clockid, precision: timestamp, timestamp_ptr: ptr<u64>) => errno;
+
+/**
+ * Return environment variable data sizes.
+ *
+ * @param environCount_ptr A memory location to store the number of vars.
+ * @param environBufSize_ptr  A memory location to store the needed buffer size.
+ */
+export type environ_sizes_get = (environCount_ptr: ptr<u32>, environBufSize_ptr: ptr<u32>) => errno;
+
+/**
+ * Read environment variable data. The sizes of the buffers should match
+ * that returned by environ_sizes_get. Key/value pairs are expected to
+ * be joined with =s, and terminated with \0s.
+ *
+ * @params environ_ptr A memory location to store the env value offsets
+ * @params environBuf_ptr A memory location to store the actual env value.
+ */
+export type environ_get = (environ_ptr: ptr<u32>, environBuf_ptr: ptr<cstring>) => errno;
 
 /**
  * Provide file advisory information on a file descriptor. Note: This is
@@ -1761,7 +1761,7 @@ export type fd_filestat_set_times = (fd: fd, atim: timestamp, mtim: timestamp, f
  * @param offset The offset within the file at which to read.
  * @param bytesRead_ptr A memory location to store the bytes read.
  */
-export type fd_pread = (fd: fd, iovs_ptr: ptr, iovs_len: u32, offset: filesize, bytesRead_ptr: ptr) => errno;
+export type fd_pread = (fd: fd, iovs_ptr: ptr<iovec>, iovs_len: u32, offset: filesize, bytesRead_ptr: ptr<u32>) => errno;
 
 /**
  * Return a description of the given preopened file descriptor.
@@ -1769,7 +1769,7 @@ export type fd_pread = (fd: fd, iovs_ptr: ptr, iovs_len: u32, offset: filesize, 
  * @param fd The file descriptor.
  * @param bufPtr A pointer to store the pre stat information.
  */
-export type fd_prestat_get = (fd: fd, bufPtr: ptr) => errno;
+export type fd_prestat_get = (fd: fd, bufPtr: ptr<prestat>) => errno;
 
 /**
  * Return a description of the given preopened file descriptor.
@@ -1778,7 +1778,7 @@ export type fd_prestat_get = (fd: fd, bufPtr: ptr) => errno;
  * @param pathPtr A memory location to store the path name.
  * @param pathLen The length of the path.
  */
-export type fd_prestat_dir_name = (fd: fd, pathPtr: ptr, pathLen: size) => errno;
+export type fd_prestat_dir_name = (fd: fd, pathPtr: ptr<u8[]>, pathLen: size) => errno;
 
 /**
  * Write to a file descriptor, without using and updating the file
@@ -1820,7 +1820,7 @@ export type fd_read = (fd: fd, iovs_ptr: ptr<iovec>, iovs_len: u32, bytesRead_pt
  * If less than the size of the read buffer, the end of the directory has
  * been reached.
  */
-export type fd_readdir = (fd: fd, buf_ptr: ptr, buf_len: size, cookie: dircookie, buf_used_ptr: ptr) => errno;
+export type fd_readdir = (fd: fd, buf_ptr: ptr<dirent>, buf_len: size, cookie: dircookie, buf_used_ptr: ptr<u32>) => errno;
 
 /**
  * Move the offset of a file descriptor. Note: This is similar to lseek in
@@ -1831,7 +1831,7 @@ export type fd_readdir = (fd: fd, buf_ptr: ptr, buf_len: size, cookie: dircookie
  * @param whence The base from which the offset is relative.
  * @param new_offset_ptr A memory location to store the new offset.
  */
-export type fd_seek = (fd: fd, offset: filedelta, whence: whence, new_offset_ptr: ptr) => errno;
+export type fd_seek = (fd: fd, offset: filedelta, whence: whence, new_offset_ptr: ptr<u64>) => errno;
 
 /**
  * Synchronize the data and metadata of a file to disk. Note: This is
@@ -1868,7 +1868,7 @@ export type fd_write = (fd: fd, ciovs_ptr: ptr<ciovec>, ciovs_len: u32, bytesWri
  * @param path_ptr A memory location that holds the path name.
  * @param path_len The length of the path
  */
-export type path_create_directory = (fd: fd, path_ptr: ptr, path_len: size) => errno;
+export type path_create_directory = (fd: fd, path_ptr: ptr<u8[]>, path_len: size) => errno;
 
 /**
  * Return the attributes of a file or directory. Note: This is similar to
@@ -1880,7 +1880,7 @@ export type path_create_directory = (fd: fd, path_ptr: ptr, path_len: size) => e
  * @param path_len The length of the path
  * @param filestat_ptr A memory location to store the file stat.
  */
-export type path_filestat_get = (fd: fd, flags: lookupflags, path_ptr: ptr, path_len: size, filestat_ptr: ptr) => errno;
+export type path_filestat_get = (fd: fd, flags: lookupflags, path_ptr: ptr<u8[]>, path_len: size, filestat_ptr: ptr) => errno;
 
 /**
  * Adjust the timestamps of a file or directory. Note: This is similar to
@@ -1894,7 +1894,7 @@ export type path_filestat_get = (fd: fd, flags: lookupflags, path_ptr: ptr, path
  * @param mtim The desired values of the data modification timestamp.
  * @param fst_flags A bitmask indicating which timestamps to adjust.
  */
-export type path_filestat_set_times = (fd: fd, flags: lookupflags, path_ptr: ptr, path_len: size, atim: timestamp, mtim: timestamp, fst_flags: fstflags) => errno;
+export type path_filestat_set_times = (fd: fd, flags: lookupflags, path_ptr: ptr<u8[]>, path_len: size, atim: timestamp, mtim: timestamp, fst_flags: fstflags) => errno;
 
 /**
  * Create a hard link. Note: This is similar to linkat in POSIX.
@@ -1910,7 +1910,7 @@ export type path_filestat_set_times = (fd: fd, flags: lookupflags, path_ptr: ptr
  * at which to create the hard link.
  * @param new_path_len: The length of the new path.
  */
-export type path_link = (old_fd: fd, old_flags: lookupflags, old_path_ptr: ptr, old_path_len: size, new_fd: fd, new_path_ptr: ptr, new_path_len: size) => errno;
+export type path_link = (old_fd: fd, old_flags: lookupflags, old_path_ptr: ptr<u8[]>, old_path_len: size, new_fd: fd, new_path_ptr: ptr<u8[]>, new_path_len: size) => errno;
 
 /**
  * Open a file or directory. The returned file descriptor is not guaranteed
@@ -1937,7 +1937,7 @@ export type path_link = (old_fd: fd, old_flags: lookupflags, old_path_ptr: ptr, 
  * @param fdflags The fd flags.
  * @param fd_ptr A memory location to store the opened file descriptor.
  */
-export type path_open = (fd: fd, dirflags: lookupflags, path: ptr, pathLen: size, oflags: oflags, fs_rights_base: rights, fs_rights_inheriting: rights, fdflags: fdflags, fd_ptr: ptr) => errno;
+export type path_open = (fd: fd, dirflags: lookupflags, path: ptr<u8[]>, pathLen: size, oflags: oflags, fs_rights_base: rights, fs_rights_inheriting: rights, fdflags: fdflags, fd_ptr: ptr<fd>) => errno;
 
 /**
  * Read the contents of a symbolic link. Note: This is similar to readlinkat
@@ -1951,7 +1951,7 @@ export type path_open = (fd: fd, dirflags: lookupflags, path: ptr, pathLen: size
  * @param result_size_ptr A memory location to store the number of bytes
  * placed in the buffer.
  */
-export type path_readlink = (fd: fd, path_ptr: ptr, path_len: size, buf: ptr, buf_len: size, result_size_ptr: ptr) => errno;
+export type path_readlink = (fd: fd, path_ptr: ptr<u8[]>, path_len: size, buf: ptr<u8[]>, buf_len: size, result_size_ptr: ptr<u32>) => errno;
 
 /**
  * Remove a directory. Return errno::notempty if the directory is not empty.
@@ -1961,7 +1961,7 @@ export type path_readlink = (fd: fd, path_ptr: ptr, path_len: size, buf: ptr, bu
  * @param path_ptr  A memory location that holds the path name.
  * @param path_len The length of the path.
  */
-export type path_remove_directory = (fd: fd, path_ptr: ptr, path_len: size) => errno;
+export type path_remove_directory = (fd: fd, path_ptr: ptr<u8[]>, path_len: size) => errno;
 
 /**
  * Rename a file or directory. Note: This is similar to renameat in POSIX.
@@ -1976,7 +1976,7 @@ export type path_remove_directory = (fd: fd, path_ptr: ptr, path_len: size) => e
  * which to rename the file or directory.
  * @param new_path_len: The length of the new path.
  */
-export type path_rename = (fd: fd, old_path_ptr: ptr, old_path_len: size, new_fd: fd, new_path_ptr: ptr, new_path_len: size) => errno;
+export type path_rename = (fd: fd, old_path_ptr: ptr<u8[]>, old_path_len: size, new_fd: fd, new_path_ptr: ptr<u8[]>, new_path_len: size) => errno;
 
 /**
  * Create a symbolic link. Note: This is similar to symlinkat in POSIX.
@@ -1989,7 +1989,7 @@ export type path_rename = (fd: fd, old_path_ptr: ptr, old_path_len: size, new_fd
  * at which to create the symbolic link.
  * @param new_path_len The length of the new path.
  */
-export type path_symlink = (old_path_ptr: ptr, old_path_len: size, fd: fd, new_path_ptr: ptr, new_path_len: size) => errno;
+export type path_symlink = (old_path_ptr: ptr<u8[]>, old_path_len: size, fd: fd, new_path_ptr: ptr<u8[]>, new_path_len: size) => errno;
 
 /**
  * Unlink a file. Return errno::isdir if the path refers to a directory.
@@ -1999,7 +1999,7 @@ export type path_symlink = (old_path_ptr: ptr, old_path_len: size, fd: fd, new_p
  * @param path_ptr  A memory location that holds the path name.
  * @param path_len The length of the path.
  */
-export type path_unlink_file = (fd: fd, path_ptr: ptr, path_len: size) => errno;
+export type path_unlink_file = (fd: fd, path_ptr: ptr<u8[]>, path_len: size) => errno;
 
 /**
  * Concurrently poll for the occurrence of a set of events.
@@ -2009,7 +2009,7 @@ export type path_unlink_file = (fd: fd, path_ptr: ptr, path_len: size) => errno;
  * @param subscriptions Both the number of subscriptions and events.
  * @param result_size_ptr The number of events stored.
  */
-export type poll_oneoff = (input: ptr, output: ptr, subscriptions: size, result_size_ptr: ptr) => errno;
+export type poll_oneoff = (input: ptr<subscription[]>, output: ptr<event[]>, subscriptions: size, result_size_ptr: ptr<u32>) => errno;
 
 /**
  * Terminate the process normally. An exit code of 0 indicates successful
@@ -2037,7 +2037,7 @@ export type sched_yield = () => errno;
  * @param buf The buffer to fill with random data.
  * @param buf_len The size of the buffer.
  */
-export type random_get = (buf: ptr, buf_len: size) => errno;
+export type random_get = (buf: ptr<u8[]>, buf_len: size) => errno;
 
 /**
  * Accept a new incoming connection. Note: This is similar to accept in
@@ -2047,7 +2047,7 @@ export type random_get = (buf: ptr, buf_len: size) => errno;
  * @param flags The desired values of the file descriptor flags.
  * @param result_fd_ptr A memory location to store the new socket connection.
  */
-export type sock_accept = (fd: fd, flags: fdflags, result_fd_ptr: ptr) => errno;
+export type sock_accept = (fd: fd, flags: fdflags, result_fd_ptr: ptr<u32>) => errno;
 
 /**
  * Receive a message from a socket. Note: This is similar to recv in POSIX,

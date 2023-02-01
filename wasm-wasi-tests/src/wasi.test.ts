@@ -750,6 +750,19 @@ suite ('Filesystem', () => {
 			assert.strictEqual(decoder.decode(memory.readBytes(buffer, bytesRead.value)), 'World');
 		});
 	});
+
+	test('fd_prestat_get', () => {
+		runTestWithFilesystem(() => {
+			// runTestWithFilesystem calls fd_prestat_get
+		});
+	});
+
+	test('fd_prestat_dir_name', () => {
+		runTestWithFilesystem(() => {
+			// runTestWithFilesystem calls fd_prestat_dir_name
+		});
+	});
+
 	test('fd_read - single iovec', () => {
 		runTestWithFilesystem((wasi, memory, rootFd, testLocation) => {
 			const name = 'test.txt';

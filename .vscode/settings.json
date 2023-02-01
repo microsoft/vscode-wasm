@@ -73,6 +73,7 @@
 		"coreutils",
 		"cputime",
 		"creat",
+		"cstring",
 		"ctim",
 		"datalen",
 		"deadlk",
