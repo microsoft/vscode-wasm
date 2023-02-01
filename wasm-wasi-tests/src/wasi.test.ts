@@ -933,6 +933,20 @@ suite ('Filesystem', () => {
 		});
 	});
 
+	test('fd_tell', () => {
+		runTestWithFilesystem((wasi, memory, rootFd) => {
+			const hw = 'Hello World';
+			const fd = createFileWithContent(wasi, memory, rootFd, 'test.txt', hw);
+			const newOffset = memory.allocBigUint64();
+			let errno = wasi.fd_seek(fd, 3n, Whence.set, newOffset.$ptr);
+			assert.strictEqual(errno, Errno.success);
+			const tellOffset = memory.allocBigUint64();
+			errno = wasi.fd_tell(fd, tellOffset.$ptr);
+			assert.strictEqual(errno, Errno.success);
+			assert.strictEqual(newOffset.value, tellOffset.value);
+		});
+	});
+
 	test('fd_write - single ciovec', () => {
 		runTestWithFilesystem((wasi, memory, rootFd, testLocation) => {
 			const hw = 'Hello World';
