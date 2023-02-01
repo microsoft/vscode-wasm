@@ -12,7 +12,7 @@ import { setTimeout } from 'node:timers/promises';
 
 import {
 	ptr, DeviceDescription, Environment, WASI, Clockid, Errno, Prestat, fd, Oflags, Rights, Filestat, Ciovec, Advice, filestat, Iovec,
-	fdstat, Fdstat, Filetype, Fdflags, fdflags, Fstflags, VSCodeFS
+	fdstat, Fdstat, Filetype, Fdflags, fdflags, Fstflags, VSCodeFS, Dirent
 } from '@vscode/wasm-wasi';
 import { URI } from 'vscode-uri';
 
@@ -78,6 +78,10 @@ class Memory {
 			get size(): number { return size; },
 			get(index: number): T { return structs[index]; }
 		};
+	}
+
+	public readStruct<T>(ptr: ptr<T>, info: { size: number; create: (ptr: ptr, memory: DataView) => T }): T {
+		return info.create(ptr, this.dataView);
 	}
 
 	public allocUint32(value?: number): wasi.Uint32 {
@@ -807,6 +811,75 @@ suite ('Filesystem', () => {
 				assert.strictEqual(decoder.decode(memory.readBytes(iovec.buf, toRead)), '1'.repeat(toRead));
 				rest -= toRead;
 			}
+		});
+	});
+
+	test('fd_readdir - single read', () => {
+		runTestWithFilesystem((wasi, memory, rootFd, testLocation) => {
+			const fileNames: Set<string> = new Set();
+			for (let i = 1; i <= 11; i++) {
+				const fileName = `test${i}.txt`;
+				fs.writeFileSync(path.join(testLocation, fileName), `${i}`.repeat(i));
+				fileNames.add(fileName);
+			}
+			const buffer = memory.alloc(2048);
+			const bufUsed = memory.allocUint32();
+			let errno = wasi.fd_readdir(rootFd, buffer, 2048, 0n, bufUsed.$ptr);
+			assert.strictEqual(errno, Errno.success);
+			let index = buffer;
+			let next = 1n;
+			while(index < bufUsed.value) {
+				const dirent = memory.readStruct(index, Dirent);
+				assert.strictEqual(dirent.d_next, next);
+				assert.strictEqual(dirent.d_type, Filetype.regular_file);
+				const name = decoder.decode(memory.readBytes(index + Dirent.size, dirent.d_namlen));
+				assert.ok(fileNames.has(name), 'Known file name');
+				fileNames.delete(name);
+				index += Dirent.size + dirent.d_namlen;
+				next++;
+			}
+			assert.strictEqual(0, fileNames.size);
+		});
+	});
+
+	test('fd_readdir - multiple read', () => {
+		type Uint32 = wasi.Uint32;
+		runTestWithFilesystem((wasi, memory, rootFd, testLocation) => {
+			const fileNames: Set<string> = new Set();
+			for (let i = 1; i <= 11; i++) {
+				const fileName = `test${i}.txt`;
+				fs.writeFileSync(path.join(testLocation, fileName), `${i}`.repeat(i));
+				fileNames.add(fileName);
+			}
+			const buffSize = 128;
+			let bufUsed: Uint32;
+			let dircookie = 0n;
+			do {
+				const buffer = memory.alloc(buffSize);
+				bufUsed = memory.allocUint32();
+				let errno = wasi.fd_readdir(rootFd, buffer, buffSize, dircookie, bufUsed.$ptr);
+				assert.strictEqual(errno, Errno.success);
+				let index = buffer;
+				let spaceLeft = buffSize;
+				while(spaceLeft >= Dirent.size && index - buffer < bufUsed.value) {
+					const dirent = memory.readStruct(index, Dirent);
+					assert.strictEqual(dirent.d_next, dircookie + 1n);
+					assert.strictEqual(dirent.d_type, Filetype.regular_file);
+					spaceLeft -= Dirent.size;
+					index += Dirent.size;
+					if (spaceLeft >= dirent.d_namlen) {
+						const name = decoder.decode(memory.readBytes(index, dirent.d_namlen));
+						assert.ok(fileNames.has(name), 'Known file name');
+						fileNames.delete(name);
+						index += dirent.d_namlen;
+						spaceLeft -= dirent.d_namlen;
+						dircookie = dirent.d_next;
+					} else {
+						spaceLeft = 0;
+					}
+				}
+			} while (bufUsed.value === buffSize);
+			assert.strictEqual(0, fileNames.size);
 		});
 	});
 

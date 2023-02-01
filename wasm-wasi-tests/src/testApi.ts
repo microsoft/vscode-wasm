@@ -102,7 +102,7 @@ class FileSystemImpl implements FileSystem {
 		}
 		const fsPath = uri.fsPath;
 		const entries = fs.readdirSync(fsPath);
-		const result: DTOs.DirectoryEntries = new Array(entries.length);
+		const result: DTOs.DirectoryEntries = [];
 		for (const entry of entries) {
 			result.push([entry, this.getFileType(fs.statSync(path.join(fsPath, entry)))]);
 		}

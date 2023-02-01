@@ -1183,7 +1183,7 @@ export type ciovec = {
 	/**
 	 * The memory location of the allocated struct.
 	 */
-	get $ptr(): ptr;
+	get $ptr(): ptr<ciovec>;
 
 	/**
 	 * The address of the buffer to be written.
@@ -1212,7 +1212,7 @@ export namespace Ciovec {
 
 	export function create(ptr: ptr, memory: DataView): ciovec {
 		return {
-			get $ptr(): ptr { return ptr; },
+			get $ptr(): ptr<ciovec> { return ptr; },
 			get buf(): ptr { return memory.getUint32(ptr + offsets.buf, true); },
 			set buf(value: ptr) { memory.setUint32(ptr + offsets.buf, value, true); },
 			get buf_len(): u32 { return memory.getUint32(ptr + offsets.buf_len, true); },
@@ -1226,23 +1226,32 @@ export type ciovec_array = iovec[];
 export type dirnamlen = u32;
 export type dirent = {
 	/**
+	 * The memory location of the allocated struct.
+	 */
+	get $ptr(): ptr;
+
+	/**
 	 * The offset of the next directory entry stored in this directory.
 	 */
+	get d_next(): dircookie;
 	set d_next(value: dircookie);
 
 	/**
 	 * The serial number of the file referred to by this directory entry.
 	 */
+	get d_ino(): inode;
 	set d_ino(value: inode);
 
 	/**
 	 * The length of the name of the directory entry.
 	 */
+	get d_namlen(): dirnamlen;
 	set d_namlen(value: dirnamlen);
 
 	/**
 	 * The type of the file referred to by this directory entry.
 	 */
+	get d_type(): filetype;
 	set d_type(value: filetype);
 };
 
@@ -1258,9 +1267,14 @@ export namespace Dirent {
 
 	export function create(ptr: ptr, memory: DataView): dirent {
 		return {
+			get $ptr(): ptr<dirent> { return ptr; },
+			get d_next(): dircookie { return memory.getBigUint64(ptr + offsets.d_next, true); },
 			set d_next(value: dircookie) { memory.setBigUint64(ptr + offsets.d_next, value, true); },
+			get d_ino(): inode { return memory.getBigUint64(ptr + offsets.d_ino, true); },
 			set d_ino(value: inode) { memory.setBigUint64(ptr + offsets.d_ino, value, true); },
+			get d_namlen(): dirnamlen { return memory.getUint32(ptr + offsets.d_namlen, true); },
 			set d_namlen(value: dirnamlen) { memory.setUint32(ptr + offsets.d_namlen, value, true); },
+			get d_type(): filetype { return memory.getUint8(ptr + offsets.d_type); },
 			set d_type(value: filetype) { memory.setUint8(ptr + offsets.d_type, value); }
 		};
 	}
