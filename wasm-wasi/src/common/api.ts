@@ -5,12 +5,26 @@
 
 import { WASI, Options, Environment, DeviceDescription, FileDescriptorDescription } from './wasi';
 import { BigInts } from './converter';
-
-export * from '@vscode/sync-api-client';
+import { s64, ptr } from './baseTypes';
+import { FileBaseRights, FileInheritingRights, DirectoryBaseRights, DirectoryInheritingRights } from './vscodeFileSystemDriver';
+import { rights } from './wasiTypes';
 
 export {
-	WASI, Options, Environment, DeviceDescription, FileDescriptorDescription, BigInts
+	s64, ptr, WASI, Options, Environment, DeviceDescription, FileDescriptorDescription, BigInts
 };
 
+export * from '@vscode/sync-api-client';
 export * from './wasiTypes';
 export * from './deviceDriver';
+
+type ExportRights  = { base: rights; inheriting: rights };
+export namespace VSCodeFS {
+	export const FileRights: ExportRights =  {
+		base: FileBaseRights,
+		inheriting: FileInheritingRights
+	};
+	export const DirectoryRights: ExportRights =  {
+		base: DirectoryBaseRights,
+		inheriting: DirectoryInheritingRights
+	};
+}

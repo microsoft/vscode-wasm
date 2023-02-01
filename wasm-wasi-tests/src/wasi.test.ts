@@ -10,11 +10,15 @@ import * as uuid from 'uuid';
 import { TextDecoder, TextEncoder } from 'util';
 import { setTimeout } from 'node:timers/promises';
 
-import { DeviceDescription, Environment, WASI, Clockid, Errno, Prestat, fd, Oflags, Rights, Filestat, Ciovec, Advice, filestat, Iovec, fdstat, Fdstat, Filetype, Fdflags, fdflags } from '@vscode/wasm-wasi';
+import {
+	ptr, DeviceDescription, Environment, WASI, Clockid, Errno, Prestat, fd, Oflags, Rights, Filestat, Ciovec, Advice, filestat, Iovec,
+	fdstat, Fdstat, Filetype, Fdflags, fdflags, Fstflags, VSCodeFS
+} from '@vscode/wasm-wasi';
 import { URI } from 'vscode-uri';
 
 import { TestApi } from './testApi';
-import { ptr } from '@vscode/wasm-wasi/src/common/baseTypes';
+
+const FileRights = VSCodeFS.FileRights;
 
 const decoder = new TextDecoder();
 const encoder = new TextEncoder();
@@ -357,7 +361,7 @@ suite ('Filesystem', () => {
 	function openFile(wasi: WASI, memory: Memory, parentFd: fd, name: string): fd {
 		const fd = memory.allocUint32(0);
 		const path = memory.allocString(name);
-		let errno = wasi.path_open(parentFd, 0, path.$ptr, path.byteLength, 0, TestApi.FileBaseRights, TestApi.FileInheritingRights, 0, fd.$ptr);
+		let errno = wasi.path_open(parentFd, 0, path.$ptr, path.byteLength, 0, FileRights.base, FileRights.inheriting, 0, fd.$ptr);
 		assert.strictEqual(errno, Errno.success);
 		return fd.value;
 	}
@@ -365,7 +369,7 @@ suite ('Filesystem', () => {
 	function createFile(wasi: WASI, memory: Memory, parentFd: fd, name: string): fd {
 		const fd = memory.allocUint32(0);
 		const path = memory.allocString(name);
-		let errno = wasi.path_open(parentFd, 0, path.$ptr, path.byteLength, Oflags.creat, TestApi.FileBaseRights, TestApi.FileInheritingRights, 0, fd.$ptr);
+		let errno = wasi.path_open(parentFd, 0, path.$ptr, path.byteLength, Oflags.creat, FileRights.base, FileRights.inheriting, 0, fd.$ptr);
 		assert.strictEqual(errno, Errno.success);
 		return fd.value;
 	}
@@ -417,7 +421,7 @@ suite ('Filesystem', () => {
 			const name = 'test.txt';
 			const fd = memory.allocUint32(0);
 			const path = memory.allocString(name);
-			let errno = wasi.path_open(rootFd, 0, path.$ptr, path.byteLength, 0, TestApi.FileBaseRights, TestApi.FileInheritingRights, 0, fd.$ptr);
+			let errno = wasi.path_open(rootFd, 0, path.$ptr, path.byteLength, 0, FileRights.base, FileRights.inheriting, 0, fd.$ptr);
 			assert.strictEqual(errno, Errno.noent);
 		});
 	});
@@ -428,7 +432,7 @@ suite ('Filesystem', () => {
 			fs.writeFileSync(path.join(testLocation, name), 'Hello World');
 			const fd = memory.allocUint32(0);
 			const p = memory.allocString(name);
-			let errno = wasi.path_open(rootFd, 0, p.$ptr, p.byteLength, 0, TestApi.FileBaseRights, TestApi.FileInheritingRights, 0, fd.$ptr);
+			let errno = wasi.path_open(rootFd, 0, p.$ptr, p.byteLength, 0, FileRights.base, FileRights.inheriting, 0, fd.$ptr);
 			assert.strictEqual(errno, Errno.success);
 			assert.notStrictEqual(fd.value, 0);
 			closeFile(wasi, fd.value);
@@ -440,7 +444,7 @@ suite ('Filesystem', () => {
 			const name = 'test.txt';
 			const fd = memory.allocUint32(0);
 			const path = memory.allocString(name);
-			let errno = wasi.path_open(rootFd, 0, path.$ptr, path.byteLength, Oflags.creat, TestApi.FileBaseRights, TestApi.FileInheritingRights, 0, fd.$ptr);
+			let errno = wasi.path_open(rootFd, 0, path.$ptr, path.byteLength, Oflags.creat, FileRights.base, FileRights.inheriting, 0, fd.$ptr);
 			assert.strictEqual(errno, Errno.success);
 			assert.notStrictEqual(fd.value, 0);
 			closeFile(wasi, fd.value);
@@ -453,7 +457,7 @@ suite ('Filesystem', () => {
 			fs.writeFileSync(path.join(testLocation, name), 'Hello World');
 			const fd = memory.allocUint32(0);
 			const p = memory.allocString(name);
-			let errno = wasi.path_open(rootFd, 0, p.$ptr, p.byteLength, Oflags.trunc, TestApi.FileBaseRights, TestApi.FileInheritingRights, 0, fd.$ptr);
+			let errno = wasi.path_open(rootFd, 0, p.$ptr, p.byteLength, Oflags.trunc, FileRights.base, FileRights.inheriting, 0, fd.$ptr);
 			assert.strictEqual(errno, Errno.success);
 			assert.notStrictEqual(fd.value, 0);
 			closeFile(wasi, fd.value);
@@ -468,7 +472,7 @@ suite ('Filesystem', () => {
 			fs.writeFileSync(path.join(testLocation, name), 'Hello World');
 			const fd = memory.allocUint32(0);
 			const p = memory.allocString(name);
-			let errno = wasi.path_open(rootFd, 0, p.$ptr, p.byteLength, Oflags.excl, TestApi.FileBaseRights, TestApi.FileInheritingRights, 0, fd.$ptr);
+			let errno = wasi.path_open(rootFd, 0, p.$ptr, p.byteLength, Oflags.excl, FileRights.base, FileRights.inheriting, 0, fd.$ptr);
 			assert.strictEqual(errno, Errno.exist);
 		});
 	});
@@ -479,7 +483,7 @@ suite ('Filesystem', () => {
 			fs.writeFileSync(path.join(testLocation, name), 'Hello World');
 			const fd = memory.allocUint32(0);
 			const p = memory.allocString(name);
-			const errno = wasi.path_open(rootFd, 0, p.$ptr, p.byteLength, Oflags.directory, TestApi.FileBaseRights, TestApi.FileInheritingRights, 0, fd.$ptr);
+			const errno = wasi.path_open(rootFd, 0, p.$ptr, p.byteLength, Oflags.directory, FileRights.base, FileRights.inheriting, 0, fd.$ptr);
 			assert.strictEqual(errno, Errno.notdir);
 		});
 	});
@@ -490,7 +494,7 @@ suite ('Filesystem', () => {
 			fs.mkdirSync(path.join(testLocation, name));
 			const fd = memory.allocUint32(0);
 			const p = memory.allocString(name);
-			const errno = wasi.path_open(rootFd, 0, p.$ptr, p.byteLength, Oflags.directory, TestApi.FileBaseRights, TestApi.FileInheritingRights, 0, fd.$ptr);
+			const errno = wasi.path_open(rootFd, 0, p.$ptr, p.byteLength, Oflags.directory, FileRights.base, FileRights.inheriting, 0, fd.$ptr);
 			assert.strictEqual(errno, Errno.success);
 			assert.notStrictEqual(fd.value, 0);
 			closeFile(wasi, fd.value);
@@ -503,7 +507,7 @@ suite ('Filesystem', () => {
 			fs.writeFileSync(path.join(testLocation, name), 'Hello');
 			const fd = memory.allocUint32(0);
 			const p = memory.allocString(name);
-			let errno = wasi.path_open(rootFd, 0, p.$ptr, p.byteLength, 0, TestApi.FileBaseRights, TestApi.FileInheritingRights, Fdflags.append, fd.$ptr);
+			let errno = wasi.path_open(rootFd, 0, p.$ptr, p.byteLength, 0, FileRights.base, FileRights.inheriting, Fdflags.append, fd.$ptr);
 			assert.strictEqual(errno, Errno.success);
 			writeToFile(wasi, memory, fd.value, ' World');
 			closeFile(wasi, fd.value);
@@ -649,8 +653,8 @@ suite ('Filesystem', () => {
 			assert.strictEqual(errno, Errno.success);
 			assert.strictEqual(fdstat.fs_filetype, Filetype.regular_file);
 			assert.strictEqual(fdstat.fs_flags, 0);
-			assert.strictEqual(fdstat.fs_rights_base, TestApi.FileBaseRights);
-			assert.strictEqual(fdstat.fs_rights_inheriting, TestApi.FileInheritingRights);
+			assert.strictEqual(fdstat.fs_rights_base, FileRights.base);
+			assert.strictEqual(fdstat.fs_rights_inheriting, FileRights.inheriting);
 			closeFile(wasi, fd);
 		});
 	});
@@ -698,7 +702,7 @@ suite ('Filesystem', () => {
 		});
 	});
 
-	test(('fd_filestat_set_size'), () => {
+	test('fd_filestat_set_size', () => {
 		runTestWithFilesystem((wasi, memory, rootFd, testLocation) => {
 			const name = 'test.txt';
 			const content = 'Hello World';
@@ -714,6 +718,16 @@ suite ('Filesystem', () => {
 			for (let i = originalLength; i < buffer.length; i++) {
 				assert.strictEqual(buffer[i], 0);
 			}
+		});
+	});
+
+	test('fd_filestat_set_times', () => {
+		runTestWithFilesystem((wasi, memory, rootFd) => {
+			const name = 'test.txt';
+			const content = 'Hello World';
+			const fd = createFileWithContent(wasi, memory, rootFd, name, content);
+			const errno = wasi.fd_filestat_set_times(fd, 10n, 10n, Fstflags.atim | Fstflags.mtim);
+			assert.strictEqual(errno, Errno.nosys);
 		});
 	});
 

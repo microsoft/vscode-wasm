@@ -8,6 +8,6 @@ export type u16 = number;
 export type u32 = number;
 export type u64 = bigint;
 export type s64 = bigint;
-export type ptr<_size = u8> =  number;
+export type ptr<_type = u8> =  number;
 
 export type size = u32;

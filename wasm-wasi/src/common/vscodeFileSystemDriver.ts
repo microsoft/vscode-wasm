@@ -15,19 +15,19 @@ import RAL from './ral';
 import { u64 } from './baseTypes';
 const paths = RAL().path;
 
-const DirectoryBaseRights: rights = Rights.fd_fdstat_set_flags | Rights.path_create_directory |
+export const DirectoryBaseRights: rights = Rights.fd_fdstat_set_flags | Rights.path_create_directory |
 		Rights.path_create_file | Rights.path_open | Rights.fd_readdir | Rights.path_rename_source |
 		Rights.path_rename_target | Rights.path_filestat_get | Rights.path_filestat_set_size | /** path_filestat_set_times | */
-		Rights.fd_filestat_get | /** fd_filestat_set_times | */ Rights.path_remove_directory |
+		Rights.fd_filestat_get | Rights.fd_filestat_set_times | Rights.path_remove_directory |
 		Rights.path_unlink_file;
 
-const FileBaseRights: rights = Rights.fd_datasync | Rights.fd_read | Rights.fd_seek | Rights.fd_fdstat_set_flags |
+export const FileBaseRights: rights = Rights.fd_datasync | Rights.fd_read | Rights.fd_seek | Rights.fd_fdstat_set_flags |
 		Rights.fd_sync | Rights.fd_tell | Rights.fd_write | Rights.fd_advise | Rights.fd_allocate | Rights.fd_filestat_get |
-		Rights.fd_filestat_set_size | /** fd_filestat_set_times | */ Rights.poll_fd_readwrite;
+		Rights.fd_filestat_set_size | Rights.fd_filestat_set_times | Rights.poll_fd_readwrite;
 
-const DirectoryInheritingRights: rights = DirectoryBaseRights | FileBaseRights;
+export const DirectoryInheritingRights: rights = DirectoryBaseRights | FileBaseRights;
 
-// const FileInheritingRights: rights = 0n;
+export const FileInheritingRights: rights = 0n;
 
 const DirectoryOnlyBaseRights: rights = DirectoryBaseRights & ~FileBaseRights;
 const FileOnlyBaseRights: rights = FileBaseRights & ~DirectoryBaseRights;
@@ -392,6 +392,7 @@ export function create(apiClient: ApiShape, _textEncoder: RAL.TextEncoder, fileD
 			// For new we do nothing. We could cache the timestamp in memory
 			// But we would loose them during reload. We could also store them
 			// in local storage
+			throw new WasiError(Errno.nosys);
 		},
 		fd_pread(fileDescriptor: FileDescriptor, _offset: filesize, buffers: Uint8Array[]): size {
 			const offset = BigInts.asNumber(_offset);
