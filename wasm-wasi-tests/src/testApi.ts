@@ -9,7 +9,7 @@ import * as fs from 'fs';
 
 import { URI } from 'vscode-uri';
 
-import { ApiShape, ByteSink, ByteSource, Process, Timer, TTY, Workspace, Console, FileSystem, FileStat, DTOs, WorkspaceFolder, FileType, FilePermission } from '@vscode/wasm-wasi';
+import { ApiShape, ByteSink, ByteSource, Process, Timer, TTY, Workspace, Console, FileSystem, FileStat, DTOs, WorkspaceFolder, FileType, FilePermission, Rights, rights } from '@vscode/wasm-wasi';
 
 class TimerImpl implements Timer {
 	public sleep(_ms: number): void {
@@ -166,6 +166,21 @@ class WorkspaceImpl implements Workspace {
 }
 
 export class TestApi implements ApiShape {
+
+	public static DirectoryBaseRights: rights = Rights.fd_fdstat_set_flags | Rights.path_create_directory |
+		Rights.path_create_file | Rights.path_open | Rights.fd_readdir | Rights.path_rename_source |
+		Rights.path_rename_target | Rights.path_filestat_get | Rights.path_filestat_set_size | /** path_filestat_set_times | */
+		Rights.fd_filestat_get | /** fd_filestat_set_times | */ Rights.path_remove_directory |
+		Rights.path_unlink_file;
+
+	public static FileBaseRights: rights = Rights.fd_datasync | Rights.fd_read | Rights.fd_seek | Rights.fd_fdstat_set_flags |
+		Rights.fd_sync | Rights.fd_tell | Rights.fd_write | Rights.fd_advise | Rights.fd_allocate | Rights.fd_filestat_get |
+		Rights.fd_filestat_set_size | /** fd_filestat_set_times | */ Rights.poll_fd_readwrite;
+
+	public static DirectoryInheritingRights: rights = this.DirectoryBaseRights | this.FileBaseRights;
+
+	public static FileInheritingRights = 0n;
+
 
 	public rval: number | undefined;
 

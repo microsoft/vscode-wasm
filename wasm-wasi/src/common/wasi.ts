@@ -19,7 +19,7 @@ import {
 	fd_filestat_set_times, fd_pread, fd_prestat_dir_name, fd_prestat_get, fd_pwrite, fd_read, fd_readdir,
 	fd_seek, fd_sync, fd_tell, fd_write, path_create_directory, path_filestat_get, path_filestat_set_times,
 	path_link, path_open, path_readlink, path_remove_directory, path_rename, path_symlink, path_unlink_file,
-	poll_oneoff, proc_exit, random_get, sched_yield, sock_accept, sock_recv, sock_send, sock_shutdown, Fdstat, Filestat, dirent, ciovec, iovec, fdstat, filestat
+	poll_oneoff, proc_exit, random_get, sched_yield, sock_accept, sock_recv, sock_send, sock_shutdown, Fdstat, Filestat, dirent, ciovec, iovec, fdstat, filestat, Whence
 } from './wasiTypes';
 import { BigInts, code2Wasi } from './converter';
 import { CharacterDeviceDriver, DeviceDriver, DeviceId, FileDescriptor, FileSystemDeviceDriver, ReaddirEntry } from './deviceDriver';
@@ -241,7 +241,7 @@ export namespace WASI {
 				if (driver === undefined) {
 					throw new Error(`No filesystem found for stdio descriptor: [${description.uri.toString(true)},${description.path}]`);
 				}
-				result = driver.createStdioFileDescriptor(fd, Rights.FileBase, Rights.FileInheriting, 0, description.path);
+				result = driver.createStdioFileDescriptor(fd, 0, description.path);
 			} else if (description.kind === 'terminal') {
 				let driver = uri2Driver!.get(description.uri.toString(true)) as (CharacterDeviceDriver | undefined);
 				if (driver === undefined) {
@@ -363,7 +363,7 @@ export namespace WASI {
 			fd_advise: (fd: fd, offset: filesize, length: filesize, advise: advise): errno => {
 				try {
 					const fileDescriptor = getFileDescriptor(fd);
-					fileDescriptor.assertBaseRight(Rights.fd_advise);
+					fileDescriptor.assertBaseRights(Rights.fd_advise);
 
 					getDeviceDriver(fileDescriptor).fd_advise(fileDescriptor, offset, length, advise);
 					return Errno.success;
@@ -374,7 +374,7 @@ export namespace WASI {
 			fd_allocate: (fd: fd, offset: filesize, len: filesize): errno => {
 				try {
 					const fileDescriptor = getFileDescriptor(fd);
-					fileDescriptor.assertBaseRight(Rights.fd_allocate);
+					fileDescriptor.assertBaseRights(Rights.fd_allocate);
 
 					getDeviceDriver(fileDescriptor).fd_allocate(fileDescriptor, offset, len);
 					return Errno.success;
@@ -396,7 +396,7 @@ export namespace WASI {
 			fd_datasync: (fd: fd): errno => {
 				try {
 					const fileDescriptor = getFileDescriptor(fd);
-					fileDescriptor.assertBaseRight(Rights.fd_datasync);
+					fileDescriptor.assertBaseRights(Rights.fd_datasync);
 
 					getDeviceDriver(fileDescriptor).fd_datasync(fileDescriptor);
 					return Errno.success;
@@ -417,7 +417,7 @@ export namespace WASI {
 			fd_fdstat_set_flags: (fd: fd, fdflags: fdflags): errno => {
 				try {
 					const fileDescriptor = getFileDescriptor(fd);
-					fileDescriptor.assertBaseRight(Rights.fd_fdstat_set_flags);
+					fileDescriptor.assertBaseRights(Rights.fd_fdstat_set_flags);
 
 					getDeviceDriver(fileDescriptor).fd_fdstat_set_flags(fileDescriptor, fdflags);
 					return Errno.success;
@@ -428,7 +428,7 @@ export namespace WASI {
 			fd_filestat_get: (fd: fd, filestat_ptr: ptr<filestat>): errno => {
 				try {
 					const fileDescriptor = getFileDescriptor(fd);
-					fileDescriptor.assertBaseRight(Rights.fd_filestat_get);
+					fileDescriptor.assertBaseRights(Rights.fd_filestat_get);
 
 					getDeviceDriver(fileDescriptor).fd_filestat_get(fileDescriptor, Filestat.create(filestat_ptr, memoryView()));
 					return Errno.success;
@@ -439,7 +439,7 @@ export namespace WASI {
 			fd_filestat_set_size: (fd: fd, size: filesize): errno => {
 				try {
 					const fileDescriptor = getFileDescriptor(fd);
-					fileDescriptor.assertBaseRight(Rights.fd_filestat_set_size);
+					fileDescriptor.assertBaseRights(Rights.fd_filestat_set_size);
 
 					getDeviceDriver(fileDescriptor).fd_filestat_set_size(fileDescriptor, size);
 					return Errno.success;
@@ -450,7 +450,7 @@ export namespace WASI {
 			fd_filestat_set_times: (fd: fd, atim: timestamp, mtim: timestamp, fst_flags: fstflags): errno => {
 				try {
 					const fileDescriptor = getFileDescriptor(fd);
-					fileDescriptor.assertBaseRight(Rights.fd_filestat_set_times);
+					fileDescriptor.assertBaseRights(Rights.fd_filestat_set_times);
 
 					getDeviceDriver(fileDescriptor).fd_filestat_set_times(fileDescriptor, atim, mtim, fst_flags);
 					return Errno.success;
@@ -461,7 +461,7 @@ export namespace WASI {
 			fd_pread: (fd: fd, iovs_ptr: ptr, iovs_len: u32, offset: filesize, bytesRead_ptr: ptr): errno => {
 				try {
 					const fileDescriptor = getFileDescriptor(fd);
-					fileDescriptor.assertBaseRight(Rights.fd_read);
+					fileDescriptor.assertBaseRights(Rights.fd_read | Rights.fd_seek);
 
 					const buffers = read_iovs(iovs_ptr, iovs_len);
 					const bytesRead = getDeviceDriver(fileDescriptor).fd_pread(fileDescriptor, offset, buffers);
@@ -519,7 +519,7 @@ export namespace WASI {
 			fd_pwrite: (fd: fd, ciovs_ptr: ptr<ciovec>, ciovs_len: u32, offset: filesize, bytesWritten_ptr: ptr<u32>): errno => {
 				try {
 					const fileDescriptor = getFileDescriptor(fd);
-					fileDescriptor.assertBaseRight(Rights.fd_write);
+					fileDescriptor.assertBaseRights(Rights.fd_write | Rights.fd_seek);
 
 					const buffers = read_ciovs(ciovs_ptr, ciovs_len);
 					const bytesWritten = getDeviceDriver(fileDescriptor).fd_pwrite(fileDescriptor, offset, buffers);
@@ -532,7 +532,7 @@ export namespace WASI {
 			fd_read: (fd: fd, iovs_ptr: ptr<iovec>, iovs_len: u32, bytesRead_ptr: ptr<u32>): errno => {
 				try {
 					const fileDescriptor = getFileDescriptor(fd);
-					fileDescriptor.assertBaseRight(Rights.fd_read);
+					fileDescriptor.assertBaseRights(Rights.fd_read);
 
 					const buffers = read_iovs(iovs_ptr, iovs_len);
 					const bytesRead = getDeviceDriver(fileDescriptor).fd_read(fileDescriptor, buffers);
@@ -545,7 +545,7 @@ export namespace WASI {
 			fd_readdir: (fd: fd, buf_ptr: ptr, buf_len: size, cookie: dircookie, buf_used_ptr: ptr): errno => {
 				try {
 					const fileDescriptor = getFileDescriptor(fd);
-					fileDescriptor.assertBaseRight(Rights.fd_readdir);
+					fileDescriptor.assertBaseRights(Rights.fd_readdir);
 					fileDescriptor.assertIsDirectory();
 
 					const driver = getDeviceDriver(fileDescriptor);
@@ -604,7 +604,11 @@ export namespace WASI {
 			fd_seek: (fd: fd, offset: filedelta, whence: whence, new_offset_ptr: ptr): errno => {
 				try {
 					const fileDescriptor = getFileDescriptor(fd);
-					fileDescriptor.assertBaseRight(Rights.fd_seek);
+					if (whence === Whence.cur && offset === 0n && !fileDescriptor.containsBaseRights(Rights.fd_seek) && !fileDescriptor.containsBaseRights(Rights.fd_tell)) {
+						throw new WasiError(Errno.perm);
+					} else {
+						fileDescriptor.assertBaseRights(Rights.fd_seek);
+					}
 
 					const newOffset = getDeviceDriver(fileDescriptor).fd_seek(fileDescriptor, offset, whence);
 					memoryView().setBigUint64(new_offset_ptr, BigInt(newOffset), true);
@@ -616,7 +620,7 @@ export namespace WASI {
 			fd_sync: (fd: fd): errno => {
 				try {
 					const fileDescriptor = getFileDescriptor(fd);
-					fileDescriptor.assertBaseRight(Rights.fd_sync);
+					fileDescriptor.assertBaseRights(Rights.fd_sync);
 
 					getDeviceDriver(fileDescriptor).fd_sync(fileDescriptor);
 					return Errno.success;
@@ -627,7 +631,7 @@ export namespace WASI {
 			fd_tell: (fd: fd, offset_ptr: ptr<u64>): errno => {
 				try {
 					const fileDescriptor = getFileDescriptor(fd);
-					fileDescriptor.assertBaseRight(Rights.fd_tell);
+					fileDescriptor.assertBaseRights(Rights.fd_tell | Rights.fd_seek);
 
 					const offset = getDeviceDriver(fileDescriptor).fd_tell(fileDescriptor);
 					memoryView().setBigUint64(offset_ptr, BigInt(offset), true);
@@ -639,7 +643,7 @@ export namespace WASI {
 			fd_write: (fd: fd, ciovs_ptr: ptr<ciovec>, ciovs_len: u32, bytesWritten_ptr: ptr<u32>): errno => {
 				try {
 					const fileDescriptor = getFileDescriptor(fd);
-					fileDescriptor.assertBaseRight(Rights.fd_write);
+					fileDescriptor.assertBaseRights(Rights.fd_write);
 
 					const buffers = read_ciovs(ciovs_ptr, ciovs_len);
 					const bytesWritten = getDeviceDriver(fileDescriptor).fd_write(fileDescriptor, buffers);
@@ -652,7 +656,7 @@ export namespace WASI {
 			path_create_directory: (fd: fd, path_ptr: ptr, path_len: size): errno => {
 				try {
 					const fileDescriptor = getFileDescriptor(fd);
-					fileDescriptor.assertBaseRight(Rights.path_create_directory);
+					fileDescriptor.assertBaseRights(Rights.path_create_directory);
 					fileDescriptor.assertIsDirectory();
 
 					const path = decoder.decode(new Uint8Array(memoryRaw(), path_ptr, path_len));
@@ -665,7 +669,7 @@ export namespace WASI {
 			path_filestat_get: (fd: fd, flags: lookupflags, path_ptr: ptr, path_len: size, filestat_ptr: ptr): errno => {
 				try {
 					const fileDescriptor = getFileDescriptor(fd);
-					fileDescriptor.assertBaseRight(Rights.path_filestat_get);
+					fileDescriptor.assertBaseRights(Rights.path_filestat_get);
 					fileDescriptor.assertIsDirectory();
 
 					const path = decoder.decode(new Uint8Array(memoryRaw(), path_ptr, path_len));
@@ -678,7 +682,7 @@ export namespace WASI {
 			path_filestat_set_times: (fd: fd, flags: lookupflags, path_ptr: ptr, path_len: size, atim: timestamp, mtim: timestamp, fst_flags: fstflags): errno => {
 				try {
 					const fileDescriptor = getFileDescriptor(fd);
-					fileDescriptor.assertBaseRight(Rights.path_filestat_set_times);
+					fileDescriptor.assertBaseRights(Rights.path_filestat_set_times);
 					fileDescriptor.assertIsDirectory();
 
 					const path = decoder.decode(new Uint8Array(memoryRaw(), path_ptr, path_len));
@@ -691,11 +695,11 @@ export namespace WASI {
 			path_link: (old_fd: fd, old_flags: lookupflags, old_path_ptr: ptr, old_path_len: size, new_fd: fd, new_path_ptr: ptr, new_path_len: size): errno => {
 				try {
 					const oldFileDescriptor = getFileDescriptor(old_fd);
-					oldFileDescriptor.assertBaseRight(Rights.path_link_source);
+					oldFileDescriptor.assertBaseRights(Rights.path_link_source);
 					oldFileDescriptor.assertIsDirectory();
 
 					const newFileDescriptor = getFileDescriptor(new_fd);
-					newFileDescriptor.assertBaseRight(Rights.path_link_target);
+					newFileDescriptor.assertBaseRights(Rights.path_link_target);
 					newFileDescriptor.assertIsDirectory();
 
 					if (oldFileDescriptor.deviceId !== newFileDescriptor.deviceId) {
@@ -715,7 +719,9 @@ export namespace WASI {
 			path_open: (fd: fd, dirflags: lookupflags, path_ptr: ptr, path_len: size, oflags: oflags, fs_rights_base: rights, fs_rights_inheriting: rights, fdflags: fdflags, fd_ptr: ptr): errno => {
 				try {
 					const fileDescriptor = getFileDescriptor(fd);
-					fileDescriptor.assertBaseRight(Rights.path_open);
+					fileDescriptor.assertBaseRights(Rights.path_open);
+					fileDescriptor.assertFdflags(fdflags);
+					fileDescriptor.assertOflags(oflags);
 
 					const path = decoder.decode(new Uint8Array(memoryRaw(), path_ptr, path_len));
 					const result = getDeviceDriver(fileDescriptor).path_open(fileDescriptor, dirflags, path, oflags, fs_rights_base, fs_rights_inheriting, fdflags);
@@ -730,7 +736,7 @@ export namespace WASI {
 				// VS Code has no support to follow a symlink.
 				try {
 					const fileDescriptor = getFileDescriptor(fd);
-					fileDescriptor.assertBaseRight(Rights.path_readlink);
+					fileDescriptor.assertBaseRights(Rights.path_readlink);
 					fileDescriptor.assertIsDirectory();
 
 					const memory = memoryRaw();
@@ -750,7 +756,7 @@ export namespace WASI {
 			path_remove_directory: (fd: fd, path_ptr: ptr, path_len: size): errno => {
 				try {
 					const fileDescriptor = getFileDescriptor(fd);
-					fileDescriptor.assertBaseRight(Rights.path_remove_directory);
+					fileDescriptor.assertBaseRights(Rights.path_remove_directory);
 					fileDescriptor.assertIsDirectory();
 
 					const path = decoder.decode(new Uint8Array(memoryRaw(), path_ptr, path_len));
@@ -763,11 +769,11 @@ export namespace WASI {
 			path_rename: (old_fd: fd, old_path_ptr: ptr, old_path_len: size, new_fd: fd, new_path_ptr: ptr, new_path_len: size): errno => {
 				try {
 					const oldFileDescriptor = getFileDescriptor(old_fd);
-					oldFileDescriptor.assertBaseRight(Rights.path_rename_source);
+					oldFileDescriptor.assertBaseRights(Rights.path_rename_source);
 					oldFileDescriptor.assertIsDirectory();
 
 					const newFileDescriptor = getFileDescriptor(new_fd);
-					newFileDescriptor.assertBaseRight(Rights.path_rename_target);
+					newFileDescriptor.assertBaseRights(Rights.path_rename_target);
 					newFileDescriptor.assertIsDirectory();
 
 					const memory = memoryRaw();
@@ -783,7 +789,7 @@ export namespace WASI {
 				// VS Code has no support to create a symlink.
 				try {
 					const fileDescriptor = getFileDescriptor(fd);
-					fileDescriptor.assertBaseRight(Rights.path_symlink);
+					fileDescriptor.assertBaseRights(Rights.path_symlink);
 					fileDescriptor.assertIsDirectory();
 
 					const memory = memoryRaw();
@@ -798,7 +804,7 @@ export namespace WASI {
 			path_unlink_file: (fd: fd, path_ptr: ptr, path_len: size): errno => {
 				try {
 					const fileDescriptor = getFileDescriptor(fd);
-					fileDescriptor.assertBaseRight(Rights.path_unlink_file);
+					fileDescriptor.assertBaseRights(Rights.path_unlink_file);
 					fileDescriptor.assertIsDirectory();
 
 					const path = decoder.decode(new Uint8Array(memoryRaw(), path_ptr, path_len));
@@ -947,7 +953,9 @@ export namespace WASI {
 			const fd = subscription.u.fd_read.file_descriptor;
 			try {
 				const fileDescriptor = getFileDescriptor(fd);
-				fileDescriptor.assertBaseRight(Rights.fd_read);
+				if (!fileDescriptor.containsBaseRights(Rights.poll_fd_readwrite) && !fileDescriptor.containsBaseRights(Rights.fd_read)) {
+					throw new WasiError(Errno.perm);
+				}
 
 				const available = getDeviceDriver(fileDescriptor).fd_bytesAvailable(fileDescriptor);
 				return {
@@ -975,8 +983,10 @@ export namespace WASI {
 		function handleWriteSubscription(subscription: subscription): Literal<event> {
 			const fd = subscription.u.fd_write.file_descriptor;
 			try {
-				const fileHandle = getFileDescriptor(fd);
-				fileHandle.assertBaseRight(Rights.fd_write);
+				const fileDescriptor = getFileDescriptor(fd);
+				if (!fileDescriptor.containsBaseRights(Rights.poll_fd_readwrite) && !fileDescriptor.containsBaseRights(Rights.fd_write)) {
+					throw new WasiError(Errno.perm);
+				}
 				return {
 					userdata: subscription.userdata,
 					type: Eventtype.fd_write,

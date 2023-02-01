@@ -12,6 +12,11 @@ import { size } from './baseTypes';
 import { fd, fdflags, fdstat, filestat, Filetype, Rights, rights } from './wasiTypes';
 import { BaseFileDescriptor, CharacterDeviceDriver, DeviceIds, FileDescriptor, NoSysDeviceDriver } from './deviceDriver';
 
+const ConsoleBaseRights: rights = Rights.fd_read | Rights.fd_fdstat_set_flags | Rights.fd_write |
+	Rights.fd_filestat_get | Rights.poll_fd_readwrite;
+
+const ConsoleInheritingRights = 0n;
+
 class ConsoleFileDescriptor extends BaseFileDescriptor {
 	constructor(deviceId: bigint, fd: fd, rights_base: rights, rights_inheriting: rights, fdflags: fdflags, inode: bigint) {
 		super(deviceId, fd, Filetype.character_device, rights_base, rights_inheriting, fdflags, inode);
@@ -24,7 +29,7 @@ export function create(apiClient: ApiShape, uri: URI, decoder: RAL.TextDecoder):
 	let inodeCounter: bigint = 0n;
 
 	function createConsoleFileDescriptor(fd: 0 | 1 | 2): ConsoleFileDescriptor {
-		return new ConsoleFileDescriptor(deviceId, fd, Rights.CharacterDeviceBase, Rights.CharacterDeviceInheriting, 0, inodeCounter++);
+		return new ConsoleFileDescriptor(deviceId, fd, ConsoleBaseRights, ConsoleInheritingRights, 0, inodeCounter++);
 	}
 
 	return Object.assign({}, NoSysDeviceDriver, {

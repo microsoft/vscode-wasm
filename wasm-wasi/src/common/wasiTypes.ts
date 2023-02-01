@@ -577,93 +577,62 @@ export namespace Rights {
 	export const sock_accept = 1n << 29n; // 536'870'912
 
 	/**
+	 * Check if the given rights contain the requested rights.
+	 * @param rights The granted rights.
+	 * @param check The rights to check.
+	 * @returns true if the granted rights contain the rights to check.
+	 */
+	export function contains(rights: rights, check: rights): boolean {
+		return (rights & check) === check;
+	}
+
+	/**
+	 * Check if the given rights support the requested flags
+	 * @param rights The granted rights.
+	 * @param fdflags The requested flags.
+	 * @returns true if the granted rights support the given flags
+	 */
+	export function supportFdflags(rights: rights, fdflags: fdflags): boolean {
+		if (fdflags === Fdflags.none) { return true; }
+		if (Fdflags.dsyncOn(fdflags)) { return contains(rights, Rights.fd_datasync | Rights.fd_sync ); }
+		if (Fdflags.rsyncOn(fdflags)) { return contains(rights, Rights.fd_sync); }
+		return true;
+	}
+
+	/**
+	 * Check if the given rights support the requested flags
+	 * @param rights The granted rights.
+	 * @param fdflags The requested flags.
+	 * @returns true if the granted rights support the given flags
+	 */
+	export function supportOflags(rights: rights, oflags: oflags): boolean {
+		if (oflags === Oflags.none) { return true; }
+		if (Oflags.creatOn(oflags)) { return contains(rights, Rights.path_create_file ); }
+		if (Oflags.truncOn(oflags)) { return contains(rights, Rights.path_filestat_set_size); }
+		return true;
+	}
+
+	/**
 	 * All rights
 	 */
-	export const All = Rights.fd_advise | Rights.fd_allocate | Rights.fd_datasync | Rights.fd_fdstat_set_flags |
-		Rights.fd_filestat_get | Rights.fd_filestat_set_size | Rights.fd_filestat_set_times | Rights.fd_read |
-		Rights.fd_readdir | Rights.fd_seek | Rights.fd_sync | Rights.fd_tell | Rights.fd_write | Rights.path_create_directory |
-		Rights.path_create_file | Rights.path_filestat_get | Rights.path_filestat_set_size | Rights.path_filestat_set_times |
-		Rights.path_link_source | Rights.path_link_target | Rights.path_open | Rights.path_readlink | Rights.path_remove_directory |
-		Rights.path_rename_source | Rights.path_rename_target | Rights.path_symlink | Rights.path_unlink_file | Rights.poll_fd_readwrite |
-		Rights.sock_accept | Rights.sock_shutdown | Rights.sock_accept;
-
-	/**
-	 * Base rights for block devices.
-	 *
-	 * Note: we don't have block devices in VS Code.
-	 */
-	export const BlockDeviceBase = 0n;
-
-	/**
-	 * Inheriting rights for block devices.
-	 *
-	 * Note: we don't have block devices in VS Code.
-	 */
-	export const BlockDeviceInheriting = 0n;
-
-	/**
-	 * Base rights for directories managed in VS Code.
-	 */
-	export const DirectoryBase = path_create_directory | path_create_file |
-		path_filestat_get | path_filestat_set_times | path_link_source |
-		path_link_target | path_open | path_readlink | path_remove_directory |
-		path_rename_source | path_rename_target | path_symlink | path_unlink_file |
-		fd_readdir;
-
-	/**
-	 * Base rights for files managed in VS Code.
-	 */
-	export const FileBase = fd_read | fd_seek | fd_write | fd_filestat_get |
-		fd_advise | fd_allocate | fd_datasync | fd_fdstat_set_flags |
-		fd_filestat_set_size | fd_filestat_set_times | fd_sync | fd_tell;
-
-	/**
-	 * Inheriting rights for directories
-	 */
-	export const DirectoryInheriting = DirectoryBase | FileBase;
-
-	/**
-	 * Inheriting rights for files
-	 */
-	export const FileInheriting = 0n;
-
-	/**
-	 * Base rights for character devices
-	 */
-	export const CharacterDeviceBase = fd_read | fd_fdstat_set_flags | fd_write |
-		fd_filestat_get | poll_fd_readwrite;
-
-	/**
-	 * Inheriting rights for character devices
-	 */
-	export const CharacterDeviceInheriting = 0n;
-
-	/**
-	 * Base rights for stdin
-	 */
-	export const StdinBase = fd_read | fd_filestat_get | poll_fd_readwrite;
-
-	/**
-	 * Inheriting rights for stdout / stderr
-	 */
-	export const StdinInheriting = 0n;
-
-	/**
-	 * Base rights for stdout / stderr
-	 */
-	export const StdoutBase = fd_fdstat_set_flags | fd_write |
-		fd_filestat_get | poll_fd_readwrite;
-
-	/**
-	 * Inheriting rights for stdout / stderr
-	 */
-	export const StdoutInheriting = 0n;
+	export const All = fd_datasync | fd_read | fd_seek | fd_fdstat_set_flags |
+		fd_sync | fd_tell | fd_write | fd_advise | fd_allocate | path_create_directory |
+		path_create_file | path_link_source | path_link_target | path_open | fd_readdir |
+		path_readlink | path_rename_source | path_rename_target | path_filestat_get |
+		path_filestat_set_size | path_filestat_set_times | fd_filestat_get |
+		fd_filestat_set_size | fd_filestat_set_times | path_symlink | path_remove_directory |
+		path_unlink_file | poll_fd_readwrite | sock_shutdown | sock_accept;
 }
 
 export type dircookie = u64;
 
 export type fdflags = u16;
 export namespace Fdflags {
+
+	/**
+	 * No flags.
+	 */
+	export const none = 0;
 
 	/**
 	 * Append mode: Data written to the file is always appended to the file's
@@ -721,6 +690,11 @@ export namespace Lookupflags {
 
 export type oflags = u16;
 export namespace Oflags {
+
+	/**
+	 * No flags.
+	 */
+	export const none = 0;
 
 	/**
 	 * Create file if it does not exist.

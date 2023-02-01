@@ -15,6 +15,24 @@ import RAL from './ral';
 import { u64 } from './baseTypes';
 const paths = RAL().path;
 
+const DirectoryBaseRights: rights = Rights.fd_fdstat_set_flags | Rights.path_create_directory |
+		Rights.path_create_file | Rights.path_open | Rights.fd_readdir | Rights.path_rename_source |
+		Rights.path_rename_target | Rights.path_filestat_get | Rights.path_filestat_set_size | /** path_filestat_set_times | */
+		Rights.fd_filestat_get | /** fd_filestat_set_times | */ Rights.path_remove_directory |
+		Rights.path_unlink_file;
+
+const FileBaseRights: rights = Rights.fd_datasync | Rights.fd_read | Rights.fd_seek | Rights.fd_fdstat_set_flags |
+		Rights.fd_sync | Rights.fd_tell | Rights.fd_write | Rights.fd_advise | Rights.fd_allocate | Rights.fd_filestat_get |
+		Rights.fd_filestat_set_size | /** fd_filestat_set_times | */ Rights.poll_fd_readwrite;
+
+const DirectoryInheritingRights: rights = DirectoryBaseRights | FileBaseRights;
+
+// const FileInheritingRights: rights = 0n;
+
+const DirectoryOnlyBaseRights: rights = DirectoryBaseRights & ~FileBaseRights;
+const FileOnlyBaseRights: rights = FileBaseRights & ~DirectoryBaseRights;
+
+
 class FileFileDescriptor extends BaseFileDescriptor {
 
 	/**
@@ -58,11 +76,11 @@ class DirectoryFileDescriptor extends BaseFileDescriptor {
 	}
 
 	childDirectoryRights(requested_rights: rights): rights {
-		return (this.rights_inheriting | requested_rights) & ~Rights.FileBase;
+		return (this.rights_inheriting & requested_rights) & ~FileOnlyBaseRights;
 	}
 
 	childFileRights(requested_rights: rights): rights {
-		return (this.rights_inheriting | requested_rights) & ~Rights.DirectoryBase;
+		return (this.rights_inheriting & requested_rights) & ~DirectoryOnlyBaseRights;
 	}
 }
 
@@ -287,7 +305,8 @@ export function create(apiClient: ApiShape, _textEncoder: RAL.TextEncoder, fileD
 
 	return Object.assign({}, NoSysDeviceDriver, {
 		id: deviceId,
-		createStdioFileDescriptor(fd: 0 | 1 | 2, rights_base: rights, _rights_inheriting: rights, fdflags: fdflags, path: string): FileDescriptor {
+
+		createStdioFileDescriptor(fd: 0 | 1 | 2, fdflags: fdflags, path: string): FileDescriptor {
 			if (path.length === 0) {
 				throw new WasiError(Errno.inval);
 			}
@@ -297,10 +316,10 @@ export function create(apiClient: ApiShape, _textEncoder: RAL.TextEncoder, fileD
 
 			const fileUri = uriJoin(baseUri, path);
 			const inode = getOrCreateINode(path, fileUri, true);
-			return new FileFileDescriptor(deviceId, fd, rights_base, fdflags, inode.id, path);
+			return new FileFileDescriptor(deviceId, fd, FileBaseRights, fdflags, inode.id, path);
 		},
 		fd_advise(fileDescriptor: FileDescriptor, _offset: bigint, _length: bigint, _advise: number): void {
-			fileDescriptor.assertBaseRight(Rights.fd_advise);
+			fileDescriptor.assertBaseRights(Rights.fd_advise);
 			// We don't have advisory in VS Code. So treat it as successful.
 			return;
 		},
@@ -386,7 +405,7 @@ export function create(apiClient: ApiShape, _textEncoder: RAL.TextEncoder, fileD
 			}
 			return [
 				next,
-				new DirectoryFileDescriptor(deviceId, fd, Rights.DirectoryBase, Rights.DirectoryInheriting, 0, getOrCreateINode('/', baseUri, true).id, '/')
+				new DirectoryFileDescriptor(deviceId, fd, DirectoryBaseRights, DirectoryInheritingRights, 0, getOrCreateINode('/', baseUri, true).id, '/')
 			];
 		},
 		fd_pwrite(fileDescriptor: FileDescriptor, _offset: filesize, buffers: Uint8Array[]): number {
@@ -545,7 +564,7 @@ export function create(apiClient: ApiShape, _textEncoder: RAL.TextEncoder, fileD
 			// a file descriptor for it and lazy get the file content on read.
 			const result = filetype === Filetype.regular_file
 				? createFileDescriptor(parentDescriptor, parentDescriptor.childFileRights(fs_rights_base), fdflags, path)
-				: createDirectoryDescriptor(parentDescriptor, parentDescriptor.childDirectoryRights(fs_rights_base), fs_rights_inheriting | Rights.DirectoryInheriting, fdflags, path);
+				: createDirectoryDescriptor(parentDescriptor, parentDescriptor.childDirectoryRights(fs_rights_base), fs_rights_inheriting | DirectoryInheritingRights, fdflags, path);
 
 			if (result instanceof FileFileDescriptor && (createFile || Oflags.truncOn(oflags))) {
 				createOrTruncate(result);
