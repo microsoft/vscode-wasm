@@ -915,6 +915,24 @@ suite ('Filesystem', () => {
 		});
 	});
 
+	test('fd_sync', (done) => {
+		runTestWithFilesystem((wasi, memory, rootFd) => {
+			const hw = 'Hello World';
+			const fd = createFileWithContent(wasi, memory, rootFd, 'test.txt', hw);
+			const before = statFile(wasi, memory, fd);
+			setTimeout(5).then(() => {
+				const errno = wasi.fd_sync(fd);
+				const after = statFile(wasi, memory, fd);
+				assert.strictEqual(errno, Errno.success);
+				assert.ok(before.mtim < after.mtim);
+			}).catch(() => {
+				assert.ok(false, 'setTimeout failed');
+			}).finally(() => {
+				done();
+			});
+		});
+	});
+
 	test('fd_write - single ciovec', () => {
 		runTestWithFilesystem((wasi, memory, rootFd, testLocation) => {
 			const hw = 'Hello World';
