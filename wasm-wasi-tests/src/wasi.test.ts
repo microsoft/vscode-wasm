@@ -731,6 +731,25 @@ suite ('Filesystem', () => {
 		});
 	});
 
+	test('fd_pread', () => {
+		runTestWithFilesystem((wasi, memory, rootFd, testLocation) => {
+			const name = 'test.txt';
+			const content = 'Hello World';
+			fs.writeFileSync(path.join(testLocation, name), content);
+			const fd = openFile(wasi, memory, rootFd, name);
+			const stat = statFile(wasi, memory, fd);
+			const iovecs = memory.allocStructArray(1, Iovec);
+			const buffer = memory.alloc(1024);
+			iovecs.get(0).buf = buffer;
+			iovecs.get(0).buf_len = 1024;
+			const bytesRead = memory.allocUint32();
+			const offset = 6n;
+			let errno = wasi.fd_pread(fd, iovecs.$ptr, iovecs.size, offset, bytesRead.$ptr);
+			assert.strictEqual(errno, Errno.success);
+			assert.strictEqual(BigInt(bytesRead.value), stat.size - offset);
+			assert.strictEqual(decoder.decode(memory.readBytes(buffer, bytesRead.value)), 'World');
+		});
+	});
 	test('fd_read - single iovec', () => {
 		runTestWithFilesystem((wasi, memory, rootFd, testLocation) => {
 			const name = 'test.txt';
