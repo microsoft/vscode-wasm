@@ -12,7 +12,7 @@ import { setTimeout } from 'node:timers/promises';
 
 import {
 	ptr, DeviceDescription, Environment, WASI, Clockid, Errno, Prestat, fd, Oflags, Rights, Filestat, Ciovec, Advice, filestat, Iovec,
-	fdstat, Fdstat, Filetype, Fdflags, fdflags, Fstflags, VSCodeFS, Dirent
+	fdstat, Fdstat, Filetype, Fdflags, fdflags, Fstflags, VSCodeFS, Dirent, Whence
 } from '@vscode/wasm-wasi';
 import { URI } from 'vscode-uri';
 
@@ -407,6 +407,17 @@ suite ('Filesystem', () => {
 		const errno = wasi.fd_write(fd, ciovecs.$ptr, 1, bytesWritten.$ptr);
 		assert.strictEqual(errno, Errno.success);
 		assert.strictEqual(bytesWritten.value, content.byteLength);
+	}
+
+	function readFromFile(wasi: WASI,memory: Memory, fd: fd): Uint8Array {
+		const iovecs = memory.allocStructArray(1, Iovec);
+		const buffer = memory.alloc(1024);
+		iovecs.get(0).buf = buffer;
+		iovecs.get(0).buf_len = 1024;
+		const bytesRead = memory.allocUint32();
+		let errno = wasi.fd_read(fd, iovecs.$ptr, iovecs.size, bytesRead.$ptr);
+		assert.strictEqual(errno, Errno.success);
+		return memory.readBytes(buffer, bytesRead.value);
 	}
 
 	function closeFile(wasi: WASI, fd: fd): void {
@@ -880,6 +891,27 @@ suite ('Filesystem', () => {
 				}
 			} while (bufUsed.value === buffSize);
 			assert.strictEqual(0, fileNames.size);
+		});
+	});
+
+	test('fd_seek', () => {
+		runTestWithFilesystem((wasi, memory, rootFd) => {
+			const hw = 'Hello World';
+			const fd = createFileWithContent(wasi, memory, rootFd, 'test.txt', hw);
+			const newOffset = memory.allocBigUint64();
+			let errno = wasi.fd_seek(fd, 6n, Whence.set, newOffset.$ptr);
+			assert.strictEqual(errno, Errno.success);
+			assert.strictEqual(newOffset.value, 6n);
+			errno = wasi.fd_seek(fd, 2n, Whence.cur, newOffset.$ptr);
+			assert.strictEqual(errno, Errno.success);
+			assert.strictEqual(newOffset.value, 8n);
+			errno = wasi.fd_seek(fd, -4n, Whence.cur, newOffset.$ptr);
+			assert.strictEqual(errno, Errno.success);
+			assert.strictEqual(newOffset.value, 4n);
+			errno = wasi.fd_seek(fd, 3n, Whence.end, newOffset.$ptr);
+			assert.strictEqual(errno, Errno.success);
+			assert.strictEqual(newOffset.value, 8n);
+			closeFile(wasi, fd);
 		});
 	});
 
