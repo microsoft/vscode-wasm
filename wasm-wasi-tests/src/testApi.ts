@@ -9,7 +9,7 @@ import * as fs from 'fs';
 
 import { URI } from 'vscode-uri';
 
-import { ApiShape, ByteSink, ByteSource, Process, Timer, TTY, Workspace, Console, FileSystem, FileStat, DTOs, WorkspaceFolder, FileType, FilePermission, Rights, rights } from '@vscode/wasm-wasi';
+import { ApiShape, ByteSink, ByteSource, Process, Timer, TTY, Workspace, Console, FileSystem, FileStat, DTOs, WorkspaceFolder, FileType, FilePermission } from '@vscode/wasm-wasi';
 
 class TimerImpl implements Timer {
 	public sleep(_ms: number): void {

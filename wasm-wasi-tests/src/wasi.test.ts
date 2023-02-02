@@ -410,16 +410,16 @@ suite ('Filesystem', () => {
 		assert.strictEqual(bytesWritten.value, content.byteLength);
 	}
 
-	function readFromFile(wasi: WASI,memory: Memory, fd: fd): Uint8Array {
-		const iovecs = memory.allocStructArray(1, Iovec);
-		const buffer = memory.alloc(1024);
-		iovecs.get(0).buf = buffer;
-		iovecs.get(0).buf_len = 1024;
-		const bytesRead = memory.allocUint32();
-		let errno = wasi.fd_read(fd, iovecs.$ptr, iovecs.size, bytesRead.$ptr);
-		assert.strictEqual(errno, Errno.success);
-		return memory.readBytes(buffer, bytesRead.value);
-	}
+	// function readFromFile(wasi: WASI,memory: Memory, fd: fd): Uint8Array {
+	// 	const iovecs = memory.allocStructArray(1, Iovec);
+	// 	const buffer = memory.alloc(1024);
+	// 	iovecs.get(0).buf = buffer;
+	// 	iovecs.get(0).buf_len = 1024;
+	// 	const bytesRead = memory.allocUint32();
+	// 	let errno = wasi.fd_read(fd, iovecs.$ptr, iovecs.size, bytesRead.$ptr);
+	// 	assert.strictEqual(errno, Errno.success);
+	// 	return memory.readBytes(buffer, bytesRead.value);
+	// }
 
 	function closeFile(wasi: WASI, fd: fd): void {
 		const errno = wasi.fd_close(fd);
