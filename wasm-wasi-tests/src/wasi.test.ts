@@ -174,8 +174,8 @@ class Memory {
 }
 
 namespace Timestamp {
-	export function inNanoseconds(timeInMilliseconds: number): bigint {
-		return BigInt(timeInMilliseconds) * 1000000n;
+	export function inNanoseconds(time: Date): bigint {
+		return BigInt(time.valueOf()) * 1000000n;
 	}
 }
 
@@ -709,10 +709,10 @@ suite ('Filesystem', () => {
 			const stat = fs.statSync(path.join(testLocation, name));
 			assert.strictEqual(filestat.size, BigInt(stat.size));
 			assert.strictEqual(filestat.nlink, BigInt(stat.nlink));
-			assert.strictEqual(filestat.ctim, Timestamp.inNanoseconds(stat.ctime.valueOf()));
-			assert.strictEqual(filestat.mtim, Timestamp.inNanoseconds(stat.mtime.valueOf()));
+			assert.strictEqual(filestat.ctim, Timestamp.inNanoseconds(stat.ctime));
+			assert.strictEqual(filestat.mtim, Timestamp.inNanoseconds(stat.mtime));
 			// VS Code has no API for atime. So we use the mtime.
-			assert.strictEqual(filestat.atim, Timestamp.inNanoseconds(stat.mtime.valueOf()));
+			assert.strictEqual(filestat.atim, Timestamp.inNanoseconds(stat.mtime));
 			errno = wasi.fd_close(fd.value);
 			assert.strictEqual(errno, Errno.success);
 		});
@@ -999,6 +999,24 @@ suite ('Filesystem', () => {
 			const stat = statFile(wasi, memory, fd.value);
 			assert.strictEqual(stat.filetype, Filetype.directory);
 			closeFile(wasi, fd.value);
+		});
+	});
+
+	test('path_filestat_get', () => {
+		runTestWithFilesystem((wasi, memory, rootFd, testLocation) => {
+			fs.writeFileSync(path.join(testLocation, 'test.txt'), 'Hello World');
+			const name = memory.allocString('test.txt');
+			const filestat = memory.allocStruct(Filestat);
+			let errno = wasi.path_filestat_get(rootFd, Lookupflags.none, name.$ptr, name.byteLength, filestat.$ptr);
+			assert.strictEqual(errno, Errno.success);
+			assert.strictEqual(filestat.filetype, Filetype.regular_file);
+			const stat = fs.statSync(path.join(testLocation, 'test.txt'), { bigint: true });
+			assert.strictEqual(filestat.size, stat.size);
+			assert.strictEqual(filestat.nlink,stat.nlink);
+			assert.strictEqual(filestat.ctim, Timestamp.inNanoseconds(stat.ctime));
+			assert.strictEqual(filestat.mtim, Timestamp.inNanoseconds(stat.mtime));
+			// VS Code has no API for atime. So we use the mtime.
+			assert.strictEqual(filestat.atim, Timestamp.inNanoseconds(stat.mtime));
 		});
 	});
 });
