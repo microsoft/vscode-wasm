@@ -56,19 +56,19 @@ class Memory {
 		return this.raw;
 	}
 
-	public alloc(bytes: number): ptr {
+	public alloc(bytes: number): wasi.Bytes {
 		const result = this.index;
 		this.index += bytes;
-		return result;
+		return { $ptr: result, byteLength: bytes};
 	}
 
 	public allocStruct<T>(info: { size: number; create: (ptr: ptr, memory: DataView) => T }): T {
-		const ptr: ptr = this.alloc(info.size);
+		const ptr: ptr = this.allocRaw(info.size);
 		return info.create(ptr, this.dataView);
 	}
 
 	public allocStructArray<T>(size: number, info: { size: number; create: (ptr: ptr, memory: DataView) => T }): wasi.StructArray<T> {
-		const ptr: ptr = this.alloc(size * info.size);
+		const ptr: ptr = this.allocRaw(size * info.size);
 		const structs: T[] = new Array(size);
 		for (let i = 0; i < size; i++) {
 			const struct = info.create(ptr + i * info.size, this.dataView);
@@ -86,7 +86,7 @@ class Memory {
 	}
 
 	public allocUint32(value?: number): wasi.Uint32 {
-		const ptr = this.alloc(Uint32Array.BYTES_PER_ELEMENT);
+		const ptr = this.allocRaw(Uint32Array.BYTES_PER_ELEMENT);
 		value !== undefined && this.dataView.setUint32(ptr, value, true);
 		const view = this.dataView;
 		return {
@@ -97,7 +97,7 @@ class Memory {
 	}
 
 	public allocUint32Array(size: number): wasi.Uint32Array {
-		const ptr = this.alloc(Uint32Array.BYTES_PER_ELEMENT * size);
+		const ptr = this.allocRaw(Uint32Array.BYTES_PER_ELEMENT * size);
 		const view = this.dataView;
 		return {
 			get $ptr(): ptr { return ptr; },
@@ -108,7 +108,7 @@ class Memory {
 	}
 
 	public allocBigUint64(value?: bigint): wasi.Uint64 {
-		const ptr = this.alloc(BigUint64Array.BYTES_PER_ELEMENT);
+		const ptr = this.allocRaw(BigUint64Array.BYTES_PER_ELEMENT);
 		value !== undefined && this.dataView.setBigUint64(ptr, value, true);
 		const view = this.dataView;
 		return {
@@ -120,7 +120,7 @@ class Memory {
 
 	public allocString(value: string): wasi.String {
 		const bytes = encoder.encode(value);
-		const ptr = this.alloc(bytes.length);
+		const ptr = this.allocRaw(bytes.length);
 		(new Uint8Array(this.raw)).set(bytes, ptr);
 		return {
 			get $ptr(): ptr { return ptr; },
@@ -129,7 +129,7 @@ class Memory {
 	}
 
 	public allocStringBuffer(length: number): wasi.StringBuffer {
-		const ptr = this.alloc(length);
+		const ptr = this.allocRaw(length);
 		const raw = this.raw;
 		return {
 			get $ptr(): ptr { return ptr; },
@@ -148,7 +148,7 @@ class Memory {
 	}
 
 	public allocBytes(bytes: Uint8Array): wasi.Bytes {
-		const ptr = this.alloc(bytes.length);
+		const ptr = this.allocRaw(bytes.length);
 		(new Uint8Array(this.raw)).set(bytes, ptr);
 		return {
 			get $ptr(): ptr { return ptr; },
@@ -158,6 +158,12 @@ class Memory {
 
 	public readBytes(ptr: ptr, length: number): Uint8Array {
 		return new Uint8Array(this.raw, ptr, length);
+	}
+
+	private allocRaw(bytes: number): ptr {
+		const result = this.index;
+		this.index += bytes;
+		return result;
 	}
 
 	private getStringLength(start: ptr): number {
@@ -224,7 +230,7 @@ suite('Configurations', () => {
 		const argv = memory.allocUint32Array(argvCount.value);
 		const argvBuf = memory.alloc(argvBufSize.value);
 
-		errno = wasi.args_get(argv.$ptr, argvBuf);
+		errno = wasi.args_get(argv.$ptr, argvBuf.$ptr);
 		assert.strictEqual(errno, Errno.success);
 
 		for (let i = 0; i < argvCount.value; i++) {
@@ -283,7 +289,7 @@ suite('Configurations', () => {
 
 		const environ = memory.allocUint32Array(environCount.value);
 		const environBuf = memory.alloc(environBufSize.value);
-		errno = wasi.environ_get(environ.$ptr, environBuf);
+		errno = wasi.environ_get(environ.$ptr, environBuf.$ptr);
 		assert.strictEqual(errno, 0);
 
 		for (let i = 0; i < environCount.value; i++) {
@@ -756,14 +762,14 @@ suite ('Filesystem', () => {
 			const stat = statFile(wasi, memory, fd);
 			const iovecs = memory.allocStructArray(1, Iovec);
 			const buffer = memory.alloc(1024);
-			iovecs.get(0).buf = buffer;
-			iovecs.get(0).buf_len = 1024;
+			iovecs.get(0).buf = buffer.$ptr;
+			iovecs.get(0).buf_len = buffer.byteLength;
 			const bytesRead = memory.allocUint32();
 			const offset = 6n;
 			let errno = wasi.fd_pread(fd, iovecs.$ptr, iovecs.size, offset, bytesRead.$ptr);
 			assert.strictEqual(errno, Errno.success);
 			assert.strictEqual(BigInt(bytesRead.value), stat.size - offset);
-			assert.strictEqual(decoder.decode(memory.readBytes(buffer, bytesRead.value)), 'World');
+			assert.strictEqual(decoder.decode(memory.readBytes(buffer.$ptr, bytesRead.value)), 'World');
 		});
 	});
 
@@ -788,13 +794,13 @@ suite ('Filesystem', () => {
 			const stat = statFile(wasi, memory, fd);
 			const iovecs = memory.allocStructArray(1, Iovec);
 			const buffer = memory.alloc(1024);
-			iovecs.get(0).buf = buffer;
-			iovecs.get(0).buf_len = 1024;
+			iovecs.get(0).buf = buffer.$ptr;
+			iovecs.get(0).buf_len = buffer.byteLength;
 			const bytesRead = memory.allocUint32();
 			let errno = wasi.fd_read(fd, iovecs.$ptr, iovecs.size, bytesRead.$ptr);
 			assert.strictEqual(errno, Errno.success);
 			assert.strictEqual(BigInt(bytesRead.value), stat.size);
-			assert.strictEqual(decoder.decode(memory.readBytes(buffer, bytesRead.value)), content);
+			assert.strictEqual(decoder.decode(memory.readBytes(buffer.$ptr, bytesRead.value)), content);
 		});
 	});
 
@@ -809,8 +815,8 @@ suite ('Filesystem', () => {
 			const iovecs = memory.allocStructArray(3, Iovec);
 			for (let i = 0; i < iovecs.size; i++) {
 				const buffer = memory.alloc(1024);
-				iovecs.get(i).buf = buffer;
-				iovecs.get(i).buf_len = 1024;
+				iovecs.get(i).buf = buffer.$ptr;
+				iovecs.get(i).buf_len = buffer.byteLength;
 			}
 			const bytesRead = memory.allocUint32();
 			let errno = wasi.fd_read(fd, iovecs.$ptr, iovecs.size, bytesRead.$ptr);
@@ -836,9 +842,9 @@ suite ('Filesystem', () => {
 			}
 			const buffer = memory.alloc(2048);
 			const bufUsed = memory.allocUint32();
-			let errno = wasi.fd_readdir(rootFd, buffer, 2048, 0n, bufUsed.$ptr);
+			let errno = wasi.fd_readdir(rootFd, buffer.$ptr, buffer.byteLength, 0n, bufUsed.$ptr);
 			assert.strictEqual(errno, Errno.success);
-			let index = buffer;
+			let index = buffer.$ptr;
 			let next = 1n;
 			while(index < bufUsed.value) {
 				const dirent = memory.readStruct(index, Dirent);
@@ -869,11 +875,11 @@ suite ('Filesystem', () => {
 			do {
 				const buffer = memory.alloc(buffSize);
 				bufUsed = memory.allocUint32();
-				let errno = wasi.fd_readdir(rootFd, buffer, buffSize, dircookie, bufUsed.$ptr);
+				let errno = wasi.fd_readdir(rootFd, buffer.$ptr, buffer.byteLength, dircookie, bufUsed.$ptr);
 				assert.strictEqual(errno, Errno.success);
-				let index = buffer;
+				let index = buffer.$ptr;
 				let spaceLeft = buffSize;
-				while(spaceLeft >= Dirent.size && index - buffer < bufUsed.value) {
+				while(spaceLeft >= Dirent.size && index - buffer.$ptr < bufUsed.value) {
 					const dirent = memory.readStruct(index, Dirent);
 					assert.strictEqual(dirent.d_next, dircookie + 1n);
 					assert.strictEqual(dirent.d_type, Filetype.regular_file);
@@ -1044,6 +1050,20 @@ suite ('Filesystem', () => {
 			const newPath = memory.allocString('newTest.txt');
 			const errno = wasi.path_link(rootFd, Lookupflags.none, oldPath.$ptr, oldPath.byteLength, rootFd, newPath.$ptr, newPath.byteLength);
 			assert.strictEqual(errno, Errno.nosys);
+		});
+	});
+
+	test('path_readlink', () => {
+		runTestWithFilesystem((wasi, memory, rootFd) => {
+			const name = 'test.txt';
+			const content = 'Hello World';
+			const fd = createFileWithContent(wasi, memory, rootFd, name, content);
+			closeFile(wasi, fd);
+			const path = memory.allocString(name);
+			const buffer = memory.alloc(1024);
+			const bufUsed = memory.allocUint32();
+			const errno = wasi.path_readlink(rootFd, path.$ptr, path.byteLength, buffer.$ptr, buffer.byteLength, bufUsed.$ptr);
+			assert.strictEqual(errno, Errno.nolink);
 		});
 	});
 });

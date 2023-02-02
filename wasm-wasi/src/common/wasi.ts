@@ -733,7 +733,6 @@ export namespace WASI {
 				}
 			},
 			path_readlink: (fd: fd, path_ptr: ptr<u8[]>, path_len: size, buf_ptr: ptr, buf_len: size, result_size_ptr: ptr<u32>): errno => {
-				// VS Code has no support to follow a symlink.
 				try {
 					const fileDescriptor = getFileDescriptor(fd);
 					fileDescriptor.assertBaseRights(Rights.path_readlink);
@@ -741,13 +740,12 @@ export namespace WASI {
 
 					const memory = memoryRaw();
 					const path = decoder.decode(new Uint8Array(memory, path_ptr, path_len));
-					const result = encoder.encode(getDeviceDriver(fileDescriptor).path_readlink(fileDescriptor, path));
-					if (result.byteLength > buf_len) {
+					const target = encoder.encode(getDeviceDriver(fileDescriptor).path_readlink(fileDescriptor, path));
+					if (target.byteLength > buf_len) {
 						return Errno.inval;
 					}
-
-					new Uint8Array(memory, buf_ptr, buf_len).set(result);
-					memoryView().setUint32(result_size_ptr, result.byteLength, true);
+					new Uint8Array(memory, buf_ptr, buf_len).set(target);
+					memoryView().setUint32(result_size_ptr, target.byteLength, true);
 					return Errno.success;
 				} catch (error) {
 					return handleError(error);

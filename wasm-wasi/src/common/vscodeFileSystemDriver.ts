@@ -17,9 +17,9 @@ const paths = RAL().path;
 
 export const DirectoryBaseRights: rights = Rights.fd_fdstat_set_flags | Rights.path_create_directory |
 		Rights.path_create_file | Rights.path_link_source | Rights.path_link_target | Rights.path_open |
-		Rights.fd_readdir | Rights.path_rename_source | Rights.path_rename_target | Rights.path_filestat_get |
-		Rights.path_filestat_set_size | Rights.path_filestat_set_times | Rights.fd_filestat_get |
-		Rights.fd_filestat_set_times | Rights.path_remove_directory | Rights.path_unlink_file;
+		Rights.fd_readdir | Rights.path_readlink | Rights.path_rename_source | Rights.path_rename_target |
+		Rights.path_filestat_get | Rights.path_filestat_set_size | Rights.path_filestat_set_times |
+		Rights.fd_filestat_get | Rights.fd_filestat_set_times | Rights.path_remove_directory | Rights.path_unlink_file;
 
 export const FileBaseRights: rights = Rights.fd_datasync | Rights.fd_read | Rights.fd_seek | Rights.fd_fdstat_set_flags |
 		Rights.fd_sync | Rights.fd_tell | Rights.fd_write | Rights.fd_advise | Rights.fd_allocate | Rights.fd_filestat_get |
@@ -578,7 +578,7 @@ export function create(apiClient: ApiShape, _textEncoder: RAL.TextEncoder, fileD
 		path_readlink(_fileDescriptor: FileDescriptor, _path: string): string {
 			// For now we do nothing. If we need to implement this we need
 			// support from the VS Code API.
-			throw new WasiError(Errno.noent);
+			throw new WasiError(Errno.nolink);
 		},
 		path_remove_directory(fileDescriptor: FileDescriptor, path: string): void {
 			assertFileOrDirectoryDescriptor(fileDescriptor);
