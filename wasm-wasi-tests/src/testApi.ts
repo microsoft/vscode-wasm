@@ -144,8 +144,8 @@ class FileSystemImpl implements FileSystem {
 		return {
 			type: stat.isFile() ? FileType.File : stat.isDirectory() ? FileType.Directory : stat.isSymbolicLink() ? FileType.SymbolicLink : FileType.Unknown,
 			size: stat.size,
-			ctime: stat.ctime.valueOf(),
-			mtime: stat.mtime.valueOf(),
+			ctime: stat.ctime.getTime(),
+			mtime: stat.mtime.getTime(),
 			permissions: (stat.mode & fs.constants.S_IWUSR) === 0 ? FilePermission.Readonly : undefined
 		};
 	}

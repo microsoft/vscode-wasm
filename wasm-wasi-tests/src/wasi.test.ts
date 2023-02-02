@@ -175,7 +175,7 @@ class Memory {
 
 namespace Timestamp {
 	export function inNanoseconds(time: Date): bigint {
-		return BigInt(time.valueOf()) * 1000000n;
+		return BigInt(time.getTime()) * 1000000n;
 	}
 }
 
@@ -1005,18 +1005,45 @@ suite ('Filesystem', () => {
 	test('path_filestat_get', () => {
 		runTestWithFilesystem((wasi, memory, rootFd, testLocation) => {
 			fs.writeFileSync(path.join(testLocation, 'test.txt'), 'Hello World');
+			const stat = fs.statSync(path.join(testLocation, 'test.txt'));
+
 			const name = memory.allocString('test.txt');
 			const filestat = memory.allocStruct(Filestat);
 			let errno = wasi.path_filestat_get(rootFd, Lookupflags.none, name.$ptr, name.byteLength, filestat.$ptr);
 			assert.strictEqual(errno, Errno.success);
 			assert.strictEqual(filestat.filetype, Filetype.regular_file);
-			const stat = fs.statSync(path.join(testLocation, 'test.txt'), { bigint: true });
-			assert.strictEqual(filestat.size, stat.size);
-			assert.strictEqual(filestat.nlink,stat.nlink);
+			assert.strictEqual(filestat.size, BigInt(stat.size));
+			assert.strictEqual(filestat.nlink, BigInt(stat.nlink));
 			assert.strictEqual(filestat.ctim, Timestamp.inNanoseconds(stat.ctime));
 			assert.strictEqual(filestat.mtim, Timestamp.inNanoseconds(stat.mtime));
 			// VS Code has no API for atime. So we use the mtime.
 			assert.strictEqual(filestat.atim, Timestamp.inNanoseconds(stat.mtime));
+		});
+	});
+
+	test('path_filestat_set_times', () => {
+		runTestWithFilesystem((wasi, memory, rootFd) => {
+			const name = 'test.txt';
+			const content = 'Hello World';
+			const fd = createFileWithContent(wasi, memory, rootFd, name, content);
+			closeFile(wasi, fd);
+			const path = memory.allocString(name);
+			const errno = wasi.path_filestat_set_times(rootFd, Lookupflags.none, path.$ptr, path.byteLength, 10n, 10n, Fstflags.atim | Fstflags.mtim);
+			assert.strictEqual(errno, Errno.nosys);
+
+		});
+	});
+
+	test('path_link', () => {
+		runTestWithFilesystem((wasi, memory, rootFd) => {
+			const name = 'test.txt';
+			const content = 'Hello World';
+			const fd = createFileWithContent(wasi, memory, rootFd, name, content);
+			closeFile(wasi, fd);
+			const oldPath = memory.allocString(name);
+			const newPath = memory.allocString('newTest.txt');
+			const errno = wasi.path_link(rootFd, Lookupflags.none, oldPath.$ptr, oldPath.byteLength, rootFd, newPath.$ptr, newPath.byteLength);
+			assert.strictEqual(errno, Errno.nosys);
 		});
 	});
 });
