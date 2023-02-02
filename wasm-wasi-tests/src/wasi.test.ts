@@ -1088,4 +1088,36 @@ suite ('Filesystem', () => {
 			assert.strictEqual(errno, Errno.noent);
 		});
 	});
+
+	test('path_rename', () => {
+		runTestWithFilesystem((wasi, memory, rootFd) => {
+			const name = 'test.txt';
+			const content = 'Hello World';
+			const fd = createFileWithContent(wasi, memory, rootFd, name, content);
+			closeFile(wasi, fd);
+			const oldPath = memory.allocString(name);
+			const newPath = memory.allocString('newTest.txt');
+			let errno = wasi.path_rename(rootFd, oldPath.$ptr, oldPath.byteLength, rootFd, newPath.$ptr, newPath.byteLength);
+			assert.strictEqual(errno, Errno.success);
+			const filestat = memory.allocStruct(Filestat);
+			errno = wasi.path_filestat_get(rootFd, Lookupflags.none, oldPath.$ptr, oldPath.byteLength, filestat.$ptr);
+			assert.strictEqual(errno, Errno.noent);
+			errno = wasi.path_filestat_get(rootFd, Lookupflags.none, newPath.$ptr, newPath.byteLength, filestat.$ptr);
+			assert.strictEqual(errno, Errno.success);
+		});
+	});
+
+	test('path_rename - open file descriptor', () => {
+		runTestWithFilesystem((wasi, memory, rootFd) => {
+			const name = 'test.txt';
+			const content = 'Hello World';
+			const fd = createFileWithContent(wasi, memory, rootFd, name, content);
+			const oldPath = memory.allocString(name);
+			const newPath = memory.allocString('newTest.txt');
+			let errno = wasi.path_rename(rootFd, oldPath.$ptr, oldPath.byteLength, rootFd, newPath.$ptr, newPath.byteLength);
+			assert.strictEqual(errno, Errno.success);
+			statFile(wasi,memory, fd);
+			closeFile(wasi, fd);
+		});
+	});
 });

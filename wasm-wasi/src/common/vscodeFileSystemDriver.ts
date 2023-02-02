@@ -9,7 +9,7 @@ import { ApiShape, size } from '@vscode/sync-api-client';
 
 import { BigInts, code2Wasi } from './converter';
 import { BaseFileDescriptor, FileDescriptor, NoSysDeviceDriver, DeviceIds, ReaddirEntry, FileSystemDeviceDriver } from './deviceDriver';
-import { fdstat, filestat, Rights, fd, rights, fdflags, Filetype, WasiError, Errno, filetype, Whence, lookupflags, timestamp, fstflags, oflags, Oflags, filesize, Fdflags, Lookupflags } from './wasiTypes';
+import { fdstat, filestat, Rights, fd, rights, fdflags, Filetype, WasiError, Errno, filetype, Whence, lookupflags, timestamp, fstflags, oflags, Oflags, filesize, Fdflags, Lookupflags, inode } from './wasiTypes';
 
 import RAL from './ral';
 import { u64 } from './baseTypes';
@@ -110,6 +110,155 @@ interface INode {
 namespace INode {
 	export function hasContent(inode: INode): inode is INode & { content: Uint8Array } {
 		return inode.content !== undefined;
+	}
+}
+
+enum INodeKind {
+	File,
+	Directory
+}
+
+type FileNode = {
+
+	readonly kind: INodeKind.File;
+
+	/**
+	 * This inode id.
+	 */
+	readonly inode: inode;
+
+	/**
+	 * The parent node
+	 */
+	readonly parent: DirectoryNode;
+};
+
+namespace FileNode {
+	export function create(id: inode, parent: DirectoryNode): FileNode {
+		return {
+			kind: INodeKind.File,
+			inode: id,
+			parent
+		};
+	}
+}
+
+type DirectoryNode = {
+
+	readonly kind: INodeKind.Directory;
+
+	/**
+	 * The inode id.
+	 */
+	readonly inode: inode;
+
+	/**
+	 * The parent node
+	 */
+	readonly parent: DirectoryNode | undefined;
+
+	/**
+	 * The directory entries.
+	 */
+	readonly entries: Map<string, FileNode | DirectoryNode>;
+};
+
+namespace DirectoryNode {
+	export function create(id: inode, parent: DirectoryNode | undefined): DirectoryNode {
+		return {
+			kind: INodeKind.Directory,
+			inode: id,
+			parent,
+			entries: new Map()
+		};
+	}
+}
+
+class FileSystem {
+
+	static inodeCounter: bigint = 1n;
+
+	private readonly vscfs: URI;
+	private readonly root: DirectoryNode;
+
+	private readonly inodes: Map<inode, FileNode | DirectoryNode>;
+	private readonly contents: Map<inode, Uint8Array>;
+
+	constructor(vscfs: URI) {
+		this.vscfs = vscfs;
+		this.root = {
+			kind: INodeKind.Directory,
+			inode: FileSystem.inodeCounter++,
+			parent: undefined,
+			entries: new Map()
+		};
+
+		this.inodes = new Map();
+		this.contents = new Map();
+	}
+
+	public getNode(id: inode): FileNode | DirectoryNode {
+		const node = this.inodes.get(id);
+		if (node === undefined) {
+			throw new WasiError(Errno.noent);
+		}
+		return node;
+	}
+
+	public getOrCreateNode(parent: DirectoryNode, path: string, kind: INodeKind): FileNode | DirectoryNode {
+		if (path.charAt(0) === '') { path = path.substring(1); }
+		if (path.charAt(path.length - 1) === '/') { path = path.substring(0, path.length - 1); }
+		const parts = path.split('/');
+		let index = 0;
+		let current: FileNode | DirectoryNode | undefined = parent;
+		for (let i = 0; i < parts.length; i++) {
+			switch (current.kind) {
+				case INodeKind.File:
+					throw new WasiError(Errno.notdir);
+				case INodeKind.Directory:
+					let entry = current.entries.get(parts[index]);
+					if (entry === undefined) {
+						if (index === parts.length - 1) {
+							entry = kind === INodeKind.File
+								? FileNode.create(FileSystem.inodeCounter++, current)
+								: DirectoryNode.create(FileSystem.inodeCounter++, current);
+						} else {
+							entry = DirectoryNode.create(FileSystem.inodeCounter++, current);
+						}
+						current.entries.set(parts[index], entry);
+					}
+					current = entry;
+					break;
+			}
+		}
+		return current;
+	}
+
+
+	public getContent(id: inode): Uint8Array {
+		const content = this.contents.get(id);
+		if (content !== undefined)	{
+			return content;
+		}
+
+		const inode = this.inodes.get(id);
+		if (inode === undefined) {
+			throw new WasiError(Errno.noent);
+		}
+
+		if (inode.kind === INodeKind.File) {
+			throw new WasiError(Errno.isdir);
+		}
+	}
+
+	private getPath(inode: FileNode | DirectoryNode): string {
+		const parts: string[] = [];
+		let current: FileNode | DirectoryNode | undefined = inode;
+		while (current !== undefined) {
+			parts.push(current.name);
+			current = current.parent;
+		}
+		return parts.reverse().join('/');
 	}
 }
 
@@ -593,24 +742,28 @@ export function create(apiClient: ApiShape, _textEncoder: RAL.TextEncoder, fileD
 			assertDirectoryDescriptor(oldFileDescriptor);
 			assertDirectoryDescriptor(newFileDescriptor);
 
+			// Make sure that we don't have an iNode for the new path.
+			const newFilePath = paths.join(newFileDescriptor.path, newPath);
+			if (path2INode.has(newFilePath)) {
+				throw new WasiError(Errno.exist);
+			}
+
 			const oldParentINode = getINode(oldFileDescriptor.inode);
 			const newParentINode = getINode(newFileDescriptor.inode);
 
 			const oldUri = uriJoin(oldParentINode.uri, oldPath);
 			const newUri = uriJoin(newParentINode.uri, newPath);
+
 			vscode_fs.rename(oldUri, newUri, { overwrite: false });
 
-			// todo@dirkb unclear what really happens in posix. We need to understand if
-			// an old file descriptor could still read the directory under its new location.
-			const oldINode = path2INode.get(paths.join(oldFileDescriptor.path, oldPath));
+			// Check if we have an iNode for the old path. If not there is nothing to do.
+			const oldFilePath = paths.join(oldFileDescriptor.path, oldPath);
+			const oldINode = path2INode.get(oldFilePath);
 			if (oldINode === undefined) {
 				return;
 			}
-			const newFilePath = paths.join(newFileDescriptor.path, newPath);
-			const newINode = path2INode.get(newFilePath);
-			if (newINode !== undefined) {
-				throw new WasiError(Errno.badf);
-			}
+			path2INode.delete(oldFilePath);
+			oldINode.uri = newUri;
 			path2INode.set(newFilePath, oldINode);
 		},
 		path_symlink(_oldPath: string, _fileDescriptor: FileDescriptor, _newPath: string): void {
