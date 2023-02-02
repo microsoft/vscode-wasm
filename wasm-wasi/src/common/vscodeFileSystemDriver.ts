@@ -581,7 +581,7 @@ export function create(apiClient: ApiShape, _textEncoder: RAL.TextEncoder, fileD
 			throw new WasiError(Errno.nolink);
 		},
 		path_remove_directory(fileDescriptor: FileDescriptor, path: string): void {
-			assertFileOrDirectoryDescriptor(fileDescriptor);
+			assertDirectoryDescriptor(fileDescriptor);
 
 			const parentINode = getINode(fileDescriptor.inode);
 			const fileUri = uriJoin(parentINode.uri, path);

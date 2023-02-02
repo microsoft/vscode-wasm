@@ -398,6 +398,12 @@ suite ('Filesystem', () => {
 		return fd;
 	}
 
+	function createDirectory(wasi: WASI, memory: Memory, parentFd: fd, name: string): void {
+		const path = memory.allocString(name);
+		let errno = wasi.path_create_directory(parentFd, path.$ptr, path.byteLength);
+		assert.strictEqual(errno, Errno.success);
+	}
+
 	function statFile(wasi: WASI, memory: Memory, fd: fd): filestat {
 		const filestat = memory.allocStruct(Filestat);
 		const errno = wasi.fd_filestat_get(fd, filestat.$ptr);
@@ -1064,6 +1070,22 @@ suite ('Filesystem', () => {
 			const bufUsed = memory.allocUint32();
 			const errno = wasi.path_readlink(rootFd, path.$ptr, path.byteLength, buffer.$ptr, buffer.byteLength, bufUsed.$ptr);
 			assert.strictEqual(errno, Errno.nolink);
+		});
+	});
+
+	test('path_remove_directory', () => {
+		runTestWithFilesystem((wasi, memory, rootFd) => {
+			const name = 'dirOne';
+			createDirectory(wasi, memory, rootFd, name);
+			const path = memory.allocString(name);
+			const filestat = memory.allocStruct(Filestat);
+			let errno = wasi.path_filestat_get(rootFd, Lookupflags.none, path.$ptr, path.byteLength, filestat.$ptr);
+			assert.strictEqual(errno, Errno.success);
+			assert.strictEqual(filestat.filetype, Filetype.directory);
+			errno = wasi.path_remove_directory(rootFd, path.$ptr, path.byteLength);
+			assert.strictEqual(errno, Errno.success);
+			errno = wasi.path_filestat_get(rootFd, Lookupflags.none, path.$ptr, path.byteLength, filestat.$ptr);
+			assert.strictEqual(errno, Errno.noent);
 		});
 	});
 });

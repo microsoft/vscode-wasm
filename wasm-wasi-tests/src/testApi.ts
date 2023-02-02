@@ -9,7 +9,7 @@ import * as fs from 'fs';
 
 import { URI } from 'vscode-uri';
 
-import { ApiShape, ByteSink, ByteSource, Process, Timer, TTY, Workspace, Console, FileSystem, FileStat, DTOs, WorkspaceFolder, FileType, FilePermission } from '@vscode/wasm-wasi';
+import { ApiShape, ByteSink, ByteSource, Process, Timer, TTY, Workspace, Console, FileSystem, FileStat, DTOs, WorkspaceFolder, FileType, FilePermission, FileSystemError } from '@vscode/wasm-wasi';
 
 class TimerImpl implements Timer {
 	public sleep(_ms: number): void {
@@ -79,7 +79,14 @@ class FileSystemImpl implements FileSystem {
 		if (uri.scheme !== 'file') {
 			throw new Error(`Only file schemes are supported, but got ${uri.scheme}`);
 		}
-		return this.convertToFileStat(fs.statSync(uri.fsPath));
+		try {
+			return this.convertToFileStat(fs.statSync(uri.fsPath));
+		} catch (err: any) {
+			if (err.code === 'ENOENT') {
+				throw FileSystemError.FileNotFound(uri);
+			}
+			throw FileSystemError.Unavailable(uri);
+		}
 	}
 
 	public readFile(uri: URI): Uint8Array {
@@ -124,7 +131,14 @@ class FileSystemImpl implements FileSystem {
 		if (options?.recursive === true) {
 			throw new Error(`Posix has no support for recursive deletion`);
 		}
-		fs.unlinkSync(uri.fsPath);
+		const stat = fs.statSync(uri.fsPath);
+		if (stat.isFile() || stat.isSymbolicLink()) {
+			fs.unlinkSync(uri.fsPath);
+		} else if (stat.isDirectory()) {
+			fs.rmdirSync(uri.fsPath);
+		} else {
+			throw new Error('Unknown file type');
+		}
 	}
 
 	public rename(source: URI, target: URI, options?: { overwrite?: boolean }): void {
