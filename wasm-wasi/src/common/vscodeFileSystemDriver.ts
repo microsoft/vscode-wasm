@@ -13,6 +13,7 @@ import { fdstat, filestat, Rights, fd, rights, fdflags, Filetype, WasiError, Err
 
 import RAL from './ral';
 import { u64 } from './baseTypes';
+import { LRUCache } from './linkedMap';
 const paths = RAL().path;
 
 export const DirectoryBaseRights: rights = Rights.fd_fdstat_set_flags | Rights.path_create_directory |
@@ -131,6 +132,12 @@ type FileNode = {
 	 * The parent node
 	 */
 	readonly parent: DirectoryNode;
+
+	/**
+	 * The cached name of the inode to speed up path
+	 * generation
+	 */
+	name: string | undefined;
 };
 
 namespace FileNode {
@@ -138,7 +145,8 @@ namespace FileNode {
 		return {
 			kind: INodeKind.File,
 			inode: id,
-			parent
+			parent,
+			name: undefined
 		};
 	}
 }
@@ -148,7 +156,7 @@ type DirectoryNode = {
 	readonly kind: INodeKind.Directory;
 
 	/**
-	 * The inode id.
+	 * This inode id.
 	 */
 	readonly inode: inode;
 
@@ -160,8 +168,16 @@ type DirectoryNode = {
 	/**
 	 * The directory entries.
 	 */
-	readonly entries: Map<string, FileNode | DirectoryNode>;
+	readonly entries: Map<string, Node>;
+
+	/**
+	 * The cached name of the inode to speed up path
+	 * generation
+	 */
+	name: string | undefined;
 };
+
+type Node = FileNode | DirectoryNode;
 
 namespace DirectoryNode {
 	export function create(id: inode, parent: DirectoryNode | undefined): DirectoryNode {
@@ -169,6 +185,7 @@ namespace DirectoryNode {
 			kind: INodeKind.Directory,
 			inode: id,
 			parent,
+			name: undefined,
 			entries: new Map()
 		};
 	}
@@ -181,8 +198,9 @@ class FileSystem {
 	private readonly vscfs: URI;
 	private readonly root: DirectoryNode;
 
-	private readonly inodes: Map<inode, FileNode | DirectoryNode>;
+	private readonly inodes: Map<inode, Node>;
 	private readonly contents: Map<inode, Uint8Array>;
+	private readonly pathCache: LRUCache<Node, string>;
 
 	constructor(vscfs: URI) {
 		this.vscfs = vscfs;
@@ -190,14 +208,20 @@ class FileSystem {
 			kind: INodeKind.Directory,
 			inode: FileSystem.inodeCounter++,
 			parent: undefined,
+			name: '/',
 			entries: new Map()
 		};
 
 		this.inodes = new Map();
 		this.contents = new Map();
+		this.pathCache = new LRUCache(256);
 	}
 
-	public getNode(id: inode): FileNode | DirectoryNode {
+	public getRoot(): DirectoryNode {
+		return this.root;
+	}
+
+	public getNode(id: inode): Node {
 		const node = this.inodes.get(id);
 		if (node === undefined) {
 			throw new WasiError(Errno.noent);
@@ -205,8 +229,43 @@ class FileSystem {
 		return node;
 	}
 
+	public deleteNodeById(id: inode): void {
+		this.deleteNode(this.getNode(id));
+	}
+
+	public deleteNodeByPath(parent: DirectoryNode, path: string): void {
+		const node = this.findNode(parent, path);
+		if (node === undefined) {
+			throw new WasiError(Errno.noent);
+		}
+		this.deleteNode(node);
+	}
+
+	private deleteNode(node: Node): void {
+		if (node.parent === undefined) {
+			throw new WasiError(Errno.badf);
+		}
+		const name = this.getName(node);
+		node.parent.entries.delete(name);
+		this.clearCache(node);
+	}
+
+	private clearCache(inode: Node): void {
+		this.pathCache.delete(inode);
+		inode.name = undefined;
+		if (inode.kind === INodeKind.Directory) {
+			for (const child of inode.entries.values()) {
+				this.clearCache(child);
+			}
+		}
+	}
+
+	private findNode(parent: DirectoryNode, path: string): Node | undefined	{
+
+	}
+
 	public getOrCreateNode(parent: DirectoryNode, path: string, kind: INodeKind): FileNode | DirectoryNode {
-		if (path.charAt(0) === '') { path = path.substring(1); }
+		if (path.charAt(0) === '/') { path = path.substring(1); }
 		if (path.charAt(path.length - 1) === '/') { path = path.substring(0, path.length - 1); }
 		const parts = path.split('/');
 		let index = 0;
@@ -252,13 +311,35 @@ class FileSystem {
 	}
 
 	private getPath(inode: FileNode | DirectoryNode): string {
-		const parts: string[] = [];
-		let current: FileNode | DirectoryNode | undefined = inode;
-		while (current !== undefined) {
-			parts.push(current.name);
-			current = current.parent;
+		let result = this.pathCache.get(inode);
+		if (result === undefined) {
+			const parts: string[] = [];
+			let current: FileNode | DirectoryNode | undefined = inode;
+			do {
+				parts.push(this.getName(current));
+				current = current.parent;
+			} while (current !== undefined);
+			result = parts.reverse().join('/');
+			this.pathCache.set(inode, result);
 		}
-		return parts.reverse().join('/');
+		return result;
+	}
+
+	private getName(inode: FileNode | DirectoryNode): string {
+		if (inode.name !== undefined) {
+			return inode.name;
+		}
+		const parent = inode.parent;
+		if (parent === undefined) {
+			throw new Error('The root node must always have a name');
+		}
+		for (const [name, child] of parent.entries) {
+			if (child === inode) {
+				inode.name = name;
+				return name;
+			}
+		}
+		throw new Error('INode not found in parent');
 	}
 }
 
