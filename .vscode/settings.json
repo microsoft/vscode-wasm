@@ -185,6 +185,7 @@
 		"unlinkat",
 		"userdata",
 		"utimensat",
+		"vscfs",
 		"waitall",
 		"willneed",
 		"xdev"

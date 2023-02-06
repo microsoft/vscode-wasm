@@ -8,12 +8,18 @@ import { URI } from 'vscode-uri';
 import { ApiShape, size } from '@vscode/sync-api-client';
 
 import { BigInts, code2Wasi } from './converter';
-import { BaseFileDescriptor, FileDescriptor, NoSysDeviceDriver, DeviceIds, ReaddirEntry, FileSystemDeviceDriver } from './deviceDriver';
-import { fdstat, filestat, Rights, fd, rights, fdflags, Filetype, WasiError, Errno, filetype, Whence, lookupflags, timestamp, fstflags, oflags, Oflags, filesize, Fdflags, Lookupflags, inode } from './wasiTypes';
+import {
+	BaseFileDescriptor, FileDescriptor, NoSysDeviceDriver, DeviceIds, ReaddirEntry, FileSystemDeviceDriver
+} from './deviceDriver';
+import {
+	fdstat, filestat, Rights, fd, rights, fdflags, Filetype, WasiError, Errno, filetype, Whence, lookupflags, timestamp, fstflags,
+	oflags, Oflags, filesize, Fdflags, Lookupflags, inode
+} from './wasiTypes';
 
 import RAL from './ral';
 import { u64 } from './baseTypes';
 import { LRUCache } from './linkedMap';
+import path from 'path';
 const paths = RAL().path;
 
 export const DirectoryBaseRights: rights = Rights.fd_fdstat_set_flags | Rights.path_create_directory |
@@ -41,15 +47,9 @@ class FileFileDescriptor extends BaseFileDescriptor {
 	 */
 	private _cursor: number;
 
-	/**
-	 * The path used when opening the file descriptor.
-	 */
-	public readonly path: string;
-
-	constructor(deviceId: bigint, fd: fd, rights_base: rights, fdflags: fdflags, inode: bigint, path: string) {
+	constructor(deviceId: bigint, fd: fd, rights_base: rights, fdflags: fdflags, inode: bigint) {
 		super(deviceId, fd, Filetype.regular_file, rights_base, 0n, fdflags, inode);
 		this._cursor = 0;
-		this.path = path;
 	}
 
 	public get cursor(): number {
@@ -66,14 +66,8 @@ class FileFileDescriptor extends BaseFileDescriptor {
 
 class DirectoryFileDescriptor extends BaseFileDescriptor {
 
-	/**
-	 * The path used when opening the file descriptor.
-	 */
-	public readonly path: string;
-
-	constructor(deviceId: bigint, fd: fd, rights_base: rights, rights_inheriting: rights, fdflags: fdflags, inode: bigint, path: string) {
+	constructor(deviceId: bigint, fd: fd, rights_base: rights, rights_inheriting: rights, fdflags: fdflags, inode: bigint) {
 		super(deviceId, fd, Filetype.directory, rights_base, rights_inheriting, fdflags, inode);
-		this.path = path;
 	}
 
 	childDirectoryRights(requested_rights: rights): rights {
@@ -85,48 +79,24 @@ class DirectoryFileDescriptor extends BaseFileDescriptor {
 	}
 }
 
-interface INode {
-
-	/**
-	 * The inode Id.
-	 */
-	id: bigint;
-
-	/**
-	 * How often the INode is referenced via a file descriptor
-	 */
-	refs: number;
-
-	/**
-	 * The corresponding VS Code URI
-	 */
-	uri: URI;
-
-	/**
-	 * The loaded file content if available.
-	 */
-	content?: Uint8Array;
-}
-
-namespace INode {
-	export function hasContent(inode: INode): inode is INode & { content: Uint8Array } {
-		return inode.content !== undefined;
-	}
-}
-
-enum INodeKind {
+enum NodeKind {
 	File,
 	Directory
 }
 
 type FileNode = {
 
-	readonly kind: INodeKind.File;
+	readonly kind: NodeKind.File;
 
 	/**
 	 * This inode id.
 	 */
 	readonly inode: inode;
+
+	/**
+	 * How often the INode is referenced via a file descriptor
+	 */
+	refs: number;
 
 	/**
 	 * The parent node
@@ -143,8 +113,9 @@ type FileNode = {
 namespace FileNode {
 	export function create(id: inode, parent: DirectoryNode): FileNode {
 		return {
-			kind: INodeKind.File,
+			kind: NodeKind.File,
 			inode: id,
+			refs: 0,
 			parent,
 			name: undefined
 		};
@@ -153,12 +124,17 @@ namespace FileNode {
 
 type DirectoryNode = {
 
-	readonly kind: INodeKind.Directory;
+	readonly kind: NodeKind.Directory;
 
 	/**
 	 * This inode id.
 	 */
 	readonly inode: inode;
+
+	/**
+	 * How often the INode is referenced via a file descriptor
+	 */
+	refs: number;
 
 	/**
 	 * The parent node
@@ -182,8 +158,9 @@ type Node = FileNode | DirectoryNode;
 namespace DirectoryNode {
 	export function create(id: inode, parent: DirectoryNode | undefined): DirectoryNode {
 		return {
-			kind: INodeKind.Directory,
+			kind: NodeKind.Directory,
 			inode: id,
+			refs: 0,
 			parent,
 			name: undefined,
 			entries: new Map()
@@ -205,14 +182,16 @@ class FileSystem {
 	constructor(vscfs: URI) {
 		this.vscfs = vscfs;
 		this.root = {
-			kind: INodeKind.Directory,
+			kind: NodeKind.Directory,
 			inode: FileSystem.inodeCounter++,
 			parent: undefined,
+			refs: 1,
 			name: '/',
 			entries: new Map()
 		};
 
 		this.inodes = new Map();
+		this.inodes.set(this.root.inode, this.root);
 		this.contents = new Map();
 		this.pathCache = new LRUCache(256);
 	}
@@ -221,10 +200,25 @@ class FileSystem {
 		return this.root;
 	}
 
-	public getNode(id: inode): Node {
+	getUri(node: Node): URI;
+	getUri(node: DirectoryNode, fsPath: string): URI;
+	getUri(node: DirectoryNode, fsPath?: string): URI {
+		const finalPath = fsPath === undefined || fsPath === '.' ? this.getPath(node) : path.join(this.getPath(node), fsPath);
+		return this.vscfs.with({ path: paths.join(this.vscfs.path, finalPath) });
+	}
+
+	public getNode(id: inode): Node;
+	public getNode(id: inode, kind: NodeKind.File): FileNode;
+	public getNode(id: inode, kind: NodeKind.Directory): DirectoryNode;
+	public getNode(id: inode, kind?: NodeKind): Node {
 		const node = this.inodes.get(id);
 		if (node === undefined) {
 			throw new WasiError(Errno.noent);
+		}
+		if (kind === NodeKind.File && node.kind !== NodeKind.File) {
+			throw new WasiError(Errno.isdir);
+		} else if (kind === NodeKind.Directory && node.kind !== NodeKind.Directory) {
+			throw new WasiError(Errno.notdir);
 		}
 		return node;
 	}
@@ -253,7 +247,7 @@ class FileSystem {
 	private clearCache(inode: Node): void {
 		this.pathCache.delete(inode);
 		inode.name = undefined;
-		if (inode.kind === INodeKind.Directory) {
+		if (inode.kind === NodeKind.Directory) {
 			for (const child of inode.entries.values()) {
 				this.clearCache(child);
 			}
@@ -261,30 +255,44 @@ class FileSystem {
 	}
 
 	private findNode(parent: DirectoryNode, path: string): Node | undefined	{
-
-	}
-
-	public getOrCreateNode(parent: DirectoryNode, path: string, kind: INodeKind): FileNode | DirectoryNode {
-		if (path.charAt(0) === '/') { path = path.substring(1); }
-		if (path.charAt(path.length - 1) === '/') { path = path.substring(0, path.length - 1); }
-		const parts = path.split('/');
-		let index = 0;
+		const parts = this.getPathSegments(path);
 		let current: FileNode | DirectoryNode | undefined = parent;
 		for (let i = 0; i < parts.length; i++) {
 			switch (current.kind) {
-				case INodeKind.File:
+				case NodeKind.File:
+					return undefined;
+				case NodeKind.Directory:
+					current = current.entries.get(parts[i]);
+					if (current === undefined) {
+						return undefined;
+					}
+					break;
+			}
+		}
+		return current;
+	}
+
+	public getOrCreateNode(parent: DirectoryNode, path: string, kind: NodeKind, ref: boolean): FileNode | DirectoryNode {
+		const parts = this.getPathSegments(path);
+		let current: FileNode | DirectoryNode | undefined = parent;
+		for (let i = 0; i < parts.length; i++) {
+			switch (current.kind) {
+				case NodeKind.File:
 					throw new WasiError(Errno.notdir);
-				case INodeKind.Directory:
-					let entry = current.entries.get(parts[index]);
+				case NodeKind.Directory:
+					let entry = current.entries.get(parts[i]);
 					if (entry === undefined) {
-						if (index === parts.length - 1) {
-							entry = kind === INodeKind.File
+						if (i === parts.length - 1) {
+							entry = kind === NodeKind.File
 								? FileNode.create(FileSystem.inodeCounter++, current)
 								: DirectoryNode.create(FileSystem.inodeCounter++, current);
+							if (ref) {
+								entry.refs++;
+							}
 						} else {
 							entry = DirectoryNode.create(FileSystem.inodeCounter++, current);
 						}
-						current.entries.set(parts[index], entry);
+						current.entries.set(parts[i], entry);
 					}
 					current = entry;
 					break;
@@ -293,21 +301,22 @@ class FileSystem {
 		return current;
 	}
 
+	private getPathSegments(path: string): string[] {
+		if (path.charAt(0) === '/') { path = path.substring(1); }
+		if (path.charAt(path.length - 1) === '/') { path = path.substring(0, path.length - 1); }
+		return path.split('/');
+	}
 
-	public getContent(id: inode): Uint8Array {
-		const content = this.contents.get(id);
+	public setContent(inode: FileNode, content: Uint8Array): void {
+		this.contents.set(inode.inode, content);
+	}
+
+	public getContent(inode: FileNode): Uint8Array {
+		const content = this.contents.get(inode.inode);
 		if (content !== undefined)	{
 			return content;
 		}
 
-		const inode = this.inodes.get(id);
-		if (inode === undefined) {
-			throw new WasiError(Errno.noent);
-		}
-
-		if (inode.kind === INodeKind.File) {
-			throw new WasiError(Errno.isdir);
-		}
 	}
 
 	private getPath(inode: FileNode | DirectoryNode): string {
@@ -339,7 +348,7 @@ class FileSystem {
 				return name;
 			}
 		}
-		throw new Error('INode not found in parent');
+		throw new WasiError(Errno.noent);
 	}
 }
 
@@ -347,19 +356,15 @@ export function create(apiClient: ApiShape, _textEncoder: RAL.TextEncoder, fileD
 
 	const deviceId = DeviceIds.next();
 	const vscode_fs = apiClient.vscode.workspace.fileSystem;
+	const fs = new FileSystem(baseUri);
 
-	let inodeCounter: bigint = 1n;
-	const path2INode: Map<string, INode> = new Map();
-	const inodes: Map<bigint, INode> = new Map();
 	const deletedINode: Map<bigint, INode> = new Map();
 
 	const preOpenDirectories = [mountPoint];
 
 	function createFileDescriptor(parentDescriptor: DirectoryFileDescriptor, rights_base: rights, fdflags: fdflags, path: string): FileFileDescriptor {
-		const parentINode = getINode(parentDescriptor.inode);
-		const filePath = paths.join(parentDescriptor.path, path);
-		const fileUri = uriJoin(parentINode.uri, path);
-		return new FileFileDescriptor(deviceId, fileDescriptorId.next(), rights_base, fdflags, getOrCreateINode(filePath, fileUri, true).id, filePath);
+		const parentNode = fs.getNode(parentDescriptor.inode, NodeKind.Directory);
+		return new FileFileDescriptor(deviceId, fileDescriptorId.next(), rights_base, fdflags, fs.getOrCreateNode(parentNode, path, NodeKind.File, true).inode);
 	}
 
 	function assertFileDescriptor(fileDescriptor: FileDescriptor): asserts fileDescriptor is FileFileDescriptor {
@@ -369,10 +374,8 @@ export function create(apiClient: ApiShape, _textEncoder: RAL.TextEncoder, fileD
 	}
 
 	function createDirectoryDescriptor(parentDescriptor: DirectoryFileDescriptor, rights_base: rights, rights_inheriting: rights, fdflags: fdflags, path: string): DirectoryFileDescriptor {
-		const parentINode = getINode(parentDescriptor.inode);
-		const filePath = paths.join(parentDescriptor.path, path);
-		const fileUri = uriJoin(parentINode.uri, path);
-		return new DirectoryFileDescriptor(deviceId, fileDescriptorId.next(), rights_base, rights_inheriting, fdflags, getOrCreateINode(filePath, fileUri, true).id, filePath);
+		const parentNode = fs.getNode(parentDescriptor.inode, NodeKind.Directory);
+		return new DirectoryFileDescriptor(deviceId, fileDescriptorId.next(), rights_base, rights_inheriting, fdflags, fs.getOrCreateNode(parentNode, path, NodeKind.Directory, true).inode);
 	}
 
 	function assertDirectoryDescriptor(fileDescriptor: FileDescriptor): asserts fileDescriptor is DirectoryFileDescriptor {
@@ -385,42 +388,6 @@ export function create(apiClient: ApiShape, _textEncoder: RAL.TextEncoder, fileD
 		if (!(fileDescriptor instanceof FileFileDescriptor) && !(fileDescriptor instanceof DirectoryFileDescriptor)) {
 			throw new WasiError(Errno.badf);
 		}
-	}
-
-	function getOrCreateINode(filepath: string, uri: URI, ref: boolean): INode {
-		let result = path2INode.get(filepath);
-		if (result !== undefined) {
-			if (ref) {
-				result.refs++;
-			}
-			return result;
-		}
-		result = { id: inodeCounter++, uri, refs: 0, content: undefined };
-		if (ref) {
-			result.refs++;
-		}
-		path2INode.set(filepath, result);
-		inodes.set(result.id, result);
-		return result;
-	}
-
-	function getINode(id: bigint): INode {
-		const inode: INode | undefined = inodes.get(id);
-		if (inode === undefined) {
-			throw new WasiError(Errno.badf);
-		}
-		return inode;
-	}
-
-	function getResolvedINode(id: bigint): Required<INode> {
-		const inode: INode | undefined = inodes.get(id);
-		if (inode === undefined) {
-			throw new WasiError(Errno.badf);
-		}
-		if (inode.content === undefined) {
-			inode.content = vscode_fs.readFile(inode.uri);
-		}
-		return inode as Required<INode>;
 	}
 
 	function unrefINode(id: bigint): void {
@@ -457,20 +424,19 @@ export function create(apiClient: ApiShape, _textEncoder: RAL.TextEncoder, fileD
 	}
 
 	function doGetFiletype(fileDescriptor: FileFileDescriptor | DirectoryFileDescriptor, path: string): filetype | undefined {
-		const inode = getINode(fileDescriptor.inode);
-		const fileUri = uriJoin(inode.uri, path);
+		const inode = fs.getNode(fileDescriptor.inode);
 		try {
-			const stat = vscode_fs.stat(fileUri);
+			const stat = vscode_fs.stat(fs.getUri(inode, path));
 			return code2Wasi.asFileType(stat.type);
 		} catch {
 			return undefined;
 		}
 	}
 
-	function doStat(inode: INode, result: filestat): void {
-		const vStat = vscode_fs.stat(inode.uri);
+	function doStat(inode: Node, result: filestat): void {
+		const vStat = vscode_fs.stat(fs.getUri(inode));
 		result.dev = deviceId;
-		result.ino = inode.id;
+		result.ino = inode.inode;
 		result.filetype = code2Wasi.asFileType(vStat.type);
 		// nlink denotes the number of hard links (not soft links)
 		// Since VS Code doesn't support hard links on files we
@@ -523,14 +489,18 @@ export function create(apiClient: ApiShape, _textEncoder: RAL.TextEncoder, fileD
 
 
 	function createOrTruncate(fileDescriptor: FileFileDescriptor): void {
-		const inode = getINode(fileDescriptor.inode);
-		inode.content = new Uint8Array(0);
+		const content = new Uint8Array(0);
+		const inode = fs.getNode(fileDescriptor.inode, NodeKind.File);
 		fileDescriptor.cursor = 0;
-		writeContent(inode as Required<INode>);
+		writeContent(inode, content);
 	}
 
-	function writeContent(inode: Required<INode>) {
-		vscode_fs.writeFile(inode.uri, inode.content);
+	function writeContent(node: FileNode, content?: Uint8Array) {
+		const toWrite = content ?? fs.getContent(node);
+		vscode_fs.writeFile(fs.getUri(node), toWrite);
+		if (content !== undefined) {
+			fs.setContent(node, content);
+		}
 	}
 
 	return Object.assign({}, NoSysDeviceDriver, {
@@ -544,9 +514,8 @@ export function create(apiClient: ApiShape, _textEncoder: RAL.TextEncoder, fileD
 				path = `/${path}`;
 			}
 
-			const fileUri = uriJoin(baseUri, path);
-			const inode = getOrCreateINode(path, fileUri, true);
-			return new FileFileDescriptor(deviceId, fd, FileBaseRights, fdflags, inode.id, path);
+			const inode = fs.getOrCreateNode(fs.getRoot(), path, NodeKind.File, true);
+			return new FileFileDescriptor(deviceId, fd, FileBaseRights, fdflags, inode.inode);
 		},
 		fd_advise(fileDescriptor: FileDescriptor, _offset: bigint, _length: bigint, _advise: number): void {
 			fileDescriptor.assertBaseRights(Rights.fd_advise);
@@ -559,8 +528,8 @@ export function create(apiClient: ApiShape, _textEncoder: RAL.TextEncoder, fileD
 			const offset = BigInts.asNumber(_offset);
 			const len = BigInts.asNumber(_len);
 
-			const inode = getResolvedINode(fileDescriptor.inode);
-			const content = inode.content;
+			const inode = fs.getNode(fileDescriptor.inode, NodeKind.File);
+			const content = fs.getContent(inode);
 			if (offset > content.byteLength) {
 				throw new WasiError(Errno.inval);
 			}
@@ -568,21 +537,15 @@ export function create(apiClient: ApiShape, _textEncoder: RAL.TextEncoder, fileD
 			const newContent: Uint8Array = new Uint8Array(content.byteLength + len);
 			newContent.set(content.subarray(0, offset), 0);
 			newContent.set(content.subarray(offset), offset + len);
-			inode.content = newContent;
-			writeContent(inode);
-
+			writeContent(inode, newContent);
 		},
 		fd_close(fileDescriptor: FileDescriptor): void {
 			unrefINode(fileDescriptor.inode);
 		},
 		fd_datasync(fileDescriptor: FileDescriptor): void {
 			assertFileDescriptor(fileDescriptor);
-
-			const inode = getINode(fileDescriptor.inode);
-			if (!INode.hasContent(inode)) {
-				return;
-			}
-			writeContent(inode);
+			const node = fs.getNode(fileDescriptor.inode, NodeKind.File);
+			writeContent(node);
 		},
 		fd_fdstat_get(fileDescriptor: FileDescriptor, result: fdstat): void {
 			result.fs_filetype = fileDescriptor.fileType;
@@ -594,27 +557,26 @@ export function create(apiClient: ApiShape, _textEncoder: RAL.TextEncoder, fileD
 			fileDescriptor.fdflags = fdflags;
 		},
 		fd_filestat_get(fileDescriptor: FileDescriptor, result: filestat): void {
-			const inode = getINode(fileDescriptor.inode);
+			const inode = fs.getNode(fileDescriptor.inode);
 			doStat(inode, result);
 		},
 		fd_filestat_set_size(fileDescriptor: FileDescriptor, _size: bigint): void {
 			assertFileDescriptor(fileDescriptor);
 
 			const size = BigInts.asNumber(_size);
-			const inode = getResolvedINode(fileDescriptor.inode);
-			const content = inode.content;
+			const node = fs.getNode(fileDescriptor.inode, NodeKind.File);
+			const content = fs.getContent(node);
 			if (content.byteLength === size) {
 				return;
 			} else if (content.byteLength < size) {
 				const newContent = new Uint8Array(size);
 				newContent.set(content);
-				inode.content = newContent;
+				writeContent(node, newContent);
 			} else if (content.byteLength > size) {
 				const newContent = new Uint8Array(size);
 				newContent.set(content.subarray(0, size));
-				inode.content = newContent;
+				writeContent(node, newContent);
 			}
-			writeContent(inode);
 		},
 		fd_filestat_set_times(_fileDescriptor: FileDescriptor, _atim: bigint, _mtim: bigint, _fst_flags: number): void {
 			// For new we do nothing. We could cache the timestamp in memory
@@ -624,7 +586,7 @@ export function create(apiClient: ApiShape, _textEncoder: RAL.TextEncoder, fileD
 		},
 		fd_pread(fileDescriptor: FileDescriptor, _offset: filesize, buffers: Uint8Array[]): size {
 			const offset = BigInts.asNumber(_offset);
-			const content = getResolvedINode(fileDescriptor.inode).content;
+			const content = fs.getContent(fs.getNode(fileDescriptor.inode, NodeKind.File));
 			return read(content, offset, buffers);
 		},
 		fd_prestat_get(fd: fd): [string, FileDescriptor] | undefined {
@@ -634,16 +596,14 @@ export function create(apiClient: ApiShape, _textEncoder: RAL.TextEncoder, fileD
 			}
 			return [
 				next,
-				new DirectoryFileDescriptor(deviceId, fd, DirectoryBaseRights, DirectoryInheritingRights, 0, getOrCreateINode('/', baseUri, true).id, '/')
+				new DirectoryFileDescriptor(deviceId, fd, DirectoryBaseRights, DirectoryInheritingRights, 0, fs.getRoot().inode)
 			];
 		},
 		fd_pwrite(fileDescriptor: FileDescriptor, _offset: filesize, buffers: Uint8Array[]): number {
 			const offset = BigInts.asNumber(_offset);
-			const inode = getResolvedINode(fileDescriptor.inode);
-
-			const [newContent, bytesWritten] = write(inode.content, offset, buffers);
-			inode.content = newContent;
-			writeContent(inode);
+			const inode = fs.getNode(fileDescriptor.inode, NodeKind.File);
+			const [newContent, bytesWritten] = write(fs.getContent(inode), offset, buffers);
+			writeContent(inode, newContent);
 			return bytesWritten;
 		},
 		fd_read(fileDescriptor: FileDescriptor, buffers: Uint8Array[]): number {
@@ -652,7 +612,7 @@ export function create(apiClient: ApiShape, _textEncoder: RAL.TextEncoder, fileD
 			}
 			assertFileDescriptor(fileDescriptor);
 
-			const content = getResolvedINode(fileDescriptor.inode).content;
+			const content = fs.getContent(fs.getNode(fileDescriptor.inode, NodeKind.File));
 			const offset = fileDescriptor.cursor;
 			const totalBytesRead = read(content, offset, buffers);
 			fileDescriptor.cursor = fileDescriptor.cursor + totalBytesRead;
@@ -663,14 +623,14 @@ export function create(apiClient: ApiShape, _textEncoder: RAL.TextEncoder, fileD
 
 			// Also unclear whether we have to include '.' and '..'
 			// See also https://github.com/WebAssembly/wasi-filesystem/issues/3
-			const inode = getINode(fileDescriptor.inode);
-			const entries = vscode_fs.readDirectory(inode.uri);
+			const directoryNode = fs.getNode(fileDescriptor.inode, NodeKind.Directory);
+			const entries = vscode_fs.readDirectory(fs.getUri(directoryNode));
 			const result: ReaddirEntry[] = [];
 			for (const entry of entries) {
 				const name = entry[0];
-				const filePath = paths.join(fileDescriptor.path, name);
-				const fileUri = uriJoin(inode.uri, name);
-				result.push({ d_ino: getOrCreateINode(filePath, fileUri, false).id, d_type: code2Wasi.asFileType(entry[1]), d_name: name });
+				const filetype: filetype = code2Wasi.asFileType(entry[1]);
+				const nodeKind = filetype === Filetype.directory ? NodeKind.Directory : NodeKind.File;
+				result.push({ d_ino: fs.getOrCreateNode(directoryNode, name, nodeKind, false).inode, d_type: filetype, d_name: name });
 			}
 			return result;
 		},
@@ -686,18 +646,14 @@ export function create(apiClient: ApiShape, _textEncoder: RAL.TextEncoder, fileD
 					fileDescriptor.cursor = fileDescriptor.cursor + offset;
 					break;
 				case Whence.end:
-					const inode = getResolvedINode(fileDescriptor.inode);
-					fileDescriptor.cursor = Math.max(0, inode.content.byteLength - offset);
+					const content = fs.getContent(fs.getNode(fileDescriptor.inode, NodeKind.File));
+					fileDescriptor.cursor = Math.max(0, content.byteLength - offset);
 					break;
 			}
 			return BigInt(fileDescriptor.cursor);
 		},
 		fd_sync(fileDescriptor: FileDescriptor): void {
-			const inode = getINode(fileDescriptor.inode);
-			if (!INode.hasContent(inode)) {
-				return;
-			}
-			writeContent(inode);
+			writeContent(fs.getNode(fileDescriptor.inode, NodeKind.File));
 		},
 		fd_tell(fileDescriptor: FileDescriptor): u64 {
 			assertFileDescriptor(fileDescriptor);
@@ -710,29 +666,27 @@ export function create(apiClient: ApiShape, _textEncoder: RAL.TextEncoder, fileD
 			}
 			assertFileDescriptor(fileDescriptor);
 
-			const inode = getResolvedINode(fileDescriptor.inode);
+			const inode = fs.getNode(fileDescriptor.inode, NodeKind.File);
+			const content = fs.getContent(inode);
 			// We have append mode on. According to POSIX we need to
 			// move the cursor to the end of the file on every write
 			if (Fdflags.appendOn(fileDescriptor.fdflags)) {
-				fileDescriptor.cursor = inode.content.byteLength;
+				fileDescriptor.cursor = content.byteLength;
 			}
-			const [newContent, bytesWritten] = write(inode.content, fileDescriptor.cursor, buffers);
-			inode.content = newContent;
-			writeContent(inode);
+			const [newContent, bytesWritten] = write(content, fileDescriptor.cursor, buffers);
+			writeContent(inode,newContent);
 			fileDescriptor.cursor = fileDescriptor.cursor + bytesWritten;
 			return bytesWritten;
 		},
 		path_create_directory(fileDescriptor: FileDescriptor, path: string): void {
-			const inode = getINode(fileDescriptor.inode);
-			vscode_fs.createDirectory(uriJoin(inode.uri, path));
+			const inode = fs.getNode(fileDescriptor.inode, NodeKind.Directory);
+			vscode_fs.createDirectory(fs.getUri(inode, path));
 		},
 		path_filestat_get(fileDescriptor: FileDescriptor, _flags: lookupflags, path: string, result: filestat): void {
 			assertFileOrDirectoryDescriptor(fileDescriptor);
 
-			const inode = getINode(fileDescriptor.inode);
-			const filePath = paths.join(fileDescriptor.path, path);
-			const fileUri = uriJoin(inode.uri, path);
-			doStat(getOrCreateINode(filePath, fileUri, false), result);
+			const inode = fs.getNode(fileDescriptor.inode);
+			doStat(fs.getOrCreateNode(filePath, fileUri, false), result);
 		},
 		path_filestat_set_times(_fileDescriptor: FileDescriptor, _flags: lookupflags, _path: string, _atim: timestamp, _mtim: timestamp, _fst_flags: fstflags): void {
 			// For now we do nothing. We could cache the timestamp in memory
