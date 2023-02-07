@@ -1120,4 +1120,13 @@ suite ('Filesystem', () => {
 			closeFile(wasi, fd);
 		});
 	});
+
+	test('path_symlink', () => {
+		runTestWithFilesystem((wasi, memory, rootFd) => {
+			const oldPath = memory.allocString('test.txt');
+			const newPath = memory.allocString('newTest.txt');
+			const errno = wasi.path_symlink(oldPath.$ptr, oldPath.byteLength, rootFd, newPath.$ptr, newPath.byteLength);
+			assert.strictEqual(errno, Errno.nosys);
+		});
+	});
 });
