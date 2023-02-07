@@ -175,7 +175,11 @@ class FileSystem {
 	private readonly root: DirectoryNode;
 
 	private readonly inodes: Map<inode, Node>;
+	// Cache contents of files
 	private readonly contents: Map<inode, Uint8Array>;
+	// Cached stats for deleted files and directories if there is still
+	// an open file descriptor
+	private readonly stats: Map<inode, FileStat>;
 	private readonly deletedNodes: Map<inode, Node>;
 	private readonly pathCache: LRUCache<Node, string>;
 
@@ -193,6 +197,7 @@ class FileSystem {
 		this.inodes = new Map();
 		this.inodes.set(this.root.inode, this.root);
 		this.contents = new Map();
+		this.stats = new Map();
 		this.deletedNodes = new Map();
 		this.pathCache = new LRUCache(256);
 	}
@@ -216,17 +221,13 @@ class FileSystem {
 		if (node === undefined) {
 			throw new WasiError(Errno.noent);
 		}
-		if (kind === NodeKind.File && node.kind !== NodeKind.File) {
-			throw new WasiError(Errno.isdir);
-		} else if (kind === NodeKind.Directory && node.kind !== NodeKind.Directory) {
-			throw new WasiError(Errno.notdir);
-		}
+		this.assertNodeKind(node, kind);
 		return node;
 	}
 
 	public getOrCreateNode(parent: DirectoryNode, path: string, kind: NodeKind, ref: boolean): FileNode | DirectoryNode {
 		const parts = this.getPathSegments(path);
-		let current: FileNode | DirectoryNode | undefined = parent;
+		let current: FileNode | DirectoryNode = parent;
 		for (let i = 0; i < parts.length; i++) {
 			switch (current.kind) {
 				case NodeKind.File:
@@ -245,6 +246,7 @@ class FileSystem {
 							entry = DirectoryNode.create(FileSystem.inodeCounter++, current);
 						}
 						current.entries.set(parts[i], entry);
+						this.inodes.set(entry.inode, entry);
 					}
 					current = entry;
 					break;
@@ -253,8 +255,32 @@ class FileSystem {
 		return current;
 	}
 
+	public getNodeByPath(parent: DirectoryNode, path: string): Node | undefined;
+	public getNodeByPath(parent: DirectoryNode, path: string, kind: NodeKind.File): FileNode | undefined;
+	public getNodeByPath(parent: DirectoryNode, path: string, kind: NodeKind.Directory): DirectoryNode | undefined;
+	public getNodeByPath(parent: DirectoryNode, path: string, kind?: NodeKind): Node | undefined	{
+		const parts = this.getPathSegments(path);
+		let current: FileNode | DirectoryNode | undefined = parent;
+		for (let i = 0; i < parts.length; i++) {
+			switch (current.kind) {
+				case NodeKind.File:
+					return undefined;
+				case NodeKind.Directory:
+					current = current.entries.get(parts[i]);
+					if (current === undefined) {
+						return undefined;
+					}
+					break;
+			}
+		}
+		if (current !== undefined) {
+			this.assertNodeKind(current, kind);
+		}
+		return current;
+	}
+
 	public existsNode(parent: DirectoryNode, path: string): boolean {
-		return this.findNode(parent, path) !== undefined;
+		return this.getNodeByPath(parent, path) !== undefined;
 	}
 
 	public setContent(inode: FileNode, content: Uint8Array): void {
@@ -270,33 +296,41 @@ class FileSystem {
 		return content;
 	}
 
-	public deleteNodeById(id: inode): void {
-		this.deleteNode(this.getNode(id));
-	}
-
-	public deleteNodeByPath(parent: DirectoryNode, path: string): void {
-		const node = this.findNode(parent, path);
-		if (node === undefined) {
+	public getStat(inode: inode): FileStat {
+		const result = this.stats.get(inode);
+		if (result === undefined) {
 			throw new WasiError(Errno.noent);
 		}
-		this.deleteNode(node);
+		return result;
 	}
 
-	private deleteNode(node: Node): void {
+	public deleteNode(node: DirectoryNode, stat: FileStat): void;
+	public deleteNode(node: FileNode, stat: FileStat, content: Uint8Array): void;
+	public deleteNode(node: Node, stat?: FileStat, content?: Uint8Array): void;
+	public deleteNode(node: Node, stat?: FileStat, content?: Uint8Array): void {
 		if (node.parent === undefined) {
 			throw new WasiError(Errno.badf);
 		}
+		if (node.refs > 0 && (stat === undefined || (node.kind === NodeKind.File && content === undefined))) {
+			throw new WasiError(Errno.inval);
+		}
 		const name = this.getName(node);
 		node.parent.entries.delete(name);
+		if (content !== undefined) {
+			this.contents.set(node.inode, content);
+		}
+		if (stat !== undefined) {
+			this.stats.set(node.inode, stat);
+		}
 		this.freeNode(node);
 	}
 
-	public renameNode(oldParent: DirectoryNode, oldPath: string, newParent: DirectoryNode, newPath: string): void {
-		const oldNode = this.findNode(oldParent, oldPath);
-		if (oldNode === undefined) {
-			return;
-		}
-		this.deleteNode(oldNode);
+	public isNodeDeleted(inode: inode): boolean {
+		return this.deletedNodes.has(inode);
+	}
+
+	public renameNode(oldNode: Node, stat: FileStat | undefined, content: Uint8Array | undefined, newParent: DirectoryNode, newPath: string): void {
+		this.deleteNode(oldNode, stat, content);
 		this.getOrCreateNode(newParent, newPath, oldNode.kind, false);
 	}
 
@@ -308,7 +342,19 @@ class FileSystem {
 		node.refs--;
 		if (node.refs === 0) {
 			this.contents.delete(node.inode);
+			this.stats.delete(node.inode);
 			this.deletedNodes.delete(node.inode);
+		}
+	}
+
+	private assertNodeKind(node: Node, kind: NodeKind | undefined): void {
+		if (kind === undefined) {
+			return;
+		}
+		if (kind === NodeKind.File && node.kind !== NodeKind.File) {
+			throw new WasiError(Errno.isdir);
+		} else if (kind === NodeKind.Directory && node.kind !== NodeKind.Directory) {
+			throw new WasiError(Errno.notdir);
 		}
 	}
 
@@ -326,24 +372,6 @@ class FileSystem {
 				this.freeNode(child);
 			}
 		}
-	}
-
-	private findNode(parent: DirectoryNode, path: string): Node | undefined	{
-		const parts = this.getPathSegments(path);
-		let current: FileNode | DirectoryNode | undefined = parent;
-		for (let i = 0; i < parts.length; i++) {
-			switch (current.kind) {
-				case NodeKind.File:
-					return undefined;
-				case NodeKind.Directory:
-					current = current.entries.get(parts[i]);
-					if (current === undefined) {
-						return undefined;
-					}
-					break;
-			}
-		}
-		return current;
 	}
 
 	private getPathSegments(path: string): string[] {
@@ -554,6 +582,10 @@ export function create(apiClient: ApiShape, _textEncoder: RAL.TextEncoder, fileD
 			fileDescriptor.fdflags = fdflags;
 		},
 		fd_filestat_get(fileDescriptor: FileDescriptor, result: filestat): void {
+			if (fs.isNodeDeleted(fileDescriptor.inode)) {
+				assignStat(result, fileDescriptor.inode, fs.getStat(fileDescriptor.inode));
+				return;
+			}
 			const inode = fs.getNode(fileDescriptor.inode);
 			const vStat: FileStat = vscode_fs.stat(fs.getUri(inode));
 			assignStat(result, inode.inode, vStat);
@@ -681,7 +713,7 @@ export function create(apiClient: ApiShape, _textEncoder: RAL.TextEncoder, fileD
 			vscode_fs.createDirectory(fs.getUri(inode, path));
 		},
 		path_filestat_get(fileDescriptor: FileDescriptor, _flags: lookupflags, path: string, result: filestat): void {
-			assertFileOrDirectoryDescriptor(fileDescriptor);
+			assertDirectoryDescriptor(fileDescriptor);
 			const inode = fs.getNode(fileDescriptor.inode, NodeKind.Directory);
 			const vStat: FileStat = vscode_fs.stat(fs.getUri(inode, path));
 			assignStat(result, fs.getOrCreateNode(inode, path, vStat.type === FileType.Directory ? NodeKind.Directory : NodeKind.File, false).inode, vStat);
@@ -763,10 +795,24 @@ export function create(apiClient: ApiShape, _textEncoder: RAL.TextEncoder, fileD
 			assertDirectoryDescriptor(fileDescriptor);
 
 			const inode = fs.getNode(fileDescriptor.inode, NodeKind.Directory);
+			const targetNode = fs.getNodeByPath(inode, path, NodeKind.Directory);
+			// We have a target node and there is an open file descriptor.
+			let filestat: FileStat | undefined;
+			if (targetNode !== undefined && targetNode.refs > 0) {
+				try {
+					filestat = vscode_fs.stat(fs.getUri(targetNode));
+				} catch {
+					filestat = { type: FileType.Directory, ctime: Date.now(), mtime: Date.now(), size: 0 };
+				}
+			}
 			vscode_fs.delete(fs.getUri(inode, path), { recursive: false, useTrash: true });
-			fs.deleteNodeById(inode.inode);
-			// todo@dirkb Need to think about whether we need to mark sub inodes as deleted as well.
-			fs.deleteNodeByPath(inode, path);
+			if (targetNode !== undefined) {
+				if (filestat !== undefined) {
+					fs.deleteNode(targetNode, filestat);
+				} else {
+					fs.deleteNode(targetNode);
+				}
+			}
 		},
 		path_rename(oldFileDescriptor: FileDescriptor, oldPath: string, newFileDescriptor: FileDescriptor, newPath: string): void {
 			assertDirectoryDescriptor(oldFileDescriptor);
@@ -777,13 +823,30 @@ export function create(apiClient: ApiShape, _textEncoder: RAL.TextEncoder, fileD
 				throw new WasiError(Errno.exist);
 			}
 			const oldParentNode = fs.getNode(oldFileDescriptor.inode, NodeKind.Directory);
+			const oldNode = fs.getNodeByPath(oldParentNode, oldPath);
+			let filestat: FileStat | undefined;
+			let content: Uint8Array | undefined;
+			if (oldNode !== undefined && oldNode.refs > 0) {
+				try {
+					const uri = fs.getUri(oldNode);
+					filestat = vscode_fs.stat(uri);
+					if (oldNode.kind === NodeKind.File) {
+						content = vscode_fs.readFile(uri);
+					}
+				} catch {
+					filestat = { type: FileType.File, ctime: Date.now(), mtime: Date.now(), size: 0 };
+					content = new Uint8Array(0);
+				}
+			}
 
 			const oldUri = fs.getUri(oldParentNode, oldPath);
 			const newUri = fs.getUri(newParentNode, newPath);
 
 			vscode_fs.rename(oldUri, newUri, { overwrite: false });
 
-			fs.renameNode(oldParentNode, oldPath, newParentNode, newPath);
+			if (oldNode !== undefined) {
+				fs.renameNode(oldNode, filestat, content, newParentNode, newPath);
+			}
 		},
 		path_symlink(_oldPath: string, _fileDescriptor: FileDescriptor, _newPath: string): void {
 			throw new WasiError(Errno.nosys);
@@ -791,8 +854,27 @@ export function create(apiClient: ApiShape, _textEncoder: RAL.TextEncoder, fileD
 		path_unlink_file(fileDescriptor: FileDescriptor, path: string): void {
 			assertDirectoryDescriptor(fileDescriptor);
 			const inode = fs.getNode(fileDescriptor.inode, NodeKind.Directory);
+			const targetNode = fs.getNodeByPath(inode, path, NodeKind.File);
+			let filestat: FileStat | undefined;
+			let content: Uint8Array | undefined;
+			if (targetNode !== undefined && targetNode.refs > 0) {
+				try {
+					const uri = fs.getUri(targetNode);
+					filestat = vscode_fs.stat(uri);
+					content = vscode_fs.readFile(uri);
+				} catch {
+					filestat = { type: FileType.File, ctime: Date.now(), mtime: Date.now(), size: 0 };
+					content = new Uint8Array(0);
+				}
+			}
 			vscode_fs.delete(fs.getUri(inode, path), { recursive: false, useTrash: true });
-			fs.deleteNodeByPath(inode, path);
+			if (targetNode !== undefined) {
+				if (filestat !== undefined && content !== undefined) {
+					fs.deleteNode(targetNode, filestat, content);
+				} else {
+					fs.deleteNode(targetNode);
+				}
+			}
 		},
 		bytesAvailable(fileDescriptor: FileDescriptor): filesize {
 			assertFileDescriptor(fileDescriptor);

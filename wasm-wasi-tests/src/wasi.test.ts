@@ -1116,7 +1116,7 @@ suite ('Filesystem', () => {
 			const newPath = memory.allocString('newTest.txt');
 			let errno = wasi.path_rename(rootFd, oldPath.$ptr, oldPath.byteLength, rootFd, newPath.$ptr, newPath.byteLength);
 			assert.strictEqual(errno, Errno.success);
-			statFile(wasi,memory, fd);
+			statFile(wasi, memory, fd);
 			closeFile(wasi, fd);
 		});
 	});
