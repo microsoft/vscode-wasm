@@ -422,16 +422,16 @@ suite ('Filesystem', () => {
 		assert.strictEqual(bytesWritten.value, content.byteLength);
 	}
 
-	// function readFromFile(wasi: WASI,memory: Memory, fd: fd): Uint8Array {
-	// 	const iovecs = memory.allocStructArray(1, Iovec);
-	// 	const buffer = memory.alloc(1024);
-	// 	iovecs.get(0).buf = buffer;
-	// 	iovecs.get(0).buf_len = 1024;
-	// 	const bytesRead = memory.allocUint32();
-	// 	let errno = wasi.fd_read(fd, iovecs.$ptr, iovecs.size, bytesRead.$ptr);
-	// 	assert.strictEqual(errno, Errno.success);
-	// 	return memory.readBytes(buffer, bytesRead.value);
-	// }
+	function readFromFile(wasi: WASI,memory: Memory, fd: fd): Uint8Array {
+		const iovecs = memory.allocStructArray(1, Iovec);
+		const buffer = memory.alloc(1024);
+		iovecs.get(0).buf = buffer.$ptr;
+		iovecs.get(0).buf_len = buffer.byteLength;
+		const bytesRead = memory.allocUint32();
+		let errno = wasi.fd_read(fd, iovecs.$ptr, iovecs.size, bytesRead.$ptr);
+		assert.strictEqual(errno, Errno.success);
+		return memory.readBytes(buffer.$ptr, bytesRead.value);
+	}
 
 	function closeFile(wasi: WASI, fd: fd): void {
 		const errno = wasi.fd_close(fd);
@@ -1127,6 +1127,46 @@ suite ('Filesystem', () => {
 			const newPath = memory.allocString('newTest.txt');
 			const errno = wasi.path_symlink(oldPath.$ptr, oldPath.byteLength, rootFd, newPath.$ptr, newPath.byteLength);
 			assert.strictEqual(errno, Errno.nosys);
+		});
+	});
+
+	test('path_unlink_file', () => {
+		runTestWithFilesystem((wasi, memory, rootFd) => {
+			const name = 'test.txt';
+			const content = 'Hello World';
+			const fd = createFileWithContent(wasi, memory, rootFd, name, content);
+			closeFile(wasi, fd);
+			const path = memory.allocString(name);
+			let errno = wasi.path_unlink_file(rootFd, path.$ptr, path.byteLength);
+			assert.strictEqual(errno, Errno.success);
+			const filestat = memory.allocStruct(Filestat);
+			errno = wasi.path_filestat_get(rootFd, Lookupflags.none, path.$ptr, path.byteLength, filestat.$ptr);
+			assert.strictEqual(errno, Errno.noent);
+		});
+	});
+
+	test('path_unlink_file - open file descriptor', () => {
+		runTestWithFilesystem((wasi, memory, rootFd) => {
+			const name = 'test.txt';
+			const content = 'Hello World';
+			const fd = createFileWithContent(wasi, memory, rootFd, name, content);
+			const newOffset = memory.allocBigUint64();
+			let errno = wasi.fd_seek(fd, 0n, Whence.set, newOffset.$ptr);
+			assert.strictEqual(errno, Errno.success);
+			assert.strictEqual(newOffset.value, 0n);
+			const path = memory.allocString(name);
+			errno = wasi.path_unlink_file(rootFd, path.$ptr, path.byteLength);
+			assert.strictEqual(errno, Errno.success);
+			const filestat = memory.allocStruct(Filestat);
+			errno = wasi.fd_filestat_get(fd, filestat.$ptr);
+			assert.strictEqual(errno, Errno.success);
+			const bytes = readFromFile(wasi, memory, fd);
+			assert.strictEqual(decoder.decode(bytes), content);
+			closeFile(wasi, fd);
+			errno = wasi.fd_filestat_get(fd, filestat.$ptr);
+			assert.strictEqual(errno, Errno.badf);
+			errno = wasi.path_filestat_get(rootFd, Lookupflags.none, path.$ptr, path.byteLength, filestat.$ptr);
+			assert.strictEqual(errno, Errno.noent);
 		});
 	});
 });
