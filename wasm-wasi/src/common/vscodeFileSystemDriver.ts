@@ -443,12 +443,6 @@ export function create(apiClient: ApiShape, _textEncoder: RAL.TextEncoder, fileD
 		}
 	}
 
-	function assertFileOrDirectoryDescriptor(fileDescriptor: FileDescriptor): asserts fileDescriptor is (FileFileDescriptor | DirectoryFileDescriptor) {
-		if (!(fileDescriptor instanceof FileFileDescriptor) && !(fileDescriptor instanceof DirectoryFileDescriptor)) {
-			throw new WasiError(Errno.badf);
-		}
-	}
-
 	function doGetFiletype(fileDescriptor: DirectoryFileDescriptor, path: string): filetype | undefined {
 		const inode = fs.getNode(fileDescriptor.inode, NodeKind.Directory);
 		try {
