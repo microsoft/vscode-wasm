@@ -613,6 +613,11 @@ export namespace Rights {
 	}
 
 	/**
+	 * No rights
+	 */
+	export const None: rights = 0n;
+
+	/**
 	 * All rights
 	 */
 	export const All = fd_datasync | fd_read | fd_seek | fd_fdstat_set_flags |

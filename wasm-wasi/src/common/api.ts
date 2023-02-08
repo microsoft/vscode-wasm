@@ -19,12 +19,12 @@ export * from './deviceDriver';
 
 type ExportRights  = { base: rights; inheriting: rights };
 export namespace VSCodeFS {
-	export const FileRights: ExportRights =  {
-		base: FileBaseRights,
-		inheriting: FileInheritingRights
-	};
 	export const DirectoryRights: ExportRights =  {
 		base: DirectoryBaseRights,
 		inheriting: DirectoryInheritingRights
+	};
+	export const FileRights: ExportRights =  {
+		base: FileBaseRights,
+		inheriting: FileInheritingRights
 	};
 }

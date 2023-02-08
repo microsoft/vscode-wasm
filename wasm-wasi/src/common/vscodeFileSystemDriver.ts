@@ -13,7 +13,7 @@ import {
 } from './deviceDriver';
 import {
 	fdstat, filestat, Rights, fd, rights, fdflags, Filetype, WasiError, Errno, filetype, Whence, lookupflags, timestamp, fstflags,
-	oflags, Oflags, filesize, Fdflags, Lookupflags, inode
+	oflags, Oflags, filesize, Fdflags, inode
 } from './wasiTypes';
 
 import RAL from './ral';
@@ -27,7 +27,6 @@ export const DirectoryBaseRights: rights = Rights.fd_fdstat_set_flags | Rights.p
 		Rights.path_filestat_get | Rights.path_filestat_set_size | Rights.path_filestat_set_times |
 		Rights.fd_filestat_get | Rights.fd_filestat_set_times | Rights.path_remove_directory | Rights.path_unlink_file |
 		Rights.path_symlink;
-
 
 export const FileBaseRights: rights = Rights.fd_datasync | Rights.fd_read | Rights.fd_seek | Rights.fd_fdstat_set_flags |
 		Rights.fd_sync | Rights.fd_tell | Rights.fd_write | Rights.fd_advise | Rights.fd_allocate | Rights.fd_filestat_get |
@@ -229,6 +228,17 @@ class FileSystem {
 
 	public getOrCreateNode(parent: DirectoryNode, path: string, kind: NodeKind, ref: boolean): FileNode | DirectoryNode {
 		const parts = this.getPathSegments(path);
+		if (parts.length === 1) {
+			if (parts[0] === '.') {
+				return parent;
+			} else if (parts[0] === '..') {
+				if (parent.parent !== undefined) {
+					return parent.parent;
+				} else {
+					throw new WasiError(Errno.noent);
+				}
+			}
+		}
 		let current: FileNode | DirectoryNode = parent;
 		for (let i = 0; i < parts.length; i++) {
 			switch (current.kind) {
@@ -248,7 +258,13 @@ class FileSystem {
 							entry = DirectoryNode.create(FileSystem.inodeCounter++, current);
 						}
 						current.entries.set(parts[i], entry);
+						// Cache the name for faster lookup.
+						entry.name = parts[i];
 						this.inodes.set(entry.inode, entry);
+					} else {
+						if (i === parts.length - 1 && ref) {
+							entry.refs++;
+						}
 					}
 					current = entry;
 					break;
@@ -262,6 +278,13 @@ class FileSystem {
 	public getNodeByPath(parent: DirectoryNode, path: string, kind: NodeKind.Directory): DirectoryNode | undefined;
 	public getNodeByPath(parent: DirectoryNode, path: string, kind?: NodeKind): Node | undefined	{
 		const parts = this.getPathSegments(path);
+		if (parts.length === 1) {
+			if (parts[0] === '.') {
+				return parent;
+			} else if (parts[0] === '..') {
+				return parent.parent;
+			}
+		}
 		let current: FileNode | DirectoryNode | undefined = parent;
 		for (let i = 0; i < parts.length; i++) {
 			switch (current.kind) {
@@ -343,8 +366,10 @@ class FileSystem {
 		}
 		node.refs--;
 		if (node.refs === 0) {
-			this.contents.delete(node.inode);
-			this.stats.delete(node.inode);
+			if (node.kind === NodeKind.File) {
+				this.contents.delete(node.inode);
+				this.stats.delete(node.inode);
+			}
 			this.deletedNodes.delete(node.inode);
 		}
 	}
@@ -379,7 +404,7 @@ class FileSystem {
 	private getPathSegments(path: string): string[] {
 		if (path.charAt(0) === '/') { path = path.substring(1); }
 		if (path.charAt(path.length - 1) === '/') { path = path.substring(0, path.length - 1); }
-		return path.split('/');
+		return path.normalize().split('/');
 	}
 
 	private getPath(inode: FileNode | DirectoryNode): string {
@@ -725,11 +750,11 @@ export function create(apiClient: ApiShape, _textEncoder: RAL.TextEncoder, fileD
 			// support from the VS Code API.
 			throw new WasiError(Errno.nosys);
 		},
-		path_open(parentDescriptor: FileDescriptor, dirflags: lookupflags, path: string, oflags: oflags, fs_rights_base: rights, fs_rights_inheriting: rights, fdflags: fdflags): FileDescriptor {
+		path_open(parentDescriptor: FileDescriptor, _dirflags: lookupflags, path: string, oflags: oflags, fs_rights_base: rights, fs_rights_inheriting: rights, fdflags: fdflags): FileDescriptor {
 			assertDirectoryDescriptor(parentDescriptor);
-			if ((dirflags & Lookupflags.symlink_follow) !== 0) {
-				throw new WasiError(Errno.inval);
-			}
+			// We ignore lookup flags that request to follow symlinks. The POSIX FS
+			// implementation we have right now doesn't support symlinks and VS Code
+			// has no API to follow / resolve a symlink.
 
 			let filetype: filetype | undefined = doGetFiletype(parentDescriptor, path);
 			const entryExists: boolean = filetype !== undefined;
