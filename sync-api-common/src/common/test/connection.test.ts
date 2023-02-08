@@ -7,7 +7,7 @@
 import assert from 'assert';
 
 import { TestRequests, AssertionErrorData, ErrorData } from './tests';
-import { RAL, ServiceConnection } from '../api';
+import { Cancellation, RAL, ServiceConnection } from '../api';
 
 let script: string = '';
 
@@ -173,5 +173,15 @@ suite('Connection', () => {
 				return { errno: 0, data: { name: 'vscode', age: 70 } };
 			});
 		});
+	});
+
+	test('Message Cancellation', async () => {
+		const message: { $cancellationData?: SharedArrayBuffer | undefined } = {};
+		const cancel = Cancellation.addData(message);
+		assert.ok(message.$cancellationData instanceof SharedArrayBuffer);
+		const check = Cancellation.retrieveCheck(message);
+		assert.strictEqual(check(), false);
+		cancel();
+		assert.strictEqual(check(), true);
 	});
 });
