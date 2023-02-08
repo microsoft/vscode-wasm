@@ -8,7 +8,7 @@ import { size } from '@vscode/sync-api-client';
 import { u64 } from './baseTypes';
 import {
 	advise, Errno, errno, fd, fdflags, fdstat,filedelta, filesize, filestat, Filetype, filetype,
-	fstflags, lookupflags, oflags, rights, timestamp, WasiError, whence
+	fstflags, lookupflags, oflags, Rights, rights, timestamp, WasiError, whence
 } from './wasiTypes';
 
 export type DeviceId = bigint;
@@ -54,11 +54,32 @@ export interface FileDescriptor {
 	readonly inode: bigint;
 
 	/**
-	 * Asserts the given base rights.
+	 * Check if the base rights contain the given rights.
+	 *
+	 * @param rights The rights to check.
+	 */
+	containsBaseRights(rights: rights): boolean;
 
+	/**
+	 * Asserts the given base rights.
+	 *
 	 * @param right the rights to assert.
 	 */
-	assertBaseRight(right: rights): void;
+	assertBaseRights(right: rights): void;
+
+	/**
+	 * Asserts the given fdflags.
+	 *
+	 * @param fdflags The fdflags to assert.
+	 */
+	assertFdflags(fdflags: fdflags): void;
+
+	/**
+	 * Asserts the given oflags.
+	 *
+	 * @param oflags The oflags to assert.
+	 */
+	assertOflags(oflags: oflags): void;
 
 	/**
 	 * Asserts that the file descriptor points to a directory.
@@ -92,8 +113,24 @@ export abstract class BaseFileDescriptor implements FileDescriptor {
 		this.inode = inode;
 	}
 
-	public assertBaseRight(right: rights): void {
-		if ((this.rights_base & right) === 0n) {
+	public containsBaseRights(rights: rights): boolean {
+		return (this.rights_base & rights) === rights;
+	}
+	public assertBaseRights(rights: rights): void {
+		if ((this.rights_base & rights) === rights) {
+			return;
+		}
+		throw new WasiError(Errno.perm);
+	}
+
+	public assertFdflags(fdflags: fdflags): void {
+		if (!Rights.supportFdflags(this.rights_base, fdflags)) {
+			throw new WasiError(Errno.perm);
+		}
+	}
+
+	public assertOflags(oflags: oflags): void {
+		if (!Rights.supportOflags(this.rights_base, oflags)) {
 			throw new WasiError(Errno.perm);
 		}
 	}
@@ -145,7 +182,7 @@ export interface DeviceDriver {
 }
 
 export interface FileSystemDeviceDriver extends DeviceDriver {
-	createStdioFileDescriptor(fd: 0 | 1 | 2, rights_base: rights, rights_inheriting: rights, fdflags: fdflags, path: string): FileDescriptor;
+	createStdioFileDescriptor(fd: 0 | 1 | 2, fdflags: fdflags, path: string): FileDescriptor;
 }
 
 export interface CharacterDeviceDriver extends DeviceDriver {

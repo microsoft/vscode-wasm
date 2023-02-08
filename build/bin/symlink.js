@@ -19,14 +19,17 @@ const node_modules = 'node_modules';
 	ln.softLink(path.join(root, 'sync-api-common'), path.join(root, 'sync-api-client', node_modules, '@vscode', 'sync-api-common'));
 	ln.softLink(path.join(root, 'sync-api-common'), path.join(root, 'sync-api-service', node_modules, '@vscode', 'sync-api-common'));
 
-	ln.softLink(path.join(root, 'wasm-wasi'), path.join(root, 'testbeds', node_modules, '@vscode', 'wasm-wasi'));
-	ln.softLink(path.join(root, 'sync-api-common'), path.join(root, 'testbeds', node_modules, '@vscode', 'sync-api-common'));
-	ln.softLink(path.join(root, 'sync-api-client'), path.join(root, 'testbeds', node_modules, '@vscode', 'sync-api-client'));
-	ln.softLink(path.join(root, 'sync-api-service'), path.join(root, 'testbeds', node_modules, '@vscode', 'sync-api-service'));
-
 	ln.softLink(path.join(root, 'sync-api-common'), path.join(root, 'sync-api-tests', node_modules, '@vscode', 'sync-api-common'));
 	ln.softLink(path.join(root, 'sync-api-client'), path.join(root, 'sync-api-tests', node_modules, '@vscode', 'sync-api-client'));
 	ln.softLink(path.join(root, 'sync-api-service'), path.join(root, 'sync-api-tests', node_modules, '@vscode', 'sync-api-service'));
 
 	ln.softLink(path.join(root, 'sync-api-client'), path.join(root, 'wasm-wasi', node_modules, '@vscode', 'sync-api-client'));
+
+	ln.softLink(path.join(root, 'wasm-wasi'), path.join(root, 'wasm-wasi-tests', node_modules, '@vscode', 'wasm-wasi'));
+	ln.softLink(path.join(root, 'sync-api-client'), path.join(root, 'wasm-wasi-tests', node_modules, '@vscode', 'sync-api-client'));
+
+	ln.softLink(path.join(root, 'wasm-wasi'), path.join(root, 'testbeds', node_modules, '@vscode', 'wasm-wasi'));
+	ln.softLink(path.join(root, 'sync-api-common'), path.join(root, 'testbeds', node_modules, '@vscode', 'sync-api-common'));
+	ln.softLink(path.join(root, 'sync-api-client'), path.join(root, 'testbeds', node_modules, '@vscode', 'sync-api-client'));
+	ln.softLink(path.join(root, 'sync-api-service'), path.join(root, 'testbeds', node_modules, '@vscode', 'sync-api-service'));
 })();

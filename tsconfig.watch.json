@@ -19,6 +19,12 @@
         },
         {
             "path": "./wasm-wasi/tsconfig.watch.json"
+        },
+        {
+            "path": "./wasm-wasi-tests/tsconfig.watch.json"
+        },
+        {
+            "path": "./tools/tsconfig.watch.json"
         }
     ]
 }

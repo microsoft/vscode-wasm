@@ -22,7 +22,7 @@ function updateNextTag() {
 	opts = {};
 	opts.stdio = 'inherit';
 
-	console.log(name + ": set 'next' tag to latest version");
+	console.log(`${name}: set 'next' tag to latest version`);
 
 	const rl = readline.createInterface({ input: process.stdin, output: process.stdout });
 

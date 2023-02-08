@@ -1,5 +1,5 @@
 {
-	"name": "sync-api-tests",
+	"name": "@vscode/sync-api-tests",
 	"publisher": "ms-vscode",
 	"private": true,
 	"description": "Test cases for the sync vscode API",
@@ -20,7 +20,7 @@
 		"clean": "node ../node_modules/rimraf/bin.js lib",
 		"compile": "node ../node_modules/typescript/lib/tsc.js -b ./tsconfig.json",
 		"compile:publish": "node ../node_modules/typescript/lib/tsc.js -b ./tsconfig.publish.json",
-		"watch": "node .../node_modules/typescript/lib/tsc.js -b ./tsconfig-watch.json -w",
+		"watch": "node ../node_modules/typescript/lib/tsc.js -b ./tsconfig.watch.json -w",
 		"lint": "node ../node_modules/eslint/bin/eslint.js --ext ts src",
 		"esbuild": "node ./bin/esbuild.js",
 		"test": "npm run test:desktop && npm run test:web",
@@ -28,10 +28,9 @@
 		"test:web": "node ./bin/esbuild.js && node lib/web/runTests.js",
 		"test:runWebTests": "node lib/web/runTests.js",
 		"symlink:publish": "node ../build/bin/symlink-sync-api-tests-publish.js",
-		"all:publish": "git clean -xfd . && npm install && npm run symlink:publish && npm run compile:publish && npm run lint && npm run test"
+		"all:publish": "git clean -xfd . && npm install && npm run symlink:publish && cd ../sync-api-client && npm run compile:publish && cd ../sync-api-service && npm run compile:publish && cd ../sync-api-tests && npm run compile:publish && npm run lint && npm run test"
 	},
 	"dependencies": {
-		"@vscode/sync-api-client": "0.8.1",
 		"vscode-uri": "3.0.6"
 	},
 	"devDependencies": {
