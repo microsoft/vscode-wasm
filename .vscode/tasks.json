@@ -64,6 +64,20 @@
 			]
 		},
 		{
+			"label": "Build PHP Example",
+			"type": "npm",
+			"script": "build",
+			"path": "testbeds/php",
+			"group": "build",
+			"presentation": {
+				"panel": "dedicated",
+				"reveal": "never"
+			},
+			"problemMatcher": [
+				"$tsc"
+			]
+		},
+		{
 			"label": "Build CoreUtils Example",
 			"type": "npm",
 			"script": "build",

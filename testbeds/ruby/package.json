@@ -1,0 +1,30 @@
+{
+	"name": "testbed-ruby",
+	"private": "true",
+	"publisher": "ms-vscode",
+	"version": "0.0.1",
+	"description": "Ruby Example",
+	"author": "MS",
+	"license": "MIT",
+	"engines": {
+		"vscode": "^1.67.0"
+	},
+	"main": "./out/extension.js",
+	"activationEvents": [
+	],
+	"contributes": {
+		"commands": [
+			{
+				"command": "testbed-ruby.runFile",
+				"category": "wasm",
+				"title": "Run Ruby File",
+				"enablement": "editorLangId == rb"
+			}
+		]
+	},
+	"scripts": {
+		"build": "npm run compile",
+		"compile": "node ../../node_modules/typescript/lib/tsc.js -b tsconfig.json",
+		"watch": "node ../../node_modules/typescript/lib/tsc.js -b tsconfig.json -w"
+	}
+}
