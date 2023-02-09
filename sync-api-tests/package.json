@@ -3,7 +3,7 @@
 	"publisher": "ms-vscode",
 	"private": true,
 	"description": "Test cases for the sync vscode API",
-	"version": "0.2.0",
+	"version": "0.9.0",
 	"engines": {
 		"vscode": "^1.71.0"
 	},
@@ -31,18 +31,18 @@
 		"all:publish": "git clean -xfd . && npm install && npm run symlink:publish && cd ../sync-api-client && npm run compile:publish && cd ../sync-api-service && npm run compile:publish && cd ../sync-api-tests && npm run compile:publish && npm run lint && npm run test"
 	},
 	"dependencies": {
-		"vscode-uri": "3.0.6"
+		"vscode-uri": "^3.0.7"
 	},
 	"devDependencies": {
-		"@types/glob": "^7.2.0",
+		"@types/glob": "^8.0.1",
 		"@types/path-browserify": "^1.0.0",
-		"@types/uuid": "^8.3.4",
+		"@types/uuid": "^9.0.0",
 		"@types/vscode": "1.71.0",
-		"@vscode/test-electron": "^2.1.5",
-		"@vscode/test-web": "0.0.30",
-		"glob": "^8.0.3",
+		"@vscode/test-electron": "^2.2.3",
+		"@vscode/test-web": "0.0.34",
+		"glob": "^8.1.0",
 		"path-browserify": "^1.0.1",
-		"uuid": "^8.3.2",
+		"uuid": "^9.0.0",
 		"find-process": "^1.4.7"
 	}
 }

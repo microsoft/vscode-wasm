@@ -1,7 +1,7 @@
 {
 	"name": "@vscode/wasm-wasi-tests",
 	"private": true,
-	"version": "0.1.0",
+	"version": "0.9.0",
 	"author": "MS",
 	"license": "MIT",
 	"publisher": "ms-vscode",
@@ -30,8 +30,8 @@
 
 	},
 	"dependencies": {
-		"@vscode/wasm-wasi": "0.8.2",
-		"@vscode/sync-api-client": "0.8.1",
+		"@vscode/wasm-wasi": "0.9.0",
+		"@vscode/sync-api-client": "0.9.0",
 		"vscode-uri": "3.0.7"
 	},
 	"devDependencies": {
