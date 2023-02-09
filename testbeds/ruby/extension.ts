@@ -17,7 +17,7 @@ export async function activate(_context: ExtensionContext) {
 
 	commands.registerCommand('testbed-ruby.runFile', () => {
 		const activeDocument = window.activeTextEditor?.document;
-		if (activeDocument === undefined || activeDocument.languageId !== 'rb') {
+		if (activeDocument === undefined || activeDocument.languageId !== 'ruby') {
 			return;
 		}
 

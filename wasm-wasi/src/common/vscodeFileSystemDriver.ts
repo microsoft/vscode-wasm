@@ -52,6 +52,10 @@ class FileFileDescriptor extends BaseFileDescriptor {
 		this._cursor = 0;
 	}
 
+	public with(change: { fd: fd }): FileDescriptor {
+		return new FileFileDescriptor(this.deviceId, change.fd, this.rights_base, this.fdflags, this.inode);
+	}
+
 	public get cursor(): number {
 		return this._cursor;
 	}
@@ -68,6 +72,10 @@ class DirectoryFileDescriptor extends BaseFileDescriptor {
 
 	constructor(deviceId: bigint, fd: fd, rights_base: rights, rights_inheriting: rights, fdflags: fdflags, inode: bigint) {
 		super(deviceId, fd, Filetype.directory, rights_base, rights_inheriting, fdflags, inode);
+	}
+
+	public with(change: { fd: number }): FileDescriptor {
+		return new DirectoryFileDescriptor(this.deviceId, change.fd, this.rights_base, this.rights_inheriting, this.fdflags, this.inode);
 	}
 
 	childDirectoryRights(requested_rights: rights): rights {
@@ -702,6 +710,9 @@ export function create(apiClient: ApiShape, _textEncoder: RAL.TextEncoder, fileD
 					break;
 			}
 			return BigInt(fileDescriptor.cursor);
+		},
+		fd_renumber(fileDescriptor: FileDescriptor, _to: fd): void {
+			assertFileDescriptor(fileDescriptor);
 		},
 		fd_sync(fileDescriptor: FileDescriptor): void {
 			writeContent(fs.getNode(fileDescriptor.inode, NodeKind.File));

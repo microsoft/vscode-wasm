@@ -18,7 +18,7 @@
 				"command": "testbed-ruby.runFile",
 				"category": "wasm",
 				"title": "Run Ruby File",
-				"enablement": "editorLangId == rb"
+				"enablement": "editorLangId == ruby"
 			}
 		]
 	},

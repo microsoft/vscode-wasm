@@ -54,6 +54,13 @@ export interface FileDescriptor {
 	readonly inode: bigint;
 
 	/**
+	 * Create a new file descriptor with the given changes.
+	 *
+	 * @param change The changes to apply to the file descriptor.
+	 */
+	with(change: { fd: fd }): FileDescriptor;
+
+	/**
 	 * Check if the base rights contain the given rights.
 	 *
 	 * @param rights The rights to check.
@@ -113,6 +120,8 @@ export abstract class BaseFileDescriptor implements FileDescriptor {
 		this.inode = inode;
 	}
 
+	abstract with(change: { fd: fd }): FileDescriptor;
+
 	public containsBaseRights(rights: rights): boolean {
 		return (this.rights_base & rights) === rights;
 	}
@@ -163,6 +172,7 @@ export interface DeviceDriver {
 	fd_read(fileDescriptor: FileDescriptor, buffers: Uint8Array[]): size;
 	fd_readdir(fileDescriptor: FileDescriptor): ReaddirEntry[];
 	fd_seek(fileDescriptor: FileDescriptor, offset: filedelta, whence: whence): bigint;
+	fd_renumber(fileDescriptor: FileDescriptor, to: fd): void;
 	fd_sync(fileDescriptor: FileDescriptor): void;
 	fd_tell(fileDescriptor: FileDescriptor): u64;
 	fd_write(fileDescriptor: FileDescriptor, buffers: Uint8Array[]): size;
@@ -233,6 +243,9 @@ export const NoSysDeviceDriver: Omit<DeviceDriver, 'id'> = {
 		throw new WasiError(Errno.nosys);
 	},
 	fd_seek(): bigint {
+		throw new WasiError(Errno.nosys);
+	},
+	fd_renumber(): void {
 		throw new WasiError(Errno.nosys);
 	},
 	fd_sync(): void {

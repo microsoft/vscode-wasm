@@ -78,6 +78,20 @@
 			]
 		},
 		{
+			"label": "Build Ruby Example",
+			"type": "npm",
+			"script": "build",
+			"path": "testbeds/ruby",
+			"group": "build",
+			"presentation": {
+				"panel": "dedicated",
+				"reveal": "never"
+			},
+			"problemMatcher": [
+				"$tsc"
+			]
+		},
+		{
 			"label": "Build CoreUtils Example",
 			"type": "npm",
 			"script": "build",

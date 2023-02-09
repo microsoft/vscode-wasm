@@ -19,7 +19,7 @@ import {
 	fd_filestat_set_times, fd_pread, fd_prestat_dir_name, fd_prestat_get, fd_pwrite, fd_read, fd_readdir,
 	fd_seek, fd_sync, fd_tell, fd_write, path_create_directory, path_filestat_get, path_filestat_set_times,
 	path_link, path_open, path_readlink, path_remove_directory, path_rename, path_symlink, path_unlink_file,
-	poll_oneoff, proc_exit, random_get, sched_yield, sock_accept, sock_recv, sock_send, sock_shutdown, Fdstat, Filestat, dirent, ciovec, iovec, fdstat, filestat, Whence, prestat
+	poll_oneoff, proc_exit, random_get, sched_yield, sock_accept, sock_recv, sock_send, sock_shutdown, Fdstat, Filestat, dirent, ciovec, iovec, fdstat, filestat, Whence, prestat, fd_renumber
 } from './wasiTypes';
 import { BigInts, code2Wasi } from './converter';
 import { CharacterDeviceDriver, DeviceDriver, DeviceId, FileDescriptor, FileSystemDeviceDriver, ReaddirEntry } from './deviceDriver';
@@ -90,6 +90,7 @@ export interface WASI {
 	fd_read: fd_read;
 	fd_readdir: fd_readdir;
 	fd_seek: fd_seek;
+	fd_renumber: fd_renumber;
 	fd_sync: fd_sync;
 	fd_tell: fd_tell;
 	fd_write: fd_write;
@@ -188,6 +189,7 @@ export namespace WASI {
 		const thread_start = RAL().clock.realtime();
 		const fileDescriptors: Map<fd, FileDescriptor> = new Map();
 		let fileDescriptorCounter: number = 0;
+		let firstRealFileDescriptor: number = 3;
 		let fileDescriptorMode: 'init' | 'running' = 'init';
 		const fileDescriptorId = {
 			next(): number {
@@ -476,6 +478,7 @@ export namespace WASI {
 					while (true) {
 						if (preStatProviders.length === 0) {
 							fileDescriptorCounter = fd;
+							firstRealFileDescriptor = fd;
 							fileDescriptorMode = 'running';
 							return Errno.badf;
 						}
@@ -612,6 +615,23 @@ export namespace WASI {
 
 					const newOffset = getDeviceDriver(fileDescriptor).fd_seek(fileDescriptor, offset, whence);
 					memoryView().setBigUint64(new_offset_ptr, BigInt(newOffset), true);
+					return Errno.success;
+				} catch (error) {
+					return handleError(error);
+				}
+			},
+			fd_renumber: (fd: fd, to: fd): errno => {
+				try {
+					if (fd < firstRealFileDescriptor || to < firstRealFileDescriptor) {
+						return Errno.notsup;
+					}
+					if ((fileDescriptors.has(to))) {
+						return Errno.badf;
+					}
+					const fileDescriptor = getFileDescriptor(fd);
+					const toFileDescriptor = fileDescriptor.with({ fd: to });
+					fileDescriptors.delete(fileDescriptor.fd);
+					fileDescriptors.set(toFileDescriptor.fd, toFileDescriptor);
 					return Errno.success;
 				} catch (error) {
 					return handleError(error);

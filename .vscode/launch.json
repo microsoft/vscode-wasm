@@ -33,6 +33,16 @@
 		{
 			"type": "extensionHost",
 			"request": "launch",
+			"name": "Ruby Testbed",
+			"runtimeExecutable": "${execPath}",
+			"args": ["--extensionDevelopmentPath=${workspaceRoot}/testbeds/ruby"],
+			"outFiles": ["${workspaceRoot}/testbeds/ruby/out/**/*.js"],
+			"sourceMaps": true,
+			"preLaunchTask": "Build Ruby Example"
+		},
+		{
+			"type": "extensionHost",
+			"request": "launch",
 			"name": "C Testbed",
 			"runtimeExecutable": "${execPath}",
 			"args": ["--extensionDevelopmentPath=${workspaceRoot}/wasm-wasi/example"],

@@ -32,10 +32,10 @@ apiClient.serviceReady().then(async (params) => {
 	}
 	const rubyRoot = URI.file(`/home/dirkb/bin/wasm`);
 	devices.push({ kind: 'fileSystem', uri: rubyRoot, mountPoint: path.posix.sep });
-	const wasi = WASI.create('php-cgi', apiClient, exitHandler, devices, params.stdio, {
+	const wasi = WASI.create('ruby', apiClient, exitHandler, devices, params.stdio, {
 		args: toRun !== undefined ? [toRun] : []
 	});
-	const binary = apiClient.vscode.workspace.fileSystem.readFile(rubyRoot.with({ path: path.join(rubyRoot.path, 'php-cgi.wasm') }));
+	const binary = apiClient.vscode.workspace.fileSystem.readFile(rubyRoot.with({ path: path.join(rubyRoot.path, 'ruby.wasm') }));
 	const { instance } = await WebAssembly.instantiate(binary, {
 		wasi_snapshot_preview1: wasi
 	});
