@@ -1848,6 +1848,17 @@ export type fd_read = (fd: fd, iovs_ptr: ptr<iovec>, iovs_len: u32, bytesRead_pt
 export type fd_readdir = (fd: fd, buf_ptr: ptr<dirent>, buf_len: size, cookie: dircookie, buf_used_ptr: ptr<u32>) => errno;
 
 /**
+ * Atomically replace a file descriptor by renumbering another file descriptor.
+ * Due to the strong focus on thread safety, this environment does not provide
+ * a mechanism to duplicate or renumber a file descriptor to an arbitrary number,
+ * like dup2(). This would be prone to race conditions, as an actual file
+ * descriptor with the same number could be allocated by a different thread
+ * at the same time. This function provides a way to atomically renumber file
+ * descriptors, which would disappear if dup2() were to be removed entirely.
+ */
+export type fd_renumber = (fd: fd, to: fd) => errno;
+
+/**
  * Move the offset of a file descriptor. Note: This is similar to lseek in
  * POSIX.
  *

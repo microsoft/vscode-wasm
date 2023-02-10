@@ -21,6 +21,10 @@ class ConsoleFileDescriptor extends BaseFileDescriptor {
 	constructor(deviceId: bigint, fd: fd, rights_base: rights, rights_inheriting: rights, fdflags: fdflags, inode: bigint) {
 		super(deviceId, fd, Filetype.character_device, rights_base, rights_inheriting, fdflags, inode);
 	}
+
+	with(change: { fd: fd }): FileDescriptor {
+		return new ConsoleFileDescriptor(this.deviceId, change.fd, this.rights_base, this.rights_inheriting, this.fdflags, this.inode);
+	}
 }
 
 export function create(apiClient: ApiShape, uri: URI, decoder: RAL.TextDecoder): CharacterDeviceDriver {
