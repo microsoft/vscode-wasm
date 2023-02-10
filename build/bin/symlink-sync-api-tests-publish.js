@@ -16,5 +16,4 @@ const node_modules = 'node_modules';
 	console.log('Symlinking node modules for sync-api-tests');
 
 	ln.softLink(path.join(root, 'sync-api-service'), path.join(root, 'sync-api-tests', node_modules, '@vscode', 'sync-api-service'));
-	ln.softLink(path.join(root, 'sync-api-client'), path.join(root, 'sync-api-tests', node_modules, '@vscode', 'sync-api-client'));
 })();

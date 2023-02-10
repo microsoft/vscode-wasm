@@ -1,6 +1,6 @@
 {
 	"name": "@vscode/sync-api-service",
-	"version": "0.8.1",
+	"version": "0.9.0",
 	"description": "A sync implementation of the VS Code API. Only supported from a worker in NodeJS and browser",
 	"engines": {
 		"node": ">=16.14.2",
@@ -28,11 +28,11 @@
 	"dependencies": {
 		"uuid": "^9.0.0",
 		"vscode-uri": "^3.0.6",
-		"@vscode/sync-api-common": "0.8.1"
+		"@vscode/sync-api-common": "0.9.0"
 	},
 	"devDependencies": {
 		"@types/vscode": "1.71.0",
-		"@types/uuid": "^8.3.4"
+		"@types/uuid": "^9.0.0"
 	},
 	"scripts": {
 		"prepublishOnly": "echo \"⛔ Can only publish from a secure pipeline ⛔\" && node ../build/npm/fail",
