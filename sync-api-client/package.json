@@ -1,6 +1,6 @@
 {
 	"name": "@vscode/sync-api-client",
-	"version": "0.8.1",
+	"version": "0.9.0",
 	"description": "A client that calls VS Code API from a non extension host worker in sync fashion.",
 	"engines": {
 		"node": ">=16.14.2"
@@ -23,8 +23,8 @@
 	},
 	"homepage": "https://github.com/microsoft/vscode-wasm/blob/main/sync-api-client/README.md",
 	"dependencies": {
-		"vscode-uri": "^3.0.6",
-		"@vscode/sync-api-common": "0.8.1"
+		"vscode-uri": "^3.0.7",
+		"@vscode/sync-api-common": "0.9.0"
 	},
 	"devDependencies": {
 	},
@@ -37,6 +37,6 @@
 		"clean": "node ../node_modules/rimraf/bin.js lib && node ../node_modules/rimraf/bin.js dist",
 		"lint": "node ../node_modules/eslint/bin/eslint.js --ext ts src",
 		"all": "npm run clean && npm run compile && npm run lint",
-		"all:publish": "git clean -xfd . && npm install && npm run compile:publish && npm run lint && cd ../sync-api-tests && npm run all:publish && cd .."
+		"all:publish": "git clean -xfd . && npm install && npm run compile:publish && npm run lint"
 	}
 }
