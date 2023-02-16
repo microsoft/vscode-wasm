@@ -16,8 +16,10 @@ int main()
 {
 	pthread_t thread_id;
 	printf("Before Thread\n");
-	pthread_create(&thread_id, NULL, myThreadFun, NULL);
-	pthread_join(thread_id, NULL);
+	int result = pthread_create(&thread_id, NULL, myThreadFun, NULL);
+	printf("Thread created with result: %i\n", result);
+	result = pthread_join(thread_id, NULL);
+	printf("Thread joined with result: %i\n", result);
 	printf("After Thread\n");
 	exit(0);
 }

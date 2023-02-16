@@ -1,6 +1,5 @@
 {
 	"name": "testbed-threads",
-	"private": "true",
 	"publisher": "ms-vscode",
 	"version": "0.0.1",
 	"description": "Thread Example",
@@ -11,6 +10,7 @@
 	},
 	"main": "./out/extension.js",
 	"activationEvents": [
+		"*"
 	],
 	"contributes": {
 		"commands": [
@@ -25,9 +25,9 @@
 		"clean": "node ../../node_modules/rimraf/bin.js out",
 		"compile:ts": "node ../../node_modules/typescript/lib/tsc.js -b tsconfig.json",
 		"watch:ts": "node ../../node_modules/typescript/lib/tsc.js -b tsconfig.json -w",
-		"build": "npm run compile:ts && npm run build:cpp && npm run build:wasi",
+		"build": "npm run compile:ts && npm run build:c && npm run build:wasi",
 		"build:c": "../../node_modules/.bin/make-dir ./out && g++ main.c -l pthread -o ./out/main",
-		"build:wasi": "../../node_modules/.bin/make-dir ./out && ~/bin/wasi-sdk/bin/clang main.c -pthread -o ./out/main.wasm",
+		"build:wasi": "../../node_modules/.bin/make-dir ./out && ~/bin/wasi-sdk-20.0+threads/bin/clang -matomics -mbulk-memory -pthread main.c -o ./out/main.wasm -L /home/dirkb/bin/wasi-sdk-20.0+threads/share/wasi-sysroot/lib/wasm32-wasi-threads",
 		"build:em": "../../node_modules/.bin/make-dir ./out && em++ main.c -pthread -o ./out/main-em.js"
 	}
 }

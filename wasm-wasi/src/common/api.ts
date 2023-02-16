@@ -16,6 +16,7 @@ export {
 export * from '@vscode/sync-api-client';
 export * from './wasiTypes';
 export * from './deviceDriver';
+export * from './debug';
 
 type ExportRights  = { base: rights; inheriting: rights };
 export namespace VSCodeFS {

@@ -23,6 +23,16 @@
 		{
 			"type": "extensionHost",
 			"request": "launch",
+			"name": "Thread Testbed",
+			"runtimeExecutable": "${execPath}",
+			"args": ["--extensionDevelopmentPath=${workspaceRoot}/testbeds/threads"],
+			"outFiles": ["${workspaceRoot}/testbeds/threads/out/**/*.js"],
+			"sourceMaps": true,
+			"preLaunchTask": "Build Thread Example"
+		},
+		{
+			"type": "extensionHost",
+			"request": "launch",
 			"name": "PHP Testbed",
 			"runtimeExecutable": "${execPath}",
 			"args": ["--extensionDevelopmentPath=${workspaceRoot}/testbeds/php"],
