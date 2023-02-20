@@ -3,18 +3,16 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import * as path from 'path';
-import { Worker } from 'worker_threads';
+import { commands, ExtensionContext, Uri, window } from 'vscode';
 
-import { commands, ExtensionContext, window } from 'vscode';
-
-import { ServiceConnection } from '@vscode/sync-api-common/node';
+import { ServiceConnection } from '@vscode/sync-api-common/browser';
 import { ApiService, ApiServiceConnection, Requests, ServicePseudoTerminal } from '@vscode/sync-api-service';
 
-export async function activate(_context: ExtensionContext) {
+export async function activate(context: ExtensionContext) {
 
 	commands.registerCommand('testbed-threads.run', () => {
-		const worker = new Worker(path.join(__dirname, './worker.js'));
+		const filename = Uri.joinPath(context.extensionUri, './dist/web/worker.js').toString();
+		const worker = new Worker(filename);
 		const connection = new ServiceConnection<Requests, ApiServiceConnection.ReadyParams>(worker);
 		const apiService = new ApiService('cpp', connection, {
 			exitHandler: (_rval) => {

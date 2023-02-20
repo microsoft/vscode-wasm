@@ -2,19 +2,14 @@
  *  Copyright (c) Microsoft Corporation. All rights reserved.
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
-import * as fs from 'fs';
-import * as path from 'path';
-import { parentPort  } from 'worker_threads';
+ import path from 'path-browserify';
 
-import { ClientConnection } from '@vscode/sync-api-common/node';
+import { ClientConnection } from '@vscode/sync-api-common/browser';
 import { ApiClient, ApiClientConnection, Requests } from '@vscode/sync-api-client';
-import { WASI, DeviceDescription, DebugWrapper } from '@vscode/wasm-wasi/node';
+import { WASI, DeviceDescription, DebugWrapper } from '@vscode/wasm-wasi/browser';
+import { binary } from './wasm'
 
-if (parentPort === null) {
-	process.exit();
-}
-
-const apiClient = new ApiClient(new ClientConnection<Requests, ApiClientConnection.ReadyParams>(parentPort));
+const apiClient = new ApiClient(new ClientConnection<Requests, ApiClientConnection.ReadyParams>(self));
 apiClient.serviceReady().then(async (params) => {
 	const exitHandler = (rval: number): void => {
 		apiClient.process.procExit(rval);
@@ -29,8 +24,6 @@ apiClient.serviceReady().then(async (params) => {
 		}
 	}
 	const wasi = DebugWrapper.create(WASI.create('hello', apiClient, exitHandler, devices, params.stdio));
-	const wasmFile = path.join(__dirname, '..', 'out', 'main.wasm');
-	const binary = fs.readFileSync(wasmFile);
 	const { instance } = await WebAssembly.instantiate(binary, {
 		wasi_snapshot_preview1: wasi,
 		wasi: wasi

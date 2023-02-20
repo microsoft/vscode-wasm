@@ -8,7 +8,7 @@
 	"engines": {
 		"vscode": "^1.67.0"
 	},
-	"main": "./out/extension.js",
+	"browser": "./dist/web/extension.js",
 	"activationEvents": [
 		"*"
 	],
@@ -27,7 +27,7 @@
 		"watch:ts": "node ../../node_modules/typescript/lib/tsc.js -b tsconfig.json -w",
 		"build": "npm run compile:ts && npm run build:c && npm run build:wasi",
 		"build:c": "../../node_modules/.bin/make-dir ./out && g++ main.c -l pthread -o ./out/main",
-		"build:wasi": "../../node_modules/.bin/make-dir ./out && ~/bin/wasi-sdk-20.0+threads/bin/clang -matomics -mbulk-memory -pthread main.c -o ./out/main.wasm -L /home/dirkb/bin/wasi-sdk-20.0+threads/share/wasi-sysroot/lib/wasm32-wasi-threads",
+		"build:wasi": "../../node_modules/.bin/make-dir ./out && ~/bin/wasi-sdk-20.0+threads/bin/clang -Wl,--initial-memory=10485760 -matomics -mbulk-memory -pthread main.c -o ./out/main.wasm -L /home/dirkb/bin/wasi-sdk-20.0+threads/share/wasi-sysroot/lib/wasm32-wasi-threads",
 		"build:em": "../../node_modules/.bin/make-dir ./out && em++ main.c -pthread -o ./out/main-em.js"
 	}
 }
