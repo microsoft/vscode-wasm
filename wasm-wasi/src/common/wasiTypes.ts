@@ -1232,7 +1232,7 @@ export namespace Ciovec {
 	}
 }
 
-export type ciovec_array = iovec[];
+export type ciovec_array = ciovec[];
 
 export type dirnamlen = u32;
 export type dirent = {
