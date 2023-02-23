@@ -24,6 +24,8 @@ apiClient.serviceReady().then(async (params) => {
 		}
 	}
 	const wasi = DebugWrapper.create(WASI.create('hello', apiClient, exitHandler, devices, params.stdio));
+	const module = new WebAssembly.Module(binary);
+	console.log(module)
 	const { instance } = await WebAssembly.instantiate(binary, {
 		wasi_snapshot_preview1: wasi,
 		wasi: wasi

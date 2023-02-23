@@ -248,6 +248,32 @@ const wasm_wasi_tests = {
 };
 
 /** @type ProjectDescription */
+const wasm_wasi_kernel = {
+	name: 'wasm-wasi-kernel',
+	path: './wasm-wasi-kernel',
+	out: {
+		dir: './lib',
+		buildInfoFile: '${buildInfoFile}.tsbuildInfo'
+	},
+	sourceFolders: [
+		{
+			path: './src/common',
+			extends: [ common ]
+		},
+		{
+			path: './src/browser',
+			extends: [ browser ],
+			references: [ '../common' ]
+		},
+		{
+			path: './src/node',
+			extends: [ node ],
+			references: [ '../common' ]
+		}
+	]
+};
+
+/** @type ProjectDescription */
 const tools = {
 	name: 'tools',
 	path: './tools',
@@ -312,7 +338,7 @@ const testbeds = {
 const root = {
 	name: 'root',
 	path: './',
-	references: [ sync_api_common, sync_api_client, sync_api_service, sync_api_tests, wasm_wasi, wasm_wasi_tests, tools ]
+	references: [ sync_api_common, sync_api_client, sync_api_service, sync_api_tests, wasm_wasi, wasm_wasi_tests, wasm_wasi_kernel, tools ]
 };
 
 /** @type CompilerOptions */
@@ -383,6 +409,8 @@ const projects = [
 	[ createPublishProjectDescription(sync_api_tests), [ publishProjectOptions ] ],
 	[ wasm_wasi, [ compileProjectOptions, watchProjectOptions ] ],
 	[ createPublishProjectDescription(wasm_wasi), [ publishProjectOptions ] ],
+	[ wasm_wasi_kernel, [ compileProjectOptions, watchProjectOptions ] ],
+	[ createPublishProjectDescription(wasm_wasi_kernel), [ publishProjectOptions ] ],
 	[ wasm_wasi_tests, [ compileProjectOptions, watchProjectOptions ] ],
 	[ createPublishProjectDescription(wasm_wasi_tests), [ publishProjectOptions ] ],
 	[ tools, [ compileProjectOptions, watchProjectOptions ] ],

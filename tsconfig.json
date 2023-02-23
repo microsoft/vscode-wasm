@@ -24,6 +24,9 @@
             "path": "./wasm-wasi-tests/tsconfig.json"
         },
         {
+            "path": "./wasm-wasi-kernel/tsconfig.json"
+        },
+        {
             "path": "./tools/tsconfig.json"
         }
     ]

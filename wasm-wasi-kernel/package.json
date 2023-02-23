@@ -1,0 +1,43 @@
+{
+	"name": "@vscode/wasm-wasi-kernel",
+	"version": "0.9.0",
+	"description": "A WASI kernel and host implementation that uses VS Code's extension host as the implementing API",
+	"engines": {
+		"vscode": "^1.71.0"
+	},
+	"main": "./lib/node/main.js",
+	"browser": {
+		"./lib/node/main.js": "./lib/browser/main.js"
+	},
+	"typings": "./lib/common/api.d.ts",
+	"repository": {
+		"type": "git",
+		"url": "git+https://github.com/microsoft/vscode-wasm.git"
+	},
+	"keywords": [
+		"vscode",
+		"wasm",
+		"wasi"
+	],
+	"author": "MS",
+	"license": "MIT",
+	"bugs": {
+		"url": "https://github.com/microsoft/vscode-wasm/issues"
+	},
+	"homepage": "https://github.com/microsoft/vscode-wasm#readme",
+	"dependencies": {
+		"vscode-uri": "^3.0.7"
+	},
+	"devDependencies": {},
+	"scripts": {
+		"prepublishOnly": "echo \"⛔ Can only publish from a secure pipeline ⛔\" && node ../build/npm/fail",
+		"prepack": "npm run all:publish",
+		"compile": "node ../node_modules/typescript/lib/tsc.js -b ./tsconfig.json",
+		"compile:publish": "node ../node_modules/typescript/lib/tsc.js -b ./tsconfig.publish.json",
+		"watch": "node ../node_modules/typescript/lib/tsc.js -b ./tsconfig.watch.json -w",
+		"clean": "node ../node_modules/rimraf/bin.js lib && node ../node_modules/rimraf/bin.js dist",
+		"lint": "node ../node_modules/eslint/bin/eslint.js --ext ts src",
+		"all": "npm run clean && npm run compile && npm run lint",
+		"all:publish": "git clean -xfd . && npm install && npm run compile:publish"
+	}
+}
