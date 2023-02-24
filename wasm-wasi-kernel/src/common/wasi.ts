@@ -9,6 +9,7 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { ptr, size, u16, u32, u64, s64, u8, cstring } from './baseTypes';
+import { FunctionSignature, Param, ParamType, PtrParamU32, PtrParamU64, PtrParamUnknown, Signatures, U32Param, U64Param } from './wasiMeta';
 
 export type fd = u32;
 
@@ -744,6 +745,7 @@ export namespace Oflags {
 }
 
 export type clockid = u32;
+const ClockidParam = U32Param;
 export namespace Clockid {
 	/**
 	 * The clock measuring real time. Time value zero corresponds with
@@ -865,10 +867,12 @@ export namespace Advice {
 }
 
 export type filesize = u64;
+const FilesizeParam = U64Param;
 export type device = u64;
 export type inode = u64;
 export type linkcount = u64;
 export type timestamp = u64;
+const TimestampParam = U64Param;
 
 export type filestat = {
 
@@ -1637,173 +1641,6 @@ export namespace Sdflags {
 	export const wr = 1 << 1;
 }
 
-// The size of the lock indicator.
-const lock_size = 4;
-const lock_index = 0;
-// Method to call.
-const method_size = 4;
-const method_index = 4;
-// Errno
-const errno_size = 2;
-const errno_index = 8;
-// params
-const params_index = 12;
-const header_size = params_index;
-// Sizes in bytes. Negative values indicate that the value is signed.
-const ptr_size = 4;
-const u8_size = 1;
-const u16_size = 2;
-const u32_size = 4;
-const u64_size = 8;
-const s64_size = 8;
-
-enum ParamType {
-	ptr = 1,
-	u8 = 2
-}
-
-// type Param = {
-// 	kind: ParamType;
-// 	size: 1 | 2 | 4 | 8;
-// 	setter: ((view: DataView, offset: number, value: number) => void) | ((view: DataView, offset: number, value: bigint) => void);
-// 	getter: ((view: DataView, offset: number) => number) | ((view: DataView, offset: number) => bigint);
-// };
-
-type PtrParam = {
-	kind: ParamType.ptr;
-	size: number;
-	setter: (view: DataView, offset: number, value: number) => void;
-	getter: (view: DataView, offset: number) => number;
-};
-
-type U8Param = {
-	kind: ParamType.u8;
-	setter: (view: DataView, offset: number, value: number) => void;
-	getter: (view: DataView, offset: number) => number;
-};
-
-type Param = PtrParam | U8Param;
-
-namespace Param {
-	export function getSize(kind: ParamType): number {
-		switch (kind) {
-			case ParamType.ptr:
-				return ptr_size;
-			case ParamType.u8:
-				return u8_size;
-			default:
-				throw new WasiError(Errno.inval);
-		}
-	}
-}
-
-type FunctionSignature = {
-	readonly params: Param[];
-	readonly paramSize: number;
-	readonly resultSize: number;
-};
-
-namespace FunctionSignature {
-	export function setUint8(view: DataView, offset: number, value: number): void {
-		view.setUint8(offset, value);
-	}
-	export function getUint8(view: DataView, offset: number): number {
-		return view.getUint8(offset);
-	}
-
-	export function setUint16(view: DataView, offset: number, value: number): void {
-		view.setUint16(offset, value, true);
-	}
-	export function getUint16(view: DataView, offset: number): number {
-		return view.getUint16(offset, true);
-	}
-
-	export function setUint32(view: DataView, offset: number, value: number): void {
-		view.setUint32(offset, value, true);
-	}
-	export function getUint32(view: DataView, offset: number): number {
-		return view.getUint32(offset, true);
-	}
-
-	export function setUint64(view: DataView, offset: number, value: bigint): void {
-		view.setBigUint64(offset, value, true);
-	}
-	export function getUint64(view: DataView, offset: number): bigint {
-		return view.getBigUint64(offset, true);
-	}
-
-	export function setInt64(view: DataView, offset: number, value: bigint): void {
-		view.setBigInt64(offset, value, true);
-	}
-	export function getInt64(view: DataView, offset: number): bigint {
-		return view.getBigInt64(offset, true);
-	}
-
-	export function setPtr(view: DataView, offset: number, value: ptr): void {
-		view.setUint32(offset, value, true);
-	}
-	export function getPtr(view: DataView, offset: number): ptr {
-		return view.getUint32(offset, true);
-	}
-
-	export function getParamSize(params: Param[]): number {
-		if (params.length === 0) {
-			return 0;
-		}
-		let result = Param.getSize(params[0].kind);
-		for (let i = 1; i < params.length; i++) {
-			result+= Param.getSize(params[i].kind);
-		}
-		return result;
-	}
-
-	export function getResultSize(params: Param[]): number {
-		if (params.length === 0) {
-			return 0;
-		}
-		let result = 0;
-		for (let i = 0; i < params.length; i++) {
-			const param = params[i];
-			if (param.kind === ParamType.ptr) {
-				result+= param.size;
-			}
-			result+= Param.getSize(params[i].kind);
-		}
-		return result;
-
-	}
-	export function createCallArray(signature: FunctionSignature, params: (number | bigint)[], wasmMemory: ArrayBuffer): [SharedArrayBuffer, SharedArrayBuffer] {
-		if (params.length !== signature.params.length) {
-			throw new WasiError(Errno.inval);
-		}
-		// The WASM memory is shared so we can share it with the kernel thread.
-		// So no need to copy data into yet another shared array.
-		const paramBuffer = new SharedArrayBuffer(header_size + signature.paramSize);
-		const paramView = new DataView(paramBuffer);
-		if (wasmMemory instanceof SharedArrayBuffer) {
-			let offset = header_size;
-			for (let i = 0; i < params.length; i++) {
-				const param = signature.params[i];
-				param.setter(paramView, offset, params[i] as (number & bigint));
-				offset += Param.getSize(param.kind);
-			}
-			return [paramBuffer, wasmMemory];
-		} else {
-			const resultBuffer = new SharedArrayBuffer(signature.resultSize);
-			let offset = header_size;
-			let result_ptr = 0;
-			for (let i = 0; i < params.length; i++) {
-				setValue(paramView, offset, result_ptr, signature.paramSizes[i]);
-				offset += Math.abs(signature.paramSizes[i]);
-				result_ptr += Math.abs(signature.resultSizes[i]);
-			}
-
-			return [paramBuffer, resultBuffer];
-		}
-	}
-}
-
-
 /**
  * Return command-line argument data sizes.
  *
@@ -1812,12 +1649,12 @@ namespace FunctionSignature {
  */
 export type args_sizes_get = (argvCount_ptr: ptr<u32>, argvBufSize_ptr: ptr<u32>) => errno;
 export namespace args_sizes_get {
-	export const params: Param[] = [
-		{ kind: ParamType.ptr, size: u32_size, setter: FunctionSignature.setUint32, getter: FunctionSignature.getUint32 },
-		{ kind: ParamType.ptr, size: u32_size, setter: FunctionSignature.setUint32, getter: FunctionSignature.getUint32 }
-	];
+	export const name: string = 'args_sizes_get';
+	export const params: Param[] = [PtrParamU32, PtrParamU32];
 	export const paramSize = FunctionSignature.getParamSize(params);
 	export const resultSize = FunctionSignature.getResultSize(params);
+	export type ServiceSignature = (memory: ArrayBuffer, argvCount_ptr: ptr<u32>, argvBufSize_ptr: ptr<u32>) => Promise<errno>;
+	Signatures.add(args_sizes_get);
 }
 
 /**
@@ -1828,6 +1665,14 @@ export namespace args_sizes_get {
  * @params argvBuf_ptr A memory location to store the actual argv value.
  */
 export type args_get = (argv_ptr: ptr<u32[]>, argvBuf_ptr: ptr<cstring>) => errno;
+export namespace args_get {
+	export const name: string = 'args_get';
+	export const params: Param[] = [PtrParamUnknown, PtrParamUnknown];
+	export const paramSize = FunctionSignature.getParamSize(params);
+	export const resultSize = FunctionSignature.getResultSize(params);
+	export type ServiceSignature = (memory: ArrayBuffer, argv_ptr: ptr<u32[]>, argvBuf_ptr: ptr<cstring>) => Promise<errno>;
+	Signatures.add(args_get);
+}
 
 /**
  * Return the resolution of a clock. Implementations are required to provide
@@ -1837,7 +1682,15 @@ export type args_get = (argv_ptr: ptr<u32[]>, argvBuf_ptr: ptr<cstring>) => errn
  * @param id The clock for which to return the resolution.
  * @param timestamp_ptr A memory location to store the actual result.
  */
-export type clock_res_get = (id: clockid, timestamp_ptr: ptr) => errno;
+export type clock_res_get = (id: clockid, timestamp_ptr: ptr<u64>) => errno;
+export namespace clock_res_get {
+	export const name: string = 'clock_res_get';
+	export const params: Param[] = [ClockidParam, PtrParamU64];
+	export const paramSize = FunctionSignature.getParamSize(params);
+	export const resultSize = FunctionSignature.getResultSize(params);
+	export type ServiceSignature = (memory: ArrayBuffer, id: clockid, timestamp_ptr: ptr<u64>) => Promise<errno>;
+	Signatures.add(clock_res_get);
+}
 
 /**
  * Return the time value of a clock. Note: This is similar to clock_gettime
@@ -1849,6 +1702,14 @@ export type clock_res_get = (id: clockid, timestamp_ptr: ptr) => errno;
  * @param timestamp_ptr: The time value of the clock.
  */
 export type clock_time_get = (id: clockid, precision: timestamp, timestamp_ptr: ptr<u64>) => errno;
+export namespace clock_time_get {
+	export const name: string = 'clock_time_get';
+	export const params: Param[] = [ClockidParam, TimestampParam, PtrParamU64];
+	export const paramSize = FunctionSignature.getParamSize(params);
+	export const resultSize = FunctionSignature.getResultSize(params);
+	export type ServiceSignature = (memory: ArrayBuffer, id: clockid, precision: timestamp, timestamp_ptr: ptr<u64>) => Promise<errno>;
+	Signatures.add(clock_time_get);
+}
 
 /**
  * Return environment variable data sizes.
@@ -2305,3 +2166,63 @@ export type sock_shutdown = (fd: fd, sdflags: sdflags) => errno;
  * @param start_args_ptr A memory location that holds the start arguments.
  */
 export type thread_spawn = (start_args_ptr: ptr<u32>) => errno;
+
+
+export interface WASI {
+
+	args_sizes_get: args_sizes_get;
+	args_get: args_get;
+
+	environ_sizes_get: environ_sizes_get;
+	environ_get: environ_get;
+
+	clock_res_get: clock_res_get;
+	clock_time_get: clock_time_get;
+
+	fd_advise: fd_advise;
+	fd_allocate: fd_allocate;
+	fd_close: fd_close;
+	fd_datasync: fd_datasync;
+	fd_fdstat_get: fd_fdstat_get;
+	fd_fdstat_set_flags: fd_fdstat_set_flags;
+	fd_filestat_get: fd_filestat_get;
+	fd_filestat_set_size:fd_filestat_set_size;
+	fd_filestat_set_times: fd_filestat_set_times;
+	fd_pread: fd_pread;
+	fd_prestat_get: fd_prestat_get;
+	fd_prestat_dir_name: fd_prestat_dir_name;
+	fd_pwrite: fd_pwrite;
+	fd_read: fd_read;
+	fd_readdir: fd_readdir;
+	fd_seek: fd_seek;
+	fd_renumber: fd_renumber;
+	fd_sync: fd_sync;
+	fd_tell: fd_tell;
+	fd_write: fd_write;
+
+	path_create_directory: path_create_directory;
+	path_filestat_get: path_filestat_get;
+	path_filestat_set_times: path_filestat_set_times;
+	path_link: path_link;
+	path_open: path_open;
+	path_readlink: path_readlink;
+	path_remove_directory: path_remove_directory;
+	path_rename: path_rename;
+	path_symlink: path_symlink;
+	path_unlink_file: path_unlink_file;
+
+	poll_oneoff: poll_oneoff;
+
+	proc_exit: proc_exit;
+
+	sched_yield: sched_yield;
+
+	random_get: random_get;
+
+	sock_accept: sock_accept;
+	sock_recv: sock_recv;
+	sock_send: sock_send;
+	sock_shutdown: sock_shutdown;
+
+	'thread-spawn': thread_spawn;
+}
