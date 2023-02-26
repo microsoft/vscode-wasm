@@ -3,9 +3,6 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { Errno, errno, Signatures, WasiError } from './wasi';
-import { FunctionSignature, Param, ParamType } from './wasiMeta';
-
 export namespace Offsets {
 	export const lock_size = 4;
 	export const lock_index = 0;
@@ -19,6 +16,3 @@ export namespace Offsets {
 	export const params_index = errno_index + errno_size + 2; // 4 bytes alignment
 	export const header_size = params_index;
 }
-// The size of the lock indicator.
-
-

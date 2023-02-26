@@ -9,9 +9,10 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { ptr, size, u16, u32, u64, s64, u8, cstring } from './baseTypes';
-import { FunctionSignature, Param, ParamType, PtrParamU32, PtrParamU64, PtrParamUnknown, Signatures, U32Param, U64Param } from './wasiMeta';
+import { FunctionSignature, Param, PtrParam, PtrParamU32, PtrParamU64, PtrParamUnknown, Signatures, U32Param, U64Param, U8Param } from './wasiMeta';
 
 export type fd = u32;
+export const FdParam = U32Param;
 
 export type exitcode = u32;
 
@@ -827,6 +828,8 @@ export namespace Filetype {
 }
 
 export type advise = u8;
+export const AdviseParam = U8Param;
+
 /**
  * File or memory access pattern advisory information.
  */
@@ -1669,8 +1672,15 @@ export namespace args_get {
 	export const name: string = 'args_get';
 	export const params: Param[] = [PtrParamUnknown, PtrParamUnknown];
 	export const paramSize = FunctionSignature.getParamSize(params);
-	export const resultSize = FunctionSignature.getResultSize(params);
 	export type ServiceSignature = (memory: ArrayBuffer, argv_ptr: ptr<u32[]>, argvBuf_ptr: ptr<cstring>) => Promise<errno>;
+	export function sizedSignature(argv_size: u32, argvBuf_size: u32): Required<FunctionSignature> {
+		return {
+			name: 'args_get',
+			params: [ PtrParam.create(argv_size), PtrParam.create(argvBuf_size) ],
+			paramSize: FunctionSignature.getParamSize(params),
+			resultSize: FunctionSignature.getResultSize(params)
+		};
+	}
 	Signatures.add(args_get);
 }
 
@@ -1718,6 +1728,14 @@ export namespace clock_time_get {
  * @param environBufSize_ptr  A memory location to store the needed buffer size.
  */
 export type environ_sizes_get = (environCount_ptr: ptr<u32>, environBufSize_ptr: ptr<u32>) => errno;
+export namespace environ_sizes_get {
+	export const name: string = 'environ_sizes_get';
+	export const params: Param[] = [PtrParamU32, PtrParamU32];
+	export const paramSize = FunctionSignature.getParamSize(params);
+	export const resultSize = FunctionSignature.getResultSize(params);
+	export type ServiceSignature = (memory: ArrayBuffer, environCount_ptr: ptr<u32>, environBufSize_ptr: ptr<u32>) => Promise<errno>;
+	Signatures.add(environ_sizes_get);
+}
 
 /**
  * Read environment variable data. The sizes of the buffers should match
@@ -1728,6 +1746,21 @@ export type environ_sizes_get = (environCount_ptr: ptr<u32>, environBufSize_ptr:
  * @params environBuf_ptr A memory location to store the actual env value.
  */
 export type environ_get = (environ_ptr: ptr<u32[]>, environBuf_ptr: ptr<cstring[]>) => errno;
+export namespace environ_get {
+	export const name: string = 'environ_get';
+	export const params: Param[] = [PtrParamUnknown, PtrParamUnknown];
+	export const paramSize = FunctionSignature.getParamSize(params);
+	export type ServiceSignature = (memory: ArrayBuffer, environ_ptr: ptr<u32[]>, environBuf_ptr: ptr<cstring[]>) => Promise<errno>;
+	export function sizedSignature(environ_size: u32, environBuf_size: u32): Required<FunctionSignature> {
+		return {
+			name: 'environ_get',
+			params: [ PtrParam.create(environ_size), PtrParam.create(environBuf_size) ],
+			paramSize: FunctionSignature.getParamSize(params),
+			resultSize: FunctionSignature.getResultSize(params)
+		};
+	}
+	Signatures.add(environ_get);
+}
 
 /**
  * Provide file advisory information on a file descriptor. Note: This is
@@ -1739,6 +1772,14 @@ export type environ_get = (environ_ptr: ptr<u32[]>, environBuf_ptr: ptr<cstring[
  * @param advise The advice.
  */
 export type fd_advise = (fd: fd, offset: filesize, length: filesize, advise: advise) => errno;
+export namespace fd_advise {
+	export const name: string = 'fd_advise';
+	export const params: Param[] = [FdParam, FilesizeParam, FilesizeParam, AdviseParam];
+	export const paramSize = FunctionSignature.getParamSize(params);
+	export const resultSize = FunctionSignature.getResultSize(params);
+	export type ServiceSignature = (memory: ArrayBuffer, fd: fd, offset: filesize, length: filesize, advise: advise) => Promise<errno>;
+	Signatures.add(fd_advise);
+}
 
 /**
  * Force the allocation of space in a file. Note: This is similar to
@@ -1749,6 +1790,14 @@ export type fd_advise = (fd: fd, offset: filesize, length: filesize, advise: adv
  * @param len The length of the area that is allocated.
  */
 export type fd_allocate = (fd: fd, offset: filesize, len: filesize) => errno;
+export namespace fd_allocate {
+	export const name: string = 'fd_allocate';
+	export const params: Param[] = [FdParam, FilesizeParam, FilesizeParam];
+	export const paramSize = FunctionSignature.getParamSize(params);
+	export const resultSize = FunctionSignature.getResultSize(params);
+	export type ServiceSignature = (memory: ArrayBuffer, fd: fd, offset: filesize, len: filesize) => Promise<errno>;
+	Signatures.add(fd_allocate);
+}
 
 /**
  * Close a file descriptor. Note: This is similar to close in POSIX.
@@ -1756,6 +1805,14 @@ export type fd_allocate = (fd: fd, offset: filesize, len: filesize) => errno;
  * @param fd The file descriptor.
  */
 export type fd_close = (fd: fd) => errno;
+export namespace fd_close {
+	export const name: string = 'fd_close';
+	export const params: Param[] = [FdParam];
+	export const paramSize = FunctionSignature.getParamSize(params);
+	export const resultSize = FunctionSignature.getResultSize(params);
+	export type ServiceSignature = (memory: ArrayBuffer, fd: fd) => Promise<errno>;
+	Signatures.add(fd_close);
+}
 
 /**
  * Synchronize the data of a file to disk. Note: This is similar to

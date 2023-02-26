@@ -3,7 +3,7 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { args_get, args_sizes_get, clock_res_get, clock_time_get, errno, Errno, WasiError } from './wasi';
+import { args_get, args_sizes_get, clock_res_get, clock_time_get, environ_get, environ_sizes_get, errno, Errno, fd_advise, fd_allocate, fd_close, WasiError } from './wasi';
 import { Offsets } from './connection';
 import { FunctionSignature, Signatures } from './wasiMeta';
 
@@ -12,6 +12,11 @@ export interface WasiService {
 	args_get: args_get.ServiceSignature;
 	clock_res_get: clock_res_get.ServiceSignature;
 	clock_time_get: clock_time_get.ServiceSignature;
+	environ_sizes_get: environ_sizes_get.ServiceSignature;
+	environ_get: environ_get.ServiceSignature;
+	fd_advise: fd_advise.ServiceSignature;
+	fd_allocate: fd_allocate.ServiceSignature;
+	fd_close: fd_close.ServiceSignature;
 	[name: string]: (memory: ArrayBuffer, ...args: (number & bigint)[]) => Promise<errno>;
 }
 

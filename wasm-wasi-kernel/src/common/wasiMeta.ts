@@ -9,6 +9,7 @@ export enum ParamType {
 	bigint = 3,
 }
 
+export const ptr_size = 4 as const;
 export type PtrParam = {
 	kind: ParamType.ptr;
 	size: 4;
@@ -16,6 +17,15 @@ export type PtrParam = {
 	setter: (view: DataView, offset: number, value: number) => void;
 	getter: (view: DataView, offset: number) => number;
 };
+
+export namespace PtrParam {
+	function setter(view: DataView, offset: number, value: number) { view.setUint32(offset, value, true); }
+	function getter(view: DataView, offset: number): number { return view.getUint32(offset, true); }
+	export function create(dataSize: number): PtrParam {
+		return { kind: ParamType.ptr, size: ptr_size, dataSize, setter, getter };
+	}
+	export const Unknown: PtrParam = { kind: ParamType.ptr, size: ptr_size, dataSize: -1, setter, getter };
+}
 
 export type NumberParam = {
 	kind: ParamType.number;
@@ -32,15 +42,20 @@ export type BigintParam = {
 };
 export type Param = PtrParam | NumberParam | BigintParam;
 
-export const U8Param: NumberParam = { kind: ParamType.number, size: 1, setter: (view, offset, value) => view.setUint8(offset, value), getter: (view, offset) => view.getUint8(offset) };
-export const U16Param: NumberParam = { kind: ParamType.number, size: 2, setter: (view, offset, value) => view.setUint16(offset, value, true), getter: (view, offset) => view.getUint16(offset, true) };
-export const U32Param: NumberParam = { kind: ParamType.number, size: 4, setter: (view, offset, value) => view.setUint32(offset, value, true), getter: (view, offset) => view.getUint32(offset, true) };
-export const U64Param: BigintParam = { kind: ParamType.bigint, size: 8, setter: (view, offset, value) => view.setBigUint64(offset, value, true), getter: (view, offset) => view.getBigUint64(offset, true) };
-export const S64Param: BigintParam = { kind: ParamType.bigint, size: 8, setter: (view, offset, value) => view.setBigInt64(offset, value, true), getter: (view, offset) => view.getBigInt64(offset, true) };
+export const u8_size = 1 as const;
+export const U8Param: NumberParam = { kind: ParamType.number, size: u8_size, setter: (view, offset, value) => view.setUint8(offset, value), getter: (view, offset) => view.getUint8(offset) };
+export const u16_size = 2 as const;
+export const U16Param: NumberParam = { kind: ParamType.number, size: u16_size, setter: (view, offset, value) => view.setUint16(offset, value, true), getter: (view, offset) => view.getUint16(offset, true) };
+export const u32_size = 4 as const;
+export const U32Param: NumberParam = { kind: ParamType.number, size: u32_size, setter: (view, offset, value) => view.setUint32(offset, value, true), getter: (view, offset) => view.getUint32(offset, true) };
+export const u64_size = 8 as const;
+export const U64Param: BigintParam = { kind: ParamType.bigint, size: u64_size, setter: (view, offset, value) => view.setBigUint64(offset, value, true), getter: (view, offset) => view.getBigUint64(offset, true) };
+export const s64_size = 8 as const;
+export const S64Param: BigintParam = { kind: ParamType.bigint, size: s64_size, setter: (view, offset, value) => view.setBigInt64(offset, value, true), getter: (view, offset) => view.getBigInt64(offset, true) };
 
-export const PtrParamUnknown: PtrParam = { kind: ParamType.ptr, size: 4, dataSize: -1, setter: (view, offset, value) => view.setUint32(offset, value, true), getter: (view, offset) => view.getUint32(offset, true) };
-export const PtrParamU32: PtrParam = { kind: ParamType.ptr, size: 4, dataSize: 4, setter: (view, offset, value) => view.setUint32(offset, value, true), getter: (view, offset) => view.getUint32(offset, true) };
-export const PtrParamU64: PtrParam = { kind: ParamType.ptr, size: 4, dataSize: 8, setter: (view, offset, value) => view.setUint32(offset, value, true), getter: (view, offset) => view.getUint32(offset, true) };
+export const PtrParamUnknown: PtrParam = PtrParam.Unknown;
+export const PtrParamU32: PtrParam = PtrParam.create(u32_size);
+export const PtrParamU64: PtrParam = PtrParam.create(u64_size);
 
 export type FunctionSignature = {
 	readonly name: string;
@@ -50,6 +65,12 @@ export type FunctionSignature = {
 };
 
 export namespace FunctionSignature {
+
+	export function assertResultSize(signature: FunctionSignature): asserts signature is Required<FunctionSignature> {
+		if (signature.resultSize === undefined) {
+			throw new Error(`Function signature ${signature.name} has no result size`);
+		}
+	}
 
 	export function getParamSize(params: Param[]): number {
 		if (params.length === 0) {
@@ -62,7 +83,7 @@ export namespace FunctionSignature {
 		return result;
 	}
 
-	export function getResultSize(params: Param[]): number | undefined {
+	export function getResultSize(params: Param[]): number {
 		if (params.length === 0) {
 			return 0;
 		}
@@ -71,7 +92,7 @@ export namespace FunctionSignature {
 			const param = params[i];
 			if (param.kind === ParamType.ptr) {
 				if (param.dataSize === -1) {
-					return undefined;
+					throw new Error(`Cant't compute result size for ptr referencing a location of unknown size`);
 				}
 				result+= param.dataSize;
 			}

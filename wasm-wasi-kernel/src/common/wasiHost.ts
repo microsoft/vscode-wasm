@@ -6,12 +6,11 @@
 import { cstring, ptr, size, u32, u64, u8 } from './baseTypes';
 import {
 	fd, errno, Errno, lookupflags, oflags, rights, fdflags, dircookie, filesize, advise, filedelta, whence, clockid, timestamp,
-	fstflags, exitcode, WasiError, event, subscription, riflags, siflags, sdflags, args_sizes_get, dirent, ciovec, iovec, fdstat,
-	filestat, prestat
+	fstflags, exitcode, WasiError, event, subscription, riflags, siflags, sdflags, dirent, ciovec, iovec, fdstat, filestat, prestat,
+	args_sizes_get, args_get, clock_res_get, clock_time_get, environ_sizes_get, environ_get, fd_advise, fd_allocate, fd_close
 } from './wasi';
 import { ParamType, FunctionSignature, Signatures } from './wasiMeta';
 import { Offsets } from './connection';
-
 
 export abstract class HostConnection {
 
@@ -21,18 +20,34 @@ export abstract class HostConnection {
 		this.timeout = timeout;
 	}
 
-	public call(signature: FunctionSignature, args: (number | bigint)[], wasmMemory: ArrayBuffer): errno {
+	public callWithSignature(signature: Required<FunctionSignature>, args: (number | bigint)[], wasmMemory: ArrayBuffer): errno {
 		if (args.length !== signature.params.length) {
 			throw new WasiError(Errno.inval);
 		}
-		const buffers = this.createCallArrays(signature, args, wasmMemory);
-		const paramBuffer = buffers[0];
+		const [paramBuffer, resultBuffer] = this.createCallArrays(signature, args, wasmMemory);
+		const result = this.doCall(paramBuffer, resultBuffer);
+		if (result !== Errno.success || resultBuffer === wasmMemory) {
+			return result;
+		}
 
+		// Copy the results back into the WASM memory.
+		const targetMemory = new Uint8Array(wasmMemory);
+		const sourceMemory = new Uint8Array(resultBuffer);
+		let result_ptr = 0;
+		for (let i = 0; i < args.length; i++) {
+			const param = signature.params[i];
+			if (param.kind === ParamType.ptr) {
+				targetMemory.set(sourceMemory.subarray(result_ptr, result_ptr + param.size), args[i] as number);
+				result_ptr += param.size;
+			}
+		}
+		return result;
+	}
+
+	private doCall(paramBuffer: SharedArrayBuffer, resultBuffer: SharedArrayBuffer): errno {
 		const sync = new Int32Array(paramBuffer, Offsets.lock_index, 1);
-		Atomics.store(sync, 0, 0);
-
-		// Post the buffer to the WASM Kernel worker
-		this.postMessage(buffers);
+		Atomics.store(sync, 0, 1);
+		this.postMessage([paramBuffer, resultBuffer]);
 
 		// Wait for the answer
 		const result = Atomics.wait(sync, 0, 0, this.timeout);
@@ -49,38 +64,20 @@ export abstract class HostConnection {
 				}
 		}
 
-		const errno = new Uint16Array(paramBuffer, Offsets.errno_index, 1)[0];
-		// If the wasmMemory is shared the WASM kernel did write the result
-		// directly into the shared memory. So we are good to go.
-		if (errno !== Errno.success || wasmMemory === buffers[1]) {
-			return errno;
-		}
-
-		// Copy the results back into the WASM memory.
-		const targetMemory = new Uint8Array(wasmMemory);
-		const sourceMemory = new Uint8Array(buffers[1]);
-		let result_ptr = 0;
-		for (let i = 0; i < args.length; i++) {
-			const param = signature.params[i];
-			if (param.kind === ParamType.ptr) {
-				targetMemory.set(sourceMemory.subarray(result_ptr, result_ptr + param.size), args[i] as number);
-				result_ptr += param.size;
-			}
-		}
-		return errno;
+		return new Uint16Array(paramBuffer, Offsets.errno_index, 1)[0];
 	}
 
 	protected abstract postMessage(buffers: [SharedArrayBuffer, SharedArrayBuffer]): any;
 
-	private createCallArrays(signature: FunctionSignature, args: (number | bigint)[], wasmMemory: ArrayBuffer): [SharedArrayBuffer, SharedArrayBuffer] {
+	private createCallArrays(signature: Required<FunctionSignature>, args: (number | bigint)[], wasmMemory: ArrayBuffer): [SharedArrayBuffer, SharedArrayBuffer] {
 		if (args.length !== signature.params.length) {
 			throw new WasiError(Errno.inval);
 		}
-		// The WASM memory is shared so we can share it with the kernel thread.
-		// So no need to copy data into yet another shared array.
 		const paramBuffer = new SharedArrayBuffer(Offsets.header_size + signature.paramSize);
 		const paramView = new DataView(paramBuffer);
 		paramView.setUint32(Offsets.method_index, Signatures.getIndex(signature.name), true);
+		// The WASM memory is shared so we can share it with the kernel thread.
+		// So no need to copy data into yet another shared array.
 		if (wasmMemory instanceof SharedArrayBuffer) {
 			let offset = Offsets.header_size;
 			for (let i = 0; i < args.length; i++) {
@@ -111,25 +108,91 @@ export abstract class HostConnection {
 
 export namespace WasiHost {
 	export function create(connection: HostConnection): WASI {
+		const args_size = { count: 0, bufferSize: 0 };
+		const environ_size = { count: 0, bufferSize: 0 };
 		const wasi: WASI = {
 			args_sizes_get: (argvCount_ptr: ptr<u32>, argvBufSize_ptr: ptr<u32>): errno => {
-				return connection.call(args_sizes_get, [argvCount_ptr, argvBufSize_ptr], memory());
+				try {
+					args_size.count = 0; args_size.bufferSize = 0;
+					const result = connection.callWithSignature(args_sizes_get, [argvCount_ptr, argvBufSize_ptr], memory());
+					if (result === Errno.success) {
+						const view = memoryView();
+						args_size.count = view.getUint32(argvCount_ptr, true);
+						args_size.bufferSize = view.getUint32(argvBufSize_ptr, true);
+					}
+					return result;
+				} catch (error) {
+					return handleError(error, Errno.inval);
+				}
 			},
 			args_get: (argv_ptr: ptr<u32[]>, argvBuf_ptr: ptr<cstring>): errno => {
+				if (args_size.count === 0 || args_size.bufferSize === 0) {
+					return Errno.inval;
+				}
+				try {
+					return connection.callWithSignature(args_get.sizedSignature(args_size.count, args_size.bufferSize), [argv_ptr, argvBuf_ptr], memory());
+				} catch (error) {
+					return handleError(error, Errno.inval);
+				}
 			},
-			clock_res_get: (id: clockid, timestamp_ptr: ptr): errno => {
+			clock_res_get: (id: clockid, timestamp_ptr: ptr<u64>): errno => {
+				try {
+					return connection.callWithSignature(clock_res_get, [id, timestamp_ptr], memory());
+				} catch (error) {
+					return handleError(error, Errno.inval);
+				}
 			},
 			clock_time_get: (id: clockid, precision: timestamp, timestamp_ptr: ptr<u64>): errno => {
+				try {
+					return connection.callWithSignature(clock_time_get, [id, precision, timestamp_ptr], memory());
+				} catch (error) {
+					return handleError(error, Errno.inval);
+				}
 			},
 			environ_sizes_get: (environCount_ptr: ptr<u32>, environBufSize_ptr: ptr<u32>): errno => {
+				try {
+					environ_size.count = 0; environ_size.bufferSize = 0;
+					const result = connection.callWithSignature(environ_sizes_get, [environCount_ptr, environBufSize_ptr], memory());
+					if (result === Errno.success) {
+						const view = memoryView();
+						environ_size.count = view.getUint32(environCount_ptr, true);
+						environ_size.bufferSize = view.getUint32(environBufSize_ptr, true);
+					}
+					return result;
+				} catch (error) {
+					return handleError(error, Errno.inval);
+				}
 			},
 			environ_get: (environ_ptr: ptr<u32>, environBuf_ptr: ptr<cstring>): errno => {
+				if (environ_size.count === 0 || environ_size.bufferSize === 0) {
+					return Errno.inval;
+				}
+				try {
+					return connection.callWithSignature(environ_get.sizedSignature(environ_size.count, environ_size.bufferSize), [environ_ptr, environBuf_ptr], memory());
+				} catch (error) {
+					return handleError(error, Errno.inval);
+				}
 			},
 			fd_advise: (fd: fd, offset: filesize, length: filesize, advise: advise): errno => {
+				try {
+					return connection.callWithSignature(fd_advise, [fd, offset, length, advise], memory());
+				} catch (error) {
+					return handleError(error, Errno.inval);
+				}
 			},
 			fd_allocate: (fd: fd, offset: filesize, len: filesize): errno => {
+				try {
+					return connection.callWithSignature(fd_allocate, [fd, offset, len], memory());
+				} catch (error) {
+					return handleError(error, Errno.inval);
+				}
 			},
 			fd_close: (fd: fd): errno => {
+				try {
+					return connection.callWithSignature(fd_close, [fd], memory());
+				} catch (error) {
+					return handleError(error, Errno.inval);
+				}
 			},
 			fd_datasync: (fd: fd): errno => {
 			},
@@ -210,6 +273,20 @@ export namespace WasiHost {
 			// 	throw new Error(`WASI layer is not initialized. Missing WebAssembly instance.`);
 			// }
 			// return instance.exports.memory.buffer;
+		}
+
+		function memoryView(): DataView {
+			if (instance === undefined) {
+				throw new Error(`WASI layer is not initialized. Missing WebAssembly instance.`);
+			}
+			return new DataView(instance.exports.memory.buffer);
+		}
+
+		function handleError(error: any, def: errno = Errno.badf): errno {
+			if (error instanceof WasiError) {
+				return error.errno;
+			}
+			return def;
 		}
 	}
 }
