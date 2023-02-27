@@ -7,9 +7,9 @@ import { cstring, ptr, size, u32, u64, u8 } from './baseTypes';
 import {
 	fd, errno, Errno, lookupflags, oflags, rights, fdflags, dircookie, filesize, advise, filedelta, whence, clockid, timestamp,
 	fstflags, exitcode, WasiError, event, subscription, riflags, siflags, sdflags, dirent, ciovec, iovec, fdstat, filestat, prestat,
-	args_sizes_get, args_get, clock_res_get, clock_time_get, environ_sizes_get, environ_get, fd_advise, fd_allocate, fd_close
+	args_sizes_get, args_get, clock_res_get, clock_time_get, environ_sizes_get, environ_get, fd_advise, fd_allocate, fd_close, fd_datasync, fd_fdstat_set_flags, fd_fdstat_get, fd_filestat_get, fd_filestat_set_size, fd_filestat_set_times
 } from './wasi';
-import { ParamType, FunctionSignature, Signatures } from './wasiMeta';
+import { ParamKind, FunctionSignature, Signatures } from './wasiMeta';
 import { Offsets } from './connection';
 
 export abstract class HostConnection {
@@ -36,7 +36,7 @@ export abstract class HostConnection {
 		let result_ptr = 0;
 		for (let i = 0; i < args.length; i++) {
 			const param = signature.params[i];
-			if (param.kind === ParamType.ptr) {
+			if (param.kind === ParamKind.ptr) {
 				targetMemory.set(sourceMemory.subarray(result_ptr, result_ptr + param.size), args[i] as number);
 				result_ptr += param.size;
 			}
@@ -92,7 +92,7 @@ export abstract class HostConnection {
 			let result_ptr = 0;
 			for (let i = 0; i < args.length; i++) {
 				const param = signature.params[i];
-				if (param.kind === ParamType.ptr) {
+				if (param.kind === ParamKind.ptr) {
 					param.setter(paramView, offset, result_ptr);
 					result_ptr += param.dataSize;
 				} else {
@@ -195,16 +195,46 @@ export namespace WasiHost {
 				}
 			},
 			fd_datasync: (fd: fd): errno => {
+				try {
+					return connection.callWithSignature(fd_datasync, [fd], memory());
+				} catch(error) {
+					return handleError(error, Errno.inval);
+				}
 			},
 			fd_fdstat_get: (fd: fd, fdstat_ptr: ptr<fdstat>): errno => {
+				try {
+					return connection.callWithSignature(fd_fdstat_get, [fd, fdstat_ptr], memory());
+				} catch (error) {
+					return handleError(error, Errno.inval);
+				}
 			},
 			fd_fdstat_set_flags: (fd: fd, fdflags: fdflags): errno => {
+				try {
+					return connection.callWithSignature(fd_fdstat_set_flags, [fd, fdflags], memory());
+				} catch (error) {
+					return handleError(error, Errno.inval);
+				}
 			},
 			fd_filestat_get: (fd: fd, filestat_ptr: ptr<filestat>): errno => {
+				try {
+					return connection.callWithSignature(fd_filestat_get, [fd, filestat_ptr], memory());
+				} catch(error) {
+					return handleError(error, Errno.inval);
+				}
 			},
 			fd_filestat_set_size: (fd: fd, size: filesize): errno => {
+				try {
+					return connection.callWithSignature(fd_filestat_set_size, [fd, size], memory());
+				} catch (error) {
+					return handleError(error, Errno.inval);
+				}
 			},
 			fd_filestat_set_times: (fd: fd, atim: timestamp, mtim: timestamp, fst_flags: fstflags): errno => {
+				try {
+					return connection.callWithSignature(fd_filestat_set_times, [fd, atim, mtim, fst_flags], memory());
+				} catch (error) {
+					return handleError(error, Errno.inval);
+				}
 			},
 			fd_pread: (fd: fd, iovs_ptr: ptr<iovec>, iovs_len: u32, offset: filesize, bytesRead_ptr: ptr<u32>): errno => {
 			},

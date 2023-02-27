@@ -9,7 +9,7 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { ptr, size, u16, u32, u64, s64, u8, cstring } from './baseTypes';
-import { FunctionSignature, Param, PtrParam, PtrParamU32, PtrParamU64, PtrParamUnknown, Signatures, U32Param, U64Param, U8Param } from './wasiMeta';
+import { FunctionSignature, Param, PtrParam, U32ResultPtrParam, U64ResultPtrParam, UnknownResultPtrParam, Signatures, U32Param, U64Param, U8Param, U16Param } from './wasiMeta';
 
 export type fd = u32;
 export const FdParam = U32Param;
@@ -685,6 +685,7 @@ export namespace Fdflags {
 		return (value & sync) !== 0;
 	}
 }
+const FdflagsParam = U16Param;
 
 export type lookupflags = u32;
 export namespace Lookupflags {
@@ -876,6 +877,7 @@ export type inode = u64;
 export type linkcount = u64;
 export type timestamp = u64;
 const TimestampParam = U64Param;
+const TimestampPtrParam = U64PtrParam;
 
 export type filestat = {
 
@@ -973,6 +975,7 @@ export namespace Filestat {
 		};
 	}
 }
+const FilestatPtrParam = PtrParam.createResult(Filestat.size);
 
 /**
  * Relative offset within a file.
@@ -1062,6 +1065,7 @@ export namespace Fdstat {
 		};
 	}
 }
+const FdstatPtrParam = PtrParam.createResult(Fdstat.size);
 
 export type fstflags = u16;
 export namespace Fstflags {
@@ -1090,6 +1094,7 @@ export namespace Fstflags {
 	 */
 	export const mtim_now = 1 << 3;
 }
+const FstflagsParam = U16Param;
 
 /**
  * The contents of a $prestat when type is `PreOpenType.dir`
@@ -1653,7 +1658,7 @@ export namespace Sdflags {
 export type args_sizes_get = (argvCount_ptr: ptr<u32>, argvBufSize_ptr: ptr<u32>) => errno;
 export namespace args_sizes_get {
 	export const name: string = 'args_sizes_get';
-	export const params: Param[] = [PtrParamU32, PtrParamU32];
+	export const params: Param[] = [U32ResultPtrParam, U32ResultPtrParam];
 	export const paramSize = FunctionSignature.getParamSize(params);
 	export const resultSize = FunctionSignature.getResultSize(params);
 	export type ServiceSignature = (memory: ArrayBuffer, argvCount_ptr: ptr<u32>, argvBufSize_ptr: ptr<u32>) => Promise<errno>;
@@ -1670,13 +1675,13 @@ export namespace args_sizes_get {
 export type args_get = (argv_ptr: ptr<u32[]>, argvBuf_ptr: ptr<cstring>) => errno;
 export namespace args_get {
 	export const name: string = 'args_get';
-	export const params: Param[] = [PtrParamUnknown, PtrParamUnknown];
+	export const params: Param[] = [UnknownResultPtrParam, UnknownResultPtrParam];
 	export const paramSize = FunctionSignature.getParamSize(params);
 	export type ServiceSignature = (memory: ArrayBuffer, argv_ptr: ptr<u32[]>, argvBuf_ptr: ptr<cstring>) => Promise<errno>;
 	export function sizedSignature(argv_size: u32, argvBuf_size: u32): Required<FunctionSignature> {
 		return {
-			name: 'args_get',
-			params: [ PtrParam.create(argv_size), PtrParam.create(argvBuf_size) ],
+			name: name,
+			params: [ PtrParam.createResult(argv_size), PtrParam.createResult(argvBuf_size) ],
 			paramSize: FunctionSignature.getParamSize(params),
 			resultSize: FunctionSignature.getResultSize(params)
 		};
@@ -1695,7 +1700,7 @@ export namespace args_get {
 export type clock_res_get = (id: clockid, timestamp_ptr: ptr<u64>) => errno;
 export namespace clock_res_get {
 	export const name: string = 'clock_res_get';
-	export const params: Param[] = [ClockidParam, PtrParamU64];
+	export const params: Param[] = [ClockidParam, U64ResultPtrParam];
 	export const paramSize = FunctionSignature.getParamSize(params);
 	export const resultSize = FunctionSignature.getResultSize(params);
 	export type ServiceSignature = (memory: ArrayBuffer, id: clockid, timestamp_ptr: ptr<u64>) => Promise<errno>;
@@ -1714,7 +1719,7 @@ export namespace clock_res_get {
 export type clock_time_get = (id: clockid, precision: timestamp, timestamp_ptr: ptr<u64>) => errno;
 export namespace clock_time_get {
 	export const name: string = 'clock_time_get';
-	export const params: Param[] = [ClockidParam, TimestampParam, PtrParamU64];
+	export const params: Param[] = [ClockidParam, TimestampParam, TimestampPtrParam];
 	export const paramSize = FunctionSignature.getParamSize(params);
 	export const resultSize = FunctionSignature.getResultSize(params);
 	export type ServiceSignature = (memory: ArrayBuffer, id: clockid, precision: timestamp, timestamp_ptr: ptr<u64>) => Promise<errno>;
@@ -1730,7 +1735,7 @@ export namespace clock_time_get {
 export type environ_sizes_get = (environCount_ptr: ptr<u32>, environBufSize_ptr: ptr<u32>) => errno;
 export namespace environ_sizes_get {
 	export const name: string = 'environ_sizes_get';
-	export const params: Param[] = [PtrParamU32, PtrParamU32];
+	export const params: Param[] = [U32ResultPtrParam, U32ResultPtrParam];
 	export const paramSize = FunctionSignature.getParamSize(params);
 	export const resultSize = FunctionSignature.getResultSize(params);
 	export type ServiceSignature = (memory: ArrayBuffer, environCount_ptr: ptr<u32>, environBufSize_ptr: ptr<u32>) => Promise<errno>;
@@ -1748,13 +1753,13 @@ export namespace environ_sizes_get {
 export type environ_get = (environ_ptr: ptr<u32[]>, environBuf_ptr: ptr<cstring[]>) => errno;
 export namespace environ_get {
 	export const name: string = 'environ_get';
-	export const params: Param[] = [PtrParamUnknown, PtrParamUnknown];
+	export const params: Param[] = [UnknownResultPtrParam, UnknownResultPtrParam];
 	export const paramSize = FunctionSignature.getParamSize(params);
 	export type ServiceSignature = (memory: ArrayBuffer, environ_ptr: ptr<u32[]>, environBuf_ptr: ptr<cstring[]>) => Promise<errno>;
 	export function sizedSignature(environ_size: u32, environBuf_size: u32): Required<FunctionSignature> {
 		return {
-			name: 'environ_get',
-			params: [ PtrParam.create(environ_size), PtrParam.create(environBuf_size) ],
+			name: name,
+			params: [ PtrParam.createResult(environ_size), PtrParam.createResult(environBuf_size) ],
 			paramSize: FunctionSignature.getParamSize(params),
 			resultSize: FunctionSignature.getResultSize(params)
 		};
@@ -1821,6 +1826,14 @@ export namespace fd_close {
  * @param fd The file descriptor.
  */
 export type fd_datasync = (fd: fd) => errno;
+export namespace fd_datasync {
+	export const name: string = 'fd_datasync';
+	export const params: Param[] = [FdParam];
+	export const paramSize = FunctionSignature.getParamSize(params);
+	export const resultSize = FunctionSignature.getResultSize(params);
+	export type ServiceSignature = (memory: ArrayBuffer, fd: fd) => Promise<errno>;
+	Signatures.add(fd_datasync);
+}
 
 /**
  * Get the attributes of a file descriptor. Note: This returns similar
@@ -1830,6 +1843,15 @@ export type fd_datasync = (fd: fd) => errno;
  * @param fdstat_ptr A pointer to store the result.
  */
 export type fd_fdstat_get = (fd: fd, fdstat_ptr: ptr<fdstat>) => errno;
+export namespace fd_fdstat_get {
+	export const name: string = 'fd_fdstat_get';
+	export const params: Param[] = [FdParam, FdstatPtrParam];
+	export const paramSize = FunctionSignature.getParamSize(params);
+	export const resultSize = FunctionSignature.getResultSize(params);
+	export type ServiceSignature = (memory: ArrayBuffer, fd: fd, fdstat_ptr: ptr<fdstat>) => Promise<errno>;
+	Signatures.add(fd_fdstat_get);
+}
+
 
 /**
  * Adjust the flags associated with a file descriptor. Note: This is similar
@@ -1839,6 +1861,14 @@ export type fd_fdstat_get = (fd: fd, fdstat_ptr: ptr<fdstat>) => errno;
  * @param fdflags The desired values of the file descriptor flags.
  */
 export type fd_fdstat_set_flags = (fd: fd, fdflags: fdflags) => errno;
+export namespace fd_fdstat_set_flags {
+	export const name: string = 'fd_fdstat_set_flags';
+	export const params: Param[] = [FdParam, FdflagsParam];
+	export const paramSize = FunctionSignature.getParamSize(params);
+	export const resultSize = FunctionSignature.getResultSize(params);
+	export type ServiceSignature = (memory: ArrayBuffer, fd: fd, fdflags: fdflags) => Promise<errno>;
+	Signatures.add(fd_fdstat_set_flags);
+}
 
 /**
  * Return the attributes of an open file.
@@ -1847,6 +1877,14 @@ export type fd_fdstat_set_flags = (fd: fd, fdflags: fdflags) => errno;
  * @param filestat_ptr The buffer where the file's attributes are stored.
  */
 export type fd_filestat_get = (fd: fd, filestat_ptr: ptr<filestat>) => errno;
+export namespace fd_filestat_get {
+	export const name: string = 'fd_filestat_get';
+	export const params: Param[] = [FdParam, FilestatPtrParam];
+	export const paramSize = FunctionSignature.getParamSize(params);
+	export const resultSize = FunctionSignature.getResultSize(params);
+	export type ServiceSignature = (memory: ArrayBuffer, fd: fd, filestat_ptr: ptr<filestat>) => Promise<errno>;
+	Signatures.add(fd_filestat_get);
+}
 
 /**
  * Adjust the size of an open file. If this increases the file's size, the
@@ -1857,6 +1895,14 @@ export type fd_filestat_get = (fd: fd, filestat_ptr: ptr<filestat>) => errno;
  * @param size: The desired file size.
  */
 export type fd_filestat_set_size = (fd: fd, size: filesize) => errno;
+export namespace fd_filestat_set_size {
+	export const name: string = 'fd_filestat_set_size';
+	export const params: Param[] = [FdParam, FilesizeParam];
+	export const paramSize = FunctionSignature.getParamSize(params);
+	export const resultSize = FunctionSignature.getResultSize(params);
+	export type ServiceSignature = (memory: ArrayBuffer, fd: fd, size: filesize) => Promise<errno>;
+	Signatures.add(fd_filestat_set_size);
+}
 
 /**
  * Adjust the timestamps of an open file or directory. Note: This is similar
@@ -1868,6 +1914,14 @@ export type fd_filestat_set_size = (fd: fd, size: filesize) => errno;
  * @param fst_flags A bitmask indicating which timestamps to adjust.
  */
 export type fd_filestat_set_times = (fd: fd, atim: timestamp, mtim: timestamp, fst_flags: fstflags) => errno;
+export namespace fd_filestat_set_times {
+	export const name: string = 'fd_filestat_set_times';
+	export const params: Param[] = [FdParam, TimestampParam, TimestampParam, FstflagsParam];
+	export const paramSize = FunctionSignature.getParamSize(params);
+	export const resultSize = FunctionSignature.getResultSize(params);
+	export type ServiceSignature = (memory: ArrayBuffer, fd: fd, atim: timestamp, mtim: timestamp, fst_flags: fstflags) => Promise<errno>;
+	Signatures.add(fd_filestat_set_times);
+}
 
 /**
  * Read from a file descriptor, without using and updating the file
@@ -1879,7 +1933,15 @@ export type fd_filestat_set_times = (fd: fd, atim: timestamp, mtim: timestamp, f
  * @param offset The offset within the file at which to read.
  * @param bytesRead_ptr A memory location to store the bytes read.
  */
-export type fd_pread = (fd: fd, iovs_ptr: ptr<iovec>, iovs_len: u32, offset: filesize, bytesRead_ptr: ptr<u32>) => errno;
+export type fd_pread = (fd: fd, iovs_ptr: ptr<iovec[]>, iovs_len: u32, offset: filesize, bytesRead_ptr: ptr<u32>) => errno;
+export namespace fd_pread {
+	export const name: string = 'fd_pread';
+	export const params: Param[] = [FdParam, IovecPtrParam, U32Param, FilesizeParam, U32PtrParam];
+	export const paramSize = FunctionSignature.getParamSize(params);
+	export const resultSize = FunctionSignature.getResultSize(params);
+	export type ServiceSignature = (memory: ArrayBuffer, fd: fd, iovs_ptr: ptr<iovec[]>, iovs_len: u32, offset: filesize, bytesRead_ptr: ptr<u32>) => Promise<errno>;
+	Signatures.add(fd_pread);
+}
 
 /**
  * Return a description of the given preopened file descriptor.

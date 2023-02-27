@@ -3,59 +3,100 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-export enum ParamType {
+import { ptr } from './baseTypes';
+
+export enum ParamKind {
 	ptr = 1,
 	number = 2,
 	bigint = 3,
 }
 
-export const ptr_size = 4 as const;
-export type PtrParam = {
-	kind: ParamType.ptr;
-	size: 4;
-	dataSize: number;
-	setter: (view: DataView, offset: number, value: number) => void;
-	getter: (view: DataView, offset: number) => number;
-};
-
-export namespace PtrParam {
-	function setter(view: DataView, offset: number, value: number) { view.setUint32(offset, value, true); }
-	function getter(view: DataView, offset: number): number { return view.getUint32(offset, true); }
-	export function create(dataSize: number): PtrParam {
-		return { kind: ParamType.ptr, size: ptr_size, dataSize, setter, getter };
-	}
-	export const Unknown: PtrParam = { kind: ParamType.ptr, size: ptr_size, dataSize: -1, setter, getter };
-}
-
 export type NumberParam = {
-	kind: ParamType.number;
+	kind: ParamKind.number;
 	size: number;
-	setter: (view: DataView, offset: number, value: number) => void;
-	getter: (view: DataView, offset: number) => number;
+	set: (view: DataView, offset: number, value: number) => void;
+	get: (view: DataView, offset: number) => number;
 };
 
 export type BigintParam = {
-	kind: ParamType.bigint;
+	kind: ParamKind.bigint;
 	size: number;
-	setter: (view: DataView, offset: number, value: bigint) => void;
-	getter: (view: DataView, offset: number) => bigint;
+	set: (view: DataView, offset: number, value: bigint) => void;
+	get: (view: DataView, offset: number) => bigint;
 };
+
+export enum DataKind {
+	param = 1,
+	result = 2,
+	both = 3
+}
+
+export const ptr_size = 4 as const;
+export type PtrParam = {
+	kind: ParamKind.ptr;
+	size: 4;
+	set: (view: DataView, offset: number, value: number) => void;
+	get: (view: DataView, offset: number) => number;
+	data: {
+		kind: DataKind;
+		size: number | (() => number);
+		copyTo(wasmMemory: Uint8Array, from: ptr, transferMemory: Uint8Array, to: ptr): { from: ptr; to: ptr; size: number}[];
+
+	};
+};
+
+export namespace PtrParam {
+	function set(view: DataView, offset: number, value: number) { view.setUint32(offset, value, true); }
+	function get(view: DataView, offset: number): number { return view.getUint32(offset, true); }
+	export const UnknownResultPtrParam: PtrParam = { kind: ParamKind.ptr, size: ptr_size, set, get, data: { kind: DataKind.result, size: -1, copyTo: () => { throw new Error('Should never happen'); } } };
+	export function create(data: PtrParam['data']): PtrParam {
+		return { kind: ParamKind.ptr, size: ptr_size, set, get, data: data };
+	}
+	export function createResult(size: number): PtrParam {
+		return {
+			kind: ParamKind.ptr, size: ptr_size, set, get,
+			data: {
+				kind: DataKind.result, size,
+				copyTo: (_wasmMemory, from, _transferMemory, to) => {
+					return [{ from: to, to: from, size: u32_size }];
+				}
+			}
+		};
+	}
+}
+
 export type Param = PtrParam | NumberParam | BigintParam;
 
 export const u8_size = 1 as const;
-export const U8Param: NumberParam = { kind: ParamType.number, size: u8_size, setter: (view, offset, value) => view.setUint8(offset, value), getter: (view, offset) => view.getUint8(offset) };
+export const U8Param: NumberParam = { kind: ParamKind.number, size: u8_size, set: (view, offset, value) => view.setUint8(offset, value), get: (view, offset) => view.getUint8(offset) };
 export const u16_size = 2 as const;
-export const U16Param: NumberParam = { kind: ParamType.number, size: u16_size, setter: (view, offset, value) => view.setUint16(offset, value, true), getter: (view, offset) => view.getUint16(offset, true) };
+export const U16Param: NumberParam = { kind: ParamKind.number, size: u16_size, set: (view, offset, value) => view.setUint16(offset, value, true), get: (view, offset) => view.getUint16(offset, true) };
 export const u32_size = 4 as const;
-export const U32Param: NumberParam = { kind: ParamType.number, size: u32_size, setter: (view, offset, value) => view.setUint32(offset, value, true), getter: (view, offset) => view.getUint32(offset, true) };
+export const U32Param: NumberParam = { kind: ParamKind.number, size: u32_size, set: (view, offset, value) => view.setUint32(offset, value, true), get: (view, offset) => view.getUint32(offset, true) };
 export const u64_size = 8 as const;
-export const U64Param: BigintParam = { kind: ParamType.bigint, size: u64_size, setter: (view, offset, value) => view.setBigUint64(offset, value, true), getter: (view, offset) => view.getBigUint64(offset, true) };
+export const U64Param: BigintParam = { kind: ParamKind.bigint, size: u64_size, set: (view, offset, value) => view.setBigUint64(offset, value, true), get: (view, offset) => view.getBigUint64(offset, true) };
 export const s64_size = 8 as const;
-export const S64Param: BigintParam = { kind: ParamType.bigint, size: s64_size, setter: (view, offset, value) => view.setBigInt64(offset, value, true), getter: (view, offset) => view.getBigInt64(offset, true) };
+export const S64Param: BigintParam = { kind: ParamKind.bigint, size: s64_size, set: (view, offset, value) => view.setBigInt64(offset, value, true), get: (view, offset) => view.getBigInt64(offset, true) };
 
-export const PtrParamUnknown: PtrParam = PtrParam.Unknown;
-export const PtrParamU32: PtrParam = PtrParam.create(u32_size);
-export const PtrParamU64: PtrParam = PtrParam.create(u64_size);
+export const UnknownResultPtrParam: PtrParam = PtrParam.UnknownResultPtrParam;
+export const U32ResultPtrParam: PtrParam = PtrParam.create({
+	kind: DataKind.result,
+	size: u32_size,
+	copyTo: (_wasmMemory, from, _transferMemory, to) => {
+		// We have a result pointer so we only need instructions to copy the
+		// result back into the wasm memory
+		return [{ from: to, to: from, size: u32_size }];
+	}
+});
+export const U64ResultPtrParam: PtrParam = PtrParam.create({
+	kind: DataKind.result,
+	size: u64_size,
+	copyTo: (_wasmMemory, from, _transferMemory, to) => {
+		// We have a result pointer so we only need instructions to copy the
+		// result back into the wasm memory
+		return [{ from: to, to: from, size: u64_size }];
+	}
+});
 
 export type FunctionSignature = {
 	readonly name: string;
@@ -90,7 +131,7 @@ export namespace FunctionSignature {
 		let result = 0;
 		for (let i = 0; i < params.length; i++) {
 			const param = params[i];
-			if (param.kind === ParamType.ptr) {
+			if (param.kind === ParamKind.ptr) {
 				if (param.dataSize === -1) {
 					throw new Error(`Cant't compute result size for ptr referencing a location of unknown size`);
 				}

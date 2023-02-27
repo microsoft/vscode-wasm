@@ -3,7 +3,10 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { args_get, args_sizes_get, clock_res_get, clock_time_get, environ_get, environ_sizes_get, errno, Errno, fd_advise, fd_allocate, fd_close, WasiError } from './wasi';
+import {
+	args_get, args_sizes_get, clock_res_get, clock_time_get, environ_get, environ_sizes_get, errno, Errno, fd_advise, fd_allocate,
+	fd_close, fd_datasync, fd_fdstat_get, fd_fdstat_set_flags, fd_filestat_get, fd_filestat_set_size, fd_filestat_set_times, WasiError
+} from './wasi';
 import { Offsets } from './connection';
 import { FunctionSignature, Signatures } from './wasiMeta';
 
@@ -17,6 +20,13 @@ export interface WasiService {
 	fd_advise: fd_advise.ServiceSignature;
 	fd_allocate: fd_allocate.ServiceSignature;
 	fd_close: fd_close.ServiceSignature;
+	fd_datasync: fd_datasync.ServiceSignature;
+	fd_fdstat_get: fd_fdstat_get.ServiceSignature;
+	fd_fdstat_set_flags: fd_fdstat_set_flags.ServiceSignature;
+	fd_filestat_get: fd_filestat_get.ServiceSignature;
+	fd_filestat_set_size: fd_filestat_set_size.ServiceSignature;
+	fd_filestat_set_times: fd_filestat_set_times.ServiceSignature;
+
 	[name: string]: (memory: ArrayBuffer, ...args: (number & bigint)[]) => Promise<errno>;
 }
 
