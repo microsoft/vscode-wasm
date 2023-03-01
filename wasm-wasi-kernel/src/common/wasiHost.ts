@@ -7,9 +7,9 @@ import { cstring, ptr, size, u32, u64, u8 } from './baseTypes';
 import {
 	fd, errno, Errno, lookupflags, oflags, rights, fdflags, dircookie, filesize, advise, filedelta, whence, clockid, timestamp,
 	fstflags, exitcode, WasiError, event, subscription, riflags, siflags, sdflags, dirent, ciovec, iovec, fdstat, filestat, prestat,
-	args_sizes_get, args_get, clock_res_get, clock_time_get, environ_sizes_get, environ_get, fd_advise, fd_allocate, fd_close, fd_datasync, fd_fdstat_set_flags, fd_fdstat_get, fd_filestat_get, fd_filestat_set_size, fd_filestat_set_times
+	args_sizes_get, args_get, clock_res_get, clock_time_get, environ_sizes_get, environ_get, fd_advise, fd_allocate, fd_close, fd_datasync, fd_fdstat_set_flags, fd_fdstat_get, fd_filestat_get, fd_filestat_set_size, fd_filestat_set_times, fd_pread
 } from './wasi';
-import { ParamKind, FunctionSignature, Signatures } from './wasiMeta';
+import { ParamKind, WasiFunction, Signatures } from './wasiMeta';
 import { Offsets } from './connection';
 
 export abstract class HostConnection {
@@ -20,7 +20,7 @@ export abstract class HostConnection {
 		this.timeout = timeout;
 	}
 
-	public callWithSignature(signature: Required<FunctionSignature>, args: (number | bigint)[], wasmMemory: ArrayBuffer): errno {
+	public callWithSignature(signature: WasiFunction, args: (number | bigint)[], wasmMemory: ArrayBuffer): errno {
 		if (args.length !== signature.params.length) {
 			throw new WasiError(Errno.inval);
 		}
@@ -69,7 +69,7 @@ export abstract class HostConnection {
 
 	protected abstract postMessage(buffers: [SharedArrayBuffer, SharedArrayBuffer]): any;
 
-	private createCallArrays(signature: Required<FunctionSignature>, args: (number | bigint)[], wasmMemory: ArrayBuffer): [SharedArrayBuffer, SharedArrayBuffer] {
+	private createCallArrays(signature: Required<WasiFunction>, args: (number | bigint)[], wasmMemory: ArrayBuffer): [SharedArrayBuffer, SharedArrayBuffer] {
 		if (args.length !== signature.params.length) {
 			throw new WasiError(Errno.inval);
 		}
@@ -130,7 +130,7 @@ export namespace WasiHost {
 					return Errno.inval;
 				}
 				try {
-					return connection.callWithSignature(args_get.sizedSignature(args_size.count, args_size.bufferSize), [argv_ptr, argvBuf_ptr], memory());
+					return connection.callWithSignature(args_get, [argv_ptr, argvBuf_ptr], memory());
 				} catch (error) {
 					return handleError(error, Errno.inval);
 				}
@@ -168,7 +168,7 @@ export namespace WasiHost {
 					return Errno.inval;
 				}
 				try {
-					return connection.callWithSignature(environ_get.sizedSignature(environ_size.count, environ_size.bufferSize), [environ_ptr, environBuf_ptr], memory());
+					return connection.callWithSignature(environ_get.createSignature(environ_size.count, environ_size.bufferSize), [environ_ptr, environBuf_ptr], memory());
 				} catch (error) {
 					return handleError(error, Errno.inval);
 				}
@@ -237,6 +237,11 @@ export namespace WasiHost {
 				}
 			},
 			fd_pread: (fd: fd, iovs_ptr: ptr<iovec>, iovs_len: u32, offset: filesize, bytesRead_ptr: ptr<u32>): errno => {
+				try {
+					return connection.callWithSignature(fd_pread.sizedSignature(memoryView(), iovs_ptr, iovs_len), [fd, iovs_ptr, iovs_len, offset, bytesRead_ptr], memory());
+				} catch (error) {
+					return handleError(error, Errno.inval);
+				}
 			},
 			fd_prestat_get: (fd: fd, bufPtr: ptr<prestat>): errno => {
 			},

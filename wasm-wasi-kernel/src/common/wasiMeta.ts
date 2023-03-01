@@ -3,7 +3,8 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { ptr } from './baseTypes';
+import { ptr, u32, u8 } from './baseTypes';
+import { Iovec, iovec_array } from './wasi';
 
 export enum ParamKind {
 	ptr = 1,
@@ -31,39 +32,13 @@ export enum DataKind {
 	both = 3
 }
 
-export const ptr_size = 4 as const;
 export type PtrParam = {
 	kind: ParamKind.ptr;
 	size: 4;
 	set: (view: DataView, offset: number, value: number) => void;
 	get: (view: DataView, offset: number) => number;
-	data: {
-		kind: DataKind;
-		size: number | (() => number);
-		copyTo(wasmMemory: Uint8Array, from: ptr, transferMemory: Uint8Array, to: ptr): { from: ptr; to: ptr; size: number}[];
-
-	};
 };
 
-export namespace PtrParam {
-	function set(view: DataView, offset: number, value: number) { view.setUint32(offset, value, true); }
-	function get(view: DataView, offset: number): number { return view.getUint32(offset, true); }
-	export const UnknownResultPtrParam: PtrParam = { kind: ParamKind.ptr, size: ptr_size, set, get, data: { kind: DataKind.result, size: -1, copyTo: () => { throw new Error('Should never happen'); } } };
-	export function create(data: PtrParam['data']): PtrParam {
-		return { kind: ParamKind.ptr, size: ptr_size, set, get, data: data };
-	}
-	export function createResult(size: number): PtrParam {
-		return {
-			kind: ParamKind.ptr, size: ptr_size, set, get,
-			data: {
-				kind: DataKind.result, size,
-				copyTo: (_wasmMemory, from, _transferMemory, to) => {
-					return [{ from: to, to: from, size: u32_size }];
-				}
-			}
-		};
-	}
-}
 
 export type Param = PtrParam | NumberParam | BigintParam;
 
@@ -77,26 +52,8 @@ export const u64_size = 8 as const;
 export const U64Param: BigintParam = { kind: ParamKind.bigint, size: u64_size, set: (view, offset, value) => view.setBigUint64(offset, value, true), get: (view, offset) => view.getBigUint64(offset, true) };
 export const s64_size = 8 as const;
 export const S64Param: BigintParam = { kind: ParamKind.bigint, size: s64_size, set: (view, offset, value) => view.setBigInt64(offset, value, true), get: (view, offset) => view.getBigInt64(offset, true) };
-
-export const UnknownResultPtrParam: PtrParam = PtrParam.UnknownResultPtrParam;
-export const U32ResultPtrParam: PtrParam = PtrParam.create({
-	kind: DataKind.result,
-	size: u32_size,
-	copyTo: (_wasmMemory, from, _transferMemory, to) => {
-		// We have a result pointer so we only need instructions to copy the
-		// result back into the wasm memory
-		return [{ from: to, to: from, size: u32_size }];
-	}
-});
-export const U64ResultPtrParam: PtrParam = PtrParam.create({
-	kind: DataKind.result,
-	size: u64_size,
-	copyTo: (_wasmMemory, from, _transferMemory, to) => {
-		// We have a result pointer so we only need instructions to copy the
-		// result back into the wasm memory
-		return [{ from: to, to: from, size: u64_size }];
-	}
-});
+export const ptr_size = 4 as const;
+export const PtrParam: PtrParam = { kind: ParamKind.ptr, size: ptr_size, set: (view, offset, value) => view.setUint32(offset, value, true), get: (view, offset) => view.getUint32(offset, true) };
 
 export type FunctionSignature = {
 	readonly name: string;
@@ -107,7 +64,7 @@ export type FunctionSignature = {
 
 export namespace FunctionSignature {
 
-	export function assertResultSize(signature: FunctionSignature): asserts signature is Required<FunctionSignature> {
+	export function assertResultSize(signature: WasiFunction): asserts signature is Required<WasiFunction> {
 		if (signature.resultSize === undefined) {
 			throw new Error(`Function signature ${signature.name} has no result size`);
 		}
@@ -143,18 +100,18 @@ export namespace FunctionSignature {
 }
 
 export namespace _Signatures {
-	const signatures: FunctionSignature[] = [];
+	const signatures: WasiFunction[] = [];
 	const name2Index: Map<string, number> = new Map();
 	const index2Name: Map<number, string> = new Map();
 
-	export function signatureAt(index: number): FunctionSignature {
+	export function signatureAt(index: number): WasiFunction {
 		if (index >= signatures.length) {
 			throw new Error('Should never happen');
 		}
 		return signatures[index];
 	}
 
-	export function get(name: string): FunctionSignature {
+	export function get(name: string): WasiFunction {
 		const index = name2Index.get(name);
 		if (index === undefined) {
 			throw new Error('Should never happen');
@@ -178,7 +135,7 @@ export namespace _Signatures {
 		return result;
 	}
 
-	export function add(signature: FunctionSignature): void {
+	export function add(signature: WasiFunction): void {
 		const index = signatures.length;
 		signatures.push(signature);
 		name2Index.set(signature.name, index);
@@ -186,10 +143,161 @@ export namespace _Signatures {
 	}
 }
 export type Signatures = {
-	add(signature: FunctionSignature): void;
-	signatureAt(index: number): FunctionSignature;
-	get(name: string): FunctionSignature;
+	add(signature: WasiFunction): void;
+	signatureAt(index: number): WasiFunction;
+	get(name: string): WasiFunction;
 	getIndex(name: string): number;
 	getName(index: number): string;
 };
 export const Signatures: Signatures = _Signatures;
+
+export type WasiFunctionSignature = {
+	params: Param[];
+	memorySize: number;
+};
+
+export namespace WasiFunctionSignature {
+	export function getMemorySize(params: Param[]): number {
+		let result: number = 0;
+		for (const param of params) {
+			result += param.size;
+		}
+		return result;
+	}
+}
+
+export type ReverseTransfer = {
+	readonly from: ptr;
+	readonly to: ptr;
+	readonly size: number;
+};
+
+export type MemoryTransfer = {
+	readonly memorySize: number;
+	copy: (wasmMemory: ArrayBuffer, from: ptr, transferMemory: SharedArrayBuffer, to: ptr) => ReverseTransfer[];
+};
+
+export enum MemoryTransferDirection {
+	param = 1,
+	result = 2,
+	both = 3
+}
+
+export namespace MemoryTransducer {
+
+	export const U32Result: MemoryTransfer = {
+		memorySize: u32_size,
+		copy: (_wasmMemory, from, _transferMemory, to) => {
+			// We have a result pointer so we only need instructions to copy the
+			// result back into the wasm memory
+			return [{ from: to, to: from, size: u32_size }];
+		}
+	};
+
+	export const U64Result: MemoryTransfer = {
+		memorySize: u64_size,
+		copy: (_wasmMemory, from, _transferMemory, to) => {
+			// We have a result pointer so we only need instructions to copy the
+			// result back into the wasm memory
+			return [{ from: to, to: from, size: u64_size }];
+		}
+	};
+
+	export function createByteTransfer(size: number, direction: MemoryTransferDirection): MemoryTransfer {
+		return {
+			memorySize: size,
+			copy: (wasmMemory, from, transferMemory, to) => {
+				if (direction === MemoryTransferDirection.param || direction === MemoryTransferDirection.both) {
+					new Uint8Array(transferMemory, to, size).set(new Uint8Array(wasmMemory, from, size));
+				}
+				return direction === MemoryTransferDirection.param ? [] : [ { from: to, to: from , size } ];
+			}
+		};
+	}
+
+	export function createPathTransfer(path: ptr<u8[]>, path_len: u32): MemoryTransfer {
+		return {
+			memorySize: path_len,
+			copy: (wasmMemory, from, transferMemory, to) => {
+				if (from !== path) {
+					throw new Error(`Path transfer needs to be used as an instance object`);
+				}
+				new Uint8Array(transferMemory, to, path_len).set(new Uint8Array(wasmMemory, from, path_len));
+				return [];
+			}
+		};
+	}
+
+	export function getMemorySize(transfers: MemoryTransfer[]): number {
+		let result: number = 0;
+		for (const transfer of transfers) {
+			result += transfer.memorySize;
+		}
+		return result;
+	}
+}
+
+export type MemoryTransducers = {
+	readonly size: number;
+	transfers: MemoryTransfer[];
+};
+
+export type WasiFunction = {
+	readonly name: string;
+	readonly signature: WasiFunctionSignature;
+	memory: (...params: (number & bigint)[]) => MemoryTransducers;
+};
+
+namespace _WasiFunctions {
+	const callbacks: WasiFunction[] = [];
+	const name2Index: Map<string, number> = new Map();
+	const index2Name: Map<number, string> = new Map();
+
+	export function functionAt(index: number): WasiFunction {
+		if (index >= callbacks.length) {
+			throw new Error('Should never happen');
+		}
+		return callbacks[index];
+	}
+
+	export function get(name: string): WasiFunction {
+		const index = name2Index.get(name);
+		if (index === undefined) {
+			throw new Error('Should never happen');
+		}
+		return callbacks[index];
+	}
+
+	export function getIndex(name: string): number {
+		const result = name2Index.get(name);
+		if (result === undefined) {
+			throw new Error('Should never happen');
+		}
+		return result;
+	}
+
+	export function getName(index: number): string {
+		const result = index2Name.get(index);
+		if (result === undefined) {
+			throw new Error('Should never happen');
+		}
+		return result;
+	}
+
+	export function add(wasiFunction: WasiFunction): void {
+		const index = callbacks.length;
+		callbacks.push(wasiFunction);
+		name2Index.set(wasiFunction.name, index);
+		index2Name.set(index, wasiFunction.name);
+	}
+}
+
+export type WasiFunctions = {
+	add(wasiFunction: WasiFunction): void;
+	functionAt(index: number): WasiFunction;
+	get(name: string): WasiFunction;
+	getIndex(name: string): number;
+	getName(index: number): string;
+};
+export const WasiFunctions: WasiFunctions = _WasiFunctions;
+

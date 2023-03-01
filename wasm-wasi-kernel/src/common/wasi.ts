@@ -9,7 +9,8 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { ptr, size, u16, u32, u64, s64, u8, cstring } from './baseTypes';
-import { FunctionSignature, Param, PtrParam, U32ResultPtrParam, U64ResultPtrParam, UnknownResultPtrParam, Signatures, U32Param, U64Param, U8Param, U16Param } from './wasiMeta';
+import { WasiFunction, Param, PtrParam, Signatures, U32Param, U64Param, U8Param, U16Param, MemoryTransfer, MemoryTransferDirection, WasiFunctionSignature, WasiFunctions, MemoryTransducers } from './wasiMeta';
+
 
 export type fd = u32;
 export const FdParam = U32Param;
@@ -877,7 +878,7 @@ export type inode = u64;
 export type linkcount = u64;
 export type timestamp = u64;
 const TimestampParam = U64Param;
-const TimestampPtrParam = U64PtrParam;
+const TimestampPtrParam = U64ResultPtrParam;
 
 export type filestat = {
 
@@ -1134,6 +1135,7 @@ export namespace Prestat {
 		tag: 0,
 		len: 4
 	};
+
 	export function create(ptr: ptr, memory: DataView): prestat {
 		memory.setUint8(ptr, Preopentype.dir);
 		return {
@@ -1150,6 +1152,7 @@ export namespace Prestat {
 		};
 	}
 }
+const PrestatPtrParam = PtrParam.createResult(Prestat.size);
 
 /**
  * A region of memory for scatter/gather reads.
@@ -1193,6 +1196,38 @@ export namespace Iovec {
 			set buf(value: ptr) { memory.setUint32(ptr + offsets.buf, value, true); },
 			get buf_len(): u32 { return memory.getUint32(ptr + offsets.buf_len, true); },
 			set buf_len(value: u32) { memory.setUint32(ptr + offsets.buf_len, value, true); }
+		};
+	}
+
+	export function memoryTransfer(memory: DataView, iovec: ptr<iovec_array>, iovs_len: u32): MemoryTransfer {
+		let dataSize = Iovec.size * iovs_len;
+		let ptr = iovec;
+		for (let i = 0; i < iovs_len; i++) {
+			const iovec = Iovec.create(ptr, memory);
+			dataSize += iovec.buf_len;
+		}
+		return {
+			memorySize: dataSize,
+			copy: (wasmMemory, from, transferMemory, to) => {
+				if (from !== iovec) {
+					throw new Error(`IovecPtrParam needs to be used as an instance object`);
+				}
+				let fromIndex = from;
+				let toIndex = to;
+				let bufferIndex = to + Iovec.size * iovs_len;
+				const result: { from: ptr; to: ptr; size: number}[] = [];
+				for (let i = 0; i < iovs_len; i++) {
+					const fromIovec = Iovec.create(fromIndex, new DataView(wasmMemory));
+					const toIovec = Iovec.create(toIndex, new DataView(transferMemory));
+					toIovec.buf = bufferIndex;
+					toIovec.buf_len = fromIovec.buf_len;
+					bufferIndex += fromIovec.buf_len;
+					// Iovecs are used to read data. So we don't need to copy anything into the
+					// transfer memory. We only need to copy the result back into the wasm memory
+					result.push({ from: toIovec.buf, to: fromIovec.buf, size: fromIovec.buf_len });
+				}
+				return result;
+			}
 		};
 	}
 }
@@ -1240,6 +1275,36 @@ export namespace Ciovec {
 			set buf(value: ptr) { memory.setUint32(ptr + offsets.buf, value, true); },
 			get buf_len(): u32 { return memory.getUint32(ptr + offsets.buf_len, true); },
 			set buf_len(value: u32) { memory.setUint32(ptr + offsets.buf_len, value, true); }
+		};
+	}
+
+	export function memoryTransfer(memory: DataView, ciovec: ptr<ciovec_array>, ciovs_len: u32): MemoryTransfer {
+		let dataSize = Ciovec.size * ciovs_len;
+		let ptr = ciovec;
+		for (let i = 0; i < ciovs_len; i++) {
+			const iovec = Ciovec.create(ptr, memory);
+			dataSize += iovec.buf_len;
+		}
+		return {
+			memorySize: dataSize,
+			copy: (wasmMemory, from, transferMemory, to) => {
+				if (from !== ciovec) {
+					throw new Error(`CiovecPtrParam needs to be used as an instance object`);
+				}
+				let fromIndex = from;
+				let toIndex = to;
+				let bufferIndex = to + Ciovec.size * ciovs_len;
+				for (let i = 0; i < ciovs_len; i++) {
+					const fromIovec = Ciovec.create(fromIndex, new DataView(wasmMemory));
+					const toIovec = Ciovec.create(toIndex, new DataView(transferMemory));
+					toIovec.buf = bufferIndex;
+					toIovec.buf_len = fromIovec.buf_len;
+					new Uint8Array(transferMemory, toIovec.buf, toIovec.buf_len).set(new Uint8Array(wasmMemory, fromIovec.buf, fromIovec.buf_len));
+				}
+				// Ciovec is used to write data to disk. So no need to copy anything
+				// back from the actual write call.
+				return [];
+			}
 		};
 	}
 }
@@ -1649,6 +1714,12 @@ export namespace Sdflags {
 	export const wr = 1 << 1;
 }
 
+export namespace WasiPath {
+	export function memoryTransfer(path_len: u32): MemoryTransfer {
+		return MemoryTransducer.createByteTransducer(path_len, MemoryTransferDirection.param);
+	}
+}
+
 /**
  * Return command-line argument data sizes.
  *
@@ -1658,11 +1729,21 @@ export namespace Sdflags {
 export type args_sizes_get = (argvCount_ptr: ptr<u32>, argvBufSize_ptr: ptr<u32>) => errno;
 export namespace args_sizes_get {
 	export const name: string = 'args_sizes_get';
-	export const params: Param[] = [U32ResultPtrParam, U32ResultPtrParam];
-	export const paramSize = FunctionSignature.getParamSize(params);
-	export const resultSize = FunctionSignature.getResultSize(params);
+	const params = [PtrParam, PtrParam];
+	export const signature: WasiFunctionSignature = {
+		params,
+		memorySize: WasiFunctionSignature.getMemorySize(params),
+	};
+	const __transfers: MemoryTransfer[] = [MemoryTransducer.U32Result, MemoryTransducer.U32Result];
+	const _transfers: MemoryTransducers = {
+		transfers: __transfers,
+		size: MemoryTransducer.getMemorySize(__transfers)
+	}
+	export function transducers(): MemoryTransducers {
+		return _transfers;
+	}
 	export type ServiceSignature = (memory: ArrayBuffer, argvCount_ptr: ptr<u32>, argvBufSize_ptr: ptr<u32>) => Promise<errno>;
-	Signatures.add(args_sizes_get);
+	WasiFunctions.add(args_sizes_get);
 }
 
 /**
@@ -1675,18 +1756,19 @@ export namespace args_sizes_get {
 export type args_get = (argv_ptr: ptr<u32[]>, argvBuf_ptr: ptr<cstring>) => errno;
 export namespace args_get {
 	export const name: string = 'args_get';
-	export const params: Param[] = [UnknownResultPtrParam, UnknownResultPtrParam];
-	export const paramSize = FunctionSignature.getParamSize(params);
-	export type ServiceSignature = (memory: ArrayBuffer, argv_ptr: ptr<u32[]>, argvBuf_ptr: ptr<cstring>) => Promise<errno>;
-	export function sizedSignature(argv_size: u32, argvBuf_size: u32): Required<FunctionSignature> {
-		return {
-			name: name,
-			params: [ PtrParam.createResult(argv_size), PtrParam.createResult(argvBuf_size) ],
-			paramSize: FunctionSignature.getParamSize(params),
-			resultSize: FunctionSignature.getResultSize(params)
-		};
+	const params: Param[] = [PtrParam, PtrParam];
+	export const signature: WasiFunctionSignature = {
+		params,
+		memorySize: WasiFunctionSignature.getMemorySize(params),
+	};
+	export function transfers(argvCount: u32, argvBufSize: u32): MemoryTransfer[] {
+		return [
+			MemoryTransfer.createByteTransfer(argvCount, MemoryTransferDirection.result),
+			MemoryTransfer.createByteTransfer(argvBufSize, MemoryTransferDirection.result),
+		];
 	}
-	Signatures.add(args_get);
+	export type ServiceSignature = (memory: ArrayBuffer, argv_ptr: ptr<u32[]>, argvBuf_ptr: ptr<cstring>) => Promise<errno>;
+	WasiFunctions.add(args_get);
 }
 
 /**
@@ -1700,7 +1782,13 @@ export namespace args_get {
 export type clock_res_get = (id: clockid, timestamp_ptr: ptr<u64>) => errno;
 export namespace clock_res_get {
 	export const name: string = 'clock_res_get';
-	export const params: Param[] = [ClockidParam, U64ResultPtrParam];
+	const params: Param[] = [ClockidParam, PtrParam];
+	export const signature: WasiFunctionSignature = {
+		params,
+		memorySize: WasiFunctionSignature.getMemorySize(params),
+	};
+	const _transferMemory: MemoryTransfer[] = [undefined, MemoryTransfer.U64Result];
+	export function transfers(): MemoryTransfer[] {
 	export const paramSize = FunctionSignature.getParamSize(params);
 	export const resultSize = FunctionSignature.getResultSize(params);
 	export type ServiceSignature = (memory: ArrayBuffer, id: clockid, timestamp_ptr: ptr<u64>) => Promise<errno>;
@@ -1753,14 +1841,14 @@ export namespace environ_sizes_get {
 export type environ_get = (environ_ptr: ptr<u32[]>, environBuf_ptr: ptr<cstring[]>) => errno;
 export namespace environ_get {
 	export const name: string = 'environ_get';
-	export const params: Param[] = [UnknownResultPtrParam, UnknownResultPtrParam];
+	export const params: Param[] = [VariablePtrParam, VariablePtrParam];
 	export const paramSize = FunctionSignature.getParamSize(params);
 	export type ServiceSignature = (memory: ArrayBuffer, environ_ptr: ptr<u32[]>, environBuf_ptr: ptr<cstring[]>) => Promise<errno>;
-	export function sizedSignature(environ_size: u32, environBuf_size: u32): Required<FunctionSignature> {
+	export function createSignature(environ_size: u32, environBuf_size: u32): Required<WasiFunction> {
 		return {
 			name: name,
 			params: [ PtrParam.createResult(environ_size), PtrParam.createResult(environBuf_size) ],
-			paramSize: FunctionSignature.getParamSize(params),
+			paramSize: paramSize,
 			resultSize: FunctionSignature.getResultSize(params)
 		};
 	}
@@ -1936,10 +2024,19 @@ export namespace fd_filestat_set_times {
 export type fd_pread = (fd: fd, iovs_ptr: ptr<iovec[]>, iovs_len: u32, offset: filesize, bytesRead_ptr: ptr<u32>) => errno;
 export namespace fd_pread {
 	export const name: string = 'fd_pread';
-	export const params: Param[] = [FdParam, IovecPtrParam, U32Param, FilesizeParam, U32PtrParam];
+	export const params: Param[] = [FdParam, VariablePtrParam, U32Param, FilesizeParam, U32ResultPtrParam];
 	export const paramSize = FunctionSignature.getParamSize(params);
-	export const resultSize = FunctionSignature.getResultSize(params);
 	export type ServiceSignature = (memory: ArrayBuffer, fd: fd, iovs_ptr: ptr<iovec[]>, iovs_len: u32, offset: filesize, bytesRead_ptr: ptr<u32>) => Promise<errno>;
+	export function createSignature(memory: DataView, iovs_ptr: ptr<iovec[]>, iovs_len: u32): Required<WasiFunction> {
+		const newParams = params.slice();
+		newParams[1] = IovecPtrParam.create(memory, iovs_ptr, iovs_len);
+		return {
+			name,
+			params: newParams,
+			paramSize: paramSize,
+			resultSize: FunctionSignature.getResultSize(newParams)
+		};
+	}
 	Signatures.add(fd_pread);
 }
 
@@ -1950,6 +2047,13 @@ export namespace fd_pread {
  * @param bufPtr A pointer to store the pre stat information.
  */
 export type fd_prestat_get = (fd: fd, bufPtr: ptr<prestat>) => errno;
+export namespace fd_prestat_get {
+	export const name: string = 'fd_prestat_get';
+	export const params: Param[] = [FdParam, PrestatPtrParam];
+	export const paramSize = FunctionSignature.getParamSize(params);
+	export const resultSize = FunctionSignature.getResultSize(params);
+	export type ServiceSignature = (memory: ArrayBuffer, fd: fd, bufPtr: ptr<prestat>) => Promise<errno>;
+}
 
 /**
  * Return a description of the given preopened file descriptor.

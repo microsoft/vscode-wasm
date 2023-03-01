@@ -8,7 +8,7 @@ import {
 	fd_close, fd_datasync, fd_fdstat_get, fd_fdstat_set_flags, fd_filestat_get, fd_filestat_set_size, fd_filestat_set_times, WasiError
 } from './wasi';
 import { Offsets } from './connection';
-import { FunctionSignature, Signatures } from './wasiMeta';
+import { WasiFunction, Signatures } from './wasiMeta';
 
 export interface WasiService {
 	args_sizes_get: args_sizes_get.ServiceSignature;
@@ -65,14 +65,14 @@ export abstract class ServiceConnection {
 		Atomics.notify(sync, 0);
 	}
 
-	private getParams(signature: FunctionSignature, paramBuffer: SharedArrayBuffer): (number & bigint)[] {
+	private getParams(signature: WasiFunction, paramBuffer: SharedArrayBuffer): (number & bigint)[] {
 		const paramView = new DataView(paramBuffer);
 		const params: (number | bigint)[] = [];
 		let offset = Offsets.header_size;
 		for (let i = 0; i < signature.params.length; i++) {
 			const param = signature.params[i];
-			params.push(param.getter(paramView, offset));
-			offset += Param.getSize(param.kind);
+			params.push(param.get(paramView, offset));
+			offset += param.size;
 		}
 		return params as (number & bigint)[];
 	}
