@@ -200,9 +200,9 @@ export namespace Bytes {
 			memorySize: length,
 			copy: (wasmMemory, from, transferMemory, to) => {
 				if (direction === MemoryTransferDirection.param || direction === MemoryTransferDirection.both) {
-					new Uint8Array(transferMemory, to, size).set(new Uint8Array(wasmMemory, from, size));
+					new Uint8Array(transferMemory, to, length).set(new Uint8Array(wasmMemory, from, length));
 				}
-				return direction === MemoryTransferDirection.param ? [] : [ { from: to, to: from , size } ];
+				return direction === MemoryTransferDirection.param ? [] : [ { from: to, to: from , size: length } ];
 			}
 		};
 	}
