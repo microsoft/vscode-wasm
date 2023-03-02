@@ -11,6 +11,12 @@ import {
 } from './wasi';
 
 export type DeviceId = bigint;
+export namespace DeviceIds {
+	let counter: bigint = 1n;
+	export function next(): bigint {
+		return counter++;
+	}
+}
 
 export type ReaddirEntry = { d_ino: bigint; d_type: filetype; d_name: string };
 

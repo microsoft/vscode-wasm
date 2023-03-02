@@ -2,6 +2,7 @@
  *  Copyright (c) Microsoft Corporation. All rights reserved.
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
+import * as vscode from 'vscode';
 
 import {
 	advise,
@@ -17,7 +18,7 @@ import { byte, bytes, cstring, ptr, size, u32, u64 } from './baseTypes';
 import RAL from './ral';
 import { FileDescriptor } from './fileDescriptor';
 import { DeviceDriver, DeviceId, ReaddirEntry } from './deviceDriver';
-import { BigInts } from './converter';
+import { BigInts, code2Wasi } from './converter';
 
 export interface WasiService {
 	args_sizes_get: args_sizes_get.ServiceSignature;
@@ -727,9 +728,11 @@ export namespace WasiService {
 					let { events, needsTimeOut, timeout } = await handleSubscriptions(view, input, subscriptions);
 					if (needsTimeOut && timeout !== undefined && timeout !== 0n) {
 						// Timeout is in ns but sleep API is in ms.
-						apiClient.timer.sleep(BigInts.asNumber(timeout / 1000000n));
+						await new Promise((resolve) => {
+							RAL().timer.setTimeout(resolve, BigInts.asNumber(timeout! / 1000000n));
+						});
 						// Reread the events. Timer will not change however the rest could have.
-						events = handleSubscriptions(view, input, subscriptions).events;
+						events = (await handleSubscriptions(view, input, subscriptions)).events;
 					}
 					let event_offset = output;
 					for (const item of events) {
@@ -754,7 +757,7 @@ export namespace WasiService {
 			sched_yield: (): Promise<errno> => {
 				return Promise.resolve(Errno.success);
 			},
-			random_get: (memory: ArrayBuffer, buf: ptr<u8[]>, buf_len: size): Promise<errno> => {
+			random_get: (memory: ArrayBuffer, buf: ptr<bytes>, buf_len: size): Promise<errno> => {
 				const random = RAL().crypto.randomGet(buf_len);
 				new Uint8Array(memory, buf, buf_len).set(random);
 				return Promise.resolve(Errno.success);
@@ -909,10 +912,8 @@ export namespace WasiService {
 		function handleError(error: any, def: errno = Errno.badf): errno {
 			if (error instanceof WasiError) {
 				return error.errno;
-			} else if (error instanceof FileSystemError) {
+			} else if (error instanceof vscode.FileSystemError) {
 				return code2Wasi.asErrno(error.code);
-			} else if (error instanceof RPCError) {
-				return code2Wasi.asErrno(error.errno);
 			}
 			return def;
 		}

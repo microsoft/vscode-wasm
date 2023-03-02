@@ -19,14 +19,8 @@ export namespace code2Wasi {
 				return wasi.Filetype.unknown;
 		}
 	}
-	export function asErrno(errno: code.RPCErrno): wasi.errno;
-	export function asErrno(code: string): wasi.errno;
-	export function asErrno(errno: code.RPCErrno | string): wasi.errno {
-		switch (errno) {
-			case code.RPCErrno.Success:
-				return wasi.Errno.success;
-			case code.RPCErrno.UnknownError:
-				return wasi.Errno.inval;
+	export function asErrno(code: string): wasi.errno {
+		switch (code) {
 			case 'FileNotFound':
 				return wasi.Errno.noent;
 			case 'FileExists':

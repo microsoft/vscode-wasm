@@ -265,16 +265,16 @@ const wasm_wasi_kernel = {
 	sourceFolders: [
 		{
 			path: './src/common',
-			extends: [ common ]
+			extends: [ common, vscodeMixin ]
 		},
 		{
 			path: './src/browser',
-			extends: [ browser ],
+			extends: [ browser, vscodeMixin ],
 			references: [ '../common' ]
 		},
 		{
 			path: './src/node',
-			extends: [ node, webworker ],
+			extends: [ node, webworker, vscodeMixin ],
 			references: [ '../common' ]
 		}
 	]

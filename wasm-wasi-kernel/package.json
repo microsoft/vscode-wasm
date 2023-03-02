@@ -28,7 +28,9 @@
 	"dependencies": {
 		"vscode-uri": "^3.0.7"
 	},
-	"devDependencies": {},
+	"devDependencies": {
+		"@types/vscode": "1.76.0"
+	},
 	"scripts": {
 		"prepublishOnly": "echo \"⛔ Can only publish from a secure pipeline ⛔\" && node ../build/npm/fail",
 		"prepack": "npm run all:publish",
