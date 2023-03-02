@@ -11,5 +11,7 @@ export type s64 = bigint;
 export type ptr<_type = u8> =  number;
 
 export type size = u32;
+export type byte = u8;
+export type bytes = byte[];
 // a \0 terminated string (e.g. C format)
-export type cstring = u8[];
+export type cstring = byte[];
