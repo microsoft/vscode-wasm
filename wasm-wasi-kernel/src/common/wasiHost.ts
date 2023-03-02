@@ -11,6 +11,7 @@ import {
 } from './wasi';
 import { ParamKind, WasiFunctions, ReverseTransfer, WasiFunctionSignature, MemoryTransfers, WasiFunction } from './wasiMeta';
 import { Offsets } from './connection';
+import { WASI } from './wasi';
 
 export abstract class HostConnection {
 
@@ -116,11 +117,49 @@ export abstract class HostConnection {
 	}
 }
 
+
+export namespace WebAssembly {
+
+	interface Global {
+		value: any;
+		valueOf(): any;
+	}
+	interface Table {
+		readonly length: number;
+		get(index: number): any;
+		grow(delta: number, value?: any): number;
+		set(index: number, value?: any): void;
+	}
+	interface Memory {
+		readonly buffer: ArrayBuffer;
+		grow(delta: number): number;
+	}
+	type ExportValue = Function | Global | Memory | Table;
+
+	export interface Instance {
+		readonly exports: Record<string, ExportValue>;
+	}
+
+	export interface $Instance {
+		readonly exports: {
+			memory: Memory;
+		} & Record<string, ExportValue>;
+	}
+}
+
+export interface WasiHost extends WASI {
+	initialize: (inst: WebAssembly.Instance) => void;
+}
+
 export namespace WasiHost {
-	export function create(connection: HostConnection): WASI {
+	export function create(connection: HostConnection): WasiHost {
+		let instance: WebAssembly.$Instance;
 		const args_size = { count: 0, bufferSize: 0 };
 		const environ_size = { count: 0, bufferSize: 0 };
-		const wasi: WASI = {
+		const wasi: WasiHost = {
+			initialize: (inst: WebAssembly.Instance): void => {
+				instance = inst as WebAssembly.$Instance;
+			},
 			args_sizes_get: (argvCount_ptr: ptr<u32>, argvBufSize_ptr: ptr<u32>): errno => {
 				try {
 					args_size.count = 0; args_size.bufferSize = 0;
@@ -424,7 +463,7 @@ export namespace WasiHost {
 			},
 			sock_accept: (_fd: fd, _flags: fdflags, _result_fd_ptr: ptr<u32>): errno => {
 				try {
-					return connection.call(sock_accept, [_fd, _flags, _result_fd_ptr], memory(), sock_accept.transfer());
+					return connection.call(sock_accept, [_fd, _flags, _result_fd_ptr], memory(), sock_accept.transfers());
 				} catch (error) {
 					return handleError(error, Errno.inval);
 				}
@@ -444,7 +483,7 @@ export namespace WasiHost {
 			},
 			'thread-spawn': (start_args_ptr: ptr<u32>): errno => {
 				try {
-					return connection.call(thread_spawn, [start_args_ptr], memory(), thread_spawn.transfer());
+					return connection.call(thread_spawn, [start_args_ptr], memory(), thread_spawn.transfers());
 				} catch (error) {
 					return handleError(error, Errno.inval);
 				}
@@ -452,10 +491,10 @@ export namespace WasiHost {
 		};
 
 		function memory(): ArrayBuffer {
-			// if (instance === undefined) {
-			// 	throw new Error(`WASI layer is not initialized. Missing WebAssembly instance.`);
-			// }
-			// return instance.exports.memory.buffer;
+			if (instance === undefined) {
+				throw new Error(`WASI layer is not initialized. Missing WebAssembly instance.`);
+			}
+			return instance.exports.memory.buffer;
 		}
 
 		function memoryView(): DataView {
@@ -471,5 +510,7 @@ export namespace WasiHost {
 			}
 			return def;
 		}
+
+		return wasi;
 	}
 }

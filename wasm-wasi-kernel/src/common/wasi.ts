@@ -2110,9 +2110,9 @@ export type fd_prestat_get = (fd: fd, bufPtr: ptr<prestat>) => errno;
 export namespace fd_prestat_get {
 	export const name: string = 'fd_prestat_get';
 	export const signature = WasiFunctionSignature.create([Fd.$param, Prestat.$ptr]);
-	const _transfer = MemoryTransfers.create([Prestat.$transfer]);
+	const _transfers = MemoryTransfers.create([Prestat.$transfer]);
 	export function transfers(): MemoryTransfers {
-		return _transfer;
+		return _transfers;
 	}
 	export type ServiceSignature = (memory: ArrayBuffer, fd: fd, bufPtr: ptr<prestat>) => Promise<errno>;
 	WasiFunctions.add(fd_prestat_get);
@@ -2235,9 +2235,9 @@ export type fd_seek = (fd: fd, offset: filedelta, whence: whence, new_offset_ptr
 export namespace fd_seek {
 	export const name: string = 'fd_seek';
 	export const signature: WasiFunctionSignature = WasiFunctionSignature.create([Fd.$param, Filedelta.$param, Whence.$param, U64.$ptr]);
-	const _transfer: MemoryTransfers = MemoryTransfers.create([U64.$transfer]);
+	const _transfers: MemoryTransfers = MemoryTransfers.create([U64.$transfer]);
 	export function transfers() {
-		return _transfer;
+		return _transfers;
 	}
 	export type ServiceSignature = (memory: ArrayBuffer, fd: fd, offset: filedelta, whence: whence, new_offset_ptr: ptr<u64>) => Promise<errno>;
 	WasiFunctions.add(fd_seek);
@@ -2269,9 +2269,9 @@ export type fd_tell = (fd: fd, offset_ptr: ptr<u64>) => errno;
 export namespace fd_tell {
 	export const name: string = 'fd_tell';
 	export const signature = WasiFunctionSignature.create([Fd.$param, U64.$ptr]);
-	const _transfer: MemoryTransfers = MemoryTransfers.create([U64.$transfer]);
+	const _transfers: MemoryTransfers = MemoryTransfers.create([U64.$transfer]);
 	export function transfers() {
-		return _transfer;
+		return _transfers;
 	}
 	export type ServiceSignature = (memory: ArrayBuffer, fd: fd, offset_ptr: ptr<u64>) => Promise<errno>;
 	WasiFunctions.add(fd_tell);
@@ -2539,7 +2539,7 @@ export type poll_oneoff = (input: ptr<subscription[]>, output: ptr<event[]>, sub
 export namespace poll_oneoff {
 	export const name: string = 'poll_oneoff';
 	export const signature = WasiFunctionSignature.create([Subscription.$ptr, Event.$ptr, Size.$param, U32.$ptr]);
-	export function transfers(_memory: DataView, _input: ptr<subscription[]>, _output: ptr<event[]>, subscriptions: size, _result_size_ptr: ptr<u32>): MemoryTransfers {
+	export function transfers(_memory: DataView, _input: ptr<subscription[]>, _output: ptr<event[]>, subscriptions: size): MemoryTransfers {
 		return MemoryTransfers.create([Subscription.createTransfer(subscriptions), Event.createTransfer(subscriptions), U32.$transfer]);
 	}
 	export type ServiceSignature = (memory: ArrayBuffer, input: ptr<subscription[]>, output: ptr<event[]>, subscriptions: size, result_size_ptr: ptr<u32>) => Promise<errno>;
@@ -2607,9 +2607,9 @@ export type sock_accept = (fd: fd, flags: fdflags, result_fd_ptr: ptr<fd>) => er
 export namespace sock_accept {
 	export const name: string = 'sock_accept';
 	export const signature = WasiFunctionSignature.create([Fd.$param, Fdflags.$param, Fd.$ptr]);
-	const _transfer = MemoryTransfers.create([Fd.$transfer]);
-	export function transfer() {
-		return _transfer;
+	const _transfers = MemoryTransfers.create([Fd.$transfer]);
+	export function transfers() {
+		return _transfers;
 	}
 	export type ServiceSignature = (memory: ArrayBuffer, fd: fd, flags: fdflags, result_fd_ptr: ptr<fd>) => Promise<errno>;
 	WasiFunctions.add(sock_accept);
@@ -2669,9 +2669,9 @@ export type thread_spawn = (start_args_ptr: ptr<u32>) => errno;
 export namespace thread_spawn {
 	export const name: string = 'thread-spawn';
 	export const signature = WasiFunctionSignature.create([U32.$ptr]);
-	const _transfer = MemoryTransfers.create([U32.$transfer]);
-	export function transfer() {
-		return _transfer;
+	const _transfers = MemoryTransfers.create([U32.$transfer]);
+	export function transfers() {
+		return _transfers;
 	}
 	export type ServiceSignature = (memory: ArrayBuffer, start_args_ptr: ptr<u32>) => Promise<errno>;
 	WasiFunctions.add(thread_spawn);

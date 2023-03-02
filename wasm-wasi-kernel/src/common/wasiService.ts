@@ -4,13 +4,20 @@
  *--------------------------------------------------------------------------------------------*/
 
 import {
-	args_get, args_sizes_get, clock_res_get, clock_time_get, environ_get, environ_sizes_get, errno, Errno, fd_advise, fd_allocate,
+	advise,
+	args_get, args_sizes_get, Ciovec, ciovec, Clockid, clockid, clock_res_get, clock_time_get, dircookie, Dirent, dirent, environ_get, environ_sizes_get, errno, Errno, Event, event, Eventtype, exitcode, fd, fdflags, Fdstat, fdstat, fd_advise, fd_allocate,
 	fd_close, fd_datasync, fd_fdstat_get, fd_fdstat_set_flags, fd_filestat_get, fd_filestat_set_size, fd_filestat_set_times, fd_pread,
-	fd_prestat_dir_name, fd_prestat_get, fd_pwrite, fd_read, fd_readdir, fd_renumber, fd_seek, fd_sync, fd_tell, fd_write, path_create_directory,
-	path_filestat_get, path_filestat_set_times, path_link, path_open, path_readlink, path_remove_directory, path_rename, path_symlink, path_unlink_file, poll_oneoff, proc_exit, random_get, sched_yield, sock_accept, thread_spawn, WasiError
+	fd_prestat_dir_name, fd_prestat_get, fd_pwrite, fd_read, fd_readdir, fd_renumber, fd_seek, fd_sync, fd_tell, fd_write, filedelta, filesize, Filestat, filestat, fstflags, Iovec, iovec, Literal, lookupflags, oflags, path_create_directory,
+	path_filestat_get, path_filestat_set_times, path_link, path_open, path_readlink, path_remove_directory, path_rename, path_symlink, path_unlink_file,
+	poll_oneoff, Prestat, prestat, proc_exit, random_get, riflags, rights, Rights, sched_yield, sdflags, siflags, sock_accept, Subclockflags, Subscription, subscription, thread_spawn, timestamp, WasiError, Whence, whence
 } from './wasi';
 import { Offsets } from './connection';
-import { WasiFunction } from './wasiMeta';
+import { WasiFunction, WasiFunctions, WasiFunctionSignature } from './wasiMeta';
+import { byte, bytes, cstring, ptr, size, u32, u64 } from './baseTypes';
+import RAL from './ral';
+import { FileDescriptor } from './fileDescriptor';
+import { DeviceDriver, DeviceId, ReaddirEntry } from './deviceDriver';
+import { BigInts } from './converter';
 
 export interface WasiService {
 	args_sizes_get: args_sizes_get.ServiceSignature;
@@ -60,7 +67,6 @@ export interface WasiService {
 	[name: string]: (memory: ArrayBuffer, ...args: (number & bigint)[]) => Promise<errno>;
 }
 
-
 export abstract class ServiceConnection {
 
 	private readonly wasiService: WasiService;
@@ -75,12 +81,12 @@ export abstract class ServiceConnection {
 		try {
 
 			const method = paramView.getUint32(Offsets.method_index, true);
-			const signature = Signatures.signatureAt(method);
-			if (signature === undefined) {
+			const func: WasiFunction = WasiFunctions.functionAt(method);
+			if (func === undefined) {
 				throw new WasiError(Errno.inval);
 			}
-			const params = this.getParams(signature, paramBuffer);
-			const result = await this.wasiService[signature.name](wasmMemory, ...params);
+			const params = this.getParams(func.signature, paramBuffer);
+			const result = await this.wasiService[func.name](wasmMemory, ...params);
 			paramView.setUint16(Offsets.errno_index, result, true);
 		} catch (err) {
 			if (err instanceof WasiError) {
@@ -95,15 +101,864 @@ export abstract class ServiceConnection {
 		Atomics.notify(sync, 0);
 	}
 
-	private getParams(signature: WasiFunction, paramBuffer: SharedArrayBuffer): (number & bigint)[] {
+	private getParams(signature: WasiFunctionSignature, paramBuffer: SharedArrayBuffer): (number & bigint)[] {
 		const paramView = new DataView(paramBuffer);
 		const params: (number | bigint)[] = [];
 		let offset = Offsets.header_size;
 		for (let i = 0; i < signature.params.length; i++) {
 			const param = signature.params[i];
-			params.push(param.get(paramView, offset));
+			params.push(param.read(paramView, offset));
 			offset += param.size;
 		}
 		return params as (number & bigint)[];
+	}
+}
+
+export interface Environment {
+	[key: string]: string;
+}
+
+export type Options = {
+
+	/**
+	 * The encoding to use.
+	 */
+	encoding?: string;
+
+	/**
+	 * Command line arguments accessible in the WASM.
+	 */
+	args?: string [];
+
+	/**
+	 * The environment accessible in the WASM.
+	 */
+	env?: Environment;
+};
+
+export namespace WasiService {
+	export function create(programName: string, exitHandler: (rval: number) => void, options: Options = {}): WasiService {
+
+		const thread_start = RAL().clock.realtime();
+
+		let fileDescriptorCounter: number = 0;
+		let firstRealFileDescriptor: number = 3;
+		let fileDescriptorMode: 'init' | 'running' = 'init';
+		const fileDescriptorId = {
+			next(): number {
+				if (fileDescriptorMode === 'init') {
+					throw new WasiError(Errno.inval);
+				}
+				return fileDescriptorCounter++;
+			}
+		};
+		const fileDescriptors: Map<fd, FileDescriptor> = new Map();
+
+		const deviceDrivers: Map<DeviceId, DeviceDriver> = new Map();
+
+		const preStatProviders: DeviceDriver[] = [];
+		const preStatDirnames: Map<fd, string> = new Map();
+
+		const directoryEntries: Map<fd, ReaddirEntry[]> = new Map();
+
+		const encoder: RAL.TextEncoder = RAL().TextEncoder.create(options?.encoding);
+		const decoder: RAL.TextDecoder = RAL().TextDecoder.create(options?.encoding);
+
+		const wasiService: WasiService = {
+			args_sizes_get: (memory: ArrayBuffer, argvCount_ptr: ptr<u32>, argvBufSize_ptr: ptr<u32>): Promise<errno> => {
+				let count = 0;
+				let size = 0;
+				function processValue(str: string): void {
+					const value = `${str}\0`;
+					size += encoder.encode(value).byteLength;
+					count++;
+				}
+				processValue(programName);
+				for (const arg of options.args ?? []) {
+					processValue(arg);
+				}
+				const view = new DataView(memory);
+				view.setUint32(argvCount_ptr, count, true);
+				view.setUint32(argvBufSize_ptr, size, true);
+				return Promise.resolve(Errno.success);
+			},
+			args_get: (memory: ArrayBuffer, argv_ptr: ptr<u32[]>, argvBuf_ptr: ptr<cstring>): Promise<errno> => {
+				const memoryView = new DataView(memory);
+				const memoryBytes = new Uint8Array(memory);
+				let entryOffset = argv_ptr;
+				let valueOffset = argvBuf_ptr;
+
+				function processValue(str: string): void {
+					const data = encoder.encode(`${str}\0`);
+					memoryView.setUint32(entryOffset, valueOffset, true);
+					entryOffset += 4;
+					memoryBytes.set(data, valueOffset);
+					valueOffset += data.byteLength;
+				}
+				processValue(programName);
+				for (const arg of options.args ?? []) {
+					processValue(arg);
+				}
+				return Promise.resolve(Errno.success);
+			},
+			clock_res_get: (memory: ArrayBuffer, id: clockid, timestamp_ptr: ptr): Promise<errno> => {
+				const view = new DataView(memory);
+				switch (id) {
+					case Clockid.realtime:
+					case Clockid.monotonic:
+					case Clockid.process_cputime_id:
+					case Clockid.thread_cputime_id:
+						view.setBigUint64(timestamp_ptr, 1n, true);
+						return Promise.resolve(Errno.success);
+					default:
+						view.setBigUint64(timestamp_ptr, 0n, true);
+						return Promise.resolve(Errno.inval);
+				}
+			},
+			clock_time_get: (memory: ArrayBuffer, id: clockid, precision: timestamp, timestamp_ptr: ptr<u64>): Promise<errno> => {
+				const time: bigint = now(id, precision);
+				const view = new DataView(memory);
+				view.setBigUint64(timestamp_ptr, time, true);
+				return Promise.resolve(Errno.success);
+			},
+			environ_sizes_get: (memory: ArrayBuffer, environCount_ptr: ptr<u32>, environBufSize_ptr: ptr<u32>): Promise<errno> => {
+				let count = 0;
+				let size = 0;
+				for (const entry of Object.entries(options.env ?? {})) {
+					const value = `${entry[0]}=${entry[1]}\0`;
+					size += encoder.encode(value).byteLength;
+					count++;
+				}
+				const view = new DataView(memory);
+				view.setUint32(environCount_ptr, count, true);
+				view.setUint32(environBufSize_ptr, size, true);
+				return Promise.resolve(Errno.success);
+			},
+			environ_get: (memory: ArrayBuffer, environ_ptr: ptr<u32>, environBuf_ptr: ptr<cstring>): Promise<errno> => {
+				const view = new DataView(memory);
+				const bytes = new Uint8Array(memory);
+				let entryOffset = environ_ptr;
+				let valueOffset = environBuf_ptr;
+				for (const entry of Object.entries(options.env ?? {})) {
+					const data = encoder.encode(`${entry[0]}=${entry[1]}\0`);
+					view.setUint32(entryOffset, valueOffset, true);
+					entryOffset += 4;
+					bytes.set(data, valueOffset);
+					valueOffset += data.byteLength;
+				}
+				return Promise.resolve(Errno.success);
+			},
+			fd_advise: async (_memory: ArrayBuffer, fd: fd, offset: filesize, length: filesize, advise: advise): Promise<errno> => {
+				try {
+					const fileDescriptor = getFileDescriptor(fd);
+					fileDescriptor.assertBaseRights(Rights.fd_advise);
+
+					await getDeviceDriver(fileDescriptor).fd_advise(fileDescriptor, offset, length, advise);
+					return Errno.success;
+				} catch (error) {
+					return handleError(error);
+				}
+			},
+			fd_allocate: async (_memory: ArrayBuffer, fd: fd, offset: filesize, len: filesize): Promise<errno> => {
+				try {
+					const fileDescriptor = getFileDescriptor(fd);
+					fileDescriptor.assertBaseRights(Rights.fd_allocate);
+
+					await getDeviceDriver(fileDescriptor).fd_allocate(fileDescriptor, offset, len);
+					return Errno.success;
+				} catch (error) {
+					return handleError(error);
+				}
+			},
+			fd_close: async (_memory: ArrayBuffer, fd: fd): Promise<errno> => {
+				try {
+					const fileDescriptor = getFileDescriptor(fd);
+
+					await getDeviceDriver(fileDescriptor).fd_close(fileDescriptor);
+					fileDescriptors.delete(fileDescriptor.fd);
+					return Errno.success;
+				} catch (error) {
+					return handleError(error);
+				}
+			},
+			fd_datasync: async (_memory: ArrayBuffer, fd: fd): Promise<errno> => {
+				try {
+					const fileDescriptor = getFileDescriptor(fd);
+					fileDescriptor.assertBaseRights(Rights.fd_datasync);
+
+					await getDeviceDriver(fileDescriptor).fd_datasync(fileDescriptor);
+					return Errno.success;
+				} catch (error) {
+					return handleError(error);
+				}
+			},
+			fd_fdstat_get: async (memory: ArrayBuffer, fd: fd, fdstat_ptr: ptr<fdstat>): Promise<errno> => {
+				try {
+					const fileDescriptor = getFileDescriptor(fd);
+
+					await getDeviceDriver(fileDescriptor).fd_fdstat_get(fileDescriptor, Fdstat.create(fdstat_ptr, new DataView(memory)));
+					return Errno.success;
+				} catch (error) {
+					return handleError(error);
+				}
+			},
+			fd_fdstat_set_flags: async (_memory: ArrayBuffer, fd: fd, fdflags: fdflags): Promise<errno> => {
+				try {
+					const fileDescriptor = getFileDescriptor(fd);
+					fileDescriptor.assertBaseRights(Rights.fd_fdstat_set_flags);
+
+					await getDeviceDriver(fileDescriptor).fd_fdstat_set_flags(fileDescriptor, fdflags);
+					return Errno.success;
+				} catch (error) {
+					return handleError(error);
+				}
+			},
+			fd_filestat_get: async (memory: ArrayBuffer, fd: fd, filestat_ptr: ptr<filestat>): Promise<errno> => {
+				try {
+					const fileDescriptor = getFileDescriptor(fd);
+					fileDescriptor.assertBaseRights(Rights.fd_filestat_get);
+
+					await getDeviceDriver(fileDescriptor).fd_filestat_get(fileDescriptor, Filestat.create(filestat_ptr, new DataView(memory)));
+					return Errno.success;
+				} catch (error) {
+					return handleError(error, Errno.perm);
+				}
+			},
+			fd_filestat_set_size: async (_memory: ArrayBuffer, fd: fd, size: filesize): Promise<errno> => {
+				try {
+					const fileDescriptor = getFileDescriptor(fd);
+					fileDescriptor.assertBaseRights(Rights.fd_filestat_set_size);
+
+					await getDeviceDriver(fileDescriptor).fd_filestat_set_size(fileDescriptor, size);
+					return Errno.success;
+				} catch (error) {
+					return handleError(error);
+				}
+			},
+			fd_filestat_set_times: async (_memory: ArrayBuffer, fd: fd, atim: timestamp, mtim: timestamp, fst_flags: fstflags): Promise<errno> => {
+				try {
+					const fileDescriptor = getFileDescriptor(fd);
+					fileDescriptor.assertBaseRights(Rights.fd_filestat_set_times);
+
+					await getDeviceDriver(fileDescriptor).fd_filestat_set_times(fileDescriptor, atim, mtim, fst_flags);
+					return Errno.success;
+				} catch (error) {
+					return handleError(error);
+				}
+			},
+			fd_pread: async (memory: ArrayBuffer, fd: fd, iovs_ptr: ptr<iovec>, iovs_len: u32, offset: filesize, bytesRead_ptr: ptr<u32>): Promise<errno> => {
+				try {
+					const fileDescriptor = getFileDescriptor(fd);
+					fileDescriptor.assertBaseRights(Rights.fd_read | Rights.fd_seek);
+
+					const view = new DataView(memory);
+					const buffers = read_iovs(memory, iovs_ptr, iovs_len);
+					const bytesRead = await getDeviceDriver(fileDescriptor).fd_pread(fileDescriptor, offset, buffers);
+					view.setUint32(bytesRead_ptr, bytesRead, true);
+					return Errno.success;
+				} catch (error) {
+					return handleError(error);
+				}
+			},
+			fd_prestat_get: async (memory: ArrayBuffer, fd: fd, bufPtr: ptr<prestat>): Promise<errno> => {
+				try {
+					while (true) {
+						if (preStatProviders.length === 0) {
+							fileDescriptorCounter = fd;
+							firstRealFileDescriptor = fd;
+							fileDescriptorMode = 'running';
+							return Errno.badf;
+						}
+						const current = preStatProviders[0];
+						const result = await current.fd_prestat_get(fd);
+						// The current provider doesn't have predefined directories anymore.
+						if (result === undefined) {
+							preStatProviders.shift();
+						} else {
+							const [mountPoint, fileDescriptor] = result;
+							fileDescriptors.set(fileDescriptor.fd, fileDescriptor);
+							preStatDirnames.set(fileDescriptor.fd, mountPoint);
+							const view = new DataView(memory);
+							const prestat = Prestat.create(bufPtr, view);
+							prestat.len = encoder.encode(mountPoint).byteLength;
+							return Errno.success;
+						}
+					}
+				} catch(error) {
+					return handleError(error);
+				}
+			},
+			fd_prestat_dir_name: (memory: ArrayBuffer, fd: fd, pathPtr: ptr<byte[]>, pathLen: size): Promise<errno> => {
+				try {
+					const fileDescriptor = getFileDescriptor(fd);
+					const dirname = preStatDirnames.get(fileDescriptor.fd);
+					if (dirname === undefined) {
+						return Promise.resolve(Errno.badf);
+					}
+					const bytes = encoder.encode(dirname);
+					if (bytes.byteLength !== pathLen) {
+						Errno.badmsg;
+					}
+					const raw = new Uint8Array(memory, pathPtr);
+					raw.set(bytes);
+					return Promise.resolve(Errno.success);
+				} catch (error) {
+					return Promise.resolve(handleError(error));
+				}
+			},
+			fd_pwrite: async (memory: ArrayBuffer, fd: fd, ciovs_ptr: ptr<ciovec>, ciovs_len: u32, offset: filesize, bytesWritten_ptr: ptr<u32>): Promise<errno> => {
+				try {
+					const fileDescriptor = getFileDescriptor(fd);
+					fileDescriptor.assertBaseRights(Rights.fd_write | Rights.fd_seek);
+
+					const view = new DataView(memory);
+					const buffers = read_ciovs(memory, ciovs_ptr, ciovs_len);
+					const bytesWritten = await getDeviceDriver(fileDescriptor).fd_pwrite(fileDescriptor, offset, buffers);
+					view.setUint32(bytesWritten_ptr, bytesWritten, true);
+					return Errno.success;
+				} catch (error) {
+					return handleError(error);
+				}
+			},
+			fd_read: async (memory: ArrayBuffer, fd: fd, iovs_ptr: ptr<iovec>, iovs_len: u32, bytesRead_ptr: ptr<u32>): Promise<errno> => {
+				try {
+					const fileDescriptor = getFileDescriptor(fd);
+					fileDescriptor.assertBaseRights(Rights.fd_read);
+
+					const view = new DataView(memory);
+					const buffers = read_iovs(memory, iovs_ptr, iovs_len);
+					const bytesRead = await getDeviceDriver(fileDescriptor).fd_read(fileDescriptor, buffers);
+					view.setUint32(bytesRead_ptr, bytesRead, true);
+					return Errno.success;
+				} catch (error) {
+					return handleError(error);
+				}
+			},
+			fd_readdir: async (memory: ArrayBuffer, fd: fd, buf_ptr: ptr<dirent>, buf_len: size, cookie: dircookie, buf_used_ptr: ptr<u32>): Promise<errno> => {
+				try {
+					const fileDescriptor = getFileDescriptor(fd);
+					fileDescriptor.assertBaseRights(Rights.fd_readdir);
+					fileDescriptor.assertIsDirectory();
+
+					const driver = getDeviceDriver(fileDescriptor);
+					const view = new DataView(memory);
+					const raw = new Uint8Array(memory);
+
+					// We have a cookie > 0 but no directory entries. So return end  of list
+					// todo@dirkb this is actually specified different. According to the spec if
+					// the used buffer size is less than the provided buffer size then no
+					// additional readdir call should happen. However at least under Rust we
+					// receive another call.
+					//
+					// Also unclear whether we have to include '.' and '..'
+					//
+					// See also https://github.com/WebAssembly/wasi-filesystem/issues/3
+					if (cookie !== 0n && !directoryEntries.has(fileDescriptor.fd)) {
+						view.setUint32(buf_used_ptr, 0, true);
+						return Errno.success;
+					}
+					if (cookie === 0n) {
+						directoryEntries.set(fileDescriptor.fd, await driver.fd_readdir(fileDescriptor));
+					}
+					const entries: ReaddirEntry[] | undefined = directoryEntries.get(fileDescriptor.fd);
+					if (entries === undefined) {
+						throw new WasiError(Errno.badmsg);
+					}
+					let i = Number(cookie);
+					let ptr: ptr = buf_ptr;
+					let spaceLeft = buf_len;
+					for (; i < entries.length && spaceLeft >= Dirent.size; i++) {
+						const entry = entries[i];
+						const name = entry.d_name;
+						const nameBytes = encoder.encode(name);
+						const dirent: dirent = Dirent.create(ptr, view);
+						dirent.d_next = BigInt(i + 1);
+						dirent.d_ino = entry.d_ino;
+						dirent.d_type = entry.d_type;
+						dirent.d_namlen = nameBytes.byteLength;
+						spaceLeft -= Dirent.size;
+						const spaceForName = Math.min(spaceLeft, nameBytes.byteLength);
+						(new Uint8Array(raw, ptr + Dirent.size, spaceForName)).set(nameBytes.subarray(0, spaceForName));
+						ptr += Dirent.size + spaceForName;
+						spaceLeft -= spaceForName;
+					}
+					if (i === entries.length) {
+						view.setUint32(buf_used_ptr, ptr - buf_ptr, true);
+						directoryEntries.delete(fileDescriptor.fd);
+					} else {
+						view.setUint32(buf_used_ptr, buf_len, true);
+					}
+					return Errno.success;
+				} catch (error) {
+					return handleError(error);
+				}
+			},
+			fd_seek: async (memory: ArrayBuffer, fd: fd, offset: filedelta, whence: whence, new_offset_ptr: ptr<u64>): Promise<errno> => {
+				try {
+					const fileDescriptor = getFileDescriptor(fd);
+					if (whence === Whence.cur && offset === 0n && !fileDescriptor.containsBaseRights(Rights.fd_seek) && !fileDescriptor.containsBaseRights(Rights.fd_tell)) {
+						throw new WasiError(Errno.perm);
+					} else {
+						fileDescriptor.assertBaseRights(Rights.fd_seek);
+					}
+
+					const view = new DataView(memory);
+					const newOffset = await getDeviceDriver(fileDescriptor).fd_seek(fileDescriptor, offset, whence);
+					view.setBigUint64(new_offset_ptr, BigInt(newOffset), true);
+					return Errno.success;
+				} catch (error) {
+					return handleError(error);
+				}
+			},
+			fd_renumber: (_memory: ArrayBuffer, fd: fd, to: fd): Promise<errno> => {
+				try {
+					if (fd < firstRealFileDescriptor || to < firstRealFileDescriptor) {
+						return Promise.resolve(Errno.notsup);
+					}
+					if ((fileDescriptors.has(to))) {
+						return Promise.resolve(Errno.badf);
+					}
+					const fileDescriptor = getFileDescriptor(fd);
+					const toFileDescriptor = fileDescriptor.with({ fd: to });
+					fileDescriptors.delete(fileDescriptor.fd);
+					fileDescriptors.set(toFileDescriptor.fd, toFileDescriptor);
+					return Promise.resolve(Errno.success);
+				} catch (error) {
+					return Promise.resolve(handleError(error));
+				}
+			},
+			fd_sync: async (_memory: ArrayBuffer, fd: fd): Promise<errno> => {
+				try {
+					const fileDescriptor = getFileDescriptor(fd);
+					fileDescriptor.assertBaseRights(Rights.fd_sync);
+
+					await getDeviceDriver(fileDescriptor).fd_sync(fileDescriptor);
+					return Errno.success;
+				} catch (error) {
+					return handleError(error);
+				}
+			},
+			fd_tell: async (memory: ArrayBuffer, fd: fd, offset_ptr: ptr<u64>): Promise<errno> => {
+				try {
+					const fileDescriptor = getFileDescriptor(fd);
+					fileDescriptor.assertBaseRights(Rights.fd_tell | Rights.fd_seek);
+
+					const view = new DataView(memory);
+					const offset = await getDeviceDriver(fileDescriptor).fd_tell(fileDescriptor);
+					view.setBigUint64(offset_ptr, BigInt(offset), true);
+					return Errno.success;
+				} catch (error) {
+					return handleError(error);
+				}
+			},
+			fd_write: async (memory: ArrayBuffer, fd: fd, ciovs_ptr: ptr<ciovec>, ciovs_len: u32, bytesWritten_ptr: ptr<u32>): Promise<errno> => {
+				try {
+					const fileDescriptor = getFileDescriptor(fd);
+					fileDescriptor.assertBaseRights(Rights.fd_write);
+
+					const view = new DataView(memory);
+					const buffers = read_ciovs(memory, ciovs_ptr, ciovs_len);
+					const bytesWritten = await getDeviceDriver(fileDescriptor).fd_write(fileDescriptor, buffers);
+					view.setUint32(bytesWritten_ptr, bytesWritten, true);
+					return Errno.success;
+				} catch (error) {
+					return handleError(error);
+				}
+			},
+			path_create_directory: async (memory: ArrayBuffer, fd: fd, path_ptr: ptr<bytes>, path_len: size): Promise<errno> => {
+				try {
+					const fileDescriptor = getFileDescriptor(fd);
+					fileDescriptor.assertBaseRights(Rights.path_create_directory);
+					fileDescriptor.assertIsDirectory();
+
+					const path = decoder.decode(new Uint8Array(memory, path_ptr, path_len));
+					await getDeviceDriver(fileDescriptor).path_create_directory(fileDescriptor, path);
+					return Errno.success;
+				} catch (error) {
+					return handleError(error);
+				}
+			},
+			path_filestat_get: async (memory: ArrayBuffer, fd: fd, flags: lookupflags, path_ptr: ptr<bytes>, path_len: size, filestat_ptr: ptr): Promise<errno> => {
+				try {
+					const fileDescriptor = getFileDescriptor(fd);
+					fileDescriptor.assertBaseRights(Rights.path_filestat_get);
+					fileDescriptor.assertIsDirectory();
+
+					const path = decoder.decode(new Uint8Array(memory, path_ptr, path_len));
+					await getDeviceDriver(fileDescriptor).path_filestat_get(fileDescriptor, flags, path, Filestat.create(filestat_ptr, new DataView(memory)));
+					return Errno.success;
+				} catch (error) {
+					return handleError(error);
+				}
+			},
+			path_filestat_set_times: async (memory: ArrayBuffer, fd: fd, flags: lookupflags, path_ptr: ptr<bytes>, path_len: size, atim: timestamp, mtim: timestamp, fst_flags: fstflags): Promise<errno> => {
+				try {
+					const fileDescriptor = getFileDescriptor(fd);
+					fileDescriptor.assertBaseRights(Rights.path_filestat_set_times);
+					fileDescriptor.assertIsDirectory();
+
+					const path = decoder.decode(new Uint8Array(memory, path_ptr, path_len));
+					await getDeviceDriver(fileDescriptor).path_filestat_set_times(fileDescriptor, flags, path, atim, mtim, fst_flags);
+					return Errno.success;
+				} catch (error) {
+					return handleError(error);
+				}
+			},
+			path_link: async (memory: ArrayBuffer, old_fd: fd, old_flags: lookupflags, old_path_ptr: ptr<bytes>, old_path_len: size, new_fd: fd, new_path_ptr: ptr<bytes>, new_path_len: size): Promise<errno> => {
+				try {
+					const oldFileDescriptor = getFileDescriptor(old_fd);
+					oldFileDescriptor.assertBaseRights(Rights.path_link_source);
+					oldFileDescriptor.assertIsDirectory();
+
+					const newFileDescriptor = getFileDescriptor(new_fd);
+					newFileDescriptor.assertBaseRights(Rights.path_link_target);
+					newFileDescriptor.assertIsDirectory();
+
+					if (oldFileDescriptor.deviceId !== newFileDescriptor.deviceId) {
+						// currently we have no support to link across devices
+						return Errno.nosys;
+					}
+
+					const oldPath = decoder.decode(new Uint8Array(memory, old_path_ptr, old_path_len));
+					const newPath = decoder.decode(new Uint8Array(memory, new_path_ptr, new_path_len));
+					await getDeviceDriver(oldFileDescriptor).path_link(oldFileDescriptor, old_flags, oldPath, newFileDescriptor, newPath);
+					return Errno.success;
+				} catch (error) {
+					return handleError(error);
+				}
+			},
+			path_open: async (memory: ArrayBuffer, fd: fd, dirflags: lookupflags, path_ptr: ptr<bytes>, path_len: size, oflags: oflags, fs_rights_base: rights, fs_rights_inheriting: rights, fdflags: fdflags, fd_ptr: ptr<fd>): Promise<errno> => {
+				try {
+					const fileDescriptor = getFileDescriptor(fd);
+					fileDescriptor.assertBaseRights(Rights.path_open);
+					fileDescriptor.assertFdflags(fdflags);
+					fileDescriptor.assertOflags(oflags);
+
+					const path = decoder.decode(new Uint8Array(memory, path_ptr, path_len));
+					const result = await getDeviceDriver(fileDescriptor).path_open(fileDescriptor, dirflags, path, oflags, fs_rights_base, fs_rights_inheriting, fdflags);
+					fileDescriptors.set(result.fd, result);
+					const view = new DataView(memory);
+					view.setUint32(fd_ptr, result.fd, true);
+					return Errno.success;
+				} catch(error) {
+					return handleError(error);
+				}
+			},
+			path_readlink: async (memory: ArrayBuffer, fd: fd, path_ptr: ptr<bytes>, path_len: size, buf_ptr: ptr, buf_len: size, result_size_ptr: ptr<u32>): Promise<errno> => {
+				try {
+					const fileDescriptor = getFileDescriptor(fd);
+					fileDescriptor.assertBaseRights(Rights.path_readlink);
+					fileDescriptor.assertIsDirectory();
+
+					const path = decoder.decode(new Uint8Array(memory, path_ptr, path_len));
+					const target = encoder.encode(await getDeviceDriver(fileDescriptor).path_readlink(fileDescriptor, path));
+					if (target.byteLength > buf_len) {
+						return Errno.inval;
+					}
+					new Uint8Array(memory, buf_ptr, buf_len).set(target);
+					new DataView(memory).setUint32(result_size_ptr, target.byteLength, true);
+					return Errno.success;
+				} catch (error) {
+					return handleError(error);
+				}
+			},
+			path_remove_directory: async (memory: ArrayBuffer, fd: fd, path_ptr: ptr<bytes>, path_len: size): Promise<errno> => {
+				try {
+					const fileDescriptor = getFileDescriptor(fd);
+					fileDescriptor.assertBaseRights(Rights.path_remove_directory);
+					fileDescriptor.assertIsDirectory();
+
+					const path = decoder.decode(new Uint8Array(memory, path_ptr, path_len));
+					await getDeviceDriver(fileDescriptor).path_remove_directory(fileDescriptor, path);
+					return Errno.success;
+				} catch (error) {
+					return handleError(error);
+				}
+			},
+			path_rename: async (memory: ArrayBuffer, old_fd: fd, old_path_ptr: ptr<bytes>, old_path_len: size, new_fd: fd, new_path_ptr: ptr<bytes>, new_path_len: size): Promise<errno> => {
+				try {
+					const oldFileDescriptor = getFileDescriptor(old_fd);
+					oldFileDescriptor.assertBaseRights(Rights.path_rename_source);
+					oldFileDescriptor.assertIsDirectory();
+
+					const newFileDescriptor = getFileDescriptor(new_fd);
+					newFileDescriptor.assertBaseRights(Rights.path_rename_target);
+					newFileDescriptor.assertIsDirectory();
+
+					const oldPath = decoder.decode(new Uint8Array(memory, old_path_ptr, old_path_len));
+					const newPath = decoder.decode(new Uint8Array(memory, new_path_ptr, new_path_len));
+					await getDeviceDriver(oldFileDescriptor).path_rename(oldFileDescriptor, oldPath, newFileDescriptor, newPath);
+					return Errno.success;
+				} catch (error) {
+					return handleError(error);
+				}
+			},
+			path_symlink: async (memory: ArrayBuffer, old_path_ptr: ptr<bytes>, old_path_len: size, fd: fd, new_path_ptr: ptr<bytes>, new_path_len: size): Promise<errno> => {
+				// VS Code has no support to create a symlink.
+				try {
+					const fileDescriptor = getFileDescriptor(fd);
+					fileDescriptor.assertBaseRights(Rights.path_symlink);
+					fileDescriptor.assertIsDirectory();
+
+					const oldPath = decoder.decode(new Uint8Array(memory, old_path_ptr, old_path_len));
+					const newPath = decoder.decode(new Uint8Array(memory, new_path_ptr, new_path_len));
+					await getDeviceDriver(fileDescriptor).path_symlink(oldPath, fileDescriptor, newPath);
+					return Errno.success;
+				} catch (error) {
+					return handleError(error);
+				}
+			},
+			path_unlink_file: async (memory: ArrayBuffer, fd: fd, path_ptr: ptr<bytes>, path_len: size): Promise<errno> => {
+				try {
+					const fileDescriptor = getFileDescriptor(fd);
+					fileDescriptor.assertBaseRights(Rights.path_unlink_file);
+					fileDescriptor.assertIsDirectory();
+
+					const path = decoder.decode(new Uint8Array(memory, path_ptr, path_len));
+					await getDeviceDriver(fileDescriptor).path_unlink_file(fileDescriptor, path);
+					return Errno.success;
+				} catch (error) {
+					return handleError(error);
+				}
+			},
+			poll_oneoff: async (memory: ArrayBuffer, input: ptr<subscription>, output: ptr<event[]>, subscriptions: size, result_size_ptr: ptr<u32>): Promise<errno> => {
+				try {
+					const view = new DataView(memory);
+					let { events, needsTimeOut, timeout } = await handleSubscriptions(view, input, subscriptions);
+					if (needsTimeOut && timeout !== undefined && timeout !== 0n) {
+						// Timeout is in ns but sleep API is in ms.
+						apiClient.timer.sleep(BigInts.asNumber(timeout / 1000000n));
+						// Reread the events. Timer will not change however the rest could have.
+						events = handleSubscriptions(view, input, subscriptions).events;
+					}
+					let event_offset = output;
+					for (const item of events) {
+						const event = Event.create(event_offset, view);
+						event.userdata = item.userdata;
+						event.type = item.type;
+						event.error = item.error;
+						event.fd_readwrite.nbytes = item.fd_readwrite.nbytes;
+						event.fd_readwrite.flags = item.fd_readwrite.flags;
+						event_offset += Event.size;
+					}
+					view.setUint32(result_size_ptr, events.length, true);
+					return Errno.success;
+				} catch (error) {
+					return handleError(error);
+				}
+			},
+			proc_exit: (_memory: ArrayBuffer, rval: exitcode): Promise<errno> => {
+				exitHandler(rval);
+				return Promise.resolve(Errno.success);
+			},
+			sched_yield: (): Promise<errno> => {
+				return Promise.resolve(Errno.success);
+			},
+			random_get: (memory: ArrayBuffer, buf: ptr<u8[]>, buf_len: size): Promise<errno> => {
+				const random = RAL().crypto.randomGet(buf_len);
+				new Uint8Array(memory, buf, buf_len).set(random);
+				return Promise.resolve(Errno.success);
+			},
+			sock_accept: (_memory: ArrayBuffer, _fd: fd, _flags: fdflags, _result_fd_ptr: ptr<u32>): Promise<errno> => {
+				return Promise.resolve(Errno.nosys);
+			},
+			sock_recv: (_memory: ArrayBuffer, _fd: fd, _ri_data_ptr: ptr, _ri_data_len: u32, _ri_flags: riflags, _ro_datalen_ptr: ptr, _roflags_ptr: ptr): Promise<errno> => {
+				return Promise.resolve(Errno.nosys);
+			},
+			sock_send: (_memory: ArrayBuffer, _fd: fd, _si_data_ptr: ptr, _si_data_len: u32, _si_flags: siflags, _si_datalen_ptr: ptr): Promise<errno> => {
+				return Promise.resolve(Errno.nosys);
+			},
+			sock_shutdown: (_memory: ArrayBuffer, _fd: fd, _sdflags: sdflags): Promise<errno> => {
+				return Promise.resolve(Errno.nosys);
+			},
+			'thread-spawn': (_memory: ArrayBuffer, _start_args_ptr: ptr<u32>): Promise<errno> => {
+				return Promise.resolve(Errno.nosys);
+			}
+		};
+
+		function now(id: clockid, _precision: timestamp): bigint {
+			switch(id) {
+				case Clockid.realtime:
+					return RAL().clock.realtime();
+				case Clockid.monotonic:
+					return RAL().clock.monotonic();
+				case Clockid.process_cputime_id:
+				case Clockid.thread_cputime_id:
+					return RAL().clock.monotonic() - thread_start;
+				default:
+					throw new WasiError(Errno.inval);
+			}
+		}
+
+		async function handleSubscriptions(memory: DataView, input: ptr, subscriptions: size) {
+			let subscription_offset: ptr = input;
+			const events: Literal<event>[] = [];
+			let timeout: bigint | undefined;
+			let needsTimeOut = false;
+			for (let i = 0; i < subscriptions; i++) {
+				const subscription = Subscription.create(subscription_offset, memory);
+				const u = subscription.u;
+				switch (u.type) {
+					case Eventtype.clock:
+						const clockResult = handleClockSubscription(subscription);
+						timeout = clockResult.timeout;
+						events.push(clockResult.event);
+						break;
+					case Eventtype.fd_read:
+						const readEvent = await handleReadSubscription(subscription);
+						events.push(readEvent);
+						if (readEvent.error !== Errno.success || readEvent.fd_readwrite.nbytes === 0n) {
+							needsTimeOut = true;
+						}
+						break;
+					case Eventtype.fd_write:
+						const writeEvent = handleWriteSubscription(subscription);
+						events.push(writeEvent);
+						if (writeEvent.error !== Errno.success) {
+							needsTimeOut = true;
+						}
+						break;
+				}
+				subscription_offset += Subscription.size;
+			}
+			return { events, needsTimeOut, timeout };
+		}
+
+		function handleClockSubscription(subscription: subscription): { event: Literal<event>; timeout: bigint } {
+			const result: Literal<event> = {
+				userdata: subscription.userdata,
+				type: Eventtype.clock,
+				error: Errno.success,
+				fd_readwrite: {
+					nbytes: 0n,
+					flags: 0
+				}
+			};
+			const clock = subscription.u.clock;
+			// Timeout is in ns.
+			let timeout: bigint;
+			if ((clock.flags & Subclockflags.subscription_clock_abstime) !== 0) {
+				const time = now(Clockid.realtime, 0n);
+				timeout = BigInt(Math.max(0, BigInts.asNumber(time - clock.timeout)));
+			} else {
+				timeout  = clock.timeout;
+			}
+			return { event: result, timeout };
+		}
+
+		async function handleReadSubscription(subscription: subscription): Promise<Literal<event>> {
+			const fd = subscription.u.fd_read.file_descriptor;
+			try {
+				const fileDescriptor = getFileDescriptor(fd);
+				if (!fileDescriptor.containsBaseRights(Rights.poll_fd_readwrite) && !fileDescriptor.containsBaseRights(Rights.fd_read)) {
+					throw new WasiError(Errno.perm);
+				}
+
+				const available = await getDeviceDriver(fileDescriptor).fd_bytesAvailable(fileDescriptor);
+				return {
+					userdata: subscription.userdata,
+					type: Eventtype.fd_read,
+					error: Errno.success,
+					fd_readwrite: {
+						nbytes: available,
+						flags: 0
+					}
+				};
+			} catch (error) {
+				return {
+					userdata: subscription.userdata,
+					type: Eventtype.fd_read,
+					error: handleError(error),
+					fd_readwrite: {
+						nbytes: 0n,
+						flags: 0
+					}
+				};
+			}
+		}
+
+		function handleWriteSubscription(subscription: subscription): Literal<event> {
+			const fd = subscription.u.fd_write.file_descriptor;
+			try {
+				const fileDescriptor = getFileDescriptor(fd);
+				if (!fileDescriptor.containsBaseRights(Rights.poll_fd_readwrite) && !fileDescriptor.containsBaseRights(Rights.fd_write)) {
+					throw new WasiError(Errno.perm);
+				}
+				return {
+					userdata: subscription.userdata,
+					type: Eventtype.fd_write,
+					error: Errno.success,
+					fd_readwrite: {
+						nbytes: 0n,
+						flags: 0
+					}
+				};
+			} catch (error) {
+				return {
+					userdata: subscription.userdata,
+					type: Eventtype.fd_write,
+					error: handleError(error),
+					fd_readwrite: {
+						nbytes: 0n,
+						flags: 0
+					}
+				};
+			}
+		}
+
+		function handleError(error: any, def: errno = Errno.badf): errno {
+			if (error instanceof WasiError) {
+				return error.errno;
+			} else if (error instanceof FileSystemError) {
+				return code2Wasi.asErrno(error.code);
+			} else if (error instanceof RPCError) {
+				return code2Wasi.asErrno(error.errno);
+			}
+			return def;
+		}
+
+		function read_ciovs (memory: ArrayBuffer, iovs: ptr, iovsLen: u32): Uint8Array[] {
+			const view = new DataView(memory);
+
+			const buffers: Uint8Array[] = [];
+			let ptr: ptr = iovs;
+			for (let i = 0; i < iovsLen; i++) {
+				const vec = Ciovec.create(ptr, view);
+				buffers.push(new Uint8Array(memory, vec.buf, vec.buf_len));
+				ptr += Ciovec.size;
+			}
+			return buffers;
+		}
+
+		function read_iovs (memory: ArrayBuffer, iovs: ptr, iovsLen: u32): Uint8Array[] {
+			const view = new DataView(memory);
+
+			const buffers: Uint8Array[] = [];
+			let ptr: ptr = iovs;
+			for (let i = 0; i < iovsLen; i++) {
+				const vec = Iovec.create(ptr, view);
+				buffers.push(new Uint8Array(memory, vec.buf, vec.buf_len));
+				ptr += Iovec.size;
+			}
+			return buffers;
+		}
+
+		function getDeviceDriver(fileDescriptor: FileDescriptor): DeviceDriver {
+			const result = deviceDrivers.get(fileDescriptor.deviceId);
+			if (result === undefined) {
+				throw new WasiError(Errno.badf);
+			}
+			return result;
+		}
+
+		function getFileDescriptor(fd: fd): FileDescriptor {
+			const result = fileDescriptors.get(fd);
+			if (result === undefined) {
+				throw new WasiError(Errno.badf);
+			}
+			return result;
+		}
+
+		return wasiService;
 	}
 }

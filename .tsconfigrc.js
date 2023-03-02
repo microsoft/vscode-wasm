@@ -87,6 +87,13 @@ const node = {
 };
 
 /** @type SharableOptions */
+const webworker = {
+	compilerOptions: {
+		lib: [ 'webworker' ]
+	}
+}
+
+/** @type SharableOptions */
 const referenced = {
 	compilerOptions: {
 		composite: true
@@ -267,7 +274,7 @@ const wasm_wasi_kernel = {
 		},
 		{
 			path: './src/node',
-			extends: [ node ],
+			extends: [ node, webworker ],
 			references: [ '../common' ]
 		}
 	]
