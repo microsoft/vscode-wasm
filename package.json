@@ -34,7 +34,10 @@
 		"shelljs": "^0.8.5",
 		"shx": "^0.3.4",
 		"@vscode/tsconfig-gen": "0.1.0",
-		"typescript": "^4.9.4"
+		"typescript": "^4.9.4",
+		"serve": "^14.1.2",
+		"@types/path-browserify": "^1.0.0",
+		"path-browserify": "^1.0.1"
 	},
 	"scripts": {
 		"postinstall": "node ./build/bin/all.js install",
@@ -49,6 +52,7 @@
 		"test:apiWebTests": "cd sync-api-tests && npm run test:runWebTests && cd ..",
 		"tsconfig-gen": "tsconfig-gen --file .tsconfigrc.js",
 		"validate:versions": "node ./tools/lib/validate-versions.js",
-		"update:lock": "git clean -xfd . && npm install"
+		"update:lock": "git clean -xfd . && npm install",
+		"serve": "serve --cors -l 5000 --ssl-cert $HOME/certs/localhost.pem --ssl-key $HOME/certs/localhost-key.pem -c ../../configs/serve.json ./testbeds/demo"
 	}
 }
