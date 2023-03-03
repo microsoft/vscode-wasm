@@ -16,8 +16,8 @@ import { Offsets } from './connection';
 import { WasiFunction, WasiFunctions, WasiFunctionSignature } from './wasiMeta';
 import { byte, bytes, cstring, ptr, size, u32, u64 } from './baseTypes';
 import RAL from './ral';
-import { FileDescriptor } from './fileDescriptor';
-import { DeviceDriver, DeviceId, ReaddirEntry } from './deviceDriver';
+import { FileDescriptor, FileDescriptors } from './fileDescriptor';
+import { DeviceDriver, DeviceDrivers, DeviceId, ReaddirEntry } from './deviceDriver';
 import { BigInts, code2Wasi } from './converter';
 
 export interface WasiService {
@@ -138,24 +138,9 @@ export type Options = {
 };
 
 export namespace WasiService {
-	export function create(programName: string, exitHandler: (rval: number) => void, options: Options = {}): WasiService {
+	export function create(deviceDrivers: DeviceDrivers, fileDescriptors: FileDescriptors, programName: string, exitHandler: (rval: number) => void, options: Options = {}): WasiService {
 
 		const thread_start = RAL().clock.realtime();
-
-		let fileDescriptorCounter: number = 0;
-		let firstRealFileDescriptor: number = 3;
-		let fileDescriptorMode: 'init' | 'running' = 'init';
-		const fileDescriptorId = {
-			next(): number {
-				if (fileDescriptorMode === 'init') {
-					throw new WasiError(Errno.inval);
-				}
-				return fileDescriptorCounter++;
-			}
-		};
-		const fileDescriptors: Map<fd, FileDescriptor> = new Map();
-
-		const deviceDrivers: Map<DeviceId, DeviceDriver> = new Map();
 
 		const preStatProviders: DeviceDriver[] = [];
 		const preStatDirnames: Map<fd, string> = new Map();
@@ -276,7 +261,7 @@ export namespace WasiService {
 					const fileDescriptor = getFileDescriptor(fd);
 
 					await getDeviceDriver(fileDescriptor).fd_close(fileDescriptor);
-					fileDescriptors.delete(fileDescriptor.fd);
+					fileDescriptors.delete(fileDescriptor);
 					return Errno.success;
 				} catch (error) {
 					return handleError(error);
@@ -365,9 +350,7 @@ export namespace WasiService {
 				try {
 					while (true) {
 						if (preStatProviders.length === 0) {
-							fileDescriptorCounter = fd;
-							firstRealFileDescriptor = fd;
-							fileDescriptorMode = 'running';
+							fileDescriptors.switchToRunning(fd);
 							return Errno.badf;
 						}
 						const current = preStatProviders[0];
@@ -377,7 +360,7 @@ export namespace WasiService {
 							preStatProviders.shift();
 						} else {
 							const [mountPoint, fileDescriptor] = result;
-							fileDescriptors.set(fileDescriptor.fd, fileDescriptor);
+							fileDescriptors.add(fileDescriptor);
 							preStatDirnames.set(fileDescriptor.fd, mountPoint);
 							const view = new DataView(memory);
 							const prestat = Prestat.create(bufPtr, view);
@@ -513,7 +496,7 @@ export namespace WasiService {
 			},
 			fd_renumber: (_memory: ArrayBuffer, fd: fd, to: fd): Promise<errno> => {
 				try {
-					if (fd < firstRealFileDescriptor || to < firstRealFileDescriptor) {
+					if (fd < fileDescriptors.firstRealFileDescriptor || to < fileDescriptors.firstRealFileDescriptor) {
 						return Promise.resolve(Errno.notsup);
 					}
 					if ((fileDescriptors.has(to))) {
@@ -521,8 +504,8 @@ export namespace WasiService {
 					}
 					const fileDescriptor = getFileDescriptor(fd);
 					const toFileDescriptor = fileDescriptor.with({ fd: to });
-					fileDescriptors.delete(fileDescriptor.fd);
-					fileDescriptors.set(toFileDescriptor.fd, toFileDescriptor);
+					fileDescriptors.delete(fileDescriptor);
+					fileDescriptors.add(toFileDescriptor);
 					return Promise.resolve(Errno.success);
 				} catch (error) {
 					return Promise.resolve(handleError(error));
@@ -636,8 +619,8 @@ export namespace WasiService {
 					fileDescriptor.assertOflags(oflags);
 
 					const path = decoder.decode(new Uint8Array(memory, path_ptr, path_len));
-					const result = await getDeviceDriver(fileDescriptor).path_open(fileDescriptor, dirflags, path, oflags, fs_rights_base, fs_rights_inheriting, fdflags);
-					fileDescriptors.set(result.fd, result);
+					const result = await getDeviceDriver(fileDescriptor).path_open(fileDescriptor, dirflags, path, oflags, fs_rights_base, fs_rights_inheriting, fdflags, fileDescriptors);
+					fileDescriptors.add(result);
 					const view = new DataView(memory);
 					view.setUint32(fd_ptr, result.fd, true);
 					return Errno.success;
@@ -945,11 +928,7 @@ export namespace WasiService {
 		}
 
 		function getDeviceDriver(fileDescriptor: FileDescriptor): DeviceDriver {
-			const result = deviceDrivers.get(fileDescriptor.deviceId);
-			if (result === undefined) {
-				throw new WasiError(Errno.badf);
-			}
-			return result;
+			return deviceDrivers.get(fileDescriptor.deviceId);
 		}
 
 		function getFileDescriptor(fd: fd): FileDescriptor {

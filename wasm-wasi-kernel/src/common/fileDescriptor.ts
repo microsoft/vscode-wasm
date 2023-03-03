@@ -140,3 +140,58 @@ export abstract class BaseFileDescriptor implements FileDescriptor {
 		}
 	}
 }
+
+export interface FdProvider {
+	next(): fd;
+}
+
+export class FileDescriptors implements FdProvider {
+
+	private readonly descriptors: Map<fd, FileDescriptor> = new Map();
+	private mode: 'init' | 'running' = 'init';
+	private counter: fd = 0;
+	private firstReal: fd = 3;
+
+	constructor() {
+	}
+
+	public get firstRealFileDescriptor(): fd {
+		return this.firstReal;
+	}
+
+	public next(): fd {
+		if (this.mode === 'init') {
+			throw new WasiError(Errno.inval);
+		}
+		return this.counter++;
+	}
+
+	public switchToRunning(start: fd): void {
+		if (this.mode === 'running') {
+			throw new WasiError(Errno.inval);
+		}
+		this.mode = 'running';
+		this.counter = start;
+		this.firstReal = start;
+	}
+
+	public add(descriptor: FileDescriptor): void {
+		this.descriptors.set(descriptor.fd, descriptor);
+	}
+
+	public get(fd: fd): FileDescriptor {
+		const descriptor = this.descriptors.get(fd);
+		if (!descriptor) {
+			throw new WasiError(Errno.badf);
+		}
+		return descriptor;
+	}
+
+	public has(fd: fd): boolean {
+		return this.descriptors.has(fd);
+	}
+
+	public delete(descriptor: FileDescriptor): boolean {
+		return this.descriptors.delete(descriptor.fd);
+	}
+}

@@ -2,9 +2,7 @@
  *  Copyright (c) Microsoft Corporation. All rights reserved.
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
-
-import { FileStat, workspace } from 'vscode';
-import { URI } from 'vscode-uri';
+import { FileStat, FileType, workspace, Uri } from 'vscode';
 
 import RAL from './ral';
 import { LRUCache } from './linkedMap';
@@ -14,8 +12,8 @@ import {
 	lookupflags, timestamp, fstflags, oflags, Oflags, filesize, Fdflags, inode
 } from './wasi';
 import { BigInts, code2Wasi } from './converter';
-import { BaseFileDescriptor, FileDescriptor } from './fileDescriptor';
-import { NoSysDeviceDriver, DeviceIds, ReaddirEntry, FileSystemDeviceDriver } from './deviceDriver';
+import { BaseFileDescriptor, FdProvider, FileDescriptor } from './fileDescriptor';
+import { NoSysDeviceDriver, DeviceIds, ReaddirEntry, FileSystemDeviceDriver, DeviceId } from './deviceDriver';
 
 const paths = RAL().path;
 
@@ -178,7 +176,7 @@ class FileSystem {
 
 	static inodeCounter: bigint = 1n;
 
-	private readonly vscfs: URI;
+	private readonly vscfs: Uri;
 	private readonly root: DirectoryNode;
 
 	private readonly inodes: Map<inode, Node>;
@@ -190,7 +188,7 @@ class FileSystem {
 	private readonly deletedNodes: Map<inode, Node>;
 	private readonly pathCache: LRUCache<Node, string>;
 
-	constructor(vscfs: URI) {
+	constructor(vscfs: Uri) {
 		this.vscfs = vscfs;
 		this.root = {
 			kind: NodeKind.Directory,
@@ -213,9 +211,9 @@ class FileSystem {
 		return this.root;
 	}
 
-	public getUri(node: Node): URI;
-	public getUri(node: DirectoryNode, fsPath: string): URI;
-	public getUri(node: DirectoryNode, fsPath?: string): URI {
+	public getUri(node: Node): Uri;
+	public getUri(node: DirectoryNode, fsPath: string): Uri;
+	public getUri(node: DirectoryNode, fsPath?: string): Uri {
 		const finalPath = fsPath === undefined || fsPath === '.' ? this.getPath(node) : paths.join(this.getPath(node), fsPath);
 		return this.vscfs.with({ path: paths.join(this.vscfs.path, finalPath) });
 	}
@@ -318,7 +316,7 @@ class FileSystem {
 		this.contents.set(inode.inode, content);
 	}
 
-	public async getContent(inode: FileNode, contentProvider: { readFile(uri: URI): Thenable<Uint8Array> }): Promise<Uint8Array> {
+	public async getContent(inode: FileNode, contentProvider: { readFile(uri: Uri): Thenable<Uint8Array> }): Promise<Uint8Array> {
 		let content = this.contents.get(inode.inode);
 		if (content === undefined)	{
 			content = await contentProvider.readFile(this.getUri(inode));
@@ -446,10 +444,9 @@ class FileSystem {
 	}
 }
 
-export function create(baseUri: URI, mountPoint: string): FileSystemDeviceDriver {
+export function create(deviceId: DeviceId, baseUri: Uri, mountPoint: string): FileSystemDeviceDriver {
 
 	const vscode_fs = workspace.fs;
-	const deviceId = DeviceIds.next();
 	const fs = new FileSystem(baseUri);
 
 	const preOpenDirectories = [mountPoint];
@@ -556,6 +553,8 @@ export function create(baseUri: URI, mountPoint: string): FileSystemDeviceDriver
 	}
 
 	return Object.assign({}, NoSysDeviceDriver, {
+
+		uri: baseUri,
 		id: deviceId,
 
 		createStdioFileDescriptor(fd: 0 | 1 | 2, fdflags: fdflags, path: string): FileDescriptor {
@@ -649,15 +648,15 @@ export function create(baseUri: URI, mountPoint: string): FileSystemDeviceDriver
 			const content = await fs.getContent(fs.getNode(fileDescriptor.inode, NodeKind.File), vscode_fs);
 			return read(content, offset, buffers);
 		},
-		fd_prestat_get(fd: fd): [string, FileDescriptor] | undefined {
+		fd_prestat_get(fd: fd): Promise<[string, FileDescriptor] | undefined> {
 			const next = preOpenDirectories.shift();
 			if (next === undefined) {
-				return undefined;
+				return Promise.resolve(undefined);
 			}
-			return [
+			return Promise.resolve([
 				next,
 				new DirectoryFileDescriptor(deviceId, fd, DirectoryBaseRights, DirectoryInheritingRights, 0, fs.getRoot().inode)
-			];
+			]);
 		},
 		async fd_pwrite(fileDescriptor: FileDescriptor, _offset: filesize, buffers: Uint8Array[]): Promise<number> {
 			const offset = BigInts.asNumber(_offset);
@@ -678,13 +677,13 @@ export function create(baseUri: URI, mountPoint: string): FileSystemDeviceDriver
 			fileDescriptor.cursor = fileDescriptor.cursor + totalBytesRead;
 			return totalBytesRead;
 		},
-		fd_readdir(fileDescriptor: FileDescriptor): ReaddirEntry[] {
+		async fd_readdir(fileDescriptor: FileDescriptor): Promise<ReaddirEntry[]> {
 			assertDirectoryDescriptor(fileDescriptor);
 
 			// Also unclear whether we have to include '.' and '..'
 			// See also https://github.com/WebAssembly/wasi-filesystem/issues/3
 			const directoryNode = fs.getNode(fileDescriptor.inode, NodeKind.Directory);
-			const entries = vscode_fs.readDirectory(fs.getUri(directoryNode));
+			const entries = await vscode_fs.readDirectory(fs.getUri(directoryNode));
 			const result: ReaddirEntry[] = [];
 			for (const entry of entries) {
 				const name = entry[0];
@@ -694,7 +693,7 @@ export function create(baseUri: URI, mountPoint: string): FileSystemDeviceDriver
 			}
 			return result;
 		},
-		fd_seek(fileDescriptor: FileDescriptor, _offset: bigint, whence: number): bigint {
+		async fd_seek(fileDescriptor: FileDescriptor, _offset: bigint, whence: number): Promise<bigint> {
 			assertFileDescriptor(fileDescriptor);
 
 			const offset = BigInts.asNumber(_offset);
@@ -706,69 +705,70 @@ export function create(baseUri: URI, mountPoint: string): FileSystemDeviceDriver
 					fileDescriptor.cursor = fileDescriptor.cursor + offset;
 					break;
 				case Whence.end:
-					const content = fs.getContent(fs.getNode(fileDescriptor.inode, NodeKind.File), vscode_fs);
+					const content = await fs.getContent(fs.getNode(fileDescriptor.inode, NodeKind.File), vscode_fs);
 					fileDescriptor.cursor = Math.max(0, content.byteLength - offset);
 					break;
 			}
 			return BigInt(fileDescriptor.cursor);
 		},
-		fd_renumber(fileDescriptor: FileDescriptor, _to: fd): void {
+		fd_renumber(fileDescriptor: FileDescriptor, _to: fd): Promise<void> {
 			assertFileDescriptor(fileDescriptor);
+			return Promise.resolve();
 		},
-		fd_sync(fileDescriptor: FileDescriptor): void {
-			writeContent(fs.getNode(fileDescriptor.inode, NodeKind.File));
+		async fd_sync(fileDescriptor: FileDescriptor): Promise<void> {
+			return writeContent(fs.getNode(fileDescriptor.inode, NodeKind.File));
 		},
-		fd_tell(fileDescriptor: FileDescriptor): u64 {
+		fd_tell(fileDescriptor: FileDescriptor): Promise<u64> {
 			assertFileDescriptor(fileDescriptor);
 
-			return BigInt(fileDescriptor.cursor);
+			return Promise.resolve(BigInt(fileDescriptor.cursor));
 		},
-		fd_write(fileDescriptor: FileDescriptor, buffers: Uint8Array[]): number {
+		async fd_write(fileDescriptor: FileDescriptor, buffers: Uint8Array[]): Promise<number> {
 			if (buffers.length === 0) {
 				return 0;
 			}
 			assertFileDescriptor(fileDescriptor);
 
 			const inode = fs.getNode(fileDescriptor.inode, NodeKind.File);
-			const content = fs.getContent(inode, vscode_fs);
+			const content = await fs.getContent(inode, vscode_fs);
 			// We have append mode on. According to POSIX we need to
 			// move the cursor to the end of the file on every write
 			if (Fdflags.appendOn(fileDescriptor.fdflags)) {
 				fileDescriptor.cursor = content.byteLength;
 			}
 			const [newContent, bytesWritten] = write(content, fileDescriptor.cursor, buffers);
-			writeContent(inode,newContent);
+			await writeContent(inode,newContent);
 			fileDescriptor.cursor = fileDescriptor.cursor + bytesWritten;
 			return bytesWritten;
 		},
-		path_create_directory(fileDescriptor: FileDescriptor, path: string): void {
+		async path_create_directory(fileDescriptor: FileDescriptor, path: string): Promise<void> {
 			const inode = fs.getNode(fileDescriptor.inode, NodeKind.Directory);
-			vscode_fs.createDirectory(fs.getUri(inode, path));
+			await vscode_fs.createDirectory(fs.getUri(inode, path));
 		},
-		path_filestat_get(fileDescriptor: FileDescriptor, _flags: lookupflags, path: string, result: filestat): void {
+		async path_filestat_get(fileDescriptor: FileDescriptor, _flags: lookupflags, path: string, result: filestat): Promise<void> {
 			assertDirectoryDescriptor(fileDescriptor);
 			const inode = fs.getNode(fileDescriptor.inode, NodeKind.Directory);
-			const vStat: FileStat = vscode_fs.stat(fs.getUri(inode, path));
+			const vStat: FileStat = await vscode_fs.stat(fs.getUri(inode, path));
 			assignStat(result, fs.getOrCreateNode(inode, path, vStat.type === FileType.Directory ? NodeKind.Directory : NodeKind.File, false).inode, vStat);
 		},
-		path_filestat_set_times(_fileDescriptor: FileDescriptor, _flags: lookupflags, _path: string, _atim: timestamp, _mtim: timestamp, _fst_flags: fstflags): void {
+		path_filestat_set_times(_fileDescriptor: FileDescriptor, _flags: lookupflags, _path: string, _atim: timestamp, _mtim: timestamp, _fst_flags: fstflags): Promise<void> {
 			// For now we do nothing. We could cache the timestamp in memory
 			// But we would loose them during reload. We could also store them
 			// in local storage
 			throw new WasiError(Errno.nosys);
 		},
-		path_link(_oldFileDescriptor: FileDescriptor, _old_flags: lookupflags, _old_path: string, _newFileDescriptor: FileDescriptor, _new_path: string): void {
+		path_link(_oldFileDescriptor: FileDescriptor, _old_flags: lookupflags, _old_path: string, _newFileDescriptor: FileDescriptor, _new_path: string): Promise<void> {
 			// For now we do nothing. If we need to implement this we need
 			// support from the VS Code API.
 			throw new WasiError(Errno.nosys);
 		},
-		path_open(parentDescriptor: FileDescriptor, _dirflags: lookupflags, path: string, oflags: oflags, fs_rights_base: rights, fs_rights_inheriting: rights, fdflags: fdflags): FileDescriptor {
+		async path_open(parentDescriptor: FileDescriptor, _dirflags: lookupflags, path: string, oflags: oflags, fs_rights_base: rights, fs_rights_inheriting: rights, fdflags: fdflags, fdProvider: FdProvider): Promise<FileDescriptor> {
 			assertDirectoryDescriptor(parentDescriptor);
 			// We ignore lookup flags that request to follow symlinks. The POSIX FS
 			// implementation we have right now doesn't support symlinks and VS Code
 			// has no API to follow / resolve a symlink.
 
-			let filetype: filetype | undefined = doGetFiletype(parentDescriptor, path);
+			let filetype: filetype | undefined = await doGetFiletype(parentDescriptor, path);
 			const entryExists: boolean = filetype !== undefined;
 			if (entryExists) {
 				if (Oflags.exclOn(oflags)) {
@@ -789,7 +789,7 @@ export function create(baseUri: URI, mountPoint: string): FileSystemDeviceDriver
 				const dirname = paths.dirname(path);
 				// The name has a directory part. Ensure that the directory exists
 				if (dirname !== '.') {
-					const dirFiletype = doGetFiletype(parentDescriptor, dirname);
+					const dirFiletype = await doGetFiletype(parentDescriptor, dirname);
 					if (dirFiletype === undefined || dirFiletype !== Filetype.directory) {
 						throw new WasiError(Errno.noent);
 					}
@@ -811,20 +811,20 @@ export function create(baseUri: URI, mountPoint: string): FileSystemDeviceDriver
 			// or a directory. Since we were able to stat the file we create
 			// a file descriptor for it and lazy get the file content on read.
 			const result = filetype === Filetype.regular_file
-				? createFileDescriptor(parentDescriptor, parentDescriptor.childFileRights(fs_rights_base), fdflags, path)
-				: createDirectoryDescriptor(parentDescriptor, parentDescriptor.childDirectoryRights(fs_rights_base), fs_rights_inheriting | DirectoryInheritingRights, fdflags, path);
+				? createFileDescriptor(parentDescriptor, fdProvider.next(), parentDescriptor.childFileRights(fs_rights_base), fdflags, path)
+				: createDirectoryDescriptor(parentDescriptor, fdProvider.next(), parentDescriptor.childDirectoryRights(fs_rights_base), fs_rights_inheriting | DirectoryInheritingRights, fdflags, path);
 
 			if (result instanceof FileFileDescriptor && (createFile || Oflags.truncOn(oflags))) {
-				createOrTruncate(result);
+				await createOrTruncate(result);
 			}
 			return result;
 		},
-		path_readlink(_fileDescriptor: FileDescriptor, _path: string): string {
+		path_readlink(_fileDescriptor: FileDescriptor, _path: string): Promise<string> {
 			// For now we do nothing. If we need to implement this we need
 			// support from the VS Code API.
 			throw new WasiError(Errno.nolink);
 		},
-		path_remove_directory(fileDescriptor: FileDescriptor, path: string): void {
+		async path_remove_directory(fileDescriptor: FileDescriptor, path: string): Promise<void> {
 			assertDirectoryDescriptor(fileDescriptor);
 
 			const inode = fs.getNode(fileDescriptor.inode, NodeKind.Directory);
@@ -833,12 +833,12 @@ export function create(baseUri: URI, mountPoint: string): FileSystemDeviceDriver
 			let filestat: FileStat | undefined;
 			if (targetNode !== undefined && targetNode.refs > 0) {
 				try {
-					filestat = vscode_fs.stat(fs.getUri(targetNode));
+					filestat = await vscode_fs.stat(fs.getUri(targetNode));
 				} catch {
 					filestat = { type: FileType.Directory, ctime: Date.now(), mtime: Date.now(), size: 0 };
 				}
 			}
-			vscode_fs.delete(fs.getUri(inode, path), { recursive: false, useTrash: true });
+			await vscode_fs.delete(fs.getUri(inode, path), { recursive: false, useTrash: true });
 			if (targetNode !== undefined) {
 				if (filestat !== undefined) {
 					fs.deleteNode(targetNode, filestat);
@@ -847,7 +847,7 @@ export function create(baseUri: URI, mountPoint: string): FileSystemDeviceDriver
 				}
 			}
 		},
-		path_rename(oldFileDescriptor: FileDescriptor, oldPath: string, newFileDescriptor: FileDescriptor, newPath: string): void {
+		async path_rename(oldFileDescriptor: FileDescriptor, oldPath: string, newFileDescriptor: FileDescriptor, newPath: string): Promise<void> {
 			assertDirectoryDescriptor(oldFileDescriptor);
 			assertDirectoryDescriptor(newFileDescriptor);
 
@@ -862,9 +862,9 @@ export function create(baseUri: URI, mountPoint: string): FileSystemDeviceDriver
 			if (oldNode !== undefined && oldNode.refs > 0) {
 				try {
 					const uri = fs.getUri(oldNode);
-					filestat = vscode_fs.stat(uri);
+					filestat = await vscode_fs.stat(uri);
 					if (oldNode.kind === NodeKind.File) {
-						content = vscode_fs.readFile(uri);
+						content = await vscode_fs.readFile(uri);
 					}
 				} catch {
 					filestat = { type: FileType.File, ctime: Date.now(), mtime: Date.now(), size: 0 };
@@ -875,16 +875,16 @@ export function create(baseUri: URI, mountPoint: string): FileSystemDeviceDriver
 			const oldUri = fs.getUri(oldParentNode, oldPath);
 			const newUri = fs.getUri(newParentNode, newPath);
 
-			vscode_fs.rename(oldUri, newUri, { overwrite: false });
+			await vscode_fs.rename(oldUri, newUri, { overwrite: false });
 
 			if (oldNode !== undefined) {
 				fs.renameNode(oldNode, filestat, content, newParentNode, newPath);
 			}
 		},
-		path_symlink(_oldPath: string, _fileDescriptor: FileDescriptor, _newPath: string): void {
+		path_symlink(_oldPath: string, _fileDescriptor: FileDescriptor, _newPath: string): Promise<void> {
 			throw new WasiError(Errno.nosys);
 		},
-		path_unlink_file(fileDescriptor: FileDescriptor, path: string): void {
+		async path_unlink_file(fileDescriptor: FileDescriptor, path: string): Promise<void> {
 			assertDirectoryDescriptor(fileDescriptor);
 			const inode = fs.getNode(fileDescriptor.inode, NodeKind.Directory);
 			const targetNode = fs.getNodeByPath(inode, path, NodeKind.File);
@@ -893,14 +893,14 @@ export function create(baseUri: URI, mountPoint: string): FileSystemDeviceDriver
 			if (targetNode !== undefined && targetNode.refs > 0) {
 				try {
 					const uri = fs.getUri(targetNode);
-					filestat = vscode_fs.stat(uri);
-					content = vscode_fs.readFile(uri);
+					filestat = await vscode_fs.stat(uri);
+					content = await vscode_fs.readFile(uri);
 				} catch {
 					filestat = { type: FileType.File, ctime: Date.now(), mtime: Date.now(), size: 0 };
 					content = new Uint8Array(0);
 				}
 			}
-			vscode_fs.delete(fs.getUri(inode, path), { recursive: false, useTrash: true });
+			await vscode_fs.delete(fs.getUri(inode, path), { recursive: false, useTrash: true });
 			if (targetNode !== undefined) {
 				if (filestat !== undefined && content !== undefined) {
 					fs.deleteNode(targetNode, filestat, content);
@@ -909,13 +909,13 @@ export function create(baseUri: URI, mountPoint: string): FileSystemDeviceDriver
 				}
 			}
 		},
-		bytesAvailable(fileDescriptor: FileDescriptor): filesize {
+		async bytesAvailable(fileDescriptor: FileDescriptor): Promise<filesize> {
 			assertFileDescriptor(fileDescriptor);
 
 			const inode = fs.getNode(fileDescriptor.inode, NodeKind.File);
 			const cursor = fileDescriptor.cursor;
-			const content = fs.getContent(inode, vscode_fs);
-			return BigInt(Math.max(0,content.byteLength - cursor));
+			const content = await fs.getContent(inode, vscode_fs);
+			return BigInt(Math.max(0, content.byteLength - cursor));
 		}
 	});
 }

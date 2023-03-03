@@ -3,8 +3,9 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
+import { Uri } from 'vscode';
 import { size, u64 } from './baseTypes';
-import { FileDescriptor } from './fileDescriptor';
+import { FdProvider, FileDescriptor } from './fileDescriptor';
 import {
 	advise, Errno, fd, fdflags, fdstat,filedelta, filesize, filestat, filetype,
 	fstflags, lookupflags, oflags, rights, timestamp, WasiError, whence
@@ -22,7 +23,12 @@ export type ReaddirEntry = { d_ino: bigint; d_type: filetype; d_name: string };
 
 export interface DeviceDriver {
 
-	id: DeviceId;
+	// A VS Code URI to identify the device. This is for example the root URI
+	// of a VS Code file system.
+	readonly uri: Uri;
+
+	// The unique device id.
+	readonly id: DeviceId;
 
 	fd_advise(fileDescriptor: FileDescriptor, offset: filesize, length: filesize, advise: advise): Promise<void>;
 	fd_allocate(fileDescriptor: FileDescriptor, offset: filesize, len: filesize): Promise<void>;
@@ -48,7 +54,7 @@ export interface DeviceDriver {
 	path_filestat_get(fileDescriptor: FileDescriptor, flags: lookupflags, path: string, result: filestat): Promise<void>;
 	path_filestat_set_times(fileDescriptor: FileDescriptor, flags: lookupflags, path: string, atim: timestamp, mtim: timestamp, fst_flags: fstflags): Promise<void>;
 	path_link(old_fd: FileDescriptor, old_flags: lookupflags, old_path: string, new_fd: FileDescriptor, new_path: string): Promise<void>;
-	path_open(fileDescriptor: FileDescriptor, dirflags: lookupflags, path: string, oflags: oflags, fs_rights_base: rights, fs_rights_inheriting: rights, fdflags: fdflags): Promise<FileDescriptor>;
+	path_open(fileDescriptor: FileDescriptor, dirflags: lookupflags, path: string, oflags: oflags, fs_rights_base: rights, fs_rights_inheriting: rights, fdflags: fdflags, fdProvider: FdProvider): Promise<FileDescriptor>;
 	path_readlink(fileDescriptor: FileDescriptor, path: string): Promise<string>;
 	path_remove_directory(fileDescriptor: FileDescriptor, path: string): Promise<void>;
 	path_rename(oldFileDescriptor: FileDescriptor, old_path: string, newFileDescriptor: FileDescriptor, new_path: string): Promise<void>;
@@ -66,7 +72,7 @@ export interface CharacterDeviceDriver extends DeviceDriver {
 	createStdioFileDescriptor(fd: 0 | 1 | 2): FileDescriptor;
 }
 
-export const NoSysDeviceDriver: Omit<DeviceDriver, 'id'> = {
+export const NoSysDeviceDriver: Omit<Omit<DeviceDriver, 'id'>, 'uri'> = {
 	fd_advise(): Promise<void> {
 		throw new WasiError(Errno.nosys);
 	},
@@ -158,3 +164,28 @@ export const NoSysDeviceDriver: Omit<DeviceDriver, 'id'> = {
 		throw new WasiError(Errno.nosys);
 	}
 };
+
+export class DeviceDrivers {
+
+	private readonly devices: Map<DeviceId, DeviceDriver>;
+
+	constructor() {
+		this.devices = new Map();
+	}
+
+	public next(): DeviceId {
+		return BigInt(this.devices.size + 1);
+	}
+
+	public add(driver: DeviceDriver): void {
+		this.devices.set(driver.id, driver);
+	}
+
+	public get(id: DeviceId): DeviceDriver {
+		const driver = this.devices.get(id);
+		if (driver === undefined) {
+			throw new WasiError(Errno.nxio);
+		}
+		return driver;
+	}
+}
