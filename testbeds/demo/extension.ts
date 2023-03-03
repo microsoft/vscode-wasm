@@ -19,9 +19,9 @@ export async function activate(context: ExtensionContext) {
 		const filename = Uri.joinPath(context.extensionUri, './dist/web/rubyWorker.js').toString();
 		const worker = new Worker(filename);
 		const connection = new ServiceConnection<Requests, ApiServiceConnection.ReadyParams>(worker);
-		const apiService = new ApiService('cpp', connection, {
+		const apiService = new ApiService('Ruby', connection, {
 			exitHandler: (_rval) => {
-				process.nextTick(() => worker.terminate());
+				setTimeout(() => worker.terminate(), 100);
 			}
 		});
 		const pty = ServicePseudoTerminal.create();
@@ -33,21 +33,21 @@ export async function activate(context: ExtensionContext) {
 
 	commands.registerCommand('testbed-demo.php.runEditorContents', () => {
 		const activeDocument = window.activeTextEditor?.document;
-		if (activeDocument === undefined || activeDocument.languageId !== 'ruby') {
+		if (activeDocument === undefined || activeDocument.languageId !== 'php') {
 			return;
 		}
 
 		const filename = Uri.joinPath(context.extensionUri, './dist/web/phpWorker.js').toString();
 		const worker = new Worker(filename);
 		const connection = new ServiceConnection<Requests, ApiServiceConnection.ReadyParams>(worker);
-		const apiService = new ApiService('cpp', connection, {
+		const apiService = new ApiService('PHP', connection, {
 			exitHandler: (_rval) => {
-				process.nextTick(() => worker.terminate());
+				setTimeout(() => worker.terminate(), 100);
 			}
 		});
 		const pty = ServicePseudoTerminal.create();
 		apiService.registerCharacterDeviceDriver(pty, true);
-		const terminal = window.createTerminal({ name: 'Run Ruby Program', pty: pty });
+		const terminal = window.createTerminal({ name: 'Run PHP Program', pty: pty });
 		terminal.show();
 		apiService.signalReady();
 	});

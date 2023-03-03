@@ -15,7 +15,7 @@ const sharedBrowserOptions = {
 	external: ['vscode'],
 	target: 'es2020',
 	platform: 'browser',
-	sourcemap: true,
+	sourcemap: false,
 };
 
 /** @type BuildOptions */
