@@ -17,7 +17,7 @@ import { WasiFunction, WasiFunctions, WasiFunctionSignature } from './wasiMeta';
 import { byte, bytes, cstring, ptr, size, u32, u64 } from './baseTypes';
 import RAL from './ral';
 import { FileDescriptor, FileDescriptors } from './fileDescriptor';
-import { DeviceDriver, DeviceDrivers, DeviceId, ReaddirEntry } from './deviceDriver';
+import { DeviceDriver, DeviceDrivers, ReaddirEntry } from './deviceDriver';
 import { BigInts, code2Wasi } from './converter';
 
 export interface WasiService {

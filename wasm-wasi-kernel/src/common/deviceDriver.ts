@@ -12,12 +12,6 @@ import {
 } from './wasi';
 
 export type DeviceId = bigint;
-export namespace DeviceIds {
-	let counter: bigint = 1n;
-	export function next(): bigint {
-		return counter++;
-	}
-}
 
 export type ReaddirEntry = { d_ino: bigint; d_type: filetype; d_name: string };
 
@@ -168,9 +162,11 @@ export const NoSysDeviceDriver: Omit<Omit<DeviceDriver, 'id'>, 'uri'> = {
 export class DeviceDrivers {
 
 	private readonly devices: Map<DeviceId, DeviceDriver>;
+	private readonly devicesByUri: Map<string, DeviceDriver>;
 
 	constructor() {
 		this.devices = new Map();
+		this.devicesByUri = new Map();
 	}
 
 	public next(): DeviceId {
@@ -179,6 +175,15 @@ export class DeviceDrivers {
 
 	public add(driver: DeviceDriver): void {
 		this.devices.set(driver.id, driver);
+		this.devicesByUri.set(driver.uri.toString(true), driver);
+	}
+
+	public has (id: DeviceId): boolean {
+		return this.devices.has(id);
+	}
+
+	public hasByUri(uri: Uri): boolean {
+		return this.devicesByUri.has(uri.toString(true));
 	}
 
 	public get(id: DeviceId): DeviceDriver {
@@ -187,5 +192,32 @@ export class DeviceDrivers {
 			throw new WasiError(Errno.nxio);
 		}
 		return driver;
+	}
+
+	public getByUri(uri: Uri): DeviceDriver {
+		const driver = this.devicesByUri.get(uri.toString(true));
+		if (driver === undefined) {
+			throw new WasiError(Errno.nxio);
+		}
+		return driver;
+	}
+
+	public remove(id: DeviceId): void {
+		const driver = this.devices.get(id);
+		if (driver === undefined) {
+			throw new WasiError(Errno.nxio);
+		}
+		this.devices.delete(id);
+		this.devicesByUri.delete(driver.uri.toString(true));
+	}
+
+	public removeByUri(uri: Uri): void {
+		const key = uri.toString(true);
+		const driver = this.devicesByUri.get(key);
+		if (driver === undefined) {
+			throw new WasiError(Errno.nxio);
+		}
+		this.devices.delete(driver.id);
+		this.devicesByUri.delete(key);
 	}
 }

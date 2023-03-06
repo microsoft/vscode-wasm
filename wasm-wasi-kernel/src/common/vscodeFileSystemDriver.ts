@@ -13,7 +13,7 @@ import {
 } from './wasi';
 import { BigInts, code2Wasi } from './converter';
 import { BaseFileDescriptor, FdProvider, FileDescriptor } from './fileDescriptor';
-import { NoSysDeviceDriver, DeviceIds, ReaddirEntry, FileSystemDeviceDriver, DeviceId } from './deviceDriver';
+import { NoSysDeviceDriver, ReaddirEntry, FileSystemDeviceDriver, DeviceId } from './deviceDriver';
 
 const paths = RAL().path;
 
@@ -444,7 +444,7 @@ class FileSystem {
 	}
 }
 
-export function create(deviceId: DeviceId, baseUri: Uri, mountPoint: string): FileSystemDeviceDriver {
+export function create(deviceId: DeviceId, baseUri: Uri): FileSystemDeviceDriver {
 
 	const vscode_fs = workspace.fs;
 	const fs = new FileSystem(baseUri);
@@ -552,7 +552,7 @@ export function create(deviceId: DeviceId, baseUri: Uri, mountPoint: string): Fi
 		}
 	}
 
-	return Object.assign({}, NoSysDeviceDriver, {
+	const deviceDriver: FileSystemDeviceDriver = {
 
 		uri: baseUri,
 		id: deviceId,
@@ -909,7 +909,7 @@ export function create(deviceId: DeviceId, baseUri: Uri, mountPoint: string): Fi
 				}
 			}
 		},
-		async bytesAvailable(fileDescriptor: FileDescriptor): Promise<filesize> {
+		async fd_bytesAvailable(fileDescriptor: FileDescriptor): Promise<filesize> {
 			assertFileDescriptor(fileDescriptor);
 
 			const inode = fs.getNode(fileDescriptor.inode, NodeKind.File);
@@ -917,5 +917,7 @@ export function create(deviceId: DeviceId, baseUri: Uri, mountPoint: string): Fi
 			const content = await fs.getContent(inode, vscode_fs);
 			return BigInt(Math.max(0, content.byteLength - cursor));
 		}
-	});
+	};
+
+	return Object.assign({}, NoSysDeviceDriver, deviceDriver);
 }
