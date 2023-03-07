@@ -449,8 +449,6 @@ export function create(deviceId: DeviceId, baseUri: Uri): FileSystemDeviceDriver
 	const vscode_fs = workspace.fs;
 	const fs = new FileSystem(baseUri);
 
-	const preOpenDirectories = [mountPoint];
-
 	function createFileDescriptor(parentDescriptor: DirectoryFileDescriptor, fd: fd, rights_base: rights, fdflags: fdflags, path: string): FileFileDescriptor {
 		const parentNode = fs.getNode(parentDescriptor.inode, NodeKind.Directory);
 		return new FileFileDescriptor(deviceId, fd, rights_base, fdflags, fs.getOrCreateNode(parentNode, path, NodeKind.File, true).inode);
@@ -647,16 +645,6 @@ export function create(deviceId: DeviceId, baseUri: Uri): FileSystemDeviceDriver
 			const offset = BigInts.asNumber(_offset);
 			const content = await fs.getContent(fs.getNode(fileDescriptor.inode, NodeKind.File), vscode_fs);
 			return read(content, offset, buffers);
-		},
-		fd_prestat_get(fd: fd): Promise<[string, FileDescriptor] | undefined> {
-			const next = preOpenDirectories.shift();
-			if (next === undefined) {
-				return Promise.resolve(undefined);
-			}
-			return Promise.resolve([
-				next,
-				new DirectoryFileDescriptor(deviceId, fd, DirectoryBaseRights, DirectoryInheritingRights, 0, fs.getRoot().inode)
-			]);
 		},
 		async fd_pwrite(fileDescriptor: FileDescriptor, _offset: filesize, buffers: Uint8Array[]): Promise<number> {
 			const offset = BigInts.asNumber(_offset);
@@ -908,6 +896,9 @@ export function create(deviceId: DeviceId, baseUri: Uri): FileSystemDeviceDriver
 					fs.deleteNode(targetNode);
 				}
 			}
+		},
+		fd_create_prestat_fd(fd: fd): Promise<FileDescriptor> {
+			return Promise.resolve(new DirectoryFileDescriptor(deviceId, fd, DirectoryBaseRights, DirectoryInheritingRights, 0, fs.getRoot().inode));
 		},
 		async fd_bytesAvailable(fileDescriptor: FileDescriptor): Promise<filesize> {
 			assertFileDescriptor(fileDescriptor);

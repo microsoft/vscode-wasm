@@ -34,7 +34,6 @@ export interface DeviceDriver {
 	fd_filestat_set_size(fileDescriptor: FileDescriptor, size: filesize): Promise<void>;
 	fd_filestat_set_times(fileDescriptor: FileDescriptor, atim: timestamp, mtim: timestamp, fst_flags: fstflags): Promise<void>;
 	fd_pread(fileDescriptor: FileDescriptor, offset: filesize, buffers: Uint8Array[]): Promise<size>;
-	fd_prestat_get(fd: fd): Promise<[string, FileDescriptor] | undefined>;
 	fd_pwrite(fileDescriptor: FileDescriptor, offset: filesize, buffers: Uint8Array[]): Promise<size>;
 	fd_read(fileDescriptor: FileDescriptor, buffers: Uint8Array[]): Promise<size>;
 	fd_readdir(fileDescriptor: FileDescriptor): Promise<ReaddirEntry[]>;
@@ -55,6 +54,7 @@ export interface DeviceDriver {
 	path_symlink(old_path: string, fileDescriptor: FileDescriptor, new_path: string): Promise<void>;
 	path_unlink_file(fileDescriptor: FileDescriptor, path: string): Promise<void>;
 
+	fd_create_prestat_fd(fd: fd): Promise<FileDescriptor>;
 	fd_bytesAvailable(fileDescriptor: FileDescriptor): Promise<filesize>;
 }
 
@@ -96,9 +96,6 @@ export const NoSysDeviceDriver: Omit<Omit<DeviceDriver, 'id'>, 'uri'> = {
 	},
 	fd_pread(): Promise<size> {
 		throw new WasiError(Errno.nosys);
-	},
-	fd_prestat_get(): Promise<undefined> {
-		return Promise.resolve(undefined);
 	},
 	fd_pwrite(): Promise<size> {
 		throw new WasiError(Errno.nosys);
@@ -152,6 +149,9 @@ export const NoSysDeviceDriver: Omit<Omit<DeviceDriver, 'id'>, 'uri'> = {
 		throw new WasiError(Errno.nosys);
 	},
 	path_unlink_file(): Promise<void> {
+		throw new WasiError(Errno.nosys);
+	},
+	fd_create_prestat_fd(): Promise<FileDescriptor> {
 		throw new WasiError(Errno.nosys);
 	},
 	fd_bytesAvailable(): Promise<filesize> {

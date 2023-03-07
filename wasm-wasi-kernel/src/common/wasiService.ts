@@ -20,101 +20,6 @@ import { FileDescriptor, FileDescriptors } from './fileDescriptor';
 import { DeviceDriver, DeviceDrivers, ReaddirEntry } from './deviceDriver';
 import { BigInts, code2Wasi } from './converter';
 
-export interface WasiService {
-	args_sizes_get: args_sizes_get.ServiceSignature;
-	args_get: args_get.ServiceSignature;
-	clock_res_get: clock_res_get.ServiceSignature;
-	clock_time_get: clock_time_get.ServiceSignature;
-	environ_sizes_get: environ_sizes_get.ServiceSignature;
-	environ_get: environ_get.ServiceSignature;
-	fd_advise: fd_advise.ServiceSignature;
-	fd_allocate: fd_allocate.ServiceSignature;
-	fd_close: fd_close.ServiceSignature;
-	fd_datasync: fd_datasync.ServiceSignature;
-	fd_fdstat_get: fd_fdstat_get.ServiceSignature;
-	fd_fdstat_set_flags: fd_fdstat_set_flags.ServiceSignature;
-	fd_filestat_get: fd_filestat_get.ServiceSignature;
-	fd_filestat_set_size: fd_filestat_set_size.ServiceSignature;
-	fd_filestat_set_times: fd_filestat_set_times.ServiceSignature;
-	fd_pread: fd_pread.ServiceSignature;
-	fd_prestat_get: fd_prestat_get.ServiceSignature;
-	fd_prestat_dir_name: fd_prestat_dir_name.ServiceSignature;
-	fd_pwrite: fd_pwrite.ServiceSignature;
-	fd_read: fd_read.ServiceSignature;
-	fd_readdir: fd_readdir.ServiceSignature;
-	fd_seek: fd_seek.ServiceSignature;
-	fd_renumber: fd_renumber.ServiceSignature;
-	fd_sync: fd_sync.ServiceSignature;
-	fd_tell: fd_tell.ServiceSignature;
-	fd_write: fd_write.ServiceSignature;
-	path_create_directory: path_create_directory.ServiceSignature;
-	path_filestat_get: path_filestat_get.ServiceSignature;
-	path_filestat_set_times: path_filestat_set_times.ServiceSignature;
-	path_link: path_link.ServiceSignature;
-	path_open: path_open.ServiceSignature;
-	path_readlink: path_readlink.ServiceSignature;
-	path_remove_directory: path_remove_directory.ServiceSignature;
-	path_rename: path_rename.ServiceSignature;
-	path_symlink: path_symlink.ServiceSignature;
-	path_unlink_file: path_unlink_file.ServiceSignature;
-	poll_oneoff: poll_oneoff.ServiceSignature;
-	proc_exit: proc_exit.ServiceSignature;
-	sched_yield: sched_yield.ServiceSignature;
-	random_get: random_get.ServiceSignature;
-	sock_accept: sock_accept.ServiceSignature;
-	sock_shutdown: sock_accept.ServiceSignature;
-	'thread-spawn': thread_spawn.ServiceSignature;
-
-	[name: string]: (memory: ArrayBuffer, ...args: (number & bigint)[]) => Promise<errno>;
-}
-
-export abstract class ServiceConnection {
-
-	private readonly wasiService: WasiService;
-
-	constructor(wasiService: WasiService) {
-		this.wasiService = wasiService;
-	}
-
-	protected async handleMessage(buffers: [SharedArrayBuffer, SharedArrayBuffer]): Promise<void> {
-		const [paramBuffer, wasmMemory] = buffers;
-		const paramView = new DataView(paramBuffer);
-		try {
-
-			const method = paramView.getUint32(Offsets.method_index, true);
-			const func: WasiFunction = WasiFunctions.functionAt(method);
-			if (func === undefined) {
-				throw new WasiError(Errno.inval);
-			}
-			const params = this.getParams(func.signature, paramBuffer);
-			const result = await this.wasiService[func.name](wasmMemory, ...params);
-			paramView.setUint16(Offsets.errno_index, result, true);
-		} catch (err) {
-			if (err instanceof WasiError) {
-				paramView.setUint16(Offsets.errno_index, err.errno, true);
-			} else {
-				paramView.setUint16(Offsets.errno_index, Errno.inval, true);
-			}
-		}
-
-		const sync = new Int32Array(paramBuffer, 0, 1);
-		Atomics.store(sync, 0, 1);
-		Atomics.notify(sync, 0);
-	}
-
-	private getParams(signature: WasiFunctionSignature, paramBuffer: SharedArrayBuffer): (number & bigint)[] {
-		const paramView = new DataView(paramBuffer);
-		const params: (number | bigint)[] = [];
-		let offset = Offsets.header_size;
-		for (let i = 0; i < signature.params.length; i++) {
-			const param = signature.params[i];
-			params.push(param.read(paramView, offset));
-			offset += param.size;
-		}
-		return params as (number & bigint)[];
-	}
-}
-
 export interface Environment {
 	[key: string]: string;
 }
@@ -137,20 +42,22 @@ export type Options = {
 	env?: Environment;
 };
 
-export namespace WasiService {
-	export function create(deviceDrivers: DeviceDrivers, fileDescriptors: FileDescriptors, programName: string, exitHandler: (rval: number) => void, options: Options = {}): WasiService {
+export interface SharedWasiService {
+	args_sizes_get: args_sizes_get.ServiceSignature;
+	args_get: args_get.ServiceSignature;
+	environ_sizes_get: environ_sizes_get.ServiceSignature;
+	environ_get: environ_get.ServiceSignature;
+	fd_prestat_get: fd_prestat_get.ServiceSignature;
+	fd_prestat_dir_name: fd_prestat_dir_name.ServiceSignature;
+}
 
-		const thread_start = RAL().clock.realtime();
-
-		const preStatProviders: DeviceDriver[] = [];
-		const preStatDirnames: Map<fd, string> = new Map();
-
-		const directoryEntries: Map<fd, ReaddirEntry[]> = new Map();
+export namespace SharedWasiService {
+	export function create(fileDescriptors: FileDescriptors, programName: string, preStats: Map<string, DeviceDriver>, options: Options = {}): SharedWasiService {
 
 		const encoder: RAL.TextEncoder = RAL().TextEncoder.create(options?.encoding);
-		const decoder: RAL.TextDecoder = RAL().TextDecoder.create(options?.encoding);
+		const preStatDirnames: Map<fd, string> = new Map();
 
-		const wasiService: WasiService = {
+		const result: SharedWasiService = {
 			args_sizes_get: (memory: ArrayBuffer, argvCount_ptr: ptr<u32>, argvBufSize_ptr: ptr<u32>): Promise<errno> => {
 				let count = 0;
 				let size = 0;
@@ -187,26 +94,6 @@ export namespace WasiService {
 				}
 				return Promise.resolve(Errno.success);
 			},
-			clock_res_get: (memory: ArrayBuffer, id: clockid, timestamp_ptr: ptr): Promise<errno> => {
-				const view = new DataView(memory);
-				switch (id) {
-					case Clockid.realtime:
-					case Clockid.monotonic:
-					case Clockid.process_cputime_id:
-					case Clockid.thread_cputime_id:
-						view.setBigUint64(timestamp_ptr, 1n, true);
-						return Promise.resolve(Errno.success);
-					default:
-						view.setBigUint64(timestamp_ptr, 0n, true);
-						return Promise.resolve(Errno.inval);
-				}
-			},
-			clock_time_get: (memory: ArrayBuffer, id: clockid, precision: timestamp, timestamp_ptr: ptr<u64>): Promise<errno> => {
-				const time: bigint = now(id, precision);
-				const view = new DataView(memory);
-				view.setBigUint64(timestamp_ptr, time, true);
-				return Promise.resolve(Errno.success);
-			},
 			environ_sizes_get: (memory: ArrayBuffer, environCount_ptr: ptr<u32>, environBufSize_ptr: ptr<u32>): Promise<errno> => {
 				let count = 0;
 				let size = 0;
@@ -232,6 +119,134 @@ export namespace WasiService {
 					bytes.set(data, valueOffset);
 					valueOffset += data.byteLength;
 				}
+				return Promise.resolve(Errno.success);
+			},
+			fd_prestat_get: async (memory: ArrayBuffer, fd: fd, bufPtr: ptr<prestat>): Promise<errno> => {
+				try {
+					const next = preStats.entries().next();
+					if (next.done === true) {
+						fileDescriptors.switchToRunning(fd);
+						return Errno.badf;
+					}
+					const [ mountPoint, deviceDriver ] = next.value;
+					const fileDescriptor = await deviceDriver.fd_create_prestat_fd(fd);
+					fileDescriptors.add(fileDescriptor);
+					preStatDirnames.set(fileDescriptor.fd, mountPoint);
+					const view = new DataView(memory);
+					const prestat = Prestat.create(bufPtr, view);
+					prestat.len = encoder.encode(mountPoint).byteLength;
+					return Errno.success;
+				} catch(error) {
+					return handleError(error);
+				}
+			},
+			fd_prestat_dir_name: (memory: ArrayBuffer, fd: fd, pathPtr: ptr<byte[]>, pathLen: size): Promise<errno> => {
+				try {
+					const fileDescriptor = fileDescriptors.get(fd);
+					const dirname = preStatDirnames.get(fileDescriptor.fd);
+					if (dirname === undefined) {
+						return Promise.resolve(Errno.badf);
+					}
+					const bytes = encoder.encode(dirname);
+					if (bytes.byteLength !== pathLen) {
+						Errno.badmsg;
+					}
+					const raw = new Uint8Array(memory, pathPtr);
+					raw.set(bytes);
+					return Promise.resolve(Errno.success);
+				} catch (error) {
+					return Promise.resolve(handleError(error));
+				}
+			}
+		};
+
+		function handleError(error: any, def: errno = Errno.badf): errno {
+			if (error instanceof WasiError) {
+				return error.errno;
+			} else if (error instanceof vscode.FileSystemError) {
+				return code2Wasi.asErrno(error.code);
+			}
+			return def;
+		}
+
+		return result;
+	}
+}
+
+interface InstanceWasiService {
+	clock_res_get: clock_res_get.ServiceSignature;
+	clock_time_get: clock_time_get.ServiceSignature;
+	fd_advise: fd_advise.ServiceSignature;
+	fd_allocate: fd_allocate.ServiceSignature;
+	fd_close: fd_close.ServiceSignature;
+	fd_datasync: fd_datasync.ServiceSignature;
+	fd_fdstat_get: fd_fdstat_get.ServiceSignature;
+	fd_fdstat_set_flags: fd_fdstat_set_flags.ServiceSignature;
+	fd_filestat_get: fd_filestat_get.ServiceSignature;
+	fd_filestat_set_size: fd_filestat_set_size.ServiceSignature;
+	fd_filestat_set_times: fd_filestat_set_times.ServiceSignature;
+	fd_pread: fd_pread.ServiceSignature;
+	fd_pwrite: fd_pwrite.ServiceSignature;
+	fd_read: fd_read.ServiceSignature;
+	fd_readdir: fd_readdir.ServiceSignature;
+	fd_seek: fd_seek.ServiceSignature;
+	fd_renumber: fd_renumber.ServiceSignature;
+	fd_sync: fd_sync.ServiceSignature;
+	fd_tell: fd_tell.ServiceSignature;
+	fd_write: fd_write.ServiceSignature;
+	path_create_directory: path_create_directory.ServiceSignature;
+	path_filestat_get: path_filestat_get.ServiceSignature;
+	path_filestat_set_times: path_filestat_set_times.ServiceSignature;
+	path_link: path_link.ServiceSignature;
+	path_open: path_open.ServiceSignature;
+	path_readlink: path_readlink.ServiceSignature;
+	path_remove_directory: path_remove_directory.ServiceSignature;
+	path_rename: path_rename.ServiceSignature;
+	path_symlink: path_symlink.ServiceSignature;
+	path_unlink_file: path_unlink_file.ServiceSignature;
+	poll_oneoff: poll_oneoff.ServiceSignature;
+	proc_exit: proc_exit.ServiceSignature;
+	sched_yield: sched_yield.ServiceSignature;
+	random_get: random_get.ServiceSignature;
+	sock_accept: sock_accept.ServiceSignature;
+	sock_shutdown: sock_accept.ServiceSignature;
+	'thread-spawn': thread_spawn.ServiceSignature;
+
+	[name: string]: (memory: ArrayBuffer, ...args: (number & bigint)[]) => Promise<errno>;
+}
+
+export interface WasiService extends InstanceWasiService, SharedWasiService {
+}
+
+export namespace InstanceWasiService {
+	export function create(deviceDrivers: DeviceDrivers, fileDescriptors: FileDescriptors, exitHandler: (rval: number) => void, threadSpawnHandler: (start_args_ptr: ptr) => Promise<u32>, options: Options = {}): InstanceWasiService {
+
+		const thread_start = RAL().clock.realtime();
+
+		const directoryEntries: Map<fd, ReaddirEntry[]> = new Map();
+
+		const encoder: RAL.TextEncoder = RAL().TextEncoder.create(options?.encoding);
+		const decoder: RAL.TextDecoder = RAL().TextDecoder.create(options?.encoding);
+
+		const result: InstanceWasiService = {
+			clock_res_get: (memory: ArrayBuffer, id: clockid, timestamp_ptr: ptr): Promise<errno> => {
+				const view = new DataView(memory);
+				switch (id) {
+					case Clockid.realtime:
+					case Clockid.monotonic:
+					case Clockid.process_cputime_id:
+					case Clockid.thread_cputime_id:
+						view.setBigUint64(timestamp_ptr, 1n, true);
+						return Promise.resolve(Errno.success);
+					default:
+						view.setBigUint64(timestamp_ptr, 0n, true);
+						return Promise.resolve(Errno.inval);
+				}
+			},
+			clock_time_get: (memory: ArrayBuffer, id: clockid, precision: timestamp, timestamp_ptr: ptr<u64>): Promise<errno> => {
+				const time: bigint = now(id, precision);
+				const view = new DataView(memory);
+				view.setBigUint64(timestamp_ptr, time, true);
 				return Promise.resolve(Errno.success);
 			},
 			fd_advise: async (_memory: ArrayBuffer, fd: fd, offset: filesize, length: filesize, advise: advise): Promise<errno> => {
@@ -344,50 +359,6 @@ export namespace WasiService {
 					return Errno.success;
 				} catch (error) {
 					return handleError(error);
-				}
-			},
-			fd_prestat_get: async (memory: ArrayBuffer, fd: fd, bufPtr: ptr<prestat>): Promise<errno> => {
-				try {
-					while (true) {
-						if (preStatProviders.length === 0) {
-							fileDescriptors.switchToRunning(fd);
-							return Errno.badf;
-						}
-						const current = preStatProviders[0];
-						const result = await current.fd_prestat_get(fd);
-						// The current provider doesn't have predefined directories anymore.
-						if (result === undefined) {
-							preStatProviders.shift();
-						} else {
-							const [mountPoint, fileDescriptor] = result;
-							fileDescriptors.add(fileDescriptor);
-							preStatDirnames.set(fileDescriptor.fd, mountPoint);
-							const view = new DataView(memory);
-							const prestat = Prestat.create(bufPtr, view);
-							prestat.len = encoder.encode(mountPoint).byteLength;
-							return Errno.success;
-						}
-					}
-				} catch(error) {
-					return handleError(error);
-				}
-			},
-			fd_prestat_dir_name: (memory: ArrayBuffer, fd: fd, pathPtr: ptr<byte[]>, pathLen: size): Promise<errno> => {
-				try {
-					const fileDescriptor = getFileDescriptor(fd);
-					const dirname = preStatDirnames.get(fileDescriptor.fd);
-					if (dirname === undefined) {
-						return Promise.resolve(Errno.badf);
-					}
-					const bytes = encoder.encode(dirname);
-					if (bytes.byteLength !== pathLen) {
-						Errno.badmsg;
-					}
-					const raw = new Uint8Array(memory, pathPtr);
-					raw.set(bytes);
-					return Promise.resolve(Errno.success);
-				} catch (error) {
-					return Promise.resolve(handleError(error));
 				}
 			},
 			fd_pwrite: async (memory: ArrayBuffer, fd: fd, ciovs_ptr: ptr<ciovec>, ciovs_len: u32, offset: filesize, bytesWritten_ptr: ptr<u32>): Promise<errno> => {
@@ -757,8 +728,13 @@ export namespace WasiService {
 			sock_shutdown: (_memory: ArrayBuffer, _fd: fd, _sdflags: sdflags): Promise<errno> => {
 				return Promise.resolve(Errno.nosys);
 			},
-			'thread-spawn': (_memory: ArrayBuffer, _start_args_ptr: ptr<u32>): Promise<errno> => {
-				return Promise.resolve(Errno.nosys);
+			'thread-spawn': async (_memory: ArrayBuffer, start_args_ptr: ptr): Promise<errno> => {
+				try {
+					await threadSpawnHandler(start_args_ptr);
+					return Promise.resolve(Errno.success);
+				} catch (error) {
+					return Promise.resolve(handleError(error));
+				}
 			}
 		};
 
@@ -939,6 +915,65 @@ export namespace WasiService {
 			return result;
 		}
 
-		return wasiService;
+		return result;
+	}
+}
+
+export interface StartMainMessage {
+	readonly method: 'startMain';
+	readonly bits: SharedArrayBuffer | vscode.Uri;
+}
+
+export interface StartThreadMessage {
+	readonly method: 'startThread';
+	readonly bits: SharedArrayBuffer | vscode.Uri;
+	readonly tid: u32;
+	readonly start_arg: ptr;
+}
+
+export abstract class ServiceConnection {
+
+	private readonly wasiService: WasiService;
+
+	constructor(wasiService: WasiService) {
+		this.wasiService = wasiService;
+	}
+
+	protected async handleMessage(buffers: [SharedArrayBuffer, SharedArrayBuffer]): Promise<void> {
+		const [paramBuffer, wasmMemory] = buffers;
+		const paramView = new DataView(paramBuffer);
+		try {
+
+			const method = paramView.getUint32(Offsets.method_index, true);
+			const func: WasiFunction = WasiFunctions.functionAt(method);
+			if (func === undefined) {
+				throw new WasiError(Errno.inval);
+			}
+			const params = this.getParams(func.signature, paramBuffer);
+			const result = await this.wasiService[func.name](wasmMemory, ...params);
+			paramView.setUint16(Offsets.errno_index, result, true);
+		} catch (err) {
+			if (err instanceof WasiError) {
+				paramView.setUint16(Offsets.errno_index, err.errno, true);
+			} else {
+				paramView.setUint16(Offsets.errno_index, Errno.inval, true);
+			}
+		}
+
+		const sync = new Int32Array(paramBuffer, 0, 1);
+		Atomics.store(sync, 0, 1);
+		Atomics.notify(sync, 0);
+	}
+
+	private getParams(signature: WasiFunctionSignature, paramBuffer: SharedArrayBuffer): (number & bigint)[] {
+		const paramView = new DataView(paramBuffer);
+		const params: (number | bigint)[] = [];
+		let offset = Offsets.header_size;
+		for (let i = 0; i < signature.params.length; i++) {
+			const param = signature.params[i];
+			params.push(param.read(paramView, offset));
+			offset += param.size;
+		}
+		return params as (number & bigint)[];
 	}
 }

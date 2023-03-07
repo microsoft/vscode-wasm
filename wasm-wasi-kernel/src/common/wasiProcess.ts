@@ -3,29 +3,74 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 import { Uri, WorkspaceFolder, workspace } from 'vscode';
-import { DeviceDrivers, FileSystemDeviceDriver } from './deviceDriver';
-import * as vscfs from './vscodeFileSystemDriver'
 
-export abstract class AbstractWasiProcess {
+import RAL from './ral';
+import { DeviceDriver, DeviceDrivers, FileSystemDeviceDriver } from './deviceDriver';
+import { FileDescriptors } from './fileDescriptor';
+import * as vscfs from './vscodeFileSystemDriver';
+import { InstanceWasiService, Options, SharedWasiService, WasiService } from './wasiService';
+import { ptr, u32 } from './baseTypes';
+
+export abstract class WasiProcess {
 
 	private readonly deviceDrivers: DeviceDrivers;
+	protected readonly baseUri: Uri;
+	private readonly bits: SharedArrayBuffer | Uri;
 
-	constructor(deviceDrivers: DeviceDrivers, mapWorkspaceFolders: boolean = true) {
+	private threadIdCounter: number;
+	private readonly fileDescriptors: FileDescriptors;
+	private readonly sharedService: SharedWasiService;
+	private readonly preOpenDirectories: Map<string, DeviceDriver>;
+
+	constructor(deviceDrivers: DeviceDrivers, baseUri: Uri, programName: string, bits: SharedArrayBuffer | Uri, options: Options = {}, mapWorkspaceFolders: boolean = true) {
 		this.deviceDrivers = deviceDrivers;
+		this.baseUri = baseUri;
+		this.bits = bits;
+
+		this.threadIdCounter = 2;
+		this.fileDescriptors = new FileDescriptors();
+		this.preOpenDirectories = new Map();
 		if (mapWorkspaceFolders) {
 			const folders = workspace.workspaceFolders;
 			if (folders !== undefined) {
 				if (folders.length === 1) {
-					const uri: Uri = folders[0].uri;
-
-					uri: workspaceFolders[0].uri, mountPoint: path.posix.join(path.posix.sep, 'workspace')
+					this.mapWorkspaceFolder(folders[0], true);
 				}
-				for (folder of folders) {
-					this._mapWorkspaceFolder(folder);
+				for (const folder of folders) {
+					this.mapWorkspaceFolder(folder, false);
 				}
 			}
 		}
+		this.sharedService = SharedWasiService.create(this.fileDescriptors, programName, this.preOpenDirectories, options);
 	}
+
+	public async run(): Promise<number> {
+		return new Promise(async (resolve) => {
+			const wasiService: WasiService = Object.assign({}, this.sharedService, InstanceWasiService.create(this.deviceDrivers, this.fileDescriptors, async (exitCode) => {
+				await this.terminate();
+				resolve(exitCode);
+			}, (start_args: ptr) => this.spawnThread(start_args)));
+			return this.startMain(wasiService, this.bits);
+		});
+	}
+
+	public abstract terminate(): Promise<number>;
+
+
+	private async spawnThread(start_args: ptr): Promise<u32> {
+		const tid = this.threadIdCounter++;
+		const wasiService: WasiService = Object.assign({}, this.sharedService, InstanceWasiService.create(this.deviceDrivers, this.fileDescriptors, async (_exitCode) => {
+			await this.threadEnded(tid);
+		}, (start_args: ptr) => this.spawnThread(start_args)));
+		await this.startThread(wasiService, this.bits, tid, start_args);
+		return Promise.resolve(tid);
+	}
+
+	protected abstract startMain(wasiService: WasiService, bits: SharedArrayBuffer | Uri): Promise<void>;
+
+	protected abstract startThread(wasiService: WasiService, bits: SharedArrayBuffer | Uri, tid: u32, start_arg: ptr): Promise<void>;
+
+	protected abstract threadEnded(tid: u32): Promise<void>;
 
 	private mapWorkspaceFolder(folder: WorkspaceFolder, single: boolean): void {
 		const uri: Uri = folder.uri;
@@ -37,8 +82,11 @@ export abstract class AbstractWasiProcess {
 			deviceDriver = this.deviceDrivers.getByUri(uri) as FileSystemDeviceDriver;
 		}
 
-		const name: string = folder.name;
-		const mountPoint: string = path.posix.join(path.posix.sep, 'workspaces', name);
-		deviceDrivers.map(uri, mountPoint);
+		const path = RAL().path;
+		const mountPoint: string = single
+			? path.join(path.sep, 'workspace')
+			: path.join(path.sep, 'workspaces', folder.name);
+
+		this.preOpenDirectories.set(mountPoint, deviceDriver);
 	}
 }

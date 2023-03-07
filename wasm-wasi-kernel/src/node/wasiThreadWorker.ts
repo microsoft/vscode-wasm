@@ -7,13 +7,13 @@ import { MessagePort, parentPort } from 'worker_threads';
 
 import { WasiHost} from '../common/wasiHost';
 import { NodeHostConnection } from './connection';
-import { StartMainMessage } from '../common/wasiService';
+import { StartThreadMessage } from '../common/wasiService';
 
 if (parentPort === null) {
 	throw new Error('This file is only intended to be run in a worker thread');
 }
 
-class WasiMainWorker {
+class WasiThreadWorker {
 
 	private readonly port: MessagePort;
 
@@ -22,7 +22,7 @@ class WasiMainWorker {
 	}
 
 	public listen(): void {
-		this.port.on('message', async (message: StartMainMessage) => {
+		this.port.on('message', async (message: StartThreadMessage) => {
 			const connection = new NodeHostConnection(this.port);
 			const binary: SharedArrayBuffer = message.bits as SharedArrayBuffer;
 			const host = WasiHost.create(connection);
@@ -36,5 +36,5 @@ class WasiMainWorker {
 	}
 }
 
-const worker = new WasiMainWorker(parentPort);
+const worker = new WasiThreadWorker(parentPort);
 worker.listen();

@@ -53,6 +53,7 @@ interface RAL {
 	};
 
 	readonly path: {
+		readonly sep: string;
 		dirname(path: string): string;
 		join(...paths: string[]): string;
 		normalize(path: string): string;
