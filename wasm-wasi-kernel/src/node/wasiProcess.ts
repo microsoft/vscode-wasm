@@ -3,13 +3,13 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 import { MessagePort, Worker } from 'worker_threads';
+import { Uri } from 'vscode';
 
 import RAL from '../common/ral';
-import { WasiProcess } from '../common/wasiProcess';
-import { WasiService, ServiceConnection, StartMainMessage, StartThreadMessage, Options } from '../common/wasiService';
-import { Uri } from 'vscode';
 import { ptr, u32 } from '../common/baseTypes';
+import { WasiProcess } from '../common/wasiProcess';
 import { DeviceDrivers } from '../common/deviceDriver';
+import { WasiService, ServiceConnection, StartMainMessage, StartThreadMessage, Options } from '../common/wasiService';
 
 class Connection extends ServiceConnection {
 

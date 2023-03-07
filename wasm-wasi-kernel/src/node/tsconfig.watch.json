@@ -4,13 +4,12 @@
             "node",
             "vscode"
         ],
-        "lib": [
-            "es2020",
-            "webworker"
-        ],
         "module": "Node16",
         "moduleResolution": "Node16",
         "target": "es2020",
+        "lib": [
+            "es2020"
+        ],
         "rootDir": ".",
         "strict": true,
         "noImplicitAny": true,

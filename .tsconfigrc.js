@@ -274,7 +274,7 @@ const wasm_wasi_kernel = {
 		},
 		{
 			path: './src/node',
-			extends: [ node, webworker, vscodeMixin ],
+			extends: [ node, vscodeMixin ],
 			references: [ '../common' ]
 		}
 	]

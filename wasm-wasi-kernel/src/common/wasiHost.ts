@@ -2,6 +2,7 @@
  *  Copyright (c) Microsoft Corporation. All rights reserved.
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
+/// <reference path="./webassembly.d.ts" />
 
 import { cstring, ptr, size, u32, u64, u8 } from './baseTypes';
 import {
@@ -118,47 +119,18 @@ export abstract class HostConnection {
 }
 
 
-export namespace WebAssembly {
-
-	interface Global {
-		value: any;
-		valueOf(): any;
-	}
-	interface Table {
-		readonly length: number;
-		get(index: number): any;
-		grow(delta: number, value?: any): number;
-		set(index: number, value?: any): void;
-	}
-	interface Memory {
-		readonly buffer: ArrayBuffer;
-		grow(delta: number): number;
-	}
-	type ExportValue = Function | Global | Memory | Table;
-
-	export interface Instance {
-		readonly exports: Record<string, ExportValue>;
-	}
-
-	export interface $Instance {
-		readonly exports: {
-			memory: Memory;
-		} & Record<string, ExportValue>;
-	}
-}
-
 export interface WasiHost extends WASI {
 	initialize: (inst: WebAssembly.Instance) => void;
 }
 
 export namespace WasiHost {
 	export function create(connection: HostConnection): WasiHost {
-		let instance: WebAssembly.$Instance;
+		let instance: WebAssembly.Instance;
 		const args_size = { count: 0, bufferSize: 0 };
 		const environ_size = { count: 0, bufferSize: 0 };
 		const wasi: WasiHost = {
 			initialize: (inst: WebAssembly.Instance): void => {
-				instance = inst as WebAssembly.$Instance;
+				instance = inst;
 			},
 			args_sizes_get: (argvCount_ptr: ptr<u32>, argvBufSize_ptr: ptr<u32>): errno => {
 				try {
@@ -494,14 +466,14 @@ export namespace WasiHost {
 			if (instance === undefined) {
 				throw new Error(`WASI layer is not initialized. Missing WebAssembly instance.`);
 			}
-			return instance.exports.memory.buffer;
+			return (instance.exports.memory as WebAssembly.Memory).buffer;
 		}
 
 		function memoryView(): DataView {
 			if (instance === undefined) {
 				throw new Error(`WASI layer is not initialized. Missing WebAssembly instance.`);
 			}
-			return new DataView(instance.exports.memory.buffer);
+			return new DataView((instance.exports.memory as WebAssembly.Memory).buffer);
 		}
 
 		function handleError(error: any, def: errno = Errno.badf): errno {

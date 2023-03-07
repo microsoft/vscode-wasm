@@ -31,7 +31,7 @@ class WasiThreadWorker {
 				wasi: host
 			});
 			host.initialize(instance);
-			(instance.exports._start as Function)();
+			(instance.exports.wasi_thread_start as Function)(message.tid, message.start_arg);
 		});
 	}
 }
