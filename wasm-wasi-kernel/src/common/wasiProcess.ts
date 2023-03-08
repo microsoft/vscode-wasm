@@ -5,15 +5,15 @@
 import { Uri, WorkspaceFolder, workspace } from 'vscode';
 
 import RAL from './ral';
-import { DeviceDriver, DeviceDrivers, FileSystemDeviceDriver } from './deviceDriver';
+import { ptr, u32 } from './baseTypes';
+import { DeviceDriver, FileSystemDeviceDriver } from './deviceDriver';
 import { FileDescriptors } from './fileDescriptor';
 import * as vscfs from './vscodeFileSystemDriver';
 import { InstanceWasiService, Options, SharedWasiService, WasiService } from './wasiService';
-import { ptr, u32 } from './baseTypes';
+import WasiKernel from './wasiKernel';
 
 export abstract class WasiProcess {
 
-	private readonly deviceDrivers: DeviceDrivers;
 	protected readonly baseUri: Uri;
 	private readonly bits: SharedArrayBuffer | Uri;
 
@@ -22,13 +22,15 @@ export abstract class WasiProcess {
 	private readonly sharedService: SharedWasiService;
 	private readonly preOpenDirectories: Map<string, DeviceDriver>;
 
-	constructor(deviceDrivers: DeviceDrivers, baseUri: Uri, programName: string, bits: SharedArrayBuffer | Uri, options: Options = {}, mapWorkspaceFolders: boolean = true) {
-		this.deviceDrivers = deviceDrivers;
+	constructor(baseUri: Uri, programName: string, bits: SharedArrayBuffer | Uri, options: Options = {}, mapWorkspaceFolders: boolean = true) {
 		this.baseUri = baseUri;
 		this.bits = bits;
 
 		this.threadIdCounter = 2;
 		this.fileDescriptors = new FileDescriptors();
+		this.fileDescriptors.add(WasiKernel.console.createStdioFileDescriptor(0));
+		this.fileDescriptors.add(WasiKernel.console.createStdioFileDescriptor(1));
+		this.fileDescriptors.add(WasiKernel.console.createStdioFileDescriptor(2));
 		this.preOpenDirectories = new Map();
 		if (mapWorkspaceFolders) {
 			const folders = workspace.workspaceFolders;
@@ -46,7 +48,7 @@ export abstract class WasiProcess {
 
 	public async run(): Promise<number> {
 		return new Promise(async (resolve) => {
-			const wasiService: WasiService = Object.assign({}, this.sharedService, InstanceWasiService.create(this.deviceDrivers, this.fileDescriptors, async (exitCode) => {
+			const wasiService: WasiService = Object.assign({}, this.sharedService, InstanceWasiService.create(this.fileDescriptors, async (exitCode) => {
 				await this.terminate();
 				resolve(exitCode);
 			}, (start_args: ptr) => this.spawnThread(start_args)));
@@ -59,7 +61,7 @@ export abstract class WasiProcess {
 
 	private async spawnThread(start_args: ptr): Promise<u32> {
 		const tid = this.threadIdCounter++;
-		const wasiService: WasiService = Object.assign({}, this.sharedService, InstanceWasiService.create(this.deviceDrivers, this.fileDescriptors, async (_exitCode) => {
+		const wasiService: WasiService = Object.assign({}, this.sharedService, InstanceWasiService.create(this.fileDescriptors, async (_exitCode) => {
 			await this.threadEnded(tid);
 		}, (start_args: ptr) => this.spawnThread(start_args)));
 		await this.startThread(wasiService, this.bits, tid, start_args);
@@ -75,11 +77,11 @@ export abstract class WasiProcess {
 	private mapWorkspaceFolder(folder: WorkspaceFolder, single: boolean): void {
 		const uri: Uri = folder.uri;
 		let deviceDriver: FileSystemDeviceDriver;
-		if (!this.deviceDrivers.hasByUri(uri)) {
-			deviceDriver = vscfs.create(this.deviceDrivers.next(), folder.uri);
-			this.deviceDrivers.add(deviceDriver);
+		if (!WasiKernel.deviceDrivers.hasByUri(uri)) {
+			deviceDriver = vscfs.create(WasiKernel.deviceDrivers.next(), folder.uri);
+			WasiKernel.deviceDrivers.add(deviceDriver);
 		} else {
-			deviceDriver = this.deviceDrivers.getByUri(uri) as FileSystemDeviceDriver;
+			deviceDriver = WasiKernel.deviceDrivers.getByUri(uri) as FileSystemDeviceDriver;
 		}
 
 		const path = RAL().path;

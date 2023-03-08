@@ -4,6 +4,7 @@
  *--------------------------------------------------------------------------------------------*/
 import * as vscode from 'vscode';
 
+import RAL from './ral';
 import {
 	advise,
 	args_get, args_sizes_get, Ciovec, ciovec, Clockid, clockid, clock_res_get, clock_time_get, dircookie, Dirent, dirent, environ_get, environ_sizes_get, errno, Errno, Event, event, Eventtype, exitcode, fd, fdflags, Fdstat, fdstat, fd_advise, fd_allocate,
@@ -15,10 +16,10 @@ import {
 import { Offsets } from './connection';
 import { WasiFunction, WasiFunctions, WasiFunctionSignature } from './wasiMeta';
 import { byte, bytes, cstring, ptr, size, u32, u64 } from './baseTypes';
-import RAL from './ral';
 import { FileDescriptor, FileDescriptors } from './fileDescriptor';
-import { DeviceDriver, DeviceDrivers, ReaddirEntry } from './deviceDriver';
+import { DeviceDriver, ReaddirEntry } from './deviceDriver';
 import { BigInts, code2Wasi } from './converter';
+import WasiKernel from './wasiKernel';
 
 export interface Environment {
 	[key: string]: string;
@@ -219,7 +220,7 @@ export interface WasiService extends InstanceWasiService, SharedWasiService {
 }
 
 export namespace InstanceWasiService {
-	export function create(deviceDrivers: DeviceDrivers, fileDescriptors: FileDescriptors, exitHandler: (rval: number) => void, threadSpawnHandler: (start_args_ptr: ptr) => Promise<u32>, options: Options = {}): InstanceWasiService {
+	export function create(fileDescriptors: FileDescriptors, exitHandler: (rval: number) => void, threadSpawnHandler: (start_args_ptr: ptr) => Promise<u32>, options: Options = {}): InstanceWasiService {
 
 		const thread_start = RAL().clock.realtime();
 
@@ -904,7 +905,7 @@ export namespace InstanceWasiService {
 		}
 
 		function getDeviceDriver(fileDescriptor: FileDescriptor): DeviceDriver {
-			return deviceDrivers.get(fileDescriptor.deviceId);
+			return WasiKernel.deviceDrivers.get(fileDescriptor.deviceId);
 		}
 
 		function getFileDescriptor(fd: fd): FileDescriptor {
@@ -931,6 +932,23 @@ export interface StartThreadMessage {
 	readonly start_arg: ptr;
 }
 
+export interface WorkerReadyMessage {
+	readonly method: 'workerReady';
+}
+export namespace WorkerReadyMessage {
+	export function is(message: WasiCallMessage | WorkerReadyMessage): message is WorkerReadyMessage {
+		const candidate = message as WorkerReadyMessage;
+		return candidate && candidate.method === 'workerReady';
+	}
+}
+
+export type WasiCallMessage = [SharedArrayBuffer, SharedArrayBuffer];
+export namespace WasiCallMessage {
+	export function is(message: WasiCallMessage | WorkerReadyMessage): message is WasiCallMessage {
+		return Array.isArray(message) && message.length === 2 && message[0] instanceof SharedArrayBuffer && message[1] instanceof SharedArrayBuffer;
+	}
+}
+
 export abstract class ServiceConnection {
 
 	private readonly wasiService: WasiService;
@@ -938,6 +956,8 @@ export abstract class ServiceConnection {
 	constructor(wasiService: WasiService) {
 		this.wasiService = wasiService;
 	}
+
+	public abstract onWorkerReady(): Promise<void>;
 
 	protected async handleMessage(buffers: [SharedArrayBuffer, SharedArrayBuffer]): Promise<void> {
 		const [paramBuffer, wasmMemory] = buffers;

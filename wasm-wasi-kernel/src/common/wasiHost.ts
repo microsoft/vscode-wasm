@@ -57,7 +57,7 @@ export abstract class HostConnection {
 
 	private doCall(paramBuffer: SharedArrayBuffer, resultBuffer: SharedArrayBuffer): errno {
 		const sync = new Int32Array(paramBuffer, Offsets.lock_index, 1);
-		Atomics.store(sync, 0, 1);
+		Atomics.store(sync, 0, 0);
 		this.postMessage([paramBuffer, resultBuffer]);
 
 		// Wait for the answer

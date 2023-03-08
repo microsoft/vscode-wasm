@@ -4,6 +4,15 @@
 		{
 			"type": "extensionHost",
 			"request": "launch",
+			"name": "Kernel Testbed",
+			"runtimeExecutable": "${execPath}",
+			"args": ["--extensionDevelopmentPath=${workspaceRoot}/wasm-wasi-kernel"],
+			"outFiles": ["${workspaceRoot}/wasm-wasi-kernel/lib/**/*.js"],
+			"sourceMaps": true
+		},
+		{
+			"type": "extensionHost",
+			"request": "launch",
 			"name": "Python Testbed",
 			"runtimeExecutable": "${execPath}",
 			"args": ["--extensionDevelopmentPath=${workspaceRoot}/testbeds/python"],

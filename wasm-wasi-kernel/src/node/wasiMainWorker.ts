@@ -24,7 +24,7 @@ class WasiMainWorker {
 	public listen(): void {
 		this.port.on('message', async (message: StartMainMessage) => {
 			const connection = new NodeHostConnection(this.port);
-			const binary: SharedArrayBuffer = message.bits as SharedArrayBuffer;
+			const binary: Uint8Array = new Uint8Array(message.bits as SharedArrayBuffer);
 			const host = WasiHost.create(connection);
 			const { instance } = await WebAssembly.instantiate(binary, {
 				wasi_snapshot_preview1: host,
