@@ -1,13 +1,13 @@
 {
     "compilerOptions": {
         "types": [
+            "node",
             "vscode"
         ],
         "module": "Node16",
         "moduleResolution": "Node16",
         "target": "es2020",
         "lib": [
-            "webworker",
             "es2020"
         ],
         "rootDir": ".",
@@ -18,10 +18,11 @@
         "declaration": true,
         "stripInternal": true,
         "sourceMap": true,
-        "noUnusedLocals": true,
-        "noUnusedParameters": true,
-        "outDir": "../../lib/browser",
-        "tsBuildInfoFile": "../../lib/browser/compile.tsbuildInfo",
+        "noUnusedLocals": false,
+        "noUnusedParameters": false,
+        "assumeChangesOnlyAffectDirectDependencies": true,
+        "outDir": "../../lib/desktop",
+        "tsBuildInfoFile": "../../lib/desktop/watch.tsbuildInfo",
         "incremental": true
     },
     "include": [
@@ -29,7 +30,7 @@
     ],
     "references": [
         {
-            "path": "../common/tsconfig.json"
+            "path": "../common/tsconfig.watch.json"
         }
     ]
 }

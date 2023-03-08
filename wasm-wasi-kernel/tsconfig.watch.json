@@ -9,10 +9,10 @@
             "path": "./src/common/tsconfig.watch.json"
         },
         {
-            "path": "./src/browser/tsconfig.watch.json"
+            "path": "./src/web/tsconfig.watch.json"
         },
         {
-            "path": "./src/node/tsconfig.watch.json"
+            "path": "./src/desktop/tsconfig.watch.json"
         }
     ]
 }

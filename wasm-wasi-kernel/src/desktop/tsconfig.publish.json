@@ -1,13 +1,13 @@
 {
     "compilerOptions": {
         "types": [
+            "node",
             "vscode"
         ],
         "module": "Node16",
         "moduleResolution": "Node16",
         "target": "es2020",
         "lib": [
-            "webworker",
             "es2020"
         ],
         "rootDir": ".",
@@ -17,12 +17,11 @@
         "noImplicitThis": true,
         "declaration": true,
         "stripInternal": true,
-        "sourceMap": true,
-        "noUnusedLocals": false,
-        "noUnusedParameters": false,
-        "assumeChangesOnlyAffectDirectDependencies": true,
-        "outDir": "../../lib/browser",
-        "tsBuildInfoFile": "../../lib/browser/watch.tsbuildInfo",
+        "sourceMap": false,
+        "noUnusedLocals": true,
+        "noUnusedParameters": true,
+        "outDir": "../../lib/desktop",
+        "tsBuildInfoFile": "../../lib/desktop/publish.tsbuildInfo",
         "incremental": true
     },
     "include": [
@@ -30,7 +29,7 @@
     ],
     "references": [
         {
-            "path": "../common/tsconfig.watch.json"
+            "path": "../common/tsconfig.publish.json"
         }
     ]
 }

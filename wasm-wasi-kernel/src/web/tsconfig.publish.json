@@ -20,8 +20,8 @@
         "sourceMap": false,
         "noUnusedLocals": true,
         "noUnusedParameters": true,
-        "outDir": "../../lib/browser",
-        "tsBuildInfoFile": "../../lib/browser/publish.tsbuildInfo",
+        "outDir": "../../lib/web",
+        "tsBuildInfoFile": "../../lib/web/publish.tsbuildInfo",
         "incremental": true
     },
     "include": [

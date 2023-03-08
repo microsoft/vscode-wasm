@@ -9,10 +9,10 @@
             "path": "./src/common/tsconfig.publish.json"
         },
         {
-            "path": "./src/browser/tsconfig.publish.json"
+            "path": "./src/web/tsconfig.publish.json"
         },
         {
-            "path": "./src/node/tsconfig.publish.json"
+            "path": "./src/desktop/tsconfig.publish.json"
         }
     ]
 }

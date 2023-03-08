@@ -268,12 +268,12 @@ const wasm_wasi_kernel = {
 			extends: [ common, vscodeMixin ]
 		},
 		{
-			path: './src/browser',
+			path: './src/web',
 			extends: [ browser, vscodeMixin ],
 			references: [ '../common' ]
 		},
 		{
-			path: './src/node',
+			path: './src/desktop',
 			extends: [ node, vscodeMixin ],
 			references: [ '../common' ]
 		}

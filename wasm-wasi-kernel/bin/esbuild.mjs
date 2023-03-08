@@ -20,7 +20,7 @@ const sharedBrowserOptions = {
 
 /** @type BuildOptions */
 const webOptions = {
-	entryPoints: ['extension.ts'],
+	entryPoints: ['src/web/extension.ts'],
 	outfile: 'dist/web/extension.js',
 	format: 'cjs',
 	...sharedBrowserOptions,
@@ -28,10 +28,18 @@ const webOptions = {
 
 /** @type BuildOptions */
 const webMainWorkerOptions = {
-	entryPoints: ['src/browser/mainWorker.ts'],
-	outfile: 'dist/web/worker.js',
+	entryPoints: ['src/web/mainWorker.ts'],
+	outfile: 'dist/web/mainWorker.js',
 	format: 'iife',
 	...sharedBrowserOptions,
 };
 
-await Promise.all([esbuild.build(webOptions), esbuild.build(webMainWorkerOptions)]);
+/** @type BuildOptions */
+const webThreadWorkerOptions = {
+	entryPoints: ['src/web/threadWorker.ts'],
+	outfile: 'dist/web/threadWorker.js',
+	format: 'iife',
+	...sharedBrowserOptions,
+};
+
+await Promise.all([esbuild.build(webOptions), esbuild.build(webMainWorkerOptions), esbuild.build(webThreadWorkerOptions)]);
