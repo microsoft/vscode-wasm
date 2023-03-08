@@ -9,8 +9,8 @@ import { ptr, u32 } from './baseTypes';
 import { DeviceDriver, FileSystemDeviceDriver } from './deviceDriver';
 import { FileDescriptors } from './fileDescriptor';
 import * as vscfs from './vscodeFileSystemDriver';
-import { InstanceWasiService, Options, SharedWasiService, WasiService } from './wasiService';
-import WasiKernel from './wasiKernel';
+import { InstanceWasiService, Options, SharedWasiService, WasiService } from './service';
+import WasiKernel from './kernel';
 
 export abstract class WasiProcess {
 

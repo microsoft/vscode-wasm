@@ -3,27 +3,22 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { MessagePort, parentPort } from 'worker_threads';
-
-import { WasiHost} from '../common/wasiHost';
-import { NodeHostConnection } from './connection';
-import { StartMainMessage } from '../common/wasiService';
-
-if (parentPort === null) {
-	throw new Error('This file is only intended to be run in a worker thread');
-}
+import { WasiHost} from '../common/host';
+import { BrowserHostConnection } from './connection';
+import { StartMainMessage, WorkerReadyMessage } from '../common/connection';
 
 class WasiMainWorker {
 
-	private readonly port: MessagePort;
+	private readonly port: MessagePort | Worker | DedicatedWorkerGlobalScope;
 
-	public constructor(port: MessagePort) {
+	public constructor(port: MessagePort | Worker | DedicatedWorkerGlobalScope) {
 		this.port = port;
 	}
 
 	public listen(): void {
-		this.port.on('message', async (message: StartMainMessage) => {
-			const connection = new NodeHostConnection(this.port);
+		const connection = new BrowserHostConnection(this.port);
+		this.port.onmessage = (async (event: MessageEvent<StartMainMessage>) => {
+			const message = event.data;
 			const binary: Uint8Array = new Uint8Array(message.bits as SharedArrayBuffer);
 			const host = WasiHost.create(connection);
 			const { instance } = await WebAssembly.instantiate(binary, {
@@ -33,8 +28,10 @@ class WasiMainWorker {
 			host.initialize(instance);
 			(instance.exports._start as Function)();
 		});
+		const ready: WorkerReadyMessage = { method: 'workerReady' };
+		connection.postMessage(ready);
 	}
 }
 
-const worker = new WasiMainWorker(parentPort);
+const worker = new WasiMainWorker(self);
 worker.listen();

@@ -13,13 +13,13 @@ import {
 	path_filestat_get, path_filestat_set_times, path_link, path_open, path_readlink, path_remove_directory, path_rename, path_symlink, path_unlink_file,
 	poll_oneoff, Prestat, prestat, proc_exit, random_get, riflags, rights, Rights, sched_yield, sdflags, siflags, sock_accept, Subclockflags, Subscription, subscription, thread_spawn, timestamp, WasiError, Whence, whence
 } from './wasi';
-import { Offsets } from './connection';
+import { Offsets, WasiCallMessage } from './connection';
 import { WasiFunction, WasiFunctions, WasiFunctionSignature } from './wasiMeta';
 import { byte, bytes, cstring, ptr, size, u32, u64 } from './baseTypes';
 import { FileDescriptor, FileDescriptors } from './fileDescriptor';
 import { DeviceDriver, ReaddirEntry } from './deviceDriver';
 import { BigInts, code2Wasi } from './converter';
-import WasiKernel from './wasiKernel';
+import WasiKernel from './kernel';
 
 export interface Environment {
 	[key: string]: string;
@@ -920,35 +920,6 @@ export namespace InstanceWasiService {
 	}
 }
 
-export interface StartMainMessage {
-	readonly method: 'startMain';
-	readonly bits: SharedArrayBuffer | vscode.Uri;
-}
-
-export interface StartThreadMessage {
-	readonly method: 'startThread';
-	readonly bits: SharedArrayBuffer | vscode.Uri;
-	readonly tid: u32;
-	readonly start_arg: ptr;
-}
-
-export interface WorkerReadyMessage {
-	readonly method: 'workerReady';
-}
-export namespace WorkerReadyMessage {
-	export function is(message: WasiCallMessage | WorkerReadyMessage): message is WorkerReadyMessage {
-		const candidate = message as WorkerReadyMessage;
-		return candidate && candidate.method === 'workerReady';
-	}
-}
-
-export type WasiCallMessage = [SharedArrayBuffer, SharedArrayBuffer];
-export namespace WasiCallMessage {
-	export function is(message: WasiCallMessage | WorkerReadyMessage): message is WasiCallMessage {
-		return Array.isArray(message) && message.length === 2 && message[0] instanceof SharedArrayBuffer && message[1] instanceof SharedArrayBuffer;
-	}
-}
-
 export abstract class ServiceConnection {
 
 	private readonly wasiService: WasiService;
@@ -957,10 +928,10 @@ export abstract class ServiceConnection {
 		this.wasiService = wasiService;
 	}
 
-	public abstract onWorkerReady(): Promise<void>;
+	public abstract workerReady(): Promise<void>;
 
-	protected async handleMessage(buffers: [SharedArrayBuffer, SharedArrayBuffer]): Promise<void> {
-		const [paramBuffer, wasmMemory] = buffers;
+	protected async handleMessage(message: WasiCallMessage): Promise<void> {
+		const [paramBuffer, wasmMemory] = message;
 		const paramView = new DataView(paramBuffer);
 		try {
 

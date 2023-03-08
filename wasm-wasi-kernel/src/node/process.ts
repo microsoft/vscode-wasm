@@ -7,18 +7,19 @@ import { Uri } from 'vscode';
 
 import RAL from '../common/ral';
 import { ptr, u32 } from '../common/baseTypes';
-import { WasiProcess } from '../common/wasiProcess';
-import { WasiService, ServiceConnection, StartMainMessage, StartThreadMessage, Options, WorkerReadyMessage, WasiCallMessage } from '../common/wasiService';
+import { WasiProcess } from '../common/process';
+import { WasiService, ServiceConnection, Options } from '../common/service';
+import { StartMainMessage, StartThreadMessage, WasiCallMessage, WorkerReadyMessage } from '../common/connection';
 
 class Connection extends ServiceConnection {
 
 	private readonly port: MessagePort | Worker;
-	private workerReady: Promise<void>;
+	private _workerReady: Promise<void>;
 
 	constructor(wasiService: WasiService, port: MessagePort | Worker) {
 		super(wasiService);
 		let workerReadyResolve: () => void;
-		this.workerReady = new Promise((resolve) => {
+		this._workerReady = new Promise((resolve) => {
 			workerReadyResolve = resolve;
 		});
 		this.port = port;
@@ -35,8 +36,12 @@ class Connection extends ServiceConnection {
 		});
 	}
 
-	public onWorkerReady(): Promise<void> {
-		return this.workerReady;
+	public workerReady(): Promise<void> {
+		return this._workerReady;
+	}
+
+	public postMessage(message: StartMainMessage | StartThreadMessage): void {
+		this.port.postMessage(message);
 	}
 }
 
@@ -62,21 +67,23 @@ export class NodeWasiProcess extends WasiProcess {
 		return result;
 	}
 
-	protected startMain(wasiService: WasiService, bits: SharedArrayBuffer | Uri): Promise<void> {
+	protected async startMain(wasiService: WasiService, bits: SharedArrayBuffer | Uri): Promise<void> {
 		const filename = Uri.joinPath(this.baseUri, './lib/node/wasiMainWorker.js').fsPath;
 		this.mainWorker = new Worker(filename);
-		new Connection(wasiService, this.mainWorker);
+		const connection = new Connection(wasiService, this.mainWorker);
+		await connection.workerReady();
 		const message: StartMainMessage = { method: 'startMain', bits };
-		this.mainWorker.postMessage(message);
+		connection.postMessage(message);
 		return Promise.resolve();
 	}
 
-	protected startThread(wasiService: WasiService, bits: SharedArrayBuffer | Uri, tid: u32, start_arg: ptr): Promise<void> {
-		const filename = Uri.joinPath(this.baseUri, './lib/node/wasiThreadWorker.js').toString();
+	protected async startThread(wasiService: WasiService, bits: SharedArrayBuffer | Uri, tid: u32, start_arg: ptr): Promise<void> {
+		const filename = Uri.joinPath(this.baseUri, './lib/node/wasiThreadWorker.js').fsPath;
 		const worker = new Worker(filename);
-		new Connection(wasiService, worker);
+		const connection = new Connection(wasiService, worker);
+		await connection.workerReady();
 		const message: StartThreadMessage = { method: 'startThread', bits, tid, start_arg };
-		worker.postMessage(message);
+		connection.postMessage(message);
 		this.threadWorkers.set(tid, worker);
 		return Promise.resolve();
 	}

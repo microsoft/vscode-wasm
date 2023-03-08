@@ -3,16 +3,14 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { MessagePort, Worker } from 'worker_threads';
-
 import { HostConnection } from '../common/host';
 import { WasiCallMessage, WorkerReadyMessage } from '../common/connection';
 
-export class NodeHostConnection extends HostConnection {
+export class BrowserHostConnection extends HostConnection {
 
-	private readonly port: MessagePort | Worker;
+	private readonly port: MessagePort | Worker | DedicatedWorkerGlobalScope;
 
-	public constructor(port: MessagePort | Worker) {
+	public constructor(port: MessagePort | Worker | DedicatedWorkerGlobalScope) {
 		super();
 		this.port = port;
 	}

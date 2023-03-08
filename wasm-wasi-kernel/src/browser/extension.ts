@@ -6,14 +6,14 @@ import RIL from './ril';
 RIL.install();
 
 import { commands, ExtensionContext  } from 'vscode';
-import { NodeWasiProcess } from './process';
+import { BrowserWasiProcess } from './process';
 import { binary } from './wasm';
 
 export async function activate(context: ExtensionContext) {
 	commands.registerCommand('testbed-threads.run', () => {
 		const bits = new SharedArrayBuffer(binary.length);
 		new Uint8Array(bits).set(binary);
-		const process: NodeWasiProcess = new NodeWasiProcess(context.extensionUri, 'threads', bits);
+		const process: BrowserWasiProcess = new BrowserWasiProcess(context.extensionUri, 'threads', bits);
 		process.run().catch(() => {});
 	});
 }

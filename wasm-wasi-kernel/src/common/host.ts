@@ -2,8 +2,6 @@
  *  Copyright (c) Microsoft Corporation. All rights reserved.
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
-/// <reference path="./webassembly.d.ts" />
-
 import { cstring, ptr, size, u32, u64, u8 } from './baseTypes';
 import {
 	fd, errno, Errno, lookupflags, oflags, rights, fdflags, dircookie, filesize, advise, filedelta, whence, clockid, timestamp,
@@ -11,7 +9,7 @@ import {
 	args_sizes_get, args_get, clock_res_get, clock_time_get, environ_sizes_get, environ_get, fd_advise, fd_allocate, fd_close, fd_datasync, fd_fdstat_set_flags, fd_fdstat_get, fd_filestat_get, fd_filestat_set_size, fd_filestat_set_times, fd_pread, fd_prestat_get, fd_prestat_dir_name, fd_pwrite, fd_read, fd_readdir, fd_seek, fd_renumber, fd_sync, fd_tell, fd_write, path_create_directory, path_filestat_get, path_filestat_set_times, path_link, path_open, path_readlink, path_remove_directory, path_rename, path_symlink, path_unlink_file, poll_oneoff, proc_exit, sched_yield, random_get, sock_accept, sock_shutdown, thread_spawn
 } from './wasi';
 import { ParamKind, WasiFunctions, ReverseTransfer, WasiFunctionSignature, MemoryTransfers, WasiFunction } from './wasiMeta';
-import { Offsets } from './connection';
+import { Offsets, WasiCallMessage, WorkerReadyMessage } from './connection';
 import { WASI } from './wasi';
 
 export abstract class HostConnection {
@@ -22,7 +20,7 @@ export abstract class HostConnection {
 		this.timeout = timeout;
 	}
 
-	protected abstract postMessage(buffers: [SharedArrayBuffer, SharedArrayBuffer]): any;
+	protected abstract postMessage(message: WasiCallMessage | WorkerReadyMessage): any;
 
 
 	public call(func: WasiFunction, args: (number | bigint)[], wasmMemory: ArrayBuffer, transfers?: MemoryTransfers): errno {
@@ -118,6 +116,28 @@ export abstract class HostConnection {
 	}
 }
 
+declare namespace WebAssembly {
+
+	interface Global {
+		value: any;
+		valueOf(): any;
+	}
+	interface Table {
+		readonly length: number;
+		get(index: number): any;
+		grow(delta: number, value?: any): number;
+		set(index: number, value?: any): void;
+	}
+	interface Memory {
+		readonly buffer: ArrayBuffer;
+		grow(delta: number): number;
+	}
+	type ExportValue = Function | Global | Memory | Table;
+
+	export interface Instance {
+		readonly exports: Record<string, ExportValue>;
+	}
+}
 
 export interface WasiHost extends WASI {
 	initialize: (inst: WebAssembly.Instance) => void;
