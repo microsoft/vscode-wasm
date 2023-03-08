@@ -23,6 +23,7 @@
 		"vscode": "^1.76.0"
 	},
 	"main": "./lib/node/extension.js",
+	"browser": "./dist/web/extension.js",
 	"activationEvents": [
 		"*"
 	],

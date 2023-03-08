@@ -83,8 +83,8 @@ function RIL(): RIL {
 
 namespace RIL {
 	export function install(): void {
-		RAL.install(_ril);
 	}
 }
 
+RAL.install(_ril);
 export default RIL;

@@ -53,6 +53,6 @@
 		"tsconfig-gen": "tsconfig-gen --file .tsconfigrc.js",
 		"validate:versions": "node ./tools/lib/validate-versions.js",
 		"update:lock": "git clean -xfd . && npm install",
-		"serve": "serve --cors -l 5000 --ssl-cert $HOME/certs/localhost.pem --ssl-key $HOME/certs/localhost-key.pem -c ../../configs/serve.json ./testbeds/threads"
+		"serve": "serve --cors -l 5000 --ssl-cert $HOME/certs/localhost.pem --ssl-key $HOME/certs/localhost-key.pem -c ../configs/serve.json ./wasm-wasi-kernel"
 	}
 }

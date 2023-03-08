@@ -23,6 +23,7 @@ export namespace Offsets {
 export interface StartMainMessage {
 	readonly method: 'startMain';
 	readonly bits: SharedArrayBuffer | Uri;
+	readonly memory: SharedArrayBuffer;
 }
 
 export interface StartThreadMessage {

@@ -21,7 +21,11 @@ class WasiMainWorker {
 			const message = event.data;
 			const binary: Uint8Array = new Uint8Array(message.bits as SharedArrayBuffer);
 			const host = WasiHost.create(connection);
+			const memory = new WebAssembly.Memory({ initial: 160, maximum: 160, shared: true });
 			const { instance } = await WebAssembly.instantiate(binary, {
+				"env": {
+					"memory": memory
+				},
 				wasi_snapshot_preview1: host,
 				wasi: host
 			});

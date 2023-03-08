@@ -28,7 +28,7 @@ class WasiThreadWorker {
 			try {
 				(instance.exports.wasi_thread_start as Function)(message.tid, message.start_arg);
 			} catch (error) {
-				// console.log(error);
+				console.log(error);
 			}
 		});
 		const ready: WorkerReadyMessage = { method: 'workerReady' };

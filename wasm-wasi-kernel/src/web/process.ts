@@ -68,7 +68,7 @@ export class BrowserWasiProcess extends WasiProcess {
 	}
 
 	protected async startMain(wasiService: WasiService, bits: SharedArrayBuffer | Uri): Promise<void> {
-		const filename = Uri.joinPath(this.baseUri, './dist/browser/mainWorker.js').toString();
+		const filename = Uri.joinPath(this.baseUri, './dist/web/mainWorker.js').toString();
 		this.mainWorker = new Worker(filename);
 		const connection = new Connection(wasiService, this.mainWorker);
 		await connection.workerReady();
@@ -78,7 +78,7 @@ export class BrowserWasiProcess extends WasiProcess {
 	}
 
 	protected async startThread(wasiService: WasiService, bits: SharedArrayBuffer | Uri, tid: u32, start_arg: ptr): Promise<void> {
-		const filename = Uri.joinPath(this.baseUri, './dist/browser/threadWorker.js').toString();
+		const filename = Uri.joinPath(this.baseUri, './dist/web/threadWorker.js').toString();
 		const worker = new Worker(filename);
 		const connection = new Connection(wasiService, worker);
 		await connection.workerReady();

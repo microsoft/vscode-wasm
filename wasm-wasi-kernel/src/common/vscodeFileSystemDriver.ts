@@ -15,8 +15,6 @@ import { BigInts, code2Wasi } from './converter';
 import { BaseFileDescriptor, FdProvider, FileDescriptor } from './fileDescriptor';
 import { NoSysDeviceDriver, ReaddirEntry, FileSystemDeviceDriver, DeviceId } from './deviceDriver';
 
-const paths = RAL().path;
-
 export const DirectoryBaseRights: rights = Rights.fd_fdstat_set_flags | Rights.path_create_directory |
 		Rights.path_create_file | Rights.path_link_source | Rights.path_link_target | Rights.path_open |
 		Rights.fd_readdir | Rights.path_readlink | Rights.path_rename_source | Rights.path_rename_target |
@@ -214,6 +212,7 @@ class FileSystem {
 	public getUri(node: Node): Uri;
 	public getUri(node: DirectoryNode, fsPath: string): Uri;
 	public getUri(node: DirectoryNode, fsPath?: string): Uri {
+		const paths = RAL().path;
 		const finalPath = fsPath === undefined || fsPath === '.' ? this.getPath(node) : paths.join(this.getPath(node), fsPath);
 		return this.vscfs.with({ path: paths.join(this.vscfs.path, finalPath) });
 	}
@@ -774,7 +773,7 @@ export function create(deviceId: DeviceId, baseUri: Uri): FileSystemDeviceDriver
 			if (Oflags.creatOn(oflags) && !entryExists) {
 				// Ensure parent handle is directory
 				parentDescriptor.assertIsDirectory();
-				const dirname = paths.dirname(path);
+				const dirname = RAL().path.dirname(path);
 				// The name has a directory part. Ensure that the directory exists
 				if (dirname !== '.') {
 					const dirFiletype = await doGetFiletype(parentDescriptor, dirname);
