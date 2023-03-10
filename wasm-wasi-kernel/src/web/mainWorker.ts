@@ -19,17 +19,20 @@ class WasiMainWorker {
 		const connection = new BrowserHostConnection(this.port);
 		this.port.onmessage = (async (event: MessageEvent<StartMainMessage>) => {
 			const message = event.data;
-			const binary: Uint8Array = new Uint8Array(message.bits as SharedArrayBuffer);
+			const module = message.module;
+			const memory = message.memory;
 			const host = WasiHost.create(connection);
-			const memory = new WebAssembly.Memory({ initial: 160, maximum: 160, shared: true });
-			const { instance } = await WebAssembly.instantiate(binary, {
-				"env": {
-					"memory": memory
-				},
+			const imports: WebAssembly.Imports = {
 				wasi_snapshot_preview1: host,
 				wasi: host
-			});
-			host.initialize(instance);
+			};
+			if (memory !== undefined) {
+				imports.env = {
+					memory: memory
+				};
+			}
+			const instance  = await WebAssembly.instantiate(module, imports);
+			host.initialize(instance, memory);
 			(instance.exports._start as Function)();
 		});
 		const ready: WorkerReadyMessage = { method: 'workerReady' };

@@ -68,7 +68,7 @@ export function create(deviceId: DeviceId, terminal: WasiPseudoTerminal): Charac
 	 		let totalBytesRead = 0;
 	 		for (const buffer of buffers) {
 	 			const toCopy = Math.min(buffer.length, result.length - offset);
-	 			buffer.set(result.subarray(offset, toCopy));
+	 			buffer.set(result.subarray(offset, offset + toCopy));
 	 			offset += toCopy;
 	 			totalBytesRead += toCopy;
 	 			if (toCopy < buffer.length) {

@@ -14,6 +14,17 @@ void *myThreadFun(void *vargp)
 
 int main()
 {
+
+	printf("Testing malloc\n");
+	void* ptr = malloc(131200);
+	if (ptr == NULL) {
+		printf("Malloc failed\n");
+		exit(1);
+	} else {
+		printf("Malloc succeeded\n");
+		free(ptr);
+	}
+
 	pthread_t thread_id;
 	printf("Before Thread\n");
 	int result = pthread_create(&thread_id, NULL, myThreadFun, NULL);

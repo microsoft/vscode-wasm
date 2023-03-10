@@ -252,8 +252,7 @@ export namespace S64 {
 
 export namespace Ptr {
 	export const size = 4 as const;
-	export const $ptr = PtrParam;
-	export const $param: NumberParam = { kind: ParamKind.number, size, write: (view, offset, value) => view.setUint32(offset, value, true), read: (view, offset) => view.getUint32(offset, true) };
+	export const $param = PtrParam;
 
 	export function createTransfer(length: number, direction: MemoryTransferDirection): MemoryTransfer {
 		return {

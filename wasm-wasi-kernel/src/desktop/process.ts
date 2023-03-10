@@ -47,12 +47,16 @@ class Connection extends ServiceConnection {
 
 export class NodeWasiProcess extends WasiProcess {
 
+	private readonly module: Promise<WebAssembly.Module>;
+	private readonly memory: WebAssembly.Memory | undefined;
 	private mainWorker: Worker | undefined;
 	private threadWorkers: Map<u32, Worker>;
 
 	constructor(baseUri: Uri, programName: string, bits: SharedArrayBuffer | Uri, options: Options = {}, mapWorkspaceFolders: boolean = true) {
-		super(baseUri, programName, bits, options,mapWorkspaceFolders);
+		super(baseUri, programName, options, mapWorkspaceFolders);
 		this.threadWorkers = new Map();
+		this.module = WebAssembly.compile(new Uint8Array(bits as SharedArrayBuffer));
+		this.memory = new WebAssembly.Memory({ initial: 160, maximum: 160, shared: true });
 	}
 
 	public async terminate(): Promise<number> {
@@ -67,22 +71,22 @@ export class NodeWasiProcess extends WasiProcess {
 		return result;
 	}
 
-	protected async startMain(wasiService: WasiService, bits: SharedArrayBuffer | Uri): Promise<void> {
+	protected async startMain(wasiService: WasiService): Promise<void> {
 		const filename = Uri.joinPath(this.baseUri, './lib/node/wasiMainWorker.js').fsPath;
 		this.mainWorker = new Worker(filename);
 		const connection = new Connection(wasiService, this.mainWorker);
 		await connection.workerReady();
-		const message: StartMainMessage = { method: 'startMain', bits };
+		const message: StartMainMessage = { method: 'startMain', module: await this.module, memory: this.memory };
 		connection.postMessage(message);
 		return Promise.resolve();
 	}
 
-	protected async startThread(wasiService: WasiService, bits: SharedArrayBuffer | Uri, tid: u32, start_arg: ptr): Promise<void> {
+	protected async startThread(wasiService: WasiService, tid: u32, start_arg: ptr): Promise<void> {
 		const filename = Uri.joinPath(this.baseUri, './lib/node/wasiThreadWorker.js').fsPath;
 		const worker = new Worker(filename);
 		const connection = new Connection(wasiService, worker);
 		await connection.workerReady();
-		const message: StartThreadMessage = { method: 'startThread', bits, tid, start_arg };
+		const message: StartThreadMessage = { method: 'startThread', module: await this.module, memory: this.memory!, tid, start_arg };
 		connection.postMessage(message);
 		this.threadWorkers.set(tid, worker);
 		return Promise.resolve();

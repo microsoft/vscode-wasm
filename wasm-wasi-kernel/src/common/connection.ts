@@ -3,7 +3,6 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { Uri } from 'vscode';
 import { ptr, u32 } from './baseTypes';
 
 export namespace Offsets {
@@ -22,13 +21,14 @@ export namespace Offsets {
 
 export interface StartMainMessage {
 	readonly method: 'startMain';
-	readonly bits: SharedArrayBuffer | Uri;
-	readonly memory: SharedArrayBuffer;
+	readonly module: WebAssembly.Module;
+	readonly memory?: WebAssembly.Memory;
 }
 
 export interface StartThreadMessage {
 	readonly method: 'startThread';
-	readonly bits: SharedArrayBuffer | Uri;
+	readonly module: WebAssembly.Module;
+	readonly memory: WebAssembly.Memory;
 	readonly tid: u32;
 	readonly start_arg: ptr;
 }

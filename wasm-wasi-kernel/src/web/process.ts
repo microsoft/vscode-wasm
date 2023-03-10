@@ -41,18 +41,27 @@ class Connection extends ServiceConnection {
 	}
 
 	public postMessage(message: StartMainMessage | StartThreadMessage): void {
-		this.port.postMessage(message);
+		try {
+			this.port.postMessage(message);
+		} catch(error) {
+			RAL().console.error(error);
+		}
 	}
 }
 
 export class BrowserWasiProcess extends WasiProcess {
 
+	private readonly module: Promise<WebAssembly.Module>;
+	private memory: WebAssembly.Memory | undefined;
 	private mainWorker: Worker | undefined;
+	private importsMemory: boolean | undefined;
 	private threadWorkers: Map<u32, Worker>;
 
 	constructor(baseUri: Uri, programName: string, bits: SharedArrayBuffer | Uri, options: Options = {}, mapWorkspaceFolders: boolean = true) {
-		super(baseUri, programName, bits, options,mapWorkspaceFolders);
+		super(baseUri, programName, options, mapWorkspaceFolders);
 		this.threadWorkers = new Map();
+		this.module = WebAssembly.compile(new Uint8Array(bits as SharedArrayBuffer));
+		this.memory = new WebAssembly.Memory({ initial: 2, maximum: 160, shared: true });
 	}
 
 	public async terminate(): Promise<number> {
@@ -67,22 +76,33 @@ export class BrowserWasiProcess extends WasiProcess {
 		return result;
 	}
 
-	protected async startMain(wasiService: WasiService, bits: SharedArrayBuffer | Uri): Promise<void> {
+	protected async startMain(wasiService: WasiService): Promise<void> {
 		const filename = Uri.joinPath(this.baseUri, './dist/web/mainWorker.js').toString();
 		this.mainWorker = new Worker(filename);
 		const connection = new Connection(wasiService, this.mainWorker);
 		await connection.workerReady();
-		const message: StartMainMessage = { method: 'startMain', bits };
+		const module = await this.module;
+		this.importsMemory = this.getImportsMemory(module);
+		if (this.importsMemory) {
+
+		}
+		const message: StartMainMessage = { method: 'startMain', module: await this.module, memory: this.memory };
 		connection.postMessage(message);
 		return Promise.resolve();
 	}
 
-	protected async startThread(wasiService: WasiService, bits: SharedArrayBuffer | Uri, tid: u32, start_arg: ptr): Promise<void> {
+	protected async startThread(wasiService: WasiService, tid: u32, start_arg: ptr): Promise<void> {
+		if (this.mainWorker === undefined) {
+			throw new Error('Main worker not started');
+		}
+		if (!this.importsMemory) {
+			throw new Error('Multi threaded applications need to import shared memory.');
+		}
 		const filename = Uri.joinPath(this.baseUri, './dist/web/threadWorker.js').toString();
 		const worker = new Worker(filename);
 		const connection = new Connection(wasiService, worker);
 		await connection.workerReady();
-		const message: StartThreadMessage = { method: 'startThread', bits, tid, start_arg };
+		const message: StartThreadMessage = { method: 'startThread', module: await this.module, memory: this.memory!, tid, start_arg };
 		connection.postMessage(message);
 		this.threadWorkers.set(tid, worker);
 		return Promise.resolve();
@@ -94,5 +114,15 @@ export class BrowserWasiProcess extends WasiProcess {
 			this.threadWorkers.delete(tid);
 			worker.terminate();
 		}
+	}
+
+	private getImportsMemory(module: WebAssembly.Module): boolean {
+		const imports = WebAssembly.Module.imports(module);
+		for (const item of imports) {
+			if (item.kind === 'memory' && item.name === 'memory') {
+				return true;
+			}
+		}
+		return false;
 	}
 }

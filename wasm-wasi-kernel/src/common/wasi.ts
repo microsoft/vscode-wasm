@@ -996,7 +996,7 @@ export namespace Filestat {
 		ctim: 56
 	};
 
-	export function create(ptr: ptr, memory: DataView): filestat {
+	export function create(memory: DataView, ptr: ptr): filestat {
 		return {
 			get $ptr(): ptr { return ptr; },
 			get dev(): device { return memory.getBigUint64(ptr + offsets.dev, true); },
@@ -1103,7 +1103,7 @@ export namespace Fdstat {
 		fs_rights_inheriting: 16
 	};
 
-	export function create(ptr: ptr, memory: DataView): fdstat {
+	export function create(memory: DataView, ptr: ptr): fdstat {
 		return {
 			get $ptr(): ptr<fdstat> { return ptr; },
 			get fs_filetype(): filetype { return memory.getUint8(ptr + offsets.fs_filetype); },
@@ -1193,7 +1193,7 @@ export namespace Prestat {
 		len: 4
 	};
 
-	export function create(ptr: ptr, memory: DataView): prestat {
+	export function create(memory: DataView, ptr: ptr): prestat {
 		memory.setUint8(ptr, Preopentype.dir);
 		return {
 			get $ptr(): ptr { return ptr; },
@@ -1249,7 +1249,7 @@ export namespace Iovec {
 		buf_len: 4,
 	};
 
-	export function create(ptr: ptr, memory: DataView): iovec {
+	export function create(memory: DataView, ptr: ptr): iovec {
 		return {
 			get $ptr(): ptr { return ptr; },
 			get buf(): ptr { return memory.getUint32(ptr + offsets.buf, true); },
@@ -1268,7 +1268,7 @@ export namespace Iovec {
 		let dataSize = Iovec.size * iovs_len;
 		let ptr = iovec;
 		for (let i = 0; i < iovs_len; i++) {
-			const iovec = Iovec.create(ptr, memory);
+			const iovec = Iovec.create(memory, ptr);
 			dataSize += iovec.buf_len;
 		}
 		return {
@@ -1282,8 +1282,8 @@ export namespace Iovec {
 				let bufferIndex = to + Iovec.size * iovs_len;
 				const result: { from: ptr; to: ptr; size: number}[] = [];
 				for (let i = 0; i < iovs_len; i++) {
-					const fromIovec = Iovec.create(fromIndex, new DataView(wasmMemory));
-					const toIovec = Iovec.create(toIndex, new DataView(transferMemory));
+					const fromIovec = Iovec.create(new DataView(wasmMemory), fromIndex);
+					const toIovec = Iovec.create(new DataView(transferMemory), toIndex);
 					toIovec.buf = bufferIndex;
 					toIovec.buf_len = fromIovec.buf_len;
 					bufferIndex += fromIovec.buf_len;
@@ -1333,7 +1333,7 @@ export namespace Ciovec {
 		buf_len: 4,
 	};
 
-	export function create(ptr: ptr, memory: DataView): ciovec {
+	export function create(memory: DataView, ptr: ptr): ciovec {
 		return {
 			get $ptr(): ptr<ciovec> { return ptr; },
 			get buf(): ptr { return memory.getUint32(ptr + offsets.buf, true); },
@@ -1350,10 +1350,8 @@ export namespace Ciovec {
 
 	export function createTransfer(memory: DataView, ciovec: ptr<ciovec_array>, ciovs_len: u32): MemoryTransfer {
 		let dataSize = Ciovec.size * ciovs_len;
-		let ptr = ciovec;
-		for (let i = 0; i < ciovs_len; i++) {
-			const iovec = Ciovec.create(ptr, memory);
-			dataSize += iovec.buf_len;
+		for (const item of new StructArray<ciovec>(memory, ciovec, ciovs_len, Ciovec).values()) {
+			dataSize += item.buf_len;
 		}
 		return {
 			memorySize: dataSize,
@@ -1361,15 +1359,17 @@ export namespace Ciovec {
 				if (from !== ciovec) {
 					throw new Error(`CiovecPtrParam needs to be used as an instance object`);
 				}
-				let fromIndex = from;
-				let toIndex = to;
+				const forms = new StructArray<ciovec>(new DataView(wasmMemory), from, ciovs_len, Ciovec);
+				const tos = new StructArray<ciovec>(new DataView(transferMemory), to, ciovs_len, Ciovec);
+				const transferBuffer = new Uint8Array(transferMemory);
 				let bufferIndex = to + Ciovec.size * ciovs_len;
 				for (let i = 0; i < ciovs_len; i++) {
-					const fromIovec = Ciovec.create(fromIndex, new DataView(wasmMemory));
-					const toIovec = Ciovec.create(toIndex, new DataView(transferMemory));
+					const fromIovec = forms.get(i);
+					const toIovec = tos.get(i);
 					toIovec.buf = bufferIndex;
 					toIovec.buf_len = fromIovec.buf_len;
-					new Uint8Array(transferMemory, toIovec.buf, toIovec.buf_len).set(new Uint8Array(wasmMemory, fromIovec.buf, fromIovec.buf_len));
+					transferBuffer.set(new Uint8Array(wasmMemory, fromIovec.buf, fromIovec.buf_len), toIovec.buf);
+					bufferIndex += toIovec.buf_len;
 				}
 				// Ciovec is used to write data to disk. So no need to copy anything
 				// back from the actual write call.
@@ -1380,6 +1380,7 @@ export namespace Ciovec {
 }
 
 export type ciovec_array = ciovec[];
+
 
 export type dirnamlen = u32;
 export type dirent = {
@@ -1423,7 +1424,7 @@ export namespace Dirent {
 		d_type: 20
 	};
 
-	export function create(ptr: ptr, memory: DataView): dirent {
+	export function create(memory: DataView, ptr: ptr): dirent {
 		return {
 			get $ptr(): ptr<dirent> { return ptr; },
 			get d_next(): dircookie { return memory.getBigUint64(ptr + offsets.d_next, true); },
@@ -1507,7 +1508,7 @@ export namespace Event_fd_readwrite {
 		flags: 8
 	};
 
-	export function create(ptr: ptr, memory: DataView): event_fd_readwrite {
+	export function create(memory: DataView, ptr: ptr): event_fd_readwrite {
 		return {
 			set nbytes(value: filesize) { memory.setBigUint64(ptr + offsets.nbytes, value, true); },
 			set flags(value: eventrwflags) { memory.setUint16(ptr + offsets.flags, value, true); }
@@ -1560,13 +1561,13 @@ export namespace Event {
 		fd_readwrite: 16
 	};
 
-	export function create(ptr: ptr, memory: DataView): event {
+	export function create(memory: DataView, ptr: ptr): event {
 		return {
 			set userdata(value: userdata) { memory.setBigUint64(ptr + offsets.userdata, value, true); },
 			set error(value: errno) { memory.setUint16(ptr + offsets.error, value, true); },
 			set type(value: eventtype) { memory.setUint8(ptr + offsets.type, value); },
 			get fd_readwrite(): event_fd_readwrite {
-				return Event_fd_readwrite.create(ptr + offsets.fd_readwrite, memory);
+				return Event_fd_readwrite.create(memory, ptr + offsets.fd_readwrite);
 			}
 		};
 	}
@@ -1624,7 +1625,7 @@ export namespace Subscription_clock {
 		precision: 16,
 		flags: 24
 	};
-	export function create(ptr: ptr, memory: DataView): subscription_clock {
+	export function create(memory: DataView, ptr: ptr): subscription_clock {
 		return {
 			get id(): clockid { return memory.getUint32(ptr + offsets.id, true); },
 			get timeout(): timestamp { return memory.getBigUint64(ptr + offsets.timeout, true); },
@@ -1652,7 +1653,7 @@ export namespace Subscription_fd_readwrite {
 	const offsets = {
 		file_descriptor: 0
 	};
-	export function create(ptr: ptr, memory: DataView): subscription_fd_readwrite {
+	export function create(memory: DataView, ptr: ptr): subscription_fd_readwrite {
 		return {
 			get file_descriptor(): fd { return memory.getUint32(ptr + offsets.file_descriptor, true); }
 		};
@@ -1680,26 +1681,26 @@ export namespace Subscription_u {
 		fd_read: 8,
 		fd_write: 8
 	};
-	export function create(ptr: ptr, memory: DataView): subscription_u {
+	export function create(memory: DataView, ptr: ptr): subscription_u {
 		return {
 			get type(): eventtype { return memory.getUint8(ptr + offsets.type); },
 			get clock(): subscription_clock {
 				if (memory.getUint8(ptr + offsets.type) !== Eventtype.clock) {
 					throw new WasiError(Errno.inval);
 				}
-				return Subscription_clock.create(ptr + offsets.clock, memory);
+				return Subscription_clock.create(memory, ptr + offsets.clock);
 			},
 			get fd_read(): subscription_fd_readwrite {
 				if (memory.getUint8(ptr + offsets.type) !== Eventtype.fd_read) {
 					throw new WasiError(Errno.inval);
 				}
-				return Subscription_fd_readwrite.create(ptr + offsets.fd_read, memory);
+				return Subscription_fd_readwrite.create(memory, ptr + offsets.fd_read);
 			},
 			get fd_write(): subscription_fd_readwrite {
 				if (memory.getUint8(ptr + offsets.type) !== Eventtype.fd_write) {
 					throw new WasiError(Errno.inval);
 				}
-				return Subscription_fd_readwrite.create(ptr + offsets.fd_write, memory);
+				return Subscription_fd_readwrite.create(memory, ptr + offsets.fd_write);
 			}
 		};
 	}
@@ -1727,10 +1728,10 @@ export namespace Subscription {
 		userdata: 0,
 		u: 8,
 	};
-	export function create(ptr: ptr, memory: DataView): subscription {
+	export function create(memory: DataView, ptr: ptr): subscription {
 		return {
 			get userdata(): userdata { return memory.getBigUint64(ptr + offsets.userdata, true); },
-			get u(): subscription_u { return Subscription_u.create(ptr + offsets.u, memory); }
+			get u(): subscription_u { return Subscription_u.create(memory, ptr + offsets.u); }
 		};
 	}
 }
@@ -2659,13 +2660,15 @@ export namespace sock_shutdown {
 	WasiFunctions.add(sock_shutdown);
 }
 
+export type tid = u32;
+
 /**
  * Spawns a new thread. See https://github.com/WebAssembly/wasi-threads
  * for the current documentation.
  *
  * @param start_args_ptr A memory location that holds the start arguments.
  */
-export type thread_spawn = (start_args_ptr: ptr<u32>) => errno;
+export type thread_spawn = (start_args_ptr: ptr<u32>) => tid;
 export namespace thread_spawn {
 	export const name: string = 'thread-spawn';
 	export const signature = WasiFunctionSignature.create([U32.$ptr]);
@@ -2673,10 +2676,17 @@ export namespace thread_spawn {
 	export function transfers() {
 		return _transfers;
 	}
-	export type ServiceSignature = (memory: ArrayBuffer, start_args_ptr: ptr<u32>) => Promise<errno>;
+	export type ServiceSignature = (memory: ArrayBuffer, start_args_ptr: ptr<u32>) => Promise<tid>;
 	WasiFunctions.add(thread_spawn);
 }
 
+export type thread_exit = (tid: tid) => errno;
+export namespace thread_exit {
+	export const name: string = 'thread_exit';
+	export const signature = WasiFunctionSignature.create([U32.$param]);
+	export type ServiceSignature = (memory: ArrayBuffer, tid: u32) => Promise<errno>;
+	WasiFunctions.add(thread_exit);
+}
 
 export interface WASI {
 
@@ -2735,4 +2745,44 @@ export interface WASI {
 	sock_shutdown: sock_shutdown;
 
 	'thread-spawn': thread_spawn;
+}
+
+interface MemoryStruct<T> {
+	size: number;
+	create: (memory: DataView, ptr: ptr) => T;
+}
+
+class StructArray<T> {
+
+	private readonly memory: DataView;
+	private readonly ptr: ptr;
+	private readonly len: number;
+	private readonly struct: MemoryStruct<T>;
+
+	constructor(memory: DataView, ptr: ptr, len: number, struct: MemoryStruct<T>) {
+		this.memory = memory;
+		this.ptr = ptr;
+		this.len = len;
+		this.struct = struct;
+	}
+
+	public values(): IterableIterator<T> {
+		let index = 0;
+		const result: IterableIterator<T> = {
+			[Symbol.iterator]: () => {
+				return result;
+			},
+			next: (): IteratorResult<T> => {
+				if (index >= this.len) {
+					return { done: true, value: undefined };
+				} else {
+					return { done: false, value: this.struct.create(this.memory, this.ptr + index++ * this.struct.size) };
+				}
+			}
+		};
+		return result;
+	}
+	public get(index: number): T {
+		return this.struct.create(this.memory, this.ptr + index * this.struct.size);
+	}
 }

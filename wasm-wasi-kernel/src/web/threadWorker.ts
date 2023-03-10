@@ -18,18 +18,17 @@ class WasiThreadWorker {
 		const connection = new BrowserHostConnection(this.port);
 		this.port.onmessage = (async (event: MessageEvent<StartThreadMessage>) => {
 			const message = event.data;
-			const binary: Uint8Array = new Uint8Array(message.bits as SharedArrayBuffer);
+			const module = message.module;
+			const memory = message.memory;
 			const host = WasiHost.create(connection);
-			const { instance } = await WebAssembly.instantiate(binary, {
+			const instance = await WebAssembly.instantiate(module, {
+				env: { memory: memory },
 				wasi_snapshot_preview1: host,
 				wasi: host
 			});
-			host.initialize(instance);
-			try {
-				(instance.exports.wasi_thread_start as Function)(message.tid, message.start_arg);
-			} catch (error) {
-				console.log(error);
-			}
+			host.initialize(instance, memory);
+			(instance.exports.wasi_thread_start as Function)(message.tid, message.start_arg);
+			host.thread_exit(message.tid);
 		});
 		const ready: WorkerReadyMessage = { method: 'workerReady' };
 		connection.postMessage(ready);

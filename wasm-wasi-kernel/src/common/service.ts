@@ -11,7 +11,7 @@ import {
 	fd_close, fd_datasync, fd_fdstat_get, fd_fdstat_set_flags, fd_filestat_get, fd_filestat_set_size, fd_filestat_set_times, fd_pread,
 	fd_prestat_dir_name, fd_prestat_get, fd_pwrite, fd_read, fd_readdir, fd_renumber, fd_seek, fd_sync, fd_tell, fd_write, filedelta, filesize, Filestat, filestat, fstflags, Iovec, iovec, Literal, lookupflags, oflags, path_create_directory,
 	path_filestat_get, path_filestat_set_times, path_link, path_open, path_readlink, path_remove_directory, path_rename, path_symlink, path_unlink_file,
-	poll_oneoff, Prestat, prestat, proc_exit, random_get, riflags, rights, Rights, sched_yield, sdflags, siflags, sock_accept, Subclockflags, Subscription, subscription, thread_spawn, timestamp, WasiError, Whence, whence
+	poll_oneoff, Prestat, prestat, proc_exit, random_get, riflags, rights, Rights, sched_yield, sdflags, siflags, sock_accept, Subclockflags, Subscription, subscription, thread_spawn, timestamp, WasiError, Whence, whence, thread_exit, tid
 } from './wasi';
 import { Offsets, WasiCallMessage } from './connection';
 import { WasiFunction, WasiFunctions, WasiFunctionSignature } from './wasiMeta';
@@ -50,6 +50,7 @@ export interface SharedWasiService {
 	environ_get: environ_get.ServiceSignature;
 	fd_prestat_get: fd_prestat_get.ServiceSignature;
 	fd_prestat_dir_name: fd_prestat_dir_name.ServiceSignature;
+	[name: string]: (memory: ArrayBuffer, ...args: (number & bigint)[]) => Promise<errno | tid>;
 }
 
 export namespace SharedWasiService {
@@ -134,7 +135,7 @@ export namespace SharedWasiService {
 					fileDescriptors.add(fileDescriptor);
 					preStatDirnames.set(fileDescriptor.fd, mountPoint);
 					const view = new DataView(memory);
-					const prestat = Prestat.create(bufPtr, view);
+					const prestat = Prestat.create(view, bufPtr);
 					prestat.len = encoder.encode(mountPoint).byteLength;
 					return Errno.success;
 				} catch(error) {
@@ -206,21 +207,25 @@ interface InstanceWasiService {
 	path_symlink: path_symlink.ServiceSignature;
 	path_unlink_file: path_unlink_file.ServiceSignature;
 	poll_oneoff: poll_oneoff.ServiceSignature;
-	proc_exit: proc_exit.ServiceSignature;
 	sched_yield: sched_yield.ServiceSignature;
 	random_get: random_get.ServiceSignature;
 	sock_accept: sock_accept.ServiceSignature;
 	sock_shutdown: sock_accept.ServiceSignature;
-	'thread-spawn': thread_spawn.ServiceSignature;
-
-	[name: string]: (memory: ArrayBuffer, ...args: (number & bigint)[]) => Promise<errno>;
+	[name: string]: (memory: ArrayBuffer, ...args: (number & bigint)[]) => Promise<errno | tid>;
 }
 
-export interface WasiService extends InstanceWasiService, SharedWasiService {
+export interface ProcessWasiService {
+	proc_exit: proc_exit.ServiceSignature;
+	thread_exit: thread_exit.ServiceSignature;
+	'thread-spawn': thread_spawn.ServiceSignature;
+	[name: string]: (memory: ArrayBuffer, ...args: (number & bigint)[]) => Promise<errno | tid>;
+}
+
+export interface WasiService extends SharedWasiService, InstanceWasiService, ProcessWasiService {
 }
 
 export namespace InstanceWasiService {
-	export function create(fileDescriptors: FileDescriptors, exitHandler: (rval: number) => void, threadSpawnHandler: (start_args_ptr: ptr) => Promise<u32>, options: Options = {}): InstanceWasiService {
+	export function create(fileDescriptors: FileDescriptors, options: Options = {}): InstanceWasiService {
 
 		const thread_start = RAL().clock.realtime();
 
@@ -298,7 +303,7 @@ export namespace InstanceWasiService {
 				try {
 					const fileDescriptor = getFileDescriptor(fd);
 
-					await getDeviceDriver(fileDescriptor).fd_fdstat_get(fileDescriptor, Fdstat.create(fdstat_ptr, new DataView(memory)));
+					await getDeviceDriver(fileDescriptor).fd_fdstat_get(fileDescriptor, Fdstat.create(new DataView(memory), fdstat_ptr));
 					return Errno.success;
 				} catch (error) {
 					return handleError(error);
@@ -320,7 +325,7 @@ export namespace InstanceWasiService {
 					const fileDescriptor = getFileDescriptor(fd);
 					fileDescriptor.assertBaseRights(Rights.fd_filestat_get);
 
-					await getDeviceDriver(fileDescriptor).fd_filestat_get(fileDescriptor, Filestat.create(filestat_ptr, new DataView(memory)));
+					await getDeviceDriver(fileDescriptor).fd_filestat_get(fileDescriptor, Filestat.create(new DataView(memory), filestat_ptr));
 					return Errno.success;
 				} catch (error) {
 					return handleError(error, Errno.perm);
@@ -427,7 +432,7 @@ export namespace InstanceWasiService {
 						const entry = entries[i];
 						const name = entry.d_name;
 						const nameBytes = encoder.encode(name);
-						const dirent: dirent = Dirent.create(ptr, view);
+						const dirent: dirent = Dirent.create(view, ptr);
 						dirent.d_next = BigInt(i + 1);
 						dirent.d_ino = entry.d_ino;
 						dirent.d_type = entry.d_type;
@@ -541,7 +546,7 @@ export namespace InstanceWasiService {
 					fileDescriptor.assertIsDirectory();
 
 					const path = decoder.decode(new Uint8Array(memory, path_ptr, path_len));
-					await getDeviceDriver(fileDescriptor).path_filestat_get(fileDescriptor, flags, path, Filestat.create(filestat_ptr, new DataView(memory)));
+					await getDeviceDriver(fileDescriptor).path_filestat_get(fileDescriptor, flags, path, Filestat.create(new DataView(memory), filestat_ptr));
 					return Errno.success;
 				} catch (error) {
 					return handleError(error);
@@ -680,8 +685,8 @@ export namespace InstanceWasiService {
 			poll_oneoff: async (memory: ArrayBuffer, input: ptr<subscription>, output: ptr<event[]>, subscriptions: size, result_size_ptr: ptr<u32>): Promise<errno> => {
 				try {
 					const view = new DataView(memory);
-					let { events, needsTimeOut, timeout } = await handleSubscriptions(view, input, subscriptions);
-					if (needsTimeOut && timeout !== undefined && timeout !== 0n) {
+					let { events, timeout } = await handleSubscriptions(view, input, subscriptions);
+					if (timeout !== undefined && timeout !== 0n) {
 						// Timeout is in ns but sleep API is in ms.
 						await new Promise((resolve) => {
 							RAL().timer.setTimeout(resolve, BigInts.asNumber(timeout! / 1000000n));
@@ -691,7 +696,7 @@ export namespace InstanceWasiService {
 					}
 					let event_offset = output;
 					for (const item of events) {
-						const event = Event.create(event_offset, view);
+						const event = Event.create(view, event_offset);
 						event.userdata = item.userdata;
 						event.type = item.type;
 						event.error = item.error;
@@ -705,8 +710,7 @@ export namespace InstanceWasiService {
 					return handleError(error);
 				}
 			},
-			proc_exit: (_memory: ArrayBuffer, rval: exitcode): Promise<errno> => {
-				exitHandler(rval);
+			proc_exit: async (_memory: ArrayBuffer, _rval: exitcode): Promise<errno> => {
 				return Promise.resolve(Errno.success);
 			},
 			sched_yield: (): Promise<errno> => {
@@ -729,13 +733,11 @@ export namespace InstanceWasiService {
 			sock_shutdown: (_memory: ArrayBuffer, _fd: fd, _sdflags: sdflags): Promise<errno> => {
 				return Promise.resolve(Errno.nosys);
 			},
-			'thread-spawn': async (_memory: ArrayBuffer, start_args_ptr: ptr): Promise<errno> => {
-				try {
-					await threadSpawnHandler(start_args_ptr);
-					return Promise.resolve(Errno.success);
-				} catch (error) {
-					return Promise.resolve(handleError(error));
-				}
+			thread_exit: async (_memory: ArrayBuffer, _tid: u32): Promise<errno> => {
+				return Promise.resolve(Errno.success);
+			},
+			'thread-spawn': async (_memory: ArrayBuffer, _start_args_ptr: ptr): Promise<errno> => {
+				return Promise.resolve(Errno.nosys);
 			}
 		};
 
@@ -757,9 +759,8 @@ export namespace InstanceWasiService {
 			let subscription_offset: ptr = input;
 			const events: Literal<event>[] = [];
 			let timeout: bigint | undefined;
-			let needsTimeOut = false;
 			for (let i = 0; i < subscriptions; i++) {
-				const subscription = Subscription.create(subscription_offset, memory);
+				const subscription = Subscription.create(memory, subscription_offset);
 				const u = subscription.u;
 				switch (u.type) {
 					case Eventtype.clock:
@@ -770,21 +771,15 @@ export namespace InstanceWasiService {
 					case Eventtype.fd_read:
 						const readEvent = await handleReadSubscription(subscription);
 						events.push(readEvent);
-						if (readEvent.error !== Errno.success || readEvent.fd_readwrite.nbytes === 0n) {
-							needsTimeOut = true;
-						}
 						break;
 					case Eventtype.fd_write:
 						const writeEvent = handleWriteSubscription(subscription);
 						events.push(writeEvent);
-						if (writeEvent.error !== Errno.success) {
-							needsTimeOut = true;
-						}
 						break;
 				}
 				subscription_offset += Subscription.size;
 			}
-			return { events, needsTimeOut, timeout };
+			return { events, timeout };
 		}
 
 		function handleClockSubscription(subscription: subscription): { event: Literal<event>; timeout: bigint } {
@@ -884,7 +879,7 @@ export namespace InstanceWasiService {
 			const buffers: Uint8Array[] = [];
 			let ptr: ptr = iovs;
 			for (let i = 0; i < iovsLen; i++) {
-				const vec = Ciovec.create(ptr, view);
+				const vec = Ciovec.create(view, ptr);
 				buffers.push(new Uint8Array(memory, vec.buf, vec.buf_len));
 				ptr += Ciovec.size;
 			}
@@ -897,7 +892,7 @@ export namespace InstanceWasiService {
 			const buffers: Uint8Array[] = [];
 			let ptr: ptr = iovs;
 			for (let i = 0; i < iovsLen; i++) {
-				const vec = Iovec.create(ptr, view);
+				const vec = Iovec.create(view, ptr);
 				buffers.push(new Uint8Array(memory, vec.buf, vec.buf_len));
 				ptr += Iovec.size;
 			}

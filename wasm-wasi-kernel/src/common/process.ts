@@ -9,22 +9,23 @@ import { ptr, u32 } from './baseTypes';
 import { DeviceDriver, FileSystemDeviceDriver } from './deviceDriver';
 import { FileDescriptors } from './fileDescriptor';
 import * as vscfs from './vscodeFileSystemDriver';
-import { InstanceWasiService, Options, SharedWasiService, WasiService } from './service';
+import { InstanceWasiService, Options, ProcessWasiService, SharedWasiService, WasiService } from './service';
 import WasiKernel from './kernel';
+import { Errno, exitcode } from './wasi';
 
 export abstract class WasiProcess {
 
 	protected readonly baseUri: Uri;
-	private readonly bits: SharedArrayBuffer | Uri;
 
+	private resolveCallback: ((value: number) => void) | undefined;
 	private threadIdCounter: number;
 	private readonly fileDescriptors: FileDescriptors;
 	private readonly sharedService: SharedWasiService;
+	private readonly processService: ProcessWasiService;
 	private readonly preOpenDirectories: Map<string, DeviceDriver>;
 
-	constructor(baseUri: Uri, programName: string, bits: SharedArrayBuffer | Uri, options: Options = {}, mapWorkspaceFolders: boolean = true) {
+	constructor(baseUri: Uri, programName: string, options: Options = {}, mapWorkspaceFolders: boolean = true) {
 		this.baseUri = baseUri;
-		this.bits = bits;
 
 		this.threadIdCounter = 2;
 		this.fileDescriptors = new FileDescriptors();
@@ -44,15 +45,32 @@ export abstract class WasiProcess {
 			}
 		}
 		this.sharedService = SharedWasiService.create(this.fileDescriptors, programName, this.preOpenDirectories, options);
+		this.processService = {
+			proc_exit: async (_memory, exitCode: exitcode) => {
+				await this.terminate();
+				if (this.resolveCallback !== undefined) {
+					this.resolveCallback(exitCode);
+				}
+				return Promise.resolve(Errno.success);
+			},
+			thread_exit: async (_memory, tid: u32) => {
+				await this.threadEnded(tid);
+				return Promise.resolve(Errno.success);
+			},
+			'thread-spawn': async (_memory, start_args: ptr) => {
+				const tid = this.threadIdCounter++;
+				const wasiService: WasiService = Object.assign({}, this.sharedService, InstanceWasiService.create(this.fileDescriptors), this.processService);
+				await this.startThread(wasiService, tid, start_args);
+				return Promise.resolve(tid);
+			}
+		};
 	}
 
 	public async run(): Promise<number> {
 		return new Promise(async (resolve) => {
-			const wasiService: WasiService = Object.assign({}, this.sharedService, InstanceWasiService.create(this.fileDescriptors, async (exitCode) => {
-				await this.terminate();
-				resolve(exitCode);
-			}, (start_args: ptr) => this.spawnThread(start_args)));
-			return this.startMain(wasiService, this.bits);
+			this.resolveCallback = resolve;
+			const wasiService: WasiService = Object.assign({}, this.sharedService, InstanceWasiService.create(this.fileDescriptors), this.processService);
+			return this.startMain(wasiService);
 		});
 	}
 
@@ -60,17 +78,11 @@ export abstract class WasiProcess {
 
 
 	private async spawnThread(start_args: ptr): Promise<u32> {
-		const tid = this.threadIdCounter++;
-		const wasiService: WasiService = Object.assign({}, this.sharedService, InstanceWasiService.create(this.fileDescriptors, async (_exitCode) => {
-			await this.threadEnded(tid);
-		}, (start_args: ptr) => this.spawnThread(start_args)));
-		await this.startThread(wasiService, this.bits, tid, start_args);
-		return Promise.resolve(tid);
 	}
 
-	protected abstract startMain(wasiService: WasiService, bits: SharedArrayBuffer | Uri): Promise<void>;
+	protected abstract startMain(wasiService: WasiService): Promise<void>;
 
-	protected abstract startThread(wasiService: WasiService, bits: SharedArrayBuffer | Uri, tid: u32, start_arg: ptr): Promise<void>;
+	protected abstract startThread(wasiService: WasiService, tid: u32, start_arg: ptr): Promise<void>;
 
 	protected abstract threadEnded(tid: u32): Promise<void>;
 

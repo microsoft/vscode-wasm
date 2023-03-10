@@ -6,7 +6,7 @@ import { cstring, ptr, size, u32, u64, u8 } from './baseTypes';
 import {
 	fd, errno, Errno, lookupflags, oflags, rights, fdflags, dircookie, filesize, advise, filedelta, whence, clockid, timestamp,
 	fstflags, exitcode, WasiError, event, subscription, riflags, siflags, sdflags, dirent, ciovec, iovec, fdstat, filestat, prestat,
-	args_sizes_get, args_get, clock_res_get, clock_time_get, environ_sizes_get, environ_get, fd_advise, fd_allocate, fd_close, fd_datasync, fd_fdstat_set_flags, fd_fdstat_get, fd_filestat_get, fd_filestat_set_size, fd_filestat_set_times, fd_pread, fd_prestat_get, fd_prestat_dir_name, fd_pwrite, fd_read, fd_readdir, fd_seek, fd_renumber, fd_sync, fd_tell, fd_write, path_create_directory, path_filestat_get, path_filestat_set_times, path_link, path_open, path_readlink, path_remove_directory, path_rename, path_symlink, path_unlink_file, poll_oneoff, proc_exit, sched_yield, random_get, sock_accept, sock_shutdown, thread_spawn
+	args_sizes_get, args_get, clock_res_get, clock_time_get, environ_sizes_get, environ_get, fd_advise, fd_allocate, fd_close, fd_datasync, fd_fdstat_set_flags, fd_fdstat_get, fd_filestat_get, fd_filestat_set_size, fd_filestat_set_times, fd_pread, fd_prestat_get, fd_prestat_dir_name, fd_pwrite, fd_read, fd_readdir, fd_seek, fd_renumber, fd_sync, fd_tell, fd_write, path_create_directory, path_filestat_get, path_filestat_set_times, path_link, path_open, path_readlink, path_remove_directory, path_rename, path_symlink, path_unlink_file, poll_oneoff, proc_exit, sched_yield, random_get, sock_accept, sock_shutdown, thread_spawn, thread_exit
 } from './wasi';
 import { ParamKind, WasiFunctions, ReverseTransfer, WasiFunctionSignature, MemoryTransfers, WasiFunction } from './wasiMeta';
 import { Offsets, WasiCallMessage, WorkerReadyMessage } from './connection';
@@ -36,8 +36,6 @@ export abstract class HostConnection {
 
 		// Copy the results back into the WASM memory.
 		const targetMemory = new Uint8Array(wasmMemory);
-		const sourceMemory = new Uint8Array(resultBuffer);
-		let result_ptr = 0;
 		let reverseIndex = 0;
 		for (let i = 0; i < args.length; i++) {
 			const param = signature.params[i];
@@ -45,9 +43,9 @@ export abstract class HostConnection {
 				continue;
 			}
 			const reverse = reverseTransfers[reverseIndex++];
-			for (const transfer of reverse) {
-				targetMemory.set(sourceMemory.subarray(result_ptr, result_ptr + transfer.size), args[i] as number);
-				result_ptr += transfer.size;
+			// Copy the result back.
+			for (const item of reverse) {
+				targetMemory.set(new Uint8Array(resultBuffer, item.from, item.size), item.to);
 			}
 		}
 		return result;
@@ -140,17 +138,20 @@ declare namespace WebAssembly {
 }
 
 export interface WasiHost extends WASI {
-	initialize: (inst: WebAssembly.Instance) => void;
+	initialize: (inst: WebAssembly.Instance, memory: WebAssembly.Memory | undefined) => void;
+	thread_exit: (tid: u32) => void;
 }
 
 export namespace WasiHost {
 	export function create(connection: HostConnection): WasiHost {
-		let instance: WebAssembly.Instance;
+		let $instance: WebAssembly.Instance;
+		let $memory: WebAssembly.Memory | undefined;
 		const args_size = { count: 0, bufferSize: 0 };
 		const environ_size = { count: 0, bufferSize: 0 };
 		const wasi: WasiHost = {
-			initialize: (inst: WebAssembly.Instance): void => {
-				instance = inst;
+			initialize: (inst: WebAssembly.Instance, memory: WebAssembly.Memory | undefined): void => {
+				$instance = inst;
+				$memory = memory;
 			},
 			args_sizes_get: (argvCount_ptr: ptr<u32>, argvBufSize_ptr: ptr<u32>): errno => {
 				try {
@@ -446,6 +447,13 @@ export namespace WasiHost {
 					return handleError(error, Errno.inval);
 				}
 			},
+			thread_exit: (tid: u32) => {
+				try {
+					return connection.call(thread_exit, [tid], memory());
+				} catch (error) {
+					return handleError(error, Errno.inval);
+				}
+			},
 			random_get: (buf: ptr<u8[]>, buf_len: size): errno => {
 				try {
 					return connection.call(random_get, [buf, buf_len], memory(), random_get.transfers(memoryView(), buf, buf_len));
@@ -483,17 +491,23 @@ export namespace WasiHost {
 		};
 
 		function memory(): ArrayBuffer {
-			if (instance === undefined) {
-				throw new Error(`WASI layer is not initialized. Missing WebAssembly instance.`);
+			if ($memory !== undefined) {
+				return $memory.buffer;
 			}
-			return (instance.exports.memory as WebAssembly.Memory).buffer;
+			if ($instance === undefined || $instance.exports.memory === undefined) {
+				throw new Error(`WASI layer is not initialized. Missing WebAssembly instance or memory module.`);
+			}
+			return ($instance.exports.memory as WebAssembly.Memory).buffer;
 		}
 
 		function memoryView(): DataView {
-			if (instance === undefined) {
-				throw new Error(`WASI layer is not initialized. Missing WebAssembly instance.`);
+			if ($memory !== undefined) {
+				return new DataView($memory.buffer);
 			}
-			return new DataView((instance.exports.memory as WebAssembly.Memory).buffer);
+			if ($instance === undefined || $instance.exports.memory === undefined) {
+				throw new Error(`WASI layer is not initialized. Missing WebAssembly instance or memory module.`);
+			}
+			return new DataView(($instance.exports.memory as WebAssembly.Memory).buffer);
 		}
 
 		function handleError(error: any, def: errno = Errno.badf): errno {
