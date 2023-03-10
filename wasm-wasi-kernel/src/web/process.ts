@@ -52,16 +52,19 @@ class Connection extends ServiceConnection {
 export class BrowserWasiProcess extends WasiProcess {
 
 	private readonly module: Promise<WebAssembly.Module>;
-	private memory: WebAssembly.Memory | undefined;
-	private mainWorker: Worker | undefined;
+
 	private importsMemory: boolean | undefined;
+	private readonly memoryDescriptor: WebAssembly.MemoryDescriptor | undefined;
+	private memory: WebAssembly.Memory | undefined;
+
+	private mainWorker: Worker | undefined;
 	private threadWorkers: Map<u32, Worker>;
 
-	constructor(baseUri: Uri, programName: string, bits: SharedArrayBuffer | Uri, options: Options = {}, mapWorkspaceFolders: boolean = true) {
+	constructor(baseUri: Uri, programName: string, bits: SharedArrayBuffer | Uri, memory: WebAssembly.MemoryDescriptor | undefined, options: Options = {}, mapWorkspaceFolders: boolean = true) {
 		super(baseUri, programName, options, mapWorkspaceFolders);
 		this.threadWorkers = new Map();
 		this.module = WebAssembly.compile(new Uint8Array(bits as SharedArrayBuffer));
-		this.memory = new WebAssembly.Memory({ initial: 2, maximum: 160, shared: true });
+		this.memoryDescriptor = memory;
 	}
 
 	public async terminate(): Promise<number> {
@@ -82,9 +85,12 @@ export class BrowserWasiProcess extends WasiProcess {
 		const connection = new Connection(wasiService, this.mainWorker);
 		await connection.workerReady();
 		const module = await this.module;
-		this.importsMemory = this.getImportsMemory(module);
+		this.importsMemory = this.doesImportMemory(module);
 		if (this.importsMemory) {
-
+			if (this.memoryDescriptor === undefined) {
+				throw new Error('Web assembly imports memory but no memory descriptor was provided.');
+			}
+			this.memory = new WebAssembly.Memory(this.memoryDescriptor);
 		}
 		const message: StartMainMessage = { method: 'startMain', module: await this.module, memory: this.memory };
 		connection.postMessage(message);
@@ -114,15 +120,5 @@ export class BrowserWasiProcess extends WasiProcess {
 			this.threadWorkers.delete(tid);
 			worker.terminate();
 		}
-	}
-
-	private getImportsMemory(module: WebAssembly.Module): boolean {
-		const imports = WebAssembly.Module.imports(module);
-		for (const item of imports) {
-			if (item.kind === 'memory' && item.name === 'memory') {
-				return true;
-			}
-		}
-		return false;
 	}
 }

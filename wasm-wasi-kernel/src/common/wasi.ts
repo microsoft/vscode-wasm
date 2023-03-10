@@ -11,7 +11,7 @@
 import { ptr, size, u16, u32, u64, s64, u8, cstring, byte, bytes } from './baseTypes';
 import {
 	MemoryTransfer, MemoryTransferDirection, WasiFunctionSignature, WasiFunctions,
-	MemoryTransfers, U32, Ptr, Byte, U64, U8, U16, Bytes, Size, S64
+	MemoryTransfers, U32, Ptr, Byte, U64, U8, U16, Bytes, Size, S64, ReverseTransfer
 } from './wasiMeta';
 
 
@@ -1266,10 +1266,8 @@ export namespace Iovec {
 
 	export function createTransfer(memory: DataView, iovec: ptr<iovec_array>, iovs_len: u32): MemoryTransfer {
 		let dataSize = Iovec.size * iovs_len;
-		let ptr = iovec;
-		for (let i = 0; i < iovs_len; i++) {
-			const iovec = Iovec.create(memory, ptr);
-			dataSize += iovec.buf_len;
+		for (const item of new StructArray<iovec>(memory, iovec, iovs_len, Iovec).values()) {
+			dataSize += item.buf_len;
 		}
 		return {
 			memorySize: dataSize,
@@ -1277,19 +1275,19 @@ export namespace Iovec {
 				if (from !== iovec) {
 					throw new Error(`IovecPtrParam needs to be used as an instance object`);
 				}
-				let fromIndex = from;
-				let toIndex = to;
+				const forms = new StructArray<iovec>(new DataView(wasmMemory), from, iovs_len, Iovec);
+				const tos = new StructArray<iovec>(new DataView(transferMemory), to, iovs_len, Iovec);
 				let bufferIndex = to + Iovec.size * iovs_len;
-				const result: { from: ptr; to: ptr; size: number}[] = [];
+				const result: ReverseTransfer[] = [];
 				for (let i = 0; i < iovs_len; i++) {
-					const fromIovec = Iovec.create(new DataView(wasmMemory), fromIndex);
-					const toIovec = Iovec.create(new DataView(transferMemory), toIndex);
+					const fromIovec = forms.get(i);
+					const toIovec = tos.get(i);
 					toIovec.buf = bufferIndex;
 					toIovec.buf_len = fromIovec.buf_len;
-					bufferIndex += fromIovec.buf_len;
 					// Iovecs are used to read data. So we don't need to copy anything into the
 					// transfer memory. We only need to copy the result back into the wasm memory
-					result.push({ from: toIovec.buf, to: fromIovec.buf, size: fromIovec.buf_len });
+					bufferIndex += toIovec.buf_len;
+					result.push({ from: toIovec.buf, to: fromIovec.buf, size: toIovec.buf_len });
 				}
 				return result;
 			}

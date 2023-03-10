@@ -36,7 +36,7 @@ class WasiMainWorker {
 					memory: memory
 				};
 			}
-			const instance = await WebAssembly.instantiate(module, imports);
+			const instance  = await WebAssembly.instantiate(module, imports);
 			host.initialize(instance, memory);
 			(instance.exports._start as Function)();
 		});

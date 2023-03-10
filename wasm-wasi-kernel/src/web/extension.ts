@@ -13,7 +13,7 @@ export async function activate(context: ExtensionContext) {
 	commands.registerCommand('testbed-threads.run', () => {
 		const bits = new SharedArrayBuffer(binary.length);
 		new Uint8Array(bits).set(binary);
-		const process: BrowserWasiProcess = new BrowserWasiProcess(context.extensionUri, 'threads', bits);
+		const process: BrowserWasiProcess = new BrowserWasiProcess(context.extensionUri, 'threads', bits, { initial: 2, maximum: 160, shared: true });
 		process.run().catch(() => {});
 	});
 }

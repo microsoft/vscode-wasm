@@ -33,6 +33,7 @@ class WasiThreadWorker {
 			});
 			host.initialize(instance, memory);
 			(instance.exports.wasi_thread_start as Function)(message.tid, message.start_arg);
+			host.thread_exit(message.tid);
 		});
 		const ready: WorkerReadyMessage = { method: 'workerReady' };
 		connection.postMessage(ready);

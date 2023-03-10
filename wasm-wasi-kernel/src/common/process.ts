@@ -58,10 +58,14 @@ export abstract class WasiProcess {
 				return Promise.resolve(Errno.success);
 			},
 			'thread-spawn': async (_memory, start_args: ptr) => {
-				const tid = this.threadIdCounter++;
-				const wasiService: WasiService = Object.assign({}, this.sharedService, InstanceWasiService.create(this.fileDescriptors), this.processService);
-				await this.startThread(wasiService, tid, start_args);
-				return Promise.resolve(tid);
+				try {
+					const tid = this.threadIdCounter++;
+					const wasiService: WasiService = Object.assign({}, this.sharedService, InstanceWasiService.create(this.fileDescriptors), this.processService);
+					await this.startThread(wasiService, tid, start_args);
+					return Promise.resolve(tid);
+				} catch (error) {
+					return Promise.resolve(-1);
+				}
 			}
 		};
 	}
@@ -75,10 +79,6 @@ export abstract class WasiProcess {
 	}
 
 	public abstract terminate(): Promise<number>;
-
-
-	private async spawnThread(start_args: ptr): Promise<u32> {
-	}
 
 	protected abstract startMain(wasiService: WasiService): Promise<void>;
 
@@ -102,5 +102,15 @@ export abstract class WasiProcess {
 			: path.join(path.sep, 'workspaces', folder.name);
 
 		this.preOpenDirectories.set(mountPoint, deviceDriver);
+	}
+
+	protected doesImportMemory(module: WebAssembly.Module): boolean {
+		const imports = WebAssembly.Module.imports(module);
+		for (const item of imports) {
+			if (item.kind === 'memory' && item.name === 'memory') {
+				return true;
+			}
+		}
+		return false;
 	}
 }

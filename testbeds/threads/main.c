@@ -31,6 +31,7 @@ int main()
 	printf("Thread created with result: %i\n", result);
 	result = pthread_join(thread_id, NULL);
 	printf("Thread joined with result: %i\n", result);
+	sleep(5);
 	printf("After Thread\n");
 	exit(0);
 }
