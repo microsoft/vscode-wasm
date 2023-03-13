@@ -8,6 +8,7 @@
 	"engines": {
 		"vscode": "^1.67.0"
 	},
+	"main": "./out/extension.js",
 	"browser": "./dist/web/extension.js",
 	"activationEvents": [
 		"*"

@@ -3,27 +3,23 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { commands, ExtensionContext, Uri, window } from 'vscode';
+import { commands, extensions, window } from 'vscode';
+import { WasiKernel } from './wasiKernel';
+import { binary } from './wasm';
 
-import { ServiceConnection } from '@vscode/sync-api-common/browser';
-import { ApiService, ApiServiceConnection, Requests, ServicePseudoTerminal } from '@vscode/sync-api-service';
+export async function activate() {
+	const wasiKernelExt = extensions.getExtension('ms-vscode.wasm-wasi-kernel');
+	if (wasiKernelExt === undefined) {
+		window.showErrorMessage('The WASI Kernel extension is required to run this testbed.');
+		return;
+	}
 
-export async function activate(context: ExtensionContext) {
-
+	const wasiKernel: WasiKernel =  await wasiKernelExt.activate();
 	commands.registerCommand('testbed-threads.run', () => {
-		const filename = Uri.joinPath(context.extensionUri, './dist/web/worker.js').toString();
-		const worker = new Worker(filename);
-		const connection = new ServiceConnection<Requests, ApiServiceConnection.ReadyParams>(worker);
-		const apiService = new ApiService('cpp', connection, {
-			exitHandler: (_rval) => {
-				process.nextTick(() => worker.terminate());
-			}
+		const process = wasiKernel.createProcess('threads', WebAssembly.compile(binary.buffer), { initial: 2, maximum: 160, shared: true });
+		process.run().catch(err => {
+			window.showErrorMessage(err.message);
 		});
-		const pty = ServicePseudoTerminal.create();
-		apiService.registerCharacterDeviceDriver(pty, true);
-		const terminal = window.createTerminal({ name: 'Run multi-threaded Program', pty: pty });
-		terminal.show();
-		apiService.signalReady();
 	});
 }
 

@@ -2,13 +2,11 @@
  * Copyright (c) Microsoft Corporation. All rights reserved.
  * Licensed under the MIT License. See License.txt in the project root for license information.
  * ------------------------------------------------------------------------------------------ */
+import { Disposable } from 'vscode';
 
 import RAL from '../common/ral';
 
-import { Disposable }  from '../common/disposable';
 import * as path from './path';
-import { BrowserWasiProcess } from './process';
-import { Options } from '../common/api';
 
 interface RIL extends RAL {
 }
@@ -75,11 +73,6 @@ const _ril: RIL = Object.freeze<RIL>({
 		normalize(value: string): string {
 			return path.normalize(value);
 		}
-	}),
-	wasi: Object.freeze({
-		create(name: string, bits: ArrayBuffer | WebAssembly.Module, memory: WebAssembly.MemoryDescriptor | WebAssembly.Memory, options?: Options, mapWorkspaceFolders?: boolean): BrowserWasiProcess {
-			return new BrowserWasiProcess(name, bits, memory, options, mapWorkspaceFolders);
-		}
 	})
 });
 
@@ -90,8 +83,13 @@ function RIL(): RIL {
 
 namespace RIL {
 	export function install(): void {
+		if (!RAL.isInstalled()) {
+			RAL.install(_ril);
+		}
 	}
 }
 
-RAL.install(_ril);
+if (!RAL.isInstalled()) {
+	RAL.install(_ril);
+}
 export default RIL;

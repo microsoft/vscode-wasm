@@ -5,18 +5,12 @@
 import RIL from './ril';
 RIL.install();
 
-import { commands, ExtensionContext  } from 'vscode';
+import { ExtensionContext } from 'vscode';
+import { WasiKernelImpl  } from '../common/api-impl';
 import { BrowserWasiProcess } from './process';
-import { binary } from './wasm';
 
 export async function activate(context: ExtensionContext) {
-	
-	commands.registerCommand('testbed-threads.run', () => {
-		const bits = new SharedArrayBuffer(binary.length);
-		new Uint8Array(bits).set(binary);
-		const process: BrowserWasiProcess = new BrowserWasiProcess(context.extensionUri, 'threads', bits, { initial: 2, maximum: 160, shared: true });
-		process.run().catch(() => {});
-	});
+	return WasiKernelImpl.create(context, BrowserWasiProcess);
 }
 
 export function deactivate() {

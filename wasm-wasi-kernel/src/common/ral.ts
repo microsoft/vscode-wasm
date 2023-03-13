@@ -3,9 +3,7 @@
  * Licensed under the MIT License. See License.txt in the project root for license information.
  * ------------------------------------------------------------------------------------------ */
 
-import { Options } from './api';
-import { Disposable } from './disposable';
-import { WasiProcess } from './process';
+import { Disposable } from 'vscode';
 
 interface _TextEncoder {
 	encode(input?: string): Uint8Array;
@@ -60,10 +58,6 @@ interface RAL {
 		join(...paths: string[]): string;
 		normalize(path: string): string;
 	};
-
-	readonly wasi: {
-		create(name: string, bits: ArrayBuffer | WebAssembly.Module, memory: WebAssembly.MemoryDescriptor | WebAssembly.Memory | undefined, options?: Options, mapWorkspaceFolders?: boolean): WasiProcess;
-	};
 }
 
 let _ral: RAL | undefined;
@@ -83,6 +77,9 @@ namespace RAL {
 			throw new Error(`No runtime abstraction layer provided`);
 		}
 		_ral = ral;
+	}
+	export function isInstalled(): boolean {
+		return _ral !== undefined;
 	}
 }
 

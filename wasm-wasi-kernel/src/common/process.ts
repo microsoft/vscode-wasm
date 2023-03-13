@@ -15,8 +15,6 @@ import { Errno, exitcode } from './wasi';
 
 export abstract class WasiProcess {
 
-	protected readonly baseUri: Uri;
-
 	private resolveCallback: ((value: number) => void) | undefined;
 	private threadIdCounter: number;
 	private readonly fileDescriptors: FileDescriptors;
@@ -24,9 +22,7 @@ export abstract class WasiProcess {
 	private readonly processService: ProcessWasiService;
 	private readonly preOpenDirectories: Map<string, DeviceDriver>;
 
-	constructor(baseUri: Uri, programName: string, options: Options = {}, mapWorkspaceFolders: boolean = true) {
-		this.baseUri = baseUri;
-
+	constructor(programName: string, options: Options = {}, mapWorkspaceFolders: boolean = true) {
 		this.threadIdCounter = 2;
 		this.fileDescriptors = new FileDescriptors();
 		this.fileDescriptors.add(WasiKernel.console.createStdioFileDescriptor(0));

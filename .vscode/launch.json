@@ -34,8 +34,8 @@
 			"request": "launch",
 			"name": "Thread Testbed",
 			"runtimeExecutable": "${execPath}",
-			"args": ["--extensionDevelopmentPath=${workspaceRoot}/testbeds/threads"],
-			"outFiles": ["${workspaceRoot}/testbeds/threads/out/**/*.js"],
+			"args": ["--extensionDevelopmentPath=${workspaceRoot}/testbeds/threads", "--extensionDevelopmentPath=${workspaceRoot}/wasm-wasi-kernel"],
+			"outFiles": ["${workspaceRoot}/testbeds/threads/out/**/*.js", "${workspaceRoot}/wasm-wasi-kernel/lib/**/*.js"],
 			"sourceMaps": true,
 			"preLaunchTask": "Build Thread Example"
 		},

@@ -2,12 +2,12 @@
  * Copyright (c) Microsoft Corporation. All rights reserved.
  * Licensed under the MIT License. See License.txt in the project root for license information.
  * ------------------------------------------------------------------------------------------ */
+import { Disposable } from 'vscode';
+import RAL from '../common/ral';
+
 import { TextDecoder } from 'util';
 import * as path from 'path';
 import * as crypto from 'crypto';
-
-import RAL from '../common/ral';
-import { Disposable } from '../common/disposable';
 
 interface RIL extends RAL {
 }
@@ -80,8 +80,13 @@ function RIL(): RIL {
 
 namespace RIL {
 	export function install(): void {
-		RAL.install(_ril);
+		if (!RAL.isInstalled()) {
+			RAL.install(_ril);
+		}
 	}
 }
 
+if (!RAL.isInstalled()) {
+	RAL.install(_ril);
+}
 export default RIL;

@@ -47,6 +47,7 @@ class Connection extends ServiceConnection {
 
 export class NodeWasiProcess extends WasiProcess {
 
+	private readonly baseUri: Uri;
 	private readonly module: Promise<WebAssembly.Module>;
 
 	private importsMemory: boolean | undefined;
@@ -56,15 +57,22 @@ export class NodeWasiProcess extends WasiProcess {
 	private mainWorker: Worker | undefined;
 	private threadWorkers: Map<u32, Worker>;
 
-	constructor(baseUri: Uri, programName: string, bits: SharedArrayBuffer | Uri, memory: WebAssembly.MemoryDescriptor | undefined, options: Options = {}, mapWorkspaceFolders: boolean = true) {
-		super(baseUri, programName, options, mapWorkspaceFolders);
+	constructor(baseUri: Uri, programName: string, module: WebAssembly.Module | Promise<WebAssembly.Module>, memory: WebAssembly.Memory | WebAssembly.MemoryDescriptor | undefined, options: Options = {}, mapWorkspaceFolders: boolean = true) {
+		super(programName, options, mapWorkspaceFolders);
+		this.baseUri = baseUri;
 		this.threadWorkers = new Map();
-		this.module = WebAssembly.compile(new Uint8Array(bits as SharedArrayBuffer));
-		this.memoryDescriptor = memory;
+		this.module = module instanceof WebAssembly.Module
+			? Promise.resolve(module)
+			: module;
+		if (memory instanceof WebAssembly.Memory) {
+			this.memory = memory;
+		} else {
+			this.memoryDescriptor = memory;
+		}
 	}
 
 	protected async startMain(wasiService: WasiService): Promise<void> {
-		const filename = Uri.joinPath(this.baseUri, './lib/node/wasiMainWorker.js').fsPath;
+		const filename = Uri.joinPath(this.baseUri, './lib/desktop/mainWorker.js').fsPath;
 		this.mainWorker = new Worker(filename);
 		this.mainWorker.on('exit', async () => {
 			this.cleanUpWorkers().catch(error => RAL().console.error(error));
@@ -88,10 +96,10 @@ export class NodeWasiProcess extends WasiProcess {
 		if (this.mainWorker === undefined) {
 			throw new Error('Main worker not started');
 		}
-		if (!this.importsMemory) {
+		if (!this.importsMemory || this.memory === undefined) {
 			throw new Error('Multi threaded applications need to import shared memory.');
 		}
-		const filename = Uri.joinPath(this.baseUri, './lib/node/wasiThreadWorker.js').fsPath;
+		const filename = Uri.joinPath(this.baseUri, './lib/desktop/threadWorker.js').fsPath;
 		const worker = new Worker(filename);
 		worker.on('exit', () => {
 			this.threadWorkers.delete(tid);

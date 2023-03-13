@@ -3,8 +3,8 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { WasiProcess, Options } from './api';
-import RAL from './ral';
+import { ExtensionContext, Uri } from 'vscode';
+import { WasiProcess, Options, WasiKernel } from './api';
 
 namespace MemoryDescriptor {
 	export function is(value: any): value is WebAssembly.MemoryDescriptor {
@@ -16,21 +16,24 @@ namespace MemoryDescriptor {
 	}
 }
 
-export namespace wasi {
-	export function create(name: string, bits: ArrayBuffer | WebAssembly.Module, options?: Options, mapWorkspaceFolders?: boolean): WasiProcess;
-	export function create(name: string, bits: ArrayBuffer | WebAssembly.Module, memory: WebAssembly.MemoryDescriptor | WebAssembly.Memory, options?: Options, mapWorkspaceFolders?: boolean): WasiProcess;
-	export function create(name: string, bits: ArrayBuffer | WebAssembly.Module, memoryOrOptions?: WebAssembly.MemoryDescriptor | WebAssembly.Memory | Options, optionsOrMapWorkspaceFolders?: Options | boolean, mwf?: boolean): WasiProcess {
-		let memory: WebAssembly.Memory | WebAssembly.MemoryDescriptor | undefined;
-		let options: Options | undefined;
-		let mapWorkspaceFolders: boolean | undefined;
-		if (memoryOrOptions instanceof WebAssembly.Memory || MemoryDescriptor.is(memoryOrOptions)) {
-			memory = memoryOrOptions;
-			options = optionsOrMapWorkspaceFolders as Options | undefined;
-			mapWorkspaceFolders = mwf;
-		} else {
-			options = memoryOrOptions;
-			mapWorkspaceFolders = mwf;
-		}
-		return RAL().wasi.create(name, bits, memory, options, mapWorkspaceFolders);
+export namespace WasiKernelImpl {
+
+	export function create(context: ExtensionContext, construct: new (baseUri: Uri, programName: string, module: WebAssembly.Module | Promise<WebAssembly.Module>, memory: WebAssembly.Memory | WebAssembly.MemoryDescriptor | undefined, options: Options | undefined, mapWorkspaceFolders: boolean | undefined) => WasiProcess): WasiKernel {
+		return {
+			createProcess(name: string, module: WebAssembly.Module | Promise<WebAssembly.Module>, memoryOrOptions?: WebAssembly.MemoryDescriptor | WebAssembly.Memory | Options, optionsOrMapWorkspaceFolders?: Options | boolean, mwf?: boolean): WasiProcess {
+				let memory: WebAssembly.Memory | WebAssembly.MemoryDescriptor | undefined;
+				let options: Options | undefined;
+				let mapWorkspaceFolders: boolean | undefined;
+				if (memoryOrOptions instanceof WebAssembly.Memory || MemoryDescriptor.is(memoryOrOptions)) {
+					memory = memoryOrOptions;
+					options = optionsOrMapWorkspaceFolders as Options | undefined;
+					mapWorkspaceFolders = mwf;
+				} else {
+					options = memoryOrOptions;
+					mapWorkspaceFolders = mwf;
+				}
+				return new construct(context.extensionUri, name, module, memory, options, mapWorkspaceFolders);
+			}
+		};
 	}
 }

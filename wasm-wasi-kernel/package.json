@@ -3,7 +3,7 @@
 	"private": "true",
 	"publisher": "ms-vscode",
 	"version": "0.0.1",
-	"description": "Python Example",
+	"description": "An implementation of the WASI Api on top of the VS Code API.",
 	"author": "MS",
 	"license": "MIT",
 	"repository": {
@@ -22,20 +22,11 @@
 	"engines": {
 		"vscode": "^1.76.0"
 	},
-	"main": "./lib/node/extension.js",
+	"main": "./lib/desktop/extension.js",
 	"browser": "./dist/web/extension.js",
 	"activationEvents": [
 		"*"
 	],
-	"contributes": {
-		"commands": [
-			{
-				"command": "testbed-threads.run",
-				"category": "wasm",
-				"title": "Run multi-threaded Program"
-			}
-		]
-	},
 	"dependencies": {
 		"vscode-uri": "^3.0.7"
 	},
