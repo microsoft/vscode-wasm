@@ -43,9 +43,11 @@ export type Options = {
 	env?: Environment;
 };
 
-export interface SharedWasiService {
+export interface EnvironmentWasiService {
 	args_sizes_get: args_sizes_get.ServiceSignature;
 	args_get: args_get.ServiceSignature;
+	clock_res_get: clock_res_get.ServiceSignature;
+	clock_time_get: clock_time_get.ServiceSignature;
 	environ_sizes_get: environ_sizes_get.ServiceSignature;
 	environ_get: environ_get.ServiceSignature;
 	fd_prestat_get: fd_prestat_get.ServiceSignature;
@@ -53,13 +55,74 @@ export interface SharedWasiService {
 	[name: string]: (memory: ArrayBuffer, ...args: (number & bigint)[]) => Promise<errno | tid>;
 }
 
-export namespace SharedWasiService {
-	export function create(fileDescriptors: FileDescriptors, programName: string, preStats: Map<string, DeviceDriver>, options: Options = {}): SharedWasiService {
+interface DeviceWasiService {
+	fd_advise: fd_advise.ServiceSignature;
+	fd_allocate: fd_allocate.ServiceSignature;
+	fd_close: fd_close.ServiceSignature;
+	fd_datasync: fd_datasync.ServiceSignature;
+	fd_fdstat_get: fd_fdstat_get.ServiceSignature;
+	fd_fdstat_set_flags: fd_fdstat_set_flags.ServiceSignature;
+	fd_filestat_get: fd_filestat_get.ServiceSignature;
+	fd_filestat_set_size: fd_filestat_set_size.ServiceSignature;
+	fd_filestat_set_times: fd_filestat_set_times.ServiceSignature;
+	fd_pread: fd_pread.ServiceSignature;
+	fd_pwrite: fd_pwrite.ServiceSignature;
+	fd_read: fd_read.ServiceSignature;
+	fd_readdir: fd_readdir.ServiceSignature;
+	fd_seek: fd_seek.ServiceSignature;
+	fd_renumber: fd_renumber.ServiceSignature;
+	fd_sync: fd_sync.ServiceSignature;
+	fd_tell: fd_tell.ServiceSignature;
+	fd_write: fd_write.ServiceSignature;
+	path_create_directory: path_create_directory.ServiceSignature;
+	path_filestat_get: path_filestat_get.ServiceSignature;
+	path_filestat_set_times: path_filestat_set_times.ServiceSignature;
+	path_link: path_link.ServiceSignature;
+	path_open: path_open.ServiceSignature;
+	path_readlink: path_readlink.ServiceSignature;
+	path_remove_directory: path_remove_directory.ServiceSignature;
+	path_rename: path_rename.ServiceSignature;
+	path_symlink: path_symlink.ServiceSignature;
+	path_unlink_file: path_unlink_file.ServiceSignature;
+	poll_oneoff: poll_oneoff.ServiceSignature;
+	sched_yield: sched_yield.ServiceSignature;
+	random_get: random_get.ServiceSignature;
+	sock_accept: sock_accept.ServiceSignature;
+	sock_shutdown: sock_accept.ServiceSignature;
+	[name: string]: (memory: ArrayBuffer, ...args: (number & bigint)[]) => Promise<errno | tid>;
+}
+
+export interface ProcessWasiService {
+	proc_exit: proc_exit.ServiceSignature;
+	thread_exit: thread_exit.ServiceSignature;
+	'thread-spawn': thread_spawn.ServiceSignature;
+	[name: string]: (memory: ArrayBuffer, ...args: (number & bigint)[]) => Promise<errno | tid>;
+}
+
+export interface WasiService extends EnvironmentWasiService, DeviceWasiService, ProcessWasiService {
+}
+
+function now(id: clockid, _precision: timestamp): bigint {
+	switch(id) {
+		case Clockid.realtime:
+			return RAL().clock.realtime();
+		case Clockid.monotonic:
+			return RAL().clock.monotonic();
+		case Clockid.process_cputime_id:
+		case Clockid.thread_cputime_id:
+			return RAL().clock.monotonic() - thread_start;
+		default:
+			throw new WasiError(Errno.inval);
+	}
+}
+
+export namespace EnvironmentWasiService {
+	export function create(fileDescriptors: FileDescriptors, programName: string, preStats: Map<string, DeviceDriver>, options: Options = {}): EnvironmentWasiService {
 
 		const encoder: RAL.TextEncoder = RAL().TextEncoder.create(options?.encoding);
 		const preStatDirnames: Map<fd, string> = new Map();
 
-		const result: SharedWasiService = {
+		const result: EnvironmentWasiService = {
 			args_sizes_get: (memory: ArrayBuffer, argvCount_ptr: ptr<u32>, argvBufSize_ptr: ptr<u32>): Promise<errno> => {
 				let count = 0;
 				let size = 0;
@@ -94,6 +157,26 @@ export namespace SharedWasiService {
 				for (const arg of options.args ?? []) {
 					processValue(arg);
 				}
+				return Promise.resolve(Errno.success);
+			},
+			clock_res_get: (memory: ArrayBuffer, id: clockid, timestamp_ptr: ptr): Promise<errno> => {
+				const view = new DataView(memory);
+				switch (id) {
+					case Clockid.realtime:
+					case Clockid.monotonic:
+					case Clockid.process_cputime_id:
+					case Clockid.thread_cputime_id:
+						view.setBigUint64(timestamp_ptr, 1n, true);
+						return Promise.resolve(Errno.success);
+					default:
+						view.setBigUint64(timestamp_ptr, 0n, true);
+						return Promise.resolve(Errno.inval);
+				}
+			},
+			clock_time_get: (memory: ArrayBuffer, id: clockid, precision: timestamp, timestamp_ptr: ptr<u64>): Promise<errno> => {
+				const time: bigint = now(id, precision);
+				const view = new DataView(memory);
+				view.setBigUint64(timestamp_ptr, time, true);
 				return Promise.resolve(Errno.success);
 			},
 			environ_sizes_get: (memory: ArrayBuffer, environCount_ptr: ptr<u32>, environBufSize_ptr: ptr<u32>): Promise<errno> => {
@@ -175,57 +258,8 @@ export namespace SharedWasiService {
 	}
 }
 
-interface InstanceWasiService {
-	clock_res_get: clock_res_get.ServiceSignature;
-	clock_time_get: clock_time_get.ServiceSignature;
-	fd_advise: fd_advise.ServiceSignature;
-	fd_allocate: fd_allocate.ServiceSignature;
-	fd_close: fd_close.ServiceSignature;
-	fd_datasync: fd_datasync.ServiceSignature;
-	fd_fdstat_get: fd_fdstat_get.ServiceSignature;
-	fd_fdstat_set_flags: fd_fdstat_set_flags.ServiceSignature;
-	fd_filestat_get: fd_filestat_get.ServiceSignature;
-	fd_filestat_set_size: fd_filestat_set_size.ServiceSignature;
-	fd_filestat_set_times: fd_filestat_set_times.ServiceSignature;
-	fd_pread: fd_pread.ServiceSignature;
-	fd_pwrite: fd_pwrite.ServiceSignature;
-	fd_read: fd_read.ServiceSignature;
-	fd_readdir: fd_readdir.ServiceSignature;
-	fd_seek: fd_seek.ServiceSignature;
-	fd_renumber: fd_renumber.ServiceSignature;
-	fd_sync: fd_sync.ServiceSignature;
-	fd_tell: fd_tell.ServiceSignature;
-	fd_write: fd_write.ServiceSignature;
-	path_create_directory: path_create_directory.ServiceSignature;
-	path_filestat_get: path_filestat_get.ServiceSignature;
-	path_filestat_set_times: path_filestat_set_times.ServiceSignature;
-	path_link: path_link.ServiceSignature;
-	path_open: path_open.ServiceSignature;
-	path_readlink: path_readlink.ServiceSignature;
-	path_remove_directory: path_remove_directory.ServiceSignature;
-	path_rename: path_rename.ServiceSignature;
-	path_symlink: path_symlink.ServiceSignature;
-	path_unlink_file: path_unlink_file.ServiceSignature;
-	poll_oneoff: poll_oneoff.ServiceSignature;
-	sched_yield: sched_yield.ServiceSignature;
-	random_get: random_get.ServiceSignature;
-	sock_accept: sock_accept.ServiceSignature;
-	sock_shutdown: sock_accept.ServiceSignature;
-	[name: string]: (memory: ArrayBuffer, ...args: (number & bigint)[]) => Promise<errno | tid>;
-}
-
-export interface ProcessWasiService {
-	proc_exit: proc_exit.ServiceSignature;
-	thread_exit: thread_exit.ServiceSignature;
-	'thread-spawn': thread_spawn.ServiceSignature;
-	[name: string]: (memory: ArrayBuffer, ...args: (number & bigint)[]) => Promise<errno | tid>;
-}
-
-export interface WasiService extends SharedWasiService, InstanceWasiService, ProcessWasiService {
-}
-
-export namespace InstanceWasiService {
-	export function create(fileDescriptors: FileDescriptors, options: Options = {}): InstanceWasiService {
+export namespace DeviceWasiService {
+	export function create(fileDescriptors: FileDescriptors, options: Options = {}): DeviceWasiService {
 
 		const thread_start = RAL().clock.realtime();
 
@@ -234,27 +268,7 @@ export namespace InstanceWasiService {
 		const encoder: RAL.TextEncoder = RAL().TextEncoder.create(options?.encoding);
 		const decoder: RAL.TextDecoder = RAL().TextDecoder.create(options?.encoding);
 
-		const result: InstanceWasiService = {
-			clock_res_get: (memory: ArrayBuffer, id: clockid, timestamp_ptr: ptr): Promise<errno> => {
-				const view = new DataView(memory);
-				switch (id) {
-					case Clockid.realtime:
-					case Clockid.monotonic:
-					case Clockid.process_cputime_id:
-					case Clockid.thread_cputime_id:
-						view.setBigUint64(timestamp_ptr, 1n, true);
-						return Promise.resolve(Errno.success);
-					default:
-						view.setBigUint64(timestamp_ptr, 0n, true);
-						return Promise.resolve(Errno.inval);
-				}
-			},
-			clock_time_get: (memory: ArrayBuffer, id: clockid, precision: timestamp, timestamp_ptr: ptr<u64>): Promise<errno> => {
-				const time: bigint = now(id, precision);
-				const view = new DataView(memory);
-				view.setBigUint64(timestamp_ptr, time, true);
-				return Promise.resolve(Errno.success);
-			},
+		const result: DeviceWasiService = {
 			fd_advise: async (_memory: ArrayBuffer, fd: fd, offset: filesize, length: filesize, advise: advise): Promise<errno> => {
 				try {
 					const fileDescriptor = getFileDescriptor(fd);
@@ -740,20 +754,6 @@ export namespace InstanceWasiService {
 				return Promise.resolve(Errno.nosys);
 			}
 		};
-
-		function now(id: clockid, _precision: timestamp): bigint {
-			switch(id) {
-				case Clockid.realtime:
-					return RAL().clock.realtime();
-				case Clockid.monotonic:
-					return RAL().clock.monotonic();
-				case Clockid.process_cputime_id:
-				case Clockid.thread_cputime_id:
-					return RAL().clock.monotonic() - thread_start;
-				default:
-					throw new WasiError(Errno.inval);
-			}
-		}
 
 		async function handleSubscriptions(memory: DataView, input: ptr, subscriptions: size) {
 			let subscription_offset: ptr = input;

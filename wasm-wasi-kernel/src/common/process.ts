@@ -9,7 +9,7 @@ import { ptr, u32 } from './baseTypes';
 import { DeviceDriver, FileSystemDeviceDriver } from './deviceDriver';
 import { FileDescriptors } from './fileDescriptor';
 import * as vscfs from './vscodeFileSystemDriver';
-import { InstanceWasiService, Options, ProcessWasiService, SharedWasiService, WasiService } from './service';
+import { DeviceWasiService, Options, ProcessWasiService, EnvironmentWasiService, WasiService } from './service';
 import WasiKernel from './kernel';
 import { Errno, exitcode } from './wasi';
 
@@ -18,7 +18,7 @@ export abstract class WasiProcess {
 	private resolveCallback: ((value: number) => void) | undefined;
 	private threadIdCounter: number;
 	private readonly fileDescriptors: FileDescriptors;
-	private readonly sharedService: SharedWasiService;
+	private readonly environmentService: EnvironmentWasiService;
 	private readonly processService: ProcessWasiService;
 	private readonly preOpenDirectories: Map<string, DeviceDriver>;
 
@@ -40,7 +40,7 @@ export abstract class WasiProcess {
 				}
 			}
 		}
-		this.sharedService = SharedWasiService.create(this.fileDescriptors, programName, this.preOpenDirectories, options);
+		this.environmentService = EnvironmentWasiService.create(this.fileDescriptors, programName, this.preOpenDirectories, options);
 		this.processService = {
 			proc_exit: async (_memory, exitCode: exitcode) => {
 				await this.terminate();
@@ -56,7 +56,7 @@ export abstract class WasiProcess {
 			'thread-spawn': async (_memory, start_args: ptr) => {
 				try {
 					const tid = this.threadIdCounter++;
-					const wasiService: WasiService = Object.assign({}, this.sharedService, InstanceWasiService.create(this.fileDescriptors), this.processService);
+					const wasiService: WasiService = Object.assign({}, this.environmentService, InstanceWasiService.create(this.fileDescriptors), this.processService);
 					await this.startThread(wasiService, tid, start_args);
 					return Promise.resolve(tid);
 				} catch (error) {
@@ -69,7 +69,7 @@ export abstract class WasiProcess {
 	public async run(): Promise<number> {
 		return new Promise(async (resolve) => {
 			this.resolveCallback = resolve;
-			const wasiService: WasiService = Object.assign({}, this.sharedService, InstanceWasiService.create(this.fileDescriptors), this.processService);
+			const wasiService: WasiService = Object.assign({}, this.environmentService, DeviceWasiService.create(this.fileDescriptors), this.processService);
 			return this.startMain(wasiService);
 		});
 	}

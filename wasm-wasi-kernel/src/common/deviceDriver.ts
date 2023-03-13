@@ -66,7 +66,7 @@ export interface CharacterDeviceDriver extends DeviceDriver {
 	createStdioFileDescriptor(fd: 0 | 1 | 2): FileDescriptor;
 }
 
-export const NoSysDeviceDriver: Omit<Omit<DeviceDriver, 'id'>, 'uri'> = {
+export const NoSysDeviceDriver: Omit<DeviceDriver, 'id' | 'uri'> = {
 	fd_advise(): Promise<void> {
 		throw new WasiError(Errno.nosys);
 	},
