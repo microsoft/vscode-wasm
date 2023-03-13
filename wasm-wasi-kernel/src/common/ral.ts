@@ -3,7 +3,9 @@
  * Licensed under the MIT License. See License.txt in the project root for license information.
  * ------------------------------------------------------------------------------------------ */
 
+import { Options } from './api';
 import { Disposable } from './disposable';
+import { WasiProcess } from './process';
 
 interface _TextEncoder {
 	encode(input?: string): Uint8Array;
@@ -57,6 +59,10 @@ interface RAL {
 		dirname(path: string): string;
 		join(...paths: string[]): string;
 		normalize(path: string): string;
+	};
+
+	readonly wasi: {
+		create(name: string, bits: ArrayBuffer | WebAssembly.Module, memory: WebAssembly.MemoryDescriptor | WebAssembly.Memory | undefined, options?: Options, mapWorkspaceFolders?: boolean): WasiProcess;
 	};
 }
 

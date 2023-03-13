@@ -10,6 +10,7 @@ import { BrowserWasiProcess } from './process';
 import { binary } from './wasm';
 
 export async function activate(context: ExtensionContext) {
+	
 	commands.registerCommand('testbed-threads.run', () => {
 		const bits = new SharedArrayBuffer(binary.length);
 		new Uint8Array(bits).set(binary);

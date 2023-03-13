@@ -7,6 +7,8 @@ import RAL from '../common/ral';
 
 import { Disposable }  from '../common/disposable';
 import * as path from './path';
+import { BrowserWasiProcess } from './process';
+import { Options } from '../common/api';
 
 interface RIL extends RAL {
 }
@@ -72,6 +74,11 @@ const _ril: RIL = Object.freeze<RIL>({
 		},
 		normalize(value: string): string {
 			return path.normalize(value);
+		}
+	}),
+	wasi: Object.freeze({
+		create(name: string, bits: ArrayBuffer | WebAssembly.Module, memory: WebAssembly.MemoryDescriptor | WebAssembly.Memory, options?: Options, mapWorkspaceFolders?: boolean): BrowserWasiProcess {
+			return new BrowserWasiProcess(name, bits, memory, options, mapWorkspaceFolders);
 		}
 	})
 });
