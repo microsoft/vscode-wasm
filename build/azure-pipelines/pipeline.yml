@@ -62,6 +62,7 @@ extends:
           - template: /build/azure-pipelines/templates/pack-steps.yml@self
             parameters:
               package: sync-api-common
+        ghTagPrefix: release/sync-api-common/
         tag: ${{ parameters.quality }}
         publishPackage: ${{ parameters.publishSyncApiCommon }}
         postPublishSteps:
@@ -90,6 +91,7 @@ extends:
           - template: /build/azure-pipelines/templates/pack-steps.yml@self
             parameters:
               package: sync-api-client
+        ghTagPrefix: release/sync-api-client/
         tag: ${{ parameters.quality }}
         publishPackage: ${{ parameters.publishSyncApiClient }}
         postPublishSteps:
@@ -118,6 +120,7 @@ extends:
           - template: /build/azure-pipelines/templates/pack-steps.yml@self
             parameters:
               package: sync-api-service
+        ghTagPrefix: release/sync-api-service/
         tag: ${{ parameters.quality }}
         publishPackage: ${{ parameters.publishSyncApiService }}
         postPublishSteps:
@@ -146,6 +149,7 @@ extends:
           - template: /build/azure-pipelines/templates/pack-steps.yml@self
             parameters:
               package: wasm-wasi
+        ghTagPrefix: release/wasm-wasi/
         tag: ${{ parameters.quality }}
         publishPackage: ${{ parameters.publishWasmWasi }}
         postPublishSteps:
