@@ -4,10 +4,10 @@
 		{
 			"type": "extensionHost",
 			"request": "launch",
-			"name": "Kernel Testbed",
+			"name": "Core Testbed",
 			"runtimeExecutable": "${execPath}",
-			"args": ["--extensionDevelopmentPath=${workspaceRoot}/wasm-wasi-kernel"],
-			"outFiles": ["${workspaceRoot}/wasm-wasi-kernel/lib/**/*.js"],
+			"args": ["--extensionDevelopmentPath=${workspaceRoot}/wasm-wasi-core"],
+			"outFiles": ["${workspaceRoot}/wasm-wasi-core/lib/**/*.js"],
 			"sourceMaps": true
 		},
 		{
@@ -34,8 +34,8 @@
 			"request": "launch",
 			"name": "Thread Testbed",
 			"runtimeExecutable": "${execPath}",
-			"args": ["--extensionDevelopmentPath=${workspaceRoot}/testbeds/threads", "--extensionDevelopmentPath=${workspaceRoot}/wasm-wasi-kernel"],
-			"outFiles": ["${workspaceRoot}/testbeds/threads/out/**/*.js", "${workspaceRoot}/wasm-wasi-kernel/lib/**/*.js"],
+			"args": ["--extensionDevelopmentPath=${workspaceRoot}/testbeds/threads", "--extensionDevelopmentPath=${workspaceRoot}/wasm-wasi-core"],
+			"outFiles": ["${workspaceRoot}/testbeds/threads/out/**/*.js", "${workspaceRoot}/wasm-wasi-core/lib/**/*.js"],
 			"sourceMaps": true,
 			"preLaunchTask": "Build Thread Example"
 		},
