@@ -24,7 +24,7 @@
             "path": "./wasm-wasi-tests/tsconfig.watch.json"
         },
         {
-            "path": "./wasm-wasi-kernel/tsconfig.watch.json"
+            "path": "./wasm-wasi-core/tsconfig.watch.json"
         },
         {
             "path": "./tools/tsconfig.watch.json"
