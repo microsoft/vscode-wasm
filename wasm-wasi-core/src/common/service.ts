@@ -20,28 +20,7 @@ import { FileDescriptor, FileDescriptors } from './fileDescriptor';
 import { DeviceDriver, ReaddirEntry } from './deviceDriver';
 import { BigInts, code2Wasi } from './converter';
 import WasiKernel from './kernel';
-
-export interface Environment {
-	[key: string]: string;
-}
-
-export type Options = {
-
-	/**
-	 * The encoding to use.
-	 */
-	encoding?: string;
-
-	/**
-	 * Command line arguments accessible in the WASM.
-	 */
-	args?: string [];
-
-	/**
-	 * The environment accessible in the WASM.
-	 */
-	env?: Environment;
-};
+import { Options } from './api';
 
 export interface EnvironmentWasiService {
 	args_sizes_get: args_sizes_get.ServiceSignature;

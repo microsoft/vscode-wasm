@@ -9,12 +9,23 @@ import { DeviceDriver, DeviceId } from './deviceDriver';
 import { Errno, WasiError } from './wasi';
 import * as ConsoleDriver from './consoleDriver';
 
-class DeviceDrivers {
+export interface DeviceDrivers {
+	next(): DeviceId;
+	add(driver: DeviceDriver): void;
+	has (id: DeviceId): boolean;
+	hasByUri(uri: Uri): boolean;
+	get(id: DeviceId): DeviceDriver;
+	getByUri(uri: Uri): DeviceDriver;
+	remove(id: DeviceId): void;
+	removeByUri(uri: Uri): void;
+}
+
+class DeviceDriversImpl {
 
 	private readonly devices: Map<DeviceId, DeviceDriver>;
 	private readonly devicesByUri: Map<string, DeviceDriver>;
 
-	constructor() {
+	public constructor() {
 		this.devices = new Map();
 		this.devicesByUri = new Map();
 	}
@@ -73,7 +84,7 @@ class DeviceDrivers {
 }
 
 namespace WasiKernel {
-	export const deviceDrivers = new DeviceDrivers();
+	export const deviceDrivers = new DeviceDriversImpl();
 	export const console = ConsoleDriver.create(deviceDrivers.next());
 	deviceDrivers.add(console);
 }

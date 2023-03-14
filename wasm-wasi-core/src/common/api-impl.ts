@@ -4,7 +4,7 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { ExtensionContext, Uri } from 'vscode';
-import { WasiProcess, Options, WasiKernel } from './api';
+import { WasiProcess, Options, WasiCor } from './api';
 
 namespace MemoryDescriptor {
 	export function is(value: any): value is WebAssembly.MemoryDescriptor {
@@ -18,7 +18,7 @@ namespace MemoryDescriptor {
 
 export namespace WasiKernelImpl {
 
-	export function create(context: ExtensionContext, construct: new (baseUri: Uri, programName: string, module: WebAssembly.Module | Promise<WebAssembly.Module>, memory: WebAssembly.Memory | WebAssembly.MemoryDescriptor | undefined, options: Options | undefined, mapWorkspaceFolders: boolean | undefined) => WasiProcess): WasiKernel {
+	export function create(context: ExtensionContext, construct: new (baseUri: Uri, programName: string, module: WebAssembly.Module | Promise<WebAssembly.Module>, memory: WebAssembly.Memory | WebAssembly.MemoryDescriptor | undefined, options: Options | undefined, mapWorkspaceFolders: boolean | undefined) => WasiProcess): WasiCor {
 		return {
 			createProcess(name: string, module: WebAssembly.Module | Promise<WebAssembly.Module>, memoryOrOptions?: WebAssembly.MemoryDescriptor | WebAssembly.Memory | Options, optionsOrMapWorkspaceFolders?: Options | boolean, mwf?: boolean): WasiProcess {
 				let memory: WebAssembly.Memory | WebAssembly.MemoryDescriptor | undefined;

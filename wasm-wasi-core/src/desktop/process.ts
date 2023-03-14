@@ -8,8 +8,9 @@ import { Uri } from 'vscode';
 import RAL from '../common/ral';
 import { ptr, u32 } from '../common/baseTypes';
 import { WasiProcess } from '../common/process';
-import { WasiService, ServiceConnection, Options } from '../common/service';
+import { WasiService, ServiceConnection } from '../common/service';
 import { StartMainMessage, StartThreadMessage, WasiCallMessage, WorkerReadyMessage } from '../common/connection';
+import { Options } from '../common/api';
 
 class Connection extends ServiceConnection {
 
