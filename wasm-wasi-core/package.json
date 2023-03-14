@@ -1,5 +1,5 @@
 {
-	"name": "wasm-wasi-kernel",
+	"name": "wasm-wasi-core",
 	"private": "true",
 	"publisher": "ms-vscode",
 	"version": "0.0.1",

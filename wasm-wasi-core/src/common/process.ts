@@ -56,7 +56,7 @@ export abstract class WasiProcess {
 			'thread-spawn': async (_memory, start_args: ptr) => {
 				try {
 					const tid = this.threadIdCounter++;
-					const wasiService: WasiService = Object.assign({}, this.environmentService, InstanceWasiService.create(this.fileDescriptors), this.processService);
+					const wasiService: WasiService = Object.assign({}, this.environmentService, DeviceWasiService.create(this.fileDescriptors), this.processService);
 					await this.startThread(wasiService, tid, start_args);
 					return Promise.resolve(tid);
 				} catch (error) {
