@@ -159,7 +159,7 @@ export enum TerminalMode {
 	inUse = 2
 }
 
-export interface WasiPseudoTerminal extends Pseudoterminal {
+export interface WasiPseudoterminal extends Pseudoterminal {
 	readonly onDidCtrlC: Event<void>;
 	readonly onDidClose: Event<void>;
 	readonly onAnyKey: Event<void>;
@@ -170,15 +170,18 @@ export interface WasiPseudoTerminal extends Pseudoterminal {
 	write(bytes: Uint8Array): Promise<number>;
 }
 
-export namespace WasiPseudoTerminal {
-	export function create(): WasiPseudoTerminal {
-		return new WasmPseudoTerminalImpl();
+export namespace WasiPseudoterminal {
+	export function is(value: any): value is WasiPseudoterminal {
+		return value instanceof WasmPseudoterminalImpl;
+	}
+	export function create(): WasiPseudoterminal {
+		return new WasmPseudoterminalImpl();
 	}
 }
 
 const terminalRegExp = /(\r\n)|(\n)/gm;
 
-class WasmPseudoTerminalImpl implements WasiPseudoTerminal {
+class WasmPseudoterminalImpl implements WasiPseudoterminal {
 
 	private mode: TerminalMode;
 

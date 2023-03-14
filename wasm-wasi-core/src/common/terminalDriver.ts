@@ -7,7 +7,7 @@ import { size } from './baseTypes';
 import { fd, fdflags, fdstat, filestat, Filetype, Rights, rights } from './wasi';
 import { CharacterDeviceDriver, DeviceId, NoSysDeviceDriver } from './deviceDriver';
 import { BaseFileDescriptor, FileDescriptor } from './fileDescriptor';
-import { WasiPseudoTerminal } from './terminal';
+import { WasiPseudoterminal } from './terminal';
 import { Uri } from 'vscode';
 
 const TerminalBaseRights: rights = Rights.fd_read | Rights.fd_fdstat_set_flags | Rights.fd_write |
@@ -25,7 +25,7 @@ class TerminalFileDescriptor extends BaseFileDescriptor {
 	}
 }
 
-export function create(deviceId: DeviceId, terminal: WasiPseudoTerminal): CharacterDeviceDriver {
+export function create(deviceId: DeviceId, terminal: WasiPseudoterminal): CharacterDeviceDriver {
 
 	let inodeCounter: bigint = 0n;
 

@@ -16,19 +16,23 @@ export interface Environment {
 	[key: string]: string;
 }
 
-export type StdioDescriptor = {
-	kind: 'file'
+export type StdioFileDescriptor = {
+	kind: 'file';
 	path: string;
-} | {
+};
+
+export type StdioTerminalDescriptor = {
 	kind: 'terminal';
 	terminal: WasiPseudoterminal;
-} | 'pipe';
+};
+
+export type StdioDescriptor = StdioFileDescriptor | StdioTerminalDescriptor | 'pipe';
 
 export type Stdio = {
 	in?: StdioDescriptor;
 	out?: StdioDescriptor;
 	err?: StdioDescriptor;
-}
+};
 
 export interface MapDirEntry {
 	vscode_fs: Uri;
@@ -58,7 +62,7 @@ export interface Options {
 	 * A boolean value of true maps the workspace folders into their default
 	 * location.
 	 */
-	mapDir?: boolean | MapDirEntry[]
+	mapDir?: boolean | MapDirEntry[];
 
 	/**
 	 * Stdio setup

@@ -19,18 +19,22 @@ import { byte, bytes, cstring, ptr, size, u32, u64 } from './baseTypes';
 import { FileDescriptor, FileDescriptors } from './fileDescriptor';
 import { DeviceDriver, ReaddirEntry } from './deviceDriver';
 import { BigInts, code2Wasi } from './converter';
-import WasiKernel from './kernel';
 import { Options } from './api';
+import { DeviceDrivers } from './kernel';
 
 export interface EnvironmentWasiService {
 	args_sizes_get: args_sizes_get.ServiceSignature;
 	args_get: args_get.ServiceSignature;
-	clock_res_get: clock_res_get.ServiceSignature;
-	clock_time_get: clock_time_get.ServiceSignature;
 	environ_sizes_get: environ_sizes_get.ServiceSignature;
 	environ_get: environ_get.ServiceSignature;
 	fd_prestat_get: fd_prestat_get.ServiceSignature;
 	fd_prestat_dir_name: fd_prestat_dir_name.ServiceSignature;
+	[name: string]: (memory: ArrayBuffer, ...args: (number & bigint)[]) => Promise<errno | tid>;
+}
+
+export interface ClockWasiService {
+	clock_res_get: clock_res_get.ServiceSignature;
+	clock_time_get: clock_time_get.ServiceSignature;
 	[name: string]: (memory: ArrayBuffer, ...args: (number & bigint)[]) => Promise<errno | tid>;
 }
 
@@ -78,41 +82,18 @@ export interface ProcessWasiService {
 	[name: string]: (memory: ArrayBuffer, ...args: (number & bigint)[]) => Promise<errno | tid>;
 }
 
-export interface WasiService extends EnvironmentWasiService, DeviceWasiService, ProcessWasiService {
+export interface WasiService extends EnvironmentWasiService, ClockWasiService, DeviceWasiService, ProcessWasiService {
 }
 
 
-interface Clock {
-	now(id: clockid, _precision: timestamp): bigint;
+export interface EnvironmentHandlers {
+	prestatDone: () => void;
 }
-namespace Clock {
-	export function create(): Clock {
-		const thread_start = RAL().clock.realtime();
-		function now(id: clockid, _precision: timestamp): bigint {
-			switch(id) {
-				case Clockid.realtime:
-					return RAL().clock.realtime();
-				case Clockid.monotonic:
-					return RAL().clock.monotonic();
-				case Clockid.process_cputime_id:
-				case Clockid.thread_cputime_id:
-					return RAL().clock.monotonic() - thread_start;
-				default:
-					throw new WasiError(Errno.inval);
-			}
-		}
-		return {
-			now
-		};
-	}
-}
-
 export namespace EnvironmentWasiService {
-	export function create(fileDescriptors: FileDescriptors, programName: string, preStats: Map<string, DeviceDriver>, options: Options = {}): EnvironmentWasiService {
+	export function create(fileDescriptors: FileDescriptors, programName: string, preStats: IterableIterator<[string, DeviceDriver]>, options: Options, handlers: EnvironmentHandlers): EnvironmentWasiService {
 
 		const $encoder: RAL.TextEncoder = RAL().TextEncoder.create(options?.encoding);
 		const $preStatDirnames: Map<fd, string> = new Map();
-		const $clock: Clock = Clock.create();
 
 		const result: EnvironmentWasiService = {
 			args_sizes_get: (memory: ArrayBuffer, argvCount_ptr: ptr<u32>, argvBufSize_ptr: ptr<u32>): Promise<errno> => {
@@ -151,26 +132,6 @@ export namespace EnvironmentWasiService {
 				}
 				return Promise.resolve(Errno.success);
 			},
-			clock_res_get: (memory: ArrayBuffer, id: clockid, timestamp_ptr: ptr): Promise<errno> => {
-				const view = new DataView(memory);
-				switch (id) {
-					case Clockid.realtime:
-					case Clockid.monotonic:
-					case Clockid.process_cputime_id:
-					case Clockid.thread_cputime_id:
-						view.setBigUint64(timestamp_ptr, 1n, true);
-						return Promise.resolve(Errno.success);
-					default:
-						view.setBigUint64(timestamp_ptr, 0n, true);
-						return Promise.resolve(Errno.inval);
-				}
-			},
-			clock_time_get: (memory: ArrayBuffer, id: clockid, precision: timestamp, timestamp_ptr: ptr<u64>): Promise<errno> => {
-				const time: bigint = $clock.now(id, precision);
-				const view = new DataView(memory);
-				view.setBigUint64(timestamp_ptr, time, true);
-				return Promise.resolve(Errno.success);
-			},
 			environ_sizes_get: (memory: ArrayBuffer, environCount_ptr: ptr<u32>, environBufSize_ptr: ptr<u32>): Promise<errno> => {
 				let count = 0;
 				let size = 0;
@@ -200,9 +161,10 @@ export namespace EnvironmentWasiService {
 			},
 			fd_prestat_get: async (memory: ArrayBuffer, fd: fd, bufPtr: ptr<prestat>): Promise<errno> => {
 				try {
-					const next = preStats.entries().next();
+					const next = preStats.next();
 					if (next.done === true) {
 						fileDescriptors.switchToRunning(fd);
+						handlers.prestatDone();
 						return Errno.badf;
 					}
 					const [ mountPoint, deviceDriver ] = next.value;
@@ -250,11 +212,66 @@ export namespace EnvironmentWasiService {
 	}
 }
 
+export interface Clock {
+	now(id: clockid, _precision: timestamp): bigint;
+}
+
+export namespace Clock {
+	export function create(): Clock {
+		const thread_start = RAL().clock.realtime();
+		function now(id: clockid, _precision: timestamp): bigint {
+			switch(id) {
+				case Clockid.realtime:
+					return RAL().clock.realtime();
+				case Clockid.monotonic:
+					return RAL().clock.monotonic();
+				case Clockid.process_cputime_id:
+				case Clockid.thread_cputime_id:
+					return RAL().clock.monotonic() - thread_start;
+				default:
+					throw new WasiError(Errno.inval);
+			}
+		}
+		return {
+			now
+		};
+	}
+}
+
+export namespace ClockWasiService {
+	export function create(clock: Clock): ClockWasiService {
+		const $clock = clock;
+		const result:ClockWasiService = {
+			clock_res_get: (memory: ArrayBuffer, id: clockid, timestamp_ptr: ptr): Promise<errno> => {
+				const view = new DataView(memory);
+				switch (id) {
+					case Clockid.realtime:
+					case Clockid.monotonic:
+					case Clockid.process_cputime_id:
+					case Clockid.thread_cputime_id:
+						view.setBigUint64(timestamp_ptr, 1n, true);
+						return Promise.resolve(Errno.success);
+					default:
+						view.setBigUint64(timestamp_ptr, 0n, true);
+						return Promise.resolve(Errno.inval);
+				}
+			},
+			clock_time_get: (memory: ArrayBuffer, id: clockid, precision: timestamp, timestamp_ptr: ptr<u64>): Promise<errno> => {
+				const time: bigint = $clock.now(id, precision);
+				const view = new DataView(memory);
+				view.setBigUint64(timestamp_ptr, time, true);
+				return Promise.resolve(Errno.success);
+			},
+		};
+		return result;
+	}
+}
+
 export namespace DeviceWasiService {
-	export function create(fileDescriptors: FileDescriptors, options: Options = {}): DeviceWasiService {
+	export function create(deviceDrivers: DeviceDrivers, fileDescriptors: FileDescriptors, clock: Clock, options: Options): DeviceWasiService {
 
 		const $directoryEntries: Map<fd, ReaddirEntry[]> = new Map();
-		const $clock: Clock = Clock.create();
+		const $clock: Clock = clock;
 
 		const $encoder: RAL.TextEncoder = RAL().TextEncoder.create(options?.encoding);
 		const $decoder: RAL.TextDecoder = RAL().TextDecoder.create(options?.encoding);
@@ -891,7 +908,7 @@ export namespace DeviceWasiService {
 		}
 
 		function getDeviceDriver(fileDescriptor: FileDescriptor): DeviceDriver {
-			return WasiKernel.deviceDrivers.get(fileDescriptor.deviceId);
+			return deviceDrivers.get(fileDescriptor.deviceId);
 		}
 
 		function getFileDescriptor(fd: fd): FileDescriptor {
