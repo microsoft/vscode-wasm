@@ -7,12 +7,12 @@ import { Uri, WorkspaceFolder, workspace } from 'vscode';
 import RAL from './ral';
 import { ptr, u32 } from './baseTypes';
 import { DeviceDriver, FileSystemDeviceDriver } from './deviceDriver';
-import { FileDescriptors } from './fileDescriptor';
+import { FileDescriptor, FileDescriptors } from './fileDescriptor';
 import * as vscfs from './vscodeFileSystemDriver';
 import * as tdd from './terminalDriver';
 import { DeviceWasiService, ProcessWasiService, EnvironmentWasiService, WasiService, Clock, ClockWasiService } from './service';
 import WasiKernel, { DeviceDrivers } from './kernel';
-import { Errno, exitcode, fd } from './wasi';
+import { Errno, Fdflags, Lookupflags, Oflags, Rights, exitcode, fd } from './wasi';
 import { MapDirEntry, Options, StdioDescriptor, StdioFileDescriptor } from './api';
 import { CharacterDeviceDriver } from './deviceDriver';
 import { WasiPseudoterminal } from './terminal';
@@ -40,9 +40,9 @@ export abstract class WasiProcess {
 	private readonly fileDescriptors: FileDescriptors;
 	private readonly environmentService: EnvironmentWasiService;
 	private readonly processService: ProcessWasiService;
-	private readonly preOpenDirectories: Map<string, DeviceDriver>;
+	private readonly preOpenDirectories: Map<string, { driver: FileSystemDeviceDriver; fd: FileDescriptor | undefined }>;
 	private terminalDevice: CharacterDeviceDriver | undefined;
-	private readonly postPrestatDescriptors: StdioFileDescriptor[];
+	private readonly postPrestatDescriptors: { fd: 0 | 1 | 2; descriptor: StdioFileDescriptor}[];
 
 	constructor(programName: string, options: Options = {}) {
 		this.options = options;
@@ -77,7 +77,11 @@ export abstract class WasiProcess {
 		this.handleStdio(stdio.out, 1);
 		this.handleStdio(stdio.err, 2);
 
-		this.environmentService = EnvironmentWasiService.create(this.fileDescriptors, programName, this.preOpenDirectories.entries(), options, { prestatDone: () => this.prestatDone() });
+		this.environmentService = EnvironmentWasiService.create(
+			this.fileDescriptors, programName,
+			this.preOpenDirectories.entries(), options,
+			{ prestatDone: () => this.prestatDone() }
+		);
 		this.processService = {
 			proc_exit: async (_memory, exitCode: exitcode) => {
 				await this.terminate();
@@ -158,7 +162,7 @@ export abstract class WasiProcess {
 		} else {
 			deviceDriver = this.deviceDrivers.getByUri(entry.vscode_fs) as FileSystemDeviceDriver;
 		}
-		this.preOpenDirectories.set(entry.mountPoint, deviceDriver);
+		this.preOpenDirectories.set(entry.mountPoint, { driver: deviceDriver, fd: undefined });
 	}
 
 	private handleStdio(descriptor: $StdioDescriptor, fd: 0 | 1 | 2): void {
@@ -175,15 +179,40 @@ export abstract class WasiProcess {
 			}
 			this.fileDescriptors.add(this.terminalDevice.createStdioFileDescriptor(fd));
 		} else if (descriptor.kind === 'file') {
-			this.postPrestatDescriptors.push(descriptor);
+			this.postPrestatDescriptors.push({fd, descriptor});
 		}
 	}
 
-	private prestatDone(): void {
+	private async prestatDone(): Promise<void> {
 		if (this.postPrestatDescriptors.length === 0) {
 			return;
 		}
-		for (const descriptor of this.postPrestatDescriptors) {
+		const preOpened = Array.from(this.preOpenDirectories.entries());
+		for (const entry of preOpened) {
+			const mountPoint = entry[0];
+			if (mountPoint[mountPoint.length - 1] !== '/') {
+				entry[0] = mountPoint + '/';
+			}
+		}
+		preOpened.sort((a, b) => b[0].length - a[0].length);
+		for (const { fd, descriptor } of this.postPrestatDescriptors) {
+			for (const preOpenEntry of preOpened) {
+				const mountPoint = preOpenEntry[0];
+				if (descriptor.path.startsWith(mountPoint)) {
+					const driver = preOpenEntry[1].driver;
+					const parentDescriptor = preOpenEntry[1].fd!;
+					const fileDescriptor = await driver.createStdioFileDescriptor(
+						parentDescriptor, Lookupflags.none,
+						descriptor.path.substring(mountPoint.length),
+						descriptor.oflags,
+						descriptor.fs_rights_base,
+						descriptor.fdflags,
+						fd
+					);
+					this.fileDescriptors.add(fileDescriptor);
+					break;
+				}
+			}
 		}
 	}
 }

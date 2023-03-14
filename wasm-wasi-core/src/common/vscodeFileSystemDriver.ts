@@ -9,7 +9,7 @@ import { LRUCache } from './linkedMap';
 import { u64, size } from './baseTypes';
 import {
 	fdstat, filestat, Rights, fd, rights, fdflags, Filetype, WasiError, Errno, filetype, Whence,
-	lookupflags, timestamp, fstflags, oflags, Oflags, filesize, Fdflags, inode
+	lookupflags, timestamp, fstflags, oflags, Oflags, filesize, Fdflags, inode, Lookupflags
 } from './wasi';
 import { BigInts, code2Wasi } from './converter';
 import { BaseFileDescriptor, FdProvider, FileDescriptor } from './fileDescriptor';
@@ -549,12 +549,12 @@ export function create(deviceId: DeviceId, baseUri: Uri): FileSystemDeviceDriver
 		}
 	}
 
-	const deviceDriver: FileSystemDeviceDriver = {
+	const $this: FileSystemDeviceDriver = {
 
 		uri: baseUri,
 		id: deviceId,
 
-		createStdioFileDescriptor(fd: 0 | 1 | 2, fdflags: fdflags, path: string): FileDescriptor {
+		createStdioFileDescriptor(parentDescriptor: FileDescriptor, dirflags: lookupflags | undefined = Lookupflags.none, path: string, oflags: oflags | undefined = Oflags.none, fs_rights_base: rights | undefined = FileBaseRights, fdflags: fdflags | undefined = Fdflags.none, fd: 0 | 1 | 2): Promise<FileDescriptor> {
 			if (path.length === 0) {
 				throw new WasiError(Errno.inval);
 			}
@@ -562,8 +562,7 @@ export function create(deviceId: DeviceId, baseUri: Uri): FileSystemDeviceDriver
 				path = `/${path}`;
 			}
 
-			const inode = fs.getOrCreateNode(fs.getRoot(), path, NodeKind.File, true);
-			return new FileFileDescriptor(deviceId, fd, FileBaseRights, fdflags, inode.inode);
+			return $this.path_open(parentDescriptor, dirflags, path, oflags, fs_rights_base, FileInheritingRights, fdflags, { next: () => fd });
 		},
 		fd_advise(fileDescriptor: FileDescriptor, _offset: bigint, _length: bigint, _advise: number): Promise<void> {
 			fileDescriptor.assertBaseRights(Rights.fd_advise);
@@ -909,5 +908,5 @@ export function create(deviceId: DeviceId, baseUri: Uri): FileSystemDeviceDriver
 		}
 	};
 
-	return Object.assign({}, NoSysDeviceDriver, deviceDriver);
+	return Object.assign({}, NoSysDeviceDriver, $this);
 }

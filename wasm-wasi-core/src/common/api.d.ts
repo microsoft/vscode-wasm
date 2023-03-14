@@ -4,6 +4,7 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { Pseudoterminal, Uri } from 'vscode';
+import { fdflags, oflags, rights } from './wasi';
 
 export interface WasiPseudoterminal extends Pseudoterminal {
 	/**
@@ -19,6 +20,9 @@ export interface Environment {
 export type StdioFileDescriptor = {
 	kind: 'file';
 	path: string;
+	oflags?: oflags;
+	fs_rights_base?: rights;
+	fdflags?: fdflags;
 };
 
 export type StdioTerminalDescriptor = {

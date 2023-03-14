@@ -59,7 +59,7 @@ export interface DeviceDriver {
 }
 
 export interface FileSystemDeviceDriver extends DeviceDriver {
-	createStdioFileDescriptor(fd: 0 | 1 | 2, fdflags: fdflags, path: string): FileDescriptor;
+	createStdioFileDescriptor(parentDescriptor: FileDescriptor, dirflags: lookupflags | undefined, path: string, oflags: oflags | undefined, fs_rights_base: rights | undefined, fdflags: fdflags | undefined, fd: 0 | 1 | 2): Promise<FileDescriptor>;
 }
 
 export interface CharacterDeviceDriver extends DeviceDriver {
