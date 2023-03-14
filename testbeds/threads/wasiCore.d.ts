@@ -37,7 +37,7 @@ export interface WasiProcess {
 	 terminate(): Promise<number>;
 }
 
-export interface WasiKernel {
+export interface WasiCore {
 	createProcess(name: string, module: WebAssembly.Module | Promise<WebAssembly.Module>, options?: Options, mapWorkspaceFolders?: boolean): WasiProcess;
 	createProcess(name: string, module: WebAssembly.Module | Promise<WebAssembly.Module>, memory: WebAssembly.MemoryDescriptor | WebAssembly.Memory, options?: Options, mapWorkspaceFolders?: boolean): WasiProcess;
 }

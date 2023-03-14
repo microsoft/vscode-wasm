@@ -4,19 +4,19 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { commands, extensions, window } from 'vscode';
-import { WasiKernel } from './wasiKernel';
+import { WasiCore } from './wasiCore';
 import { binary } from './wasm';
 
 export async function activate() {
-	const wasiKernelExt = extensions.getExtension('ms-vscode.wasm-wasi-kernel');
-	if (wasiKernelExt === undefined) {
-		window.showErrorMessage('The WASI Kernel extension is required to run this testbed.');
+	const wasiCoreExt = extensions.getExtension('ms-vscode.wasm-wasi-core');
+	if (wasiCoreExt === undefined) {
+		window.showErrorMessage('The WASI core extension is required to run this testbed.');
 		return;
 	}
 
-	const wasiKernel: WasiKernel =  await wasiKernelExt.activate();
+	const wasiCore: WasiCore =  await wasiCoreExt.activate();
 	commands.registerCommand('testbed-threads.run', () => {
-		const process = wasiKernel.createProcess('threads', WebAssembly.compile(binary.buffer), { initial: 2, maximum: 160, shared: true });
+		const process = wasiCore.createProcess('threads', WebAssembly.compile(binary.buffer), { initial: 2, maximum: 160, shared: true });
 		process.run().catch(err => {
 			window.showErrorMessage(err.message);
 		});
