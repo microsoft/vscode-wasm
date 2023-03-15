@@ -62,8 +62,8 @@ export class BrowserWasiProcess extends WasiProcess {
 	private mainWorker: Worker | undefined;
 	private threadWorkers: Map<u32, Worker>;
 
-	constructor(baseUri: Uri, programName: string, module: WebAssembly.Module | Promise<WebAssembly.Module>, memory: WebAssembly.Memory | WebAssembly.MemoryDescriptor | undefined, options: Options = {}, mapWorkspaceFolders: boolean = true) {
-		super(programName, options, mapWorkspaceFolders);
+	constructor(baseUri: Uri, programName: string, module: WebAssembly.Module | Promise<WebAssembly.Module>, memory: WebAssembly.Memory | WebAssembly.MemoryDescriptor | undefined, options: Options = {}) {
+		super(programName, options);
 		this.baseUri = baseUri;
 		this.threadWorkers = new Map();
 		this.module = module instanceof WebAssembly.Module

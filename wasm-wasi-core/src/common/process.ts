@@ -6,13 +6,13 @@ import { Uri, WorkspaceFolder, workspace } from 'vscode';
 
 import RAL from './ral';
 import { ptr, u32 } from './baseTypes';
-import { DeviceDriver, FileSystemDeviceDriver } from './deviceDriver';
+import { FileSystemDeviceDriver } from './deviceDriver';
 import { FileDescriptor, FileDescriptors } from './fileDescriptor';
 import * as vscfs from './vscodeFileSystemDriver';
 import * as tdd from './terminalDriver';
 import { DeviceWasiService, ProcessWasiService, EnvironmentWasiService, WasiService, Clock, ClockWasiService } from './service';
 import WasiKernel, { DeviceDrivers } from './kernel';
-import { Errno, Fdflags, Lookupflags, Oflags, Rights, exitcode, fd } from './wasi';
+import { Errno, Lookupflags, exitcode } from './wasi';
 import { MapDirEntry, Options, StdioDescriptor, StdioFileDescriptor } from './api';
 import { CharacterDeviceDriver } from './deviceDriver';
 import { WasiPseudoterminal } from './terminal';
@@ -176,6 +176,7 @@ export abstract class WasiProcess {
 			}
 			if (this.terminalDevice === undefined) {
 				this.terminalDevice = tdd.create(this.deviceDrivers.next(), descriptor.terminal);
+				this.deviceDrivers.add(this.terminalDevice);
 			}
 			this.fileDescriptors.add(this.terminalDevice.createStdioFileDescriptor(fd));
 		} else if (descriptor.kind === 'file') {
@@ -205,7 +206,7 @@ export abstract class WasiProcess {
 						parentDescriptor, Lookupflags.none,
 						descriptor.path.substring(mountPoint.length),
 						descriptor.oflags,
-						descriptor.fs_rights_base,
+						undefined,
 						descriptor.fdflags,
 						fd
 					);

@@ -32,6 +32,8 @@ export const FileInheritingRights: rights = 0n;
 
 const DirectoryOnlyBaseRights: rights = DirectoryBaseRights & ~FileBaseRights;
 const FileOnlyBaseRights: rights = FileBaseRights & ~DirectoryBaseRights;
+const StdInFileRights: rights = Rights.fd_read | Rights.fd_seek | Rights.fd_tell | Rights.fd_advise | Rights.fd_filestat_get | Rights.poll_fd_readwrite;
+const StdoutFileRights: rights = FileBaseRights & ~Rights.fd_read;
 
 
 class FileFileDescriptor extends BaseFileDescriptor {
@@ -554,15 +556,18 @@ export function create(deviceId: DeviceId, baseUri: Uri): FileSystemDeviceDriver
 		uri: baseUri,
 		id: deviceId,
 
-		createStdioFileDescriptor(parentDescriptor: FileDescriptor, dirflags: lookupflags | undefined = Lookupflags.none, path: string, oflags: oflags | undefined = Oflags.none, fs_rights_base: rights | undefined = FileBaseRights, fdflags: fdflags | undefined = Fdflags.none, fd: 0 | 1 | 2): Promise<FileDescriptor> {
+		createStdioFileDescriptor(parentDescriptor: FileDescriptor, dirflags: lookupflags | undefined = Lookupflags.none, path: string, oflags: oflags | undefined = Oflags.none, fs_rights_base: rights | undefined, fdflags: fdflags | undefined = Fdflags.none, fd: 0 | 1 | 2): Promise<FileDescriptor> {
 			if (path.length === 0) {
 				throw new WasiError(Errno.inval);
 			}
 			if (path[0] !== '/') {
 				path = `/${path}`;
 			}
+			const file_rights_base: rights = fs_rights_base ?? fd === 0
+				? StdInFileRights
+				: StdoutFileRights;
 
-			return $this.path_open(parentDescriptor, dirflags, path, oflags, fs_rights_base, FileInheritingRights, fdflags, { next: () => fd });
+			return $this.path_open(parentDescriptor, dirflags, path, oflags, file_rights_base, FileInheritingRights, fdflags, { next: () => fd });
 		},
 		fd_advise(fileDescriptor: FileDescriptor, _offset: bigint, _length: bigint, _advise: number): Promise<void> {
 			fileDescriptor.assertBaseRights(Rights.fd_advise);

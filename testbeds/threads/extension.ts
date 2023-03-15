@@ -4,7 +4,7 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { commands, extensions, window } from 'vscode';
-import { WasiCore } from './wasiCore';
+import { Options, WasiCore } from './wasiCore';
 import { binary } from './wasm';
 
 export async function activate() {
@@ -16,7 +16,13 @@ export async function activate() {
 
 	const wasiCore: WasiCore =  await wasiCoreExt.activate();
 	commands.registerCommand('testbed-threads.run', () => {
-		const process = wasiCore.createProcess('threads', WebAssembly.compile(binary.buffer), { initial: 2, maximum: 160, shared: true });
+		const pty = wasiCore.createPseudoterminal('threads');
+		window.createTerminal({ name: 'threads', pty, isTransient: true });
+		const options: Options = {
+			stdio: pty.stdio,
+			mapDir: true
+		}
+		const process = wasiCore.createProcess('threads', WebAssembly.compile(binary.buffer), { initial: 2, maximum: 160, shared: true }, options);
 		process.run().catch(err => {
 			window.showErrorMessage(err.message);
 		});

@@ -5,6 +5,7 @@
 import { Event, EventEmitter, Pseudoterminal } from 'vscode';
 
 import RAL from './ral';
+import { Stdio } from './api';
 
 class LineBuffer {
 
@@ -160,9 +161,12 @@ export enum TerminalMode {
 }
 
 export interface WasiPseudoterminal extends Pseudoterminal {
+	readonly _wasiPseudoterminalBrand: any;
 	readonly onDidCtrlC: Event<void>;
 	readonly onDidClose: Event<void>;
 	readonly onAnyKey: Event<void>;
+
+	readonly stdio: Stdio;
 
 	setMode(mode: TerminalMode): void;
 	setName(name: string): void;
@@ -174,8 +178,8 @@ export namespace WasiPseudoterminal {
 	export function is(value: any): value is WasiPseudoterminal {
 		return value instanceof WasmPseudoterminalImpl;
 	}
-	export function create(): WasiPseudoterminal {
-		return new WasmPseudoterminalImpl();
+	export function create(name: string): WasiPseudoterminal {
+		return new WasmPseudoterminalImpl(name);
 	}
 }
 
@@ -183,6 +187,7 @@ const terminalRegExp = /(\r\n)|(\n)/gm;
 
 class WasmPseudoterminalImpl implements WasiPseudoterminal {
 
+	readonly _wasiPseudoterminalBrand: any;
 	private mode: TerminalMode;
 
 	private readonly _onDidClose: EventEmitter<void>;
@@ -210,7 +215,8 @@ class WasmPseudoterminalImpl implements WasiPseudoterminal {
 	private encoder: RAL.TextEncoder;
 	private decoder: RAL.TextDecoder;
 
-	constructor() {
+	constructor(name: string) {
+		this.nameBuffer = name;
 		this.mode = TerminalMode.inUse;
 
 		this._onDidClose = new EventEmitter();
@@ -231,6 +237,14 @@ class WasmPseudoterminalImpl implements WasiPseudoterminal {
 		this.lineBuffer = new LineBuffer();
 
 		this.isOpen = false;
+	}
+
+	public get stdio(): Stdio {
+		return {
+			in: { kind: 'terminal', terminal: this },
+			out: { kind: 'terminal', terminal: this },
+			err: { kind: 'terminal', terminal: this }
+		};
 	}
 
 	public setMode(mode: TerminalMode): void {

@@ -4,7 +4,8 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { ExtensionContext, Uri } from 'vscode';
-import { WasiProcess, Options, WasiCor } from './api';
+import { WasiProcess, Options, WasiCore } from './api';
+import { WasiPseudoterminal } from './terminal';
 
 namespace MemoryDescriptor {
 	export function is(value: any): value is WebAssembly.MemoryDescriptor {
@@ -16,23 +17,23 @@ namespace MemoryDescriptor {
 	}
 }
 
-export namespace WasiKernelImpl {
+export namespace WasiCoreImpl {
 
-	export function create(context: ExtensionContext, construct: new (baseUri: Uri, programName: string, module: WebAssembly.Module | Promise<WebAssembly.Module>, memory: WebAssembly.Memory | WebAssembly.MemoryDescriptor | undefined, options: Options | undefined, mapWorkspaceFolders: boolean | undefined) => WasiProcess): WasiCor {
+	export function create(context: ExtensionContext, construct: new (baseUri: Uri, programName: string, module: WebAssembly.Module | Promise<WebAssembly.Module>, memory: WebAssembly.Memory | WebAssembly.MemoryDescriptor | undefined, options: Options | undefined) => WasiProcess): WasiCore {
 		return {
-			createProcess(name: string, module: WebAssembly.Module | Promise<WebAssembly.Module>, memoryOrOptions?: WebAssembly.MemoryDescriptor | WebAssembly.Memory | Options, optionsOrMapWorkspaceFolders?: Options | boolean, mwf?: boolean): WasiProcess {
+			createPseudoterminal(name: string): WasiPseudoterminal {
+				return WasiPseudoterminal.create(name);
+			},
+			createProcess(name: string, module: WebAssembly.Module | Promise<WebAssembly.Module>, memoryOrOptions?: WebAssembly.MemoryDescriptor | WebAssembly.Memory | Options, optionsOrMapWorkspaceFolders?: Options | boolean): WasiProcess {
 				let memory: WebAssembly.Memory | WebAssembly.MemoryDescriptor | undefined;
 				let options: Options | undefined;
-				let mapWorkspaceFolders: boolean | undefined;
 				if (memoryOrOptions instanceof WebAssembly.Memory || MemoryDescriptor.is(memoryOrOptions)) {
 					memory = memoryOrOptions;
 					options = optionsOrMapWorkspaceFolders as Options | undefined;
-					mapWorkspaceFolders = mwf;
 				} else {
 					options = memoryOrOptions;
-					mapWorkspaceFolders = mwf;
 				}
-				return new construct(context.extensionUri, name, module, memory, options, mapWorkspaceFolders);
+				return new construct(context.extensionUri, name, module, memory, options);
 			}
 		};
 	}

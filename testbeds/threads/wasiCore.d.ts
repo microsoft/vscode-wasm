@@ -3,14 +3,54 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
+import { Pseudoterminal, Uri } from 'vscode';
+import { fdflags, oflags, rights } from './wasi';
+
+export interface WasiPseudoterminal extends Pseudoterminal {
+	/**
+	 * Clients must not use this property. It is here to ensure correct typing.
+	 */
+	readonly _wasiPseudoterminalBrand: any;
+
+	/**
+	 * Create stdio
+	 */
+	readonly stdio: Stdio;
+}
+
 export interface Environment {
 	[key: string]: string;
+}
+
+export type StdioFileDescriptor = {
+	kind: 'file';
+	path: string;
+	oflags?: oflags;
+	fdflags?: fdflags;
+};
+
+export type StdioTerminalDescriptor = {
+	kind: 'terminal';
+	terminal: WasiPseudoterminal;
+};
+
+export type StdioDescriptor = StdioFileDescriptor | StdioTerminalDescriptor | 'pipe';
+
+export type Stdio = {
+	in?: StdioDescriptor;
+	out?: StdioDescriptor;
+	err?: StdioDescriptor;
+};
+
+export interface MapDirEntry {
+	vscode_fs: Uri;
+	mountPoint: string;
 }
 
 export interface Options {
 
 	/**
-	 * The encoding to use.
+	 * The encoding to use when decoding strings from and to the WASM layer.
 	 */
 	encoding?: string;
 
@@ -23,6 +63,19 @@ export interface Options {
 	 * The environment accessible in the WASM.
 	 */
 	env?: Environment;
+
+	/**
+	 * How VS Code files systems are mapped into the WASM/WASI file system.
+	 *
+	 * A boolean value of true maps the workspace folders into their default
+	 * location.
+	 */
+	mapDir?: boolean | MapDirEntry[];
+
+	/**
+	 * Stdio setup
+	 */
+	stdio?: Stdio;
 }
 
 export interface WasiProcess {
@@ -38,6 +91,7 @@ export interface WasiProcess {
 }
 
 export interface WasiCore {
-	createProcess(name: string, module: WebAssembly.Module | Promise<WebAssembly.Module>, options?: Options, mapWorkspaceFolders?: boolean): WasiProcess;
-	createProcess(name: string, module: WebAssembly.Module | Promise<WebAssembly.Module>, memory: WebAssembly.MemoryDescriptor | WebAssembly.Memory, options?: Options, mapWorkspaceFolders?: boolean): WasiProcess;
+	createPseudoterminal(name: string): WasiPseudoterminal;
+	createProcess(name: string, module: WebAssembly.Module | Promise<WebAssembly.Module>, options?: Options): WasiProcess;
+	createProcess(name: string, module: WebAssembly.Module | Promise<WebAssembly.Module>, memory: WebAssembly.MemoryDescriptor | WebAssembly.Memory, options?: Options): WasiProcess;
 }

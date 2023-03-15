@@ -6,11 +6,11 @@ import RIL from './ril';
 RIL.install();
 
 import { ExtensionContext } from 'vscode';
-import { WasiKernelImpl  } from '../common/api-impl';
+import { WasiCoreImpl  } from '../common/api-impl';
 import { NodeWasiProcess } from './process';
 
 export async function activate(context: ExtensionContext) {
-	return WasiKernelImpl.create(context, NodeWasiProcess);
+	return WasiCoreImpl.create(context, NodeWasiProcess);
 }
 
 export function deactivate() {
