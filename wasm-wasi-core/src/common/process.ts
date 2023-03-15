@@ -41,7 +41,7 @@ export abstract class WasiProcess {
 	private readonly environmentService: EnvironmentWasiService;
 	private readonly processService: ProcessWasiService;
 	private readonly preOpenDirectories: Map<string, { driver: FileSystemDeviceDriver; fd: FileDescriptor | undefined }>;
-	private terminalDevice: CharacterDeviceDriver | undefined;
+	private readonly terminalDevices: Map<WasiPseudoterminal, CharacterDeviceDriver>;
 	private readonly postPrestatDescriptors: { fd: 0 | 1 | 2; descriptor: StdioFileDescriptor}[];
 
 	constructor(programName: string, options: Options = {}) {
@@ -50,6 +50,7 @@ export abstract class WasiProcess {
 		this.threadIdCounter = 2;
 		this.fileDescriptors = new FileDescriptors();
 		this.preOpenDirectories = new Map();
+		this.terminalDevices = new Map();
 		this.postPrestatDescriptors = [];
 		// Map directories
 		if (options.mapDir === true) {
@@ -174,11 +175,13 @@ export abstract class WasiProcess {
 			if (!WasiPseudoterminal.is(descriptor.terminal)) {
 				throw new Error('Terminal must be an WASI pseudo terminal created using the WASI Core facade.');
 			}
-			if (this.terminalDevice === undefined) {
-				this.terminalDevice = tdd.create(this.deviceDrivers.next(), descriptor.terminal);
-				this.deviceDrivers.add(this.terminalDevice);
+			let terminalDevice = this.terminalDevices.get(descriptor.terminal);
+			if (terminalDevice === undefined) {
+				terminalDevice = tdd.create(this.deviceDrivers.next(), descriptor.terminal);
+				this.terminalDevices.set(descriptor.terminal, terminalDevice);
+				this.deviceDrivers.add(terminalDevice);
 			}
-			this.fileDescriptors.add(this.terminalDevice.createStdioFileDescriptor(fd));
+			this.fileDescriptors.add(terminalDevice.createStdioFileDescriptor(fd));
 		} else if (descriptor.kind === 'file') {
 			this.postPrestatDescriptors.push({fd, descriptor});
 		}
