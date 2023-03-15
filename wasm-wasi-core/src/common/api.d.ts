@@ -4,7 +4,9 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { Pseudoterminal, Uri } from 'vscode';
-import { fdflags, oflags, rights } from './wasi';
+
+import { fdflags, oflags } from './wasi';
+export { fdflags, oflags };
 
 export interface Environment {
 	[key: string]: string;

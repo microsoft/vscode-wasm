@@ -472,6 +472,10 @@ export function create(deviceId: DeviceId, baseUri: Uri): FileSystemDeviceDriver
 		}
 	}
 
+	function createRootDescriptor(fd: fd): DirectoryFileDescriptor {
+		return new DirectoryFileDescriptor(deviceId, fd, DirectoryBaseRights, DirectoryInheritingRights, 0, fs.getRoot().inode);
+	}
+
 	async function doGetFiletype(fileDescriptor: DirectoryFileDescriptor, path: string): Promise<filetype | undefined> {
 		const inode = fs.getNode(fileDescriptor.inode, NodeKind.Directory);
 		try {
@@ -556,18 +560,20 @@ export function create(deviceId: DeviceId, baseUri: Uri): FileSystemDeviceDriver
 		uri: baseUri,
 		id: deviceId,
 
-		createStdioFileDescriptor(parentDescriptor: FileDescriptor, dirflags: lookupflags | undefined = Lookupflags.none, path: string, oflags: oflags | undefined = Oflags.none, fs_rights_base: rights | undefined, fdflags: fdflags | undefined = Fdflags.none, fd: 0 | 1 | 2): Promise<FileDescriptor> {
+		createStdioFileDescriptor(dirflags: lookupflags | undefined = Lookupflags.none, path: string, _oflags: oflags | undefined = Oflags.none, _fs_rights_base: rights | undefined, fdflags: fdflags | undefined = Fdflags.none, fd: 0 | 1 | 2): Promise<FileDescriptor> {
 			if (path.length === 0) {
 				throw new WasiError(Errno.inval);
 			}
-			if (path[0] !== '/') {
-				path = `/${path}`;
-			}
-			const file_rights_base: rights = fs_rights_base ?? fd === 0
+			const fs_rights_base: rights = _fs_rights_base ?? fd === 0
 				? StdInFileRights
 				: StdoutFileRights;
+			const oflags: oflags = _oflags ?? fd === 0
+				? Oflags.none
+				: Oflags.creat | Oflags.trunc;
 
-			return $this.path_open(parentDescriptor, dirflags, path, oflags, file_rights_base, FileInheritingRights, fdflags, { next: () => fd });
+			// Fake a parent descriptor
+			const parentDescriptor = createRootDescriptor(999999);
+			return $this.path_open(parentDescriptor, dirflags, path, oflags, fs_rights_base, FileInheritingRights, fdflags, { next: () => fd });
 		},
 		fd_advise(fileDescriptor: FileDescriptor, _offset: bigint, _length: bigint, _advise: number): Promise<void> {
 			fileDescriptor.assertBaseRights(Rights.fd_advise);
@@ -901,7 +907,7 @@ export function create(deviceId: DeviceId, baseUri: Uri): FileSystemDeviceDriver
 			}
 		},
 		fd_create_prestat_fd(fd: fd): Promise<FileDescriptor> {
-			return Promise.resolve(new DirectoryFileDescriptor(deviceId, fd, DirectoryBaseRights, DirectoryInheritingRights, 0, fs.getRoot().inode));
+			return Promise.resolve(createRootDescriptor(fd));
 		},
 		async fd_bytesAvailable(fileDescriptor: FileDescriptor): Promise<filesize> {
 			assertFileDescriptor(fileDescriptor);

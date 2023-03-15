@@ -33,34 +33,61 @@ type $Stdio = {
 
 export abstract class WasiProcess {
 
+	private state: 'created' | 'initialized' | 'running' | 'exited';
+	private readonly programName: string;
 	private readonly options: Options;
-	private readonly deviceDrivers: DeviceDrivers;
+	private deviceDrivers: DeviceDrivers;
 	private resolveCallback: ((value: number) => void) | undefined;
 	private threadIdCounter: number;
 	private readonly fileDescriptors: FileDescriptors;
-	private readonly environmentService: EnvironmentWasiService;
-	private readonly processService: ProcessWasiService;
+	private environmentService!: EnvironmentWasiService;
+	private processService!: ProcessWasiService;
 	private readonly preOpenDirectories: Map<string, { driver: FileSystemDeviceDriver; fd: FileDescriptor | undefined }>;
 	private readonly terminalDevices: Map<WasiPseudoterminal, CharacterDeviceDriver>;
-	private readonly postPrestatDescriptors: { fd: 0 | 1 | 2; descriptor: StdioFileDescriptor}[];
 
 	constructor(programName: string, options: Options = {}) {
+		this.programName = programName;
 		this.options = options;
 		this.deviceDrivers = WasiKernel.deviceDrivers;
 		this.threadIdCounter = 2;
 		this.fileDescriptors = new FileDescriptors();
 		this.preOpenDirectories = new Map();
 		this.terminalDevices = new Map();
-		this.postPrestatDescriptors = [];
+		this.state = 'created';
+	}
+
+	public async run(): Promise<number> {
+		await this.initialize();
+		return new Promise(async (resolve) => {
+			this.resolveCallback = resolve;
+			const clock: Clock = Clock.create();
+			const wasiService: WasiService = Object.assign({},
+				this.environmentService,
+				ClockWasiService.create(clock),
+				DeviceWasiService.create(this.deviceDrivers, this.fileDescriptors, clock, this.options),
+				this.processService
+			);
+			const result = this.startMain(wasiService);
+			this.state = 'running';
+			return result;
+		});
+	}
+
+	private async initialize(): Promise<void> {
+		if (this.state !== 'created') {
+			throw new Error('WasiProcess already initialized or running');
+		}
+		const options = this.options;
 		// Map directories
 		if (options.mapDir === true) {
 			const folders = workspace.workspaceFolders;
 			if (folders !== undefined) {
 				if (folders.length === 1) {
 					this.mapWorkspaceFolder(folders[0], true);
-				}
-				for (const folder of folders) {
-					this.mapWorkspaceFolder(folder, false);
+				} else {
+					for (const folder of folders) {
+						this.mapWorkspaceFolder(folder, false);
+					}
 				}
 			}
 		} else if (Array.isArray(options.mapDir)) {
@@ -71,17 +98,15 @@ export abstract class WasiProcess {
 				this.mapDirEntry(entry);
 			}
 		}
-
 		// Setup stdio file descriptors
 		const stdio: $Stdio = Object.assign({ in: 'console', out: 'console', err: 'console'}, options.stdio);
-		this.handleStdio(stdio.in, 0);
-		this.handleStdio(stdio.out, 1);
-		this.handleStdio(stdio.err, 2);
+		await this.handleStdio(stdio.in, 0);
+		await this.handleStdio(stdio.out, 1);
+		await this.handleStdio(stdio.err, 2);
 
 		this.environmentService = EnvironmentWasiService.create(
-			this.fileDescriptors, programName,
-			this.preOpenDirectories.entries(), options,
-			{ prestatDone: () => this.prestatDone() }
+			this.fileDescriptors, this.programName,
+			this.preOpenDirectories.entries(), options
 		);
 		this.processService = {
 			proc_exit: async (_memory, exitCode: exitcode) => {
@@ -112,20 +137,7 @@ export abstract class WasiProcess {
 				}
 			}
 		};
-	}
-
-	public async run(): Promise<number> {
-		return new Promise(async (resolve) => {
-			this.resolveCallback = resolve;
-			const clock: Clock = Clock.create();
-			const wasiService: WasiService = Object.assign({},
-				this.environmentService,
-				ClockWasiService.create(clock),
-				DeviceWasiService.create(this.deviceDrivers, this.fileDescriptors, clock, this.options),
-				this.processService
-			);
-			return this.startMain(wasiService);
-		});
+		this.state = 'initialized';
 	}
 
 	public abstract terminate(): Promise<number>;
@@ -166,7 +178,7 @@ export abstract class WasiProcess {
 		this.preOpenDirectories.set(entry.mountPoint, { driver: deviceDriver, fd: undefined });
 	}
 
-	private handleStdio(descriptor: $StdioDescriptor, fd: 0 | 1 | 2): void {
+	private async handleStdio(descriptor: $StdioDescriptor, fd: 0 | 1 | 2): Promise<void> {
 		if (descriptor === 'console') {
 			this.fileDescriptors.add(WasiKernel.console.createStdioFileDescriptor(fd));
 		} else if (descriptor === 'pipe') {
@@ -183,14 +195,11 @@ export abstract class WasiProcess {
 			}
 			this.fileDescriptors.add(terminalDevice.createStdioFileDescriptor(fd));
 		} else if (descriptor.kind === 'file') {
-			this.postPrestatDescriptors.push({fd, descriptor});
+			await this.handleStdioFileDescriptor(descriptor, fd);
 		}
 	}
 
-	private async prestatDone(): Promise<void> {
-		if (this.postPrestatDescriptors.length === 0) {
-			return;
-		}
+	private async handleStdioFileDescriptor(descriptor: StdioFileDescriptor, fd: 0 | 1 | 2): Promise<void> {
 		const preOpened = Array.from(this.preOpenDirectories.entries());
 		for (const entry of preOpened) {
 			const mountPoint = entry[0];
@@ -199,23 +208,20 @@ export abstract class WasiProcess {
 			}
 		}
 		preOpened.sort((a, b) => b[0].length - a[0].length);
-		for (const { fd, descriptor } of this.postPrestatDescriptors) {
-			for (const preOpenEntry of preOpened) {
-				const mountPoint = preOpenEntry[0];
-				if (descriptor.path.startsWith(mountPoint)) {
-					const driver = preOpenEntry[1].driver;
-					const parentDescriptor = preOpenEntry[1].fd!;
-					const fileDescriptor = await driver.createStdioFileDescriptor(
-						parentDescriptor, Lookupflags.none,
-						descriptor.path.substring(mountPoint.length),
-						descriptor.oflags,
-						undefined,
-						descriptor.fdflags,
-						fd
-					);
-					this.fileDescriptors.add(fileDescriptor);
-					break;
-				}
+		for (const preOpenEntry of preOpened) {
+			const mountPoint = preOpenEntry[0];
+			if (descriptor.path.startsWith(mountPoint)) {
+				const driver = preOpenEntry[1].driver;
+				const fileDescriptor = await driver.createStdioFileDescriptor(
+					Lookupflags.none,
+					descriptor.path.substring(mountPoint.length),
+					descriptor.oflags,
+					undefined,
+					descriptor.fdflags,
+					fd
+				);
+				this.fileDescriptors.add(fileDescriptor);
+				break;
 			}
 		}
 	}

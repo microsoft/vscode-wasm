@@ -86,11 +86,8 @@ export interface WasiService extends EnvironmentWasiService, ClockWasiService, D
 }
 
 
-export interface EnvironmentHandlers {
-	prestatDone: () => Promise<void>;
-}
 export namespace EnvironmentWasiService {
-	export function create(fileDescriptors: FileDescriptors, programName: string, preStats: IterableIterator<[string, { driver: DeviceDriver; fd: FileDescriptor | undefined }]>, options: Options, handlers: EnvironmentHandlers): EnvironmentWasiService {
+	export function create(fileDescriptors: FileDescriptors, programName: string, preStats: IterableIterator<[string, { driver: DeviceDriver; fd: FileDescriptor | undefined }]>, options: Options): EnvironmentWasiService {
 
 		const $encoder: RAL.TextEncoder = RAL().TextEncoder.create(options?.encoding);
 		const $preStatDirnames: Map<fd, string> = new Map();
@@ -164,7 +161,6 @@ export namespace EnvironmentWasiService {
 					const next = preStats.next();
 					if (next.done === true) {
 						fileDescriptors.switchToRunning(fd);
-						await handlers.prestatDone();
 						return Errno.badf;
 					}
 					const [ mountPoint, value ] = next.value;
