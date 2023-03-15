@@ -91,7 +91,7 @@ export interface WasiProcess {
 }
 
 export interface WasiCore {
-	createPseudoterminal(name: string): WasiPseudoterminal;
+	createPseudoterminal(): WasiPseudoterminal;
 	createProcess(name: string, module: WebAssembly.Module | Promise<WebAssembly.Module>, options?: Options): WasiProcess;
 	createProcess(name: string, module: WebAssembly.Module | Promise<WebAssembly.Module>, memory: WebAssembly.MemoryDescriptor | WebAssembly.Memory, options?: Options): WasiProcess;
 }

@@ -21,8 +21,8 @@ export namespace WasiCoreImpl {
 
 	export function create(context: ExtensionContext, construct: new (baseUri: Uri, programName: string, module: WebAssembly.Module | Promise<WebAssembly.Module>, memory: WebAssembly.Memory | WebAssembly.MemoryDescriptor | undefined, options: Options | undefined) => WasiProcess): WasiCore {
 		return {
-			createPseudoterminal(name: string): WasiPseudoterminal {
-				return WasiPseudoterminal.create(name);
+			createPseudoterminal(): WasiPseudoterminal {
+				return WasiPseudoterminal.create();
 			},
 			createProcess(name: string, module: WebAssembly.Module | Promise<WebAssembly.Module>, memoryOrOptions?: WebAssembly.MemoryDescriptor | WebAssembly.Memory | Options, optionsOrMapWorkspaceFolders?: Options | boolean): WasiProcess {
 				let memory: WebAssembly.Memory | WebAssembly.MemoryDescriptor | undefined;

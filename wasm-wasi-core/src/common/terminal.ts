@@ -178,8 +178,8 @@ export namespace WasiPseudoterminal {
 	export function is(value: any): value is WasiPseudoterminal {
 		return value instanceof WasmPseudoterminalImpl;
 	}
-	export function create(name: string): WasiPseudoterminal {
-		return new WasmPseudoterminalImpl(name);
+	export function create(): WasiPseudoterminal {
+		return new WasmPseudoterminalImpl();
 	}
 }
 
@@ -215,8 +215,7 @@ class WasmPseudoterminalImpl implements WasiPseudoterminal {
 	private encoder: RAL.TextEncoder;
 	private decoder: RAL.TextDecoder;
 
-	constructor(name: string) {
-		this.nameBuffer = name;
+	constructor() {
 		this.mode = TerminalMode.inUse;
 
 		this._onDidClose = new EventEmitter();

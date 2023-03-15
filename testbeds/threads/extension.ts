@@ -16,7 +16,7 @@ export async function activate() {
 
 	const wasiCore: WasiCore =  await wasiCoreExt.activate();
 	commands.registerCommand('testbed-threads.run', () => {
-		const pty = wasiCore.createPseudoterminal('threads');
+		const pty = wasiCore.createPseudoterminal();
 		window.createTerminal({ name: 'threads', pty, isTransient: true });
 		const options = {
 			stdio: pty.stdio,
