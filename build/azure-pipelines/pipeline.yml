@@ -64,12 +64,9 @@ extends:
               package: sync-api-common
         ghTagPrefix: release/sync-api-common/
         tag: ${{ parameters.quality }}
+        preReleaseTag: next
+        preReleaseTagAddToLatest: true
         publishPackage: ${{ parameters.publishSyncApiCommon }}
-        postPublishSteps:
-          - template: /build/azure-pipelines/templates/postPublish-steps.yml@self
-            parameters:
-              package: sync-api-common
-              quality: ${{ parameters.quality }}
         workingDirectory: $(Build.SourcesDirectory)/sync-api-common
 
       - name: sync-api-client
@@ -93,12 +90,9 @@ extends:
               package: sync-api-client
         ghTagPrefix: release/sync-api-client/
         tag: ${{ parameters.quality }}
+        preReleaseTag: next
+        preReleaseTagAddToLatest: true
         publishPackage: ${{ parameters.publishSyncApiClient }}
-        postPublishSteps:
-          - template: /build/azure-pipelines/templates/postPublish-steps.yml@self
-            parameters:
-              package: sync-api-client
-              quality: ${{ parameters.quality }}
         workingDirectory: $(Build.SourcesDirectory)/sync-api-client
 
       - name: sync-api-service
@@ -122,12 +116,9 @@ extends:
               package: sync-api-service
         ghTagPrefix: release/sync-api-service/
         tag: ${{ parameters.quality }}
+        preReleaseTag: next
+        preReleaseTagAddToLatest: true
         publishPackage: ${{ parameters.publishSyncApiService }}
-        postPublishSteps:
-          - template: /build/azure-pipelines/templates/postPublish-steps.yml@self
-            parameters:
-              package: sync-api-service
-              quality: ${{ parameters.quality }}
         workingDirectory: $(Build.SourcesDirectory)/sync-api-service
 
       - name: wasm-wasi
@@ -151,10 +142,7 @@ extends:
               package: wasm-wasi
         ghTagPrefix: release/wasm-wasi/
         tag: ${{ parameters.quality }}
+        preReleaseTag: next
+        preReleaseTagAddToLatest: true
         publishPackage: ${{ parameters.publishWasmWasi }}
-        postPublishSteps:
-          - template: /build/azure-pipelines/templates/postPublish-steps.yml@self
-            parameters:
-              package: wasm-wasi
-              quality: ${{ parameters.quality }}
         workingDirectory: $(Build.SourcesDirectory)/wasm-wasi
