@@ -4,40 +4,54 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { size } from './baseTypes';
-import { fd, fdflags, fdstat, filestat, Filetype, Rights, rights } from './wasi';
+import { Errno, fd, fdflags, fdstat, filestat, Filetype, Rights, rights, WasiError } from './wasi';
 import { CharacterDeviceDriver, DeviceId, NoSysDeviceDriver } from './deviceDriver';
 import { BaseFileDescriptor, FileDescriptor } from './fileDescriptor';
-import { WasiPseudoterminal } from './terminal';
 import { Uri } from 'vscode';
 
-const TerminalBaseRights: rights = Rights.fd_read | Rights.fd_fdstat_set_flags | Rights.fd_write |
+const PipeBaseRights: rights = Rights.fd_read | Rights.fd_fdstat_set_flags | Rights.fd_write |
 	Rights.fd_filestat_get | Rights.poll_fd_readwrite;
 
-const TerminalInheritingRights = 0n;
+const PipeInheritingRights = 0n;
 
-class TerminalFileDescriptor extends BaseFileDescriptor {
+class PipeFileDescriptor extends BaseFileDescriptor {
 	constructor(deviceId: bigint, fd: fd, rights_base: rights, rights_inheriting: rights, fdflags: fdflags, inode: bigint) {
 		super(deviceId, fd, Filetype.character_device, rights_base, rights_inheriting, fdflags, inode);
 	}
 
 	public with(change: { fd: number }): FileDescriptor {
-		return new TerminalFileDescriptor(this.deviceId, change.fd, this.rights_base, this.rights_inheriting, this.fdflags, this.inode);
+		return new PipeFileDescriptor(this.deviceId, change.fd, this.rights_base, this.rights_inheriting, this.fdflags, this.inode);
 	}
 }
 
-export function create(deviceId: DeviceId, terminal: WasiPseudoterminal): CharacterDeviceDriver {
+interface Stdin {
+	read(maxBytesToRead: size): Promise<Uint8Array>;
+}
+
+interface Stdout {
+	write(chunk: Uint8Array): Promise<size>;
+}
+
+export function create(deviceId: DeviceId, stdin: Stdin | undefined, stdout: Stdout | undefined, stderr: Stdout | undefined): CharacterDeviceDriver {
 
 	let inodeCounter: bigint = 0n;
 
-	function createTerminalFileDescriptor(fd: 0 | 1 | 2): TerminalFileDescriptor {
-		return new TerminalFileDescriptor(deviceId, fd, TerminalBaseRights, TerminalInheritingRights, 0, inodeCounter++);
+	function createPipeFileDescriptor(fd: 0 | 1 | 2): PipeFileDescriptor {
+		return new PipeFileDescriptor(deviceId, fd, PipeBaseRights, PipeInheritingRights, 0, inodeCounter++);
 	}
 
 	const deviceDriver: Pick<CharacterDeviceDriver, 'id' | 'uri' | 'createStdioFileDescriptor' | 'fd_fdstat_get' | 'fd_filestat_get' | 'fd_read' | 'fd_write'> = {
 		id: deviceId,
-		uri: Uri.from({ scheme: 'wasi-terminal', authority: deviceId.toString() }),
+		uri: Uri.from({ scheme: 'wasi-pipe', authority: deviceId.toString() }),
 		createStdioFileDescriptor(fd: 0 | 1 | 2): FileDescriptor {
-			return createTerminalFileDescriptor(fd);
+			if (fd === 0 && stdin !== undefined) {
+				return createPipeFileDescriptor(fd);
+			} else if (fd === 1 && stdout !== undefined) {
+				return createPipeFileDescriptor(fd);
+			} else if (fd === 2 && stderr !== undefined) {
+				return createPipeFileDescriptor(fd);
+			}
+			throw new WasiError(Errno.badf);
 		},
 		fd_fdstat_get(fileDescriptor: FileDescriptor, result: fdstat): Promise<void> {
 	 		result.fs_filetype = fileDescriptor.fileType;
@@ -62,8 +76,12 @@ export function create(deviceId: DeviceId, terminal: WasiPseudoterminal): Charac
 	 		if (buffers.length === 0) {
 	 			return 0;
 	 		}
+			if (stdin === undefined) {
+				throw new WasiError(Errno.badf);
+			}
+
 	 		const maxBytesToRead = buffers.reduce<number>((prev, current) => prev + current.length, 0);
-	 		const result = await terminal.read(maxBytesToRead);
+	 		const result = await stdin.read(maxBytesToRead);
 	 		let offset = 0;
 	 		let totalBytesRead = 0;
 	 		for (const buffer of buffers) {
@@ -77,7 +95,7 @@ export function create(deviceId: DeviceId, terminal: WasiPseudoterminal): Charac
 	 		}
 	 		return totalBytesRead;
 	 	},
-	 	fd_write(_fileDescriptor: FileDescriptor, buffers: Uint8Array[]): Promise<size> {
+	 	fd_write(fileDescriptor: FileDescriptor, buffers: Uint8Array[]): Promise<size> {
 	 		let buffer: Uint8Array;
 	 		if (buffers.length === 1) {
 	 			buffer = buffers[0];
@@ -90,7 +108,12 @@ export function create(deviceId: DeviceId, terminal: WasiPseudoterminal): Charac
 	 				offset = item.byteLength;
 	 			}
 	 		}
-	 		return terminal.write(buffer);
+			if (fileDescriptor.fd === 1 && stdout !== undefined) {
+				return stdout.write(buffer);
+			} else if (fileDescriptor.fd === 2 && stderr !== undefined) {
+				return stderr.write(buffer);
+			}
+	 		throw new WasiError(Errno.badf);
 	 	}
 	 };
 

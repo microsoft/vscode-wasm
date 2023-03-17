@@ -54,7 +54,7 @@ export interface Options {
 	/**
 	 * The encoding to use when decoding strings from and to the WASM layer.
 	 */
-	encoding?: string;
+	encoding?: 'utf-8';
 
 	/**
 	 * Command line arguments accessible in the WASM.

@@ -5,7 +5,7 @@
 import { Uri, WorkspaceFolder, workspace } from 'vscode';
 
 import RAL from './ral';
-import { ptr, u32 } from './baseTypes';
+import { ptr, size, u32 } from './baseTypes';
 import { FileSystemDeviceDriver } from './deviceDriver';
 import { FileDescriptor, FileDescriptors } from './fileDescriptor';
 import * as vscfs from './vscodeFileSystemDriver';
@@ -31,11 +31,15 @@ type $Stdio = {
 	err: $StdioDescriptor;
 };
 
+export interface Writable {
+	write(chunk: Uint8Array | string): Promise<void>;
+}
+
 export abstract class WasiProcess {
 
 	private state: 'created' | 'initialized' | 'running' | 'exited';
 	private readonly programName: string;
-	private readonly options: Options;
+	protected readonly options: Options;
 	private deviceDrivers: DeviceDrivers;
 	private resolveCallback: ((value: number) => void) | undefined;
 	private threadIdCounter: number;
@@ -44,6 +48,8 @@ export abstract class WasiProcess {
 	private processService!: ProcessWasiService;
 	private readonly preOpenDirectories: Map<string, { driver: FileSystemDeviceDriver; fd: FileDescriptor | undefined }>;
 	private readonly terminalDevices: Map<WasiPseudoterminal, CharacterDeviceDriver>;
+
+	private _stdin: Writable | null;
 
 	constructor(programName: string, options: Options = {}) {
 		this.programName = programName;
@@ -54,26 +60,14 @@ export abstract class WasiProcess {
 		this.preOpenDirectories = new Map();
 		this.terminalDevices = new Map();
 		this.state = 'created';
+		this._stdin = null;
 	}
 
-	public async run(): Promise<number> {
-		await this.initialize();
-		return new Promise(async (resolve) => {
-			this.resolveCallback = resolve;
-			const clock: Clock = Clock.create();
-			const wasiService: WasiService = Object.assign({},
-				this.environmentService,
-				ClockWasiService.create(clock),
-				DeviceWasiService.create(this.deviceDrivers, this.fileDescriptors, clock, this.options),
-				this.processService
-			);
-			const result = this.startMain(wasiService);
-			this.state = 'running';
-			return result;
-		});
+	get stdin(): Writable | null {
+		return this._stdin;
 	}
 
-	private async initialize(): Promise<void> {
+	public async initialize(): Promise<void> {
 		if (this.state !== 'created') {
 			throw new Error('WasiProcess already initialized or running');
 		}
@@ -138,6 +132,25 @@ export abstract class WasiProcess {
 			}
 		};
 		this.state = 'initialized';
+	}
+
+	public async run(): Promise<number> {
+		if (this.state !== 'initialized') {
+			throw new Error('WasiProcess is not initialized');
+		}
+		return new Promise(async (resolve) => {
+			this.resolveCallback = resolve;
+			const clock: Clock = Clock.create();
+			const wasiService: WasiService = Object.assign({},
+				this.environmentService,
+				ClockWasiService.create(clock),
+				DeviceWasiService.create(this.deviceDrivers, this.fileDescriptors, clock, this.options),
+				this.processService
+			);
+			const result = this.startMain(wasiService);
+			this.state = 'running';
+			return result;
+		});
 	}
 
 	public abstract terminate(): Promise<number>;
@@ -224,5 +237,86 @@ export abstract class WasiProcess {
 				break;
 			}
 		}
+	}
+
+	private async handlePipeDescriptor(fd: 0 | 1 | 2): Promise<void> {
+	}
+
+	protected createStdinStream(): Writable & { read: (maxBytes: size) => Promise<Uint8Array> } {
+		const options = this.options;
+		return new class {
+			private buffer: Uint8Array = new Uint8Array(16384);
+			private writeIndex: number = 0;
+			private encoder: RAL.TextEncoder = RAL().TextEncoder.create(options.encoding);
+			private spaceNeeded: number = 0;
+			private _awaitSpace: (() => void) | undefined = undefined;
+			private _awaitData: (() => void) | undefined = undefined;
+
+			public write(chunk: Uint8Array | string): Promise<void> {
+				if (typeof chunk === 'string') {
+					chunk = this.encoder.encode(chunk);
+				}
+				// We have enough space
+				if (this.writeIndex + chunk.length <= this.buffer.length) {
+					this.buffer.set(chunk, this.writeIndex);
+					this.writeIndex += chunk.length;
+					return Promise.resolve();
+				} else if (this.writeIndex === 0) {
+					// We don't have enough space and the buffer is empty
+					this.buffer = chunk;
+					return Promise.resolve();
+				}
+				const spaceNeeded = Math.min(this.buffer.length, chunk.length);
+			}
+			public async read(maxBytes: size): Promise<Uint8Array> {
+				if (this.writeIndex === 0) {
+					await this.awaitData();
+				}
+				if (this.writeIndex === 0) {
+					throw new Error('Invalid state: no bytes available after awaiting data');
+				}
+				const toRead = Math.min(this.writeIndex, maxBytes);
+				const result = new Uint8Array(toRead);
+				result.set(this.buffer.subarray(0, toRead));
+				this.buffer.copyWithin(0, toRead, this.writeIndex);
+				this.writeIndex -= toRead;
+				this.signalSpace();
+				return result;
+			}
+
+			private awaitSpace(spaceNeeded: number): Promise<void> {
+				this.spaceNeeded = spaceNeeded;
+				return new Promise<void>((resolve) => {
+					this._awaitSpace = resolve;
+				});
+			}
+
+			private signalSpace(): void {
+				if (this._awaitSpace === undefined) {
+					return;
+				}
+				if (this.writeIndex !== 0 && this.spaceNeeded > this.buffer.length - this.writeIndex) {
+					// Not enough space
+					return;
+				}
+				this._awaitSpace();
+				this._awaitSpace = undefined;
+				this.spaceNeeded = 0;
+			}
+
+			private awaitData(): Promise<void> {
+				return new Promise<void>((resolve) => {
+					this._awaitData = resolve;
+				});
+			}
+
+			private signalData(): void {
+				if (this._awaitData === undefined) {
+					return;
+				}
+				this._awaitData();
+				this._awaitData = undefined;
+			}
+		};
 	}
 }

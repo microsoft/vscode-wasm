@@ -30,7 +30,7 @@ export function create(deviceId: DeviceId): CharacterDeviceDriver {
 	let inodeCounter: bigint = 0n;
 	const decoder = RAL().TextDecoder.create();
 
-	function createConsoleFileDescriptor(fd: 0 | 1 |2): ConsoleFileDescriptor {
+	function createConsoleFileDescriptor(fd: 0 | 1 | 2): ConsoleFileDescriptor {
 		return new ConsoleFileDescriptor(deviceId, fd, ConsoleBaseRights, ConsoleInheritingRights, 0, inodeCounter++);
 	}
 

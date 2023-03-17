@@ -2,12 +2,14 @@
  *  Copyright (c) Microsoft Corporation. All rights reserved.
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
-import { MessagePort, Worker } from 'worker_threads';
+import { MessagePort, Worker } from 'node:worker_threads';
+import * as stream from 'node:stream';
+
 import { Uri } from 'vscode';
 
 import RAL from '../common/ral';
-import { ptr, u32 } from '../common/baseTypes';
-import { WasiProcess } from '../common/process';
+import { ptr, size, u32 } from '../common/baseTypes';
+import { WasiProcess, Writable } from '../common/process';
 import { WasiService, ServiceConnection } from '../common/service';
 import { StartMainMessage, StartThreadMessage, WasiCallMessage, WorkerReadyMessage } from '../common/connection';
 import { Options } from '../common/api';
@@ -135,5 +137,75 @@ export class NodeWasiProcess extends WasiProcess {
 			this.threadWorkers.delete(tid);
 			await worker.terminate();
 		}
+	}
+
+	protected createStdinWriteable(): Writable & { read: (maxBytes: size) => Promise<Uint8Array> } {
+		// const readable = new class extends stream.Readable {
+		// 	public ready: Promise<boolean>;
+		// 	private resolve: ((value: boolean) => void) | undefined;
+		// 	private rest: Uint8Array | undefined;
+		// 	constructor() {
+		// 		super();
+		// 		this.ready = Promise.resolve(true);
+		// 	}
+		// 	push(chunk: any, encoding?: BufferEncoding | undefined): boolean {
+		// 		const cont = super.push(chunk, encoding);
+		// 		if (cont) {
+		// 			this.ready = Promise.resolve(true);
+		// 		} else {
+		// 			this.ready = new Promise<boolean>((resolve) => {
+		// 				this.resolve = resolve;
+		// 			});
+		// 		}
+		// 		return cont;
+		// 	}
+		// 	public _read(_size: number) {
+		// 		if (this.resolve !== undefined) {
+		// 			this.resolve(true);
+		// 		}
+		// 	}
+		// 	public async get(maxBytes: size): Promise<Uint8Array> {
+		// 		if (this.rest !== undefined) {
+		// 			if (this.rest.length > maxBytes) {
+		// 				return this.partRest(maxBytes);
+		// 			} else if (this.rest.length === maxBytes) {
+		// 				return this.allRest();
+		// 			}
+		// 		}
+		// 		let bytes: Uint8Array | undefined | null = this.read();
+		// 		if (bytes === null || bytes === undefined || bytes.length === 0) {
+		// 			await new Promise((resolve) => this.on('readable', resolve));
+		// 			bytes = this.read();
+		// 		}
+		// 		if (bytes === null || bytes === undefined || bytes.length === 0) {
+		// 			return new Uint8Array(0);
+		// 		}
+		// 		if (bytes.length < maxBytes) {
+		// 			return bytes;
+		// 		}
+		// 		this.rest = bytes.subarray(maxBytes);
+		// 		return bytes.subarray(0, maxBytes);
+		// 	}
+		// 	private allRest(): Promise<Uint8Array> {
+		// 		const result = this.rest!;
+		// 		this.rest = undefined;
+		// 		return Promise.resolve(result);
+		// 	}
+		// 	private partRest(maxBytes: size): Promise<Uint8Array> {
+		// 		const result = this.rest!.subarray(0, maxBytes);
+		// 		this.rest = this.rest!.subarray(maxBytes);
+		// 		return Promise.resolve(result);
+		// 	}
+		// };
+		// return {
+		// 	write: async (chunk: string | Uint8Array): Promise<void> => {
+		// 		await readable.ready;
+		// 		readable.push(chunk);
+		// 	},
+		// 	read(maxBytes: size): Promise<Uint8Array> {
+		// 		return readable.get(maxBytes);
+		// 	}
+		// };
+
 	}
 }
