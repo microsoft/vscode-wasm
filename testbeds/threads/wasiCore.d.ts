@@ -34,7 +34,11 @@ export type StdioTerminalDescriptor = {
 	terminal: WasiPseudoterminal;
 };
 
-export type StdioDescriptor = StdioFileDescriptor | StdioTerminalDescriptor | 'pipe';
+export type StdioPipeDescriptor = {
+	kind: 'pipe';
+};
+
+export type StdioDescriptor = StdioFileDescriptor | StdioTerminalDescriptor | StdioPipeDescriptor;
 
 export type Stdio = {
 	in?: StdioDescriptor;
@@ -78,7 +82,22 @@ export interface Options {
 	stdio?: Stdio;
 }
 
+export interface Writable {
+	write(chunk: Uint8Array | string): Promise<void>;
+}
+
+export interface Readable {
+	[Symbol.asyncIterator](): AsyncIterableIterator<Uint8Array>;
+}
+
 export interface WasiProcess {
+	
+	readonly stdin: Writable | undefined;
+
+	readonly stdout: Readable | undefined;
+
+	readonly stderr: Readable | undefined;
+
 	/**
 	 * Runs the WASI process.
 	 */
@@ -92,6 +111,6 @@ export interface WasiProcess {
 
 export interface WasiCore {
 	createPseudoterminal(): WasiPseudoterminal;
-	createProcess(name: string, module: WebAssembly.Module | Promise<WebAssembly.Module>, options?: Options): WasiProcess;
-	createProcess(name: string, module: WebAssembly.Module | Promise<WebAssembly.Module>, memory: WebAssembly.MemoryDescriptor | WebAssembly.Memory, options?: Options): WasiProcess;
+	createProcess(name: string, module: WebAssembly.Module | Promise<WebAssembly.Module>, options?: Options): Promise<WasiProcess>;
+	createProcess(name: string, module: WebAssembly.Module | Promise<WebAssembly.Module>, memory: WebAssembly.MemoryDescriptor | WebAssembly.Memory, options?: Options): Promise<WasiProcess>;
 }

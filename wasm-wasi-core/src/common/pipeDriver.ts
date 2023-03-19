@@ -29,7 +29,7 @@ interface Stdin {
 }
 
 interface Stdout {
-	write(chunk: Uint8Array): Promise<size>;
+	write(chunk: Uint8Array): Promise<void>;
 }
 
 export function create(deviceId: DeviceId, stdin: Stdin | undefined, stdout: Stdout | undefined, stderr: Stdout | undefined): CharacterDeviceDriver {
@@ -95,7 +95,7 @@ export function create(deviceId: DeviceId, stdin: Stdin | undefined, stdout: Std
 	 		}
 	 		return totalBytesRead;
 	 	},
-	 	fd_write(fileDescriptor: FileDescriptor, buffers: Uint8Array[]): Promise<size> {
+	 	async fd_write(fileDescriptor: FileDescriptor, buffers: Uint8Array[]): Promise<size> {
 	 		let buffer: Uint8Array;
 	 		if (buffers.length === 1) {
 	 			buffer = buffers[0];
@@ -109,9 +109,11 @@ export function create(deviceId: DeviceId, stdin: Stdin | undefined, stdout: Std
 	 			}
 	 		}
 			if (fileDescriptor.fd === 1 && stdout !== undefined) {
-				return stdout.write(buffer);
+				await stdout.write(buffer);
+				return Promise.resolve(buffer.byteLength);
 			} else if (fileDescriptor.fd === 2 && stderr !== undefined) {
-				return stderr.write(buffer);
+				await stderr.write(buffer);
+				return Promise.resolve(buffer.byteLength);
 			}
 	 		throw new WasiError(Errno.badf);
 	 	}

@@ -20,6 +20,8 @@ export interface DeviceDrivers {
 	removeByUri(uri: Uri): void;
 }
 
+let deviceCounter: DeviceId = 1n;
+
 class DeviceDriversImpl {
 
 	private readonly devices: Map<DeviceId, DeviceDriver>;
@@ -31,7 +33,7 @@ class DeviceDriversImpl {
 	}
 
 	public next(): DeviceId {
-		return BigInt(this.devices.size + 1);
+		return deviceCounter++;
 	}
 
 	public add(driver: DeviceDriver): void {
@@ -83,10 +85,86 @@ class DeviceDriversImpl {
 	}
 }
 
+class LocalDeviceDrivers implements DeviceDrivers {
+
+	private readonly nextDrivers: DeviceDrivers;
+	private readonly devices: Map<DeviceId, DeviceDriver>;
+	private readonly devicesByUri: Map<string, DeviceDriver>;
+
+	public constructor(next: DeviceDrivers) {
+		this.nextDrivers = next;
+		this.devices = new Map();
+		this.devicesByUri = new Map();
+	}
+
+	public next(): bigint {
+		return this.nextDrivers.next();
+	}
+
+	public add(driver: DeviceDriver): void {
+		this.devices.set(driver.id, driver);
+		this.devicesByUri.set(driver.uri.toString(true), driver);
+	}
+
+	public has(id: bigint): boolean {
+		if (this.nextDrivers.has(id)) {
+			return true;
+		}
+		return this.devices.has(id);
+	}
+
+	public hasByUri(uri: Uri): boolean {
+		if (this.nextDrivers.hasByUri(uri)) {
+			return true;
+		}
+		return this.devicesByUri.has(uri.toString(true));
+	}
+
+	public get(id: bigint): DeviceDriver {
+		const result = this.devices.get(id);
+		if (result !== undefined) {
+			return result;
+		}
+		return this.nextDrivers.get(id);
+	}
+
+	public getByUri(uri: Uri): DeviceDriver {
+		const result = this.devicesByUri.get(uri.toString(true));
+		if (result !== undefined) {
+			return result;
+		}
+		return this.nextDrivers.getByUri(uri);
+	}
+
+	public remove(id: bigint): void {
+		const driver = this.devices.get(id);
+		if (driver !== undefined) {
+			this.devices.delete(id);
+			this.devicesByUri.delete(driver.uri.toString(true));
+			return;
+		}
+		this.nextDrivers.remove(id);
+	}
+
+	public removeByUri(uri: Uri): void {
+		const key = uri.toString(true);
+		const driver = this.devicesByUri.get(key);
+		if (driver !== undefined) {
+			this.devices.delete(driver.id);
+			this.devicesByUri.delete(key);
+			return;
+		}
+		this.nextDrivers.removeByUri(uri);
+	}
+}
+
 namespace WasiKernel {
 	export const deviceDrivers = new DeviceDriversImpl();
 	export const console = ConsoleDriver.create(deviceDrivers.next());
 	deviceDrivers.add(console);
+	export function createLocalDeviceDrivers(): DeviceDrivers {
+		return new LocalDeviceDrivers(deviceDrivers);
+	}
 }
 
 export default WasiKernel;

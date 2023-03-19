@@ -6,6 +6,7 @@
 import { ExtensionContext, Uri } from 'vscode';
 import { WasiProcess, Options, WasiCore } from './api';
 import { WasiPseudoterminal } from './terminal';
+import { WasiProcess as InternalWasiProcess } from './process';
 
 namespace MemoryDescriptor {
 	export function is(value: any): value is WebAssembly.MemoryDescriptor {
@@ -19,12 +20,12 @@ namespace MemoryDescriptor {
 
 export namespace WasiCoreImpl {
 
-	export function create(context: ExtensionContext, construct: new (baseUri: Uri, programName: string, module: WebAssembly.Module | Promise<WebAssembly.Module>, memory: WebAssembly.Memory | WebAssembly.MemoryDescriptor | undefined, options: Options | undefined) => WasiProcess): WasiCore {
+	export function create(context: ExtensionContext, construct: new (baseUri: Uri, programName: string, module: WebAssembly.Module | Promise<WebAssembly.Module>, memory: WebAssembly.Memory | WebAssembly.MemoryDescriptor | undefined, options: Options | undefined) => InternalWasiProcess): WasiCore {
 		return {
 			createPseudoterminal(): WasiPseudoterminal {
 				return WasiPseudoterminal.create();
 			},
-			createProcess(name: string, module: WebAssembly.Module | Promise<WebAssembly.Module>, memoryOrOptions?: WebAssembly.MemoryDescriptor | WebAssembly.Memory | Options, optionsOrMapWorkspaceFolders?: Options | boolean): WasiProcess {
+			async createProcess(name: string, module: WebAssembly.Module | Promise<WebAssembly.Module>, memoryOrOptions?: WebAssembly.MemoryDescriptor | WebAssembly.Memory | Options, optionsOrMapWorkspaceFolders?: Options | boolean): Promise<WasiProcess> {
 				let memory: WebAssembly.Memory | WebAssembly.MemoryDescriptor | undefined;
 				let options: Options | undefined;
 				if (memoryOrOptions instanceof WebAssembly.Memory || MemoryDescriptor.is(memoryOrOptions)) {
@@ -33,7 +34,9 @@ export namespace WasiCoreImpl {
 				} else {
 					options = memoryOrOptions;
 				}
-				return new construct(context.extensionUri, name, module, memory, options);
+				const result = new construct(context.extensionUri, name, module, memory, options);
+				await result.initialize();
+				return result;
 			}
 		};
 	}

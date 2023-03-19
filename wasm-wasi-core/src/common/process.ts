@@ -10,6 +10,7 @@ import { FileSystemDeviceDriver } from './deviceDriver';
 import { FileDescriptor, FileDescriptors } from './fileDescriptor';
 import * as vscfs from './vscodeFileSystemDriver';
 import * as tdd from './terminalDriver';
+import * as pdd from './pipeDriver';
 import { DeviceWasiService, ProcessWasiService, EnvironmentWasiService, WasiService, Clock, ClockWasiService } from './service';
 import WasiKernel, { DeviceDrivers } from './kernel';
 import { Errno, Lookupflags, exitcode } from './wasi';
@@ -24,7 +25,7 @@ namespace MapDirEntry {
 	}
 }
 
-type $StdioDescriptor = StdioDescriptor | 'console';
+type $StdioDescriptor = StdioDescriptor | { kind: 'console' };
 type $Stdio = {
 	in: $StdioDescriptor;
 	out: $StdioDescriptor;
@@ -34,6 +35,178 @@ type $Stdio = {
 export interface Writable {
 	write(chunk: Uint8Array | string): Promise<void>;
 }
+
+export interface Readable {
+	[Symbol.asyncIterator](): AsyncIterableIterator<Uint8Array>;
+}
+
+enum StreamMode {
+	readable = 1,
+	writeable = 2,
+}
+
+class StdioStream implements Writable {
+
+	private static BufferSize = 16384;
+
+	private readonly mode: StreamMode;
+	private readonly encoding: 'utf-8';
+	private readonly encoder: RAL.TextEncoder;
+
+	private chunks: Uint8Array[];
+	private fillLevel: number;
+
+	private _targetFillLevel: number;
+	private _awaitFillLevel: (() => void) | undefined;
+	private _awaitData: (() => void) | undefined;
+
+	constructor(mode: StreamMode, encoding?: 'utf-8') {
+		this.mode = mode;
+		this.encoding = encoding || 'utf-8';
+		this.encoder = RAL().TextEncoder.create(this.encoding);
+		this.chunks = [];
+		this.fillLevel = 0;
+		this._targetFillLevel = 0;
+	}
+
+	public async write(chunk: Uint8Array | string): Promise<void> {
+		if (typeof chunk === 'string') {
+			if (this.mode === StreamMode.readable) {
+				throw new Error('Invalid state: cannot write string to readable stream. Only Uint8Array is allowed.');
+			}
+			chunk = this.encoder.encode(chunk);
+		}
+		// We have enough space
+		if (this.fillLevel + chunk.byteLength <= StdioStream.BufferSize) {
+			this.chunks.push(chunk);
+			this.fillLevel += chunk.byteLength;
+			this.signalData();
+			return;
+		}
+		// What for the necessary space.
+		const targetFillLevel = Math.max(0, StdioStream.BufferSize - chunk.byteLength);
+		await this.awaitFillLevel(targetFillLevel);
+		if (this.fillLevel > targetFillLevel) {
+			throw new Error(`Invalid state: fillLevel should be <= ${targetFillLevel}`);
+		}
+		this.chunks.push(chunk);
+		this.fillLevel += chunk.byteLength;
+		this.signalData();
+		return;
+	}
+
+	public async read(maxBytes?: size): Promise<Uint8Array> {
+		if (this.mode === StreamMode.readable) {
+			throw new Error('Invalid state: cannot read single Uint8Array from readable stream. Use [Symbol.asyncIterator] instead.');
+		}
+		if (this.chunks.length === 0) {
+			await this.awaitData();
+		}
+		if (this.chunks.length === 0) {
+			throw new Error('Invalid state: no bytes available after awaiting data');
+		}
+		// No max bytes or all data fits into the result.
+		if (maxBytes === undefined || maxBytes > this.fillLevel) {
+			const result = new Uint8Array(this.fillLevel);
+			let offset = 0;
+			for (const chunk of this.chunks) {
+				result.set(chunk, offset);
+				offset += chunk.byteLength;
+			}
+			this.chunks = [];
+			this.fillLevel = 0;
+			this.signalSpace();
+			return result;
+		}
+
+		const chunk = this.chunks[0];
+		// The first chunk is bigger than the maxBytes. Although not optimal we need
+		// to split it up
+		if (chunk.byteLength > maxBytes) {
+			const result = chunk.subarray(0, maxBytes);
+			this.chunks[0] = chunk.subarray(maxBytes);
+			this.fillLevel -= maxBytes;
+			this.signalSpace();
+			return result;
+		} else {
+			let resultSize = chunk.byteLength;
+			for (let i = 1; i < this.chunks.length; i++) {
+				if (resultSize + this.chunks[i].byteLength > maxBytes) {
+					break;
+				}
+			}
+			const result = new Uint8Array(resultSize);
+			let offset = 0;
+			for (let i = 0; i < this.chunks.length; i++) {
+				const chunk = this.chunks.shift()!;
+				if (offset + chunk.byteLength > maxBytes) {
+					break;
+				}
+				result.set(chunk, offset);
+				offset += chunk.byteLength;
+				this.fillLevel -= chunk.byteLength;
+			}
+			this.signalSpace();
+			return result;
+		}
+	}
+
+	public [Symbol.asyncIterator](): AsyncIterableIterator<Uint8Array> {
+		const result: AsyncIterableIterator<Uint8Array> = {
+			[Symbol.asyncIterator]() {
+				return result;
+			},
+			next: async () => {
+				if (this.chunks.length === 0) {
+					await this.awaitData();
+				}
+				if (this.chunks.length === 0) {
+					return { done: true, value: undefined };
+				}
+				const chunk = this.chunks.shift()!;
+				this.fillLevel -= chunk.byteLength;
+				this.signalSpace();
+				return { done: false, value: chunk };
+			}
+		};
+		return result;
+	}
+
+	private awaitFillLevel(targetFillLevel: number): Promise<void> {
+		this._targetFillLevel = targetFillLevel;
+		return new Promise<void>((resolve) => {
+			this._awaitFillLevel = resolve;
+		});
+	}
+
+	private signalSpace(): void {
+		if (this._awaitFillLevel === undefined) {
+			return;
+		}
+		// Not enough space.
+		if (this.fillLevel > this._targetFillLevel) {
+			return;
+		}
+		this._awaitFillLevel();
+		this._awaitFillLevel = undefined;
+		this._targetFillLevel = 0;
+	}
+
+	private awaitData(): Promise<void> {
+		return new Promise<void>((resolve) => {
+			this._awaitData = resolve;
+		});
+	}
+
+	private signalData(): void {
+		if (this._awaitData === undefined) {
+			return;
+		}
+		this._awaitData();
+		this._awaitData = undefined;
+	}
+}
+
 
 export abstract class WasiProcess {
 
@@ -47,24 +220,34 @@ export abstract class WasiProcess {
 	private environmentService!: EnvironmentWasiService;
 	private processService!: ProcessWasiService;
 	private readonly preOpenDirectories: Map<string, { driver: FileSystemDeviceDriver; fd: FileDescriptor | undefined }>;
-	private readonly terminalDevices: Map<WasiPseudoterminal, CharacterDeviceDriver>;
 
-	private _stdin: Writable | null;
+	private _stdin: Writable | undefined;
+	private _stdout: Readable | undefined;
+	private _stderr: Readable | undefined;
 
 	constructor(programName: string, options: Options = {}) {
 		this.programName = programName;
 		this.options = options;
-		this.deviceDrivers = WasiKernel.deviceDrivers;
+		this.deviceDrivers = WasiKernel.createLocalDeviceDrivers();
 		this.threadIdCounter = 2;
 		this.fileDescriptors = new FileDescriptors();
 		this.preOpenDirectories = new Map();
-		this.terminalDevices = new Map();
 		this.state = 'created';
-		this._stdin = null;
+		this._stdin = undefined;
+		this._stdout = undefined;
+		this._stderr = undefined;
 	}
 
-	get stdin(): Writable | null {
+	get stdin(): Writable | undefined {
 		return this._stdin;
+	}
+
+	get stdout(): Readable | undefined {
+		return this._stdout;
+	}
+
+	get stderr(): Readable | undefined {
+		return this._stderr;
 	}
 
 	public async initialize(): Promise<void> {
@@ -94,9 +277,10 @@ export abstract class WasiProcess {
 		}
 		// Setup stdio file descriptors
 		const stdio: $Stdio = Object.assign({ in: 'console', out: 'console', err: 'console'}, options.stdio);
-		await this.handleStdio(stdio.in, 0);
-		await this.handleStdio(stdio.out, 1);
-		await this.handleStdio(stdio.err, 2);
+		await this.handleConsole(stdio);
+		await this.handleTerminal(stdio);
+		await this.handleFiles(stdio);
+		await this.handlePipes(stdio);
 
 		this.environmentService = EnvironmentWasiService.create(
 			this.fileDescriptors, this.programName,
@@ -191,28 +375,54 @@ export abstract class WasiProcess {
 		this.preOpenDirectories.set(entry.mountPoint, { driver: deviceDriver, fd: undefined });
 	}
 
-	private async handleStdio(descriptor: $StdioDescriptor, fd: 0 | 1 | 2): Promise<void> {
-		if (descriptor === 'console') {
-			this.fileDescriptors.add(WasiKernel.console.createStdioFileDescriptor(fd));
-		} else if (descriptor === 'pipe') {
-
-		} else if (descriptor.kind === 'terminal') {
-			if (!WasiPseudoterminal.is(descriptor.terminal)) {
-				throw new Error('Terminal must be an WASI pseudo terminal created using the WASI Core facade.');
-			}
-			let terminalDevice = this.terminalDevices.get(descriptor.terminal);
-			if (terminalDevice === undefined) {
-				terminalDevice = tdd.create(this.deviceDrivers.next(), descriptor.terminal);
-				this.terminalDevices.set(descriptor.terminal, terminalDevice);
-				this.deviceDrivers.add(terminalDevice);
-			}
-			this.fileDescriptors.add(terminalDevice.createStdioFileDescriptor(fd));
-		} else if (descriptor.kind === 'file') {
-			await this.handleStdioFileDescriptor(descriptor, fd);
+	private async handleConsole(stdio: $Stdio): Promise<void> {
+		if (stdio.in.kind === 'console') {
+			this.fileDescriptors.add(WasiKernel.console.createStdioFileDescriptor(0));
+		}
+		if (stdio.out.kind === 'console') {
+			this.fileDescriptors.add(WasiKernel.console.createStdioFileDescriptor(1));
+		}
+		if (stdio.out.kind === 'console') {
+			this.fileDescriptors.add(WasiKernel.console.createStdioFileDescriptor(2));
 		}
 	}
 
-	private async handleStdioFileDescriptor(descriptor: StdioFileDescriptor, fd: 0 | 1 | 2): Promise<void> {
+	private async handleTerminal(stdio: $Stdio): Promise<void> {
+		const terminalDevices: Map<WasiPseudoterminal, CharacterDeviceDriver> = new Map();
+		if (stdio.in.kind === 'terminal') {
+			this.fileDescriptors.add(this.getTerminalDevice(terminalDevices, stdio.in.terminal as WasiPseudoterminal).createStdioFileDescriptor(0));
+		}
+		if (stdio.out.kind === 'terminal') {
+			this.fileDescriptors.add(this.getTerminalDevice(terminalDevices, stdio.out.terminal as WasiPseudoterminal).createStdioFileDescriptor(1));
+		}
+		if (stdio.err.kind === 'terminal') {
+			this.fileDescriptors.add(this.getTerminalDevice(terminalDevices, stdio.err.terminal as WasiPseudoterminal).createStdioFileDescriptor(2));
+		}
+	}
+
+	private getTerminalDevice(devices: Map<WasiPseudoterminal, CharacterDeviceDriver>, terminal: WasiPseudoterminal): CharacterDeviceDriver {
+		let result = devices.get(terminal);
+		if (result === undefined) {
+			result = tdd.create(this.deviceDrivers.next(), terminal);
+			devices.set(terminal, result);
+			this.deviceDrivers.add(result);
+		}
+		return result;
+	}
+
+	private async handleFiles(stdio: $Stdio): Promise<void>{
+		if (stdio.in.kind === 'file') {
+			await this.handleFileDescriptor(stdio.in, 0);
+		}
+		if (stdio.out.kind === 'file') {
+			await this.handleFileDescriptor(stdio.out, 1);
+		}
+		if (stdio.err.kind === 'file') {
+			await this.handleFileDescriptor(stdio.err, 2);
+		}
+	}
+
+	private async handleFileDescriptor(descriptor: StdioFileDescriptor, fd: 0 | 1 | 2): Promise<void> {
 		const preOpened = Array.from(this.preOpenDirectories.entries());
 		for (const entry of preOpened) {
 			const mountPoint = entry[0];
@@ -239,84 +449,29 @@ export abstract class WasiProcess {
 		}
 	}
 
-	private async handlePipeDescriptor(fd: 0 | 1 | 2): Promise<void> {
-	}
-
-	protected createStdinStream(): Writable & { read: (maxBytes: size) => Promise<Uint8Array> } {
-		const options = this.options;
-		return new class {
-			private buffer: Uint8Array = new Uint8Array(16384);
-			private writeIndex: number = 0;
-			private encoder: RAL.TextEncoder = RAL().TextEncoder.create(options.encoding);
-			private spaceNeeded: number = 0;
-			private _awaitSpace: (() => void) | undefined = undefined;
-			private _awaitData: (() => void) | undefined = undefined;
-
-			public write(chunk: Uint8Array | string): Promise<void> {
-				if (typeof chunk === 'string') {
-					chunk = this.encoder.encode(chunk);
-				}
-				// We have enough space
-				if (this.writeIndex + chunk.length <= this.buffer.length) {
-					this.buffer.set(chunk, this.writeIndex);
-					this.writeIndex += chunk.length;
-					return Promise.resolve();
-				} else if (this.writeIndex === 0) {
-					// We don't have enough space and the buffer is empty
-					this.buffer = chunk;
-					return Promise.resolve();
-				}
-				const spaceNeeded = Math.min(this.buffer.length, chunk.length);
-			}
-			public async read(maxBytes: size): Promise<Uint8Array> {
-				if (this.writeIndex === 0) {
-					await this.awaitData();
-				}
-				if (this.writeIndex === 0) {
-					throw new Error('Invalid state: no bytes available after awaiting data');
-				}
-				const toRead = Math.min(this.writeIndex, maxBytes);
-				const result = new Uint8Array(toRead);
-				result.set(this.buffer.subarray(0, toRead));
-				this.buffer.copyWithin(0, toRead, this.writeIndex);
-				this.writeIndex -= toRead;
-				this.signalSpace();
-				return result;
-			}
-
-			private awaitSpace(spaceNeeded: number): Promise<void> {
-				this.spaceNeeded = spaceNeeded;
-				return new Promise<void>((resolve) => {
-					this._awaitSpace = resolve;
-				});
-			}
-
-			private signalSpace(): void {
-				if (this._awaitSpace === undefined) {
-					return;
-				}
-				if (this.writeIndex !== 0 && this.spaceNeeded > this.buffer.length - this.writeIndex) {
-					// Not enough space
-					return;
-				}
-				this._awaitSpace();
-				this._awaitSpace = undefined;
-				this.spaceNeeded = 0;
-			}
-
-			private awaitData(): Promise<void> {
-				return new Promise<void>((resolve) => {
-					this._awaitData = resolve;
-				});
-			}
-
-			private signalData(): void {
-				if (this._awaitData === undefined) {
-					return;
-				}
-				this._awaitData();
-				this._awaitData = undefined;
-			}
-		};
+	private async handlePipes(stdio: $Stdio): Promise<void> {
+		if (stdio.in.kind === 'pipe') {
+			this._stdin = new StdioStream(StreamMode.writeable);
+		}
+		if (stdio.out.kind === 'pipe') {
+			this._stdout = new StdioStream(StreamMode.readable);
+		}
+		if (stdio.err.kind === 'pipe') {
+			this._stderr = new StdioStream(StreamMode.readable);
+		}
+		if (this._stdin === undefined && this._stdout === undefined && this._stderr === undefined) {
+			return;
+		}
+		const pipeDevice = pdd.create(this.deviceDrivers.next(), this._stdin as StdioStream | undefined, this._stdout as StdioStream | undefined, this._stderr as StdioStream | undefined);
+		if (this._stdin !== undefined) {
+			this.fileDescriptors.add(pipeDevice.createStdioFileDescriptor(0));
+		}
+		if (this._stdout !== undefined) {
+			this.fileDescriptors.add(pipeDevice.createStdioFileDescriptor(1));
+		}
+		if (this._stderr !== undefined) {
+			this.fileDescriptors.add(pipeDevice.createStdioFileDescriptor(2));
+		}
+		this.deviceDrivers.add(pipeDevice);
 	}
 }
