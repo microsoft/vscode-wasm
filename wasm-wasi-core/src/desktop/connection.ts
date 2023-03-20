@@ -21,5 +21,3 @@ export class NodeHostConnection extends HostConnection {
 		this.port.postMessage(message);
 	}
 }
-
-import * as cp from 'child_process';
