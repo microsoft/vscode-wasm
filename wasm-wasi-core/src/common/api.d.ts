@@ -3,7 +3,7 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { Pseudoterminal, Uri } from 'vscode';
+import { Event, Pseudoterminal, Uri } from 'vscode';
 
 import { fdflags, oflags } from './wasi';
 export { fdflags, oflags };
@@ -89,7 +89,7 @@ export interface Writable {
 }
 
 export interface Readable {
-	[Symbol.asyncIterator](): AsyncIterableIterator<Uint8Array>;
+	onData: Event<Uint8Array>;
 }
 
 export interface WasiProcess {

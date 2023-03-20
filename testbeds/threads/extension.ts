@@ -17,18 +17,19 @@ export async function activate() {
 	const wasiCore: WasiCore =  await wasiCoreExt.activate();
 	commands.registerCommand('testbed-threads.run', async () => {
 		const pty = wasiCore.createPseudoterminal();
-		window.createTerminal({ name: 'threads', pty, isTransient: true });
+		const terminal = window.createTerminal({ name: 'threads', pty, isTransient: true });
+		terminal.show(true);
 		const options = {
 			stdio: pty.stdio,
 			mapDir: true
 		};
 		// options.stdio.out = { kind: 'file', path: '/workspace/out.txt' };
-		options.stdio.out = { kind: 'pipe' };
+		// options.stdio.out = { kind: 'pipe' };
 		const process = await wasiCore.createProcess('threads', WebAssembly.compile(binary.buffer), { initial: 2, maximum: 160, shared: true }, options);
-		const decoder = new TextDecoder();
-		for await (const chunk of process.stdout!) {
-			console.log('stdout', decoder.decode(chunk));
-		}
+		// const decoder = new TextDecoder();
+		// process.stdout!.onData(data => {
+		// 	console.log('stdout', decoder.decode(data));
+		// });
 		process.run().catch(err => {
 			window.showErrorMessage(err.message);
 		});

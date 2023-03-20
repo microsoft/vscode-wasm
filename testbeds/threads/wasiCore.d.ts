@@ -3,7 +3,7 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { Pseudoterminal, Uri } from 'vscode';
+import { Pseudoterminal, Uri, Event } from 'vscode';
 import { fdflags, oflags, rights } from './wasi';
 
 export interface WasiPseudoterminal extends Pseudoterminal {
@@ -87,11 +87,11 @@ export interface Writable {
 }
 
 export interface Readable {
-	[Symbol.asyncIterator](): AsyncIterableIterator<Uint8Array>;
+	onData: Event<Uint8Array>;
 }
 
 export interface WasiProcess {
-	
+
 	readonly stdin: Writable | undefined;
 
 	readonly stdout: Readable | undefined;

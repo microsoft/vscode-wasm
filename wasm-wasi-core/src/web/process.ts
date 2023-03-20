@@ -85,6 +85,7 @@ export class BrowserWasiProcess extends WasiProcess {
 			worker.terminate();
 		}
 		this.threadWorkers.clear();
+		await this.destroyStreams();
 		return result;
 	}
 

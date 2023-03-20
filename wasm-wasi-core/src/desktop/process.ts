@@ -120,6 +120,7 @@ export class NodeWasiProcess extends WasiProcess {
 			result = await this.mainWorker.terminate();
 		}
 		await this.cleanUpWorkers();
+		await this.destroyStreams();
 		return result;
 	}
 
