@@ -36,6 +36,7 @@
 	"scripts": {
 		"build": "npm run compile",
 		"compile": "node ../../node_modules/typescript/lib/tsc.js -b tsconfig.json",
-		"watch": "node ../../node_modules/typescript/lib/tsc.js -b tsconfig.json -w"
+		"watch": "node ../../node_modules/typescript/lib/tsc.js -b tsconfig.json -w",
+		"test:desktop": "node ./lib/desktop/test/runTest.js"
 	}
 }

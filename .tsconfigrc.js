@@ -265,17 +265,30 @@ const wasm_wasi_core = {
 	sourceFolders: [
 		{
 			path: './src/common',
-			extends: [ common, vscodeMixin ]
+			extends: [ common, vscodeMixin ],
+			exclude: [ 'test' ]
+		},
+		{
+			path: './src/common/test',
+			extends: [ common, vscodeMixin, testMixin ],
+			references: [ '..' ]
 		},
 		{
 			path: './src/web',
 			extends: [ browser, vscodeMixin ],
+			exclude: [ 'test' ],
 			references: [ '../common' ]
 		},
 		{
 			path: './src/desktop',
 			extends: [ node, vscodeMixin ],
+			exclude: [ 'test' ],
 			references: [ '../common' ]
+		},
+		{
+			path: './src/desktop/test',
+			extends: [ node, vscodeMixin, testMixin],
+			references: [ '..' ]
 		}
 	]
 };

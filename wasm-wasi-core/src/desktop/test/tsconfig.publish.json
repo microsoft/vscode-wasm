@@ -2,7 +2,8 @@
     "compilerOptions": {
         "types": [
             "node",
-            "vscode"
+            "vscode",
+            "mocha"
         ],
         "module": "Node16",
         "moduleResolution": "Node16",
@@ -17,24 +18,19 @@
         "noImplicitThis": true,
         "declaration": true,
         "stripInternal": true,
-        "sourceMap": true,
-        "noUnusedLocals": false,
-        "noUnusedParameters": false,
-        "assumeChangesOnlyAffectDirectDependencies": true,
-        "outDir": "../../lib/desktop",
-        "tsBuildInfoFile": "../../lib/desktop/watch.tsbuildInfo",
-        "incremental": true,
-        "composite": true
+        "sourceMap": false,
+        "noUnusedLocals": true,
+        "noUnusedParameters": true,
+        "outDir": "../../../lib/desktop/test",
+        "tsBuildInfoFile": "../../../lib/desktop/test/publish.tsbuildInfo",
+        "incremental": true
     },
     "include": [
         "."
     ],
-    "exclude": [
-        "test"
-    ],
     "references": [
         {
-            "path": "../common/tsconfig.watch.json"
+            "path": "../tsconfig.publish.json"
         }
     ]
 }

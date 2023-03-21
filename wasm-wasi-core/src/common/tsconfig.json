@@ -26,5 +26,8 @@
     },
     "include": [
         "."
+    ],
+    "exclude": [
+        "test"
     ]
 }

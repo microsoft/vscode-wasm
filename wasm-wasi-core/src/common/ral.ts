@@ -4,6 +4,7 @@
  * ------------------------------------------------------------------------------------------ */
 
 import { Disposable } from 'vscode';
+import { HostConnection } from './host';
 
 interface _TextEncoder {
 	encode(input?: string): Uint8Array;
@@ -57,6 +58,12 @@ interface RAL {
 		dirname(path: string): string;
 		join(...paths: string[]): string;
 		normalize(path: string): string;
+	};
+
+	readonly $testing: {
+		readonly HostConnection: {
+			create(): HostConnection;
+		};
 	};
 }
 

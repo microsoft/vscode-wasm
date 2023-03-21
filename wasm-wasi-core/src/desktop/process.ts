@@ -13,7 +13,7 @@ import { WasiService, ServiceConnection } from '../common/service';
 import { StartMainMessage, StartThreadMessage, WasiCallMessage, WorkerReadyMessage } from '../common/connection';
 import { Options } from '../common/api';
 
-class Connection extends ServiceConnection {
+export class NodeServiceConnection extends ServiceConnection {
 
 	private readonly port: MessagePort | Worker;
 	private _workerReady: Promise<void>;
@@ -79,7 +79,7 @@ export class NodeWasiProcess extends WasiProcess {
 		this.mainWorker.on('exit', async () => {
 			this.cleanUpWorkers().catch(error => RAL().console.error(error));
 		});
-		const connection = new Connection(wasiService, this.mainWorker);
+		const connection = new NodeServiceConnection(wasiService, this.mainWorker);
 		await connection.workerReady();
 		const module = await this.module;
 		this.importsMemory = this.doesImportMemory(module);
@@ -106,7 +106,7 @@ export class NodeWasiProcess extends WasiProcess {
 		worker.on('exit', () => {
 			this.threadWorkers.delete(tid);
 		});
-		const connection = new Connection(wasiService, worker);
+		const connection = new NodeServiceConnection(wasiService, worker);
 		await connection.workerReady();
 		const message: StartThreadMessage = { method: 'startThread', module: await this.module, memory: this.memory!, tid, start_arg };
 		connection.postMessage(message);

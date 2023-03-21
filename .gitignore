@@ -114,6 +114,8 @@ testbeds/python/python.tar
 testbeds/coreutils/coreutils.wasm
 sync-api-tests/.vscode-test
 sync-api-tests/.vscode-test-web
+wasm-wasi-core/.vscode-test
+wasm-wasi-core/.vscode-test-web
 *.wasm
 *.wat
 *.o

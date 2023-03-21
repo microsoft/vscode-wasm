@@ -2,12 +2,16 @@
  * Copyright (c) Microsoft Corporation. All rights reserved.
  * Licensed under the MIT License. See License.txt in the project root for license information.
  * ------------------------------------------------------------------------------------------ */
-import { Disposable } from 'vscode';
-import RAL from '../common/ral';
-
 import { TextDecoder } from 'util';
 import * as path from 'path';
 import * as crypto from 'crypto';
+import { parentPort } from 'worker_threads';
+
+import { Disposable } from 'vscode';
+
+import RAL from '../common/ral';
+import { NodeHostConnection } from './connection';
+
 
 interface RIL extends RAL {
 }
@@ -70,6 +74,16 @@ const _ril: RIL = Object.freeze<RIL>({
 		normalize(value: string): string {
 			return path.posix.normalize(value);
 		}
+	}),
+	$testing: Object.freeze({
+		HostConnection: Object.freeze({
+			create(): NodeHostConnection {
+				if (parentPort === null) {
+					throw new Error('Not running inside a worker');
+				}
+				return new NodeHostConnection(parentPort);
+			}
+		})
 	})
 });
 

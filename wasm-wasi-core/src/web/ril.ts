@@ -7,6 +7,7 @@ import { Disposable } from 'vscode';
 import RAL from '../common/ral';
 
 import * as path from './path';
+import { BrowserHostConnection } from './connection';
 
 interface RIL extends RAL {
 }
@@ -73,6 +74,13 @@ const _ril: RIL = Object.freeze<RIL>({
 		normalize(value: string): string {
 			return path.normalize(value);
 		}
+	}),
+	$testing: Object.freeze({
+		HostConnection: Object.freeze({
+			create(): BrowserHostConnection {
+				return new BrowserHostConnection(self);
+			}
+		})
 	})
 });
 
