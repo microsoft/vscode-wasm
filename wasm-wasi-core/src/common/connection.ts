@@ -2,9 +2,9 @@
  *  Copyright (c) Microsoft Corporation. All rights reserved.
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
+/// <reference path="../../types/webAssemblyCommon.d.ts" />
 
 import { ptr, u32 } from './baseTypes';
-import type { WebAssembly } from './webassemblyCommon';
 
 export namespace Offsets {
 	export const lock_size = 4;

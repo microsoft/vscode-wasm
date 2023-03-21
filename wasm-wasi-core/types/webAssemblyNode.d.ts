@@ -12,10 +12,19 @@ MERCHANTABLITY OR NON-INFRINGEMENT.
 See the Apache Version 2.0 License for specific language governing permissions
 and limitations under the License.
 ***************************************************************************** */
-/// <reference path="../common/webassembly.d.ts" />
+/// <reference path="./webAssemblyCommon.d.ts" />
 
 type BufferSource = ArrayBufferView | ArrayBuffer;
 declare namespace WebAssembly {
+
+	var Module: {
+		prototype: Module;
+		new(bytes: BufferSource): Module;
+		customSections(moduleObject: Module, sectionName: string): ArrayBuffer[];
+		exports(moduleObject: Module): ModuleExportDescriptor[];
+		imports(moduleObject: Module): ModuleImportDescriptor[];
+	};
+
 	function compile(bytes: BufferSource): Promise<Module>;
 	function instantiate(bytes: BufferSource, importObject?: Imports): Promise<WebAssemblyInstantiatedSource>;
 	function instantiate(moduleObject: Module, importObject?: Imports): Promise<Instance>;

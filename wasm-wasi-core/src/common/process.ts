@@ -2,6 +2,8 @@
  *  Copyright (c) Microsoft Corporation. All rights reserved.
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
+/// <reference path="../../types/webAssemblyCommon.d.ts" />
+
 import { Event, EventEmitter, Uri, WorkspaceFolder, workspace } from 'vscode';
 
 import { MapDirEntry, Options, StdioDescriptor, StdioFileDescriptor } from './api';
@@ -17,7 +19,6 @@ import WasiKernel, { DeviceDrivers } from './kernel';
 import { Errno, Lookupflags, exitcode } from './wasi';
 import { CharacterDeviceDriver } from './deviceDriver';
 import { WasiPseudoterminal } from './terminal';
-import { WebAssembly } from './webassemblyCommon';
 
 namespace MapDirEntry {
 	export function is(value: any): value is MapDirEntry {
@@ -424,7 +425,7 @@ export abstract class WasiProcess {
 	protected abstract threadEnded(tid: u32): Promise<void>;
 
 	protected doesImportMemory(module: WebAssembly.Module): boolean {
-		const imports = WebAssembly.Module.imports(module);
+		const imports = this.getImports(module);
 		for (const item of imports) {
 			if (item.kind === 'memory' && item.name === 'memory') {
 				return true;
@@ -432,6 +433,8 @@ export abstract class WasiProcess {
 		}
 		return false;
 	}
+
+	protected abstract getImports(module: WebAssembly.Module): WebAssembly.ModuleImportDescriptor[];
 
 	private mapWorkspaceFolder(folder: WorkspaceFolder, single: boolean): void {
 		const path = RAL().path;

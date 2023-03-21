@@ -76,6 +76,10 @@ export class BrowserWasiProcess extends WasiProcess {
 		}
 	}
 
+	protected getImports(module: WebAssembly.Module): WebAssembly.ModuleImportDescriptor[] {
+		return WebAssembly.Module.imports(module);
+	}
+
 	public async terminate(): Promise<number> {
 		let result = 0;
 		if (this.mainWorker !== undefined) {

@@ -13,7 +13,7 @@ See the Apache Version 2.0 License for specific language governing permissions
 and limitations under the License.
 ***************************************************************************** */
 
-export namespace WebAssembly {
+declare namespace WebAssembly {
 
 	interface CompileError extends Error {
 	}
@@ -64,13 +64,6 @@ export namespace WebAssembly {
 
 	interface Module {
 	}
-
-	var Module: {
-		prototype: Module;
-		customSections(moduleObject: Module, sectionName: string): ArrayBuffer[];
-		exports(moduleObject: Module): ModuleExportDescriptor[];
-		imports(moduleObject: Module): ModuleImportDescriptor[];
-	};
 
 	interface RuntimeError extends Error {
 	}
