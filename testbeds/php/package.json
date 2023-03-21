@@ -1,0 +1,30 @@
+{
+	"name": "testbed-php",
+	"private": "true",
+	"publisher": "ms-vscode",
+	"version": "0.0.1",
+	"description": "PHP Example",
+	"author": "MS",
+	"license": "MIT",
+	"engines": {
+		"vscode": "^1.67.0"
+	},
+	"main": "./out/extension.js",
+	"activationEvents": [
+	],
+	"contributes": {
+		"commands": [
+			{
+				"command": "testbed-php.runFile",
+				"category": "wasm",
+				"title": "Run PHP File",
+				"enablement": "editorLangId == php"
+			}
+		]
+	},
+	"scripts": {
+		"build": "npm run compile",
+		"compile": "node ../../node_modules/typescript/lib/tsc.js -b tsconfig.json",
+		"watch": "node ../../node_modules/typescript/lib/tsc.js -b tsconfig.json -w"
+	}
+}

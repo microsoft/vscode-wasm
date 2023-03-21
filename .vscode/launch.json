@@ -8,8 +8,7 @@
 			"runtimeExecutable": "${execPath}",
 			"args": ["--extensionDevelopmentPath=${workspaceRoot}/testbeds/python"],
 			"outFiles": ["${workspaceRoot}/testbeds/python/out/**/*.js"],
-			"sourceMaps": true,
-			"preLaunchTask": "Build Python Example"
+			"sourceMaps": true
 		},
 		{
 			"type": "extensionHost",
@@ -20,6 +19,26 @@
 			"outFiles": ["${workspaceRoot}/testbeds/rust/out/**/*.js"],
 			"sourceMaps": true,
 			"preLaunchTask": "Build Rust Example"
+		},
+		{
+			"type": "extensionHost",
+			"request": "launch",
+			"name": "PHP Testbed",
+			"runtimeExecutable": "${execPath}",
+			"args": ["--extensionDevelopmentPath=${workspaceRoot}/testbeds/php"],
+			"outFiles": ["${workspaceRoot}/testbeds/php/out/**/*.js"],
+			"sourceMaps": true,
+			"preLaunchTask": "Build PHP Example"
+		},
+		{
+			"type": "extensionHost",
+			"request": "launch",
+			"name": "Ruby Testbed",
+			"runtimeExecutable": "${execPath}",
+			"args": ["--extensionDevelopmentPath=${workspaceRoot}/testbeds/ruby"],
+			"outFiles": ["${workspaceRoot}/testbeds/ruby/out/**/*.js"],
+			"sourceMaps": true,
+			"preLaunchTask": "Build Ruby Example"
 		},
 		{
 			"type": "extensionHost",
@@ -77,6 +96,21 @@
 			],
 			"sourceMaps": true,
 			"outFiles": ["${workspaceRoot}/sync-api-tests/lib/**/*.js"],
+			"preLaunchTask": "npm: watch"
+		},
+		{
+			"request": "launch",
+			"type": "node",
+			"name": "test:wasm-wasi",
+			"program": "${workspaceRoot}/node_modules/mocha/bin/_mocha",
+			"stopOnEntry": false,
+			"args": ["--timeout", "999999"],
+			"cwd": "${workspaceRoot}/wasm-wasi-tests",
+			"runtimeExecutable": null,
+			"runtimeArgs": [],
+			"env": { },
+			"sourceMaps": true,
+			"outFiles": ["${workspaceRoot}/wasm-wasi-tests/lib/**/*.js"],
 			"preLaunchTask": "npm: watch"
 		}
 	]

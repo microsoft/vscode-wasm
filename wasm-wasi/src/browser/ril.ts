@@ -68,6 +68,9 @@ const _ril: RIL = Object.freeze<RIL>({
 		},
 		join(...paths: string[]): string {
 			return path.join(...paths);
+		},
+		normalize(value: string): string {
+			return path.normalize(value);
 		}
 	})
 });

@@ -8,7 +8,7 @@
  * https://github.com/WebAssembly/WASI/blob/main/phases/snapshot/docs.md
  *--------------------------------------------------------------------------------------------*/
 
-import { ptr, size, u16, u32, u64, s64, u8 } from './baseTypes';
+import { ptr, size, u16, u32, u64, s64, u8, cstring } from './baseTypes';
 
 export type fd = u32;
 
@@ -577,87 +577,56 @@ export namespace Rights {
 	export const sock_accept = 1n << 29n; // 536'870'912
 
 	/**
+	 * Check if the given rights contain the requested rights.
+	 * @param rights The granted rights.
+	 * @param check The rights to check.
+	 * @returns true if the granted rights contain the rights to check.
+	 */
+	export function contains(rights: rights, check: rights): boolean {
+		return (rights & check) === check;
+	}
+
+	/**
+	 * Check if the given rights support the requested flags
+	 * @param rights The granted rights.
+	 * @param fdflags The requested flags.
+	 * @returns true if the granted rights support the given flags
+	 */
+	export function supportFdflags(rights: rights, fdflags: fdflags): boolean {
+		if (fdflags === Fdflags.none) { return true; }
+		if (Fdflags.dsyncOn(fdflags)) { return contains(rights, Rights.fd_datasync | Rights.fd_sync ); }
+		if (Fdflags.rsyncOn(fdflags)) { return contains(rights, Rights.fd_sync); }
+		return true;
+	}
+
+	/**
+	 * Check if the given rights support the requested flags
+	 * @param rights The granted rights.
+	 * @param fdflags The requested flags.
+	 * @returns true if the granted rights support the given flags
+	 */
+	export function supportOflags(rights: rights, oflags: oflags): boolean {
+		if (oflags === Oflags.none) { return true; }
+		if (Oflags.creatOn(oflags)) { return contains(rights, Rights.path_create_file ); }
+		if (Oflags.truncOn(oflags)) { return contains(rights, Rights.path_filestat_set_size); }
+		return true;
+	}
+
+	/**
+	 * No rights
+	 */
+	export const None: rights = 0n;
+
+	/**
 	 * All rights
 	 */
-	export const All = Rights.fd_advise | Rights.fd_allocate | Rights.fd_datasync | Rights.fd_fdstat_set_flags |
-		Rights.fd_filestat_get | Rights.fd_filestat_set_size | Rights.fd_filestat_set_times | Rights.fd_read |
-		Rights.fd_readdir | Rights.fd_seek | Rights.fd_sync | Rights.fd_tell | Rights.fd_write | Rights.path_create_directory |
-		Rights.path_create_file | Rights.path_filestat_get | Rights.path_filestat_set_size | Rights.path_filestat_set_times |
-		Rights.path_link_source | Rights.path_link_target | Rights.path_open | Rights.path_readlink | Rights.path_remove_directory |
-		Rights.path_rename_source | Rights.path_rename_target | Rights.path_symlink | Rights.path_unlink_file | Rights.poll_fd_readwrite |
-		Rights.sock_accept | Rights.sock_shutdown;
-
-	/**
-	 * Base rights for block devices.
-	 *
-	 * Note: we don't have block devices in VS Code.
-	 */
-	export const BlockDeviceBase = 0n;
-
-	/**
-	 * Inheriting rights for block devices.
-	 *
-	 * Note: we don't have block devices in VS Code.
-	 */
-	export const BlockDeviceInheriting = 0n;
-
-	/**
-	 * Base rights for directories managed in VS Code.
-	 */
-	export const DirectoryBase = path_create_directory | path_create_file |
-		path_filestat_get | path_filestat_set_size | path_filestat_set_times |
-		path_link_source | path_link_target | path_open | path_readlink |
-		path_remove_directory | path_rename_source | path_rename_target |
-		path_symlink | path_unlink_file | fd_readdir;
-
-	/**
-	 * Base rights for files managed in VS Code.
-	 */
-	export const FileBase = fd_read | fd_seek | fd_write | fd_filestat_get |
-		fd_advise | fd_allocate | fd_datasync | fd_fdstat_set_flags |
-		fd_filestat_set_size | fd_filestat_set_times | fd_sync | fd_tell;
-
-	/**
-	 * Inheriting rights for directories
-	 */
-	export const DirectoryInheriting = DirectoryBase | FileBase;
-
-	/**
-	 * Inheriting rights for files
-	 */
-	export const FileInheriting = 0n;
-
-	/**
-	 * Base rights for character devices
-	 */
-	export const CharacterDeviceBase = fd_read | fd_fdstat_set_flags | fd_write |
-		fd_filestat_get | poll_fd_readwrite;
-
-	/**
-	 * Inheriting rights for character devices
-	 */
-	export const CharacterDeviceInheriting = 0n;
-
-	/**
-	 * Base rights for stdin
-	 */
-	export const StdinBase = fd_read | fd_filestat_get | poll_fd_readwrite;
-
-	/**
-	 * Inheriting rights for stdout / stderr
-	 */
-	export const StdinInheriting = 0n;
-
-	/**
-	 * Base rights for stdout / stderr
-	 */
-	export const StdoutBase = fd_fdstat_set_flags | fd_write |
-		fd_filestat_get | poll_fd_readwrite;
-
-	/**
-	 * Inheriting rights for stdout / stderr
-	 */
-	export const StdoutInheriting = 0n;
+	export const All = fd_datasync | fd_read | fd_seek | fd_fdstat_set_flags |
+		fd_sync | fd_tell | fd_write | fd_advise | fd_allocate | path_create_directory |
+		path_create_file | path_link_source | path_link_target | path_open | fd_readdir |
+		path_readlink | path_rename_source | path_rename_target | path_filestat_get |
+		path_filestat_set_size | path_filestat_set_times | fd_filestat_get |
+		fd_filestat_set_size | fd_filestat_set_times | path_symlink | path_remove_directory |
+		path_unlink_file | poll_fd_readwrite | sock_shutdown | sock_accept;
 }
 
 export type dircookie = u64;
@@ -666,26 +635,43 @@ export type fdflags = u16;
 export namespace Fdflags {
 
 	/**
+	 * No flags.
+	 */
+	export const none = 0;
+
+	/**
 	 * Append mode: Data written to the file is always appended to the file's
 	 * end.
 	 */
 	export const append = 1 << 0;
+	export function appendOn(value: fdflags): boolean {
+		return (value & append) !== 0;
+	}
 
 	/**
 	 * Write according to synchronized I/O data integrity completion. Only the
 	 * data stored in the file is synchronized.
 	 */
 	export const dsync = 1 << 1;
+	export function dsyncOn(value: fdflags): boolean {
+		return (value & dsync) !== 0;
+	}
 
 	/**
 	 * Non-blocking mode.
 	 */
 	export const nonblock = 1 << 2;
+	export function nonblockOn(value: fdflags): boolean {
+		return (value & nonblock) !== 0;
+	}
 
 	/**
 	 * Synchronized read I/O operations.
 	 */
 	export const rsync = 1 << 3;
+	export function rsyncOn(value: fdflags): boolean {
+		return (value & rsync) !== 0;
+	}
 
 	/**
 	 * Write according to synchronized I/O file integrity completion. In
@@ -693,10 +679,19 @@ export namespace Fdflags {
 	 * implementation may also synchronously update the file's metadata.
 	 */
 	export const sync = 1 << 4;
+	export function syncOn(value: fdflags): boolean {
+		return (value & sync) !== 0;
+	}
 }
 
 export type lookupflags = u32;
 export namespace Lookupflags {
+
+	/**
+	 * No flags.
+	 */
+	export const none = 0;
+
 	/**
 	 * As long as the resolved path corresponds to a symbolic link, it is
 	 * expanded.
@@ -708,41 +703,41 @@ export type oflags = u16;
 export namespace Oflags {
 
 	/**
+	 * No flags.
+	 */
+	export const none = 0;
+
+	/**
 	 * Create file if it does not exist.
 	 */
 	export const creat = 1 << 0;
+	export function creatOn(value: oflags): boolean {
+		return (value & creat) !== 0;
+	}
+	export function creatOff(value: oflags): boolean {
+		return (value & creat) === 0;
+	}
 
 	/**
 	 * Fail if not a directory.
 	 */
 	export const directory = 1 << 1;
+	export function directoryOn(value: oflags): boolean {
+		return (value & directory) !== 0;
+	}
 
 	/**
 	 * Fail if file already exists.
 	 */
 	export const excl = 1 << 2;
+	export function exclOn(value: oflags): boolean {
+		return (value & excl) !== 0;
+	}
 
 	/**
 	 * Truncate file to size 0.
 	 */
 	export const trunc = 1 << 3;
-
-	export function creatOn(value: oflags): boolean {
-		return (value & creat) !== 0;
-	}
-
-	export function creatOff(value: oflags): boolean {
-		return (value & creat) === 0;
-	}
-
-	export function directoryOn(value: oflags): boolean {
-		return (value & directory) !== 0;
-	}
-
-	export function exclOn(value: oflags): boolean {
-		return (value & excl) !== 0;
-	}
-
 	export function truncOn(value: oflags): boolean {
 		return (value & trunc) !== 0;
 	}
@@ -863,7 +858,7 @@ export namespace Advice {
 	export const dontneed = 4;
 
 	/**
-	 *  The application expects to access the specified data once and then not
+	 * The application expects to access the specified data once and then not
 	 * reuse it thereafter.
 	 */
 	export const noreuse = 5;
@@ -878,44 +873,57 @@ export type timestamp = u64;
 export type filestat = {
 
 	/**
+	 * The memory location of the allocated struct.
+	 */
+	get $ptr(): ptr;
+
+	/**
 	 * Device ID of device containing the file.
 	 */
+	get dev(): device;
 	set dev(value: device);
 
 	/**
 	 * File serial number.
 	 */
+	get ino(): inode;
 	set ino(value: inode);
 
 	/**
 	 * File type.
 	 */
+	get filetype(): filetype;
 	set filetype(value: filetype);
 
 	/**
 	 * Number of hard links to the file.
 	 */
+	get nlink(): linkcount;
 	set nlink(value: linkcount);
 
 	/**
 	 * For regular files, the file size in bytes. For symbolic links, the
 	 * length in bytes of the pathname contained in the symbolic link.
 	 */
+	get size(): filesize;
 	set size(value: filesize);
 
 	/**
 	 * Last data access timestamp.
 	 */
+	get atim(): timestamp;
 	set atim(value: timestamp);
 
 	/**
 	 * Last data modification timestamp.
 	 */
+	get mtim(): timestamp;
 	set mtim(value: timestamp);
 
 	/**
 	 * Last file status change timestamp.
 	 */
+	get ctim(): timestamp;
 	set ctim(value: timestamp);
 };
 
@@ -938,13 +946,22 @@ export namespace Filestat {
 
 	export function create(ptr: ptr, memory: DataView): filestat {
 		return {
+			get $ptr(): ptr { return ptr; },
+			get dev(): device { return memory.getBigUint64(ptr + offsets.dev, true); },
 			set dev(value: device) { memory.setBigUint64(ptr + offsets.dev, value, true); },
+			get ino(): inode { return memory.getBigUint64(ptr + offsets.ino, true); },
 			set ino(value: inode) { memory.setBigUint64(ptr + offsets.ino, value, true); },
+			get filetype(): filetype { return memory.getUint8(ptr + offsets.filetype); },
 			set filetype(value: filetype) { memory.setUint8(ptr + offsets.filetype, value); },
+			get nlink(): linkcount { return memory.getBigUint64(ptr + offsets.nlink, true); },
 			set nlink(value: linkcount) { memory.setBigUint64(ptr + offsets.nlink, value, true); },
+			get size(): filesize { return memory.getBigUint64(ptr + offsets.size, true); },
 			set size(value: filesize) { memory.setBigUint64(ptr + offsets.size, value, true); },
+			get atim(): timestamp { return memory.getBigUint64(ptr + offsets.atim, true); },
 			set atim(value: timestamp) { memory.setBigUint64(ptr + offsets.atim, value, true); },
+			get mtim(): timestamp { return memory.getBigUint64(ptr + offsets.mtim, true); },
 			set mtim(value: timestamp) { memory.setBigUint64(ptr + offsets.mtim, value, true); },
+			get ctim(): timestamp { return memory.getBigUint64(ptr + offsets.ctim, true); },
 			set ctim(value: timestamp) { memory.setBigUint64(ptr + offsets.ctim, value, true); }
 		};
 	}
@@ -979,24 +996,33 @@ export namespace Whence {
 export type fdstat = {
 
 	/**
+	 * The memory location.
+	 */
+	get $ptr(): ptr<fdstat>;
+
+	/**
 	 *  File type.
 	 */
+	get fs_filetype(): filetype;
 	set fs_filetype(value: filetype);
 
 	/**
 	 * File descriptor flags.
 	 */
+	get fs_flags(): fdflags;
 	set fs_flags(value: fdflags);
 
 	/**
 	 * Rights that apply to this file descriptor.
 	 */
+	get fs_rights_base(): rights;
 	set fs_rights_base(value: rights);
 
 	/**
 	 * Maximum set of rights that may be installed on new file descriptors
 	 * that are created through this file descriptor, e.g., through path_open.
 	 */
+	get fs_rights_inheriting(): rights;
 	set fs_rights_inheriting(value: rights);
 };
 
@@ -1017,9 +1043,14 @@ export namespace Fdstat {
 
 	export function create(ptr: ptr, memory: DataView): fdstat {
 		return {
+			get $ptr(): ptr<fdstat> { return ptr; },
+			get fs_filetype(): filetype { return memory.getUint8(ptr + offsets.fs_filetype); },
 			set fs_filetype(value: filetype) { memory.setUint8(ptr + offsets.fs_filetype, value); },
+			get fs_flags(): fdflags { return memory.getUint16(ptr + offsets.fs_flags, true); },
 			set fs_flags(value: fdflags) { memory.setUint16(ptr + offsets.fs_flags, value, true); },
+			get fs_rights_base(): rights { return memory.getBigUint64(ptr + offsets.fs_rights_base, true); },
 			set fs_rights_base(value: rights) { memory.setBigUint64(ptr + offsets.fs_rights_base, value, true); },
+			get fs_rights_inheriting(): rights { return memory.getBigUint64(ptr + offsets.fs_rights_inheriting, true); },
 			set fs_rights_inheriting(value: rights) { memory.setBigUint64(ptr + offsets.fs_rights_inheriting, value, true); }
 		};
 	}
@@ -1059,17 +1090,50 @@ export namespace Fstflags {
 export type prestat = {
 
 	/**
+	 * The memory location.
+	 */
+	get $ptr(): ptr;
+
+	/**
+	 * Gets the pre-open type.
+	 */
+	get preopentype(): preopentype;
+
+	/**
+	 * Gets the length of the pre opened directory name.
+	 */
+	get len(): size;
+
+	/**
 	 * Sets the length of the pre opened directory name.
 	 */
 	set len(value: size);
 };
 
 export namespace Prestat {
+	/**
+	 * The size in bytes.
+	 */
+	export const size = 8 as const;
+
+	export const alignment = 4 as const;
+
+	const offsets = {
+		tag: 0,
+		len: 4
+	};
 	export function create(ptr: ptr, memory: DataView): prestat {
 		memory.setUint8(ptr, Preopentype.dir);
 		return {
+			get $ptr(): ptr { return ptr; },
+			get preopentype(): preopentype {
+				return memory.getUint8(ptr + offsets.tag);
+			},
+			get len(): size {
+				return memory.getUint32(ptr + offsets.len, true);
+			},
 			set len(value: size) {
-				memory.setUint32(ptr + 4, value, true);
+				memory.setUint32(ptr + offsets.len, value, true);
 			}
 		};
 	}
@@ -1079,15 +1143,23 @@ export namespace Prestat {
  * A region of memory for scatter/gather reads.
  */
 export type iovec = {
+
+	/**
+	 * The memory location of the allocated struct.
+	 */
+	get $ptr(): ptr;
+
 	/**
 	 * The address of the buffer to be filled.
 	 */
 	get buf(): ptr;
+	set buf(value: ptr);
 
 	/**
 	 * The length of the buffer to be filled.
 	 */
 	get buf_len(): u32;
+	set buf_len(value: u32);
 };
 
 export namespace Iovec {
@@ -1102,14 +1174,13 @@ export namespace Iovec {
 		buf_len: 4,
 	};
 
-	export function create(ptr: ptr, memory: DataView): ciovec {
+	export function create(ptr: ptr, memory: DataView): iovec {
 		return {
-			get buf(): ptr {
-				return memory.getUint32(ptr + offsets.buf, true);
-			},
-			get buf_len(): u32 {
-				return memory.getUint32(ptr + offsets.buf_len, true);
-			}
+			get $ptr(): ptr { return ptr; },
+			get buf(): ptr { return memory.getUint32(ptr + offsets.buf, true); },
+			set buf(value: ptr) { memory.setUint32(ptr + offsets.buf, value, true); },
+			get buf_len(): u32 { return memory.getUint32(ptr + offsets.buf_len, true); },
+			set buf_len(value: u32) { memory.setUint32(ptr + offsets.buf_len, value, true); }
 		};
 	}
 }
@@ -1121,14 +1192,21 @@ export type iovec_array = iovec[];
  */
 export type ciovec = {
 	/**
+	 * The memory location of the allocated struct.
+	 */
+	get $ptr(): ptr<ciovec>;
+
+	/**
 	 * The address of the buffer to be written.
 	 */
 	get buf(): ptr;
+	set buf(value: ptr);
 
 	/**
 	 * The length of the buffer to be written.
 	 */
 	get buf_len(): u32;
+	set buf_len(value: u32);
 };
 
 export namespace Ciovec {
@@ -1145,12 +1223,11 @@ export namespace Ciovec {
 
 	export function create(ptr: ptr, memory: DataView): ciovec {
 		return {
-			get buf(): ptr {
-				return memory.getUint32(ptr + offsets.buf, true);
-			},
-			get buf_len(): u32 {
-				return memory.getUint32(ptr + offsets.buf_len, true);
-			}
+			get $ptr(): ptr<ciovec> { return ptr; },
+			get buf(): ptr { return memory.getUint32(ptr + offsets.buf, true); },
+			set buf(value: ptr) { memory.setUint32(ptr + offsets.buf, value, true); },
+			get buf_len(): u32 { return memory.getUint32(ptr + offsets.buf_len, true); },
+			set buf_len(value: u32) { memory.setUint32(ptr + offsets.buf_len, value, true); }
 		};
 	}
 }
@@ -1160,23 +1237,32 @@ export type ciovec_array = iovec[];
 export type dirnamlen = u32;
 export type dirent = {
 	/**
+	 * The memory location of the allocated struct.
+	 */
+	get $ptr(): ptr;
+
+	/**
 	 * The offset of the next directory entry stored in this directory.
 	 */
+	get d_next(): dircookie;
 	set d_next(value: dircookie);
 
 	/**
 	 * The serial number of the file referred to by this directory entry.
 	 */
+	get d_ino(): inode;
 	set d_ino(value: inode);
 
 	/**
 	 * The length of the name of the directory entry.
 	 */
+	get d_namlen(): dirnamlen;
 	set d_namlen(value: dirnamlen);
 
 	/**
 	 * The type of the file referred to by this directory entry.
 	 */
+	get d_type(): filetype;
 	set d_type(value: filetype);
 };
 
@@ -1192,9 +1278,14 @@ export namespace Dirent {
 
 	export function create(ptr: ptr, memory: DataView): dirent {
 		return {
+			get $ptr(): ptr<dirent> { return ptr; },
+			get d_next(): dircookie { return memory.getBigUint64(ptr + offsets.d_next, true); },
 			set d_next(value: dircookie) { memory.setBigUint64(ptr + offsets.d_next, value, true); },
+			get d_ino(): inode { return memory.getBigUint64(ptr + offsets.d_ino, true); },
 			set d_ino(value: inode) { memory.setBigUint64(ptr + offsets.d_ino, value, true); },
+			get d_namlen(): dirnamlen { return memory.getUint32(ptr + offsets.d_namlen, true); },
 			set d_namlen(value: dirnamlen) { memory.setUint32(ptr + offsets.d_namlen, value, true); },
+			get d_type(): filetype { return memory.getUint8(ptr + offsets.d_type); },
 			set d_type(value: filetype) { memory.setUint8(ptr + offsets.d_type, value); }
 		};
 	}
@@ -1552,7 +1643,7 @@ export namespace Sdflags {
  * @param argvCount_ptr A memory location to store the number of args.
  * @param argvBufSize_ptr A memory location to store the needed buffer size.
  */
-export type args_sizes_get = (argvCount_ptr: ptr, argvBufSize_ptr: ptr) => errno;
+export type args_sizes_get = (argvCount_ptr: ptr<u32>, argvBufSize_ptr: ptr<u32>) => errno;
 
 /**
  * Read command-line argument data. The size of the array should match that
@@ -1561,25 +1652,7 @@ export type args_sizes_get = (argvCount_ptr: ptr, argvBufSize_ptr: ptr) => errno
  * @params argv_ptr A memory location to store the argv value offsets
  * @params argvBuf_ptr A memory location to store the actual argv value.
  */
-export type args_get = (argv_ptr: ptr, argvBuf_ptr: ptr) => errno;
-
-/**
- * Return environment variable data sizes.
- *
- * @param environCount_ptr A memory location to store the number of vars.
- * @param environBufSize_ptr  A memory location to store the needed buffer size.
- */
-export type environ_sizes_get = (environCount_ptr: ptr, environBufSize_ptr: ptr) => errno;
-
-/**
- * Read environment variable data. The sizes of the buffers should match
- * that returned by environ_sizes_get. Key/value pairs are expected to
- * be joined with =s, and terminated with \0s.
- *
- * @params environ_ptr A memory location to store the env value offsets
- * @params environBuf_ptr A memory location to store the actual env value.
- */
-export type environ_get = (environ_ptr: ptr, environBuf_ptr: ptr) => errno;
+export type args_get = (argv_ptr: ptr<u32[]>, argvBuf_ptr: ptr<cstring>) => errno;
 
 /**
  * Return the resolution of a clock. Implementations are required to provide
@@ -1600,7 +1673,25 @@ export type clock_res_get = (id: clockid, timestamp_ptr: ptr) => errno;
  * value may have, compared to its actual value.
  * @param timestamp_ptr: The time value of the clock.
  */
-export type clock_time_get = (id: clockid, precision: timestamp, timestamp_ptr: ptr) => errno;
+export type clock_time_get = (id: clockid, precision: timestamp, timestamp_ptr: ptr<u64>) => errno;
+
+/**
+ * Return environment variable data sizes.
+ *
+ * @param environCount_ptr A memory location to store the number of vars.
+ * @param environBufSize_ptr  A memory location to store the needed buffer size.
+ */
+export type environ_sizes_get = (environCount_ptr: ptr<u32>, environBufSize_ptr: ptr<u32>) => errno;
+
+/**
+ * Read environment variable data. The sizes of the buffers should match
+ * that returned by environ_sizes_get. Key/value pairs are expected to
+ * be joined with =s, and terminated with \0s.
+ *
+ * @params environ_ptr A memory location to store the env value offsets
+ * @params environBuf_ptr A memory location to store the actual env value.
+ */
+export type environ_get = (environ_ptr: ptr<u32>, environBuf_ptr: ptr<cstring>) => errno;
 
 /**
  * Provide file advisory information on a file descriptor. Note: This is
@@ -1645,7 +1736,7 @@ export type fd_datasync = (fd: fd) => errno;
  * @param fd The file descriptor.
  * @param fdstat_ptr A pointer to store the result.
  */
-export type fd_fdstat_get = (fd: fd, fdstat_ptr: ptr) => errno;
+export type fd_fdstat_get = (fd: fd, fdstat_ptr: ptr<fdstat>) => errno;
 
 /**
  * Adjust the flags associated with a file descriptor. Note: This is similar
@@ -1662,7 +1753,7 @@ export type fd_fdstat_set_flags = (fd: fd, fdflags: fdflags) => errno;
  * @param fd The file descriptor.
  * @param filestat_ptr The buffer where the file's attributes are stored.
  */
-export type fd_filestat_get = (fd: fd, filestat_ptr: ptr) => errno;
+export type fd_filestat_get = (fd: fd, filestat_ptr: ptr<filestat>) => errno;
 
 /**
  * Adjust the size of an open file. If this increases the file's size, the
@@ -1695,7 +1786,7 @@ export type fd_filestat_set_times = (fd: fd, atim: timestamp, mtim: timestamp, f
  * @param offset The offset within the file at which to read.
  * @param bytesRead_ptr A memory location to store the bytes read.
  */
-export type fd_pread = (fd: fd, iovs_ptr: ptr, iovs_len: u32, offset: filesize, bytesRead_ptr: ptr) => errno;
+export type fd_pread = (fd: fd, iovs_ptr: ptr<iovec>, iovs_len: u32, offset: filesize, bytesRead_ptr: ptr<u32>) => errno;
 
 /**
  * Return a description of the given preopened file descriptor.
@@ -1703,7 +1794,7 @@ export type fd_pread = (fd: fd, iovs_ptr: ptr, iovs_len: u32, offset: filesize, 
  * @param fd The file descriptor.
  * @param bufPtr A pointer to store the pre stat information.
  */
-export type fd_prestat_get = (fd: fd, bufPtr: ptr) => errno;
+export type fd_prestat_get = (fd: fd, bufPtr: ptr<prestat>) => errno;
 
 /**
  * Return a description of the given preopened file descriptor.
@@ -1712,7 +1803,7 @@ export type fd_prestat_get = (fd: fd, bufPtr: ptr) => errno;
  * @param pathPtr A memory location to store the path name.
  * @param pathLen The length of the path.
  */
-export type fd_prestat_dir_name = (fd: fd, pathPtr: ptr, pathLen: size) => errno;
+export type fd_prestat_dir_name = (fd: fd, pathPtr: ptr<u8[]>, pathLen: size) => errno;
 
 /**
  * Write to a file descriptor, without using and updating the file
@@ -1724,7 +1815,7 @@ export type fd_prestat_dir_name = (fd: fd, pathPtr: ptr, pathLen: size) => errno
  * @param offset The offset within the file at which to write.
  * @param bytesWritten_ptr A memory location to store the bytes written.
  */
-export type fd_pwrite = (fd: fd, ciovs_ptr: ptr, ciovs_len: u32, offset: filesize, bytesWritten_ptr: ptr) => errno;
+export type fd_pwrite = (fd: fd, ciovs_ptr: ptr<ciovec>, ciovs_len: u32, offset: filesize, bytesWritten_ptr: ptr<u32>) => errno;
 
 /**
  * Read from a file descriptor. Note: This is similar to readv in POSIX.
@@ -1734,7 +1825,7 @@ export type fd_pwrite = (fd: fd, ciovs_ptr: ptr, ciovs_len: u32, offset: filesiz
  * @param iovs_len The length of the iovs.
  * @param bytesRead_ptr A memory location to store the bytes read.
  */
-export type fd_read = (fd: fd, iovs_ptr: ptr, iovs_len: u32, bytesRead_ptr: ptr) => errno;
+export type fd_read = (fd: fd, iovs_ptr: ptr<iovec>, iovs_len: u32, bytesRead_ptr: ptr<u32>) => errno;
 
 /**
  * Read directory entries from a directory. When successful, the contents of
@@ -1754,7 +1845,18 @@ export type fd_read = (fd: fd, iovs_ptr: ptr, iovs_len: u32, bytesRead_ptr: ptr)
  * If less than the size of the read buffer, the end of the directory has
  * been reached.
  */
-export type fd_readdir = (fd: fd, buf_ptr: ptr, buf_len: size, cookie: dircookie, buf_used_ptr: ptr) => errno;
+export type fd_readdir = (fd: fd, buf_ptr: ptr<dirent>, buf_len: size, cookie: dircookie, buf_used_ptr: ptr<u32>) => errno;
+
+/**
+ * Atomically replace a file descriptor by renumbering another file descriptor.
+ * Due to the strong focus on thread safety, this environment does not provide
+ * a mechanism to duplicate or renumber a file descriptor to an arbitrary number,
+ * like dup2(). This would be prone to race conditions, as an actual file
+ * descriptor with the same number could be allocated by a different thread
+ * at the same time. This function provides a way to atomically renumber file
+ * descriptors, which would disappear if dup2() were to be removed entirely.
+ */
+export type fd_renumber = (fd: fd, to: fd) => errno;
 
 /**
  * Move the offset of a file descriptor. Note: This is similar to lseek in
@@ -1765,7 +1867,7 @@ export type fd_readdir = (fd: fd, buf_ptr: ptr, buf_len: size, cookie: dircookie
  * @param whence The base from which the offset is relative.
  * @param new_offset_ptr A memory location to store the new offset.
  */
-export type fd_seek = (fd: fd, offset: filedelta, whence: whence, new_offset_ptr: ptr) => errno;
+export type fd_seek = (fd: fd, offset: filedelta, whence: whence, new_offset_ptr: ptr<u64>) => errno;
 
 /**
  * Synchronize the data and metadata of a file to disk. Note: This is
@@ -1783,7 +1885,7 @@ export type fd_sync = (fd: fd) => errno;
  * @param offset_ptr A memory location to store the current offset of the
  * file descriptor, relative to the start of the file.
  */
-export type fd_tell = (fd: fd, offset_ptr: ptr) => errno;
+export type fd_tell = (fd: fd, offset_ptr: ptr<u64>) => errno;
 
 /**
  * Write to a file descriptor. Note: This is similar to writev in POSIX.
@@ -1793,7 +1895,7 @@ export type fd_tell = (fd: fd, offset_ptr: ptr) => errno;
  * @param ciovs_len The length of the iovs.
  * @param bytesWritten_ptr A memory location to store the bytes written.
  */
-export type fd_write = (fd: fd, ciovs_ptr: ptr, ciovs_len: u32, bytesWritten_ptr: ptr) => errno;
+export type fd_write = (fd: fd, ciovs_ptr: ptr<ciovec>, ciovs_len: u32, bytesWritten_ptr: ptr<u32>) => errno;
 
 /**
  * Create a directory. Note: This is similar to mkdirat in POSIX.
@@ -1802,7 +1904,7 @@ export type fd_write = (fd: fd, ciovs_ptr: ptr, ciovs_len: u32, bytesWritten_ptr
  * @param path_ptr A memory location that holds the path name.
  * @param path_len The length of the path
  */
-export type path_create_directory = (fd: fd, path_ptr: ptr, path_len: size) => errno;
+export type path_create_directory = (fd: fd, path_ptr: ptr<u8[]>, path_len: size) => errno;
 
 /**
  * Return the attributes of a file or directory. Note: This is similar to
@@ -1814,7 +1916,7 @@ export type path_create_directory = (fd: fd, path_ptr: ptr, path_len: size) => e
  * @param path_len The length of the path
  * @param filestat_ptr A memory location to store the file stat.
  */
-export type path_filestat_get = (fd: fd, flags: lookupflags, path_ptr: ptr, path_len: size, filestat_ptr: ptr) => errno;
+export type path_filestat_get = (fd: fd, flags: lookupflags, path_ptr: ptr<u8[]>, path_len: size, filestat_ptr: ptr) => errno;
 
 /**
  * Adjust the timestamps of a file or directory. Note: This is similar to
@@ -1828,7 +1930,7 @@ export type path_filestat_get = (fd: fd, flags: lookupflags, path_ptr: ptr, path
  * @param mtim The desired values of the data modification timestamp.
  * @param fst_flags A bitmask indicating which timestamps to adjust.
  */
-export type path_filestat_set_times = (fd: fd, flags: lookupflags, path_ptr: ptr, path_len: size, atim: timestamp, mtim: timestamp, fst_flags: fstflags) => errno;
+export type path_filestat_set_times = (fd: fd, flags: lookupflags, path_ptr: ptr<u8[]>, path_len: size, atim: timestamp, mtim: timestamp, fst_flags: fstflags) => errno;
 
 /**
  * Create a hard link. Note: This is similar to linkat in POSIX.
@@ -1844,7 +1946,7 @@ export type path_filestat_set_times = (fd: fd, flags: lookupflags, path_ptr: ptr
  * at which to create the hard link.
  * @param new_path_len: The length of the new path.
  */
-export type path_link = (old_fd: fd, old_flags: lookupflags, old_path_ptr: ptr, old_path_len: size, new_fd: fd, new_path_ptr: ptr, new_path_len: size) => errno;
+export type path_link = (old_fd: fd, old_flags: lookupflags, old_path_ptr: ptr<u8[]>, old_path_len: size, new_fd: fd, new_path_ptr: ptr<u8[]>, new_path_len: size) => errno;
 
 /**
  * Open a file or directory. The returned file descriptor is not guaranteed
@@ -1871,7 +1973,7 @@ export type path_link = (old_fd: fd, old_flags: lookupflags, old_path_ptr: ptr, 
  * @param fdflags The fd flags.
  * @param fd_ptr A memory location to store the opened file descriptor.
  */
-export type path_open = (fd: fd, dirflags: lookupflags, path: ptr, pathLen: size, oflags: oflags, fs_rights_base: rights, fs_rights_inheriting: rights, fdflags: fdflags, fd_ptr: ptr) => errno;
+export type path_open = (fd: fd, dirflags: lookupflags, path: ptr<u8[]>, pathLen: size, oflags: oflags, fs_rights_base: rights, fs_rights_inheriting: rights, fdflags: fdflags, fd_ptr: ptr<fd>) => errno;
 
 /**
  * Read the contents of a symbolic link. Note: This is similar to readlinkat
@@ -1885,7 +1987,7 @@ export type path_open = (fd: fd, dirflags: lookupflags, path: ptr, pathLen: size
  * @param result_size_ptr A memory location to store the number of bytes
  * placed in the buffer.
  */
-export type path_readlink = (fd: fd, path_ptr: ptr, path_len: size, buf: ptr, buf_len: size, result_size_ptr: ptr) => errno;
+export type path_readlink = (fd: fd, path_ptr: ptr<u8[]>, path_len: size, buf: ptr<u8[]>, buf_len: size, result_size_ptr: ptr<u32>) => errno;
 
 /**
  * Remove a directory. Return errno::notempty if the directory is not empty.
@@ -1895,7 +1997,7 @@ export type path_readlink = (fd: fd, path_ptr: ptr, path_len: size, buf: ptr, bu
  * @param path_ptr  A memory location that holds the path name.
  * @param path_len The length of the path.
  */
-export type path_remove_directory = (fd: fd, path_ptr: ptr, path_len: size) => errno;
+export type path_remove_directory = (fd: fd, path_ptr: ptr<u8[]>, path_len: size) => errno;
 
 /**
  * Rename a file or directory. Note: This is similar to renameat in POSIX.
@@ -1910,7 +2012,7 @@ export type path_remove_directory = (fd: fd, path_ptr: ptr, path_len: size) => e
  * which to rename the file or directory.
  * @param new_path_len: The length of the new path.
  */
-export type path_rename = (fd: fd, old_path_ptr: ptr, old_path_len: size, new_fd: fd, new_path_ptr: ptr, new_path_len: size) => errno;
+export type path_rename = (fd: fd, old_path_ptr: ptr<u8[]>, old_path_len: size, new_fd: fd, new_path_ptr: ptr<u8[]>, new_path_len: size) => errno;
 
 /**
  * Create a symbolic link. Note: This is similar to symlinkat in POSIX.
@@ -1923,7 +2025,7 @@ export type path_rename = (fd: fd, old_path_ptr: ptr, old_path_len: size, new_fd
  * at which to create the symbolic link.
  * @param new_path_len The length of the new path.
  */
-export type path_symlink = (old_path_ptr: ptr, old_path_len: size, fd: fd, new_path_ptr: ptr, new_path_len: size) => errno;
+export type path_symlink = (old_path_ptr: ptr<u8[]>, old_path_len: size, fd: fd, new_path_ptr: ptr<u8[]>, new_path_len: size) => errno;
 
 /**
  * Unlink a file. Return errno::isdir if the path refers to a directory.
@@ -1933,7 +2035,7 @@ export type path_symlink = (old_path_ptr: ptr, old_path_len: size, fd: fd, new_p
  * @param path_ptr  A memory location that holds the path name.
  * @param path_len The length of the path.
  */
-export type path_unlink_file = (fd: fd, path_ptr: ptr, path_len: size) => errno;
+export type path_unlink_file = (fd: fd, path_ptr: ptr<u8[]>, path_len: size) => errno;
 
 /**
  * Concurrently poll for the occurrence of a set of events.
@@ -1943,7 +2045,7 @@ export type path_unlink_file = (fd: fd, path_ptr: ptr, path_len: size) => errno;
  * @param subscriptions Both the number of subscriptions and events.
  * @param result_size_ptr The number of events stored.
  */
-export type poll_oneoff = (input: ptr, output: ptr, subscriptions: size, result_size_ptr: ptr) => errno;
+export type poll_oneoff = (input: ptr<subscription[]>, output: ptr<event[]>, subscriptions: size, result_size_ptr: ptr<u32>) => errno;
 
 /**
  * Terminate the process normally. An exit code of 0 indicates successful
@@ -1971,7 +2073,7 @@ export type sched_yield = () => errno;
  * @param buf The buffer to fill with random data.
  * @param buf_len The size of the buffer.
  */
-export type random_get = (buf: ptr, buf_len: size) => errno;
+export type random_get = (buf: ptr<u8[]>, buf_len: size) => errno;
 
 /**
  * Accept a new incoming connection. Note: This is similar to accept in
@@ -1981,7 +2083,7 @@ export type random_get = (buf: ptr, buf_len: size) => errno;
  * @param flags The desired values of the file descriptor flags.
  * @param result_fd_ptr A memory location to store the new socket connection.
  */
-export type sock_accept = (fd: fd, flags: fdflags, result_fd_ptr: ptr) => errno;
+export type sock_accept = (fd: fd, flags: fdflags, result_fd_ptr: ptr<u32>) => errno;
 
 /**
  * Receive a message from a socket. Note: This is similar to recv in POSIX,

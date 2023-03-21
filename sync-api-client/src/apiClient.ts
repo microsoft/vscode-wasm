@@ -40,10 +40,6 @@ export interface FileSystem {
 	rename(source: URI, target: URI, options?: { overwrite?: boolean }): void;
 }
 
-export interface Window {
-	activeTextDocument: vscode.TextDocument | undefined;
-}
-
 export interface Workspace {
 	workspaceFolders: vscode.WorkspaceFolder[];
 	fileSystem: FileSystem;
@@ -273,7 +269,20 @@ class WorkspaceImpl implements Workspace {
 	}
 }
 
-export class ApiClient {
+export interface ApiShape {
+
+	readonly timer: Timer;
+	readonly process: Process;
+	readonly byteSource: ByteSource;
+	readonly byteSink: ByteSink;
+	readonly console: Console;
+	readonly tty: TTY;
+	readonly vscode: {
+		readonly workspace: Workspace;
+	};
+}
+
+export class ApiClient implements ApiShape {
 
 	private readonly connection: ApiClientConnection;
 	private readonly encoder: RAL.TextEncoder;
