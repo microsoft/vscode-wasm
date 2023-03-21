@@ -17,6 +17,7 @@ import WasiKernel, { DeviceDrivers } from './kernel';
 import { Errno, Lookupflags, exitcode } from './wasi';
 import { CharacterDeviceDriver } from './deviceDriver';
 import { WasiPseudoterminal } from './terminal';
+import { WebAssembly } from './webassemblyCommon';
 
 namespace MapDirEntry {
 	export function is(value: any): value is MapDirEntry {

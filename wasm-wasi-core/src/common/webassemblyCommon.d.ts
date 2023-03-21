@@ -13,8 +13,7 @@ See the Apache Version 2.0 License for specific language governing permissions
 and limitations under the License.
 ***************************************************************************** */
 
-type BufferSource = ArrayBufferView | ArrayBuffer;
-declare namespace WebAssembly {
+export namespace WebAssembly {
 
 	interface CompileError extends Error {
 	}
@@ -68,7 +67,6 @@ declare namespace WebAssembly {
 
 	var Module: {
 		prototype: Module;
-		new(bytes: BufferSource): Module;
 		customSections(moduleObject: Module, sectionName: string): ArrayBuffer[];
 		exports(moduleObject: Module): ModuleExportDescriptor[];
 		imports(moduleObject: Module): ModuleImportDescriptor[];

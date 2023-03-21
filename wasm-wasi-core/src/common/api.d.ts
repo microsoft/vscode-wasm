@@ -4,6 +4,7 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { Event, Pseudoterminal, Uri } from 'vscode';
+import type { WebAssembly } from './webassemblyCommon';
 
 import { fdflags, oflags } from './wasi';
 export { fdflags, oflags };

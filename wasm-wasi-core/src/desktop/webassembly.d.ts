@@ -14,6 +14,7 @@ and limitations under the License.
 ***************************************************************************** */
 /// <reference path="../common/webassembly.d.ts" />
 
+type BufferSource = ArrayBufferView | ArrayBuffer;
 declare namespace WebAssembly {
 	function compile(bytes: BufferSource): Promise<Module>;
 	function instantiate(bytes: BufferSource, importObject?: Imports): Promise<WebAssemblyInstantiatedSource>;

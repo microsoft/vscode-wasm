@@ -4,6 +4,7 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { ptr, u32 } from './baseTypes';
+import type { WebAssembly } from './webassemblyCommon';
 
 export namespace Offsets {
 	export const lock_size = 4;
