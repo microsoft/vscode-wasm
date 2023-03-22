@@ -22,6 +22,55 @@ import { BigInts, code2Wasi } from './converter';
 import { Options } from './api';
 import { DeviceDrivers } from './kernel';
 
+export abstract class ServiceConnection {
+
+	private readonly wasiService: WasiService;
+
+	constructor(wasiService: WasiService) {
+		this.wasiService = wasiService;
+	}
+
+	public abstract workerReady(): Promise<void>;
+
+	protected async handleMessage(message: WasiCallMessage): Promise<void> {
+		const [paramBuffer, wasmMemory] = message;
+		const paramView = new DataView(paramBuffer);
+		try {
+
+			const method = paramView.getUint32(Offsets.method_index, true);
+			const func: WasiFunction = WasiFunctions.functionAt(method);
+			if (func === undefined) {
+				throw new WasiError(Errno.inval);
+			}
+			const params = this.getParams(func.signature, paramBuffer);
+			const result = await this.wasiService[func.name](wasmMemory, ...params);
+			paramView.setUint16(Offsets.errno_index, result, true);
+		} catch (err) {
+			if (err instanceof WasiError) {
+				paramView.setUint16(Offsets.errno_index, err.errno, true);
+			} else {
+				paramView.setUint16(Offsets.errno_index, Errno.inval, true);
+			}
+		}
+
+		const sync = new Int32Array(paramBuffer, 0, 1);
+		Atomics.store(sync, 0, 1);
+		Atomics.notify(sync, 0);
+	}
+
+	private getParams(signature: WasiFunctionSignature, paramBuffer: SharedArrayBuffer): (number & bigint)[] {
+		const paramView = new DataView(paramBuffer);
+		const params: (number | bigint)[] = [];
+		let offset = Offsets.header_size;
+		for (let i = 0; i < signature.params.length; i++) {
+			const param = signature.params[i];
+			params.push(param.read(paramView, offset));
+			offset += param.size;
+		}
+		return params as (number & bigint)[];
+	}
+}
+
 export interface EnvironmentWasiService {
 	args_sizes_get: args_sizes_get.ServiceSignature;
 	args_get: args_get.ServiceSignature;
@@ -920,51 +969,137 @@ export namespace DeviceWasiService {
 	}
 }
 
-export abstract class ServiceConnection {
-
-	private readonly wasiService: WasiService;
-
-	constructor(wasiService: WasiService) {
-		this.wasiService = wasiService;
+export const NoSysWasiService: WasiService = {
+	args_sizes_get: (): Promise<number> => {
+		throw new WasiError(Errno.nosys);
+	},
+	args_get: (): Promise<number> => {
+		throw new WasiError(Errno.nosys);
+	},
+	environ_sizes_get: (): Promise<number> => {
+		throw new WasiError(Errno.nosys);
+	},
+	environ_get: (): Promise<number> => {
+		throw new WasiError(Errno.nosys);
+	},
+	fd_prestat_get: (): Promise<number> => {
+		throw new WasiError(Errno.nosys);
+	},
+	fd_prestat_dir_name: (): Promise<number> => {
+		throw new WasiError(Errno.nosys);
+	},
+	clock_res_get: (): Promise<number> => {
+		throw new WasiError(Errno.nosys);
+	},
+	clock_time_get: (): Promise<number> => {
+		throw new WasiError(Errno.nosys);
+	},
+	fd_advise: (): Promise<number> => {
+		throw new WasiError(Errno.nosys);
+	},
+	fd_allocate: (): Promise<number> => {
+		throw new WasiError(Errno.nosys);
+	},
+	fd_close: (): Promise<number> => {
+		throw new WasiError(Errno.nosys);
+	},
+	fd_datasync: (): Promise<number> => {
+		throw new WasiError(Errno.nosys);
+	},
+	fd_fdstat_get: (): Promise<number> => {
+		throw new WasiError(Errno.nosys);
+	},
+	fd_fdstat_set_flags: (): Promise<number> => {
+		throw new WasiError(Errno.nosys);
+	},
+	fd_filestat_get: (): Promise<number> => {
+		throw new WasiError(Errno.nosys);
+	},
+	fd_filestat_set_size: (): Promise<number> => {
+		throw new WasiError(Errno.nosys);
+	},
+	fd_filestat_set_times: (): Promise<number> => {
+		throw new WasiError(Errno.nosys);
+	},
+	fd_pread: (): Promise<number> => {
+		throw new WasiError(Errno.nosys);
+	},
+	fd_pwrite: (): Promise<number> => {
+		throw new WasiError(Errno.nosys);
+	},
+	fd_read: (): Promise<number> => {
+		throw new WasiError(Errno.nosys);
+	},
+	fd_readdir: (): Promise<number> => {
+		throw new WasiError(Errno.nosys);
+	},
+	fd_seek: (): Promise<number> => {
+		throw new WasiError(Errno.nosys);
+	},
+	fd_renumber: (): Promise<number> => {
+		throw new WasiError(Errno.nosys);
+	},
+	fd_sync: (): Promise<number> => {
+		throw new WasiError(Errno.nosys);
+	},
+	fd_tell: (): Promise<number> => {
+		throw new WasiError(Errno.nosys);
+	},
+	fd_write: (): Promise<number> => {
+		throw new WasiError(Errno.nosys);
+	},
+	path_create_directory: (): Promise<number> => {
+		throw new WasiError(Errno.nosys);
+	},
+	path_filestat_get: (): Promise<number> => {
+		throw new WasiError(Errno.nosys);
+	},
+	path_filestat_set_times: (): Promise<number> => {
+		throw new WasiError(Errno.nosys);
+	},
+	path_link: (): Promise<number> => {
+		throw new WasiError(Errno.nosys);
+	},
+	path_open: (): Promise<number> => {
+		throw new WasiError(Errno.nosys);
+	},
+	path_readlink: (): Promise<number> => {
+		throw new WasiError(Errno.nosys);
+	},
+	path_remove_directory: (): Promise<number> => {
+		throw new WasiError(Errno.nosys);
+	},
+	path_rename: (): Promise<number> => {
+		throw new WasiError(Errno.nosys);
+	},
+	path_symlink: (): Promise<number> => {
+		throw new WasiError(Errno.nosys);
+	},
+	path_unlink_file: (): Promise<number> => {
+		throw new WasiError(Errno.nosys);
+	},
+	poll_oneoff: (): Promise<number> => {
+		throw new WasiError(Errno.nosys);
+	},
+	sched_yield: (): Promise<number> => {
+		throw new WasiError(Errno.nosys);
+	},
+	random_get: (): Promise<number> => {
+		throw new WasiError(Errno.nosys);
+	},
+	sock_accept: (): Promise<number> => {
+		throw new WasiError(Errno.nosys);
+	},
+	sock_shutdown: (): Promise<number> => {
+		throw new WasiError(Errno.nosys);
+	},
+	proc_exit: (): Promise<number> => {
+		throw new WasiError(Errno.nosys);
+	},
+	thread_exit: (): Promise<number> => {
+		throw new WasiError(Errno.nosys);
+	},
+	'thread-spawn': (): Promise<number> => {
+		throw new WasiError(Errno.nosys);
 	}
-
-	public abstract workerReady(): Promise<void>;
-
-	protected async handleMessage(message: WasiCallMessage): Promise<void> {
-		const [paramBuffer, wasmMemory] = message;
-		const paramView = new DataView(paramBuffer);
-		try {
-
-			const method = paramView.getUint32(Offsets.method_index, true);
-			const func: WasiFunction = WasiFunctions.functionAt(method);
-			if (func === undefined) {
-				throw new WasiError(Errno.inval);
-			}
-			const params = this.getParams(func.signature, paramBuffer);
-			const result = await this.wasiService[func.name](wasmMemory, ...params);
-			paramView.setUint16(Offsets.errno_index, result, true);
-		} catch (err) {
-			if (err instanceof WasiError) {
-				paramView.setUint16(Offsets.errno_index, err.errno, true);
-			} else {
-				paramView.setUint16(Offsets.errno_index, Errno.inval, true);
-			}
-		}
-
-		const sync = new Int32Array(paramBuffer, 0, 1);
-		Atomics.store(sync, 0, 1);
-		Atomics.notify(sync, 0);
-	}
-
-	private getParams(signature: WasiFunctionSignature, paramBuffer: SharedArrayBuffer): (number & bigint)[] {
-		const paramView = new DataView(paramBuffer);
-		const params: (number | bigint)[] = [];
-		let offset = Offsets.header_size;
-		for (let i = 0; i < signature.params.length; i++) {
-			const param = signature.params[i];
-			params.push(param.read(paramView, offset));
-			offset += param.size;
-		}
-		return params as (number & bigint)[];
-	}
-}
+};

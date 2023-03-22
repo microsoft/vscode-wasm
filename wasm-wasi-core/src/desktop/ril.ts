@@ -83,7 +83,8 @@ const _ril: RIL = Object.freeze<RIL>({
 				}
 				return new NodeHostConnection(parentPort);
 			}
-		})
+		}),
+		sharedMemory: false
 	})
 });
 

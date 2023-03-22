@@ -20,8 +20,7 @@ export abstract class HostConnection {
 		this.timeout = timeout;
 	}
 
-	protected abstract postMessage(message: WasiCallMessage | WorkerReadyMessage): any;
-
+	public abstract postMessage(message: WasiCallMessage | WorkerReadyMessage): any;
 
 	public call(func: WasiFunction, args: (number | bigint)[], wasmMemory: ArrayBuffer, transfers?: MemoryTransfers): errno {
 		const signature = func.signature;
@@ -132,26 +131,36 @@ declare namespace WebAssembly {
 	}
 	type ExportValue = Function | Global | Memory | Table;
 
-	export interface Instance {
+	interface Instance {
 		readonly exports: Record<string, ExportValue>;
 	}
+
+	var Instance: {
+    	prototype: Instance;
+    	new(): Instance;
+	};
 }
 
 export interface WasiHost extends WASI {
-	initialize: (inst: WebAssembly.Instance, memory: WebAssembly.Memory | undefined) => void;
+	initialize: (instOrMemory: WebAssembly.Instance | WebAssembly.Memory) => void;
 	thread_exit: (tid: u32) => void;
 }
 
 export namespace WasiHost {
 	export function create(connection: HostConnection): WasiHost {
-		let $instance: WebAssembly.Instance;
+		let $instance: WebAssembly.Instance | undefined;
 		let $memory: WebAssembly.Memory | undefined;
 		const args_size = { count: 0, bufferSize: 0 };
 		const environ_size = { count: 0, bufferSize: 0 };
 		const wasi: WasiHost = {
-			initialize: (inst: WebAssembly.Instance, memory: WebAssembly.Memory | undefined): void => {
-				$instance = inst;
-				$memory = memory;
+			initialize: (instOrMemory: WebAssembly.Instance | WebAssembly.Memory): void => {
+				if (instOrMemory instanceof WebAssembly.Instance) {
+					$instance = instOrMemory;
+					$memory = undefined;
+				} else {
+					$instance = undefined;
+					$memory = instOrMemory;
+				}
 			},
 			args_sizes_get: (argvCount_ptr: ptr<u32>, argvBufSize_ptr: ptr<u32>): errno => {
 				try {

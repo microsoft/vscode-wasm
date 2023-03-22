@@ -64,6 +64,7 @@ interface RAL {
 		readonly HostConnection: {
 			create(): HostConnection;
 		};
+		sharedMemory: boolean;
 	};
 }
 

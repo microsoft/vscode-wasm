@@ -80,7 +80,8 @@ const _ril: RIL = Object.freeze<RIL>({
 			create(): BrowserHostConnection {
 				return new BrowserHostConnection(self);
 			}
-		})
+		}),
+		sharedMemory: false
 	})
 });
 

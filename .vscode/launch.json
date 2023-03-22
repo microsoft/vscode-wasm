@@ -131,6 +131,16 @@
 			"sourceMaps": true,
 			"outFiles": ["${workspaceRoot}/wasm-wasi-tests/lib/**/*.js"],
 			"preLaunchTask": "npm: watch"
+		},
+		{
+			"request": "launch",
+			"type": "extensionHost",
+			"name": "test:wasm-wasi-core",
+			"runtimeExecutable": "${execPath}",
+			"args": ["--extensionDevelopmentPath=${workspaceFolder}/wasm-wasi-core", "--extensionTestsPath=${workspaceFolder}/wasm-wasi-core/lib/desktop/test/index.js" ],
+			"sourceMaps": true,
+			"outFiles": ["${workspaceRoot}/wasm-wasi-core/lib/**/*.js"],
+			"preLaunchTask": "npm: watch"
 		}
 	]
 }

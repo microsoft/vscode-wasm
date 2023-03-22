@@ -32,7 +32,7 @@ class WasiMainWorker {
 				};
 			}
 			const instance  = await WebAssembly.instantiate(module, imports);
-			host.initialize(instance, memory);
+			host.initialize(memory ?? instance);
 			(instance.exports._start as Function)();
 		});
 		const ready: WorkerReadyMessage = { method: 'workerReady' };
