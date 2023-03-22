@@ -8,7 +8,7 @@ import {
 	fstflags, exitcode, WasiError, event, subscription, riflags, siflags, sdflags, dirent, ciovec, iovec, fdstat, filestat, prestat,
 	args_sizes_get, args_get, clock_res_get, clock_time_get, environ_sizes_get, environ_get, fd_advise, fd_allocate, fd_close, fd_datasync, fd_fdstat_set_flags, fd_fdstat_get, fd_filestat_get, fd_filestat_set_size, fd_filestat_set_times, fd_pread, fd_prestat_get, fd_prestat_dir_name, fd_pwrite, fd_read, fd_readdir, fd_seek, fd_renumber, fd_sync, fd_tell, fd_write, path_create_directory, path_filestat_get, path_filestat_set_times, path_link, path_open, path_readlink, path_remove_directory, path_rename, path_symlink, path_unlink_file, poll_oneoff, proc_exit, sched_yield, random_get, sock_accept, sock_shutdown, thread_spawn, thread_exit
 } from './wasi';
-import { ParamKind, WasiFunctions, ReverseTransfer, WasiFunctionSignature, MemoryTransfers, WasiFunction } from './wasiMeta';
+import { ParamKind, WasiFunctions, ReverseArgumentTransfer, WasiFunctionSignature, ArgumentsTransfer, WasiFunction, CustomMemoryTransfer } from './wasiMeta';
 import { Offsets, WasiCallMessage, WorkerReadyMessage } from './connection';
 import { WASI } from './wasi';
 
@@ -22,7 +22,7 @@ export abstract class HostConnection {
 
 	public abstract postMessage(message: WasiCallMessage | WorkerReadyMessage): any;
 
-	public call(func: WasiFunction, args: (number | bigint)[], wasmMemory: ArrayBuffer, transfers?: MemoryTransfers): errno {
+	public call(func: WasiFunction, args: (number | bigint)[], wasmMemory: ArrayBuffer, transfers?: ArgumentsTransfer | CustomMemoryTransfer): errno {
 		const signature = func.signature;
 		if (signature.params.length !== args.length) {
 			throw new WasiError(Errno.inval);
@@ -73,7 +73,7 @@ export abstract class HostConnection {
 		return new Uint16Array(paramBuffer, Offsets.errno_index, 1)[0];
 	}
 
-	private createCallArrays(name: string, signature: WasiFunctionSignature, args: (number | bigint)[], wasmMemory: ArrayBuffer, transfers: MemoryTransfers | undefined): [SharedArrayBuffer, SharedArrayBuffer, (ReverseTransfer[])[]] {
+	private createCallArrays(name: string, signature: WasiFunctionSignature, args: (number | bigint)[], wasmMemory: ArrayBuffer, transfers: ArgumentsTransfer | CustomMemoryTransfer | undefined): [SharedArrayBuffer, SharedArrayBuffer, (ReverseArgumentTransfer[])[]] {
 		const paramBuffer = new SharedArrayBuffer(Offsets.header_size + signature.memorySize);
 		const paramView = new DataView(paramBuffer);
 		paramView.setUint32(Offsets.method_index, WasiFunctions.getIndex(name), true);
@@ -92,7 +92,7 @@ export abstract class HostConnection {
 			let offset = Offsets.header_size;
 			let result_ptr = 0;
 			let transferIndex = 0;
-			const reverse: (ReverseTransfer[])[] = [];
+			const reverse: (ReverseArgumentTransfer[])[] = [];
 			for (let i = 0; i < args.length; i++) {
 				const param = signature.params[i];
 				if (param.kind === ParamKind.ptr) {
@@ -176,7 +176,7 @@ export namespace WasiHost {
 					return handleError(error, Errno.inval);
 				}
 			},
-			args_get: (argv_ptr: ptr<u32[]>, argvBuf_ptr: ptr<cstring>): errno => {
+			args_get: (argv_ptr: ptr<ptr<cstring>[]>, argvBuf_ptr: ptr<cstring>): errno => {
 				if (args_size.count === 0 || args_size.bufferSize === 0) {
 					return Errno.inval;
 				}

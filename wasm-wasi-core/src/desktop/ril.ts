@@ -75,7 +75,7 @@ const _ril: RIL = Object.freeze<RIL>({
 			return path.posix.normalize(value);
 		}
 	}),
-	$testing: Object.freeze({
+	$testing: {
 		HostConnection: Object.freeze({
 			create(): NodeHostConnection {
 				if (parentPort === null) {
@@ -85,7 +85,7 @@ const _ril: RIL = Object.freeze<RIL>({
 			}
 		}),
 		sharedMemory: false
-	})
+	}
 });
 
 

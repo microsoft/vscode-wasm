@@ -15,11 +15,11 @@ async function run(): Promise<void> {
 	const files = (await glob('**/**.test.js', { cwd: testsRoot })).map(f => path.resolve(testsRoot, f));
 	let sharedError: any = undefined;
 	let ownError: any = undefined;
-	try {
-		await doRun(files, true);
-	} catch (err) {
-		sharedError = err;
-	}
+	// try {
+	// 	await doRun(files, true);
+	// } catch (err) {
+	// 	sharedError = err;
+	// }
 	try {
 		await doRun(files, false);
 	} catch (err) {

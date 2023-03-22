@@ -11,7 +11,6 @@ import { WorkerReadyMessage } from '../connection';
 import { WasiHost } from '../host';
 import { Errno, WasiError } from '../wasi';
 
-debugger;
 const hostConnection = RAL().$testing.HostConnection.create();
 const wasi = WasiHost.create(hostConnection);
 const ready: WorkerReadyMessage = { method: 'workerReady' };
@@ -189,6 +188,7 @@ class Memory {
 
 suite('Simple test', () => {
 	test('argv', () => {
+		debugger;
 		const memory = new Memory(undefined, RAL().$testing.sharedMemory);
 		const args = ['arg1', 'arg22', 'arg333'];
 		wasi.initialize(memory);

@@ -65,15 +65,15 @@ export namespace WasiFunctionSignature {
 	}
 }
 
-export type ReverseTransfer = {
+export type ReverseArgumentTransfer = {
 	readonly from: ptr;
 	readonly to: ptr;
 	readonly size: number;
 };
 
-export type MemoryTransfer = {
+export type ArgumentTransfer = {
 	readonly memorySize: number;
-	copy: (wasmMemory: ArrayBuffer, from: ptr, transferMemory: SharedArrayBuffer, to: ptr) => ReverseTransfer[];
+	copy: (wasmMemory: ArrayBuffer, from: ptr, transferMemory: SharedArrayBuffer, to: ptr) => ReverseArgumentTransfer[];
 };
 
 export enum MemoryTransferDirection {
@@ -83,20 +83,20 @@ export enum MemoryTransferDirection {
 }
 
 
-export type MemoryTransfers = {
-	items: MemoryTransfer[];
+export type ArgumentsTransfer = {
+	items: ArgumentTransfer[];
 	readonly size: number;
 };
 
-export namespace MemoryTransfers {
-	export function create(items: MemoryTransfer[]): MemoryTransfers {
+export namespace ArgumentsTransfer {
+	export function create(items: ArgumentTransfer[]): ArgumentsTransfer {
 		return {
 			items,
 			size: getMemorySize(items)
 		};
 	}
 
-	function getMemorySize(transfers: MemoryTransfer[]): number {
+	function getMemorySize(transfers: ArgumentTransfer[]): number {
 		let result: number = 0;
 		for (const transfer of transfers) {
 			result += transfer.memorySize;
@@ -106,11 +106,11 @@ export namespace MemoryTransfers {
 }
 
 export namespace MemoryTransfer {
-	export const Null: MemoryTransfers = {
+	export const Null: ArgumentsTransfer = {
 		items: [],
 		size: 0
 	};
-	export function createPathTransfer(path: ptr<u8[]>, path_len: u32): MemoryTransfer {
+	export function createPathTransfer(path: ptr<u8[]>, path_len: u32): ArgumentTransfer {
 		return {
 			memorySize: path_len,
 			copy: (wasmMemory, from, transferMemory, to) => {
@@ -125,10 +125,19 @@ export namespace MemoryTransfer {
 
 }
 
+export type ReverseCustomTransfer = {
+	copy: () => void;
+};
+
+export type CustomMemoryTransfer = {
+	readonly size: number;
+	copy: (wasmMemory: ArrayBuffer, args: (number | bigint)[], transferMemory: SharedArrayBuffer, to: ptr) => ReverseCustomTransfer;
+};
+
 export type WasiFunction = {
 	readonly name: string;
 	readonly signature: WasiFunctionSignature;
-	transfers?: (memory: DataView, ...params: (number & bigint)[]) => MemoryTransfers;
+	transfers?: (memory: DataView, ...params: (number & bigint)[]) => ArgumentsTransfer | CustomMemoryTransfer;
 };
 
 namespace _WasiFunctions {
@@ -195,7 +204,7 @@ export const Byte = U8;
 
 export namespace Bytes {
 	export const $ptr = PtrParam;
-	export function createTransfer(length: number, direction: MemoryTransferDirection): MemoryTransfer {
+	export function createTransfer(length: number, direction: MemoryTransferDirection): ArgumentTransfer {
 		return {
 			memorySize: length,
 			copy: (wasmMemory, from, transferMemory, to) => {
@@ -218,7 +227,7 @@ export namespace U32 {
 	export const size = 4 as const;
 	export const $ptr = PtrParam;
 	export const $param: NumberParam = { kind: ParamKind.number, size, write: (view, offset, value) => view.setUint32(offset, value, true), read: (view, offset) => view.getUint32(offset, true) };
-	export const $transfer: MemoryTransfer = {
+	export const $transfer: ArgumentTransfer = {
 		memorySize: size,
 		copy: (_wasmMemory, from, _transferMemory, to) => {
 			// We have a result pointer so we only need instructions to copy the
@@ -234,7 +243,7 @@ export namespace U64 {
 	export const size = 8 as const;
 	export const $ptr = PtrParam;
 	export const $param: BigintParam = { kind: ParamKind.bigint, size, write: (view, offset, value) => view.setBigUint64(offset, value, true), read: (view, offset) => view.getBigUint64(offset, true) };
-	export const $transfer: MemoryTransfer = {
+	export const $transfer: ArgumentTransfer = {
 		memorySize: size,
 		copy: (_wasmMemory, from, _transferMemory, to) => {
 			// We have a result pointer so we only need instructions to copy the
@@ -254,7 +263,7 @@ export namespace Ptr {
 	export const size = 4 as const;
 	export const $param = PtrParam;
 
-	export function createTransfer(length: number, direction: MemoryTransferDirection): MemoryTransfer {
+	export function createTransfer(length: number, direction: MemoryTransferDirection): ArgumentTransfer {
 		return {
 			memorySize: length * size,
 			copy: (wasmMemory, from, transferMemory, to) => {
