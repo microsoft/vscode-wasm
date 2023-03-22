@@ -75,10 +75,6 @@ export class NodeWasiProcess extends WasiProcess {
 		}
 	}
 
-	protected getImports(module: WebAssembly.Module): WebAssembly.ModuleImportDescriptor[] {
-		return WebAssembly.Module.imports(module);
-	}
-
 	protected async startMain(wasiService: WasiService): Promise<void> {
 		const filename = Uri.joinPath(this.baseUri, './lib/desktop/mainWorker.js').fsPath;
 		this.mainWorker = new Worker(filename);
@@ -143,5 +139,15 @@ export class NodeWasiProcess extends WasiProcess {
 			this.threadWorkers.delete(tid);
 			await worker.terminate();
 		}
+	}
+
+	private doesImportMemory(module: WebAssembly.Module): boolean {
+		const imports = WebAssembly.Module.imports(module);
+		for (const item of imports) {
+			if (item.kind === 'memory' && item.name === 'memory') {
+				return true;
+			}
+		}
+		return false;
 	}
 }

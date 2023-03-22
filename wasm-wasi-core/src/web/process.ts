@@ -76,10 +76,6 @@ export class BrowserWasiProcess extends WasiProcess {
 		}
 	}
 
-	protected getImports(module: WebAssembly.Module): WebAssembly.ModuleImportDescriptor[] {
-		return WebAssembly.Module.imports(module);
-	}
-
 	public async terminate(): Promise<number> {
 		let result = 0;
 		if (this.mainWorker !== undefined) {
@@ -134,5 +130,15 @@ export class BrowserWasiProcess extends WasiProcess {
 			this.threadWorkers.delete(tid);
 			worker.terminate();
 		}
+	}
+
+	private doesImportMemory(module: WebAssembly.Module): boolean {
+		const imports = WebAssembly.Module.imports(module);
+		for (const item of imports) {
+			if (item.kind === 'memory' && item.name === 'memory') {
+				return true;
+			}
+		}
+		return false;
 	}
 }

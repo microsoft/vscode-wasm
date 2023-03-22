@@ -90,6 +90,7 @@
 		"ESUCCESS",
 		"eventrwflags",
 		"eventtype",
+		"externref",
 		"fadvise",
 		"fallocate",
 		"fbig",

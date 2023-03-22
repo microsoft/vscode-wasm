@@ -424,18 +424,6 @@ export abstract class WasiProcess {
 
 	protected abstract threadEnded(tid: u32): Promise<void>;
 
-	protected doesImportMemory(module: WebAssembly.Module): boolean {
-		const imports = this.getImports(module);
-		for (const item of imports) {
-			if (item.kind === 'memory' && item.name === 'memory') {
-				return true;
-			}
-		}
-		return false;
-	}
-
-	protected abstract getImports(module: WebAssembly.Module): WebAssembly.ModuleImportDescriptor[];
-
 	private mapWorkspaceFolder(folder: WorkspaceFolder, single: boolean): void {
 		const path = RAL().path;
 		const mountPoint: string = single
