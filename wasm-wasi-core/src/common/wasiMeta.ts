@@ -65,6 +65,12 @@ export namespace WasiFunctionSignature {
 	}
 }
 
+export enum MemoryTransferDirection {
+	param = 1,
+	result = 2,
+	both = 3
+}
+
 export type ReverseArgumentTransfer = {
 	readonly from: ptr;
 	readonly to: ptr;
@@ -76,12 +82,20 @@ export type ArgumentTransfer = {
 	copy: (wasmMemory: ArrayBuffer, from: ptr, transferMemory: SharedArrayBuffer, to: ptr) => ReverseArgumentTransfer[];
 };
 
-export enum MemoryTransferDirection {
-	param = 1,
-	result = 2,
-	both = 3
+export namespace ArgumentTransfer {
+	export function createPathTransfer(path: ptr<u8[]>, path_len: u32): ArgumentTransfer {
+		return {
+			memorySize: path_len,
+			copy: (wasmMemory, from, transferMemory, to) => {
+				if (from !== path) {
+					throw new Error(`Path transfer needs to be used as an instance object`);
+				}
+				new Uint8Array(transferMemory, to, path_len).set(new Uint8Array(wasmMemory, from, path_len));
+				return [];
+			}
+		};
+	}
 }
-
 
 export type ArgumentsTransfer = {
 	items: ArgumentTransfer[];
@@ -89,6 +103,12 @@ export type ArgumentsTransfer = {
 };
 
 export namespace ArgumentsTransfer {
+
+	export const Null: ArgumentsTransfer = {
+		items: [],
+		size: 0
+	};
+
 	export function create(items: ArgumentTransfer[]): ArgumentsTransfer {
 		return {
 			items,
@@ -105,26 +125,6 @@ export namespace ArgumentsTransfer {
 	}
 }
 
-export namespace MemoryTransfer {
-	export const Null: ArgumentsTransfer = {
-		items: [],
-		size: 0
-	};
-	export function createPathTransfer(path: ptr<u8[]>, path_len: u32): ArgumentTransfer {
-		return {
-			memorySize: path_len,
-			copy: (wasmMemory, from, transferMemory, to) => {
-				if (from !== path) {
-					throw new Error(`Path transfer needs to be used as an instance object`);
-				}
-				new Uint8Array(transferMemory, to, path_len).set(new Uint8Array(wasmMemory, from, path_len));
-				return [];
-			}
-		};
-	}
-
-}
-
 export type ReverseCustomTransfer = {
 	copy: () => void;
 };
@@ -133,6 +133,14 @@ export type CustomMemoryTransfer = {
 	readonly size: number;
 	copy: (wasmMemory: ArrayBuffer, args: (number | bigint)[], transferMemory: SharedArrayBuffer, to: ptr) => ReverseCustomTransfer;
 };
+
+export type MemoryTransfer = ArgumentsTransfer | CustomMemoryTransfer;
+
+export namespace MemoryTransfer {
+	export function isCustom(transfer: MemoryTransfer): transfer is CustomMemoryTransfer {
+		return typeof (transfer as CustomMemoryTransfer).copy === 'function';
+	}
+}
 
 export type WasiFunction = {
 	readonly name: string;

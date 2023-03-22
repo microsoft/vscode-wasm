@@ -8,7 +8,7 @@ import {
 	fstflags, exitcode, WasiError, event, subscription, riflags, siflags, sdflags, dirent, ciovec, iovec, fdstat, filestat, prestat,
 	args_sizes_get, args_get, clock_res_get, clock_time_get, environ_sizes_get, environ_get, fd_advise, fd_allocate, fd_close, fd_datasync, fd_fdstat_set_flags, fd_fdstat_get, fd_filestat_get, fd_filestat_set_size, fd_filestat_set_times, fd_pread, fd_prestat_get, fd_prestat_dir_name, fd_pwrite, fd_read, fd_readdir, fd_seek, fd_renumber, fd_sync, fd_tell, fd_write, path_create_directory, path_filestat_get, path_filestat_set_times, path_link, path_open, path_readlink, path_remove_directory, path_rename, path_symlink, path_unlink_file, poll_oneoff, proc_exit, sched_yield, random_get, sock_accept, sock_shutdown, thread_spawn, thread_exit
 } from './wasi';
-import { ParamKind, WasiFunctions, ReverseArgumentTransfer, WasiFunctionSignature, ArgumentsTransfer, WasiFunction, CustomMemoryTransfer } from './wasiMeta';
+import { ParamKind, WasiFunctions, ReverseArgumentTransfer, WasiFunctionSignature, WasiFunction, MemoryTransfer } from './wasiMeta';
 import { Offsets, WasiCallMessage, WorkerReadyMessage } from './connection';
 import { WASI } from './wasi';
 
@@ -22,7 +22,7 @@ export abstract class HostConnection {
 
 	public abstract postMessage(message: WasiCallMessage | WorkerReadyMessage): any;
 
-	public call(func: WasiFunction, args: (number | bigint)[], wasmMemory: ArrayBuffer, transfers?: ArgumentsTransfer | CustomMemoryTransfer): errno {
+	public call(func: WasiFunction, args: (number | bigint)[], wasmMemory: ArrayBuffer, transfers?: MemoryTransfer): errno {
 		const signature = func.signature;
 		if (signature.params.length !== args.length) {
 			throw new WasiError(Errno.inval);
@@ -73,7 +73,7 @@ export abstract class HostConnection {
 		return new Uint16Array(paramBuffer, Offsets.errno_index, 1)[0];
 	}
 
-	private createCallArrays(name: string, signature: WasiFunctionSignature, args: (number | bigint)[], wasmMemory: ArrayBuffer, transfers: ArgumentsTransfer | CustomMemoryTransfer | undefined): [SharedArrayBuffer, SharedArrayBuffer, (ReverseArgumentTransfer[])[]] {
+	private createCallArrays(name: string, signature: WasiFunctionSignature, args: (number | bigint)[], wasmMemory: ArrayBuffer, transfers: MemoryTransfer | undefined): [SharedArrayBuffer, SharedArrayBuffer, (ReverseArgumentTransfer[])[]] {
 		const paramBuffer = new SharedArrayBuffer(Offsets.header_size + signature.memorySize);
 		const paramView = new DataView(paramBuffer);
 		paramView.setUint32(Offsets.method_index, WasiFunctions.getIndex(name), true);
