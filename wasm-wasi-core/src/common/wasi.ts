@@ -11,7 +11,7 @@
 import { ptr, size, u16, u32, u64, s64, u8, cstring, byte, bytes } from './baseTypes';
 import {
 	ArgumentTransfer, MemoryTransferDirection, WasiFunctionSignature, WasiFunctions,
-	ArgumentsTransfer, U32, Ptr, Byte, U64, U8, U16, Bytes, Size, S64, ReverseArgumentTransfer, CustomMemoryTransfer
+	ArgumentsTransfer, U32, Ptr, Byte, U64, U8, U16, Bytes, Size, S64, CustomMemoryTransfer, SingleReverseArgumentTransfer
 } from './wasiMeta';
 
 
@@ -1374,7 +1374,7 @@ export namespace Iovec {
 				const forms = new StructArray<iovec>(new DataView(wasmMemory), from, iovs_len, Iovec);
 				const tos = new StructArray<iovec>(new DataView(transferMemory), to, iovs_len, Iovec);
 				let bufferIndex = to + Iovec.size * iovs_len;
-				const result: ReverseArgumentTransfer[] = [];
+				const result: SingleReverseArgumentTransfer[] = [];
 				for (let i = 0; i < iovs_len; i++) {
 					const fromIovec = forms.get(i);
 					const toIovec = tos.get(i);

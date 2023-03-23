@@ -71,15 +71,19 @@ export enum MemoryTransferDirection {
 	both = 3
 }
 
-export type ReverseArgumentTransfer = {
+export type SingleReverseArgumentTransfer = {
 	readonly from: ptr;
 	readonly to: ptr;
 	readonly size: number;
 };
 
+export type ReverseArgumentTransfer = SingleReverseArgumentTransfer | SingleReverseArgumentTransfer[] | undefined;
+
+export type ReverseArgumentsTransfer = ReverseArgumentTransfer[];
+
 export type ArgumentTransfer = {
 	readonly memorySize: number;
-	copy: (wasmMemory: ArrayBuffer, from: ptr, transferMemory: SharedArrayBuffer, to: ptr) => ReverseArgumentTransfer[];
+	copy: (wasmMemory: ArrayBuffer, from: ptr, transferMemory: SharedArrayBuffer, to: ptr) => ReverseArgumentTransfer | undefined;
 };
 
 export namespace ArgumentTransfer {
@@ -91,7 +95,7 @@ export namespace ArgumentTransfer {
 					throw new Error(`Path transfer needs to be used as an instance object`);
 				}
 				new Uint8Array(transferMemory, to, path_len).set(new Uint8Array(wasmMemory, from, path_len));
-				return [];
+				return undefined;
 			}
 		};
 	}
@@ -131,14 +135,30 @@ export type ReverseCustomTransfer = {
 
 export type CustomMemoryTransfer = {
 	readonly size: number;
-	copy: (wasmMemory: ArrayBuffer, args: (number | bigint)[], transferMemory: SharedArrayBuffer, to: ptr) => ReverseCustomTransfer;
+	copy: (wasmMemory: ArrayBuffer, args: (number | bigint)[], paramBuffer: SharedArrayBuffer, paramIndex: number, transferMemory: SharedArrayBuffer) => ReverseCustomTransfer;
 };
 
 export type MemoryTransfer = ArgumentsTransfer | CustomMemoryTransfer;
-
 export namespace MemoryTransfer {
-	export function isCustom(transfer: MemoryTransfer): transfer is CustomMemoryTransfer {
-		return typeof (transfer as CustomMemoryTransfer).copy === 'function';
+	export function isCustom(transfer: MemoryTransfer | undefined): transfer is CustomMemoryTransfer {
+		const candidate = transfer as CustomMemoryTransfer;
+		return candidate && typeof candidate.copy === 'function' && typeof candidate.size === 'number';
+	}
+	export function isArguments(transfer: MemoryTransfer | undefined): transfer is ArgumentsTransfer {
+		const candidate = transfer as ArgumentsTransfer;
+		return candidate && Array.isArray(candidate.items) && typeof candidate.size === 'number';
+	}
+}
+
+export type ReverseTransfer = ReverseArgumentsTransfer | ReverseCustomTransfer;
+export namespace ReverseTransfer {
+	export function isCustom(transfer: ReverseTransfer | undefined): transfer is ReverseCustomTransfer {
+		const candidate = transfer as ReverseCustomTransfer;
+		return candidate && typeof candidate.copy === 'function';
+	}
+	export function isArguments(transfer: ReverseTransfer | undefined): transfer is ReverseArgumentsTransfer {
+		const candidate = transfer as ReverseArgumentsTransfer;
+		return candidate && Array.isArray(candidate);
 	}
 }
 
@@ -219,7 +239,7 @@ export namespace Bytes {
 				if (direction === MemoryTransferDirection.param || direction === MemoryTransferDirection.both) {
 					new Uint8Array(transferMemory, to, length).set(new Uint8Array(wasmMemory, from, length));
 				}
-				return direction === MemoryTransferDirection.param ? [] : [ { from: to, to: from , size: length } ];
+				return direction === MemoryTransferDirection.param ? undefined : { from: to, to: from , size: length };
 			}
 		};
 	}
@@ -240,7 +260,7 @@ export namespace U32 {
 		copy: (_wasmMemory, from, _transferMemory, to) => {
 			// We have a result pointer so we only need instructions to copy the
 			// result back into the wasm memory
-			return [{ from: to, to: from, size: size }];
+			return { from: to, to: from, size: size };
 		}
 	};
 }
@@ -256,7 +276,7 @@ export namespace U64 {
 		copy: (_wasmMemory, from, _transferMemory, to) => {
 			// We have a result pointer so we only need instructions to copy the
 			// result back into the wasm memory
-			return [{ from: to, to: from, size: size }];
+			return { from: to, to: from, size: size };
 		}
 	};
 }
@@ -278,7 +298,7 @@ export namespace Ptr {
 				if (direction === MemoryTransferDirection.param || direction === MemoryTransferDirection.both) {
 					new Uint8Array(transferMemory, to, size).set(new Uint8Array(wasmMemory, from, size));
 				}
-				return direction === MemoryTransferDirection.param ? [] : [ { from: to, to: from , size } ];
+				return direction === MemoryTransferDirection.param ? undefined : { from: to, to: from , size };
 			}
 		};
 	}

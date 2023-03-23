@@ -8,7 +8,7 @@ import {
 	fstflags, exitcode, WasiError, event, subscription, riflags, siflags, sdflags, dirent, ciovec, iovec, fdstat, filestat, prestat,
 	args_sizes_get, args_get, clock_res_get, clock_time_get, environ_sizes_get, environ_get, fd_advise, fd_allocate, fd_close, fd_datasync, fd_fdstat_set_flags, fd_fdstat_get, fd_filestat_get, fd_filestat_set_size, fd_filestat_set_times, fd_pread, fd_prestat_get, fd_prestat_dir_name, fd_pwrite, fd_read, fd_readdir, fd_seek, fd_renumber, fd_sync, fd_tell, fd_write, path_create_directory, path_filestat_get, path_filestat_set_times, path_link, path_open, path_readlink, path_remove_directory, path_rename, path_symlink, path_unlink_file, poll_oneoff, proc_exit, sched_yield, random_get, sock_accept, sock_shutdown, thread_spawn, thread_exit
 } from './wasi';
-import { ParamKind, WasiFunctions, ReverseArgumentTransfer, WasiFunctionSignature, WasiFunction, MemoryTransfer } from './wasiMeta';
+import { ParamKind, WasiFunctions, WasiFunctionSignature, WasiFunction, MemoryTransfer, ReverseTransfer } from './wasiMeta';
 import { Offsets, WasiCallMessage, WorkerReadyMessage } from './connection';
 import { WASI } from './wasi';
 
@@ -27,24 +27,33 @@ export abstract class HostConnection {
 		if (signature.params.length !== args.length) {
 			throw new WasiError(Errno.inval);
 		}
-		const [paramBuffer, resultBuffer, reverseTransfers] = this.createCallArrays(func.name, signature, args, wasmMemory, transfers);
+		const [paramBuffer, resultBuffer, reverseTransfer] = this.createCallArrays(func.name, signature, args, wasmMemory, transfers);
 		const result = this.doCall(paramBuffer, resultBuffer);
-		if (result !== Errno.success || resultBuffer === wasmMemory) {
+		if (result !== Errno.success || resultBuffer === wasmMemory || reverseTransfer === undefined) {
 			return result;
 		}
 
 		// Copy the results back into the WASM memory.
 		const targetMemory = new Uint8Array(wasmMemory);
-		let reverseIndex = 0;
-		for (let i = 0; i < args.length; i++) {
-			const param = signature.params[i];
-			if (param.kind !== ParamKind.ptr) {
-				continue;
-			}
-			const reverse = reverseTransfers[reverseIndex++];
-			// Copy the result back.
-			for (const item of reverse) {
-				targetMemory.set(new Uint8Array(resultBuffer, item.from, item.size), item.to);
+		if (ReverseTransfer.isCustom(reverseTransfer)) {
+			reverseTransfer.copy();
+		} else if (ReverseTransfer.isArguments(reverseTransfer)) {
+			let reverseIndex = 0;
+			for (let i = 0; i < args.length; i++) {
+				const param = signature.params[i];
+				if (param.kind !== ParamKind.ptr) {
+					continue;
+				}
+				const reverse = reverseTransfer[reverseIndex++];
+				if (reverse !== undefined) {
+					if (Array.isArray(reverse)) {
+						for (const single of reverse) {
+							targetMemory.set(new Uint8Array(resultBuffer, single.from, single.size), single.to);
+						}
+					} else {
+						targetMemory.set(new Uint8Array(resultBuffer, reverse.from, reverse.size), reverse.to);
+					}
+				}
 			}
 		}
 		return result;
@@ -73,7 +82,7 @@ export abstract class HostConnection {
 		return new Uint16Array(paramBuffer, Offsets.errno_index, 1)[0];
 	}
 
-	private createCallArrays(name: string, signature: WasiFunctionSignature, args: (number | bigint)[], wasmMemory: ArrayBuffer, transfers: MemoryTransfer | undefined): [SharedArrayBuffer, SharedArrayBuffer, (ReverseArgumentTransfer[])[]] {
+	private createCallArrays(name: string, signature: WasiFunctionSignature, args: (number | bigint)[], wasmMemory: ArrayBuffer, transfer: MemoryTransfer | undefined): [SharedArrayBuffer, SharedArrayBuffer, ReverseTransfer | undefined] {
 		const paramBuffer = new SharedArrayBuffer(Offsets.header_size + signature.memorySize);
 		const paramView = new DataView(paramBuffer);
 		paramView.setUint32(Offsets.method_index, WasiFunctions.getIndex(name), true);
@@ -88,25 +97,37 @@ export abstract class HostConnection {
 			}
 			return [paramBuffer, wasmMemory, []];
 		} else {
-			const resultBuffer = new SharedArrayBuffer(transfers?.size ?? 0);
+			const resultBuffer = new SharedArrayBuffer(transfer?.size ?? 0);
+			let reverse: ReverseTransfer | undefined = undefined;
 			let offset = Offsets.header_size;
 			let result_ptr = 0;
-			let transferIndex = 0;
-			const reverse: (ReverseArgumentTransfer[])[] = [];
-			for (let i = 0; i < args.length; i++) {
-				const param = signature.params[i];
-				if (param.kind === ParamKind.ptr) {
-					param.write(paramView, offset, result_ptr);
-					const transfer = transfers?.items[transferIndex++];
-					if (transfer === undefined) {
-						throw new WasiError(Errno.inval);
+			if (MemoryTransfer.isCustom(transfer)) {
+				reverse = transfer.copy(wasmMemory, args, paramBuffer, offset, resultBuffer);
+			} else if (MemoryTransfer.isArguments(transfer)) {
+				let transferIndex = 0;
+				reverse = [];
+				for (let i = 0; i < args.length; i++) {
+					const param = signature.params[i];
+					if (param.kind === ParamKind.ptr) {
+						param.write(paramView, offset, result_ptr);
+						const transferItem = transfer?.items[transferIndex++];
+						if (transferItem === undefined) {
+							throw new WasiError(Errno.inval);
+						}
+						reverse.push(transferItem.copy(wasmMemory, args[i] as number, resultBuffer, result_ptr));
+						result_ptr += transferItem.memorySize;
+					} else {
+						param.write(paramView, offset, args[i] as (number & bigint));
 					}
-					reverse.push(transfer.copy(wasmMemory, args[i] as number, resultBuffer, result_ptr));
-					result_ptr += transfer.memorySize;
-				} else {
-					param.write(paramView, offset, args[i] as (number & bigint));
+					offset += param.size;
 				}
-				offset += param.size;
+			} else {
+				// Only copy params
+				for (let i = 0; i < args.length; i++) {
+					const param = signature.params[i];
+					param.write(paramView, offset, args[i] as (number & bigint));
+					offset += param.size;
+				}
 			}
 			return [paramBuffer, resultBuffer, reverse];
 		}
