@@ -13,28 +13,8 @@ async function run(): Promise<void> {
 
 	const testsRoot = path.join(__dirname, '..', '..', 'common', 'test');
 	const files = (await glob('**/**.test.js', { cwd: testsRoot })).map(f => path.resolve(testsRoot, f));
-	let sharedError: any = undefined;
-	let ownError: any = undefined;
-	// try {
-	// 	await doRun(files, true);
-	// } catch (err) {
-	// 	sharedError = err;
-	// }
-	try {
-		await doRun(files, false);
-	} catch (err) {
-		ownError = err;
-	}
-	if (sharedError !== undefined) {
-		throw sharedError;
-	}
-	if (ownError !== undefined) {
-		throw ownError;
-	}
-}
 
-async function doRun(files: string[], shared: boolean): Promise<void> {
-	RIL().$testing.sharedMemory = shared;
+	RIL().$testing.sharedMemory = process.argv[2] === 'shared';
 
 	// Create the mocha test
 	const mocha = new Mocha({

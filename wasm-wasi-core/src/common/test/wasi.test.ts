@@ -9,7 +9,8 @@ import assert from 'assert';
 import { ptr } from '../baseTypes';
 import { WorkerReadyMessage } from '../connection';
 import { WasiHost } from '../host';
-import { Errno, WasiError } from '../wasi';
+import { Clockid, Errno, WasiError } from '../wasi';
+import { Environment } from '../api';
 
 const hostConnection = RAL().$testing.HostConnection.create();
 const wasi = WasiHost.create(hostConnection);
@@ -186,13 +187,18 @@ class Memory {
 // 	}
 // }
 
-suite('Simple test', () => {
-	test('argv', () => {
-		debugger;
-		const memory = new Memory(undefined, RAL().$testing.sharedMemory);
-		const args = ['arg1', 'arg22', 'arg333'];
-		wasi.initialize(memory);
+suite(`Simple test - ${RAL().$testing.sharedMemory ? 'SharedArrayBuffer' : 'ArrayBuffer'}`, () => {
 
+	function createMemory(): Memory {
+		const memory = new Memory(undefined, RAL().$testing.sharedMemory);
+		wasi.initialize(memory);
+		return memory;
+	}
+
+	test('argv', () => {
+		const memory = createMemory();
+
+		const args = ['arg1', 'arg22', 'arg333'];
 		const argvCount = memory.allocUint32();
 		const argvBufSize = memory.allocUint32();
 		let errno = wasi.args_sizes_get(argvCount.$ptr, argvBufSize.$ptr);
@@ -216,6 +222,66 @@ suite('Simple test', () => {
 			const valueStartOffset = argv.get(i);
 			const arg = memory.readString(valueStartOffset);
 			assert.strictEqual(arg, expectedArgs[i]);
+		}
+	});
+
+	test('clock', () => {
+		const memory = createMemory();
+		for (const clockid of [Clockid.realtime, Clockid.monotonic, Clockid.process_cputime_id, Clockid.thread_cputime_id]) {
+			const timestamp = memory.allocBigUint64();
+			const errno = wasi.clock_res_get(clockid, timestamp.$ptr);
+			assert.strictEqual(errno, Errno.success);
+			assert.strictEqual(timestamp.value, 1n);
+		}
+
+		const delta = (100n * 1000000n); // 100 ms
+		const time = memory.allocBigUint64();
+		let errno = wasi.clock_time_get(Clockid.realtime, 0n, time.$ptr);
+		assert.strictEqual(errno, Errno.success);
+		// Clock realtime is in ns but date now in ms.
+		const now = BigInt(Date.now()) * 1000000n;
+		assert.ok(now - delta < time.value && time.value <= now);
+
+		errno = wasi.clock_time_get(Clockid.monotonic, 0n, time.$ptr);
+		assert.strictEqual(errno, Errno.success);
+		const hrtime =  RAL().clock.monotonic();
+		assert.ok(hrtime - delta < time.value && time.value <= hrtime);
+
+		errno = wasi.clock_time_get(Clockid.process_cputime_id, 0n, time.$ptr);
+		assert.strictEqual(errno, Errno.success);
+
+		errno = wasi.clock_time_get(Clockid.thread_cputime_id, 0n, time.$ptr);
+		assert.strictEqual(errno, Errno.success);
+	});
+
+	test('env', () => {
+		const memory = createMemory();
+		const environCount = memory.allocUint32();
+		const environBufSize = memory.allocUint32();
+		let errno = wasi.environ_sizes_get(environCount.$ptr, environBufSize.$ptr);
+		assert.strictEqual(errno, 0);
+
+		const env: Environment = { 'var1': 'value1', 'var2': 'value2' };
+		const keys = Object.keys(env);
+		assert.strictEqual(environCount.value, keys.length);
+
+		let expectedBufferLength: number = 0;
+		for (const key of keys) {
+			expectedBufferLength += encoder.encode(key).length + 1 /* = */ + encoder.encode(env[key]).length + 1 /* 0 */;
+		}
+		assert.strictEqual(environBufSize.value, expectedBufferLength);
+
+		const environ = memory.allocUint32Array(environCount.value);
+		const environBuf = memory.alloc(environBufSize.value);
+		errno = wasi.environ_get(environ.$ptr, environBuf.$ptr);
+		assert.strictEqual(errno, 0);
+
+		for (let i = 0; i < environCount.value; i++) {
+			const valueStartOffset = environ.get(i);
+			const value = memory.readString(valueStartOffset);
+			const values = value.split('=');
+			assert.strictEqual(values.length, 2);
+			assert.strictEqual(env[values[0]], values[1]);
 		}
 	});
 });

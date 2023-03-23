@@ -1946,16 +1946,19 @@ export namespace args_get {
 	export function transfers(_memory: DataView, argvCount: u32, argvBufSize: u32): CustomMemoryTransfer {
 		return {
 			size: argvCount * Ptr.size + argvBufSize,
-			copy(wasmMemory, args: (number | bigint)[], transferMemory, to) {
-				// On the call side we don't need to copy anything since the
-				// memory is used as a pure result memory.
+			copy(wasmMemory, args: (number | bigint)[], paramBuffer, paramIndex, transferMemory) {
+				// On the call side we only need to fill in the arguments;
+				const transfer_argv_ptr = 0;
+				const transfer_argvBuf_ptr = 0 + argvCount * Ptr.size;
+				const paramView = new DataView(paramBuffer);
+				// In the transfer memory the result is written at index 0
+				paramView.setUint32(paramIndex, transfer_argv_ptr, true);
+				paramView.setUint32(paramIndex + Ptr.size, transfer_argvBuf_ptr, true);
 				return {
 					copy() {
 						// Copy the pointers back and adjust their offsets.
 						const wasm_argv_ptr = args[0] as ptr<ptr<cstring>[]>;
 						const wasm_argvBuf_ptr = args[1] as ptr<bytes>;
-						const transfer_argv_ptr = to;
-						const transfer_argvBuf_ptr = to + argvCount * Ptr.size;
 						const diff = wasm_argvBuf_ptr - transfer_argvBuf_ptr;
 						const wasm_argv_array = new PointerArray(new DataView(wasmMemory), wasm_argv_ptr, argvCount);
 						const transfer_argv_array = new PointerArray(new DataView(transferMemory), transfer_argv_ptr, argvCount);
@@ -2044,8 +2047,34 @@ export type environ_get = (environ_ptr: ptr<ptr<cstring>[]>, environBuf_ptr: ptr
 export namespace environ_get {
 	export const name: string = 'environ_get';
 	export const signature = WasiFunctionSignature.create([Ptr.$param, Ptr.$param]);
-	export function transfers(_memory: DataView, environ_size: u32, environBuf_size: u32): ArgumentsTransfer {
-		return ArgumentsTransfer.create([Ptr.createTransfer(environ_size, MemoryTransferDirection.result), Bytes.createTransfer(environBuf_size, MemoryTransferDirection.result)]);
+	export function transfers(_memory: DataView, argvCount: u32, argvBufSize: u32): CustomMemoryTransfer {
+		return {
+			size: argvCount * Ptr.size + argvBufSize,
+			copy(wasmMemory, args: (number | bigint)[], paramBuffer, paramIndex, transferMemory) {
+				// On the call side we only need to fill in the arguments;
+				const transfer_environ_ptr = 0;
+				const transfer_environBuf_ptr = 0 + argvCount * Ptr.size;
+				const paramView = new DataView(paramBuffer);
+				// In the transfer memory the result is written at index 0
+				paramView.setUint32(paramIndex, transfer_environ_ptr, true);
+				paramView.setUint32(paramIndex + Ptr.size, transfer_environBuf_ptr, true);
+				return {
+					copy() {
+						// Copy the pointers back and adjust their offsets.
+						const wasm_environ_ptr = args[0] as ptr<ptr<cstring>[]>;
+						const wasm_environBuf_ptr = args[1] as ptr<bytes>;
+						const diff = wasm_environBuf_ptr - transfer_environBuf_ptr;
+						const wasm_environ_array = new PointerArray(new DataView(wasmMemory), wasm_environ_ptr, argvCount);
+						const transfer_environ_array = new PointerArray(new DataView(transferMemory), transfer_environ_ptr, argvCount);
+						for (let i = 0; i < argvCount; i++) {
+							wasm_environ_array.set(i, transfer_environ_array.get(i) + diff);
+						}
+						// Copy the actual strings
+						new Uint8Array(wasmMemory).set(new Uint8Array(transferMemory, transfer_environBuf_ptr, argvBufSize), wasm_environBuf_ptr);
+					},
+				};
+			},
+		};
 	}
 	export type ServiceSignature = (memory: ArrayBuffer, environ_ptr: ptr<ptr<cstring>[]>, environBuf_ptr: ptr<bytes>) => Promise<errno>;
 	WasiFunctions.add(environ_get);
