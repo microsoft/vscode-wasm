@@ -27,19 +27,14 @@ async function run(): Promise<void> {
 	files.forEach(f => mocha.addFile(f));
 
 	return new Promise((c, e) => {
-		try {
-			// Run the mocha test
-			mocha.run(failures => {
-				if (failures > 0) {
-					e(new Error(`${failures} tests failed.`));
-				} else {
-					c();
-				}
-			});
-		} catch (err) {
-			console.error(err);
-			e(err);
-		}
+		// Run the mocha test
+		mocha.run(failures => {
+			if (failures > 0) {
+				e(new Error(`${failures} tests failed.`));
+			} else {
+				c();
+			}
+		});
 	});
 }
 

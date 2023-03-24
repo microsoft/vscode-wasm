@@ -9,8 +9,13 @@ import assert from 'assert';
 import { ptr } from '../baseTypes';
 import { WorkerReadyMessage } from '../connection';
 import { WasiHost } from '../host';
-import { Clockid, Errno, WasiError } from '../wasi';
+import { Clockid, Errno, WasiError, Prestat, fd, Lookupflags, Oflags, Fdflags, rights, Rights } from '../wasi';
 import { Environment } from '../api';
+
+const FileBaseRights: rights = Rights.fd_datasync | Rights.fd_read | Rights.fd_seek | Rights.fd_fdstat_set_flags |
+		Rights.fd_sync | Rights.fd_tell | Rights.fd_write | Rights.fd_advise | Rights.fd_allocate | Rights.fd_filestat_get |
+		Rights.fd_filestat_set_size | Rights.fd_filestat_set_times | Rights.poll_fd_readwrite;
+const FileInheritingRights: rights = 0n;
 
 const hostConnection = RAL().$testing.HostConnection.create();
 const wasi = WasiHost.create(hostConnection);
@@ -19,6 +24,7 @@ hostConnection.postMessage(ready);
 
 const decoder = RAL().TextDecoder.create();
 const encoder = RAL().TextEncoder.create();
+
 
 namespace wasi {
 	export type Uint32 = { readonly $ptr: ptr; value: number };
@@ -64,16 +70,16 @@ class Memory {
 		return { $ptr: result, byteLength: bytes};
 	}
 
-	public allocStruct<T>(info: { size: number; create: (ptr: ptr, memory: DataView) => T }): T {
+	public allocStruct<T>(info: { size: number; create: (memory: DataView, ptr: ptr) => T }): T {
 		const ptr: ptr = this.allocRaw(info.size);
-		return info.create(ptr, this.dataView);
+		return info.create(this.dataView, ptr);
 	}
 
-	public allocStructArray<T>(size: number, info: { size: number; create: (ptr: ptr, memory: DataView) => T }): wasi.StructArray<T> {
+	public allocStructArray<T>(size: number, info: { size: number; create: (memory: DataView, ptr: ptr) => T }): wasi.StructArray<T> {
 		const ptr: ptr = this.allocRaw(size * info.size);
 		const structs: T[] = new Array(size);
 		for (let i = 0; i < size; i++) {
-			const struct = info.create(ptr + i * info.size, this.dataView);
+			const struct = info.create(this.dataView, ptr + i * info.size);
 			structs[i] = struct;
 		}
 		return {
@@ -83,8 +89,8 @@ class Memory {
 		};
 	}
 
-	public readStruct<T>(ptr: ptr<T>, info: { size: number; create: (ptr: ptr, memory: DataView) => T }): T {
-		return info.create(ptr, this.dataView);
+	public readStruct<T>(ptr: ptr<T>, info: { size: number; create: (memory: DataView, ptr: ptr) => T }): T {
+		return info.create(this.dataView, ptr);
 	}
 
 	public allocUint32(value?: number): wasi.Uint32 {
@@ -187,13 +193,15 @@ class Memory {
 // 	}
 // }
 
-suite(`Simple test - ${RAL().$testing.sharedMemory ? 'SharedArrayBuffer' : 'ArrayBuffer'}`, () => {
+function createMemory(): Memory {
+	const memory = new Memory(undefined, RAL().$testing.sharedMemory);
+	wasi.initialize(memory);
+	return memory;
+}
 
-	function createMemory(): Memory {
-		const memory = new Memory(undefined, RAL().$testing.sharedMemory);
-		wasi.initialize(memory);
-		return memory;
-	}
+const memoryQualifier = RAL().$testing.sharedMemory ? 'SharedArrayBuffer' : 'ArrayBuffer';
+
+suite(`Simple test - ${memoryQualifier}`, () => {
 
 	test('argv', () => {
 		const memory = createMemory();
@@ -283,5 +291,32 @@ suite(`Simple test - ${RAL().$testing.sharedMemory ? 'SharedArrayBuffer' : 'Arra
 			assert.strictEqual(values.length, 2);
 			assert.strictEqual(env[values[0]], values[1]);
 		}
+	});
+});
+
+suite (`Filesystem - ${memoryQualifier}`, () => {
+	const rootFd: fd = 4;
+	let root: string;
+	test(`fd_prestat`, () => {
+		const memory = createMemory();
+		const prestat = memory.allocStruct(Prestat);
+		let errno = wasi.fd_prestat_get(rootFd, prestat.$ptr);
+		assert.strictEqual(errno, Errno.success);
+		const buffer = memory.allocStringBuffer(prestat.len);
+		errno = wasi.fd_prestat_dir_name(rootFd, buffer.$ptr, prestat.len);
+		assert.strictEqual(errno, Errno.success);
+		root = buffer.value;
+		// We only have one prestat directory
+		errno = wasi.fd_prestat_get(5, prestat.$ptr);
+		assert.strictEqual(errno, Errno.badf);
+	});
+
+	test(`path_open - exists`, () => {
+		const memory = createMemory();
+		const fd = memory.allocUint32();
+		const path = memory.allocString('fixture/path_open/helloWorld.txt');
+		let errno = wasi.path_open(rootFd, Lookupflags.none, path.$ptr, path.byteLength, Oflags.none, FileBaseRights, FileInheritingRights, Fdflags.none, fd.$ptr);
+		assert.strictEqual(errno, Errno.success);
+		assert.strictEqual(fd.value, 5);
 	});
 });

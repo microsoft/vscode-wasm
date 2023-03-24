@@ -31,7 +31,11 @@
 		"vscode-uri": "^3.0.7"
 	},
 	"devDependencies": {
-		"@types/vscode": "1.76.0"
+		"@types/vscode": "1.76.0",
+		"@types/uuid": "^9.0.1",
+		"uuid": "^9.0.0",
+		"@types/find-process": "^1.2.0",
+		"find-process": "^1.4.7"
 	},
 	"scripts": {
 		"build": "npm run compile",
