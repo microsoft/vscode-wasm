@@ -22,7 +22,8 @@
         "noUnusedParameters": true,
         "outDir": "../../../lib/common/test",
         "tsBuildInfoFile": "../../../lib/common/test/compile.tsbuildInfo",
-        "incremental": true
+        "incremental": true,
+        "composite": true
     },
     "include": [
         "."

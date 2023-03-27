@@ -15,6 +15,9 @@
             "path": "./src/web/tsconfig.json"
         },
         {
+            "path": "./src/web/test/tsconfig.json"
+        },
+        {
             "path": "./src/desktop/tsconfig.json"
         },
         {

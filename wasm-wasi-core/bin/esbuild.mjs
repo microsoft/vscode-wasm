@@ -42,4 +42,16 @@ const webThreadWorkerOptions = {
 	...sharedBrowserOptions,
 };
 
+/** @type BuildOptions */
+const webTestsIndexOptions = {
+	entryPoints: ['src/web/test/index.ts'],
+	outfile: 'dist/web/test/index.js',
+	format: 'iife',
+	...sharedBrowserOptions
+}
+
+const webTestWorkerOptions = {
+	entryPoints: ['src/web/test/index.ts'],
+}
+
 await Promise.all([esbuild.build(webOptions), esbuild.build(webMainWorkerOptions), esbuild.build(webThreadWorkerOptions)]);

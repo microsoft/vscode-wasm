@@ -23,7 +23,8 @@
         "assumeChangesOnlyAffectDirectDependencies": true,
         "outDir": "../../lib/web",
         "tsBuildInfoFile": "../../lib/web/watch.tsbuildInfo",
-        "incremental": true
+        "incremental": true,
+        "composite": true
     },
     "include": [
         "."

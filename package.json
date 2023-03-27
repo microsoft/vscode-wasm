@@ -22,7 +22,7 @@
 		"@types/node": "^18.14.6",
 		"@typescript-eslint/eslint-plugin": "^5.35.1",
 		"@typescript-eslint/parser": "^5.35.1",
-		"esbuild": "^0.17.9",
+		"esbuild": "^0.17.14",
 		"eslint": "^8.22.0",
 		"http-server": "^14.1.1",
 		"make-dir-cli": "^3.0.0",
@@ -39,6 +39,7 @@
 		"@types/path-browserify": "^1.0.0",
 		"path-browserify": "^1.0.1",
 		"@vscode/test-electron": "^2.3.0",
+		"@vscode/test-web": "^0.0.36",
 		"@types/glob": "^8.1.0",
 		"glob": "^9.3.1"
 	},
