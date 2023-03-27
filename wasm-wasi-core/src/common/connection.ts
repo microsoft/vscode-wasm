@@ -34,19 +34,33 @@ export interface StartThreadMessage {
 	readonly start_arg: ptr;
 }
 
+export interface WorkerMessage {
+	readonly method: string;
+}
+
 export interface WorkerReadyMessage {
 	readonly method: 'workerReady';
 }
 export namespace WorkerReadyMessage {
-	export function is(message: WasiCallMessage | WorkerReadyMessage): message is WorkerReadyMessage {
+	export function is(message: WasiCallMessage | WorkerMessage): message is WorkerReadyMessage {
 		const candidate = message as WorkerReadyMessage;
 		return candidate && candidate.method === 'workerReady';
 	}
 }
 
+export interface WorkerDoneMessage {
+	readonly method: 'workerDone';
+}
+export namespace WorkerDoneMessage {
+	export function is(message: WasiCallMessage | WorkerMessage): message is WorkerReadyMessage {
+		const candidate = message as WorkerDoneMessage;
+		return candidate && candidate.method === 'workerDone';
+	}
+}
+
 export type WasiCallMessage = [SharedArrayBuffer, SharedArrayBuffer];
 export namespace WasiCallMessage {
-	export function is(message: WasiCallMessage | WorkerReadyMessage): message is WasiCallMessage {
+	export function is(message: WasiCallMessage | WorkerMessage): message is WasiCallMessage {
 		return Array.isArray(message) && message.length === 2 && message[0] instanceof SharedArrayBuffer && message[1] instanceof SharedArrayBuffer;
 	}
 }

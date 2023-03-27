@@ -4,10 +4,10 @@
  *--------------------------------------------------------------------------------------------*/
 /// <reference path="../../types/webAssemblyCommon.d.ts" />
 
+import RAL from './ral';
 import { Event, EventEmitter, Uri, WorkspaceFolder, workspace } from 'vscode';
 
 import { MapDirEntry, Options, StdioDescriptor, StdioFileDescriptor } from './api';
-import RAL from './ral';
 import { ptr, size, u32 } from './baseTypes';
 import { FileSystemDeviceDriver } from './deviceDriver';
 import { FileDescriptor, FileDescriptors } from './fileDescriptor';

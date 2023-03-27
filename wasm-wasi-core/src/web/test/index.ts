@@ -5,14 +5,13 @@
 import RIL from '../ril';
 RIL.install();
 
-import path from 'node:path';
-import {  Worker } from 'node:worker_threads';
 
-import { NodeServiceConnection } from '../process';
+import { BrowserServiceConnection } from '../process';
 import { createWorkspaceContent, createTmp, cleanupTmp, cleanupWorkspaceContent, createWasiService, WorkspaceContent } from '../../common/test/index';
 
 export async function run(): Promise<void> {
 
+	debugger;
 	const workspaceContent = await createWorkspaceContent();
 
 	await doRun(workspaceContent, true);
@@ -30,14 +29,28 @@ export async function run(): Promise<void> {
 	}
 }
 
+interface TestsDoneMessage {
+	method: 'testsDone';
+	failures: number;
+}
+
 async function doRun(workspaceContent: WorkspaceContent, shared: boolean): Promise<void> {
 	const wasiService = createWasiService(workspaceContent);
 
-	const worker = new Worker(path.join(__dirname, 'testWorker'), { argv: [shared ? 'shared' : 'nonShared'] });
-	const result = new Promise<void>((resolve) => {
-		worker.once('exit', resolve);
+	const workerURL = `http://localhost:3000/static/devextensions/dist/web/test/testWorker.js?vscode-coi=3${shared ? '&shared' : ''}`;
+	const worker = new Worker(workerURL);
+	return new Promise(async (resolve, reject) => {
+		const connection = new BrowserServiceConnection(wasiService, worker, (message) => {
+			if (message.method === 'testsDone') {
+				const testsDoneMessage = message as TestsDoneMessage;
+				if (testsDoneMessage.failures > 0) {
+					reject(new Error(`${testsDoneMessage.failures} tests failed.`));
+				} else {
+					resolve();
+				}
+			}
+			reject(new Error('Unexpected message: ' + JSON.stringify(message)));
+		});
+		await connection.workerReady();
 	});
-	const connection = new NodeServiceConnection(wasiService, worker);
-	await connection.workerReady();
-	await result;
 }

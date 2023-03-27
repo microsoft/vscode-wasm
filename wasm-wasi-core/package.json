@@ -35,12 +35,14 @@
 		"@types/uuid": "^9.0.1",
 		"uuid": "^9.0.0",
 		"@types/find-process": "^1.2.0",
-		"find-process": "^1.4.7"
+		"find-process": "^1.4.7",
+		"browser-assert": "^1.2.1"
 	},
 	"scripts": {
 		"build": "npm run compile",
 		"compile": "node ../../node_modules/typescript/lib/tsc.js -b tsconfig.json",
 		"watch": "node ../../node_modules/typescript/lib/tsc.js -b tsconfig.json -w",
-		"test:desktop": "node ./lib/desktop/test/runTests.js"
+		"test:desktop": "node ./lib/desktop/test/runTests.js",
+		"test:web": "node ./bin/esbuild.js && node ./lib/web/test/runTests.js"
 	}
 }

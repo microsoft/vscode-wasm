@@ -15,7 +15,7 @@ async function main() {
 	try {
 		await fs.mkdir(testDir, { recursive: true });
 		const extensionDevelopmentPath = path.resolve(__dirname, '..', '..', '..');
-		const extensionTestsPath = path.resolve(__dirname, '..', '..', '..', 'dist', 'web', 'index.js');
+		const extensionTestsPath = path.resolve(__dirname, '..', '..', '..', 'dist', 'web', 'test', 'index.js');
 
 		/**
 		 * Basic usage
@@ -26,8 +26,8 @@ async function main() {
 			extensionDevelopmentPath,
 			extensionTestsPath,
 			folderPath: testDir,
-			devTools: false,
-			headless: true,
+			devTools: true,
+			headless: false,
 			// verbose: true,
 			// printServerLog: true,
 			coi: true
@@ -36,7 +36,7 @@ async function main() {
 		console.error('Failed to run tests');
 		process.exitCode = 1;
 	} finally {
-		fs.rm(testDir, { recursive: true });
+		fs.rm(testDir, { recursive: true }).catch(console.error);
 	}
 }
 

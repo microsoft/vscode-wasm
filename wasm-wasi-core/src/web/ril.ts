@@ -75,14 +75,14 @@ const _ril: RIL = Object.freeze<RIL>({
 			return path.normalize(value);
 		}
 	}),
-	$testing: Object.freeze({
+	$testing: {
 		HostConnection: Object.freeze({
 			create(): BrowserHostConnection {
 				return new BrowserHostConnection(self);
 			}
 		}),
 		sharedMemory: false
-	})
+	}
 });
 
 

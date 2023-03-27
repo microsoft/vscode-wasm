@@ -8,22 +8,29 @@ import RAL from '../common/ral';
 import { ptr, u32 } from '../common/baseTypes';
 import { WasiProcess } from '../common/process';
 import { WasiService, ServiceConnection } from '../common/service';
-import { StartMainMessage, StartThreadMessage, WasiCallMessage, WorkerReadyMessage } from '../common/connection';
+import { StartMainMessage, StartThreadMessage, WasiCallMessage, WorkerDoneMessage, WorkerMessage, WorkerReadyMessage } from '../common/connection';
 import { Options } from '../common/api';
 
-class Connection extends ServiceConnection {
+export class BrowserServiceConnection extends ServiceConnection {
 
 	private readonly port: MessagePort | Worker;
-	private _workerReady: Promise<void>;
+	private readonly handler?: ((message: WorkerMessage) => void) | undefined;
+	private readonly _workerReady: Promise<void>;
+	private readonly _workerDone: Promise<void>;
 
-	constructor(wasiService: WasiService, port: MessagePort | Worker) {
+	constructor(wasiService: WasiService, port: MessagePort | Worker, handler?: (message: WorkerMessage) => void) {
 		super(wasiService);
+		this.port = port;
+		this.handler = handler;
 		let workerReadyResolve: () => void;
 		this._workerReady = new Promise((resolve) => {
 			workerReadyResolve = resolve;
 		});
-		this.port = port;
-		this.port.onmessage = (async (event: MessageEvent< WorkerReadyMessage | WasiCallMessage>) => {
+		let workerDoneResolve: () => void;
+		this._workerDone = new Promise((resolve) => {
+			workerDoneResolve = resolve;
+		});
+		this.port.onmessage = (async (event: MessageEvent< WasiCallMessage | WorkerReadyMessage | WorkerDoneMessage | { method: string }>) => {
 			const message = event.data;
 			if (WasiCallMessage.is(message)) {
 				try {
@@ -33,12 +40,22 @@ class Connection extends ServiceConnection {
 				}
 			} else if (WorkerReadyMessage.is(message)) {
 				workerReadyResolve();
+			} else if (WorkerDoneMessage.is(message)) {
+				workerDoneResolve();
+			} else {
+				if (this.handler !== undefined) {
+					this.handler(message);
+				}
 			}
 		});
 	}
 
 	public workerReady(): Promise<void> {
 		return this._workerReady;
+	}
+
+	public workerDone(): Promise<void> {
+		return this._workerDone;
 	}
 
 	public postMessage(message: StartMainMessage | StartThreadMessage): void {
@@ -92,7 +109,7 @@ export class BrowserWasiProcess extends WasiProcess {
 	protected async startMain(wasiService: WasiService): Promise<void> {
 		const filename = Uri.joinPath(this.baseUri, './dist/web/mainWorker.js').toString();
 		this.mainWorker = new Worker(filename);
-		const connection = new Connection(wasiService, this.mainWorker);
+		const connection = new BrowserServiceConnection(wasiService, this.mainWorker);
 		await connection.workerReady();
 		const module = await this.module;
 		this.importsMemory = this.doesImportMemory(module);
@@ -116,7 +133,7 @@ export class BrowserWasiProcess extends WasiProcess {
 		}
 		const filename = Uri.joinPath(this.baseUri, './dist/web/threadWorker.js').toString();
 		const worker = new Worker(filename);
-		const connection = new Connection(wasiService, worker);
+		const connection = new BrowserServiceConnection(wasiService, worker);
 		await connection.workerReady();
 		const message: StartThreadMessage = { method: 'startThread', module: await this.module, memory: this.memory!, tid, start_arg };
 		connection.postMessage(message);

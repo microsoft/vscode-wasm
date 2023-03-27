@@ -17,7 +17,7 @@ const FileBaseRights: rights = Rights.fd_datasync | Rights.fd_read | Rights.fd_s
 		Rights.fd_filestat_set_size | Rights.fd_filestat_set_times | Rights.poll_fd_readwrite;
 const FileInheritingRights: rights = 0n;
 
-const hostConnection = RAL().$testing.HostConnection.create();
+export const hostConnection = RAL().$testing.HostConnection.create();
 const wasi = WasiHost.create(hostConnection);
 const ready: WorkerReadyMessage = { method: 'workerReady' };
 hostConnection.postMessage(ready);
@@ -294,7 +294,7 @@ suite(`Simple test - ${memoryQualifier}`, () => {
 	});
 });
 
-suite (`Filesystem - ${memoryQualifier}`, () => {
+suite(`Filesystem - ${memoryQualifier}`, () => {
 	const rootFd: fd = 4;
 	let root: string;
 	test(`fd_prestat`, () => {

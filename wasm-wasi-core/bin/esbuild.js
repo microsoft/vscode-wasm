@@ -3,7 +3,22 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 //@ts-check
-import * as esbuild from 'esbuild'
+const esbuild = require('esbuild');
+const browser_assert = require.resolve('browser-assert');
+
+/** @type esbuild.Plugin */
+const assertResolvePlugin = {
+	name: 'Assert Resolve',
+	setup(build) {
+		build.onResolve({ filter: /^assert$/g }, args => {
+			if (args.kind === 'require-call' || args.kind === 'import-statement') {
+				return { path: browser_assert };
+			}
+			return { path: args.path };
+		});
+	},
+};
+
 
 /**
  * @typedef {import('esbuild').BuildOptions} BuildOptions
@@ -46,12 +61,23 @@ const webThreadWorkerOptions = {
 const webTestsIndexOptions = {
 	entryPoints: ['src/web/test/index.ts'],
 	outfile: 'dist/web/test/index.js',
+	format: 'cjs',
+	...sharedBrowserOptions
+}
+
+/** @type BuildOptions */
+const webTestWorkerOptions = {
+	entryPoints: ['src/web/test/testWorker.ts'],
+	outfile: 'dist/web/test/testWorker.js',
+	plugins: [ assertResolvePlugin ],
 	format: 'iife',
 	...sharedBrowserOptions
 }
 
-const webTestWorkerOptions = {
-	entryPoints: ['src/web/test/index.ts'],
-}
-
-await Promise.all([esbuild.build(webOptions), esbuild.build(webMainWorkerOptions), esbuild.build(webThreadWorkerOptions)]);
+Promise.all([
+	esbuild.build(webOptions),
+	esbuild.build(webMainWorkerOptions),
+	esbuild.build(webThreadWorkerOptions),
+	esbuild.build(webTestsIndexOptions),
+	esbuild.build(webTestWorkerOptions)
+]).catch(console.error);
