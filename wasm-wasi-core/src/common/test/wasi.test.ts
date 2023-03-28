@@ -235,7 +235,6 @@ suite(`Simple test - ${memoryQualifier}`, () => {
 
 suite(`Filesystem - ${memoryQualifier}`, () => {
 	const rootFd: fd = 4;
-	let root: string;
 	test(`fd_prestat`, () => {
 		const memory = createMemory();
 		const prestat = memory.allocStruct(Prestat);
@@ -244,7 +243,6 @@ suite(`Filesystem - ${memoryQualifier}`, () => {
 		const buffer = memory.allocStringBuffer(prestat.len);
 		errno = wasi.fd_prestat_dir_name(rootFd, buffer.$ptr, prestat.len);
 		assert.strictEqual(errno, Errno.success);
-		root = buffer.value;
 		// We only have one prestat directory
 		errno = wasi.fd_prestat_get(5, prestat.$ptr);
 		assert.strictEqual(errno, Errno.badf);
