@@ -49,7 +49,7 @@ namespace Clock {
 }
 
 namespace FileSystem {
-	export function pathOpen(memory: Memory, parentFd: fd, name: string): fd {
+	export function open(memory: Memory, parentFd: fd, name: string): fd {
 		const fd = memory.allocUint32(0);
 		const path = memory.allocString(name);
 		let errno = wasi.path_open(parentFd, 0, path.$ptr, path.byteLength, 0, FileBaseRights, FileInheritingRights, 0, fd.$ptr);
@@ -262,7 +262,7 @@ suite(`Filesystem - ${memoryQualifier}`, () => {
 	test(`fd_filestat_get`, () => {
 		const memory = createMemory();
 		const name = 'fixture/read/helloWorld.txt';
-		const fd = FileSystem.pathOpen(memory, rootFd, name);
+		const fd = FileSystem.open(memory, rootFd, name);
 		const filestat = memory.allocStruct(Filestat);
 		let errno = wasi.fd_filestat_get(fd, filestat.$ptr);
 		FileSystem.close(fd);
@@ -279,7 +279,7 @@ suite(`Filesystem - ${memoryQualifier}`, () => {
 		const memory = createMemory();
 		const name = 'fixture/read/helloWorld.txt';
 		const content = 'Hello World';
-		const fd = FileSystem.pathOpen(memory, rootFd, name);
+		const fd = FileSystem.open(memory, rootFd, name);
 		const stat = FileSystem.stat(memory, fd);
 		const iovecs = memory.allocStructArray(1, Iovec);
 		const buffer = memory.alloc(1024);
@@ -296,7 +296,7 @@ suite(`Filesystem - ${memoryQualifier}`, () => {
 	test('fd_read - multiple iovec', () => {
 		const memory = createMemory();
 		const name = 'fixture/read/large.txt';
-		const fd = FileSystem.pathOpen(memory, rootFd, name);
+		const fd = FileSystem.open(memory, rootFd, name);
 		const stat = FileSystem.stat(memory, fd);
 		assert.strictEqual(stat.size, 3000n);
 		const iovecs = memory.allocStructArray(3, Iovec);
@@ -346,7 +346,7 @@ suite(`Filesystem - ${memoryQualifier}`, () => {
 		assert.strictEqual(errno, Errno.success);
 		assert.strictEqual(bytesWritten.value, content.byteLength);
 		FileSystem.close(fd);
-		const check = FileSystem.pathOpen(memory, rootFd, filename);
+		const check = FileSystem.open(memory, rootFd, filename);
 		const written = FileSystem.read(memory, check);
 		assert.strictEqual(decoder.decode(written), hw);
 		FileSystem.close(check);
@@ -407,7 +407,7 @@ suite(`Filesystem - ${memoryQualifier}`, () => {
 		assert.strictEqual(errno, Errno.success);
 		FileSystem.write(memory, fd.value, ' World');
 		FileSystem.close(fd.value);
-		const check = FileSystem.pathOpen(memory, rootFd, filename);
+		const check = FileSystem.open(memory, rootFd, filename);
 		assert.strictEqual(decoder.decode(FileSystem.read(memory, check)), 'Hello World');
 	});
 
@@ -486,7 +486,7 @@ suite(`Filesystem - ${memoryQualifier}`, () => {
 		const memory = createMemory();
 		const filename = `/tmp/${uuid.v4()}`;
 		FileSystem.createFileClose(memory, rootFd, filename, 'Hello World');
-		const fd = FileSystem.pathOpen(memory, rootFd, filename);
+		const fd = FileSystem.open(memory, rootFd, filename);
 		const before = FileSystem.stat(memory, fd);
 		const errno = wasi.fd_allocate(fd, 0n, 5n);
 		assert.strictEqual(errno, Errno.success);
@@ -504,7 +504,7 @@ suite(`Filesystem - ${memoryQualifier}`, () => {
 		const memory = createMemory();
 		const filename = `/tmp/${uuid.v4()}`;
 		FileSystem.createFileClose(memory, rootFd, filename, 'Hello World');
-		const fd = FileSystem.pathOpen(memory, rootFd, filename);
+		const fd = FileSystem.open(memory, rootFd, filename);
 		const before = FileSystem.stat(memory, fd);
 		const errno = wasi.fd_allocate(fd, 5n, 11n);
 		assert.strictEqual(errno, Errno.success);
@@ -522,7 +522,7 @@ suite(`Filesystem - ${memoryQualifier}`, () => {
 		const memory = createMemory();
 		const filename = `/tmp/${uuid.v4()}`;
 		FileSystem.createFileClose(memory, rootFd, filename, 'Hello World');
-		const fd = FileSystem.pathOpen(memory, rootFd, filename);
+		const fd = FileSystem.open(memory, rootFd, filename);
 		const before = FileSystem.stat(memory, fd);
 		const errno = wasi.fd_allocate(fd, 11n, 7n);
 		assert.strictEqual(errno, Errno.success);
@@ -597,7 +597,7 @@ suite(`Filesystem - ${memoryQualifier}`, () => {
 		assert.strictEqual(newSize, stat.size + 13n);
 		const originalLength = encoder.encode(content).byteLength;
 		FileSystem.close(fd);
-		const check = FileSystem.pathOpen(memory, rootFd, filename);
+		const check = FileSystem.open(memory, rootFd, filename);
 		const buffer = FileSystem.read(memory, check);
 		assert.strictEqual(buffer.length, originalLength + 13);
 		for (let i = originalLength; i < buffer.length; i++) {
@@ -615,4 +615,24 @@ suite(`Filesystem - ${memoryQualifier}`, () => {
 		assert.strictEqual(errno, Errno.nosys);
 		FileSystem.close(fd);
 	});
+
+	test('fd_pread', () => {
+		const memory = createMemory();
+		const filename = `/tmp/${uuid.v4()}`;
+		const content = 'Hello World';
+		FileSystem.createFileClose(memory, rootFd, filename, content);
+		const fd = FileSystem.open(memory, rootFd, filename);
+		const stat = FileSystem.stat(memory, fd);
+		const iovecs = memory.allocStructArray(1, Iovec);
+		const buffer = memory.alloc(1024);
+		iovecs.get(0).buf = buffer.$ptr;
+		iovecs.get(0).buf_len = buffer.byteLength;
+		const bytesRead = memory.allocUint32();
+		const offset = 6n;
+		let errno = wasi.fd_pread(fd, iovecs.$ptr, iovecs.size, offset, bytesRead.$ptr);
+		assert.strictEqual(errno, Errno.success);
+		assert.strictEqual(BigInt(bytesRead.value), stat.size - offset);
+		assert.strictEqual(decoder.decode(memory.readBytes(buffer.$ptr, bytesRead.value)), 'World');
+	});
+
 });
