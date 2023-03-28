@@ -6,12 +6,12 @@ import RIL from '../ril';
 RIL.install();
 
 
-import { BrowserServiceConnection } from '../process';
-import { ConsoleMessage, ModeMessage, TestsDoneMessage } from './messages';
-
+import { ConsoleMessage, ModeMessage, TestsDoneMessage } from '../../common/test/messages';
 import { createWorkspaceContent, createTmp, cleanupTmp, cleanupWorkspaceContent, createWasiService, WorkspaceContent } from '../../common/test/index';
 import { WasiService } from '../../common/service';
 import { CapturedPromise, WorkerMessage } from '../../common/connection';
+
+import { BrowserServiceConnection } from '../process';
 
 export async function run(): Promise<void> {
 	const workspaceContent = await createWorkspaceContent();

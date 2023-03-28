@@ -6,7 +6,7 @@ import RIL from '../ril';
 RIL.install();
 
 import { HostConnection } from '../../common/host';
-import { ConsoleMessage, ModeMessage, TestsDoneMessage } from './messages';
+import { ConsoleMessage, ModeMessage, TestsDoneMessage } from '../../common/test/messages';
 import { BrowserHostConnection } from '../connection';
 import TestEnvironment from '../../common/test/testEnvironment';
 import { CapturedPromise, HostMessage } from '../../common/connection';

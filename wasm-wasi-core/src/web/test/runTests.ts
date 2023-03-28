@@ -26,8 +26,8 @@ async function main() {
 			extensionDevelopmentPath,
 			extensionTestsPath,
 			folderPath: testDir,
-			devTools: true,
-			headless: false,
+			devTools: false,
+			headless: true,
 			// verbose: true,
 			// printServerLog: true,
 			coi: true

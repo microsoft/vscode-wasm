@@ -7,7 +7,6 @@ require('mocha/mocha');
 
 export function run(): Promise<void> {
 	return new Promise((resolve, reject) => {
-		debugger;
 		// Create the mocha test
 		mocha.setup({
 			ui: 'tdd',
