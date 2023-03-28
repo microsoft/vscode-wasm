@@ -497,7 +497,6 @@ export namespace DeviceWasiService {
 
 					const driver = getDeviceDriver(fileDescriptor);
 					const view = new DataView(memory);
-					const raw = new Uint8Array(memory);
 
 					// We have a cookie > 0 but no directory entries. So return end  of list
 					// todo@dirkb this is actually specified different. According to the spec if
@@ -533,7 +532,7 @@ export namespace DeviceWasiService {
 						dirent.d_namlen = nameBytes.byteLength;
 						spaceLeft -= Dirent.size;
 						const spaceForName = Math.min(spaceLeft, nameBytes.byteLength);
-						(new Uint8Array(raw, ptr + Dirent.size, spaceForName)).set(nameBytes.subarray(0, spaceForName));
+						(new Uint8Array(memory, ptr + Dirent.size, spaceForName)).set(nameBytes.subarray(0, spaceForName));
 						ptr += Dirent.size + spaceForName;
 						spaceLeft -= spaceForName;
 					}

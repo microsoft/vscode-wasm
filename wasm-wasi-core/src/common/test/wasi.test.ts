@@ -686,11 +686,12 @@ suite(`Filesystem - ${memoryQualifier}`, () => {
 		}
 		const buffer = memory.alloc(2048);
 		const bufUsed = memory.allocUint32();
-		let errno = wasi.fd_readdir(rootFd, buffer.$ptr, buffer.byteLength, 0n, bufUsed.$ptr);
+		let errno = wasi.fd_readdir(folderFd, buffer.$ptr, buffer.byteLength, 0n, bufUsed.$ptr);
 		assert.strictEqual(errno, Errno.success);
 		let index = buffer.$ptr;
 		let next = 1n;
-		while(index < bufUsed.value) {
+		const end = index + bufUsed.value;
+		while(index < end) {
 			const dirent = memory.readStruct(index, Dirent);
 			assert.strictEqual(dirent.d_next, next);
 			assert.strictEqual(dirent.d_type, Filetype.regular_file);
