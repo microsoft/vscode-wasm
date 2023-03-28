@@ -514,4 +514,20 @@ suite(`Filesystem - ${memoryQualifier}`, () => {
 		}
 		FileSystem.close(fd);
 	});
+
+	test('fd_datasync', async () => {
+		// In VS Code data sync writes `blindly` to disk since no other
+		// options are available.
+		const memory = createMemory();
+		const filename = `/tmp/${uuid.v4()}`;
+		const fd = FileSystem.createWrite(memory, rootFd, filename, 'Hello World');
+		const before = FileSystem.stat(memory, fd);
+		await new Promise(resolve => RAL().timer.setTimeout(resolve, 5));
+
+		const errno = wasi.fd_datasync(fd);
+		const after = FileSystem.stat(memory, fd);
+		assert.strictEqual(errno, Errno.success);
+		assert.ok(before.mtim < after.mtim);
+		FileSystem.close(fd);
+	});
 });
