@@ -31,7 +31,7 @@ async function go() {
 	try {
 		fs.mkdirSync(testDir, { recursive: true });
 		const extensionDevelopmentPath = path.resolve(__dirname, '..', '..');
-		const extensionTestsPath = path.resolve(__dirname, '..', '..', 'dist', 'web', 'test', 'index.js');
+		const extensionTestsPath = path.resolve(__dirname, '..', '..', 'dist', 'web', 'index.js');
 
 		/**
 		 * Basic usage
@@ -42,8 +42,8 @@ async function go() {
 			extensionDevelopmentPath,
 			extensionTestsPath,
 			folderPath: testDir,
-			devTools: false,
-			headless: true,
+			devTools: true,
+			headless: false,
 			// verbose: true,
 			// printServerLog: true,
 			coi: true

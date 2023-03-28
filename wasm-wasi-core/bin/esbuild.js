@@ -4,7 +4,8 @@
  *--------------------------------------------------------------------------------------------*/
 //@ts-check
 const esbuild = require('esbuild');
-const browser_assert = require.resolve('browser-assert');
+const path = require('path');
+const browser_assert = path.resolve(__dirname, '../node_modules/assert/build/assert.js');
 
 /** @type esbuild.Plugin */
 const assertResolvePlugin = {
@@ -69,6 +70,9 @@ const webTestsIndexOptions = {
 const webTestWorkerOptions = {
 	entryPoints: ['src/web/test/testWorker.ts'],
 	outfile: 'dist/web/test/testWorker.js',
+	define: {
+		process: '{"env":{}}'
+	},
 	plugins: [ assertResolvePlugin ],
 	format: 'iife',
 	...sharedBrowserOptions

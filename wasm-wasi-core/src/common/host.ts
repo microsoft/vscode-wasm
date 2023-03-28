@@ -9,7 +9,7 @@ import {
 	args_sizes_get, args_get, clock_res_get, clock_time_get, environ_sizes_get, environ_get, fd_advise, fd_allocate, fd_close, fd_datasync, fd_fdstat_set_flags, fd_fdstat_get, fd_filestat_get, fd_filestat_set_size, fd_filestat_set_times, fd_pread, fd_prestat_get, fd_prestat_dir_name, fd_pwrite, fd_read, fd_readdir, fd_seek, fd_renumber, fd_sync, fd_tell, fd_write, path_create_directory, path_filestat_get, path_filestat_set_times, path_link, path_open, path_readlink, path_remove_directory, path_rename, path_symlink, path_unlink_file, poll_oneoff, proc_exit, sched_yield, random_get, sock_accept, sock_shutdown, thread_spawn, thread_exit
 } from './wasi';
 import { ParamKind, WasiFunctions, WasiFunctionSignature, WasiFunction, MemoryTransfer, ReverseTransfer } from './wasiMeta';
-import { Offsets, WasiCallMessage, WorkerReadyMessage } from './connection';
+import { Offsets, WasiCallMessage, WorkerMessage, WorkerReadyMessage } from './connection';
 import { WASI } from './wasi';
 
 export abstract class HostConnection {
@@ -20,7 +20,7 @@ export abstract class HostConnection {
 		this.timeout = timeout;
 	}
 
-	public abstract postMessage(message: WasiCallMessage | WorkerReadyMessage): any;
+	public abstract postMessage(message: WasiCallMessage | WorkerMessage): any;
 
 	public call(func: WasiFunction, args: (number | bigint)[], wasmMemory: ArrayBuffer, transfers?: MemoryTransfer): errno {
 		const signature = func.signature;

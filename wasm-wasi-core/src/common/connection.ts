@@ -38,17 +38,17 @@ export interface WorkerMessage {
 	readonly method: string;
 }
 
-export interface WorkerReadyMessage {
+export interface WorkerReadyMessage extends WorkerMessage {
 	readonly method: 'workerReady';
 }
 export namespace WorkerReadyMessage {
-	export function is(message: WasiCallMessage | WorkerMessage): message is WorkerReadyMessage {
+	export function is(message: WorkerMessage): message is WorkerReadyMessage {
 		const candidate = message as WorkerReadyMessage;
 		return candidate && candidate.method === 'workerReady';
 	}
 }
 
-export interface WorkerDoneMessage {
+export interface WorkerDoneMessage extends WorkerMessage {
 	readonly method: 'workerDone';
 }
 export namespace WorkerDoneMessage {

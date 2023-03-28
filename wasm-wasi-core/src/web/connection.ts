@@ -4,7 +4,7 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { HostConnection } from '../common/host';
-import { WasiCallMessage, WorkerReadyMessage } from '../common/connection';
+import { WasiCallMessage, WorkerMessage } from '../common/connection';
 
 export class BrowserHostConnection extends HostConnection {
 
@@ -15,7 +15,7 @@ export class BrowserHostConnection extends HostConnection {
 		this.port = port;
 	}
 
-	public postMessage(message: WasiCallMessage | WorkerReadyMessage): void {
+	public postMessage(message: WasiCallMessage | WorkerMessage): void {
 		this.port.postMessage(message);
 	}
 }

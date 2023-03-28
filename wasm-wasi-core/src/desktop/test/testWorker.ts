@@ -5,16 +5,30 @@
 import RIL from '../ril';
 RIL.install();
 
-import * as path from 'path';
+import * as path from 'node:path';
+import { parentPort } from 'node:worker_threads';
+
 import Mocha from 'mocha';
 import glob from 'glob';
 
+import { NodeHostConnection } from '../connection';
+import TestEnvironment from '../../common/test/testEnvironment';
+
 async function run(): Promise<void> {
+
+	if (parentPort === null) {
+		throw new Error('Test must run in a web worker');
+	}
+
+	debugger;
 
 	const testsRoot = path.join(__dirname, '..', '..', 'common', 'test');
 	const files = (await glob('**/**.test.js', { cwd: testsRoot })).map(f => path.resolve(testsRoot, f));
 
-	RIL().$testing.sharedMemory = process.argv[2] === 'shared';
+	const shared = process.argv[2] === 'shared';
+	const connection = new NodeHostConnection(parentPort);
+	TestEnvironment.setup(connection, shared);
+	connection.postMessage({ method: 'workerReady' });
 
 	// Create the mocha test
 	const mocha = new Mocha({

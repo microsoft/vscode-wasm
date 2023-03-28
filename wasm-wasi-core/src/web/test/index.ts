@@ -7,6 +7,8 @@ RIL.install();
 
 
 import { BrowserServiceConnection } from '../process';
+import { ConsoleMessage, TestsDoneMessage } from './messages';
+
 import { createWorkspaceContent, createTmp, cleanupTmp, cleanupWorkspaceContent, createWasiService, WorkspaceContent } from '../../common/test/index';
 
 export async function run(): Promise<void> {
@@ -29,11 +31,6 @@ export async function run(): Promise<void> {
 	}
 }
 
-interface TestsDoneMessage {
-	method: 'testsDone';
-	failures: number;
-}
-
 async function doRun(workspaceContent: WorkspaceContent, shared: boolean): Promise<void> {
 	const wasiService = createWasiService(workspaceContent);
 
@@ -48,6 +45,9 @@ async function doRun(workspaceContent: WorkspaceContent, shared: boolean): Promi
 				} else {
 					resolve();
 				}
+			} else if (message.method === 'console') {
+				const consoleMessage: ConsoleMessage = message as ConsoleMessage;
+				console[consoleMessage.severity](...consoleMessage.args);
 			}
 			reject(new Error('Unexpected message: ' + JSON.stringify(message)));
 		});
