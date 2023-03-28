@@ -37,8 +37,9 @@ export async function createWorkspaceContent(): Promise<WorkspaceContent>{
 	await vscode.workspace.fs.createDirectory(fixture);
 
 	// Setup a fixture to test path_open
-	const read = fixture.with({ path: path.join(fixture.path, 'path_open') });
+	const read = fixture.with({ path: path.join(fixture.path, 'read') });
 	await vscode.workspace.fs.writeFile(folder.with({ path: path.join(read.path, 'helloWorld.txt') }), encoder.encode('Hello World'));
+	await vscode.workspace.fs.writeFile(folder.with({ path: path.join(read.path, 'large.txt') }), encoder.encode('1'.repeat(3000)));
 
 	// This is to store tmp data
 	const tmp = folder.with({ path: path.join(folder.path, 'tmp') });

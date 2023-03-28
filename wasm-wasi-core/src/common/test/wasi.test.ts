@@ -5,10 +5,14 @@
 import RAL from '../ral';
 
 import assert from 'assert';
+import * as uuid from 'uuid';
 
-import { Clockid, Errno, Prestat, fd, Lookupflags, Oflags, Fdflags, rights, Rights } from '../wasi';
+import { Clockid, Errno, Prestat, fd, Lookupflags, Oflags, Fdflags, rights, Rights, Filetype, Filestat, Ciovec, WasiError } from '../wasi';
 import { Environment } from '../api';
 import TestEnvironment from './testEnvironment';
+import { Memory } from './memory';
+import { filestat } from '../wasi';
+import { Iovec } from '../wasi';
 
 const FileBaseRights: rights = Rights.fd_datasync | Rights.fd_read | Rights.fd_seek | Rights.fd_fdstat_set_flags |
 		Rights.fd_sync | Rights.fd_tell | Rights.fd_write | Rights.fd_advise | Rights.fd_allocate | Rights.fd_filestat_get |
@@ -22,9 +26,113 @@ const FileInheritingRights: rights = 0n;
 // }
 
 const encoder = RAL().TextEncoder.create();
+const decoder = RAL().TextDecoder.create();
+
 const wasi = TestEnvironment.wasi();
 const createMemory = TestEnvironment.createMemory;
 const memoryQualifier = TestEnvironment.qualifier();
+
+namespace Clock {
+	export const start = RAL().clock.realtime();
+	export function now(memory: Memory): bigint {
+		const time = memory.allocBigUint64();
+		let errno = wasi.clock_time_get(Clockid.realtime, 0n, time.$ptr);
+		assert.strictEqual(errno, Errno.success);
+		return time.value;
+	}
+	export function assertClock(actual: bigint, expected: bigint): void {
+		const delta = (3000n * 1000000n); // 3 s
+		const low = expected - delta;
+		const high = expected;
+		assert.ok(low < actual && actual <= high, `Expected [${low},${high}] but got ${actual}`);
+	}
+}
+
+namespace FileSystem {
+	export function pathOpen(memory: Memory, parentFd: fd, name: string): fd {
+		const fd = memory.allocUint32(0);
+		const path = memory.allocString(name);
+		let errno = wasi.path_open(parentFd, 0, path.$ptr, path.byteLength, 0, FileBaseRights, FileInheritingRights, 0, fd.$ptr);
+		assert.strictEqual(errno, Errno.success);
+		return fd.value;
+	}
+
+	export function createFile(memory: Memory, parentFd: fd, name: string): fd {
+		const fd = memory.allocUint32(0);
+		const path = memory.allocString(name);
+		let errno = wasi.path_open(parentFd, 0, path.$ptr, path.byteLength, Oflags.creat, FileBaseRights, FileInheritingRights, 0, fd.$ptr);
+		assert.strictEqual(errno, Errno.success);
+		const _stat = stat(memory, fd.value);
+		assert.strictEqual(_stat.filetype, Filetype.regular_file);
+		return fd.value;
+	}
+
+	export function stat(memory: Memory, fd: fd): filestat {
+		const stat = memory.allocStruct(Filestat);
+		let errno = wasi.fd_filestat_get(fd, stat.$ptr);
+		assert.strictEqual(errno, Errno.success);
+		return stat;
+	}
+
+	export function read(memory: Memory, fd: fd): Uint8Array {
+		const _stat  = stat(memory, fd);
+		const iovecs = memory.allocStructArray(1, Iovec);
+		const buffer = memory.alloc(BigInts.asNumber(_stat.size));
+		iovecs.get(0).buf = buffer.$ptr;
+		iovecs.get(0).buf_len = buffer.byteLength;
+		const bytesRead = memory.allocUint32();
+		let errno = wasi.fd_read(fd, iovecs.$ptr, iovecs.size, bytesRead.$ptr);
+		assert.strictEqual(errno, Errno.success);
+		return memory.readBytes(buffer.$ptr, bytesRead.value);
+	}
+
+	export function createWrite(memory: Memory, parentFd: fd, filename: string, content: Uint8Array | string): fd {
+		if (typeof content === 'string') {
+			content = encoder.encode(content);
+		}
+		const fd = createFile(memory, parentFd, filename);
+		const iovecs = memory.allocStructArray(1, Iovec);
+		const buffer = memory.allocBytes(content);
+		iovecs.get(0).buf = buffer.$ptr;
+		iovecs.get(0).buf_len = buffer.byteLength;
+		const bytesWritten = memory.allocUint32();
+		let errno = wasi.fd_write(fd, iovecs.$ptr, iovecs.size, bytesWritten.$ptr);
+		assert.strictEqual(errno, Errno.success);
+		assert.strictEqual(bytesWritten.value, content.byteLength);
+		const _stat = stat(memory, fd);
+		assert.strictEqual(_stat.size, BigInt(content.byteLength));
+		return fd;
+	}
+
+	export function write(memory: Memory, fd: fd, content: Uint8Array | string): void {
+		if (typeof content === 'string') {
+			content = encoder.encode(content);
+		}
+		const iovecs = memory.allocStructArray(1, Iovec);
+		const buffer = memory.allocBytes(content);
+		iovecs.get(0).buf = buffer.$ptr;
+		iovecs.get(0).buf_len = buffer.byteLength;
+		const bytesWritten = memory.allocUint32();
+		let errno = wasi.fd_write(fd, iovecs.$ptr, iovecs.size, bytesWritten.$ptr);
+		assert.strictEqual(errno, Errno.success);
+		assert.strictEqual(bytesWritten.value, content.byteLength);
+	}
+
+	export function close(fd: fd): void {
+		let errno = wasi.fd_close(fd);
+		assert.strictEqual(errno, Errno.success);
+	}
+}
+
+namespace BigInts {
+	const MAX_VALUE_AS_BIGINT = BigInt(Number.MAX_VALUE);
+	export function asNumber(value: bigint): number {
+		if (value > MAX_VALUE_AS_BIGINT) {
+			throw new WasiError(Errno.fbig);
+		}
+		return Number(value);
+	}
+}
 
 suite(`Simple test - ${memoryQualifier}`, () => {
 
@@ -139,9 +247,163 @@ suite(`Filesystem - ${memoryQualifier}`, () => {
 	test(`path_open - exists`, () => {
 		const memory = createMemory();
 		const fd = memory.allocUint32();
-		const path = memory.allocString('fixture/path_open/helloWorld.txt');
+		const path = memory.allocString('fixture/read/helloWorld.txt');
 		let errno = wasi.path_open(rootFd, Lookupflags.none, path.$ptr, path.byteLength, Oflags.none, FileBaseRights, FileInheritingRights, Fdflags.none, fd.$ptr);
 		assert.strictEqual(errno, Errno.success);
 		assert.strictEqual(fd.value, 5);
+		errno = wasi.fd_close(fd.value);
+		assert.strictEqual(errno, Errno.success);
+	});
+
+	test(`fd_filestat_get`, () => {
+		const memory = createMemory();
+		const name = 'fixture/read/helloWorld.txt';
+		const fd = FileSystem.pathOpen(memory, rootFd, name);
+		const filestat = memory.allocStruct(Filestat);
+		let errno = wasi.fd_filestat_get(fd, filestat.$ptr);
+		FileSystem.close(fd);
+		assert.strictEqual(errno, Errno.success);
+		assert.strictEqual(filestat.filetype, Filetype.regular_file);
+		assert.strictEqual(filestat.size, 11n);
+		assert.strictEqual(filestat.nlink, 1n);
+		Clock.assertClock(filestat.atim, Clock.start);
+		Clock.assertClock(filestat.ctim, Clock.start);
+		Clock.assertClock(filestat.mtim, Clock.start);
+	});
+
+	test('fd_read - single iovec', () => {
+		const memory = createMemory();
+		const name = 'fixture/read/helloWorld.txt';
+		const content = 'Hello World';
+		const fd = FileSystem.pathOpen(memory, rootFd, name);
+		const stat = FileSystem.stat(memory, fd);
+		const iovecs = memory.allocStructArray(1, Iovec);
+		const buffer = memory.alloc(1024);
+		iovecs.get(0).buf = buffer.$ptr;
+		iovecs.get(0).buf_len = buffer.byteLength;
+		const bytesRead = memory.allocUint32();
+		let errno = wasi.fd_read(fd, iovecs.$ptr, iovecs.size, bytesRead.$ptr);
+		assert.strictEqual(errno, Errno.success);
+		assert.strictEqual(BigInt(bytesRead.value), stat.size);
+		assert.strictEqual(decoder.decode(memory.readBytes(buffer.$ptr, bytesRead.value)), content);
+		FileSystem.close(fd);
+	});
+
+	test('fd_read - multiple iovec', () => {
+		const memory = createMemory();
+		const name = 'fixture/read/large.txt';
+		const fd = FileSystem.pathOpen(memory, rootFd, name);
+		const stat = FileSystem.stat(memory, fd);
+		assert.strictEqual(stat.size, 3000n);
+		const iovecs = memory.allocStructArray(3, Iovec);
+		for (let i = 0; i < iovecs.size; i++) {
+			const buffer = memory.alloc(1024);
+			iovecs.get(i).buf = buffer.$ptr;
+			iovecs.get(i).buf_len = buffer.byteLength;
+		}
+		const bytesRead = memory.allocUint32();
+		let errno = wasi.fd_read(fd, iovecs.$ptr, iovecs.size, bytesRead.$ptr);
+		assert.strictEqual(errno, Errno.success);
+		assert.strictEqual(BigInt(bytesRead.value), stat.size);
+		let rest = 3000;
+		for (let i = 0; i < iovecs.size; i++) {
+			const iovec = iovecs.get(i);
+			const toRead = rest >= 1024 ? 1024 : rest;
+			assert.strictEqual(decoder.decode(memory.readBytes(iovec.buf, toRead)), '1'.repeat(toRead));
+			rest -= toRead;
+		}
+		FileSystem.close(fd);
+	});
+
+	test('path_open - create file', () => {
+		const memory = createMemory();
+		const name = '/tmp/test.txt';
+		const fd = memory.allocUint32(0);
+		const path = memory.allocString(name);
+		let errno = wasi.path_open(rootFd, 0, path.$ptr, path.byteLength, Oflags.creat, FileBaseRights, FileInheritingRights, 0, fd.$ptr);
+		assert.strictEqual(errno, Errno.success);
+		assert.notStrictEqual(fd.value, 0);
+		const stat = FileSystem.stat(memory, fd.value);
+		assert.strictEqual(stat.filetype, Filetype.regular_file);
+		FileSystem.close(fd.value);
+	});
+
+	test('fd_write - single ciovec', () => {
+		const memory = createMemory();
+		const filename = `/tmp/${uuid.v4()}`;
+		const hw = 'Hello World';
+		const fd = FileSystem.createFile(memory, rootFd, filename);
+		const ciovecs = memory.allocStructArray(1, Ciovec);
+		const content = memory.allocBytes(encoder.encode(hw));
+		ciovecs.get(0).buf = content.$ptr;
+		ciovecs.get(0).buf_len = content.byteLength;
+		const bytesWritten = memory.allocUint32();
+		let errno = wasi.fd_write(fd, ciovecs.$ptr, 1, bytesWritten.$ptr);
+		assert.strictEqual(errno, Errno.success);
+		assert.strictEqual(bytesWritten.value, content.byteLength);
+		FileSystem.close(fd);
+		const check = FileSystem.pathOpen(memory, rootFd, filename);
+		const written = FileSystem.read(memory, check);
+		assert.strictEqual(decoder.decode(written), hw);
+		FileSystem.close(check);
+	});
+
+	test('path_open - truncate file', () => {
+		const memory = createMemory();
+		const filename = `/tmp/${uuid.v4()}`;
+		FileSystem.close(FileSystem.createWrite(memory, rootFd, filename, 'Hello World'));
+		const fd = memory.allocUint32();
+		const p = memory.allocString(filename);
+		let errno = wasi.path_open(rootFd, 0, p.$ptr, p.byteLength, Oflags.trunc, FileBaseRights, FileInheritingRights, 0, fd.$ptr);
+		assert.strictEqual(errno, Errno.success);
+		assert.notStrictEqual(fd.value, 0);
+		const stat = FileSystem.stat(memory, fd.value);
+		assert.strictEqual(stat.size, 0n);
+		FileSystem.close(fd.value);
+	});
+
+	test('path_open - fail if file exists', () => {
+		const memory = createMemory();
+		const filename = `/tmp/${uuid.v4()}`;
+		FileSystem.close(FileSystem.createWrite(memory, rootFd, filename, 'Hello World'));
+		const fd = memory.allocUint32(0);
+		const p = memory.allocString(filename);
+		let errno = wasi.path_open(rootFd, 0, p.$ptr, p.byteLength, Oflags.excl, FileBaseRights, FileInheritingRights, 0, fd.$ptr);
+		assert.strictEqual(errno, Errno.exist);
+	});
+
+	test('path_open - fail if not directory', () => {
+		const memory = createMemory();
+		const filename = `/tmp/${uuid.v4()}`;
+		FileSystem.close(FileSystem.createWrite(memory, rootFd, filename, 'Hello World'));
+		const fd = memory.allocUint32(0);
+		const p = memory.allocString(filename);
+		const errno = wasi.path_open(rootFd, 0, p.$ptr, p.byteLength, Oflags.directory, FileBaseRights, FileInheritingRights, 0, fd.$ptr);
+		assert.strictEqual(errno, Errno.notdir);
+	});
+
+	test('path_open - is directory', () => {
+		const memory = createMemory();
+		const foldername = `fixture/read`;
+		const fd = memory.allocUint32(0);
+		const p = memory.allocString(foldername);
+		const errno = wasi.path_open(rootFd, 0, p.$ptr, p.byteLength, Oflags.directory, FileBaseRights, FileInheritingRights, 0, fd.$ptr);
+		assert.strictEqual(errno, Errno.success);
+		assert.notStrictEqual(fd.value, 0);
+		FileSystem.close(fd.value);
+	});
+
+	test('path_open - append mode', () => {
+		const memory = createMemory();
+		const filename = `/tmp/${uuid.v4()}`;
+		FileSystem.close(FileSystem.createWrite(memory, rootFd, filename, 'Hello'));
+		const fd = memory.allocUint32(0);
+		const p = memory.allocString(filename);
+		let errno = wasi.path_open(rootFd, 0, p.$ptr, p.byteLength, 0, FileBaseRights, FileInheritingRights, Fdflags.append, fd.$ptr);
+		assert.strictEqual(errno, Errno.success);
+		FileSystem.write(memory, fd.value, ' World');
+		FileSystem.close(fd.value);
+		const check = FileSystem.pathOpen(memory, rootFd, filename);
+		assert.strictEqual(decoder.decode(FileSystem.read(memory, check)), 'Hello World');
 	});
 });
