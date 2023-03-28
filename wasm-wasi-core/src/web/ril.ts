@@ -24,7 +24,19 @@ const _ril: RIL = Object.freeze<RIL>({
 	}),
 	TextDecoder: Object.freeze({
 		create(_encoding: string = 'utf-8'): RAL.TextDecoder {
-			return decoder;
+			return {
+				decode(input?: Uint8Array): string {
+					if (input === undefined) {
+						return decoder.decode(input);
+					} else {
+						if (input.buffer instanceof SharedArrayBuffer) {
+							return decoder.decode(input.slice(0));
+						} else {
+							return decoder.decode(input);
+						}
+					}
+				}
+			};
 		}
 	}),
 	console: console,
@@ -49,7 +61,7 @@ const _ril: RIL = Object.freeze<RIL>({
 		},
 		monotonic(): bigint {
 			// digits are ms, decimal places are fractions of ms.
-			const now = self.performance.now();
+			const now = self.performance.timeOrigin + self.performance.now();
 			const ms = Math.trunc(now);
 			const msf = now - ms;
 			// We need to convert everything into nanoseconds

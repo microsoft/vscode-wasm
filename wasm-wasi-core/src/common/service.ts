@@ -13,7 +13,7 @@ import {
 	path_filestat_get, path_filestat_set_times, path_link, path_open, path_readlink, path_remove_directory, path_rename, path_symlink, path_unlink_file,
 	poll_oneoff, Prestat, prestat, proc_exit, random_get, riflags, rights, Rights, sched_yield, sdflags, siflags, sock_accept, Subclockflags, Subscription, subscription, thread_spawn, timestamp, WasiError, Whence, whence, thread_exit, tid
 } from './wasi';
-import { Offsets, WasiCallMessage } from './connection';
+import { CapturedPromise, Offsets, WasiCallMessage, WorkerDoneMessage, WorkerMessage, WorkerReadyMessage } from './connection';
 import { WasiFunction, WasiFunctions, WasiFunctionSignature } from './wasiMeta';
 import { byte, bytes, cstring, ptr, size, u32, u64 } from './baseTypes';
 import { FileDescriptor, FileDescriptors } from './fileDescriptor';
@@ -26,13 +26,39 @@ export abstract class ServiceConnection {
 
 	private readonly wasiService: WasiService;
 
+	private readonly _workerReady: CapturedPromise<void>;
+
+	private readonly _workerDone: CapturedPromise<void>;
+
 	constructor(wasiService: WasiService) {
 		this.wasiService = wasiService;
+		this._workerReady = CapturedPromise.create<void>();
+		this._workerDone = CapturedPromise.create<void>();
 	}
 
-	public abstract workerReady(): Promise<void>;
+	public workerReady(): Promise<void> {
+		return this._workerReady.promise;
+	}
 
-	protected async handleMessage(message: WasiCallMessage): Promise<void> {
+	public workerDone(): Promise<void> {
+		return this._workerDone.promise;
+	}
+
+	protected async handleMessage(message: WorkerMessage): Promise<void> {
+		if (WasiCallMessage.is(message)) {
+			try {
+				await this.handleWasiCallMessage(message);
+			} catch (error) {
+				RAL().console.error(error);
+			}
+		} else if (WorkerReadyMessage.is(message)) {
+			this._workerReady.resolve();
+		} else if (WorkerDoneMessage.is(message)) {
+			this._workerDone.resolve();
+		}
+	}
+
+	private async handleWasiCallMessage(message: WasiCallMessage): Promise<void> {
 		const [paramBuffer, wasmMemory] = message;
 		const paramView = new DataView(paramBuffer);
 		try {

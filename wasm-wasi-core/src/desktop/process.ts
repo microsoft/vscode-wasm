@@ -12,39 +12,22 @@ import RAL from '../common/ral';
 import { ptr, u32 } from '../common/baseTypes';
 import { WasiProcess } from '../common/process';
 import { WasiService, ServiceConnection } from '../common/service';
-import { StartMainMessage, StartThreadMessage, WasiCallMessage, WorkerReadyMessage } from '../common/connection';
+import type { HostMessage, StartMainMessage, StartThreadMessage, WorkerMessage } from '../common/connection';
 import { Options } from '../common/api';
 
 export class NodeServiceConnection extends ServiceConnection {
 
 	private readonly port: MessagePort | Worker;
-	private _workerReady: Promise<void>;
 
 	constructor(wasiService: WasiService, port: MessagePort | Worker) {
 		super(wasiService);
-		let workerReadyResolve: () => void;
-		this._workerReady = new Promise((resolve) => {
-			workerReadyResolve = resolve;
-		});
 		this.port = port;
-		this.port.on('message', async (message: WorkerReadyMessage | WasiCallMessage) => {
-			if (WasiCallMessage.is(message)) {
-				try {
-					await this.handleMessage(message);
-				} catch (error) {
-					RAL().console.error(error);
-				}
-			} else if (WorkerReadyMessage.is(message)) {
-				workerReadyResolve();
-			}
+		this.port.on('message', (message: WorkerMessage) => {
+			this.handleMessage(message).catch(RAL().console.error);
 		});
 	}
 
-	public workerReady(): Promise<void> {
-		return this._workerReady;
-	}
-
-	public postMessage(message: StartMainMessage | StartThreadMessage): void {
+	public postMessage(message: HostMessage): void {
 		this.port.postMessage(message);
 	}
 }

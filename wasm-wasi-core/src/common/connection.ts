@@ -34,11 +34,9 @@ export interface StartThreadMessage {
 	readonly start_arg: ptr;
 }
 
-export interface WorkerMessage {
-	readonly method: string;
-}
+export type HostMessage = StartMainMessage | StartThreadMessage | { method: string };
 
-export interface WorkerReadyMessage extends WorkerMessage {
+export interface WorkerReadyMessage {
 	readonly method: 'workerReady';
 }
 export namespace WorkerReadyMessage {
@@ -48,11 +46,11 @@ export namespace WorkerReadyMessage {
 	}
 }
 
-export interface WorkerDoneMessage extends WorkerMessage {
+export interface WorkerDoneMessage {
 	readonly method: 'workerDone';
 }
 export namespace WorkerDoneMessage {
-	export function is(message: WasiCallMessage | WorkerMessage): message is WorkerReadyMessage {
+	export function is(message: WorkerMessage): message is WorkerReadyMessage {
 		const candidate = message as WorkerDoneMessage;
 		return candidate && candidate.method === 'workerDone';
 	}
@@ -60,7 +58,29 @@ export namespace WorkerDoneMessage {
 
 export type WasiCallMessage = [SharedArrayBuffer, SharedArrayBuffer];
 export namespace WasiCallMessage {
-	export function is(message: WasiCallMessage | WorkerMessage): message is WasiCallMessage {
+	export function is(message: WorkerMessage): message is WasiCallMessage {
 		return Array.isArray(message) && message.length === 2 && message[0] instanceof SharedArrayBuffer && message[1] instanceof SharedArrayBuffer;
+	}
+}
+
+export type WorkerMessage = WasiCallMessage | WorkerReadyMessage | WorkerDoneMessage | { method: string };
+
+export interface CapturedPromise<T> {
+	promise: Promise<T>;
+	resolve: (value: T | PromiseLike<T>) => void;
+	reject: (reason?: any) => void;
+}
+
+export namespace CapturedPromise {
+	export function create<T>(): CapturedPromise<T> {
+		let _resolve!: (value: T | PromiseLike<T>) => void;
+		let _reject!: (reason?: any) => void;
+		const promise: Promise<T> = new Promise<T>((resolve, reject) => {
+			_resolve = resolve;
+			_reject = reject;
+		});
+		return {
+			promise, resolve: _resolve, reject: _reject
+		};
 	}
 }

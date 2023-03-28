@@ -5,60 +5,26 @@
 import { Uri } from 'vscode';
 
 import RAL from '../common/ral';
+
 import { ptr, u32 } from '../common/baseTypes';
 import { WasiProcess } from '../common/process';
 import { WasiService, ServiceConnection } from '../common/service';
-import { StartMainMessage, StartThreadMessage, WasiCallMessage, WorkerDoneMessage, WorkerMessage, WorkerReadyMessage } from '../common/connection';
+import { HostMessage, StartMainMessage, StartThreadMessage, WorkerMessage } from '../common/connection';
 import { Options } from '../common/api';
 
 export class BrowserServiceConnection extends ServiceConnection {
 
 	private readonly port: MessagePort | Worker;
-	private readonly handler?: ((message: WorkerMessage) => void) | undefined;
-	private readonly _workerReady: Promise<void>;
-	private readonly _workerDone: Promise<void>;
 
-	constructor(wasiService: WasiService, port: MessagePort | Worker, handler?: (message: WorkerMessage) => void) {
+	constructor(wasiService: WasiService, port: MessagePort | Worker) {
 		super(wasiService);
 		this.port = port;
-		this.handler = handler;
-		let workerReadyResolve: () => void;
-		this._workerReady = new Promise((resolve) => {
-			workerReadyResolve = resolve;
-		});
-		let workerDoneResolve: () => void;
-		this._workerDone = new Promise((resolve) => {
-			workerDoneResolve = resolve;
-		});
-		this.port.onmessage = (async (event: MessageEvent< WasiCallMessage | WorkerReadyMessage | WorkerDoneMessage | { method: string }>) => {
-			const message = event.data;
-			if (WasiCallMessage.is(message)) {
-				try {
-					await this.handleMessage(message);
-				} catch (error) {
-					RAL().console.error(error);
-				}
-			} else if (WorkerReadyMessage.is(message)) {
-				workerReadyResolve();
-			} else if (WorkerDoneMessage.is(message)) {
-				workerDoneResolve();
-			} else {
-				if (this.handler !== undefined) {
-					this.handler(message);
-				}
-			}
+		this.port.onmessage = ((event: MessageEvent<WorkerMessage>) => {
+			this.handleMessage(event.data).catch((error) => RAL().console.error(error));
 		});
 	}
 
-	public workerReady(): Promise<void> {
-		return this._workerReady;
-	}
-
-	public workerDone(): Promise<void> {
-		return this._workerDone;
-	}
-
-	public postMessage(message: StartMainMessage | StartThreadMessage): void {
+	public postMessage(message: HostMessage): void {
 		try {
 			this.port.postMessage(message);
 		} catch(error) {
