@@ -104,6 +104,10 @@ namespace FileSystem {
 		return fd;
 	}
 
+	export function createWriteClose(memory: Memory, parentFd: fd, filename: string, content: Uint8Array | string): void {
+		close(createWrite(memory, parentFd, filename, content));
+	}
+
 	export function write(memory: Memory, fd: fd, content: Uint8Array | string): void {
 		if (typeof content === 'string') {
 			content = encoder.encode(content);
@@ -454,6 +458,60 @@ suite(`Filesystem - ${memoryQualifier}`, () => {
 		// VS Code has no advise support. So all advises should result in success
 		const errno = wasi.fd_advise(fd, 0n, 3n, Advise.noreuse);
 		assert.strictEqual(errno, Errno.success);
+		FileSystem.close(fd);
+	});
+
+	test('fd_allocate - start', () => {
+		const memory = createMemory();
+		const filename = `/tmp/${uuid.v4()}`;
+		FileSystem.createWriteClose(memory, rootFd, filename, 'Hello World');
+		const fd = FileSystem.pathOpen(memory, rootFd, filename);
+		const before = FileSystem.stat(memory, fd);
+		const errno = wasi.fd_allocate(fd, 0n, 5n);
+		assert.strictEqual(errno, Errno.success);
+		const after = FileSystem.stat(memory, fd);
+		assert.strictEqual(before.size + 5n, after.size);
+		const buffer = FileSystem.read(memory, fd);
+		for (let i = 0; i < 5; i++) {
+			assert.strictEqual(buffer[i], 0);
+		}
+		assert.notStrictEqual(buffer[5], 0);
+		FileSystem.close(fd);
+	});
+
+	test('fd_allocate - middle', () => {
+		const memory = createMemory();
+		const filename = `/tmp/${uuid.v4()}`;
+		FileSystem.createWriteClose(memory, rootFd, filename, 'Hello World');
+		const fd = FileSystem.pathOpen(memory, rootFd, filename);
+		const before = FileSystem.stat(memory, fd);
+		const errno = wasi.fd_allocate(fd, 5n, 11n);
+		assert.strictEqual(errno, Errno.success);
+		const after = FileSystem.stat(memory, fd);
+		assert.strictEqual(before.size + 11n, after.size);
+		const buffer = FileSystem.read(memory, fd);
+		for (let i = 5; i < 5 + 11; i++) {
+			assert.strictEqual(buffer[i], 0);
+		}
+		assert.notStrictEqual(buffer[5 + 11], 0);
+		FileSystem.close(fd);
+	});
+
+	test('fd_allocate - end', () => {
+		const memory = createMemory();
+		const filename = `/tmp/${uuid.v4()}`;
+		FileSystem.createWriteClose(memory, rootFd, filename, 'Hello World');
+		const fd = FileSystem.pathOpen(memory, rootFd, filename);
+		const before = FileSystem.stat(memory, fd);
+		const errno = wasi.fd_allocate(fd, 11n, 7n);
+		assert.strictEqual(errno, Errno.success);
+		const after = FileSystem.stat(memory, fd);
+		assert.strictEqual(before.size + 7n, after.size);
+		const buffer = FileSystem.read(memory, fd);
+		assert.strictEqual(buffer.length, 11 + 7);
+		for (let i = 11; i < 11 + 7; i++) {
+			assert.strictEqual(buffer[i], 0);
+		}
 		FileSystem.close(fd);
 	});
 });
