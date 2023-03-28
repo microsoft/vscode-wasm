@@ -7,7 +7,7 @@ import RAL from '../ral';
 import assert from 'assert';
 import * as uuid from 'uuid';
 
-import { Clockid, Errno, Prestat, fd, Lookupflags, Oflags, Fdflags, rights, Rights, Filetype, Filestat, Ciovec, WasiError } from '../wasi';
+import { Clockid, Errno, Prestat, fd, Lookupflags, Oflags, Fdflags, rights, Rights, Filetype, Filestat, Ciovec, WasiError, Advise } from '../wasi';
 import { Environment } from '../api';
 import TestEnvironment from './testEnvironment';
 import { Memory } from './memory';
@@ -405,5 +405,55 @@ suite(`Filesystem - ${memoryQualifier}`, () => {
 		FileSystem.close(fd.value);
 		const check = FileSystem.pathOpen(memory, rootFd, filename);
 		assert.strictEqual(decoder.decode(FileSystem.read(memory, check)), 'Hello World');
+	});
+
+	test('fd_advise - sequential', () => {
+		const memory = createMemory();
+		const filename = `/tmp/${uuid.v4()}`;
+		const fd = FileSystem.createWrite(memory, rootFd, filename, 'Hello World');
+		// VS Code has no advise support. So all advises should result in success
+		const errno = wasi.fd_advise(fd, 0n, 3n, Advise.sequential);
+		assert.strictEqual(errno, Errno.success);
+		FileSystem.close(fd);
+	});
+
+	test('fd_advise - random', () => {
+		const memory = createMemory();
+		const filename = `/tmp/${uuid.v4()}`;
+		const fd = FileSystem.createWrite(memory, rootFd, filename, 'Hello World');
+		// VS Code has no advise support. So all advises should result in success
+		const errno = wasi.fd_advise(fd, 0n, 3n, Advise.random);
+		assert.strictEqual(errno, Errno.success);
+		FileSystem.close(fd);
+	});
+
+	test('fd_advise - willneed', () => {
+		const memory = createMemory();
+		const filename = `/tmp/${uuid.v4()}`;
+		const fd = FileSystem.createWrite(memory, rootFd, filename, 'Hello World');
+		// VS Code has no advise support. So all advises should result in success
+		const errno = wasi.fd_advise(fd, 0n, 3n, Advise.willneed);
+		assert.strictEqual(errno, Errno.success);
+		FileSystem.close(fd);
+	});
+
+	test('fd_advise - dontneed', () => {
+		const memory = createMemory();
+		const filename = `/tmp/${uuid.v4()}`;
+		const fd = FileSystem.createWrite(memory, rootFd, filename, 'Hello World');
+		// VS Code has no advise support. So all advises should result in success
+		const errno = wasi.fd_advise(fd, 0n, 3n, Advise.dontneed);
+		assert.strictEqual(errno, Errno.success);
+		FileSystem.close(fd);
+	});
+
+	test('fd_advise - noreuse', () => {
+		const memory = createMemory();
+		const filename = `/tmp/${uuid.v4()}`;
+		const fd = FileSystem.createWrite(memory, rootFd, filename, 'Hello World');
+		// VS Code has no advise support. So all advises should result in success
+		const errno = wasi.fd_advise(fd, 0n, 3n, Advise.noreuse);
+		assert.strictEqual(errno, Errno.success);
+		FileSystem.close(fd);
 	});
 });
