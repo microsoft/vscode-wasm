@@ -353,7 +353,7 @@ export namespace WasiHost {
 			},
 			fd_seek: (fd: fd, offset: filedelta, whence: whence, new_offset_ptr: ptr<u64>): errno => {
 				try {
-					return connection.call(fd_seek, [fd, offset, whence, new_offset_ptr], memory());
+					return connection.call(fd_seek, [fd, offset, whence, new_offset_ptr], memory(), fd_seek.transfers());
 				} catch (error) {
 					return handleError(error, Errno.inval);
 				}

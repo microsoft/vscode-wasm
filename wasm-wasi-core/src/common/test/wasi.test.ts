@@ -7,7 +7,7 @@ import RAL from '../ral';
 import assert from 'assert';
 import * as uuid from 'uuid';
 
-import { Clockid, Errno, Prestat, fd, Lookupflags, Oflags, Fdflags, rights, Rights, Filetype, Filestat, Ciovec, WasiError, Advise } from '../wasi';
+import { Clockid, Errno, Prestat, fd, Lookupflags, Oflags, Fdflags, rights, Rights, Filetype, Filestat, Ciovec, WasiError, Advise, fdstat, Fdstat, fdflags, Whence, Fstflags } from '../wasi';
 import { Environment } from '../api';
 import TestEnvironment from './testEnvironment';
 import { Memory } from './memory';
@@ -57,13 +57,33 @@ namespace FileSystem {
 		return fd.value;
 	}
 
-	export function createFile(memory: Memory, parentFd: fd, name: string): fd {
+	export function createFile(memory: Memory, parentFd: fd, name: string, content?: Uint8Array | string): fd {
 		const fd = memory.allocUint32(0);
 		const path = memory.allocString(name);
 		let errno = wasi.path_open(parentFd, 0, path.$ptr, path.byteLength, Oflags.creat, FileBaseRights, FileInheritingRights, 0, fd.$ptr);
 		assert.strictEqual(errno, Errno.success);
-		const _stat = stat(memory, fd.value);
+		let _stat = stat(memory, fd.value);
 		assert.strictEqual(_stat.filetype, Filetype.regular_file);
+		if (content === undefined) {
+			return fd.value;
+		}
+		if (typeof content === 'string') {
+			content = encoder.encode(content);
+		}
+		const iovecs = memory.allocStructArray(1, Iovec);
+		const buffer = memory.allocBytes(content);
+		iovecs.get(0).buf = buffer.$ptr;
+		iovecs.get(0).buf_len = buffer.byteLength;
+		const bytesWritten = memory.allocUint32();
+		errno = wasi.fd_write(fd.value, iovecs.$ptr, iovecs.size, bytesWritten.$ptr);
+		assert.strictEqual(errno, Errno.success);
+		assert.strictEqual(bytesWritten.value, content.byteLength);
+		_stat = stat(memory, fd.value);
+		assert.strictEqual(_stat.size, BigInt(content.byteLength));
+		const newOffset = memory.allocBigUint64();
+		errno = wasi.fd_seek(fd.value, 0n, Whence.set, newOffset.$ptr);
+		assert.strictEqual(errno, Errno.success);
+		assert.strictEqual(newOffset.value, 0n);
 		return fd.value;
 	}
 
@@ -86,26 +106,8 @@ namespace FileSystem {
 		return memory.readBytes(buffer.$ptr, bytesRead.value);
 	}
 
-	export function createWrite(memory: Memory, parentFd: fd, filename: string, content: Uint8Array | string): fd {
-		if (typeof content === 'string') {
-			content = encoder.encode(content);
-		}
-		const fd = createFile(memory, parentFd, filename);
-		const iovecs = memory.allocStructArray(1, Iovec);
-		const buffer = memory.allocBytes(content);
-		iovecs.get(0).buf = buffer.$ptr;
-		iovecs.get(0).buf_len = buffer.byteLength;
-		const bytesWritten = memory.allocUint32();
-		let errno = wasi.fd_write(fd, iovecs.$ptr, iovecs.size, bytesWritten.$ptr);
-		assert.strictEqual(errno, Errno.success);
-		assert.strictEqual(bytesWritten.value, content.byteLength);
-		const _stat = stat(memory, fd);
-		assert.strictEqual(_stat.size, BigInt(content.byteLength));
-		return fd;
-	}
-
-	export function createWriteClose(memory: Memory, parentFd: fd, filename: string, content: Uint8Array | string): void {
-		close(createWrite(memory, parentFd, filename, content));
+	export function createFileClose(memory: Memory, parentFd: fd, filename: string, content: Uint8Array | string): void {
+		close(createFile(memory, parentFd, filename, content));
 	}
 
 	export function write(memory: Memory, fd: fd, content: Uint8Array | string): void {
@@ -355,7 +357,7 @@ suite(`Filesystem - ${memoryQualifier}`, () => {
 	test('path_open - truncate file', () => {
 		const memory = createMemory();
 		const filename = `/tmp/${uuid.v4()}`;
-		FileSystem.close(FileSystem.createWrite(memory, rootFd, filename, 'Hello World'));
+		FileSystem.close(FileSystem.createFile(memory, rootFd, filename, 'Hello World'));
 		const fd = memory.allocUint32();
 		const p = memory.allocString(filename);
 		let errno = wasi.path_open(rootFd, 0, p.$ptr, p.byteLength, Oflags.trunc, FileBaseRights, FileInheritingRights, 0, fd.$ptr);
@@ -369,7 +371,7 @@ suite(`Filesystem - ${memoryQualifier}`, () => {
 	test('path_open - fail if file exists', () => {
 		const memory = createMemory();
 		const filename = `/tmp/${uuid.v4()}`;
-		FileSystem.close(FileSystem.createWrite(memory, rootFd, filename, 'Hello World'));
+		FileSystem.close(FileSystem.createFile(memory, rootFd, filename, 'Hello World'));
 		const fd = memory.allocUint32(0);
 		const p = memory.allocString(filename);
 		let errno = wasi.path_open(rootFd, 0, p.$ptr, p.byteLength, Oflags.excl, FileBaseRights, FileInheritingRights, 0, fd.$ptr);
@@ -379,7 +381,7 @@ suite(`Filesystem - ${memoryQualifier}`, () => {
 	test('path_open - fail if not directory', () => {
 		const memory = createMemory();
 		const filename = `/tmp/${uuid.v4()}`;
-		FileSystem.close(FileSystem.createWrite(memory, rootFd, filename, 'Hello World'));
+		FileSystem.close(FileSystem.createFile(memory, rootFd, filename, 'Hello World'));
 		const fd = memory.allocUint32(0);
 		const p = memory.allocString(filename);
 		const errno = wasi.path_open(rootFd, 0, p.$ptr, p.byteLength, Oflags.directory, FileBaseRights, FileInheritingRights, 0, fd.$ptr);
@@ -400,7 +402,7 @@ suite(`Filesystem - ${memoryQualifier}`, () => {
 	test('path_open - append mode', () => {
 		const memory = createMemory();
 		const filename = `/tmp/${uuid.v4()}`;
-		FileSystem.close(FileSystem.createWrite(memory, rootFd, filename, 'Hello'));
+		FileSystem.close(FileSystem.createFile(memory, rootFd, filename, 'Hello'));
 		const fd = memory.allocUint32(0);
 		const p = memory.allocString(filename);
 		let errno = wasi.path_open(rootFd, 0, p.$ptr, p.byteLength, 0, FileBaseRights, FileInheritingRights, Fdflags.append, fd.$ptr);
@@ -411,10 +413,31 @@ suite(`Filesystem - ${memoryQualifier}`, () => {
 		assert.strictEqual(decoder.decode(FileSystem.read(memory, check)), 'Hello World');
 	});
 
+	test('fd_seek', () => {
+		const memory = createMemory();
+		const filename = `/tmp/${uuid.v4()}`;
+		const hw = 'Hello World';
+		const fd = FileSystem.createFile(memory, rootFd, filename, hw);
+		const newOffset = memory.allocBigUint64();
+		let errno = wasi.fd_seek(fd, 6n, Whence.set, newOffset.$ptr);
+		assert.strictEqual(errno, Errno.success);
+		assert.strictEqual(newOffset.value, 6n);
+		errno = wasi.fd_seek(fd, 2n, Whence.cur, newOffset.$ptr);
+		assert.strictEqual(errno, Errno.success);
+		assert.strictEqual(newOffset.value, 8n);
+		errno = wasi.fd_seek(fd, -4n, Whence.cur, newOffset.$ptr);
+		assert.strictEqual(errno, Errno.success);
+		assert.strictEqual(newOffset.value, 4n);
+		errno = wasi.fd_seek(fd, 3n, Whence.end, newOffset.$ptr);
+		assert.strictEqual(errno, Errno.success);
+		assert.strictEqual(newOffset.value, 8n);
+		FileSystem.close(fd);
+	});
+
 	test('fd_advise - sequential', () => {
 		const memory = createMemory();
 		const filename = `/tmp/${uuid.v4()}`;
-		const fd = FileSystem.createWrite(memory, rootFd, filename, 'Hello World');
+		const fd = FileSystem.createFile(memory, rootFd, filename, 'Hello World');
 		// VS Code has no advise support. So all advises should result in success
 		const errno = wasi.fd_advise(fd, 0n, 3n, Advise.sequential);
 		assert.strictEqual(errno, Errno.success);
@@ -424,7 +447,7 @@ suite(`Filesystem - ${memoryQualifier}`, () => {
 	test('fd_advise - random', () => {
 		const memory = createMemory();
 		const filename = `/tmp/${uuid.v4()}`;
-		const fd = FileSystem.createWrite(memory, rootFd, filename, 'Hello World');
+		const fd = FileSystem.createFile(memory, rootFd, filename, 'Hello World');
 		// VS Code has no advise support. So all advises should result in success
 		const errno = wasi.fd_advise(fd, 0n, 3n, Advise.random);
 		assert.strictEqual(errno, Errno.success);
@@ -434,7 +457,7 @@ suite(`Filesystem - ${memoryQualifier}`, () => {
 	test('fd_advise - willneed', () => {
 		const memory = createMemory();
 		const filename = `/tmp/${uuid.v4()}`;
-		const fd = FileSystem.createWrite(memory, rootFd, filename, 'Hello World');
+		const fd = FileSystem.createFile(memory, rootFd, filename, 'Hello World');
 		// VS Code has no advise support. So all advises should result in success
 		const errno = wasi.fd_advise(fd, 0n, 3n, Advise.willneed);
 		assert.strictEqual(errno, Errno.success);
@@ -444,7 +467,7 @@ suite(`Filesystem - ${memoryQualifier}`, () => {
 	test('fd_advise - dontneed', () => {
 		const memory = createMemory();
 		const filename = `/tmp/${uuid.v4()}`;
-		const fd = FileSystem.createWrite(memory, rootFd, filename, 'Hello World');
+		const fd = FileSystem.createFile(memory, rootFd, filename, 'Hello World');
 		// VS Code has no advise support. So all advises should result in success
 		const errno = wasi.fd_advise(fd, 0n, 3n, Advise.dontneed);
 		assert.strictEqual(errno, Errno.success);
@@ -454,7 +477,7 @@ suite(`Filesystem - ${memoryQualifier}`, () => {
 	test('fd_advise - noreuse', () => {
 		const memory = createMemory();
 		const filename = `/tmp/${uuid.v4()}`;
-		const fd = FileSystem.createWrite(memory, rootFd, filename, 'Hello World');
+		const fd = FileSystem.createFile(memory, rootFd, filename, 'Hello World');
 		// VS Code has no advise support. So all advises should result in success
 		const errno = wasi.fd_advise(fd, 0n, 3n, Advise.noreuse);
 		assert.strictEqual(errno, Errno.success);
@@ -464,7 +487,7 @@ suite(`Filesystem - ${memoryQualifier}`, () => {
 	test('fd_allocate - start', () => {
 		const memory = createMemory();
 		const filename = `/tmp/${uuid.v4()}`;
-		FileSystem.createWriteClose(memory, rootFd, filename, 'Hello World');
+		FileSystem.createFileClose(memory, rootFd, filename, 'Hello World');
 		const fd = FileSystem.pathOpen(memory, rootFd, filename);
 		const before = FileSystem.stat(memory, fd);
 		const errno = wasi.fd_allocate(fd, 0n, 5n);
@@ -482,7 +505,7 @@ suite(`Filesystem - ${memoryQualifier}`, () => {
 	test('fd_allocate - middle', () => {
 		const memory = createMemory();
 		const filename = `/tmp/${uuid.v4()}`;
-		FileSystem.createWriteClose(memory, rootFd, filename, 'Hello World');
+		FileSystem.createFileClose(memory, rootFd, filename, 'Hello World');
 		const fd = FileSystem.pathOpen(memory, rootFd, filename);
 		const before = FileSystem.stat(memory, fd);
 		const errno = wasi.fd_allocate(fd, 5n, 11n);
@@ -500,7 +523,7 @@ suite(`Filesystem - ${memoryQualifier}`, () => {
 	test('fd_allocate - end', () => {
 		const memory = createMemory();
 		const filename = `/tmp/${uuid.v4()}`;
-		FileSystem.createWriteClose(memory, rootFd, filename, 'Hello World');
+		FileSystem.createFileClose(memory, rootFd, filename, 'Hello World');
 		const fd = FileSystem.pathOpen(memory, rootFd, filename);
 		const before = FileSystem.stat(memory, fd);
 		const errno = wasi.fd_allocate(fd, 11n, 7n);
@@ -520,7 +543,7 @@ suite(`Filesystem - ${memoryQualifier}`, () => {
 		// options are available.
 		const memory = createMemory();
 		const filename = `/tmp/${uuid.v4()}`;
-		const fd = FileSystem.createWrite(memory, rootFd, filename, 'Hello World');
+		const fd = FileSystem.createFile(memory, rootFd, filename, 'Hello World');
 		const before = FileSystem.stat(memory, fd);
 		await new Promise(resolve => RAL().timer.setTimeout(resolve, 5));
 
@@ -528,6 +551,70 @@ suite(`Filesystem - ${memoryQualifier}`, () => {
 		const after = FileSystem.stat(memory, fd);
 		assert.strictEqual(errno, Errno.success);
 		assert.ok(before.mtim < after.mtim);
+		FileSystem.close(fd);
+	});
+
+	test('fd_fdstat_get', () => {
+		const memory = createMemory();
+		const filename = `/tmp/${uuid.v4()}`;
+		const fd = FileSystem.createFile(memory, rootFd, filename, 'Hello World');
+		const fdstat: fdstat = memory.allocStruct(Fdstat);
+		const errno = wasi.fd_fdstat_get(fd, fdstat.$ptr);
+		assert.strictEqual(errno, Errno.success);
+		assert.strictEqual(fdstat.fs_filetype, Filetype.regular_file);
+		assert.strictEqual(fdstat.fs_flags, 0);
+		assert.strictEqual(fdstat.fs_rights_base, FileBaseRights);
+		assert.strictEqual(fdstat.fs_rights_inheriting, FileInheritingRights);
+		FileSystem.close(fd);
+	});
+
+	test('fd_fdstat_set_flags', () => {
+		function setFlags(memory: Memory, fd: fd, flags: fdflags) {
+			let errno = wasi.fd_fdstat_set_flags(fd, flags);
+			assert.strictEqual(errno, Errno.success);
+			const fdstat: fdstat = memory.allocStruct(Fdstat);
+			errno = wasi.fd_fdstat_get(fd, fdstat.$ptr);
+			assert.strictEqual(errno, Errno.success);
+			assert.notStrictEqual(fdstat.fs_flags & flags, 0);
+		}
+		const memory = createMemory();
+		const filename = `/tmp/${uuid.v4()}`;
+		const fd = FileSystem.createFile(memory, rootFd, filename);
+		setFlags(memory, fd, Fdflags.dsync);
+		setFlags(memory, fd, Fdflags.nonblock);
+		setFlags(memory, fd, Fdflags.rsync);
+		setFlags(memory, fd, Fdflags.sync);
+		FileSystem.close(fd);
+	});
+
+	test('fd_filestat_set_size', () => {
+		const memory = createMemory();
+		const filename = `/tmp/${uuid.v4()}`;
+		const content = 'Hello World';
+		const fd = FileSystem.createFile(memory, rootFd, filename, content);
+		const stat = FileSystem.stat(memory, fd);
+		const errno = wasi.fd_filestat_set_size(fd, stat.size + 13n);
+		assert.strictEqual(errno, Errno.success);
+		const newSize = FileSystem.stat(memory, fd).size;
+		assert.strictEqual(newSize, stat.size + 13n);
+		const originalLength = encoder.encode(content).byteLength;
+		FileSystem.close(fd);
+		const check = FileSystem.pathOpen(memory, rootFd, filename);
+		const buffer = FileSystem.read(memory, check);
+		assert.strictEqual(buffer.length, originalLength + 13);
+		for (let i = originalLength; i < buffer.length; i++) {
+			assert.strictEqual(buffer[i], 0);
+		}
+		FileSystem.close(check);
+	});
+
+	test('fd_filestat_set_times', () => {
+		const memory = createMemory();
+		const filename = `/tmp/${uuid.v4()}`;
+		const content = 'Hello World';
+		const fd = FileSystem.createFile(memory, rootFd, filename, content);
+		const errno = wasi.fd_filestat_set_times(fd, 10n, 10n, Fstflags.atim | Fstflags.mtim);
+		assert.strictEqual(errno, Errno.nosys);
 		FileSystem.close(fd);
 	});
 });
