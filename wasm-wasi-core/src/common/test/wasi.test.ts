@@ -832,4 +832,19 @@ suite(`Filesystem - ${memoryQualifier}`, () => {
 		const errno = wasi.path_readlink(rootFd, path.$ptr, path.byteLength, buffer.$ptr, buffer.byteLength, bufUsed.$ptr);
 		assert.strictEqual(errno, Errno.nolink);
 	});
+
+	test('path_remove_directory', () => {
+		const memory = createMemory();
+		const foldername = `/tmp/${uuid.v4()}`;
+		FileSystem.createFolder(memory, rootFd, foldername);
+		const path = memory.allocString(foldername);
+		const filestat = memory.allocStruct(Filestat);
+		let errno = wasi.path_filestat_get(rootFd, Lookupflags.none, path.$ptr, path.byteLength, filestat.$ptr);
+		assert.strictEqual(errno, Errno.success);
+		assert.strictEqual(filestat.filetype, Filetype.directory);
+		errno = wasi.path_remove_directory(rootFd, path.$ptr, path.byteLength);
+		assert.strictEqual(errno, Errno.success);
+		errno = wasi.path_filestat_get(rootFd, Lookupflags.none, path.$ptr, path.byteLength, filestat.$ptr);
+		assert.strictEqual(errno, Errno.noent);
+	});
 });
