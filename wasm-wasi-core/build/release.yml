@@ -30,3 +30,4 @@ extends:
           npm run lint
           npm run compile
         displayName: "Lint & Compile"
+    workingDirectory: $(Build.SourcesDirectory)/wasm-wasi-core
