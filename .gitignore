@@ -122,3 +122,4 @@ wasm-wasi-core/.vscode-test-workspace/**/*
 *.wat
 *.o
 tmp/
+*.vsix
