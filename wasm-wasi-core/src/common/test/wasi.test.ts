@@ -847,4 +847,83 @@ suite(`Filesystem - ${memoryQualifier}`, () => {
 		errno = wasi.path_filestat_get(rootFd, Lookupflags.none, path.$ptr, path.byteLength, filestat.$ptr);
 		assert.strictEqual(errno, Errno.noent);
 	});
+
+	test('path_rename', () => {
+		const memory = createMemory();
+		const filename = `/tmp/${uuid.v4()}`;
+		const content = 'Hello World';
+		const fd = FileSystem.createFile(memory, rootFd, filename, content);
+		FileSystem.close(fd);
+		const oldPath = memory.allocString(filename);
+		const newPath = memory.allocString(`/tmp/${uuid.v4()}`);
+		let errno = wasi.path_rename(rootFd, oldPath.$ptr, oldPath.byteLength, rootFd, newPath.$ptr, newPath.byteLength);
+		assert.strictEqual(errno, Errno.success);
+		const filestat = memory.allocStruct(Filestat);
+		errno = wasi.path_filestat_get(rootFd, Lookupflags.none, oldPath.$ptr, oldPath.byteLength, filestat.$ptr);
+		assert.strictEqual(errno, Errno.noent);
+		errno = wasi.path_filestat_get(rootFd, Lookupflags.none, newPath.$ptr, newPath.byteLength, filestat.$ptr);
+		assert.strictEqual(errno, Errno.success);
+	});
+
+	test('path_rename - open file descriptor', () => {
+		const memory = createMemory();
+		const filename = `/tmp/${uuid.v4()}`;
+		const content = 'Hello World';
+		const fd = FileSystem.createFile(memory, rootFd, filename, content);
+		const oldPath = memory.allocString(filename);
+		const newPath = memory.allocString(`/tmp/${uuid.v4()}`);
+		let errno = wasi.path_rename(rootFd, oldPath.$ptr, oldPath.byteLength, rootFd, newPath.$ptr, newPath.byteLength);
+		assert.strictEqual(errno, Errno.success);
+		const stat = FileSystem.stat(memory, fd);
+		assert.strictEqual(stat.filetype, Filetype.regular_file);
+		FileSystem.close(fd);
+	});
+
+	test('path_symlink', () => {
+		// VS Code has no symlink support. So we can only test
+		// that the call is processed correctly.
+		const memory = createMemory();
+		const oldPath = memory.allocString(`/tmp/${uuid.v4()}`);
+		const newPath = memory.allocString(`/tmp/${uuid.v4()}`);
+		const errno = wasi.path_symlink(oldPath.$ptr, oldPath.byteLength, rootFd, newPath.$ptr, newPath.byteLength);
+		assert.strictEqual(errno, Errno.nosys);
+	});
+
+	test('path_unlink_file', () => {
+		const memory = createMemory();
+		const filename = `/tmp/${uuid.v4()}`;
+		const content = 'Hello World';
+		const fd = FileSystem.createFile(memory, rootFd, filename, content);
+		FileSystem.close(fd);
+		const path = memory.allocString(filename);
+		let errno = wasi.path_unlink_file(rootFd, path.$ptr, path.byteLength);
+		assert.strictEqual(errno, Errno.success);
+		const filestat = memory.allocStruct(Filestat);
+		errno = wasi.path_filestat_get(rootFd, Lookupflags.none, path.$ptr, path.byteLength, filestat.$ptr);
+		assert.strictEqual(errno, Errno.noent);
+	});
+
+	test('path_unlink_file - open file descriptor', () => {
+		const memory = createMemory();
+		const filename = `/tmp/${uuid.v4()}`;
+		const content = 'Hello World';
+		const fd = FileSystem.createFile(memory, rootFd, filename, content);
+		const newOffset = memory.allocBigUint64();
+		let errno = wasi.fd_seek(fd, 0n, Whence.set, newOffset.$ptr);
+		assert.strictEqual(errno, Errno.success);
+		assert.strictEqual(newOffset.value, 0n);
+		const path = memory.allocString(filename);
+		errno = wasi.path_unlink_file(rootFd, path.$ptr, path.byteLength);
+		assert.strictEqual(errno, Errno.success);
+		const filestat = memory.allocStruct(Filestat);
+		errno = wasi.fd_filestat_get(fd, filestat.$ptr);
+		assert.strictEqual(errno, Errno.success);
+		const bytes = FileSystem.read(memory, fd);
+		assert.strictEqual(decoder.decode(bytes), content);
+		FileSystem.close(fd);
+		errno = wasi.fd_filestat_get(fd, filestat.$ptr);
+		assert.strictEqual(errno, Errno.badf);
+		errno = wasi.path_filestat_get(rootFd, Lookupflags.none, path.$ptr, path.byteLength, filestat.$ptr);
+		assert.strictEqual(errno, Errno.noent);
+	});
 });
