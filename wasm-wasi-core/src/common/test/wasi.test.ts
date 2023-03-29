@@ -730,4 +730,17 @@ suite(`Filesystem - ${memoryQualifier}`, () => {
 		} while (bufUsed.value === buffSize);
 		assert.strictEqual(0, fileNames.size);
 	});
+
+	test('fd_sync', async () => {
+		const memory = createMemory();
+		const filename = `/tmp/${uuid.v4()}`;
+		const content = 'Hello World';
+		const fd = FileSystem.createFile(memory, rootFd, filename, content);
+		const before = FileSystem.stat(memory, fd);
+		await new Promise((resolve) => RAL().timer.setTimeout(resolve, 5)); // Wait for 5ms to ensure mtim changes
+		const errno = wasi.fd_sync(fd);
+		const after = FileSystem.stat(memory, fd);
+		assert.strictEqual(errno, Errno.success);
+		assert.ok(before.mtim < after.mtim);
+	});
 });
