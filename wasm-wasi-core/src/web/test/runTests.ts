@@ -14,8 +14,9 @@ async function main() {
 	const testDir = path.join(os.tmpdir(), uuid.v4());
 	try {
 		await fs.mkdir(testDir, { recursive: true });
-		const extensionDevelopmentPath = path.resolve(__dirname, '..', '..', '..');
-		const extensionTestsPath = path.resolve(__dirname, '..', '..', '..', 'dist', 'web', 'test', 'index.js');
+		const workspaceRoot = path.resolve(__dirname, '..', '..', '..', '..');
+		const extensionDevelopmentPath = path.join(workspaceRoot, 'wasm-wasi-core');
+		const extensionTestsPath = path.join(extensionDevelopmentPath, 'dist', 'web', 'test', 'index.js');
 
 		/**
 		 * Basic usage
