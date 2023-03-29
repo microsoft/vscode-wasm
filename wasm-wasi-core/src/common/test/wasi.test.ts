@@ -796,4 +796,15 @@ suite(`Filesystem - ${memoryQualifier}`, () => {
 		assert.strictEqual(filestat.ctim, TestEnvironment.stats().ctime);
 		assert.strictEqual(filestat.mtim, TestEnvironment.stats().mtime);
 	});
+
+	test('path_filestat_set_times', () => {
+		const memory = createMemory();
+		const filename = `/tmp/${uuid.v4()}`;
+		const content = 'Hello World';
+		const fd = FileSystem.createFile(memory, rootFd, filename, content);
+		FileSystem.close(fd);
+		const path = memory.allocString(filename);
+		const errno = wasi.path_filestat_set_times(rootFd, Lookupflags.none, path.$ptr, path.byteLength, 10n, 10n, Fstflags.atim | Fstflags.mtim);
+		assert.strictEqual(errno, Errno.nosys);
+	});
 });
