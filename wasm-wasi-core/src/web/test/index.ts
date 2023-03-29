@@ -6,7 +6,7 @@ import RIL from '../ril';
 RIL.install();
 
 
-import { ConsoleMessage, ModeMessage, TestsDoneMessage } from '../../common/test/messages';
+import { ConsoleMessage, TestSetupMessage, TestsDoneMessage } from '../../common/test/messages';
 import { createWorkspaceContent, createTmp, cleanupTmp, cleanupWorkspaceContent, createWasiService, WorkspaceContent } from '../../common/test/index';
 import { WasiService } from '../../common/service';
 import { CapturedPromise, WorkerMessage } from '../../common/connection';
@@ -66,7 +66,7 @@ async function doRun(workspaceContent: WorkspaceContent, shared: boolean): Promi
 	const worker = new Worker(workerURL);
 	const connection = new TestBrowserServiceConnection(wasiService, worker);
 	await connection.workerReady();
-	const message: ModeMessage = { method: 'setMode', shared };
+	const message: TestSetupMessage = { method: 'testSetup', shared, stats: workspaceContent.stats };
 	connection.postMessage(message);
 	return connection.testDone();
 }

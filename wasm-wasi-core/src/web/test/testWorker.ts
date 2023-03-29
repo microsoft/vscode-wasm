@@ -6,7 +6,7 @@ import RIL from '../ril';
 RIL.install();
 
 import { HostConnection } from '../../common/host';
-import { ConsoleMessage, ModeMessage, TestsDoneMessage } from '../../common/test/messages';
+import { ConsoleMessage, TestSetup, TestSetupMessage, TestsDoneMessage } from '../../common/test/messages';
 import { BrowserHostConnection } from '../connection';
 import TestEnvironment from '../../common/test/testEnvironment';
 import { CapturedPromise, HostMessage } from '../../common/connection';
@@ -31,31 +31,30 @@ function warpConsole(hostConnection: HostConnection): void {
 
 class TestBrowserHostConnection extends BrowserHostConnection {
 
-	private _modePromise: CapturedPromise<boolean>;
+	private _testSetup: CapturedPromise<TestSetup>;
 
 	public constructor(port: MessagePort | Worker | DedicatedWorkerGlobalScope) {
 		super(port);
-		this._modePromise = CapturedPromise.create<boolean>();
+		this._testSetup = CapturedPromise.create<TestSetup>();
 	}
 
-	public mode(): Promise<boolean> {
-		return this._modePromise.promise;
+	public testSetup(): Promise<TestSetup> {
+		return this._testSetup.promise;
 	}
 
 	protected handleMessage(message: HostMessage): Promise<void> {
-		if (ModeMessage.is(message)) {
-			this._modePromise.resolve(message.shared);
+		if (TestSetupMessage.is(message)) {
+			this._testSetup.resolve(Object.assign({}, message, { method: undefined }));
 		}
 		return super.handleMessage(message);
 	}
-
 }
 
 async function run(): Promise<void> {
 	const connection = new TestBrowserHostConnection(self);
 	connection.postMessage({ method: 'workerReady'});
-	const shared: boolean = await connection.mode();
-	TestEnvironment.setup(connection, shared);
+	const setup = await connection.testSetup();
+	TestEnvironment.setup(connection, setup);
 	warpConsole(connection);
 
 	require('mocha/mocha');

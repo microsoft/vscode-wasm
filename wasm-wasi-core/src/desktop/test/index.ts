@@ -12,7 +12,7 @@ import { NodeServiceConnection } from '../process';
 import { createWorkspaceContent, createTmp, cleanupTmp, cleanupWorkspaceContent, createWasiService, WorkspaceContent } from '../../common/test/index';
 import { CapturedPromise, WorkerMessage } from '../../common/connection';
 import { WasiService } from '../../common/service';
-import { TestsDoneMessage } from '../../common/test/messages';
+import { TestSetupMessage, TestsDoneMessage } from '../../common/test/messages';
 
 class TestNodeServiceConnection extends NodeServiceConnection {
 
@@ -73,8 +73,10 @@ export async function run(): Promise<void> {
 async function doRun(workspaceContent: WorkspaceContent, shared: boolean): Promise<void> {
 	const wasiService = createWasiService(workspaceContent);
 
-	const worker = new Worker(path.join(__dirname, 'testWorker'), { argv: [shared ? 'shared' : 'nonShared'] });
+	const worker = new Worker(path.join(__dirname, 'testWorker'));
 	const connection = new TestNodeServiceConnection(wasiService, worker);
 	await connection.workerReady();
+	const message: TestSetupMessage = { method: 'testSetup', shared, stats: workspaceContent.stats };
+	connection.postMessage(message);
 	await connection.testDone();
 }

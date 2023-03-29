@@ -19,6 +19,10 @@ export type WorkspaceContent = {
 	readonly root: vscode.Uri;
 	readonly fixture: vscode.Uri;
 	readonly tmp: vscode.Uri;
+	readonly stats: {
+		mtime: bigint;
+		ctime: bigint;
+	};
 };
 
 export async function createWorkspaceContent(): Promise<WorkspaceContent>{
@@ -38,7 +42,9 @@ export async function createWorkspaceContent(): Promise<WorkspaceContent>{
 
 	// Setup a fixture to test path_open
 	const read = fixture.with({ path: path.join(fixture.path, 'read') });
-	await vscode.workspace.fs.writeFile(folder.with({ path: path.join(read.path, 'helloWorld.txt') }), encoder.encode('Hello World'));
+	const helloWorld = folder.with({ path: path.join(read.path, 'helloWorld.txt') });
+	await vscode.workspace.fs.writeFile(helloWorld, encoder.encode('Hello World'));
+	const stats = await vscode.workspace.fs.stat(helloWorld);
 	await vscode.workspace.fs.writeFile(folder.with({ path: path.join(read.path, 'large.txt') }), encoder.encode('1'.repeat(3000)));
 
 	// This is to store tmp data
@@ -48,7 +54,11 @@ export async function createWorkspaceContent(): Promise<WorkspaceContent>{
 	return {
 		root: folder,
 		fixture: fixture,
-		tmp: tmp
+		tmp: tmp,
+		stats: {
+			mtime: BigInt(stats.mtime) * 1000000n,
+			ctime: BigInt(stats.ctime) * 1000000n
+		}
 	};
 }
 

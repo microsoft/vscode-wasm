@@ -40,22 +40,6 @@ const wasi = TestEnvironment.wasi();
 const createMemory = TestEnvironment.createMemory;
 const memoryQualifier = TestEnvironment.qualifier();
 
-namespace Clock {
-	export const start = RAL().clock.realtime();
-	export function now(memory: Memory): bigint {
-		const time = memory.allocBigUint64();
-		let errno = wasi.clock_time_get(Clockid.realtime, 0n, time.$ptr);
-		assert.strictEqual(errno, Errno.success);
-		return time.value;
-	}
-	export function assertClock(actual: bigint, expected: bigint): void {
-		const delta = (3000n * 1000000n); // 3 s
-		const low = expected - delta;
-		const high = expected;
-		assert.ok(low < actual && actual <= high, `Expected [${low},${high}] but got ${actual}`);
-	}
-}
-
 namespace FileSystem {
 
 	export function openFile(memory: Memory, parentFd: fd, name: string): fd {
@@ -294,9 +278,9 @@ suite(`Filesystem - ${memoryQualifier}`, () => {
 		assert.strictEqual(filestat.filetype, Filetype.regular_file);
 		assert.strictEqual(filestat.size, 11n);
 		assert.strictEqual(filestat.nlink, 1n);
-		Clock.assertClock(filestat.atim, Clock.start);
-		Clock.assertClock(filestat.ctim, Clock.start);
-		Clock.assertClock(filestat.mtim, Clock.start);
+		assert.strictEqual(filestat.atim, TestEnvironment.stats().mtime);
+		assert.strictEqual(filestat.ctim, TestEnvironment.stats().ctime);
+		assert.strictEqual(filestat.mtim, TestEnvironment.stats().mtime);
 	});
 
 	test('fd_read - single iovec', () => {

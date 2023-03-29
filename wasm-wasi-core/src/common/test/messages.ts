@@ -30,14 +30,20 @@ export namespace ConsoleMessage {
 	}
 }
 
-export interface ModeMessage {
-	readonly method: 'setMode';
+export interface TestSetupMessage {
+	readonly method: 'testSetup';
 	readonly shared: boolean;
+	readonly stats: {
+		mtime: bigint;
+		ctime: bigint;
+	};
 }
 
-export namespace ModeMessage {
-	export function is(message: HostMessage): message is ModeMessage {
-		const candidate = message as ModeMessage;
-		return candidate.method === 'setMode';
+export namespace TestSetupMessage {
+	export function is(message: HostMessage): message is TestSetupMessage {
+		const candidate = message as TestSetupMessage;
+		return candidate.method === 'testSetup';
 	}
 }
+
+export type TestSetup = Omit<TestSetupMessage, 'method'>;

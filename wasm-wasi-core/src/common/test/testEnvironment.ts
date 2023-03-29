@@ -5,13 +5,14 @@
 
 import { HostConnection, WasiHost } from '../host';
 import { Memory } from './memory';
+import { TestSetup } from './messages';
 
 namespace TestEnvironment {
 	let _wasi: WasiHost | undefined;
-	let _shared: boolean | undefined;
-	export function setup(connection: HostConnection, shared: boolean): void {
+	let _setup: TestSetup | undefined;
+	export function setup(connection: HostConnection, setup: TestSetup): void {
 		_wasi = WasiHost.create(connection);
-		_shared = shared;
+		_setup = setup;
 	}
 	export function wasi(): WasiHost {
 		if (_wasi === undefined) {
@@ -21,19 +22,26 @@ namespace TestEnvironment {
 	}
 
 	export function createMemory(byteLength: number = 65536): Memory {
-		if (_shared === undefined) {
+		if (_setup === undefined) {
 			throw new Error('TestEnvironment not initialized');
 		}
-		const result = new Memory(byteLength, _shared);
+		const result = new Memory(byteLength, _setup.shared);
 		_wasi?.initialize(result);
 		return result;
 	}
 
 	export function qualifier(): string {
-		if (_shared === undefined) {
+		if (_setup === undefined) {
 			throw new Error('TestEnvironment not initialized');
 		}
-		return _shared ? 'SharedArrayBuffer' : 'ArrayBuffer';
+		return _setup.shared ? 'SharedArrayBuffer' : 'ArrayBuffer';
+	}
+
+	export function stats(): TestSetup['stats'] {
+		if (_setup === undefined) {
+			throw new Error('TestEnvironment not initialized');
+		}
+		return _setup?.stats;
 	}
 }
 
