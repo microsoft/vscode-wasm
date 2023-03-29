@@ -807,4 +807,29 @@ suite(`Filesystem - ${memoryQualifier}`, () => {
 		const errno = wasi.path_filestat_set_times(rootFd, Lookupflags.none, path.$ptr, path.byteLength, 10n, 10n, Fstflags.atim | Fstflags.mtim);
 		assert.strictEqual(errno, Errno.nosys);
 	});
+
+	test('path_link', () => {
+		const memory = createMemory();
+		const filename = `/tmp/${uuid.v4()}`;
+		const content = 'Hello World';
+		const fd = FileSystem.createFile(memory, rootFd, filename, content);
+		FileSystem.close(fd);
+		const oldPath = memory.allocString(filename);
+		const newPath = memory.allocString(`/tmp/${uuid.v4()}`);
+		const errno = wasi.path_link(rootFd, Lookupflags.none, oldPath.$ptr, oldPath.byteLength, rootFd, newPath.$ptr, newPath.byteLength);
+		assert.strictEqual(errno, Errno.nosys);
+	});
+
+	test('path_readlink', () => {
+		const memory = createMemory();
+		const filename = `/tmp/${uuid.v4()}`;
+		const content = 'Hello World';
+		const fd = FileSystem.createFile(memory, rootFd, filename, content);
+		FileSystem.close(fd);
+		const path = memory.allocString(filename);
+		const buffer = memory.alloc(1024);
+		const bufUsed = memory.allocUint32();
+		const errno = wasi.path_readlink(rootFd, path.$ptr, path.byteLength, buffer.$ptr, buffer.byteLength, bufUsed.$ptr);
+		assert.strictEqual(errno, Errno.nolink);
+	});
 });
