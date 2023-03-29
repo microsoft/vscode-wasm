@@ -743,4 +743,18 @@ suite(`Filesystem - ${memoryQualifier}`, () => {
 		assert.strictEqual(errno, Errno.success);
 		assert.ok(before.mtim < after.mtim);
 	});
+
+	test('fd_tell', () => {
+		const memory = createMemory();
+		const filename = `/tmp/${uuid.v4()}`;
+		const content = 'Hello World';
+		const fd = FileSystem.createFile(memory, rootFd, filename, content);
+		const newOffset = memory.allocBigUint64();
+		let errno = wasi.fd_seek(fd, 3n, Whence.set, newOffset.$ptr);
+		assert.strictEqual(errno, Errno.success);
+		const tellOffset = memory.allocBigUint64();
+		errno = wasi.fd_tell(fd, tellOffset.$ptr);
+		assert.strictEqual(errno, Errno.success);
+		assert.strictEqual(newOffset.value, tellOffset.value);
+	});
 });
