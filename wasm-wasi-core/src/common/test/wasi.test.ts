@@ -10,7 +10,7 @@ import * as uuid from 'uuid';
 import { Clockid, Errno, Prestat, fd, Lookupflags, Oflags, Fdflags, rights, Rights, Filetype, Filestat, Ciovec, WasiError, Advise, fdstat, Fdstat, fdflags, Whence, Fstflags, Dirent } from '../wasi';
 import { Environment } from '../api';
 import TestEnvironment from './testEnvironment';
-import { Memory } from './memory';
+import { Memory, wasi } from './memory';
 import { filestat } from '../wasi';
 import { Iovec } from '../wasi';
 
@@ -676,7 +676,7 @@ suite(`Filesystem - ${memoryQualifier}`, () => {
 	test('fd_readdir - single read', () => {
 		const memory = createMemory();
 		const fileNames: Set<string> = new Set();
-		const folderName = '/tmp/readdir';
+		const folderName = '/tmp/readdir-single';
 		FileSystem.createFolder(memory, rootFd, folderName);
 		const folderFd = FileSystem.openFolder(memory, rootFd, folderName);
 		for (let i = 1; i <= 11; i++) {
@@ -704,4 +704,46 @@ suite(`Filesystem - ${memoryQualifier}`, () => {
 		assert.strictEqual(0, fileNames.size);
 	});
 
+	test('fd_readdir - multiple read', () => {
+		type Uint32 = wasi.Uint32;
+		const memory = createMemory();
+		const fileNames: Set<string> = new Set();
+		const folderName = '/tmp/readdir-multi';
+		FileSystem.createFolder(memory, rootFd, folderName);
+		const folderFd = FileSystem.openFolder(memory, rootFd, folderName);
+		for (let i = 1; i <= 11; i++) {
+			const fileName = `test${i}.txt`;
+			FileSystem.createFileClose(memory, folderFd, fileName, `${i}`.repeat(i));
+			fileNames.add(fileName);
+		}
+		const buffSize = 128;
+		let bufUsed: Uint32;
+		let dircookie = 0n;
+		do {
+			const buffer = memory.alloc(buffSize);
+			bufUsed = memory.allocUint32();
+			let errno = wasi.fd_readdir(folderFd, buffer.$ptr, buffer.byteLength, dircookie, bufUsed.$ptr);
+			assert.strictEqual(errno, Errno.success);
+			let index = buffer.$ptr;
+			let spaceLeft = buffSize;
+			while(spaceLeft >= Dirent.size && index - buffer.$ptr < bufUsed.value) {
+				const dirent = memory.readStruct(index, Dirent);
+				assert.strictEqual(dirent.d_next, dircookie + 1n);
+				assert.strictEqual(dirent.d_type, Filetype.regular_file);
+				spaceLeft -= Dirent.size;
+				index += Dirent.size;
+				if (spaceLeft >= dirent.d_namlen) {
+					const name = decoder.decode(memory.readBytes(index, dirent.d_namlen));
+					assert.ok(fileNames.has(name), 'Known file name');
+					fileNames.delete(name);
+					index += dirent.d_namlen;
+					spaceLeft -= dirent.d_namlen;
+					dircookie = dirent.d_next;
+				} else {
+					spaceLeft = 0;
+				}
+			}
+		} while (bufUsed.value === buffSize);
+		assert.strictEqual(0, fileNames.size);
+	});
 });
