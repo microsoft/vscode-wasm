@@ -757,4 +757,43 @@ suite(`Filesystem - ${memoryQualifier}`, () => {
 		assert.strictEqual(errno, Errno.success);
 		assert.strictEqual(newOffset.value, tellOffset.value);
 	});
+
+	test('fd_write - multiple ciovec', () => {
+		const memory = createMemory();
+		const filename = `/tmp/${uuid.v4()}`;
+		const hw = ['Hello ', 'World ', '!!!'];
+		const fd = FileSystem.createFile(memory, rootFd, filename);
+		const ciovecs = memory.allocStructArray(3, Ciovec);
+		let contentLength: number = 0;
+		for (let i = 0; i < hw.length; i++) {
+			const content = memory.allocBytes(encoder.encode(hw[i]));
+			ciovecs.get(i).buf = content.$ptr;
+			ciovecs.get(i).buf_len = content.byteLength;
+			contentLength += content.byteLength;
+		}
+		const bytesWritten = memory.allocUint32();
+		let errno = wasi.fd_write(fd, ciovecs.$ptr, ciovecs.size, bytesWritten.$ptr);
+		FileSystem.close(fd);
+		const check = FileSystem.openFile(memory, rootFd, filename);
+		assert.strictEqual(errno, Errno.success);
+		assert.strictEqual(bytesWritten.value, contentLength);
+		assert.strictEqual(decoder.decode(FileSystem.read(memory, check)), hw.join(''));
+		FileSystem.close(check);
+	});
+
+	test('path_filestat_get', () => {
+		const memory = createMemory();
+		const filename = '/fixture/read/helloWorld.txt';
+		const path = memory.allocString(filename);
+		const filestat = memory.allocStruct(Filestat);
+		let errno = wasi.path_filestat_get(rootFd, Lookupflags.none, path.$ptr, path.byteLength, filestat.$ptr);
+		assert.strictEqual(errno, Errno.success);
+		assert.strictEqual(errno, Errno.success);
+		assert.strictEqual(filestat.filetype, Filetype.regular_file);
+		assert.strictEqual(filestat.size, 11n);
+		assert.strictEqual(filestat.nlink, 1n);
+		assert.strictEqual(filestat.atim, TestEnvironment.stats().mtime);
+		assert.strictEqual(filestat.ctim, TestEnvironment.stats().ctime);
+		assert.strictEqual(filestat.mtim, TestEnvironment.stats().mtime);
+	});
 });
