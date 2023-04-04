@@ -3,6 +3,4 @@
  * Licensed under the MIT License. See License.txt in the project root for license information.
  * ----------------------------------------------------------------------------------------- */
 
-import RAL from './lib/browser/main';
 export * from './lib/browser/main';
-export default RAL;
