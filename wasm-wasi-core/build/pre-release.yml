@@ -20,13 +20,12 @@ extends:
     customNPMRegistry: ''
     buildSteps:
       - script: |
-          pushd ..
           npm ci
-          popd
+        workingDirectory: $(Build.SourcesDirectory)
         displayName: "Install dependencies"
 
       - script: |
           npm run lint
           npm run compile
+        workingDirectory: $(Build.SourcesDirectory)/wasm-wasi-core
         displayName: "Lint & Compile"
-    workingDirectory: $(Build.SourcesDirectory)/wasm-wasi-core
