@@ -42,6 +42,7 @@
 		"./sync-api-tests",
 		"./wasm-wasi",
 		"./wasm-wasi-tests",
+		"./wasm-wasi-core",
 		"./tools",
 		"./testbeds"
 	],
@@ -89,6 +90,7 @@
 		"ESUCCESS",
 		"eventrwflags",
 		"eventtype",
+		"externref",
 		"fadvise",
 		"fallocate",
 		"fbig",

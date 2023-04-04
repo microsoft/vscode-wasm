@@ -87,6 +87,13 @@ const node = {
 };
 
 /** @type SharableOptions */
+const webworker = {
+	compilerOptions: {
+		lib: [ 'webworker' ]
+	}
+}
+
+/** @type SharableOptions */
 const referenced = {
 	compilerOptions: {
 		composite: true
@@ -248,6 +255,50 @@ const wasm_wasi_tests = {
 };
 
 /** @type ProjectDescription */
+const wasm_wasi_core = {
+	name: 'wasm-wasi-core',
+	path: './wasm-wasi-core',
+	out: {
+		dir: './lib',
+		buildInfoFile: '${buildInfoFile}.tsbuildInfo'
+	},
+	sourceFolders: [
+		{
+			path: './src/common',
+			extends: [ common, vscodeMixin ],
+			exclude: [ 'test' ]
+		},
+		{
+			path: './src/common/test',
+			extends: [ common, vscodeMixin, testMixin ],
+			references: [ '..' ]
+		},
+		{
+			path: './src/web',
+			extends: [ browser, vscodeMixin ],
+			exclude: [ 'test' ],
+			references: [ '../common' ]
+		},
+		{
+			path: './src/web/test',
+			extends: [ browser, vscodeMixin, testMixin, node ],
+			references: [ '..', '../../common/test' ]
+		},
+		{
+			path: './src/desktop',
+			extends: [ node, vscodeMixin ],
+			exclude: [ 'test' ],
+			references: [ '../common' ]
+		},
+		{
+			path: './src/desktop/test',
+			extends: [ node, vscodeMixin, testMixin],
+			references: [ '..', '../../common/test' ]
+		}
+	]
+};
+
+/** @type ProjectDescription */
 const tools = {
 	name: 'tools',
 	path: './tools',
@@ -312,7 +363,7 @@ const testbeds = {
 const root = {
 	name: 'root',
 	path: './',
-	references: [ sync_api_common, sync_api_client, sync_api_service, sync_api_tests, wasm_wasi, wasm_wasi_tests, tools ]
+	references: [ sync_api_common, sync_api_client, sync_api_service, sync_api_tests, wasm_wasi, wasm_wasi_tests, wasm_wasi_core, tools ]
 };
 
 /** @type CompilerOptions */
@@ -383,6 +434,8 @@ const projects = [
 	[ createPublishProjectDescription(sync_api_tests), [ publishProjectOptions ] ],
 	[ wasm_wasi, [ compileProjectOptions, watchProjectOptions ] ],
 	[ createPublishProjectDescription(wasm_wasi), [ publishProjectOptions ] ],
+	[ wasm_wasi_core, [ compileProjectOptions, watchProjectOptions ] ],
+	[ createPublishProjectDescription(wasm_wasi_core), [ publishProjectOptions ] ],
 	[ wasm_wasi_tests, [ compileProjectOptions, watchProjectOptions ] ],
 	[ createPublishProjectDescription(wasm_wasi_tests), [ publishProjectOptions ] ],
 	[ tools, [ compileProjectOptions, watchProjectOptions ] ],

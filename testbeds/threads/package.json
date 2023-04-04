@@ -1,6 +1,5 @@
 {
 	"name": "testbed-threads",
-	"private": "true",
 	"publisher": "ms-vscode",
 	"version": "0.0.1",
 	"description": "Thread Example",
@@ -10,7 +9,9 @@
 		"vscode": "^1.67.0"
 	},
 	"main": "./out/extension.js",
+	"browser": "./dist/web/extension.js",
 	"activationEvents": [
+		"*"
 	],
 	"contributes": {
 		"commands": [
@@ -25,9 +26,12 @@
 		"clean": "node ../../node_modules/rimraf/bin.js out",
 		"compile:ts": "node ../../node_modules/typescript/lib/tsc.js -b tsconfig.json",
 		"watch:ts": "node ../../node_modules/typescript/lib/tsc.js -b tsconfig.json -w",
-		"build": "npm run compile:ts && npm run build:cpp && npm run build:wasi",
+		"build": "npm run compile:ts && npm run build:c && npm run build:wasi",
 		"build:c": "../../node_modules/.bin/make-dir ./out && g++ main.c -l pthread -o ./out/main",
-		"build:wasi": "../../node_modules/.bin/make-dir ./out && ~/bin/wasi-sdk/bin/clang main.c -pthread -o ./out/main.wasm",
-		"build:em": "../../node_modules/.bin/make-dir ./out && em++ main.c -pthread -o ./out/main-em.js"
+		"build:wasi": "../../node_modules/.bin/make-dir ./out && ~/bin/wasi-sdk-20.0+threads/bin/clang -Wl,--import-memory -Wl,--max-memory=10485760 -pthread -L /home/dirkb/bin/wasi-sdk-20.0+threads/share/wasi-sysroot/lib/wasm32-wasi-threads main.c -o ./out/main.wasm",
+		"build:em": "../../node_modules/.bin/make-dir ./out && em++ main.c -pthread -o ./out/main-em.js",
+		"build:wasi-import-memory": "../../node_modules/.bin/make-dir ./out && ~/bin/wasi-sdk-20.0+threads/bin/clang -Wl,--import-memory -Wl,--max-memory=10485760 -matomics -mbulk-memory -pthread main.c -o ./out/main.wasm -L /home/dirkb/bin/wasi-sdk-20.0+threads/share/wasi-sysroot/lib/wasm32-wasi-threads",
+		"build:wasi-malloc-import": "../../node_modules/.bin/make-dir ./out && ~/bin/wasi-sdk-20.0+threads/bin/clang -Wl,--import-memory -Wl,--max-memory=10485760 main.c -o ./out/main.wasm",
+		"build:wasi-malloc-import-shared": "../../node_modules/.bin/make-dir ./out && ~/bin/wasi-sdk-20.0+threads/bin/clang -Wl,--import-memory -Wl,--max-memory=10485760 -pthread  -L /home/dirkb/bin/wasi-sdk-20.0+threads/share/wasi-sysroot/lib/wasm32-wasi-threads main.c -o ./out/main.wasm"
 	}
 }

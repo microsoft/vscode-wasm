@@ -1,0 +1,40 @@
+{
+    "compilerOptions": {
+        "module": "Node16",
+        "moduleResolution": "Node16",
+        "target": "es2020",
+        "lib": [
+            "webworker",
+            "es2020"
+        ],
+        "rootDir": ".",
+        "types": [
+            "vscode",
+            "mocha",
+            "node"
+        ],
+        "strict": true,
+        "noImplicitAny": true,
+        "noImplicitReturns": true,
+        "noImplicitThis": true,
+        "declaration": true,
+        "stripInternal": true,
+        "sourceMap": true,
+        "noUnusedLocals": true,
+        "noUnusedParameters": true,
+        "outDir": "../../../lib/web/test",
+        "tsBuildInfoFile": "../../../lib/web/test/compile.tsbuildInfo",
+        "incremental": true
+    },
+    "include": [
+        "."
+    ],
+    "references": [
+        {
+            "path": "../tsconfig.json"
+        },
+        {
+            "path": "../../common/test/tsconfig.json"
+        }
+    ]
+}

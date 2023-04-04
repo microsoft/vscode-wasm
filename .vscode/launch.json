@@ -4,6 +4,15 @@
 		{
 			"type": "extensionHost",
 			"request": "launch",
+			"name": "Core Testbed",
+			"runtimeExecutable": "${execPath}",
+			"args": ["--extensionDevelopmentPath=${workspaceRoot}/wasm-wasi-core"],
+			"outFiles": ["${workspaceRoot}/wasm-wasi-core/lib/**/*.js"],
+			"sourceMaps": true
+		},
+		{
+			"type": "extensionHost",
+			"request": "launch",
 			"name": "Python Testbed",
 			"runtimeExecutable": "${execPath}",
 			"args": ["--extensionDevelopmentPath=${workspaceRoot}/testbeds/python"],
@@ -19,6 +28,16 @@
 			"outFiles": ["${workspaceRoot}/testbeds/rust/out/**/*.js"],
 			"sourceMaps": true,
 			"preLaunchTask": "Build Rust Example"
+		},
+		{
+			"type": "extensionHost",
+			"request": "launch",
+			"name": "Thread Testbed",
+			"runtimeExecutable": "${execPath}",
+			"args": ["--extensionDevelopmentPath=${workspaceRoot}/testbeds/threads", "--extensionDevelopmentPath=${workspaceRoot}/wasm-wasi-core"],
+			"outFiles": ["${workspaceRoot}/testbeds/threads/out/**/*.js", "${workspaceRoot}/wasm-wasi-core/lib/**/*.js"],
+			"sourceMaps": true,
+			"preLaunchTask": "Build Thread Example"
 		},
 		{
 			"type": "extensionHost",
@@ -111,6 +130,20 @@
 			"env": { },
 			"sourceMaps": true,
 			"outFiles": ["${workspaceRoot}/wasm-wasi-tests/lib/**/*.js"],
+			"preLaunchTask": "npm: watch"
+		},
+		{
+			"request": "launch",
+			"type": "extensionHost",
+			"name": "test:wasm-wasi-core",
+			"runtimeExecutable": "${execPath}",
+			"args": [
+				"--extensionDevelopmentPath=${workspaceFolder}/wasm-wasi-core",
+				"--extensionTestsPath=${workspaceFolder}/wasm-wasi-core/lib/desktop/test/index.js",
+				"${workspaceFolder}/wasm-wasi-core/.vscode-test-workspace"
+			],
+			"sourceMaps": true,
+			"outFiles": ["${workspaceRoot}/wasm-wasi-core/lib/**/*.js"],
 			"preLaunchTask": "npm: watch"
 		}
 	]

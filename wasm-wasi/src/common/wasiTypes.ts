@@ -1232,7 +1232,7 @@ export namespace Ciovec {
 	}
 }
 
-export type ciovec_array = iovec[];
+export type ciovec_array = ciovec[];
 
 export type dirnamlen = u32;
 export type dirent = {
@@ -2122,3 +2122,11 @@ export type sock_send = (fd: fd, si_data_ptr: ptr, si_data_len: u32, si_flags: s
  * @param sdflags Which channels on the socket to shut down.
  */
 export type sock_shutdown = (fd: fd, sdflags: sdflags) => errno;
+
+/**
+ * Spawns a new thread. See https://github.com/WebAssembly/wasi-threads
+ * for the current documentation.
+ *
+ * @param start_args_ptr A memory location that holds the start arguments.
+ */
+export type thread_spawn = (start_args_ptr: ptr<u32>) => errno;

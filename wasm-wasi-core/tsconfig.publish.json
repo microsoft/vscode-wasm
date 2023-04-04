@@ -1,0 +1,27 @@
+{
+    "compilerOptions": {
+        "incremental": true,
+        "composite": true
+    },
+    "files": [],
+    "references": [
+        {
+            "path": "./src/common/tsconfig.publish.json"
+        },
+        {
+            "path": "./src/common/test/tsconfig.publish.json"
+        },
+        {
+            "path": "./src/web/tsconfig.publish.json"
+        },
+        {
+            "path": "./src/web/test/tsconfig.publish.json"
+        },
+        {
+            "path": "./src/desktop/tsconfig.publish.json"
+        },
+        {
+            "path": "./src/desktop/test/tsconfig.publish.json"
+        }
+    ]
+}

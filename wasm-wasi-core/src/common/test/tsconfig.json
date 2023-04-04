@@ -1,0 +1,36 @@
+{
+    "compilerOptions": {
+        "types": [
+            "vscode",
+            "mocha"
+        ],
+        "module": "Node16",
+        "moduleResolution": "Node16",
+        "target": "es2020",
+        "lib": [
+            "es2020"
+        ],
+        "rootDir": ".",
+        "strict": true,
+        "noImplicitAny": true,
+        "noImplicitReturns": true,
+        "noImplicitThis": true,
+        "declaration": true,
+        "stripInternal": true,
+        "sourceMap": true,
+        "noUnusedLocals": true,
+        "noUnusedParameters": true,
+        "outDir": "../../../lib/common/test",
+        "tsBuildInfoFile": "../../../lib/common/test/compile.tsbuildInfo",
+        "incremental": true,
+        "composite": true
+    },
+    "include": [
+        "."
+    ],
+    "references": [
+        {
+            "path": "../tsconfig.json"
+        }
+    ]
+}

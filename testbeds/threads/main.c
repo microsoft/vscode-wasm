@@ -14,10 +14,24 @@ void *myThreadFun(void *vargp)
 
 int main()
 {
+
+	printf("Testing malloc\n");
+	void* ptr = malloc(131200);
+	if (ptr == NULL) {
+		printf("Malloc failed\n");
+		exit(1);
+	} else {
+		printf("Malloc succeeded\n");
+		free(ptr);
+	}
+
 	pthread_t thread_id;
 	printf("Before Thread\n");
-	pthread_create(&thread_id, NULL, myThreadFun, NULL);
-	pthread_join(thread_id, NULL);
+	int result = pthread_create(&thread_id, NULL, myThreadFun, NULL);
+	printf("Thread created with result: %i\n", result);
+	result = pthread_join(thread_id, NULL);
+	printf("Thread joined with result: %i\n", result);
+	sleep(5);
 	printf("After Thread\n");
 	exit(0);
 }

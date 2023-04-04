@@ -29,7 +29,7 @@ apiClient.serviceReady().then(async (params) => {
 		}
 	}
 	const wasi = WASI.create('coreutils', apiClient, exitHandler, devices, params.stdio, {
-		args: ['base32', 'workspace/test.bat'],
+		args: ['mkdir', '/workspace/folder'],
 	});
 	const wasmFile = path.join(__dirname, '..', 'coreutils.wasm');
 	const binary = fs.readFileSync(wasmFile);

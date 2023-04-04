@@ -64,6 +64,20 @@
 			]
 		},
 		{
+			"label": "Build Thread Example",
+			"type": "npm",
+			"script": "build",
+			"path": "testbeds/threads",
+			"group": "build",
+			"presentation": {
+				"panel": "dedicated",
+				"reveal": "never"
+			},
+			"problemMatcher": [
+				"$tsc"
+			]
+		},
+		{
 			"label": "Build PHP Example",
 			"type": "npm",
 			"script": "build",
@@ -104,6 +118,14 @@
 			"problemMatcher": [
 				"$tsc"
 			]
+		},
+		{
+			"type": "npm",
+			"script": "serve",
+			"problemMatcher": [],
+			"isBackground": true,
+			"label": "npm: serve",
+			"detail": "serve --cors -l 5000 --ssl-cert $HOME/certs/localhost.pem --ssl-key $HOME/certs/localhost-key.pem -c ./configs/serve.json"
 		}
 	]
 }
