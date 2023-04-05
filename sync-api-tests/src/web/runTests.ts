@@ -27,11 +27,11 @@ function rimraf(location: string) {
 }
 
 async function go() {
-	const testDir = path.join(os.tmpdir(), uuid.v4());
 	try {
-		fs.mkdirSync(testDir, { recursive: true });
-		const extensionDevelopmentPath = path.resolve(__dirname, '..', '..');
-		const extensionTestsPath = path.resolve(__dirname, '..', '..', 'dist', 'web', 'index.js');
+		const workspaceRoot = path.resolve(__dirname, '..', '..', '..');
+		const folderPath = path.join(workspaceRoot, 'sync-api-tests', '.vscode-test-workspace');
+		const extensionDevelopmentPath = path.join(workspaceRoot, 'sync-api-tests');
+		const extensionTestsPath = path.resolve(workspaceRoot, 'sync-api-tests', 'dist', 'web', 'index.js');
 
 		/**
 		 * Basic usage
@@ -41,7 +41,7 @@ async function go() {
 			version: 'insiders',
 			extensionDevelopmentPath,
 			extensionTestsPath,
-			folderPath: testDir,
+			folderPath: folderPath,
 			devTools: false,
 			headless: true,
 			// verbose: true,
@@ -51,8 +51,6 @@ async function go() {
 	} catch (err) {
 		console.error('Failed to run tests');
 		process.exitCode = 1;
-	} finally {
-		rimraf(testDir);
 	}
 }
 
