@@ -209,52 +209,6 @@ const sync_api_tests = {
 };
 
 /** @type ProjectDescription */
-const wasm_wasi = {
-	name: 'wasm-wasi',
-	path: './wasm-wasi',
-	out: {
-		dir: './lib',
-		buildInfoFile: '${buildInfoFile}.tsbuildInfo'
-	},
-	sourceFolders: [
-		{
-			path: './src/common',
-			extends: [ common ]
-		},
-		{
-			path: './src/browser',
-			extends: [ browser ],
-			references: [ '../common' ]
-		},
-		{
-			path: './src/node',
-			extends: [ node ],
-			references: [ '../common' ]
-		}
-	],
-	references: [
-		sync_api_client
-	]
-};
-
-/** @type ProjectDescription */
-const wasm_wasi_tests = {
-	name: 'wasm-wasi-tests',
-	path: './wasm-wasi-tests',
-	extends: [ node, testMixin ],
-	out: {
-		dir: './lib',
-		buildInfoFile: '${buildInfoFile}.tsbuildInfo'
-	},
-	compilerOptions: {
-		rootDir: './src'
-	},
-	references: [
-		wasm_wasi
-	]
-};
-
-/** @type ProjectDescription */
 const wasm_wasi_core = {
 	name: 'wasm-wasi-core',
 	path: './wasm-wasi-core',
@@ -299,9 +253,9 @@ const wasm_wasi_core = {
 };
 
 /** @type ProjectDescription */
-const wasm_wasi_core_api = {
-	name: 'wasm-wasi-core-api',
-	path: './wasm-wasi-core-api',
+const wasm_wasi = {
+	name: 'wasm-wasi',
+	path: './wasm-wasi',
 	extends: [ common, vscodeMixin ],
 	out: {
 		dir: './lib',
@@ -377,7 +331,7 @@ const testbeds = {
 const root = {
 	name: 'root',
 	path: './',
-	references: [ sync_api_common, sync_api_client, sync_api_service, sync_api_tests, wasm_wasi, wasm_wasi_tests, wasm_wasi_core, wasm_wasi_core_api, tools ]
+	references: [ sync_api_common, sync_api_client, sync_api_service, sync_api_tests, wasm_wasi_core, wasm_wasi, tools ]
 };
 
 /** @type CompilerOptions */
@@ -446,14 +400,10 @@ const projects = [
 	[ createPublishProjectDescription(sync_api_service), [ publishProjectOptions ] ],
 	[ sync_api_tests, [ compileProjectOptions, watchProjectOptions ] ],
 	[ createPublishProjectDescription(sync_api_tests), [ publishProjectOptions ] ],
-	[ wasm_wasi, [ compileProjectOptions, watchProjectOptions ] ],
-	[ createPublishProjectDescription(wasm_wasi), [ publishProjectOptions ] ],
 	[ wasm_wasi_core, [ compileProjectOptions, watchProjectOptions ] ],
 	[ createPublishProjectDescription(wasm_wasi_core), [ publishProjectOptions ] ],
-	[ wasm_wasi_core_api, [ compileProjectOptions, watchProjectOptions ] ],
-	[ createPublishProjectDescription(wasm_wasi_core_api), [ publishProjectOptions ] ],
-	[ wasm_wasi_tests, [ compileProjectOptions, watchProjectOptions ] ],
-	[ createPublishProjectDescription(wasm_wasi_tests), [ publishProjectOptions ] ],
+	[ wasm_wasi, [ compileProjectOptions, watchProjectOptions ] ],
+	[ createPublishProjectDescription(wasm_wasi), [ publishProjectOptions ] ],
 	[ tools, [ compileProjectOptions, watchProjectOptions ] ],
 	[ root, [compileProjectOptions, watchProjectOptions ] ],
 	[ testbed_coreutils, [ compileProjectOptions ] ],

@@ -18,16 +18,10 @@
             "path": "./sync-api-tests/tsconfig.json"
         },
         {
-            "path": "./wasm-wasi/tsconfig.json"
-        },
-        {
-            "path": "./wasm-wasi-tests/tsconfig.json"
-        },
-        {
             "path": "./wasm-wasi-core/tsconfig.json"
         },
         {
-            "path": "./wasm-wasi-core-api/tsconfig.json"
+            "path": "./wasm-wasi/tsconfig.json"
         },
         {
             "path": "./tools/tsconfig.json"
