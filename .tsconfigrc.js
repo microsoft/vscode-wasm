@@ -299,6 +299,20 @@ const wasm_wasi_core = {
 };
 
 /** @type ProjectDescription */
+const wasm_wasi_core_api = {
+	name: 'wasm-wasi-core-api',
+	path: './wasm-wasi-core-api',
+	extends: [ common, vscodeMixin ],
+	out: {
+		dir: './lib',
+		buildInfoFile: '${buildInfoFile}.tsbuildInfo'
+	},
+	compilerOptions: {
+		rootDir: './src'
+	}
+}
+
+/** @type ProjectDescription */
 const tools = {
 	name: 'tools',
 	path: './tools',
@@ -363,7 +377,7 @@ const testbeds = {
 const root = {
 	name: 'root',
 	path: './',
-	references: [ sync_api_common, sync_api_client, sync_api_service, sync_api_tests, wasm_wasi, wasm_wasi_tests, wasm_wasi_core, tools ]
+	references: [ sync_api_common, sync_api_client, sync_api_service, sync_api_tests, wasm_wasi, wasm_wasi_tests, wasm_wasi_core, wasm_wasi_core_api, tools ]
 };
 
 /** @type CompilerOptions */
@@ -436,6 +450,8 @@ const projects = [
 	[ createPublishProjectDescription(wasm_wasi), [ publishProjectOptions ] ],
 	[ wasm_wasi_core, [ compileProjectOptions, watchProjectOptions ] ],
 	[ createPublishProjectDescription(wasm_wasi_core), [ publishProjectOptions ] ],
+	[ wasm_wasi_core_api, [ compileProjectOptions, watchProjectOptions ] ],
+	[ createPublishProjectDescription(wasm_wasi_core_api), [ publishProjectOptions ] ],
 	[ wasm_wasi_tests, [ compileProjectOptions, watchProjectOptions ] ],
 	[ createPublishProjectDescription(wasm_wasi_tests), [ publishProjectOptions ] ],
 	[ tools, [ compileProjectOptions, watchProjectOptions ] ],

@@ -43,6 +43,7 @@
 		"./wasm-wasi",
 		"./wasm-wasi-tests",
 		"./wasm-wasi-core",
+		"./wasm-wasi-core-api",
 		"./tools",
 		"./testbeds"
 	],
