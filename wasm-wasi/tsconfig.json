@@ -1,21 +1,29 @@
 {
     "compilerOptions": {
-        "incremental": true,
-        "composite": true
+        "types": [
+            "vscode"
+        ],
+        "module": "Node16",
+        "moduleResolution": "Node16",
+        "target": "es2020",
+        "lib": [
+            "es2020"
+        ],
+        "rootDir": "./src",
+        "strict": true,
+        "noImplicitAny": true,
+        "noImplicitReturns": true,
+        "noImplicitThis": true,
+        "declaration": true,
+        "stripInternal": true,
+        "sourceMap": true,
+        "noUnusedLocals": true,
+        "noUnusedParameters": true,
+        "outDir": "./lib",
+        "tsBuildInfoFile": "lib/compile.tsbuildInfo",
+        "incremental": true
     },
-    "files": [],
-    "references": [
-        {
-            "path": "./../sync-api-client/tsconfig.json"
-        },
-        {
-            "path": "./src/common/tsconfig.json"
-        },
-        {
-            "path": "./src/browser/tsconfig.json"
-        },
-        {
-            "path": "./src/node/tsconfig.json"
-        }
+    "include": [
+        "."
     ]
 }
