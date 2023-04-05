@@ -4,27 +4,8 @@
  *--------------------------------------------------------------------------------------------*/
 
 import * as path from 'path';
-import * as fs from 'fs';
-import * as os from 'os';
-import * as uuid from 'uuid';
 
 import { runTests } from '@vscode/test-web';
-
-function rimraf(location: string) {
-	const stat = fs.lstatSync(location);
-	if (stat) {
-		if (stat.isDirectory() && !stat.isSymbolicLink()) {
-			for (const dir of fs.readdirSync(location)) {
-				rimraf(path.join(location, dir));
-			}
-
-			fs.rmdirSync(location);
-		}
-		else {
-			fs.unlinkSync(location);
-		}
-	}
-}
 
 async function go() {
 	try {
