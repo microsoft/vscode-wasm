@@ -15,7 +15,7 @@
 			"request": "launch",
 			"name": "Python Testbed",
 			"runtimeExecutable": "${execPath}",
-			"args": ["--extensionDevelopmentPath=${workspaceRoot}/testbeds/python"],
+			"args": ["--extensionDevelopmentPath=${workspaceRoot}/testbeds/python", "--extensionDevelopmentPath=${workspaceRoot}/wasm-wasi-core"],
 			"outFiles": ["${workspaceRoot}/testbeds/python/out/**/*.js"],
 			"sourceMaps": true
 		},
@@ -24,7 +24,7 @@
 			"request": "launch",
 			"name": "Rust Testbed",
 			"runtimeExecutable": "${execPath}",
-			"args": ["--extensionDevelopmentPath=${workspaceRoot}/testbeds/rust"],
+			"args": ["--extensionDevelopmentPath=${workspaceRoot}/testbeds/rust", "--extensionDevelopmentPath=${workspaceRoot}/wasm-wasi-core"],
 			"outFiles": ["${workspaceRoot}/testbeds/rust/out/**/*.js"],
 			"sourceMaps": true,
 			"preLaunchTask": "Build Rust Example"
@@ -44,7 +44,7 @@
 			"request": "launch",
 			"name": "PHP Testbed",
 			"runtimeExecutable": "${execPath}",
-			"args": ["--extensionDevelopmentPath=${workspaceRoot}/testbeds/php"],
+			"args": ["--extensionDevelopmentPath=${workspaceRoot}/testbeds/php", "--extensionDevelopmentPath=${workspaceRoot}/wasm-wasi-core"],
 			"outFiles": ["${workspaceRoot}/testbeds/php/out/**/*.js"],
 			"sourceMaps": true,
 			"preLaunchTask": "Build PHP Example"
@@ -54,7 +54,7 @@
 			"request": "launch",
 			"name": "Ruby Testbed",
 			"runtimeExecutable": "${execPath}",
-			"args": ["--extensionDevelopmentPath=${workspaceRoot}/testbeds/ruby"],
+			"args": ["--extensionDevelopmentPath=${workspaceRoot}/testbeds/ruby", "--extensionDevelopmentPath=${workspaceRoot}/wasm-wasi-core"],
 			"outFiles": ["${workspaceRoot}/testbeds/ruby/out/**/*.js"],
 			"sourceMaps": true,
 			"preLaunchTask": "Build Ruby Example"
@@ -64,7 +64,7 @@
 			"request": "launch",
 			"name": "C Testbed",
 			"runtimeExecutable": "${execPath}",
-			"args": ["--extensionDevelopmentPath=${workspaceRoot}/wasm-wasi/example"],
+			"args": ["--extensionDevelopmentPath=${workspaceRoot}/wasm-wasi/example", "--extensionDevelopmentPath=${workspaceRoot}/wasm-wasi-core"],
 			"outFiles": ["${workspaceRoot}/wasm-wasi/example/**/*.js"],
 			"sourceMaps": true
 		},

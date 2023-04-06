@@ -14,14 +14,14 @@ export async function activate(_context: ExtensionContext) {
 	const wasiCore: WasiCore = await api();
 	commands.registerCommand('testbed-cpp.run', async () => {
 		const pty = wasiCore.createPseudoterminal();
-		const terminal = window.createTerminal({ name: 'threads', pty, isTransient: true });
+		const terminal = window.createTerminal({ name: 'CPP', pty, isTransient: true });
 		terminal.show(true);
 		const options = {
 			stdio: pty.stdio,
 			mapDir: true
 		};
 		const module = await WebAssembly.compile(await fs.readFile(path.join(__dirname, 'hello.wasm')));
-		const process = await wasiCore.createProcess('threads', module, options);
+		const process = await wasiCore.createProcess('test-cpp', module, options);
 		process.run().catch(err => {
 			void window.showErrorMessage(err.message);
 		});
