@@ -73,7 +73,7 @@
 			"request": "launch",
 			"name": "C++ Testbed",
 			"runtimeExecutable": "${execPath}",
-			"args": ["--extensionDevelopmentPath=${workspaceRoot}/testbeds/cpp"],
+			"args": ["--extensionDevelopmentPath=${workspaceRoot}/testbeds/cpp", "--extensionDevelopmentPath=${workspaceRoot}/wasm-wasi-core"],
 			"outFiles": ["${workspaceRoot}/testbeds/cpp/out/**/*.js"],
 			"sourceMaps": true,
 			"preLaunchTask": "Build C++ Example"
