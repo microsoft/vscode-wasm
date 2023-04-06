@@ -25,7 +25,7 @@ class WasiMainWorker {
 
 	public listen(): void {
 		const connection = new NodeHostConnection(this.port);
-		this.port.on('message', async (message: StartMainMessage) => {
+		this.port.once('message', async (message: StartMainMessage) => {
 			const module = message.module;
 			const memory = message.memory;
 			const host = WasiHost.create(connection);
@@ -41,6 +41,7 @@ class WasiMainWorker {
 			const instance  = await WebAssembly.instantiate(module, imports);
 			host.initialize(memory ?? instance);
 			(instance.exports._start as Function)();
+			connection.destroy();
 		});
 		const ready: WorkerReadyMessage = { method: 'workerReady' };
 		connection.postMessage(ready);

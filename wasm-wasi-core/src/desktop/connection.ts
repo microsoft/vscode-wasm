@@ -25,6 +25,10 @@ export class NodeHostConnection extends HostConnection {
 		this.port.postMessage(message);
 	}
 
+	public destroy(): void {
+		this.port.removeAllListeners('message');
+	}
+
 	protected async handleMessage(_message: HostMessage): Promise<void> {
 	}
 }

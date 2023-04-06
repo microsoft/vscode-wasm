@@ -1,10 +1,8 @@
-#include <stdio.h>
-#include <stdlib.h>
-
+#include <iostream>
 using namespace std;
 
-int main() {
-    FILE *fptr;
-    fptr = fopen("/workspace/app.py", "r");
-    fclose(fptr);
+int main()
+{
+	cout << "Hello World";
+	return 0;
 }

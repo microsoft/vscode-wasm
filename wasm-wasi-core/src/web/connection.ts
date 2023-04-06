@@ -23,6 +23,10 @@ export class BrowserHostConnection extends HostConnection {
 		this.port.postMessage(message);
 	}
 
+	public destroy(): void {
+		this.port.onmessage = null;
+	}
+
 	protected async handleMessage(_message: HostMessage): Promise<void> {
 	}
 }
