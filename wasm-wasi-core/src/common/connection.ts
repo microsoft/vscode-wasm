@@ -25,6 +25,12 @@ export interface StartMainMessage {
 	readonly module: WebAssembly.Module;
 	readonly memory?: WebAssembly.Memory;
 }
+export namespace StartMainMessage {
+	export function is(message: ServiceMessage): message is StartMainMessage {
+		const candidate = message as StartMainMessage;
+		return candidate && candidate.method === 'startMain';
+	}
+}
 
 export interface StartThreadMessage {
 	readonly method: 'startThread';
@@ -33,8 +39,14 @@ export interface StartThreadMessage {
 	readonly tid: u32;
 	readonly start_arg: ptr;
 }
+export namespace StartThreadMessage {
+	export function is(message: ServiceMessage): message is StartThreadMessage {
+		const candidate = message as StartThreadMessage;
+		return candidate && candidate.method === 'startThread';
+	}
+}
 
-export type HostMessage = StartMainMessage | StartThreadMessage | { method: string };
+export type ServiceMessage = StartMainMessage | StartThreadMessage | { method: string };
 
 export interface WorkerReadyMessage {
 	readonly method: 'workerReady';

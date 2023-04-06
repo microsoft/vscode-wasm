@@ -12,7 +12,7 @@ import RAL from '../common/ral';
 import { ptr, u32 } from '../common/baseTypes';
 import { WasiProcess } from '../common/process';
 import { WasiService, ServiceConnection } from '../common/service';
-import type { HostMessage, StartMainMessage, StartThreadMessage, WorkerMessage } from '../common/connection';
+import type { ServiceMessage, StartMainMessage, StartThreadMessage, WorkerMessage } from '../common/connection';
 import { Options } from '../common/api';
 
 export class NodeServiceConnection extends ServiceConnection {
@@ -27,7 +27,7 @@ export class NodeServiceConnection extends ServiceConnection {
 		});
 	}
 
-	public postMessage(message: HostMessage): void {
+	public postMessage(message: ServiceMessage): void {
 		this.port.postMessage(message);
 	}
 }

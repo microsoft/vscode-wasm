@@ -9,7 +9,7 @@ import { HostConnection } from '../../common/host';
 import { ConsoleMessage, TestSetup, TestSetupMessage, TestsDoneMessage } from '../../common/test/messages';
 import { BrowserHostConnection } from '../connection';
 import TestEnvironment from '../../common/test/testEnvironment';
-import { CapturedPromise, HostMessage } from '../../common/connection';
+import { CapturedPromise, ServiceMessage } from '../../common/connection';
 
 
 function warpConsoleMethod(hostConnection: HostConnection, severity: 'log' | 'info' | 'warn' | 'error'): void {
@@ -42,11 +42,11 @@ class TestBrowserHostConnection extends BrowserHostConnection {
 		return this._testSetup.promise;
 	}
 
-	protected handleMessage(message: HostMessage): Promise<void> {
+	protected handleMessage(message: ServiceMessage): Promise<void> {
 		if (TestSetupMessage.is(message)) {
 			this._testSetup.resolve(Object.assign({}, message, { method: undefined }));
 		}
-		return super.handleMessage(message);
+		return Promise.resolve();
 	}
 }
 

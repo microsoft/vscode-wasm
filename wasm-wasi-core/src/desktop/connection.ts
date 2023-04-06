@@ -7,16 +7,16 @@ import { MessagePort, Worker } from 'worker_threads';
 
 import RAL from '../common/ral';
 import { HostConnection } from '../common/host';
-import type { HostMessage, WorkerMessage } from '../common/connection';
+import type { ServiceMessage, WorkerMessage } from '../common/connection';
 
-export class NodeHostConnection extends HostConnection {
+export abstract class NodeHostConnection extends HostConnection {
 
 	private readonly port: MessagePort | Worker;
 
 	public constructor(port: MessagePort | Worker) {
 		super();
 		this.port = port;
-		this.port.on('message', (message: HostMessage) => {
+		this.port.on('message', (message: ServiceMessage) => {
 			this.handleMessage(message).catch(RAL().console.error);
 		});
 	}
@@ -29,6 +29,5 @@ export class NodeHostConnection extends HostConnection {
 		this.port.removeAllListeners('message');
 	}
 
-	protected async handleMessage(_message: HostMessage): Promise<void> {
-	}
+	protected abstract handleMessage(message: ServiceMessage): Promise<void>;
 }

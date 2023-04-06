@@ -3,10 +3,11 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import fs from 'fs/promises';
+import fs from 'node:fs/promises';
+import path from 'node:path';
+
 import { commands, ExtensionContext, window } from 'vscode';
 import { WasiCore, api } from '@vscode/wasm-wasi';
-import path from 'path';
 
 
 export async function activate(_context: ExtensionContext) {

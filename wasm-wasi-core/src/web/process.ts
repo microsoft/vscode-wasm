@@ -9,7 +9,7 @@ import RAL from '../common/ral';
 import { ptr, u32 } from '../common/baseTypes';
 import { WasiProcess } from '../common/process';
 import { WasiService, ServiceConnection } from '../common/service';
-import { HostMessage, StartMainMessage, StartThreadMessage, WorkerMessage } from '../common/connection';
+import { ServiceMessage, StartMainMessage, StartThreadMessage, WorkerMessage } from '../common/connection';
 import { Options } from '../common/api';
 
 export class BrowserServiceConnection extends ServiceConnection {
@@ -24,7 +24,7 @@ export class BrowserServiceConnection extends ServiceConnection {
 		});
 	}
 
-	public postMessage(message: HostMessage): void {
+	public postMessage(message: ServiceMessage): void {
 		try {
 			this.port.postMessage(message);
 		} catch(error) {

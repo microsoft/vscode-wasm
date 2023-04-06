@@ -14,7 +14,7 @@ import glob from 'glob';
 import { TestSetup, TestSetupMessage, TestsDoneMessage } from '../../common/test/messages';
 import TestEnvironment from '../../common/test/testEnvironment';
 import { NodeHostConnection } from '../connection';
-import { CapturedPromise, HostMessage } from '../../common/connection';
+import { CapturedPromise, ServiceMessage } from '../../common/connection';
 
 class TestNodeHostConnection extends NodeHostConnection {
 
@@ -29,11 +29,11 @@ class TestNodeHostConnection extends NodeHostConnection {
 		return this._testSetup.promise;
 	}
 
-	protected handleMessage(message: HostMessage): Promise<void> {
+	protected handleMessage(message: ServiceMessage): Promise<void> {
 		if (TestSetupMessage.is(message)) {
 			this._testSetup.resolve(Object.assign({}, message, { method: undefined }));
 		}
-		return super.handleMessage(message);
+		return Promise.resolve();
 	}
 }
 
