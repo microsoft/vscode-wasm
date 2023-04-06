@@ -17,7 +17,8 @@
 			"runtimeExecutable": "${execPath}",
 			"args": ["--extensionDevelopmentPath=${workspaceRoot}/testbeds/python", "--extensionDevelopmentPath=${workspaceRoot}/wasm-wasi-core"],
 			"outFiles": ["${workspaceRoot}/testbeds/python/out/**/*.js"],
-			"sourceMaps": true
+			"sourceMaps": true,
+			"preLaunchTask": "Build Python Example"
 		},
 		{
 			"type": "extensionHost",

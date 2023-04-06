@@ -271,6 +271,20 @@ class StdoutStream extends StdioStream implements Readable {
 	}
 }
 
+namespace MapDir {
+	export function mapWorkspaceFolders(value: Options['mapDir'] | undefined): boolean {
+		return value !== undefined && (value === true || (value as { folders: boolean; entries: MapDirEntry[] }).folders === true);
+	}
+	export function getMapEntries(value: Options['mapDir'] | undefined): MapDirEntry[] | undefined {
+		if (value === undefined || value === true) {
+			return undefined;
+		}
+		if (Array.isArray(value)) {
+			return value;
+		}
+		return (value as { folders: boolean; entries: MapDirEntry[] }).entries;
+	}
+}
 
 export abstract class WasiProcess {
 
@@ -320,7 +334,9 @@ export abstract class WasiProcess {
 		}
 		const options = this.options;
 		// Map directories
-		if (options.mapDir === true) {
+		const mapWorkspaceFolders = MapDir.mapWorkspaceFolders(options.mapDir);
+		const mapEntries = MapDir.getMapEntries(options.mapDir);
+		if (mapWorkspaceFolders) {
 			const folders = workspace.workspaceFolders;
 			if (folders !== undefined) {
 				if (folders.length === 1) {
@@ -331,8 +347,8 @@ export abstract class WasiProcess {
 					}
 				}
 			}
-		} else if (Array.isArray(options.mapDir)) {
-			for (const entry of options.mapDir) {
+		} else if (mapEntries !== undefined) {
+			for (const entry of mapEntries) {
 				if (!MapDirEntry.is(entry)) {
 					continue;
 				}

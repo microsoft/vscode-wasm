@@ -141,7 +141,7 @@ export interface Options {
 	 * A boolean value of true maps the workspace folders into their default
 	 * location.
 	 */
-	mapDir?: boolean | MapDirEntry[];
+	mapDir?: boolean | MapDirEntry[] | { folders: boolean; entries: MapDirEntry[] };
 
 	/**
 	 * Stdio setup
