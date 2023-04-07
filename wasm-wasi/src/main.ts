@@ -128,7 +128,7 @@ export interface Options {
 	/**
 	 * Command line arguments accessible in the WASM.
 	 */
-	args?: string [];
+	args?: (string | Uri)[];
 
 	/**
 	 * The environment accessible in the WASM.

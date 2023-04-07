@@ -11,9 +11,9 @@ import { WasiCore, api, Options } from '@vscode/wasm-wasi';
 
 export async function activate(_context: ExtensionContext) {
 	const wasiCore: WasiCore = await api();
-	async function run(fileToRun?: string): Promise<void> {
+	async function run(name: string, fileToRun?: Uri): Promise<void> {
 		const pty = wasiCore.createPseudoterminal();
-		const terminal = window.createTerminal({ name: 'Python - Repl', pty, isTransient: true });
+		const terminal = window.createTerminal({ name, pty, isTransient: true });
 		terminal.show(true);
 		const options: Options = {
 			stdio: pty.stdio,
@@ -40,8 +40,20 @@ export async function activate(_context: ExtensionContext) {
 		});
 	}
 
+	commands.registerCommand('testbed-python.runFile', async () => {
+		const editor = window.activeTextEditor;
+		if (editor === undefined) {
+			return;
+		}
+		const document = editor.document;
+		if (document.languageId !== 'python') {
+			return;
+		}
+
+		await run(`Python File`, document.uri);
+	});
 	commands.registerCommand('testbed-python.runInteractive', async () => {
-		await run();
+		await run(`Python Repl`);
 	});
 }
 

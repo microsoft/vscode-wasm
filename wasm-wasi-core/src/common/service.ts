@@ -160,9 +160,12 @@ export interface ProcessWasiService {
 export interface WasiService extends EnvironmentWasiService, ClockWasiService, DeviceWasiService, ProcessWasiService {
 }
 
+export interface WasiOptions extends Omit<Options, 'args'> {
+	args?: string[];
+}
 
 export namespace EnvironmentWasiService {
-	export function create(fileDescriptors: FileDescriptors, programName: string, preStats: IterableIterator<[string, { driver: DeviceDriver; fd: FileDescriptor | undefined }]>, options: Options): EnvironmentWasiService {
+	export function create(fileDescriptors: FileDescriptors, programName: string, preStats: IterableIterator<[string, { driver: DeviceDriver; fd: FileDescriptor | undefined }]>, options: WasiOptions): EnvironmentWasiService {
 
 		const $encoder: RAL.TextEncoder = RAL().TextEncoder.create(options?.encoding);
 		const $preStatDirnames: Map<fd, string> = new Map();

@@ -14,7 +14,7 @@ import { FileDescriptor, FileDescriptors } from './fileDescriptor';
 import * as vscfs from './vscodeFileSystemDriver';
 import * as tdd from './terminalDriver';
 import * as pdd from './pipeDriver';
-import { DeviceWasiService, ProcessWasiService, EnvironmentWasiService, WasiService, Clock, ClockWasiService } from './service';
+import { DeviceWasiService, ProcessWasiService, EnvironmentWasiService, WasiService, Clock, ClockWasiService, WasiOptions } from './service';
 import WasiKernel, { DeviceDrivers } from './kernel';
 import { Errno, Lookupflags, exitcode } from './wasi';
 import { CharacterDeviceDriver } from './deviceDriver';
@@ -332,10 +332,11 @@ export abstract class WasiProcess {
 		if (this.state !== 'created') {
 			throw new Error('WasiProcess already initialized or running');
 		}
-		const options = this.options;
+
+
 		// Map directories
-		const mapWorkspaceFolders = MapDir.mapWorkspaceFolders(options.mapDir);
-		const mapEntries = MapDir.getMapEntries(options.mapDir);
+		const mapWorkspaceFolders = MapDir.mapWorkspaceFolders(this.options.mapDir);
+		const mapEntries = MapDir.getMapEntries(this.options.mapDir);
 		if (mapWorkspaceFolders) {
 			const folders = workspace.workspaceFolders;
 			if (folders !== undefined) {
@@ -347,7 +348,9 @@ export abstract class WasiProcess {
 					}
 				}
 			}
-		} else if (mapEntries !== undefined) {
+		}
+
+		if (mapEntries !== undefined) {
 			for (const entry of mapEntries) {
 				if (!MapDirEntry.is(entry)) {
 					continue;
@@ -355,12 +358,42 @@ export abstract class WasiProcess {
 				this.mapDirEntry(entry);
 			}
 		}
+
+		const args: undefined | string[] = this.options.args !== undefined ? [] : undefined;
+		if (this.options.args !== undefined && args !== undefined) {
+			const path = RAL().path;
+			const uriToMountPoint: [string, string][] = [];
+			for (const [mountPoint, { driver }] of this.preOpenDirectories) {
+				let vsc_uri = driver.uri.toString(true);
+				if (!vsc_uri.endsWith(path.sep)) {
+					vsc_uri += path.sep;
+				}
+				uriToMountPoint.push([vsc_uri, mountPoint]);
+			}
+			for (const arg of this.options.args) {
+				if (typeof arg === 'string') {
+					args.push(arg);
+				} else if (arg instanceof Uri) {
+					const arg_str = arg.toString(true);
+					for (const [uri, mountPoint] of uriToMountPoint) {
+						if (arg_str.startsWith(uri)) {
+							args.push(path.join(mountPoint, arg_str.substring(uri.length)));
+						}
+					}
+				} else {
+					throw new Error('Invalid argument type');
+				}
+			}
+		}
+
 		// Setup stdio file descriptors
-		const stdio: $Stdio = Object.assign({ in: 'console', out: 'console', err: 'console'}, options.stdio);
+		const stdio: $Stdio = Object.assign({ in: 'console', out: 'console', err: 'console'}, this.options.stdio);
 		await this.handleConsole(stdio);
 		await this.handleTerminal(stdio);
 		await this.handleFiles(stdio);
 		await this.handlePipes(stdio);
+
+		const options: WasiOptions = Object.assign({}, (delete Object.assign({}, this.options).args), { args });
 
 		this.environmentService = EnvironmentWasiService.create(
 			this.fileDescriptors, this.programName,
