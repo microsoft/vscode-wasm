@@ -40,9 +40,8 @@
 		"./sync-api-client",
 		"./sync-api-service",
 		"./sync-api-tests",
-		"./wasm-wasi",
-		"./wasm-wasi-tests",
 		"./wasm-wasi-core",
+		"./wasm-wasi",
 		"./tools",
 		"./testbeds"
 	],

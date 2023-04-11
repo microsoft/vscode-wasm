@@ -39,7 +39,7 @@
 		"@types/path-browserify": "^1.0.0",
 		"path-browserify": "^1.0.1",
 		"@vscode/test-electron": "^2.3.0",
-		"@vscode/test-web": "^0.0.36",
+		"@vscode/test-web": "^0.0.41",
 		"@types/glob": "^8.1.0",
 		"glob": "^9.3.1"
 	},
@@ -52,7 +52,7 @@
 		"clean": "node ./build/bin/all.js run clean",
 		"lint": "node ./build/bin/all.js run lint",
 		"esbuild:apiTests": "cd sync-api-tests && npm run esbuild && cd ..",
-		"test": "cd sync-api-common && npm run test && cd ../sync-api-tests && npm run test && cd ../wasm-wasi-tests && npm run test && cd ../wasm-wasi-core && npm run test && cd ..",
+		"test": "cd sync-api-common && npm run test && cd ../sync-api-tests && npm run test && cd ../wasm-wasi-core && npm run test && cd ..",
 		"test:apiWebTests": "cd sync-api-tests && npm run test:runWebTests && cd ..",
 		"tsconfig-gen": "tsconfig-gen --file .tsconfigrc.js",
 		"validate:versions": "node ./tools/lib/validate-versions.js",

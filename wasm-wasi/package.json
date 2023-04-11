@@ -1,44 +1,43 @@
 {
 	"name": "@vscode/wasm-wasi",
-	"version": "0.9.0",
-	"description": "A WASI implementation that uses VS Code's extension host as the implementing API",
+	"version": "0.11.0",
+	"description": "An API facade for the WASM WASI CORE VS Code extension",
 	"engines": {
+		"node": ">=16.14.2",
 		"vscode": "^1.71.0"
 	},
-	"main": "./lib/node/main.js",
-	"browser": {
-		"./lib/node/main.js": "./lib/browser/main.js"
-	},
-	"typings": "./lib/common/api.d.ts",
+	"main": "./lib/main.js",
+	"typings": "./lib/main.d.ts",
 	"repository": {
 		"type": "git",
 		"url": "git+https://github.com/microsoft/vscode-wasm.git"
 	},
 	"keywords": [
-		"vscode",
-		"wasm",
-		"wasi"
+		"VSCode",
+		"API"
 	],
-	"author": "MS",
+	"author": "Visual Studio Code Team",
 	"license": "MIT",
 	"bugs": {
 		"url": "https://github.com/microsoft/vscode-wasm/issues"
 	},
-	"homepage": "https://github.com/microsoft/vscode-wasm#readme",
+	"homepage": "https://github.com/microsoft/vscode-wasi#readme",
+	"enabledApiProposals": [
+	],
 	"dependencies": {
-		"vscode-uri": "^3.0.7",
-		"@vscode/sync-api-client": "0.9.0"
 	},
-	"devDependencies": {},
+	"devDependencies": {
+		"@types/vscode": "1.71.0"
+	},
 	"scripts": {
 		"prepublishOnly": "echo \"⛔ Can only publish from a secure pipeline ⛔\" && node ../build/npm/fail",
 		"prepack": "npm run all:publish",
 		"compile": "node ../node_modules/typescript/lib/tsc.js -b ./tsconfig.json",
 		"compile:publish": "node ../node_modules/typescript/lib/tsc.js -b ./tsconfig.publish.json",
 		"watch": "node ../node_modules/typescript/lib/tsc.js -b ./tsconfig.watch.json -w",
-		"clean": "node ../node_modules/rimraf/bin.js lib && node ../node_modules/rimraf/bin.js dist",
+		"clean": "node ../node_modules/rimraf/bin.js lib",
 		"lint": "node ../node_modules/eslint/bin/eslint.js --ext ts src",
 		"all": "npm run clean && npm run compile && npm run lint",
-		"all:publish": "git clean -xfd . && npm install && npm run compile:publish && npm run lint && cd ../wasm-wasi-tests && npm run all:publish && cd .."
+		"all:publish": "git clean -xfd . && npm install && npm run compile:publish && npm run lint"
 	}
 }

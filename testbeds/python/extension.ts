@@ -3,57 +3,57 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import * as path from 'path';
-import { Worker } from 'worker_threads';
+import fs from 'node:fs/promises';
+import path from 'node:path';
 
-import { commands, ExtensionContext, Terminal, window } from 'vscode';
-
-import { ServiceConnection } from '@vscode/sync-api-common/node';
-import { Requests, ApiService, ApiServiceConnection, ServicePseudoTerminal } from '@vscode/sync-api-service';
-
-const connectionState: Map<number, [Worker, ApiServiceConnection, ApiService, Terminal]> = new Map();
+import { commands, ExtensionContext, Uri, window } from 'vscode';
+import { WasiCore, api, Options } from '@vscode/wasm-wasi';
 
 export async function activate(_context: ExtensionContext) {
+	const wasiCore: WasiCore = await api();
+	async function run(name: string, fileToRun?: Uri): Promise<void> {
+		const pty = wasiCore.createPseudoterminal();
+		const terminal = window.createTerminal({ name, pty, isTransient: true });
+		terminal.show(true);
+		const options: Options = {
+			stdio: pty.stdio,
+			mapDir: {
+				folders: true,
+				entries: [
+					{
+						vscode_fs: Uri.file(path.join(path.sep, 'home', 'dirkb', 'bin', 'wasm', 'Python-3.11.0')),
+						mountPoint: path.posix.sep
+					}
+				]
+			},
+			env: {
+ 				PYTHONPATH: '/workspace'
+ 			},
+			args: fileToRun !== undefined ? ['-X', 'utf8', fileToRun] : ['-X', 'utf8']
+		};
+		const filename = path.join(path.sep, 'home', 'dirkb', 'bin', 'wasm', 'Python-3.11.0', 'python.wasm');
+		const bits = await fs.readFile(filename);
+		const module = await WebAssembly.compile(bits);
+		const process = await wasiCore.createProcess('python', module, options);
+		process.run().catch(err => {
+			void window.showErrorMessage(err.message);
+		});
+	}
 
-	commands.registerCommand('testbed-python.runFile', () => {
-		const activeDocument = window.activeTextEditor?.document;
-		if (activeDocument === undefined || activeDocument.languageId !== 'python') {
+	commands.registerCommand('testbed-python.runFile', async () => {
+		const editor = window.activeTextEditor;
+		if (editor === undefined) {
+			return;
+		}
+		const document = editor.document;
+		if (document.languageId !== 'python') {
 			return;
 		}
 
-		const key = Date.now();
-		const worker = new Worker(path.join(__dirname, './worker.js'));
-		const connection: ApiServiceConnection = new ServiceConnection<Requests, ApiServiceConnection.ReadyParams>(worker);
-		const apiService = new ApiService('python', connection, {
-			exitHandler: (_rval) => {
-				connectionState.delete(key);
-				process.nextTick(() => worker.terminate());
-			}
-		});
-		const pty = ServicePseudoTerminal.create();
-		apiService.registerCharacterDeviceDriver(pty, true);
-		const terminal = window.createTerminal({ name: 'Run Python', pty: pty });
-		terminal.show();
-		connectionState.set(key, [worker, connection, apiService, terminal]);
-		apiService.signalReady();
+		await run(`Python File`, document.uri);
 	});
-
-	commands.registerCommand('testbed-python.runInteractive', () => {
-		const key = Date.now();
-		const worker = new Worker(path.join(__dirname, './worker.js'));
-		const connection: ApiServiceConnection = new ServiceConnection<Requests, ApiServiceConnection.ReadyParams>(worker);
-		const apiService = new ApiService('python', connection, {
-			exitHandler: (_rval) => {
-				connectionState.delete(key);
-				process.nextTick(() => worker.terminate());
-			}
-		});
-		const pty = ServicePseudoTerminal.create();
-		apiService.registerCharacterDeviceDriver(pty, true);
-		const terminal = window.createTerminal({ name: 'Python Shell', pty: pty });
-		terminal.show();
-		connectionState.set(key, [worker, connection, apiService, terminal]);
-		apiService.signalReady();
+	commands.registerCommand('testbed-python.runInteractive', async () => {
+		await run(`Python Repl`);
 	});
 }
 

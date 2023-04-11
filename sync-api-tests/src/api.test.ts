@@ -63,19 +63,26 @@ export function contribute(workerResolver: (testCase: string) => string, scheme:
 	}
 
 	suite('API Tests', () => {
-		const folder = getFolder();
-		const textFile: Uri = joinPath(folder.uri, 'test.txt');
-		const toDelete: Uri = joinPath(folder.uri, 'toDelete.txt');
-		const directory: Uri = joinPath(folder.uri, 'directory');
-		const entry1 = joinPath(directory, 'entry1.txt');
-		const entry2 = joinPath(directory, 'entry2.txt');
-		const entry3 = joinPath(directory, 'entry3.txt');
-
 		const encoder = RAL().TextEncoder.create();
 		const empty = encoder.encode('');
 
+		let folder!: vscode.WorkspaceFolder;
+		let textFile!: Uri;
+		let toDelete!: Uri;
+		let directory!: Uri;
+		let entry1!: Uri;
+		let entry2!: Uri;
+		let entry3!: Uri;
 		// Setting up test files in workspace
 		suiteSetup(async () => {
+			folder = getFolder();
+			console.log(folder.toString());
+			textFile = joinPath(folder.uri, 'test.txt');
+			toDelete = joinPath(folder.uri, 'toDelete.txt');
+			directory = joinPath(folder.uri, 'directory');
+			entry1 = joinPath(directory, 'entry1.txt');
+			entry2 = joinPath(directory, 'entry2.txt');
+			entry3 = joinPath(directory, 'entry3.txt');
 			const fileSystem = vscode.workspace.fs;
 			await fileSystem.writeFile(textFile, encoder.encode('test content'));
 			await fileSystem.writeFile(toDelete, empty);

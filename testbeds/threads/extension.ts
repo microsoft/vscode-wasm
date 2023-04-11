@@ -3,18 +3,12 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { commands, extensions, window } from 'vscode';
-import { WasiCore } from './wasiCore';
+import { commands, window } from 'vscode';
+import { WasiCore, api } from '@vscode/wasm-wasi';
 import { binary } from './wasm';
 
 export async function activate() {
-	const wasiCoreExt = extensions.getExtension('ms-vscode.wasm-wasi-core');
-	if (wasiCoreExt === undefined) {
-		window.showErrorMessage('The WASI core extension is required to run this testbed.');
-		return;
-	}
-
-	const wasiCore: WasiCore =  await wasiCoreExt.activate();
+	const wasiCore: WasiCore = await api();
 	commands.registerCommand('testbed-threads.run', async () => {
 		const pty = wasiCore.createPseudoterminal();
 		const terminal = window.createTerminal({ name: 'threads', pty, isTransient: true });

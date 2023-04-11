@@ -1266,6 +1266,11 @@ export type prestat = {
 	get preopentype(): preopentype;
 
 	/**
+	 * Gets the pre-open type.
+	 */
+	set preopentype(value: preopentype);
+
+	/**
 	 * Gets the length of the pre opened directory name.
 	 */
 	get len(): size;
@@ -1295,6 +1300,9 @@ export namespace Prestat {
 			get $ptr(): ptr { return ptr; },
 			get preopentype(): preopentype {
 				return memory.getUint8(ptr + offsets.tag);
+			},
+			set preopentype(value: preopentype) {
+				memory.setUint8(ptr + offsets.tag, value);
 			},
 			get len(): size {
 				return memory.getUint32(ptr + offsets.len, true);
@@ -1909,8 +1917,8 @@ export namespace WasiPath {
 	export const $ptr = Ptr.$param;
 	export const $len = Size.$param;
 
-	export function createTransfer(path_len: size): ArgumentTransfer {
-		return Bytes.createTransfer(path_len, MemoryTransferDirection.param);
+	export function createTransfer(path_len: size, direction: MemoryTransferDirection): ArgumentTransfer {
+		return Bytes.createTransfer(path_len, direction);
 	}
 }
 
@@ -2277,7 +2285,7 @@ export namespace fd_prestat_dir_name {
 	export const name: string = 'fd_prestat_dir_name';
 	export const signature = WasiFunctionSignature.create([Fd.$param, WasiPath.$ptr, WasiPath.$len]);
 	export function transfers(_memory: DataView, _pathPtr: ptr<byte[]>, pathLen: size): ArgumentsTransfer {
-		return ArgumentsTransfer.create([WasiPath.createTransfer(pathLen)]);
+		return ArgumentsTransfer.create([WasiPath.createTransfer(pathLen, MemoryTransferDirection.result)]);
 	}
 	export type ServiceSignature = (memory: ArrayBuffer, fd: fd, pathPtr: ptr<byte[]>, pathLen: size) => Promise<errno>;
 	WasiFunctions.add(fd_prestat_dir_name);
@@ -2456,7 +2464,7 @@ export namespace path_create_directory {
 	export const name: string = 'path_create_directory';
 	export const signature = WasiFunctionSignature.create([Fd.$param, WasiPath.$ptr, WasiPath.$len]);
 	export function transfers(_memory: DataView, _path_ptr: ptr<byte[]>, path_len: size): ArgumentsTransfer {
-		return ArgumentsTransfer.create([WasiPath.createTransfer(path_len)]);
+		return ArgumentsTransfer.create([WasiPath.createTransfer(path_len, MemoryTransferDirection.param)]);
 	}
 	export type ServiceSignature = (memory: ArrayBuffer, fd: fd, path_ptr: ptr<byte[]>, path_len: size) => Promise<errno>;
 	WasiFunctions.add(path_create_directory);
@@ -2477,7 +2485,7 @@ export namespace path_filestat_get {
 	export const name: string = 'path_filestat_get';
 	export const signature = WasiFunctionSignature.create([Fd.$param, Lookupflags.$param, WasiPath.$ptr, WasiPath.$len, Filestat.$ptr]);
 	export function transfers(_memory: DataView, _path_ptr: ptr<byte[]>, path_len: size): ArgumentsTransfer {
-		return ArgumentsTransfer.create([WasiPath.createTransfer(path_len), Filestat.$transfer]);
+		return ArgumentsTransfer.create([WasiPath.createTransfer(path_len, MemoryTransferDirection.param), Filestat.$transfer]);
 	}
 	export type ServiceSignature = (memory: ArrayBuffer, fd: fd, flags: lookupflags, path_ptr: ptr<byte[]>, path_len: size, filestat_ptr: ptr) => Promise<errno>;
 	WasiFunctions.add(path_filestat_get);
@@ -2500,7 +2508,7 @@ export namespace path_filestat_set_times {
 	export const name: string = 'path_filestat_set_times';
 	export const signature = WasiFunctionSignature.create([Fd.$param, Lookupflags.$param, WasiPath.$ptr, WasiPath.$len, Timestamp.$param, Timestamp.$param, Fstflags.$param]);
 	export function transfers(_memory: DataView, _path_ptr: ptr<byte[]>, path_len: size): ArgumentsTransfer {
-		return ArgumentsTransfer.create([WasiPath.createTransfer(path_len)]);
+		return ArgumentsTransfer.create([WasiPath.createTransfer(path_len, MemoryTransferDirection.param)]);
 	}
 	export type ServiceSignature = (memory: ArrayBuffer, fd: fd, flags: lookupflags, path_ptr: ptr<byte[]>, path_len: size, atim: timestamp, mtim: timestamp, fst_flags: fstflags) => Promise<errno>;
 	WasiFunctions.add(path_filestat_set_times);
@@ -2525,7 +2533,7 @@ export namespace path_link {
 	export const name: string = 'path_link';
 	export const signature = WasiFunctionSignature.create([Fd.$param, Lookupflags.$param, WasiPath.$ptr, WasiPath.$len, Fd.$param, WasiPath.$ptr, WasiPath.$len]);
 	export function transfers(_memory: DataView, _old_path_ptr: ptr<byte[]>, old_path_len: size, _new_path_ptr: ptr<byte[]>, new_path_len: size): ArgumentsTransfer {
-		return ArgumentsTransfer.create([WasiPath.createTransfer(old_path_len), WasiPath.createTransfer(new_path_len)]);
+		return ArgumentsTransfer.create([WasiPath.createTransfer(old_path_len, MemoryTransferDirection.param), WasiPath.createTransfer(new_path_len, MemoryTransferDirection.param)]);
 	}
 	export type ServiceSignature = (memory: ArrayBuffer, old_fd: fd, old_flags: lookupflags, old_path_ptr: ptr<byte[]>, old_path_len: size, new_fd: fd, new_path_ptr: ptr<byte[]>, new_path_len: size) => Promise<errno>;
 	WasiFunctions.add(path_link);
@@ -2561,7 +2569,7 @@ export namespace path_open {
 	export const name: string = 'path_open';
 	export const signature = WasiFunctionSignature.create([Fd.$param, Lookupflags.$param, WasiPath.$ptr, WasiPath.$len, Oflags.$param, Rights.$param, Rights.$param, Fdflags.$param, Fd.$ptr]);
 	export function transfers(_memory: DataView, _path: ptr<byte[]>, pathLen: size): ArgumentsTransfer {
-		return ArgumentsTransfer.create([WasiPath.createTransfer(pathLen), Fd.$transfer]);
+		return ArgumentsTransfer.create([WasiPath.createTransfer(pathLen, MemoryTransferDirection.param), Fd.$transfer]);
 	}
 	export type ServiceSignature = (memory: ArrayBuffer, fd: fd, dirflags: lookupflags, path: ptr<byte[]>, pathLen: size, oflags: oflags, fs_rights_base: rights, fs_rights_inheriting: rights, fdflags: fdflags, fd_ptr: ptr<fd>) => Promise<errno>;
 	WasiFunctions.add(path_open);
@@ -2584,7 +2592,7 @@ export namespace path_readlink {
 	export const name: string = 'path_readlink';
 	export const signature = WasiFunctionSignature.create([Fd.$param, WasiPath.$ptr, WasiPath.$len, Bytes.$ptr, Size.$param, U32.$ptr]);
 	export function transfers(_memory: DataView, _path_ptr: ptr<byte[]>, path_len: size, _buf: ptr<byte[]>, buf_len: size): ArgumentsTransfer {
-		return ArgumentsTransfer.create([WasiPath.createTransfer(path_len), Bytes.createTransfer(buf_len,MemoryTransferDirection.result), U32.$transfer]);
+		return ArgumentsTransfer.create([WasiPath.createTransfer(path_len, MemoryTransferDirection.param), Bytes.createTransfer(buf_len,MemoryTransferDirection.result), U32.$transfer]);
 	}
 	export type ServiceSignature = (memory: ArrayBuffer, fd: fd, path_ptr: ptr<byte[]>, path_len: size, buf: ptr<byte[]>, buf_len: size, result_size_ptr: ptr<u32>) => Promise<errno>;
 	WasiFunctions.add(path_readlink);
@@ -2603,7 +2611,7 @@ export namespace path_remove_directory {
 	export const name: string = 'path_remove_directory';
 	export const signature = WasiFunctionSignature.create([Fd.$param, WasiPath.$ptr, WasiPath.$len]);
 	export function transfers(_memory: DataView, _path_ptr: ptr<byte[]>, path_len: size): ArgumentsTransfer {
-		return ArgumentsTransfer.create([WasiPath.createTransfer(path_len)]);
+		return ArgumentsTransfer.create([WasiPath.createTransfer(path_len, MemoryTransferDirection.param)]);
 	}
 	export type ServiceSignature = (memory: ArrayBuffer, fd: fd, path_ptr: ptr<byte[]>, path_len: size) => Promise<errno>;
 	WasiFunctions.add(path_remove_directory);
@@ -2627,7 +2635,7 @@ export namespace path_rename {
 	export const name: string = 'path_rename';
 	export const signature = WasiFunctionSignature.create([Fd.$param, WasiPath.$ptr, WasiPath.$len, Fd.$param, WasiPath.$ptr, WasiPath.$len]);
 	export function transfers(_memory: DataView, _old_path_ptr: ptr<byte[]>, old_path_len: size, _new_path_ptr: ptr<byte[]>, new_path_len: size): ArgumentsTransfer {
-		return ArgumentsTransfer.create([WasiPath.createTransfer(old_path_len), WasiPath.createTransfer(new_path_len)]);
+		return ArgumentsTransfer.create([WasiPath.createTransfer(old_path_len, MemoryTransferDirection.param), WasiPath.createTransfer(new_path_len, MemoryTransferDirection.param)]);
 	}
 	export type ServiceSignature = (memory: ArrayBuffer, fd: fd, old_path_ptr: ptr<byte[]>, old_path_len: size, new_fd: fd, new_path_ptr: ptr<byte[]>, new_path_len: size) => Promise<errno>;
 	WasiFunctions.add(path_rename);
@@ -2649,7 +2657,7 @@ export namespace path_symlink {
 	export const name: string = 'path_symlink';
 	export const signature = WasiFunctionSignature.create([WasiPath.$ptr, WasiPath.$len, Fd.$param, WasiPath.$ptr, WasiPath.$len]);
 	export function transfers(_memory: DataView, _old_path_ptr: ptr<byte[]>, old_path_len: size, _new_path_ptr: ptr<byte[]>, new_path_len: size): ArgumentsTransfer {
-		return ArgumentsTransfer.create([WasiPath.createTransfer(old_path_len), WasiPath.createTransfer(new_path_len)]);
+		return ArgumentsTransfer.create([WasiPath.createTransfer(old_path_len, MemoryTransferDirection.param), WasiPath.createTransfer(new_path_len, MemoryTransferDirection.param)]);
 	}
 	export type ServiceSignature = (memory: ArrayBuffer, old_path_ptr: ptr<byte[]>, old_path_len: size, fd: fd, new_path_ptr: ptr<byte[]>, new_path_len: size) => Promise<errno>;
 	WasiFunctions.add(path_symlink);
@@ -2668,7 +2676,7 @@ export namespace path_unlink_file {
 	export const name: string = 'path_unlink_file';
 	export const signature = WasiFunctionSignature.create([Fd.$param, WasiPath.$ptr, WasiPath.$len]);
 	export function transfers(_memory: DataView, _path_ptr: ptr<byte[]>, path_len: size): ArgumentsTransfer {
-		return ArgumentsTransfer.create([WasiPath.createTransfer(path_len)]);
+		return ArgumentsTransfer.create([WasiPath.createTransfer(path_len, MemoryTransferDirection.param)]);
 	}
 	export type ServiceSignature = (memory: ArrayBuffer, fd: fd, path_ptr: ptr<byte[]>, path_len: size) => Promise<errno>;
 	WasiFunctions.add(path_unlink_file);

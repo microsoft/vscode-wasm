@@ -22,6 +22,8 @@ export abstract class HostConnection {
 
 	public abstract postMessage(message: WorkerMessage): any;
 
+	public abstract destroy(): void;
+
 	public call(func: WasiFunction, args: (number | bigint)[], wasmMemory: ArrayBuffer, transfers?: MemoryTransfer): errno {
 		const signature = func.signature;
 		if (signature.params.length !== args.length) {

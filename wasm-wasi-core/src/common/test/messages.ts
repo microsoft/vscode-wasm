@@ -3,7 +3,7 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { HostMessage, WorkerMessage } from '../../common/connection';
+import { ServiceMessage, WorkerMessage } from '../../common/connection';
 
 export interface TestsDoneMessage {
 	method: 'testsDone';
@@ -40,7 +40,7 @@ export interface TestSetupMessage {
 }
 
 export namespace TestSetupMessage {
-	export function is(message: HostMessage): message is TestSetupMessage {
+	export function is(message: ServiceMessage): message is TestSetupMessage {
 		const candidate = message as TestSetupMessage;
 		return candidate.method === 'testSetup';
 	}

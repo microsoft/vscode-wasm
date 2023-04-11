@@ -2,9 +2,80 @@
  *  Copyright (c) Microsoft Corporation. All rights reserved.
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
+/// <reference path="../typings/webAssemblyCommon.d.ts" />
 
-import { Pseudoterminal, Uri, Event } from 'vscode';
-import { fdflags, oflags, rights } from './wasi';
+import { Event, Pseudoterminal, Uri, extensions as Extensions } from 'vscode';
+
+type u16 = number;
+export type oflags = u16;
+export namespace Oflags {
+	/**
+	 * No flags.
+	 */
+	export const none = 0;
+
+	/**
+	 * Create file if it does not exist.
+	 */
+	export const creat = 1 << 0;
+
+	/**
+	 * Fail if not a directory.
+	 */
+	export const directory = 1 << 1;
+
+	/**
+	 * Fail if file already exists.
+	 */
+	export const excl = 1 << 2;
+
+	/**
+	 * Truncate file to size 0.
+	 */
+	export const trunc = 1 << 3;
+}
+
+export type fdflags = u16;
+export namespace Fdflags {
+
+	/**
+	 * No flags.
+	 */
+	export const none = 0;
+
+	/**
+	 * Append mode: Data written to the file is always appended to the file's
+	 * end.
+	 */
+	export const append = 1 << 0;
+
+	/**
+	 * Write according to synchronized I/O data integrity completion. Only the
+	 * data stored in the file is synchronized.
+	 */
+	export const dsync = 1 << 1;
+
+	/**
+	 * Non-blocking mode.
+	 */
+	export const nonblock = 1 << 2;
+
+	/**
+	 * Synchronized read I/O operations.
+	 */
+	export const rsync = 1 << 3;
+
+	/**
+	 * Write according to synchronized I/O file integrity completion. In
+	 * addition to synchronizing the data stored in the file, the
+	 * implementation may also synchronously update the file's metadata.
+	 */
+	export const sync = 1 << 4;
+}
+
+export interface Environment {
+	[key: string]: string;
+}
 
 export interface WasiPseudoterminal extends Pseudoterminal {
 	/**
@@ -16,10 +87,6 @@ export interface WasiPseudoterminal extends Pseudoterminal {
 	 * Create stdio
 	 */
 	readonly stdio: Stdio;
-}
-
-export interface Environment {
-	[key: string]: string;
 }
 
 export type StdioFileDescriptor = {
@@ -61,7 +128,7 @@ export interface Options {
 	/**
 	 * Command line arguments accessible in the WASM.
 	 */
-	args?: string [];
+	args?: (string | Uri)[];
 
 	/**
 	 * The environment accessible in the WASM.
@@ -74,7 +141,7 @@ export interface Options {
 	 * A boolean value of true maps the workspace folders into their default
 	 * location.
 	 */
-	mapDir?: boolean | MapDirEntry[];
+	mapDir?: boolean | MapDirEntry[] | { folders: boolean; entries: MapDirEntry[] };
 
 	/**
 	 * Stdio setup
@@ -113,4 +180,13 @@ export interface WasiCore {
 	createPseudoterminal(): WasiPseudoterminal;
 	createProcess(name: string, module: WebAssembly.Module | Promise<WebAssembly.Module>, options?: Options): Promise<WasiProcess>;
 	createProcess(name: string, module: WebAssembly.Module | Promise<WebAssembly.Module>, memory: WebAssembly.MemoryDescriptor | WebAssembly.Memory, options?: Options): Promise<WasiProcess>;
+}
+
+export async function api(): Promise<WasiCore> {
+	const wasiCoreExt = Extensions.getExtension('ms-vscode.wasm-wasi-core');
+	if (wasiCoreExt === undefined) {
+		throw new Error(`Unable to load WASM WASI Core extension.`);
+	}
+	const result: WasiCore = await wasiCoreExt.activate();
+	return result;
 }

@@ -5,16 +5,16 @@
 
 import RAL from '../common/ral';
 import { HostConnection } from '../common/host';
-import { HostMessage, WasiCallMessage, WorkerMessage } from '../common/connection';
+import { ServiceMessage, WasiCallMessage, WorkerMessage } from '../common/connection';
 
-export class BrowserHostConnection extends HostConnection {
+export abstract class BrowserHostConnection extends HostConnection {
 
 	private readonly port: MessagePort | Worker | DedicatedWorkerGlobalScope;
 
 	public constructor(port: MessagePort | Worker | DedicatedWorkerGlobalScope) {
 		super();
 		this.port = port;
-		this.port.onmessage = ((event: MessageEvent<HostMessage>) => {
+		this.port.onmessage = ((event: MessageEvent<ServiceMessage>) => {
 			this.handleMessage(event.data).catch(RAL().console.error);
 		});
 	}
@@ -23,6 +23,9 @@ export class BrowserHostConnection extends HostConnection {
 		this.port.postMessage(message);
 	}
 
-	protected async handleMessage(_message: HostMessage): Promise<void> {
+	public destroy(): void {
+		this.port.onmessage = null;
 	}
+
+	protected abstract handleMessage(_message: ServiceMessage): Promise<void>;
 }

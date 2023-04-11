@@ -4,18 +4,13 @@
  *--------------------------------------------------------------------------------------------*/
 
 import path from 'node:path';
-import fs from 'node:fs/promises';
-import os from 'node:os';
-import * as uuid from 'uuid';
-
 import { runTests } from '@vscode/test-web';
 
 async function main() {
-	const testDir = path.join(os.tmpdir(), uuid.v4());
 	try {
-		await fs.mkdir(testDir, { recursive: true });
 		const workspaceRoot = path.resolve(__dirname, '..', '..', '..', '..');
 		const extensionDevelopmentPath = path.join(workspaceRoot, 'wasm-wasi-core');
+		const folderPath = path.join(workspaceRoot, 'wasm-wasi-core', '.vscode-test-workspace');
 		const extensionTestsPath = path.join(extensionDevelopmentPath, 'dist', 'web', 'test', 'index.js');
 
 		/**
@@ -26,7 +21,7 @@ async function main() {
 			version: 'insiders',
 			extensionDevelopmentPath,
 			extensionTestsPath,
-			folderPath: testDir,
+			folderPath: folderPath,
 			devTools: false,
 			headless: true,
 			// verbose: true,
@@ -36,8 +31,6 @@ async function main() {
 	} catch (err) {
 		console.error('Failed to run tests');
 		process.exitCode = 1;
-	} finally {
-		fs.rm(testDir, { recursive: true }).catch(console.error);
 	}
 }
 

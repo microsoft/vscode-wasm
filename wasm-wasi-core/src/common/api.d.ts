@@ -2,7 +2,7 @@
  *  Copyright (c) Microsoft Corporation. All rights reserved.
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
-/// <reference path="../../types/webAssemblyCommon.d.ts" />
+/// <reference path="../../typings/webAssemblyCommon.d.ts" />
 
 import { Event, Pseudoterminal, Uri } from 'vscode';
 
@@ -64,7 +64,7 @@ export interface Options {
 	/**
 	 * Command line arguments accessible in the WASM.
 	 */
-	args?: string [];
+	args?: (string | Uri)[];
 
 	/**
 	 * The environment accessible in the WASM.
@@ -77,7 +77,7 @@ export interface Options {
 	 * A boolean value of true maps the workspace folders into their default
 	 * location.
 	 */
-	mapDir?: boolean | MapDirEntry[];
+	mapDir?: boolean | MapDirEntry[] | { folders: boolean; entries: MapDirEntry[] };
 
 	/**
 	 * Stdio setup

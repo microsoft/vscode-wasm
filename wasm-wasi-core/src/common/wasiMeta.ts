@@ -3,7 +3,7 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { ptr, u32, u8 } from './baseTypes';
+import { ptr } from './baseTypes';
 
 export enum ParamKind {
 	ptr = 1,
@@ -85,21 +85,6 @@ export type ArgumentTransfer = {
 	readonly memorySize: number;
 	copy: (wasmMemory: ArrayBuffer, from: ptr, transferMemory: SharedArrayBuffer, to: ptr) => ReverseArgumentTransfer | undefined;
 };
-
-export namespace ArgumentTransfer {
-	export function createPathTransfer(path: ptr<u8[]>, path_len: u32): ArgumentTransfer {
-		return {
-			memorySize: path_len,
-			copy: (wasmMemory, from, transferMemory, to) => {
-				if (from !== path) {
-					throw new Error(`Path transfer needs to be used as an instance object`);
-				}
-				new Uint8Array(transferMemory, to, path_len).set(new Uint8Array(wasmMemory, from, path_len));
-				return undefined;
-			}
-		};
-	}
-}
 
 export type ArgumentsTransfer = {
 	items: ArgumentTransfer[];

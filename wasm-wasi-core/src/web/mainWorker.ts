@@ -2,26 +2,31 @@
  *  Copyright (c) Microsoft Corporation. All rights reserved.
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
+import RIL from './ril';
+RIL.install();
 
 import { WasiHost} from '../common/host';
 import { BrowserHostConnection } from './connection';
-import { StartMainMessage, WorkerReadyMessage } from '../common/connection';
+import { CapturedPromise, ServiceMessage, StartMainMessage, WorkerReadyMessage } from '../common/connection';
 
-class WasiMainWorker {
+class MainBrowserHostConnection extends BrowserHostConnection {
 
-	private readonly port: MessagePort | Worker | DedicatedWorkerGlobalScope;
+	private _done: CapturedPromise<void>;
 
-	public constructor(port: MessagePort | Worker | DedicatedWorkerGlobalScope) {
-		this.port = port;
+	constructor(port: MessagePort | Worker | DedicatedWorkerGlobalScope) {
+		super(port);
+		this._done = CapturedPromise.create();
 	}
 
-	public listen(): void {
-		const connection = new BrowserHostConnection(this.port);
-		this.port.onmessage = (async (event: MessageEvent<StartMainMessage>) => {
-			const message = event.data;
+	public done(): Promise<void> {
+		return this._done.promise;
+	}
+
+	protected async handleMessage(message: ServiceMessage): Promise<void> {
+		if (StartMainMessage.is(message)) {
 			const module = message.module;
 			const memory = message.memory;
-			const host = WasiHost.create(connection);
+			const host = WasiHost.create(this);
 			const imports: WebAssembly.Imports = {
 				wasi_snapshot_preview1: host,
 				wasi: host
@@ -34,11 +39,17 @@ class WasiMainWorker {
 			const instance  = await WebAssembly.instantiate(module, imports);
 			host.initialize(memory ?? instance);
 			(instance.exports._start as Function)();
-		});
-		const ready: WorkerReadyMessage = { method: 'workerReady' };
-		connection.postMessage(ready);
+			this._done.resolve();
+		}
 	}
 }
 
-const worker = new WasiMainWorker(self);
-worker.listen();
+async function main(port: MessagePort | Worker | DedicatedWorkerGlobalScope): Promise<void> {
+	const connection = new MainBrowserHostConnection(port);
+	const ready: WorkerReadyMessage = { method: 'workerReady' };
+	connection.postMessage(ready);
+	await connection.done();
+	connection.destroy();
+}
+
+main(self).catch(RIL().console.error);

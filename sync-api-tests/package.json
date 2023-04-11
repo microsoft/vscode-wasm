@@ -35,14 +35,8 @@
 		"vscode-uri": "^3.0.7"
 	},
 	"devDependencies": {
-		"@types/glob": "^8.0.1",
-		"@types/path-browserify": "^1.0.0",
 		"@types/uuid": "^9.0.0",
 		"@types/vscode": "1.71.0",
-		"@vscode/test-electron": "^2.2.3",
-		"@vscode/test-web": "0.0.34",
-		"glob": "^8.1.0",
-		"path-browserify": "^1.0.1",
 		"uuid": "^9.0.0",
 		"find-process": "^1.4.7"
 	}

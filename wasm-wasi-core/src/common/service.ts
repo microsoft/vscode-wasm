@@ -11,7 +11,7 @@ import {
 	fd_close, fd_datasync, fd_fdstat_get, fd_fdstat_set_flags, fd_filestat_get, fd_filestat_set_size, fd_filestat_set_times, fd_pread,
 	fd_prestat_dir_name, fd_prestat_get, fd_pwrite, fd_read, fd_readdir, fd_renumber, fd_seek, fd_sync, fd_tell, fd_write, filedelta, filesize, Filestat, filestat, fstflags, Iovec, iovec, Literal, lookupflags, oflags, path_create_directory,
 	path_filestat_get, path_filestat_set_times, path_link, path_open, path_readlink, path_remove_directory, path_rename, path_symlink, path_unlink_file,
-	poll_oneoff, Prestat, prestat, proc_exit, random_get, riflags, rights, Rights, sched_yield, sdflags, siflags, sock_accept, Subclockflags, Subscription, subscription, thread_spawn, timestamp, WasiError, Whence, whence, thread_exit, tid
+	poll_oneoff, Prestat, prestat, proc_exit, random_get, riflags, rights, Rights, sched_yield, sdflags, siflags, sock_accept, Subclockflags, Subscription, subscription, thread_spawn, timestamp, WasiError, Whence, whence, thread_exit, tid, Preopentype
 } from './wasi';
 import { CapturedPromise, Offsets, WasiCallMessage, WorkerDoneMessage, WorkerMessage, WorkerReadyMessage } from './connection';
 import { WasiFunction, WasiFunctions, WasiFunctionSignature } from './wasiMeta';
@@ -160,9 +160,12 @@ export interface ProcessWasiService {
 export interface WasiService extends EnvironmentWasiService, ClockWasiService, DeviceWasiService, ProcessWasiService {
 }
 
+export interface WasiOptions extends Omit<Options, 'args'> {
+	args?: string[];
+}
 
 export namespace EnvironmentWasiService {
-	export function create(fileDescriptors: FileDescriptors, programName: string, preStats: IterableIterator<[string, { driver: DeviceDriver; fd: FileDescriptor | undefined }]>, options: Options): EnvironmentWasiService {
+	export function create(fileDescriptors: FileDescriptors, programName: string, preStats: IterableIterator<[string, { driver: DeviceDriver; fd: FileDescriptor | undefined }]>, options: WasiOptions): EnvironmentWasiService {
 
 		const $encoder: RAL.TextEncoder = RAL().TextEncoder.create(options?.encoding);
 		const $preStatDirnames: Map<fd, string> = new Map();
@@ -245,6 +248,7 @@ export namespace EnvironmentWasiService {
 					$preStatDirnames.set(fileDescriptor.fd, mountPoint);
 					const view = new DataView(memory);
 					const prestat = Prestat.create(view, bufPtr);
+					prestat.preopentype = Preopentype.dir;
 					prestat.len = $encoder.encode(mountPoint).byteLength;
 					return Errno.success;
 				} catch(error) {
