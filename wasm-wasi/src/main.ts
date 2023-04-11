@@ -105,7 +105,11 @@ export type StdioPipeDescriptor = {
 	kind: 'pipe';
 };
 
-export type StdioDescriptor = StdioFileDescriptor | StdioTerminalDescriptor | StdioPipeDescriptor;
+export type StdioConsoleDescriptor = {
+	kind: 'console';
+};
+
+export type StdioDescriptor = StdioFileDescriptor | StdioTerminalDescriptor | StdioPipeDescriptor | StdioConsoleDescriptor;
 
 export type Stdio = {
 	in?: StdioDescriptor;
@@ -176,17 +180,19 @@ export interface WasiProcess {
 	 terminate(): Promise<number>;
 }
 
-export interface WasiCore {
+export interface Wasm {
 	createPseudoterminal(): WasiPseudoterminal;
 	createProcess(name: string, module: WebAssembly.Module | Promise<WebAssembly.Module>, options?: Options): Promise<WasiProcess>;
 	createProcess(name: string, module: WebAssembly.Module | Promise<WebAssembly.Module>, memory: WebAssembly.MemoryDescriptor | WebAssembly.Memory, options?: Options): Promise<WasiProcess>;
 }
 
-export async function api(): Promise<WasiCore> {
-	const wasiCoreExt = Extensions.getExtension('ms-vscode.wasm-wasi-core');
-	if (wasiCoreExt === undefined) {
-		throw new Error(`Unable to load WASM WASI Core extension.`);
+export namespace Wasm {
+	export async function api(): Promise<Wasm> {
+		const wasiCoreExt = Extensions.getExtension('ms-vscode.wasm-wasi-core');
+		if (wasiCoreExt === undefined) {
+			throw new Error(`Unable to load WASM WASI Core extension.`);
+		}
+		const result: Wasm = await wasiCoreExt.activate();
+		return result;
 	}
-	const result: WasiCore = await wasiCoreExt.activate();
-	return result;
 }

@@ -1,0 +1,39 @@
+{
+	"name": "vscode-wasm-wasi-c-example",
+	"private": "true",
+	"publisher": "vscode-samples",
+	"version": "0.1.0",
+	"description": "C Example",
+	"author": "MS",
+	"license": "MIT",
+	"engines": {
+		"vscode": "^1.77.0"
+	},
+	"main": "./extension.js",
+	"activationEvents": [
+	],
+	"extensionDependencies": [
+		"ms-vscode.wasm-wasi-core"
+	],
+	"contributes": {
+		"commands": [
+			{
+				"command": "vscode-wasm-wasi-c-example.run",
+				"category": "WASM Example",
+				"title": "Run C Hello World"
+			}
+		]
+	},
+	"devDependencies": {
+		"@types/vscode": "1.77.0",
+		"@types/node": "16.11.63"
+	},
+	"dependencies": {
+		"@vscode/wasm-wasi": "0.11.0"
+	},
+	"scripts": {
+		"build": "npm run compile:ts && npm run build:wasi",
+		"compile:ts": "tsc -p tsconfig.json",
+		"build:wasi": "clang hello.c -o ./hello.wasm"
+	}
+}

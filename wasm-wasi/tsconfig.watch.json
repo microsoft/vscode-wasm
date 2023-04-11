@@ -26,5 +26,9 @@
     },
     "include": [
         "."
+    ],
+    "exclude": [
+        "./lib",
+        "./example"
     ]
 }
