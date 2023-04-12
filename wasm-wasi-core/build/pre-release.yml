@@ -18,6 +18,7 @@ extends:
   template: azure-pipelines/extension/pre-release.yml@templates
   parameters:
     customNPMRegistry: ''
+    nodeVersion: 16.17.1
     buildSteps:
       - script: |
           npm ci
@@ -27,5 +28,7 @@ extends:
       - script: |
           npm run lint
           npm run compile
+          npm run esbuild
         workingDirectory: $(Build.SourcesDirectory)/wasm-wasi-core
         displayName: "Lint & Compile"
+    workingDirectory: $(Build.SourcesDirectory)/wasm-wasi-core

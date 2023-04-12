@@ -29,7 +29,11 @@ export type StdioPipeDescriptor = {
 	kind: 'pipe';
 };
 
-export type StdioDescriptor = StdioFileDescriptor | StdioTerminalDescriptor | StdioPipeDescriptor;
+export type StdioConsoleDescriptor = {
+	kind: 'console';
+};
+
+export type StdioDescriptor = StdioFileDescriptor | StdioTerminalDescriptor | StdioPipeDescriptor | StdioConsoleDescriptor;
 
 export type Stdio = {
 	in?: StdioDescriptor;

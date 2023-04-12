@@ -90,6 +90,15 @@
 			"preLaunchTask": "Build CoreUtils Example"
 		},
 		{
+			"type": "extensionHost",
+			"request": "launch",
+			"name": "WASM-WASI Example",
+			"runtimeExecutable": "${execPath}",
+			"args": ["--extensionDevelopmentPath=${workspaceRoot}/wasm-wasi/example", "--extensionDevelopmentPath=${workspaceRoot}/wasm-wasi-core"],
+			"outFiles": ["${workspaceRoot}/wasm-wasi/example/*.js"],
+			"sourceMaps": true
+		},
+		{
 			"request": "launch",
 			"type": "node",
 			"name": "test:common",

@@ -262,8 +262,12 @@ const wasm_wasi = {
 		buildInfoFile: '${buildInfoFile}.tsbuildInfo'
 	},
 	compilerOptions: {
-		rootDir: './src'
-	}
+		rootDir: './src',
+	},
+	exclude: [
+		"./lib",
+		"./example"
+	]
 }
 
 /** @type ProjectDescription */

@@ -7,7 +7,7 @@
 import RAL from './ral';
 import { Event, EventEmitter, Uri, WorkspaceFolder, workspace } from 'vscode';
 
-import { MapDirEntry, Options, StdioDescriptor, StdioFileDescriptor } from './api';
+import { MapDirEntry, Options, StdioConsoleDescriptor, StdioDescriptor, StdioFileDescriptor } from './api';
 import { ptr, size, u32 } from './baseTypes';
 import { FileSystemDeviceDriver } from './deviceDriver';
 import { FileDescriptor, FileDescriptors } from './fileDescriptor';
@@ -387,7 +387,8 @@ export abstract class WasiProcess {
 		}
 
 		// Setup stdio file descriptors
-		const stdio: $Stdio = Object.assign({ in: 'console', out: 'console', err: 'console'}, this.options.stdio);
+		const con: StdioConsoleDescriptor = { kind: 'console' };
+		const stdio: $Stdio = Object.assign({ in: con, out: con, err: con}, this.options.stdio);
 		await this.handleConsole(stdio);
 		await this.handleTerminal(stdio);
 		await this.handleFiles(stdio);
