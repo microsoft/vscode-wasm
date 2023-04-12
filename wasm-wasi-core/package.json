@@ -3,7 +3,8 @@
 	"private": "true",
 	"publisher": "ms-vscode",
 	"version": "0.0.1",
-	"description": "An implementation of the WASI Api on top of the VS Code API.",
+	"displayName": "Experimental - WebAssembly Execution Support",
+	"description": "Experimental support to execute WebAssemblies on top of the VS Code API.",
 	"author": "MS",
 	"license": "MIT",
 	"repository": {
@@ -42,6 +43,7 @@
 		"esbuild": "node ./bin/esbuild.js",
 		"test": "npm run test:desktop && npm run test:web",
 		"test:desktop": "node ./lib/desktop/test/runTests.js",
-		"test:web": "npm run esbuild && node ./lib/web/test/runTests.js"
+		"test:web": "npm run esbuild && node ./lib/web/test/runTests.js",
+		"vscode:prepublish": "npm run compile && npm run esbuild"
 	}
 }

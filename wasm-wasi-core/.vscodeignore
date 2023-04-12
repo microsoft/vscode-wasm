@@ -5,7 +5,7 @@ bin/**
 build/**
 lib/**
 src/**
-types/**
+typings/**
 .gitignore
 contributing.md
 **/*.ts
