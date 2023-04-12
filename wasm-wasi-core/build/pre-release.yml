@@ -18,8 +18,7 @@ extends:
   template: azure-pipelines/extension/pre-release.yml@templates
   parameters:
     customNPMRegistry: ''
-    nodeVersion:
-      - 16.17.1
+    nodeVersion: 16.17.1
     buildSteps:
       - script: |
           npm ci
