@@ -77,16 +77,23 @@ export interface Environment {
 	[key: string]: string;
 }
 
-export interface WasiPseudoterminal extends Pseudoterminal {
-	/**
-	 * Clients must not use this property. It is here to ensure correct typing.
-	 */
-	readonly _wasiPseudoterminalBrand: any;
-
+export interface WasmPseudoterminal extends Pseudoterminal {
 	/**
 	 * Create stdio
 	 */
 	readonly stdio: Stdio;
+
+	/**
+	 * Read a line from the terminal.
+	 */
+	readline(): Promise<string>;
+
+	/**
+	 * Write a string to the terminal.
+	 *
+	 * @param str The string to write to the terminal.
+	 */
+	write(str: string): Promise<void>;
 }
 
 export type StdioFileDescriptor = {
@@ -98,7 +105,7 @@ export type StdioFileDescriptor = {
 
 export type StdioTerminalDescriptor = {
 	kind: 'terminal';
-	terminal: WasiPseudoterminal;
+	terminal: WasmPseudoterminal;
 };
 
 export type StdioPipeDescriptor = {
@@ -161,7 +168,7 @@ export interface Readable {
 	onData: Event<Uint8Array>;
 }
 
-export interface WasiProcess {
+export interface WasmProcess {
 
 	readonly stdin: Writable | undefined;
 
@@ -170,20 +177,20 @@ export interface WasiProcess {
 	readonly stderr: Readable | undefined;
 
 	/**
-	 * Runs the WASI process.
+	 * Runs the Wasm process.
 	 */
 	run(): Promise<number>;
 
 	/**
-	 * Terminate the WASI process.
+	 * Terminate the Wasm process.
 	 */
 	 terminate(): Promise<number>;
 }
 
 export interface Wasm {
-	createPseudoterminal(): WasiPseudoterminal;
-	createProcess(name: string, module: WebAssembly.Module | Promise<WebAssembly.Module>, options?: Options): Promise<WasiProcess>;
-	createProcess(name: string, module: WebAssembly.Module | Promise<WebAssembly.Module>, memory: WebAssembly.MemoryDescriptor | WebAssembly.Memory, options?: Options): Promise<WasiProcess>;
+	createPseudoterminal(): WasmPseudoterminal;
+	createProcess(name: string, module: WebAssembly.Module | Promise<WebAssembly.Module>, options?: Options): Promise<WasmProcess>;
+	createProcess(name: string, module: WebAssembly.Module | Promise<WebAssembly.Module>, memory: WebAssembly.MemoryDescriptor | WebAssembly.Memory, options?: Options): Promise<WasmProcess>;
 }
 
 export namespace Wasm {

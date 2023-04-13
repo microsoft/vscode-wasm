@@ -5,8 +5,8 @@
 /// <reference path="../../typings/webAssemblyCommon.d.ts" />
 
 import { ExtensionContext, Uri } from 'vscode';
-import { WasiProcess, Options, WasiCore } from './api';
-import { WasiPseudoterminal } from './terminal';
+import { WasmProcess, Options, WasmCore } from './api';
+import { WasmPseudoterminal } from './terminal';
 import { WasiProcess as InternalWasiProcess } from './process';
 
 namespace MemoryDescriptor {
@@ -21,12 +21,12 @@ namespace MemoryDescriptor {
 
 export namespace WasiCoreImpl {
 
-	export function create(context: ExtensionContext, construct: new (baseUri: Uri, programName: string, module: WebAssembly.Module | Promise<WebAssembly.Module>, memory: WebAssembly.Memory | WebAssembly.MemoryDescriptor | undefined, options: Options | undefined) => InternalWasiProcess): WasiCore {
+	export function create(context: ExtensionContext, construct: new (baseUri: Uri, programName: string, module: WebAssembly.Module | Promise<WebAssembly.Module>, memory: WebAssembly.Memory | WebAssembly.MemoryDescriptor | undefined, options: Options | undefined) => InternalWasiProcess): WasmCore {
 		return {
-			createPseudoterminal(): WasiPseudoterminal {
-				return WasiPseudoterminal.create();
+			createPseudoterminal(): WasmPseudoterminal {
+				return WasmPseudoterminal.create();
 			},
-			async createProcess(name: string, module: WebAssembly.Module | Promise<WebAssembly.Module>, memoryOrOptions?: WebAssembly.MemoryDescriptor | WebAssembly.Memory | Options, optionsOrMapWorkspaceFolders?: Options | boolean): Promise<WasiProcess> {
+			async createProcess(name: string, module: WebAssembly.Module | Promise<WebAssembly.Module>, memoryOrOptions?: WebAssembly.MemoryDescriptor | WebAssembly.Memory | Options, optionsOrMapWorkspaceFolders?: Options | boolean): Promise<WasmProcess> {
 				let memory: WebAssembly.Memory | WebAssembly.MemoryDescriptor | undefined;
 				let options: Options | undefined;
 				if (memoryOrOptions instanceof WebAssembly.Memory || MemoryDescriptor.is(memoryOrOptions)) {

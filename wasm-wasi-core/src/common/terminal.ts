@@ -160,8 +160,7 @@ export enum TerminalMode {
 	inUse = 2
 }
 
-export interface WasiPseudoterminal extends Pseudoterminal {
-	readonly _wasiPseudoterminalBrand: any;
+export interface WasmPseudoterminal extends Pseudoterminal {
 	readonly onDidCtrlC: Event<void>;
 	readonly onDidClose: Event<void>;
 	readonly onAnyKey: Event<void>;
@@ -171,23 +170,24 @@ export interface WasiPseudoterminal extends Pseudoterminal {
 	setMode(mode: TerminalMode): void;
 	setName(name: string): void;
 	read(maxBytesToRead: number): Promise<Uint8Array>;
+	readline(): Promise<string>;
+	write(str: string): Promise<void>;
 	write(bytes: Uint8Array): Promise<number>;
 }
 
-export namespace WasiPseudoterminal {
-	export function is(value: any): value is WasiPseudoterminal {
+export namespace WasmPseudoterminal {
+	export function is(value: any): value is WasmPseudoterminal {
 		return value instanceof WasmPseudoterminalImpl;
 	}
-	export function create(): WasiPseudoterminal {
+	export function create(): WasmPseudoterminal {
 		return new WasmPseudoterminalImpl();
 	}
 }
 
 const terminalRegExp = /(\r\n)|(\n)/gm;
 
-class WasmPseudoterminalImpl implements WasiPseudoterminal {
+class WasmPseudoterminalImpl implements WasmPseudoterminal {
 
-	readonly _wasiPseudoterminalBrand: any;
 	private mode: TerminalMode;
 
 	private readonly _onDidClose: EventEmitter<void>;
@@ -281,7 +281,7 @@ class WasmPseudoterminalImpl implements WasiPseudoterminal {
 		return this.encoder.encode(value);
 	}
 
-	private readline(): Promise<string> {
+	public readline(): Promise<string> {
 		if (this.readlineCallback !== undefined) {
 			throw new Error(`Already in readline mode`);
 		}
@@ -293,9 +293,16 @@ class WasmPseudoterminalImpl implements WasiPseudoterminal {
 		});
 	}
 
-	public write(bytes: Uint8Array): Promise<number> {
-		this.writeString(this.getString(bytes));
-		return Promise.resolve(bytes.byteLength);
+	public write(content: string): Promise<void>;
+	public write(content: Uint8Array): Promise<number>;
+	public write(content: Uint8Array | string): Promise<void> | Promise<number> {
+		if (typeof content === 'string') {
+			this.writeString(content);
+			return Promise.resolve();
+		} else {
+			this.writeString(this.getString(content));
+			return Promise.resolve(content.byteLength);
+		}
 	}
 
 	private writeString(str: string): void {

@@ -1,10 +1,10 @@
 {
-	"name": "wasm-wasi-core",
+	"name": "webshell",
 	"private": "true",
 	"publisher": "ms-vscode",
 	"version": "0.1.0",
-	"displayName": "Experimental - WebAssembly Execution Support",
-	"description": "Experimental support to execute WebAssemblies on top of the VS Code API.",
+	"displayName": "A shell for VS Code for the Web",
+	"description": "A shell for VS Code for the Web - allows executing commands like ls, cat, more, ...",
 	"author": "MS",
 	"license": "MIT",
 	"repository": {
@@ -14,7 +14,7 @@
 	"bugs": {
 		"url": "https://github.com/microsoft/vscode-wasm/issues"
 	},
-	"homepage": "https://github.com/microsoft/vscode-wasm/blob/main/wasm-wasi-core/README.md",
+	"homepage": "https://github.com/microsoft/vscode-wasm/blob/main/webshell/README.md",
 	"keywords": [
 		"vscode",
 		"wasm",
@@ -23,16 +23,23 @@
 	"engines": {
 		"vscode": "^1.76.0"
 	},
-	"main": "./dist/desktop/extension.js",
+	"main": "./lib/desktop/extension.js",
 	"browser": "./dist/web/extension.js",
 	"activationEvents": [],
+	"contributes": {
+		"commands": [
+			{
+				"command": "ms-vscode.webshell.create",
+				"category": "Terminal",
+				"title": "Create New Web Shell"
+			}
+		]
+	},
+	"dependencies": {
+		"@vscode/wasm-wasi": "0.11.0"
+	},
 	"devDependencies": {
-		"@types/vscode": "1.76.0",
-		"@types/uuid": "^9.0.1",
-		"@types/assert": "^1.5.6",
-		"assert": "^2.0.0",
-		"uuid": "^9.0.0",
-		"find-process": "^1.4.7"
+		"@types/vscode": "^1.76.0"
 	},
 	"scripts": {
 		"build": "npm run compile",
@@ -41,7 +48,6 @@
 		"clean": "node ../node_modules/rimraf/bin.js lib && node ../node_modules/rimraf/bin.js dist",
 		"lint": "node ../node_modules/eslint/bin/eslint.js --ext ts src",
 		"esbuild": "node ./bin/esbuild.js",
-		"esbuild:watch": "node ./bin/esbuild.js --watch",
 		"test": "npm run test:desktop && npm run test:web",
 		"test:desktop": "node ./lib/desktop/test/runTests.js",
 		"test:web": "npm run esbuild && node ./lib/web/test/runTests.js",

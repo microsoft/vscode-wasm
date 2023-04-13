@@ -18,7 +18,7 @@ import { DeviceWasiService, ProcessWasiService, EnvironmentWasiService, WasiServ
 import WasiKernel, { DeviceDrivers } from './kernel';
 import { Errno, Lookupflags, exitcode } from './wasi';
 import { CharacterDeviceDriver } from './deviceDriver';
-import { WasiPseudoterminal } from './terminal';
+import { WasmPseudoterminal } from './terminal';
 
 namespace MapDirEntry {
 	export function is(value: any): value is MapDirEntry {
@@ -507,19 +507,19 @@ export abstract class WasiProcess {
 	}
 
 	private async handleTerminal(stdio: $Stdio): Promise<void> {
-		const terminalDevices: Map<WasiPseudoterminal, CharacterDeviceDriver> = new Map();
+		const terminalDevices: Map<WasmPseudoterminal, CharacterDeviceDriver> = new Map();
 		if (stdio.in.kind === 'terminal') {
-			this.fileDescriptors.add(this.getTerminalDevice(terminalDevices, stdio.in.terminal as WasiPseudoterminal).createStdioFileDescriptor(0));
+			this.fileDescriptors.add(this.getTerminalDevice(terminalDevices, stdio.in.terminal as WasmPseudoterminal).createStdioFileDescriptor(0));
 		}
 		if (stdio.out.kind === 'terminal') {
-			this.fileDescriptors.add(this.getTerminalDevice(terminalDevices, stdio.out.terminal as WasiPseudoterminal).createStdioFileDescriptor(1));
+			this.fileDescriptors.add(this.getTerminalDevice(terminalDevices, stdio.out.terminal as WasmPseudoterminal).createStdioFileDescriptor(1));
 		}
 		if (stdio.err.kind === 'terminal') {
-			this.fileDescriptors.add(this.getTerminalDevice(terminalDevices, stdio.err.terminal as WasiPseudoterminal).createStdioFileDescriptor(2));
+			this.fileDescriptors.add(this.getTerminalDevice(terminalDevices, stdio.err.terminal as WasmPseudoterminal).createStdioFileDescriptor(2));
 		}
 	}
 
-	private getTerminalDevice(devices: Map<WasiPseudoterminal, CharacterDeviceDriver>, terminal: WasiPseudoterminal): CharacterDeviceDriver {
+	private getTerminalDevice(devices: Map<WasmPseudoterminal, CharacterDeviceDriver>, terminal: WasmPseudoterminal): CharacterDeviceDriver {
 		let result = devices.get(terminal);
 		if (result === undefined) {
 			result = tdd.create(this.deviceDrivers.next(), terminal);

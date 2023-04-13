@@ -1,0 +1,11 @@
+{
+	"extends": "../.eslintrc.base.json",
+	"root": true,
+	"parserOptions": {
+		"project": ["src/common/tsconfig.json", "src/web/tsconfig.json", "src/desktop/tsconfig.json"]
+	},
+	"rules": {
+		"no-console": "error",
+		"@typescript-eslint/no-floating-promises": "error"
+	}
+}
