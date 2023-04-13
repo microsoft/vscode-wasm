@@ -36,10 +36,12 @@
 		]
 	},
 	"dependencies": {
-		"@vscode/wasm-wasi": "0.11.0"
+		"@vscode/wasm-wasi": "0.11.0",
+		"path-browserify": "^1.0.1"
 	},
 	"devDependencies": {
-		"@types/vscode": "^1.76.0"
+		"@types/vscode": "^1.76.0",
+		"@types/path-browserify": "^1.0.0"
 	},
 	"scripts": {
 		"build": "npm run compile",

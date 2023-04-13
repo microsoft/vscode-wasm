@@ -381,7 +381,8 @@ class WasmPseudoterminalImpl implements WasmPseudoterminal {
 		this.lineBuffer.clear();
 		this.lines.push(line);
 		if (this.readlineCallback !== undefined) {
-			this.readlineCallback(`${this.lines.shift()!}\n`);
+			const result = this.lines.shift()! + '\n';
+			this.readlineCallback(result);
 			this.readlineCallback = undefined;
 		}
 	}

@@ -364,7 +364,7 @@ const testbeds = {
 const root = {
 	name: 'root',
 	path: './',
-	references: [ sync_api_common, sync_api_client, sync_api_service, sync_api_tests, wasm_wasi_core, wasm_wasi, tools ]
+	references: [ sync_api_common, sync_api_client, sync_api_service, sync_api_tests, wasm_wasi_core, wasm_wasi, webshell, tools ]
 };
 
 /** @type CompilerOptions */
