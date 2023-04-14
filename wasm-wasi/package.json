@@ -27,7 +27,7 @@
 	"dependencies": {
 	},
 	"devDependencies": {
-		"@types/vscode": "1.71.0"
+		"@types/vscode": "1.77.0"
 	},
 	"scripts": {
 		"prepublishOnly": "echo \"⛔ Can only publish from a secure pipeline ⛔\" && node ../build/npm/fail",

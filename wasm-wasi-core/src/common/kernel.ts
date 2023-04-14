@@ -18,6 +18,10 @@ export interface DeviceDrivers {
 	getByUri(uri: Uri): DeviceDriver;
 	remove(id: DeviceId): void;
 	removeByUri(uri: Uri): void;
+	size: number;
+	values(): IterableIterator<DeviceDriver>;
+	entries(): IterableIterator<[bigint, DeviceDriver]>;
+	[Symbol.iterator](): IterableIterator<[bigint, DeviceDriver]>;
 }
 
 let deviceCounter: DeviceId = 1n;
@@ -82,6 +86,22 @@ class DeviceDriversImpl {
 		}
 		this.devices.delete(driver.id);
 		this.devicesByUri.delete(key);
+	}
+
+	public get size(): number {
+		return this.devices.size;
+	}
+
+	public values(): IterableIterator<DeviceDriver> {
+		return this.devices.values();
+	}
+
+	public entries(): IterableIterator<[bigint, DeviceDriver]> {
+		return this.devices.entries();
+	}
+
+	public [Symbol.iterator](): IterableIterator<[bigint, DeviceDriver]> {
+		return this.entries();
 	}
 }
 
@@ -155,6 +175,56 @@ class LocalDeviceDrivers implements DeviceDrivers {
 			return;
 		}
 		this.nextDrivers.removeByUri(uri);
+	}
+
+	public get size(): number {
+		return this.devices.size + this.nextDrivers.size;
+	}
+
+	public entries(): IterableIterator<[bigint, DeviceDriver]> {
+		let local: IterableIterator<[bigint, DeviceDriver]> | undefined = this.devices.entries();
+		const next = this.nextDrivers.entries();
+		const iterator: IterableIterator<[bigint, DeviceDriver]> = {
+			[Symbol.iterator]: () => {
+				return iterator;
+			},
+			next: (): IteratorResult<[bigint, DeviceDriver]> => {
+				if (local !== undefined) {
+					const result = local.next();
+					if (!result.done) {
+						return result;
+					}
+					local = undefined;
+				}
+				return next.next();
+			}
+		};
+		return iterator;
+	}
+
+	public values(): IterableIterator<DeviceDriver> {
+		let local: IterableIterator<DeviceDriver> | undefined = this.devices.values();
+		const next = this.nextDrivers.values();
+		const iterator: IterableIterator<DeviceDriver> = {
+			[Symbol.iterator]: () => {
+				return iterator;
+			},
+			next: (): IteratorResult<DeviceDriver> => {
+				if (local !== undefined) {
+					const result = local.next();
+					if (!result.done) {
+						return result;
+					}
+					local = undefined;
+				}
+				return next.next();
+			}
+		};
+		return iterator;
+	}
+
+	public [Symbol.iterator](): IterableIterator<[bigint, DeviceDriver]> {
+		return this.entries();
 	}
 }
 

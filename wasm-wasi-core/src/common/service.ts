@@ -165,7 +165,7 @@ export interface WasiOptions extends Omit<Options, 'args'> {
 }
 
 export namespace EnvironmentWasiService {
-	export function create(fileDescriptors: FileDescriptors, programName: string, preStats: IterableIterator<[string, { driver: DeviceDriver; fd: FileDescriptor | undefined }]>, options: WasiOptions): EnvironmentWasiService {
+	export function create(fileDescriptors: FileDescriptors, programName: string, preStats: IterableIterator<[string, { driver: DeviceDriver; fileDescriptor: FileDescriptor | undefined }]>, options: WasiOptions): EnvironmentWasiService {
 
 		const $encoder: RAL.TextEncoder = RAL().TextEncoder.create(options?.encoding);
 		const $preStatDirnames: Map<fd, string> = new Map();
@@ -243,7 +243,7 @@ export namespace EnvironmentWasiService {
 					}
 					const [ mountPoint, value ] = next.value;
 					const fileDescriptor = await value.driver.fd_create_prestat_fd(fd);
-					value.fd = fileDescriptor;
+					value.fileDescriptor = fileDescriptor;
 					fileDescriptors.add(fileDescriptor);
 					$preStatDirnames.set(fileDescriptor.fd, mountPoint);
 					const view = new DataView(memory);

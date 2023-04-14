@@ -80,8 +80,8 @@ export function createWasiService(workspaceContent: WorkspaceContent): WasiServi
 	const deviceDrivers = WasiKernel.deviceDrivers;
 	const fileSystem = vscfs.create(deviceDrivers.next(), workspaceContent.root);
 	deviceDrivers.add(fileSystem);
-	const preOpenDirectories: Map<string, { driver: FileSystemDeviceDriver; fd: FileDescriptor | undefined }> =  new Map([
-		['/workspace', { driver: fileSystem, fd: undefined }]
+	const preOpenDirectories: Map<string, { driver: FileSystemDeviceDriver; fileDescriptor: FileDescriptor | undefined }> =  new Map([
+		['/workspace', { driver: fileSystem, fileDescriptor: undefined }]
 	]);
 	const env: Environment = { 'var1': 'value1', 'var2': 'value2' };
 	const options: WasiOptions = {

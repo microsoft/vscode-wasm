@@ -644,7 +644,7 @@ export function create(deviceId: DeviceId, baseUri: Uri): FileSystemDeviceDriver
 				await writeContent(node, newContent);
 			}
 		},
-		fd_filestat_set_times(_fileDescriptor: FileDescriptor, _atim: bigint, _mtim: bigint, _fst_flags: number): Promise<void> {
+		fd_filestat_set_times(_fileDescriptor: FileDescriptor, _atim: bigint, _mtim: bigint, _fst_flags: fstflags): Promise<void> {
 			// For new we do nothing. We could cache the timestamp in memory
 			// But we would loose them during reload. We could also store them
 			// in local storage

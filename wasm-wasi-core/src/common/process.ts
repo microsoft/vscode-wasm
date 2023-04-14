@@ -12,6 +12,7 @@ import { ptr, size, u32 } from './baseTypes';
 import { FileSystemDeviceDriver } from './deviceDriver';
 import { FileDescriptor, FileDescriptors } from './fileDescriptor';
 import * as vscfs from './vscodeFileSystemDriver';
+import * as vrfs from './virtualRootFS';
 import * as tdd from './terminalDriver';
 import * as pdd from './pipeDriver';
 import { DeviceWasiService, ProcessWasiService, EnvironmentWasiService, WasiService, Clock, ClockWasiService, WasiOptions } from './service';
@@ -297,7 +298,7 @@ export abstract class WasiProcess {
 	private readonly fileDescriptors: FileDescriptors;
 	private environmentService!: EnvironmentWasiService;
 	private processService!: ProcessWasiService;
-	private readonly preOpenDirectories: Map<string, { driver: FileSystemDeviceDriver; fd: FileDescriptor | undefined }>;
+	private readonly preOpenDirectories: Map<string, { driver: FileSystemDeviceDriver; fileDescriptor: FileDescriptor | undefined }>;
 
 	private _stdin: StdinStream | undefined;
 	private _stdout: StdoutStream | undefined;
@@ -357,6 +358,22 @@ export abstract class WasiProcess {
 				}
 				this.mapDirEntry(entry);
 			}
+		}
+
+		let needsRootFs = false;
+		for (const mountPoint of this.preOpenDirectories.keys()) {
+			if (mountPoint === '/') {
+				if (this.preOpenDirectories.size > 1) {
+					throw new Error(`Cannot map root directory when other directories are mapped`);
+				} else {
+					needsRootFs = true;
+				}
+			}
+		}
+		if (needsRootFs) {
+			const driver = vrfs.create(this.deviceDrivers.next(), this.preOpenDirectories);
+			this.preOpenDirectories.set('/', { driver: driver, fileDescriptor: undefined });
+			this.deviceDrivers.add(driver);
 		}
 
 		const args: undefined | string[] = this.options.args !== undefined ? [] : undefined;
@@ -491,7 +508,7 @@ export abstract class WasiProcess {
 		} else {
 			deviceDriver = this.deviceDrivers.getByUri(entry.vscode_fs) as FileSystemDeviceDriver;
 		}
-		this.preOpenDirectories.set(entry.mountPoint, { driver: deviceDriver, fd: undefined });
+		this.preOpenDirectories.set(entry.mountPoint, { driver: deviceDriver, fileDescriptor: undefined });
 	}
 
 	private async handleConsole(stdio: $Stdio): Promise<void> {

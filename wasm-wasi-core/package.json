@@ -21,13 +21,13 @@
 		"wasi"
 	],
 	"engines": {
-		"vscode": "^1.76.0"
+		"vscode": "^1.77.0"
 	},
 	"main": "./dist/desktop/extension.js",
 	"browser": "./dist/web/extension.js",
 	"activationEvents": [],
 	"devDependencies": {
-		"@types/vscode": "1.76.0",
+		"@types/vscode": "1.77.0",
 		"@types/uuid": "^9.0.1",
 		"@types/assert": "^1.5.6",
 		"assert": "^2.0.0",
