@@ -5,25 +5,40 @@
 
 import { Uri } from 'vscode';
 import { DeviceId, FileSystemDeviceDriver, NoSysDeviceDriver, ReaddirEntry } from './deviceDriver';
-import { FdProvider, FileDescriptor } from './fileDescriptor';
-import { WasiError, Filetype, fdstat, filestat, fstflags, lookupflags, oflags, rights, fdflags } from './wasi';
+import { BaseFileDescriptor, FdProvider, FileDescriptor } from './fileDescriptor';
+import { WasiError, Filetype, fdstat, filestat, fstflags, lookupflags, oflags, rights, fdflags, fd, Rights } from './wasi';
 import { Errno } from './wasi';
+
+const DirectoryBaseRights: rights = Rights.fd_fdstat_set_flags | Rights.path_create_directory |
+		Rights.path_create_file | Rights.path_link_source | Rights.path_link_target | Rights.path_open |
+		Rights.fd_readdir | Rights.path_readlink | Rights.path_rename_source | Rights.path_rename_target |
+		Rights.path_filestat_get | Rights.path_filestat_set_size | Rights.path_filestat_set_times |
+		Rights.fd_filestat_get | Rights.fd_filestat_set_times | Rights.path_remove_directory | Rights.path_unlink_file |
+		Rights.path_symlink;
+
+const FileBaseRights: rights = Rights.fd_datasync | Rights.fd_read | Rights.fd_seek | Rights.fd_fdstat_set_flags |
+		Rights.fd_sync | Rights.fd_tell | Rights.fd_write | Rights.fd_advise | Rights.fd_allocate | Rights.fd_filestat_get |
+		Rights.fd_filestat_set_size | Rights.fd_filestat_set_times | Rights.poll_fd_readwrite;
+
+const DirectoryInheritingRights: rights = DirectoryBaseRights | FileBaseRights;
+
+class DirectoryFileDescriptor extends BaseFileDescriptor {
+
+	constructor(deviceId: bigint, fd: fd, rights_base: rights, rights_inheriting: rights, fdflags: fdflags, inode: bigint) {
+		super(deviceId, fd, Filetype.directory, rights_base, rights_inheriting, fdflags, inode);
+	}
+
+	public with(change: { fd: number }): FileDescriptor {
+		return new DirectoryFileDescriptor(this.deviceId, change.fd, this.rights_base, this.rights_inheriting, this.fdflags, this.inode);
+	}
+}
 
 export function create(deviceId: DeviceId, preOpenDirectories: Map<string, { driver: FileSystemDeviceDriver; fileDescriptor: FileDescriptor | undefined }>): FileSystemDeviceDriver {
 
-	function assertDirectoryDescriptor(fileDescriptor: FileDescriptor): asserts fileDescriptor is FileDescriptor & { readonly fileType: typeof Filetype.directory } {
-		if (!(fileDescriptor.fileType !== Filetype.directory)) {
-			throw new WasiError(Errno.badf);
-		}
-	}
 
-	let $rootFd: FileDescriptor | undefined;
-	function rootFd(): FileDescriptor {
-		if (!$rootFd) {
-			$rootFd = preOpenDirectories.get('/')!.fileDescriptor!;
-		}
-		return $rootFd;
-	}
+	let $atim: bigint = BigInt(Date.now()) * 1000000n;
+	let $mtim: bigint = $atim;
+	let $ctim: bigint = $atim;
 
 	let $inodeCounter: bigint = 1n;
 	let $inodes = new Map<string, bigint>();
@@ -36,7 +51,25 @@ export function create(deviceId: DeviceId, preOpenDirectories: Map<string, { dri
 		return result;
 	}
 
-	let $atim: bigint, $mtim: bigint, $ctim: bigint = BigInt(Date.now()) * 1000000n;
+	let $rootFd: FileDescriptor | undefined;
+	function assertRootDescriptor(fileDescriptor: FileDescriptor): asserts fileDescriptor is FileDescriptor {
+		if (!$rootFd) {
+			$rootFd = preOpenDirectories.get('/')!.fileDescriptor!;
+		}
+		if ($rootFd.deviceId !== fileDescriptor.deviceId || $rootFd.inode !== fileDescriptor.inode) {
+			throw new WasiError(Errno.badf);
+		}
+	}
+
+	function assertDirectoryDescriptor(fileDescriptor: FileDescriptor): asserts fileDescriptor is FileDescriptor & { readonly fileType: typeof Filetype.directory } {
+		if (fileDescriptor.fileType !== Filetype.directory) {
+			throw new WasiError(Errno.badf);
+		}
+	}
+
+	function createRootDescriptor(fd: fd): FileDescriptor {
+		return new DirectoryFileDescriptor(deviceId, fd, DirectoryBaseRights, DirectoryInheritingRights, 0, inode('/'));
+	}
 
 	const $this = {
 		id: deviceId,
@@ -45,7 +78,12 @@ export function create(deviceId: DeviceId, preOpenDirectories: Map<string, { dri
 		createStdioFileDescriptor(): Promise<FileDescriptor> {
 			throw new Error(`Virtual root FS can't provide stdio file descriptors`);
 		},
-
+		fd_close(_fileDescriptor: FileDescriptor): Promise<void> {
+			return Promise.resolve();
+		},
+		fd_create_prestat_fd(fd: fd): Promise<FileDescriptor> {
+			return Promise.resolve(createRootDescriptor(fd));
+		},
 		fd_fdstat_get(fileDescriptor: FileDescriptor, result: fdstat): Promise<void> {
 			result.fs_filetype = fileDescriptor.fileType;
 			result.fs_flags = fileDescriptor.fdflags;
@@ -58,9 +96,7 @@ export function create(deviceId: DeviceId, preOpenDirectories: Map<string, { dri
 			return Promise.resolve();
 		},
 		fd_filestat_get(fileDescriptor: FileDescriptor, result: filestat): Promise<void> {
-			if (fileDescriptor !== rootFd()) {
-				throw new WasiError(Errno.badf);
-			}
+			assertRootDescriptor(fileDescriptor);
 			result.dev = fileDescriptor.deviceId;
 			result.ino = fileDescriptor.inode;
 			result.filetype = fileDescriptor.fileType;
@@ -78,9 +114,7 @@ export function create(deviceId: DeviceId, preOpenDirectories: Map<string, { dri
 		},
 		async fd_readdir(fileDescriptor: FileDescriptor): Promise<ReaddirEntry[]> {
 			assertDirectoryDescriptor(fileDescriptor);
-			if (fileDescriptor !== rootFd()) {
-				throw new WasiError(Errno.badf);
-			}
+			assertRootDescriptor(fileDescriptor);
 
 			const result: ReaddirEntry[] = [];
 			for (const [mountPoint, { fileDescriptor }] of preOpenDirectories) {
@@ -91,9 +125,21 @@ export function create(deviceId: DeviceId, preOpenDirectories: Map<string, { dri
 			}
 			return result;
 		},
+		async path_filestat_get(rootFileDescriptor: FileDescriptor, flags: lookupflags, path: string, result: filestat): Promise<void> {
+			assertRootDescriptor(rootFileDescriptor);
+			if (path === '.' || path === '..') {
+				return this.fd_filestat_get(rootFileDescriptor, result);
+			}
+			const { driver, fileDescriptor } = preOpenDirectories.get(path)!;
+			if (driver === undefined || fileDescriptor === undefined) {
+				throw new WasiError(Errno.noent);
+			}
+			return driver.path_filestat_get(fileDescriptor, flags, '.' , result);
+		},
 		async path_open(parentDescriptor: FileDescriptor, dirflags: lookupflags, path: string, oflags: oflags, fs_rights_base: rights, fs_rights_inheriting: rights, fdflags: fdflags, fdProvider: FdProvider): Promise<FileDescriptor> {
-			if (parentDescriptor !== rootFd()) {
-				throw new WasiError(Errno.badf);
+			assertRootDescriptor(parentDescriptor);
+			if (path === '.' || path === '/') {
+				return createRootDescriptor(fdProvider.next());
 			}
 
 			const { driver, fileDescriptor } = preOpenDirectories.get(path)!;

@@ -365,9 +365,9 @@ export abstract class WasiProcess {
 			if (mountPoint === '/') {
 				if (this.preOpenDirectories.size > 1) {
 					throw new Error(`Cannot map root directory when other directories are mapped`);
-				} else {
-					needsRootFs = true;
 				}
+			} else {
+				needsRootFs = true;
 			}
 		}
 		if (needsRootFs) {

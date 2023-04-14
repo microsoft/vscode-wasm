@@ -23,7 +23,7 @@
 	"engines": {
 		"vscode": "^1.77.0"
 	},
-	"main": "./dist/desktop/extension.js",
+	"main": "./lib/desktop/extension.js",
 	"browser": "./dist/web/extension.js",
 	"activationEvents": [],
 	"devDependencies": {
