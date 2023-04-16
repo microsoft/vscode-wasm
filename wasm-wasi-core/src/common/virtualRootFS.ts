@@ -6,7 +6,7 @@
 import { Uri } from 'vscode';
 import { DeviceId, FileSystemDeviceDriver, NoSysDeviceDriver, ReaddirEntry } from './deviceDriver';
 import { BaseFileDescriptor, FdProvider, FileDescriptor } from './fileDescriptor';
-import { WasiError, Filetype, fdstat, filestat, fstflags, lookupflags, oflags, rights, fdflags, fd, Rights } from './wasi';
+import { WasiError, Filetype, fdstat, filestat, fstflags, lookupflags, oflags, rights, fdflags, fd, Rights, inode } from './wasi';
 import { Errno } from './wasi';
 
 const DirectoryBaseRights: rights = Rights.fd_fdstat_set_flags | Rights.path_create_directory |
@@ -30,6 +30,83 @@ class DirectoryFileDescriptor extends BaseFileDescriptor {
 
 	public with(change: { fd: number }): FileDescriptor {
 		return new DirectoryFileDescriptor(this.deviceId, change.fd, this.rights_base, this.rights_inheriting, this.fdflags, this.inode);
+	}
+}
+
+enum NodeKind {
+	VirtualDirectory,
+	MountPoint
+}
+
+type VirtualDirectoryNode = {
+
+	readonly kind: NodeKind.VirtualDirectory;
+
+	/**
+	 * This inode id.
+	 */
+	readonly inode: inode;
+
+	/**
+	 * The parent node
+	 */
+	readonly parent: VirtualDirectoryNode | undefined;
+
+	/**
+	 * The name of the inode.
+	 */
+	name: string;
+
+	/**
+	 * The directory entries.
+	 */
+	readonly entries: Map<string, Node>;
+};
+
+namespace VirtualDirectoryNode {
+	export function create(id: inode, parent: VirtualDirectoryNode | undefined, name: string): VirtualDirectoryNode {
+		return {
+			kind: NodeKind.VirtualDirectory,
+			inode: id,
+			parent,
+			name,
+			entries: new Map()
+		};
+	}
+}
+
+type MountPointNode = {
+
+	readonly kind: NodeKind.MountPoint;
+
+	/**
+	 * The parent node
+	 */
+	readonly parent: VirtualDirectoryNode | undefined;
+
+	/**
+	 * The name of the inode.
+	 */
+	readonly name: string;
+
+	/**
+	 * The device driver that is mounted at this node.
+	 */
+	readonly deviceDriver: FileSystemDeviceDriver;
+};
+
+type Node = VirtualDirectoryNode | MountPointNode;
+
+class VirtualRootFileSystem {
+
+	static inodeCounter: bigint = 1n;
+
+	private readonly deviceId: DeviceId;
+	private readonly root: VirtualDirectoryNode;
+
+	constructor(deviceId: DeviceId) {
+		this.deviceId = deviceId;
+		this.root = VirtualDirectoryNode.create(VirtualRootFileSystem.inodeCounter++, undefined, '/');
 	}
 }
 
