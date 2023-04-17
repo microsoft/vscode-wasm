@@ -7,7 +7,7 @@ import RAL from '../ral';
 import vscode from 'vscode';
 
 import { Clock, EnvironmentWasiService, NoSysWasiService, WasiService, ClockWasiService, WasiOptions } from '../service';
-import { FileDescriptor, FileDescriptors } from '../fileDescriptor';
+import { FileDescriptors } from '../fileDescriptor';
 import { Environment } from '../api';
 import { FileSystemDeviceDriver } from '../deviceDriver';
 import WasiKernel from '../kernel';
@@ -80,8 +80,8 @@ export function createWasiService(workspaceContent: WorkspaceContent): WasiServi
 	const deviceDrivers = WasiKernel.deviceDrivers;
 	const fileSystem = vscfs.create(deviceDrivers.next(), workspaceContent.root);
 	deviceDrivers.add(fileSystem);
-	const preOpenDirectories: Map<string, { driver: FileSystemDeviceDriver; fileDescriptor: FileDescriptor | undefined }> =  new Map([
-		['/workspace', { driver: fileSystem, fileDescriptor: undefined }]
+	const preOpenDirectories: Map<string, FileSystemDeviceDriver> =  new Map([
+		['/workspace', fileSystem]
 	]);
 	const env: Environment = { 'var1': 'value1', 'var2': 'value2' };
 	const options: WasiOptions = {
@@ -90,7 +90,7 @@ export function createWasiService(workspaceContent: WorkspaceContent): WasiServi
 	};
 
 	const clock = Clock.create();
-	const fileSystemService = DeviceWasiService.create(deviceDrivers, fileDescriptors, clock, options);
+	const fileSystemService = DeviceWasiService.create(deviceDrivers, fileDescriptors, clock, undefined, options);
 	const environmentService = EnvironmentWasiService.create(fileDescriptors, 'testApp', preOpenDirectories.entries(), options);
 	const clockService = ClockWasiService.create(clock);
 	const result: WasiService = Object.assign({}, NoSysWasiService, environmentService, clockService, fileSystemService);

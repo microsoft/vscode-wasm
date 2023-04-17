@@ -472,8 +472,17 @@ export function create(deviceId: DeviceId, baseUri: Uri): FileSystemDeviceDriver
 		}
 	}
 
-	function createRootDescriptor(fd: fd): DirectoryFileDescriptor {
+	function createRootFileDescriptor(fd: fd): DirectoryFileDescriptor {
 		return new DirectoryFileDescriptor(deviceId, fd, DirectoryBaseRights, DirectoryInheritingRights, 0, fs.getRoot().inode);
+	}
+
+	let $rootFileDescriptor: DirectoryFileDescriptor | undefined = undefined;
+	function getRootFileDescriptor(fd: fd): DirectoryFileDescriptor {
+		if ($rootFileDescriptor !== undefined) {
+			throw new WasiError(Errno.inval);
+		}
+		$rootFileDescriptor = createRootFileDescriptor(fd);
+		return $rootFileDescriptor;
 	}
 
 	async function doGetFiletype(fileDescriptor: DirectoryFileDescriptor, path: string): Promise<filetype | undefined> {
@@ -560,6 +569,18 @@ export function create(deviceId: DeviceId, baseUri: Uri): FileSystemDeviceDriver
 		uri: baseUri,
 		id: deviceId,
 
+		getRootFileDescriptor(): FileDescriptor {
+			if ($rootFileDescriptor === undefined) {
+				throw new WasiError(Errno.inval);
+			}
+			return $rootFileDescriptor;
+		},
+		isRootFileDescriptor(fileDescriptor: FileDescriptor): boolean {
+			if ($rootFileDescriptor === undefined) {
+				throw new WasiError(Errno.inval);
+			}
+			return $rootFileDescriptor.deviceId === fileDescriptor.deviceId && $rootFileDescriptor.inode === fileDescriptor.inode;
+		},
 		createStdioFileDescriptor(dirflags: lookupflags | undefined = Lookupflags.none, path: string, _oflags: oflags | undefined = Oflags.none, _fs_rights_base: rights | undefined, fdflags: fdflags | undefined = Fdflags.none, fd: 0 | 1 | 2): Promise<FileDescriptor> {
 			if (path.length === 0) {
 				throw new WasiError(Errno.inval);
@@ -572,8 +593,11 @@ export function create(deviceId: DeviceId, baseUri: Uri): FileSystemDeviceDriver
 				: Oflags.creat | Oflags.trunc;
 
 			// Fake a parent descriptor
-			const parentDescriptor = createRootDescriptor(999999);
+			const parentDescriptor = createRootFileDescriptor(999999);
 			return $this.path_open(parentDescriptor, dirflags, path, oflags, fs_rights_base, FileInheritingRights, fdflags, { next: () => fd });
+		},
+		fd_create_prestat_fd(fd: fd): Promise<FileDescriptor> {
+			return Promise.resolve(getRootFileDescriptor(fd));
 		},
 		fd_advise(fileDescriptor: FileDescriptor, _offset: bigint, _length: bigint, _advise: number): Promise<void> {
 			fileDescriptor.assertBaseRights(Rights.fd_advise);
@@ -905,9 +929,6 @@ export function create(deviceId: DeviceId, baseUri: Uri): FileSystemDeviceDriver
 					fs.deleteNode(targetNode);
 				}
 			}
-		},
-		fd_create_prestat_fd(fd: fd): Promise<FileDescriptor> {
-			return Promise.resolve(createRootDescriptor(fd));
 		},
 		async fd_bytesAvailable(fileDescriptor: FileDescriptor): Promise<filesize> {
 			assertFileDescriptor(fileDescriptor);

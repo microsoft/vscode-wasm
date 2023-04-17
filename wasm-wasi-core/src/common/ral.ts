@@ -57,6 +57,7 @@ interface RAL {
 		dirname(path: string): string;
 		join(...paths: string[]): string;
 		normalize(path: string): string;
+		isAbsolute(path: string): boolean;
 	};
 }
 

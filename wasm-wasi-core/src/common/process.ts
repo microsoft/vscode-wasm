@@ -10,7 +10,7 @@ import { Event, EventEmitter, Uri, WorkspaceFolder, workspace } from 'vscode';
 import { MapDirEntry, Options, StdioConsoleDescriptor, StdioDescriptor, StdioFileDescriptor } from './api';
 import { ptr, size, u32 } from './baseTypes';
 import { FileSystemDeviceDriver } from './deviceDriver';
-import { FileDescriptor, FileDescriptors } from './fileDescriptor';
+import { FileDescriptors } from './fileDescriptor';
 import * as vscfs from './vscodeFileSystemDriver';
 import * as vrfs from './virtualRootFS';
 import * as tdd from './terminalDriver';
@@ -298,7 +298,8 @@ export abstract class WasiProcess {
 	private readonly fileDescriptors: FileDescriptors;
 	private environmentService!: EnvironmentWasiService;
 	private processService!: ProcessWasiService;
-	private readonly preOpenDirectories: Map<string, { driver: FileSystemDeviceDriver; fileDescriptor: FileDescriptor | undefined }>;
+	private readonly preOpenDirectories: Map<string, FileSystemDeviceDriver>;
+	private virtualRootFileSystem: vrfs.VirtualRootFileSystemDeviceDriver | undefined;
 
 	private _stdin: StdinStream | undefined;
 	private _stdout: StdoutStream | undefined;
@@ -333,7 +334,6 @@ export abstract class WasiProcess {
 		if (this.state !== 'created') {
 			throw new Error('WasiProcess already initialized or running');
 		}
-
 
 		// Map directories
 		const mapWorkspaceFolders = MapDir.mapWorkspaceFolders(this.options.mapDir);
@@ -371,16 +371,17 @@ export abstract class WasiProcess {
 			}
 		}
 		if (needsRootFs) {
-			const driver = vrfs.create(this.deviceDrivers.next(), this.preOpenDirectories);
-			this.preOpenDirectories.set('/', { driver: driver, fileDescriptor: undefined });
-			this.deviceDrivers.add(driver);
+			const mountPoints: Map<string, FileSystemDeviceDriver> = new Map(Array.from(this.preOpenDirectories.entries()));
+			this.virtualRootFileSystem = vrfs.create(this.deviceDrivers.next(), mountPoints);
+			this.preOpenDirectories.set('/', this.virtualRootFileSystem);
+			this.deviceDrivers.add(this.virtualRootFileSystem);
 		}
 
 		const args: undefined | string[] = this.options.args !== undefined ? [] : undefined;
 		if (this.options.args !== undefined && args !== undefined) {
 			const path = RAL().path;
 			const uriToMountPoint: [string, string][] = [];
-			for (const [mountPoint, { driver }] of this.preOpenDirectories) {
+			for (const [mountPoint, driver] of this.preOpenDirectories) {
 				let vsc_uri = driver.uri.toString(true);
 				if (!vsc_uri.endsWith(path.sep)) {
 					vsc_uri += path.sep;
@@ -436,7 +437,7 @@ export abstract class WasiProcess {
 					const wasiService: WasiService = Object.assign({},
 						this.environmentService,
 						ClockWasiService.create(clock),
-						DeviceWasiService.create(this.deviceDrivers, this.fileDescriptors, clock, options),
+						DeviceWasiService.create(this.deviceDrivers, this.fileDescriptors, clock, this.virtualRootFileSystem, options),
 						this.processService
 					);
 					await this.startThread(wasiService, tid, start_args);
@@ -459,7 +460,7 @@ export abstract class WasiProcess {
 			const wasiService: WasiService = Object.assign({},
 				this.environmentService,
 				ClockWasiService.create(clock),
-				DeviceWasiService.create(this.deviceDrivers, this.fileDescriptors, clock, this.options),
+				DeviceWasiService.create(this.deviceDrivers, this.fileDescriptors, clock, this.virtualRootFileSystem, this.options),
 				this.processService
 			);
 			const result = this.startMain(wasiService);
@@ -508,7 +509,7 @@ export abstract class WasiProcess {
 		} else {
 			deviceDriver = this.deviceDrivers.getByUri(entry.vscode_fs) as FileSystemDeviceDriver;
 		}
-		this.preOpenDirectories.set(entry.mountPoint, { driver: deviceDriver, fileDescriptor: undefined });
+		this.preOpenDirectories.set(entry.mountPoint, deviceDriver);
 	}
 
 	private async handleConsole(stdio: $Stdio): Promise<void> {
@@ -570,7 +571,7 @@ export abstract class WasiProcess {
 		for (const preOpenEntry of preOpened) {
 			const mountPoint = preOpenEntry[0];
 			if (descriptor.path.startsWith(mountPoint)) {
-				const driver = preOpenEntry[1].driver;
+				const driver = preOpenEntry[1];
 				const fileDescriptor = await driver.createStdioFileDescriptor(
 					Lookupflags.none,
 					descriptor.path.substring(mountPoint.length),

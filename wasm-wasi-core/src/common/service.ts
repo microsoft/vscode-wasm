@@ -17,10 +17,11 @@ import { CapturedPromise, Offsets, WasiCallMessage, WorkerDoneMessage, WorkerMes
 import { WasiFunction, WasiFunctions, WasiFunctionSignature } from './wasiMeta';
 import { byte, bytes, cstring, ptr, size, u32, u64 } from './baseTypes';
 import { FileDescriptor, FileDescriptors } from './fileDescriptor';
-import { DeviceDriver, ReaddirEntry } from './deviceDriver';
+import { DeviceDriver, FileSystemDeviceDriver, ReaddirEntry } from './deviceDriver';
 import { BigInts, code2Wasi } from './converter';
 import { Options } from './api';
 import { DeviceDrivers } from './kernel';
+import { VirtualRootFileSystemDeviceDriver } from './virtualRootFS';
 
 export abstract class ServiceConnection {
 
@@ -165,7 +166,7 @@ export interface WasiOptions extends Omit<Options, 'args'> {
 }
 
 export namespace EnvironmentWasiService {
-	export function create(fileDescriptors: FileDescriptors, programName: string, preStats: IterableIterator<[string, { driver: DeviceDriver; fileDescriptor: FileDescriptor | undefined }]>, options: WasiOptions): EnvironmentWasiService {
+	export function create(fileDescriptors: FileDescriptors, programName: string, preStats: IterableIterator<[string, DeviceDriver]>, options: WasiOptions): EnvironmentWasiService {
 
 		const $encoder: RAL.TextEncoder = RAL().TextEncoder.create(options?.encoding);
 		const $preStatDirnames: Map<fd, string> = new Map();
@@ -241,9 +242,8 @@ export namespace EnvironmentWasiService {
 						fileDescriptors.switchToRunning(fd);
 						return Errno.badf;
 					}
-					const [ mountPoint, value ] = next.value;
-					const fileDescriptor = await value.driver.fd_create_prestat_fd(fd);
-					value.fileDescriptor = fileDescriptor;
+					const [ mountPoint, driver ] = next.value;
+					const fileDescriptor = await driver.fd_create_prestat_fd(fd);
 					fileDescriptors.add(fileDescriptor);
 					$preStatDirnames.set(fileDescriptor.fd, mountPoint);
 					const view = new DataView(memory);
@@ -344,13 +344,14 @@ export namespace ClockWasiService {
 }
 
 export namespace DeviceWasiService {
-	export function create(deviceDrivers: DeviceDrivers, fileDescriptors: FileDescriptors, clock: Clock, options: Options): DeviceWasiService {
+	export function create(deviceDrivers: DeviceDrivers, fileDescriptors: FileDescriptors, clock: Clock, virtualRootFileSystem: VirtualRootFileSystemDeviceDriver | undefined, options: Options): DeviceWasiService {
 
 		const $directoryEntries: Map<fd, ReaddirEntry[]> = new Map();
 		const $clock: Clock = clock;
 
 		const $encoder: RAL.TextEncoder = RAL().TextEncoder.create(options?.encoding);
 		const $decoder: RAL.TextDecoder = RAL().TextDecoder.create(options?.encoding);
+		const $path = RAL().path;
 
 		const result: DeviceWasiService = {
 			fd_advise: async (_memory: ArrayBuffer, fd: fd, offset: filesize, length: filesize, advise: advise): Promise<errno> => {
@@ -629,8 +630,8 @@ export namespace DeviceWasiService {
 					fileDescriptor.assertBaseRights(Rights.path_create_directory);
 					fileDescriptor.assertIsDirectory();
 
-					const path = $decoder.decode(new Uint8Array(memory, path_ptr, path_len));
-					await getDeviceDriver(fileDescriptor).path_create_directory(fileDescriptor, path);
+					const [deviceDriver, path] = getDeviceDriverWithPath(fileDescriptor, $decoder.decode(new Uint8Array(memory, path_ptr, path_len)));
+					await deviceDriver.path_create_directory(fileDescriptor, path);
 					return Errno.success;
 				} catch (error) {
 					return handleError(error);
@@ -642,8 +643,8 @@ export namespace DeviceWasiService {
 					fileDescriptor.assertBaseRights(Rights.path_filestat_get);
 					fileDescriptor.assertIsDirectory();
 
-					const path = $decoder.decode(new Uint8Array(memory, path_ptr, path_len));
-					await getDeviceDriver(fileDescriptor).path_filestat_get(fileDescriptor, flags, path, Filestat.create(new DataView(memory), filestat_ptr));
+					const [deviceDriver, path] = getDeviceDriverWithPath(fileDescriptor, $decoder.decode(new Uint8Array(memory, path_ptr, path_len)));
+					await deviceDriver.path_filestat_get(fileDescriptor, flags, path, Filestat.create(new DataView(memory), filestat_ptr));
 					return Errno.success;
 				} catch (error) {
 					return handleError(error);
@@ -655,8 +656,8 @@ export namespace DeviceWasiService {
 					fileDescriptor.assertBaseRights(Rights.path_filestat_set_times);
 					fileDescriptor.assertIsDirectory();
 
-					const path = $decoder.decode(new Uint8Array(memory, path_ptr, path_len));
-					await getDeviceDriver(fileDescriptor).path_filestat_set_times(fileDescriptor, flags, path, atim, mtim, fst_flags);
+					const [deviceDriver, path] = getDeviceDriverWithPath(fileDescriptor, $decoder.decode(new Uint8Array(memory, path_ptr, path_len)));
+					await deviceDriver.path_filestat_set_times(fileDescriptor, flags, path, atim, mtim, fst_flags);
 					return Errno.success;
 				} catch (error) {
 					return handleError(error);
@@ -677,9 +678,12 @@ export namespace DeviceWasiService {
 						return Errno.nosys;
 					}
 
-					const oldPath = $decoder.decode(new Uint8Array(memory, old_path_ptr, old_path_len));
-					const newPath = $decoder.decode(new Uint8Array(memory, new_path_ptr, new_path_len));
-					await getDeviceDriver(oldFileDescriptor).path_link(oldFileDescriptor, old_flags, oldPath, newFileDescriptor, newPath);
+					const [oldDeviceDriver, oldPath] = getDeviceDriverWithPath(oldFileDescriptor, $decoder.decode(new Uint8Array(memory, old_path_ptr, old_path_len)));
+					const [newDeviceDriver, newPath] = getDeviceDriverWithPath(newFileDescriptor, $decoder.decode(new Uint8Array(memory, new_path_ptr, new_path_len)));
+					if (oldDeviceDriver !== newDeviceDriver) {
+						return Errno.nosys;
+					}
+					await oldDeviceDriver.path_link(oldFileDescriptor, old_flags, oldPath, newFileDescriptor, newPath);
 					return Errno.success;
 				} catch (error) {
 					return handleError(error);
@@ -692,8 +696,8 @@ export namespace DeviceWasiService {
 					fileDescriptor.assertFdflags(fdflags);
 					fileDescriptor.assertOflags(oflags);
 
-					const path = $decoder.decode(new Uint8Array(memory, path_ptr, path_len));
-					const result = await getDeviceDriver(fileDescriptor).path_open(fileDescriptor, dirflags, path, oflags, fs_rights_base, fs_rights_inheriting, fdflags, fileDescriptors);
+					const [deviceDriver, path] = getDeviceDriverWithPath(fileDescriptor, $decoder.decode(new Uint8Array(memory, path_ptr, path_len)));
+					const result = await deviceDriver.path_open(fileDescriptor, dirflags, path, oflags, fs_rights_base, fs_rights_inheriting, fdflags, fileDescriptors);
 					fileDescriptors.add(result);
 					const view = new DataView(memory);
 					view.setUint32(fd_ptr, result.fd, true);
@@ -708,8 +712,8 @@ export namespace DeviceWasiService {
 					fileDescriptor.assertBaseRights(Rights.path_readlink);
 					fileDescriptor.assertIsDirectory();
 
-					const path = $decoder.decode(new Uint8Array(memory, path_ptr, path_len));
-					const target = $encoder.encode(await getDeviceDriver(fileDescriptor).path_readlink(fileDescriptor, path));
+					const [deviceDriver, path] = getDeviceDriverWithPath(fileDescriptor, $decoder.decode(new Uint8Array(memory, path_ptr, path_len)));
+					const target = $encoder.encode(await deviceDriver.path_readlink(fileDescriptor, path));
 					if (target.byteLength > buf_len) {
 						return Errno.inval;
 					}
@@ -726,8 +730,8 @@ export namespace DeviceWasiService {
 					fileDescriptor.assertBaseRights(Rights.path_remove_directory);
 					fileDescriptor.assertIsDirectory();
 
-					const path = $decoder.decode(new Uint8Array(memory, path_ptr, path_len));
-					await getDeviceDriver(fileDescriptor).path_remove_directory(fileDescriptor, path);
+					const [deviceDriver, path] = getDeviceDriverWithPath(fileDescriptor, $decoder.decode(new Uint8Array(memory, path_ptr, path_len)));
+					await deviceDriver.path_remove_directory(fileDescriptor, path);
 					return Errno.success;
 				} catch (error) {
 					return handleError(error);
@@ -743,9 +747,12 @@ export namespace DeviceWasiService {
 					newFileDescriptor.assertBaseRights(Rights.path_rename_target);
 					newFileDescriptor.assertIsDirectory();
 
-					const oldPath = $decoder.decode(new Uint8Array(memory, old_path_ptr, old_path_len));
-					const newPath = $decoder.decode(new Uint8Array(memory, new_path_ptr, new_path_len));
-					await getDeviceDriver(oldFileDescriptor).path_rename(oldFileDescriptor, oldPath, newFileDescriptor, newPath);
+					const [oldDeviceDriver, oldPath] = getDeviceDriverWithPath(oldFileDescriptor, $decoder.decode(new Uint8Array(memory, old_path_ptr, old_path_len)));
+					const [newDeviceDriver, newPath] = getDeviceDriverWithPath(newFileDescriptor, $decoder.decode(new Uint8Array(memory, new_path_ptr, new_path_len)));
+					if (oldDeviceDriver !== newDeviceDriver) {
+						return Errno.nosys;
+					}
+					await oldDeviceDriver.path_rename(oldFileDescriptor, oldPath, newFileDescriptor, newPath);
 					return Errno.success;
 				} catch (error) {
 					return handleError(error);
@@ -758,9 +765,12 @@ export namespace DeviceWasiService {
 					fileDescriptor.assertBaseRights(Rights.path_symlink);
 					fileDescriptor.assertIsDirectory();
 
-					const oldPath = $decoder.decode(new Uint8Array(memory, old_path_ptr, old_path_len));
-					const newPath = $decoder.decode(new Uint8Array(memory, new_path_ptr, new_path_len));
-					await getDeviceDriver(fileDescriptor).path_symlink(oldPath, fileDescriptor, newPath);
+					const [oldDeviceDriver, oldPath] = getDeviceDriverWithPath(fileDescriptor, $decoder.decode(new Uint8Array(memory, old_path_ptr, old_path_len)));
+					const [newDeviceDriver, newPath] = getDeviceDriverWithPath(fileDescriptor, $decoder.decode(new Uint8Array(memory, new_path_ptr, new_path_len)));
+					if (oldDeviceDriver !== newDeviceDriver) {
+						return Errno.nosys;
+					}
+					await oldDeviceDriver.path_symlink(oldPath, fileDescriptor, newPath);
 					return Errno.success;
 				} catch (error) {
 					return handleError(error);
@@ -772,8 +782,8 @@ export namespace DeviceWasiService {
 					fileDescriptor.assertBaseRights(Rights.path_unlink_file);
 					fileDescriptor.assertIsDirectory();
 
-					const path = $decoder.decode(new Uint8Array(memory, path_ptr, path_len));
-					await getDeviceDriver(fileDescriptor).path_unlink_file(fileDescriptor, path);
+					const [deviceDriver, path] = getDeviceDriverWithPath(fileDescriptor, $decoder.decode(new Uint8Array(memory, path_ptr, path_len)));
+					await deviceDriver.path_unlink_file(fileDescriptor, path);
 					return Errno.success;
 				} catch (error) {
 					return handleError(error);
@@ -984,6 +994,21 @@ export namespace DeviceWasiService {
 
 		function getDeviceDriver(fileDescriptor: FileDescriptor): DeviceDriver {
 			return deviceDrivers.get(fileDescriptor.deviceId);
+		}
+
+		function getDeviceDriverWithPath(fileDescriptor: FileDescriptor, path: string): [DeviceDriver, string] {
+			const result = deviceDrivers.get(fileDescriptor.deviceId);
+			if (path !== undefined && !$path.isAbsolute(path) && FileSystemDeviceDriver.is(result) && virtualRootFileSystem !== undefined) {
+				path = $path.normalize(path);
+				if (path.startsWith('..')) {
+					const virtualPath = virtualRootFileSystem.makeVirtualPath(result, path);
+					if (virtualPath === undefined) {
+						throw new WasiError(Errno.noent);
+					}
+					return [virtualRootFileSystem, virtualPath];
+				}
+			}
+			return [result, path];
 		}
 
 		function getFileDescriptor(fd: fd): FileDescriptor {

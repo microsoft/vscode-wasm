@@ -59,7 +59,16 @@ export interface DeviceDriver {
 }
 
 export interface FileSystemDeviceDriver extends DeviceDriver {
+	getRootFileDescriptor(): FileDescriptor;
+	isRootFileDescriptor(fileDescriptor: FileDescriptor): boolean;
 	createStdioFileDescriptor(dirflags: lookupflags | undefined, path: string, oflags: oflags | undefined, fs_rights_base: rights | undefined, fdflags: fdflags | undefined, fd: 0 | 1 | 2): Promise<FileDescriptor>;
+}
+
+export namespace FileSystemDeviceDriver {
+	export function is(value: DeviceDriver): value is FileSystemDeviceDriver {
+		const candidate: FileSystemDeviceDriver = value as FileSystemDeviceDriver;
+		return typeof candidate.getRootFileDescriptor === 'function' && typeof candidate.isRootFileDescriptor === 'function';
+	}
 }
 
 export interface CharacterDeviceDriver extends DeviceDriver {
