@@ -161,6 +161,7 @@ class VirtualRootFileSystem {
 				let child = current.entries.get(segment);
 				if (child === undefined) {
 					child = VirtualDirectoryNode.create(VirtualRootFileSystem.inodeCounter++, current, segment);
+					current.entries.set(segment, child);
 					this.inodes.set(child.inode, child);
 				}
 				current = child;
@@ -196,7 +197,7 @@ class VirtualRootFileSystem {
 			if (parentNode !== this.root) {
 				throw new WasiError(Errno.noent);
 			}
-			segments.unshift();
+			segments.shift();
 		}
 		let current: Node = parentNode;
 		for (let i = 0; i < segments.length; i++) {

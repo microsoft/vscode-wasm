@@ -39,7 +39,7 @@ export class Webshell {
 
 	public async runCommandLoop(): Promise<void> {
 		while (true) {
-			this.pty.write(this.getPrompt());
+			void this.pty.write(this.getPrompt());
 			const line = await this.pty.readline();
 			const { command, args } = this.parseCommand(line);
 			switch (command) {
@@ -47,7 +47,7 @@ export class Webshell {
 					this.terminal.dispose();
 					return;
 				case 'pwd':
-					this.pty.write(`${this.cwd}\r\n`);
+					void this.pty.write(`${this.cwd}\r\n`);
 					break;
 				case 'cd':
 					this.handleCd(args);
@@ -57,7 +57,7 @@ export class Webshell {
 					if (handler !== undefined) {
 						await handler(this.pty, command, args, this.cwd);
 					} else {
-						this.pty.write(`-wesh: ${command}: command not found\r\n`);
+						void this.pty.write(`-wesh: ${command}: command not found\r\n`);
 					}
 					break;
 			}
@@ -66,7 +66,7 @@ export class Webshell {
 
 	private handleCd(args: string[]): void {
 		if (args.length > 1) {
-			this.pty.write(`-wesh: cd: too many arguments\r\n`);
+			void this.pty.write(`-wesh: cd: too many arguments\r\n`);
 			return;
 		}
 		const path = RAL().path;
