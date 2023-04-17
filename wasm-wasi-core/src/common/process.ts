@@ -364,7 +364,7 @@ export abstract class WasiProcess {
 		for (const mountPoint of this.preOpenDirectories.keys()) {
 			if (mountPoint === '/') {
 				if (this.preOpenDirectories.size > 1) {
-					throw new Error(`Cannot map root directory when other directories are mapped`);
+					throw new Error(`Cannot mount root directory when other directories are mounted as well.`);
 				}
 			} else {
 				needsRootFs = true;

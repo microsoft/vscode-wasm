@@ -21,8 +21,8 @@ export async function activate(_context: ExtensionContext) {
 				folders: true,
 				entries: [
 					{
-						vscode_fs: Uri.file(path.join(path.sep, 'home', 'dirkb', 'bin', 'wasm', 'Python-3.11.0')),
-						mountPoint: path.posix.sep
+						vscode_fs: Uri.file(path.join(path.sep, 'home', 'dirkb', 'bin', 'wasm', 'Python-3.11.3', 'lib')),
+						mountPoint: path.posix.join(path.posix.sep, 'usr', 'local', 'lib')
 					}
 				]
 			},
@@ -31,7 +31,7 @@ export async function activate(_context: ExtensionContext) {
  			},
 			args: fileToRun !== undefined ? ['-X', 'utf8', fileToRun] : ['-X', 'utf8']
 		};
-		const filename = path.join(path.sep, 'home', 'dirkb', 'bin', 'wasm', 'Python-3.11.0', 'python.wasm');
+		const filename = path.join(path.sep, 'home', 'dirkb', 'bin', 'wasm', 'Python-3.11.3', 'python.wasm');
 		const bits = await fs.readFile(filename);
 		const module = await WebAssembly.compile(bits);
 		const process = await wasm.createProcess('python', module, options);
