@@ -231,7 +231,7 @@ class VirtualRootFileSystem {
 			parts.push(current.name);
 			current = current.parent;
 		} while (current !== undefined);
-		return parts.reverse().join('/');
+		return RAL().path.join(...parts.reverse());
 	}
 }
 
@@ -345,7 +345,7 @@ export function create(deviceId: DeviceId, mountPoints: Map<string, FileSystemDe
 		async path_filestat_get(fileDescriptor: FileDescriptor, flags: lookupflags, path: string, result: filestat): Promise<void> {
 			assertDirectoryDescriptor(fileDescriptor);
 			const parentNode = $fs.getNode(fileDescriptor.inode);
-			if ($fs.isRoot(parentNode) && path === '.' || path === '..') {
+			if ($fs.isRoot(parentNode) && (path === '.' || path === '..' || path === '/')) {
 				return this.fd_filestat_get(this.getRootFileDescriptor(), result);
 			}
 
