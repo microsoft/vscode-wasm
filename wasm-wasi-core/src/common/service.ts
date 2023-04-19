@@ -19,7 +19,7 @@ import { byte, bytes, cstring, ptr, size, u32, u64 } from './baseTypes';
 import { FileDescriptor, FileDescriptors } from './fileDescriptor';
 import { DeviceDriver, FileSystemDeviceDriver, ReaddirEntry } from './deviceDriver';
 import { BigInts, code2Wasi } from './converter';
-import { Options } from './api';
+import { ProcessOptions } from './api';
 import { DeviceDrivers } from './kernel';
 import { VirtualRootFileSystemDeviceDriver } from './virtualRootFS';
 
@@ -161,12 +161,12 @@ export interface ProcessWasiService {
 export interface WasiService extends EnvironmentWasiService, ClockWasiService, DeviceWasiService, ProcessWasiService {
 }
 
-export interface WasiOptions extends Omit<Options, 'args'> {
+export interface EnvironmentOptions extends Omit<ProcessOptions, 'args'> {
 	args?: string[];
 }
 
 export namespace EnvironmentWasiService {
-	export function create(fileDescriptors: FileDescriptors, programName: string, preStats: IterableIterator<[string, DeviceDriver]>, options: WasiOptions): EnvironmentWasiService {
+	export function create(fileDescriptors: FileDescriptors, programName: string, preStats: IterableIterator<[string, DeviceDriver]>, options: EnvironmentOptions): EnvironmentWasiService {
 
 		const $encoder: RAL.TextEncoder = RAL().TextEncoder.create(options?.encoding);
 		const $preStatDirnames: Map<fd, string> = new Map();
@@ -343,8 +343,11 @@ export namespace ClockWasiService {
 	}
 }
 
+export interface DeviceOptions extends Pick<ProcessOptions, 'encoding'> {
+}
+
 export namespace DeviceWasiService {
-	export function create(deviceDrivers: DeviceDrivers, fileDescriptors: FileDescriptors, clock: Clock, virtualRootFileSystem: VirtualRootFileSystemDeviceDriver | undefined, options: Options): DeviceWasiService {
+	export function create(deviceDrivers: DeviceDrivers, fileDescriptors: FileDescriptors, clock: Clock, virtualRootFileSystem: VirtualRootFileSystemDeviceDriver | undefined, options: DeviceOptions): DeviceWasiService {
 
 		const $directoryEntries: Map<fd, ReaddirEntry[]> = new Map();
 		const $clock: Clock = clock;

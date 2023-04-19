@@ -26,7 +26,7 @@ export class Webshell {
 	constructor(wasm: Wasm, cwd: string, prompt: string = '$ ') {
 		this.wasm = wasm;
 		this.prompt = prompt;
-		this.pty = this.wasm.createPseudoterminal();
+		this.pty = this.wasm.createPseudoterminal({ history: true });
 		this.terminal = window.createTerminal({ name: 'wesh', pty: this.pty, isTransient: true });
 		this.terminal.show();
 		this.cwd = cwd;
@@ -39,7 +39,7 @@ export class Webshell {
 
 	public async runCommandLoop(): Promise<void> {
 		while (true) {
-			void this.pty.write(this.getPrompt());
+			void this.pty.prompt(this.getPrompt());
 			const line = await this.pty.readline();
 			const { command, args } = this.parseCommand(line);
 			switch (command) {

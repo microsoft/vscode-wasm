@@ -10,7 +10,7 @@ import { ptr, u32 } from '../common/baseTypes';
 import { WasiProcess } from '../common/process';
 import { WasiService, ServiceConnection } from '../common/service';
 import { ServiceMessage, StartMainMessage, StartThreadMessage, WorkerMessage } from '../common/connection';
-import { Options } from '../common/api';
+import { ProcessOptions } from '../common/api';
 
 export class BrowserServiceConnection extends ServiceConnection {
 
@@ -45,7 +45,7 @@ export class BrowserWasiProcess extends WasiProcess {
 	private mainWorker: Worker | undefined;
 	private threadWorkers: Map<u32, Worker>;
 
-	constructor(baseUri: Uri, programName: string, module: WebAssembly.Module | Promise<WebAssembly.Module>, memory: WebAssembly.Memory | WebAssembly.MemoryDescriptor | undefined, options: Options = {}) {
+	constructor(baseUri: Uri, programName: string, module: WebAssembly.Module | Promise<WebAssembly.Module>, memory: WebAssembly.Memory | WebAssembly.MemoryDescriptor | undefined, options: ProcessOptions = {}) {
 		super(programName, options);
 		this.baseUri = baseUri;
 		this.threadWorkers = new Map();

@@ -2,7 +2,7 @@
  *  Copyright (c) Microsoft Corporation. All rights reserved.
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
-import { ExtensionContext } from 'vscode';
+import { ExtensionContext, Uri } from 'vscode';
 
 import RAL from './ral';
 import { HandlerTarget } from './types';
@@ -33,7 +33,19 @@ async function executeWithFileSystem(context: ExtensionContext, wasm: Wasm, pty:
 	if (!fileFound && addCwd) {
 		newArgs.push(cwd);
 	}
-	const process = await wasm.createProcess('coreutils', module, { stdio: pty.stdio, args: newArgs, mapDir: true });
+	const process = await wasm.createProcess('coreutils', module, {
+		stdio: pty.stdio, args: newArgs,
+		mapDir: {
+			folders: true,
+			entries: [
+				{
+					vscode_fs: Uri.file(path.join(path.sep, 'home', 'dirkb', 'bin', 'wasm', 'Python-3.11.3', 'lib', 'python3.11')),
+					mountPoint: path.join(path.sep, 'usr', 'local', 'lib', 'python3.11')
+				}
+			]
+		}
+	});
+
 	const result = await process.run();
 	if (needsNewLine) {
 		await pty.write('\r\n');

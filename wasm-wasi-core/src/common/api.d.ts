@@ -41,6 +41,13 @@ export type Stdio = {
 	err?: StdioDescriptor;
 };
 
+export interface TerminalOptions {
+	/**
+	 * Enables a history stack for the terminal.
+	 */
+	history?: boolean;
+}
+
 export interface WasmPseudoterminal extends Pseudoterminal {
 	/**
 	 * Create stdio
@@ -58,6 +65,13 @@ export interface WasmPseudoterminal extends Pseudoterminal {
 	 * @param str The string to write to the terminal.
 	 */
 	write(str: string): Promise<void>;
+
+	/**
+	 * Write a prompt to the terminal.
+	 *
+	 * @param prompt The prompt to write to the terminal.
+	 */
+	prompt(prompt: string): Promise<void>;
 }
 
 export interface MapDirEntry {
@@ -65,7 +79,7 @@ export interface MapDirEntry {
 	mountPoint: string;
 }
 
-export interface Options {
+export interface ProcessOptions {
 
 	/**
 	 * The encoding to use when decoding strings from and to the WASM layer.
@@ -124,7 +138,7 @@ export interface WasmProcess {
 }
 
 export interface WasmCore {
-	createPseudoterminal(): WasmPseudoterminal;
-	createProcess(name: string, module: WebAssembly.Module | Promise<WebAssembly.Module>, options?: Options): Promise<WasmProcess>;
-	createProcess(name: string, module: WebAssembly.Module | Promise<WebAssembly.Module>, memory: WebAssembly.MemoryDescriptor | WebAssembly.Memory, options?: Options): Promise<WasmProcess>;
+	createPseudoterminal(options?: TerminalOptions): WasmPseudoterminal;
+	createProcess(name: string, module: WebAssembly.Module | Promise<WebAssembly.Module>, options?: ProcessOptions): Promise<WasmProcess>;
+	createProcess(name: string, module: WebAssembly.Module | Promise<WebAssembly.Module>, memory: WebAssembly.MemoryDescriptor | WebAssembly.Memory, options?: ProcessOptions): Promise<WasmProcess>;
 }

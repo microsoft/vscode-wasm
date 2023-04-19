@@ -9,16 +9,32 @@ import { Stdio } from './api';
 
 class LineBuffer {
 
+	private offset: number;
 	private cursor: number;
 	private content: string[];
 	constructor() {
+		this.offset = 0;
 		this.cursor = 0;
 		this.content = [];
 	}
 
 	public clear(): void {
+		this.offset = 0;
 		this.cursor = 0;
 		this.content = [];
+	}
+
+	public setContent(content: string): void {
+		this.content = content.split('');
+		this.cursor = this.content.length;
+	}
+
+	public getOffset(): number {
+		return this.offset;
+	}
+
+	public setOffset(offset: number): void {
+		this.offset = offset;
 	}
 
 	public getLine(): string {
@@ -160,6 +176,10 @@ export enum TerminalMode {
 	inUse = 2
 }
 
+export interface Options {
+	history?: boolean;
+}
+
 export interface WasmPseudoterminal extends Pseudoterminal {
 	readonly onDidCtrlC: Event<void>;
 	readonly onDidClose: Event<void>;
@@ -173,21 +193,62 @@ export interface WasmPseudoterminal extends Pseudoterminal {
 	readline(): Promise<string>;
 	write(str: string): Promise<void>;
 	write(bytes: Uint8Array): Promise<number>;
+	prompt(prompt: string): Promise<void>;
 }
 
 export namespace WasmPseudoterminal {
 	export function is(value: any): value is WasmPseudoterminal {
 		return value instanceof WasmPseudoterminalImpl;
 	}
-	export function create(): WasmPseudoterminal {
-		return new WasmPseudoterminalImpl();
+	export function create(options?: Options): WasmPseudoterminal {
+		return new WasmPseudoterminalImpl(options);
 	}
 }
 
 const terminalRegExp = /(\r\n)|(\n)/gm;
 
+class CommandHistory {
+
+	private readonly history: string[];
+	private current: number;
+
+	constructor() {
+		this.history = [''];
+		this.current = 0;
+	}
+
+	public update(command: string): void {
+		this.history[this.history.length - 1] = command;
+	}
+
+	public markExecuted(): void {
+		// We execute a command from the history so we need to add it to the top.
+		if (this.current !== this.history.length - 1) {
+			this.history[this.history.length - 1] = this.history[this.current];
+		}
+		this.history.push('');
+		this.current = this.history.length - 1;
+	}
+
+	public previous(): string | undefined {
+		if (this.current === 0) {
+			return undefined;
+		}
+		return this.history[--this.current];
+	}
+
+	public next(): string | undefined {
+		if (this.current === this.history.length - 1) {
+			return undefined;
+		}
+		return this.history[++this.current];
+	}
+}
+
 class WasmPseudoterminalImpl implements WasmPseudoterminal {
 
+	private readonly options: Options;
+	private readonly commandHistory: CommandHistory | undefined;
 	private mode: TerminalMode;
 
 	private readonly _onDidClose: EventEmitter<void>;
@@ -215,7 +276,9 @@ class WasmPseudoterminalImpl implements WasmPseudoterminal {
 	private encoder: RAL.TextEncoder;
 	private decoder: RAL.TextDecoder;
 
-	constructor() {
+	constructor(options: Options = {}) {
+		this.options = options;
+		this.commandHistory = this.options.history ? new CommandHistory() : undefined;
 		this.mode = TerminalMode.inUse;
 
 		this._onDidClose = new EventEmitter();
@@ -316,6 +379,11 @@ class WasmPseudoterminalImpl implements WasmPseudoterminal {
 		}
 	}
 
+	public async prompt(prompt: string): Promise<void> {
+		await this.write(prompt);
+		this.lineBuffer.setOffset(prompt.length);
+	}
+
 	public handleInput(data: string): void {
 		if (this.mode === TerminalMode.idle) {
 			this._onAnyKey.fire();
@@ -351,10 +419,32 @@ class WasmPseudoterminalImpl implements WasmPseudoterminal {
 				this.adjustCursor(this.lineBuffer.moveCursorEndOfLine(), previousCursor, this.lineBuffer.getCursor());
 				break;
 			case '\x1b[A': // up
-				this.bell();
+				if (this.commandHistory === undefined) {
+					this.bell();
+				} else {
+					const content = this.commandHistory.previous();
+					if (content !== undefined) {
+						this.eraseLine();
+						this.lineBuffer.setContent(content);
+						this.writeString(content);
+					} else {
+						this.bell();
+					}
+				}
 				break;
 			case '\x1b[B': // down
-				this.bell();
+				if (this.commandHistory === undefined) {
+					this.bell();
+				} else {
+					const content = this.commandHistory.next();
+					if (content !== undefined) {
+						this.eraseLine();
+						this.lineBuffer.setContent(content);
+						this.writeString(content);
+					} else {
+						this.bell();
+					}
+				}
 				break;
 			case '\x08': // shift+backspace
 			case '\x7F': // backspace
@@ -372,6 +462,9 @@ class WasmPseudoterminalImpl implements WasmPseudoterminal {
 					this._onDidWrite.fire('\x1b[@');
 				}
 				this._onDidWrite.fire(data);
+				if (this.commandHistory !== undefined) {
+					this.commandHistory.update(this.lineBuffer.getLine());
+				}
 		}
 	}
 
@@ -380,6 +473,9 @@ class WasmPseudoterminalImpl implements WasmPseudoterminal {
 		const line = this.lineBuffer.getLine();
 		this.lineBuffer.clear();
 		this.lines.push(line);
+		if (this.commandHistory !== undefined) {
+			this.commandHistory.markExecuted();
+		}
 		if (this.readlineCallback !== undefined) {
 			const result = this.lines.shift()! + '\n';
 			this.readlineCallback(result);
@@ -397,6 +493,14 @@ class WasmPseudoterminalImpl implements WasmPseudoterminal {
 	    const code = change > 0 ? 'D' : 'C';
 		const sequence = `\x1b[${code}`.repeat(Math.abs(change));
 		this._onDidWrite.fire(sequence);
+	}
+
+	private eraseLine(): void {
+		const cursor = this.lineBuffer.getCursor();
+		// Move cursor back to the start of the prompt
+		this.adjustCursor(true, cursor, 0);
+		// erase until end of line
+		this._onDidWrite.fire(`\x1b[0J`);
 	}
 
 	private bell() {

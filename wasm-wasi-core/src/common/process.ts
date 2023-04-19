@@ -7,7 +7,7 @@
 import RAL from './ral';
 import { Event, EventEmitter, Uri, WorkspaceFolder, workspace } from 'vscode';
 
-import { MapDirEntry, Options, StdioConsoleDescriptor, StdioDescriptor, StdioFileDescriptor } from './api';
+import { MapDirEntry, ProcessOptions, StdioConsoleDescriptor, StdioDescriptor, StdioFileDescriptor } from './api';
 import { ptr, size, u32 } from './baseTypes';
 import { FileSystemDeviceDriver } from './deviceDriver';
 import { FileDescriptors } from './fileDescriptor';
@@ -15,7 +15,7 @@ import * as vscfs from './vscodeFileSystemDriver';
 import * as vrfs from './virtualRootFS';
 import * as tdd from './terminalDriver';
 import * as pdd from './pipeDriver';
-import { DeviceWasiService, ProcessWasiService, EnvironmentWasiService, WasiService, Clock, ClockWasiService, WasiOptions } from './service';
+import { DeviceWasiService, ProcessWasiService, EnvironmentWasiService, WasiService, Clock, ClockWasiService, EnvironmentOptions } from './service';
 import WasiKernel, { DeviceDrivers } from './kernel';
 import { Errno, Lookupflags, exitcode } from './wasi';
 import { CharacterDeviceDriver } from './deviceDriver';
@@ -273,10 +273,10 @@ class StdoutStream extends StdioStream implements Readable {
 }
 
 namespace MapDir {
-	export function mapWorkspaceFolders(value: Options['mapDir'] | undefined): boolean {
+	export function mapWorkspaceFolders(value: ProcessOptions['mapDir'] | undefined): boolean {
 		return value !== undefined && (value === true || (value as { folders: boolean; entries: MapDirEntry[] }).folders === true);
 	}
-	export function getMapEntries(value: Options['mapDir'] | undefined): MapDirEntry[] | undefined {
+	export function getMapEntries(value: ProcessOptions['mapDir'] | undefined): MapDirEntry[] | undefined {
 		if (value === undefined || value === true) {
 			return undefined;
 		}
@@ -291,7 +291,7 @@ export abstract class WasiProcess {
 
 	private state: 'created' | 'initialized' | 'running' | 'exited';
 	private readonly programName: string;
-	protected readonly options: Options;
+	protected readonly options: ProcessOptions;
 	private deviceDrivers: DeviceDrivers;
 	private resolveCallback: ((value: number) => void) | undefined;
 	private threadIdCounter: number;
@@ -305,7 +305,7 @@ export abstract class WasiProcess {
 	private _stdout: StdoutStream | undefined;
 	private _stderr: StdoutStream | undefined;
 
-	constructor(programName: string, options: Options = {}) {
+	constructor(programName: string, options: ProcessOptions = {}) {
 		this.programName = programName;
 		this.options = options;
 		this.deviceDrivers = WasiKernel.createLocalDeviceDrivers();
@@ -412,7 +412,7 @@ export abstract class WasiProcess {
 		await this.handleFiles(stdio);
 		await this.handlePipes(stdio);
 
-		const options: WasiOptions = Object.assign({}, (delete Object.assign({}, this.options).args), { args });
+		const options: EnvironmentOptions = Object.assign({}, (delete Object.assign({}, this.options).args), { args });
 
 		this.environmentService = EnvironmentWasiService.create(
 			this.fileDescriptors, this.programName,

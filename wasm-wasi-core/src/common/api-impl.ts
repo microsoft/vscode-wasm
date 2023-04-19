@@ -5,7 +5,7 @@
 /// <reference path="../../typings/webAssemblyCommon.d.ts" />
 
 import { ExtensionContext, Uri } from 'vscode';
-import { WasmProcess, Options, WasmCore } from './api';
+import { WasmProcess, ProcessOptions, TerminalOptions, WasmCore } from './api';
 import { WasmPseudoterminal } from './terminal';
 import { WasiProcess as InternalWasiProcess } from './process';
 
@@ -21,17 +21,17 @@ namespace MemoryDescriptor {
 
 export namespace WasiCoreImpl {
 
-	export function create(context: ExtensionContext, construct: new (baseUri: Uri, programName: string, module: WebAssembly.Module | Promise<WebAssembly.Module>, memory: WebAssembly.Memory | WebAssembly.MemoryDescriptor | undefined, options: Options | undefined) => InternalWasiProcess): WasmCore {
+	export function create(context: ExtensionContext, construct: new (baseUri: Uri, programName: string, module: WebAssembly.Module | Promise<WebAssembly.Module>, memory: WebAssembly.Memory | WebAssembly.MemoryDescriptor | undefined, options: ProcessOptions | undefined) => InternalWasiProcess): WasmCore {
 		return {
-			createPseudoterminal(): WasmPseudoterminal {
-				return WasmPseudoterminal.create();
+			createPseudoterminal(options?: TerminalOptions): WasmPseudoterminal {
+				return WasmPseudoterminal.create(options);
 			},
-			async createProcess(name: string, module: WebAssembly.Module | Promise<WebAssembly.Module>, memoryOrOptions?: WebAssembly.MemoryDescriptor | WebAssembly.Memory | Options, optionsOrMapWorkspaceFolders?: Options | boolean): Promise<WasmProcess> {
+			async createProcess(name: string, module: WebAssembly.Module | Promise<WebAssembly.Module>, memoryOrOptions?: WebAssembly.MemoryDescriptor | WebAssembly.Memory | ProcessOptions, optionsOrMapWorkspaceFolders?: ProcessOptions | boolean): Promise<WasmProcess> {
 				let memory: WebAssembly.Memory | WebAssembly.MemoryDescriptor | undefined;
-				let options: Options | undefined;
+				let options: ProcessOptions | undefined;
 				if (memoryOrOptions instanceof WebAssembly.Memory || MemoryDescriptor.is(memoryOrOptions)) {
 					memory = memoryOrOptions;
-					options = optionsOrMapWorkspaceFolders as Options | undefined;
+					options = optionsOrMapWorkspaceFolders as ProcessOptions | undefined;
 				} else {
 					options = memoryOrOptions;
 				}

@@ -6,7 +6,7 @@ import RAL from '../ral';
 
 import vscode from 'vscode';
 
-import { Clock, EnvironmentWasiService, NoSysWasiService, WasiService, ClockWasiService, WasiOptions } from '../service';
+import { Clock, EnvironmentWasiService, NoSysWasiService, WasiService, ClockWasiService, EnvironmentOptions } from '../service';
 import { FileDescriptors } from '../fileDescriptor';
 import { Environment } from '../api';
 import { FileSystemDeviceDriver } from '../deviceDriver';
@@ -84,7 +84,7 @@ export function createWasiService(workspaceContent: WorkspaceContent): WasiServi
 		['/workspace', fileSystem]
 	]);
 	const env: Environment = { 'var1': 'value1', 'var2': 'value2' };
-	const options: WasiOptions = {
+	const options: EnvironmentOptions = {
 		args: ['arg1', 'arg22', 'arg333'],
 		env: env
 	};

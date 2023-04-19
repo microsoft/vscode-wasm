@@ -15,7 +15,11 @@
 			"request": "launch",
 			"name": "Python Testbed",
 			"runtimeExecutable": "${execPath}",
-			"args": ["--extensionDevelopmentPath=${workspaceRoot}/testbeds/python", "--extensionDevelopmentPath=${workspaceRoot}/wasm-wasi-core"],
+			"args": [
+				"--extensionDevelopmentPath=${workspaceRoot}/testbeds/python",
+				"--extensionDevelopmentPath=${workspaceRoot}/wasm-wasi-core",
+				"--extensionDevelopmentPath=${workspaceRoot}/webshell"
+			],
 			"outFiles": ["${workspaceRoot}/testbeds/python/out/**/*.js"],
 			"sourceMaps": true,
 			"preLaunchTask": "Build Python Example"
