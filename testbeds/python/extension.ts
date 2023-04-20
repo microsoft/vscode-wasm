@@ -7,7 +7,7 @@ import fs from 'node:fs/promises';
 import path from 'node:path';
 
 import { commands, ExtensionContext, Uri, window } from 'vscode';
-import { Wasm, Options } from '@vscode/wasm-wasi';
+import { Wasm, ProcessOptions } from '@vscode/wasm-wasi';
 
 export async function activate(_context: ExtensionContext) {
 	const wasm: Wasm = await Wasm.api();
@@ -15,7 +15,7 @@ export async function activate(_context: ExtensionContext) {
 		const pty = wasm.createPseudoterminal();
 		const terminal = window.createTerminal({ name, pty, isTransient: true });
 		terminal.show(true);
-		const options: Options = {
+		const options: ProcessOptions = {
 			stdio: pty.stdio,
 			mapDir: {
 				folders: true,
