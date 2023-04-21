@@ -815,6 +815,9 @@ export namespace Lookupflags {
 	 * expanded.
 	 */
 	export const symlink_follow = 1 << 0;
+	export function symlink_followOn(value: lookupflags): boolean {
+		return (value & symlink_follow) !== 0;
+	}
 }
 export namespace Lookupflags {
 	export const $param = U32.$param;
@@ -1227,24 +1230,28 @@ export namespace Fstflags {
 	 * filestat::atim.
 	 */
 	export const atim = 1 << 0;
+	export function atimOn(flags: fstflags): boolean { return (flags & atim) !== 0; }
 
 	/**
 	 * Adjust the last data access timestamp to the time of clock
 	 * clockid::realtime.
 	 */
 	export const atim_now =  1 << 1;
+	export function atim_nowOn(flags: fstflags): boolean { return (flags & atim_now) !== 0; }
 
 	/**
 	 * Adjust the last data modification timestamp to the value stored in
 	 * filestat::mtim.
 	 */
 	export const mtim = 1 << 2;
+	export function mtimOn(flags: fstflags): boolean { return (flags & mtim) !== 0; }
 
 	/**
 	 * Adjust the last data modification timestamp to the time of clock
 	 * clockid::realtime.
 	 */
 	export const mtim_now = 1 << 3;
+	export function mtim_nowOn(flags: fstflags): boolean { return (flags & mtim_now) !== 0; }
 }
 export namespace Fstflags {
 	export const $param = U16.$param;

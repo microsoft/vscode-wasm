@@ -101,6 +101,7 @@
 		"filesize",
 		"filestat",
 		"fstflags",
+		"fullpath",
 		"futimens",
 		"GETFL",
 		"getres",
