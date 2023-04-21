@@ -226,6 +226,9 @@ class CommandHistory {
 		if (this.current !== this.history.length - 1) {
 			this.history[this.history.length - 1] = this.history[this.current];
 		}
+		if (this.history[this.history.length - 1] === this.history[this.history.length - 2]) {
+			this.history.pop();
+		}
 		this.history.push('');
 		this.current = this.history.length - 1;
 	}
