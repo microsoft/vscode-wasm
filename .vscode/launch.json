@@ -15,7 +15,11 @@
 			"request": "launch",
 			"name": "Python Testbed",
 			"runtimeExecutable": "${execPath}",
-			"args": ["--extensionDevelopmentPath=${workspaceRoot}/testbeds/python", "--extensionDevelopmentPath=${workspaceRoot}/wasm-wasi-core"],
+			"args": [
+				"--extensionDevelopmentPath=${workspaceRoot}/testbeds/python",
+				"--extensionDevelopmentPath=${workspaceRoot}/wasm-wasi-core",
+				"--extensionDevelopmentPath=${workspaceRoot}/webshell"
+			],
 			"outFiles": ["${workspaceRoot}/testbeds/python/out/**/*.js"],
 			"sourceMaps": true,
 			"preLaunchTask": "Build Python Example"
@@ -99,6 +103,14 @@
 			"sourceMaps": true
 		},
 		{
+			"type": "extensionHost",
+			"request": "launch",
+			"name": "Webshell",
+			"runtimeExecutable": "${execPath}",
+			"args": ["--extensionDevelopmentPath=${workspaceRoot}/webshell", "--extensionDevelopmentPath=${workspaceRoot}/wasm-wasi-core"],
+			"sourceMaps": true
+		},
+		{
 			"request": "launch",
 			"type": "node",
 			"name": "test:common",
@@ -125,21 +137,6 @@
 			],
 			"sourceMaps": true,
 			"outFiles": ["${workspaceRoot}/sync-api-tests/lib/**/*.js"],
-			"preLaunchTask": "npm: watch"
-		},
-		{
-			"request": "launch",
-			"type": "node",
-			"name": "test:wasm-wasi",
-			"program": "${workspaceRoot}/node_modules/mocha/bin/_mocha",
-			"stopOnEntry": false,
-			"args": ["--timeout", "999999"],
-			"cwd": "${workspaceRoot}/wasm-wasi-tests",
-			"runtimeExecutable": null,
-			"runtimeArgs": [],
-			"env": { },
-			"sourceMaps": true,
-			"outFiles": ["${workspaceRoot}/wasm-wasi-tests/lib/**/*.js"],
 			"preLaunchTask": "npm: watch"
 		},
 		{

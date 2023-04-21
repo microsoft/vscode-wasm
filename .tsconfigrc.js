@@ -271,6 +271,35 @@ const wasm_wasi = {
 }
 
 /** @type ProjectDescription */
+const webshell = {
+	name: 'webshell',
+	path: './webshell',
+	out: {
+		dir: './lib',
+		buildInfoFile: '${buildInfoFile}.tsbuildInfo'
+	},
+	sourceFolders: [
+		{
+			path: './src/common',
+			extends: [ common, vscodeMixin ],
+		},
+		{
+			path: './src/web',
+			extends: [ browser, vscodeMixin ],
+			references: [ '../common' ]
+		},
+		{
+			path: './src/desktop',
+			extends: [ node, vscodeMixin ],
+			references: [ '../common' ]
+		}
+	],
+	references: [
+		wasm_wasi
+	]
+};
+
+/** @type ProjectDescription */
 const tools = {
 	name: 'tools',
 	path: './tools',
@@ -335,7 +364,7 @@ const testbeds = {
 const root = {
 	name: 'root',
 	path: './',
-	references: [ sync_api_common, sync_api_client, sync_api_service, sync_api_tests, wasm_wasi_core, wasm_wasi, tools ]
+	references: [ sync_api_common, sync_api_client, sync_api_service, sync_api_tests, wasm_wasi_core, wasm_wasi, webshell, tools ]
 };
 
 /** @type CompilerOptions */
@@ -408,6 +437,8 @@ const projects = [
 	[ createPublishProjectDescription(wasm_wasi_core), [ publishProjectOptions ] ],
 	[ wasm_wasi, [ compileProjectOptions, watchProjectOptions ] ],
 	[ createPublishProjectDescription(wasm_wasi), [ publishProjectOptions ] ],
+	[ webshell, [ compileProjectOptions, watchProjectOptions ] ],
+	[ createPublishProjectDescription(webshell), [ publishProjectOptions ] ],
 	[ tools, [ compileProjectOptions, watchProjectOptions ] ],
 	[ root, [compileProjectOptions, watchProjectOptions ] ],
 	[ testbed_coreutils, [ compileProjectOptions ] ],

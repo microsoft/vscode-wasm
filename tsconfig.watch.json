@@ -24,6 +24,9 @@
             "path": "./wasm-wasi/tsconfig.watch.json"
         },
         {
+            "path": "./webshell/tsconfig.watch.json"
+        },
+        {
             "path": "./tools/tsconfig.watch.json"
         }
     ]

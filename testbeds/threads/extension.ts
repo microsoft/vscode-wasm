@@ -4,7 +4,7 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { commands, window } from 'vscode';
-import { Wasm, Options } from '@vscode/wasm-wasi';
+import { Wasm, ProcessOptions } from '@vscode/wasm-wasi';
 import { binary } from './wasm';
 
 export async function activate() {
@@ -13,7 +13,7 @@ export async function activate() {
 		const pty = wasm.createPseudoterminal();
 		const terminal = window.createTerminal({ name: 'threads', pty, isTransient: true });
 		terminal.show(true);
-		const options: Options = {
+		const options: ProcessOptions = {
 			stdio: pty.stdio,
 			mapDir: true
 		};

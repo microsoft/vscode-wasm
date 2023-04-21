@@ -22,7 +22,7 @@ export type StdioFileDescriptor = {
 
 export type StdioTerminalDescriptor = {
 	kind: 'terminal';
-	terminal: WasiPseudoterminal;
+	terminal: WasmPseudoterminal;
 };
 
 export type StdioPipeDescriptor = {
@@ -41,16 +41,37 @@ export type Stdio = {
 	err?: StdioDescriptor;
 };
 
-export interface WasiPseudoterminal extends Pseudoterminal {
+export interface TerminalOptions {
 	/**
-	 * Clients must not use this property. It is here to ensure correct typing.
+	 * Enables a history stack for the terminal.
 	 */
-	readonly _wasiPseudoterminalBrand: any;
+	history?: boolean;
+}
 
+export interface WasmPseudoterminal extends Pseudoterminal {
 	/**
 	 * Create stdio
 	 */
 	readonly stdio: Stdio;
+
+	/**
+	 * Read a line from the terminal.
+	 */
+	readline(): Promise<string>;
+
+	/**
+	 * Write a string to the terminal.
+	 *
+	 * @param str The string to write to the terminal.
+	 */
+	write(str: string): Promise<void>;
+
+	/**
+	 * Write a prompt to the terminal.
+	 *
+	 * @param prompt The prompt to write to the terminal.
+	 */
+	prompt(prompt: string): Promise<void>;
 }
 
 export interface MapDirEntry {
@@ -58,7 +79,7 @@ export interface MapDirEntry {
 	mountPoint: string;
 }
 
-export interface Options {
+export interface ProcessOptions {
 
 	/**
 	 * The encoding to use when decoding strings from and to the WASM layer.
@@ -97,7 +118,7 @@ export interface Readable {
 	onData: Event<Uint8Array>;
 }
 
-export interface WasiProcess {
+export interface WasmProcess {
 
 	readonly stdin: Writable | undefined;
 
@@ -106,18 +127,18 @@ export interface WasiProcess {
 	readonly stderr: Readable | undefined;
 
 	/**
-	 * Runs the WASI process.
+	 * Runs the WASM process.
 	 */
 	run(): Promise<number>;
 
 	/**
-	 * Terminate the WASI process.
+	 * Terminate the WASM process.
 	 */
 	 terminate(): Promise<number>;
 }
 
-export interface WasiCore {
-	createPseudoterminal(): WasiPseudoterminal;
-	createProcess(name: string, module: WebAssembly.Module | Promise<WebAssembly.Module>, options?: Options): Promise<WasiProcess>;
-	createProcess(name: string, module: WebAssembly.Module | Promise<WebAssembly.Module>, memory: WebAssembly.MemoryDescriptor | WebAssembly.Memory, options?: Options): Promise<WasiProcess>;
+export interface WasmCore {
+	createPseudoterminal(options?: TerminalOptions): WasmPseudoterminal;
+	createProcess(name: string, module: WebAssembly.Module | Promise<WebAssembly.Module>, options?: ProcessOptions): Promise<WasmProcess>;
+	createProcess(name: string, module: WebAssembly.Module | Promise<WebAssembly.Module>, memory: WebAssembly.MemoryDescriptor | WebAssembly.Memory, options?: ProcessOptions): Promise<WasmProcess>;
 }

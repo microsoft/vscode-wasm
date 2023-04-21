@@ -7,7 +7,7 @@ import fs from 'node:fs/promises';
 import path from 'node:path';
 
 import { commands, ExtensionContext, Uri, window } from 'vscode';
-import { Wasm, Options } from '@vscode/wasm-wasi';
+import { Wasm, ProcessOptions } from '@vscode/wasm-wasi';
 
 export async function activate(_context: ExtensionContext) {
 	const wasm: Wasm = await Wasm.api();
@@ -15,14 +15,14 @@ export async function activate(_context: ExtensionContext) {
 		const pty = wasm.createPseudoterminal();
 		const terminal = window.createTerminal({ name, pty, isTransient: true });
 		terminal.show(true);
-		const options: Options = {
+		const options: ProcessOptions = {
 			stdio: pty.stdio,
 			mapDir: {
 				folders: true,
 				entries: [
 					{
-						vscode_fs: Uri.file(path.join(path.sep, 'home', 'dirkb', 'bin', 'wasm', 'Python-3.11.0')),
-						mountPoint: path.posix.sep
+						vscode_fs: Uri.file(path.join(path.sep, 'home', 'dirkb', 'bin', 'wasm', 'Python-3.11.3', 'lib')),
+						mountPoint: path.posix.join(path.posix.sep, 'usr', 'local', 'lib')
 					}
 				]
 			},
@@ -31,7 +31,7 @@ export async function activate(_context: ExtensionContext) {
  			},
 			args: fileToRun !== undefined ? ['-X', 'utf8', fileToRun] : ['-X', 'utf8']
 		};
-		const filename = path.join(path.sep, 'home', 'dirkb', 'bin', 'wasm', 'Python-3.11.0', 'python.wasm');
+		const filename = path.join(path.sep, 'home', 'dirkb', 'bin', 'wasm', 'Python-3.11.3', 'python.wasm');
 		const bits = await fs.readFile(filename);
 		const module = await WebAssembly.compile(bits);
 		const process = await wasm.createProcess('python', module, options);

@@ -42,6 +42,7 @@
 		"./sync-api-tests",
 		"./wasm-wasi-core",
 		"./wasm-wasi",
+		"./webshell",
 		"./tools",
 		"./testbeds"
 	],
@@ -188,6 +189,8 @@
 		"utimensat",
 		"vscfs",
 		"waitall",
+		"webshell",
+		"wesh",
 		"willneed",
 		"xdev"
 	],

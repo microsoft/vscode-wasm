@@ -111,13 +111,35 @@ const desktopThreadWorkerOptions = {
 	...sharedDesktopOptions,
 };
 
-Promise.all([
-	esbuild.build(webOptions),
-	esbuild.build(webMainWorkerOptions),
-	esbuild.build(webThreadWorkerOptions),
-	esbuild.build(webTestsIndexOptions),
-	esbuild.build(webTestWorkerOptions),
-	esbuild.build(desktopOptions),
-	esbuild.build(desktopMainWorkerOptions),
-	esbuild.build(desktopThreadWorkerOptions)
-]).catch(console.error);
+function createContexts() {
+	return Promise.all([
+		esbuild.context(webOptions),
+		esbuild.context(webMainWorkerOptions),
+		esbuild.context(webThreadWorkerOptions),
+		esbuild.context(webTestsIndexOptions),
+		esbuild.context(webTestWorkerOptions),
+		esbuild.context(desktopOptions),
+		esbuild.context(desktopMainWorkerOptions),
+		esbuild.context(desktopThreadWorkerOptions)
+	]);
+}
+
+createContexts().then(contexts => {
+	if (process.argv[2] === '--watch') {
+		const promises = [];
+		for (const context of contexts) {
+			promises.push(context.watch());
+		}
+		return Promise.all(promises).then(() => { return undefined; });
+	} else {
+		const promises = [];
+		for (const context of contexts) {
+			promises.push(context.rebuild());
+		}
+		Promise.all(promises).then(() => {
+			for (const context of contexts) {
+				context.dispose();
+			}
+		}).then(() => { return undefined; });
+	}
+}).catch(console.error);

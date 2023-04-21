@@ -22,6 +22,21 @@
 			]
 		},
 		{
+			"label": "npm: esbuild:watch",
+			"type": "npm",
+			"script": "esbuild:watch",
+			"path": "wasm-wasi-core",
+			"group": "build",
+			"runOptions": {
+				"runOn": "folderOpen"
+			},
+			"isBackground": true,
+			"presentation": {
+				"panel": "dedicated",
+				"reveal": "never"
+			}
+		},
+		{
 			"label": "Build Python Example",
 			"type": "npm",
 			"script": "build",
