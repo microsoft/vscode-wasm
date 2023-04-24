@@ -62,7 +62,14 @@ export interface FileDescriptor {
 	 *
 	 * @param right the rights to assert.
 	 */
-	assertBaseRights(right: rights): void;
+	assertBaseRights(rights: rights): void;
+
+	/**
+	 * Asserts the given base rights.
+	 *
+	 * @param right the rights to assert.
+	 */
+	assertInheritingRights(rights: rights): void;
 
 	/**
 	 * Asserts the given fdflags.
@@ -121,6 +128,14 @@ export abstract class BaseFileDescriptor implements FileDescriptor {
 		}
 		throw new WasiError(Errno.perm);
 	}
+
+	public assertInheritingRights(rights: rights): void {
+		if ((this.rights_inheriting & rights) === rights) {
+			return;
+		}
+		throw new WasiError(Errno.perm);
+	}
+
 
 	public assertFdflags(fdflags: fdflags): void {
 		if (!Rights.supportFdflags(this.rights_base, fdflags)) {
