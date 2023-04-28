@@ -17,6 +17,7 @@ import { BigInts } from '../common/converter';
 import { BaseFileDescriptor, FdProvider, FileDescriptor } from '../common/fileDescriptor';
 import { NoSysDeviceDriver, ReaddirEntry, FileSystemDeviceDriver, DeviceId } from '../common/deviceDriver';
 import { Dirent } from 'node:fs';
+import { Uri } from 'vscode';
 
 export const DirectoryBaseRights: rights = Rights.fd_fdstat_set_flags | Rights.path_create_directory |
 		Rights.path_create_file | Rights.path_link_source | Rights.path_link_target | Rights.path_open |
@@ -118,6 +119,25 @@ export function create(deviceId: DeviceId, basePath: string): FileSystemDeviceDr
 		}
 	}
 
+	let $rootFileDescriptor: DirectoryFileDescriptor | undefined = undefined;
+	async function getRootFileDescriptor(fd: fd): Promise<DirectoryFileDescriptor> {
+		if ($rootFileDescriptor !== undefined) {
+			throw new WasiError(Errno.inval);
+		}
+		try {
+			const stat = await fs.stat(basePath, { bigint: true });
+			if (!stat.isDirectory()) {
+				throw new WasiError(Errno.notdir);
+			}
+			const handle = await fs.open(basePath);
+			const dir = await fs.opendir(basePath);
+			$rootFileDescriptor = new DirectoryFileDescriptor(deviceId, fd, DirectoryBaseRights, DirectoryInheritingRights, 0, stat.ino, handle, dir);
+			return $rootFileDescriptor;
+		} catch (error) {
+			throw handleError(error);
+		}
+	}
+
 	async function assertDirectoryExists(fileDescriptor: DirectoryFileDescriptor): Promise<void> {
 		try {
 			const stat = await fileDescriptor.handle.stat();
@@ -199,8 +219,8 @@ export function create(deviceId: DeviceId, basePath: string): FileSystemDeviceDr
 
 	const $this: FileSystemDeviceDriver = {
 
-		uri: baseUri,
 		id: deviceId,
+		uri: Uri.from( { scheme: 'node-fs', path: '/'} ),
 
 		getRootFileDescriptor(): FileDescriptor {
 			if ($rootFileDescriptor === undefined) {
@@ -214,20 +234,10 @@ export function create(deviceId: DeviceId, basePath: string): FileSystemDeviceDr
 			}
 			return $rootFileDescriptor.deviceId === fileDescriptor.deviceId && $rootFileDescriptor.inode === fileDescriptor.inode;
 		},
-		createStdioFileDescriptor(dirflags: lookupflags | undefined = Lookupflags.none, path: string, _oflags: oflags | undefined = Oflags.none, _fs_rights_base: rights | undefined, fdflags: fdflags | undefined = Fdflags.none, fd: 0 | 1 | 2): Promise<FileDescriptor> {
-			if (path.length === 0) {
-				throw new WasiError(Errno.inval);
-			}
-			const fs_rights_base: rights = _fs_rights_base ?? fd === 0
-				? StdInFileRights
-				: StdoutFileRights;
-			const oflags: oflags = _oflags ?? fd === 0
-				? Oflags.none
-				: Oflags.creat | Oflags.trunc;
-
-			// Fake a parent descriptor
-			const parentDescriptor = createRootFileDescriptor(999999);
-			return $this.path_open(parentDescriptor, dirflags, path, oflags, fs_rights_base, FileInheritingRights, fdflags, { next: () => fd });
+		createStdioFileDescriptor(_dirflags: lookupflags | undefined = Lookupflags.none, _path: string, _oflags: oflags | undefined = Oflags.none, _fs_rights_base: rights | undefined, _fdflags: fdflags | undefined = Fdflags.none, _fd: 0 | 1 | 2): Promise<FileDescriptor> {
+			// The file system shouldn't be used to give WASM processes access to the workspace files, even not on the desktop.
+			// It main purpose is to read file from the extensions installation directory. So we don't support stdio operations.
+			throw new WasiError(Errno.inval);
 		},
 		fd_create_prestat_fd(fd: fd): Promise<FileDescriptor> {
 			return Promise.resolve(getRootFileDescriptor(fd));
@@ -237,10 +247,17 @@ export function create(deviceId: DeviceId, basePath: string): FileSystemDeviceDr
 			// We don't have advisory in NodeFS. So treat it as successful.
 			return Promise.resolve();
 		},
-		async fd_allocate(fileDescriptor: FileDescriptor, _offset: bigint, _len: bigint): Promise<void> {
+		async fd_allocate(fileDescriptor: FileDescriptor, offset: bigint, len: bigint): Promise<void> {
 			assertGenericDescriptor(fileDescriptor);
-			fileDescriptor.handle.allocate();
-
+			try {
+				const buffer = await fileDescriptor.handle.readFile();
+				const newBuffer = Buffer.alloc(buffer.byteLength + BigInts.asNumber(len));
+				buffer.copy(newBuffer, 0, 0, BigInts.asNumber(offset));
+				buffer.copy(newBuffer, BigInts.asNumber(offset + len), BigInts.asNumber(offset));
+				await fileDescriptor.handle.write(newBuffer);
+			} catch (error) {
+				throw handleError(error);
+			}
 		},
 		async fd_close(fileDescriptor: FileDescriptor): Promise<void> {
 			try {
