@@ -4,13 +4,63 @@
  *--------------------------------------------------------------------------------------------*/
 /// <reference path="../../typings/webAssemblyCommon.d.ts" />
 
-import { Event, Pseudoterminal, Uri } from 'vscode';
+import { Event, ExtensionContext, Pseudoterminal, Uri } from 'vscode';
 
 import { fdflags, oflags } from './wasi';
 export { fdflags, oflags };
 
 export interface Environment {
 	[key: string]: string;
+}
+
+export interface TerminalOptions {
+	/**
+	 * Enables a history stack for the terminal.
+	 */
+	history?: boolean;
+}
+
+/**
+ * A special pseudo terminal that has support for reading and writing.
+ *
+ * This interface is not intended to be implemented. Instances of this
+ * interface are available via `Wasm.createPseudoterminal`.
+ */
+export interface WasmPseudoterminal extends Pseudoterminal {
+	/**
+	 * Create stdio
+	 */
+	readonly stdio: Stdio;
+
+	/**
+	 * Read a line from the terminal.
+	 */
+	readline(): Promise<string>;
+
+	/**
+	 * Write a string to the terminal.
+	 *
+	 * @param str The string to write to the terminal.
+	 */
+	write(str: string): Promise<void>;
+
+	/**
+	 * Write a prompt to the terminal.
+	 *
+	 * @param prompt The prompt to write to the terminal.
+	 */
+	prompt(prompt: string): Promise<void>;
+}
+
+/**
+ * A mountable file system that can be used inside a WASM process.
+ *
+ * This interface is not intended to be implemented. Instances of this
+ * interface are available via `Wasm.createPseudoterminal`.
+ */
+export interface WasmFileSystem {
+	id: bigint;
+	uri: Uri;
 }
 
 export type StdioFileDescriptor = {
@@ -41,41 +91,8 @@ export type Stdio = {
 	err?: StdioDescriptor;
 };
 
-export interface TerminalOptions {
-	/**
-	 * Enables a history stack for the terminal.
-	 */
-	history?: boolean;
-}
-
-export interface WasmPseudoterminal extends Pseudoterminal {
-	/**
-	 * Create stdio
-	 */
-	readonly stdio: Stdio;
-
-	/**
-	 * Read a line from the terminal.
-	 */
-	readline(): Promise<string>;
-
-	/**
-	 * Write a string to the terminal.
-	 *
-	 * @param str The string to write to the terminal.
-	 */
-	write(str: string): Promise<void>;
-
-	/**
-	 * Write a prompt to the terminal.
-	 *
-	 * @param prompt The prompt to write to the terminal.
-	 */
-	prompt(prompt: string): Promise<void>;
-}
-
 export interface MapDirEntry {
-	vscode_fs: Uri;
+	fileSystem: WasmFileSystem;
 	mountPoint: string;
 }
 
@@ -84,7 +101,7 @@ export interface ProcessOptions {
 	/**
 	 * The encoding to use when decoding strings from and to the WASM layer.
 	 */
-	encoding?: 'utf-8';
+	encoding?: string;
 
 	/**
 	 * Command line arguments accessible in the WASM.
@@ -99,8 +116,8 @@ export interface ProcessOptions {
 	/**
 	 * How VS Code files systems are mapped into the WASM/WASI file system.
 	 *
-	 * A boolean value of true maps the workspace folders into their default
-	 * location.
+	 * The workspace folder is always mapped as `/workspace` or in case of a
+	 * multi-root workspace each folder is mapped as `/workspaces/folder-name`.
 	 */
 	mapDir?: boolean | MapDirEntry[] | { folders: boolean; entries: MapDirEntry[] };
 
@@ -127,18 +144,48 @@ export interface WasmProcess {
 	readonly stderr: Readable | undefined;
 
 	/**
-	 * Runs the WASM process.
+	 * Runs the Wasm process.
 	 */
 	run(): Promise<number>;
 
 	/**
-	 * Terminate the WASM process.
+	 * Terminate the Wasm process.
 	 */
 	 terminate(): Promise<number>;
 }
 
-export interface WasmCore {
+export interface Wasm {
+	/**
+	 * Creates a new pseudoterminal.
+	 *
+	 * @param options Additional options for the terminal.
+	 */
 	createPseudoterminal(options?: TerminalOptions): WasmPseudoterminal;
+
+	/**
+	 * Creates a file system that reads and writes data from the extensions
+	 * installation directory.
+	 *
+	 * @param context The extension context.
+	 */
+	createExtensionInstallationFileSystem(context: ExtensionContext): WasmFileSystem;
+
+	/**
+	 * Creates a new WASM process.
+	 *
+	 * @param name The name of the process. Will be available as `argv[0]`.
+	 * @param module The WASM module to run.
+	 * @param options Additional options for the process.
+	 */
 	createProcess(name: string, module: WebAssembly.Module | Promise<WebAssembly.Module>, options?: ProcessOptions): Promise<WasmProcess>;
+
+	/**
+	 * Creates a new WASM process.
+	 *
+	 * @param name The name of the process. Will be available as `argv[0]`.
+	 * @param module The WASM module to run.
+	 * @param memory The memory descriptor for the WASM module.
+	 * @param options Additional options for the process.
+	 */
 	createProcess(name: string, module: WebAssembly.Module | Promise<WebAssembly.Module>, memory: WebAssembly.MemoryDescriptor | WebAssembly.Memory, options?: ProcessOptions): Promise<WasmProcess>;
 }

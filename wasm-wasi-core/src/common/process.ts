@@ -11,7 +11,6 @@ import { MapDirEntry, ProcessOptions, StdioConsoleDescriptor, StdioDescriptor, S
 import { ptr, size, u32 } from './baseTypes';
 import { FileSystemDeviceDriver } from './deviceDriver';
 import { FileDescriptors } from './fileDescriptor';
-import * as vscfs from './vscodeFileSystemDriver';
 import * as vrfs from './virtualRootFS';
 import * as tdd from './terminalDriver';
 import * as pdd from './pipeDriver';

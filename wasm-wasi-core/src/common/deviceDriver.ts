@@ -167,3 +167,58 @@ export const NoSysDeviceDriver: Omit<DeviceDriver, 'id' | 'uri'> = {
 		throw new WasiError(Errno.nosys);
 	}
 };
+
+export const WritePermDeniedDeviceDriver: Pick<DeviceDriver,
+'fd_allocate' | 'fd_datasync' | 'fd_fdstat_set_flags' | 'fd_filestat_set_size' | 'fd_filestat_set_times' | 'fd_pwrite' |
+'fd_renumber' | 'fd_sync' | 'fd_write' | 'path_create_directory' | 'path_filestat_set_times' | 'path_link' | 'path_remove_directory' |
+'path_rename' | 'path_symlink' | 'path_unlink_file'
+> = {
+	fd_allocate(): Promise<void> {
+		throw new WasiError(Errno.perm);
+	},
+	fd_datasync(): Promise<void> {
+		throw new WasiError(Errno.perm);
+	},
+	fd_fdstat_set_flags(): Promise<void> {
+		throw new WasiError(Errno.perm);
+	},
+	fd_filestat_set_size(): Promise<void> {
+		throw new WasiError(Errno.perm);
+	},
+	fd_filestat_set_times(): Promise<void> {
+		throw new WasiError(Errno.perm);
+	},
+	fd_pwrite(): Promise<size> {
+		throw new WasiError(Errno.perm);
+	},
+	fd_renumber(): Promise<void> {
+		throw new WasiError(Errno.perm);
+	},
+	fd_sync(): Promise<void> {
+		throw new WasiError(Errno.perm);
+	},
+	fd_write(): Promise<size> {
+		throw new WasiError(Errno.perm);
+	},
+	path_create_directory(): Promise<void> {
+		throw new WasiError(Errno.perm);
+	},
+	path_filestat_set_times(): Promise<void> {
+		throw new WasiError(Errno.perm);
+	},
+	path_link(): Promise<void> {
+		throw new WasiError(Errno.perm);
+	},
+	path_remove_directory(): Promise<void> {
+		throw new WasiError(Errno.perm);
+	},
+	path_rename(): Promise<void> {
+		throw new WasiError(Errno.perm);
+	},
+	path_symlink(): Promise<void> {
+		throw new WasiError(Errno.perm);
+	},
+	path_unlink_file(): Promise<void> {
+		throw new WasiError(Errno.nosys);
+	}
+};

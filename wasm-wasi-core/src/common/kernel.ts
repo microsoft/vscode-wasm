@@ -3,11 +3,12 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { Uri } from 'vscode';
+import { Uri, workspace } from 'vscode';
 
 import { DeviceDriver, DeviceId } from './deviceDriver';
 import { Errno, WasiError } from './wasi';
 import * as ConsoleDriver from './consoleDriver';
+import * as vscfs from './vscodeFileSystemDriver';
 
 export interface DeviceDrivers {
 	next(): DeviceId;
@@ -230,8 +231,30 @@ class LocalDeviceDrivers implements DeviceDrivers {
 
 namespace WasiKernel {
 	export const deviceDrivers = new DeviceDriversImpl();
+	// By default we have a console
 	export const console = ConsoleDriver.create(deviceDrivers.next());
 	deviceDrivers.add(console);
+	// By default we have file systems for all workspace folders.
+	workspace.onDidChangeWorkspaceFolders((event) => {
+		for (const added of event.added) {
+			if (!deviceDrivers.hasByUri(added.uri)) {
+				const driver = vscfs.create(deviceDrivers.next(), added.uri, !workspace.fs.isWritableFileSystem(added.uri.scheme) ?? true);
+				deviceDrivers.add(driver);
+			}
+		}
+		for (const removed of event.removed) {
+			deviceDrivers.removeByUri(removed.uri);
+		}
+	});
+	const folders = workspace.workspaceFolders;
+	if (folders !== undefined) {
+		for (const folder of folders) {
+			if (!deviceDrivers.hasByUri(folder.uri)) {
+				const driver = vscfs.create(deviceDrivers.next(), folder.uri, !workspace.fs.isWritableFileSystem(folder.uri.scheme) ?? true);
+				deviceDrivers.add(driver);
+			}
+		}
+	}
 	export function createLocalDeviceDrivers(): DeviceDrivers {
 		return new LocalDeviceDrivers(deviceDrivers);
 	}

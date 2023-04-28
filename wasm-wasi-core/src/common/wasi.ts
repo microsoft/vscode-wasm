@@ -736,6 +736,12 @@ export namespace Rights {
 		path_filestat_set_size | path_filestat_set_times | fd_filestat_get |
 		fd_filestat_set_size | fd_filestat_set_times | path_symlink | path_remove_directory |
 		path_unlink_file | poll_fd_readwrite | sock_shutdown | sock_accept;
+
+	/**
+	 * All read rights in terms of modifying disk state.
+	 */
+	export const ReadOnly = fd_read | fd_seek | fd_tell | path_open | fd_readdir |
+		path_readlink | path_filestat_get | fd_filestat_get | poll_fd_readwrite;
 }
 export namespace Rights {
 	export const $param = U64.$param;

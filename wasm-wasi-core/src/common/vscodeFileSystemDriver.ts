@@ -13,27 +13,43 @@ import {
 } from './wasi';
 import { BigInts, code2Wasi } from './converter';
 import { BaseFileDescriptor, FdProvider, FileDescriptor } from './fileDescriptor';
-import { NoSysDeviceDriver, ReaddirEntry, FileSystemDeviceDriver, DeviceId } from './deviceDriver';
+import { NoSysDeviceDriver, ReaddirEntry, FileSystemDeviceDriver, DeviceId, WritePermDeniedDeviceDriver } from './deviceDriver';
 
-export const DirectoryBaseRights: rights = Rights.fd_fdstat_set_flags | Rights.path_create_directory |
-		Rights.path_create_file | Rights.path_link_source | Rights.path_link_target | Rights.path_open |
-		Rights.fd_readdir | Rights.path_readlink | Rights.path_rename_source | Rights.path_rename_target |
-		Rights.path_filestat_get | Rights.path_filestat_set_size | Rights.path_filestat_set_times |
-		Rights.fd_filestat_get | Rights.fd_filestat_set_times | Rights.path_remove_directory | Rights.path_unlink_file |
-		Rights.path_symlink;
+const _DirectoryBaseRights: rights = Rights.fd_fdstat_set_flags | Rights.path_create_directory |
+	Rights.path_create_file | Rights.path_link_source | Rights.path_link_target | Rights.path_open |
+	Rights.fd_readdir | Rights.path_readlink | Rights.path_rename_source | Rights.path_rename_target |
+	Rights.path_filestat_get | Rights.path_filestat_set_size | Rights.path_filestat_set_times |
+	Rights.fd_filestat_get | Rights.fd_filestat_set_times | Rights.path_remove_directory | Rights.path_unlink_file |
+	Rights.path_symlink;
+const _DirectoryBaseRightsReadonly = _DirectoryBaseRights & Rights.ReadOnly;
+function getDirectoryBaseRights(readOnly: boolean = false): rights {
+	return readOnly ? _DirectoryBaseRightsReadonly : _DirectoryBaseRights;
+}
 
-export const FileBaseRights: rights = Rights.fd_datasync | Rights.fd_read | Rights.fd_seek | Rights.fd_fdstat_set_flags |
-		Rights.fd_sync | Rights.fd_tell | Rights.fd_write | Rights.fd_advise | Rights.fd_allocate | Rights.fd_filestat_get |
-		Rights.fd_filestat_set_size | Rights.fd_filestat_set_times | Rights.poll_fd_readwrite;
+const _FileBaseRights: rights = Rights.fd_datasync | Rights.fd_read | Rights.fd_seek | Rights.fd_fdstat_set_flags |
+	Rights.fd_sync | Rights.fd_tell | Rights.fd_write | Rights.fd_advise | Rights.fd_allocate | Rights.fd_filestat_get |
+	Rights.fd_filestat_set_size | Rights.fd_filestat_set_times | Rights.poll_fd_readwrite;
+const _FileBaseRightsReadOnly = _FileBaseRights & Rights.ReadOnly;
+function getFileBaseRights(readOnly: boolean = false): rights {
+	return readOnly ? _FileBaseRightsReadOnly : _FileBaseRights;
+}
 
-export const DirectoryInheritingRights: rights = DirectoryBaseRights | FileBaseRights;
+const _DirectoryInheritingRights: rights = _DirectoryBaseRights | _FileBaseRights;
+const _DirectoryInheritingRightsReadonly = _DirectoryInheritingRights & Rights.ReadOnly;
+function getDirectoryInheritingRights(readOnly: boolean = false): rights {
+	return readOnly ? _DirectoryInheritingRightsReadonly : _DirectoryInheritingRights;
+}
 
-export const FileInheritingRights: rights = 0n;
+const _FileInheritingRights: rights = 0n;
+const _FileInheritingRightsReadonly = _FileInheritingRights & Rights.ReadOnly;
+function getFileInheritingRights(readOnly: boolean = false): rights {
+	return readOnly ? _FileInheritingRightsReadonly : _FileInheritingRights;
+}
 
-const DirectoryOnlyBaseRights: rights = DirectoryBaseRights & ~FileBaseRights;
-const FileOnlyBaseRights: rights = FileBaseRights & ~DirectoryBaseRights;
+const DirectoryOnlyBaseRights: rights = getDirectoryBaseRights() & ~getFileBaseRights();
+const FileOnlyBaseRights: rights = getFileBaseRights() & ~getDirectoryBaseRights();
 const StdInFileRights: rights = Rights.fd_read | Rights.fd_seek | Rights.fd_tell | Rights.fd_advise | Rights.fd_filestat_get | Rights.poll_fd_readwrite;
-const StdoutFileRights: rights = FileBaseRights & ~Rights.fd_read;
+const StdoutFileRights: rights = getFileBaseRights() & ~Rights.fd_read;
 
 
 class FileFileDescriptor extends BaseFileDescriptor {
@@ -445,7 +461,7 @@ class FileSystem {
 	}
 }
 
-export function create(deviceId: DeviceId, baseUri: Uri): FileSystemDeviceDriver {
+export function create(deviceId: DeviceId, baseUri: Uri, readOnly: boolean = false): FileSystemDeviceDriver {
 
 	const vscode_fs = workspace.fs;
 	const fs = new FileSystem(baseUri);
@@ -473,7 +489,7 @@ export function create(deviceId: DeviceId, baseUri: Uri): FileSystemDeviceDriver
 	}
 
 	function createRootFileDescriptor(fd: fd): DirectoryFileDescriptor {
-		return new DirectoryFileDescriptor(deviceId, fd, DirectoryBaseRights, DirectoryInheritingRights, 0, fs.getRoot().inode);
+		return new DirectoryFileDescriptor(deviceId, fd, getDirectoryBaseRights(readOnly), getDirectoryInheritingRights(readOnly), 0, fs.getRoot().inode);
 	}
 
 	let $rootFileDescriptor: DirectoryFileDescriptor | undefined = undefined;
@@ -594,7 +610,7 @@ export function create(deviceId: DeviceId, baseUri: Uri): FileSystemDeviceDriver
 
 			// Fake a parent descriptor
 			const parentDescriptor = createRootFileDescriptor(999999);
-			return $this.path_open(parentDescriptor, dirflags, path, oflags, fs_rights_base, FileInheritingRights, fdflags, { next: () => fd });
+			return $this.path_open(parentDescriptor, dirflags, path, oflags, fs_rights_base, getFileInheritingRights(readOnly), fdflags, { next: () => fd });
 		},
 		fd_create_prestat_fd(fd: fd): Promise<FileDescriptor> {
 			return Promise.resolve(getRootFileDescriptor(fd));
@@ -785,6 +801,9 @@ export function create(deviceId: DeviceId, baseUri: Uri): FileSystemDeviceDriver
 		},
 		async path_open(parentDescriptor: FileDescriptor, _dirflags: lookupflags, path: string, oflags: oflags, fs_rights_base: rights, fs_rights_inheriting: rights, fdflags: fdflags, fdProvider: FdProvider): Promise<FileDescriptor> {
 			assertDirectoryDescriptor(parentDescriptor);
+			parentDescriptor.assertBaseRights(fs_rights_base);
+			parentDescriptor.assertInheritingRights(fs_rights_inheriting);
+
 			// We ignore lookup flags that request to follow symlinks. The POSIX FS
 			// implementation we have right now doesn't support symlinks and VS Code
 			// has no API to follow / resolve a symlink.
@@ -833,7 +852,7 @@ export function create(deviceId: DeviceId, baseUri: Uri): FileSystemDeviceDriver
 			// a file descriptor for it and lazy get the file content on read.
 			const result = filetype === Filetype.regular_file
 				? createFileDescriptor(parentDescriptor, fdProvider.next(), parentDescriptor.childFileRights(fs_rights_base), fdflags, path)
-				: createDirectoryDescriptor(parentDescriptor, fdProvider.next(), parentDescriptor.childDirectoryRights(fs_rights_base), fs_rights_inheriting | DirectoryInheritingRights, fdflags, path);
+				: createDirectoryDescriptor(parentDescriptor, fdProvider.next(), parentDescriptor.childDirectoryRights(fs_rights_base), fs_rights_inheriting | getDirectoryInheritingRights(readOnly), fdflags, path);
 
 			if (result instanceof FileFileDescriptor && (createFile || Oflags.truncOn(oflags))) {
 				await createOrTruncate(result);
@@ -940,5 +959,5 @@ export function create(deviceId: DeviceId, baseUri: Uri): FileSystemDeviceDriver
 		}
 	};
 
-	return Object.assign({}, NoSysDeviceDriver, $this);
+	return Object.assign({}, NoSysDeviceDriver, $this, readOnly ? WritePermDeniedDeviceDriver : {});
 }

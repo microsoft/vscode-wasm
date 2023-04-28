@@ -4,7 +4,7 @@
  *--------------------------------------------------------------------------------------------*/
 /// <reference path="../typings/webAssemblyCommon.d.ts" />
 
-import { Event, Pseudoterminal, Uri, extensions as Extensions } from 'vscode';
+import { Event, Pseudoterminal, Uri, extensions as Extensions, ExtensionContext } from 'vscode';
 
 type u16 = number;
 export type oflags = u16;
@@ -84,6 +84,12 @@ export interface TerminalOptions {
 	history?: boolean;
 }
 
+/**
+ * A special pseudo terminal that has support for reading and writing.
+ *
+ * This interface is not intended to be implemented. Instances of this
+ * interface are available via `Wasm.createPseudoterminal`.
+ */
 export interface WasmPseudoterminal extends Pseudoterminal {
 	/**
 	 * Create stdio
@@ -108,6 +114,17 @@ export interface WasmPseudoterminal extends Pseudoterminal {
 	 * @param prompt The prompt to write to the terminal.
 	 */
 	prompt(prompt: string): Promise<void>;
+}
+
+/**
+ * A mountable file system that can be used inside a WASM process.
+ *
+ * This interface is not intended to be implemented. Instances of this
+ * interface are available via `Wasm.createPseudoterminal`.
+ */
+export interface WasmFileSystem {
+	id: bigint;
+	uri: Uri;
 }
 
 export type StdioFileDescriptor = {
@@ -139,7 +156,7 @@ export type Stdio = {
 };
 
 export interface MapDirEntry {
-	vscode_fs: Uri;
+	fileSystem: WasmFileSystem;
 	mountPoint: string;
 }
 
@@ -202,8 +219,46 @@ export interface WasmProcess {
 }
 
 export interface Wasm {
+	/**
+	 * Creates a new pseudoterminal.
+	 *
+	 * @param options Additional options for the terminal.
+	 */
 	createPseudoterminal(options?: TerminalOptions): WasmPseudoterminal;
+
+	/**
+	 * Creates a file system that reads and writes data through VS Code's file
+	 * system provider API.
+	 *
+	 * @param uri The URI of the VS Code file system.
+	 */
+	createVSCodeFileSystem(uri: Uri): WasmFileSystem;
+
+	/**
+	 * Creates a file system that reads and writes data from the extensions
+	 * installation directory.
+	 *
+	 * @param context The extension context.
+	 */
+	createExtensionInstallationFileSystem(context: ExtensionContext): WasmFileSystem;
+
+	/**
+	 * Creates a new WASM process.
+	 *
+	 * @param name The name of the process. Will be available as `argv[0]`.
+	 * @param module The WASM module to run.
+	 * @param options Additional options for the process.
+	 */
 	createProcess(name: string, module: WebAssembly.Module | Promise<WebAssembly.Module>, options?: ProcessOptions): Promise<WasmProcess>;
+
+	/**
+	 * Creates a new WASM process.
+	 *
+	 * @param name The name of the process. Will be available as `argv[0]`.
+	 * @param module The WASM module to run.
+	 * @param memory The memory descriptor for the WASM module.
+	 * @param options Additional options for the process.
+	 */
 	createProcess(name: string, module: WebAssembly.Module | Promise<WebAssembly.Module>, memory: WebAssembly.MemoryDescriptor | WebAssembly.Memory, options?: ProcessOptions): Promise<WasmProcess>;
 }
 

@@ -4,7 +4,7 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { Uri } from 'vscode';
-import { DeviceId, FileSystemDeviceDriver, NoSysDeviceDriver, ReaddirEntry } from './deviceDriver';
+import { DeviceId, FileSystemDeviceDriver, NoSysDeviceDriver, ReaddirEntry, WritePermDeniedDeviceDriver } from './deviceDriver';
 import { BaseFileDescriptor, FdProvider, FileDescriptor } from './fileDescriptor';
 import { WasiError, Filetype, fdstat, filestat, fstflags, lookupflags, oflags, rights, fdflags, fd, Rights, inode } from './wasi';
 import { Errno } from './wasi';
@@ -383,5 +383,5 @@ export function create(deviceId: DeviceId, mountPoints: Map<string, FileSystemDe
 		},
 	};
 
-	return Object.assign({}, NoSysDeviceDriver, $this);
+	return Object.assign({}, NoSysDeviceDriver, $this, WritePermDeniedDeviceDriver);
 }

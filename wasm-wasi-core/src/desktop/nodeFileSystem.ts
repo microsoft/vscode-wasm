@@ -18,27 +18,42 @@ import { BaseFileDescriptor, FdProvider, FileDescriptor } from '../common/fileDe
 import { NoSysDeviceDriver, ReaddirEntry, FileSystemDeviceDriver, DeviceId } from '../common/deviceDriver';
 import { Dirent } from 'node:fs';
 import { Uri } from 'vscode';
+import { WritePermDeniedDeviceDriver } from '../common/deviceDriver';
 
-export const DirectoryBaseRights: rights = Rights.fd_fdstat_set_flags | Rights.path_create_directory |
-		Rights.path_create_file | Rights.path_link_source | Rights.path_link_target | Rights.path_open |
-		Rights.fd_readdir | Rights.path_readlink | Rights.path_rename_source | Rights.path_rename_target |
-		Rights.path_filestat_get | Rights.path_filestat_set_size | Rights.path_filestat_set_times |
-		Rights.fd_filestat_get | Rights.fd_filestat_set_times | Rights.path_remove_directory | Rights.path_unlink_file |
-		Rights.path_symlink;
+const _DirectoryBaseRights: rights = Rights.fd_fdstat_set_flags | Rights.path_create_directory |
+	Rights.path_create_file | Rights.path_link_source | Rights.path_link_target | Rights.path_open |
+	Rights.fd_readdir | Rights.path_readlink | Rights.path_rename_source | Rights.path_rename_target |
+	Rights.path_filestat_get | Rights.path_filestat_set_size | Rights.path_filestat_set_times |
+	Rights.fd_filestat_get | Rights.fd_filestat_set_times | Rights.path_remove_directory | Rights.path_unlink_file |
+	Rights.path_symlink;
+const _DirectoryBaseRightsReadonly = _DirectoryBaseRights & Rights.ReadOnly;
+function getDirectoryBaseRights(readOnly: boolean = false): rights {
+	return readOnly ? _DirectoryBaseRightsReadonly : _DirectoryBaseRights;
+}
 
-export const FileBaseRights: rights = Rights.fd_datasync | Rights.fd_read | Rights.fd_seek | Rights.fd_fdstat_set_flags |
-		Rights.fd_sync | Rights.fd_tell | Rights.fd_write | Rights.fd_advise | Rights.fd_allocate | Rights.fd_filestat_get |
-		Rights.fd_filestat_set_size | Rights.fd_filestat_set_times | Rights.poll_fd_readwrite;
+const _FileBaseRights: rights = Rights.fd_datasync | Rights.fd_read | Rights.fd_seek | Rights.fd_fdstat_set_flags |
+	Rights.fd_sync | Rights.fd_tell | Rights.fd_write | Rights.fd_advise | Rights.fd_allocate | Rights.fd_filestat_get |
+	Rights.fd_filestat_set_size | Rights.fd_filestat_set_times | Rights.poll_fd_readwrite;
+const _FileBaseRightsReadOnly = _FileBaseRights & Rights.ReadOnly;
+function getFileBaseRights(readOnly: boolean = false): rights {
+	return readOnly ? _FileBaseRightsReadOnly : _FileBaseRights;
+}
 
-export const DirectoryInheritingRights: rights = DirectoryBaseRights | FileBaseRights;
+const _DirectoryInheritingRights: rights = _DirectoryBaseRights | _FileBaseRights;
+const _DirectoryInheritingRightsReadonly = _DirectoryInheritingRights & Rights.ReadOnly;
+function getDirectoryInheritingRights(readOnly: boolean = false): rights {
+	return readOnly ? _DirectoryInheritingRightsReadonly : _DirectoryInheritingRights;
+}
 
-export const FileInheritingRights: rights = 0n;
+// const _FileInheritingRights: rights = 0n;
+// const _FileInheritingRightsReadonly = _FileInheritingRights & Rights.ReadOnly;
+// Needed when we allow creation of stdio file descriptors
+// function getFileInheritingRights(readOnly: boolean = false): rights {
+// 	return readOnly ? _FileInheritingRightsReadonly : _FileInheritingRights;
+// }
 
-const DirectoryOnlyBaseRights: rights = DirectoryBaseRights & ~FileBaseRights;
-const FileOnlyBaseRights: rights = FileBaseRights & ~DirectoryBaseRights;
-const StdInFileRights: rights = Rights.fd_read | Rights.fd_seek | Rights.fd_tell | Rights.fd_advise | Rights.fd_filestat_get | Rights.poll_fd_readwrite;
-const StdoutFileRights: rights = FileBaseRights & ~Rights.fd_read;
-
+const DirectoryOnlyBaseRights: rights = getDirectoryBaseRights() & ~getFileBaseRights();
+const FileOnlyBaseRights: rights = getFileBaseRights() & ~getDirectoryBaseRights();
 
 class GenericFileDescriptor extends BaseFileDescriptor {
 
@@ -91,7 +106,7 @@ class DirectoryFileDescriptor extends BaseFileDescriptor {
 	}
 }
 
-export function create(deviceId: DeviceId, basePath: string): FileSystemDeviceDriver {
+export function create(deviceId: DeviceId, basePath: string, readOnly: boolean = false): FileSystemDeviceDriver {
 
 	function createGenericDescriptor(fd: fd, filetype: filetype, rights_base: rights, fdflags: fdflags, inode: inode, handle: fs.FileHandle): GenericFileDescriptor {
 		return new GenericFileDescriptor(deviceId, fd, filetype, rights_base, fdflags, inode, handle);
@@ -131,7 +146,7 @@ export function create(deviceId: DeviceId, basePath: string): FileSystemDeviceDr
 			}
 			const handle = await fs.open(basePath);
 			const dir = await fs.opendir(basePath);
-			$rootFileDescriptor = new DirectoryFileDescriptor(deviceId, fd, DirectoryBaseRights, DirectoryInheritingRights, 0, stat.ino, handle, dir);
+			$rootFileDescriptor = new DirectoryFileDescriptor(deviceId, fd, getDirectoryBaseRights(readOnly), getDirectoryInheritingRights(readOnly), 0, stat.ino, handle, dir);
 			return $rootFileDescriptor;
 		} catch (error) {
 			throw handleError(error);
@@ -532,7 +547,7 @@ export function create(deviceId: DeviceId, basePath: string): FileSystemDeviceDr
 				const stat = await handle.stat({ bigint: true });
 				const filetype: filetype = getFiletype(stat);
 				const result = filetype === Filetype.directory
-					? createDirectoryDescriptor(fdProvider.next(), fileDescriptor.childDirectoryRights(fs_rights_base), fs_rights_inheriting | DirectoryInheritingRights, fdflags, stat.ino, handle, await fs.opendir(fullpath))
+					? createDirectoryDescriptor(fdProvider.next(), fileDescriptor.childDirectoryRights(fs_rights_base), fs_rights_inheriting | getDirectoryInheritingRights(readOnly), fdflags, stat.ino, handle, await fs.opendir(fullpath))
 					: createGenericDescriptor(fdProvider.next(), filetype, fileDescriptor.childFileRights(fs_rights_base), fdflags, stat.ino, handle);
 				return result;
 			} catch (error) {
@@ -609,5 +624,5 @@ export function create(deviceId: DeviceId, basePath: string): FileSystemDeviceDr
 		}
 	};
 
-	return Object.assign({}, NoSysDeviceDriver, $this);
+	return Object.assign({}, NoSysDeviceDriver, $this, readOnly ? WritePermDeniedDeviceDriver : {});
 }
