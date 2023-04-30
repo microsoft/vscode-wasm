@@ -7,12 +7,12 @@
 import RAL from './ral';
 import { Event, EventEmitter, Uri, WorkspaceFolder, workspace } from 'vscode';
 
-import {
+import type {
 	ExtensionLocationDescriptor, MapDirDescriptor, ProcessOptions, StdioConsoleDescriptor, StdioDescriptor, StdioFileDescriptor, VSCodeFileSystemDescriptor,
 	WorkspaceFolderDescriptor
 } from './api';
-import { ptr, size, u32 } from './baseTypes';
-import { FileSystemDeviceDriver } from './deviceDriver';
+import type { ptr, size, u32 } from './baseTypes';
+import type { DeviceId, FileSystemDeviceDriver } from './deviceDriver';
 import { FileDescriptors } from './fileDescriptor';
 import * as vscfs from './vscodeFileSystemDriver';
 import * as vrfs from './virtualRootFS';
@@ -359,7 +359,7 @@ export abstract class WasiProcess {
 				if (this.localDeviceDrivers.hasByUri(extensionUri)) {
 					continue;
 				}
-				const extensionFS = RAL().fs.createExtensionLocationFileSystem(this.localDeviceDrivers.next(), extensionUri);
+				const extensionFS = this.createExtensionLocationFileSystem(this.localDeviceDrivers.next(), extensionUri);
 				this.localDeviceDrivers.add(extensionFS);
 				this.preOpenDirectories.set(descriptor.mountPoint, extensionFS);
 			}
@@ -507,6 +507,8 @@ export abstract class WasiProcess {
 	protected abstract startThread(wasiService: WasiService, tid: u32, start_arg: ptr): Promise<void>;
 
 	protected abstract threadEnded(tid: u32): Promise<void>;
+
+	protected abstract createExtensionLocationFileSystem(deviceId: DeviceId, uri: Uri): FileSystemDeviceDriver;
 
 	private mapWorkspaceFolder(folder: WorkspaceFolder, single: boolean): void {
 		const path = RAL().path;

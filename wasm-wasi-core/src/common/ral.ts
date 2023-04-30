@@ -3,8 +3,7 @@
  * Licensed under the MIT License. See License.txt in the project root for license information.
  * ------------------------------------------------------------------------------------------ */
 
-import type { Disposable, Uri } from 'vscode';
-import type { DeviceId, FileSystemDeviceDriver } from './deviceDriver';
+import type { Disposable } from 'vscode';
 
 interface _TextEncoder {
 	encode(input?: string): Uint8Array;
@@ -59,10 +58,6 @@ interface RAL {
 		join(...paths: string[]): string;
 		normalize(path: string): string;
 		isAbsolute(path: string): boolean;
-	};
-
-	readonly fs: {
-		createExtensionLocationFileSystem(deviceId: DeviceId, uri: Uri): FileSystemDeviceDriver;
 	};
 }
 

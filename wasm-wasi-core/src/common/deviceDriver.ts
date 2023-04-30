@@ -15,7 +15,17 @@ export type DeviceId = bigint;
 
 export type ReaddirEntry = { d_ino: bigint; d_type: filetype; d_name: string };
 
+export enum DeviceDriverKind {
+	character = 'character',
+	fileSystem = 'fileSystem'
+}
+
 export interface DeviceDriver {
+
+	/**
+	 * The kind of device driver.
+	 */
+	readonly kind: DeviceDriverKind;
 
 	// A VS Code URI to identify the device. This is for example the root URI
 	// of a VS Code file system.
@@ -59,23 +69,23 @@ export interface DeviceDriver {
 }
 
 export interface FileSystemDeviceDriver extends DeviceDriver {
-	getRootFileDescriptor(): FileDescriptor;
-	isRootFileDescriptor(fileDescriptor: FileDescriptor): boolean;
+	kind: DeviceDriverKind.fileSystem;
 	createStdioFileDescriptor(dirflags: lookupflags | undefined, path: string, oflags: oflags | undefined, fs_rights_base: rights | undefined, fdflags: fdflags | undefined, fd: 0 | 1 | 2): Promise<FileDescriptor>;
 }
 
 export namespace FileSystemDeviceDriver {
 	export function is(value: DeviceDriver): value is FileSystemDeviceDriver {
 		const candidate: FileSystemDeviceDriver = value as FileSystemDeviceDriver;
-		return typeof candidate.getRootFileDescriptor === 'function' && typeof candidate.isRootFileDescriptor === 'function';
+		return candidate.kind === DeviceDriverKind.fileSystem;
 	}
 }
 
 export interface CharacterDeviceDriver extends DeviceDriver {
+	kind: DeviceDriverKind.character;
 	createStdioFileDescriptor(fd: 0 | 1 | 2): FileDescriptor;
 }
 
-export const NoSysDeviceDriver: Omit<DeviceDriver, 'id' | 'uri'> = {
+export const NoSysDeviceDriver: Omit<DeviceDriver, 'id' | 'uri' | 'kind'> = {
 	fd_advise(): Promise<void> {
 		throw new WasiError(Errno.nosys);
 	},

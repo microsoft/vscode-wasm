@@ -3,6 +3,7 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
+import { DeviceDriver } from './deviceDriver';
 import {
 	Errno, fd, fdflags, Filetype, filetype, oflags, Rights, rights, WasiError
 } from './wasi';
@@ -163,6 +164,8 @@ export interface FdProvider {
 export class FileDescriptors implements FdProvider {
 
 	private readonly descriptors: Map<fd, FileDescriptor> = new Map();
+	private readonly rootDescriptors: Map<DeviceId, FileDescriptor> = new Map();
+
 	private mode: 'init' | 'running' = 'init';
 	private counter: fd = 0;
 	private firstReal: fd = 3;
@@ -208,5 +211,13 @@ export class FileDescriptors implements FdProvider {
 
 	public delete(descriptor: FileDescriptor): boolean {
 		return this.descriptors.delete(descriptor.fd);
+	}
+
+	public setRoot(driver: DeviceDriver, descriptor: FileDescriptor): void {
+		this.rootDescriptors.set(driver.id, descriptor);
+	}
+
+	public getRoot(driver: DeviceDriver): FileDescriptor | undefined {
+		return this.rootDescriptors.get(driver.id);
 	}
 }

@@ -4,12 +4,11 @@
  *--------------------------------------------------------------------------------------------*/
 
 import fs from 'node:fs/promises';
-import path from 'node:path';
 
 import { commands, ExtensionContext, Uri, window } from 'vscode';
 import { Wasm, ProcessOptions } from '@vscode/wasm-wasi';
 
-export async function activate(_context: ExtensionContext) {
+export async function activate(context: ExtensionContext) {
 	const wasm: Wasm = await Wasm.api();
 	async function run(name: string, fileToRun?: Uri): Promise<void> {
 		const pty = wasm.createPseudoterminal();
@@ -17,21 +16,16 @@ export async function activate(_context: ExtensionContext) {
 		terminal.show(true);
 		const options: ProcessOptions = {
 			stdio: pty.stdio,
-			mapDir: {
-				folders: true,
-				entries: [
-					{
-						vscode_fs: Uri.file(path.join(path.sep, 'home', 'dirkb', 'bin', 'wasm', 'Python-3.11.3', 'lib')),
-						mountPoint: path.posix.join(path.posix.sep, 'usr', 'local', 'lib')
-					}
-				]
-			},
+			mapDir: [
+				{ kind: 'workspaceFolder' },
+				{ kind: 'extensionLocation', extension: context, path: 'wasm/lib/python3.11', mountPoint: '/usr/local/lib/python3.11' }
+			],
 			env: {
  				PYTHONPATH: '/workspace'
  			},
 			args: fileToRun !== undefined ? ['-X', 'utf8', fileToRun] : ['-X', 'utf8']
 		};
-		const filename = path.join(path.sep, 'home', 'dirkb', 'bin', 'wasm', 'Python-3.11.3', 'python.wasm');
+		const filename = context.asAbsolutePath('wasm/python.wasm');
 		const bits = await fs.readFile(filename);
 		const module = await WebAssembly.compile(bits);
 		const process = await wasm.createProcess('python', module, options);

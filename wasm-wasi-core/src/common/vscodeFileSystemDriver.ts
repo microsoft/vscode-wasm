@@ -13,7 +13,7 @@ import {
 } from './wasi';
 import { BigInts, code2Wasi } from './converter';
 import { BaseFileDescriptor, FdProvider, FileDescriptor } from './fileDescriptor';
-import { NoSysDeviceDriver, ReaddirEntry, FileSystemDeviceDriver, DeviceId, WritePermDeniedDeviceDriver } from './deviceDriver';
+import { NoSysDeviceDriver, ReaddirEntry, FileSystemDeviceDriver, DeviceId, WritePermDeniedDeviceDriver, DeviceDriverKind } from './deviceDriver';
 
 const _DirectoryBaseRights: rights = Rights.fd_fdstat_set_flags | Rights.path_create_directory |
 	Rights.path_create_file | Rights.path_link_source | Rights.path_link_target | Rights.path_open |
@@ -492,15 +492,6 @@ export function create(deviceId: DeviceId, baseUri: Uri, readOnly: boolean = fal
 		return new DirectoryFileDescriptor(deviceId, fd, getDirectoryBaseRights(readOnly), getDirectoryInheritingRights(readOnly), 0, fs.getRoot().inode);
 	}
 
-	let $rootFileDescriptor: DirectoryFileDescriptor | undefined = undefined;
-	function getRootFileDescriptor(fd: fd): DirectoryFileDescriptor {
-		if ($rootFileDescriptor !== undefined) {
-			throw new WasiError(Errno.inval);
-		}
-		$rootFileDescriptor = createRootFileDescriptor(fd);
-		return $rootFileDescriptor;
-	}
-
 	async function doGetFiletype(fileDescriptor: DirectoryFileDescriptor, path: string): Promise<filetype | undefined> {
 		const inode = fs.getNode(fileDescriptor.inode, NodeKind.Directory);
 		try {
@@ -582,21 +573,10 @@ export function create(deviceId: DeviceId, baseUri: Uri, readOnly: boolean = fal
 
 	const $this: FileSystemDeviceDriver = {
 
+		kind: DeviceDriverKind.fileSystem,
 		uri: baseUri,
 		id: deviceId,
 
-		getRootFileDescriptor(): FileDescriptor {
-			if ($rootFileDescriptor === undefined) {
-				throw new WasiError(Errno.inval);
-			}
-			return $rootFileDescriptor;
-		},
-		isRootFileDescriptor(fileDescriptor: FileDescriptor): boolean {
-			if ($rootFileDescriptor === undefined) {
-				throw new WasiError(Errno.inval);
-			}
-			return $rootFileDescriptor.deviceId === fileDescriptor.deviceId && $rootFileDescriptor.inode === fileDescriptor.inode;
-		},
 		createStdioFileDescriptor(dirflags: lookupflags | undefined = Lookupflags.none, path: string, _oflags: oflags | undefined = Oflags.none, _fs_rights_base: rights | undefined, fdflags: fdflags | undefined = Fdflags.none, fd: 0 | 1 | 2): Promise<FileDescriptor> {
 			if (path.length === 0) {
 				throw new WasiError(Errno.inval);
@@ -613,7 +593,7 @@ export function create(deviceId: DeviceId, baseUri: Uri, readOnly: boolean = fal
 			return $this.path_open(parentDescriptor, dirflags, path, oflags, fs_rights_base, getFileInheritingRights(readOnly), fdflags, { next: () => fd });
 		},
 		fd_create_prestat_fd(fd: fd): Promise<FileDescriptor> {
-			return Promise.resolve(getRootFileDescriptor(fd));
+			return Promise.resolve(createRootFileDescriptor(fd));
 		},
 		fd_advise(fileDescriptor: FileDescriptor, _offset: bigint, _length: bigint, _advise: number): Promise<void> {
 			fileDescriptor.assertBaseRights(Rights.fd_advise);

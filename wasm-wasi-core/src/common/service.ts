@@ -17,7 +17,7 @@ import { CapturedPromise, Offsets, WasiCallMessage, WorkerDoneMessage, WorkerMes
 import { WasiFunction, WasiFunctions, WasiFunctionSignature } from './wasiMeta';
 import { byte, bytes, cstring, ptr, size, u32, u64 } from './baseTypes';
 import { FileDescriptor, FileDescriptors } from './fileDescriptor';
-import { DeviceDriver, FileSystemDeviceDriver, ReaddirEntry } from './deviceDriver';
+import { DeviceDriver, DeviceId, FileSystemDeviceDriver, ReaddirEntry } from './deviceDriver';
 import { BigInts, code2Wasi } from './converter';
 import { ProcessOptions } from './api';
 import { DeviceDrivers } from './kernel';
@@ -245,6 +245,7 @@ export namespace EnvironmentWasiService {
 					const [ mountPoint, driver ] = next.value;
 					const fileDescriptor = await driver.fd_create_prestat_fd(fd);
 					fileDescriptors.add(fileDescriptor);
+					fileDescriptors.setRoot(driver, fileDescriptor);
 					$preStatDirnames.set(fileDescriptor.fd, mountPoint);
 					const view = new DataView(memory);
 					const prestat = Prestat.create(view, bufPtr);
@@ -1058,7 +1059,11 @@ export namespace DeviceWasiService {
 					if (virtualPath === undefined) {
 						throw new WasiError(Errno.noent);
 					}
-					return [virtualRootFileSystem, virtualRootFileSystem.getRootFileDescriptor(), virtualPath];
+					const rootDescriptor = fileDescriptors.getRoot(virtualRootFileSystem);
+					if (rootDescriptor === undefined) {
+						throw new WasiError(Errno.noent);
+					}
+					return [virtualRootFileSystem, rootDescriptor, virtualPath];
 				}
 			}
 			return [result, fileDescriptor, path];
