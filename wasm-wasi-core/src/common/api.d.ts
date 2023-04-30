@@ -4,7 +4,7 @@
  *--------------------------------------------------------------------------------------------*/
 /// <reference path="../../typings/webAssemblyCommon.d.ts" />
 
-import { Event, ExtensionContext, Pseudoterminal, Uri } from 'vscode';
+import { Event, Extension, ExtensionContext, Pseudoterminal, Uri } from 'vscode';
 
 import { fdflags, oflags } from './wasi';
 export { fdflags, oflags };
@@ -91,17 +91,46 @@ export type Stdio = {
 	err?: StdioDescriptor;
 };
 
-export interface MapDirEntry {
-	fileSystem: WasmFileSystem;
+/**
+ * A descriptor signaling that the workspace folder is mapped as `/workspace` or in case of a
+ * multi-root workspace each folder is mapped as `/workspaces/folder-name`.
+ */
+export type WorkspaceFolderDescriptor = {
+	kind: 'workspaceFolder';
+};
+
+/**
+ * A descriptor signaling that the extension location is mapped under the given
+ * mount point.
+ */
+export type ExtensionLocationDescriptor = {
+	kind: 'extensionLocation';
+	extension: ExtensionContext | Extension<any>;
+	path?: string;
 	mountPoint: string;
-}
+};
+
+/**
+ * A descriptor signaling that the VS Code file system is mapped under the given
+ * mount point.
+ */
+export type VSCodeFileSystemDescriptor = {
+	kind: 'vscodeFileSystem';
+	uri: Uri;
+	mountPoint: string;
+};
+
+export type MapDirDescriptor = WorkspaceFolderDescriptor | ExtensionLocationDescriptor | VSCodeFileSystemDescriptor;
 
 export interface ProcessOptions {
 
 	/**
 	 * The encoding to use when decoding strings from and to the WASM layer.
+	 *
+	 * Currently we only have support for utf8 since this is the only encoding
+	 * that browsers currently support natively.
 	 */
-	encoding?: string;
+	encoding?: 'utf-8';
 
 	/**
 	 * Command line arguments accessible in the WASM.
@@ -115,11 +144,8 @@ export interface ProcessOptions {
 
 	/**
 	 * How VS Code files systems are mapped into the WASM/WASI file system.
-	 *
-	 * The workspace folder is always mapped as `/workspace` or in case of a
-	 * multi-root workspace each folder is mapped as `/workspaces/folder-name`.
 	 */
-	mapDir?: boolean | MapDirEntry[] | { folders: boolean; entries: MapDirEntry[] };
+	mapDir?: MapDirDescriptor[];
 
 	/**
 	 * Stdio setup
@@ -161,14 +187,6 @@ export interface Wasm {
 	 * @param options Additional options for the terminal.
 	 */
 	createPseudoterminal(options?: TerminalOptions): WasmPseudoterminal;
-
-	/**
-	 * Creates a file system that reads and writes data from the extensions
-	 * installation directory.
-	 *
-	 * @param context The extension context.
-	 */
-	createExtensionInstallationFileSystem(context: ExtensionContext): WasmFileSystem;
 
 	/**
 	 * Creates a new WASM process.

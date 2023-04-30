@@ -238,7 +238,7 @@ namespace WasiKernel {
 	workspace.onDidChangeWorkspaceFolders((event) => {
 		for (const added of event.added) {
 			if (!deviceDrivers.hasByUri(added.uri)) {
-				const driver = vscfs.create(deviceDrivers.next(), added.uri, !workspace.fs.isWritableFileSystem(added.uri.scheme) ?? true);
+				const driver = vscfs.create(deviceDrivers.next(), added.uri, !(workspace.fs.isWritableFileSystem(added.uri.scheme) ?? true));
 				deviceDrivers.add(driver);
 			}
 		}
@@ -250,7 +250,7 @@ namespace WasiKernel {
 	if (folders !== undefined) {
 		for (const folder of folders) {
 			if (!deviceDrivers.hasByUri(folder.uri)) {
-				const driver = vscfs.create(deviceDrivers.next(), folder.uri, !workspace.fs.isWritableFileSystem(folder.uri.scheme) ?? true);
+				const driver = vscfs.create(deviceDrivers.next(), folder.uri, !(workspace.fs.isWritableFileSystem(folder.uri.scheme) ?? true));
 				deviceDrivers.add(driver);
 			}
 		}

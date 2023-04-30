@@ -6,9 +6,11 @@ import { TextDecoder } from 'util';
 import * as path from 'path';
 import * as crypto from 'crypto';
 
-import { Disposable } from 'vscode';
+import { Disposable, Uri } from 'vscode';
 
 import RAL from '../common/ral';
+import * as nodefs from './nodeFileSystem';
+import type { DeviceId, FileSystemDeviceDriver } from '../common/deviceDriver';
 
 
 interface RIL extends RAL {
@@ -61,7 +63,12 @@ const _ril: RIL = Object.freeze<RIL>({
 			return result;
 		}
 	}),
-	path: path.posix
+	path: path.posix,
+	fs: Object.freeze({
+		createExtensionLocationFileSystem(deviceId: DeviceId, uri: Uri): FileSystemDeviceDriver {
+			return nodefs.create(deviceId, uri.fsPath, true);
+		}
+	})
 });
 
 

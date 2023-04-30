@@ -2,11 +2,12 @@
  * Copyright (c) Microsoft Corporation. All rights reserved.
  * Licensed under the MIT License. See License.txt in the project root for license information.
  * ------------------------------------------------------------------------------------------ */
-import { Disposable } from 'vscode';
+import { Disposable, Uri } from 'vscode';
 
 import RAL from '../common/ral';
 
 import * as path from './path';
+import type { DeviceId, FileSystemDeviceDriver } from '../common/deviceDriver';
 
 interface RIL extends RAL {
 }
@@ -74,7 +75,12 @@ const _ril: RIL = Object.freeze<RIL>({
 			return result;
 		}
 	}),
-	path: path
+	path: path,
+	fs: Object.freeze({
+		createExtensionLocationFileSystem(_deviceId: DeviceId, _uri: Uri): FileSystemDeviceDriver {
+			throw new Error('not implemented');
+		}
+	})
 });
 
 

@@ -3,8 +3,8 @@
  * Licensed under the MIT License. See License.txt in the project root for license information.
  * ------------------------------------------------------------------------------------------ */
 
-import { Disposable, ExtensionContext } from 'vscode';
-import { FileSystemDeviceDriver } from './deviceDriver';
+import type { Disposable, Uri } from 'vscode';
+import type { DeviceId, FileSystemDeviceDriver } from './deviceDriver';
 
 interface _TextEncoder {
 	encode(input?: string): Uint8Array;
@@ -62,7 +62,7 @@ interface RAL {
 	};
 
 	readonly fs: {
-		createExtensionInstallationFileSystem(context: ExtensionContext): FileSystemDeviceDriver;
+		createExtensionLocationFileSystem(deviceId: DeviceId, uri: Uri): FileSystemDeviceDriver;
 	};
 }
 
