@@ -15,7 +15,7 @@ import {
 } from '../common/wasi';
 import { BigInts } from '../common/converter';
 import { BaseFileDescriptor, FdProvider, FileDescriptor } from '../common/fileDescriptor';
-import { NoSysDeviceDriver, ReaddirEntry, FileSystemDeviceDriver, DeviceId } from '../common/deviceDriver';
+import { NoSysDeviceDriver, ReaddirEntry, FileSystemDeviceDriver, DeviceId, DeviceDriverKind } from '../common/deviceDriver';
 import { Dirent } from 'node:fs';
 import { Uri } from 'vscode';
 import { WritePermDeniedDeviceDriver } from '../common/deviceDriver';
@@ -85,12 +85,21 @@ class GenericFileDescriptor extends BaseFileDescriptor {
 class DirectoryFileDescriptor extends BaseFileDescriptor {
 
 	public readonly handle: fs.FileHandle;
-	public readonly dir: Dir;
+	private _dir: Dir;
 
 	constructor(deviceId: bigint, fd: fd, rights_base: rights, rights_inheriting: rights, fdflags: fdflags, inode: bigint, handle: fs.FileHandle, dir: Dir) {
 		super(deviceId, fd, Filetype.directory, rights_base, rights_inheriting, fdflags, inode);
 		this.handle = handle;
-		this.dir = dir;
+		this._dir = dir;
+	}
+
+	public get dir(): Dir {
+		return this._dir;
+	}
+
+	public async reOpenDir(): Promise<void> {
+		const path = this._dir.path;
+		this._dir = await fs.opendir(path);
 	}
 
 	public with(change: { fd: fd }): FileDescriptor {
@@ -134,11 +143,7 @@ export function create(deviceId: DeviceId, basePath: string, readOnly: boolean =
 		}
 	}
 
-	let $rootFileDescriptor: DirectoryFileDescriptor | undefined = undefined;
 	async function getRootFileDescriptor(fd: fd): Promise<DirectoryFileDescriptor> {
-		if ($rootFileDescriptor !== undefined) {
-			throw new WasiError(Errno.inval);
-		}
 		try {
 			const stat = await fs.stat(basePath, { bigint: true });
 			if (!stat.isDirectory()) {
@@ -146,8 +151,7 @@ export function create(deviceId: DeviceId, basePath: string, readOnly: boolean =
 			}
 			const handle = await fs.open(basePath);
 			const dir = await fs.opendir(basePath);
-			$rootFileDescriptor = new DirectoryFileDescriptor(deviceId, fd, getDirectoryBaseRights(readOnly), getDirectoryInheritingRights(readOnly), 0, stat.ino, handle, dir);
-			return $rootFileDescriptor;
+			return new DirectoryFileDescriptor(deviceId, fd, getDirectoryBaseRights(readOnly), getDirectoryInheritingRights(readOnly), 0, stat.ino, handle, dir);
 		} catch (error) {
 			throw handleError(error);
 		}
@@ -220,6 +224,13 @@ export function create(deviceId: DeviceId, basePath: string, readOnly: boolean =
 		['ERR_FS_INVALID_SYMLINK_TYPE', Errno.inval]
 	]);
 
+	function getNodeErrorCode(error: any): string | undefined {
+		if (!(error instanceof Error)) {
+			return undefined;
+		}
+		return typeof (error as unknown as {code: string}).code === 'string' ? (error as unknown as {code: string}).code : undefined;
+	}
+
 	function handleError(error: any, def: errno = Errno.badf): Error {
 		if (error instanceof WasiError) {
 			return error;
@@ -234,21 +245,10 @@ export function create(deviceId: DeviceId, basePath: string, readOnly: boolean =
 
 	const $this: FileSystemDeviceDriver = {
 
+		kind: DeviceDriverKind.fileSystem,
 		id: deviceId,
 		uri: Uri.from( { scheme: 'node-fs', path: '/'} ),
 
-		getRootFileDescriptor(): FileDescriptor {
-			if ($rootFileDescriptor === undefined) {
-				throw new WasiError(Errno.inval);
-			}
-			return $rootFileDescriptor;
-		},
-		isRootFileDescriptor(fileDescriptor: FileDescriptor): boolean {
-			if ($rootFileDescriptor === undefined) {
-				throw new WasiError(Errno.inval);
-			}
-			return $rootFileDescriptor.deviceId === fileDescriptor.deviceId && $rootFileDescriptor.inode === fileDescriptor.inode;
-		},
 		createStdioFileDescriptor(_dirflags: lookupflags | undefined = Lookupflags.none, _path: string, _oflags: oflags | undefined = Oflags.none, _fs_rights_base: rights | undefined, _fdflags: fdflags | undefined = Fdflags.none, _fd: 0 | 1 | 2): Promise<FileDescriptor> {
 			// The file system shouldn't be used to give WASM processes access to the workspace files, even not on the desktop.
 			// It main purpose is to read file from the extensions installation directory. So we don't support stdio operations.
@@ -279,7 +279,14 @@ export function create(deviceId: DeviceId, basePath: string, readOnly: boolean =
 				assertHandleDescriptor(fileDescriptor);
 				await fileDescriptor.handle.close();
 				if (fileDescriptor instanceof DirectoryFileDescriptor) {
-					await fileDescriptor.dir.close();
+					try {
+						await fileDescriptor.dir.close();
+					} catch (error) {
+						const code = getNodeErrorCode(error);
+						if (code === undefined || code !== 'ERR_DIR_CLOSED') {
+							throw error;
+						}
+					}
 				}
 			} catch (error) {
 				throw handleError(error);
@@ -370,11 +377,13 @@ export function create(deviceId: DeviceId, basePath: string, readOnly: boolean =
 			try {
 				assertDirectoryDescriptor(fileDescriptor);
 
+				const path = fileDescriptor.dir.path;
 				const result: ReaddirEntry[] = [];
 				for await (const entry of fileDescriptor.dir) {
-					const stat = await fs.stat(paths.join(fileDescriptor.dir.path, entry.name), { bigint: true });
+					const stat = await fs.stat(paths.join(path, entry.name), { bigint: true });
 					result.push({ d_ino: stat.ino, d_type: getFiletype(entry), d_name: entry.name});
 				}
+				await fileDescriptor.reOpenDir();
 				return result;
 			} catch (error) {
 				throw handleError(error);

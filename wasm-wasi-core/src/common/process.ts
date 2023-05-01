@@ -388,7 +388,7 @@ export abstract class WasiProcess {
 		}
 		if (needsRootFs) {
 			const mountPoints: Map<string, FileSystemDeviceDriver> = new Map(Array.from(this.preOpenDirectories.entries()));
-			this.virtualRootFileSystem = vrfs.create(this.localDeviceDrivers.next(), mountPoints);
+			this.virtualRootFileSystem = vrfs.create(this.localDeviceDrivers.next(), this.fileDescriptors, mountPoints);
 			this.preOpenDirectories.set('/', this.virtualRootFileSystem);
 			this.localDeviceDrivers.add(this.virtualRootFileSystem);
 		}

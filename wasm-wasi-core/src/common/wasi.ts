@@ -509,6 +509,89 @@ export namespace Errno {
 	 * Extension: Capabilities insufficient.
 	 */
 	export const notcapable = 76;
+
+	export function toString(value: errno): string {
+		switch (value) {
+			case success: return 'success';
+			case toobig: return 'toobig';
+			case acces: return 'acces';
+			case addrinuse: return 'addrinuse';
+			case addrnotavail: return 'addrnotavail';
+			case afnosupport: return 'afnosupport';
+			case again: return 'again';
+			case already: return 'already';
+			case badf: return 'badf';
+			case badmsg: return 'badmsg';
+			case busy: return 'busy';
+			case canceled: return 'canceled';
+			case child: return 'child';
+			case connaborted: return 'connaborted';
+			case connrefused: return 'connrefused';
+			case connreset: return 'connreset';
+			case deadlk: return 'deadlk';
+			case destaddrreq: return 'destaddrreq';
+			case dom: return 'dom';
+			case dquot: return 'dquot';
+			case exist: return 'exist';
+			case fault: return 'fault';
+			case fbig: return 'fbig';
+			case hostunreach: return 'hostunreach';
+			case idrm: return 'idrm';
+			case ilseq: return 'ilseq';
+			case inprogress: return 'inprogress';
+			case intr: return 'intr';
+			case inval: return 'inval';
+			case io: return 'io';
+			case isconn: return 'isconn';
+			case isdir: return 'isdir';
+			case loop: return 'loop';
+			case mfile: return 'mfile';
+			case mlink: return 'mlink';
+			case msgsize: return 'msgsize';
+			case multihop: return 'multihop';
+			case nametoolong: return 'nametoolong';
+			case netdown: return 'netdown';
+			case netreset: return 'netreset';
+			case netunreach: return 'netunreach';
+			case nfile: return 'nfile';
+			case nobufs: return 'nobufs';
+			case nodev: return 'nodev';
+			case noent: return 'noent';
+			case noexec: return 'noexec';
+			case nolck: return 'nolck';
+			case nolink: return 'nolink';
+			case nomem: return 'nomem';
+			case nomsg: return 'nomsg';
+			case noprotoopt: return 'noprotoopt';
+			case nospc: return 'nospc';
+			case nosys: return 'nosys';
+			case notconn: return 'notconn';
+			case notdir: return 'notdir';
+			case notempty: return 'notempty';
+			case notrecoverable: return 'notrecoverable';
+			case notsock: return 'notsock';
+			case notsup: return 'notsup';
+			case notty: return 'notty';
+			case nxio: return 'nxio';
+			case overflow: return 'overflow';
+			case ownerdead: return 'ownerdead';
+			case perm: return 'perm';
+			case pipe: return 'pipe';
+			case proto: return 'proto';
+			case protonosupport: return 'protonosupport';
+			case prototype: return 'prototype';
+			case range: return 'range';
+			case rofs: return 'rofs';
+			case spipe: return 'spipe';
+			case srch: return 'srch';
+			case stale: return 'stale';
+			case timedout: return 'timedout';
+			case txtbsy: return 'txtbsy';
+			case xdev: return 'xdev';
+			case notcapable: return 'notcapable';
+			default: return value.toString();
+		}
+	}
 }
 
 export class WasiError extends Error {
@@ -742,6 +825,41 @@ export namespace Rights {
 	 */
 	export const ReadOnly = fd_read | fd_seek | fd_tell | path_open | fd_readdir |
 		path_readlink | path_filestat_get | fd_filestat_get | poll_fd_readwrite;
+
+	export function toString(value: rights): string {
+		const parts: string[] = [];
+		if (contains(value, Rights.fd_datasync)) { parts.push('fd_datasync'); }
+		if (contains(value, Rights.fd_read)) { parts.push('fd_read'); }
+		if (contains(value, Rights.fd_seek)) { parts.push('fd_seek'); }
+		if (contains(value, Rights.fd_fdstat_set_flags)) { parts.push('fd_fdstat_set_flags'); }
+		if (contains(value, Rights.fd_sync)) { parts.push('fd_sync'); }
+		if (contains(value, Rights.fd_tell)) { parts.push('fd_tell'); }
+		if (contains(value, Rights.fd_write)) { parts.push('fd_write'); }
+		if (contains(value, Rights.fd_advise)) { parts.push('fd_advise'); }
+		if (contains(value, Rights.fd_allocate)) { parts.push('fd_allocate'); }
+		if (contains(value, Rights.path_create_directory)) { parts.push('path_create_directory'); }
+		if (contains(value, Rights.path_create_file)) { parts.push('path_create_file'); }
+		if (contains(value, Rights.path_link_source)) { parts.push('path_link_source'); }
+		if (contains(value, Rights.path_link_target)) { parts.push('path_link_target'); }
+		if (contains(value, Rights.path_open)) { parts.push('path_open'); }
+		if (contains(value, Rights.fd_readdir)) { parts.push('fd_readdir'); }
+		if (contains(value, Rights.path_readlink)) { parts.push('path_readlink'); }
+		if (contains(value, Rights.path_rename_source)) { parts.push('path_rename_source'); }
+		if (contains(value, Rights.path_rename_target)) { parts.push('path_rename_target'); }
+		if (contains(value, Rights.path_filestat_get)) { parts.push('path_filestat_get'); }
+		if (contains(value, Rights.path_filestat_set_size)) { parts.push('path_filestat_set_size'); }
+		if (contains(value, Rights.path_filestat_set_times)) { parts.push('path_filestat_set_times'); }
+		if (contains(value, Rights.fd_filestat_get)) { parts.push('fd_filestat_get'); }
+		if (contains(value, Rights.fd_filestat_set_size)) { parts.push('fd_filestat_set_size'); }
+		if (contains(value, Rights.fd_filestat_set_times)) { parts.push('fd_filestat_set_times'); }
+		if (contains(value, Rights.path_symlink)) { parts.push('path_symlink'); }
+		if (contains(value, Rights.path_remove_directory)) { parts.push('path_remove_directory'); }
+		if (contains(value, Rights.path_unlink_file)) { parts.push('path_unlink_file'); }
+		if (contains(value, Rights.poll_fd_readwrite)) { parts.push('poll_fd_readwrite'); }
+		if (contains(value, Rights.sock_shutdown)) { parts.push('sock_shutdown'); }
+		if (contains(value, Rights.sock_accept)) { parts.push('sock_accept'); }
+		return parts.join(' | ');
+	}
 }
 export namespace Rights {
 	export const $param = U64.$param;
@@ -803,6 +921,16 @@ export namespace Fdflags {
 	export function syncOn(value: fdflags): boolean {
 		return (value & sync) !== 0;
 	}
+
+	export function toString(value: fdflags): string {
+		const parts: string[] = [];
+		if (appendOn(value)) { parts.push('append'); }
+		if (dsyncOn(value)) { parts.push('dsync'); }
+		if (nonblockOn(value)) { parts.push('nonblock'); }
+		if (rsyncOn(value)) { parts.push('rsync'); }
+		if (syncOn(value)) { parts.push('sync'); }
+		return parts.join(' | ');
+	}
 }
 export namespace Fdflags {
 	export const $param = U16.$param;
@@ -823,6 +951,12 @@ export namespace Lookupflags {
 	export const symlink_follow = 1 << 0;
 	export function symlink_followOn(value: lookupflags): boolean {
 		return (value & symlink_follow) !== 0;
+	}
+
+	export function toString(value: lookupflags): string {
+		const parts: string[] = [];
+		if (symlink_followOn(value)) { parts.push('symlink_follow'); }
+		return parts.join(' | ');
 	}
 }
 export namespace Lookupflags {
@@ -871,6 +1005,15 @@ export namespace Oflags {
 	export function truncOn(value: oflags): boolean {
 		return (value & trunc) !== 0;
 	}
+
+	export function toString(value: oflags): string {
+		const parts: string[] = [];
+		if (creatOn(value)) { parts.push('creat'); }
+		if (directoryOn(value)) { parts.push('directory'); }
+		if (exclOn(value)) { parts.push('excl'); }
+		if (truncOn(value)) { parts.push('trunc'); }
+		return parts.join(' | ');
+	}
 }
 export namespace Oflags {
 	export const $param = U16.$param;
@@ -901,6 +1044,16 @@ export namespace Clockid {
 	 * The CPU-time clock associated with the current thread.
 	 */
 	export const thread_cputime_id = 3;
+
+	export function toString(value: clockid): string {
+		switch (value) {
+			case realtime: return 'realtime';
+			case monotonic: return 'monotonic';
+			case process_cputime_id: return 'process_cputime_id';
+			case thread_cputime_id: return 'thread_cputime_id';
+			default: return value.toString();
+		}
+	}
 }
 export namespace Clockid {
 	export const $param = U32.$param;
@@ -1000,6 +1153,18 @@ export namespace Advise {
 	 * reuse it thereafter.
 	 */
 	export const noreuse = 5;
+
+	export function toString(value: advise): string {
+		switch (value) {
+			case normal: return 'normal';
+			case sequential: return 'sequential';
+			case random: return 'random';
+			case willneed: return 'willneed';
+			case dontneed: return 'dontneed';
+			case noreuse: return 'noreuse';
+			default: return value.toString();
+		}
+	}
 }
 
 export namespace Advise {
@@ -1155,6 +1320,15 @@ export namespace Whence {
 	 * Seek relative to end-of-file.
 	 */
 	export const end = 2;
+
+	export function toString(value: whence): string {
+		switch (value) {
+			case set: return 'set';
+			case cur: return 'cur';
+			case end: return 'end';
+			default: return value.toString();
+		}
+	}
 }
 export namespace Whence {
 	export const $param = U8.$param;
@@ -1258,6 +1432,15 @@ export namespace Fstflags {
 	 */
 	export const mtim_now = 1 << 3;
 	export function mtim_nowOn(flags: fstflags): boolean { return (flags & mtim_now) !== 0; }
+
+	export function toString(value: fstflags): string {
+		const parts = [];
+		if (atimOn(value)) {parts.push('atim');}
+		if (atim_nowOn(value)) {parts.push('atim_now');}
+		if (mtimOn(value)) {parts.push('mtim');}
+		if (mtim_nowOn(value)) {parts.push('mtim_now');}
+		return parts.join(' | ');
+	}
 }
 export namespace Fstflags {
 	export const $param = U16.$param;
@@ -1920,6 +2103,13 @@ export namespace Sdflags {
 	 * Disables further send operations.
 	 */
 	export const wr = 1 << 1;
+
+	export function toString(value: sdflags): string {
+		const parts: string[] = [];
+		if (value & rd) { parts.push('rd'); }
+		if (value & wr) { parts.push('wr'); }
+		return parts.join(' | ');
+	}
 }
 
 export namespace Sdflags {
