@@ -4,7 +4,7 @@
  *--------------------------------------------------------------------------------------------*/
 /// <reference path="../../typings/webAssemblyCommon.d.ts" />
 
-import { Event, Extension, ExtensionContext, Pseudoterminal, Uri } from 'vscode';
+import { Event, Extension, ExtensionContext, LogOutputChannel, Pseudoterminal, Uri } from 'vscode';
 
 import { fdflags, oflags } from './wasi';
 export { fdflags, oflags };
@@ -151,6 +151,11 @@ export interface ProcessOptions {
 	 * Stdio setup
 	 */
 	stdio?: Stdio;
+
+	/**
+	 * A channel to log trace messages to.
+	 */
+	trace?: LogOutputChannel;
 }
 
 export interface Writable {

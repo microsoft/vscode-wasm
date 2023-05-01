@@ -1112,6 +1112,20 @@ export namespace Filetype {
 	 * The file refers to a symbolic link inode.
 	 */
 	export const symbolic_link = 7;
+
+	export function toString(value: filetype): string {
+		switch (value) {
+			case unknown: return 'unknown';
+			case block_device: return 'block_device';
+			case character_device: return 'character_device';
+			case directory: return 'directory';
+			case regular_file: return 'regular_file';
+			case socket_dgram: return 'socket_dgram';
+			case socket_stream: return 'socket_stream';
+			case symbolic_link: return 'symbolic_link';
+			default: return value.toString();
+		}
+	}
 }
 
 export type advise = u8;

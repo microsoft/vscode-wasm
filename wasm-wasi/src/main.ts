@@ -4,7 +4,7 @@
  *--------------------------------------------------------------------------------------------*/
 /// <reference path="../typings/webAssemblyCommon.d.ts" />
 
-import { Event, Pseudoterminal, Uri, extensions as Extensions, ExtensionContext, Extension } from 'vscode';
+import { Event, Pseudoterminal, Uri, extensions as Extensions, ExtensionContext, Extension, LogOutputChannel } from 'vscode';
 
 type u16 = number;
 export type oflags = u16;
@@ -215,6 +215,11 @@ export interface ProcessOptions {
 	 * Stdio setup
 	 */
 	stdio?: Stdio;
+
+	/**
+	 * A channel to log trace messages to.
+	 */
+	trace?: LogOutputChannel;
 }
 
 export interface Writable {

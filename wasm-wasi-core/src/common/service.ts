@@ -11,7 +11,7 @@ import {
 	fd_close, fd_datasync, fd_fdstat_get, fd_fdstat_set_flags, fd_filestat_get, fd_filestat_set_size, fd_filestat_set_times, fd_pread,
 	fd_prestat_dir_name, fd_prestat_get, fd_pwrite, fd_read, fd_readdir, fd_renumber, fd_seek, fd_sync, fd_tell, fd_write, filedelta, filesize, Filestat, filestat, fstflags, Iovec, iovec, Literal, lookupflags, oflags, path_create_directory,
 	path_filestat_get, path_filestat_set_times, path_link, path_open, path_readlink, path_remove_directory, path_rename, path_symlink, path_unlink_file,
-	poll_oneoff, Prestat, prestat, proc_exit, random_get, riflags, rights, Rights, sched_yield, sdflags, siflags, sock_accept, Subclockflags, Subscription, subscription, thread_spawn, timestamp, WasiError, Whence, whence, thread_exit, tid, Preopentype, Advise, Fdflags, Fstflags, Lookupflags, Oflags, sock_shutdown, Sdflags
+	poll_oneoff, Prestat, prestat, proc_exit, random_get, riflags, rights, Rights, sched_yield, sdflags, siflags, sock_accept, Subclockflags, Subscription, subscription, thread_spawn, timestamp, WasiError, Whence, whence, thread_exit, tid, Preopentype, Advise, Fdflags, Fstflags, Lookupflags, Oflags, sock_shutdown, Sdflags, Filetype
 } from './wasi';
 import { CapturedPromise, Offsets, WasiCallMessage, WorkerDoneMessage, WorkerMessage, WorkerReadyMessage } from './connection';
 import { WasiFunction, WasiFunctions, WasiFunctionSignature } from './wasiMeta';
@@ -1303,71 +1303,104 @@ export namespace TraceWasiService {
 		return {
 			args_sizes_get: async (_memory: ArrayBuffer, argvCount_ptr: ptr<u32>, argvBufSize_ptr: ptr<u32>): Promise<errno> => {
 				const result = await service.args_sizes_get(_memory, argvCount_ptr, argvBufSize_ptr);
-				const memory = new Memory(_memory);
-				argvCount = memory.readUint32(argvCount_ptr);
-				argvBufSize = memory.readUint32(argvBufSize_ptr);
-				channel.info(`args_sizes_get() => [count: ${argvCount}, bufSize: ${argvBufSize}, result: ${Errno.toString(result)}]`);
+				if (result === Errno.success) {
+					const memory = new Memory(_memory);
+					argvCount = memory.readUint32(argvCount_ptr);
+					argvBufSize = memory.readUint32(argvBufSize_ptr);
+					channel.info(`args_sizes_get() => [count: ${argvCount}, bufSize: ${argvBufSize}, result: ${Errno.toString(result)}]`);
+				} else {
+					channel.info(`args_sizes_get() => [result: ${Errno.toString(result)}]`);
+				}
 				return result;
 			},
 			args_get: async (_memory: ArrayBuffer, argv_ptr: ptr<u32[]>, argvBuf_ptr: ptr<cstring>): Promise<errno> => {
 				const result = await service.args_get(_memory, argv_ptr, argvBuf_ptr);
-				const $memory = new Memory(_memory);
-				const argv = $memory.readUint32Array(argv_ptr, argvCount);
-				const buffer: string[] = [`args_get() => [result: ${Errno.toString(result)}]`];
-				for (let i = 0; i < argvCount; i++) {
-					const valueStartOffset = argv.get(i);
-					const arg = $memory.readString(valueStartOffset);
-					buffer.push(`\t${i}: ${arg}`);
+				if (result === Errno.success) {
+					const memory = new Memory(_memory);
+					const argv = memory.readUint32Array(argv_ptr, argvCount);
+					const buffer: string[] = [`args_get() => [result: ${Errno.toString(result)}]`];
+					for (let i = 0; i < argvCount; i++) {
+						const valueStartOffset = argv.get(i);
+						const arg = memory.readString(valueStartOffset);
+						buffer.push(`\t${i}: ${arg}`);
+					}
+					channel.info(buffer.join('\n'));
+				} else {
+					channel.info(`args_get() => [result: ${Errno.toString(result)}]`);
 				}
-				channel.info(buffer.join('\n'));
 				return result;
 			},
 			environ_sizes_get: async (_memory: ArrayBuffer, environCount_ptr: ptr<u32>, environBufSize_ptr: ptr<u32>): Promise<errno> => {
 				const result = await service.environ_sizes_get(_memory, environCount_ptr, environBufSize_ptr);
-				const memory = new Memory(_memory);
-				environCount = memory.readUint32(environCount_ptr);
-				environBufSize = memory.readUint32(environBufSize_ptr);
-				channel.info(`environ_sizes_get() => [count: ${environCount}, bufSize: ${environBufSize}, result: ${Errno.toString(result)}]`);
+				if (result === Errno.success) {
+					const memory = new Memory(_memory);
+					environCount = memory.readUint32(environCount_ptr);
+					environBufSize = memory.readUint32(environBufSize_ptr);
+					channel.info(`environ_sizes_get() => [envCount: ${environCount}, envBufSize: ${environBufSize}, result: ${Errno.toString(result)}]`);
+				} else {
+					channel.info(`environ_sizes_get() => [result: ${Errno.toString(result)}]`);
+				}
 				return result;
 			},
 			environ_get: async (_memory: ArrayBuffer, environ_ptr: ptr<u32>, environBuf_ptr: ptr<cstring>): Promise<errno> => {
 				const result = await service.environ_get(_memory, environ_ptr, environBuf_ptr);
-				const memory = new Memory(_memory);
-				const environ = memory.readUint32Array(environ_ptr, environCount);
-				const buffer: string[] = [`environ_get() => [result: ${Errno.toString(result)}]`];
-				for (let i = 0; i < environCount; i++) {
-					const valueStartOffset = environ.get(i);
-					const env = memory.readString(valueStartOffset);
-					buffer.push(`\t${i}: ${env}`);
+				if (result === Errno.success) {
+					const memory = new Memory(_memory);
+					const environ = memory.readUint32Array(environ_ptr, environCount);
+					const buffer: string[] = [`environ_get() => [result: ${Errno.toString(result)}]`];
+					for (let i = 0; i < environCount; i++) {
+						const valueStartOffset = environ.get(i);
+						const env = memory.readString(valueStartOffset);
+						buffer.push(`\t${i}: ${env}`);
+					}
+					channel.info(buffer.join('\n'));
+				} else {
+					channel.info(`environ_get() => [result: ${Errno.toString(result)}]`);
 				}
 				return result;
 			},
 			fd_prestat_get: async (_memory: ArrayBuffer, fd: fd, bufPtr: ptr<prestat>): Promise<errno> => {
 				const result = await service.fd_prestat_get(_memory, fd, bufPtr);
-				const memory = new Memory(_memory);
-				const prestat = memory.readStruct(bufPtr, Prestat);
-				channel.info(`fd_prestat_get(fd: ${fd}) => [prestat: ${JSON.stringify(prestat, undefined, 0)}, result: ${Errno.toString(result)}]`);
+				if (result === Errno.success) {
+					const memory = new Memory(_memory);
+					const prestat = memory.readStruct(bufPtr, Prestat);
+					channel.info(`fd_prestat_get(fd: ${fd}) => [prestat: ${JSON.stringify(prestat, undefined, 0)}, result: ${Errno.toString(result)}]`);
+				} else {
+					channel.info(`fd_prestat_get(fd: ${fd}) => [result: ${Errno.toString(result)}]`);
+				}
 				return result;
 			},
 			fd_prestat_dir_name: async (_memory: ArrayBuffer, fd: fd, pathPtr: ptr<byte[]>, pathLen: size): Promise<errno> => {
 				const result = await service.fd_prestat_dir_name(_memory, fd, pathPtr, pathLen);
-				const memory = new Memory(_memory);
-				const path = memory.readString(pathPtr, pathLen);
-				channel.info(`fd_prestat_dir_name(fd: ${fd}) => [path: ${path}, result: ${Errno.toString(result)}]`);
-				preStats.set(fd, path);
+				if (result === Errno.success) {
+					const memory = new Memory(_memory);
+					const path = memory.readString(pathPtr, pathLen);
+					channel.info(`fd_prestat_dir_name(fd: ${fd}) => [path: ${path}, result: ${Errno.toString(result)}]`);
+					preStats.set(fd, path);
+				} else {
+					channel.info(`fd_prestat_dir_name(fd: ${fd}) => [result: ${Errno.toString(result)}]`);
+				}
 				return result;
 			},
 			clock_res_get: async (_memory: ArrayBuffer, id: clockid, timestamp_ptr: ptr<u64>): Promise<errno> => {
 				const result = await service.clock_res_get(_memory, id, timestamp_ptr);
-				const memory = new Memory(_memory);
-				channel.info(`clock_res_get(id: ${Clockid.toString(id)}) => [timestamp: ${memory.readUint64(timestamp_ptr)}, result: ${Errno.toString(result)}]`);
+				if (result === Errno.success) {
+					const memory = new Memory(_memory);
+					channel.info(`clock_res_get(id: ${Clockid.toString(id)}) => [timestamp: ${memory.readUint64(timestamp_ptr)}, result: ${Errno.toString(result)}]`);
+				} else {
+					channel.info(`clock_res_get(id: ${Clockid.toString(id)}) => [result: ${Errno.toString(result)}]`);
+				}
 				return result;
 
 			},
 			clock_time_get: async (_memory: ArrayBuffer, id: clockid, precision: timestamp, timestamp_ptr: ptr<u64>): Promise<errno> => {
 				const result = await service.clock_time_get(_memory, id, precision, timestamp_ptr);
-				const memory = new Memory(_memory);
-				channel.info(`clock_time_get(id: ${Clockid.toString(id)}, precision: ${precision}) => [timestamp: ${memory.readUint64(timestamp_ptr)}, result: ${Errno.toString(result)}]`);
+				if (result === Errno.success) {
+					const memory = new Memory(_memory);
+					channel.info(`clock_time_get(id: ${Clockid.toString(id)}, precision: ${precision}) => [timestamp: ${memory.readUint64(timestamp_ptr)}, result: ${Errno.toString(result)}]`);
+				} else {
+					channel.info(`clock_time_get(id: ${Clockid.toString(id)}, precision: ${precision}) => [result: ${Errno.toString(result)}]`);
+				}
 				return result;
 			},
 			fd_advise: async (_memory: ArrayBuffer, fd: fd, offset: filesize, length: filesize, advise: advise): Promise<errno> => {
@@ -1393,9 +1426,13 @@ export namespace TraceWasiService {
 			},
 			fd_fdstat_get: async (_memory: ArrayBuffer, fd: fd, fdstat_ptr: ptr<fdstat>): Promise<errno> => {
 				const result = await service.fd_fdstat_get(_memory, fd, fdstat_ptr);
-				const memory = new Memory(_memory);
-				const fdstat = memory.readStruct(fdstat_ptr, Fdstat);
-				channel.info(`fd_fdstat_get(fd: ${fd} => ${fileDescriptors.get(fd)}) => [fdstat: ${JSON.stringify(fdstat, undefined, 0)}, result: ${Errno.toString(result)}]`);
+				if (result === Errno.success) {
+					const memory = new Memory(_memory);
+					const fdstat = memory.readStruct(fdstat_ptr, Fdstat);
+					channel.info(`fd_fdstat_get(fd: ${fd} => ${fileDescriptors.get(fd)}) => [fdstat: ${Filetype.toString(fdstat.fs_filetype)}}, result: ${Errno.toString(result)}]`);
+				} else {
+					channel.info(`fd_fdstat_get(fd: ${fd} => ${fileDescriptors.get(fd)}) => [result: ${Errno.toString(result)}]`);
+				}
 				return result;
 			},
 			fd_fdstat_set_flags: async (_memory: ArrayBuffer, fd: fd, fdflags: fdflags): Promise<errno> => {
@@ -1405,9 +1442,13 @@ export namespace TraceWasiService {
 			},
 			fd_filestat_get: async (_memory: ArrayBuffer, fd: fd, filestat_ptr: ptr<filestat>): Promise<errno> => {
 				const result = await service.fd_filestat_get(_memory, fd, filestat_ptr);
-				const memory = new Memory(_memory);
-				const filestat = memory.readStruct(filestat_ptr, Filestat);
-				channel.info(`fd_filestat_get(fd: ${fd} => ${fileDescriptors.get(fd)}) => [filestat: ${JSON.stringify(filestat, undefined, 0)}, result: ${Errno.toString(result)}]`);
+				if (result === Errno.success) {
+					const memory = new Memory(_memory);
+					const filestat = memory.readStruct(filestat_ptr, Filestat);
+					channel.info(`fd_filestat_get(fd: ${fd} => ${fileDescriptors.get(fd)}) => [filestat: ${Filetype.toString(filestat.filetype)}, result: ${Errno.toString(result)}]`);
+				} else {
+					channel.info(`fd_filestat_get(fd: ${fd} => ${fileDescriptors.get(fd)}) => [result: ${Errno.toString(result)}]`);
+				}
 				return result;
 			},
 			fd_filestat_set_size: async (_memory: ArrayBuffer, fd: fd, size: filesize): Promise<errno> => {
@@ -1422,39 +1463,61 @@ export namespace TraceWasiService {
 			},
 			fd_pread: async (_memory: ArrayBuffer, fd: fd, iovs_ptr: ptr<iovec>, iovs_len: u32, offset: filesize, bytesRead_ptr: ptr<u32>): Promise<errno> => {
 				const result = await service.fd_pread(_memory, fd, iovs_ptr, iovs_len, offset, bytesRead_ptr);
-				const memory = new Memory(_memory);
-				channel.info(`fd_pread(fd: ${fd} => ${fileDescriptors.get(fd)}, offset: ${offset}) => [bytesRead: ${memory.readUint32(bytesRead_ptr)}, result: ${Errno.toString(result)}]`);
+				if (result === Errno.success) {
+					const memory = new Memory(_memory);
+					channel.info(`fd_pread(fd: ${fd} => ${fileDescriptors.get(fd)}, offset: ${offset}) => [bytesRead: ${memory.readUint32(bytesRead_ptr)}, result: ${Errno.toString(result)}]`);
+				} else {
+					channel.info(`fd_pread(fd: ${fd} => ${fileDescriptors.get(fd)}, offset: ${offset}) => [result: ${Errno.toString(result)}]`);
+				}
 				return result;
 			},
 			fd_pwrite: async (_memory: ArrayBuffer, fd: fd, ciovs_ptr: ptr<ciovec>, ciovs_len: u32, offset: filesize, bytesWritten_ptr: ptr<u32>): Promise<errno> => {
 				const result = await service.fd_pwrite(_memory, fd, ciovs_ptr, ciovs_len, offset, bytesWritten_ptr);
-				const memory = new Memory(_memory);
-				channel.info(`fd_pwrite(fd: ${fd} => ${fileDescriptors.get(fd)}, offset: ${offset}) => [bytesWritten: ${memory.readUint32(bytesWritten_ptr)}, result: ${Errno.toString(result)}]`);
+				if (result === Errno.success) {
+					const memory = new Memory(_memory);
+					channel.info(`fd_pwrite(fd: ${fd} => ${fileDescriptors.get(fd)}, offset: ${offset}) => [bytesWritten: ${memory.readUint32(bytesWritten_ptr)}, result: ${Errno.toString(result)}]`);
+				} else {
+					channel.info(`fd_pwrite(fd: ${fd} => ${fileDescriptors.get(fd)}, offset: ${offset}) => [result: ${Errno.toString(result)}]`);
+				}
 				return result;
 			},
 			fd_read: async (_memory: ArrayBuffer, fd: fd, iovs_ptr: ptr<iovec>, iovs_len: u32, bytesRead_ptr: ptr<u32>): Promise<errno> => {
 				const result = await service.fd_read(_memory, fd, iovs_ptr, iovs_len, bytesRead_ptr);
-				const memory = new Memory(_memory);
-				channel.info(`fd_read(fd: ${fd} => ${fileDescriptors.get(fd)}) => [bytesRead: ${memory.readUint32(bytesRead_ptr)}, result: ${Errno.toString(result)}]`);
+				if (result === Errno.success) {
+					const memory = new Memory(_memory);
+					channel.info(`fd_read(fd: ${fd} => ${fileDescriptors.get(fd)}) => [bytesRead: ${memory.readUint32(bytesRead_ptr)}, result: ${Errno.toString(result)}]`);
+				} else {
+					channel.info(`fd_read(fd: ${fd} => ${fileDescriptors.get(fd)}) => [result: ${Errno.toString(result)}]`);
+				}
 				return result;
 			},
 			fd_readdir: async (_memory: ArrayBuffer, fd: fd, buf_ptr: ptr<dirent>, buf_len: size, cookie: dircookie, buf_used_ptr: ptr<u32>): Promise<errno> => {
 				const result = await service.fd_readdir(_memory, fd, buf_ptr, buf_len, cookie, buf_used_ptr);
-				const memory = new Memory(_memory);
-				channel.info(`fd_readdir(fd: ${fd} => ${fileDescriptors.get(fd)}, cookie: ${cookie}) => [buf_used: ${memory.readUint32(buf_used_ptr)}, result: ${Errno.toString(result)}]`);
+				if (result === Errno.success) {
+					const memory = new Memory(_memory);
+					channel.info(`fd_readdir(fd: ${fd} => ${fileDescriptors.get(fd)}, cookie: ${cookie}) => [buf_used: ${memory.readUint32(buf_used_ptr)}, result: ${Errno.toString(result)}]`);
+				} else {
+					channel.info(`fd_readdir(fd: ${fd} => ${fileDescriptors.get(fd)}, cookie: ${cookie}) => [result: ${Errno.toString(result)}]`);
+				}
 				return result;
 			},
 			fd_seek: async (_memory: ArrayBuffer, fd: fd, offset: filedelta, whence: whence, new_offset_ptr: ptr<u64>): Promise<errno> => {
 				const result = await service.fd_seek(_memory, fd, offset, whence, new_offset_ptr);
-				const memory = new Memory(_memory);
-				channel.info(`fd_seek(fd: ${fd} => ${fileDescriptors.get(fd)}, offset: ${offset}, whence: ${Whence.toString(whence)}) => [new_offset: ${memory.readUint64(new_offset_ptr)}, result: ${Errno.toString(result)}]`);
+				if (result === Errno.success) {
+					const memory = new Memory(_memory);
+					channel.info(`fd_seek(fd: ${fd} => ${fileDescriptors.get(fd)}, offset: ${offset}, whence: ${Whence.toString(whence)}) => [new_offset: ${memory.readUint64(new_offset_ptr)}, result: ${Errno.toString(result)}]`);
+				} else {
+					channel.info(`fd_seek(fd: ${fd} => ${fileDescriptors.get(fd)}, offset: ${offset}, whence: ${Whence.toString(whence)}) => [result: ${Errno.toString(result)}]`);
+				}
 				return result;
 			},
 			fd_renumber: async (_memory: ArrayBuffer, fd: fd, to: fd): Promise<errno> => {
 				const result = await service.fd_renumber(_memory, fd, to);
 				channel.info(`fd_renumber(fd: ${fd} => ${fileDescriptors.get(fd)}, to: ${to}) => [result: ${Errno.toString(result)}]`);
-				fileDescriptors.set(to, fileDescriptors.get(fd)!);
-				fileDescriptors.delete(fd);
+				if (result === Errno.success) {
+					fileDescriptors.set(to, fileDescriptors.get(fd)!);
+					fileDescriptors.delete(fd);
+				}
 				return result;
 			},
 			fd_sync: async (_memory: ArrayBuffer, fd: fd): Promise<errno> => {
@@ -1464,14 +1527,22 @@ export namespace TraceWasiService {
 			},
 			fd_tell: async (_memory: ArrayBuffer, fd: fd, offset_ptr: ptr<u64>): Promise<errno> => {
 				const result = await service.fd_tell(_memory, fd, offset_ptr);
-				const memory = new Memory(_memory);
-				channel.info(`fd_tell(fd: ${fd} => ${fileDescriptors.get(fd)}) => [offset: ${memory.readUint64(offset_ptr)}, result: ${Errno.toString(result)}]`);
+				if (result === Errno.success) {
+					const memory = new Memory(_memory);
+					channel.info(`fd_tell(fd: ${fd} => ${fileDescriptors.get(fd)}) => [offset: ${memory.readUint64(offset_ptr)}, result: ${Errno.toString(result)}]`);
+				} else {
+					channel.info(`fd_tell(fd: ${fd} => ${fileDescriptors.get(fd)}) => [result: ${Errno.toString(result)}]`);
+				}
 				return result;
 			},
 			fd_write: async (_memory: ArrayBuffer, fd: fd, ciovs_ptr: ptr<ciovec>, ciovs_len: u32, bytesWritten_ptr: ptr<u32>): Promise<errno> => {
 				const result = await service.fd_write(_memory, fd, ciovs_ptr, ciovs_len, bytesWritten_ptr);
-				const memory = new Memory(_memory);
-				channel.info(`fd_write(fd: ${fd} => ${fileDescriptors.get(fd)}) => [bytesWritten: ${memory.readUint32(bytesWritten_ptr)}, result: ${Errno.toString(result)}]`);
+				if (result === Errno.success) {
+					const memory = new Memory(_memory);
+					channel.info(`fd_write(fd: ${fd} => ${fileDescriptors.get(fd)}) => [bytesWritten: ${memory.readUint32(bytesWritten_ptr)}, result: ${Errno.toString(result)}]`);
+				} else {
+					channel.info(`fd_write(fd: ${fd} => ${fileDescriptors.get(fd)}) => [result: ${Errno.toString(result)}]`);
+				}
 				return result;
 			},
 			path_create_directory: async (_memory: ArrayBuffer, fd: fd, path_ptr: ptr<bytes>, path_len: size): Promise<errno> => {
@@ -1483,8 +1554,12 @@ export namespace TraceWasiService {
 			path_filestat_get: async (_memory: ArrayBuffer, fd: fd, flags: lookupflags, path_ptr: ptr<bytes>, path_len: size, filestat_ptr: ptr<filestat>): Promise<errno> => {
 				const result = await service.path_filestat_get(_memory, fd, flags, path_ptr, path_len, filestat_ptr);
 				const memory = new Memory(_memory);
-				const filestat = memory.readStruct(filestat_ptr, Filestat);
-				channel.info(`path_filestat_get(fd: ${fd} => ${fileDescriptors.get(fd)}, flags: ${Lookupflags.toString(flags)} path: ${memory.readString(path_ptr, path_len)}) => [filestat: ${JSON.stringify(filestat, undefined, 0)} result: ${Errno.toString(result)}]`);
+				if (result === Errno.success) {
+					const filestat = memory.readStruct(filestat_ptr, Filestat);
+					channel.info(`path_filestat_get(fd: ${fd} => ${fileDescriptors.get(fd)}, flags: ${Lookupflags.toString(flags)} path: ${memory.readString(path_ptr, path_len)}) => [filestat: ${Filetype.toString(filestat.filetype)} result: ${Errno.toString(result)}]`);
+				} else {
+					channel.info(`path_filestat_get(fd: ${fd} => ${fileDescriptors.get(fd)}, flags: ${Lookupflags.toString(flags)} path: ${memory.readString(path_ptr, path_len)}) => [result: ${Errno.toString(result)}]`);
+				}
 				return result;
 			},
 			path_filestat_set_times: async (_memory: ArrayBuffer, fd: fd, flags: lookupflags, path_ptr: ptr<bytes>, path_len: size, atim: timestamp, mtim: timestamp, fst_flags: fstflags): Promise<errno> => {
@@ -1502,19 +1577,27 @@ export namespace TraceWasiService {
 			path_open: async (_memory: ArrayBuffer, fd: fd, dirflags: lookupflags, path_ptr: ptr<bytes>, path_len: size, oflags: oflags, fs_rights_base: rights, fs_rights_inheriting: rights, fdflags: fdflags, fd_ptr: ptr<fd>): Promise<errno> => {
 				const result = await service.path_open(_memory, fd, dirflags, path_ptr, path_len, oflags, fs_rights_base, fs_rights_inheriting, fdflags, fd_ptr);
 				const memory = new Memory(_memory);
-				const resultFd = memory.readUint32(fd_ptr);
 				const path = memory.readString(path_ptr, path_len);
-				channel.info(`path_open(fd: ${fd} => ${fileDescriptors.get(fd)}, dirflags: ${Lookupflags.toString(dirflags)}, path: ${path}, oflags: ${Oflags.toString(oflags)}, fs_rights_base: ${Rights.toString(fs_rights_base)}, fs_rights_inheriting: ${Rights.toString(fs_rights_inheriting)}, fdflags: ${Fdflags.toString(fdflags)}) => [fd: ${resultFd}, result: ${Errno.toString(result)}]`);
 				if (result === Errno.success) {
-					fileDescriptors.set(resultFd, path);
+					const resultFd = memory.readUint32(fd_ptr);
+					channel.info(`path_open(fd: ${fd} => ${fileDescriptors.get(fd)}, dirflags: ${Lookupflags.toString(dirflags)}, path: ${path}, oflags: ${Oflags.toString(oflags)}, fs_rights_base: ${Rights.toString(fs_rights_base)}, fs_rights_inheriting: ${Rights.toString(fs_rights_inheriting)}, fdflags: ${Fdflags.toString(fdflags)}) => [fd: ${resultFd}, result: ${Errno.toString(result)}]`);
+					if (result === Errno.success) {
+						fileDescriptors.set(resultFd, path);
+					}
+				} else {
+					channel.info(`path_open(fd: ${fd} => ${fileDescriptors.get(fd)}, dirflags: ${Lookupflags.toString(dirflags)}, path: ${path}, oflags: ${Oflags.toString(oflags)}, fs_rights_base: ${Rights.toString(fs_rights_base)}, fs_rights_inheriting: ${Rights.toString(fs_rights_inheriting)}, fdflags: ${Fdflags.toString(fdflags)}) => [result: ${Errno.toString(result)}]`);
 				}
 				return result;
 			},
 			path_readlink: async (_memory: ArrayBuffer, fd: fd, path_ptr: ptr<bytes>, path_len: size, buf_ptr: ptr, buf_len: size, result_size_ptr: ptr<u32>): Promise<errno> => {
 				const result = await service.path_readlink(_memory, fd, path_ptr, path_len, buf_ptr, buf_len, result_size_ptr);
 				const memory = new Memory(_memory);
-				const resultSize = memory.readUint32(result_size_ptr);
-				channel.info(`path_readlink(fd: ${fd} => ${fileDescriptors.get(fd)}, path: ${memory.readString(path_ptr, path_len)}, buf_len: ${buf_len}) => [target: ${memory.readString(buf_ptr, resultSize)}, result: ${Errno.toString(result)}]`);
+				if (result === Errno.success) {
+					const resultSize = memory.readUint32(result_size_ptr);
+					channel.info(`path_readlink(fd: ${fd} => ${fileDescriptors.get(fd)}, path: ${memory.readString(path_ptr, path_len)}, buf_len: ${buf_len}) => [target: ${memory.readString(buf_ptr, resultSize)}, result: ${Errno.toString(result)}]`);
+				} else {
+					channel.info(`path_readlink(fd: ${fd} => ${fileDescriptors.get(fd)}, path: ${memory.readString(path_ptr, path_len)}, buf_len: ${buf_len}) => [result: ${Errno.toString(result)}]`);
+				}
 				return result;
 			},
 			path_remove_directory: async (_memory: ArrayBuffer, fd: fd, path_ptr: ptr<bytes>, path_len: size): Promise<errno> => {
@@ -1563,8 +1646,12 @@ export namespace TraceWasiService {
 			},
 			sock_accept: async (_memory: ArrayBuffer, fd: fd, flags: fdflags, result_fd_ptr: ptr<u32>): Promise<errno> => {
 				const result = await service.sock_accept(_memory, fd, flags, result_fd_ptr);
-				const memory = new Memory(_memory);
-				channel.info(`sock_accept(fd: ${fd}}, flags: ${flags}) => [result_fd: ${memory.readUint32(result_fd_ptr)}, result: ${Errno.toString(result)}]`);
+				if (result === Errno.success) {
+					const memory = new Memory(_memory);
+					channel.info(`sock_accept(fd: ${fd}}, flags: ${flags}) => [result_fd: ${memory.readUint32(result_fd_ptr)}, result: ${Errno.toString(result)}]`);
+				} else {
+					channel.info(`sock_accept(fd: ${fd}}, flags: ${flags}) => [result: ${Errno.toString(result)}]`);
+				}
 				return result;
 			},
 			sock_shutdown: async (_memory: ArrayBuffer, fd: fd, sdflags: sdflags): Promise<errno> => {

@@ -14,6 +14,9 @@ export async function activate(context: ExtensionContext) {
 		const pty = wasm.createPseudoterminal();
 		const terminal = window.createTerminal({ name, pty, isTransient: true });
 		terminal.show(true);
+		const channel = window.createOutputChannel('Python WASM Trace', { log: true });
+		channel.show(true);
+		channel.info(`Running ${name}...`);
 		const options: ProcessOptions = {
 			stdio: pty.stdio,
 			mapDir: [
@@ -23,7 +26,8 @@ export async function activate(context: ExtensionContext) {
 			env: {
  				PYTHONPATH: '/workspace'
  			},
-			args: fileToRun !== undefined ? ['-X', 'utf8', fileToRun] : ['-X', 'utf8']
+			args: fileToRun !== undefined ? ['-X', 'utf8', fileToRun] : ['-X', 'utf8'],
+			trace: channel
 		};
 		const filename = context.asAbsolutePath('wasm/python.wasm');
 		const bits = await fs.readFile(filename);
