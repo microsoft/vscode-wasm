@@ -35,15 +35,9 @@ async function executeWithFileSystem(context: ExtensionContext, wasm: Wasm, pty:
 	}
 	const process = await wasm.createProcess('coreutils', module, {
 		stdio: pty.stdio, args: newArgs,
-		mapDir: {
-			folders: true,
-			entries: [
-				{
-					vscode_fs: Uri.file(path.join(path.sep, 'home', 'dirkb', 'bin', 'wasm', 'Python-3.11.3', 'lib', 'python3.11')),
-					mountPoint: path.join(path.sep, 'usr', 'local', 'lib', 'python3.11')
-				}
-			]
-		}
+		mapDir: [
+			{ kind: 'workspaceFolder' }
+		]
 	});
 
 	const result = await process.run();

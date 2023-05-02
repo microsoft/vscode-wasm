@@ -45,6 +45,11 @@ export interface FileDescriptor {
 	readonly inode: bigint;
 
 	/**
+	 * Dispose resource associated with this file descriptor.
+	 */
+	dispose?(): Promise<void>;
+
+	/**
 	 * Create a new file descriptor with the given changes.
 	 *
 	 * @param change The changes to apply to the file descriptor.
@@ -124,6 +129,8 @@ export abstract class BaseFileDescriptor implements FileDescriptor {
 		this.fdflags = fdflags;
 		this.inode = inode;
 	}
+
+	dispose?(): Promise<void>;
 
 	abstract with(change: { fd: fd }): FileDescriptor;
 
@@ -234,5 +241,21 @@ export class FileDescriptors implements FdProvider {
 
 	public getRoot(driver: DeviceDriver): FileDescriptor | undefined {
 		return this.rootDescriptors.get(driver.id);
+	}
+
+	public entries(): IterableIterator<[number, FileDescriptor]> {
+		return this.descriptors.entries();
+	}
+
+	public keys(): IterableIterator<number> {
+		return this.descriptors.keys();
+	}
+
+	public values(): IterableIterator<FileDescriptor> {
+		return this.descriptors.values();
+	}
+
+	public [Symbol.iterator](): IterableIterator<[number, FileDescriptor]> {
+		return this.entries();
 	}
 }

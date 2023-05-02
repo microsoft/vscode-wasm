@@ -504,6 +504,15 @@ export abstract class WasiProcess {
 		}
 	}
 
+	protected async cleanupFileDescriptors(): Promise<void> {
+		// Dispose any resources that are still allocated with a file descriptor
+		for (const fd of this.fileDescriptors.values()) {
+			if (fd.dispose !== undefined) {
+				await fd.dispose();
+			}
+		}
+	}
+
 	protected abstract startMain(wasiService: WasiService): Promise<void>;
 
 	protected abstract startThread(wasiService: WasiService, tid: u32, start_arg: ptr): Promise<void>;

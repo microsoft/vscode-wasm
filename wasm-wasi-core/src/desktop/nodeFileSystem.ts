@@ -70,6 +70,10 @@ class GenericFileDescriptor extends BaseFileDescriptor {
 		return new GenericFileDescriptor(this.deviceId, change.fd, this.fileType, this.rights_base, this.fdflags, this.inode, this.handle);
 	}
 
+	public dispose(): Promise<void> {
+		return this.handle.close();
+	}
+
 	public get cursor(): number {
 		return this._cursor;
 	}
@@ -95,6 +99,11 @@ class DirectoryFileDescriptor extends BaseFileDescriptor {
 
 	public get dir(): Dir {
 		return this._dir;
+	}
+
+	public async dispose(): Promise<void> {
+		await this.handle.close();
+		await this._dir.close();
 	}
 
 	public async reOpenDir(): Promise<void> {
@@ -277,10 +286,9 @@ export function create(deviceId: DeviceId, basePath: string, readOnly: boolean =
 		async fd_close(fileDescriptor: FileDescriptor): Promise<void> {
 			try {
 				assertHandleDescriptor(fileDescriptor);
-				await fileDescriptor.handle.close();
-				if (fileDescriptor instanceof DirectoryFileDescriptor) {
+				if (fileDescriptor.dispose !== undefined) {
 					try {
-						await fileDescriptor.dir.close();
+						await fileDescriptor.dispose();
 					} catch (error) {
 						const code = getNodeErrorCode(error);
 						if (code === undefined || code !== 'ERR_DIR_CLOSED') {

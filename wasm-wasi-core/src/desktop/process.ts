@@ -69,6 +69,7 @@ export class NodeWasiProcess extends WasiProcess {
 		this.mainWorker = new Worker(filename);
 		this.mainWorker.on('exit', async () => {
 			this.cleanUpWorkers().catch(error => RAL().console.error(error));
+			this.cleanupFileDescriptors().catch(error => RAL().console.error(error));
 		});
 		const connection = new NodeServiceConnection(wasiService, this.mainWorker, this.options.trace);
 		await connection.workerReady();
@@ -112,6 +113,7 @@ export class NodeWasiProcess extends WasiProcess {
 		}
 		await this.cleanUpWorkers();
 		await this.destroyStreams();
+		await this.cleanupFileDescriptors();
 		return result;
 	}
 
