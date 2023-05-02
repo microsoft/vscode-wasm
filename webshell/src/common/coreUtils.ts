@@ -2,7 +2,7 @@
  *  Copyright (c) Microsoft Corporation. All rights reserved.
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
-import { ExtensionContext, Uri } from 'vscode';
+import { ExtensionContext } from 'vscode';
 
 import RAL from './ral';
 import { HandlerTarget } from './types';
