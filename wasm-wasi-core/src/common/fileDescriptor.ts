@@ -59,6 +59,13 @@ export interface FileDescriptor {
 	containsBaseRights(rights: rights): boolean;
 
 	/**
+	 * Asserts the given rights.
+	 *
+	 * @param right the rights to assert.
+	 */
+	assertRights(rights: rights): void;
+
+	/**
 	 * Asserts the given base rights.
 	 *
 	 * @param right the rights to assert.
@@ -123,6 +130,14 @@ export abstract class BaseFileDescriptor implements FileDescriptor {
 	public containsBaseRights(rights: rights): boolean {
 		return (this.rights_base & rights) === rights;
 	}
+
+	public assertRights(rights: rights): void {
+		if (((this.rights_base | this.rights_inheriting) & rights) === rights) {
+			return;
+		}
+		throw new WasiError(Errno.perm);
+	}
+
 	public assertBaseRights(rights: rights): void {
 		if ((this.rights_base & rights) === rights) {
 			return;

@@ -858,6 +858,7 @@ export namespace Rights {
 		if (contains(value, Rights.poll_fd_readwrite)) { parts.push('poll_fd_readwrite'); }
 		if (contains(value, Rights.sock_shutdown)) { parts.push('sock_shutdown'); }
 		if (contains(value, Rights.sock_accept)) { parts.push('sock_accept'); }
+		if (parts.length === 0) { return 'none'; }
 		return parts.join(' | ');
 	}
 }
@@ -929,6 +930,7 @@ export namespace Fdflags {
 		if (nonblockOn(value)) { parts.push('nonblock'); }
 		if (rsyncOn(value)) { parts.push('rsync'); }
 		if (syncOn(value)) { parts.push('sync'); }
+		if (parts.length === 0) { return 'none'; }
 		return parts.join(' | ');
 	}
 }
@@ -956,6 +958,7 @@ export namespace Lookupflags {
 	export function toString(value: lookupflags): string {
 		const parts: string[] = [];
 		if (symlink_followOn(value)) { parts.push('symlink_follow'); }
+		if (parts.length === 0) { return 'none'; }
 		return parts.join(' | ');
 	}
 }
@@ -1012,6 +1015,7 @@ export namespace Oflags {
 		if (directoryOn(value)) { parts.push('directory'); }
 		if (exclOn(value)) { parts.push('excl'); }
 		if (truncOn(value)) { parts.push('trunc'); }
+		if (parts.length === 0) { parts.push('none'); }
 		return parts.join(' | ');
 	}
 }

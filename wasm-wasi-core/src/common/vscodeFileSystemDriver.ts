@@ -595,8 +595,7 @@ export function create(deviceId: DeviceId, baseUri: Uri, readOnly: boolean = fal
 		fd_create_prestat_fd(fd: fd): Promise<FileDescriptor> {
 			return Promise.resolve(createRootFileDescriptor(fd));
 		},
-		fd_advise(fileDescriptor: FileDescriptor, _offset: bigint, _length: bigint, _advise: number): Promise<void> {
-			fileDescriptor.assertBaseRights(Rights.fd_advise);
+		fd_advise(_fileDescriptor: FileDescriptor, _offset: bigint, _length: bigint, _advise: number): Promise<void> {
 			// We don't have advisory in VS Code. So treat it as successful.
 			return Promise.resolve();
 		},
@@ -781,7 +780,7 @@ export function create(deviceId: DeviceId, baseUri: Uri, readOnly: boolean = fal
 		},
 		async path_open(parentDescriptor: FileDescriptor, _dirflags: lookupflags, path: string, oflags: oflags, fs_rights_base: rights, fs_rights_inheriting: rights, fdflags: fdflags, fdProvider: FdProvider): Promise<FileDescriptor> {
 			assertDirectoryDescriptor(parentDescriptor);
-			parentDescriptor.assertBaseRights(fs_rights_base);
+			parentDescriptor.assertRights(fs_rights_base);
 			parentDescriptor.assertInheritingRights(fs_rights_inheriting);
 
 			// We ignore lookup flags that request to follow symlinks. The POSIX FS

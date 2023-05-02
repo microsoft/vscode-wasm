@@ -1377,6 +1377,7 @@ export namespace TraceWasiService {
 					const path = memory.readString(pathPtr, pathLen);
 					channel.info(`fd_prestat_dir_name(fd: ${fd}) => [path: ${path}, result: ${Errno.toString(result)}]`);
 					preStats.set(fd, path);
+					fileDescriptors.set(fd, path);
 				} else {
 					channel.info(`fd_prestat_dir_name(fd: ${fd}) => [result: ${Errno.toString(result)}]`);
 				}
@@ -1580,12 +1581,12 @@ export namespace TraceWasiService {
 				const path = memory.readString(path_ptr, path_len);
 				if (result === Errno.success) {
 					const resultFd = memory.readUint32(fd_ptr);
-					channel.info(`path_open(fd: ${fd} => ${fileDescriptors.get(fd)}, dirflags: ${Lookupflags.toString(dirflags)}, path: ${path}, oflags: ${Oflags.toString(oflags)}, fs_rights_base: ${Rights.toString(fs_rights_base)}, fs_rights_inheriting: ${Rights.toString(fs_rights_inheriting)}, fdflags: ${Fdflags.toString(fdflags)}) => [fd: ${resultFd}, result: ${Errno.toString(result)}]`);
+					channel.info(`path_open(fd: ${fd} => ${fileDescriptors.get(fd)}, dirflags: ${Lookupflags.toString(dirflags)}, path: ${path}, oflags: ${Oflags.toString(oflags)}, fdflags: ${Fdflags.toString(fdflags)}) => [fd: ${resultFd}, result: ${Errno.toString(result)}]`);
 					if (result === Errno.success) {
 						fileDescriptors.set(resultFd, path);
 					}
 				} else {
-					channel.info(`path_open(fd: ${fd} => ${fileDescriptors.get(fd)}, dirflags: ${Lookupflags.toString(dirflags)}, path: ${path}, oflags: ${Oflags.toString(oflags)}, fs_rights_base: ${Rights.toString(fs_rights_base)}, fs_rights_inheriting: ${Rights.toString(fs_rights_inheriting)}, fdflags: ${Fdflags.toString(fdflags)}) => [result: ${Errno.toString(result)}]`);
+					channel.info(`path_open(fd: ${fd} => ${fileDescriptors.get(fd)}, dirflags: ${Lookupflags.toString(dirflags)}, path: ${path}, oflags: ${Oflags.toString(oflags)}, fdflags: ${Fdflags.toString(fdflags)}) => [result: ${Errno.toString(result)}]`);
 				}
 				return result;
 			},
