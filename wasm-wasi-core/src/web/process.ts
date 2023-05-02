@@ -74,6 +74,7 @@ export class BrowserWasiProcess extends WasiProcess {
 		}
 		this.threadWorkers.clear();
 		await this.destroyStreams();
+		await this.cleanupFileDescriptors();
 		return result;
 	}
 
