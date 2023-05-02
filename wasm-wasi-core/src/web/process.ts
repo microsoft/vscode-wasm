@@ -90,7 +90,7 @@ export class BrowserWasiProcess extends WasiProcess {
 			}
 			this.memory = new WebAssembly.Memory(this.memoryDescriptor);
 		}
-		const message: StartMainMessage = { method: 'startMain', module: await this.module, memory: this.memory };
+		const message: StartMainMessage = { method: 'startMain', module: await this.module, memory: this.memory, trace: this.options.trace !== undefined };
 		connection.postMessage(message);
 		return Promise.resolve();
 	}
@@ -106,7 +106,7 @@ export class BrowserWasiProcess extends WasiProcess {
 		const worker = new Worker(filename);
 		const connection = new BrowserServiceConnection(wasiService, worker);
 		await connection.workerReady();
-		const message: StartThreadMessage = { method: 'startThread', module: await this.module, memory: this.memory!, tid, start_arg };
+		const message: StartThreadMessage = { method: 'startThread', module: await this.module, memory: this.memory!, tid, start_arg, trace: this.options.trace !== undefined };
 		connection.postMessage(message);
 		this.threadWorkers.set(tid, worker);
 		return Promise.resolve();

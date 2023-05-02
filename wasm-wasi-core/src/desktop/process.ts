@@ -6,7 +6,7 @@
 
 import { MessagePort, Worker } from 'node:worker_threads';
 
-import { Uri } from 'vscode';
+import { LogOutputChannel, Uri } from 'vscode';
 
 import RAL from '../common/ral';
 import { ptr, u32 } from '../common/baseTypes';
@@ -21,8 +21,8 @@ export class NodeServiceConnection extends ServiceConnection {
 
 	private readonly port: MessagePort | Worker;
 
-	constructor(wasiService: WasiService, port: MessagePort | Worker) {
-		super(wasiService);
+	constructor(wasiService: WasiService, port: MessagePort | Worker, logChannel?: LogOutputChannel | undefined) {
+		super(wasiService, logChannel);
 		this.port = port;
 		this.port.on('message', (message: WorkerMessage) => {
 			this.handleMessage(message).catch(RAL().console.error);
@@ -70,7 +70,7 @@ export class NodeWasiProcess extends WasiProcess {
 		this.mainWorker.on('exit', async () => {
 			this.cleanUpWorkers().catch(error => RAL().console.error(error));
 		});
-		const connection = new NodeServiceConnection(wasiService, this.mainWorker);
+		const connection = new NodeServiceConnection(wasiService, this.mainWorker, this.options.trace);
 		await connection.workerReady();
 		const module = await this.module;
 		this.importsMemory = this.doesImportMemory(module);
@@ -80,7 +80,7 @@ export class NodeWasiProcess extends WasiProcess {
 			}
 			this.memory = new WebAssembly.Memory(this.memoryDescriptor);
 		}
-		const message: StartMainMessage = { method: 'startMain', module: await this.module, memory: this.memory };
+		const message: StartMainMessage = { method: 'startMain', module: await this.module, memory: this.memory, trace: this.options.trace !== undefined };
 		connection.postMessage(message);
 		return Promise.resolve();
 	}
@@ -97,9 +97,9 @@ export class NodeWasiProcess extends WasiProcess {
 		worker.on('exit', () => {
 			this.threadWorkers.delete(tid);
 		});
-		const connection = new NodeServiceConnection(wasiService, worker);
+		const connection = new NodeServiceConnection(wasiService, worker, this.options.trace);
 		await connection.workerReady();
-		const message: StartThreadMessage = { method: 'startThread', module: await this.module, memory: this.memory!, tid, start_arg };
+		const message: StartThreadMessage = { method: 'startThread', module: await this.module, memory: this.memory!, tid, start_arg, trace: this.options.trace !== undefined };
 		connection.postMessage(message);
 		this.threadWorkers.set(tid, worker);
 		return Promise.resolve();

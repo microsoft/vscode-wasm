@@ -18,7 +18,7 @@ import * as vscfs from './vscodeFileSystemDriver';
 import * as vrfs from './virtualRootFS';
 import * as tdd from './terminalDriver';
 import * as pdd from './pipeDriver';
-import { DeviceWasiService, ProcessWasiService, EnvironmentWasiService, WasiService, Clock, ClockWasiService, EnvironmentOptions, TraceWasiService } from './service';
+import { DeviceWasiService, ProcessWasiService, EnvironmentWasiService, WasiService, Clock, ClockWasiService, EnvironmentOptions } from './service';
 import WasiKernel, { DeviceDrivers } from './kernel';
 import { Errno, Lookupflags, exitcode } from './wasi';
 import { CharacterDeviceDriver } from './deviceDriver';
@@ -452,15 +452,12 @@ export abstract class WasiProcess {
 				try {
 					const tid = this.threadIdCounter++;
 					const clock: Clock = Clock.create();
-					let wasiService: WasiService = Object.assign({},
+					const wasiService: WasiService = Object.assign({},
 						this.environmentService,
 						ClockWasiService.create(clock),
 						DeviceWasiService.create(this.localDeviceDrivers, this.fileDescriptors, clock, this.virtualRootFileSystem, options),
 						this.processService
 					);
-					if (this.options.trace !== undefined) {
-						wasiService = TraceWasiService.create(wasiService, this.options.trace);
-					}
 					await this.startThread(wasiService, tid, start_args);
 					return Promise.resolve(tid);
 				} catch (error) {
@@ -478,15 +475,12 @@ export abstract class WasiProcess {
 		return new Promise(async (resolve) => {
 			this.resolveCallback = resolve;
 			const clock: Clock = Clock.create();
-			let wasiService: WasiService = Object.assign({},
+			const wasiService: WasiService = Object.assign({},
 				this.environmentService,
 				ClockWasiService.create(clock),
 				DeviceWasiService.create(this.localDeviceDrivers, this.fileDescriptors, clock, this.virtualRootFileSystem, this.options),
 				this.processService
 			);
-			if (this.options.trace !== undefined) {
-				wasiService = TraceWasiService.create(wasiService, this.options.trace);
-			}
 			const result = this.startMain(wasiService);
 			this.state = 'running';
 			return result;
