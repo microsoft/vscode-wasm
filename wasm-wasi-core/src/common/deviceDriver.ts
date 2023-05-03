@@ -85,6 +85,14 @@ export interface CharacterDeviceDriver extends DeviceDriver {
 	createStdioFileDescriptor(fd: 0 | 1 | 2): FileDescriptor;
 }
 
+export interface ReadonlyFileSystemDeviceDriver extends Pick<
+FileSystemDeviceDriver, 'kind' | 'uri' | 'id' | 'createStdioFileDescriptor' |
+'fd_advise' | 'fd_close' | 'fd_fdstat_get' | 'fd_filestat_get' | 'fd_pread' | 'fd_read' | 'fd_readdir' | 'fd_seek' |
+'fd_renumber' | 'fd_tell' | 'path_filestat_get' | 'path_open' | 'path_readlink' | 'fd_create_prestat_fd' | 'fd_bytesAvailable'
+> {
+	kind: DeviceDriverKind.fileSystem;
+}
+
 export const NoSysDeviceDriver: Omit<DeviceDriver, 'id' | 'uri' | 'kind'> = {
 	fd_advise(): Promise<void> {
 		throw new WasiError(Errno.nosys);

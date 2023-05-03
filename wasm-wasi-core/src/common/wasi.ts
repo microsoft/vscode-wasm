@@ -1203,6 +1203,7 @@ export type inode = u64;
 
 export type linkcount = u64;
 
+/** Timestamp in nanoseconds. */
 export type timestamp = u64;
 namespace Timestamp {
 	export const $ptr = Ptr.$param;

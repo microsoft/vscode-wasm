@@ -47,4 +47,11 @@ export namespace BigInts {
 		}
 		return Number(value);
 	}
+	export function max(...args: bigint[]): bigint {
+		return args.reduce((m, e) => e > m ? e : m);
+	}
+
+	export function min(...args: bigint[]): bigint {
+		return args.reduce((m, e) => e < m ? e : m);
+	}
 }

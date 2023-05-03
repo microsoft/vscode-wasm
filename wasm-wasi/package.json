@@ -6,8 +6,8 @@
 		"node": ">=16.14.2",
 		"vscode": "^1.71.0"
 	},
-	"main": "./lib/main.js",
-	"typings": "./lib/main.d.ts",
+	"main": "./lib/api/main.js",
+	"typings": "./lib/api/main.d.ts",
 	"repository": {
 		"type": "git",
 		"url": "git+https://github.com/microsoft/vscode-wasm.git"
@@ -25,9 +25,11 @@
 	"enabledApiProposals": [
 	],
 	"dependencies": {
+		"yargs": "^17.7.2"
 	},
 	"devDependencies": {
-		"@types/vscode": "1.77.0"
+		"@types/vscode": "1.77.0",
+		"@types/yargs": "17.0.24"
 	},
 	"scripts": {
 		"prepublishOnly": "echo \"⛔ Can only publish from a secure pipeline ⛔\" && node ../build/npm/fail",
