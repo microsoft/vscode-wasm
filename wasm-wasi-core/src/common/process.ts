@@ -12,10 +12,11 @@ import type {
 	WorkspaceFolderDescriptor
 } from './api';
 import type { ptr, size, u32 } from './baseTypes';
-import type { DeviceId, FileSystemDeviceDriver } from './deviceDriver';
+import type { FileSystemDeviceDriver } from './deviceDriver';
 import { FileDescriptors } from './fileDescriptor';
 import * as vscfs from './vscodeFileSystemDriver';
 import * as vrfs from './virtualRootFS';
+import * as extlocfs from './extLocFileSystem';
 import * as tdd from './terminalDriver';
 import * as pdd from './pipeDriver';
 import { DeviceWasiService, ProcessWasiService, EnvironmentWasiService, WasiService, Clock, ClockWasiService, EnvironmentOptions } from './service';
@@ -352,15 +353,7 @@ export abstract class WasiProcess {
 		}
 		if (extensions.length > 0) {
 			for (const descriptor of extensions) {
-				let extensionUri = descriptor.extension.extensionUri;
-				if (descriptor.path !== undefined) {
-					extensionUri = extensionUri.with({ path: RAL().path.join(extensionUri.path, descriptor.path) });
-				}
-				if (this.localDeviceDrivers.hasByUri(extensionUri)) {
-					continue;
-				}
-				const extensionFS = this.createExtensionLocationFileSystem(this.localDeviceDrivers.next(), extensionUri);
-				this.localDeviceDrivers.add(extensionFS);
+				const extensionFS = await this.getExtensionLocationFileSystem(this.localDeviceDrivers, descriptor);
 				this.preOpenDirectories.set(descriptor.mountPoint, extensionFS);
 			}
 		}
@@ -438,7 +431,7 @@ export abstract class WasiProcess {
 		);
 		this.processService = {
 			proc_exit: async (_memory, exitCode: exitcode) => {
-				await this.terminate();
+				// await this.terminate();
 				if (this.resolveCallback !== undefined) {
 					this.resolveCallback(exitCode);
 				}
@@ -519,7 +512,28 @@ export abstract class WasiProcess {
 
 	protected abstract threadEnded(tid: u32): Promise<void>;
 
-	protected abstract createExtensionLocationFileSystem(deviceId: DeviceId, uri: Uri): FileSystemDeviceDriver;
+	private async getExtensionLocationFileSystem(deviceDrivers: DeviceDrivers, descriptor: ExtensionLocationDescriptor): Promise<FileSystemDeviceDriver> {
+		let extensionUri = descriptor.extension.extensionUri;
+		extensionUri = extensionUri.with({ path: RAL().path.join(extensionUri.path, descriptor.path) });
+		if (deviceDrivers.hasByUri(extensionUri)) {
+			return deviceDrivers.getByUri(extensionUri) as FileSystemDeviceDriver;
+		}
+
+		const paths = RAL().path;
+		const basename = paths.basename(descriptor.path);
+		const dirname = paths.dirname(descriptor.path);
+		const dirDumpFileUri = Uri.joinPath(descriptor.extension.extensionUri, dirname, `${basename}.dir.json`);
+		try {
+			const content = await workspace.fs.readFile(dirDumpFileUri);
+			const dirDump = JSON.parse(RAL().TextDecoder.create().decode(content));
+			const extensionFS = extlocfs.create(deviceDrivers.next(), extensionUri, dirDump);
+			deviceDrivers.add(extensionFS);
+			return extensionFS;
+		} catch (error) {
+			RAL().console.error(`Failed to read directory dump file ${dirDumpFileUri.toString()}: ${error}`);
+			throw error;
+		}
+	}
 
 	private mapWorkspaceFolder(folder: WorkspaceFolder, single: boolean): void {
 		const path = RAL().path;

@@ -11,7 +11,6 @@ import { WasiService, ServiceConnection } from '../common/service';
 import type { ptr, u32 } from '../common/baseTypes';
 import type { ServiceMessage, StartMainMessage, StartThreadMessage, WorkerMessage } from '../common/connection';
 import type { ProcessOptions } from '../common/api';
-import type { DeviceId, FileSystemDeviceDriver } from '../common/deviceDriver';
 
 export class BrowserServiceConnection extends ServiceConnection {
 
@@ -58,10 +57,6 @@ export class BrowserWasiProcess extends WasiProcess {
 		} else {
 			this.memoryDescriptor = memory;
 		}
-	}
-
-	protected createExtensionLocationFileSystem(_deviceId: DeviceId, _uri: Uri): FileSystemDeviceDriver {
-		throw new Error('Not implemented');
 	}
 
 	public async terminate(): Promise<number> {

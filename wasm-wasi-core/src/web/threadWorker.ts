@@ -5,7 +5,7 @@
 import RIL from './ril';
 RIL.install();
 
-import { TraceWasiHost, WasiHost} from '../common/host';
+import { TraceWasiHost, Tracer, WasiHost} from '../common/host';
 import { BrowserHostConnection } from './connection';
 import { CapturedPromise, ServiceMessage, StartThreadMessage, WorkerReadyMessage } from '../common/connection';
 
@@ -27,8 +27,10 @@ class ThreadBrowserHostConnection extends BrowserHostConnection {
 			const module = message.module;
 			const memory = message.memory;
 			let host = WasiHost.create(this);
+			let tracer: Tracer | undefined;
 			if (message.trace) {
-				host = TraceWasiHost.create(this, host);
+				tracer  = TraceWasiHost.create(this, host);
+				host = tracer.tracer;
 			}
 			const instance = await WebAssembly.instantiate(module, {
 				env: { memory: memory },
@@ -38,6 +40,9 @@ class ThreadBrowserHostConnection extends BrowserHostConnection {
 			host.initialize(memory ?? instance);
 			(instance.exports.wasi_thread_start as Function)(message.tid, message.start_arg);
 			host.thread_exit(message.tid);
+			if (tracer !== undefined) {
+				tracer.printSummary();
+			}
 			this._done.resolve();
 		}
 	}

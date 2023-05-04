@@ -7,7 +7,7 @@ RIL.install();
 
 import { MessagePort, Worker, parentPort } from 'worker_threads';
 
-import { TraceWasiHost, WasiHost} from '../common/host';
+import { TraceWasiHost, Tracer, WasiHost} from '../common/host';
 import { NodeHostConnection } from './connection';
 import { CapturedPromise, ServiceMessage, StartMainMessage, WorkerReadyMessage } from '../common/connection';
 
@@ -33,8 +33,10 @@ class MainNodeHostConnection extends NodeHostConnection {
 			const module = message.module;
 			const memory = message.memory;
 			let host = WasiHost.create(this);
+			let tracer: Tracer | undefined;
 			if (message.trace) {
-				host = TraceWasiHost.create(this, host);
+				tracer  = TraceWasiHost.create(this, host);
+				host = tracer.tracer;
 			}
 			const imports: WebAssembly.Imports = {
 				wasi_snapshot_preview1: host,
@@ -48,6 +50,9 @@ class MainNodeHostConnection extends NodeHostConnection {
 			const instance  = await WebAssembly.instantiate(module, imports);
 			host.initialize(memory ?? instance);
 			(instance.exports._start as Function)();
+			if (tracer !== undefined) {
+				tracer.printSummary();
+			}
 			this._done.resolve();
 		}
 	}

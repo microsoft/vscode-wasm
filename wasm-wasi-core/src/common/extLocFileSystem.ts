@@ -3,6 +3,7 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
+import { Uri, workspace } from 'vscode';
 import { DeviceDriverKind, DeviceId, FileSystemDeviceDriver, NoSysDeviceDriver, ReaddirEntry, ReadonlyFileSystemDeviceDriver, WritePermDeniedDeviceDriver } from '../common/deviceDriver';
 import { BaseFileDescriptor, FdProvider, FileDescriptor } from '../common/fileDescriptor';
 import { Fdflags, Filetype, Lookupflags, Oflags, Whence, fdstat, filesize, filestat, inode, lookupflags, oflags } from '../common/wasi';
@@ -13,7 +14,6 @@ import { fd } from '../common/wasi';
 import { Rights, rights } from '../common/wasi';
 import { BigInts } from '../common/converter';
 import { size, u64 } from '../common/baseTypes';
-import { Uri, workspace } from 'vscode';
 
 // The Unpkg file system is readonly.
 const DirectoryBaseRights: rights = Rights.path_open | Rights.fd_readdir | Rights.path_filestat_get | Rights.fd_filestat_get;
@@ -144,19 +144,19 @@ namespace Dump {
 	export type FileNode = {
 		kind: 'file';
 		name: string;
-		size: bigint;
-		ctime: bigint;
-		atime: bigint;
-		mtime: bigint;
+		size: string;
+		ctime: string;
+		atime: string;
+		mtime: string;
 	};
 
 	export type DirectoryNode =  {
 		kind: 'directory';
 		name: string;
-		size: bigint;
-		ctime: bigint;
-		atime: bigint;
-		mtime: bigint;
+		size: string;
+		ctime: string;
+		atime: string;
+		mtime: string;
 		children: { [key: string]: Node };
 	};
 
@@ -242,20 +242,20 @@ class FileSystem {
 
 	private parseDump(dump: Dump.DirectoryNode): DirectoryNode {
 		let inodeCounter = 1n;
-		const root = DirectoryNode.create(undefined, inodeCounter++, dump.name, dump.ctime, dump.size);
-		this.processDirectoryNode(dump, this.root, inodeCounter);
+		const root = DirectoryNode.create(undefined, inodeCounter++, dump.name, BigInt(dump.ctime), BigInt(dump.size));
+		this.processDirectoryNode(dump, root, inodeCounter);
 		return root;
 	}
 
 	private processDirectoryNode(dump: Dump.DirectoryNode, fs: DirectoryNode, inodeCounter: bigint): void {
 		for (const entry of Object.values(dump.children)) {
 			if (entry.kind === 'directory') {
-				const child = DirectoryNode.create(fs, inodeCounter++, name, entry.ctime, entry.size);
-				fs.entries.set(name, child);
+				const child = DirectoryNode.create(fs, inodeCounter++, entry.name, BigInt(entry.ctime), BigInt(entry.size));
+				fs.entries.set(entry.name, child);
 				this.processDirectoryNode(entry, child, inodeCounter);
 			} else {
-				const child = FileNode.create(fs, inodeCounter++, name, entry.ctime, entry.size);
-				fs.entries.set(name, child);
+				const child = FileNode.create(fs, inodeCounter++, entry.name, BigInt(entry.ctime), BigInt(entry.size));
+				fs.entries.set(entry.name, child);
 			}
 		}
 	}

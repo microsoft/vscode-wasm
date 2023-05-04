@@ -94,6 +94,15 @@ export namespace TraceMessage {
 		const preStats: Map<fd, string> = new Map();
 		const fileDescriptors: Map<fd, string> = new Map();
 
+		function getFileDescriptorPath(fd: fd): string {
+			switch(fd) {
+				case 0: return 'stdin';
+				case 1: return 'stdout';
+				case 2: return 'stderr';
+				default: return fileDescriptors.get(fd) || `fd: ${fd}`;
+			}
+		}
+
 		return {
 			args_sizes_get: (_memory: ArrayBuffer, result: errno, argvCount_ptr: ptr<u32>, argvBufSize_ptr: ptr<u32>): string => {
 				if (result === Errno.success) {
@@ -182,88 +191,88 @@ export namespace TraceMessage {
 				}
 			},
 			fd_advise: (_memory: ArrayBuffer, result: errno, fd: fd, offset: filesize, length: filesize, advise: advise): string => {
-				return `fd_advise(fd: ${fd} => ${fileDescriptors.get(fd)}, offset: ${offset}, length: ${length}, advise: ${Advise.toString(advise)}) => [result: ${Errno.toString(result)}]`;
+				return `fd_advise(fd: ${fd} => ${getFileDescriptorPath(fd)}, offset: ${offset}, length: ${length}, advise: ${Advise.toString(advise)}) => [result: ${Errno.toString(result)}]`;
 			},
 			fd_allocate: (_memory: ArrayBuffer, result: errno, fd: fd, offset: filesize, len: filesize): string => {
-				return `fd_allocate(fd: ${fd} => ${fileDescriptors.get(fd)}, offset: ${offset}, len: ${len}) => [result: ${Errno.toString(result)}]`;
+				return `fd_allocate(fd: ${fd} => ${getFileDescriptorPath(fd)}, offset: ${offset}, len: ${len}) => [result: ${Errno.toString(result)}]`;
 			},
 			fd_close: (_memory: ArrayBuffer, result: errno, fd: fd): string => {
-				const message = `fd_close(fd: ${fd} => ${fileDescriptors.get(fd)}) => [result: ${Errno.toString(result)}]`;
+				const message = `fd_close(fd: ${fd} => ${getFileDescriptorPath(fd)}) => [result: ${Errno.toString(result)}]`;
 				fileDescriptors.delete(fd);
 				return message;
 			},
 			fd_datasync: (_memory: ArrayBuffer, result: errno, fd: fd): string => {
-				return `fd_datasync(fd: ${fd} => ${fileDescriptors.get(fd)}) => [result: ${Errno.toString(result)}]`;
+				return `fd_datasync(fd: ${fd} => ${getFileDescriptorPath(fd)}) => [result: ${Errno.toString(result)}]`;
 			},
 			fd_fdstat_get: (_memory: ArrayBuffer, result: errno, fd: fd, fdstat_ptr: ptr<fdstat>): string => {
 				if (result === Errno.success) {
 					const memory = new Memory(_memory);
 					const fdstat = memory.readStruct(fdstat_ptr, Fdstat);
-					return `fd_fdstat_get(fd: ${fd} => ${fileDescriptors.get(fd)}) => [fdstat: ${Filetype.toString(fdstat.fs_filetype)}}, result: ${Errno.toString(result)}]`;
+					return `fd_fdstat_get(fd: ${fd} => ${getFileDescriptorPath(fd)}) => [fdstat: ${Filetype.toString(fdstat.fs_filetype)}}, result: ${Errno.toString(result)}]`;
 				} else {
-					return `fd_fdstat_get(fd: ${fd} => ${fileDescriptors.get(fd)}) => [result: ${Errno.toString(result)}]`;
+					return `fd_fdstat_get(fd: ${fd} => ${getFileDescriptorPath(fd)}) => [result: ${Errno.toString(result)}]`;
 				}
 			},
 			fd_fdstat_set_flags: (_memory: ArrayBuffer, result: errno, fd: fd, fdflags: fdflags): string => {
-				return `fd_fdstat_set_flags(fd: ${fd} => ${fileDescriptors.get(fd)}, fdflags: ${Fdflags.toString(fdflags)}) => [result: ${Errno.toString(result)}]`;
+				return `fd_fdstat_set_flags(fd: ${fd} => ${getFileDescriptorPath(fd)}, fdflags: ${Fdflags.toString(fdflags)}) => [result: ${Errno.toString(result)}]`;
 			},
 			fd_filestat_get: (_memory: ArrayBuffer, result: errno, fd: fd, filestat_ptr: ptr<filestat>): string => {
 				if (result === Errno.success) {
 					const memory = new Memory(_memory);
 					const filestat = memory.readStruct(filestat_ptr, Filestat);
-					return `fd_filestat_get(fd: ${fd} => ${fileDescriptors.get(fd)}) => [filestat: ${Filetype.toString(filestat.filetype)}, result: ${Errno.toString(result)}]`;
+					return `fd_filestat_get(fd: ${fd} => ${getFileDescriptorPath(fd)}) => [filestat: ${Filetype.toString(filestat.filetype)}, result: ${Errno.toString(result)}]`;
 				} else {
-					return `fd_filestat_get(fd: ${fd} => ${fileDescriptors.get(fd)}) => [result: ${Errno.toString(result)}]`;
+					return `fd_filestat_get(fd: ${fd} => ${getFileDescriptorPath(fd)}) => [result: ${Errno.toString(result)}]`;
 				}
 			},
 			fd_filestat_set_size: (_memory: ArrayBuffer, result: errno, fd: fd, size: filesize): string => {
-				return `fd_filestat_set_size(fd: ${fd} => ${fileDescriptors.get(fd)}, size: ${size}) => [result: ${Errno.toString(result)}]`;
+				return `fd_filestat_set_size(fd: ${fd} => ${getFileDescriptorPath(fd)}, size: ${size}) => [result: ${Errno.toString(result)}]`;
 			},
 			fd_filestat_set_times: (_memory: ArrayBuffer, result: errno, fd: fd, atim: timestamp, mtim: timestamp, fst_flags: fstflags): string => {
-				return `fd_filestat_set_times(fd: ${fd} => ${fileDescriptors.get(fd)}, atim: ${atim}, mtim: ${mtim}, fst_flags: ${Fstflags.toString(fst_flags)}) => [result: ${Errno.toString(result)}]`;
+				return `fd_filestat_set_times(fd: ${fd} => ${getFileDescriptorPath(fd)}, atim: ${atim}, mtim: ${mtim}, fst_flags: ${Fstflags.toString(fst_flags)}) => [result: ${Errno.toString(result)}]`;
 			},
 			fd_pread: (_memory: ArrayBuffer, result: errno, fd: fd, _iovs_ptr: ptr<iovec>, _iovs_len: u32, offset: filesize, bytesRead_ptr: ptr<u32>): string => {
 				if (result === Errno.success) {
 					const memory = new Memory(_memory);
-					return `fd_pread(fd: ${fd} => ${fileDescriptors.get(fd)}, offset: ${offset}) => [bytesRead: ${memory.readUint32(bytesRead_ptr)}, result: ${Errno.toString(result)}]`;
+					return `fd_pread(fd: ${fd} => ${getFileDescriptorPath(fd)}, offset: ${offset}) => [bytesRead: ${memory.readUint32(bytesRead_ptr)}, result: ${Errno.toString(result)}]`;
 				} else {
-					return `fd_pread(fd: ${fd} => ${fileDescriptors.get(fd)}, offset: ${offset}) => [result: ${Errno.toString(result)}]`;
+					return `fd_pread(fd: ${fd} => ${getFileDescriptorPath(fd)}, offset: ${offset}) => [result: ${Errno.toString(result)}]`;
 				}
 			},
 			fd_pwrite: (_memory: ArrayBuffer, result: errno, fd: fd, _ciovs_ptr: ptr<ciovec>, _ciovs_len: u32, offset: filesize, bytesWritten_ptr: ptr<u32>): string => {
 				if (result === Errno.success) {
 					const memory = new Memory(_memory);
-					return `fd_pwrite(fd: ${fd} => ${fileDescriptors.get(fd)}, offset: ${offset}) => [bytesWritten: ${memory.readUint32(bytesWritten_ptr)}, result: ${Errno.toString(result)}]`;
+					return `fd_pwrite(fd: ${fd} => ${getFileDescriptorPath(fd)}, offset: ${offset}) => [bytesWritten: ${memory.readUint32(bytesWritten_ptr)}, result: ${Errno.toString(result)}]`;
 				} else {
-					return `fd_pwrite(fd: ${fd} => ${fileDescriptors.get(fd)}, offset: ${offset}) => [result: ${Errno.toString(result)}]`;
+					return `fd_pwrite(fd: ${fd} => ${getFileDescriptorPath(fd)}, offset: ${offset}) => [result: ${Errno.toString(result)}]`;
 				}
 			},
 			fd_read: (_memory: ArrayBuffer, result: errno, fd: fd, _iovs_ptr: ptr<iovec>, _iovs_len: u32, bytesRead_ptr: ptr<u32>): string => {
 				if (result === Errno.success) {
 					const memory = new Memory(_memory);
-					return `fd_read(fd: ${fd} => ${fileDescriptors.get(fd)}) => [bytesRead: ${memory.readUint32(bytesRead_ptr)}, result: ${Errno.toString(result)}]`;
+					return `fd_read(fd: ${fd} => ${getFileDescriptorPath(fd)}) => [bytesRead: ${memory.readUint32(bytesRead_ptr)}, result: ${Errno.toString(result)}]`;
 				} else {
-					return `fd_read(fd: ${fd} => ${fileDescriptors.get(fd)}) => [result: ${Errno.toString(result)}]`;
+					return `fd_read(fd: ${fd} => ${getFileDescriptorPath(fd)}) => [result: ${Errno.toString(result)}]`;
 				}
 			},
 			fd_readdir: (_memory: ArrayBuffer, result: errno, fd: fd, _buf_ptr: ptr<dirent>, _buf_len: size, cookie: dircookie, buf_used_ptr: ptr<u32>): string => {
 				if (result === Errno.success) {
 					const memory = new Memory(_memory);
-					return `fd_readdir(fd: ${fd} => ${fileDescriptors.get(fd)}, cookie: ${cookie}) => [buf_used: ${memory.readUint32(buf_used_ptr)}, result: ${Errno.toString(result)}]`;
+					return `fd_readdir(fd: ${fd} => ${getFileDescriptorPath(fd)}, cookie: ${cookie}) => [buf_used: ${memory.readUint32(buf_used_ptr)}, result: ${Errno.toString(result)}]`;
 				} else {
-					return `fd_readdir(fd: ${fd} => ${fileDescriptors.get(fd)}, cookie: ${cookie}) => [result: ${Errno.toString(result)}]`;
+					return `fd_readdir(fd: ${fd} => ${getFileDescriptorPath(fd)}, cookie: ${cookie}) => [result: ${Errno.toString(result)}]`;
 				}
 			},
 			fd_seek: (_memory: ArrayBuffer, result: errno, fd: fd, offset: filedelta, whence: whence, new_offset_ptr: ptr<u64>): string => {
 				if (result === Errno.success) {
 					const memory = new Memory(_memory);
-					return `fd_seek(fd: ${fd} => ${fileDescriptors.get(fd)}, offset: ${offset}, whence: ${Whence.toString(whence)}) => [new_offset: ${memory.readUint64(new_offset_ptr)}, result: ${Errno.toString(result)}]`;
+					return `fd_seek(fd: ${fd} => ${getFileDescriptorPath(fd)}, offset: ${offset}, whence: ${Whence.toString(whence)}) => [new_offset: ${memory.readUint64(new_offset_ptr)}, result: ${Errno.toString(result)}]`;
 				} else {
-					return `fd_seek(fd: ${fd} => ${fileDescriptors.get(fd)}, offset: ${offset}, whence: ${Whence.toString(whence)}) => [result: ${Errno.toString(result)}]`;
+					return `fd_seek(fd: ${fd} => ${getFileDescriptorPath(fd)}, offset: ${offset}, whence: ${Whence.toString(whence)}) => [result: ${Errno.toString(result)}]`;
 				}
 			},
 			fd_renumber: (_memory: ArrayBuffer, result: errno, fd: fd, to: fd): string => {
-				const message = `fd_renumber(fd: ${fd} => ${fileDescriptors.get(fd)}, to: ${to}) => [result: ${Errno.toString(result)}]`;
+				const message = `fd_renumber(fd: ${fd} => ${getFileDescriptorPath(fd)}, to: ${to}) => [result: ${Errno.toString(result)}]`;
 				if (result === Errno.success) {
 					fileDescriptors.set(to, fileDescriptors.get(fd)!);
 					fileDescriptors.delete(fd);
@@ -271,40 +280,40 @@ export namespace TraceMessage {
 				return message;
 			},
 			fd_sync: (_memory: ArrayBuffer, result: errno, fd: fd): string => {
-				return `fd_sync(fd: ${fd} => ${fileDescriptors.get(fd)}) => [result: ${Errno.toString(result)}]`;
+				return `fd_sync(fd: ${fd} => ${getFileDescriptorPath(fd)}) => [result: ${Errno.toString(result)}]`;
 			},
 			fd_tell: (_memory: ArrayBuffer, result: errno, fd: fd, offset_ptr: ptr<u64>): string => {
 				if (result === Errno.success) {
 					const memory = new Memory(_memory);
-					return `fd_tell(fd: ${fd} => ${fileDescriptors.get(fd)}) => [offset: ${memory.readUint64(offset_ptr)}, result: ${Errno.toString(result)}]`;
+					return `fd_tell(fd: ${fd} => ${getFileDescriptorPath(fd)}) => [offset: ${memory.readUint64(offset_ptr)}, result: ${Errno.toString(result)}]`;
 				} else {
-					return `fd_tell(fd: ${fd} => ${fileDescriptors.get(fd)}) => [result: ${Errno.toString(result)}]`;
+					return `fd_tell(fd: ${fd} => ${getFileDescriptorPath(fd)}) => [result: ${Errno.toString(result)}]`;
 				}
 			},
 			fd_write: (_memory: ArrayBuffer, result: errno, fd: fd, _ciovs_ptr: ptr<ciovec>, _ciovs_len: u32, bytesWritten_ptr: ptr<u32>): string => {
 				if (result === Errno.success) {
 					const memory = new Memory(_memory);
-					return `fd_write(fd: ${fd} => ${fileDescriptors.get(fd)}) => [bytesWritten: ${memory.readUint32(bytesWritten_ptr)}, result: ${Errno.toString(result)}]`;
+					return `fd_write(fd: ${fd} => ${getFileDescriptorPath(fd)}) => [bytesWritten: ${memory.readUint32(bytesWritten_ptr)}, result: ${Errno.toString(result)}]`;
 				} else {
-					return `fd_write(fd: ${fd} => ${fileDescriptors.get(fd)}) => [result: ${Errno.toString(result)}]`;
+					return `fd_write(fd: ${fd} => ${fd === 1 || fd === 2 ? fd : fileDescriptors.get(fd)}) => [result: ${Errno.toString(result)}]`;
 				}
 			},
 			path_create_directory: (_memory: ArrayBuffer, result: errno, fd: fd, path_ptr: ptr<bytes>, path_len: size): string => {
 				const memory = new Memory(_memory);
-				return `path_create_directory(fd: ${fd} => ${fileDescriptors.get(fd)}, path: ${memory.readString(path_ptr, path_len)}) => [result: ${Errno.toString(result)}]`;
+				return `path_create_directory(fd: ${fd} => ${getFileDescriptorPath(fd)}, path: ${memory.readString(path_ptr, path_len)}) => [result: ${Errno.toString(result)}]`;
 			},
 			path_filestat_get: (_memory: ArrayBuffer, result: errno, fd: fd, flags: lookupflags, path_ptr: ptr<bytes>, path_len: size, filestat_ptr: ptr<filestat>): string => {
 				const memory = new Memory(_memory);
 				if (result === Errno.success) {
 					const filestat = memory.readStruct(filestat_ptr, Filestat);
-					return `path_filestat_get(fd: ${fd} => ${fileDescriptors.get(fd)}, flags: ${Lookupflags.toString(flags)} path: ${memory.readString(path_ptr, path_len)}) => [filestat: ${Filetype.toString(filestat.filetype)} result: ${Errno.toString(result)}]`;
+					return `path_filestat_get(fd: ${fd} => ${getFileDescriptorPath(fd)}, flags: ${Lookupflags.toString(flags)} path: ${memory.readString(path_ptr, path_len)}) => [filestat: ${Filetype.toString(filestat.filetype)} result: ${Errno.toString(result)}]`;
 				} else {
-					return `path_filestat_get(fd: ${fd} => ${fileDescriptors.get(fd)}, flags: ${Lookupflags.toString(flags)} path: ${memory.readString(path_ptr, path_len)}) => [result: ${Errno.toString(result)}]`;
+					return `path_filestat_get(fd: ${fd} => ${getFileDescriptorPath(fd)}, flags: ${Lookupflags.toString(flags)} path: ${memory.readString(path_ptr, path_len)}) => [result: ${Errno.toString(result)}]`;
 				}
 			},
 			path_filestat_set_times: (_memory: ArrayBuffer, result: errno, fd: fd, flags: lookupflags, path_ptr: ptr<bytes>, path_len: size, atim: timestamp, mtim: timestamp, fst_flags: fstflags): string => {
 				const memory = new Memory(_memory);
-				return `path_filestat_set_times(fd: ${fd} => ${fileDescriptors.get(fd)}, flags: ${Lookupflags.toString(flags)} path: ${memory.readString(path_ptr, path_len)}, atim: ${atim}, mtim: ${mtim}, fst_flags: ${Fstflags.toString(fst_flags)}) => [result: ${Errno.toString(result)}]`;
+				return `path_filestat_set_times(fd: ${fd} => ${getFileDescriptorPath(fd)}, flags: ${Lookupflags.toString(flags)} path: ${memory.readString(path_ptr, path_len)}, atim: ${atim}, mtim: ${mtim}, fst_flags: ${Fstflags.toString(fst_flags)}) => [result: ${Errno.toString(result)}]`;
 			},
 			path_link: (_memory: ArrayBuffer, result: errno, old_fd: fd, old_flags: lookupflags, old_path_ptr: ptr<bytes>, old_path_len: size, new_fd: fd, new_path_ptr: ptr<bytes>, new_path_len: size): string => {
 				const memory = new Memory(_memory);
@@ -315,28 +324,28 @@ export namespace TraceMessage {
 				const path = memory.readString(path_ptr, path_len);
 				if (result === Errno.success) {
 					const resultFd = memory.readUint32(fd_ptr);
-					const message = `path_open(fd: ${fd} => ${fileDescriptors.get(fd)}, dirflags: ${Lookupflags.toString(dirflags)}, path: ${path}, oflags: ${Oflags.toString(oflags)}, fdflags: ${Fdflags.toString(fdflags)}) => [fd: ${resultFd}, result: ${Errno.toString(result)}]`;
+					const message = `path_open(fd: ${fd} => ${getFileDescriptorPath(fd)}, dirflags: ${Lookupflags.toString(dirflags)}, path: ${path}, oflags: ${Oflags.toString(oflags)}, fdflags: ${Fdflags.toString(fdflags)}) => [fd: ${resultFd}, result: ${Errno.toString(result)}]`;
 					if (result === Errno.success) {
 						const parentPath = fileDescriptors.get(fd);
 						fileDescriptors.set(resultFd, parentPath !== undefined ? RAL().path.join(parentPath, path) : path);
 					}
 					return message;
 				} else {
-					return `path_open(fd: ${fd} => ${fileDescriptors.get(fd)}, dirflags: ${Lookupflags.toString(dirflags)}, path: ${path}, oflags: ${Oflags.toString(oflags)}, fdflags: ${Fdflags.toString(fdflags)}) => [result: ${Errno.toString(result)}]`;
+					return `path_open(fd: ${fd} => ${getFileDescriptorPath(fd)}, dirflags: ${Lookupflags.toString(dirflags)}, path: ${path}, oflags: ${Oflags.toString(oflags)}, fdflags: ${Fdflags.toString(fdflags)}) => [result: ${Errno.toString(result)}]`;
 				}
 			},
 			path_readlink: (_memory: ArrayBuffer, result: errno, fd: fd, path_ptr: ptr<bytes>, path_len: size, buf_ptr: ptr, buf_len: size, result_size_ptr: ptr<u32>): string => {
 				const memory = new Memory(_memory);
 				if (result === Errno.success) {
 					const resultSize = memory.readUint32(result_size_ptr);
-					return `path_readlink(fd: ${fd} => ${fileDescriptors.get(fd)}, path: ${memory.readString(path_ptr, path_len)}, buf_len: ${buf_len}) => [target: ${memory.readString(buf_ptr, resultSize)}, result: ${Errno.toString(result)}]`;
+					return `path_readlink(fd: ${fd} => ${getFileDescriptorPath(fd)}, path: ${memory.readString(path_ptr, path_len)}, buf_len: ${buf_len}) => [target: ${memory.readString(buf_ptr, resultSize)}, result: ${Errno.toString(result)}]`;
 				} else {
-					return `path_readlink(fd: ${fd} => ${fileDescriptors.get(fd)}, path: ${memory.readString(path_ptr, path_len)}, buf_len: ${buf_len}) => [result: ${Errno.toString(result)}]`;
+					return `path_readlink(fd: ${fd} => ${getFileDescriptorPath(fd)}, path: ${memory.readString(path_ptr, path_len)}, buf_len: ${buf_len}) => [result: ${Errno.toString(result)}]`;
 				}
 			},
 			path_remove_directory: (_memory: ArrayBuffer, result: errno, fd: fd, path_ptr: ptr<bytes>, path_len: size): string => {
 				const memory = new Memory(_memory);
-				return `path_remove_directory(fd: ${fd} => ${fileDescriptors.get(fd)}, path: ${memory.readString(path_ptr, path_len)}) => [result: ${Errno.toString(result)}]`;
+				return `path_remove_directory(fd: ${fd} => ${getFileDescriptorPath(fd)}, path: ${memory.readString(path_ptr, path_len)}) => [result: ${Errno.toString(result)}]`;
 			},
 			path_rename: (_memory: ArrayBuffer, result: errno, old_fd: fd, old_path_ptr: ptr<bytes>, old_path_len: size, new_fd: fd, new_path_ptr: ptr<bytes>, new_path_len: size): string => {
 				const memory = new Memory(_memory);
@@ -344,11 +353,11 @@ export namespace TraceMessage {
 			},
 			path_symlink: (_memory: ArrayBuffer, result: errno, old_path_ptr: ptr<bytes>, old_path_len: size, fd: fd, new_path_ptr: ptr<bytes>, new_path_len: size): string => {
 				const memory = new Memory(_memory);
-				return `path_symlink(old_path: ${memory.readString(old_path_ptr, old_path_len)}, fd: ${fd} => ${fileDescriptors.get(fd)}, new_path: ${memory.readString(new_path_ptr, new_path_len)}) => [result: ${Errno.toString(result)}]`;
+				return `path_symlink(old_path: ${memory.readString(old_path_ptr, old_path_len)}, fd: ${fd} => ${getFileDescriptorPath(fd)}, new_path: ${memory.readString(new_path_ptr, new_path_len)}) => [result: ${Errno.toString(result)}]`;
 			},
 			path_unlink_file: (_memory: ArrayBuffer, result: errno, fd: fd, path_ptr: ptr<bytes>, path_len: size): string => {
 				const memory = new Memory(_memory);
-				return `path_unlink_file(fd: ${fd} => ${fileDescriptors.get(fd)}, path: ${memory.readString(path_ptr, path_len)}) => [result: ${Errno.toString(result)}]`;
+				return `path_unlink_file(fd: ${fd} => ${getFileDescriptorPath(fd)}, path: ${memory.readString(path_ptr, path_len)}) => [result: ${Errno.toString(result)}]`;
 			},
 			poll_oneoff: (_memory: ArrayBuffer, result: errno, _input: ptr<subscription>, _output: ptr<event[]>, _subscriptions: size, _result_size_ptr: ptr<u32>): string => {
 				return `poll_oneoff(...) => [result: ${Errno.toString(result)}]`;

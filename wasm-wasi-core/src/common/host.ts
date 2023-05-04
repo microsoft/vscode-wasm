@@ -564,23 +564,32 @@ export namespace WasiHost {
 	}
 }
 
+export interface Tracer {
+	tracer: WasiHost;
+	printSummary(): void;
+}
+
 export namespace TraceWasiHost {
-	export function create(connection: HostConnection, host: WasiHost): WasiHost {
+	export function create(connection: HostConnection, host: WasiHost):  Tracer {
 		const timePerFunction: Map<string, { count: number; time: number }> = new Map();
 		const traceMessage = TraceMessage.create();
 
-		return new Proxy(host, {
+		function printSummary(): void {
+			const summary: string[] = [];
+			for (const [name, { count, time }] of timePerFunction.entries()) {
+				summary.push(`${name} was called ${count} times and took ${time}ms in total. Average time: ${time / count}ms.`);
+			}
+			connection.postMessage({ method: 'traceSummary', summary: summary });
+		}
+
+		const proxy = new Proxy<WasiHost>(host, {
 			get: (target: WasiHost, property: string | symbol, receiver: any) => {
 				const value = Reflect.get(target, property, receiver);
 				const propertyName = property.toString();
 				if (typeof value === 'function') {
 					return (...args: any[]) => {
 						if (propertyName === 'proc_exit') {
-							const summary: string[] = [];
-							for (const [name, { count, time }] of timePerFunction.entries()) {
-								summary.push(`${name} was called ${count} times and took ${time}ms in total. Average time: ${time / count}ms.`);
-							}
-							connection.postMessage({ method: 'traceSummary', summary: summary });
+							printSummary();
 						}
 						const start = Date.now();
 						const result = value.apply(target, args);
@@ -608,5 +617,9 @@ export namespace TraceWasiHost {
 				}
 			}
 		});
+		return {
+			tracer: proxy,
+			printSummary: printSummary
+		};
 	}
 }

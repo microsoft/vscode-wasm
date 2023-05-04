@@ -106,7 +106,7 @@ export type WorkspaceFolderDescriptor = {
 export type ExtensionLocationDescriptor = {
 	kind: 'extensionLocation';
 	extension: ExtensionContext | Extension<any>;
-	path?: string;
+	path: string;
 	mountPoint: string;
 };
 

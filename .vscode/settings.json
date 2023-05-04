@@ -133,6 +133,7 @@
 		"netunreach",
 		"nfile",
 		"nobufs",
+		"nodefs",
 		"nodev",
 		"noent",
 		"noexec",

@@ -14,8 +14,6 @@ import { WasiProcess } from '../common/process';
 import { WasiService, ServiceConnection } from '../common/service';
 import type { ServiceMessage, StartMainMessage, StartThreadMessage, WorkerMessage } from '../common/connection';
 import { ProcessOptions } from '../common/api';
-import { DeviceId, FileSystemDeviceDriver } from '../common/deviceDriver';
-import * as nodefs from './nodeFileSystem';
 
 export class NodeServiceConnection extends ServiceConnection {
 
@@ -58,10 +56,6 @@ export class NodeWasiProcess extends WasiProcess {
 		} else {
 			this.memoryDescriptor = memory;
 		}
-	}
-
-	protected createExtensionLocationFileSystem(deviceId: DeviceId, uri: Uri): FileSystemDeviceDriver {
-		return nodefs.create(deviceId, uri.fsPath, true);
 	}
 
 	protected async startMain(wasiService: WasiService): Promise<void> {
