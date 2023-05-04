@@ -35,7 +35,7 @@
 		"shx": "^0.3.4",
 		"@vscode/tsconfig-gen": "0.1.0",
 		"typescript": "^5.0.4",
-		"serve": "^14.1.2",
+		"serve": "^14.2.0",
 		"@types/path-browserify": "^1.0.0",
 		"path-browserify": "^1.0.1",
 		"@vscode/test-electron": "^2.3.0",
@@ -57,6 +57,6 @@
 		"tsconfig-gen": "tsconfig-gen --file .tsconfigrc.js",
 		"validate:versions": "node ./tools/lib/validate-versions.js",
 		"update:lock": "git clean -xfd . && npm install",
-		"serve": "serve --cors -l 5000 --ssl-cert $HOME/certs/localhost.pem --ssl-key $HOME/certs/localhost-key.pem -c ../configs/serve.json ./wasm-wasi-kernel"
+		"serve": "serve --cors -l 5000 --ssl-cert $HOME/certs/localhost.pem --ssl-key $HOME/certs/localhost-key.pem -c ./configs/serve.json ."
 	}
 }

@@ -3,9 +3,7 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import fs from 'node:fs/promises';
-
-import { commands, ExtensionContext, Uri, window } from 'vscode';
+import { commands, ExtensionContext, Uri, window, workspace } from 'vscode';
 import { Wasm, ProcessOptions } from '@vscode/wasm-wasi';
 
 export async function activate(context: ExtensionContext) {
@@ -15,7 +13,6 @@ export async function activate(context: ExtensionContext) {
 		const terminal = window.createTerminal({ name, pty, isTransient: true });
 		terminal.show(true);
 		const channel = window.createOutputChannel('Python WASM Trace', { log: true });
-		channel.show(true);
 		channel.info(`Running ${name}...`);
 		const options: ProcessOptions = {
 			stdio: pty.stdio,
@@ -29,8 +26,8 @@ export async function activate(context: ExtensionContext) {
 			args: fileToRun !== undefined ? ['-X', 'utf8', fileToRun] : ['-X', 'utf8'],
 			trace: channel
 		};
-		const filename = context.asAbsolutePath('wasm/python.wasm');
-		const bits = await fs.readFile(filename);
+		const filename = Uri.joinPath(context.extensionUri, 'wasm', 'python.wasm');
+		const bits = await workspace.fs.readFile(filename);
 		const module = await WebAssembly.compile(bits);
 		const process = await wasm.createProcess('python', module, options);
 		process.run().catch(err => {
