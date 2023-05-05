@@ -4,18 +4,17 @@
  * ------------------------------------------------------------------------------------------ */
 /// <reference path="../../typings/webAssemblyNode.d.ts" />
 import path from 'node:path';
-import fs from 'node:fs/promises';
 
-import { ExtensionContext } from 'vscode';
+import { Uri, workspace } from 'vscode';
 
 import RAL from '../common/ral';
 
 const _ril: RAL = Object.freeze<RAL>({
 	path: path.posix,
-	coreUtils: Object.freeze({
-		async load(context: ExtensionContext): Promise<WebAssembly.Module> {
-			const location = context.asAbsolutePath(path.posix.join('wasm', 'coreutils.wasm'));
-			return WebAssembly.compile(await fs.readFile(location));
+	webAssembly: Object.freeze({
+		async compile(uri: Uri): Promise<WebAssembly.Module> {
+			const bits = await workspace.fs.readFile(uri);
+			return WebAssembly.compile(bits);
 		}
 	})
 });

@@ -2,39 +2,30 @@
  *  Copyright (c) Microsoft Corporation. All rights reserved.
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
+import * as uuid from 'uuid';
 
-import { Uri, workspace } from 'vscode';
-import { DeviceDriverKind, DeviceId, FileSystemDeviceDriver, NoSysDeviceDriver, ReaddirEntry, ReadonlyFileSystemDeviceDriver, WritePermDeniedDeviceDriver } from '../common/deviceDriver';
-import { BaseFileDescriptor, FdProvider, FileDescriptor } from '../common/fileDescriptor';
-import { Fdflags, Filetype, Lookupflags, Oflags, Whence, fdstat, filesize, filestat, inode, lookupflags, oflags } from '../common/wasi';
-import { Errno } from '../common/wasi';
-import { WasiError } from '../common/wasi';
-import { fdflags } from '../common/wasi';
-import { fd } from '../common/wasi';
-import { Rights, rights } from '../common/wasi';
-import { BigInts } from '../common/converter';
-import { size, u64 } from '../common/baseTypes';
+import type { FileNode as ApiFileNode, DirectoryNode as ApiDirectoryNode, MemoryFileSystem as ApiMemoryFileSystem } from './api';
+import { Uri } from 'vscode';
+import { DeviceDriverKind, DeviceId, FileSystemDeviceDriver, NoSysDeviceDriver, ReaddirEntry, ReadonlyFileSystemDeviceDriver, WritePermDeniedDeviceDriver } from './deviceDriver';
+import { BaseFileDescriptor, FdProvider, FileDescriptor } from './fileDescriptor';
+import { Errno, Fdflags, Filetype, Lookupflags, Oflags, Rights, WasiError, Whence, fd, fdflags, fdstat, filesize, filestat, inode, lookupflags, oflags, rights } from './wasi';
+import { size, u64 } from './baseTypes';
+import { BigInts } from './converter';
 
-// The Unpkg file system is readonly.
-const DirectoryBaseRights: rights = Rights.path_open | Rights.fd_readdir | Rights.path_filestat_get | Rights.fd_filestat_get;
-const FileBaseRights: rights = Rights.fd_read | Rights.fd_seek | Rights.fd_tell | Rights.fd_advise | Rights.fd_filestat_get | Rights.poll_fd_readwrite;
-const DirectoryInheritingRights: rights = DirectoryBaseRights | FileBaseRights;
-const DirectoryOnlyBaseRights: rights = DirectoryBaseRights & ~FileBaseRights;
-const FileOnlyBaseRights: rights = FileBaseRights & DirectoryBaseRights;
+import RAL from './ral';
+const paths = RAL().path;
 
 enum NodeKind {
-	File,
-	Directory
+	Directory = 3,
+	File = 4
 }
 
-type FileNode = {
-
-	readonly kind: NodeKind.File;
+interface BaseFileNode extends ApiFileNode {
 
 	/**
 	 * The parent node
 	 */
-	readonly parent: DirectoryNode;
+	readonly parent: BaseDirectoryNode;
 
 	/**
 	 * This inode id.
@@ -45,51 +36,14 @@ type FileNode = {
 	 * The name of the file.
 	 */
 	readonly name: string;
-
-	/**
-	 * The files time stamp.
-	 */
-	readonly time: bigint;
-
-	/**
-	 * The size of the file.
-	 */
-	readonly size: bigint;
-
-	/**
-	 * How often the INode is referenced via a file descriptor
-	 */
-	refs: number;
-
-	/**
-	 * The cached content of the file.
-	 */
-	content: Uint8Array | undefined;
-};
-
-namespace FileNode {
-	export function create(parent: DirectoryNode, inode: inode, name: string, time: bigint, size: bigint): FileNode {
-		return {
-			kind: NodeKind.File,
-			parent,
-			inode,
-			name,
-			time,
-			size,
-			refs: 0,
-			content: undefined
-		};
-	}
 }
 
-type DirectoryNode = {
-
-	readonly kind: NodeKind.Directory;
+interface BaseDirectoryNode extends ApiDirectoryNode {
 
 	/**
 	 * The parent node
 	 */
-	readonly parent: DirectoryNode | undefined;
+	readonly parent: BaseDirectoryNode | undefined;
 
 	/**
 	 * This inode id.
@@ -102,78 +56,34 @@ type DirectoryNode = {
 	readonly  name: string;
 
 	/**
-	 * The files time stamp.
-	 */
-	readonly time: bigint;
-
-	/**
-	 * The size of the directory.
-	 */
-	readonly size: bigint;
-
-	/**
-	 * How often the INode is referenced via a file descriptor
-	 */
-	refs: number;
-
-	/**
 	 * The directory entries.
 	 */
-	readonly entries: Map<string, Node>;
-};
-
-namespace DirectoryNode {
-	export function create(parent: DirectoryNode | undefined, id: inode, name: string, time: bigint, size: bigint): DirectoryNode {
-		return {
-			kind: NodeKind.Directory,
-			inode: id,
-			name,
-			time,
-			size,
-			refs: 0,
-			parent,
-			entries: new Map()
-		};
-	}
+	readonly entries: Map<string, BaseNode>;
 }
 
-type Node = FileNode | DirectoryNode;
+type BaseNode = BaseFileNode | BaseDirectoryNode;
 
-namespace Dump {
 
-	export type FileNode = {
-		kind: 'file';
-		name: string;
-		size: string;
-		ctime: string;
-		atime: string;
-		mtime: string;
-	};
-
-	export type DirectoryNode =  {
-		kind: 'directory';
-		name: string;
-		size: string;
-		ctime: string;
-		atime: string;
-		mtime: string;
-		children: { [key: string]: Node };
-	};
-
-	export type Node = FileNode | DirectoryNode;
+function timeInNanoseconds(timeInMilliseconds: number): bigint {
+	return BigInt(timeInMilliseconds) * 1000000n;
 }
 
-class FileSystem {
+abstract class BaseFileSystem<D extends BaseDirectoryNode, F extends BaseFileNode > {
 
-	private readonly baseUri: Uri;
-	private readonly root: DirectoryNode;
+	private inodeCounter: bigint;
+	private readonly root: D;
 
-	constructor(baseUri: Uri, dump: Dump.DirectoryNode) {
-		this.baseUri = baseUri;
-		this.root = this.parseDump(dump);
+	constructor(root: D) {
+		// 1n is reserved for root
+		this.inodeCounter = 2n;
+		this.root = root;
 	}
 
-	public getRoot(): DirectoryNode {
+	protected nextInode(): inode {
+		return this.inodeCounter++;
+	}
+
+	public getRoot(): D {
 		return this.root;
 	}
 
@@ -183,42 +93,35 @@ class FileSystem {
 
 	public unrefNode(node: Node): void {
 		node.refs--;
-		if (node.refs === 0 && node.kind === NodeKind.File) {
-			node.content = undefined;
-		}
 	}
 
-	public async getContent(node: FileNode): Promise<Uint8Array> {
-		if (node.content !== undefined) {
-			return node.content;
+	public findNode(path: string): D | F | undefined;
+	public findNode(parent: D, path: string): D | F | undefined;
+	public findNode(parentOrPath: D | string, p?: string): D | F | undefined {
+		let parent: D;
+		let path: string;
+		if (typeof parentOrPath === 'string') {
+			parent = this.root;
+			path = parentOrPath;
+		} else {
+			parent = parentOrPath;
+			path = p!;
 		}
-		try {
-			const segments = this.getSegmentsFromNode(node);
-			const vscode_fs = Uri.joinPath(this.baseUri, ...segments);
-			const content = await workspace.fs.readFile(vscode_fs);
-			node.content = content;
-			return node.content;
-		} catch (error) {
-			throw new WasiError(Errno.noent);
-		}
-	}
-
-	public findNode(parent: DirectoryNode, path: string): Node | undefined {
 		const parts = this.getSegmentsFromPath(path);
 		if (parts.length === 1) {
 			if (parts[0] === '.') {
 				return parent;
 			} else if (parts[0] === '..') {
-				return parent.parent;
+				return parent.parent as D;
 			}
 		}
-		let current: FileNode | DirectoryNode | undefined = parent;
+		let current: F | D | undefined = parent;
 		for (let i = 0; i < parts.length; i++) {
 			switch (current.kind) {
 				case NodeKind.File:
 					return undefined;
 				case NodeKind.Directory:
-					current = current.entries.get(parts[i]);
+					current = current.entries.get(parts[i]) as F | D | undefined;
 					if (current === undefined) {
 						return undefined;
 					}
@@ -228,42 +131,151 @@ class FileSystem {
 		return current;
 	}
 
-	private getSegmentsFromNode(node: Node): string[] {
-		const parts: string[] = [];
-		let current: FileNode | DirectoryNode | undefined = node;
-		do {
-			parts.push(current.name);
-			current = current.parent;
-		} while (current !== undefined);
-		return parts.reverse();
-	}
-
 	private getSegmentsFromPath(path: string): string[] {
 		if (path.charAt(0) === '/') { path = path.substring(1); }
 		if (path.charAt(path.length - 1) === '/') { path = path.substring(0, path.length - 1); }
 		return path.normalize().split('/');
 	}
+}
 
-	private parseDump(dump: Dump.DirectoryNode): DirectoryNode {
-		let inodeCounter = 1n;
-		const root = DirectoryNode.create(undefined, inodeCounter++, dump.name, BigInt(dump.ctime), BigInt(dump.size));
-		this.processDirectoryNode(dump, root, inodeCounter);
-		return root;
+interface FileNode extends BaseFileNode {
+
+	readonly parent: DirectoryNode;
+
+	/**
+	 * The files time stamp.
+	 */
+	readonly ctime: bigint;
+	readonly mtime: bigint;
+	readonly atime: bigint;
+
+	/**
+	 * How often the INode is referenced via a file descriptor
+	 */
+	refs: number;
+
+	/**
+	 * The content of the file.
+	 */
+	readonly content: Uint8Array | { size: bigint; reader: (node: FileNode) => Promise<Uint8Array> };
+}
+
+namespace FileNode {
+	export function create(parent: DirectoryNode, inode: inode, name: string, time: bigint, content: Uint8Array | { size: bigint; reader: (node: FileNode) => Promise<Uint8Array> }): FileNode {
+		return {
+			kind: NodeKind.File as const,
+			parent,
+			inode,
+			name,
+			ctime: time,
+			mtime: time,
+			atime: time,
+			refs: 0,
+			content: content
+		};
 	}
-
-	private processDirectoryNode(dump: Dump.DirectoryNode, fs: DirectoryNode, inodeCounter: bigint): void {
-		for (const entry of Object.values(dump.children)) {
-			if (entry.kind === 'directory') {
-				const child = DirectoryNode.create(fs, inodeCounter++, entry.name, BigInt(entry.ctime), BigInt(entry.size));
-				fs.entries.set(entry.name, child);
-				this.processDirectoryNode(entry, child, inodeCounter);
-			} else {
-				const child = FileNode.create(fs, inodeCounter++, entry.name, BigInt(entry.ctime), BigInt(entry.size));
-				fs.entries.set(entry.name, child);
-			}
+	export function size(node: FileNode): bigint {
+		if (node.content instanceof Uint8Array) {
+			return BigInt(node.content.length);
+		} else {
+			return node.content.size;
 		}
 	}
 }
+
+interface DirectoryNode extends BaseDirectoryNode {
+
+	readonly parent: DirectoryNode | undefined;
+
+	/**
+	 * The files time stamp.
+	 */
+	readonly ctime: bigint;
+	readonly mtime: bigint;
+	readonly atime: bigint;
+
+	/**
+	 * How often the INode is referenced via a file descriptor
+	 */
+	refs: number;
+
+	readonly entries: Map<string, Node>;
+}
+
+namespace DirectoryNode {
+	export function create(parent: DirectoryNode | undefined, id: inode, name: string, time: bigint): DirectoryNode {
+		return {
+			kind: NodeKind.Directory as const,
+			inode: id,
+			name,
+			ctime: time,
+			mtime: time,
+			atime: time,
+			refs: 0,
+			parent,
+			entries: new Map()
+		};
+	}
+	export function size(node: DirectoryNode): bigint {
+		return BigInt((Math.trunc(node.entries.size * 24 / 4096) + 1) * 4096);
+	}
+}
+
+type Node = FileNode | DirectoryNode;
+
+export class MemoryFileSystem extends BaseFileSystem<DirectoryNode, FileNode> implements ApiMemoryFileSystem {
+
+	public readonly uri: Uri = Uri.from({ scheme: 'wasi-memfs', authority: uuid.v4() });
+
+	constructor() {
+		super(DirectoryNode.create(undefined, 1n, '/', timeInNanoseconds(Date.now())));
+	}
+
+	public createDirectory(path: string): void {
+		const dirname = paths.dirname(path);
+		const basename = paths.basename(path);
+		const parent = this.getDirectoryNode(dirname);
+		const node = DirectoryNode.create(parent, this.nextInode(), basename, timeInNanoseconds(Date.now()));
+		parent.entries.set(basename, node);
+	}
+
+	public createFile(path: string, content: Uint8Array | { size: bigint; reader: (node: FileNode) => Promise<Uint8Array> }): void {
+		const dirname = paths.dirname(path);
+		const basename = paths.basename(path);
+		const parent = this.getDirectoryNode(dirname);
+		const node = FileNode.create(parent, this.nextInode(), basename, timeInNanoseconds(Date.now()), content);
+		parent.entries.set(basename, node);
+	}
+
+	private getDirectoryNode(path: string): DirectoryNode {
+		const result = this.findNode(path);
+		if (result === undefined) {
+			throw new Error(`ENOENT: no such directory ${path}`);
+		}
+		if (result.kind !== NodeKind.Directory) {
+			throw new Error(`ENOTDIR: not a directory ${path}`);
+		}
+		return result;
+	}
+
+	public async getContent(node: FileNode): Promise<Uint8Array> {
+		if (node.content instanceof Uint8Array) {
+			return Promise.resolve(node.content);
+		} else {
+			const result = await node.content.reader(node);
+			(node as { content: Uint8Array}).content = result;
+			return result;
+		}
+	}
+}
+
+// When mounted the file system is readonly for now. We need to invest to make this writable and we need a use case first.
+const DirectoryBaseRights: rights = Rights.path_open | Rights.fd_readdir | Rights.path_filestat_get | Rights.fd_filestat_get;
+const FileBaseRights: rights = Rights.fd_read | Rights.fd_seek | Rights.fd_tell | Rights.fd_advise | Rights.fd_filestat_get | Rights.poll_fd_readwrite;
+const DirectoryInheritingRights: rights = DirectoryBaseRights | FileBaseRights;
+const DirectoryOnlyBaseRights: rights = DirectoryBaseRights & ~FileBaseRights;
+const FileOnlyBaseRights: rights = FileBaseRights & DirectoryBaseRights;
+
 
 class FileFileDescriptor extends BaseFileDescriptor {
 
@@ -315,9 +327,9 @@ class DirectoryFileDescriptor extends BaseFileDescriptor {
 }
 
 
-export function create(deviceId: DeviceId, baseUri: Uri, dump: Dump.DirectoryNode): FileSystemDeviceDriver {
+export function create(deviceId: DeviceId, fs: MemoryFileSystem): FileSystemDeviceDriver {
 
-	const $fs: FileSystem = new FileSystem(baseUri, dump);
+	const $fs: MemoryFileSystem = fs;
 
 	function assertFileDescriptor(fileDescriptor: FileDescriptor): asserts fileDescriptor is FileFileDescriptor {
 		if (!(fileDescriptor instanceof FileFileDescriptor)) {
@@ -342,10 +354,10 @@ export function create(deviceId: DeviceId, baseUri: Uri, dump: Dump.DirectoryNod
 		result.ino = node.inode;
 		result.filetype = node.kind === NodeKind.File ? Filetype.regular_file : Filetype.directory;
 		result.nlink = 1n;
-		result.size = node.size;
-		result.atim = node.time;
-		result.ctim = node.time;
-		result.mtim = node.time;
+		result.size = node.kind === NodeKind.File ? FileNode.size(node) : DirectoryNode.size(node);
+		result.atim = node.atime;
+		result.ctim = node.ctime;
+		result.mtim = node.mtime;
 	}
 
 	function read(content: Uint8Array, offset: number, buffers: Uint8Array[]): size {
@@ -364,14 +376,13 @@ export function create(deviceId: DeviceId, baseUri: Uri, dump: Dump.DirectoryNod
 
 	const $driver: ReadonlyFileSystemDeviceDriver = {
 		kind: DeviceDriverKind.fileSystem,
-		uri: baseUri,
+		uri: $fs.uri,
 		id: deviceId,
 		createStdioFileDescriptor(_dirflags: lookupflags | undefined = Lookupflags.none, _path: string, _oflags: oflags | undefined = Oflags.none, _fs_rights_base: rights | undefined, _fdflags: fdflags | undefined = Fdflags.none, _fd: 0 | 1 | 2): Promise<FileDescriptor> {
 			throw new WasiError(Errno.nosys);
 		},
 		fd_create_prestat_fd(fd: fd): Promise<FileDescriptor> {
 			const root = $fs.getRoot();
-			$fs.refNode(root);
 			return Promise.resolve(new DirectoryFileDescriptor(deviceId, fd, DirectoryBaseRights, DirectoryInheritingRights, Fdflags.none, root.inode, root));
 		},
 		fd_advise(fileDescriptor: FileDescriptor, _offset: bigint, _length: bigint, _advise: number): Promise<void> {
@@ -437,7 +448,7 @@ export function create(deviceId: DeviceId, baseUri: Uri, dump: Dump.DirectoryNod
 					fileDescriptor.cursor = fileDescriptor.cursor + offset;
 					break;
 				case Whence.end:
-					const size = fileDescriptor.node.size;
+					const size = FileNode.size(fileDescriptor.node);
 					fileDescriptor.cursor = BigInts.max(0n, size - offset);
 					break;
 			}
@@ -484,11 +495,9 @@ export function create(deviceId: DeviceId, baseUri: Uri, dump: Dump.DirectoryNod
 				throw new WasiError(Errno.perm);
 			}
 
-			const result = target.kind === NodeKind.Directory
+			return Promise.resolve(target.kind === NodeKind.Directory
 				? new DirectoryFileDescriptor(deviceId, fdProvider.next(), fileDescriptor.childDirectoryRights(fs_rights_base), fs_rights_inheriting | DirectoryInheritingRights, fdflags, target.inode, target)
-				: new FileFileDescriptor(deviceId, fdProvider.next(), fileDescriptor.childFileRights(fs_rights_base), fdflags, target.inode, target);
-			$fs.refNode(target);
-			return Promise.resolve(result);
+				: new FileFileDescriptor(deviceId, fdProvider.next(), fileDescriptor.childFileRights(fs_rights_base), fdflags, target.inode, target));
 		},
 		path_readlink(fileDescriptor: FileDescriptor, path: string): Promise<string> {
 			assertDirectoryDescriptor(fileDescriptor);
@@ -500,7 +509,7 @@ export function create(deviceId: DeviceId, baseUri: Uri, dump: Dump.DirectoryNod
 		},
 		fd_bytesAvailable(fileDescriptor: FileDescriptor): Promise<filesize> {
 			assertFileDescriptor(fileDescriptor);
-			return Promise.resolve(BigInts.max(0n, fileDescriptor.node.size - fileDescriptor.cursor));
+			return Promise.resolve(BigInts.max(0n, FileNode.size(fileDescriptor.node) - fileDescriptor.cursor));
 		}
 	};
 

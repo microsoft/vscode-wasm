@@ -5,10 +5,10 @@
 /// <reference path="../../typings/webAssemblyCommon.d.ts" />
 
 import RAL from './ral';
-import { Event, EventEmitter, Uri, WorkspaceFolder, workspace } from 'vscode';
+import { Event, EventEmitter, LogOutputChannel, Uri, WorkspaceFolder, window, workspace } from 'vscode';
 
 import type {
-	ExtensionLocationDescriptor, MapDirDescriptor, ProcessOptions, StdioConsoleDescriptor, StdioDescriptor, StdioFileDescriptor, VSCodeFileSystemDescriptor,
+	ExtensionLocationDescriptor, InMemoryFileSystemDescriptor, MapDirDescriptor, ProcessOptions, StdioConsoleDescriptor, StdioDescriptor, StdioFileDescriptor, VSCodeFileSystemDescriptor,
 	WorkspaceFolderDescriptor
 } from './api';
 import type { ptr, size, u32 } from './baseTypes';
@@ -17,6 +17,7 @@ import { FileDescriptors } from './fileDescriptor';
 import * as vscfs from './vscodeFileSystemDriver';
 import * as vrfs from './virtualRootFS';
 import * as extlocfs from './extLocFileSystem';
+import * as memfs from './memoryFileSystem';
 import * as tdd from './terminalDriver';
 import * as pdd from './pipeDriver';
 import { DeviceWasiService, ProcessWasiService, EnvironmentWasiService, WasiService, Clock, ClockWasiService, EnvironmentOptions } from './service';
@@ -270,12 +271,13 @@ class StdoutStream extends StdioStream implements Readable {
 }
 
 namespace MapDirDescriptor {
-	export function getDescriptors(descriptors: MapDirDescriptor[] | undefined) : { workspaceFolders: WorkspaceFolderDescriptor | undefined; extensions: ExtensionLocationDescriptor[]; vscodeFileSystems: VSCodeFileSystemDescriptor[]} {
+	export function getDescriptors(descriptors: MapDirDescriptor[] | undefined) : { workspaceFolders: WorkspaceFolderDescriptor | undefined; extensions: ExtensionLocationDescriptor[]; vscodeFileSystems: VSCodeFileSystemDescriptor[]; inMemoryFileSystems: InMemoryFileSystemDescriptor[]} {
 		let workspaceFolders: WorkspaceFolderDescriptor | undefined;
 		const extensions: ExtensionLocationDescriptor[] = [];
 		const vscodeFileSystems: VSCodeFileSystemDescriptor[] = [];
+		const inMemoryFileSystems: InMemoryFileSystemDescriptor[] = [];
 		if (descriptors === undefined) {
-			return { workspaceFolders, extensions, vscodeFileSystems };
+			return { workspaceFolders, extensions, vscodeFileSystems, inMemoryFileSystems };
 		}
 		for (const descriptor of descriptors) {
 			if (descriptor.kind === 'workspaceFolder') {
@@ -284,17 +286,27 @@ namespace MapDirDescriptor {
 				extensions.push(descriptor);
 			} else if (descriptor.kind === 'vscodeFileSystem') {
 				vscodeFileSystems.push(descriptor);
+			} else if (descriptor.kind === 'inMemoryFileSystem') {
+				inMemoryFileSystems.push(descriptor);
 			}
 		}
-		return { workspaceFolders, extensions, vscodeFileSystems };
+		return { workspaceFolders, extensions, vscodeFileSystems, inMemoryFileSystems };
 	}
+}
+
+let $channel: LogOutputChannel | undefined;
+function channel(): LogOutputChannel {
+	if ($channel === undefined) {
+		$channel = window.createOutputChannel('Wasm Core', { log: true });
+	}
+	return $channel;
 }
 
 export abstract class WasiProcess {
 
 	private state: 'created' | 'initialized' | 'running' | 'exited';
 	private readonly programName: string;
-	protected readonly options: ProcessOptions;
+	protected readonly options: Omit<ProcessOptions, 'trace'> & { trace: LogOutputChannel | undefined };
 	private localDeviceDrivers: DeviceDrivers;
 	private resolveCallback: ((value: number) => void) | undefined;
 	private threadIdCounter: number;
@@ -310,7 +322,13 @@ export abstract class WasiProcess {
 
 	constructor(programName: string, options: ProcessOptions = {}) {
 		this.programName = programName;
-		this.options = options;
+		let opt = Object.assign({}, options);
+		delete opt.trace;
+		if (options.trace === true) {
+			this.options = Object.assign({}, opt, { trace: channel() });
+		} else {
+			this.options = Object.assign({}, opt, { trace: undefined });
+		}
 		this.threadIdCounter = 2;
 		this.localDeviceDrivers = WasiKernel.createLocalDeviceDrivers();
 		this.fileDescriptors = new FileDescriptors();
@@ -338,7 +356,7 @@ export abstract class WasiProcess {
 			throw new Error('WasiProcess already initialized or running');
 		}
 
-		const { workspaceFolders, extensions, vscodeFileSystems } = MapDirDescriptor.getDescriptors(this.options.mapDir);
+		const { workspaceFolders, extensions, vscodeFileSystems, inMemoryFileSystems } = MapDirDescriptor.getDescriptors(this.options.mapDir);
 		if (workspaceFolders !== undefined) {
 			const folders = workspace.workspaceFolders;
 			if (folders !== undefined) {
@@ -366,6 +384,17 @@ export abstract class WasiProcess {
 				const fs = vscfs.create(this.localDeviceDrivers.next(), vscode_fs, !(workspace.fs.isWritableFileSystem(vscode_fs.scheme) ?? true));
 				this.localDeviceDrivers.add(fs);
 				this.preOpenDirectories.set(descriptor.mountPoint, fs);
+			}
+		}
+		if (inMemoryFileSystems.length > 0) {
+			for (const descriptor of inMemoryFileSystems) {
+				const fs = descriptor.fileSystem as memfs.MemoryFileSystem;
+				if (this.localDeviceDrivers.hasByUri(fs.uri)) {
+					continue;
+				}
+				const dd = memfs.create(this.localDeviceDrivers.next(), fs);
+				this.localDeviceDrivers.add(dd);
+				this.preOpenDirectories.set(descriptor.mountPoint, dd);
 			}
 		}
 
@@ -431,7 +460,7 @@ export abstract class WasiProcess {
 		);
 		this.processService = {
 			proc_exit: async (_memory, exitCode: exitcode) => {
-				// await this.terminate();
+				await this.terminate();
 				if (this.resolveCallback !== undefined) {
 					this.resolveCallback(exitCode);
 				}

@@ -8,13 +8,14 @@ import { ExtensionContext, commands } from 'vscode';
 import { Wasm } from '@vscode/wasm-wasi';
 
 import { Webshell } from './webShell';
-import * as coreutils from './coreUtils';
+import { CoreUtils } from './coreUtils';
 
 export async function activate(context: ExtensionContext): Promise<void> {
 	const wasm: Wasm = await Wasm.api();
 	commands.registerCommand('ms-vscode.webshell.create', async () => {
 		const webShell = new Webshell(wasm, '/workspace');
-		coreutils.contributeHandlers(context, wasm, webShell);
+		const coreUtils = new CoreUtils(context);
+		coreUtils.contributeHandlers(wasm, webShell);
 		void webShell.runCommandLoop();
 	});
 }

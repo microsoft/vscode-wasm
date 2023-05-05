@@ -182,7 +182,7 @@ export interface ProcessWasiService {
 export interface WasiService extends EnvironmentWasiService, ClockWasiService, DeviceWasiService, ProcessWasiService {
 }
 
-export interface EnvironmentOptions extends Omit<ProcessOptions, 'args'> {
+export interface EnvironmentOptions extends Omit<ProcessOptions, 'args' | 'trace'> {
 	args?: string[];
 }
 

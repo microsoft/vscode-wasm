@@ -3,7 +3,7 @@
  * Licensed under the MIT License. See License.txt in the project root for license information.
  * ------------------------------------------------------------------------------------------ */
 
-import type { ExtensionContext } from 'vscode';
+import type { Uri } from 'vscode';
 
 interface _Path {
 	dirname(path: string): string;
@@ -19,8 +19,8 @@ interface _Path {
 
 interface RAL {
 	readonly path: _Path;
-	readonly coreUtils: {
-		load(context: ExtensionContext): Promise<WebAssembly.Module>;
+	readonly webAssembly: {
+		compile(uri: Uri): Promise<WebAssembly.Module>;
 	};
 }
 

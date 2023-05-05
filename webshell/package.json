@@ -21,7 +21,7 @@
 		"wasi"
 	],
 	"engines": {
-		"vscode": "^1.77.0"
+		"vscode": "^1.78.0"
 	},
 	"main": "./lib/desktop/extension.js",
 	"browser": "./dist/web/extension.js",

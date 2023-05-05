@@ -4,7 +4,7 @@
  *--------------------------------------------------------------------------------------------*/
 import { window, Terminal } from 'vscode';
 
-import { Wasm, WasmPseudoterminal } from '@vscode/wasm-wasi';
+import { MemoryFileSystem, Wasm, WasmPseudoterminal } from '@vscode/wasm-wasi';
 
 import RAL from './ral';
 import { CommandHandler } from './types';
@@ -22,6 +22,7 @@ export class Webshell {
 
 	private cwd: string;
 	private readonly commandHandlers: Map<string, CommandHandler>;
+	private readonly userBin: MemoryFileSystem;
 
 	constructor(wasm: Wasm, cwd: string, prompt: string = '$ ') {
 		this.wasm = wasm;
@@ -31,9 +32,11 @@ export class Webshell {
 		this.terminal.show();
 		this.cwd = cwd;
 		this.commandHandlers = new Map<string, CommandHandler>();
+		this.userBin = wasm.createInMemoryFileSystem();
 	}
 
 	registerCommandHandler(command: string, handler: CommandHandler): void {
+		this.userBin.createFile(command, { size: 1047646n, reader: () => { throw new Error('No permissions'); }});
 		this.commandHandlers.set(command, handler);
 	}
 
@@ -55,7 +58,7 @@ export class Webshell {
 				default:
 					const handler = this.commandHandlers.get(command);
 					if (handler !== undefined) {
-						await handler(this.pty, command, args, this.cwd);
+						await handler(this.pty, command, args, this.cwd, [ { kind: 'inMemoryFileSystem', fileSystem: this.userBin, mountPoint: '/usr/bin' } ]);
 					} else {
 						void this.pty.write(`-wesh: ${command}: command not found\r\n`);
 					}

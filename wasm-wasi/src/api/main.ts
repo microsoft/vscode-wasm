@@ -4,7 +4,7 @@
  *--------------------------------------------------------------------------------------------*/
 /// <reference path="../../typings/webAssemblyCommon.d.ts" />
 
-import { Event, Pseudoterminal, Uri, extensions as Extensions, ExtensionContext, Extension, LogOutputChannel } from 'vscode';
+import { Event, Pseudoterminal, Uri, extensions as Extensions, ExtensionContext, Extension } from 'vscode';
 
 type u16 = number;
 export type oflags = u16;
@@ -184,7 +184,13 @@ export type VSCodeFileSystemDescriptor = {
 	mountPoint: string;
 };
 
-export type MapDirDescriptor = WorkspaceFolderDescriptor | ExtensionLocationDescriptor | VSCodeFileSystemDescriptor;
+export type InMemoryFileSystemDescriptor = {
+	kind: 'inMemoryFileSystem';
+	fileSystem: MemoryFileSystem;
+	mountPoint: string;
+};
+
+export type MapDirDescriptor = WorkspaceFolderDescriptor | ExtensionLocationDescriptor | VSCodeFileSystemDescriptor | InMemoryFileSystemDescriptor;
 
 export interface ProcessOptions {
 
@@ -217,9 +223,9 @@ export interface ProcessOptions {
 	stdio?: Stdio;
 
 	/**
-	 * A channel to log trace messages to.
+	 * Enable WASM/WASI API tracing.
 	 */
-	trace?: LogOutputChannel;
+	trace?: true;
 }
 
 export interface Writable {
@@ -249,6 +255,36 @@ export interface WasmProcess {
 	 terminate(): Promise<number>;
 }
 
+/**
+ * The kind of a node in the in-memory file system.
+ */
+export enum NodeKind {
+	File,
+	Directory
+}
+
+/**
+ * A file node in the in-memory file system.
+ */
+export interface FileNode {
+	kind: NodeKind.File;
+}
+
+/**
+ * A directory node in the in-memory file system.
+ */
+export interface DirectoryNode {
+	kind: NodeKind.Directory;
+}
+
+/**
+ * The memory file system. Currently read only.
+ */
+export interface MemoryFileSystem {
+	createDirectory(path: string): void;
+	createFile(path: string, content: Uint8Array | { size: bigint; reader: (node: FileNode) => Promise<Uint8Array> }): void;
+}
+
 export interface Wasm {
 	/**
 	 * Creates a new pseudoterminal.
@@ -256,6 +292,11 @@ export interface Wasm {
 	 * @param options Additional options for the terminal.
 	 */
 	createPseudoterminal(options?: TerminalOptions): WasmPseudoterminal;
+
+	/**
+	 * Creates a new in-memory file system.
+	 */
+	createInMemoryFileSystem(): MemoryFileSystem;
 
 	/**
 	 * Creates a new WASM process.

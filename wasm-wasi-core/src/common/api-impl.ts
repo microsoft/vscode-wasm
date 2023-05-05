@@ -6,9 +6,10 @@
 
 import { ExtensionContext, Uri } from 'vscode';
 
-import { WasmProcess, ProcessOptions, TerminalOptions, Wasm } from './api';
+import { WasmProcess, ProcessOptions, TerminalOptions, Wasm, MemoryFileSystem } from './api';
 import { WasmPseudoterminal } from './terminal';
 import { WasiProcess as InternalWasiProcess } from './process';
+import { MemoryFileSystem as InMemoryFileSystemImpl } from './memoryFileSystem';
 
 namespace MemoryDescriptor {
 	export function is(value: any): value is WebAssembly.MemoryDescriptor {
@@ -25,6 +26,9 @@ export namespace WasiCoreImpl {
 		return {
 			createPseudoterminal(options?: TerminalOptions): WasmPseudoterminal {
 				return WasmPseudoterminal.create(options);
+			},
+			createInMemoryFileSystem(): MemoryFileSystem {
+				return new InMemoryFileSystemImpl();
 			},
 			async createProcess(name: string, module: WebAssembly.Module | Promise<WebAssembly.Module>, memoryOrOptions?: WebAssembly.MemoryDescriptor | WebAssembly.Memory | ProcessOptions, optionsOrMapWorkspaceFolders?: ProcessOptions | boolean): Promise<WasmProcess> {
 				let memory: WebAssembly.Memory | WebAssembly.MemoryDescriptor | undefined;
