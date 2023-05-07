@@ -14,6 +14,10 @@
 	"activationEvents": [
 		"*"
 	],
+	"extensionDependencies": [
+		"ms-vscode.wasm-wasi-core",
+		"ms-vscode.webshell"
+	],
 	"contributes": {
 		"commands": [
 			{
@@ -27,7 +31,24 @@
 				"category": "wasm",
 				"title": "Run Interactive Python Shell"
 			}
-		]
+		],
+		"wasm": {
+			"fileSystems": [
+				{
+					"kind": "extensionLocation",
+					"path": "wasm/lib",
+					"mountPoint": "/usr/local/lib/python3.11"
+				}
+			]
+		},
+		"webshell": {
+			"commands": [
+				{
+					"command": "testbed-python.webshell.python",
+					"name": "python"
+				}
+			]
+		}
 	},
 	"scripts": {
 		"build": "npm run compile",

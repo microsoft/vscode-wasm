@@ -2,12 +2,13 @@
  *  Copyright (c) Microsoft Corporation. All rights reserved.
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
-import { window, Terminal } from 'vscode';
+import { window, Terminal, commands } from 'vscode';
 
-import { MemoryFileSystem, Wasm, WasmPseudoterminal } from '@vscode/wasm-wasi';
+import { MapDirDescriptor, MemoryFileSystem, Wasm, WasmPseudoterminal } from '@vscode/wasm-wasi';
 
 import RAL from './ral';
 import { CommandHandler } from './types';
+import { WebShellContributions } from './webShellContributions';
 
 type CommandLine = {
 	command: string; args: string[];
@@ -24,7 +25,7 @@ export class Webshell {
 	private readonly commandHandlers: Map<string, CommandHandler>;
 	private readonly userBin: MemoryFileSystem;
 
-	constructor(wasm: Wasm, cwd: string, prompt: string = '$ ') {
+	constructor(wasm: Wasm, contributions: WebShellContributions, cwd: string, prompt: string = '$ ') {
 		this.wasm = wasm;
 		this.prompt = prompt;
 		this.pty = this.wasm.createPseudoterminal({ history: true });
@@ -33,11 +34,35 @@ export class Webshell {
 		this.cwd = cwd;
 		this.commandHandlers = new Map<string, CommandHandler>();
 		this.userBin = wasm.createInMemoryFileSystem();
+		for (const contribution of contributions.getCommands()) {
+			this.registerCommandHandler(contribution.name, (pty: WasmPseudoterminal, command: string, args: string[], cwd: string, mapDir?: MapDirDescriptor[] | undefined) => {
+				return new Promise<number>((resolve, reject) => {
+					commands.executeCommand<number>(contribution.command, pty, command, args, cwd, mapDir).then(resolve, reject);
+				});
+
+			});
+		}
+		contributions.onChanged((event) => {
+			for (const add of event.added) {
+				this.registerCommandHandler(add.name, (pty: WasmPseudoterminal, command: string, args: string[], cwd: string, mapDir?: MapDirDescriptor[] | undefined) => {
+					return new Promise<number>((resolve, reject) => {
+						commands.executeCommand<number>(add.command, pty, command, args, cwd, mapDir).then(resolve, reject);
+					});
+				});
+			}
+			for (const remove of event.removed) {
+				this.unregisterCommandHandler(remove.name);
+			}
+		});
 	}
 
-	registerCommandHandler(command: string, handler: CommandHandler): void {
+	public registerCommandHandler(command: string, handler: CommandHandler): void {
 		this.userBin.createFile(command, { size: 1047646n, reader: () => { throw new Error('No permissions'); }});
 		this.commandHandlers.set(command, handler);
+	}
+
+	public unregisterCommandHandler(command: string): void {
+		this.commandHandlers.delete(command);
 	}
 
 	public async runCommandLoop(): Promise<void> {
@@ -58,7 +83,12 @@ export class Webshell {
 				default:
 					const handler = this.commandHandlers.get(command);
 					if (handler !== undefined) {
-						await handler(this.pty, command, args, this.cwd, [ { kind: 'inMemoryFileSystem', fileSystem: this.userBin, mountPoint: '/usr/bin' } ]);
+						try {
+							await handler(this.pty, command, args, this.cwd, [ { kind: 'inMemoryFileSystem', fileSystem: this.userBin, mountPoint: '/usr/bin' } ]);
+						} catch (error: any) {
+							const message = error.message ?? error.toString();
+							void this.pty.write(`-wesh: executing ${command} failed: ${message}\r\n`);
+						}
 					} else {
 						void this.pty.write(`-wesh: ${command}: command not found\r\n`);
 					}

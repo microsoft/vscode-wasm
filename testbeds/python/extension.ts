@@ -4,7 +4,7 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { commands, ExtensionContext, Uri, window, workspace } from 'vscode';
-import { Wasm, ProcessOptions } from '@vscode/wasm-wasi';
+import { Wasm, ProcessOptions, WasmPseudoterminal, MapDirDescriptor } from '@vscode/wasm-wasi';
 
 export async function activate(context: ExtensionContext) {
 	const wasm: Wasm = await Wasm.api();
@@ -18,15 +18,15 @@ export async function activate(context: ExtensionContext) {
 			stdio: pty.stdio,
 			mapDir: [
 				{ kind: 'workspaceFolder' },
-				{ kind: 'extensionLocation', extension: context, path: 'wasm/lib/python3.11', mountPoint: '/usr/local/lib/python3.11' }
+				{ kind: 'extensionLocation', extension: context, path: 'wasm/lib', mountPoint: '/usr/local/lib/python3.11' }
 			],
 			env: {
  				PYTHONPATH: '/workspace'
  			},
-			args: fileToRun !== undefined ? ['-X', 'utf8', fileToRun] : ['-X', 'utf8'],
-			trace: channel
+			args: fileToRun !== undefined ? ['-B', '-X', 'utf8', fileToRun] : ['-B', '-X', 'utf8'],
+			trace: true
 		};
-		const filename = Uri.joinPath(context.extensionUri, 'wasm', 'python.wasm');
+		const filename = Uri.joinPath(context.extensionUri, 'wasm', 'bin', 'python.wasm');
 		const bits = await workspace.fs.readFile(filename);
 		const module = await WebAssembly.compile(bits);
 		const process = await wasm.createProcess('python', module, options);
@@ -49,6 +49,25 @@ export async function activate(context: ExtensionContext) {
 	});
 	commands.registerCommand('testbed-python.runInteractive', async () => {
 		await run(`Python Repl`);
+	});
+	commands.registerCommand('testbed-python.runPython', async (pty: WasmPseudoterminal, _command: string, args: string[], _cwd: string, mapDir?: MapDirDescriptor[] | undefined): Promise<number> => {
+		const options: ProcessOptions = {
+			stdio: pty.stdio,
+			mapDir: (mapDir ??[]).concat([
+				{ kind: 'workspaceFolder' },
+				{ kind: 'extensionLocation', extension: context, path: 'wasm/lib', mountPoint: '/usr/local/lib/python3.11' }
+			]),
+			env: {
+ 				PYTHONPATH: '/workspace'
+ 			},
+			args: ['-B', '-X', 'utf8', ...args],
+			trace: true
+		};
+		const filename = Uri.joinPath(context.extensionUri, 'wasm', 'bin', 'python.wasm');
+		const bits = await workspace.fs.readFile(filename);
+		const module = await WebAssembly.compile(bits);
+		const process = await wasm.createProcess('python', module, options);
+		return process.run();
 	});
 }
 
