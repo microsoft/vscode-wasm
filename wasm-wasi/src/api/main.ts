@@ -281,6 +281,7 @@ export interface DirectoryNode {
  * The memory file system. Currently read only.
  */
 export interface MemoryFileSystem {
+	readonly uri: Uri;
 	createDirectory(path: string): void;
 	createFile(path: string, content: Uint8Array | { size: bigint; reader: (node: FileNode) => Promise<Uint8Array> }): void;
 }

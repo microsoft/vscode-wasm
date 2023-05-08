@@ -4,7 +4,7 @@
  *--------------------------------------------------------------------------------------------*/
 /// <reference path="../../typings/webAssemblyCommon.d.ts" />
 
-import { Event, Extension, ExtensionContext, LogOutputChannel, Pseudoterminal, Uri } from 'vscode';
+import { Event, Extension, ExtensionContext, LogOutputChannel, Pseudoterminal, Uri, UriHandler } from 'vscode';
 
 import { fdflags, oflags } from './wasi';
 export { fdflags, oflags };
@@ -217,6 +217,7 @@ export interface DirectoryNode {
  * The memory file system. Currently read only.
  */
 export interface MemoryFileSystem {
+	readonly uri: Uri;
 	createDirectory(path: string): void;
 	createFile(path: string, content: Uint8Array | { size: bigint; reader: (node: FileNode) => Promise<Uint8Array> }): void;
 }

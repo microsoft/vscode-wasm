@@ -35,13 +35,22 @@
 		"wasm": {
 			"fileSystems": [
 				{
-					"kind": "extensionLocation",
+					"id": "ms-vscode.testbed-python.pythonLib",
+					"kind": "extensionData",
 					"path": "wasm/lib",
 					"mountPoint": "/usr/local/lib/python3.11"
+				},
+				{
+					"id": "ms-vscode.testbed-python.pythonBin",
+					"kind": "extensionBinaries",
+					"path": "wasm/bin"
 				}
 			]
 		},
 		"webshell": {
+			"fileSystems": [
+				"testbed-python.extensionLocation"
+			],
 			"commands": [
 				{
 					"command": "testbed-python.webshell.python",
