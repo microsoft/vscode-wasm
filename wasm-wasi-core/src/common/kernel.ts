@@ -6,7 +6,7 @@
 import { Uri, WorkspaceFoldersChangeEvent, extensions, workspace } from 'vscode';
 
 import RAL from './ral';
-import { ExtensionLocationDescriptor, InMemoryFileSystemDescriptor, VSCodeFileSystemDescriptor, MapDirDescriptor } from './api';
+import { ExtensionLocationDescriptor, InMemoryFileSystemDescriptor, VSCodeFileSystemDescriptor, MapDirDescriptor, ExtensionContributionDescriptor } from './api';
 import type { DeviceDriver, DeviceId, FileSystemDeviceDriver } from './deviceDriver';
 import { Errno, WasiError } from './wasi';
 import * as ConsoleDriver from './consoleDriver';
@@ -44,6 +44,9 @@ function getSegments(path: string): string[] {
 namespace MapDirDescriptors {
 	export function isExtensionLocation(descriptor: MapDirDescriptor): descriptor is ExtensionLocationDescriptor {
 		return descriptor.kind === 'extensionLocation';
+	}
+	export function isExtensionContribution(descriptor: MapDirDescriptor): descriptor is ExtensionContributionDescriptor {
+		return descriptor.kind === 'extensionContribution';
 	}
 	export function isInMemoryDescriptor(descriptor: MapDirDescriptor): descriptor is InMemoryFileSystemDescriptor {
 		return descriptor.kind === 'inMemoryFileSystem';
@@ -114,9 +117,12 @@ class FileSystems {
 		return undefined;
 	}
 
-	public async getFileSystemByContributionId(id: string): Promise<FileSystemDeviceDriver | undefined> {
-		const uri = this.contributionIdToUri.get(id);
-		return uri !== undefined ? this.getFileSystem(uri) : undefined;
+	getExtensionLocationDescriptor(descriptor: ExtensionContributionDescriptor): ExtensionLocationDescriptor | undefined {
+		const uri = this.contributionIdToUri.get(descriptor.id);
+		if (uri === undefined) {
+			return undefined;
+		}
+		return this.contributedFileSystems.get(uri.toString()) as ExtensionLocationDescriptor;
 	}
 
 	public async getOrCreateFileSystemByDescriptor(deviceDrivers: DeviceDrivers, descriptor: VSCodeFileSystemDescriptor | ExtensionLocationDescriptor | InMemoryFileSystemDescriptor, manage: ManageKind = ManageKind.default): Promise<FileSystemDeviceDriver> {
@@ -458,12 +464,10 @@ namespace WasiKernel {
 	export function nextDeviceId(): bigint {
 		return deviceCounter++;
 	}
+
 	const fileSystems = new FileSystems();
-	export function getFileSystem(uri: Uri): Promise<FileSystemDeviceDriver | undefined> {
-		return fileSystems.getFileSystem(uri);
-	}
-	export function getFileSystemByContributionId(id: string): Promise<FileSystemDeviceDriver | undefined> {
-		return fileSystems.getFileSystemByContributionId(id);
+	export function getExtensionLocationDescriptor(descriptor: ExtensionContributionDescriptor): ExtensionLocationDescriptor | undefined {
+		return fileSystems.getExtensionLocationDescriptor(descriptor);
 	}
 	export function getOrCreateFileSystemByDescriptor(deviceDrivers: DeviceDrivers, descriptor: VSCodeFileSystemDescriptor | ExtensionLocationDescriptor | InMemoryFileSystemDescriptor): Promise<FileSystemDeviceDriver> {
 		return fileSystems.getOrCreateFileSystemByDescriptor(deviceDrivers, descriptor);

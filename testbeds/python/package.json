@@ -49,7 +49,7 @@
 		},
 		"webshell": {
 			"fileSystems": [
-				"testbed-python.extensionLocation"
+				"ms-vscode.testbed-python.pythonLib"
 			],
 			"commands": [
 				{

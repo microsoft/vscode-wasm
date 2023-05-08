@@ -5,7 +5,7 @@
 
 import { Event, EventEmitter, extensions as Extensions } from 'vscode';
 
-interface WebShellCommand {
+export interface WebShellCommand {
 	command: string;
 	name: string;
 }
@@ -21,18 +21,23 @@ export interface ChangeEvent {
 	removed: WebShellCommand[];
 }
 
+type WebShellFileSystem = string;
+
 export interface WebShellContributions {
 	readonly onChanged: Event<ChangeEvent>;
 	getCommands(): WebShellCommand[];
+	getFileSystems(): WebShellFileSystem[];
 }
 
 class WebShellContributionsImpl implements WebShellContributions {
 
-	private webShellCommands: WebShellCommand[] = [];
+	private webShellCommands: WebShellCommand[];
+	private webShellFileSystems: WebShellFileSystem[];
 	private readonly _onChanged: EventEmitter<ChangeEvent>;
 
 	constructor() {
 		this.webShellCommands = [];
+		this.webShellFileSystems = [];
 		this._onChanged = new EventEmitter<ChangeEvent>();
 	}
 
@@ -41,7 +46,9 @@ class WebShellContributionsImpl implements WebShellContributions {
 	}
 
 	public initialize(): void {
-		this.webShellCommands = this.parseWebShellCommands();
+		const { commands, fileSystems } = this.parseExtensions();
+		this.webShellCommands = commands;
+		this.webShellFileSystems = fileSystems;
 		Extensions.onDidChange(() => {
 			this.handleExtensionsChanged();
 		});
@@ -51,15 +58,27 @@ class WebShellContributionsImpl implements WebShellContributions {
 		return this.webShellCommands;
 	}
 
-	private parseWebShellCommands(): WebShellCommand[] {
-		const result: WebShellCommand[] = [];
+	public getFileSystems(): WebShellFileSystem[] {
+		return this.webShellFileSystems;
+	}
+
+	private parseExtensions(): { commands: WebShellCommand[]; fileSystems: WebShellFileSystem[] } {
+		const result: { commands: WebShellCommand[]; fileSystems: WebShellFileSystem[] } = { commands: [], fileSystems: [] };
 		for (const extension of Extensions.all) {
 			const packageJSON = extension.packageJSON;
 			const commands: WebShellCommand[] = packageJSON?.contributes?.webshell?.commands;
 			if (commands !== undefined) {
 				for (const command of commands) {
 					if (WebShellCommand.is(command)) {
-						result.push(command);
+						result.commands.push(command);
+					}
+				}
+			}
+			const fileSystems: WebShellFileSystem[] = packageJSON?.contributes?.webshell?.fileSystems;
+			if (fileSystems !== undefined) {
+				for (const fileSystem of fileSystems) {
+					if (typeof fileSystem === 'string') {
+						result.fileSystems.push(fileSystem);
 					}
 				}
 			}
@@ -69,7 +88,9 @@ class WebShellContributionsImpl implements WebShellContributions {
 
 	private handleExtensionsChanged(): void {
 		const oldCommands: Map<string, WebShellCommand> = new Map(this.webShellCommands.map(command => [command.command, command]));
-		const newCommands: Map<string, WebShellCommand> = new Map(this.parseWebShellCommands().map(command => [command.command, command]));
+		const { commands, fileSystems } = this.parseExtensions();
+		this.webShellFileSystems = fileSystems;
+		const newCommands: Map<string, WebShellCommand> = new Map(commands.map(command => [command.command, command]));
 		const added: WebShellCommand[] = [];
 		const removed: WebShellCommand[] = [];
 		for (const [command, newCommand] of newCommands) {

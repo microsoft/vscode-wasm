@@ -175,7 +175,7 @@ export type ExtensionLocationDescriptor = {
 };
 
 /**
- * A descriptor signaling that the VS Code file system is mapped under the given
+ * A descriptor signaling that a VS Code file system is mapped under the given
  * mount point.
  */
 export type VSCodeFileSystemDescriptor = {
@@ -184,13 +184,26 @@ export type VSCodeFileSystemDescriptor = {
 	mountPoint: string;
 };
 
+/**
+ * A descriptor signaling that a in-memory file system is mapped under the given
+ * mount point.
+ */
 export type InMemoryFileSystemDescriptor = {
 	kind: 'inMemoryFileSystem';
 	fileSystem: MemoryFileSystem;
 	mountPoint: string;
 };
 
-export type MapDirDescriptor = WorkspaceFolderDescriptor | ExtensionLocationDescriptor | VSCodeFileSystemDescriptor | InMemoryFileSystemDescriptor;
+/**
+ * A descriptor signaling that a extension contribution is mapped under the given
+ * mount point (contribution point wasm.fileSystems).
+ */
+export type ExtensionContributionDescriptor = {
+	kind: 'extensionContribution';
+	id: string;
+};
+
+export type MapDirDescriptor = WorkspaceFolderDescriptor | ExtensionLocationDescriptor | VSCodeFileSystemDescriptor | InMemoryFileSystemDescriptor | ExtensionContributionDescriptor;
 
 export interface ProcessOptions {
 

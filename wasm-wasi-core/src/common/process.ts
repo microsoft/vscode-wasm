@@ -8,13 +8,13 @@ import RAL from './ral';
 import { Event, EventEmitter, LogOutputChannel, Uri, WorkspaceFolder, window, workspace } from 'vscode';
 
 import type {
+	ExtensionContributionDescriptor,
 	ExtensionLocationDescriptor, InMemoryFileSystemDescriptor, MapDirDescriptor, ProcessOptions, StdioConsoleDescriptor, StdioDescriptor, StdioFileDescriptor, VSCodeFileSystemDescriptor,
 	WorkspaceFolderDescriptor
 } from './api';
 import type { ptr, size, u32 } from './baseTypes';
 import type { FileSystemDeviceDriver } from './deviceDriver';
 import { FileDescriptors } from './fileDescriptor';
-import * as vscfs from './vscodeFileSystemDriver';
 import * as vrfs from './virtualRootFS';
 import * as tdd from './terminalDriver';
 import * as pdd from './pipeDriver';
@@ -269,13 +269,14 @@ class StdoutStream extends StdioStream implements Readable {
 }
 
 namespace MapDirDescriptor {
-	export function getDescriptors(descriptors: MapDirDescriptor[] | undefined) : { workspaceFolders: WorkspaceFolderDescriptor | undefined; extensions: ExtensionLocationDescriptor[]; vscodeFileSystems: VSCodeFileSystemDescriptor[]; inMemoryFileSystems: InMemoryFileSystemDescriptor[]} {
+	export function getDescriptors(descriptors: MapDirDescriptor[] | undefined) : { workspaceFolders: WorkspaceFolderDescriptor | undefined; extensions: ExtensionLocationDescriptor[]; extensionContributions: ExtensionContributionDescriptor[]; vscodeFileSystems: VSCodeFileSystemDescriptor[]; inMemoryFileSystems: InMemoryFileSystemDescriptor[]} {
 		let workspaceFolders: WorkspaceFolderDescriptor | undefined;
 		const extensions: ExtensionLocationDescriptor[] = [];
+		const extensionContributions: ExtensionContributionDescriptor[] = [];
 		const vscodeFileSystems: VSCodeFileSystemDescriptor[] = [];
 		const inMemoryFileSystems: InMemoryFileSystemDescriptor[] = [];
 		if (descriptors === undefined) {
-			return { workspaceFolders, extensions, vscodeFileSystems, inMemoryFileSystems };
+			return { workspaceFolders, extensions, extensionContributions, vscodeFileSystems, inMemoryFileSystems };
 		}
 		for (const descriptor of descriptors) {
 			if (descriptor.kind === 'workspaceFolder') {
@@ -286,9 +287,11 @@ namespace MapDirDescriptor {
 				vscodeFileSystems.push(descriptor);
 			} else if (descriptor.kind === 'inMemoryFileSystem') {
 				inMemoryFileSystems.push(descriptor);
+			} else if (descriptor.kind === 'extensionContribution') {
+				extensionContributions.push(descriptor);
 			}
 		}
-		return { workspaceFolders, extensions, vscodeFileSystems, inMemoryFileSystems };
+		return { workspaceFolders, extensions, extensionContributions, vscodeFileSystems, inMemoryFileSystems };
 	}
 }
 
@@ -354,15 +357,15 @@ export abstract class WasiProcess {
 			throw new Error('WasiProcess already initialized or running');
 		}
 
-		const { workspaceFolders, extensions, vscodeFileSystems, inMemoryFileSystems } = MapDirDescriptor.getDescriptors(this.options.mapDir);
+		const { workspaceFolders, extensions, extensionContributions, vscodeFileSystems, inMemoryFileSystems } = MapDirDescriptor.getDescriptors(this.options.mapDir);
 		if (workspaceFolders !== undefined) {
 			const folders = workspace.workspaceFolders;
 			if (folders !== undefined) {
 				if (folders.length === 1) {
-					this.mapWorkspaceFolder(folders[0], true);
+					await this.mapWorkspaceFolder(folders[0], true);
 				} else {
 					for (const folder of folders) {
-						this.mapWorkspaceFolder(folder, false);
+						await this.mapWorkspaceFolder(folder, false);
 					}
 				}
 			}
@@ -371,6 +374,15 @@ export abstract class WasiProcess {
 			for (const descriptor of extensions) {
 				const extensionFS = await WasiKernel.getOrCreateFileSystemByDescriptor(this.localDeviceDrivers, descriptor);
 				this.preOpenDirectories.set(descriptor.mountPoint, extensionFS);
+			}
+		}
+		if (extensionContributions.length > 0) {
+			for (const descriptor of extensionContributions) {
+				const extensionDescriptor = WasiKernel.getExtensionLocationDescriptor(descriptor);
+				if (extensionDescriptor !== undefined) {
+					const extensionFS = await WasiKernel.getOrCreateFileSystemByDescriptor(this.localDeviceDrivers, extensionDescriptor);
+					this.preOpenDirectories.set(extensionDescriptor.mountPoint, extensionFS);
+				}
 			}
 		}
 		if (vscodeFileSystems.length > 0) {
@@ -529,24 +541,18 @@ export abstract class WasiProcess {
 
 	protected abstract threadEnded(tid: u32): Promise<void>;
 
-	private mapWorkspaceFolder(folder: WorkspaceFolder, single: boolean): void {
+	private mapWorkspaceFolder(folder: WorkspaceFolder, single: boolean): Promise<void> {
 		const path = RAL().path;
 		const mountPoint: string = single
 			? path.join(path.sep, 'workspace')
 			: path.join(path.sep, 'workspaces', folder.name);
 
-		this.mapDirEntry(folder.uri, mountPoint);
+		return this.mapDirEntry(folder.uri, mountPoint);
 	}
 
-	private mapDirEntry(vscode_fs: Uri, mountPoint: string): void {
-		let deviceDriver: FileSystemDeviceDriver;
-		if (!WasiKernel.deviceDrivers.hasByUri(vscode_fs)) {
-			deviceDriver = vscfs.create(WasiKernel.nextDeviceId(), vscode_fs);
-			WasiKernel.deviceDrivers.add(deviceDriver);
-		} else {
-			deviceDriver = WasiKernel.deviceDrivers.getByUri(vscode_fs) as FileSystemDeviceDriver;
-		}
-		this.preOpenDirectories.set(mountPoint, deviceDriver);
+	private async mapDirEntry(vscode_fs: Uri, mountPoint: string): Promise<void> {
+		const fs = await WasiKernel.getOrCreateFileSystemByDescriptor(this.localDeviceDrivers, { kind: 'vscodeFileSystem', uri: vscode_fs, mountPoint});
+		this.preOpenDirectories.set(mountPoint, fs);
 	}
 
 	private async handleConsole(stdio: $Stdio): Promise<void> {

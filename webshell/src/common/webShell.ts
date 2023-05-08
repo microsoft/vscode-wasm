@@ -4,7 +4,7 @@
  *--------------------------------------------------------------------------------------------*/
 import { window, Terminal, commands } from 'vscode';
 
-import { MapDirDescriptor, MemoryFileSystem, Wasm, WasmPseudoterminal } from '@vscode/wasm-wasi';
+import { ExtensionContributionDescriptor, MapDirDescriptor, MemoryFileSystem, Wasm, WasmPseudoterminal } from '@vscode/wasm-wasi';
 
 import RAL from './ral';
 import { CommandHandler } from './types';
@@ -17,6 +17,7 @@ type CommandLine = {
 export class Webshell {
 
 	private readonly wasm: Wasm;
+	private readonly contributions: WebShellContributions;
 	private readonly pty: WasmPseudoterminal;
 	private readonly terminal : Terminal;
 	private readonly prompt;
@@ -27,6 +28,7 @@ export class Webshell {
 
 	constructor(wasm: Wasm, contributions: WebShellContributions, cwd: string, prompt: string = '$ ') {
 		this.wasm = wasm;
+		this.contributions = contributions;
 		this.prompt = prompt;
 		this.pty = this.wasm.createPseudoterminal({ history: true });
 		this.terminal = window.createTerminal({ name: 'wesh', pty: this.pty, isTransient: true });
@@ -84,7 +86,7 @@ export class Webshell {
 					const handler = this.commandHandlers.get(command);
 					if (handler !== undefined) {
 						try {
-							await handler(this.pty, command, args, this.cwd, [ { kind: 'inMemoryFileSystem', fileSystem: this.userBin, mountPoint: '/usr/bin' } ]);
+							await handler(this.pty, command, args, this.cwd, this.getAdditionalFileSystems());
 						} catch (error: any) {
 							const message = error.message ?? error.toString();
 							void this.pty.write(`-wesh: executing ${command} failed: ${message}\r\n`);
@@ -121,5 +123,12 @@ export class Webshell {
 
 	private getPrompt(): string {
 		return `\x1b[01;34m${this.cwd}\x1b[0m ${this.prompt}`;
+	}
+
+	private getAdditionalFileSystems(): MapDirDescriptor[] {
+		const result: MapDirDescriptor[] = [{ kind: 'inMemoryFileSystem', fileSystem: this.userBin, mountPoint: '/usr/bin' }];
+		const contributions: ExtensionContributionDescriptor[] = this.contributions.getFileSystems().map(fs => ({ kind: 'extensionContribution', id: fs }));
+		result.push(...contributions);
+		return result;
 	}
 }
