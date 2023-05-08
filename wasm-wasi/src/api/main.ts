@@ -6,6 +6,7 @@
 
 import { Event, Pseudoterminal, Uri, extensions as Extensions, ExtensionContext, Extension } from 'vscode';
 
+type u8 = number;
 type u16 = number;
 export type oflags = u16;
 export namespace Oflags {
@@ -73,6 +74,19 @@ export namespace Fdflags {
 	export const sync = 1 << 4;
 }
 
+export type filetype = u8;
+export namespace Filetype {
+	/**
+	 * The file descriptor or file refers to a directory inode.
+	 */
+	export const directory = 3;
+
+	/**
+	 * The file descriptor or file refers to a regular file inode.
+	 */
+	export const regular_file = 4;
+}
+
 export interface Environment {
 	[key: string]: string;
 }
@@ -114,17 +128,6 @@ export interface WasmPseudoterminal extends Pseudoterminal {
 	 * @param prompt The prompt to write to the terminal.
 	 */
 	prompt(prompt: string): Promise<void>;
-}
-
-/**
- * A mountable file system that can be used inside a WASM process.
- *
- * This interface is not intended to be implemented. Instances of this
- * interface are available via `Wasm.createPseudoterminal`.
- */
-export interface WasmFileSystem {
-	id: bigint;
-	uri: Uri;
 }
 
 export type StdioFileDescriptor = {
@@ -269,25 +272,17 @@ export interface WasmProcess {
 }
 
 /**
- * The kind of a node in the in-memory file system.
- */
-export enum NodeKind {
-	File,
-	Directory
-}
-
-/**
  * A file node in the in-memory file system.
  */
 export interface FileNode {
-	kind: NodeKind.File;
+	filetype: typeof Filetype.regular_file;
 }
 
 /**
  * A directory node in the in-memory file system.
  */
 export interface DirectoryNode {
-	kind: NodeKind.Directory;
+	filetype: typeof Filetype.directory;
 }
 
 /**
@@ -297,6 +292,11 @@ export interface MemoryFileSystem {
 	readonly uri: Uri;
 	createDirectory(path: string): void;
 	createFile(path: string, content: Uint8Array | { size: bigint; reader: (node: FileNode) => Promise<Uint8Array> }): void;
+}
+
+export interface WasmFileSystem {
+	readonly uri: Uri;
+	stat(path: string): Promise<{ filetype: filetype }>;
 }
 
 export interface Wasm {

@@ -6,10 +6,13 @@
 
 import { ExtensionContext, Uri } from 'vscode';
 
-import { WasmProcess, ProcessOptions, TerminalOptions, Wasm, MemoryFileSystem } from './api';
+import { WasmProcess, ProcessOptions, TerminalOptions, Wasm, MemoryFileSystem, MapDirDescriptor, WasmFileSystem } from './api';
 import { WasmPseudoterminal } from './terminal';
 import { WasiProcess as InternalWasiProcess } from './process';
 import { MemoryFileSystem as InMemoryFileSystemImpl } from './memoryFileSystem';
+import WasiKernel from './kernel';
+import { FileDescriptors } from './fileDescriptor';
+import { Filetype } from './wasi';
 
 namespace MemoryDescriptor {
 	export function is(value: any): value is WebAssembly.MemoryDescriptor {
@@ -29,6 +32,16 @@ export namespace WasiCoreImpl {
 			},
 			createInMemoryFileSystem(): MemoryFileSystem {
 				return new InMemoryFileSystemImpl();
+			},
+			async createWasmFileSystem(descriptors: MapDirDescriptor[]): Promise<WasmFileSystem> {
+				const fileDescriptors = new FileDescriptors();
+				const info = await WasiKernel.createRootFileSystem(fileDescriptors, descriptors);
+				return {
+					uri: info.fileSystem.uri,
+					stat() {
+						return Promise.resolve({ filetype: Filetype.regular_file });
+					}
+				};
 			},
 			async createProcess(name: string, module: WebAssembly.Module | Promise<WebAssembly.Module>, memoryOrOptions?: WebAssembly.MemoryDescriptor | WebAssembly.Memory | ProcessOptions, optionsOrMapWorkspaceFolders?: ProcessOptions | boolean): Promise<WasmProcess> {
 				let memory: WebAssembly.Memory | WebAssembly.MemoryDescriptor | undefined;

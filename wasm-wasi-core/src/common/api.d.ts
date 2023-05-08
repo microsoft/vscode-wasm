@@ -4,9 +4,10 @@
  *--------------------------------------------------------------------------------------------*/
 /// <reference path="../../typings/webAssemblyCommon.d.ts" />
 
-import { Event, Extension, ExtensionContext, LogOutputChannel, Pseudoterminal, Uri, UriHandler } from 'vscode';
+import { Event, Extension, ExtensionContext, Pseudoterminal, Uri } from 'vscode';
 
 import { fdflags, oflags } from './wasi';
+import { u8 } from './baseTypes';
 export { fdflags, oflags };
 
 export interface Environment {
@@ -50,17 +51,6 @@ export interface WasmPseudoterminal extends Pseudoterminal {
 	 * @param prompt The prompt to write to the terminal.
 	 */
 	prompt(prompt: string): Promise<void>;
-}
-
-/**
- * A mountable file system that can be used inside a WASM process.
- *
- * This interface is not intended to be implemented. Instances of this
- * interface are available via `Wasm.createPseudoterminal`.
- */
-export interface WasmFileSystem {
-	id: bigint;
-	uri: Uri;
 }
 
 export type StdioFileDescriptor = {
@@ -204,35 +194,45 @@ export interface WasmProcess {
 	 terminate(): Promise<number>;
 }
 
-/**
- * The kind of a node in the in-memory file system.
- */
-export enum NodeKind {
-	Directory = 3,
-	File = 4
+export type filetype = u8;
+export namespace Filetype {
+	/**
+	 * The file descriptor or file refers to a directory inode.
+	 */
+	export const directory = 3;
+
+	/**
+	 * The file descriptor or file refers to a regular file inode.
+	 */
+	export const regular_file = 4;
 }
 
 /**
  * A file node in the in-memory file system.
  */
 export interface FileNode {
-	kind: NodeKind.File;
+	filetype: typeof Filetype.regular_file;
 }
 
 /**
  * A directory node in the in-memory file system.
  */
 export interface DirectoryNode {
-	kind: NodeKind.Directory;
+	filetype: typeof Filetype.directory;
 }
 
 /**
- * The memory file system. Currently read only.
+ * The memory file system.
  */
 export interface MemoryFileSystem {
 	readonly uri: Uri;
 	createDirectory(path: string): void;
 	createFile(path: string, content: Uint8Array | { size: bigint; reader: (node: FileNode) => Promise<Uint8Array> }): void;
+}
+
+export interface WasmFileSystem {
+	readonly uri: Uri;
+	stat(path: string): Promise<{ filetype: filetype }>;
 }
 
 export interface Wasm {
@@ -247,6 +247,11 @@ export interface Wasm {
 	 * Creates a new in-memory file system.
 	 */
 	createInMemoryFileSystem(): MemoryFileSystem;
+
+	/**
+	 * Creates a new WASM file system.
+	 */
+	createWasmFileSystem(descriptors: MapDirDescriptor[]): Promise<WasmFileSystem>;
 
 	/**
 	 * Creates a new WASM process.
