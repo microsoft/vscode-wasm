@@ -30,7 +30,7 @@ async function go() {
 			coi: true
 		});
 	} catch (err) {
-		console.error('Failed to run tests');
+		console.error('Failed to run tests', err);
 		process.exitCode = 1;
 	}
 }

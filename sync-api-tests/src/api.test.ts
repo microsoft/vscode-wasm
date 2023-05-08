@@ -76,7 +76,6 @@ export function contribute(workerResolver: (testCase: string) => string, scheme:
 		// Setting up test files in workspace
 		suiteSetup(async () => {
 			folder = getFolder();
-			console.log(folder.toString());
 			textFile = joinPath(folder.uri, 'test.txt');
 			toDelete = joinPath(folder.uri, 'toDelete.txt');
 			directory = joinPath(folder.uri, 'directory');
