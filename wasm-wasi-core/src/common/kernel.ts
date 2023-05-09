@@ -6,7 +6,7 @@
 import { Uri, WorkspaceFolder, WorkspaceFoldersChangeEvent, extensions, workspace } from 'vscode';
 
 import RAL from './ral';
-import type { ExtensionLocationDescriptor, InMemoryFileSystemDescriptor, VSCodeFileSystemDescriptor, MapDirDescriptor, ExtensionContributionDescriptor } from './api';
+import type { ExtensionLocationDescriptor, InMemoryFileSystemDescriptor, VSCodeFileSystemDescriptor, MapDirDescriptor } from './api';
 import type { DeviceDriver, DeviceId, FileSystemDeviceDriver } from './deviceDriver';
 import type { FileDescriptors } from './fileDescriptor';
 
@@ -256,9 +256,6 @@ namespace MapDirDescriptors {
 	export function isExtensionLocation(descriptor: MapDirDescriptor): descriptor is ExtensionLocationDescriptor {
 		return descriptor.kind === 'extensionLocation';
 	}
-	export function isExtensionContribution(descriptor: MapDirDescriptor): descriptor is ExtensionContributionDescriptor {
-		return descriptor.kind === 'extensionContribution';
-	}
 	export function isInMemoryDescriptor(descriptor: MapDirDescriptor): descriptor is InMemoryFileSystemDescriptor {
 		return descriptor.kind === 'inMemoryFileSystem';
 	}
@@ -311,11 +308,6 @@ namespace MapDirDescriptors {
 				vscodeFileSystems.push(descriptor);
 			} else if (descriptor.kind === 'inMemoryFileSystem') {
 				inMemoryFileSystems.push(descriptor);
-			} else if (descriptor.kind === 'extensionContribution') {
-				const extLoc = WasiKernel.getExtensionLocationDescriptor(descriptor);
-				if (extLoc !== undefined) {
-					extensions.push(extLoc);
-				}
 			}
 		}
 		return { extensions, vscodeFileSystems, inMemoryFileSystems };
@@ -384,14 +376,6 @@ class FileSystems {
 			}
 		}
 		return undefined;
-	}
-
-	public getExtensionLocationDescriptor(descriptor: ExtensionContributionDescriptor): ExtensionLocationDescriptor | undefined {
-		const uri = this.contributionIdToUri.get(descriptor.id);
-		if (uri === undefined) {
-			return undefined;
-		}
-		return this.contributedFileSystems.get(uri.toString()) as ExtensionLocationDescriptor;
 	}
 
 	public async createRootFileSystem(fileDescriptors: FileDescriptors, descriptors: MapDirDescriptor[]): Promise<RootFileSystemInfo> {
@@ -590,13 +574,9 @@ namespace WasiKernel {
 	}
 
 	const fileSystems = new FileSystems();
-	export function getExtensionLocationDescriptor(descriptor: ExtensionContributionDescriptor): ExtensionLocationDescriptor | undefined {
-		return fileSystems.getExtensionLocationDescriptor(descriptor);
-	}
 	export function getOrCreateFileSystemByDescriptor(deviceDrivers: DeviceDrivers, descriptor: VSCodeFileSystemDescriptor | ExtensionLocationDescriptor | InMemoryFileSystemDescriptor): Promise<FileSystemDeviceDriver> {
 		return fileSystems.getOrCreateFileSystemByDescriptor(deviceDrivers, descriptor);
 	}
-
 	export function createRootFileSystem(fileDescriptors: FileDescriptors, descriptors: MapDirDescriptor[]): Promise<RootFileSystemInfo> {
 		return fileSystems.createRootFileSystem(fileDescriptors, descriptors);
 	}

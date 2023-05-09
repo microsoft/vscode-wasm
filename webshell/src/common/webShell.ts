@@ -4,11 +4,13 @@
  *--------------------------------------------------------------------------------------------*/
 import { window, Terminal, commands } from 'vscode';
 
-import { ExtensionContributionDescriptor, MapDirDescriptor, MemoryFileSystem, Wasm, WasmPseudoterminal } from '@vscode/wasm-wasi';
+import { ExtensionLocationDescriptor, MapDirDescriptor, MemoryFileSystem, Wasm, WasmPseudoterminal } from '@vscode/wasm-wasi';
 
 import RAL from './ral';
+const paths = RAL().path;
 import { CommandHandler } from './types';
-import { WebShellContributions } from './webShellContributions';
+import { CommandMountPoint, WebShellContributions } from './webShellContributions';
+
 
 type CommandLine = {
 	command: string; args: string[];
@@ -36,26 +38,34 @@ export class Webshell {
 		this.cwd = cwd;
 		this.commandHandlers = new Map<string, CommandHandler>();
 		this.userBin = wasm.createInMemoryFileSystem();
-		for (const contribution of contributions.getCommands()) {
-			this.registerCommandHandler(contribution.name, (pty: WasmPseudoterminal, command: string, args: string[], cwd: string, mapDir?: MapDirDescriptor[] | undefined) => {
+		for (const contribution of contributions.getCommandMountPoints()) {
+			this.registerCommandContribution(contribution);
+		}
+		contributions.onChanged((event) => {
+			for (const add of event.commands.added) {
+				this.registerCommandContribution(add);
+			}
+			for (const remove of event.commands.removed) {
+				this.unregisterCommandContribution(remove);
+			}
+		});
+	}
+
+	private registerCommandContribution(contribution: CommandMountPoint): void {
+		const basename = paths.basename(contribution.mountPoint);
+		const dirname = paths.dirname(contribution.mountPoint);
+		if (dirname === '/usr/bin') {
+			this.registerCommandHandler(basename, (pty: WasmPseudoterminal, command: string, args: string[], cwd: string, mapDir?: MapDirDescriptor[] | undefined) => {
 				return new Promise<number>((resolve, reject) => {
 					commands.executeCommand<number>(contribution.command, pty, command, args, cwd, mapDir).then(resolve, reject);
 				});
-
 			});
 		}
-		contributions.onChanged((event) => {
-			for (const add of event.added) {
-				this.registerCommandHandler(add.name, (pty: WasmPseudoterminal, command: string, args: string[], cwd: string, mapDir?: MapDirDescriptor[] | undefined) => {
-					return new Promise<number>((resolve, reject) => {
-						commands.executeCommand<number>(add.command, pty, command, args, cwd, mapDir).then(resolve, reject);
-					});
-				});
-			}
-			for (const remove of event.removed) {
-				this.unregisterCommandHandler(remove.name);
-			}
-		});
+	}
+
+	private unregisterCommandContribution(contribution: CommandMountPoint): void {
+		const basename = paths.basename(contribution.mountPoint);
+		this.unregisterCommandHandler(basename);
 	}
 
 	public registerCommandHandler(command: string, handler: CommandHandler): void {
@@ -127,7 +137,7 @@ export class Webshell {
 
 	private getAdditionalFileSystems(): MapDirDescriptor[] {
 		const result: MapDirDescriptor[] = [{ kind: 'inMemoryFileSystem', fileSystem: this.userBin, mountPoint: '/usr/bin' }];
-		const contributions: ExtensionContributionDescriptor[] = this.contributions.getFileSystems().map(fs => ({ kind: 'extensionContribution', id: fs }));
+		const contributions: ExtensionLocationDescriptor[] = this.contributions.getDirectoryMountPoints().map(entry => ({ kind: 'extensionLocation', extension: entry.extension, path: entry.path, mountPoint: entry.mountPoint }));
 		result.push(...contributions);
 		return result;
 	}

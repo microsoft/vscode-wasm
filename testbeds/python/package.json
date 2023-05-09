@@ -32,32 +32,16 @@
 				"title": "Run Interactive Python Shell"
 			}
 		],
-		"wasm": {
-			"fileSystems": [
-				{
-					"id": "ms-vscode.testbed-python.pythonLib",
-					"kind": "extensionData",
-					"path": "wasm/lib",
-					"mountPoint": "/usr/local/lib/python3.11"
-				},
-				{
-					"id": "ms-vscode.testbed-python.pythonBin",
-					"kind": "extensionBinaries",
-					"path": "wasm/bin"
-				}
-			]
-		},
-		"webshell": {
-			"fileSystems": [
-				"ms-vscode.testbed-python.pythonLib"
-			],
-			"commands": [
-				{
-					"command": "testbed-python.webshell.python",
-					"name": "python"
-				}
-			]
-		}
+		"webShellMountPoints": [
+			{
+				"mountPoint": "/usr/local/lib/python3.11",
+				"path": "wasm/lib"
+			},
+			{
+				"mountPoint": "/usr/bin/python",
+				"command": "testbed-python.webshell.python"
+			}
+		]
 	},
 	"scripts": {
 		"build": "npm run compile",

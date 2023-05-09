@@ -120,16 +120,7 @@ export type InMemoryFileSystemDescriptor = {
 	mountPoint: string;
 };
 
-/**
- * A descriptor signaling that a extension contribution is mapped under the given
- * mount point (contribution point wasm.fileSystems).
- */
-export type ExtensionContributionDescriptor = {
-	kind: 'extensionContribution';
-	id: string;
-};
-
-export type MapDirDescriptor = WorkspaceFolderDescriptor | ExtensionLocationDescriptor | VSCodeFileSystemDescriptor | InMemoryFileSystemDescriptor | ExtensionContributionDescriptor;
+export type MapDirDescriptor = WorkspaceFolderDescriptor | ExtensionLocationDescriptor | VSCodeFileSystemDescriptor | InMemoryFileSystemDescriptor;
 
 export interface ProcessOptions {
 

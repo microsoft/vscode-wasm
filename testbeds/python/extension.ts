@@ -50,7 +50,7 @@ export async function activate(context: ExtensionContext) {
 	commands.registerCommand('testbed-python.runInteractive', async () => {
 		await run(`Python Repl`);
 	});
-	commands.registerCommand('testbed-python.runPython', async (pty: WasmPseudoterminal, _command: string, args: string[], _cwd: string, mapDir?: MapDirDescriptor[] | undefined): Promise<number> => {
+	commands.registerCommand('testbed-python.webshell.python', async (pty: WasmPseudoterminal, _command: string, args: string[], _cwd: string, mapDir?: MapDirDescriptor[] | undefined): Promise<number> => {
 		const options: ProcessOptions = {
 			stdio: pty.stdio,
 			mapDir: (mapDir ??[]).concat([
