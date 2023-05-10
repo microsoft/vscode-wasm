@@ -6,7 +6,7 @@
 
 import { ExtensionContext, Uri } from 'vscode';
 
-import { WasmProcess, ProcessOptions, TerminalOptions, Wasm, MemoryFileSystem, MapDirDescriptor, WasmFileSystem } from './api';
+import { WasmProcess, ProcessOptions, TerminalOptions, Wasm, MemoryFileSystem, MountPointDescriptor, WasmFileSystem } from './api';
 import { WasmPseudoterminal } from './terminal';
 import { WasiProcess as InternalWasiProcess } from './process';
 import { MemoryFileSystem as InMemoryFileSystemImpl } from './memoryFileSystem';
@@ -33,7 +33,7 @@ export namespace WasiCoreImpl {
 			createInMemoryFileSystem(): MemoryFileSystem {
 				return new InMemoryFileSystemImpl();
 			},
-			async createWasmFileSystem(descriptors: MapDirDescriptor[]): Promise<WasmFileSystem> {
+			async createWasmFileSystem(descriptors: MountPointDescriptor[]): Promise<WasmFileSystem> {
 				const fileDescriptors = new FileDescriptors();
 				const info = await WasiKernel.createRootFileSystem(fileDescriptors, descriptors);
 				return {

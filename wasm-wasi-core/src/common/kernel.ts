@@ -6,7 +6,7 @@
 import { Uri, WorkspaceFolder, WorkspaceFoldersChangeEvent, extensions, workspace } from 'vscode';
 
 import RAL from './ral';
-import type { ExtensionLocationDescriptor, InMemoryFileSystemDescriptor, VSCodeFileSystemDescriptor, MapDirDescriptor } from './api';
+import type { ExtensionLocationDescriptor, InMemoryFileSystemDescriptor, VSCodeFileSystemDescriptor, MountPointDescriptor } from './api';
 import type { DeviceDriver, DeviceId, FileSystemDeviceDriver } from './deviceDriver';
 import type { FileDescriptors } from './fileDescriptor';
 
@@ -253,13 +253,13 @@ function getSegments(path: string): string[] {
 }
 
 namespace MapDirDescriptors {
-	export function isExtensionLocation(descriptor: MapDirDescriptor): descriptor is ExtensionLocationDescriptor {
+	export function isExtensionLocation(descriptor: MountPointDescriptor): descriptor is ExtensionLocationDescriptor {
 		return descriptor.kind === 'extensionLocation';
 	}
-	export function isInMemoryDescriptor(descriptor: MapDirDescriptor): descriptor is InMemoryFileSystemDescriptor {
+	export function isInMemoryDescriptor(descriptor: MountPointDescriptor): descriptor is InMemoryFileSystemDescriptor {
 		return descriptor.kind === 'inMemoryFileSystem';
 	}
-	export function isVSCodeFileSystemDescriptor(descriptor: MapDirDescriptor): descriptor is VSCodeFileSystemDescriptor {
+	export function isVSCodeFileSystemDescriptor(descriptor: MountPointDescriptor): descriptor is VSCodeFileSystemDescriptor {
 		return descriptor.kind === 'vscodeFileSystem';
 	}
 	export function getExtensionLocationKey(descriptor: ExtensionLocationDescriptor): Uri {
@@ -283,7 +283,7 @@ namespace MapDirDescriptors {
 				throw new Error(`Unknown MapDirDescriptor kind ${JSON.stringify(descriptor, undefined, 0)}`);
 		}
 	}
-	export function getDescriptors(descriptors: MapDirDescriptor[] | undefined) : { extensions: ExtensionLocationDescriptor[]; vscodeFileSystems: VSCodeFileSystemDescriptor[]; inMemoryFileSystems: InMemoryFileSystemDescriptor[]} {
+	export function getDescriptors(descriptors: MountPointDescriptor[] | undefined) : { extensions: ExtensionLocationDescriptor[]; vscodeFileSystems: VSCodeFileSystemDescriptor[]; inMemoryFileSystems: InMemoryFileSystemDescriptor[]} {
 		const extensions: ExtensionLocationDescriptor[] = [];
 		const vscodeFileSystems: VSCodeFileSystemDescriptor[] = [];
 		const inMemoryFileSystems: InMemoryFileSystemDescriptor[] = [];
@@ -338,7 +338,7 @@ export interface RootFileSystemInfo {
 class FileSystems {
 
 	private readonly contributionIdToUri: Map<string, Uri>;
-	private contributedFileSystems: Map<string, MapDirDescriptor>;
+	private contributedFileSystems: Map<string, MountPointDescriptor>;
 	private readonly fileSystemDeviceDrivers: Map<string, FileSystemDeviceDriver>;
 
 	constructor() {
@@ -378,7 +378,7 @@ class FileSystems {
 		return undefined;
 	}
 
-	public async createRootFileSystem(fileDescriptors: FileDescriptors, descriptors: MapDirDescriptor[]): Promise<RootFileSystemInfo> {
+	public async createRootFileSystem(fileDescriptors: FileDescriptors, descriptors: MountPointDescriptor[]): Promise<RootFileSystemInfo> {
 		const fileSystems: FileSystemDeviceDriver[] = [];
 		const preOpens: Map<string, FileSystemDeviceDriver> = new Map();
 		const { extensions, vscodeFileSystems, inMemoryFileSystems } = MapDirDescriptors.getDescriptors(descriptors);
@@ -477,8 +477,8 @@ class FileSystems {
 		return result;
 	}
 
-	private parseFileSystems(): { id: Uri; contributionId: string; mapDir: MapDirDescriptor }[] {
-		const result: { id: Uri; contributionId: string; mapDir: MapDirDescriptor }[] = [];
+	private parseFileSystems(): { id: Uri; contributionId: string; mapDir: MountPointDescriptor }[] {
+		const result: { id: Uri; contributionId: string; mapDir: MountPointDescriptor }[] = [];
 		for (const extension of extensions.all) {
 			const packageJSON = extension.packageJSON;
 			const fileSystems: FileSystem[] = packageJSON?.contributes?.wasm?.fileSystems;
@@ -501,9 +501,9 @@ class FileSystems {
 	}
 
 	private handleExtensionsChanged(): void {
-		const oldFileSystems: Map<string, MapDirDescriptor> = new Map(this.contributedFileSystems.entries());
-		const newFileSystems: Map<string, MapDirDescriptor> = new Map(this.parseFileSystems().map(fileSystem => [fileSystem.id.toString(), fileSystem.mapDir]));
-		const added: Map<string, MapDirDescriptor> = new Map();
+		const oldFileSystems: Map<string, MountPointDescriptor> = new Map(this.contributedFileSystems.entries());
+		const newFileSystems: Map<string, MountPointDescriptor> = new Map(this.parseFileSystems().map(fileSystem => [fileSystem.id.toString(), fileSystem.mapDir]));
+		const added: Map<string, MountPointDescriptor> = new Map();
 		for (const [id, newFileSystem] of newFileSystems) {
 			if (oldFileSystems.has(id)) {
 				oldFileSystems.delete(id);
@@ -577,7 +577,7 @@ namespace WasiKernel {
 	export function getOrCreateFileSystemByDescriptor(deviceDrivers: DeviceDrivers, descriptor: VSCodeFileSystemDescriptor | ExtensionLocationDescriptor | InMemoryFileSystemDescriptor): Promise<FileSystemDeviceDriver> {
 		return fileSystems.getOrCreateFileSystemByDescriptor(deviceDrivers, descriptor);
 	}
-	export function createRootFileSystem(fileDescriptors: FileDescriptors, descriptors: MapDirDescriptor[]): Promise<RootFileSystemInfo> {
+	export function createRootFileSystem(fileDescriptors: FileDescriptors, descriptors: MountPointDescriptor[]): Promise<RootFileSystemInfo> {
 		return fileSystems.createRootFileSystem(fileDescriptors, descriptors);
 	}
 

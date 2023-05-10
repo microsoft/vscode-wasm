@@ -53,6 +53,26 @@ export interface WasmPseudoterminal extends Pseudoterminal {
 	prompt(prompt: string): Promise<void>;
 }
 
+export interface Writable {
+
+	/**
+	 * Write some data to the stream.
+	 * @param chunk The data to write.
+	 */
+	write(chunk: Uint8Array): Promise<void>;
+
+	/**
+	 * Write a string to the stream.
+	 * @param chunk The string to write.
+	 * @param encoding The encoding to use to convert to a binary format.
+	 */
+	write(chunk: string, encoding?: 'utf-8'): Promise<void>;
+}
+
+export interface Readable {
+	onData: Event<Uint8Array>;
+}
+
 export type StdioFileDescriptor = {
 	kind: 'file';
 	path: string;
@@ -65,8 +85,9 @@ export type StdioTerminalDescriptor = {
 	terminal: WasmPseudoterminal;
 };
 
-export type StdioPipeDescriptor = {
-	kind: 'pipe';
+export type StdioPipeReadDescriptor = {
+	kind: 'pipeRead';
+	
 };
 
 export type StdioConsoleDescriptor = {
@@ -120,14 +141,14 @@ export type InMemoryFileSystemDescriptor = {
 	mountPoint: string;
 };
 
-export type MapDirDescriptor = WorkspaceFolderDescriptor | ExtensionLocationDescriptor | VSCodeFileSystemDescriptor | InMemoryFileSystemDescriptor;
+export type MountPointDescriptor = WorkspaceFolderDescriptor | ExtensionLocationDescriptor | VSCodeFileSystemDescriptor | InMemoryFileSystemDescriptor;
 
 export interface ProcessOptions {
 
 	/**
 	 * The encoding to use when decoding strings from and to the WASM layer.
 	 *
-	 * Currently we only have support for utf8 since this is the only encoding
+	 * Currently we only have support for utf-8 since this is the only encoding
 	 * that browsers currently support natively.
 	 */
 	encoding?: 'utf-8';
@@ -145,7 +166,7 @@ export interface ProcessOptions {
 	/**
 	 * How VS Code files systems are mapped into the WASM/WASI file system.
 	 */
-	mapDir?: MapDirDescriptor[];
+	mountPoints?: MountPointDescriptor[];
 
 	/**
 	 * Stdio setup
@@ -156,14 +177,6 @@ export interface ProcessOptions {
 	 * Whether the WASM/WASI API should be traced or not.
 	 */
 	trace?: boolean;
-}
-
-export interface Writable {
-	write(chunk: Uint8Array | string): Promise<void>;
-}
-
-export interface Readable {
-	onData: Event<Uint8Array>;
 }
 
 export interface WasmProcess {
@@ -242,7 +255,7 @@ export interface Wasm {
 	/**
 	 * Creates a new WASM file system.
 	 */
-	createWasmFileSystem(descriptors: MapDirDescriptor[]): Promise<WasmFileSystem>;
+	createWasmFileSystem(descriptors: MountPointDescriptor[]): Promise<WasmFileSystem>;
 
 	/**
 	 * Creates a new WASM process.

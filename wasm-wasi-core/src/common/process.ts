@@ -8,7 +8,7 @@ import RAL from './ral';
 import { Event, EventEmitter, LogOutputChannel, Uri, WorkspaceFolder, window, workspace } from 'vscode';
 
 import type {
-	ExtensionLocationDescriptor, InMemoryFileSystemDescriptor, MapDirDescriptor, ProcessOptions, StdioConsoleDescriptor, StdioDescriptor,
+	ExtensionLocationDescriptor, InMemoryFileSystemDescriptor, MountPointDescriptor, ProcessOptions, StdioConsoleDescriptor, StdioDescriptor,
 	StdioFileDescriptor, VSCodeFileSystemDescriptor, WorkspaceFolderDescriptor
 } from './api';
 import type { ptr, size, u32 } from './baseTypes';
@@ -268,7 +268,7 @@ class StdoutStream extends StdioStream implements Readable {
 }
 
 namespace MapDirDescriptor {
-	export function getDescriptors(descriptors: MapDirDescriptor[] | undefined) : { workspaceFolders: WorkspaceFolderDescriptor | undefined; extensions: ExtensionLocationDescriptor[]; vscodeFileSystems: VSCodeFileSystemDescriptor[]; inMemoryFileSystems: InMemoryFileSystemDescriptor[]} {
+	export function getDescriptors(descriptors: MountPointDescriptor[] | undefined) : { workspaceFolders: WorkspaceFolderDescriptor | undefined; extensions: ExtensionLocationDescriptor[]; vscodeFileSystems: VSCodeFileSystemDescriptor[]; inMemoryFileSystems: InMemoryFileSystemDescriptor[]} {
 		let workspaceFolders: WorkspaceFolderDescriptor | undefined;
 		const extensions: ExtensionLocationDescriptor[] = [];
 		const vscodeFileSystems: VSCodeFileSystemDescriptor[] = [];
@@ -353,7 +353,7 @@ export abstract class WasiProcess {
 			throw new Error('WasiProcess already initialized or running');
 		}
 
-		const { workspaceFolders, extensions, vscodeFileSystems, inMemoryFileSystems } = MapDirDescriptor.getDescriptors(this.options.mapDir);
+		const { workspaceFolders, extensions, vscodeFileSystems, inMemoryFileSystems } = MapDirDescriptor.getDescriptors(this.options.mountPoints);
 		if (workspaceFolders !== undefined) {
 			const folders = workspace.workspaceFolders;
 			if (folders !== undefined) {
