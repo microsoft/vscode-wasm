@@ -4,7 +4,7 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { commands, ExtensionContext, Uri, window, workspace } from 'vscode';
-import { Wasm, ProcessOptions, WasmPseudoterminal, MapDirDescriptor } from '@vscode/wasm-wasi';
+import { Wasm, ProcessOptions, MountPointDescriptor, Stdio } from '@vscode/wasm-wasi';
 
 export async function activate(context: ExtensionContext) {
 	const wasm: Wasm = await Wasm.api();
@@ -16,7 +16,7 @@ export async function activate(context: ExtensionContext) {
 		channel.info(`Running ${name}...`);
 		const options: ProcessOptions = {
 			stdio: pty.stdio,
-			mapDir: [
+			mountPoints: [
 				{ kind: 'workspaceFolder' },
 				{ kind: 'extensionLocation', extension: context, path: 'wasm/lib', mountPoint: '/usr/local/lib/python3.11' }
 			],
@@ -50,10 +50,10 @@ export async function activate(context: ExtensionContext) {
 	commands.registerCommand('testbed-python.runInteractive', async () => {
 		await run(`Python Repl`);
 	});
-	commands.registerCommand('testbed-python.webshell.python', async (pty: WasmPseudoterminal, _command: string, args: string[], _cwd: string, mapDir?: MapDirDescriptor[] | undefined): Promise<number> => {
+	commands.registerCommand('testbed-python.webshell.python', async (_command: string, args: string[], _cwd: string, stdio: Stdio, mountPoints?: MountPointDescriptor[] | undefined): Promise<number> => {
 		const options: ProcessOptions = {
-			stdio: pty.stdio,
-			mapDir: (mapDir ??[]).concat([
+			stdio,
+			mountPoints: (mountPoints ??[]).concat([
 				{ kind: 'workspaceFolder' },
 				{ kind: 'extensionLocation', extension: context, path: 'wasm/lib', mountPoint: '/usr/local/lib/python3.11' }
 			]),
@@ -67,7 +67,8 @@ export async function activate(context: ExtensionContext) {
 		const bits = await workspace.fs.readFile(filename);
 		const module = await WebAssembly.compile(bits);
 		const process = await wasm.createProcess('python', module, options);
-		return process.run();
+		const result = await process.run();
+		return result;
 	});
 }
 

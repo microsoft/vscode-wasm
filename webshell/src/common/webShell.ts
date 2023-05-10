@@ -4,7 +4,7 @@
  *--------------------------------------------------------------------------------------------*/
 import { window, Terminal, commands } from 'vscode';
 
-import { ExtensionLocationDescriptor, MountPointDescriptor, MemoryFileSystem, Wasm, WasmPseudoterminal } from '@vscode/wasm-wasi';
+import { ExtensionLocationDescriptor, MountPointDescriptor, MemoryFileSystem, Wasm, WasmPseudoterminal, Stdio } from '@vscode/wasm-wasi';
 
 import RAL from './ral';
 const paths = RAL().path;
@@ -55,9 +55,9 @@ export class Webshell {
 		const basename = paths.basename(contribution.mountPoint);
 		const dirname = paths.dirname(contribution.mountPoint);
 		if (dirname === '/usr/bin') {
-			this.registerCommandHandler(basename, (command: string, args: string[], cwd: string, pty: WasmPseudoterminal, mountPoints?: MountPointDescriptor[] | undefined) => {
+			this.registerCommandHandler(basename, (command: string, args: string[], cwd: string, stdio: Stdio, mountPoints?: MountPointDescriptor[] | undefined) => {
 				return new Promise<number>((resolve, reject) => {
-					commands.executeCommand<number>(contribution.command, command, args, cwd, pty, mountPoints).then(resolve, reject);
+					commands.executeCommand<number>(contribution.command, command, args, cwd, stdio, mountPoints).then(resolve, reject);
 				});
 			});
 		}
@@ -96,7 +96,9 @@ export class Webshell {
 					const handler = this.commandHandlers.get(command);
 					if (handler !== undefined) {
 						try {
-							await handler(command, args, this.cwd, this.pty, this.getAdditionalFileSystems());
+							const result = await handler(command, args, this.cwd, this.pty.stdio, this.getAdditionalFileSystems());
+							if (result !== 0) {
+							}
 						} catch (error: any) {
 							const message = error.message ?? error.toString();
 							void this.pty.write(`-wesh: executing ${command} failed: ${message}\r\n`);
@@ -135,8 +137,8 @@ export class Webshell {
 		return `\x1b[01;34m${this.cwd}\x1b[0m ${this.prompt}`;
 	}
 
-	private getAdditionalFileSystems(): MapDirDescriptor[] {
-		const result: MapDirDescriptor[] = [{ kind: 'inMemoryFileSystem', fileSystem: this.userBin, mountPoint: '/usr/bin' }];
+	private getAdditionalFileSystems(): MountPointDescriptor[] {
+		const result: MountPointDescriptor[] = [{ kind: 'inMemoryFileSystem', fileSystem: this.userBin, mountPoint: '/usr/bin' }];
 		const contributions: ExtensionLocationDescriptor[] = this.contributions.getDirectoryMountPoints().map(entry => ({ kind: 'extensionLocation', extension: entry.extension, path: entry.path, mountPoint: entry.mountPoint }));
 		result.push(...contributions);
 		return result;

@@ -13,6 +13,7 @@ import { MemoryFileSystem as InMemoryFileSystemImpl } from './memoryFileSystem';
 import WasiKernel from './kernel';
 import { FileDescriptors } from './fileDescriptor';
 import { Filetype } from './wasi';
+import { StdinStream, StdoutStream } from './streams';
 
 namespace MemoryDescriptor {
 	export function is(value: any): value is WebAssembly.MemoryDescriptor {
@@ -42,6 +43,12 @@ export namespace WasiCoreImpl {
 						return Promise.resolve({ filetype: Filetype.regular_file });
 					}
 				};
+			},
+			createReadable() {
+				return new StdoutStream();
+			},
+			createWritable(encoding?: 'utf-8') {
+				return new StdinStream(encoding);
 			},
 			async createProcess(name: string, module: WebAssembly.Module | Promise<WebAssembly.Module>, memoryOrOptions?: WebAssembly.MemoryDescriptor | WebAssembly.Memory | ProcessOptions, optionsOrMapWorkspaceFolders?: ProcessOptions | boolean): Promise<WasmProcess> {
 				let memory: WebAssembly.Memory | WebAssembly.MemoryDescriptor | undefined;

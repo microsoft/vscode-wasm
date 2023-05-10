@@ -61,9 +61,10 @@ export class NodeWasiProcess extends WasiProcess {
 	protected async startMain(wasiService: WasiService): Promise<void> {
 		const filename = Uri.joinPath(this.baseUri, './lib/desktop/mainWorker.js').fsPath;
 		this.mainWorker = new Worker(filename);
-		this.mainWorker.on('exit', async () => {
+		this.mainWorker.on('exit', async (exitCode: number) => {
 			this.cleanUpWorkers().catch(error => RAL().console.error(error));
 			this.cleanupFileDescriptors().catch(error => RAL().console.error(error));
+			this.resolveRunPromise(exitCode);
 		});
 		const connection = new NodeServiceConnection(wasiService, this.mainWorker, this.options.trace);
 		await connection.workerReady();

@@ -4,7 +4,7 @@
  *--------------------------------------------------------------------------------------------*/
 /// <reference path="../../typings/webAssemblyCommon.d.ts" />
 
-import { Event, Pseudoterminal, Uri, extensions as Extensions, ExtensionContext, Extension } from 'vscode';
+import { extensions as Extensions, Event, Pseudoterminal, Uri, ExtensionContext, Extension } from 'vscode';
 
 type u8 = number;
 type u16 = number;
@@ -74,19 +74,6 @@ export namespace Fdflags {
 	export const sync = 1 << 4;
 }
 
-export type filetype = u8;
-export namespace Filetype {
-	/**
-	 * The file descriptor or file refers to a directory inode.
-	 */
-	export const directory = 3;
-
-	/**
-	 * The file descriptor or file refers to a regular file inode.
-	 */
-	export const regular_file = 4;
-}
-
 export interface Environment {
 	[key: string]: string;
 }
@@ -130,6 +117,42 @@ export interface WasmPseudoterminal extends Pseudoterminal {
 	prompt(prompt: string): Promise<void>;
 }
 
+/**
+ * A writable stream.
+ *
+ * This interface is not intended to be implemented. Instances of this
+ * interface are available via `Wasm.createWritable`.
+ */
+export interface Writable {
+
+	/**
+	 * Write some data to the stream.
+	 * @param chunk The data to write.
+	 */
+	write(chunk: Uint8Array): Promise<void>;
+
+	/**
+	 * Write a string to the stream.
+	 * @param chunk The string to write.
+	 * @param encoding The encoding to use to convert to a binary format.
+	 */
+	write(chunk: string, encoding?: 'utf-8'): Promise<void>;
+}
+
+/**
+ * A readable stream.
+ *
+ * This interface is not intended to be implemented. Instances of this
+ * interface are available via `Wasm.createReadable`.
+ */
+export interface Readable {
+	onData: Event<Uint8Array>;
+}
+
+/**
+ * A stdio descriptor denoting a file in a WASM
+ * file system.
+ */
 export type StdioFileDescriptor = {
 	kind: 'file';
 	path: string;
@@ -137,25 +160,46 @@ export type StdioFileDescriptor = {
 	fdflags?: fdflags;
 };
 
+/**
+ * A stdio descriptor denoting a WASM Pseudo terminal.
+ */
 export type StdioTerminalDescriptor = {
 	kind: 'terminal';
 	terminal: WasmPseudoterminal;
 };
 
-export type StdioPipeDescriptor = {
-	kind: 'pipe';
+/**
+ * A stdio descriptor denoting a pipe that is used to
+ * write to the WASM process.
+ */
+export type StdioPipeInDescriptor = {
+	kind: 'pipeIn';
+	pipe?: Writable;
 };
 
+/**
+ * A stdio descriptor denoting a pipe that is used to
+ * read from the WASM process.
+ */
+export type StdioPipeOutDescriptor = {
+	kind: 'pipeOut';
+	pipe?: Readable;
+};
+
+/**
+ * A stdio descriptor denoting the console.
+ */
 export type StdioConsoleDescriptor = {
 	kind: 'console';
 };
 
-export type StdioDescriptor = StdioFileDescriptor | StdioTerminalDescriptor | StdioPipeDescriptor | StdioConsoleDescriptor;
-
+/**
+ * Stdio setup for a WASM process.
+ */
 export type Stdio = {
-	in?: StdioDescriptor;
-	out?: StdioDescriptor;
-	err?: StdioDescriptor;
+	in?: StdioFileDescriptor | StdioTerminalDescriptor | StdioPipeInDescriptor;
+	out?: StdioFileDescriptor | StdioTerminalDescriptor | StdioConsoleDescriptor | StdioPipeOutDescriptor;
+	err?: StdioFileDescriptor | StdioTerminalDescriptor | StdioConsoleDescriptor | StdioPipeOutDescriptor;
 };
 
 /**
@@ -173,7 +217,7 @@ export type WorkspaceFolderDescriptor = {
 export type ExtensionLocationDescriptor = {
 	kind: 'extensionLocation';
 	extension: ExtensionContext | Extension<any>;
-	path?: string;
+	path: string;
 	mountPoint: string;
 };
 
@@ -197,14 +241,20 @@ export type InMemoryFileSystemDescriptor = {
 	mountPoint: string;
 };
 
+/**
+ * The union of all mount point descriptors.
+ */
 export type MountPointDescriptor = WorkspaceFolderDescriptor | ExtensionLocationDescriptor | VSCodeFileSystemDescriptor | InMemoryFileSystemDescriptor;
 
+/**
+ * Options for a WASM process.
+ */
 export interface ProcessOptions {
 
 	/**
 	 * The encoding to use when decoding strings from and to the WASM layer.
 	 *
-	 * Currently we only have support for utf8 since this is the only encoding
+	 * Currently we only have support for utf-8 since this is the only encoding
 	 * that browsers currently support natively.
 	 */
 	encoding?: 'utf-8';
@@ -230,25 +280,29 @@ export interface ProcessOptions {
 	stdio?: Stdio;
 
 	/**
-	 * Enable WASM/WASI API tracing.
+	 * Whether the WASM/WASI API should be traced or not.
 	 */
-	trace?: true;
+	trace?: boolean;
 }
 
-export interface Writable {
-	write(chunk: Uint8Array | string): Promise<void>;
-}
-
-export interface Readable {
-	onData: Event<Uint8Array>;
-}
-
+/**
+ * A WASM process.
+ */
 export interface WasmProcess {
 
+	/**
+	 * The stdin of the WASM process or undefined if not available.
+	 */
 	readonly stdin: Writable | undefined;
 
+	/**
+	 * The stdout of the WASM process or undefined if not available.
+	 */
 	readonly stdout: Readable | undefined;
 
+	/**
+	 * The stderr of the WASM process or undefined if not available.
+	 */
 	readonly stderr: Readable | undefined;
 
 	/**
@@ -260,6 +314,19 @@ export interface WasmProcess {
 	 * Terminate the Wasm process.
 	 */
 	 terminate(): Promise<number>;
+}
+
+export type filetype = u8;
+export namespace Filetype {
+	/**
+	 * The file descriptor or file refers to a directory inode.
+	 */
+	export const directory = 3;
+
+	/**
+	 * The file descriptor or file refers to a regular file inode.
+	 */
+	export const regular_file = 4;
 }
 
 /**
@@ -277,7 +344,7 @@ export interface DirectoryNode {
 }
 
 /**
- * The memory file system. Currently read only.
+ * The memory file system.
  */
 export interface MemoryFileSystem {
 	readonly uri: Uri;
@@ -302,6 +369,21 @@ export interface Wasm {
 	 * Creates a new in-memory file system.
 	 */
 	createInMemoryFileSystem(): MemoryFileSystem;
+
+	/**
+	 * Creates a new WASM file system.
+	 */
+	createWasmFileSystem(descriptors: MountPointDescriptor[]): Promise<WasmFileSystem>;
+
+	/**
+	 * Creates a new readable stream.
+	 */
+	createReadable(): Readable;
+
+	/**
+	 * Creates a new writable stream.
+	 */
+	createWritable(encoding?: 'utf-8'): Writable;
 
 	/**
 	 * Creates a new WASM process.

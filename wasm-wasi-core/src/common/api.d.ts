@@ -53,6 +53,12 @@ export interface WasmPseudoterminal extends Pseudoterminal {
 	prompt(prompt: string): Promise<void>;
 }
 
+/**
+ * A writable stream.
+ *
+ * This interface is not intended to be implemented. Instances of this
+ * interface are available via `Wasm.createWritable`.
+ */
 export interface Writable {
 
 	/**
@@ -69,10 +75,20 @@ export interface Writable {
 	write(chunk: string, encoding?: 'utf-8'): Promise<void>;
 }
 
+/**
+ * A readable stream.
+ *
+ * This interface is not intended to be implemented. Instances of this
+ * interface are available via `Wasm.createReadable`.
+ */
 export interface Readable {
 	onData: Event<Uint8Array>;
 }
 
+/**
+ * A stdio descriptor denoting a file in a WASM
+ * file system.
+ */
 export type StdioFileDescriptor = {
 	kind: 'file';
 	path: string;
@@ -80,26 +96,46 @@ export type StdioFileDescriptor = {
 	fdflags?: fdflags;
 };
 
+/**
+ * A stdio descriptor denoting a WASM Pseudo terminal.
+ */
 export type StdioTerminalDescriptor = {
 	kind: 'terminal';
 	terminal: WasmPseudoterminal;
 };
 
-export type StdioPipeReadDescriptor = {
-	kind: 'pipeRead';
-	
+/**
+ * A stdio descriptor denoting a pipe that is used to
+ * write to the WASM process.
+ */
+export type StdioPipeInDescriptor = {
+	kind: 'pipeIn';
+	pipe?: Writable;
 };
 
+/**
+ * A stdio descriptor denoting a pipe that is used to
+ * read from the WASM process.
+ */
+export type StdioPipeOutDescriptor = {
+	kind: 'pipeOut';
+	pipe?: Readable;
+};
+
+/**
+ * A stdio descriptor denoting the console.
+ */
 export type StdioConsoleDescriptor = {
 	kind: 'console';
 };
 
-export type StdioDescriptor = StdioFileDescriptor | StdioTerminalDescriptor | StdioPipeDescriptor | StdioConsoleDescriptor;
-
+/**
+ * Stdio setup for a WASM process.
+ */
 export type Stdio = {
-	in?: StdioDescriptor;
-	out?: StdioDescriptor;
-	err?: StdioDescriptor;
+	in?: StdioFileDescriptor | StdioTerminalDescriptor | StdioPipeInDescriptor;
+	out?: StdioFileDescriptor | StdioTerminalDescriptor | StdioConsoleDescriptor | StdioPipeOutDescriptor;
+	err?: StdioFileDescriptor | StdioTerminalDescriptor | StdioConsoleDescriptor | StdioPipeOutDescriptor;
 };
 
 /**
@@ -141,8 +177,14 @@ export type InMemoryFileSystemDescriptor = {
 	mountPoint: string;
 };
 
+/**
+ * The union of all mount point descriptors.
+ */
 export type MountPointDescriptor = WorkspaceFolderDescriptor | ExtensionLocationDescriptor | VSCodeFileSystemDescriptor | InMemoryFileSystemDescriptor;
 
+/**
+ * Options for a WASM process.
+ */
 export interface ProcessOptions {
 
 	/**
@@ -179,12 +221,24 @@ export interface ProcessOptions {
 	trace?: boolean;
 }
 
+/**
+ * A WASM process.
+ */
 export interface WasmProcess {
 
+	/**
+	 * The stdin of the WASM process or undefined if not available.
+	 */
 	readonly stdin: Writable | undefined;
 
+	/**
+	 * The stdout of the WASM process or undefined if not available.
+	 */
 	readonly stdout: Readable | undefined;
 
+	/**
+	 * The stderr of the WASM process or undefined if not available.
+	 */
 	readonly stderr: Readable | undefined;
 
 	/**
@@ -256,6 +310,16 @@ export interface Wasm {
 	 * Creates a new WASM file system.
 	 */
 	createWasmFileSystem(descriptors: MountPointDescriptor[]): Promise<WasmFileSystem>;
+
+	/**
+	 * Creates a new readable stream.
+	 */
+	createReadable(): Readable;
+
+	/**
+	 * Creates a new writable stream.
+	 */
+	createWritable(encoding?: 'utf-8'): Writable;
 
 	/**
 	 * Creates a new WASM process.
