@@ -37,7 +37,7 @@
 		]
 	},
 	"dependencies": {
-		"@vscode/wasm-wasi": "file:../wasm-wasi/vscode-wasm-wasi-0.11.0.tgz"
+		"@vscode/wasm-wasi": "0.11.0"
 	},
 	"devDependencies": {
 		"@types/vscode": "1.78.0"
