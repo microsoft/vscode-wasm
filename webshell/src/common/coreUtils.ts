@@ -6,132 +6,135 @@ import { ExtensionContext, Uri } from 'vscode';
 
 import RAL from './ral';
 import { HandlerTarget } from './types';
-import { Wasm, WasmPseudoterminal } from '@vscode/wasm-wasi';
+import { MountPointDescriptor, ProcessOptions, Stdio, Wasm } from '@vscode/wasm-wasi';
 
-let _coreutils: Promise<WebAssembly.Module> | undefined;
-function coreutils(context: ExtensionContext): Promise<WebAssembly.Module> {
-	if (!_coreutils) {
-		_coreutils = RAL().coreUtils.load(context);
+export class CoreUtils {
+
+	private readonly context: ExtensionContext;
+	private coreUtils: Promise<WebAssembly.Module> | undefined;
+
+	constructor(context: ExtensionContext) {
+		this.context = context;
 	}
-	return _coreutils;
-}
 
-async function executeWithFileSystem(context: ExtensionContext, wasm: Wasm, pty: WasmPseudoterminal, needsNewLine: boolean, command: string, args: string[], cwd: string, addCwd: boolean = false): Promise<number> {
-	const module = await coreutils(context);
-	const path = RAL().path;
-	let fileFound: boolean = false;
-	const newArgs = args.map((arg) => {
-		if (arg.startsWith('-')) {
-			return arg;
-		} else {
-			fileFound = true;
-			return path.isAbsolute(arg) ? arg : path.join(cwd, arg);
+	public contributeHandlers(wasm: Wasm, target: HandlerTarget): void {
+		target.registerCommandHandler('basenc', async (command, args, cwd, stdio, mapDir) => {
+			return this.executeWithFileSystem(wasm, command, args, cwd, false, stdio, mapDir);
+		});
+		target.registerCommandHandler('cat', async (command, args, cwd, stdio, mapDir) => {
+			return this.executeWithFileSystem(wasm, command, args, cwd, false, stdio, mapDir);
+		});
+		target.registerCommandHandler('comm', async (command, args, cwd, stdio, mapDir) => {
+			return this.executeWithFileSystem(wasm, command, args, cwd, false, stdio, mapDir);
+		});
+		target.registerCommandHandler('cp', async (command, args, cwd, stdio, mapDir) => {
+			return this.executeWithFileSystem(wasm, command, args, cwd, false, stdio, mapDir);
+		});
+		target.registerCommandHandler('date', async (command, args, _cwd, stdio, _mapDir) => {
+			return this.executeWithoutFileSystem(wasm, command, args, stdio);
+		});
+		target.registerCommandHandler('dir', async (command, args, cwd, stdio, mapDir) => {
+			return this.executeWithFileSystem(wasm, command, args, cwd, true, stdio, mapDir);
+		});
+		target.registerCommandHandler('echo', async (command, args, _cwd, stdio, _mapDir) => {
+			return this.executeWithoutFileSystem(wasm, command, args, stdio);
+		});
+		target.registerCommandHandler('expand', async (command, args, cwd, stdio, mapDir) => {
+			return this.executeWithFileSystem(wasm, command, args, cwd, false, stdio, mapDir);
+		});
+		target.registerCommandHandler('factor', async (command, args, _cwd, stdio, _mapDir) => {
+			return this.executeWithoutFileSystem(wasm, command, args, stdio);
+		});
+		target.registerCommandHandler('head', async (command, args, cwd, stdio, mapDir) => {
+			return this.executeWithFileSystem(wasm, command, args, cwd, false, stdio, mapDir);
+		});
+		target.registerCommandHandler('ls', async (command, args, cwd, stdio, mapDir) => {
+			return this.executeWithFileSystem(wasm, command, args, cwd, true, stdio, mapDir);
+		});
+		target.registerCommandHandler('mkdir', async (command, args, cwd, stdio, mapDir) => {
+			return this.executeWithFileSystem(wasm, command, args, cwd, false, stdio, mapDir);
+		});
+		target.registerCommandHandler('mv', async (command, args, cwd, stdio, mapDir) => {
+			return this.executeWithFileSystem(wasm, command, args, cwd, false, stdio, mapDir);
+		});
+		target.registerCommandHandler('printenv', async (command, args, _cwd, stdio, _mapDir) => {
+			return this.executeWithoutFileSystem(wasm, command, args, stdio);
+		});
+		target.registerCommandHandler('realpath', async (command, args, cwd, stdio, mapDir) => {
+			return this.executeWithFileSystem(wasm, command, args, cwd, false, stdio, mapDir);
+		});
+		target.registerCommandHandler('rm', async (command, args, cwd, stdio, mapDir) => {
+			return this.executeWithFileSystem(wasm, command, args, cwd, false, stdio, mapDir);
+		});
+		target.registerCommandHandler('rmdir', async (command, args, cwd, stdio, mapDir) => {
+			return this.executeWithFileSystem(wasm, command, args, cwd, false, stdio, mapDir);
+		});
+		target.registerCommandHandler('sleep', async (command, args, _cwd, stdio, _mapDir) => {
+			return this.executeWithoutFileSystem(wasm, command, args, stdio);
+		});
+		target.registerCommandHandler('tail', async (command, args, cwd, stdio, mapDir) => {
+			return this.executeWithFileSystem(wasm, command, args, cwd, false, stdio, mapDir);
+		});
+		target.registerCommandHandler('touch', async (command, args, cwd, stdio, mapDir) => {
+			return this.executeWithFileSystem(wasm, command, args, cwd, false, stdio, mapDir);
+		});
+		target.registerCommandHandler('unexpand', async (command, args, cwd, stdio, mapDir) => {
+			return this.executeWithFileSystem(wasm, command, args, cwd, false, stdio, mapDir);
+		});
+		target.registerCommandHandler('unlink', async (command, args, cwd, stdio, mapDir) => {
+			return this.executeWithFileSystem(wasm, command, args, cwd, false, stdio, mapDir);
+		});
+		target.registerCommandHandler('vdir', async (command, args, cwd, stdio, mapDir) => {
+			return this.executeWithFileSystem(wasm, command, args, cwd, true, stdio, mapDir);
+		});
+		target.registerCommandHandler('wc', async (command, args, cwd, stdio, mapDir) => {
+			return this.executeWithFileSystem(wasm, command, args, cwd, false, stdio, mapDir);
+		});
+	}
+
+	private getCoreUtils(): Promise<WebAssembly.Module> {
+		if (this.coreUtils !== undefined) {
+			return this.coreUtils;
 		}
-
-	});
-	newArgs.unshift(command);
-	if (!fileFound && addCwd) {
-		newArgs.push(cwd);
+		const uri = Uri.joinPath(this.context.extensionUri, 'wasm', 'coreutils.wasm');
+		this.coreUtils = RAL().webAssembly.compile(uri);
+		return this.coreUtils;
 	}
-	const process = await wasm.createProcess('coreutils', module, {
-		stdio: pty.stdio, args: newArgs,
-		mapDir: {
-			folders: true,
-			entries: [
-				{
-					vscode_fs: Uri.file(path.join(path.sep, 'home', 'dirkb', 'bin', 'wasm', 'Python-3.11.3', 'lib', 'python3.11')),
-					mountPoint: path.join(path.sep, 'usr', 'local', 'lib', 'python3.11')
-				}
-			]
+
+	private async executeWithFileSystem(wasm: Wasm, command: string, args: string[], cwd: string, addCwd: boolean, stdio: Stdio, mountPoints: MountPointDescriptor[] | undefined): Promise<number> {
+		const module = await this.getCoreUtils();
+		const path = RAL().path;
+		let fileFound: boolean = false;
+		const newArgs = args.map((arg) => {
+			if (arg.startsWith('-')) {
+				return arg;
+			} else {
+				fileFound = true;
+				return path.isAbsolute(arg) ? arg : path.join(cwd, arg);
+			}
+
+		});
+		newArgs.unshift(command);
+		if (!fileFound && addCwd) {
+			newArgs.push(cwd);
 		}
-	});
-
-	const result = await process.run();
-	if (needsNewLine) {
-		await pty.write('\r\n');
+		const _mountPoints: MountPointDescriptor[] = [ { kind: 'workspaceFolder'}, ...(mountPoints ?? [])];
+		const options: ProcessOptions = {
+			args: newArgs,
+			stdio,
+			mountPoints: _mountPoints,
+			trace: true
+		};
+		const process = await wasm.createProcess('coreutils', module, options);
+		const result = await process.run();
+		return result;
 	}
-	return result;
-}
 
-async function executeWithoutFileSystem(context: ExtensionContext, wasm: Wasm, pty: WasmPseudoterminal, command: string, args: string[]): Promise<number> {
-	const module = await coreutils(context);
-	const newArgs = [command].concat(args);
-	const process = await wasm.createProcess('coreutils', module, { stdio: pty.stdio, args: newArgs });
-	const result = await process.run();
-	return result;
-}
-
-export function contributeHandlers(context: ExtensionContext, wasm: Wasm, target: HandlerTarget): void {
-	target.registerCommandHandler('basenc', async (pty, command, args, cwd) => {
-		return executeWithFileSystem(context, wasm, pty, true, command, args, cwd);
-	});
-	target.registerCommandHandler('cat', async (pty, command, args, cwd) => {
-		return executeWithFileSystem(context, wasm, pty, true, command, args, cwd);
-	});
-	target.registerCommandHandler('comm', async (pty, command, args, cwd) => {
-		return executeWithFileSystem(context, wasm, pty, false, command, args, cwd);
-	});
-	target.registerCommandHandler('cp', async (pty, command, args, cwd) => {
-		return executeWithFileSystem(context, wasm, pty, false, command, args, cwd);
-	});
-	target.registerCommandHandler('date', async (pty, command, args, _cwd) => {
-		return executeWithoutFileSystem(context, wasm, pty, command, args);
-	});
-	target.registerCommandHandler('dir', async (pty, command, args, cwd) => {
-		return executeWithFileSystem(context, wasm, pty, false, command, args, cwd, true);
-	});
-	target.registerCommandHandler('echo', async (pty, command, args, _cwd) => {
-		return executeWithoutFileSystem(context, wasm, pty, command, args);
-	});
-	target.registerCommandHandler('expand', async (pty, command, args, cwd) => {
-		return executeWithFileSystem(context, wasm, pty, true, command, args, cwd);
-	});
-	target.registerCommandHandler('factor', async (pty, command, args, _cwd) => {
-		return executeWithoutFileSystem(context, wasm, pty, command, args);
-	});
-	target.registerCommandHandler('head', async (pty, command, args, cwd) => {
-		return executeWithFileSystem(context, wasm, pty, true, command, args, cwd);
-	});
-	target.registerCommandHandler('ls', async (pty, command, args, cwd) => {
-		return executeWithFileSystem(context, wasm, pty, false, command, args, cwd, true);
-	});
-	target.registerCommandHandler('mkdir', async (pty, command, args, cwd) => {
-		return executeWithFileSystem(context, wasm, pty, false, command, args, cwd);
-	});
-	target.registerCommandHandler('mv', async (pty, command, args, cwd) => {
-		return executeWithFileSystem(context, wasm, pty, false, command, args, cwd);
-	});
-	target.registerCommandHandler('printenv', async (pty, command, args, _cwd) => {
-		return executeWithoutFileSystem(context, wasm, pty, command, args);
-	});
-	target.registerCommandHandler('realpath', async (pty, command, args, cwd) => {
-		return executeWithFileSystem(context, wasm, pty, false, command, args, cwd);
-	});
-	target.registerCommandHandler('rm', async (pty, command, args, cwd) => {
-		return executeWithFileSystem(context, wasm, pty, false, command, args, cwd);
-	});
-	target.registerCommandHandler('rmdir', async (pty, command, args, cwd) => {
-		return executeWithFileSystem(context, wasm, pty, false, command, args, cwd);
-	});
-	target.registerCommandHandler('sleep', async (pty, command, args, _cwd) => {
-		return executeWithoutFileSystem(context, wasm, pty, command, args);
-	});
-	target.registerCommandHandler('tail', async (pty, command, args, cwd) => {
-		return executeWithFileSystem(context, wasm, pty, true, command, args, cwd);
-	});
-	target.registerCommandHandler('touch', async (pty, command, args, cwd) => {
-		return executeWithFileSystem(context, wasm, pty, false, command, args, cwd);
-	});
-	target.registerCommandHandler('unexpand', async (pty, command, args, cwd) => {
-		return executeWithFileSystem(context, wasm, pty, true, command, args, cwd);
-	});
-	target.registerCommandHandler('unlink', async (pty, command, args, cwd) => {
-		return executeWithFileSystem(context, wasm, pty, false, command, args, cwd);
-	});
-	target.registerCommandHandler('vdir', async (pty, command, args, cwd) => {
-		return executeWithFileSystem(context, wasm, pty, false, command, args, cwd, true);
-	});
-	target.registerCommandHandler('wc', async (pty, command, args, cwd) => {
-		return executeWithFileSystem(context, wasm, pty, false, command, args, cwd);
-	});
+	private async executeWithoutFileSystem(wasm: Wasm, command: string, args: string[], stdio: Stdio): Promise<number> {
+		const module = await this.getCoreUtils();
+		const newArgs = [command].concat(args);
+		const process = await wasm.createProcess('coreutils', module, { stdio: stdio, args: newArgs, trace: true });
+		const result = await process.run();
+		return result;
+	}
 }

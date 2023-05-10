@@ -78,7 +78,7 @@ export async function cleanupWorkspaceContent(workspaceContent: WorkspaceContent
 export function createWasiService(workspaceContent: WorkspaceContent): WasiService {
 	const fileDescriptors: FileDescriptors = new FileDescriptors();
 	const deviceDrivers = WasiKernel.deviceDrivers;
-	const fileSystem = vscfs.create(deviceDrivers.next(), workspaceContent.root);
+	const fileSystem = vscfs.create(WasiKernel.nextDeviceId(), workspaceContent.root);
 	deviceDrivers.add(fileSystem);
 	const preOpenDirectories: Map<string, FileSystemDeviceDriver> =  new Map([
 		['/workspace', fileSystem]

@@ -78,7 +78,7 @@ async function go() {
 			extensionTestsEnv
 		});
 	} catch (err) {
-		console.error('Failed to run tests');
+		console.error('Failed to run tests', err);
 		process.exitCode = 1;
 	} finally {
 		rimraf(testDir);

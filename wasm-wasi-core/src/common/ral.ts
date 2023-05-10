@@ -3,7 +3,7 @@
  * Licensed under the MIT License. See License.txt in the project root for license information.
  * ------------------------------------------------------------------------------------------ */
 
-import { Disposable } from 'vscode';
+import type { Disposable } from 'vscode';
 
 interface _TextEncoder {
 	encode(input?: string): Uint8Array;
@@ -54,6 +54,7 @@ interface RAL {
 
 	readonly path: {
 		readonly sep: string;
+		basename(path: string): string;
 		dirname(path: string): string;
 		join(...paths: string[]): string;
 		normalize(path: string): string;

@@ -2,10 +2,9 @@
  * Copyright (c) Microsoft Corporation. All rights reserved.
  * Licensed under the MIT License. See License.txt in the project root for license information.
  * ------------------------------------------------------------------------------------------ */
-import { Disposable } from 'vscode';
+import type { Disposable } from 'vscode';
 
 import RAL from '../common/ral';
-
 import * as path from './path';
 
 interface RIL extends RAL {

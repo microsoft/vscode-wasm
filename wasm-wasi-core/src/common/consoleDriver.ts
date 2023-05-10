@@ -4,7 +4,7 @@
  *--------------------------------------------------------------------------------------------*/
 import { size } from './baseTypes';
 import { fd, fdflags, fdstat, filestat, Filetype, Rights, rights } from './wasi';
-import { CharacterDeviceDriver, DeviceId, NoSysDeviceDriver } from './deviceDriver';
+import { CharacterDeviceDriver, DeviceDriverKind, DeviceId, NoSysDeviceDriver } from './deviceDriver';
 import { BaseFileDescriptor, FileDescriptor } from './fileDescriptor';
 import RAL from './ral';
 import { Uri } from 'vscode';
@@ -34,7 +34,8 @@ export function create(deviceId: DeviceId): CharacterDeviceDriver {
 		return new ConsoleFileDescriptor(deviceId, fd, ConsoleBaseRights, ConsoleInheritingRights, 0, inodeCounter++);
 	}
 
-	const deviceDriver: Pick<CharacterDeviceDriver, 'id' | 'uri' | 'createStdioFileDescriptor' | 'fd_fdstat_get' | 'fd_filestat_get' | 'fd_write'> = {
+	const deviceDriver: Pick<CharacterDeviceDriver, 'kind' | 'id' | 'uri' | 'createStdioFileDescriptor' | 'fd_fdstat_get' | 'fd_filestat_get' | 'fd_write'> = {
+		kind: DeviceDriverKind.character,
 		id: deviceId,
 		uri: uri,
 		createStdioFileDescriptor(fd: 0 | 1 | 2): FileDescriptor {

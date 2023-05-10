@@ -256,17 +256,19 @@ const wasm_wasi_core = {
 const wasm_wasi = {
 	name: 'wasm-wasi',
 	path: './wasm-wasi',
-	extends: [ common, vscodeMixin ],
 	out: {
 		dir: './lib',
 		buildInfoFile: '${buildInfoFile}.tsbuildInfo'
 	},
-	compilerOptions: {
-		rootDir: './src',
-	},
-	exclude: [
-		"./lib",
-		"./example"
+	sourceFolders: [
+		{
+			path: './src/api',
+			extends: [ common, vscodeMixin ],
+		},
+		{
+			path: './src/tools',
+			extends: [ node ],
+		}
 	]
 }
 

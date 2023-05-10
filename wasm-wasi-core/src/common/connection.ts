@@ -24,6 +24,7 @@ export interface StartMainMessage {
 	readonly method: 'startMain';
 	readonly module: WebAssembly.Module;
 	readonly memory?: WebAssembly.Memory;
+	readonly trace?: boolean;
 }
 export namespace StartMainMessage {
 	export function is(message: ServiceMessage): message is StartMainMessage {
@@ -38,6 +39,7 @@ export interface StartThreadMessage {
 	readonly memory: WebAssembly.Memory;
 	readonly tid: u32;
 	readonly start_arg: ptr;
+	readonly trace?: boolean;
 }
 export namespace StartThreadMessage {
 	export function is(message: ServiceMessage): message is StartThreadMessage {
@@ -68,6 +70,29 @@ export namespace WorkerDoneMessage {
 	}
 }
 
+export interface TraceMessage {
+	readonly method: 'trace';
+	readonly message: string;
+	readonly timeTaken: number;
+}
+export namespace TraceMessage {
+	export function is(message: WorkerMessage): message is TraceMessage {
+		const candidate = message as TraceMessage;
+		return candidate && candidate.method === 'trace';
+	}
+}
+
+export interface TraceSummaryMessage {
+	readonly method: 'traceSummary';
+	readonly summary: string[];
+}
+export namespace TraceSummaryMessage {
+	export function is(message: WorkerMessage): message is TraceSummaryMessage {
+		const candidate = message as TraceSummaryMessage;
+		return candidate && candidate.method === 'traceSummary';
+	}
+}
+
 export type WasiCallMessage = [SharedArrayBuffer, SharedArrayBuffer];
 export namespace WasiCallMessage {
 	export function is(message: WorkerMessage): message is WasiCallMessage {
@@ -75,7 +100,7 @@ export namespace WasiCallMessage {
 	}
 }
 
-export type WorkerMessage = WasiCallMessage | WorkerReadyMessage | WorkerDoneMessage | { method: string };
+export type WorkerMessage = WasiCallMessage | WorkerReadyMessage | WorkerDoneMessage | TraceMessage | TraceSummaryMessage | { method: string };
 
 export interface CapturedPromise<T> {
 	promise: Promise<T>;

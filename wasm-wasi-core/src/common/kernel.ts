@@ -3,14 +3,21 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { Uri } from 'vscode';
+import { Uri, WorkspaceFolder, WorkspaceFoldersChangeEvent, extensions, workspace } from 'vscode';
 
-import { DeviceDriver, DeviceId } from './deviceDriver';
+import RAL from './ral';
+import type { ExtensionLocationDescriptor, InMemoryFileSystemDescriptor, VSCodeFileSystemDescriptor, MountPointDescriptor } from './api';
+import type { DeviceDriver, DeviceId, FileSystemDeviceDriver } from './deviceDriver';
+import type { FileDescriptors } from './fileDescriptor';
+
 import { Errno, WasiError } from './wasi';
 import * as ConsoleDriver from './consoleDriver';
+import * as vscfs from './vscodeFileSystemDriver';
+import * as extlocfs from './extLocFileSystem';
+import * as memfs from './memoryFileSystem';
+import * as vrfs from './virtualRootFS';
 
 export interface DeviceDrivers {
-	next(): DeviceId;
 	add(driver: DeviceDriver): void;
 	has (id: DeviceId): boolean;
 	hasByUri(uri: Uri): boolean;
@@ -24,8 +31,6 @@ export interface DeviceDrivers {
 	[Symbol.iterator](): IterableIterator<[bigint, DeviceDriver]>;
 }
 
-let deviceCounter: DeviceId = 1n;
-
 class DeviceDriversImpl {
 
 	private readonly devices: Map<DeviceId, DeviceDriver>;
@@ -34,10 +39,6 @@ class DeviceDriversImpl {
 	public constructor() {
 		this.devices = new Map();
 		this.devicesByUri = new Map();
-	}
-
-	public next(): DeviceId {
-		return deviceCounter++;
 	}
 
 	public add(driver: DeviceDriver): void {
@@ -115,10 +116,6 @@ class LocalDeviceDrivers implements DeviceDrivers {
 		this.nextDrivers = next;
 		this.devices = new Map();
 		this.devicesByUri = new Map();
-	}
-
-	public next(): bigint {
-		return this.nextDrivers.next();
 	}
 
 	public add(driver: DeviceDriver): void {
@@ -228,9 +225,365 @@ class LocalDeviceDrivers implements DeviceDrivers {
 	}
 }
 
+type ExtensionDataFileSystem = {
+	id: string;
+	kind: 'extensionData';
+	path: string;
+	mountPoint: string;
+};
+namespace ExtensionDataFileSystem {
+	export function is(value: any): value is Omit<ExtensionDataFileSystem, 'extension'> {
+		const candidate = value as ExtensionDataFileSystem;
+		return candidate && candidate.kind === 'extensionData' && typeof candidate.id === 'string' && typeof candidate.path === 'string' && typeof candidate.mountPoint === 'string';
+	}
+}
+
+type FileSystem = ExtensionDataFileSystem;
+
+namespace FileSystem {
+	export function is(value: any): value is FileSystem {
+		return ExtensionDataFileSystem.is(value);
+	}
+}
+
+function getSegments(path: string): string[] {
+	if (path.charAt(0) === '/') { path = path.substring(1); }
+	if (path.charAt(path.length - 1) === '/') { path = path.substring(0, path.length - 1); }
+	return path.normalize().split('/');
+}
+
+namespace MapDirDescriptors {
+	export function isExtensionLocation(descriptor: MountPointDescriptor): descriptor is ExtensionLocationDescriptor {
+		return descriptor.kind === 'extensionLocation';
+	}
+	export function isInMemoryDescriptor(descriptor: MountPointDescriptor): descriptor is InMemoryFileSystemDescriptor {
+		return descriptor.kind === 'inMemoryFileSystem';
+	}
+	export function isVSCodeFileSystemDescriptor(descriptor: MountPointDescriptor): descriptor is VSCodeFileSystemDescriptor {
+		return descriptor.kind === 'vscodeFileSystem';
+	}
+	export function getExtensionLocationKey(descriptor: ExtensionLocationDescriptor): Uri {
+		return Uri.joinPath(descriptor.extension.extensionUri, ...getSegments(descriptor.path));
+	}
+	export function getInMemoryKey(descriptor: InMemoryFileSystemDescriptor): Uri {
+		return descriptor.fileSystem.uri;
+	}
+	export function getVScodeFileSystemKey(descriptor: VSCodeFileSystemDescriptor): Uri {
+		return descriptor.uri;
+	}
+	export function key(descriptor: VSCodeFileSystemDescriptor | ExtensionLocationDescriptor | InMemoryFileSystemDescriptor): Uri {
+		switch (descriptor.kind) {
+			case 'extensionLocation':
+				return getExtensionLocationKey(descriptor);
+			case 'inMemoryFileSystem':
+				return getInMemoryKey(descriptor);
+			case 'vscodeFileSystem':
+				return getVScodeFileSystemKey(descriptor);
+			default:
+				throw new Error(`Unknown MapDirDescriptor kind ${JSON.stringify(descriptor, undefined, 0)}`);
+		}
+	}
+	export function getDescriptors(descriptors: MountPointDescriptor[] | undefined) : { extensions: ExtensionLocationDescriptor[]; vscodeFileSystems: VSCodeFileSystemDescriptor[]; inMemoryFileSystems: InMemoryFileSystemDescriptor[]} {
+		const extensions: ExtensionLocationDescriptor[] = [];
+		const vscodeFileSystems: VSCodeFileSystemDescriptor[] = [];
+		const inMemoryFileSystems: InMemoryFileSystemDescriptor[] = [];
+		if (descriptors === undefined) {
+			return { extensions, vscodeFileSystems, inMemoryFileSystems };
+		}
+		for (const descriptor of descriptors) {
+			if (descriptor.kind === 'workspaceFolder') {
+				const folders = workspace.workspaceFolders;
+				if (folders !== undefined) {
+					if (folders.length === 1) {
+						vscodeFileSystems.push(mapWorkspaceFolder(folders[0], true));
+					} else {
+						for (const folder of folders) {
+							vscodeFileSystems.push(mapWorkspaceFolder(folder, false));
+						}
+					}
+				}
+			} else if (descriptor.kind === 'extensionLocation') {
+				extensions.push(descriptor);
+			} else if (descriptor.kind === 'vscodeFileSystem') {
+				vscodeFileSystems.push(descriptor);
+			} else if (descriptor.kind === 'inMemoryFileSystem') {
+				inMemoryFileSystems.push(descriptor);
+			}
+		}
+		return { extensions, vscodeFileSystems, inMemoryFileSystems };
+	}
+
+	function mapWorkspaceFolder(folder: WorkspaceFolder, single: boolean): VSCodeFileSystemDescriptor {
+		const path = RAL().path;
+		const mountPoint: string = single
+			? path.join(path.sep, 'workspace')
+			: path.join(path.sep, 'workspaces', folder.name);
+
+		return { kind: 'vscodeFileSystem', uri: folder.uri, mountPoint };
+	}
+}
+
+export enum ManageKind {
+	no = 1,
+	yes = 2,
+	default = 3
+}
+
+export interface RootFileSystemInfo {
+	fileSystem: FileSystemDeviceDriver;
+	deviceDrivers: DeviceDrivers;
+	preOpens: Map<string, FileSystemDeviceDriver>;
+}
+
+class FileSystems {
+
+	private readonly contributionIdToUri: Map<string, Uri>;
+	private contributedFileSystems: Map<string, MountPointDescriptor>;
+	private readonly fileSystemDeviceDrivers: Map<string, FileSystemDeviceDriver>;
+
+	constructor() {
+		this.contributionIdToUri = new Map();
+		this.contributedFileSystems = new Map();
+		this.fileSystemDeviceDrivers = new Map();
+
+		// Handle workspace folders
+		this.parseWorkspaceFolders();
+		workspace.onDidChangeWorkspaceFolders(event => this.handleWorkspaceFoldersChanged(event));
+
+		const fileSystems = this.parseFileSystems();
+		for (const fileSystem of fileSystems) {
+			this.contributedFileSystems.set(fileSystem.id.toString(), fileSystem.mapDir);
+			this.contributionIdToUri.set(fileSystem.contributionId, fileSystem.id);
+		}
+		extensions.onDidChange(() => this.handleExtensionsChanged());
+	}
+
+	public async getFileSystem(uri: Uri): Promise<FileSystemDeviceDriver | undefined> {
+		const key = uri.toString();
+		let result = this.fileSystemDeviceDrivers.get(key);
+		if (result !== undefined) {
+			return result;
+		}
+		const mapDir = this.contributedFileSystems.get(key);
+		if (mapDir !== undefined) {
+			if (mapDir.kind === 'extensionLocation') {
+				try {
+					const result = await this.createExtensionLocationFileSystem(mapDir);
+					this.fileSystemDeviceDrivers.set(key, result);
+				} catch (error) {
+					return undefined;
+				}
+			}
+		}
+		return undefined;
+	}
+
+	public async createRootFileSystem(fileDescriptors: FileDescriptors, descriptors: MountPointDescriptor[]): Promise<RootFileSystemInfo> {
+		const fileSystems: FileSystemDeviceDriver[] = [];
+		const preOpens: Map<string, FileSystemDeviceDriver> = new Map();
+		const { extensions, vscodeFileSystems, inMemoryFileSystems } = MapDirDescriptors.getDescriptors(descriptors);
+		if (extensions.length > 0) {
+			for (const descriptor of extensions) {
+				const key = MapDirDescriptors.getExtensionLocationKey(descriptor);
+				let fs = this.fileSystemDeviceDrivers.get(key.toString());
+				if (fs === undefined) {
+					fs = await this.createExtensionLocationFileSystem(descriptor);
+					this.fileSystemDeviceDrivers.set(key.toString(), fs);
+				}
+				fileSystems.push(fs);
+				preOpens.set(descriptor.mountPoint, fs);
+			}
+		}
+		if (vscodeFileSystems.length > 0) {
+			for (const descriptor of vscodeFileSystems) {
+				const key = MapDirDescriptors.getVScodeFileSystemKey(descriptor);
+				let fs = this.fileSystemDeviceDrivers.get(key.toString());
+				if (fs === undefined) {
+					fs = vscfs.create(WasiKernel.nextDeviceId(), descriptor.uri, !(workspace.fs.isWritableFileSystem(descriptor.uri.scheme) ?? true));
+					this.fileSystemDeviceDrivers.set(key.toString(), fs);
+				}
+				fileSystems.push(fs);
+				preOpens.set(descriptor.mountPoint, fs);
+			}
+		}
+		if (inMemoryFileSystems.length > 0) {
+			for (const descriptor of inMemoryFileSystems) {
+				const fs = memfs.create(WasiKernel.nextDeviceId(), descriptor.fileSystem as memfs.MemoryFileSystem);
+				fileSystems.push(fs);
+				preOpens.set(descriptor.mountPoint, fs);
+			}
+		}
+
+		let needsRootFs = false;
+		for (const mountPoint of preOpens.keys()) {
+			if (mountPoint === '/') {
+				if (preOpens.size > 1) {
+					throw new Error(`Cannot mount root directory when other directories are mounted as well.`);
+				}
+			} else {
+				needsRootFs = true;
+			}
+		}
+		let root: FileSystemDeviceDriver | undefined;
+		if (needsRootFs) {
+			const mountPoints: Map<string, FileSystemDeviceDriver> = new Map(Array.from(preOpens.entries()));
+			const fs = vrfs.create(WasiKernel.nextDeviceId(), fileDescriptors, mountPoints);
+			preOpens.set('/', fs);
+			fileSystems.push(fs);
+			root = fs;
+		} else {
+			root = fileSystems[0];
+		}
+		const deviceDrivers = new DeviceDriversImpl();
+		for (const fs of fileSystems) {
+			deviceDrivers.add(fs);
+		}
+		return { fileSystem: root, deviceDrivers, preOpens };
+	}
+
+	public async getOrCreateFileSystemByDescriptor(deviceDrivers: DeviceDrivers, descriptor: VSCodeFileSystemDescriptor | ExtensionLocationDescriptor | InMemoryFileSystemDescriptor, manage: ManageKind = ManageKind.default): Promise<FileSystemDeviceDriver> {
+		const key = MapDirDescriptors.key(descriptor);
+		if (deviceDrivers.hasByUri(key)) {
+			return deviceDrivers.getByUri(key) as FileSystemDeviceDriver;
+		}
+		let result = this.fileSystemDeviceDrivers.get(key.toString());
+		if (result !== undefined) {
+			deviceDrivers.add(result);
+			return result;
+		}
+		if (MapDirDescriptors.isExtensionLocation(descriptor)) {
+			result = await this.createExtensionLocationFileSystem(descriptor);
+			if (manage === ManageKind.default) {
+				manage = ManageKind.yes;
+			}
+		} else if (MapDirDescriptors.isInMemoryDescriptor(descriptor)) {
+			result = memfs.create(WasiKernel.nextDeviceId(), descriptor.fileSystem as memfs.MemoryFileSystem);
+			if (manage === ManageKind.default) {
+				manage = ManageKind.no;
+			}
+		} else if (MapDirDescriptors.isVSCodeFileSystemDescriptor(descriptor)) {
+			result = vscfs.create(WasiKernel.nextDeviceId(), descriptor.uri, !(workspace.fs.isWritableFileSystem(descriptor.uri.scheme) ?? true));
+			if (manage === ManageKind.default) {
+				manage = ManageKind.yes;
+			}
+		}
+		if (result !== undefined && manage === ManageKind.yes) {
+			this.fileSystemDeviceDrivers.set(key.toString(), result);
+		}
+		if (result === undefined) {
+			throw new Error(`Unable to create file system for ${JSON.stringify(descriptor, undefined, 0)}`);
+		}
+		deviceDrivers.add(result);
+		return result;
+	}
+
+	private parseFileSystems(): { id: Uri; contributionId: string; mapDir: MountPointDescriptor }[] {
+		const result: { id: Uri; contributionId: string; mapDir: MountPointDescriptor }[] = [];
+		for (const extension of extensions.all) {
+			const packageJSON = extension.packageJSON;
+			const fileSystems: FileSystem[] = packageJSON?.contributes?.wasm?.fileSystems;
+			if (fileSystems !== undefined) {
+				for (const contribution of fileSystems) {
+					if (ExtensionDataFileSystem.is(contribution)) {
+						const mapDir: ExtensionLocationDescriptor = {
+							kind: 'extensionLocation',
+							extension: extension,
+							path: contribution.path,
+							mountPoint: contribution.mountPoint
+						};
+						const id = Uri.joinPath(extension.extensionUri, ...getSegments(contribution.path));
+						result.push({ id, contributionId: contribution.id, mapDir });
+					}
+				}
+			}
+		}
+		return result;
+	}
+
+	private handleExtensionsChanged(): void {
+		const oldFileSystems: Map<string, MountPointDescriptor> = new Map(this.contributedFileSystems.entries());
+		const newFileSystems: Map<string, MountPointDescriptor> = new Map(this.parseFileSystems().map(fileSystem => [fileSystem.id.toString(), fileSystem.mapDir]));
+		const added: Map<string, MountPointDescriptor> = new Map();
+		for (const [id, newFileSystem] of newFileSystems) {
+			if (oldFileSystems.has(id)) {
+				oldFileSystems.delete(id);
+			} else {
+				added.set(id, newFileSystem);
+			}
+		}
+		for (const [id, add] of added) {
+			this.contributedFileSystems.set(id, add);
+		}
+		for (const id of oldFileSystems.keys()) {
+			this.contributedFileSystems.delete(id);
+			this.fileSystemDeviceDrivers.delete(id);
+		}
+	}
+
+	private parseWorkspaceFolders(): void {
+		const folders = workspace.workspaceFolders;
+		if (folders !== undefined) {
+			for (const folder of folders) {
+				const key = folder.uri.toString();
+				if (!this.fileSystemDeviceDrivers.has(key)) {
+					const driver = vscfs.create(WasiKernel.nextDeviceId(), folder.uri, !(workspace.fs.isWritableFileSystem(folder.uri.scheme) ?? true));
+					this.fileSystemDeviceDrivers.set(key, driver);
+				}
+			}
+		}
+	}
+
+	private handleWorkspaceFoldersChanged(event: WorkspaceFoldersChangeEvent): void {
+		for (const added of event.added) {
+			const key = added.uri.toString();
+			if (!this.fileSystemDeviceDrivers.has(key)) {
+				const driver = vscfs.create(WasiKernel.nextDeviceId(), added.uri, !(workspace.fs.isWritableFileSystem(added.uri.scheme) ?? true));
+				this.fileSystemDeviceDrivers.set(key, driver);
+			}
+		}
+		for (const removed of event.removed) {
+			const key = removed.uri.toString();
+			this.fileSystemDeviceDrivers.delete(key);
+		}
+	}
+
+	private async createExtensionLocationFileSystem(descriptor: ExtensionLocationDescriptor): Promise<FileSystemDeviceDriver> {
+		let extensionUri = descriptor.extension.extensionUri;
+		extensionUri = extensionUri.with({ path: RAL().path.join(extensionUri.path, descriptor.path) });
+
+		const paths = RAL().path;
+		const basename = paths.basename(descriptor.path);
+		const dirname = paths.dirname(descriptor.path);
+		const dirDumpFileUri = Uri.joinPath(descriptor.extension.extensionUri, dirname, `${basename}.dir.json`);
+		try {
+			const content = await workspace.fs.readFile(dirDumpFileUri);
+			const dirDump = JSON.parse(RAL().TextDecoder.create().decode(content));
+			const extensionFS = extlocfs.create(WasiKernel.nextDeviceId(), extensionUri, dirDump);
+			return extensionFS;
+		} catch (error) {
+			RAL().console.error(`Failed to read directory dump file ${dirDumpFileUri.toString()}: ${error}`);
+			throw error;
+		}
+	}
+}
+
 namespace WasiKernel {
+	let deviceCounter: DeviceId = 1n;
+	export function nextDeviceId(): bigint {
+		return deviceCounter++;
+	}
+
+	const fileSystems = new FileSystems();
+	export function getOrCreateFileSystemByDescriptor(deviceDrivers: DeviceDrivers, descriptor: VSCodeFileSystemDescriptor | ExtensionLocationDescriptor | InMemoryFileSystemDescriptor): Promise<FileSystemDeviceDriver> {
+		return fileSystems.getOrCreateFileSystemByDescriptor(deviceDrivers, descriptor);
+	}
+	export function createRootFileSystem(fileDescriptors: FileDescriptors, descriptors: MountPointDescriptor[]): Promise<RootFileSystemInfo> {
+		return fileSystems.createRootFileSystem(fileDescriptors, descriptors);
+	}
+
 	export const deviceDrivers = new DeviceDriversImpl();
-	export const console = ConsoleDriver.create(deviceDrivers.next());
+	// By default we have a console
+	export const console = ConsoleDriver.create(nextDeviceId());
 	deviceDrivers.add(console);
 	export function createLocalDeviceDrivers(): DeviceDrivers {
 		return new LocalDeviceDrivers(deviceDrivers);

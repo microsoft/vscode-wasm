@@ -2,16 +2,16 @@
  * Copyright (c) Microsoft Corporation. All rights reserved.
  * Licensed under the MIT License. See License.txt in the project root for license information.
  * ------------------------------------------------------------------------------------------ */
-import path from 'path-browserify';
+import * as path from './path';
 
 import RAL from '../common/ral';
-import { ExtensionContext } from 'vscode';
+import { Uri } from 'vscode';
 
 const _ril: RAL = Object.freeze<RAL>({
 	path: path.posix,
-	coreUtils: Object.freeze({
-		async load(_context: ExtensionContext): Promise<WebAssembly.Module> {
-			throw new Error('Not implemented');
+	webAssembly: Object.freeze({
+		async compile(Uri: Uri): Promise<WebAssembly.Module> {
+			return WebAssembly.compileStreaming(fetch(Uri.toString()));
 		}
 	})
 });

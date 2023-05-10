@@ -3,6 +3,7 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
+import { DeviceDriver } from './deviceDriver';
 import {
 	Errno, fd, fdflags, Filetype, filetype, oflags, Rights, rights, WasiError
 } from './wasi';
@@ -44,6 +45,11 @@ export interface FileDescriptor {
 	readonly inode: bigint;
 
 	/**
+	 * Dispose resource associated with this file descriptor.
+	 */
+	dispose?(): Promise<void>;
+
+	/**
 	 * Create a new file descriptor with the given changes.
 	 *
 	 * @param change The changes to apply to the file descriptor.
@@ -58,11 +64,25 @@ export interface FileDescriptor {
 	containsBaseRights(rights: rights): boolean;
 
 	/**
+	 * Asserts the given rights.
+	 *
+	 * @param right the rights to assert.
+	 */
+	assertRights(rights: rights): void;
+
+	/**
 	 * Asserts the given base rights.
 	 *
 	 * @param right the rights to assert.
 	 */
-	assertBaseRights(right: rights): void;
+	assertBaseRights(rights: rights): void;
+
+	/**
+	 * Asserts the given base rights.
+	 *
+	 * @param right the rights to assert.
+	 */
+	assertInheritingRights(rights: rights): void;
 
 	/**
 	 * Asserts the given fdflags.
@@ -110,17 +130,35 @@ export abstract class BaseFileDescriptor implements FileDescriptor {
 		this.inode = inode;
 	}
 
+	dispose?(): Promise<void>;
+
 	abstract with(change: { fd: fd }): FileDescriptor;
 
 	public containsBaseRights(rights: rights): boolean {
 		return (this.rights_base & rights) === rights;
 	}
+
+	public assertRights(rights: rights): void {
+		if (((this.rights_base | this.rights_inheriting) & rights) === rights) {
+			return;
+		}
+		throw new WasiError(Errno.perm);
+	}
+
 	public assertBaseRights(rights: rights): void {
 		if ((this.rights_base & rights) === rights) {
 			return;
 		}
 		throw new WasiError(Errno.perm);
 	}
+
+	public assertInheritingRights(rights: rights): void {
+		if ((this.rights_inheriting & rights) === rights) {
+			return;
+		}
+		throw new WasiError(Errno.perm);
+	}
+
 
 	public assertFdflags(fdflags: fdflags): void {
 		if (!Rights.supportFdflags(this.rights_base, fdflags)) {
@@ -148,6 +186,8 @@ export interface FdProvider {
 export class FileDescriptors implements FdProvider {
 
 	private readonly descriptors: Map<fd, FileDescriptor> = new Map();
+	private readonly rootDescriptors: Map<DeviceId, FileDescriptor> = new Map();
+
 	private mode: 'init' | 'running' = 'init';
 	private counter: fd = 0;
 	private firstReal: fd = 3;
@@ -193,5 +233,29 @@ export class FileDescriptors implements FdProvider {
 
 	public delete(descriptor: FileDescriptor): boolean {
 		return this.descriptors.delete(descriptor.fd);
+	}
+
+	public setRoot(driver: DeviceDriver, descriptor: FileDescriptor): void {
+		this.rootDescriptors.set(driver.id, descriptor);
+	}
+
+	public getRoot(driver: DeviceDriver): FileDescriptor | undefined {
+		return this.rootDescriptors.get(driver.id);
+	}
+
+	public entries(): IterableIterator<[number, FileDescriptor]> {
+		return this.descriptors.entries();
+	}
+
+	public keys(): IterableIterator<number> {
+		return this.descriptors.keys();
+	}
+
+	public values(): IterableIterator<FileDescriptor> {
+		return this.descriptors.values();
+	}
+
+	public [Symbol.iterator](): IterableIterator<[number, FileDescriptor]> {
+		return this.entries();
 	}
 }

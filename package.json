@@ -29,17 +29,17 @@
 		"@types/mocha": "^9.1.1",
 		"mocha": "^10.0.0",
 		"node-polyfill-webpack-plugin": "^2.0.1",
-		"playwright": "^1.25.1",
+		"playwright": "^1.33.0",
 		"rimraf": "^3.0.2",
 		"shelljs": "^0.8.5",
 		"shx": "^0.3.4",
 		"@vscode/tsconfig-gen": "0.1.0",
 		"typescript": "^5.0.4",
-		"serve": "^14.1.2",
+		"serve": "^14.2.0",
 		"@types/path-browserify": "^1.0.0",
 		"path-browserify": "^1.0.1",
 		"@vscode/test-electron": "^2.3.0",
-		"@vscode/test-web": "^0.0.41",
+		"@vscode/test-web": "^0.0.43",
 		"@types/glob": "^8.1.0",
 		"glob": "^9.3.1"
 	},
@@ -57,6 +57,6 @@
 		"tsconfig-gen": "tsconfig-gen --file .tsconfigrc.js",
 		"validate:versions": "node ./tools/lib/validate-versions.js",
 		"update:lock": "git clean -xfd . && npm install",
-		"serve": "serve --cors -l 5000 --ssl-cert $HOME/certs/localhost.pem --ssl-key $HOME/certs/localhost-key.pem -c ../configs/serve.json ./wasm-wasi-kernel"
+		"serve": "serve --cors -l 5000 --ssl-cert $HOME/certs/localhost.pem --ssl-key $HOME/certs/localhost-key.pem -c ./configs/serve.json ."
 	}
 }

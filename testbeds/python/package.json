@@ -10,8 +10,13 @@
 		"vscode": "^1.67.0"
 	},
 	"main": "./out/extension.js",
+	"browser": "./dist/web/extension.js",
 	"activationEvents": [
 		"*"
+	],
+	"extensionDependencies": [
+		"ms-vscode.wasm-wasi-core",
+		"ms-vscode.webshell"
 	],
 	"contributes": {
 		"commands": [
@@ -25,6 +30,16 @@
 				"command": "testbed-python.runInteractive",
 				"category": "wasm",
 				"title": "Run Interactive Python Shell"
+			}
+		],
+		"webShellMountPoints": [
+			{
+				"mountPoint": "/usr/local/lib/python3.11",
+				"path": "wasm/lib"
+			},
+			{
+				"mountPoint": "/usr/bin/python",
+				"command": "testbed-python.webshell.python"
 			}
 		]
 	},

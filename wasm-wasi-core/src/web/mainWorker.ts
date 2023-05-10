@@ -5,7 +5,7 @@
 import RIL from './ril';
 RIL.install();
 
-import { WasiHost} from '../common/host';
+import { TraceWasiHost, Tracer, WasiHost} from '../common/host';
 import { BrowserHostConnection } from './connection';
 import { CapturedPromise, ServiceMessage, StartMainMessage, WorkerReadyMessage } from '../common/connection';
 
@@ -26,7 +26,12 @@ class MainBrowserHostConnection extends BrowserHostConnection {
 		if (StartMainMessage.is(message)) {
 			const module = message.module;
 			const memory = message.memory;
-			const host = WasiHost.create(this);
+			let host = WasiHost.create(this);
+			let tracer: Tracer | undefined;
+			if (message.trace) {
+				tracer  = TraceWasiHost.create(this, host);
+				host = tracer.tracer;
+			}
 			const imports: WebAssembly.Imports = {
 				wasi_snapshot_preview1: host,
 				wasi: host
@@ -39,6 +44,9 @@ class MainBrowserHostConnection extends BrowserHostConnection {
 			const instance  = await WebAssembly.instantiate(module, imports);
 			host.initialize(memory ?? instance);
 			(instance.exports._start as Function)();
+			if (tracer !== undefined) {
+				tracer.printSummary();
+			}
 			this._done.resolve();
 		}
 	}

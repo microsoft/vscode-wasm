@@ -2,22 +2,22 @@
  *  Copyright (c) Microsoft Corporation. All rights reserved.
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
-import { Uri } from 'vscode';
+import { LogOutputChannel, Uri } from 'vscode';
 
 import RAL from '../common/ral';
 
-import { ptr, u32 } from '../common/baseTypes';
 import { WasiProcess } from '../common/process';
 import { WasiService, ServiceConnection } from '../common/service';
-import { ServiceMessage, StartMainMessage, StartThreadMessage, WorkerMessage } from '../common/connection';
-import { ProcessOptions } from '../common/api';
+import type { ptr, u32 } from '../common/baseTypes';
+import type { ServiceMessage, StartMainMessage, StartThreadMessage, WorkerMessage } from '../common/connection';
+import type { ProcessOptions } from '../common/api';
 
 export class BrowserServiceConnection extends ServiceConnection {
 
 	private readonly port: MessagePort | Worker;
 
-	constructor(wasiService: WasiService, port: MessagePort | Worker) {
-		super(wasiService);
+	constructor(wasiService: WasiService, port: MessagePort | Worker, logChannel?: LogOutputChannel | undefined) {
+		super(wasiService, logChannel);
 		this.port = port;
 		this.port.onmessage = ((event: MessageEvent<WorkerMessage>) => {
 			this.handleMessage(event.data).catch((error) => RAL().console.error(error));
@@ -69,13 +69,14 @@ export class BrowserWasiProcess extends WasiProcess {
 		}
 		this.threadWorkers.clear();
 		await this.destroyStreams();
+		await this.cleanupFileDescriptors();
 		return result;
 	}
 
 	protected async startMain(wasiService: WasiService): Promise<void> {
 		const filename = Uri.joinPath(this.baseUri, './dist/web/mainWorker.js').toString();
 		this.mainWorker = new Worker(filename);
-		const connection = new BrowserServiceConnection(wasiService, this.mainWorker);
+		const connection = new BrowserServiceConnection(wasiService, this.mainWorker, this.options.trace);
 		await connection.workerReady();
 		const module = await this.module;
 		this.importsMemory = this.doesImportMemory(module);
@@ -85,7 +86,7 @@ export class BrowserWasiProcess extends WasiProcess {
 			}
 			this.memory = new WebAssembly.Memory(this.memoryDescriptor);
 		}
-		const message: StartMainMessage = { method: 'startMain', module: await this.module, memory: this.memory };
+		const message: StartMainMessage = { method: 'startMain', module: await this.module, memory: this.memory, trace: this.options.trace !== undefined };
 		connection.postMessage(message);
 		return Promise.resolve();
 	}
@@ -99,9 +100,9 @@ export class BrowserWasiProcess extends WasiProcess {
 		}
 		const filename = Uri.joinPath(this.baseUri, './dist/web/threadWorker.js').toString();
 		const worker = new Worker(filename);
-		const connection = new BrowserServiceConnection(wasiService, worker);
+		const connection = new BrowserServiceConnection(wasiService, worker, this.options.trace);
 		await connection.workerReady();
-		const message: StartThreadMessage = { method: 'startThread', module: await this.module, memory: this.memory!, tid, start_arg };
+		const message: StartThreadMessage = { method: 'startThread', module: await this.module, memory: this.memory!, tid, start_arg, trace: this.options.trace !== undefined };
 		connection.postMessage(message);
 		this.threadWorkers.set(tid, worker);
 		return Promise.resolve();

@@ -6,10 +6,9 @@ import { TextDecoder } from 'util';
 import * as path from 'path';
 import * as crypto from 'crypto';
 
-import { Disposable } from 'vscode';
+import type { Disposable } from 'vscode';
 
 import RAL from '../common/ral';
-
 
 interface RIL extends RAL {
 }

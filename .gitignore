@@ -106,6 +106,7 @@ dist
 
 testbeds/c/*.js
 testbeds/python/bin*
+testbeds/python/wasm
 testbeds/python/bin.tar
 testbeds/python/python.tar
 testbeds/coreutils/coreutils.wasm
@@ -115,6 +116,7 @@ wasm-wasi-core/.vscode-test
 wasm-wasi-core/.vscode-test-web
 wasm-wasi-core/.vscode-test-workspace/**/*
 !wasm-wasi-core/.vscode-test-workspace/dummy.txt
+webshell/wasm
 *.wasm
 *.wat
 *.o

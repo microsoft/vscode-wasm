@@ -2,12 +2,15 @@
  *  Copyright (c) Microsoft Corporation. All rights reserved.
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
-import { window, Terminal } from 'vscode';
+import { window, Terminal, commands } from 'vscode';
 
-import { Wasm, WasmPseudoterminal } from '@vscode/wasm-wasi';
+import { ExtensionLocationDescriptor, MountPointDescriptor, MemoryFileSystem, Wasm, WasmPseudoterminal, Stdio } from '@vscode/wasm-wasi';
 
 import RAL from './ral';
+const paths = RAL().path;
 import { CommandHandler } from './types';
+import { CommandMountPoint, WebShellContributions } from './webShellContributions';
+
 
 type CommandLine = {
 	command: string; args: string[];
@@ -16,25 +19,62 @@ type CommandLine = {
 export class Webshell {
 
 	private readonly wasm: Wasm;
+	private readonly contributions: WebShellContributions;
 	private readonly pty: WasmPseudoterminal;
 	private readonly terminal : Terminal;
 	private readonly prompt;
 
 	private cwd: string;
 	private readonly commandHandlers: Map<string, CommandHandler>;
+	private readonly userBin: MemoryFileSystem;
 
-	constructor(wasm: Wasm, cwd: string, prompt: string = '$ ') {
+	constructor(wasm: Wasm, contributions: WebShellContributions, cwd: string, prompt: string = '$ ') {
 		this.wasm = wasm;
+		this.contributions = contributions;
 		this.prompt = prompt;
 		this.pty = this.wasm.createPseudoterminal({ history: true });
 		this.terminal = window.createTerminal({ name: 'wesh', pty: this.pty, isTransient: true });
 		this.terminal.show();
 		this.cwd = cwd;
 		this.commandHandlers = new Map<string, CommandHandler>();
+		this.userBin = wasm.createInMemoryFileSystem();
+		for (const contribution of contributions.getCommandMountPoints()) {
+			this.registerCommandContribution(contribution);
+		}
+		contributions.onChanged((event) => {
+			for (const add of event.commands.added) {
+				this.registerCommandContribution(add);
+			}
+			for (const remove of event.commands.removed) {
+				this.unregisterCommandContribution(remove);
+			}
+		});
 	}
 
-	registerCommandHandler(command: string, handler: CommandHandler): void {
+	private registerCommandContribution(contribution: CommandMountPoint): void {
+		const basename = paths.basename(contribution.mountPoint);
+		const dirname = paths.dirname(contribution.mountPoint);
+		if (dirname === '/usr/bin') {
+			this.registerCommandHandler(basename, (command: string, args: string[], cwd: string, stdio: Stdio, mountPoints?: MountPointDescriptor[] | undefined) => {
+				return new Promise<number>((resolve, reject) => {
+					commands.executeCommand<number>(contribution.command, command, args, cwd, stdio, mountPoints).then(resolve, reject);
+				});
+			});
+		}
+	}
+
+	private unregisterCommandContribution(contribution: CommandMountPoint): void {
+		const basename = paths.basename(contribution.mountPoint);
+		this.unregisterCommandHandler(basename);
+	}
+
+	public registerCommandHandler(command: string, handler: CommandHandler): void {
+		this.userBin.createFile(command, { size: 1047646n, reader: () => { throw new Error('No permissions'); }});
 		this.commandHandlers.set(command, handler);
+	}
+
+	public unregisterCommandHandler(command: string): void {
+		this.commandHandlers.delete(command);
 	}
 
 	public async runCommandLoop(): Promise<void> {
@@ -55,7 +95,14 @@ export class Webshell {
 				default:
 					const handler = this.commandHandlers.get(command);
 					if (handler !== undefined) {
-						await handler(this.pty, command, args, this.cwd);
+						try {
+							const result = await handler(command, args, this.cwd, this.pty.stdio, this.getAdditionalFileSystems());
+							if (result !== 0) {
+							}
+						} catch (error: any) {
+							const message = error.message ?? error.toString();
+							void this.pty.write(`-wesh: executing ${command} failed: ${message}\r\n`);
+						}
 					} else {
 						void this.pty.write(`-wesh: ${command}: command not found\r\n`);
 					}
@@ -88,5 +135,12 @@ export class Webshell {
 
 	private getPrompt(): string {
 		return `\x1b[01;34m${this.cwd}\x1b[0m ${this.prompt}`;
+	}
+
+	private getAdditionalFileSystems(): MountPointDescriptor[] {
+		const result: MountPointDescriptor[] = [{ kind: 'inMemoryFileSystem', fileSystem: this.userBin, mountPoint: '/usr/bin' }];
+		const contributions: ExtensionLocationDescriptor[] = this.contributions.getDirectoryMountPoints().map(entry => ({ kind: 'extensionLocation', extension: entry.extension, path: entry.path, mountPoint: entry.mountPoint }));
+		result.push(...contributions);
+		return result;
 	}
 }

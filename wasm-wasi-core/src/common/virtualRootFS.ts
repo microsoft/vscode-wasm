@@ -4,7 +4,7 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { Uri } from 'vscode';
-import { DeviceId, FileSystemDeviceDriver, NoSysDeviceDriver, ReaddirEntry } from './deviceDriver';
+import { DeviceDriver, DeviceDriverKind, DeviceId, FileSystemDeviceDriver, NoSysDeviceDriver, ReaddirEntry, WritePermDeniedDeviceDriver } from './deviceDriver';
 import { BaseFileDescriptor, FdProvider, FileDescriptor } from './fileDescriptor';
 import { WasiError, Filetype, fdstat, filestat, fstflags, lookupflags, oflags, rights, fdflags, fd, Rights, inode } from './wasi';
 import { Errno } from './wasi';
@@ -240,7 +240,7 @@ export interface VirtualRootFileSystemDeviceDriver extends FileSystemDeviceDrive
 	makeVirtualPath(deviceDriver: FileSystemDeviceDriver, filepath: string): string | undefined;
 }
 
-export function create(deviceId: DeviceId, mountPoints: Map<string, FileSystemDeviceDriver>): VirtualRootFileSystemDeviceDriver {
+export function create(deviceId: DeviceId, rootFileDescriptors: { getRoot(device: DeviceDriver): FileDescriptor | undefined }, mountPoints: Map<string, FileSystemDeviceDriver>): VirtualRootFileSystemDeviceDriver {
 
 	let $atim: bigint = BigInt(Date.now()) * 1000000n;
 	let $mtim: bigint = $atim;
@@ -256,13 +256,8 @@ export function create(deviceId: DeviceId, mountPoints: Map<string, FileSystemDe
 		return new DirectoryFileDescriptor(deviceId, fd, DirectoryBaseRights, DirectoryInheritingRights, 0, inode);
 	}
 
-	let $rootFileDescriptor: DirectoryFileDescriptor | undefined = undefined;
-	function getRootFileDescriptor(fd: fd): DirectoryFileDescriptor {
-		if ($rootFileDescriptor !== undefined) {
-			throw new WasiError(Errno.inval);
-		}
-		$rootFileDescriptor = createFileDescriptor(fd, $fs.root.inode);
-		return $rootFileDescriptor;
+	function createRootFileDescriptor(fd: fd): DirectoryFileDescriptor {
+		return createFileDescriptor(fd, $fs.root.inode);
 	}
 
 	const $fs = new VirtualRootFileSystem(deviceId);
@@ -270,7 +265,8 @@ export function create(deviceId: DeviceId, mountPoints: Map<string, FileSystemDe
 		$fs.addMountPoint(filepath, driver);
 	}
 
-	const $this = {
+	const $driver = {
+		kind: DeviceDriverKind.fileSystem as const,
 		id: deviceId,
 		uri: Uri.from( { scheme: 'wasi-root', path: '/'} ),
 
@@ -280,20 +276,8 @@ export function create(deviceId: DeviceId, mountPoints: Map<string, FileSystemDe
 		createStdioFileDescriptor(): Promise<FileDescriptor> {
 			throw new Error(`Virtual root FS can't provide stdio file descriptors`);
 		},
-		getRootFileDescriptor(): FileDescriptor {
-			if ($rootFileDescriptor === undefined) {
-				throw new WasiError(Errno.inval);
-			}
-			return $rootFileDescriptor;
-		},
-		isRootFileDescriptor(fileDescriptor: FileDescriptor): boolean {
-			if ($rootFileDescriptor === undefined) {
-				throw new WasiError(Errno.inval);
-			}
-			return $rootFileDescriptor.deviceId === fileDescriptor.deviceId && $rootFileDescriptor.inode === fileDescriptor.inode;
-		},
 		fd_create_prestat_fd(fd: fd): Promise<FileDescriptor> {
-			return Promise.resolve(getRootFileDescriptor(fd));
+			return Promise.resolve(createRootFileDescriptor(fd));
 		},
 		fd_close(_fileDescriptor: FileDescriptor): Promise<void> {
 			return Promise.resolve();
@@ -347,14 +331,18 @@ export function create(deviceId: DeviceId, mountPoints: Map<string, FileSystemDe
 			assertDirectoryDescriptor(fileDescriptor);
 			const parentNode = $fs.getNode(fileDescriptor.inode);
 			if ($fs.isRoot(parentNode) && (path === '.' || path === '..' || path === '/')) {
-				return this.fd_filestat_get(this.getRootFileDescriptor(), result);
+				return this.fd_filestat_get(rootFileDescriptors.getRoot($this)!, result);
 			}
 
 			const [node, pathRemainder] = $fs.findNode(parentNode, path);
 			// The leave is a file system device driver. Forward the call to it.
 			if (node.kind === NodeKind.MountPoint) {
 				const driver = node.deviceDriver;
-				return driver.path_filestat_get(driver.getRootFileDescriptor(), flags, pathRemainder!, result);
+				const rootFileDescriptor = rootFileDescriptors.getRoot(driver);
+				if (rootFileDescriptor === undefined) {
+					throw new WasiError(Errno.badf);
+				}
+				return driver.path_filestat_get(rootFileDescriptor, flags, pathRemainder!, result);
 			}
 
 			result.dev = fileDescriptor.deviceId;
@@ -375,7 +363,11 @@ export function create(deviceId: DeviceId, mountPoints: Map<string, FileSystemDe
 			// The leave is a file system device driver. Forward the call to it.
 			if (node.kind === NodeKind.MountPoint) {
 				const driver = node.deviceDriver;
-				return driver.path_open(driver.getRootFileDescriptor(), dirflags, pathRemainder!, oflags, fs_rights_base, fs_rights_inheriting, fdflags, fdProvider);
+				const rootFileDescriptor = rootFileDescriptors.getRoot(driver);
+				if (rootFileDescriptor === undefined) {
+					throw new WasiError(Errno.noent);
+				}
+				return driver.path_open(rootFileDescriptor, dirflags, pathRemainder!, oflags, fs_rights_base, fs_rights_inheriting, fdflags, fdProvider);
 			}
 
 			// It is a virtual directory. Create a file descriptor for it.
@@ -383,5 +375,6 @@ export function create(deviceId: DeviceId, mountPoints: Map<string, FileSystemDe
 		},
 	};
 
-	return Object.assign({}, NoSysDeviceDriver, $this);
+	const $this = Object.assign({}, NoSysDeviceDriver, $driver, WritePermDeniedDeviceDriver);
+	return $this;
 }

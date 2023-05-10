@@ -5,7 +5,7 @@
 
 import { size } from './baseTypes';
 import { fd, fdflags, fdstat, filestat, Filetype, Rights, rights } from './wasi';
-import { CharacterDeviceDriver, DeviceId, NoSysDeviceDriver } from './deviceDriver';
+import { CharacterDeviceDriver, DeviceDriverKind, DeviceId, NoSysDeviceDriver } from './deviceDriver';
 import { BaseFileDescriptor, FileDescriptor } from './fileDescriptor';
 import { WasmPseudoterminal } from './terminal';
 import { Uri } from 'vscode';
@@ -33,7 +33,8 @@ export function create(deviceId: DeviceId, terminal: WasmPseudoterminal): Charac
 		return new TerminalFileDescriptor(deviceId, fd, TerminalBaseRights, TerminalInheritingRights, 0, inodeCounter++);
 	}
 
-	const deviceDriver: Pick<CharacterDeviceDriver, 'id' | 'uri' | 'createStdioFileDescriptor' | 'fd_fdstat_get' | 'fd_filestat_get' | 'fd_read' | 'fd_write'> = {
+	const deviceDriver: Pick<CharacterDeviceDriver, 'kind' | 'id' | 'uri' | 'createStdioFileDescriptor' | 'fd_fdstat_get' | 'fd_filestat_get' | 'fd_read' | 'fd_write'> = {
+		kind: DeviceDriverKind.character,
 		id: deviceId,
 		uri: Uri.from({ scheme: 'wasi-terminal', authority: deviceId.toString() }),
 		createStdioFileDescriptor(fd: 0 | 1 | 2): FileDescriptor {

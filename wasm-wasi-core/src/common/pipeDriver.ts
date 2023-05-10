@@ -5,7 +5,7 @@
 
 import { size } from './baseTypes';
 import { Errno, fd, fdflags, fdstat, filestat, Filetype, Rights, rights, WasiError } from './wasi';
-import { CharacterDeviceDriver, DeviceId, NoSysDeviceDriver } from './deviceDriver';
+import { CharacterDeviceDriver, DeviceDriverKind, DeviceId, NoSysDeviceDriver } from './deviceDriver';
 import { BaseFileDescriptor, FileDescriptor } from './fileDescriptor';
 import { Uri } from 'vscode';
 
@@ -40,7 +40,8 @@ export function create(deviceId: DeviceId, stdin: Stdin | undefined, stdout: Std
 		return new PipeFileDescriptor(deviceId, fd, PipeBaseRights, PipeInheritingRights, 0, inodeCounter++);
 	}
 
-	const deviceDriver: Pick<CharacterDeviceDriver, 'id' | 'uri' | 'createStdioFileDescriptor' | 'fd_fdstat_get' | 'fd_filestat_get' | 'fd_read' | 'fd_write'> = {
+	const deviceDriver: Pick<CharacterDeviceDriver, 'kind' | 'id' | 'uri' | 'createStdioFileDescriptor' | 'fd_fdstat_get' | 'fd_filestat_get' | 'fd_read' | 'fd_write'> = {
+		kind: DeviceDriverKind.character,
 		id: deviceId,
 		uri: Uri.from({ scheme: 'wasi-pipe', authority: deviceId.toString() }),
 		createStdioFileDescriptor(fd: 0 | 1 | 2): FileDescriptor {

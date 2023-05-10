@@ -7,13 +7,15 @@ import * as vscode from 'vscode';
 import RAL from './ral';
 import {
 	advise,
-	args_get, args_sizes_get, Ciovec, ciovec, Clockid, clockid, clock_res_get, clock_time_get, dircookie, Dirent, dirent, environ_get, environ_sizes_get, errno, Errno, Event, event, Eventtype, exitcode, fd, fdflags, Fdstat, fdstat, fd_advise, fd_allocate,
-	fd_close, fd_datasync, fd_fdstat_get, fd_fdstat_set_flags, fd_filestat_get, fd_filestat_set_size, fd_filestat_set_times, fd_pread,
-	fd_prestat_dir_name, fd_prestat_get, fd_pwrite, fd_read, fd_readdir, fd_renumber, fd_seek, fd_sync, fd_tell, fd_write, filedelta, filesize, Filestat, filestat, fstflags, Iovec, iovec, Literal, lookupflags, oflags, path_create_directory,
+	args_get, args_sizes_get, Ciovec, ciovec, Clockid, clockid, clock_res_get, clock_time_get, dircookie, Dirent, dirent, environ_get, environ_sizes_get, errno,
+	Errno, Event, event, Eventtype, exitcode, fd, fdflags, Fdstat, fdstat, fd_advise, fd_allocate, fd_close, fd_datasync, fd_fdstat_get, fd_fdstat_set_flags,
+	fd_filestat_get, fd_filestat_set_size, fd_filestat_set_times, fd_pread, fd_prestat_dir_name, fd_prestat_get, fd_pwrite, fd_read, fd_readdir, fd_renumber,
+	fd_seek, fd_sync, fd_tell, fd_write, filedelta, filesize, Filestat, filestat, fstflags, Iovec, iovec, Literal, lookupflags, oflags, path_create_directory,
 	path_filestat_get, path_filestat_set_times, path_link, path_open, path_readlink, path_remove_directory, path_rename, path_symlink, path_unlink_file,
-	poll_oneoff, Prestat, prestat, proc_exit, random_get, riflags, rights, Rights, sched_yield, sdflags, siflags, sock_accept, Subclockflags, Subscription, subscription, thread_spawn, timestamp, WasiError, Whence, whence, thread_exit, tid, Preopentype
+	poll_oneoff, Prestat, prestat, proc_exit, random_get, riflags, rights, Rights, sched_yield, sdflags, siflags, sock_accept, Subclockflags, Subscription,
+	subscription, thread_spawn, timestamp, WasiError, Whence, whence, thread_exit, tid, Preopentype, sock_shutdown
 } from './wasi';
-import { CapturedPromise, Offsets, WasiCallMessage, WorkerDoneMessage, WorkerMessage, WorkerReadyMessage } from './connection';
+import { CapturedPromise, Offsets, TraceMessage, TraceSummaryMessage, WasiCallMessage, WorkerDoneMessage, WorkerMessage, WorkerReadyMessage } from './connection';
 import { WasiFunction, WasiFunctions, WasiFunctionSignature } from './wasiMeta';
 import { byte, bytes, cstring, ptr, size, u32, u64 } from './baseTypes';
 import { FileDescriptor, FileDescriptors } from './fileDescriptor';
@@ -26,13 +28,15 @@ import { VirtualRootFileSystemDeviceDriver } from './virtualRootFS';
 export abstract class ServiceConnection {
 
 	private readonly wasiService: WasiService;
+	private readonly logChannel: vscode.LogOutputChannel | undefined;
 
 	private readonly _workerReady: CapturedPromise<void>;
 
 	private readonly _workerDone: CapturedPromise<void>;
 
-	constructor(wasiService: WasiService) {
+	constructor(wasiService: WasiService, logChannel?: vscode.LogOutputChannel | undefined) {
 		this.wasiService = wasiService;
+		this.logChannel = logChannel;
 		this._workerReady = CapturedPromise.create<void>();
 		this._workerDone = CapturedPromise.create<void>();
 	}
@@ -56,6 +60,23 @@ export abstract class ServiceConnection {
 			this._workerReady.resolve();
 		} else if (WorkerDoneMessage.is(message)) {
 			this._workerDone.resolve();
+		} else if (this.logChannel !== undefined) {
+			if (TraceMessage.is(message)) {
+				const timeTaken = message.timeTaken;
+				const final = `${message.message} (${timeTaken}ms)`;
+				if (timeTaken > 10) {
+					this.logChannel.error(final);
+				} else if (timeTaken > 5) {
+					this.logChannel.warn(final);
+				} else {
+					this.logChannel.info(final);
+				}
+			} else if (TraceSummaryMessage.is(message)) {
+				if (message.summary.length === 0) {
+					return;
+				}
+				this.logChannel.info(`Call summary:\n\t${message.summary.join('\n\t')}`);
+			}
 		}
 	}
 
@@ -147,7 +168,7 @@ interface DeviceWasiService {
 	sched_yield: sched_yield.ServiceSignature;
 	random_get: random_get.ServiceSignature;
 	sock_accept: sock_accept.ServiceSignature;
-	sock_shutdown: sock_accept.ServiceSignature;
+	sock_shutdown: sock_shutdown.ServiceSignature;
 	[name: string]: (memory: ArrayBuffer, ...args: (number & bigint)[]) => Promise<errno | tid>;
 }
 
@@ -161,7 +182,7 @@ export interface ProcessWasiService {
 export interface WasiService extends EnvironmentWasiService, ClockWasiService, DeviceWasiService, ProcessWasiService {
 }
 
-export interface EnvironmentOptions extends Omit<ProcessOptions, 'args'> {
+export interface EnvironmentOptions extends Omit<ProcessOptions, 'args' | 'trace'> {
 	args?: string[];
 }
 
@@ -245,6 +266,7 @@ export namespace EnvironmentWasiService {
 					const [ mountPoint, driver ] = next.value;
 					const fileDescriptor = await driver.fd_create_prestat_fd(fd);
 					fileDescriptors.add(fileDescriptor);
+					fileDescriptors.setRoot(driver, fileDescriptor);
 					$preStatDirnames.set(fileDescriptor.fd, mountPoint);
 					const view = new DataView(memory);
 					const prestat = Prestat.create(view, bufPtr);
@@ -318,7 +340,7 @@ export namespace ClockWasiService {
 	export function create(clock: Clock): ClockWasiService {
 		const $clock = clock;
 		const result:ClockWasiService = {
-			clock_res_get: (memory: ArrayBuffer, id: clockid, timestamp_ptr: ptr): Promise<errno> => {
+			clock_res_get: (memory: ArrayBuffer, id: clockid, timestamp_ptr: ptr<u64>): Promise<errno> => {
 				const view = new DataView(memory);
 				switch (id) {
 					case Clockid.realtime:
@@ -1058,7 +1080,11 @@ export namespace DeviceWasiService {
 					if (virtualPath === undefined) {
 						throw new WasiError(Errno.noent);
 					}
-					return [virtualRootFileSystem, virtualRootFileSystem.getRootFileDescriptor(), virtualPath];
+					const rootDescriptor = fileDescriptors.getRoot(virtualRootFileSystem);
+					if (rootDescriptor === undefined) {
+						throw new WasiError(Errno.noent);
+					}
+					return [virtualRootFileSystem, rootDescriptor, virtualPath];
 				}
 			}
 			return [result, fileDescriptor, path];
