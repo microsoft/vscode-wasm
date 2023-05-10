@@ -46,6 +46,7 @@
 	"scripts": {
 		"build": "npm run compile",
 		"compile": "node ../../node_modules/typescript/lib/tsc.js -b tsconfig.json",
-		"watch": "node ../../node_modules/typescript/lib/tsc.js -b tsconfig.json -w"
+		"watch": "node ../../node_modules/typescript/lib/tsc.js -b tsconfig.json -w",
+		"esbuild": "node ./bin/esbuild.js"
 	}
 }

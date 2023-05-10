@@ -59,7 +59,7 @@ export class NodeWasiProcess extends WasiProcess {
 	}
 
 	protected async startMain(wasiService: WasiService): Promise<void> {
-		const filename = Uri.joinPath(this.baseUri, './lib/desktop/mainWorker.js').fsPath;
+		const filename = Uri.joinPath(this.baseUri, './dist/desktop/mainWorker.js').fsPath;
 		this.mainWorker = new Worker(filename);
 		this.mainWorker.on('exit', async (exitCode: number) => {
 			this.cleanUpWorkers().catch(error => RAL().console.error(error));
@@ -88,7 +88,7 @@ export class NodeWasiProcess extends WasiProcess {
 		if (!this.importsMemory || this.memory === undefined) {
 			throw new Error('Multi threaded applications need to import shared memory.');
 		}
-		const filename = Uri.joinPath(this.baseUri, './lib/desktop/threadWorker.js').fsPath;
+		const filename = Uri.joinPath(this.baseUri, './dist/desktop/threadWorker.js').fsPath;
 		const worker = new Worker(filename);
 		worker.on('exit', () => {
 			this.threadWorkers.delete(tid);

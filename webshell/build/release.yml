@@ -1,9 +1,12 @@
 name: $(Date:yyyyMMdd)$(Rev:.r)
 
 trigger:
+  branches:
+    include:
+      - main
   tags:
     include:
-      - pre-release/*
+      - release/*
 pr: none
 
 resources:
@@ -15,7 +18,7 @@ resources:
       endpoint: Monaco
 
 extends:
-  template: azure-pipelines/extension/pre-release.yml@templates
+  template: azure-pipelines/extension/stable.yml@templates
   parameters:
     customNPMRegistry: ''
     nodeVersion: 16.17.1
@@ -26,8 +29,8 @@ extends:
         displayName: "Install dependencies"
 
       - script: |
-          npm run compile
           npm run lint
+          npm run compile
           npm run esbuild
         workingDirectory: $(Build.SourcesDirectory)/wasm-wasi-core
         displayName: "Lint & Compile"

@@ -29,6 +29,6 @@ extends:
           npm run compile
           npm run lint
           npm run esbuild
-        workingDirectory: $(Build.SourcesDirectory)/wasm-wasi-core
+        workingDirectory: $(Build.SourcesDirectory)/webshell
         displayName: "Lint & Compile"
-    workingDirectory: $(Build.SourcesDirectory)/wasm-wasi-core
+    workingDirectory: $(Build.SourcesDirectory)/webshell

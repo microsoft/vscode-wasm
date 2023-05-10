@@ -8,6 +8,9 @@
 	},
 	"main": "./lib/api/main.js",
 	"typings": "./lib/api/main.d.ts",
+	"bin": {
+		"dir-dump": "./bin/dir-dump"
+	},
 	"repository": {
 		"type": "git",
 		"url": "git+https://github.com/microsoft/vscode-wasm.git"

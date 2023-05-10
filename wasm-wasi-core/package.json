@@ -3,7 +3,7 @@
 	"private": "true",
 	"publisher": "ms-vscode",
 	"version": "0.1.0",
-	"displayName": "Experimental - WebAssembly Execution Support",
+	"displayName": "Experimental - WebAssembly Execution Engine",
 	"description": "Experimental support to execute WebAssemblies on top of the VS Code API.",
 	"author": "MS",
 	"license": "MIT",
@@ -23,7 +23,7 @@
 	"engines": {
 		"vscode": "^1.77.0"
 	},
-	"main": "./lib/desktop/extension.js",
+	"main": "./dist/desktop/extension.js",
 	"browser": "./dist/web/extension.js",
 	"activationEvents": [],
 	"dependencies": {
@@ -46,7 +46,6 @@
 		"esbuild:watch": "node ./bin/esbuild.js --watch",
 		"test": "npm run test:desktop && npm run test:web",
 		"test:desktop": "node ./lib/desktop/test/runTests.js",
-		"test:web": "npm run esbuild && node ./lib/web/test/runTests.js",
-		"vscode:prepublish": "npm run compile && npm run esbuild"
+		"test:web": "npm run esbuild && node ./lib/web/test/runTests.js"
 	}
 }

@@ -29,8 +29,8 @@ extends:
         displayName: "Install dependencies"
 
       - script: |
-          npm run lint
           npm run compile
+          npm run lint
           npm run esbuild
         workingDirectory: $(Build.SourcesDirectory)/wasm-wasi-core
         displayName: "Lint & Compile"
