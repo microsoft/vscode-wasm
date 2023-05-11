@@ -3,8 +3,8 @@
 	"private": "true",
 	"publisher": "ms-vscode",
 	"version": "0.1.0",
-	"displayName": "A shell for VS Code for the Web",
-	"description": "A shell for VS Code for the Web - allows executing commands like ls, cat, more, ...",
+	"displayName": "Experimental - A shell for VS Code Web",
+	"description": "A shell for VS Code for the Web - allows executing commands like ls, cat, ...",
 	"author": "MS",
 	"license": "MIT",
 	"repository": {
@@ -18,12 +18,13 @@
 	"keywords": [
 		"vscode",
 		"wasm",
-		"wasi"
+		"wasi",
+		"shell"
 	],
 	"engines": {
 		"vscode": "^1.78.0"
 	},
-	"main": "./lib/desktop/extension.js",
+	"main": "./dist/desktop/extension.js",
 	"browser": "./dist/web/extension.js",
 	"activationEvents": [],
 	"contributes": {
@@ -36,12 +37,10 @@
 		]
 	},
 	"dependencies": {
-		"@vscode/wasm-wasi": "0.11.0",
-		"path-browserify": "^1.0.1"
+		"@vscode/wasm-wasi": "0.8.2"
 	},
 	"devDependencies": {
-		"@types/vscode": "1.77.0",
-		"@types/path-browserify": "^1.0.0"
+		"@types/vscode": "1.78.0"
 	},
 	"scripts": {
 		"build": "npm run compile",
@@ -49,10 +48,6 @@
 		"watch": "node ../node_modules/typescript/lib/tsc.js -b tsconfig.json -w",
 		"clean": "node ../node_modules/rimraf/bin.js lib && node ../node_modules/rimraf/bin.js dist",
 		"lint": "node ../node_modules/eslint/bin/eslint.js --ext ts src",
-		"esbuild": "node ./bin/esbuild.js",
-		"test": "npm run test:desktop && npm run test:web",
-		"test:desktop": "node ./lib/desktop/test/runTests.js",
-		"test:web": "npm run esbuild && node ./lib/web/test/runTests.js",
-		"vscode:prepublish": "npm run compile && npm run esbuild"
+		"esbuild": "node ./bin/esbuild.js"
 	}
 }

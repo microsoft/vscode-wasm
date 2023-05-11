@@ -88,6 +88,12 @@ export class BrowserWasiProcess extends WasiProcess {
 		}
 		const message: StartMainMessage = { method: 'startMain', module: await this.module, memory: this.memory, trace: this.options.trace !== undefined };
 		connection.postMessage(message);
+		connection.workerDone().then(async () => {
+			await this.cleanUpWorkers();
+			await this.cleanupFileDescriptors();
+			this.resolveRunPromise(0);
+
+		}).catch((error) => { RAL().console.error(error); });
 		return Promise.resolve();
 	}
 
@@ -106,6 +112,13 @@ export class BrowserWasiProcess extends WasiProcess {
 		connection.postMessage(message);
 		this.threadWorkers.set(tid, worker);
 		return Promise.resolve();
+	}
+
+	private async cleanUpWorkers(): Promise<void> {
+		for (const worker of this.threadWorkers.values()) {
+			await worker.terminate();
+		}
+		this.threadWorkers.clear();
 	}
 
 	protected async threadEnded(tid: u32): Promise<void> {

@@ -50,10 +50,14 @@ class ThreadBrowserHostConnection extends BrowserHostConnection {
 
 async function main(port: MessagePort | Worker | DedicatedWorkerGlobalScope): Promise<void> {
 	const connection = new ThreadBrowserHostConnection(port);
-	const ready: WorkerReadyMessage = { method: 'workerReady' };
-	connection.postMessage(ready);
-	await connection.done();
-	connection.destroy();
+	try {
+		const ready: WorkerReadyMessage = { method: 'workerReady' };
+		connection.postMessage(ready);
+		await connection.done();
+	} finally {
+		connection.postMessage({ method: 'workerDone' });
+		connection.destroy();
+	}
 }
 
-main(self).catch(RIL().console.error);
+main(self).catch(RIL().console.error).finally(() => close());

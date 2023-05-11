@@ -1,5 +1,5 @@
 .vscode/
-bin/
+example/**
 dist/
 lib/**/test/
 lib/**/*.map
