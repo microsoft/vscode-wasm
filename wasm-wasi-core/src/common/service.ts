@@ -182,6 +182,9 @@ export interface ProcessWasiService {
 export interface WasiService extends EnvironmentWasiService, ClockWasiService, DeviceWasiService, ProcessWasiService {
 }
 
+export interface FileSystemService extends Pick<EnvironmentWasiService, 'fd_prestat_get' | 'fd_prestat_dir_name'>, DeviceWasiService {
+}
+
 export interface EnvironmentOptions extends Omit<ProcessOptions, 'args' | 'trace'> {
 	args?: string[];
 }
@@ -1099,6 +1102,19 @@ export namespace DeviceWasiService {
 		}
 
 		return result;
+	}
+}
+
+export interface FileSystemService extends Pick<EnvironmentWasiService, 'fd_prestat_get' | 'fd_prestat_dir_name'>, DeviceWasiService {
+}
+export namespace FileSystemService {
+	export function create(deviceDrivers: DeviceDrivers, fileDescriptors: FileDescriptors, virtualRootFileSystem: VirtualRootFileSystemDeviceDriver | undefined, preOpens: Map<string, FileSystemDeviceDriver>, options: DeviceOptions): FileSystemService {
+		const clock = Clock.create();
+		return Object.assign(
+			{},
+			EnvironmentWasiService.create(fileDescriptors, 'virtualRootFileSystem', preOpens.entries(), {}),
+			DeviceWasiService.create(deviceDrivers, fileDescriptors, clock, virtualRootFileSystem, options)
+		);
 	}
 }
 

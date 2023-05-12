@@ -372,9 +372,9 @@ export abstract class WasiProcess {
 				const fileDescriptor = await driver.createStdioFileDescriptor(
 					Lookupflags.none,
 					descriptor.path.substring(mountPoint.length),
-					descriptor.oflags,
+					descriptor.openFlags,
 					undefined,
-					descriptor.fdflags,
+					descriptor.openFlags,
 					fd
 				);
 				this.fileDescriptors.add(fileDescriptor);

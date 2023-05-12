@@ -6,74 +6,6 @@
 
 import { extensions as Extensions, Event, Pseudoterminal, Uri, ExtensionContext, Extension } from 'vscode';
 
-type u8 = number;
-type u16 = number;
-export type oflags = u16;
-export namespace Oflags {
-	/**
-	 * No flags.
-	 */
-	export const none = 0;
-
-	/**
-	 * Create file if it does not exist.
-	 */
-	export const creat = 1 << 0;
-
-	/**
-	 * Fail if not a directory.
-	 */
-	export const directory = 1 << 1;
-
-	/**
-	 * Fail if file already exists.
-	 */
-	export const excl = 1 << 2;
-
-	/**
-	 * Truncate file to size 0.
-	 */
-	export const trunc = 1 << 3;
-}
-
-export type fdflags = u16;
-export namespace Fdflags {
-
-	/**
-	 * No flags.
-	 */
-	export const none = 0;
-
-	/**
-	 * Append mode: Data written to the file is always appended to the file's
-	 * end.
-	 */
-	export const append = 1 << 0;
-
-	/**
-	 * Write according to synchronized I/O data integrity completion. Only the
-	 * data stored in the file is synchronized.
-	 */
-	export const dsync = 1 << 1;
-
-	/**
-	 * Non-blocking mode.
-	 */
-	export const nonblock = 1 << 2;
-
-	/**
-	 * Synchronized read I/O operations.
-	 */
-	export const rsync = 1 << 3;
-
-	/**
-	 * Write according to synchronized I/O file integrity completion. In
-	 * addition to synchronizing the data stored in the file, the
-	 * implementation may also synchronously update the file's metadata.
-	 */
-	export const sync = 1 << 4;
-}
-
 export interface Environment {
 	[key: string]: string;
 }
@@ -150,14 +82,44 @@ export interface Readable {
 }
 
 /**
+ * Flags used to open a file.
+ */
+export namespace OpenFlags {
+	/**
+	 * No flags.
+	 */
+	export const none = 0;
+
+	/**
+	 * Create file if it does not exist.
+	 */
+	export const create = 1 << 0;
+
+	/**
+	 * Fail if not a directory.
+	 */
+	export const directory = 1 << 1;
+
+	/**
+	 * Fail if file already exists.
+	 */
+	export const exclusive = 1 << 2;
+
+	/**
+	 * Truncate file to size 0.
+	 */
+	export const truncate = 1 << 3;
+}
+export type OpenFlags = number;
+
+/**
  * A stdio descriptor denoting a file in a WASM
  * file system.
  */
 export type StdioFileDescriptor = {
 	kind: 'file';
 	path: string;
-	oflags?: oflags;
-	fdflags?: fdflags;
+	openFlags?: OpenFlags;
 };
 
 /**
@@ -316,17 +278,23 @@ export interface WasmProcess {
 	 terminate(): Promise<number>;
 }
 
-export type filetype = u8;
-export namespace Filetype {
+export enum Filetype {
+
+	/**
+	 * The type of the file descriptor or file is unknown or is different from
+	 * any of the other types specified.
+	 */
+	unknown,
+
 	/**
 	 * The file descriptor or file refers to a directory inode.
 	 */
-	export const directory = 3;
+	directory,
 
 	/**
 	 * The file descriptor or file refers to a regular file inode.
 	 */
-	export const regular_file = 4;
+	regular_file,
 }
 
 /**
@@ -354,7 +322,7 @@ export interface MemoryFileSystem {
 
 export interface WasmFileSystem {
 	readonly uri: Uri;
-	stat(path: string): Promise<{ filetype: filetype }>;
+	stat(path: string): Promise<{ filetype: Filetype }>;
 }
 
 export interface Wasm {

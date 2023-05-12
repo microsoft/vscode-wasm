@@ -6,9 +6,16 @@
 
 import { Event, Extension, ExtensionContext, Pseudoterminal, Uri } from 'vscode';
 
-import { fdflags, oflags } from './wasi';
-import { u8 } from './baseTypes';
-export { fdflags, oflags };
+import { WasmPseudoterminal as WasmPseudoterminalImpl } from './terminal';
+import { WasiProcess as InternalWasiProcess } from './process';
+import { MemoryFileSystem as InMemoryFileSystemImpl } from './memoryFileSystem';
+import WasiKernel, { RootFileSystemInfo } from './kernel';
+import { FileDescriptor, FileDescriptors } from './fileDescriptor';
+import { StdinStream, StdoutStream } from './streams';
+import { FileSystemService } from './service';
+import { Errno, errno } from './wasi';
+import { VirtualRootFileSystemDeviceDriver } from './virtualRootFS';
+import { FileSystemDeviceDriver } from './deviceDriver';
 
 export interface Environment {
 	[key: string]: string;
@@ -86,14 +93,43 @@ export interface Readable {
 }
 
 /**
+ * Flags used to open a file.
+ */
+export namespace OpenFlags {
+	/**
+	 * No flags.
+	 */
+	export const none = 0;
+
+	/**
+	 * Create file if it does not exist.
+	 */
+	export const create = 1 << 0;
+
+	/**
+	 * Fail if not a directory.
+	 */
+	export const directory = 1 << 1;
+
+	/**
+	 * Fail if file already exists.
+	 */
+	export const exclusive = 1 << 2;
+
+	/**
+	 * Truncate file to size 0.
+	 */
+	export const truncate = 1 << 3;
+}
+export type OpenFlags = number;
+/**
  * A stdio descriptor denoting a file in a WASM
  * file system.
  */
 export type StdioFileDescriptor = {
 	kind: 'file';
 	path: string;
-	oflags?: oflags;
-	fdflags?: fdflags;
+	openFlags?: OpenFlags;
 };
 
 /**
@@ -168,7 +204,7 @@ export type VSCodeFileSystemDescriptor = {
 };
 
 /**
- * A descriptor signaling that a in-memory file system is mapped under the given
+ * A descriptor signaling that an in-memory file system is mapped under the given
  * mount point.
  */
 export type InMemoryFileSystemDescriptor = {
@@ -252,17 +288,23 @@ export interface WasmProcess {
 	 terminate(): Promise<number>;
 }
 
-export type filetype = u8;
-export namespace Filetype {
+export enum Filetype {
+
+	/**
+	 * The type of the file descriptor or file is unknown or is different from
+	 * any of the other types specified.
+	 */
+	unknown,
+
 	/**
 	 * The file descriptor or file refers to a directory inode.
 	 */
-	export const directory = 3;
+	directory,
 
 	/**
 	 * The file descriptor or file refers to a regular file inode.
 	 */
-	export const regular_file = 4;
+	regular_file,
 }
 
 /**
@@ -289,8 +331,7 @@ export interface MemoryFileSystem {
 }
 
 export interface WasmFileSystem {
-	readonly uri: Uri;
-	stat(path: string): Promise<{ filetype: filetype }>;
+	stat(path: string): Promise<{ filetype: Filetype }>;
 }
 
 export interface Wasm {
@@ -339,4 +380,90 @@ export interface Wasm {
 	 * @param options Additional options for the process.
 	 */
 	createProcess(name: string, module: WebAssembly.Module | Promise<WebAssembly.Module>, memory: WebAssembly.MemoryDescriptor | WebAssembly.Memory, options?: ProcessOptions): Promise<WasmProcess>;
+}
+
+namespace MemoryDescriptor {
+	export function is(value: any): value is WebAssembly.MemoryDescriptor {
+		const candidate = value as WebAssembly.MemoryDescriptor;
+		return candidate && typeof candidate === 'object'
+			&& typeof candidate.initial === 'number'
+			&& (typeof candidate.maximum === 'number' || candidate.maximum === undefined)
+			&& (typeof candidate.shared === 'boolean' || candidate.shared === undefined);
+	}
+}
+
+class WasmFileSystemImpl {
+	private readonly service: FileSystemService;
+	private virtualFileSystem: VirtualRootFileSystemDeviceDriver | undefined;
+	private singleFileSystem: FileSystemDeviceDriver | undefined;
+
+	constructor(info: RootFileSystemInfo, fileDescriptors: FileDescriptors) {
+		if (info.kind === 'virtual') {
+			this.service = FileSystemService.create(info.deviceDrivers, fileDescriptors, info.fileSystem, info.preOpens, {});
+			this.virtualFileSystem = info.fileSystem;
+		} else {
+			this.service = FileSystemService.create(info.deviceDrivers, fileDescriptors, undefined, info.preOpens, {});
+			this.singleFileSystem = info.fileSystem;
+		}
+	}
+
+	public async initialize(): Promise<void> {
+		let fd = 3;
+		let errno: errno;
+		const memory = new ArrayBuffer(1024);
+		do {
+			errno = await this.service.fd_prestat_get(memory, fd++, 0);
+		} while (errno === Errno.success);
+	}
+
+	async stat(path: string): Promise<{ filetype: Filetype }> {
+	}
+
+	private getFileDescriptor(path: string): [FileDescriptor | undefined, string] {
+		if (this.virtualFileSystem !== undefined) {
+			return this.virtualFileSystem.makeVirtualPath(path);
+		}
+	}
+}
+
+export namespace WasiCoreImpl {
+	export function create(context: ExtensionContext, construct: new (baseUri: Uri, programName: string, module: WebAssembly.Module | Promise<WebAssembly.Module>, memory: WebAssembly.Memory | WebAssembly.MemoryDescriptor | undefined, options: ProcessOptions | undefined) => InternalWasiProcess): Wasm {
+		return {
+			createPseudoterminal(options?: TerminalOptions): WasmPseudoterminal {
+				return WasmPseudoterminalImpl.create(options);
+			},
+			createInMemoryFileSystem(): MemoryFileSystem {
+				return new InMemoryFileSystemImpl();
+			},
+			async createWasmFileSystem(mountDescriptors: MountPointDescriptor[]): Promise<WasmFileSystem> {
+				const fileDescriptors = new FileDescriptors();
+				const info = await WasiKernel.createRootFileSystem(fileDescriptors, mountDescriptors);
+				const service: FileSystemService = info.kind === 'virtual'
+					? FileSystemService.create(info.deviceDrivers, fileDescriptors, info.fileSystem, info.preOpens, {})
+					: FileSystemService.create(info.deviceDrivers, fileDescriptors, undefined, info.preOpens, {});
+				const result = new WasmFileSystemImpl(service);
+				await result.initialize();
+				return result;
+			},
+			createReadable() {
+				return new StdoutStream();
+			},
+			createWritable(encoding?: 'utf-8') {
+				return new StdinStream(encoding);
+			},
+			async createProcess(name: string, module: WebAssembly.Module | Promise<WebAssembly.Module>, memoryOrOptions?: WebAssembly.MemoryDescriptor | WebAssembly.Memory | ProcessOptions, optionsOrMapWorkspaceFolders?: ProcessOptions | boolean): Promise<WasmProcess> {
+				let memory: WebAssembly.Memory | WebAssembly.MemoryDescriptor | undefined;
+				let options: ProcessOptions | undefined;
+				if (memoryOrOptions instanceof WebAssembly.Memory || MemoryDescriptor.is(memoryOrOptions)) {
+					memory = memoryOrOptions;
+					options = optionsOrMapWorkspaceFolders as ProcessOptions | undefined;
+				} else {
+					options = memoryOrOptions;
+				}
+				const result = new construct(context.extensionUri, name, module, memory, options);
+				await result.initialize();
+				return result;
+			}
+		};
+	}
 }
