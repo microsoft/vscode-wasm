@@ -9,11 +9,11 @@ import { Event, Extension, ExtensionContext, Pseudoterminal, Uri } from 'vscode'
 import { WasmPseudoterminal as WasmPseudoterminalImpl } from './terminal';
 import { WasiProcess as InternalWasiProcess } from './process';
 import { MemoryFileSystem as InMemoryFileSystemImpl } from './memoryFileSystem';
-import WasiKernel, { RootFileSystemInfo } from './kernel';
+import WasiKernel, { DeviceDrivers, RootFileSystemInfo } from './kernel';
 import { FileDescriptor, FileDescriptors } from './fileDescriptor';
 import { StdinStream, StdoutStream } from './streams';
 import { FileSystemService } from './service';
-import { Errno, errno } from './wasi';
+import { Errno, Filestat, Lookupflags, errno, Filetype as WasiFiletype, filetype, WasiError } from './wasi';
 import { VirtualRootFileSystemDeviceDriver } from './virtualRootFS';
 import { FileSystemDeviceDriver } from './deviceDriver';
 
@@ -307,6 +307,16 @@ export enum Filetype {
 	regular_file,
 }
 
+namespace Filetypes {
+	export function from(filetype: filetype): Filetype {
+		switch (filetype) {
+			case WasiFiletype.directory: return Filetype.directory;
+			case WasiFiletype.regular_file: return Filetype.regular_file;
+			default: return Filetype.unknown;
+		}
+	}
+}
+
 /**
  * A file node in the in-memory file system.
  */
@@ -393,11 +403,15 @@ namespace MemoryDescriptor {
 }
 
 class WasmFileSystemImpl {
+	private readonly deviceDrivers: DeviceDrivers;
+	private readonly fileDescriptors: FileDescriptors;
 	private readonly service: FileSystemService;
 	private virtualFileSystem: VirtualRootFileSystemDeviceDriver | undefined;
 	private singleFileSystem: FileSystemDeviceDriver | undefined;
 
 	constructor(info: RootFileSystemInfo, fileDescriptors: FileDescriptors) {
+		this.deviceDrivers = info.deviceDrivers;
+		this.fileDescriptors = fileDescriptors;
 		if (info.kind === 'virtual') {
 			this.service = FileSystemService.create(info.deviceDrivers, fileDescriptors, info.fileSystem, info.preOpens, {});
 			this.virtualFileSystem = info.fileSystem;
@@ -417,11 +431,30 @@ class WasmFileSystemImpl {
 	}
 
 	async stat(path: string): Promise<{ filetype: Filetype }> {
+		const [fileDescriptor, relativePath] = this.getFileDescriptor(path);
+		if (fileDescriptor !== undefined) {
+			const deviceDriver = this.deviceDrivers.get(fileDescriptor.deviceId);
+			if (deviceDriver !== undefined && deviceDriver.kind === 'fileSystem') {
+				const result = Filestat.createHeap();
+				await deviceDriver.path_filestat_get(fileDescriptor, Lookupflags.none, relativePath, result);
+				return { filetype: Filetypes.from(result.filetype) };
+			}
+		}
+		throw new WasiError(Errno.noent);
 	}
 
 	private getFileDescriptor(path: string): [FileDescriptor | undefined, string] {
 		if (this.virtualFileSystem !== undefined) {
-			return this.virtualFileSystem.makeVirtualPath(path);
+			const [deviceDriver, rest] = this.virtualFileSystem.getDeviceDriver(path);
+			if (deviceDriver !== undefined) {
+				return [this.fileDescriptors.getRoot(deviceDriver), rest];
+			} else {
+				return [this.fileDescriptors.getRoot(this.virtualFileSystem), path];
+			}
+		} else if (this.singleFileSystem !== undefined) {
+			return [this.fileDescriptors.getRoot(this.singleFileSystem), path];
+		} else {
+			return [undefined, path];
 		}
 	}
 }
@@ -438,10 +471,7 @@ export namespace WasiCoreImpl {
 			async createWasmFileSystem(mountDescriptors: MountPointDescriptor[]): Promise<WasmFileSystem> {
 				const fileDescriptors = new FileDescriptors();
 				const info = await WasiKernel.createRootFileSystem(fileDescriptors, mountDescriptors);
-				const service: FileSystemService = info.kind === 'virtual'
-					? FileSystemService.create(info.deviceDrivers, fileDescriptors, info.fileSystem, info.preOpens, {})
-					: FileSystemService.create(info.deviceDrivers, fileDescriptors, undefined, info.preOpens, {});
-				const result = new WasmFileSystemImpl(service);
+				const result = new WasmFileSystemImpl(info, fileDescriptors);
 				await result.initialize();
 				return result;
 			},
