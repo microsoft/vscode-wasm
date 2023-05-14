@@ -15,7 +15,7 @@ import { StdinStream, StdoutStream } from './streams';
 import { FileSystemService } from './service';
 import { Errno, Filestat, Lookupflags, errno, Filetype as WasiFiletype, filetype, WasiError } from './wasi';
 import { VirtualRootFileSystemDeviceDriver } from './virtualRootFS';
-import { FileSystemDeviceDriver } from './deviceDriver';
+import { DeviceDriver, FileSystemDeviceDriver } from './deviceDriver';
 
 export interface Environment {
 	[key: string]: string;
@@ -221,7 +221,7 @@ export type MountPointDescriptor = WorkspaceFolderDescriptor | ExtensionLocation
 /**
  * Options for a WASM process.
  */
-export interface ProcessOptions {
+export type BaseProcessOptions = {
 
 	/**
 	 * The encoding to use when decoding strings from and to the WASM layer.
@@ -242,11 +242,6 @@ export interface ProcessOptions {
 	env?: Environment;
 
 	/**
-	 * How VS Code files systems are mapped into the WASM/WASI file system.
-	 */
-	mountPoints?: MountPointDescriptor[];
-
-	/**
 	 * Stdio setup
 	 */
 	stdio?: Stdio;
@@ -255,7 +250,35 @@ export interface ProcessOptions {
 	 * Whether the WASM/WASI API should be traced or not.
 	 */
 	trace?: boolean;
+};
+
+export type MountPointOptions = {
+	/**
+	 * How VS Code files systems are mapped into the WASM/WASI file system.
+	 */
+	mountPoints?: MountPointDescriptor[];
+};
+export namespace MountPointOptions {
+	export function is(value: any): value is MountPointOptions {
+		const candidate = value as MountPointOptions;
+		return candidate && Array.isArray(candidate.mountPoints);
+	}
 }
+
+export type RootFileSystemOptions = {
+	/**
+	 * The root file system that is used by the WASM process.
+	 */
+	rootFileSystem?: WasmFileSystem;
+};
+export namespace RootFileSystemOptions {
+	export function is(value: any): value is RootFileSystemOptions {
+		const candidate = value as RootFileSystemOptions;
+		return candidate && candidate.rootFileSystem instanceof WasmFileSystemImpl;
+	}
+}
+
+export type ProcessOptions = BaseProcessOptions & (MountPointOptions | RootFileSystemOptions);
 
 /**
  * A WASM process.
@@ -415,7 +438,7 @@ namespace MemoryDescriptor {
 	}
 }
 
-class WasmFileSystemImpl {
+export class WasmFileSystemImpl implements WasmFileSystem{
 	private readonly deviceDrivers: DeviceDrivers;
 	private readonly fileDescriptors: FileDescriptors;
 	private readonly service: FileSystemService;
@@ -441,6 +464,10 @@ class WasmFileSystemImpl {
 		do {
 			errno = await this.service.fd_prestat_get(memory, fd++, 0);
 		} while (errno === Errno.success);
+	}
+
+	getDeviceDrivers(): DeviceDriver[] {
+		return Array.from(this.deviceDrivers.values());
 	}
 
 	async stat(path: string): Promise<{ filetype: Filetype }> {

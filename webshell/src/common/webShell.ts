@@ -4,7 +4,7 @@
  *--------------------------------------------------------------------------------------------*/
 import { window, Terminal, commands } from 'vscode';
 
-import { ExtensionLocationDescriptor, MountPointDescriptor, MemoryFileSystem, Wasm, WasmPseudoterminal, Stdio } from '@vscode/wasm-wasi';
+import { ExtensionLocationDescriptor, MountPointDescriptor, MemoryFileSystem, Wasm, WasmPseudoterminal, Stdio, WasmFileSystem } from '@vscode/wasm-wasi';
 
 import RAL from './ral';
 const paths = RAL().path;
@@ -20,12 +20,19 @@ export class WebShell {
 
 	private static contributions: WebShellContributions;
 	private static commandHandlers: Map<string, CommandHandler>;
+	private static rootFs: WasmFileSystem;
 	private static userBin: MemoryFileSystem;
 
-	public static initialize(wasm: Wasm, contributions: WebShellContributions): void {
+	public static async initialize(wasm: Wasm, contributions: WebShellContributions): Promise<void> {
 		this.contributions = contributions;
 		this.commandHandlers = new Map<string, CommandHandler>();
 		this.userBin = wasm.createInMemoryFileSystem();
+		const fsContributions: ExtensionLocationDescriptor[] = WebShell.contributions.getDirectoryMountPoints().map(entry => ({ kind: 'extensionLocation', extension: entry.extension, path: entry.path, mountPoint: entry.mountPoint }));
+		const mountPoints: MountPointDescriptor[] = [
+			{ kind: 'inMemoryFileSystem', fileSystem: this.userBin, mountPoint: '/usr/bin' },
+			...fsContributions
+		];
+		this.rootFs = await wasm.createWasmFileSystem(mountPoints);
 		for (const contribution of this.contributions.getCommandMountPoints()) {
 			this.registerCommandContribution(contribution);
 		}

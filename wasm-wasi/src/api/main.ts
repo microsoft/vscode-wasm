@@ -208,10 +208,7 @@ export type InMemoryFileSystemDescriptor = {
  */
 export type MountPointDescriptor = WorkspaceFolderDescriptor | ExtensionLocationDescriptor | VSCodeFileSystemDescriptor | InMemoryFileSystemDescriptor;
 
-/**
- * Options for a WASM process.
- */
-export interface ProcessOptions {
+type BaseProcessOptions = {
 
 	/**
 	 * The encoding to use when decoding strings from and to the WASM layer.
@@ -232,11 +229,6 @@ export interface ProcessOptions {
 	env?: Environment;
 
 	/**
-	 * How VS Code files systems are mapped into the WASM/WASI file system.
-	 */
-	mountPoints?: MountPointDescriptor[];
-
-	/**
 	 * Stdio setup
 	 */
 	stdio?: Stdio;
@@ -245,7 +237,25 @@ export interface ProcessOptions {
 	 * Whether the WASM/WASI API should be traced or not.
 	 */
 	trace?: boolean;
-}
+};
+
+type MountPointOptions = {
+	/**
+	 * How VS Code files systems are mapped into the WASM/WASI file system.
+	 */
+	mountPoints?: MountPointDescriptor[];
+};
+type RootFileSystemOptions = {
+	/**
+	 * The root file system that is used by the WASM process.
+	 */
+	rootFileSystem?: WasmFileSystem;
+};
+
+/**
+ * Options for a WASM process.
+ */
+export type ProcessOptions = BaseProcessOptions & (MountPointOptions | RootFileSystemOptions);
 
 /**
  * A WASM process.
