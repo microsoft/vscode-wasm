@@ -307,12 +307,25 @@ export enum Filetype {
 	regular_file,
 }
 
-namespace Filetypes {
+export namespace Filetype {
 	export function from(filetype: filetype): Filetype {
 		switch (filetype) {
-			case WasiFiletype.directory: return Filetype.directory;
-			case WasiFiletype.regular_file: return Filetype.regular_file;
-			default: return Filetype.unknown;
+			case WasiFiletype.directory:
+				return Filetype.directory;
+			case WasiFiletype.regular_file:
+				return Filetype.regular_file;
+			default:
+				return Filetype.unknown;
+		}
+	}
+	export function to(filetype: Filetype): filetype {
+		switch(filetype) {
+			case Filetype.regular_file:
+				return WasiFiletype.regular_file;
+			case Filetype.directory:
+				return WasiFiletype.directory;
+			default:
+				return WasiFiletype.unknown;
 		}
 	}
 }
@@ -437,7 +450,7 @@ class WasmFileSystemImpl {
 			if (deviceDriver !== undefined && deviceDriver.kind === 'fileSystem') {
 				const result = Filestat.createHeap();
 				await deviceDriver.path_filestat_get(fileDescriptor, Lookupflags.none, relativePath, result);
-				return { filetype: Filetypes.from(result.filetype) };
+				return { filetype: Filetype.from(result.filetype) };
 			}
 		}
 		throw new WasiError(Errno.noent);

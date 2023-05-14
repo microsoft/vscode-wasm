@@ -16,32 +16,20 @@ type CommandLine = {
 	command: string; args: string[];
 };
 
-export class Webshell {
+export class WebShell {
 
-	private readonly wasm: Wasm;
-	private readonly contributions: WebShellContributions;
-	private readonly pty: WasmPseudoterminal;
-	private readonly terminal : Terminal;
-	private readonly prompt;
+	private static contributions: WebShellContributions;
+	private static commandHandlers: Map<string, CommandHandler>;
+	private static userBin: MemoryFileSystem;
 
-	private cwd: string;
-	private readonly commandHandlers: Map<string, CommandHandler>;
-	private readonly userBin: MemoryFileSystem;
-
-	constructor(wasm: Wasm, contributions: WebShellContributions, cwd: string, prompt: string = '$ ') {
-		this.wasm = wasm;
+	public static initialize(wasm: Wasm, contributions: WebShellContributions): void {
 		this.contributions = contributions;
-		this.prompt = prompt;
-		this.pty = this.wasm.createPseudoterminal({ history: true });
-		this.terminal = window.createTerminal({ name: 'wesh', pty: this.pty, isTransient: true });
-		this.terminal.show();
-		this.cwd = cwd;
 		this.commandHandlers = new Map<string, CommandHandler>();
 		this.userBin = wasm.createInMemoryFileSystem();
-		for (const contribution of contributions.getCommandMountPoints()) {
+		for (const contribution of this.contributions.getCommandMountPoints()) {
 			this.registerCommandContribution(contribution);
 		}
-		contributions.onChanged((event) => {
+		this.contributions.onChanged((event) => {
 			for (const add of event.commands.added) {
 				this.registerCommandContribution(add);
 			}
@@ -51,7 +39,7 @@ export class Webshell {
 		});
 	}
 
-	private registerCommandContribution(contribution: CommandMountPoint): void {
+	private static registerCommandContribution(contribution: CommandMountPoint): void {
 		const basename = paths.basename(contribution.mountPoint);
 		const dirname = paths.dirname(contribution.mountPoint);
 		if (dirname === '/usr/bin') {
@@ -63,18 +51,33 @@ export class Webshell {
 		}
 	}
 
-	private unregisterCommandContribution(contribution: CommandMountPoint): void {
+	private static unregisterCommandContribution(contribution: CommandMountPoint): void {
 		const basename = paths.basename(contribution.mountPoint);
 		this.unregisterCommandHandler(basename);
 	}
 
-	public registerCommandHandler(command: string, handler: CommandHandler): void {
+	public static registerCommandHandler(command: string, handler: CommandHandler): void {
 		this.userBin.createFile(command, { size: 1047646n, reader: () => { throw new Error('No permissions'); }});
 		this.commandHandlers.set(command, handler);
 	}
 
-	public unregisterCommandHandler(command: string): void {
+	public static unregisterCommandHandler(command: string): void {
 		this.commandHandlers.delete(command);
+	}
+
+	private readonly wasm: Wasm;
+	private readonly pty: WasmPseudoterminal;
+	private readonly terminal : Terminal;
+	private readonly prompt;
+	private cwd: string;
+
+	constructor(wasm: Wasm, cwd: string, prompt: string = '$ ') {
+		this.wasm = wasm;
+		this.prompt = prompt;
+		this.pty = this.wasm.createPseudoterminal({ history: true });
+		this.terminal = window.createTerminal({ name: 'wesh', pty: this.pty, isTransient: true });
+		this.terminal.show();
+		this.cwd = cwd;
 	}
 
 	public async runCommandLoop(): Promise<void> {
@@ -93,7 +96,7 @@ export class Webshell {
 					this.handleCd(args);
 					break;
 				default:
-					const handler = this.commandHandlers.get(command);
+					const handler = WebShell.commandHandlers.get(command);
 					if (handler !== undefined) {
 						try {
 							const result = await handler(command, args, this.cwd, this.pty.stdio, this.getAdditionalFileSystems());
@@ -138,8 +141,8 @@ export class Webshell {
 	}
 
 	private getAdditionalFileSystems(): MountPointDescriptor[] {
-		const result: MountPointDescriptor[] = [{ kind: 'inMemoryFileSystem', fileSystem: this.userBin, mountPoint: '/usr/bin' }];
-		const contributions: ExtensionLocationDescriptor[] = this.contributions.getDirectoryMountPoints().map(entry => ({ kind: 'extensionLocation', extension: entry.extension, path: entry.path, mountPoint: entry.mountPoint }));
+		const result: MountPointDescriptor[] = [{ kind: 'inMemoryFileSystem', fileSystem: WebShell.userBin, mountPoint: '/usr/bin' }];
+		const contributions: ExtensionLocationDescriptor[] = WebShell.contributions.getDirectoryMountPoints().map(entry => ({ kind: 'extensionLocation', extension: entry.extension, path: entry.path, mountPoint: entry.mountPoint }));
 		result.push(...contributions);
 		return result;
 	}

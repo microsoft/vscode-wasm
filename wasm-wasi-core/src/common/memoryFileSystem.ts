@@ -347,7 +347,7 @@ export function create(deviceId: DeviceId, fs: MemoryFileSystem): FileSystemDevi
 	function assignStat(result: filestat, node: Node): void {
 		result.dev = deviceId;
 		result.ino = node.inode;
-		result.filetype = node.filetype;
+		result.filetype = ApiFiletype.to(node.filetype);
 		result.nlink = 1n;
 		result.size = node.filetype === ApiFiletype.regular_file ? FileNode.size(node) : DirectoryNode.size(node);
 		result.atim = node.atime;
