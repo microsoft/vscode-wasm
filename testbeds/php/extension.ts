@@ -23,11 +23,13 @@ export async function activate(_context: ExtensionContext) {
 		}
 
 		const pty = wasm.createPseudoterminal();
-		const terminal = window.createTerminal({ name, pty, isTransient: true });
+		const terminal = window.createTerminal({ name: 'PHP', pty, isTransient: true });
 		terminal.show(true);
 		const options: ProcessOptions = {
 			stdio: pty.stdio,
-			mapDir: true,
+			mountPoints: [
+				{ kind: 'workspaceFolder' }
+			],
 			args: [document.uri]
 		};
 		const filename = path.join(path.sep, 'home', 'dirkb', 'bin', 'wasm', 'php-cgi.wasm');

@@ -86,16 +86,6 @@
 		{
 			"type": "extensionHost",
 			"request": "launch",
-			"name": "CoreUtils Testbed",
-			"runtimeExecutable": "${execPath}",
-			"args": ["--extensionDevelopmentPath=${workspaceRoot}/testbeds/coreutils"],
-			"outFiles": ["${workspaceRoot}/testbeds/coreutils/out/**/*.js"],
-			"sourceMaps": true,
-			"preLaunchTask": "Build CoreUtils Example"
-		},
-		{
-			"type": "extensionHost",
-			"request": "launch",
 			"name": "WASM-WASI Example",
 			"runtimeExecutable": "${execPath}",
 			"args": ["--extensionDevelopmentPath=${workspaceRoot}/wasm-wasi/example", "--extensionDevelopmentPath=${workspaceRoot}/wasm-wasi-core"],
