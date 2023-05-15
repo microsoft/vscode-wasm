@@ -3,39 +3,42 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import * as path from 'path';
-import { Worker } from 'worker_threads';
+import fs from 'node:fs/promises';
+import path from 'node:path';
 
-import { commands, ExtensionContext, Terminal, window } from 'vscode';
-
-import { ServiceConnection } from '@vscode/sync-api-common/node';
-import { Requests, ApiService, ApiServiceConnection, ServicePseudoTerminal } from '@vscode/sync-api-service';
-
-const connectionState: Map<number, [Worker, ApiServiceConnection, ApiService, Terminal]> = new Map();
+import { commands, ExtensionContext, window } from 'vscode';
+import { Wasm, ProcessOptions } from '@vscode/wasm-wasi';
 
 export async function activate(_context: ExtensionContext) {
+	const wasm: Wasm = await Wasm.api();
 
-	commands.registerCommand('testbed-ruby.runFile', () => {
-		const activeDocument = window.activeTextEditor?.document;
-		if (activeDocument === undefined || activeDocument.languageId !== 'ruby') {
+	commands.registerCommand('testbed-ruby.runFile', async () => {
+		const editor = window.activeTextEditor;
+		if (editor === undefined) {
+			return;
+		}
+		const document = editor.document;
+		if (document.languageId !== 'ruby') {
 			return;
 		}
 
-		const key = Date.now();
-		const worker = new Worker(path.join(__dirname, './worker.js'));
-		const connection: ApiServiceConnection = new ServiceConnection<Requests, ApiServiceConnection.ReadyParams>(worker);
-		const apiService = new ApiService('ruby', connection, {
-			exitHandler: (_rval) => {
-				connectionState.delete(key);
-				process.nextTick(() => worker.terminate());
-			}
+		const pty = wasm.createPseudoterminal();
+		const terminal = window.createTerminal({ name: 'Ruby', pty, isTransient: true });
+		terminal.show(true);
+		const options: ProcessOptions = {
+			stdio: pty.stdio,
+			mountPoints: [
+				{ kind: 'workspaceFolder' }
+			],
+			args: [document.uri]
+		};
+		const filename = path.join(path.sep, 'home', 'dirkb', 'bin', 'wasm', 'ruby.wasm');
+		const bits = await fs.readFile(filename);
+		const module = await WebAssembly.compile(bits);
+		const process = await wasm.createProcess('ruby', module, options);
+		process.run().catch(err => {
+			void window.showErrorMessage(err.message);
 		});
-		const pty = ServicePseudoTerminal.create();
-		apiService.registerCharacterDeviceDriver(pty, true);
-		const terminal = window.createTerminal({ name: 'Run Ruby', pty: pty });
-		terminal.show();
-		connectionState.set(key, [worker, connection, apiService, terminal]);
-		apiService.signalReady();
 	});
 }
 

@@ -7,14 +7,14 @@
 import RAL from './ral';
 import { LogOutputChannel, Uri, WorkspaceFolder, window, workspace } from 'vscode';
 
-import type {
-	ExtensionLocationDescriptor, InMemoryFileSystemDescriptor, MountPointDescriptor, ProcessOptions, StdioConsoleDescriptor, Stdio,
-	StdioFileDescriptor, VSCodeFileSystemDescriptor, WorkspaceFolderDescriptor, Readable, Writable
+import {
+	type ExtensionLocationDescriptor, type InMemoryFileSystemDescriptor, type MountPointDescriptor, type ProcessOptions, type StdioConsoleDescriptor, type Stdio,
+	type StdioFileDescriptor, type VSCodeFileSystemDescriptor, type WorkspaceFolderDescriptor, type Readable, type Writable, MountPointOptions, RootFileSystemOptions
 } from './api';
 import type { ptr, u32 } from './baseTypes';
 import type { FileSystemDeviceDriver } from './deviceDriver';
 import { FileDescriptors } from './fileDescriptor';
-import * as vrfs from './virtualRootFS';
+import * as vrfs from './rootFileSystemDriver';
 import * as tdd from './terminalDriver';
 import * as pdd from './pipeDriver';
 import { DeviceWasiService, ProcessWasiService, EnvironmentWasiService, WasiService, Clock, ClockWasiService, EnvironmentOptions } from './service';
@@ -74,7 +74,7 @@ export abstract class WasiProcess {
 	private environmentService!: EnvironmentWasiService;
 	private processService!: ProcessWasiService;
 	private readonly preOpenDirectories: Map<string, FileSystemDeviceDriver>;
-	private virtualRootFileSystem: vrfs.VirtualRootFileSystemDeviceDriver | undefined;
+	private virtualRootFileSystem: vrfs.RootFileSystemDeviceDriver | undefined;
 
 	private _stdin: StdinStream | undefined;
 	private _stdout: StdoutStream | undefined;
@@ -116,55 +116,66 @@ export abstract class WasiProcess {
 			throw new Error('WasiProcess already initialized or running');
 		}
 
-		const { workspaceFolders, extensions, vscodeFileSystems, inMemoryFileSystems } = MapDirDescriptor.getDescriptors(this.options.mountPoints);
-		if (workspaceFolders !== undefined) {
-			const folders = workspace.workspaceFolders;
-			if (folders !== undefined) {
-				if (folders.length === 1) {
-					await this.mapWorkspaceFolder(folders[0], true);
-				} else {
-					for (const folder of folders) {
-						await this.mapWorkspaceFolder(folder, false);
+		if (MountPointOptions.is(this.options)) {
+			const { workspaceFolders, extensions, vscodeFileSystems, inMemoryFileSystems } = MapDirDescriptor.getDescriptors(this.options.mountPoints);
+			if (workspaceFolders !== undefined) {
+				const folders = workspace.workspaceFolders;
+				if (folders !== undefined) {
+					if (folders.length === 1) {
+						await this.mapWorkspaceFolder(folders[0], true);
+					} else {
+						for (const folder of folders) {
+							await this.mapWorkspaceFolder(folder, false);
+						}
 					}
 				}
 			}
-		}
-		if (extensions.length > 0) {
-			for (const descriptor of extensions) {
-				const extensionFS = await WasiKernel.getOrCreateFileSystemByDescriptor(this.localDeviceDrivers, descriptor);
-				this.preOpenDirectories.set(descriptor.mountPoint, extensionFS);
-			}
-		}
-		if (vscodeFileSystems.length > 0) {
-			for (const descriptor of vscodeFileSystems) {
-				const fs = await WasiKernel.getOrCreateFileSystemByDescriptor(this.localDeviceDrivers, descriptor);
-				this.preOpenDirectories.set(descriptor.mountPoint, fs);
-			}
-		}
-		if (inMemoryFileSystems.length > 0) {
-			for (const descriptor of inMemoryFileSystems) {
-				const dd = await WasiKernel.getOrCreateFileSystemByDescriptor(this.localDeviceDrivers, descriptor);
-				this.preOpenDirectories.set(descriptor.mountPoint, dd);
-			}
-		}
-
-		let needsRootFs = false;
-		for (const mountPoint of this.preOpenDirectories.keys()) {
-			if (mountPoint === '/') {
-				if (this.preOpenDirectories.size > 1) {
-					throw new Error(`Cannot mount root directory when other directories are mounted as well.`);
+			if (extensions.length > 0) {
+				for (const descriptor of extensions) {
+					const extensionFS = await WasiKernel.getOrCreateFileSystemByDescriptor(this.localDeviceDrivers, descriptor);
+					this.preOpenDirectories.set(descriptor.mountPoint, extensionFS);
 				}
-			} else {
-				needsRootFs = true;
+			}
+			if (vscodeFileSystems.length > 0) {
+				for (const descriptor of vscodeFileSystems) {
+					const fs = await WasiKernel.getOrCreateFileSystemByDescriptor(this.localDeviceDrivers, descriptor);
+					this.preOpenDirectories.set(descriptor.mountPoint, fs);
+				}
+			}
+			if (inMemoryFileSystems.length > 0) {
+				for (const descriptor of inMemoryFileSystems) {
+					const dd = await WasiKernel.getOrCreateFileSystemByDescriptor(this.localDeviceDrivers, descriptor);
+					this.preOpenDirectories.set(descriptor.mountPoint, dd);
+				}
+			}
+
+			let needsRootFs = false;
+			for (const mountPoint of this.preOpenDirectories.keys()) {
+				if (mountPoint === '/') {
+					if (this.preOpenDirectories.size > 1) {
+						throw new Error(`Cannot mount root directory when other directories are mounted as well.`);
+					}
+				} else {
+					needsRootFs = true;
+				}
+			}
+			if (needsRootFs) {
+				const mountPoints: Map<string, FileSystemDeviceDriver> = new Map(Array.from(this.preOpenDirectories.entries()));
+				this.virtualRootFileSystem = vrfs.create(WasiKernel.nextDeviceId(), this.fileDescriptors, mountPoints);
+				this.preOpenDirectories.set('/', this.virtualRootFileSystem);
+				this.localDeviceDrivers.add(this.virtualRootFileSystem);
+			}
+		} else if (RootFileSystemOptions.is(this.options)) {
+			const devices = this.options.rootFileSystem.getDeviceDrivers();
+			const preOpens = this.options.rootFileSystem.getPreOpenDirectories();
+			this.virtualRootFileSystem = this.options.rootFileSystem.getVirtualRootFileSystem();
+			for (const entry of preOpens) {
+				this.preOpenDirectories.set(entry[0], entry[1]);
+			}
+			for (const device of devices) {
+				this.localDeviceDrivers.add(device);
 			}
 		}
-		if (needsRootFs) {
-			const mountPoints: Map<string, FileSystemDeviceDriver> = new Map(Array.from(this.preOpenDirectories.entries()));
-			this.virtualRootFileSystem = vrfs.create(WasiKernel.nextDeviceId(), this.fileDescriptors, mountPoints);
-			this.preOpenDirectories.set('/', this.virtualRootFileSystem);
-			this.localDeviceDrivers.add(this.virtualRootFileSystem);
-		}
-
 		const args: undefined | string[] = this.options.args !== undefined ? [] : undefined;
 		if (this.options.args !== undefined && args !== undefined) {
 			const path = RAL().path;
@@ -372,9 +383,9 @@ export abstract class WasiProcess {
 				const fileDescriptor = await driver.createStdioFileDescriptor(
 					Lookupflags.none,
 					descriptor.path.substring(mountPoint.length),
-					descriptor.oflags,
+					descriptor.openFlags,
 					undefined,
-					descriptor.fdflags,
+					descriptor.openFlags,
 					fd
 				);
 				this.fileDescriptors.add(fileDescriptor);

@@ -15,7 +15,9 @@ export async function activate() {
 		terminal.show(true);
 		const options: ProcessOptions = {
 			stdio: pty.stdio,
-			mapDir: true
+			mountPoints: [
+				{ kind: 'workspaceFolder' }
+			],
 		};
 		// options.stdio.out = { kind: 'file', path: '/workspace/out.txt' };
 		// options.stdio.out = { kind: 'pipe' };

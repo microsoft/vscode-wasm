@@ -4,7 +4,7 @@
  *--------------------------------------------------------------------------------------------*/
 import { window, Terminal, commands } from 'vscode';
 
-import { ExtensionLocationDescriptor, MountPointDescriptor, MemoryFileSystem, Wasm, WasmPseudoterminal, Stdio } from '@vscode/wasm-wasi';
+import { ExtensionLocationDescriptor, MountPointDescriptor, MemoryFileSystem, Wasm, WasmPseudoterminal, Stdio, WasmFileSystem, Filetype } from '@vscode/wasm-wasi';
 
 import RAL from './ral';
 const paths = RAL().path;
@@ -16,32 +16,28 @@ type CommandLine = {
 	command: string; args: string[];
 };
 
-export class Webshell {
+export class WebShell {
 
-	private readonly wasm: Wasm;
-	private readonly contributions: WebShellContributions;
-	private readonly pty: WasmPseudoterminal;
-	private readonly terminal : Terminal;
-	private readonly prompt;
+	private static contributions: WebShellContributions;
+	private static commandHandlers: Map<string, CommandHandler>;
+	private static rootFs: WasmFileSystem;
+	private static userBin: MemoryFileSystem;
 
-	private cwd: string;
-	private readonly commandHandlers: Map<string, CommandHandler>;
-	private readonly userBin: MemoryFileSystem;
-
-	constructor(wasm: Wasm, contributions: WebShellContributions, cwd: string, prompt: string = '$ ') {
-		this.wasm = wasm;
+	public static async initialize(wasm: Wasm, contributions: WebShellContributions): Promise<void> {
 		this.contributions = contributions;
-		this.prompt = prompt;
-		this.pty = this.wasm.createPseudoterminal({ history: true });
-		this.terminal = window.createTerminal({ name: 'wesh', pty: this.pty, isTransient: true });
-		this.terminal.show();
-		this.cwd = cwd;
 		this.commandHandlers = new Map<string, CommandHandler>();
 		this.userBin = wasm.createInMemoryFileSystem();
-		for (const contribution of contributions.getCommandMountPoints()) {
+		const fsContributions: ExtensionLocationDescriptor[] = WebShell.contributions.getDirectoryMountPoints().map(entry => ({ kind: 'extensionLocation', extension: entry.extension, path: entry.path, mountPoint: entry.mountPoint }));
+		const mountPoints: MountPointDescriptor[] = [
+			{ kind: 'workspaceFolder'},
+			{ kind: 'inMemoryFileSystem', fileSystem: this.userBin, mountPoint: '/usr/bin' },
+			...fsContributions
+		];
+		this.rootFs = await wasm.createWasmFileSystem(mountPoints);
+		for (const contribution of this.contributions.getCommandMountPoints()) {
 			this.registerCommandContribution(contribution);
 		}
-		contributions.onChanged((event) => {
+		this.contributions.onChanged((event) => {
 			for (const add of event.commands.added) {
 				this.registerCommandContribution(add);
 			}
@@ -51,30 +47,45 @@ export class Webshell {
 		});
 	}
 
-	private registerCommandContribution(contribution: CommandMountPoint): void {
+	private static registerCommandContribution(contribution: CommandMountPoint): void {
 		const basename = paths.basename(contribution.mountPoint);
 		const dirname = paths.dirname(contribution.mountPoint);
 		if (dirname === '/usr/bin') {
-			this.registerCommandHandler(basename, (command: string, args: string[], cwd: string, stdio: Stdio, mountPoints?: MountPointDescriptor[] | undefined) => {
+			this.registerCommandHandler(basename, (command: string, args: string[], cwd: string, stdio: Stdio, rootFileSystem: WasmFileSystem) => {
 				return new Promise<number>((resolve, reject) => {
-					commands.executeCommand<number>(contribution.command, command, args, cwd, stdio, mountPoints).then(resolve, reject);
+					commands.executeCommand<number>(contribution.command, command, args, cwd, stdio, rootFileSystem).then(resolve, reject);
 				});
 			});
 		}
 	}
 
-	private unregisterCommandContribution(contribution: CommandMountPoint): void {
+	private static unregisterCommandContribution(contribution: CommandMountPoint): void {
 		const basename = paths.basename(contribution.mountPoint);
 		this.unregisterCommandHandler(basename);
 	}
 
-	public registerCommandHandler(command: string, handler: CommandHandler): void {
+	public static registerCommandHandler(command: string, handler: CommandHandler): void {
 		this.userBin.createFile(command, { size: 1047646n, reader: () => { throw new Error('No permissions'); }});
 		this.commandHandlers.set(command, handler);
 	}
 
-	public unregisterCommandHandler(command: string): void {
+	public static unregisterCommandHandler(command: string): void {
 		this.commandHandlers.delete(command);
+	}
+
+	private readonly wasm: Wasm;
+	private readonly pty: WasmPseudoterminal;
+	private readonly terminal : Terminal;
+	private readonly prompt;
+	private cwd: string;
+
+	constructor(wasm: Wasm, cwd: string, prompt: string = '$ ') {
+		this.wasm = wasm;
+		this.prompt = prompt;
+		this.pty = this.wasm.createPseudoterminal({ history: true });
+		this.terminal = window.createTerminal({ name: 'wesh', pty: this.pty, isTransient: true });
+		this.terminal.show();
+		this.cwd = cwd;
 	}
 
 	public async runCommandLoop(): Promise<void> {
@@ -90,13 +101,13 @@ export class Webshell {
 					void this.pty.write(`${this.cwd}\r\n`);
 					break;
 				case 'cd':
-					this.handleCd(args);
+					await this.handleCd(args);
 					break;
 				default:
-					const handler = this.commandHandlers.get(command);
+					const handler = WebShell.commandHandlers.get(command);
 					if (handler !== undefined) {
 						try {
-							const result = await handler(command, args, this.cwd, this.pty.stdio, this.getAdditionalFileSystems());
+							const result = await handler(command, args, this.cwd, this.pty.stdio, WebShell.rootFs);
 							if (result !== 0) {
 							}
 						} catch (error: any) {
@@ -111,18 +122,26 @@ export class Webshell {
 		}
 	}
 
-	private handleCd(args: string[]): void {
+	private async handleCd(args: string[]): Promise<void> {
 		if (args.length > 1) {
 			void this.pty.write(`-wesh: cd: too many arguments\r\n`);
 			return;
 		}
 		const path = RAL().path;
-		const target = args[0];
-		if (path.isAbsolute(target)) {
-			this.cwd = target;
-		} else {
-			this.cwd = path.join(this.cwd, target);
+		let target = args[0];
+		if (!path.isAbsolute(target)) {
+			target = path.join(this.cwd, target);
 		}
+		try {
+			const stat = await WebShell.rootFs.stat(target);
+			if (stat.filetype === Filetype.directory) {
+				this.cwd = target;
+				return;
+			}
+		} catch (error) {
+			// Do nothing
+		}
+		await this.pty.write(`-wesh: cd: ${target}: No such file or directory\r\n`);
 	}
 
 	private parseCommand(line: string): CommandLine {
@@ -135,12 +154,5 @@ export class Webshell {
 
 	private getPrompt(): string {
 		return `\x1b[01;34m${this.cwd}\x1b[0m ${this.prompt}`;
-	}
-
-	private getAdditionalFileSystems(): MountPointDescriptor[] {
-		const result: MountPointDescriptor[] = [{ kind: 'inMemoryFileSystem', fileSystem: this.userBin, mountPoint: '/usr/bin' }];
-		const contributions: ExtensionLocationDescriptor[] = this.contributions.getDirectoryMountPoints().map(entry => ({ kind: 'extensionLocation', extension: entry.extension, path: entry.path, mountPoint: entry.mountPoint }));
-		result.push(...contributions);
-		return result;
 	}
 }

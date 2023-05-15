@@ -1,0 +1,2 @@
+#!/usr/bin/env node
+require('../lib/tools/main.js').main().then(undefined, console.error);

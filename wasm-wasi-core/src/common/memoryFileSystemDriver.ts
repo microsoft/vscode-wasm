@@ -4,7 +4,7 @@
  *--------------------------------------------------------------------------------------------*/
 import * as uuid from 'uuid';
 
-import type { FileNode as ApiFileNode, DirectoryNode as ApiDirectoryNode, MemoryFileSystem as ApiMemoryFileSystem } from './api';
+import { FileNode as ApiFileNode, DirectoryNode as ApiDirectoryNode, Filetype as ApiFiletype, MemoryFileSystem as ApiMemoryFileSystem } from './api';
 import { Uri } from 'vscode';
 import { DeviceDriverKind, DeviceId, FileSystemDeviceDriver, NoSysDeviceDriver, ReaddirEntry, ReadonlyFileSystemDeviceDriver, WritePermDeniedDeviceDriver } from './deviceDriver';
 import { BaseFileDescriptor, FdProvider, FileDescriptor } from './fileDescriptor';
@@ -113,9 +113,9 @@ abstract class BaseFileSystem<D extends BaseDirectoryNode, F extends BaseFileNod
 		let current: F | D | undefined = parent;
 		for (let i = 0; i < parts.length; i++) {
 			switch (current.filetype) {
-				case Filetype.regular_file:
+				case ApiFiletype.regular_file:
 					return undefined;
-				case Filetype.directory:
+				case ApiFiletype.directory:
 					current = current.entries.get(parts[i]) as F | D | undefined;
 					if (current === undefined) {
 						return undefined;
@@ -158,7 +158,7 @@ interface FileNode extends BaseFileNode {
 namespace FileNode {
 	export function create(parent: DirectoryNode, inode: inode, name: string, time: bigint, content: Uint8Array | { size: bigint; reader: (node: FileNode) => Promise<Uint8Array> }): FileNode {
 		return {
-			filetype: Filetype.regular_file,
+			filetype: ApiFiletype.regular_file,
 			parent,
 			inode,
 			name,
@@ -200,7 +200,7 @@ interface DirectoryNode extends BaseDirectoryNode {
 namespace DirectoryNode {
 	export function create(parent: DirectoryNode | undefined, id: inode, name: string, time: bigint): DirectoryNode {
 		return {
-			filetype: Filetype.directory,
+			filetype: ApiFiletype.directory,
 			inode: id,
 			name,
 			ctime: time,
@@ -247,7 +247,7 @@ export class MemoryFileSystem extends BaseFileSystem<DirectoryNode, FileNode> im
 		if (result === undefined) {
 			throw new Error(`ENOENT: no such directory ${path}`);
 		}
-		if (result.filetype !== Filetype.directory) {
+		if (result.filetype !== ApiFiletype.directory) {
 			throw new Error(`ENOTDIR: not a directory ${path}`);
 		}
 		return result;
@@ -347,9 +347,9 @@ export function create(deviceId: DeviceId, fs: MemoryFileSystem): FileSystemDevi
 	function assignStat(result: filestat, node: Node): void {
 		result.dev = deviceId;
 		result.ino = node.inode;
-		result.filetype = node.filetype;
+		result.filetype = ApiFiletype.to(node.filetype);
 		result.nlink = 1n;
-		result.size = node.filetype === Filetype.regular_file ? FileNode.size(node) : DirectoryNode.size(node);
+		result.size = node.filetype === ApiFiletype.regular_file ? FileNode.size(node) : DirectoryNode.size(node);
 		result.atim = node.atime;
 		result.ctim = node.ctime;
 		result.mtim = node.mtime;
@@ -475,7 +475,7 @@ export function create(deviceId: DeviceId, fs: MemoryFileSystem): FileSystemDevi
 				}
 				throw new WasiError(Errno.noent);
 			}
-			if (target.filetype !== Filetype.directory && Oflags.directoryOn(oflags)) {
+			if (target.filetype !== ApiFiletype.directory && Oflags.directoryOn(oflags)) {
 				throw new WasiError(Errno.notdir);
 			}
 			if (Oflags.exclOn(oflags)) {
@@ -490,7 +490,7 @@ export function create(deviceId: DeviceId, fs: MemoryFileSystem): FileSystemDevi
 				throw new WasiError(Errno.perm);
 			}
 
-			return Promise.resolve(target.filetype === Filetype.directory
+			return Promise.resolve(target.filetype === ApiFiletype.directory
 				? new DirectoryFileDescriptor(deviceId, fdProvider.next(), fileDescriptor.childDirectoryRights(fs_rights_base), fs_rights_inheriting | DirectoryInheritingRights, fdflags, target.inode, target)
 				: new FileFileDescriptor(deviceId, fdProvider.next(), fileDescriptor.childFileRights(fs_rights_base), fdflags, target.inode, target));
 		},

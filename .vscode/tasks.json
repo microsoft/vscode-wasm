@@ -27,9 +27,6 @@
 			"script": "esbuild:watch",
 			"path": "wasm-wasi-core",
 			"group": "build",
-			"runOptions": {
-				"runOn": "folderOpen"
-			},
 			"isBackground": true,
 			"presentation": {
 				"panel": "dedicated",

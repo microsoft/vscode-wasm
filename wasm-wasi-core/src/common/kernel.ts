@@ -13,9 +13,9 @@ import type { FileDescriptors } from './fileDescriptor';
 import { Errno, WasiError } from './wasi';
 import * as ConsoleDriver from './consoleDriver';
 import * as vscfs from './vscodeFileSystemDriver';
-import * as extlocfs from './extLocFileSystem';
-import * as memfs from './memoryFileSystem';
-import * as vrfs from './virtualRootFS';
+import * as extlocfs from './extLocFileSystemDriver';
+import * as memfs from './memoryFileSystemDriver';
+import * as vrfs from './rootFileSystemDriver';
 
 export interface DeviceDrivers {
 	add(driver: DeviceDriver): void;
@@ -329,11 +329,21 @@ export enum ManageKind {
 	default = 3
 }
 
-export interface RootFileSystemInfo {
+export interface SingleFileSystemInfo {
+	kind: 'single';
 	fileSystem: FileSystemDeviceDriver;
 	deviceDrivers: DeviceDrivers;
 	preOpens: Map<string, FileSystemDeviceDriver>;
 }
+
+export interface VirtualFileSystemInfo {
+	kind: 'virtual';
+	fileSystem: vrfs.RootFileSystemDeviceDriver;
+	deviceDrivers: DeviceDrivers;
+	preOpens: Map<string, FileSystemDeviceDriver>;
+}
+
+export type RootFileSystemInfo = SingleFileSystemInfo | VirtualFileSystemInfo;
 
 class FileSystems {
 
@@ -424,21 +434,21 @@ class FileSystems {
 				needsRootFs = true;
 			}
 		}
-		let root: FileSystemDeviceDriver | undefined;
+		const deviceDrivers = new DeviceDriversImpl();
+		let result: RootFileSystemInfo;
 		if (needsRootFs) {
 			const mountPoints: Map<string, FileSystemDeviceDriver> = new Map(Array.from(preOpens.entries()));
 			const fs = vrfs.create(WasiKernel.nextDeviceId(), fileDescriptors, mountPoints);
 			preOpens.set('/', fs);
 			fileSystems.push(fs);
-			root = fs;
+			result = { kind: 'virtual', fileSystem: fs, deviceDrivers, preOpens };
 		} else {
-			root = fileSystems[0];
+			result = { kind: 'single', fileSystem: fileSystems[0], deviceDrivers, preOpens };
 		}
-		const deviceDrivers = new DeviceDriversImpl();
 		for (const fs of fileSystems) {
 			deviceDrivers.add(fs);
 		}
-		return { fileSystem: root, deviceDrivers, preOpens };
+		return result;
 	}
 
 	public async getOrCreateFileSystemByDescriptor(deviceDrivers: DeviceDrivers, descriptor: VSCodeFileSystemDescriptor | ExtensionLocationDescriptor | InMemoryFileSystemDescriptor, manage: ManageKind = ManageKind.default): Promise<FileSystemDeviceDriver> {

@@ -180,8 +180,10 @@ class VirtualRootFileSystem {
 	public findNode(parentNode: Node, filePath: string): [Node, string | undefined] {
 		const path = RAL().path;
 		filePath = path.normalize(filePath);
-		if (filePath === '.') {
-			return parentNode.kind === NodeKind.VirtualDirectory ? [parentNode, undefined] : [parentNode, '.'];
+		if (filePath === '/') {
+			return [this.root, filePath];
+		} else if (filePath === '.') {
+			return parentNode.kind === NodeKind.VirtualDirectory ? [parentNode, undefined] : [parentNode, filePath];
 		} else if (filePath === '..') {
 			if (parentNode.parent === undefined) {
 				return [this.root, undefined];
@@ -225,6 +227,15 @@ class VirtualRootFileSystem {
 		return RAL().path.join(nodePath, filepath);
 	}
 
+	public getDeviceDriver(path: string): [FileSystemDeviceDriver | undefined, string] {
+		const [node, relativePath] = this.findNode(this.root, path);
+		if (node.kind === NodeKind.MountPoint) {
+			return [node.deviceDriver, relativePath!];
+		} else {
+			return [undefined, path];
+		}
+	}
+
 	private getPath(inode: Node): string {
 		const parts: string[] = [];
 		let current: Node | undefined = inode;
@@ -236,11 +247,12 @@ class VirtualRootFileSystem {
 	}
 }
 
-export interface VirtualRootFileSystemDeviceDriver extends FileSystemDeviceDriver {
+export interface RootFileSystemDeviceDriver extends FileSystemDeviceDriver {
 	makeVirtualPath(deviceDriver: FileSystemDeviceDriver, filepath: string): string | undefined;
+	getDeviceDriver(path: string): [FileSystemDeviceDriver | undefined, string];
 }
 
-export function create(deviceId: DeviceId, rootFileDescriptors: { getRoot(device: DeviceDriver): FileDescriptor | undefined }, mountPoints: Map<string, FileSystemDeviceDriver>): VirtualRootFileSystemDeviceDriver {
+export function create(deviceId: DeviceId, rootFileDescriptors: { getRoot(device: DeviceDriver): FileDescriptor | undefined }, mountPoints: Map<string, FileSystemDeviceDriver>): RootFileSystemDeviceDriver {
 
 	let $atim: bigint = BigInt(Date.now()) * 1000000n;
 	let $mtim: bigint = $atim;
@@ -272,6 +284,9 @@ export function create(deviceId: DeviceId, rootFileDescriptors: { getRoot(device
 
 		makeVirtualPath(deviceDriver: FileSystemDeviceDriver, filepath: string): string | undefined {
 			return $fs.makeVirtualPath(deviceDriver, filepath);
+		},
+		getDeviceDriver(path: string): [FileSystemDeviceDriver | undefined, string] {
+			return $fs.getDeviceDriver(path);
 		},
 		createStdioFileDescriptor(): Promise<FileDescriptor> {
 			throw new Error(`Virtual root FS can't provide stdio file descriptors`);

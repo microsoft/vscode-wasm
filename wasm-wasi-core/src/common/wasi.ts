@@ -1306,6 +1306,20 @@ export namespace Filestat {
 			set ctim(value: timestamp) { memory.setBigUint64(ptr + offsets.ctim, value, true); }
 		};
 	}
+
+	export function createHeap(): filestat {
+		return {
+			get $ptr(): ptr { throw new WasiError(Errno.inval); },
+			dev: 0n,
+			ino: 0n,
+			filetype: Filetype.unknown,
+			nlink: 0n,
+			size: 0n,
+			atim: 0n,
+			mtim: 0n,
+			ctim: 0n
+		};
+	}
 }
 export namespace Filestat {
 	export const $ptr = Ptr.$param;

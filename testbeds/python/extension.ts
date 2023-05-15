@@ -4,7 +4,7 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { commands, ExtensionContext, Uri, window, workspace } from 'vscode';
-import { Wasm, ProcessOptions, MountPointDescriptor, Stdio } from '@vscode/wasm-wasi';
+import { Wasm, ProcessOptions, Stdio, WasmFileSystem } from '@vscode/wasm-wasi';
 
 export async function activate(context: ExtensionContext) {
 	const wasm: Wasm = await Wasm.api();
@@ -50,13 +50,10 @@ export async function activate(context: ExtensionContext) {
 	commands.registerCommand('testbed-python.runInteractive', async () => {
 		await run(`Python Repl`);
 	});
-	commands.registerCommand('testbed-python.webshell.python', async (_command: string, args: string[], _cwd: string, stdio: Stdio, mountPoints?: MountPointDescriptor[] | undefined): Promise<number> => {
+	commands.registerCommand('testbed-python.webshell.python', async (_command: string, args: string[], _cwd: string, stdio: Stdio, rootFileSystem: WasmFileSystem): Promise<number> => {
 		const options: ProcessOptions = {
 			stdio,
-			mountPoints: (mountPoints ??[]).concat([
-				{ kind: 'workspaceFolder' },
-				{ kind: 'extensionLocation', extension: context, path: 'wasm/lib', mountPoint: '/usr/local/lib/python3.11' }
-			]),
+			rootFileSystem,
 			env: {
  				PYTHONPATH: '/workspace'
  			},

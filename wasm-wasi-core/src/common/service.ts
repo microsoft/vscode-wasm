@@ -23,7 +23,7 @@ import { DeviceDriver, FileSystemDeviceDriver, ReaddirEntry } from './deviceDriv
 import { BigInts, code2Wasi } from './converter';
 import { ProcessOptions } from './api';
 import { DeviceDrivers } from './kernel';
-import { VirtualRootFileSystemDeviceDriver } from './virtualRootFS';
+import { RootFileSystemDeviceDriver } from './rootFileSystemDriver';
 
 export abstract class ServiceConnection {
 
@@ -180,6 +180,9 @@ export interface ProcessWasiService {
 }
 
 export interface WasiService extends EnvironmentWasiService, ClockWasiService, DeviceWasiService, ProcessWasiService {
+}
+
+export interface FileSystemService extends Pick<EnvironmentWasiService, 'fd_prestat_get' | 'fd_prestat_dir_name'>, DeviceWasiService {
 }
 
 export interface EnvironmentOptions extends Omit<ProcessOptions, 'args' | 'trace'> {
@@ -369,7 +372,7 @@ export interface DeviceOptions extends Pick<ProcessOptions, 'encoding'> {
 }
 
 export namespace DeviceWasiService {
-	export function create(deviceDrivers: DeviceDrivers, fileDescriptors: FileDescriptors, clock: Clock, virtualRootFileSystem: VirtualRootFileSystemDeviceDriver | undefined, options: DeviceOptions): DeviceWasiService {
+	export function create(deviceDrivers: DeviceDrivers, fileDescriptors: FileDescriptors, clock: Clock, virtualRootFileSystem: RootFileSystemDeviceDriver | undefined, options: DeviceOptions): DeviceWasiService {
 
 		const $directoryEntries: Map<fd, ReaddirEntry[]> = new Map();
 		const $clock: Clock = clock;
@@ -1099,6 +1102,19 @@ export namespace DeviceWasiService {
 		}
 
 		return result;
+	}
+}
+
+export interface FileSystemService extends Pick<EnvironmentWasiService, 'fd_prestat_get' | 'fd_prestat_dir_name'>, DeviceWasiService {
+}
+export namespace FileSystemService {
+	export function create(deviceDrivers: DeviceDrivers, fileDescriptors: FileDescriptors, virtualRootFileSystem: RootFileSystemDeviceDriver | undefined, preOpens: Map<string, FileSystemDeviceDriver>, options: DeviceOptions): FileSystemService {
+		const clock = Clock.create();
+		return Object.assign(
+			{},
+			EnvironmentWasiService.create(fileDescriptors, 'virtualRootFileSystem', preOpens.entries(), {}),
+			DeviceWasiService.create(deviceDrivers, fileDescriptors, clock, virtualRootFileSystem, options)
+		);
 	}
 }
 
