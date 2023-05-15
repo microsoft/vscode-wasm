@@ -129,7 +129,7 @@ async function run(options: Options): Promise<number> {
 	}
 }
 
-async function main(): Promise<number> {
+export async function main(): Promise<number> {
 	yargs.
 		parserConfiguration({ 'camel-case-expansion': false }).
 		exitProcess(false).
