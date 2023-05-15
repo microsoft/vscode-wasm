@@ -37,6 +37,7 @@
 		"find-process": "^1.4.7"
 	},
 	"scripts": {
+		"vscode:prepublish": "git clean -xfd . && npm install && npm run compile && npm run lint && npm run esbuild",
 		"build": "npm run compile",
 		"compile": "node ../node_modules/typescript/lib/tsc.js -b tsconfig.json",
 		"watch": "node ../node_modules/typescript/lib/tsc.js -b tsconfig.json -w",
