@@ -180,8 +180,10 @@ class VirtualRootFileSystem {
 	public findNode(parentNode: Node, filePath: string): [Node, string | undefined] {
 		const path = RAL().path;
 		filePath = path.normalize(filePath);
-		if (filePath === '.') {
-			return parentNode.kind === NodeKind.VirtualDirectory ? [parentNode, undefined] : [parentNode, '.'];
+		if (filePath === '/') {
+			return [this.root, filePath];
+		} else if (filePath === '.') {
+			return parentNode.kind === NodeKind.VirtualDirectory ? [parentNode, undefined] : [parentNode, filePath];
 		} else if (filePath === '..') {
 			if (parentNode.parent === undefined) {
 				return [this.root, undefined];
@@ -245,12 +247,12 @@ class VirtualRootFileSystem {
 	}
 }
 
-export interface VirtualRootFileSystemDeviceDriver extends FileSystemDeviceDriver {
+export interface RootFileSystemDeviceDriver extends FileSystemDeviceDriver {
 	makeVirtualPath(deviceDriver: FileSystemDeviceDriver, filepath: string): string | undefined;
 	getDeviceDriver(path: string): [FileSystemDeviceDriver | undefined, string];
 }
 
-export function create(deviceId: DeviceId, rootFileDescriptors: { getRoot(device: DeviceDriver): FileDescriptor | undefined }, mountPoints: Map<string, FileSystemDeviceDriver>): VirtualRootFileSystemDeviceDriver {
+export function create(deviceId: DeviceId, rootFileDescriptors: { getRoot(device: DeviceDriver): FileDescriptor | undefined }, mountPoints: Map<string, FileSystemDeviceDriver>): RootFileSystemDeviceDriver {
 
 	let $atim: bigint = BigInt(Date.now()) * 1000000n;
 	let $mtim: bigint = $atim;

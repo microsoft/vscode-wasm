@@ -6,7 +6,6 @@
 
 'use strict';
 
-const { join } = require('path');
 const path = require('path');
 const ln = require('./linking');
 

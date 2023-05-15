@@ -13,9 +13,9 @@ import type { FileDescriptors } from './fileDescriptor';
 import { Errno, WasiError } from './wasi';
 import * as ConsoleDriver from './consoleDriver';
 import * as vscfs from './vscodeFileSystemDriver';
-import * as extlocfs from './extLocFileSystem';
-import * as memfs from './memoryFileSystem';
-import * as vrfs from './virtualRootFS';
+import * as extlocfs from './extLocFileSystemDriver';
+import * as memfs from './memoryFileSystemDriver';
+import * as vrfs from './rootFileSystemDriver';
 
 export interface DeviceDrivers {
 	add(driver: DeviceDriver): void;
@@ -338,7 +338,7 @@ export interface SingleFileSystemInfo {
 
 export interface VirtualFileSystemInfo {
 	kind: 'virtual';
-	fileSystem: vrfs.VirtualRootFileSystemDeviceDriver;
+	fileSystem: vrfs.RootFileSystemDeviceDriver;
 	deviceDrivers: DeviceDrivers;
 	preOpens: Map<string, FileSystemDeviceDriver>;
 }

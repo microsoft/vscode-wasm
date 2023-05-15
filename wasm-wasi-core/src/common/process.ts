@@ -9,12 +9,12 @@ import { LogOutputChannel, Uri, WorkspaceFolder, window, workspace } from 'vscod
 
 import {
 	type ExtensionLocationDescriptor, type InMemoryFileSystemDescriptor, type MountPointDescriptor, type ProcessOptions, type StdioConsoleDescriptor, type Stdio,
-	type StdioFileDescriptor, type VSCodeFileSystemDescriptor, type WorkspaceFolderDescriptor, type Readable, type Writable, MountPointOptions, RootFileSystemOptions, WasmFileSystemImpl
+	type StdioFileDescriptor, type VSCodeFileSystemDescriptor, type WorkspaceFolderDescriptor, type Readable, type Writable, MountPointOptions, RootFileSystemOptions
 } from './api';
 import type { ptr, u32 } from './baseTypes';
 import type { FileSystemDeviceDriver } from './deviceDriver';
 import { FileDescriptors } from './fileDescriptor';
-import * as vrfs from './virtualRootFS';
+import * as vrfs from './rootFileSystemDriver';
 import * as tdd from './terminalDriver';
 import * as pdd from './pipeDriver';
 import { DeviceWasiService, ProcessWasiService, EnvironmentWasiService, WasiService, Clock, ClockWasiService, EnvironmentOptions } from './service';
@@ -74,7 +74,7 @@ export abstract class WasiProcess {
 	private environmentService!: EnvironmentWasiService;
 	private processService!: ProcessWasiService;
 	private readonly preOpenDirectories: Map<string, FileSystemDeviceDriver>;
-	private virtualRootFileSystem: vrfs.VirtualRootFileSystemDeviceDriver | undefined;
+	private virtualRootFileSystem: vrfs.RootFileSystemDeviceDriver | undefined;
 
 	private _stdin: StdinStream | undefined;
 	private _stdout: StdoutStream | undefined;
@@ -166,7 +166,12 @@ export abstract class WasiProcess {
 				this.localDeviceDrivers.add(this.virtualRootFileSystem);
 			}
 		} else if (RootFileSystemOptions.is(this.options)) {
-			const devices = (this.options.rootFileSystem as WasmFileSystemImpl).getDeviceDrivers();
+			const devices = this.options.rootFileSystem.getDeviceDrivers();
+			const preOpens = this.options.rootFileSystem.getPreOpenDirectories();
+			this.virtualRootFileSystem = this.options.rootFileSystem.getVirtualRootFileSystem();
+			for (const entry of preOpens) {
+				this.preOpenDirectories.set(entry[0], entry[1]);
+			}
 			for (const device of devices) {
 				this.localDeviceDrivers.add(device);
 			}

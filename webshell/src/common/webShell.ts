@@ -4,7 +4,7 @@
  *--------------------------------------------------------------------------------------------*/
 import { window, Terminal, commands } from 'vscode';
 
-import { ExtensionLocationDescriptor, MountPointDescriptor, MemoryFileSystem, Wasm, WasmPseudoterminal, Stdio, WasmFileSystem } from '@vscode/wasm-wasi';
+import { ExtensionLocationDescriptor, MountPointDescriptor, MemoryFileSystem, Wasm, WasmPseudoterminal, Stdio, WasmFileSystem, Filetype } from '@vscode/wasm-wasi';
 
 import RAL from './ral';
 const paths = RAL().path;
@@ -29,6 +29,7 @@ export class WebShell {
 		this.userBin = wasm.createInMemoryFileSystem();
 		const fsContributions: ExtensionLocationDescriptor[] = WebShell.contributions.getDirectoryMountPoints().map(entry => ({ kind: 'extensionLocation', extension: entry.extension, path: entry.path, mountPoint: entry.mountPoint }));
 		const mountPoints: MountPointDescriptor[] = [
+			{ kind: 'workspaceFolder'},
 			{ kind: 'inMemoryFileSystem', fileSystem: this.userBin, mountPoint: '/usr/bin' },
 			...fsContributions
 		];
@@ -50,9 +51,9 @@ export class WebShell {
 		const basename = paths.basename(contribution.mountPoint);
 		const dirname = paths.dirname(contribution.mountPoint);
 		if (dirname === '/usr/bin') {
-			this.registerCommandHandler(basename, (command: string, args: string[], cwd: string, stdio: Stdio, mountPoints?: MountPointDescriptor[] | undefined) => {
+			this.registerCommandHandler(basename, (command: string, args: string[], cwd: string, stdio: Stdio, rootFileSystem: WasmFileSystem) => {
 				return new Promise<number>((resolve, reject) => {
-					commands.executeCommand<number>(contribution.command, command, args, cwd, stdio, mountPoints).then(resolve, reject);
+					commands.executeCommand<number>(contribution.command, command, args, cwd, stdio, rootFileSystem).then(resolve, reject);
 				});
 			});
 		}
@@ -100,13 +101,13 @@ export class WebShell {
 					void this.pty.write(`${this.cwd}\r\n`);
 					break;
 				case 'cd':
-					this.handleCd(args);
+					await this.handleCd(args);
 					break;
 				default:
 					const handler = WebShell.commandHandlers.get(command);
 					if (handler !== undefined) {
 						try {
-							const result = await handler(command, args, this.cwd, this.pty.stdio, this.getAdditionalFileSystems());
+							const result = await handler(command, args, this.cwd, this.pty.stdio, WebShell.rootFs);
 							if (result !== 0) {
 							}
 						} catch (error: any) {
@@ -121,18 +122,26 @@ export class WebShell {
 		}
 	}
 
-	private handleCd(args: string[]): void {
+	private async handleCd(args: string[]): Promise<void> {
 		if (args.length > 1) {
 			void this.pty.write(`-wesh: cd: too many arguments\r\n`);
 			return;
 		}
 		const path = RAL().path;
-		const target = args[0];
-		if (path.isAbsolute(target)) {
-			this.cwd = target;
-		} else {
-			this.cwd = path.join(this.cwd, target);
+		let target = args[0];
+		if (!path.isAbsolute(target)) {
+			target = path.join(this.cwd, target);
 		}
+		try {
+			const stat = await WebShell.rootFs.stat(target);
+			if (stat.filetype === Filetype.directory) {
+				this.cwd = target;
+				return;
+			}
+		} catch (error) {
+			// Do nothing
+		}
+		await this.pty.write(`-wesh: cd: ${target}: No such file or directory\r\n`);
 	}
 
 	private parseCommand(line: string): CommandLine {
@@ -145,12 +154,5 @@ export class WebShell {
 
 	private getPrompt(): string {
 		return `\x1b[01;34m${this.cwd}\x1b[0m ${this.prompt}`;
-	}
-
-	private getAdditionalFileSystems(): MountPointDescriptor[] {
-		const result: MountPointDescriptor[] = [{ kind: 'inMemoryFileSystem', fileSystem: WebShell.userBin, mountPoint: '/usr/bin' }];
-		const contributions: ExtensionLocationDescriptor[] = WebShell.contributions.getDirectoryMountPoints().map(entry => ({ kind: 'extensionLocation', extension: entry.extension, path: entry.path, mountPoint: entry.mountPoint }));
-		result.push(...contributions);
-		return result;
 	}
 }

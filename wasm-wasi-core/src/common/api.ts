@@ -8,13 +8,13 @@ import { Event, Extension, ExtensionContext, Pseudoterminal, Uri } from 'vscode'
 
 import { WasmPseudoterminal as WasmPseudoterminalImpl } from './terminal';
 import { WasiProcess as InternalWasiProcess } from './process';
-import { MemoryFileSystem as InMemoryFileSystemImpl } from './memoryFileSystem';
+import { MemoryFileSystem as InMemoryFileSystemImpl } from './memoryFileSystemDriver';
 import WasiKernel, { DeviceDrivers, RootFileSystemInfo } from './kernel';
 import { FileDescriptor, FileDescriptors } from './fileDescriptor';
 import { StdinStream, StdoutStream } from './streams';
 import { FileSystemService } from './service';
 import { Errno, Filestat, Lookupflags, errno, Filetype as WasiFiletype, filetype, WasiError } from './wasi';
-import { VirtualRootFileSystemDeviceDriver } from './virtualRootFS';
+import { RootFileSystemDeviceDriver } from './rootFileSystemDriver';
 import { DeviceDriver, FileSystemDeviceDriver } from './deviceDriver';
 
 export interface Environment {
@@ -272,7 +272,7 @@ export type RootFileSystemOptions = {
 	rootFileSystem?: WasmFileSystem;
 };
 export namespace RootFileSystemOptions {
-	export function is(value: any): value is RootFileSystemOptions {
+	export function is(value: any): value is { rootFileSystem: WasmFileSystemImpl } {
 		const candidate = value as RootFileSystemOptions;
 		return candidate && candidate.rootFileSystem instanceof WasmFileSystemImpl;
 	}
@@ -440,13 +440,15 @@ namespace MemoryDescriptor {
 
 export class WasmFileSystemImpl implements WasmFileSystem{
 	private readonly deviceDrivers: DeviceDrivers;
+	private readonly preOpens: Map<string, FileSystemDeviceDriver>;
 	private readonly fileDescriptors: FileDescriptors;
 	private readonly service: FileSystemService;
-	private virtualFileSystem: VirtualRootFileSystemDeviceDriver | undefined;
+	private virtualFileSystem: RootFileSystemDeviceDriver | undefined;
 	private singleFileSystem: FileSystemDeviceDriver | undefined;
 
 	constructor(info: RootFileSystemInfo, fileDescriptors: FileDescriptors) {
 		this.deviceDrivers = info.deviceDrivers;
+		this.preOpens = info.preOpens;
 		this.fileDescriptors = fileDescriptors;
 		if (info.kind === 'virtual') {
 			this.service = FileSystemService.create(info.deviceDrivers, fileDescriptors, info.fileSystem, info.preOpens, {});
@@ -468,6 +470,14 @@ export class WasmFileSystemImpl implements WasmFileSystem{
 
 	getDeviceDrivers(): DeviceDriver[] {
 		return Array.from(this.deviceDrivers.values());
+	}
+
+	getPreOpenDirectories(): Map<string, FileSystemDeviceDriver> {
+		return this.preOpens;
+	}
+
+	getVirtualRootFileSystem(): RootFileSystemDeviceDriver | undefined {
+		return this.virtualFileSystem;
 	}
 
 	async stat(path: string): Promise<{ filetype: Filetype }> {
