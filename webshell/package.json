@@ -37,13 +37,13 @@
 		]
 	},
 	"dependencies": {
-		"@vscode/wasm-wasi": "0.8.2"
+		"@vscode/wasm-wasi": "0.11.0-next.0"
 	},
 	"devDependencies": {
 		"@types/vscode": "1.78.0"
 	},
 	"scripts": {
-		"vscode:prepublish": "npm run clean & npm run compile && npm run lint && npm run esbuild",
+		"vscode:prepublish": "git clean -xfd . && npm install && npm run compile && npm run lint && npm run esbuild",
 		"build": "npm run compile",
 		"compile": "node ../node_modules/typescript/lib/tsc.js -b tsconfig.json",
 		"watch": "node ../node_modules/typescript/lib/tsc.js -b tsconfig.json -w",
