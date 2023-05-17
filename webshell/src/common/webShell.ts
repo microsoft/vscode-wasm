@@ -51,10 +51,9 @@ export class WebShell {
 		const basename = paths.basename(contribution.mountPoint);
 		const dirname = paths.dirname(contribution.mountPoint);
 		if (dirname === '/usr/bin') {
-			this.registerCommandHandler(basename, (command: string, args: string[], cwd: string, stdio: Stdio, rootFileSystem: WasmFileSystem) => {
-				return new Promise<number>((resolve, reject) => {
-					commands.executeCommand<number>(contribution.command, command, args, cwd, stdio, rootFileSystem).then(resolve, reject);
-				});
+			this.registerCommandHandler(basename, async (command: string, args: string[], cwd: string, stdio: Stdio, rootFileSystem: WasmFileSystem): Promise<number> => {
+				await contribution.extension.activate();
+				return commands.executeCommand<number>(contribution.command, command, args, cwd, stdio, rootFileSystem);
 			});
 		}
 	}
