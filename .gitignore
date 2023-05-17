@@ -120,5 +120,6 @@ wasm-wasi-core/.vscode-test-workspace/**/*
 *.wat
 *.o
 tmp/
-!webshell/wasm/coreutils.wasm
 *.vsix
+!webshell/wasm/coreutils.wasm
+!wasm-wasi/example/hello.wasm
