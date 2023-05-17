@@ -16,6 +16,7 @@ export namespace CommandMountPointContribution {
 	}
 }
 export interface CommandMountPoint extends CommandMountPointContribution {
+	extension: Extension<any>;
 }
 
 export interface DirectoryMountPointContribution {
@@ -91,7 +92,7 @@ class WebShellContributionsImpl implements WebShellContributions {
 			if (mountPoints !== undefined) {
 				for (const mountPoint of mountPoints) {
 					if (CommandMountPointContribution.is(mountPoint)) {
-						result.commands.push(Object.assign({}, mountPoint));
+						result.commands.push(Object.assign({ extension }, mountPoint));
 					} else if (DirectoryMountPointContribution.is(mountPoint)) {
 						result.directories.push(Object.assign({}, mountPoint, { extension }));
 					}

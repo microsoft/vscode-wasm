@@ -24,6 +24,9 @@
 	"engines": {
 		"vscode": "^1.78.0"
 	},
+	"extensionDependencies": [
+		"ms-vscode.wasm-wasi-core"
+	],
 	"main": "./dist/desktop/extension.js",
 	"browser": "./dist/web/extension.js",
 	"activationEvents": [],

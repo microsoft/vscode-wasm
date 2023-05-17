@@ -1,5 +1,5 @@
 {
-	"name": "vscode-wasm-wasi-c-example",
+	"name": "wasm-wasi-c-example",
 	"private": "true",
 	"publisher": "vscode-samples",
 	"version": "0.1.0",
@@ -9,7 +9,8 @@
 	"engines": {
 		"vscode": "^1.77.0"
 	},
-	"main": "./extension.js",
+	"main": "./dist/desktop/extension.js",
+	"browser": "./dist/web/extension.js",
 	"activationEvents": [
 	],
 	"extensionDependencies": [
@@ -18,22 +19,22 @@
 	"contributes": {
 		"commands": [
 			{
-				"command": "vscode-wasm-wasi-c-example.run",
+				"command": "wasm-wasi-c-example.run",
 				"category": "WASM Example",
 				"title": "Run C Hello World"
 			}
 		]
 	},
 	"devDependencies": {
-		"@types/vscode": "1.77.0",
-		"@types/node": "16.11.63"
+		"@types/vscode": "1.77.0"
 	},
 	"dependencies": {
-		"@vscode/wasm-wasi": "0.11.0"
+		"@vscode/wasm-wasi": "0.11.0-next.0"
 	},
 	"scripts": {
-		"build": "npm run compile:ts && npm run build:wasi",
+		"build": "npm run compile:ts && npm run build:wasi && npm run esbuild",
 		"compile:ts": "tsc -p tsconfig.json",
-		"build:wasi": "clang hello.c -o ./hello.wasm"
+		"build:wasi": "clang hello.c -o ./hello.wasm",
+		"esbuild": "node ./bin/esbuild.js"
 	}
 }

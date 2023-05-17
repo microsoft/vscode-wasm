@@ -12,7 +12,7 @@
 	"main": "./out/extension.js",
 	"browser": "./dist/web/extension.js",
 	"activationEvents": [
-		"*"
+		"onCommand:testbed-python.webshell.python"
 	],
 	"extensionDependencies": [
 		"ms-vscode.wasm-wasi-core",
@@ -32,6 +32,20 @@
 				"title": "Run Interactive Python Shell"
 			}
 		],
+		"menus": {
+			"editor/title/run": [
+				{
+					"command": "testbed-python.runFile",
+					"when": "resourceLangId == python",
+					"group": "navigation@1"
+				},
+				{
+					"command": "testbed-python.runInteractive",
+					"when": "resourceLangId == python",
+					"group": "navigation@2"
+				}
+			]
+		},
 		"webShellMountPoints": [
 			{
 				"mountPoint": "/usr/local/lib/python3.11",
