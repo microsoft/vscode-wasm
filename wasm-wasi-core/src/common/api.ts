@@ -269,12 +269,12 @@ export type RootFileSystemOptions = {
 	/**
 	 * The root file system that is used by the WASM process.
 	 */
-	rootFileSystem?: WasmFileSystem;
+	rootFileSystem?: RootFileSystem;
 };
 export namespace RootFileSystemOptions {
-	export function is(value: any): value is { rootFileSystem: WasmFileSystemImpl } {
+	export function is(value: any): value is { rootFileSystem: WasmRootFileSystemImpl } {
 		const candidate = value as RootFileSystemOptions;
-		return candidate && candidate.rootFileSystem instanceof WasmFileSystemImpl;
+		return candidate && candidate.rootFileSystem instanceof WasmRootFileSystemImpl;
 	}
 }
 
@@ -371,12 +371,22 @@ export interface DirectoryNode {
  * The memory file system.
  */
 export interface MemoryFileSystem {
-	readonly uri: Uri;
 	createDirectory(path: string): void;
 	createFile(path: string, content: Uint8Array | { size: bigint; reader: (node: FileNode) => Promise<Uint8Array> }): void;
 }
 
-export interface WasmFileSystem {
+export interface RootFileSystem {
+	/**
+	 * Maps the give absolute path to a URI. Return undefined if the path cannot
+	 * be mapped.
+	 */
+	mapPath(path: string): Promise<Uri | undefined>;
+
+	/**
+	 * Stats the file / folder at the given absolute path.
+	 *
+	 * @param path the absolute path
+	 */
 	stat(path: string): Promise<{ filetype: Filetype }>;
 }
 
@@ -391,12 +401,12 @@ export interface Wasm {
 	/**
 	 * Creates a new in-memory file system.
 	 */
-	createInMemoryFileSystem(): MemoryFileSystem;
+	createInMemoryFileSystem(): Promise<MemoryFileSystem>;
 
 	/**
 	 * Creates a new WASM file system.
 	 */
-	createWasmFileSystem(descriptors: MountPointDescriptor[]): Promise<WasmFileSystem>;
+	createRootFileSystem(descriptors: MountPointDescriptor[]): Promise<RootFileSystem>;
 
 	/**
 	 * Creates a new readable stream.
@@ -438,7 +448,7 @@ namespace MemoryDescriptor {
 	}
 }
 
-export class WasmFileSystemImpl implements WasmFileSystem{
+export class WasmRootFileSystemImpl implements RootFileSystem{
 	private readonly deviceDrivers: DeviceDrivers;
 	private readonly preOpens: Map<string, FileSystemDeviceDriver>;
 	private readonly fileDescriptors: FileDescriptors;
@@ -480,6 +490,14 @@ export class WasmFileSystemImpl implements WasmFileSystem{
 		return this.virtualFileSystem;
 	}
 
+	async mapPath(path: string): Promise<Uri | undefined> {
+		const [deviceDriver, relativePath] = this.getDeviceDriver(path);
+		if (deviceDriver === undefined) {
+			return undefined;
+		}
+		return deviceDriver.joinPath(...relativePath.split('/'));
+	}
+
 	async stat(path: string): Promise<{ filetype: Filetype }> {
 		const [fileDescriptor, relativePath] = this.getFileDescriptor(path);
 		if (fileDescriptor !== undefined) {
@@ -507,6 +525,16 @@ export class WasmFileSystemImpl implements WasmFileSystem{
 			return [undefined, path];
 		}
 	}
+
+	private getDeviceDriver(path: string): [FileSystemDeviceDriver | undefined, string] {
+		if (this.virtualFileSystem !== undefined) {
+			return this.virtualFileSystem.getDeviceDriver(path);
+		} else if (this.singleFileSystem !== undefined) {
+			return [this.singleFileSystem, path];
+		} else {
+			return [undefined, path];
+		}
+	}
 }
 
 export namespace WasiCoreImpl {
@@ -515,13 +543,13 @@ export namespace WasiCoreImpl {
 			createPseudoterminal(options?: TerminalOptions): WasmPseudoterminal {
 				return WasmPseudoterminalImpl.create(options);
 			},
-			createInMemoryFileSystem(): MemoryFileSystem {
-				return new InMemoryFileSystemImpl();
+			createInMemoryFileSystem(): Promise<MemoryFileSystem> {
+				return Promise.resolve(new InMemoryFileSystemImpl());
 			},
-			async createWasmFileSystem(mountDescriptors: MountPointDescriptor[]): Promise<WasmFileSystem> {
+			async createRootFileSystem(mountDescriptors: MountPointDescriptor[]): Promise<RootFileSystem> {
 				const fileDescriptors = new FileDescriptors();
 				const info = await WasiKernel.createRootFileSystem(fileDescriptors, mountDescriptors);
-				const result = new WasmFileSystemImpl(info, fileDescriptors);
+				const result = new WasmRootFileSystemImpl(info, fileDescriptors);
 				await result.initialize();
 				return result;
 			},

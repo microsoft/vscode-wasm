@@ -249,7 +249,7 @@ type RootFileSystemOptions = {
 	/**
 	 * The root file system that is used by the WASM process.
 	 */
-	rootFileSystem?: WasmFileSystem;
+	rootFileSystem?: RootFileSystem;
 };
 
 /**
@@ -325,13 +325,22 @@ export interface DirectoryNode {
  * The memory file system.
  */
 export interface MemoryFileSystem {
-	readonly uri: Uri;
 	createDirectory(path: string): void;
 	createFile(path: string, content: Uint8Array | { size: bigint; reader: (node: FileNode) => Promise<Uint8Array> }): void;
 }
 
-export interface WasmFileSystem {
-	readonly uri: Uri;
+export interface RootFileSystem {
+	/**
+	 * Maps the give absolute path to a URI. Return undefined if the path cannot
+	 * be mapped.
+	 */
+	mapPath(path: string): Promise<Uri | undefined>;
+
+	/**
+	 * Stats the file / folder at the given absolute path.
+	 *
+	 * @param path the absolute path
+	 */
 	stat(path: string): Promise<{ filetype: Filetype }>;
 }
 
@@ -346,12 +355,12 @@ export interface Wasm {
 	/**
 	 * Creates a new in-memory file system.
 	 */
-	createInMemoryFileSystem(): MemoryFileSystem;
+	createInMemoryFileSystem(): Promise<MemoryFileSystem>;
 
 	/**
-	 * Creates a new WASM file system.
+	 * Creates a new root file system.
 	 */
-	createWasmFileSystem(descriptors: MountPointDescriptor[]): Promise<WasmFileSystem>;
+	createRootFileSystem(descriptors: MountPointDescriptor[]): Promise<RootFileSystem>;
 
 	/**
 	 * Creates a new readable stream.

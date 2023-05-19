@@ -256,7 +256,9 @@ export function create(deviceId: DeviceId, basePath: string, readOnly: boolean =
 		kind: DeviceDriverKind.fileSystem,
 		id: deviceId,
 		uri: Uri.from( { scheme: 'node-fs', path: '/'} ),
-
+		joinPath(): Uri | undefined {
+			return undefined;
+		},
 		createStdioFileDescriptor(_dirflags: lookupflags | undefined = Lookupflags.none, _path: string, _oflags: oflags | undefined = Oflags.none, _fs_rights_base: rights | undefined, _fdflags: fdflags | undefined = Fdflags.none, _fd: 0 | 1 | 2): Promise<FileDescriptor> {
 			// The file system shouldn't be used to give WASM processes access to the workspace files, even not on the desktop.
 			// It main purpose is to read file from the extensions installation directory. So we don't support stdio operations.

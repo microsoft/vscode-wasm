@@ -15,11 +15,12 @@ export async function activate(_context: ExtensionContext) {
 		const pty = wasm.createPseudoterminal();
 		const terminal = window.createTerminal({ name: 'CPP', pty, isTransient: true });
 		terminal.show(true);
+		const rootFileSystem = await wasm.createRootFileSystem([
+			{ kind: 'workspaceFolder' }
+		]);
 		const options: ProcessOptions = {
 			stdio: pty.stdio,
-			mountPoints: [
-				{ kind: 'workspaceFolder' }
-			]
+			rootFileSystem
 		};
 		const module = await WebAssembly.compile(await fs.readFile(path.join(__dirname, 'hello.wasm')));
 		const process = await wasm.createProcess('test-cpp', module, options);

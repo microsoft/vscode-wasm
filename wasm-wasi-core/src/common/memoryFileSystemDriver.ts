@@ -373,6 +373,9 @@ export function create(deviceId: DeviceId, fs: MemoryFileSystem): FileSystemDevi
 		kind: DeviceDriverKind.fileSystem,
 		uri: $fs.uri,
 		id: deviceId,
+		joinPath(): Uri | undefined {
+			return undefined;
+		},
 		createStdioFileDescriptor(_dirflags: lookupflags | undefined = Lookupflags.none, _path: string, _oflags: oflags | undefined = Oflags.none, _fs_rights_base: rights | undefined, _fdflags: fdflags | undefined = Fdflags.none, _fd: 0 | 1 | 2): Promise<FileDescriptor> {
 			throw new WasiError(Errno.nosys);
 		},

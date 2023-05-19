@@ -266,7 +266,7 @@ namespace MapDirDescriptors {
 		return Uri.joinPath(descriptor.extension.extensionUri, ...getSegments(descriptor.path));
 	}
 	export function getInMemoryKey(descriptor: InMemoryFileSystemDescriptor): Uri {
-		return descriptor.fileSystem.uri;
+		return (descriptor.fileSystem as memfs.MemoryFileSystem).uri;
 	}
 	export function getVScodeFileSystemKey(descriptor: VSCodeFileSystemDescriptor): Uri {
 		return descriptor.uri;

@@ -366,6 +366,9 @@ export function create(deviceId: DeviceId, baseUri: Uri, dump: Dump.DirectoryNod
 		kind: DeviceDriverKind.fileSystem,
 		uri: baseUri,
 		id: deviceId,
+		joinPath( ...pathSegments: string[]): Uri | undefined {
+			return Uri.joinPath(baseUri, ...pathSegments);
+		},
 		createStdioFileDescriptor(_dirflags: lookupflags | undefined = Lookupflags.none, _path: string, _oflags: oflags | undefined = Oflags.none, _fs_rights_base: rights | undefined, _fdflags: fdflags | undefined = Fdflags.none, _fd: 0 | 1 | 2): Promise<FileDescriptor> {
 			throw new WasiError(Errno.nosys);
 		},

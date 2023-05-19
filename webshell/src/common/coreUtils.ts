@@ -6,7 +6,7 @@ import { ExtensionContext, Uri } from 'vscode';
 
 import RAL from './ral';
 import { HandlerTarget } from './types';
-import { ProcessOptions, Stdio, Wasm, WasmFileSystem } from '@vscode/wasm-wasi';
+import { ProcessOptions, Stdio, Wasm, RootFileSystem } from '@vscode/wasm-wasi';
 
 export class CoreUtils {
 
@@ -101,7 +101,7 @@ export class CoreUtils {
 		return this.coreUtils;
 	}
 
-	private async executeWithFileSystem(wasm: Wasm, command: string, args: string[], cwd: string, addCwd: boolean, stdio: Stdio, rootFileSystem: WasmFileSystem): Promise<number> {
+	private async executeWithFileSystem(wasm: Wasm, command: string, args: string[], cwd: string, addCwd: boolean, stdio: Stdio, rootFileSystem: RootFileSystem): Promise<number> {
 		const module = await this.getCoreUtils();
 		const path = RAL().path;
 		let fileFound: boolean = false;

@@ -281,12 +281,14 @@ export function create(deviceId: DeviceId, rootFileDescriptors: { getRoot(device
 		kind: DeviceDriverKind.fileSystem as const,
 		id: deviceId,
 		uri: Uri.from( { scheme: 'wasi-root', path: '/'} ),
-
 		makeVirtualPath(deviceDriver: FileSystemDeviceDriver, filepath: string): string | undefined {
 			return $fs.makeVirtualPath(deviceDriver, filepath);
 		},
 		getDeviceDriver(path: string): [FileSystemDeviceDriver | undefined, string] {
 			return $fs.getDeviceDriver(path);
+		},
+		joinPath(): Uri | undefined {
+			return undefined;
 		},
 		createStdioFileDescriptor(): Promise<FileDescriptor> {
 			throw new Error(`Virtual root FS can't provide stdio file descriptors`);
