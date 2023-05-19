@@ -26,13 +26,15 @@ export async function activate(context: ExtensionContext) {
 			args: fileToRun !== undefined ? ['-B', '-X', 'utf8', fileToRun] : ['-B', '-X', 'utf8'],
 			trace: true
 		};
-		const filename = Uri.joinPath(context.extensionUri, 'wasm', 'bin', 'python.wasm');
-		const bits = await workspace.fs.readFile(filename);
-		const module = await WebAssembly.compile(bits);
-		const process = await wasm.createProcess('python', module, options);
-		process.run().catch(err => {
-			void window.showErrorMessage(err.message);
-		});
+		try {
+			const filename = Uri.joinPath(context.extensionUri, 'wasm', 'bin', 'python.wasm');
+			const bits = await workspace.fs.readFile(filename);
+			const module = await WebAssembly.compile(bits);
+			const process = await wasm.createProcess('python', module, options);
+			await process.run();
+		} catch (err: any) {
+			pty.write(`Launching python failed: ${err.toString()}`);
+		}
 	}
 
 	commands.registerCommand('testbed-python.runFile', async () => {

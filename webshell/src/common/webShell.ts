@@ -64,7 +64,7 @@ export class WebShell {
 	}
 
 	public static registerCommandHandler(command: string, handler: CommandHandler): void {
-		this.userBin.createFile(command, { size: 1047646n, reader: () => { throw new Error('No permissions'); }});
+		this.userBin.createFile(command, { size: 0n, reader: () => { throw new Error('No permissions'); }});
 		this.commandHandlers.set(command, handler);
 	}
 

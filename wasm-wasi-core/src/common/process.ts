@@ -192,10 +192,16 @@ export abstract class WasiProcess {
 					args.push(arg);
 				} else if (arg instanceof Uri) {
 					const arg_str = arg.toString(true);
+					let mapped: boolean = false;
 					for (const [uri, mountPoint] of uriToMountPoint) {
 						if (arg_str.startsWith(uri)) {
 							args.push(path.join(mountPoint, arg_str.substring(uri.length)));
+							mapped = true;
+							break;
 						}
+					}
+					if (!mapped) {
+						throw new Error(`Could not map argument ${arg_str} to a mount point.`);
 					}
 				} else {
 					throw new Error('Invalid argument type');

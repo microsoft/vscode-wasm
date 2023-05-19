@@ -7,7 +7,9 @@
 			"name": "Core Testbed",
 			"runtimeExecutable": "${execPath}",
 			"args": ["--extensionDevelopmentPath=${workspaceRoot}/wasm-wasi-core"],
-			"outFiles": ["${workspaceRoot}/wasm-wasi-core/lib/**/*.js"],
+			"outFiles": [
+				"${workspaceRoot}/wasm-wasi-core/lib/**/*.js"
+			],
 			"sourceMaps": true
 		},
 		{
@@ -20,7 +22,11 @@
 				"--extensionDevelopmentPath=${workspaceRoot}/wasm-wasi-core",
 				"--extensionDevelopmentPath=${workspaceRoot}/webshell"
 			],
-			"outFiles": ["${workspaceRoot}/testbeds/python/out/**/*.js"],
+			"outFiles": [
+				"${workspaceRoot}/testbeds/python/out/**/*.js",
+				"${workspaceRoot}/wasm-wasi-core/lib/**/*.js",
+				"${workspaceRoot}/webshell/lib/**/*.js"
+			],
 			"sourceMaps": true,
 			"preLaunchTask": "Build Python Example"
 		},
@@ -29,8 +35,14 @@
 			"request": "launch",
 			"name": "Rust Testbed",
 			"runtimeExecutable": "${execPath}",
-			"args": ["--extensionDevelopmentPath=${workspaceRoot}/testbeds/rust", "--extensionDevelopmentPath=${workspaceRoot}/wasm-wasi-core"],
-			"outFiles": ["${workspaceRoot}/testbeds/rust/out/**/*.js"],
+			"args": [
+				"--extensionDevelopmentPath=${workspaceRoot}/testbeds/rust",
+				"--extensionDevelopmentPath=${workspaceRoot}/wasm-wasi-core"
+			],
+			"outFiles": [
+				"${workspaceRoot}/testbeds/rust/out/**/*.js",
+				"${workspaceRoot}/wasm-wasi-core/lib/**/*.js",
+			],
 			"sourceMaps": true,
 			"preLaunchTask": "Build Rust Example"
 		},
@@ -39,8 +51,14 @@
 			"request": "launch",
 			"name": "Thread Testbed",
 			"runtimeExecutable": "${execPath}",
-			"args": ["--extensionDevelopmentPath=${workspaceRoot}/testbeds/threads", "--extensionDevelopmentPath=${workspaceRoot}/wasm-wasi-core"],
-			"outFiles": ["${workspaceRoot}/testbeds/threads/out/**/*.js", "${workspaceRoot}/wasm-wasi-core/lib/**/*.js"],
+			"args": [
+				"--extensionDevelopmentPath=${workspaceRoot}/testbeds/threads",
+				"--extensionDevelopmentPath=${workspaceRoot}/wasm-wasi-core"
+			],
+			"outFiles": [
+				"${workspaceRoot}/testbeds/threads/out/**/*.js",
+				"${workspaceRoot}/wasm-wasi-core/lib/**/*.js",
+			],
 			"sourceMaps": true,
 			"preLaunchTask": "Build Thread Example"
 		},
@@ -49,8 +67,14 @@
 			"request": "launch",
 			"name": "PHP Testbed",
 			"runtimeExecutable": "${execPath}",
-			"args": ["--extensionDevelopmentPath=${workspaceRoot}/testbeds/php", "--extensionDevelopmentPath=${workspaceRoot}/wasm-wasi-core"],
-			"outFiles": ["${workspaceRoot}/testbeds/php/out/**/*.js"],
+			"args": [
+				"--extensionDevelopmentPath=${workspaceRoot}/testbeds/php",
+				"--extensionDevelopmentPath=${workspaceRoot}/wasm-wasi-core"
+			],
+			"outFiles": [
+				"${workspaceRoot}/testbeds/php/out/**/*.js",
+				"${workspaceRoot}/wasm-wasi-core/lib/**/*.js"
+			],
 			"sourceMaps": true,
 			"preLaunchTask": "Build PHP Example"
 		},
@@ -59,27 +83,30 @@
 			"request": "launch",
 			"name": "Ruby Testbed",
 			"runtimeExecutable": "${execPath}",
-			"args": ["--extensionDevelopmentPath=${workspaceRoot}/testbeds/ruby", "--extensionDevelopmentPath=${workspaceRoot}/wasm-wasi-core"],
-			"outFiles": ["${workspaceRoot}/testbeds/ruby/out/**/*.js"],
+			"args": [
+				"--extensionDevelopmentPath=${workspaceRoot}/testbeds/ruby",
+				"--extensionDevelopmentPath=${workspaceRoot}/wasm-wasi-core"
+			],
+			"outFiles": [
+				"${workspaceRoot}/testbeds/ruby/out/**/*.js",
+				"${workspaceRoot}/wasm-wasi-core/lib/**/*.js"
+			],
 			"sourceMaps": true,
 			"preLaunchTask": "Build Ruby Example"
 		},
 		{
 			"type": "extensionHost",
 			"request": "launch",
-			"name": "C Testbed",
-			"runtimeExecutable": "${execPath}",
-			"args": ["--extensionDevelopmentPath=${workspaceRoot}/wasm-wasi/example", "--extensionDevelopmentPath=${workspaceRoot}/wasm-wasi-core"],
-			"outFiles": ["${workspaceRoot}/wasm-wasi/example/**/*.js"],
-			"sourceMaps": true
-		},
-		{
-			"type": "extensionHost",
-			"request": "launch",
 			"name": "C++ Testbed",
 			"runtimeExecutable": "${execPath}",
-			"args": ["--extensionDevelopmentPath=${workspaceRoot}/testbeds/cpp", "--extensionDevelopmentPath=${workspaceRoot}/wasm-wasi-core"],
-			"outFiles": ["${workspaceRoot}/testbeds/cpp/out/**/*.js"],
+			"args": [
+				"--extensionDevelopmentPath=${workspaceRoot}/testbeds/cpp",
+				"--extensionDevelopmentPath=${workspaceRoot}/wasm-wasi-core"
+			],
+			"outFiles": [
+				"${workspaceRoot}/testbeds/cpp/out/**/*.js",
+				"${workspaceRoot}/wasm-wasi-core/lib/**/*.js",
+			],
 			"sourceMaps": true,
 			"preLaunchTask": "Build C++ Example"
 		},
@@ -88,8 +115,14 @@
 			"request": "launch",
 			"name": "WASM-WASI Example",
 			"runtimeExecutable": "${execPath}",
-			"args": ["--extensionDevelopmentPath=${workspaceRoot}/wasm-wasi/example", "--extensionDevelopmentPath=${workspaceRoot}/wasm-wasi-core"],
-			"outFiles": ["${workspaceRoot}/wasm-wasi/example/*.js"],
+			"args": [
+				"--extensionDevelopmentPath=${workspaceRoot}/wasm-wasi/example",
+				"--extensionDevelopmentPath=${workspaceRoot}/wasm-wasi-core"
+			],
+			"outFiles": [
+				"${workspaceRoot}/wasm-wasi/example/*.js",
+				"${workspaceRoot}/wasm-wasi-core/lib/**/*.js"
+			],
 			"sourceMaps": true
 		},
 		{
@@ -97,7 +130,14 @@
 			"request": "launch",
 			"name": "Webshell",
 			"runtimeExecutable": "${execPath}",
-			"args": ["--extensionDevelopmentPath=${workspaceRoot}/webshell", "--extensionDevelopmentPath=${workspaceRoot}/wasm-wasi-core"],
+			"args": [
+				"--extensionDevelopmentPath=${workspaceRoot}/webshell",
+				"--extensionDevelopmentPath=${workspaceRoot}/wasm-wasi-core"
+			],
+			"outFiles": [
+				"${workspaceRoot}/wasm-wasi-core/lib/**/*.js",
+				"${workspaceRoot}/webshell/lib/**/*.js"
+			],
 			"sourceMaps": true
 		},
 		{
