@@ -297,28 +297,19 @@ export enum Filetype {
 	unknown,
 
 	/**
-	 * The file descriptor or file refers to a directory inode.
+	 * The file descriptor or file refers to a directory.
 	 */
 	directory,
 
 	/**
-	 * The file descriptor or file refers to a regular file inode.
+	 * The file descriptor or file refers to a regular file.
 	 */
 	regular_file,
-}
 
-/**
- * A file node in the in-memory file system.
- */
-export interface FileNode {
-	filetype: typeof Filetype.regular_file;
-}
-
-/**
- * A directory node in the in-memory file system.
- */
-export interface DirectoryNode {
-	filetype: typeof Filetype.directory;
+	/**
+	 * The file descriptor or file refers to a character device.
+	 */
+	character_device
 }
 
 /**
@@ -326,7 +317,7 @@ export interface DirectoryNode {
  */
 export interface MemoryFileSystem {
 	createDirectory(path: string): void;
-	createFile(path: string, content: Uint8Array | { size: bigint; reader: (node: FileNode) => Promise<Uint8Array> }): void;
+	createFile(path: string, content: Uint8Array | { size: bigint; reader: () => Promise<Uint8Array> }): void;
 }
 
 export interface RootFileSystem {

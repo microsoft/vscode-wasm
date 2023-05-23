@@ -4,7 +4,7 @@
  *--------------------------------------------------------------------------------------------*/
 import * as uuid from 'uuid';
 
-import { FileNode as ApiFileNode, DirectoryNode as ApiDirectoryNode, Filetype as ApiFiletype, MemoryFileSystem as ApiMemoryFileSystem } from './api';
+import { Filetype as ApiFiletype, MemoryFileSystem as ApiMemoryFileSystem } from './api';
 import { Uri } from 'vscode';
 import { DeviceDriverKind, DeviceId, FileSystemDeviceDriver, NoSysDeviceDriver, ReaddirEntry, ReadonlyFileSystemDeviceDriver, WritePermDeniedDeviceDriver } from './deviceDriver';
 import { BaseFileDescriptor, FdProvider, FileDescriptor } from './fileDescriptor';
@@ -13,145 +13,21 @@ import { size, u64 } from './baseTypes';
 import { BigInts } from './converter';
 
 import RAL from './ral';
+import { BaseDirectoryNode, BaseFileNode, BaseFileSystem, Filetypes } from './fileSystem';
 const paths = RAL().path;
-
-interface BaseFileNode extends ApiFileNode {
-
-	/**
-	 * The parent node
-	 */
-	readonly parent: BaseDirectoryNode;
-
-	/**
-	 * This inode id.
-	 */
-	readonly inode: inode;
-
-	/**
-	 * The name of the file.
-	 */
-	readonly name: string;
-}
-
-interface BaseDirectoryNode extends ApiDirectoryNode {
-
-	/**
-	 * The parent node
-	 */
-	readonly parent: BaseDirectoryNode | undefined;
-
-	/**
-	 * This inode id.
-	 */
-	readonly inode: inode;
-
-	/**
-	 * The name of the directory
-	 */
-	readonly  name: string;
-
-	/**
-	 * The directory entries.
-	 */
-	readonly entries: Map<string, BaseNode>;
-}
-
-type BaseNode = BaseFileNode | BaseDirectoryNode;
-
 
 function timeInNanoseconds(timeInMilliseconds: number): bigint {
 	return BigInt(timeInMilliseconds) * 1000000n;
-}
-
-abstract class BaseFileSystem<D extends BaseDirectoryNode, F extends BaseFileNode > {
-
-	private inodeCounter: bigint;
-	private readonly root: D;
-
-	constructor(root: D) {
-		// 1n is reserved for root
-		this.inodeCounter = 2n;
-		this.root = root;
-	}
-
-	protected nextInode(): inode {
-		return this.inodeCounter++;
-	}
-
-	public getRoot(): D {
-		return this.root;
-	}
-
-	public refNode(node: Node): void {
-		node.refs++;
-	}
-
-	public unrefNode(node: Node): void {
-		node.refs--;
-	}
-
-	public findNode(path: string): D | F | undefined;
-	public findNode(parent: D, path: string): D | F | undefined;
-	public findNode(parentOrPath: D | string, p?: string): D | F | undefined {
-		let parent: D;
-		let path: string;
-		if (typeof parentOrPath === 'string') {
-			parent = this.root;
-			path = parentOrPath;
-		} else {
-			parent = parentOrPath;
-			path = p!;
-		}
-		const parts = this.getSegmentsFromPath(path);
-		if (parts.length === 1) {
-			if (parts[0] === '.') {
-				return parent;
-			} else if (parts[0] === '..') {
-				return parent.parent as D;
-			}
-		}
-		let current: F | D | undefined = parent;
-		for (let i = 0; i < parts.length; i++) {
-			switch (current.filetype) {
-				case ApiFiletype.regular_file:
-					return undefined;
-				case ApiFiletype.directory:
-					current = current.entries.get(parts[i]) as F | D | undefined;
-					if (current === undefined) {
-						return undefined;
-					}
-					break;
-			}
-		}
-		return current;
-	}
-
-	private getSegmentsFromPath(path: string): string[] {
-		if (path.charAt(0) === '/') { path = path.substring(1); }
-		if (path.charAt(path.length - 1) === '/') { path = path.substring(0, path.length - 1); }
-		return path.normalize().split('/');
-	}
 }
 
 interface FileNode extends BaseFileNode {
 
 	readonly parent: DirectoryNode;
 
-	/**
-	 * The files time stamp.
-	 */
 	readonly ctime: bigint;
 	readonly mtime: bigint;
 	readonly atime: bigint;
 
-	/**
-	 * How often the INode is referenced via a file descriptor
-	 */
-	refs: number;
-
-	/**
-	 * The content of the file.
-	 */
 	readonly content: Uint8Array | { size: bigint; reader: (node: FileNode) => Promise<Uint8Array> };
 }
 
@@ -182,17 +58,9 @@ interface DirectoryNode extends BaseDirectoryNode {
 
 	readonly parent: DirectoryNode | undefined;
 
-	/**
-	 * The files time stamp.
-	 */
 	readonly ctime: bigint;
 	readonly mtime: bigint;
 	readonly atime: bigint;
-
-	/**
-	 * How often the INode is referenced via a file descriptor
-	 */
-	refs: number;
 
 	readonly entries: Map<string, Node>;
 }
@@ -347,7 +215,7 @@ export function create(deviceId: DeviceId, fs: MemoryFileSystem): FileSystemDevi
 	function assignStat(result: filestat, node: Node): void {
 		result.dev = deviceId;
 		result.ino = node.inode;
-		result.filetype = ApiFiletype.to(node.filetype);
+		result.filetype = Filetypes.to(node.filetype);
 		result.nlink = 1n;
 		result.size = node.filetype === ApiFiletype.regular_file ? FileNode.size(node) : DirectoryNode.size(node);
 		result.atim = node.atime;
