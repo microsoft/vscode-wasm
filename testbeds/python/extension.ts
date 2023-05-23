@@ -52,7 +52,25 @@ export async function activate(context: ExtensionContext) {
 	commands.registerCommand('testbed-python.runInteractive', async () => {
 		await run(`Python Repl`);
 	});
-	commands.registerCommand('testbed-python.webshell.python', async (_command: string, args: string[], _cwd: string, stdio: Stdio, rootFileSystem: WasmFileSystem): Promise<number> => {
+	commands.registerCommand('testbed-python.webshell.python', async (_command: string, args: string[], cwd: string, stdio: Stdio, rootFileSystem: WasmFileSystem): Promise<number> => {
+		// WASI doesn't support the concept of an initial working directory.
+		// So we need to make file paths absolute.
+		// See https://github.com/WebAssembly/wasi-filesystem/issues/24
+		const optionsWithArgs = new Set(['-c', '-m', '-W', '-X', '--check-hash-based-pycs'])
+		for (let i = 0; i < args.length; i++) {
+			const arg = args[i]
+			if (optionsWithArgs.has(arg)) {
+				const next = args[i + 1];
+				if (next !== undefined && !next.startsWith('-')) {
+					i++;
+					continue;
+				}
+			} else if (arg.startsWith('-')) {
+				continue;
+			} else if (!arg.startsWith('/')) {
+				args[i] = `${cwd}/${arg}`
+			}
+		}
 		const options: ProcessOptions = {
 			stdio,
 			rootFileSystem,
