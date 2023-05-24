@@ -1,37 +1,30 @@
-#include <stdio.h>
-#include <stdlib.h>
-#include <unistd.h> //Header file for sleep(). man 3 sleep for details.
 #include <pthread.h>
+#include <stdio.h>
+#include <string.h>
+#include <unistd.h> //Header file for sleep(). man 3 sleep for details.
 
-// A normal C function that is executed as a thread
-// when its name is specified in pthread_create()
-void *myThreadFun(void *vargp)
-{
-	sleep(1);
-	printf("Printing GeeksQuiz from Thread \n");
-	return NULL;
+#define NUM_THREADS 10
+
+void *thread_entry_point(void *ctx) {
+	int id = (int) ctx;
+	printf(" in thread %d\n", id);
+	return 0;
 }
 
-int main()
-{
-
-	printf("Testing malloc\n");
-	void* ptr = malloc(131200);
-	if (ptr == NULL) {
-		printf("Malloc failed\n");
-		exit(1);
-	} else {
-		printf("Malloc succeeded\n");
-		free(ptr);
+int main(int argc, char **argv) {
+	pthread_t threads[10];
+	for (int i = 0; i < NUM_THREADS; i++) {
+		int ret = pthread_create(&threads[i], NULL, &thread_entry_point, (void *) i);
+		if (ret) {
+			printf("failed to spawn thread: %s", strerror(ret));
+		}
+	}
+	for (int i = 0; i < NUM_THREADS; i++) {
+		int ret = pthread_join(threads[i], NULL);
+		printf("Thread %d joined with result: %i\n", i, ret);
 	}
 
-	pthread_t thread_id;
-	printf("Before Thread\n");
-	int result = pthread_create(&thread_id, NULL, myThreadFun, NULL);
-	printf("Thread created with result: %i\n", result);
-	result = pthread_join(thread_id, NULL);
-	printf("Thread joined with result: %i\n", result);
-	sleep(5);
-	printf("After Thread\n");
-	exit(0);
+  sleep(5);
+  printf("After sleep\n");
+  return 0;
 }
