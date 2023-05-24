@@ -17,6 +17,25 @@ export interface TerminalOptions {
 	history?: boolean;
 }
 
+
+export enum PseudoterminalMode {
+
+	/**
+	 * The terminal is not in use.
+	 */
+	free = 1,
+
+	/**
+	 *  The terminal in in use however no process is currently running.
+	 */
+	idle = 2,
+
+	/**
+	 * The terminal is in use and a process is currently running.
+	 */
+	busy = 3
+}
+
 /**
  * A special pseudo terminal that has support for reading and writing.
  *
@@ -24,10 +43,46 @@ export interface TerminalOptions {
  * interface are available via `Wasm.createPseudoterminal`.
  */
 export interface WasmPseudoterminal extends Pseudoterminal {
+
 	/**
-	 * Create stdio
+	 * Fires if Ctrl+C is pressed in the terminal.
+	 */
+	readonly onDidCtrlC: Event<void>;
+
+	/**
+	 * Fires when any key is pressed in the terminal and the
+	 * terminal mode is idle.
+	 */
+	readonly onAnyKey: Event<void>;
+
+	/**
+	 * Fires when the terminal mode changes.
+	 */
+	readonly onDidChangeMode: Event<{ old: PseudoterminalMode; new: PseudoterminalMode}>;
+
+	/**
+	 * Stdio descriptors of the terminal.
 	 */
 	readonly stdio: Stdio;
+
+	/**
+	 * Set the terminal mode.
+	 *
+	 * @param mode The mode to set.
+	 */
+	setMode(mode: PseudoterminalMode): void;
+
+	/**
+	 * Get the terminal mode.
+	 */
+	getMode(): PseudoterminalMode;
+
+	/**
+	 * Set the terminal name.
+	 *
+	 * @param name The name to set.
+	 */
+	setName(name: string): void;
 
 	/**
 	 * Read a line from the terminal.
@@ -384,12 +439,33 @@ export interface Wasm {
 }
 
 export namespace Wasm {
-	export async function api(): Promise<Wasm> {
+	let $api: Wasm | undefined | null= undefined;
+	export function api(): Wasm {
+		if ($api !== undefined) {
+			throw new Error(`Unable to activate WASM WASI Core extension`);
+		}
+		if ($api === undefined) {
+			throw new Error(`Wasm API not yet loaded. Call await Wasm.load() first.`);
+		}
+		return $api;
+	}
+	export async function load(): Promise<Wasm> {
+		if ($api !== undefined) {
+			throw new Error(`Unable to activate WASM WASI Core extension`);
+		}
+		if ($api !== undefined) {
+			return $api;
+		}
 		const wasiCoreExt = Extensions.getExtension('ms-vscode.wasm-wasi-core');
 		if (wasiCoreExt === undefined) {
 			throw new Error(`Unable to load WASM WASI Core extension.`);
 		}
-		const result: Wasm = await wasiCoreExt.activate();
-		return result;
+		try {
+			$api = (await wasiCoreExt.activate()) as Wasm;
+			return $api;
+		} catch (err) {
+			$api = null;
+			throw new Error(`Unable to activate WASM WASI Core extension: ${err}`);
+		}
 	}
 }

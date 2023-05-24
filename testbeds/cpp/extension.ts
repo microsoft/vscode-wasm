@@ -10,7 +10,7 @@ import { commands, ExtensionContext, window } from 'vscode';
 import { ProcessOptions, Wasm } from '@vscode/wasm-wasi';
 
 export async function activate(_context: ExtensionContext) {
-	const wasm: Wasm = await Wasm.api();
+	const wasm: Wasm = await Wasm.load();
 	commands.registerCommand('testbed-cpp.run', async () => {
 		const pty = wasm.createPseudoterminal();
 		const terminal = window.createTerminal({ name: 'CPP', pty, isTransient: true });

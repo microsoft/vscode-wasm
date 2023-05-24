@@ -9,7 +9,8 @@ import { LogOutputChannel, Uri, WorkspaceFolder, window, workspace } from 'vscod
 
 import type {
 	ExtensionLocationDescriptor, InMemoryFileSystemDescriptor, MountPointDescriptor, ProcessOptions, StdioConsoleDescriptor, Stdio,
-	StdioFileDescriptor, VSCodeFileSystemDescriptor, WorkspaceFolderDescriptor, Readable, Writable, MountPointOptions, RootFileSystemOptions
+	StdioFileDescriptor, VSCodeFileSystemDescriptor, WorkspaceFolderDescriptor, Readable, Writable, MountPointOptions, RootFileSystemOptions,
+	WasmPseudoterminal
 } from './api';
 import type { ptr, u32 } from './baseTypes';
 import type { FileSystemDeviceDriver } from './deviceDriver';
@@ -21,7 +22,6 @@ import { DeviceWasiService, ProcessWasiService, EnvironmentWasiService, WasiServ
 import WasiKernel, { DeviceDrivers } from './kernel';
 import { Errno, Lookupflags, exitcode } from './wasi';
 import { CharacterDeviceDriver } from './deviceDriver';
-import { WasmPseudoterminal } from './terminal';
 import { WritableStream, ReadableStream } from './streams';
 import { WasmRootFileSystemImpl } from './fileSystem';
 

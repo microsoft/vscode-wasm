@@ -2,10 +2,10 @@
  * Copyright (c) Microsoft Corporation. All rights reserved.
  * Licensed under the MIT License. See License.txt in the project root for license information.
  * ------------------------------------------------------------------------------------------ */
-import { Event, EventEmitter, Pseudoterminal } from 'vscode';
+import { Event, EventEmitter } from 'vscode';
 
 import RAL from './ral';
-import { Stdio } from './api';
+import { Stdio, WasmPseudoterminal, PseudoterminalMode } from './api';
 
 class LineBuffer {
 
@@ -171,32 +171,11 @@ class LineBuffer {
 	}
 }
 
-export enum TerminalMode {
-	idle = 1,
-	inUse = 2
-}
-
 export interface Options {
 	history?: boolean;
 }
 
-export interface WasmPseudoterminal extends Pseudoterminal {
-	readonly onDidCtrlC: Event<void>;
-	readonly onDidClose: Event<void>;
-	readonly onAnyKey: Event<void>;
-
-	readonly stdio: Stdio;
-
-	setMode(mode: TerminalMode): void;
-	setName(name: string): void;
-	read(maxBytesToRead: number): Promise<Uint8Array>;
-	readline(): Promise<string>;
-	write(str: string): Promise<void>;
-	write(bytes: Uint8Array): Promise<number>;
-	prompt(prompt: string): Promise<void>;
-}
-
-export namespace WasmPseudoterminal {
+namespace WasmPseudoterminal {
 	export function is(value: any): value is WasmPseudoterminal {
 		return value instanceof WasmPseudoterminalImpl;
 	}
@@ -252,7 +231,7 @@ class WasmPseudoterminalImpl implements WasmPseudoterminal {
 
 	private readonly options: Options;
 	private readonly commandHistory: CommandHistory | undefined;
-	private mode: TerminalMode;
+	private mode: PseudoterminalMode;
 
 	private readonly _onDidClose: EventEmitter<void>;
 	public readonly onDidClose: Event<void>;
@@ -282,7 +261,7 @@ class WasmPseudoterminalImpl implements WasmPseudoterminal {
 	constructor(options: Options = {}) {
 		this.options = options;
 		this.commandHistory = this.options.history ? new CommandHistory() : undefined;
-		this.mode = TerminalMode.inUse;
+		this.mode = PseudoterminalMode.busy;
 
 		this._onDidClose = new EventEmitter();
 		this.onDidClose = this._onDidClose.event;
@@ -312,8 +291,12 @@ class WasmPseudoterminalImpl implements WasmPseudoterminal {
 		};
 	}
 
-	public setMode(mode: TerminalMode): void {
+	public setMode(mode: PseudoterminalMode): void {
 		this.mode = mode;
+	}
+
+	public getMode(): PseudoterminalMode {
+		return this.mode;
 	}
 
 	public setName(name: string): void {
@@ -388,7 +371,7 @@ class WasmPseudoterminalImpl implements WasmPseudoterminal {
 	}
 
 	public handleInput(data: string): void {
-		if (this.mode === TerminalMode.idle) {
+		if (this.mode === PseudoterminalMode.free) {
 			this._onAnyKey.fire();
 			return;
 		}

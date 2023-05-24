@@ -25,6 +25,24 @@ export interface TerminalOptions {
 	history?: boolean;
 }
 
+export enum PseudoterminalMode {
+
+	/**
+	 * The pseudoterminal is not in use.
+	 */
+	free = 1,
+
+	/**
+	 *  The pseudoterminal in in use however no process is currently running.
+	 */
+	idle = 2,
+
+	/**
+	 * The pseudoterminal is in use and a process is currently running.
+	 */
+	busy = 3
+}
+
 /**
  * A special pseudo terminal that has support for reading and writing.
  *
@@ -32,13 +50,44 @@ export interface TerminalOptions {
  * interface are available via `Wasm.createPseudoterminal`.
  */
 export interface WasmPseudoterminal extends Pseudoterminal {
+
 	/**
-	 * Create stdio
+	 * Fires if Ctrl+C is pressed in the terminal.
+	 */
+	readonly onDidCtrlC: Event<void>;
+
+	/**
+	 * Fires when any key is pressed in the terminal and the
+	 * terminal mode is idle.
+	 */
+	readonly onAnyKey: Event<void>;
+
+	/**
+	 * Stdio descriptors of the terminal.
 	 */
 	readonly stdio: Stdio;
 
 	/**
-	 * Read a line from the terminal.
+	 * Set the terminal mode.
+	 *
+	 * @param mode The mode to set.
+	 */
+	setMode(mode: PseudoterminalMode): void;
+
+	/**
+	 * Get the terminal mode.
+	 */
+	getMode(): PseudoterminalMode;
+
+	/**
+	 * Set the terminal name.
+	 *
+	 * @param name The name to set.
+	 */
+	setName(name: string): void;
+
+	/**
+	 * Reads a line from the terminal.
 	 */
 	readline(): Promise<string>;
 

@@ -7,7 +7,7 @@ import { ExtensionContext, Uri, commands, window, workspace } from 'vscode';
 import { Wasm, ProcessOptions } from '@vscode/wasm-wasi';
 
 export async function activate(context: ExtensionContext) {
-	const wasm: Wasm = await Wasm.api();
+	const wasm: Wasm = await Wasm.load();
 	commands.registerCommand('testbed-threads.run', async () => {
 		const pty = wasm.createPseudoterminal();
 		const terminal = window.createTerminal({ name: 'threads', pty, isTransient: true });

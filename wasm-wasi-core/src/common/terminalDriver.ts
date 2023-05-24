@@ -2,13 +2,13 @@
  *  Copyright (c) Microsoft Corporation. All rights reserved.
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
+import { Uri } from 'vscode';
 
-import { size } from './baseTypes';
+import type { WasmPseudoterminal } from './api';
+import type { size } from './baseTypes';
 import { fd, fdflags, fdstat, filestat, Filetype, Rights, rights } from './wasi';
 import { CharacterDeviceDriver, DeviceDriverKind, DeviceId, NoSysDeviceDriver } from './deviceDriver';
 import { BaseFileDescriptor, FileDescriptor } from './fileDescriptor';
-import { WasmPseudoterminal } from './terminal';
-import { Uri } from 'vscode';
 
 const TerminalBaseRights: rights = Rights.fd_read | Rights.fd_fdstat_set_flags | Rights.fd_write |
 	Rights.fd_filestat_get | Rights.poll_fd_readwrite;

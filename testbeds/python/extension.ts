@@ -7,7 +7,7 @@ import { commands, ExtensionContext, Uri, window, workspace } from 'vscode';
 import { Wasm, ProcessOptions, Stdio, RootFileSystem } from '@vscode/wasm-wasi';
 
 export async function activate(context: ExtensionContext) {
-	const wasm: Wasm = await Wasm.api();
+	const wasm: Wasm = await Wasm.load();
 	async function run(name: string, fileToRun?: Uri): Promise<void> {
 		const pty = wasm.createPseudoterminal();
 		const terminal = window.createTerminal({ name, pty, isTransient: true });
