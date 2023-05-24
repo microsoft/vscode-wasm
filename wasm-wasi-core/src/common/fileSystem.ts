@@ -5,11 +5,11 @@
 
 import { Uri } from 'vscode';
 import { Filetype as ApiFiletype, RootFileSystem } from './api';
-import { Errno, Filestat, Lookupflags, WasiError, Filetype as WasiFiletype, errno, filetype, inode } from './wasi';
+import { Errno, Filestat, Filetype, Lookupflags, WasiError, Filetype as WasiFiletype, errno, fd, fdflags, filetype, inode, rights } from './wasi';
 import { RootFileSystemDeviceDriver } from './rootFileSystemDriver';
 import { DeviceDrivers, RootFileSystemInfo } from './kernel';
 import { DeviceDriver, FileSystemDeviceDriver } from './deviceDriver';
-import { FileDescriptor, FileDescriptors } from './fileDescriptor';
+import { BaseFileDescriptor, FileDescriptor, FileDescriptors } from './fileDescriptor';
 import { FileSystemService } from './service';
 
 export namespace Filetypes {
@@ -39,17 +39,12 @@ export namespace Filetypes {
 	}
 }
 
-export interface BaseFileNode {
+export interface BaseNode {
 
-	readonly filetype: typeof ApiFiletype.regular_file;
-
-	/**
-	 * The parent node
-	 */
-	readonly parent: BaseDirectoryNode;
+	readonly filetype: filetype;
 
 	/**
-	 * This inode id.
+	 * The inode id.
 	 */
 	readonly inode: inode;
 
@@ -64,39 +59,44 @@ export interface BaseFileNode {
 	refs: number;
 }
 
-export interface BaseDirectoryNode {
+export interface FileNode extends BaseNode {
 
-	readonly filetype: typeof ApiFiletype.directory;
+	readonly filetype: typeof WasiFiletype.regular_file;
 
 	/**
 	 * The parent node
 	 */
-	readonly parent: BaseDirectoryNode | undefined;
+	readonly parent: DirectoryNode;
+}
+
+export interface CharacterDeviceNode extends BaseNode {
+
+	readonly filetype: typeof WasiFiletype.character_device;
 
 	/**
-	 * This inode id.
+	 * The parent node
 	 */
-	readonly inode: inode;
+	readonly parent: DirectoryNode;
+}
+
+export interface DirectoryNode extends BaseNode {
+
+	readonly filetype: typeof WasiFiletype.directory;
 
 	/**
-	 * The name of the directory
+	 * The parent node
 	 */
-	readonly  name: string;
+	readonly parent: DirectoryNode | undefined;
 
 	/**
 	 * The directory entries.
 	 */
-	readonly entries: Map<string, BaseNode>;
-
-	/**
-	 * How often the node is referenced via a file descriptor
-	 */
-	refs: number;
+	readonly entries: Map<string, Node>;
 }
 
-export type BaseNode = BaseFileNode | BaseDirectoryNode;
+type Node = FileNode | DirectoryNode | CharacterDeviceNode;
 
-export abstract class BaseFileSystem<D extends BaseDirectoryNode, F extends BaseFileNode > {
+export abstract class BaseFileSystem<D extends DirectoryNode, F extends FileNode, C extends CharacterDeviceNode > {
 
 	private inodeCounter: bigint;
 	private readonly root: D;
@@ -115,17 +115,9 @@ export abstract class BaseFileSystem<D extends BaseDirectoryNode, F extends Base
 		return this.root;
 	}
 
-	public refNode(node: BaseNode): void {
-		node.refs++;
-	}
-
-	public unrefNode(node: BaseNode): void {
-		node.refs--;
-	}
-
-	public findNode(path: string): D | F | undefined;
-	public findNode(parent: D, path: string): D | F | undefined;
-	public findNode(parentOrPath: D | string, p?: string): D | F | undefined {
+	public findNode(path: string): D | F | C | undefined;
+	public findNode(parent: D, path: string): D | F | C |undefined;
+	public findNode(parentOrPath: D | string, p?: string): D | F | C |undefined {
 		let parent: D;
 		let path: string;
 		if (typeof parentOrPath === 'string') {
@@ -146,9 +138,9 @@ export abstract class BaseFileSystem<D extends BaseDirectoryNode, F extends Base
 		let current: F | D | undefined = parent;
 		for (let i = 0; i < parts.length; i++) {
 			switch (current.filetype) {
-				case ApiFiletype.regular_file:
+				case WasiFiletype.regular_file:
 					return undefined;
-				case ApiFiletype.directory:
+				case WasiFiletype.directory:
 					current = current.entries.get(parts[i]) as F | D | undefined;
 					if (current === undefined) {
 						return undefined;
@@ -163,6 +155,76 @@ export abstract class BaseFileSystem<D extends BaseDirectoryNode, F extends Base
 		if (path.charAt(0) === '/') { path = path.substring(1); }
 		if (path.charAt(path.length - 1) === '/') { path = path.substring(0, path.length - 1); }
 		return path.normalize().split('/');
+	}
+}
+
+abstract class NodeDescriptor<N extends Node> extends BaseFileDescriptor {
+
+	public readonly node: N;
+
+	constructor(deviceId: bigint, fd: fd, filetype: filetype, rights_base: rights, rights_inheriting: rights, fdflags: fdflags, inode: bigint, node: N) {
+		super(deviceId, fd, filetype, rights_base, rights_inheriting, fdflags, inode);
+		this.node = node;
+		this.node.refs++;
+	}
+
+	dispose(): Promise<void> {
+		this.node.refs--;
+		return Promise.resolve();
+	}
+}
+
+export class FileNodeDescriptor<F extends FileNode> extends NodeDescriptor<F> {
+
+	private _cursor: bigint;
+
+	constructor(deviceId: bigint, fd: fd, rights_base: rights, fdflags: fdflags, inode: bigint, node: F) {
+		super(deviceId, fd, Filetype.regular_file, rights_base, 0n, fdflags, inode, node);
+		this._cursor = 0n;
+	}
+
+	public with(change: { fd: fd }): FileDescriptor {
+		return new FileNodeDescriptor(this.deviceId, change.fd, this.rights_base, this.fdflags, this.inode, this.node as F);
+	}
+
+	public get cursor(): bigint {
+		return this._cursor;
+	}
+
+	public set cursor(value: bigint) {
+		if (value < 0) {
+			throw new WasiError(Errno.inval);
+		}
+		this._cursor = value;
+	}
+}
+
+export class CharacterDeviceNodeDescriptor<C extends CharacterDeviceNode> extends NodeDescriptor<C> {
+	constructor(deviceId: bigint, fd: fd, rights_base: rights, fdflags: fdflags, inode: bigint, node: C) {
+		super(deviceId, fd, Filetype.regular_file, rights_base, 0n, fdflags, inode, node);
+	}
+
+	public with(change: { fd: fd }): FileDescriptor {
+		return new CharacterDeviceNodeDescriptor(this.deviceId, change.fd, this.rights_base, this.fdflags, this.inode, this.node as C);
+	}
+}
+
+export class DirectoryNodeDescriptor<D extends DirectoryNode> extends NodeDescriptor<D> {
+
+	constructor(deviceId: bigint, fd: fd, rights_base: rights, rights_inheriting: rights, fdflags: fdflags, inode: bigint, node: D) {
+		super(deviceId, fd, Filetype.directory, rights_base, rights_inheriting, fdflags, inode, node);
+	}
+
+	public with(change: { fd: fd }): FileDescriptor {
+		return new DirectoryNodeDescriptor(this.deviceId, change.fd, this.rights_base, this.rights_inheriting, this.fdflags, this.inode, this.node as D);
+	}
+
+	childDirectoryRights(requested_rights: rights, fileOnlyBaseRights: rights): rights {
+		return (this.rights_inheriting & requested_rights) & ~fileOnlyBaseRights;
+	}
+
+	childFileRights(requested_rights: rights, directoryOnlyBaseRights: rights): rights {
+		return (this.rights_inheriting & requested_rights) & ~directoryOnlyBaseRights;
 	}
 }
 

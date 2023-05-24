@@ -4,7 +4,7 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { commands, ExtensionContext, Uri, window, workspace } from 'vscode';
-import { Wasm, ProcessOptions, Stdio, WasmFileSystem } from '@vscode/wasm-wasi';
+import { Wasm, ProcessOptions, Stdio, RootFileSystem } from '@vscode/wasm-wasi';
 
 export async function activate(context: ExtensionContext) {
 	const wasm: Wasm = await Wasm.api();
@@ -52,7 +52,7 @@ export async function activate(context: ExtensionContext) {
 	commands.registerCommand('testbed-python.runInteractive', async () => {
 		await run(`Python Repl`);
 	});
-	commands.registerCommand('testbed-python.webshell.python', async (_command: string, args: string[], cwd: string, stdio: Stdio, rootFileSystem: WasmFileSystem): Promise<number> => {
+	commands.registerCommand('testbed-python.webshell.python', async (_command: string, args: string[], cwd: string, stdio: Stdio, rootFileSystem: RootFileSystem): Promise<number> => {
 		// WASI doesn't support the concept of an initial working directory.
 		// So we need to make file paths absolute.
 		// See https://github.com/WebAssembly/wasi-filesystem/issues/24

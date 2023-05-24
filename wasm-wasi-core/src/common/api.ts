@@ -11,7 +11,7 @@ import { WasiProcess as InternalWasiProcess } from './process';
 import { MemoryFileSystem as InMemoryFileSystemImpl } from './memoryFileSystemDriver';
 import WasiKernel from './kernel';
 import { FileDescriptors } from './fileDescriptor';
-import { StdinStream, StdoutStream } from './streams';
+import { WritableStream, ReadableStream } from './streams';
 import { WasmRootFileSystemImpl } from './fileSystem';
 
 export interface Environment {
@@ -255,12 +255,6 @@ export type MountPointOptions = {
 	 */
 	mountPoints?: MountPointDescriptor[];
 };
-export namespace MountPointOptions {
-	export function is(value: any): value is MountPointOptions {
-		const candidate = value as MountPointOptions;
-		return candidate && Array.isArray(candidate.mountPoints);
-	}
-}
 
 export type RootFileSystemOptions = {
 	/**
@@ -268,12 +262,6 @@ export type RootFileSystemOptions = {
 	 */
 	rootFileSystem?: RootFileSystem;
 };
-export namespace RootFileSystemOptions {
-	export function is(value: any): value is { rootFileSystem: WasmRootFileSystemImpl } {
-		const candidate = value as RootFileSystemOptions;
-		return candidate && candidate.rootFileSystem instanceof WasmRootFileSystemImpl;
-	}
-}
 
 export type ProcessOptions = BaseProcessOptions & (MountPointOptions | RootFileSystemOptions);
 
@@ -430,10 +418,10 @@ export namespace WasiCoreImpl {
 				return result;
 			},
 			createReadable() {
-				return new StdoutStream();
+				return new ReadableStream();
 			},
 			createWritable(encoding?: 'utf-8') {
-				return new StdinStream(encoding);
+				return new WritableStream(encoding);
 			},
 			async createProcess(name: string, module: WebAssembly.Module | Promise<WebAssembly.Module>, memoryOrOptions?: WebAssembly.MemoryDescriptor | WebAssembly.Memory | ProcessOptions, optionsOrMapWorkspaceFolders?: ProcessOptions | boolean): Promise<WasmProcess> {
 				let memory: WebAssembly.Memory | WebAssembly.MemoryDescriptor | undefined;

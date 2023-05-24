@@ -405,14 +405,18 @@ export namespace DeviceWasiService {
 				}
 			},
 			fd_close: async (_memory: ArrayBuffer, fd: fd): Promise<errno> => {
+				const fileDescriptor = getFileDescriptor(fd);
 				try {
-					const fileDescriptor = getFileDescriptor(fd);
 
 					await getDeviceDriver(fileDescriptor).fd_close(fileDescriptor);
-					fileDescriptors.delete(fileDescriptor);
 					return Errno.success;
 				} catch (error) {
 					return handleError(error);
+				} finally {
+					fileDescriptors.delete(fileDescriptor);
+					if (fileDescriptor.dispose !== undefined) {
+						await fileDescriptor.dispose();
+					}
 				}
 			},
 			fd_datasync: async (_memory: ArrayBuffer, fd: fd): Promise<errno> => {

@@ -3,10 +3,10 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import RAL from './ral';
 import { Event, EventEmitter } from 'vscode';
-import { Readable, Writable } from './api';
-import { size } from './baseTypes';
+import RAL from './ral';
+import type { Readable, Writable } from './api';
+import type { size } from './baseTypes';
 
 export class DestroyError extends Error {
 	constructor() {
@@ -14,7 +14,7 @@ export class DestroyError extends Error {
 	}
 }
 
-export abstract class StdioStream {
+export abstract class Stream {
 
 	private static BufferSize = 16384;
 
@@ -28,19 +28,19 @@ export abstract class StdioStream {
 	constructor() {
 		this.chunks = [];
 		this.fillLevel = 0;
-		this._targetFillLevel = StdioStream.BufferSize;
+		this._targetFillLevel = Stream.BufferSize;
 	}
 
 	public async write(chunk: Uint8Array): Promise<void> {
 		// We have enough space
-		if (this.fillLevel + chunk.byteLength <= StdioStream.BufferSize) {
+		if (this.fillLevel + chunk.byteLength <= Stream.BufferSize) {
 			this.chunks.push(chunk);
 			this.fillLevel += chunk.byteLength;
 			this.signalData();
 			return;
 		}
 		// What for the necessary space.
-		const targetFillLevel = Math.max(0, StdioStream.BufferSize - chunk.byteLength);
+		const targetFillLevel = Math.max(0, Stream.BufferSize - chunk.byteLength);
 		try {
 			await this.awaitFillLevel(targetFillLevel);
 			if (this.fillLevel > targetFillLevel) {
@@ -61,7 +61,7 @@ export abstract class StdioStream {
 	public async destroy(): Promise<void> {
 		this.chunks = [];
 		this.fillLevel = 0;
-		this._targetFillLevel = StdioStream.BufferSize;
+		this._targetFillLevel = Stream.BufferSize;
 		this._awaitFillLevel = undefined;
 		if (this._awaitFillLevelReject !== undefined) {
 			this._awaitFillLevelReject(new DestroyError());
@@ -87,14 +87,14 @@ export abstract class StdioStream {
 		}
 		this._awaitFillLevel();
 		this._awaitFillLevel = undefined;
-		this._targetFillLevel = StdioStream.BufferSize;
+		this._targetFillLevel = Stream.BufferSize;
 	}
 
 	protected abstract signalData(): void;
 
 }
 
-export class StdinStream extends StdioStream implements Writable {
+export class WritableStream extends Stream implements Writable {
 
 	private readonly encoding: 'utf-8';
 	private readonly encoder: RAL.TextEncoder;
@@ -195,7 +195,7 @@ export class StdinStream extends StdioStream implements Writable {
 	}
 }
 
-export class StdoutStream extends StdioStream implements Readable {
+export class ReadableStream extends Stream implements Readable {
 
 	private readonly _onData = new EventEmitter<Uint8Array>();
 

@@ -7,9 +7,9 @@
 import RAL from './ral';
 import { LogOutputChannel, Uri, WorkspaceFolder, window, workspace } from 'vscode';
 
-import {
-	type ExtensionLocationDescriptor, type InMemoryFileSystemDescriptor, type MountPointDescriptor, type ProcessOptions, type StdioConsoleDescriptor, type Stdio,
-	type StdioFileDescriptor, type VSCodeFileSystemDescriptor, type WorkspaceFolderDescriptor, type Readable, type Writable, MountPointOptions, RootFileSystemOptions
+import type {
+	ExtensionLocationDescriptor, InMemoryFileSystemDescriptor, MountPointDescriptor, ProcessOptions, StdioConsoleDescriptor, Stdio,
+	StdioFileDescriptor, VSCodeFileSystemDescriptor, WorkspaceFolderDescriptor, Readable, Writable, MountPointOptions, RootFileSystemOptions
 } from './api';
 import type { ptr, u32 } from './baseTypes';
 import type { FileSystemDeviceDriver } from './deviceDriver';
@@ -22,7 +22,8 @@ import WasiKernel, { DeviceDrivers } from './kernel';
 import { Errno, Lookupflags, exitcode } from './wasi';
 import { CharacterDeviceDriver } from './deviceDriver';
 import { WasmPseudoterminal } from './terminal';
-import { StdinStream, StdoutStream } from './streams';
+import { WritableStream, ReadableStream } from './streams';
+import { WasmRootFileSystemImpl } from './fileSystem';
 
 type $Stdio = {
 	in: NonNullable<Stdio['in']> | { kind: 'console' };
@@ -54,6 +55,20 @@ namespace MapDirDescriptor {
 	}
 }
 
+namespace MountPointOptions {
+	export function is(value: any): value is MountPointOptions {
+		const candidate = value as MountPointOptions;
+		return candidate && Array.isArray(candidate.mountPoints);
+	}
+}
+
+namespace RootFileSystemOptions {
+	export function is(value: any): value is { rootFileSystem: WasmRootFileSystemImpl } {
+		const candidate = value as RootFileSystemOptions;
+		return candidate && candidate.rootFileSystem instanceof WasmRootFileSystemImpl;
+	}
+}
+
 let $channel: LogOutputChannel | undefined;
 function channel(): LogOutputChannel {
 	if ($channel === undefined) {
@@ -76,9 +91,9 @@ export abstract class WasiProcess {
 	private readonly preOpenDirectories: Map<string, FileSystemDeviceDriver>;
 	private virtualRootFileSystem: vrfs.RootFileSystemDeviceDriver | undefined;
 
-	private _stdin: StdinStream | undefined;
-	private _stdout: StdoutStream | undefined;
-	private _stderr: StdoutStream | undefined;
+	private _stdin: WritableStream | undefined;
+	private _stdout: ReadableStream | undefined;
+	private _stderr: ReadableStream | undefined;
 
 	constructor(programName: string, options: ProcessOptions = {}) {
 		this.programName = programName;
@@ -402,18 +417,18 @@ export abstract class WasiProcess {
 
 	private async handlePipes(stdio: $Stdio): Promise<void> {
 		if (stdio.in.kind === 'pipeIn') {
-			this._stdin = (stdio.in.pipe as StdinStream) ?? new StdinStream(this.options.encoding);
+			this._stdin = (stdio.in.pipe as WritableStream) ?? new WritableStream(this.options.encoding);
 		}
 		if (stdio.out.kind === 'pipeOut') {
-			this._stdout = (stdio.out.pipe as StdoutStream) ?? new StdoutStream();
+			this._stdout = (stdio.out.pipe as ReadableStream) ?? new ReadableStream();
 		}
 		if (stdio.err.kind === 'pipeOut') {
-			this._stderr = (stdio.err.pipe as StdoutStream) ?? new StdoutStream();
+			this._stderr = (stdio.err.pipe as ReadableStream) ?? new ReadableStream();
 		}
 		if (this._stdin === undefined && this._stdout === undefined && this._stderr === undefined) {
 			return;
 		}
-		const pipeDevice = pdd.create(WasiKernel.nextDeviceId(), this._stdin as StdinStream | undefined, this._stdout as StdoutStream | undefined, this._stderr as StdoutStream | undefined);
+		const pipeDevice = pdd.create(WasiKernel.nextDeviceId(), this._stdin as WritableStream | undefined, this._stdout as ReadableStream | undefined, this._stderr as ReadableStream | undefined);
 		if (this._stdin !== undefined) {
 			this.fileDescriptors.add(pipeDevice.createStdioFileDescriptor(0));
 		}
