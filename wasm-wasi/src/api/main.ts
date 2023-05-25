@@ -11,29 +11,39 @@ export interface Environment {
 }
 
 export interface TerminalOptions {
+
+	/**
+	 * The encoding to use when converting bytes to characters for the terminal.
+	 */
+	encoding?: 'utf-8';
+
 	/**
 	 * Enables a history stack for the terminal.
 	 */
 	history?: boolean;
 }
 
-
-export enum PseudoterminalMode {
+export enum PseudoterminalState {
 
 	/**
-	 * The terminal is not in use.
+	 * The pseudoterminal is not in use.
 	 */
 	free = 1,
 
 	/**
-	 *  The terminal in in use however no process is currently running.
+	 *  The pseudoterminal is in use however no process is currently running.
 	 */
 	idle = 2,
 
 	/**
-	 * The terminal is in use and a process is currently running.
+	 * The pseudoterminal is in use and a process is currently running.
 	 */
 	busy = 3
+}
+
+export interface PseudoterminalStateChangeEvent {
+	old: PseudoterminalState;
+	new: PseudoterminalState;
 }
 
 /**
@@ -56,9 +66,14 @@ export interface WasmPseudoterminal extends Pseudoterminal {
 	readonly onAnyKey: Event<void>;
 
 	/**
-	 * Fires when the terminal mode changes.
+	 * Fires when the terminal state changes.
 	 */
-	readonly onDidChangeMode: Event<{ old: PseudoterminalMode; new: PseudoterminalMode}>;
+	readonly onDidChangeState: Event<PseudoterminalStateChangeEvent>;
+
+	/**
+	 * Fires when the terminal got closed by a user actions.
+	 */
+	readonly onDidCloseTerminal: Event<void>;
 
 	/**
 	 * Stdio descriptors of the terminal.
@@ -66,16 +81,16 @@ export interface WasmPseudoterminal extends Pseudoterminal {
 	readonly stdio: Stdio;
 
 	/**
-	 * Set the terminal mode.
+	 * Set the terminal state.
 	 *
-	 * @param mode The mode to set.
+	 * @param state The state to set.
 	 */
-	setMode(mode: PseudoterminalMode): void;
+	setState(state: PseudoterminalState): void;
 
 	/**
-	 * Get the terminal mode.
+	 * Get the terminal state.
 	 */
-	getMode(): PseudoterminalMode;
+	getState(): PseudoterminalState;
 
 	/**
 	 * Set the terminal name.
@@ -85,9 +100,15 @@ export interface WasmPseudoterminal extends Pseudoterminal {
 	setName(name: string): void;
 
 	/**
-	 * Read a line from the terminal.
+	 * Reads a line from the terminal.
 	 */
 	readline(): Promise<string>;
+
+	/**
+	 * Reads bytes from the terminal.
+	 * @param maxBytesToRead The maximum number of bytes to read.
+	 */
+	read(maxBytesToRead: number, encoding?: 'utf-8'): Promise<Uint8Array>;
 
 	/**
 	 * Write a string to the terminal.
@@ -95,6 +116,13 @@ export interface WasmPseudoterminal extends Pseudoterminal {
 	 * @param str The string to write to the terminal.
 	 */
 	write(str: string): Promise<void>;
+
+	/**
+	 * Writes bytes to the terminal using the given encoding.
+	 *
+	 * @param chunk The bytes to write to the terminal.
+	 */
+	write(chunk: Uint8Array, encoding?: 'utf-8'): Promise<number>;
 
 	/**
 	 * Write a prompt to the terminal.

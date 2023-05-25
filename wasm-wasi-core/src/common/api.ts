@@ -6,7 +6,7 @@
 
 import { Event, Extension, ExtensionContext, Pseudoterminal, Uri } from 'vscode';
 
-import { WasmPseudoterminal as WasmPseudoterminalImpl } from './terminal';
+import { WasmPseudoterminalImpl } from './terminal';
 import { WasiProcess as InternalWasiProcess } from './process';
 import { MemoryFileSystem as InMemoryFileSystemImpl } from './memoryFileSystemDriver';
 import WasiKernel from './kernel';
@@ -19,13 +19,19 @@ export interface Environment {
 }
 
 export interface TerminalOptions {
+
+	/**
+	 * The encoding to use when converting bytes to characters for the terminal.
+	 */
+	encoding?: 'utf-8';
+
 	/**
 	 * Enables a history stack for the terminal.
 	 */
 	history?: boolean;
 }
 
-export enum PseudoterminalMode {
+export enum PseudoterminalState {
 
 	/**
 	 * The pseudoterminal is not in use.
@@ -33,7 +39,7 @@ export enum PseudoterminalMode {
 	free = 1,
 
 	/**
-	 *  The pseudoterminal in in use however no process is currently running.
+	 *  The pseudoterminal is in use however no process is currently running.
 	 */
 	idle = 2,
 
@@ -41,6 +47,11 @@ export enum PseudoterminalMode {
 	 * The pseudoterminal is in use and a process is currently running.
 	 */
 	busy = 3
+}
+
+export interface PseudoterminalStateChangeEvent {
+	old: PseudoterminalState;
+	new: PseudoterminalState;
 }
 
 /**
@@ -63,21 +74,31 @@ export interface WasmPseudoterminal extends Pseudoterminal {
 	readonly onAnyKey: Event<void>;
 
 	/**
+	 * Fires when the terminal state changes.
+	 */
+	readonly onDidChangeState: Event<PseudoterminalStateChangeEvent>;
+
+	/**
+	 * Fires when the terminal got closed by a user actions.
+	 */
+	readonly onDidCloseTerminal: Event<void>;
+
+	/**
 	 * Stdio descriptors of the terminal.
 	 */
 	readonly stdio: Stdio;
 
 	/**
-	 * Set the terminal mode.
+	 * Set the terminal state.
 	 *
-	 * @param mode The mode to set.
+	 * @param state The state to set.
 	 */
-	setMode(mode: PseudoterminalMode): void;
+	setState(state: PseudoterminalState): void;
 
 	/**
-	 * Get the terminal mode.
+	 * Get the terminal state.
 	 */
-	getMode(): PseudoterminalMode;
+	getState(): PseudoterminalState;
 
 	/**
 	 * Set the terminal name.
@@ -92,11 +113,24 @@ export interface WasmPseudoterminal extends Pseudoterminal {
 	readline(): Promise<string>;
 
 	/**
+	 * Reads bytes from the terminal.
+	 * @param maxBytesToRead The maximum number of bytes to read.
+	 */
+	read(maxBytesToRead: number, encoding?: 'utf-8'): Promise<Uint8Array>;
+
+	/**
 	 * Write a string to the terminal.
 	 *
 	 * @param str The string to write to the terminal.
 	 */
 	write(str: string): Promise<void>;
+
+	/**
+	 * Writes bytes to the terminal using the given encoding.
+	 *
+	 * @param chunk The bytes to write to the terminal.
+	 */
+	write(chunk: Uint8Array, encoding?: 'utf-8'): Promise<number>;
 
 	/**
 	 * Write a prompt to the terminal.
@@ -454,7 +488,7 @@ export namespace WasiCoreImpl {
 	export function create(context: ExtensionContext, construct: new (baseUri: Uri, programName: string, module: WebAssembly.Module | Promise<WebAssembly.Module>, memory: WebAssembly.Memory | WebAssembly.MemoryDescriptor | undefined, options: ProcessOptions | undefined) => InternalWasiProcess): Wasm {
 		return {
 			createPseudoterminal(options?: TerminalOptions): WasmPseudoterminal {
-				return WasmPseudoterminalImpl.create(options);
+				return new WasmPseudoterminalImpl(options);
 			},
 			createInMemoryFileSystem(): Promise<MemoryFileSystem> {
 				return Promise.resolve(new InMemoryFileSystemImpl());
