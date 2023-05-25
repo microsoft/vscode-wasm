@@ -8,7 +8,7 @@ import RAL from './ral';
 import { LogOutputChannel, Uri, WorkspaceFolder, window, workspace } from 'vscode';
 
 import type {
-	ExtensionLocationDescriptor, InMemoryFileSystemDescriptor, MountPointDescriptor, ProcessOptions, StdioConsoleDescriptor, Stdio,
+	ExtensionLocationDescriptor, MemoryFileSystemDescriptor, MountPointDescriptor, ProcessOptions, StdioConsoleDescriptor, Stdio,
 	StdioFileDescriptor, VSCodeFileSystemDescriptor, WorkspaceFolderDescriptor, Readable, Writable, MountPointOptions, RootFileSystemOptions,
 	WasmPseudoterminal
 } from './api';
@@ -32,11 +32,11 @@ type $Stdio = {
 };
 
 namespace MapDirDescriptor {
-	export function getDescriptors(descriptors: MountPointDescriptor[] | undefined) : { workspaceFolders: WorkspaceFolderDescriptor | undefined; extensions: ExtensionLocationDescriptor[]; vscodeFileSystems: VSCodeFileSystemDescriptor[]; inMemoryFileSystems: InMemoryFileSystemDescriptor[]} {
+	export function getDescriptors(descriptors: MountPointDescriptor[] | undefined) : { workspaceFolders: WorkspaceFolderDescriptor | undefined; extensions: ExtensionLocationDescriptor[]; vscodeFileSystems: VSCodeFileSystemDescriptor[]; inMemoryFileSystems: MemoryFileSystemDescriptor[]} {
 		let workspaceFolders: WorkspaceFolderDescriptor | undefined;
 		const extensions: ExtensionLocationDescriptor[] = [];
 		const vscodeFileSystems: VSCodeFileSystemDescriptor[] = [];
-		const inMemoryFileSystems: InMemoryFileSystemDescriptor[] = [];
+		const inMemoryFileSystems: MemoryFileSystemDescriptor[] = [];
 		if (descriptors === undefined) {
 			return { workspaceFolders, extensions, vscodeFileSystems, inMemoryFileSystems };
 		}
@@ -47,7 +47,7 @@ namespace MapDirDescriptor {
 				extensions.push(descriptor);
 			} else if (descriptor.kind === 'vscodeFileSystem') {
 				vscodeFileSystems.push(descriptor);
-			} else if (descriptor.kind === 'inMemoryFileSystem') {
+			} else if (descriptor.kind === 'memoryFileSystem') {
 				inMemoryFileSystems.push(descriptor);
 			}
 		}

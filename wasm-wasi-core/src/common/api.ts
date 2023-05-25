@@ -287,8 +287,8 @@ export type VSCodeFileSystemDescriptor = {
  * A descriptor signaling that an in-memory file system is mapped under the given
  * mount point.
  */
-export type InMemoryFileSystemDescriptor = {
-	kind: 'inMemoryFileSystem';
+export type MemoryFileSystemDescriptor = {
+	kind: 'memoryFileSystem';
 	fileSystem: MemoryFileSystem;
 	mountPoint: string;
 };
@@ -296,7 +296,7 @@ export type InMemoryFileSystemDescriptor = {
 /**
  * The union of all mount point descriptors.
  */
-export type MountPointDescriptor = WorkspaceFolderDescriptor | ExtensionLocationDescriptor | VSCodeFileSystemDescriptor | InMemoryFileSystemDescriptor;
+export type MountPointDescriptor = WorkspaceFolderDescriptor | ExtensionLocationDescriptor | VSCodeFileSystemDescriptor | MemoryFileSystemDescriptor;
 
 /**
  * Options for a WASM process.
@@ -409,6 +409,8 @@ export enum Filetype {
 export interface MemoryFileSystem {
 	createDirectory(path: string): void;
 	createFile(path: string, content: Uint8Array | { size: bigint; reader: () => Promise<Uint8Array> }): void;
+	createReadable(path: string): Readable;
+	createWritable(path: string, encoding?: 'utf-8'): Writable;
 }
 
 export interface RootFileSystem {
@@ -448,7 +450,7 @@ export interface Wasm {
 	/**
 	 * Creates a new in-memory file system.
 	 */
-	createInMemoryFileSystem(): Promise<MemoryFileSystem>;
+	createMemoryFileSystem(): Promise<MemoryFileSystem>;
 
 	/**
 	 * Creates a new WASM file system.
@@ -514,7 +516,7 @@ export namespace WasiCoreImpl {
 			createPseudoterminal(options?: TerminalOptions): WasmPseudoterminal {
 				return new WasmPseudoterminalImpl(options);
 			},
-			createInMemoryFileSystem(): Promise<MemoryFileSystem> {
+			createMemoryFileSystem(): Promise<MemoryFileSystem> {
 				return Promise.resolve(new InMemoryFileSystemImpl());
 			},
 			async createRootFileSystem(mountDescriptors: MountPointDescriptor[]): Promise<RootFileSystem> {
