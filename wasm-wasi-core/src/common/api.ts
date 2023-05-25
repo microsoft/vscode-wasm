@@ -412,11 +412,22 @@ export interface MemoryFileSystem {
 }
 
 export interface RootFileSystem {
+
 	/**
-	 * Maps the give absolute path to a URI. Return undefined if the path cannot
-	 * be mapped.
+	 * Maps a given absolute path in the WASM filesystem back to a VS Code URI.
+	 * Returns undefined if the path cannot be mapped.
+     *
+	 * @param path the absolute path (e.g. /workspace/file.txt)
 	 */
-	mapPath(path: string): Promise<Uri | undefined>;
+	toVSCode(path: string): Promise<Uri | undefined>;
+
+	/**
+	 * Maps a given VS Code URI to an absolute path in the WASM filesystem.
+	 * Returns undefined if the URI cannot be mapped.
+	 *
+	 * @param uri the VS Code URI
+	 */
+	toWasm(uri: Uri): Promise<string | undefined>;
 
 	/**
 	 * Stats the file / folder at the given absolute path.
@@ -472,6 +483,15 @@ export interface Wasm {
 	 * @param options Additional options for the process.
 	 */
 	createProcess(name: string, module: WebAssembly.Module | Promise<WebAssembly.Module>, memory: WebAssembly.MemoryDescriptor | WebAssembly.Memory, options?: ProcessOptions): Promise<WasmProcess>;
+
+	/**
+	 * Compiles a Webassembly module from the given source. In the Web the
+	 * implementation uses streaming, on the desktop the bits are first
+	 * loaded into memory.
+	 *
+	 * @param source The source to compile.
+	 */
+	compile(source: Uri): Promise<WebAssembly.Module>;
 }
 
 namespace MemoryDescriptor {
@@ -485,7 +505,11 @@ namespace MemoryDescriptor {
 }
 
 export namespace WasiCoreImpl {
-	export function create(context: ExtensionContext, construct: new (baseUri: Uri, programName: string, module: WebAssembly.Module | Promise<WebAssembly.Module>, memory: WebAssembly.Memory | WebAssembly.MemoryDescriptor | undefined, options: ProcessOptions | undefined) => InternalWasiProcess): Wasm {
+	export function create(
+		context: ExtensionContext,
+		construct: new (baseUri: Uri, programName: string, module: WebAssembly.Module | Promise<WebAssembly.Module>, memory: WebAssembly.Memory | WebAssembly.MemoryDescriptor | undefined, options: ProcessOptions | undefined) => InternalWasiProcess,
+		compile: (source: Uri) => Promise<WebAssembly.Module>,
+	): Wasm {
 		return {
 			createPseudoterminal(options?: TerminalOptions): WasmPseudoterminal {
 				return new WasmPseudoterminalImpl(options);
@@ -518,7 +542,8 @@ export namespace WasiCoreImpl {
 				const result = new construct(context.extensionUri, name, module, memory, options);
 				await result.initialize();
 				return result;
-			}
+			},
+			compile
 		};
 	}
 }

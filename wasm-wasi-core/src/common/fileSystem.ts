@@ -4,6 +4,8 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { Uri } from 'vscode';
+
+import RAL from './ral';
 import { Filetype as ApiFiletype, RootFileSystem } from './api';
 import { Errno, Filestat, Filetype, Lookupflags, WasiError, Filetype as WasiFiletype, errno, fd, fdflags, filetype, inode, rights } from './wasi';
 import { RootFileSystemDeviceDriver } from './rootFileSystemDriver';
@@ -271,12 +273,21 @@ export class WasmRootFileSystemImpl implements RootFileSystem {
 		return this.virtualFileSystem;
 	}
 
-	async mapPath(path: string): Promise<Uri | undefined> {
+	async toVSCode(path: string): Promise<Uri | undefined> {
 		const [deviceDriver, relativePath] = this.getDeviceDriver(path);
 		if (deviceDriver === undefined) {
 			return undefined;
 		}
 		return deviceDriver.joinPath(...relativePath.split('/'));
+	}
+
+	async toWasm(uri: Uri): Promise<string | undefined> {
+		const [mountPoint, root] = this.getMountPoint(uri);
+		if (mountPoint === undefined) {
+			return undefined;
+		}
+		const relative = uri.toString().substring(root.toString().length + 1);
+		return RAL().path.join(mountPoint, relative);
 	}
 
 	async stat(path: string): Promise<{ filetype: ApiFiletype }> {
@@ -315,5 +326,18 @@ export class WasmRootFileSystemImpl implements RootFileSystem {
 		} else {
 			return [undefined, path];
 		}
+	}
+
+	private getMountPoint(uri: Uri): [string | undefined, Uri] {
+		if (this.virtualFileSystem !== undefined) {
+			return this.virtualFileSystem.getMountPoint(uri);
+		} else if (this.singleFileSystem !== undefined) {
+			const uriStr = uri.toString();
+			const rootStr = this.singleFileSystem.uri.toString();
+			if (uriStr === rootStr || (uriStr.startsWith(rootStr) && uriStr.charAt(rootStr.length) === '/')) {
+				return ['/', this.singleFileSystem.uri];
+			}
+		}
+		return [undefined, uri];
 	}
 }

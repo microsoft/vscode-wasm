@@ -404,11 +404,22 @@ export interface MemoryFileSystem {
 }
 
 export interface RootFileSystem {
+
 	/**
-	 * Maps the give absolute path to a URI. Return undefined if the path cannot
-	 * be mapped.
+	 * Maps a given absolute path in the WASM filesystem back to a VS Code URI.
+	 * Returns undefined if the path cannot be mapped.
+     *
+	 * @param path the absolute path (e.g. /workspace/file.txt)
 	 */
-	mapPath(path: string): Promise<Uri | undefined>;
+	toVSCode(path: string): Promise<Uri | undefined>;
+
+	/**
+	 * Maps a given VS Code URI to an absolute path in the WASM filesystem.
+	 * Returns undefined if the URI cannot be mapped.
+	 *
+	 * @param uri the VS Code URI
+	 */
+	toWasm(uri: Uri): Promise<string | undefined>;
 
 	/**
 	 * Stats the file / folder at the given absolute path.
@@ -464,12 +475,22 @@ export interface Wasm {
 	 * @param options Additional options for the process.
 	 */
 	createProcess(name: string, module: WebAssembly.Module | Promise<WebAssembly.Module>, memory: WebAssembly.MemoryDescriptor | WebAssembly.Memory, options?: ProcessOptions): Promise<WasmProcess>;
+
+	/**
+	 * Compiles a Webassembly module from the given source. In the Web the
+	 * implementation uses streaming, on the desktop the bits are first
+	 * loaded into memory.
+	 *
+	 * @param source The source to compile.
+	 */
+	compile(source: Uri): Promise<WebAssembly.Module>;
 }
 
 export namespace Wasm {
 	let $api: Wasm | undefined | null= undefined;
+	let $promise: Promise<Wasm> | undefined | null = undefined;
 	export function api(): Wasm {
-		if ($api !== undefined) {
+		if ($api === null) {
 			throw new Error(`Unable to activate WASM WASI Core extension`);
 		}
 		if ($api === undefined) {
@@ -478,21 +499,22 @@ export namespace Wasm {
 		return $api;
 	}
 	export async function load(): Promise<Wasm> {
-		if ($api !== undefined) {
+		if ($promise === null) {
 			throw new Error(`Unable to activate WASM WASI Core extension`);
 		}
-		if ($api !== undefined) {
-			return $api;
+		if ($promise !== undefined) {
+			return $promise;
 		}
 		const wasiCoreExt = Extensions.getExtension('ms-vscode.wasm-wasi-core');
 		if (wasiCoreExt === undefined) {
 			throw new Error(`Unable to load WASM WASI Core extension.`);
 		}
 		try {
-			$api = (await wasiCoreExt.activate()) as Wasm;
-			return $api;
+			$promise = wasiCoreExt.activate() as Promise<Wasm>;
+			$promise.then(api => $api = api, () => $api = null);
+			return $promise;
 		} catch (err) {
-			$api = null;
+			$promise = null;
 			throw new Error(`Unable to activate WASM WASI Core extension: ${err}`);
 		}
 	}
