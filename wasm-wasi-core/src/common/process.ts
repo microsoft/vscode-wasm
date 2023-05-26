@@ -32,13 +32,13 @@ type $Stdio = {
 };
 
 namespace MapDirDescriptor {
-	export function getDescriptors(descriptors: MountPointDescriptor[] | undefined) : { workspaceFolders: WorkspaceFolderDescriptor | undefined; extensions: ExtensionLocationDescriptor[]; vscodeFileSystems: VSCodeFileSystemDescriptor[]; inMemoryFileSystems: MemoryFileSystemDescriptor[]} {
+	export function getDescriptors(descriptors: MountPointDescriptor[] | undefined) : { workspaceFolders: WorkspaceFolderDescriptor | undefined; extensions: ExtensionLocationDescriptor[]; vscodeFileSystems: VSCodeFileSystemDescriptor[]; memoryFileSystems: MemoryFileSystemDescriptor[]} {
 		let workspaceFolders: WorkspaceFolderDescriptor | undefined;
 		const extensions: ExtensionLocationDescriptor[] = [];
 		const vscodeFileSystems: VSCodeFileSystemDescriptor[] = [];
-		const inMemoryFileSystems: MemoryFileSystemDescriptor[] = [];
+		const memoryFileSystems: MemoryFileSystemDescriptor[] = [];
 		if (descriptors === undefined) {
-			return { workspaceFolders, extensions, vscodeFileSystems, inMemoryFileSystems };
+			return { workspaceFolders, extensions, vscodeFileSystems, memoryFileSystems };
 		}
 		for (const descriptor of descriptors) {
 			if (descriptor.kind === 'workspaceFolder') {
@@ -48,10 +48,10 @@ namespace MapDirDescriptor {
 			} else if (descriptor.kind === 'vscodeFileSystem') {
 				vscodeFileSystems.push(descriptor);
 			} else if (descriptor.kind === 'memoryFileSystem') {
-				inMemoryFileSystems.push(descriptor);
+				memoryFileSystems.push(descriptor);
 			}
 		}
-		return { workspaceFolders, extensions, vscodeFileSystems, inMemoryFileSystems };
+		return { workspaceFolders, extensions, vscodeFileSystems, memoryFileSystems };
 	}
 }
 
@@ -132,7 +132,7 @@ export abstract class WasiProcess {
 		}
 
 		if (MountPointOptions.is(this.options)) {
-			const { workspaceFolders, extensions, vscodeFileSystems, inMemoryFileSystems } = MapDirDescriptor.getDescriptors(this.options.mountPoints);
+			const { workspaceFolders, extensions, vscodeFileSystems, memoryFileSystems } = MapDirDescriptor.getDescriptors(this.options.mountPoints);
 			if (workspaceFolders !== undefined) {
 				const folders = workspace.workspaceFolders;
 				if (folders !== undefined) {
@@ -157,8 +157,8 @@ export abstract class WasiProcess {
 					this.preOpenDirectories.set(descriptor.mountPoint, fs);
 				}
 			}
-			if (inMemoryFileSystems.length > 0) {
-				for (const descriptor of inMemoryFileSystems) {
+			if (memoryFileSystems.length > 0) {
+				for (const descriptor of memoryFileSystems) {
 					const dd = await WasiKernel.getOrCreateFileSystemByDescriptor(this.localDeviceDrivers, descriptor);
 					this.preOpenDirectories.set(descriptor.mountPoint, dd);
 				}

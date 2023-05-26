@@ -265,7 +265,7 @@ namespace MapDirDescriptors {
 	export function getExtensionLocationKey(descriptor: ExtensionLocationDescriptor): Uri {
 		return Uri.joinPath(descriptor.extension.extensionUri, ...getSegments(descriptor.path));
 	}
-	export function getInMemoryKey(descriptor: MemoryFileSystemDescriptor): Uri {
+	export function getMemoryKey(descriptor: MemoryFileSystemDescriptor): Uri {
 		return (descriptor.fileSystem as memfs.MemoryFileSystem).uri;
 	}
 	export function getVScodeFileSystemKey(descriptor: VSCodeFileSystemDescriptor): Uri {
@@ -276,19 +276,19 @@ namespace MapDirDescriptors {
 			case 'extensionLocation':
 				return getExtensionLocationKey(descriptor);
 			case 'memoryFileSystem':
-				return getInMemoryKey(descriptor);
+				return getMemoryKey(descriptor);
 			case 'vscodeFileSystem':
 				return getVScodeFileSystemKey(descriptor);
 			default:
 				throw new Error(`Unknown MapDirDescriptor kind ${JSON.stringify(descriptor, undefined, 0)}`);
 		}
 	}
-	export function getDescriptors(descriptors: MountPointDescriptor[] | undefined) : { extensions: ExtensionLocationDescriptor[]; vscodeFileSystems: VSCodeFileSystemDescriptor[]; inMemoryFileSystems: MemoryFileSystemDescriptor[]} {
+	export function getDescriptors(descriptors: MountPointDescriptor[] | undefined) : { extensions: ExtensionLocationDescriptor[]; vscodeFileSystems: VSCodeFileSystemDescriptor[]; memoryFileSystems: MemoryFileSystemDescriptor[]} {
 		const extensions: ExtensionLocationDescriptor[] = [];
 		const vscodeFileSystems: VSCodeFileSystemDescriptor[] = [];
-		const inMemoryFileSystems: MemoryFileSystemDescriptor[] = [];
+		const memoryFileSystems: MemoryFileSystemDescriptor[] = [];
 		if (descriptors === undefined) {
-			return { extensions, vscodeFileSystems, inMemoryFileSystems };
+			return { extensions, vscodeFileSystems, memoryFileSystems: memoryFileSystems };
 		}
 		for (const descriptor of descriptors) {
 			if (descriptor.kind === 'workspaceFolder') {
@@ -307,10 +307,10 @@ namespace MapDirDescriptors {
 			} else if (descriptor.kind === 'vscodeFileSystem') {
 				vscodeFileSystems.push(descriptor);
 			} else if (descriptor.kind === 'memoryFileSystem') {
-				inMemoryFileSystems.push(descriptor);
+				memoryFileSystems.push(descriptor);
 			}
 		}
-		return { extensions, vscodeFileSystems, inMemoryFileSystems };
+		return { extensions, vscodeFileSystems, memoryFileSystems: memoryFileSystems };
 	}
 
 	function mapWorkspaceFolder(folder: WorkspaceFolder, single: boolean): VSCodeFileSystemDescriptor {
@@ -391,7 +391,7 @@ class FileSystems {
 	public async createRootFileSystem(fileDescriptors: FileDescriptors, descriptors: MountPointDescriptor[]): Promise<RootFileSystemInfo> {
 		const fileSystems: FileSystemDeviceDriver[] = [];
 		const preOpens: Map<string, FileSystemDeviceDriver> = new Map();
-		const { extensions, vscodeFileSystems, inMemoryFileSystems } = MapDirDescriptors.getDescriptors(descriptors);
+		const { extensions, vscodeFileSystems, memoryFileSystems } = MapDirDescriptors.getDescriptors(descriptors);
 		if (extensions.length > 0) {
 			for (const descriptor of extensions) {
 				const key = MapDirDescriptors.getExtensionLocationKey(descriptor);
@@ -416,8 +416,8 @@ class FileSystems {
 				preOpens.set(descriptor.mountPoint, fs);
 			}
 		}
-		if (inMemoryFileSystems.length > 0) {
-			for (const descriptor of inMemoryFileSystems) {
+		if (memoryFileSystems.length > 0) {
+			for (const descriptor of memoryFileSystems) {
 				const fs = memfs.create(WasiKernel.nextDeviceId(), descriptor.fileSystem as memfs.MemoryFileSystem);
 				fileSystems.push(fs);
 				preOpens.set(descriptor.mountPoint, fs);

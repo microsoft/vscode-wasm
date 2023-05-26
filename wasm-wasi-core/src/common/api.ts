@@ -8,7 +8,7 @@ import { Event, Extension, ExtensionContext, Pseudoterminal, Uri } from 'vscode'
 
 import { WasmPseudoterminalImpl } from './terminal';
 import { WasiProcess as InternalWasiProcess } from './process';
-import { MemoryFileSystem as InMemoryFileSystemImpl } from './memoryFileSystemDriver';
+import { MemoryFileSystem as MemoryFileSystemImpl } from './memoryFileSystemDriver';
 import WasiKernel from './kernel';
 import { FileDescriptors } from './fileDescriptor';
 import { WritableStream, ReadableStream } from './streams';
@@ -517,7 +517,7 @@ export namespace WasiCoreImpl {
 				return new WasmPseudoterminalImpl(options);
 			},
 			createMemoryFileSystem(): Promise<MemoryFileSystem> {
-				return Promise.resolve(new InMemoryFileSystemImpl());
+				return Promise.resolve(new MemoryFileSystemImpl());
 			},
 			async createRootFileSystem(mountDescriptors: MountPointDescriptor[]): Promise<RootFileSystem> {
 				const fileDescriptors = new FileDescriptors();

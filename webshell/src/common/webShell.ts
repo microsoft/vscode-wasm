@@ -26,11 +26,11 @@ export class WebShell {
 	public static async initialize(wasm: Wasm, contributions: WebShellContributions): Promise<void> {
 		this.contributions = contributions;
 		this.commandHandlers = new Map<string, CommandHandler>();
-		this.userBin = await wasm.createInMemoryFileSystem();
+		this.userBin = await wasm.createMemoryFileSystem();
 		const fsContributions: ExtensionLocationDescriptor[] = WebShell.contributions.getDirectoryMountPoints().map(entry => ({ kind: 'extensionLocation', extension: entry.extension, path: entry.path, mountPoint: entry.mountPoint }));
 		const mountPoints: MountPointDescriptor[] = [
 			{ kind: 'workspaceFolder'},
-			{ kind: 'inMemoryFileSystem', fileSystem: this.userBin, mountPoint: '/usr/bin' },
+			{ kind: 'memoryFileSystem', fileSystem: this.userBin, mountPoint: '/usr/bin' },
 			...fsContributions
 		];
 		this.rootFs = await wasm.createRootFileSystem(mountPoints);
