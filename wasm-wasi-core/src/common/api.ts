@@ -169,6 +169,21 @@ export interface Writable {
  * interface are available via `Wasm.createReadable`.
  */
 export interface Readable {
+	/**
+	 * Pauses the stream.
+	 *
+	 * @param flush If `true` the stream will be flushed before pausing.
+	 */
+	pause(flush?: boolean): void;
+
+	/**
+	 * Resumes the stream.
+	 */
+	resume(): void;
+
+	/**
+	 * Fires when data is available.
+	 */
 	onData: Event<Uint8Array>;
 }
 

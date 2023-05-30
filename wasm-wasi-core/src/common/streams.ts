@@ -201,32 +201,74 @@ export class ReadableStream extends Stream implements Readable {
 
 	private mode: ReadableStreamMode;
 	private readonly _onData: EventEmitter<Uint8Array>;
+	private readonly _onDataEvent: Event<Uint8Array>;
 	private timer: Disposable | undefined;
 
 	constructor() {
 		super();
 		this.mode = ReadableStreamMode.initial;
 		this._onData = new EventEmitter();
-	}
-
-	public get onData(): Event<Uint8Array> {
-		const result: Event<Uint8Array> = (listener, thisArgs?, disposables?) => {
+		this._onDataEvent = (listener, thisArgs?, disposables?) => {
 			if (this.mode === ReadableStreamMode.initial) {
 				this.mode = ReadableStreamMode.flowing;
 			}
 			return this._onData.event(listener, thisArgs, disposables);
 		};
-		return result;
 	}
 
-	public pause(flush: boolean): void {
+	public get onData(): Event<Uint8Array> {
+		return this._onDataEvent;
+	}
+
+	public pause(flush: boolean = false): void {
 		// When we are in flowing mode emit all chunks as data events
 		// before switching to paused mode.
-		if (this.mode === ReadableStreamMode.flowing && flush) {
+		if (this.mode === ReadableStreamMode.flowing) {
 			if (this.timer !== undefined) {
 				this.timer.dispose();
 				this.timer = undefined;
 			}
+			if (flush) {
+				this.emitAll();
+			}
+		}
+		this.mode = ReadableStreamMode.paused;
+	}
+
+	public resume(): void {
+		this.mode = ReadableStreamMode.flowing;
+		if (this.chunks.length > 0) {
+			this.signalData();
+		}
+	}
+
+	public async read(mode?: 'max', size?: number): Promise<Uint8Array> {
+		if (this.mode === ReadableStreamMode.flowing) {
+			throw new Error('Cannot read from stream in flowing mode');
+		}
+		return mode === undefined ? super.read() : super.read(mode, size!);
+	}
+
+	public end(): void {
+		if (this.mode === ReadableStreamMode.flowing) {
+			this.emitAll();
+		}
+		return super.destroy();
+	}
+
+	protected signalData(): void {
+		if (this.mode === ReadableStreamMode.flowing) {
+			if (this.timer !== undefined) {
+				return;
+			}
+			this.timer = RAL().timer.setImmediate(() => this.triggerData());
+		} else {
+			super.signalData();
+		}
+	}
+
+	private emitAll(): void {
+		if (this.chunks.length > 0) {
 			for (const chunk of this.chunks) {
 				try {
 					this._onData.fire(chunk);
@@ -236,37 +278,9 @@ export class ReadableStream extends Stream implements Readable {
 			}
 			this.chunks = [];
 		}
-		this.mode = ReadableStreamMode.paused;
 	}
 
-	public resume(): void {
-		this.mode = ReadableStreamMode.flowing;
-		this.signalData();
-	}
-
-	public end(): void {
-		if (this.mode === ReadableStreamMode.flowing) {
-			if (this.chunks.length > 0) {
-				for (const chunk of this.chunks) {
-					try {
-						this._onData.fire(chunk);
-					} catch (error) {
-						RAL().console.error(`[ReadableStream]: Error while emitting data event: ${error}`);
-					}
-				}
-			}
-		}
-		return super.destroy();
-	}
-
-	protected signalData(): void {
-		if (this.timer !== undefined) {
-			return;
-		}
-		this.timer = RAL().timer.setImmediate(() => this.triggerData());
-	}
-
-	triggerData() {
+	private triggerData() {
 		this.timer = undefined;
 		if (this.chunks.length === 0) {
 			return;
