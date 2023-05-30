@@ -9,7 +9,8 @@ import { MessagePort, Worker, parentPort } from 'worker_threads';
 
 import { TraceWasiHost, Tracer, WasiHost} from '../common/host';
 import { NodeHostConnection } from './connection';
-import { CapturedPromise, ServiceMessage, StartThreadMessage, WorkerReadyMessage } from '../common/connection';
+import { ServiceMessage, StartThreadMessage, WorkerReadyMessage } from '../common/connection';
+import { CapturedPromise } from '../common/promises';
 
 if (parentPort === null) {
 	throw new Error('This file is only intended to be run in a worker thread');

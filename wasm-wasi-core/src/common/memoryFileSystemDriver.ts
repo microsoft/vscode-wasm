@@ -163,7 +163,7 @@ export class MemoryFileSystem extends fs.BaseFileSystem<DirectoryNode, FileNode,
 
 	public async readCharacterDevice(node: CharacterDeviceNode & { writable: WritableStream }, buffers: Uint8Array[]): Promise<size> {
 		const maxBytes = buffers.reduce((previousValue, current) => { return previousValue + current.byteLength; }, 0);
-		const content = await node.writable.read(maxBytes);
+		const content = await node.writable.read('max', maxBytes);
 		return this.read(content, 0n, buffers);
 	}
 
@@ -235,7 +235,7 @@ export class MemoryFileSystem extends fs.BaseFileSystem<DirectoryNode, FileNode,
 }
 
 // When mounted the file system is readonly for now. We need to invest to make this writable and we need a use case first.
-const DirectoryBaseRights: rights = Rights.path_open | Rights.fd_readdir | Rights.path_filestat_get | Rights.fd_filestat_get;
+const DirectoryBaseRights: rights = Rights.fd_readdir | Rights.path_filestat_get | Rights.fd_filestat_get | Rights.path_open | Rights.path_create_file | Rights.path_create_directory;
 const FileBaseRights: rights = Rights.fd_read | Rights.fd_seek | Rights.fd_tell | Rights.fd_advise | Rights.fd_filestat_get | Rights.poll_fd_readwrite;
 const DirectoryInheritingRights: rights = DirectoryBaseRights | FileBaseRights;
 const DirectoryOnlyBaseRights: rights = DirectoryBaseRights & ~FileBaseRights;
@@ -447,12 +447,12 @@ export function create(deviceId: DeviceId, memfs: MemoryFileSystem): FileSystemD
 			if (Oflags.exclOn(oflags)) {
 				throw new WasiError(Errno.exist);
 			}
-			if (Oflags.truncOn(oflags) || Fdflags.appendOn(fdflags) || Fdflags.syncOn(fdflags)) {
+			if (target.filetype === Filetype.regular_file && (Oflags.truncOn(oflags) || Fdflags.appendOn(fdflags) || Fdflags.syncOn(fdflags))) {
 				throw new WasiError(Errno.perm);
 			}
 
 			const write= (fs_rights_base & (Rights.fd_write | Rights.fd_datasync | Rights.fd_allocate | Rights.fd_filestat_set_size)) !== 0n;
-			if (write) {
+			if (target.filetype === Filetype.regular_file && write) {
 				throw new WasiError(Errno.perm);
 			}
 
