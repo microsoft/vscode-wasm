@@ -10,7 +10,8 @@ import {  MessagePort, Worker } from 'node:worker_threads';
 
 import { NodeServiceConnection } from '../process';
 import { createWorkspaceContent, createTmp, cleanupTmp, cleanupWorkspaceContent, createWasiService, WorkspaceContent } from '../../common/test/index';
-import { CapturedPromise, WorkerMessage } from '../../common/connection';
+import { WorkerMessage } from '../../common/connection';
+import { CapturedPromise } from '../../common/promises';
 import { WasiService } from '../../common/service';
 import { TestSetupMessage, TestsDoneMessage } from '../../common/test/messages';
 

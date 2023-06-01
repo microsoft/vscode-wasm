@@ -70,6 +70,7 @@ export interface DeviceDriver {
 
 export interface FileSystemDeviceDriver extends DeviceDriver {
 	kind: DeviceDriverKind.fileSystem;
+	joinPath( ...pathSegments: string[]): Uri | undefined;
 	createStdioFileDescriptor(dirflags: lookupflags | undefined, path: string, oflags: oflags | undefined, fs_rights_base: rights | undefined, fdflags: fdflags | undefined, fd: 0 | 1 | 2): Promise<FileDescriptor>;
 }
 
@@ -86,7 +87,7 @@ export interface CharacterDeviceDriver extends DeviceDriver {
 }
 
 export interface ReadonlyFileSystemDeviceDriver extends Pick<
-FileSystemDeviceDriver, 'kind' | 'uri' | 'id' | 'createStdioFileDescriptor' |
+FileSystemDeviceDriver, 'kind' | 'joinPath' | 'createStdioFileDescriptor' | 'uri' | 'id' |
 'fd_advise' | 'fd_close' | 'fd_fdstat_get' | 'fd_filestat_get' | 'fd_pread' | 'fd_read' | 'fd_readdir' | 'fd_seek' |
 'fd_renumber' | 'fd_tell' | 'path_filestat_get' | 'path_open' | 'path_readlink' | 'fd_create_prestat_fd' | 'fd_bytesAvailable'
 > {

@@ -11,10 +11,39 @@ export interface Environment {
 }
 
 export interface TerminalOptions {
+
+	/**
+	 * The encoding to use when converting bytes to characters for the terminal.
+	 */
+	encoding?: 'utf-8';
+
 	/**
 	 * Enables a history stack for the terminal.
 	 */
 	history?: boolean;
+}
+
+export enum PseudoterminalState {
+
+	/**
+	 * The pseudoterminal is not in use.
+	 */
+	free = 1,
+
+	/**
+	 *  The pseudoterminal is in use however no process is currently running.
+	 */
+	idle = 2,
+
+	/**
+	 * The pseudoterminal is in use and a process is currently running.
+	 */
+	busy = 3
+}
+
+export interface PseudoterminalStateChangeEvent {
+	old: PseudoterminalState;
+	new: PseudoterminalState;
 }
 
 /**
@@ -24,15 +53,62 @@ export interface TerminalOptions {
  * interface are available via `Wasm.createPseudoterminal`.
  */
 export interface WasmPseudoterminal extends Pseudoterminal {
+
 	/**
-	 * Create stdio
+	 * Fires if Ctrl+C is pressed in the terminal.
+	 */
+	readonly onDidCtrlC: Event<void>;
+
+	/**
+	 * Fires when any key is pressed in the terminal and the
+	 * terminal mode is idle.
+	 */
+	readonly onAnyKey: Event<void>;
+
+	/**
+	 * Fires when the terminal state changes.
+	 */
+	readonly onDidChangeState: Event<PseudoterminalStateChangeEvent>;
+
+	/**
+	 * Fires when the terminal got closed by a user actions.
+	 */
+	readonly onDidCloseTerminal: Event<void>;
+
+	/**
+	 * Stdio descriptors of the terminal.
 	 */
 	readonly stdio: Stdio;
 
 	/**
-	 * Read a line from the terminal.
+	 * Set the terminal state.
+	 *
+	 * @param state The state to set.
+	 */
+	setState(state: PseudoterminalState): void;
+
+	/**
+	 * Get the terminal state.
+	 */
+	getState(): PseudoterminalState;
+
+	/**
+	 * Set the terminal name.
+	 *
+	 * @param name The name to set.
+	 */
+	setName(name: string): void;
+
+	/**
+	 * Reads a line from the terminal.
 	 */
 	readline(): Promise<string>;
+
+	/**
+	 * Reads bytes from the terminal.
+	 * @param maxBytesToRead The maximum number of bytes to read.
+	 */
+	read(maxBytesToRead: number, encoding?: 'utf-8'): Promise<Uint8Array>;
 
 	/**
 	 * Write a string to the terminal.
@@ -40,6 +116,13 @@ export interface WasmPseudoterminal extends Pseudoterminal {
 	 * @param str The string to write to the terminal.
 	 */
 	write(str: string): Promise<void>;
+
+	/**
+	 * Writes bytes to the terminal using the given encoding.
+	 *
+	 * @param chunk The bytes to write to the terminal.
+	 */
+	write(chunk: Uint8Array, encoding?: 'utf-8'): Promise<number>;
 
 	/**
 	 * Write a prompt to the terminal.
@@ -78,6 +161,22 @@ export interface Writable {
  * interface are available via `Wasm.createReadable`.
  */
 export interface Readable {
+
+	/**
+	 * Pauses the stream.
+	 *
+	 * @param flush If `true` the stream will be flushed before pausing.
+	 */
+	pause(flush?: boolean): void;
+
+	/**
+	 * Resumes the stream.
+	 */
+	resume(): void;
+
+	/**
+	 * Fires when data is available.
+	 */
 	onData: Event<Uint8Array>;
 }
 
@@ -197,8 +296,8 @@ export type VSCodeFileSystemDescriptor = {
  * A descriptor signaling that a in-memory file system is mapped under the given
  * mount point.
  */
-export type InMemoryFileSystemDescriptor = {
-	kind: 'inMemoryFileSystem';
+export type MemoryFileSystemDescriptor = {
+	kind: 'memoryFileSystem';
 	fileSystem: MemoryFileSystem;
 	mountPoint: string;
 };
@@ -206,7 +305,7 @@ export type InMemoryFileSystemDescriptor = {
 /**
  * The union of all mount point descriptors.
  */
-export type MountPointDescriptor = WorkspaceFolderDescriptor | ExtensionLocationDescriptor | VSCodeFileSystemDescriptor | InMemoryFileSystemDescriptor;
+export type MountPointDescriptor = WorkspaceFolderDescriptor | ExtensionLocationDescriptor | VSCodeFileSystemDescriptor | MemoryFileSystemDescriptor;
 
 type BaseProcessOptions = {
 
@@ -249,7 +348,7 @@ type RootFileSystemOptions = {
 	/**
 	 * The root file system that is used by the WASM process.
 	 */
-	rootFileSystem?: WasmFileSystem;
+	rootFileSystem?: RootFileSystem;
 };
 
 /**
@@ -297,41 +396,54 @@ export enum Filetype {
 	unknown,
 
 	/**
-	 * The file descriptor or file refers to a directory inode.
+	 * The file descriptor or file refers to a directory.
 	 */
 	directory,
 
 	/**
-	 * The file descriptor or file refers to a regular file inode.
+	 * The file descriptor or file refers to a regular file.
 	 */
 	regular_file,
-}
 
-/**
- * A file node in the in-memory file system.
- */
-export interface FileNode {
-	filetype: typeof Filetype.regular_file;
-}
-
-/**
- * A directory node in the in-memory file system.
- */
-export interface DirectoryNode {
-	filetype: typeof Filetype.directory;
+	/**
+	 * The file descriptor or file refers to a character device.
+	 */
+	character_device
 }
 
 /**
  * The memory file system.
  */
 export interface MemoryFileSystem {
-	readonly uri: Uri;
 	createDirectory(path: string): void;
-	createFile(path: string, content: Uint8Array | { size: bigint; reader: (node: FileNode) => Promise<Uint8Array> }): void;
+	createFile(path: string, content: Uint8Array | { size: bigint; reader: () => Promise<Uint8Array> }): void;
+	createReadable(path: string): Readable;
+	createWritable(path: string, encoding?: 'utf-8'): Writable;
 }
 
-export interface WasmFileSystem {
-	readonly uri: Uri;
+export interface RootFileSystem {
+
+	/**
+	 * Maps a given absolute path in the WASM filesystem back to a VS Code URI.
+	 * Returns undefined if the path cannot be mapped.
+     *
+	 * @param path the absolute path (e.g. /workspace/file.txt)
+	 */
+	toVSCode(path: string): Promise<Uri | undefined>;
+
+	/**
+	 * Maps a given VS Code URI to an absolute path in the WASM filesystem.
+	 * Returns undefined if the URI cannot be mapped.
+	 *
+	 * @param uri the VS Code URI
+	 */
+	toWasm(uri: Uri): Promise<string | undefined>;
+
+	/**
+	 * Stats the file / folder at the given absolute path.
+	 *
+	 * @param path the absolute path
+	 */
 	stat(path: string): Promise<{ filetype: Filetype }>;
 }
 
@@ -346,12 +458,12 @@ export interface Wasm {
 	/**
 	 * Creates a new in-memory file system.
 	 */
-	createInMemoryFileSystem(): MemoryFileSystem;
+	createMemoryFileSystem(): Promise<MemoryFileSystem>;
 
 	/**
-	 * Creates a new WASM file system.
+	 * Creates a new root file system.
 	 */
-	createWasmFileSystem(descriptors: MountPointDescriptor[]): Promise<WasmFileSystem>;
+	createRootFileSystem(descriptors: MountPointDescriptor[]): Promise<RootFileSystem>;
 
 	/**
 	 * Creates a new readable stream.
@@ -381,15 +493,47 @@ export interface Wasm {
 	 * @param options Additional options for the process.
 	 */
 	createProcess(name: string, module: WebAssembly.Module | Promise<WebAssembly.Module>, memory: WebAssembly.MemoryDescriptor | WebAssembly.Memory, options?: ProcessOptions): Promise<WasmProcess>;
+
+	/**
+	 * Compiles a Webassembly module from the given source. In the Web the
+	 * implementation uses streaming, on the desktop the bits are first
+	 * loaded into memory.
+	 *
+	 * @param source The source to compile.
+	 */
+	compile(source: Uri): Promise<WebAssembly.Module>;
 }
 
 export namespace Wasm {
-	export async function api(): Promise<Wasm> {
+	let $api: Wasm | undefined | null= undefined;
+	let $promise: Promise<Wasm> | undefined | null = undefined;
+	export function api(): Wasm {
+		if ($api === null) {
+			throw new Error(`Unable to activate WASM WASI Core extension`);
+		}
+		if ($api === undefined) {
+			throw new Error(`Wasm API not yet loaded. Call await Wasm.load() first.`);
+		}
+		return $api;
+	}
+	export async function load(): Promise<Wasm> {
+		if ($promise === null) {
+			throw new Error(`Unable to activate WASM WASI Core extension`);
+		}
+		if ($promise !== undefined) {
+			return $promise;
+		}
 		const wasiCoreExt = Extensions.getExtension('ms-vscode.wasm-wasi-core');
 		if (wasiCoreExt === undefined) {
 			throw new Error(`Unable to load WASM WASI Core extension.`);
 		}
-		const result: Wasm = await wasiCoreExt.activate();
-		return result;
+		try {
+			$promise = wasiCoreExt.activate() as Promise<Wasm>;
+			$promise.then(api => $api = api, () => $api = null);
+			return $promise;
+		} catch (err) {
+			$promise = null;
+			throw new Error(`Unable to activate WASM WASI Core extension: ${err}`);
+		}
 	}
 }

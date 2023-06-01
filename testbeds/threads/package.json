@@ -28,7 +28,7 @@
 		"watch:ts": "node ../../node_modules/typescript/lib/tsc.js -b tsconfig.json -w",
 		"build": "npm run compile:ts && npm run build:c && npm run build:wasi",
 		"build:c": "../../node_modules/.bin/make-dir ./out && g++ main.c -l pthread -o ./out/main",
-		"build:wasi": "../../node_modules/.bin/make-dir ./out && ~/bin/wasi-sdk-20.0/bin/clang -Wl,--import-memory -Wl,--max-memory=10485760 -pthread -L ~/bin/wasi-sdk-20.0/share/wasi-sysroot/lib/wasm32-wasi-threads main.c -o ./out/main.wasm",
+		"build:wasi": "../../node_modules/.bin/make-dir ./out && ~/bin/wasi-sdk-20.0/bin/clang --sysroot ~/bin/wasi-sdk-20.0/share/wasi-sysroot --target=wasm32-wasi-threads -pthread -Wl,--import-memory,--export-memory,--max-memory=10485760 main.c -o ./out/main.wasm",
 		"build:em": "../../node_modules/.bin/make-dir ./out && em++ main.c -pthread -o ./out/main-em.js",
 		"build:wasi-import-memory": "../../node_modules/.bin/make-dir ./out && ~/bin/wasi-sdk-20.0/bin/clang -Wl,--import-memory -Wl,--max-memory=10485760 -matomics -mbulk-memory -pthread main.c -o ./out/main.wasm -L ~/bin/wasi-sdk-20.0/share/wasi-sysroot/lib/wasm32-wasi-threads",
 		"build:wasi-malloc-import": "../../node_modules/.bin/make-dir ./out && ~/bin/wasi-sdk-20.0/bin/clang -Wl,--import-memory -Wl,--max-memory=10485760 main.c -o ./out/main.wasm",

@@ -123,3 +123,4 @@ tmp/
 *.vsix
 !webshell/wasm/coreutils.wasm
 !wasm-wasi/example/hello.wasm
+!testbeds/cpp/out/hello.wasm

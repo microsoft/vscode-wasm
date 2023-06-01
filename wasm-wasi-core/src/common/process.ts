@@ -7,9 +7,10 @@
 import RAL from './ral';
 import { LogOutputChannel, Uri, WorkspaceFolder, window, workspace } from 'vscode';
 
-import {
-	type ExtensionLocationDescriptor, type InMemoryFileSystemDescriptor, type MountPointDescriptor, type ProcessOptions, type StdioConsoleDescriptor, type Stdio,
-	type StdioFileDescriptor, type VSCodeFileSystemDescriptor, type WorkspaceFolderDescriptor, type Readable, type Writable, MountPointOptions, RootFileSystemOptions
+import type {
+	ExtensionLocationDescriptor, MemoryFileSystemDescriptor, MountPointDescriptor, ProcessOptions, StdioConsoleDescriptor, Stdio,
+	StdioFileDescriptor, VSCodeFileSystemDescriptor, WorkspaceFolderDescriptor, Readable, Writable, MountPointOptions, RootFileSystemOptions,
+	WasmPseudoterminal
 } from './api';
 import type { ptr, u32 } from './baseTypes';
 import type { FileSystemDeviceDriver } from './deviceDriver';
@@ -21,8 +22,8 @@ import { DeviceWasiService, ProcessWasiService, EnvironmentWasiService, WasiServ
 import WasiKernel, { DeviceDrivers } from './kernel';
 import { Errno, Lookupflags, exitcode } from './wasi';
 import { CharacterDeviceDriver } from './deviceDriver';
-import { WasmPseudoterminal } from './terminal';
-import { StdinStream, StdoutStream } from './streams';
+import { WritableStream, ReadableStream } from './streams';
+import { WasmRootFileSystemImpl } from './fileSystem';
 
 type $Stdio = {
 	in: NonNullable<Stdio['in']> | { kind: 'console' };
@@ -31,13 +32,13 @@ type $Stdio = {
 };
 
 namespace MapDirDescriptor {
-	export function getDescriptors(descriptors: MountPointDescriptor[] | undefined) : { workspaceFolders: WorkspaceFolderDescriptor | undefined; extensions: ExtensionLocationDescriptor[]; vscodeFileSystems: VSCodeFileSystemDescriptor[]; inMemoryFileSystems: InMemoryFileSystemDescriptor[]} {
+	export function getDescriptors(descriptors: MountPointDescriptor[] | undefined) : { workspaceFolders: WorkspaceFolderDescriptor | undefined; extensions: ExtensionLocationDescriptor[]; vscodeFileSystems: VSCodeFileSystemDescriptor[]; memoryFileSystems: MemoryFileSystemDescriptor[]} {
 		let workspaceFolders: WorkspaceFolderDescriptor | undefined;
 		const extensions: ExtensionLocationDescriptor[] = [];
 		const vscodeFileSystems: VSCodeFileSystemDescriptor[] = [];
-		const inMemoryFileSystems: InMemoryFileSystemDescriptor[] = [];
+		const memoryFileSystems: MemoryFileSystemDescriptor[] = [];
 		if (descriptors === undefined) {
-			return { workspaceFolders, extensions, vscodeFileSystems, inMemoryFileSystems };
+			return { workspaceFolders, extensions, vscodeFileSystems, memoryFileSystems };
 		}
 		for (const descriptor of descriptors) {
 			if (descriptor.kind === 'workspaceFolder') {
@@ -46,11 +47,25 @@ namespace MapDirDescriptor {
 				extensions.push(descriptor);
 			} else if (descriptor.kind === 'vscodeFileSystem') {
 				vscodeFileSystems.push(descriptor);
-			} else if (descriptor.kind === 'inMemoryFileSystem') {
-				inMemoryFileSystems.push(descriptor);
+			} else if (descriptor.kind === 'memoryFileSystem') {
+				memoryFileSystems.push(descriptor);
 			}
 		}
-		return { workspaceFolders, extensions, vscodeFileSystems, inMemoryFileSystems };
+		return { workspaceFolders, extensions, vscodeFileSystems, memoryFileSystems };
+	}
+}
+
+namespace MountPointOptions {
+	export function is(value: any): value is MountPointOptions {
+		const candidate = value as MountPointOptions;
+		return candidate && Array.isArray(candidate.mountPoints);
+	}
+}
+
+namespace RootFileSystemOptions {
+	export function is(value: any): value is { rootFileSystem: WasmRootFileSystemImpl } {
+		const candidate = value as RootFileSystemOptions;
+		return candidate && candidate.rootFileSystem instanceof WasmRootFileSystemImpl;
 	}
 }
 
@@ -76,9 +91,9 @@ export abstract class WasiProcess {
 	private readonly preOpenDirectories: Map<string, FileSystemDeviceDriver>;
 	private virtualRootFileSystem: vrfs.RootFileSystemDeviceDriver | undefined;
 
-	private _stdin: StdinStream | undefined;
-	private _stdout: StdoutStream | undefined;
-	private _stderr: StdoutStream | undefined;
+	private _stdin: WritableStream | undefined;
+	private _stdout: ReadableStream | undefined;
+	private _stderr: ReadableStream | undefined;
 
 	constructor(programName: string, options: ProcessOptions = {}) {
 		this.programName = programName;
@@ -117,7 +132,7 @@ export abstract class WasiProcess {
 		}
 
 		if (MountPointOptions.is(this.options)) {
-			const { workspaceFolders, extensions, vscodeFileSystems, inMemoryFileSystems } = MapDirDescriptor.getDescriptors(this.options.mountPoints);
+			const { workspaceFolders, extensions, vscodeFileSystems, memoryFileSystems } = MapDirDescriptor.getDescriptors(this.options.mountPoints);
 			if (workspaceFolders !== undefined) {
 				const folders = workspace.workspaceFolders;
 				if (folders !== undefined) {
@@ -142,8 +157,8 @@ export abstract class WasiProcess {
 					this.preOpenDirectories.set(descriptor.mountPoint, fs);
 				}
 			}
-			if (inMemoryFileSystems.length > 0) {
-				for (const descriptor of inMemoryFileSystems) {
+			if (memoryFileSystems.length > 0) {
+				for (const descriptor of memoryFileSystems) {
 					const dd = await WasiKernel.getOrCreateFileSystemByDescriptor(this.localDeviceDrivers, descriptor);
 					this.preOpenDirectories.set(descriptor.mountPoint, dd);
 				}
@@ -192,10 +207,16 @@ export abstract class WasiProcess {
 					args.push(arg);
 				} else if (arg instanceof Uri) {
 					const arg_str = arg.toString(true);
+					let mapped: boolean = false;
 					for (const [uri, mountPoint] of uriToMountPoint) {
 						if (arg_str.startsWith(uri)) {
 							args.push(path.join(mountPoint, arg_str.substring(uri.length)));
+							mapped = true;
+							break;
 						}
+					}
+					if (!mapped) {
+						throw new Error(`Could not map argument ${arg_str} to a mount point.`);
 					}
 				} else {
 					throw new Error('Invalid argument type');
@@ -396,18 +417,18 @@ export abstract class WasiProcess {
 
 	private async handlePipes(stdio: $Stdio): Promise<void> {
 		if (stdio.in.kind === 'pipeIn') {
-			this._stdin = (stdio.in.pipe as StdinStream) ?? new StdinStream(this.options.encoding);
+			this._stdin = (stdio.in.pipe as WritableStream) ?? new WritableStream(this.options.encoding);
 		}
 		if (stdio.out.kind === 'pipeOut') {
-			this._stdout = (stdio.out.pipe as StdoutStream) ?? new StdoutStream();
+			this._stdout = (stdio.out.pipe as ReadableStream) ?? new ReadableStream();
 		}
 		if (stdio.err.kind === 'pipeOut') {
-			this._stderr = (stdio.err.pipe as StdoutStream) ?? new StdoutStream();
+			this._stderr = (stdio.err.pipe as ReadableStream) ?? new ReadableStream();
 		}
 		if (this._stdin === undefined && this._stdout === undefined && this._stderr === undefined) {
 			return;
 		}
-		const pipeDevice = pdd.create(WasiKernel.nextDeviceId(), this._stdin as StdinStream | undefined, this._stdout as StdoutStream | undefined, this._stderr as StdoutStream | undefined);
+		const pipeDevice = pdd.create(WasiKernel.nextDeviceId(), this._stdin as WritableStream | undefined, this._stdout as ReadableStream | undefined, this._stderr as ReadableStream | undefined);
 		if (this._stdin !== undefined) {
 			this.fileDescriptors.add(pipeDevice.createStdioFileDescriptor(0));
 		}

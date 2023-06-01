@@ -576,7 +576,9 @@ export function create(deviceId: DeviceId, baseUri: Uri, readOnly: boolean = fal
 		kind: DeviceDriverKind.fileSystem,
 		uri: baseUri,
 		id: deviceId,
-
+		joinPath( ...pathSegments: string[]): Uri | undefined {
+			return Uri.joinPath(baseUri, ...pathSegments);
+		},
 		createStdioFileDescriptor(dirflags: lookupflags | undefined = Lookupflags.none, path: string, _oflags: oflags | undefined = Oflags.none, _fs_rights_base: rights | undefined, fdflags: fdflags | undefined = Fdflags.none, fd: 0 | 1 | 2): Promise<FileDescriptor> {
 			if (path.length === 0) {
 				throw new WasiError(Errno.inval);

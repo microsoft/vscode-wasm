@@ -4,10 +4,10 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { commands, ExtensionContext, Uri, window, workspace } from 'vscode';
-import { Wasm, ProcessOptions, Stdio, WasmFileSystem } from '@vscode/wasm-wasi';
+import { Wasm, ProcessOptions, Stdio, RootFileSystem } from '@vscode/wasm-wasi';
 
 export async function activate(context: ExtensionContext) {
-	const wasm: Wasm = await Wasm.api();
+	const wasm: Wasm = await Wasm.load();
 	async function run(name: string, fileToRun?: Uri): Promise<void> {
 		const pty = wasm.createPseudoterminal();
 		const terminal = window.createTerminal({ name, pty, isTransient: true });
@@ -26,13 +26,15 @@ export async function activate(context: ExtensionContext) {
 			args: fileToRun !== undefined ? ['-B', '-X', 'utf8', fileToRun] : ['-B', '-X', 'utf8'],
 			trace: true
 		};
-		const filename = Uri.joinPath(context.extensionUri, 'wasm', 'bin', 'python.wasm');
-		const bits = await workspace.fs.readFile(filename);
-		const module = await WebAssembly.compile(bits);
-		const process = await wasm.createProcess('python', module, options);
-		process.run().catch(err => {
-			void window.showErrorMessage(err.message);
-		});
+		try {
+			const filename = Uri.joinPath(context.extensionUri, 'wasm', 'bin', 'python.wasm');
+			const bits = await workspace.fs.readFile(filename);
+			const module = await WebAssembly.compile(bits);
+			const process = await wasm.createProcess('python', module, options);
+			await process.run();
+		} catch (err: any) {
+			pty.write(`Launching python failed: ${err.toString()}`);
+		}
 	}
 
 	commands.registerCommand('testbed-python.runFile', async () => {
@@ -50,7 +52,25 @@ export async function activate(context: ExtensionContext) {
 	commands.registerCommand('testbed-python.runInteractive', async () => {
 		await run(`Python Repl`);
 	});
-	commands.registerCommand('testbed-python.webshell.python', async (_command: string, args: string[], _cwd: string, stdio: Stdio, rootFileSystem: WasmFileSystem): Promise<number> => {
+	commands.registerCommand('testbed-python.webshell.python', async (_command: string, args: string[], cwd: string, stdio: Stdio, rootFileSystem: RootFileSystem): Promise<number> => {
+		// WASI doesn't support the concept of an initial working directory.
+		// So we need to make file paths absolute.
+		// See https://github.com/WebAssembly/wasi-filesystem/issues/24
+		const optionsWithArgs = new Set(['-c', '-m', '-W', '-X', '--check-hash-based-pycs'])
+		for (let i = 0; i < args.length; i++) {
+			const arg = args[i]
+			if (optionsWithArgs.has(arg)) {
+				const next = args[i + 1];
+				if (next !== undefined && !next.startsWith('-')) {
+					i++;
+					continue;
+				}
+			} else if (arg.startsWith('-')) {
+				continue;
+			} else if (!arg.startsWith('/')) {
+				args[i] = `${cwd}/${arg}`
+			}
+		}
 		const options: ProcessOptions = {
 			stdio,
 			rootFileSystem,

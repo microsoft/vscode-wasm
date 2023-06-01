@@ -11,7 +11,7 @@ import { Wasm } from '@vscode/wasm-wasi';
 
 
 export async function activate(_context: ExtensionContext) {
-	const wasm: Wasm = await Wasm.api();
+	const wasm: Wasm = await Wasm.load();
 	commands.registerCommand('testbed-rust.run', async () => {
 		const pty = wasm.createPseudoterminal();
 		const terminal = window.createTerminal({ name: 'Rust', pty, isTransient: true });

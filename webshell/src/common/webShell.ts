@@ -4,7 +4,7 @@
  *--------------------------------------------------------------------------------------------*/
 import { window, Terminal, commands } from 'vscode';
 
-import { ExtensionLocationDescriptor, MountPointDescriptor, MemoryFileSystem, Wasm, WasmPseudoterminal, Stdio, WasmFileSystem, Filetype } from '@vscode/wasm-wasi';
+import { ExtensionLocationDescriptor, MountPointDescriptor, MemoryFileSystem, Wasm, WasmPseudoterminal, Stdio, RootFileSystem, Filetype } from '@vscode/wasm-wasi';
 
 import RAL from './ral';
 const paths = RAL().path;
@@ -20,20 +20,20 @@ export class WebShell {
 
 	private static contributions: WebShellContributions;
 	private static commandHandlers: Map<string, CommandHandler>;
-	private static rootFs: WasmFileSystem;
+	private static rootFs: RootFileSystem;
 	private static userBin: MemoryFileSystem;
 
 	public static async initialize(wasm: Wasm, contributions: WebShellContributions): Promise<void> {
 		this.contributions = contributions;
 		this.commandHandlers = new Map<string, CommandHandler>();
-		this.userBin = wasm.createInMemoryFileSystem();
+		this.userBin = await wasm.createMemoryFileSystem();
 		const fsContributions: ExtensionLocationDescriptor[] = WebShell.contributions.getDirectoryMountPoints().map(entry => ({ kind: 'extensionLocation', extension: entry.extension, path: entry.path, mountPoint: entry.mountPoint }));
 		const mountPoints: MountPointDescriptor[] = [
 			{ kind: 'workspaceFolder'},
-			{ kind: 'inMemoryFileSystem', fileSystem: this.userBin, mountPoint: '/usr/bin' },
+			{ kind: 'memoryFileSystem', fileSystem: this.userBin, mountPoint: '/usr/bin' },
 			...fsContributions
 		];
-		this.rootFs = await wasm.createWasmFileSystem(mountPoints);
+		this.rootFs = await wasm.createRootFileSystem(mountPoints);
 		for (const contribution of this.contributions.getCommandMountPoints()) {
 			this.registerCommandContribution(contribution);
 		}
@@ -51,7 +51,7 @@ export class WebShell {
 		const basename = paths.basename(contribution.mountPoint);
 		const dirname = paths.dirname(contribution.mountPoint);
 		if (dirname === '/usr/bin') {
-			this.registerCommandHandler(basename, async (command: string, args: string[], cwd: string, stdio: Stdio, rootFileSystem: WasmFileSystem): Promise<number> => {
+			this.registerCommandHandler(basename, async (command: string, args: string[], cwd: string, stdio: Stdio, rootFileSystem: RootFileSystem): Promise<number> => {
 				await contribution.extension.activate();
 				return commands.executeCommand<number>(contribution.command, command, args, cwd, stdio, rootFileSystem);
 			});
@@ -64,7 +64,7 @@ export class WebShell {
 	}
 
 	public static registerCommandHandler(command: string, handler: CommandHandler): void {
-		this.userBin.createFile(command, { size: 1047646n, reader: () => { throw new Error('No permissions'); }});
+		this.userBin.createFile(command, { size: 0n, reader: () => { throw new Error('No permissions'); }});
 		this.commandHandlers.set(command, handler);
 	}
 

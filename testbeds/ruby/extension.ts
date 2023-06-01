@@ -10,7 +10,7 @@ import { commands, ExtensionContext, window } from 'vscode';
 import { Wasm, ProcessOptions } from '@vscode/wasm-wasi';
 
 export async function activate(_context: ExtensionContext) {
-	const wasm: Wasm = await Wasm.api();
+	const wasm: Wasm = await Wasm.load();
 
 	commands.registerCommand('testbed-ruby.runFile', async () => {
 		const editor = window.activeTextEditor;

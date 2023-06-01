@@ -12,7 +12,7 @@ import { CoreUtils } from './coreUtils';
 import { WebShellContributions } from './webShellContributions';
 
 export async function activate(context: ExtensionContext): Promise<void> {
-	const wasm: Wasm = await Wasm.api();
+	const wasm: Wasm = await Wasm.load();
 	await WebShell.initialize(wasm, WebShellContributions);
 	const coreUtils = new CoreUtils(context);
 	coreUtils.contributeHandlers(wasm, WebShell);

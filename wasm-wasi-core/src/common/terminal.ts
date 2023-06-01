@@ -2,10 +2,10 @@
  * Copyright (c) Microsoft Corporation. All rights reserved.
  * Licensed under the MIT License. See License.txt in the project root for license information.
  * ------------------------------------------------------------------------------------------ */
-import { Event, EventEmitter, Pseudoterminal } from 'vscode';
+import { Event, EventEmitter } from 'vscode';
 
 import RAL from './ral';
-import { Stdio } from './api';
+import { Stdio, WasmPseudoterminal, PseudoterminalState } from './api';
 
 class LineBuffer {
 
@@ -171,41 +171,9 @@ class LineBuffer {
 	}
 }
 
-export enum TerminalMode {
-	idle = 1,
-	inUse = 2
-}
-
 export interface Options {
 	history?: boolean;
 }
-
-export interface WasmPseudoterminal extends Pseudoterminal {
-	readonly onDidCtrlC: Event<void>;
-	readonly onDidClose: Event<void>;
-	readonly onAnyKey: Event<void>;
-
-	readonly stdio: Stdio;
-
-	setMode(mode: TerminalMode): void;
-	setName(name: string): void;
-	read(maxBytesToRead: number): Promise<Uint8Array>;
-	readline(): Promise<string>;
-	write(str: string): Promise<void>;
-	write(bytes: Uint8Array): Promise<number>;
-	prompt(prompt: string): Promise<void>;
-}
-
-export namespace WasmPseudoterminal {
-	export function is(value: any): value is WasmPseudoterminal {
-		return value instanceof WasmPseudoterminalImpl;
-	}
-	export function create(options?: Options): WasmPseudoterminal {
-		return new WasmPseudoterminalImpl(options);
-	}
-}
-
-const terminalRegExp = /(\r\n)|(\n)/gm;
 
 class CommandHistory {
 
@@ -248,14 +216,14 @@ class CommandHistory {
 	}
 }
 
-class WasmPseudoterminalImpl implements WasmPseudoterminal {
+export class WasmPseudoterminalImpl implements WasmPseudoterminal {
 
 	private readonly options: Options;
 	private readonly commandHistory: CommandHistory | undefined;
-	private mode: TerminalMode;
+	private state: PseudoterminalState;
 
-	private readonly _onDidClose: EventEmitter<void>;
-	public readonly onDidClose: Event<void>;
+	private readonly _onDidClose: EventEmitter<void | number>;
+	public readonly onDidClose: Event<void | number>;
 
 	private readonly _onDidWrite: EventEmitter<string>;
 	public readonly onDidWrite: Event<string>;
@@ -268,6 +236,12 @@ class WasmPseudoterminalImpl implements WasmPseudoterminal {
 
 	private readonly _onAnyKey: EventEmitter<void>;
 	public readonly onAnyKey: Event<void>;
+
+	private readonly _onDidChangeState: EventEmitter<{ old: PseudoterminalState; new: PseudoterminalState }>;
+	public readonly onDidChangeState: Event<{ old: PseudoterminalState; new: PseudoterminalState }>;
+
+	private readonly _onDidCloseTerminal: EventEmitter<void>;
+	public readonly onDidCloseTerminal: Event<void>;
 
 	private lines: string[];
 	private lineBuffer: LineBuffer;
@@ -282,18 +256,28 @@ class WasmPseudoterminalImpl implements WasmPseudoterminal {
 	constructor(options: Options = {}) {
 		this.options = options;
 		this.commandHistory = this.options.history ? new CommandHistory() : undefined;
-		this.mode = TerminalMode.inUse;
+		this.state = PseudoterminalState.busy;
 
 		this._onDidClose = new EventEmitter();
 		this.onDidClose = this._onDidClose.event;
+
 		this._onDidWrite = new EventEmitter<string>();
 		this.onDidWrite = this._onDidWrite.event;
-		this._onDidChangeName = new EventEmitter<string>;
+
+		this._onDidChangeName = new EventEmitter<string>();
 		this.onDidChangeName = this._onDidChangeName.event;
-		this._onDidCtrlC = new EventEmitter<void>;
+
+		this._onDidCtrlC = new EventEmitter<void>();
 		this.onDidCtrlC = this._onDidCtrlC.event;
-		this._onAnyKey = new EventEmitter<void>;
+
+		this._onAnyKey = new EventEmitter<void>();
 		this.onAnyKey = this._onAnyKey.event;
+
+		this._onDidChangeState = new EventEmitter<{ old: PseudoterminalState; new: PseudoterminalState }>();
+		this.onDidChangeState = this._onDidChangeState.event;
+
+		this._onDidCloseTerminal = new EventEmitter<void>();
+		this.onDidCloseTerminal = this._onDidCloseTerminal.event;
 
 		this.encoder = RAL().TextEncoder.create();
 		this.decoder = RAL().TextDecoder.create();
@@ -312,8 +296,16 @@ class WasmPseudoterminalImpl implements WasmPseudoterminal {
 		};
 	}
 
-	public setMode(mode: TerminalMode): void {
-		this.mode = mode;
+	public setState(state: PseudoterminalState): void {
+		const old = this.state;
+		this.state = state;
+		if (old !== state) {
+			this._onDidChangeState.fire({ old, new: state });
+		}
+	}
+
+	public getState(): PseudoterminalState {
+		return this.state;
 	}
 
 	public setName(name: string): void {
@@ -339,7 +331,7 @@ class WasmPseudoterminalImpl implements WasmPseudoterminal {
 	}
 
 	public close(): void {
-		this._onDidClose.fire();
+		this._onDidCloseTerminal.fire();
 	}
 
 	public async read(_maxBytesToRead: number): Promise<Uint8Array> {
@@ -360,13 +352,13 @@ class WasmPseudoterminalImpl implements WasmPseudoterminal {
 	}
 
 	public write(content: string): Promise<void>;
-	public write(content: Uint8Array): Promise<number>;
-	public write(content: Uint8Array | string): Promise<void> | Promise<number> {
+	public write(content: Uint8Array, encoding?: 'utf-8'): Promise<number>;
+	public write(content: Uint8Array | string, encoding?: 'utf-8'): Promise<void> | Promise<number> {
 		if (typeof content === 'string') {
-			this.writeString(content);
+			this.writeString(this.replaceNewlines(content));
 			return Promise.resolve();
 		} else {
-			this.writeString(this.getString(content));
+			this.writeString(this.getString(content, encoding));
 			return Promise.resolve(content.byteLength);
 		}
 	}
@@ -388,7 +380,7 @@ class WasmPseudoterminalImpl implements WasmPseudoterminal {
 	}
 
 	public handleInput(data: string): void {
-		if (this.mode === TerminalMode.idle) {
+		if (this.state === PseudoterminalState.free) {
 			this._onAnyKey.fire();
 			return;
 		}
@@ -510,8 +502,9 @@ class WasmPseudoterminalImpl implements WasmPseudoterminal {
 		this._onDidWrite.fire('\x07');
 	}
 
-	private getString(bytes: Uint8Array): string {
-		return this.decoder.decode(bytes.slice()).replace(terminalRegExp, (match: string, m1: string, m2: string) => {
+	private static terminalRegExp = /(\r\n)|(\n)/gm;
+	private replaceNewlines(str: string): string {
+		return str.replace(WasmPseudoterminalImpl.terminalRegExp, (match: string, m1: string, m2: string) => {
 			if (m1) {
 				return m1;
 			} else if (m2) {
@@ -520,5 +513,8 @@ class WasmPseudoterminalImpl implements WasmPseudoterminal {
 				return match;
 			}
 		});
+	}
+	private getString(bytes: Uint8Array, _encoding?: 'utf-8'): string {
+		return this.replaceNewlines(this.decoder.decode(bytes.slice()));
 	}
 }

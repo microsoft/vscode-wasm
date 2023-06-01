@@ -123,6 +123,7 @@ class VirtualRootFileSystem {
 	private readonly inodes: Map<inode, Node>;
 	public readonly root: VirtualDirectoryNode;
 	private readonly deviceDrivers: Map<FileSystemDeviceDriver, MountPointNode>;
+	private readonly mountPoints: Map<string, MountPointNode>;
 
 	constructor(deviceId: DeviceId) {
 		this.deviceId = deviceId;
@@ -130,6 +131,7 @@ class VirtualRootFileSystem {
 		this.root = VirtualDirectoryNode.create(VirtualRootFileSystem.inodeCounter++, undefined, '/');
 		this.inodes.set(this.root.inode, this.root);
 		this.deviceDrivers = new Map();
+		this.mountPoints = new Map();
 	}
 
 	public isRoot(node: Node): boolean {
@@ -157,6 +159,7 @@ class VirtualRootFileSystem {
 				this.inodes.set(child.inode, child);
 				current.entries.set(segment, child);
 				this.deviceDrivers.set(deviceDriver, child);
+				this.mountPoints.set(filepath, child);
 			} else {
 				let child = current.entries.get(segment);
 				if (child === undefined) {
@@ -236,6 +239,18 @@ class VirtualRootFileSystem {
 		}
 	}
 
+	public getMountPoint(uri: Uri): [string | undefined, Uri] {
+		const uriStr = uri.toString();
+		for (const [mountPoint, node] of this.mountPoints) {
+			const root = node.deviceDriver.uri;
+			const rootStr = root.toString();
+			if (uriStr === rootStr || (uriStr.startsWith(rootStr) && uriStr.charAt(rootStr.length) === '/')) {
+				return [mountPoint, root];
+			}
+		}
+		return [undefined, uri];
+	}
+
 	private getPath(inode: Node): string {
 		const parts: string[] = [];
 		let current: Node | undefined = inode;
@@ -250,6 +265,7 @@ class VirtualRootFileSystem {
 export interface RootFileSystemDeviceDriver extends FileSystemDeviceDriver {
 	makeVirtualPath(deviceDriver: FileSystemDeviceDriver, filepath: string): string | undefined;
 	getDeviceDriver(path: string): [FileSystemDeviceDriver | undefined, string];
+	getMountPoint(uri: Uri): [string | undefined, Uri];
 }
 
 export function create(deviceId: DeviceId, rootFileDescriptors: { getRoot(device: DeviceDriver): FileDescriptor | undefined }, mountPoints: Map<string, FileSystemDeviceDriver>): RootFileSystemDeviceDriver {
@@ -281,12 +297,17 @@ export function create(deviceId: DeviceId, rootFileDescriptors: { getRoot(device
 		kind: DeviceDriverKind.fileSystem as const,
 		id: deviceId,
 		uri: Uri.from( { scheme: 'wasi-root', path: '/'} ),
-
 		makeVirtualPath(deviceDriver: FileSystemDeviceDriver, filepath: string): string | undefined {
 			return $fs.makeVirtualPath(deviceDriver, filepath);
 		},
 		getDeviceDriver(path: string): [FileSystemDeviceDriver | undefined, string] {
 			return $fs.getDeviceDriver(path);
+		},
+		getMountPoint(uri: Uri): [string | undefined, Uri] {
+			return $fs.getMountPoint(uri);
+		},
+		joinPath(): Uri | undefined {
+			return undefined;
 		},
 		createStdioFileDescriptor(): Promise<FileDescriptor> {
 			throw new Error(`Virtual root FS can't provide stdio file descriptors`);

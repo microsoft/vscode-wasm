@@ -7,7 +7,8 @@ RIL.install();
 
 import { TraceWasiHost, Tracer, WasiHost} from '../common/host';
 import { BrowserHostConnection } from './connection';
-import { CapturedPromise, ServiceMessage, StartMainMessage, WorkerReadyMessage } from '../common/connection';
+import { ServiceMessage, StartMainMessage, WorkerReadyMessage } from '../common/connection';
+import { CapturedPromise } from '../common/promises';
 
 class MainBrowserHostConnection extends BrowserHostConnection {
 

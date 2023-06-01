@@ -2,11 +2,11 @@
  *  Copyright (c) Microsoft Corporation. All rights reserved.
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
+import { Disposable, Event, EventEmitter } from 'vscode';
 
 import RAL from './ral';
-import { Event, EventEmitter } from 'vscode';
-import { Readable, Writable } from './api';
-import { size } from './baseTypes';
+import type { Readable, Writable } from './api';
+import { CapturedPromise } from './promises';
 
 export class DestroyError extends Error {
 	constructor() {
@@ -14,33 +14,33 @@ export class DestroyError extends Error {
 	}
 }
 
-export abstract class StdioStream {
+export abstract class Stream {
 
 	private static BufferSize = 16384;
 
 	protected chunks: Uint8Array[];
 	protected fillLevel: number;
 
-	private _targetFillLevel: number;
-	private _awaitFillLevel: (() => void) | undefined;
-	private _awaitFillLevelReject: ((err: Error) => void) | undefined;
+	private awaitForFillLevel: { fillLevel: number; promise: CapturedPromise<void> }[];
+	private awaitForData: CapturedPromise<void>[];
 
 	constructor() {
 		this.chunks = [];
 		this.fillLevel = 0;
-		this._targetFillLevel = StdioStream.BufferSize;
+		this.awaitForFillLevel = [];
+		this.awaitForData = [];
 	}
 
 	public async write(chunk: Uint8Array): Promise<void> {
 		// We have enough space
-		if (this.fillLevel + chunk.byteLength <= StdioStream.BufferSize) {
+		if (this.fillLevel + chunk.byteLength <= Stream.BufferSize) {
 			this.chunks.push(chunk);
 			this.fillLevel += chunk.byteLength;
 			this.signalData();
 			return;
 		}
-		// What for the necessary space.
-		const targetFillLevel = Math.max(0, StdioStream.BufferSize - chunk.byteLength);
+		// Wait for the necessary space.
+		const targetFillLevel = Math.max(0, Stream.BufferSize - chunk.byteLength);
 		try {
 			await this.awaitFillLevel(targetFillLevel);
 			if (this.fillLevel > targetFillLevel) {
@@ -58,61 +58,10 @@ export abstract class StdioStream {
 		}
 	}
 
-	public async destroy(): Promise<void> {
-		this.chunks = [];
-		this.fillLevel = 0;
-		this._targetFillLevel = StdioStream.BufferSize;
-		this._awaitFillLevel = undefined;
-		if (this._awaitFillLevelReject !== undefined) {
-			this._awaitFillLevelReject(new DestroyError());
-			this._awaitFillLevelReject = undefined;
-		}
-	}
-
-	private awaitFillLevel(targetFillLevel: number): Promise<void> {
-		this._targetFillLevel = targetFillLevel;
-		return new Promise<void>((resolve, reject) => {
-			this._awaitFillLevel = resolve;
-			this._awaitFillLevelReject = reject;
-		});
-	}
-
-	protected signalSpace(): void {
-		if (this._awaitFillLevel === undefined) {
-			return;
-		}
-		// Not enough space.
-		if (this.fillLevel > this._targetFillLevel) {
-			return;
-		}
-		this._awaitFillLevel();
-		this._awaitFillLevel = undefined;
-		this._targetFillLevel = StdioStream.BufferSize;
-	}
-
-	protected abstract signalData(): void;
-
-}
-
-export class StdinStream extends StdioStream implements Writable {
-
-	private readonly encoding: 'utf-8';
-	private readonly encoder: RAL.TextEncoder;
-
-	private _awaitData: (() => void) | undefined;
-	private _awaitDataReject: ((err: Error) => void) | undefined;
-
-	constructor(encoding?: 'utf-8') {
-		super();
-		this.encoding = encoding ?? 'utf-8';
-		this.encoder = RAL().TextEncoder.create(this.encoding);
-	}
-
-	public async write(chunk: Uint8Array | string): Promise<void> {
-		return super.write(typeof chunk === 'string' ? this.encoder.encode(chunk) : chunk);
-	}
-
-	public async read(maxBytes: size): Promise<Uint8Array> {
+	public async read(): Promise<Uint8Array>;
+	public async read(mode: 'max', size: number): Promise<Uint8Array>;
+	public async read(mode?: 'max', size?: number): Promise<Uint8Array> {
+		const maxBytes = mode === 'max' ? size : undefined;
 		if (this.chunks.length === 0) {
 			try {
 				await this.awaitData();
@@ -172,56 +121,167 @@ export class StdinStream extends StdioStream implements Writable {
 		}
 	}
 
-	public async destroy(): Promise<void> {
-		if (this._awaitDataReject !== undefined) {
-			this._awaitDataReject(new DestroyError());
-			this._awaitDataReject = undefined;
+	public end(): void {
+	}
+
+	public destroy(): void {
+		this.chunks = [];
+		this.fillLevel = 0;
+		const error = new DestroyError();
+		for (const { promise } of this.awaitForFillLevel) {
+			promise.reject(error);
 		}
-		return super.destroy();
+		this.awaitForFillLevel = [];
+		for (const promise of this.awaitForData) {
+			promise.reject(error);
+		}
+	}
+
+	private awaitFillLevel(targetFillLevel: number): Promise<void> {
+		const result = CapturedPromise.create<void>();
+		this.awaitForFillLevel.push({ fillLevel: targetFillLevel, promise: result });
+		return result.promise;
 	}
 
 	private awaitData(): Promise<void> {
-		return new Promise<void>((resolve) => {
-			this._awaitData = resolve;
-		});
+		const result = CapturedPromise.create<void>();
+		this.awaitForData.push(result);
+		return result.promise;
+	}
+
+	protected signalSpace(): void {
+		if (this.awaitForFillLevel.length === 0) {
+			return;
+		}
+		const { fillLevel, promise } = this.awaitForFillLevel[0];
+		// Not enough space.
+		if (this.fillLevel > fillLevel) {
+			return;
+		}
+		this.awaitForFillLevel.shift();
+		promise.resolve();
 	}
 
 	protected signalData(): void {
-		if (this._awaitData === undefined) {
+		if (this.awaitForData.length === 0) {
 			return;
 		}
-		this._awaitData();
-		this._awaitData = undefined;
+		const promise = this.awaitForData.shift()!;
+		promise.resolve();
+	}
+
+}
+
+export class WritableStream extends Stream implements Writable {
+
+	private readonly encoding: 'utf-8';
+	private readonly encoder: RAL.TextEncoder;
+
+	constructor(encoding?: 'utf-8') {
+		super();
+		this.encoding = encoding ?? 'utf-8';
+		this.encoder = RAL().TextEncoder.create(this.encoding);
+	}
+
+	public async write(chunk: Uint8Array | string): Promise<void> {
+		return super.write(typeof chunk === 'string' ? this.encoder.encode(chunk) : chunk);
+	}
+
+	public end(): void {
 	}
 }
 
-export class StdoutStream extends StdioStream implements Readable {
+enum ReadableStreamMode {
+	initial,
+	flowing,
+	paused
+}
 
-	private readonly _onData = new EventEmitter<Uint8Array>();
+export class ReadableStream extends Stream implements Readable {
+
+	private mode: ReadableStreamMode;
+	private readonly _onData: EventEmitter<Uint8Array>;
+	private readonly _onDataEvent: Event<Uint8Array>;
+	private timer: Disposable | undefined;
 
 	constructor() {
 		super();
+		this.mode = ReadableStreamMode.initial;
 		this._onData = new EventEmitter();
+		this._onDataEvent = (listener, thisArgs?, disposables?) => {
+			if (this.mode === ReadableStreamMode.initial) {
+				this.mode = ReadableStreamMode.flowing;
+			}
+			return this._onData.event(listener, thisArgs, disposables);
+		};
 	}
 
 	public get onData(): Event<Uint8Array> {
-		return this._onData.event;
+		return this._onDataEvent;
 	}
 
-	public destroy(): Promise<void> {
-		if (this.chunks.length > 0) {
-			for (const chunk of this.chunks) {
-				this._onData.fire(chunk);
+	public pause(flush: boolean = false): void {
+		// When we are in flowing mode emit all chunks as data events
+		// before switching to paused mode.
+		if (this.mode === ReadableStreamMode.flowing) {
+			if (this.timer !== undefined) {
+				this.timer.dispose();
+				this.timer = undefined;
 			}
+			if (flush) {
+				this.emitAll();
+			}
+		}
+		this.mode = ReadableStreamMode.paused;
+	}
+
+	public resume(): void {
+		this.mode = ReadableStreamMode.flowing;
+		if (this.chunks.length > 0) {
+			this.signalData();
+		}
+	}
+
+	public async read(mode?: 'max', size?: number): Promise<Uint8Array> {
+		if (this.mode === ReadableStreamMode.flowing) {
+			throw new Error('Cannot read from stream in flowing mode');
+		}
+		return mode === undefined ? super.read() : super.read(mode, size!);
+	}
+
+	public end(): void {
+		if (this.mode === ReadableStreamMode.flowing) {
+			this.emitAll();
 		}
 		return super.destroy();
 	}
 
 	protected signalData(): void {
-		RAL().timer.setImmediate(() => this.triggerData());
+		if (this.mode === ReadableStreamMode.flowing) {
+			if (this.timer !== undefined) {
+				return;
+			}
+			this.timer = RAL().timer.setImmediate(() => this.triggerData());
+		} else {
+			super.signalData();
+		}
 	}
 
-	triggerData() {
+	private emitAll(): void {
+		if (this.chunks.length > 0) {
+			for (const chunk of this.chunks) {
+				try {
+					this._onData.fire(chunk);
+				} catch (error) {
+					RAL().console.error(`[ReadableStream]: Error while emitting data event: ${error}`);
+				}
+			}
+			this.chunks = [];
+		}
+	}
+
+	private triggerData() {
+		this.timer = undefined;
 		if (this.chunks.length === 0) {
 			return;
 		}
@@ -230,7 +290,7 @@ export class StdoutStream extends StdioStream implements Readable {
 		this._onData.fire(chunk);
 		this.signalSpace();
 		if (this.chunks.length > 0) {
-			RAL().timer.setImmediate(() => this.triggerData());
+			this.timer = RAL().timer.setImmediate(() => this.triggerData());
 		}
 	}
 }

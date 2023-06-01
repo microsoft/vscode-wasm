@@ -10,7 +10,9 @@ import { WasiCoreImpl  } from '../common/api';
 import { BrowserWasiProcess } from './process';
 
 export async function activate(context: ExtensionContext) {
-	return WasiCoreImpl.create(context, BrowserWasiProcess);
+	return WasiCoreImpl.create(context, BrowserWasiProcess, async (source) => {
+		return WebAssembly.compileStreaming(fetch(source.toString()));
+	});
 }
 
 export function deactivate() {

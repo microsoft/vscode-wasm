@@ -15,7 +15,7 @@ import {
 	poll_oneoff, Prestat, prestat, proc_exit, random_get, riflags, rights, Rights, sched_yield, sdflags, siflags, sock_accept, Subclockflags, Subscription,
 	subscription, thread_spawn, timestamp, WasiError, Whence, whence, thread_exit, tid, Preopentype, sock_shutdown
 } from './wasi';
-import { CapturedPromise, Offsets, TraceMessage, TraceSummaryMessage, WasiCallMessage, WorkerDoneMessage, WorkerMessage, WorkerReadyMessage } from './connection';
+import { Offsets, TraceMessage, TraceSummaryMessage, WasiCallMessage, WorkerDoneMessage, WorkerMessage, WorkerReadyMessage } from './connection';
 import { WasiFunction, WasiFunctions, WasiFunctionSignature } from './wasiMeta';
 import { byte, bytes, cstring, ptr, size, u32, u64 } from './baseTypes';
 import { FileDescriptor, FileDescriptors } from './fileDescriptor';
@@ -24,6 +24,7 @@ import { BigInts, code2Wasi } from './converter';
 import { ProcessOptions } from './api';
 import { DeviceDrivers } from './kernel';
 import { RootFileSystemDeviceDriver } from './rootFileSystemDriver';
+import { CapturedPromise } from './promises';
 
 export abstract class ServiceConnection {
 
@@ -405,14 +406,18 @@ export namespace DeviceWasiService {
 				}
 			},
 			fd_close: async (_memory: ArrayBuffer, fd: fd): Promise<errno> => {
+				const fileDescriptor = getFileDescriptor(fd);
 				try {
-					const fileDescriptor = getFileDescriptor(fd);
 
 					await getDeviceDriver(fileDescriptor).fd_close(fileDescriptor);
-					fileDescriptors.delete(fileDescriptor);
 					return Errno.success;
 				} catch (error) {
 					return handleError(error);
+				} finally {
+					fileDescriptors.delete(fileDescriptor);
+					if (fileDescriptor.dispose !== undefined) {
+						await fileDescriptor.dispose();
+					}
 				}
 			},
 			fd_datasync: async (_memory: ArrayBuffer, fd: fd): Promise<errno> => {
