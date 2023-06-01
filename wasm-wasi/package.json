@@ -28,11 +28,13 @@
 	"enabledApiProposals": [
 	],
 	"dependencies": {
-		"yargs": "^17.7.2"
+		"yargs": "^17.7.2",
+		"semver": "^7.5.1"
 	},
 	"devDependencies": {
 		"@types/vscode": "1.78.0",
-		"@types/yargs": "17.0.24"
+		"@types/yargs": "^17.0.24",
+		"@types/semver": "^7.5.0"
 	},
 	"scripts": {
 		"prepublishOnly": "echo \"⛔ Can only publish from a secure pipeline ⛔\" && node ../build/npm/fail",
@@ -43,6 +45,7 @@
 		"clean": "node ../node_modules/rimraf/bin.js lib",
 		"lint": "node ../node_modules/eslint/bin/eslint.js --ext ts src",
 		"all": "npm run clean && npm run compile && npm run lint",
-		"all:publish": "git clean -xfd . && npm install && npm run compile:publish && npm run lint"
+		"all:publish": "git clean -xfd . && npm install && npm run update:version && npm run compile:publish && npm run lint",
+		"update:version": "node ./bin/updateVersion.mjs"
 	}
 }

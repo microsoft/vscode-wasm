@@ -13,6 +13,7 @@ import WasiKernel from './kernel';
 import { FileDescriptors } from './fileDescriptor';
 import { WritableStream, ReadableStream } from './streams';
 import { WasmRootFileSystemImpl } from './fileSystem';
+import version from './version';
 
 export interface Environment {
 	[key: string]: string;
@@ -455,6 +456,12 @@ export interface RootFileSystem {
 }
 
 export interface Wasm {
+
+	/**
+	 * The version of the WASM API following semver semantics.
+	 */
+	readonly version: string;
+
 	/**
 	 * Creates a new pseudoterminal.
 	 *
@@ -524,10 +531,11 @@ namespace MemoryDescriptor {
 export namespace WasiCoreImpl {
 	export function create(
 		context: ExtensionContext,
-		construct: new (baseUri: Uri, programName: string, module: WebAssembly.Module | Promise<WebAssembly.Module>, memory: WebAssembly.Memory | WebAssembly.MemoryDescriptor | undefined, options: ProcessOptions | undefined) => InternalWasiProcess,
+		processConstructor: new (baseUri: Uri, programName: string, module: WebAssembly.Module | Promise<WebAssembly.Module>, memory: WebAssembly.Memory | WebAssembly.MemoryDescriptor | undefined, options: ProcessOptions | undefined) => InternalWasiProcess,
 		compile: (source: Uri) => Promise<WebAssembly.Module>,
 	): Wasm {
 		return {
+			version,
 			createPseudoterminal(options?: TerminalOptions): WasmPseudoterminal {
 				return new WasmPseudoterminalImpl(options);
 			},
@@ -556,7 +564,7 @@ export namespace WasiCoreImpl {
 				} else {
 					options = memoryOrOptions;
 				}
-				const result = new construct(context.extensionUri, name, module, memory, options);
+				const result = new processConstructor(context.extensionUri, name, module, memory, options);
 				await result.initialize();
 				return result;
 			},
