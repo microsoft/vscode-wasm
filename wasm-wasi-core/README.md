@@ -39,7 +39,7 @@ The actual source code to execute a WASM process looks like this
 
 ```typescript
 // Load the WASM API
-const wasm: Wasm = await Wasm.api();
+const wasm: Wasm = await Wasm.load();
 
 const pty = wasm.createPseudoterminal();
 const terminal = window.createTerminal({ name: 'My Example', pty, isTransient: true });
