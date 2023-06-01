@@ -11,3 +11,5 @@ test/
 .mocharc*
 .gitignore
 tsconfig*.json
+bin/**
+!bin/dir-dump

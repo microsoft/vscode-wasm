@@ -5,6 +5,7 @@
 /// <reference path="../../typings/webAssemblyCommon.d.ts" />
 
 import { extensions as Extensions, Event, Pseudoterminal, Uri, ExtensionContext, Extension } from 'vscode';
+import version from './version';
 
 import semverParse = require('semver/functions/parse');
 import semverSatisfies = require('semver/functions/satisfies');
@@ -544,9 +545,16 @@ export namespace Wasm {
 					if (extVersion === null) {
 						throw new Error(`Unable to parse WASM WASI Core extension version: ${api.version}`);
 					}
-
-
-
+					const moduleVersion = semverParse(version);
+					if (moduleVersion === null) {
+						throw new Error(`Unable to parse WASM WASI Core module version: ${version}`);
+					}
+					if (moduleVersion.prerelease.length > 0) {
+						moduleVersion.prerelease = [];
+					}
+					if (!semverSatisfies(moduleVersion, api.version)) {
+						throw new Error(`WASM WASI Core module version ${version} is not compatible with extension version ${api.version}`);
+					}
 					$api = api;
 				},
 				() => {
