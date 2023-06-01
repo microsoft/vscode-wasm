@@ -274,20 +274,34 @@ export class WasmRootFileSystemImpl implements RootFileSystem {
 	}
 
 	async toVSCode(path: string): Promise<Uri | undefined> {
-		const [deviceDriver, relativePath] = this.getDeviceDriver(path);
-		if (deviceDriver === undefined) {
-			return undefined;
+		try {
+			const [deviceDriver, relativePath] = this.getDeviceDriver(path);
+			if (deviceDriver === undefined) {
+				return undefined;
+			}
+			return deviceDriver.joinPath(...relativePath.split('/'));
+		} catch (error) {
+			if (error instanceof WasiError && error.errno === Errno.noent) {
+				return undefined;
+			}
+			throw error;
 		}
-		return deviceDriver.joinPath(...relativePath.split('/'));
 	}
 
 	async toWasm(uri: Uri): Promise<string | undefined> {
-		const [mountPoint, root] = this.getMountPoint(uri);
-		if (mountPoint === undefined) {
-			return undefined;
+		try {
+			const [mountPoint, root] = this.getMountPoint(uri);
+			if (mountPoint === undefined) {
+				return undefined;
+			}
+			const relative = uri.toString().substring(root.toString().length + 1);
+			return RAL().path.join(mountPoint, relative);
+		} catch (error) {
+			if (error instanceof WasiError && error.errno === Errno.noent) {
+				return undefined;
+			}
+			throw error;
 		}
-		const relative = uri.toString().substring(root.toString().length + 1);
-		return RAL().path.join(mountPoint, relative);
 	}
 
 	async stat(path: string): Promise<{ filetype: ApiFiletype }> {
