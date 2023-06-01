@@ -9,7 +9,8 @@ RIL.install();
 import { ConsoleMessage, TestSetupMessage, TestsDoneMessage } from '../../common/test/messages';
 import { createWorkspaceContent, createTmp, cleanupTmp, cleanupWorkspaceContent, createWasiService, WorkspaceContent } from '../../common/test/index';
 import { WasiService } from '../../common/service';
-import { CapturedPromise, WorkerMessage } from '../../common/connection';
+import { WorkerMessage } from '../../common/connection';
+import { CapturedPromise } from '../../common/promises';
 
 import { BrowserServiceConnection } from '../process';
 

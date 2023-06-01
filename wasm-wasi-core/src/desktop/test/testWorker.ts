@@ -14,7 +14,8 @@ import glob from 'glob';
 import { TestSetup, TestSetupMessage, TestsDoneMessage } from '../../common/test/messages';
 import TestEnvironment from '../../common/test/testEnvironment';
 import { NodeHostConnection } from '../connection';
-import { CapturedPromise, ServiceMessage } from '../../common/connection';
+import { ServiceMessage } from '../../common/connection';
+import { CapturedPromise } from '../../common/promises';
 
 class TestNodeHostConnection extends NodeHostConnection {
 

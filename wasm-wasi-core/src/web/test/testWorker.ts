@@ -9,7 +9,8 @@ import { HostConnection } from '../../common/host';
 import { ConsoleMessage, TestSetup, TestSetupMessage, TestsDoneMessage } from '../../common/test/messages';
 import { BrowserHostConnection } from '../connection';
 import TestEnvironment from '../../common/test/testEnvironment';
-import { CapturedPromise, ServiceMessage } from '../../common/connection';
+import { ServiceMessage } from '../../common/connection';
+import { CapturedPromise } from '../../common/promises';
 
 
 function warpConsoleMethod(hostConnection: HostConnection, severity: 'log' | 'info' | 'warn' | 'error'): void {
