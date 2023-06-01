@@ -10,7 +10,7 @@ import { WasiCoreImpl  } from '../common/api';
 import { NodeWasiProcess } from './process';
 
 export async function activate(context: ExtensionContext) {
-	return WasiCoreImpl.create(context, NodeWasiProcess, async (source) => {
+	return WasiCoreImpl.create(version, context, NodeWasiProcess, async (source) => {
 		const bits = await workspace.fs.readFile(source);
 		return WebAssembly.compile(bits);
 	});

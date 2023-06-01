@@ -6,6 +6,9 @@
 
 import { extensions as Extensions, Event, Pseudoterminal, Uri, ExtensionContext, Extension } from 'vscode';
 
+import semverParse = require('semver/functions/parse');
+import semverSatisfies = require('semver/functions/satisfies');
+
 export interface Environment {
 	[key: string]: string;
 }
@@ -448,6 +451,12 @@ export interface RootFileSystem {
 }
 
 export interface Wasm {
+
+	/**
+	 * The version of the WASM API following semver semantics.
+	 */
+	readonly version: string;
+
 	/**
 	 * Creates a new pseudoterminal.
 	 *
@@ -529,7 +538,21 @@ export namespace Wasm {
 		}
 		try {
 			$promise = wasiCoreExt.activate() as Promise<Wasm>;
-			$promise.then(api => $api = api, () => $api = null);
+			$promise.then(
+				(api) => {
+					const extVersion = semverParse(api.version);
+					if (extVersion === null) {
+						throw new Error(`Unable to parse WASM WASI Core extension version: ${api.version}`);
+					}
+
+
+
+					$api = api;
+				},
+				() => {
+					$api = null;
+				}
+			);
 			return $promise;
 		} catch (err) {
 			$promise = null;

@@ -28,11 +28,13 @@
 	"enabledApiProposals": [
 	],
 	"dependencies": {
-		"yargs": "^17.7.2"
+		"yargs": "^17.7.2",
+		"semver": "^7.5.1"
 	},
 	"devDependencies": {
 		"@types/vscode": "1.78.0",
-		"@types/yargs": "17.0.24"
+		"@types/yargs": "^17.0.24",
+		"@types/semver": "^7.5.0"
 	},
 	"scripts": {
 		"prepublishOnly": "echo \"⛔ Can only publish from a secure pipeline ⛔\" && node ../build/npm/fail",

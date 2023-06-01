@@ -23,7 +23,8 @@
         "outDir": "../../lib/desktop",
         "tsBuildInfoFile": "../../lib/desktop/compile.tsbuildInfo",
         "incremental": true,
-        "composite": true
+        "composite": true,
+        "resolveJsonModule": true
     },
     "include": [
         "."
