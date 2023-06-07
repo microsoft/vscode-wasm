@@ -517,6 +517,11 @@ export interface Wasm {
 export namespace Wasm {
 	let $api: Wasm | undefined | null= undefined;
 	let $promise: Promise<Wasm> | undefined | null = undefined;
+
+	function isOdd(value: number): boolean {
+		return value % 2 === 1;
+	}
+
 	export function api(): Wasm {
 		if ($api === null) {
 			throw new Error(`Unable to activate WASM WASI Core extension`);
@@ -526,6 +531,7 @@ export namespace Wasm {
 		}
 		return $api;
 	}
+
 	export async function load(): Promise<Wasm> {
 		if ($promise === null) {
 			throw new Error(`Unable to activate WASM WASI Core extension`);
@@ -539,28 +545,34 @@ export namespace Wasm {
 		}
 		try {
 			$promise = wasiCoreExt.activate() as Promise<Wasm>;
-			$promise.then(
-				(api) => {
-					const extVersion = semverParse(api.version);
-					if (extVersion === null) {
-						throw new Error(`Unable to parse WASM WASI Core extension version: ${api.version}`);
-					}
-					const moduleVersion = semverParse(version);
-					if (moduleVersion === null) {
-						throw new Error(`Unable to parse WASM WASI Core module version: ${version}`);
-					}
-					if (moduleVersion.prerelease.length > 0) {
-						moduleVersion.prerelease = [];
-					}
-					if (!semverSatisfies(moduleVersion, api.version)) {
-						throw new Error(`WASM WASI Core module version ${version} is not compatible with extension version ${api.version}`);
-					}
-					$api = api;
-				},
-				() => {
-					$api = null;
+			$promise.then((api) => {
+				const extVersion = semverParse(api.version);
+				if (extVersion === null) {
+					throw new Error(`Unable to parse WASM WASI Core extension version: ${api.version}`);
 				}
-			);
+				const moduleVersion = semverParse(version);
+				if (moduleVersion === null) {
+					throw new Error(`Unable to parse WASM WASI Core module version: ${version}`);
+				}
+
+				const extIsPrerelease = isOdd(extVersion.major) || isOdd(extVersion.minor) || isOdd(extVersion.patch);
+				if (moduleVersion.prerelease.length > 0) {
+					if (!extIsPrerelease) {
+						throw new Error(`WASM WASI Core extension version ${api.version} is a pre-release version but the module version ${version} is not.`);
+					}
+					if (moduleVersion.prerelease[0] !== 'pre' || moduleVersion.prerelease[1] !== 1) {
+						throw new Error(`WASM WASI Core extension version ${api.version} is a pre-release version but the module version ${version} is not a valid pre-release version`);
+					}
+					moduleVersion.prerelease = [];
+				}
+				if (!semverSatisfies(api.version, `^${moduleVersion.format()}`)) {
+					throw new Error(`WASM WASI Core module version ${version} is not compatible with extension version ${api.version}`);
+				}
+				$api = api;
+			},
+			() => {
+				$api = null;
+			});
 			return $promise;
 		} catch (err) {
 			$promise = null;
