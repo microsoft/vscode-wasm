@@ -67,7 +67,9 @@ async function main(port: MessagePort | Worker): Promise<void> {
 	connection.destroy();
 }
 main(parentPort)
-	.catch(RIL().console.error)
+	.catch((error) => {
+		RIL().console.error('Running main thread failed', error);
+	})
 	.finally(() => {
 		parentPort?.unref();
 	});

@@ -79,7 +79,7 @@ function channel(): LogOutputChannel {
 
 export abstract class WasiProcess {
 
-	private state: 'created' | 'initialized' | 'running' | 'exited';
+	private _state: 'created' | 'initialized' | 'running' | 'exiting' | 'exited';
 	private readonly programName: string;
 	protected readonly options: Omit<ProcessOptions, 'trace'> & { trace: LogOutputChannel | undefined };
 	private localDeviceDrivers: DeviceDrivers;
@@ -108,7 +108,7 @@ export abstract class WasiProcess {
 		this.localDeviceDrivers = WasiKernel.createLocalDeviceDrivers();
 		this.fileDescriptors = new FileDescriptors();
 		this.preOpenDirectories = new Map();
-		this.state = 'created';
+		this._state = 'created';
 		this._stdin = undefined;
 		this._stdout = undefined;
 		this._stderr = undefined;
@@ -126,8 +126,12 @@ export abstract class WasiProcess {
 		return this._stderr;
 	}
 
+	protected get state(): typeof this._state {
+		return this._state;
+	}
+
 	public async initialize(): Promise<void> {
-		if (this.state !== 'created') {
+		if (this._state !== 'created') {
 			throw new Error('WasiProcess already initialized or running');
 		}
 
@@ -242,6 +246,7 @@ export abstract class WasiProcess {
 		);
 		this.processService = {
 			proc_exit: async (_memory, exitCode: exitcode) => {
+				this._state = 'exiting';
 				await this.terminate();
 				this.resolveRunPromise(exitCode);
 				return Promise.resolve(Errno.success);
@@ -267,14 +272,14 @@ export abstract class WasiProcess {
 				}
 			}
 		};
-		this.state = 'initialized';
+		this._state = 'initialized';
 	}
 
 	public async run(): Promise<number> {
-		if (this.state !== 'initialized') {
+		if (this._state !== 'initialized') {
 			throw new Error('WasiProcess is not initialized');
 		}
-		return new Promise(async (resolve) => {
+		return new Promise<number>(async (resolve, reject) => {
 			this.resolveCallback = resolve;
 			const clock: Clock = Clock.create();
 			const wasiService: WasiService = Object.assign({},
@@ -283,9 +288,11 @@ export abstract class WasiProcess {
 				DeviceWasiService.create(this.localDeviceDrivers, this.fileDescriptors, clock, this.virtualRootFileSystem, this.options),
 				this.processService
 			);
-			const result = this.startMain(wasiService);
-			this.state = 'running';
-			return result;
+			this.startMain(wasiService).catch(reject);
+			this._state = 'running';
+		}).then((exitCode) => {
+			this._state = 'exited';
+			return exitCode;
 		});
 	}
 

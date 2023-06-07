@@ -459,10 +459,10 @@ export function create(deviceId: DeviceId, memfs: MemoryFileSystem): FileSystemD
 			let descriptor: FileDescriptor;
 			switch(target.filetype) {
 				case Filetype.regular_file:
-					descriptor = new fs.FileNodeDescriptor(deviceId, fdProvider.next(), fileDescriptor.childFileRights(fs_rights_base, FileOnlyBaseRights), fdflags, target.inode, target);
+					descriptor = new fs.FileNodeDescriptor(deviceId, fdProvider.next(), fileDescriptor.childFileRights(fs_rights_base, DirectoryOnlyBaseRights), fdflags, target.inode, target);
 					break;
 				case Filetype.directory:
-					descriptor = new fs.DirectoryNodeDescriptor<DirectoryNode>(deviceId, fdProvider.next(), fileDescriptor.childDirectoryRights(fs_rights_base, DirectoryOnlyBaseRights), fs_rights_inheriting | DirectoryInheritingRights, fdflags, target.inode, target);
+					descriptor = new fs.DirectoryNodeDescriptor<DirectoryNode>(deviceId, fdProvider.next(), fileDescriptor.childDirectoryRights(fs_rights_base, FileOnlyBaseRights), fs_rights_inheriting | DirectoryInheritingRights, fdflags, target.inode, target);
 					break;
 				case Filetype.character_device:
 					let rights = fileDescriptor.childFileRights(fs_rights_base, FileOnlyBaseRights) | Rights.fd_write;
