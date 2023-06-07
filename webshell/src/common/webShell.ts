@@ -121,6 +121,7 @@ export class WebShell {
 					}
 					break;
 			}
+			await this.pty.write(vscSeq(`E;${line}`)); // Command line
 			await this.pty.write(vscSeq(`D;${exitCode}`)); // Command finished
 		}
 	}
