@@ -116,7 +116,7 @@ export class WebShell {
 							exitCode = 1;
 						}
 					} else {
-						void this.pty.write(`-wesh: ${command}: command not found!!!\r\n`);
+						void this.pty.write(`-wesh: ${command}: command not found\r\n`);
 						exitCode = 1;
 					}
 					break;
