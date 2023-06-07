@@ -91,40 +91,44 @@ export class WebShell {
 		while (true) {
 			void this.pty.prompt(this.getPrompt());
 			const line = await this.pty.readline();
+			await this.pty.write(vscSeq('C')); // Command executed
 			const { command, args } = this.parseCommand(line);
+			let exitCode: number;
 			switch (command) {
 				case 'exit':
 					this.terminal.dispose();
 					return;
 				case 'pwd':
 					void this.pty.write(`${this.cwd}\r\n`);
+					exitCode = 0;
 					break;
 				case 'cd':
-					await this.handleCd(args);
+					exitCode = await this.handleCd(args);
 					break;
 				default:
 					const handler = WebShell.commandHandlers.get(command);
 					if (handler !== undefined) {
 						try {
-							const result = await handler(command, args, this.cwd, this.pty.stdio, WebShell.rootFs);
-							if (result !== 0) {
-							}
+							exitCode = await handler(command, args, this.cwd, this.pty.stdio, WebShell.rootFs);
 						} catch (error: any) {
 							const message = error.message ?? error.toString();
 							void this.pty.write(`-wesh: executing ${command} failed: ${message}\r\n`);
+							exitCode = 1;
 						}
 					} else {
-						void this.pty.write(`-wesh: ${command}: command not found\r\n`);
+						void this.pty.write(`-wesh: ${command}: command not found!!!\r\n`);
+						exitCode = 1;
 					}
 					break;
 			}
+			await this.pty.write(vscSeq(`D;${exitCode}`)); // Command finished
 		}
 	}
 
-	private async handleCd(args: string[]): Promise<void> {
+	private async handleCd(args: string[]): Promise<number> {
 		if (args.length > 1) {
 			void this.pty.write(`-wesh: cd: too many arguments\r\n`);
-			return;
+			return 1;
 		}
 		const path = RAL().path;
 		let target = args[0];
@@ -135,12 +139,13 @@ export class WebShell {
 			const stat = await WebShell.rootFs.stat(target);
 			if (stat.filetype === Filetype.directory) {
 				this.cwd = target;
-				return;
+				return 0;
 			}
 		} catch (error) {
 			// Do nothing
 		}
 		await this.pty.write(`-wesh: cd: ${target}: No such file or directory\r\n`);
+		return 1;
 	}
 
 	private parseCommand(line: string): CommandLine {
@@ -152,6 +157,19 @@ export class WebShell {
 	}
 
 	private getPrompt(): string {
-		return `\x1b[01;34m${this.cwd}\x1b[0m ${this.prompt}`;
+		return (
+			// Prompt start
+			vscSeq(`A`) +
+			// Cwd property
+			vscSeq(`P;Cwd=${this.cwd}`) +
+			// User-visible prompt
+			`\x1b[01;34m${this.cwd}\x1b[0m ${this.prompt}` +
+			// Command start
+			vscSeq(`B`)
+		);
 	}
+}
+
+function vscSeq(data: string): string {
+	return `\x1b]633;${data}\x1b\\`;
 }
