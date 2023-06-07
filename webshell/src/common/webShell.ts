@@ -92,6 +92,9 @@ export class WebShell {
 			void this.pty.prompt(this.getPrompt());
 			const line = await this.pty.readline();
 			const { command, args } = this.parseCommand(line);
+			if (command.trim().length === 0) {
+				continue; // no-op
+			}
 			switch (command) {
 				case 'exit':
 					this.terminal.dispose();
