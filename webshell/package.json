@@ -2,7 +2,7 @@
 	"name": "webshell",
 	"private": "true",
 	"publisher": "ms-vscode",
-	"version": "0.1.0",
+	"version": "0.13.0",
 	"displayName": "Experimental - A shell for VS Code Web",
 	"description": "A shell for VS Code for the Web - allows executing commands like ls, cat, ...",
 	"author": "MS",
@@ -40,7 +40,7 @@
 		]
 	},
 	"dependencies": {
-		"@vscode/wasm-wasi": "0.11.0-next.0"
+		"@vscode/wasm-wasi": "0.13.0-pre.1"
 	},
 	"devDependencies": {
 		"@types/vscode": "1.78.0"
