@@ -387,7 +387,7 @@ export class WasmPseudoterminalImpl implements WasmPseudoterminal {
 		const previousCursor = this.lineBuffer.getCursor();
 		switch (data) {
 			case '\x03': // ctrl+C
-				this._onDidCtrlC.fire();
+				this.handleInterrupt();
 				break;
 			case '\x06': // ctrl+f
 			case '\x1b[C': // right
@@ -461,6 +461,15 @@ export class WasmPseudoterminalImpl implements WasmPseudoterminal {
 					this.commandHistory.update(this.lineBuffer.getLine());
 				}
 		}
+	}
+
+	private handleInterrupt(): void {
+		this._onDidCtrlC.fire();
+		this._onDidWrite.fire('\x1b[31m^C\x1b[0m\r\n');
+		this.lineBuffer.clear();
+		this.lines.length = 0;
+		this.readlineCallback?.('\n');
+		this.readlineCallback = undefined;
 	}
 
 	private handleEnter(): void {

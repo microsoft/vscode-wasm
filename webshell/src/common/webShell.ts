@@ -93,6 +93,9 @@ export class WebShell {
 			const line = await this.pty.readline();
 			await this.pty.write(vscSeq('C')); // Command executed
 			const { command, args } = this.parseCommand(line);
+			if (command.trim().length === 0) {
+				continue; // no-op
+			}
 			let exitCode: number;
 			switch (command) {
 				case 'exit':
