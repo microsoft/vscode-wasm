@@ -64,7 +64,10 @@ export class NodeWasiProcess extends WasiProcess {
 		this.mainWorker.on('exit', async (exitCode: number) => {
 			this.cleanUpWorkers().catch(error => RAL().console.error(error));
 			this.cleanupFileDescriptors().catch(error => RAL().console.error(error));
-			this.resolveRunPromise(exitCode);
+			// We might be in proc_exit state.
+			if (this.state !== 'exiting') {
+				this.resolveRunPromise(exitCode);
+			}
 		});
 		const connection = new NodeServiceConnection(wasiService, this.mainWorker, this.options.trace);
 		await connection.workerReady();

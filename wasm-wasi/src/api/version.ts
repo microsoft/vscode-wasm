@@ -3,5 +3,5 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-const version = '0.11.0-next.1';
+const version = '0.13.0-pre.1';
 export default version;
