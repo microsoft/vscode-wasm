@@ -10,6 +10,6 @@
 	"scripts": {
 		"clean": "cd ./coreutils && npm run clean",
 		"postinstall": "cd .. && npm run symlink",
-		"lint": "node ../node_modules/eslint/bin/eslint.js --ext ts coreutils cpp python rust"
+		"lint": "node ../node_modules/eslint/bin/eslint.js --ext ts cpp python rust ruby php threads"
 	}
 }

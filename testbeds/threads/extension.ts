@@ -28,7 +28,7 @@ export async function activate(context: ExtensionContext) {
 		// 	console.log('stdout', decoder.decode(data));
 		// });
 		process.run().catch(err => {
-			window.showErrorMessage(err.message);
+			void window.showErrorMessage(err.message);
 		});
 	});
 }

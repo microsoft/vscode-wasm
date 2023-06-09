@@ -33,7 +33,7 @@ export async function activate(context: ExtensionContext) {
 			const process = await wasm.createProcess('python', module, options);
 			await process.run();
 		} catch (err: any) {
-			pty.write(`Launching python failed: ${err.toString()}`);
+			void pty.write(`Launching python failed: ${err.toString()}`);
 		}
 	}
 
@@ -56,9 +56,9 @@ export async function activate(context: ExtensionContext) {
 		// WASI doesn't support the concept of an initial working directory.
 		// So we need to make file paths absolute.
 		// See https://github.com/WebAssembly/wasi-filesystem/issues/24
-		const optionsWithArgs = new Set(['-c', '-m', '-W', '-X', '--check-hash-based-pycs'])
+		const optionsWithArgs = new Set(['-c', '-m', '-W', '-X', '--check-hash-based-pycs']);
 		for (let i = 0; i < args.length; i++) {
-			const arg = args[i]
+			const arg = args[i];
 			if (optionsWithArgs.has(arg)) {
 				const next = args[i + 1];
 				if (next !== undefined && !next.startsWith('-')) {
@@ -68,7 +68,7 @@ export async function activate(context: ExtensionContext) {
 			} else if (arg.startsWith('-')) {
 				continue;
 			} else if (!arg.startsWith('/')) {
-				args[i] = `${cwd}/${arg}`
+				args[i] = `${cwd}/${arg}`;
 			}
 		}
 		const options: ProcessOptions = {
