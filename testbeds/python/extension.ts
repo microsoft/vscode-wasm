@@ -18,7 +18,7 @@ export async function activate(context: ExtensionContext) {
 			stdio: pty.stdio,
 			mountPoints: [
 				{ kind: 'workspaceFolder' },
-				{ kind: 'extensionLocation', extension: context, path: 'wasm/lib', mountPoint: '/usr/local/lib/python3.11' }
+				{ kind: 'extensionLocation', extension: context, path: 'wasm/lib', mountPoint: '/usr/local/lib/python3.12' }
 			],
 			env: {
  				PYTHONPATH: '/workspace'
