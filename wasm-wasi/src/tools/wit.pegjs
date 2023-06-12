@@ -2,6 +2,11 @@
 	const Kind = {
     	interface: 'interface',
     	type: 'type',
+        variant: 'variant',
+        variantCase: 'variantCase',
+        record: 'record',
+        union: 'union',
+        field: 'field',
         tuple: 'tuple',
         list: 'list',
         option: 'option',
@@ -35,6 +40,13 @@
         	start: loc.start,
             end: loc.end
         }
+    }
+
+	function trimTrailing(members, ch) {
+    	if (members.length === 0) {
+        	return members;
+        }
+        return members[members.length - 1] !== ch ? members : members.slice(0, members.length - 1);
     }
 
 	function commentNode(items, text, loc) {
@@ -126,6 +138,9 @@ start =
 reservedWord "reserved words"
  	= 'interface'
 	/ 'func'
+    / 'type'
+    / 'variant'
+    / 'record'
     / 'tuple'
     / 'list'
     / 'option'
@@ -134,20 +149,78 @@ reservedWord "reserved words"
 	/ baseTypes
 
 interface_item "interface declaration"
-	= c1:_ 'default'? c2:_ 'interface' c3:_ name:identifier c4:_ '{' members:interface_items '}' c5:__ {
-    	return node(Kind.interface, text(), location(), { name: name, members: members }, c1, c2, c3, c4, c5);
+	= c1:_ 'default'? c2:_ 'interface' c3:_ name:identifier c4:_ '{' members:interface_items c5:_ '}' c6:__ {
+     	return node(Kind.interface, text(), location(), { name, members }, c1, c2, c3, c4, c5, c6);
     }
 
 interface_items
     = interface_part|.., lineTerminatorSequence|
 	/ interface_part
-    / _
 
 interface_part
-	= typedef_item
+    = typedef_item
 
 typedef_item
-	= type_item
+	= variant_items
+    / record_item
+    / union_items
+	/ type_item
+
+variant_items "variant"
+	= c1:_ 'variant' c2:_ name:identifier c3:_ '{' members:variant_cases c4:_ '}' c5:__ {
+    	return node(Kind.variant, text(), location(), { name, members }, c2, c2 ,c3, c4, c5);
+    }
+
+variant_cases "variant cases"
+	= items:variant_case|.., ','| sep:','? {
+    	return items;
+    }
+    / variant_case
+
+variant_case
+	= c1:_ name:identifier c2:_ '(' c3:_ type:ty c4:_ ')' c5:__ {
+    	return node(Kind.variantCase, text(), location(), { name, type }, c1, c2, c3, c4, c5 );
+    }
+    / c1:_ name:identifier c2:__ {
+    	return node(Kind.variantCase, text(), location(), { name }, c1, c2);
+    }
+
+record_item "record"
+	= c1:_ 'record' c2:_ name:identifier c3:_ '{' members:record_items c4:_ '}' c5:__ {
+    	return node(Kind.record, text(), location(), { name, members: members }, c1, c2, c3, c4, c5);
+    }
+
+record_items
+	= items:record_part|.., ','| sep:','? {
+    	return items;
+    }
+    / record_part
+
+record_part
+	= c1:_ name:identifier c2:_ ':' c3:_ type:ty c4:__ {
+    	return node(Kind.field, text(), location(), { name, type }, c1, c2, c3, c4);
+    }
+
+union_items "union"
+	= c1:_ 'union' c2:_ name:identifier c3:_ '{' members:union_cases c4:_ '}' c5:__ {
+    	return node(Kind.union, text(), location(), { name, members }, c2, c2 ,c3, c4, c5);
+    }
+
+union_cases "union cases"
+	= items:union_case|.., ','| sep:','? {
+    	return items;
+    }
+    / union_case
+
+union_case "union case"
+	= c1:_ type:ty c2:_ {
+    	return attachComments(type, c1, c2);
+    }
+
+type_item
+	= c1:_ 'type' c2:_ name:identifier c3:_ '=' c4:_ type:ty c5:__ {
+    	return node(Kind.type, text(), location(), { name, type }, c1, c2, c3, c4, c5);
+    }
 
 ty "built in types"
 	= baseTypes
@@ -157,11 +230,6 @@ ty "built in types"
     / result
     / handle
     / id
-
-type_item
-	= c1:_ 'type' c2:_ name:identifier c3:_ '=' c4:_ type:ty c5:__ {
-    	return node(Kind.type, text(), location(), { name: name, type: type }, c1, c2, c3, c4, c5);
-    }
 
 ty_item "build in type with comment"
 	= c1:_ type:ty c2:_ {
@@ -179,23 +247,23 @@ tupleList "tuple element list"
 
 list "element list"
 	= 'list' _ '<' type:ty_item '>' {
-    	return node(Kind.list, text(), location(), { type: type });
+    	return node(Kind.list, text(), location(), { type });
     }
 
 option "option type"
 	= 'option' _ '<' type:ty_item '>' {
-    	return node(Kind.option, text(), location(), { type: type });
+    	return node(Kind.option, text(), location(), { type });
     }
 
 result "result type"
 	= 'result' _ '<' result:ty_item ',' error:ty_item '>' {
-    	return node(Kind.result, text(), location(), { result: result, error: error });
+    	return node(Kind.result, text(), location(), { result, error });
     }
     / 'result' _ '<' result:no_result ',' error:ty_item '>' {
-    	return node(Kind.result, text(), location(), { result: result, error: error });
+    	return node(Kind.result, text(), location(), { result, error });
     }
     / 'result' _ '<' error:ty_item '>' {
-    	return node(Kind.result, text(), location(), { result: undefined, error: error });
+    	return node(Kind.result, text(), location(), { result: undefined, error });
     }
     / 'result' {
     	return node(Kind.result, text(), location(), { result: undefined, error: undefined });
@@ -208,13 +276,13 @@ no_result "no result"
 
 handle "handle type"
 	= id
-    / 'borrow' _ '<' id_item '>' {
-    	return node(Kind.borrow, text(), location(), { id: id });
+    / 'borrow' c1:_ '<' name:id_item '>' {
+    	return node(Kind.borrow, text(), location(), { name }, c1);
     }
 
 id_item
-	= c0:_ id:id c1:_ {
-    	return attachedComments(id, c0, c1);
+	= c1:_ id:id c2:_ {
+    	return attachedComments(id, c1, c2);
     }
 
 id "id"
