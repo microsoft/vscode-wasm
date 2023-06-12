@@ -1,8 +1,10 @@
 {{
 	const Kind = {
-    	multiLineComment: 'multiLineComment',
-        singleLineComment: 'singleLineComment',
         tuple: 'tuple',
+        list: 'list',
+        option: 'option',
+        result: 'result',
+        handle: 'handle',
         u8: 'u8',
         u16: 'u16',
         u32: 'u32',
@@ -19,6 +21,9 @@
         identifier: 'identifier',
         name: 'name',
         id: 'id',
+    	multiLineComment: 'multiLineComment',
+    	multiLineCommentOneLine: 'multiLineCommentOneLine',
+        singleLineComment: 'singleLineComment',
     }
 
 	function _loc(loc) {
@@ -39,25 +44,29 @@
         };
         return rest !== undefined ? Object.assign(result, rest) : result;
     }
+
+    function attachComments(node, ...comments) {
+    	if (comments === undefined || comments.length === 0) {
+        	return;
+        }
+		const filtered = [];
+        for (const comment of comments) {
+            if (typeof comment === 'object') {
+            	filtered.push(comment);
+            }
+        }
+        if (filtered.length > 0) {
+        	node.comments = filtered;
+        }
+        return node;
+    }
+
 }}
 
 start =
  	// comment
-	__ builtInTypes __
-
-comment "comment"
-	= multiLineComment
-	/ singleLineComment
-
-multiLineComment "multi line comment"
-	= '/*' (!'*/' .)* '*/' {
-    	return node(Kind.multiLineComment, text(), location());
-    }
-
-singleLineComment " single line comment"
-	= '//' (!lineTerminator .)* {
-    	return node(Kind.singleLineComment, text(), location());
-    }
+	tuple
+    // __
 
 reservedWords "reserved words"
  	= 'interface'
@@ -79,29 +88,46 @@ builtInTypes "built in types"
     / id
 
 tuple "tuple type"
-	= 'tuple' __ '<' __ list:tupleList __ '>' {
-    	return node(Kind.tuple, text(), location(), { items: list });
+	= 'tuple' c1:_ '<' list:tupleList '>' c2:__ {
+    	return node(Kind.tuple, text(), location(), { c1: c1, c2: c2, items: list });
     }
 
 tupleList "tuple element list"
-    = builtInTypes|.., __ ',' __ |
-	/ builtInTypes
+    = tupleItem|.., ','|
+	/ tupleItem
+
+tupleItem
+	= c1:_ type:builtInTypes c2:_ { return attachComments(type, c1, c2); }
 
 list "element list"
-	= 'list' __ '<' __ builtInTypes __ '>'
+	= 'list' _ '<' _ type:builtInTypes _ '>' {
+    	return node(Kind.list, text(), location(), { type: type });
+    }
 
 option "option type"
-	= 'option' __ '<' __ builtInTypes __ '>'
+	= 'option' _ '<' _ type:builtInTypes _ '>' {
+    	return node(Kind.option, text(), location(), { type: type });
+    }
 
 result "result type"
-	= 'result' __ '<' __ builtInTypes __ ',' __ builtInTypes __ '>'
-    / 'result' __ '<' __ '_' __ ',' __ builtInTypes __ '>'
-    / 'result' __ '<' __ builtInTypes __ '>'
-    / 'result'
+	= 'result' _ '<' _ result:builtInTypes _ ',' _ error:builtInTypes _ '>' {
+    	return node(Kind.result, text(), location(), { result: result, error: error });
+    }
+    / 'result' _ '<' _ '_' _ ',' _ error:builtInTypes _ '>' {
+    	return node(Kind.result, text(), location(), { result: undefined, error: error });
+    }
+    / 'result' _ '<' _ error:builtInTypes _ '>' {
+    	return node(Kind.result, text(), location(), { result: undefined, error: error });
+    }
+    / 'result' {
+    	return node(Kind.result, text(), location(), { result: undefined, error: undefined });
+    }
 
 handle "handle type"
 	= id
-    / 'borrow' __ '<' __ id __ '>'
+    / 'borrow' _ '<' _ id: id _ '>' {
+    	return node(Kind.borrow, text(), location(), { id: id });
+    }
 
 id "id"
 	= name {
@@ -203,6 +229,33 @@ string "string"
     	return node(Kind.string, text(), location())
     }
 
+__ "whitespace end of line"
+	= space:[ ]* comment:(singleLineComment / multiLineCommentOneLine+)? {
+    	return comment;
+    }
+
+_ "whitespace with comments"
+	= comment / s
+
+comment "comment"
+	= multiLineComment
+	/ singleLineComment
+
+multiLineComment "multi line comment"
+	= '/*' (!'*/' .)* '*/' {
+    	return node(Kind.multiLineComment, text(), location());
+    }
+
+multiLineCommentOneLine "multi line comment on one line"
+	= '/*' (!('*/' / lineTerminatorSequence) .)* '*/' {
+    	return node(Kind.multiLineCommentOneLine, text(), location());
+    }
+
+singleLineComment " single line comment"
+	= '//' (!lineTerminator .)* {
+    	return node(Kind.singleLineComment, text(), location());
+    }
+
 lineTerminator
 	= [\n\r]
 
@@ -211,8 +264,7 @@ lineTerminatorSequence "end of line"
     / "\r"
     / "\r\n"
 
-__ "whitespace with comments"
-	= _
-
-_ "whitespace"
-	= [ \t\n\r]*
+s "whitespace"
+	= [ \t\n\r]* {
+    	return text()
+    }
