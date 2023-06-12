@@ -6,6 +6,7 @@
         variantCase: 'variantCase',
         record: 'record',
         union: 'union',
+        flags: 'flags',
         field: 'field',
         tuple: 'tuple',
         list: 'list',
@@ -141,6 +142,8 @@ reservedWord "reserved words"
     / 'type'
     / 'variant'
     / 'record'
+    / 'union'
+    / 'flags'
     / 'tuple'
     / 'list'
     / 'option'
@@ -164,6 +167,7 @@ typedef_item
 	= variant_items
     / record_item
     / union_items
+    / flags_items
 	/ type_item
 
 variant_items "variant"
@@ -172,7 +176,7 @@ variant_items "variant"
     }
 
 variant_cases "variant cases"
-	= items:variant_case|.., ','| sep:','? {
+	= items:variant_case|1.., ','| sep:','? {
     	return items;
     }
     / variant_case
@@ -186,28 +190,28 @@ variant_case
     }
 
 record_item "record"
-	= c1:_ 'record' c2:_ name:identifier c3:_ '{' members:record_items c4:_ '}' c5:__ {
+	= c1:_ 'record' c2:_ name:identifier c3:_ '{' members:record_fields c4:_ '}' c5:__ {
     	return node(Kind.record, text(), location(), { name, members: members }, c1, c2, c3, c4, c5);
     }
 
-record_items
-	= items:record_part|.., ','| sep:','? {
+record_fields
+	= items:record_field|1.., ','| sep:','? {
     	return items;
     }
-    / record_part
+    / record_field
 
-record_part
+record_field
 	= c1:_ name:identifier c2:_ ':' c3:_ type:ty c4:__ {
     	return node(Kind.field, text(), location(), { name, type }, c1, c2, c3, c4);
     }
 
 union_items "union"
 	= c1:_ 'union' c2:_ name:identifier c3:_ '{' members:union_cases c4:_ '}' c5:__ {
-    	return node(Kind.union, text(), location(), { name, members }, c2, c2 ,c3, c4, c5);
+    	return node(Kind.union, text(), location(), { name, members }, c1, c2, c2 ,c3, c4, c5);
     }
 
 union_cases "union cases"
-	= items:union_case|.., ','| sep:','? {
+	= items:union_case|1.., ','| sep:','? {
     	return items;
     }
     / union_case
@@ -215,6 +219,22 @@ union_cases "union cases"
 union_case "union case"
 	= c1:_ type:ty c2:_ {
     	return attachComments(type, c1, c2);
+    }
+
+flags_items "flags"
+	= c1:_ 'flags' c2:_ name:identifier c3:_ '{' members:flags_fields c4:_ '}' c5:__ {
+    	return node(Kind.flags, text(), location(), { name, members }, c1, c2, c3, c4, c5);
+    }
+
+flags_fields "flag fields"
+	= items:flags_field|1.., ','| sep:','? {
+    	return items;
+    }
+    / flags_field
+
+flags_field "flag field"
+	= c1:_ name:identifier c2:_ {
+    	return attachComments(name, c1, c2);
     }
 
 type_item
@@ -304,12 +324,12 @@ name "name"
     }
 
 label "label"
-	= !reservedWord word|..,'-'| {
-    	return { text: text() };
+	= word|1..,'-'| {
+    	return text();
     }
 
 word "word"
-	= [a-z]i[0-9a-z]i* {
+	= ([a-z]i)([0-9a-z]i)* {
     	return text();
     }
 
