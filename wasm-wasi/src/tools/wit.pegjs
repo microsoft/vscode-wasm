@@ -18,12 +18,14 @@
         string: 'string',
         float32: 'float32',
         float64: 'float64',
+        noResult: 'noResult',
         identifier: 'identifier',
         name: 'name',
         id: 'id',
     	multiLineComment: 'multiLineComment',
     	multiLineCommentOneLine: 'multiLineCommentOneLine',
         singleLineComment: 'singleLineComment',
+        commentBlock: 'commentBlock'
     }
 
 	function _loc(loc) {
@@ -33,8 +35,63 @@
         }
     }
 
-    function node(kind, text, loc, rest) {
-    	const result = {
+	function commentNode(items, text, loc) {
+    	const filtered = [];
+        for (const item of items) {
+        	if (typeof item === 'string') {
+            	continue;
+            }
+            filtered.push(item);
+        }
+        if (filtered.length === 0) {
+        	return undefined;
+        } else if (filtered.length === 1) {
+        	return filtered[0];
+        } else {
+        	return {
+            	kind: Kind.commentBlock,
+                items: filtered,
+                text: text,
+                range: {
+	             	start: loc.start,
+    	            end: loc.end,
+               }
+            }
+        }
+    }
+
+    function attachComments(node, ...comments) {
+    	if (comments === undefined || comments.length === 0) {
+        	return;
+        }
+		let filtered = [];
+        for (const comment of comments) {
+        	if (Array.isArray(comment)) {
+            	throw new Error('Should not happen');
+            } else if (comment === null) {
+            	filtered.push(undefined);
+            } else if (typeof comment === 'object') {
+            	filtered.push(comment);
+            } else {
+            	filtered.push(undefined);
+            }
+        }
+        let end = filtered.length - 1;
+        while (end >= 0 && filtered[end] === undefined) {
+        	end--;
+        }
+        if (end < 0) {
+        	return node;
+        }
+        if (end < filtered.length - 1) {
+        	filtered = filtered.slice(0, end + 1)
+        }
+        node.comments = filtered;
+        return node;
+    }
+
+    function node(kind, text, loc, props, ...comments) {
+    	let result = {
         	kind: kind,
             text: text,
             range: {
@@ -42,25 +99,21 @@
                 end: loc.end,
             }
         };
-        return rest !== undefined ? Object.assign(result, rest) : result;
+        const allComments = [];
+        if (typeof props === 'object' && (props.kind === Kind.multiLineComment || props.kind === Kind.multiLineCommentOneLine || props.kind === Kind.singleLineComment || props.kind === Kind.commentBlock)) {
+        	allComments.push(props);
+        } else if (typeof props === 'string') {
+        	props = undefined;
+        }
+        if (comments !== undefined && comments.length > 0) {
+        	allComments.push(...comments);
+        }
+        result = props !== undefined ? Object.assign(result, props) : result;
+        if (allComments.length > 0) {
+        	attachComments(result, ...allComments);
+        }
+        return result;
     }
-
-    function attachComments(node, ...comments) {
-    	if (comments === undefined || comments.length === 0) {
-        	return;
-        }
-		const filtered = [];
-        for (const comment of comments) {
-            if (typeof comment === 'object') {
-            	filtered.push(comment);
-            }
-        }
-        if (filtered.length > 0) {
-        	node.comments = filtered;
-        }
-        return node;
-    }
-
 }}
 
 start =
@@ -68,7 +121,7 @@ start =
 	tuple
     // __
 
-reservedWords "reserved words"
+reservedWord "reserved words"
  	= 'interface'
 	/ 'func'
     / 'tuple'
@@ -78,7 +131,7 @@ reservedWords "reserved words"
     / 'borrow'
 	/ baseTypes
 
-builtInTypes "built in types"
+ty "built in types"
 	= baseTypes
     / tuple
     / list
@@ -87,46 +140,58 @@ builtInTypes "built in types"
     / handle
     / id
 
+ty_item "build in type with comment"
+	= c1:_ type:ty c2:_ {
+    	return attachComments(type, c1, c2);
+    }
+
 tuple "tuple type"
 	= 'tuple' c1:_ '<' list:tupleList '>' c2:__ {
-    	return node(Kind.tuple, text(), location(), { c1: c1, c2: c2, items: list });
+    	return node(Kind.tuple, text(), location(), { items: list }, c1, c2);
     }
 
 tupleList "tuple element list"
-    = tupleItem|.., ','|
-	/ tupleItem
-
-tupleItem
-	= c1:_ type:builtInTypes c2:_ { return attachComments(type, c1, c2); }
+    = ty_item|.., ','|
+	/ ty_item
 
 list "element list"
-	= 'list' _ '<' _ type:builtInTypes _ '>' {
+	= 'list' _ '<' type:ty_item '>' {
     	return node(Kind.list, text(), location(), { type: type });
     }
 
 option "option type"
-	= 'option' _ '<' _ type:builtInTypes _ '>' {
+	= 'option' _ '<' type:ty_item '>' {
     	return node(Kind.option, text(), location(), { type: type });
     }
 
 result "result type"
-	= 'result' _ '<' _ result:builtInTypes _ ',' _ error:builtInTypes _ '>' {
+	= 'result' _ '<' result:ty_item ',' error:ty_item '>' {
     	return node(Kind.result, text(), location(), { result: result, error: error });
     }
-    / 'result' _ '<' _ '_' _ ',' _ error:builtInTypes _ '>' {
-    	return node(Kind.result, text(), location(), { result: undefined, error: error });
+    / 'result' _ '<' result:no_result ',' error:ty_item '>' {
+    	return node(Kind.result, text(), location(), { result: result, error: error });
     }
-    / 'result' _ '<' _ error:builtInTypes _ '>' {
+    / 'result' _ '<' error:ty_item '>' {
     	return node(Kind.result, text(), location(), { result: undefined, error: error });
     }
     / 'result' {
     	return node(Kind.result, text(), location(), { result: undefined, error: undefined });
     }
 
+no_result "no result"
+	= c1:_ '_' c2:_ {
+    	return node(Kind.noResult, text(), location());
+    }
+
 handle "handle type"
 	= id
-    / 'borrow' _ '<' _ id: id _ '>' {
+    / 'borrow' _ '<' id_item '>' {
     	return node(Kind.borrow, text(), location(), { id: id });
+    }
+
+id_item
+	= c0:_ id:id c1:_ {
+    	return attachedComments(id, c0, c1);
     }
 
 id "id"
@@ -140,15 +205,16 @@ identifier "identifier"
     }
 
 name "name"
-	= label {
+	= !reservedWord label {
+    	return node(Kind.name, text(), location());
+    }
+    / '%'label {
     	return node(Kind.name, text(), location());
     }
 
 label "label"
-	= word|..,'-'| {
-    	return {
-        	text: text()
-        };
+	= reservedWord word|..,'-'| {
+    	return { text: text() };
     }
 
 word "word"
@@ -235,7 +301,9 @@ __ "whitespace end of line"
     }
 
 _ "whitespace with comments"
-	= comment / s
+	= items:(comment / s)* {
+    	return commentNode(items, text(), location());
+    }
 
 comment "comment"
 	= multiLineComment
@@ -265,6 +333,6 @@ lineTerminatorSequence "end of line"
     / "\r\n"
 
 s "whitespace"
-	= [ \t\n\r]* {
+	= [ \t\n\r] {
     	return text()
     }
