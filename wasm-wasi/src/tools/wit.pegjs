@@ -1,5 +1,7 @@
 {{
 	const Kind = {
+    	interface: 'interface',
+    	type: 'type',
         tuple: 'tuple',
         list: 'list',
         option: 'option',
@@ -50,12 +52,12 @@
         } else {
         	return {
             	kind: Kind.commentBlock,
-                items: filtered,
                 text: text,
                 range: {
 	             	start: loc.start,
     	            end: loc.end,
-               }
+                },
+                items: filtered
             }
         }
     }
@@ -118,7 +120,7 @@
 
 start =
  	// comment
-	tuple
+	interface_item
     // __
 
 reservedWord "reserved words"
@@ -131,6 +133,22 @@ reservedWord "reserved words"
     / 'borrow'
 	/ baseTypes
 
+interface_item "interface declaration"
+	= c1:_ 'default'? c2:_ 'interface' c3:_ name:identifier c4:_ '{' members:interface_items '}' c5:__ {
+    	return node(Kind.interface, text(), location(), { name: name, members: members }, c1, c2, c3, c4, c5);
+    }
+
+interface_items
+    = interface_part|.., lineTerminatorSequence|
+	/ interface_part
+    / _
+
+interface_part
+	= typedef_item
+
+typedef_item
+	= type_item
+
 ty "built in types"
 	= baseTypes
     / tuple
@@ -139,6 +157,11 @@ ty "built in types"
     / result
     / handle
     / id
+
+type_item
+	= c1:_ 'type' c2:_ name:identifier c3:_ '=' c4:_ type:ty c5:__ {
+    	return node(Kind.type, text(), location(), { name: name, type: type }, c1, c2, c3, c4, c5);
+    }
 
 ty_item "build in type with comment"
 	= c1:_ type:ty c2:_ {
@@ -213,7 +236,7 @@ name "name"
     }
 
 label "label"
-	= reservedWord word|..,'-'| {
+	= !reservedWord word|..,'-'| {
     	return { text: text() };
     }
 
