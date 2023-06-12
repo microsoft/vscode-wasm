@@ -7,6 +7,7 @@
         record: 'record',
         union: 'union',
         flags: 'flags',
+        enum: 'enum',
         field: 'field',
         tuple: 'tuple',
         list: 'list',
@@ -139,11 +140,12 @@ start =
 reservedWord "reserved words"
  	= 'interface'
 	/ 'func'
-    / 'type'
     / 'variant'
     / 'record'
     / 'union'
     / 'flags'
+    / 'enum'
+    / 'type'
     / 'tuple'
     / 'list'
     / 'option'
@@ -168,6 +170,7 @@ typedef_item
     / record_item
     / union_items
     / flags_items
+    / enum_items
 	/ type_item
 
 variant_items "variant"
@@ -233,6 +236,22 @@ flags_fields "flag fields"
     / flags_field
 
 flags_field "flag field"
+	= c1:_ name:identifier c2:_ {
+    	return attachComments(name, c1, c2);
+    }
+
+enum_items "enums"
+	= c1:_ 'enum' c2:_ name:identifier c3:_ '{' members:enum_cases c4:_ '}' c5:__ {
+    	return node(Kind.enum, text(), location(), { name, members }, c1, c2, c3, c4, c5);
+    }
+
+enum_cases "enum cases"
+	= items:enum_case|1.., ','| sep:','? {
+    	return items;
+    }
+    / enum_case
+
+enum_case "enum_case"
 	= c1:_ name:identifier c2:_ {
     	return attachComments(name, c1, c2);
     }
