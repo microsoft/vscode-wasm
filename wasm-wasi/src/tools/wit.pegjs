@@ -15,6 +15,8 @@
         option: 'option',
         result: 'result',
         handle: 'handle',
+        qualifiedName: 'qualifiedName',
+        rename: 'rename',
         u8: 'u8',
         u16: 'u16',
         u32: 'u32',
@@ -43,6 +45,14 @@
         	start: loc.start,
             end: loc.end
         }
+    }
+
+	function split(use_path) {
+    	const length = use_path.length;
+        return {
+        	path: use_path.slice(0, length - 1).join('.'),
+        	type: use_path[length - 1]
+        };
     }
 
 	function trimTrailing(members, ch) {
@@ -162,10 +172,10 @@ interface_item "interface declaration"
     }
 
 interface_items
-    = interface_part|.., lineTerminatorSequence|
-	/ interface_part
+    = interface_member|.., lineTerminatorSequence|
+	/ interface_member
 
-interface_part
+interface_member
     = typedef_item
     / use_item
 
@@ -183,10 +193,9 @@ variant_items "variant"
     }
 
 variant_cases "variant cases"
-	= items:variant_case|1.., ','| sep:','? {
+	= items:variant_case|0.., ','| sep:','? {
     	return items;
     }
-    / variant_case
 
 variant_case
 	= c1:_ name:identifier c2:_ '(' c3:_ type:ty c4:_ ')' c5:__ {
@@ -202,10 +211,9 @@ record_item "record"
     }
 
 record_fields
-	= items:record_field|1.., ','| sep:','? {
+	= items:record_field|0.., ','| sep:','? {
     	return items;
     }
-    / record_field
 
 record_field
 	= c1:_ name:identifier c2:_ ':' c3:_ type:ty c4:__ {
@@ -218,10 +226,9 @@ union_items "union"
     }
 
 union_cases "union cases"
-	= items:union_case|1.., ','| sep:','? {
+	= items:union_case|0.., ','| sep:','? {
     	return items;
     }
-    / union_case
 
 union_case "union case"
 	= c1:_ type:ty c2:_ {
@@ -234,10 +241,9 @@ flags_items "flags"
     }
 
 flags_fields "flag fields"
-	= items:flags_field|1.., ','| sep:','? {
+	= items:flags_field|0.., ','| sep:','? {
     	return items;
     }
-    / flags_field
 
 flags_field "flag field"
 	= c1:_ name:identifier c2:_ {
@@ -250,10 +256,9 @@ enum_items "enums"
     }
 
 enum_cases "enum cases"
-	= items:enum_case|1.., ','| sep:','? {
+	= items:enum_case|0.., ','| sep:','? {
     	return items;
     }
-    / enum_case
 
 enum_case "enum case"
 	= c1:_ name:identifier c2:_ {
@@ -266,22 +271,28 @@ type_item "type"
     }
 
 use_item "use"
-	= c1:_ 'use' c2:_ use_path c3:_ '.' c4:_ '{' members:use_names_list c5:_ '}' c6:__ {
-    	return node(Kind.use, text(), location(), {members }, c1, c2, c3, c4, c5, c6);
+	= c1:_ 'use' c2:_ path:use_path c3:_ '.' c4:_ '{' members:use_names_list c5:_ '}' c6:__ {
+    	return node(Kind.use, text(), location(), { path, members }, c1, c2, c3, c4, c5, c6);
+    }
+    / c1:_ 'use' c2:_ path:use_path  {
+    	return node(Kind.use, text(), location(), { path }, c1, c2);
     }
 
 use_path "use path"
-	=
+	= items:id_item|1..,'.'| {
+    	return node(Kind.qualifiedName, text(), location(), { members: items });
+    }
 
 use_names_list "use names"
-	= items:use_names_item|1..,| sep:','? {
+	= items:use_names_item|1..,','| sep:','? {
+    	return items;
     }
 
 use_names_item
-	= id_item
-    / id_item 'as' id_item {
-    	return
+    = oldName:id_item 'as' newName:id_item {
+    	return node(Kind.rename, text(), location(), { oldName, newName });
     }
+	/ id_item
 
 
 ty "built in types"
@@ -344,7 +355,7 @@ handle "handle type"
 
 id_item
 	= c1:_ id:id c2:_ {
-    	return attachedComments(id, c1, c2);
+    	return attachComments(id, c1, c2);
     }
 
 id "id"
