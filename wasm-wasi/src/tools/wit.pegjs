@@ -31,7 +31,6 @@
         float32: 'float32',
         float64: 'float64',
         noResult: 'noResult',
-        identifier: 'identifier',
         name: 'name',
         id: 'id',
     	multiLineComment: 'multiLineComment',
@@ -167,7 +166,7 @@ reservedWord "reserved words"
 	/ baseTypes
 
 interface_item "interface declaration"
-	= c1:_ 'default'? c2:_ 'interface' c3:_ name:identifier c4:_ '{' members:interface_items c5:_ '}' c6:__ {
+	= c1:_ 'default'? c2:_ 'interface' c3:_ name:id c4:_ '{' members:interface_items c5:_ '}' c6:__ {
      	return node(Kind.interface, text(), location(), { name, members }, c1, c2, c3, c4, c5, c6);
     }
 
@@ -188,7 +187,7 @@ typedef_item
 	/ type_item
 
 variant_items "variant"
-	= c1:_ 'variant' c2:_ name:identifier c3:_ '{' members:variant_cases c4:_ '}' c5:__ {
+	= c1:_ 'variant' c2:_ name:id c3:_ '{' members:variant_cases c4:_ '}' c5:__ {
     	return node(Kind.variant, text(), location(), { name, members }, c2, c2 ,c3, c4, c5);
     }
 
@@ -198,15 +197,15 @@ variant_cases "variant cases"
     }
 
 variant_case
-	= c1:_ name:identifier c2:_ '(' c3:_ type:ty c4:_ ')' c5:__ {
+	= c1:_ name:id c2:_ '(' c3:_ type:ty c4:_ ')' c5:__ {
     	return node(Kind.variantCase, text(), location(), { name, type }, c1, c2, c3, c4, c5 );
     }
-    / c1:_ name:identifier c2:__ {
+    / c1:_ name:id c2:__ {
     	return node(Kind.variantCase, text(), location(), { name }, c1, c2);
     }
 
 record_item "record"
-	= c1:_ 'record' c2:_ name:identifier c3:_ '{' members:record_fields c4:_ '}' c5:__ {
+	= c1:_ 'record' c2:_ name:id c3:_ '{' members:record_fields c4:_ '}' c5:__ {
     	return node(Kind.record, text(), location(), { name, members: members }, c1, c2, c3, c4, c5);
     }
 
@@ -216,12 +215,12 @@ record_fields
     }
 
 record_field
-	= c1:_ name:identifier c2:_ ':' c3:_ type:ty c4:__ {
+	= c1:_ name:id c2:_ ':' c3:_ type:ty c4:__ {
     	return node(Kind.field, text(), location(), { name, type }, c1, c2, c3, c4);
     }
 
 union_items "union"
-	= c1:_ 'union' c2:_ name:identifier c3:_ '{' members:union_cases c4:_ '}' c5:__ {
+	= c1:_ 'union' c2:_ name:id c3:_ '{' members:union_cases c4:_ '}' c5:__ {
     	return node(Kind.union, text(), location(), { name, members }, c1, c2, c2 ,c3, c4, c5);
     }
 
@@ -236,7 +235,7 @@ union_case "union case"
     }
 
 flags_items "flags"
-	= c1:_ 'flags' c2:_ name:identifier c3:_ '{' members:flags_fields c4:_ '}' c5:__ {
+	= c1:_ 'flags' c2:_ name:id c3:_ '{' members:flags_fields c4:_ '}' c5:__ {
     	return node(Kind.flags, text(), location(), { name, members }, c1, c2, c3, c4, c5);
     }
 
@@ -246,12 +245,12 @@ flags_fields "flag fields"
     }
 
 flags_field "flag field"
-	= c1:_ name:identifier c2:_ {
+	= c1:_ name:id c2:_ {
     	return attachComments(name, c1, c2);
     }
 
 enum_items "enums"
-	= c1:_ 'enum' c2:_ name:identifier c3:_ '{' members:enum_cases c4:_ '}' c5:__ {
+	= c1:_ 'enum' c2:_ name:id c3:_ '{' members:enum_cases c4:_ '}' c5:__ {
     	return node(Kind.enum, text(), location(), { name, members }, c1, c2, c3, c4, c5);
     }
 
@@ -261,12 +260,12 @@ enum_cases "enum cases"
     }
 
 enum_case "enum case"
-	= c1:_ name:identifier c2:_ {
+	= c1:_ name:id c2:_ {
     	return attachComments(name, c1, c2);
     }
 
 type_item "type"
-	= c1:_ 'type' c2:_ name:identifier c3:_ '=' c4:_ type:ty c5:__ {
+	= c1:_ 'type' c2:_ name:id c3:_ '=' c4:_ type:ty c5:__ {
     	return node(Kind.type, text(), location(), { name, type }, c1, c2, c3, c4, c5);
     }
 
@@ -361,11 +360,6 @@ id_item
 id "id"
 	= name {
     	return node(Kind.id, text(), location());
-    }
-
-identifier "identifier"
-	= name {
-    	return node(Kind.identifier, text(), location());
     }
 
 name "name"
