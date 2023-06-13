@@ -4,9 +4,6 @@ trigger:
   branches:
     include:
       - main
-  tags:
-    include:
-      - release/*
 pr: none
 
 resources:
@@ -16,6 +13,12 @@ resources:
       name: microsoft/vscode-engineering
       ref: main
       endpoint: Monaco
+
+parameters:
+  - name: publishExtension
+    displayName: 🚀 Publish Extension
+    type: boolean
+    default: false
 
 extends:
   template: azure-pipelines/extension/stable.yml@templates
@@ -34,4 +37,9 @@ extends:
           npm run esbuild
         workingDirectory: $(Build.SourcesDirectory)/wasm-wasi-core
         displayName: "Lint & Compile"
+
+    ghCreateTag: true
+    ghTagPrefix: release/wasm-wasi-core/
+
+    publishExtension: ${{ parameters.publishExtension }}
     workingDirectory: $(Build.SourcesDirectory)/wasm-wasi-core
