@@ -50,7 +50,7 @@
         commentBlock: 'commentBlock'
     }
 
-	function _loc(loc) {
+	function range(loc) {
         return {
         	start: loc.start,
             end: loc.end
@@ -88,10 +88,7 @@
         	return {
             	kind: Kind.commentBlock,
                 text: text,
-                range: {
-	             	start: loc.start,
-    	            end: loc.end,
-                },
+                range: range(loc),
                 items: filtered
             }
         }
@@ -131,10 +128,7 @@
     	let result = {
         	kind: kind,
             text: text,
-            range: {
-            	start: loc.start,
-                end: loc.end,
-            }
+            range: range(loc)
         };
         const allComments = [];
         if (typeof props === 'object' && (props.kind === Kind.multiLineComment || props.kind === Kind.multiLineCommentOneLine || props.kind === Kind.singleLineComment || props.kind === Kind.commentBlock)) {
@@ -157,6 +151,8 @@ start = wit_document
 
 reservedWord "reserved words"
  	= 'world'
+    / 'import'
+    / 'export'
     / 'interface'
     / 'use'
 	/ 'func'
@@ -184,13 +180,13 @@ world_item "world declaration"
     }
 
 world_items
-	= world_members|0.., lineTerminatorSequence|
+	= world_members|.., lineTerminatorSequence|
 
 world_members
-	= export_item
-    / import_item
-    / use_item
-    / typedef_item
+	// = export_item
+    = import_item
+    // / use_item
+    // / typedef_item
 
 export_item
 	= c1:_ 'export' c2:_ name:id c3:_ ':' type:extern_type c4:__ {
@@ -198,8 +194,8 @@ export_item
     }
 
 import_item
-	= c1:_ 'import' c2:_ name:id c3:_ ':' type:extern_type c4:__ {
-    	return node(Kind.import, text(), location(), { name, type }, c1, c2, c3, c4);
+	= c1:_ 'import' c2:_ name:id c3:_ ':' type:use_path c4:__ {
+    	return node(Kind.import, text(), location(), { name, type }, c1, c2, c3);
     }
 
 extern_type
@@ -207,10 +203,10 @@ extern_type
     / interface_type
 
 interface_type "interface type"
-	= c1:_ 'interface' c2:_ '{' members:interface_items c3:_ '}' c4:__ {
+	= use_path
+    / c1:_ 'interface' c2:_ '{' members:interface_items c3:_ '}' c4:__ {
     	return node(Kind.interfaceType, text(), location(), { name, members }, c1, c2, c3, c4);
     }
-    / use_path
 
 interface_item "interface declaration"
 	= c1:_ 'default'? c2:_ 'interface' c3:_ name:id c4:_ '{' members:interface_items c5:_ '}' c6:__ {
@@ -320,13 +316,37 @@ use_item "use"
 	= c1:_ 'use' c2:_ path:use_path c3:_ '.' c4:_ '{' members:use_names_list c5:_ '}' c6:__ {
     	return node(Kind.use, text(), location(), { path, members }, c1, c2, c3, c4, c5, c6);
     }
-    / c1:_ 'use' c2:_ path:use_path  {
-    	return node(Kind.use, text(), location(), { path }, c1, c2);
+    / c1:_ 'use' c2:_ path:use_path c3:__ {
+    	return node(Kind.use, text(), location(), { path }, c1, c2, c3);
     }
 
 use_path "use path"
-	= items:id_item|1..,'.'| {
-    	return node(Kind.qualifiedName, text(), location(), { members: items });
+	= head:use_path_part tail:(c1:_ '.' part:use_path_part { return {comment: c1, part: part, loc: location() }; })* {
+    	debugger;
+    	const result = [head];
+        if (tail) {
+        	let last = 0;
+        	for (const item of tail) {
+            	const prev = result[last];
+                if (item.comment !== undefined && item.comment !== null) {
+                	const comment = item.comment;
+                	if (prev.comments === undefined) {
+                    	prev.comments = [undefined];
+                    }
+                    prev.comments.push(comment);
+                    prev.text = prev.text + comment.text;
+                    prev.range.end = comment.range.end;
+                }
+                result.push(item.part);
+            	last++;
+            }
+        }
+        return  node(Kind.qualifiedName, text(), location(), { members: result });
+    }
+
+use_path_part
+	= c1:_ id:id {
+    	return node(Kind.id, text(), location(), { name: id.name }, c1);
     }
 
 use_names_list "use names"
@@ -387,12 +407,18 @@ ty "built in types"
 
 ty_item "build in type with comment"
 	= c1:_ type:ty c2:_ {
-    	return attachComments(type, c1, c2);
+    	const result = Object.assign({}, type);
+    	result.text = text();
+        result.range = range(location());
+    	return attachComments(result, c1, c2);
     }
 
 ty_item_ "build in type with comment"
 	= c1:_ type:ty c2:__ {
-    	return attachComments(type, c1, c2);
+    	const result = Object.assign({}, type);
+    	result.text = text();
+        result.range = range(location());
+    	return attachComments(result, c1, c2);
     }
 
 tuple "tuple type"
@@ -430,7 +456,7 @@ result "result type"
 
 no_result "no result"
 	= c1:_ '_' c2:_ {
-    	return node(Kind.noResult, text(), location());
+    	return node(Kind.noResult, text(), location(), c1, c2);
     }
 
 handle "handle type"
@@ -441,17 +467,17 @@ handle "handle type"
 
 id_item
 	= c1:_ id:id c2:_ {
-    	return attachComments(id, c1, c2);
+    	return node(Kind.id, text(), location(), { name: id.name }, c1, c2);
     }
 
 id_item_
 	= c1:_ id:id c2:__ {
-    	return attachComments(id, c1, c2);
+    	return node(Kind.id, text(), location(), { name: id.name }, c1, c2);
     }
 
 id "id"
-	= name {
-    	return node(Kind.id, text(), location());
+	= name:name {
+    	return node(Kind.id, text(), location(), { name: name.text });
     }
 
 name "name"
@@ -546,7 +572,7 @@ string "string"
     }
 
 __ "whitespace end of line"
-	= space:[ ]* comment:(singleLineComment / multiLineCommentOneLine+)? {
+	= space:[ \t]* comment:(singleLineComment / multiLineCommentOneLine+)? {
     	return comment;
     }
 
@@ -578,9 +604,9 @@ lineTerminator
 	= [\n\r]
 
 lineTerminatorSequence "end of line"
-	= "\n"
-    / "\r"
-    / "\r\n"
+	= '\n'
+    / '\r'
+    / '\r\n'
 
 s "whitespace"
 	= [ \t\n\r] {
