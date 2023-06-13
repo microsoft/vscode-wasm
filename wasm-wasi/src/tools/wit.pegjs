@@ -1,5 +1,10 @@
 {{
 	const Kind = {
+    	document: 'document',
+    	world: 'world',
+        export: 'export',
+        import: 'import',
+        interfaceType: 'interfaceType',
     	interface: 'interface',
     	type: 'type',
         variant: 'variant',
@@ -148,14 +153,11 @@
     }
 }}
 
-start =
- 	// comment
-	interface_item
-    _
-    // __
+start = wit_document
 
 reservedWord "reserved words"
- 	= 'interface'
+ 	= 'world'
+    / 'interface'
     / 'use'
 	/ 'func'
     / 'variant'
@@ -171,6 +173,45 @@ reservedWord "reserved words"
     / 'borrow'
 	/ baseTypes
 
+wit_document
+	= members:(world_item / interface_item)* c1:_ {
+    	return node(Kind.document, text(), location(), { members }, c1);
+    }
+
+world_item "world declaration"
+	= c1:_ 'default'? c2:_ 'world' c3:_ name:id c4:_ '{' members:world_items c5:_ '}' c6:__ {
+    	return node(Kind.world, text(), location(), { name, members }, c1, c2, c3, c4, c5, c6);
+    }
+
+world_items
+	= world_members|0.., lineTerminatorSequence|
+
+world_members
+	= export_item
+    / import_item
+    / use_item
+    / typedef_item
+
+export_item
+	= c1:_ 'export' c2:_ name:id c3:_ ':' type:extern_type c4:__ {
+    	return node(Kind.export, text(), location(), { name, type }, c1, c2, c3, c4);
+    }
+
+import_item
+	= c1:_ 'import' c2:_ name:id c3:_ ':' type:extern_type c4:__ {
+    	return node(Kind.import, text(), location(), { name, type }, c1, c2, c3, c4);
+    }
+
+extern_type
+	= func_type
+    / interface_type
+
+interface_type "interface type"
+	= c1:_ 'interface' c2:_ '{' members:interface_items c3:_ '}' c4:__ {
+    	return node(Kind.interfaceType, text(), location(), { name, members }, c1, c2, c3, c4);
+    }
+    / use_path
+
 interface_item "interface declaration"
 	= c1:_ 'default'? c2:_ 'interface' c3:_ name:id c4:_ '{' members:interface_items c5:_ '}' c6:__ {
      	return node(Kind.interface, text(), location(), { name, members }, c1, c2, c3, c4, c5, c6);
@@ -178,7 +219,6 @@ interface_item "interface declaration"
 
 interface_items
     = interface_member|.., lineTerminatorSequence|
-	/ interface_member
 
 interface_member
     = typedef_item
