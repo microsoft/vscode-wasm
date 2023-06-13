@@ -183,10 +183,10 @@ world_items
 	= world_members|.., lineTerminatorSequence|
 
 world_members
-	// = export_item
-    = import_item
-    // / use_item
-    // / typedef_item
+	= export_item
+    / import_item
+    / use_item
+    / typedef_item
 
 export_item
 	= c1:_ 'export' c2:_ name:id c3:_ ':' type:extern_type c4:__ {
@@ -321,8 +321,7 @@ use_item "use"
     }
 
 use_path "use path"
-	= head:use_path_part tail:(c1:_ '.' part:use_path_part { return {comment: c1, part: part, loc: location() }; })* {
-    	debugger;
+	= head:use_path_part tail:(c1:_ '.' part:use_path_part { return {comment: c1, part: part, loc: location(), text: text() }; })* {
     	const result = [head];
         if (tail) {
         	let last = 0;
@@ -334,7 +333,7 @@ use_path "use path"
                     	prev.comments = [undefined];
                     }
                     prev.comments.push(comment);
-                    prev.text = prev.text + comment.text;
+                    prev.text = prev.text + input.substring(item.loc.start.offset, comment.range.end.offset);
                     prev.range.end = comment.range.end;
                 }
                 result.push(item.part);
