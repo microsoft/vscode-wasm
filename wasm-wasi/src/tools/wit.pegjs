@@ -9,6 +9,7 @@
         flags: 'flags',
         enum: 'enum',
         field: 'field',
+        use: 'use',
         tuple: 'tuple',
         list: 'list',
         option: 'option',
@@ -135,10 +136,12 @@
 start =
  	// comment
 	interface_item
+    _
     // __
 
 reservedWord "reserved words"
  	= 'interface'
+    / 'use'
 	/ 'func'
     / 'variant'
     / 'record'
@@ -164,6 +167,7 @@ interface_items
 
 interface_part
     = typedef_item
+    / use_item
 
 typedef_item
 	= variant_items
@@ -251,15 +255,34 @@ enum_cases "enum cases"
     }
     / enum_case
 
-enum_case "enum_case"
+enum_case "enum case"
 	= c1:_ name:identifier c2:_ {
     	return attachComments(name, c1, c2);
     }
 
-type_item
+type_item "type"
 	= c1:_ 'type' c2:_ name:identifier c3:_ '=' c4:_ type:ty c5:__ {
     	return node(Kind.type, text(), location(), { name, type }, c1, c2, c3, c4, c5);
     }
+
+use_item "use"
+	= c1:_ 'use' c2:_ use_path c3:_ '.' c4:_ '{' members:use_names_list c5:_ '}' c6:__ {
+    	return node(Kind.use, text(), location(), {members }, c1, c2, c3, c4, c5, c6);
+    }
+
+use_path "use path"
+	=
+
+use_names_list "use names"
+	= items:use_names_item|1..,| sep:','? {
+    }
+
+use_names_item
+	= id_item
+    / id_item 'as' id_item {
+    	return
+    }
+
 
 ty "built in types"
 	= baseTypes
