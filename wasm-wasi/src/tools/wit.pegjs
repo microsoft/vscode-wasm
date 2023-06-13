@@ -10,6 +10,12 @@
         enum: 'enum',
         field: 'field',
         use: 'use',
+        func: 'func',
+        funcSignature: 'funcSignature',
+        funcParams: 'funcParams',
+        funcResult: 'funcResult',
+        namedFuncResult: 'namedFuncResult',
+        namedType: 'namedType',
         tuple: 'tuple',
         list: 'list',
         option: 'option',
@@ -177,6 +183,7 @@ interface_items
 interface_member
     = typedef_item
     / use_item
+    / func_item
 
 typedef_item
 	= variant_items
@@ -197,8 +204,8 @@ variant_cases "variant cases"
     }
 
 variant_case
-	= c1:_ name:id c2:_ '(' c3:_ type:ty c4:_ ')' c5:__ {
-    	return node(Kind.variantCase, text(), location(), { name, type }, c1, c2, c3, c4, c5 );
+	= c1:_ name:id c2:_ '(' type:ty_item ')' c3:__ {
+    	return node(Kind.variantCase, text(), location(), { name, type }, c1, c2, c3 );
     }
     / c1:_ name:id c2:__ {
     	return node(Kind.variantCase, text(), location(), { name }, c1, c2);
@@ -215,8 +222,8 @@ record_fields
     }
 
 record_field
-	= c1:_ name:id c2:_ ':' c3:_ type:ty c4:__ {
-    	return node(Kind.field, text(), location(), { name, type }, c1, c2, c3, c4);
+	= name:id_item ':' type:ty_item_ {
+    	return node(Kind.field, text(), location(), { name, type });
     }
 
 union_items "union"
@@ -230,8 +237,8 @@ union_cases "union cases"
     }
 
 union_case "union case"
-	= c1:_ type:ty c2:_ {
-    	return attachComments(type, c1, c2);
+	= type:ty_item {
+    	return type;
     }
 
 flags_items "flags"
@@ -245,8 +252,8 @@ flags_fields "flag fields"
     }
 
 flags_field "flag field"
-	= c1:_ name:id c2:_ {
-    	return attachComments(name, c1, c2);
+	= name:id_item {
+    	return name;
     }
 
 enum_items "enums"
@@ -260,8 +267,8 @@ enum_cases "enum cases"
     }
 
 enum_case "enum case"
-	= c1:_ name:id c2:_ {
-    	return attachComments(name, c1, c2);
+	= name:id_item {
+    	return name;
     }
 
 type_item "type"
@@ -293,6 +300,41 @@ use_names_item
     }
 	/ id_item
 
+func_item "function"
+	= name:id_item ':' signature:func_type {
+    	return node(Kind.func, text(), location(), { name, signature });
+    }
+
+func_type
+	= c1:_ 'func' c2:_ params:param_list c3:_ result:result_list c4:__ {
+    	return node(Kind.funcSignature, text(), location(), { params, result }, c1, c2, c3, c4);
+    }
+	/ c1:_ 'func' c2:_ params:param_list c3:__ {
+    	return node(Kind.funcSignature, text(), location(), { params }, c1, c2, c3);
+    }
+
+param_list
+	= '(' members:named_type_list c1:_ ')' {
+    	return node(Kind.funcParams, text(), location(), { members }, c1);
+    }
+
+result_list
+	= '->' c1:_ '(' members:named_type_list c2:_ ')' {
+    	return node(Kind.namedFuncResult, text(), location(), { members }, c1, c2);
+    }
+	/ '->' c1:_ type:ty {
+    	return node(Kind.funcResult, text(), location(), { type }, c1);
+    }
+
+named_type_list
+	= items:named_type|0..,','| {
+    	return items;
+    }
+
+named_type
+	= name:id_item ':' type:ty_item {
+    	return node(Kind.namedType, text(), location(), { name, type });
+    }
 
 ty "built in types"
 	= baseTypes
@@ -305,6 +347,11 @@ ty "built in types"
 
 ty_item "build in type with comment"
 	= c1:_ type:ty c2:_ {
+    	return attachComments(type, c1, c2);
+    }
+
+ty_item_ "build in type with comment"
+	= c1:_ type:ty c2:__ {
     	return attachComments(type, c1, c2);
     }
 
@@ -354,6 +401,11 @@ handle "handle type"
 
 id_item
 	= c1:_ id:id c2:_ {
+    	return attachComments(id, c1, c2);
+    }
+
+id_item_
+	= c1:_ id:id c2:__ {
     	return attachComments(id, c1, c2);
     }
 
