@@ -130,9 +130,11 @@
     function node(kind, text, loc, props, ...comments) {
     	let result = {
         	kind: kind,
-            text: text,
             range: range(loc)
         };
+        if (kind === Kind.name) {
+        	result.text = text;
+        }
         const allComments = [];
         if (typeof props === 'object' && (props.kind === Kind.multiLineComment || props.kind === Kind.multiLineCommentOneLine || props.kind === Kind.singleLineComment || props.kind === Kind.commentBlock)) {
         	allComments.push(props);
@@ -205,8 +207,8 @@ export_item
     }
 
 import_item
-	= c1:_ 'import' c2:_ name:id c3:_ ':' type:use_path c4:__ {
-    	return node(Kind.import, text(), location(), { name, type }, c1, c2, c3);
+	= c1:_ 'import' c2:_ name:id c3:__ {
+    	return node(Kind.import, text(), location(), { name }, c1, c2, c3);
     }
 
 extern_type
@@ -331,7 +333,7 @@ use_item "use"
     	return node(Kind.use, text(), location(), { from: pack, item, members }, c1, c2, c3, c4, c5, c6, c7);
     }
 	/ c1:_ 'use' c2:_ pack:package_id c3:_ '/' c4:_ item:id c5:__ {
-    	return node(Kind.use, text(), location(), { package: pack, item }, c1, c2, c3, c4, c5);
+    	return node(Kind.use, text(), location(), { from: pack, item }, c1, c2, c3, c4, c5);
     }
     / c1:_ 'use' item:id_item '.' c2:_ '{' members:use_names_list c3:_  '}' c4:__ {
     	return node(Kind.use, text(), location(), { item, members }, c1, c2, c3, c4);
