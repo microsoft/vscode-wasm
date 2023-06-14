@@ -406,7 +406,7 @@ result_list
     }
 
 named_type_list
-	= items:named_type|0..,','| {
+	= items:named_type|0..,','| sep:','? {
     	return items;
     }
 
