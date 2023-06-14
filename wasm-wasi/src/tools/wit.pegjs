@@ -1,6 +1,9 @@
 {{
 	const Kind = {
     	document: 'document',
+        package: 'package',
+        packageId: 'packageId',
+        version: 'version',
     	world: 'world',
         export: 'export',
         import: 'import',
@@ -149,29 +152,37 @@
 
 start = wit_document
 
-reservedWord "reserved words"
- 	= 'world'
-    / 'import'
-    / 'export'
-    / 'interface'
-    / 'use'
-	/ 'func'
-    / 'variant'
-    / 'record'
-    / 'union'
-    / 'flags'
-    / 'enum'
-    / 'type'
-    / 'tuple'
-    / 'list'
-    / 'option'
-    / 'result'
-    / 'borrow'
-	/ baseTypes
-
 wit_document
-	= members:(world_item / interface_item)* c1:_ {
-    	return node(Kind.document, text(), location(), { members }, c1);
+	= pack:package_item? members:(world_item / interface_item)* c1:_ {
+    	const props = {};
+        if (pack !== null && pack !== undefined) {
+        	props.package = pack;
+        }
+        props.members = members ?? [];
+    	return node(Kind.document, text(), location(), props, c1);
+    }
+
+package_item "package declaration"
+	= c1:_ 'package' c2:_ id:package_id c3:__ {
+    	return node(Kind.package, text(), location(), { id }, c1, c2, c3);
+    }
+
+package_id "package id"
+	= namespace:(namespace:id_item ':' { return namespace; })? name:id_item version:('@' version:version_number { return version; })? c1:__ {
+    	const props = {};
+        if (namespace !== null && namespace !== undefined) {
+        	props.namespace = namespace;
+        }
+        props.name = name;
+        if (version !== null && version !== undefined) {
+        	props.version = version;
+        }
+    	return node(Kind.packageId, text(), location(), props, c1);
+    }
+
+version_number "version number"
+	= [^ \t\n\r]+ {
+    	return node(Kind.version, text(), location());
     }
 
 world_item "world declaration"
@@ -313,11 +324,20 @@ type_item "type"
     }
 
 use_item "use"
-	= c1:_ 'use' c2:_ path:use_path c3:_ '.' c4:_ '{' members:use_names_list c5:_ '}' c6:__ {
-    	return node(Kind.use, text(), location(), { path, members }, c1, c2, c3, c4, c5, c6);
+	= c1:_ 'use' c2:_ pack:package_id c3:_ '/' c4:_ item:id c5:_ 'as' c6:_ as:id c7:__ {
+    	return node(Kind.use, text(), location(), { package: pack, item, as}, c1, c2, c3, c4, c5, c6, c7);
     }
-    / c1:_ 'use' c2:_ path:use_path c3:__ {
-    	return node(Kind.use, text(), location(), { path }, c1, c2, c3);
+	/ c1:_ 'use' c2:_ pack:package_id c3:_ '/' c4:_ item:id_item '.' c5:_ '{' members:use_names_list c6:_ '}' c7:__ {
+    	return node(Kind.use, text(), location(), { from: pack, item, members }, c1, c2, c3, c4, c5, c6, c7);
+    }
+	/ c1:_ 'use' c2:_ pack:package_id c3:_ '/' c4:_ item:id c5:__ {
+    	return node(Kind.use, text(), location(), { package: pack, item }, c1, c2, c3, c4, c5);
+    }
+    / c1:_ 'use' item:id_item '.' c2:_ '{' members:use_names_list c3:_  '}' c4:__ {
+    	return node(Kind.use, text(), location(), { item, members }, c1, c2, c3, c4);
+    }
+	/ c1:_ 'use' item:id_item_ {
+    	return node(Kind.use, text(), location(), { item }, c1);
     }
 
 use_path "use path"
@@ -421,8 +441,8 @@ ty_item_ "build in type with comment"
     }
 
 tuple "tuple type"
-	= 'tuple' c1:_ '<' list:tupleList '>' c2:__ {
-    	return node(Kind.tuple, text(), location(), { items: list }, c1, c2);
+	= 'tuple' c1:_ '<' list:tupleList '>' {
+    	return node(Kind.tuple, text(), location(), { items: list }, c1);
     }
 
 tupleList "tuple element list"
@@ -430,24 +450,24 @@ tupleList "tuple element list"
 	/ ty_item
 
 list "element list"
-	= 'list' _ '<' type:ty_item '>' {
-    	return node(Kind.list, text(), location(), { type });
+	= 'list' c1:_ '<' type:ty_item '>' {
+    	return node(Kind.list, text(), location(), { type }, c1);
     }
 
 option "option type"
-	= 'option' _ '<' type:ty_item '>' {
-    	return node(Kind.option, text(), location(), { type });
+	= 'option' c1:_ '<' type:ty_item '>' {
+    	return node(Kind.option, text(), location(), { type }, c1);
     }
 
 result "result type"
-	= 'result' _ '<' result:ty_item ',' error:ty_item '>' {
-    	return node(Kind.result, text(), location(), { result, error });
+	= 'result' c1:_ '<' result:ty_item ',' error:ty_item '>' {
+    	return node(Kind.result, text(), location(), { result, error }, c1);
     }
-    / 'result' _ '<' result:no_result ',' error:ty_item '>' {
-    	return node(Kind.result, text(), location(), { result, error });
+    / 'result' c1:_ '<' result:no_result ',' error:ty_item '>' {
+    	return node(Kind.result, text(), location(), { result, error }, c1);
     }
-    / 'result' _ '<' error:ty_item '>' {
-    	return node(Kind.result, text(), location(), { result: undefined, error });
+    / 'result' c1:_ '<' error:ty_item '>' {
+    	return node(Kind.result, text(), location(), { result: undefined, error }, c1);
     }
     / 'result' {
     	return node(Kind.result, text(), location(), { result: undefined, error: undefined });
@@ -479,13 +499,35 @@ id "id"
     	return node(Kind.id, text(), location(), { name: name.text });
     }
 
+reservedWord "reserved words"
+ 	= 'package'
+    / 'world'
+    / 'import'
+    / 'export'
+    / 'interface'
+    / 'use'
+	/ 'func'
+    / 'variant'
+    / 'record'
+    / 'union'
+    / 'flags'
+    / 'enum'
+    / 'type'
+    / 'tuple'
+    / 'list'
+    / 'option'
+    / 'result'
+    / 'borrow'
+	/ baseTypes
+
 name "name"
-	= !reservedWord label {
+    = '%'label {
     	return node(Kind.name, text(), location());
     }
-    / '%'label {
+	/ !(reservedWord (' ' / comment / lineTerminator)) label {
     	return node(Kind.name, text(), location());
     }
+
 
 label "label"
 	= word|1..,'-'| {
