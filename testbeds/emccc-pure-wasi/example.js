@@ -865,14 +865,14 @@ function initRuntime() {
 
   checkStackCookie();
 
-  
+
   callRuntimeCallbacks(__ATINIT__);
 }
 
 function preMain() {
   checkStackCookie();
   if (ENVIRONMENT_IS_PTHREAD) return; // PThreads reuse the runtime from the main thread.
-  
+
   callRuntimeCallbacks(__ATMAIN__);
 }
 
@@ -1300,7 +1300,7 @@ var tempI64;
 // === Body ===
 
 var ASM_CONSTS = {
-  
+
 };
 
 
@@ -1322,19 +1322,19 @@ var ASM_CONSTS = {
       delete PThread.pthreads[pthread_ptr];
       worker.terminate();
       __emscripten_thread_free_data(pthread_ptr);
-      // The worker was completely nuked (not just the pthread execution it was hosting), so remove it from running workers
+      // The worker was completely destroyed (not just the pthread execution it was hosting), so remove it from running workers
       // but don't put it back to the pool.
       PThread.runningWorkers.splice(PThread.runningWorkers.indexOf(worker), 1); // Not a running Worker anymore.
       worker.pthread_ptr = 0;
     }
-  
+
   function cancelThread(pthread_ptr) {
       assert(!ENVIRONMENT_IS_PTHREAD, 'Internal Error! cancelThread() can only ever be called from main application thread!');
       assert(pthread_ptr, 'Internal Error! Null pthread_ptr in cancelThread!');
       var worker = PThread.pthreads[pthread_ptr];
       worker.postMessage({ 'cmd': 'cancel' });
     }
-  
+
   function cleanupThread(pthread_ptr) {
       assert(!ENVIRONMENT_IS_PTHREAD, 'Internal Error! cleanupThread() can only ever be called from main application thread!');
       assert(pthread_ptr, 'Internal Error! Null pthread_ptr in cleanupThread!');
@@ -1342,28 +1342,28 @@ var ASM_CONSTS = {
       assert(worker);
       PThread.returnWorkerToPool(worker);
     }
-  
+
   function zeroMemory(address, size) {
       HEAPU8.fill(0, address, address + size);
       return address;
     }
-  
+
   function spawnThread(threadParams) {
       assert(!ENVIRONMENT_IS_PTHREAD, 'Internal Error! spawnThread() can only ever be called from main application thread!');
       assert(threadParams.pthread_ptr, 'Internal error, no pthread ptr!');
-  
+
       var worker = PThread.getNewWorker();
       if (!worker) {
         // No available workers in the PThread pool.
         return 6;
       }
       assert(!worker.pthread_ptr, 'Internal error!');
-  
+
       PThread.runningWorkers.push(worker);
-  
+
       // Add to pthreads map
       PThread.pthreads[threadParams.pthread_ptr] = worker;
-  
+
       worker.pthread_ptr = threadParams.pthread_ptr;
       var msg = {
           'cmd': 'run',
@@ -1382,7 +1382,7 @@ var ASM_CONSTS = {
       }
       return 0;
     }
-  
+
   var SYSCALLS = {varargs:undefined,get:function() {
         assert(SYSCALLS.varargs != undefined);
         SYSCALLS.varargs += 4;
@@ -1392,11 +1392,11 @@ var ASM_CONSTS = {
         var ret = UTF8ToString(ptr);
         return ret;
       }};
-  
+
   function _proc_exit(code) {
     if (ENVIRONMENT_IS_PTHREAD)
       return _emscripten_proxy_to_main_thread_js(1, 1, code);
-    
+
       EXITSTATUS = code;
       if (!keepRuntimeAlive()) {
         PThread.terminateAllThreads();
@@ -1404,15 +1404,15 @@ var ASM_CONSTS = {
         ABORT = true;
       }
       quit_(code, new ExitStatus(code));
-    
+
   }
-  
+
   /** @param {boolean|number=} implicit */
   function exitJS(status, implicit) {
       EXITSTATUS = status;
-  
+
       checkUnflushedContent();
-  
+
       if (!implicit) {
         if (ENVIRONMENT_IS_PTHREAD) {
           // When running in a pthread we propagate the exit back to the main thread
@@ -1424,21 +1424,21 @@ var ASM_CONSTS = {
         } else {
         }
       }
-  
+
       // if exit() was called explicitly, warn the user if the runtime isn't actually being shut down
       if (keepRuntimeAlive() && !implicit) {
         var msg = 'program exited (with status: ' + status + '), but EXIT_RUNTIME is not set, so halting execution but not exiting the runtime or preventing further async execution (build with EXIT_RUNTIME=1, if you want a true shutdown)';
         err(msg);
       }
-  
+
       _proc_exit(status);
     }
   var _exit = exitJS;
-  
+
   function ptrToString(ptr) {
       return '0x' + ptr.toString(16).padStart(8, '0');
     }
-  
+
   function handleException(e) {
       // Certain exception types we do not treat as errors since they are used for
       // internal control flow.
@@ -1463,7 +1463,7 @@ var ASM_CONSTS = {
           PThread.allocateUnusedWorker();
         }
       },initWorker:function() {
-  
+
         // The default behaviour for pthreads is always to exit once they return
         // from their entry point (or call pthread_exit).  If we set noExitRuntime
         // to true here on pthreads they would never complete and attempt to
@@ -1480,12 +1480,12 @@ var ASM_CONSTS = {
           assert(worker);
           PThread.returnWorkerToPool(worker);
         }
-  
+
         // At this point there should be zero pthreads and zero runningWorkers.
         // All workers should be now be the unused queue.
         assert(Object.keys(PThread.pthreads).length === 0);
         assert(PThread.runningWorkers.length === 0);
-  
+
         for (var worker of PThread.unusedWorkers) {
           // This Worker should not be hosting a pthread at this time.
           assert(!worker.pthread_ptr);
@@ -1509,7 +1509,7 @@ var ASM_CONSTS = {
         // Detach the worker from the pthread object, and return it to the
         // worker pool as an unused worker.
         worker.pthread_ptr = 0;
-  
+
         // Finally, free the underlying (and now-unused) pthread structure in
         // linear memory.
         __emscripten_thread_free_data(pthread_ptr);
@@ -1527,7 +1527,7 @@ var ASM_CONSTS = {
           // emscripten_set_mousemove_callback()), so keep track in a globally
           // accessible variable about the thread that initiated the proxying.
           if (worker.pthread_ptr) PThread.currentProxiedOperationCallerThread = worker.pthread_ptr;
-  
+
           // If this message is intended to a recipient that is not the main thread, forward it to the target thread.
           if (d['targetThread'] && d['targetThread'] != _pthread_self()) {
             var targetWorker = PThread.pthreads[d.targetThread];
@@ -1539,7 +1539,7 @@ var ASM_CONSTS = {
             PThread.currentProxiedOperationCallerThread = undefined;
             return;
           }
-  
+
           if (cmd === 'processProxyingQueue') {
             executeNotifiedProxyingQueue(d['queue']);
           } else if (cmd === 'spawnThread') {
@@ -1580,7 +1580,7 @@ var ASM_CONSTS = {
           }
           PThread.currentProxiedOperationCallerThread = undefined;
         };
-  
+
         worker.onerror = (e) => {
           var message = 'worker sent an error!';
           if (worker.pthread_ptr) {
@@ -1589,7 +1589,7 @@ var ASM_CONSTS = {
           err(message + ' ' + e.filename + ':' + e.lineno + ': ' + e.message);
           throw e;
         };
-  
+
         if (ENVIRONMENT_IS_NODE) {
           worker.on('message', function(data) {
             worker.onmessage({ data: data });
@@ -1602,10 +1602,10 @@ var ASM_CONSTS = {
             // See: https://github.com/emscripten-core/emscripten/issues/9763
           });
         }
-  
+
         assert(wasmMemory instanceof WebAssembly.Memory, 'WebAssembly memory should have been loaded by now!');
         assert(wasmModule instanceof WebAssembly.Module, 'WebAssembly Module should have been loaded by now!');
-  
+
         // Ask the new worker to load up the Emscripten-compiled page. This is a heavy operation.
         worker.postMessage({
           'cmd': 'load',
@@ -1633,7 +1633,7 @@ var ASM_CONSTS = {
           'If you want to increase the pool size, use setting `-sPTHREAD_POOL_SIZE=...`.'
           + '\nIf you want to throw an explicit error instead of the risk of deadlocking in those cases, use setting `-sPTHREAD_POOL_SIZE_STRICT=2`.'
           );
-  
+
           PThread.allocateUnusedWorker();
           PThread.loadWasmModuleToWorker(PThread.unusedWorkers[0]);
         }
@@ -1680,31 +1680,31 @@ var ASM_CONSTS = {
       // Set stack limits used by `emscripten/stack.h` function.  These limits are
       // cached in wasm-side globals to make checks as fast as possible.
       _emscripten_stack_set_limits(stackTop, stackMax);
-  
+
       // Call inside wasm module to set up the stack frame for this pthread in wasm module scope
       stackRestore(stackTop);
-  
+
       // Write the stack cookie last, after we have set up the proper bounds and
       // current position of the stack.
       writeStackCookie();
     }
   Module["establishStackSpace"] = establishStackSpace;
 
-  
+
   function exitOnMainThread(returnCode) {
     if (ENVIRONMENT_IS_PTHREAD)
       return _emscripten_proxy_to_main_thread_js(2, 0, returnCode);
-    
+
       try {
         _exit(returnCode);
       } catch (e) {
         handleException(e);
       }
-    
-  }
-  
 
-  
+  }
+
+
+
     /**
      * @param {number} ptr
      * @param {string} type
@@ -1777,7 +1777,7 @@ var ASM_CONSTS = {
       PThread.tlsInitFunctions.push(tlsInitFunc);
     }
 
-  
+
     /**
      * @param {number} ptr
      * @param {number} value
@@ -1845,43 +1845,43 @@ var ASM_CONSTS = {
       else postMessage({ 'cmd': 'cleanupThread', 'thread': thread });
     }
 
-  
+
   function pthreadCreateProxied(pthread_ptr, attr, startRoutine, arg) {
     if (ENVIRONMENT_IS_PTHREAD)
       return _emscripten_proxy_to_main_thread_js(3, 1, pthread_ptr, attr, startRoutine, arg);
-    
+
       return ___pthread_create_js(pthread_ptr, attr, startRoutine, arg);
-    
+
   }
-  
+
   function ___pthread_create_js(pthread_ptr, attr, startRoutine, arg) {
       if (typeof SharedArrayBuffer == 'undefined') {
         err('Current environment does not support SharedArrayBuffer, pthreads are not available!');
         return 6;
       }
-  
+
       // List of JS objects that will transfer ownership to the Worker hosting the thread
       var transferList = [];
       var error = 0;
-  
+
       // Synchronously proxy the thread creation to main thread if possible. If we
       // need to transfer ownership of objects, then proxy asynchronously via
       // postMessage.
       if (ENVIRONMENT_IS_PTHREAD && (transferList.length === 0 || error)) {
         return pthreadCreateProxied(pthread_ptr, attr, startRoutine, arg);
       }
-  
+
       // If on the main thread, and accessing Canvas/OffscreenCanvas failed, abort
       // with the detected error.
       if (error) return error;
-  
+
       var threadParams = {
         startRoutine,
         pthread_ptr,
         arg,
         transferList,
       };
-  
+
       if (ENVIRONMENT_IS_PTHREAD) {
         // The prepopulated pool of web workers that can host pthreads is stored
         // in the main JS thread. Therefore if a pthread is attempting to spawn a
@@ -1892,7 +1892,7 @@ var ASM_CONSTS = {
         // creation synchronously today, so we have to assume success and return 0.
         return 0;
       }
-  
+
       // We are the main thread, so we have the pthread warmup pool in this
       // thread and can fire off JS thread creation directly ourselves.
       return spawnThread(threadParams);
@@ -1951,11 +1951,11 @@ var ASM_CONSTS = {
 
   function _emscripten_check_blocking_allowed() {
       if (ENVIRONMENT_IS_NODE) return;
-  
+
       if (ENVIRONMENT_IS_WORKER) return; // Blocking in a worker/pthread is fine.
-  
+
       warnOnce('Blocking on the main thread is very dangerous, see https://emscripten.org/docs/porting/pthreads.html#blocking-on-the-main-browser-thread');
-  
+
     }
 
   var _emscripten_get_now;if (ENVIRONMENT_IS_NODE) {
@@ -2000,7 +2000,7 @@ var ASM_CONSTS = {
         return _emscripten_run_in_main_runtime_thread_js(index, serializedNumCallArgs, args, sync);
       });
     }
-  
+
   var _emscripten_receive_on_main_thread_js_callArgs = [];
   function _emscripten_receive_on_main_thread_js(index, numCallArgs, args) {
       _emscripten_receive_on_main_thread_js_callArgs.length = numCallArgs;
@@ -2019,7 +2019,7 @@ var ASM_CONSTS = {
   function getHeapMax() {
       return HEAPU8.length;
     }
-  
+
   function abortOnCannotGrowMemory(requestedSize) {
       abort('Cannot enlarge memory arrays to size ' + requestedSize + ' bytes (OOM). Either (1) compile with -sINITIAL_MEMORY=X with X higher than the current value ' + HEAP8.length + ', (2) compile with -sALLOW_MEMORY_GROWTH which allows increasing the size at runtime, or (3) if you want malloc to return NULL (0) instead of this abort, compile with -sABORTING_MALLOC=0');
     }
@@ -2051,11 +2051,11 @@ var ASM_CONSTS = {
       if (printCharBuffers[1].length) printChar(1, 10);
       if (printCharBuffers[2].length) printChar(2, 10);
     }
-  
+
   function _fd_write(fd, iov, iovcnt, pnum) {
     if (ENVIRONMENT_IS_PTHREAD)
       return _emscripten_proxy_to_main_thread_js(4, 1, fd, iov, iovcnt, pnum);
-    
+
       // hack to support printf in SYSCALLS_REQUIRE_FILESYSTEM=0
       var num = 0;
       for (var i = 0; i < iovcnt; i++) {
@@ -2069,9 +2069,9 @@ var ASM_CONSTS = {
       }
       HEAPU32[((pnum)>>2)] = num;
       return 0;
-    
+
   }
-  
+
 
 
   function uleb128Encode(n, target) {
@@ -2082,7 +2082,7 @@ var ASM_CONSTS = {
         target.push((n % 128) | 128, n >> 7);
       }
     }
-  
+
   function sigToWasmTypes(sig) {
       var typeNames = {
         'i': 'i32',
@@ -2102,7 +2102,7 @@ var ASM_CONSTS = {
       return type;
     }
   function convertJsFunctionToWasm(func, sig) {
-  
+
       // If the type reflection proposal is available, use the new
       // "WebAssembly.Function" constructor.
       // Otherwise, construct a minimal wasm module importing the JS function and
@@ -2110,7 +2110,7 @@ var ASM_CONSTS = {
       if (typeof WebAssembly.Function == "function") {
         return new WebAssembly.Function(sigToWasmTypes(sig), func);
       }
-  
+
       // The module is static, with the exception of the type section, which is
       // generated based on the signature passed in.
       var typeSectionBody = [
@@ -2126,14 +2126,14 @@ var ASM_CONSTS = {
         'f': 0x7d, // f32
         'd': 0x7c, // f64
       };
-  
+
       // Parameters, length + signatures
       uleb128Encode(sigParam.length, typeSectionBody);
       for (var i = 0; i < sigParam.length; ++i) {
         assert(sigParam[i] in typeCodes, 'invalid signature char: ' + sigParam[i]);
         typeSectionBody.push(typeCodes[sigParam[i]]);
       }
-  
+
       // Return values, length + signatures
       // With no multi-return in MVP, either 0 (void) or 1 (anything else)
       if (sigRet == 'v') {
@@ -2141,7 +2141,7 @@ var ASM_CONSTS = {
       } else {
         typeSectionBody.push(0x01, typeCodes[sigRet]);
       }
-  
+
       // Rest of the module is static
       var bytes = [
         0x00, 0x61, 0x73, 0x6d, // magic ("\0asm")
@@ -2151,7 +2151,7 @@ var ASM_CONSTS = {
       // Write the overall length of the type section followed by the body
       uleb128Encode(typeSectionBody.length, bytes);
       bytes.push.apply(bytes, typeSectionBody);
-  
+
       // The rest of the module is static
       bytes.push(
         0x02, 0x07, // import section
@@ -2161,7 +2161,7 @@ var ASM_CONSTS = {
           // (export "f" (func 0 (type 0)))
           0x01, 0x01, 0x66, 0x00, 0x00,
       );
-  
+
       // We can compile this wasm module synchronously because it is very small.
       // This accepts an import (at "e.f"), that it reroutes to an export (at "f")
       var module = new WebAssembly.Module(new Uint8Array(bytes));
@@ -2169,7 +2169,7 @@ var ASM_CONSTS = {
       var wrappedFunc = instance.exports['f'];
       return wrappedFunc;
     }
-  
+
   function updateTableMap(offset, count) {
       if (functionsInTableMap) {
         for (var i = offset; i < offset + count; i++) {
@@ -2181,9 +2181,9 @@ var ASM_CONSTS = {
         }
       }
     }
-  
+
   var functionsInTableMap = undefined;
-  
+
   var freeTableIndexes = [];
   function getEmptyTableSlot() {
       // Reuse a free index if there is one, otherwise grow.
@@ -2201,7 +2201,7 @@ var ASM_CONSTS = {
       }
       return wasmTable.length - 1;
     }
-  
+
   function setWasmTableEntry(idx, func) {
       wasmTable.set(idx, func);
       // With ABORT_ON_WASM_EXCEPTIONS wasmTable.get is overriden to return wrapped
@@ -2212,7 +2212,7 @@ var ASM_CONSTS = {
   /** @param {string=} sig */
   function addFunction(func, sig) {
       assert(typeof func != 'undefined');
-  
+
       // Check if the function is already in the table, to ensure each function
       // gets a unique index. First, create the map if this is the first use.
       if (!functionsInTableMap) {
@@ -2222,11 +2222,11 @@ var ASM_CONSTS = {
       if (functionsInTableMap.has(func)) {
         return functionsInTableMap.get(func);
       }
-  
+
       // It's not in the table, add it now.
-  
+
       var ret = getEmptyTableSlot();
-  
+
       // Set the new value.
       try {
         // Attempting to call this with JS function will cause of table.set() to fail
@@ -2239,9 +2239,9 @@ var ASM_CONSTS = {
         var wrapped = convertJsFunctionToWasm(func, sig);
         setWasmTableEntry(ret, wrapped);
       }
-  
+
       functionsInTableMap.set(func, ret);
-  
+
       return ret;
     }
 
@@ -2251,19 +2251,19 @@ var ASM_CONSTS = {
     }
 
   var ALLOC_NORMAL = 0;
-  
+
   var ALLOC_STACK = 1;
   function allocate(slab, allocator) {
       var ret;
       assert(typeof allocator == 'number', 'allocate no longer takes a type argument')
       assert(typeof slab != 'number', 'allocate no longer takes a number as arg0')
-  
+
       if (allocator == ALLOC_STACK) {
         ret = stackAlloc(slab.length);
       } else {
         ret = _malloc(slab.length);
       }
-  
+
       if (!slab.subarray && !slab.slice) {
         slab = new Uint8Array(slab);
       }
@@ -2307,12 +2307,12 @@ var ASM_CONSTS = {
       // will always evaluate to true. This saves on code size.
       while (!(idx >= maxIdx) && HEAPU16[idx]) ++idx;
       endPtr = idx << 1;
-  
+
       if (endPtr - ptr > 32 && UTF16Decoder) {
         return UTF16Decoder.decode(HEAPU8.slice(ptr, endPtr));
       } else {
         var str = '';
-  
+
         // If maxBytesToRead is not passed explicitly, it will be undefined, and the for-loop's condition
         // will always evaluate to true. The loop is then terminated on the first null char.
         for (var i = 0; !(i >= maxBytesToRead / 2); ++i) {
@@ -2321,7 +2321,7 @@ var ASM_CONSTS = {
           // fromCharCode constructs a character from a UTF-16 code unit, so we can pass the UTF16 string right through.
           str += String.fromCharCode(codeUnit);
         }
-  
+
         return str;
       }
     }
@@ -2355,7 +2355,7 @@ var ASM_CONSTS = {
   function UTF32ToString(ptr, maxBytesToRead) {
       assert(ptr % 4 == 0, 'Pointer passed to UTF32ToString must be aligned to four bytes!');
       var i = 0;
-  
+
       var str = '';
       // If maxBytesToRead is not passed explicitly, it will be undefined, and this
       // will always evaluate to true. This saves on code size.
@@ -2411,7 +2411,7 @@ var ASM_CONSTS = {
         if (codeUnit >= 0xD800 && codeUnit <= 0xDFFF) ++i; // possibly a lead surrogate, so skip over the tail surrogate.
         len += 4;
       }
-  
+
       return len;
     }
 
@@ -2432,7 +2432,7 @@ var ASM_CONSTS = {
   /** @deprecated @param {boolean=} dontAddNull */
   function writeStringToMemory(string, buffer, dontAddNull) {
       warnOnce('writeStringToMemory is deprecated and should not be called! Use stringToUTF8() instead!');
-  
+
       var /** @type {number} */ lastChar, /** @type {number} */ end;
       if (dontAddNull) {
         // stringToUTF8Array always appends null. If we don't want to do that, remember the
@@ -2477,7 +2477,7 @@ var ASM_CONSTS = {
       assert(func, 'Cannot call unknown function ' + ident + ', make sure it is exported');
       return func;
     }
-  
+
     /**
      * @param {string|null=} returnType
      * @param {Array=} argTypes
@@ -2503,16 +2503,16 @@ var ASM_CONSTS = {
           return ret;
         }
       };
-  
+
       function convertReturnValue(ret) {
         if (returnType === 'string') {
-          
+
           return UTF8ToString(ret);
         }
         if (returnType === 'boolean') return Boolean(ret);
         return ret;
       }
-  
+
       var func = getCFunc(ident);
       var cArgs = [];
       var stack = 0;
@@ -2533,12 +2533,12 @@ var ASM_CONSTS = {
         if (stack !== 0) stackRestore(stack);
         return convertReturnValue(ret);
       }
-  
+
       ret = onDone(ret);
       return ret;
     }
 
-  
+
     /**
      * @param {string=} returnType
      * @param {Array=} argTypes

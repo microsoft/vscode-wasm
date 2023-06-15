@@ -105,11 +105,6 @@ dist
 .tern-port
 
 testbeds/c/*.js
-testbeds/python/bin*
-testbeds/python/wasm
-testbeds/python/bin.tar
-testbeds/python/python.tar
-testbeds/coreutils/coreutils.wasm
 sync-api-tests/.vscode-test
 sync-api-tests/.vscode-test-web
 wasm-wasi-core/.vscode-test
@@ -121,6 +116,7 @@ wasm-wasi-core/.vscode-test-workspace/**/*
 *.o
 tmp/
 *.vsix
+testbeds/python/wasm/**
 !webshell/wasm/coreutils.wasm
 !wasm-wasi/example/hello.wasm
 !testbeds/cpp/out/hello.wasm
