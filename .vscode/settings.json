@@ -44,7 +44,8 @@
 		"./wasm-wasi",
 		"./webshell",
 		"./tools",
-		"./testbeds"
+		"./testbeds",
+		"./preview2"
 	],
 	"editor.codeActionsOnSave": {
 		"source.fixAll.eslint": true
