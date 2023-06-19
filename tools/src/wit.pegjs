@@ -29,7 +29,7 @@ const Kind = {
     list: 'list',
     option: 'option',
     result: 'result',
-    handle: 'handle',
+    borrow: 'borrow',
     qualifiedName: 'qualifiedName',
     rename: 'rename',
     u8: 'u8',
@@ -445,8 +445,8 @@ ty_item_ "build in type with comment"
     }
 
 tuple "tuple type"
-	= 'tuple' c1:_ '<' list:tupleList '>' {
-    	return node(Kind.tuple, text(), location(), { items: list }, c1);
+	= 'tuple' c1:_ '<' members:tupleList '>' {
+    	return node(Kind.tuple, text(), location(), { members: members }, c1);
     }
 
 tupleList "tuple element list"
