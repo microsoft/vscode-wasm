@@ -31,7 +31,7 @@ const Kind = {
     result: 'result',
     borrow: 'borrow',
     qualifiedName: 'qualifiedName',
-    rename: 'rename',
+    renamed: 'renamed',
     u8: 'u8',
     u16: 'u16',
     u32: 'u32',
@@ -379,7 +379,7 @@ use_names_list "use names"
 
 use_names_item
     = oldName:id_item 'as' newName:id_item {
-    	return node(Kind.rename, text(), location(), { oldName, newName });
+    	return node(Kind.renamed, text(), location(), { oldName, newName });
     }
 	/ id_item
 

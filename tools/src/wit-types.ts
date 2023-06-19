@@ -22,6 +22,7 @@ enum NodeKind {
 	enum = 'enum',
 	field = 'field',
 	use = 'use',
+	namedImports = 'namedImports',
 	func = 'func',
 	funcSignature = 'funcSignature',
 	funcParams = 'funcParams',
@@ -34,7 +35,7 @@ enum NodeKind {
 	result = 'result',
 	borrow = 'borrow',
 	qualifiedName = 'qualifiedName',
-	rename = 'rename',
+	renamed = 'renamed',
 	u8 = 'u8',
 	u16 = 'u16',
 	u32 = 'u32',
@@ -58,13 +59,30 @@ enum NodeKind {
 }
 
 export interface Document extends Node {
-	pack: PackageDeclaration;
-	members: (WorldDeclaration | InterfaceDeclaration)[];
+	kind: NodeKind.document;
+	pack?: PackageItem;
+	members: (WorldItem | InterfaceItem)[];
+}
+export namespace Document {
+	export function is(node: Node): node is Document {
+		return node.kind === NodeKind.document;
+	}
+	export function create(range: Range, members: (WorldItem | InterfaceItem)[], pack?: PackageItem): Document {
+		return { kind: NodeKind.document, range, parent: undefined, members, pack };
+	}
 }
 
-export interface PackageDeclaration extends Node {
+export interface PackageItem extends Node {
 	kind: NodeKind.package;
 	id: PackageIdentifier;
+}
+export namespace PackageItem {
+	export function is(node: Node): node is PackageItem {
+		return node.kind === NodeKind.package;
+	}
+	export function create(range: Range, id: PackageIdentifier): PackageItem {
+		return { kind: NodeKind.package, range, parent: undefined, id };
+	}
 }
 
 export interface PackageIdentifier extends Node {
@@ -73,7 +91,6 @@ export interface PackageIdentifier extends Node {
 	name: Identifier;
 	version?: VersionNumber;
 }
-
 export namespace PackageIdentifier {
 	export function is(node: Node): node is PackageIdentifier {
 		return node.kind === NodeKind.packageId;
@@ -87,7 +104,6 @@ export interface VersionNumber extends Node {
 	kind: NodeKind.versionNumber;
 	value: string;
 }
-
 export namespace VersionNumber {
 	export function is(node: Node): node is VersionNumber {
 		return node.kind === NodeKind.versionNumber;
@@ -97,22 +113,76 @@ export namespace VersionNumber {
 	}
 }
 
-export interface WorldDeclaration extends Node {
+export interface WorldItem extends Node {
 	kind: NodeKind.world;
+	name: Identifier;
+	members: WorldMember[];
 }
-
-export namespace WorldDeclaration {
-	export function is(node: Node): node is WorldDeclaration {
+export namespace WorldItem {
+	export function is(node: Node): node is WorldItem {
 		return node.kind === NodeKind.world;
 	}
-	export function create(range: Range): WorldDeclaration {
-		return { kind: NodeKind.world, range, parent: undefined };
+	export function create(range: Range, name: Identifier, members: WorldMember[]): WorldItem {
+		return { kind: NodeKind.world, range, parent: undefined, name, members };
 	}
 }
 
-export interface InterfaceDeclaration extends Node {
+export type WorldMember = ExportItem | UseItem | TypeDefItem;
+
+export interface ExportItem extends Node {
+	kind: NodeKind.export;
+	name: Identifier;
+	type: ExternType;
+}
+export namespace ExportItem {
+	export function is(node: Node): node is ExportItem {
+		return node.kind === NodeKind.export;
+	}
+	export function create(range: Range, name: Identifier, type: ExternType): ExportItem {
+		return { kind: NodeKind.export, range, parent: undefined, name, type };
+	}
+}
+
+export type ExternType = FuncType | InterfaceType;
+
+export interface ImportItem extends Node {
+	kind: NodeKind.import;
+	name: Identifier;
+}
+export namespace ImportItem {
+	export function is(node: Node): node is ImportItem {
+		return node.kind === NodeKind.import;
+	}
+	export function create(range: Range, name: Identifier): ImportItem {
+		return { kind: NodeKind.import, range, parent: undefined, name };
+	}
+}
+
+export interface InterfaceType extends Node {
+	kind: NodeKind.interfaceType;
+	members: InterfaceMember[];
+}
+export namespace InterfaceType {
+	export function is(node: Node): node is InterfaceType {
+		return node.kind === NodeKind.interfaceType;
+	}
+	export function create(range: Range, members: InterfaceMember[]): InterfaceType {
+		return { kind: NodeKind.interfaceType, range, parent: undefined, members };
+	}
+}
+
+export interface InterfaceItem extends Node {
 	kind: NodeKind.interface;
 	name: Identifier;
+	members: InterfaceMember[];
+}
+export namespace InterfaceItem {
+	export function is(node: Node): node is InterfaceItem {
+		return node.kind === NodeKind.interface;
+	}
+	export function create(range: Range, name: Identifier, members: InterfaceMember[]): InterfaceItem {
+		return { kind: NodeKind.interface, range, parent: undefined, name, members };
+	}
 }
 
 export type InterfaceMember = TypeDefItem | FuncItem | UseItem;
@@ -120,19 +190,19 @@ export type InterfaceMember = TypeDefItem | FuncItem | UseItem;
 export interface FuncItem extends Node {
 	kind: NodeKind.func;
 	name: Identifier;
-	signature: FuncSignature;
+	signature: FuncType;
 }
 
-export interface FuncSignature extends Node {
+export interface FuncType extends Node {
 	kind: NodeKind.funcSignature;
 	params: FuncParams;
 	result?: FuncResult | NamedFuncResult;
 }
-export namespace FuncSignature {
-	export function is(node: Node): node is FuncSignature {
+export namespace FuncType {
+	export function is(node: Node): node is FuncType {
 		return node.kind === NodeKind.funcSignature;
 	}
-	export function create(range: Range, params: FuncParams, result?: FuncResult | NamedFuncResult): FuncSignature {
+	export function create(range: Range, params: FuncParams, result?: FuncResult | NamedFuncResult): FuncType {
 		return { kind: NodeKind.funcSignature, range, parent: undefined, params, result };
 	}
 }
@@ -177,7 +247,6 @@ export namespace FuncResult {
 	}
 }
 
-
 export interface NamedType extends Node {
 	kind: NodeKind.namedType;
 	name: Identifier;
@@ -194,9 +263,52 @@ export namespace NamedType {
 
 export interface UseItem extends Node {
 	kind: NodeKind.use;
-	pack: PackageIdentifier;
+	from?: PackageIdentifier;
+	importItem: ImportItemTypes;
+}
+export namespace UseItem {
+	export function is(node: Node): node is UseItem {
+		return node.kind === NodeKind.use;
+	}
+	export function create(range: Range, importItem: ImportItemTypes, from?: PackageIdentifier): UseItem {
+		return { kind: NodeKind.use, range, parent: undefined, importItem, from };
+	}
 }
 
+export type ImportItemTypes = Identifier | RenamedIdentifier | NamedImports;
+export namespace ImportItemTypes {
+	export function is(node: Node): node is ImportItem {
+		return Identifier.is(node) || RenamedIdentifier.is(node) || NamedImports.is(node);
+	}
+}
+
+export interface NamedImports extends Node {
+	kind: NodeKind.namedImports;
+	name: Identifier;
+	members: (Identifier | RenamedIdentifier)[];
+}
+export namespace NamedImports {
+	export function is(node: Node): node is NamedImports {
+		return node.kind === NodeKind.namedImports;
+	}
+	export function create(range: Range, name: Identifier, members: (Identifier | RenamedIdentifier)[]): NamedImports {
+		return { kind: NodeKind.namedImports, range, parent: undefined, name, members };
+	}
+}
+
+export interface RenamedIdentifier extends Node {
+	kind: NodeKind.renamed;
+	from: Identifier;
+	to: Identifier;
+}
+export namespace RenamedIdentifier {
+	export function is(node: Node): node is RenamedIdentifier {
+		return node.kind === NodeKind.renamed;
+	}
+	export function create(range: Range, from: Identifier, to: Identifier): RenamedIdentifier {
+		return { kind: NodeKind.renamed, range, parent: undefined, from, to };
+	}
+}
 
 export type TypeDefItem = VariantItem | RecordItem | UnionItem | FlagsItem | EnumItem | TypeItem;
 export namespace TypeDefItem {
