@@ -67,8 +67,9 @@ export namespace Document {
 	export function is(node: Node): node is Document {
 		return node.kind === NodeKind.document;
 	}
-	export function create(range: Range, members: (WorldItem | InterfaceItem)[], pack?: PackageItem): Document {
-		return { kind: NodeKind.document, range, parent: undefined, members, pack };
+	export function create(range: Range, pack: PackageItem | undefined | null, members: (WorldItem | InterfaceItem)[], ...ws: Comment[]): Document {
+		pack = pack === null ? undefined : pack;
+		return Node.parent({ kind: NodeKind.document, range, parent: undefined, pack, members }, pack, members);
 	}
 }
 
@@ -735,10 +736,44 @@ export namespace MultiLineCommentOneLine {
 	}
 }
 
-export type Comment = MultiLineComment | SingleLineComment;
+export interface CommentBlock extends Node {
+	kind: NodeKind.commentBlock;
+	members: Comment[];
+}
+export namespace CommentBlock {
+	export function is(node: Node): node is CommentBlock {
+		return node.kind === NodeKind.commentBlock;
+	}
+	export function create(range: Range, members: Comment[]): CommentBlock {
+		return { kind: NodeKind.commentBlock, range, parent: undefined, members };
+	}
+}
+
+export type Comment = MultiLineComment | MultiLineCommentOneLine | SingleLineComment;
 export namespace Comment {
 	export function is(node: Node): node is Comment {
-		return MultiLineComment.is(node) || SingleLineComment.is(node);
+		return MultiLineComment.is(node) || MultiLineCommentOneLine.is(node) || SingleLineComment.is(node);
+	}
+	export function create(range: Range, items: (string | Comment)[]): Comment | CommentBlock | undefined {
+		const filtered = [];
+		for (const item of items) {
+			if (typeof item === 'string') {
+				continue;
+			}
+			filtered.push(item);
+		}
+		if (filtered.length === 0) {
+			return undefined;
+		} else if (filtered.length === 1) {
+			return filtered[0];
+		} else {
+			return Node.finalize({
+				kind: NodeKind.commentBlock,
+				range: range,
+				parent: undefined,
+				members: filtered
+			});
+		}
 	}
 }
 
@@ -746,7 +781,54 @@ export interface Node {
 	kind: NodeKind;
 	range: Range;
 	parent: Node | undefined;
-	comments?: Node[];
+	comments?: (Comment | CommentBlock | undefined)[];
+}
+export namespace Node {
+	export function finalize<T extends Node>(node: T, ...ws: (string | Comment)[]): T {
+		if (ws !== undefined && ws.length > 0) {
+			let filtered = [];
+			for (const item of ws) {
+				if (Array.isArray(item)) {
+					throw new Error('Should not happen');
+				} else if (item === null) {
+					filtered.push(undefined);
+				} else if (typeof item === 'object') {
+					filtered.push(item);
+				} else {
+					filtered.push(undefined);
+				}
+			}
+			let end = filtered.length - 1;
+			while (end >= 0 && filtered[end] === undefined) {
+				end--;
+			}
+			if (end >= 0) {
+				if (end < filtered.length - 1) {
+					filtered = filtered.slice(0, end + 1);
+				}
+				node.comments = filtered;
+			}
+		}
+		const props = Object.keys(node);
+		for (const prop of props) {
+			const value = (node as any)[prop];
+			if (Array.isArray(value)) {
+				for (const member of value) {
+					if (is(member)) {
+						member.parent = node;
+					}
+				}
+			} else {
+
+			}
+		}
+		return node;
+	}
+	function is(node: any): node is Node {
+		const candidate = node as Node;
+		return candidate !== undefined && candidate !== null && typeof candidate === 'object' &&
+			typeof candidate.kind === 'string' && candidate.range !== undefined;
+	}
 }
 
 export interface Position {

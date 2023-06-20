@@ -1,5 +1,7 @@
 {{
 
+import * as ast from './wit-types';
+
 const Kind = {
     document: 'document',
     package: 'package',
@@ -163,7 +165,7 @@ wit_document
         	props.package = pack;
         }
         props.members = members ?? [];
-    	return node(Kind.document, text(), location(), props, c1);
+    	return ast.Document() node(Kind.document, text(), location(), props, c1);
     }
 
 package_item "package declaration"
@@ -479,28 +481,28 @@ result "result type"
 
 no_result "no result"
 	= c1:_ '_' c2:_ {
-    	return node(Kind.noResult, text(), location(), c1, c2);
+    	return Node.finalize(ast.NoResultType.create(range(location())), c1, c2);
     }
 
 handle "handle type"
 	= id
     / 'borrow' c1:_ '<' name:id_item '>' {
-    	return node(Kind.borrow, text(), location(), { name }, c1);
+    	return Node.finalize(ast.Borrow.create(range(location()), name), c1);
     }
 
 id_item
 	= c1:_ id:id c2:_ {
-    	return node(Kind.id, text(), location(), { name: id.name }, c1, c2);
+    	return Node.finalize(ast.Identifier.create(range(location()), id.name), c1, c2);
     }
 
 id_item_
 	= c1:_ id:id c2:__ {
-    	return node(Kind.id, text(), location(), { name: id.name }, c1, c2);
+    	return Node.finalize(ast.Identifier.create(range(location()), id.name), c1, c2);
     }
 
 id "id"
 	= name:name {
-    	return node(Kind.id, text(), location(), { name: name.text });
+    	return ast.Identifier.create(range(location()), name);
     }
 
 reservedWord "reserved words"
@@ -526,10 +528,10 @@ reservedWord "reserved words"
 
 name "name"
     = '%'label {
-    	return node(Kind.name, text(), location());
+    	return text();
     }
 	/ !(reservedWord (' ' / comment / lineTerminator)) label {
-    	return node(Kind.name, text(), location());
+    	return text();
     }
 
 
@@ -553,67 +555,67 @@ baseTypes "base types"
 
 u8 "u8"
 	= 'u8' {
-    	return node(Kind.u8, text(), location())
+    	return ast.u8.create(range(location()));
     }
 
 u16 "u16"
 	= 'u16' {
-    	return node(Kind.u16, text(), location())
+    	return ast.u16.create(range(location()));
     }
 
 u32 "u32"
 	= 'u32' {
-    	return node(Kind.u32, text(), location())
+    	return ast.u32.create(range(location()));
     }
 
 u64 "u64"
 	= 'u64' {
-    	return node(Kind.u64, text(), location())
+    	return ast.u64.create(range(location()));
     }
 
 s8 "s8"
 	= 's8' {
-    	return node(Kind.s8, text(), location())
+    	return ast.s8.create(range(location()));
     }
 
 s16 "s16"
 	= 's16' {
-    	return node(Kind.s16, text(), location())
+    	return ast.s16.create(range(location()));
     }
 
 s32 "s32"
 	= 's32' {
-    	return node(Kind.s32, text(), location())
+    	return ast.s32.create(range(location()));
     }
 
 s64 "s64"
 	= 's64' {
-    	return node(Kind.s64, text(), location())
+    	return ast.s64.create(range(location()));
     }
 
 float32 "float32"
 	= 'float32' {
-    	return node(Kind.float32, text(), location())
+    	return ast.float32.create(range(location()));
     }
 
 float64 "float64"
 	= 'float64' {
-    	return node(Kind.float64, text(), location())
+    	return ast.float64.create(range(location()));
     }
 
 bool "bool"
 	= 'bool' {
-    	return node(Kind.bool, text(), location())
+    	return ast.bool.create(range(location()));
     }
 
 char "char"
 	= 'char' {
-    	return node(Kind.char, text(), location())
+    	return ast.char.create(range(location()));
     }
 
 string "string"
 	= 'string' {
-    	return node(Kind.string, text(), location())
+    	return ast.string_.create(range(location()));
     }
 
 __ "whitespace end of line"
@@ -623,7 +625,7 @@ __ "whitespace end of line"
 
 _ "whitespace with comments"
 	= items:(comment / s)* {
-    	return commentNode(items, text(), location());
+    	return ast.Comment.create(range(location()), items);
     }
 
 comment "comment"
@@ -632,17 +634,17 @@ comment "comment"
 
 multiLineComment "multi line comment"
 	= '/*' (!'*/' .)* '*/' {
-    	return node(Kind.multiLineComment, text(), location());
+    	return ast.MultiLineComment.create(range(location()), text());
     }
 
 multiLineCommentOneLine "multi line comment on one line"
 	= '/*' (!('*/' / lineTerminatorSequence) .)* '*/' {
-    	return node(Kind.multiLineCommentOneLine, text(), location());
+    	return ast.MultiLineCommentOneLine.create(range(location()), text());
     }
 
 singleLineComment " single line comment"
 	= '//' (!lineTerminator .)* {
-    	return node(Kind.singleLineComment, text(), location());
+    	return ast.SingleLineComment.create(range(location()), text());
     }
 
 lineTerminator
