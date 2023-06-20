@@ -418,7 +418,7 @@ named_type_list
 
 named_type
 	= name:id_item ':' type:ty_item {
-    	return node(Kind.namedType, text(), location(), { name, type });
+    	return Node.finalize(ast.NamedType.create(range(location()), name, type));
     }
 
 ty "built in types"
@@ -432,23 +432,21 @@ ty "built in types"
 
 ty_item "build in type with comment"
 	= c1:_ type:ty c2:_ {
-    	const result = Object.assign({}, type);
-    	result.text = text();
+        const result = Node.attachComments(type, c1, c2);
         result.range = range(location());
-    	return attachComments(result, c1, c2);
+    	return result;
     }
 
 ty_item_ "build in type with comment"
 	= c1:_ type:ty c2:__ {
-    	const result = Object.assign({}, type);
-    	result.text = text();
+        const result = Node.attachComments(type, c1, c2);
         result.range = range(location());
-    	return attachComments(result, c1, c2);
+    	return result;
     }
 
 tuple "tuple type"
 	= 'tuple' c1:_ '<' members:tupleList '>' {
-    	return node(Kind.tuple, text(), location(), { members: members }, c1);
+        return Node.finalize(ast.Tuple.create(range(location()), members), c1);
     }
 
 tupleList "tuple element list"
@@ -457,26 +455,26 @@ tupleList "tuple element list"
 
 list "element list"
 	= 'list' c1:_ '<' type:ty_item '>' {
-    	return node(Kind.list, text(), location(), { type }, c1);
+        return Node.finalize(ast.List.create(range(location()), type), c1);
     }
 
 option "option type"
 	= 'option' c1:_ '<' type:ty_item '>' {
-    	return node(Kind.option, text(), location(), { type }, c1);
+        return Node.finalize(ast.Option.create(range(location()), type), c1);
     }
 
 result "result type"
 	= 'result' c1:_ '<' result:ty_item ',' error:ty_item '>' {
-    	return node(Kind.result, text(), location(), { result, error }, c1);
+        return Node.finalize(ast.ResultType.create(range(location()), result, error), c1);
     }
     / 'result' c1:_ '<' result:no_result ',' error:ty_item '>' {
-    	return node(Kind.result, text(), location(), { result, error }, c1);
+        return Node.finalize(ast.ResultType.create(range(location()), result, error), c1);
     }
     / 'result' c1:_ '<' error:ty_item '>' {
-    	return node(Kind.result, text(), location(), { result: undefined, error }, c1);
+        return Node.finalize(ast.ResultType.create(range(location()), undefined, error), c1);
     }
     / 'result' {
-    	return node(Kind.result, text(), location(), { result: undefined, error: undefined });
+        return Node.finalize(ast.ResultType.create(range(location()), undefined, undefined), c1);
     }
 
 no_result "no result"

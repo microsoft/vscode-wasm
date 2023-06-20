@@ -478,14 +478,14 @@ export namespace Option {
 
 export interface Result extends Node {
 	kind: NodeKind.result;
-	result: Ty | NoResultType;
-	error: Ty;
+	result: Ty | NoResultType | undefined;
+	error: Ty | undefined;
 }
 export namespace Result {
 	export function is(node: Node): node is Result {
 		return node.kind === NodeKind.result;
 	}
-	export function create(range: Range, result: Ty | NoResultType, error: Ty): Result {
+	export function create(range: Range, result: Ty | NoResultType | undefined, error: Ty | undefined): Result {
 		return { kind: NodeKind.result, range, parent: undefined, result, error };
 	}
 }
@@ -784,7 +784,7 @@ export interface Node {
 	comments?: (Comment | CommentBlock | undefined)[];
 }
 export namespace Node {
-	export function finalize<T extends Node>(node: T, ...ws: (string | Comment)[]): T {
+	export function attachComments<T extends Node>(node: T, ...ws: (string | Comment)[]): T {
 		if (ws !== undefined && ws.length > 0) {
 			let filtered = [];
 			for (const item of ws) {
@@ -809,6 +809,10 @@ export namespace Node {
 				node.comments = filtered;
 			}
 		}
+		return node;
+	}
+	export function finalize<T extends Node>(node: T, ...ws: (string | Comment)[]): T {
+		attachComments(node, ...ws);
 		const props = Object.keys(node);
 		for (const prop of props) {
 			const value = (node as any)[prop];
@@ -819,7 +823,9 @@ export namespace Node {
 					}
 				}
 			} else {
-
+				if (is(value)) {
+					value.parent = node;
+				}
 			}
 		}
 		return node;
