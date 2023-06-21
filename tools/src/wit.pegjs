@@ -1,60 +1,7 @@
 {{
 
-import * as ast from './wit-types';
-
-const Kind = {
-    document: 'document',
-    package: 'package',
-    packageId: 'packageId',
-    version: 'version',
-    world: 'world',
-    export: 'export',
-    import: 'import',
-    interfaceType: 'interfaceType',
-    interface: 'interface',
-    type: 'type',
-    variant: 'variant',
-    variantCase: 'variantCase',
-    record: 'record',
-    union: 'union',
-    flags: 'flags',
-    enum: 'enum',
-    field: 'field',
-    use: 'use',
-    func: 'func',
-    funcSignature: 'funcSignature',
-    funcParams: 'funcParams',
-    funcResult: 'funcResult',
-    namedFuncResult: 'namedFuncResult',
-    namedType: 'namedType',
-    tuple: 'tuple',
-    list: 'list',
-    option: 'option',
-    result: 'result',
-    borrow: 'borrow',
-    qualifiedName: 'qualifiedName',
-    renamed: 'renamed',
-    u8: 'u8',
-    u16: 'u16',
-    u32: 'u32',
-    u64: 'u64',
-    s8: 's8',
-    s16: 's16',
-    s32: 's32',
-    s64: 's64',
-    bool: 'bool',
-    char: 'char',
-    string: 'string',
-    float32: 'float32',
-    float64: 'float64',
-    noResult: 'noResult',
-    name: 'name',
-    id: 'id',
-    multiLineComment: 'multiLineComment',
-    multiLineCommentOneLine: 'multiLineCommentOneLine',
-    singleLineComment: 'singleLineComment',
-    commentBlock: 'commentBlock'
-}
+const ast = require('./wit-ast');
+const Node = ast.Node;
 
 function range(loc) {
     return {
@@ -63,137 +10,33 @@ function range(loc) {
     }
 }
 
-function split(use_path) {
-    const length = use_path.length;
-    return {
-        path: use_path.slice(0, length - 1).join('.'),
-        type: use_path[length - 1]
-    };
-}
-
-function trimTrailing(members, ch) {
-    if (members.length === 0) {
-        return members;
-    }
-    return members[members.length - 1] !== ch ? members : members.slice(0, members.length - 1);
-}
-
-function commentNode(items, text, loc) {
-    const filtered = [];
-    for (const item of items) {
-        if (typeof item === 'string') {
-            continue;
-        }
-        filtered.push(item);
-    }
-    if (filtered.length === 0) {
-        return undefined;
-    } else if (filtered.length === 1) {
-        return filtered[0];
-    } else {
-        return {
-            kind: Kind.commentBlock,
-            text: text,
-            range: range(loc),
-            items: filtered
-        }
-    }
-}
-
-function attachComments(node, ...comments) {
-    if (comments === undefined || comments.length === 0) {
-        return;
-    }
-    let filtered = [];
-    for (const comment of comments) {
-        if (Array.isArray(comment)) {
-            throw new Error('Should not happen');
-        } else if (comment === null) {
-            filtered.push(undefined);
-        } else if (typeof comment === 'object') {
-            filtered.push(comment);
-        } else {
-            filtered.push(undefined);
-        }
-    }
-    let end = filtered.length - 1;
-    while (end >= 0 && filtered[end] === undefined) {
-        end--;
-    }
-    if (end < 0) {
-        return node;
-    }
-    if (end < filtered.length - 1) {
-        filtered = filtered.slice(0, end + 1)
-    }
-    node.comments = filtered;
-    return node;
-}
-
-function node(kind, text, loc, props, ...comments) {
-    let result = {
-        kind: kind,
-        range: range(loc)
-    };
-    if (kind === Kind.name) {
-        result.text = text;
-    }
-    const allComments = [];
-    if (typeof props === 'object' && (props.kind === Kind.multiLineComment || props.kind === Kind.multiLineCommentOneLine || props.kind === Kind.singleLineComment || props.kind === Kind.commentBlock)) {
-        allComments.push(props);
-    } else if (typeof props === 'string') {
-        props = undefined;
-    }
-    if (comments !== undefined && comments.length > 0) {
-        allComments.push(...comments);
-    }
-    result = props !== undefined ? Object.assign(result, props) : result;
-    if (allComments.length > 0) {
-        attachComments(result, ...allComments);
-    }
-    return result;
-}
-
 }}
 
 start = wit_document
 
 wit_document
 	= pack:package_item? members:(world_item / interface_item)* c1:_ {
-    	const props = {};
-        if (pack !== null && pack !== undefined) {
-        	props.package = pack;
-        }
-        props.members = members ?? [];
-    	return ast.Document() node(Kind.document, text(), location(), props, c1);
+        return Node.finalize(ast.Document.create(range(location()), pack, members), c1);
     }
 
-package_item "package declaration"
+package_item "package item"
 	= c1:_ 'package' c2:_ id:package_id c3:__ {
-    	return node(Kind.package, text(), location(), { id }, c1, c2, c3);
+        return Node.finalize(ast.PackageItem.create(range(location()), id), c1, c2, c3);
     }
 
 package_id "package id"
 	= namespace:(namespace:id_item ':' { return namespace; })? name:id_item version:('@' version:version_number { return version; })? c1:__ {
-    	const props = {};
-        if (namespace !== null && namespace !== undefined) {
-        	props.namespace = namespace;
-        }
-        props.name = name;
-        if (version !== null && version !== undefined) {
-        	props.version = version;
-        }
-    	return node(Kind.packageId, text(), location(), props, c1);
+        return Node.finalize(ast.PackageIdentifier.create(range(location()), namespace, name, version), c1);
     }
 
 version_number "version number"
 	= [^ \t\n\r]+ {
-    	return node(Kind.version, text(), location());
+        return Node.finalize(ast.VersionNumber.create(range(location()), text()));
     }
 
 world_item "world declaration"
-	= c1:_ 'default'? c2:_ 'world' c3:_ name:id c4:_ '{' members:world_items c5:_ '}' c6:__ {
-    	return node(Kind.world, text(), location(), { name, members }, c1, c2, c3, c4, c5, c6);
+	= c1:_ 'world' c2:_ name:id c3:_ '{' members:world_items c4:_ '}' c5:__ {
+        return Node.finalize(ast.WorldItem.create(range(location()), name, members), c1, c2, c3, c4, c5);
     }
 
 world_items
@@ -207,27 +50,26 @@ world_members
 
 export_item
 	= c1:_ 'export' c2:_ name:id c3:_ ':' type:extern_type c4:__ {
-    	return node(Kind.export, text(), location(), { name, type }, c1, c2, c3, c4);
+        return Node.finalize(ast.ExportItem.create(range(location()), name, type), c1, c2, c3, c4);
     }
 
 import_item
 	= c1:_ 'import' c2:_ name:id c3:__ {
-    	return node(Kind.import, text(), location(), { name }, c1, c2, c3);
+        return Node.finalize(ast.ImportItem.create(range(location()), name), c1, c2, c3);
     }
 
 extern_type
 	= func_type
     / interface_type
 
-interface_type "interface type"
-	= use_path
-    / c1:_ 'interface' c2:_ '{' members:interface_items c3:_ '}' c4:__ {
-    	return node(Kind.interfaceType, text(), location(), { name, members }, c1, c2, c3, c4);
+interface_item "interface declaration"
+	= c1:_ 'interface' c2:_ name:id c3:_ '{' members:interface_items c4:_ '}' c5:__ {
+        return Node.finalize(ast.InterfaceItem.create(range(location()), name, members), c1, c2, c3, c4, c5);
     }
 
-interface_item "interface declaration"
-	= c1:_ 'default'? c2:_ 'interface' c3:_ name:id c4:_ '{' members:interface_items c5:_ '}' c6:__ {
-     	return node(Kind.interface, text(), location(), { name, members }, c1, c2, c3, c4, c5, c6);
+interface_type "interface type"
+    = c1:_ 'interface' c2:_ '{' members:interface_items c3:_ '}' c4:__ {
+        return Node.finalize(ast.InterfaceType.create(range(location()), members), c1, c2, c3, c4);
     }
 
 interface_items
@@ -248,7 +90,7 @@ typedef_item
 
 variant_items "variant"
 	= c1:_ 'variant' c2:_ name:id c3:_ '{' members:variant_cases c4:_ '}' c5:__ {
-    	return node(Kind.variant, text(), location(), { name, members }, c2, c2 ,c3, c4, c5);
+        return Node.finalize(ast.VariantItem.create(range(location()), name, members), c1, c2, c3, c4, c5);
     }
 
 variant_cases "variant cases"
@@ -258,15 +100,15 @@ variant_cases "variant cases"
 
 variant_case
 	= c1:_ name:id c2:_ '(' type:ty_item ')' c3:__ {
-    	return node(Kind.variantCase, text(), location(), { name, type }, c1, c2, c3 );
+        return Node.finalize(ast.VariantCase.create(range(location()), name, type), c1, c2, c3);
     }
     / c1:_ name:id c2:__ {
-    	return node(Kind.variantCase, text(), location(), { name }, c1, c2);
+        return Node.finalize(ast.VariantCase.create(range(location()), name), c1, c2);
     }
 
 record_item "record"
 	= c1:_ 'record' c2:_ name:id c3:_ '{' members:record_fields c4:_ '}' c5:__ {
-    	return node(Kind.record, text(), location(), { name, members: members }, c1, c2, c3, c4, c5);
+        return Node.finalize(ast.RecordItem.create(range(location()), name, members), c1, c2, c3, c4, c5);
     }
 
 record_fields
@@ -276,12 +118,12 @@ record_fields
 
 record_field
 	= name:id_item ':' type:ty_item_ {
-    	return node(Kind.field, text(), location(), { name, type });
+        return Node.finalize(ast.RecordField.create(range(location()), name, type));
     }
 
 union_items "union"
 	= c1:_ 'union' c2:_ name:id c3:_ '{' members:union_cases c4:_ '}' c5:__ {
-    	return node(Kind.union, text(), location(), { name, members }, c1, c2, c2 ,c3, c4, c5);
+        return Node.finalize(ast.UnionItem.create(range(location()), name, members), c1, c2, c3, c4, c5);
     }
 
 union_cases "union cases"
@@ -296,7 +138,7 @@ union_case "union case"
 
 flags_items "flags"
 	= c1:_ 'flags' c2:_ name:id c3:_ '{' members:flags_fields c4:_ '}' c5:__ {
-    	return node(Kind.flags, text(), location(), { name, members }, c1, c2, c3, c4, c5);
+        return Node.finalize(ast.FlagsItem.create(range(location()), name, members), c1, c2, c3, c4, c5);
     }
 
 flags_fields "flag fields"
@@ -311,7 +153,7 @@ flags_field "flag field"
 
 enum_items "enums"
 	= c1:_ 'enum' c2:_ name:id c3:_ '{' members:enum_cases c4:_ '}' c5:__ {
-    	return node(Kind.enum, text(), location(), { name, members }, c1, c2, c3, c4, c5);
+        return Node.finalize(ast.EnumItem.create(range(location()), name, members), c1, c2, c3, c4, c5);
     }
 
 enum_cases "enum cases"
@@ -326,52 +168,34 @@ enum_case "enum case"
 
 type_item "type"
 	= c1:_ 'type' c2:_ name:id c3:_ '=' c4:_ type:ty c5:__ {
-    	return node(Kind.type, text(), location(), { name, type }, c1, c2, c3, c4, c5);
+        return Node.finalize(ast.TypeItem.create(range(location()), name, type), c1, c2, c3, c4, c5);
     }
 
 use_item "use"
-	= c1:_ 'use' c2:_ pack:package_id c3:_ '/' c4:_ item:id c5:_ 'as' c6:_ as:id c7:__ {
-    	return node(Kind.use, text(), location(), { package: pack, item, as}, c1, c2, c3, c4, c5, c6, c7);
+	= c1:_ 'use' c2:_ pack:package_id c3:_ '/' c4:_ importItem:renamed_item c5:__ {
+        return Node.finalize(ast.UseItem.create(range(location()), pack, importItem), c1, c2, c3, c4, c5);
     }
-	/ c1:_ 'use' c2:_ pack:package_id c3:_ '/' c4:_ item:id_item '.' c5:_ '{' members:use_names_list c6:_ '}' c7:__ {
-    	return node(Kind.use, text(), location(), { from: pack, item, members }, c1, c2, c3, c4, c5, c6, c7);
+	/ c1:_ 'use' c2:_ pack:package_id c3:_ '/' c4:_ namedImports:named_imports c5:__ {
+        return Node.finalize(ast.UseItem.create(range(location()), pack, namedImports), c1, c2, c3, c4, c5);
     }
 	/ c1:_ 'use' c2:_ pack:package_id c3:_ '/' c4:_ item:id c5:__ {
-    	return node(Kind.use, text(), location(), { from: pack, item }, c1, c2, c3, c4, c5);
+        return Node.finalize(ast.UseItem.create(range(location()), pack, item), c1, c2, c3, c4, c5);
     }
-    / c1:_ 'use' item:id_item '.' c2:_ '{' members:use_names_list c3:_  '}' c4:__ {
-    	return node(Kind.use, text(), location(), { item, members }, c1, c2, c3, c4);
+    / c1:_ 'use' namedImports:named_imports c2:__ {
+        return Node.finalize(ast.UseItem.create(range(location()), undefined, namedImports), c1, c2);
     }
-	/ c1:_ 'use' item:id_item_ {
-    	return node(Kind.use, text(), location(), { item }, c1);
-    }
-
-use_path "use path"
-	= head:use_path_part tail:(c1:_ '.' part:use_path_part { return {comment: c1, part: part, loc: location(), text: text() }; })* {
-    	const result = [head];
-        if (tail) {
-        	let last = 0;
-        	for (const item of tail) {
-            	const prev = result[last];
-                if (item.comment !== undefined && item.comment !== null) {
-                	const comment = item.comment;
-                	if (prev.comments === undefined) {
-                    	prev.comments = [undefined];
-                    }
-                    prev.comments.push(comment);
-                    prev.text = prev.text + input.substring(item.loc.start.offset, comment.range.end.offset);
-                    prev.range.end = comment.range.end;
-                }
-                result.push(item.part);
-            	last++;
-            }
-        }
-        return  node(Kind.qualifiedName, text(), location(), { members: result });
+	/ c1:_ 'use' item:id_item_ c2:__ {
+        return Node.finalize(ast.UseItem.create(range(location()), undefined, item), c1, c2);
     }
 
-use_path_part
-	= c1:_ id:id {
-    	return node(Kind.id, text(), location(), { name: id.name }, c1);
+renamed_item "renamed identifier"
+    = from:id c1:_ 'as' c2:_ to:id {
+        return Node.finalize(ast.RenameItem.create(range(location()), from, to), c1, c2);
+    }
+
+named_imports "named imports"
+    = item:id_item '.' c1:_ '{' members:use_names_list c2:_ '}' {
+        return Node.finalize(ast.NamedImports.create(range(location()), item, members), c1, c2);
     }
 
 use_names_list "use names"
@@ -380,35 +204,35 @@ use_names_list "use names"
     }
 
 use_names_item
-    = oldName:id_item 'as' newName:id_item {
-    	return node(Kind.renamed, text(), location(), { oldName, newName });
+    = from:id_item 'as' to:id_item {
+        return Node.finalize(ast.RenameItem.create(range(location()), from, to));
     }
 	/ id_item
 
 func_item "function"
 	= name:id_item ':' signature:func_type {
-    	return node(Kind.func, text(), location(), { name, signature });
+        return Node.finalize(ast.FuncItem.create(range(location()), name, signature));
     }
 
 func_type
 	= c1:_ 'func' c2:_ params:param_list c3:_ result:result_list c4:__ {
-    	return node(Kind.funcSignature, text(), location(), { params, result }, c1, c2, c3, c4);
+        return Node.finalize(ast.FuncType.create(range(location()), params, result), c1, c2, c3, c4);
     }
 	/ c1:_ 'func' c2:_ params:param_list c3:__ {
-    	return node(Kind.funcSignature, text(), location(), { params }, c1, c2, c3);
+        return Node.finalize(ast.FuncType.create(range(location()), params), c1, c2, c3);
     }
 
 param_list
 	= '(' members:named_type_list c1:_ ')' {
-    	return node(Kind.funcParams, text(), location(), { members }, c1);
+        return Node.finalize(ast.FuncParams.create(range(location()), members), c1);
     }
 
 result_list
 	= '->' c1:_ '(' members:named_type_list c2:_ ')' {
-    	return node(Kind.namedFuncResult, text(), location(), { members }, c1, c2);
+        return Node.finalize(ast.NamedFuncResult.create(range(location()), members), c1, c2);
     }
 	/ '->' c1:_ type:ty {
-    	return node(Kind.funcResult, text(), location(), { type }, c1);
+        return Node.finalize(ast.FuncResult.create(range(location()), type), c1);
     }
 
 named_type_list

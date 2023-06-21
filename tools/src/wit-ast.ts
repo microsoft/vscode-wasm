@@ -67,9 +67,9 @@ export namespace Document {
 	export function is(node: Node): node is Document {
 		return node.kind === NodeKind.document;
 	}
-	export function create(range: Range, pack: PackageItem | undefined | null, members: (WorldItem | InterfaceItem)[], ...ws: Comment[]): Document {
+	export function create(range: Range, pack: PackageItem | undefined | null, members: (WorldItem | InterfaceItem)[]): Document {
 		pack = pack === null ? undefined : pack;
-		return Node.parent({ kind: NodeKind.document, range, parent: undefined, pack, members }, pack, members);
+		return { kind: NodeKind.document, range, parent: undefined, pack, members };
 	}
 }
 
@@ -88,15 +88,17 @@ export namespace PackageItem {
 
 export interface PackageIdentifier extends Node {
 	kind: NodeKind.packageId;
-	namespace?: Identifier;
+	namespace: Identifier | undefined;
 	name: Identifier;
-	version?: VersionNumber;
+	version: VersionNumber | undefined;
 }
 export namespace PackageIdentifier {
 	export function is(node: Node): node is PackageIdentifier {
 		return node.kind === NodeKind.packageId;
 	}
-	export function create(range: Range, name: Identifier, namespace?: Identifier, version?: VersionNumber): PackageIdentifier {
+	export function create(range: Range, namespace: Identifier | undefined | null, name: Identifier, version: VersionNumber | undefined | null): PackageIdentifier {
+		namespace = namespace === null ? undefined : namespace;
+		version = version === null ? undefined : version;
 		return { kind: NodeKind.packageId, range, parent: undefined, name, namespace, version };
 	}
 }
@@ -193,6 +195,14 @@ export interface FuncItem extends Node {
 	name: Identifier;
 	signature: FuncType;
 }
+export namespace FuncItem {
+	export function is(node: Node): node is FuncItem {
+		return node.kind === NodeKind.func;
+	}
+	export function create(range: Range, name: Identifier, signature: FuncType): FuncItem {
+		return { kind: NodeKind.func, range, parent: undefined, name, signature };
+	}
+}
 
 export interface FuncType extends Node {
 	kind: NodeKind.funcSignature;
@@ -223,15 +233,14 @@ export namespace FuncParams {
 
 export interface NamedFuncResult extends Node {
 	kind: NodeKind.namedFuncResult;
-	name: Identifier;
 	members: NamedType[];
 }
 export namespace NamedFuncResult {
 	export function is(node: Node): node is NamedFuncResult {
 		return node.kind === NodeKind.namedFuncResult;
 	}
-	export function create(range: Range, name: Identifier, members: NamedType[]): NamedFuncResult {
-		return { kind: NodeKind.namedFuncResult, range, parent: undefined, name, members };
+	export function create(range: Range, members: NamedType[]): NamedFuncResult {
+		return { kind: NodeKind.namedFuncResult, range, parent: undefined, members };
 	}
 }
 
@@ -264,49 +273,50 @@ export namespace NamedType {
 
 export interface UseItem extends Node {
 	kind: NodeKind.use;
-	from?: PackageIdentifier;
+	from: PackageIdentifier | undefined;
 	importItem: ImportItemTypes;
 }
 export namespace UseItem {
 	export function is(node: Node): node is UseItem {
 		return node.kind === NodeKind.use;
 	}
-	export function create(range: Range, importItem: ImportItemTypes, from?: PackageIdentifier): UseItem {
-		return { kind: NodeKind.use, range, parent: undefined, importItem, from };
+	export function create(range: Range, from: PackageIdentifier | undefined | null, importItem: ImportItemTypes, ): UseItem {
+		from = from === null ? undefined : from;
+		return { kind: NodeKind.use, range, parent: undefined, from, importItem };
 	}
 }
 
-export type ImportItemTypes = Identifier | RenamedIdentifier | NamedImports;
+export type ImportItemTypes = Identifier | RenameItem | NamedImports;
 export namespace ImportItemTypes {
 	export function is(node: Node): node is ImportItem {
-		return Identifier.is(node) || RenamedIdentifier.is(node) || NamedImports.is(node);
+		return Identifier.is(node) || RenameItem.is(node) || NamedImports.is(node);
 	}
 }
 
 export interface NamedImports extends Node {
 	kind: NodeKind.namedImports;
 	name: Identifier;
-	members: (Identifier | RenamedIdentifier)[];
+	members: (Identifier | RenameItem)[];
 }
 export namespace NamedImports {
 	export function is(node: Node): node is NamedImports {
 		return node.kind === NodeKind.namedImports;
 	}
-	export function create(range: Range, name: Identifier, members: (Identifier | RenamedIdentifier)[]): NamedImports {
+	export function create(range: Range, name: Identifier, members: (Identifier | RenameItem)[]): NamedImports {
 		return { kind: NodeKind.namedImports, range, parent: undefined, name, members };
 	}
 }
 
-export interface RenamedIdentifier extends Node {
+export interface RenameItem extends Node {
 	kind: NodeKind.renamed;
 	from: Identifier;
 	to: Identifier;
 }
-export namespace RenamedIdentifier {
-	export function is(node: Node): node is RenamedIdentifier {
+export namespace RenameItem {
+	export function is(node: Node): node is RenameItem {
 		return node.kind === NodeKind.renamed;
 	}
-	export function create(range: Range, from: Identifier, to: Identifier): RenamedIdentifier {
+	export function create(range: Range, from: Identifier, to: Identifier): RenameItem {
 		return { kind: NodeKind.renamed, range, parent: undefined, from, to };
 	}
 }
@@ -349,27 +359,27 @@ export namespace VariantCase {
 export interface RecordItem extends Node {
 	kind: NodeKind.record;
 	name: Identifier;
-	members: Field[];
+	members: RecordField[];
 }
 export namespace RecordItem {
 	export function is(node: Node): node is RecordItem {
 		return node.kind === NodeKind.record;
 	}
-	export function create(range: Range, name: Identifier, members: Field[]): RecordItem {
+	export function create(range: Range, name: Identifier, members: RecordField[]): RecordItem {
 		return { kind: NodeKind.record, range, parent: undefined, name, members };
 	}
 }
 
-export interface Field extends Node {
+export interface RecordField extends Node {
 	kind: NodeKind.field;
 	name: Identifier;
 	type: Ty;
 }
-export namespace Field {
-	export function is(node: Node): node is Field {
+export namespace RecordField {
+	export function is(node: Node): node is RecordField {
 		return node.kind === NodeKind.field;
 	}
-	export function create(range: Range, name: Identifier, type: Ty): Field {
+	export function create(range: Range, name: Identifier, type: Ty): RecordField {
 		return { kind: NodeKind.field, range, parent: undefined, name, type };
 	}
 }
@@ -485,7 +495,9 @@ export namespace Result {
 	export function is(node: Node): node is Result {
 		return node.kind === NodeKind.result;
 	}
-	export function create(range: Range, result: Ty | NoResultType | undefined, error: Ty | undefined): Result {
+	export function create(range: Range, result: Ty | NoResultType | undefined | null, error: Ty | undefined | null): Result {
+		result = result === null ? undefined : result;
+		error = error === null ? undefined : error;
 		return { kind: NodeKind.result, range, parent: undefined, result, error };
 	}
 }

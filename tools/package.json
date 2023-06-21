@@ -22,7 +22,7 @@
 		"compile": "node ../node_modules/typescript/lib/tsc.js -b ./tsconfig.json",
 		"watch": "node ../node_modules/typescript/lib/tsc.js -b ./tsconfig.watch.json -w",
 		"lint": "node ../node_modules/eslint/bin/eslint.js --ext ts src",
-		"peggy": "peggy --dependency witTypes:wit-types -o lib/wit.js src/wit.pegjs"
+		"peggy": "peggy -o lib/wit.js src/wit.pegjs"
 	},
 	"devDependencies": {
 		"peggy": "^3.0.2"
