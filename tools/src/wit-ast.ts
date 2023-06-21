@@ -58,10 +58,46 @@ enum NodeKind {
 	commentBlock = 'commentBlock'
 }
 
+export interface Visitor {
+	visitDocument?(node: Document): boolean;
+	endVisitDocument?(node: Document): void;
+	visitPackageItem?(node: PackageItem): boolean;
+	endVisitPackageItem?(node: PackageItem): void;
+	visitPackageIdentifier?(node: PackageIdentifier): boolean;
+	endVisitPackageIdentifier?(node: PackageIdentifier): void;
+	visitVersionNumber?(node: VersionNumber): boolean;
+	endVisitVersionNumber?(node: VersionNumber): void;
+	visitWorldItem?(node: WorldItem): boolean;
+	endVisitWorldItem?(node: WorldItem): void;
+	visitExportItem?(node: ExportItem): boolean;
+	endVisitExportItem?(node: ExportItem): void;
+	visitImportItem?(node: ImportItem): boolean;
+	endVisitImportItem?(node: ImportItem): void;
+	visitInterfaceType?(node: InterfaceType): boolean;
+	endVisitInterfaceType?(node: InterfaceType): void;
+	visitInterfaceItem?(node: InterfaceItem): boolean;
+	endVisitInterfaceItem?(node: InterfaceItem): void;
+	visitFuncItem?(node: FuncItem): boolean;
+	endVisitFuncItem?(node: FuncItem): void;
+	visitFuncType?(node: FuncType): boolean;
+	endVisitFuncType?(node: FuncType): void;
+	visitFuncParams?(node: FuncParams): boolean;
+	endVisitFuncParams?(node: FuncParams): void;
+	visitFuncResult?(node: FuncResult): boolean;
+	endVisitFuncResult?(node: FuncResult): void;
+	visitNamedFuncResult?(node: NamedFuncResult): boolean;
+	endVisitNamedFuncResult?(node: NamedFuncResult): void;
+	visitFuncResult?(name: FuncResult): boolean;
+	endVisitFuncResult?(name: FuncResult): void;
+	visitNamedType?(node: NamedType): boolean;
+	endVisitNamedType?(node: NamedType): void;
+}
+
 export interface Document extends Node {
 	kind: NodeKind.document;
 	pack?: PackageItem;
 	members: (WorldItem | InterfaceItem)[];
+	visit: (visitor: Visitor, node:Document) => void;
 }
 export namespace Document {
 	export function is(node: Node): node is Document {
@@ -69,20 +105,34 @@ export namespace Document {
 	}
 	export function create(range: Range, pack: PackageItem | undefined | null, members: (WorldItem | InterfaceItem)[]): Document {
 		pack = pack === null ? undefined : pack;
-		return { kind: NodeKind.document, range, parent: undefined, pack, members };
+		return { kind: NodeKind.document, range, parent: undefined, pack, members, visit };
 	}
+	function visit(visitor: Visitor, node: Document): void {
+		if (visitor.visitDocument && visitor.visitDocument(node)) {
+
+		}
+		visitor.endVisitDocument && visitor.endVisitDocument(node);
+	}
+
 }
 
 export interface PackageItem extends Node {
 	kind: NodeKind.package;
 	id: PackageIdentifier;
+	visit: (visitor: Visitor, node: PackageItem) => void;
 }
 export namespace PackageItem {
 	export function is(node: Node): node is PackageItem {
 		return node.kind === NodeKind.package;
 	}
 	export function create(range: Range, id: PackageIdentifier): PackageItem {
-		return { kind: NodeKind.package, range, parent: undefined, id };
+		return { kind: NodeKind.package, range, parent: undefined, id, visit };
+	}
+	function visit(visitor: Visitor, node: PackageItem): void {
+		if (visitor.visitPackageItem && visitor.visitPackageItem(node)) {
+			node.id.visit(visitor, node.id);
+		}
+		visitor.endVisitPackageItem && visitor.endVisitPackageItem(node);
 	}
 }
 
@@ -91,6 +141,7 @@ export interface PackageIdentifier extends Node {
 	namespace: Identifier | undefined;
 	name: Identifier;
 	version: VersionNumber | undefined;
+	visit: (visitor: Visitor, node: PackageIdentifier) => void;
 }
 export namespace PackageIdentifier {
 	export function is(node: Node): node is PackageIdentifier {
@@ -99,20 +150,33 @@ export namespace PackageIdentifier {
 	export function create(range: Range, namespace: Identifier | undefined | null, name: Identifier, version: VersionNumber | undefined | null): PackageIdentifier {
 		namespace = namespace === null ? undefined : namespace;
 		version = version === null ? undefined : version;
-		return { kind: NodeKind.packageId, range, parent: undefined, name, namespace, version };
+		return { kind: NodeKind.packageId, range, parent: undefined, name, namespace, version, visit };
+	}
+	function visit(visitor: Visitor, node: PackageIdentifier): void {
+		if (visitor.visitPackageIdentifier && visitor.visitPackageIdentifier(node)) {
+			node.namespace && node.namespace.visit(visitor, node.namespace);
+			node.name.visit(visitor, node.name);
+			node.version && node.version.visit(visitor, node.version);
+		}
+		visitor.endVisitPackageIdentifier && visitor.endVisitPackageIdentifier(node);
 	}
 }
 
 export interface VersionNumber extends Node {
 	kind: NodeKind.versionNumber;
 	value: string;
+	visit: (visitor: Visitor, node: VersionNumber) => void;
 }
 export namespace VersionNumber {
 	export function is(node: Node): node is VersionNumber {
 		return node.kind === NodeKind.versionNumber;
 	}
 	export function create(range: Range, value: string): VersionNumber {
-		return { kind: NodeKind.versionNumber, range, parent: undefined, value };
+		return { kind: NodeKind.versionNumber, range, parent: undefined, value, visit };
+	}
+	function visit(visitor: Visitor, node: VersionNumber): void {
+		visitor.visitVersionNumber && visitor.visitVersionNumber(node)
+		visitor.endVisitVersionNumber && visitor.endVisitVersionNumber(node);
 	}
 }
 
@@ -120,13 +184,21 @@ export interface WorldItem extends Node {
 	kind: NodeKind.world;
 	name: Identifier;
 	members: WorldMember[];
+	visit: (visitor: Visitor, node: WorldItem) => void;
 }
 export namespace WorldItem {
 	export function is(node: Node): node is WorldItem {
 		return node.kind === NodeKind.world;
 	}
 	export function create(range: Range, name: Identifier, members: WorldMember[]): WorldItem {
-		return { kind: NodeKind.world, range, parent: undefined, name, members };
+		return { kind: NodeKind.world, range, parent: undefined, name, members, visit };
+	}
+	function visit(visitor: Visitor, node: WorldItem): void {
+		if (visitor.visitWorldItem && visitor.visitWorldItem(node)) {
+			node.name.visit(visitor, node.name);
+			node.members.forEach(member => member.visit(visitor, member));
+		}
+		visitor.endVisitWorldItem && visitor.endVisitWorldItem(node);
 	}
 }
 
@@ -136,13 +208,21 @@ export interface ExportItem extends Node {
 	kind: NodeKind.export;
 	name: Identifier;
 	type: ExternType;
+	visit: (visitor: Visitor, node: ExportItem) => void;
 }
 export namespace ExportItem {
 	export function is(node: Node): node is ExportItem {
 		return node.kind === NodeKind.export;
 	}
 	export function create(range: Range, name: Identifier, type: ExternType): ExportItem {
-		return { kind: NodeKind.export, range, parent: undefined, name, type };
+		return { kind: NodeKind.export, range, parent: undefined, name, type, visit };
+	}
+	function visit(visitor: Visitor, node: ExportItem): void {
+		if (visitor.visitExportItem && visitor.visitExportItem(node)) {
+			node.name.visit(visitor, node.name);
+			node.type.visit(visitor, node.type);
+		}
+		visitor.endVisitExportItem && visitor.endVisitExportItem(node);
 	}
 }
 
@@ -151,26 +231,40 @@ export type ExternType = FuncType | InterfaceType;
 export interface ImportItem extends Node {
 	kind: NodeKind.import;
 	name: Identifier;
+	visit: (visitor: Visitor, node: ImportItem) => void;
 }
 export namespace ImportItem {
 	export function is(node: Node): node is ImportItem {
 		return node.kind === NodeKind.import;
 	}
 	export function create(range: Range, name: Identifier): ImportItem {
-		return { kind: NodeKind.import, range, parent: undefined, name };
+		return { kind: NodeKind.import, range, parent: undefined, name, visit };
+	}
+	function visit(visitor: Visitor, node: ImportItem): void {
+		if (visitor.visitImportItem && visitor.visitImportItem(node)) {
+			node.name.visit(visitor, node.name);
+		}
+		visitor.endVisitImportItem && visitor.endVisitImportItem(node);
 	}
 }
 
 export interface InterfaceType extends Node {
 	kind: NodeKind.interfaceType;
 	members: InterfaceMember[];
+	visit: (visitor: Visitor, node: InterfaceType) => void;
 }
 export namespace InterfaceType {
 	export function is(node: Node): node is InterfaceType {
 		return node.kind === NodeKind.interfaceType;
 	}
 	export function create(range: Range, members: InterfaceMember[]): InterfaceType {
-		return { kind: NodeKind.interfaceType, range, parent: undefined, members };
+		return { kind: NodeKind.interfaceType, range, parent: undefined, members, visit };
+	}
+	function visit(visitor: Visitor, node: InterfaceType): void {
+		if (visitor.visitInterfaceType && visitor.visitInterfaceType(node)) {
+			node.members.forEach(member => member.visit(visitor, member));
+		}
+		visitor.endVisitInterfaceType && visitor.endVisitInterfaceType(node);
 	}
 }
 
@@ -178,13 +272,21 @@ export interface InterfaceItem extends Node {
 	kind: NodeKind.interface;
 	name: Identifier;
 	members: InterfaceMember[];
+	visit: (visitor: Visitor, node: InterfaceItem) => void;
 }
 export namespace InterfaceItem {
 	export function is(node: Node): node is InterfaceItem {
 		return node.kind === NodeKind.interface;
 	}
 	export function create(range: Range, name: Identifier, members: InterfaceMember[]): InterfaceItem {
-		return { kind: NodeKind.interface, range, parent: undefined, name, members };
+		return { kind: NodeKind.interface, range, parent: undefined, name, members, visit };
+	}
+	function visit(visitor: Visitor, node: InterfaceItem): void {
+		if (visitor.visitInterfaceItem && visitor.visitInterfaceItem(node)) {
+			node.name.visit(visitor, node.name);
+			node.members.forEach(member => member.visit(visitor, member));
+		}
+		visitor.endVisitInterfaceItem && visitor.endVisitInterfaceItem(node);
 	}
 }
 
@@ -194,13 +296,21 @@ export interface FuncItem extends Node {
 	kind: NodeKind.func;
 	name: Identifier;
 	signature: FuncType;
+	visit: (visitor: Visitor, node: FuncItem) => void;
 }
 export namespace FuncItem {
 	export function is(node: Node): node is FuncItem {
 		return node.kind === NodeKind.func;
 	}
 	export function create(range: Range, name: Identifier, signature: FuncType): FuncItem {
-		return { kind: NodeKind.func, range, parent: undefined, name, signature };
+		return { kind: NodeKind.func, range, parent: undefined, name, signature, visit };
+	}
+	function visit(visitor: Visitor, node: FuncItem): void {
+		if (visitor.visitFuncItem && visitor.visitFuncItem(node)) {
+			node.name.visit(visitor, node.name);
+			node.signature.visit(visitor, node.signature);
+		}
+		visitor.endVisitFuncItem && visitor.endVisitFuncItem(node);
 	}
 }
 
@@ -208,52 +318,81 @@ export interface FuncType extends Node {
 	kind: NodeKind.funcSignature;
 	params: FuncParams;
 	result?: FuncResult | NamedFuncResult;
+	visit: (visitor: Visitor, node: FuncType) => void;
 }
 export namespace FuncType {
 	export function is(node: Node): node is FuncType {
 		return node.kind === NodeKind.funcSignature;
 	}
 	export function create(range: Range, params: FuncParams, result?: FuncResult | NamedFuncResult): FuncType {
-		return { kind: NodeKind.funcSignature, range, parent: undefined, params, result };
+		return { kind: NodeKind.funcSignature, range, parent: undefined, params, result, visit };
+	}
+	function visit(visitor: Visitor, node: FuncType): void {
+		if (visitor.visitFuncType && visitor.visitFuncType(node)) {
+			node.params.visit(visitor, node.params);
+			node.result && node.result.visit(visitor, node.result);
+		}
+		visitor.endVisitFuncType && visitor.endVisitFuncType(node);
 	}
 }
 
 export interface FuncParams extends Node {
 	kind: NodeKind.funcParams;
 	params: NamedType[];
+	visit: (visitor: Visitor, node: FuncParams) => void;
 }
 export namespace FuncParams {
 	export function is(node: Node): node is FuncParams {
 		return node.kind === NodeKind.funcParams;
 	}
 	export function create(range: Range, params: NamedType[]): FuncParams {
-		return { kind: NodeKind.funcParams, range, parent: undefined, params };
+		return { kind: NodeKind.funcParams, range, parent: undefined, params, visit };
+	}
+	function visit(visitor: Visitor, node: FuncParams): void {
+		if (visitor.visitFuncParams && visitor.visitFuncParams(node)) {
+			node.params.forEach(param => param.visit(visitor, param));
+		}
+		visitor.endVisitFuncParams && visitor.endVisitFuncParams(node);
 	}
 }
 
 export interface NamedFuncResult extends Node {
 	kind: NodeKind.namedFuncResult;
 	members: NamedType[];
+	visit: (visitor: Visitor, node: NamedFuncResult) => void;
 }
 export namespace NamedFuncResult {
 	export function is(node: Node): node is NamedFuncResult {
 		return node.kind === NodeKind.namedFuncResult;
 	}
 	export function create(range: Range, members: NamedType[]): NamedFuncResult {
-		return { kind: NodeKind.namedFuncResult, range, parent: undefined, members };
+		return { kind: NodeKind.namedFuncResult, range, parent: undefined, members, visit };
+	}
+	function visit(visitor: Visitor, node: NamedFuncResult): void {
+		if (visitor.visitNamedFuncResult && visitor.visitNamedFuncResult(node)) {
+			node.members.forEach(member => member.visit(visitor, member));
+		}
+		visitor.endVisitNamedFuncResult && visitor.endVisitNamedFuncResult(node);
 	}
 }
 
 export interface FuncResult extends Node {
 	kind: NodeKind.funcResult;
 	type: Ty;
+	visit: (visitor: Visitor, node: FuncResult) => void;
 }
 export namespace FuncResult {
 	export function is(node: Node): node is FuncResult {
 		return node.kind === NodeKind.funcResult;
 	}
 	export function create(range: Range, type: Ty): FuncResult {
-		return { kind: NodeKind.funcResult, range, parent: undefined, type };
+		return { kind: NodeKind.funcResult, range, parent: undefined, type, visit };
+	}
+	function visit(visitor: Visitor, node: FuncResult): void {
+		if (visitor.visitFuncResult && visitor.visitFuncResult(node)) {
+			node.type.visit(visitor, node.type);
+		}
+		visitor.endVisitFuncResult && visitor.endVisitFuncResult(node);
 	}
 }
 
@@ -261,13 +400,21 @@ export interface NamedType extends Node {
 	kind: NodeKind.namedType;
 	name: Identifier;
 	type: Ty;
+	visit: (visitor: Visitor, node: NamedType) => void;
 }
 export namespace NamedType {
 	export function is(node: Node): node is NamedType {
 		return node.kind === NodeKind.namedType;
 	}
 	export function create(range: Range, name: Identifier, type: Ty): NamedType {
-		return { kind: NodeKind.namedType, range, parent: undefined, name, type };
+		return { kind: NodeKind.namedType, range, parent: undefined, name, type, visit };
+	}
+	function visit(visitor: Visitor, node: NamedType): void {
+		if (visitor.visitNamedType && visitor.visitNamedType(node)) {
+			node.name.visit(visitor, node.name);
+			node.type.visit(visitor, node.type);
+		}
+		visitor.endVisitNamedType && visitor.endVisitNamedType(node);
 	}
 }
 
