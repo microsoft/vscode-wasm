@@ -87,8 +87,6 @@ export interface Visitor {
 	endVisitFuncResult?(node: FuncResult): void;
 	visitNamedFuncResult?(node: NamedFuncResult): boolean;
 	endVisitNamedFuncResult?(node: NamedFuncResult): void;
-	visitFuncResult?(name: FuncResult): boolean;
-	endVisitFuncResult?(name: FuncResult): void;
 	visitNamedType?(node: NamedType): boolean;
 	endVisitNamedType?(node: NamedType): void;
 	visitUseItem?(node: UseItem): boolean;
@@ -163,28 +161,133 @@ export interface Visitor {
 	endVisitMultiLineCommentOneLine?(node: MultiLineCommentOneLine): void;
 }
 
+export const DefaultVisitor: Visitor = {
+	visitDocument: () => true,
+	endVisitDocument: () => { },
+	visitPackageItem: () => true,
+	endVisitPackageItem: () => { },
+	visitPackageIdentifier: () => true,
+	endVisitPackageIdentifier: () => { },
+	visitVersionNumber: () => true,
+	endVisitVersionNumber: () => { },
+	visitWorldItem: () => true,
+	endVisitWorldItem: () => { },
+	visitExportItem: () => true,
+	endVisitExportItem: () => { },
+	visitImportItem: () => true,
+	endVisitImportItem: () => { },
+	visitInterfaceType: () => true,
+	endVisitInterfaceType: () => { },
+	visitInterfaceItem: () => true,
+	endVisitInterfaceItem: () => { },
+	visitFuncItem: () => true,
+	endVisitFuncItem: () => { },
+	visitFuncType: () => true,
+	endVisitFuncType: () => { },
+	visitFuncParams: () => true,
+	endVisitFuncParams: () => { },
+	visitFuncResult: () => true,
+	endVisitFuncResult: () => { },
+	visitNamedFuncResult: () => true,
+	endVisitNamedFuncResult: () => { },
+	visitNamedType: () => true,
+	endVisitNamedType: () => { },
+	visitUseItem: () => true,
+	endVisitUseItem: () => { },
+	visitNamedImports: () => true,
+	endVisitNamedImports: () => { },
+	visitRenameItem: () => true,
+	endVisitRenameItem: () => { },
+	visitVariantItem: () => true,
+	endVisitVariantItem: () => { },
+	visitVariantCase: () => true,
+	endVisitVariantCase: () => { },
+	visitRecordItem: () => true,
+	endVisitRecordItem: () => { },
+	visitRecordField: () => true,
+	endVisitRecordField: () => { },
+	visitUnionItem: () => true,
+	endVisitUnionItem: () => { },
+	visitFlagsItem: () => true,
+	endVisitFlagsItem: () => { },
+	visitEnumItem: () => true,
+	endVisitEnumItem: () => { },
+	visitTypeItem: () => true,
+	endVisitTypeItem: () => { },
+	visitTuple: () => true,
+	endVisitTuple: () => { },
+	visitList: () => true,
+	endVisitList: () => { },
+	visitOption: () => true,
+	endVisitOption: () => { },
+	visitResult: () => true,
+	endVisitResult: () => { },
+	visitNoResultType: () => true,
+	endVisitNoResultType: () => { },
+	visitBorrow: () => true,
+	endVisitBorrow: () => { },
+	visitU8: () => true,
+	endVisitU8: () => { },
+	visitU16: () => true,
+	endVisitU16: () => { },
+	visitU32: () => true,
+	endVisitU32: () => { },
+	visitU64: () => true,
+	endVisitU64: () => { },
+	visitS8: () => true,
+	endVisitS8: () => { },
+	visitS16: () => true,
+	endVisitS16: () => { },
+	visitS32: () => true,
+	endVisitS32: () => { },
+	visitS64: () => true,
+	endVisitS64: () => { },
+	visitBool: () => true,
+	endVisitBool: () => { },
+	visitChar: () => true,
+	endVisitChar: () => { },
+	visitString: () => true,
+	endVisitString: () => { },
+	visitFloat32: () => true,
+	endVisitFloat32: () => { },
+	visitFloat64: () => true,
+	endVisitFloat64: () => { },
+	visitIdentifier: () => true,
+	endVisitIdentifier: () => { },
+	visitCommentBlock: () => true,
+	endVisitCommentBlock: () => { },
+	visitMultiLineComment: () => true,
+	endVisitMultiLineComment: () => { },
+	visitSingleLineComment: () => true,
+	endVisitSingleLineComment: () => { },
+	visitMultiLineCommentOneLine: () => true,
+	endVisitMultiLineCommentOneLine: () => { },
+};
+
 export interface Document extends Node {
 	kind: NodeKind.document;
 	pack?: PackageItem;
-	members: (WorldItem | InterfaceItem)[];
+	members: DocumentMember[];
 	visit: (visitor: Visitor, node:Document) => void;
 }
 export namespace Document {
 	export function is(node: Node): node is Document {
 		return node.kind === NodeKind.document;
 	}
-	export function create(range: Range, pack: PackageItem | undefined | null, members: (WorldItem | InterfaceItem)[]): Document {
+	export function create(range: Range, pack: PackageItem | undefined | null, members: DocumentMember[]): Document {
 		pack = pack === null ? undefined : pack;
 		return { kind: NodeKind.document, range, parent: undefined, pack, members, visit };
 	}
-	function visit(visitor: Visitor, node: Document): void {
+	export function visit(visitor: Visitor, node: Document): void {
 		if (visitor.visitDocument && visitor.visitDocument(node)) {
-
+			node.pack && node.pack.visit(visitor, node.pack);
+			node.members.forEach(member => member.visit(visitor, member));
 		}
 		visitor.endVisitDocument && visitor.endVisitDocument(node);
 	}
-
 }
+
+export type DocumentMember = (WorldItem | InterfaceItem) & { visit: (visitor: Visitor, node: DocumentMember) => void };
 
 export interface PackageItem extends Node {
 	kind: NodeKind.package;
@@ -1119,15 +1222,15 @@ export namespace string_ {
 
 export interface Identifier extends Node {
 	kind: NodeKind.id;
-	name: string;
+	value: string;
 	visit: (visitor: Visitor, node: Identifier) => void;
 }
 export namespace Identifier {
 	export function is(node: Node): node is Identifier {
 		return node.kind === NodeKind.id;
 	}
-	export function create(range: Range, name: string): Identifier {
-		return { kind: NodeKind.id, range, parent: undefined, name, visit };
+	export function create(range: Range, value: string): Identifier {
+		return { kind: NodeKind.id, range, parent: undefined, value, visit };
 	}
 	function visit(visitor: Visitor, node: Identifier): void {
 		visitor.visitIdentifier && visitor.visitIdentifier(node);

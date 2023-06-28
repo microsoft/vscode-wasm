@@ -314,12 +314,12 @@ handle "handle type"
 
 id_item
 	= c1:_ id:id c2:_ {
-    	return Node.finalize(ast.Identifier.create(range(location()), id.name), c1, c2);
+    	return Node.finalize(ast.Identifier.create(range(location()), id.value), c1, c2);
     }
 
 id_item_
 	= c1:_ id:id c2:__ {
-    	return Node.finalize(ast.Identifier.create(range(location()), id.name), c1, c2);
+    	return Node.finalize(ast.Identifier.create(range(location()), id.value), c1, c2);
     }
 
 id "id"
