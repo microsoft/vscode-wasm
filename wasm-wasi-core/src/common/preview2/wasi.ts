@@ -30,7 +30,7 @@ export interface Meta<W, J, F extends s32 | s64 | float32 | float64> {
 	readonly alignment: alignment;
 	flatten: (memory: Memory, value: W, result: F[]) => void;
 	load: (memory: Memory, ptr: ptr<W>, options: Options) => J;
-	loadFlattened: (memory: Memory, value: F | F[], options: Options) => J;
+	liftFlat: (memory: Memory, values: Iterator<F, F>, options: Options) => J;
 	alloc: (memory: Memory) => ptr<W>;
 	store: (memory: Memory, ptr: ptr<W>, value: J, options: Options) => void;
 }
@@ -55,8 +55,9 @@ export const bool: Meta<bool, boolean, s32> = {
 	load(memory, ptr: ptr<bool>): boolean {
 		return memory.view.getUint8(ptr) !== 0;
 	},
-	loadFlattened(_memory, value): boolean {
-		if (Array.isArray(value) || value < 0) {
+	liftFlat(_memory, values): boolean {
+		const value = values.next().value;
+		if (value < 0) {
 			throw new Error(`Invalid bool value ${value}`);
 		}
 		return value !== 0;
@@ -83,8 +84,9 @@ export const u8:MetaNumber<u8> = {
 	load(memory, ptr: ptr<u8>): u8 {
 		return memory.view.getUint8(ptr);
 	},
-	loadFlattened(_memory, value): u8 {
-		if (Array.isArray(value) || value < u8.lowValue || value > u8.highValue) {
+	liftFlat(_memory, values): u8 {
+		const value = values.next().value;
+		if (value < u8.lowValue || value > u8.highValue) {
 			throw new Error(`Invalid u8 value ${value}`);
 		}
 		return value;
@@ -111,8 +113,9 @@ export const u16: MetaNumber<u16> = {
 	load(memory: Memory, ptr: ptr): u16 {
 		return memory.view.getUint16(ptr, true);
 	},
-	loadFlattened(_memory, value): u16 {
-		if (Array.isArray(value) || value < u16.lowValue || value > u16.highValue) {
+	liftFlat(_memory, values): u16 {
+		const value = values.next().value;
+		if (value < u16.lowValue || value > u16.highValue) {
 			throw new Error(`Invalid u16 value ${value}`);
 		}
 		return value;
@@ -142,8 +145,9 @@ export const u32: MetaNumber<u32> = {
 	load(memory: Memory, ptr: ptr): u32 {
 		return memory.view.getUint32(ptr, true);
 	},
-	loadFlattened(_memory, value): u32 {
-		if (Array.isArray(value) || value < u32.lowValue) {
+	liftFlat(_memory, values): u32 {
+		const value = values.next().value;
+		if (value < u32.lowValue) {
 			throw new Error(`Invalid u32 value ${value}`);
 		}
 		return value;
@@ -173,8 +177,9 @@ export const u64: MetaBigint<u64> = {
 	load(memory: Memory, ptr: ptr): u64 {
 		return memory.view.getBigUint64(ptr, true);
 	},
-	loadFlattened(_memory, value): u64 {
-		if (Array.isArray(value) || value < u64.lowValue) {
+	liftFlat(_memory, values): u64 {
+		const value = values.next().value;
+		if (value < u64.lowValue) {
 			throw new Error(`Invalid u64 value ${value}`);
 		}
 		return value;
@@ -195,14 +200,15 @@ export const s8: MetaNumber<u8> = {
 	lowValue: -128, // -2 ^ 7
 	highValue: 127, // 2 ^ 7 - 1
 
-	flatten(_memory, value: s8): s32 {
-		return value;
+	flatten(_memory, value: s8, result): void {
+		result.push(value);
 	},
 	load(memory: Memory, ptr: ptr): s8 {
 		return memory.view.getInt8(ptr);
 	},
-	loadFlattened(_memory, value): s8 {
-		if (Array.isArray(value) || value < s8.lowValue || value > s8.highValue) {
+	liftFlat(_memory, values): s8 {
+		const value = values.next().value;
+		if (value < s8.lowValue || value > s8.highValue) {
 			throw new Error(`Invalid s8 value ${value}`);
 		}
 		return value;
@@ -223,14 +229,15 @@ export const s16: MetaNumber<s16> = {
 	lowValue: -32768, // -2 ^ 15
 	highValue: 32767, // 2 ^ 15 - 1
 
-	flatten(_memory, value: s16): s32 {
-		return value;
+	flatten(_memory, value: s16, result): void {
+		result.push(value);
 	},
 	load(memory: Memory, ptr: ptr): s16 {
 		return memory.view.getInt16(ptr, true);
 	},
-	loadFlattened(_memory, value): s16 {
-		if (Array.isArray(value) || value < s16.lowValue || value > s16.highValue) {
+	liftFlat(_memory, values): s16 {
+		const value = values.next().value;
+		if (value < s16.lowValue || value > s16.highValue) {
 			throw new Error(`Invalid s16 value ${value}`);
 		}
 		return value;
@@ -251,13 +258,14 @@ export const s32: MetaNumber<s32> = {
 	lowValue: -2147483648, // -2 ^ 31
 	highValue: 2147483647, // 2 ^ 31 - 1
 
-	flatten(_memory, value: s32): s32 {
-		return value;
+	flatten(_memory, value: s32, result): void {
+		result.push(value);
 	},
 	load(memory: Memory, ptr: ptr): s32 {
 		return memory.view.getInt32(ptr, true);
 	},
-	loadFlattened(_memory, value): s32 {
+	liftFlat(_memory, values): s32 {
+		const value = values.next().value;
 		return value as s32;
 	},
 	alloc(memory: Memory): ptr<s32> {
@@ -276,13 +284,14 @@ export const s64: MetaBigint<s64> = {
 	lowValue: -9223372036854775808n, // -2 ^ 63
 	highValue: 9223372036854775807n, // 2 ^ 63 - 1
 
-	flatten(_memory, value: s64): s64 {
-		return value;
+	flatten(_memory, value: s64, result): void {
+		result.push(value);
 	},
 	load(memory: Memory, ptr: ptr<s64>): s64 {
 		return memory.view.getBigInt64(ptr, true);
 	},
-	loadFlattened(_memory, value): s64 {
+	liftFlat(_memory, values): s64 {
+		const value = values.next().value;
 		return value as s64;
 	},
 	alloc(memory: Memory): ptr<s64> {
@@ -318,7 +327,7 @@ export const byte: Meta<byte, byte, s32> = {
 
 	flatten: u8.flatten,
 	load: u8.load,
-	loadFlattened: u8.loadFlattened,
+	liftFlat: u8.liftFlat,
 	alloc: u8.alloc,
 	store: u8.store
 };
@@ -330,7 +339,7 @@ export const size: Meta<size, size, s32> = {
 
 	flatten: u32.flatten,
 	load: u32.load,
-	loadFlattened: u32.loadFlattened,
+	liftFlat: u32.liftFlat,
 	alloc: u32.alloc,
 	store: u32.store
 };
@@ -342,7 +351,7 @@ export const ptr: Meta<ptr, ptr, s32> = {
 
 	flatten: u32.flatten,
 	load: u32.load,
-	loadFlattened: u32.loadFlattened,
+	liftFlat: u32.liftFlat,
 	alloc: u32.alloc,
 	store: u32.store
 };
@@ -357,54 +366,41 @@ export interface wstring {
 }
 
 namespace $wstring {
-	export const offsets = {
+
+	const offsets = {
 		data: 0,
 		codeUnits: 4
 	};
-}
 
-export const wstring: Meta<ptr<wstring>, string, s32> = {
-	size: 8,
-	alignment:  4,
+	export const size = 8;
+	export const alignment: alignment = 4;
 
-	flatten(memory, ptr): [ptr, u32] {
+	export function flatten(memory: Memory, ptr: ptr<wstring>, result: s32[]): void {
 		const view = memory.view;
-		const offsets = $wstring.offsets;
 		const dataPtr: ptr =  view.getUint32(ptr + offsets.data);
 		const codeUnits: u32 = view.getUint32(ptr + offsets.codeUnits);
-		return [dataPtr, codeUnits];
-	},
+		result.push(dataPtr, codeUnits);
+	}
 
-	load(memory: Memory, ptr: ptr<wstring>, options: Options): string {
-		return wstring.loadFlattened(memory, wstring.flatten(memory, ptr), options);
-	},
+	export function load(memory: Memory, ptr: ptr<wstring>, options: Options): string {
+		const view = memory.view;
+		const dataPtr: ptr =  view.getUint32(ptr + offsets.data);
+		const codeUnits: u32 = view.getUint32(ptr + offsets.codeUnits);
+		return loadFromRange(memory, dataPtr, codeUnits, options);
+	}
 
-	loadFlattened(memory, values, options: Options): string {
-		const encoding = options.encoding;
-		if (encoding === 'latin1+utf-16') {
-			throw new Error('latin1+utf-16 encoding not yet supported');
-		}
-		if (!Array.isArray(values) || values.length !== 2) {
-			throw new Error('Invalid flatten values');
-		}
-		const [data, codeUnits] = values;
-		if (encoding === 'utf-8') {
-			const byteLength = codeUnits;
-			return utf8Decoder.decode(new Uint8Array(memory.buffer, data, byteLength));
-		} else if (encoding === 'utf-16') {
-			return String.fromCharCode(...(new Uint16Array(memory.buffer, data, codeUnits)));
-		} else {
-			throw new Error('Unsupported encoding');
-		}
-	},
+	export function liftFlat(memory: Memory, values: Iterator<s32>, options: Options): string {
+		const dataPtr: ptr = values.next().value;
+		const codeUnits: u32 = values.next().value;
+		return loadFromRange(memory, dataPtr, codeUnits, options);
+	}
 
-	alloc(memory: Memory): ptr<wstring> {
+	export function alloc(memory: Memory): ptr<wstring> {
 		return memory.alloc(wstring.size, wstring.alignment);
-	},
+	}
 
-	store(memory: Memory, ptr: ptr<wstring>, str: string, options: Options): void {
+	export function store(memory: Memory, ptr: ptr<wstring>, str: string, options: Options): void {
 		const { encoding } = options;
-		const offsets = $wstring.offsets;
 		if (encoding === 'latin1+utf-16') {
 			throw new Error('latin1+utf-16 encoding not yet supported');
 		}
@@ -427,8 +423,25 @@ export const wstring: Meta<ptr<wstring>, string, s32> = {
 		} else {
 			throw new Error('Unsupported encoding');
 		}
-	},
-};
+	}
+
+	function loadFromRange(memory: Memory, data: ptr, codeUnits: u32, options: Options): string {
+		const encoding = options.encoding;
+		if (encoding === 'latin1+utf-16') {
+			throw new Error('latin1+utf-16 encoding not yet supported');
+		}
+		if (encoding === 'utf-8') {
+			const byteLength = codeUnits;
+			return utf8Decoder.decode(new Uint8Array(memory.buffer, data, byteLength));
+		} else if (encoding === 'utf-16') {
+			return String.fromCharCode(...(new Uint16Array(memory.buffer, data, codeUnits)));
+		} else {
+			throw new Error('Unsupported encoding');
+		}
+	}
+}
+
+const wstring: Meta<ptr<wstring>, string, s32> = $wstring;
 
 interface MetaInfo<T> {
 	readonly size: number;
