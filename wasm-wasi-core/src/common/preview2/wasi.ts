@@ -400,29 +400,14 @@ namespace $wstring {
 	}
 
 	export function store(memory: Memory, ptr: ptr<wstring>, str: string, options: Options): void {
-		const { encoding } = options;
-		if (encoding === 'latin1+utf-16') {
-			throw new Error('latin1+utf-16 encoding not yet supported');
-		}
-		if (encoding === 'utf-8') {
-			const data = utf8Encoder.encode(str);
-			const dataPtr = memory.alloc(u8.alignment, data.length);
-			memory.raw.set(data, dataPtr);
-			const view = memory.view;
-			view.setUint32(ptr + offsets.data, dataPtr, true);
-			view.setUint32(ptr + offsets.codeUnits, data.length, true);
-		} else if (encoding === 'utf-16') {
-			const dataPtr = memory.alloc(u8.alignment, str.length * 2);
-			const data = new Uint16Array(memory.buffer, dataPtr, str.length);
-			for (let i = 0; i < str.length; i++) {
-				data[i] = str.charCodeAt(i);
-			}
-			const view = memory.view;
-			view.setUint32(ptr + offsets.data, dataPtr, true);
-			view.setUint32(ptr + offsets.codeUnits, data.length, true);
-		} else {
-			throw new Error('Unsupported encoding');
-		}
+		const [ data, codeUnits ] = storeIntoRange(memory, str, options);
+		const view = memory.view;
+		view.setUint32(ptr + offsets.data, data, true);
+		view.setUint32(ptr + offsets.codeUnits, codeUnits, true);
+	}
+
+	export function lowerFlat(memory: Memory, str: string, options: Options): s32[] {
+		return storeIntoRange(memory, str, options);
 	}
 
 	function loadFromRange(memory: Memory, data: ptr, codeUnits: u32, options: Options): string {
@@ -435,6 +420,28 @@ namespace $wstring {
 			return utf8Decoder.decode(new Uint8Array(memory.buffer, data, byteLength));
 		} else if (encoding === 'utf-16') {
 			return String.fromCharCode(...(new Uint16Array(memory.buffer, data, codeUnits)));
+		} else {
+			throw new Error('Unsupported encoding');
+		}
+	}
+
+	function storeIntoRange(memory: Memory, str: string, options: Options): [ptr, u32] {
+		const { encoding } = options;
+		if (encoding === 'latin1+utf-16') {
+			throw new Error('latin1+utf-16 encoding not yet supported');
+		}
+		if (encoding === 'utf-8') {
+			const data = utf8Encoder.encode(str);
+			const dataPtr = memory.alloc(u8.alignment, data.length);
+			memory.raw.set(data, dataPtr);
+			return [dataPtr, data.length];
+		} else if (encoding === 'utf-16') {
+			const dataPtr = memory.alloc(u8.alignment, str.length * 2);
+			const data = new Uint16Array(memory.buffer, dataPtr, str.length);
+			for (let i = 0; i < str.length; i++) {
+				data[i] = str.charCodeAt(i);
+			}
+			return [dataPtr, data.length];
 		} else {
 			throw new Error('Unsupported encoding');
 		}
