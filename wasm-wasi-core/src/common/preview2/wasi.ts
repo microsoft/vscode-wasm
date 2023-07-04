@@ -25,14 +25,24 @@ function align(ptr: ptr, alignment: alignment): ptr {
 	return Math.ceil(ptr / alignment) * alignment;
 }
 
-export interface Meta<W, J, F extends s32 | s64 | float32 | float64> {
+export type i32 = number;
+export type i64 = bigint;
+export type f32 = number;
+export type f64 = number;
+export type wasmTypes = i32 | i64 | f32 | f64;
+export type wasmTypeNames = 'i32' | 'i64' | 'f32' | 'f64';
+
+export type FlatIterator = Iterator<wasmTypes, wasmTypes>;
+
+export interface Meta<W, J, F extends wasmTypes> {
 	readonly size: number;
 	readonly alignment: alignment;
-	flatten: (memory: Memory, value: W, result: F[]) => void;
-	load: (memory: Memory, ptr: ptr<W>, options: Options) => J;
-	liftFlat: (memory: Memory, values: Iterator<F, F>, options: Options) => J;
-	alloc: (memory: Memory) => ptr<W>;
-	store: (memory: Memory, ptr: ptr<W>, value: J, options: Options) => void;
+	readonly flatType: wasmTypeNames[];
+	load(memory: Memory, ptr: ptr<W>, options: Options): J;
+	liftFlat(memory: Memory, values: Iterator<F, F>, options: Options): J;
+	alloc(memory: Memory): ptr<W>;
+	store(memory: Memory, ptr: ptr<W>, value: J, options: Options): void;
+	lowerFlat(memory: Memory, value: J, options: Options): F;
 }
 
 export interface MetaNumber<T> extends Meta<T, T, s32> {
@@ -49,9 +59,7 @@ export type bool = number;
 export const bool: Meta<bool, boolean, s32> = {
 	size: 1,
 	alignment: 1,
-	flatten(_memory, value: bool, result): void {
-		result.push(value);
-	},
+	flatType: ['i32'],
 	load(memory, ptr: ptr<bool>): boolean {
 		return memory.view.getUint8(ptr) !== 0;
 	},
@@ -67,10 +75,43 @@ export const bool: Meta<bool, boolean, s32> = {
 	},
 	store(memory, ptr: ptr<bool>, value: boolean): void {
 		memory.view.setUint8(ptr, value ? 1 : 0);
+	},
+	lowerFlat(_memory, value: boolean): s32 {
+		return value ? 1 : 0;
 	}
 };
 
 export type u8 = number;
+namespace $u8 {
+	export const size = 1;
+	export const alignment: alignment = 1;
+	export const flatType: wasmTypeNames[] = ['i32'];
+
+	const lowValue = 0;
+	const highValue = 255;
+
+	export function load(memory: Memory, ptr: ptr<u8>): u8 {
+		return memory.view.getUint8(ptr);
+	};
+
+	export function liftFlat(_memory: Memory, values: FlatIterator<wasmTypes>): u8 {
+		const value = values.next().value;
+		if (value < lowValue || value > highValue) {
+			throw new Error(`Invalid u8 value ${value}`);
+		}
+		return value;
+	};
+
+	export alloc(memory): ptr<u8> {
+		return memory.alloc(u8.size, u8.alignment);
+	},
+	store(memory, ptr: ptr<u8>, value: u8): void {
+		memory.view.setUint8(ptr, value);
+	},
+	lowerFlat(_memory, value: u8): s32 {
+		return value;
+	}
+}
 export const u8:MetaNumber<u8> = {
 	size: 1,
 	alignment: 1,
@@ -96,6 +137,9 @@ export const u8:MetaNumber<u8> = {
 	},
 	store(memory, ptr: ptr<u8>, value: u8): void {
 		memory.view.setUint8(ptr, value);
+	},
+	lowerFlat(_memory, value: u8): s32 {
+		return value;
 	}
 };
 
@@ -125,6 +169,9 @@ export const u16: MetaNumber<u16> = {
 	},
 	store(memory, ptr: ptr<u16>, value: u16): void {
 		memory.view.setUint16(ptr, value, true);
+	},
+	lowerFlat(_memory, value: u16): s32 {
+		return value;
 	}
 };
 
@@ -157,6 +204,9 @@ export const u32: MetaNumber<u32> = {
 	},
 	store(memory: Memory, ptr: ptr<u32>, value: u32): void {
 		memory.view.setUint32(ptr, value, true);
+	},
+	lowerFlat(_memory, value: u32): s32 {
+		return value;
 	}
 };
 
