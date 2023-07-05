@@ -34,32 +34,23 @@ export type wasmTypeNames = 'i32' | 'i64' | 'f32' | 'f64';
 
 export type FlatIterator = Iterator<wasmTypes, wasmTypes>;
 
-export interface Meta<W, J, F extends wasmTypes> {
+export interface ComponentModelType<W, J, F extends wasmTypes> {
 	readonly size: number;
 	readonly alignment: alignment;
-	readonly flatType: wasmTypeNames[];
+	readonly flatTypes: wasmTypeNames[];
 	load(memory: Memory, ptr: ptr<W>, options: Options): J;
 	liftFlat(memory: Memory, values: Iterator<F, F>, options: Options): J;
 	alloc(memory: Memory): ptr<W>;
 	store(memory: Memory, ptr: ptr<W>, value: J, options: Options): void;
-	lowerFlat(memory: Memory, value: J, options: Options): F;
+	lowerFlat(result: F[], memory: Memory, value: J, options: Options): void;
 }
-
-export interface MetaNumber<T> extends Meta<T, T, s32> {
-	readonly lowValue: T;
-	readonly highValue: T;
-}
-
-export interface MetaBigint<T> extends Meta<T, T, s64> {
-	readonly lowValue: T;
-	readonly highValue: T;
-}
+export type GenericComponentModelType = ComponentModelType<any, any, wasmTypes>;
 
 export type bool = number;
-export const bool: Meta<bool, boolean, s32> = {
+export const bool: ComponentModelType<bool, boolean, s32> = {
 	size: 1,
 	alignment: 1,
-	flatType: ['i32'],
+	flatTypes: ['i32'],
 	load(memory, ptr: ptr<bool>): boolean {
 		return memory.view.getUint8(ptr) !== 0;
 	},
@@ -76,8 +67,8 @@ export const bool: Meta<bool, boolean, s32> = {
 	store(memory, ptr: ptr<bool>, value: boolean): void {
 		memory.view.setUint8(ptr, value ? 1 : 0);
 	},
-	lowerFlat(_memory, value: boolean): s32 {
-		return value ? 1 : 0;
+	lowerFlat(result, _memory, value: boolean): void {
+		result.push(value ? 1 : 0);
 	}
 };
 
@@ -85,335 +76,436 @@ export type u8 = number;
 namespace $u8 {
 	export const size = 1;
 	export const alignment: alignment = 1;
-	export const flatType: wasmTypeNames[] = ['i32'];
+	export const flatTypes: wasmTypeNames[] = ['i32'];
 
-	const lowValue = 0;
-	const highValue = 255;
+	export const LOW_VALUE = 0;
+	export const HIGH_VALUE = 255;
 
 	export function load(memory: Memory, ptr: ptr<u8>): u8 {
 		return memory.view.getUint8(ptr);
-	};
+	}
 
-	export function liftFlat(_memory: Memory, values: FlatIterator<wasmTypes>): u8 {
+	export function liftFlat(_memory: Memory, values: FlatIterator): u8 {
 		const value = values.next().value;
-		if (value < lowValue || value > highValue) {
+		if (value < LOW_VALUE || value > HIGH_VALUE || !Number.isInteger(value)) {
 			throw new Error(`Invalid u8 value ${value}`);
 		}
-		return value;
-	};
+		return value as u8;
+	}
 
-	export alloc(memory): ptr<u8> {
-		return memory.alloc(u8.size, u8.alignment);
-	},
-	store(memory, ptr: ptr<u8>, value: u8): void {
+	export function alloc(memory: Memory): ptr<u8> {
+		return memory.alloc(size, alignment);
+	}
+
+	export function store(memory: Memory, ptr: ptr<u8>, value: u8): void {
 		memory.view.setUint8(ptr, value);
-	},
-	lowerFlat(_memory, value: u8): s32 {
-		return value;
+	}
+
+	export function lowerFlat(result: wasmTypes[], _memory: Memory, value: u8): void {
+		if (value < LOW_VALUE || value > HIGH_VALUE || !Number.isInteger(value)) {
+			throw new Error(`Invalid u8 value ${value}`);
+		}
+		result.push(value);
 	}
 }
-export const u8:MetaNumber<u8> = {
-	size: 1,
-	alignment: 1,
-
-	lowValue: 0,
-	highValue: 255,
-
-	flatten(_memory, value: u8, result): void {
-		result.push(value);
-	},
-	load(memory, ptr: ptr<u8>): u8 {
-		return memory.view.getUint8(ptr);
-	},
-	liftFlat(_memory, values): u8 {
-		const value = values.next().value;
-		if (value < u8.lowValue || value > u8.highValue) {
-			throw new Error(`Invalid u8 value ${value}`);
-		}
-		return value;
-	},
-	alloc(memory): ptr<u8> {
-		return memory.alloc(u8.size, u8.alignment);
-	},
-	store(memory, ptr: ptr<u8>, value: u8): void {
-		memory.view.setUint8(ptr, value);
-	},
-	lowerFlat(_memory, value: u8): s32 {
-		return value;
-	}
-};
+export const u8:ComponentModelType<u8, number, i32> = $u8;
 
 export type u16 = number;
-export const u16: MetaNumber<u16> = {
-	size: 2,
-	alignment: 2,
+namespace $u16 {
+	export const size = 2;
+	export const alignment: alignment = 2;
+	export const flatTypes: wasmTypeNames[] = ['i32'];
 
-	lowValue: 0,
-	highValue: 65535,
+	export const LOW_VALUE = 0;
+	export const HIGH_VALUE = 65535;
 
-	flatten(_memory, value: u16, result): void {
-		result.push(value);
-	},
-	load(memory: Memory, ptr: ptr): u16 {
+	export function load(memory: Memory, ptr: ptr): u16 {
 		return memory.view.getUint16(ptr, true);
-	},
-	liftFlat(_memory, values): u16 {
+	}
+
+	export function liftFlat(_memory: Memory, values:FlatIterator): u16 {
 		const value = values.next().value;
-		if (value < u16.lowValue || value > u16.highValue) {
+		if (value < LOW_VALUE || value > HIGH_VALUE || !Number.isInteger(value)) {
 			throw new Error(`Invalid u16 value ${value}`);
 		}
-		return value;
-	},
-	alloc(memory: Memory): ptr<u16> {
-		return memory.alloc(u16.size, u16.alignment);
-	},
-	store(memory, ptr: ptr<u16>, value: u16): void {
-		memory.view.setUint16(ptr, value, true);
-	},
-	lowerFlat(_memory, value: u16): s32 {
-		return value;
+		return value as u16;
 	}
-};
+
+	export function alloc(memory: Memory): ptr<u16> {
+		return memory.alloc(size, alignment);
+	}
+
+	export function store(memory: Memory, ptr: ptr<u16>, value: u16): void {
+		memory.view.setUint16(ptr, value, true);
+	}
+
+	export function lowerFlat(result: wasmTypes[], _memory: Memory, value: number): void {
+		if (value < LOW_VALUE || value > HIGH_VALUE || !Number.isInteger(value)) {
+			throw new Error(`Invalid u16 value ${value}`);
+		}
+		result.push(value);
+	}
+}
+export const u16: ComponentModelType<u16, number, i32> = $u16;
 
 export type u32 = number;
-export const u32: MetaNumber<u32> = {
-	size: 4,
-	alignment: 4,
+namespace $u32 {
+	export const size = 4;
+	export const alignment: alignment = 4;
+	export const flatTypes: wasmTypeNames[] = ['i32'];
 
-	lowValue: 0,
-	highValue: 4294967295, // 2 ^ 32 - 1
+	export const LOW_VALUE = 0;
+	export const HIGH_VALUE = 4294967295; // 2 ^ 32 - 1
 
-	flatten(_memory, value: u32, result): void {
-		if (value > s32.highValue) {
-			throw new Error(`Can't flatten u32 ${value} to s32`);
-		}
-		result.push(value);
-	},
-	load(memory: Memory, ptr: ptr): u32 {
+	export function load(memory: Memory, ptr: ptr): u32 {
 		return memory.view.getUint32(ptr, true);
-	},
-	liftFlat(_memory, values): u32 {
+	}
+
+	export function liftFlat(_memory: Memory, values: FlatIterator): u32 {
 		const value = values.next().value;
-		if (value < u32.lowValue) {
+		if (value < LOW_VALUE || value > HIGH_VALUE || !Number.isInteger(value)) {
 			throw new Error(`Invalid u32 value ${value}`);
 		}
-		return value;
-	},
-	alloc(memory: Memory): ptr<u32> {
-		return memory.alloc(u32.size, u32.alignment);
-	},
-	store(memory: Memory, ptr: ptr<u32>, value: u32): void {
-		memory.view.setUint32(ptr, value, true);
-	},
-	lowerFlat(_memory, value: u32): s32 {
-		return value;
+		return value as u32;
 	}
-};
+
+	export function alloc(memory: Memory): ptr<u32> {
+		return memory.alloc(size, alignment);
+	}
+
+	export function store(memory: Memory, ptr: ptr<u32>, value: u32): void {
+		memory.view.setUint32(ptr, value, true);
+	}
+
+	export function lowerFlat(result: wasmTypes[], _memory: Memory, value: number): void {
+		if (value < LOW_VALUE || value > HIGH_VALUE || !Number.isInteger(value)) {
+			throw new Error(`Invalid u32 value ${value}`);
+		}
+		result.push(value);
+	}
+}
+export const u32: ComponentModelType<u32, number, i32> = $u32;
 
 export type u64 = bigint;
-export const u64: MetaBigint<u64> = {
-	size: 8,
-	alignment: 8,
+namespace $u64 {
+	export const size = 8;
+	export const alignment: alignment = 8;
+	export const flatTypes: wasmTypeNames[] = ['i64'];
 
-	lowValue: 0n,
-	highValue: 18446744073709551615n, // 2 ^ 64 - 1
+	export const LOW_VALUE = 0n;
+	export const HIGH_VALUE = 18446744073709551615n; // 2 ^ 64 - 1
 
-	flatten(_memory, value: u64, result): void {
-		if (value > s64.highValue) {
-			throw new Error(`Can't flatten u64 ${value} to s64`);
-		}
-		result.push(value);
-	},
-	load(memory: Memory, ptr: ptr): u64 {
+	export function load(memory: Memory, ptr: ptr): u64 {
 		return memory.view.getBigUint64(ptr, true);
-	},
-	liftFlat(_memory, values): u64 {
+	}
+
+	export function liftFlat(_memory: Memory, values: FlatIterator): u64 {
 		const value = values.next().value;
-		if (value < u64.lowValue) {
+		if (value < LOW_VALUE) {
 			throw new Error(`Invalid u64 value ${value}`);
 		}
-		return value;
-	},
-	alloc(memory: Memory): ptr<u64> {
-		return memory.alloc(u64.size, u64.alignment);
-	},
-	store(memory: Memory, ptr: ptr<u64>, value: u64): void {
+		return value as u64;
+	}
+
+	export function alloc(memory: Memory): ptr<u64> {
+		return memory.alloc(size, alignment);
+	}
+
+	export function store(memory: Memory, ptr: ptr<u64>, value: u64): void {
 		memory.view.setBigUint64(ptr, value, true);
 	}
-};
+
+	export function lowerFlat(result: wasmTypes[], _memory: Memory, value: bigint): void {
+		if (value < LOW_VALUE) {
+			throw new Error(`Invalid u64 value ${value}`);
+		}
+		result.push(value);
+	}
+}
+export const u64: ComponentModelType<u64, bigint, i64> = $u64;
 
 export type s8 = number;
-export const s8: MetaNumber<u8> = {
-	size: 1,
-	alignment: 1,
+namespace $s8 {
+	export const size = 1;
+	export const alignment: alignment = 1;
+	export const flatTypes: wasmTypeNames[] = ['i32'];
 
-	lowValue: -128, // -2 ^ 7
-	highValue: 127, // 2 ^ 7 - 1
+	const LOW_VALUE = -128;
+	const HIGH_VALUE = 127;
 
-	flatten(_memory, value: s8, result): void {
-		result.push(value);
-	},
-	load(memory: Memory, ptr: ptr): s8 {
+	export function load(memory: Memory, ptr: ptr): s8 {
 		return memory.view.getInt8(ptr);
-	},
-	liftFlat(_memory, values): s8 {
+	}
+
+	export function liftFlat(_memory: Memory, values: FlatIterator): s8 {
 		const value = values.next().value;
-		if (value < s8.lowValue || value > s8.highValue) {
-			throw new Error(`Invalid s8 value ${value}`);
+		// All int values in the component model are transferred as unsigned
+		// values. So for signed values we need to convert them back. First
+		// we check if the value is in range of the corresponding unsigned
+		// value and the convert it to a signed value.
+		if (value < $u8.LOW_VALUE || value > $u8.HIGH_VALUE || !Number.isInteger(value)) {
+			throw new Error(`Invalid u8 value ${value}`);
 		}
-		return value;
-	},
-	alloc(memory: Memory): ptr<s8> {
-		return memory.alloc(s8.size, s8.alignment);
-	},
-	store(memory: Memory, ptr: ptr<s8>, value: s8): void {
+		if (value <= HIGH_VALUE) {
+			return value as s8;
+		} else {
+			return (value as u8) - 256;
+		}
+	}
+
+	export function alloc(memory: Memory): ptr<s8> {
+		return memory.alloc(size, alignment);
+	}
+
+	export function store(memory: Memory, ptr: ptr<s8>, value: s8): void {
 		memory.view.setInt8(ptr, value);
 	}
-};
+
+	export function lowerFlat(result: wasmTypes[], _memory: Memory, value: number): void {
+		if (value < LOW_VALUE || value > HIGH_VALUE || !Number.isInteger(value)) {
+			throw new Error(`Invalid s8 value ${value}`);
+		}
+		result.push((value < 0) ? (value + 256) : value);
+	}
+}
+export const s8: ComponentModelType<s8, number, i32> = $s8;
 
 export type s16 = number;
-export const s16: MetaNumber<s16> = {
-	size: 2,
-	alignment: 2,
+namespace $s16 {
+	export const size = 2;
+	export const alignment: alignment = 2;
+	export const flatTypes: wasmTypeNames[] = ['i32'];
 
-	lowValue: -32768, // -2 ^ 15
-	highValue: 32767, // 2 ^ 15 - 1
+	const LOW_VALUE = -32768; // -2 ^ 15
+	const HIGH_VALUE = 32767; // 2 ^ 15 - 1
 
-	flatten(_memory, value: s16, result): void {
-		result.push(value);
-	},
-	load(memory: Memory, ptr: ptr): s16 {
+	export function load(memory: Memory, ptr: ptr): s16 {
 		return memory.view.getInt16(ptr, true);
-	},
-	liftFlat(_memory, values): s16 {
+	}
+
+	export function liftFlat(_memory: Memory, values: FlatIterator): s16 {
 		const value = values.next().value;
-		if (value < s16.lowValue || value > s16.highValue) {
+		if (value < $u16.LOW_VALUE || value > $u16.HIGH_VALUE || !Number.isInteger(value)) {
 			throw new Error(`Invalid s16 value ${value}`);
 		}
-		return value;
-	},
-	alloc(memory: Memory): ptr<s16> {
-		return memory.alloc(s16.size, s16.alignment);
-	},
-	store(memory: Memory, ptr: ptr<s16>, value: s16): void {
+		return (value <= HIGH_VALUE) ? value as s16 : (value as u16) - 65536;
+	}
+
+	export function alloc(memory: Memory): ptr<s16> {
+		return memory.alloc(size, alignment);
+	}
+
+	export function store(memory: Memory, ptr: ptr<s16>, value: s16): void {
 		memory.view.setInt16(ptr, value, true);
 	}
-};
+
+	export function lowerFlat(result: wasmTypes[], _memory: Memory, value: number): void {
+		if (value < LOW_VALUE || value > HIGH_VALUE || !Number.isInteger(value)) {
+			throw new Error(`Invalid s16 value ${value}`);
+		}
+		result.push((value < 0) ? (value + 65536) : value);
+	}
+}
+export const s16: ComponentModelType<s16, number, i32> = $s16;
 
 export type s32 = number;
-export const s32: MetaNumber<s32> = {
-	size: 4,
-	alignment: 4,
+namespace $s32 {
+	export const size = 4;
+	export const alignment: alignment = 4;
+	export const flatTypes: wasmTypeNames[] = ['i32'];
 
-	lowValue: -2147483648, // -2 ^ 31
-	highValue: 2147483647, // 2 ^ 31 - 1
+	const LOW_VALUE = -2147483648; // -2 ^ 31
+	const HIGH_VALUE = 2147483647; // 2 ^ 31 - 1
 
-	flatten(_memory, value: s32, result): void {
-		result.push(value);
-	},
-	load(memory: Memory, ptr: ptr): s32 {
+	export function load(memory: Memory, ptr: ptr): s32 {
 		return memory.view.getInt32(ptr, true);
-	},
-	liftFlat(_memory, values): s32 {
+	}
+
+	export function liftFlat(_memory: Memory, values: FlatIterator): s32 {
 		const value = values.next().value;
-		return value as s32;
-	},
-	alloc(memory: Memory): ptr<s32> {
-		return memory.alloc(s32.size, s32.alignment);
-	},
-	store(memory, ptr: ptr<s32>, value: s32): void {
+		if (value < $u32.LOW_VALUE || value > $u32.HIGH_VALUE || !Number.isInteger(value)) {
+			throw new Error(`Invalid s32 value ${value}`);
+		}
+		return (value <= HIGH_VALUE) ? value as s32 : (value as u32) - 4294967296;
+	}
+
+	export function alloc(memory: Memory): ptr<s32> {
+		return memory.alloc(size, alignment);
+	}
+
+	export function store(memory: Memory, ptr: ptr<s32>, value: s32): void {
 		memory.view.setInt32(ptr, value, true);
 	}
-};
+
+	export function lowerFlat(result: wasmTypes[], _memory: Memory, value: number): void {
+		if (value < LOW_VALUE || value > HIGH_VALUE || !Number.isInteger(value)) {
+			throw new Error(`Invalid s32 value ${value}`);
+		}
+		result.push((value < 0) ? (value + 4294967296) : value);
+	}
+}
+export const s32: ComponentModelType<s32, number, i32> = $s32;
 
 export type s64 = bigint;
-export const s64: MetaBigint<s64> = {
-	size: 8,
-	alignment: 8,
+namespace $s64 {
+	export const size = 8;
+	export const alignment: alignment = 8;
+	export const flatTypes: wasmTypeNames[] = ['i64'];
 
-	lowValue: -9223372036854775808n, // -2 ^ 63
-	highValue: 9223372036854775807n, // 2 ^ 63 - 1
+	const LOW_VALUE = -9223372036854775808n; // -2 ^ 63
+	const HIGH_VALUE = 9223372036854775807n; // 2 ^ 63 - 1
 
-	flatten(_memory, value: s64, result): void {
-		result.push(value);
-	},
-	load(memory: Memory, ptr: ptr<s64>): s64 {
+	export function load(memory: Memory, ptr: ptr<s64>): s64 {
 		return memory.view.getBigInt64(ptr, true);
-	},
-	liftFlat(_memory, values): s64 {
+	}
+
+	export function liftFlat(_memory: Memory, values: FlatIterator): s64 {
 		const value = values.next().value;
-		return value as s64;
-	},
-	alloc(memory: Memory): ptr<s64> {
-		return memory.alloc(s64.size, s64.alignment);
-	},
-	store(memory: Memory, ptr: ptr<s64>, value: s64): void {
+		if (value < $u64.LOW_VALUE) {
+			throw new Error(`Invalid s64 value ${value}`);
+		}
+		return (value <= HIGH_VALUE) ? value as s64 : (value as u64) - 18446744073709551616n;
+	}
+
+	export function alloc(memory: Memory): ptr<s64> {
+		return memory.alloc(size, alignment);
+	}
+
+	export function store(memory: Memory, ptr: ptr<s64>, value: s64): void {
 		memory.view.setBigInt64(ptr, value, true);
-	},
-};
+	}
+
+	export function lowerFlat(result: wasmTypes[], _memory: Memory, value: bigint): void {
+		if (value < LOW_VALUE || value > HIGH_VALUE) {
+			throw new Error(`Invalid s64 value ${value}`);
+		}
+		result.push((value < 0) ? (value + 18446744073709551616n) : value);
+	}
+}
+export const s64: ComponentModelType<s64, bigint, i64> = $s64;
 
 export type float32 = number;
-export const float32 = {
-	size: 4,
-	alignment: 4,
+namespace $float32 {
+	export const size = 4;
+	export const alignment:alignment = 4;
+	export const flatTypes: wasmTypeNames[] = ['f32'];
 
-	lowValue: -3.4028234663852886e+38,
-	highValue: 3.4028234663852886e+38,
-};
+	const LOW_VALUE = -3.4028234663852886e+38;
+	const HIGH_VALUE = 3.4028234663852886e+38;
+	const NAN = 0x7fc00000;
+
+	export function load(memory: Memory, ptr: ptr): float32 {
+		return memory.view.getFloat32(ptr, true);
+	}
+
+	export function liftFlat(_memory: Memory, values: FlatIterator): float32 {
+		const value = values.next().value;
+		if (value < LOW_VALUE || value > HIGH_VALUE) {
+			throw new Error(`Invalid float32 value ${value}`);
+		}
+		return value === NAN ? Number.NaN : value as float32;
+	}
+
+	export function alloc(memory: Memory): ptr<float32> {
+		return memory.alloc(size, alignment);
+	}
+
+	export function store(memory: Memory, ptr: ptr<float32>, value: float32): void {
+		memory.view.setFloat32(ptr, value, true);
+	}
+
+	export function lowerFlat(result: wasmTypes[], _memory: Memory, value: number): void {
+		if (value < LOW_VALUE || value > HIGH_VALUE) {
+			throw new Error(`Invalid float32 value ${value}`);
+		}
+		result.push(Number.isNaN(value) ? NAN : value);
+	}
+}
+export const float32: ComponentModelType<float32, number, f32> = $float32;
 
 export type float64 = number;
-export const float64 = {
-	size: 8,
-	alignment: 8,
+namespace float64 {
+	export const size = 8;
+	export const alignment: alignment = 8;
 
-	lowValue: -1 * Number.MAX_VALUE,
-	highValue: Number.MAX_VALUE
-};
+	const LOW_VALUE = -1 * Number.MAX_VALUE;
+	const HIGH_VALUE = Number.MAX_VALUE;
+	const NAN = 0x7ff8000000000000;
+
+	export function load(memory: Memory, ptr: ptr): float64 {
+		return memory.view.getFloat64(ptr, true);
+	}
+
+	export function liftFlat(_memory: Memory, values: FlatIterator): float64 {
+		const value = values.next().value;
+		if (value < LOW_VALUE || value > HIGH_VALUE) {
+			throw new Error(`Invalid float64 value ${value}`);
+		}
+		return value === NAN ? Number.NaN : value as float64;
+	}
+
+	export function alloc(memory: Memory): ptr<float64> {
+		return memory.alloc(size, alignment);
+	}
+
+	export function store(memory: Memory, ptr: ptr<float64>, value: float64): void {
+		memory.view.setFloat64(ptr, value, true);
+	}
+
+	export function lowerFlat(result: wasmTypes[], _memory: Memory, value: number): void {
+		if (value < LOW_VALUE || value > HIGH_VALUE) {
+			throw new Error(`Invalid float64 value ${value}`);
+		}
+		result.push(Number.isNaN(value) ? NAN : value);
+	}
+}
 
 export type byte = u8;
-export const byte: Meta<byte, byte, s32> = {
+export const byte: ComponentModelType<byte, byte, s32> = {
 	size: u8.size,
 	alignment: u8.alignment,
+	flatTypes: u8.flatTypes,
 
-	flatten: u8.flatten,
 	load: u8.load,
 	liftFlat: u8.liftFlat,
 	alloc: u8.alloc,
-	store: u8.store
+	store: u8.store,
+	lowerFlat: u8.lowerFlat
 };
 
 export type size = u32;
-export const size: Meta<size, size, s32> = {
+export const size: ComponentModelType<size, size, s32> = {
 	size: u32.size,
 	alignment: u32.alignment,
+	flatTypes: u32.flatTypes,
 
-	flatten: u32.flatten,
 	load: u32.load,
 	liftFlat: u32.liftFlat,
 	alloc: u32.alloc,
-	store: u32.store
+	store: u32.store,
+	lowerFlat: u32.lowerFlat
 };
 
 export type ptr<_type = u8> = u32;
-export const ptr: Meta<ptr, ptr, s32> = {
+export const ptr: ComponentModelType<ptr, ptr, s32> = {
 	size: u32.size,
 	alignment: u32.alignment,
+	flatTypes: u32.flatTypes,
 
-	flatten: u32.flatten,
 	load: u32.load,
 	liftFlat: u32.liftFlat,
 	alloc: u32.alloc,
-	store: u32.store
+	store: u32.store,
+	lowerFlat: u32.lowerFlat
 };
 
 export interface char {
 
 }
 
-export interface wstring {
-	data: ptr;
-	codeUnits: u32;
-}
+// This is the best representation for a string in WASM. It is a pointer to a
+// range of bytes and a length.
+export type wstring = [ptr, u32];
 
 namespace $wstring {
 
@@ -424,13 +516,7 @@ namespace $wstring {
 
 	export const size = 8;
 	export const alignment: alignment = 4;
-
-	export function flatten(memory: Memory, ptr: ptr<wstring>, result: s32[]): void {
-		const view = memory.view;
-		const dataPtr: ptr =  view.getUint32(ptr + offsets.data);
-		const codeUnits: u32 = view.getUint32(ptr + offsets.codeUnits);
-		result.push(dataPtr, codeUnits);
-	}
+	export const flatTypes: wasmTypeNames[] = ['i32', 'i32'];
 
 	export function load(memory: Memory, ptr: ptr<wstring>, options: Options): string {
 		const view = memory.view;
@@ -439,9 +525,9 @@ namespace $wstring {
 		return loadFromRange(memory, dataPtr, codeUnits, options);
 	}
 
-	export function liftFlat(memory: Memory, values: Iterator<s32>, options: Options): string {
-		const dataPtr: ptr = values.next().value;
-		const codeUnits: u32 = values.next().value;
+	export function liftFlat(memory: Memory, values: FlatIterator, options: Options): string {
+		const dataPtr: ptr = values.next().value as ptr;
+		const codeUnits: u32 = values.next().value as u32;
 		return loadFromRange(memory, dataPtr, codeUnits, options);
 	}
 
@@ -456,8 +542,8 @@ namespace $wstring {
 		view.setUint32(ptr + offsets.codeUnits, codeUnits, true);
 	}
 
-	export function lowerFlat(memory: Memory, str: string, options: Options): s32[] {
-		return storeIntoRange(memory, str, options);
+	export function lowerFlat(result: wasmTypes[], memory: Memory, str: string, options: Options): void {
+		result.push(...storeIntoRange(memory, str, options));
 	}
 
 	function loadFromRange(memory: Memory, data: ptr, codeUnits: u32, options: Options): string {
@@ -497,79 +583,125 @@ namespace $wstring {
 		}
 	}
 }
+export const wstring: ComponentModelType<ptr<wstring>, string, s32> = $wstring;
 
-const wstring: Meta<ptr<wstring>, string, s32> = $wstring;
-
-interface MetaInfo<T> {
-	readonly size: number;
-	readonly alignment: alignment;
-	store(memory: Memory, ptr: ptr<T>, value: T, options: Options): void;
-}
-
-interface RecordField<T = u8 | u16> extends MetaInfo<T> {
+interface RecordField {
 	readonly name: string;
 	readonly offset: number;
+	readonly type: GenericComponentModelType;
 }
 
 namespace RecordField {
-	export function create<T>(name: string, offset: number, meta: Omit<RecordField<T>, 'name' | 'offset'>): RecordField<T> {
-		return {
-			name,
-			offset,
-			...meta
-		};
+	export function create(name: string, offset: number, type: GenericComponentModelType): RecordField {
+		return { name, offset, type };
 	}
 }
 
+export interface JRecord {
+	[key: string]: any;
+}
 export namespace record {
-	export function alignment(fields: RecordField[]): alignment {
-		let result: alignment = 1;
-		for (const field of fields) {
-			result = Math.max(result, field.alignment) as alignment;
-		}
-		return result;
-	}
 	export function size(fields: RecordField[]): size {
 		let result: ptr = 0;
 		for (const field of fields) {
-			align(result, field.alignment);
-			result += field.size;
+			align(result, field.type.alignment);
+			result += field.type.size;
 		}
 		return result;
 	}
-	export function store(memory: Memory, ptr: ptr, record: { [key:string]: any }, fields: RecordField[], options: Options): void {
+
+	export function alignment(fields: RecordField[]): alignment {
+		let result: alignment = 1;
+		for (const field of fields) {
+			result = Math.max(result, field.type.alignment) as alignment;
+		}
+		return result;
+	}
+
+	export function flatTypes(fields: RecordField[]): wasmTypeNames[] {
+		const result: wasmTypeNames[] = [];
+		for (const field of fields) {
+			result.push(...field.type.flatTypes);
+		}
+		return result;
+	}
+
+	export function load(memory: Memory, ptr: ptr, fields: RecordField[], options: Options): JRecord {
+		const result: JRecord = Object.create(null);
+		for (const field of fields) {
+			const value = field.type.load(memory, ptr + field.offset, options);
+			result[field.name] = value;
+		}
+		return result;
+	}
+
+	export function liftFlat(memory: Memory, values: FlatIterator, fields: RecordField[], options: Options): JRecord {
+		const result: JRecord = Object.create(null);
+		for (const field of fields) {
+			const value = field.type.liftFlat(memory, values, options);
+			result[field.name] = value;
+		}
+		return result;
+	}
+
+	export function store(memory: Memory, ptr: ptr, record: JRecord, fields: RecordField[], options: Options): void {
 		for (const field of fields) {
 			const value = record[field.name];
-			field.store(memory, ptr + field.offset, value, options);
+			field.type.store(memory, ptr + field.offset, value, options);
+		}
+	}
+
+	export function lowerFlat(result: wasmTypes[], memory: Memory, record: JRecord, fields: RecordField[], options: Options): void {
+		for (const field of fields) {
+			const value = record[field.name];
+			field.type.lowerFlat(result, memory, value, options);
 		}
 	}
 }
 
-interface TestRecord {
+interface TestRecord extends JRecord {
 	a: u8;
 	b: u32;
 	c: u8;
+	d: string;
 }
 
-namespace TestRecord {
+// We can look into generating this via mapped types.
+export type WTestRecord = [u8, u32, u8, ...wstring];
+
+namespace $TestRecord {
+
 	const fields: RecordField[] = [];
-	const meta: [string, MetaInfo<any>][] = [['a', u8], ['b', u32], ['c', u8], ['d', wstring]];
 	let offset = 0;
-	for (const item of meta) {
-		const [name, meta] = item;
-		offset = align(offset, meta.alignment);
-		fields.push(RecordField.create(name, offset, meta));
-		offset += meta.size;
+	for (const item of [['a', u8], ['b', u32], ['c', u8], ['d', wstring]] as [string, GenericComponentModelType][]) {
+		const [name, type] = item;
+		offset = align(offset, type.alignment);
+		fields.push(RecordField.create(name, offset, type));
+		offset += type.size;
 	}
 
 	export const alignment = record.alignment(fields);
 	export const size = record.size(fields);
+	export const flatTypes = record.flatTypes(fields);
+
+	export function load(memory: Memory, ptr: ptr<WTestRecord>, options: Options): TestRecord {
+		return record.load(memory, ptr, fields, options) as TestRecord;
+	}
+
+	export function liftFlat(memory: Memory, values: FlatIterator, options: Options): TestRecord {
+		return record.liftFlat(memory, values, fields, options) as TestRecord;
+	}
 
 	export function alloc(memory: Memory): ptr<TestRecord> {
 		return memory.alloc(alignment, size);
 	}
 
-	export function store(memory: Memory, ptr: ptr<TestRecord>, value: TestRecord, options: Options): void {
+	export function store(memory: Memory, ptr: ptr<WTestRecord>, value: TestRecord, options: Options): void {
 		record.store(memory, ptr, value, fields, options);
 	}
+
+	export function lowerFlat(result: wasmTypes[], memory: Memory, value: TestRecord, options: Options): void {
+		record.lowerFlat(result, memory, value, fields, options);
+	}
 }
+const TestRecord: ComponentModelType<ptr<WTestRecord>, TestRecord, s32> = $TestRecord;
