@@ -587,13 +587,13 @@ namespace $wstring {
 }
 export const wstring: ComponentModelType<ptr<wstring>, string, s32> = $wstring;
 
-interface recordField {
+export interface recordField {
 	readonly name: string;
 	readonly offset: number;
 	readonly type: GenericComponentModelType;
 }
 
-namespace recordField {
+export namespace recordField {
 	export function create(name: string, offset: number, type: GenericComponentModelType): recordField {
 		return { name, offset, type };
 	}
@@ -663,33 +663,75 @@ export namespace record {
 
 interface flagField {
 	readonly name: string;
-	readonly mask: number;
 	readonly offset: number;
+	readonly mask: number;
+}
+
+export interface JFlags {
+	[key: string]: boolean;
 }
 
 export namespace flags {
-	export function size(fields: flagField[]): size {
-		const n = fields.length;
-		if (n === 0) {
+	export function size(fields: number): size {
+		if (fields === 0) {
 			return 0;
-		} else if (n <= 8) {
+		} else if (fields <= 8) {
 			return 1;
-		} else if (n <= 16) {
+		} else if (fields <= 16) {
 			return 2;
 		} else {
-			return 4 * Math.ceil(n / 32);
+			return 4 * num32Flags(fields);
 		}
 	}
 
-	export function alignment(fields: flagField[]): alignment {
-		const n = fields.length;
-		if (n <= 8) {
+	export function alignment(fields: number): alignment {
+		if (fields <= 8) {
 			return 1;
-		} else if (n <= 16) {
+		} else if (fields <= 16) {
 			return 2;
 		} else {
 			return 4;
 		}
+	}
+
+	export function flatTypes(fields: number): 'i32'[] {
+		return new Array(num32Flags(fields)).fill('i32');
+	}
+
+	export function load(memory: Memory, ptr: ptr<u32[]>, fields: number): u32[] {
+		const numFlags = num32Flags(fields);
+		const result: u32[] = new Array(numFlags);
+		for (let i = 0; i < numFlags; i++) {
+			result[i] = memory.view.getUint32(ptr, true);
+			ptr += u32.size;
+		}
+		return result;
+	}
+
+	export function liftFlat(_memory: Memory, values: FlatIterator, fields: number): u32[] {
+		const numFlags = num32Flags(fields);
+		const result: u32[] = new Array(numFlags);
+		for (let i = 0; i < numFlags; i++) {
+			result[i] = values.next().value as u32;
+		}
+		return result;
+	}
+
+	export function store(memory: Memory, ptr: ptr<u32[]>, flags: u32[]): void {
+		for (const flag of flags) {
+			memory.view.setUint32(ptr, flag, true);
+			ptr += u32.size;
+		}
+	}
+
+	export function lowerFlat(result: wasmTypes[], _memory: Memory, flags: u32[]): void {
+		for (const flag of flags) {
+			result.push(flag);
+		}
+	}
+
+	function num32Flags(fields: number): number {
+		return Math.ceil(fields / 32);
 	}
 }
 
@@ -726,7 +768,7 @@ namespace $TestRecord {
 		return record.liftFlat(memory, values, fields, options) as TestRecord;
 	}
 
-	export function alloc(memory: Memory): ptr<TestRecord> {
+	export function alloc(memory: Memory): ptr<WTestRecord> {
 		return memory.alloc(alignment, size);
 	}
 
@@ -739,3 +781,47 @@ namespace $TestRecord {
 	}
 }
 const TestRecord: ComponentModelType<ptr<WTestRecord>, TestRecord, s32> = $TestRecord;
+
+export interface TestFlags {
+	$flags: u32[];
+	a: boolean;
+	b: boolean;
+	c: boolean;
+}
+
+namespace $TestFlags {
+	const _flags: number = 10;
+
+	export const alignment = flags.alignment(_flags);
+	export const size = flags.size(_flags);
+	export const flatTypes = flags.flatTypes(_flags);
+
+	export function load(memory: Memory, ptr: ptr<u32[]>): TestFlags {
+		return create(flags.load(memory, ptr, _flags));
+	}
+
+	export function liftFlat(memory: Memory, values: FlatIterator): TestFlags {
+		return create(flags.liftFlat(memory, values, _flags));
+	}
+
+	export function alloc(memory: Memory): ptr<u32[]> {
+		return memory.alloc(alignment, size);
+	}
+
+	export function store(memory: Memory, ptr: ptr<u32[]>, value: TestFlags): void {
+		flags.store(memory, ptr, value.$flags);
+	}
+
+	export function lowerFlat(result: wasmTypes[], memory: Memory, value: TestFlags): void {
+		flags.lowerFlat(result, memory, value.$flags);
+	}
+
+	function create(flags: u32[]): TestFlags {
+		return {
+			$flags: flags,
+			get a(): boolean { return  (flags[0] & 1) !== 0; },
+			get b(): boolean { return (flags[0] & 2) !== 0; },
+			get c(): boolean { return (flags[0] & 4) !== 0; }
+		};
+	}
+}
