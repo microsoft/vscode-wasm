@@ -661,14 +661,8 @@ export namespace record {
 	}
 }
 
-interface flagField {
-	readonly name: string;
-	readonly offset: number;
-	readonly mask: number;
-}
-
 export interface JFlags {
-	[key: string]: boolean;
+	$flags: u32[];
 }
 
 export namespace flags {
@@ -735,6 +729,136 @@ export namespace flags {
 	}
 }
 
+export interface caseVariant {
+	readonly name: string;
+	readonly index: number;
+	readonly type: GenericComponentModelType | undefined;
+}
+
+export namespace caseVariant {
+	export function create(name: string, index: number, type: GenericComponentModelType | undefined): caseVariant {
+		return { name, index, type };
+	}
+}
+
+export interface JCase {
+	readonly case: string;
+	readonly index: number;
+	value?: JTypes;
+}
+
+export namespace variant {
+	export function size(cases: caseVariant[]): size {
+		let result = discriminantType(cases.length).size;
+		result = align(result, maxCaseAlignment(cases));
+		return result + maxCaseSize(cases);
+	}
+
+	export function alignment(cases: caseVariant[]): alignment {
+		return Math.max(discriminantType(cases.length).alignment, maxCaseAlignment(cases)) as alignment;
+	}
+
+	export function flatTypes(cases: caseVariant[]): wasmTypeNames[] {
+		const flat: wasmTypeNames[] = [];
+		for (const c of cases) {
+			if (c.type === undefined) {
+				continue;
+			}
+			const flatTypes = c.type.flatTypes;
+			for (let i = 0; i < flatTypes.length; i++) {
+				if (i < flat.length) {
+					flat[i] = joinFlatType(flat[i], flatTypes[i]);
+				} else {
+					flat.push(flatTypes[i]);
+				}
+			}
+		}
+		return [...flat,...discriminantType(cases.length).flatTypes];
+	}
+
+	export function load(memory: Memory, ptr: ptr, discriminantType: GenericComponentModelType, maxCaseAlignment: alignment, cases: caseVariant[], options: Options): JCase {
+		const caseIndex = discriminantType.load(memory, ptr, options);
+		ptr += discriminantType.size;
+		const caseVariant = cases[caseIndex];
+		if (caseVariant.type === undefined) {
+			return { case: caseVariant.name, index: caseIndex };
+		} else {
+			ptr = align(ptr, maxCaseAlignment);
+			const value = caseVariant.type.load(memory, ptr, options);
+			return { case: caseVariant.name, index: caseIndex, value };
+		}
+	}
+
+	export function liftFlat(memory: Memory, values: FlatIterator, discriminantType: GenericComponentModelType, flatTypes: wasmTypeNames[], cases: caseVariant[], options: Options): JCase {
+		const caseIndex = discriminantType.liftFlat(memory, values, options);
+		const caseVariant = cases[caseIndex];
+		if (caseVariant.type === undefined) {
+			return { case: caseVariant.name, index: caseIndex };
+		} else {
+			const value = caseVariant.type.liftFlat(memory, values, options);
+			return { case: caseVariant.name, index: caseIndex, value };
+		}
+	}
+
+	export function store(memory: Memory, ptr: ptr, discriminantType: GenericComponentModelType, maxCaseAlignment: alignment, value: JCase, c: caseVariant, options: Options): void {
+		discriminantType.store(memory, ptr, value.index, options);
+		ptr += discriminantType.size;
+		if (c.type !== undefined && value.value !== undefined) {
+			ptr = align(ptr, maxCaseAlignment);
+			c.type.store(memory, ptr, value.value, options);
+		}
+	}
+
+	export function lowerFlat(result: wasmTypes[], memory: Memory, discriminantType: GenericComponentModelType, value: JCase, c: caseVariant, options: Options): void {
+		discriminantType.lowerFlat(result, memory, value.index, options);
+		if (c.type !== undefined && value.value !== undefined) {
+			c.type.lowerFlat(result, memory, value.value, options);
+		}
+	}
+
+	export function discriminantType(cases: number): GenericComponentModelType {
+		switch (Math.ceil(Math.log2(cases) / 8)) {
+			case 0: return u8;
+			case 1: return u8;
+			case 2: return u16;
+			case 3: return u32;
+		}
+		throw new Error('Too many variants');
+	}
+
+	export function maxCaseAlignment(cases: caseVariant[]): alignment {
+		let result: alignment = 1;
+		for (const c of cases) {
+			if (c.type) {
+				result = Math.max(result, c.type.alignment) as alignment;
+			}
+		}
+		return result;
+	}
+
+	function maxCaseSize(cases: caseVariant[]): size {
+		let result = 0;
+		for (const c of cases) {
+			if (c.type !== undefined) {
+				result = Math.max(result, c.type.size);
+			}
+		}
+		return result;
+	}
+
+	function joinFlatType(a: wasmTypeNames, b:wasmTypeNames) : wasmTypeNames {
+		if (a === b) {
+			return a;
+		}
+		if ((a === 'i32' && b === 'f32') || (a === 'f32' && b === 'i32')) {
+			return 'i32';
+		}
+		return 'i64';
+	}
+}
+
+export type JTypes = number | bigint | string | boolean | JRecord | JCase | JFlags;
+
 interface TestRecord extends JRecord {
 	a: u8;
 	b: u32;
@@ -782,8 +906,7 @@ namespace $TestRecord {
 }
 const TestRecord: ComponentModelType<ptr<WTestRecord>, TestRecord, s32> = $TestRecord;
 
-export interface TestFlags {
-	$flags: u32[];
+export interface TestFlags extends JFlags {
 	a: boolean;
 	b: boolean;
 	c: boolean;
@@ -823,5 +946,39 @@ namespace $TestFlags {
 			get b(): boolean { return (flags[0] & 2) !== 0; },
 			get c(): boolean { return (flags[0] & 4) !== 0; }
 		};
+	}
+}
+
+export type TestVariant = { readonly case: 'a'; value: u8 } | { readonly case: 'b'; value: u32 } | { readonly case: 'c'; value: string };
+
+namespace $TestVariant {
+	const cases: caseVariant[] = [];
+	let index = 0;
+	for (const item of [['a', u8], ['b', u32], ['c'], ['d', wstring]] as [string, GenericComponentModelType | undefined][]) {
+		const [name, type] = item;
+		cases.push(caseVariant.create(name, index++, type));
+	}
+
+	export const alignment = variant.alignment(cases);
+	export const size = variant.size(cases);
+	export const flatTypes = variant.flatTypes(cases);
+
+	const discriminantType = variant.discriminantType(cases.length);
+	const maxCaseAlignment = variant.maxCaseAlignment(cases);
+
+	export function load(memory: Memory, ptr: ptr, options: Options): TestVariant {
+		return variant.load(memory, ptr, discriminantType, maxCaseAlignment, cases, options) as TestVariant;
+	}
+	export function liftFlat(memory: Memory, values: FlatIterator, options: Options): TestVariant {
+		return variant.liftFlat(memory, values, discriminantType, cases, options) as TestVariant;
+	}
+	export function alloc(memory: Memory): ptr {
+		return memory.alloc(alignment, size);
+	}
+	export function store(memory: Memory, ptr: ptr, value: TestVariant, options: Options): void {
+		variant.store(memory, ptr, discriminantType, maxCaseAlignment, value as JCase, cases[(value as JCase).index], options);
+	}
+	export function lowerFlat(result: wasmTypes[], memory: Memory, value: TestVariant, options: Options): void {
+		variant.lowerFlat(result, memory, discriminantType, value as JCase, cases[(value as JCase).index], options);
 	}
 }
