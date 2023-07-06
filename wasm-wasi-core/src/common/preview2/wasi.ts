@@ -461,7 +461,7 @@ namespace float64 {
 }
 
 export type byte = u8;
-export const byte: ComponentModelType<byte, byte, s32> = {
+export const byte: ComponentModelType<byte, byte, i32> = {
 	size: u8.size,
 	alignment: u8.alignment,
 	flatTypes: u8.flatTypes,
@@ -474,7 +474,7 @@ export const byte: ComponentModelType<byte, byte, s32> = {
 };
 
 export type size = u32;
-export const size: ComponentModelType<size, size, s32> = {
+export const size: ComponentModelType<size, size, i32> = {
 	size: u32.size,
 	alignment: u32.alignment,
 	flatTypes: u32.flatTypes,
@@ -487,7 +487,7 @@ export const size: ComponentModelType<size, size, s32> = {
 };
 
 export type ptr<_type = u8> = u32;
-export const ptr: ComponentModelType<ptr, ptr, s32> = {
+export const ptr: ComponentModelType<ptr, ptr, i32> = {
 	size: u32.size,
 	alignment: u32.alignment,
 	flatTypes: u32.flatTypes,
@@ -498,6 +498,8 @@ export const ptr: ComponentModelType<ptr, ptr, s32> = {
 	store: u32.store,
 	lowerFlat: u32.lowerFlat
 };
+
+
 
 export interface char {
 
@@ -585,14 +587,14 @@ namespace $wstring {
 }
 export const wstring: ComponentModelType<ptr<wstring>, string, s32> = $wstring;
 
-interface RecordField {
+interface recordField {
 	readonly name: string;
 	readonly offset: number;
 	readonly type: GenericComponentModelType;
 }
 
-namespace RecordField {
-	export function create(name: string, offset: number, type: GenericComponentModelType): RecordField {
+namespace recordField {
+	export function create(name: string, offset: number, type: GenericComponentModelType): recordField {
 		return { name, offset, type };
 	}
 }
@@ -601,7 +603,7 @@ export interface JRecord {
 	[key: string]: any;
 }
 export namespace record {
-	export function size(fields: RecordField[]): size {
+	export function size(fields: recordField[]): size {
 		let result: ptr = 0;
 		for (const field of fields) {
 			align(result, field.type.alignment);
@@ -610,7 +612,7 @@ export namespace record {
 		return result;
 	}
 
-	export function alignment(fields: RecordField[]): alignment {
+	export function alignment(fields: recordField[]): alignment {
 		let result: alignment = 1;
 		for (const field of fields) {
 			result = Math.max(result, field.type.alignment) as alignment;
@@ -618,7 +620,7 @@ export namespace record {
 		return result;
 	}
 
-	export function flatTypes(fields: RecordField[]): wasmTypeNames[] {
+	export function flatTypes(fields: recordField[]): wasmTypeNames[] {
 		const result: wasmTypeNames[] = [];
 		for (const field of fields) {
 			result.push(...field.type.flatTypes);
@@ -626,7 +628,7 @@ export namespace record {
 		return result;
 	}
 
-	export function load(memory: Memory, ptr: ptr, fields: RecordField[], options: Options): JRecord {
+	export function load(memory: Memory, ptr: ptr, fields: recordField[], options: Options): JRecord {
 		const result: JRecord = Object.create(null);
 		for (const field of fields) {
 			const value = field.type.load(memory, ptr + field.offset, options);
@@ -635,7 +637,7 @@ export namespace record {
 		return result;
 	}
 
-	export function liftFlat(memory: Memory, values: FlatIterator, fields: RecordField[], options: Options): JRecord {
+	export function liftFlat(memory: Memory, values: FlatIterator, fields: recordField[], options: Options): JRecord {
 		const result: JRecord = Object.create(null);
 		for (const field of fields) {
 			const value = field.type.liftFlat(memory, values, options);
@@ -644,17 +646,49 @@ export namespace record {
 		return result;
 	}
 
-	export function store(memory: Memory, ptr: ptr, record: JRecord, fields: RecordField[], options: Options): void {
+	export function store(memory: Memory, ptr: ptr, record: JRecord, fields: recordField[], options: Options): void {
 		for (const field of fields) {
 			const value = record[field.name];
 			field.type.store(memory, ptr + field.offset, value, options);
 		}
 	}
 
-	export function lowerFlat(result: wasmTypes[], memory: Memory, record: JRecord, fields: RecordField[], options: Options): void {
+	export function lowerFlat(result: wasmTypes[], memory: Memory, record: JRecord, fields: recordField[], options: Options): void {
 		for (const field of fields) {
 			const value = record[field.name];
 			field.type.lowerFlat(result, memory, value, options);
+		}
+	}
+}
+
+interface flagField {
+	readonly name: string;
+	readonly mask: number;
+	readonly offset: number;
+}
+
+export namespace flags {
+	export function size(fields: flagField[]): size {
+		const n = fields.length;
+		if (n === 0) {
+			return 0;
+		} else if (n <= 8) {
+			return 1;
+		} else if (n <= 16) {
+			return 2;
+		} else {
+			return 4 * Math.ceil(n / 32);
+		}
+	}
+
+	export function alignment(fields: flagField[]): alignment {
+		const n = fields.length;
+		if (n <= 8) {
+			return 1;
+		} else if (n <= 16) {
+			return 2;
+		} else {
+			return 4;
 		}
 	}
 }
@@ -671,12 +705,12 @@ export type WTestRecord = [u8, u32, u8, ...wstring];
 
 namespace $TestRecord {
 
-	const fields: RecordField[] = [];
+	const fields: recordField[] = [];
 	let offset = 0;
 	for (const item of [['a', u8], ['b', u32], ['c', u8], ['d', wstring]] as [string, GenericComponentModelType][]) {
 		const [name, type] = item;
 		offset = align(offset, type.alignment);
-		fields.push(RecordField.create(name, offset, type));
+		fields.push(recordField.create(name, offset, type));
 		offset += type.size;
 	}
 
