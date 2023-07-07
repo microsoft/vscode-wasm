@@ -1028,7 +1028,53 @@ export namespace variant {
 
 export type JEnum = number;
 
-export type JType = number | bigint | string | boolean | JRecord | JVariantCase | JFlags | JVariantCase | JTuple | JEnum;
+export class Option<T> {
+
+	private _$caseIndex: 0 | 1;
+	public value: T | undefined;
+
+	constructor(caseIndex: 0 | 1, value: T | undefined) {
+		this._$caseIndex = caseIndex;
+		this.value = value;
+	}
+
+	get $caseIndex(): number {
+		return this._$caseIndex;
+	}
+
+	public none(): this is { value: undefined } {
+		return this._$caseIndex === 0;
+	}
+
+	public some(): this is { value: T} {
+		return this._$caseIndex === 1;
+	}
+}
+
+export class Result<O, E> {
+
+	private _$caseIndex: 0 | 1;
+	public value: O | E;
+
+	constructor(caseIndex: 0 | 1, value: O | E) {
+		this._$caseIndex = caseIndex;
+		this.value = value;
+	}
+
+	get $caseIndex(): number {
+		return this._$caseIndex;
+	}
+
+	public isOK(): this is { value: O } {
+		return this._$caseIndex === 0;
+	}
+
+	public isError(): this is { value: E } {
+		return this._$caseIndex === 1;
+	}
+}
+
+export type JType = number | bigint | string | boolean | JRecord | JVariantCase | JFlags | JVariantCase | JTuple | JEnum | Option<any> | Result<any, any>;
 
 
 // This are examples can can be fully generated from the Wit files.
@@ -1218,7 +1264,7 @@ namespace $TestVariantType {
 		variant.store(memory, ptr, value.$caseIndex, value.value, options, discriminantType, maxCaseAlignment, cases[value.$caseIndex]);
 	}
 	export function lowerFlat(result: wasmType[], memory: Memory, value: TestVariant, options: Options): void {
-		variant.lowerFlat(result, memory, value.$caseIndex, value as JVariantCase, options, discriminantType, flatTypes, cases[value.$caseIndex]);
+		variant.lowerFlat(result, memory, value.$caseIndex, value.value, options, discriminantType, flatTypes, cases[value.$caseIndex]);
 	}
 }
 export const TestVariantType: ComponentModelType<TestVariant> = $TestVariantType;
@@ -1279,11 +1325,69 @@ namespace $TestUnionType {
 		variant.store(memory, ptr, value.$caseIndex, value.value, options, discriminantType, maxCaseAlignment, cases[value.$caseIndex]);
 	}
 	export function lowerFlat(result: wasmType[], memory: Memory, value: TestUnion, options: Options): void {
-		variant.lowerFlat(result, memory, value.$caseIndex, value as JVariantCase, options, discriminantType, flatTypes, cases[value.$caseIndex]);
+		variant.lowerFlat(result, memory, value.$caseIndex, value.value, options, discriminantType, flatTypes, cases[value.$caseIndex]);
 	}
 }
 export const TestUnionType: ComponentModelType<TestUnion> = $TestUnionType;
 
+namespace $TestOptionType {
+	const cases: variantCase[] = [ variantCase.create(0, undefined), variantCase.create(1, TestRecordType) ];
+	const discriminantType = u8;
+	const maxCaseAlignment = variant.maxCaseAlignment(cases);
+
+	export const alignment = variant.alignment(discriminantType, cases);
+	export const size = variant.size(discriminantType, cases);
+	export const flatTypes = variant.flatTypes(discriminantType, cases);
+
+	type variants = undefined | TestRecord;
+	export function load(memory: Memory, ptr: ptr, options: Options): Option<TestRecord> {
+		const [index, value] = variant.load(memory, ptr, options, discriminantType, maxCaseAlignment, cases);
+		return new Option<TestRecord>(index as 0 | 1, value as variants);
+	}
+	export function liftFlat(memory: Memory, values: FlatValuesIter, options: Options): Option<TestRecord> {
+		const [index, value] = variant.liftFlat(memory, values, options, discriminantType, flatTypes, cases);
+		return new Option<TestRecord>(index as 0 | 1, value as variants);
+	}
+	export function alloc(memory: Memory): ptr {
+		return memory.alloc(alignment, size);
+	}
+	export function store(memory: Memory, ptr: ptr, value: Option<TestRecord>, options: Options): void {
+		variant.store(memory, ptr, value.$caseIndex, value.value, options, discriminantType, maxCaseAlignment, cases[value.$caseIndex]);
+	}
+	export function lowerFlat(result: wasmType[], memory: Memory, value: Option<TestRecord>, options: Options): void {
+		variant.lowerFlat(result, memory, value.$caseIndex, value.value, options, discriminantType, flatTypes, cases[value.$caseIndex]);
+	}
+}
+export const TestOptionType: ComponentModelType<Option<TestRecord>> = $TestOptionType;
+
+namespace $TestResultType {
+	const cases: variantCase[] = [ variantCase.create(0, TestTupleType), variantCase.create(1, u32) ];
+	const discriminantType = u8;
+	const maxCaseAlignment = variant.maxCaseAlignment(cases);
+
+	export const alignment = variant.alignment(discriminantType, cases);
+	export const size = variant.size(discriminantType, cases);
+	export const flatTypes = variant.flatTypes(discriminantType, cases);
+
+	type variants = TestTuple | u32;
+	export function load(memory: Memory, ptr: ptr, options: Options): Result<TestTuple, u32> {
+		const [index, value] = variant.load(memory, ptr, options, discriminantType, maxCaseAlignment, cases);
+		return new Result<TestTuple, u32>(index as 0 | 1, value as variants);
+	}
+	export function liftFlat(memory: Memory, values: FlatValuesIter, options: Options): Result<TestTuple, u32> {
+		const [index, value] = variant.liftFlat(memory, values, options, discriminantType, flatTypes, cases);
+		return new Result<TestTuple, u32>(index as 0 | 1, value as variants);
+	}
+	export function alloc(memory: Memory): ptr {
+		return memory.alloc(alignment, size);
+	}
+	export function store(memory: Memory, ptr: ptr, value: Result<TestTuple, u32>, options: Options): void {
+		variant.store(memory, ptr, value.$caseIndex, value.value, options, discriminantType, maxCaseAlignment, cases[value.$caseIndex]);
+	}
+	export function lowerFlat(result: wasmType[], memory: Memory, value: Result<TestTuple, u32>, options: Options): void {
+		variant.lowerFlat(result, memory, value.$caseIndex, value.value, options, discriminantType, flatTypes, cases[value.$caseIndex]);
+	}
+}
 
 export enum TestEnum {
 	a = 0,
