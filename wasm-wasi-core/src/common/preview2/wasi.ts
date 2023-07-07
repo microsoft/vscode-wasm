@@ -4,6 +4,10 @@
  *--------------------------------------------------------------------------------------------*/
 import RAL from '../ral';
 
+// We need to move this to a more generic place
+import { BigInts } from '../converter';
+import { Errno, WasiError } from '../wasi';
+
 const utf8Decoder = RAL().TextDecoder.create('utf-8');
 const utf8Encoder = RAL().TextEncoder.create('utf-8');
 
@@ -32,12 +36,70 @@ export type f64 = number;
 export type wasmTypes = i32 | i64 | f32 | f64;
 export type wasmTypeNames = 'i32' | 'i64' | 'f32' | 'f64';
 
-export type FlatIterator = Iterator<wasmTypes, wasmTypes>;
+namespace WasmTypes {
+
+	const $32 = new DataView(new ArrayBuffer(4));
+	const $64 = new DataView(new ArrayBuffer(8));
+
+	export function reinterpret_i32_as_f32(i32: number): number {
+		$32.setInt32(0, i32, true);
+		return $32.getFloat32(0, true);
+	}
+
+	export function convert_i64_to_i32(i64: bigint): number {
+		return BigInts.asNumber(i64);
+	}
+
+	export function reinterpret_i64_as_f32(i64: bigint): number {
+		const i32 = convert_i64_to_i32(i64);
+		return reinterpret_i32_as_f32(i32);
+	}
+
+	export function reinterpret_i64_as_f64(i64: bigint): number {
+		$64.setBigInt64(0, i64, true);
+		return $64.getFloat64(0, true);
+	}
+}
+
+export type FlatValuesIter = Iterator<wasmTypes, wasmTypes>;
+
+class CoerceValueIter implements Iterator<wasmTypes, wasmTypes> {
+
+	private index: number;
+
+	constructor(private readonly values: FlatValuesIter, private haveFlatTypes: readonly wasmTypeNames[], private wantFlatTypes: readonly wasmTypeNames[]) {
+		if (haveFlatTypes.length !== wantFlatTypes.length) {
+			throw new WasiError(Errno.inval);
+		}
+		this.index = 0;
+	}
+
+	next(): IteratorResult<wasmTypes, wasmTypes> {
+		const value = this.values.next();
+		if (value.done) {
+			return value;
+		}
+		const haveType = this.haveFlatTypes[this.index];
+		const wantType = this.wantFlatTypes[this.index++];
+
+		if (haveType === 'i32' && wantType === 'f32') {
+			return { done: false, value: WasmTypes.reinterpret_i32_as_f32(value.value as i32) };
+		} else if (haveType === 'i64' && wantType === 'i32') {
+			return { done: false, value: WasmTypes.convert_i64_to_i32(value.value as i64) };
+		} else if (haveType === 'i64' && wantType === 'f32') {
+			return { done: false, value: WasmTypes.reinterpret_i64_as_f32(value.value as i64) };
+		} else if (haveType === 'i64' && wantType === 'f64') {
+			return { done: false, value: WasmTypes.reinterpret_i64_as_f64(value.value as i64) };
+		} else {
+			return value;
+		}
+	}
+}
 
 export interface ComponentModelType<W, J, F extends wasmTypes> {
 	readonly size: number;
 	readonly alignment: alignment;
-	readonly flatTypes: wasmTypeNames[];
+	readonly flatTypes: ReadonlyArray<wasmTypeNames>;
 	load(memory: Memory, ptr: ptr<W>, options: Options): J;
 	liftFlat(memory: Memory, values: Iterator<F, F>, options: Options): J;
 	alloc(memory: Memory): ptr<W>;
@@ -76,7 +138,7 @@ export type u8 = number;
 namespace $u8 {
 	export const size = 1;
 	export const alignment: alignment = 1;
-	export const flatTypes: wasmTypeNames[] = ['i32'];
+	export const flatTypes: readonly wasmTypeNames[] = ['i32'];
 
 	export const LOW_VALUE = 0;
 	export const HIGH_VALUE = 255;
@@ -85,7 +147,7 @@ namespace $u8 {
 		return memory.view.getUint8(ptr);
 	}
 
-	export function liftFlat(_memory: Memory, values: FlatIterator): u8 {
+	export function liftFlat(_memory: Memory, values: FlatValuesIter): u8 {
 		const value = values.next().value;
 		if (value < LOW_VALUE || value > HIGH_VALUE || !Number.isInteger(value)) {
 			throw new Error(`Invalid u8 value ${value}`);
@@ -114,7 +176,7 @@ export type u16 = number;
 namespace $u16 {
 	export const size = 2;
 	export const alignment: alignment = 2;
-	export const flatTypes: wasmTypeNames[] = ['i32'];
+	export const flatTypes: readonly wasmTypeNames[] = ['i32'];
 
 	export const LOW_VALUE = 0;
 	export const HIGH_VALUE = 65535;
@@ -123,7 +185,7 @@ namespace $u16 {
 		return memory.view.getUint16(ptr, true);
 	}
 
-	export function liftFlat(_memory: Memory, values:FlatIterator): u16 {
+	export function liftFlat(_memory: Memory, values:FlatValuesIter): u16 {
 		const value = values.next().value;
 		if (value < LOW_VALUE || value > HIGH_VALUE || !Number.isInteger(value)) {
 			throw new Error(`Invalid u16 value ${value}`);
@@ -152,7 +214,7 @@ export type u32 = number;
 namespace $u32 {
 	export const size = 4;
 	export const alignment: alignment = 4;
-	export const flatTypes: wasmTypeNames[] = ['i32'];
+	export const flatTypes: readonly wasmTypeNames[] = ['i32'];
 
 	export const LOW_VALUE = 0;
 	export const HIGH_VALUE = 4294967295; // 2 ^ 32 - 1
@@ -161,7 +223,7 @@ namespace $u32 {
 		return memory.view.getUint32(ptr, true);
 	}
 
-	export function liftFlat(_memory: Memory, values: FlatIterator): u32 {
+	export function liftFlat(_memory: Memory, values: FlatValuesIter): u32 {
 		const value = values.next().value;
 		if (value < LOW_VALUE || value > HIGH_VALUE || !Number.isInteger(value)) {
 			throw new Error(`Invalid u32 value ${value}`);
@@ -190,7 +252,7 @@ export type u64 = bigint;
 namespace $u64 {
 	export const size = 8;
 	export const alignment: alignment = 8;
-	export const flatTypes: wasmTypeNames[] = ['i64'];
+	export const flatTypes: readonly wasmTypeNames[] = ['i64'];
 
 	export const LOW_VALUE = 0n;
 	export const HIGH_VALUE = 18446744073709551615n; // 2 ^ 64 - 1
@@ -199,7 +261,7 @@ namespace $u64 {
 		return memory.view.getBigUint64(ptr, true);
 	}
 
-	export function liftFlat(_memory: Memory, values: FlatIterator): u64 {
+	export function liftFlat(_memory: Memory, values: FlatValuesIter): u64 {
 		const value = values.next().value;
 		if (value < LOW_VALUE) {
 			throw new Error(`Invalid u64 value ${value}`);
@@ -228,7 +290,7 @@ export type s8 = number;
 namespace $s8 {
 	export const size = 1;
 	export const alignment: alignment = 1;
-	export const flatTypes: wasmTypeNames[] = ['i32'];
+	export const flatTypes: readonly wasmTypeNames[] = ['i32'];
 
 	const LOW_VALUE = -128;
 	const HIGH_VALUE = 127;
@@ -237,7 +299,7 @@ namespace $s8 {
 		return memory.view.getInt8(ptr);
 	}
 
-	export function liftFlat(_memory: Memory, values: FlatIterator): s8 {
+	export function liftFlat(_memory: Memory, values: FlatValuesIter): s8 {
 		const value = values.next().value;
 		// All int values in the component model are transferred as unsigned
 		// values. So for signed values we need to convert them back. First
@@ -274,7 +336,7 @@ export type s16 = number;
 namespace $s16 {
 	export const size = 2;
 	export const alignment: alignment = 2;
-	export const flatTypes: wasmTypeNames[] = ['i32'];
+	export const flatTypes: readonly wasmTypeNames[] = ['i32'];
 
 	const LOW_VALUE = -32768; // -2 ^ 15
 	const HIGH_VALUE = 32767; // 2 ^ 15 - 1
@@ -283,7 +345,7 @@ namespace $s16 {
 		return memory.view.getInt16(ptr, true);
 	}
 
-	export function liftFlat(_memory: Memory, values: FlatIterator): s16 {
+	export function liftFlat(_memory: Memory, values: FlatValuesIter): s16 {
 		const value = values.next().value;
 		if (value < $u16.LOW_VALUE || value > $u16.HIGH_VALUE || !Number.isInteger(value)) {
 			throw new Error(`Invalid s16 value ${value}`);
@@ -312,7 +374,7 @@ export type s32 = number;
 namespace $s32 {
 	export const size = 4;
 	export const alignment: alignment = 4;
-	export const flatTypes: wasmTypeNames[] = ['i32'];
+	export const flatTypes: readonly wasmTypeNames[] = ['i32'];
 
 	const LOW_VALUE = -2147483648; // -2 ^ 31
 	const HIGH_VALUE = 2147483647; // 2 ^ 31 - 1
@@ -321,7 +383,7 @@ namespace $s32 {
 		return memory.view.getInt32(ptr, true);
 	}
 
-	export function liftFlat(_memory: Memory, values: FlatIterator): s32 {
+	export function liftFlat(_memory: Memory, values: FlatValuesIter): s32 {
 		const value = values.next().value;
 		if (value < $u32.LOW_VALUE || value > $u32.HIGH_VALUE || !Number.isInteger(value)) {
 			throw new Error(`Invalid s32 value ${value}`);
@@ -350,7 +412,7 @@ export type s64 = bigint;
 namespace $s64 {
 	export const size = 8;
 	export const alignment: alignment = 8;
-	export const flatTypes: wasmTypeNames[] = ['i64'];
+	export const flatTypes: readonly wasmTypeNames[] = ['i64'];
 
 	const LOW_VALUE = -9223372036854775808n; // -2 ^ 63
 	const HIGH_VALUE = 9223372036854775807n; // 2 ^ 63 - 1
@@ -359,7 +421,7 @@ namespace $s64 {
 		return memory.view.getBigInt64(ptr, true);
 	}
 
-	export function liftFlat(_memory: Memory, values: FlatIterator): s64 {
+	export function liftFlat(_memory: Memory, values: FlatValuesIter): s64 {
 		const value = values.next().value;
 		if (value < $u64.LOW_VALUE) {
 			throw new Error(`Invalid s64 value ${value}`);
@@ -388,7 +450,7 @@ export type float32 = number;
 namespace $float32 {
 	export const size = 4;
 	export const alignment:alignment = 4;
-	export const flatTypes: wasmTypeNames[] = ['f32'];
+	export const flatTypes: readonly wasmTypeNames[] = ['f32'];
 
 	const LOW_VALUE = -3.4028234663852886e+38;
 	const HIGH_VALUE = 3.4028234663852886e+38;
@@ -398,7 +460,7 @@ namespace $float32 {
 		return memory.view.getFloat32(ptr, true);
 	}
 
-	export function liftFlat(_memory: Memory, values: FlatIterator): float32 {
+	export function liftFlat(_memory: Memory, values: FlatValuesIter): float32 {
 		const value = values.next().value;
 		if (value < LOW_VALUE || value > HIGH_VALUE) {
 			throw new Error(`Invalid float32 value ${value}`);
@@ -424,9 +486,10 @@ namespace $float32 {
 export const float32: ComponentModelType<float32, number, f32> = $float32;
 
 export type float64 = number;
-namespace float64 {
+namespace $float64 {
 	export const size = 8;
 	export const alignment: alignment = 8;
+	export const flatTypes: readonly wasmTypeNames[] = ['f64'];
 
 	const LOW_VALUE = -1 * Number.MAX_VALUE;
 	const HIGH_VALUE = Number.MAX_VALUE;
@@ -436,7 +499,7 @@ namespace float64 {
 		return memory.view.getFloat64(ptr, true);
 	}
 
-	export function liftFlat(_memory: Memory, values: FlatIterator): float64 {
+	export function liftFlat(_memory: Memory, values: FlatValuesIter): float64 {
 		const value = values.next().value;
 		if (value < LOW_VALUE || value > HIGH_VALUE) {
 			throw new Error(`Invalid float64 value ${value}`);
@@ -459,6 +522,7 @@ namespace float64 {
 		result.push(Number.isNaN(value) ? NAN : value);
 	}
 }
+export const float64: ComponentModelType<float64, number, f64> = $float64;
 
 export type byte = u8;
 export const byte: ComponentModelType<byte, byte, i32> = {
@@ -518,7 +582,7 @@ namespace $wstring {
 
 	export const size = 8;
 	export const alignment: alignment = 4;
-	export const flatTypes: wasmTypeNames[] = ['i32', 'i32'];
+	export const flatTypes: readonly wasmTypeNames[] = ['i32', 'i32'];
 
 	export function load(memory: Memory, ptr: ptr<wstring>, options: Options): string {
 		const view = memory.view;
@@ -527,7 +591,7 @@ namespace $wstring {
 		return loadFromRange(memory, dataPtr, codeUnits, options);
 	}
 
-	export function liftFlat(memory: Memory, values: FlatIterator, options: Options): string {
+	export function liftFlat(memory: Memory, values: FlatValuesIter, options: Options): string {
 		const dataPtr: ptr = values.next().value as ptr;
 		const codeUnits: u32 = values.next().value as u32;
 		return loadFromRange(memory, dataPtr, codeUnits, options);
@@ -620,7 +684,7 @@ export namespace record {
 		return result;
 	}
 
-	export function flatTypes(fields: recordField[]): wasmTypeNames[] {
+	export function flatTypes(fields: recordField[]): readonly wasmTypeNames[] {
 		const result: wasmTypeNames[] = [];
 		for (const field of fields) {
 			result.push(...field.type.flatTypes);
@@ -637,7 +701,7 @@ export namespace record {
 		return result;
 	}
 
-	export function liftFlat(memory: Memory, values: FlatIterator, fields: recordField[], options: Options): JRecord {
+	export function liftFlat(memory: Memory, values: FlatValuesIter, fields: recordField[], options: Options): JRecord {
 		const result: JRecord = Object.create(null);
 		for (const field of fields) {
 			const value = field.type.liftFlat(memory, values, options);
@@ -702,7 +766,7 @@ export namespace flags {
 		return result;
 	}
 
-	export function liftFlat(_memory: Memory, values: FlatIterator, fields: number): u32[] {
+	export function liftFlat(_memory: Memory, values: FlatValuesIter, fields: number): u32[] {
 		const numFlags = num32Flags(fields);
 		const result: u32[] = new Array(numFlags);
 		for (let i = 0; i < numFlags; i++) {
@@ -733,11 +797,12 @@ export interface caseVariant {
 	readonly name: string;
 	readonly index: number;
 	readonly type: GenericComponentModelType | undefined;
+	readonly wantFlatTypes: wasmTypeNames[] | undefined;
 }
 
 export namespace caseVariant {
 	export function create(name: string, index: number, type: GenericComponentModelType | undefined): caseVariant {
-		return { name, index, type };
+		return { name, index, type, wantFlatTypes: type !== undefined ? [] : undefined };
 	}
 }
 
@@ -748,17 +813,17 @@ export interface JCase {
 }
 
 export namespace variant {
-	export function size(cases: caseVariant[]): size {
-		let result = discriminantType(cases.length).size;
+	export function size(discriminantType: GenericComponentModelType, cases: caseVariant[]): size {
+		let result = discriminantType.size;
 		result = align(result, maxCaseAlignment(cases));
 		return result + maxCaseSize(cases);
 	}
 
-	export function alignment(cases: caseVariant[]): alignment {
-		return Math.max(discriminantType(cases.length).alignment, maxCaseAlignment(cases)) as alignment;
+	export function alignment(discriminantType: GenericComponentModelType, cases: caseVariant[]): alignment {
+		return Math.max(discriminantType.alignment, maxCaseAlignment(cases)) as alignment;
 	}
 
-	export function flatTypes(cases: caseVariant[]): wasmTypeNames[] {
+	export function flatTypes(discriminantType: GenericComponentModelType, cases: caseVariant[]): readonly wasmTypeNames[] {
 		const flat: wasmTypeNames[] = [];
 		for (const c of cases) {
 			if (c.type === undefined) {
@@ -766,14 +831,18 @@ export namespace variant {
 			}
 			const flatTypes = c.type.flatTypes;
 			for (let i = 0; i < flatTypes.length; i++) {
+				const want = flatTypes[i];
 				if (i < flat.length) {
-					flat[i] = joinFlatType(flat[i], flatTypes[i]);
+					const use = joinFlatType(flat[i], want);
+					flat[i] = use;
+					c.wantFlatTypes!.push(want);
 				} else {
-					flat.push(flatTypes[i]);
+					flat.push(want);
+					c.wantFlatTypes!.push(want);
 				}
 			}
 		}
-		return [...flat,...discriminantType(cases.length).flatTypes];
+		return [...discriminantType.flatTypes, ...flat];
 	}
 
 	export function load(memory: Memory, ptr: ptr, discriminantType: GenericComponentModelType, maxCaseAlignment: alignment, cases: caseVariant[], options: Options): JCase {
@@ -789,13 +858,15 @@ export namespace variant {
 		}
 	}
 
-	export function liftFlat(memory: Memory, values: FlatIterator, discriminantType: GenericComponentModelType, flatTypes: wasmTypeNames[], cases: caseVariant[], options: Options): JCase {
+	export function liftFlat(memory: Memory, values: FlatValuesIter, discriminantType: GenericComponentModelType, flatTypes: readonly wasmTypeNames[], cases: caseVariant[], options: Options): JCase {
 		const caseIndex = discriminantType.liftFlat(memory, values, options);
 		const caseVariant = cases[caseIndex];
 		if (caseVariant.type === undefined) {
 			return { case: caseVariant.name, index: caseIndex };
 		} else {
-			const value = caseVariant.type.liftFlat(memory, values, options);
+			// The first flat type is the discriminant type. So skip it.
+			const iter = new CoerceValueIter(values, flatTypes.slice(1), caseVariant.wantFlatTypes!);
+			const value = caseVariant.type.liftFlat(memory, iter, options);
 			return { case: caseVariant.name, index: caseIndex, value };
 		}
 	}
@@ -888,7 +959,7 @@ namespace $TestRecord {
 		return record.load(memory, ptr, fields, options) as TestRecord;
 	}
 
-	export function liftFlat(memory: Memory, values: FlatIterator, options: Options): TestRecord {
+	export function liftFlat(memory: Memory, values: FlatValuesIter, options: Options): TestRecord {
 		return record.liftFlat(memory, values, fields, options) as TestRecord;
 	}
 
@@ -923,7 +994,7 @@ namespace $TestFlags {
 		return create(flags.load(memory, ptr, _flags));
 	}
 
-	export function liftFlat(memory: Memory, values: FlatIterator): TestFlags {
+	export function liftFlat(memory: Memory, values: FlatValuesIter): TestFlags {
 		return create(flags.liftFlat(memory, values, _flags));
 	}
 
@@ -959,18 +1030,19 @@ namespace $TestVariant {
 		cases.push(caseVariant.create(name, index++, type));
 	}
 
-	export const alignment = variant.alignment(cases);
-	export const size = variant.size(cases);
-	export const flatTypes = variant.flatTypes(cases);
-
 	const discriminantType = variant.discriminantType(cases.length);
 	const maxCaseAlignment = variant.maxCaseAlignment(cases);
+
+	export const alignment = variant.alignment(discriminantType, cases);
+	export const size = variant.size(discriminantType, cases);
+	export const flatTypes = variant.flatTypes(discriminantType, cases);
+
 
 	export function load(memory: Memory, ptr: ptr, options: Options): TestVariant {
 		return variant.load(memory, ptr, discriminantType, maxCaseAlignment, cases, options) as TestVariant;
 	}
-	export function liftFlat(memory: Memory, values: FlatIterator, options: Options): TestVariant {
-		return variant.liftFlat(memory, values, discriminantType, cases, options) as TestVariant;
+	export function liftFlat(memory: Memory, values: FlatValuesIter, options: Options): TestVariant {
+		return variant.liftFlat(memory, values, discriminantType, flatTypes, cases, options) as TestVariant;
 	}
 	export function alloc(memory: Memory): ptr {
 		return memory.alloc(alignment, size);
