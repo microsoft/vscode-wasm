@@ -46,8 +46,17 @@ namespace WasmTypes {
 		return $32.getFloat32(0, true);
 	}
 
+	export function reinterpret_f32_as_i32(f32: number): number {
+		$32.setFloat32(0, f32, true);
+		return $32.getInt32(0, true);
+	}
+
 	export function convert_i64_to_i32(i64: bigint): number {
 		return BigInts.asNumber(i64);
+	}
+
+	export function convert_i32_to_i64(i32: number): bigint {
+		return BigInt(i32);
 	}
 
 	export function reinterpret_i64_as_f32(i64: bigint): number {
@@ -55,9 +64,19 @@ namespace WasmTypes {
 		return reinterpret_i32_as_f32(i32);
 	}
 
+	export function reinterpret_f32_as_i64(f32: number): bigint {
+		const i32 = reinterpret_f32_as_i32(f32);
+		return convert_i32_to_i64(i32);
+	}
+
 	export function reinterpret_i64_as_f64(i64: bigint): number {
 		$64.setBigInt64(0, i64, true);
 		return $64.getFloat64(0, true);
+	}
+
+	export function reinterpret_f64_as_i64(f64: number): bigint {
+		$64.setFloat64(0, f64, true);
+		return $64.getBigInt64(0, true);
 	}
 }
 
@@ -692,7 +711,7 @@ export namespace record {
 		return result;
 	}
 
-	export function load(memory: Memory, ptr: ptr, fields: recordField[], options: Options): JRecord {
+	export function load(memory: Memory, ptr: ptr, options: Options, fields: recordField[]): JRecord {
 		const result: JRecord = Object.create(null);
 		for (const field of fields) {
 			const value = field.type.load(memory, ptr + field.offset, options);
@@ -701,7 +720,7 @@ export namespace record {
 		return result;
 	}
 
-	export function liftFlat(memory: Memory, values: FlatValuesIter, fields: recordField[], options: Options): JRecord {
+	export function liftFlat(memory: Memory, values: FlatValuesIter, options: Options, fields: recordField[]): JRecord {
 		const result: JRecord = Object.create(null);
 		for (const field of fields) {
 			const value = field.type.liftFlat(memory, values, options);
@@ -710,14 +729,14 @@ export namespace record {
 		return result;
 	}
 
-	export function store(memory: Memory, ptr: ptr, record: JRecord, fields: recordField[], options: Options): void {
+	export function store(memory: Memory, ptr: ptr, record: JRecord, options: Options, fields: recordField[]): void {
 		for (const field of fields) {
 			const value = record[field.name];
 			field.type.store(memory, ptr + field.offset, value, options);
 		}
 	}
 
-	export function lowerFlat(result: wasmTypes[], memory: Memory, record: JRecord, fields: recordField[], options: Options): void {
+	export function lowerFlat(result: wasmTypes[], memory: Memory, record: JRecord, options: Options, fields: recordField[]): void {
 		for (const field of fields) {
 			const value = record[field.name];
 			field.type.lowerFlat(result, memory, value, options);
@@ -845,7 +864,7 @@ export namespace variant {
 		return [...discriminantType.flatTypes, ...flat];
 	}
 
-	export function load(memory: Memory, ptr: ptr, discriminantType: GenericComponentModelType, maxCaseAlignment: alignment, cases: caseVariant[], options: Options): JCase {
+	export function load(memory: Memory, ptr: ptr, options: Options, discriminantType: GenericComponentModelType, maxCaseAlignment: alignment, cases: caseVariant[]): JCase {
 		const caseIndex = discriminantType.load(memory, ptr, options);
 		ptr += discriminantType.size;
 		const caseVariant = cases[caseIndex];
@@ -858,7 +877,7 @@ export namespace variant {
 		}
 	}
 
-	export function liftFlat(memory: Memory, values: FlatValuesIter, discriminantType: GenericComponentModelType, flatTypes: readonly wasmTypeNames[], cases: caseVariant[], options: Options): JCase {
+	export function liftFlat(memory: Memory, values: FlatValuesIter, options: Options, discriminantType: GenericComponentModelType, flatTypes: readonly wasmTypeNames[], cases: caseVariant[]): JCase {
 		const caseIndex = discriminantType.liftFlat(memory, values, options);
 		const caseVariant = cases[caseIndex];
 		if (caseVariant.type === undefined) {
@@ -871,7 +890,7 @@ export namespace variant {
 		}
 	}
 
-	export function store(memory: Memory, ptr: ptr, discriminantType: GenericComponentModelType, maxCaseAlignment: alignment, value: JCase, c: caseVariant, options: Options): void {
+	export function store(memory: Memory, ptr: ptr, value: JCase, options: Options, discriminantType: GenericComponentModelType, maxCaseAlignment: alignment, c: caseVariant): void {
 		discriminantType.store(memory, ptr, value.index, options);
 		ptr += discriminantType.size;
 		if (c.type !== undefined && value.value !== undefined) {
@@ -880,10 +899,31 @@ export namespace variant {
 		}
 	}
 
-	export function lowerFlat(result: wasmTypes[], memory: Memory, discriminantType: GenericComponentModelType, value: JCase, c: caseVariant, options: Options): void {
+	export function lowerFlat(result: wasmTypes[], memory: Memory, value: JCase, options: Options, discriminantType: GenericComponentModelType, flatTypes: readonly wasmTypeNames[], c: caseVariant): void {
 		discriminantType.lowerFlat(result, memory, value.index, options);
 		if (c.type !== undefined && value.value !== undefined) {
-			c.type.lowerFlat(result, memory, value.value, options);
+			const payload: wasmTypes[] = [];
+			c.type.lowerFlat(payload, memory, value.value, options);
+			// First one is the discriminant type. So skip it.
+			const wantTypes = flatTypes.slice(1);
+			const haveTypes = c.wantFlatTypes!;
+			if (wantTypes.length !== haveTypes.length || payload.length !== haveTypes.length) {
+				throw new WasiError(Errno.inval);
+			}
+			for (let i = 0; i < wantTypes.length; i++) {
+				const have: wasmTypeNames = haveTypes[i];
+				const want: wasmTypeNames = wantTypes[i];
+				if (have === 'f32' && want === 'i32') {
+					payload[i] = WasmTypes.reinterpret_f32_as_i32(payload[i] as number);
+				} else if (have === 'i32' && want === 'i64') {
+					payload[i] = WasmTypes.convert_i32_to_i64(payload[i] as number);
+				} else if (have === 'f32' && want === 'i64') {
+					payload[i] = WasmTypes.reinterpret_f32_as_i64(payload[i] as number);
+				} else if (have === 'f64' && want === 'i64') {
+					payload[i] = WasmTypes.reinterpret_f64_as_i64(payload[i] as number);
+				}
+			}
+			result.push(...payload);
 		}
 	}
 
@@ -956,11 +996,11 @@ namespace $TestRecord {
 	export const flatTypes = record.flatTypes(fields);
 
 	export function load(memory: Memory, ptr: ptr<WTestRecord>, options: Options): TestRecord {
-		return record.load(memory, ptr, fields, options) as TestRecord;
+		return record.load(memory, ptr, options, fields) as TestRecord;
 	}
 
 	export function liftFlat(memory: Memory, values: FlatValuesIter, options: Options): TestRecord {
-		return record.liftFlat(memory, values, fields, options) as TestRecord;
+		return record.liftFlat(memory, values, options, fields) as TestRecord;
 	}
 
 	export function alloc(memory: Memory): ptr<WTestRecord> {
@@ -968,11 +1008,11 @@ namespace $TestRecord {
 	}
 
 	export function store(memory: Memory, ptr: ptr<WTestRecord>, value: TestRecord, options: Options): void {
-		record.store(memory, ptr, value, fields, options);
+		record.store(memory, ptr, value, options, fields);
 	}
 
 	export function lowerFlat(result: wasmTypes[], memory: Memory, value: TestRecord, options: Options): void {
-		record.lowerFlat(result, memory, value, fields, options);
+		record.lowerFlat(result, memory, value, options, fields);
 	}
 }
 const TestRecord: ComponentModelType<ptr<WTestRecord>, TestRecord, s32> = $TestRecord;
@@ -1039,18 +1079,18 @@ namespace $TestVariant {
 
 
 	export function load(memory: Memory, ptr: ptr, options: Options): TestVariant {
-		return variant.load(memory, ptr, discriminantType, maxCaseAlignment, cases, options) as TestVariant;
+		return variant.load(memory, ptr, options, discriminantType, maxCaseAlignment, cases) as TestVariant;
 	}
 	export function liftFlat(memory: Memory, values: FlatValuesIter, options: Options): TestVariant {
-		return variant.liftFlat(memory, values, discriminantType, flatTypes, cases, options) as TestVariant;
+		return variant.liftFlat(memory, values, options, discriminantType, flatTypes, cases) as TestVariant;
 	}
 	export function alloc(memory: Memory): ptr {
 		return memory.alloc(alignment, size);
 	}
 	export function store(memory: Memory, ptr: ptr, value: TestVariant, options: Options): void {
-		variant.store(memory, ptr, discriminantType, maxCaseAlignment, value as JCase, cases[(value as JCase).index], options);
+		variant.store(memory, ptr, value as JCase, options, discriminantType, maxCaseAlignment, cases[(value as JCase).index]);
 	}
 	export function lowerFlat(result: wasmTypes[], memory: Memory, value: TestVariant, options: Options): void {
-		variant.lowerFlat(result, memory, discriminantType, value as JCase, cases[(value as JCase).index], options);
+		variant.lowerFlat(result, memory, value as JCase, options, discriminantType, flatTypes, cases[(value as JCase).index]);
 	}
 }
