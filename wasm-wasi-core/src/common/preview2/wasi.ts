@@ -885,7 +885,7 @@ export namespace variantCase {
 }
 
 export interface JVariantCase {
-	$caseIndex: u32;
+	readonly _caseIndex: u32;
 	value: JType | undefined;
 }
 
@@ -942,9 +942,9 @@ export class variantType<T extends JVariantCase, I, V> implements ComponentModel
 	}
 
 	public store(memory: Memory, ptr: ptr, value: T, options: Options): void {
-		this.discriminantType.store(memory, ptr, value.$caseIndex, options);
+		this.discriminantType.store(memory, ptr, value._caseIndex, options);
 		ptr += this.discriminantType.size;
-		const c = this.cases[value.$caseIndex];
+		const c = this.cases[value._caseIndex];
 		if (c.type !== undefined && value !== undefined) {
 			ptr = align(ptr, this.maxCaseAlignment);
 			c.type.store(memory, ptr, value, options);
@@ -952,8 +952,8 @@ export class variantType<T extends JVariantCase, I, V> implements ComponentModel
 	}
 
 	public lowerFlat(result: wasmType[], memory: Memory, value: T, options: Options): void {
-		this.discriminantType.lowerFlat(result, memory, value.$caseIndex, options);
-		const c = this.cases[value.$caseIndex];
+		this.discriminantType.lowerFlat(result, memory, value._caseIndex, options);
+		const c = this.cases[value._caseIndex];
 		if (c.type !== undefined && value !== undefined) {
 			const payload: wasmType[] = [];
 			c.type.lowerFlat(payload, memory, value, options);
@@ -1055,49 +1055,49 @@ export class variantType<T extends JVariantCase, I, V> implements ComponentModel
 
 export type JEnum = number;
 
-export class Option<T> {
+export class Option<T extends JType> implements JVariantCase {
 
-	private _$caseIndex: 0 | 1;
+	private __caseIndex: 0 | 1;
 	public value: T | undefined;
 
 	constructor(caseIndex: 0 | 1, value: T | undefined) {
-		this._$caseIndex = caseIndex;
+		this.__caseIndex = caseIndex;
 		this.value = value;
 	}
 
-	get $caseIndex(): number {
-		return this._$caseIndex;
+	get _caseIndex(): number {
+		return this.__caseIndex;
 	}
 
 	public none(): this is { value: undefined } {
-		return this._$caseIndex === 0;
+		return this.__caseIndex === 0;
 	}
 
 	public some(): this is { value: T} {
-		return this._$caseIndex === 1;
+		return this.__caseIndex === 1;
 	}
 }
 
-export class Result<O, E> {
+export class Result<O extends JType , E extends JType> implements JVariantCase {
 
-	private _$caseIndex: 0 | 1;
+	private __caseIndex: 0 | 1;
 	public value: O | E;
 
 	constructor(caseIndex: 0 | 1, value: O | E) {
-		this._$caseIndex = caseIndex;
+		this.__caseIndex = caseIndex;
 		this.value = value;
 	}
 
-	get $caseIndex(): number {
-		return this._$caseIndex;
+	get _caseIndex(): number {
+		return this.__caseIndex;
 	}
 
-	public isOK(): this is { value: O } {
-		return this._$caseIndex === 0;
+	public ok(): this is { value: O } {
+		return this.__caseIndex === 0;
 	}
 
-	public isError(): this is { value: E } {
-		return this._$caseIndex === 1;
+	public error(): this is { value: E } {
+		return this.__caseIndex === 1;
 	}
 }
 
@@ -1231,33 +1231,33 @@ namespace $TestFlagsType {
 }
 export const TestFlagsType: ComponentModelType<TestFlags> = $TestFlagsType;
 
-export class TestVariant {
-	private _$caseIndex: number;
+export class TestVariant implements JVariantCase {
+	private __caseIndex: number;
 	public value: u8 | u32 | undefined | string;
 
 	constructor(c: number, value: u8 | u32 | undefined | string) {
-		this._$caseIndex = c;
+		this.__caseIndex = c;
 		this.value = value;
 	}
 
-	get $caseIndex(): number {
-		return this._$caseIndex;
+	get _caseIndex(): number {
+		return this.__caseIndex;
 	}
 
 	red(): this is { value: u8 } {
-		return this._$caseIndex === 0;
+		return this.__caseIndex === 0;
 	}
 
 	green(): this is { value: u32 } {
-		return this._$caseIndex === 1;
+		return this.__caseIndex === 1;
 	}
 
 	nothing(): this is { value: undefined } {
-		return this._$caseIndex === 2;
+		return this.__caseIndex === 2;
 	}
 
 	blue(): this is { value: string } {
-		return this._$caseIndex === 3;
+		return this.__caseIndex === 3;
 	}
 }
 
@@ -1266,29 +1266,29 @@ export const TestVariantType: ComponentModelType<TestVariant> = new variantType<
 	TestVariant
 );
 
-export class TestUnion {
-	private _$caseIndex: number;
+export class TestUnion implements JVariantCase {
+	private __caseIndex: number;
 	public value: u8 | u32 | string;
 
 	constructor(c: number, value: u8 | u32 | string) {
-		this._$caseIndex = c;
+		this.__caseIndex = c;
 		this.value = value;
 	}
 
-	get $caseIndex(): number {
-		return this._$caseIndex;
+	get _caseIndex(): number {
+		return this.__caseIndex;
 	}
 
 	u8(): this is { value: u8} {
-		return this._$caseIndex === 0;
+		return this.__caseIndex === 0;
 	}
 
 	u32(): this is { value: u32} {
-		return this._$caseIndex === 1;
+		return this.__caseIndex === 1;
 	}
 
 	string(): this is { value: string } {
-		return this._$caseIndex === 2;
+		return this.__caseIndex === 2;
 	}
 }
 
