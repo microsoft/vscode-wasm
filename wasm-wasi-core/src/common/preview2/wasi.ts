@@ -115,24 +115,24 @@ class CoerceValueIter implements Iterator<wasmType, wasmType> {
 	}
 }
 
-export interface ComponentModelType<W, J> {
+export interface ComponentModelType<J> {
 	readonly size: number;
 	readonly alignment: alignment;
 	readonly flatTypes: ReadonlyArray<wasmTypeName>;
-	load(memory: Memory, ptr: ptr<W>, options: Options): J;
+	load(memory: Memory, ptr: ptr, options: Options): J;
 	liftFlat(memory: Memory, values: Iterator<wasmType, wasmType>, options: Options): J;
-	alloc(memory: Memory): ptr<W>;
-	store(memory: Memory, ptr: ptr<W>, value: J, options: Options): void;
+	alloc(memory: Memory): ptr;
+	store(memory: Memory, ptr: ptr, value: J, options: Options): void;
 	lowerFlat(result: wasmType[], memory: Memory, value: J, options: Options): void;
 }
-export type GenericComponentModelType = ComponentModelType<any, any>;
+export type GenericComponentModelType = ComponentModelType<any>;
 
 export type bool = number;
-export const bool: ComponentModelType<bool, boolean> = {
+export const bool: ComponentModelType<boolean> = {
 	size: 1,
 	alignment: 1,
 	flatTypes: ['i32'],
-	load(memory, ptr: ptr<bool>): boolean {
+	load(memory, ptr: ptr<u8>): boolean {
 		return memory.view.getUint8(ptr) !== 0;
 	},
 	liftFlat(_memory, values): boolean {
@@ -142,10 +142,10 @@ export const bool: ComponentModelType<bool, boolean> = {
 		}
 		return value !== 0;
 	},
-	alloc(memory): ptr<bool> {
+	alloc(memory): ptr<u8> {
 		return memory.alloc(bool.size, bool.alignment);
 	},
-	store(memory, ptr: ptr<bool>, value: boolean): void {
+	store(memory, ptr: ptr<u8>, value: boolean): void {
 		memory.view.setUint8(ptr, value ? 1 : 0);
 	},
 	lowerFlat(result, _memory, value: boolean): void {
@@ -189,7 +189,7 @@ namespace $u8 {
 		result.push(value);
 	}
 }
-export const u8:ComponentModelType<u8, number> = $u8;
+export const u8:ComponentModelType<number> = $u8;
 
 export type u16 = number;
 namespace $u16 {
@@ -227,7 +227,7 @@ namespace $u16 {
 		result.push(value);
 	}
 }
-export const u16: ComponentModelType<u16, number> = $u16;
+export const u16: ComponentModelType<number> = $u16;
 
 export type u32 = number;
 namespace $u32 {
@@ -265,7 +265,7 @@ namespace $u32 {
 		result.push(value);
 	}
 }
-export const u32: ComponentModelType<u32, number> = $u32;
+export const u32: ComponentModelType<number> = $u32;
 
 export type u64 = bigint;
 namespace $u64 {
@@ -303,7 +303,7 @@ namespace $u64 {
 		result.push(value);
 	}
 }
-export const u64: ComponentModelType<u64, bigint> = $u64;
+export const u64: ComponentModelType<bigint> = $u64;
 
 export type s8 = number;
 namespace $s8 {
@@ -349,7 +349,7 @@ namespace $s8 {
 		result.push((value < 0) ? (value + 256) : value);
 	}
 }
-export const s8: ComponentModelType<s8, number> = $s8;
+export const s8: ComponentModelType<number> = $s8;
 
 export type s16 = number;
 namespace $s16 {
@@ -387,7 +387,7 @@ namespace $s16 {
 		result.push((value < 0) ? (value + 65536) : value);
 	}
 }
-export const s16: ComponentModelType<s16, number> = $s16;
+export const s16: ComponentModelType<number> = $s16;
 
 export type s32 = number;
 namespace $s32 {
@@ -425,7 +425,7 @@ namespace $s32 {
 		result.push((value < 0) ? (value + 4294967296) : value);
 	}
 }
-export const s32: ComponentModelType<s32, number> = $s32;
+export const s32: ComponentModelType<number> = $s32;
 
 export type s64 = bigint;
 namespace $s64 {
@@ -463,7 +463,7 @@ namespace $s64 {
 		result.push((value < 0) ? (value + 18446744073709551616n) : value);
 	}
 }
-export const s64: ComponentModelType<s64, bigint> = $s64;
+export const s64: ComponentModelType<bigint> = $s64;
 
 export type float32 = number;
 namespace $float32 {
@@ -502,7 +502,7 @@ namespace $float32 {
 		result.push(Number.isNaN(value) ? NAN : value);
 	}
 }
-export const float32: ComponentModelType<float32, number> = $float32;
+export const float32: ComponentModelType<number> = $float32;
 
 export type float64 = number;
 namespace $float64 {
@@ -541,10 +541,10 @@ namespace $float64 {
 		result.push(Number.isNaN(value) ? NAN : value);
 	}
 }
-export const float64: ComponentModelType<float64, number> = $float64;
+export const float64: ComponentModelType<number> = $float64;
 
 export type byte = u8;
-export const byte: ComponentModelType<byte, byte> = {
+export const byte: ComponentModelType<byte> = {
 	size: u8.size,
 	alignment: u8.alignment,
 	flatTypes: u8.flatTypes,
@@ -557,7 +557,7 @@ export const byte: ComponentModelType<byte, byte> = {
 };
 
 export type size = u32;
-export const size: ComponentModelType<size, size> = {
+export const size: ComponentModelType<size> = {
 	size: u32.size,
 	alignment: u32.alignment,
 	flatTypes: u32.flatTypes,
@@ -569,8 +569,8 @@ export const size: ComponentModelType<size, size> = {
 	lowerFlat: u32.lowerFlat
 };
 
-export type ptr<_type = u8> = u32;
-export const ptr: ComponentModelType<ptr, ptr> = {
+export type ptr<_type = ArrayBuffer> = u32;
+export const ptr: ComponentModelType<ptr> = {
 	size: u32.size,
 	alignment: u32.alignment,
 	flatTypes: u32.flatTypes,
@@ -588,10 +588,6 @@ export interface char {
 
 }
 
-// This is the best representation for a string in WASM. It is a pointer to a
-// range of bytes and a length.
-export type wstring = [ptr, u32];
-
 namespace $wstring {
 
 	const offsets = {
@@ -603,7 +599,7 @@ namespace $wstring {
 	export const alignment: alignment = 4;
 	export const flatTypes: readonly wasmTypeName[] = ['i32', 'i32'];
 
-	export function load(memory: Memory, ptr: ptr<wstring>, options: Options): string {
+	export function load(memory: Memory, ptr: ptr, options: Options): string {
 		const view = memory.view;
 		const dataPtr: ptr =  view.getUint32(ptr + offsets.data);
 		const codeUnits: u32 = view.getUint32(ptr + offsets.codeUnits);
@@ -616,11 +612,11 @@ namespace $wstring {
 		return loadFromRange(memory, dataPtr, codeUnits, options);
 	}
 
-	export function alloc(memory: Memory): ptr<wstring> {
-		return memory.alloc(wstring.size, wstring.alignment);
+	export function alloc(memory: Memory): ptr {
+		return memory.alloc(size, alignment);
 	}
 
-	export function store(memory: Memory, ptr: ptr<wstring>, str: string, options: Options): void {
+	export function store(memory: Memory, ptr: ptr, str: string, options: Options): void {
 		const [ data, codeUnits ] = storeIntoRange(memory, str, options);
 		const view = memory.view;
 		view.setUint32(ptr + offsets.data, data, true);
@@ -668,7 +664,7 @@ namespace $wstring {
 		}
 	}
 }
-export const wstring: ComponentModelType<ptr<wstring>, string> = $wstring;
+export const wstring: ComponentModelType<string> = $wstring;
 
 interface typedField {
 	readonly type: GenericComponentModelType;
@@ -876,37 +872,24 @@ export namespace flags {
 	}
 }
 
-export interface caseVariant {
-	readonly name: string;
-	readonly index: number;
+interface baseCase {
 	readonly type: GenericComponentModelType | undefined;
 	readonly wantFlatTypes: wasmTypeName[] | undefined;
 }
 
-export namespace caseVariant {
-	export function create(name: string, index: number, type: GenericComponentModelType | undefined): caseVariant {
-		return { name, index, type, wantFlatTypes: type !== undefined ? [] : undefined };
-	}
-}
+namespace baseVariant {
 
-export interface JCase {
-	readonly _index: number;
-	readonly case: string;
-	value?: JType;
-}
-
-export namespace variant {
-	export function size(discriminantType: GenericComponentModelType, cases: caseVariant[]): size {
+	export function size(discriminantType: GenericComponentModelType, cases: baseCase[]): size {
 		let result = discriminantType.size;
 		result = align(result, maxCaseAlignment(cases));
 		return result + maxCaseSize(cases);
 	}
 
-	export function alignment(discriminantType: GenericComponentModelType, cases: caseVariant[]): alignment {
+	export function alignment(discriminantType: GenericComponentModelType, cases: baseCase[]): alignment {
 		return Math.max(discriminantType.alignment, maxCaseAlignment(cases)) as alignment;
 	}
 
-	export function flatTypes(discriminantType: GenericComponentModelType, cases: caseVariant[]): readonly wasmTypeName[] {
+	export function flatTypes(discriminantType: GenericComponentModelType, cases: variantCase[]): readonly wasmTypeName[] {
 		const flat: wasmTypeName[] = [];
 		for (const c of cases) {
 			if (c.type === undefined) {
@@ -928,7 +911,72 @@ export namespace variant {
 		return [...discriminantType.flatTypes, ...flat];
 	}
 
-	export function load(memory: Memory, ptr: ptr, options: Options, discriminantType: GenericComponentModelType, maxCaseAlignment: alignment, cases: caseVariant[]): JCase {
+	export function discriminantType(cases: number): GenericComponentModelType {
+		switch (Math.ceil(Math.log2(cases) / 8)) {
+			case 0: return u8;
+			case 1: return u8;
+			case 2: return u16;
+			case 3: return u32;
+		}
+		throw new WasiError(Errno.inval);
+	}
+
+	export function maxCaseAlignment(cases: baseCase[]): alignment {
+		let result: alignment = 1;
+		for (const c of cases) {
+			if (c.type !== undefined) {
+				result = Math.max(result, c.type.alignment) as alignment;
+			}
+		}
+		return result;
+	}
+
+	function maxCaseSize(cases: baseCase[]): size {
+		let result = 0;
+		for (const c of cases) {
+			if (c.type !== undefined) {
+				result = Math.max(result, c.type.size);
+			}
+		}
+		return result;
+	}
+
+	function joinFlatType(a: wasmTypeName, b:wasmTypeName) : wasmTypeName {
+		if (a === b) {
+			return a;
+		}
+		if ((a === 'i32' && b === 'f32') || (a === 'f32' && b === 'i32')) {
+			return 'i32';
+		}
+		return 'i64';
+	}
+}
+
+export interface variantCase extends baseCase {
+	readonly name: string;
+	readonly index: number;
+}
+
+export namespace variantCase {
+	export function create(name: string, index: number, type: GenericComponentModelType | undefined): variantCase {
+		return { name, index, type, wantFlatTypes: type !== undefined ? [] : undefined };
+	}
+}
+
+export interface JCase {
+	readonly _index: number;
+	readonly case: string;
+	value?: JType;
+}
+
+export namespace variant {
+	export const size: (discriminantType: GenericComponentModelType, cases: variantCase[]) =>  size = baseVariant.size;
+
+	export const alignment: (discriminantType: GenericComponentModelType, cases: variantCase[]) => alignment = baseVariant.alignment;
+
+	export const flatTypes: (discriminantType: GenericComponentModelType, cases: variantCase[]) => readonly wasmTypeName[] = baseVariant.flatTypes;
+
+	export function load(memory: Memory, ptr: ptr, options: Options, discriminantType: GenericComponentModelType, maxCaseAlignment: alignment, cases: variantCase[]): JCase {
 		const caseIndex = discriminantType.load(memory, ptr, options);
 		ptr += discriminantType.size;
 		const caseVariant = cases[caseIndex];
@@ -941,7 +989,7 @@ export namespace variant {
 		}
 	}
 
-	export function liftFlat(memory: Memory, values: FlatValuesIter, options: Options, discriminantType: GenericComponentModelType, flatTypes: readonly wasmTypeName[], cases: caseVariant[]): JCase {
+	export function liftFlat(memory: Memory, values: FlatValuesIter, options: Options, discriminantType: GenericComponentModelType, flatTypes: readonly wasmTypeName[], cases: variantCase[]): JCase {
 		const caseIndex = discriminantType.liftFlat(memory, values, options);
 		const caseVariant = cases[caseIndex];
 		if (caseVariant.type === undefined) {
@@ -954,7 +1002,7 @@ export namespace variant {
 		}
 	}
 
-	export function store(memory: Memory, ptr: ptr, value: JCase, options: Options, discriminantType: GenericComponentModelType, maxCaseAlignment: alignment, c: caseVariant): void {
+	export function store(memory: Memory, ptr: ptr, value: JCase, options: Options, discriminantType: GenericComponentModelType, maxCaseAlignment: alignment, c: variantCase): void {
 		discriminantType.store(memory, ptr, value._index, options);
 		ptr += discriminantType.size;
 		if (c.type !== undefined && value.value !== undefined) {
@@ -963,7 +1011,7 @@ export namespace variant {
 		}
 	}
 
-	export function lowerFlat(result: wasmType[], memory: Memory, value: JCase, options: Options, discriminantType: GenericComponentModelType, flatTypes: readonly wasmTypeName[], c: caseVariant): void {
+	export function lowerFlat(result: wasmType[], memory: Memory, value: JCase, options: Options, discriminantType: GenericComponentModelType, flatTypes: readonly wasmTypeName[], c: variantCase): void {
 		discriminantType.lowerFlat(result, memory, value._index, options);
 		if (c.type !== undefined && value.value !== undefined) {
 			const payload: wasmType[] = [];
@@ -991,48 +1039,14 @@ export namespace variant {
 		}
 	}
 
-	export function discriminantType(cases: number): GenericComponentModelType {
-		switch (Math.ceil(Math.log2(cases) / 8)) {
-			case 0: return u8;
-			case 1: return u8;
-			case 2: return u16;
-			case 3: return u32;
-		}
-		throw new Error('Too many variants');
-	}
+	export const discriminantType: (cases: number) => GenericComponentModelType = baseVariant.discriminantType;
 
-	export function maxCaseAlignment(cases: caseVariant[]): alignment {
-		let result: alignment = 1;
-		for (const c of cases) {
-			if (c.type) {
-				result = Math.max(result, c.type.alignment) as alignment;
-			}
-		}
-		return result;
-	}
-
-	function maxCaseSize(cases: caseVariant[]): size {
-		let result = 0;
-		for (const c of cases) {
-			if (c.type !== undefined) {
-				result = Math.max(result, c.type.size);
-			}
-		}
-		return result;
-	}
-
-	function joinFlatType(a: wasmTypeName, b:wasmTypeName) : wasmTypeName {
-		if (a === b) {
-			return a;
-		}
-		if ((a === 'i32' && b === 'f32') || (a === 'f32' && b === 'i32')) {
-			return 'i32';
-		}
-		return 'i64';
-	}
+	export const maxCaseAlignment: (cases: variantCase[]) => alignment = baseVariant.maxCaseAlignment;
 }
 
-export type JType = number | bigint | string | boolean | JRecord | JCase | JFlags | JCase | JTuple;
+export type JEnum = number;
+
+export type JType = number | bigint | string | boolean | JRecord | JCase | JFlags | JCase | JTuple | JEnum;
 
 interface TestRecord extends JRecord {
 	a: u8;
@@ -1041,10 +1055,7 @@ interface TestRecord extends JRecord {
 	d: string;
 }
 
-// We can look into generating this via mapped types.
-export type WTestRecord = [u8, u32, u8, ...wstring];
-
-namespace $TestRecord {
+namespace $TestRecordType {
 
 	const fields: recordField[] = [];
 	let offset = 0;
@@ -1059,7 +1070,7 @@ namespace $TestRecord {
 	export const size = record.size(fields);
 	export const flatTypes = record.flatTypes(fields);
 
-	export function load(memory: Memory, ptr: ptr<WTestRecord>, options: Options): TestRecord {
+	export function load(memory: Memory, ptr: ptr, options: Options): TestRecord {
 		return record.load(memory, ptr, options, fields) as TestRecord;
 	}
 
@@ -1067,11 +1078,11 @@ namespace $TestRecord {
 		return record.liftFlat(memory, values, options, fields) as TestRecord;
 	}
 
-	export function alloc(memory: Memory): ptr<WTestRecord> {
+	export function alloc(memory: Memory): ptr {
 		return memory.alloc(alignment, size);
 	}
 
-	export function store(memory: Memory, ptr: ptr<WTestRecord>, value: TestRecord, options: Options): void {
+	export function store(memory: Memory, ptr: ptr, value: TestRecord, options: Options): void {
 		record.store(memory, ptr, value, options, fields);
 	}
 
@@ -1079,12 +1090,11 @@ namespace $TestRecord {
 		record.lowerFlat(result, memory, value, options, fields);
 	}
 }
-const TestRecord: ComponentModelType<ptr<WTestRecord>, TestRecord> = $TestRecord;
+export const TestRecordType: ComponentModelType<TestRecord> = $TestRecordType;
 
 export type TestTuple = [u8, string];
-export type WTestTuple = [u8, ...wstring];
 
-namespace $TestTuple {
+namespace $TestTupleType {
 	const fields: tupleField[] = [];
 	let offset = 0;
 	for (const type of [u8, wstring]) {
@@ -1096,7 +1106,7 @@ namespace $TestTuple {
 	export const size = tuple.size(fields);
 	export const flatTypes = tuple.flatTypes(fields);
 
-	export function load(memory: Memory, ptr: ptr<WTestTuple>, options: Options): TestTuple {
+	export function load(memory: Memory, ptr: ptr, options: Options): TestTuple {
 		return tuple.load(memory, ptr, options, fields) as TestTuple;
 	}
 
@@ -1104,11 +1114,11 @@ namespace $TestTuple {
 		return tuple.liftFlat(memory, values, options, fields) as TestTuple;
 	}
 
-	export function alloc(memory: Memory): ptr<WTestTuple> {
+	export function alloc(memory: Memory): ptr {
 		return memory.alloc(alignment, size);
 	}
 
-	export function store(memory: Memory, ptr: ptr<WTestTuple>, value: TestTuple, options: Options): void {
+	export function store(memory: Memory, ptr: ptr, value: TestTuple, options: Options): void {
 		tuple.store(memory, ptr, value, options, fields);
 	}
 
@@ -1116,7 +1126,7 @@ namespace $TestTuple {
 		tuple.lowerFlat(result, memory, value, options, fields);
 	}
 }
-export const TestTuple: ComponentModelType<ptr<WTestTuple>, TestTuple> = $TestTuple;
+export const TestTupleType: ComponentModelType<TestTuple> = $TestTupleType;
 
 
 export interface TestFlags extends JFlags {
@@ -1125,14 +1135,14 @@ export interface TestFlags extends JFlags {
 	c: boolean;
 }
 
-namespace $TestFlags {
+namespace $TestFlagsType {
 	const _flags: number = 10;
 
 	export const alignment = flags.alignment(_flags);
 	export const size = flags.size(_flags);
 	export const flatTypes = flags.flatTypes(_flags);
 
-	export function load(memory: Memory, ptr: ptr<u32[]>): TestFlags {
+	export function load(memory: Memory, ptr: ptr): TestFlags {
 		return create(flags.load(memory, ptr, _flags));
 	}
 
@@ -1140,11 +1150,11 @@ namespace $TestFlags {
 		return create(flags.liftFlat(memory, values, _flags));
 	}
 
-	export function alloc(memory: Memory): ptr<u32[]> {
+	export function alloc(memory: Memory): ptr {
 		return memory.alloc(alignment, size);
 	}
 
-	export function store(memory: Memory, ptr: ptr<u32[]>, value: TestFlags): void {
+	export function store(memory: Memory, ptr: ptr, value: TestFlags): void {
 		flags.store(memory, ptr, value._flags);
 	}
 
@@ -1161,16 +1171,16 @@ namespace $TestFlags {
 		};
 	}
 }
-const TestFlags: ComponentModelType<ptr<u32[]>, TestFlags> = $TestFlags;
+export const TestFlagsType: ComponentModelType<TestFlags> = $TestFlagsType;
 
 export type TestVariant = { readonly case: 'a'; value: u8 } | { readonly case: 'b'; value: u32 } | { readonly case: 'c'; value: string };
 
-namespace $TestVariant {
-	const cases: caseVariant[] = [];
+namespace $TestVariantType {
+	const cases: variantCase[] = [];
 	let index = 0;
 	for (const item of [['a', u8], ['b', u32], ['c'], ['d', wstring]] as [string, GenericComponentModelType | undefined][]) {
 		const [name, type] = item;
-		cases.push(caseVariant.create(name, index++, type));
+		cases.push(variantCase.create(name, index++, type));
 	}
 
 	const discriminantType = variant.discriminantType(cases.length);
@@ -1197,4 +1207,43 @@ namespace $TestVariant {
 		variant.lowerFlat(result, memory, value as JCase, options, discriminantType, flatTypes, cases[(value as JCase)._index]);
 	}
 }
-export const TestVariant: ComponentModelType<ptr, TestVariant> = $TestVariant;
+export const TestVariantType: ComponentModelType<TestVariant> = $TestVariantType;
+
+export enum TestEnum {
+	a = 0,
+	b = 1,
+	c = 2
+}
+export const TestEnumType: ComponentModelType<TestEnum> = $TestEnumType;
+
+namespace $TestEnumType {
+
+	const discriminantType = u8;
+
+	export const alignment = discriminantType.alignment;
+	export const size = discriminantType.size;
+	export const flatTypes = discriminantType.flatTypes;
+
+	export function load(memory: Memory, ptr: ptr, options: Options): TestEnum {
+		return assertRange(discriminantType.load(memory, ptr, options)) as TestEnum;
+	}
+	export function liftFlat(memory: Memory, values: FlatValuesIter, options: Options): TestEnum {
+		return assertRange(discriminantType.liftFlat(memory, values, options)) as TestEnum;
+	}
+	export function alloc(memory: Memory): ptr {
+		return memory.alloc(alignment, size);
+	}
+	export function store(memory: Memory, ptr: ptr, value: TestEnum, options: Options): void {
+		discriminantType.store(memory, ptr, value as number, options);
+	}
+	export function lowerFlat(result: wasmType[], memory: Memory, value: TestEnum, options: Options): void {
+		discriminantType.lowerFlat(result, memory, value as number, options);
+	}
+
+	function assertRange(value: number): number {
+		if (value < TestEnum.a || value > TestEnum.c) {
+			throw new WasiError(Errno.inval);
+		}
+		return value;
+	}
+}
