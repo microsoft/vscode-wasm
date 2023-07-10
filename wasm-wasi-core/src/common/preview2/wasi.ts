@@ -965,9 +965,7 @@ export namespace FlagField {
 
 enum FlagsStorageType {
 	Empty,
-	OneByte,
-	TwoBytes,
-	FourBytes,
+	Single,
 	Array
 }
 
@@ -1007,9 +1005,7 @@ export class FlagsType<T extends JFlags> implements ComponentModelType<T> {
 		switch (this.type[0]) {
 			case FlagsStorageType.Empty:
 				return Object.create(null) as T;
-			case FlagsStorageType.OneByte:
-			case FlagsStorageType.TwoBytes:
-			case FlagsStorageType.FourBytes:
+			case FlagsStorageType.Single:
 				return this.createSingle(0) as T;
 			case FlagsStorageType.Array:
 				return this.createArray(new Array(this.num32Flags)) as T;
@@ -1020,9 +1016,7 @@ export class FlagsType<T extends JFlags> implements ComponentModelType<T> {
 		switch (this.type[0]) {
 			case FlagsStorageType.Empty:
 				return Object.create(null) as T;
-			case FlagsStorageType.OneByte:
-			case FlagsStorageType.TwoBytes:
-			case FlagsStorageType.FourBytes:
+			case FlagsStorageType.Single:
 				return this.createSingle(this.type[1]!.load(memory, ptr, options)) as T;
 			case FlagsStorageType.Array:
 				const bits: u32[] = new Array(this.num32Flags);
@@ -1035,18 +1029,17 @@ export class FlagsType<T extends JFlags> implements ComponentModelType<T> {
 		}
 	}
 
-	public liftFlat(_memory: Memory, values: FlatValuesIter): T {
+	public liftFlat(_memory: Memory, values: FlatValuesIter, options: Options): T {
 		switch (this.type[0]) {
 			case FlagsStorageType.Empty:
 				return Object.create(null) as T;
-			case FlagsStorageType.OneByte:
-			case FlagsStorageType.TwoBytes:
-			case FlagsStorageType.FourBytes:
-				return this.createSingle(values.next().value as i32) as T;
+			case FlagsStorageType.Single:
+				return this.createSingle(this.type[1]!.liftFlat(_memory, values, options)) as T;
 			case FlagsStorageType.Array:
 				const bits: i32[] = new Array(this.num32Flags);
+				const type = this.type[1]!;
 				for (let i = 0; i < this.num32Flags; i++) {
-					bits[i] = values.next().value as i32;
+					bits[i] = type.liftFlat(_memory, values, options);
 				}
 				return this.createArray(bits) as T;
 		}
@@ -1060,9 +1053,7 @@ export class FlagsType<T extends JFlags> implements ComponentModelType<T> {
 		switch (this.type[0]) {
 			case FlagsStorageType.Empty:
 				return;
-			case FlagsStorageType.OneByte:
-			case FlagsStorageType.TwoBytes:
-			case FlagsStorageType.FourBytes:
+			case FlagsStorageType.Single:
 				this.type[1]!.store(memory, ptr, (flags as unknown as SingleFlags)._bits, options);
 				break;
 			case FlagsStorageType.Array:
@@ -1079,9 +1070,7 @@ export class FlagsType<T extends JFlags> implements ComponentModelType<T> {
 		switch (this.type[0]) {
 			case FlagsStorageType.Empty:
 				return;
-			case FlagsStorageType.OneByte:
-			case FlagsStorageType.TwoBytes:
-			case FlagsStorageType.FourBytes:
+			case FlagsStorageType.Single:
 				this.type[1]!.lowerFlat(result, _memory, (flags as unknown as SingleFlags)._bits, options);
 				break;
 			case FlagsStorageType.Array:
@@ -1158,13 +1147,12 @@ export class FlagsType<T extends JFlags> implements ComponentModelType<T> {
 	private static getType(size: number): [FlagsStorageType, GenericComponentModelType | undefined] {
 		switch (size) {
 			case 0: return [FlagsStorageType.Empty, undefined];
-			case 1: return [FlagsStorageType.OneByte, u8];
-			case 2: return [FlagsStorageType.TwoBytes, u16];
-			case 4: return [FlagsStorageType.FourBytes, u32];
+			case 1: return [FlagsStorageType.Single, u8];
+			case 2: return [FlagsStorageType.Single, u16];
+			case 4: return [FlagsStorageType.Single, u32];
 			default: return [FlagsStorageType.Array, u32];
 		}
 	}
-
 
 	private static num32Flags(fields: number): number {
 		return Math.ceil(fields / 32);
