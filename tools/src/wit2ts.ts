@@ -8,10 +8,7 @@ import * as fs from 'fs';
 import * as wit from './wit';
 import {
 	Visitor, DefaultVisitor, InterfaceItem, UseItem, PackageItem, Identifier, RenameItem, NamedImports,
-	Document,
-	TypeItem,
-	u8,
-	Tuple
+	Document, TypeItem, Tuple
 } from './wit-ast';
 
 const document = wit.parse(fs.readFileSync('./src/timezone.wit', 'utf8'));
@@ -21,7 +18,7 @@ interface _Visitor extends Visitor {
 }
 namespace Wit2TS {
 
-	namespace TyVisistor {
+	export namespace TyVisitor {
 		export function create(): Visitor & { getResult(): string } {
 			let result: string;
 			const visitor: Visitor = {
@@ -39,7 +36,7 @@ namespace Wit2TS {
 				visitBool(): boolean { result = 'boolean'; return true; },
 				visitChar(): boolean { result = 'string'; return true; },
 				visitTuple(node: Tuple): boolean {
-					const tyVisitor = TyVisistor.create();
+					const tyVisitor = TyVisitor.create();
 					const elements: string[] = [];
 					for (let i = 0; i < node.members.length; i++) {
 						const member = node.members[i];
@@ -50,22 +47,22 @@ namespace Wit2TS {
 					return true;
 				},
 				visitList(node) {
-					const tyVisitor = TyVisistor.create();
+					const tyVisitor = TyVisitor.create();
 					node.type.visit(tyVisitor, node.type);
 					result = `${tyVisitor.getResult()}[]`;
 					return true;
 				},
 				visitOption(node) {
-					const tyVisitor = TyVisistor.create();
+					const tyVisitor = TyVisitor.create();
 					node.type.visit(tyVisitor, node.type);
 					result = `(${tyVisitor.getResult()} | null)`;
 					return true;
 				},
-				visitResult(node) {
-					const tyVisitor = TyVisistor.create();
-					if (node.result !== undefined) {
-						
-					}
+				visitResult(_node) {
+					// const tyVisitor = TyVisitor.create();
+					// if (node.result !== undefined) {
+
+					// }
 					return true;
 				}
 			};
@@ -103,11 +100,11 @@ namespace Wit2TS {
 			values.push(value);
 		}
 
-		const tyVisitor: Visitor = {
-			visitU8(node: u8): string {
-				return 'number';
-			}
-		};
+		// const tyVisitor: Visitor = {
+		// 	visitU8(node: u8): string {
+		// 		return 'number';
+		// 	}
+		// };
 
 		const result: _Visitor = {
 			source,
@@ -160,8 +157,8 @@ namespace Wit2TS {
 				}
 				return false;
 			},
-			visitTypeItem(item: TypeItem): boolean {
-				const tsName = toTsTypeName(item.name.value);
+			visitTypeItem(_item: TypeItem): boolean {
+				// const tsName = toTsTypeName(item.name.value);
 				return false;
 			}
 		};
