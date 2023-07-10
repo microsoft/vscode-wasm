@@ -1145,6 +1145,55 @@ export class VariantType<T extends JVariantCase, I, V> implements ComponentModel
 
 export type JEnum = number;
 
+export class Enumeration<T extends JEnum> implements ComponentModelType<T> {
+
+	private readonly discriminantType: ComponentModelType<u8> | ComponentModelType<u16> | ComponentModelType<u32>;
+
+	public readonly size: size;
+	public readonly alignment: alignment;
+	public readonly flatTypes: readonly wasmTypeName[];
+
+	constructor(cases: number) {
+		this.discriminantType = Enumeration.discriminantType(cases);
+		this.size = this.discriminantType.size;
+		this.alignment = this.discriminantType.alignment;
+		this.flatTypes = this.discriminantType.flatTypes;
+	}
+
+	public load(memory: Memory, ptr: ptr, options: Options): T {
+		return this.assertRange(this.discriminantType.load(memory, ptr, options)) as T;
+	}
+	public liftFlat(memory: Memory, values: FlatValuesIter, options: Options): T {
+		return this.assertRange(this.discriminantType.liftFlat(memory, values, options)) as T;
+	}
+	public alloc(memory: Memory): ptr {
+		return memory.alloc(this.alignment, this.size);
+	}
+	public store(memory: Memory, ptr: ptr, value: T, options: Options): void {
+		this.discriminantType.store(memory, ptr, value, options);
+	}
+	public lowerFlat(result: wasmType[], memory: Memory, value: T, options: Options): void {
+		this. discriminantType.lowerFlat(result, memory, value, options);
+	}
+
+	private assertRange(value: number): number {
+		if (value < TestEnum.a || value > TestEnum.c) {
+			throw new WasiError(Errno.inval);
+		}
+		return value;
+	}
+
+	private static discriminantType(cases: number): ComponentModelType<u8> | ComponentModelType<u16> | ComponentModelType<u32> {
+		switch (Math.ceil(Math.log2(cases) / 8)) {
+			case 0: return u8;
+			case 1: return u8;
+			case 2: return u16;
+			case 3: return u32;
+		}
+		throw new WasiError(Errno.inval);
+	}
+}
+
 export class Option<T extends JType> implements JVariantCase {
 
 	private __caseIndex: 0 | 1;
@@ -1194,7 +1243,9 @@ export class Result<O extends JType , E extends JType> implements JVariantCase {
 export type JType = number | bigint | string | boolean | JRecord | JVariantCase | JFlags | JTuple | JEnum | Option<any> | Result<any, any>;
 
 
-// This are examples can can be fully generated from the Wit files.
+/****************************************************************************************
+ * This are examples can can be fully generated from the Wit files.
+ ****************************************************************************************/
 
 interface TestRecord extends JRecord {
 	a: u8;
@@ -1294,36 +1345,4 @@ export enum TestEnum {
 	b = 1,
 	c = 2
 }
-export const TestEnumType: ComponentModelType<TestEnum> = $TestEnumType;
-
-namespace $TestEnumType {
-
-	const discriminantType = u8;
-
-	export const alignment = discriminantType.alignment;
-	export const size = discriminantType.size;
-	export const flatTypes = discriminantType.flatTypes;
-
-	export function load(memory: Memory, ptr: ptr, options: Options): TestEnum {
-		return assertRange(discriminantType.load(memory, ptr, options)) as TestEnum;
-	}
-	export function liftFlat(memory: Memory, values: FlatValuesIter, options: Options): TestEnum {
-		return assertRange(discriminantType.liftFlat(memory, values, options)) as TestEnum;
-	}
-	export function alloc(memory: Memory): ptr {
-		return memory.alloc(alignment, size);
-	}
-	export function store(memory: Memory, ptr: ptr, value: TestEnum, options: Options): void {
-		discriminantType.store(memory, ptr, value as number, options);
-	}
-	export function lowerFlat(result: wasmType[], memory: Memory, value: TestEnum, options: Options): void {
-		discriminantType.lowerFlat(result, memory, value as number, options);
-	}
-
-	function assertRange(value: number): number {
-		if (value < TestEnum.a || value > TestEnum.c) {
-			throw new WasiError(Errno.inval);
-		}
-		return value;
-	}
-}
+export const TestEnumType: ComponentModelType<TestEnum> = new Enumeration<TestEnum>(3);
