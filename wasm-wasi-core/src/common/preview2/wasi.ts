@@ -586,6 +586,51 @@ export interface char {
 
 }
 
+namespace $wchar {
+	export const size = 4;
+	export const alignment: alignment = 4;
+	export const flatTypes: readonly wasmTypeName[] = ['i32'];
+
+	export function load(memory: Memory, ptr: ptr, options: Options): string {
+		return fromCodePoint(u32.load(memory, ptr, options));
+	}
+
+	export function liftFlat(memory: Memory, values: FlatValuesIter, options: Options): string {
+		return fromCodePoint(u32.liftFlat(memory, values, options));
+	}
+
+	export function alloc(memory: Memory): ptr {
+		return u32.alloc(memory);
+	}
+
+	export function store(memory: Memory, ptr: ptr, value: string, options: Options): void {
+		u32.store(memory, ptr, asCodePoint(value), options);
+	}
+
+	export function lowerFlat(result: wasmType[], memory: Memory, value: string, options: Options): void {
+		u32.lowerFlat(result, memory, asCodePoint(value), options);
+	}
+
+	function fromCodePoint(code: u32): string {
+		if (code >= 0x110000 || (0xD800 <= code && code <= 0xDFFF)) {
+			throw new WasiError(Errno.inval);
+		}
+		return String.fromCodePoint(code);
+	}
+
+	function asCodePoint(str: string): u32 {
+		if (str.length !== 1) {
+			throw new WasiError(Errno.inval);
+		}
+		const code = str.codePointAt(0)!;
+		if (!(code <= 0xD7FF || (0xD800 <= code && code <= 0x10FFFF))) {
+			throw new WasiError(Errno.inval);
+		}
+		return code;
+	}
+}
+export const wchar: ComponentModelType<string> = $wchar;
+
 namespace $wstring {
 
 	const offsets = {
