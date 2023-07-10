@@ -981,7 +981,7 @@ export class FlagsType<T extends JFlags> implements ComponentModelType<T> {
 
 	private readonly fields: FlagField[];
 	private readonly num32Flags: number;
-	private type: [FlagsStorageType, GenericComponentModelType | undefined];
+	private type: [FlagsStorageType, typeof u8 | typeof u16 | typeof u32 | undefined];
 
 	public readonly size: size;
 	public readonly alignment: alignment;
