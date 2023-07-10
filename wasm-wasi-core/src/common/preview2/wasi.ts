@@ -783,7 +783,7 @@ interface TypedField {
 }
 
 export interface JRecord {
-	[key: string]: any;
+	[key: string]: JType;
 }
 
 export type JTuple = JType[];
