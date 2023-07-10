@@ -1385,7 +1385,7 @@ export class Option<T extends JType> implements JVariantCase {
 		return this.__caseIndex === 0;
 	}
 
-	public some(): this is { value: T} {
+	public some(): this is { value: T } {
 		return this.__caseIndex === 1;
 	}
 }
@@ -1417,7 +1417,7 @@ export type JType = number | bigint | string | boolean | JRecord | JVariantCase 
 
 
 /****************************************************************************************
- * This are examples can can be fully generated from the Wit files.
+ * This are examples that can be fully generated from the Wit files.
  ****************************************************************************************/
 
 interface TestRecord extends JRecord {
@@ -1489,11 +1489,11 @@ export class TestUnion implements JVariantCase {
 		return this.__caseIndex;
 	}
 
-	u8(): this is { value: u8} {
+	u8(): this is { value: u8 } {
 		return this.__caseIndex === 0;
 	}
 
-	u32(): this is { value: u32} {
+	u32(): this is { value: u32 } {
 		return this.__caseIndex === 1;
 	}
 
