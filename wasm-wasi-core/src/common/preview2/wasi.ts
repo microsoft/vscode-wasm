@@ -582,10 +582,6 @@ export const ptr: ComponentModelType<ptr> = {
 	lowerFlat: u32.lowerFlat
 };
 
-export interface char {
-
-}
-
 namespace $wchar {
 	export const size = 4;
 	export const alignment: alignment = 4;
