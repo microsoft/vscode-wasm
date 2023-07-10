@@ -582,8 +582,6 @@ export const ptr: ComponentModelType<ptr> = {
 	lowerFlat: u32.lowerFlat
 };
 
-
-
 export interface char {
 
 }
@@ -666,12 +664,77 @@ namespace $wstring {
 }
 export const wstring: ComponentModelType<string> = $wstring;
 
-interface typedField {
+interface TypedField {
 	readonly type: GenericComponentModelType;
+	readonly offset: number;
 }
 
-namespace typedFields {
-	export function size(fields: typedField[]): size {
+export interface JRecord {
+	[key: string]: any;
+}
+
+export type JTuple = JType[];
+
+abstract class BaseRecordType<T extends JRecord | JTuple, F extends TypedField> implements ComponentModelType<T> {
+
+	private fields: F[];
+
+	public readonly size: size;
+	public readonly alignment: alignment;
+	public readonly flatTypes: readonly wasmTypeName[];
+
+	constructor(fields: F[]) {
+		this.fields = fields;
+
+		this.size = BaseRecordType.size(fields);
+		this.alignment = BaseRecordType.alignment(fields);
+		this.flatTypes = BaseRecordType.flatTypes(fields);
+	}
+
+	public load(memory: Memory, ptr: ptr, options: Options): T {
+		const result: JType[] = [];
+		for (const field of this.fields) {
+			const value = field.type.load(memory, ptr + field.offset, options);
+			result.push(value);
+		}
+		return this.create(this.fields, result);
+	}
+
+
+	public liftFlat(memory: Memory, values: FlatValuesIter, options: Options): T {
+		const result: JType[] = [];
+		for (const field of this.fields) {
+			result.push(field.type.liftFlat(memory, values, options));
+		}
+		return this.create(this.fields, result);
+	}
+
+	public alloc(memory: Memory): ptr {
+		return memory.alloc(this.size, this.alignment);
+	}
+
+	public store(memory: Memory, ptr: ptr, record: T, options: Options): void {
+		const values = this.elements(record, this.fields);
+		for (let i = 0; i < this.fields.length; i++) {
+			const field = this.fields[i];
+			const value = values[i];
+			field.type.store(memory, ptr + field.offset, value, options);
+		}
+	}
+
+	public lowerFlat(result: wasmType[], memory: Memory, record: T, options: Options): void {
+		const values = this.elements(record, this.fields);
+		for (let i = 0; i < this.fields.length; i++) {
+			const field = this.fields[i];
+			const value = values[i];
+			field.type.lowerFlat(result, memory, value, options);
+		}
+	}
+
+	protected abstract create(fields: F[], values: JType[]): T;
+	protected abstract elements(record: T, fields: F[]): JType[];
+
+	private static size(fields: TypedField[]): size {
 		let result: ptr = 0;
 		for (const field of fields) {
 			align(result, field.type.alignment);
@@ -680,7 +743,7 @@ namespace typedFields {
 		return result;
 	}
 
-	export function alignment(fields: typedField[]): alignment {
+	private static alignment(fields: TypedField[]): alignment {
 		let result: alignment = 1;
 		for (const field of fields) {
 			result = Math.max(result, field.type.alignment) as alignment;
@@ -688,7 +751,7 @@ namespace typedFields {
 		return result;
 	}
 
-	export function flatTypes(fields: typedField[]): readonly wasmTypeName[] {
+	private static flatTypes(fields: TypedField[]): readonly wasmTypeName[] {
 		const result: wasmTypeName[] = [];
 		for (const field of fields) {
 			result.push(...field.type.flatTypes);
@@ -697,110 +760,77 @@ namespace typedFields {
 	}
 }
 
-export interface recordField extends typedField {
+interface RecordField extends TypedField {
 	readonly name: string;
 	readonly offset: number;
 }
 
-export namespace recordField {
-	export function create(name: string, offset: number, type: GenericComponentModelType): recordField {
+namespace RecordField {
+	export function create(name: string, offset: number, type: GenericComponentModelType): RecordField {
 		return { name, offset, type };
 	}
 }
 
-export interface JRecord {
-	[key: string]: any;
-}
-export namespace record {
+export class RecordType<T extends JRecord> extends BaseRecordType<T, RecordField> {
 
-	export const size: (fields: recordField[]) => size = typedFields.size;
+	constructor(fields: [string, GenericComponentModelType][]) {
+		let offset = 0;
+		const recordFields: RecordField[] = [];
+		for (const [name, type] of fields) {
+			offset = align(offset, type.alignment);
+			recordFields.push(RecordField.create(name, offset, type));
+			offset += type.size;
+		}
+		super(recordFields);
+	}
 
-	export const alignment: (fields: recordField[]) => alignment = typedFields.alignment;
-
-	export const flatTypes: (fields: recordField[]) => readonly wasmTypeName[] = typedFields.flatTypes;
-
-	export function load(memory: Memory, ptr: ptr, options: Options, fields: recordField[]): JRecord {
-		const result: JRecord = Object.create(null);
-		for (const field of fields) {
-			const value = field.type.load(memory, ptr + field.offset, options);
+	protected create(fields: RecordField[], values: JType[]): T {
+		const result: JRecord = {};
+		for (let i = 0; i < fields.length; i++) {
+			const field = fields[i];
+			const value = values[i];
 			result[field.name] = value;
+		}
+		return result as T;
+	}
+
+	protected elements(record: T, fields: RecordField[]): JType[] {
+		const result: JType[] = [];
+		for (const field of fields) {
+			result.push(record[field.name]);
 		}
 		return result;
 	}
-
-	export function liftFlat(memory: Memory, values: FlatValuesIter, options: Options, fields: recordField[]): JRecord {
-		const result: JRecord = Object.create(null);
-		for (const field of fields) {
-			const value = field.type.liftFlat(memory, values, options);
-			result[field.name] = value;
-		}
-		return result;
-	}
-
-	export function store(memory: Memory, ptr: ptr, record: JRecord, options: Options, fields: recordField[]): void {
-		for (const field of fields) {
-			const value = record[field.name];
-			field.type.store(memory, ptr + field.offset, value, options);
-		}
-	}
-
-	export function lowerFlat(result: wasmType[], memory: Memory, record: JRecord, options: Options, fields: recordField[]): void {
-		for (const field of fields) {
-			const value = record[field.name];
-			field.type.lowerFlat(result, memory, value, options);
-		}
-	}
 }
 
-export type JTuple = JType[];
-export interface tupleField extends typedField {
+interface TupleField extends TypedField {
 	readonly offset: number;
 }
-export namespace tupleField {
-	export function create(offset: number, type: GenericComponentModelType): tupleField {
+namespace TupleField {
+	export function create(offset: number, type: GenericComponentModelType): TupleField {
 		return { offset, type };
 	}
 }
 
-export namespace tuple {
-	export const size: (fields: tupleField[]) => size = typedFields.size;
+export class TupleType<T extends JTuple> extends BaseRecordType<T, TupleField> {
 
-	export const alignment: (fields: tupleField[]) => alignment = typedFields.alignment;
-
-	export const flatTypes: (fields: tupleField[]) => readonly wasmTypeName[] = typedFields.flatTypes;
-
-	export function load(memory: Memory, ptr: ptr, options: Options, fields: tupleField[]): JTuple {
-		const result: JTuple = [];
-		for (const field of fields) {
-			const value = field.type.load(memory, ptr + field.offset, options);
-			result.push(value);
+	constructor(fields: GenericComponentModelType[]) {
+		let offset = 0;
+		const tupleFields: TupleField[] = [];
+		for (const type of fields) {
+			offset = align(offset, type.alignment);
+			tupleFields.push(TupleField.create(offset, type));
+			offset += type.size;
 		}
-		return result;
+		super(tupleFields);
 	}
 
-	export function liftFlat(memory: Memory, values: FlatValuesIter, options: Options, fields: tupleField[]): JTuple {
-		const result: JTuple = [];
-		for (const field of fields) {
-			const value = field.type.liftFlat(memory, values, options);
-			result.push(value);
-		}
-		return result;
+	protected create(_fields: TupleField[], values: JType[]): T {
+		return values as JTuple as T;
 	}
 
-	export function store(memory: Memory, ptr: ptr, tuple: JTuple, options: Options, fields: tupleField[]): void {
-		for (let i = 0; i < fields.length; i++) {
-			const field = fields[i];
-			const value = tuple[i];
-			field.type.store(memory, ptr + field.offset, value, options);
-		}
-	}
-
-	export function lowerFlat(result: wasmType[], memory: Memory, tuple: JTuple, options: Options, fields: tupleField[]): void {
-		for (let i = 0; i < fields.length; i++) {
-			const field = fields[i];
-			const value = tuple[i];
-			field.type.lowerFlat(result, memory, value, options);
-		}
+	protected elements(record: T, _fields: TupleField[]): JType[] {
+		return record;
 	}
 }
 
@@ -889,7 +919,7 @@ export interface JVariantCase {
 	value: JType | undefined;
 }
 
-export class variantType<T extends JVariantCase, I, V> implements ComponentModelType<T> {
+export class VariantType<T extends JVariantCase, I, V> implements ComponentModelType<T> {
 
 	private readonly cases: variantCase[];
 	private readonly ctor: new (caseIndex: I, value: V) => T;
@@ -900,15 +930,20 @@ export class variantType<T extends JVariantCase, I, V> implements ComponentModel
 	public readonly alignment: alignment;
 	public readonly flatTypes: readonly wasmTypeName[];
 
-	constructor(cases: variantCase[], ctor: new (caseIndex: I, value: V) => T) {
+	constructor(variants: (GenericComponentModelType | undefined)[], ctor: new (caseIndex: I, value: V) => T) {
+		const cases: variantCase[] = [];
+		for (let i = 0; i < variants.length; i++) {
+			const type = variants[i];
+			cases.push(variantCase.create(i, type));
+		}
 		this.cases = cases;
 		this.ctor = ctor;
 
-		this.discriminantType = variantType.discriminantType(cases.length);
-		this.maxCaseAlignment = variantType.maxCaseAlignment(cases);
-		this.size = variantType.size(this.discriminantType, cases);
-		this.alignment = variantType.alignment(this.discriminantType, cases);
-		this.flatTypes = variantType.flatTypes(this.discriminantType, cases);
+		this.discriminantType = VariantType.discriminantType(cases.length);
+		this.maxCaseAlignment = VariantType.maxCaseAlignment(cases);
+		this.size = VariantType.size(this.discriminantType, cases);
+		this.alignment = VariantType.alignment(this.discriminantType, cases);
+		this.flatTypes = VariantType.flatTypes(this.discriminantType, cases);
 	}
 
 	public load(memory: Memory, ptr: ptr, options: Options): T {
@@ -1101,7 +1136,7 @@ export class Result<O extends JType , E extends JType> implements JVariantCase {
 	}
 }
 
-export type JType = number | bigint | string | boolean | JRecord | JVariantCase | JFlags | JVariantCase | JTuple | JEnum | Option<any> | Result<any, any>;
+export type JType = number | bigint | string | boolean | JRecord | JVariantCase | JFlags | JTuple | JEnum | Option<any> | Result<any, any>;
 
 
 // This are examples can can be fully generated from the Wit files.
@@ -1113,78 +1148,12 @@ interface TestRecord extends JRecord {
 	d: string;
 }
 
-namespace $TestRecordType {
-
-	const fields: recordField[] = [];
-	let offset = 0;
-	for (const item of [['a', u8], ['b', u32], ['c', u8], ['d', wstring]] as [string, GenericComponentModelType][]) {
-		const [name, type] = item;
-		offset = align(offset, type.alignment);
-		fields.push(recordField.create(name, offset, type));
-		offset += type.size;
-	}
-
-	export const alignment = record.alignment(fields);
-	export const size = record.size(fields);
-	export const flatTypes = record.flatTypes(fields);
-
-	export function load(memory: Memory, ptr: ptr, options: Options): TestRecord {
-		return record.load(memory, ptr, options, fields) as TestRecord;
-	}
-
-	export function liftFlat(memory: Memory, values: FlatValuesIter, options: Options): TestRecord {
-		return record.liftFlat(memory, values, options, fields) as TestRecord;
-	}
-
-	export function alloc(memory: Memory): ptr {
-		return memory.alloc(alignment, size);
-	}
-
-	export function store(memory: Memory, ptr: ptr, value: TestRecord, options: Options): void {
-		record.store(memory, ptr, value, options, fields);
-	}
-
-	export function lowerFlat(result: wasmType[], memory: Memory, value: TestRecord, options: Options): void {
-		record.lowerFlat(result, memory, value, options, fields);
-	}
-}
-export const TestRecordType: ComponentModelType<TestRecord> = $TestRecordType;
+export const TestRecordType: ComponentModelType<TestRecord> = new RecordType<TestRecord>([
+	['a', u8], ['b', u32], ['c', u8], ['d', wstring]
+]);
 
 export type TestTuple = [u8, string];
-
-namespace $TestTupleType {
-	const fields: tupleField[] = [];
-	let offset = 0;
-	for (const type of [u8, wstring]) {
-		offset = align(offset, type.alignment);
-		fields.push(tupleField.create(offset, type));
-		offset += type.size;
-	}
-	export const alignment = tuple.alignment(fields);
-	export const size = tuple.size(fields);
-	export const flatTypes = tuple.flatTypes(fields);
-
-	export function load(memory: Memory, ptr: ptr, options: Options): TestTuple {
-		return tuple.load(memory, ptr, options, fields) as TestTuple;
-	}
-
-	export function liftFlat(memory: Memory, values: FlatValuesIter, options: Options): TestTuple {
-		return tuple.liftFlat(memory, values, options, fields) as TestTuple;
-	}
-
-	export function alloc(memory: Memory): ptr {
-		return memory.alloc(alignment, size);
-	}
-
-	export function store(memory: Memory, ptr: ptr, value: TestTuple, options: Options): void {
-		tuple.store(memory, ptr, value, options, fields);
-	}
-
-	export function lowerFlat(result: wasmType[], memory: Memory, value: TestTuple, options: Options): void {
-		tuple.lowerFlat(result, memory, value, options, fields);
-	}
-}
-export const TestTupleType: ComponentModelType<TestTuple> = $TestTupleType;
+export const TestTupleType: ComponentModelType<TestTuple> = new TupleType<TestTuple>([u8, wstring]);
 
 
 export interface TestFlags extends JFlags {
@@ -1261,8 +1230,8 @@ export class TestVariant implements JVariantCase {
 	}
 }
 
-export const TestVariantType: ComponentModelType<TestVariant> = new variantType<TestVariant, number, u8 | u32 | undefined | string>(
-	[ variantCase.create(0, u8), variantCase.create(1, u32), variantCase.create(2, undefined), variantCase.create(3, wstring) ],
+export const TestVariantType: ComponentModelType<TestVariant> = new VariantType<TestVariant, number, u8 | u32 | undefined | string>(
+	[ u8, u32, undefined, wstring ],
 	TestVariant
 );
 
@@ -1292,18 +1261,18 @@ export class TestUnion implements JVariantCase {
 	}
 }
 
-export const TestUnionType: ComponentModelType<TestUnion> = new variantType<TestUnion, number, u8 | u32 | string>(
-	[ variantCase.create(0, u8), variantCase.create(1, u32), variantCase.create(2, wstring) ],
+export const TestUnionType: ComponentModelType<TestUnion> = new VariantType<TestUnion, number, u8 | u32 | string>(
+	[ u8, u32, wstring ],
 	TestUnion
 );
 
-export const TestOptionType: ComponentModelType<Option<TestRecord>> = new variantType<Option<TestRecord>, 0 | 1, TestRecord | undefined>(
-	[ variantCase.create(0, undefined), variantCase.create(1, TestRecordType) ],
+export const TestOptionType: ComponentModelType<Option<TestRecord>> = new VariantType<Option<TestRecord>, 0 | 1, TestRecord | undefined>(
+	[ undefined, TestRecordType],
 	Option<TestRecord>
 );
 
-export const TestResultType: ComponentModelType<Result<TestTuple, u32>> = new variantType<Result<TestTuple, u32>, 0 | 1, TestTuple | u32>(
-	[ variantCase.create(0, TestTupleType), variantCase.create(1, u32) ],
+export const TestResultType: ComponentModelType<Result<TestTuple, u32>> = new VariantType<Result<TestTuple, u32>, 0 | 1, TestTuple | u32>(
+	[ TestTupleType, u32 ],
 	Result<TestTuple, u32>
 );
 
