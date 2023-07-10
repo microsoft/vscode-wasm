@@ -664,6 +664,78 @@ namespace $wstring {
 }
 export const wstring: ComponentModelType<string> = $wstring;
 
+export class ListType<T> implements ComponentModelType<T[]> {
+
+	private static readonly offsets = {
+		data: 0,
+		length: 4
+	};
+
+	private elementType: ComponentModelType<T>;
+
+	public readonly size: size;
+	public readonly alignment: alignment;
+	public readonly flatTypes: readonly wasmTypeName[];
+
+	constructor(elementType: ComponentModelType<T>) {
+		this.elementType = elementType;
+		this.size = 8;
+		this.alignment = 4;
+		this.flatTypes = ['i32', 'i32'];
+	}
+
+	public load(memory: Memory, ptr: ptr, options: Options): T[] {
+		const view = memory.view;
+		const offsets = ListType.offsets;
+		const dataPtr: ptr =  view.getUint32(ptr + offsets.data);
+		const codeUnits: u32 = view.getUint32(ptr + offsets.length);
+		return this.loadFromRange(memory, dataPtr, codeUnits, options);
+	}
+
+	public liftFlat(memory: Memory, values: FlatValuesIter, options: Options): T[] {
+		const dataPtr: ptr = values.next().value as ptr;
+		const length: u32 = values.next().value as u32;
+		return this.loadFromRange(memory, dataPtr, length, options);
+	}
+
+	public alloc(memory: Memory): ptr {
+		return memory.alloc(this.size, this.alignment);
+	}
+
+	public store(memory: Memory, ptr: ptr, values: T[], options: Options): void {
+		const [ data, length ] = this.storeIntoRange(memory, values, options);
+		const view = memory.view;
+		const offsets = ListType.offsets;
+		view.setUint32(ptr + offsets.data, data, true);
+		view.setUint32(ptr + offsets.length, length, true);
+	}
+
+	public lowerFlat(result: wasmType[], memory: Memory, values: T[], options: Options): void {
+		result.push(...this.storeIntoRange(memory, values, options));
+	}
+
+	private loadFromRange(memory: Memory, data: ptr, length: u32, options: Options): T[] {
+		const result: T[] = [];
+		let offset = 0;
+		for (let i = 0; i < length; i++) {
+			result.push(this.elementType.load(memory, data + offset, options));
+			offset += this.elementType.size;
+		}
+		return result;
+	}
+
+	private storeIntoRange(memory: Memory, values: T[], options: Options): [ptr, u32] {
+		const bytes = this.elementType.size * values.length;
+		const ptr = memory.alloc(this.elementType.alignment, bytes);
+		let indexPtr = ptr;
+		for (const item of values) {
+			this.elementType.store(memory, indexPtr, item, options);
+			indexPtr += this.elementType.size;
+		}
+		return [ptr, values.length];
+	}
+}
+
 interface TypedField {
 	readonly type: GenericComponentModelType;
 	readonly offset: number;
@@ -1257,6 +1329,8 @@ interface TestRecord extends JRecord {
 export const TestRecordType: ComponentModelType<TestRecord> = new RecordType<TestRecord>([
 	['a', u8], ['b', u32], ['c', u8], ['d', wstring]
 ]);
+
+export const ListTestRecordType = new ListType<TestRecord>(TestRecordType);
 
 export type TestTuple = [u8, string];
 export const TestTupleType: ComponentModelType<TestTuple> = new TupleType<TestTuple>([u8, wstring]);
