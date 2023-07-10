@@ -835,11 +835,97 @@ export class TupleType<T extends JTuple> extends BaseRecordType<T, TupleField> {
 }
 
 export interface JFlags {
-	_flags: u32[];
+	readonly _bits: u32[];
 }
 
-export namespace flags {
-	export function size(fields: number): size {
+interface FlagField {
+	readonly name: string;
+	readonly index: number;
+	readonly mask: u32;
+}
+
+export namespace FlagField {
+	export function create(name: string, index: number, mask: u32): FlagField {
+		return { name, index, mask };
+	}
+}
+
+export class Flags<T extends JFlags> {
+
+	private readonly fields: FlagField[];
+	private readonly numFlags: number;
+
+	public readonly size: size;
+	public readonly alignment: alignment;
+	public readonly flatTypes: readonly wasmTypeName[];
+
+	constructor(fields: string[]) {
+		this.fields = [];
+		for (let i = 0; i < fields.length; i++) {
+			this.fields.push(FlagField.create(fields[i], i >>> 5, 1 << (i & 31)));
+		}
+
+		const nr = fields.length;
+
+		this.numFlags = Flags.num32Flags(nr);
+		this.size = Flags.size(nr);
+		this.alignment = Flags.alignment(nr);
+		this.flatTypes = Flags.flatTypes(nr);
+	}
+
+	public load(memory: Memory, ptr: ptr<u32[]>): T {
+		const bits: u32[] = new Array(this.numFlags);
+		for (let i = 0; i < this.numFlags; i++) {
+			bits[i] = memory.view.getUint32(ptr, true);
+			ptr += u32.size;
+		}
+		return this.create(bits) as T;
+	}
+
+	public liftFlat(_memory: Memory, values: FlatValuesIter): T {
+		const bits: u32[] = new Array(this.numFlags);
+		for (let i = 0; i < this.numFlags; i++) {
+			bits[i] = values.next().value as u32;
+		}
+		return this.create(bits) as T;
+	}
+
+	public alloc(memory: Memory): ptr<u32[]> {
+		return memory.alloc(this.size, this.alignment);
+	}
+
+	public store(memory: Memory, ptr: ptr<u32[]>, flags: JFlags): void {
+		for (const flag of flags._bits) {
+			memory.view.setUint32(ptr, flag, true);
+			ptr += u32.size;
+		}
+	}
+
+	public lowerFlat(result: wasmType[], _memory: Memory, flags: JFlags): void {
+		for (const flag of flags._bits) {
+			result.push(flag);
+		}
+	}
+
+	private create(bits: u32[]): JFlags {
+		const result = { _bits: bits };
+		const props = Object.create(null);
+		for (const field of this.fields) {
+			props[field.name] = {
+				get: () => (bits[field.index] & field.mask) !== 0,
+				set: (newVal: boolean) => {
+					if (newVal) {
+						bits[field.index] |= field.mask;
+					} else {
+						bits[field.index] &= ~field.mask;
+					}
+				}
+			};
+		}
+		return Object.defineProperties(result, props);
+	}
+
+	private static size(fields: number): size {
 		if (fields === 0) {
 			return 0;
 		} else if (fields <= 8) {
@@ -847,11 +933,11 @@ export namespace flags {
 		} else if (fields <= 16) {
 			return 2;
 		} else {
-			return 4 * num32Flags(fields);
+			return 4 * this.num32Flags(fields);
 		}
 	}
 
-	export function alignment(fields: number): alignment {
+	private static alignment(fields: number): alignment {
 		if (fields <= 8) {
 			return 1;
 		} else if (fields <= 16) {
@@ -861,55 +947,24 @@ export namespace flags {
 		}
 	}
 
-	export function flatTypes(fields: number): 'i32'[] {
-		return new Array(num32Flags(fields)).fill('i32');
+	private static flatTypes(fields: number): 'i32'[] {
+		return new Array(this.num32Flags(fields)).fill('i32');
 	}
 
-	export function load(memory: Memory, ptr: ptr<u32[]>, fields: number): u32[] {
-		const numFlags = num32Flags(fields);
-		const result: u32[] = new Array(numFlags);
-		for (let i = 0; i < numFlags; i++) {
-			result[i] = memory.view.getUint32(ptr, true);
-			ptr += u32.size;
-		}
-		return result;
-	}
 
-	export function liftFlat(_memory: Memory, values: FlatValuesIter, fields: number): u32[] {
-		const numFlags = num32Flags(fields);
-		const result: u32[] = new Array(numFlags);
-		for (let i = 0; i < numFlags; i++) {
-			result[i] = values.next().value as u32;
-		}
-		return result;
-	}
-
-	export function store(memory: Memory, ptr: ptr<u32[]>, flags: u32[]): void {
-		for (const flag of flags) {
-			memory.view.setUint32(ptr, flag, true);
-			ptr += u32.size;
-		}
-	}
-
-	export function lowerFlat(result: wasmType[], _memory: Memory, flags: u32[]): void {
-		for (const flag of flags) {
-			result.push(flag);
-		}
-	}
-
-	function num32Flags(fields: number): number {
+	private static num32Flags(fields: number): number {
 		return Math.ceil(fields / 32);
 	}
 }
 
-export interface variantCase {
+interface VariantCase {
 	readonly index: u32;
 	readonly type: GenericComponentModelType | undefined;
 	readonly wantFlatTypes: wasmTypeName[] | undefined;
 }
 
-export namespace variantCase {
-	export function create(index: number, type: GenericComponentModelType | undefined): variantCase {
+namespace VariantCase {
+	export function create(index: number, type: GenericComponentModelType | undefined): VariantCase {
 		return { index, type, wantFlatTypes: type !== undefined ? [] : undefined };
 	}
 }
@@ -921,7 +976,7 @@ export interface JVariantCase {
 
 export class VariantType<T extends JVariantCase, I, V> implements ComponentModelType<T> {
 
-	private readonly cases: variantCase[];
+	private readonly cases: VariantCase[];
 	private readonly ctor: new (caseIndex: I, value: V) => T;
 	private readonly discriminantType: GenericComponentModelType;
 	private readonly maxCaseAlignment: alignment;
@@ -931,10 +986,10 @@ export class VariantType<T extends JVariantCase, I, V> implements ComponentModel
 	public readonly flatTypes: readonly wasmTypeName[];
 
 	constructor(variants: (GenericComponentModelType | undefined)[], ctor: new (caseIndex: I, value: V) => T) {
-		const cases: variantCase[] = [];
+		const cases: VariantCase[] = [];
 		for (let i = 0; i < variants.length; i++) {
 			const type = variants[i];
-			cases.push(variantCase.create(i, type));
+			cases.push(VariantCase.create(i, type));
 		}
 		this.cases = cases;
 		this.ctor = ctor;
@@ -1015,17 +1070,17 @@ export class VariantType<T extends JVariantCase, I, V> implements ComponentModel
 		}
 	}
 
-	private static size(discriminantType: GenericComponentModelType, cases: variantCase[]): size {
+	private static size(discriminantType: GenericComponentModelType, cases: VariantCase[]): size {
 		let result = discriminantType.size;
 		result = align(result, this.maxCaseAlignment(cases));
 		return result + this.maxCaseSize(cases);
 	}
 
-	private static alignment(discriminantType: GenericComponentModelType, cases: variantCase[]): alignment {
+	private static alignment(discriminantType: GenericComponentModelType, cases: VariantCase[]): alignment {
 		return Math.max(discriminantType.alignment, this.maxCaseAlignment(cases)) as alignment;
 	}
 
-	private static flatTypes(discriminantType: GenericComponentModelType, cases: variantCase[]): readonly wasmTypeName[] {
+	private static flatTypes(discriminantType: GenericComponentModelType, cases: VariantCase[]): readonly wasmTypeName[] {
 		const flat: wasmTypeName[] = [];
 		for (const c of cases) {
 			if (c.type === undefined) {
@@ -1057,7 +1112,7 @@ export class VariantType<T extends JVariantCase, I, V> implements ComponentModel
 		throw new WasiError(Errno.inval);
 	}
 
-	private static maxCaseAlignment(cases: variantCase[]): alignment {
+	private static maxCaseAlignment(cases: VariantCase[]): alignment {
 		let result: alignment = 1;
 		for (const c of cases) {
 			if (c.type !== undefined) {
@@ -1067,7 +1122,7 @@ export class VariantType<T extends JVariantCase, I, V> implements ComponentModel
 		return result;
 	}
 
-	private static maxCaseSize(cases: variantCase[]): size {
+	private static maxCaseSize(cases: VariantCase[]): size {
 		let result = 0;
 		for (const c of cases) {
 			if (c.type !== undefined) {
@@ -1155,50 +1210,8 @@ export const TestRecordType: ComponentModelType<TestRecord> = new RecordType<Tes
 export type TestTuple = [u8, string];
 export const TestTupleType: ComponentModelType<TestTuple> = new TupleType<TestTuple>([u8, wstring]);
 
-
-export interface TestFlags extends JFlags {
-	a: boolean;
-	b: boolean;
-	c: boolean;
-}
-
-namespace $TestFlagsType {
-	const _flags: number = 10;
-
-	export const alignment = flags.alignment(_flags);
-	export const size = flags.size(_flags);
-	export const flatTypes = flags.flatTypes(_flags);
-
-	export function load(memory: Memory, ptr: ptr): TestFlags {
-		return create(flags.load(memory, ptr, _flags));
-	}
-
-	export function liftFlat(memory: Memory, values: FlatValuesIter): TestFlags {
-		return create(flags.liftFlat(memory, values, _flags));
-	}
-
-	export function alloc(memory: Memory): ptr {
-		return memory.alloc(alignment, size);
-	}
-
-	export function store(memory: Memory, ptr: ptr, value: TestFlags): void {
-		flags.store(memory, ptr, value._flags);
-	}
-
-	export function lowerFlat(result: wasmType[], memory: Memory, value: TestFlags): void {
-		flags.lowerFlat(result, memory, value._flags);
-	}
-
-	function create(flags: u32[]): TestFlags {
-		return {
-			_flags: flags,
-			get a(): boolean { return  (flags[0] & 1) !== 0; },
-			get b(): boolean { return (flags[0] & 2) !== 0; },
-			get c(): boolean { return (flags[0] & 4) !== 0; }
-		};
-	}
-}
-export const TestFlagsType: ComponentModelType<TestFlags> = $TestFlagsType;
+export type TestFlags = Record<'a' | 'b' | 'c', boolean> & JFlags;
+export const TestFlagsType: ComponentModelType<TestFlags> = new Flags<TestFlags>(['a', 'b', 'c']);
 
 export class TestVariant implements JVariantCase {
 	private __caseIndex: number;
