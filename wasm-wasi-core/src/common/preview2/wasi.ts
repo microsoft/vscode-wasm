@@ -119,10 +119,15 @@ export interface ComponentModelType<J> {
 	readonly size: number;
 	readonly alignment: alignment;
 	readonly flatTypes: ReadonlyArray<wasmTypeName>;
+	// Loads an object directly from the memory buffer
 	load(memory: Memory, ptr: ptr, options: Options): J;
-	liftFlat(memory: Memory, values: Iterator<wasmType, wasmType>, options: Options): J;
+	// Loads an object from a flattened signature
+	liftFlat(memory: Memory, values: FlatValuesIter, options: Options): J;
+	// Allocates a new object in the memory buffer
 	alloc(memory: Memory): ptr;
+	// Stores an object directly into the memory buffer
 	store(memory: Memory, ptr: ptr, value: J, options: Options): void;
+	// Stores an object into a flattened signature
 	lowerFlat(result: wasmType[], memory: Memory, value: J, options: Options): void;
 }
 export type GenericComponentModelType = ComponentModelType<any>;
@@ -1173,7 +1178,7 @@ namespace VariantCase {
 
 export interface JVariantCase {
 	readonly _caseIndex: u32;
-	value: JType | undefined;
+	readonly value: JType | undefined;
 }
 
 export class VariantType<T extends JVariantCase, I, V> implements ComponentModelType<T> {
@@ -1472,32 +1477,60 @@ flags.a = true;
 
 export class TestVariant implements JVariantCase {
 	private __caseIndex: number;
-	public value: u8 | u32 | undefined | string;
+	public _value: u8 | u32 | undefined | string;
 
 	constructor(c: number, value: u8 | u32 | undefined | string) {
 		this.__caseIndex = c;
-		this.value = value;
+		this._value = value;
+	}
+
+	public static red(value: u8) {
+		return new TestVariant(0, value);
+	}
+
+	public static green(value: u32) {
+		return new TestVariant(1, value);
+	}
+
+	public static nothing() {
+		return new TestVariant(2, undefined);
+	}
+
+	public static blue(value: string) {
+		return new TestVariant(3, value);
 	}
 
 	get _caseIndex(): number {
 		return this.__caseIndex;
 	}
 
-	red(): this is { value: u8 } {
+	get value(): u8 | u32 | undefined | string {
+		return this._value;
+	}
+
+	red(): this is { readonly value: u8 } {
 		return this.__caseIndex === 0;
 	}
 
-	green(): this is { value: u32 } {
+	green(): this is { readonly value: u32 } {
 		return this.__caseIndex === 1;
 	}
 
-	nothing(): this is { value: undefined } {
+	nothing(): this is { readonly value: undefined } {
 		return this.__caseIndex === 2;
 	}
 
-	blue(): this is { value: string } {
+	blue(): this is { readonly value: string } {
 		return this.__caseIndex === 3;
 	}
+}
+
+let t1: TestVariant = TestVariant.red(1);
+if (t1.red()) {
+	t1.value;
+}
+if (t1.blue()) {
+	t1.value;
 }
 
 export const TestVariantType: ComponentModelType<TestVariant> = new VariantType<TestVariant, number, u8 | u32 | undefined | string>(
