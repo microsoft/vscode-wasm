@@ -1177,14 +1177,14 @@ namespace VariantCase {
 }
 
 export interface JVariantCase {
-	readonly _caseIndex: u32;
-	readonly value: JType | undefined;
+	readonly case: u32;
+	readonly value?: JType | undefined;
 }
 
 export class VariantType<T extends JVariantCase, I, V> implements ComponentModelType<T> {
 
 	private readonly cases: VariantCase[];
-	private readonly ctor: new (caseIndex: I, value: V) => T;
+	private readonly ctor: (caseIndex: I, value: V) => T;
 	private readonly discriminantType: GenericComponentModelType;
 	private readonly maxCaseAlignment: alignment;
 
@@ -1192,7 +1192,7 @@ export class VariantType<T extends JVariantCase, I, V> implements ComponentModel
 	public readonly alignment: alignment;
 	public readonly flatTypes: readonly wasmTypeName[];
 
-	constructor(variants: (GenericComponentModelType | undefined)[], ctor: new (caseIndex: I, value: V) => T) {
+	constructor(variants: (GenericComponentModelType | undefined)[], ctor: (caseIndex: I, value: V) => T) {
 		const cases: VariantCase[] = [];
 		for (let i = 0; i < variants.length; i++) {
 			const type = variants[i];
@@ -1213,11 +1213,11 @@ export class VariantType<T extends JVariantCase, I, V> implements ComponentModel
 		ptr += this.discriminantType.size;
 		const caseVariant = this.cases[caseIndex];
 		if (caseVariant.type === undefined) {
-			return new this.ctor(caseIndex, undefined as any);
+			return this.ctor(caseIndex, undefined as any);
 		} else {
 			ptr = align(ptr, this.maxCaseAlignment);
 			const value = caseVariant.type.load(memory, ptr, options);
-			return new this.ctor(caseIndex, value);
+			return this.ctor(caseIndex, value);
 		}
 	}
 
@@ -1225,12 +1225,12 @@ export class VariantType<T extends JVariantCase, I, V> implements ComponentModel
 		const caseIndex = this.discriminantType.liftFlat(memory, values, options);
 		const caseVariant = this.cases[caseIndex];
 		if (caseVariant.type === undefined) {
-			return new this.ctor(caseIndex, undefined as any);
+			return this.ctor(caseIndex, undefined as any);
 		} else {
 			// The first flat type is the discriminant type. So skip it.
 			const iter = new CoerceValueIter(values, this.flatTypes.slice(1), caseVariant.wantFlatTypes!);
 			const value = caseVariant.type.liftFlat(memory, iter, options);
-			return new this.ctor(caseIndex, value);
+			return this.ctor(caseIndex, value);
 		}
 	}
 
@@ -1239,9 +1239,9 @@ export class VariantType<T extends JVariantCase, I, V> implements ComponentModel
 	}
 
 	public store(memory: Memory, ptr: ptr, value: T, options: Options): void {
-		this.discriminantType.store(memory, ptr, value._caseIndex, options);
+		this.discriminantType.store(memory, ptr, value.case, options);
 		ptr += this.discriminantType.size;
-		const c = this.cases[value._caseIndex];
+		const c = this.cases[value.case];
 		if (c.type !== undefined && value !== undefined) {
 			ptr = align(ptr, this.maxCaseAlignment);
 			c.type.store(memory, ptr, value, options);
@@ -1249,8 +1249,8 @@ export class VariantType<T extends JVariantCase, I, V> implements ComponentModel
 	}
 
 	public lowerFlat(result: wasmType[], memory: Memory, value: T, options: Options): void {
-		this.discriminantType.lowerFlat(result, memory, value._caseIndex, options);
-		const c = this.cases[value._caseIndex];
+		this.discriminantType.lowerFlat(result, memory, value.case, options);
+		const c = this.cases[value.case];
 		if (c.type !== undefined && value !== undefined) {
 			const payload: wasmType[] = [];
 			c.type.lowerFlat(payload, memory, value, options);
@@ -1401,27 +1401,64 @@ export class Enumeration<T extends JEnum> implements ComponentModelType<T> {
 	}
 }
 
-export class Option<T extends JType> implements JVariantCase {
 
-	private __caseIndex: 0 | 1;
-	public value: T | undefined;
+export namespace Option {
+	export const none = 0 as const;
+	export const some = 1 as const;
 
-	constructor(caseIndex: 0 | 1, value: T | undefined) {
-		this.__caseIndex = caseIndex;
-		this.value = value;
+	export type _ct = typeof none | typeof some;
+	export type _vt<T extends JType> = undefined | T;
+
+	type _common<T> = Omit<OptionImpl<T>, 'case' | 'value'>;
+
+	export type none<T> = { readonly case: typeof none } & _common<T>;
+	export type some<T> = { readonly case: typeof some; readonly value: T } & _common<T>;
+
+	export function _ctor<T extends JType>(c: _ct, v: _vt<T>): Option<T> {
+		return new OptionImpl(c, v) as Option<T>;
 	}
 
-	get _caseIndex(): number {
-		return this.__caseIndex;
+	export function _none<T extends JType>(): none<T> {
+		return new OptionImpl<T>(none, undefined) as none<T>;
 	}
 
-	public none(): this is { value: undefined } {
-		return this.__caseIndex === 0;
+	export function _some<T extends JType>(value: T): some<T> {
+		return new OptionImpl<T>(some, value ) as some<T>;
 	}
 
-	public some(): this is { value: T } {
-		return this.__caseIndex === 1;
+	class OptionImpl<T extends JType> {
+		private readonly _case: _ct;
+		private readonly _value?: _vt<T>;
+
+		constructor(c: typeof Option.none | typeof Option.some, value: undefined | T) {
+			this._case = c;
+			this._value = value;
+		}
+
+		get case():  typeof Option.none | typeof Option.some {
+			return this._case;
+		}
+
+		get value(): undefined | T {
+			return this._value;
+		}
+
+		public none(): this is none<T> {
+			return this._case === Option.none;
+		}
+
+		public some(): this is some<T> {
+			return this._case === Option.some;
+		}
+
 	}
+}
+
+export type Option<T> = Option.none<T> | Option.some<T>;
+
+let x: Option<string> = {} as any;
+if (x.none()) {
+	x.value;
 }
 
 export class Result<O extends JType , E extends JType> implements JVariantCase {
@@ -1475,103 +1512,167 @@ export const TestFlagsType: FlagsType<TestFlags> = new FlagsType<TestFlags>(['a'
 let flags: TestFlags = TestFlagsType.create();
 flags.a = true;
 
-export class TestVariant implements JVariantCase {
-	private __caseIndex: number;
-	public _value: u8 | u32 | undefined | string;
 
-	constructor(c: number, value: u8 | u32 | undefined | string) {
-		this.__caseIndex = c;
-		this._value = value;
+export namespace TestVariant {
+
+	export const red = 0 as const;
+	export const green = 1 as const;
+	export const nothing = 2 as const;
+	export const blue = 3 as const;
+
+	export type _ct = typeof red | typeof green | typeof nothing | typeof blue;
+	export type _vt = u8 | u32 | undefined | string;
+
+
+	type _common = Omit<VariantImpl, 'case' | 'value'>;
+	export type red = { readonly case: typeof red; readonly value: u8 } & _common;
+	export type green = { readonly case: typeof green; readonly value: u32 } & _common;
+	export type nothing = { readonly case: typeof nothing } & _common;
+	export type blue = { readonly case: typeof blue; readonly value: string } & _common;
+
+	export function _ctor(c: _ct, v: _vt): TestVariant {
+		return new VariantImpl (c, v) as TestVariant;
 	}
 
-	public static red(value: u8) {
-		return new TestVariant(0, value);
+	export function _red(value: u8): red {
+		return new VariantImpl(red, value) as red;
 	}
 
-	public static green(value: u32) {
-		return new TestVariant(1, value);
+	export function _green(value: u32): green {
+		return new VariantImpl (green, value ) as green;
 	}
 
-	public static nothing() {
-		return new TestVariant(2, undefined);
+	export function _nothing(): nothing {
+		return new VariantImpl (nothing, undefined) as nothing;
 	}
 
-	public static blue(value: string) {
-		return new TestVariant(3, value);
+	export function _blue(value: string): blue {
+		return new VariantImpl (blue, value) as blue;
 	}
 
-	get _caseIndex(): number {
-		return this.__caseIndex;
-	}
+	class VariantImpl {
+		private readonly _case: _ct;
+		private readonly _value?: _vt;
 
-	get value(): u8 | u32 | undefined | string {
-		return this._value;
-	}
+		constructor(c: _ct, value: _vt) {
+			this._case = c;
+			this._value = value;
+		}
 
-	red(): this is { readonly value: u8 } {
-		return this.__caseIndex === 0;
-	}
+		get case(): _ct {
+			return this._case;
+		}
 
-	green(): this is { readonly value: u32 } {
-		return this.__caseIndex === 1;
-	}
+		get value(): _vt {
+			return this._value;
+		}
 
-	nothing(): this is { readonly value: undefined } {
-		return this.__caseIndex === 2;
-	}
+		red(): this is red {
+			return this._case === 0;
+		}
 
-	blue(): this is { readonly value: string } {
-		return this.__caseIndex === 3;
+		green(): this is green {
+			return this._case === 1;
+		}
+
+		nothing(): this is nothing {
+			return this._case === 2;
+		}
+
+		blue(): this is blue {
+			return this._case === 3;
+		}
 	}
 }
+export type TestVariant = TestVariant.red | TestVariant.green | TestVariant.nothing | TestVariant.blue;
+export const TestVariantType: ComponentModelType<TestVariant> = new VariantType<TestVariant, TestVariant._ct, TestVariant._vt>(
+	[ u8, u32, undefined, wstring ],
+	TestVariant._ctor
+);
 
-let t1: TestVariant = TestVariant.red(1);
+
+let t1: TestVariant = {} as any;
 if (t1.red()) {
 	t1.value;
 }
 if (t1.blue()) {
 	t1.value;
 }
-
-export const TestVariantType: ComponentModelType<TestVariant> = new VariantType<TestVariant, number, u8 | u32 | undefined | string>(
-	[ u8, u32, undefined, wstring ],
-	TestVariant
-);
-
-export class TestUnion implements JVariantCase {
-	private __caseIndex: number;
-	public value: u8 | u32 | string;
-
-	constructor(c: number, value: u8 | u32 | string) {
-		this.__caseIndex = c;
-		this.value = value;
-	}
-
-	get _caseIndex(): number {
-		return this.__caseIndex;
-	}
-
-	u8(): this is { value: u8 } {
-		return this.__caseIndex === 0;
-	}
-
-	u32(): this is { value: u32 } {
-		return this.__caseIndex === 1;
-	}
-
-	string(): this is { value: string } {
-		return this.__caseIndex === 2;
-	}
+if (t1.nothing()) {
+	t1.value;
 }
 
-export const TestUnionType: ComponentModelType<TestUnion> = new VariantType<TestUnion, number, u8 | u32 | string>(
+
+export namespace TestUnion {
+
+	export const u8 = 0 as const;
+	export const u32 = 1 as const;
+	export const string = 2 as const;
+
+	export type _ct = typeof u8 | typeof u32 | typeof string;
+	export type _vt = u8 | u32 | undefined | string;
+
+	type _common = Omit<UnionImpl, 'case' | 'value'>;
+
+	export type $u8 = { readonly case: typeof u8; readonly value: u8 } & _common;
+	export type $u32 = { readonly case: typeof u32; readonly value: u32 } & _common;
+	export type $string = { readonly case: typeof string; readonly value: string } & _common;
+
+	export function _ctor(c: _ct, v: _vt): TestUnion {
+		return new UnionImpl(c, v) as TestUnion;
+	}
+
+	export function _u8(value: u8): $u8 {
+		return new UnionImpl(u8, value) as $u8;
+	}
+
+	export function _u32(value: u32): $u32 {
+		return new UnionImpl (u32, value ) as $u32;
+	}
+
+	export function _string(): $string {
+		return new UnionImpl (string, undefined) as $string;
+	}
+
+	class UnionImpl {
+		private readonly _case: _ct;
+		private readonly _value?: _vt;
+
+		constructor(c: _ct, value: _vt) {
+			this._case = c;
+			this._value = value;
+		}
+
+		get case(): _ct {
+			return this._case;
+		}
+
+		get value(): _vt {
+			return this._value;
+		}
+
+		u8(): this is $u8 {
+			return this._case === u8;
+		}
+
+		u32(): this is $u32 {
+			return this._case === u32;
+		}
+
+		string(): this is $string {
+			return this._case === string;
+		}
+	}
+}
+export type TestUnion = TestUnion.$u8 | TestUnion.$u32 | TestUnion.$string;
+export const TestUnionType: ComponentModelType<TestUnion> = new VariantType<TestUnion, TestUnion._ct, TestUnion._vt>(
 	[ u8, u32, wstring ],
-	TestUnion
+	TestUnion._ctor
 );
 
-export const TestOptionType: ComponentModelType<Option<TestRecord>> = new VariantType<Option<TestRecord>, 0 | 1, TestRecord | undefined>(
+export const TestOptionType: ComponentModelType<Option<TestRecord>> = new VariantType<Option<TestRecord>, Option._ct, Option._vt<TestRecord>>(
 	[ undefined, TestRecordType],
-	Option<TestRecord>
+	Option._ctor<TestRecord>
 );
 
 export const TestResultType: ComponentModelType<Result<TestTuple, u32>> = new VariantType<Result<TestTuple, u32>, 0 | 1, TestTuple | u32>(
