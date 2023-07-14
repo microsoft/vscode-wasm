@@ -1356,11 +1356,13 @@ export class Enumeration<T extends JEnum> implements ComponentModelType<T> {
 
 	private readonly discriminantType: ComponentModelType<u8> | ComponentModelType<u16> | ComponentModelType<u32>;
 
+	private readonly cases: number;
 	public readonly size: size;
 	public readonly alignment: alignment;
 	public readonly flatTypes: readonly wasmTypeName[];
 
 	constructor(cases: number) {
+		this.cases = cases;
 		this.discriminantType = Enumeration.discriminantType(cases);
 		this.size = this.discriminantType.size;
 		this.alignment = this.discriminantType.alignment;
@@ -1384,7 +1386,7 @@ export class Enumeration<T extends JEnum> implements ComponentModelType<T> {
 	}
 
 	private assertRange(value: number): number {
-		if (value < TestEnum.a || value > TestEnum.c) {
+		if (value < 0 || value > this.cases) {
 			throw new WasiError(Errno.inval);
 		}
 		return value;

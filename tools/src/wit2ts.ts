@@ -18,12 +18,20 @@ interface _Visitor extends Visitor {
 }
 namespace Wit2TS {
 
-	export namespace TyVisitor {
-		export function create(): Visitor & { getResult(): string } {
+	namespace TyVisitor {
+		export function create(baseTypes: Set<string>): Visitor & { getResult(): string } {
 			let result: string;
 			const visitor: Visitor = {
-				visitU8(): boolean { result = 'number'; return true; },
-				visitU16(): boolean { result = 'number'; return true; },
+				visitU8(): boolean {
+					result = 'u8';
+					baseTypes.add(result);
+					return true;
+				},
+				visitU16(): boolean {
+					result = 'u16';
+					baseTypes.add(result);
+					return true;
+				},
 				visitU32(): boolean { result = 'number'; return true; },
 				visitU64(): boolean { result = 'bigint'; return true; },
 				visitS8(): boolean { result = 'number'; return true; },
@@ -36,7 +44,7 @@ namespace Wit2TS {
 				visitBool(): boolean { result = 'boolean'; return true; },
 				visitChar(): boolean { result = 'string'; return true; },
 				visitTuple(node: Tuple): boolean {
-					const tyVisitor = TyVisitor.create();
+					const tyVisitor = TyVisitor.create(baseTypes);
 					const elements: string[] = [];
 					for (let i = 0; i < node.members.length; i++) {
 						const member = node.members[i];
@@ -47,13 +55,13 @@ namespace Wit2TS {
 					return true;
 				},
 				visitList(node) {
-					const tyVisitor = TyVisitor.create();
+					const tyVisitor = TyVisitor.create(baseTypes);
 					node.type.visit(tyVisitor, node.type);
 					result = `${tyVisitor.getResult()}[]`;
 					return true;
 				},
 				visitOption(node) {
-					const tyVisitor = TyVisitor.create();
+					const tyVisitor = TyVisitor.create(baseTypes);
 					node.type.visit(tyVisitor, node.type);
 					result = `(${tyVisitor.getResult()} | null)`;
 					return true;
@@ -100,15 +108,12 @@ namespace Wit2TS {
 			values.push(value);
 		}
 
-		// const tyVisitor: Visitor = {
-		// 	visitU8(node: u8): string {
-		// 		return 'number';
-		// 	}
-		// };
-
+		const baseTypes: Set<string> = new Set();
+		const tyVisitor = TyVisitor.create(baseTypes);
 		const result: _Visitor = {
 			source,
 			visitDocument(_document: Document): boolean {
+				tyVisitor.getResult();
 				return true;
 			},
 			endVisitDocument(_document: Document): void {

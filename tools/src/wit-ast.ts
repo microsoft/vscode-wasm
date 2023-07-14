@@ -8,6 +8,8 @@ enum NodeKind {
 	package = 'package',
 	packageId = 'packageId',
 	versionNumber = 'version',
+	topLevelUseItem = 'topLevelUseItem',
+	topLevelUseInterface = 'topLevelUseInterface',
 	world = 'world',
 	export = 'export',
 	import = 'import',
@@ -67,6 +69,10 @@ export interface Visitor {
 	endVisitPackageIdentifier?(node: PackageIdentifier): void;
 	visitVersionNumber?(node: VersionNumber): boolean;
 	endVisitVersionNumber?(node: VersionNumber): void;
+	visitTopLevelUseItem?(node: TopLevelUseItem): boolean;
+	endVisitTopLevelUseItem?(node: TopLevelUseItem): void;
+	visitTopLevelUseInterface?(node: TopLevelUseInterface): boolean;
+	endVisitTopLevelUseInterface?(node: TopLevelUseInterface): void;
 	visitWorldItem?(node: WorldItem): boolean;
 	endVisitWorldItem?(node: WorldItem): void;
 	visitExportItem?(node: ExportItem): boolean;
@@ -170,6 +176,10 @@ export const DefaultVisitor: Visitor = {
 	endVisitPackageIdentifier: () => { },
 	visitVersionNumber: () => true,
 	endVisitVersionNumber: () => { },
+	visitTopLevelUseItem: () => true,
+	endVisitTopLevelUseItem: () => { },
+	visitTopLevelUseInterface: () => true,
+	endVisitTopLevelUseInterface: () => { },
 	visitWorldItem: () => true,
 	endVisitWorldItem: () => { },
 	visitExportItem: () => true,
@@ -350,6 +360,37 @@ export namespace VersionNumber {
 	function visit(visitor: Visitor, node: VersionNumber): void {
 		visitor.visitVersionNumber && visitor.visitVersionNumber(node);
 		visitor.endVisitVersionNumber && visitor.endVisitVersionNumber(node);
+	}
+}
+
+export interface TopLevelUseItem extends Node {
+	kind: NodeKind.topLevelUseItem;
+	interface: TopLevelUseInterface;
+}
+export namespace TopLevelUseItem {
+	export function is(node: Node): node is TopLevelUseItem {
+		return node.kind === NodeKind.topLevelUseItem;
+	}
+	export function create(range: Range, _interface: TopLevelUseInterface): TopLevelUseItem {
+		return { kind: NodeKind.topLevelUseItem, range, parent: undefined, interface: _interface };
+	}
+}
+
+export interface TopLevelUseInterface extends Node {
+	namespace: Identifier;
+	name: Identifier | undefined;
+	import: Identifier | undefined;
+	version: VersionNumber | undefined;
+}
+export namespace TopLevelUseInterface {
+	export function is(node: Node): node is TopLevelUseInterface {
+		return node.kind === NodeKind.topLevelUseInterface;
+	}
+	export function create(range: Range, namespace: Identifier, name: Identifier | undefined | null, _import: Identifier | undefined | null, version: VersionNumber | undefined | null): TopLevelUseInterface {
+		name = name === null ? undefined : name;
+		_import = _import === null ? undefined : _import;
+		version = version === null ? undefined : version;
+		return { kind: NodeKind.topLevelUseInterface, range, parent: undefined, namespace, name, import: _import, version };
 	}
 }
 

@@ -15,11 +15,11 @@ function range(loc) {
 start = wit_document
 
 wit_document
-	= pack:package_item? members:(world_item / interface_item)* c1:_ {
+	= pack:package_decl? members:(interface_item / world_item)* c1:_ {
         return Node.finalize(ast.Document.create(range(location()), pack, members), c1);
     }
 
-package_item "package item"
+package_decl "package declaration"
 	= c1:_ 'package' c2:_ id:package_id c3:__ {
         return Node.finalize(ast.PackageItem.create(range(location()), id), c1, c2, c3);
     }
@@ -32,6 +32,19 @@ package_id "package id"
 version_number "version number"
 	= [^ \t\n\r]+ {
         return Node.finalize(ast.VersionNumber.create(range(location()), text()));
+    }
+
+toplevel_use_item "top level use"
+    = c1:_ 'use' inter:toplevel_use_interface ('as' c2:_ name:id { return name; })? c3:__ {
+        return Node.finalize(ast.TopLevelUseItem.create(range(location()), inter, name), c1, c2, c3);
+    }
+
+toplevel_use_interface "top level use interface"
+    = namespace:id_item ':' name:id_item '/' imp:id_item version:('@' version:version_number { return version; })? c1:__ {
+        return Node.finalize(ast.TopLevelUseInterface.create(range(location()), namespace, name, imp, version), c1);
+    }
+    / namepsace:id_item {
+        return Node.finalize(ast.TopLevelUseInterface.create(range(location()), namespace, undefined, undefined, undefined));
     }
 
 world_item "world declaration"
