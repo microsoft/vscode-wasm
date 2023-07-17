@@ -366,13 +366,20 @@ export namespace VersionNumber {
 export interface TopLevelUseItem extends Node {
 	kind: NodeKind.topLevelUseItem;
 	interface: TopLevelUseInterface;
+	visit: (visitor: Visitor, node: TopLevelUseItem) => void;
 }
 export namespace TopLevelUseItem {
 	export function is(node: Node): node is TopLevelUseItem {
 		return node.kind === NodeKind.topLevelUseItem;
 	}
 	export function create(range: Range, _interface: TopLevelUseInterface): TopLevelUseItem {
-		return { kind: NodeKind.topLevelUseItem, range, parent: undefined, interface: _interface };
+		return { kind: NodeKind.topLevelUseItem, range, parent: undefined, interface: _interface, visit };
+	}
+	export function visit(visitor: Visitor, node: TopLevelUseItem): void {
+		if (visitor.visitTopLevelUseItem && visitor.visitTopLevelUseItem(node)) {
+			node.interface.visit(visitor, node.interface);
+		}
+		visitor.endVisitTopLevelUseItem && visitor.endVisitTopLevelUseItem(node);
 	}
 }
 
@@ -381,6 +388,7 @@ export interface TopLevelUseInterface extends Node {
 	name: Identifier | undefined;
 	import: Identifier | undefined;
 	version: VersionNumber | undefined;
+	visit: (visitor: Visitor, node: TopLevelUseInterface) => void;
 }
 export namespace TopLevelUseInterface {
 	export function is(node: Node): node is TopLevelUseInterface {
@@ -390,7 +398,16 @@ export namespace TopLevelUseInterface {
 		name = name === null ? undefined : name;
 		_import = _import === null ? undefined : _import;
 		version = version === null ? undefined : version;
-		return { kind: NodeKind.topLevelUseInterface, range, parent: undefined, namespace, name, import: _import, version };
+		return { kind: NodeKind.topLevelUseInterface, range, parent: undefined, namespace, name, import: _import, version, visit };
+	}
+	export function visit(visitor: Visitor, node: TopLevelUseInterface): void {
+		if (visitor.visitTopLevelUseInterface && visitor.visitTopLevelUseInterface(node)) {
+			node.namespace.visit(visitor, node.namespace);
+			node.name && node.name.visit(visitor, node.name);
+			node.import && node.import.visit(visitor, node.import);
+			node.version && node.version.visit(visitor, node.version);
+		}
+		visitor.endVisitTopLevelUseInterface && visitor.endVisitTopLevelUseInterface(node);
 	}
 }
 
@@ -554,19 +571,19 @@ export type _FuncResult = (FuncResult | NamedFuncResult) & { visit: (visitor: Vi
 
 export interface FuncParams extends Node {
 	kind: NodeKind.funcParams;
-	params: NamedType[];
+	members: NamedType[];
 	visit: (visitor: Visitor, node: FuncParams) => void;
 }
 export namespace FuncParams {
 	export function is(node: Node): node is FuncParams {
 		return node.kind === NodeKind.funcParams;
 	}
-	export function create(range: Range, params: NamedType[]): FuncParams {
-		return { kind: NodeKind.funcParams, range, parent: undefined, params, visit };
+	export function create(range: Range, members: NamedType[]): FuncParams {
+		return { kind: NodeKind.funcParams, range, parent: undefined, members: members, visit };
 	}
 	function visit(visitor: Visitor, node: FuncParams): void {
 		if (visitor.visitFuncParams && visitor.visitFuncParams(node)) {
-			node.params.forEach(param => param.visit(visitor, param));
+			node.members.forEach(param => param.visit(visitor, param));
 		}
 		visitor.endVisitFuncParams && visitor.endVisitFuncParams(node);
 	}
@@ -960,7 +977,7 @@ export namespace Option {
 
 export interface Result extends Node {
 	kind: NodeKind.result;
-	result: ResultType | undefined;
+	ok: ResultType | undefined;
 	error: Ty | undefined;
 	visit: (visitor: Visitor, node: Result) => void;
 }
@@ -968,15 +985,15 @@ export namespace Result {
 	export function is(node: Node): node is Result {
 		return node.kind === NodeKind.result;
 	}
-	export function create(range: Range, result: ResultType | undefined | null, error: Ty | undefined | null): Result {
-		result = result === null ? undefined : result;
+	export function create(range: Range, ok: ResultType | undefined | null, error: Ty | undefined | null): Result {
+		ok = ok === null ? undefined : ok;
 		error = error === null ? undefined : error;
-		return { kind: NodeKind.result, range, parent: undefined, result, error, visit };
+		return { kind: NodeKind.result, range, parent: undefined, ok: ok, error, visit };
 	}
 	function visit(visitor: Visitor, node: Result): void {
 		if (visitor.visitResult && visitor.visitResult(node)) {
-			if (node.result) {
-				node.result.visit(visitor, node.result);
+			if (node.ok) {
+				node.ok.visit(visitor, node.ok);
 			}
 			if (node.error) {
 				node.error.visit(visitor, node.error);
@@ -1381,6 +1398,7 @@ export interface Node {
 	range: Range;
 	parent: Node | undefined;
 	comments?: (Comment | CommentBlock | undefined)[];
+	visit: (visitor: Visitor, node: any) => void;
 }
 export namespace Node {
 	export function attachComments<T extends Node>(node: T, ...ws: (string | Comment)[]): T {
