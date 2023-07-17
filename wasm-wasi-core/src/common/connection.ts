@@ -7,14 +7,17 @@
 import { ptr, u32 } from './baseTypes';
 
 export namespace Offsets {
-	export const lock_size = 4;
 	export const lock_index = 0;
+	export const lock_size = 4;
+	// Timings
+	export const time_index = lock_index + lock_size;
+	export const time_size = 4;
 	// Method to call.
+	export const method_index = time_index + time_size;
 	export const method_size = 4;
-	export const method_index = lock_index + lock_size;
 	// Errno
-	export const errno_size = 2;
 	export const errno_index = method_index + method_size;
+	export const errno_size = 2;
 	// params
 	export const params_index = errno_index + errno_size + 2; // 4 bytes alignment
 	export const header_size = params_index;
