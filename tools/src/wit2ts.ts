@@ -8,7 +8,7 @@ import * as fs from 'fs';
 import * as wit from './wit';
 import {
 	Visitor, InterfaceItem, UseItem, PackageItem, Identifier, RenameItem, NamedImports,
-	Document, TypeItem, Tuple, Node, List, Option, Result, RecordItem, FuncItem, Ty, Borrow, _FuncResult, NamedFuncResult, FuncResult
+	Document, TypeItem, Tuple, List, Option, Result, RecordItem, FuncItem, Ty, Borrow, _FuncResult, NamedFuncResult, FuncResult
 } from './wit-ast';
 
 const document = wit.parse(fs.readFileSync('./src/timezone.wit', 'utf8'));
@@ -87,13 +87,223 @@ class Code {
 	}
 
 	public toString(): string {
-		if (this.imports.size > 0) {
-			this.source.unshift('');
-		}
+		this.source.unshift('');
 		for (const [from, values] of this.imports) {
 			this.source.unshift(`import type { ${values.join(', ')} } from './${from}';`);
 		}
+		this.source.unshift(`import * as $wasi from './wasi';`);
 		return this.source.join('\n');
+	}
+}
+
+interface ComponentModelType {
+	emit(code: Code): void;
+}
+
+class RecordType implements ComponentModelType {
+
+	private readonly name: string;
+	private readonly fields: [string, string][];
+
+	constructor(name: string) {
+		this.name = name;
+		this.fields = [];
+	}
+
+	public addField(name: string, type: string): void {
+		this.fields.push([name, type]);
+	}
+
+	public emit(code: Code): void {
+		const elements: string[] = [];
+		for (const [name, type] of this.fields) {
+			elements.push(`['${name}', ${type}]`);
+		}
+		code.push(`export const _${this.name}: $wasi.ComponentModelType<${this.name}> = new $wasi.RecordType<${this.name}>([`);
+		code.increaseIndent();
+		code.push(`${elements.join(', ')}`);
+		code.decreaseIndent();
+		code.push(`]);`);
+	}
+}
+
+class TupleType implements ComponentModelType {
+
+	private readonly name: string;
+	private readonly fields: string[];
+
+	constructor(name: string) {
+		this.name = name;
+		this.fields = [];
+	}
+
+	public addField(type: string): void {
+		this.fields.push(type);
+	}
+
+	public emit(code: Code): void {
+		const elements: string[] = [];
+		for (const type of this.fields) {
+			elements.push(type);
+		}
+		code.push(`export const _${this.name}: $wasi.ComponentModelType<${this.name}> = new $wasi.TupleType<${this.name}>([${elements.join(', ')}]);`);
+	}
+}
+
+class ListType implements ComponentModelType {
+
+	private readonly name: string;
+	private readonly type: string;
+
+	constructor(name: string, type: string) {
+		this.name = name;
+		this.type = type;
+	}
+
+	public emit(code: Code): void {
+		code.push(`export const _${this.name}: $wasi.ComponentModelType<${this.name}> = new $wasi.ListType<${this.name}>(${this.type});`);
+	}
+}
+
+class TypeType implements ComponentModelType {
+
+	private readonly name: string;
+	private readonly type: string;
+
+	constructor(name: string, type: string) {
+		this.name = name;
+		this.type = type;
+	}
+
+	public emit(code: Code): void {
+		code.push(`export const _${this.name}: $wasi.ComponentModelType<${this.name}> = ${this.type};`);
+	}
+}
+
+class ComponentModelTypePrinter implements Visitor {
+
+	public result: string;
+
+	public static do(node: Ty): string {
+		const visitor = new ComponentModelTypePrinter();
+		node.visit(visitor, node);
+		return visitor.result;
+	}
+
+	public constructor() {
+		this.result = '';
+	}
+
+	visitU8(): boolean {
+		this.result = '$wasi.u8';
+		return true;
+	}
+
+	visitU16(): boolean {
+		this.result = '$wasi.u16';
+		return true;
+	}
+
+	visitU32(): boolean {
+		this.result = '$wasi.u32';
+		return true;
+	}
+
+	visitU64(): boolean {
+		this.result = '$wasi.u64';
+		return true;
+	}
+
+	visitS8(): boolean {
+		this.result = '$wasi.s8';
+		return true;
+	}
+
+	visitS16(): boolean {
+		this.result = '$wasi.s16';
+		return true;
+	}
+
+	visitS32(): boolean {
+		this.result = '$wasi.s32';
+		return true;
+	}
+
+	visitS64(): boolean {
+		this.result = '$wasi.s64';
+		return true;
+	}
+
+	visitFloat32(): boolean {
+		this.result = '$wasi.float32';
+		return true;
+	}
+
+	visitFloat64(): boolean {
+		this.result = '$wasi.float64';
+		return true;
+	}
+
+	visitString(): boolean {
+		this.result = '$wasi.wstring';
+		return true;
+	}
+
+	visitBool(): boolean {
+		this.result = '$wasi.bool';
+		return true;
+	}
+
+	visitChar(): boolean {
+		this.result = '$wasi.char';
+		return true;
+	}
+
+	visitIdentifier(node: Identifier) {
+		this.result = Names.toTs(node);
+		return true;
+	}
+
+	visitTuple(_node: Tuple): boolean {
+		return false;
+	}
+
+	visitList(_node: List): boolean {
+		return false;
+	}
+
+	visitOption(_node: Option): boolean {
+		return false;
+	}
+
+	visitResult(_node: Result): boolean {
+		return false;
+	}
+
+	visitBorrow(_node: Borrow): boolean {
+		return false;
+	}
+}
+
+class ComponentModelTypes {
+	private readonly types: ComponentModelType[];
+
+	constructor() {
+		this.types = [];
+	}
+
+	public get size(): number {
+		return this.types.length;
+	}
+
+	public add(type: ComponentModelType): void {
+		this.types.push(type);
+	}
+
+	public emit(code: Code): void {
+		for (const type of this.types) {
+			type.emit(code);
+		}
 	}
 }
 
@@ -274,12 +484,19 @@ class FuncResultPrinter implements Visitor {
 	}
 }
 
+interface InterfaceData {
+	componentModelTypes: ComponentModelTypes;
+	exports: string[];
+}
+
 class DocumentVisitor implements Visitor {
 
 	private readonly code: Code;
+	private readonly interfaceData: InterfaceData[];
 
 	constructor() {
 		this.code = new Code();
+		this.interfaceData = [];
 	}
 
 
@@ -296,6 +513,7 @@ class DocumentVisitor implements Visitor {
 	}
 
 	visitInterfaceItem(item: InterfaceItem): boolean {
+		this.interfaceData.push({ componentModelTypes: new ComponentModelTypes(), exports: [] });
 		const name = Names.toTs(item.name);
 		this.code.push(`export namespace ${name} {`);
 		this.code.increaseIndent();
@@ -305,14 +523,27 @@ class DocumentVisitor implements Visitor {
 		return false;
 	}
 
-	endVisitInterfaceItem(_item: InterfaceItem): void {
+	endVisitInterfaceItem(item: InterfaceItem): void {
+		const interfaceData = this.interfaceData.pop();
+		if (interfaceData === undefined) {
+			throw new Error(`No interface data available`);
+		}
+		if (interfaceData.componentModelTypes.size > 0) {
+			this.code.push(`export namespace $cmt {`);
+			this.code.increaseIndent();
+			interfaceData.componentModelTypes.emit(this.code);
+			this.code.decreaseIndent();
+			this.code.push(`}`);
+		}
 		this.code.decreaseIndent();
 		this.code.push(`}`);
+		if (interfaceData.exports.length > 0) {
+			const name = Names.toTs(item.name);
+			this.code.push(`export type ${name} = Pick<typeof ${name}, ${interfaceData.exports.join(', ')}>;`);
+		}
 	}
 
 	visitUseItem(item: UseItem): boolean {
-		if (item.from !== undefined) {
-		}
 		const importItem = item.importItem;
 		if (Identifier.is(importItem)) {
 			throw new Error(`Not implemented`);
@@ -340,20 +571,26 @@ class DocumentVisitor implements Visitor {
 		const tsName = Names.toTs(item.name);
 		const typeName = TyPrinter.do(item.type, this.code.imports);
 		this.code.push(`export type ${tsName} = ${typeName};`);
+		const interfaceData = this.getInterfaceData();
+		interfaceData.componentModelTypes.add(new TypeType(tsName, ComponentModelTypePrinter.do(item.type)));
 		return false;
 	}
 
 	visitRecordItem(node: RecordItem): boolean {
 		const tsName = Names.toTs(node.name);
+		const recordType = new RecordType(tsName);
 		this.code.push(`export interface ${tsName} {`);
 		this.code.increaseIndent();
 		for (const member of node.members) {
 			const memberName = Names.toTs(member.name);
 			const typeName = TyPrinter.do(member.type, this.code.imports);
 			this.code.push(`${memberName}: ${typeName};`);
+			recordType.addField(memberName, ComponentModelTypePrinter.do(member.type));
 		}
 		this.code.decreaseIndent();
 		this.code.push(`}`);
+		const interfaceData = this.getInterfaceData();
+		interfaceData.componentModelTypes.add(recordType);
 		return false;
 	}
 
@@ -368,7 +605,17 @@ class DocumentVisitor implements Visitor {
 		}
 		const returnType = signature.result !== undefined ? FuncResultPrinter.do(signature.result, this.code.imports) : 'void';
 		this.code.push(`export declare function ${tsName}(${params.join(', ')}): ${returnType};`);
+		const interfaceData = this.getInterfaceData();
+		interfaceData.exports.push(tsName);
 		return false;
+	}
+
+	private getInterfaceData(): InterfaceData {
+		const result = this.interfaceData[this.interfaceData.length - 1];
+		if (result === undefined) {
+			throw new Error(`No component model type`);
+		}
+		return result;
 	}
 }
 

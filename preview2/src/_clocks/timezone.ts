@@ -12,8 +12,33 @@ export namespace Timezone {
 
 	export type Timezone = number;
 
-	export declare function display(this: Timezone, when: Datetime): TimezoneDisplay;
-	export declare function utcOffset(this: Timezone, when: Datetime): number;
-	export declare function dropTimezone(this: Timezone): void;
+	export declare function display(self: Timezone, when: Datetime): TimezoneDisplay;
+	export declare function utcOffset(self: Timezone, when: Datetime): number;
+	export declare function dropTimezone(self: Timezone): void;
+
+	export namespace $cm {
+		export const Timezone = 10;
+		// export const TimezoneDisplay: ComponentModelType<TimezoneDisplay> = new RecordType<TimezoneDisplay>([
+		// 	['utcOffset', u8], ['inDaylightSavingTime', u32]
+		// ]);
+	}
+
+	export function $host(service: $Timezone) {
+		service.display = display;
+		return {
+			display(params: (number | bigint)[]) {
+				service.display(params[0], params[1]);
+			}
+		};
+	}
+
+	export function $forwardHost() {
+		return {
+			display(params: (number | bigint)[]) {
+				return service.display(params[0], params[1]);
+			}
+		};
+	}
 }
-export type Timezone = typeof Timezone;
+type $Timezone = Pick<typeof Timezone, 'display' | 'utcOffset' | 'dropTimezone'>;
+export type Timezone = Pick<typeof Timezone, 'display' | 'utcOffset' | 'dropTimezone'>;
