@@ -1398,7 +1398,6 @@ export interface Node {
 	range: Range;
 	parent: Node | undefined;
 	comments?: (Comment | CommentBlock | undefined)[];
-	visit: (visitor: Visitor, node: any) => void;
 }
 export namespace Node {
 	export function attachComments<T extends Node>(node: T, ...ws: (string | Comment)[]): T {

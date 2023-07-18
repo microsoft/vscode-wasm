@@ -8,7 +8,7 @@ import * as fs from 'fs';
 import * as wit from './wit';
 import {
 	Visitor, InterfaceItem, UseItem, PackageItem, Identifier, RenameItem, NamedImports,
-	Document, TypeItem, Tuple, Node, List, Option, Result, RecordItem, FuncItem
+	Document, TypeItem, Tuple, Node, List, Option, Result, RecordItem, FuncItem, Ty, Borrow, _FuncResult, NamedFuncResult, FuncResult
 } from './wit-ast';
 
 const document = wit.parse(fs.readFileSync('./src/timezone.wit', 'utf8'));
@@ -19,26 +19,9 @@ namespace Names {
 		['this', 'self']
 	]);
 
-	export function toTsType(name: string): string {
-		const parts = name.split('-');
-		for (let i = 0; i < parts.length; i++) {
-			parts[i] = parts[i][0].toUpperCase() + parts[i].substring(1);
-		}
-		return parts.join('');
-	}
-
-	export function toTsProperty(name: string, keepKeyword: boolean = false): string {
-		const parts = name.split('-');
-		for (let i = 1; i < parts.length; i++) {
-			parts[i] = parts[i][0].toUpperCase() + parts[i].substring(1);
-		}
-		const result = parts.join('');
-		if (keepKeyword) {
-			return result;
-		} else {
-			const replacement = keywords.get(result);
-			return replacement !== undefined ? replacement : result;
-		}
+	export function toTs(id: Identifier): string {
+		const result = id.value.replace(/-/g, '_');
+		return keywords.get(result) ?? result;
 	}
 }
 
@@ -75,55 +58,14 @@ class Imports {
 	}
 }
 
-class Line {
-	private readonly parts: string[];
-	private modes: ('add' | 'append')[];
-
-	constructor() {
-		this.parts = [];
-		this.modes = ['add'];
-	}
-
-	public push(part: string): void {
-		const mode = this.modes[this.modes.length - 1];
-		if (mode === 'add') {
-			this.parts.push(part);
-		} else {
-			if (this.parts.length === 0) {
-				this.parts.push(part);
-			} else {
-				this.parts[this.parts.length - 1] += part;
-			}
-		}
-	}
-
-	public add(): void {
-		this.modes.push('add');
-	}
-
-	public append(): void {
-		this.modes.push('append');
-	}
-
-	public pop() {
-		this.modes.pop();
-	}
-
-	public toString(): string {
-		return this.parts.join(' ');
-	}
-}
-
 class Code {
 
 	public readonly imports: Imports;
-	public line: Line;
 	private readonly source: string[];
 	private indent: number;
 
 	constructor() {
 		this.imports = new Imports();
-		this.line = new Line();
 		this.source = [];
 		this.indent = 0;
 	}
@@ -136,9 +78,12 @@ class Code {
 		this.indent -= 1;
 	}
 
-	public pushLine(): void {
-		this.source.push(`${new Array(this.indent).fill('\t').join('')}${this.line.toString()}`);
-		this.line = new Line();
+	public push(content?: string): void {
+		if (content !== undefined) {
+			this.source.push(`${new Array(this.indent).fill('\t').join('')}${content}`);
+		} else {
+			this.source.push('');
+		}
 	}
 
 	public toString(): string {
@@ -152,13 +97,13 @@ class Code {
 	}
 }
 
-class TyVisitor implements Visitor {
+class TyPrinter implements Visitor {
 
 	private readonly imports: Imports;
 	public result: string;
 
-	public static toString(node: Node, typeContext: Imports): string {
-		const visitor = new TyVisitor(typeContext);
+	public static do(node: Ty, imports: Imports): string {
+		const visitor = new TyPrinter(imports);
 		node.visit(visitor, node);
 		return visitor.result;
 	}
@@ -168,16 +113,165 @@ class TyVisitor implements Visitor {
 		this.result = '';
 	}
 
-}
-
-class InterfaceVisitor implements Visitor {
-
-	private readonly code: Code;
-
-	constructor(code: Code) {
-		this.code = code;
+	visitU8(): boolean {
+		this.result = 'u8';
+		this.imports.addBaseType('u8');
+		return true;
 	}
 
+	visitU16(): boolean {
+		this.result = 'u16';
+		this.imports.addBaseType('u16');
+		return true;
+	}
+
+	visitU32(): boolean {
+		this.result = 'u32';
+		this.imports.addBaseType('u32');
+		return true;
+	}
+
+	visitU64(): boolean {
+		this.result = 'u64';
+		this.imports.addBaseType('u64');
+		return true;
+	}
+
+	visitS8(): boolean {
+		this.result = 's8';
+		this.imports.addBaseType('s8');
+		return true;
+	}
+
+	visitS16(): boolean {
+		this.result = 's16';
+		this.imports.addBaseType('s16');
+		return true;
+	}
+
+	visitS32(): boolean {
+		this.result = 's32';
+		this.imports.addBaseType('s32');
+		return true;
+	}
+
+	visitS64(): boolean {
+		this.result = 's64';
+		this.imports.addBaseType('s64');
+		return true;
+	}
+
+	visitFloat32(): boolean {
+		this.result = 'float32';
+		this.imports.addBaseType('float32');
+		return true;
+	}
+
+	visitFloat64(): boolean {
+		this.result = 'float64';
+		this.imports.addBaseType('float64');
+		return true;
+	}
+
+	visitString(): boolean {
+		this.result = 'string';
+		return true;
+	}
+
+	visitBool(): boolean {
+		this.result = 'boolean';
+		return true;
+	}
+
+	visitChar(): boolean {
+		this.result = 'string';
+		return true;
+	}
+
+	visitIdentifier(node: Identifier) {
+		this.result = Names.toTs(node);
+		return true;
+	}
+
+	visitTuple(node: Tuple): boolean {
+		const elements: string[] = [];
+		const tyVisitor = new TyPrinter(this.imports);
+		for (let i = 0; i < node.members.length; i++) {
+			const member = node.members[i];
+			member.visit(tyVisitor, member);
+			elements.push(tyVisitor.result);
+		}
+		this.result = `[${elements.join(', ')}]`;
+		return false;
+	}
+
+	visitList(node: List): boolean {
+		const tyVisitor = new TyPrinter(this.imports);
+		node.type.visit(tyVisitor, node.type);
+		this.result = `${tyVisitor.result}[]`;
+		return false;
+	}
+
+	visitOption(node: Option): boolean {
+		const tyVisitor = new TyPrinter(this.imports);
+		node.type.visit(tyVisitor, node.type);
+		this.result = `Option<${tyVisitor.result}>`;
+		return false;
+	}
+
+	visitResult(node: Result): boolean {
+		const tyVisitor = new TyPrinter(this.imports);
+		if (node.ok !== undefined) {
+			node.ok.visit(tyVisitor, node.ok);
+		} else {
+			tyVisitor.result = 'void';
+		}
+		const ok = tyVisitor.result;
+		if (node.error !== undefined) {
+			node.error.visit(tyVisitor, node.error);
+		} else {
+			tyVisitor.result = 'void';
+		}
+		const error = tyVisitor.result;
+		this.result = `Result<${ok}, ${error}>`;
+		return false;
+	}
+
+	visitBorrow(node: Borrow): boolean {
+		const tyVisitor = new TyPrinter(this.imports);
+		node.name.visit(tyVisitor, node.name);
+		this.result = `Borrow<${tyVisitor.result}>`;
+		return false;
+	}
+
+}
+
+class FuncResultPrinter implements Visitor {
+
+	private readonly imports: Imports;
+	public result: string;
+
+	public static do(node: _FuncResult, imports: Imports): string {
+		const visitor = new FuncResultPrinter(imports);
+		node.visit(visitor, node);
+		return visitor.result;
+	}
+
+	public constructor(imports: Imports) {
+		this.imports = imports;
+		this.result = '';
+	}
+
+	visitFuncResult(node: FuncResult): boolean {
+		const tyVisitor = new TyPrinter(this.imports);
+		node.type.visit(tyVisitor, node.type);
+		this.result = tyVisitor.result;
+		return false;
+	}
+
+	visitNamedFuncResult(_node: NamedFuncResult): boolean {
+		return false;
+	}
 }
 
 class DocumentVisitor implements Visitor {
@@ -188,136 +282,6 @@ class DocumentVisitor implements Visitor {
 		this.code = new Code();
 	}
 
-	visitU8(): boolean {
-		this.code.line.push('u8');
-		this.code.imports.addBaseType('u8');
-		return true;
-	}
-
-	visitU16(): boolean {
-		this.code.line.push('u16');
-		this.code.imports.addBaseType('u16');
-		return true;
-	}
-
-	visitU32(): boolean {
-		this.code.line.push('u32');
-		this.code.imports.addBaseType('u32');
-		return true;
-	}
-
-	visitU64(): boolean {
-		this.code.line.push('u64');
-		this.code.imports.addBaseType('u64');
-		return true;
-	}
-
-	visitS8(): boolean {
-		this.code.line.push('s8');
-		this.code.imports.addBaseType('s8');
-		return true;
-	}
-
-	visitS16(): boolean {
-		this.code.line.push('s16');
-		this.code.imports.addBaseType('s16');
-		return true;
-	}
-
-	visitS32(): boolean {
-		this.code.line.push('s32');
-		this.code.imports.addBaseType('s32');
-		return true;
-	}
-
-	visitS64(): boolean {
-		this.code.line.push('s64');
-		this.code.imports.addBaseType('s64');
-		return true;
-	}
-
-	visitFloat32(): boolean {
-		this.code.line.push('float32');
-		this.code.imports.addBaseType('float32');
-		return true;
-	}
-
-	visitFloat64(): boolean {
-		this.code.line.push('float64');
-		this.code.imports.addBaseType('float64');
-		return true;
-	}
-
-	visitString(): boolean {
-		this.code.line.push('string');
-		return true;
-	}
-
-	visitBool(): boolean {
-		this.code.line.push('boolean');
-		return true;
-	}
-
-	visitChar(): boolean {
-		this.code.line.push('string');
-		return true;
-	}
-
-	visitTuple(node: Tuple): boolean {
-		this.code.line.push('[');
-		this.code.line.append();
-		for (let i = 0; i < node.members.length; i++) {
-			const member = node.members[i];
-			member.visit(this, member);
-			if (i < node.members.length - 2) {
-				this.code.line.push(', ');
-			}
-		}
-		this.code.line.push(']');
-		this.code.line.pop();
-		return false;
-	}
-
-	visitList(node: List) {
-		node.type.visit(this, node.type);
-		this.code.line.append();
-		this.code.line.push('[]');
-		this.code.line.pop();
-		return false;
-	}
-
-	visitOption(node: Option) {
-		this.code.line.push('Option<');
-		this.code.line.append();
-		node.type.visit(this, node.type);
-		this.code.line.push('>');
-		this.code.line.pop();
-		return false;
-	}
-
-	visitResult(node: Result) {
-		this.code.line.push('Result<');
-		this.code.line.append();
-		if (node.ok !== undefined) {
-			node.ok.visit(this, node.ok);
-		} else {
-			this.code.line.push('void');
-		}
-		this.code.line.push(', ');
-		if (node.error !== undefined) {
-			node.error.visit(this, node.error);
-		} else {
-			this.code.line.push('void');
-		}
-		this.code.line.push('>');
-		this.code.line.pop();
-		return false;
-	}
-
-	visitIdentifier(node: Identifier) {
-		this.code.line.push(Names.toTsType(node.value));
-		return true;
-	}
 
 	public visitDocument(_node: Document): boolean {
 		return true;
@@ -332,16 +296,20 @@ class DocumentVisitor implements Visitor {
 	}
 
 	visitInterfaceItem(item: InterfaceItem): boolean {
-		const tsName = Names.toTsType(item.name.value);
-		this.code.line.push(`export namespace ${tsName} {`);
-		this.code.pushLine();
+		const name = Names.toTs(item.name);
+		this.code.push(`export namespace ${name} {`);
 		this.code.increaseIndent();
-		return true;
+		for (const member of item.members) {
+			member.visit(this, member);
+		}
+		return false;
 	}
+
 	endVisitInterfaceItem(_item: InterfaceItem): void {
 		this.code.decreaseIndent();
-		this.code.addLine(`}`);
+		this.code.push(`}`);
 	}
+
 	visitUseItem(item: UseItem): boolean {
 		if (item.from !== undefined) {
 		}
@@ -351,52 +319,55 @@ class DocumentVisitor implements Visitor {
 		} else if (RenameItem.is(importItem)) {
 			throw new Error(`Not implemented`);
 		} else if (NamedImports.is(importItem)) {
-			const name = importItem.name.value;
-			const tsName = Names.toTsType(name);
-			this.code.imports.add(name, tsName);
+			const name = importItem.name;
+			const tsName = Names.toTs(name);
+			this.code.imports.add(name.value, tsName);
 			for (const member of importItem.members) {
 				if (Identifier.is(member)) {
-					const memberName = Names.toTsType(member.value);
-					this.code.addLine(`type ${memberName} = ${tsName}.${memberName};`);
+					const memberName = Names.toTs(member);
+					this.code.push(`type ${memberName} = ${tsName}.${memberName};`);
 				} else if (RenameItem.is(member)) {
-					const fromName = Names.toTsType(member.from.value);
-					const toName = Names.toTsType(member.to.value);
-					this.code.addLine(`type ${toName} = ${tsName}.${fromName};`);
+					const fromName = Names.toTs(member.from);
+					const toName = Names.toTs(member.to);
+					this.code.push(`type ${toName} = ${tsName}.${fromName};`);
 				}
 			}
 		}
 		return false;
 	}
+
 	visitTypeItem(item: TypeItem): boolean {
-		const tsName = Names.toTsType(item.name.value);
-		const typeName = TyVisitor.toString(item.type, this.code.imports);
-		this.code.addLine(`export type ${tsName} = ${typeName};`);
+		const tsName = Names.toTs(item.name);
+		const typeName = TyPrinter.do(item.type, this.code.imports);
+		this.code.push(`export type ${tsName} = ${typeName};`);
 		return false;
 	}
+
 	visitRecordItem(node: RecordItem): boolean {
-		const tsName = Names.toTsType(node.name.value);
-		this.code.addLine(`export interface ${tsName} {`);
+		const tsName = Names.toTs(node.name);
+		this.code.push(`export interface ${tsName} {`);
 		this.code.increaseIndent();
 		for (const member of node.members) {
-			const memberName = Names.toTsProperty(member.name.value);
-			const typeName = TyVisitor.toString(member.type, this.code.imports);
-			this.code.addLine(`${memberName}: ${typeName};`);
+			const memberName = Names.toTs(member.name);
+			const typeName = TyPrinter.do(member.type, this.code.imports);
+			this.code.push(`${memberName}: ${typeName};`);
 		}
 		this.code.decreaseIndent();
-		this.code.addLine(`}`);
+		this.code.push(`}`);
 		return false;
 	}
+
 	visitFuncItem(node: FuncItem): boolean {
-		const tsName = Names.toTsProperty(node.name.value);
-		const tyVisitor = new TyVisitor(this.code.imports);
+		const tsName = Names.toTs(node.name);
+		const tyVisitor = new TyPrinter(this.code.imports);
 		const signature = node.signature;
 		const params: string[] = [];
 		for (const param of signature.params.members) {
 			param.type.visit(tyVisitor, param.type);
-			params.push(`${Names.toTsProperty(param.name.value)}: ${tyVisitor.result}`);
+			params.push(`${Names.toTs(param.name)}: ${tyVisitor.result}`);
 		}
-		const returnType = signature.result !== undefined ? TyVisitor.toString(signature.result, this.code.imports) : 'void';
-		this.code.addLine(`export declare function ${tsName}(${params.join(', ')}): ${returnType};`);
+		const returnType = signature.result !== undefined ? FuncResultPrinter.do(signature.result, this.code.imports) : 'void';
+		this.code.push(`export declare function ${tsName}(${params.join(', ')}): ${returnType};`);
 		return false;
 	}
 }
