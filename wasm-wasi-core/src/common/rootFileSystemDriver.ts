@@ -296,7 +296,7 @@ export function create(deviceId: DeviceId, rootFileDescriptors: { getRoot(device
 	const $driver = {
 		kind: DeviceDriverKind.fileSystem as const,
 		id: deviceId,
-		uri: Uri.from( { scheme: 'wasi-root', path: '/' } ),
+		uri: Uri.from( { scheme: 'wasi-root', path: '/'} ),
 		makeVirtualPath(deviceDriver: FileSystemDeviceDriver, filepath: string): string | undefined {
 			return $fs.makeVirtualPath(deviceDriver, filepath);
 		},
