@@ -11,15 +11,15 @@ import { Errno } from './wasi';
 import RAL from './ral';
 
 const DirectoryBaseRights: rights = Rights.fd_fdstat_set_flags | Rights.path_create_directory |
-	Rights.path_create_file | Rights.path_link_source | Rights.path_link_target | Rights.path_open |
-	Rights.fd_readdir | Rights.path_readlink | Rights.path_rename_source | Rights.path_rename_target |
-	Rights.path_filestat_get | Rights.path_filestat_set_size | Rights.path_filestat_set_times |
-	Rights.fd_filestat_get | Rights.fd_filestat_set_times | Rights.path_remove_directory | Rights.path_unlink_file |
-	Rights.path_symlink;
+		Rights.path_create_file | Rights.path_link_source | Rights.path_link_target | Rights.path_open |
+		Rights.fd_readdir | Rights.path_readlink | Rights.path_rename_source | Rights.path_rename_target |
+		Rights.path_filestat_get | Rights.path_filestat_set_size | Rights.path_filestat_set_times |
+		Rights.fd_filestat_get | Rights.fd_filestat_set_times | Rights.path_remove_directory | Rights.path_unlink_file |
+		Rights.path_symlink;
 
 const FileBaseRights: rights = Rights.fd_datasync | Rights.fd_read | Rights.fd_seek | Rights.fd_fdstat_set_flags |
-	Rights.fd_sync | Rights.fd_tell | Rights.fd_write | Rights.fd_advise | Rights.fd_allocate | Rights.fd_filestat_get |
-	Rights.fd_filestat_set_size | Rights.fd_filestat_set_times | Rights.poll_fd_readwrite;
+		Rights.fd_sync | Rights.fd_tell | Rights.fd_write | Rights.fd_advise | Rights.fd_allocate | Rights.fd_filestat_get |
+		Rights.fd_filestat_set_size | Rights.fd_filestat_set_times | Rights.poll_fd_readwrite;
 
 const DirectoryInheritingRights: rights = DirectoryBaseRights | FileBaseRights;
 
@@ -296,7 +296,7 @@ export function create(deviceId: DeviceId, rootFileDescriptors: { getRoot(device
 	const $driver = {
 		kind: DeviceDriverKind.fileSystem as const,
 		id: deviceId,
-		uri: Uri.from({ scheme: 'wasi-root', path: '/' }),
+		uri: Uri.from( { scheme: 'wasi-root', path: '/' } ),
 		makeVirtualPath(deviceDriver: FileSystemDeviceDriver, filepath: string): string | undefined {
 			return $fs.makeVirtualPath(deviceDriver, filepath);
 		},
