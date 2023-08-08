@@ -244,7 +244,7 @@ class VirtualRootFileSystem {
 		for (const [mountPoint, node] of this.mountPoints) {
 			const root = node.deviceDriver.uri;
 			const rootStr = root.toString();
-			if (uriStr === rootStr || (uriStr.startsWith(rootStr) && uriStr.charAt(rootStr.length - 1) === '/')) {
+			if (uriStr === rootStr || uriStr.startsWith(rootStr)) {
 				return [mountPoint, root];
 			}
 		}
