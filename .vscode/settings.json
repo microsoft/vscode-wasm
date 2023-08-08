@@ -40,6 +40,7 @@
 		"./sync-api-client",
 		"./sync-api-service",
 		"./sync-api-tests",
+		"./wasm-component-model",
 		"./wasm-wasi-core",
 		"./wasm-wasi",
 		"./webshell",

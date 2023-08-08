@@ -7,6 +7,7 @@
             "es2020"
         ],
         "rootDir": ".",
+        "types": [],
         "strict": true,
         "noImplicitAny": true,
         "noImplicitReturns": true,

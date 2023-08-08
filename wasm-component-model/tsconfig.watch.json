@@ -1,12 +1,13 @@
 {
     "compilerOptions": {
+        "composite": true,
         "module": "Node16",
         "moduleResolution": "Node16",
         "target": "es2020",
         "lib": [
             "es2020"
         ],
-        "rootDir": ".",
+        "rootDir": "./src",
         "types": [],
         "strict": true,
         "noImplicitAny": true,
@@ -18,15 +19,11 @@
         "noUnusedLocals": false,
         "noUnusedParameters": false,
         "assumeChangesOnlyAffectDirectDependencies": true,
-        "outDir": "../../lib/common",
-        "tsBuildInfoFile": "../../lib/common/watch.tsbuildInfo",
-        "incremental": true,
-        "composite": true
+        "outDir": "./lib",
+        "tsBuildInfoFile": "lib/watch.tsbuildInfo",
+        "incremental": true
     },
     "include": [
         "."
-    ],
-    "exclude": [
-        "test"
     ]
 }

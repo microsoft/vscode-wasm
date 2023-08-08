@@ -2,14 +2,31 @@
  *  Copyright (c) Microsoft Corporation. All rights reserved.
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
-import RAL from '../ral';
+export class ComponentModelError extends Error {
+	constructor(message: string) {
+		super(message);
+	}
+}
 
-// We need to move this to a more generic place
-import { BigInts } from '../converter';
-import { Errno, WasiError } from '../wasi';
+namespace BigInts {
+	const MAX_VALUE_AS_BIGINT = BigInt(Number.MAX_VALUE);
+	export function asNumber(value: bigint): number {
+		if (value > MAX_VALUE_AS_BIGINT) {
+			throw new ComponentModelError('Value too big for number');
+		}
+		return Number(value);
+	}
+	export function max(...args: bigint[]): bigint {
+		return args.reduce((m, e) => e > m ? e : m);
+	}
 
-const utf8Decoder = RAL().TextDecoder.create('utf-8');
-const utf8Encoder = RAL().TextEncoder.create('utf-8');
+	export function min(...args: bigint[]): bigint {
+		return args.reduce((m, e) => e < m ? e : m);
+	}
+}
+
+const utf8Decoder = new TextDecoder('utf-8');
+const utf8Encoder = new TextEncoder('utf-8');
 
 export interface Memory {
 	readonly buffer: ArrayBuffer;
@@ -88,7 +105,7 @@ class CoerceValueIter implements Iterator<wasmType, wasmType> {
 
 	constructor(private readonly values: FlatValuesIter, private haveFlatTypes: readonly wasmTypeName[], private wantFlatTypes: readonly wasmTypeName[]) {
 		if (haveFlatTypes.length !== wantFlatTypes.length) {
-			throw new WasiError(Errno.inval);
+			throw new ComponentModelError('Invalid coercion');
 		}
 		this.index = 0;
 	}
@@ -614,18 +631,18 @@ namespace $wchar {
 
 	function fromCodePoint(code: u32): string {
 		if (code >= 0x110000 || (0xD800 <= code && code <= 0xDFFF)) {
-			throw new WasiError(Errno.inval);
+			throw new ComponentModelError('Invalid code point');
 		}
 		return String.fromCodePoint(code);
 	}
 
 	function asCodePoint(str: string): u32 {
 		if (str.length !== 1) {
-			throw new WasiError(Errno.inval);
+			throw new ComponentModelError('String length must be 1');
 		}
 		const code = str.codePointAt(0)!;
 		if (!(code <= 0xD7FF || (0xD800 <= code && code <= 0x10FFFF))) {
-			throw new WasiError(Errno.inval);
+			throw new ComponentModelError('Invalid code point');
 		}
 		return code;
 	}
@@ -1258,7 +1275,7 @@ export class VariantType<T extends JVariantCase, I, V> implements ComponentModel
 			const wantTypes = this.flatTypes.slice(1);
 			const haveTypes = c.wantFlatTypes!;
 			if (wantTypes.length !== haveTypes.length || payload.length !== haveTypes.length) {
-				throw new WasiError(Errno.inval);
+				throw new ComponentModelError('Mismatched flat types');
 			}
 			for (let i = 0; i < wantTypes.length; i++) {
 				const have: wasmTypeName = haveTypes[i];
@@ -1316,7 +1333,7 @@ export class VariantType<T extends JVariantCase, I, V> implements ComponentModel
 			case 2: return u16;
 			case 3: return u32;
 		}
-		throw new WasiError(Errno.inval);
+		throw new ComponentModelError(`Too many cases: ${cases}`);
 	}
 
 	private static maxCaseAlignment(cases: VariantCase[]): alignment {
@@ -1387,7 +1404,7 @@ export class Enumeration<T extends JEnum> implements ComponentModelType<T> {
 
 	private assertRange(value: number): number {
 		if (value < 0 || value > this.cases) {
-			throw new WasiError(Errno.inval);
+			throw new ComponentModelError('Enumeration value out of range');
 		}
 		return value;
 	}
@@ -1399,7 +1416,7 @@ export class Enumeration<T extends JEnum> implements ComponentModelType<T> {
 			case 2: return u16;
 			case 3: return u32;
 		}
-		throw new WasiError(Errno.inval);
+		throw new ComponentModelError(`Too many cases: ${cases}`);
 	}
 }
 
