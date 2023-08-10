@@ -6,8 +6,11 @@
 		"node": ">=16.17.1",
 		"vscode": "^1.78.0"
 	},
-	"main": "./lib/main.js",
-	"typings": "./lib/main.d.ts",
+	"main": "./lib/desktop/main.js",
+	"browser": {
+		"./lib/desktop/main.js": "./lib/web/main.js"
+	},
+	"typings": "./lib/common/api.d.ts",
 	"repository": {
 		"type": "git",
 		"url": "git+https://github.com/microsoft/vscode-wasm.git"

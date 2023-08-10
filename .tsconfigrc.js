@@ -218,9 +218,22 @@ const wasm_component_model = {
 		dir: './lib',
 		buildInfoFile: '${buildInfoFile}.tsbuildInfo'
 	},
-	compilerOptions: {
-		rootDir: './src'
-	}
+	sourceFolders: [
+		{
+			path: './src/common',
+			extends: [ common ],
+		},
+		{
+			path: './src/web',
+			extends: [ browser ],
+			references: [ '../common' ]
+		},
+		{
+			path: './src/desktop',
+			extends: [ node ],
+			references: [ '../common' ]
+		}
+	]
 };
 
 /** @type ProjectDescription */

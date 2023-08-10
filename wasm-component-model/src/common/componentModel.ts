@@ -2,6 +2,8 @@
  *  Copyright (c) Microsoft Corporation. All rights reserved.
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
+import RAL from './ral';
+
 export class ComponentModelError extends Error {
 	constructor(message: string) {
 		super(message);
@@ -25,8 +27,8 @@ namespace BigInts {
 	}
 }
 
-const utf8Decoder = new TextDecoder('utf-8');
-const utf8Encoder = new TextEncoder('utf-8');
+const utf8Decoder = RAL().TextDecoder.create('utf-8');
+const utf8Encoder = RAL().TextEncoder.create('utf-8');
 
 export interface Memory {
 	readonly buffer: ArrayBuffer;
