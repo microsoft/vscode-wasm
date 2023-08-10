@@ -1530,3 +1530,21 @@ export namespace Result {
 export type Result<O extends JType , E extends JType> = Result.ok<O, E> | Result.error<O, E>;
 
 export type JType = number | bigint | string | boolean | JRecord | JVariantCase | JFlags | JTuple | JEnum | Option<any> | Result<any, any>;
+
+export interface FunctionParameter {
+	name: string;
+	type: JType;
+}
+
+export class FunctionSignature {
+
+	public readonly name: string;
+	public readonly params: FunctionParameter[];
+	public readonly returnValue: JType | undefined;
+
+	constructor(name: string, params: FunctionParameter[], returnValue?: JType) {
+		this.name = name;
+		this.params = params;
+		this.returnValue = returnValue;
+	}
+}

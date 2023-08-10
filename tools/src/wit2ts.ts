@@ -37,10 +37,10 @@ class Imports {
 	}
 
 	public addBaseType(name: string): void {
-		this.add('wasi', name);
+		this.add(name, '@vscode/wasm-component-model');
 	}
 
-	public add(from: string, value: string): void {
+	public add(value: string, from: string): void {
 		let values = this.imports.get(from);
 		if (values === undefined) {
 			values = [];
@@ -89,10 +89,63 @@ class Code {
 	public toString(): string {
 		this.source.unshift('');
 		for (const [from, values] of this.imports) {
-			this.source.unshift(`import type { ${values.join(', ')} } from './${from}';`);
+			this.source.unshift(`import type { ${values.join(', ')} } from '${from}';`);
 		}
-		this.source.unshift(`import * as $wasi from './wasi';`);
+		this.source.unshift(`import * as $wcm from '@vscode/wasm-component-model';`);
 		return this.source.join('\n');
+	}
+}
+
+interface SymbolInformation {
+	getComponentModelName(): string;
+}
+
+class LocalSymbol implements SymbolInformation {
+	public readonly name: string;
+
+	constructor(name: string) {
+		this.name = name;
+	}
+
+	public getComponentModelName(): string {
+		return `$${this.name}`;
+	}
+}
+
+class ImportedSymbol implements SymbolInformation {
+	public readonly name: string;
+	public readonly from: string;
+	public readonly original?: string;
+
+	constructor(name: string, from: string, original?: string) {
+		this.name = name;
+		this.from = from;
+		this.original = original;
+	}
+
+	public getComponentModelName(): string {
+		if (this.original !== undefined) {
+			return `${this.from}.$cm.${this.original}`;
+		} else {
+			return `${this.from}.$cm.${this.name}`;
+		}
+	}
+}
+
+class Symbols {
+
+	private readonly symbols: Map<string, SymbolInformation> = new Map();
+
+	public addLocal(name: string): void {
+		this.symbols.set(name, new LocalSymbol(name));
+	}
+
+	public addImported(name: string, from: string, original?: string): void {
+		this.symbols.set(name, new ImportedSymbol(name, from, original));
+	}
+
+	public get(name: string): SymbolInformation | undefined {
+		return this.symbols.get(name);
 	}
 }
 
@@ -119,7 +172,7 @@ class RecordType implements ComponentModelType {
 		for (const [name, type] of this.fields) {
 			elements.push(`['${name}', ${type}]`);
 		}
-		code.push(`export const _${this.name}: $wasi.ComponentModelType<${this.name}> = new $wasi.RecordType<${this.name}>([`);
+		code.push(`export const $${this.name}: $wcm.ComponentModelType<${this.name}> = new $wcm.RecordType<${this.name}>([`);
 		code.increaseIndent();
 		code.push(`${elements.join(', ')}`);
 		code.decreaseIndent();
@@ -146,7 +199,7 @@ class TupleType implements ComponentModelType {
 		for (const type of this.fields) {
 			elements.push(type);
 		}
-		code.push(`export const _${this.name}: $wasi.ComponentModelType<${this.name}> = new $wasi.TupleType<${this.name}>([${elements.join(', ')}]);`);
+		code.push(`export const $${this.name}: $wcm.ComponentModelType<${this.name}> = new $wcm.TupleType<${this.name}>([${elements.join(', ')}]);`);
 	}
 }
 
@@ -161,22 +214,66 @@ class ListType implements ComponentModelType {
 	}
 
 	public emit(code: Code): void {
-		code.push(`export const _${this.name}: $wasi.ComponentModelType<${this.name}> = new $wasi.ListType<${this.name}>(${this.type});`);
+		code.push(`export const $${this.name}: $wcm.ComponentModelType<${this.name}> = new $wcm.ListType<${this.name}>(${this.type});`);
 	}
 }
 
+type Visibility = 'public' | 'private';
 class TypeType implements ComponentModelType {
 
 	private readonly name: string;
 	private readonly type: string;
+	private readonly visibility: Visibility;
 
-	constructor(name: string, type: string) {
+	constructor(name: string, type: string, visibility: Visibility = 'public') {
 		this.name = name;
 		this.type = type;
+		this.visibility = visibility;
 	}
 
 	public emit(code: Code): void {
-		code.push(`export const _${this.name}: $wasi.ComponentModelType<${this.name}> = ${this.type};`);
+		if (this.visibility === 'public') {
+			code.push(`export const $${this.name}: $wcm.ComponentModelType<${this.name}> = ${this.type};`);
+		} else {
+			code.push(`const $${this.name}: $wcm.ComponentModelType<${this.name}> = ${this.type};`);
+		}
+	}
+}
+
+class FunctionSignature implements ComponentModelType {
+
+	private readonly name: string;
+	private readonly parameters: [string, string][];
+	private returnType: string | undefined;
+
+	constructor(name: string) {
+		this.name = name;
+		this.parameters = [];
+		this.returnType = undefined;
+	}
+
+	public addParameter(name: string, type: string): void {
+		this.parameters.push([name, type]);
+	}
+
+	public setReturnType(type: string): void {
+		this.returnType = type;
+	}
+
+	public emit(code: Code): void {
+		const elements: string[] = [];
+		for (const [name, type] of this.parameters) {
+			elements.push(`['${name}', ${type}]`);
+		}
+		code.push(`export const $${this.name}: $wcm.FunctionSignature = new $wcm.FunctionSignature(${this.name}, [`);
+		code.increaseIndent();
+		code.push(`${elements.join(', ')}`);
+		code.decreaseIndent();
+		if (this.returnType !== undefined) {
+			code.push(`], ${this.returnType} );`);
+		} else {
+			code.push(`]);`);
+		}
 	}
 }
 
@@ -195,67 +292,67 @@ class ComponentModelTypePrinter implements Visitor {
 	}
 
 	visitU8(): boolean {
-		this.result = '$wasi.u8';
+		this.result = '$wcm.u8';
 		return true;
 	}
 
 	visitU16(): boolean {
-		this.result = '$wasi.u16';
+		this.result = '$wcm.u16';
 		return true;
 	}
 
 	visitU32(): boolean {
-		this.result = '$wasi.u32';
+		this.result = '$wcm.u32';
 		return true;
 	}
 
 	visitU64(): boolean {
-		this.result = '$wasi.u64';
+		this.result = '$wcm.u64';
 		return true;
 	}
 
 	visitS8(): boolean {
-		this.result = '$wasi.s8';
+		this.result = '$wcm.s8';
 		return true;
 	}
 
 	visitS16(): boolean {
-		this.result = '$wasi.s16';
+		this.result = '$wcm.s16';
 		return true;
 	}
 
 	visitS32(): boolean {
-		this.result = '$wasi.s32';
+		this.result = '$wcm.s32';
 		return true;
 	}
 
 	visitS64(): boolean {
-		this.result = '$wasi.s64';
+		this.result = '$wcm.s64';
 		return true;
 	}
 
 	visitFloat32(): boolean {
-		this.result = '$wasi.float32';
+		this.result = '$wcm.float32';
 		return true;
 	}
 
 	visitFloat64(): boolean {
-		this.result = '$wasi.float64';
+		this.result = '$wcm.float64';
 		return true;
 	}
 
 	visitString(): boolean {
-		this.result = '$wasi.wstring';
+		this.result = '$wcm.wstring';
 		return true;
 	}
 
 	visitBool(): boolean {
-		this.result = '$wasi.bool';
+		this.result = '$wcm.bool';
 		return true;
 	}
 
 	visitChar(): boolean {
-		this.result = '$wasi.char';
+		this.result = '$wcm.char';
 		return true;
 	}
 
@@ -485,6 +582,7 @@ class FuncResultPrinter implements Visitor {
 }
 
 interface InterfaceData {
+	symbols: Symbols;
 	componentModelTypes: ComponentModelTypes;
 	exports: string[];
 }
@@ -513,7 +611,7 @@ class DocumentVisitor implements Visitor {
 	}
 
 	visitInterfaceItem(item: InterfaceItem): boolean {
-		this.interfaceData.push({ componentModelTypes: new ComponentModelTypes(), exports: [] });
+		this.interfaceData.push({ symbols: new Symbols(), componentModelTypes: new ComponentModelTypes(), exports: [] });
 		const name = Names.toTs(item.name);
 		this.code.push(`export namespace ${name} {`);
 		this.code.increaseIndent();
@@ -529,7 +627,7 @@ class DocumentVisitor implements Visitor {
 			throw new Error(`No interface data available`);
 		}
 		if (interfaceData.componentModelTypes.size > 0) {
-			this.code.push(`export namespace $cmt {`);
+			this.code.push(`export namespace $cm {`);
 			this.code.increaseIndent();
 			interfaceData.componentModelTypes.emit(this.code);
 			this.code.decreaseIndent();
@@ -544,6 +642,7 @@ class DocumentVisitor implements Visitor {
 	}
 
 	visitUseItem(item: UseItem): boolean {
+		const interfaceData = this.getInterfaceData();
 		const importItem = item.importItem;
 		if (Identifier.is(importItem)) {
 			throw new Error(`Not implemented`);
@@ -552,15 +651,17 @@ class DocumentVisitor implements Visitor {
 		} else if (NamedImports.is(importItem)) {
 			const name = importItem.name;
 			const tsName = Names.toTs(name);
-			this.code.imports.add(name.value, tsName);
+			this.code.imports.add(tsName, `./${name.value}`);
 			for (const member of importItem.members) {
 				if (Identifier.is(member)) {
 					const memberName = Names.toTs(member);
 					this.code.push(`type ${memberName} = ${tsName}.${memberName};`);
+					interfaceData.componentModelTypes.add(new TypeType(memberName, `${tsName}.$cm.$${memberName}`, 'private'));
 				} else if (RenameItem.is(member)) {
 					const fromName = Names.toTs(member.from);
 					const toName = Names.toTs(member.to);
 					this.code.push(`type ${toName} = ${tsName}.${fromName};`);
+					interfaceData.componentModelTypes.add(new TypeType(toName, `${tsName}.$cm.$${fromName}`, 'private'));
 				}
 			}
 		}
@@ -595,17 +696,25 @@ class DocumentVisitor implements Visitor {
 	}
 
 	visitFuncItem(node: FuncItem): boolean {
+		const interfaceData = this.getInterfaceData();
 		const tsName = Names.toTs(node.name);
+		const functionSignature = new FunctionSignature(tsName);
 		const tyVisitor = new TyPrinter(this.code.imports);
 		const signature = node.signature;
 		const params: string[] = [];
 		for (const param of signature.params.members) {
 			param.type.visit(tyVisitor, param.type);
-			params.push(`${Names.toTs(param.name)}: ${tyVisitor.result}`);
+			const paramName = Names.toTs(param.name);
+			const typeName = tyVisitor.result;
+			params.push(`${paramName}: ${typeName}`);
+			functionSignature.addParameter(paramName, `$${typeName}`);
 		}
 		const returnType = signature.result !== undefined ? FuncResultPrinter.do(signature.result, this.code.imports) : 'void';
 		this.code.push(`export declare function ${tsName}(${params.join(', ')}): ${returnType};`);
-		const interfaceData = this.getInterfaceData();
+		if (signature.result !== undefined) {
+			functionSignature.setReturnType(`$${returnType}`);
+		}
+		interfaceData.componentModelTypes.add(functionSignature);
 		interfaceData.exports.push(tsName);
 		return false;
 	}
