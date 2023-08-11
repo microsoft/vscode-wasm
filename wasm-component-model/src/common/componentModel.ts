@@ -1531,18 +1531,15 @@ export type Result<O extends JType , E extends JType> = Result.ok<O, E> | Result
 
 export type JType = number | bigint | string | boolean | JRecord | JVariantCase | JFlags | JTuple | JEnum | Option<any> | Result<any, any>;
 
-export interface FunctionParameter {
-	name: string;
-	type: JType;
-}
+export type FunctionParameter = [/* name */string, /* type */GenericComponentModelType];
 
 export class FunctionSignature {
 
 	public readonly name: string;
 	public readonly params: FunctionParameter[];
-	public readonly returnValue: JType | undefined;
+	public readonly returnValue: GenericComponentModelType | undefined;
 
-	constructor(name: string, params: FunctionParameter[], returnValue?: JType) {
+	constructor(name: string, params: FunctionParameter[], returnValue?: GenericComponentModelType) {
 		this.name = name;
 		this.params = params;
 		this.returnValue = returnValue;

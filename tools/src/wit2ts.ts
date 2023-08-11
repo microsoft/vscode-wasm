@@ -27,6 +27,7 @@ namespace Names {
 
 class Imports {
 
+	public readonly baseTypes: Set<string> = new Set();
 	private readonly imports: Map<string, string[]> = new Map();
 
 	constructor() {
@@ -37,7 +38,7 @@ class Imports {
 	}
 
 	public addBaseType(name: string): void {
-		this.add(name, '@vscode/wasm-component-model');
+		this.baseTypes.add(name);
 	}
 
 	public add(value: string, from: string): void {
@@ -89,7 +90,10 @@ class Code {
 	public toString(): string {
 		this.source.unshift('');
 		for (const [from, values] of this.imports) {
-			this.source.unshift(`import type { ${values.join(', ')} } from '${from}';`);
+			this.source.unshift(`import { ${values.join(', ')} } from '${from}';`);
+		}
+		if (this.imports.baseTypes.size > 0) {
+			this.source.unshift(`import type { ${Array.from(this.imports.baseTypes).join(', ')} } from '@vscode/wasm-component-model';`);
 		}
 		this.source.unshift(`import * as $wcm from '@vscode/wasm-component-model';`);
 		return this.source.join('\n');
@@ -265,24 +269,28 @@ class FunctionSignature implements ComponentModelType {
 		for (const [name, type] of this.parameters) {
 			elements.push(`['${name}', ${type}]`);
 		}
-		code.push(`export const $${this.name}: $wcm.FunctionSignature = new $wcm.FunctionSignature(${this.name}, [`);
-		code.increaseIndent();
-		code.push(`${elements.join(', ')}`);
-		code.decreaseIndent();
-		if (this.returnType !== undefined) {
-			code.push(`], ${this.returnType} );`);
+		if (elements.length === 0) {
+			code.push(`export const $${this.name}: $wcm.FunctionSignature = new $wcm.FunctionSignature('${this.name}', [], ${this.returnType});`);
 		} else {
-			code.push(`]);`);
+			code.push(`export const $${this.name}: $wcm.FunctionSignature = new $wcm.FunctionSignature('${this.name}', [`);
+			code.increaseIndent();
+			code.push(`${elements.join(', ')}`);
+			code.decreaseIndent();
+			if (this.returnType !== undefined) {
+				code.push(`], ${this.returnType} );`);
+			} else {
+				code.push(`]);`);
+			}
 		}
 	}
 }
 
-class ComponentModelTypePrinter implements Visitor {
+class ComponentModelTyPrinter implements Visitor {
 
 	public result: string;
 
 	public static do(node: Ty): string {
-		const visitor = new ComponentModelTypePrinter();
+		const visitor = new ComponentModelTyPrinter();
 		node.visit(visitor, node);
 		return visitor.result;
 	}
@@ -357,7 +365,7 @@ class ComponentModelTypePrinter implements Visitor {
 	}
 
 	visitIdentifier(node: Identifier) {
-		this.result = Names.toTs(node);
+		this.result = `$${Names.toTs(node)}`;
 		return true;
 	}
 
@@ -570,9 +578,7 @@ class FuncResultPrinter implements Visitor {
 	}
 
 	visitFuncResult(node: FuncResult): boolean {
-		const tyVisitor = new TyPrinter(this.imports);
-		node.type.visit(tyVisitor, node.type);
-		this.result = tyVisitor.result;
+		this.result = TyPrinter.do(node.type, this.imports);
 		return false;
 	}
 
@@ -637,7 +643,7 @@ class DocumentVisitor implements Visitor {
 		this.code.push(`}`);
 		if (interfaceData.exports.length > 0) {
 			const name = Names.toTs(item.name);
-			this.code.push(`export type ${name} = Pick<typeof ${name}, ${interfaceData.exports.join(', ')}>;`);
+			this.code.push(`export type ${name} = Pick<typeof ${name}, ${interfaceData.exports.map(value => `'${value}'`).join(' | ')}>;`);
 		}
 	}
 
@@ -673,20 +679,20 @@ class DocumentVisitor implements Visitor {
 		const typeName = TyPrinter.do(item.type, this.code.imports);
 		this.code.push(`export type ${tsName} = ${typeName};`);
 		const interfaceData = this.getInterfaceData();
-		interfaceData.componentModelTypes.add(new TypeType(tsName, ComponentModelTypePrinter.do(item.type)));
+		interfaceData.componentModelTypes.add(new TypeType(tsName, ComponentModelTyPrinter.do(item.type)));
 		return false;
 	}
 
 	visitRecordItem(node: RecordItem): boolean {
 		const tsName = Names.toTs(node.name);
 		const recordType = new RecordType(tsName);
-		this.code.push(`export interface ${tsName} {`);
+		this.code.push(`export interface ${tsName} extends $wcm.JRecord {`);
 		this.code.increaseIndent();
 		for (const member of node.members) {
 			const memberName = Names.toTs(member.name);
 			const typeName = TyPrinter.do(member.type, this.code.imports);
 			this.code.push(`${memberName}: ${typeName};`);
-			recordType.addField(memberName, ComponentModelTypePrinter.do(member.type));
+			recordType.addField(memberName, ComponentModelTyPrinter.do(member.type));
 		}
 		this.code.decreaseIndent();
 		this.code.push(`}`);
@@ -699,19 +705,22 @@ class DocumentVisitor implements Visitor {
 		const interfaceData = this.getInterfaceData();
 		const tsName = Names.toTs(node.name);
 		const functionSignature = new FunctionSignature(tsName);
-		const tyVisitor = new TyPrinter(this.code.imports);
+		const tyPrinter = new TyPrinter(this.code.imports);
+		const componentModelTyPrinter = new ComponentModelTyPrinter();
 		const signature = node.signature;
 		const params: string[] = [];
 		for (const param of signature.params.members) {
-			param.type.visit(tyVisitor, param.type);
+			param.type.visit(tyPrinter, param.type);
+			param.type.visit(componentModelTyPrinter, param.type);
 			const paramName = Names.toTs(param.name);
-			const typeName = tyVisitor.result;
+			const typeName = tyPrinter.result;
 			params.push(`${paramName}: ${typeName}`);
-			functionSignature.addParameter(paramName, `$${typeName}`);
+			functionSignature.addParameter(paramName, componentModelTyPrinter.result);
 		}
 		const returnType = signature.result !== undefined ? FuncResultPrinter.do(signature.result, this.code.imports) : 'void';
 		this.code.push(`export declare function ${tsName}(${params.join(', ')}): ${returnType};`);
 		if (signature.result !== undefined) {
+
 			functionSignature.setReturnType(`$${returnType}`);
 		}
 		interfaceData.componentModelTypes.add(functionSignature);
