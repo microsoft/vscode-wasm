@@ -3,8 +3,8 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import * as $wcm from '../componentModel';
-import type { u64, u32 } from '../componentModel';
+import * as $wcm from '../../componentModel';
+import type { u64, u32 } from '../../componentModel';
 
 export namespace wall_clock {
 	export interface datetime extends $wcm.JRecord {

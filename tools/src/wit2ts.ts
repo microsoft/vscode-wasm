@@ -11,12 +11,13 @@ import {
 	Document, TypeItem, Tuple, List, Option, Result, RecordItem, FuncItem, Ty, Borrow, _FuncResult, NamedFuncResult, FuncResult
 } from './wit-ast';
 
-const document = wit.parse(fs.readFileSync('./src/timezone.wit', 'utf8'));
+const document = wit.parse(fs.readFileSync('./src/monotonic-clock.wit', 'utf8'));
 
 namespace Names {
 
 	const keywords: Map<string, string> = new Map<string, string>([
-		['this', 'self']
+		['this', '$this'],
+		['in', '$in']
 	]);
 
 	export function toTs(id: Identifier): string {
@@ -277,7 +278,7 @@ class FunctionSignature implements ComponentModelType {
 			code.push(`${elements.join(', ')}`);
 			code.decreaseIndent();
 			if (this.returnType !== undefined) {
-				code.push(`], ${this.returnType} );`);
+				code.push(`], ${this.returnType});`);
 			} else {
 				code.push(`]);`);
 			}
@@ -287,93 +288,97 @@ class FunctionSignature implements ComponentModelType {
 
 class ComponentModelTyPrinter implements Visitor {
 
+	private readonly imports: Imports;
 	public result: string;
 
-	public static do(node: Ty): string {
-		const visitor = new ComponentModelTyPrinter();
+	public static do(node: Ty, imports: Imports): string {
+		const visitor = new ComponentModelTyPrinter(imports);
 		node.visit(visitor, node);
 		return visitor.result;
 	}
 
-	public constructor() {
+	public constructor(imports: Imports) {
+		this.imports = imports;
 		this.result = '';
 	}
 
 	visitU8(): boolean {
 		this.result = '$wcm.u8';
-		return true;
+		return false;
 	}
 
 	visitU16(): boolean {
 		this.result = '$wcm.u16';
-		return true;
+		return false;
 	}
 
 	visitU32(): boolean {
 		this.result = '$wcm.u32';
-		return true;
+		return false;
 	}
 
 	visitU64(): boolean {
 		this.result = '$wcm.u64';
-		return true;
+		return false;
 	}
 
 	visitS8(): boolean {
 		this.result = '$wcm.s8';
-		return true;
+		return false;
 	}
 
 	visitS16(): boolean {
 		this.result = '$wcm.s16';
-		return true;
+		return false;
 	}
 
 	visitS32(): boolean {
 		this.result = '$wcm.s32';
-		return true;
+		return false;
 	}
 
 	visitS64(): boolean {
 		this.result = '$wcm.s64';
-		return true;
+		return false;
 	}
 
 	visitFloat32(): boolean {
 		this.result = '$wcm.float32';
-		return true;
+		return false;
 	}
 
 	visitFloat64(): boolean {
 		this.result = '$wcm.float64';
-		return true;
+		return false;
 	}
 
 	visitString(): boolean {
 		this.result = '$wcm.wstring';
-		return true;
+		return false;
 	}
 
 	visitBool(): boolean {
 		this.result = '$wcm.bool';
-		return true;
+		return false;
 	}
 
 	visitChar(): boolean {
 		this.result = '$wcm.char';
-		return true;
+		return false;
 	}
 
 	visitIdentifier(node: Identifier) {
 		this.result = `$${Names.toTs(node)}`;
-		return true;
+		return false;
 	}
 
 	visitTuple(_node: Tuple): boolean {
 		return false;
 	}
 
-	visitList(_node: List): boolean {
+	visitList(node: List): boolean {
+		const typeName = TyPrinter.do(node.type, this.imports);
+		this.result = `new $wcm.ListType<${typeName}>(${ComponentModelTyPrinter.do(node.type, this.imports)})`;
 		return false;
 	}
 
@@ -386,6 +391,32 @@ class ComponentModelTyPrinter implements Visitor {
 	}
 
 	visitBorrow(_node: Borrow): boolean {
+		return false;
+	}
+}
+
+class ComponentModelFuncResultPrinter implements Visitor {
+
+	private readonly imports: Imports;
+	public result: string;
+
+	public static do(node: _FuncResult, imports: Imports): string {
+		const visitor = new ComponentModelFuncResultPrinter(imports);
+		node.visit(visitor, node);
+		return visitor.result;
+	}
+
+	public constructor(imports: Imports) {
+		this.imports = imports;
+		this.result = '';
+	}
+
+	visitFuncResult(node: FuncResult): boolean {
+		this.result = ComponentModelTyPrinter.do(node.type, this.imports);
+		return false;
+	}
+
+	visitNamedFuncResult(_node: NamedFuncResult): boolean {
 		return false;
 	}
 }
@@ -406,7 +437,24 @@ class ComponentModelTypes {
 	}
 
 	public emit(code: Code): void {
-		for (const type of this.types) {
+		// We need to sort the const declarations otherwise we receive compile error
+		// that we reference a var before it is initialized. Since WIT has no cyclic
+		// dependencies sorting should be fine. However if they get introduced we need
+		// to introduce access functions to delay the construction of the meta model.
+		// For now we simply sort functions to the end and hope that type are declared
+		// before used.
+		const sorted: ComponentModelType[] = this.types.sort((a, b) => {
+			const aIsFunction = a instanceof FunctionSignature;
+			const bIsFunction = b instanceof FunctionSignature;
+			if (aIsFunction && !bIsFunction) {
+				return 1;
+			} else if (!aIsFunction && bIsFunction) {
+				return -1;
+			} else {
+				return 0;
+			}
+		});
+		for (const type of sorted) {
 			type.emit(code);
 		}
 	}
@@ -679,7 +727,7 @@ class DocumentVisitor implements Visitor {
 		const typeName = TyPrinter.do(item.type, this.code.imports);
 		this.code.push(`export type ${tsName} = ${typeName};`);
 		const interfaceData = this.getInterfaceData();
-		interfaceData.componentModelTypes.add(new TypeType(tsName, ComponentModelTyPrinter.do(item.type)));
+		interfaceData.componentModelTypes.add(new TypeType(tsName, ComponentModelTyPrinter.do(item.type, this.code.imports)));
 		return false;
 	}
 
@@ -692,7 +740,7 @@ class DocumentVisitor implements Visitor {
 			const memberName = Names.toTs(member.name);
 			const typeName = TyPrinter.do(member.type, this.code.imports);
 			this.code.push(`${memberName}: ${typeName};`);
-			recordType.addField(memberName, ComponentModelTyPrinter.do(member.type));
+			recordType.addField(memberName, ComponentModelTyPrinter.do(member.type, this.code.imports));
 		}
 		this.code.decreaseIndent();
 		this.code.push(`}`);
@@ -706,7 +754,7 @@ class DocumentVisitor implements Visitor {
 		const tsName = Names.toTs(node.name);
 		const functionSignature = new FunctionSignature(tsName);
 		const tyPrinter = new TyPrinter(this.code.imports);
-		const componentModelTyPrinter = new ComponentModelTyPrinter();
+		const componentModelTyPrinter = new ComponentModelTyPrinter(this.code.imports);
 		const signature = node.signature;
 		const params: string[] = [];
 		for (const param of signature.params.members) {
@@ -720,8 +768,7 @@ class DocumentVisitor implements Visitor {
 		const returnType = signature.result !== undefined ? FuncResultPrinter.do(signature.result, this.code.imports) : 'void';
 		this.code.push(`export declare function ${tsName}(${params.join(', ')}): ${returnType};`);
 		if (signature.result !== undefined) {
-
-			functionSignature.setReturnType(`$${returnType}`);
+			functionSignature.setReturnType(ComponentModelFuncResultPrinter.do(signature.result, this.code.imports));
 		}
 		interfaceData.componentModelTypes.add(functionSignature);
 		interfaceData.exports.push(tsName);

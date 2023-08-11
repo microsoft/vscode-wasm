@@ -1,5 +1,10 @@
-import * as $wcm from '../componentModel';
-import type { s32, u32 } from '../componentModel';
+/*---------------------------------------------------------------------------------------------
+ *  Copyright (c) Microsoft Corporation. All rights reserved.
+ *  Licensed under the MIT License. See License.txt in the project root for license information.
+ *--------------------------------------------------------------------------------------------*/
+
+import * as $wcm from '../../componentModel';
+import type { s32, u32 } from '../../componentModel';
 
 import { wall_clock } from './wall-clock';
 
@@ -16,10 +21,10 @@ export namespace timezone {
 	}
 	export namespace $cm {
 		const $datetime: $wcm.ComponentModelType<datetime> = wall_clock.$cm.$datetime;
+		export const $timezone: $wcm.ComponentModelType<timezone> = $wcm.u32;
 		export const $timezone_display: $wcm.ComponentModelType<timezone_display> = new $wcm.RecordType<timezone_display>([
 			['utc_offset', $wcm.s32], ['name', $wcm.wstring], ['in_daylight_saving_time', $wcm.bool]
 		]);
-		export const $timezone: $wcm.ComponentModelType<timezone> = $wcm.u32;
 		export const $display: $wcm.FunctionSignature = new $wcm.FunctionSignature('display', [
 			['self', $timezone], ['when', $datetime]
 		], $timezone_display );
