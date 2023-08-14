@@ -513,6 +513,34 @@ namespace TypeScript {
 		}
 	}
 
+	export class functionSignature {
+		private readonly name: string;
+		private readonly parameters: [string, string][];
+		private returnType: string | undefined;
+
+		constructor(name: string) {
+			this.name = name;
+			this.parameters = [];
+			this.returnType = undefined;
+		}
+
+		public addParameter(name: string, type: string): void {
+			this.parameters.push([name, type]);
+		}
+
+		public setReturnType(type: string): void {
+			this.returnType = type;
+		}
+
+		public emit(code: Code): void {
+			const elements: string[] = [];
+			for (const [name, type] of this.parameters) {
+				elements.push(`${name}: ${type}`);
+			}
+			code.push(`export declare function ${this.name}(${elements.join(', ')}): ${this.returnType};`);
+		}
+	}
+
 	export class enumeration {
 
 	}
@@ -833,25 +861,25 @@ class DocumentVisitor implements Visitor {
 	visitFuncItem(node: FuncItem): boolean {
 		const interfaceData = this.getInterfaceData();
 		const tsName = Names.toTs(node.name);
-		const functionSignature = new ComponentModel.functionSignature(tsName);
+		const tsSignature = new TypeScript.functionSignature(tsName);
+		const cmSignature = new ComponentModel.functionSignature(tsName);
 		const tyPrinter = new TypeScript.TyPrinter(this.code.imports);
-		const componentModelTyPrinter = new ComponentModel.TyPrinter(this.code.imports);
+		const cmTyPrinter = new ComponentModel.TyPrinter(this.code.imports);
 		const signature = node.signature;
-		const params: string[] = [];
 		for (const param of signature.params.members) {
 			param.type.visit(tyPrinter, param.type);
-			param.type.visit(componentModelTyPrinter, param.type);
+			param.type.visit(cmTyPrinter, param.type);
 			const paramName = Names.toTs(param.name);
-			const typeName = tyPrinter.result;
-			params.push(`${paramName}: ${typeName}`);
-			functionSignature.addParameter(paramName, componentModelTyPrinter.result);
+			tsSignature.addParameter(paramName, tyPrinter.result);
+			cmSignature.addParameter(paramName, cmTyPrinter.result);
 		}
 		const returnType = signature.result !== undefined ? TypeScript.FuncResultPrinter.do(signature.result, this.code.imports) : 'void';
-		this.code.push(`export declare function ${tsName}(${params.join(', ')}): ${returnType};`);
+		tsSignature.setReturnType(returnType);
 		if (signature.result !== undefined) {
-			functionSignature.setReturnType(ComponentModel.FuncResultPrinter.do(signature.result, this.code.imports));
+			cmSignature.setReturnType(ComponentModel.FuncResultPrinter.do(signature.result, this.code.imports));
 		}
-		interfaceData.componentModelEntries.add(functionSignature);
+		interfaceData.typeScriptEntries.add(tsSignature);
+		interfaceData.componentModelEntries.add(cmSignature);
 		interfaceData.exports.push(tsName);
 		return false;
 	}
