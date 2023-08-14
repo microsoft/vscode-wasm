@@ -11,7 +11,7 @@ import {
 	Document, TypeItem, Tuple, List, Option, Result, RecordItem, FuncItem, Ty, Borrow, _FuncResult, NamedFuncResult, FuncResult
 } from './wit-ast';
 
-const document = wit.parse(fs.readFileSync('./src/monotonic-clock.wit', 'utf8'));
+const document = wit.parse(fs.readFileSync('./src/streams.wit', 'utf8'));
 
 namespace Names {
 
@@ -154,286 +154,289 @@ class Symbols {
 	}
 }
 
-interface ComponentModelType {
-	emit(code: Code): void;
-}
+namespace ComponentModel {
 
-class RecordType implements ComponentModelType {
-
-	private readonly name: string;
-	private readonly fields: [string, string][];
-
-	constructor(name: string) {
-		this.name = name;
-		this.fields = [];
+	export interface Emitter {
+		emit(code: Code): void;
 	}
 
-	public addField(name: string, type: string): void {
-		this.fields.push([name, type]);
-	}
+	export class record implements Emitter {
 
-	public emit(code: Code): void {
-		const elements: string[] = [];
-		for (const [name, type] of this.fields) {
-			elements.push(`['${name}', ${type}]`);
+		private readonly name: string;
+		private readonly fields: [string, string][];
+
+		constructor(name: string) {
+			this.name = name;
+			this.fields = [];
 		}
-		code.push(`export const $${this.name}: $wcm.ComponentModelType<${this.name}> = new $wcm.RecordType<${this.name}>([`);
-		code.increaseIndent();
-		code.push(`${elements.join(', ')}`);
-		code.decreaseIndent();
-		code.push(`]);`);
-	}
-}
 
-class TupleType implements ComponentModelType {
-
-	private readonly name: string;
-	private readonly fields: string[];
-
-	constructor(name: string) {
-		this.name = name;
-		this.fields = [];
-	}
-
-	public addField(type: string): void {
-		this.fields.push(type);
-	}
-
-	public emit(code: Code): void {
-		const elements: string[] = [];
-		for (const type of this.fields) {
-			elements.push(type);
+		public addField(name: string, type: string): void {
+			this.fields.push([name, type]);
 		}
-		code.push(`export const $${this.name}: $wcm.ComponentModelType<${this.name}> = new $wcm.TupleType<${this.name}>([${elements.join(', ')}]);`);
-	}
-}
 
-class ListType implements ComponentModelType {
-
-	private readonly name: string;
-	private readonly type: string;
-
-	constructor(name: string, type: string) {
-		this.name = name;
-		this.type = type;
-	}
-
-	public emit(code: Code): void {
-		code.push(`export const $${this.name}: $wcm.ComponentModelType<${this.name}> = new $wcm.ListType<${this.name}>(${this.type});`);
-	}
-}
-
-type Visibility = 'public' | 'private';
-class TypeType implements ComponentModelType {
-
-	private readonly name: string;
-	private readonly type: string;
-	private readonly visibility: Visibility;
-
-	constructor(name: string, type: string, visibility: Visibility = 'public') {
-		this.name = name;
-		this.type = type;
-		this.visibility = visibility;
-	}
-
-	public emit(code: Code): void {
-		if (this.visibility === 'public') {
-			code.push(`export const $${this.name}: $wcm.ComponentModelType<${this.name}> = ${this.type};`);
-		} else {
-			code.push(`const $${this.name}: $wcm.ComponentModelType<${this.name}> = ${this.type};`);
-		}
-	}
-}
-
-class FunctionSignature implements ComponentModelType {
-
-	private readonly name: string;
-	private readonly parameters: [string, string][];
-	private returnType: string | undefined;
-
-	constructor(name: string) {
-		this.name = name;
-		this.parameters = [];
-		this.returnType = undefined;
-	}
-
-	public addParameter(name: string, type: string): void {
-		this.parameters.push([name, type]);
-	}
-
-	public setReturnType(type: string): void {
-		this.returnType = type;
-	}
-
-	public emit(code: Code): void {
-		const elements: string[] = [];
-		for (const [name, type] of this.parameters) {
-			elements.push(`['${name}', ${type}]`);
-		}
-		if (elements.length === 0) {
-			code.push(`export const $${this.name}: $wcm.FunctionSignature = new $wcm.FunctionSignature('${this.name}', [], ${this.returnType});`);
-		} else {
-			code.push(`export const $${this.name}: $wcm.FunctionSignature = new $wcm.FunctionSignature('${this.name}', [`);
+		public emit(code: Code): void {
+			const elements: string[] = [];
+			for (const [name, type] of this.fields) {
+				elements.push(`['${name}', ${type}]`);
+			}
+			code.push(`export const $${this.name}: $wcm.ComponentModelType<${this.name}> = new $wcm.RecordType<${this.name}>([`);
 			code.increaseIndent();
 			code.push(`${elements.join(', ')}`);
 			code.decreaseIndent();
-			if (this.returnType !== undefined) {
-				code.push(`], ${this.returnType});`);
-			} else {
-				code.push(`]);`);
+			code.push(`]);`);
+		}
+	}
+
+	export class tuple implements Emitter {
+
+		private readonly name: string;
+		private readonly fields: string[];
+
+		constructor(name: string) {
+			this.name = name;
+			this.fields = [];
+		}
+
+		public addField(type: string): void {
+			this.fields.push(type);
+		}
+
+		public emit(code: Code): void {
+			const elements: string[] = [];
+			for (const type of this.fields) {
+				elements.push(type);
 			}
+			code.push(`export const $${this.name}: $wcm.ComponentModelType<${this.name}> = new $wcm.TupleType<${this.name}>([${elements.join(', ')}]);`);
+		}
+	}
+
+	export class list implements Emitter {
+
+		private readonly name: string;
+		private readonly type: string;
+
+		constructor(name: string, type: string) {
+			this.name = name;
+			this.type = type;
+		}
+
+		public emit(code: Code): void {
+			code.push(`export const $${this.name}: $wcm.ComponentModelType<${this.name}> = new $wcm.ListType<${this.name}>(${this.type});`);
+		}
+	}
+
+	type Visibility = 'public' | 'private';
+	export class type implements Emitter {
+
+		private readonly name: string;
+		private readonly type: string;
+		private readonly visibility: Visibility;
+
+		constructor(name: string, type: string, visibility: Visibility = 'public') {
+			this.name = name;
+			this.type = type;
+			this.visibility = visibility;
+		}
+
+		public emit(code: Code): void {
+			if (this.visibility === 'public') {
+				code.push(`export const $${this.name}: $wcm.ComponentModelType<${this.name}> = ${this.type};`);
+			} else {
+				code.push(`const $${this.name}: $wcm.ComponentModelType<${this.name}> = ${this.type};`);
+			}
+		}
+	}
+
+	export class functionSignature implements Emitter {
+
+		private readonly name: string;
+		private readonly parameters: [string, string][];
+		private returnType: string | undefined;
+
+		constructor(name: string) {
+			this.name = name;
+			this.parameters = [];
+			this.returnType = undefined;
+		}
+
+		public addParameter(name: string, type: string): void {
+			this.parameters.push([name, type]);
+		}
+
+		public setReturnType(type: string): void {
+			this.returnType = type;
+		}
+
+		public emit(code: Code): void {
+			const elements: string[] = [];
+			for (const [name, type] of this.parameters) {
+				elements.push(`['${name}', ${type}]`);
+			}
+			if (elements.length === 0) {
+				code.push(`export const $${this.name}: $wcm.FunctionSignature = new $wcm.FunctionSignature('${this.name}', [], ${this.returnType});`);
+			} else {
+				code.push(`export const $${this.name}: $wcm.FunctionSignature = new $wcm.FunctionSignature('${this.name}', [`);
+				code.increaseIndent();
+				code.push(`${elements.join(', ')}`);
+				code.decreaseIndent();
+				if (this.returnType !== undefined) {
+					code.push(`], ${this.returnType});`);
+				} else {
+					code.push(`]);`);
+				}
+			}
+		}
+	}
+
+	export class TyPrinter implements Visitor {
+
+		private readonly imports: Imports;
+		public result: string;
+
+		public static do(node: Ty, imports: Imports): string {
+			const visitor = new TyPrinter(imports);
+			node.visit(visitor, node);
+			return visitor.result;
+		}
+
+		public constructor(imports: Imports) {
+			this.imports = imports;
+			this.result = '';
+		}
+
+		visitU8(): boolean {
+			this.result = '$wcm.u8';
+			return false;
+		}
+
+		visitU16(): boolean {
+			this.result = '$wcm.u16';
+			return false;
+		}
+
+		visitU32(): boolean {
+			this.result = '$wcm.u32';
+			return false;
+		}
+
+		visitU64(): boolean {
+			this.result = '$wcm.u64';
+			return false;
+		}
+
+		visitS8(): boolean {
+			this.result = '$wcm.s8';
+			return false;
+		}
+
+		visitS16(): boolean {
+			this.result = '$wcm.s16';
+			return false;
+		}
+
+		visitS32(): boolean {
+			this.result = '$wcm.s32';
+			return false;
+		}
+
+		visitS64(): boolean {
+			this.result = '$wcm.s64';
+			return false;
+		}
+
+		visitFloat32(): boolean {
+			this.result = '$wcm.float32';
+			return false;
+		}
+
+		visitFloat64(): boolean {
+			this.result = '$wcm.float64';
+			return false;
+		}
+
+		visitString(): boolean {
+			this.result = '$wcm.wstring';
+			return false;
+		}
+
+		visitBool(): boolean {
+			this.result = '$wcm.bool';
+			return false;
+		}
+
+		visitChar(): boolean {
+			this.result = '$wcm.char';
+			return false;
+		}
+
+		visitIdentifier(node: Identifier) {
+			this.result = `$${Names.toTs(node)}`;
+			return false;
+		}
+
+		visitTuple(_node: Tuple): boolean {
+			return false;
+		}
+
+		visitList(node: List): boolean {
+			const typeName = TyPrinter.do(node.type, this.imports);
+			this.result = `new $wcm.ListType<${typeName}>(${TyPrinter.do(node.type, this.imports)})`;
+			return false;
+		}
+
+		visitOption(_node: Option): boolean {
+			return false;
+		}
+
+		visitResult(_node: Result): boolean {
+			return false;
+		}
+
+		visitBorrow(_node: Borrow): boolean {
+			return false;
+		}
+	}
+
+	export class FuncResultPrinter implements Visitor {
+
+		private readonly imports: Imports;
+		public result: string;
+
+		public static do(node: _FuncResult, imports: Imports): string {
+			const visitor = new FuncResultPrinter(imports);
+			node.visit(visitor, node);
+			return visitor.result;
+		}
+
+		public constructor(imports: Imports) {
+			this.imports = imports;
+			this.result = '';
+		}
+
+		visitFuncResult(node: FuncResult): boolean {
+			this.result = TyPrinter.do(node.type, this.imports);
+			return false;
+		}
+
+		visitNamedFuncResult(_node: NamedFuncResult): boolean {
+			return false;
 		}
 	}
 }
 
-class ComponentModelTyPrinter implements Visitor {
-
-	private readonly imports: Imports;
-	public result: string;
-
-	public static do(node: Ty, imports: Imports): string {
-		const visitor = new ComponentModelTyPrinter(imports);
-		node.visit(visitor, node);
-		return visitor.result;
-	}
-
-	public constructor(imports: Imports) {
-		this.imports = imports;
-		this.result = '';
-	}
-
-	visitU8(): boolean {
-		this.result = '$wcm.u8';
-		return false;
-	}
-
-	visitU16(): boolean {
-		this.result = '$wcm.u16';
-		return false;
-	}
-
-	visitU32(): boolean {
-		this.result = '$wcm.u32';
-		return false;
-	}
-
-	visitU64(): boolean {
-		this.result = '$wcm.u64';
-		return false;
-	}
-
-	visitS8(): boolean {
-		this.result = '$wcm.s8';
-		return false;
-	}
-
-	visitS16(): boolean {
-		this.result = '$wcm.s16';
-		return false;
-	}
-
-	visitS32(): boolean {
-		this.result = '$wcm.s32';
-		return false;
-	}
-
-	visitS64(): boolean {
-		this.result = '$wcm.s64';
-		return false;
-	}
-
-	visitFloat32(): boolean {
-		this.result = '$wcm.float32';
-		return false;
-	}
-
-	visitFloat64(): boolean {
-		this.result = '$wcm.float64';
-		return false;
-	}
-
-	visitString(): boolean {
-		this.result = '$wcm.wstring';
-		return false;
-	}
-
-	visitBool(): boolean {
-		this.result = '$wcm.bool';
-		return false;
-	}
-
-	visitChar(): boolean {
-		this.result = '$wcm.char';
-		return false;
-	}
-
-	visitIdentifier(node: Identifier) {
-		this.result = `$${Names.toTs(node)}`;
-		return false;
-	}
-
-	visitTuple(_node: Tuple): boolean {
-		return false;
-	}
-
-	visitList(node: List): boolean {
-		const typeName = TyPrinter.do(node.type, this.imports);
-		this.result = `new $wcm.ListType<${typeName}>(${ComponentModelTyPrinter.do(node.type, this.imports)})`;
-		return false;
-	}
-
-	visitOption(_node: Option): boolean {
-		return false;
-	}
-
-	visitResult(_node: Result): boolean {
-		return false;
-	}
-
-	visitBorrow(_node: Borrow): boolean {
-		return false;
-	}
-}
-
-class ComponentModelFuncResultPrinter implements Visitor {
-
-	private readonly imports: Imports;
-	public result: string;
-
-	public static do(node: _FuncResult, imports: Imports): string {
-		const visitor = new ComponentModelFuncResultPrinter(imports);
-		node.visit(visitor, node);
-		return visitor.result;
-	}
-
-	public constructor(imports: Imports) {
-		this.imports = imports;
-		this.result = '';
-	}
-
-	visitFuncResult(node: FuncResult): boolean {
-		this.result = ComponentModelTyPrinter.do(node.type, this.imports);
-		return false;
-	}
-
-	visitNamedFuncResult(_node: NamedFuncResult): boolean {
-		return false;
-	}
-}
-
-class ComponentModelTypes {
-	private readonly types: ComponentModelType[];
+class ComponentModelEntries {
+	private readonly entries: ComponentModel.Emitter[];
 
 	constructor() {
-		this.types = [];
+		this.entries = [];
 	}
 
 	public get size(): number {
-		return this.types.length;
+		return this.entries.length;
 	}
 
-	public add(type: ComponentModelType): void {
-		this.types.push(type);
+	public add(type: ComponentModel.Emitter): void {
+		this.entries.push(type);
 	}
 
 	public emit(code: Code): void {
@@ -443,9 +446,9 @@ class ComponentModelTypes {
 		// to introduce access functions to delay the construction of the meta model.
 		// For now we simply sort functions to the end and hope that type are declared
 		// before used.
-		const sorted: ComponentModelType[] = this.types.sort((a, b) => {
-			const aIsFunction = a instanceof FunctionSignature;
-			const bIsFunction = b instanceof FunctionSignature;
+		const sorted: ComponentModel.Emitter[] = this.entries.sort((a, b) => {
+			const aIsFunction = a instanceof ComponentModel.functionSignature;
+			const bIsFunction = b instanceof ComponentModel.functionSignature;
 			if (aIsFunction && !bIsFunction) {
 				return 1;
 			} else if (!aIsFunction && bIsFunction) {
@@ -460,184 +463,262 @@ class ComponentModelTypes {
 	}
 }
 
-class TyPrinter implements Visitor {
+namespace TypeScript {
 
-	private readonly imports: Imports;
-	public result: string;
-
-	public static do(node: Ty, imports: Imports): string {
-		const visitor = new TyPrinter(imports);
-		node.visit(visitor, node);
-		return visitor.result;
+	export interface Emitter {
+		emit(code: Code): void;
 	}
 
-	public constructor(imports: Imports) {
-		this.imports = imports;
-		this.result = '';
-	}
-
-	visitU8(): boolean {
-		this.result = 'u8';
-		this.imports.addBaseType('u8');
-		return true;
-	}
-
-	visitU16(): boolean {
-		this.result = 'u16';
-		this.imports.addBaseType('u16');
-		return true;
-	}
-
-	visitU32(): boolean {
-		this.result = 'u32';
-		this.imports.addBaseType('u32');
-		return true;
-	}
-
-	visitU64(): boolean {
-		this.result = 'u64';
-		this.imports.addBaseType('u64');
-		return true;
-	}
-
-	visitS8(): boolean {
-		this.result = 's8';
-		this.imports.addBaseType('s8');
-		return true;
-	}
-
-	visitS16(): boolean {
-		this.result = 's16';
-		this.imports.addBaseType('s16');
-		return true;
-	}
-
-	visitS32(): boolean {
-		this.result = 's32';
-		this.imports.addBaseType('s32');
-		return true;
-	}
-
-	visitS64(): boolean {
-		this.result = 's64';
-		this.imports.addBaseType('s64');
-		return true;
-	}
-
-	visitFloat32(): boolean {
-		this.result = 'float32';
-		this.imports.addBaseType('float32');
-		return true;
-	}
-
-	visitFloat64(): boolean {
-		this.result = 'float64';
-		this.imports.addBaseType('float64');
-		return true;
-	}
-
-	visitString(): boolean {
-		this.result = 'string';
-		return true;
-	}
-
-	visitBool(): boolean {
-		this.result = 'boolean';
-		return true;
-	}
-
-	visitChar(): boolean {
-		this.result = 'string';
-		return true;
-	}
-
-	visitIdentifier(node: Identifier) {
-		this.result = Names.toTs(node);
-		return true;
-	}
-
-	visitTuple(node: Tuple): boolean {
-		const elements: string[] = [];
-		const tyVisitor = new TyPrinter(this.imports);
-		for (let i = 0; i < node.members.length; i++) {
-			const member = node.members[i];
-			member.visit(tyVisitor, member);
-			elements.push(tyVisitor.result);
+	type Visibility = 'public' | 'private';
+	export class type implements Emitter {
+		private readonly name: string;
+		private readonly type: string;
+		private readonly visibility: Visibility;
+		constructor(name: string, type: string, visibility: Visibility = 'public') {
+			this.name = name;
+			this.type = type;
+			this.visibility = visibility;
 		}
-		this.result = `[${elements.join(', ')}]`;
-		return false;
-	}
 
-	visitList(node: List): boolean {
-		const tyVisitor = new TyPrinter(this.imports);
-		node.type.visit(tyVisitor, node.type);
-		this.result = `${tyVisitor.result}[]`;
-		return false;
-	}
-
-	visitOption(node: Option): boolean {
-		const tyVisitor = new TyPrinter(this.imports);
-		node.type.visit(tyVisitor, node.type);
-		this.result = `Option<${tyVisitor.result}>`;
-		return false;
-	}
-
-	visitResult(node: Result): boolean {
-		const tyVisitor = new TyPrinter(this.imports);
-		if (node.ok !== undefined) {
-			node.ok.visit(tyVisitor, node.ok);
-		} else {
-			tyVisitor.result = 'void';
+		emit(code: Code): void {
+			if (this.visibility === 'public') {
+				code.push(`export type ${this.name} = ${this.type};`);
+			} else {
+				code.push(`type ${this.name} = ${this.type};`);
+			}
 		}
-		const ok = tyVisitor.result;
-		if (node.error !== undefined) {
-			node.error.visit(tyVisitor, node.error);
-		} else {
-			tyVisitor.result = 'void';
+	}
+
+	export class literal implements Emitter {
+		private readonly name: string;
+		private readonly properties: [string, string][];
+
+		constructor(name: string) {
+			this.name = name;
+			this.properties = [];
 		}
-		const error = tyVisitor.result;
-		this.result = `Result<${ok}, ${error}>`;
-		return false;
+
+		addProperty(name: string, type: string): void {
+			this.properties.push([name, type]);
+		}
+
+		emit(code: Code): void {
+			code.push(`export interface ${this.name} extends $wcm.JRecord {`);
+			code.increaseIndent();
+			for (const [name, type] of this.properties) {
+				code.push(`${name}: ${type};`);
+			}
+			code.decreaseIndent();
+			code.push(`}`);
+		}
 	}
 
-	visitBorrow(node: Borrow): boolean {
-		const tyVisitor = new TyPrinter(this.imports);
-		node.name.visit(tyVisitor, node.name);
-		this.result = `Borrow<${tyVisitor.result}>`;
-		return false;
+	export class enumeration {
+
 	}
 
+	export class TyPrinter implements Visitor {
+
+		private readonly imports: Imports;
+		public result: string;
+
+		public static do(node: Ty, imports: Imports): string {
+			const visitor = new TyPrinter(imports);
+			node.visit(visitor, node);
+			return visitor.result;
+		}
+
+		public constructor(imports: Imports) {
+			this.imports = imports;
+			this.result = '';
+		}
+
+		visitU8(): boolean {
+			this.result = 'u8';
+			this.imports.addBaseType('u8');
+			return true;
+		}
+
+		visitU16(): boolean {
+			this.result = 'u16';
+			this.imports.addBaseType('u16');
+			return true;
+		}
+
+		visitU32(): boolean {
+			this.result = 'u32';
+			this.imports.addBaseType('u32');
+			return true;
+		}
+
+		visitU64(): boolean {
+			this.result = 'u64';
+			this.imports.addBaseType('u64');
+			return true;
+		}
+
+		visitS8(): boolean {
+			this.result = 's8';
+			this.imports.addBaseType('s8');
+			return true;
+		}
+
+		visitS16(): boolean {
+			this.result = 's16';
+			this.imports.addBaseType('s16');
+			return true;
+		}
+
+		visitS32(): boolean {
+			this.result = 's32';
+			this.imports.addBaseType('s32');
+			return true;
+		}
+
+		visitS64(): boolean {
+			this.result = 's64';
+			this.imports.addBaseType('s64');
+			return true;
+		}
+
+		visitFloat32(): boolean {
+			this.result = 'float32';
+			this.imports.addBaseType('float32');
+			return true;
+		}
+
+		visitFloat64(): boolean {
+			this.result = 'float64';
+			this.imports.addBaseType('float64');
+			return true;
+		}
+
+		visitString(): boolean {
+			this.result = 'string';
+			return true;
+		}
+
+		visitBool(): boolean {
+			this.result = 'boolean';
+			return true;
+		}
+
+		visitChar(): boolean {
+			this.result = 'string';
+			return true;
+		}
+
+		visitIdentifier(node: Identifier) {
+			this.result = Names.toTs(node);
+			return true;
+		}
+
+		visitTuple(node: Tuple): boolean {
+			const elements: string[] = [];
+			const tyVisitor = new TyPrinter(this.imports);
+			for (let i = 0; i < node.members.length; i++) {
+				const member = node.members[i];
+				member.visit(tyVisitor, member);
+				elements.push(tyVisitor.result);
+			}
+			this.result = `[${elements.join(', ')}]`;
+			return false;
+		}
+
+		visitList(node: List): boolean {
+			const tyVisitor = new TyPrinter(this.imports);
+			node.type.visit(tyVisitor, node.type);
+			this.result = `${tyVisitor.result}[]`;
+			return false;
+		}
+
+		visitOption(node: Option): boolean {
+			const tyVisitor = new TyPrinter(this.imports);
+			node.type.visit(tyVisitor, node.type);
+			this.result = `Option<${tyVisitor.result}>`;
+			return false;
+		}
+
+		visitResult(node: Result): boolean {
+			const tyVisitor = new TyPrinter(this.imports);
+			if (node.ok !== undefined) {
+				node.ok.visit(tyVisitor, node.ok);
+			} else {
+				tyVisitor.result = 'void';
+			}
+			const ok = tyVisitor.result;
+			if (node.error !== undefined) {
+				node.error.visit(tyVisitor, node.error);
+			} else {
+				tyVisitor.result = 'void';
+			}
+			const error = tyVisitor.result;
+			this.result = `Result<${ok}, ${error}>`;
+			return false;
+		}
+
+		visitBorrow(node: Borrow): boolean {
+			const tyVisitor = new TyPrinter(this.imports);
+			node.name.visit(tyVisitor, node.name);
+			this.result = `Borrow<${tyVisitor.result}>`;
+			return false;
+		}
+
+	}
+
+	export class FuncResultPrinter implements Visitor {
+
+		private readonly imports: Imports;
+		public result: string;
+
+		public static do(node: _FuncResult, imports: Imports): string {
+			const visitor = new FuncResultPrinter(imports);
+			node.visit(visitor, node);
+			return visitor.result;
+		}
+
+		public constructor(imports: Imports) {
+			this.imports = imports;
+			this.result = '';
+		}
+
+		visitFuncResult(node: FuncResult): boolean {
+			this.result = TyPrinter.do(node.type, this.imports);
+			return false;
+		}
+
+		visitNamedFuncResult(_node: NamedFuncResult): boolean {
+			return false;
+		}
+	}
 }
 
-class FuncResultPrinter implements Visitor {
+class TypeScriptEntries {
+	private readonly entries: TypeScript.Emitter[];
 
-	private readonly imports: Imports;
-	public result: string;
-
-	public static do(node: _FuncResult, imports: Imports): string {
-		const visitor = new FuncResultPrinter(imports);
-		node.visit(visitor, node);
-		return visitor.result;
+	constructor() {
+		this.entries = [];
 	}
 
-	public constructor(imports: Imports) {
-		this.imports = imports;
-		this.result = '';
+	public get size(): number {
+		return this.entries.length;
 	}
 
-	visitFuncResult(node: FuncResult): boolean {
-		this.result = TyPrinter.do(node.type, this.imports);
-		return false;
+	public add(type: TypeScript.Emitter): void {
+		this.entries.push(type);
 	}
 
-	visitNamedFuncResult(_node: NamedFuncResult): boolean {
-		return false;
+	public emit(code: Code): void {
+		for (const type of this.entries) {
+			type.emit(code);
+		}
 	}
 }
 
 interface InterfaceData {
 	symbols: Symbols;
-	componentModelTypes: ComponentModelTypes;
+	typeScriptEntries: TypeScriptEntries;
+	componentModelEntries: ComponentModelEntries;
 	exports: string[];
 }
 
@@ -665,10 +746,7 @@ class DocumentVisitor implements Visitor {
 	}
 
 	visitInterfaceItem(item: InterfaceItem): boolean {
-		this.interfaceData.push({ symbols: new Symbols(), componentModelTypes: new ComponentModelTypes(), exports: [] });
-		const name = Names.toTs(item.name);
-		this.code.push(`export namespace ${name} {`);
-		this.code.increaseIndent();
+		this.interfaceData.push({ symbols: new Symbols(), typeScriptEntries: new TypeScriptEntries(), componentModelEntries: new ComponentModelEntries(), exports: [] });
 		for (const member of item.members) {
 			member.visit(this, member);
 		}
@@ -676,14 +754,20 @@ class DocumentVisitor implements Visitor {
 	}
 
 	endVisitInterfaceItem(item: InterfaceItem): void {
+		const name = Names.toTs(item.name);
 		const interfaceData = this.interfaceData.pop();
+		this.code.increaseIndent();
 		if (interfaceData === undefined) {
 			throw new Error(`No interface data available`);
 		}
-		if (interfaceData.componentModelTypes.size > 0) {
+		this.code.push(`export namespace ${name} {`);
+		if (interfaceData.typeScriptEntries.size > 0) {
+			interfaceData.typeScriptEntries.emit(this.code);
+		}
+		if (interfaceData.componentModelEntries.size > 0) {
 			this.code.push(`export namespace $cm {`);
 			this.code.increaseIndent();
-			interfaceData.componentModelTypes.emit(this.code);
+			interfaceData.componentModelEntries.emit(this.code);
 			this.code.decreaseIndent();
 			this.code.push(`}`);
 		}
@@ -709,13 +793,13 @@ class DocumentVisitor implements Visitor {
 			for (const member of importItem.members) {
 				if (Identifier.is(member)) {
 					const memberName = Names.toTs(member);
-					this.code.push(`type ${memberName} = ${tsName}.${memberName};`);
-					interfaceData.componentModelTypes.add(new TypeType(memberName, `${tsName}.$cm.$${memberName}`, 'private'));
+					interfaceData.typeScriptEntries.add(new TypeScript.type(memberName, `${tsName}.${memberName}`));
+					interfaceData.componentModelEntries.add(new ComponentModel.type(memberName, `${tsName}.$cm.$${memberName}`, 'private'));
 				} else if (RenameItem.is(member)) {
 					const fromName = Names.toTs(member.from);
 					const toName = Names.toTs(member.to);
-					this.code.push(`type ${toName} = ${tsName}.${fromName};`);
-					interfaceData.componentModelTypes.add(new TypeType(toName, `${tsName}.$cm.$${fromName}`, 'private'));
+					interfaceData.typeScriptEntries.add(new TypeScript.type(toName, `${tsName}.${fromName}`));
+					interfaceData.componentModelEntries.add(new ComponentModel.type(toName, `${tsName}.$cm.$${fromName}`, 'private'));
 				}
 			}
 		}
@@ -724,37 +808,34 @@ class DocumentVisitor implements Visitor {
 
 	visitTypeItem(item: TypeItem): boolean {
 		const tsName = Names.toTs(item.name);
-		const typeName = TyPrinter.do(item.type, this.code.imports);
-		this.code.push(`export type ${tsName} = ${typeName};`);
+		const typeName = TypeScript.TyPrinter.do(item.type, this.code.imports);
 		const interfaceData = this.getInterfaceData();
-		interfaceData.componentModelTypes.add(new TypeType(tsName, ComponentModelTyPrinter.do(item.type, this.code.imports)));
+		interfaceData.typeScriptEntries.add(new TypeScript.type(tsName, typeName));
+		interfaceData.componentModelEntries.add(new ComponentModel.type(tsName, ComponentModel.TyPrinter.do(item.type, this.code.imports)));
 		return false;
 	}
 
 	visitRecordItem(node: RecordItem): boolean {
 		const tsName = Names.toTs(node.name);
-		const recordType = new RecordType(tsName);
-		this.code.push(`export interface ${tsName} extends $wcm.JRecord {`);
-		this.code.increaseIndent();
+		const literal = new TypeScript.literal(tsName);
+		const recordType = new ComponentModel.record(tsName);
 		for (const member of node.members) {
 			const memberName = Names.toTs(member.name);
-			const typeName = TyPrinter.do(member.type, this.code.imports);
-			this.code.push(`${memberName}: ${typeName};`);
-			recordType.addField(memberName, ComponentModelTyPrinter.do(member.type, this.code.imports));
+			literal.addProperty(memberName, TypeScript.TyPrinter.do(member.type, this.code.imports));
+			recordType.addField(memberName, ComponentModel.TyPrinter.do(member.type, this.code.imports));
 		}
-		this.code.decreaseIndent();
-		this.code.push(`}`);
 		const interfaceData = this.getInterfaceData();
-		interfaceData.componentModelTypes.add(recordType);
+		interfaceData.typeScriptEntries.add(literal);
+		interfaceData.componentModelEntries.add(recordType);
 		return false;
 	}
 
 	visitFuncItem(node: FuncItem): boolean {
 		const interfaceData = this.getInterfaceData();
 		const tsName = Names.toTs(node.name);
-		const functionSignature = new FunctionSignature(tsName);
-		const tyPrinter = new TyPrinter(this.code.imports);
-		const componentModelTyPrinter = new ComponentModelTyPrinter(this.code.imports);
+		const functionSignature = new ComponentModel.functionSignature(tsName);
+		const tyPrinter = new TypeScript.TyPrinter(this.code.imports);
+		const componentModelTyPrinter = new ComponentModel.TyPrinter(this.code.imports);
 		const signature = node.signature;
 		const params: string[] = [];
 		for (const param of signature.params.members) {
@@ -765,12 +846,12 @@ class DocumentVisitor implements Visitor {
 			params.push(`${paramName}: ${typeName}`);
 			functionSignature.addParameter(paramName, componentModelTyPrinter.result);
 		}
-		const returnType = signature.result !== undefined ? FuncResultPrinter.do(signature.result, this.code.imports) : 'void';
+		const returnType = signature.result !== undefined ? TypeScript.FuncResultPrinter.do(signature.result, this.code.imports) : 'void';
 		this.code.push(`export declare function ${tsName}(${params.join(', ')}): ${returnType};`);
 		if (signature.result !== undefined) {
-			functionSignature.setReturnType(ComponentModelFuncResultPrinter.do(signature.result, this.code.imports));
+			functionSignature.setReturnType(ComponentModel.FuncResultPrinter.do(signature.result, this.code.imports));
 		}
-		interfaceData.componentModelTypes.add(functionSignature);
+		interfaceData.componentModelEntries.add(functionSignature);
 		interfaceData.exports.push(tsName);
 		return false;
 	}

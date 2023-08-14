@@ -263,7 +263,7 @@ ty "built in types"
     / tuple
     / list
     / option
-    / ok
+    / result
     / handle
     / id
 
@@ -300,18 +300,18 @@ option "option type"
         return Node.finalize(ast.Option.create(range(location()), type), c1);
     }
 
-ok "result type"
+result "result type"
 	= 'result' c1:_ '<' ok:ty_item ',' error:ty_item '>' {
-        return Node.finalize(ast.ResultType.create(range(location()), ok, error), c1);
+        return Node.finalize(ast.Result.create(range(location()), ok, error), c1);
     }
     / 'result' c1:_ '<' ok:no_result ',' error:ty_item '>' {
-        return Node.finalize(ast.ResultType.create(range(location()), ok, error), c1);
+        return Node.finalize(ast.Result.create(range(location()), ok, error), c1);
     }
     / 'result' c1:_ '<' error:ty_item '>' {
-        return Node.finalize(ast.ResultType.create(range(location()), undefined, error), c1);
+        return Node.finalize(ast.Result.create(range(location()), undefined, error), c1);
     }
     / 'result' {
-        return Node.finalize(ast.ResultType.create(range(location()), undefined, undefined), c1);
+        return Node.finalize(ast.Result.create(range(location()), undefined, undefined), c1);
     }
 
 no_result "no result"

@@ -977,7 +977,7 @@ export namespace Option {
 
 export interface Result extends Node {
 	kind: NodeKind.result;
-	ok: ResultType | undefined;
+	ok: ResultOkType | undefined;
 	error: Ty | undefined;
 	visit: (visitor: Visitor, node: Result) => void;
 }
@@ -985,7 +985,7 @@ export namespace Result {
 	export function is(node: Node): node is Result {
 		return node.kind === NodeKind.result;
 	}
-	export function create(range: Range, ok: ResultType | undefined | null, error: Ty | undefined | null): Result {
+	export function create(range: Range, ok: ResultOkType | undefined | null, error: Ty | undefined | null): Result {
 		ok = ok === null ? undefined : ok;
 		error = error === null ? undefined : error;
 		return { kind: NodeKind.result, range, parent: undefined, ok: ok, error, visit };
@@ -1003,7 +1003,7 @@ export namespace Result {
 	}
 }
 
-export type ResultType = (Ty | NoResultType) & { visit: (visitor: Visitor, node: ResultType) => void };
+export type ResultOkType = (Ty | NoResultType) & { visit: (visitor: Visitor, node: ResultOkType) => void };
 
 export interface NoResultType extends Node {
 	kind: NodeKind.noResult;
