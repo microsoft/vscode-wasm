@@ -1371,7 +1371,7 @@ export class VariantType<T extends JVariantCase, I, V> implements ComponentModel
 
 export type JEnum = number;
 
-export class Enumeration<T extends JEnum> implements ComponentModelType<T> {
+export class EnumType<T extends JEnum> implements ComponentModelType<T> {
 
 	private readonly discriminantType: ComponentModelType<u8> | ComponentModelType<u16> | ComponentModelType<u32>;
 
@@ -1382,7 +1382,7 @@ export class Enumeration<T extends JEnum> implements ComponentModelType<T> {
 
 	constructor(cases: number) {
 		this.cases = cases;
-		this.discriminantType = Enumeration.discriminantType(cases);
+		this.discriminantType = EnumType.discriminantType(cases);
 		this.size = this.discriminantType.size;
 		this.alignment = this.discriminantType.alignment;
 		this.flatTypes = this.discriminantType.flatTypes;
@@ -1423,7 +1423,7 @@ export class Enumeration<T extends JEnum> implements ComponentModelType<T> {
 }
 
 
-export namespace Option {
+export namespace option {
 	export const none = 0 as const;
 	export const some = 1 as const;
 
@@ -1435,8 +1435,8 @@ export namespace Option {
 	export type none<T extends JType> = { readonly case: typeof none } & _common<T>;
 	export type some<T extends JType> = { readonly case: typeof some; readonly value: T } & _common<T>;
 
-	export function _ctor<T extends JType>(c: _ct, v: _vt<T>): Option<T> {
-		return new OptionImpl(c, v) as Option<T>;
+	export function _ctor<T extends JType>(c: _ct, v: _vt<T>): option<T> {
+		return new OptionImpl(c, v) as option<T>;
 	}
 
 	export function _none<T extends JType>(): none<T> {
@@ -1451,12 +1451,12 @@ export namespace Option {
 		private readonly _case: _ct;
 		private readonly _value?: _vt<T>;
 
-		constructor(c: typeof Option.none | typeof Option.some, value: undefined | T) {
+		constructor(c: typeof option.none | typeof option.some, value: undefined | T) {
 			this._case = c;
 			this._value = value;
 		}
 
-		get case():  typeof Option.none | typeof Option.some {
+		get case():  typeof option.none | typeof option.some {
 			return this._case;
 		}
 
@@ -1465,18 +1465,18 @@ export namespace Option {
 		}
 
 		public none(): this is none<T> {
-			return this._case === Option.none;
+			return this._case === option.none;
 		}
 
 		public some(): this is some<T> {
-			return this._case === Option.some;
+			return this._case === option.some;
 		}
 
 	}
 }
-export type Option<T extends JType> = Option.none<T> | Option.some<T>;
+export type option<T extends JType> = option.none<T> | option.some<T>;
 
-export namespace Result {
+export namespace result {
 	export const ok = 0 as const;
 	export const error = 1 as const;
 
@@ -1488,8 +1488,8 @@ export namespace Result {
 	export type ok<O extends JType , E extends JType> = { readonly case: typeof ok; readonly value: O } & _common<O, E>;
 	export type error<O extends JType , E extends JType> = { readonly case: typeof error; readonly value: E } & _common<O, E>;
 
-	export function _ctor<O extends JType , E extends JType>(c: _ct, v: _vt<O, E>): Result<O, E> {
-		return new ResultImpl<O, E>(c, v) as Result<O, E>;
+	export function _ctor<O extends JType , E extends JType>(c: _ct, v: _vt<O, E>): result<O, E> {
+		return new ResultImpl<O, E>(c, v) as result<O, E>;
 	}
 
 	export function _ok<O extends JType , E extends JType>(value: O): ok<O, E> {
@@ -1527,9 +1527,14 @@ export namespace Result {
 		}
 	}
 }
-export type Result<O extends JType , E extends JType> = Result.ok<O, E> | Result.error<O, E>;
+export type result<O extends JType , E extends JType> = result.ok<O, E> | result.error<O, E>;
+export class ResultType<O extends JType , E extends JType> extends VariantType<result<O, E>, 0 | 1, O | E> {
+	constructor(okType: GenericComponentModelType, errorType: GenericComponentModelType) {
+		super([okType, errorType], result._ctor<O, E>);
+	}
+}
 
-export type JType = number | bigint | string | boolean | JRecord | JVariantCase | JFlags | JTuple | JEnum | Option<any> | Result<any, any>;
+export type JType = number | bigint | string | boolean | JRecord | JVariantCase | JFlags | JTuple | JEnum | option<any> | result<any, any>;
 
 export type FunctionParameter = [/* name */string, /* type */GenericComponentModelType];
 

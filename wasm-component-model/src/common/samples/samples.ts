@@ -3,7 +3,7 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { ComponentModelType, Enumeration, FlagsType, JFlags, JRecord, ListType, Option, RecordType, Result, TupleType, VariantType, u32, u8, wstring } from '../componentModel';
+import { ComponentModelType, EnumType, FlagsType, JFlags, JRecord, ListType, option, RecordType, result, TupleType, VariantType, u32, u8, wstring } from '../componentModel';
 
 
 /****************************************************************************************
@@ -187,14 +187,14 @@ export const TestUnionType: ComponentModelType<TestUnion> = new VariantType<Test
 	TestUnion._ctor
 );
 
-export const TestOptionType: ComponentModelType<Option<TestRecord>> = new VariantType<Option<TestRecord>, Option._ct, Option._vt<TestRecord>>(
+export const TestOptionType: ComponentModelType<option<TestRecord>> = new VariantType<option<TestRecord>, option._ct, option._vt<TestRecord>>(
 	[ undefined, TestRecordType],
-	Option._ctor<TestRecord>
+	option._ctor<TestRecord>
 );
 
-export const TestResultType: ComponentModelType<Result<TestTuple, u32>> = new VariantType<Result<TestTuple, u32>, 0 | 1, TestTuple | u32>(
+export const TestResultType: ComponentModelType<result<TestTuple, u32>> = new VariantType<result<TestTuple, u32>, 0 | 1, TestTuple | u32>(
 	[ TestTupleType, u32 ],
-	Result._ctor<TestTuple, u32>
+	result._ctor<TestTuple, u32>
 );
 
 export enum TestEnum {
@@ -202,4 +202,4 @@ export enum TestEnum {
 	b = 1,
 	c = 2
 }
-export const TestEnumType: ComponentModelType<TestEnum> = new Enumeration<TestEnum>(3);
+export const TestEnumType: ComponentModelType<TestEnum> = new EnumType<TestEnum>(3);

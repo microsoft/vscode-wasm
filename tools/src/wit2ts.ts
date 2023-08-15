@@ -8,7 +8,7 @@ import * as fs from 'fs';
 import * as wit from './wit';
 import {
 	Visitor, InterfaceItem, UseItem, PackageItem, Identifier, RenameItem, NamedImports,
-	Document, TypeItem, Tuple, List, Option, Result, RecordItem, FuncItem, Ty, Borrow, _FuncResult, NamedFuncResult, FuncResult
+	Document, TypeItem, Tuple, List, Option, Result, RecordItem, FuncItem, Ty, Borrow, _FuncResult, NamedFuncResult, FuncResult, EnumItem
 } from './wit-ast';
 
 const document = wit.parse(fs.readFileSync('./src/streams.wit', 'utf8'));
@@ -288,6 +288,20 @@ namespace ComponentModel {
 		}
 	}
 
+	export class enumeration implements Emitter {
+		private readonly name: string;
+		private readonly cases: number;
+
+		constructor(name: string, cases: number) {
+			this.name = name;
+			this.cases = cases;
+		}
+
+		public emit(code: Code): void {
+			code.push(`export const $${this.name}: $wcm.ComponentModelType<${this.name}> = new $wcm.EnumType<${this.name}>(${this.cases});`);
+		}
+	}
+
 	export class TyPrinter implements Visitor {
 
 		private readonly imports: Imports;
@@ -374,13 +388,23 @@ namespace ComponentModel {
 			return false;
 		}
 
-		visitTuple(_node: Tuple): boolean {
+		visitTuple(node: Tuple): boolean {
+			const tyPrinter = new TypeScript.TyPrinter(this.imports);
+			const cmTyPrinter = new ComponentModel.TyPrinter(this.imports);
+			const tsElements: string[] = [];
+			const cmElements: string[] = [];
+			for (const member of node.members) {
+				member.visit(tyPrinter, member);
+				tsElements.push(tyPrinter.result);
+				member.visit(cmTyPrinter, member);
+				cmElements.push(cmTyPrinter.result);
+			}
+			this.result = `new $wcm.TupleType<[${tsElements.join(', ')}]>([${cmElements.join(', ')}])`;
 			return false;
 		}
 
 		visitList(node: List): boolean {
-			const typeName = TyPrinter.do(node.type, this.imports);
-			this.result = `new $wcm.ListType<${typeName}>(${TyPrinter.do(node.type, this.imports)})`;
+			this.result = `new $wcm.ListType<${TypeScript.TyPrinter.do(node.type, this.imports)}>(${TyPrinter.do(node.type, this.imports)})`;
 			return false;
 		}
 
@@ -388,7 +412,23 @@ namespace ComponentModel {
 			return false;
 		}
 
-		visitResult(_node: Result): boolean {
+		visitResult(node: Result): boolean {
+			const tyPrinter = new TypeScript.TyPrinter(this.imports);
+			const cmTyPrinter = new ComponentModel.TyPrinter(this.imports);
+			let ok, cmOk, error, cmError: string = 'void';
+			if (node.ok !== undefined) {
+				node.ok.visit(tyPrinter, node.ok);
+				ok = tyPrinter.result;
+				node.ok.visit(cmTyPrinter, node.ok);
+				cmOk = cmTyPrinter.result;
+			}
+			if (node.error !== undefined) {
+				node.error.visit(tyPrinter, node.error);
+				error = tyPrinter.result;
+				node.error.visit(cmTyPrinter, node.error);
+				cmError = cmTyPrinter.result;
+			}
+			this.result = `new $wcm.ResultType<${ok}, ${error}>(${cmOk}, ${cmError})`;
 			return false;
 		}
 
@@ -513,7 +553,7 @@ namespace TypeScript {
 		}
 	}
 
-	export class functionSignature {
+	export class functionSignature implements Emitter {
 		private readonly name: string;
 		private readonly parameters: [string, string][];
 		private returnType: string | undefined;
@@ -541,8 +581,28 @@ namespace TypeScript {
 		}
 	}
 
-	export class enumeration {
+	export class enumeration implements Emitter {
+		private readonly name: string;
+		private readonly values: string[];
 
+		constructor(name: string) {
+			this.name = name;
+			this.values = [];
+		}
+
+		public addValue(name: string): void {
+			this.values.push(name);
+		}
+
+		public emit(code: Code): void {
+			code.push(`export enum ${this.name} {`);
+			code.increaseIndent();
+			for (let i = 0; i < this.values.length; i++) {
+				code.push(`${this.values[i]} = ${i},`);
+			}
+			code.decreaseIndent();
+			code.push(`}`);
+		}
 	}
 
 	export class TyPrinter implements Visitor {
@@ -663,7 +723,8 @@ namespace TypeScript {
 		visitOption(node: Option): boolean {
 			const tyVisitor = new TyPrinter(this.imports);
 			node.type.visit(tyVisitor, node.type);
-			this.result = `Option<${tyVisitor.result}>`;
+			this.result = `option<${tyVisitor.result}>`;
+			this.imports.addBaseType('option');
 			return false;
 		}
 
@@ -681,17 +742,18 @@ namespace TypeScript {
 				tyVisitor.result = 'void';
 			}
 			const error = tyVisitor.result;
-			this.result = `Result<${ok}, ${error}>`;
+			this.result = `result<${ok}, ${error}>`;
+			this.imports.addBaseType('result');
 			return false;
 		}
 
 		visitBorrow(node: Borrow): boolean {
 			const tyVisitor = new TyPrinter(this.imports);
 			node.name.visit(tyVisitor, node.name);
-			this.result = `Borrow<${tyVisitor.result}>`;
+			this.result = `borrow<${tyVisitor.result}>`;
+			this.imports.addBaseType('borrow');
 			return false;
 		}
-
 	}
 
 	export class FuncResultPrinter implements Visitor {
@@ -784,11 +846,11 @@ class DocumentVisitor implements Visitor {
 	endVisitInterfaceItem(item: InterfaceItem): void {
 		const name = Names.toTs(item.name);
 		const interfaceData = this.interfaceData.pop();
-		this.code.increaseIndent();
 		if (interfaceData === undefined) {
 			throw new Error(`No interface data available`);
 		}
 		this.code.push(`export namespace ${name} {`);
+		this.code.increaseIndent();
 		if (interfaceData.typeScriptEntries.size > 0) {
 			interfaceData.typeScriptEntries.emit(this.code);
 		}
@@ -881,6 +943,18 @@ class DocumentVisitor implements Visitor {
 		interfaceData.typeScriptEntries.add(tsSignature);
 		interfaceData.componentModelEntries.add(cmSignature);
 		interfaceData.exports.push(tsName);
+		return false;
+	}
+
+	visitEnumItem(node: EnumItem): boolean {
+		const interfaceData = this.getInterfaceData();
+		const tsName = Names.toTs(node.name);
+		const tsEnum = new TypeScript.enumeration(tsName);
+		for (const member of node.members) {
+			tsEnum.addValue(Names.toTs(member));
+		}
+		interfaceData.typeScriptEntries.add(tsEnum);
+		interfaceData.componentModelEntries.add(new ComponentModel.enumeration(tsName, node.members.length));
 		return false;
 	}
 
