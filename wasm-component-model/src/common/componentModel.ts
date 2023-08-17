@@ -1001,6 +1001,7 @@ interface ArrayFlags {
 	readonly _bits: u32[];
 }
 
+export type flags<K extends keyof any> = Record<K, boolean> & JFlags;
 export class FlagsType<T extends JFlags> implements ComponentModelType<T> {
 
 	private readonly fields: FlagField[];

@@ -8,10 +8,10 @@ import * as fs from 'fs';
 import * as wit from './wit';
 import {
 	Visitor, InterfaceItem, UseItem, PackageItem, Identifier, RenameItem, NamedImports,
-	Document, TypeItem, Tuple, List, Option, Result, RecordItem, FuncItem, Ty, Borrow, _FuncResult, NamedFuncResult, FuncResult, EnumItem
+	Document, TypeItem, Tuple, List, Option, Result, RecordItem, FuncItem, Ty, Borrow, _FuncResult, NamedFuncResult, FuncResult, EnumItem, FlagsItem, VariantItem
 } from './wit-ast';
 
-const document = wit.parse(fs.readFileSync('./src/streams.wit', 'utf8'));
+const document = wit.parse(fs.readFileSync('./src/filesystem.wit', 'utf8'));
 
 namespace Names {
 
@@ -21,7 +21,10 @@ namespace Names {
 	]);
 
 	export function toTs(id: Identifier): string {
-		const result = id.value.replace(/-/g, '_');
+		let result = id.value.replace(/-/g, '_');
+		if (result[0] === '%') {
+			result = result.substring(1);
+		}
 		return keywords.get(result) ?? result;
 	}
 }
@@ -299,6 +302,24 @@ namespace ComponentModel {
 
 		public emit(code: Code): void {
 			code.push(`export const $${this.name}: $wcm.ComponentModelType<${this.name}> = new $wcm.EnumType<${this.name}>(${this.cases});`);
+		}
+	}
+
+	export class flags implements Emitter {
+		private readonly name: string;
+		private readonly values: string[];
+
+		constructor(name: string) {
+			this.name = name;
+			this.values = [];
+		}
+
+		public addValue(name: string): void {
+			this.values.push(name);
+		}
+
+		public emit(code: Code): void {
+			code.push(`export const $${this.name} = $wcm.FlagsType<${this.name}>([${this.values.map(value => `'${value}'`).join(', ')}]);`);
 		}
 	}
 
@@ -605,6 +626,127 @@ namespace TypeScript {
 		}
 	}
 
+	export class flags implements Emitter {
+		private readonly name: string;
+		private readonly values: string[];
+
+		constructor(name: string) {
+			this.name = name;
+			this.values = [];
+		}
+
+		public addValue(name: string): void {
+			this.values.push(name);
+		}
+
+		public emit(code: Code): void {
+			code.push(`export type ${this.name} = flags<${this.values.map(value => `'${value}'`).join(' | ')}>;`);
+		}
+	}
+
+	export class variant implements Emitter {
+		private readonly name: string;
+		private readonly members: [string, string | undefined][];
+
+		constructor(name: string) {
+			this.name = name;
+			this.members = [];
+		}
+
+		public addMember(name: string, type?: string): void {
+			this.members.push([name, type]);
+		}
+
+		public emit(code: Code): void {
+			const names = this.members.map(value => value[0]);
+			const types = this.members.map(value => value[1]);
+			code.push(`export namespace ${this.name} {`);
+			code.increaseIndent();
+			for (let i = 0; i < names.length; i++) {
+				code.push(`export const ${names[i]} = ${i};`);
+			}
+			code.push(`export type _ct = ${names.map(value => `typeof ${value}`).join(' | ')};`);
+			let needsUndefined = false;
+			const items: string[] = [];
+			for (const type of types) {
+				if (type === undefined) {
+					needsUndefined = true;
+				} else {
+					items.push(type);
+				}
+			}
+			if (needsUndefined) {
+				items.push('undefined');
+			}
+			code.push(`export type _vt = ${items.join(' | ')};`);
+			code.push(`type _common = Omit<VariantImpl, 'case' | 'value'>;`);
+			for (const [name, type] of this.members) {
+				if (type !== undefined) {
+					code.push(`export type ${name} = { readonly case: typeof ${name}; readonly value: ${type} } & _common;`);
+				} else {
+					code.push(`export type ${name} = { readonly case: typeof ${name} } & _common;`);
+				}
+			}
+			code.push(`export function _ctor(c: _ct, v: _vt): ${this.name} {`);
+			code.increaseIndent();
+			code.push(`return new VariantImpl(c, v) as ${this.name};`);
+			code.decreaseIndent();
+			code.push(`}`);
+
+			for(const [name, type] of this.members) {
+				if (type !== undefined) {
+					code.push(`export function _${name}(value: ${type}): ${name} {`);
+					code.increaseIndent();
+					code.push(`return new VariantImpl(${name}, value) as ${name};`);
+					code.decreaseIndent();
+					code.push(`}`);
+				} else {
+					code.push(`export function _${name}(): ${name} {`);
+					code.increaseIndent();
+					code.push(`return new VariantImpl(${name}, undefined) as ${name};`);
+					code.decreaseIndent();
+					code.push(`}`);
+				}
+			}
+
+			code.push(`class VariantImpl {`);
+			code.increaseIndent();
+			code.push(`private readonly _case: _ct;`);
+			code.push(`private readonly _value?: _vt;`);
+			code.push(`constructor(c: _ct, value: _vt) {`);
+			code.increaseIndent();
+			code.push(`this._case = c;`);
+			code.push(`this._value = value;`);
+			code.decreaseIndent();
+			code.push(`}`);
+			code.push(`get case(): _ct {`);
+			code.increaseIndent();
+			code.push(`return this._case;`);
+			code.decreaseIndent();
+			code.push(`}`);
+			code.push(`get value(): _vt {`);
+			code.increaseIndent();
+			code.push(`return this._value;`);
+			code.decreaseIndent();
+			code.push(`}`);
+			for (const [name, type] of this.members) {
+				code.push(`${name}(): this is ${name} {`);
+				code.increaseIndent();
+				code.push(`return this._case === ${this.name}.${name};`);
+				code.decreaseIndent();
+				code.push(`}`);
+			}
+			// class
+			code.decreaseIndent();
+			code.push(`}`);
+			//namespace
+			code.decreaseIndent();
+			code.push(`}`);
+
+			code.push(`export type ${this.name} = ${names.map(value => `${this.name}.${value}`).join(' | ')}`);
+		}
+	}
+
 	export class TyPrinter implements Visitor {
 
 		private readonly imports: Imports;
@@ -716,7 +858,42 @@ namespace TypeScript {
 		visitList(node: List): boolean {
 			const tyVisitor = new TyPrinter(this.imports);
 			node.type.visit(tyVisitor, node.type);
-			this.result = `${tyVisitor.result}[]`;
+			const type = tyVisitor.result;
+			switch (type) {
+				case 'u8':
+					this.result = 'Uint8Array';
+					break;
+				case 'u16':
+					this.result = 'Uint16Array';
+					break;
+				case 'u32':
+					this.result = 'Uint32Array';
+					break;
+				case 'u64':
+					this.result = 'BigUint64Array';
+					break;
+				case 's8':
+					this.result = 'Int8Array';
+					break;
+				case 's16':
+					this.result = 'Int16Array';
+					break;
+				case 's32':
+					this.result = 'Int32Array';
+					break;
+				case 's64':
+					this.result = 'BigInt64Array';
+					break;
+				case 'float32':
+					this.result = 'Float32Array';
+					break;
+				case 'float64':
+					this.result = 'Float64Array';
+					break;
+				default:
+					this.result = `${tyVisitor.result}[]`;
+					break;
+			}
 			return false;
 		}
 
@@ -955,6 +1132,39 @@ class DocumentVisitor implements Visitor {
 		}
 		interfaceData.typeScriptEntries.add(tsEnum);
 		interfaceData.componentModelEntries.add(new ComponentModel.enumeration(tsName, node.members.length));
+		return false;
+	}
+
+	visitFlagsItem(node: FlagsItem): boolean {
+		this.code.imports.addBaseType('flags');
+		const interfaceData = this.getInterfaceData();
+		const tsName = Names.toTs(node.name);
+		const tsFlags = new TypeScript.flags(tsName);
+		const cmFlags = new ComponentModel.flags(tsName);
+		for (const member of node.members) {
+			const name = Names.toTs(member);
+			tsFlags.addValue(name);
+			cmFlags.addValue(name);
+		}
+		interfaceData.typeScriptEntries.add(tsFlags);
+		interfaceData.componentModelEntries.add(cmFlags);
+		return false;
+	}
+
+	visitVariantItem(node: VariantItem): boolean {
+		const interfaceData = this.getInterfaceData();
+		const tsName = Names.toTs(node.name);
+		const tsVariant = new TypeScript.variant(tsName);
+		for (const member of node.members) {
+			const memberName = Names.toTs(member.name);
+			if (member.type !== undefined) {
+				const memberType = TypeScript.TyPrinter.do(member.type, this.code.imports);
+				tsVariant.addMember(memberName, memberType);
+			} else {
+				tsVariant.addMember(memberName);
+			}
+		}
+		interfaceData.typeScriptEntries.add(tsVariant);
 		return false;
 	}
 
