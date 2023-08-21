@@ -66,7 +66,7 @@ async function run(): Promise<void> {
 		reporter: undefined
 	});
 
-	require('../../common/test/wasi.test');
+	require('../../common/test/wasi.worker.test');
 
 	mocha.run(failures => {
 		const message: TestsDoneMessage = { method: 'testsDone', failures };
