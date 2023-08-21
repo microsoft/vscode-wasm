@@ -8,6 +8,9 @@ RIL.install();
 import path from 'node:path';
 import {  MessagePort, Worker } from 'node:worker_threads';
 
+import glob from 'glob';
+import Mocha from 'mocha';
+
 import { NodeServiceConnection } from '../process';
 import { createWorkspaceContent, createTmp, cleanupTmp, cleanupWorkspaceContent, createWasiService, WorkspaceContent } from '../../common/test/index';
 import { WorkerMessage } from '../../common/connection';
@@ -42,12 +45,12 @@ class TestNodeServiceConnection extends NodeServiceConnection {
 }
 
 
-export async function run(): Promise<void> {
+export async function run(_testRoot: string): Promise<void> {
 
 	const workspaceContent = await createWorkspaceContent();
 
 	try {
-		await doRun(workspaceContent, true);
+		await doRunWorkerTests(workspaceContent, true);
 	} catch (error) {
 		console.error(error);
 	} finally {
@@ -57,9 +60,10 @@ export async function run(): Promise<void> {
 			console.error(err);
 		}
 	}
+
 	try {
 		await createTmp(workspaceContent);
-		await doRun(workspaceContent, false);
+		await doRunWorkerTests(workspaceContent, false);
 	} catch (error) {
 		console.error(error);
 	} finally {
@@ -69,9 +73,30 @@ export async function run(): Promise<void> {
 			console.error(err);
 		}
 	}
+
+	const commonTestRoot = path.join(__dirname, '..', '..', 'common', 'test');
+	const files = (await glob('**/**main.test.js', { cwd: commonTestRoot })).map(f => path.resolve(commonTestRoot, f));
+
+	// Create the mocha test
+	const mocha = new Mocha({
+		ui: 'tdd',
+		color: true
+	});
+
+	// Add files to the test suite
+	files.forEach(f => mocha.addFile(f));
+	return new Promise<void>((resolve, reject) => {
+		mocha.run(failures => {
+			if (failures > 0) {
+				reject(new Error(`${failures} tests failed.`));
+			} else {
+				resolve();
+			}
+		});
+	});
 }
 
-async function doRun(workspaceContent: WorkspaceContent, shared: boolean): Promise<void> {
+async function doRunWorkerTests(workspaceContent: WorkspaceContent, shared: boolean): Promise<void> {
 	const wasiService = createWasiService(workspaceContent);
 
 	const worker = new Worker(path.join(__dirname, 'testWorker'));

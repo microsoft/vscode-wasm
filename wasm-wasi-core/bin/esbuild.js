@@ -62,6 +62,10 @@ const webThreadWorkerOptions = {
 const webTestsIndexOptions = {
 	entryPoints: ['src/web/test/index.ts'],
 	outfile: 'dist/web/test/index.js',
+	define: {
+		process: '{"env":{}}'
+	},
+	plugins: [ assertResolvePlugin ],
 	format: 'cjs',
 	...sharedWebOptions
 }
