@@ -64,12 +64,14 @@ export class BrowserWasiProcess extends WasiProcess {
 		if (this.mainWorker !== undefined) {
 			this.mainWorker.terminate();
 		}
-		for (const worker of this.threadWorkers.values()) {
-			worker.terminate();
-		}
-		this.threadWorkers.clear();
+		await this.cleanUpWorkers();
 		await this.destroyStreams();
 		await this.cleanupFileDescriptors();
+
+		// when terinated, web workers silently exit, and there are no events
+		// to hook on to know when they are done. To ensure that the run promise resolves,
+		// we call it here so callers awaiting `process.run()` will get a result.
+		this.resolveRunPromise(result);
 		return result;
 	}
 
