@@ -11,7 +11,7 @@ import {
 	Document, TypeItem, Tuple, List, Option, Result, RecordItem, FuncItem, Ty, Borrow, _FuncResult, NamedFuncResult, FuncResult, EnumItem, FlagsItem, VariantItem
 } from './wit-ast';
 
-const document = wit.parse(fs.readFileSync('./src/filesystem.wit', 'utf8'));
+const document = wit.parse(fs.readFileSync('./src/types.wit', 'utf8'));
 
 namespace Names {
 
@@ -320,6 +320,24 @@ namespace ComponentModel {
 
 		public emit(code: Code): void {
 			code.push(`export const $${this.name} = $wcm.FlagsType<${this.name}>([${this.values.map(value => `'${value}'`).join(', ')}]);`);
+		}
+	}
+
+	export class variant implements Emitter {
+		private readonly name: string;
+		private readonly cases: (string | undefined)[];
+
+		constructor(name: string) {
+			this.name = name;
+			this.cases = [];
+		}
+
+		public addMember(name: string | undefined): void {
+			this.cases.push(name);
+		}
+
+		public emit(code: Code): void {
+			code.push(`export const $${this.name} = $wcm.VariantType<${this.name}, ${this.name}._ct, ${this.name}._vt>(${this.cases.map(value => value === undefined ? 'undefined' : value).join(', ')});`);
 		}
 	}
 
@@ -729,7 +747,7 @@ namespace TypeScript {
 			code.push(`return this._value;`);
 			code.decreaseIndent();
 			code.push(`}`);
-			for (const [name, type] of this.members) {
+			for (const [name, ] of this.members) {
 				code.push(`${name}(): this is ${name} {`);
 				code.increaseIndent();
 				code.push(`return this._case === ${this.name}.${name};`);
@@ -907,18 +925,16 @@ namespace TypeScript {
 
 		visitResult(node: Result): boolean {
 			const tyVisitor = new TyPrinter(this.imports);
-			if (node.ok !== undefined) {
+			let ok: string = 'void';
+			if (node.ok !== undefined && Ty.is(node.ok)) {
 				node.ok.visit(tyVisitor, node.ok);
-			} else {
-				tyVisitor.result = 'void';
+				ok = tyVisitor.result;
 			}
-			const ok = tyVisitor.result;
-			if (node.error !== undefined) {
+			let error: string = 'void';
+			if (node.error !== undefined && Ty.is(node.error)) {
 				node.error.visit(tyVisitor, node.error);
-			} else {
-				tyVisitor.result = 'void';
+				error = tyVisitor.result;
 			}
-			const error = tyVisitor.result;
 			this.result = `result<${ok}, ${error}>`;
 			this.imports.addBaseType('result');
 			return false;
@@ -1155,16 +1171,19 @@ class DocumentVisitor implements Visitor {
 		const interfaceData = this.getInterfaceData();
 		const tsName = Names.toTs(node.name);
 		const tsVariant = new TypeScript.variant(tsName);
+		const cmVariant = new ComponentModel.variant(tsName);
 		for (const member of node.members) {
 			const memberName = Names.toTs(member.name);
 			if (member.type !== undefined) {
-				const memberType = TypeScript.TyPrinter.do(member.type, this.code.imports);
-				tsVariant.addMember(memberName, memberType);
+				tsVariant.addMember(memberName, TypeScript.TyPrinter.do(member.type, this.code.imports));
+				cmVariant.addMember(ComponentModel.TyPrinter.do(member.type, this.code.imports));
 			} else {
 				tsVariant.addMember(memberName);
+				cmVariant.addMember(undefined);
 			}
 		}
 		interfaceData.typeScriptEntries.add(tsVariant);
+		interfaceData.componentModelEntries.add(cmVariant);
 		return false;
 	}
 

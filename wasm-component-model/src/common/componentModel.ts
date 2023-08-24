@@ -1528,7 +1528,7 @@ export namespace result {
 		}
 	}
 }
-export type result<O extends JType , E extends JType> = result.ok<O, E> | result.error<O, E>;
+export type result<O extends JType | void , E extends JType> = result.ok<O, E> | result.error<O, E>;
 export class ResultType<O extends JType , E extends JType> extends VariantType<result<O, E>, 0 | 1, O | E> {
 	constructor(okType: GenericComponentModelType, errorType: GenericComponentModelType) {
 		super([okType, errorType], result._ctor<O, E>);
