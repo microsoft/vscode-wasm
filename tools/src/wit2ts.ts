@@ -11,7 +11,7 @@ import {
 	Document, TypeItem, Tuple, List, Option, Result, RecordItem, FuncItem, Ty, Borrow, _FuncResult, NamedFuncResult, FuncResult, EnumItem, FlagsItem, VariantItem
 } from './wit-ast';
 
-const document = wit.parse(fs.readFileSync('./src/types.wit', 'utf8'));
+const document = wit.parse(fs.readFileSync('./src/filesystem.wit', 'utf8'));
 
 namespace Names {
 
@@ -182,7 +182,7 @@ namespace ComponentModel {
 			for (const [name, type] of this.fields) {
 				elements.push(`['${name}', ${type}]`);
 			}
-			code.push(`export const $${this.name}: $wcm.ComponentModelType<${this.name}> = new $wcm.RecordType<${this.name}>([`);
+			code.push(`export const $${this.name} = new $wcm.RecordType<${this.name}>([`);
 			code.increaseIndent();
 			code.push(`${elements.join(', ')}`);
 			code.decreaseIndent();
@@ -209,7 +209,7 @@ namespace ComponentModel {
 			for (const type of this.fields) {
 				elements.push(type);
 			}
-			code.push(`export const $${this.name}: $wcm.ComponentModelType<${this.name}> = new $wcm.TupleType<${this.name}>([${elements.join(', ')}]);`);
+			code.push(`export const $${this.name} = new $wcm.TupleType<${this.name}>([${elements.join(', ')}]);`);
 		}
 	}
 
@@ -224,7 +224,7 @@ namespace ComponentModel {
 		}
 
 		public emit(code: Code): void {
-			code.push(`export const $${this.name}: $wcm.ComponentModelType<${this.name}> = new $wcm.ListType<${this.name}>(${this.type});`);
+			code.push(`export const $${this.name} = new $wcm.ListType<${this.name}>(${this.type});`);
 		}
 	}
 
@@ -276,9 +276,9 @@ namespace ComponentModel {
 				elements.push(`['${name}', ${type}]`);
 			}
 			if (elements.length === 0) {
-				code.push(`export const $${this.name}: $wcm.FunctionSignature = new $wcm.FunctionSignature('${this.name}', [], ${this.returnType});`);
+				code.push(`export const $${this.name} = new $wcm.FunctionSignature('${this.name}', [], ${this.returnType});`);
 			} else {
-				code.push(`export const $${this.name}: $wcm.FunctionSignature = new $wcm.FunctionSignature('${this.name}', [`);
+				code.push(`export const $${this.name} = new $wcm.FunctionSignature('${this.name}', [`);
 				code.increaseIndent();
 				code.push(`${elements.join(', ')}`);
 				code.decreaseIndent();
@@ -301,7 +301,7 @@ namespace ComponentModel {
 		}
 
 		public emit(code: Code): void {
-			code.push(`export const $${this.name}: $wcm.ComponentModelType<${this.name}> = new $wcm.EnumType<${this.name}>(${this.cases});`);
+			code.push(`export const $${this.name} = new $wcm.EnumType<${this.name}>(${this.cases});`);
 		}
 	}
 
@@ -319,7 +319,7 @@ namespace ComponentModel {
 		}
 
 		public emit(code: Code): void {
-			code.push(`export const $${this.name} = $wcm.FlagsType<${this.name}>([${this.values.map(value => `'${value}'`).join(', ')}]);`);
+			code.push(`export const $${this.name} = new $wcm.FlagsType<${this.name}>([${this.values.map(value => `'${value}'`).join(', ')}]);`);
 		}
 	}
 
@@ -337,7 +337,7 @@ namespace ComponentModel {
 		}
 
 		public emit(code: Code): void {
-			code.push(`export const $${this.name} = $wcm.VariantType<${this.name}, ${this.name}._ct, ${this.name}._vt>(${this.cases.map(value => value === undefined ? 'undefined' : value).join(', ')});`);
+			code.push(`export const $${this.name} = new $wcm.VariantType<${this.name}, ${this.name}._ct, ${this.name}._vt>([${this.cases.map(value => value === undefined ? 'undefined' : value).join(', ')}], ${this.name}._ctor);`);
 		}
 	}
 
@@ -443,25 +443,61 @@ namespace ComponentModel {
 		}
 
 		visitList(node: List): boolean {
-			this.result = `new $wcm.ListType<${TypeScript.TyPrinter.do(node.type, this.imports)}>(${TyPrinter.do(node.type, this.imports)})`;
+			const type = TypeScript.TyPrinter.do(node.type, this.imports);
+			switch (type) {
+				case 'u8':
+					this.result = 'new $wcm.Uint8ArrayType()';
+					break;
+				case 'u16':
+					this.result = 'new $wcm.Uint16ArrayType()';
+					break;
+				case 'u32':
+					this.result = 'new $wcm.Uint32ArrayType()';
+					break;
+				case 'u64':
+					this.result = 'new $wcm.BigUint64ArrayType()';
+					break;
+				case 's8':
+					this.result = 'new $wcm.Int8ArrayType();';
+					break;
+				case 's16':
+					this.result = 'new $wcm.Int16ArrayType()';
+					break;
+				case 's32':
+					this.result = 'new $wcm.Int32ArrayType()';
+					break;
+				case 's64':
+					this.result = 'new $wcm.BigInt64ArrayType()';
+					break;
+				case 'float32':
+					this.result = 'new $wcm.Float32ArrayType()';
+					break;
+				case 'float64':
+					this.result = 'new $wcm.Float64ArrayType()';
+					break;
+				default:
+					this.result = `new $wcm.ListType<${type}>(${TyPrinter.do(node.type, this.imports)})`;
+					break;
+			}
 			return false;
 		}
 
-		visitOption(_node: Option): boolean {
+		visitOption(node: Option): boolean {
+			this.result = `new $wcm.OptionType<${TypeScript.TyPrinter.do(node.type, this.imports)}>(${ComponentModel.TyPrinter.do(node.type, this.imports)})`;
 			return false;
 		}
 
 		visitResult(node: Result): boolean {
 			const tyPrinter = new TypeScript.TyPrinter(this.imports);
 			const cmTyPrinter = new ComponentModel.TyPrinter(this.imports);
-			let ok, cmOk, error, cmError: string = 'void';
-			if (node.ok !== undefined) {
+			let ok = 'void', cmOk = 'void', error = 'void', cmError = 'void';
+			if (node.ok !== undefined && Ty.is(node.ok)) {
 				node.ok.visit(tyPrinter, node.ok);
 				ok = tyPrinter.result;
 				node.ok.visit(cmTyPrinter, node.ok);
 				cmOk = cmTyPrinter.result;
 			}
-			if (node.error !== undefined) {
+			if (node.error !== undefined && Ty.is(node.error)) {
 				node.error.visit(tyPrinter, node.error);
 				error = tyPrinter.result;
 				node.error.visit(cmTyPrinter, node.error);

@@ -801,6 +801,178 @@ export class ListType<T> implements ComponentModelType<T[]> {
 	}
 }
 
+abstract class TypeArrayType<T> implements ComponentModelType<T> {
+
+	private static readonly offsets = {
+		data: 0,
+		length: 4
+	};
+
+	public readonly size: size;
+	public readonly alignment: alignment;
+	public readonly flatTypes: readonly wasmTypeName[];
+
+	constructor() {
+		this.size = 8;
+		this.alignment = 4;
+		this.flatTypes = ['i32', 'i32'];
+	}
+
+	public load(memory: Memory, ptr: ptr, options: Options): T {
+		const view = memory.view;
+		const offsets = TypeArrayType.offsets;
+		const dataPtr: ptr =  view.getUint32(ptr + offsets.data);
+		const codeUnits: u32 = view.getUint32(ptr + offsets.length);
+		return this.loadFromRange(memory, dataPtr, codeUnits, options);
+	}
+
+	public liftFlat(memory: Memory, values: FlatValuesIter, options: Options): T {
+		const dataPtr: ptr = values.next().value as ptr;
+		const length: u32 = values.next().value as u32;
+		return this.loadFromRange(memory, dataPtr, length, options);
+	}
+
+	public alloc(memory: Memory): ptr {
+		return memory.alloc(this.size, this.alignment);
+	}
+
+	public store(memory: Memory, ptr: ptr, value: T, options: Options): void {
+		const [ data, length ] = this.storeIntoRange(memory, value, options);
+		const view = memory.view;
+		const offsets = TypeArrayType.offsets;
+		view.setUint32(ptr + offsets.data, data, true);
+		view.setUint32(ptr + offsets.length, length, true);
+	}
+
+	public lowerFlat(result: wasmType[], memory: Memory, value: T, options: Options): void {
+		result.push(...this.storeIntoRange(memory, value, options));
+	}
+
+	protected abstract loadFromRange(memory: Memory, data: ptr, length: u32, options: Options): T;
+	protected abstract storeIntoRange(memory: Memory, value: T, options: Options): [ptr, u32];
+
+}
+
+export class Int8ArrayType extends TypeArrayType<Int8Array> {
+	protected loadFromRange(memory: Memory, data: ptr, length: u32): Int8Array {
+		return new Int8Array(memory.buffer, data, length);
+	}
+	protected storeIntoRange(memory: Memory, value: Int8Array): [ptr, u32] {
+		const ptr = memory.alloc(s8.alignment, value.byteLength);
+		const target = new Int8Array(memory.buffer, ptr, value.length);
+		target.set(value);
+		return [ptr, target.length];
+	}
+}
+
+export class Int16ArrayType extends TypeArrayType<Int16Array> {
+	protected loadFromRange(memory: Memory, data: ptr, length: u32): Int16Array {
+		return new Int16Array(memory.buffer, data, length);
+	}
+	protected storeIntoRange(memory: Memory, value: Int16Array): [ptr, u32] {
+		const ptr = memory.alloc(s16.alignment, value.byteLength);
+		const target = new Int16Array(memory.buffer, ptr, value.length);
+		target.set(value);
+		return [ptr, target.length];
+	}
+}
+
+export class Int32ArrayType extends TypeArrayType<Int32Array> {
+	protected loadFromRange(memory: Memory, data: ptr, length: u32): Int32Array {
+		return new Int32Array(memory.buffer, data, length);
+	}
+	protected storeIntoRange(memory: Memory, value: Int32Array): [ptr, u32] {
+		const ptr = memory.alloc(s32.alignment, value.byteLength);
+		const target = new Int32Array(memory.buffer, ptr, value.length);
+		target.set(value);
+		return [ptr, target.length];
+	}
+}
+
+export class BigInt64ArrayType extends TypeArrayType<BigInt64Array> {
+	protected loadFromRange(memory: Memory, data: ptr, length: u32): BigInt64Array {
+		return new BigInt64Array(memory.buffer, data, length);
+	}
+	protected storeIntoRange(memory: Memory, value: BigInt64Array): [ptr, u32] {
+		const ptr = memory.alloc(s64.alignment, value.byteLength);
+		const target = new BigInt64Array(memory.buffer, ptr, value.length);
+		target.set(value);
+		return [ptr, target.length];
+	}
+}
+
+export class Uint8ArrayType extends TypeArrayType<Uint8Array> {
+	protected loadFromRange(memory: Memory, data: ptr, length: u32): Uint8Array {
+		return new Uint8Array(memory.buffer, data, length);
+	}
+	protected storeIntoRange(memory: Memory, value: Uint8Array): [ptr, u32] {
+		const ptr = memory.alloc(u8.alignment, value.byteLength);
+		const target = new Uint8Array(memory.buffer, ptr, value.length);
+		target.set(value);
+		return [ptr, target.length];
+	}
+}
+
+export class Uint16ArrayType extends TypeArrayType<Uint16Array> {
+	protected loadFromRange(memory: Memory, data: ptr, length: u32): Uint16Array {
+		return new Uint16Array(memory.buffer, data, length);
+	}
+	protected storeIntoRange(memory: Memory, value: Uint16Array): [ptr, u32] {
+		const ptr = memory.alloc(u16.alignment, value.byteLength);
+		const target = new Uint16Array(memory.buffer, ptr, value.length);
+		target.set(value);
+		return [ptr, target.length];
+	}
+}
+
+export class Uint32ArrayType extends TypeArrayType<Uint32Array> {
+	protected loadFromRange(memory: Memory, data: ptr, length: u32): Uint32Array {
+		return new Uint32Array(memory.buffer, data, length);
+	}
+	protected storeIntoRange(memory: Memory, value: Uint32Array): [ptr, u32] {
+		const ptr = memory.alloc(u32.alignment, value.byteLength);
+		const target = new Uint32Array(memory.buffer, ptr, value.length);
+		target.set(value);
+		return [ptr, target.length];
+	}
+}
+
+export class BigUint64ArrayType extends TypeArrayType<BigUint64Array> {
+	protected loadFromRange(memory: Memory, data: ptr, length: u32): BigUint64Array {
+		return new BigUint64Array(memory.buffer, data, length);
+	}
+	protected storeIntoRange(memory: Memory, value: BigUint64Array): [ptr, u32] {
+		const ptr = memory.alloc(u64.alignment, value.byteLength);
+		const target = new BigUint64Array(memory.buffer, ptr, value.length);
+		target.set(value);
+		return [ptr, target.length];
+	}
+}
+
+export class Float32ArrayType extends TypeArrayType<Float32Array> {
+	protected loadFromRange(memory: Memory, data: ptr, length: u32): Float32Array {
+		return new Float32Array(memory.buffer, data, length);
+	}
+	protected storeIntoRange(memory: Memory, value: Float32Array): [ptr, u32] {
+		const ptr = memory.alloc(float32.alignment, value.byteLength);
+		const target = new Float32Array(memory.buffer, ptr, value.length);
+		target.set(value);
+		return [ptr, target.length];
+	}
+}
+
+export class Float64ArrayType extends TypeArrayType<Float64Array> {
+	protected loadFromRange(memory: Memory, data: ptr, length: u32): Float64Array {
+		return new Float64Array(memory.buffer, data, length);
+	}
+	protected storeIntoRange(memory: Memory, value: Float64Array): [ptr, u32] {
+		const ptr = memory.alloc(float32.alignment, value.byteLength);
+		const target = new Float64Array(memory.buffer, ptr, value.length);
+		target.set(value);
+		return [ptr, target.length];
+	}
+}
+
 interface TypedField {
 	readonly type: GenericComponentModelType;
 	readonly offset: number;
@@ -1198,7 +1370,7 @@ namespace VariantCase {
 
 export interface JVariantCase {
 	readonly case: u32;
-	readonly value?: JType | undefined;
+	readonly value?: JType | undefined | void;
 }
 
 export class VariantType<T extends JVariantCase, I, V> implements ComponentModelType<T> {
@@ -1476,32 +1648,37 @@ export namespace option {
 	}
 }
 export type option<T extends JType> = option.none<T> | option.some<T>;
+export class OptionType<T extends JType> extends VariantType<option<T>, option._ct, option._vt<T>> {
+	constructor(type: GenericComponentModelType) {
+		super([undefined, type], option._ctor<T>);
+	}
+}
 
 export namespace result {
 	export const ok = 0 as const;
 	export const error = 1 as const;
 
 	export type _ct = typeof ok | typeof error;
-	export type _vt<O extends JType , E extends JType> = O | E;
+	export type _vt<O extends JType | void, E extends JType> = O | E;
 
-	type _common<O extends JType , E extends JType> = Omit<ResultImpl<O, E>, 'case' | 'value'>;
+	type _common<O extends JType | void, E extends JType> = Omit<ResultImpl<O, E>, 'case' | 'value'>;
 
-	export type ok<O extends JType , E extends JType> = { readonly case: typeof ok; readonly value: O } & _common<O, E>;
-	export type error<O extends JType , E extends JType> = { readonly case: typeof error; readonly value: E } & _common<O, E>;
+	export type ok<O extends JType | void, E extends JType> = { readonly case: typeof ok; readonly value: O } & _common<O, E>;
+	export type error<O extends JType | void, E extends JType> = { readonly case: typeof error; readonly value: E } & _common<O, E>;
 
-	export function _ctor<O extends JType , E extends JType>(c: _ct, v: _vt<O, E>): result<O, E> {
+	export function _ctor<O extends JType | void, E extends JType>(c: _ct, v: _vt<O, E>): result<O, E> {
 		return new ResultImpl<O, E>(c, v) as result<O, E>;
 	}
 
-	export function _ok<O extends JType , E extends JType>(value: O): ok<O, E> {
+	export function _ok<O extends JType | void , E extends JType>(value: O): ok<O, E> {
 		return new ResultImpl<O, E>(ok, value) as ok<O, E>;
 	}
 
-	export function _error<O extends JType , E extends JType>(value: E): error<O, E> {
+	export function _error<O extends JType | void, E extends JType>(value: E): error<O, E> {
 		return new ResultImpl<O, E>(error, value ) as error<O, E>;
 	}
 
-	export class ResultImpl<O extends JType , E extends JType> implements JVariantCase {
+	export class ResultImpl<O extends JType | void, E extends JType> implements JVariantCase {
 
 		private readonly _case: _ct;
 		private readonly _value: _vt<O, E>;
@@ -1528,14 +1705,14 @@ export namespace result {
 		}
 	}
 }
-export type result<O extends JType | void , E extends JType> = result.ok<O, E> | result.error<O, E>;
-export class ResultType<O extends JType , E extends JType> extends VariantType<result<O, E>, 0 | 1, O | E> {
-	constructor(okType: GenericComponentModelType, errorType: GenericComponentModelType) {
+export type result<O extends JType | void, E extends JType> = result.ok<O, E> | result.error<O, E>;
+export class ResultType<O extends JType | void, E extends JType> extends VariantType<result<O, E>, 0 | 1, O | E> {
+	constructor(okType: GenericComponentModelType | undefined, errorType: GenericComponentModelType) {
 		super([okType, errorType], result._ctor<O, E>);
 	}
 }
 
-export type JType = number | bigint | string | boolean | JRecord | JVariantCase | JFlags | JTuple | JEnum | option<any> | result<any, any>;
+export type JType = number | bigint | string | boolean | JRecord | JVariantCase | JFlags | JTuple | JEnum | option<any> | result<any, any> | Int8Array | Int16Array | Int32Array | BigInt64Array | Uint8Array | Uint16Array | Uint32Array | BigUint64Array | Float32Array | Float64Array;
 
 export type FunctionParameter = [/* name */string, /* type */GenericComponentModelType];
 
