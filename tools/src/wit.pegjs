@@ -223,8 +223,8 @@ use_names_item
 	/ id_item
 
 func_item "function"
-	= name:id_item ':' signature:func_type {
-        return Node.finalize(ast.FuncItem.create(range(location()), name, signature));
+	= c1:_ name:id c2:_ ':' signature:func_type {
+        return Node.finalize(ast.FuncItem.create(range(location()), name, signature), c1, c2);
     }
 
 func_type

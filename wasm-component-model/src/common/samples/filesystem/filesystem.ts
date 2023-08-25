@@ -644,70 +644,400 @@ export namespace filesystem {
      */
     export type descriptor = u32;
 
+    /**
+     * Return a stream for reading from a file.
+     *
+     * Multiple read, write, and append streams may be active on the same open
+     * file and they do not interfere with each other.
+     *
+     * Note: This allows using `wasi:io/streams.read`, which is similar to `read` in POSIX.
+     */
     export declare function read_via_stream($this: descriptor, offset: filesize): result<input_stream, error_code>;
 
+    /**
+     * Return a stream for writing to a file.
+     *
+     * Note: This allows using `wasi:io/streams.write`, which is similar to `write` in
+     * POSIX.
+     */
     export declare function write_via_stream($this: descriptor, offset: filesize): result<output_stream, error_code>;
 
+    /**
+     * Return a stream for appending to a file.
+     *
+     * Note: This allows using `wasi:io/streams.write`, which is similar to `write` with
+     * `O_APPEND` in in POSIX.
+     */
     export declare function append_via_stream($this: descriptor): result<output_stream, error_code>;
 
+    /**
+     * Provide file advisory information on a descriptor.
+     *
+     * This is similar to `posix_fadvise` in POSIX.
+     */
     export declare function advise($this: descriptor, offset: filesize, length: filesize, advice: advice): result<void, error_code>;
 
+    /**
+     * Synchronize the data of a file to disk.
+     *
+     * This function succeeds with no effect if the file descriptor is not
+     * opened for writing.
+     *
+     * Note: This is similar to `fdatasync` in POSIX.
+     */
     export declare function sync_data($this: descriptor): result<void, error_code>;
 
+    /**
+     * Get flags associated with a descriptor.
+     *
+     * Note: This returns similar flags to `fcntl(fd, F_GETFL)` in POSIX.
+     *
+     * Note: This returns the value that was the `fs_flags` value returned
+     * from `fdstat_get` in earlier versions of WASI.
+     */
     export declare function get_flags($this: descriptor): result<descriptor_flags, error_code>;
 
+    /**
+     * Get the dynamic type of a descriptor.
+     *
+     * Note: This returns the same value as the `type` field of the `fd-stat`
+     * returned by `stat`, `stat-at` and similar.
+     *
+     * Note: This returns similar flags to the `st_mode & S_IFMT` value provided
+     * by `fstat` in POSIX.
+     *
+     * Note: This returns the value that was the `fs_filetype` value returned
+     * from `fdstat_get` in earlier versions of WASI.
+     */
     export declare function get_type($this: descriptor): result<descriptor_type, error_code>;
 
+    /**
+     * Adjust the size of an open file. If this increases the file's size, the
+     * extra bytes are filled with zeros.
+     *
+     * Note: This was called `fd_filestat_set_size` in earlier versions of WASI.
+     */
     export declare function set_size($this: descriptor, size: filesize): result<void, error_code>;
 
+    /**
+     * Adjust the timestamps of an open file or directory.
+     *
+     * Note: This is similar to `futimens` in POSIX.
+     *
+     * Note: This was called `fd_filestat_set_times` in earlier versions of WASI.
+     */
     export declare function set_times($this: descriptor, data_access_timestamp: new_timestamp, data_modification_timestamp: new_timestamp): result<void, error_code>;
 
+    /**
+     * Read from a descriptor, without using and updating the descriptor's offset.
+     *
+     * This function returns a list of bytes containing the data that was
+     * read, along with a bool which, when true, indicates that the end of the
+     * file was reached. The returned list will contain up to `length` bytes; it
+     * may return fewer than requested, if the end of the file is reached or
+     * if the I/O operation is interrupted.
+     *
+     * In the future, this may change to return a `stream<u8, error-code>`.
+     *
+     * Note: This is similar to `pread` in POSIX.
+     */
     export declare function read($this: descriptor, length: filesize, offset: filesize): result<[Uint8Array, boolean], error_code>;
 
+    /**
+     * Write to a descriptor, without using and updating the descriptor's offset.
+     *
+     * It is valid to write past the end of a file; the file is extended to the
+     * extent of the write, with bytes between the previous end and the start of
+     * the write set to zero.
+     *
+     * In the future, this may change to take a `stream<u8, error-code>`.
+     *
+     * Note: This is similar to `pwrite` in POSIX.
+     */
     export declare function write($this: descriptor, buffer: Uint8Array, offset: filesize): result<filesize, error_code>;
 
+    /**
+     * Read directory entries from a directory.
+     *
+     * On filesystems where directories contain entries referring to themselves
+     * and their parents, often named `.` and `..` respectively, these entries
+     * are omitted.
+     *
+     * This always returns a new stream which starts at the beginning of the
+     * directory. Multiple streams may be active on the same directory, and they
+     * do not interfere with each other.
+     */
     export declare function read_directory($this: descriptor): result<directory_entry_stream, error_code>;
 
+    /**
+     * Synchronize the data and metadata of a file to disk.
+     *
+     * This function succeeds with no effect if the file descriptor is not
+     * opened for writing.
+     *
+     * Note: This is similar to `fsync` in POSIX.
+     */
     export declare function sync($this: descriptor): result<void, error_code>;
 
+    /**
+     * Create a directory.
+     *
+     * Note: This is similar to `mkdirat` in POSIX.
+     */
     export declare function create_directory_at($this: descriptor, path: string): result<void, error_code>;
 
+    /**
+     * Return the attributes of an open file or directory.
+     *
+     * Note: This is similar to `fstat` in POSIX.
+     *
+     * Note: This was called `fd_filestat_get` in earlier versions of WASI.
+     */
     export declare function stat($this: descriptor): result<descriptor_stat, error_code>;
 
+    /**
+     * Return the attributes of a file or directory.
+     *
+     * Note: This is similar to `fstatat` in POSIX.
+     *
+     * Note: This was called `path_filestat_get` in earlier versions of WASI.
+     */
     export declare function stat_at($this: descriptor, path_flags: path_flags, path: string): result<descriptor_stat, error_code>;
 
+    /**
+     * Adjust the timestamps of a file or directory.
+     *
+     * Note: This is similar to `utimensat` in POSIX.
+     *
+     * Note: This was called `path_filestat_set_times` in earlier versions of
+     * WASI.
+     */
     export declare function set_times_at($this: descriptor, path_flags: path_flags, path: string, data_access_timestamp: new_timestamp, data_modification_timestamp: new_timestamp): result<void, error_code>;
 
+    /**
+     * Create a hard link.
+     *
+     * Note: This is similar to `linkat` in POSIX.
+     */
     export declare function link_at($this: descriptor, old_path_flags: path_flags, old_path: string, new_descriptor: descriptor, new_path: string): result<void, error_code>;
 
+    /**
+     * Open a file or directory.
+     *
+     * The returned descriptor is not guaranteed to be the lowest-numbered
+     * descriptor not currently open/ it is randomized to prevent applications
+     * from depending on making assumptions about indexes, since this is
+     * error-prone in multi-threaded contexts. The returned descriptor is
+     * guaranteed to be less than 2**31.
+     *
+     * If `flags` contains `descriptor-flags::mutate-directory`, and the base
+     * descriptor doesn't have `descriptor-flags::mutate-directory` set,
+     * `open-at` fails with `error-code::read-only`.
+     *
+     * If `flags` contains `write` or `mutate-directory`, or `open-flags`
+     * contains `truncate` or `create`, and the base descriptor doesn't have
+     * `descriptor-flags::mutate-directory` set, `open-at` fails with
+     * `error-code::read-only`.
+     *
+     * Note: This is similar to `openat` in POSIX.
+     */
     export declare function open_at($this: descriptor, path_flags: path_flags, path: string, open_flags: open_flags, flags: descriptor_flags, modes: modes): result<descriptor, error_code>;
 
+    /**
+     * Read the contents of a symbolic link.
+     *
+     * If the contents contain an absolute or rooted path in the underlying
+     * filesystem, this function fails with `error-code::not-permitted`.
+     *
+     * Note: This is similar to `readlinkat` in POSIX.
+     */
     export declare function readlink_at($this: descriptor, path: string): result<string, error_code>;
 
+    /**
+     * Remove a directory.
+     *
+     * Return `error-code::not-empty` if the directory is not empty.
+     *
+     * Note: This is similar to `unlinkat(fd, path, AT_REMOVEDIR)` in POSIX.
+     */
     export declare function remove_directory_at($this: descriptor, path: string): result<void, error_code>;
 
+    /**
+     * Rename a filesystem object.
+     *
+     * Note: This is similar to `renameat` in POSIX.
+     */
     export declare function rename_at($this: descriptor, old_path: string, new_descriptor: descriptor, new_path: string): result<void, error_code>;
 
+    /**
+     * Create a symbolic link (also known as a "symlink").
+     *
+     * If `old-path` starts with `/`, the function fails with
+     * `error-code::not-permitted`.
+     *
+     * Note: This is similar to `symlinkat` in POSIX.
+     */
     export declare function symlink_at($this: descriptor, old_path: string, new_path: string): result<void, error_code>;
 
+    /**
+     * Check accessibility of a filesystem path.
+     *
+     * Check whether the given filesystem path names an object which is
+     * readable, writable, or executable, or whether it exists.
+     *
+     * This does not a guarantee that subsequent accesses will succeed, as
+     * filesystem permissions may be modified asynchronously by external
+     * entities.
+     *
+     * Note: This is similar to `faccessat` with the `AT_EACCESS` flag in POSIX.
+     */
     export declare function access_at($this: descriptor, path_flags: path_flags, path: string, type: access_type): result<void, error_code>;
 
+    /**
+     * Unlink a filesystem object that is not a directory.
+     *
+     * Return `error-code::is-directory` if the path refers to a directory.
+     * Note: This is similar to `unlinkat(fd, path, 0)` in POSIX.
+     */
     export declare function unlink_file_at($this: descriptor, path: string): result<void, error_code>;
 
+    /**
+     * Change the permissions of a filesystem object that is not a directory.
+     *
+     * Note that the ultimate meanings of these permissions is
+     * filesystem-specific.
+     *
+     * Note: This is similar to `fchmodat` in POSIX.
+     */
     export declare function change_file_permissions_at($this: descriptor, path_flags: path_flags, path: string, modes: modes): result<void, error_code>;
 
+    /**
+     * Change the permissions of a directory.
+     *
+     * Note that the ultimate meanings of these permissions is
+     * filesystem-specific.
+     *
+     * Unlike in POSIX, the `executable` flag is not reinterpreted as a "search"
+     * flag. `read` on a directory implies readability and searchability, and
+     * `execute` is not valid for directories.
+     *
+     * Note: This is similar to `fchmodat` in POSIX.
+     */
     export declare function change_directory_permissions_at($this: descriptor, path_flags: path_flags, path: string, modes: modes): result<void, error_code>;
 
+    /**
+     * Request a shared advisory lock for an open file.
+     *
+     * This requests a *shared* lock; more than one shared lock can be held for
+     * a file at the same time.
+     *
+     * If the open file has an exclusive lock, this function downgrades the lock
+     * to a shared lock. If it has a shared lock, this function has no effect.
+     *
+     * This requests an *advisory* lock, meaning that the file could be accessed
+     * by other programs that don't hold the lock.
+     *
+     * It is unspecified how shared locks interact with locks acquired by
+     * non-WASI programs.
+     *
+     * This function blocks until the lock can be acquired.
+     *
+     * Not all filesystems support locking; on filesystems which don't support
+     * locking, this function returns `error-code::unsupported`.
+     *
+     * Note: This is similar to `flock(fd, LOCK_SH)` in Unix.
+     */
     export declare function lock_shared($this: descriptor): result<void, error_code>;
 
+    /**
+     * Request an exclusive advisory lock for an open file.
+     *
+     * This requests an *exclusive* lock; no other locks may be held for the
+     * file while an exclusive lock is held.
+     *
+     * If the open file has a shared lock and there are no exclusive locks held
+     * for the file, this function upgrades the lock to an exclusive lock. If the
+     * open file already has an exclusive lock, this function has no effect.
+     *
+     * This requests an *advisory* lock, meaning that the file could be accessed
+     * by other programs that don't hold the lock.
+     *
+     * It is unspecified whether this function succeeds if the file descriptor
+     * is not opened for writing. It is unspecified how exclusive locks interact
+     * with locks acquired by non-WASI programs.
+     *
+     * This function blocks until the lock can be acquired.
+     *
+     * Not all filesystems support locking; on filesystems which don't support
+     * locking, this function returns `error-code::unsupported`.
+     *
+     * Note: This is similar to `flock(fd, LOCK_EX)` in Unix.
+     */
     export declare function lock_exclusive($this: descriptor): result<void, error_code>;
 
+    /**
+     * Request a shared advisory lock for an open file.
+     *
+     * This requests a *shared* lock; more than one shared lock can be held for
+     * a file at the same time.
+     *
+     * If the open file has an exclusive lock, this function downgrades the lock
+     * to a shared lock. If it has a shared lock, this function has no effect.
+     *
+     * This requests an *advisory* lock, meaning that the file could be accessed
+     * by other programs that don't hold the lock.
+     *
+     * It is unspecified how shared locks interact with locks acquired by
+     * non-WASI programs.
+     *
+     * This function returns `error-code::would-block` if the lock cannot be
+     * acquired.
+     *
+     * Not all filesystems support locking; on filesystems which don't support
+     * locking, this function returns `error-code::unsupported`.
+     *
+     * Note: This is similar to `flock(fd, LOCK_SH | LOCK_NB)` in Unix.
+     */
     export declare function try_lock_shared($this: descriptor): result<void, error_code>;
 
+    /**
+     * Request an exclusive advisory lock for an open file.
+     *
+     * This requests an *exclusive* lock; no other locks may be held for the
+     * file while an exclusive lock is held.
+     *
+     * If the open file has a shared lock and there are no exclusive locks held
+     * for the file, this function upgrades the lock to an exclusive lock. If the
+     * open file already has an exclusive lock, this function has no effect.
+     *
+     * This requests an *advisory* lock, meaning that the file could be accessed
+     * by other programs that don't hold the lock.
+     *
+     * It is unspecified whether this function succeeds if the file descriptor
+     * is not opened for writing. It is unspecified how exclusive locks interact
+     * with locks acquired by non-WASI programs.
+     *
+     * This function returns `error-code::would-block` if the lock cannot be
+     * acquired.
+     *
+     * Not all filesystems support locking; on filesystems which don't support
+     * locking, this function returns `error-code::unsupported`.
+     *
+     * Note: This is similar to `flock(fd, LOCK_EX | LOCK_NB)` in Unix.
+     */
     export declare function try_lock_exclusive($this: descriptor): result<void, error_code>;
 
+    /**
+     * Release a shared or exclusive lock on an open file.
+     *
+     * Note: This is similar to `flock(fd, LOCK_UN)` in Unix.
+     */
     export declare function unlock($this: descriptor): result<void, error_code>;
 
+    /**
+     * Dispose of the specified `descriptor`, after which it may no longer
+     * be used.
+     */
     export declare function drop_descriptor($this: descriptor): void;
 
     /**
@@ -717,9 +1047,17 @@ export namespace filesystem {
      */
     export type directory_entry_stream = u32;
 
+    /**
+     * Read a single directory entry from a `directory-entry-stream`.
+     */
     export declare function read_directory_entry($this: directory_entry_stream): result<option<directory_entry>, error_code>;
 
+    /**
+     * Dispose of the specified `directory-entry-stream`, after which it may no longer
+     * be used.
+     */
     export declare function drop_directory_entry_stream($this: directory_entry_stream): void;
+
     export namespace $cm {
     	const $input_stream: $wcm.ComponentModelType<input_stream> = streams.$cm.$input_stream;
     	const $output_stream: $wcm.ComponentModelType<output_stream> = streams.$cm.$output_stream;
