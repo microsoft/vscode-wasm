@@ -1393,11 +1393,13 @@ export namespace Comment {
 	}
 }
 
+export type Comments = (Comment | CommentBlock | undefined)[];
 export interface Node {
 	kind: NodeKind;
 	range: Range;
 	parent: Node | undefined;
-	comments?: (Comment | CommentBlock | undefined)[];
+	comments?: Comments;
+	visit: (visitor: Visitor, node: any) => void;
 }
 export namespace Node {
 	export function attachComments<T extends Node>(node: T, ...ws: (string | Comment)[]): T {
