@@ -13,6 +13,9 @@
         },
         {
             "path": "./src/desktop/tsconfig.json"
+        },
+        {
+            "path": "./src/tools/tsconfig.json"
         }
     ]
 }

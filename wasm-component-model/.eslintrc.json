@@ -2,7 +2,7 @@
 	"extends": "../.eslintrc.base.json",
 	"root": true,
 	"parserOptions": {
-		"project": ["./src/common/tsconfig.json", "./src/desktop/tsconfig.json", "./src/web/tsconfig.json"]
+		"project": ["./src/common/tsconfig.json", "./src/desktop/tsconfig.json", "./src/web/tsconfig.json", "src/tools/tsconfig.json"]
 	},
 	"rules": {
 		"no-console": "error",

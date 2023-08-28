@@ -1,0 +1,30 @@
+{
+    "compilerOptions": {
+        "module": "Node16",
+        "moduleResolution": "Node16",
+        "target": "es2020",
+        "lib": [
+            "es2020"
+        ],
+        "rootDir": ".",
+        "types": [
+            "node"
+        ],
+        "strict": true,
+        "noImplicitAny": true,
+        "noImplicitReturns": true,
+        "noImplicitThis": true,
+        "declaration": true,
+        "stripInternal": true,
+        "sourceMap": true,
+        "noUnusedLocals": false,
+        "noUnusedParameters": false,
+        "assumeChangesOnlyAffectDirectDependencies": true,
+        "outDir": "../../lib/tools",
+        "tsBuildInfoFile": "../../lib/tools/watch.tsbuildInfo",
+        "incremental": true
+    },
+    "include": [
+        "."
+    ]
+}

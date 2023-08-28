@@ -13,6 +13,9 @@
         },
         {
             "path": "./src/desktop/tsconfig.watch.json"
+        },
+        {
+            "path": "./src/tools/tsconfig.watch.json"
         }
     ]
 }

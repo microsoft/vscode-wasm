@@ -3,16 +3,11 @@
  * Licensed under the MIT License. See License.txt in the project root for license information.
  * ------------------------------------------------------------------------------------------ */
 
-import * as fs from 'fs';
-
-import * as wit from './wit';
 import {
 	Visitor, InterfaceItem, UseItem, PackageItem, Identifier, RenameItem, NamedImports, Document, TypeItem, Tuple, List,
 	Option, Result, RecordItem, FuncItem, Ty, Borrow, _FuncResult, NamedFuncResult, FuncResult, EnumItem, FlagsItem,
 	VariantItem, Comment, CommentBlock, Node
 } from './wit-ast';
-
-const document = wit.parse(fs.readFileSync('./src/filesystem.wit', 'utf8'));
 
 namespace Names {
 
@@ -86,7 +81,7 @@ class Code {
 
 	public push(content?: string): void {
 		if (content !== undefined) {
-			this.source.push(`${new Array(this.indent).fill('    ').join('')}${content}`);
+			this.source.push(`${new Array(this.indent).fill('\t').join('')}${content}`);
 		} else {
 			this.source.push('');
 		}
@@ -1092,7 +1087,7 @@ interface InterfaceData {
 	exports: string[];
 }
 
-class DocumentVisitor implements Visitor {
+export class DocumentVisitor implements Visitor {
 
 	private readonly code: Code;
 	private readonly interfaceData: InterfaceData[];
@@ -1102,13 +1097,15 @@ class DocumentVisitor implements Visitor {
 		this.interfaceData = [];
 	}
 
+	public getCode(): Code {
+		return this.code;
+	}
 
 	public visitDocument(_node: Document): boolean {
 		return true;
 	}
 
 	public endVisitDocument(_document: Document): void {
-		console.log(this.code.toString());
 	}
 
 	public visitPackageItem(_item: PackageItem): boolean {
@@ -1215,6 +1212,3 @@ class DocumentVisitor implements Visitor {
 		return result;
 	}
 }
-
-const visitor = new DocumentVisitor();
-document.visit(visitor, document);

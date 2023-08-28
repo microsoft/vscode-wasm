@@ -232,6 +232,10 @@ const wasm_component_model = {
 			path: './src/desktop',
 			extends: [ node ],
 			references: [ '../common' ]
+		},
+		{
+			path: './src/tools',
+			extends: [ node ],
 		}
 	]
 };
