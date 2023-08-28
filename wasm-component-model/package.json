@@ -1,6 +1,6 @@
 {
 	"name": "@vscode/wasm-component-model",
-	"version": "0.1.0",
+	"version": "0.1.0-pre.1",
 	"description": "A VS Code specific component model implementation",
 	"engines": {
 		"node": ">=16.17.1",
@@ -11,6 +11,9 @@
 		"./lib/desktop/main.js": "./lib/web/main.js"
 	},
 	"typings": "./lib/common/api.d.ts",
+	"bin": {
+		"wit2ts": "./bin/wit2ts"
+	},
 	"repository": {
 		"type": "git",
 		"url": "git+https://github.com/microsoft/vscode-wasm.git"
@@ -44,8 +47,7 @@
 		"clean": "node ../node_modules/rimraf/bin.js lib",
 		"lint": "node ../node_modules/eslint/bin/eslint.js --ext ts src",
 		"all": "npm run clean && npm run compile && npm run lint",
-		"all:publish": "git clean -xfd . && npm install && npm run update:version && npm run compile:publish && npm run lint",
-		"update:version": "node ./bin/updateVersion.mjs",
+		"all:publish": "git clean -xfd . && npm install && npm run peggy && npm run compile:publish && npm run lint",
 		"peggy": "../node_modules/.bin/make-dir ./lib/tools && peggy -o lib/tools/wit.js src/tools/wit.pegjs"
 	}
 }

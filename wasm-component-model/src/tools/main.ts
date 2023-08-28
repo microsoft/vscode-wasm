@@ -104,5 +104,5 @@ export async function main(): Promise<number> {
 }
 
 if (module === require.main) {
-	main().then((exitCode) => process.exitCode = exitCode).catch((error) => { process.exitCode = 1; console.error(error); });
+	main().then((exitCode) => process.exitCode = exitCode).catch((error) => { process.exitCode = 1; process.stderr.write(`${error.toString()}`); });
 }

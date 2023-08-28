@@ -163,16 +163,34 @@ namespace ComponentModel {
 			this.node = node;
 		}
 
-		public abstract emit(code: Code): void;
+		public abstract emit(code: Code, emitted: Set<String>): void;
 	}
 
-	export class record extends Emitter<RecordItem> {
+	export interface HasDependencies {
+		readonly dependencies: Set<string>;
+	}
+
+	export namespace HasDependencies {
+		export function is(value: any): value is HasDependencies {
+			const candidate = value as HasDependencies;
+			return candidate.dependencies instanceof Set;
+		}
+	}
+
+	export class record extends Emitter<RecordItem> implements HasDependencies {
+
+		public readonly dependencies: Set<string>;
 
 		constructor(node: RecordItem) {
 			super(node);
+			this.dependencies = new Set();
+			const collector = new TypeScript.TypeDependencyCollector();
+			for (const member of node.members) {
+				collector.do(member.type).forEach(item => this.dependencies.add(item));
+			}
 		}
 
-		public emit(code: Code): void {
+		public emit(code: Code, emitted: Set<String>): void {
 			const node = this.node;
 			const name = Names.toTs(node.name);
 			const elements: string[] = [];
@@ -186,6 +204,7 @@ namespace ComponentModel {
 			code.push(`${elements.join(', ')}`);
 			code.decreaseIndent();
 			code.push(`]);`);
+			emitted.add(name);
 		}
 	}
 
@@ -194,7 +213,7 @@ namespace ComponentModel {
 			super(node);
 		}
 
-		emit(code: Code): void {
+		emit(code: Code, emitted: Set<String>): void {
 			const node = this.node;
 			const name = node.name;
 			const tsName = Names.toTs(name);
@@ -202,34 +221,42 @@ namespace ComponentModel {
 			for (const member of this.node.members) {
 				if (Identifier.is(member)) {
 					const memberName = Names.toTs(member);
-					code.push(`type ${memberName} = ${tsName}.$cm.$${memberName}`);
+					code.push(`const $${memberName} = ${tsName}.$cm.$${memberName};`);
+					emitted.add(memberName);
 				} else if (RenameItem.is(member)) {
 					const fromName = Names.toTs(member.from);
 					const toName = Names.toTs(member.to);
-					code.push(`type ${toName} = ${tsName}.$cm.$${fromName}`);
+					code.push(`const $${toName} = ${tsName}.$cm.$${fromName};`);
+					emitted.add(toName);
 				}
 			}
 		}
 	}
 
 	type Visibility = 'public' | 'private';
-	export class type extends Emitter<TypeItem> {
+	export class type extends Emitter<TypeItem> implements HasDependencies {
+
+		public readonly dependencies: Set<string>;
 
 		private readonly visibility: Visibility;
 
 		constructor(node: TypeItem, visibility: Visibility = 'public') {
 			super(node);
+			this.dependencies = new Set();
+			const collector = new TypeScript.TypeDependencyCollector();
+			collector.do(node.type).forEach(item => this.dependencies.add(item));
 			this.visibility = visibility;
 		}
 
-		public emit(code: Code): void {
+		public emit(code: Code, emitted: Set<String>): void {
 			const node = this.node;
 			const name = Names.toTs(node.name);
 			if (this.visibility === 'public') {
-				code.push(`export const $${name}: $wcm.ComponentModelType<${name}> = ${ComponentModel.TyPrinter.do(node.type, code.imports)};`);
+				code.push(`export const $${name} = ${ComponentModel.TyPrinter.do(node.type, code.imports)};`);
 			} else {
-				code.push(`const $${name}: $wcm.ComponentModelType<${name}> = ${ComponentModel.TyPrinter.do(node.type, code.imports)};`);
+				code.push(`const $${name} = ${ComponentModel.TyPrinter.do(node.type, code.imports)};`);
 			}
+			emitted.add(name);
 		}
 	}
 
@@ -239,7 +266,7 @@ namespace ComponentModel {
 			super(node);
 		}
 
-		public emit(code: Code): void {
+		public emit(code: Code, emitted: Set<String>): void {
 			const node = this.node;
 			const signature = node.signature;
 			const name = Names.toTs(node.name);
@@ -264,6 +291,7 @@ namespace ComponentModel {
 					code.push(`]);`);
 				}
 			}
+			emitted.add(name);
 		}
 	}
 
@@ -273,10 +301,11 @@ namespace ComponentModel {
 			super(node);
 		}
 
-		public emit(code: Code): void {
+		public emit(code: Code, emitted: Set<String>): void {
 			const node = this.node;
 			const name = Names.toTs(node.name);
 			code.push(`export const $${name} = new $wcm.EnumType<${name}>(${node.members.length});`);
+			emitted.add(name);
 		}
 	}
 
@@ -285,7 +314,7 @@ namespace ComponentModel {
 			super(node);
 		}
 
-		public emit(code: Code): void {
+		public emit(code: Code, emitted: Set<String>): void {
 			const node = this.node;
 			const name = Names.toTs(node.name);
 			const flags: string[] = [];
@@ -293,16 +322,26 @@ namespace ComponentModel {
 				flags.push(`'${Names.toTs(member)}'`);
 			}
 			code.push(`export const $${name} = new $wcm.FlagsType<${name}>([${flags.join(', ')}]);`);
+			emitted.add(name);
 		}
 	}
 
-	export class variant extends Emitter<VariantItem> {
+	export class variant extends Emitter<VariantItem> implements HasDependencies {
+
+		public readonly dependencies: Set<string>;
 
 		constructor(node: VariantItem) {
 			super(node);
+			this.dependencies = new Set();
+			const collector = new TypeScript.TypeDependencyCollector();
+			for (const member of node.members) {
+				if (member.type !== undefined) {
+					collector.do(member.type).forEach(item => this.dependencies.add(item));
+				}
+			}
 		}
 
-		public emit(code: Code): void {
+		public emit(code: Code, emitted: Set<String>): void {
 			const node = this.node;
 			const name = Names.toTs(node.name);
 			const cases: string[] = [];
@@ -314,9 +353,8 @@ namespace ComponentModel {
 					cases.push('undefined');
 				}
 			}
-
-
 			code.push(`export const $${name} = new $wcm.VariantType<${name}, ${name}._ct, ${name}._vt>([${cases.join(', ')}], ${name}._ctor);`);
+			emitted.add(name);
 		}
 	}
 
@@ -541,25 +579,58 @@ class ComponentModelEntries {
 	}
 
 	public emit(code: Code): void {
-		// We need to sort the const declarations otherwise we receive compile error
-		// that we reference a var before it is initialized. Since WIT has no cyclic
-		// dependencies sorting should be fine. However if they get introduced we need
-		// to introduce access functions to delay the construction of the meta model.
-		// For now we simply sort functions to the end and hope that type are declared
-		// before used.
-		const sorted: ComponentModel.Emitter[] = this.entries.sort((a, b) => {
-			const aIsFunction = a instanceof ComponentModel.functionSignature;
-			const bIsFunction = b instanceof ComponentModel.functionSignature;
-			if (aIsFunction && !bIsFunction) {
-				return 1;
-			} else if (!aIsFunction && bIsFunction) {
-				return -1;
+		const namedImports: ComponentModel.Emitter[] = [];
+		const types: ComponentModel.type[] = [];
+		const others: ComponentModel.Emitter[] = [];
+		const functions: ComponentModel.functionSignature[] = [];
+		for (const entry of this.entries) {
+			if (entry instanceof ComponentModel.namedImports) {
+				namedImports.push(entry);
+			} else if (entry instanceof ComponentModel.type) {
+				types.push(entry);
+			} else if (entry instanceof ComponentModel.functionSignature) {
+				functions.push(entry);
 			} else {
-				return 0;
+				others.push(entry);
 			}
-		});
-		for (const type of sorted) {
-			type.emit(code);
+		}
+
+		const emitted: Set<string> = new Set();
+		function dependenciesEmitted(entry: ComponentModel.Emitter): boolean {
+			const hasDependencies = ComponentModel.HasDependencies.is(entry);
+			if (hasDependencies) {
+				for (const dependency of entry.dependencies) {
+					if (!emitted.has(dependency)) {
+						return false;
+					}
+				}
+			}
+			return true;
+		}
+
+		for (const entry of namedImports) {
+			entry.emit(code, emitted);
+		}
+
+		for (const entry of types) {
+			entry.emit(code, emitted);
+		}
+
+		const current: ComponentModel.Emitter[] = others.slice();
+		while (current.length > 0) {
+			for (let i = 0; i < current.length;) {
+				const entry = current[i];
+				if (dependenciesEmitted(entry)) {
+					entry.emit(code, emitted);
+					current.splice(i, 1);
+				} else {
+					i++;
+				}
+			}
+		}
+
+		for (const entry of functions) {
+			entry.emit(code, emitted);
 		}
 	}
 }
@@ -834,6 +905,65 @@ namespace TypeScript {
 			code.push(`}`);
 
 			code.push(`export type ${variantName} = ${names.map(value => `${variantName}.${value}`).join(' | ')}`);
+		}
+	}
+
+	export class TypeDependencyCollector implements Visitor {
+
+		public result: string[];
+
+		public static do(node: Ty): string[] {
+			const visitor = new TypeDependencyCollector();
+			node.visit(visitor, node);
+			return visitor.result;
+		}
+
+		public constructor() {
+			this.result = [];
+		}
+
+		public do(node: Node): string[] {
+			node.visit(this, node);
+			const result = this.result;
+			this.result = [];
+			return result;
+		}
+
+		visitIdentifier(node: Identifier) {
+			this.result.push(Names.toTs(node));
+			return true;
+		}
+
+		visitTuple(node: Tuple): boolean {
+			for(const member of node.members) {
+				member.visit(this, member);
+			}
+			return false;
+		}
+
+		visitList(node: List): boolean {
+			node.type.visit(this, node.type);
+			return false;
+		}
+
+		visitOption(node: Option): boolean {
+			node.type.visit(this, node.type);
+			return false;
+		}
+
+		visitResult(node: Result): boolean {
+			if (node.ok !== undefined && Ty.is(node.ok)) {
+				node.ok.visit(this, node.ok);
+			}
+			if (node.error !== undefined && Ty.is(node.error)) {
+				node.error.visit(this, node.error);
+			}
+			return false;
+		}
+
+		visitBorrow(node: Borrow): boolean {
+			node.name.visit(this, node.name);
+			return false;
 		}
 	}
 
