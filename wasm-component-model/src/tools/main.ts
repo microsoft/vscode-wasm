@@ -30,7 +30,6 @@ export namespace Options {
 
 async function run(options: Options): Promise<number> {
 	if (options.help) {
-		yargs.showHelp();
 		return 0;
 	}
 
@@ -86,7 +85,8 @@ export async function main(): Promise<number> {
 		option('h', {
 			alias: 'help',
 			description: 'Output usage information',
-			boolean: true
+			boolean: true,
+
 		}).
 		option('out', {
 			description: 'The output file the dump is save to.',
