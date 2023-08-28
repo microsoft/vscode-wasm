@@ -7,8 +7,9 @@ import * as fs from 'fs';
 
 import * as wit from './wit';
 import {
-	Visitor, InterfaceItem, UseItem, PackageItem, Identifier, RenameItem, NamedImports,
-	Document, TypeItem, Tuple, List, Option, Result, RecordItem, FuncItem, Ty, Borrow, _FuncResult, NamedFuncResult, FuncResult, EnumItem, FlagsItem, VariantItem, Comment, CommentBlock, Node
+	Visitor, InterfaceItem, UseItem, PackageItem, Identifier, RenameItem, NamedImports, Document, TypeItem, Tuple, List,
+	Option, Result, RecordItem, FuncItem, Ty, Borrow, _FuncResult, NamedFuncResult, FuncResult, EnumItem, FlagsItem,
+	VariantItem, Comment, CommentBlock, Node
 } from './wit-ast';
 
 const document = wit.parse(fs.readFileSync('./src/filesystem.wit', 'utf8'));
@@ -159,30 +160,33 @@ class Symbols {
 
 namespace ComponentModel {
 
-	export interface Emitter {
-		emit(code: Code): void;
-	}
+	export abstract class Emitter<T extends Node = Node> {
 
-	export class record implements Emitter {
+		protected readonly node: T;
 
-		private readonly name: string;
-		private readonly fields: [string, string][];
-
-		constructor(name: string) {
-			this.name = name;
-			this.fields = [];
+		constructor(node: T) {
+			this.node = node;
 		}
 
-		public addField(name: string, type: string): void {
-			this.fields.push([name, type]);
+		public abstract emit(code: Code): void;
+	}
+
+	export class record extends Emitter<RecordItem> {
+
+		constructor(node: RecordItem) {
+			super(node);
 		}
 
 		public emit(code: Code): void {
+			const node = this.node;
+			const name = Names.toTs(node.name);
 			const elements: string[] = [];
-			for (const [name, type] of this.fields) {
-				elements.push(`['${name}', ${type}]`);
+			for (const member of node.members) {
+				const memberName = Names.toTs(member.name);
+				const memberType = ComponentModel.TyPrinter.do(member.type, code.imports);
+				elements.push(`['${memberName}', ${memberType}]`);
 			}
-			code.push(`export const $${this.name} = new $wcm.RecordType<${this.name}>([`);
+			code.push(`export const $${name} = new $wcm.RecordType<${name}>([`);
 			code.increaseIndent();
 			code.push(`${elements.join(', ')}`);
 			code.decreaseIndent();
@@ -190,100 +194,77 @@ namespace ComponentModel {
 		}
 	}
 
-	export class tuple implements Emitter {
-
-		private readonly name: string;
-		private readonly fields: string[];
-
-		constructor(name: string) {
-			this.name = name;
-			this.fields = [];
+	export class namedImports extends Emitter<NamedImports> {
+		constructor(node: NamedImports) {
+			super(node);
 		}
 
-		public addField(type: string): void {
-			this.fields.push(type);
-		}
-
-		public emit(code: Code): void {
-			const elements: string[] = [];
-			for (const type of this.fields) {
-				elements.push(type);
+		emit(code: Code): void {
+			const node = this.node;
+			const name = node.name;
+			const tsName = Names.toTs(name);
+			code.imports.add(tsName, `./${name.value}`);
+			for (const member of this.node.members) {
+				if (Identifier.is(member)) {
+					const memberName = Names.toTs(member);
+					code.push(`type ${memberName} = ${tsName}.$cm.$${memberName}`);
+				} else if (RenameItem.is(member)) {
+					const fromName = Names.toTs(member.from);
+					const toName = Names.toTs(member.to);
+					code.push(`type ${toName} = ${tsName}.$cm.$${fromName}`);
+				}
 			}
-			code.push(`export const $${this.name} = new $wcm.TupleType<${this.name}>([${elements.join(', ')}]);`);
-		}
-	}
-
-	export class list implements Emitter {
-
-		private readonly name: string;
-		private readonly type: string;
-
-		constructor(name: string, type: string) {
-			this.name = name;
-			this.type = type;
-		}
-
-		public emit(code: Code): void {
-			code.push(`export const $${this.name} = new $wcm.ListType<${this.name}>(${this.type});`);
 		}
 	}
 
 	type Visibility = 'public' | 'private';
-	export class type implements Emitter {
+	export class type extends Emitter<TypeItem> {
 
-		private readonly name: string;
-		private readonly type: string;
 		private readonly visibility: Visibility;
 
-		constructor(name: string, type: string, visibility: Visibility = 'public') {
-			this.name = name;
-			this.type = type;
+		constructor(node: TypeItem, visibility: Visibility = 'public') {
+			super(node);
 			this.visibility = visibility;
 		}
 
 		public emit(code: Code): void {
+			const node = this.node;
+			const name = Names.toTs(node.name);
 			if (this.visibility === 'public') {
-				code.push(`export const $${this.name}: $wcm.ComponentModelType<${this.name}> = ${this.type};`);
+				code.push(`export const $${name}: $wcm.ComponentModelType<${name}> = ${ComponentModel.TyPrinter.do(node.type, code.imports)};`);
 			} else {
-				code.push(`const $${this.name}: $wcm.ComponentModelType<${this.name}> = ${this.type};`);
+				code.push(`const $${name}: $wcm.ComponentModelType<${name}> = ${ComponentModel.TyPrinter.do(node.type, code.imports)};`);
 			}
 		}
 	}
 
-	export class functionSignature implements Emitter {
+	export class functionSignature extends Emitter<FuncItem> {
 
-		private readonly name: string;
-		private readonly parameters: [string, string][];
-		private returnType: string | undefined;
-
-		constructor(name: string) {
-			this.name = name;
-			this.parameters = [];
-			this.returnType = undefined;
-		}
-
-		public addParameter(name: string, type: string): void {
-			this.parameters.push([name, type]);
-		}
-
-		public setReturnType(type: string): void {
-			this.returnType = type;
+		constructor(node: FuncItem) {
+			super(node);
 		}
 
 		public emit(code: Code): void {
-			const elements: string[] = [];
-			for (const [name, type] of this.parameters) {
-				elements.push(`['${name}', ${type}]`);
+			const node = this.node;
+			const signature = node.signature;
+			const name = Names.toTs(node.name);
+
+			const cmTyPrinter = new ComponentModel.TyPrinter(code.imports);
+			const params: string[] = [];
+			for (const param of signature.params.members) {
+				params.push(`['${Names.toTs(param.name)}', ${cmTyPrinter.do(param.type)}]`);
 			}
-			if (elements.length === 0) {
-				code.push(`export const $${this.name} = new $wcm.FunctionSignature('${this.name}', [], ${this.returnType});`);
+			const returnType = signature.result !== undefined ? ComponentModel.FuncResultPrinter.do(signature.result, code.imports) : undefined;
+
+			if (params.length === 0) {
+				code.push(`export const $${name} = new $wcm.FunctionSignature('${name}', [], ${returnType});`);
 			} else {
-				code.push(`export const $${this.name} = new $wcm.FunctionSignature('${this.name}', [`);
+				code.push(`export const $${name} = new $wcm.FunctionSignature('${name}', [`);
 				code.increaseIndent();
-				code.push(`${elements.join(', ')}`);
+				code.push(`${params.join(', ')}`);
 				code.decreaseIndent();
-				if (this.returnType !== undefined) {
-					code.push(`], ${this.returnType});`);
+				if (returnType !== undefined) {
+					code.push(`], ${returnType});`);
 				} else {
 					code.push(`]);`);
 				}
@@ -291,53 +272,56 @@ namespace ComponentModel {
 		}
 	}
 
-	export class enumeration implements Emitter {
-		private readonly name: string;
-		private readonly cases: number;
+	export class enumeration extends Emitter<EnumItem> {
 
-		constructor(name: string, cases: number) {
-			this.name = name;
-			this.cases = cases;
+		constructor(node: EnumItem) {
+			super(node);
 		}
 
 		public emit(code: Code): void {
-			code.push(`export const $${this.name} = new $wcm.EnumType<${this.name}>(${this.cases});`);
+			const node = this.node;
+			const name = Names.toTs(node.name);
+			code.push(`export const $${name} = new $wcm.EnumType<${name}>(${node.members.length});`);
 		}
 	}
 
-	export class flags implements Emitter {
-		private readonly name: string;
-		private readonly values: string[];
-
-		constructor(name: string) {
-			this.name = name;
-			this.values = [];
-		}
-
-		public addValue(name: string): void {
-			this.values.push(name);
+	export class flags extends Emitter<FlagsItem> {
+		constructor(node: FlagsItem) {
+			super(node);
 		}
 
 		public emit(code: Code): void {
-			code.push(`export const $${this.name} = new $wcm.FlagsType<${this.name}>([${this.values.map(value => `'${value}'`).join(', ')}]);`);
+			const node = this.node;
+			const name = Names.toTs(node.name);
+			const flags: string[] = [];
+			for (const member of node.members) {
+				flags.push(`'${Names.toTs(member)}'`);
+			}
+			code.push(`export const $${name} = new $wcm.FlagsType<${name}>([${flags.join(', ')}]);`);
 		}
 	}
 
-	export class variant implements Emitter {
-		private readonly name: string;
-		private readonly cases: (string | undefined)[];
+	export class variant extends Emitter<VariantItem> {
 
-		constructor(name: string) {
-			this.name = name;
-			this.cases = [];
-		}
-
-		public addMember(name: string | undefined): void {
-			this.cases.push(name);
+		constructor(node: VariantItem) {
+			super(node);
 		}
 
 		public emit(code: Code): void {
-			code.push(`export const $${this.name} = new $wcm.VariantType<${this.name}, ${this.name}._ct, ${this.name}._vt>([${this.cases.map(value => value === undefined ? 'undefined' : value).join(', ')}], ${this.name}._ctor);`);
+			const node = this.node;
+			const name = Names.toTs(node.name);
+			const cases: string[] = [];
+			const tyPrinter = new ComponentModel.TyPrinter(code.imports);
+			for (const member of node.members) {
+				if (member.type !== undefined) {
+					cases.push(tyPrinter.do(member.type));
+				} else {
+					cases.push('undefined');
+				}
+			}
+
+
+			code.push(`export const $${name} = new $wcm.VariantType<${name}, ${name}._ct, ${name}._vt>([${cases.join(', ')}], ${name}._ctor);`);
 		}
 	}
 
@@ -355,6 +339,13 @@ namespace ComponentModel {
 		public constructor(imports: Imports) {
 			this.imports = imports;
 			this.result = '';
+		}
+
+		public do(node: Node): string {
+			node.visit(this, node);
+			const result = this.result;
+			this.result = '';
+			return result;
 		}
 
 		visitU8(): boolean {
@@ -1167,106 +1158,52 @@ class DocumentVisitor implements Visitor {
 			throw new Error(`Not implemented`);
 		} else if (NamedImports.is(importItem)) {
 			interfaceData.typeScriptEntries.add(new TypeScript.namedImports(importItem));
-			const name = importItem.name;
-			const tsName = Names.toTs(name);
-			this.code.imports.add(tsName, `./${name.value}`);
-			for (const member of importItem.members) {
-				if (Identifier.is(member)) {
-					const memberName = Names.toTs(member);
-					interfaceData.componentModelEntries.add(new ComponentModel.type(memberName, `${tsName}.$cm.$${memberName}`, 'private'));
-				} else if (RenameItem.is(member)) {
-					const fromName = Names.toTs(member.from);
-					const toName = Names.toTs(member.to);
-					interfaceData.componentModelEntries.add(new ComponentModel.type(toName, `${tsName}.$cm.$${fromName}`, 'private'));
-				}
-			}
+			interfaceData.componentModelEntries.add(new ComponentModel.namedImports(importItem));
 		}
 		return false;
 	}
 
-	visitTypeItem(item: TypeItem): boolean {
-		const tsName = Names.toTs(item.name);
+	visitTypeItem(node: TypeItem): boolean {
 		const interfaceData = this.getInterfaceData();
-		interfaceData.typeScriptEntries.add(new TypeScript.type(item));
-		interfaceData.componentModelEntries.add(new ComponentModel.type(tsName, ComponentModel.TyPrinter.do(item.type, this.code.imports)));
+		interfaceData.typeScriptEntries.add(new TypeScript.type(node));
+		interfaceData.componentModelEntries.add(new ComponentModel.type(node));
 		return false;
 	}
 
 	visitRecordItem(node: RecordItem): boolean {
-		const tsName = Names.toTs(node.name);
-		const literal = new TypeScript.literal(node);
-		const recordType = new ComponentModel.record(tsName);
-		for (const member of node.members) {
-			const memberName = Names.toTs(member.name);
-			recordType.addField(memberName, ComponentModel.TyPrinter.do(member.type, this.code.imports));
-		}
 		const interfaceData = this.getInterfaceData();
-		interfaceData.typeScriptEntries.add(literal);
-		interfaceData.componentModelEntries.add(recordType);
+		interfaceData.typeScriptEntries.add(new TypeScript.literal(node));
+		interfaceData.componentModelEntries.add(new ComponentModel.record(node));
 		return false;
 	}
 
 	visitFuncItem(node: FuncItem): boolean {
 		const interfaceData = this.getInterfaceData();
-		const tsName = Names.toTs(node.name);
-		const tsSignature = new TypeScript.functionSignature(node);
-		const cmSignature = new ComponentModel.functionSignature(tsName);
-		const tyPrinter = new TypeScript.TyPrinter(this.code.imports);
-		const cmTyPrinter = new ComponentModel.TyPrinter(this.code.imports);
-		const signature = node.signature;
-		for (const param of signature.params.members) {
-			param.type.visit(tyPrinter, param.type);
-			param.type.visit(cmTyPrinter, param.type);
-			const paramName = Names.toTs(param.name);
-			cmSignature.addParameter(paramName, cmTyPrinter.result);
-		}
-		if (signature.result !== undefined) {
-			cmSignature.setReturnType(ComponentModel.FuncResultPrinter.do(signature.result, this.code.imports));
-		}
-		interfaceData.typeScriptEntries.add(tsSignature);
-		interfaceData.componentModelEntries.add(cmSignature);
-		interfaceData.exports.push(tsName);
+		interfaceData.typeScriptEntries.add(new TypeScript.functionSignature(node));
+		interfaceData.componentModelEntries.add(new ComponentModel.functionSignature(node));
+		interfaceData.exports.push(Names.toTs(node.name));
 		return false;
 	}
 
 	visitEnumItem(node: EnumItem): boolean {
 		const interfaceData = this.getInterfaceData();
-		const tsName = Names.toTs(node.name);
-		const tsEnum = new TypeScript.enumeration(node);
-		interfaceData.typeScriptEntries.add(tsEnum);
-		interfaceData.componentModelEntries.add(new ComponentModel.enumeration(tsName, node.members.length));
+		interfaceData.typeScriptEntries.add(new TypeScript.enumeration(node));
+		interfaceData.componentModelEntries.add(new ComponentModel.enumeration(node));
 		return false;
 	}
 
 	visitFlagsItem(node: FlagsItem): boolean {
 		this.code.imports.addBaseType('flags');
 		const interfaceData = this.getInterfaceData();
-		const tsName = Names.toTs(node.name);
-		const tsFlags = new TypeScript.flags(node);
-		const cmFlags = new ComponentModel.flags(tsName);
-		for (const member of node.members) {
-			const name = Names.toTs(member);
-			cmFlags.addValue(name);
-		}
-		interfaceData.typeScriptEntries.add(tsFlags);
-		interfaceData.componentModelEntries.add(cmFlags);
+		interfaceData.typeScriptEntries.add(new TypeScript.flags(node));
+		interfaceData.componentModelEntries.add(new ComponentModel.flags(node));
 		return false;
 	}
 
 	visitVariantItem(node: VariantItem): boolean {
 		const interfaceData = this.getInterfaceData();
-		const tsName = Names.toTs(node.name);
-		const tsVariant = new TypeScript.variant(node);
-		const cmVariant = new ComponentModel.variant(tsName);
-		for (const member of node.members) {
-			if (member.type !== undefined) {
-				cmVariant.addMember(ComponentModel.TyPrinter.do(member.type, this.code.imports));
-			} else {
-				cmVariant.addMember(undefined);
-			}
-		}
-		interfaceData.typeScriptEntries.add(tsVariant);
-		interfaceData.componentModelEntries.add(cmVariant);
+		interfaceData.typeScriptEntries.add(new TypeScript.variant(node));
+		interfaceData.componentModelEntries.add(new ComponentModel.variant(node));
 		return false;
 	}
 
