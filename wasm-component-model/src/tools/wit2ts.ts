@@ -28,7 +28,7 @@ namespace Names {
 class Imports {
 
 	public readonly baseTypes: Set<string> = new Set();
-	private readonly imports: Map<string, string[]> = new Map();
+	private readonly imports: Map<string, Set<string>> = new Map();
 
 	constructor() {
 	}
@@ -44,17 +44,17 @@ class Imports {
 	public add(value: string, from: string): void {
 		let values = this.imports.get(from);
 		if (values === undefined) {
-			values = [];
+			values = new Set();
 			this.imports.set(from, values);
 		}
-		values.push(value);
+		values.add(value);
 	}
 
-	public entries(): IterableIterator<[string, string[]]> {
+	public entries(): IterableIterator<[string, Set<string>]> {
 		return this.imports.entries();
 	}
 
-	public [Symbol.iterator](): IterableIterator<[string, string[]]> {
+	public [Symbol.iterator](): IterableIterator<[string, Set<string>]> {
 		return this.imports[Symbol.iterator]();
 	}
 }
@@ -90,7 +90,7 @@ class Code {
 	public toString(): string {
 		this.source.unshift('');
 		for (const [from, values] of this.imports) {
-			this.source.unshift(`import { ${values.join(', ')} } from '${from}';`);
+			this.source.unshift(`import { ${Array.from(values).join(', ')} } from '${from}';`);
 		}
 		if (this.imports.baseTypes.size > 0) {
 			this.source.unshift(`import type { ${Array.from(this.imports.baseTypes).join(', ')} } from '@vscode/wasm-component-model';`);
@@ -467,7 +467,8 @@ namespace ComponentModel {
 		}
 
 		visitList(node: List): boolean {
-			const type = TypeScript.TyPrinter.do(node.type, this.imports);
+			const imports = new Imports();
+			const type = TypeScript.TyPrinter.do(node.type, imports);
 			switch (type) {
 				case 'u8':
 					this.result = 'new $wcm.Uint8ArrayType()';
@@ -500,6 +501,14 @@ namespace ComponentModel {
 					this.result = 'new $wcm.Float64ArrayType()';
 					break;
 				default:
+					for (const base of imports.baseTypes) {
+						this.imports.addBaseType(base);
+					}
+					for (const [from, values] of imports) {
+						for (const value of values) {
+							this.imports.add(value, from);
+						}
+					}
 					this.result = `new $wcm.ListType<${type}>(${TyPrinter.do(node.type, this.imports)})`;
 					break;
 			}
@@ -699,11 +708,11 @@ namespace TypeScript {
 			for (const member of this.node.members) {
 				if (Identifier.is(member)) {
 					const memberName = Names.toTs(member);
-					code.push(`type ${memberName} = ${tsName}.${memberName}`);
+					code.push(`type ${memberName} = ${tsName}.${memberName};`);
 				} else if (RenameItem.is(member)) {
 					const fromName = Names.toTs(member.from);
 					const toName = Names.toTs(member.to);
-					code.push(`type ${toName} = ${tsName}.${fromName}`);
+					code.push(`type ${toName} = ${tsName}.${fromName};`);
 				}
 			}
 		}
@@ -904,7 +913,7 @@ namespace TypeScript {
 			code.decreaseIndent();
 			code.push(`}`);
 
-			code.push(`export type ${variantName} = ${names.map(value => `${variantName}.${value}`).join(' | ')}`);
+			code.push(`export type ${variantName} = ${names.map(value => `${variantName}.${value}`).join(' | ')};`);
 		}
 	}
 
@@ -1083,7 +1092,8 @@ namespace TypeScript {
 		}
 
 		visitList(node: List): boolean {
-			const tyVisitor = new TyPrinter(this.imports);
+			const imports = new Imports();
+			const tyVisitor = new TyPrinter(imports);
 			node.type.visit(tyVisitor, node.type);
 			const type = tyVisitor.result;
 			switch (type) {
@@ -1118,6 +1128,14 @@ namespace TypeScript {
 					this.result = 'Float64Array';
 					break;
 				default:
+					for (const base of imports.baseTypes) {
+						this.imports.addBaseType(base);
+					}
+					for (const [from, values] of imports) {
+						for (const value of values) {
+							this.imports.add(value, from);
+						}
+					}
 					this.result = `${tyVisitor.result}[]`;
 					break;
 			}
@@ -1320,7 +1338,6 @@ export class DocumentVisitor implements Visitor {
 	}
 
 	visitFlagsItem(node: FlagsItem): boolean {
-		this.code.imports.addBaseType('flags');
 		const interfaceData = this.getInterfaceData();
 		interfaceData.typeScriptEntries.add(new TypeScript.flags(node));
 		interfaceData.componentModelEntries.add(new ComponentModel.flags(node));

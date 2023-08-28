@@ -1,5 +1,5 @@
 import * as $wcm from '../../componentModel';
-import type { flags, u64, option, u32, result, u8 } from '../../componentModel';
+import type { u64, option, u32, result } from '../../componentModel';
 import { wall_clock } from '../clocks/wall-clock';
 import { streams } from '../io/streams';
 
