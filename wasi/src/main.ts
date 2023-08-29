@@ -8,7 +8,8 @@ import { streams as _streams} from './io/streams';
 import { timezone as _timezone } from './clocks/timezone';
 import { wall_clock as _wall_clock } from './clocks/wall-clock';
 import { monotonic_clock as _monotonic_clock } from './clocks/monotonic-clock';
-import { filesystem as _filesystem } from './filesystem/filesystem';
+import { types as _types } from './filesystem/types';
+import { preopens as _preopens } from './filesystem/preopens';
 
 export namespace poll {
 	export type poll = _poll;
@@ -30,6 +31,8 @@ export namespace clocks {
 }
 
 export namespace filesystem {
-	export type filesystem = _filesystem;
-	export const filesystem = _filesystem;
+	export type types = _types;
+	export const types = _types;
+	export type preopens = _preopens;
+	export const preopens = _preopens;
 }

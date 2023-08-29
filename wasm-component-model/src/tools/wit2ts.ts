@@ -217,7 +217,6 @@ namespace ComponentModel {
 			const node = this.node;
 			const name = node.name;
 			const tsName = Names.toTs(name);
-			code.imports.add(tsName, `./${name.value}`);
 			for (const member of this.node.members) {
 				if (Identifier.is(member)) {
 					const memberName = Names.toTs(member);
@@ -695,24 +694,37 @@ namespace TypeScript {
 		}
 	}
 
-	export class namedImports extends Emitter<NamedImports> {
-		constructor(node: NamedImports) {
+	export class useItem extends Emitter<UseItem> {
+
+		constructor(node: UseItem) {
 			super(node);
 		}
 
 		emit(code: Code): void {
 			super.emit(code);
-			const name = this.node.name;
-			const tsName = Names.toTs(name);
-			code.imports.add(tsName, `./${name.value}`);
-			for (const member of this.node.members) {
-				if (Identifier.is(member)) {
-					const memberName = Names.toTs(member);
-					code.push(`type ${memberName} = ${tsName}.${memberName};`);
-				} else if (RenameItem.is(member)) {
-					const fromName = Names.toTs(member.from);
-					const toName = Names.toTs(member.to);
-					code.push(`type ${toName} = ${tsName}.${fromName};`);
+			const importItem = this.node.importItem;
+			if (Identifier.is(importItem)) {
+				throw new Error(`Not implemented`);
+			} else if (RenameItem.is(importItem)) {
+				throw new Error(`Not implemented`);
+			} else if (NamedImports.is(importItem)) {
+				const pack = this.node.from !== undefined ? Names.toTs(this.node.from.name) : undefined;
+				const name = importItem.name;
+				const tsName = Names.toTs(name);
+				if (pack !== undefined) {
+					code.imports.add(tsName, `../${pack}/${name.value}`);
+				} else {
+					code.imports.add(tsName, `./${name.value}`);
+				}
+				for (const member of importItem.members) {
+					if (Identifier.is(member)) {
+						const memberName = Names.toTs(member);
+						code.push(`type ${memberName} = ${tsName}.${memberName};`);
+					} else if (RenameItem.is(member)) {
+						const fromName = Names.toTs(member.from);
+						const toName = Names.toTs(member.to);
+						code.push(`type ${toName} = ${tsName}.${fromName};`);
+					}
 				}
 			}
 		}
@@ -1296,13 +1308,13 @@ export class DocumentVisitor implements Visitor {
 
 	visitUseItem(item: UseItem): boolean {
 		const interfaceData = this.getInterfaceData();
+		interfaceData.typeScriptEntries.add(new TypeScript.useItem(item));
 		const importItem = item.importItem;
 		if (Identifier.is(importItem)) {
 			throw new Error(`Not implemented`);
 		} else if (RenameItem.is(importItem)) {
 			throw new Error(`Not implemented`);
 		} else if (NamedImports.is(importItem)) {
-			interfaceData.typeScriptEntries.add(new TypeScript.namedImports(importItem));
 			interfaceData.componentModelEntries.add(new ComponentModel.namedImports(importItem));
 		}
 		return false;
