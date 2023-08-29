@@ -4,7 +4,7 @@ import { wall_clock } from './wall-clock';
 
 export namespace timezone {
 	type datetime = wall_clock.datetime;
-	
+
 	/**
 	 * A timezone.
 	 *
@@ -15,7 +15,7 @@ export namespace timezone {
 	 * This [represents a resource](https://github.com/WebAssembly/WASI/blob/main/docs/WitInWasi.md#Resources).
 	 */
 	export type timezone = u32;
-	
+
 	/**
 	 * Return information needed to display the given `datetime`. This includes
 	 * the UTC offset, the time zone name, and a flag indicating whether
@@ -26,18 +26,18 @@ export namespace timezone {
 	 * saving time.
 	 */
 	export declare function display($this: timezone, when: datetime): timezone_display;
-	
+
 	/**
 	 * The same as `display`, but only return the UTC offset.
 	 */
 	export declare function utc_offset($this: timezone, when: datetime): s32;
-	
+
 	/**
 	 * Dispose of the specified input-stream, after which it may no longer
 	 * be used.
 	 */
 	export declare function drop_timezone($this: timezone): void;
-	
+
 	/**
 	 * Information useful for displaying the timezone of a specific `datetime`.
 	 *
@@ -46,11 +46,13 @@ export namespace timezone {
 	 */
 	export interface timezone_display extends $wcm.JRecord {
 		utc_offset: s32;
-		
+
 		name: string;
-		
+
 		in_daylight_saving_time: boolean;
 	}
+
+
 	export namespace $cm {
 		const $datetime = wall_clock.$cm.$datetime;
 		export const $timezone = $wcm.u32;

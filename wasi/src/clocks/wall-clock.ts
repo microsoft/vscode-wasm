@@ -7,10 +7,10 @@ export namespace wall_clock {
 	 */
 	export interface datetime extends $wcm.JRecord {
 		seconds: u64;
-		
+
 		nanoseconds: u32;
 	}
-	
+
 	/**
 	 * Read the current value of the clock.
 	 *
@@ -27,13 +27,15 @@ export namespace wall_clock {
 	 * [Unix Time]: https://en.wikipedia.org/wiki/Unix_time
 	 */
 	export declare function now(): datetime;
-	
+
 	/**
 	 * Query the resolution of the clock.
 	 *
 	 * The nanoseconds field of the output is always less than 1000000000.
 	 */
 	export declare function resolution(): datetime;
+
+
 	export namespace $cm {
 		export const $datetime = new $wcm.RecordType<datetime>([
 			['seconds', $wcm.u64], ['nanoseconds', $wcm.u32]

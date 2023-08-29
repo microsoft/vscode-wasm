@@ -4,7 +4,7 @@ import { poll } from '../poll/poll';
 
 export namespace streams {
 	type pollable = poll.pollable;
-	
+
 	/**
 	 * Streams provide a sequence of data and then end; once they end, they
 	 * no longer provide any further data.
@@ -18,7 +18,7 @@ export namespace streams {
 		 * The stream is open and may produce further data.
 		 */
 		open = 0,
-		
+
 		/**
 		 * When reading, this indicates that the stream will not produce
 		 * further data.
@@ -27,7 +27,7 @@ export namespace streams {
 		 */
 		ended = 1,
 	}
-	
+
 	/**
 	 * An input bytestream. In the future, this will be replaced by handle
 	 * types.
@@ -45,7 +45,7 @@ export namespace streams {
 	 * This [represents a resource](https://github.com/WebAssembly/WASI/blob/main/docs/WitInWasi.md#Resources).
 	 */
 	export type input_stream = u32;
-	
+
 	/**
 	 * Perform a non-blocking read from the stream.
 	 *
@@ -56,7 +56,7 @@ export namespace streams {
 	 * empty list and `stream-status:open` indicates no more data is
 	 * available at this time, and that the pollable given by
 	 * `subscribe-to-input-stream` will be ready when more data is available.
-	 * 
+	 *
 	 * Once a stream has reached the end, subsequent calls to `read` or
 	 * `skip` will always report `stream-status:ended` rather than producing more
 	 * data.
@@ -71,13 +71,13 @@ export namespace streams {
 	 * less than `len` in size while more bytes are available for reading.
 	 */
 	export declare function read($this: input_stream, len: u64): result<void, [Uint8Array, stream_status]>;
-	
+
 	/**
 	 * Read bytes from a stream, after blocking until at least one byte can
 	 * be read. Except for blocking, identical to `read`.
 	 */
 	export declare function blocking_read($this: input_stream, len: u64): result<void, [Uint8Array, stream_status]>;
-	
+
 	/**
 	 * Skip bytes from a stream.
 	 *
@@ -93,13 +93,13 @@ export namespace streams {
 	 * reached. The returned value will be at most `len`; it may be less.
 	 */
 	export declare function skip($this: input_stream, len: u64): result<void, [u64, stream_status]>;
-	
+
 	/**
 	 * Skip bytes from a stream, after blocking until at least one byte
 	 * can be skipped. Except for blocking behavior, identical to `skip`.
 	 */
 	export declare function blocking_skip($this: input_stream, len: u64): result<void, [u64, stream_status]>;
-	
+
 	/**
 	 * Create a `pollable` which will resolve once either the specified stream
 	 * has bytes available to read or the other end of the stream has been
@@ -109,7 +109,7 @@ export namespace streams {
 	 * all derived `pollable`s created with this function are dropped.
 	 */
 	export declare function subscribe_to_input_stream($this: input_stream): pollable;
-	
+
 	/**
 	 * Dispose of the specified `input-stream`, after which it may no longer
 	 * be used.
@@ -119,7 +119,7 @@ export namespace streams {
 	 * corresponding `output-stream` has `stream-state.closed`.
 	 */
 	export declare function drop_input_stream($this: input_stream): void;
-	
+
 	/**
 	 * An output bytestream. In the future, this will be replaced by handle
 	 * types.
@@ -137,7 +137,7 @@ export namespace streams {
 	 * This [represents a resource](https://github.com/WebAssembly/WASI/blob/main/docs/WitInWasi.md#Resources).
 	 */
 	export type output_stream = u32;
-	
+
 	/**
 	 * Perform a non-blocking write of bytes to a stream.
 	 *
@@ -156,7 +156,7 @@ export namespace streams {
 	 * `u64` return value, and the current `stream-status`.
 	 */
 	export declare function write($this: output_stream, buf: Uint8Array): result<void, [u64, stream_status]>;
-	
+
 	/**
 	 * Blocking write of bytes to a stream.
 	 *
@@ -164,7 +164,7 @@ export namespace streams {
 	 * byte can be written.
 	 */
 	export declare function blocking_write($this: output_stream, buf: Uint8Array): result<void, [u64, stream_status]>;
-	
+
 	/**
 	 * Write multiple zero-bytes to a stream.
 	 *
@@ -173,7 +173,7 @@ export namespace streams {
 	 * `write` with a list of zeroes of the given length.
 	 */
 	export declare function write_zeroes($this: output_stream, len: u64): result<void, [u64, stream_status]>;
-	
+
 	/**
 	 * Write multiple zero bytes to a stream, with blocking.
 	 *
@@ -182,7 +182,7 @@ export namespace streams {
 	 * a list of zeroes of the given length.
 	 */
 	export declare function blocking_write_zeroes($this: output_stream, len: u64): result<void, [u64, stream_status]>;
-	
+
 	/**
 	 * Read from one stream and write to another.
 	 *
@@ -193,7 +193,7 @@ export namespace streams {
 	 * read from the input stream has been written to the output stream.
 	 */
 	export declare function splice($this: output_stream, src: input_stream, len: u64): result<void, [u64, stream_status]>;
-	
+
 	/**
 	 * Read from one stream and write to another, with blocking.
 	 *
@@ -201,7 +201,7 @@ export namespace streams {
 	 * one byte can be read.
 	 */
 	export declare function blocking_splice($this: output_stream, src: input_stream, len: u64): result<void, [u64, stream_status]>;
-	
+
 	/**
 	 * Forward the entire contents of an input stream to an output stream.
 	 *
@@ -217,7 +217,7 @@ export namespace streams {
 	 * the output stream.
 	 */
 	export declare function forward($this: output_stream, src: input_stream): result<void, [u64, stream_status]>;
-	
+
 	/**
 	 * Create a `pollable` which will resolve once either the specified stream
 	 * is ready to accept bytes or the `stream-state` has become closed.
@@ -230,7 +230,7 @@ export namespace streams {
 	 * all derived `pollable`s created with this function are dropped.
 	 */
 	export declare function subscribe_to_output_stream($this: output_stream): pollable;
-	
+
 	/**
 	 * Dispose of the specified `output-stream`, after which it may no longer
 	 * be used.
@@ -240,6 +240,8 @@ export namespace streams {
 	 * corresponding `input-stream` has `stream-state.closed`.
 	 */
 	export declare function drop_output_stream($this: output_stream): void;
+
+
 	export namespace $cm {
 		const $pollable = poll.$cm.$pollable;
 		export const $input_stream = $wcm.u32;
