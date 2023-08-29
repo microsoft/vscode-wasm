@@ -4,12 +4,12 @@ import { poll } from '../poll/poll';
 
 export namespace monotonic_clock {
 	type pollable = poll.pollable;
-
+	
 	/**
 	 * A timestamp in nanoseconds.
 	 */
 	export type instant = u64;
-
+	
 	/**
 	 * Read the current value of the clock.
 	 *
@@ -17,25 +17,28 @@ export namespace monotonic_clock {
 	 * produce a sequence of non-decreasing values.
 	 */
 	export declare function now(): instant;
-
+	export type now = typeof now;
+	
 	/**
 	 * Query the resolution of the clock.
 	 */
 	export declare function resolution(): instant;
-
+	export type resolution = typeof resolution;
+	
 	/**
 	 * Create a `pollable` which will resolve once the specified time has been
 	 * reached.
 	 */
 	export declare function subscribe(when: instant, absolute: boolean): pollable;
-
-
+	export type subscribe = typeof subscribe;
+	
+	
 	export namespace $cm {
 		const $pollable = poll.$cm.$pollable;
 		export const $instant = $wcm.u64;
-		export const $now = new $wcm.FunctionSignature('now', [], $instant);
-		export const $resolution = new $wcm.FunctionSignature('resolution', [], $instant);
-		export const $subscribe = new $wcm.FunctionSignature('subscribe', [
+		export const $now = new $wcm.FunctionSignature<now>('now', [], $instant);
+		export const $resolution = new $wcm.FunctionSignature<resolution>('resolution', [], $instant);
+		export const $subscribe = new $wcm.FunctionSignature<subscribe>('subscribe', [
 			['when', $instant], ['absolute', $wcm.bool]
 		], $pollable);
 	}

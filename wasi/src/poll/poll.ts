@@ -19,13 +19,14 @@ export namespace poll {
 	 * This [represents a resource](https://github.com/WebAssembly/WASI/blob/main/docs/WitInWasi.md#Resources).
 	 */
 	export type pollable = u32;
-
+	
 	/**
 	 * Dispose of the specified `pollable`, after which it may no longer
 	 * be used.
 	 */
 	export declare function drop_pollable($this: pollable): void;
-
+	export type drop_pollable = typeof drop_pollable;
+	
 	/**
 	 * Poll for completion on a set of pollables.
 	 *
@@ -41,14 +42,15 @@ export namespace poll {
 	 * element in that / list, with true indicating ready.
 	 */
 	export declare function poll_oneoff($in: pollable[]): boolean[];
-
-
+	export type poll_oneoff = typeof poll_oneoff;
+	
+	
 	export namespace $cm {
 		export const $pollable = $wcm.u32;
-		export const $drop_pollable = new $wcm.FunctionSignature('drop_pollable', [
+		export const $drop_pollable = new $wcm.FunctionSignature<drop_pollable>('drop_pollable', [
 			['$this', $pollable]
 		]);
-		export const $poll_oneoff = new $wcm.FunctionSignature('poll_oneoff', [
+		export const $poll_oneoff = new $wcm.FunctionSignature<poll_oneoff>('poll_oneoff', [
 			['$in', new $wcm.ListType<pollable>($pollable)]
 		], new $wcm.ListType<boolean>($wcm.bool));
 	}

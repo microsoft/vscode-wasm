@@ -1716,7 +1716,7 @@ export type JType = number | bigint | string | boolean | JRecord | JVariantCase 
 
 export type FunctionParameter = [/* name */string, /* type */GenericComponentModelType];
 
-export class FunctionSignature {
+export class FunctionSignature<_T extends Function> {
 
 	public readonly name: string;
 	public readonly params: FunctionParameter[];

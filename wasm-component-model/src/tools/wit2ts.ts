@@ -285,9 +285,9 @@ namespace ComponentModel {
 			const returnType = signature.result !== undefined ? ComponentModel.FuncResultPrinter.do(signature.result, code.imports) : undefined;
 
 			if (params.length === 0) {
-				code.push(`export const $${name} = new $wcm.FunctionSignature('${name}', [], ${returnType});`);
+				code.push(`export const $${name} = new $wcm.FunctionSignature<${name}>('${name}', [], ${returnType});`);
 			} else {
-				code.push(`export const $${name} = new $wcm.FunctionSignature('${name}', [`);
+				code.push(`export const $${name} = new $wcm.FunctionSignature<${name}>('${name}', [`);
 				code.increaseIndent();
 				code.push(`${params.join(', ')}`);
 				code.decreaseIndent();
@@ -776,7 +776,9 @@ namespace TypeScript {
 				elements.push(`${Names.toTs(param.name)}: ${tyPrinter.do(param.type)}`);
 			}
 			const returnType = signature.result !== undefined ? TypeScript.FuncResultPrinter.do(signature.result, code.imports) : 'void';
-			code.push(`export declare function ${Names.toTs(this.node.name)}(${elements.join(', ')}): ${returnType};`);
+			const name = Names.toTs(this.node.name);
+			code.push(`export declare function ${name}(${elements.join(', ')}): ${returnType};`);
+			code.push(`export type ${name} = typeof ${name};`);
 		}
 	}
 
@@ -1299,6 +1301,8 @@ export class DocumentVisitor implements Visitor {
 			interfaceData.typeScriptEntries.emit(this.code);
 		}
 		if (interfaceData.componentModelEntries.size > 0) {
+			this.code.push('');
+			this.code.push('');
 			this.code.push(`export namespace $cm {`);
 			this.code.increaseIndent();
 			interfaceData.componentModelEntries.emit(this.code);
