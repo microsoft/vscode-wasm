@@ -3,8 +3,8 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import * as $wcm from '../../componentModel';
-import type { s32, u32 } from '../../componentModel';
+import * as $wcm from '@vscode/wasm-component-model';
+import type { s32, u32 } from '@vscode/wasm-component-model';
 
 import { wall_clock } from './wall-clock';
 

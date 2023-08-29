@@ -241,6 +241,26 @@ const wasm_component_model = {
 };
 
 /** @type ProjectDescription */
+const wasi = {
+	name: 'wasi',
+	path: './wasi',
+	extends: [ common, referenced ],
+	out: {
+		dir: './lib',
+		buildInfoFile: '${buildInfoFile}.tsbuildInfo'
+	},
+	sourceFolders: [
+		{
+			path: './src',
+			extends: [ common ],
+		}
+	],
+	references: [
+		'../wasm-component-model'
+	]
+};
+
+/** @type ProjectDescription */
 const wasm_wasi_core = {
 	name: 'wasm-wasi-core',
 	path: './wasm-wasi-core',
@@ -457,6 +477,8 @@ const projects = [
 	[ createPublishProjectDescription(sync_api_service), [ publishProjectOptions ] ],
 	[ sync_api_tests, [ compileProjectOptions, watchProjectOptions ] ],
 	[ createPublishProjectDescription(sync_api_tests), [ publishProjectOptions ] ],
+	[ wasi, [ compileProjectOptions, watchProjectOptions ] ],
+	[ createPublishProjectDescription(wasi), [ publishProjectOptions ] ],
 	[ wasm_component_model, [ compileProjectOptions, watchProjectOptions ] ],
 	[ createPublishProjectDescription(wasm_component_model), [ publishProjectOptions ] ],
 	[ wasm_wasi_core, [ compileProjectOptions, watchProjectOptions ] ],

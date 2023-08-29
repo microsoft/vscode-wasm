@@ -3,8 +3,8 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import * as $wcm from '../../componentModel';
-import type { u32 } from '../../componentModel';
+import * as $wcm from '@vscode/wasm-component-model';
+import type { u32 } from '@vscode/wasm-component-model';
 
 export namespace poll {
 	export type pollable = u32;
