@@ -208,25 +208,32 @@ namespace ComponentModel {
 		}
 	}
 
-	export class namedImports extends Emitter<NamedImports> {
-		constructor(node: NamedImports) {
+	export class useItem extends Emitter<UseItem> {
+
+		constructor(node: UseItem) {
 			super(node);
 		}
 
 		emit(code: Code, emitted: Set<String>): void {
-			const node = this.node;
-			const name = node.name;
-			const tsName = Names.toTs(name);
-			for (const member of this.node.members) {
-				if (Identifier.is(member)) {
-					const memberName = Names.toTs(member);
-					code.push(`const $${memberName} = ${tsName}.$cm.$${memberName};`);
-					emitted.add(memberName);
-				} else if (RenameItem.is(member)) {
-					const fromName = Names.toTs(member.from);
-					const toName = Names.toTs(member.to);
-					code.push(`const $${toName} = ${tsName}.$cm.$${fromName};`);
-					emitted.add(toName);
+			const importItem = this.node.importItem;
+			if (Identifier.is(importItem)) {
+				throw new Error(`Not implemented`);
+			} else if (RenameItem.is(importItem)) {
+				throw new Error(`Not implemented`);
+			} else if (NamedImports.is(importItem)) {
+				const name = importItem.name;
+				const tsName = Names.toTs(name);
+				for (const member of importItem.members) {
+					if (Identifier.is(member)) {
+						const memberName = Names.toTs(member);
+						code.push(`const $${memberName} = ${tsName}.$cm.$${memberName};`);
+						emitted.add(memberName);
+					} else if (RenameItem.is(member)) {
+						const fromName = Names.toTs(member.from);
+						const toName = Names.toTs(member.to);
+						code.push(`const $${toName} = ${tsName}.$cm.$${fromName};`);
+						emitted.add(toName);
+					}
 				}
 			}
 		}
@@ -587,13 +594,13 @@ class ComponentModelEntries {
 	}
 
 	public emit(code: Code): void {
-		const namedImports: ComponentModel.Emitter[] = [];
+		const use: ComponentModel.Emitter[] = [];
 		const types: ComponentModel.type[] = [];
 		const others: ComponentModel.Emitter[] = [];
 		const functions: ComponentModel.functionSignature[] = [];
 		for (const entry of this.entries) {
-			if (entry instanceof ComponentModel.namedImports) {
-				namedImports.push(entry);
+			if (entry instanceof ComponentModel.useItem) {
+				use.push(entry);
 			} else if (entry instanceof ComponentModel.type) {
 				types.push(entry);
 			} else if (entry instanceof ComponentModel.functionSignature) {
@@ -616,7 +623,7 @@ class ComponentModelEntries {
 			return true;
 		}
 
-		for (const entry of namedImports) {
+		for (const entry of use) {
 			entry.emit(code, emitted);
 		}
 
@@ -1309,14 +1316,7 @@ export class DocumentVisitor implements Visitor {
 	visitUseItem(item: UseItem): boolean {
 		const interfaceData = this.getInterfaceData();
 		interfaceData.typeScriptEntries.add(new TypeScript.useItem(item));
-		const importItem = item.importItem;
-		if (Identifier.is(importItem)) {
-			throw new Error(`Not implemented`);
-		} else if (RenameItem.is(importItem)) {
-			throw new Error(`Not implemented`);
-		} else if (NamedImports.is(importItem)) {
-			interfaceData.componentModelEntries.add(new ComponentModel.namedImports(importItem));
-		}
+		interfaceData.componentModelEntries.add(new ComponentModel.useItem(item));
 		return false;
 	}
 
