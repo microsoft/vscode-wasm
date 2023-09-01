@@ -272,6 +272,10 @@ namespace ComponentModel {
 			super(node);
 		}
 
+		public get name(): string {
+			return Names.toTs(this.node.name);
+		}
+
 		public emit(code: Code, emitted: Set<String>): void {
 			const node = this.node;
 			const signature = node.signature;
@@ -593,7 +597,7 @@ class ComponentModelEntries {
 		this.entries.push(type);
 	}
 
-	public emit(code: Code): void {
+	public emit(code: Code, name: string): void {
 		const use: ComponentModel.Emitter[] = [];
 		const types: ComponentModel.type[] = [];
 		const others: ComponentModel.Emitter[] = [];
@@ -647,6 +651,24 @@ class ComponentModelEntries {
 		for (const entry of functions) {
 			entry.emit(code, emitted);
 		}
+
+		code.push('export namespace $ {');
+		code.increaseIndent();
+		code.push(`const allFunctions = [${functions.map(entry => `$${entry.name}`).join(', ')}];`);
+		code.push(`export function createHost<T extends $wcm.Host>(service: ${name}, context: $wcm.Context): T {`);
+		code.increaseIndent();
+		code.push(`return $wcm.Host.create<T>(allFunctions, service, context);`);
+		code.decreaseIndent();
+		code.push(`}`);
+		code.push(`export function createService<T extends ${name}>(wasmInterface: $wcm.WasmInterface, context: $wcm.Context): T {`);
+		code.increaseIndent();
+		code.push(`return $wcm.Service.create<T>(allFunctions, wasmInterface, context);`);
+		code.decreaseIndent();
+		code.push(`}`);
+
+		code.push();
+		code.decreaseIndent();
+		code.push('}');
 	}
 }
 
@@ -1305,7 +1327,7 @@ export class DocumentVisitor implements Visitor {
 			this.code.push('');
 			this.code.push(`export namespace $cm {`);
 			this.code.increaseIndent();
-			interfaceData.componentModelEntries.emit(this.code);
+			interfaceData.componentModelEntries.emit(this.code, name);
 			this.code.decreaseIndent();
 			this.code.push(`}`);
 		}

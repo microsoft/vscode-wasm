@@ -41,15 +41,15 @@
 	"scripts": {
 		"prepublishOnly": "echo \"⛔ Can only publish from a secure pipeline ⛔\" && node ../build/npm/fail",
 		"prepack": "npm run all:publish",
-		"compile": "node ../node_modules/typescript/lib/tsc.js -b ./tsconfig.json",
-		"compile:publish": "node ../node_modules/typescript/lib/tsc.js -b ./tsconfig.publish.json",
+		"compile": "npm run peggy && node ../node_modules/typescript/lib/tsc.js -b ./tsconfig.json",
+		"compile:publish": "npm run peggy && node ../node_modules/typescript/lib/tsc.js -b ./tsconfig.publish.json",
 		"watch": "node ../node_modules/typescript/lib/tsc.js -b ./tsconfig.watch.json -w",
 		"clean": "node ../node_modules/rimraf/bin.js lib",
 		"lint": "node ../node_modules/eslint/bin/eslint.js --ext ts src",
 		"test": "npm run test:desktop",
 		"test:desktop": "node ../node_modules/mocha/bin/_mocha",
 		"all": "npm run clean && npm run compile && npm run lint",
-		"all:publish": "git clean -xfd . && npm install && npm run peggy && npm run compile:publish && npm run lint",
+		"all:publish": "git clean -xfd . && npm install && npm run compile:publish && npm run lint",
 		"peggy": "../node_modules/.bin/make-dir ./lib/tools && peggy -o lib/tools/wit.js src/tools/wit.pegjs"
 	}
 }

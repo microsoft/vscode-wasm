@@ -19,14 +19,14 @@ export namespace poll {
 	 * This [represents a resource](https://github.com/WebAssembly/WASI/blob/main/docs/WitInWasi.md#Resources).
 	 */
 	export type pollable = u32;
-
+	
 	/**
 	 * Dispose of the specified `pollable`, after which it may no longer
 	 * be used.
 	 */
 	export declare function drop_pollable($this: pollable): void;
 	export type drop_pollable = typeof drop_pollable;
-
+	
 	/**
 	 * Poll for completion on a set of pollables.
 	 *
@@ -43,8 +43,8 @@ export namespace poll {
 	 */
 	export declare function poll_oneoff($in: pollable[]): boolean[];
 	export type poll_oneoff = typeof poll_oneoff;
-
-
+	
+	
 	export namespace $cm {
 		export const $pollable = $wcm.u32;
 		export const $drop_pollable = new $wcm.FunctionType<drop_pollable>('drop_pollable', [
@@ -53,6 +53,16 @@ export namespace poll {
 		export const $poll_oneoff = new $wcm.FunctionType<poll_oneoff>('poll_oneoff', [
 			['$in', new $wcm.ListType<pollable>($pollable)]
 		], new $wcm.ListType<boolean>($wcm.bool));
+		export namespace $ {
+			const allFunctions = [$drop_pollable, $poll_oneoff];
+			export function createHost<T extends $wcm.Host>(service: poll, context: $wcm.Context): T {
+				return $wcm.Host.create<T>(allFunctions, service, context);
+			}
+			export function createService<T extends poll>(wasmInterface: $wcm.WasmInterface, context: $wcm.Context): T {
+				return $wcm.Service.create<T>(allFunctions, wasmInterface, context);
+			}
+
+		}
 	}
 }
 export type poll = Pick<typeof poll, 'drop_pollable' | 'poll_oneoff'>;

@@ -7,10 +7,10 @@ export namespace wall_clock {
 	 */
 	export interface datetime extends $wcm.JRecord {
 		seconds: u64;
-
+		
 		nanoseconds: u32;
 	}
-
+	
 	/**
 	 * Read the current value of the clock.
 	 *
@@ -28,7 +28,7 @@ export namespace wall_clock {
 	 */
 	export declare function now(): datetime;
 	export type now = typeof now;
-
+	
 	/**
 	 * Query the resolution of the clock.
 	 *
@@ -36,14 +36,24 @@ export namespace wall_clock {
 	 */
 	export declare function resolution(): datetime;
 	export type resolution = typeof resolution;
-
-
+	
+	
 	export namespace $cm {
 		export const $datetime = new $wcm.RecordType<datetime>([
 			['seconds', $wcm.u64], ['nanoseconds', $wcm.u32]
 		]);
 		export const $now = new $wcm.FunctionType<now>('now', [], $datetime);
 		export const $resolution = new $wcm.FunctionType<resolution>('resolution', [], $datetime);
+		export namespace $ {
+			const allFunctions = [$now, $resolution];
+			export function createHost<T extends $wcm.Host>(service: wall_clock, context: $wcm.Context): T {
+				return $wcm.Host.create<T>(allFunctions, service, context);
+			}
+			export function createService<T extends wall_clock>(wasmInterface: $wcm.WasmInterface, context: $wcm.Context): T {
+				return $wcm.Service.create<T>(allFunctions, wasmInterface, context);
+			}
+
+		}
 	}
 }
 export type wall_clock = Pick<typeof wall_clock, 'now' | 'resolution'>;
