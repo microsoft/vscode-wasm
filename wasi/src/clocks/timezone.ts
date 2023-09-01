@@ -4,7 +4,7 @@ import { wall_clock } from './wall-clock';
 
 export namespace timezone {
 	type datetime = wall_clock.datetime;
-	
+
 	/**
 	 * A timezone.
 	 *
@@ -15,7 +15,7 @@ export namespace timezone {
 	 * This [represents a resource](https://github.com/WebAssembly/WASI/blob/main/docs/WitInWasi.md#Resources).
 	 */
 	export type timezone = u32;
-	
+
 	/**
 	 * Return information needed to display the given `datetime`. This includes
 	 * the UTC offset, the time zone name, and a flag indicating whether
@@ -27,20 +27,20 @@ export namespace timezone {
 	 */
 	export declare function display($this: timezone, when: datetime): timezone_display;
 	export type display = typeof display;
-	
+
 	/**
 	 * The same as `display`, but only return the UTC offset.
 	 */
 	export declare function utc_offset($this: timezone, when: datetime): s32;
 	export type utc_offset = typeof utc_offset;
-	
+
 	/**
 	 * Dispose of the specified input-stream, after which it may no longer
 	 * be used.
 	 */
 	export declare function drop_timezone($this: timezone): void;
 	export type drop_timezone = typeof drop_timezone;
-	
+
 	/**
 	 * Information useful for displaying the timezone of a specific `datetime`.
 	 *
@@ -49,13 +49,13 @@ export namespace timezone {
 	 */
 	export interface timezone_display extends $wcm.JRecord {
 		utc_offset: s32;
-		
+
 		name: string;
-		
+
 		in_daylight_saving_time: boolean;
 	}
-	
-	
+
+
 	export namespace $cm {
 		const $datetime = wall_clock.$cm.$datetime;
 		export const $timezone = $wcm.u32;
@@ -73,10 +73,10 @@ export namespace timezone {
 		]);
 		export namespace $ {
 			const allFunctions = [$display, $utc_offset, $drop_timezone];
-			export function createHost<T extends $wcm.Host>(service: timezone, context: $wcm.Context): T {
+			export function createHost<T extends $wcm.Host>(service: _root._timezone, context: $wcm.Context): T {
 				return $wcm.Host.create<T>(allFunctions, service, context);
 			}
-			export function createService<T extends timezone>(wasmInterface: $wcm.WasmInterface, context: $wcm.Context): T {
+			export function createService<T extends _root._timezone>(wasmInterface: $wcm.WasmInterface, context: $wcm.Context): T {
 				return $wcm.Service.create<T>(allFunctions, wasmInterface, context);
 			}
 
@@ -84,3 +84,8 @@ export namespace timezone {
 	}
 }
 export type timezone = Pick<typeof timezone, 'display' | 'utc_offset' | 'drop_timezone'>;
+
+namespace _root {
+	export const _timezone = timezone;
+	export type _timezone = timezone;
+}
