@@ -44,13 +44,6 @@ export namespace wall_clock {
 		]);
 		export const $now = new $wcm.FunctionType<now>('now', [], $datetime);
 		export const $resolution = new $wcm.FunctionType<resolution>('resolution', [], $datetime);
-
-		export namespace _ {
-			export type Host = Record<'now' | 'resolution', $wcm.Host.Signature>;
-			export function createHost(service: wall_clock): Host {
-				return $wcm.Host.create([$now, $resolution], service);
-			}
-		}
 	}
 }
 export type wall_clock = Pick<typeof wall_clock, 'now' | 'resolution'>;
