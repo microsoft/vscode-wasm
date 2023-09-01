@@ -4,7 +4,7 @@ import { wall_clock } from './wall-clock';
 
 export namespace timezone {
 	type datetime = wall_clock.datetime;
-	
+
 	/**
 	 * A timezone.
 	 *
@@ -15,7 +15,7 @@ export namespace timezone {
 	 * This [represents a resource](https://github.com/WebAssembly/WASI/blob/main/docs/WitInWasi.md#Resources).
 	 */
 	export type timezone = u32;
-	
+
 	/**
 	 * Return information needed to display the given `datetime`. This includes
 	 * the UTC offset, the time zone name, and a flag indicating whether
@@ -27,20 +27,20 @@ export namespace timezone {
 	 */
 	export declare function display($this: timezone, when: datetime): timezone_display;
 	export type display = typeof display;
-	
+
 	/**
 	 * The same as `display`, but only return the UTC offset.
 	 */
 	export declare function utc_offset($this: timezone, when: datetime): s32;
 	export type utc_offset = typeof utc_offset;
-	
+
 	/**
 	 * Dispose of the specified input-stream, after which it may no longer
 	 * be used.
 	 */
 	export declare function drop_timezone($this: timezone): void;
 	export type drop_timezone = typeof drop_timezone;
-	
+
 	/**
 	 * Information useful for displaying the timezone of a specific `datetime`.
 	 *
@@ -49,26 +49,26 @@ export namespace timezone {
 	 */
 	export interface timezone_display extends $wcm.JRecord {
 		utc_offset: s32;
-		
+
 		name: string;
-		
+
 		in_daylight_saving_time: boolean;
 	}
-	
-	
+
+
 	export namespace $cm {
 		const $datetime = wall_clock.$cm.$datetime;
 		export const $timezone = $wcm.u32;
 		export const $timezone_display = new $wcm.RecordType<timezone_display>([
 			['utc_offset', $wcm.s32], ['name', $wcm.wstring], ['in_daylight_saving_time', $wcm.bool]
 		]);
-		export const $display = new $wcm.FunctionSignature<display>('display', [
+		export const $display = new $wcm.FunctionType<display>('display', [
 			['$this', $timezone], ['when', $datetime]
 		], $timezone_display);
-		export const $utc_offset = new $wcm.FunctionSignature<utc_offset>('utc_offset', [
+		export const $utc_offset = new $wcm.FunctionType<utc_offset>('utc_offset', [
 			['$this', $timezone], ['when', $datetime]
 		], $wcm.s32);
-		export const $drop_timezone = new $wcm.FunctionSignature<drop_timezone>('drop_timezone', [
+		export const $drop_timezone = new $wcm.FunctionType<drop_timezone>('drop_timezone', [
 			['$this', $timezone]
 		]);
 	}

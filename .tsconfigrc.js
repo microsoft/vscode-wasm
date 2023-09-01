@@ -222,6 +222,12 @@ const wasm_component_model = {
 		{
 			path: './src/common',
 			extends: [ common ],
+			exclude: [ 'test' ]
+		},
+		{
+			path: './src/common/test',
+			extends: [ common, testMixin ],
+			references: [ '..' ]
 		},
 		{
 			path: './src/web',
@@ -231,7 +237,13 @@ const wasm_component_model = {
 		{
 			path: './src/desktop',
 			extends: [ node ],
-			references: [ '../common' ]
+			references: [ '../common' ],
+			exclude: [ 'test' ]
+		},
+		{
+			path: './src/desktop/test',
+			extends: [ node, testMixin],
+			references: [ '..', '../../common/test' ]
 		},
 		{
 			path: './src/tools',

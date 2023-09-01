@@ -22,10 +22,14 @@
         "assumeChangesOnlyAffectDirectDependencies": true,
         "outDir": "../../lib/desktop",
         "tsBuildInfoFile": "../../lib/desktop/watch.tsbuildInfo",
-        "incremental": true
+        "incremental": true,
+        "composite": true
     },
     "include": [
         "."
+    ],
+    "exclude": [
+        "test"
     ],
     "references": [
         {

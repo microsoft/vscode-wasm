@@ -729,6 +729,7 @@ namespace $wstring {
 }
 export const wstring: ComponentModelType<string> = $wstring;
 
+export type JArray = JType[];
 export class ListType<T> implements ComponentModelType<T[]> {
 
 	private static readonly offsets = {
@@ -1712,19 +1713,171 @@ export class ResultType<O extends JType | void, E extends JType> extends Variant
 	}
 }
 
-export type JType = number | bigint | string | boolean | JRecord | JVariantCase | JFlags | JTuple | JEnum | option<any> | result<any, any> | Int8Array | Int16Array | Int32Array | BigInt64Array | Uint8Array | Uint16Array | Uint32Array | BigUint64Array | Float32Array | Float64Array;
+export type JType = number | bigint | string | boolean | JArray | JRecord | JVariantCase | JFlags | JTuple | JEnum | option<any> | result<any, any> | Int8Array | Int16Array | Int32Array | BigInt64Array | Uint8Array | Uint16Array | Uint32Array | BigUint64Array | Float32Array | Float64Array;
 
 export type FunctionParameter = [/* name */string, /* type */GenericComponentModelType];
 
-export class FunctionSignature<_T extends Function> {
+export type ServiceFunction = (...params: JType[]) => JType | void;
+export interface ServiceInterface {
+	readonly [key: string]: ServiceFunction;
+}
+
+export type WasmFunction = (...params: wasmType[]) => wasmType | void;
+export interface WasmInterface {
+	readonly [key: string]: WasmFunction;
+}
+
+export class FunctionType<_T extends Function> {
+
+	private static MAX_FLAT_PARAMS = 16;
+	private static MAX_FLAT_RESULTS = 1;
 
 	public readonly name: string;
 	public readonly params: FunctionParameter[];
-	public readonly returnValue: GenericComponentModelType | undefined;
+	private readonly paramTupleType: TupleType<JTuple>;
+	public readonly returnType: GenericComponentModelType | undefined;
 
-	constructor(name: string, params: FunctionParameter[], returnValue?: GenericComponentModelType) {
+	private readonly paramFlatTypes: number;
+	private readonly returnFlatTypes: number;
+
+	constructor(name: string, params: FunctionParameter[], returnType?: GenericComponentModelType) {
 		this.name = name;
 		this.params = params;
-		this.returnValue = returnValue;
+		this.returnType = returnType;
+		const paramTypes: GenericComponentModelType[] = [];
+		let paramFlatTypes: number = 0;
+		for (const param of params) {
+			paramTypes.push(param[1]);
+			paramFlatTypes += param[1].flatTypes.length;
+		}
+		this.paramFlatTypes = paramFlatTypes;
+		this.paramTupleType = new TupleType(paramTypes);
+		this.returnFlatTypes = returnType !== undefined ? returnType.flatTypes.length : 0;
+	}
+
+	public callService(params: (number | bigint)[], serviceFunction: ServiceFunction, memory: Memory, options: Options): number | bigint | void {
+		const jParams = this.liftParamValues(params, memory, options);
+		const result: JType | void = serviceFunction(...jParams);
+		return this.lowerReturnValue(result, memory, options, undefined);
+	}
+
+	public callWasm(params: JType[], wasmFunction: WasmFunction, memory: Memory, options: Options): JType | void {
+		const wasmValues = this.lowerParamValues(params, memory, options, undefined);
+		const result = wasmFunction(...wasmValues);
+		return this.liftReturnValue(result, memory, options);
+	}
+
+	private liftParamValues(wasmValues: (number | bigint)[], memory: Memory, options: Options): JType[] {
+		if (this.paramFlatTypes > FunctionType.MAX_FLAT_PARAMS) {
+			const p0 = wasmValues[0];
+			if (!Number.isInteger(p0)) {
+				throw new ComponentModelError('Invalid pointer');
+			}
+			return this.paramTupleType.load(memory, p0 as ptr, options);
+		} else {
+			return this.paramTupleType.liftFlat(memory, wasmValues.values(), options);
+		}
+	}
+
+	private liftReturnValue(value: wasmType | void, memory: Memory, options: Options): JType | void {
+		if (this.returnFlatTypes === 0) {
+			return;
+		} else if (this.returnFlatTypes <= FunctionType.MAX_FLAT_RESULTS) {
+			const type = this.returnType!;
+			return type.liftFlat(memory, [value!].values(), options);
+		} else {
+			const type = this.returnType!;
+			return type.load(memory, value as ptr, options);
+		}
+	}
+
+	private lowerParamValues(values: JType[], memory: Memory, options: Options, out: ptr | undefined): wasmType[] {
+		if (this.paramFlatTypes > FunctionType.MAX_FLAT_PARAMS) {
+			const ptr = out !== undefined ? out : memory.alloc(this.paramTupleType.size, this.paramTupleType.alignment);
+			this.paramTupleType.store(memory, ptr, values as JTuple, options);
+			return [ptr];
+		} else {
+			const result: wasmType[] = [];
+			this.paramTupleType.lowerFlat(result, memory, values, options);
+			return result;
+		}
+	}
+
+	private lowerReturnValue(value: JType | void, memory: Memory, options: Options, out: ptr | undefined): wasmType | void {
+		if (this.returnFlatTypes === 0) {
+			return;
+		} else if (this.returnFlatTypes <= FunctionType.MAX_FLAT_RESULTS) {
+			const result: wasmType[] = [];
+			this.returnType!.lowerFlat(result, memory, value, options);
+			if (result.length !== 1) {
+				throw new ComponentModelError('Invalid result');
+			}
+			return result[0];
+		} else {
+			const type = this.returnType!;
+			const ptr = out !== undefined ? out : memory.alloc(type.size, type.alignment);
+			type.store(memory, ptr, value, options);
+			return ptr;
+		}
+	}
+}
+
+
+export interface Context {
+	readonly memory: Memory;
+	readonly options: Options;
+}
+
+type UnionJType = number & bigint & string & boolean & JArray & JRecord & JVariantCase & JFlags & JTuple & JEnum & option<any> & result<any, any> & Int8Array & Int16Array & Int32Array & BigInt64Array & Uint8Array & Uint16Array & Uint32Array & BigUint64Array & Float32Array & Float64Array;
+
+type UnionWasmType = number & bigint;
+interface ParamWasmInterface {
+	readonly [key: string]: (...params: UnionWasmType[]) => wasmType | void;
+}
+
+type ParamServiceFunction = (...params: UnionJType[]) => JType | void;
+interface ParamServiceInterface {
+	readonly [key: string]: ParamServiceFunction;
+}
+
+
+
+export type Host = ParamWasmInterface;
+export namespace Host {
+	export function asWasmInterface(host: Host): WasmInterface {
+		return host as unknown as WasmInterface;
+	}
+	export function create<T extends Host>(signatures: FunctionType<ServiceFunction>[], service: ParamServiceInterface, context: Context): T {
+		const result: { [key: string]: WasmFunction }  = Object.create(null);
+		for (const signature of signatures) {
+			result[signature.name] = createHostFunction(signature, service, context);
+		}
+		return result as unknown as T;
+	}
+
+	function createHostFunction(func: FunctionType<ServiceFunction>, service: ParamServiceInterface, context: Context): WasmFunction {
+		const serviceFunction = service[func.name] as ServiceFunction;
+		return (...params: wasmType[]): number | bigint | void => {
+			return func.callService(params, serviceFunction, context.memory, context.options);
+		};
+	}
+}
+
+export type Service = ParamServiceInterface;
+export namespace Service {
+
+	export function create<T extends Service>(signatures: FunctionType<Function>[], wasm: WasmInterface, context: Context): T {
+		const result: { [key: string]: ServiceFunction }  = Object.create(null);
+		for (const signature of signatures) {
+			result[signature.name] = createServiceFunction(signature, wasm, context);
+		}
+		return result as unknown as T;
+	}
+
+	function createServiceFunction(func: FunctionType<ServiceFunction>, wasm: WasmInterface, context: Context): ServiceFunction {
+		const wasmFunction = wasm[func.name];
+		return (...params: JType[]): JType | void => {
+			return func.callWasm(params, wasmFunction, context.memory, context.options);
+		};
 	}
 }

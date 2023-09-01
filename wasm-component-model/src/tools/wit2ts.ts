@@ -285,9 +285,9 @@ namespace ComponentModel {
 			const returnType = signature.result !== undefined ? ComponentModel.FuncResultPrinter.do(signature.result, code.imports) : undefined;
 
 			if (params.length === 0) {
-				code.push(`export const $${name} = new $wcm.FunctionSignature<${name}>('${name}', [], ${returnType});`);
+				code.push(`export const $${name} = new $wcm.FunctionType<${name}>('${name}', [], ${returnType});`);
 			} else {
-				code.push(`export const $${name} = new $wcm.FunctionSignature<${name}>('${name}', [`);
+				code.push(`export const $${name} = new $wcm.FunctionType<${name}>('${name}', [`);
 				code.increaseIndent();
 				code.push(`${params.join(', ')}`);
 				code.decreaseIndent();

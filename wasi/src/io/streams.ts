@@ -4,7 +4,7 @@ import { poll } from '../poll/poll';
 
 export namespace streams {
 	type pollable = poll.pollable;
-	
+
 	/**
 	 * Streams provide a sequence of data and then end; once they end, they
 	 * no longer provide any further data.
@@ -18,7 +18,7 @@ export namespace streams {
 		 * The stream is open and may produce further data.
 		 */
 		open = 0,
-		
+
 		/**
 		 * When reading, this indicates that the stream will not produce
 		 * further data.
@@ -27,7 +27,7 @@ export namespace streams {
 		 */
 		ended = 1,
 	}
-	
+
 	/**
 	 * An input bytestream. In the future, this will be replaced by handle
 	 * types.
@@ -45,7 +45,7 @@ export namespace streams {
 	 * This [represents a resource](https://github.com/WebAssembly/WASI/blob/main/docs/WitInWasi.md#Resources).
 	 */
 	export type input_stream = u32;
-	
+
 	/**
 	 * Perform a non-blocking read from the stream.
 	 *
@@ -56,7 +56,7 @@ export namespace streams {
 	 * empty list and `stream-status:open` indicates no more data is
 	 * available at this time, and that the pollable given by
 	 * `subscribe-to-input-stream` will be ready when more data is available.
-	 * 
+	 *
 	 * Once a stream has reached the end, subsequent calls to `read` or
 	 * `skip` will always report `stream-status:ended` rather than producing more
 	 * data.
@@ -72,14 +72,14 @@ export namespace streams {
 	 */
 	export declare function read($this: input_stream, len: u64): result<void, [Uint8Array, stream_status]>;
 	export type read = typeof read;
-	
+
 	/**
 	 * Read bytes from a stream, after blocking until at least one byte can
 	 * be read. Except for blocking, identical to `read`.
 	 */
 	export declare function blocking_read($this: input_stream, len: u64): result<void, [Uint8Array, stream_status]>;
 	export type blocking_read = typeof blocking_read;
-	
+
 	/**
 	 * Skip bytes from a stream.
 	 *
@@ -96,14 +96,14 @@ export namespace streams {
 	 */
 	export declare function skip($this: input_stream, len: u64): result<void, [u64, stream_status]>;
 	export type skip = typeof skip;
-	
+
 	/**
 	 * Skip bytes from a stream, after blocking until at least one byte
 	 * can be skipped. Except for blocking behavior, identical to `skip`.
 	 */
 	export declare function blocking_skip($this: input_stream, len: u64): result<void, [u64, stream_status]>;
 	export type blocking_skip = typeof blocking_skip;
-	
+
 	/**
 	 * Create a `pollable` which will resolve once either the specified stream
 	 * has bytes available to read or the other end of the stream has been
@@ -114,7 +114,7 @@ export namespace streams {
 	 */
 	export declare function subscribe_to_input_stream($this: input_stream): pollable;
 	export type subscribe_to_input_stream = typeof subscribe_to_input_stream;
-	
+
 	/**
 	 * Dispose of the specified `input-stream`, after which it may no longer
 	 * be used.
@@ -125,7 +125,7 @@ export namespace streams {
 	 */
 	export declare function drop_input_stream($this: input_stream): void;
 	export type drop_input_stream = typeof drop_input_stream;
-	
+
 	/**
 	 * An output bytestream. In the future, this will be replaced by handle
 	 * types.
@@ -143,7 +143,7 @@ export namespace streams {
 	 * This [represents a resource](https://github.com/WebAssembly/WASI/blob/main/docs/WitInWasi.md#Resources).
 	 */
 	export type output_stream = u32;
-	
+
 	/**
 	 * Perform a non-blocking write of bytes to a stream.
 	 *
@@ -163,7 +163,7 @@ export namespace streams {
 	 */
 	export declare function write($this: output_stream, buf: Uint8Array): result<void, [u64, stream_status]>;
 	export type write = typeof write;
-	
+
 	/**
 	 * Blocking write of bytes to a stream.
 	 *
@@ -172,7 +172,7 @@ export namespace streams {
 	 */
 	export declare function blocking_write($this: output_stream, buf: Uint8Array): result<void, [u64, stream_status]>;
 	export type blocking_write = typeof blocking_write;
-	
+
 	/**
 	 * Write multiple zero-bytes to a stream.
 	 *
@@ -182,7 +182,7 @@ export namespace streams {
 	 */
 	export declare function write_zeroes($this: output_stream, len: u64): result<void, [u64, stream_status]>;
 	export type write_zeroes = typeof write_zeroes;
-	
+
 	/**
 	 * Write multiple zero bytes to a stream, with blocking.
 	 *
@@ -192,7 +192,7 @@ export namespace streams {
 	 */
 	export declare function blocking_write_zeroes($this: output_stream, len: u64): result<void, [u64, stream_status]>;
 	export type blocking_write_zeroes = typeof blocking_write_zeroes;
-	
+
 	/**
 	 * Read from one stream and write to another.
 	 *
@@ -204,7 +204,7 @@ export namespace streams {
 	 */
 	export declare function splice($this: output_stream, src: input_stream, len: u64): result<void, [u64, stream_status]>;
 	export type splice = typeof splice;
-	
+
 	/**
 	 * Read from one stream and write to another, with blocking.
 	 *
@@ -213,7 +213,7 @@ export namespace streams {
 	 */
 	export declare function blocking_splice($this: output_stream, src: input_stream, len: u64): result<void, [u64, stream_status]>;
 	export type blocking_splice = typeof blocking_splice;
-	
+
 	/**
 	 * Forward the entire contents of an input stream to an output stream.
 	 *
@@ -230,7 +230,7 @@ export namespace streams {
 	 */
 	export declare function forward($this: output_stream, src: input_stream): result<void, [u64, stream_status]>;
 	export type forward = typeof forward;
-	
+
 	/**
 	 * Create a `pollable` which will resolve once either the specified stream
 	 * is ready to accept bytes or the `stream-state` has become closed.
@@ -244,7 +244,7 @@ export namespace streams {
 	 */
 	export declare function subscribe_to_output_stream($this: output_stream): pollable;
 	export type subscribe_to_output_stream = typeof subscribe_to_output_stream;
-	
+
 	/**
 	 * Dispose of the specified `output-stream`, after which it may no longer
 	 * be used.
@@ -255,56 +255,56 @@ export namespace streams {
 	 */
 	export declare function drop_output_stream($this: output_stream): void;
 	export type drop_output_stream = typeof drop_output_stream;
-	
-	
+
+
 	export namespace $cm {
 		const $pollable = poll.$cm.$pollable;
 		export const $input_stream = $wcm.u32;
 		export const $output_stream = $wcm.u32;
 		export const $stream_status = new $wcm.EnumType<stream_status>(2);
-		export const $read = new $wcm.FunctionSignature<read>('read', [
+		export const $read = new $wcm.FunctionType<read>('read', [
 			['$this', $input_stream], ['len', $wcm.u64]
 		], new $wcm.ResultType<void, [Uint8Array, stream_status]>(undefined, new $wcm.TupleType<[Uint8Array, stream_status]>([new $wcm.Uint8ArrayType(), $stream_status])));
-		export const $blocking_read = new $wcm.FunctionSignature<blocking_read>('blocking_read', [
+		export const $blocking_read = new $wcm.FunctionType<blocking_read>('blocking_read', [
 			['$this', $input_stream], ['len', $wcm.u64]
 		], new $wcm.ResultType<void, [Uint8Array, stream_status]>(undefined, new $wcm.TupleType<[Uint8Array, stream_status]>([new $wcm.Uint8ArrayType(), $stream_status])));
-		export const $skip = new $wcm.FunctionSignature<skip>('skip', [
+		export const $skip = new $wcm.FunctionType<skip>('skip', [
 			['$this', $input_stream], ['len', $wcm.u64]
 		], new $wcm.ResultType<void, [u64, stream_status]>(undefined, new $wcm.TupleType<[u64, stream_status]>([$wcm.u64, $stream_status])));
-		export const $blocking_skip = new $wcm.FunctionSignature<blocking_skip>('blocking_skip', [
+		export const $blocking_skip = new $wcm.FunctionType<blocking_skip>('blocking_skip', [
 			['$this', $input_stream], ['len', $wcm.u64]
 		], new $wcm.ResultType<void, [u64, stream_status]>(undefined, new $wcm.TupleType<[u64, stream_status]>([$wcm.u64, $stream_status])));
-		export const $subscribe_to_input_stream = new $wcm.FunctionSignature<subscribe_to_input_stream>('subscribe_to_input_stream', [
+		export const $subscribe_to_input_stream = new $wcm.FunctionType<subscribe_to_input_stream>('subscribe_to_input_stream', [
 			['$this', $input_stream]
 		], $pollable);
-		export const $drop_input_stream = new $wcm.FunctionSignature<drop_input_stream>('drop_input_stream', [
+		export const $drop_input_stream = new $wcm.FunctionType<drop_input_stream>('drop_input_stream', [
 			['$this', $input_stream]
 		]);
-		export const $write = new $wcm.FunctionSignature<write>('write', [
+		export const $write = new $wcm.FunctionType<write>('write', [
 			['$this', $output_stream], ['buf', new $wcm.Uint8ArrayType()]
 		], new $wcm.ResultType<void, [u64, stream_status]>(undefined, new $wcm.TupleType<[u64, stream_status]>([$wcm.u64, $stream_status])));
-		export const $blocking_write = new $wcm.FunctionSignature<blocking_write>('blocking_write', [
+		export const $blocking_write = new $wcm.FunctionType<blocking_write>('blocking_write', [
 			['$this', $output_stream], ['buf', new $wcm.Uint8ArrayType()]
 		], new $wcm.ResultType<void, [u64, stream_status]>(undefined, new $wcm.TupleType<[u64, stream_status]>([$wcm.u64, $stream_status])));
-		export const $write_zeroes = new $wcm.FunctionSignature<write_zeroes>('write_zeroes', [
+		export const $write_zeroes = new $wcm.FunctionType<write_zeroes>('write_zeroes', [
 			['$this', $output_stream], ['len', $wcm.u64]
 		], new $wcm.ResultType<void, [u64, stream_status]>(undefined, new $wcm.TupleType<[u64, stream_status]>([$wcm.u64, $stream_status])));
-		export const $blocking_write_zeroes = new $wcm.FunctionSignature<blocking_write_zeroes>('blocking_write_zeroes', [
+		export const $blocking_write_zeroes = new $wcm.FunctionType<blocking_write_zeroes>('blocking_write_zeroes', [
 			['$this', $output_stream], ['len', $wcm.u64]
 		], new $wcm.ResultType<void, [u64, stream_status]>(undefined, new $wcm.TupleType<[u64, stream_status]>([$wcm.u64, $stream_status])));
-		export const $splice = new $wcm.FunctionSignature<splice>('splice', [
+		export const $splice = new $wcm.FunctionType<splice>('splice', [
 			['$this', $output_stream], ['src', $input_stream], ['len', $wcm.u64]
 		], new $wcm.ResultType<void, [u64, stream_status]>(undefined, new $wcm.TupleType<[u64, stream_status]>([$wcm.u64, $stream_status])));
-		export const $blocking_splice = new $wcm.FunctionSignature<blocking_splice>('blocking_splice', [
+		export const $blocking_splice = new $wcm.FunctionType<blocking_splice>('blocking_splice', [
 			['$this', $output_stream], ['src', $input_stream], ['len', $wcm.u64]
 		], new $wcm.ResultType<void, [u64, stream_status]>(undefined, new $wcm.TupleType<[u64, stream_status]>([$wcm.u64, $stream_status])));
-		export const $forward = new $wcm.FunctionSignature<forward>('forward', [
+		export const $forward = new $wcm.FunctionType<forward>('forward', [
 			['$this', $output_stream], ['src', $input_stream]
 		], new $wcm.ResultType<void, [u64, stream_status]>(undefined, new $wcm.TupleType<[u64, stream_status]>([$wcm.u64, $stream_status])));
-		export const $subscribe_to_output_stream = new $wcm.FunctionSignature<subscribe_to_output_stream>('subscribe_to_output_stream', [
+		export const $subscribe_to_output_stream = new $wcm.FunctionType<subscribe_to_output_stream>('subscribe_to_output_stream', [
 			['$this', $output_stream]
 		], $pollable);
-		export const $drop_output_stream = new $wcm.FunctionSignature<drop_output_stream>('drop_output_stream', [
+		export const $drop_output_stream = new $wcm.FunctionType<drop_output_stream>('drop_output_stream', [
 			['$this', $output_stream]
 		]);
 	}

@@ -21,10 +21,14 @@
         "noUnusedParameters": true,
         "outDir": "../../lib/desktop",
         "tsBuildInfoFile": "../../lib/desktop/compile.tsbuildInfo",
-        "incremental": true
+        "incremental": true,
+        "composite": true
     },
     "include": [
         "."
+    ],
+    "exclude": [
+        "test"
     ],
     "references": [
         {
