@@ -2,14 +2,10 @@
  *  Copyright (c) Microsoft Corporation. All rights reserved.
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
-
-import fs from 'node:fs/promises';
-import path from 'node:path';
-
-import { commands, ExtensionContext, window } from 'vscode';
+import { commands, ExtensionContext, window, Uri, workspace } from 'vscode';
 import { Wasm, ProcessOptions } from '@vscode/wasm-wasi';
 
-export async function activate(_context: ExtensionContext) {
+export async function activate(context: ExtensionContext) {
 	const wasm: Wasm = await Wasm.load();
 
 	commands.registerCommand('testbed-php.runFile', async () => {
@@ -32,8 +28,8 @@ export async function activate(_context: ExtensionContext) {
 			],
 			args: [document.uri]
 		};
-		const filename = path.join(path.sep, 'home', 'dirkb', 'bin', 'wasm', 'php-cgi.wasm');
-		const bits = await fs.readFile(filename);
+		const filename = Uri.joinPath(context.extensionUri, 'wasm', 'php-cgi-8.2.0.wasm');
+		const bits = await workspace.fs.readFile(filename);
 		const module = await WebAssembly.compile(bits);
 		const process = await wasm.createProcess('php-cgi', module, options);
 		process.run().catch(err => {
