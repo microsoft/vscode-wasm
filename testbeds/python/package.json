@@ -48,7 +48,7 @@
 		},
 		"webShellMountPoints": [
 			{
-				"mountPoint": "/usr/local/lib/python3.11",
+				"mountPoint": "/usr/local/lib/python3.12",
 				"path": "wasm/lib"
 			},
 			{
