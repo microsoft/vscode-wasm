@@ -59,6 +59,15 @@ export class BrowserWasiProcess extends WasiProcess {
 		}
 	}
 
+	protected async cleanupResources(): Promise<void> {
+		if (this.mainWorker !== undefined) {
+			this.mainWorker.terminate();
+		}
+		await this.cleanUpWorkers();
+		await this.destroyStreams();
+		await this.cleanupFileDescriptors();
+	}
+
 	public async terminate(): Promise<number> {
 		let result = 0;
 		if (this.mainWorker !== undefined) {
