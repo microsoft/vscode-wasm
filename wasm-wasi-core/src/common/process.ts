@@ -247,7 +247,7 @@ export abstract class WasiProcess {
 		this.processService = {
 			proc_exit: async (_memory, exitCode: exitcode) => {
 				this._state = 'exiting';
-				await this.cleanupResources();
+				await this.processEnded(false);
 				this.resolveRunPromise(exitCode);
 				return Promise.resolve(Errno.success);
 			},
@@ -296,7 +296,7 @@ export abstract class WasiProcess {
 		});
 	}
 
-	protected abstract cleanupResources(): Promise<void>;
+	protected abstract processEnded(isExternallyTerminated: boolean): Promise<void>;
 
 	public abstract terminate(): Promise<number>;
 

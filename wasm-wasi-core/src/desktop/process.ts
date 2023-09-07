@@ -104,8 +104,10 @@ export class NodeWasiProcess extends WasiProcess {
 		return Promise.resolve();
 	}
 
-	protected async cleanupResources(): Promise<void> {
-		await this.mainWorker?.terminate();
+	protected async processEnded(isExternallyTerminated: boolean): Promise<void> {
+		if (!isExternallyTerminated) {
+			await this.mainWorker?.terminate();
+		}
 		await this.cleanUpWorkers();
 		await this.destroyStreams();
 		await this.cleanupFileDescriptors();
@@ -116,7 +118,7 @@ export class NodeWasiProcess extends WasiProcess {
 		if (this.mainWorker !== undefined) {
 			result = await this.mainWorker.terminate();
 		}
-		await this.cleanupResources();
+		await this.processEnded(true);
 		return result;
 	}
 
