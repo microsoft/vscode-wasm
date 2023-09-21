@@ -27,7 +27,7 @@ export class BrowserServiceConnection extends ServiceConnection {
 	public postMessage(message: ServiceMessage): void {
 		try {
 			this.port.postMessage(message);
-		} catch(error) {
+		} catch (error) {
 			RAL().console.error(error);
 		}
 	}
@@ -69,7 +69,7 @@ export class BrowserWasiProcess extends WasiProcess {
 	}
 
 	public async terminate(): Promise<number> {
-		let result = 0;
+		const result = 0;
 		await this.procExit();
 
 		// when terminated, web workers silently exit, and there are no events
