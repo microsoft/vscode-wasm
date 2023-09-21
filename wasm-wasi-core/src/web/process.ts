@@ -59,7 +59,7 @@ export class BrowserWasiProcess extends WasiProcess {
 		}
 	}
 
-	protected async processEnded(_isExternallyTerminated: boolean): Promise<void> {
+	protected async procExit(): Promise<void> {
 		if (this.mainWorker !== undefined) {
 			this.mainWorker.terminate();
 		}
@@ -70,9 +70,9 @@ export class BrowserWasiProcess extends WasiProcess {
 
 	public async terminate(): Promise<number> {
 		let result = 0;
-		await this.processEnded(true);
+		await this.procExit();
 
-		// when terinated, web workers silently exit, and there are no events
+		// when terminated, web workers silently exit, and there are no events
 		// to hook on to know when they are done. To ensure that the run promise resolves,
 		// we call it here so callers awaiting `process.run()` will get a result.
 		this.resolveRunPromise(result);

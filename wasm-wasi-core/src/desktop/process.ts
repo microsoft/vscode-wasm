@@ -44,6 +44,8 @@ export class NodeWasiProcess extends WasiProcess {
 	private mainWorker: Worker | undefined;
 	private threadWorkers: Map<u32, Worker>;
 
+	private isExternallyTerminated: boolean;
+
 	constructor(baseUri: Uri, programName: string, module: WebAssembly.Module | Promise<WebAssembly.Module>, memory: WebAssembly.Memory | WebAssembly.MemoryDescriptor | undefined, options: ProcessOptions = {}) {
 		super(programName, options);
 		this.baseUri = baseUri;
@@ -56,6 +58,7 @@ export class NodeWasiProcess extends WasiProcess {
 		} else {
 			this.memoryDescriptor = memory;
 		}
+		this.isExternallyTerminated = false;
 	}
 
 	protected async startMain(wasiService: WasiService): Promise<void> {
@@ -104,8 +107,8 @@ export class NodeWasiProcess extends WasiProcess {
 		return Promise.resolve();
 	}
 
-	protected async processEnded(isExternallyTerminated: boolean): Promise<void> {
-		if (!isExternallyTerminated) {
+	protected async procExit(): Promise<void> {
+		if (!this.isExternallyTerminated) {
 			await this.mainWorker?.terminate();
 		}
 		await this.cleanUpWorkers();
@@ -114,11 +117,12 @@ export class NodeWasiProcess extends WasiProcess {
 	}
 
 	public async terminate(): Promise<number> {
+		this.isExternallyTerminated = true;
 		let result = 0;
 		if (this.mainWorker !== undefined) {
 			result = await this.mainWorker.terminate();
 		}
-		await this.processEnded(true);
+		await this.procExit();
 		return result;
 	}
 
