@@ -27,7 +27,7 @@ export class BrowserServiceConnection extends ServiceConnection {
 	public postMessage(message: ServiceMessage): void {
 		try {
 			this.port.postMessage(message);
-		} catch(error) {
+		} catch (error) {
 			RAL().console.error(error);
 		}
 	}
@@ -59,16 +59,20 @@ export class BrowserWasiProcess extends WasiProcess {
 		}
 	}
 
-	public async terminate(): Promise<number> {
-		let result = 0;
+	protected async procExit(): Promise<void> {
 		if (this.mainWorker !== undefined) {
 			this.mainWorker.terminate();
 		}
 		await this.cleanUpWorkers();
 		await this.destroyStreams();
 		await this.cleanupFileDescriptors();
+	}
 
-		// when terinated, web workers silently exit, and there are no events
+	public async terminate(): Promise<number> {
+		const result = 0;
+		await this.procExit();
+
+		// when terminated, web workers silently exit, and there are no events
 		// to hook on to know when they are done. To ensure that the run promise resolves,
 		// we call it here so callers awaiting `process.run()` will get a result.
 		this.resolveRunPromise(result);
