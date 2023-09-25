@@ -195,12 +195,12 @@ suite(`Simple test - ${memoryQualifier}`, () => {
 		assert.strictEqual(errno, Errno.success);
 		// Clock realtime is in ns but date now in ms.
 		const now = BigInt(Date.now()) * 1000000n;
-		assert.ok(now - delta < time.value && time.value <= now, 'realtime');
+		assert.ok(now - delta < time.value && time.value < now + delta, `realtime [${now}, ${time.value}]`);
 
 		errno = wasi.clock_time_get(Clockid.monotonic, 0n, time.$ptr);
 		assert.strictEqual(errno, Errno.success);
 		const hrtime =  RAL().clock.monotonic();
-		assert.ok(hrtime - delta < time.value && time.value <= hrtime, 'monotonic');
+		assert.ok(hrtime - delta < time.value && time.value < hrtime + delta, `monotonic [${hrtime}, ${time.value}]`);
 
 		errno = wasi.clock_time_get(Clockid.process_cputime_id, 0n, time.$ptr);
 		assert.strictEqual(errno, Errno.success);
