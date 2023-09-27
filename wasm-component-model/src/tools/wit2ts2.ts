@@ -6,7 +6,16 @@
 import * as fs from 'node:fs';
 import * as path from 'node:path';
 
-import { Document, Func, Interface, Owner, Package, Type, TypeKind, TypeReference } from './wit-json';
+import { Document, Documentation, Field, Func, Interface, Owner, Package, Type, TypeKind, TypeReference } from './wit-json';
+
+export function processDocument(document: Document, outDir: string): void {
+	for (const pkg of document.packages) {
+		const visitor = new TypeScript.PackageEmitter(pkg, document);
+		const code = visitor.emit();
+		const fileName = Names.fileName(pkg);
+		fs.writeFileSync(path.join(outDir, fileName), code.toString());
+	}
+}
 
 class Imports {
 
@@ -91,6 +100,12 @@ class Code {
 type SymbolTable = Pick<Document, 'interfaces' | 'types' | 'packages'>;
 
 namespace Names {
+
+	const keywords: Map<string, string> = new Map<string, string>([
+		['this', 'this_'],
+		['in', 'in_']
+	]);
+
 	export function fileName(pkg: Package): string {
 		const index = pkg.name.indexOf(':');
 		if (index === -1) {
@@ -107,12 +122,21 @@ namespace Names {
 		return parts.join('');
 	}
 
+	export function asFuncName(name: string): string {
+		return asPropertyName(name);
+	}
+
+	export function asParamName(name: string): string {
+		return asPropertyName(name);
+	}
+
 	export function asPropertyName(name: string): string {
 		const parts = name.split('-');
 		for (let i = 1; i < parts.length; i++) {
 			parts[i] = parts[i][0].toUpperCase() + parts[i].substring(1);
 		}
-		return parts.join('');
+		const result = parts.join('');
+		return keywords.get(result) ?? result;
 	}
 
 	export function getNamespaceAndName(name: string): [string | undefined, string] {
@@ -125,6 +149,140 @@ namespace Names {
 }
 
 namespace TypeScript {
+
+	function emitDocumentation(item: { docs?: Documentation }, code: Code, emitNewLine: boolean = false): void {
+		if (item.docs !== undefined && item.docs.contents !== null) {
+			emitNewLine && code.push('');
+			code.push(`/**`);
+			const lines = item.docs.contents.split('\n');
+			for (const line of lines) {
+				code.push(` * ${line}`);
+			}
+			code.push(` */`);
+		}
+	}
+
+	export class PackageEmitter {
+
+		private readonly pkg: Package;
+		private readonly symbols: SymbolTable;
+		private readonly code: Code;
+
+		constructor(pkg: Package, symbols: SymbolTable) {
+			this.pkg = pkg;
+			this.symbols = symbols;
+			this.code = new Code();
+		}
+
+		public emit(): Code {
+			for (const iface of Object.values(this.pkg.interfaces)) {
+				this.processInterface(this.symbols.interfaces[iface]);
+				this.code.push('');
+			}
+			return this.code;
+		}
+
+		private processInterface(iface: Interface): void {
+			emitDocumentation(iface, this.code);
+			this.code.push(`export namespace ${Names.asTypeName(iface.name)} {`);
+			this.code.increaseIndent();
+			for (const t of Object.values(iface.types)) {
+				this.code.push('');
+				const type = this.symbols.types[t];
+				(new TypeEmitter(type, this.code, this.symbols)).emit();
+			}
+			for (const func of Object.values(iface.functions)) {
+				this.code.push('');
+				(new FunctionEmitter(func, this.code, this.symbols)).emit();
+			}
+			this.code.decreaseIndent();
+			this.code.push(`}`);
+		}
+	}
+
+	class TypeEmitter {
+
+		private readonly type: Type;
+		private readonly code: Code;
+		private readonly symbols: SymbolTable;
+
+		constructor(type: Type, code: Code, symbols: SymbolTable) {
+			this.type = type;
+			this.code = code;
+			this.symbols = symbols;
+		}
+
+		public emit(): void {
+			if (this.type.name === null) {
+				throw new Error(`Type ${this.type.kind} has no name.`);
+			}
+			emitDocumentation(this.type, this.code);
+			if (TypeKind.isRecord(this.type.kind)) {
+				this.code.push(`export interface ${Names.asTypeName(this.type.name)} {`);
+				this.code.increaseIndent();
+				for (const field of this.type.kind.record.fields) {
+					emitDocumentation(field, this.code, true);
+					this.code.push(`${Names.asPropertyName(field.name)}: ${TypeName.fromReference(field.type, this.symbols, this.code.imports)};`);
+				}
+				this.code.decreaseIndent();
+				this.code.push(`};`);
+			} else if (TypeKind.isVariant(this.type.kind)) {
+				this.code.push(`export namespace ${Names.asTypeName(this.type.name)} {`);
+				this.code.increaseIndent();
+				this.code.decreaseIndent();
+				this.code.push(`};`);
+			} else if (TypeKind.isEnum(this.type.kind)) {
+				this.code.push(`export enum ${Names.asTypeName(this.type.name)} {`);
+				this.code.increaseIndent();
+				for (let i = 0; i < this.type.kind.enum.cases.length; i++) {
+					const item = this.type.kind.enum.cases[i];
+					this.code.push(`${Names.asPropertyName(item.name)} = ${i},`);
+				}
+				this.code.decreaseIndent();
+				this.code.push(`};`);
+			} else if (TypeKind.isFlags(this.type.kind)) {
+				this.code.push(`export interface ${Names.asTypeName(this.type.name)} {`);
+				this.code.increaseIndent();
+				for (const flag of this.type.kind.flags.flags) {
+					this.code.push(`${Names.asPropertyName(flag.name)}: boolean;`);
+				}
+				this.code.decreaseIndent();
+				this.code.push(`};`);
+			} else {
+				this.code.push(`export type ${Names.asTypeName(this.type.name)} = ${TypeName.fromType(this.type, this.symbols, this.code.imports)};`);
+			}
+		}
+	}
+
+	class FunctionEmitter {
+
+		private readonly func: Func;
+		private readonly code: Code;
+		private readonly symbols: SymbolTable;
+
+		constructor(func: Func, code: Code, symbols: SymbolTable) {
+			this.func = func;
+			this.code = code;
+			this.symbols = symbols;
+		}
+
+		public emit(): void {
+			emitDocumentation(this.func, this.code);
+			const name = Names.asFuncName(this.func.name);
+			const elements: string[] = [];
+			for (const param of this.func.params) {
+				elements.push(`${Names.asParamName(param.name)}: ${TypeName.fromReference(param.type, this.symbols, this.code.imports)}`);
+			}
+			let returnType = this.func.results.length === 0
+				? 'void'
+				: this.func.results.length === 1
+					? TypeName.fromReference(this.func.results[0].type, this.symbols, this.code.imports)
+					: `[${this.func.results.map(r => TypeName.fromReference(r.type, this.symbols, this.code.imports)).join(', ')}]`;
+
+			this.code.push(`export declare function ${name}(${elements.join(', ')}): ${returnType};`);
+			this.code.push(`export type ${name} = typeof ${name};`);
+		}
+	}
 
 	namespace TypeName {
 
@@ -139,7 +297,7 @@ namespace TypeScript {
 		}
 
 		export function fromType(type: Type, symbols: SymbolTable, imports: Imports): string {
-			if (TypeKind.isTypeReferenceObject(type.kind)) {
+			if (TypeKind.isTypeReference(type.kind)) {
 				const referenced = symbols.types[type.kind.type];
 				let qualifier = computeQualifier(type.owner, referenced.owner, symbols, imports);
 				const name = type.name === null ? fromType(referenced, symbols, imports) : Names.asTypeName(type.name);
@@ -150,7 +308,7 @@ namespace TypeScript {
 				}
 			}
 			if (TypeKind.isBaseType(type.kind)) {
-				return baseType(type.kind.type);
+				return type.name !== null ? Names.asTypeName(type.name) : baseType(type.kind.type);
 			}
 			if (TypeKind.isList(type.kind)) {
 				if (typeof type.kind.list === 'string') {
@@ -185,8 +343,20 @@ namespace TypeScript {
 				return `[${type.kind.tuple.types.map(t => fromReference(t, symbols, imports)).join(', ')}]`;
 			} else if (TypeKind.isOption(type.kind)) {
 				return `${fromReference(type.kind.option, symbols, imports)} | undefined`;
+			} else if (TypeKind.isResult(type.kind)) {
+				let ok: string = 'void';
+				const result = type.kind.result;
+				if (result.ok !== null) {
+					ok = fromReference(result.ok, symbols, imports);
+				}
+				let error: string = 'void';
+				if (result.err !== null) {
+					error = fromReference(result.err, symbols, imports);
+				}
+				imports.addBaseType('result');
+				return `result<${ok}, ${error}>`;
 			} else if (type.name !== null) {
-				return type.name;
+				return Names.asTypeName(type.name);
 			}
 			throw new Error(`Unknown type ${type.kind}`);
 		}
@@ -243,114 +413,5 @@ namespace TypeScript {
 					throw new Error(`Unknown base type ${base}`);
 			}
 		}
-	}
-
-	export class PackageEmitter {
-
-		private readonly pkg: Package;
-		private readonly symbols: SymbolTable;
-		private readonly code: Code;
-
-		constructor(pkg: Package, symbols: SymbolTable) {
-			this.pkg = pkg;
-			this.symbols = symbols;
-			this.code = new Code();
-		}
-
-		public emit(): Code {
-			for (const iface of Object.values(this.pkg.interfaces)) {
-				this.processInterface(this.symbols.interfaces[iface]);
-				this.code.push('');
-			}
-			return this.code;
-		}
-
-		private processInterface(iface: Interface): void {
-			this.code.push(`export namespace ${Names.asTypeName(iface.name)} {`);
-			this.code.increaseIndent();
-			for (const t of Object.values(iface.types)) {
-				const type = this.symbols.types[t];
-				(new TypeEmitter(type, this.code, this.symbols)).emit();
-			}
-			for (const func of Object.values(iface.functions)) {
-			}
-			this.code.decreaseIndent();
-			this.code.push(`}`);
-		}
-	}
-
-	class TypeEmitter {
-
-		private readonly type: Type;
-		private readonly code: Code;
-		private readonly symbols: SymbolTable;
-
-		constructor(type: Type, code: Code, symbols: SymbolTable) {
-			this.type = type;
-			this.code = code;
-			this.symbols = symbols;
-		}
-
-		public emit(): void {
-			if (this.type.name === null) {
-				throw new Error(`Type ${this.type.kind} has no name.`);
-			}
-			if (TypeKind.isRecord(this.type.kind)) {
-				this.code.push(`export interface ${Names.asTypeName(this.type.name)} {`);
-				this.code.increaseIndent();
-				for (const field of this.type.kind.record.fields) {
-					this.code.push(`${Names.asPropertyName(field.name)}: ${TypeName.fromReference(field.type, this.symbols, this.code.imports)};`);
-				}
-				this.code.decreaseIndent();
-				this.code.push(`};`);
-			} else if (TypeKind.isVariant(this.type.kind)) {
-				this.code.push(`export namespace ${Names.asTypeName(this.type.name)} {`);
-				this.code.increaseIndent();
-				this.code.decreaseIndent();
-				this.code.push(`};`);
-			} else if (TypeKind.isEnum(this.type.kind)) {
-				this.code.push(`export enum ${Names.asTypeName(this.type.name)} {`);
-				this.code.increaseIndent();
-				for (let i = 0; i < this.type.kind.enum.cases.length; i++) {
-					const item = this.type.kind.enum.cases[i];
-					this.code.push(`${Names.asPropertyName(item.name)} = ${i},`);
-				}
-				this.code.decreaseIndent();
-				this.code.push(`};`);
-			} else if (TypeKind.isFlags(this.type.kind)) {
-				this.code.push(`export interface ${Names.asTypeName(this.type.name)} {`);
-				this.code.increaseIndent();
-				for (const flag of this.type.kind.flags.flags) {
-					this.code.push(`${Names.asPropertyName(flag.name)}: boolean;`);
-				}
-				this.code.decreaseIndent();
-				this.code.push(`};`);
-			} else {
-				this.code.push(`export type ${Names.asTypeName(this.type.name)} = ${TypeName.fromType(this.type, this.symbols, this.code.imports)};`);
-			}
-		}
-	}
-
-	class FunctionEmitter {
-
-		private readonly func: Func;
-		private readonly code: Code;
-		private readonly symbols: SymbolTable;
-
-		constructor(func: Func, code: Code, symbols: SymbolTable) {
-			this.func = func;
-			this.code = code;
-			this.symbols = symbols;
-		}
-
-	}
-}
-
-export function processDocument(document: Document, outDir: string): void {
-	for (const pkg of document.packages) {
-		const visitor = new TypeScript.PackageEmitter(pkg, document);
-		const code = visitor.emit();
-		const fileName = Names.fileName(pkg);
-		fs.writeFileSync(path.join(outDir, fileName), code.toString());
 	}
 }

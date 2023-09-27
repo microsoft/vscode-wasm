@@ -34,7 +34,7 @@ export interface Func {
 	docs?: Documentation | undefined;
 	kind: 'freestanding';
 	params: Param[];
-	results: TypeReferenceObject[];
+	results: TypeObject[];
 }
 
 export interface Type {
@@ -74,13 +74,17 @@ export namespace Owner {
 	}
 }
 
-export type TypeKind = BaseType | TypeReferenceObject | Record | Variant | Enum | Flags | Tuple | List | Option;
+export type TypeKind = TypeObject | Record | Variant | Enum | Flags | Tuple | List | Option | Result;
 export namespace TypeKind {
-	export function isBaseType(kind: TypeKind): kind is BaseType {
+	export function isBaseType(kind: TypeKind): kind is { type: string } {
 		return typeof (kind as BaseType).type === 'string';
 	}
-	export function isTypeReferenceObject(kind: TypeKind): kind is TypeReferenceObject {
-		return typeof (kind as TypeReferenceObject).type === 'number';
+	export function isTypeReference(kind: TypeKind): kind is { type: number } {
+		return typeof (kind as { type: number }).type === 'number';
+	}
+	export function isTypeObject(kind: TypeKind): kind is TypeObject {
+		const candidate = kind as TypeObject;
+		return typeof candidate.type === 'number' || typeof candidate.type === 'string';
 	}
 	export function isRecord(kind: TypeKind): kind is Record {
 		return typeof (kind as Record).record === 'object';
@@ -108,6 +112,13 @@ export namespace TypeKind {
 	export function isOption(kind: TypeKind): kind is Option {
 		const candidate = kind as Option;
 		return typeof candidate.option === 'number' || typeof candidate.option === 'string';
+	}
+	export function isResult(kind: TypeKind): kind is Result {
+		const candidate = kind as Result;
+		const ok = candidate.result?.ok;
+		const err = candidate.result?.err;
+		return (ok !== undefined && (typeof ok === 'number' || typeof ok === 'string' || ok === null))
+			&& (err !== undefined && (typeof err === 'number' || typeof err === 'string' || err === null));
 	}
 }
 
@@ -164,19 +175,26 @@ export interface Tuple {
 }
 
 export interface List {
-	list: number | string;
+	list: TypeReference;
 }
 
 export interface Option {
-	option: number | string;
+	option: TypeReference;
+}
+
+export interface Result {
+	result: {
+		ok: TypeReference | null;
+		err: TypeReference | null;
+	};
 }
 
 export interface BaseType {
 	type: string;
 }
 
-export interface TypeReferenceObject {
-	type: number;
+export interface TypeObject {
+	type: number | string;
 }
 
 export interface FuncObject {
@@ -187,10 +205,10 @@ export interface InterfaceObject {
 	interface: number;
 }
 
-export type ObjectKind = TypeReferenceObject | FuncObject | InterfaceObject;
+export type ObjectKind = TypeObject | FuncObject | InterfaceObject;
 export namespace ObjectKind {
-	export function isTypeObject(kind: ObjectKind): kind is TypeReferenceObject {
-		return typeof (kind as TypeReferenceObject).type === 'number';
+	export function isTypeObject(kind: ObjectKind): kind is TypeObject {
+		return typeof (kind as TypeObject).type === 'number';
 	}
 	export function isFuncObject(kind: ObjectKind): kind is FuncObject {
 		return typeof (kind as FuncObject).function === 'object';
