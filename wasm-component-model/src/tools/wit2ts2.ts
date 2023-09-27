@@ -382,8 +382,9 @@ namespace TypeScript {
 					const [typeNamespace, ] = Names.getNamespaceAndName(typePackage.name);
 					const [referenceNamespace, referenceName] = Names.getNamespaceAndName(referencedPackage.name);
 					if (typeNamespace === referenceNamespace) {
-						imports.add(Names.asTypeName(referenceName), `./${referenceName}`);
-						return Names.asTypeName(referenceName);
+						const refName = Names.asTypeName(referenceInterface.name);
+						imports.add(refName, `./${referenceName}`);
+						return refName;
 					} else {
 						throw new Error(`Cannot compute qualifier for ${JSON.stringify(type)} and ${JSON.stringify(reference)}`);
 					}
