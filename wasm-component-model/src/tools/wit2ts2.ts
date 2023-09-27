@@ -249,7 +249,7 @@ namespace TypeScript {
 				this.code.decreaseIndent();
 				this.code.push(`};`);
 			} else {
-				this.code.push(`export type ${Names.asTypeName(this.type.name)} = ${TypeName.fromType(this.type, this.symbols, this.code.imports)};`);
+				this.code.push(`export type ${Names.asTypeName(this.type.name)} = ${TypeName.fromType(this.type, this.symbols, this.code.imports, true)};`);
 			}
 		}
 	}
@@ -296,7 +296,10 @@ namespace TypeScript {
 			}
 		}
 
-		export function fromType(type: Type, symbols: SymbolTable, imports: Imports): string {
+		export function fromType(type: Type, symbols: SymbolTable, imports: Imports, forceReference: boolean = false): string {
+			if (type.name !== null && !forceReference) {
+				return Names.asTypeName(type.name);
+			}
 			if (TypeKind.isTypeReference(type.kind)) {
 				const referenced = symbols.types[type.kind.type];
 				let qualifier = computeQualifier(type.owner, referenced.owner, symbols, imports);
@@ -308,7 +311,7 @@ namespace TypeScript {
 				}
 			}
 			if (TypeKind.isBaseType(type.kind)) {
-				return type.name !== null ? Names.asTypeName(type.name) : baseType(type.kind.type);
+				return baseType(type.kind.type);
 			}
 			if (TypeKind.isList(type.kind)) {
 				if (typeof type.kind.list === 'string') {
@@ -334,7 +337,7 @@ namespace TypeScript {
 						case 'float64':
 							return 'Float64Array';
 						default:
-							return `${type.kind.list}[]`;
+							return `${baseType(type.kind.list)}[]`;
 					}
 				} else {
 					return `${fromReference(type.kind.list, symbols, imports)}[]`;
