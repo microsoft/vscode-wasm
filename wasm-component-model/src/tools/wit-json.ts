@@ -15,12 +15,12 @@ export interface World {
 	docs?: Documentation | undefined;
 	imports: NameMap<ObjectKind>;
 	exports: NameMap<ObjectKind>;
+	package: number;
 }
 
 export interface Documentation {
 	contents: string | null;
 }
-
 export interface Interface {
 	name: string;
 	docs?: Documentation;
@@ -34,7 +34,7 @@ export interface Func {
 	docs?: Documentation | undefined;
 	kind: 'freestanding';
 	params: Param[];
-	results: TypeObject[];
+	results: TypeReferenceObject[];
 }
 
 export interface Type {
@@ -52,6 +52,10 @@ export interface Package {
 }
 
 export type Owner = { world: number } | { interface: number };
+export enum OwnerKind {
+	World = 'world',
+	Interface = 'interface',
+}
 export namespace Owner {
 	export function isWorld(owner: Owner): owner is { world: number } {
 		return typeof (owner as { world: number }).world === 'number';
@@ -59,26 +63,52 @@ export namespace Owner {
 	export function isInterface(owner: Owner): owner is { interface: number } {
 		return typeof (owner as { interface: number }).interface === 'number';
 	}
+	export function kind(owner: Owner): OwnerKind {
+		if (isWorld(owner)) {
+			return OwnerKind.World;
+		} else if (isInterface(owner)) {
+			return OwnerKind.Interface;
+		} else {
+			throw new Error(`Unknown owner kind ${JSON.stringify(owner)}`);
+		}
+	}
 }
 
-export type TypeKind = BaseType | TypeObject | Record | List;
+export type TypeKind = BaseType | TypeReferenceObject | Record | Variant | Enum | Flags | Tuple | List | Option;
 export namespace TypeKind {
 	export function isBaseType(kind: TypeKind): kind is BaseType {
 		return typeof (kind as BaseType).type === 'string';
 	}
-	export function isTypeObject(kind: TypeKind): kind is TypeObject {
-		return typeof (kind as TypeObject).type === 'number';
+	export function isTypeReferenceObject(kind: TypeKind): kind is TypeReferenceObject {
+		return typeof (kind as TypeReferenceObject).type === 'number';
 	}
 	export function isRecord(kind: TypeKind): kind is Record {
 		return typeof (kind as Record).record === 'object';
 	}
-	export function isList(Kind: TypeKind): Kind is { List: TypeReference } {
-		return false;
+	export function isVariant(kind: TypeKind): kind is Variant {
+		const candidate = kind as Variant;
+		return typeof candidate.variant === 'object';
 	}
-}
-
-export interface BaseType {
-	type: string;
+	export function isEnum(kind: TypeKind): kind is Enum {
+		const candidate = kind as Enum;
+		return typeof candidate.enum === 'object';
+	}
+	export function isFlags(kind: TypeKind): kind is Flags {
+		const candidate = kind as Flags;
+		return typeof candidate.flags === 'object';
+	}
+	export function isTuple(kind: TypeKind): kind is Tuple {
+		const candidate = kind as Tuple;
+		return typeof candidate.tuple === 'object';
+	}
+	export function isList(kind: TypeKind): kind is List {
+		const candidate = kind as List;
+		return typeof candidate.list === 'number' || typeof candidate.list === 'string';
+	}
+	export function isOption(kind: TypeKind): kind is Option {
+		const candidate = kind as Option;
+		return typeof candidate.option === 'number' || typeof candidate.option === 'string';
+	}
 }
 
 export interface Record {
@@ -93,10 +123,59 @@ export interface Field {
 	type: TypeReference;
 }
 
-export interface List {
+export interface Variant {
+	variant: {
+		cases: VariantCase[];
+	};
 }
 
-export interface TypeObject {
+export interface VariantCase {
+	name: string;
+	docs: Documentation;
+	type: TypeReference | null;
+}
+
+export interface Enum {
+	enum: {
+		cases: EnumCase[];
+	};
+}
+
+export interface EnumCase {
+	name: string;
+	docs: Documentation;
+}
+
+export interface Flags {
+	flags: {
+		flags: Flag[];
+	};
+}
+
+export interface Flag {
+	name: string;
+	docs: Documentation;
+}
+
+export interface Tuple {
+	tuple: {
+		types: TypeReference[];
+	};
+}
+
+export interface List {
+	list: number | string;
+}
+
+export interface Option {
+	option: number | string;
+}
+
+export interface BaseType {
+	type: string;
+}
+
+export interface TypeReferenceObject {
 	type: number;
 }
 
@@ -108,10 +187,10 @@ export interface InterfaceObject {
 	interface: number;
 }
 
-export type ObjectKind = TypeObject | FuncObject | InterfaceObject;
+export type ObjectKind = TypeReferenceObject | FuncObject | InterfaceObject;
 export namespace ObjectKind {
-	export function isTypeObject(kind: ObjectKind): kind is TypeObject {
-		return typeof (kind as TypeObject).type === 'number';
+	export function isTypeObject(kind: ObjectKind): kind is TypeReferenceObject {
+		return typeof (kind as TypeReferenceObject).type === 'number';
 	}
 	export function isFuncObject(kind: ObjectKind): kind is FuncObject {
 		return typeof (kind as FuncObject).function === 'object';
