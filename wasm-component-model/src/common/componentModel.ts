@@ -134,7 +134,32 @@ class CoerceValueIter implements Iterator<wasmType, wasmType> {
 	}
 }
 
+export enum ComponentModelTypeKind {
+	bool = 'bool',
+	u8 = 'u8',
+	u16 = 'u16',
+	u32 = 'u32',
+	u64 = 'u64',
+	s8 = 's8',
+	s16 = 's16',
+	s32 = 's32',
+	s64 = 's64',
+	float32 = 'float32',
+	float64 = 'float64',
+	char = 'char',
+	string = 'string',
+	list = 'list',
+	record = 'record',
+	tuple = 'tuple',
+	variant = 'variant',
+	enum = 'enum',
+	flags = 'flags',
+	option = 'option',
+	result = 'result',
+}
+
 export interface ComponentModelType<J> {
+	readonly kind : ComponentModelTypeKind;
 	readonly size: number;
 	readonly alignment: alignment;
 	readonly flatTypes: ReadonlyArray<wasmTypeName>;
@@ -153,6 +178,7 @@ export type GenericComponentModelType = ComponentModelType<any>;
 
 export type bool = number;
 export const bool: ComponentModelType<boolean> = {
+	kind: ComponentModelTypeKind.bool,
 	size: 1,
 	alignment: 1,
 	flatTypes: ['i32'],
@@ -179,6 +205,7 @@ export const bool: ComponentModelType<boolean> = {
 
 export type u8 = number;
 namespace $u8 {
+	export const kind: ComponentModelTypeKind = ComponentModelTypeKind.u8;
 	export const size = 1;
 	export const alignment: alignment = 1;
 	export const flatTypes: readonly wasmTypeName[] = ['i32'];
@@ -217,6 +244,7 @@ export const u8:ComponentModelType<number> = $u8;
 
 export type u16 = number;
 namespace $u16 {
+	export const kind: ComponentModelTypeKind = ComponentModelTypeKind.u16;
 	export const size = 2;
 	export const alignment: alignment = 2;
 	export const flatTypes: readonly wasmTypeName[] = ['i32'];
@@ -255,6 +283,7 @@ export const u16: ComponentModelType<number> = $u16;
 
 export type u32 = number;
 namespace $u32 {
+	export const kind: ComponentModelTypeKind = ComponentModelTypeKind.u32;
 	export const size = 4;
 	export const alignment: alignment = 4;
 	export const flatTypes: readonly wasmTypeName[] = ['i32'];
@@ -293,6 +322,7 @@ export const u32: ComponentModelType<number> = $u32;
 
 export type u64 = bigint;
 namespace $u64 {
+	export const kind: ComponentModelTypeKind = ComponentModelTypeKind.u64;
 	export const size = 8;
 	export const alignment: alignment = 8;
 	export const flatTypes: readonly wasmTypeName[] = ['i64'];
@@ -331,6 +361,7 @@ export const u64: ComponentModelType<bigint> = $u64;
 
 export type s8 = number;
 namespace $s8 {
+	export const kind: ComponentModelTypeKind = ComponentModelTypeKind.s8;
 	export const size = 1;
 	export const alignment: alignment = 1;
 	export const flatTypes: readonly wasmTypeName[] = ['i32'];
@@ -377,6 +408,7 @@ export const s8: ComponentModelType<number> = $s8;
 
 export type s16 = number;
 namespace $s16 {
+	export const kind: ComponentModelTypeKind = ComponentModelTypeKind.s16;
 	export const size = 2;
 	export const alignment: alignment = 2;
 	export const flatTypes: readonly wasmTypeName[] = ['i32'];
@@ -415,6 +447,7 @@ export const s16: ComponentModelType<number> = $s16;
 
 export type s32 = number;
 namespace $s32 {
+	export const kind: ComponentModelTypeKind = ComponentModelTypeKind.s32;
 	export const size = 4;
 	export const alignment: alignment = 4;
 	export const flatTypes: readonly wasmTypeName[] = ['i32'];
@@ -453,6 +486,7 @@ export const s32: ComponentModelType<number> = $s32;
 
 export type s64 = bigint;
 namespace $s64 {
+	export const kind: ComponentModelTypeKind = ComponentModelTypeKind.s64;
 	export const size = 8;
 	export const alignment: alignment = 8;
 	export const flatTypes: readonly wasmTypeName[] = ['i64'];
@@ -491,6 +525,7 @@ export const s64: ComponentModelType<bigint> = $s64;
 
 export type float32 = number;
 namespace $float32 {
+	export const kind: ComponentModelTypeKind = ComponentModelTypeKind.float32;
 	export const size = 4;
 	export const alignment:alignment = 4;
 	export const flatTypes: readonly wasmTypeName[] = ['f32'];
@@ -530,6 +565,7 @@ export const float32: ComponentModelType<number> = $float32;
 
 export type float64 = number;
 namespace $float64 {
+	export const kind: ComponentModelTypeKind = ComponentModelTypeKind.float64;
 	export const size = 8;
 	export const alignment: alignment = 8;
 	export const flatTypes: readonly wasmTypeName[] = ['f64'];
@@ -569,6 +605,7 @@ export const float64: ComponentModelType<number> = $float64;
 
 export type byte = u8;
 export const byte: ComponentModelType<byte> = {
+	kind: u8.kind,
 	size: u8.size,
 	alignment: u8.alignment,
 	flatTypes: u8.flatTypes,
@@ -582,6 +619,7 @@ export const byte: ComponentModelType<byte> = {
 
 export type size = u32;
 export const size: ComponentModelType<size> = {
+	kind: u32.kind,
 	size: u32.size,
 	alignment: u32.alignment,
 	flatTypes: u32.flatTypes,
@@ -595,6 +633,7 @@ export const size: ComponentModelType<size> = {
 
 export type ptr<_type = ArrayBuffer> = u32;
 export const ptr: ComponentModelType<ptr> = {
+	kind: u32.kind,
 	size: u32.size,
 	alignment: u32.alignment,
 	flatTypes: u32.flatTypes,
@@ -607,6 +646,7 @@ export const ptr: ComponentModelType<ptr> = {
 };
 
 namespace $wchar {
+	export const kind: ComponentModelTypeKind = ComponentModelTypeKind.char;
 	export const size = 4;
 	export const alignment: alignment = 4;
 	export const flatTypes: readonly wasmTypeName[] = ['i32'];
@@ -658,6 +698,7 @@ namespace $wstring {
 		codeUnits: 4
 	};
 
+	export const kind: ComponentModelTypeKind = ComponentModelTypeKind.string;
 	export const size = 8;
 	export const alignment: alignment = 4;
 	export const flatTypes: readonly wasmTypeName[] = ['i32', 'i32'];
@@ -739,12 +780,14 @@ export class ListType<T> implements ComponentModelType<T[]> {
 
 	private elementType: ComponentModelType<T>;
 
+	public readonly kind: ComponentModelTypeKind;
 	public readonly size: size;
 	public readonly alignment: alignment;
 	public readonly flatTypes: readonly wasmTypeName[];
 
 	constructor(elementType: ComponentModelType<T>) {
 		this.elementType = elementType;
+		this.kind = ComponentModelTypeKind.list;
 		this.size = 8;
 		this.alignment = 4;
 		this.flatTypes = ['i32', 'i32'];
@@ -809,11 +852,13 @@ abstract class TypeArrayType<T> implements ComponentModelType<T> {
 		length: 4
 	};
 
+	public readonly kind: ComponentModelTypeKind;
 	public readonly size: size;
 	public readonly alignment: alignment;
 	public readonly flatTypes: readonly wasmTypeName[];
 
 	constructor() {
+		this.kind = ComponentModelTypeKind.list;
 		this.size = 8;
 		this.alignment = 4;
 		this.flatTypes = ['i32', 'i32'];
@@ -980,7 +1025,7 @@ interface TypedField {
 }
 
 export interface JRecord {
-	[key: string]: JType;
+	[key: string]: JType | undefined;
 }
 
 export type JTuple = JType[];
@@ -989,13 +1034,15 @@ abstract class BaseRecordType<T extends JRecord | JTuple, F extends TypedField> 
 
 	private fields: F[];
 
+	public kind: ComponentModelTypeKind;
 	public readonly size: size;
 	public readonly alignment: alignment;
 	public readonly flatTypes: readonly wasmTypeName[];
 
-	constructor(fields: F[]) {
+	constructor(fields: F[], kind: ComponentModelTypeKind.record | ComponentModelTypeKind.tuple) {
 		this.fields = fields;
 
+		this.kind = kind;
 		this.size = BaseRecordType.size(fields);
 		this.alignment = BaseRecordType.alignment(fields);
 		this.flatTypes = BaseRecordType.flatTypes(fields);
@@ -1091,7 +1138,7 @@ export class RecordType<T extends JRecord> extends BaseRecordType<T, RecordField
 			recordFields.push(RecordField.create(name, offset, type));
 			offset += type.size;
 		}
-		super(recordFields);
+		super(recordFields, ComponentModelTypeKind.record);
 	}
 
 	protected create(fields: RecordField[], values: JType[]): T {
@@ -1107,7 +1154,15 @@ export class RecordType<T extends JRecord> extends BaseRecordType<T, RecordField
 	protected elements(record: T, fields: RecordField[]): JType[] {
 		const result: JType[] = [];
 		for (const field of fields) {
-			result.push(record[field.name]);
+			const value = record[field.name];
+			if (field.type.kind === ComponentModelTypeKind.option) {
+				result.push(value === undefined ? option._none() : option._some(value));
+			} else {
+				if (value === undefined) {
+					throw new Error(`Missing value for field ${field.name}. Field is declared as ${field.type.kind}`);
+				}
+				result.push(value);
+			}
 		}
 		return result;
 	}
@@ -1132,7 +1187,7 @@ export class TupleType<T extends JTuple> extends BaseRecordType<T, TupleField> {
 			tupleFields.push(TupleField.create(offset, type));
 			offset += type.size;
 		}
-		super(tupleFields);
+		super(tupleFields, ComponentModelTypeKind.tuple);
 	}
 
 	protected create(_fields: TupleField[], values: JType[]): T {
@@ -1181,6 +1236,7 @@ export class FlagsType<T extends JFlags> implements ComponentModelType<T> {
 	private readonly num32Flags: number;
 	private type: [FlagsStorageType, typeof u8 | typeof u16 | typeof u32 | undefined];
 
+	public readonly kind: ComponentModelTypeKind;
 	public readonly size: size;
 	public readonly alignment: alignment;
 	public readonly flatTypes: readonly wasmTypeName[];
@@ -1193,6 +1249,7 @@ export class FlagsType<T extends JFlags> implements ComponentModelType<T> {
 
 		const nr = fields.length;
 		const size = this.size = FlagsType.size(nr);
+		this.kind = ComponentModelTypeKind.flags;
 		this.type = FlagsType.getType(size);
 		this.num32Flags = FlagsType.num32Flags(nr);
 		this.alignment = FlagsType.alignment(nr);
@@ -1381,11 +1438,12 @@ export class VariantType<T extends JVariantCase, I, V> implements ComponentModel
 	private readonly discriminantType: GenericComponentModelType;
 	private readonly maxCaseAlignment: alignment;
 
+	public readonly kind: ComponentModelTypeKind;
 	public readonly size: size;
 	public readonly alignment: alignment;
 	public readonly flatTypes: readonly wasmTypeName[];
 
-	constructor(variants: (GenericComponentModelType | undefined)[], ctor: (caseIndex: I, value: V) => T) {
+	constructor(variants: (GenericComponentModelType | undefined)[], ctor: (caseIndex: I, value: V) => T, kind: ComponentModelTypeKind.variant | ComponentModelTypeKind.option | ComponentModelTypeKind.result = ComponentModelTypeKind.variant) {
 		const cases: VariantCase[] = [];
 		for (let i = 0; i < variants.length; i++) {
 			const type = variants[i];
@@ -1396,6 +1454,7 @@ export class VariantType<T extends JVariantCase, I, V> implements ComponentModel
 
 		this.discriminantType = VariantType.discriminantType(cases.length);
 		this.maxCaseAlignment = VariantType.maxCaseAlignment(cases);
+		this.kind = kind;
 		this.size = VariantType.size(this.discriminantType, cases);
 		this.alignment = VariantType.alignment(this.discriminantType, cases);
 		this.flatTypes = VariantType.flatTypes(this.discriminantType, cases);
@@ -1548,8 +1607,9 @@ export type JEnum = number;
 export class EnumType<T extends JEnum> implements ComponentModelType<T> {
 
 	private readonly discriminantType: ComponentModelType<u8> | ComponentModelType<u16> | ComponentModelType<u32>;
-
 	private readonly cases: number;
+
+	public readonly kind: ComponentModelTypeKind;
 	public readonly size: size;
 	public readonly alignment: alignment;
 	public readonly flatTypes: readonly wasmTypeName[];
@@ -1557,6 +1617,7 @@ export class EnumType<T extends JEnum> implements ComponentModelType<T> {
 	constructor(cases: number) {
 		this.cases = cases;
 		this.discriminantType = EnumType.discriminantType(cases);
+		this.kind = ComponentModelTypeKind.enum;
 		this.size = this.discriminantType.size;
 		this.alignment = this.discriminantType.alignment;
 		this.flatTypes = this.discriminantType.flatTypes;
@@ -1651,7 +1712,7 @@ export namespace option {
 export type option<T extends JType> = option.none<T> | option.some<T>;
 export class OptionType<T extends JType> extends VariantType<option<T>, option._ct, option._vt<T>> {
 	constructor(type: GenericComponentModelType) {
-		super([undefined, type], option._ctor<T>);
+		super([undefined, type], option._ctor<T>, ComponentModelTypeKind.option);
 	}
 }
 
@@ -1660,26 +1721,26 @@ export namespace result {
 	export const error = 1 as const;
 
 	export type _ct = typeof ok | typeof error;
-	export type _vt<O extends JType | void, E extends JType> = O | E;
+	export type _vt<O extends JType | void, E extends JType | void> = O | E;
 
-	type _common<O extends JType | void, E extends JType> = Omit<ResultImpl<O, E>, 'case' | 'value'>;
+	type _common<O extends JType | void, E extends JType | void> = Omit<ResultImpl<O, E>, 'case' | 'value'>;
 
-	export type ok<O extends JType | void, E extends JType> = { readonly case: typeof ok; readonly value: O } & _common<O, E>;
-	export type error<O extends JType | void, E extends JType> = { readonly case: typeof error; readonly value: E } & _common<O, E>;
+	export type ok<O extends JType | void, E extends JType | void> = { readonly case: typeof ok; readonly value: O } & _common<O, E>;
+	export type error<O extends JType | void, E extends JType | void> = { readonly case: typeof error; readonly value: E } & _common<O, E>;
 
-	export function _ctor<O extends JType | void, E extends JType>(c: _ct, v: _vt<O, E>): result<O, E> {
+	export function _ctor<O extends JType | void, E extends JType | void>(c: _ct, v: _vt<O, E>): result<O, E> {
 		return new ResultImpl<O, E>(c, v) as result<O, E>;
 	}
 
-	export function _ok<O extends JType | void , E extends JType>(value: O): ok<O, E> {
+	export function _ok<O extends JType | void , E extends JType | void>(value: O): ok<O, E> {
 		return new ResultImpl<O, E>(ok, value) as ok<O, E>;
 	}
 
-	export function _error<O extends JType | void, E extends JType>(value: E): error<O, E> {
+	export function _error<O extends JType | void, E extends JType | void>(value: E): error<O, E> {
 		return new ResultImpl<O, E>(error, value ) as error<O, E>;
 	}
 
-	export class ResultImpl<O extends JType | void, E extends JType> implements JVariantCase {
+	export class ResultImpl<O extends JType | void, E extends JType | void> implements JVariantCase {
 
 		private readonly _case: _ct;
 		private readonly _value: _vt<O, E>;
@@ -1706,10 +1767,10 @@ export namespace result {
 		}
 	}
 }
-export type result<O extends JType | void, E extends JType> = result.ok<O, E> | result.error<O, E>;
+export type result<O extends JType | void, E extends JType | void = void> = result.ok<O, E> | result.error<O, E>;
 export class ResultType<O extends JType | void, E extends JType> extends VariantType<result<O, E>, 0 | 1, O | E> {
 	constructor(okType: GenericComponentModelType | undefined, errorType: GenericComponentModelType) {
-		super([okType, errorType], result._ctor<O, E>);
+		super([okType, errorType], result._ctor<O, E>, ComponentModelTypeKind.result);
 	}
 }
 
