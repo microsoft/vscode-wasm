@@ -47,3 +47,4 @@ export namespace Poll {
 	 */
 	export declare function pollOneoff(in_: Pollable[]): boolean[];
 }
+export type Poll = Pick<typeof Poll, 'dropPollable' | 'pollOneoff'>;

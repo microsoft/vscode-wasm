@@ -27,6 +27,7 @@ export namespace Environment {
 	 */
 	export declare function initialCwd(): string | undefined;
 }
+export type Environment = Pick<typeof Environment, 'getEnvironment' | 'getArguments' | 'initialCwd'>;
 
 export namespace Exit {
 	
@@ -35,6 +36,7 @@ export namespace Exit {
 	 */
 	export declare function exit(status: result<void, void>): void;
 }
+export type Exit = Pick<typeof Exit, 'exit'>;
 
 export namespace Run {
 	
@@ -43,6 +45,7 @@ export namespace Run {
 	 */
 	export declare function run(): result<void, void>;
 }
+export type Run = Pick<typeof Run, 'run'>;
 
 export namespace Stdin {
 	
@@ -50,6 +53,7 @@ export namespace Stdin {
 	
 	export declare function getStdin(): InputStream;
 }
+export type Stdin = Pick<typeof Stdin, 'getStdin'>;
 
 export namespace Stdout {
 	
@@ -57,6 +61,7 @@ export namespace Stdout {
 	
 	export declare function getStdout(): OutputStream;
 }
+export type Stdout = Pick<typeof Stdout, 'getStdout'>;
 
 export namespace Stderr {
 	
@@ -64,6 +69,7 @@ export namespace Stderr {
 	
 	export declare function getStderr(): OutputStream;
 }
+export type Stderr = Pick<typeof Stderr, 'getStderr'>;
 
 export namespace TerminalInput {
 	
@@ -80,6 +86,7 @@ export namespace TerminalInput {
 	 */
 	export declare function dropTerminalInput(this_: TerminalInput): void;
 }
+export type TerminalInput = Pick<typeof TerminalInput, 'dropTerminalInput'>;
 
 export namespace TerminalOutput {
 	
@@ -96,6 +103,7 @@ export namespace TerminalOutput {
 	 */
 	export declare function dropTerminalOutput(this_: TerminalOutput): void;
 }
+export type TerminalOutput = Pick<typeof TerminalOutput, 'dropTerminalOutput'>;
 
 /**
  * An interface providing an optional `terminal-input` for stdin as a
@@ -111,6 +119,7 @@ export namespace TerminalStdin {
 	 */
 	export declare function getTerminalStdin(): TerminalInput | undefined;
 }
+export type TerminalStdin = Pick<typeof TerminalStdin, 'getTerminalStdin'>;
 
 /**
  * An interface providing an optional `terminal-output` for stdout as a
@@ -126,6 +135,7 @@ export namespace TerminalStdout {
 	 */
 	export declare function getTerminalStdout(): TerminalOutput | undefined;
 }
+export type TerminalStdout = Pick<typeof TerminalStdout, 'getTerminalStdout'>;
 
 /**
  * An interface providing an optional `terminal-output` for stderr as a
@@ -141,3 +151,4 @@ export namespace TerminalStderr {
 	 */
 	export declare function getTerminalStderr(): TerminalOutput | undefined;
 }
+export type TerminalStderr = Pick<typeof TerminalStderr, 'getTerminalStderr'>;

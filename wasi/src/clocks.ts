@@ -42,6 +42,7 @@ export namespace MonotonicClock {
 	 */
 	export declare function subscribe(when: Instant, absolute: boolean): Pollable;
 }
+export type MonotonicClock = Pick<typeof MonotonicClock, 'now' | 'resolution' | 'subscribe'>;
 
 /**
  * WASI Wall Clock is a clock API intended to let users query the current
@@ -93,6 +94,7 @@ export namespace WallClock {
 	 */
 	export declare function resolution(): Datetime;
 }
+export type WallClock = Pick<typeof WallClock, 'now' | 'resolution'>;
 
 export namespace Timezone {
 	
@@ -173,3 +175,4 @@ export namespace Timezone {
 	 */
 	export declare function dropTimezone(this_: Timezone): void;
 }
+export type Timezone = Pick<typeof Timezone, 'display' | 'utcOffset' | 'dropTimezone'>;

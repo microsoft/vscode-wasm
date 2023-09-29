@@ -7,26 +7,9 @@ import * as fs from 'node:fs/promises';
 
 import * as yargs from 'yargs';
 
-import * as wit from './wit';
-import { DocumentVisitor } from './wit2ts';
 import { Document } from './wit-json';
 import { processDocument } from './wit2ts2';
-
-export type Options = {
-	help: boolean;
-	version: boolean;
-	outDir: string | undefined;
-	file: string | undefined;
-};
-
-export namespace Options {
-	export const defaults: Options = {
-		help: false,
-		version: false,
-		outDir: undefined,
-		file: undefined
-	};
-}
+import { Options } from './options';
 
 async function run(options: Options): Promise<number> {
 	if (options.help) {
@@ -38,10 +21,10 @@ async function run(options: Options): Promise<number> {
 		return 0;
 	}
 
-	if (!options.file) {
-		process.stderr.write('Missing file argument.\n');
+	if (!Options.validate(options)) {
 		yargs.showHelp();
 		return 1;
+	} else {
 	}
 
 	try {
@@ -52,7 +35,7 @@ async function run(options: Options): Promise<number> {
 		}
 
 		const content: Document = JSON.parse(await fs.readFile(options.file, { encoding: 'utf8' }));
-		processDocument(content, options.outDir!);
+		processDocument(content, options);
 
 		return 0;
 	} catch (error:any) {
@@ -82,6 +65,10 @@ export async function main(): Promise<number> {
 		}).
 		option('outDir', {
 			description: 'The directory the TypeScript files are written to.',
+			string: true
+		}).
+		option('package', {
+			description: 'A regular expression to filter the packages to be included.',
 			string: true
 		});
 

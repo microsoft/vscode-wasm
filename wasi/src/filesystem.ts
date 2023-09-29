@@ -825,6 +825,7 @@ export namespace Types {
 	 */
 	export declare function metadataHashAt(this_: Descriptor, pathFlags: PathFlags, path: string): result<MetadataHashValue, ErrorCode>;
 }
+export type Types = Pick<typeof Types, 'readViaStream' | 'writeViaStream' | 'appendViaStream' | 'advise' | 'syncData' | 'getFlags' | 'getType' | 'setSize' | 'setTimes' | 'read' | 'write' | 'readDirectory' | 'sync' | 'createDirectoryAt' | 'stat' | 'statAt' | 'setTimesAt' | 'linkAt' | 'openAt' | 'readlinkAt' | 'removeDirectoryAt' | 'renameAt' | 'symlinkAt' | 'accessAt' | 'unlinkFileAt' | 'changeFilePermissionsAt' | 'changeDirectoryPermissionsAt' | 'lockShared' | 'lockExclusive' | 'tryLockShared' | 'tryLockExclusive' | 'unlock' | 'dropDescriptor' | 'readDirectoryEntry' | 'dropDirectoryEntryStream' | 'isSameObject' | 'metadataHash' | 'metadataHashAt'>;
 
 export namespace Preopens {
 	
@@ -835,3 +836,4 @@ export namespace Preopens {
 	 */
 	export declare function getDirectories(): [Descriptor, string][];
 }
+export type Preopens = Pick<typeof Preopens, 'getDirectories'>;

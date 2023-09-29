@@ -7,19 +7,27 @@ import * as fs from 'node:fs';
 import * as path from 'node:path';
 
 import { Document, Documentation, Enum, Flags, Func, Interface, Owner, Package, Record, Type, TypeKind, TypeReference, Variant, World } from './wit-json';
+import { ResolvedOptions } from './options';
 
-export function processDocument(document: Document, outDir: string): void {
+export function processDocument(document: Document, options: ResolvedOptions): void {
+	const regExp = new RegExp(options.package);
+	const mainCode = new Code();
 	for (const pkg of document.packages) {
-		const visitor = new TypeScript.PackageEmitter(pkg, document);
+		if (!regExp.test(pkg.name)) {
+			continue;
+		}
+		const visitor = new TypeScript.PackageEmitter(pkg, mainCode, document);
 		const code = visitor.emit();
-		const fileName = Names.fileName(pkg);
-		fs.writeFileSync(path.join(outDir, fileName), code.toString());
+		const fileName = Names.asFileName(pkg);
+		fs.writeFileSync(path.join(options.outDir, fileName), code.toString());
 	}
+	fs.writeFileSync(path.join(options.outDir, 'main.ts'), mainCode.toString());
 }
 
 class Imports {
 
 	public readonly baseTypes: Set<string> = new Set();
+	public readonly starImports = new Map<string, string>();
 	private readonly imports: Map<string, Set<string>> = new Map();
 	private uniqueName: number = 1;
 
@@ -45,6 +53,10 @@ class Imports {
 			this.imports.set(from, values);
 		}
 		values.add(value);
+	}
+
+	public addStar(from: string, as: string): void {
+		this.starImports.set(from, as);
 	}
 
 	public entries(): IterableIterator<[string, Set<string>]> {
@@ -92,6 +104,10 @@ class Code {
 		if (this.imports.baseTypes.size > 0) {
 			this.source.unshift(`import type { ${Array.from(this.imports.baseTypes).join(', ')} } from '@vscode/wasm-component-model';`);
 		}
+		const starImports = this.imports.starImports;
+		for (const from of Array.from(starImports.keys()).reverse()) {
+			this.source.unshift(`import * as ${starImports.get(from)} from '${from}';`);
+		}
 		this.source.unshift(`import * as $wcm from '@vscode/wasm-component-model';`);
 		return this.source.join('\n');
 	}
@@ -107,12 +123,20 @@ namespace Names {
 		['delete', 'delete_']
 	]);
 
-	export function fileName(pkg: Package): string {
+	export function asFileName(pkg: Package): string {
+		return `${asPackageName(pkg)}.ts`;
+	}
+
+	export function asImportName(pkg: Package): string {
+		return asPackageName(pkg);
+	}
+
+	export function asPackageName(pkg: Package): string {
 		const index = pkg.name.indexOf(':');
 		if (index === -1) {
 			return pkg.name;
 		}
-		return `${pkg.name.substring(index + 1)}.ts`;
+		return `${pkg.name.substring(index + 1)}`;
 	}
 
 	export function asTypeName(name: string): string {
@@ -167,37 +191,64 @@ namespace TypeScript {
 
 		private readonly pkg: Package;
 		private readonly symbols: SymbolTable;
-		private readonly code: Code;
+		private readonly mainCode: Code;
 
-		constructor(pkg: Package, symbols: SymbolTable) {
+		constructor(pkg: Package, mainCode: Code, symbols: SymbolTable) {
 			this.pkg = pkg;
 			this.symbols = symbols;
-			this.code = new Code();
+			this.mainCode = mainCode;
 		}
 
 		public emit(): Code {
-			for (const iface of Object.values(this.pkg.interfaces)) {
-				this.processInterface(this.symbols.interfaces[iface]);
-				this.code.push('');
+			const star = this.mainCode.imports.getUniqueName();
+			this.mainCode.imports.addStar(`./${Names.asImportName(this.pkg)}`, star);
+			this.mainCode.push(`export namespace ${Names.asPackageName(this.pkg)} {`);
+			this.mainCode.increaseIndent();
+
+			const code = new Code();
+			for (const ref of Object.values(this.pkg.interfaces)) {
+				const iface = this.symbols.interfaces[ref];
+				const typeExports = this.processInterface(iface, code);
+				code.push('');
+				const name = Names.asTypeName(iface.name);
+				this.mainCode.push(`export type ${name} = ${star}.${name};`);
+				if (typeExports.length > 0) {
+					this.mainCode.push(`export namespace ${name} {`);
+					this.mainCode.increaseIndent();
+					for (const type of typeExports) {
+						this.mainCode.push(`export type ${type} = ${star}.${name}.${type};`);
+					}
+					this.mainCode.decreaseIndent();
+					this.mainCode.push(`}`);
+				}
 			}
-			return this.code;
+
+			this.mainCode.decreaseIndent();
+			this.mainCode.push(`}`);
+			return code;
 		}
 
-		private processInterface(iface: Interface): void {
-			emitDocumentation(iface, this.code);
-			this.code.push(`export namespace ${Names.asTypeName(iface.name)} {`);
-			this.code.increaseIndent();
+		private processInterface(iface: Interface, code: Code): string[] {
+			const typeExports: string[] = [];
+			emitDocumentation(iface, code);
+			const name = Names.asTypeName(iface.name);
+			code.push(`export namespace ${name} {`);
+			code.increaseIndent();
 			for (const t of Object.values(iface.types)) {
-				this.code.push('');
+				code.push('');
 				const type = this.symbols.types[t];
-				(new TypeEmitter(type, iface, this.code, this.symbols)).emit();
+				typeExports.push(...(new TypeEmitter(type, iface, code, this.symbols)).emit());
 			}
+			const funcExports: string[] = [];
 			for (const func of Object.values(iface.functions)) {
-				this.code.push('');
-				(new FunctionEmitter(func, iface, this.code, this.symbols)).emit();
+				code.push('');
+				(new FunctionEmitter(func, iface, code, this.symbols)).emit();
+				funcExports.push(Names.asFuncName(func.name));
 			}
-			this.code.decreaseIndent();
-			this.code.push(`}`);
+			code.decreaseIndent();
+			code.push(`}`);
+			code.push(`export type ${name} = Pick<typeof ${name}, ${funcExports.map(item => `'${item}'`).join(' | ')}>;`);
+			return typeExports;
 		}
 	}
 
@@ -215,7 +266,8 @@ namespace TypeScript {
 			this.symbols = symbols;
 		}
 
-		public emit(): void {
+		public emit(): string[] {
+			const exports: string[] = [];
 			if (this.type.name === null) {
 				throw new Error(`Type ${this.type.kind} has no name.`);
 			}
@@ -238,8 +290,11 @@ namespace TypeScript {
 					throw new Error(`Cannot reference type ${JSON.stringify(referenced)} from ${JSON.stringify(this.scope)}`);
 				}
 			} else {
-				this.code.push(`export type ${Names.asTypeName(this.type.name)} = ${TypeName.fromType(this.type, this.scope, this.symbols, this.code.imports, TypeUsage.typeDeclaration)};`);
+				const name = Names.asTypeName(this.type.name);
+				exports.push(name);
+				this.code.push(`export type ${name} = ${TypeName.fromType(this.type, this.scope, this.symbols, this.code.imports, TypeUsage.typeDeclaration)};`);
 			}
+			return exports;
 		}
 
 		private emitRecord(name: string, kind: Record): void {

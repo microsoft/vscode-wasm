@@ -30,6 +30,7 @@ export namespace InsecureSeed {
 	 */
 	export declare function insecureSeed(): [u64, u64];
 }
+export type InsecureSeed = Pick<typeof InsecureSeed, 'insecureSeed'>;
 
 /**
  * The insecure interface for insecure pseudo-random numbers.
@@ -59,6 +60,7 @@ export namespace Insecure {
 	 */
 	export declare function getInsecureRandomU64(): u64;
 }
+export type Insecure = Pick<typeof Insecure, 'getInsecureRandomBytes' | 'getInsecureRandomU64'>;
 
 /**
  * WASI Random is a random data API.
@@ -90,3 +92,4 @@ export namespace Random {
 	 */
 	export declare function getRandomU64(): u64;
 }
+export type Random = Pick<typeof Random, 'getRandomBytes' | 'getRandomU64'>;

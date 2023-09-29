@@ -174,6 +174,7 @@ export namespace Network {
 	 */
 	export declare function dropNetwork(this_: Network): void;
 }
+export type Network = Pick<typeof Network, 'dropNetwork'>;
 
 /**
  * This interface provides a value-export of the default network handle..
@@ -187,6 +188,7 @@ export namespace InstanceNetwork {
 	 */
 	export declare function instanceNetwork(): Network;
 }
+export type InstanceNetwork = Pick<typeof InstanceNetwork, 'instanceNetwork'>;
 
 export namespace IpNameLookup {
 	
@@ -269,6 +271,7 @@ export namespace IpNameLookup {
 	 */
 	export declare function subscribe(this_: ResolveAddressStream): Pollable;
 }
+export type IpNameLookup = Pick<typeof IpNameLookup, 'resolveAddresses' | 'resolveNextAddress' | 'dropResolveAddressStream' | 'subscribe'>;
 
 export namespace Tcp {
 	
@@ -587,6 +590,7 @@ export namespace Tcp {
 	 */
 	export declare function dropTcpSocket(this_: TcpSocket): void;
 }
+export type Tcp = Pick<typeof Tcp, 'startBind' | 'finishBind' | 'startConnect' | 'finishConnect' | 'startListen' | 'finishListen' | 'accept' | 'localAddress' | 'remoteAddress' | 'addressFamily' | 'ipv6Only' | 'setIpv6Only' | 'setListenBacklogSize' | 'keepAlive' | 'setKeepAlive' | 'noDelay' | 'setNoDelay' | 'unicastHopLimit' | 'setUnicastHopLimit' | 'receiveBufferSize' | 'setReceiveBufferSize' | 'sendBufferSize' | 'setSendBufferSize' | 'subscribe' | 'shutdown' | 'dropTcpSocket'>;
 
 export namespace TcpCreateSocket {
 	
@@ -622,6 +626,7 @@ export namespace TcpCreateSocket {
 	 */
 	export declare function createTcpSocket(addressFamily: IpAddressFamily): result<TcpSocket, ErrorCode>;
 }
+export type TcpCreateSocket = Pick<typeof TcpCreateSocket, 'createTcpSocket'>;
 
 export namespace Udp {
 	
@@ -872,6 +877,7 @@ export namespace Udp {
 	 */
 	export declare function dropUdpSocket(this_: UdpSocket): void;
 }
+export type Udp = Pick<typeof Udp, 'startBind' | 'finishBind' | 'startConnect' | 'finishConnect' | 'receive' | 'send' | 'localAddress' | 'remoteAddress' | 'addressFamily' | 'ipv6Only' | 'setIpv6Only' | 'unicastHopLimit' | 'setUnicastHopLimit' | 'receiveBufferSize' | 'setReceiveBufferSize' | 'sendBufferSize' | 'setSendBufferSize' | 'subscribe' | 'dropUdpSocket'>;
 
 export namespace UdpCreateSocket {
 	
@@ -907,3 +913,4 @@ export namespace UdpCreateSocket {
 	 */
 	export declare function createUdpSocket(addressFamily: IpAddressFamily): result<UdpSocket, ErrorCode>;
 }
+export type UdpCreateSocket = Pick<typeof UdpCreateSocket, 'createUdpSocket'>;

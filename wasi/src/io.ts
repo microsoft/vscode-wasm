@@ -288,3 +288,4 @@ export namespace Streams {
 	 */
 	export declare function dropOutputStream(this_: OutputStream): void;
 }
+export type Streams = Pick<typeof Streams, 'read' | 'blockingRead' | 'skip' | 'blockingSkip' | 'subscribeToInputStream' | 'dropInputStream' | 'checkWrite' | 'write' | 'blockingWriteAndFlush' | 'flush' | 'blockingFlush' | 'subscribeToOutputStream' | 'writeZeroes' | 'splice' | 'blockingSplice' | 'forward' | 'dropOutputStream'>;

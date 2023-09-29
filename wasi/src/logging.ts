@@ -28,3 +28,4 @@ export namespace Logging {
 	 */
 	export declare function log(level: Level, context: string, message: string): void;
 }
+export type Logging = Pick<typeof Logging, 'log'>;

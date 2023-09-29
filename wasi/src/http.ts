@@ -384,6 +384,7 @@ export namespace Types {
 	
 	export declare function listenToFutureIncomingResponse(f: FutureIncomingResponse): Pollable;
 }
+export type Types = Pick<typeof Types, 'dropFields' | 'newFields' | 'fieldsGet' | 'fieldsSet' | 'fieldsDelete' | 'fieldsAppend' | 'fieldsEntries' | 'fieldsClone' | 'dropIncomingRequest' | 'incomingRequestMethod' | 'incomingRequestPathWithQuery' | 'incomingRequestScheme' | 'incomingRequestAuthority' | 'incomingRequestHeaders' | 'incomingRequestConsume' | 'dropOutgoingRequest' | 'newOutgoingRequest' | 'outgoingRequestWrite' | 'dropResponseOutparam' | 'setResponseOutparam' | 'dropIncomingResponse' | 'incomingResponseStatus' | 'incomingResponseHeaders' | 'incomingResponseConsume' | 'dropIncomingBody' | 'incomingBodyStream' | 'incomingBodyFinish' | 'dropFutureTrailers' | 'futureTrailersSubscribe' | 'futureTrailersGet' | 'dropOutgoingResponse' | 'newOutgoingResponse' | 'outgoingResponseWrite' | 'dropOutgoingBody' | 'outgoingBodyWrite' | 'outgoingBodyFinish' | 'dropFutureIncomingResponse' | 'futureIncomingResponseGet' | 'listenToFutureIncomingResponse'>;
 
 export namespace IncomingHandler {
 	
@@ -393,6 +394,7 @@ export namespace IncomingHandler {
 	
 	export declare function handle(request: IncomingRequest, responseOut: ResponseOutparam): void;
 }
+export type IncomingHandler = Pick<typeof IncomingHandler, 'handle'>;
 
 export namespace OutgoingHandler {
 	
@@ -406,3 +408,4 @@ export namespace OutgoingHandler {
 	
 	export declare function handle(request: OutgoingRequest, options: RequestOptions | undefined): result<FutureIncomingResponse, Error>;
 }
+export type OutgoingHandler = Pick<typeof OutgoingHandler, 'handle'>;
