@@ -17,6 +17,15 @@ export interface World {
 	exports: NameMap<ObjectKind>;
 	package: number;
 }
+export namespace World {
+	export function is(value: any): value is World {
+		return typeof value === 'object'
+			&& typeof value.name === 'string'
+			&& typeof value.imports === 'object'
+			&& typeof value.exports === 'object'
+			&& typeof value.package === 'number';
+	}
+}
 
 export interface Documentation {
 	contents: string | null;
@@ -27,6 +36,15 @@ export interface Interface {
 	types: References;
 	functions: NameMap<Func>;
 	package: number;
+}
+export namespace Interface {
+	export function is(value: any): value is Interface {
+		return typeof value === 'object'
+			&& typeof value.name === 'string'
+			&& typeof value.types === 'object'
+			&& typeof value.functions === 'object'
+			&& typeof value.package === 'number';
+	}
 }
 
 export interface Func {
@@ -62,6 +80,15 @@ export namespace Owner {
 	}
 	export function isInterface(owner: Owner): owner is { interface: number } {
 		return typeof (owner as { interface: number }).interface === 'number';
+	}
+	export function resolve(owner: Owner, symbols: Pick<Document, 'interfaces' | 'worlds'>): Interface | World {
+		if (isWorld(owner)) {
+			return symbols.worlds[owner.world];
+		} else if (isInterface(owner)) {
+			return symbols.interfaces[owner.interface];
+		} else {
+			throw new Error(`Unknown owner kind ${JSON.stringify(owner)}`);
+		}
 	}
 	export function kind(owner: Owner): OwnerKind {
 		if (isWorld(owner)) {

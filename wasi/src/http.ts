@@ -1,15 +1,15 @@
 import * as $wcm from '@vscode/wasm-component-model';
-import type { result } from '@vscode/wasm-component-model';
+import type { u32, u16, result } from '@vscode/wasm-component-model';
 import { Poll } from './poll';
 import { Streams } from './io';
 
 export namespace Types {
 	
-	export type InputStream = Streams.InputStream;
+	type InputStream = Streams.InputStream;
 	
-	export type OutputStream = Streams.OutputStream;
+	type OutputStream = Streams.OutputStream;
 	
-	export type Pollable = Poll.Pollable;
+	type Pollable = Poll.Pollable;
 	
 	export namespace Method {
 		export const get = 0 as const;
@@ -236,39 +236,50 @@ export namespace Types {
 	}
 	export type Error = Error.invalidUrl | Error.timeoutError | Error.protocolError | Error.unexpectedError;
 	
-	export type Fields = number;
+	export type Fields = u32;
 	
-	export type Headers = Headers;
+	type Headers = Fields;
 	
-	export type Trailers = Trailers;
+	type Trailers = Fields;
 	
-	export type IncomingStream = IncomingStream;
+	export type IncomingRequest = u32;
 	
-	export type OutgoingStream = OutgoingStream;
-	
-	export type IncomingRequest = number;
-	
-	export type OutgoingRequest = number;
+	export type OutgoingRequest = u32;
 	
 	export interface RequestOptions extends $wcm.JRecord {
-		connectTimeoutMs?: number | undefined;
-		firstByteTimeoutMs?: number | undefined;
-		betweenBytesTimeoutMs?: number | undefined;
+		connectTimeoutMs?: u32 | undefined;
+		firstByteTimeoutMs?: u32 | undefined;
+		betweenBytesTimeoutMs?: u32 | undefined;
 	}
 	
-	export type ResponseOutparam = number;
+	export type ResponseOutparam = u32;
 	
-	export type StatusCode = number;
+	export type StatusCode = u16;
 	
-	export type IncomingResponse = number;
+	export type IncomingResponse = u32;
 	
-	export type OutgoingResponse = number;
+	export type IncomingBody = u32;
 	
-	export type FutureIncomingResponse = number;
+	export type FutureTrailers = u32;
+	
+	export type OutgoingResponse = u32;
+	
+	export type OutgoingBody = u32;
+	
+	/**
+	 * The following block defines a special resource type used by the
+	 * `wasi:http/outgoing-handler` interface to emulate
+	 * `future<result<response, error>>` in advance of Preview3. Given a
+	 * `future-incoming-response`, the client can call the non-blocking `get`
+	 * method to get the result if it is available. If the result is not available,
+	 * the client can call `listen` to get a `pollable` that can be passed to
+	 * `io.poll.poll-oneoff`.
+	 */
+	export type FutureIncomingResponse = u32;
 	
 	export declare function dropFields(fields: Fields): void;
 	
-	export declare function newFields(entries: [string, string][]): Fields;
+	export declare function newFields(entries: [string, Uint8Array][]): Fields;
 	
 	export declare function fieldsGet(fields: Fields, name: string): Uint8Array[];
 	
@@ -282,13 +293,7 @@ export namespace Types {
 	
 	export declare function fieldsClone(fields: Fields): Fields;
 	
-	export declare function finishIncomingStream(s: IncomingStream): Trailers | undefined;
-	
-	export declare function finishOutgoingStream(s: OutgoingStream, trailers: Trailers | undefined): void;
-	
 	export declare function dropIncomingRequest(request: IncomingRequest): void;
-	
-	export declare function dropOutgoingRequest(request: OutgoingRequest): void;
 	
 	export declare function incomingRequestMethod(request: IncomingRequest): Method;
 	
@@ -300,53 +305,104 @@ export namespace Types {
 	
 	export declare function incomingRequestHeaders(request: IncomingRequest): Headers;
 	
-	export declare function incomingRequestConsume(request: IncomingRequest): result<IncomingStream, void>;
+	export declare function incomingRequestConsume(request: IncomingRequest): result<IncomingBody, void>;
+	
+	export declare function dropOutgoingRequest(request: OutgoingRequest): void;
 	
 	export declare function newOutgoingRequest(method: Method, pathWithQuery: string | undefined, scheme: Scheme | undefined, authority: string | undefined, headers: Headers): OutgoingRequest;
 	
-	export declare function outgoingRequestWrite(request: OutgoingRequest): result<OutgoingStream, void>;
+	export declare function outgoingRequestWrite(request: OutgoingRequest): result<OutgoingBody, void>;
 	
 	export declare function dropResponseOutparam(response: ResponseOutparam): void;
 	
-	export declare function setResponseOutparam(param: ResponseOutparam, response: result<OutgoingResponse, Error>): result<void, void>;
+	export declare function setResponseOutparam(param: ResponseOutparam, response: result<OutgoingResponse, Error>): void;
 	
 	export declare function dropIncomingResponse(response: IncomingResponse): void;
-	
-	export declare function dropOutgoingResponse(response: OutgoingResponse): void;
 	
 	export declare function incomingResponseStatus(response: IncomingResponse): StatusCode;
 	
 	export declare function incomingResponseHeaders(response: IncomingResponse): Headers;
 	
-	export declare function incomingResponseConsume(response: IncomingResponse): result<IncomingStream, void>;
+	export declare function incomingResponseConsume(response: IncomingResponse): result<IncomingBody, void>;
+	
+	export declare function dropIncomingBody(this_: IncomingBody): void;
+	
+	export declare function incomingBodyStream(this_: IncomingBody): result<InputStream, void>;
+	
+	export declare function incomingBodyFinish(this_: IncomingBody): FutureTrailers;
+	
+	export declare function dropFutureTrailers(this_: FutureTrailers): void;
+	
+	/**
+	 * Pollable that resolves when the body has been fully read, and the trailers
+	 * are ready to be consumed.
+	 */
+	export declare function futureTrailersSubscribe(this_: FutureTrailers): Pollable;
+	
+	/**
+	 * Retrieve reference to trailers, if they are ready.
+	 */
+	export declare function futureTrailersGet(response: FutureTrailers): result<Trailers, Error> | undefined;
+	
+	export declare function dropOutgoingResponse(response: OutgoingResponse): void;
 	
 	export declare function newOutgoingResponse(statusCode: StatusCode, headers: Headers): OutgoingResponse;
 	
-	export declare function outgoingResponseWrite(response: OutgoingResponse): result<OutgoingStream, void>;
+	/**
+	 * Will give the child outgoing-response at most once. subsequent calls will
+	 * return an error.
+	 */
+	export declare function outgoingResponseWrite(this_: OutgoingResponse): result<OutgoingBody, void>;
+	
+	export declare function dropOutgoingBody(this_: OutgoingBody): void;
+	
+	/**
+	 * Will give the child output-stream at most once. subsequent calls will
+	 * return an error.
+	 */
+	export declare function outgoingBodyWrite(this_: OutgoingBody): result<OutputStream, void>;
+	
+	/**
+	 * Finalize an outgoing body, optionally providing trailers. This must be
+	 * called to signal that the response is complete. If the `outgoing-body` is
+	 * dropped without calling `outgoing-body-finalize`, the implementation
+	 * should treat the body as corrupted.
+	 */
+	export declare function outgoingBodyFinish(this_: OutgoingBody, trailers: Trailers | undefined): void;
 	
 	export declare function dropFutureIncomingResponse(f: FutureIncomingResponse): void;
 	
-	export declare function futureIncomingResponseGet(f: FutureIncomingResponse): result<IncomingResponse, Error> | undefined;
+	/**
+	 * option indicates readiness.
+	 * outer result indicates you are allowed to get the
+	 * incoming-response-or-error at most once. subsequent calls after ready
+	 * will return an error here.
+	 * inner result indicates whether the incoming-response was available, or an
+	 * error occured.
+	 */
+	export declare function futureIncomingResponseGet(f: FutureIncomingResponse): result<result<IncomingResponse, Error>, void> | undefined;
 	
 	export declare function listenToFutureIncomingResponse(f: FutureIncomingResponse): Pollable;
 }
 
 export namespace IncomingHandler {
 	
-	export type IncomingRequest = Types.IncomingRequest;
+	type IncomingRequest = Types.IncomingRequest;
 	
-	export type ResponseOutparam = Types.ResponseOutparam;
+	type ResponseOutparam = Types.ResponseOutparam;
 	
 	export declare function handle(request: IncomingRequest, responseOut: ResponseOutparam): void;
 }
 
 export namespace OutgoingHandler {
 	
-	export type OutgoingRequest = Types.OutgoingRequest;
+	type OutgoingRequest = Types.OutgoingRequest;
 	
-	export type RequestOptions = Types.RequestOptions;
+	type RequestOptions = Types.RequestOptions;
 	
-	export type FutureIncomingResponse = Types.FutureIncomingResponse;
+	type FutureIncomingResponse = Types.FutureIncomingResponse;
 	
-	export declare function handle(request: OutgoingRequest, options: RequestOptions | undefined): FutureIncomingResponse;
+	type Error = Types.Error;
+	
+	export declare function handle(request: OutgoingRequest, options: RequestOptions | undefined): result<FutureIncomingResponse, Error>;
 }

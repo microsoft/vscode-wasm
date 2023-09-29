@@ -456,10 +456,10 @@
           "interface": 18
         },
         "output-stream": {
-          "type": 182
+          "type": 187
         },
         "descriptor-stat": {
-          "type": 183
+          "type": 188
         }
       },
       "exports": {
@@ -470,7 +470,7 @@
             "params": [
               {
                 "name": "s",
-                "type": 184
+                "type": 189
               }
             ],
             "results": [
@@ -487,7 +487,7 @@
             "params": [],
             "results": [
               {
-                "type": 184
+                "type": 189
               }
             ]
           }
@@ -499,12 +499,12 @@
             "params": [
               {
                 "name": "o",
-                "type": 182
+                "type": 187
               }
             ],
             "results": [
               {
-                "type": 185
+                "type": 190
               }
             ]
           }
@@ -516,7 +516,7 @@
             "params": [
               {
                 "name": "d",
-                "type": 183
+                "type": 188
               }
             ],
             "results": [
@@ -3553,16 +3553,17 @@
         "fields": 146,
         "headers": 147,
         "trailers": 148,
-        "incoming-stream": 149,
-        "outgoing-stream": 150,
-        "incoming-request": 151,
-        "outgoing-request": 152,
-        "request-options": 154,
-        "response-outparam": 155,
-        "status-code": 156,
-        "incoming-response": 157,
+        "incoming-request": 149,
+        "outgoing-request": 150,
+        "request-options": 152,
+        "response-outparam": 153,
+        "status-code": 154,
+        "incoming-response": 155,
+        "incoming-body": 156,
+        "future-trailers": 157,
         "outgoing-response": 158,
-        "future-incoming-response": 159
+        "outgoing-body": 159,
+        "future-incoming-response": 160
       },
       "functions": {
         "drop-fields": {
@@ -3582,7 +3583,7 @@
           "params": [
             {
               "name": "entries",
-              "type": 161
+              "type": 163
             }
           ],
           "results": [
@@ -3606,7 +3607,7 @@
           ],
           "results": [
             {
-              "type": 163
+              "type": 164
             }
           ]
         },
@@ -3624,7 +3625,7 @@
             },
             {
               "name": "value",
-              "type": 163
+              "type": 164
             }
           ],
           "results": []
@@ -3658,7 +3659,7 @@
             },
             {
               "name": "value",
-              "type": 162
+              "type": 161
             }
           ],
           "results": []
@@ -3674,7 +3675,7 @@
           ],
           "results": [
             {
-              "type": 165
+              "type": 163
             }
           ]
         },
@@ -3693,54 +3694,13 @@
             }
           ]
         },
-        "finish-incoming-stream": {
-          "name": "finish-incoming-stream",
-          "kind": "freestanding",
-          "params": [
-            {
-              "name": "s",
-              "type": 149
-            }
-          ],
-          "results": [
-            {
-              "type": 166
-            }
-          ]
-        },
-        "finish-outgoing-stream": {
-          "name": "finish-outgoing-stream",
-          "kind": "freestanding",
-          "params": [
-            {
-              "name": "s",
-              "type": 150
-            },
-            {
-              "name": "trailers",
-              "type": 166
-            }
-          ],
-          "results": []
-        },
         "drop-incoming-request": {
           "name": "drop-incoming-request",
           "kind": "freestanding",
           "params": [
             {
               "name": "request",
-              "type": 151
-            }
-          ],
-          "results": []
-        },
-        "drop-outgoing-request": {
-          "name": "drop-outgoing-request",
-          "kind": "freestanding",
-          "params": [
-            {
-              "name": "request",
-              "type": 152
+              "type": 149
             }
           ],
           "results": []
@@ -3751,7 +3711,7 @@
           "params": [
             {
               "name": "request",
-              "type": 151
+              "type": 149
             }
           ],
           "results": [
@@ -3766,12 +3726,12 @@
           "params": [
             {
               "name": "request",
-              "type": 151
+              "type": 149
             }
           ],
           "results": [
             {
-              "type": 167
+              "type": 165
             }
           ]
         },
@@ -3781,12 +3741,12 @@
           "params": [
             {
               "name": "request",
-              "type": 151
+              "type": 149
             }
           ],
           "results": [
             {
-              "type": 168
+              "type": 166
             }
           ]
         },
@@ -3796,12 +3756,12 @@
           "params": [
             {
               "name": "request",
-              "type": 151
+              "type": 149
             }
           ],
           "results": [
             {
-              "type": 167
+              "type": 165
             }
           ]
         },
@@ -3811,7 +3771,7 @@
           "params": [
             {
               "name": "request",
-              "type": 151
+              "type": 149
             }
           ],
           "results": [
@@ -3826,14 +3786,25 @@
           "params": [
             {
               "name": "request",
-              "type": 151
+              "type": 149
             }
           ],
           "results": [
             {
-              "type": 169
+              "type": 167
             }
           ]
+        },
+        "drop-outgoing-request": {
+          "name": "drop-outgoing-request",
+          "kind": "freestanding",
+          "params": [
+            {
+              "name": "request",
+              "type": 150
+            }
+          ],
+          "results": []
         },
         "new-outgoing-request": {
           "name": "new-outgoing-request",
@@ -3845,15 +3816,15 @@
             },
             {
               "name": "path-with-query",
-              "type": 167
+              "type": 165
             },
             {
               "name": "scheme",
-              "type": 168
+              "type": 166
             },
             {
               "name": "authority",
-              "type": 167
+              "type": 165
             },
             {
               "name": "headers",
@@ -3862,7 +3833,7 @@
           ],
           "results": [
             {
-              "type": 152
+              "type": 150
             }
           ]
         },
@@ -3872,12 +3843,12 @@
           "params": [
             {
               "name": "request",
-              "type": 152
+              "type": 150
             }
           ],
           "results": [
             {
-              "type": 170
+              "type": 168
             }
           ]
         },
@@ -3887,7 +3858,7 @@
           "params": [
             {
               "name": "response",
-              "type": 155
+              "type": 153
             }
           ],
           "results": []
@@ -3898,18 +3869,14 @@
           "params": [
             {
               "name": "param",
-              "type": 155
+              "type": 153
             },
             {
               "name": "response",
-              "type": 171
+              "type": 169
             }
           ],
-          "results": [
-            {
-              "type": 172
-            }
-          ]
+          "results": []
         },
         "drop-incoming-response": {
           "name": "drop-incoming-response",
@@ -3917,18 +3884,7 @@
           "params": [
             {
               "name": "response",
-              "type": 157
-            }
-          ],
-          "results": []
-        },
-        "drop-outgoing-response": {
-          "name": "drop-outgoing-response",
-          "kind": "freestanding",
-          "params": [
-            {
-              "name": "response",
-              "type": 158
+              "type": 155
             }
           ],
           "results": []
@@ -3939,12 +3895,12 @@
           "params": [
             {
               "name": "response",
-              "type": 157
+              "type": 155
             }
           ],
           "results": [
             {
-              "type": 156
+              "type": 154
             }
           ]
         },
@@ -3954,7 +3910,7 @@
           "params": [
             {
               "name": "response",
-              "type": 157
+              "type": 155
             }
           ],
           "results": [
@@ -3969,14 +3925,113 @@
           "params": [
             {
               "name": "response",
+              "type": 155
+            }
+          ],
+          "results": [
+            {
+              "type": 167
+            }
+          ]
+        },
+        "drop-incoming-body": {
+          "name": "drop-incoming-body",
+          "kind": "freestanding",
+          "params": [
+            {
+              "name": "this",
+              "type": 156
+            }
+          ],
+          "results": []
+        },
+        "incoming-body-stream": {
+          "name": "incoming-body-stream",
+          "kind": "freestanding",
+          "params": [
+            {
+              "name": "this",
+              "type": 156
+            }
+          ],
+          "results": [
+            {
+              "type": 170
+            }
+          ]
+        },
+        "incoming-body-finish": {
+          "name": "incoming-body-finish",
+          "kind": "freestanding",
+          "params": [
+            {
+              "name": "this",
+              "type": 156
+            }
+          ],
+          "results": [
+            {
+              "type": 157
+            }
+          ]
+        },
+        "drop-future-trailers": {
+          "name": "drop-future-trailers",
+          "kind": "freestanding",
+          "params": [
+            {
+              "name": "this",
+              "type": 157
+            }
+          ],
+          "results": []
+        },
+        "future-trailers-subscribe": {
+          "name": "future-trailers-subscribe",
+          "kind": "freestanding",
+          "params": [
+            {
+              "name": "this",
               "type": 157
             }
           ],
           "results": [
             {
-              "type": 169
+              "type": 142
             }
-          ]
+          ],
+          "docs": {
+            "contents": "Pollable that resolves when the body has been fully read, and the trailers\nare ready to be consumed."
+          }
+        },
+        "future-trailers-get": {
+          "name": "future-trailers-get",
+          "kind": "freestanding",
+          "params": [
+            {
+              "name": "response",
+              "type": 157
+            }
+          ],
+          "results": [
+            {
+              "type": 172
+            }
+          ],
+          "docs": {
+            "contents": "Retrieve reference to trailers, if they are ready."
+          }
+        },
+        "drop-outgoing-response": {
+          "name": "drop-outgoing-response",
+          "kind": "freestanding",
+          "params": [
+            {
+              "name": "response",
+              "type": 158
+            }
+          ],
+          "results": []
         },
         "new-outgoing-response": {
           "name": "new-outgoing-response",
@@ -3984,7 +4039,7 @@
           "params": [
             {
               "name": "status-code",
-              "type": 156
+              "type": 154
             },
             {
               "name": "headers",
@@ -4002,15 +4057,65 @@
           "kind": "freestanding",
           "params": [
             {
-              "name": "response",
+              "name": "this",
               "type": 158
             }
           ],
           "results": [
             {
-              "type": 170
+              "type": 168
             }
-          ]
+          ],
+          "docs": {
+            "contents": "Will give the child outgoing-response at most once. subsequent calls will\nreturn an error."
+          }
+        },
+        "drop-outgoing-body": {
+          "name": "drop-outgoing-body",
+          "kind": "freestanding",
+          "params": [
+            {
+              "name": "this",
+              "type": 159
+            }
+          ],
+          "results": []
+        },
+        "outgoing-body-write": {
+          "name": "outgoing-body-write",
+          "kind": "freestanding",
+          "params": [
+            {
+              "name": "this",
+              "type": 159
+            }
+          ],
+          "results": [
+            {
+              "type": 173
+            }
+          ],
+          "docs": {
+            "contents": "Will give the child output-stream at most once. subsequent calls will\nreturn an error."
+          }
+        },
+        "outgoing-body-finish": {
+          "name": "outgoing-body-finish",
+          "kind": "freestanding",
+          "params": [
+            {
+              "name": "this",
+              "type": 159
+            },
+            {
+              "name": "trailers",
+              "type": 174
+            }
+          ],
+          "results": [],
+          "docs": {
+            "contents": "Finalize an outgoing body, optionally providing trailers. This must be\ncalled to signal that the response is complete. If the `outgoing-body` is\ndropped without calling `outgoing-body-finalize`, the implementation\nshould treat the body as corrupted."
+          }
         },
         "drop-future-incoming-response": {
           "name": "drop-future-incoming-response",
@@ -4018,7 +4123,7 @@
           "params": [
             {
               "name": "f",
-              "type": 159
+              "type": 160
             }
           ],
           "results": []
@@ -4029,14 +4134,17 @@
           "params": [
             {
               "name": "f",
-              "type": 159
+              "type": 160
             }
           ],
           "results": [
             {
-              "type": 174
+              "type": 177
             }
-          ]
+          ],
+          "docs": {
+            "contents": "option indicates readiness.\nouter result indicates you are allowed to get the\nincoming-response-or-error at most once. subsequent calls after ready\nwill return an error here.\ninner result indicates whether the incoming-response was available, or an\nerror occured."
+          }
         },
         "listen-to-future-incoming-response": {
           "name": "listen-to-future-incoming-response",
@@ -4044,7 +4152,7 @@
           "params": [
             {
               "name": "f",
-              "type": 159
+              "type": 160
             }
           ],
           "results": [
@@ -4059,8 +4167,8 @@
     {
       "name": "incoming-handler",
       "types": {
-        "incoming-request": 175,
-        "response-outparam": 176
+        "incoming-request": 178,
+        "response-outparam": 179
       },
       "functions": {
         "handle": {
@@ -4069,11 +4177,11 @@
           "params": [
             {
               "name": "request",
-              "type": 175
+              "type": 178
             },
             {
               "name": "response-out",
-              "type": 176
+              "type": 179
             }
           ],
           "results": []
@@ -4084,9 +4192,10 @@
     {
       "name": "outgoing-handler",
       "types": {
-        "outgoing-request": 177,
-        "request-options": 178,
-        "future-incoming-response": 179
+        "outgoing-request": 180,
+        "request-options": 181,
+        "future-incoming-response": 182,
+        "error": 183
       },
       "functions": {
         "handle": {
@@ -4095,16 +4204,16 @@
           "params": [
             {
               "name": "request",
-              "type": 177
+              "type": 180
             },
             {
               "name": "options",
-              "type": 180
+              "type": 184
             }
           ],
           "results": [
             {
-              "type": 179
+              "type": 185
             }
           ]
         }
@@ -4114,7 +4223,7 @@
     {
       "name": "logging",
       "types": {
-        "level": 181
+        "level": 186
       },
       "functions": {
         "log": {
@@ -4123,7 +4232,7 @@
           "params": [
             {
               "name": "level",
-              "type": 181
+              "type": 186
             },
             {
               "name": "context",
@@ -6590,24 +6699,6 @@
       }
     },
     {
-      "name": "incoming-stream",
-      "kind": {
-        "type": 140
-      },
-      "owner": {
-        "interface": 28
-      }
-    },
-    {
-      "name": "outgoing-stream",
-      "kind": {
-        "type": 141
-      },
-      "owner": {
-        "interface": 28
-      }
-    },
-    {
       "name": "incoming-request",
       "kind": {
         "type": "u32"
@@ -6639,15 +6730,15 @@
           "fields": [
             {
               "name": "connect-timeout-ms",
-              "type": 153
+              "type": 151
             },
             {
               "name": "first-byte-timeout-ms",
-              "type": 153
+              "type": 151
             },
             {
               "name": "between-bytes-timeout-ms",
-              "type": 153
+              "type": 151
             }
           ]
         }
@@ -6684,7 +6775,34 @@
       }
     },
     {
+      "name": "incoming-body",
+      "kind": {
+        "type": "u32"
+      },
+      "owner": {
+        "interface": 28
+      }
+    },
+    {
+      "name": "future-trailers",
+      "kind": {
+        "type": "u32"
+      },
+      "owner": {
+        "interface": 28
+      }
+    },
+    {
       "name": "outgoing-response",
+      "kind": {
+        "type": "u32"
+      },
+      "owner": {
+        "interface": 28
+      }
+    },
+    {
+      "name": "outgoing-body",
       "kind": {
         "type": "u32"
       },
@@ -6699,7 +6817,17 @@
       },
       "owner": {
         "interface": 28
+      },
+      "docs": {
+        "contents": "The following block defines a special resource type used by the\n`wasi:http/outgoing-handler` interface to emulate\n`future<result<response, error>>` in advance of Preview3. Given a\n`future-incoming-response`, the client can call the non-blocking `get`\nmethod to get the result if it is available. If the result is not available,\nthe client can call `listen` to get a `pollable` that can be passed to\n`io.poll.poll-oneoff`."
       }
+    },
+    {
+      "name": null,
+      "kind": {
+        "list": "u8"
+      },
+      "owner": null
     },
     {
       "name": null,
@@ -6707,23 +6835,9 @@
         "tuple": {
           "types": [
             "string",
-            "string"
+            161
           ]
         }
-      },
-      "owner": null
-    },
-    {
-      "name": null,
-      "kind": {
-        "list": 160
-      },
-      "owner": null
-    },
-    {
-      "name": null,
-      "kind": {
-        "list": "u8"
       },
       "owner": null
     },
@@ -6737,26 +6851,7 @@
     {
       "name": null,
       "kind": {
-        "tuple": {
-          "types": [
-            "string",
-            162
-          ]
-        }
-      },
-      "owner": null
-    },
-    {
-      "name": null,
-      "kind": {
-        "list": 164
-      },
-      "owner": null
-    },
-    {
-      "name": null,
-      "kind": {
-        "option": 148
+        "list": 161
       },
       "owner": null
     },
@@ -6778,7 +6873,7 @@
       "name": null,
       "kind": {
         "result": {
-          "ok": 149,
+          "ok": 156,
           "err": null
         }
       },
@@ -6788,7 +6883,7 @@
       "name": null,
       "kind": {
         "result": {
-          "ok": 150,
+          "ok": 159,
           "err": null
         }
       },
@@ -6808,7 +6903,7 @@
       "name": null,
       "kind": {
         "result": {
-          "ok": null,
+          "ok": 140,
           "err": null
         }
       },
@@ -6818,7 +6913,7 @@
       "name": null,
       "kind": {
         "result": {
-          "ok": 157,
+          "ok": 148,
           "err": 145
         }
       },
@@ -6827,14 +6922,58 @@
     {
       "name": null,
       "kind": {
-        "option": 173
+        "option": 171
+      },
+      "owner": null
+    },
+    {
+      "name": null,
+      "kind": {
+        "result": {
+          "ok": 141,
+          "err": null
+        }
+      },
+      "owner": null
+    },
+    {
+      "name": null,
+      "kind": {
+        "option": 148
+      },
+      "owner": null
+    },
+    {
+      "name": null,
+      "kind": {
+        "result": {
+          "ok": 155,
+          "err": 145
+        }
+      },
+      "owner": null
+    },
+    {
+      "name": null,
+      "kind": {
+        "result": {
+          "ok": 175,
+          "err": null
+        }
+      },
+      "owner": null
+    },
+    {
+      "name": null,
+      "kind": {
+        "option": 176
       },
       "owner": null
     },
     {
       "name": "incoming-request",
       "kind": {
-        "type": 151
+        "type": 149
       },
       "owner": {
         "interface": 29
@@ -6843,7 +6982,7 @@
     {
       "name": "response-outparam",
       "kind": {
-        "type": 155
+        "type": 153
       },
       "owner": {
         "interface": 29
@@ -6852,7 +6991,7 @@
     {
       "name": "outgoing-request",
       "kind": {
-        "type": 152
+        "type": 150
       },
       "owner": {
         "interface": 30
@@ -6861,7 +7000,7 @@
     {
       "name": "request-options",
       "kind": {
-        "type": 154
+        "type": 152
       },
       "owner": {
         "interface": 30
@@ -6870,7 +7009,16 @@
     {
       "name": "future-incoming-response",
       "kind": {
-        "type": 159
+        "type": 160
+      },
+      "owner": {
+        "interface": 30
+      }
+    },
+    {
+      "name": "error",
+      "kind": {
+        "type": 145
       },
       "owner": {
         "interface": 30
@@ -6879,7 +7027,17 @@
     {
       "name": null,
       "kind": {
-        "option": 178
+        "option": 181
+      },
+      "owner": null
+    },
+    {
+      "name": null,
+      "kind": {
+        "result": {
+          "ok": 182,
+          "err": 183
+        }
       },
       "owner": null
     },

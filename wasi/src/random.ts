@@ -1,4 +1,5 @@
 import * as $wcm from '@vscode/wasm-component-model';
+import type { u64 } from '@vscode/wasm-component-model';
 
 /**
  * The insecure-seed interface for seeding hash-map DoS resistance.
@@ -27,7 +28,7 @@ export namespace InsecureSeed {
 	 * called multiple times and potentially used for purposes other than DoS
 	 * protection.
 	 */
-	export declare function insecureSeed(): [bigint, bigint];
+	export declare function insecureSeed(): [u64, u64];
 }
 
 /**
@@ -48,7 +49,7 @@ export namespace Insecure {
 	 * implementations are encouraged to return evenly distributed values with
 	 * a long period.
 	 */
-	export declare function getInsecureRandomBytes(len: bigint): Uint8Array;
+	export declare function getInsecureRandomBytes(len: u64): Uint8Array;
 	
 	/**
 	 * Return an insecure pseudo-random `u64` value.
@@ -56,7 +57,7 @@ export namespace Insecure {
 	 * This function returns the same type of pseudo-random data as
 	 * `get-insecure-random-bytes`, represented as a `u64`.
 	 */
-	export declare function getInsecureRandomU64(): bigint;
+	export declare function getInsecureRandomU64(): u64;
 }
 
 /**
@@ -79,7 +80,7 @@ export namespace Random {
 	 * environments must omit this function, rather than implementing it with
 	 * deterministic data.
 	 */
-	export declare function getRandomBytes(len: bigint): Uint8Array;
+	export declare function getRandomBytes(len: u64): Uint8Array;
 	
 	/**
 	 * Return a cryptographically-secure pseudo-random `u64` value.
@@ -87,5 +88,5 @@ export namespace Random {
 	 * This function returns the same type of pseudo-random data as
 	 * `get-random-bytes`, represented as a `u64`.
 	 */
-	export declare function getRandomU64(): bigint;
+	export declare function getRandomU64(): u64;
 }

@@ -6,7 +6,7 @@
 import * as fs from 'node:fs';
 import * as path from 'node:path';
 
-import { Document, Documentation, Enum, Flags, Func, Interface, Owner, Package, Record, Type, TypeKind, TypeReference, Variant } from './wit-json';
+import { Document, Documentation, Enum, Flags, Func, Interface, Owner, Package, Record, Type, TypeKind, TypeReference, Variant, World } from './wit-json';
 
 export function processDocument(document: Document, outDir: string): void {
 	for (const pkg of document.packages) {
@@ -97,7 +97,7 @@ class Code {
 	}
 }
 
-type SymbolTable = Pick<Document, 'interfaces' | 'types' | 'packages'>;
+type SymbolTable = Pick<Document, 'interfaces' | 'types' | 'packages' | 'worlds'>;
 
 namespace Names {
 
@@ -190,11 +190,11 @@ namespace TypeScript {
 			for (const t of Object.values(iface.types)) {
 				this.code.push('');
 				const type = this.symbols.types[t];
-				(new TypeEmitter(type, this.code, this.symbols)).emit();
+				(new TypeEmitter(type, iface, this.code, this.symbols)).emit();
 			}
 			for (const func of Object.values(iface.functions)) {
 				this.code.push('');
-				(new FunctionEmitter(func, this.code, this.symbols)).emit();
+				(new FunctionEmitter(func, iface, this.code, this.symbols)).emit();
 			}
 			this.code.decreaseIndent();
 			this.code.push(`}`);
@@ -204,11 +204,13 @@ namespace TypeScript {
 	class TypeEmitter {
 
 		private readonly type: Type;
+		private readonly scope: Interface;
 		private readonly code: Code;
 		private readonly symbols: SymbolTable;
 
-		constructor(type: Type, code: Code, symbols: SymbolTable) {
+		constructor(type: Type, scope: Interface, code: Code, symbols: SymbolTable) {
 			this.type = type;
+			this.scope = scope;
 			this.code = code;
 			this.symbols = symbols;
 		}
@@ -226,8 +228,17 @@ namespace TypeScript {
 				this.emitEnum(this.type.name, this.type.kind);
 			} else if (TypeKind.isFlags(this.type.kind)) {
 				this.emitFlags(this.type.name, this.type.kind);
+			} else if (TypeKind.isTypeReference(this.type.kind)) {
+				const referenced = this.symbols.types[this.type.kind.type];
+				if (referenced.name !== null) {
+					const qualifier = referenced.owner !== null ? this.computeQualifier(this.scope, Owner.resolve(referenced.owner, this.symbols)) : undefined;
+					const typeName = qualifier !== undefined ? `${qualifier}.${Names.asTypeName(referenced.name)}` : Names.asTypeName(referenced.name);
+					this.code.push(`type ${Names.asTypeName(this.type.name)} = ${typeName};`);
+				} else {
+					throw new Error(`Cannot reference type ${JSON.stringify(referenced)} from ${JSON.stringify(this.scope)}`);
+				}
 			} else {
-				this.code.push(`export type ${Names.asTypeName(this.type.name)} = ${TypeName.fromType(this.type, this.symbols, this.code.imports, true)};`);
+				this.code.push(`export type ${Names.asTypeName(this.type.name)} = ${TypeName.fromType(this.type, this.scope, this.symbols, this.code.imports, TypeUsage.typeDeclaration)};`);
 			}
 		}
 
@@ -240,7 +251,7 @@ namespace TypeScript {
 					? false
 					: TypeKind.isOption(this.symbols.types[field.type].kind);
 
-				this.code.push(`${Names.asPropertyName(field.name)}${isOptional ? '?' : ''}: ${TypeName.fromReference(field.type, this.symbols, this.code.imports)};`);
+				this.code.push(`${Names.asPropertyName(field.name)}${isOptional ? '?' : ''}: ${TypeName.fromReference(field.type, this.scope, this.symbols, this.code.imports, TypeUsage.property)};`);
 			}
 			this.code.decreaseIndent();
 			this.code.push(`}`);
@@ -257,7 +268,7 @@ namespace TypeScript {
 			for (const item of kind.variant.cases) {
 				names.push(Names.asPropertyName(item.name));
 				if (item.type !== null) {
-					types.push(TypeName.fromReference(item.type, this.symbols, this.code.imports));
+					types.push(TypeName.fromReference(item.type, this.scope, this.symbols, this.code.imports, TypeUsage.property));
 				} else {
 					types.push(undefined);
 				}
@@ -371,16 +382,42 @@ namespace TypeScript {
 			this.code.decreaseIndent();
 			this.code.push(`};`);
 		}
+
+		private computeQualifier(scope: Interface | World, reference: Interface | World): string | undefined {
+			if (scope === reference) {
+				return undefined;
+			}
+			if (Interface.is(scope) && Interface.is(reference)) {
+				if (scope.package === reference.package) {
+					return `${Names.asTypeName(reference.name)}`;
+				} else {
+					const typePackage = this.symbols.packages[scope.package];
+					const referencedPackage = this.symbols.packages[reference.package];
+					const [typeNamespace, ] = Names.getNamespaceAndName(typePackage.name);
+					const [referenceNamespace, referenceName] = Names.getNamespaceAndName(referencedPackage.name);
+					if (typeNamespace === referenceNamespace) {
+						const refName = Names.asTypeName(reference.name);
+						this.code.imports.add(refName, `./${referenceName}`);
+						return refName;
+					} else {
+						throw new Error(`Cannot compute qualifier to import ${JSON.stringify(reference)} into scope  ${JSON.stringify(scope)}.`);
+					}
+				}
+			}
+			return undefined;
+		}
 	}
 
 	class FunctionEmitter {
 
 		private readonly func: Func;
+		private readonly scope: Interface;
 		private readonly code: Code;
 		private readonly symbols: SymbolTable;
 
-		constructor(func: Func, code: Code, symbols: SymbolTable) {
+		constructor(func: Func, scope: Interface, code: Code, symbols: SymbolTable) {
 			this.func = func;
+			this.scope = scope;
 			this.code = code;
 			this.symbols = symbols;
 		}
@@ -390,49 +427,44 @@ namespace TypeScript {
 			const name = Names.asFuncName(this.func.name);
 			const elements: string[] = [];
 			for (const param of this.func.params) {
-				elements.push(`${Names.asParamName(param.name)}: ${TypeName.fromReference(param.type, this.symbols, this.code.imports)}`);
+				elements.push(`${Names.asParamName(param.name)}: ${TypeName.fromReference(param.type, this.scope, this.symbols, this.code.imports, TypeUsage.parameter)}`);
 			}
 			let returnType = this.func.results.length === 0
 				? 'void'
 				: this.func.results.length === 1
-					? TypeName.fromReference(this.func.results[0].type, this.symbols, this.code.imports)
-					: `[${this.func.results.map(r => TypeName.fromReference(r.type, this.symbols, this.code.imports)).join(', ')}]`;
+					? TypeName.fromReference(this.func.results[0].type, this.scope, this.symbols, this.code.imports, TypeUsage.function)
+					: `[${this.func.results.map(r => TypeName.fromReference(r.type, this.scope, this.symbols, this.code.imports, TypeUsage.function)).join(', ')}]`;
 
 			this.code.push(`export declare function ${name}(${elements.join(', ')}): ${returnType};`);
 			// this.code.push(`export type ${name} = typeof ${name};`);
 		}
 	}
 
+	export enum TypeUsage {
+		parameter,
+		function,
+		property,
+		typeDeclaration
+	}
+
 	namespace TypeName {
 
-		export function fromReference(ref: TypeReference, symbols: SymbolTable, imports: Imports): string {
-			if (typeof ref === 'string') {
-				return baseType(ref);
-			} else if (typeof ref === 'number') {
-				return fromType(symbols.types[ref], symbols, imports);
+		export function fromReference(ref: TypeReference, scope: Interface | World, symbols: SymbolTable, imports: Imports, usage: TypeUsage): string {
+			if (TypeReference.isString(ref)) {
+				return baseType(ref, imports);
+			} else if (TypeReference.isNumber(ref)) {
+				return fromType(symbols.types[ref], scope, symbols, imports, usage);
 			} else {
 				throw new Error(`Unknown type reference ${ref}`);
 			}
 		}
 
-		export function fromType(type: Type, symbols: SymbolTable, imports: Imports, forceReference: boolean = false): string {
-			if (type.name !== null && !forceReference) {
+		export function fromType(type: Type, scope: Interface | World, symbols: SymbolTable, imports: Imports, usage: TypeUsage): string {
+			if (type.name !== null && (usage === TypeUsage.parameter || usage === TypeUsage.function || usage === TypeUsage.property)) {
 				return Names.asTypeName(type.name);
-			}
-			if (TypeKind.isTypeReference(type.kind)) {
-				const referenced = symbols.types[type.kind.type];
-				let qualifier = computeQualifier(type.owner, referenced.owner, symbols, imports);
-				const name = type.name === null ? fromType(referenced, symbols, imports) : Names.asTypeName(type.name);
-				if (qualifier !== undefined) {
-					return `${qualifier}.${name}`;
-				} else {
-					return name;
-				}
-			}
-			if (TypeKind.isBaseType(type.kind)) {
-				return baseType(type.kind.type);
-			}
-			if (TypeKind.isList(type.kind)) {
+			} else if (TypeKind.isBaseType(type.kind)) {
+				return baseType(type.kind.type, imports);
+			} else if (TypeKind.isList(type.kind)) {
 				if (typeof type.kind.list === 'string') {
 					switch (type.kind.list) {
 						case 'u8':
@@ -456,78 +488,66 @@ namespace TypeScript {
 						case 'float64':
 							return 'Float64Array';
 						default:
-							return `${baseType(type.kind.list)}[]`;
+							return `${baseType(type.kind.list, imports)}[]`;
 					}
 				} else {
-					return `${fromReference(type.kind.list, symbols, imports)}[]`;
+					return `${fromReference(type.kind.list, scope, symbols, imports, usage)}[]`;
 				}
 			} else if (TypeKind.isTuple(type.kind)) {
-				return `[${type.kind.tuple.types.map(t => fromReference(t, symbols, imports)).join(', ')}]`;
+				return `[${type.kind.tuple.types.map(t => fromReference(t, scope, symbols, imports, usage)).join(', ')}]`;
 			} else if (TypeKind.isOption(type.kind)) {
-				return `${fromReference(type.kind.option, symbols, imports)} | undefined`;
+				return `${fromReference(type.kind.option, scope, symbols, imports, usage)} | undefined`;
 			} else if (TypeKind.isResult(type.kind)) {
 				let ok: string = 'void';
 				const result = type.kind.result;
 				if (result.ok !== null) {
-					ok = fromReference(result.ok, symbols, imports);
+					ok = fromReference(result.ok, scope, symbols, imports, usage);
 				}
 				let error: string = 'void';
 				if (result.err !== null) {
-					error = fromReference(result.err, symbols, imports);
+					error = fromReference(result.err, scope, symbols, imports, usage);
 				}
 				imports.addBaseType('result');
 				return `result<${ok}, ${error}>`;
-			} else if (type.name !== null) {
-				return Names.asTypeName(type.name);
+			} else if (TypeKind.isTypeReference(type.kind)) {
+				return fromType(symbols.types[type.kind.type], scope, symbols, imports, usage);
 			}
+
 			throw new Error(`Unknown type ${type.kind}`);
 		}
 
-		function computeQualifier(type: Owner | null, reference: Owner | null, symbols: SymbolTable, imports: Imports): string | undefined {
-			if (type === null || reference === null) {
-				return undefined;
-			}
-			if (Owner.isInterface(type) && Owner.isInterface(reference)) {
-				if (type.interface === reference.interface) {
-					return undefined;
-				}
-				const typeInterface = symbols.interfaces[type.interface];
-				const referenceInterface = symbols.interfaces[reference.interface];
-				if (typeInterface.package === referenceInterface.package) {
-					return `${Names.asTypeName(referenceInterface.name)}`;
-				} else {
-					const typePackage = symbols.packages[typeInterface.package];
-					const referencedPackage = symbols.packages[referenceInterface.package];
-					const [typeNamespace, ] = Names.getNamespaceAndName(typePackage.name);
-					const [referenceNamespace, referenceName] = Names.getNamespaceAndName(referencedPackage.name);
-					if (typeNamespace === referenceNamespace) {
-						const refName = Names.asTypeName(referenceInterface.name);
-						imports.add(refName, `./${referenceName}`);
-						return refName;
-					} else {
-						throw new Error(`Cannot compute qualifier for ${JSON.stringify(type)} and ${JSON.stringify(reference)}`);
-					}
-				}
-			}
-			return undefined;
-		}
-
-		function baseType(base: string): string {
+		export function baseType(base: string, imports: Imports): string {
 			switch (base) {
 				case 'u8':
+					imports.addBaseType('u8');
+					return 'u8';
 				case 'u16':
+					imports.addBaseType('u16');
+					return 'u16';
 				case 'u32':
-				case 's8':
-				case 's16':
-				case 's32':
-					return 'number';
+					imports.addBaseType('u32');
+					return 'u32';
 				case 'u64':
+					imports.addBaseType('u64');
+					return 'u64';
+				case 's8':
+					imports.addBaseType('s8');
+					return 's8';
+				case 's16':
+					imports.addBaseType('s16');
+					return 's16';
+				case 's32':
+					imports.addBaseType('s32');
+					return 's32';
 				case 's64':
-					return 'bigint';
+					imports.addBaseType('s64');
+					return 's64';
 				case 'f32':
-					return 'number';
+					imports.addBaseType('f32');
+					return 'f32';
 				case 'f64':
-					return 'bigint';
+					imports.addBaseType('f64');
+					return 'f64';
 				case 'bool':
 					return 'boolean';
 				case 'string':

@@ -1,4 +1,5 @@
 import * as $wcm from '@vscode/wasm-component-model';
+import type { u64, u32, s32 } from '@vscode/wasm-component-model';
 import { Poll } from './poll';
 
 /**
@@ -15,12 +16,12 @@ import { Poll } from './poll';
  */
 export namespace MonotonicClock {
 	
-	export type Pollable = Poll.Pollable;
+	type Pollable = Poll.Pollable;
 	
 	/**
 	 * A timestamp in nanoseconds.
 	 */
-	export type Instant = bigint;
+	export type Instant = u64;
 	
 	/**
 	 * Read the current value of the clock.
@@ -64,8 +65,8 @@ export namespace WallClock {
 	 * A time and date in seconds plus nanoseconds.
 	 */
 	export interface Datetime extends $wcm.JRecord {
-		seconds: bigint;
-		nanoseconds: number;
+		seconds: u64;
+		nanoseconds: u32;
 	}
 	
 	/**
@@ -95,7 +96,7 @@ export namespace WallClock {
 
 export namespace Timezone {
 	
-	export type Datetime = WallClock.Datetime;
+	type Datetime = WallClock.Datetime;
 	
 	/**
 	 * A timezone.
@@ -106,7 +107,7 @@ export namespace Timezone {
 	 * 
 	 * This [represents a resource](https://github.com/WebAssembly/WASI/blob/main/docs/WitInWasi.md#Resources).
 	 */
-	export type Timezone = number;
+	export type Timezone = u32;
 	
 	/**
 	 * Information useful for displaying the timezone of a specific `datetime`.
@@ -126,7 +127,7 @@ export namespace Timezone {
 		 * In implementations that do not expose an actual time zone, this
 		 * should return 0.
 		 */
-		utcOffset: number;
+		utcOffset: s32;
 		
 		/**
 		 * The abbreviated name of the timezone to display to a user. The name
@@ -164,7 +165,7 @@ export namespace Timezone {
 	/**
 	 * The same as `display`, but only return the UTC offset.
 	 */
-	export declare function utcOffset(this_: Timezone, when: Datetime): number;
+	export declare function utcOffset(this_: Timezone, when: Datetime): s32;
 	
 	/**
 	 * Dispose of the specified input-stream, after which it may no longer

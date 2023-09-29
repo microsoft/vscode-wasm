@@ -1,4 +1,5 @@
 import * as $wcm from '@vscode/wasm-component-model';
+import type { u32 } from '@vscode/wasm-component-model';
 
 /**
  * A poll API intended to let users wait for I/O events on multiple handles
@@ -22,7 +23,7 @@ export namespace Poll {
 	 * 
 	 * This [represents a resource](https://github.com/WebAssembly/WASI/blob/main/docs/WitInWasi.md#Resources).
 	 */
-	export type Pollable = number;
+	export type Pollable = u32;
 	
 	/**
 	 * Dispose of the specified `pollable`, after which it may no longer

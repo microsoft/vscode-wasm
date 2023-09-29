@@ -1,5 +1,5 @@
 import * as $wcm from '@vscode/wasm-component-model';
-import type { result } from '@vscode/wasm-component-model';
+import type { u32, u8, u16, result, u64 } from '@vscode/wasm-component-model';
 import { Streams } from './io';
 import { Poll } from './poll';
 
@@ -12,7 +12,7 @@ export namespace Network {
 	 * 
 	 * FYI, In the future this will be replaced by handle types.
 	 */
-	export type Network = number;
+	export type Network = u32;
 	
 	/**
 	 * Error codes.
@@ -67,9 +67,9 @@ export namespace Network {
 		ipv6 = 1,
 	}
 	
-	export type Ipv4Address = [number, number, number, number];
+	export type Ipv4Address = [u8, u8, u8, u8];
 	
-	export type Ipv6Address = [number, number, number, number, number, number, number, number];
+	export type Ipv6Address = [u16, u16, u16, u16, u16, u16, u16, u16];
 	
 	export namespace IpAddress {
 		export const ipv4 = 0 as const;
@@ -114,15 +114,15 @@ export namespace Network {
 	export type IpAddress = IpAddress.ipv4 | IpAddress.ipv6;
 	
 	export interface Ipv4SocketAddress extends $wcm.JRecord {
-		port: number;
+		port: u16;
 		address: Ipv4Address;
 	}
 	
 	export interface Ipv6SocketAddress extends $wcm.JRecord {
-		port: number;
-		flowInfo: number;
+		port: u16;
+		flowInfo: u32;
 		address: Ipv6Address;
-		scopeId: number;
+		scopeId: u32;
 	}
 	
 	export namespace IpSocketAddress {
@@ -180,7 +180,7 @@ export namespace Network {
  */
 export namespace InstanceNetwork {
 	
-	export type Network = Network.Network;
+	type Network = Network.Network;
 	
 	/**
 	 * Get a handle to the default network.
@@ -190,17 +190,17 @@ export namespace InstanceNetwork {
 
 export namespace IpNameLookup {
 	
-	export type Pollable = Poll.Pollable;
+	type Pollable = Poll.Pollable;
 	
-	export type Network = Network.Network;
+	type Network = Network.Network;
 	
-	export type ErrorCode = Network.ErrorCode;
+	type ErrorCode = Network.ErrorCode;
 	
-	export type IpAddress = Network.IpAddress;
+	type IpAddress = Network.IpAddress;
 	
-	export type IpAddressFamily = Network.IpAddressFamily;
+	type IpAddressFamily = Network.IpAddressFamily;
 	
-	export type ResolveAddressStream = number;
+	export type ResolveAddressStream = u32;
 	
 	/**
 	 * Resolve an internet host name to a list of IP addresses.
@@ -272,24 +272,24 @@ export namespace IpNameLookup {
 
 export namespace Tcp {
 	
-	export type InputStream = Streams.InputStream;
+	type InputStream = Streams.InputStream;
 	
-	export type OutputStream = Streams.OutputStream;
+	type OutputStream = Streams.OutputStream;
 	
-	export type Pollable = Poll.Pollable;
+	type Pollable = Poll.Pollable;
 	
-	export type Network = Network.Network;
+	type Network = Network.Network;
 	
-	export type ErrorCode = Network.ErrorCode;
+	type ErrorCode = Network.ErrorCode;
 	
-	export type IpSocketAddress = Network.IpSocketAddress;
+	type IpSocketAddress = Network.IpSocketAddress;
 	
-	export type IpAddressFamily = Network.IpAddressFamily;
+	type IpAddressFamily = Network.IpAddressFamily;
 	
 	/**
 	 * A TCP socket handle.
 	 */
-	export type TcpSocket = number;
+	export type TcpSocket = u32;
 	
 	export enum ShutdownType {
 		receive = 0,
@@ -484,7 +484,7 @@ export namespace Tcp {
 	 * - `already-connected`:    (set) The socket is already in the Connection state.
 	 * - `concurrency-conflict`: (set) A `bind`, `connect` or `listen` operation is already in progress. (EALREADY)
 	 */
-	export declare function setListenBacklogSize(this_: TcpSocket, value: bigint): result<void, ErrorCode>;
+	export declare function setListenBacklogSize(this_: TcpSocket, value: u64): result<void, ErrorCode>;
 	
 	/**
 	 * Equivalent to the SO_KEEPALIVE socket option.
@@ -514,9 +514,9 @@ export namespace Tcp {
 	 * - `already-listening`:    (set) The socket is already in the Listener state.
 	 * - `concurrency-conflict`: (set) A `bind`, `connect` or `listen` operation is already in progress. (EALREADY)
 	 */
-	export declare function unicastHopLimit(this_: TcpSocket): result<number, ErrorCode>;
+	export declare function unicastHopLimit(this_: TcpSocket): result<u8, ErrorCode>;
 	
-	export declare function setUnicastHopLimit(this_: TcpSocket, value: number): result<void, ErrorCode>;
+	export declare function setUnicastHopLimit(this_: TcpSocket, value: u8): result<void, ErrorCode>;
 	
 	/**
 	 * The kernel buffer space reserved for sends/receives on this socket.
@@ -535,13 +535,13 @@ export namespace Tcp {
 	 * - `already-listening`:    (set) The socket is already in the Listener state.
 	 * - `concurrency-conflict`: (set) A `bind`, `connect` or `listen` operation is already in progress. (EALREADY)
 	 */
-	export declare function receiveBufferSize(this_: TcpSocket): result<bigint, ErrorCode>;
+	export declare function receiveBufferSize(this_: TcpSocket): result<u64, ErrorCode>;
 	
-	export declare function setReceiveBufferSize(this_: TcpSocket, value: bigint): result<void, ErrorCode>;
+	export declare function setReceiveBufferSize(this_: TcpSocket, value: u64): result<void, ErrorCode>;
 	
-	export declare function sendBufferSize(this_: TcpSocket): result<bigint, ErrorCode>;
+	export declare function sendBufferSize(this_: TcpSocket): result<u64, ErrorCode>;
 	
-	export declare function setSendBufferSize(this_: TcpSocket, value: bigint): result<void, ErrorCode>;
+	export declare function setSendBufferSize(this_: TcpSocket, value: u64): result<void, ErrorCode>;
 	
 	/**
 	 * Create a `pollable` which will resolve once the socket is ready for I/O.
@@ -590,13 +590,13 @@ export namespace Tcp {
 
 export namespace TcpCreateSocket {
 	
-	export type Network = Network.Network;
+	type Network = Network.Network;
 	
-	export type ErrorCode = Network.ErrorCode;
+	type ErrorCode = Network.ErrorCode;
 	
-	export type IpAddressFamily = Network.IpAddressFamily;
+	type IpAddressFamily = Network.IpAddressFamily;
 	
-	export type TcpSocket = Tcp.TcpSocket;
+	type TcpSocket = Tcp.TcpSocket;
 	
 	/**
 	 * Create a new TCP socket.
@@ -625,20 +625,20 @@ export namespace TcpCreateSocket {
 
 export namespace Udp {
 	
-	export type Pollable = Poll.Pollable;
+	type Pollable = Poll.Pollable;
 	
-	export type Network = Network.Network;
+	type Network = Network.Network;
 	
-	export type ErrorCode = Network.ErrorCode;
+	type ErrorCode = Network.ErrorCode;
 	
-	export type IpSocketAddress = Network.IpSocketAddress;
+	type IpSocketAddress = Network.IpSocketAddress;
 	
-	export type IpAddressFamily = Network.IpAddressFamily;
+	type IpAddressFamily = Network.IpAddressFamily;
 	
 	/**
 	 * A UDP socket handle.
 	 */
-	export type UdpSocket = number;
+	export type UdpSocket = u32;
 	
 	export interface Datagram extends $wcm.JRecord {
 		data: Uint8Array;
@@ -735,7 +735,7 @@ export namespace Udp {
 	 * - <https://learn.microsoft.com/en-us/previous-versions/windows/desktop/legacy/ms741687(v=vs.85)>
 	 * - <https://man.freebsd.org/cgi/man.cgi?query=recv&sektion=2>
 	 */
-	export declare function receive(this_: UdpSocket, maxResults: bigint): result<Datagram[], ErrorCode>;
+	export declare function receive(this_: UdpSocket, maxResults: u64): result<Datagram[], ErrorCode>;
 	
 	/**
 	 * Send messages on the socket.
@@ -772,7 +772,7 @@ export namespace Udp {
 	 * - <https://learn.microsoft.com/en-us/windows/win32/api/winsock2/nf-winsock2-wsasendmsg>
 	 * - <https://man.freebsd.org/cgi/man.cgi?query=send&sektion=2>
 	 */
-	export declare function send(this_: UdpSocket, datagrams: Datagram[]): result<bigint, ErrorCode>;
+	export declare function send(this_: UdpSocket, datagrams: Datagram[]): result<u64, ErrorCode>;
 	
 	/**
 	 * Get the current bound address.
@@ -830,9 +830,9 @@ export namespace Udp {
 	 * # Typical errors
 	 * - `concurrency-conflict`: (set) Another `bind` or `connect` operation is already in progress. (EALREADY)
 	 */
-	export declare function unicastHopLimit(this_: UdpSocket): result<number, ErrorCode>;
+	export declare function unicastHopLimit(this_: UdpSocket): result<u8, ErrorCode>;
 	
-	export declare function setUnicastHopLimit(this_: UdpSocket, value: number): result<void, ErrorCode>;
+	export declare function setUnicastHopLimit(this_: UdpSocket, value: u8): result<void, ErrorCode>;
 	
 	/**
 	 * The kernel buffer space reserved for sends/receives on this socket.
@@ -849,13 +849,13 @@ export namespace Udp {
 	 * # Typical errors
 	 * - `concurrency-conflict`: (set) Another `bind` or `connect` operation is already in progress. (EALREADY)
 	 */
-	export declare function receiveBufferSize(this_: UdpSocket): result<bigint, ErrorCode>;
+	export declare function receiveBufferSize(this_: UdpSocket): result<u64, ErrorCode>;
 	
-	export declare function setReceiveBufferSize(this_: UdpSocket, value: bigint): result<void, ErrorCode>;
+	export declare function setReceiveBufferSize(this_: UdpSocket, value: u64): result<void, ErrorCode>;
 	
-	export declare function sendBufferSize(this_: UdpSocket): result<bigint, ErrorCode>;
+	export declare function sendBufferSize(this_: UdpSocket): result<u64, ErrorCode>;
 	
-	export declare function setSendBufferSize(this_: UdpSocket, value: bigint): result<void, ErrorCode>;
+	export declare function setSendBufferSize(this_: UdpSocket, value: u64): result<void, ErrorCode>;
 	
 	/**
 	 * Create a `pollable` which will resolve once the socket is ready for I/O.
@@ -875,13 +875,13 @@ export namespace Udp {
 
 export namespace UdpCreateSocket {
 	
-	export type Network = Network.Network;
+	type Network = Network.Network;
 	
-	export type ErrorCode = Network.ErrorCode;
+	type ErrorCode = Network.ErrorCode;
 	
-	export type IpAddressFamily = Network.IpAddressFamily;
+	type IpAddressFamily = Network.IpAddressFamily;
 	
-	export type UdpSocket = Udp.UdpSocket;
+	type UdpSocket = Udp.UdpSocket;
 	
 	/**
 	 * Create a new UDP socket.

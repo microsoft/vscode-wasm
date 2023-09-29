@@ -1,5 +1,5 @@
 import * as $wcm from '@vscode/wasm-component-model';
-import type { result } from '@vscode/wasm-component-model';
+import type { u64, u32, result } from '@vscode/wasm-component-model';
 import { WallClock } from './clocks';
 import { Streams } from './io';
 
@@ -26,16 +26,16 @@ import { Streams } from './io';
  */
 export namespace Types {
 	
-	export type InputStream = Streams.InputStream;
+	type InputStream = Streams.InputStream;
 	
-	export type OutputStream = Streams.OutputStream;
+	type OutputStream = Streams.OutputStream;
 	
-	export type Datetime = WallClock.Datetime;
+	type Datetime = WallClock.Datetime;
 	
 	/**
 	 * File size or length of a region within a file.
 	 */
-	export type Filesize = bigint;
+	export type Filesize = u64;
 	
 	/**
 	 * The type of a filesystem object referenced by a descriptor.
@@ -150,7 +150,7 @@ export namespace Types {
 	/**
 	 * Number of hard links to an inode.
 	 */
-	export type LinkCount = bigint;
+	export type LinkCount = u64;
 	
 	/**
 	 * File attributes.
@@ -339,7 +339,7 @@ export namespace Types {
 	 * 
 	 * This [represents a resource](https://github.com/WebAssembly/WASI/blob/main/docs/WitInWasi.md#Resources).
 	 */
-	export type Descriptor = number;
+	export type Descriptor = u32;
 	
 	/**
 	 * A 128-bit hash value, split into parts because wasm doesn't have a
@@ -350,12 +350,12 @@ export namespace Types {
 		/**
 		 * 64 bits of a 128-bit hash value.
 		 */
-		lower: bigint;
+		lower: u64;
 		
 		/**
 		 * Another 64 bits of a 128-bit hash value.
 		 */
-		upper: bigint;
+		upper: u64;
 	}
 	
 	/**
@@ -363,7 +363,7 @@ export namespace Types {
 	 * 
 	 * This [represents a stream of `dir-entry`](https://github.com/WebAssembly/WASI/blob/main/docs/WitInWasi.md#Streams).
 	 */
-	export type DirectoryEntryStream = number;
+	export type DirectoryEntryStream = u32;
 	
 	/**
 	 * Return a stream for reading from a file, if available.
@@ -828,7 +828,7 @@ export namespace Types {
 
 export namespace Preopens {
 	
-	export type Descriptor = Types.Descriptor;
+	type Descriptor = Types.Descriptor;
 	
 	/**
 	 * Return the set of preopened directories, and their path.

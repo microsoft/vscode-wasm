@@ -1,5 +1,5 @@
 import * as $wcm from '@vscode/wasm-component-model';
-import type { result } from '@vscode/wasm-component-model';
+import type { result, u32 } from '@vscode/wasm-component-model';
 import { Streams } from './io';
 
 export namespace Environment {
@@ -46,21 +46,21 @@ export namespace Run {
 
 export namespace Stdin {
 	
-	export type InputStream = Streams.InputStream;
+	type InputStream = Streams.InputStream;
 	
 	export declare function getStdin(): InputStream;
 }
 
 export namespace Stdout {
 	
-	export type OutputStream = Streams.OutputStream;
+	type OutputStream = Streams.OutputStream;
 	
 	export declare function getStdout(): OutputStream;
 }
 
 export namespace Stderr {
 	
-	export type OutputStream = Streams.OutputStream;
+	type OutputStream = Streams.OutputStream;
 	
 	export declare function getStderr(): OutputStream;
 }
@@ -72,7 +72,7 @@ export namespace TerminalInput {
 	 * 
 	 * This [represents a resource](https://github.com/WebAssembly/WASI/blob/main/docs/WitInWasi.md#Resources).
 	 */
-	export type TerminalInput = number;
+	export type TerminalInput = u32;
 	
 	/**
 	 * Dispose of the specified terminal-input after which it may no longer
@@ -88,7 +88,7 @@ export namespace TerminalOutput {
 	 * 
 	 * This [represents a resource](https://github.com/WebAssembly/WASI/blob/main/docs/WitInWasi.md#Resources).
 	 */
-	export type TerminalOutput = number;
+	export type TerminalOutput = u32;
 	
 	/**
 	 * Dispose of the specified terminal-output, after which it may no longer
@@ -103,7 +103,7 @@ export namespace TerminalOutput {
  */
 export namespace TerminalStdin {
 	
-	export type TerminalInput = TerminalInput.TerminalInput;
+	type TerminalInput = TerminalInput.TerminalInput;
 	
 	/**
 	 * If stdin is connected to a terminal, return a `terminal-input` handle
@@ -118,7 +118,7 @@ export namespace TerminalStdin {
  */
 export namespace TerminalStdout {
 	
-	export type TerminalOutput = TerminalOutput.TerminalOutput;
+	type TerminalOutput = TerminalOutput.TerminalOutput;
 	
 	/**
 	 * If stdout is connected to a terminal, return a `terminal-output` handle
@@ -133,7 +133,7 @@ export namespace TerminalStdout {
  */
 export namespace TerminalStderr {
 	
-	export type TerminalOutput = TerminalOutput.TerminalOutput;
+	type TerminalOutput = TerminalOutput.TerminalOutput;
 	
 	/**
 	 * If stderr is connected to a terminal, return a `terminal-output` handle

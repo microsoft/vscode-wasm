@@ -1,5 +1,5 @@
 import * as $wcm from '@vscode/wasm-component-model';
-import type { result } from '@vscode/wasm-component-model';
+import type { u32, u64, result } from '@vscode/wasm-component-model';
 import { Poll } from './poll';
 
 /**
@@ -11,7 +11,7 @@ import { Poll } from './poll';
  */
 export namespace Streams {
 	
-	export type Pollable = Poll.Pollable;
+	type Pollable = Poll.Pollable;
 	
 	/**
 	 * Streams provide a sequence of data and then end; once they end, they
@@ -42,7 +42,7 @@ export namespace Streams {
 	 * 
 	 * This [represents a resource](https://github.com/WebAssembly/WASI/blob/main/docs/WitInWasi.md#Resources).
 	 */
-	export type InputStream = number;
+	export type InputStream = u32;
 	
 	/**
 	 * An output bytestream. In the future, this will be replaced by handle
@@ -60,7 +60,7 @@ export namespace Streams {
 	 * 
 	 * This [represents a resource](https://github.com/WebAssembly/WASI/blob/main/docs/WitInWasi.md#Resources).
 	 */
-	export type OutputStream = number;
+	export type OutputStream = u32;
 	
 	/**
 	 * An error for output-stream operations.
@@ -97,13 +97,13 @@ export namespace Streams {
 	 * as a return value by the callee. The callee may return a list of bytes
 	 * less than `len` in size while more bytes are available for reading.
 	 */
-	export declare function read(this_: InputStream, len: bigint): result<[Uint8Array, StreamStatus], void>;
+	export declare function read(this_: InputStream, len: u64): result<[Uint8Array, StreamStatus], void>;
 	
 	/**
 	 * Read bytes from a stream, after blocking until at least one byte can
 	 * be read. Except for blocking, identical to `read`.
 	 */
-	export declare function blockingRead(this_: InputStream, len: bigint): result<[Uint8Array, StreamStatus], void>;
+	export declare function blockingRead(this_: InputStream, len: u64): result<[Uint8Array, StreamStatus], void>;
 	
 	/**
 	 * Skip bytes from a stream.
@@ -119,13 +119,13 @@ export namespace Streams {
 	 * `stream-status` indicating whether the end of the stream was
 	 * reached. The returned value will be at most `len`; it may be less.
 	 */
-	export declare function skip(this_: InputStream, len: bigint): result<[bigint, StreamStatus], void>;
+	export declare function skip(this_: InputStream, len: u64): result<[u64, StreamStatus], void>;
 	
 	/**
 	 * Skip bytes from a stream, after blocking until at least one byte
 	 * can be skipped. Except for blocking behavior, identical to `skip`.
 	 */
-	export declare function blockingSkip(this_: InputStream, len: bigint): result<[bigint, StreamStatus], void>;
+	export declare function blockingSkip(this_: InputStream, len: u64): result<[u64, StreamStatus], void>;
 	
 	/**
 	 * Create a `pollable` which will resolve once either the specified stream
@@ -158,7 +158,7 @@ export namespace Streams {
 	 * pollable will become ready when this function will report at least
 	 * 1 byte, or an error.
 	 */
-	export declare function checkWrite(this_: OutputStream): result<bigint, WriteError>;
+	export declare function checkWrite(this_: OutputStream): result<u64, WriteError>;
 	
 	/**
 	 * Perform a write. This function never blocks.
@@ -241,7 +241,7 @@ export namespace Streams {
 	 * passing a list of bytes, you simply pass the number of zero-bytes
 	 * that should be written.
 	 */
-	export declare function writeZeroes(this_: OutputStream, len: bigint): result<void, WriteError>;
+	export declare function writeZeroes(this_: OutputStream, len: u64): result<void, WriteError>;
 	
 	/**
 	 * Read from one stream and write to another.
@@ -252,7 +252,7 @@ export namespace Streams {
 	 * Unlike other I/O functions, this function blocks until all the data
 	 * read from the input stream has been written to the output stream.
 	 */
-	export declare function splice(this_: OutputStream, src: InputStream, len: bigint): result<[bigint, StreamStatus], void>;
+	export declare function splice(this_: OutputStream, src: InputStream, len: u64): result<[u64, StreamStatus], void>;
 	
 	/**
 	 * Read from one stream and write to another, with blocking.
@@ -260,7 +260,7 @@ export namespace Streams {
 	 * This is similar to `splice`, except that it blocks until at least
 	 * one byte can be read.
 	 */
-	export declare function blockingSplice(this_: OutputStream, src: InputStream, len: bigint): result<[bigint, StreamStatus], void>;
+	export declare function blockingSplice(this_: OutputStream, src: InputStream, len: u64): result<[u64, StreamStatus], void>;
 	
 	/**
 	 * Forward the entire contents of an input stream to an output stream.
@@ -276,7 +276,7 @@ export namespace Streams {
 	 * This function returns the number of bytes transferred, and the status of
 	 * the output stream.
 	 */
-	export declare function forward(this_: OutputStream, src: InputStream): result<[bigint, StreamStatus], void>;
+	export declare function forward(this_: OutputStream, src: InputStream): result<[u64, StreamStatus], void>;
 	
 	/**
 	 * Dispose of the specified `output-stream`, after which it may no longer
