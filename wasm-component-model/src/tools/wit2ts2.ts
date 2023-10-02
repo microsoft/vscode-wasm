@@ -200,31 +200,20 @@ namespace TypeScript {
 		}
 
 		public emit(): Code {
-			const star = this.mainCode.imports.getUniqueName();
-			this.mainCode.imports.addStar(`./${Names.asImportName(this.pkg)}`, star);
-			this.mainCode.push(`export namespace ${Names.asPackageName(this.pkg)} {`);
-			this.mainCode.increaseIndent();
-
 			const code = new Code();
+			const pkgName = Names.asPackageName(this.pkg);
+			code.push(`export namespace ${pkgName} {`);
+			code.increaseIndent();
+
 			for (const ref of Object.values(this.pkg.interfaces)) {
 				const iface = this.symbols.interfaces[ref];
-				const typeExports = this.processInterface(iface, code);
+				this.processInterface(iface, code);
 				code.push('');
-				const name = Names.asTypeName(iface.name);
-				this.mainCode.push(`export type ${name} = ${star}.${name};`);
-				if (typeExports.length > 0) {
-					this.mainCode.push(`export namespace ${name} {`);
-					this.mainCode.increaseIndent();
-					for (const type of typeExports) {
-						this.mainCode.push(`export type ${type} = ${star}.${name}.${type};`);
-					}
-					this.mainCode.decreaseIndent();
-					this.mainCode.push(`}`);
-				}
 			}
 
-			this.mainCode.decreaseIndent();
-			this.mainCode.push(`}`);
+			code.decreaseIndent();
+			code.push(`}`);
+			this.mainCode.push(`export { ${pkgName} } from './${Names.asImportName(this.pkg)}';`);
 			return code;
 		}
 
@@ -448,12 +437,12 @@ namespace TypeScript {
 				} else {
 					const typePackage = this.symbols.packages[scope.package];
 					const referencedPackage = this.symbols.packages[reference.package];
-					const [typeNamespace, ] = Names.getNamespaceAndName(typePackage.name);
-					const [referenceNamespace, referenceName] = Names.getNamespaceAndName(referencedPackage.name);
-					if (typeNamespace === referenceNamespace) {
-						const refName = Names.asTypeName(reference.name);
-						this.code.imports.add(refName, `./${referenceName}`);
-						return refName;
+					const [typeNamespaceName, ] = Names.getNamespaceAndName(typePackage.name);
+					const [referencedNamespaceName, referencePackagedName] = Names.getNamespaceAndName(referencedPackage.name);
+					if (typeNamespaceName === referencedNamespaceName) {
+						const referencedTypeName = Names.asTypeName(reference.name);
+						this.code.imports.add(referencePackagedName, `./${referencePackagedName}`);
+						return `${referencePackagedName}.${referencedTypeName}`;
 					} else {
 						throw new Error(`Cannot compute qualifier to import ${JSON.stringify(reference)} into scope  ${JSON.stringify(scope)}.`);
 					}
