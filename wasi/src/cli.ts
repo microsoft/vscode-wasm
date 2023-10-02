@@ -155,3 +155,36 @@ export namespace cli {
 	export type TerminalStderr = Pick<typeof TerminalStderr, 'getTerminalStderr'>;
 	
 }
+
+export namespace cli {
+	export namespace Environment.$ {
+	}
+	export namespace Exit.$ {
+	}
+	export namespace Run.$ {
+	}
+	export namespace Stdin.$ {
+		export const InputStream = io.Streams.$.InputStream;
+	}
+	export namespace Stdout.$ {
+		export const OutputStream = io.Streams.$.OutputStream;
+	}
+	export namespace Stderr.$ {
+		export const OutputStream = io.Streams.$.OutputStream;
+	}
+	export namespace TerminalInput.$ {
+		export const TerminalInput = $wcm.u32;
+	}
+	export namespace TerminalOutput.$ {
+		export const TerminalOutput = $wcm.u32;
+	}
+	export namespace TerminalStdin.$ {
+		export const TerminalInput = TerminalInput.$.TerminalInput;
+	}
+	export namespace TerminalStdout.$ {
+		export const TerminalOutput = TerminalOutput.$.TerminalOutput;
+	}
+	export namespace TerminalStderr.$ {
+		export const TerminalOutput = TerminalOutput.$.TerminalOutput;
+	}
+}

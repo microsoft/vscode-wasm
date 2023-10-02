@@ -840,3 +840,41 @@ export namespace filesystem {
 	export type Preopens = Pick<typeof Preopens, 'getDirectories'>;
 	
 }
+
+export namespace filesystem {
+	export namespace Types.$ {
+		export const InputStream = io.Streams.$.InputStream;
+		export const OutputStream = io.Streams.$.OutputStream;
+		export const Datetime = clocks.WallClock.$.Datetime;
+		export const Filesize = $wcm.u64;
+		export const DescriptorType = new $wcm.EnumType<filesystem.Types.DescriptorType>(8);
+		export const DescriptorFlags = new $wcm.FlagsType<filesystem.Types.DescriptorFlags>(['read', 'write', 'fileIntegritySync', 'dataIntegritySync', 'requestedWriteSync', 'mutateDirectory']);
+		export const PathFlags = new $wcm.FlagsType<filesystem.Types.PathFlags>(['symlinkFollow']);
+		export const OpenFlags = new $wcm.FlagsType<filesystem.Types.OpenFlags>(['create', 'directory', 'exclusive', 'truncate']);
+		export const Modes = new $wcm.FlagsType<filesystem.Types.Modes>(['readable', 'writable', 'executable']);
+		export const LinkCount = $wcm.u64;
+		export const DescriptorStat = new $wcm.RecordType<filesystem.Types.DescriptorStat>([
+			['type', DescriptorType],
+			['linkCount', LinkCount],
+			['size', Filesize],
+			['dataAccessTimestamp', Datetime],
+			['dataModificationTimestamp', Datetime],
+			['statusChangeTimestamp', Datetime],
+		]);
+		export const DirectoryEntry = new $wcm.RecordType<filesystem.Types.DirectoryEntry>([
+			['type', DescriptorType],
+			['name', $wcm.wstring],
+		]);
+		export const ErrorCode = new $wcm.EnumType<filesystem.Types.ErrorCode>(37);
+		export const Advice = new $wcm.EnumType<filesystem.Types.Advice>(6);
+		export const Descriptor = $wcm.u32;
+		export const MetadataHashValue = new $wcm.RecordType<filesystem.Types.MetadataHashValue>([
+			['lower', $wcm.u64],
+			['upper', $wcm.u64],
+		]);
+		export const DirectoryEntryStream = $wcm.u32;
+	}
+	export namespace Preopens.$ {
+		export const Descriptor = Types.$.Descriptor;
+	}
+}

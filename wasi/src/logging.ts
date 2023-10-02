@@ -32,3 +32,9 @@ export namespace logging {
 	export type Logging = Pick<typeof Logging, 'log'>;
 	
 }
+
+export namespace logging {
+	export namespace Logging.$ {
+		export const Level = new $wcm.EnumType<logging.Logging.Level>(6);
+	}
+}

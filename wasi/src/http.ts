@@ -412,3 +412,39 @@ export namespace http {
 	export type OutgoingHandler = Pick<typeof OutgoingHandler, 'handle'>;
 	
 }
+
+export namespace http {
+	export namespace Types.$ {
+		export const InputStream = io.Streams.$.InputStream;
+		export const OutputStream = io.Streams.$.OutputStream;
+		export const Pollable = poll.Poll.$.Pollable;
+		export const Fields = $wcm.u32;
+		export const Headers = Fields;
+		export const Trailers = Fields;
+		export const IncomingRequest = $wcm.u32;
+		export const OutgoingRequest = $wcm.u32;
+		export const RequestOptions = new $wcm.RecordType<http.Types.RequestOptions>([
+			['connectTimeoutMs', $wcm.u32 | undefined],
+			['firstByteTimeoutMs', $wcm.u32 | undefined],
+			['betweenBytesTimeoutMs', $wcm.u32 | undefined],
+		]);
+		export const ResponseOutparam = $wcm.u32;
+		export const StatusCode = $wcm.u16;
+		export const IncomingResponse = $wcm.u32;
+		export const IncomingBody = $wcm.u32;
+		export const FutureTrailers = $wcm.u32;
+		export const OutgoingResponse = $wcm.u32;
+		export const OutgoingBody = $wcm.u32;
+		export const FutureIncomingResponse = $wcm.u32;
+	}
+	export namespace IncomingHandler.$ {
+		export const IncomingRequest = Types.$.IncomingRequest;
+		export const ResponseOutparam = Types.$.ResponseOutparam;
+	}
+	export namespace OutgoingHandler.$ {
+		export const OutgoingRequest = Types.$.OutgoingRequest;
+		export const RequestOptions = Types.$.RequestOptions;
+		export const FutureIncomingResponse = Types.$.FutureIncomingResponse;
+		export const Error = Types.$.Error;
+	}
+}

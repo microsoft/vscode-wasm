@@ -96,3 +96,12 @@ export namespace random {
 	export type Random = Pick<typeof Random, 'getRandomBytes' | 'getRandomU64'>;
 	
 }
+
+export namespace random {
+	export namespace InsecureSeed.$ {
+	}
+	export namespace Insecure.$ {
+	}
+	export namespace Random.$ {
+	}
+}

@@ -292,3 +292,13 @@ export namespace io {
 	export type Streams = Pick<typeof Streams, 'read' | 'blockingRead' | 'skip' | 'blockingSkip' | 'subscribeToInputStream' | 'dropInputStream' | 'checkWrite' | 'write' | 'blockingWriteAndFlush' | 'flush' | 'blockingFlush' | 'subscribeToOutputStream' | 'writeZeroes' | 'splice' | 'blockingSplice' | 'forward' | 'dropOutputStream'>;
 	
 }
+
+export namespace io {
+	export namespace Streams.$ {
+		export const Pollable = poll.Poll.$.Pollable;
+		export const StreamStatus = new $wcm.EnumType<io.Streams.StreamStatus>(2);
+		export const InputStream = $wcm.u32;
+		export const OutputStream = $wcm.u32;
+		export const WriteError = new $wcm.EnumType<io.Streams.WriteError>(2);
+	}
+}

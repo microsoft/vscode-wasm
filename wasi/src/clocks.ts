@@ -179,3 +179,25 @@ export namespace clocks {
 	export type Timezone = Pick<typeof Timezone, 'display' | 'utcOffset' | 'dropTimezone'>;
 	
 }
+
+export namespace clocks {
+	export namespace MonotonicClock.$ {
+		export const Pollable = poll.Poll.$.Pollable;
+		export const Instant = $wcm.u64;
+	}
+	export namespace WallClock.$ {
+		export const Datetime = new $wcm.RecordType<clocks.WallClock.Datetime>([
+			['seconds', $wcm.u64],
+			['nanoseconds', $wcm.u32],
+		]);
+	}
+	export namespace Timezone.$ {
+		export const Datetime = WallClock.$.Datetime;
+		export const Timezone = $wcm.u32;
+		export const TimezoneDisplay = new $wcm.RecordType<clocks.Timezone.TimezoneDisplay>([
+			['utcOffset', $wcm.s32],
+			['name', $wcm.wstring],
+			['inDaylightSavingTime', $wcm.bool],
+		]);
+	}
+}

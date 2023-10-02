@@ -51,3 +51,9 @@ export namespace poll {
 	export type Poll = Pick<typeof Poll, 'dropPollable' | 'pollOneoff'>;
 	
 }
+
+export namespace poll {
+	export namespace Poll.$ {
+		export const Pollable = $wcm.u32;
+	}
+}

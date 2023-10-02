@@ -917,3 +917,69 @@ export namespace sockets {
 	export type UdpCreateSocket = Pick<typeof UdpCreateSocket, 'createUdpSocket'>;
 	
 }
+
+export namespace sockets {
+	export namespace Network.$ {
+		export const Network = $wcm.u32;
+		export const ErrorCode = new $wcm.EnumType<sockets.Network.ErrorCode>(32);
+		export const IpAddressFamily = new $wcm.EnumType<sockets.Network.IpAddressFamily>(2);
+		export const Ipv4Address = [$wcm.u8, $wcm.u8, $wcm.u8, $wcm.u8];
+		export const Ipv6Address = [$wcm.u16, $wcm.u16, $wcm.u16, $wcm.u16, $wcm.u16, $wcm.u16, $wcm.u16, $wcm.u16];
+		export const Ipv4SocketAddress = new $wcm.RecordType<sockets.Network.Ipv4SocketAddress>([
+			['port', $wcm.u16],
+			['address', Ipv4Address],
+		]);
+		export const Ipv6SocketAddress = new $wcm.RecordType<sockets.Network.Ipv6SocketAddress>([
+			['port', $wcm.u16],
+			['flowInfo', $wcm.u32],
+			['address', Ipv6Address],
+			['scopeId', $wcm.u32],
+		]);
+	}
+	export namespace InstanceNetwork.$ {
+		export const Network = Network.$.Network;
+	}
+	export namespace IpNameLookup.$ {
+		export const Pollable = poll.Poll.$.Pollable;
+		export const Network = Network.$.Network;
+		export const ErrorCode = Network.$.ErrorCode;
+		export const IpAddress = Network.$.IpAddress;
+		export const IpAddressFamily = Network.$.IpAddressFamily;
+		export const ResolveAddressStream = $wcm.u32;
+	}
+	export namespace Tcp.$ {
+		export const InputStream = io.Streams.$.InputStream;
+		export const OutputStream = io.Streams.$.OutputStream;
+		export const Pollable = poll.Poll.$.Pollable;
+		export const Network = Network.$.Network;
+		export const ErrorCode = Network.$.ErrorCode;
+		export const IpSocketAddress = Network.$.IpSocketAddress;
+		export const IpAddressFamily = Network.$.IpAddressFamily;
+		export const TcpSocket = $wcm.u32;
+		export const ShutdownType = new $wcm.EnumType<sockets.Tcp.ShutdownType>(3);
+	}
+	export namespace TcpCreateSocket.$ {
+		export const Network = Network.$.Network;
+		export const ErrorCode = Network.$.ErrorCode;
+		export const IpAddressFamily = Network.$.IpAddressFamily;
+		export const TcpSocket = Tcp.$.TcpSocket;
+	}
+	export namespace Udp.$ {
+		export const Pollable = poll.Poll.$.Pollable;
+		export const Network = Network.$.Network;
+		export const ErrorCode = Network.$.ErrorCode;
+		export const IpSocketAddress = Network.$.IpSocketAddress;
+		export const IpAddressFamily = Network.$.IpAddressFamily;
+		export const UdpSocket = $wcm.u32;
+		export const Datagram = new $wcm.RecordType<sockets.Udp.Datagram>([
+			['data', new $wcm.Uint8ArrayType()],
+			['remoteAddress', IpSocketAddress],
+		]);
+	}
+	export namespace UdpCreateSocket.$ {
+		export const Network = Network.$.Network;
+		export const ErrorCode = Network.$.ErrorCode;
+		export const IpAddressFamily = Network.$.IpAddressFamily;
+		export const UdpSocket = Udp.$.UdpSocket;
+	}
+}
