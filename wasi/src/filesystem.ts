@@ -1,3 +1,7 @@
+/*---------------------------------------------------------------------------------------------
+ *  Copyright (c) Microsoft Corporation. All rights reserved.
+ *  Licensed under the MIT License. See License.txt in the project root for license information.
+ *--------------------------------------------------------------------------------------------*/
 import * as $wcm from '@vscode/wasm-component-model';
 import type { u64, u32, result, option } from '@vscode/wasm-component-model';
 import { clocks } from './clocks';

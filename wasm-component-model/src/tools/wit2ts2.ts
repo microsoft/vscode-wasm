@@ -109,6 +109,10 @@ class Code {
 			this.source.unshift(`import * as ${starImports.get(from)} from '${from}';`);
 		}
 		this.source.unshift(`import * as $wcm from '@vscode/wasm-component-model';`);
+		this.source.unshift(' *--------------------------------------------------------------------------------------------*/');
+		this.source.unshift(' *  Licensed under the MIT License. See License.txt in the project root for license information.');
+		this.source.unshift(' *  Copyright (c) Microsoft Corporation. All rights reserved.');
+		this.source.unshift('/*---------------------------------------------------------------------------------------------');
 		return this.source.join('\n');
 	}
 }
@@ -501,7 +505,9 @@ namespace MetaModel {
 					return depth === 0 ? result : `${result}[]`;
 				}
 			} else if (TypeKind.isOption(kind)) {
-				imports.addBaseType('option');
+				if (depth > 0) {
+					imports.addBaseType('option');
+				}
 				const result = `${getTypeParamFromReference(kind.option, symbols, imports, depth + 1)}`;
 				return depth === 0 ? result : `option<${result}>`;
 			} else if (TypeKind.isTuple(kind)) {
@@ -509,7 +515,9 @@ namespace MetaModel {
 			} else if (TypeKind.isResult(kind)) {
 				const ok = kind.result.ok !== null ? getTypeParamFromReference(kind.result.ok, symbols, imports, depth + 1) : 'void';
 				const error = kind.result.err !== null ? getTypeParamFromReference(kind.result.err, symbols, imports, depth + 1) : 'void';
-				imports.addBaseType('result');
+				if (depth > 0) {
+					imports.addBaseType('result');
+				}
 				return depth === 0 ? `${ok}, ${error}` : `result<${ok}, ${error}>`;
 			} else if (type.name !== null) {
 				return Type.getFullyQualifiedNameFromType(type, symbols);

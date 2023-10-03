@@ -1,5 +1,9 @@
+/*---------------------------------------------------------------------------------------------
+ *  Copyright (c) Microsoft Corporation. All rights reserved.
+ *  Licensed under the MIT License. See License.txt in the project root for license information.
+ *--------------------------------------------------------------------------------------------*/
 import * as $wcm from '@vscode/wasm-component-model';
-import type { u32, u8, u16, option, result, u64 } from '@vscode/wasm-component-model';
+import type { u32, u8, u16, result, option, u64 } from '@vscode/wasm-component-model';
 import { io } from './io';
 import { poll } from './poll';
 
