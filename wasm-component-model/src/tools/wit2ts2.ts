@@ -164,7 +164,8 @@ namespace Names {
 		return keywords.get(result) ?? result;
 	}
 
-	export function getNamespaceAndName(name: string): [string | undefined, string] {
+	export function getNamespaceAndName(pkg: Package): [string | undefined, string] {
+		const name = pkg.name;
 		const index = name.indexOf(':');
 		if (index === -1) {
 			return [undefined, name];
@@ -178,6 +179,33 @@ enum TypeUsage {
 	function,
 	property,
 	typeDeclaration
+}
+
+namespace Type {
+	export function getFullyQualifiedNameFromType(type: Type, symbols: SymbolTable): string {
+		let name: string | undefined = type.name !== null ? Names.asTypeName(type.name) : undefined;
+		if (name === undefined) {
+			throw new Error(`Type ${type.kind} has no name.`);
+		}
+		if (type.owner !== null) {
+			if (Owner.isInterface(type.owner)) {
+				const owner = Owner.resolve(type.owner, symbols) as Interface;
+				const pkg = symbols.packages[owner.package];
+				return `${Names.asPackageName(pkg)}.${Names.asTypeName(owner.name)}.${name}`;
+			} else {
+				throw new Error(`Unsupported owner ${type.owner}`);
+			}
+		} else {
+			return name;
+		}
+	}
+	export function getFullyQualifiedNameFromReference(reference: TypeReference, symbols: SymbolTable): string {
+		if (TypeReference.isString(reference)) {
+			return reference;
+		} else {
+			return getFullyQualifiedNameFromType(symbols.types[reference], symbols);
+		}
+	}
 }
 
 namespace MetaModel {
@@ -281,55 +309,64 @@ namespace MetaModel {
 		}
 	}
 
-	export class PackageEmitter {
-		private readonly pkg: Package;
-		private readonly symbols: SymbolTable;
+	export class VariantEmitter implements Emitter, HasDependencies {
 
-		constructor(pkg: Package, symbols: SymbolTable) {
-			this.pkg = pkg;
-			this.symbols = symbols;
-		}
-		public emit(): Code {
-			const code = new Code();
-			const pkgName = Names.asPackageName(this.pkg);
-			code.push(`export namespace ${pkgName} {`);
-			code.increaseIndent();
+		private readonly name: string;
+		private readonly typeParam: string;
+		private readonly cases: (string | undefined)[];
 
-			for (const ref of Object.values(this.pkg.interfaces)) {
-				const iface = this.symbols.interfaces[ref];
-				this.processInterface(iface, code);
-				code.push('');
-			}
+		public readonly dependencies: Set<string>;
 
-			code.decreaseIndent();
-			code.push(`}`);
-			return code;
+		constructor(name: string, typeParam: string, cases: (string | undefined)[]) {
+			this.name = name;
+			this.typeParam = typeParam;
+			this.cases = cases;
+			this.dependencies = new Set();
 		}
 
-		private processInterface(iface: Interface, code: Code): void {
-			const name = Names.asTypeName(iface.name);
-			code.push(`export namespace ${name}.$ {`);
-			code.increaseIndent();
-			for (const t of Object.values(iface.types)) {
-				code.push('');
-				const type = this.symbols.types[t];
-			}
-			const funcExports: string[] = [];
-			for (const func of Object.values(iface.functions)) {
-				code.push('');
-				funcExports.push(Names.asFuncName(func.name));
-			}
-			code.decreaseIndent();
-			code.push(`}`);
+		public emit(code: Code, emitted: Set<String>): void {
+			code.push(`export const ${this.name} = new $wcm.VariantType<${this.typeParam}, ${this.typeParam}._ct, ${this.typeParam}._vt>([${this.cases.join(', ')}], ${this.typeParam}._ctor);`);
+			emitted.add(this.name);
 		}
 	}
 
+
+	export class FunctionEmitter implements Emitter {
+
+		private readonly typeParam: string;
+		private readonly name: string;
+		private readonly witName: string;
+		private readonly params: string[][];
+		private readonly result: string | undefined;
+
+		constructor(typeParam: string, name: string, witName: string, params: string[][], result: string | undefined) {
+			this.typeParam = typeParam;
+			this.name = name;
+			this.witName = witName;
+			this.params = params;
+			this.result = result;
+		}
+
+		public emit(code: Code, _emitted: Set<String>): void {
+			if (this.params.length === 0) {
+				code.push(`export const ${this.name} = new $wcm.FunctionType<${this.typeParam}>('${this.name}', '${this.witName}', [], ${this.result});`);
+			} else {
+				code.push(`export const ${this.name} = new $wcm.FunctionType<${this.typeParam}>('${this.name}', '${this.witName}',[`);
+				code.increaseIndent();
+				for (const [name, type] of this.params) {
+					code.push(`['${name}', ${type}],`);
+				}
+				code.decreaseIndent();
+				code.push(`], ${this.result});`);
+			}
+		}
+	}
 
 	export namespace TypeName {
 
 		export function fromReference(ref: TypeReference, scope: Interface | World, symbols: SymbolTable, imports: Imports, usage: TypeUsage): string {
 			if (TypeReference.isString(ref)) {
-				return baseType(ref, imports);
+				return baseType(ref);
 			} else if (TypeReference.isNumber(ref)) {
 				return fromType(symbols.types[ref], scope, symbols, imports, usage);
 			} else {
@@ -341,7 +378,7 @@ namespace MetaModel {
 			if (type.name !== null && (usage === TypeUsage.parameter || usage === TypeUsage.function || usage === TypeUsage.property)) {
 				return Names.asTypeName(type.name);
 			} else if (TypeKind.isBaseType(type.kind)) {
-				return baseType(type.kind.type, imports);
+				return baseType(type.kind.type);
 			} else if (TypeKind.isList(type.kind)) {
 				if (typeof type.kind.list === 'string') {
 					switch (type.kind.list) {
@@ -366,27 +403,30 @@ namespace MetaModel {
 						case 'float64':
 							return `new ${qualifier}.Float64ArrayType()`;
 						default:
-							return `${baseType(type.kind.list, imports)}[]`;
+							const typeParam = getTypeParam(type, symbols, imports);
+							return `new ${qualifier}.ListType<${typeParam}>(${baseType(type.kind.list)})`;
 					}
 				} else {
-					return `${fromReference(type.kind.list, scope, symbols, imports, usage)}[]`;
+					const typeParam = getTypeParam(type, symbols, imports);
+					return `new ${qualifier}.ListType<${typeParam}>(${fromReference(type.kind.list, scope, symbols, imports, usage)})`;
 				}
 			} else if (TypeKind.isTuple(type.kind)) {
-				return `[${type.kind.tuple.types.map(t => fromReference(t, scope, symbols, imports, usage)).join(', ')}]`;
+				const typeParam = getTypeParam(type, symbols, imports);
+				return `new ${qualifier}.TupleType<${typeParam}>([${type.kind.tuple.types.map(t => fromReference(t, scope, symbols, imports, usage)).join(', ')}])`;
 			} else if (TypeKind.isOption(type.kind)) {
-				return `${fromReference(type.kind.option, scope, symbols, imports, usage)} | undefined`;
+				const typeParam = getTypeParam(type, symbols, imports);
+				return `new ${qualifier}.OptionType<${typeParam}>(${fromReference(type.kind.option, scope, symbols, imports, usage)})`;
 			} else if (TypeKind.isResult(type.kind)) {
-				let ok: string = 'void';
+				let ok: string = 'undefined';
 				const result = type.kind.result;
 				if (result.ok !== null) {
 					ok = fromReference(result.ok, scope, symbols, imports, usage);
 				}
-				let error: string = 'void';
+				let error: string = 'undefined';
 				if (result.err !== null) {
 					error = fromReference(result.err, scope, symbols, imports, usage);
 				}
-				imports.addBaseType('result');
-				return `result<${ok}, ${error}>`;
+				return `new ${qualifier}.ResultType<${getTypeParam(type, symbols, imports)}>(${ok}, ${error})`;
 			} else if (TypeKind.isTypeReference(type.kind)) {
 				return fromType(symbols.types[type.kind.type], scope, symbols, imports, usage);
 			}
@@ -394,37 +434,27 @@ namespace MetaModel {
 			throw new Error(`Unknown type ${type.kind}`);
 		}
 
-		export function baseType(base: string, imports: Imports): string {
+		function baseType(base: string): string {
 			switch (base) {
 				case 'u8':
-					imports.addBaseType('u8');
 					return qualify('u8');
 				case 'u16':
-					imports.addBaseType('u16');
 					return qualify('u16');
 				case 'u32':
-					imports.addBaseType('u32');
 					return qualify('u32');
 				case 'u64':
-					imports.addBaseType('u64');
 					return qualify('u64');
 				case 's8':
-					imports.addBaseType('s8');
 					return qualify('s8');
 				case 's16':
-					imports.addBaseType('s16');
 					return qualify('s16');
 				case 's32':
-					imports.addBaseType('s32');
 					return qualify('s32');
 				case 's64':
-					imports.addBaseType('s64');
 					return qualify('s64');
 				case 'f32':
-					imports.addBaseType('f32');
 					return qualify('f32');
 				case 'f64':
-					imports.addBaseType('f64');
 					return qualify('f64');
 				case 'bool':
 					return qualify('bool');
@@ -432,6 +462,34 @@ namespace MetaModel {
 					return qualify('wstring');
 				default:
 					throw new Error(`Unknown base type ${base}`);
+			}
+		}
+
+		function getTypeParam(type: Type, symbols: SymbolTable, imports: Imports): string {
+			const kind = type.kind;
+			if (TypeKind.isBaseType(kind)) {
+				return TypeScript.TypeName.baseType(kind.type, imports);
+			} else if (TypeKind.isList(kind)) {
+				return getTypeParamFromReference(kind.list, symbols, imports);
+			} else if (TypeKind.isOption(kind)) {
+				return getTypeParamFromReference(kind.option, symbols, imports);
+			} else if (TypeKind.isTuple(kind)) {
+				return `[${kind.tuple.types.map(t => getTypeParamFromReference(t, symbols, imports)).join(', ')}]`;
+			} else if (TypeKind.isResult(kind)) {
+				const ok = kind.result.ok !== null ? getTypeParamFromReference(kind.result.ok, symbols, imports) : 'void';
+				const error = kind.result.err !== null ? getTypeParamFromReference(kind.result.err, symbols, imports) : 'void';
+				return `${ok}, ${error}`;
+			} else if (type.name !== null) {
+				return Type.getFullyQualifiedNameFromType(type, symbols);
+			}
+			throw new Error(`Can't compute type parameter for type ${kind}`);
+		}
+
+		function getTypeParamFromReference(ref: TypeReference, symbols: SymbolTable, imports: Imports): string {
+			if (TypeReference.isString(ref)) {
+				return TypeScript.TypeName.baseType(ref, imports);
+			} else {
+				return getTypeParam(symbols.types[ref], symbols, imports);
 			}
 		}
 	}
@@ -522,7 +580,11 @@ namespace TypeScript {
 			const funcExports: string[] = [];
 			for (const func of Object.values(iface.functions)) {
 				code.push('');
-				(new FunctionEmitter(func, iface, code, this.symbols)).emit();
+				const funcEmitter = new FunctionEmitter(func, iface, `${qualifier}.${name}`, code, this.symbols);
+				funcEmitter.emit();
+				if (funcEmitter.metaModelEmitter !== undefined) {
+					metaModelEmitters.push(funcEmitter.metaModelEmitter);
+				}
 				funcExports.push(Names.asFuncName(func.name));
 			}
 			code.decreaseIndent();
@@ -567,7 +629,7 @@ namespace TypeScript {
 					const qualifier = referenced.owner !== null ? this.computeQualifier(this.scope, Owner.resolve(referenced.owner, this.symbols)) : undefined;
 					const typeName = qualifier !== undefined ? `${qualifier}.${Names.asTypeName(referenced.name)}` : Names.asTypeName(referenced.name);
 					const tsName = Names.asTypeName(this.type.name);
-					this.code.push(`type ${tsName} = ${typeName};`);
+					this.code.push(`export type ${tsName} = ${typeName};`);
 					this.metaModelEmitter = new MetaModel.TypeNameEmitter(tsName, qualifier !== undefined ? `${qualifier}.$.${Names.asTypeName(referenced.name)}` : Names.asTypeName(referenced.name));
 				} else {
 					throw new Error(`Cannot reference type ${JSON.stringify(referenced)} from ${JSON.stringify(this.scope)}`);
@@ -701,6 +763,7 @@ namespace TypeScript {
 			code.push(`}`);
 
 			code.push(`export type ${variantName} = ${names.map(value => `${variantName}.${value}`).join(' | ')};`);
+			this.metaModelEmitter = new MetaModel.VariantEmitter(variantName, `${this.qualifier}.${variantName}`, types);
 		}
 
 		private emitEnum(name: string, kind: Enum): void {
@@ -737,12 +800,14 @@ namespace TypeScript {
 			}
 			if (Interface.is(scope) && Interface.is(reference)) {
 				if (scope.package === reference.package) {
-					return `${Names.asTypeName(reference.name)}`;
+					const referencedPackage = this.symbols.packages[reference.package];
+					const [, referencePackagedName] = Names.getNamespaceAndName(referencedPackage);
+					return `${referencePackagedName}.${Names.asTypeName(reference.name)}`;
 				} else {
 					const typePackage = this.symbols.packages[scope.package];
 					const referencedPackage = this.symbols.packages[reference.package];
-					const [typeNamespaceName, ] = Names.getNamespaceAndName(typePackage.name);
-					const [referencedNamespaceName, referencePackagedName] = Names.getNamespaceAndName(referencedPackage.name);
+					const [typeNamespaceName, ] = Names.getNamespaceAndName(typePackage);
+					const [referencedNamespaceName, referencePackagedName] = Names.getNamespaceAndName(referencedPackage);
 					if (typeNamespaceName === referencedNamespaceName) {
 						const referencedTypeName = Names.asTypeName(reference.name);
 						this.code.imports.add(referencePackagedName, `./${referencePackagedName}`);
@@ -760,35 +825,45 @@ namespace TypeScript {
 
 		private readonly func: Func;
 		private readonly scope: Interface;
+		private readonly qualifier: string;
 		private readonly code: Code;
 		private readonly symbols: SymbolTable;
+		public metaModelEmitter: MetaModel.Emitter | undefined;
 
-		constructor(func: Func, scope: Interface, code: Code, symbols: SymbolTable) {
+		constructor(func: Func, scope: Interface, qualifier: string, code: Code, symbols: SymbolTable) {
 			this.func = func;
 			this.scope = scope;
+			this.qualifier = qualifier;
 			this.code = code;
 			this.symbols = symbols;
 		}
 
 		public emit(): void {
 			emitDocumentation(this.func, this.code);
-			const name = Names.asFuncName(this.func.name);
+			const funcName = Names.asFuncName(this.func.name);
 			const elements: string[] = [];
+			const metaData: string[][] = [];
 			for (const param of this.func.params) {
-				elements.push(`${Names.asParamName(param.name)}: ${TypeName.fromReference(param.type, this.scope, this.symbols, this.code.imports, TypeUsage.parameter)}`);
+				const paramName = Names.asParamName(param.name);
+				elements.push(`${paramName}: ${TypeName.fromReference(param.type, this.scope, this.symbols, this.code.imports, TypeUsage.parameter)}`);
+				metaData.push([paramName, MetaModel.TypeName.fromReference(param.type, this.scope, this.symbols, this.code.imports, TypeUsage.parameter)]);
 			}
-			let returnType = this.func.results.length === 0
-				? 'void'
-				: this.func.results.length === 1
-					? TypeName.fromReference(this.func.results[0].type, this.scope, this.symbols, this.code.imports, TypeUsage.function)
-					: `[${this.func.results.map(r => TypeName.fromReference(r.type, this.scope, this.symbols, this.code.imports, TypeUsage.function)).join(', ')}]`;
-
-			this.code.push(`export declare function ${name}(${elements.join(', ')}): ${returnType};`);
+			let returnType: string = 'void';
+			let metaReturnType: string | undefined = undefined;
+			if (this.func.results.length === 1) {
+				returnType = TypeName.fromReference(this.func.results[0].type, this.scope, this.symbols, this.code.imports, TypeUsage.function);
+				metaReturnType = MetaModel.TypeName.fromReference(this.func.results[0].type, this.scope, this.symbols, this.code.imports, TypeUsage.function);
+			} else if (this.func.results.length > 1) {
+				returnType = `[${this.func.results.map(r => TypeName.fromReference(r.type, this.scope, this.symbols, this.code.imports, TypeUsage.function)).join(', ')}]`;
+				metaReturnType = `[${this.func.results.map(r => MetaModel.TypeName.fromReference(r.type, this.scope, this.symbols, this.code.imports, TypeUsage.function)).join(', ')}]`;
+			}
+			this.code.push(`export declare function ${funcName}(${elements.join(', ')}): ${returnType};`);
+			this.metaModelEmitter = new MetaModel.FunctionEmitter(`typeof ${this.qualifier}.${funcName}`, funcName, this.func.name, metaData, metaReturnType);
 			// this.code.push(`export type ${name} = typeof ${name};`);
 		}
 	}
 
-	namespace TypeName {
+	export namespace TypeName {
 
 		export function fromReference(ref: TypeReference, scope: Interface | World, symbols: SymbolTable, imports: Imports, usage: TypeUsage): string {
 			if (TypeReference.isString(ref)) {

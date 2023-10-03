@@ -17,7 +17,7 @@ export namespace clocks {
 	 */
 	export namespace MonotonicClock {
 		
-		type Pollable = poll.Poll.Pollable;
+		export type Pollable = poll.Poll.Pollable;
 		
 		/**
 		 * A timestamp in nanoseconds.
@@ -99,7 +99,7 @@ export namespace clocks {
 	
 	export namespace Timezone {
 		
-		type Datetime = WallClock.Datetime;
+		export type Datetime = clocks.WallClock.Datetime;
 		
 		/**
 		 * A timezone.
@@ -184,20 +184,39 @@ export namespace clocks {
 	export namespace MonotonicClock.$ {
 		export const Pollable = poll.Poll.$.Pollable;
 		export const Instant = $wcm.u64;
+		export const now = new $wcm.FunctionType<typeof clocks.MonotonicClock.now>('now', 'now', [], Instant);
+		export const resolution = new $wcm.FunctionType<typeof clocks.MonotonicClock.resolution>('resolution', 'resolution', [], Instant);
+		export const subscribe = new $wcm.FunctionType<typeof clocks.MonotonicClock.subscribe>('subscribe', 'subscribe',[
+			['when', Instant],
+			['absolute', $wcm.bool],
+		], Pollable);
 	}
 	export namespace WallClock.$ {
 		export const Datetime = new $wcm.RecordType<clocks.WallClock.Datetime>([
 			['seconds', $wcm.u64],
 			['nanoseconds', $wcm.u32],
 		]);
+		export const now = new $wcm.FunctionType<typeof clocks.WallClock.now>('now', 'now', [], Datetime);
+		export const resolution = new $wcm.FunctionType<typeof clocks.WallClock.resolution>('resolution', 'resolution', [], Datetime);
 	}
 	export namespace Timezone.$ {
-		export const Datetime = WallClock.$.Datetime;
+		export const Datetime = clocks.WallClock.$.Datetime;
 		export const Timezone = $wcm.u32;
 		export const TimezoneDisplay = new $wcm.RecordType<clocks.Timezone.TimezoneDisplay>([
 			['utcOffset', $wcm.s32],
 			['name', $wcm.wstring],
 			['inDaylightSavingTime', $wcm.bool],
 		]);
+		export const display = new $wcm.FunctionType<typeof clocks.Timezone.display>('display', 'display',[
+			['this_', Timezone],
+			['when', Datetime],
+		], TimezoneDisplay);
+		export const utcOffset = new $wcm.FunctionType<typeof clocks.Timezone.utcOffset>('utcOffset', 'utc-offset',[
+			['this_', Timezone],
+			['when', Datetime],
+		], $wcm.s32);
+		export const dropTimezone = new $wcm.FunctionType<typeof clocks.Timezone.dropTimezone>('dropTimezone', 'drop-timezone',[
+			['this_', Timezone],
+		], undefined);
 	}
 }

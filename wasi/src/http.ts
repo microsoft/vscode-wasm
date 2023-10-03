@@ -1,16 +1,16 @@
 import * as $wcm from '@vscode/wasm-component-model';
-import type { u32, u16, result } from '@vscode/wasm-component-model';
+import type { u32, u16, u8, result } from '@vscode/wasm-component-model';
 import { poll } from './poll';
 import { io } from './io';
 
 export namespace http {
 	export namespace Types {
 		
-		type InputStream = io.Streams.InputStream;
+		export type InputStream = io.Streams.InputStream;
 		
-		type OutputStream = io.Streams.OutputStream;
+		export type OutputStream = io.Streams.OutputStream;
 		
-		type Pollable = poll.Poll.Pollable;
+		export type Pollable = poll.Poll.Pollable;
 		
 		export namespace Method {
 			export const get = 0 as const;
@@ -239,9 +239,9 @@ export namespace http {
 		
 		export type Fields = u32;
 		
-		type Headers = Fields;
+		export type Headers = Fields;
 		
-		type Trailers = Fields;
+		export type Trailers = Fields;
 		
 		export type IncomingRequest = u32;
 		
@@ -389,9 +389,9 @@ export namespace http {
 	
 	export namespace IncomingHandler {
 		
-		type IncomingRequest = Types.IncomingRequest;
+		export type IncomingRequest = http.Types.IncomingRequest;
 		
-		type ResponseOutparam = Types.ResponseOutparam;
+		export type ResponseOutparam = http.Types.ResponseOutparam;
 		
 		export declare function handle(request: IncomingRequest, responseOut: ResponseOutparam): void;
 	}
@@ -399,13 +399,13 @@ export namespace http {
 	
 	export namespace OutgoingHandler {
 		
-		type OutgoingRequest = Types.OutgoingRequest;
+		export type OutgoingRequest = http.Types.OutgoingRequest;
 		
-		type RequestOptions = Types.RequestOptions;
+		export type RequestOptions = http.Types.RequestOptions;
 		
-		type FutureIncomingResponse = Types.FutureIncomingResponse;
+		export type FutureIncomingResponse = http.Types.FutureIncomingResponse;
 		
-		type Error = Types.Error;
+		export type Error = http.Types.Error;
 		
 		export declare function handle(request: OutgoingRequest, options: RequestOptions | undefined): result<FutureIncomingResponse, Error>;
 	}
@@ -418,15 +418,18 @@ export namespace http {
 		export const InputStream = io.Streams.$.InputStream;
 		export const OutputStream = io.Streams.$.OutputStream;
 		export const Pollable = poll.Poll.$.Pollable;
+		export const Method = new $wcm.VariantType<http.Types.Method, http.Types.Method._ct, http.Types.Method._vt>([, , , , , , , , , string], http.Types.Method._ctor);
+		export const Scheme = new $wcm.VariantType<http.Types.Scheme, http.Types.Scheme._ct, http.Types.Scheme._vt>([, , string], http.Types.Scheme._ctor);
+		export const Error = new $wcm.VariantType<http.Types.Error, http.Types.Error._ct, http.Types.Error._vt>([string, string, string, string], http.Types.Error._ctor);
 		export const Fields = $wcm.u32;
 		export const Headers = Fields;
 		export const Trailers = Fields;
 		export const IncomingRequest = $wcm.u32;
 		export const OutgoingRequest = $wcm.u32;
 		export const RequestOptions = new $wcm.RecordType<http.Types.RequestOptions>([
-			['connectTimeoutMs', $wcm.u32 | undefined],
-			['firstByteTimeoutMs', $wcm.u32 | undefined],
-			['betweenBytesTimeoutMs', $wcm.u32 | undefined],
+			['connectTimeoutMs', new $wcm.OptionType<u32>($wcm.u32)],
+			['firstByteTimeoutMs', new $wcm.OptionType<u32>($wcm.u32)],
+			['betweenBytesTimeoutMs', new $wcm.OptionType<u32>($wcm.u32)],
 		]);
 		export const ResponseOutparam = $wcm.u32;
 		export const StatusCode = $wcm.u16;
@@ -436,15 +439,153 @@ export namespace http {
 		export const OutgoingResponse = $wcm.u32;
 		export const OutgoingBody = $wcm.u32;
 		export const FutureIncomingResponse = $wcm.u32;
+		export const dropFields = new $wcm.FunctionType<typeof http.Types.dropFields>('dropFields', 'drop-fields',[
+			['fields', Fields],
+		], undefined);
+		export const newFields = new $wcm.FunctionType<typeof http.Types.newFields>('newFields', 'new-fields',[
+			['entries', new $wcm.ListType<[string, u8]>(new $wcm.TupleType<[string, u8]>([$wcm.wstring, new $wcm.Uint8ArrayType()]))],
+		], Fields);
+		export const fieldsGet = new $wcm.FunctionType<typeof http.Types.fieldsGet>('fieldsGet', 'fields-get',[
+			['fields', Fields],
+			['name', $wcm.wstring],
+		], new $wcm.ListType<u8>(new $wcm.Uint8ArrayType()));
+		export const fieldsSet = new $wcm.FunctionType<typeof http.Types.fieldsSet>('fieldsSet', 'fields-set',[
+			['fields', Fields],
+			['name', $wcm.wstring],
+			['value', new $wcm.ListType<u8>(new $wcm.Uint8ArrayType())],
+		], undefined);
+		export const fieldsDelete = new $wcm.FunctionType<typeof http.Types.fieldsDelete>('fieldsDelete', 'fields-delete',[
+			['fields', Fields],
+			['name', $wcm.wstring],
+		], undefined);
+		export const fieldsAppend = new $wcm.FunctionType<typeof http.Types.fieldsAppend>('fieldsAppend', 'fields-append',[
+			['fields', Fields],
+			['name', $wcm.wstring],
+			['value', new $wcm.Uint8ArrayType()],
+		], undefined);
+		export const fieldsEntries = new $wcm.FunctionType<typeof http.Types.fieldsEntries>('fieldsEntries', 'fields-entries',[
+			['fields', Fields],
+		], new $wcm.ListType<[string, u8]>(new $wcm.TupleType<[string, u8]>([$wcm.wstring, new $wcm.Uint8ArrayType()])));
+		export const fieldsClone = new $wcm.FunctionType<typeof http.Types.fieldsClone>('fieldsClone', 'fields-clone',[
+			['fields', Fields],
+		], Fields);
+		export const dropIncomingRequest = new $wcm.FunctionType<typeof http.Types.dropIncomingRequest>('dropIncomingRequest', 'drop-incoming-request',[
+			['request', IncomingRequest],
+		], undefined);
+		export const incomingRequestMethod = new $wcm.FunctionType<typeof http.Types.incomingRequestMethod>('incomingRequestMethod', 'incoming-request-method',[
+			['request', IncomingRequest],
+		], Method);
+		export const incomingRequestPathWithQuery = new $wcm.FunctionType<typeof http.Types.incomingRequestPathWithQuery>('incomingRequestPathWithQuery', 'incoming-request-path-with-query',[
+			['request', IncomingRequest],
+		], new $wcm.OptionType<string>($wcm.wstring));
+		export const incomingRequestScheme = new $wcm.FunctionType<typeof http.Types.incomingRequestScheme>('incomingRequestScheme', 'incoming-request-scheme',[
+			['request', IncomingRequest],
+		], new $wcm.OptionType<http.Types.Scheme>(Scheme));
+		export const incomingRequestAuthority = new $wcm.FunctionType<typeof http.Types.incomingRequestAuthority>('incomingRequestAuthority', 'incoming-request-authority',[
+			['request', IncomingRequest],
+		], new $wcm.OptionType<string>($wcm.wstring));
+		export const incomingRequestHeaders = new $wcm.FunctionType<typeof http.Types.incomingRequestHeaders>('incomingRequestHeaders', 'incoming-request-headers',[
+			['request', IncomingRequest],
+		], Headers);
+		export const incomingRequestConsume = new $wcm.FunctionType<typeof http.Types.incomingRequestConsume>('incomingRequestConsume', 'incoming-request-consume',[
+			['request', IncomingRequest],
+		], new $wcm.ResultType<u32, void>(IncomingBody, undefined));
+		export const dropOutgoingRequest = new $wcm.FunctionType<typeof http.Types.dropOutgoingRequest>('dropOutgoingRequest', 'drop-outgoing-request',[
+			['request', OutgoingRequest],
+		], undefined);
+		export const newOutgoingRequest = new $wcm.FunctionType<typeof http.Types.newOutgoingRequest>('newOutgoingRequest', 'new-outgoing-request',[
+			['method', Method],
+			['pathWithQuery', new $wcm.OptionType<string>($wcm.wstring)],
+			['scheme', new $wcm.OptionType<http.Types.Scheme>(Scheme)],
+			['authority', new $wcm.OptionType<string>($wcm.wstring)],
+			['headers', Headers],
+		], OutgoingRequest);
+		export const outgoingRequestWrite = new $wcm.FunctionType<typeof http.Types.outgoingRequestWrite>('outgoingRequestWrite', 'outgoing-request-write',[
+			['request', OutgoingRequest],
+		], new $wcm.ResultType<u32, void>(OutgoingBody, undefined));
+		export const dropResponseOutparam = new $wcm.FunctionType<typeof http.Types.dropResponseOutparam>('dropResponseOutparam', 'drop-response-outparam',[
+			['response', ResponseOutparam],
+		], undefined);
+		export const setResponseOutparam = new $wcm.FunctionType<typeof http.Types.setResponseOutparam>('setResponseOutparam', 'set-response-outparam',[
+			['param', ResponseOutparam],
+			['response', new $wcm.ResultType<u32, http.Types.Error>(OutgoingResponse, Error)],
+		], undefined);
+		export const dropIncomingResponse = new $wcm.FunctionType<typeof http.Types.dropIncomingResponse>('dropIncomingResponse', 'drop-incoming-response',[
+			['response', IncomingResponse],
+		], undefined);
+		export const incomingResponseStatus = new $wcm.FunctionType<typeof http.Types.incomingResponseStatus>('incomingResponseStatus', 'incoming-response-status',[
+			['response', IncomingResponse],
+		], StatusCode);
+		export const incomingResponseHeaders = new $wcm.FunctionType<typeof http.Types.incomingResponseHeaders>('incomingResponseHeaders', 'incoming-response-headers',[
+			['response', IncomingResponse],
+		], Headers);
+		export const incomingResponseConsume = new $wcm.FunctionType<typeof http.Types.incomingResponseConsume>('incomingResponseConsume', 'incoming-response-consume',[
+			['response', IncomingResponse],
+		], new $wcm.ResultType<u32, void>(IncomingBody, undefined));
+		export const dropIncomingBody = new $wcm.FunctionType<typeof http.Types.dropIncomingBody>('dropIncomingBody', 'drop-incoming-body',[
+			['this_', IncomingBody],
+		], undefined);
+		export const incomingBodyStream = new $wcm.FunctionType<typeof http.Types.incomingBodyStream>('incomingBodyStream', 'incoming-body-stream',[
+			['this_', IncomingBody],
+		], new $wcm.ResultType<http.Types.InputStream, void>(InputStream, undefined));
+		export const incomingBodyFinish = new $wcm.FunctionType<typeof http.Types.incomingBodyFinish>('incomingBodyFinish', 'incoming-body-finish',[
+			['this_', IncomingBody],
+		], FutureTrailers);
+		export const dropFutureTrailers = new $wcm.FunctionType<typeof http.Types.dropFutureTrailers>('dropFutureTrailers', 'drop-future-trailers',[
+			['this_', FutureTrailers],
+		], undefined);
+		export const futureTrailersSubscribe = new $wcm.FunctionType<typeof http.Types.futureTrailersSubscribe>('futureTrailersSubscribe', 'future-trailers-subscribe',[
+			['this_', FutureTrailers],
+		], Pollable);
+		export const futureTrailersGet = new $wcm.FunctionType<typeof http.Types.futureTrailersGet>('futureTrailersGet', 'future-trailers-get',[
+			['response', FutureTrailers],
+		], new $wcm.OptionType<http.Types.Trailers, http.Types.Error>(new $wcm.ResultType<http.Types.Trailers, http.Types.Error>(Trailers, Error)));
+		export const dropOutgoingResponse = new $wcm.FunctionType<typeof http.Types.dropOutgoingResponse>('dropOutgoingResponse', 'drop-outgoing-response',[
+			['response', OutgoingResponse],
+		], undefined);
+		export const newOutgoingResponse = new $wcm.FunctionType<typeof http.Types.newOutgoingResponse>('newOutgoingResponse', 'new-outgoing-response',[
+			['statusCode', StatusCode],
+			['headers', Headers],
+		], OutgoingResponse);
+		export const outgoingResponseWrite = new $wcm.FunctionType<typeof http.Types.outgoingResponseWrite>('outgoingResponseWrite', 'outgoing-response-write',[
+			['this_', OutgoingResponse],
+		], new $wcm.ResultType<u32, void>(OutgoingBody, undefined));
+		export const dropOutgoingBody = new $wcm.FunctionType<typeof http.Types.dropOutgoingBody>('dropOutgoingBody', 'drop-outgoing-body',[
+			['this_', OutgoingBody],
+		], undefined);
+		export const outgoingBodyWrite = new $wcm.FunctionType<typeof http.Types.outgoingBodyWrite>('outgoingBodyWrite', 'outgoing-body-write',[
+			['this_', OutgoingBody],
+		], new $wcm.ResultType<http.Types.OutputStream, void>(OutputStream, undefined));
+		export const outgoingBodyFinish = new $wcm.FunctionType<typeof http.Types.outgoingBodyFinish>('outgoingBodyFinish', 'outgoing-body-finish',[
+			['this_', OutgoingBody],
+			['trailers', new $wcm.OptionType<http.Types.Trailers>(Trailers)],
+		], undefined);
+		export const dropFutureIncomingResponse = new $wcm.FunctionType<typeof http.Types.dropFutureIncomingResponse>('dropFutureIncomingResponse', 'drop-future-incoming-response',[
+			['f', FutureIncomingResponse],
+		], undefined);
+		export const futureIncomingResponseGet = new $wcm.FunctionType<typeof http.Types.futureIncomingResponseGet>('futureIncomingResponseGet', 'future-incoming-response-get',[
+			['f', FutureIncomingResponse],
+		], new $wcm.OptionType<u32, http.Types.Error, void>(new $wcm.ResultType<u32, http.Types.Error, void>(new $wcm.ResultType<u32, http.Types.Error>(IncomingResponse, Error), undefined)));
+		export const listenToFutureIncomingResponse = new $wcm.FunctionType<typeof http.Types.listenToFutureIncomingResponse>('listenToFutureIncomingResponse', 'listen-to-future-incoming-response',[
+			['f', FutureIncomingResponse],
+		], Pollable);
 	}
 	export namespace IncomingHandler.$ {
-		export const IncomingRequest = Types.$.IncomingRequest;
-		export const ResponseOutparam = Types.$.ResponseOutparam;
+		export const IncomingRequest = http.Types.$.IncomingRequest;
+		export const ResponseOutparam = http.Types.$.ResponseOutparam;
+		export const handle = new $wcm.FunctionType<typeof http.IncomingHandler.handle>('handle', 'handle',[
+			['request', IncomingRequest],
+			['responseOut', ResponseOutparam],
+		], undefined);
 	}
 	export namespace OutgoingHandler.$ {
-		export const OutgoingRequest = Types.$.OutgoingRequest;
-		export const RequestOptions = Types.$.RequestOptions;
-		export const FutureIncomingResponse = Types.$.FutureIncomingResponse;
-		export const Error = Types.$.Error;
+		export const OutgoingRequest = http.Types.$.OutgoingRequest;
+		export const RequestOptions = http.Types.$.RequestOptions;
+		export const FutureIncomingResponse = http.Types.$.FutureIncomingResponse;
+		export const Error = http.Types.$.Error;
+		export const handle = new $wcm.FunctionType<typeof http.OutgoingHandler.handle>('handle', 'handle',[
+			['request', OutgoingRequest],
+			['options', new $wcm.OptionType<http.OutgoingHandler.RequestOptions>(RequestOptions)],
+		], new $wcm.ResultType<http.OutgoingHandler.FutureIncomingResponse, http.OutgoingHandler.Error>(FutureIncomingResponse, Error));
 	}
 }

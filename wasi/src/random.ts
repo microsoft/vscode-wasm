@@ -99,9 +99,18 @@ export namespace random {
 
 export namespace random {
 	export namespace InsecureSeed.$ {
+		export const insecureSeed = new $wcm.FunctionType<typeof random.InsecureSeed.insecureSeed>('insecureSeed', 'insecure-seed', [], new $wcm.TupleType<[u64, u64]>([$wcm.u64, $wcm.u64]));
 	}
 	export namespace Insecure.$ {
+		export const getInsecureRandomBytes = new $wcm.FunctionType<typeof random.Insecure.getInsecureRandomBytes>('getInsecureRandomBytes', 'get-insecure-random-bytes',[
+			['len', $wcm.u64],
+		], new $wcm.Uint8ArrayType());
+		export const getInsecureRandomU64 = new $wcm.FunctionType<typeof random.Insecure.getInsecureRandomU64>('getInsecureRandomU64', 'get-insecure-random-u64', [], $wcm.u64);
 	}
 	export namespace Random.$ {
+		export const getRandomBytes = new $wcm.FunctionType<typeof random.Random.getRandomBytes>('getRandomBytes', 'get-random-bytes',[
+			['len', $wcm.u64],
+		], new $wcm.Uint8ArrayType());
+		export const getRandomU64 = new $wcm.FunctionType<typeof random.Random.getRandomU64>('getRandomU64', 'get-random-u64', [], $wcm.u64);
 	}
 }

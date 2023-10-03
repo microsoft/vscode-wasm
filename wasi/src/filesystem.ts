@@ -1,5 +1,5 @@
 import * as $wcm from '@vscode/wasm-component-model';
-import type { u64, u32, result } from '@vscode/wasm-component-model';
+import type { u64, u32, result, u8 } from '@vscode/wasm-component-model';
 import { clocks } from './clocks';
 import { io } from './io';
 
@@ -27,11 +27,11 @@ export namespace filesystem {
 	 */
 	export namespace Types {
 		
-		type InputStream = io.Streams.InputStream;
+		export type InputStream = io.Streams.InputStream;
 		
-		type OutputStream = io.Streams.OutputStream;
+		export type OutputStream = io.Streams.OutputStream;
 		
-		type Datetime = clocks.WallClock.Datetime;
+		export type Datetime = clocks.WallClock.Datetime;
 		
 		/**
 		 * File size or length of a region within a file.
@@ -830,7 +830,7 @@ export namespace filesystem {
 	
 	export namespace Preopens {
 		
-		type Descriptor = Types.Descriptor;
+		export type Descriptor = filesystem.Types.Descriptor;
 		
 		/**
 		 * Return the set of preopened directories, and their path.
@@ -852,6 +852,7 @@ export namespace filesystem {
 		export const PathFlags = new $wcm.FlagsType<filesystem.Types.PathFlags>(['symlinkFollow']);
 		export const OpenFlags = new $wcm.FlagsType<filesystem.Types.OpenFlags>(['create', 'directory', 'exclusive', 'truncate']);
 		export const Modes = new $wcm.FlagsType<filesystem.Types.Modes>(['readable', 'writable', 'executable']);
+		export const AccessType = new $wcm.VariantType<filesystem.Types.AccessType, filesystem.Types.AccessType._ct, filesystem.Types.AccessType._vt>([Modes, ], filesystem.Types.AccessType._ctor);
 		export const LinkCount = $wcm.u64;
 		export const DescriptorStat = new $wcm.RecordType<filesystem.Types.DescriptorStat>([
 			['type', DescriptorType],
@@ -861,6 +862,7 @@ export namespace filesystem {
 			['dataModificationTimestamp', Datetime],
 			['statusChangeTimestamp', Datetime],
 		]);
+		export const NewTimestamp = new $wcm.VariantType<filesystem.Types.NewTimestamp, filesystem.Types.NewTimestamp._ct, filesystem.Types.NewTimestamp._vt>([, , Datetime], filesystem.Types.NewTimestamp._ctor);
 		export const DirectoryEntry = new $wcm.RecordType<filesystem.Types.DirectoryEntry>([
 			['type', DescriptorType],
 			['name', $wcm.wstring],
@@ -873,8 +875,171 @@ export namespace filesystem {
 			['upper', $wcm.u64],
 		]);
 		export const DirectoryEntryStream = $wcm.u32;
+		export const readViaStream = new $wcm.FunctionType<typeof filesystem.Types.readViaStream>('readViaStream', 'read-via-stream',[
+			['this_', Descriptor],
+			['offset', Filesize],
+		], new $wcm.ResultType<filesystem.Types.InputStream, filesystem.Types.ErrorCode>(InputStream, ErrorCode));
+		export const writeViaStream = new $wcm.FunctionType<typeof filesystem.Types.writeViaStream>('writeViaStream', 'write-via-stream',[
+			['this_', Descriptor],
+			['offset', Filesize],
+		], new $wcm.ResultType<filesystem.Types.OutputStream, filesystem.Types.ErrorCode>(OutputStream, ErrorCode));
+		export const appendViaStream = new $wcm.FunctionType<typeof filesystem.Types.appendViaStream>('appendViaStream', 'append-via-stream',[
+			['this_', Descriptor],
+		], new $wcm.ResultType<filesystem.Types.OutputStream, filesystem.Types.ErrorCode>(OutputStream, ErrorCode));
+		export const advise = new $wcm.FunctionType<typeof filesystem.Types.advise>('advise', 'advise',[
+			['this_', Descriptor],
+			['offset', Filesize],
+			['length', Filesize],
+			['advice', Advice],
+		], new $wcm.ResultType<void, filesystem.Types.ErrorCode>(undefined, ErrorCode));
+		export const syncData = new $wcm.FunctionType<typeof filesystem.Types.syncData>('syncData', 'sync-data',[
+			['this_', Descriptor],
+		], new $wcm.ResultType<void, filesystem.Types.ErrorCode>(undefined, ErrorCode));
+		export const getFlags = new $wcm.FunctionType<typeof filesystem.Types.getFlags>('getFlags', 'get-flags',[
+			['this_', Descriptor],
+		], new $wcm.ResultType<filesystem.Types.DescriptorFlags, filesystem.Types.ErrorCode>(DescriptorFlags, ErrorCode));
+		export const getType = new $wcm.FunctionType<typeof filesystem.Types.getType>('getType', 'get-type',[
+			['this_', Descriptor],
+		], new $wcm.ResultType<filesystem.Types.DescriptorType, filesystem.Types.ErrorCode>(DescriptorType, ErrorCode));
+		export const setSize = new $wcm.FunctionType<typeof filesystem.Types.setSize>('setSize', 'set-size',[
+			['this_', Descriptor],
+			['size', Filesize],
+		], new $wcm.ResultType<void, filesystem.Types.ErrorCode>(undefined, ErrorCode));
+		export const setTimes = new $wcm.FunctionType<typeof filesystem.Types.setTimes>('setTimes', 'set-times',[
+			['this_', Descriptor],
+			['dataAccessTimestamp', NewTimestamp],
+			['dataModificationTimestamp', NewTimestamp],
+		], new $wcm.ResultType<void, filesystem.Types.ErrorCode>(undefined, ErrorCode));
+		export const read = new $wcm.FunctionType<typeof filesystem.Types.read>('read', 'read',[
+			['this_', Descriptor],
+			['length', Filesize],
+			['offset', Filesize],
+		], new $wcm.ResultType<[u8, boolean], filesystem.Types.ErrorCode>(new $wcm.TupleType<[u8, boolean]>([new $wcm.Uint8ArrayType(), $wcm.bool]), ErrorCode));
+		export const write = new $wcm.FunctionType<typeof filesystem.Types.write>('write', 'write',[
+			['this_', Descriptor],
+			['buffer', new $wcm.Uint8ArrayType()],
+			['offset', Filesize],
+		], new $wcm.ResultType<u64, filesystem.Types.ErrorCode>(Filesize, ErrorCode));
+		export const readDirectory = new $wcm.FunctionType<typeof filesystem.Types.readDirectory>('readDirectory', 'read-directory',[
+			['this_', Descriptor],
+		], new $wcm.ResultType<u32, filesystem.Types.ErrorCode>(DirectoryEntryStream, ErrorCode));
+		export const sync = new $wcm.FunctionType<typeof filesystem.Types.sync>('sync', 'sync',[
+			['this_', Descriptor],
+		], new $wcm.ResultType<void, filesystem.Types.ErrorCode>(undefined, ErrorCode));
+		export const createDirectoryAt = new $wcm.FunctionType<typeof filesystem.Types.createDirectoryAt>('createDirectoryAt', 'create-directory-at',[
+			['this_', Descriptor],
+			['path', $wcm.wstring],
+		], new $wcm.ResultType<void, filesystem.Types.ErrorCode>(undefined, ErrorCode));
+		export const stat = new $wcm.FunctionType<typeof filesystem.Types.stat>('stat', 'stat',[
+			['this_', Descriptor],
+		], new $wcm.ResultType<filesystem.Types.DescriptorStat, filesystem.Types.ErrorCode>(DescriptorStat, ErrorCode));
+		export const statAt = new $wcm.FunctionType<typeof filesystem.Types.statAt>('statAt', 'stat-at',[
+			['this_', Descriptor],
+			['pathFlags', PathFlags],
+			['path', $wcm.wstring],
+		], new $wcm.ResultType<filesystem.Types.DescriptorStat, filesystem.Types.ErrorCode>(DescriptorStat, ErrorCode));
+		export const setTimesAt = new $wcm.FunctionType<typeof filesystem.Types.setTimesAt>('setTimesAt', 'set-times-at',[
+			['this_', Descriptor],
+			['pathFlags', PathFlags],
+			['path', $wcm.wstring],
+			['dataAccessTimestamp', NewTimestamp],
+			['dataModificationTimestamp', NewTimestamp],
+		], new $wcm.ResultType<void, filesystem.Types.ErrorCode>(undefined, ErrorCode));
+		export const linkAt = new $wcm.FunctionType<typeof filesystem.Types.linkAt>('linkAt', 'link-at',[
+			['this_', Descriptor],
+			['oldPathFlags', PathFlags],
+			['oldPath', $wcm.wstring],
+			['newDescriptor', Descriptor],
+			['newPath', $wcm.wstring],
+		], new $wcm.ResultType<void, filesystem.Types.ErrorCode>(undefined, ErrorCode));
+		export const openAt = new $wcm.FunctionType<typeof filesystem.Types.openAt>('openAt', 'open-at',[
+			['this_', Descriptor],
+			['pathFlags', PathFlags],
+			['path', $wcm.wstring],
+			['openFlags', OpenFlags],
+			['flags', DescriptorFlags],
+			['modes', Modes],
+		], new $wcm.ResultType<u32, filesystem.Types.ErrorCode>(Descriptor, ErrorCode));
+		export const readlinkAt = new $wcm.FunctionType<typeof filesystem.Types.readlinkAt>('readlinkAt', 'readlink-at',[
+			['this_', Descriptor],
+			['path', $wcm.wstring],
+		], new $wcm.ResultType<string, filesystem.Types.ErrorCode>($wcm.wstring, ErrorCode));
+		export const removeDirectoryAt = new $wcm.FunctionType<typeof filesystem.Types.removeDirectoryAt>('removeDirectoryAt', 'remove-directory-at',[
+			['this_', Descriptor],
+			['path', $wcm.wstring],
+		], new $wcm.ResultType<void, filesystem.Types.ErrorCode>(undefined, ErrorCode));
+		export const renameAt = new $wcm.FunctionType<typeof filesystem.Types.renameAt>('renameAt', 'rename-at',[
+			['this_', Descriptor],
+			['oldPath', $wcm.wstring],
+			['newDescriptor', Descriptor],
+			['newPath', $wcm.wstring],
+		], new $wcm.ResultType<void, filesystem.Types.ErrorCode>(undefined, ErrorCode));
+		export const symlinkAt = new $wcm.FunctionType<typeof filesystem.Types.symlinkAt>('symlinkAt', 'symlink-at',[
+			['this_', Descriptor],
+			['oldPath', $wcm.wstring],
+			['newPath', $wcm.wstring],
+		], new $wcm.ResultType<void, filesystem.Types.ErrorCode>(undefined, ErrorCode));
+		export const accessAt = new $wcm.FunctionType<typeof filesystem.Types.accessAt>('accessAt', 'access-at',[
+			['this_', Descriptor],
+			['pathFlags', PathFlags],
+			['path', $wcm.wstring],
+			['type', AccessType],
+		], new $wcm.ResultType<void, filesystem.Types.ErrorCode>(undefined, ErrorCode));
+		export const unlinkFileAt = new $wcm.FunctionType<typeof filesystem.Types.unlinkFileAt>('unlinkFileAt', 'unlink-file-at',[
+			['this_', Descriptor],
+			['path', $wcm.wstring],
+		], new $wcm.ResultType<void, filesystem.Types.ErrorCode>(undefined, ErrorCode));
+		export const changeFilePermissionsAt = new $wcm.FunctionType<typeof filesystem.Types.changeFilePermissionsAt>('changeFilePermissionsAt', 'change-file-permissions-at',[
+			['this_', Descriptor],
+			['pathFlags', PathFlags],
+			['path', $wcm.wstring],
+			['modes', Modes],
+		], new $wcm.ResultType<void, filesystem.Types.ErrorCode>(undefined, ErrorCode));
+		export const changeDirectoryPermissionsAt = new $wcm.FunctionType<typeof filesystem.Types.changeDirectoryPermissionsAt>('changeDirectoryPermissionsAt', 'change-directory-permissions-at',[
+			['this_', Descriptor],
+			['pathFlags', PathFlags],
+			['path', $wcm.wstring],
+			['modes', Modes],
+		], new $wcm.ResultType<void, filesystem.Types.ErrorCode>(undefined, ErrorCode));
+		export const lockShared = new $wcm.FunctionType<typeof filesystem.Types.lockShared>('lockShared', 'lock-shared',[
+			['this_', Descriptor],
+		], new $wcm.ResultType<void, filesystem.Types.ErrorCode>(undefined, ErrorCode));
+		export const lockExclusive = new $wcm.FunctionType<typeof filesystem.Types.lockExclusive>('lockExclusive', 'lock-exclusive',[
+			['this_', Descriptor],
+		], new $wcm.ResultType<void, filesystem.Types.ErrorCode>(undefined, ErrorCode));
+		export const tryLockShared = new $wcm.FunctionType<typeof filesystem.Types.tryLockShared>('tryLockShared', 'try-lock-shared',[
+			['this_', Descriptor],
+		], new $wcm.ResultType<void, filesystem.Types.ErrorCode>(undefined, ErrorCode));
+		export const tryLockExclusive = new $wcm.FunctionType<typeof filesystem.Types.tryLockExclusive>('tryLockExclusive', 'try-lock-exclusive',[
+			['this_', Descriptor],
+		], new $wcm.ResultType<void, filesystem.Types.ErrorCode>(undefined, ErrorCode));
+		export const unlock = new $wcm.FunctionType<typeof filesystem.Types.unlock>('unlock', 'unlock',[
+			['this_', Descriptor],
+		], new $wcm.ResultType<void, filesystem.Types.ErrorCode>(undefined, ErrorCode));
+		export const dropDescriptor = new $wcm.FunctionType<typeof filesystem.Types.dropDescriptor>('dropDescriptor', 'drop-descriptor',[
+			['this_', Descriptor],
+		], undefined);
+		export const readDirectoryEntry = new $wcm.FunctionType<typeof filesystem.Types.readDirectoryEntry>('readDirectoryEntry', 'read-directory-entry',[
+			['this_', DirectoryEntryStream],
+		], new $wcm.ResultType<filesystem.Types.DirectoryEntry, filesystem.Types.ErrorCode>(new $wcm.OptionType<filesystem.Types.DirectoryEntry>(DirectoryEntry), ErrorCode));
+		export const dropDirectoryEntryStream = new $wcm.FunctionType<typeof filesystem.Types.dropDirectoryEntryStream>('dropDirectoryEntryStream', 'drop-directory-entry-stream',[
+			['this_', DirectoryEntryStream],
+		], undefined);
+		export const isSameObject = new $wcm.FunctionType<typeof filesystem.Types.isSameObject>('isSameObject', 'is-same-object',[
+			['this_', Descriptor],
+			['other', Descriptor],
+		], $wcm.bool);
+		export const metadataHash = new $wcm.FunctionType<typeof filesystem.Types.metadataHash>('metadataHash', 'metadata-hash',[
+			['this_', Descriptor],
+		], new $wcm.ResultType<filesystem.Types.MetadataHashValue, filesystem.Types.ErrorCode>(MetadataHashValue, ErrorCode));
+		export const metadataHashAt = new $wcm.FunctionType<typeof filesystem.Types.metadataHashAt>('metadataHashAt', 'metadata-hash-at',[
+			['this_', Descriptor],
+			['pathFlags', PathFlags],
+			['path', $wcm.wstring],
+		], new $wcm.ResultType<filesystem.Types.MetadataHashValue, filesystem.Types.ErrorCode>(MetadataHashValue, ErrorCode));
 	}
 	export namespace Preopens.$ {
-		export const Descriptor = Types.$.Descriptor;
+		export const Descriptor = filesystem.Types.$.Descriptor;
+		export const getDirectories = new $wcm.FunctionType<typeof filesystem.Preopens.getDirectories>('getDirectories', 'get-directories', [], new $wcm.ListType<[filesystem.Preopens.Descriptor, string]>(new $wcm.TupleType<[filesystem.Preopens.Descriptor, string]>([Descriptor, $wcm.wstring])));
 	}
 }

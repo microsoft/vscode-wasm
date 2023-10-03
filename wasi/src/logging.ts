@@ -36,5 +36,10 @@ export namespace logging {
 export namespace logging {
 	export namespace Logging.$ {
 		export const Level = new $wcm.EnumType<logging.Logging.Level>(6);
+		export const log = new $wcm.FunctionType<typeof logging.Logging.log>('log', 'log',[
+			['level', Level],
+			['context', $wcm.wstring],
+			['message', $wcm.wstring],
+		], undefined);
 	}
 }

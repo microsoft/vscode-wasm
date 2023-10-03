@@ -182,7 +182,7 @@ export namespace sockets {
 	 */
 	export namespace InstanceNetwork {
 		
-		type Network = Network.Network;
+		export type Network = sockets.Network.Network;
 		
 		/**
 		 * Get a handle to the default network.
@@ -193,15 +193,15 @@ export namespace sockets {
 	
 	export namespace IpNameLookup {
 		
-		type Pollable = poll.Poll.Pollable;
+		export type Pollable = poll.Poll.Pollable;
 		
-		type Network = Network.Network;
+		export type Network = sockets.Network.Network;
 		
-		type ErrorCode = Network.ErrorCode;
+		export type ErrorCode = sockets.Network.ErrorCode;
 		
-		type IpAddress = Network.IpAddress;
+		export type IpAddress = sockets.Network.IpAddress;
 		
-		type IpAddressFamily = Network.IpAddressFamily;
+		export type IpAddressFamily = sockets.Network.IpAddressFamily;
 		
 		export type ResolveAddressStream = u32;
 		
@@ -276,19 +276,19 @@ export namespace sockets {
 	
 	export namespace Tcp {
 		
-		type InputStream = io.Streams.InputStream;
+		export type InputStream = io.Streams.InputStream;
 		
-		type OutputStream = io.Streams.OutputStream;
+		export type OutputStream = io.Streams.OutputStream;
 		
-		type Pollable = poll.Poll.Pollable;
+		export type Pollable = poll.Poll.Pollable;
 		
-		type Network = Network.Network;
+		export type Network = sockets.Network.Network;
 		
-		type ErrorCode = Network.ErrorCode;
+		export type ErrorCode = sockets.Network.ErrorCode;
 		
-		type IpSocketAddress = Network.IpSocketAddress;
+		export type IpSocketAddress = sockets.Network.IpSocketAddress;
 		
-		type IpAddressFamily = Network.IpAddressFamily;
+		export type IpAddressFamily = sockets.Network.IpAddressFamily;
 		
 		/**
 		 * A TCP socket handle.
@@ -595,13 +595,13 @@ export namespace sockets {
 	
 	export namespace TcpCreateSocket {
 		
-		type Network = Network.Network;
+		export type Network = sockets.Network.Network;
 		
-		type ErrorCode = Network.ErrorCode;
+		export type ErrorCode = sockets.Network.ErrorCode;
 		
-		type IpAddressFamily = Network.IpAddressFamily;
+		export type IpAddressFamily = sockets.Network.IpAddressFamily;
 		
-		type TcpSocket = Tcp.TcpSocket;
+		export type TcpSocket = sockets.Tcp.TcpSocket;
 		
 		/**
 		 * Create a new TCP socket.
@@ -631,15 +631,15 @@ export namespace sockets {
 	
 	export namespace Udp {
 		
-		type Pollable = poll.Poll.Pollable;
+		export type Pollable = poll.Poll.Pollable;
 		
-		type Network = Network.Network;
+		export type Network = sockets.Network.Network;
 		
-		type ErrorCode = Network.ErrorCode;
+		export type ErrorCode = sockets.Network.ErrorCode;
 		
-		type IpSocketAddress = Network.IpSocketAddress;
+		export type IpSocketAddress = sockets.Network.IpSocketAddress;
 		
-		type IpAddressFamily = Network.IpAddressFamily;
+		export type IpAddressFamily = sockets.Network.IpAddressFamily;
 		
 		/**
 		 * A UDP socket handle.
@@ -882,13 +882,13 @@ export namespace sockets {
 	
 	export namespace UdpCreateSocket {
 		
-		type Network = Network.Network;
+		export type Network = sockets.Network.Network;
 		
-		type ErrorCode = Network.ErrorCode;
+		export type ErrorCode = sockets.Network.ErrorCode;
 		
-		type IpAddressFamily = Network.IpAddressFamily;
+		export type IpAddressFamily = sockets.Network.IpAddressFamily;
 		
-		type UdpSocket = Udp.UdpSocket;
+		export type UdpSocket = sockets.Udp.UdpSocket;
 		
 		/**
 		 * Create a new UDP socket.
@@ -923,8 +923,9 @@ export namespace sockets {
 		export const Network = $wcm.u32;
 		export const ErrorCode = new $wcm.EnumType<sockets.Network.ErrorCode>(32);
 		export const IpAddressFamily = new $wcm.EnumType<sockets.Network.IpAddressFamily>(2);
-		export const Ipv4Address = [$wcm.u8, $wcm.u8, $wcm.u8, $wcm.u8];
-		export const Ipv6Address = [$wcm.u16, $wcm.u16, $wcm.u16, $wcm.u16, $wcm.u16, $wcm.u16, $wcm.u16, $wcm.u16];
+		export const Ipv4Address = new $wcm.TupleType<[u8, u8, u8, u8]>([$wcm.u8, $wcm.u8, $wcm.u8, $wcm.u8]);
+		export const Ipv6Address = new $wcm.TupleType<[u16, u16, u16, u16, u16, u16, u16, u16]>([$wcm.u16, $wcm.u16, $wcm.u16, $wcm.u16, $wcm.u16, $wcm.u16, $wcm.u16, $wcm.u16]);
+		export const IpAddress = new $wcm.VariantType<sockets.Network.IpAddress, sockets.Network.IpAddress._ct, sockets.Network.IpAddress._vt>([Ipv4Address, Ipv6Address], sockets.Network.IpAddress._ctor);
 		export const Ipv4SocketAddress = new $wcm.RecordType<sockets.Network.Ipv4SocketAddress>([
 			['port', $wcm.u16],
 			['address', Ipv4Address],
@@ -935,51 +936,234 @@ export namespace sockets {
 			['address', Ipv6Address],
 			['scopeId', $wcm.u32],
 		]);
+		export const IpSocketAddress = new $wcm.VariantType<sockets.Network.IpSocketAddress, sockets.Network.IpSocketAddress._ct, sockets.Network.IpSocketAddress._vt>([Ipv4SocketAddress, Ipv6SocketAddress], sockets.Network.IpSocketAddress._ctor);
+		export const dropNetwork = new $wcm.FunctionType<typeof sockets.Network.dropNetwork>('dropNetwork', 'drop-network',[
+			['this_', Network],
+		], undefined);
 	}
 	export namespace InstanceNetwork.$ {
-		export const Network = Network.$.Network;
+		export const Network = sockets.Network.$.Network;
+		export const instanceNetwork = new $wcm.FunctionType<typeof sockets.InstanceNetwork.instanceNetwork>('instanceNetwork', 'instance-network', [], Network);
 	}
 	export namespace IpNameLookup.$ {
 		export const Pollable = poll.Poll.$.Pollable;
-		export const Network = Network.$.Network;
-		export const ErrorCode = Network.$.ErrorCode;
-		export const IpAddress = Network.$.IpAddress;
-		export const IpAddressFamily = Network.$.IpAddressFamily;
+		export const Network = sockets.Network.$.Network;
+		export const ErrorCode = sockets.Network.$.ErrorCode;
+		export const IpAddress = sockets.Network.$.IpAddress;
+		export const IpAddressFamily = sockets.Network.$.IpAddressFamily;
 		export const ResolveAddressStream = $wcm.u32;
+		export const resolveAddresses = new $wcm.FunctionType<typeof sockets.IpNameLookup.resolveAddresses>('resolveAddresses', 'resolve-addresses',[
+			['network', Network],
+			['name', $wcm.wstring],
+			['addressFamily', new $wcm.OptionType<sockets.IpNameLookup.IpAddressFamily>(IpAddressFamily)],
+			['includeUnavailable', $wcm.bool],
+		], new $wcm.ResultType<u32, sockets.IpNameLookup.ErrorCode>(ResolveAddressStream, ErrorCode));
+		export const resolveNextAddress = new $wcm.FunctionType<typeof sockets.IpNameLookup.resolveNextAddress>('resolveNextAddress', 'resolve-next-address',[
+			['this_', ResolveAddressStream],
+		], new $wcm.ResultType<sockets.IpNameLookup.IpAddress, sockets.IpNameLookup.ErrorCode>(new $wcm.OptionType<sockets.IpNameLookup.IpAddress>(IpAddress), ErrorCode));
+		export const dropResolveAddressStream = new $wcm.FunctionType<typeof sockets.IpNameLookup.dropResolveAddressStream>('dropResolveAddressStream', 'drop-resolve-address-stream',[
+			['this_', ResolveAddressStream],
+		], undefined);
+		export const subscribe = new $wcm.FunctionType<typeof sockets.IpNameLookup.subscribe>('subscribe', 'subscribe',[
+			['this_', ResolveAddressStream],
+		], Pollable);
 	}
 	export namespace Tcp.$ {
 		export const InputStream = io.Streams.$.InputStream;
 		export const OutputStream = io.Streams.$.OutputStream;
 		export const Pollable = poll.Poll.$.Pollable;
-		export const Network = Network.$.Network;
-		export const ErrorCode = Network.$.ErrorCode;
-		export const IpSocketAddress = Network.$.IpSocketAddress;
-		export const IpAddressFamily = Network.$.IpAddressFamily;
+		export const Network = sockets.Network.$.Network;
+		export const ErrorCode = sockets.Network.$.ErrorCode;
+		export const IpSocketAddress = sockets.Network.$.IpSocketAddress;
+		export const IpAddressFamily = sockets.Network.$.IpAddressFamily;
 		export const TcpSocket = $wcm.u32;
 		export const ShutdownType = new $wcm.EnumType<sockets.Tcp.ShutdownType>(3);
+		export const startBind = new $wcm.FunctionType<typeof sockets.Tcp.startBind>('startBind', 'start-bind',[
+			['this_', TcpSocket],
+			['network', Network],
+			['localAddress', IpSocketAddress],
+		], new $wcm.ResultType<void, sockets.Tcp.ErrorCode>(undefined, ErrorCode));
+		export const finishBind = new $wcm.FunctionType<typeof sockets.Tcp.finishBind>('finishBind', 'finish-bind',[
+			['this_', TcpSocket],
+		], new $wcm.ResultType<void, sockets.Tcp.ErrorCode>(undefined, ErrorCode));
+		export const startConnect = new $wcm.FunctionType<typeof sockets.Tcp.startConnect>('startConnect', 'start-connect',[
+			['this_', TcpSocket],
+			['network', Network],
+			['remoteAddress', IpSocketAddress],
+		], new $wcm.ResultType<void, sockets.Tcp.ErrorCode>(undefined, ErrorCode));
+		export const finishConnect = new $wcm.FunctionType<typeof sockets.Tcp.finishConnect>('finishConnect', 'finish-connect',[
+			['this_', TcpSocket],
+		], new $wcm.ResultType<[sockets.Tcp.InputStream, sockets.Tcp.OutputStream], sockets.Tcp.ErrorCode>(new $wcm.TupleType<[sockets.Tcp.InputStream, sockets.Tcp.OutputStream]>([InputStream, OutputStream]), ErrorCode));
+		export const startListen = new $wcm.FunctionType<typeof sockets.Tcp.startListen>('startListen', 'start-listen',[
+			['this_', TcpSocket],
+		], new $wcm.ResultType<void, sockets.Tcp.ErrorCode>(undefined, ErrorCode));
+		export const finishListen = new $wcm.FunctionType<typeof sockets.Tcp.finishListen>('finishListen', 'finish-listen',[
+			['this_', TcpSocket],
+		], new $wcm.ResultType<void, sockets.Tcp.ErrorCode>(undefined, ErrorCode));
+		export const accept = new $wcm.FunctionType<typeof sockets.Tcp.accept>('accept', 'accept',[
+			['this_', TcpSocket],
+		], new $wcm.ResultType<[u32, sockets.Tcp.InputStream, sockets.Tcp.OutputStream], sockets.Tcp.ErrorCode>(new $wcm.TupleType<[u32, sockets.Tcp.InputStream, sockets.Tcp.OutputStream]>([TcpSocket, InputStream, OutputStream]), ErrorCode));
+		export const localAddress = new $wcm.FunctionType<typeof sockets.Tcp.localAddress>('localAddress', 'local-address',[
+			['this_', TcpSocket],
+		], new $wcm.ResultType<sockets.Tcp.IpSocketAddress, sockets.Tcp.ErrorCode>(IpSocketAddress, ErrorCode));
+		export const remoteAddress = new $wcm.FunctionType<typeof sockets.Tcp.remoteAddress>('remoteAddress', 'remote-address',[
+			['this_', TcpSocket],
+		], new $wcm.ResultType<sockets.Tcp.IpSocketAddress, sockets.Tcp.ErrorCode>(IpSocketAddress, ErrorCode));
+		export const addressFamily = new $wcm.FunctionType<typeof sockets.Tcp.addressFamily>('addressFamily', 'address-family',[
+			['this_', TcpSocket],
+		], IpAddressFamily);
+		export const ipv6Only = new $wcm.FunctionType<typeof sockets.Tcp.ipv6Only>('ipv6Only', 'ipv6-only',[
+			['this_', TcpSocket],
+		], new $wcm.ResultType<boolean, sockets.Tcp.ErrorCode>($wcm.bool, ErrorCode));
+		export const setIpv6Only = new $wcm.FunctionType<typeof sockets.Tcp.setIpv6Only>('setIpv6Only', 'set-ipv6-only',[
+			['this_', TcpSocket],
+			['value', $wcm.bool],
+		], new $wcm.ResultType<void, sockets.Tcp.ErrorCode>(undefined, ErrorCode));
+		export const setListenBacklogSize = new $wcm.FunctionType<typeof sockets.Tcp.setListenBacklogSize>('setListenBacklogSize', 'set-listen-backlog-size',[
+			['this_', TcpSocket],
+			['value', $wcm.u64],
+		], new $wcm.ResultType<void, sockets.Tcp.ErrorCode>(undefined, ErrorCode));
+		export const keepAlive = new $wcm.FunctionType<typeof sockets.Tcp.keepAlive>('keepAlive', 'keep-alive',[
+			['this_', TcpSocket],
+		], new $wcm.ResultType<boolean, sockets.Tcp.ErrorCode>($wcm.bool, ErrorCode));
+		export const setKeepAlive = new $wcm.FunctionType<typeof sockets.Tcp.setKeepAlive>('setKeepAlive', 'set-keep-alive',[
+			['this_', TcpSocket],
+			['value', $wcm.bool],
+		], new $wcm.ResultType<void, sockets.Tcp.ErrorCode>(undefined, ErrorCode));
+		export const noDelay = new $wcm.FunctionType<typeof sockets.Tcp.noDelay>('noDelay', 'no-delay',[
+			['this_', TcpSocket],
+		], new $wcm.ResultType<boolean, sockets.Tcp.ErrorCode>($wcm.bool, ErrorCode));
+		export const setNoDelay = new $wcm.FunctionType<typeof sockets.Tcp.setNoDelay>('setNoDelay', 'set-no-delay',[
+			['this_', TcpSocket],
+			['value', $wcm.bool],
+		], new $wcm.ResultType<void, sockets.Tcp.ErrorCode>(undefined, ErrorCode));
+		export const unicastHopLimit = new $wcm.FunctionType<typeof sockets.Tcp.unicastHopLimit>('unicastHopLimit', 'unicast-hop-limit',[
+			['this_', TcpSocket],
+		], new $wcm.ResultType<u8, sockets.Tcp.ErrorCode>($wcm.u8, ErrorCode));
+		export const setUnicastHopLimit = new $wcm.FunctionType<typeof sockets.Tcp.setUnicastHopLimit>('setUnicastHopLimit', 'set-unicast-hop-limit',[
+			['this_', TcpSocket],
+			['value', $wcm.u8],
+		], new $wcm.ResultType<void, sockets.Tcp.ErrorCode>(undefined, ErrorCode));
+		export const receiveBufferSize = new $wcm.FunctionType<typeof sockets.Tcp.receiveBufferSize>('receiveBufferSize', 'receive-buffer-size',[
+			['this_', TcpSocket],
+		], new $wcm.ResultType<u64, sockets.Tcp.ErrorCode>($wcm.u64, ErrorCode));
+		export const setReceiveBufferSize = new $wcm.FunctionType<typeof sockets.Tcp.setReceiveBufferSize>('setReceiveBufferSize', 'set-receive-buffer-size',[
+			['this_', TcpSocket],
+			['value', $wcm.u64],
+		], new $wcm.ResultType<void, sockets.Tcp.ErrorCode>(undefined, ErrorCode));
+		export const sendBufferSize = new $wcm.FunctionType<typeof sockets.Tcp.sendBufferSize>('sendBufferSize', 'send-buffer-size',[
+			['this_', TcpSocket],
+		], new $wcm.ResultType<u64, sockets.Tcp.ErrorCode>($wcm.u64, ErrorCode));
+		export const setSendBufferSize = new $wcm.FunctionType<typeof sockets.Tcp.setSendBufferSize>('setSendBufferSize', 'set-send-buffer-size',[
+			['this_', TcpSocket],
+			['value', $wcm.u64],
+		], new $wcm.ResultType<void, sockets.Tcp.ErrorCode>(undefined, ErrorCode));
+		export const subscribe = new $wcm.FunctionType<typeof sockets.Tcp.subscribe>('subscribe', 'subscribe',[
+			['this_', TcpSocket],
+		], Pollable);
+		export const shutdown = new $wcm.FunctionType<typeof sockets.Tcp.shutdown>('shutdown', 'shutdown',[
+			['this_', TcpSocket],
+			['shutdownType', ShutdownType],
+		], new $wcm.ResultType<void, sockets.Tcp.ErrorCode>(undefined, ErrorCode));
+		export const dropTcpSocket = new $wcm.FunctionType<typeof sockets.Tcp.dropTcpSocket>('dropTcpSocket', 'drop-tcp-socket',[
+			['this_', TcpSocket],
+		], undefined);
 	}
 	export namespace TcpCreateSocket.$ {
-		export const Network = Network.$.Network;
-		export const ErrorCode = Network.$.ErrorCode;
-		export const IpAddressFamily = Network.$.IpAddressFamily;
-		export const TcpSocket = Tcp.$.TcpSocket;
+		export const Network = sockets.Network.$.Network;
+		export const ErrorCode = sockets.Network.$.ErrorCode;
+		export const IpAddressFamily = sockets.Network.$.IpAddressFamily;
+		export const TcpSocket = sockets.Tcp.$.TcpSocket;
+		export const createTcpSocket = new $wcm.FunctionType<typeof sockets.TcpCreateSocket.createTcpSocket>('createTcpSocket', 'create-tcp-socket',[
+			['addressFamily', IpAddressFamily],
+		], new $wcm.ResultType<sockets.TcpCreateSocket.TcpSocket, sockets.TcpCreateSocket.ErrorCode>(TcpSocket, ErrorCode));
 	}
 	export namespace Udp.$ {
 		export const Pollable = poll.Poll.$.Pollable;
-		export const Network = Network.$.Network;
-		export const ErrorCode = Network.$.ErrorCode;
-		export const IpSocketAddress = Network.$.IpSocketAddress;
-		export const IpAddressFamily = Network.$.IpAddressFamily;
+		export const Network = sockets.Network.$.Network;
+		export const ErrorCode = sockets.Network.$.ErrorCode;
+		export const IpSocketAddress = sockets.Network.$.IpSocketAddress;
+		export const IpAddressFamily = sockets.Network.$.IpAddressFamily;
 		export const UdpSocket = $wcm.u32;
 		export const Datagram = new $wcm.RecordType<sockets.Udp.Datagram>([
 			['data', new $wcm.Uint8ArrayType()],
 			['remoteAddress', IpSocketAddress],
 		]);
+		export const startBind = new $wcm.FunctionType<typeof sockets.Udp.startBind>('startBind', 'start-bind',[
+			['this_', UdpSocket],
+			['network', Network],
+			['localAddress', IpSocketAddress],
+		], new $wcm.ResultType<void, sockets.Udp.ErrorCode>(undefined, ErrorCode));
+		export const finishBind = new $wcm.FunctionType<typeof sockets.Udp.finishBind>('finishBind', 'finish-bind',[
+			['this_', UdpSocket],
+		], new $wcm.ResultType<void, sockets.Udp.ErrorCode>(undefined, ErrorCode));
+		export const startConnect = new $wcm.FunctionType<typeof sockets.Udp.startConnect>('startConnect', 'start-connect',[
+			['this_', UdpSocket],
+			['network', Network],
+			['remoteAddress', IpSocketAddress],
+		], new $wcm.ResultType<void, sockets.Udp.ErrorCode>(undefined, ErrorCode));
+		export const finishConnect = new $wcm.FunctionType<typeof sockets.Udp.finishConnect>('finishConnect', 'finish-connect',[
+			['this_', UdpSocket],
+		], new $wcm.ResultType<void, sockets.Udp.ErrorCode>(undefined, ErrorCode));
+		export const receive = new $wcm.FunctionType<typeof sockets.Udp.receive>('receive', 'receive',[
+			['this_', UdpSocket],
+			['maxResults', $wcm.u64],
+		], new $wcm.ResultType<sockets.Udp.Datagram, sockets.Udp.ErrorCode>(new $wcm.ListType<sockets.Udp.Datagram>(Datagram), ErrorCode));
+		export const send = new $wcm.FunctionType<typeof sockets.Udp.send>('send', 'send',[
+			['this_', UdpSocket],
+			['datagrams', new $wcm.ListType<sockets.Udp.Datagram>(Datagram)],
+		], new $wcm.ResultType<u64, sockets.Udp.ErrorCode>($wcm.u64, ErrorCode));
+		export const localAddress = new $wcm.FunctionType<typeof sockets.Udp.localAddress>('localAddress', 'local-address',[
+			['this_', UdpSocket],
+		], new $wcm.ResultType<sockets.Udp.IpSocketAddress, sockets.Udp.ErrorCode>(IpSocketAddress, ErrorCode));
+		export const remoteAddress = new $wcm.FunctionType<typeof sockets.Udp.remoteAddress>('remoteAddress', 'remote-address',[
+			['this_', UdpSocket],
+		], new $wcm.ResultType<sockets.Udp.IpSocketAddress, sockets.Udp.ErrorCode>(IpSocketAddress, ErrorCode));
+		export const addressFamily = new $wcm.FunctionType<typeof sockets.Udp.addressFamily>('addressFamily', 'address-family',[
+			['this_', UdpSocket],
+		], IpAddressFamily);
+		export const ipv6Only = new $wcm.FunctionType<typeof sockets.Udp.ipv6Only>('ipv6Only', 'ipv6-only',[
+			['this_', UdpSocket],
+		], new $wcm.ResultType<boolean, sockets.Udp.ErrorCode>($wcm.bool, ErrorCode));
+		export const setIpv6Only = new $wcm.FunctionType<typeof sockets.Udp.setIpv6Only>('setIpv6Only', 'set-ipv6-only',[
+			['this_', UdpSocket],
+			['value', $wcm.bool],
+		], new $wcm.ResultType<void, sockets.Udp.ErrorCode>(undefined, ErrorCode));
+		export const unicastHopLimit = new $wcm.FunctionType<typeof sockets.Udp.unicastHopLimit>('unicastHopLimit', 'unicast-hop-limit',[
+			['this_', UdpSocket],
+		], new $wcm.ResultType<u8, sockets.Udp.ErrorCode>($wcm.u8, ErrorCode));
+		export const setUnicastHopLimit = new $wcm.FunctionType<typeof sockets.Udp.setUnicastHopLimit>('setUnicastHopLimit', 'set-unicast-hop-limit',[
+			['this_', UdpSocket],
+			['value', $wcm.u8],
+		], new $wcm.ResultType<void, sockets.Udp.ErrorCode>(undefined, ErrorCode));
+		export const receiveBufferSize = new $wcm.FunctionType<typeof sockets.Udp.receiveBufferSize>('receiveBufferSize', 'receive-buffer-size',[
+			['this_', UdpSocket],
+		], new $wcm.ResultType<u64, sockets.Udp.ErrorCode>($wcm.u64, ErrorCode));
+		export const setReceiveBufferSize = new $wcm.FunctionType<typeof sockets.Udp.setReceiveBufferSize>('setReceiveBufferSize', 'set-receive-buffer-size',[
+			['this_', UdpSocket],
+			['value', $wcm.u64],
+		], new $wcm.ResultType<void, sockets.Udp.ErrorCode>(undefined, ErrorCode));
+		export const sendBufferSize = new $wcm.FunctionType<typeof sockets.Udp.sendBufferSize>('sendBufferSize', 'send-buffer-size',[
+			['this_', UdpSocket],
+		], new $wcm.ResultType<u64, sockets.Udp.ErrorCode>($wcm.u64, ErrorCode));
+		export const setSendBufferSize = new $wcm.FunctionType<typeof sockets.Udp.setSendBufferSize>('setSendBufferSize', 'set-send-buffer-size',[
+			['this_', UdpSocket],
+			['value', $wcm.u64],
+		], new $wcm.ResultType<void, sockets.Udp.ErrorCode>(undefined, ErrorCode));
+		export const subscribe = new $wcm.FunctionType<typeof sockets.Udp.subscribe>('subscribe', 'subscribe',[
+			['this_', UdpSocket],
+		], Pollable);
+		export const dropUdpSocket = new $wcm.FunctionType<typeof sockets.Udp.dropUdpSocket>('dropUdpSocket', 'drop-udp-socket',[
+			['this_', UdpSocket],
+		], undefined);
 	}
 	export namespace UdpCreateSocket.$ {
-		export const Network = Network.$.Network;
-		export const ErrorCode = Network.$.ErrorCode;
-		export const IpAddressFamily = Network.$.IpAddressFamily;
-		export const UdpSocket = Udp.$.UdpSocket;
+		export const Network = sockets.Network.$.Network;
+		export const ErrorCode = sockets.Network.$.ErrorCode;
+		export const IpAddressFamily = sockets.Network.$.IpAddressFamily;
+		export const UdpSocket = sockets.Udp.$.UdpSocket;
+		export const createUdpSocket = new $wcm.FunctionType<typeof sockets.UdpCreateSocket.createUdpSocket>('createUdpSocket', 'create-udp-socket',[
+			['addressFamily', IpAddressFamily],
+		], new $wcm.ResultType<sockets.UdpCreateSocket.UdpSocket, sockets.UdpCreateSocket.ErrorCode>(UdpSocket, ErrorCode));
 	}
 }

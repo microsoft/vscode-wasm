@@ -55,5 +55,11 @@ export namespace poll {
 export namespace poll {
 	export namespace Poll.$ {
 		export const Pollable = $wcm.u32;
+		export const dropPollable = new $wcm.FunctionType<typeof poll.Poll.dropPollable>('dropPollable', 'drop-pollable',[
+			['this_', Pollable],
+		], undefined);
+		export const pollOneoff = new $wcm.FunctionType<typeof poll.Poll.pollOneoff>('pollOneoff', 'poll-oneoff',[
+			['in_', new $wcm.ListType<u32>(Pollable)],
+		], new $wcm.ListType<boolean>($wcm.bool));
 	}
 }

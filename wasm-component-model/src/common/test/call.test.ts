@@ -44,7 +44,7 @@ namespace Sample {
 
 	export namespace $cm {
 		export const $Point = new RecordType<Point>([['x', u32], ['y', u32]]);
-		export const $call = new FunctionType<call>('call', [['point', $Point]], u32);
+		export const $call = new FunctionType<call>('call', 'call', [['point', $Point]], u32);
 	}
 }
 export type Sample = Pick<typeof Sample, 'call'>;

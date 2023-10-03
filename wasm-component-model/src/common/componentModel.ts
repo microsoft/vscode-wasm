@@ -1768,8 +1768,8 @@ export namespace result {
 	}
 }
 export type result<O extends JType | void, E extends JType | void = void> = result.ok<O, E> | result.error<O, E>;
-export class ResultType<O extends JType | void, E extends JType> extends VariantType<result<O, E>, 0 | 1, O | E> {
-	constructor(okType: GenericComponentModelType | undefined, errorType: GenericComponentModelType) {
+export class ResultType<O extends JType | void, E extends JType | void = void> extends VariantType<result<O, E>, 0 | 1, O | E> {
+	constructor(okType: GenericComponentModelType | undefined, errorType: GenericComponentModelType | undefined) {
 		super([okType, errorType], result._ctor<O, E>, ComponentModelTypeKind.result);
 	}
 }
@@ -1794,6 +1794,7 @@ export class FunctionType<_T extends Function> {
 	private static MAX_FLAT_RESULTS = 1;
 
 	public readonly name: string;
+	public readonly witName: string;
 	public readonly params: FunctionParameter[];
 	private readonly paramTupleType: TupleType<JTuple>;
 	public readonly returnType: GenericComponentModelType | undefined;
@@ -1801,8 +1802,9 @@ export class FunctionType<_T extends Function> {
 	private readonly paramFlatTypes: number;
 	private readonly returnFlatTypes: number;
 
-	constructor(name: string, params: FunctionParameter[], returnType?: GenericComponentModelType) {
+	constructor(name: string, witName: string, params: FunctionParameter[], returnType?: GenericComponentModelType) {
 		this.name = name;
+		this.witName = witName;
 		this.params = params;
 		this.returnType = returnType;
 		const paramTypes: GenericComponentModelType[] = [];

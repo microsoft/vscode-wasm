@@ -1,5 +1,5 @@
 import * as $wcm from '@vscode/wasm-component-model';
-import type { u32, u64, result } from '@vscode/wasm-component-model';
+import type { u32, u64, result, u8 } from '@vscode/wasm-component-model';
 import { poll } from './poll';
 
 export namespace io {
@@ -12,7 +12,7 @@ export namespace io {
 	 */
 	export namespace Streams {
 		
-		type Pollable = poll.Poll.Pollable;
+		export type Pollable = poll.Poll.Pollable;
 		
 		/**
 		 * Streams provide a sequence of data and then end; once they end, they
@@ -300,5 +300,68 @@ export namespace io {
 		export const InputStream = $wcm.u32;
 		export const OutputStream = $wcm.u32;
 		export const WriteError = new $wcm.EnumType<io.Streams.WriteError>(2);
+		export const read = new $wcm.FunctionType<typeof io.Streams.read>('read', 'read',[
+			['this_', InputStream],
+			['len', $wcm.u64],
+		], new $wcm.ResultType<[u8, io.Streams.StreamStatus], void>(new $wcm.TupleType<[u8, io.Streams.StreamStatus]>([new $wcm.Uint8ArrayType(), StreamStatus]), undefined));
+		export const blockingRead = new $wcm.FunctionType<typeof io.Streams.blockingRead>('blockingRead', 'blocking-read',[
+			['this_', InputStream],
+			['len', $wcm.u64],
+		], new $wcm.ResultType<[u8, io.Streams.StreamStatus], void>(new $wcm.TupleType<[u8, io.Streams.StreamStatus]>([new $wcm.Uint8ArrayType(), StreamStatus]), undefined));
+		export const skip = new $wcm.FunctionType<typeof io.Streams.skip>('skip', 'skip',[
+			['this_', InputStream],
+			['len', $wcm.u64],
+		], new $wcm.ResultType<[u64, io.Streams.StreamStatus], void>(new $wcm.TupleType<[u64, io.Streams.StreamStatus]>([$wcm.u64, StreamStatus]), undefined));
+		export const blockingSkip = new $wcm.FunctionType<typeof io.Streams.blockingSkip>('blockingSkip', 'blocking-skip',[
+			['this_', InputStream],
+			['len', $wcm.u64],
+		], new $wcm.ResultType<[u64, io.Streams.StreamStatus], void>(new $wcm.TupleType<[u64, io.Streams.StreamStatus]>([$wcm.u64, StreamStatus]), undefined));
+		export const subscribeToInputStream = new $wcm.FunctionType<typeof io.Streams.subscribeToInputStream>('subscribeToInputStream', 'subscribe-to-input-stream',[
+			['this_', InputStream],
+		], Pollable);
+		export const dropInputStream = new $wcm.FunctionType<typeof io.Streams.dropInputStream>('dropInputStream', 'drop-input-stream',[
+			['this_', InputStream],
+		], undefined);
+		export const checkWrite = new $wcm.FunctionType<typeof io.Streams.checkWrite>('checkWrite', 'check-write',[
+			['this_', OutputStream],
+		], new $wcm.ResultType<u64, io.Streams.WriteError>($wcm.u64, WriteError));
+		export const write = new $wcm.FunctionType<typeof io.Streams.write>('write', 'write',[
+			['this_', OutputStream],
+			['contents', new $wcm.Uint8ArrayType()],
+		], new $wcm.ResultType<void, io.Streams.WriteError>(undefined, WriteError));
+		export const blockingWriteAndFlush = new $wcm.FunctionType<typeof io.Streams.blockingWriteAndFlush>('blockingWriteAndFlush', 'blocking-write-and-flush',[
+			['this_', OutputStream],
+			['contents', new $wcm.Uint8ArrayType()],
+		], new $wcm.ResultType<void, io.Streams.WriteError>(undefined, WriteError));
+		export const flush = new $wcm.FunctionType<typeof io.Streams.flush>('flush', 'flush',[
+			['this_', OutputStream],
+		], new $wcm.ResultType<void, io.Streams.WriteError>(undefined, WriteError));
+		export const blockingFlush = new $wcm.FunctionType<typeof io.Streams.blockingFlush>('blockingFlush', 'blocking-flush',[
+			['this_', OutputStream],
+		], new $wcm.ResultType<void, io.Streams.WriteError>(undefined, WriteError));
+		export const subscribeToOutputStream = new $wcm.FunctionType<typeof io.Streams.subscribeToOutputStream>('subscribeToOutputStream', 'subscribe-to-output-stream',[
+			['this_', OutputStream],
+		], Pollable);
+		export const writeZeroes = new $wcm.FunctionType<typeof io.Streams.writeZeroes>('writeZeroes', 'write-zeroes',[
+			['this_', OutputStream],
+			['len', $wcm.u64],
+		], new $wcm.ResultType<void, io.Streams.WriteError>(undefined, WriteError));
+		export const splice = new $wcm.FunctionType<typeof io.Streams.splice>('splice', 'splice',[
+			['this_', OutputStream],
+			['src', InputStream],
+			['len', $wcm.u64],
+		], new $wcm.ResultType<[u64, io.Streams.StreamStatus], void>(new $wcm.TupleType<[u64, io.Streams.StreamStatus]>([$wcm.u64, StreamStatus]), undefined));
+		export const blockingSplice = new $wcm.FunctionType<typeof io.Streams.blockingSplice>('blockingSplice', 'blocking-splice',[
+			['this_', OutputStream],
+			['src', InputStream],
+			['len', $wcm.u64],
+		], new $wcm.ResultType<[u64, io.Streams.StreamStatus], void>(new $wcm.TupleType<[u64, io.Streams.StreamStatus]>([$wcm.u64, StreamStatus]), undefined));
+		export const forward = new $wcm.FunctionType<typeof io.Streams.forward>('forward', 'forward',[
+			['this_', OutputStream],
+			['src', InputStream],
+		], new $wcm.ResultType<[u64, io.Streams.StreamStatus], void>(new $wcm.TupleType<[u64, io.Streams.StreamStatus]>([$wcm.u64, StreamStatus]), undefined));
+		export const dropOutputStream = new $wcm.FunctionType<typeof io.Streams.dropOutputStream>('dropOutputStream', 'drop-output-stream',[
+			['this_', OutputStream],
+		], undefined);
 	}
 }
