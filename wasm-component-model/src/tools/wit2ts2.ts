@@ -325,7 +325,7 @@ namespace MetaModel {
 		}
 
 		public emit(code: Code, emitted: Set<String>): void {
-			code.push(`export const ${this.name} = new $wcm.VariantType<${this.typeParam}, ${this.typeParam}._ct, ${this.typeParam}._vt>([${this.cases.join(', ')}], ${this.typeParam}._ctor);`);
+			code.push(`export const ${this.name} = new $wcm.VariantType<${this.typeParam}, ${this.typeParam}._ct, ${this.typeParam}._vt>([${this.cases.map(c => c !== undefined ? c : 'undefined').join(', ')}], ${this.typeParam}._ctor);`);
 			emitted.add(this.name);
 		}
 	}
@@ -403,18 +403,18 @@ namespace MetaModel {
 						case 'float64':
 							return `new ${qualifier}.Float64ArrayType()`;
 						default:
-							const typeParam = getTypeParam(type, symbols, imports);
+							const typeParam = getTypeParam(type, symbols, imports, 0);
 							return `new ${qualifier}.ListType<${typeParam}>(${baseType(type.kind.list)})`;
 					}
 				} else {
-					const typeParam = getTypeParam(type, symbols, imports);
+					const typeParam = getTypeParam(type, symbols, imports, 0);
 					return `new ${qualifier}.ListType<${typeParam}>(${fromReference(type.kind.list, scope, symbols, imports, usage)})`;
 				}
 			} else if (TypeKind.isTuple(type.kind)) {
-				const typeParam = getTypeParam(type, symbols, imports);
+				const typeParam = getTypeParam(type, symbols, imports, 0);
 				return `new ${qualifier}.TupleType<${typeParam}>([${type.kind.tuple.types.map(t => fromReference(t, scope, symbols, imports, usage)).join(', ')}])`;
 			} else if (TypeKind.isOption(type.kind)) {
-				const typeParam = getTypeParam(type, symbols, imports);
+				const typeParam = getTypeParam(type, symbols, imports, 0);
 				return `new ${qualifier}.OptionType<${typeParam}>(${fromReference(type.kind.option, scope, symbols, imports, usage)})`;
 			} else if (TypeKind.isResult(type.kind)) {
 				let ok: string = 'undefined';
@@ -426,7 +426,7 @@ namespace MetaModel {
 				if (result.err !== null) {
 					error = fromReference(result.err, scope, symbols, imports, usage);
 				}
-				return `new ${qualifier}.ResultType<${getTypeParam(type, symbols, imports)}>(${ok}, ${error})`;
+				return `new ${qualifier}.ResultType<${getTypeParam(type, symbols, imports, 0)}>(${ok}, ${error})`;
 			} else if (TypeKind.isTypeReference(type.kind)) {
 				return fromType(symbols.types[type.kind.type], scope, symbols, imports, usage);
 			}
@@ -465,31 +465,63 @@ namespace MetaModel {
 			}
 		}
 
-		function getTypeParam(type: Type, symbols: SymbolTable, imports: Imports): string {
+		function getTypeParam(type: Type, symbols: SymbolTable, imports: Imports, depth: number): string {
 			const kind = type.kind;
 			if (TypeKind.isBaseType(kind)) {
 				return TypeScript.TypeName.baseType(kind.type, imports);
 			} else if (TypeKind.isList(kind)) {
-				return getTypeParamFromReference(kind.list, symbols, imports);
+				if (typeof kind.list === 'string') {
+					switch (kind.list) {
+						case 'u8':
+							return 'Uint8Array';
+						case 'u16':
+							return 'Uint16Array';
+						case 'u32':
+							return 'Uint32Array';
+						case 'u64':
+							return 'BigUint64Array';
+						case 's8':
+							return 'Int8Array';
+						case 's16':
+							return 'Int16Array';
+						case 's32':
+							return 'Int32Array';
+						case 's64':
+							return 'BigInt64Array';
+						case 'float32':
+							return 'Float32Array';
+						case 'float64':
+							return 'Float64Array';
+						default:
+							const result = getTypeParamFromReference(kind.list, symbols, imports, depth + 1);
+							return depth === 0 ? result : `${result}[]`;
+					}
+				} else {
+					const result = getTypeParamFromReference(kind.list, symbols, imports, depth + 1);
+					return depth === 0 ? result : `${result}[]`;
+				}
 			} else if (TypeKind.isOption(kind)) {
-				return getTypeParamFromReference(kind.option, symbols, imports);
+				imports.addBaseType('option');
+				const result = `${getTypeParamFromReference(kind.option, symbols, imports, depth + 1)}`;
+				return depth === 0 ? result : `option<${result}>`;
 			} else if (TypeKind.isTuple(kind)) {
-				return `[${kind.tuple.types.map(t => getTypeParamFromReference(t, symbols, imports)).join(', ')}]`;
+				return `[${kind.tuple.types.map(t => getTypeParamFromReference(t, symbols, imports, depth + 1)).join(', ')}]`;
 			} else if (TypeKind.isResult(kind)) {
-				const ok = kind.result.ok !== null ? getTypeParamFromReference(kind.result.ok, symbols, imports) : 'void';
-				const error = kind.result.err !== null ? getTypeParamFromReference(kind.result.err, symbols, imports) : 'void';
-				return `${ok}, ${error}`;
+				const ok = kind.result.ok !== null ? getTypeParamFromReference(kind.result.ok, symbols, imports, depth + 1) : 'void';
+				const error = kind.result.err !== null ? getTypeParamFromReference(kind.result.err, symbols, imports, depth + 1) : 'void';
+				imports.addBaseType('result');
+				return depth === 0 ? `${ok}, ${error}` : `result<${ok}, ${error}>`;
 			} else if (type.name !== null) {
 				return Type.getFullyQualifiedNameFromType(type, symbols);
 			}
 			throw new Error(`Can't compute type parameter for type ${kind}`);
 		}
 
-		function getTypeParamFromReference(ref: TypeReference, symbols: SymbolTable, imports: Imports): string {
+		function getTypeParamFromReference(ref: TypeReference, symbols: SymbolTable, imports: Imports, depth: number): string {
 			if (TypeReference.isString(ref)) {
 				return TypeScript.TypeName.baseType(ref, imports);
 			} else {
-				return getTypeParam(symbols.types[ref], symbols, imports);
+				return getTypeParam(symbols.types[ref], symbols, imports, depth);
 			}
 		}
 	}
@@ -668,12 +700,15 @@ namespace TypeScript {
 			this.code.increaseIndent();
 			const names: string[] = [];
 			const types: (string | undefined)[] = [];
+			const metaTypes: (string | undefined)[] = [];
 			for (const item of kind.variant.cases) {
 				names.push(Names.asPropertyName(item.name));
 				if (item.type !== null) {
 					types.push(TypeName.fromReference(item.type, this.scope, this.symbols, this.code.imports, TypeUsage.property));
+					metaTypes.push(MetaModel.TypeName.fromReference(item.type, this.scope, this.symbols, this.code.imports, TypeUsage.property));
 				} else {
 					types.push(undefined);
+					metaTypes.push(undefined);
 				}
 			}
 
@@ -763,7 +798,7 @@ namespace TypeScript {
 			code.push(`}`);
 
 			code.push(`export type ${variantName} = ${names.map(value => `${variantName}.${value}`).join(' | ')};`);
-			this.metaModelEmitter = new MetaModel.VariantEmitter(variantName, `${this.qualifier}.${variantName}`, types);
+			this.metaModelEmitter = new MetaModel.VariantEmitter(variantName, `${this.qualifier}.${variantName}`, metaTypes);
 		}
 
 		private emitEnum(name: string, kind: Enum): void {

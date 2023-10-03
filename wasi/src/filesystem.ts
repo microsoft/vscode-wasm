@@ -1,5 +1,5 @@
 import * as $wcm from '@vscode/wasm-component-model';
-import type { u64, u32, result, u8 } from '@vscode/wasm-component-model';
+import type { u64, u32, result, option } from '@vscode/wasm-component-model';
 import { clocks } from './clocks';
 import { io } from './io';
 
@@ -852,7 +852,7 @@ export namespace filesystem {
 		export const PathFlags = new $wcm.FlagsType<filesystem.Types.PathFlags>(['symlinkFollow']);
 		export const OpenFlags = new $wcm.FlagsType<filesystem.Types.OpenFlags>(['create', 'directory', 'exclusive', 'truncate']);
 		export const Modes = new $wcm.FlagsType<filesystem.Types.Modes>(['readable', 'writable', 'executable']);
-		export const AccessType = new $wcm.VariantType<filesystem.Types.AccessType, filesystem.Types.AccessType._ct, filesystem.Types.AccessType._vt>([Modes, ], filesystem.Types.AccessType._ctor);
+		export const AccessType = new $wcm.VariantType<filesystem.Types.AccessType, filesystem.Types.AccessType._ct, filesystem.Types.AccessType._vt>([Modes, undefined], filesystem.Types.AccessType._ctor);
 		export const LinkCount = $wcm.u64;
 		export const DescriptorStat = new $wcm.RecordType<filesystem.Types.DescriptorStat>([
 			['type', DescriptorType],
@@ -862,7 +862,7 @@ export namespace filesystem {
 			['dataModificationTimestamp', Datetime],
 			['statusChangeTimestamp', Datetime],
 		]);
-		export const NewTimestamp = new $wcm.VariantType<filesystem.Types.NewTimestamp, filesystem.Types.NewTimestamp._ct, filesystem.Types.NewTimestamp._vt>([, , Datetime], filesystem.Types.NewTimestamp._ctor);
+		export const NewTimestamp = new $wcm.VariantType<filesystem.Types.NewTimestamp, filesystem.Types.NewTimestamp._ct, filesystem.Types.NewTimestamp._vt>([undefined, undefined, Datetime], filesystem.Types.NewTimestamp._ctor);
 		export const DirectoryEntry = new $wcm.RecordType<filesystem.Types.DirectoryEntry>([
 			['type', DescriptorType],
 			['name', $wcm.wstring],
@@ -914,7 +914,7 @@ export namespace filesystem {
 			['this_', Descriptor],
 			['length', Filesize],
 			['offset', Filesize],
-		], new $wcm.ResultType<[u8, boolean], filesystem.Types.ErrorCode>(new $wcm.TupleType<[u8, boolean]>([new $wcm.Uint8ArrayType(), $wcm.bool]), ErrorCode));
+		], new $wcm.ResultType<[Uint8Array, boolean], filesystem.Types.ErrorCode>(new $wcm.TupleType<[Uint8Array, boolean]>([new $wcm.Uint8ArrayType(), $wcm.bool]), ErrorCode));
 		export const write = new $wcm.FunctionType<typeof filesystem.Types.write>('write', 'write',[
 			['this_', Descriptor],
 			['buffer', new $wcm.Uint8ArrayType()],
@@ -1021,7 +1021,7 @@ export namespace filesystem {
 		], undefined);
 		export const readDirectoryEntry = new $wcm.FunctionType<typeof filesystem.Types.readDirectoryEntry>('readDirectoryEntry', 'read-directory-entry',[
 			['this_', DirectoryEntryStream],
-		], new $wcm.ResultType<filesystem.Types.DirectoryEntry, filesystem.Types.ErrorCode>(new $wcm.OptionType<filesystem.Types.DirectoryEntry>(DirectoryEntry), ErrorCode));
+		], new $wcm.ResultType<option<filesystem.Types.DirectoryEntry>, filesystem.Types.ErrorCode>(new $wcm.OptionType<filesystem.Types.DirectoryEntry>(DirectoryEntry), ErrorCode));
 		export const dropDirectoryEntryStream = new $wcm.FunctionType<typeof filesystem.Types.dropDirectoryEntryStream>('dropDirectoryEntryStream', 'drop-directory-entry-stream',[
 			['this_', DirectoryEntryStream],
 		], undefined);

@@ -1,5 +1,5 @@
 import * as $wcm from '@vscode/wasm-component-model';
-import type { u32, u64, result, u8 } from '@vscode/wasm-component-model';
+import type { u32, u64, result } from '@vscode/wasm-component-model';
 import { poll } from './poll';
 
 export namespace io {
@@ -303,11 +303,11 @@ export namespace io {
 		export const read = new $wcm.FunctionType<typeof io.Streams.read>('read', 'read',[
 			['this_', InputStream],
 			['len', $wcm.u64],
-		], new $wcm.ResultType<[u8, io.Streams.StreamStatus], void>(new $wcm.TupleType<[u8, io.Streams.StreamStatus]>([new $wcm.Uint8ArrayType(), StreamStatus]), undefined));
+		], new $wcm.ResultType<[Uint8Array, io.Streams.StreamStatus], void>(new $wcm.TupleType<[Uint8Array, io.Streams.StreamStatus]>([new $wcm.Uint8ArrayType(), StreamStatus]), undefined));
 		export const blockingRead = new $wcm.FunctionType<typeof io.Streams.blockingRead>('blockingRead', 'blocking-read',[
 			['this_', InputStream],
 			['len', $wcm.u64],
-		], new $wcm.ResultType<[u8, io.Streams.StreamStatus], void>(new $wcm.TupleType<[u8, io.Streams.StreamStatus]>([new $wcm.Uint8ArrayType(), StreamStatus]), undefined));
+		], new $wcm.ResultType<[Uint8Array, io.Streams.StreamStatus], void>(new $wcm.TupleType<[Uint8Array, io.Streams.StreamStatus]>([new $wcm.Uint8ArrayType(), StreamStatus]), undefined));
 		export const skip = new $wcm.FunctionType<typeof io.Streams.skip>('skip', 'skip',[
 			['this_', InputStream],
 			['len', $wcm.u64],

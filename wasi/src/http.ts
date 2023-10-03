@@ -1,5 +1,5 @@
 import * as $wcm from '@vscode/wasm-component-model';
-import type { u32, u16, u8, result } from '@vscode/wasm-component-model';
+import type { u32, option, u16, result } from '@vscode/wasm-component-model';
 import { poll } from './poll';
 import { io } from './io';
 
@@ -418,9 +418,9 @@ export namespace http {
 		export const InputStream = io.Streams.$.InputStream;
 		export const OutputStream = io.Streams.$.OutputStream;
 		export const Pollable = poll.Poll.$.Pollable;
-		export const Method = new $wcm.VariantType<http.Types.Method, http.Types.Method._ct, http.Types.Method._vt>([, , , , , , , , , string], http.Types.Method._ctor);
-		export const Scheme = new $wcm.VariantType<http.Types.Scheme, http.Types.Scheme._ct, http.Types.Scheme._vt>([, , string], http.Types.Scheme._ctor);
-		export const Error = new $wcm.VariantType<http.Types.Error, http.Types.Error._ct, http.Types.Error._vt>([string, string, string, string], http.Types.Error._ctor);
+		export const Method = new $wcm.VariantType<http.Types.Method, http.Types.Method._ct, http.Types.Method._vt>([undefined, undefined, undefined, undefined, undefined, undefined, undefined, undefined, undefined, $wcm.wstring], http.Types.Method._ctor);
+		export const Scheme = new $wcm.VariantType<http.Types.Scheme, http.Types.Scheme._ct, http.Types.Scheme._vt>([undefined, undefined, $wcm.wstring], http.Types.Scheme._ctor);
+		export const Error = new $wcm.VariantType<http.Types.Error, http.Types.Error._ct, http.Types.Error._vt>([$wcm.wstring, $wcm.wstring, $wcm.wstring, $wcm.wstring], http.Types.Error._ctor);
 		export const Fields = $wcm.u32;
 		export const Headers = Fields;
 		export const Trailers = Fields;
@@ -443,16 +443,16 @@ export namespace http {
 			['fields', Fields],
 		], undefined);
 		export const newFields = new $wcm.FunctionType<typeof http.Types.newFields>('newFields', 'new-fields',[
-			['entries', new $wcm.ListType<[string, u8]>(new $wcm.TupleType<[string, u8]>([$wcm.wstring, new $wcm.Uint8ArrayType()]))],
+			['entries', new $wcm.ListType<[string, Uint8Array]>(new $wcm.TupleType<[string, Uint8Array]>([$wcm.wstring, new $wcm.Uint8ArrayType()]))],
 		], Fields);
 		export const fieldsGet = new $wcm.FunctionType<typeof http.Types.fieldsGet>('fieldsGet', 'fields-get',[
 			['fields', Fields],
 			['name', $wcm.wstring],
-		], new $wcm.ListType<u8>(new $wcm.Uint8ArrayType()));
+		], new $wcm.ListType<Uint8Array>(new $wcm.Uint8ArrayType()));
 		export const fieldsSet = new $wcm.FunctionType<typeof http.Types.fieldsSet>('fieldsSet', 'fields-set',[
 			['fields', Fields],
 			['name', $wcm.wstring],
-			['value', new $wcm.ListType<u8>(new $wcm.Uint8ArrayType())],
+			['value', new $wcm.ListType<Uint8Array>(new $wcm.Uint8ArrayType())],
 		], undefined);
 		export const fieldsDelete = new $wcm.FunctionType<typeof http.Types.fieldsDelete>('fieldsDelete', 'fields-delete',[
 			['fields', Fields],
@@ -465,7 +465,7 @@ export namespace http {
 		], undefined);
 		export const fieldsEntries = new $wcm.FunctionType<typeof http.Types.fieldsEntries>('fieldsEntries', 'fields-entries',[
 			['fields', Fields],
-		], new $wcm.ListType<[string, u8]>(new $wcm.TupleType<[string, u8]>([$wcm.wstring, new $wcm.Uint8ArrayType()])));
+		], new $wcm.ListType<[string, Uint8Array]>(new $wcm.TupleType<[string, Uint8Array]>([$wcm.wstring, new $wcm.Uint8ArrayType()])));
 		export const fieldsClone = new $wcm.FunctionType<typeof http.Types.fieldsClone>('fieldsClone', 'fields-clone',[
 			['fields', Fields],
 		], Fields);
@@ -539,7 +539,7 @@ export namespace http {
 		], Pollable);
 		export const futureTrailersGet = new $wcm.FunctionType<typeof http.Types.futureTrailersGet>('futureTrailersGet', 'future-trailers-get',[
 			['response', FutureTrailers],
-		], new $wcm.OptionType<http.Types.Trailers, http.Types.Error>(new $wcm.ResultType<http.Types.Trailers, http.Types.Error>(Trailers, Error)));
+		], new $wcm.OptionType<result<http.Types.Trailers, http.Types.Error>>(new $wcm.ResultType<http.Types.Trailers, http.Types.Error>(Trailers, Error)));
 		export const dropOutgoingResponse = new $wcm.FunctionType<typeof http.Types.dropOutgoingResponse>('dropOutgoingResponse', 'drop-outgoing-response',[
 			['response', OutgoingResponse],
 		], undefined);
@@ -565,7 +565,7 @@ export namespace http {
 		], undefined);
 		export const futureIncomingResponseGet = new $wcm.FunctionType<typeof http.Types.futureIncomingResponseGet>('futureIncomingResponseGet', 'future-incoming-response-get',[
 			['f', FutureIncomingResponse],
-		], new $wcm.OptionType<u32, http.Types.Error, void>(new $wcm.ResultType<u32, http.Types.Error, void>(new $wcm.ResultType<u32, http.Types.Error>(IncomingResponse, Error), undefined)));
+		], new $wcm.OptionType<result<result<u32, http.Types.Error>, void>>(new $wcm.ResultType<result<u32, http.Types.Error>, void>(new $wcm.ResultType<u32, http.Types.Error>(IncomingResponse, Error), undefined)));
 		export const listenToFutureIncomingResponse = new $wcm.FunctionType<typeof http.Types.listenToFutureIncomingResponse>('listenToFutureIncomingResponse', 'listen-to-future-incoming-response',[
 			['f', FutureIncomingResponse],
 		], Pollable);

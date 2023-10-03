@@ -1,5 +1,5 @@
 import * as $wcm from '@vscode/wasm-component-model';
-import type { result, u32 } from '@vscode/wasm-component-model';
+import type { option, result, u32 } from '@vscode/wasm-component-model';
 import { io } from './io';
 
 export namespace cli {

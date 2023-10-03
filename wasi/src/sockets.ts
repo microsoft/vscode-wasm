@@ -1,5 +1,5 @@
 import * as $wcm from '@vscode/wasm-component-model';
-import type { u32, u8, u16, result, u64 } from '@vscode/wasm-component-model';
+import type { u32, u8, u16, option, result, u64 } from '@vscode/wasm-component-model';
 import { io } from './io';
 import { poll } from './poll';
 
@@ -960,7 +960,7 @@ export namespace sockets {
 		], new $wcm.ResultType<u32, sockets.IpNameLookup.ErrorCode>(ResolveAddressStream, ErrorCode));
 		export const resolveNextAddress = new $wcm.FunctionType<typeof sockets.IpNameLookup.resolveNextAddress>('resolveNextAddress', 'resolve-next-address',[
 			['this_', ResolveAddressStream],
-		], new $wcm.ResultType<sockets.IpNameLookup.IpAddress, sockets.IpNameLookup.ErrorCode>(new $wcm.OptionType<sockets.IpNameLookup.IpAddress>(IpAddress), ErrorCode));
+		], new $wcm.ResultType<option<sockets.IpNameLookup.IpAddress>, sockets.IpNameLookup.ErrorCode>(new $wcm.OptionType<sockets.IpNameLookup.IpAddress>(IpAddress), ErrorCode));
 		export const dropResolveAddressStream = new $wcm.FunctionType<typeof sockets.IpNameLookup.dropResolveAddressStream>('dropResolveAddressStream', 'drop-resolve-address-stream',[
 			['this_', ResolveAddressStream],
 		], undefined);
@@ -1108,7 +1108,7 @@ export namespace sockets {
 		export const receive = new $wcm.FunctionType<typeof sockets.Udp.receive>('receive', 'receive',[
 			['this_', UdpSocket],
 			['maxResults', $wcm.u64],
-		], new $wcm.ResultType<sockets.Udp.Datagram, sockets.Udp.ErrorCode>(new $wcm.ListType<sockets.Udp.Datagram>(Datagram), ErrorCode));
+		], new $wcm.ResultType<sockets.Udp.Datagram[], sockets.Udp.ErrorCode>(new $wcm.ListType<sockets.Udp.Datagram>(Datagram), ErrorCode));
 		export const send = new $wcm.FunctionType<typeof sockets.Udp.send>('send', 'send',[
 			['this_', UdpSocket],
 			['datagrams', new $wcm.ListType<sockets.Udp.Datagram>(Datagram)],
