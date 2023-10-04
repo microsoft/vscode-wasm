@@ -347,7 +347,7 @@ export abstract class AbstractTyPrinter<C = undefined> {
 		return this.symbols.types[type.kind.type];
 	}
 
-	protected updateContext(context: C, type: Type): C {
+	protected updateContext(context: C, _type: Type): C {
 		return context;
 	}
 }

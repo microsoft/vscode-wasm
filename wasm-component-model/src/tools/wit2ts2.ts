@@ -11,6 +11,7 @@ import {
 	AbstractTyPrinter, Type, TypeKind, TypeReference, VariantKind, World, BaseType, ListType, OptionType, ResultType, TupleType
 } from './wit-json';
 import { ResolvedOptions } from './options';
+import { number } from 'yargs';
 
 export function processDocument(document: Document, options: ResolvedOptions): void {
 	const regExp = new RegExp(options.package);
@@ -126,6 +127,7 @@ interface NameProvider {
 	asFileName(pkg: Package): string;
 	asImportName(pkg: Package): string;
 	asPackageName(pkg: Package): string;
+	asInterfaceName(iface: Interface): string;
 	asTypeName(type: Type): string;
 	asFunctionName(func: Func): string;
 	asParameterName(param: Param): string;
@@ -157,15 +159,15 @@ namespace _TypeScriptNameProvider {
 		return `${pkg.name.substring(index + 1)}`;
 	}
 
+	export function asInterfaceName(iface: Interface): string {
+		return _asTypeName(iface.name);
+	}
+
 	export function asTypeName(type: Type): string {
 		if (type.name === null) {
 			throw new Error(`Type ${JSON.stringify(type)} has no name.`);
 		}
-		const parts = type.name.split('-');
-		for (let i = 0; i < parts.length; i++) {
-			parts[i] = parts[i][0].toUpperCase() + parts[i].substring(1);
-		}
-		return parts.join('');
+		return _asTypeName(type.name);
 	}
 
 	export function asFunctionName(func: Func): string {
@@ -191,6 +193,14 @@ namespace _TypeScriptNameProvider {
 			return [undefined, name];
 		}
 		return [name.substring(0, index), name.substring(index + 1)];
+	}
+
+	function _asTypeName(name: string): string {
+		const parts = name.split('-');
+		for (let i = 0; i < parts.length; i++) {
+			parts[i] = parts[i][0].toUpperCase() + parts[i].substring(1);
+		}
+		return parts.join('');
 	}
 
 	function _asPropertyName(name: string): string {
@@ -225,6 +235,10 @@ namespace _WitNameProvider {
 			return pkg.name;
 		}
 		return `${pkg.name.substring(index + 1)}`;
+	}
+
+	export function asInterfaceName(iface: Interface): string {
+		return toTs(iface.name);
 	}
 
 	export function asTypeName(type: Type): string {
@@ -270,12 +284,10 @@ namespace _WitNameProvider {
 const WitNameProvider: NameProvider = _WitNameProvider;
 
 namespace TypeScript {
-	export class TyPrinter extends AbstractTyPrinter<undefined> {
+	export class TyPrinter extends AbstractTyPrinter<TypeUsage> {
 
 		private readonly nameProvider: NameProvider;
 		private readonly imports: Imports;
-
-		private usage: TypeUsage | undefined;
 
 		constructor (symbols: SymbolTable, nameProvider: NameProvider, imports: Imports) {
 			super(symbols);
@@ -284,28 +296,17 @@ namespace TypeScript {
 		}
 
 		public perform(type: Type, usage: TypeUsage): string {
-			if (this.usage !== undefined) {
-				throw new Error('Printer in usage.');
-			}
-			try {
-				this.usage = usage;
-				return this.print(type);
-			} finally {
-				this.usage = undefined;
-			}
+			return this.print(type, usage);
 		}
 
-		public print(type: Type): string {
-			if (this.usage === undefined) {
-				throw new Error('Usage is undefined');
-			}
-			if (type.name !== null && (this.usage === TypeUsage.parameter || this.usage === TypeUsage.function || this.usage === TypeUsage.property)) {
+		public print(type: Type, usage: TypeUsage): string {
+			if (type.name !== null && (usage === TypeUsage.parameter || usage === TypeUsage.function || usage === TypeUsage.property)) {
 				return this.nameProvider.asTypeName(type);
 			}
-			return super.print(type);
+			return super.print(type, usage);
 		}
 
-		public printList(type: ListType): string {
+		public printList(type: ListType, usage: TypeUsage): string {
 			const base = type.kind.list;
 			if (TypeReference.isString(base)) {
 				switch (base) {
@@ -333,27 +334,27 @@ namespace TypeScript {
 						return `${this.printBaseReference(base)}[]`;
 				}
 			} else {
-				return `${this.printTypeReference(base)}[]`;
+				return `${this.printTypeReference(base, usage)}[]`;
 			}
 		}
 
-		public printOption(type: OptionType): string {
-			return `${this.printTypeReference(type.kind.option)} | undefined`;
+		public printOption(type: OptionType, usage: TypeUsage): string {
+			return `${this.printTypeReference(type.kind.option, usage)} | undefined`;
 		}
 
-		public printTuple(type: TupleType): string {
-			return `[${type.kind.tuple.types.map(t => this.printTypeReference(t)).join(', ')}]`;
+		public printTuple(type: TupleType, usage: TypeUsage): string {
+			return `[${type.kind.tuple.types.map(t => this.printTypeReference(t, usage)).join(', ')}]`;
 		}
 
-		public printResult(type: ResultType): string {
+		public printResult(type: ResultType, usage: TypeUsage): string {
 			let ok: string = 'void';
 			const result = type.kind.result;
 			if (result.ok !== null) {
-				ok = this.printTypeReference(result.ok);
+				ok = this.printTypeReference(result.ok, usage);
 			}
 			let error: string = 'void';
 			if (result.err !== null) {
-				error = this.printTypeReference(result.err);
+				error = this.printTypeReference(result.err, usage);
 			}
 			this.imports.addBaseType('result');
 			return `result<${ok}, ${error}>`;
@@ -531,7 +532,7 @@ namespace MetaModel {
 		}
 	}
 
-	class TypeParamPrinter extends AbstractTyPrinter {
+	class TypeParamPrinter extends AbstractTyPrinter<number> {
 
 		private readonly nameProvider: NameProvider;
 		private readonly imports: Imports;
@@ -545,11 +546,26 @@ namespace MetaModel {
 			this.typeScriptPrinter = new TypeScript.TyPrinter(symbols, nameProvider, imports);
 		}
 
+		public perform(type: Type): string {
+			return this.print(type, 0);
+		}
+
+		public print(type: Type, depth: number): string {
+			try {
+				super.print(type, depth);
+			} catch (err) {
+				if (type.name !== null) {
+					Types.getFullyQualifiedNameFromType(type, symbols);
+					return this.nameProvider.asTypeName(type);
+				}
+			}
+		}
+
 		public printBaseReference(type: string): string {
 			return this.typeScriptPrinter.printBaseReference(type);
 		}
 
-		public printList(type: ListType): string {
+		public printList(type: ListType, depth: number): string {
 			const base = type.kind.list;
 			if (TypeReference.isString(base)) {
 				switch (base) {
@@ -574,13 +590,35 @@ namespace MetaModel {
 					case 'float64':
 						return 'Float64Array';
 					default:
-						const result = this.printTypeReference(type.kind.list);
+						const result = this.printTypeReference(type.kind.list, depth + 1);
 						return depth === 0 ? result : `${result}[]`;
 				}
 			} else {
-				const result = getTypeParamFromReference(kind.list, symbols, imports, depth + 1);
+				const result = this.printTypeReference(type.kind.list, depth + 1);
 				return depth === 0 ? result : `${result}[]`;
 			}
+		}
+
+		public printOption(type: OptionType, depth: number): string {
+			if (depth > 0) {
+				this.imports.addBaseType('option');
+			}
+			const result = `${this.printTypeReference(type.kind.option, depth + 1)}`;
+			return depth === 0 ? result : `option<${result}>`;
+		}
+
+		public printTuple(type: TupleType, depth: number): string {
+			return `[${type.kind.tuple.types.map(t => this.printTypeReference(t, depth + 1)).join(', ')}]`;
+		}
+
+		public printResult(type: ResultType, depth: number): string {
+			const result = type.kind.result;
+			const ok = result.ok !== null ? this.printTypeReference(result.ok, depth + 1) : 'void';
+			const error = result.err !== null ? this.printTypeReference(result.err, depth + 1) : 'void';
+			if (depth > 0) {
+				this.imports.addBaseType('result');
+			}
+			return depth === 0 ? `${ok}, ${error}` : `result<${ok}, ${error}>`;
 		}
 	}
 
@@ -708,6 +746,72 @@ namespace Names {
 			return [undefined, name];
 		}
 		return [name.substring(0, index), name.substring(index + 1)];
+	}
+}
+
+class Types {
+
+	private readonly symbols: SymbolTable2;
+
+	constructor(symbols: SymbolTable2) {
+		this.symbols = symbols;
+	}
+
+	getFullyQualifiedName(type: Type | TypeReference): string {
+		if (typeof type === 'string') {
+			return type;
+		} else if (typeof type === 'number') {
+			type = this.symbols.getType(type);
+		}
+	}
+}
+
+class Interfaces {
+
+	private readonly symbols: SymbolTable2;
+	private readonly nameProvider: NameProvider;
+
+	constructor(symbols: SymbolTable2, nameProvider: NameProvider) {
+		this.symbols = symbols;
+		this.nameProvider = nameProvider;
+	}
+
+	getFullyQualifiedName(iface: Interface | number): string {
+		if (typeof iface === 'number') {
+			iface = this.symbols.getInterface(iface);
+		}
+		const pkg = this.symbols.getPackage(iface.package);
+		return `${this.nameProvider.asPackageName(pkg)}.${this.nameProvider.asTypeName(iface.name)}`;
+	}
+}
+
+class SymbolTable2 {
+
+	private readonly document: Document;
+
+	public readonly types: Types;
+	public readonly	interfaces: Interfaces;
+
+	constructor(document: Document, nameProvider: NameProvider) {
+		this.document = document;
+		this.types = new Types(this);
+		this.interfaces = new Interfaces(this);
+	}
+
+	public getType(ref: number): Type {
+		return this.document.types[ref];
+	}
+
+	public getInterface(ref: number): Interface {
+		return this.document.interfaces[ref];
+	}
+
+	public getPackage(ref: number): Package {
+		return this.document.packages[ref];
+	}
+
+	public getWorld(ref: number): World {
+		return this.document.worlds[ref];
 	}
 }
 
