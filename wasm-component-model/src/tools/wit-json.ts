@@ -308,7 +308,7 @@ export abstract class AbstractTyPrinter<C = undefined> {
 
 	public print(type: Type, context: C): string {
 		if (Type.isBaseType(type)) {
-			return this.printBase(type, context);
+			return this.printBase(type, this.updateContext(context, type));
 		} else if (Type.isReferenceType(type)) {
 			return this.printReference(type, context);
 		} else if (Type.isListType(type)) {
@@ -345,6 +345,10 @@ export abstract class AbstractTyPrinter<C = undefined> {
 
 	public resolve(type: ReferenceType): Type {
 		return this.symbols.types[type.kind.type];
+	}
+
+	protected updateContext(context: C, type: Type): C {
+		return context;
 	}
 }
 

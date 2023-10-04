@@ -270,7 +270,7 @@ namespace _WitNameProvider {
 const WitNameProvider: NameProvider = _WitNameProvider;
 
 namespace TypeScript {
-	export class TyPrinter extends AbstractTyPrinter {
+	export class TyPrinter extends AbstractTyPrinter<undefined> {
 
 		private readonly nameProvider: NameProvider;
 		private readonly imports: Imports;
