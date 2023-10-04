@@ -66,4 +66,13 @@ export namespace poll {
 			['in_', new $wcm.ListType<u32>(Pollable)],
 		], new $wcm.ListType<boolean>($wcm.bool));
 	}
+	export namespace Poll._ {
+		const allFunctions = [$.dropPollable, $.pollOneoff];
+		export function createHost<T extends $wcm.Host>(service: poll.Poll, context: $wcm.Context): T {
+			return $wcm.Host.create<T>(allFunctions, service, context);
+		}
+		export function createService<T extends poll.Poll>(wasmInterface: $wcm.WasmInterface, context: $wcm.Context): T {
+			return $wcm.Service.create<T>(allFunctions, wasmInterface, context);
+		}
+	}
 }

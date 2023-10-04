@@ -1042,8 +1042,26 @@ export namespace filesystem {
 			['path', $wcm.wstring],
 		], new $wcm.ResultType<filesystem.Types.MetadataHashValue, filesystem.Types.ErrorCode>(MetadataHashValue, ErrorCode));
 	}
+	export namespace Types._ {
+		const allFunctions = [$.readViaStream, $.writeViaStream, $.appendViaStream, $.advise, $.syncData, $.getFlags, $.getType, $.setSize, $.setTimes, $.read, $.write, $.readDirectory, $.sync, $.createDirectoryAt, $.stat, $.statAt, $.setTimesAt, $.linkAt, $.openAt, $.readlinkAt, $.removeDirectoryAt, $.renameAt, $.symlinkAt, $.accessAt, $.unlinkFileAt, $.changeFilePermissionsAt, $.changeDirectoryPermissionsAt, $.lockShared, $.lockExclusive, $.tryLockShared, $.tryLockExclusive, $.unlock, $.dropDescriptor, $.readDirectoryEntry, $.dropDirectoryEntryStream, $.isSameObject, $.metadataHash, $.metadataHashAt];
+		export function createHost<T extends $wcm.Host>(service: filesystem.Types, context: $wcm.Context): T {
+			return $wcm.Host.create<T>(allFunctions, service, context);
+		}
+		export function createService<T extends filesystem.Types>(wasmInterface: $wcm.WasmInterface, context: $wcm.Context): T {
+			return $wcm.Service.create<T>(allFunctions, wasmInterface, context);
+		}
+	}
 	export namespace Preopens.$ {
 		export const Descriptor = filesystem.Types.$.Descriptor;
 		export const getDirectories = new $wcm.FunctionType<typeof filesystem.Preopens.getDirectories>('getDirectories', 'get-directories', [], new $wcm.ListType<[filesystem.Preopens.Descriptor, string]>(new $wcm.TupleType<[filesystem.Preopens.Descriptor, string]>([Descriptor, $wcm.wstring])));
+	}
+	export namespace Preopens._ {
+		const allFunctions = [$.getDirectories];
+		export function createHost<T extends $wcm.Host>(service: filesystem.Preopens, context: $wcm.Context): T {
+			return $wcm.Host.create<T>(allFunctions, service, context);
+		}
+		export function createService<T extends filesystem.Preopens>(wasmInterface: $wcm.WasmInterface, context: $wcm.Context): T {
+			return $wcm.Service.create<T>(allFunctions, wasmInterface, context);
+		}
 	}
 }

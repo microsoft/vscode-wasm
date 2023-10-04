@@ -574,6 +574,15 @@ export namespace http {
 			['f', FutureIncomingResponse],
 		], Pollable);
 	}
+	export namespace Types._ {
+		const allFunctions = [$.dropFields, $.newFields, $.fieldsGet, $.fieldsSet, $.fieldsDelete, $.fieldsAppend, $.fieldsEntries, $.fieldsClone, $.dropIncomingRequest, $.incomingRequestMethod, $.incomingRequestPathWithQuery, $.incomingRequestScheme, $.incomingRequestAuthority, $.incomingRequestHeaders, $.incomingRequestConsume, $.dropOutgoingRequest, $.newOutgoingRequest, $.outgoingRequestWrite, $.dropResponseOutparam, $.setResponseOutparam, $.dropIncomingResponse, $.incomingResponseStatus, $.incomingResponseHeaders, $.incomingResponseConsume, $.dropIncomingBody, $.incomingBodyStream, $.incomingBodyFinish, $.dropFutureTrailers, $.futureTrailersSubscribe, $.futureTrailersGet, $.dropOutgoingResponse, $.newOutgoingResponse, $.outgoingResponseWrite, $.dropOutgoingBody, $.outgoingBodyWrite, $.outgoingBodyFinish, $.dropFutureIncomingResponse, $.futureIncomingResponseGet, $.listenToFutureIncomingResponse];
+		export function createHost<T extends $wcm.Host>(service: http.Types, context: $wcm.Context): T {
+			return $wcm.Host.create<T>(allFunctions, service, context);
+		}
+		export function createService<T extends http.Types>(wasmInterface: $wcm.WasmInterface, context: $wcm.Context): T {
+			return $wcm.Service.create<T>(allFunctions, wasmInterface, context);
+		}
+	}
 	export namespace IncomingHandler.$ {
 		export const IncomingRequest = http.Types.$.IncomingRequest;
 		export const ResponseOutparam = http.Types.$.ResponseOutparam;
@@ -581,6 +590,15 @@ export namespace http {
 			['request', IncomingRequest],
 			['responseOut', ResponseOutparam],
 		], undefined);
+	}
+	export namespace IncomingHandler._ {
+		const allFunctions = [$.handle];
+		export function createHost<T extends $wcm.Host>(service: http.IncomingHandler, context: $wcm.Context): T {
+			return $wcm.Host.create<T>(allFunctions, service, context);
+		}
+		export function createService<T extends http.IncomingHandler>(wasmInterface: $wcm.WasmInterface, context: $wcm.Context): T {
+			return $wcm.Service.create<T>(allFunctions, wasmInterface, context);
+		}
 	}
 	export namespace OutgoingHandler.$ {
 		export const OutgoingRequest = http.Types.$.OutgoingRequest;
@@ -591,5 +609,14 @@ export namespace http {
 			['request', OutgoingRequest],
 			['options', new $wcm.OptionType<http.OutgoingHandler.RequestOptions>(RequestOptions)],
 		], new $wcm.ResultType<http.OutgoingHandler.FutureIncomingResponse, http.OutgoingHandler.Error>(FutureIncomingResponse, Error));
+	}
+	export namespace OutgoingHandler._ {
+		const allFunctions = [$.handle];
+		export function createHost<T extends $wcm.Host>(service: http.OutgoingHandler, context: $wcm.Context): T {
+			return $wcm.Host.create<T>(allFunctions, service, context);
+		}
+		export function createService<T extends http.OutgoingHandler>(wasmInterface: $wcm.WasmInterface, context: $wcm.Context): T {
+			return $wcm.Service.create<T>(allFunctions, wasmInterface, context);
+		}
 	}
 }

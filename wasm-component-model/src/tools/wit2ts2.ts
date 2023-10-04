@@ -178,11 +178,11 @@ namespace Names {
 	}
 }
 
-enum TypeUsage {
-	parameter,
-	function,
-	property,
-	typeDeclaration
+namespace Interfaces {
+	export function getFullyQualifiedName(iface: Interface, symbols: SymbolTable): string {
+		const pkg = symbols.packages[iface.package];
+		return `${Names.asPackageName(pkg)}.${Names.asTypeName(iface.name)}`;
+	}
 }
 
 namespace Type {
@@ -210,6 +210,13 @@ namespace Type {
 			return getFullyQualifiedNameFromType(symbols.types[reference], symbols);
 		}
 	}
+}
+
+enum TypeUsage {
+	parameter,
+	function,
+	property,
+	typeDeclaration
 }
 
 namespace MetaModel {
@@ -338,7 +345,7 @@ namespace MetaModel {
 	export class FunctionEmitter implements Emitter {
 
 		private readonly typeParam: string;
-		private readonly name: string;
+		public readonly name: string;
 		private readonly witName: string;
 		private readonly params: string[][];
 		private readonly result: string | undefined;
@@ -569,8 +576,10 @@ namespace TypeScript {
 			code.push(`export namespace ${pkgName} {`);
 			code.increaseIndent();
 
+			const interfaces: Map<string, Interface> = new Map();
 			for (const ref of Object.values(this.pkg.interfaces)) {
 				const iface = this.symbols.interfaces[ref];
+				interfaces.set(Names.asTypeName(iface.name), iface);
 				this.processInterface(iface, pkgName, code);
 				code.push('');
 			}
@@ -586,9 +595,34 @@ namespace TypeScript {
 				for (const [jface, emitters] of this.metaModelEmitters) {
 					code.push(`export namespace ${jface}.$ {`);
 					code.increaseIndent();
+					const functions: string[] = [];
 					for (const emitter of emitters) {
 						emitter.emit(code, emitted);
+						if (emitter instanceof MetaModel.FunctionEmitter) {
+							functions.push(emitter.name);
+						}
 					}
+					code.decreaseIndent();
+					code.push('}');
+
+					code.push(`export namespace ${jface}._ {`);
+					code.increaseIndent();
+
+					code.push(`const allFunctions = [${functions.map(name => `$.${name}`).join(', ')}];`);
+					const iface = interfaces.get(jface)!;
+					const ifaceName = Interfaces.getFullyQualifiedName(iface, this.symbols);
+					code.push(`export function createHost<T extends $wcm.Host>(service: ${ifaceName}, context: $wcm.Context): T {`);
+					code.increaseIndent();
+					code.push(`return $wcm.Host.create<T>(allFunctions, service, context);`);
+					code.decreaseIndent();
+					code.push(`}`);
+					code.push(`export function createService<T extends ${ifaceName}>(wasmInterface: $wcm.WasmInterface, context: $wcm.Context): T {`);
+					code.increaseIndent();
+					code.push(`return $wcm.Service.create<T>(allFunctions, wasmInterface, context);`);
+					code.decreaseIndent();
+					code.push(`}`);
+
+
 					code.decreaseIndent();
 					code.push('}');
 				}

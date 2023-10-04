@@ -46,4 +46,13 @@ export namespace logging {
 			['message', $wcm.wstring],
 		], undefined);
 	}
+	export namespace Logging._ {
+		const allFunctions = [$.log];
+		export function createHost<T extends $wcm.Host>(service: logging.Logging, context: $wcm.Context): T {
+			return $wcm.Host.create<T>(allFunctions, service, context);
+		}
+		export function createService<T extends logging.Logging>(wasmInterface: $wcm.WasmInterface, context: $wcm.Context): T {
+			return $wcm.Service.create<T>(allFunctions, wasmInterface, context);
+		}
+	}
 }

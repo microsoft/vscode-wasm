@@ -945,9 +945,27 @@ export namespace sockets {
 			['this_', Network],
 		], undefined);
 	}
+	export namespace Network._ {
+		const allFunctions = [$.dropNetwork];
+		export function createHost<T extends $wcm.Host>(service: sockets.Network, context: $wcm.Context): T {
+			return $wcm.Host.create<T>(allFunctions, service, context);
+		}
+		export function createService<T extends sockets.Network>(wasmInterface: $wcm.WasmInterface, context: $wcm.Context): T {
+			return $wcm.Service.create<T>(allFunctions, wasmInterface, context);
+		}
+	}
 	export namespace InstanceNetwork.$ {
 		export const Network = sockets.Network.$.Network;
 		export const instanceNetwork = new $wcm.FunctionType<typeof sockets.InstanceNetwork.instanceNetwork>('instanceNetwork', 'instance-network', [], Network);
+	}
+	export namespace InstanceNetwork._ {
+		const allFunctions = [$.instanceNetwork];
+		export function createHost<T extends $wcm.Host>(service: sockets.InstanceNetwork, context: $wcm.Context): T {
+			return $wcm.Host.create<T>(allFunctions, service, context);
+		}
+		export function createService<T extends sockets.InstanceNetwork>(wasmInterface: $wcm.WasmInterface, context: $wcm.Context): T {
+			return $wcm.Service.create<T>(allFunctions, wasmInterface, context);
+		}
 	}
 	export namespace IpNameLookup.$ {
 		export const Pollable = poll.Poll.$.Pollable;
@@ -971,6 +989,15 @@ export namespace sockets {
 		export const subscribe = new $wcm.FunctionType<typeof sockets.IpNameLookup.subscribe>('subscribe', 'subscribe',[
 			['this_', ResolveAddressStream],
 		], Pollable);
+	}
+	export namespace IpNameLookup._ {
+		const allFunctions = [$.resolveAddresses, $.resolveNextAddress, $.dropResolveAddressStream, $.subscribe];
+		export function createHost<T extends $wcm.Host>(service: sockets.IpNameLookup, context: $wcm.Context): T {
+			return $wcm.Host.create<T>(allFunctions, service, context);
+		}
+		export function createService<T extends sockets.IpNameLookup>(wasmInterface: $wcm.WasmInterface, context: $wcm.Context): T {
+			return $wcm.Service.create<T>(allFunctions, wasmInterface, context);
+		}
 	}
 	export namespace Tcp.$ {
 		export const InputStream = io.Streams.$.InputStream;
@@ -1073,6 +1100,15 @@ export namespace sockets {
 			['this_', TcpSocket],
 		], undefined);
 	}
+	export namespace Tcp._ {
+		const allFunctions = [$.startBind, $.finishBind, $.startConnect, $.finishConnect, $.startListen, $.finishListen, $.accept, $.localAddress, $.remoteAddress, $.addressFamily, $.ipv6Only, $.setIpv6Only, $.setListenBacklogSize, $.keepAlive, $.setKeepAlive, $.noDelay, $.setNoDelay, $.unicastHopLimit, $.setUnicastHopLimit, $.receiveBufferSize, $.setReceiveBufferSize, $.sendBufferSize, $.setSendBufferSize, $.subscribe, $.shutdown, $.dropTcpSocket];
+		export function createHost<T extends $wcm.Host>(service: sockets.Tcp, context: $wcm.Context): T {
+			return $wcm.Host.create<T>(allFunctions, service, context);
+		}
+		export function createService<T extends sockets.Tcp>(wasmInterface: $wcm.WasmInterface, context: $wcm.Context): T {
+			return $wcm.Service.create<T>(allFunctions, wasmInterface, context);
+		}
+	}
 	export namespace TcpCreateSocket.$ {
 		export const Network = sockets.Network.$.Network;
 		export const ErrorCode = sockets.Network.$.ErrorCode;
@@ -1081,6 +1117,15 @@ export namespace sockets {
 		export const createTcpSocket = new $wcm.FunctionType<typeof sockets.TcpCreateSocket.createTcpSocket>('createTcpSocket', 'create-tcp-socket',[
 			['addressFamily', IpAddressFamily],
 		], new $wcm.ResultType<sockets.TcpCreateSocket.TcpSocket, sockets.TcpCreateSocket.ErrorCode>(TcpSocket, ErrorCode));
+	}
+	export namespace TcpCreateSocket._ {
+		const allFunctions = [$.createTcpSocket];
+		export function createHost<T extends $wcm.Host>(service: sockets.TcpCreateSocket, context: $wcm.Context): T {
+			return $wcm.Host.create<T>(allFunctions, service, context);
+		}
+		export function createService<T extends sockets.TcpCreateSocket>(wasmInterface: $wcm.WasmInterface, context: $wcm.Context): T {
+			return $wcm.Service.create<T>(allFunctions, wasmInterface, context);
+		}
 	}
 	export namespace Udp.$ {
 		export const Pollable = poll.Poll.$.Pollable;
@@ -1161,6 +1206,15 @@ export namespace sockets {
 			['this_', UdpSocket],
 		], undefined);
 	}
+	export namespace Udp._ {
+		const allFunctions = [$.startBind, $.finishBind, $.startConnect, $.finishConnect, $.receive, $.send, $.localAddress, $.remoteAddress, $.addressFamily, $.ipv6Only, $.setIpv6Only, $.unicastHopLimit, $.setUnicastHopLimit, $.receiveBufferSize, $.setReceiveBufferSize, $.sendBufferSize, $.setSendBufferSize, $.subscribe, $.dropUdpSocket];
+		export function createHost<T extends $wcm.Host>(service: sockets.Udp, context: $wcm.Context): T {
+			return $wcm.Host.create<T>(allFunctions, service, context);
+		}
+		export function createService<T extends sockets.Udp>(wasmInterface: $wcm.WasmInterface, context: $wcm.Context): T {
+			return $wcm.Service.create<T>(allFunctions, wasmInterface, context);
+		}
+	}
 	export namespace UdpCreateSocket.$ {
 		export const Network = sockets.Network.$.Network;
 		export const ErrorCode = sockets.Network.$.ErrorCode;
@@ -1169,5 +1223,14 @@ export namespace sockets {
 		export const createUdpSocket = new $wcm.FunctionType<typeof sockets.UdpCreateSocket.createUdpSocket>('createUdpSocket', 'create-udp-socket',[
 			['addressFamily', IpAddressFamily],
 		], new $wcm.ResultType<sockets.UdpCreateSocket.UdpSocket, sockets.UdpCreateSocket.ErrorCode>(UdpSocket, ErrorCode));
+	}
+	export namespace UdpCreateSocket._ {
+		const allFunctions = [$.createUdpSocket];
+		export function createHost<T extends $wcm.Host>(service: sockets.UdpCreateSocket, context: $wcm.Context): T {
+			return $wcm.Host.create<T>(allFunctions, service, context);
+		}
+		export function createService<T extends sockets.UdpCreateSocket>(wasmInterface: $wcm.WasmInterface, context: $wcm.Context): T {
+			return $wcm.Service.create<T>(allFunctions, wasmInterface, context);
+		}
 	}
 }

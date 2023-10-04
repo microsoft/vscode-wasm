@@ -195,6 +195,15 @@ export namespace clocks {
 			['absolute', $wcm.bool],
 		], Pollable);
 	}
+	export namespace MonotonicClock._ {
+		const allFunctions = [$.now, $.resolution, $.subscribe];
+		export function createHost<T extends $wcm.Host>(service: clocks.MonotonicClock, context: $wcm.Context): T {
+			return $wcm.Host.create<T>(allFunctions, service, context);
+		}
+		export function createService<T extends clocks.MonotonicClock>(wasmInterface: $wcm.WasmInterface, context: $wcm.Context): T {
+			return $wcm.Service.create<T>(allFunctions, wasmInterface, context);
+		}
+	}
 	export namespace WallClock.$ {
 		export const Datetime = new $wcm.RecordType<clocks.WallClock.Datetime>([
 			['seconds', $wcm.u64],
@@ -202,6 +211,15 @@ export namespace clocks {
 		]);
 		export const now = new $wcm.FunctionType<typeof clocks.WallClock.now>('now', 'now', [], Datetime);
 		export const resolution = new $wcm.FunctionType<typeof clocks.WallClock.resolution>('resolution', 'resolution', [], Datetime);
+	}
+	export namespace WallClock._ {
+		const allFunctions = [$.now, $.resolution];
+		export function createHost<T extends $wcm.Host>(service: clocks.WallClock, context: $wcm.Context): T {
+			return $wcm.Host.create<T>(allFunctions, service, context);
+		}
+		export function createService<T extends clocks.WallClock>(wasmInterface: $wcm.WasmInterface, context: $wcm.Context): T {
+			return $wcm.Service.create<T>(allFunctions, wasmInterface, context);
+		}
 	}
 	export namespace Timezone.$ {
 		export const Datetime = clocks.WallClock.$.Datetime;
@@ -222,5 +240,14 @@ export namespace clocks {
 		export const dropTimezone = new $wcm.FunctionType<typeof clocks.Timezone.dropTimezone>('dropTimezone', 'drop-timezone',[
 			['this_', Timezone],
 		], undefined);
+	}
+	export namespace Timezone._ {
+		const allFunctions = [$.display, $.utcOffset, $.dropTimezone];
+		export function createHost<T extends $wcm.Host>(service: clocks.Timezone, context: $wcm.Context): T {
+			return $wcm.Host.create<T>(allFunctions, service, context);
+		}
+		export function createService<T extends clocks.Timezone>(wasmInterface: $wcm.WasmInterface, context: $wcm.Context): T {
+			return $wcm.Service.create<T>(allFunctions, wasmInterface, context);
+		}
 	}
 }

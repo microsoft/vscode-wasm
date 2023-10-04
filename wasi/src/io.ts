@@ -368,4 +368,13 @@ export namespace io {
 			['this_', OutputStream],
 		], undefined);
 	}
+	export namespace Streams._ {
+		const allFunctions = [$.read, $.blockingRead, $.skip, $.blockingSkip, $.subscribeToInputStream, $.dropInputStream, $.checkWrite, $.write, $.blockingWriteAndFlush, $.flush, $.blockingFlush, $.subscribeToOutputStream, $.writeZeroes, $.splice, $.blockingSplice, $.forward, $.dropOutputStream];
+		export function createHost<T extends $wcm.Host>(service: io.Streams, context: $wcm.Context): T {
+			return $wcm.Host.create<T>(allFunctions, service, context);
+		}
+		export function createService<T extends io.Streams>(wasmInterface: $wcm.WasmInterface, context: $wcm.Context): T {
+			return $wcm.Service.create<T>(allFunctions, wasmInterface, context);
+		}
+	}
 }
