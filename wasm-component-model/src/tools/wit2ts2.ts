@@ -6,7 +6,10 @@
 import * as fs from 'node:fs';
 import * as path from 'node:path';
 
-import { Document, Documentation, Enum, Flags, Func, Interface, Owner, Package, Record, Type, TypeKind, TypeReference, Variant, World } from './wit-json';
+import {
+	Document, Documentation, EnumCase, EnumKind, Flag, FlagsKind, Func, Interface, Owner, Package, Param, RecordKind,
+	AbstractTyPrinter, Type, TypeKind, TypeReference, VariantKind, World, BaseType, ListType, OptionType, ResultType, TupleType
+} from './wit-json';
 import { ResolvedOptions } from './options';
 
 export function processDocument(document: Document, options: ResolvedOptions): void {
@@ -119,6 +122,536 @@ class Code {
 
 type SymbolTable = Pick<Document, 'interfaces' | 'types' | 'packages' | 'worlds'>;
 
+interface NameProvider {
+	asFileName(pkg: Package): string;
+	asImportName(pkg: Package): string;
+	asPackageName(pkg: Package): string;
+	asTypeName(type: Type): string;
+	asFunctionName(func: Func): string;
+	asParameterName(param: Param): string;
+	asEnumCaseName(c: EnumCase): string;
+	asFlagName(flag: Flag): string;
+	getNamespaceAndName(pkg: Package): [string | undefined, string];
+}
+
+namespace _TypeScriptNameProvider {
+	const keywords: Map<string, string> = new Map<string, string>([
+		['this', 'this_'],
+		['in', 'in_'],
+		['delete', 'delete_']
+	]);
+
+	export function asFileName(pkg: Package): string {
+		return `${asPackageName(pkg)}.ts`;
+	}
+
+	export function asImportName(pkg: Package): string {
+		return asPackageName(pkg);
+	}
+
+	export function asPackageName(pkg: Package): string {
+		const index = pkg.name.indexOf(':');
+		if (index === -1) {
+			return pkg.name;
+		}
+		return `${pkg.name.substring(index + 1)}`;
+	}
+
+	export function asTypeName(type: Type): string {
+		if (type.name === null) {
+			throw new Error(`Type ${JSON.stringify(type)} has no name.`);
+		}
+		const parts = type.name.split('-');
+		for (let i = 0; i < parts.length; i++) {
+			parts[i] = parts[i][0].toUpperCase() + parts[i].substring(1);
+		}
+		return parts.join('');
+	}
+
+	export function asFunctionName(func: Func): string {
+		return _asPropertyName(func.name);
+	}
+
+	export function asParameterName(param: Param): string {
+		return _asPropertyName(param.name);
+	}
+
+	export function asEnumCaseName(c: EnumCase): string {
+		return _asPropertyName(c.name);
+	}
+
+	export function asFlagName(flag: Flag): string {
+		return _asPropertyName(flag.name);
+	}
+
+	export function getNamespaceAndName(pkg: Package): [string | undefined, string] {
+		const name = pkg.name;
+		const index = name.indexOf(':');
+		if (index === -1) {
+			return [undefined, name];
+		}
+		return [name.substring(0, index), name.substring(index + 1)];
+	}
+
+	function _asPropertyName(name: string): string {
+		const parts = name.split('-');
+		for (let i = 1; i < parts.length; i++) {
+			parts[i] = parts[i][0].toUpperCase() + parts[i].substring(1);
+		}
+		const result = parts.join('');
+		return keywords.get(result) ?? result;
+	}
+}
+const TypeScriptNameProvider: NameProvider = _TypeScriptNameProvider;
+
+namespace _WitNameProvider {
+	const keywords: Map<string, string> = new Map<string, string>([
+		['this', 'this_'],
+		['in', 'in_'],
+		['delete', 'delete_']
+	]);
+
+	export function asFileName(pkg: Package): string {
+		return `${asPackageName(pkg)}.ts`;
+	}
+
+	export function asImportName(pkg: Package): string {
+		return asPackageName(pkg);
+	}
+
+	export function asPackageName(pkg: Package): string {
+		const index = pkg.name.indexOf(':');
+		if (index === -1) {
+			return pkg.name;
+		}
+		return `${pkg.name.substring(index + 1)}`;
+	}
+
+	export function asTypeName(type: Type): string {
+		if (type.name === null) {
+			throw new Error(`Type ${JSON.stringify(type)} has no name.`);
+		}
+		return toTs(type.name);
+	}
+
+	export function asFunctionName(func: Func): string {
+		return toTs(func.name);
+	}
+
+	export function asParameterName(param: Param): string {
+		return toTs(param.name);
+	}
+
+	export function asEnumCaseName(c: EnumCase): string {
+		return toTs(c.name);
+	}
+
+	export function asFlagName(flag: Flag): string {
+		return toTs(flag.name);
+	}
+
+	export function getNamespaceAndName(pkg: Package): [string | undefined, string] {
+		const name = pkg.name;
+		const index = name.indexOf(':');
+		if (index === -1) {
+			return [undefined, name];
+		}
+		return [name.substring(0, index), name.substring(index + 1)];
+	}
+
+	function toTs(name: string): string {
+		let result = name.replace(/-/g, '_');
+		if (result[0] === '%') {
+			result = result.substring(1);
+		}
+		return keywords.get(result) ?? result;
+	}
+}
+const WitNameProvider: NameProvider = _WitNameProvider;
+
+namespace TypeScript {
+	export class TyPrinter extends AbstractTyPrinter {
+
+		private readonly nameProvider: NameProvider;
+		private readonly imports: Imports;
+
+		private usage: TypeUsage | undefined;
+
+		constructor (symbols: SymbolTable, nameProvider: NameProvider, imports: Imports) {
+			super(symbols);
+			this.nameProvider = nameProvider;
+			this.imports = imports;
+		}
+
+		public perform(type: Type, usage: TypeUsage): string {
+			if (this.usage !== undefined) {
+				throw new Error('Printer in usage.');
+			}
+			try {
+				this.usage = usage;
+				return this.print(type);
+			} finally {
+				this.usage = undefined;
+			}
+		}
+
+		public print(type: Type): string {
+			if (this.usage === undefined) {
+				throw new Error('Usage is undefined');
+			}
+			if (type.name !== null && (this.usage === TypeUsage.parameter || this.usage === TypeUsage.function || this.usage === TypeUsage.property)) {
+				return this.nameProvider.asTypeName(type);
+			}
+			return super.print(type);
+		}
+
+		public printList(type: ListType): string {
+			const base = type.kind.list;
+			if (TypeReference.isString(base)) {
+				switch (base) {
+					case 'u8':
+						return 'Uint8Array';
+					case 'u16':
+						return 'Uint16Array';
+					case 'u32':
+						return 'Uint32Array';
+					case 'u64':
+						return 'BigUint64Array';
+					case 's8':
+						return 'Int8Array';
+					case 's16':
+						return 'Int16Array';
+					case 's32':
+						return 'Int32Array';
+					case 's64':
+						return 'BigInt64Array';
+					case 'float32':
+						return 'Float32Array';
+					case 'float64':
+						return 'Float64Array';
+					default:
+						return `${this.printBaseReference(base)}[]`;
+				}
+			} else {
+				return `${this.printTypeReference(base)}[]`;
+			}
+		}
+
+		public printOption(type: OptionType): string {
+			return `${this.printTypeReference(type.kind.option)} | undefined`;
+		}
+
+		public printTuple(type: TupleType): string {
+			return `[${type.kind.tuple.types.map(t => this.printTypeReference(t)).join(', ')}]`;
+		}
+
+		public printResult(type: ResultType): string {
+			let ok: string = 'void';
+			const result = type.kind.result;
+			if (result.ok !== null) {
+				ok = this.printTypeReference(result.ok);
+			}
+			let error: string = 'void';
+			if (result.err !== null) {
+				error = this.printTypeReference(result.err);
+			}
+			this.imports.addBaseType('result');
+			return `result<${ok}, ${error}>`;
+		}
+
+		public printBaseReference(base: string): string {
+			switch (base) {
+				case 'u8':
+					this.imports.addBaseType('u8');
+					return 'u8';
+				case 'u16':
+					this.imports.addBaseType('u16');
+					return 'u16';
+				case 'u32':
+					this.imports.addBaseType('u32');
+					return 'u32';
+				case 'u64':
+					this.imports.addBaseType('u64');
+					return 'u64';
+				case 's8':
+					this.imports.addBaseType('s8');
+					return 's8';
+				case 's16':
+					this.imports.addBaseType('s16');
+					return 's16';
+				case 's32':
+					this.imports.addBaseType('s32');
+					return 's32';
+				case 's64':
+					this.imports.addBaseType('s64');
+					return 's64';
+				case 'f32':
+					this.imports.addBaseType('f32');
+					return 'f32';
+				case 'f64':
+					this.imports.addBaseType('f64');
+					return 'f64';
+				case 'bool':
+					return 'boolean';
+				case 'string':
+					return 'string';
+				default:
+					throw new Error(`Unknown base type ${base}`);
+			}
+		}
+	}
+}
+
+namespace MetaModel {
+
+	const qualifier = '$wcm';
+	function qualify(name: string): string {
+		return `${qualifier}.${name}`;
+	}
+
+	export class TyPrinter extends AbstractTyPrinter {
+
+		private readonly nameProvider: NameProvider;
+		private readonly imports: Imports;
+
+		private typeParamPrinter: TypeParamPrinter;
+		private usage: TypeUsage | undefined;
+
+		constructor (symbols: SymbolTable, nameProvider: NameProvider, imports: Imports) {
+			super(symbols);
+			this.nameProvider = nameProvider;
+			this.imports = imports;
+			this.typeParamPrinter = new TypeParamPrinter(symbols, nameProvider, imports);
+		}
+
+		public perform(type: Type, usage: TypeUsage): string {
+			if (this.usage !== undefined) {
+				throw new Error('Printer in usage.');
+			}
+			try {
+				this.usage = usage;
+				return this.print(type);
+			} finally {
+				this.usage = undefined;
+			}
+		}
+
+		public print(type: Type): string {
+			if (this.usage === undefined) {
+				throw new Error('Usage is undefined');
+			}
+			if (type.name !== null && (this.usage === TypeUsage.parameter || this.usage === TypeUsage.function || this.usage === TypeUsage.property)) {
+				return this.nameProvider.asTypeName(type);
+			}
+			return super.print(type);
+		}
+
+		public printList(type: ListType): string {
+			const base = type.kind.list;
+			if (TypeReference.isString(base)) {
+				switch (base) {
+					case 'u8':
+						return 'Uint8Array';
+					case 'u16':
+						return 'Uint16Array';
+					case 'u32':
+						return 'Uint32Array';
+					case 'u64':
+						return 'BigUint64Array';
+					case 's8':
+						return 'Int8Array';
+					case 's16':
+						return 'Int16Array';
+					case 's32':
+						return 'Int32Array';
+					case 's64':
+						return 'BigInt64Array';
+					case 'float32':
+						return 'Float32Array';
+					case 'float64':
+						return 'Float64Array';
+					default:
+						return `${this.printBaseReference(base)}[]`;
+				}
+			} else {
+				return `${this.printTypeReference(base)}[]`;
+			}
+		}
+
+		public printOption(type: OptionType): string {
+			return `${this.printTypeReference(type.kind.option)} | undefined`;
+		}
+
+		public printTuple(type: TupleType): string {
+			return `[${type.kind.tuple.types.map(t => this.printTypeReference(t)).join(', ')}]`;
+		}
+
+		public printResult(type: ResultType): string {
+			let ok: string = 'undefined';
+			const result = type.kind.result;
+			if (result.ok !== null) {
+				ok = this.printTypeReference(result.ok);
+			}
+			let error: string = 'undefined';
+			if (result.err !== null) {
+				error = this.printTypeReference(result.err);
+			}
+			return `new ${qualifier}.ResultType<${this.typeParamPrinter.print(type)}>(${ok}, ${error})`;
+		}
+
+		public printBaseReference(base: string): string {
+			switch (base) {
+				case 'u8':
+					return qualify('u8');
+				case 'u16':
+					return qualify('u16');
+				case 'u32':
+					return qualify('u32');
+				case 'u64':
+					return qualify('u64');
+				case 's8':
+					return qualify('s8');
+				case 's16':
+					return qualify('s16');
+				case 's32':
+					return qualify('s32');
+				case 's64':
+					return qualify('s64');
+				case 'f32':
+					return qualify('f32');
+				case 'f64':
+					return qualify('f64');
+				case 'bool':
+					return qualify('bool');
+				case 'string':
+					return qualify('wstring');
+				default:
+					throw new Error(`Unknown base type ${base}`);
+			}
+		}
+	}
+
+	class TypeParamPrinter extends AbstractTyPrinter {
+
+		private readonly nameProvider: NameProvider;
+		private readonly imports: Imports;
+
+		private typeScriptPrinter: TypeScript.TyPrinter;
+
+		constructor(symbols: SymbolTable, nameProvider: NameProvider, imports: Imports) {
+			super(symbols);
+			this.nameProvider = nameProvider;
+			this.imports = imports;
+			this.typeScriptPrinter = new TypeScript.TyPrinter(symbols, nameProvider, imports);
+		}
+
+		public printBaseReference(type: string): string {
+			return this.typeScriptPrinter.printBaseReference(type);
+		}
+
+		public printList(type: ListType): string {
+			const base = type.kind.list;
+			if (TypeReference.isString(base)) {
+				switch (base) {
+					case 'u8':
+						return 'Uint8Array';
+					case 'u16':
+						return 'Uint16Array';
+					case 'u32':
+						return 'Uint32Array';
+					case 'u64':
+						return 'BigUint64Array';
+					case 's8':
+						return 'Int8Array';
+					case 's16':
+						return 'Int16Array';
+					case 's32':
+						return 'Int32Array';
+					case 's64':
+						return 'BigInt64Array';
+					case 'float32':
+						return 'Float32Array';
+					case 'float64':
+						return 'Float64Array';
+					default:
+						const result = this.printTypeReference(type.kind.list);
+						return depth === 0 ? result : `${result}[]`;
+				}
+			} else {
+				const result = getTypeParamFromReference(kind.list, symbols, imports, depth + 1);
+				return depth === 0 ? result : `${result}[]`;
+			}
+		}
+	}
+
+
+	function getTypeParam(type: Type, symbols: SymbolTable, imports: Imports, depth: number): string {
+		const kind = type.kind;
+		if (TypeKind.isBaseType(kind)) {
+			return TypeScript.TypeName.baseType(kind.type, imports);
+		} else if (TypeKind.isList(kind)) {
+			if (typeof kind.list === 'string') {
+				switch (kind.list) {
+					case 'u8':
+						return 'Uint8Array';
+					case 'u16':
+						return 'Uint16Array';
+					case 'u32':
+						return 'Uint32Array';
+					case 'u64':
+						return 'BigUint64Array';
+					case 's8':
+						return 'Int8Array';
+					case 's16':
+						return 'Int16Array';
+					case 's32':
+						return 'Int32Array';
+					case 's64':
+						return 'BigInt64Array';
+					case 'float32':
+						return 'Float32Array';
+					case 'float64':
+						return 'Float64Array';
+					default:
+						const result = getTypeParamFromReference(kind.list, symbols, imports, depth + 1);
+						return depth === 0 ? result : `${result}[]`;
+				}
+			} else {
+				const result = getTypeParamFromReference(kind.list, symbols, imports, depth + 1);
+				return depth === 0 ? result : `${result}[]`;
+			}
+		} else if (TypeKind.isOption(kind)) {
+			if (depth > 0) {
+				imports.addBaseType('option');
+			}
+			const result = `${getTypeParamFromReference(kind.option, symbols, imports, depth + 1)}`;
+			return depth === 0 ? result : `option<${result}>`;
+		} else if (TypeKind.isTuple(kind)) {
+			return `[${kind.tuple.types.map(t => getTypeParamFromReference(t, symbols, imports, depth + 1)).join(', ')}]`;
+		} else if (TypeKind.isResult(kind)) {
+			const ok = kind.result.ok !== null ? getTypeParamFromReference(kind.result.ok, symbols, imports, depth + 1) : 'void';
+			const error = kind.result.err !== null ? getTypeParamFromReference(kind.result.err, symbols, imports, depth + 1) : 'void';
+			if (depth > 0) {
+				imports.addBaseType('result');
+			}
+			return depth === 0 ? `${ok}, ${error}` : `result<${ok}, ${error}>`;
+		} else if (type.name !== null) {
+			return Types.getFullyQualifiedNameFromType(type, symbols);
+		}
+		throw new Error(`Can't compute type parameter for type ${kind}`);
+	}
+
+	function getTypeParamFromReference(ref: TypeReference, symbols: SymbolTable, imports: Imports, depth: number): string {
+		if (TypeReference.isString(ref)) {
+			return TypeScript.TypeName.baseType(ref, imports);
+		} else {
+			return getTypeParam(symbols.types[ref], symbols, imports, depth);
+		}
+	}
+
+}
+
+
 namespace Names {
 
 	const keywords: Map<string, string> = new Map<string, string>([
@@ -185,7 +718,7 @@ namespace Interfaces {
 	}
 }
 
-namespace Type {
+namespace Types {
 	export function getFullyQualifiedNameFromType(type: Type, symbols: SymbolTable): string {
 		let name: string | undefined = type.name !== null ? Names.asTypeName(type.name) : undefined;
 		if (name === undefined) {
@@ -527,7 +1060,7 @@ namespace MetaModel {
 				}
 				return depth === 0 ? `${ok}, ${error}` : `result<${ok}, ${error}>`;
 			} else if (type.name !== null) {
-				return Type.getFullyQualifiedNameFromType(type, symbols);
+				return Types.getFullyQualifiedNameFromType(type, symbols);
 			}
 			throw new Error(`Can't compute type parameter for type ${kind}`);
 		}
@@ -715,7 +1248,7 @@ namespace TypeScript {
 			}
 		}
 
-		private emitRecord(name: string, kind: Record): void {
+		private emitRecord(name: string, kind: RecordKind): void {
 			const tsName = Names.asTypeName(name);
 			this.code.push(`export interface ${Names.asTypeName(name)} extends $wcm.JRecord {`);
 			this.code.increaseIndent();
@@ -734,7 +1267,7 @@ namespace TypeScript {
 			this.metaModelEmitter= new MetaModel.RecordEmitter(tsName, `${this.qualifier}.${tsName}`, metaFields);
 		}
 
-		private emitVariant(name: string, kind: Variant): void {
+		private emitVariant(name: string, kind: VariantKind): void {
 			const code = this.code;
 			const variantName = Names.asTypeName(name);
 
@@ -843,7 +1376,7 @@ namespace TypeScript {
 			this.metaModelEmitter = new MetaModel.VariantEmitter(variantName, `${this.qualifier}.${variantName}`, metaTypes);
 		}
 
-		private emitEnum(name: string, kind: Enum): void {
+		private emitEnum(name: string, kind: EnumKind): void {
 			const tsName = Names.asTypeName(name);
 			this.code.push(`export enum ${tsName} {`);
 			this.code.increaseIndent();
@@ -856,7 +1389,7 @@ namespace TypeScript {
 			this.metaModelEmitter = new MetaModel.EnumerationEmitter(tsName, `${this.qualifier}.${tsName}`, kind.enum.cases.length);
 		}
 
-		private emitFlags(name: string, kind: Flags): void {
+		private emitFlags(name: string, kind: FlagsKind): void {
 			const tsName = Names.asTypeName(name);
 			const flags: string[] = [];
 			this.code.push(`export interface ${tsName} extends $wcm.JFlags {`);

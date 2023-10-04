@@ -10,6 +10,10 @@ export interface Document {
 	packages: Package[];
 }
 
+export interface Documentation {
+	contents: string | null;
+}
+
 export interface World {
 	name: string;
 	docs?: Documentation | undefined;
@@ -27,9 +31,13 @@ export namespace World {
 	}
 }
 
-export interface Documentation {
-	contents: string | null;
+export interface Package {
+	name: string;
+	docs?: Documentation | undefined;
+	interfaces: References;
+	worlds: References;
 }
+
 export interface Interface {
 	name: string;
 	docs?: Documentation;
@@ -55,18 +63,84 @@ export interface Func {
 	results: TypeObject[];
 }
 
-export interface Type {
+export interface AbstractType {
 	name: string | null;
 	docs?: Documentation | undefined;
-	kind: TypeKind;
 	owner: Owner | null;
 }
 
-export interface Package {
-	name: string;
-	docs?: Documentation | undefined;
-	interfaces: References;
-	worlds: References;
+export interface BaseType extends AbstractType {
+	kind: BaseKind;
+}
+
+export interface ReferenceType extends AbstractType {
+	kind: ReferenceKind;
+}
+
+export interface ListType extends AbstractType {
+	kind: ListKind;
+}
+
+export interface OptionType extends AbstractType {
+	kind: OptionKind;
+}
+
+export interface TupleType extends AbstractType {
+	kind: TupleKind;
+}
+
+export interface ResultType extends AbstractType {
+	kind: ResultKind;
+}
+
+export interface RecordType extends AbstractType {
+	kind: RecordKind;
+}
+
+export interface EnumType extends AbstractType {
+	kind: EnumKind;
+}
+
+export interface FlagsType extends AbstractType {
+	kind: FlagsKind;
+}
+
+export interface VariantType extends AbstractType {
+	kind: VariantKind;
+}
+
+export type Type = BaseType | ReferenceType | ListType | OptionType | TupleType | ResultType | RecordType | EnumType | FlagsType | VariantType;
+export namespace Type {
+	export function isBaseType(type: Type): type is BaseType {
+		return TypeKind.isBaseType(type.kind);
+	}
+	export function isReferenceType(type: Type): type is ReferenceType {
+		return TypeKind.isTypeReference(type.kind);
+	}
+	export function isListType(type: Type): type is ListType {
+		return TypeKind.isList(type.kind);
+	}
+	export function isOptionType(type: Type): type is OptionType {
+		return TypeKind.isOption(type.kind);
+	}
+	export function isTupleType(type: Type): type is TupleType {
+		return TypeKind.isTuple(type.kind);
+	}
+	export function isResultType(type: Type): type is ResultType {
+		return TypeKind.isResult(type.kind);
+	}
+	export function isRecordType(type: Type): type is RecordType {
+		return TypeKind.isRecord(type.kind);
+	}
+	export function isEnumType(type: Type): type is EnumType {
+		return TypeKind.isEnum(type.kind);
+	}
+	export function isFlagsType(type: Type): type is FlagsType {
+		return TypeKind.isFlags(type.kind);
+	}
+	export function isVariantType(type: Type): type is VariantType {
+		return TypeKind.isVariant(type.kind);
+	}
 }
 
 export type Owner = { world: number } | { interface: number };
@@ -101,47 +175,47 @@ export namespace Owner {
 	}
 }
 
-export type TypeKind = TypeObject | Record | Variant | Enum | Flags | Tuple | List | Option | Result;
+export type TypeKind = TypeObject | RecordKind | VariantKind | EnumKind | FlagsKind | TupleKind | ListKind | OptionKind | ResultKind | BaseKind | ReferenceKind;
 export namespace TypeKind {
-	export function isBaseType(kind: TypeKind): kind is { type: string } {
-		return typeof (kind as BaseType).type === 'string';
+	export function isBaseType(kind: TypeKind): kind is BaseKind {
+		return typeof (kind as BaseKind).type === 'string';
 	}
-	export function isTypeReference(kind: TypeKind): kind is { type: number } {
-		return typeof (kind as { type: number }).type === 'number';
+	export function isTypeReference(kind: TypeKind): kind is ReferenceKind {
+		return typeof (kind as ReferenceKind).type === 'number';
 	}
 	export function isTypeObject(kind: TypeKind): kind is TypeObject {
 		const candidate = kind as TypeObject;
 		return typeof candidate.type === 'number' || typeof candidate.type === 'string';
 	}
-	export function isRecord(kind: TypeKind): kind is Record {
-		return typeof (kind as Record).record === 'object';
+	export function isRecord(kind: TypeKind): kind is RecordKind {
+		return typeof (kind as RecordKind).record === 'object';
 	}
-	export function isVariant(kind: TypeKind): kind is Variant {
-		const candidate = kind as Variant;
+	export function isVariant(kind: TypeKind): kind is VariantKind {
+		const candidate = kind as VariantKind;
 		return typeof candidate.variant === 'object';
 	}
-	export function isEnum(kind: TypeKind): kind is Enum {
-		const candidate = kind as Enum;
+	export function isEnum(kind: TypeKind): kind is EnumKind {
+		const candidate = kind as EnumKind;
 		return typeof candidate.enum === 'object';
 	}
-	export function isFlags(kind: TypeKind): kind is Flags {
-		const candidate = kind as Flags;
+	export function isFlags(kind: TypeKind): kind is FlagsKind {
+		const candidate = kind as FlagsKind;
 		return typeof candidate.flags === 'object';
 	}
-	export function isTuple(kind: TypeKind): kind is Tuple {
-		const candidate = kind as Tuple;
+	export function isTuple(kind: TypeKind): kind is TupleKind {
+		const candidate = kind as TupleKind;
 		return typeof candidate.tuple === 'object';
 	}
-	export function isList(kind: TypeKind): kind is List {
-		const candidate = kind as List;
+	export function isList(kind: TypeKind): kind is ListKind {
+		const candidate = kind as ListKind;
 		return typeof candidate.list === 'number' || typeof candidate.list === 'string';
 	}
-	export function isOption(kind: TypeKind): kind is Option {
-		const candidate = kind as Option;
+	export function isOption(kind: TypeKind): kind is OptionKind {
+		const candidate = kind as OptionKind;
 		return typeof candidate.option === 'number' || typeof candidate.option === 'string';
 	}
-	export function isResult(kind: TypeKind): kind is Result {
-		const candidate = kind as Result;
+	export function isResult(kind: TypeKind): kind is ResultKind {
+		const candidate = kind as ResultKind;
 		const ok = candidate.result?.ok;
 		const err = candidate.result?.err;
 		return (ok !== undefined && (typeof ok === 'number' || typeof ok === 'string' || ok === null))
@@ -149,7 +223,15 @@ export namespace TypeKind {
 	}
 }
 
-export interface Record {
+export interface BaseKind {
+	type: string;
+}
+
+export interface ReferenceKind {
+	type: number;
+}
+
+export interface RecordKind {
 	record: {
 		fields: Field[];
 	};
@@ -161,7 +243,7 @@ export interface Field {
 	type: TypeReference;
 }
 
-export interface Variant {
+export interface VariantKind {
 	variant: {
 		cases: VariantCase[];
 	};
@@ -173,7 +255,7 @@ export interface VariantCase {
 	type: TypeReference | null;
 }
 
-export interface Enum {
+export interface EnumKind {
 	enum: {
 		cases: EnumCase[];
 	};
@@ -184,7 +266,7 @@ export interface EnumCase {
 	docs: Documentation;
 }
 
-export interface Flags {
+export interface FlagsKind {
 	flags: {
 		flags: Flag[];
 	};
@@ -195,29 +277,75 @@ export interface Flag {
 	docs: Documentation;
 }
 
-export interface Tuple {
+export interface TupleKind {
 	tuple: {
 		types: TypeReference[];
 	};
 }
 
-export interface List {
+export interface ListKind {
 	list: TypeReference;
 }
 
-export interface Option {
+export interface OptionKind {
 	option: TypeReference;
 }
 
-export interface Result {
+export interface ResultKind {
 	result: {
 		ok: TypeReference | null;
 		err: TypeReference | null;
 	};
 }
 
-export interface BaseType {
-	type: string;
+export abstract class AbstractTyPrinter<C = undefined> {
+
+	private readonly symbols: Document;
+
+	constructor(symbols: Document) {
+		this.symbols = symbols;
+	}
+
+	public print(type: Type, context: C): string {
+		if (Type.isBaseType(type)) {
+			return this.printBase(type, context);
+		} else if (Type.isReferenceType(type)) {
+			return this.printReference(type, context);
+		} else if (Type.isListType(type)) {
+			return this.printList(type, context);
+		} else if (Type.isOptionType(type)) {
+			return this.printOption(type, context);
+		} else if (Type.isTupleType(type)) {
+			return this.printTuple(type, context);
+		} else if (Type.isResultType(type)) {
+			return this.printResult(type, context);
+		}
+		throw new Error(`Unknown type kind ${JSON.stringify(type)}`);
+	}
+
+	public printReference(type: ReferenceType, context: C): string {
+		return this.print(this.resolve(type), context);
+	}
+	public printBase(type: BaseType, context: C): string {
+		return this.printBaseReference(type.kind.type, context);
+	}
+	public abstract printList(type: ListType, context: C): string;
+	public abstract printOption(type: OptionType, context: C): string;
+	public abstract printTuple(type: TupleType, context: C): string;
+	public abstract printResult(type: ResultType, context: C): string;
+
+	public printTypeReference(type: TypeReference, context: C): string {
+		if (TypeReference.isNumber(type)) {
+			return this.print(this.symbols.types[type], context);
+		} else {
+			return this.printBaseReference(type, context);
+		}
+	}
+	public abstract printBaseReference(type: string, context: C): string;
+
+	public resolve(type: ReferenceType): Type {
+		return this.symbols.types[type.kind.type];
+	}
 }
 
 export interface TypeObject {
