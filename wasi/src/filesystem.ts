@@ -923,10 +923,10 @@ export namespace filesystem {
 			['this_', Descriptor],
 			['buffer', new $wcm.Uint8ArrayType()],
 			['offset', Filesize],
-		], new $wcm.ResultType<u64, filesystem.Types.ErrorCode>(Filesize, ErrorCode));
+		], new $wcm.ResultType<filesystem.Types.Filesize, filesystem.Types.ErrorCode>(Filesize, ErrorCode));
 		export const readDirectory = new $wcm.FunctionType<typeof filesystem.Types.readDirectory>('readDirectory', 'read-directory',[
 			['this_', Descriptor],
-		], new $wcm.ResultType<u32, filesystem.Types.ErrorCode>(DirectoryEntryStream, ErrorCode));
+		], new $wcm.ResultType<filesystem.Types.DirectoryEntryStream, filesystem.Types.ErrorCode>(DirectoryEntryStream, ErrorCode));
 		export const sync = new $wcm.FunctionType<typeof filesystem.Types.sync>('sync', 'sync',[
 			['this_', Descriptor],
 		], new $wcm.ResultType<void, filesystem.Types.ErrorCode>(undefined, ErrorCode));
@@ -963,7 +963,7 @@ export namespace filesystem {
 			['openFlags', OpenFlags],
 			['flags', DescriptorFlags],
 			['modes', Modes],
-		], new $wcm.ResultType<u32, filesystem.Types.ErrorCode>(Descriptor, ErrorCode));
+		], new $wcm.ResultType<filesystem.Types.Descriptor, filesystem.Types.ErrorCode>(Descriptor, ErrorCode));
 		export const readlinkAt = new $wcm.FunctionType<typeof filesystem.Types.readlinkAt>('readlinkAt', 'readlink-at',[
 			['this_', Descriptor],
 			['path', $wcm.wstring],

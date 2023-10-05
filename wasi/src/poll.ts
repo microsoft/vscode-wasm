@@ -63,7 +63,7 @@ export namespace poll {
 			['this_', Pollable],
 		], undefined);
 		export const pollOneoff = new $wcm.FunctionType<typeof poll.Poll.pollOneoff>('pollOneoff', 'poll-oneoff',[
-			['in_', new $wcm.ListType<u32>(Pollable)],
+			['in_', new $wcm.ListType<poll.Poll.Pollable>(Pollable)],
 		], new $wcm.ListType<boolean>($wcm.bool));
 	}
 	export namespace Poll._ {

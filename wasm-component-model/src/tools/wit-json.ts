@@ -155,15 +155,6 @@ export namespace Owner {
 	export function isInterface(owner: Owner): owner is { interface: number } {
 		return typeof (owner as { interface: number }).interface === 'number';
 	}
-	export function resolve(owner: Owner, symbols: Pick<Document, 'interfaces' | 'worlds'>): Interface | World {
-		if (isWorld(owner)) {
-			return symbols.worlds[owner.world];
-		} else if (isInterface(owner)) {
-			return symbols.interfaces[owner.interface];
-		} else {
-			throw new Error(`Unknown owner kind ${JSON.stringify(owner)}`);
-		}
-	}
 	export function kind(owner: Owner): OwnerKind {
 		if (isWorld(owner)) {
 			return OwnerKind.World;
@@ -296,60 +287,6 @@ export interface ResultKind {
 		ok: TypeReference | null;
 		err: TypeReference | null;
 	};
-}
-
-export abstract class AbstractTyPrinter<C = undefined> {
-
-	private readonly symbols: Document;
-
-	constructor(symbols: Document) {
-		this.symbols = symbols;
-	}
-
-	public print(type: Type, context: C): string {
-		if (Type.isBaseType(type)) {
-			return this.printBase(type, this.updateContext(context, type));
-		} else if (Type.isReferenceType(type)) {
-			return this.printReference(type, context);
-		} else if (Type.isListType(type)) {
-			return this.printList(type, context);
-		} else if (Type.isOptionType(type)) {
-			return this.printOption(type, context);
-		} else if (Type.isTupleType(type)) {
-			return this.printTuple(type, context);
-		} else if (Type.isResultType(type)) {
-			return this.printResult(type, context);
-		}
-		throw new Error(`Unknown type kind ${JSON.stringify(type)}`);
-	}
-
-	public printReference(type: ReferenceType, context: C): string {
-		return this.print(this.resolve(type), context);
-	}
-	public printBase(type: BaseType, context: C): string {
-		return this.printBaseReference(type.kind.type, context);
-	}
-	public abstract printList(type: ListType, context: C): string;
-	public abstract printOption(type: OptionType, context: C): string;
-	public abstract printTuple(type: TupleType, context: C): string;
-	public abstract printResult(type: ResultType, context: C): string;
-
-	public printTypeReference(type: TypeReference, context: C): string {
-		if (TypeReference.isNumber(type)) {
-			return this.print(this.symbols.types[type], context);
-		} else {
-			return this.printBaseReference(type, context);
-		}
-	}
-	public abstract printBaseReference(type: string, context: C): string;
-
-	public resolve(type: ReferenceType): Type {
-		return this.symbols.types[type.kind.type];
-	}
-
-	protected updateContext(context: C, _type: Type): C {
-		return context;
-	}
 }
 
 export interface TypeObject {

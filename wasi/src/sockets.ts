@@ -979,7 +979,7 @@ export namespace sockets {
 			['name', $wcm.wstring],
 			['addressFamily', new $wcm.OptionType<sockets.IpNameLookup.IpAddressFamily>(IpAddressFamily)],
 			['includeUnavailable', $wcm.bool],
-		], new $wcm.ResultType<u32, sockets.IpNameLookup.ErrorCode>(ResolveAddressStream, ErrorCode));
+		], new $wcm.ResultType<sockets.IpNameLookup.ResolveAddressStream, sockets.IpNameLookup.ErrorCode>(ResolveAddressStream, ErrorCode));
 		export const resolveNextAddress = new $wcm.FunctionType<typeof sockets.IpNameLookup.resolveNextAddress>('resolveNextAddress', 'resolve-next-address',[
 			['this_', ResolveAddressStream],
 		], new $wcm.ResultType<option<sockets.IpNameLookup.IpAddress>, sockets.IpNameLookup.ErrorCode>(new $wcm.OptionType<sockets.IpNameLookup.IpAddress>(IpAddress), ErrorCode));
@@ -1033,7 +1033,7 @@ export namespace sockets {
 		], new $wcm.ResultType<void, sockets.Tcp.ErrorCode>(undefined, ErrorCode));
 		export const accept = new $wcm.FunctionType<typeof sockets.Tcp.accept>('accept', 'accept',[
 			['this_', TcpSocket],
-		], new $wcm.ResultType<[u32, sockets.Tcp.InputStream, sockets.Tcp.OutputStream], sockets.Tcp.ErrorCode>(new $wcm.TupleType<[u32, sockets.Tcp.InputStream, sockets.Tcp.OutputStream]>([TcpSocket, InputStream, OutputStream]), ErrorCode));
+		], new $wcm.ResultType<[sockets.Tcp.TcpSocket, sockets.Tcp.InputStream, sockets.Tcp.OutputStream], sockets.Tcp.ErrorCode>(new $wcm.TupleType<[sockets.Tcp.TcpSocket, sockets.Tcp.InputStream, sockets.Tcp.OutputStream]>([TcpSocket, InputStream, OutputStream]), ErrorCode));
 		export const localAddress = new $wcm.FunctionType<typeof sockets.Tcp.localAddress>('localAddress', 'local-address',[
 			['this_', TcpSocket],
 		], new $wcm.ResultType<sockets.Tcp.IpSocketAddress, sockets.Tcp.ErrorCode>(IpSocketAddress, ErrorCode));
