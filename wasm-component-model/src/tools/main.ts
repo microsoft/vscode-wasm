@@ -7,26 +7,9 @@ import * as fs from 'node:fs/promises';
 
 import * as yargs from 'yargs';
 
-import * as wit from './wit';
-import { DocumentVisitor } from './wit2ts';
-
-export type Options = {
-	help: boolean;
-	version: boolean;
-	stdout: boolean;
-	out: string | undefined;
-	file: string | undefined;
-};
-
-export namespace Options {
-	export const defaults: Options = {
-		help: false,
-		version: false,
-		stdout: false,
-		out: undefined,
-		file: undefined
-	};
-}
+import { Document } from './wit-json';
+import { processDocument } from './wit2ts';
+import { Options } from './options';
 
 async function run(options: Options): Promise<number> {
 	if (options.help) {
@@ -38,10 +21,10 @@ async function run(options: Options): Promise<number> {
 		return 0;
 	}
 
-	if (!options.file) {
-		process.stderr.write('Missing file argument.\n');
+	if (!Options.validate(options)) {
 		yargs.showHelp();
 		return 1;
+	} else {
 	}
 
 	try {
@@ -51,17 +34,9 @@ async function run(options: Options): Promise<number> {
 			return 1;
 		}
 
-		const content = await fs.readFile(options.file, { encoding: 'utf8' });
-		const document = wit.parse(content);
+		const content: Document = JSON.parse(await fs.readFile(options.file, { encoding: 'utf8' }));
+		processDocument(content, options);
 
-		const visitor = new DocumentVisitor();
-		document.visit(visitor, document);
-		const code = visitor.getCode();
-		if (options.stdout) {
-			process.stdout.write(code.toString());
-		} else {
-			await fs.writeFile(options.out!, code.toString());
-		}
 		return 0;
 	} catch (error:any) {
 		process.stderr.write(`Creating TypeScript file failed\n${error.toString()}\n`);
@@ -73,8 +48,8 @@ export async function main(): Promise<number> {
 	yargs.
 		parserConfiguration({ 'camel-case-expansion': false }).
 		exitProcess(false).
-		usage(`Tool to generate a TypeScript file and the corresponding meta data from a Wit file.\nVersion: ${require('../../package.json').version}\nUsage: wit2ts [options] file.wit`).
-		example(`wit2ts --stdout test.wit`, `Creates a TypeScript file for the given Wit file and prints it to stdout.`).
+		usage(`Tool to generate a TypeScript file and the corresponding meta data from a WIT JSON file.\nVersion: ${require('../../package.json').version}\nUsage: wit2ts [options] wasi.json`).
+		example(`wit2ts --outDir . wasi.json`, `Creates a TypeScript file for the given Wit JSON file and writes the files into the provided output directory.`).
 		version(false).
 		wrap(Math.min(100, yargs.terminalWidth())).
 		option('v', {
@@ -88,13 +63,23 @@ export async function main(): Promise<number> {
 			boolean: true,
 
 		}).
-		option('out', {
-			description: 'The output file the dump is save to.',
+		option('outDir', {
+			description: 'The directory the TypeScript files are written to.',
 			string: true
 		}).
-		option('stdout', {
-			description: 'Writes the dump to stdout.',
-			boolean: true
+		option('package', {
+			description: 'A regular expression to filter the packages to be included.',
+			string: true
+		}).
+		option('target', {
+			description: 'The target language. Currently only TypeScript is supported.',
+			enum: ['ts'],
+			default: 'ts'
+		}).
+		option('nameStyle', {
+			description: 'The style of the generated names.',
+			enum: ['ts', 'wit'],
+			default: 'ts'
 		});
 
 	const parsed = await yargs.argv;

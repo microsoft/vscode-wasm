@@ -9,6 +9,8 @@ export type Options = {
 	outDir: string | undefined;
 	package: RegExp;
 	file: string | undefined;
+	target: 'ts';
+	nameStyle: 'ts' | 'wit';
 };
 
 export type ResolvedOptions = Required<Options> & { file: string; outDir: string };
@@ -19,7 +21,9 @@ export namespace Options {
 		version: false,
 		outDir: undefined,
 		package: /.*/,
-		file: undefined
+		file: undefined,
+		target: 'ts',
+		nameStyle: 'ts'
 	};
 
 	export function validate(options: Options): options is ResolvedOptions {
