@@ -316,6 +316,10 @@ export namespace ObjectKind {
 
 export type TypeReference = number | string;
 export namespace TypeReference {
+	export function is(value: TypeReference | Type): value is TypeReference {
+		const candidate = value as TypeReference;
+		return isNumber(candidate) || isString(candidate);
+	}
 	export function isNumber(ref: TypeReference): ref is number {
 		return typeof ref === 'number';
 	}

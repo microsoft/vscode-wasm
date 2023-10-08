@@ -3,7 +3,7 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 import * as $wcm from '@vscode/wasm-component-model';
-import type { u64, u32, s32 } from '@vscode/wasm-component-model';
+import type { u64, u32, s32, i64, i32, ptr } from '@vscode/wasm-component-model';
 import { poll } from './poll';
 
 export namespace clocks {
@@ -197,11 +197,16 @@ export namespace clocks {
 	}
 	export namespace MonotonicClock._ {
 		const allFunctions = [$.now, $.resolution, $.subscribe];
+		export type WasmInterface = {
+			'now': () => i64;
+			'resolution': () => i64;
+			'subscribe': (when: i64, absolute: i32) => i32;
+		};
 		export function createHost<T extends $wcm.Host>(service: clocks.MonotonicClock, context: $wcm.Context): T {
 			return $wcm.Host.create<T>(allFunctions, service, context);
 		}
-		export function createService<T extends clocks.MonotonicClock>(wasmInterface: $wcm.WasmInterface, context: $wcm.Context): T {
-			return $wcm.Service.create<T>(allFunctions, wasmInterface, context);
+		export function createService(wasmInterface: $wcm.WasmInterface, context: $wcm.Context): clocks.MonotonicClock {
+			return $wcm.Service.create<clocks.MonotonicClock>(allFunctions, wasmInterface, context);
 		}
 	}
 	export namespace WallClock.$ {
@@ -214,11 +219,15 @@ export namespace clocks {
 	}
 	export namespace WallClock._ {
 		const allFunctions = [$.now, $.resolution];
+		export type WasmInterface = {
+			'now': (result: ptr<[i64, i32]>) => void;
+			'resolution': (result: ptr<[i64, i32]>) => void;
+		};
 		export function createHost<T extends $wcm.Host>(service: clocks.WallClock, context: $wcm.Context): T {
 			return $wcm.Host.create<T>(allFunctions, service, context);
 		}
-		export function createService<T extends clocks.WallClock>(wasmInterface: $wcm.WasmInterface, context: $wcm.Context): T {
-			return $wcm.Service.create<T>(allFunctions, wasmInterface, context);
+		export function createService(wasmInterface: $wcm.WasmInterface, context: $wcm.Context): clocks.WallClock {
+			return $wcm.Service.create<clocks.WallClock>(allFunctions, wasmInterface, context);
 		}
 	}
 	export namespace Timezone.$ {
@@ -243,11 +252,16 @@ export namespace clocks {
 	}
 	export namespace Timezone._ {
 		const allFunctions = [$.display, $.utcOffset, $.dropTimezone];
+		export type WasmInterface = {
+			'display': (this_: i32, when_Datetime_seconds: i64, when_Datetime_nanoseconds: i32, result: ptr<[i32, ptr<i32>, i32, i32]>) => void;
+			'utc-offset': (this_: i32, when_Datetime_seconds: i64, when_Datetime_nanoseconds: i32) => i32;
+			'drop-timezone': (this_: i32) => void;
+		};
 		export function createHost<T extends $wcm.Host>(service: clocks.Timezone, context: $wcm.Context): T {
 			return $wcm.Host.create<T>(allFunctions, service, context);
 		}
-		export function createService<T extends clocks.Timezone>(wasmInterface: $wcm.WasmInterface, context: $wcm.Context): T {
-			return $wcm.Service.create<T>(allFunctions, wasmInterface, context);
+		export function createService(wasmInterface: $wcm.WasmInterface, context: $wcm.Context): clocks.Timezone {
+			return $wcm.Service.create<clocks.Timezone>(allFunctions, wasmInterface, context);
 		}
 	}
 }

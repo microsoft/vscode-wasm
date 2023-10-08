@@ -1,0 +1,11 @@
+package vscode:test
+
+interface sample {
+
+	record point {
+		x: u32,
+		y: u32,
+	}
+
+	call: func(point: point) -> u32
+}

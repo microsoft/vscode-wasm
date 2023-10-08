@@ -3,6 +3,7 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 import * as $wcm from '@vscode/wasm-component-model';
+import type { i32 } from '@vscode/wasm-component-model';
 
 export namespace logging {
 	/**
@@ -48,11 +49,14 @@ export namespace logging {
 	}
 	export namespace Logging._ {
 		const allFunctions = [$.log];
+		export type WasmInterface = {
+			'log': (level_Level: i32, context_ptr: i32, context_len: i32, message_ptr: i32, message_len: i32) => void;
+		};
 		export function createHost<T extends $wcm.Host>(service: logging.Logging, context: $wcm.Context): T {
 			return $wcm.Host.create<T>(allFunctions, service, context);
 		}
-		export function createService<T extends logging.Logging>(wasmInterface: $wcm.WasmInterface, context: $wcm.Context): T {
-			return $wcm.Service.create<T>(allFunctions, wasmInterface, context);
+		export function createService(wasmInterface: $wcm.WasmInterface, context: $wcm.Context): logging.Logging {
+			return $wcm.Service.create<logging.Logging>(allFunctions, wasmInterface, context);
 		}
 	}
 }

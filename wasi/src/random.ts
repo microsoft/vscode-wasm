@@ -3,7 +3,7 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 import * as $wcm from '@vscode/wasm-component-model';
-import type { u64 } from '@vscode/wasm-component-model';
+import type { u64, i64, ptr, i32 } from '@vscode/wasm-component-model';
 
 export namespace random {
 	/**
@@ -107,11 +107,14 @@ export namespace random {
 	}
 	export namespace InsecureSeed._ {
 		const allFunctions = [$.insecureSeed];
+		export type WasmInterface = {
+			'insecure-seed': (result: ptr<[i64, i64]>) => void;
+		};
 		export function createHost<T extends $wcm.Host>(service: random.InsecureSeed, context: $wcm.Context): T {
 			return $wcm.Host.create<T>(allFunctions, service, context);
 		}
-		export function createService<T extends random.InsecureSeed>(wasmInterface: $wcm.WasmInterface, context: $wcm.Context): T {
-			return $wcm.Service.create<T>(allFunctions, wasmInterface, context);
+		export function createService(wasmInterface: $wcm.WasmInterface, context: $wcm.Context): random.InsecureSeed {
+			return $wcm.Service.create<random.InsecureSeed>(allFunctions, wasmInterface, context);
 		}
 	}
 	export namespace Insecure.$ {
@@ -122,11 +125,15 @@ export namespace random {
 	}
 	export namespace Insecure._ {
 		const allFunctions = [$.getInsecureRandomBytes, $.getInsecureRandomU64];
+		export type WasmInterface = {
+			'get-insecure-random-bytes': (len: i64, result: ptr<[ptr<i32>, i32]>) => void;
+			'get-insecure-random-u64': () => i64;
+		};
 		export function createHost<T extends $wcm.Host>(service: random.Insecure, context: $wcm.Context): T {
 			return $wcm.Host.create<T>(allFunctions, service, context);
 		}
-		export function createService<T extends random.Insecure>(wasmInterface: $wcm.WasmInterface, context: $wcm.Context): T {
-			return $wcm.Service.create<T>(allFunctions, wasmInterface, context);
+		export function createService(wasmInterface: $wcm.WasmInterface, context: $wcm.Context): random.Insecure {
+			return $wcm.Service.create<random.Insecure>(allFunctions, wasmInterface, context);
 		}
 	}
 	export namespace Random.$ {
@@ -137,11 +144,15 @@ export namespace random {
 	}
 	export namespace Random._ {
 		const allFunctions = [$.getRandomBytes, $.getRandomU64];
+		export type WasmInterface = {
+			'get-random-bytes': (len: i64, result: ptr<[ptr<i32>, i32]>) => void;
+			'get-random-u64': () => i64;
+		};
 		export function createHost<T extends $wcm.Host>(service: random.Random, context: $wcm.Context): T {
 			return $wcm.Host.create<T>(allFunctions, service, context);
 		}
-		export function createService<T extends random.Random>(wasmInterface: $wcm.WasmInterface, context: $wcm.Context): T {
-			return $wcm.Service.create<T>(allFunctions, wasmInterface, context);
+		export function createService(wasmInterface: $wcm.WasmInterface, context: $wcm.Context): random.Random {
+			return $wcm.Service.create<random.Random>(allFunctions, wasmInterface, context);
 		}
 	}
 }

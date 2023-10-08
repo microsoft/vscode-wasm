@@ -28,12 +28,14 @@ export function processDocument(document: Document, options: ResolvedOptions): v
 		const fileName = nameProvider.asFileName(pkg);
 		fs.writeFileSync(path.join(options.outDir, fileName), code.toString());
 	}
-	fs.writeFileSync(path.join(options.outDir, 'main.ts'), mainCode.toString());
+	if (!options.noMain) {
+		fs.writeFileSync(path.join(options.outDir, 'main.ts'), mainCode.toString());
+	}
 }
 
 interface Printers {
-	typeScript: TypeScript.TyPrinter;
-	metaModel: MetaModel.TyPrinter;
+	typeScript: TypeScript.TypePrinter;
+	metaModel: MetaModel.TypePrinter;
 }
 
 class Imports {
@@ -142,6 +144,7 @@ interface NameProvider {
 	asFlagName(flag: Flag): string;
 	asFieldName(field: Field): string;
 	getNamespaceAndName(pkg: Package): [string | undefined, string];
+	typeAsParameterName(type: Type): string;
 }
 
 namespace _TypeScriptNameProvider {
@@ -209,6 +212,13 @@ namespace _TypeScriptNameProvider {
 			return [undefined, name];
 		}
 		return [name.substring(0, index), name.substring(index + 1)];
+	}
+
+	export function typeAsParameterName(type: Type): string {
+		if (type.name === null) {
+			throw new Error(`Type ${JSON.stringify(type)} has no name.`);
+		}
+		return _asTypeName(type.name);
 	}
 
 	function _asTypeName(name: string): string {
@@ -295,6 +305,13 @@ namespace _WitNameProvider {
 			return [undefined, name];
 		}
 		return [name.substring(0, index), name.substring(index + 1)];
+	}
+
+	export function typeAsParameterName(type: Type): string {
+		if (type.name === null) {
+			throw new Error(`Type ${JSON.stringify(type)} has no name.`);
+		}
+		return toTs(type.name);
 	}
 
 	function toTs(name: string): string {
@@ -400,7 +417,7 @@ class SymbolTable {
 	}
 }
 
-abstract class AbstractTyPrinter<C = undefined> {
+abstract class AbstractTypePrinter<C = undefined> {
 
 	protected readonly symbols: SymbolTable;
 
@@ -626,7 +643,7 @@ namespace MetaModel {
 		return `${qualifier}.${name}`;
 	}
 
-	export class TyPrinter extends AbstractTyPrinter<TypeUsage> {
+	export class TypePrinter extends AbstractTypePrinter<TypeUsage> {
 
 		private readonly nameProvider: NameProvider;
 
@@ -768,15 +785,15 @@ namespace MetaModel {
 		}
 	}
 
-	class TypeParamPrinter extends AbstractTyPrinter<number> {
+	class TypeParamPrinter extends AbstractTypePrinter<number> {
 
 		private readonly imports: Imports;
-		private typeScriptPrinter: TypeScript.TyPrinter;
+		private typeScriptPrinter: TypeScript.TypePrinter;
 
 		constructor(symbols: SymbolTable, nameProvider: NameProvider, imports: Imports) {
 			super(symbols);
 			this.imports = imports;
-			this.typeScriptPrinter = new TypeScript.TyPrinter(symbols, nameProvider, imports);
+			this.typeScriptPrinter = new TypeScript.TypePrinter(symbols, nameProvider, imports);
 		}
 
 		public perform(type: Type): string {
@@ -908,8 +925,8 @@ namespace TypeScript {
 		public emit(): Code {
 			const code = new Code();
 			const printers: Printers = {
-				typeScript: new TypeScript.TyPrinter(this.symbols, this.nameProvider, code.imports),
-				metaModel: new MetaModel.TyPrinter(this.symbols, this.nameProvider, code.imports)
+				typeScript: new TypeScript.TypePrinter(this.symbols, this.nameProvider, code.imports),
+				metaModel: new MetaModel.TypePrinter(this.symbols, this.nameProvider, code.imports)
 			};
 
 			const pkgName = this.nameProvider.asPackageName(this.pkg);
@@ -951,14 +968,59 @@ namespace TypeScript {
 					code.push(`const allFunctions = [${functions.map(name => `$.${name}`).join(', ')}];`);
 					const iface = interfaces.get(jface)!;
 					const ifaceName = this.symbols.interfaces.getFullyQualifiedName(iface);
+					code.push(`export type WasmInterface = {`);
+					code.increaseIndent();
+					const typeFlattener = new TypeFlattener(this.symbols, this.nameProvider, code.imports);
+					for (const func of Object.values(iface.functions)) {
+						let params;
+						try {
+							params = typeFlattener.flattenParams(func);
+						} catch (err) {
+							if (err instanceof VariantError) {
+								code.imports.addBaseType('i32');
+								code.imports.addBaseType('i64');
+								code.imports.addBaseType('f32');
+								code.imports.addBaseType('f64');
+								params = [{ name: '...args', type: '(i32 | i64 | f32 | f64)[]'}];
+							} else {
+								throw err;
+							}
+						}
+						let returnType: string;
+						try {
+							const results = typeFlattener.flattenResult(func);
+							if (results.length === 1) {
+								returnType = results[0];
+							} else {
+								returnType = 'void';
+								code.imports.addBaseType('ptr');
+								params.push({ name: 'result', type: `ptr<[${results.join(', ')}]>`});
+							}
+						} catch (err) {
+							if (err instanceof VariantError) {
+								returnType = 'void';
+								code.imports.addBaseType('i32');
+								code.imports.addBaseType('i64');
+								code.imports.addBaseType('f32');
+								code.imports.addBaseType('f64');
+								code.imports.addBaseType('ptr');
+								params = [{ name: 'result', type: 'ptr<(i32 | i64 | f32 | f64)[]>'}];
+							} else {
+								throw err;
+							}
+						}
+						code.push(`'${func.name}': (${params.map(p => `${p.name}: ${p.type}`).join(', ')}) => ${returnType};`);
+					}
+					code.decreaseIndent();
+					code.push(`};`);
 					code.push(`export function createHost<T extends $wcm.Host>(service: ${ifaceName}, context: $wcm.Context): T {`);
 					code.increaseIndent();
 					code.push(`return $wcm.Host.create<T>(allFunctions, service, context);`);
 					code.decreaseIndent();
 					code.push(`}`);
-					code.push(`export function createService<T extends ${ifaceName}>(wasmInterface: $wcm.WasmInterface, context: $wcm.Context): T {`);
+					code.push(`export function createService(wasmInterface: $wcm.WasmInterface, context: $wcm.Context): ${ifaceName} {`);
 					code.increaseIndent();
-					code.push(`return $wcm.Service.create<T>(allFunctions, wasmInterface, context);`);
+					code.push(`return $wcm.Service.create<${ifaceName}>(allFunctions, wasmInterface, context);`);
 					code.decreaseIndent();
 					code.push(`}`);
 
@@ -1216,7 +1278,7 @@ namespace TypeScript {
 				flags.push(flagName);
 			}
 			this.code.decreaseIndent();
-			this.code.push(`};`);
+			this.code.push(`}`);
 			this.metaModelEmitter = new MetaModel.FlagsEmitter(tsName, `${this.qualifier}.${tsName}`, flags);
 		}
 
@@ -1290,7 +1352,7 @@ namespace TypeScript {
 		}
 	}
 
-	export class TyPrinter extends AbstractTyPrinter<TypeUsage> {
+	export class TypePrinter extends AbstractTypePrinter<TypeUsage> {
 
 		private readonly nameProvider: NameProvider;
 		private readonly imports: Imports;
@@ -1435,6 +1497,206 @@ namespace TypeScript {
 				default:
 					throw new Error(`Unknown base type ${base}`);
 			}
+		}
+	}
+
+
+	type WasmTypeName = 'i32' | 'i64' | 'f32' | 'f64';
+
+	interface FlattendParam {
+		name: string;
+		type: WasmTypeName;
+	}
+
+	class VariantError extends Error {
+		constructor () {
+			super('Variant detected');
+		}
+	}
+
+	class TypeFlattener  {
+
+		private readonly symbols: SymbolTable;
+		private readonly nameProvider: NameProvider;
+		private readonly imports: Imports;
+
+		private static MAX_FLAT_PARAMS = 16;
+		private static MAX_FLAT_RESULTS = 1;
+		private static readonly baseTypes: Map<string, WasmTypeName> = new Map([
+			['u8', 'i32'],
+			['u16', 'i32'],
+			['u32', 'i32'],
+			['u64', 'i64'],
+			['s8', 'i32'],
+			['s16', 'i32'],
+			['s32', 'i32'],
+			['s64', 'i64'],
+			['f32', 'f32'],
+			['f64', 'f64'],
+			['bool', 'i32'],
+		]);
+
+		constructor (symbols: SymbolTable, nameProvider: NameProvider, imports: Imports) {
+			this.symbols = symbols;
+			this.nameProvider = nameProvider;
+			this.imports = imports;
+		}
+
+		public flattenParams(func: Func): FlattendParam[] {
+			const result: FlattendParam[] = [];
+			for (const param of func.params) {
+				this.flattenParam(result, param);
+			}
+			return result;
+		}
+
+		public flattenResult(func: Func): string[] {
+			const result: string[] = [];
+			if (func.results.length === 0) {
+				result.push('void');
+			} else {
+				for (const r of func.results) {
+					this.flattenResultType(result, r.type);
+				}
+			}
+			return result;
+		}
+
+		private flattenParam(result: FlattendParam[], param: Param): void {
+			this.flattenParamType(result, param.type, this.nameProvider.asParameterName(param));
+		}
+
+		private flattenParamType(result: FlattendParam[], type: Type | TypeReference, prefix: string): void {
+			if (TypeReference.is(type)) {
+				if (TypeReference.isString(type)) {
+					this.handleParamBaseType(result, type, prefix);
+				} else if (TypeReference.isNumber(type)) {
+					const ref = this.symbols.getType(type);
+					this.flattenParamType(result, ref, prefix);
+				}
+			} else if (Type.isBaseType(type)) {
+				this.handleParamBaseType(result, type.kind.type, prefix);
+			} else if (Type.isReferenceType(type)) {
+				const ref = this.symbols.getType(type.kind.type);
+				this.flattenParamType(result, ref, this.prefix(type, prefix));
+			} else if (Type.isListType(type)) {
+				result.push({ name: `${prefix}_ptr`, type: 'i32' });
+				result.push({ name: `${prefix}_len`, type: 'i32' });
+			} else if (Type.isTupleType(type)) {
+				for (let i = 0; i < type.kind.tuple.types.length; i++) {
+					this.flattenParamType(result, type.kind.tuple.types[i], `${prefix}_${i}`);
+				}
+			} else if (Type.isOptionType(type)) {
+				throw new VariantError();
+			} else if (Type.isResultType(type)) {
+				throw new VariantError();
+			} else if (Type.isVariantType(type)) {
+				throw new VariantError();
+			} else if (Type.isEnumType(type)) {
+				this.imports.addBaseType('i32');
+				result.push({ name: `${prefix}_${this.nameProvider.typeAsParameterName(type)}`, type: 'i32' });
+			} else if (Type.isFlagsType(type)) {
+				const flatTypes = TypeFlattener.flagsFlatTypes(type.kind.flags.flags.length);
+				if (flatTypes.length > 0) {
+					this.imports.addBaseType(flatTypes[0]);
+				}
+				for (let i = 0; i < flatTypes.length; i++) {
+					result.push({ name: `${prefix}_${i}`, type: flatTypes[i] });
+				}
+			} else if (Type.isRecordType(type)) {
+				for (const field of type.kind.record.fields) {
+					this.flattenParamType(result, field.type, `${prefix}_${this.nameProvider.asFieldName(field)}`);
+				}
+			}
+		}
+
+		private handleParamBaseType(result: FlattendParam[], type: string, prefix: string): void {
+			if (type === 'string') {
+				result.push({ name: `${prefix}_ptr`, type: 'i32' });
+				result.push({ name: `${prefix}_len`, type: 'i32' });
+				this.imports.addBaseType('i32');
+			} else {
+				const t = TypeFlattener.baseTypes.get(type);
+				if (t === undefined) {
+					throw new Error(`Unknown base type ${type}`);
+				}
+				this.imports.addBaseType(t);
+				result.push({ name: prefix, type: t });
+			}
+		}
+
+		private flattenResultType(result: string[], type: Type | TypeReference): void {
+			if (TypeReference.is(type)) {
+				if (TypeReference.isString(type)) {
+					this.handleResultBaseType(result, type);
+				} else if (TypeReference.isNumber(type)) {
+					const ref = this.symbols.getType(type);
+					this.flattenResultType(result, ref);
+				}
+			} else if (Type.isBaseType(type)) {
+				this.handleResultBaseType(result, type.kind.type);
+			} else if (Type.isReferenceType(type)) {
+				const ref = this.symbols.getType(type.kind.type);
+				this.flattenResultType(result, ref);
+			} else if (Type.isListType(type)) {
+				this.imports.addBaseType('ptr');
+				this.imports.addBaseType('i32');
+				result.push('ptr<i32>', 'i32');
+			} else if (Type.isTupleType(type)) {
+				for (let i = 0; i < type.kind.tuple.types.length; i++) {
+					this.flattenResultType(result, type.kind.tuple.types[i]);
+				}
+			} else if (Type.isOptionType(type)) {
+				throw new VariantError();
+			} else if (Type.isResultType(type)) {
+				throw new VariantError();
+			} else if (Type.isVariantType(type)) {
+				throw new VariantError();
+			} else if (Type.isEnumType(type)) {
+				this.imports.addBaseType('i32');
+				result.push('i32');
+			} else if (Type.isFlagsType(type)) {
+				const flatTypes = TypeFlattener.flagsFlatTypes(type.kind.flags.flags.length);
+				if (flatTypes.length > 0) {
+					this.imports.addBaseType(flatTypes[0]);
+				}
+				result.push(...flatTypes);
+			} else if (Type.isRecordType(type)) {
+				for (const field of type.kind.record.fields) {
+					this.flattenResultType(result, field.type);
+				}
+			}
+		}
+
+		private handleResultBaseType(result: string[], type: string): void {
+			if (type === 'string') {
+				this.imports.addBaseType('ptr');
+				this.imports.addBaseType('i32');
+				result.push('ptr<i32>', 'i32');
+			} else {
+				const t = TypeFlattener.baseTypes.get(type);
+				if (t === undefined) {
+					throw new Error(`Unknown base type ${type}`);
+				}
+				this.imports.addBaseType(t);
+				result.push(t);
+			}
+		}
+
+		private prefix(type: Type, prefix: string): string {
+			if (type.name !== null) {
+				return `${prefix}_${this.nameProvider.typeAsParameterName(type)}`;
+			} else {
+				return prefix;
+			}
+		}
+
+		private static flagsFlatTypes(fields: number): 'i32'[] {
+			return new Array(this.num32Flags(fields)).fill('i32');
+		}
+
+		private static num32Flags(fields: number): number {
+			return Math.ceil(fields / 32);
 		}
 	}
 }

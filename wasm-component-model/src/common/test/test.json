@@ -1,0 +1,60 @@
+{
+  "worlds": [],
+  "interfaces": [
+    {
+      "name": "sample",
+      "types": {
+        "point": 0
+      },
+      "functions": {
+        "call": {
+          "name": "call",
+          "kind": "freestanding",
+          "params": [
+            {
+              "name": "point",
+              "type": 0
+            }
+          ],
+          "results": [
+            {
+              "type": "u32"
+            }
+          ]
+        }
+      },
+      "package": 0
+    }
+  ],
+  "types": [
+    {
+      "name": "point",
+      "kind": {
+        "record": {
+          "fields": [
+            {
+              "name": "x",
+              "type": "u32"
+            },
+            {
+              "name": "y",
+              "type": "u32"
+            }
+          ]
+        }
+      },
+      "owner": {
+        "interface": 0
+      }
+    }
+  ],
+  "packages": [
+    {
+      "name": "vscode:test",
+      "interfaces": {
+        "sample": 0
+      },
+      "worlds": {}
+    }
+  ]
+}

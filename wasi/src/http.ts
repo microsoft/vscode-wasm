@@ -3,7 +3,7 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 import * as $wcm from '@vscode/wasm-component-model';
-import type { u32, u16, result } from '@vscode/wasm-component-model';
+import type { u32, u16, result, i32, ptr, i64, f32, f64 } from '@vscode/wasm-component-model';
 import { poll } from './poll';
 import { io } from './io';
 
@@ -576,11 +576,52 @@ export namespace http {
 	}
 	export namespace Types._ {
 		const allFunctions = [$.dropFields, $.newFields, $.fieldsGet, $.fieldsSet, $.fieldsDelete, $.fieldsAppend, $.fieldsEntries, $.fieldsClone, $.dropIncomingRequest, $.incomingRequestMethod, $.incomingRequestPathWithQuery, $.incomingRequestScheme, $.incomingRequestAuthority, $.incomingRequestHeaders, $.incomingRequestConsume, $.dropOutgoingRequest, $.newOutgoingRequest, $.outgoingRequestWrite, $.dropResponseOutparam, $.setResponseOutparam, $.dropIncomingResponse, $.incomingResponseStatus, $.incomingResponseHeaders, $.incomingResponseConsume, $.dropIncomingBody, $.incomingBodyStream, $.incomingBodyFinish, $.dropFutureTrailers, $.futureTrailersSubscribe, $.futureTrailersGet, $.dropOutgoingResponse, $.newOutgoingResponse, $.outgoingResponseWrite, $.dropOutgoingBody, $.outgoingBodyWrite, $.outgoingBodyFinish, $.dropFutureIncomingResponse, $.futureIncomingResponseGet, $.listenToFutureIncomingResponse];
+		export type WasmInterface = {
+			'drop-fields': (fields: i32) => void;
+			'new-fields': (entries_ptr: i32, entries_len: i32) => i32;
+			'fields-get': (fields: i32, name_ptr: i32, name_len: i32, result: ptr<[ptr<i32>, i32]>) => void;
+			'fields-set': (fields: i32, name_ptr: i32, name_len: i32, value_ptr: i32, value_len: i32) => void;
+			'fields-delete': (fields: i32, name_ptr: i32, name_len: i32) => void;
+			'fields-append': (fields: i32, name_ptr: i32, name_len: i32, value_ptr: i32, value_len: i32) => void;
+			'fields-entries': (fields: i32, result: ptr<[ptr<i32>, i32]>) => void;
+			'fields-clone': (fields: i32) => i32;
+			'drop-incoming-request': (request: i32) => void;
+			'incoming-request-method': (result: ptr<(i32 | i64 | f32 | f64)[]>) => void;
+			'incoming-request-path-with-query': (result: ptr<(i32 | i64 | f32 | f64)[]>) => void;
+			'incoming-request-scheme': (result: ptr<(i32 | i64 | f32 | f64)[]>) => void;
+			'incoming-request-authority': (result: ptr<(i32 | i64 | f32 | f64)[]>) => void;
+			'incoming-request-headers': (request: i32) => i32;
+			'incoming-request-consume': (result: ptr<(i32 | i64 | f32 | f64)[]>) => void;
+			'drop-outgoing-request': (request: i32) => void;
+			'new-outgoing-request': (...args: (i32 | i64 | f32 | f64)[]) => i32;
+			'outgoing-request-write': (result: ptr<(i32 | i64 | f32 | f64)[]>) => void;
+			'drop-response-outparam': (response: i32) => void;
+			'set-response-outparam': (...args: (i32 | i64 | f32 | f64)[]) => void;
+			'drop-incoming-response': (response: i32) => void;
+			'incoming-response-status': (response: i32) => i32;
+			'incoming-response-headers': (response: i32) => i32;
+			'incoming-response-consume': (result: ptr<(i32 | i64 | f32 | f64)[]>) => void;
+			'drop-incoming-body': (this_: i32) => void;
+			'incoming-body-stream': (result: ptr<(i32 | i64 | f32 | f64)[]>) => void;
+			'incoming-body-finish': (this_: i32) => i32;
+			'drop-future-trailers': (this_: i32) => void;
+			'future-trailers-subscribe': (this_: i32) => i32;
+			'future-trailers-get': (result: ptr<(i32 | i64 | f32 | f64)[]>) => void;
+			'drop-outgoing-response': (response: i32) => void;
+			'new-outgoing-response': (statusCode: i32, headers_Headers: i32) => i32;
+			'outgoing-response-write': (result: ptr<(i32 | i64 | f32 | f64)[]>) => void;
+			'drop-outgoing-body': (this_: i32) => void;
+			'outgoing-body-write': (result: ptr<(i32 | i64 | f32 | f64)[]>) => void;
+			'outgoing-body-finish': (...args: (i32 | i64 | f32 | f64)[]) => void;
+			'drop-future-incoming-response': (f: i32) => void;
+			'future-incoming-response-get': (result: ptr<(i32 | i64 | f32 | f64)[]>) => void;
+			'listen-to-future-incoming-response': (f: i32) => i32;
+		};
 		export function createHost<T extends $wcm.Host>(service: http.Types, context: $wcm.Context): T {
 			return $wcm.Host.create<T>(allFunctions, service, context);
 		}
-		export function createService<T extends http.Types>(wasmInterface: $wcm.WasmInterface, context: $wcm.Context): T {
-			return $wcm.Service.create<T>(allFunctions, wasmInterface, context);
+		export function createService(wasmInterface: $wcm.WasmInterface, context: $wcm.Context): http.Types {
+			return $wcm.Service.create<http.Types>(allFunctions, wasmInterface, context);
 		}
 	}
 	export namespace IncomingHandler.$ {
@@ -593,11 +634,14 @@ export namespace http {
 	}
 	export namespace IncomingHandler._ {
 		const allFunctions = [$.handle];
+		export type WasmInterface = {
+			'handle': (request_IncomingRequest: i32, responseOut_ResponseOutparam: i32) => void;
+		};
 		export function createHost<T extends $wcm.Host>(service: http.IncomingHandler, context: $wcm.Context): T {
 			return $wcm.Host.create<T>(allFunctions, service, context);
 		}
-		export function createService<T extends http.IncomingHandler>(wasmInterface: $wcm.WasmInterface, context: $wcm.Context): T {
-			return $wcm.Service.create<T>(allFunctions, wasmInterface, context);
+		export function createService(wasmInterface: $wcm.WasmInterface, context: $wcm.Context): http.IncomingHandler {
+			return $wcm.Service.create<http.IncomingHandler>(allFunctions, wasmInterface, context);
 		}
 	}
 	export namespace OutgoingHandler.$ {
@@ -612,11 +656,14 @@ export namespace http {
 	}
 	export namespace OutgoingHandler._ {
 		const allFunctions = [$.handle];
+		export type WasmInterface = {
+			'handle': (result: ptr<(i32 | i64 | f32 | f64)[]>) => void;
+		};
 		export function createHost<T extends $wcm.Host>(service: http.OutgoingHandler, context: $wcm.Context): T {
 			return $wcm.Host.create<T>(allFunctions, service, context);
 		}
-		export function createService<T extends http.OutgoingHandler>(wasmInterface: $wcm.WasmInterface, context: $wcm.Context): T {
-			return $wcm.Service.create<T>(allFunctions, wasmInterface, context);
+		export function createService(wasmInterface: $wcm.WasmInterface, context: $wcm.Context): http.OutgoingHandler {
+			return $wcm.Service.create<http.OutgoingHandler>(allFunctions, wasmInterface, context);
 		}
 	}
 }

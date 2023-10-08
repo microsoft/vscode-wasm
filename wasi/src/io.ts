@@ -3,7 +3,7 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 import * as $wcm from '@vscode/wasm-component-model';
-import type { u32, u64, result } from '@vscode/wasm-component-model';
+import type { u32, u64, result, i32, i64, f32, f64, ptr } from '@vscode/wasm-component-model';
 import { poll } from './poll';
 
 export namespace io {
@@ -370,11 +370,30 @@ export namespace io {
 	}
 	export namespace Streams._ {
 		const allFunctions = [$.read, $.blockingRead, $.skip, $.blockingSkip, $.subscribeToInputStream, $.dropInputStream, $.checkWrite, $.write, $.blockingWriteAndFlush, $.flush, $.blockingFlush, $.subscribeToOutputStream, $.writeZeroes, $.splice, $.blockingSplice, $.forward, $.dropOutputStream];
+		export type WasmInterface = {
+			'read': (result: ptr<(i32 | i64 | f32 | f64)[]>) => void;
+			'blocking-read': (result: ptr<(i32 | i64 | f32 | f64)[]>) => void;
+			'skip': (result: ptr<(i32 | i64 | f32 | f64)[]>) => void;
+			'blocking-skip': (result: ptr<(i32 | i64 | f32 | f64)[]>) => void;
+			'subscribe-to-input-stream': (this_: i32) => i32;
+			'drop-input-stream': (this_: i32) => void;
+			'check-write': (result: ptr<(i32 | i64 | f32 | f64)[]>) => void;
+			'write': (result: ptr<(i32 | i64 | f32 | f64)[]>) => void;
+			'blocking-write-and-flush': (result: ptr<(i32 | i64 | f32 | f64)[]>) => void;
+			'flush': (result: ptr<(i32 | i64 | f32 | f64)[]>) => void;
+			'blocking-flush': (result: ptr<(i32 | i64 | f32 | f64)[]>) => void;
+			'subscribe-to-output-stream': (this_: i32) => i32;
+			'write-zeroes': (result: ptr<(i32 | i64 | f32 | f64)[]>) => void;
+			'splice': (result: ptr<(i32 | i64 | f32 | f64)[]>) => void;
+			'blocking-splice': (result: ptr<(i32 | i64 | f32 | f64)[]>) => void;
+			'forward': (result: ptr<(i32 | i64 | f32 | f64)[]>) => void;
+			'drop-output-stream': (this_: i32) => void;
+		};
 		export function createHost<T extends $wcm.Host>(service: io.Streams, context: $wcm.Context): T {
 			return $wcm.Host.create<T>(allFunctions, service, context);
 		}
-		export function createService<T extends io.Streams>(wasmInterface: $wcm.WasmInterface, context: $wcm.Context): T {
-			return $wcm.Service.create<T>(allFunctions, wasmInterface, context);
+		export function createService(wasmInterface: $wcm.WasmInterface, context: $wcm.Context): io.Streams {
+			return $wcm.Service.create<io.Streams>(allFunctions, wasmInterface, context);
 		}
 	}
 }

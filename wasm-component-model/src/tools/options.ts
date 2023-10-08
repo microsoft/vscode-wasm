@@ -11,6 +11,8 @@ export type Options = {
 	file: string | undefined;
 	target: 'ts';
 	nameStyle: 'ts' | 'wit';
+	stdin: boolean;
+	noMain: boolean;
 };
 
 export type ResolvedOptions = Required<Options> & { file: string; outDir: string };
@@ -23,11 +25,13 @@ export namespace Options {
 		package: /.*/,
 		file: undefined,
 		target: 'ts',
-		nameStyle: 'ts'
+		nameStyle: 'ts',
+		stdin: false,
+		noMain: false
 	};
 
 	export function validate(options: Options): options is ResolvedOptions {
-		if (!options.file) {
+		if (options.stdin === false && !options.file) {
 			process.stderr.write('Missing file argument.\n');
 			return false;
 		}

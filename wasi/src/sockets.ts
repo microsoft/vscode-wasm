@@ -3,7 +3,7 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 import * as $wcm from '@vscode/wasm-component-model';
-import type { u32, u8, u16, result, option, u64 } from '@vscode/wasm-component-model';
+import type { u32, u8, u16, result, option, u64, i32, i64, f32, f64, ptr } from '@vscode/wasm-component-model';
 import { io } from './io';
 import { poll } from './poll';
 
@@ -947,11 +947,14 @@ export namespace sockets {
 	}
 	export namespace Network._ {
 		const allFunctions = [$.dropNetwork];
+		export type WasmInterface = {
+			'drop-network': (this_: i32) => void;
+		};
 		export function createHost<T extends $wcm.Host>(service: sockets.Network, context: $wcm.Context): T {
 			return $wcm.Host.create<T>(allFunctions, service, context);
 		}
-		export function createService<T extends sockets.Network>(wasmInterface: $wcm.WasmInterface, context: $wcm.Context): T {
-			return $wcm.Service.create<T>(allFunctions, wasmInterface, context);
+		export function createService(wasmInterface: $wcm.WasmInterface, context: $wcm.Context): sockets.Network {
+			return $wcm.Service.create<sockets.Network>(allFunctions, wasmInterface, context);
 		}
 	}
 	export namespace InstanceNetwork.$ {
@@ -960,11 +963,14 @@ export namespace sockets {
 	}
 	export namespace InstanceNetwork._ {
 		const allFunctions = [$.instanceNetwork];
+		export type WasmInterface = {
+			'instance-network': () => i32;
+		};
 		export function createHost<T extends $wcm.Host>(service: sockets.InstanceNetwork, context: $wcm.Context): T {
 			return $wcm.Host.create<T>(allFunctions, service, context);
 		}
-		export function createService<T extends sockets.InstanceNetwork>(wasmInterface: $wcm.WasmInterface, context: $wcm.Context): T {
-			return $wcm.Service.create<T>(allFunctions, wasmInterface, context);
+		export function createService(wasmInterface: $wcm.WasmInterface, context: $wcm.Context): sockets.InstanceNetwork {
+			return $wcm.Service.create<sockets.InstanceNetwork>(allFunctions, wasmInterface, context);
 		}
 	}
 	export namespace IpNameLookup.$ {
@@ -992,11 +998,17 @@ export namespace sockets {
 	}
 	export namespace IpNameLookup._ {
 		const allFunctions = [$.resolveAddresses, $.resolveNextAddress, $.dropResolveAddressStream, $.subscribe];
+		export type WasmInterface = {
+			'resolve-addresses': (result: ptr<(i32 | i64 | f32 | f64)[]>) => void;
+			'resolve-next-address': (result: ptr<(i32 | i64 | f32 | f64)[]>) => void;
+			'drop-resolve-address-stream': (this_: i32) => void;
+			'subscribe': (this_: i32) => i32;
+		};
 		export function createHost<T extends $wcm.Host>(service: sockets.IpNameLookup, context: $wcm.Context): T {
 			return $wcm.Host.create<T>(allFunctions, service, context);
 		}
-		export function createService<T extends sockets.IpNameLookup>(wasmInterface: $wcm.WasmInterface, context: $wcm.Context): T {
-			return $wcm.Service.create<T>(allFunctions, wasmInterface, context);
+		export function createService(wasmInterface: $wcm.WasmInterface, context: $wcm.Context): sockets.IpNameLookup {
+			return $wcm.Service.create<sockets.IpNameLookup>(allFunctions, wasmInterface, context);
 		}
 	}
 	export namespace Tcp.$ {
@@ -1102,11 +1114,39 @@ export namespace sockets {
 	}
 	export namespace Tcp._ {
 		const allFunctions = [$.startBind, $.finishBind, $.startConnect, $.finishConnect, $.startListen, $.finishListen, $.accept, $.localAddress, $.remoteAddress, $.addressFamily, $.ipv6Only, $.setIpv6Only, $.setListenBacklogSize, $.keepAlive, $.setKeepAlive, $.noDelay, $.setNoDelay, $.unicastHopLimit, $.setUnicastHopLimit, $.receiveBufferSize, $.setReceiveBufferSize, $.sendBufferSize, $.setSendBufferSize, $.subscribe, $.shutdown, $.dropTcpSocket];
+		export type WasmInterface = {
+			'start-bind': (result: ptr<(i32 | i64 | f32 | f64)[]>) => void;
+			'finish-bind': (result: ptr<(i32 | i64 | f32 | f64)[]>) => void;
+			'start-connect': (result: ptr<(i32 | i64 | f32 | f64)[]>) => void;
+			'finish-connect': (result: ptr<(i32 | i64 | f32 | f64)[]>) => void;
+			'start-listen': (result: ptr<(i32 | i64 | f32 | f64)[]>) => void;
+			'finish-listen': (result: ptr<(i32 | i64 | f32 | f64)[]>) => void;
+			'accept': (result: ptr<(i32 | i64 | f32 | f64)[]>) => void;
+			'local-address': (result: ptr<(i32 | i64 | f32 | f64)[]>) => void;
+			'remote-address': (result: ptr<(i32 | i64 | f32 | f64)[]>) => void;
+			'address-family': (this_: i32) => i32;
+			'ipv6-only': (result: ptr<(i32 | i64 | f32 | f64)[]>) => void;
+			'set-ipv6-only': (result: ptr<(i32 | i64 | f32 | f64)[]>) => void;
+			'set-listen-backlog-size': (result: ptr<(i32 | i64 | f32 | f64)[]>) => void;
+			'keep-alive': (result: ptr<(i32 | i64 | f32 | f64)[]>) => void;
+			'set-keep-alive': (result: ptr<(i32 | i64 | f32 | f64)[]>) => void;
+			'no-delay': (result: ptr<(i32 | i64 | f32 | f64)[]>) => void;
+			'set-no-delay': (result: ptr<(i32 | i64 | f32 | f64)[]>) => void;
+			'unicast-hop-limit': (result: ptr<(i32 | i64 | f32 | f64)[]>) => void;
+			'set-unicast-hop-limit': (result: ptr<(i32 | i64 | f32 | f64)[]>) => void;
+			'receive-buffer-size': (result: ptr<(i32 | i64 | f32 | f64)[]>) => void;
+			'set-receive-buffer-size': (result: ptr<(i32 | i64 | f32 | f64)[]>) => void;
+			'send-buffer-size': (result: ptr<(i32 | i64 | f32 | f64)[]>) => void;
+			'set-send-buffer-size': (result: ptr<(i32 | i64 | f32 | f64)[]>) => void;
+			'subscribe': (this_: i32) => i32;
+			'shutdown': (result: ptr<(i32 | i64 | f32 | f64)[]>) => void;
+			'drop-tcp-socket': (this_: i32) => void;
+		};
 		export function createHost<T extends $wcm.Host>(service: sockets.Tcp, context: $wcm.Context): T {
 			return $wcm.Host.create<T>(allFunctions, service, context);
 		}
-		export function createService<T extends sockets.Tcp>(wasmInterface: $wcm.WasmInterface, context: $wcm.Context): T {
-			return $wcm.Service.create<T>(allFunctions, wasmInterface, context);
+		export function createService(wasmInterface: $wcm.WasmInterface, context: $wcm.Context): sockets.Tcp {
+			return $wcm.Service.create<sockets.Tcp>(allFunctions, wasmInterface, context);
 		}
 	}
 	export namespace TcpCreateSocket.$ {
@@ -1120,11 +1160,14 @@ export namespace sockets {
 	}
 	export namespace TcpCreateSocket._ {
 		const allFunctions = [$.createTcpSocket];
+		export type WasmInterface = {
+			'create-tcp-socket': (result: ptr<(i32 | i64 | f32 | f64)[]>) => void;
+		};
 		export function createHost<T extends $wcm.Host>(service: sockets.TcpCreateSocket, context: $wcm.Context): T {
 			return $wcm.Host.create<T>(allFunctions, service, context);
 		}
-		export function createService<T extends sockets.TcpCreateSocket>(wasmInterface: $wcm.WasmInterface, context: $wcm.Context): T {
-			return $wcm.Service.create<T>(allFunctions, wasmInterface, context);
+		export function createService(wasmInterface: $wcm.WasmInterface, context: $wcm.Context): sockets.TcpCreateSocket {
+			return $wcm.Service.create<sockets.TcpCreateSocket>(allFunctions, wasmInterface, context);
 		}
 	}
 	export namespace Udp.$ {
@@ -1208,11 +1251,32 @@ export namespace sockets {
 	}
 	export namespace Udp._ {
 		const allFunctions = [$.startBind, $.finishBind, $.startConnect, $.finishConnect, $.receive, $.send, $.localAddress, $.remoteAddress, $.addressFamily, $.ipv6Only, $.setIpv6Only, $.unicastHopLimit, $.setUnicastHopLimit, $.receiveBufferSize, $.setReceiveBufferSize, $.sendBufferSize, $.setSendBufferSize, $.subscribe, $.dropUdpSocket];
+		export type WasmInterface = {
+			'start-bind': (result: ptr<(i32 | i64 | f32 | f64)[]>) => void;
+			'finish-bind': (result: ptr<(i32 | i64 | f32 | f64)[]>) => void;
+			'start-connect': (result: ptr<(i32 | i64 | f32 | f64)[]>) => void;
+			'finish-connect': (result: ptr<(i32 | i64 | f32 | f64)[]>) => void;
+			'receive': (result: ptr<(i32 | i64 | f32 | f64)[]>) => void;
+			'send': (result: ptr<(i32 | i64 | f32 | f64)[]>) => void;
+			'local-address': (result: ptr<(i32 | i64 | f32 | f64)[]>) => void;
+			'remote-address': (result: ptr<(i32 | i64 | f32 | f64)[]>) => void;
+			'address-family': (this_: i32) => i32;
+			'ipv6-only': (result: ptr<(i32 | i64 | f32 | f64)[]>) => void;
+			'set-ipv6-only': (result: ptr<(i32 | i64 | f32 | f64)[]>) => void;
+			'unicast-hop-limit': (result: ptr<(i32 | i64 | f32 | f64)[]>) => void;
+			'set-unicast-hop-limit': (result: ptr<(i32 | i64 | f32 | f64)[]>) => void;
+			'receive-buffer-size': (result: ptr<(i32 | i64 | f32 | f64)[]>) => void;
+			'set-receive-buffer-size': (result: ptr<(i32 | i64 | f32 | f64)[]>) => void;
+			'send-buffer-size': (result: ptr<(i32 | i64 | f32 | f64)[]>) => void;
+			'set-send-buffer-size': (result: ptr<(i32 | i64 | f32 | f64)[]>) => void;
+			'subscribe': (this_: i32) => i32;
+			'drop-udp-socket': (this_: i32) => void;
+		};
 		export function createHost<T extends $wcm.Host>(service: sockets.Udp, context: $wcm.Context): T {
 			return $wcm.Host.create<T>(allFunctions, service, context);
 		}
-		export function createService<T extends sockets.Udp>(wasmInterface: $wcm.WasmInterface, context: $wcm.Context): T {
-			return $wcm.Service.create<T>(allFunctions, wasmInterface, context);
+		export function createService(wasmInterface: $wcm.WasmInterface, context: $wcm.Context): sockets.Udp {
+			return $wcm.Service.create<sockets.Udp>(allFunctions, wasmInterface, context);
 		}
 	}
 	export namespace UdpCreateSocket.$ {
@@ -1226,11 +1290,14 @@ export namespace sockets {
 	}
 	export namespace UdpCreateSocket._ {
 		const allFunctions = [$.createUdpSocket];
+		export type WasmInterface = {
+			'create-udp-socket': (result: ptr<(i32 | i64 | f32 | f64)[]>) => void;
+		};
 		export function createHost<T extends $wcm.Host>(service: sockets.UdpCreateSocket, context: $wcm.Context): T {
 			return $wcm.Host.create<T>(allFunctions, service, context);
 		}
-		export function createService<T extends sockets.UdpCreateSocket>(wasmInterface: $wcm.WasmInterface, context: $wcm.Context): T {
-			return $wcm.Service.create<T>(allFunctions, wasmInterface, context);
+		export function createService(wasmInterface: $wcm.WasmInterface, context: $wcm.Context): sockets.UdpCreateSocket {
+			return $wcm.Service.create<sockets.UdpCreateSocket>(allFunctions, wasmInterface, context);
 		}
 	}
 }

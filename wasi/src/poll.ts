@@ -3,7 +3,7 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 import * as $wcm from '@vscode/wasm-component-model';
-import type { u32 } from '@vscode/wasm-component-model';
+import type { u32, i32, ptr } from '@vscode/wasm-component-model';
 
 export namespace poll {
 	/**
@@ -68,11 +68,15 @@ export namespace poll {
 	}
 	export namespace Poll._ {
 		const allFunctions = [$.dropPollable, $.pollOneoff];
+		export type WasmInterface = {
+			'drop-pollable': (this_: i32) => void;
+			'poll-oneoff': (in__ptr: i32, in__len: i32, result: ptr<[ptr<i32>, i32]>) => void;
+		};
 		export function createHost<T extends $wcm.Host>(service: poll.Poll, context: $wcm.Context): T {
 			return $wcm.Host.create<T>(allFunctions, service, context);
 		}
-		export function createService<T extends poll.Poll>(wasmInterface: $wcm.WasmInterface, context: $wcm.Context): T {
-			return $wcm.Service.create<T>(allFunctions, wasmInterface, context);
+		export function createService(wasmInterface: $wcm.WasmInterface, context: $wcm.Context): poll.Poll {
+			return $wcm.Service.create<poll.Poll>(allFunctions, wasmInterface, context);
 		}
 	}
 }

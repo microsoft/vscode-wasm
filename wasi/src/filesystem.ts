@@ -3,7 +3,7 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 import * as $wcm from '@vscode/wasm-component-model';
-import type { u64, u32, result, option } from '@vscode/wasm-component-model';
+import type { u64, u32, result, option, i32, i64, f32, f64, ptr } from '@vscode/wasm-component-model';
 import { clocks } from './clocks';
 import { io } from './io';
 
@@ -70,14 +70,14 @@ export namespace filesystem {
 			dataIntegritySync: boolean;
 			requestedWriteSync: boolean;
 			mutateDirectory: boolean;
-		};
+		}
 		
 		/**
 		 * Flags determining the method of how paths are resolved.
 		 */
 		export interface PathFlags extends $wcm.JFlags {
 			symlinkFollow: boolean;
-		};
+		}
 		
 		/**
 		 * Open flags used by `open-at`.
@@ -87,7 +87,7 @@ export namespace filesystem {
 			directory: boolean;
 			exclusive: boolean;
 			truncate: boolean;
-		};
+		}
 		
 		/**
 		 * Permissions mode used by `open-at`, `change-file-permissions-at`, and
@@ -97,7 +97,7 @@ export namespace filesystem {
 			readable: boolean;
 			writable: boolean;
 			executable: boolean;
-		};
+		}
 		
 		/**
 		 * Access type used by `access-at`.
@@ -1044,11 +1044,51 @@ export namespace filesystem {
 	}
 	export namespace Types._ {
 		const allFunctions = [$.readViaStream, $.writeViaStream, $.appendViaStream, $.advise, $.syncData, $.getFlags, $.getType, $.setSize, $.setTimes, $.read, $.write, $.readDirectory, $.sync, $.createDirectoryAt, $.stat, $.statAt, $.setTimesAt, $.linkAt, $.openAt, $.readlinkAt, $.removeDirectoryAt, $.renameAt, $.symlinkAt, $.accessAt, $.unlinkFileAt, $.changeFilePermissionsAt, $.changeDirectoryPermissionsAt, $.lockShared, $.lockExclusive, $.tryLockShared, $.tryLockExclusive, $.unlock, $.dropDescriptor, $.readDirectoryEntry, $.dropDirectoryEntryStream, $.isSameObject, $.metadataHash, $.metadataHashAt];
+		export type WasmInterface = {
+			'read-via-stream': (result: ptr<(i32 | i64 | f32 | f64)[]>) => void;
+			'write-via-stream': (result: ptr<(i32 | i64 | f32 | f64)[]>) => void;
+			'append-via-stream': (result: ptr<(i32 | i64 | f32 | f64)[]>) => void;
+			'advise': (result: ptr<(i32 | i64 | f32 | f64)[]>) => void;
+			'sync-data': (result: ptr<(i32 | i64 | f32 | f64)[]>) => void;
+			'get-flags': (result: ptr<(i32 | i64 | f32 | f64)[]>) => void;
+			'get-type': (result: ptr<(i32 | i64 | f32 | f64)[]>) => void;
+			'set-size': (result: ptr<(i32 | i64 | f32 | f64)[]>) => void;
+			'set-times': (result: ptr<(i32 | i64 | f32 | f64)[]>) => void;
+			'read': (result: ptr<(i32 | i64 | f32 | f64)[]>) => void;
+			'write': (result: ptr<(i32 | i64 | f32 | f64)[]>) => void;
+			'read-directory': (result: ptr<(i32 | i64 | f32 | f64)[]>) => void;
+			'sync': (result: ptr<(i32 | i64 | f32 | f64)[]>) => void;
+			'create-directory-at': (result: ptr<(i32 | i64 | f32 | f64)[]>) => void;
+			'stat': (result: ptr<(i32 | i64 | f32 | f64)[]>) => void;
+			'stat-at': (result: ptr<(i32 | i64 | f32 | f64)[]>) => void;
+			'set-times-at': (result: ptr<(i32 | i64 | f32 | f64)[]>) => void;
+			'link-at': (result: ptr<(i32 | i64 | f32 | f64)[]>) => void;
+			'open-at': (result: ptr<(i32 | i64 | f32 | f64)[]>) => void;
+			'readlink-at': (result: ptr<(i32 | i64 | f32 | f64)[]>) => void;
+			'remove-directory-at': (result: ptr<(i32 | i64 | f32 | f64)[]>) => void;
+			'rename-at': (result: ptr<(i32 | i64 | f32 | f64)[]>) => void;
+			'symlink-at': (result: ptr<(i32 | i64 | f32 | f64)[]>) => void;
+			'access-at': (result: ptr<(i32 | i64 | f32 | f64)[]>) => void;
+			'unlink-file-at': (result: ptr<(i32 | i64 | f32 | f64)[]>) => void;
+			'change-file-permissions-at': (result: ptr<(i32 | i64 | f32 | f64)[]>) => void;
+			'change-directory-permissions-at': (result: ptr<(i32 | i64 | f32 | f64)[]>) => void;
+			'lock-shared': (result: ptr<(i32 | i64 | f32 | f64)[]>) => void;
+			'lock-exclusive': (result: ptr<(i32 | i64 | f32 | f64)[]>) => void;
+			'try-lock-shared': (result: ptr<(i32 | i64 | f32 | f64)[]>) => void;
+			'try-lock-exclusive': (result: ptr<(i32 | i64 | f32 | f64)[]>) => void;
+			'unlock': (result: ptr<(i32 | i64 | f32 | f64)[]>) => void;
+			'drop-descriptor': (this_: i32) => void;
+			'read-directory-entry': (result: ptr<(i32 | i64 | f32 | f64)[]>) => void;
+			'drop-directory-entry-stream': (this_: i32) => void;
+			'is-same-object': (this_: i32, other: i32) => i32;
+			'metadata-hash': (result: ptr<(i32 | i64 | f32 | f64)[]>) => void;
+			'metadata-hash-at': (result: ptr<(i32 | i64 | f32 | f64)[]>) => void;
+		};
 		export function createHost<T extends $wcm.Host>(service: filesystem.Types, context: $wcm.Context): T {
 			return $wcm.Host.create<T>(allFunctions, service, context);
 		}
-		export function createService<T extends filesystem.Types>(wasmInterface: $wcm.WasmInterface, context: $wcm.Context): T {
-			return $wcm.Service.create<T>(allFunctions, wasmInterface, context);
+		export function createService(wasmInterface: $wcm.WasmInterface, context: $wcm.Context): filesystem.Types {
+			return $wcm.Service.create<filesystem.Types>(allFunctions, wasmInterface, context);
 		}
 	}
 	export namespace Preopens.$ {
@@ -1057,11 +1097,14 @@ export namespace filesystem {
 	}
 	export namespace Preopens._ {
 		const allFunctions = [$.getDirectories];
+		export type WasmInterface = {
+			'get-directories': (result: ptr<[ptr<i32>, i32]>) => void;
+		};
 		export function createHost<T extends $wcm.Host>(service: filesystem.Preopens, context: $wcm.Context): T {
 			return $wcm.Host.create<T>(allFunctions, service, context);
 		}
-		export function createService<T extends filesystem.Preopens>(wasmInterface: $wcm.WasmInterface, context: $wcm.Context): T {
-			return $wcm.Service.create<T>(allFunctions, wasmInterface, context);
+		export function createService(wasmInterface: $wcm.WasmInterface, context: $wcm.Context): filesystem.Preopens {
+			return $wcm.Service.create<filesystem.Preopens>(allFunctions, wasmInterface, context);
 		}
 	}
 }

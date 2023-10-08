@@ -28,14 +28,25 @@ async function run(options: Options): Promise<number> {
 	}
 
 	try {
-		const stat = await fs.stat(options.file, { bigint: true });
-		if (!stat.isFile()) {
-			process.stderr.write(`${options.file} is not a file.\n`);
-			return 1;
-		}
+		if (options.stdin) {
+			let data: string = '';
+			process.stdin.on('data', async (chunk) => {
+				data = data + chunk.toString();
+			});
+			process.stdin.on('end', async () => {
+				const content: Document = JSON.parse(data);
+				processDocument(content, options);
+			});
+		} else {
+			const stat = await fs.stat(options.file, { bigint: true });
+			if (!stat.isFile()) {
+				process.stderr.write(`${options.file} is not a file.\n`);
+				return 1;
+			}
 
-		const content: Document = JSON.parse(await fs.readFile(options.file, { encoding: 'utf8' }));
-		processDocument(content, options);
+			const content: Document = JSON.parse(await fs.readFile(options.file, { encoding: 'utf8' }));
+			processDocument(content, options);
+		}
 
 		return 0;
 	} catch (error:any) {
@@ -80,6 +91,16 @@ export async function main(): Promise<number> {
 			description: 'The style of the generated names.',
 			enum: ['ts', 'wit'],
 			default: 'ts'
+		}).
+		option('stdin', {
+			description: 'Read the input from stdin.',
+			boolean: true,
+			default: false
+		}).
+		option('noMain', {
+			description: 'Do not generate a main entry point file.',
+			boolean: true,
+			default: false
 		});
 
 	const parsed = await yargs.argv;
