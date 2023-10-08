@@ -1520,8 +1520,8 @@ namespace TypeScript {
 		private readonly nameProvider: NameProvider;
 		private readonly imports: Imports;
 
-		private static MAX_FLAT_PARAMS = 16;
-		private static MAX_FLAT_RESULTS = 1;
+		// private static MAX_FLAT_PARAMS = 16;
+		// private static MAX_FLAT_RESULTS = 1;
 		private static readonly baseTypes: Map<string, WasmTypeName> = new Map([
 			['u8', 'i32'],
 			['u16', 'i32'],
