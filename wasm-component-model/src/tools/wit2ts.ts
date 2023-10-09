@@ -138,6 +138,7 @@ interface NameProvider {
 	asNamespaceName(iface: Interface): string;
 	asTypeName(type: Type): string;
 	asFunctionName(func: Func): string;
+	asMethodName(method: Method): string;
 	asParameterName(param: Param): string;
 	asEnumCaseName(c: EnumCase): string;
 	asVariantCaseName(c: VariantCase): string;
@@ -183,6 +184,10 @@ namespace _TypeScriptNameProvider {
 
 	export function asFunctionName(func: Func): string {
 		return _asPropertyName(func.name);
+	}
+
+	export function asMethodName(method: Method): string {
+		return _asPropertyName(method.name);
 	}
 
 	export function asParameterName(param: Param): string {
@@ -276,6 +281,10 @@ namespace _WitNameProvider {
 
 	export function asFunctionName(func: Func): string {
 		return toTs(func.name);
+	}
+
+	export function asMethodName(method: Method): string {
+		return toTs(method.name);
 	}
 
 	export function asParameterName(param: Param): string {
@@ -1028,6 +1037,9 @@ namespace TypeScript {
 					const typeFlattener = new TypeFlattener(this.symbols, this.nameProvider, code.imports);
 					let variantParam: boolean = false;
 					for (const func of Object.values(iface.functions)) {
+						if (Callable.isMethod(func)) {
+							continue;
+						}
 						let params;
 						try {
 							params = typeFlattener.flattenParams(func);
@@ -1361,9 +1373,13 @@ namespace TypeScript {
 			if (methods === undefined || methods.length === 0) {
 				this.code.push(`export type ${tsName} = {};`);
 			} else {
+				this.code.push(`export namespace ${tsName} {`);
+				this.code.increaseIndent();
 				for (const method of methods) {
-					new FunctionEmitter(method, this.scope, this.qualifier, this.code, this.symbols, this.printers, this.nameProvider).emit();
+					new MethodEmitter(method, this.scope, this.qualifier, this.code, this.symbols, this.printers, this.nameProvider).emit();
 				}
+				this.code.decreaseIndent();
+				this.code.push(`}`);
 			}
 		}
 
@@ -1395,17 +1411,17 @@ namespace TypeScript {
 		}
 	}
 
-	class FunctionEmitter {
+	abstract class CallableEmitter {
 
-		private readonly func: Func;
-		private readonly qualifier: string;
-		private readonly code: Code;
-		private readonly printers: Printers;
-		private readonly nameProvider: NameProvider;
+		protected readonly callable: Callable;
+		protected readonly qualifier: string;
+		protected readonly code: Code;
+		protected readonly printers: Printers;
+		protected readonly nameProvider: NameProvider;
 		public metaModelEmitter: MetaModel.Emitter | undefined;
 
-		constructor(func: Func, _scope: Interface, qualifier: string, code: Code, _symbols: SymbolTable, printers: Printers, nameProvider: NameProvider) {
-			this.func = func;
+		constructor(callable: Callable, qualifier: string, code: Code, printers: Printers, nameProvider: NameProvider) {
+			this.callable = callable;
 			this.qualifier = qualifier;
 			this.code = code;
 			this.printers = printers;
@@ -1413,69 +1429,72 @@ namespace TypeScript {
 		}
 
 		public emit(): void {
-			emitDocumentation(this.func, this.code);
-			const funcName = this.nameProvider.asFunctionName(this.func);
-			const elements: string[] = [];
-			const metaData: string[][] = [];
-			for (const param of this.func.params) {
+			emitDocumentation(this.callable, this.code);
+			const params: string[] = [];
+			const metaDataParams: string[][] = [];
+			for (const param of this.callable.params) {
 				const paramName = this.nameProvider.asParameterName(param);
-				elements.push(`${paramName}: ${this.printers.typeScript.printTypeReference(param.type, TypeUsage.parameter)}`);
-				metaData.push([paramName, this.printers.metaModel.printTypeReference(param.type, TypeUsage.parameter)]);
+				params.push(`${paramName}: ${this.printers.typeScript.printTypeReference(param.type, TypeUsage.parameter)}`);
+				metaDataParams.push([paramName, this.printers.metaModel.printTypeReference(param.type, TypeUsage.parameter)]);
 			}
-			let returnType: string = 'void';
+			let returnType: string | undefined = undefined;
 			let metaReturnType: string | undefined = undefined;
-			if (this.func.results.length === 1) {
-				returnType = this.printers.typeScript.printTypeReference(this.func.results[0].type, TypeUsage.function);
-				metaReturnType = this.printers.metaModel.printTypeReference(this.func.results[0].type, TypeUsage.function);
-			} else if (this.func.results.length > 1) {
-				returnType = `[${this.func.results.map(r => this.printers.typeScript.printTypeReference(r.type, TypeUsage.function)).join(', ')}]`;
-				metaReturnType = `[${this.func.results.map(r => this.printers.metaModel.printTypeReference(r.type, TypeUsage.function)).join(', ')}]`;
+			if (this.callable.results.length === 1) {
+				returnType = this.printers.typeScript.printTypeReference(this.callable.results[0].type, TypeUsage.function);
+				metaReturnType = this.printers.metaModel.printTypeReference(this.callable.results[0].type, TypeUsage.function);
+			} else if (this.callable.results.length > 1) {
+				returnType = `[${this.callable.results.map(r => this.printers.typeScript.printTypeReference(r.type, TypeUsage.function)).join(', ')}]`;
+				metaReturnType = `[${this.callable.results.map(r => this.printers.metaModel.printTypeReference(r.type, TypeUsage.function)).join(', ')}]`;
 			}
-			this.code.push(`export declare function ${funcName}(${elements.join(', ')}): ${returnType};`);
-			this.metaModelEmitter = new MetaModel.FunctionEmitter(`typeof ${this.qualifier}.${funcName}`, funcName, this.func.name, metaData, metaReturnType);
-			// this.code.push(`export type ${name} = typeof ${name};`);
+			this.metaModelEmitter = this.doEmit(params, returnType, metaDataParams, metaReturnType);
+		}
+
+		protected abstract doEmit(params: string[], returnType: string | undefined, metaData: string[][], metaReturnType: string | undefined): MetaModel.Emitter;
+	}
+
+	class FunctionEmitter extends CallableEmitter {
+
+		private readonly func: Func;
+
+		constructor(func: Func, qualifier: string, code: Code, printers: Printers, nameProvider: NameProvider) {
+			super(func, qualifier, code, printers, nameProvider);
+			this.func = func;
+		}
+
+		protected doEmit(params: string[], returnType: string | undefined, metaData: string[][], metaReturnType: string | undefined): MetaModel.Emitter {
+			if (returnType === undefined) {
+				returnType = 'void';
+			}
+			const funcName = this.nameProvider.asFunctionName(this.func);
+			this.code.push(`export declare function ${funcName}(${params.join(', ')}): ${returnType};`);
+			return new MetaModel.FunctionEmitter(`typeof ${this.qualifier}.${funcName}`, funcName, this.callable.name, metaData, metaReturnType);
 		}
 	}
 
-	class MethodEmitter {
+	class MethodEmitter extends CallableEmitter {
 
-		private readonly func: Func;
-		private readonly qualifier: string;
-		private readonly code: Code;
-		private readonly printers: Printers;
-		private readonly nameProvider: NameProvider;
-		public metaModelEmitter: MetaModel.Emitter | undefined;
+		private readonly method: Method;
+		private readonly options: ResolvedOptions;
 
-		constructor(func: Func, _scope: Interface, qualifier: string, code: Code, _symbols: SymbolTable, printers: Printers, nameProvider: NameProvider) {
-			this.func = func;
-			this.qualifier = qualifier;
-			this.code = code;
-			this.printers = printers;
-			this.nameProvider = nameProvider;
+		constructor(method: Method, qualifier: string, code: Code, printers: Printers, nameProvider: NameProvider, options: ResolvedOptions) {
+			super(method, qualifier, code, printers, nameProvider);
+			this.method = method;
+			this.options = options;
 		}
 
-		public emit(): void {
-			emitDocumentation(this.func, this.code);
-			const funcName = this.nameProvider.asFunctionName(this.func);
-			const elements: string[] = [];
-			const metaData: string[][] = [];
-			for (const param of this.func.params) {
-				const paramName = this.nameProvider.asParameterName(param);
-				elements.push(`${paramName}: ${this.printers.typeScript.printTypeReference(param.type, TypeUsage.parameter)}`);
-				metaData.push([paramName, this.printers.metaModel.printTypeReference(param.type, TypeUsage.parameter)]);
+		protected doEmit(params: string[], returnType: string | undefined, metaData: string[][], metaReturnType: string | undefined): MetaModel.Emitter {
+			if (returnType === undefined) {
+				returnType = 'void';
 			}
-			let returnType: string = 'void';
-			let metaReturnType: string | undefined = undefined;
-			if (this.func.results.length === 1) {
-				returnType = this.printers.typeScript.printTypeReference(this.func.results[0].type, TypeUsage.function);
-				metaReturnType = this.printers.metaModel.printTypeReference(this.func.results[0].type, TypeUsage.function);
-			} else if (this.func.results.length > 1) {
-				returnType = `[${this.func.results.map(r => this.printers.typeScript.printTypeReference(r.type, TypeUsage.function)).join(', ')}]`;
-				metaReturnType = `[${this.func.results.map(r => this.printers.metaModel.printTypeReference(r.type, TypeUsage.function)).join(', ')}]`;
+			const methodName = this.nameProvider.asMethodName(this.method);
+			if (this.options.resourceStyle === 'namespace') {
+				this.code.push(`export declare function ${methodName}(${params.join(', ')}): ${returnType};`);
+			} else if (this.options.resourceStyle === 'class') {
+
+			} else {
+				throw new Error(`Unknown resource style ${this.options.resourceStyle}.`);
 			}
-			this.code.push(`export declare function ${funcName}(${elements.join(', ')}): ${returnType};`);
-			this.metaModelEmitter = new MetaModel.FunctionEmitter(`typeof ${this.qualifier}.${funcName}`, funcName, this.func.name, metaData, metaReturnType);
-			// this.code.push(`export type ${name} = typeof ${name};`);
+			return new MetaModel.FunctionEmitter(`typeof ${this.qualifier}.${methodName}`, methodName, this.callable.name, metaData, metaReturnType);
 		}
 	}
 
