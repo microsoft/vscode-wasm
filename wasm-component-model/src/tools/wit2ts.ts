@@ -914,6 +914,9 @@ namespace TypeScript {
 		private readonly nameProvider: NameProvider;
 		private readonly metaModelEmitters: Map<string, MetaModel.Emitter[]>;
 
+		private static MAX_FLAT_PARAMS = 16;
+		private static MAX_FLAT_RESULTS = 1;
+
 		constructor(pkg: Package, mainCode: Code, symbols: SymbolTable, nameProvider: NameProvider) {
 			this.pkg = pkg;
 			this.mainCode = mainCode;
@@ -971,6 +974,7 @@ namespace TypeScript {
 					code.push(`export type WasmInterface = {`);
 					code.increaseIndent();
 					const typeFlattener = new TypeFlattener(this.symbols, this.nameProvider, code.imports);
+					let variantParam: boolean = false;
 					for (const func of Object.values(iface.functions)) {
 						let params;
 						try {
@@ -982,6 +986,7 @@ namespace TypeScript {
 								code.imports.addBaseType('f32');
 								code.imports.addBaseType('f64');
 								params = [{ name: '...args', type: '(i32 | i64 | f32 | f64)[]'}];
+								variantParam = true;
 							} else {
 								throw err;
 							}
@@ -989,7 +994,7 @@ namespace TypeScript {
 						let returnType: string;
 						try {
 							const results = typeFlattener.flattenResult(func);
-							if (results.length === 1) {
+							if (results.length === PackageEmitter.MAX_FLAT_RESULTS) {
 								returnType = results[0];
 							} else {
 								returnType = 'void';
@@ -1009,7 +1014,16 @@ namespace TypeScript {
 								throw err;
 							}
 						}
-						code.push(`'${func.name}': (${params.map(p => `${p.name}: ${p.type}`).join(', ')}) => ${returnType};`);
+						if (params.length <= PackageEmitter.MAX_FLAT_PARAMS) {
+							code.push(`'${func.name}': (${params.map(p => `${p.name}: ${p.type}`).join(', ')}) => ${returnType};`);
+						} else {
+							code.imports.addBaseType('ptr');
+							if (variantParam) {
+								code.push(`'${func.name}': (args: ptr<(i32 | i64 | f32 | f64)[]>) => ${returnType};`);
+							} else {
+								code.push(`'${func.name}': (args: ptr<[${params.map(p => p.type).join(', ')}]>) => ${returnType};`);
+							}
+						}
 					}
 					code.decreaseIndent();
 					code.push(`};`);
@@ -1520,8 +1534,6 @@ namespace TypeScript {
 		private readonly nameProvider: NameProvider;
 		private readonly imports: Imports;
 
-		// private static MAX_FLAT_PARAMS = 16;
-		// private static MAX_FLAT_RESULTS = 1;
 		private static readonly baseTypes: Map<string, WasmTypeName> = new Map([
 			['u8', 'i32'],
 			['u16', 'i32'],
