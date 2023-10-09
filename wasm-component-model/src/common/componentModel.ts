@@ -644,6 +644,19 @@ export const ptr: ComponentModelType<ptr> = {
 	store: u32.store,
 	lowerFlat: u32.lowerFlat
 };
+export type resource = u32;
+export const resource: ComponentModelType<resource> = {
+	kind: u32.kind,
+	size: u32.size,
+	alignment: u32.alignment,
+	flatTypes: u32.flatTypes,
+
+	load: u32.load,
+	liftFlat: u32.liftFlat,
+	alloc: u32.alloc,
+	store: u32.store,
+	lowerFlat: u32.lowerFlat
+};
 
 namespace $wchar {
 	export const kind: ComponentModelTypeKind = ComponentModelTypeKind.char;

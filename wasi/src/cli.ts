@@ -3,7 +3,7 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 import * as $wcm from '@vscode/wasm-component-model';
-import type { result, u32, ptr, i32, i64, f32, f64 } from '@vscode/wasm-component-model';
+import type { result, resource, ptr, i32, i64, f32, f64 } from '@vscode/wasm-component-model';
 import { io } from './io';
 
 export namespace cli {
@@ -80,35 +80,17 @@ export namespace cli {
 		
 		/**
 		 * The input side of a terminal.
-		 * 
-		 * This [represents a resource](https://github.com/WebAssembly/WASI/blob/main/docs/WitInWasi.md#Resources).
 		 */
-		export type TerminalInput = u32;
-		
-		/**
-		 * Dispose of the specified terminal-input after which it may no longer
-		 * be used.
-		 */
-		export declare function dropTerminalInput(this_: TerminalInput): void;
+		export type TerminalInput = resource;
 	}
-	export type TerminalInput = Pick<typeof TerminalInput, 'dropTerminalInput'>;
 	
 	export namespace TerminalOutput {
 		
 		/**
 		 * The output side of a terminal.
-		 * 
-		 * This [represents a resource](https://github.com/WebAssembly/WASI/blob/main/docs/WitInWasi.md#Resources).
 		 */
-		export type TerminalOutput = u32;
-		
-		/**
-		 * Dispose of the specified terminal-output, after which it may no longer
-		 * be used.
-		 */
-		export declare function dropTerminalOutput(this_: TerminalOutput): void;
+		export type TerminalOutput = resource;
 	}
-	export type TerminalOutput = Pick<typeof TerminalOutput, 'dropTerminalOutput'>;
 	
 	/**
 	 * An interface providing an optional `terminal-input` for stdin as a
@@ -214,12 +196,12 @@ export namespace cli {
 	}
 	export namespace Stdin.$ {
 		export const InputStream = io.Streams.$.InputStream;
-		export const getStdin = new $wcm.FunctionType<typeof cli.Stdin.getStdin>('getStdin', 'get-stdin', [], InputStream);
+		export const getStdin = new $wcm.FunctionType<typeof cli.Stdin.getStdin>('getStdin', 'get-stdin', [], new $wcm.OwnType<cli.Stdin.InputStream>(InputStream));
 	}
 	export namespace Stdin._ {
 		const allFunctions = [$.getStdin];
 		export type WasmInterface = {
-			'get-stdin': () => i32;
+			'get-stdin': (result: ptr<[]>) => void;
 		};
 		export function createHost<T extends $wcm.Host>(service: cli.Stdin, context: $wcm.Context): T {
 			return $wcm.Host.create<T>(allFunctions, service, context);
@@ -230,12 +212,12 @@ export namespace cli {
 	}
 	export namespace Stdout.$ {
 		export const OutputStream = io.Streams.$.OutputStream;
-		export const getStdout = new $wcm.FunctionType<typeof cli.Stdout.getStdout>('getStdout', 'get-stdout', [], OutputStream);
+		export const getStdout = new $wcm.FunctionType<typeof cli.Stdout.getStdout>('getStdout', 'get-stdout', [], new $wcm.OwnType<cli.Stdout.OutputStream>(OutputStream));
 	}
 	export namespace Stdout._ {
 		const allFunctions = [$.getStdout];
 		export type WasmInterface = {
-			'get-stdout': () => i32;
+			'get-stdout': (result: ptr<[]>) => void;
 		};
 		export function createHost<T extends $wcm.Host>(service: cli.Stdout, context: $wcm.Context): T {
 			return $wcm.Host.create<T>(allFunctions, service, context);
@@ -246,12 +228,12 @@ export namespace cli {
 	}
 	export namespace Stderr.$ {
 		export const OutputStream = io.Streams.$.OutputStream;
-		export const getStderr = new $wcm.FunctionType<typeof cli.Stderr.getStderr>('getStderr', 'get-stderr', [], OutputStream);
+		export const getStderr = new $wcm.FunctionType<typeof cli.Stderr.getStderr>('getStderr', 'get-stderr', [], new $wcm.OwnType<cli.Stderr.OutputStream>(OutputStream));
 	}
 	export namespace Stderr._ {
 		const allFunctions = [$.getStderr];
 		export type WasmInterface = {
-			'get-stderr': () => i32;
+			'get-stderr': (result: ptr<[]>) => void;
 		};
 		export function createHost<T extends $wcm.Host>(service: cli.Stderr, context: $wcm.Context): T {
 			return $wcm.Host.create<T>(allFunctions, service, context);
@@ -261,15 +243,10 @@ export namespace cli {
 		}
 	}
 	export namespace TerminalInput.$ {
-		export const TerminalInput = $wcm.u32;
-		export const dropTerminalInput = new $wcm.FunctionType<typeof cli.TerminalInput.dropTerminalInput>('dropTerminalInput', 'drop-terminal-input',[
-			['this_', TerminalInput],
-		], undefined);
 	}
 	export namespace TerminalInput._ {
-		const allFunctions = [$.dropTerminalInput];
+		const allFunctions = [];
 		export type WasmInterface = {
-			'drop-terminal-input': (this_: i32) => void;
 		};
 		export function createHost<T extends $wcm.Host>(service: cli.TerminalInput, context: $wcm.Context): T {
 			return $wcm.Host.create<T>(allFunctions, service, context);
@@ -279,15 +256,10 @@ export namespace cli {
 		}
 	}
 	export namespace TerminalOutput.$ {
-		export const TerminalOutput = $wcm.u32;
-		export const dropTerminalOutput = new $wcm.FunctionType<typeof cli.TerminalOutput.dropTerminalOutput>('dropTerminalOutput', 'drop-terminal-output',[
-			['this_', TerminalOutput],
-		], undefined);
 	}
 	export namespace TerminalOutput._ {
-		const allFunctions = [$.dropTerminalOutput];
+		const allFunctions = [];
 		export type WasmInterface = {
-			'drop-terminal-output': (this_: i32) => void;
 		};
 		export function createHost<T extends $wcm.Host>(service: cli.TerminalOutput, context: $wcm.Context): T {
 			return $wcm.Host.create<T>(allFunctions, service, context);
@@ -298,7 +270,7 @@ export namespace cli {
 	}
 	export namespace TerminalStdin.$ {
 		export const TerminalInput = cli.TerminalInput.$.TerminalInput;
-		export const getTerminalStdin = new $wcm.FunctionType<typeof cli.TerminalStdin.getTerminalStdin>('getTerminalStdin', 'get-terminal-stdin', [], new $wcm.OptionType<cli.TerminalStdin.TerminalInput>(TerminalInput));
+		export const getTerminalStdin = new $wcm.FunctionType<typeof cli.TerminalStdin.getTerminalStdin>('getTerminalStdin', 'get-terminal-stdin', [], new $wcm.OptionType<cli.TerminalStdin.TerminalInput>(new $wcm.OwnType<cli.TerminalStdin.TerminalInput>(TerminalInput)));
 	}
 	export namespace TerminalStdin._ {
 		const allFunctions = [$.getTerminalStdin];
@@ -314,7 +286,7 @@ export namespace cli {
 	}
 	export namespace TerminalStdout.$ {
 		export const TerminalOutput = cli.TerminalOutput.$.TerminalOutput;
-		export const getTerminalStdout = new $wcm.FunctionType<typeof cli.TerminalStdout.getTerminalStdout>('getTerminalStdout', 'get-terminal-stdout', [], new $wcm.OptionType<cli.TerminalStdout.TerminalOutput>(TerminalOutput));
+		export const getTerminalStdout = new $wcm.FunctionType<typeof cli.TerminalStdout.getTerminalStdout>('getTerminalStdout', 'get-terminal-stdout', [], new $wcm.OptionType<cli.TerminalStdout.TerminalOutput>(new $wcm.OwnType<cli.TerminalStdout.TerminalOutput>(TerminalOutput)));
 	}
 	export namespace TerminalStdout._ {
 		const allFunctions = [$.getTerminalStdout];
@@ -330,7 +302,7 @@ export namespace cli {
 	}
 	export namespace TerminalStderr.$ {
 		export const TerminalOutput = cli.TerminalOutput.$.TerminalOutput;
-		export const getTerminalStderr = new $wcm.FunctionType<typeof cli.TerminalStderr.getTerminalStderr>('getTerminalStderr', 'get-terminal-stderr', [], new $wcm.OptionType<cli.TerminalStderr.TerminalOutput>(TerminalOutput));
+		export const getTerminalStderr = new $wcm.FunctionType<typeof cli.TerminalStderr.getTerminalStderr>('getTerminalStderr', 'get-terminal-stderr', [], new $wcm.OptionType<cli.TerminalStderr.TerminalOutput>(new $wcm.OwnType<cli.TerminalStderr.TerminalOutput>(TerminalOutput)));
 	}
 	export namespace TerminalStderr._ {
 		const allFunctions = [$.getTerminalStderr];
