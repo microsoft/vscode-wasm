@@ -73,6 +73,16 @@ export namespace Callable {
 		const candidate = value as Method;
 		return typeof candidate.kind === 'object' && typeof candidate.kind.method === 'number';
 	}
+	export function containingType(value: Method | StaticMethod | Constructor): number {
+		if (isMethod(value)) {
+			return value.kind.method;
+		} else if (isStaticMethod(value)) {
+			return value.kind.static;
+		} else if (isConstructor(value)) {
+			return value.kind.constructor;
+		}
+		throw new Error(`Unknown callable kind ${JSON.stringify(value)}`);
+	}
 }
 
 interface AbstractCallable {
