@@ -1946,13 +1946,17 @@ export class NamespaceResourceType extends AbstractResourceType {
 
 	public readonly name: string;
 	public readonly witName: string;
-	public readonly functions: FunctionType<Function>[];
+	public readonly functions: Map<string, FunctionType<Function>>;
 
-	constructor(name: string, witName: string, functions: FunctionType<Function>[]) {
+	constructor(name: string, witName: string) {
 		super(ComponentModelTypeKind.resource);
 		this.name = name;
 		this.witName = witName;
-		this.functions = functions;
+		this.functions = new Map();
+	}
+
+	public addFunction(func: FunctionType<Function>): void {
+		this.functions.set(func.name, func);
 	}
 }
 
@@ -1991,7 +1995,7 @@ export namespace Host {
 			result[signature.witName] = createHostFunction(signature, service, context);
 		}
 		for (const resource of resources) {
-			for (const callable of resource.functions) {
+			for (const callable of resource.functions.values()) {
 				result[callable.witName] = createHostFunction(callable, service, context);
 			}
 		}
@@ -2019,7 +2023,7 @@ export namespace Service {
 		}
 		for (const resource of resources) {
 			result[resource.name] = Object.create(null);
-			for (const callable of resource.functions) {
+			for (const callable of resource.functions.values()) {
 				result[callable.name] = createServiceFunction(callable, wasm, context);
 			}
 		}

@@ -683,36 +683,30 @@ namespace MetaModel {
 		private readonly witName: string;
 		private readonly functionEmitters: FunctionEmitter[];
 
-		constructor(name: string, witName: string, functionEmitters: MetaModel.FunctionEmitter[]) {
+		constructor(name: string, witName: string, functionEmitters: MetaModel.AbstractFunctionEmitter[]) {
 			this.name = name;
 			this.witName = witName;
 			this.functionEmitters = functionEmitters;
 		}
 
 		public emit(code: Code, emitted: Set<String>): void {
-			let resourceFunctions: string = '[]';
-			if (this.functionEmitters.length === 0) {
-			} else {
-				code.push(`namespace resource.${this.name} {`);
-				code.increaseIndent();
+			code.push(`export const ${this.name} = new $wcm.NamespaceResourceType('${this.name}', '${this.witName}');`);
+			if (this.functionEmitters.length > 0) {
 				for (const emitter of this.functionEmitters) {
 					emitter.emit(code, emitted);
 				}
-				code.decreaseIndent();
-				code.push('}');
 			}
-			code.push(`export const ${this.name} = new $wcm.NamespaceResourceType('${this.name}', '${this.witName}', ${resourceFunctions});`);
 			emitted.add(this.name);
 		}
 	}
 
-	export class FunctionEmitter implements Emitter {
+	export abstract class AbstractFunctionEmitter implements Emitter {
 
-		private readonly typeParam: string;
+		protected readonly typeParam: string;
 		public readonly name: string;
-		private readonly witName: string;
-		private readonly params: string[][];
-		private readonly result: string | undefined;
+		protected readonly witName: string;
+		protected readonly params: string[][];
+		protected readonly result: string | undefined;
 
 		constructor(typeParam: string, name: string, witName: string, params: string[][], result: string | undefined) {
 			this.typeParam = typeParam;
@@ -720,6 +714,15 @@ namespace MetaModel {
 			this.witName = witName;
 			this.params = params;
 			this.result = result;
+		}
+
+		public abstract emit(code: Code, emitted: Set<String>): void;
+	}
+
+	export class FunctionEmitter extends AbstractFunctionEmitter {
+
+		constructor(typeParam: string, name: string, witName: string, params: string[][], result: string | undefined) {
+			super(typeParam, name, witName, params, result);
 		}
 
 		public emit(code: Code, _emitted: Set<String>): void {
@@ -733,6 +736,30 @@ namespace MetaModel {
 				}
 				code.decreaseIndent();
 				code.push(`], ${this.result});`);
+			}
+		}
+	}
+
+	export class ResourceFunctionEmitter extends AbstractFunctionEmitter {
+
+		private readonly resourceName: string;
+
+		constructor(resourceName: string, typeParam: string, name: string, witName: string, params: string[][], result: string | undefined) {
+			super(typeParam, name, witName, params, result);
+			this.resourceName = resourceName;
+		}
+
+		public emit(code: Code, _emitted: Set<String>): void {
+			if (this.params.length === 0) {
+				code.push(`${this.resourceName}.addFunction(new $wcm.FunctionType<${this.typeParam}>('${this.name}', '${this.witName}', [], ${this.result}));`);
+			} else {
+				code.push(`${this.resourceName}.addFunction(new $wcm.FunctionType<${this.typeParam}>('${this.name}', '${this.witName}', [`);
+				code.increaseIndent();
+				for (const [name, type] of this.params) {
+					code.push(`['${name}', ${type}],`);
+				}
+				code.decreaseIndent();
+				code.push(`], ${this.result}));`);
 			}
 		}
 	}
@@ -1136,7 +1163,7 @@ namespace TypeScript {
 								code.imports.addBaseType('f32');
 								code.imports.addBaseType('f64');
 								code.imports.addBaseType('ptr');
-								params = [{ name: 'result', type: 'ptr<(i32 | i64 | f32 | f64)[]>'}];
+								params.push({ name: 'result', type: 'ptr<(i32 | i64 | f32 | f64)[]>'});
 							} else {
 								throw err;
 							}
@@ -1453,11 +1480,11 @@ namespace TypeScript {
 					this.code.push('');
 					let emitter: MethodEmitter | StaticMethodEmitter | ConstructorEmitter;
 					if (Callable.isMethod(method)) {
-						emitter = new MethodEmitter(method, this.qualifier, this.code, this.printers, this.nameProvider, this.options);
+						emitter = new MethodEmitter(tsName, method, this.qualifier, this.code, this.printers, this.nameProvider, this.options);
 					} else if (Callable.isStaticMethod(method)) {
-						emitter = new StaticMethodEmitter(method, this.qualifier, this.code, this.printers, this.nameProvider, this.options);
+						emitter = new StaticMethodEmitter(tsName, method, this.qualifier, this.code, this.printers, this.nameProvider, this.options);
 					} else if (Callable.isConstructor(method)) {
-						emitter = new ConstructorEmitter(method, this.qualifier, this.code, this.printers, this.nameProvider, this.options);
+						emitter = new ConstructorEmitter(tsName, method, this.qualifier, this.code, this.printers, this.nameProvider, this.options);
 					} else {
 						throw new Error(`Unexpected callable ${JSON.stringify(method)}.`);
 					}
@@ -1562,23 +1589,25 @@ namespace TypeScript {
 
 	class MethodEmitter extends CallableEmitter {
 
+		private readonly resourceName: string;
 		private readonly method: Method;
 		private readonly options: ResolvedOptions;
 
-		constructor(method: Method, qualifier: string, code: Code, printers: Printers, nameProvider: NameProvider, options: ResolvedOptions) {
+		constructor(resourceName: string, method: Method, qualifier: string, code: Code, printers: Printers, nameProvider: NameProvider, options: ResolvedOptions) {
 			super(method, qualifier, code, printers, nameProvider);
+			this.resourceName = resourceName;
 			this.method = method;
 			this.options = options;
 		}
 
-		protected doEmit(params: string[], returnType: string | undefined, metaData: string[][], metaReturnType: string | undefined): MetaModel.FunctionEmitter {
+		protected doEmit(params: string[], returnType: string | undefined, metaData: string[][], metaReturnType: string | undefined): MetaModel.AbstractFunctionEmitter {
 			if (returnType === undefined) {
 				returnType = 'void';
 			}
 			const methodName = this.nameProvider.asMethodName(this.method);
 			if (this.options.resourceStyle === 'namespace') {
 				this.code.push(`export declare function ${methodName}(${params.join(', ')}): ${returnType};`);
-				return new MetaModel.FunctionEmitter(`typeof ${this.qualifier}.${methodName}`, methodName, this.callable.name, metaData, metaReturnType);
+				return new MetaModel.ResourceFunctionEmitter(this.resourceName, `typeof ${this.qualifier}.${this.resourceName}.${methodName}`, methodName, this.callable.name, metaData, metaReturnType);
 			} else if (this.options.resourceStyle === 'class') {
 				throw new Error(`Unknown resource style ${this.options.resourceStyle}.`);
 			} else {
@@ -1589,23 +1618,25 @@ namespace TypeScript {
 
 	class StaticMethodEmitter extends CallableEmitter {
 
+		private readonly resourceName: string;
 		private readonly method: StaticMethod;
 		private readonly options: ResolvedOptions;
 
-		constructor(method: StaticMethod, qualifier: string, code: Code, printers: Printers, nameProvider: NameProvider, options: ResolvedOptions) {
+		constructor(resourceName: string, method: StaticMethod, qualifier: string, code: Code, printers: Printers, nameProvider: NameProvider, options: ResolvedOptions) {
 			super(method, qualifier, code, printers, nameProvider);
+			this.resourceName = resourceName;
 			this.method = method;
 			this.options = options;
 		}
 
-		protected doEmit(params: string[], returnType: string | undefined, metaData: string[][], metaReturnType: string | undefined): MetaModel.FunctionEmitter {
+		protected doEmit(params: string[], returnType: string | undefined, metaData: string[][], metaReturnType: string | undefined): MetaModel.AbstractFunctionEmitter {
 			if (returnType === undefined) {
 				returnType = 'void';
 			}
 			const methodName = this.nameProvider.asStaticMethodName(this.method);
 			if (this.options.resourceStyle === 'namespace') {
 				this.code.push(`export declare function ${methodName}(${params.join(', ')}): ${returnType};`);
-				return new MetaModel.FunctionEmitter(`typeof ${this.qualifier}.${methodName}`, methodName, this.callable.name, metaData, metaReturnType);
+				return new MetaModel.ResourceFunctionEmitter(this.resourceName, `typeof ${this.qualifier}.${this.resourceName}.${methodName}`, methodName, this.callable.name, metaData, metaReturnType);
 			} else if (this.options.resourceStyle === 'class') {
 				throw new Error(`Unknown resource style ${this.options.resourceStyle}.`);
 			} else {
@@ -1616,23 +1647,25 @@ namespace TypeScript {
 
 	class ConstructorEmitter extends CallableEmitter {
 
+		private readonly resourceName: string;
 		private readonly method: Constructor;
 		private readonly options: ResolvedOptions;
 
-		constructor(method: Constructor, qualifier: string, code: Code, printers: Printers, nameProvider: NameProvider, options: ResolvedOptions) {
+		constructor(resourceName: string, method: Constructor, qualifier: string, code: Code, printers: Printers, nameProvider: NameProvider, options: ResolvedOptions) {
 			super(method, qualifier, code, printers, nameProvider);
+			this.resourceName = resourceName;
 			this.method = method;
 			this.options = options;
 		}
 
-		protected doEmit(params: string[], returnType: string | undefined, metaData: string[][], metaReturnType: string | undefined): MetaModel.FunctionEmitter {
+		protected doEmit(params: string[], returnType: string | undefined, metaData: string[][], metaReturnType: string | undefined): MetaModel.AbstractFunctionEmitter {
 			if (returnType === undefined) {
 				returnType = 'void';
 			}
 			const methodName = this.nameProvider.asConstructorName(this.method);
 			if (this.options.resourceStyle === 'namespace') {
 				this.code.push(`export declare function ${methodName}(${params.join(', ')}): ${returnType};`);
-				return new MetaModel.FunctionEmitter(`typeof ${this.qualifier}.${methodName}`, methodName, this.callable.name, metaData, metaReturnType);
+				return new MetaModel.ResourceFunctionEmitter(this.resourceName, `typeof ${this.qualifier}.${this.resourceName}.${methodName}`, methodName, this.callable.name, metaData, metaReturnType);
 			} else if (this.options.resourceStyle === 'class') {
 				throw new Error(`Unknown resource style ${this.options.resourceStyle}.`);
 			} else {
@@ -1906,6 +1939,15 @@ namespace TypeScript {
 				for (const field of type.kind.record.fields) {
 					this.flattenParamType(result, field.type, `${prefix}_${this.nameProvider.asFieldName(field)}`);
 				}
+			} else if (Type.isResourceType(type)) {
+				this.imports.addBaseType('i32');
+				result.push({ name: `${prefix}`, type: 'i32' });
+			} else if (Type.isBorrowHandleType(type)) {
+				this.imports.addBaseType('i32');
+				result.push({ name: `${prefix}`, type: 'i32' });
+			} else if (Type.isOwnHandleType(type)) {
+				this.imports.addBaseType('i32');
+				result.push({ name: `${prefix}`, type: 'i32' });
 			}
 		}
 
@@ -1964,6 +2006,15 @@ namespace TypeScript {
 				for (const field of type.kind.record.fields) {
 					this.flattenResultType(result, field.type);
 				}
+			} else if (Type.isResourceType(type)) {
+				this.imports.addBaseType('i32');
+				result.push('i32');
+			} else if (Type.isBorrowHandleType(type)) {
+				this.imports.addBaseType('i32');
+				result.push('i32');
+			} else if (Type.isOwnHandleType(type)) {
+				this.imports.addBaseType('i32');
+				result.push('i32');
 			}
 		}
 
