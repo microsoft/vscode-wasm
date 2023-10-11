@@ -76,24 +76,26 @@ export namespace random {
 	export namespace Random {
 		
 		/**
-		 * Return `len` cryptographically-secure pseudo-random bytes.
+		 * Return `len` cryptographically-secure random or pseudo-random bytes.
 		 * 
-		 * This function must produce data from an adequately seeded
-		 * cryptographically-secure pseudo-random number generator (CSPRNG), so it
-		 * must not block, from the perspective of the calling program, and the
-		 * returned data is always unpredictable.
+		 * This function must produce data at least as cryptographically secure and
+		 * fast as an adequately seeded cryptographically-secure pseudo-random
+		 * number generator (CSPRNG). It must not block, from the perspective of
+		 * the calling program, under any circumstances, including on the first
+		 * request and on requests for numbers of bytes. The returned data must
+		 * always be unpredictable.
 		 * 
-		 * This function must always return fresh pseudo-random data. Deterministic
-		 * environments must omit this function, rather than implementing it with
-		 * deterministic data.
+		 * This function must always return fresh data. Deterministic environments
+		 * must omit this function, rather than implementing it with deterministic
+		 * data.
 		 */
 		export declare function getRandomBytes(len: u64): Uint8Array;
 		
 		/**
-		 * Return a cryptographically-secure pseudo-random `u64` value.
+		 * Return a cryptographically-secure random or pseudo-random `u64` value.
 		 * 
-		 * This function returns the same type of pseudo-random data as
-		 * `get-random-bytes`, represented as a `u64`.
+		 * This function returns the same type of data as `get-random-bytes`,
+		 * represented as a `u64`.
 		 */
 		export declare function getRandomU64(): u64;
 	}
@@ -106,15 +108,16 @@ export namespace random {
 		export const insecureSeed = new $wcm.FunctionType<typeof random.InsecureSeed.insecureSeed>('insecureSeed', 'insecure-seed', [], new $wcm.TupleType<[u64, u64]>([$wcm.u64, $wcm.u64]));
 	}
 	export namespace InsecureSeed._ {
-		const allFunctions = [$.insecureSeed];
+		const functions: $wcm.FunctionType<$wcm.ServiceFunction>[] = [$.insecureSeed];
+		const resources: $wcm.NamespaceResourceType[] = [];
 		export type WasmInterface = {
 			'insecure-seed': (result: ptr<[i64, i64]>) => void;
 		};
-		export function createHost<T extends $wcm.Host>(service: random.InsecureSeed, context: $wcm.Context): T {
-			return $wcm.Host.create<T>(allFunctions, service, context);
+		export function createHost(service: random.InsecureSeed, context: $wcm.Context): WasmInterface {
+			return $wcm.Host.create<WasmInterface>(functions, resources, service, context);
 		}
-		export function createService(wasmInterface: $wcm.WasmInterface, context: $wcm.Context): random.InsecureSeed {
-			return $wcm.Service.create<random.InsecureSeed>(allFunctions, wasmInterface, context);
+		export function createService(wasmInterface: WasmInterface, context: $wcm.Context): random.InsecureSeed {
+			return $wcm.Service.create<random.InsecureSeed>(functions, resources, wasmInterface, context);
 		}
 	}
 	export namespace Insecure.$ {
@@ -124,16 +127,17 @@ export namespace random {
 		export const getInsecureRandomU64 = new $wcm.FunctionType<typeof random.Insecure.getInsecureRandomU64>('getInsecureRandomU64', 'get-insecure-random-u64', [], $wcm.u64);
 	}
 	export namespace Insecure._ {
-		const allFunctions = [$.getInsecureRandomBytes, $.getInsecureRandomU64];
+		const functions: $wcm.FunctionType<$wcm.ServiceFunction>[] = [$.getInsecureRandomBytes, $.getInsecureRandomU64];
+		const resources: $wcm.NamespaceResourceType[] = [];
 		export type WasmInterface = {
-			'get-insecure-random-bytes': (len: i64, result: ptr<[ptr<i32>, i32]>) => void;
+			'get-insecure-random-bytes': (len: i64, result: ptr<[i32, i32]>) => void;
 			'get-insecure-random-u64': () => i64;
 		};
-		export function createHost<T extends $wcm.Host>(service: random.Insecure, context: $wcm.Context): T {
-			return $wcm.Host.create<T>(allFunctions, service, context);
+		export function createHost(service: random.Insecure, context: $wcm.Context): WasmInterface {
+			return $wcm.Host.create<WasmInterface>(functions, resources, service, context);
 		}
-		export function createService(wasmInterface: $wcm.WasmInterface, context: $wcm.Context): random.Insecure {
-			return $wcm.Service.create<random.Insecure>(allFunctions, wasmInterface, context);
+		export function createService(wasmInterface: WasmInterface, context: $wcm.Context): random.Insecure {
+			return $wcm.Service.create<random.Insecure>(functions, resources, wasmInterface, context);
 		}
 	}
 	export namespace Random.$ {
@@ -143,16 +147,17 @@ export namespace random {
 		export const getRandomU64 = new $wcm.FunctionType<typeof random.Random.getRandomU64>('getRandomU64', 'get-random-u64', [], $wcm.u64);
 	}
 	export namespace Random._ {
-		const allFunctions = [$.getRandomBytes, $.getRandomU64];
+		const functions: $wcm.FunctionType<$wcm.ServiceFunction>[] = [$.getRandomBytes, $.getRandomU64];
+		const resources: $wcm.NamespaceResourceType[] = [];
 		export type WasmInterface = {
-			'get-random-bytes': (len: i64, result: ptr<[ptr<i32>, i32]>) => void;
+			'get-random-bytes': (len: i64, result: ptr<[i32, i32]>) => void;
 			'get-random-u64': () => i64;
 		};
-		export function createHost<T extends $wcm.Host>(service: random.Random, context: $wcm.Context): T {
-			return $wcm.Host.create<T>(allFunctions, service, context);
+		export function createHost(service: random.Random, context: $wcm.Context): WasmInterface {
+			return $wcm.Host.create<WasmInterface>(functions, resources, service, context);
 		}
-		export function createService(wasmInterface: $wcm.WasmInterface, context: $wcm.Context): random.Random {
-			return $wcm.Service.create<random.Random>(allFunctions, wasmInterface, context);
+		export function createService(wasmInterface: WasmInterface, context: $wcm.Context): random.Random {
+			return $wcm.Service.create<random.Random>(functions, resources, wasmInterface, context);
 		}
 	}
 }

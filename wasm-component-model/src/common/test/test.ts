@@ -8,10 +8,10 @@ import type { u32, i32 } from '../componentModel';
 export namespace test {
 	export namespace Sample {
 
-		export interface Point extends $wcm.JRecord {
+		export type Point = {
 			x: u32;
 			y: u32;
-		}
+		};
 
 		export declare function call(point: Point): u32;
 	}
@@ -30,15 +30,23 @@ export namespace test {
 		], $wcm.u32);
 	}
 	export namespace Sample._ {
-		const allFunctions = [$.call];
-		export interface WasmInterface {
-			call(point_x: i32, point_y: i32): void;
+		const functions: $wcm.FunctionType<$wcm.ServiceFunction>[] = [$.call];
+		const resources: $wcm.NamespaceResourceType[] = [];
+		export type WasmInterface = {
+			'call': (point_x: i32, point_y: i32) => i32;
+		};
+		type internalWasmInterface = {
+			[ket: string]: (...args: (number & bigint)[]) => number | bigint;
+		};
+
+		let c: WasmInterface | undefined;
+		let i: internalWasmInterface | undefined;
+		i = c;
+		export function createHost(service: test.Sample, context: $wcm.Context): WasmInterface {
+			return $wcm.Host.create<WasmInterface>(functions, resources, service, context);
 		}
-		export function createHost<T extends $wcm.Host>(service: test.Sample, context: $wcm.Context): T {
-			return $wcm.Host.create<T>(allFunctions, service, context);
-		}
-		export function createService(wasmInterface: $wcm.WasmInterface, context: $wcm.Context): test.Sample {
-			return $wcm.Service.create<test.Sample>(allFunctions, wasmInterface, context);
+		export function createService(wasmInterface: WasmInterface, context: $wcm.Context): test.Sample {
+			return $wcm.Service.create<test.Sample>(functions, resources, wasmInterface, context);
 		}
 	}
 }

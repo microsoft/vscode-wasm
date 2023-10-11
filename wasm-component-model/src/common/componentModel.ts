@@ -156,6 +156,9 @@ export enum ComponentModelTypeKind {
 	flags = 'flags',
 	option = 'option',
 	result = 'result',
+	resource = 'resource',
+	borrow = 'borrow',
+	own = 'own'
 }
 
 export interface ComponentModelType<J> {
@@ -644,7 +647,6 @@ export const ptr: ComponentModelType<ptr> = {
 	store: u32.store,
 	lowerFlat: u32.lowerFlat
 };
-
 namespace $wchar {
 	export const kind: ComponentModelTypeKind = ComponentModelTypeKind.char;
 	export const size = 4;
@@ -778,7 +780,7 @@ export class ListType<T> implements ComponentModelType<T[]> {
 		length: 4
 	};
 
-	private elementType: ComponentModelType<T>;
+	private readonly elementType: ComponentModelType<T>;
 
 	public readonly kind: ComponentModelTypeKind;
 	public readonly size: size;
@@ -1474,16 +1476,25 @@ export class VariantType<T extends JVariantCase, I, V> implements ComponentModel
 	}
 
 	public liftFlat(memory: Memory, values: FlatValuesIter, options: Options): T {
+		// First one is the discriminant type. So skip it.
+		let valuesToReadOver = this.flatTypes.length - 1;
 		const caseIndex = this.discriminantType.liftFlat(memory, values, options);
 		const caseVariant = this.cases[caseIndex];
+		let result: T;
 		if (caseVariant.type === undefined) {
-			return this.ctor(caseIndex, undefined as any);
+			result = this.ctor(caseIndex, undefined as any);
 		} else {
 			// The first flat type is the discriminant type. So skip it.
-			const iter = new CoerceValueIter(values, this.flatTypes.slice(1), caseVariant.wantFlatTypes!);
+			const wantFlatTypes = caseVariant.wantFlatTypes!;
+			const iter = new CoerceValueIter(values, this.flatTypes.slice(1), wantFlatTypes);
 			const value = caseVariant.type.liftFlat(memory, iter, options);
-			return this.ctor(caseIndex, value);
+			result = this.ctor(caseIndex, value);
+			valuesToReadOver = valuesToReadOver - wantFlatTypes.length;
 		}
+		for (let i = 0; i < valuesToReadOver; i++) {
+			values.next();
+		}
+		return result;
 	}
 
 	public alloc(memory: Memory): ptr {
@@ -1501,15 +1512,18 @@ export class VariantType<T extends JVariantCase, I, V> implements ComponentModel
 	}
 
 	public lowerFlat(result: wasmType[], memory: Memory, value: T, options: Options): void {
+		const flatTypes = this.flatTypes;
 		this.discriminantType.lowerFlat(result, memory, value.case, options);
 		const c = this.cases[value.case];
+		// First one is the discriminant type. So skip it.
+		let valuesToFill = this.flatTypes.length - 1;
 		if (c.type !== undefined && value !== undefined) {
 			const payload: wasmType[] = [];
 			c.type.lowerFlat(payload, memory, value, options);
 			// First one is the discriminant type. So skip it.
-			const wantTypes = this.flatTypes.slice(1);
+			const wantTypes = flatTypes.slice(1);
 			const haveTypes = c.wantFlatTypes!;
-			if (wantTypes.length !== haveTypes.length || payload.length !== haveTypes.length) {
+			if (payload.length !== haveTypes.length) {
 				throw new ComponentModelError('Mismatched flat types');
 			}
 			for (let i = 0; i < wantTypes.length; i++) {
@@ -1525,7 +1539,16 @@ export class VariantType<T extends JVariantCase, I, V> implements ComponentModel
 					payload[i] = WasmTypes.reinterpret_f64_as_i64(payload[i] as number);
 				}
 			}
+			valuesToFill = valuesToFill - payload.length;
 			result.push(...payload);
+		}
+		for(let i = flatTypes.length - valuesToFill; i < flatTypes.length; i++) {
+			const type = flatTypes[i];
+			if (type === 'i64') {
+				result.push(0n);
+			} else {
+				result.push(0);
+			}
 		}
 	}
 
@@ -1776,33 +1799,23 @@ export class ResultType<O extends JType | void, E extends JType | void = void> e
 
 export type JType = number | bigint | string | boolean | JArray | JRecord | JVariantCase | JFlags | JTuple | JEnum | option<any> | result<any, any> | Int8Array | Int16Array | Int32Array | BigInt64Array | Uint8Array | Uint16Array | Uint32Array | BigUint64Array | Float32Array | Float64Array;
 
-export type FunctionParameter = [/* name */string, /* type */GenericComponentModelType];
+export type CallableParameter = [/* name */string, /* type */GenericComponentModelType];
 
-export type ServiceFunction = (...params: JType[]) => JType | void;
-export interface ServiceInterface {
-	readonly [key: string]: ServiceFunction;
-}
+abstract class AbstractResourceCallable {
 
-export type WasmFunction = (...params: wasmType[]) => wasmType | void;
-export interface WasmInterface {
-	readonly [key: string]: WasmFunction;
-}
-
-export class FunctionType<_T extends Function> {
-
-	private static MAX_FLAT_PARAMS = 16;
-	private static MAX_FLAT_RESULTS = 1;
+	protected static MAX_FLAT_PARAMS = 16;
+	protected static MAX_FLAT_RESULTS = 1;
 
 	public readonly name: string;
 	public readonly witName: string;
-	public readonly params: FunctionParameter[];
-	private readonly paramTupleType: TupleType<JTuple>;
+	public readonly params: CallableParameter[];
+	protected readonly paramTupleType: TupleType<JTuple>;
 	public readonly returnType: GenericComponentModelType | undefined;
 
-	private readonly paramFlatTypes: number;
-	private readonly returnFlatTypes: number;
+	protected readonly paramFlatTypes: number;
+	protected readonly returnFlatTypes: number;
 
-	constructor(name: string, witName: string, params: FunctionParameter[], returnType?: GenericComponentModelType) {
+	constructor(name: string, witName: string, params: CallableParameter[], returnType?: GenericComponentModelType) {
 		this.name = name;
 		this.witName = witName;
 		this.params = params;
@@ -1818,20 +1831,8 @@ export class FunctionType<_T extends Function> {
 		this.returnFlatTypes = returnType !== undefined ? returnType.flatTypes.length : 0;
 	}
 
-	public callService(params: (number | bigint)[], serviceFunction: ServiceFunction, memory: Memory, options: Options): number | bigint | void {
-		const jParams = this.liftParamValues(params, memory, options);
-		const result: JType | void = serviceFunction(...jParams);
-		return this.lowerReturnValue(result, memory, options, undefined);
-	}
-
-	public callWasm(params: JType[], wasmFunction: WasmFunction, memory: Memory, options: Options): JType | void {
-		const wasmValues = this.lowerParamValues(params, memory, options, undefined);
-		const result = wasmFunction(...wasmValues);
-		return this.liftReturnValue(result, memory, options);
-	}
-
-	private liftParamValues(wasmValues: (number | bigint)[], memory: Memory, options: Options): JType[] {
-		if (this.paramFlatTypes > FunctionType.MAX_FLAT_PARAMS) {
+	protected liftParamValues(wasmValues: (number | bigint)[], memory: Memory, options: Options): JType[] {
+		if (this.paramFlatTypes > AbstractResourceCallable.MAX_FLAT_PARAMS) {
 			const p0 = wasmValues[0];
 			if (!Number.isInteger(p0)) {
 				throw new ComponentModelError('Invalid pointer');
@@ -1842,7 +1843,7 @@ export class FunctionType<_T extends Function> {
 		}
 	}
 
-	private liftReturnValue(value: wasmType | void, memory: Memory, options: Options): JType | void {
+	protected liftReturnValue(value: wasmType | void, memory: Memory, options: Options): JType | void {
 		if (this.returnFlatTypes === 0) {
 			return;
 		} else if (this.returnFlatTypes <= FunctionType.MAX_FLAT_RESULTS) {
@@ -1854,7 +1855,7 @@ export class FunctionType<_T extends Function> {
 		}
 	}
 
-	private lowerParamValues(values: JType[], memory: Memory, options: Options, out: ptr | undefined): wasmType[] {
+	protected lowerParamValues(values: JType[], memory: Memory, options: Options, out: ptr | undefined): wasmType[] {
 		if (this.paramFlatTypes > FunctionType.MAX_FLAT_PARAMS) {
 			const ptr = out !== undefined ? out : memory.alloc(this.paramTupleType.size, this.paramTupleType.alignment);
 			this.paramTupleType.store(memory, ptr, values as JTuple, options);
@@ -1866,7 +1867,7 @@ export class FunctionType<_T extends Function> {
 		}
 	}
 
-	private lowerReturnValue(value: JType | void, memory: Memory, options: Options, out: ptr | undefined): wasmType | void {
+	protected lowerReturnValue(value: JType | void, memory: Memory, options: Options, out: ptr | undefined): wasmType | void {
 		if (this.returnFlatTypes === 0) {
 			return;
 		} else if (this.returnFlatTypes <= FunctionType.MAX_FLAT_RESULTS) {
@@ -1885,6 +1886,103 @@ export class FunctionType<_T extends Function> {
 	}
 }
 
+export type ServiceFunction = (...params: JType[]) => JType | void;
+export interface ServiceInterface {
+	readonly [key: string]: (ServiceFunction | ServiceInterface);
+}
+
+export type WasmFunction = (...params: wasmType[]) => wasmType | void;
+
+export class FunctionType<_T extends Function> extends AbstractResourceCallable {
+
+	constructor(name: string, witName: string, params: CallableParameter[], returnType?: GenericComponentModelType) {
+		super(name, witName, params, returnType);
+	}
+
+	public callService(params: (number | bigint)[], serviceFunction: ServiceFunction, memory: Memory, options: Options): number | bigint | void {
+		const jParams = this.liftParamValues(params, memory, options);
+		const result: JType | void = serviceFunction(...jParams);
+		return this.lowerReturnValue(result, memory, options, undefined);
+	}
+
+	public callWasm(params: JType[], wasmFunction: WasmFunction, memory: Memory, options: Options): JType | void {
+		const wasmValues = this.lowerParamValues(params, memory, options, undefined);
+		const result = wasmFunction(...wasmValues);
+		return this.liftReturnValue(result, memory, options);
+	}
+}
+
+export type resource = u32;
+abstract class AbstractResourceType implements ComponentModelType<resource> {
+
+	public readonly kind: ComponentModelTypeKind;
+	public readonly size: size;
+	public readonly alignment: alignment;
+	public readonly flatTypes: readonly wasmTypeName[];
+
+	constructor(kind: ComponentModelTypeKind) {
+		this.kind = kind;
+		this.size = u32.size;
+		this.alignment = u32.alignment;
+		this.flatTypes = u32.flatTypes;
+	}
+
+	public load(memory: Memory, ptr: ptr, options: Options): resource {
+		return u32.load(memory, ptr, options);
+	}
+
+	public liftFlat(memory: Memory, values: FlatValuesIter, options: Options): resource {
+		return u32.liftFlat(memory, values, options);
+	}
+
+	public alloc(memory: Memory): ptr {
+		return u32.alloc(memory);
+	}
+
+	public store(memory: Memory, ptr: ptr, value: resource, options: Options): void {
+		u32.store(memory, ptr, value, options);
+	}
+
+	public lowerFlat(result: wasmType[], memory: Memory, value: resource, options: Options): void {
+		u32.lowerFlat(result, memory, value, options);
+	}
+}
+
+export class BorrowType<_T extends resource> extends AbstractResourceType {
+	constructor(_r: ComponentModelType<resource>) {
+		super(ComponentModelTypeKind.borrow);
+	}
+}
+
+export class OwnType<_T extends resource> extends AbstractResourceType {
+	constructor(_r: ComponentModelType<resource>) {
+		super(ComponentModelTypeKind.own);
+	}
+}
+
+export class NamespaceResourceType extends AbstractResourceType {
+
+	public readonly name: string;
+	public readonly witName: string;
+	public readonly functions: Map<string, FunctionType<Function>>;
+
+	constructor(name: string, witName: string) {
+		super(ComponentModelTypeKind.resource);
+		this.name = name;
+		this.witName = witName;
+		this.functions = new Map();
+	}
+
+	public addFunction(func: FunctionType<Function>): void {
+		this.functions.set(func.name, func);
+	}
+}
+
+export class ClassResourceType extends AbstractResourceType {
+	constructor() {
+		super(ComponentModelTypeKind.resource);
+	}
+}
 
 export interface Context {
 	readonly memory: Memory;
@@ -1894,26 +1992,27 @@ export interface Context {
 type UnionJType = number & bigint & string & boolean & JArray & JRecord & JVariantCase & JFlags & JTuple & JEnum & option<any> & result<any, any> & Int8Array & Int16Array & Int32Array & BigInt64Array & Uint8Array & Uint16Array & Uint32Array & BigUint64Array & Float32Array & Float64Array;
 
 type UnionWasmType = number & bigint;
+type ParamWasmFunction = (...params: UnionWasmType[]) => wasmType | void;
 interface ParamWasmInterface {
-	readonly [key: string]: (...params: UnionWasmType[]) => wasmType | void;
+	readonly [key: string]: ParamWasmFunction;
 }
 
 type ParamServiceFunction = (...params: UnionJType[]) => JType | void;
 interface ParamServiceInterface {
-	readonly [key: string]: ParamServiceFunction;
+	readonly [key: string]: (ParamServiceFunction | ParamServiceInterface);
 }
-
-
 
 export type Host = ParamWasmInterface;
 export namespace Host {
-	export function asWasmInterface(host: Host): WasmInterface {
-		return host as unknown as WasmInterface;
-	}
-	export function create<T extends Host>(signatures: FunctionType<ServiceFunction>[], service: ParamServiceInterface, context: Context): T {
+	export function create<T extends Host>(signatures: FunctionType<ServiceFunction>[], resources: NamespaceResourceType[], service: ParamServiceInterface | {}, context: Context): T {
 		const result: { [key: string]: WasmFunction }  = Object.create(null);
 		for (const signature of signatures) {
-			result[signature.name] = createHostFunction(signature, service, context);
+			result[signature.witName] = createHostFunction(signature, service, context);
+		}
+		for (const resource of resources) {
+			for (const callable of resource.functions.values()) {
+				result[callable.witName] = createHostFunction(callable, service, context);
+			}
 		}
 		return result as unknown as T;
 	}
@@ -1926,19 +2025,28 @@ export namespace Host {
 	}
 }
 
-export type Service = ParamServiceInterface;
+interface WriteableServiceInterface {
+	[key: string]: (ServiceFunction | WriteableServiceInterface);
+}
+export type Service = ParamServiceInterface | {};
 export namespace Service {
 
-	export function create<T extends Service>(signatures: FunctionType<Function>[], wasm: WasmInterface, context: Context): T {
-		const result: { [key: string]: ServiceFunction }  = Object.create(null);
+	export function create<T extends Service>(signatures: FunctionType<Function>[], resources: NamespaceResourceType[], wasm: ParamWasmInterface, context: Context): T {
+		const result: WriteableServiceInterface  = Object.create(null);
 		for (const signature of signatures) {
 			result[signature.name] = createServiceFunction(signature, wasm, context);
+		}
+		for (const resource of resources) {
+			result[resource.name] = Object.create(null);
+			for (const callable of resource.functions.values()) {
+				result[callable.name] = createServiceFunction(callable, wasm, context);
+			}
 		}
 		return result as unknown as T;
 	}
 
-	function createServiceFunction(func: FunctionType<ServiceFunction>, wasm: WasmInterface, context: Context): ServiceFunction {
-		const wasmFunction = wasm[func.name];
+	function createServiceFunction(func: FunctionType<ServiceFunction>, wasm: ParamWasmInterface, context: Context): ServiceFunction {
+		const wasmFunction = wasm[func.witName] as WasmFunction;
 		return (...params: JType[]): JType | void => {
 			return func.callWasm(params, wasmFunction, context.memory, context.options);
 		};

@@ -42,7 +42,7 @@ export interface Interface {
 	name: string;
 	docs?: Documentation;
 	types: References;
-	functions: NameMap<Func>;
+	functions: NameMap<Callable>;
 	package: number;
 }
 export namespace Interface {
@@ -55,12 +55,106 @@ export namespace Interface {
 	}
 }
 
-export interface Func {
+export type Callable = Func | Method | StaticMethod | Constructor;
+export namespace Callable {
+	export function isFunction(value: Callable): value is Func {
+		const candidate = value as Func;
+		return candidate.kind === 'freestanding';
+	}
+	export function isStaticMethod(value: Callable): value is StaticMethod {
+		const candidate = value as StaticMethod;
+		return typeof candidate.kind === 'object' && typeof candidate.kind.static === 'number';
+	}
+	export function isConstructor(value: Callable): value is Constructor {
+		const candidate = value as Constructor;
+		return typeof candidate.kind === 'object' && typeof candidate.kind.constructor === 'number';
+	}
+	export function isMethod(value: Callable): value is Method {
+		const candidate = value as Method;
+		return typeof candidate.kind === 'object' && typeof candidate.kind.method === 'number';
+	}
+	export function containingType(value: Method | StaticMethod | Constructor): number {
+		if (isMethod(value)) {
+			return value.kind.method;
+		} else if (isStaticMethod(value)) {
+			return value.kind.static;
+		} else if (isConstructor(value)) {
+			return value.kind.constructor;
+		}
+		throw new Error(`Unknown callable kind ${JSON.stringify(value)}`);
+	}
+}
+
+interface AbstractCallable {
 	name: string;
 	docs?: Documentation | undefined;
-	kind: 'freestanding';
 	params: Param[];
 	results: TypeObject[];
+}
+
+export interface Func extends AbstractCallable {
+	kind: 'freestanding';
+}
+
+export interface StaticMethod extends AbstractCallable{
+	kind: {
+		static: number;
+	};
+}
+
+export interface Constructor extends AbstractCallable {
+	kind: {
+		constructor: number;
+	};
+}
+
+export interface Method extends AbstractCallable {
+	kind: {
+		method: number;
+	};
+}
+
+export type Type = BaseType | ReferenceType | ListType | OptionType | TupleType | ResultType | RecordType | EnumType | FlagsType | VariantType | ResourceType | BorrowHandleType | OwnHandleType;
+export namespace Type {
+	export function isBaseType(type: Type): type is BaseType {
+		return TypeKind.isBase(type.kind);
+	}
+	export function isReferenceType(type: Type): type is ReferenceType {
+		return TypeKind.isReference(type.kind);
+	}
+	export function isListType(type: Type): type is ListType {
+		return TypeKind.isList(type.kind);
+	}
+	export function isOptionType(type: Type): type is OptionType {
+		return TypeKind.isOption(type.kind);
+	}
+	export function isTupleType(type: Type): type is TupleType {
+		return TypeKind.isTuple(type.kind);
+	}
+	export function isResultType(type: Type): type is ResultType {
+		return TypeKind.isResult(type.kind);
+	}
+	export function isResourceType(type: Type): type is ResourceType {
+		return TypeKind.isResource(type.kind);
+	}
+	export function isRecordType(type: Type): type is RecordType {
+		return TypeKind.isRecord(type.kind);
+	}
+	export function isEnumType(type: Type): type is EnumType {
+		return TypeKind.isEnum(type.kind);
+	}
+	export function isFlagsType(type: Type): type is FlagsType {
+		return TypeKind.isFlags(type.kind);
+	}
+	export function isVariantType(type: Type): type is VariantType {
+		return TypeKind.isVariant(type.kind);
+	}
+	export function isBorrowHandleType(type: Type): type is BorrowHandleType {
+		return TypeKind.isBorrowHandle(type.kind);
+	}
+	export function isOwnHandleType(type: Type): type is OwnHandleType {
+		return TypeKind.isOwnHandle(type.kind);
+	}
 }
 
 export interface AbstractType {
@@ -109,45 +203,18 @@ export interface VariantType extends AbstractType {
 	kind: VariantKind;
 }
 
-export type Type = BaseType | ReferenceType | ListType | OptionType | TupleType | ResultType | RecordType | EnumType | FlagsType | VariantType;
-export namespace Type {
-	export function isBaseType(type: Type): type is BaseType {
-		return TypeKind.isBaseType(type.kind);
-	}
-	export function isReferenceType(type: Type): type is ReferenceType {
-		return TypeKind.isTypeReference(type.kind);
-	}
-	export function isListType(type: Type): type is ListType {
-		return TypeKind.isList(type.kind);
-	}
-	export function isOptionType(type: Type): type is OptionType {
-		return TypeKind.isOption(type.kind);
-	}
-	export function isTupleType(type: Type): type is TupleType {
-		return TypeKind.isTuple(type.kind);
-	}
-	export function isResultType(type: Type): type is ResultType {
-		return TypeKind.isResult(type.kind);
-	}
-	export function isRecordType(type: Type): type is RecordType {
-		return TypeKind.isRecord(type.kind);
-	}
-	export function isEnumType(type: Type): type is EnumType {
-		return TypeKind.isEnum(type.kind);
-	}
-	export function isFlagsType(type: Type): type is FlagsType {
-		return TypeKind.isFlags(type.kind);
-	}
-	export function isVariantType(type: Type): type is VariantType {
-		return TypeKind.isVariant(type.kind);
-	}
+export interface BorrowHandleType extends AbstractType {
+	kind: BorrowHandleKind;
 }
 
-export type Owner = { world: number } | { interface: number };
-export enum OwnerKind {
-	World = 'world',
-	Interface = 'interface',
+export interface OwnHandleType extends AbstractType {
+	kind: OwnHandleKind;
 }
+
+export interface ResourceType extends AbstractType {
+	kind: 'resource';
+}
+
 export namespace Owner {
 	export function isWorld(owner: Owner): owner is { world: number } {
 		return typeof (owner as { world: number }).world === 'number';
@@ -165,13 +232,18 @@ export namespace Owner {
 		}
 	}
 }
+export type Owner = { world: number } | { interface: number };
+export enum OwnerKind {
+	World = 'world',
+	Interface = 'interface',
+}
 
-export type TypeKind = TypeObject | RecordKind | VariantKind | EnumKind | FlagsKind | TupleKind | ListKind | OptionKind | ResultKind | BaseKind | ReferenceKind;
+export type TypeKind = TypeObject | RecordKind | VariantKind | EnumKind | FlagsKind | TupleKind | ListKind | OptionKind | BorrowHandleKind | OwnHandleKind | ResultKind | BaseKind | ReferenceKind | 'resource';
 export namespace TypeKind {
-	export function isBaseType(kind: TypeKind): kind is BaseKind {
+	export function isBase(kind: TypeKind): kind is BaseKind {
 		return typeof (kind as BaseKind).type === 'string';
 	}
-	export function isTypeReference(kind: TypeKind): kind is ReferenceKind {
+	export function isReference(kind: TypeKind): kind is ReferenceKind {
 		return typeof (kind as ReferenceKind).type === 'number';
 	}
 	export function isTypeObject(kind: TypeKind): kind is TypeObject {
@@ -211,6 +283,17 @@ export namespace TypeKind {
 		const err = candidate.result?.err;
 		return (ok !== undefined && (typeof ok === 'number' || typeof ok === 'string' || ok === null))
 			&& (err !== undefined && (typeof err === 'number' || typeof err === 'string' || err === null));
+	}
+	export function isBorrowHandle(kind: TypeKind): kind is BorrowHandleKind {
+		const candidate = kind as BorrowHandleKind;
+		return typeof candidate.handle === 'object' && TypeReference.is(candidate.handle.borrow);
+	}
+	export function isOwnHandle(kind: TypeKind): kind is OwnHandleKind {
+		const candidate = kind as OwnHandleKind;
+		return typeof candidate.handle === 'object' && TypeReference.is(candidate.handle.own);
+	}
+	export function isResource(kind: TypeKind): kind is 'resource' {
+		return kind === 'resource';
 	}
 }
 
@@ -289,16 +372,16 @@ export interface ResultKind {
 	};
 }
 
-export interface TypeObject {
-	type: number | string;
+export interface BorrowHandleKind {
+	handle: {
+		borrow: TypeReference;
+	};
 }
 
-export interface FuncObject {
-	function: Func;
-}
-
-export interface InterfaceObject {
-	interface: number;
+export interface OwnHandleKind {
+	handle: {
+		own: TypeReference;
+	};
 }
 
 export type ObjectKind = TypeObject | FuncObject | InterfaceObject;
@@ -312,6 +395,18 @@ export namespace ObjectKind {
 	export function isInterfaceObject(kind: ObjectKind): kind is InterfaceObject {
 		return typeof (kind as InterfaceObject).interface === 'number';
 	}
+}
+
+export interface TypeObject {
+	type: number | string;
+}
+
+export interface FuncObject {
+	function: Func;
+}
+
+export interface InterfaceObject {
+	interface: number;
 }
 
 export type TypeReference = number | string;

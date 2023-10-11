@@ -10,7 +10,7 @@ import { ResolvedOptions } from './options';
 import {
 	Document, Documentation, EnumCase, Flag, Func, Interface, Owner, Package, Param, Type, TypeKind, TypeReference,
 	World, BaseType, ListType, OptionType, ResultType, TupleType, ReferenceType, RecordType, VariantType, VariantCase,
-	EnumType, FlagsType, Field
+	EnumType, FlagsType, Field, Callable, ResourceType, BorrowHandleType, OwnHandleType, Method, AbstractType, Constructor, StaticMethod
 } from './wit-json';
 
 export function processDocument(document: Document, options: ResolvedOptions): void {
@@ -23,7 +23,7 @@ export function processDocument(document: Document, options: ResolvedOptions): v
 		}
 
 		const symbols = new SymbolTable(document, nameProvider);
-		const visitor = new TypeScript.PackageEmitter(pkg, mainCode, symbols, nameProvider);
+		const visitor = new TypeScript.PackageEmitter(pkg, mainCode, symbols, nameProvider, options);
 		const code = visitor.emit();
 		const fileName = nameProvider.asFileName(pkg);
 		fs.writeFileSync(path.join(options.outDir, fileName), code.toString());
@@ -138,6 +138,9 @@ interface NameProvider {
 	asNamespaceName(iface: Interface): string;
 	asTypeName(type: Type): string;
 	asFunctionName(func: Func): string;
+	asMethodName(method: Method): string;
+	asStaticMethodName(method: StaticMethod): string;
+	asConstructorName(method: Constructor): string;
 	asParameterName(param: Param): string;
 	asEnumCaseName(c: EnumCase): string;
 	asVariantCaseName(c: VariantCase): string;
@@ -183,6 +186,18 @@ namespace _TypeScriptNameProvider {
 
 	export function asFunctionName(func: Func): string {
 		return _asPropertyName(func.name);
+	}
+
+	export function asMethodName(method: Method): string {
+		return _asMethodName(method.name);
+	}
+
+	export function asStaticMethodName(method: StaticMethod): string {
+		return _asMethodName(method.name);
+	}
+
+	export function asConstructorName(method: Constructor): string {
+		return _asMethodName(method.name);
 	}
 
 	export function asParameterName(param: Param): string {
@@ -237,6 +252,18 @@ namespace _TypeScriptNameProvider {
 		const result = parts.join('');
 		return keywords.get(result) ?? result;
 	}
+
+	function _asMethodName(name: string): string {
+		if (name.startsWith('[constructor]')) {
+			return 'constructor';
+		}
+		const index = name.indexOf('.');
+		if (index === -1) {
+			return _asPropertyName(name);
+		} else {
+			return _asPropertyName(name.substring(index + 1));
+		}
+	}
 }
 const TypeScriptNameProvider: NameProvider = _TypeScriptNameProvider;
 
@@ -276,6 +303,18 @@ namespace _WitNameProvider {
 
 	export function asFunctionName(func: Func): string {
 		return toTs(func.name);
+	}
+
+	export function asMethodName(method: Method): string {
+		return _asMethodName(method.name);
+	}
+
+	export function asStaticMethodName(method: StaticMethod): string {
+		return _asMethodName(method.name);
+	}
+
+	export function asConstructorName(method: Constructor): string {
+		return _asMethodName(method.name);
 	}
 
 	export function asParameterName(param: Param): string {
@@ -320,6 +359,15 @@ namespace _WitNameProvider {
 			result = result.substring(1);
 		}
 		return keywords.get(result) ?? result;
+	}
+
+	function _asMethodName(name: string): string {
+		const index = name.indexOf('.');
+		if (index === -1) {
+			return toTs(name);
+		} else {
+			return toTs(name.substring(index + 1));
+		}
 	}
 }
 const WitNameProvider: NameProvider = _WitNameProvider;
@@ -380,14 +428,30 @@ class Interfaces {
 class SymbolTable {
 
 	private readonly document: Document;
+	private readonly methods: Map<AbstractType, (Method | StaticMethod | Constructor)[]>;
 
 	public readonly	interfaces: Interfaces;
 	public readonly types: Types;
 
+
 	constructor(document: Document, nameProvider: NameProvider) {
 		this.document = document;
+		this.methods = new Map();
 		this.interfaces = new Interfaces(this, nameProvider);
 		this.types = new Types(this, nameProvider);
+		for (const iface of document.interfaces) {
+			for (const callable of Object.values(iface.functions)) {
+				if (Callable.isMethod(callable) || Callable.isStaticMethod(callable) || Callable.isConstructor(callable)) {
+					const type = this.getType(Callable.containingType(callable));
+					let values = this.methods.get(type);
+					if (values === undefined) {
+						values = [];
+						this.methods.set(type, values);
+					}
+					values.push(callable);
+				}
+			}
+		}
 	}
 
 	public getType(ref: number): Type {
@@ -404,6 +468,10 @@ class SymbolTable {
 
 	public getWorld(ref: number): World {
 		return this.document.worlds[ref];
+	}
+
+	public getMethods(type: ResourceType): (Method | Constructor | StaticMethod)[] | undefined {
+		return this.methods.get(type);
 	}
 
 	public resolveOwner(owner: Owner): Interface | World {
@@ -446,6 +514,12 @@ abstract class AbstractTypePrinter<C = undefined> {
 			return this.printFlags(type, context);
 		} else if (Type.isVariantType(type)) {
 			return this.printVariant(type, context);
+		} else if (Type.isResourceType(type)) {
+			return this.printResource(type, context);
+		} else if (Type.isBorrowHandleType(type)) {
+			return this.printBorrowHandle(type, context);
+		} else if (Type.isOwnHandleType(type)) {
+			return this.printOwnHandle(type, context);
 		}
 		throw new Error(`Unknown type kind ${JSON.stringify(type)}`);
 	}
@@ -464,6 +538,9 @@ abstract class AbstractTypePrinter<C = undefined> {
 	public abstract printEnum(type: EnumType, context: C): string;
 	public abstract printFlags(type: FlagsType, context: C): string;
 	public abstract printVariant(type: VariantType, context: C): string;
+	public abstract printResource(type: ResourceType, context: C): string;
+	public abstract printBorrowHandle(type: BorrowHandleType, context: C): string;
+	public abstract printOwnHandle(type: OwnHandleType, context: C): string;
 
 	public printTypeReference(type: TypeReference, context: C): string {
 		if (TypeReference.isNumber(type)) {
@@ -479,9 +556,6 @@ abstract class AbstractTypePrinter<C = undefined> {
 	}
 }
 
-namespace TypeScript {
-}
-
 enum TypeUsage {
 	parameter = 'parameter',
 	function = 'function',
@@ -492,18 +566,7 @@ enum TypeUsage {
 namespace MetaModel {
 
 	export interface Emitter {
-		emit(code: Code, emitted: Set<String>): void;
-	}
-
-	export interface HasDependencies {
-		readonly dependencies: Set<string>;
-	}
-
-	export namespace HasDependencies {
-		export function is(value: any): value is HasDependencies {
-			const candidate = value as HasDependencies;
-			return candidate.dependencies instanceof Set;
-		}
+		emit(code: Code): void;
 	}
 
 	export class TypeNameEmitter implements Emitter {
@@ -516,28 +579,24 @@ namespace MetaModel {
 			this.reference = reference;
 		}
 
-		public emit(code: Code, emitted: Set<String>): void {
+		public emit(code: Code): void {
 			code.push(`export const ${this.name} = ${this.reference};`);
-			emitted.add(this.name);
 		}
 	}
 
-	export class RecordEmitter implements Emitter, HasDependencies {
+	export class RecordEmitter implements Emitter {
 
 		private readonly name: string;
 		private readonly typeParam: string;
 		private readonly fields: string[][];
 
-		public readonly dependencies: Set<string>;
-
 		constructor(name: string, typeParam: string, fields: string[][]) {
 			this.name = name;
 			this.typeParam = typeParam;
 			this.fields = fields;
-			this.dependencies = new Set();
 		}
 
-		public emit(code: Code, emitted: Set<String>): void {
+		public emit(code: Code): void {
 			code.push(`export const ${this.name} = new $wcm.RecordType<${this.typeParam}>([`);
 			code.increaseIndent();
 			for (const [name, type] of this.fields) {
@@ -545,7 +604,6 @@ namespace MetaModel {
 			}
 			code.decreaseIndent();
 			code.push(`]);`);
-			emitted.add(this.name);
 		}
 	}
 
@@ -561,9 +619,8 @@ namespace MetaModel {
 			this.items = items;
 		}
 
-		public emit(code: Code, emitted: Set<String>): void {
+		public emit(code: Code): void {
 			code.push(`export const ${this.name} = new $wcm.EnumType<${this.typeParam}>(${this.items});`);
-			emitted.add(this.name);
 		}
 	}
 
@@ -579,41 +636,52 @@ namespace MetaModel {
 			this.flags = flags;
 		}
 
-		public emit(code: Code, emitted: Set<String>): void {
+		public emit(code: Code): void {
 			code.push(`export const ${this.name} = new $wcm.FlagsType<${this.typeParam}>([${this.flags.map(flag => `'${flag}'`).join(', ')}]);`);
-			emitted.add(this.name);
 		}
 	}
 
-	export class VariantEmitter implements Emitter, HasDependencies {
+	export class VariantEmitter implements Emitter {
 
 		private readonly name: string;
 		private readonly typeParam: string;
 		private readonly cases: (string | undefined)[];
 
-		public readonly dependencies: Set<string>;
-
 		constructor(name: string, typeParam: string, cases: (string | undefined)[]) {
 			this.name = name;
 			this.typeParam = typeParam;
 			this.cases = cases;
-			this.dependencies = new Set();
 		}
 
-		public emit(code: Code, emitted: Set<String>): void {
+		public emit(code: Code): void {
 			code.push(`export const ${this.name} = new $wcm.VariantType<${this.typeParam}, ${this.typeParam}._ct, ${this.typeParam}._vt>([${this.cases.map(c => c !== undefined ? c : 'undefined').join(', ')}], ${this.typeParam}._ctor);`);
-			emitted.add(this.name);
 		}
 	}
 
+	export class NamespaceResourceEmitter implements Emitter {
 
-	export class FunctionEmitter implements Emitter {
-
-		private readonly typeParam: string;
 		public readonly name: string;
 		private readonly witName: string;
-		private readonly params: string[][];
-		private readonly result: string | undefined;
+		public readonly functionEmitters: AbstractFunctionEmitter[];
+
+		constructor(name: string, witName: string, functionEmitters: AbstractFunctionEmitter[]) {
+			this.name = name;
+			this.witName = witName;
+			this.functionEmitters = functionEmitters;
+		}
+
+		public emit(code: Code): void {
+			code.push(`export const ${this.name} = new $wcm.NamespaceResourceType('${this.name}', '${this.witName}');`);
+		}
+	}
+
+	export abstract class AbstractFunctionEmitter implements Emitter {
+
+		protected readonly typeParam: string;
+		public readonly name: string;
+		protected readonly witName: string;
+		protected readonly params: string[][];
+		protected readonly result: string | undefined;
 
 		constructor(typeParam: string, name: string, witName: string, params: string[][], result: string | undefined) {
 			this.typeParam = typeParam;
@@ -623,7 +691,16 @@ namespace MetaModel {
 			this.result = result;
 		}
 
-		public emit(code: Code, _emitted: Set<String>): void {
+		public abstract emit(code: Code): void;
+	}
+
+	export class FunctionEmitter extends AbstractFunctionEmitter {
+
+		constructor(typeParam: string, name: string, witName: string, params: string[][], result: string | undefined) {
+			super(typeParam, name, witName, params, result);
+		}
+
+		public emit(code: Code): void {
 			if (this.params.length === 0) {
 				code.push(`export const ${this.name} = new $wcm.FunctionType<${this.typeParam}>('${this.name}', '${this.witName}', [], ${this.result});`);
 			} else {
@@ -638,8 +715,32 @@ namespace MetaModel {
 		}
 	}
 
-	const qualifier = '$wcm';
-	function qualify(name: string): string {
+	export class ResourceFunctionEmitter extends AbstractFunctionEmitter {
+
+		private readonly resourceName: string;
+
+		constructor(resourceName: string, typeParam: string, name: string, witName: string, params: string[][], result: string | undefined) {
+			super(typeParam, name, witName, params, result);
+			this.resourceName = resourceName;
+		}
+
+		public emit(code: Code): void {
+			if (this.params.length === 0) {
+				code.push(`${this.resourceName}.addFunction(new $wcm.FunctionType<${this.typeParam}>('${this.name}', '${this.witName}', [], ${this.result}));`);
+			} else {
+				code.push(`${this.resourceName}.addFunction(new $wcm.FunctionType<${this.typeParam}>('${this.name}', '${this.witName}', [`);
+				code.increaseIndent();
+				for (const [name, type] of this.params) {
+					code.push(`['${name}', ${type}],`);
+				}
+				code.decreaseIndent();
+				code.push(`], ${this.result}));`);
+			}
+		}
+	}
+
+	export const qualifier = '$wcm';
+	export function qualify(name: string): string {
 		return `${qualifier}.${name}`;
 	}
 
@@ -737,19 +838,33 @@ namespace MetaModel {
 			return `new ${qualifier}.ResultType<${this.typeParamPrinter.perform(type)}>(${ok}, ${error})`;
 		}
 
-		public printRecord(type: RecordType, _context: TypeUsage): string {
+		public printBorrowHandle(type: BorrowHandleType, usage: TypeUsage): string {
+			const typeParam = this.typeParamPrinter.perform(type);
+			return `new ${qualifier}.BorrowType<${typeParam}>(${this.printTypeReference(type.kind.handle.borrow, usage)})`;
+		}
+
+		public printOwnHandle(type: OwnHandleType, usage: TypeUsage): string {
+			const typeParam = this.typeParamPrinter.perform(type);
+			return `new ${qualifier}.OwnType<${typeParam}>(${this.printTypeReference(type.kind.handle.own, usage)})`;
+		}
+
+		public printRecord(type: RecordType, _usage: TypeUsage): string {
 			return this.nameProvider.asTypeName(type);
 		}
 
-		public printEnum(type: EnumType, _context: TypeUsage): string {
+		public printEnum(type: EnumType, _usage: TypeUsage): string {
 			return this.nameProvider.asTypeName(type);
 		}
 
-		public printFlags(type: FlagsType, _context: TypeUsage): string {
+		public printFlags(type: FlagsType, _usage: TypeUsage): string {
 			return this.nameProvider.asTypeName(type);
 		}
 
-		public printVariant(type: VariantType, _context: TypeUsage): string {
+		public printVariant(type: VariantType, _usage: TypeUsage): string {
+			return this.nameProvider.asTypeName(type);
+		}
+
+		public printResource(type: ResourceType, _usage: TypeUsage): string {
 			return this.nameProvider.asTypeName(type);
 		}
 
@@ -856,7 +971,7 @@ namespace MetaModel {
 			if (depth > 0) {
 				this.imports.addBaseType('option');
 			}
-			const result = `${this.printTypeReference(type.kind.option, depth + 1)}`;
+			const result = this.printTypeReference(type.kind.option, depth + 1);
 			return depth === 0 ? result : `option<${result}>`;
 		}
 
@@ -874,6 +989,14 @@ namespace MetaModel {
 			return depth === 0 ? `${ok}, ${error}` : `result<${ok}, ${error}>`;
 		}
 
+		public printBorrowHandle(type: BorrowHandleType, depth: number): string {
+			return this.printTypeReference(type.kind.handle.borrow, depth + 1);
+		}
+
+		public printOwnHandle(type: OwnHandleType, depth: number): string {
+			return this.printTypeReference(type.kind.handle.own, depth + 1);
+		}
+
 		public printRecord(type: RecordType, _depth: number): string {
 			return this.symbols.types.getFullyQualifiedName(type);
 		}
@@ -887,6 +1010,10 @@ namespace MetaModel {
 		}
 
 		public printVariant(type: VariantType, _depth: number): string {
+			return this.symbols.types.getFullyQualifiedName(type);
+		}
+
+		public printResource(type: ResourceType, _depth: number): string {
 			return this.symbols.types.getFullyQualifiedName(type);
 		}
 	}
@@ -912,16 +1039,18 @@ namespace TypeScript {
 		private readonly mainCode: Code;
 		private readonly symbols: SymbolTable;
 		private readonly nameProvider: NameProvider;
+		private readonly options: ResolvedOptions;
 		private readonly metaModelEmitters: Map<string, MetaModel.Emitter[]>;
 
 		private static MAX_FLAT_PARAMS = 16;
 		private static MAX_FLAT_RESULTS = 1;
 
-		constructor(pkg: Package, mainCode: Code, symbols: SymbolTable, nameProvider: NameProvider) {
+		constructor(pkg: Package, mainCode: Code, symbols: SymbolTable, nameProvider: NameProvider, options: ResolvedOptions) {
 			this.pkg = pkg;
 			this.mainCode = mainCode;
 			this.symbols = symbols;
 			this.nameProvider = nameProvider;
+			this.options = options;
 			this.metaModelEmitters = new Map();
 		}
 
@@ -951,16 +1080,23 @@ namespace TypeScript {
 				code.push('');
 				code.push(`export namespace ${pkgName} {`);
 				code.increaseIndent();
-				const emitted = new Set<string>();
 				for (const [jface, emitters] of this.metaModelEmitters) {
 					code.push(`export namespace ${jface}.$ {`);
 					code.increaseIndent();
 					const functions: string[] = [];
+					const namespaceResources: string[] = [];
+					const resourceFunctionEmitters: MetaModel.AbstractFunctionEmitter[] = [];
 					for (const emitter of emitters) {
-						emitter.emit(code, emitted);
+						emitter.emit(code);
 						if (emitter instanceof MetaModel.FunctionEmitter) {
 							functions.push(emitter.name);
+						} else if (emitter instanceof MetaModel.NamespaceResourceEmitter) {
+							namespaceResources.push(emitter.name);
+							resourceFunctionEmitters.push(...emitter.functionEmitters);
 						}
+					}
+					for (const emitter of resourceFunctionEmitters) {
+						emitter.emit(code);
 					}
 					code.decreaseIndent();
 					code.push('}');
@@ -968,73 +1104,41 @@ namespace TypeScript {
 					code.push(`export namespace ${jface}._ {`);
 					code.increaseIndent();
 
-					code.push(`const allFunctions = [${functions.map(name => `$.${name}`).join(', ')}];`);
+					code.push(`const functions: ${MetaModel.qualifier}.FunctionType<${MetaModel.qualifier}.ServiceFunction>[] = [${functions.map(name => `$.${name}`).join(', ')}];`);
+					code.push(`const resources: ${MetaModel.qualifier}.NamespaceResourceType[] = [${namespaceResources.map(name => `$.${name}`).join(', ')}];`);
 					const iface = interfaces.get(jface)!;
 					const ifaceName = this.symbols.interfaces.getFullyQualifiedName(iface);
 					code.push(`export type WasmInterface = {`);
 					code.increaseIndent();
 					const typeFlattener = new TypeFlattener(this.symbols, this.nameProvider, code.imports);
-					let variantParam: boolean = false;
 					for (const func of Object.values(iface.functions)) {
-						let params;
-						try {
-							params = typeFlattener.flattenParams(func);
-						} catch (err) {
-							if (err instanceof VariantError) {
-								code.imports.addBaseType('i32');
-								code.imports.addBaseType('i64');
-								code.imports.addBaseType('f32');
-								code.imports.addBaseType('f64');
-								params = [{ name: '...args', type: '(i32 | i64 | f32 | f64)[]'}];
-								variantParam = true;
-							} else {
-								throw err;
-							}
-						}
+						const params = typeFlattener.flattenParams(func);
 						let returnType: string;
-						try {
-							const results = typeFlattener.flattenResult(func);
-							if (results.length === PackageEmitter.MAX_FLAT_RESULTS) {
-								returnType = results[0];
-							} else {
-								returnType = 'void';
-								code.imports.addBaseType('ptr');
-								params.push({ name: 'result', type: `ptr<[${results.join(', ')}]>`});
-							}
-						} catch (err) {
-							if (err instanceof VariantError) {
-								returnType = 'void';
-								code.imports.addBaseType('i32');
-								code.imports.addBaseType('i64');
-								code.imports.addBaseType('f32');
-								code.imports.addBaseType('f64');
-								code.imports.addBaseType('ptr');
-								params = [{ name: 'result', type: 'ptr<(i32 | i64 | f32 | f64)[]>'}];
-							} else {
-								throw err;
-							}
+						const results = typeFlattener.flattenResult(func);
+						if (results.length === PackageEmitter.MAX_FLAT_RESULTS) {
+							returnType = results[0];
+						} else {
+							returnType = 'void';
+							code.imports.addBaseType('ptr');
+							params.push({ name: 'result', type: `ptr<[${results.join(', ')}]>`});
 						}
 						if (params.length <= PackageEmitter.MAX_FLAT_PARAMS) {
 							code.push(`'${func.name}': (${params.map(p => `${p.name}: ${p.type}`).join(', ')}) => ${returnType};`);
 						} else {
 							code.imports.addBaseType('ptr');
-							if (variantParam) {
-								code.push(`'${func.name}': (args: ptr<(i32 | i64 | f32 | f64)[]>) => ${returnType};`);
-							} else {
-								code.push(`'${func.name}': (args: ptr<[${params.map(p => p.type).join(', ')}]>) => ${returnType};`);
-							}
+							code.push(`'${func.name}': (args: ptr<[${params.map(p => p.type).join(', ')}]>) => ${returnType};`);
 						}
 					}
 					code.decreaseIndent();
 					code.push(`};`);
-					code.push(`export function createHost<T extends $wcm.Host>(service: ${ifaceName}, context: $wcm.Context): T {`);
+					code.push(`export function createHost(service: ${ifaceName}, context: $wcm.Context): WasmInterface {`);
 					code.increaseIndent();
-					code.push(`return $wcm.Host.create<T>(allFunctions, service, context);`);
+					code.push(`return $wcm.Host.create<WasmInterface>(functions, resources, service, context);`);
 					code.decreaseIndent();
 					code.push(`}`);
-					code.push(`export function createService(wasmInterface: $wcm.WasmInterface, context: $wcm.Context): ${ifaceName} {`);
+					code.push(`export function createService(wasmInterface: WasmInterface, context: $wcm.Context): ${ifaceName} {`);
 					code.increaseIndent();
-					code.push(`return $wcm.Service.create<${ifaceName}>(allFunctions, wasmInterface, context);`);
+					code.push(`return $wcm.Service.create<${ifaceName}>(functions, resources, wasmInterface, context);`);
 					code.decreaseIndent();
 					code.push(`}`);
 
@@ -1058,28 +1162,41 @@ namespace TypeScript {
 			emitDocumentation(iface, code);
 			code.push(`export namespace ${name} {`);
 			code.increaseIndent();
+			const exports: string[] = [];
 			for (const t of Object.values(iface.types)) {
 				code.push('');
 				const type = this.symbols.getType(t);
-				const typeEmitter = new TypeEmitter(type, iface, `${qualifier}.${name}`, code, this.symbols, printers, this.nameProvider);
+				const typeEmitter = new TypeEmitter(type, iface, `${qualifier}.${name}`, code, this.symbols, printers, this.nameProvider, this.options);
 				typeEmitter.emit();
 				if (typeEmitter.metaModelEmitter !== undefined) {
 					metaModelEmitters.push(typeEmitter.metaModelEmitter);
 				}
+				if (Type.isResourceType(type)) {
+					const methods = this.symbols.getMethods(type);
+					if (methods !== undefined && methods.length > 0) {
+						exports.push(this.nameProvider.asTypeName(type));
+					}
+				}
 			}
-			const funcExports: string[] = [];
 			for (const func of Object.values(iface.functions)) {
+				if (!Callable.isFunction(func)) {
+					continue;
+				}
 				code.push('');
-				const funcEmitter = new FunctionEmitter(func, iface, `${qualifier}.${name}`, code, this.symbols, printers, this.nameProvider);
+				const funcEmitter = new FunctionEmitter(func, `${qualifier}.${name}`, code, printers, this.nameProvider);
 				funcEmitter.emit();
 				if (funcEmitter.metaModelEmitter !== undefined) {
 					metaModelEmitters.push(funcEmitter.metaModelEmitter);
 				}
-				funcExports.push(this.nameProvider.asFunctionName(func));
+				exports.push(this.nameProvider.asFunctionName(func));
 			}
 			code.decreaseIndent();
 			code.push(`}`);
-			code.push(`export type ${name} = Pick<typeof ${name}, ${funcExports.map(item => `'${item}'`).join(' | ')}>;`);
+			if (exports.length > 0) {
+				code.push(`export type ${name} = Pick<typeof ${name}, ${exports.map(item => `'${item}'`).join(' | ')}>;`);
+			} else {
+				code.push(`export type ${name} = typeof ${name};`);
+			}
 		}
 	}
 
@@ -1092,9 +1209,10 @@ namespace TypeScript {
 		private readonly symbols: SymbolTable;
 		private readonly printers: Printers;
 		private readonly nameProvider: NameProvider;
+		private readonly options: ResolvedOptions;
 		public metaModelEmitter: MetaModel.Emitter | undefined;
 
-		constructor(type: Type, scope: Interface, qualifier: string, code: Code, symbols: SymbolTable, printers: Printers, nameProvider: NameProvider) {
+		constructor(type: Type, scope: Interface, qualifier: string, code: Code, symbols: SymbolTable, printers: Printers, nameProvider: NameProvider, options: ResolvedOptions) {
 			this.type = type;
 			this.scope = scope;
 			this.qualifier = qualifier;
@@ -1102,6 +1220,7 @@ namespace TypeScript {
 			this.symbols = symbols;
 			this.printers = printers;
 			this.nameProvider = nameProvider;
+			this.options = options;
 		}
 
 		public emit(): void {
@@ -1117,7 +1236,7 @@ namespace TypeScript {
 				this.emitEnum(this.type);
 			} else if (Type.isFlagsType(this.type)) {
 				this.emitFlags(this.type);
-			} else if (TypeKind.isTypeReference(this.type.kind)) {
+			} else if (TypeKind.isReference(this.type.kind)) {
 				const referenced = this.symbols.getType(this.type.kind.type);
 				if (referenced.name !== null) {
 					const referencedName = this.nameProvider.asTypeName(referenced);
@@ -1129,6 +1248,8 @@ namespace TypeScript {
 				} else {
 					throw new Error(`Cannot reference type ${JSON.stringify(referenced)} from ${JSON.stringify(this.scope)}`);
 				}
+			} else if (Type.isResourceType(this.type)) {
+				this.emitResource(this.type);
 			} else {
 				const name = this.nameProvider.asTypeName(this.type);
 				this.code.push(`export type ${name} = ${this.printers.typeScript.print(this.type, TypeUsage.typeDeclaration)};`);
@@ -1139,7 +1260,7 @@ namespace TypeScript {
 		private emitRecord(type: RecordType): void {
 			const kind = type.kind;
 			const tsName = this.nameProvider.asTypeName(type);
-			this.code.push(`export interface ${tsName} extends $wcm.JRecord {`);
+			this.code.push(`export type ${tsName} = {`);
 			this.code.increaseIndent();
 			const metaFields: string[][] = [];
 			for (const field of kind.record.fields) {
@@ -1152,7 +1273,7 @@ namespace TypeScript {
 				metaFields.push([fieldName, this.printers.metaModel.printTypeReference(field.type, TypeUsage.property)]);
 			}
 			this.code.decreaseIndent();
-			this.code.push(`}`);
+			this.code.push(`};`);
 			this.metaModelEmitter= new MetaModel.RecordEmitter(tsName, `${this.qualifier}.${tsName}`, metaFields);
 		}
 
@@ -1284,7 +1405,7 @@ namespace TypeScript {
 			const kind = type.kind;
 			const tsName = this.nameProvider.asTypeName(type);
 			const flags: string[] = [];
-			this.code.push(`export interface ${tsName} extends $wcm.JFlags {`);
+			this.code.push(`export type ${tsName} = {`);
 			this.code.increaseIndent();
 			for (const flag of kind.flags.flags) {
 				const flagName = this.nameProvider.asFlagName(flag);
@@ -1292,8 +1413,43 @@ namespace TypeScript {
 				flags.push(flagName);
 			}
 			this.code.decreaseIndent();
-			this.code.push(`}`);
+			this.code.push(`};`);
 			this.metaModelEmitter = new MetaModel.FlagsEmitter(tsName, `${this.qualifier}.${tsName}`, flags);
+		}
+
+		private emitResource(type: ResourceType): void {
+			const tsName = this.nameProvider.asTypeName(type);
+			const methods = this.symbols.getMethods(type);
+			const metaModelEmitters: MetaModel.FunctionEmitter[] = [];
+			if (methods === undefined || methods.length === 0) {
+				this.code.imports.addBaseType('resource');
+				this.code.push(`export type ${tsName} = resource;`);
+			} else {
+				this.code.imports.addBaseType('resource');
+				this.code.push(`export type ${tsName} = resource;`);
+				this.code.push(`export namespace ${tsName} {`);
+				this.code.increaseIndent();
+				for (const method of methods) {
+					this.code.push('');
+					let emitter: MethodEmitter | StaticMethodEmitter | ConstructorEmitter;
+					if (Callable.isMethod(method)) {
+						emitter = new MethodEmitter(tsName, method, this.qualifier, this.code, this.printers, this.nameProvider, this.options);
+					} else if (Callable.isStaticMethod(method)) {
+						emitter = new StaticMethodEmitter(tsName, method, this.qualifier, this.code, this.printers, this.nameProvider, this.options);
+					} else if (Callable.isConstructor(method)) {
+						emitter = new ConstructorEmitter(tsName, method, this.qualifier, this.code, this.printers, this.nameProvider, this.options);
+					} else {
+						throw new Error(`Unexpected callable ${JSON.stringify(method)}.`);
+					}
+					emitter.emit();
+					if (emitter.metaModelEmitter !== undefined) {
+						metaModelEmitters.push(emitter.metaModelEmitter);
+					}
+				}
+				this.code.decreaseIndent();
+				this.code.push(`}`);
+			}
+			this.metaModelEmitter = new MetaModel.NamespaceResourceEmitter(tsName, type.name!, metaModelEmitters);
 		}
 
 		private computeQualifier(reference: Interface | World): string | undefined {
@@ -1324,17 +1480,17 @@ namespace TypeScript {
 		}
 	}
 
-	class FunctionEmitter {
+	abstract class CallableEmitter {
 
-		private readonly func: Func;
-		private readonly qualifier: string;
-		private readonly code: Code;
-		private readonly printers: Printers;
-		private readonly nameProvider: NameProvider;
-		public metaModelEmitter: MetaModel.Emitter | undefined;
+		protected readonly callable: Callable;
+		protected readonly qualifier: string;
+		protected readonly code: Code;
+		protected readonly printers: Printers;
+		protected readonly nameProvider: NameProvider;
+		public metaModelEmitter: MetaModel.FunctionEmitter | undefined;
 
-		constructor(func: Func, _scope: Interface, qualifier: string, code: Code, _symbols: SymbolTable, printers: Printers, nameProvider: NameProvider) {
-			this.func = func;
+		constructor(callable: Callable, qualifier: string, code: Code, printers: Printers, nameProvider: NameProvider) {
+			this.callable = callable;
 			this.qualifier = qualifier;
 			this.code = code;
 			this.printers = printers;
@@ -1342,27 +1498,132 @@ namespace TypeScript {
 		}
 
 		public emit(): void {
-			emitDocumentation(this.func, this.code);
-			const funcName = this.nameProvider.asFunctionName(this.func);
-			const elements: string[] = [];
-			const metaData: string[][] = [];
-			for (const param of this.func.params) {
+			emitDocumentation(this.callable, this.code);
+			const params: string[] = [];
+			const metaDataParams: string[][] = [];
+			for (const param of this.callable.params) {
 				const paramName = this.nameProvider.asParameterName(param);
-				elements.push(`${paramName}: ${this.printers.typeScript.printTypeReference(param.type, TypeUsage.parameter)}`);
-				metaData.push([paramName, this.printers.metaModel.printTypeReference(param.type, TypeUsage.parameter)]);
+				params.push(`${paramName}: ${this.printers.typeScript.printTypeReference(param.type, TypeUsage.parameter)}`);
+				metaDataParams.push([paramName, this.printers.metaModel.printTypeReference(param.type, TypeUsage.parameter)]);
 			}
-			let returnType: string = 'void';
+			let returnType: string | undefined = undefined;
 			let metaReturnType: string | undefined = undefined;
-			if (this.func.results.length === 1) {
-				returnType = this.printers.typeScript.printTypeReference(this.func.results[0].type, TypeUsage.function);
-				metaReturnType = this.printers.metaModel.printTypeReference(this.func.results[0].type, TypeUsage.function);
-			} else if (this.func.results.length > 1) {
-				returnType = `[${this.func.results.map(r => this.printers.typeScript.printTypeReference(r.type, TypeUsage.function)).join(', ')}]`;
-				metaReturnType = `[${this.func.results.map(r => this.printers.metaModel.printTypeReference(r.type, TypeUsage.function)).join(', ')}]`;
+			if (this.callable.results.length === 1) {
+				returnType = this.printers.typeScript.printTypeReference(this.callable.results[0].type, TypeUsage.function);
+				metaReturnType = this.printers.metaModel.printTypeReference(this.callable.results[0].type, TypeUsage.function);
+			} else if (this.callable.results.length > 1) {
+				returnType = `[${this.callable.results.map(r => this.printers.typeScript.printTypeReference(r.type, TypeUsage.function)).join(', ')}]`;
+				metaReturnType = `[${this.callable.results.map(r => this.printers.metaModel.printTypeReference(r.type, TypeUsage.function)).join(', ')}]`;
 			}
-			this.code.push(`export declare function ${funcName}(${elements.join(', ')}): ${returnType};`);
-			this.metaModelEmitter = new MetaModel.FunctionEmitter(`typeof ${this.qualifier}.${funcName}`, funcName, this.func.name, metaData, metaReturnType);
-			// this.code.push(`export type ${name} = typeof ${name};`);
+			this.metaModelEmitter = this.doEmit(params, returnType, metaDataParams, metaReturnType);
+		}
+
+		protected abstract doEmit(params: string[], returnType: string | undefined, metaData: string[][], metaReturnType: string | undefined): MetaModel.FunctionEmitter;
+	}
+
+	class FunctionEmitter extends CallableEmitter {
+
+		private readonly func: Func;
+
+		constructor(func: Func, qualifier: string, code: Code, printers: Printers, nameProvider: NameProvider) {
+			super(func, qualifier, code, printers, nameProvider);
+			this.func = func;
+		}
+
+		protected doEmit(params: string[], returnType: string | undefined, metaData: string[][], metaReturnType: string | undefined): MetaModel.FunctionEmitter {
+			if (returnType === undefined) {
+				returnType = 'void';
+			}
+			const funcName = this.nameProvider.asFunctionName(this.func);
+			this.code.push(`export declare function ${funcName}(${params.join(', ')}): ${returnType};`);
+			return new MetaModel.FunctionEmitter(`typeof ${this.qualifier}.${funcName}`, funcName, this.callable.name, metaData, metaReturnType);
+		}
+	}
+
+	class MethodEmitter extends CallableEmitter {
+
+		private readonly resourceName: string;
+		private readonly method: Method;
+		private readonly options: ResolvedOptions;
+
+		constructor(resourceName: string, method: Method, qualifier: string, code: Code, printers: Printers, nameProvider: NameProvider, options: ResolvedOptions) {
+			super(method, qualifier, code, printers, nameProvider);
+			this.resourceName = resourceName;
+			this.method = method;
+			this.options = options;
+		}
+
+		protected doEmit(params: string[], returnType: string | undefined, metaData: string[][], metaReturnType: string | undefined): MetaModel.AbstractFunctionEmitter {
+			if (returnType === undefined) {
+				returnType = 'void';
+			}
+			const methodName = this.nameProvider.asMethodName(this.method);
+			if (this.options.resourceStyle === 'namespace') {
+				this.code.push(`export declare function ${methodName}(${params.join(', ')}): ${returnType};`);
+				return new MetaModel.ResourceFunctionEmitter(this.resourceName, `typeof ${this.qualifier}.${this.resourceName}.${methodName}`, methodName, this.callable.name, metaData, metaReturnType);
+			} else if (this.options.resourceStyle === 'class') {
+				throw new Error(`Unknown resource style ${this.options.resourceStyle}.`);
+			} else {
+				throw new Error(`Unknown resource style ${this.options.resourceStyle}.`);
+			}
+		}
+	}
+
+	class StaticMethodEmitter extends CallableEmitter {
+
+		private readonly resourceName: string;
+		private readonly method: StaticMethod;
+		private readonly options: ResolvedOptions;
+
+		constructor(resourceName: string, method: StaticMethod, qualifier: string, code: Code, printers: Printers, nameProvider: NameProvider, options: ResolvedOptions) {
+			super(method, qualifier, code, printers, nameProvider);
+			this.resourceName = resourceName;
+			this.method = method;
+			this.options = options;
+		}
+
+		protected doEmit(params: string[], returnType: string | undefined, metaData: string[][], metaReturnType: string | undefined): MetaModel.AbstractFunctionEmitter {
+			if (returnType === undefined) {
+				returnType = 'void';
+			}
+			const methodName = this.nameProvider.asStaticMethodName(this.method);
+			if (this.options.resourceStyle === 'namespace') {
+				this.code.push(`export declare function ${methodName}(${params.join(', ')}): ${returnType};`);
+				return new MetaModel.ResourceFunctionEmitter(this.resourceName, `typeof ${this.qualifier}.${this.resourceName}.${methodName}`, methodName, this.callable.name, metaData, metaReturnType);
+			} else if (this.options.resourceStyle === 'class') {
+				throw new Error(`Unknown resource style ${this.options.resourceStyle}.`);
+			} else {
+				throw new Error(`Unknown resource style ${this.options.resourceStyle}.`);
+			}
+		}
+	}
+
+	class ConstructorEmitter extends CallableEmitter {
+
+		private readonly resourceName: string;
+		private readonly method: Constructor;
+		private readonly options: ResolvedOptions;
+
+		constructor(resourceName: string, method: Constructor, qualifier: string, code: Code, printers: Printers, nameProvider: NameProvider, options: ResolvedOptions) {
+			super(method, qualifier, code, printers, nameProvider);
+			this.resourceName = resourceName;
+			this.method = method;
+			this.options = options;
+		}
+
+		protected doEmit(params: string[], returnType: string | undefined, metaData: string[][], metaReturnType: string | undefined): MetaModel.AbstractFunctionEmitter {
+			if (returnType === undefined) {
+				returnType = 'void';
+			}
+			const methodName = this.nameProvider.asConstructorName(this.method);
+			if (this.options.resourceStyle === 'namespace') {
+				this.code.push(`export declare function ${methodName}(${params.join(', ')}): ${returnType};`);
+				return new MetaModel.ResourceFunctionEmitter(this.resourceName, `typeof ${this.qualifier}.${this.resourceName}.${methodName}`, methodName, this.callable.name, metaData, metaReturnType);
+			} else if (this.options.resourceStyle === 'class') {
+				throw new Error(`Unknown resource style ${this.options.resourceStyle}.`);
+			} else {
+				throw new Error(`Unknown resource style ${this.options.resourceStyle}.`);
+			}
 		}
 	}
 
@@ -1456,19 +1717,31 @@ namespace TypeScript {
 			return `result<${ok}, ${error}>`;
 		}
 
-		public printRecord(type: RecordType, _context: TypeUsage): string {
+		public printBorrowHandle(type: BorrowHandleType, usage: TypeUsage): string {
+			return this.printTypeReference(type.kind.handle.borrow, usage);
+		}
+
+		public printOwnHandle(type: OwnHandleType, usage: TypeUsage): string {
+			return this.printTypeReference(type.kind.handle.own, usage);
+		}
+
+		public printRecord(type: RecordType, _usage: TypeUsage): string {
 			return this.nameProvider.asTypeName(type);
 		}
 
-		public printEnum(type: EnumType, _context: TypeUsage): string {
+		public printEnum(type: EnumType, _usage: TypeUsage): string {
 			return this.nameProvider.asTypeName(type);
 		}
 
-		public printFlags(type: FlagsType, _context: TypeUsage): string {
+		public printFlags(type: FlagsType, _usage: TypeUsage): string {
 			return this.nameProvider.asTypeName(type);
 		}
 
-		public printVariant(type: VariantType, _context: TypeUsage): string {
+		public printVariant(type: VariantType, _usage: TypeUsage): string {
+			return this.nameProvider.asTypeName(type);
+		}
+
+		public printResource(type: ResourceType, _usage: TypeUsage): string {
 			return this.nameProvider.asTypeName(type);
 		}
 
@@ -1517,15 +1790,9 @@ namespace TypeScript {
 
 	type WasmTypeName = 'i32' | 'i64' | 'f32' | 'f64';
 
-	interface FlattendParam {
+	interface FlattenedParam {
 		name: string;
-		type: WasmTypeName;
-	}
-
-	class VariantError extends Error {
-		constructor () {
-			super('Variant detected');
-		}
+		type: string;
 	}
 
 	class TypeFlattener  {
@@ -1554,31 +1821,31 @@ namespace TypeScript {
 			this.imports = imports;
 		}
 
-		public flattenParams(func: Func): FlattendParam[] {
-			const result: FlattendParam[] = [];
-			for (const param of func.params) {
+		public flattenParams(callable: Callable): FlattenedParam[] {
+			const result: FlattenedParam[] = [];
+			for (const param of callable.params) {
 				this.flattenParam(result, param);
 			}
 			return result;
 		}
 
-		public flattenResult(func: Func): string[] {
+		public flattenResult(callable: Callable): string[] {
 			const result: string[] = [];
-			if (func.results.length === 0) {
+			if (callable.results.length === 0) {
 				result.push('void');
 			} else {
-				for (const r of func.results) {
+				for (const r of callable.results) {
 					this.flattenResultType(result, r.type);
 				}
 			}
 			return result;
 		}
 
-		private flattenParam(result: FlattendParam[], param: Param): void {
+		private flattenParam(result: FlattenedParam[], param: Param): void {
 			this.flattenParamType(result, param.type, this.nameProvider.asParameterName(param));
 		}
 
-		private flattenParamType(result: FlattendParam[], type: Type | TypeReference, prefix: string): void {
+		private flattenParamType(result: FlattenedParam[], type: Type | TypeReference, prefix: string): void {
 			if (TypeReference.is(type)) {
 				if (TypeReference.isString(type)) {
 					this.handleParamBaseType(result, type, prefix);
@@ -1599,11 +1866,20 @@ namespace TypeScript {
 					this.flattenParamType(result, type.kind.tuple.types[i], `${prefix}_${i}`);
 				}
 			} else if (Type.isOptionType(type)) {
-				throw new VariantError();
+				this.imports.addBaseType('i32');
+				result.push({ name: `${prefix}_case`, type: 'i32' });
+				this.flattenParamType(result, type.kind.option, `${prefix}_option`);
 			} else if (Type.isResultType(type)) {
-				throw new VariantError();
+				const cases: (TypeReference | undefined)[] = [];
+				cases.push(type.kind.result.ok === null ? undefined : type.kind.result.ok);
+				cases.push(type.kind.result.err === null ? undefined : type.kind.result.err);
+				this.flattenParamVariantType(result, cases, prefix);
 			} else if (Type.isVariantType(type)) {
-				throw new VariantError();
+				const cases: (TypeReference | undefined)[] = [];
+				for (const c of type.kind.variant.cases) {
+					cases.push(c.type === null ? undefined : c.type);
+				}
+				this.flattenParamVariantType(result, cases, prefix);
 			} else if (Type.isEnumType(type)) {
 				this.imports.addBaseType('i32');
 				result.push({ name: `${prefix}_${this.nameProvider.typeAsParameterName(type)}`, type: 'i32' });
@@ -1612,17 +1888,57 @@ namespace TypeScript {
 				if (flatTypes.length > 0) {
 					this.imports.addBaseType(flatTypes[0]);
 				}
-				for (let i = 0; i < flatTypes.length; i++) {
-					result.push({ name: `${prefix}_${i}`, type: flatTypes[i] });
+				if (flatTypes.length === 1) {
+					result.push({ name: `${prefix}`, type: flatTypes[0] });
+				} else {
+					for (let i = 0; i < flatTypes.length; i++) {
+						result.push({ name: `${prefix}_${i}`, type: flatTypes[i] });
+					}
 				}
 			} else if (Type.isRecordType(type)) {
 				for (const field of type.kind.record.fields) {
 					this.flattenParamType(result, field.type, `${prefix}_${this.nameProvider.asFieldName(field)}`);
 				}
+			} else if (Type.isResourceType(type)) {
+				this.imports.addBaseType('i32');
+				result.push({ name: `${prefix}`, type: 'i32' });
+			} else if (Type.isBorrowHandleType(type)) {
+				this.imports.addBaseType('i32');
+				result.push({ name: `${prefix}`, type: 'i32' });
+			} else if (Type.isOwnHandleType(type)) {
+				this.imports.addBaseType('i32');
+				result.push({ name: `${prefix}`, type: 'i32' });
+			} else {
+				throw new Error(`Unexpected type ${JSON.stringify(type)}.`);
 			}
 		}
 
-		private handleParamBaseType(result: FlattendParam[], type: string, prefix: string): void {
+		private flattenParamVariantType(result: FlattenedParam[], cases: (TypeReference | undefined)[], prefix: string): void {
+			this.imports.addBaseType('i32');
+			result.push({ name: `${prefix}_case`, type: 'i32' });
+			const variantResult: FlattenedParam[] = [];
+			for (const c of cases) {
+				if (c === undefined) {
+					continue;
+				}
+				const caseFlatTypes: FlattenedParam[] = [];
+				this.flattenParamType(caseFlatTypes, c, '');
+				for (let i = 0; i < caseFlatTypes.length; i++) {
+					const want = caseFlatTypes[i];
+					if (i < variantResult.length) {
+						const use = TypeFlattener.joinFlatType(this.assertWasmTypeName(variantResult[i].type), this.assertWasmTypeName(want.type));
+						this.imports.addBaseType(use);
+						variantResult[i].type = use;
+					} else {
+						this.imports.addBaseType(want.type);
+						variantResult.push({ name: `${prefix}_${i}`, type: want.type});
+					}
+				}
+			}
+			result.push(...variantResult);
+		}
+
+		private handleParamBaseType(result: FlattenedParam[], type: string, prefix: string): void {
 			if (type === 'string') {
 				result.push({ name: `${prefix}_ptr`, type: 'i32' });
 				result.push({ name: `${prefix}_len`, type: 'i32' });
@@ -1651,19 +1967,27 @@ namespace TypeScript {
 				const ref = this.symbols.getType(type.kind.type);
 				this.flattenResultType(result, ref);
 			} else if (Type.isListType(type)) {
-				this.imports.addBaseType('ptr');
 				this.imports.addBaseType('i32');
-				result.push('ptr<i32>', 'i32');
+				result.push('i32', 'i32');
 			} else if (Type.isTupleType(type)) {
 				for (let i = 0; i < type.kind.tuple.types.length; i++) {
 					this.flattenResultType(result, type.kind.tuple.types[i]);
 				}
 			} else if (Type.isOptionType(type)) {
-				throw new VariantError();
+				this.imports.addBaseType('i32');
+				result.push('i32' );
+				this.flattenResultType(result, type.kind.option);
 			} else if (Type.isResultType(type)) {
-				throw new VariantError();
+				const cases: (TypeReference | undefined)[] = [];
+				cases.push(type.kind.result.ok === null ? undefined : type.kind.result.ok);
+				cases.push(type.kind.result.err === null ? undefined : type.kind.result.err);
+				this.flattenResultVariantType(result, cases);
 			} else if (Type.isVariantType(type)) {
-				throw new VariantError();
+				const cases: (TypeReference | undefined)[] = [];
+				for (const c of type.kind.variant.cases) {
+					cases.push(c.type === null ? undefined : c.type);
+				}
+				this.flattenResultVariantType(result, cases);
 			} else if (Type.isEnumType(type)) {
 				this.imports.addBaseType('i32');
 				result.push('i32');
@@ -1677,14 +2001,56 @@ namespace TypeScript {
 				for (const field of type.kind.record.fields) {
 					this.flattenResultType(result, field.type);
 				}
+			} else if (Type.isResourceType(type)) {
+				this.imports.addBaseType('i32');
+				result.push('i32');
+			} else if (Type.isBorrowHandleType(type)) {
+				this.imports.addBaseType('i32');
+				result.push('i32');
+			} else if (Type.isOwnHandleType(type)) {
+				this.imports.addBaseType('i32');
+				result.push('i32');
+			}  else {
+				throw new Error(`Unexpected type ${JSON.stringify(type)}.`);
 			}
+		}
+
+		private flattenResultVariantType(result: string[], cases: (TypeReference | undefined)[]): void {
+			this.imports.addBaseType('i32');
+			result.push('i32');
+			const variantResult: string[] = [];
+			for (const c of cases) {
+				if (c === undefined) {
+					continue;
+				}
+				const caseFlatTypes: string[] = [];
+				this.flattenResultType(caseFlatTypes, c);
+				for (let i = 0; i < caseFlatTypes.length; i++) {
+					const want = caseFlatTypes[i];
+					if (i < variantResult.length) {
+						const use = TypeFlattener.joinFlatType(this.assertWasmTypeName(variantResult[i]), this.assertWasmTypeName(want));
+						this.imports.addBaseType(use);
+						variantResult[i] = use;
+					} else {
+						this.imports.addBaseType(want);
+						variantResult.push(want);
+					}
+				}
+			}
+			result.push(...variantResult);
+		}
+
+		private assertWasmTypeName(type: string): WasmTypeName {
+			if (type === 'i32' || type === 'i64' || type === 'f32' || type === 'f64') {
+				return type;
+			}
+			throw new Error(`Type ${type} is not a wasm type name.`);
 		}
 
 		private handleResultBaseType(result: string[], type: string): void {
 			if (type === 'string') {
-				this.imports.addBaseType('ptr');
 				this.imports.addBaseType('i32');
-				result.push('ptr<i32>', 'i32');
+				result.push('i32', 'i32');
 			} else {
 				const t = TypeFlattener.baseTypes.get(type);
 				if (t === undefined) {
@@ -1709,6 +2075,16 @@ namespace TypeScript {
 
 		private static num32Flags(fields: number): number {
 			return Math.ceil(fields / 32);
+		}
+
+		private static joinFlatType(a: WasmTypeName, b: WasmTypeName) : WasmTypeName {
+			if (a === b) {
+				return a;
+			}
+			if ((a === 'i32' && b === 'f32') || (a === 'f32' && b === 'i32')) {
+				return 'i32';
+			}
+			return 'i64';
 		}
 	}
 }

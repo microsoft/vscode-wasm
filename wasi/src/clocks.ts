@@ -4,7 +4,7 @@
  *--------------------------------------------------------------------------------------------*/
 import * as $wcm from '@vscode/wasm-component-model';
 import type { u64, u32, s32, i64, i32, ptr } from '@vscode/wasm-component-model';
-import { poll } from './poll';
+import { io } from './io';
 
 export namespace clocks {
 	/**
@@ -21,7 +21,7 @@ export namespace clocks {
 	 */
 	export namespace MonotonicClock {
 		
-		export type Pollable = poll.Poll.Pollable;
+		export type Pollable = io.Poll.Pollable;
 		
 		/**
 		 * A timestamp in nanoseconds.
@@ -70,10 +70,10 @@ export namespace clocks {
 		/**
 		 * A time and date in seconds plus nanoseconds.
 		 */
-		export interface Datetime extends $wcm.JRecord {
+		export type Datetime = {
 			seconds: u64;
 			nanoseconds: u32;
-		}
+		};
 		
 		/**
 		 * Read the current value of the clock.
@@ -106,23 +106,12 @@ export namespace clocks {
 		export type Datetime = clocks.WallClock.Datetime;
 		
 		/**
-		 * A timezone.
-		 * 
-		 * In timezones that recognize daylight saving time, also known as daylight
-		 * time and summer time, the information returned from the functions varies
-		 * over time to reflect these adjustments.
-		 * 
-		 * This [represents a resource](https://github.com/WebAssembly/WASI/blob/main/docs/WitInWasi.md#Resources).
-		 */
-		export type Timezone = u32;
-		
-		/**
 		 * Information useful for displaying the timezone of a specific `datetime`.
 		 * 
 		 * This information may vary within a single `timezone` to reflect daylight
 		 * saving time adjustments.
 		 */
-		export interface TimezoneDisplay extends $wcm.JRecord {
+		export type TimezoneDisplay = {
 			
 			/**
 			 * The number of seconds difference between UTC time and the local
@@ -156,7 +145,7 @@ export namespace clocks {
 			 * should return false.
 			 */
 			inDaylightSavingTime: boolean;
-		}
+		};
 		
 		/**
 		 * Return information needed to display the given `datetime`. This includes
@@ -167,46 +156,41 @@ export namespace clocks {
 		 * `timezone-display` for `UTC` with a `utc-offset` of 0 and no daylight
 		 * saving time.
 		 */
-		export declare function display(this_: Timezone, when: Datetime): TimezoneDisplay;
+		export declare function display(when: Datetime): TimezoneDisplay;
 		
 		/**
 		 * The same as `display`, but only return the UTC offset.
 		 */
-		export declare function utcOffset(this_: Timezone, when: Datetime): s32;
-		
-		/**
-		 * Dispose of the specified input-stream, after which it may no longer
-		 * be used.
-		 */
-		export declare function dropTimezone(this_: Timezone): void;
+		export declare function utcOffset(when: Datetime): s32;
 	}
-	export type Timezone = Pick<typeof Timezone, 'display' | 'utcOffset' | 'dropTimezone'>;
+	export type Timezone = Pick<typeof Timezone, 'display' | 'utcOffset'>;
 	
 }
 
 export namespace clocks {
 	export namespace MonotonicClock.$ {
-		export const Pollable = poll.Poll.$.Pollable;
+		export const Pollable = io.Poll.$.Pollable;
 		export const Instant = $wcm.u64;
 		export const now = new $wcm.FunctionType<typeof clocks.MonotonicClock.now>('now', 'now', [], Instant);
 		export const resolution = new $wcm.FunctionType<typeof clocks.MonotonicClock.resolution>('resolution', 'resolution', [], Instant);
 		export const subscribe = new $wcm.FunctionType<typeof clocks.MonotonicClock.subscribe>('subscribe', 'subscribe',[
 			['when', Instant],
 			['absolute', $wcm.bool],
-		], Pollable);
+		], new $wcm.OwnType<clocks.MonotonicClock.Pollable>(Pollable));
 	}
 	export namespace MonotonicClock._ {
-		const allFunctions = [$.now, $.resolution, $.subscribe];
+		const functions: $wcm.FunctionType<$wcm.ServiceFunction>[] = [$.now, $.resolution, $.subscribe];
+		const resources: $wcm.NamespaceResourceType[] = [];
 		export type WasmInterface = {
 			'now': () => i64;
 			'resolution': () => i64;
 			'subscribe': (when: i64, absolute: i32) => i32;
 		};
-		export function createHost<T extends $wcm.Host>(service: clocks.MonotonicClock, context: $wcm.Context): T {
-			return $wcm.Host.create<T>(allFunctions, service, context);
+		export function createHost(service: clocks.MonotonicClock, context: $wcm.Context): WasmInterface {
+			return $wcm.Host.create<WasmInterface>(functions, resources, service, context);
 		}
-		export function createService(wasmInterface: $wcm.WasmInterface, context: $wcm.Context): clocks.MonotonicClock {
-			return $wcm.Service.create<clocks.MonotonicClock>(allFunctions, wasmInterface, context);
+		export function createService(wasmInterface: WasmInterface, context: $wcm.Context): clocks.MonotonicClock {
+			return $wcm.Service.create<clocks.MonotonicClock>(functions, resources, wasmInterface, context);
 		}
 	}
 	export namespace WallClock.$ {
@@ -218,50 +202,45 @@ export namespace clocks {
 		export const resolution = new $wcm.FunctionType<typeof clocks.WallClock.resolution>('resolution', 'resolution', [], Datetime);
 	}
 	export namespace WallClock._ {
-		const allFunctions = [$.now, $.resolution];
+		const functions: $wcm.FunctionType<$wcm.ServiceFunction>[] = [$.now, $.resolution];
+		const resources: $wcm.NamespaceResourceType[] = [];
 		export type WasmInterface = {
 			'now': (result: ptr<[i64, i32]>) => void;
 			'resolution': (result: ptr<[i64, i32]>) => void;
 		};
-		export function createHost<T extends $wcm.Host>(service: clocks.WallClock, context: $wcm.Context): T {
-			return $wcm.Host.create<T>(allFunctions, service, context);
+		export function createHost(service: clocks.WallClock, context: $wcm.Context): WasmInterface {
+			return $wcm.Host.create<WasmInterface>(functions, resources, service, context);
 		}
-		export function createService(wasmInterface: $wcm.WasmInterface, context: $wcm.Context): clocks.WallClock {
-			return $wcm.Service.create<clocks.WallClock>(allFunctions, wasmInterface, context);
+		export function createService(wasmInterface: WasmInterface, context: $wcm.Context): clocks.WallClock {
+			return $wcm.Service.create<clocks.WallClock>(functions, resources, wasmInterface, context);
 		}
 	}
 	export namespace Timezone.$ {
 		export const Datetime = clocks.WallClock.$.Datetime;
-		export const Timezone = $wcm.u32;
 		export const TimezoneDisplay = new $wcm.RecordType<clocks.Timezone.TimezoneDisplay>([
 			['utcOffset', $wcm.s32],
 			['name', $wcm.wstring],
 			['inDaylightSavingTime', $wcm.bool],
 		]);
 		export const display = new $wcm.FunctionType<typeof clocks.Timezone.display>('display', 'display',[
-			['this_', Timezone],
 			['when', Datetime],
 		], TimezoneDisplay);
 		export const utcOffset = new $wcm.FunctionType<typeof clocks.Timezone.utcOffset>('utcOffset', 'utc-offset',[
-			['this_', Timezone],
 			['when', Datetime],
 		], $wcm.s32);
-		export const dropTimezone = new $wcm.FunctionType<typeof clocks.Timezone.dropTimezone>('dropTimezone', 'drop-timezone',[
-			['this_', Timezone],
-		], undefined);
 	}
 	export namespace Timezone._ {
-		const allFunctions = [$.display, $.utcOffset, $.dropTimezone];
+		const functions: $wcm.FunctionType<$wcm.ServiceFunction>[] = [$.display, $.utcOffset];
+		const resources: $wcm.NamespaceResourceType[] = [];
 		export type WasmInterface = {
-			'display': (this_: i32, when_Datetime_seconds: i64, when_Datetime_nanoseconds: i32, result: ptr<[i32, ptr<i32>, i32, i32]>) => void;
-			'utc-offset': (this_: i32, when_Datetime_seconds: i64, when_Datetime_nanoseconds: i32) => i32;
-			'drop-timezone': (this_: i32) => void;
+			'display': (when_Datetime_seconds: i64, when_Datetime_nanoseconds: i32, result: ptr<[i32, i32, i32, i32]>) => void;
+			'utc-offset': (when_Datetime_seconds: i64, when_Datetime_nanoseconds: i32) => i32;
 		};
-		export function createHost<T extends $wcm.Host>(service: clocks.Timezone, context: $wcm.Context): T {
-			return $wcm.Host.create<T>(allFunctions, service, context);
+		export function createHost(service: clocks.Timezone, context: $wcm.Context): WasmInterface {
+			return $wcm.Host.create<WasmInterface>(functions, resources, service, context);
 		}
-		export function createService(wasmInterface: $wcm.WasmInterface, context: $wcm.Context): clocks.Timezone {
-			return $wcm.Service.create<clocks.Timezone>(allFunctions, wasmInterface, context);
+		export function createService(wasmInterface: WasmInterface, context: $wcm.Context): clocks.Timezone {
+			return $wcm.Service.create<clocks.Timezone>(functions, resources, wasmInterface, context);
 		}
 	}
 }

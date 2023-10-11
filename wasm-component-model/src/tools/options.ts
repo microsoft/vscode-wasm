@@ -13,6 +13,7 @@ export type Options = {
 	nameStyle: 'ts' | 'wit';
 	stdin: boolean;
 	noMain: boolean;
+	resourceStyle: 'class' | 'namespace';
 };
 
 export type ResolvedOptions = Required<Options> & { file: string; outDir: string };
@@ -27,7 +28,8 @@ export namespace Options {
 		target: 'ts',
 		nameStyle: 'ts',
 		stdin: false,
-		noMain: false
+		noMain: false,
+		resourceStyle: 'class',
 	};
 
 	export function validate(options: Options): options is ResolvedOptions {

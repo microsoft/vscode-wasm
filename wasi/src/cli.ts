@@ -3,7 +3,7 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 import * as $wcm from '@vscode/wasm-component-model';
-import type { result, u32, ptr, i32, i64, f32, f64 } from '@vscode/wasm-component-model';
+import type { result, resource, i32, ptr } from '@vscode/wasm-component-model';
 import { io } from './io';
 
 export namespace cli {
@@ -80,35 +80,19 @@ export namespace cli {
 		
 		/**
 		 * The input side of a terminal.
-		 * 
-		 * This [represents a resource](https://github.com/WebAssembly/WASI/blob/main/docs/WitInWasi.md#Resources).
 		 */
-		export type TerminalInput = u32;
-		
-		/**
-		 * Dispose of the specified terminal-input after which it may no longer
-		 * be used.
-		 */
-		export declare function dropTerminalInput(this_: TerminalInput): void;
+		export type TerminalInput = resource;
 	}
-	export type TerminalInput = Pick<typeof TerminalInput, 'dropTerminalInput'>;
+	export type TerminalInput = typeof TerminalInput;
 	
 	export namespace TerminalOutput {
 		
 		/**
 		 * The output side of a terminal.
-		 * 
-		 * This [represents a resource](https://github.com/WebAssembly/WASI/blob/main/docs/WitInWasi.md#Resources).
 		 */
-		export type TerminalOutput = u32;
-		
-		/**
-		 * Dispose of the specified terminal-output, after which it may no longer
-		 * be used.
-		 */
-		export declare function dropTerminalOutput(this_: TerminalOutput): void;
+		export type TerminalOutput = resource;
 	}
-	export type TerminalOutput = Pick<typeof TerminalOutput, 'dropTerminalOutput'>;
+	export type TerminalOutput = typeof TerminalOutput;
 	
 	/**
 	 * An interface providing an optional `terminal-input` for stdin as a
@@ -167,17 +151,18 @@ export namespace cli {
 		export const initialCwd = new $wcm.FunctionType<typeof cli.Environment.initialCwd>('initialCwd', 'initial-cwd', [], new $wcm.OptionType<string>($wcm.wstring));
 	}
 	export namespace Environment._ {
-		const allFunctions = [$.getEnvironment, $.getArguments, $.initialCwd];
+		const functions: $wcm.FunctionType<$wcm.ServiceFunction>[] = [$.getEnvironment, $.getArguments, $.initialCwd];
+		const resources: $wcm.NamespaceResourceType[] = [];
 		export type WasmInterface = {
-			'get-environment': (result: ptr<[ptr<i32>, i32]>) => void;
-			'get-arguments': (result: ptr<[ptr<i32>, i32]>) => void;
-			'initial-cwd': (result: ptr<(i32 | i64 | f32 | f64)[]>) => void;
+			'get-environment': (result: ptr<[i32, i32]>) => void;
+			'get-arguments': (result: ptr<[i32, i32]>) => void;
+			'initial-cwd': (result: ptr<[i32, i32, i32]>) => void;
 		};
-		export function createHost<T extends $wcm.Host>(service: cli.Environment, context: $wcm.Context): T {
-			return $wcm.Host.create<T>(allFunctions, service, context);
+		export function createHost(service: cli.Environment, context: $wcm.Context): WasmInterface {
+			return $wcm.Host.create<WasmInterface>(functions, resources, service, context);
 		}
-		export function createService(wasmInterface: $wcm.WasmInterface, context: $wcm.Context): cli.Environment {
-			return $wcm.Service.create<cli.Environment>(allFunctions, wasmInterface, context);
+		export function createService(wasmInterface: WasmInterface, context: $wcm.Context): cli.Environment {
+			return $wcm.Service.create<cli.Environment>(functions, resources, wasmInterface, context);
 		}
 	}
 	export namespace Exit.$ {
@@ -186,162 +171,164 @@ export namespace cli {
 		], undefined);
 	}
 	export namespace Exit._ {
-		const allFunctions = [$.exit];
+		const functions: $wcm.FunctionType<$wcm.ServiceFunction>[] = [$.exit];
+		const resources: $wcm.NamespaceResourceType[] = [];
 		export type WasmInterface = {
-			'exit': (...args: (i32 | i64 | f32 | f64)[]) => void;
+			'exit': (status_case: i32) => void;
 		};
-		export function createHost<T extends $wcm.Host>(service: cli.Exit, context: $wcm.Context): T {
-			return $wcm.Host.create<T>(allFunctions, service, context);
+		export function createHost(service: cli.Exit, context: $wcm.Context): WasmInterface {
+			return $wcm.Host.create<WasmInterface>(functions, resources, service, context);
 		}
-		export function createService(wasmInterface: $wcm.WasmInterface, context: $wcm.Context): cli.Exit {
-			return $wcm.Service.create<cli.Exit>(allFunctions, wasmInterface, context);
+		export function createService(wasmInterface: WasmInterface, context: $wcm.Context): cli.Exit {
+			return $wcm.Service.create<cli.Exit>(functions, resources, wasmInterface, context);
 		}
 	}
 	export namespace Run.$ {
 		export const run = new $wcm.FunctionType<typeof cli.Run.run>('run', 'run', [], new $wcm.ResultType<void, void>(undefined, undefined));
 	}
 	export namespace Run._ {
-		const allFunctions = [$.run];
+		const functions: $wcm.FunctionType<$wcm.ServiceFunction>[] = [$.run];
+		const resources: $wcm.NamespaceResourceType[] = [];
 		export type WasmInterface = {
-			'run': (result: ptr<(i32 | i64 | f32 | f64)[]>) => void;
+			'run': () => i32;
 		};
-		export function createHost<T extends $wcm.Host>(service: cli.Run, context: $wcm.Context): T {
-			return $wcm.Host.create<T>(allFunctions, service, context);
+		export function createHost(service: cli.Run, context: $wcm.Context): WasmInterface {
+			return $wcm.Host.create<WasmInterface>(functions, resources, service, context);
 		}
-		export function createService(wasmInterface: $wcm.WasmInterface, context: $wcm.Context): cli.Run {
-			return $wcm.Service.create<cli.Run>(allFunctions, wasmInterface, context);
+		export function createService(wasmInterface: WasmInterface, context: $wcm.Context): cli.Run {
+			return $wcm.Service.create<cli.Run>(functions, resources, wasmInterface, context);
 		}
 	}
 	export namespace Stdin.$ {
 		export const InputStream = io.Streams.$.InputStream;
-		export const getStdin = new $wcm.FunctionType<typeof cli.Stdin.getStdin>('getStdin', 'get-stdin', [], InputStream);
+		export const getStdin = new $wcm.FunctionType<typeof cli.Stdin.getStdin>('getStdin', 'get-stdin', [], new $wcm.OwnType<cli.Stdin.InputStream>(InputStream));
 	}
 	export namespace Stdin._ {
-		const allFunctions = [$.getStdin];
+		const functions: $wcm.FunctionType<$wcm.ServiceFunction>[] = [$.getStdin];
+		const resources: $wcm.NamespaceResourceType[] = [];
 		export type WasmInterface = {
 			'get-stdin': () => i32;
 		};
-		export function createHost<T extends $wcm.Host>(service: cli.Stdin, context: $wcm.Context): T {
-			return $wcm.Host.create<T>(allFunctions, service, context);
+		export function createHost(service: cli.Stdin, context: $wcm.Context): WasmInterface {
+			return $wcm.Host.create<WasmInterface>(functions, resources, service, context);
 		}
-		export function createService(wasmInterface: $wcm.WasmInterface, context: $wcm.Context): cli.Stdin {
-			return $wcm.Service.create<cli.Stdin>(allFunctions, wasmInterface, context);
+		export function createService(wasmInterface: WasmInterface, context: $wcm.Context): cli.Stdin {
+			return $wcm.Service.create<cli.Stdin>(functions, resources, wasmInterface, context);
 		}
 	}
 	export namespace Stdout.$ {
 		export const OutputStream = io.Streams.$.OutputStream;
-		export const getStdout = new $wcm.FunctionType<typeof cli.Stdout.getStdout>('getStdout', 'get-stdout', [], OutputStream);
+		export const getStdout = new $wcm.FunctionType<typeof cli.Stdout.getStdout>('getStdout', 'get-stdout', [], new $wcm.OwnType<cli.Stdout.OutputStream>(OutputStream));
 	}
 	export namespace Stdout._ {
-		const allFunctions = [$.getStdout];
+		const functions: $wcm.FunctionType<$wcm.ServiceFunction>[] = [$.getStdout];
+		const resources: $wcm.NamespaceResourceType[] = [];
 		export type WasmInterface = {
 			'get-stdout': () => i32;
 		};
-		export function createHost<T extends $wcm.Host>(service: cli.Stdout, context: $wcm.Context): T {
-			return $wcm.Host.create<T>(allFunctions, service, context);
+		export function createHost(service: cli.Stdout, context: $wcm.Context): WasmInterface {
+			return $wcm.Host.create<WasmInterface>(functions, resources, service, context);
 		}
-		export function createService(wasmInterface: $wcm.WasmInterface, context: $wcm.Context): cli.Stdout {
-			return $wcm.Service.create<cli.Stdout>(allFunctions, wasmInterface, context);
+		export function createService(wasmInterface: WasmInterface, context: $wcm.Context): cli.Stdout {
+			return $wcm.Service.create<cli.Stdout>(functions, resources, wasmInterface, context);
 		}
 	}
 	export namespace Stderr.$ {
 		export const OutputStream = io.Streams.$.OutputStream;
-		export const getStderr = new $wcm.FunctionType<typeof cli.Stderr.getStderr>('getStderr', 'get-stderr', [], OutputStream);
+		export const getStderr = new $wcm.FunctionType<typeof cli.Stderr.getStderr>('getStderr', 'get-stderr', [], new $wcm.OwnType<cli.Stderr.OutputStream>(OutputStream));
 	}
 	export namespace Stderr._ {
-		const allFunctions = [$.getStderr];
+		const functions: $wcm.FunctionType<$wcm.ServiceFunction>[] = [$.getStderr];
+		const resources: $wcm.NamespaceResourceType[] = [];
 		export type WasmInterface = {
 			'get-stderr': () => i32;
 		};
-		export function createHost<T extends $wcm.Host>(service: cli.Stderr, context: $wcm.Context): T {
-			return $wcm.Host.create<T>(allFunctions, service, context);
+		export function createHost(service: cli.Stderr, context: $wcm.Context): WasmInterface {
+			return $wcm.Host.create<WasmInterface>(functions, resources, service, context);
 		}
-		export function createService(wasmInterface: $wcm.WasmInterface, context: $wcm.Context): cli.Stderr {
-			return $wcm.Service.create<cli.Stderr>(allFunctions, wasmInterface, context);
+		export function createService(wasmInterface: WasmInterface, context: $wcm.Context): cli.Stderr {
+			return $wcm.Service.create<cli.Stderr>(functions, resources, wasmInterface, context);
 		}
 	}
 	export namespace TerminalInput.$ {
-		export const TerminalInput = $wcm.u32;
-		export const dropTerminalInput = new $wcm.FunctionType<typeof cli.TerminalInput.dropTerminalInput>('dropTerminalInput', 'drop-terminal-input',[
-			['this_', TerminalInput],
-		], undefined);
+		export const TerminalInput = new $wcm.NamespaceResourceType('TerminalInput', 'terminal-input');
 	}
 	export namespace TerminalInput._ {
-		const allFunctions = [$.dropTerminalInput];
+		const functions: $wcm.FunctionType<$wcm.ServiceFunction>[] = [];
+		const resources: $wcm.NamespaceResourceType[] = [$.TerminalInput];
 		export type WasmInterface = {
-			'drop-terminal-input': (this_: i32) => void;
 		};
-		export function createHost<T extends $wcm.Host>(service: cli.TerminalInput, context: $wcm.Context): T {
-			return $wcm.Host.create<T>(allFunctions, service, context);
+		export function createHost(service: cli.TerminalInput, context: $wcm.Context): WasmInterface {
+			return $wcm.Host.create<WasmInterface>(functions, resources, service, context);
 		}
-		export function createService(wasmInterface: $wcm.WasmInterface, context: $wcm.Context): cli.TerminalInput {
-			return $wcm.Service.create<cli.TerminalInput>(allFunctions, wasmInterface, context);
+		export function createService(wasmInterface: WasmInterface, context: $wcm.Context): cli.TerminalInput {
+			return $wcm.Service.create<cli.TerminalInput>(functions, resources, wasmInterface, context);
 		}
 	}
 	export namespace TerminalOutput.$ {
-		export const TerminalOutput = $wcm.u32;
-		export const dropTerminalOutput = new $wcm.FunctionType<typeof cli.TerminalOutput.dropTerminalOutput>('dropTerminalOutput', 'drop-terminal-output',[
-			['this_', TerminalOutput],
-		], undefined);
+		export const TerminalOutput = new $wcm.NamespaceResourceType('TerminalOutput', 'terminal-output');
 	}
 	export namespace TerminalOutput._ {
-		const allFunctions = [$.dropTerminalOutput];
+		const functions: $wcm.FunctionType<$wcm.ServiceFunction>[] = [];
+		const resources: $wcm.NamespaceResourceType[] = [$.TerminalOutput];
 		export type WasmInterface = {
-			'drop-terminal-output': (this_: i32) => void;
 		};
-		export function createHost<T extends $wcm.Host>(service: cli.TerminalOutput, context: $wcm.Context): T {
-			return $wcm.Host.create<T>(allFunctions, service, context);
+		export function createHost(service: cli.TerminalOutput, context: $wcm.Context): WasmInterface {
+			return $wcm.Host.create<WasmInterface>(functions, resources, service, context);
 		}
-		export function createService(wasmInterface: $wcm.WasmInterface, context: $wcm.Context): cli.TerminalOutput {
-			return $wcm.Service.create<cli.TerminalOutput>(allFunctions, wasmInterface, context);
+		export function createService(wasmInterface: WasmInterface, context: $wcm.Context): cli.TerminalOutput {
+			return $wcm.Service.create<cli.TerminalOutput>(functions, resources, wasmInterface, context);
 		}
 	}
 	export namespace TerminalStdin.$ {
 		export const TerminalInput = cli.TerminalInput.$.TerminalInput;
-		export const getTerminalStdin = new $wcm.FunctionType<typeof cli.TerminalStdin.getTerminalStdin>('getTerminalStdin', 'get-terminal-stdin', [], new $wcm.OptionType<cli.TerminalStdin.TerminalInput>(TerminalInput));
+		export const getTerminalStdin = new $wcm.FunctionType<typeof cli.TerminalStdin.getTerminalStdin>('getTerminalStdin', 'get-terminal-stdin', [], new $wcm.OptionType<cli.TerminalStdin.TerminalInput>(new $wcm.OwnType<cli.TerminalStdin.TerminalInput>(TerminalInput)));
 	}
 	export namespace TerminalStdin._ {
-		const allFunctions = [$.getTerminalStdin];
+		const functions: $wcm.FunctionType<$wcm.ServiceFunction>[] = [$.getTerminalStdin];
+		const resources: $wcm.NamespaceResourceType[] = [];
 		export type WasmInterface = {
-			'get-terminal-stdin': (result: ptr<(i32 | i64 | f32 | f64)[]>) => void;
+			'get-terminal-stdin': (result: ptr<[i32, i32]>) => void;
 		};
-		export function createHost<T extends $wcm.Host>(service: cli.TerminalStdin, context: $wcm.Context): T {
-			return $wcm.Host.create<T>(allFunctions, service, context);
+		export function createHost(service: cli.TerminalStdin, context: $wcm.Context): WasmInterface {
+			return $wcm.Host.create<WasmInterface>(functions, resources, service, context);
 		}
-		export function createService(wasmInterface: $wcm.WasmInterface, context: $wcm.Context): cli.TerminalStdin {
-			return $wcm.Service.create<cli.TerminalStdin>(allFunctions, wasmInterface, context);
+		export function createService(wasmInterface: WasmInterface, context: $wcm.Context): cli.TerminalStdin {
+			return $wcm.Service.create<cli.TerminalStdin>(functions, resources, wasmInterface, context);
 		}
 	}
 	export namespace TerminalStdout.$ {
 		export const TerminalOutput = cli.TerminalOutput.$.TerminalOutput;
-		export const getTerminalStdout = new $wcm.FunctionType<typeof cli.TerminalStdout.getTerminalStdout>('getTerminalStdout', 'get-terminal-stdout', [], new $wcm.OptionType<cli.TerminalStdout.TerminalOutput>(TerminalOutput));
+		export const getTerminalStdout = new $wcm.FunctionType<typeof cli.TerminalStdout.getTerminalStdout>('getTerminalStdout', 'get-terminal-stdout', [], new $wcm.OptionType<cli.TerminalStdout.TerminalOutput>(new $wcm.OwnType<cli.TerminalStdout.TerminalOutput>(TerminalOutput)));
 	}
 	export namespace TerminalStdout._ {
-		const allFunctions = [$.getTerminalStdout];
+		const functions: $wcm.FunctionType<$wcm.ServiceFunction>[] = [$.getTerminalStdout];
+		const resources: $wcm.NamespaceResourceType[] = [];
 		export type WasmInterface = {
-			'get-terminal-stdout': (result: ptr<(i32 | i64 | f32 | f64)[]>) => void;
+			'get-terminal-stdout': (result: ptr<[i32, i32]>) => void;
 		};
-		export function createHost<T extends $wcm.Host>(service: cli.TerminalStdout, context: $wcm.Context): T {
-			return $wcm.Host.create<T>(allFunctions, service, context);
+		export function createHost(service: cli.TerminalStdout, context: $wcm.Context): WasmInterface {
+			return $wcm.Host.create<WasmInterface>(functions, resources, service, context);
 		}
-		export function createService(wasmInterface: $wcm.WasmInterface, context: $wcm.Context): cli.TerminalStdout {
-			return $wcm.Service.create<cli.TerminalStdout>(allFunctions, wasmInterface, context);
+		export function createService(wasmInterface: WasmInterface, context: $wcm.Context): cli.TerminalStdout {
+			return $wcm.Service.create<cli.TerminalStdout>(functions, resources, wasmInterface, context);
 		}
 	}
 	export namespace TerminalStderr.$ {
 		export const TerminalOutput = cli.TerminalOutput.$.TerminalOutput;
-		export const getTerminalStderr = new $wcm.FunctionType<typeof cli.TerminalStderr.getTerminalStderr>('getTerminalStderr', 'get-terminal-stderr', [], new $wcm.OptionType<cli.TerminalStderr.TerminalOutput>(TerminalOutput));
+		export const getTerminalStderr = new $wcm.FunctionType<typeof cli.TerminalStderr.getTerminalStderr>('getTerminalStderr', 'get-terminal-stderr', [], new $wcm.OptionType<cli.TerminalStderr.TerminalOutput>(new $wcm.OwnType<cli.TerminalStderr.TerminalOutput>(TerminalOutput)));
 	}
 	export namespace TerminalStderr._ {
-		const allFunctions = [$.getTerminalStderr];
+		const functions: $wcm.FunctionType<$wcm.ServiceFunction>[] = [$.getTerminalStderr];
+		const resources: $wcm.NamespaceResourceType[] = [];
 		export type WasmInterface = {
-			'get-terminal-stderr': (result: ptr<(i32 | i64 | f32 | f64)[]>) => void;
+			'get-terminal-stderr': (result: ptr<[i32, i32]>) => void;
 		};
-		export function createHost<T extends $wcm.Host>(service: cli.TerminalStderr, context: $wcm.Context): T {
-			return $wcm.Host.create<T>(allFunctions, service, context);
+		export function createHost(service: cli.TerminalStderr, context: $wcm.Context): WasmInterface {
+			return $wcm.Host.create<WasmInterface>(functions, resources, service, context);
 		}
-		export function createService(wasmInterface: $wcm.WasmInterface, context: $wcm.Context): cli.TerminalStderr {
-			return $wcm.Service.create<cli.TerminalStderr>(allFunctions, wasmInterface, context);
+		export function createService(wasmInterface: WasmInterface, context: $wcm.Context): cli.TerminalStderr {
+			return $wcm.Service.create<cli.TerminalStderr>(functions, resources, wasmInterface, context);
 		}
 	}
 }
