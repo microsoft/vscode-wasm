@@ -1948,12 +1948,14 @@ abstract class AbstractResourceType implements ComponentModelType<resource> {
 	}
 }
 
+export type borrow<T extends JType> = T;
 export class BorrowType<_T extends resource> extends AbstractResourceType {
 	constructor(_r: ComponentModelType<resource>) {
 		super(ComponentModelTypeKind.borrow);
 	}
 }
 
+export type own<T extends JType> = T;
 export class OwnType<_T extends resource> extends AbstractResourceType {
 	constructor(_r: ComponentModelType<resource>) {
 		super(ComponentModelTypeKind.own);

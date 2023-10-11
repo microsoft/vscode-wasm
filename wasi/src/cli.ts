@@ -3,7 +3,7 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 import * as $wcm from '@vscode/wasm-component-model';
-import type { result, resource, i32, ptr } from '@vscode/wasm-component-model';
+import type { result, own, resource, i32, ptr } from '@vscode/wasm-component-model';
 import { io } from './io';
 
 export namespace cli {
@@ -56,7 +56,7 @@ export namespace cli {
 		
 		export type InputStream = io.Streams.InputStream;
 		
-		export declare function getStdin(): InputStream;
+		export declare function getStdin(): own<InputStream>;
 	}
 	export type Stdin = Pick<typeof Stdin, 'getStdin'>;
 	
@@ -64,7 +64,7 @@ export namespace cli {
 		
 		export type OutputStream = io.Streams.OutputStream;
 		
-		export declare function getStdout(): OutputStream;
+		export declare function getStdout(): own<OutputStream>;
 	}
 	export type Stdout = Pick<typeof Stdout, 'getStdout'>;
 	
@@ -72,7 +72,7 @@ export namespace cli {
 		
 		export type OutputStream = io.Streams.OutputStream;
 		
-		export declare function getStderr(): OutputStream;
+		export declare function getStderr(): own<OutputStream>;
 	}
 	export type Stderr = Pick<typeof Stderr, 'getStderr'>;
 	
@@ -106,7 +106,7 @@ export namespace cli {
 		 * If stdin is connected to a terminal, return a `terminal-input` handle
 		 * allowing further interaction with it.
 		 */
-		export declare function getTerminalStdin(): TerminalInput | undefined;
+		export declare function getTerminalStdin(): own<TerminalInput> | undefined;
 	}
 	export type TerminalStdin = Pick<typeof TerminalStdin, 'getTerminalStdin'>;
 	
@@ -122,7 +122,7 @@ export namespace cli {
 		 * If stdout is connected to a terminal, return a `terminal-output` handle
 		 * allowing further interaction with it.
 		 */
-		export declare function getTerminalStdout(): TerminalOutput | undefined;
+		export declare function getTerminalStdout(): own<TerminalOutput> | undefined;
 	}
 	export type TerminalStdout = Pick<typeof TerminalStdout, 'getTerminalStdout'>;
 	
@@ -138,7 +138,7 @@ export namespace cli {
 		 * If stderr is connected to a terminal, return a `terminal-output` handle
 		 * allowing further interaction with it.
 		 */
-		export declare function getTerminalStderr(): TerminalOutput | undefined;
+		export declare function getTerminalStderr(): own<TerminalOutput> | undefined;
 	}
 	export type TerminalStderr = Pick<typeof TerminalStderr, 'getTerminalStderr'>;
 	
@@ -262,7 +262,7 @@ export namespace cli {
 	}
 	export namespace TerminalStdin.$ {
 		export const TerminalInput = cli.TerminalInput.$.TerminalInput;
-		export const getTerminalStdin = new $wcm.FunctionType<typeof cli.TerminalStdin.getTerminalStdin>('getTerminalStdin', 'get-terminal-stdin', [], new $wcm.OptionType<cli.TerminalStdin.TerminalInput>(new $wcm.OwnType<cli.TerminalStdin.TerminalInput>(TerminalInput)));
+		export const getTerminalStdin = new $wcm.FunctionType<typeof cli.TerminalStdin.getTerminalStdin>('getTerminalStdin', 'get-terminal-stdin', [], new $wcm.OptionType<own<cli.TerminalStdin.TerminalInput>>(new $wcm.OwnType<cli.TerminalStdin.TerminalInput>(TerminalInput)));
 	}
 	export namespace TerminalStdin._ {
 		const functions: $wcm.FunctionType<$wcm.ServiceFunction>[] = [$.getTerminalStdin];
@@ -279,7 +279,7 @@ export namespace cli {
 	}
 	export namespace TerminalStdout.$ {
 		export const TerminalOutput = cli.TerminalOutput.$.TerminalOutput;
-		export const getTerminalStdout = new $wcm.FunctionType<typeof cli.TerminalStdout.getTerminalStdout>('getTerminalStdout', 'get-terminal-stdout', [], new $wcm.OptionType<cli.TerminalStdout.TerminalOutput>(new $wcm.OwnType<cli.TerminalStdout.TerminalOutput>(TerminalOutput)));
+		export const getTerminalStdout = new $wcm.FunctionType<typeof cli.TerminalStdout.getTerminalStdout>('getTerminalStdout', 'get-terminal-stdout', [], new $wcm.OptionType<own<cli.TerminalStdout.TerminalOutput>>(new $wcm.OwnType<cli.TerminalStdout.TerminalOutput>(TerminalOutput)));
 	}
 	export namespace TerminalStdout._ {
 		const functions: $wcm.FunctionType<$wcm.ServiceFunction>[] = [$.getTerminalStdout];
@@ -296,7 +296,7 @@ export namespace cli {
 	}
 	export namespace TerminalStderr.$ {
 		export const TerminalOutput = cli.TerminalOutput.$.TerminalOutput;
-		export const getTerminalStderr = new $wcm.FunctionType<typeof cli.TerminalStderr.getTerminalStderr>('getTerminalStderr', 'get-terminal-stderr', [], new $wcm.OptionType<cli.TerminalStderr.TerminalOutput>(new $wcm.OwnType<cli.TerminalStderr.TerminalOutput>(TerminalOutput)));
+		export const getTerminalStderr = new $wcm.FunctionType<typeof cli.TerminalStderr.getTerminalStderr>('getTerminalStderr', 'get-terminal-stderr', [], new $wcm.OptionType<own<cli.TerminalStderr.TerminalOutput>>(new $wcm.OwnType<cli.TerminalStderr.TerminalOutput>(TerminalOutput)));
 	}
 	export namespace TerminalStderr._ {
 		const functions: $wcm.FunctionType<$wcm.ServiceFunction>[] = [$.getTerminalStderr];

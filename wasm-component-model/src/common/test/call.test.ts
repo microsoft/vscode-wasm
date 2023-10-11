@@ -4,7 +4,7 @@
  *--------------------------------------------------------------------------------------------*/
 import assert from 'assert';
 
-import { u32, Memory as IMemory, ptr, size, Context } from '../componentModel';
+import { u32, Memory as IMemory, ptr, size, Context, borrow, own } from '../componentModel';
 
 class Memory implements IMemory {
 	public readonly buffer: ArrayBuffer;
@@ -42,21 +42,21 @@ namespace PointResourceImpl {
 
 	const data: Map<u32, Point> = new Map();
 
-	export function constructor(x: u32, y: u32): t.Sample.PointResource {
+	export function constructor(x: u32, y: u32): own<t.Sample.PointResource> {
 		const id = counter++;
 		data.set(id, new Point(x, y));
 		return id;
 	}
 
-	export function getX(self: t.Sample.PointResource): u32 {
+	export function getX(self: borrow<t.Sample.PointResource>): u32 {
 		return data.get(self)!.x;
 	}
 
-	export function getY(self: t.Sample.PointResource): u32 {
+	export function getY(self: borrow<t.Sample.PointResource>): u32 {
 		return data.get(self)!.y;
 	}
 
-	export function add(self: t.Sample.PointResource): u32 {
+	export function add(self: borrow<t.Sample.PointResource>): u32 {
 		return data.get(self)!.x + data.get(self)!.y;
 	}
 }

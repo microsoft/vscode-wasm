@@ -3,7 +3,7 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 import * as $wcm from '@vscode/wasm-component-model';
-import type { u64, resource, result, option, i32, i64, ptr } from '@vscode/wasm-component-model';
+import type { u64, resource, borrow, own, result, option, i32, i64, ptr } from '@vscode/wasm-component-model';
 import { clocks } from './clocks';
 import { io } from './io';
 
@@ -388,7 +388,7 @@ export namespace filesystem {
 			 * 
 			 * Note: This allows using `read-stream`, which is similar to `read` in POSIX.
 			 */
-			export declare function readViaStream(self: Descriptor, offset: Filesize): result<InputStream, ErrorCode>;
+			export declare function readViaStream(self: borrow<Descriptor>, offset: Filesize): result<own<InputStream>, ErrorCode>;
 			
 			/**
 			 * Return a stream for writing to a file, if available.
@@ -398,7 +398,7 @@ export namespace filesystem {
 			 * Note: This allows using `write-stream`, which is similar to `write` in
 			 * POSIX.
 			 */
-			export declare function writeViaStream(self: Descriptor, offset: Filesize): result<OutputStream, ErrorCode>;
+			export declare function writeViaStream(self: borrow<Descriptor>, offset: Filesize): result<own<OutputStream>, ErrorCode>;
 			
 			/**
 			 * Return a stream for appending to a file, if available.
@@ -408,14 +408,14 @@ export namespace filesystem {
 			 * Note: This allows using `write-stream`, which is similar to `write` with
 			 * `O_APPEND` in in POSIX.
 			 */
-			export declare function appendViaStream(self: Descriptor): result<OutputStream, ErrorCode>;
+			export declare function appendViaStream(self: borrow<Descriptor>): result<own<OutputStream>, ErrorCode>;
 			
 			/**
 			 * Provide file advisory information on a descriptor.
 			 * 
 			 * This is similar to `posix_fadvise` in POSIX.
 			 */
-			export declare function advise(self: Descriptor, offset: Filesize, length: Filesize, advice: Advice): result<void, ErrorCode>;
+			export declare function advise(self: borrow<Descriptor>, offset: Filesize, length: Filesize, advice: Advice): result<void, ErrorCode>;
 			
 			/**
 			 * Synchronize the data of a file to disk.
@@ -425,7 +425,7 @@ export namespace filesystem {
 			 * 
 			 * Note: This is similar to `fdatasync` in POSIX.
 			 */
-			export declare function syncData(self: Descriptor): result<void, ErrorCode>;
+			export declare function syncData(self: borrow<Descriptor>): result<void, ErrorCode>;
 			
 			/**
 			 * Get flags associated with a descriptor.
@@ -435,7 +435,7 @@ export namespace filesystem {
 			 * Note: This returns the value that was the `fs_flags` value returned
 			 * from `fdstat_get` in earlier versions of WASI.
 			 */
-			export declare function getFlags(self: Descriptor): result<DescriptorFlags, ErrorCode>;
+			export declare function getFlags(self: borrow<Descriptor>): result<DescriptorFlags, ErrorCode>;
 			
 			/**
 			 * Get the dynamic type of a descriptor.
@@ -449,7 +449,7 @@ export namespace filesystem {
 			 * Note: This returns the value that was the `fs_filetype` value returned
 			 * from `fdstat_get` in earlier versions of WASI.
 			 */
-			export declare function getType(self: Descriptor): result<DescriptorType, ErrorCode>;
+			export declare function getType(self: borrow<Descriptor>): result<DescriptorType, ErrorCode>;
 			
 			/**
 			 * Adjust the size of an open file. If this increases the file's size, the
@@ -457,7 +457,7 @@ export namespace filesystem {
 			 * 
 			 * Note: This was called `fd_filestat_set_size` in earlier versions of WASI.
 			 */
-			export declare function setSize(self: Descriptor, size: Filesize): result<void, ErrorCode>;
+			export declare function setSize(self: borrow<Descriptor>, size: Filesize): result<void, ErrorCode>;
 			
 			/**
 			 * Adjust the timestamps of an open file or directory.
@@ -466,7 +466,7 @@ export namespace filesystem {
 			 * 
 			 * Note: This was called `fd_filestat_set_times` in earlier versions of WASI.
 			 */
-			export declare function setTimes(self: Descriptor, dataAccessTimestamp: NewTimestamp, dataModificationTimestamp: NewTimestamp): result<void, ErrorCode>;
+			export declare function setTimes(self: borrow<Descriptor>, dataAccessTimestamp: NewTimestamp, dataModificationTimestamp: NewTimestamp): result<void, ErrorCode>;
 			
 			/**
 			 * Read from a descriptor, without using and updating the descriptor's offset.
@@ -481,7 +481,7 @@ export namespace filesystem {
 			 * 
 			 * Note: This is similar to `pread` in POSIX.
 			 */
-			export declare function read(self: Descriptor, length: Filesize, offset: Filesize): result<[Uint8Array, boolean], ErrorCode>;
+			export declare function read(self: borrow<Descriptor>, length: Filesize, offset: Filesize): result<[Uint8Array, boolean], ErrorCode>;
 			
 			/**
 			 * Write to a descriptor, without using and updating the descriptor's offset.
@@ -494,7 +494,7 @@ export namespace filesystem {
 			 * 
 			 * Note: This is similar to `pwrite` in POSIX.
 			 */
-			export declare function write(self: Descriptor, buffer: Uint8Array, offset: Filesize): result<Filesize, ErrorCode>;
+			export declare function write(self: borrow<Descriptor>, buffer: Uint8Array, offset: Filesize): result<Filesize, ErrorCode>;
 			
 			/**
 			 * Read directory entries from a directory.
@@ -507,7 +507,7 @@ export namespace filesystem {
 			 * directory. Multiple streams may be active on the same directory, and they
 			 * do not interfere with each other.
 			 */
-			export declare function readDirectory(self: Descriptor): result<DirectoryEntryStream, ErrorCode>;
+			export declare function readDirectory(self: borrow<Descriptor>): result<own<DirectoryEntryStream>, ErrorCode>;
 			
 			/**
 			 * Synchronize the data and metadata of a file to disk.
@@ -517,14 +517,14 @@ export namespace filesystem {
 			 * 
 			 * Note: This is similar to `fsync` in POSIX.
 			 */
-			export declare function sync(self: Descriptor): result<void, ErrorCode>;
+			export declare function sync(self: borrow<Descriptor>): result<void, ErrorCode>;
 			
 			/**
 			 * Create a directory.
 			 * 
 			 * Note: This is similar to `mkdirat` in POSIX.
 			 */
-			export declare function createDirectoryAt(self: Descriptor, path: string): result<void, ErrorCode>;
+			export declare function createDirectoryAt(self: borrow<Descriptor>, path: string): result<void, ErrorCode>;
 			
 			/**
 			 * Return the attributes of an open file or directory.
@@ -537,7 +537,7 @@ export namespace filesystem {
 			 * 
 			 * Note: This was called `fd_filestat_get` in earlier versions of WASI.
 			 */
-			export declare function stat(self: Descriptor): result<DescriptorStat, ErrorCode>;
+			export declare function stat(self: borrow<Descriptor>): result<DescriptorStat, ErrorCode>;
 			
 			/**
 			 * Return the attributes of a file or directory.
@@ -548,7 +548,7 @@ export namespace filesystem {
 			 * 
 			 * Note: This was called `path_filestat_get` in earlier versions of WASI.
 			 */
-			export declare function statAt(self: Descriptor, pathFlags: PathFlags, path: string): result<DescriptorStat, ErrorCode>;
+			export declare function statAt(self: borrow<Descriptor>, pathFlags: PathFlags, path: string): result<DescriptorStat, ErrorCode>;
 			
 			/**
 			 * Adjust the timestamps of a file or directory.
@@ -558,14 +558,14 @@ export namespace filesystem {
 			 * Note: This was called `path_filestat_set_times` in earlier versions of
 			 * WASI.
 			 */
-			export declare function setTimesAt(self: Descriptor, pathFlags: PathFlags, path: string, dataAccessTimestamp: NewTimestamp, dataModificationTimestamp: NewTimestamp): result<void, ErrorCode>;
+			export declare function setTimesAt(self: borrow<Descriptor>, pathFlags: PathFlags, path: string, dataAccessTimestamp: NewTimestamp, dataModificationTimestamp: NewTimestamp): result<void, ErrorCode>;
 			
 			/**
 			 * Create a hard link.
 			 * 
 			 * Note: This is similar to `linkat` in POSIX.
 			 */
-			export declare function linkAt(self: Descriptor, oldPathFlags: PathFlags, oldPath: string, newDescriptor: Descriptor, newPath: string): result<void, ErrorCode>;
+			export declare function linkAt(self: borrow<Descriptor>, oldPathFlags: PathFlags, oldPath: string, newDescriptor: borrow<Descriptor>, newPath: string): result<void, ErrorCode>;
 			
 			/**
 			 * Open a file or directory.
@@ -587,7 +587,7 @@ export namespace filesystem {
 			 * 
 			 * Note: This is similar to `openat` in POSIX.
 			 */
-			export declare function openAt(self: Descriptor, pathFlags: PathFlags, path: string, openFlags: OpenFlags, flags: DescriptorFlags, modes: Modes): result<Descriptor, ErrorCode>;
+			export declare function openAt(self: borrow<Descriptor>, pathFlags: PathFlags, path: string, openFlags: OpenFlags, flags: DescriptorFlags, modes: Modes): result<own<Descriptor>, ErrorCode>;
 			
 			/**
 			 * Read the contents of a symbolic link.
@@ -597,7 +597,7 @@ export namespace filesystem {
 			 * 
 			 * Note: This is similar to `readlinkat` in POSIX.
 			 */
-			export declare function readlinkAt(self: Descriptor, path: string): result<string, ErrorCode>;
+			export declare function readlinkAt(self: borrow<Descriptor>, path: string): result<string, ErrorCode>;
 			
 			/**
 			 * Remove a directory.
@@ -606,14 +606,14 @@ export namespace filesystem {
 			 * 
 			 * Note: This is similar to `unlinkat(fd, path, AT_REMOVEDIR)` in POSIX.
 			 */
-			export declare function removeDirectoryAt(self: Descriptor, path: string): result<void, ErrorCode>;
+			export declare function removeDirectoryAt(self: borrow<Descriptor>, path: string): result<void, ErrorCode>;
 			
 			/**
 			 * Rename a filesystem object.
 			 * 
 			 * Note: This is similar to `renameat` in POSIX.
 			 */
-			export declare function renameAt(self: Descriptor, oldPath: string, newDescriptor: Descriptor, newPath: string): result<void, ErrorCode>;
+			export declare function renameAt(self: borrow<Descriptor>, oldPath: string, newDescriptor: borrow<Descriptor>, newPath: string): result<void, ErrorCode>;
 			
 			/**
 			 * Create a symbolic link (also known as a "symlink").
@@ -623,7 +623,7 @@ export namespace filesystem {
 			 * 
 			 * Note: This is similar to `symlinkat` in POSIX.
 			 */
-			export declare function symlinkAt(self: Descriptor, oldPath: string, newPath: string): result<void, ErrorCode>;
+			export declare function symlinkAt(self: borrow<Descriptor>, oldPath: string, newPath: string): result<void, ErrorCode>;
 			
 			/**
 			 * Check accessibility of a filesystem path.
@@ -637,7 +637,7 @@ export namespace filesystem {
 			 * 
 			 * Note: This is similar to `faccessat` with the `AT_EACCESS` flag in POSIX.
 			 */
-			export declare function accessAt(self: Descriptor, pathFlags: PathFlags, path: string, type: AccessType): result<void, ErrorCode>;
+			export declare function accessAt(self: borrow<Descriptor>, pathFlags: PathFlags, path: string, type: AccessType): result<void, ErrorCode>;
 			
 			/**
 			 * Unlink a filesystem object that is not a directory.
@@ -645,7 +645,7 @@ export namespace filesystem {
 			 * Return `error-code::is-directory` if the path refers to a directory.
 			 * Note: This is similar to `unlinkat(fd, path, 0)` in POSIX.
 			 */
-			export declare function unlinkFileAt(self: Descriptor, path: string): result<void, ErrorCode>;
+			export declare function unlinkFileAt(self: borrow<Descriptor>, path: string): result<void, ErrorCode>;
 			
 			/**
 			 * Change the permissions of a filesystem object that is not a directory.
@@ -655,7 +655,7 @@ export namespace filesystem {
 			 * 
 			 * Note: This is similar to `fchmodat` in POSIX.
 			 */
-			export declare function changeFilePermissionsAt(self: Descriptor, pathFlags: PathFlags, path: string, modes: Modes): result<void, ErrorCode>;
+			export declare function changeFilePermissionsAt(self: borrow<Descriptor>, pathFlags: PathFlags, path: string, modes: Modes): result<void, ErrorCode>;
 			
 			/**
 			 * Change the permissions of a directory.
@@ -669,7 +669,7 @@ export namespace filesystem {
 			 * 
 			 * Note: This is similar to `fchmodat` in POSIX.
 			 */
-			export declare function changeDirectoryPermissionsAt(self: Descriptor, pathFlags: PathFlags, path: string, modes: Modes): result<void, ErrorCode>;
+			export declare function changeDirectoryPermissionsAt(self: borrow<Descriptor>, pathFlags: PathFlags, path: string, modes: Modes): result<void, ErrorCode>;
 			
 			/**
 			 * Request a shared advisory lock for an open file.
@@ -693,7 +693,7 @@ export namespace filesystem {
 			 * 
 			 * Note: This is similar to `flock(fd, LOCK_SH)` in Unix.
 			 */
-			export declare function lockShared(self: Descriptor): result<void, ErrorCode>;
+			export declare function lockShared(self: borrow<Descriptor>): result<void, ErrorCode>;
 			
 			/**
 			 * Request an exclusive advisory lock for an open file.
@@ -719,7 +719,7 @@ export namespace filesystem {
 			 * 
 			 * Note: This is similar to `flock(fd, LOCK_EX)` in Unix.
 			 */
-			export declare function lockExclusive(self: Descriptor): result<void, ErrorCode>;
+			export declare function lockExclusive(self: borrow<Descriptor>): result<void, ErrorCode>;
 			
 			/**
 			 * Request a shared advisory lock for an open file.
@@ -744,7 +744,7 @@ export namespace filesystem {
 			 * 
 			 * Note: This is similar to `flock(fd, LOCK_SH | LOCK_NB)` in Unix.
 			 */
-			export declare function tryLockShared(self: Descriptor): result<void, ErrorCode>;
+			export declare function tryLockShared(self: borrow<Descriptor>): result<void, ErrorCode>;
 			
 			/**
 			 * Request an exclusive advisory lock for an open file.
@@ -771,14 +771,14 @@ export namespace filesystem {
 			 * 
 			 * Note: This is similar to `flock(fd, LOCK_EX | LOCK_NB)` in Unix.
 			 */
-			export declare function tryLockExclusive(self: Descriptor): result<void, ErrorCode>;
+			export declare function tryLockExclusive(self: borrow<Descriptor>): result<void, ErrorCode>;
 			
 			/**
 			 * Release a shared or exclusive lock on an open file.
 			 * 
 			 * Note: This is similar to `flock(fd, LOCK_UN)` in Unix.
 			 */
-			export declare function unlock(self: Descriptor): result<void, ErrorCode>;
+			export declare function unlock(self: borrow<Descriptor>): result<void, ErrorCode>;
 			
 			/**
 			 * Test whether two descriptors refer to the same filesystem object.
@@ -788,7 +788,7 @@ export namespace filesystem {
 			 * wasi-filesystem does not expose device and inode numbers, so this function
 			 * may be used instead.
 			 */
-			export declare function isSameObject(self: Descriptor, other: Descriptor): boolean;
+			export declare function isSameObject(self: borrow<Descriptor>, other: borrow<Descriptor>): boolean;
 			
 			/**
 			 * Return a hash of the metadata associated with a filesystem object referred
@@ -811,7 +811,7 @@ export namespace filesystem {
 			 * 
 			 * However, none of these is required.
 			 */
-			export declare function metadataHash(self: Descriptor): result<MetadataHashValue, ErrorCode>;
+			export declare function metadataHash(self: borrow<Descriptor>): result<MetadataHashValue, ErrorCode>;
 			
 			/**
 			 * Return a hash of the metadata associated with a filesystem object referred
@@ -819,7 +819,7 @@ export namespace filesystem {
 			 * 
 			 * This performs the same hash computation as `metadata-hash`.
 			 */
-			export declare function metadataHashAt(self: Descriptor, pathFlags: PathFlags, path: string): result<MetadataHashValue, ErrorCode>;
+			export declare function metadataHashAt(self: borrow<Descriptor>, pathFlags: PathFlags, path: string): result<MetadataHashValue, ErrorCode>;
 		}
 		
 		/**
@@ -831,7 +831,7 @@ export namespace filesystem {
 			/**
 			 * Read a single directory entry from a `directory-entry-stream`.
 			 */
-			export declare function readDirectoryEntry(self: DirectoryEntryStream): result<DirectoryEntry | undefined, ErrorCode>;
+			export declare function readDirectoryEntry(self: borrow<DirectoryEntryStream>): result<DirectoryEntry | undefined, ErrorCode>;
 		}
 		
 		/**
@@ -846,7 +846,7 @@ export namespace filesystem {
 		 * Note that this function is fallible because not all stream-related
 		 * errors are filesystem-related errors.
 		 */
-		export declare function filesystemErrorCode(err: Error): ErrorCode | undefined;
+		export declare function filesystemErrorCode(err: borrow<Error>): ErrorCode | undefined;
 	}
 	export type Types = Pick<typeof Types, 'Descriptor' | 'DirectoryEntryStream' | 'filesystemErrorCode'>;
 	
@@ -857,7 +857,7 @@ export namespace filesystem {
 		/**
 		 * Return the set of preopened directories, and their path.
 		 */
-		export declare function getDirectories(): [Descriptor, string][];
+		export declare function getDirectories(): [own<Descriptor>, string][];
 	}
 	export type Preopens = Pick<typeof Preopens, 'getDirectories'>;
 	
@@ -904,14 +904,14 @@ export namespace filesystem {
 		Descriptor.addFunction(new $wcm.FunctionType<typeof filesystem.Types.Descriptor.readViaStream>('readViaStream', '[method]descriptor.read-via-stream', [
 			['self', new $wcm.BorrowType<filesystem.Types.Descriptor>(Descriptor)],
 			['offset', Filesize],
-		], new $wcm.ResultType<filesystem.Types.InputStream, filesystem.Types.ErrorCode>(new $wcm.OwnType<filesystem.Types.InputStream>(InputStream), ErrorCode)));
+		], new $wcm.ResultType<own<filesystem.Types.InputStream>, filesystem.Types.ErrorCode>(new $wcm.OwnType<filesystem.Types.InputStream>(InputStream), ErrorCode)));
 		Descriptor.addFunction(new $wcm.FunctionType<typeof filesystem.Types.Descriptor.writeViaStream>('writeViaStream', '[method]descriptor.write-via-stream', [
 			['self', new $wcm.BorrowType<filesystem.Types.Descriptor>(Descriptor)],
 			['offset', Filesize],
-		], new $wcm.ResultType<filesystem.Types.OutputStream, filesystem.Types.ErrorCode>(new $wcm.OwnType<filesystem.Types.OutputStream>(OutputStream), ErrorCode)));
+		], new $wcm.ResultType<own<filesystem.Types.OutputStream>, filesystem.Types.ErrorCode>(new $wcm.OwnType<filesystem.Types.OutputStream>(OutputStream), ErrorCode)));
 		Descriptor.addFunction(new $wcm.FunctionType<typeof filesystem.Types.Descriptor.appendViaStream>('appendViaStream', '[method]descriptor.append-via-stream', [
 			['self', new $wcm.BorrowType<filesystem.Types.Descriptor>(Descriptor)],
-		], new $wcm.ResultType<filesystem.Types.OutputStream, filesystem.Types.ErrorCode>(new $wcm.OwnType<filesystem.Types.OutputStream>(OutputStream), ErrorCode)));
+		], new $wcm.ResultType<own<filesystem.Types.OutputStream>, filesystem.Types.ErrorCode>(new $wcm.OwnType<filesystem.Types.OutputStream>(OutputStream), ErrorCode)));
 		Descriptor.addFunction(new $wcm.FunctionType<typeof filesystem.Types.Descriptor.advise>('advise', '[method]descriptor.advise', [
 			['self', new $wcm.BorrowType<filesystem.Types.Descriptor>(Descriptor)],
 			['offset', Filesize],
@@ -948,7 +948,7 @@ export namespace filesystem {
 		], new $wcm.ResultType<filesystem.Types.Filesize, filesystem.Types.ErrorCode>(Filesize, ErrorCode)));
 		Descriptor.addFunction(new $wcm.FunctionType<typeof filesystem.Types.Descriptor.readDirectory>('readDirectory', '[method]descriptor.read-directory', [
 			['self', new $wcm.BorrowType<filesystem.Types.Descriptor>(Descriptor)],
-		], new $wcm.ResultType<filesystem.Types.DirectoryEntryStream, filesystem.Types.ErrorCode>(new $wcm.OwnType<filesystem.Types.DirectoryEntryStream>(DirectoryEntryStream), ErrorCode)));
+		], new $wcm.ResultType<own<filesystem.Types.DirectoryEntryStream>, filesystem.Types.ErrorCode>(new $wcm.OwnType<filesystem.Types.DirectoryEntryStream>(DirectoryEntryStream), ErrorCode)));
 		Descriptor.addFunction(new $wcm.FunctionType<typeof filesystem.Types.Descriptor.sync>('sync', '[method]descriptor.sync', [
 			['self', new $wcm.BorrowType<filesystem.Types.Descriptor>(Descriptor)],
 		], new $wcm.ResultType<void, filesystem.Types.ErrorCode>(undefined, ErrorCode)));
@@ -985,7 +985,7 @@ export namespace filesystem {
 			['openFlags', OpenFlags],
 			['flags', DescriptorFlags],
 			['modes', Modes],
-		], new $wcm.ResultType<filesystem.Types.Descriptor, filesystem.Types.ErrorCode>(new $wcm.OwnType<filesystem.Types.Descriptor>(Descriptor), ErrorCode)));
+		], new $wcm.ResultType<own<filesystem.Types.Descriptor>, filesystem.Types.ErrorCode>(new $wcm.OwnType<filesystem.Types.Descriptor>(Descriptor), ErrorCode)));
 		Descriptor.addFunction(new $wcm.FunctionType<typeof filesystem.Types.Descriptor.readlinkAt>('readlinkAt', '[method]descriptor.readlink-at', [
 			['self', new $wcm.BorrowType<filesystem.Types.Descriptor>(Descriptor)],
 			['path', $wcm.wstring],
@@ -1109,7 +1109,7 @@ export namespace filesystem {
 	}
 	export namespace Preopens.$ {
 		export const Descriptor = filesystem.Types.$.Descriptor;
-		export const getDirectories = new $wcm.FunctionType<typeof filesystem.Preopens.getDirectories>('getDirectories', 'get-directories', [], new $wcm.ListType<[filesystem.Preopens.Descriptor, string]>(new $wcm.TupleType<[filesystem.Preopens.Descriptor, string]>([new $wcm.OwnType<filesystem.Preopens.Descriptor>(Descriptor), $wcm.wstring])));
+		export const getDirectories = new $wcm.FunctionType<typeof filesystem.Preopens.getDirectories>('getDirectories', 'get-directories', [], new $wcm.ListType<[own<filesystem.Preopens.Descriptor>, string]>(new $wcm.TupleType<[own<filesystem.Preopens.Descriptor>, string]>([new $wcm.OwnType<filesystem.Preopens.Descriptor>(Descriptor), $wcm.wstring])));
 	}
 	export namespace Preopens._ {
 		const functions: $wcm.FunctionType<$wcm.ServiceFunction>[] = [$.getDirectories];

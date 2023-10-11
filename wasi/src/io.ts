@@ -3,7 +3,7 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 import * as $wcm from '@vscode/wasm-component-model';
-import type { resource, u64, result, i32, ptr, i64 } from '@vscode/wasm-component-model';
+import type { resource, borrow, own, u64, result, i32, ptr, i64 } from '@vscode/wasm-component-model';
 
 export namespace io {
 	/**
@@ -37,7 +37,7 @@ export namespace io {
 		 * the pollables has an error, it is indicated by marking the source as
 		 * being reaedy for I/O.
 		 */
-		export declare function pollList(in_: Pollable[]): Uint32Array;
+		export declare function pollList(in_: borrow<Pollable>[]): Uint32Array;
 		
 		/**
 		 * Poll for completion on a single pollable.
@@ -45,7 +45,7 @@ export namespace io {
 		 * This function is similar to `poll-list`, but operates on only a single
 		 * pollable. When it returns, the handle is ready for I/O.
 		 */
-		export declare function pollOne(in_: Pollable): void;
+		export declare function pollOne(in_: borrow<Pollable>): void;
 	}
 	export type Poll = Pick<typeof Poll, 'pollList' | 'pollOne'>;
 	
@@ -83,7 +83,7 @@ export namespace io {
 			 * means that parsing it, for example, would be a
 			 * platform-compatibility hazard.
 			 */
-			export declare function toDebugString(self: Error): string;
+			export declare function toDebugString(self: borrow<Error>): string;
 		}
 		
 		/**
@@ -97,7 +97,7 @@ export namespace io {
 			 * More information is available in the `error` payload.
 			 */
 			export const lastOperationFailed = 0 as const;
-			export type lastOperationFailed = { readonly case: typeof lastOperationFailed; readonly value: Error } & _common;
+			export type lastOperationFailed = { readonly case: typeof lastOperationFailed; readonly value: own<Error> } & _common;
 			
 			
 			/**
@@ -109,12 +109,12 @@ export namespace io {
 			export type closed = { readonly case: typeof closed } & _common;
 			
 			export type _ct = typeof lastOperationFailed | typeof closed;
-			export type _vt = Error | undefined;
+			export type _vt = own<Error> | undefined;
 			type _common = Omit<VariantImpl, 'case' | 'value'>;
 			export function _ctor(c: _ct, v: _vt): StreamError {
 				return new VariantImpl(c, v) as StreamError;
 			}
-			export function _lastOperationFailed(value: Error): lastOperationFailed {
+			export function _lastOperationFailed(value: own<Error>): lastOperationFailed {
 				return new VariantImpl(lastOperationFailed, value) as lastOperationFailed;
 			}
 			export function _closed(): closed {
@@ -180,13 +180,13 @@ export namespace io {
 			 * as a return value by the callee. The callee may return a list of bytes
 			 * less than `len` in size while more bytes are available for reading.
 			 */
-			export declare function read(self: InputStream, len: u64): result<Uint8Array, StreamError>;
+			export declare function read(self: borrow<InputStream>, len: u64): result<Uint8Array, StreamError>;
 			
 			/**
 			 * Read bytes from a stream, after blocking until at least one byte can
 			 * be read. Except for blocking, identical to `read`.
 			 */
-			export declare function blockingRead(self: InputStream, len: u64): result<Uint8Array, StreamError>;
+			export declare function blockingRead(self: borrow<InputStream>, len: u64): result<Uint8Array, StreamError>;
 			
 			/**
 			 * Skip bytes from a stream.
@@ -202,13 +202,13 @@ export namespace io {
 			 * `stream-status` indicating whether the end of the stream was
 			 * reached. The returned value will be at most `len`; it may be less.
 			 */
-			export declare function skip(self: InputStream, len: u64): result<u64, StreamError>;
+			export declare function skip(self: borrow<InputStream>, len: u64): result<u64, StreamError>;
 			
 			/**
 			 * Skip bytes from a stream, after blocking until at least one byte
 			 * can be skipped. Except for blocking behavior, identical to `skip`.
 			 */
-			export declare function blockingSkip(self: InputStream, len: u64): result<u64, StreamError>;
+			export declare function blockingSkip(self: borrow<InputStream>, len: u64): result<u64, StreamError>;
 			
 			/**
 			 * Create a `pollable` which will resolve once either the specified stream
@@ -218,7 +218,7 @@ export namespace io {
 			 * Implementations may trap if the `input-stream` is dropped before
 			 * all derived `pollable`s created with this function are dropped.
 			 */
-			export declare function subscribe(self: InputStream): Pollable;
+			export declare function subscribe(self: borrow<InputStream>): own<Pollable>;
 		}
 		
 		/**
@@ -245,7 +245,7 @@ export namespace io {
 			 * become ready when this function will report at least 1 byte, or an
 			 * error.
 			 */
-			export declare function checkWrite(self: OutputStream): result<u64, StreamError>;
+			export declare function checkWrite(self: borrow<OutputStream>): result<u64, StreamError>;
 			
 			/**
 			 * Perform a write. This function never blocks.
@@ -256,7 +256,7 @@ export namespace io {
 			 * returns Err(closed) without writing if the stream has closed since
 			 * the last call to check-write provided a permit.
 			 */
-			export declare function write(self: OutputStream, contents: Uint8Array): result<void, StreamError>;
+			export declare function write(self: borrow<OutputStream>, contents: Uint8Array): result<void, StreamError>;
 			
 			/**
 			 * Perform a write of up to 4096 bytes, and then flush the stream. Block
@@ -284,7 +284,7 @@ export namespace io {
 			 * let _ = this.check-write();         // eliding error handling
 			 * ```
 			 */
-			export declare function blockingWriteAndFlush(self: OutputStream, contents: Uint8Array): result<void, StreamError>;
+			export declare function blockingWriteAndFlush(self: borrow<OutputStream>, contents: Uint8Array): result<void, StreamError>;
 			
 			/**
 			 * Request to flush buffered output. This function never blocks.
@@ -298,13 +298,13 @@ export namespace io {
 			 * completed. The `subscribe` pollable will become ready when the
 			 * flush has completed and the stream can accept more writes.
 			 */
-			export declare function flush(self: OutputStream): result<void, StreamError>;
+			export declare function flush(self: borrow<OutputStream>): result<void, StreamError>;
 			
 			/**
 			 * Request to flush buffered output, and block until flush completes
 			 * and stream is ready for writing again.
 			 */
-			export declare function blockingFlush(self: OutputStream): result<void, StreamError>;
+			export declare function blockingFlush(self: borrow<OutputStream>): result<void, StreamError>;
 			
 			/**
 			 * Create a `pollable` which will resolve once the output-stream
@@ -318,7 +318,7 @@ export namespace io {
 			 * Implementations may trap if the `output-stream` is dropped before
 			 * all derived `pollable`s created with this function are dropped.
 			 */
-			export declare function subscribe(self: OutputStream): Pollable;
+			export declare function subscribe(self: borrow<OutputStream>): own<Pollable>;
 			
 			/**
 			 * Write zeroes to a stream.
@@ -328,7 +328,7 @@ export namespace io {
 			 * passing a list of bytes, you simply pass the number of zero-bytes
 			 * that should be written.
 			 */
-			export declare function writeZeroes(self: OutputStream, len: u64): result<void, StreamError>;
+			export declare function writeZeroes(self: borrow<OutputStream>, len: u64): result<void, StreamError>;
 			
 			/**
 			 * Perform a write of up to 4096 zeroes, and then flush the stream.
@@ -356,7 +356,7 @@ export namespace io {
 			 * let _ = this.check-write();         // eliding error handling
 			 * ```
 			 */
-			export declare function blockingWriteZeroesAndFlush(self: OutputStream, len: u64): result<void, StreamError>;
+			export declare function blockingWriteZeroesAndFlush(self: borrow<OutputStream>, len: u64): result<void, StreamError>;
 			
 			/**
 			 * Read from one stream and write to another.
@@ -367,7 +367,7 @@ export namespace io {
 			 * Unlike other I/O functions, this function blocks until all the data
 			 * read from the input stream has been written to the output stream.
 			 */
-			export declare function splice(self: OutputStream, src: InputStream, len: u64): result<u64, StreamError>;
+			export declare function splice(self: borrow<OutputStream>, src: own<InputStream>, len: u64): result<u64, StreamError>;
 			
 			/**
 			 * Read from one stream and write to another, with blocking.
@@ -375,7 +375,7 @@ export namespace io {
 			 * This is similar to `splice`, except that it blocks until at least
 			 * one byte can be read.
 			 */
-			export declare function blockingSplice(self: OutputStream, src: InputStream, len: u64): result<u64, StreamError>;
+			export declare function blockingSplice(self: borrow<OutputStream>, src: own<InputStream>, len: u64): result<u64, StreamError>;
 			
 			/**
 			 * Forward the entire contents of an input stream to an output stream.
@@ -391,7 +391,7 @@ export namespace io {
 			 * This function returns the number of bytes transferred, and the status of
 			 * the output stream.
 			 */
-			export declare function forward(self: OutputStream, src: InputStream): result<u64, StreamError>;
+			export declare function forward(self: borrow<OutputStream>, src: own<InputStream>): result<u64, StreamError>;
 		}
 	}
 	export type Streams = Pick<typeof Streams, 'Error' | 'InputStream' | 'OutputStream'>;
@@ -402,7 +402,7 @@ export namespace io {
 	export namespace Poll.$ {
 		export const Pollable = new $wcm.NamespaceResourceType('Pollable', 'pollable');
 		export const pollList = new $wcm.FunctionType<typeof io.Poll.pollList>('pollList', 'poll-list',[
-			['in_', new $wcm.ListType<io.Poll.Pollable>(new $wcm.BorrowType<io.Poll.Pollable>(Pollable))],
+			['in_', new $wcm.ListType<borrow<io.Poll.Pollable>>(new $wcm.BorrowType<io.Poll.Pollable>(Pollable))],
 		], new $wcm.Uint32ArrayType());
 		export const pollOne = new $wcm.FunctionType<typeof io.Poll.pollOne>('pollOne', 'poll-one',[
 			['in_', new $wcm.BorrowType<io.Poll.Pollable>(Pollable)],

@@ -3,7 +3,7 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 import * as $wcm from '../componentModel';
-import type { u32, resource, i32 } from '../componentModel';
+import type { u32, resource, own, borrow, i32 } from '../componentModel';
 
 export namespace test {
 	export namespace Sample {
@@ -16,13 +16,13 @@ export namespace test {
 		export type PointResource = resource;
 		export namespace PointResource {
 
-			export declare function constructor(x: u32, y: u32): PointResource;
+			export declare function constructor(x: u32, y: u32): own<PointResource>;
 
-			export declare function getX(self: PointResource): u32;
+			export declare function getX(self: borrow<PointResource>): u32;
 
-			export declare function getY(self: PointResource): u32;
+			export declare function getY(self: borrow<PointResource>): u32;
 
-			export declare function add(self: PointResource): u32;
+			export declare function add(self: borrow<PointResource>): u32;
 		}
 
 		export declare function call(point: Point): u32;

@@ -990,11 +990,15 @@ namespace MetaModel {
 		}
 
 		public printBorrowHandle(type: BorrowHandleType, depth: number): string {
-			return this.printTypeReference(type.kind.handle.borrow, depth + 1);
+			const borrowed = this.printTypeReference(type.kind.handle.borrow, depth + 1);
+			this.imports.addBaseType('borrow');
+			return depth === 0 ? borrowed : `borrow<${borrowed}>`;
 		}
 
 		public printOwnHandle(type: OwnHandleType, depth: number): string {
-			return this.printTypeReference(type.kind.handle.own, depth + 1);
+			const owned = this.printTypeReference(type.kind.handle.own, depth + 1);
+			this.imports.addBaseType('own');
+			return depth === 0 ? owned : `own<${owned}>`;
 		}
 
 		public printRecord(type: RecordType, _depth: number): string {
@@ -1735,11 +1739,15 @@ namespace TypeScript {
 		}
 
 		public printBorrowHandle(type: BorrowHandleType, usage: TypeUsage): string {
-			return this.printTypeReference(type.kind.handle.borrow, usage);
+			const borrowed = this.printTypeReference(type.kind.handle.borrow, usage);
+			this.imports.addBaseType('borrow');
+			return `borrow<${borrowed}>`;
 		}
 
 		public printOwnHandle(type: OwnHandleType, usage: TypeUsage): string {
-			return this.printTypeReference(type.kind.handle.own, usage);
+			const owned = this.printTypeReference(type.kind.handle.own, usage);
+			this.imports.addBaseType('own');
+			return `own<${owned}>`;
 		}
 
 		public printRecord(type: RecordType, _usage: TypeUsage): string {

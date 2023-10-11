@@ -3,7 +3,7 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 import * as $wcm from '@vscode/wasm-component-model';
-import type { u64, u32, s32, i64, i32, ptr } from '@vscode/wasm-component-model';
+import type { u64, own, u32, s32, i64, i32, ptr } from '@vscode/wasm-component-model';
 import { io } from './io';
 
 export namespace clocks {
@@ -45,7 +45,7 @@ export namespace clocks {
 		 * Create a `pollable` which will resolve once the specified time has been
 		 * reached.
 		 */
-		export declare function subscribe(when: Instant, absolute: boolean): Pollable;
+		export declare function subscribe(when: Instant, absolute: boolean): own<Pollable>;
 	}
 	export type MonotonicClock = Pick<typeof MonotonicClock, 'now' | 'resolution' | 'subscribe'>;
 	
