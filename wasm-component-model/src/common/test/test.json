@@ -4,9 +4,82 @@
     {
       "name": "sample",
       "types": {
-        "point": 0
+        "point": 0,
+        "point-resource": 1
       },
       "functions": {
+        "[constructor]point-resource": {
+          "name": "[constructor]point-resource",
+          "kind": {
+            "constructor": 1
+          },
+          "params": [
+            {
+              "name": "x",
+              "type": "u32"
+            },
+            {
+              "name": "y",
+              "type": "u32"
+            }
+          ],
+          "results": [
+            {
+              "type": 3
+            }
+          ]
+        },
+        "[method]point-resource.get-x": {
+          "name": "[method]point-resource.get-x",
+          "kind": {
+            "method": 1
+          },
+          "params": [
+            {
+              "name": "self",
+              "type": 2
+            }
+          ],
+          "results": [
+            {
+              "type": "u32"
+            }
+          ]
+        },
+        "[method]point-resource.get-y": {
+          "name": "[method]point-resource.get-y",
+          "kind": {
+            "method": 1
+          },
+          "params": [
+            {
+              "name": "self",
+              "type": 2
+            }
+          ],
+          "results": [
+            {
+              "type": "u32"
+            }
+          ]
+        },
+        "[method]point-resource.add": {
+          "name": "[method]point-resource.add",
+          "kind": {
+            "method": 1
+          },
+          "params": [
+            {
+              "name": "self",
+              "type": 2
+            }
+          ],
+          "results": [
+            {
+              "type": "u32"
+            }
+          ]
+        },
         "call": {
           "name": "call",
           "kind": "freestanding",
@@ -46,6 +119,31 @@
       "owner": {
         "interface": 0
       }
+    },
+    {
+      "name": "point-resource",
+      "kind": "resource",
+      "owner": {
+        "interface": 0
+      }
+    },
+    {
+      "name": null,
+      "kind": {
+        "handle": {
+          "borrow": 1
+        }
+      },
+      "owner": null
+    },
+    {
+      "name": null,
+      "kind": {
+        "handle": {
+          "own": 1
+        }
+      },
+      "owner": null
     }
   ],
   "packages": [

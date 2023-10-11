@@ -7,5 +7,14 @@ interface sample {
 		y: u32,
 	}
 
+	resource point-resource {
+
+		constructor(x: u32, y: u32);
+
+		get-x: func() -> u32;
+		get-y: func() -> u32;
+		add: func() -> u32;
+	}
+
 	call: func(point: point) -> u32
 }

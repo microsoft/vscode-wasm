@@ -4,7 +4,7 @@
  *--------------------------------------------------------------------------------------------*/
 import assert from 'assert';
 
-import { Host, u32, Memory as IMemory, ptr, size, Context } from '../componentModel';
+import { u32, Memory as IMemory, ptr, size, Context } from '../componentModel';
 
 class Memory implements IMemory {
 	public readonly buffer: ArrayBuffer;
@@ -33,15 +33,40 @@ class Memory implements IMemory {
 
 import { test as t } from './test';
 
+namespace PointResourceImpl {
+
+	class Point {
+		constructor(public x: u32, public y: u32) { }
+	}
+	let counter: u32 = 0;
+
+	const data: Map<u32, Point> = new Map();
+
+	export function constructor(x: u32, y: u32): t.Sample.PointResource {
+		const id = counter++;
+		data.set(id, new Point(x, y));
+		return id;
+	}
+
+	export function getX(self: t.Sample.PointResource): u32 {
+		return data.get(self)!.x;
+	}
+
+	export function getY(self: t.Sample.PointResource): u32 {
+		return data.get(self)!.y;
+	}
+
+	export function add(self: t.Sample.PointResource): u32 {
+		return data.get(self)!.x + data.get(self)!.y;
+	}
+}
+
 const sampleImpl: t.Sample = {
 	call(point: t.Sample.Point): u32 {
 		return point.x + point.y;
-	}
+	},
+	PointResource: PointResourceImpl
 };
-
-interface TestHost extends Host {
-	call(x: u32, y: u32): u32;
-}
 
 const context: Context = {
 	memory: new Memory(),
@@ -50,12 +75,21 @@ const context: Context = {
 
 suite('sample', () => {
 	test('host', () => {
-		const host: TestHost = t.Sample._.createHost(sampleImpl, context);
+		const host: t.Sample._.WasmInterface = t.Sample._.createHost(sampleImpl, context);
 		assert.strictEqual(host.call(1, 2), 3);
+
+		const point = host['[constructor]point-resource'](1, 2);
+		assert.strictEqual(host['[method]point-resource.get-x'](point), 1);
+		assert.strictEqual(host['[method]point-resource.get-y'](point), 2);
+		assert.strictEqual(host['[method]point-resource.add'](point), 3);
 	});
 	test('service', () => {
-		const host: TestHost = t.Sample._.createHost(sampleImpl, context);
+		const host: t.Sample._.WasmInterface = t.Sample._.createHost(sampleImpl, context);
 		const service: t.Sample = t.Sample._.createService(host, context);
 		assert.strictEqual(service.call({ x: 1, y: 2 }), 3);
+		const point = service.PointResource.constructor(1, 2);
+		assert.strictEqual(service.PointResource.getX(point), 1);
+		assert.strictEqual(service.PointResource.getY(point), 2);
+		assert.strictEqual(service.PointResource.add(point), 3);
 	});
 });
