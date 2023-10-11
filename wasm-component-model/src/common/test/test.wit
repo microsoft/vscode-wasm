@@ -16,5 +16,5 @@ interface sample {
 		add: func() -> u32;
 	}
 
-	call: func(point: point) -> u32
+	call: func(point: option<point>) -> option<u32>;
 }

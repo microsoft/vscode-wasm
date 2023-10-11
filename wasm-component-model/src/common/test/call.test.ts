@@ -76,7 +76,7 @@ const context: Context = {
 suite('sample', () => {
 	test('host', () => {
 		const host: t.Sample._.WasmInterface = t.Sample._.createHost(sampleImpl, context);
-		assert.strictEqual(host.call(1, 2), 3);
+		assert.strictEqual(host.call(1, 1, 2), 3);
 
 		const point = host['[constructor]point-resource'](1, 2);
 		assert.strictEqual(host['[method]point-resource.get-x'](point), 1);
