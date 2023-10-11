@@ -158,10 +158,10 @@ export namespace cli {
 			'get-arguments': (result: ptr<[i32, i32]>) => void;
 			'initial-cwd': (result: ptr<[i32, i32, i32]>) => void;
 		};
-		export function createHost<T extends $wcm.Host>(service: cli.Environment, context: $wcm.Context): T {
-			return $wcm.Host.create<T>(functions, resources, service, context);
+		export function createHost(service: cli.Environment, context: $wcm.Context): WasmInterface {
+			return $wcm.Host.create<WasmInterface>(functions, resources, service, context);
 		}
-		export function createService(wasmInterface: $wcm.WasmInterface, context: $wcm.Context): cli.Environment {
+		export function createService(wasmInterface: WasmInterface, context: $wcm.Context): cli.Environment {
 			return $wcm.Service.create<cli.Environment>(functions, resources, wasmInterface, context);
 		}
 	}
@@ -174,12 +174,12 @@ export namespace cli {
 		const functions: $wcm.FunctionType<$wcm.ServiceFunction>[] = [$.exit];
 		const resources: $wcm.NamespaceResourceType[] = [];
 		export type WasmInterface = {
-			'exit': (status_discriminant: i32) => void;
+			'exit': (status_case: i32) => void;
 		};
-		export function createHost<T extends $wcm.Host>(service: cli.Exit, context: $wcm.Context): T {
-			return $wcm.Host.create<T>(functions, resources, service, context);
+		export function createHost(service: cli.Exit, context: $wcm.Context): WasmInterface {
+			return $wcm.Host.create<WasmInterface>(functions, resources, service, context);
 		}
-		export function createService(wasmInterface: $wcm.WasmInterface, context: $wcm.Context): cli.Exit {
+		export function createService(wasmInterface: WasmInterface, context: $wcm.Context): cli.Exit {
 			return $wcm.Service.create<cli.Exit>(functions, resources, wasmInterface, context);
 		}
 	}
@@ -192,10 +192,10 @@ export namespace cli {
 		export type WasmInterface = {
 			'run': () => i32;
 		};
-		export function createHost<T extends $wcm.Host>(service: cli.Run, context: $wcm.Context): T {
-			return $wcm.Host.create<T>(functions, resources, service, context);
+		export function createHost(service: cli.Run, context: $wcm.Context): WasmInterface {
+			return $wcm.Host.create<WasmInterface>(functions, resources, service, context);
 		}
-		export function createService(wasmInterface: $wcm.WasmInterface, context: $wcm.Context): cli.Run {
+		export function createService(wasmInterface: WasmInterface, context: $wcm.Context): cli.Run {
 			return $wcm.Service.create<cli.Run>(functions, resources, wasmInterface, context);
 		}
 	}
@@ -209,10 +209,10 @@ export namespace cli {
 		export type WasmInterface = {
 			'get-stdin': () => i32;
 		};
-		export function createHost<T extends $wcm.Host>(service: cli.Stdin, context: $wcm.Context): T {
-			return $wcm.Host.create<T>(functions, resources, service, context);
+		export function createHost(service: cli.Stdin, context: $wcm.Context): WasmInterface {
+			return $wcm.Host.create<WasmInterface>(functions, resources, service, context);
 		}
-		export function createService(wasmInterface: $wcm.WasmInterface, context: $wcm.Context): cli.Stdin {
+		export function createService(wasmInterface: WasmInterface, context: $wcm.Context): cli.Stdin {
 			return $wcm.Service.create<cli.Stdin>(functions, resources, wasmInterface, context);
 		}
 	}
@@ -226,10 +226,10 @@ export namespace cli {
 		export type WasmInterface = {
 			'get-stdout': () => i32;
 		};
-		export function createHost<T extends $wcm.Host>(service: cli.Stdout, context: $wcm.Context): T {
-			return $wcm.Host.create<T>(functions, resources, service, context);
+		export function createHost(service: cli.Stdout, context: $wcm.Context): WasmInterface {
+			return $wcm.Host.create<WasmInterface>(functions, resources, service, context);
 		}
-		export function createService(wasmInterface: $wcm.WasmInterface, context: $wcm.Context): cli.Stdout {
+		export function createService(wasmInterface: WasmInterface, context: $wcm.Context): cli.Stdout {
 			return $wcm.Service.create<cli.Stdout>(functions, resources, wasmInterface, context);
 		}
 	}
@@ -243,10 +243,10 @@ export namespace cli {
 		export type WasmInterface = {
 			'get-stderr': () => i32;
 		};
-		export function createHost<T extends $wcm.Host>(service: cli.Stderr, context: $wcm.Context): T {
-			return $wcm.Host.create<T>(functions, resources, service, context);
+		export function createHost(service: cli.Stderr, context: $wcm.Context): WasmInterface {
+			return $wcm.Host.create<WasmInterface>(functions, resources, service, context);
 		}
-		export function createService(wasmInterface: $wcm.WasmInterface, context: $wcm.Context): cli.Stderr {
+		export function createService(wasmInterface: WasmInterface, context: $wcm.Context): cli.Stderr {
 			return $wcm.Service.create<cli.Stderr>(functions, resources, wasmInterface, context);
 		}
 	}
@@ -258,10 +258,10 @@ export namespace cli {
 		const resources: $wcm.NamespaceResourceType[] = [$.TerminalInput];
 		export type WasmInterface = {
 		};
-		export function createHost<T extends $wcm.Host>(service: cli.TerminalInput, context: $wcm.Context): T {
-			return $wcm.Host.create<T>(functions, resources, service, context);
+		export function createHost(service: cli.TerminalInput, context: $wcm.Context): WasmInterface {
+			return $wcm.Host.create<WasmInterface>(functions, resources, service, context);
 		}
-		export function createService(wasmInterface: $wcm.WasmInterface, context: $wcm.Context): cli.TerminalInput {
+		export function createService(wasmInterface: WasmInterface, context: $wcm.Context): cli.TerminalInput {
 			return $wcm.Service.create<cli.TerminalInput>(functions, resources, wasmInterface, context);
 		}
 	}
@@ -273,10 +273,10 @@ export namespace cli {
 		const resources: $wcm.NamespaceResourceType[] = [$.TerminalOutput];
 		export type WasmInterface = {
 		};
-		export function createHost<T extends $wcm.Host>(service: cli.TerminalOutput, context: $wcm.Context): T {
-			return $wcm.Host.create<T>(functions, resources, service, context);
+		export function createHost(service: cli.TerminalOutput, context: $wcm.Context): WasmInterface {
+			return $wcm.Host.create<WasmInterface>(functions, resources, service, context);
 		}
-		export function createService(wasmInterface: $wcm.WasmInterface, context: $wcm.Context): cli.TerminalOutput {
+		export function createService(wasmInterface: WasmInterface, context: $wcm.Context): cli.TerminalOutput {
 			return $wcm.Service.create<cli.TerminalOutput>(functions, resources, wasmInterface, context);
 		}
 	}
@@ -290,10 +290,10 @@ export namespace cli {
 		export type WasmInterface = {
 			'get-terminal-stdin': (result: ptr<[i32, i32]>) => void;
 		};
-		export function createHost<T extends $wcm.Host>(service: cli.TerminalStdin, context: $wcm.Context): T {
-			return $wcm.Host.create<T>(functions, resources, service, context);
+		export function createHost(service: cli.TerminalStdin, context: $wcm.Context): WasmInterface {
+			return $wcm.Host.create<WasmInterface>(functions, resources, service, context);
 		}
-		export function createService(wasmInterface: $wcm.WasmInterface, context: $wcm.Context): cli.TerminalStdin {
+		export function createService(wasmInterface: WasmInterface, context: $wcm.Context): cli.TerminalStdin {
 			return $wcm.Service.create<cli.TerminalStdin>(functions, resources, wasmInterface, context);
 		}
 	}
@@ -307,10 +307,10 @@ export namespace cli {
 		export type WasmInterface = {
 			'get-terminal-stdout': (result: ptr<[i32, i32]>) => void;
 		};
-		export function createHost<T extends $wcm.Host>(service: cli.TerminalStdout, context: $wcm.Context): T {
-			return $wcm.Host.create<T>(functions, resources, service, context);
+		export function createHost(service: cli.TerminalStdout, context: $wcm.Context): WasmInterface {
+			return $wcm.Host.create<WasmInterface>(functions, resources, service, context);
 		}
-		export function createService(wasmInterface: $wcm.WasmInterface, context: $wcm.Context): cli.TerminalStdout {
+		export function createService(wasmInterface: WasmInterface, context: $wcm.Context): cli.TerminalStdout {
 			return $wcm.Service.create<cli.TerminalStdout>(functions, resources, wasmInterface, context);
 		}
 	}
@@ -324,10 +324,10 @@ export namespace cli {
 		export type WasmInterface = {
 			'get-terminal-stderr': (result: ptr<[i32, i32]>) => void;
 		};
-		export function createHost<T extends $wcm.Host>(service: cli.TerminalStderr, context: $wcm.Context): T {
-			return $wcm.Host.create<T>(functions, resources, service, context);
+		export function createHost(service: cli.TerminalStderr, context: $wcm.Context): WasmInterface {
+			return $wcm.Host.create<WasmInterface>(functions, resources, service, context);
 		}
-		export function createService(wasmInterface: $wcm.WasmInterface, context: $wcm.Context): cli.TerminalStderr {
+		export function createService(wasmInterface: WasmInterface, context: $wcm.Context): cli.TerminalStderr {
 			return $wcm.Service.create<cli.TerminalStderr>(functions, resources, wasmInterface, context);
 		}
 	}

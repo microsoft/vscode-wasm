@@ -1892,9 +1892,6 @@ export interface ServiceInterface {
 }
 
 export type WasmFunction = (...params: wasmType[]) => wasmType | void;
-export interface WasmInterface {
-	readonly [key: string]: WasmFunction;
-}
 
 export class FunctionType<_T extends Function> extends AbstractResourceCallable {
 
@@ -2007,10 +2004,7 @@ interface ParamServiceInterface {
 
 export type Host = ParamWasmInterface;
 export namespace Host {
-	export function asWasmInterface(host: Host): WasmInterface {
-		return host as unknown as WasmInterface;
-	}
-	export function create<T extends Host>(signatures: FunctionType<ServiceFunction>[], resources: NamespaceResourceType[], service: ParamServiceInterface, context: Context): T {
+	export function create<T extends Host>(signatures: FunctionType<ServiceFunction>[], resources: NamespaceResourceType[], service: ParamServiceInterface | {}, context: Context): T {
 		const result: { [key: string]: WasmFunction }  = Object.create(null);
 		for (const signature of signatures) {
 			result[signature.witName] = createHostFunction(signature, service, context);
@@ -2034,10 +2028,10 @@ export namespace Host {
 interface WriteableServiceInterface {
 	[key: string]: (ServiceFunction | WriteableServiceInterface);
 }
-export type Service = ParamServiceInterface;
+export type Service = ParamServiceInterface | {};
 export namespace Service {
 
-	export function create<T extends Service>(signatures: FunctionType<Function>[], resources: NamespaceResourceType[], wasm: WasmInterface, context: Context): T {
+	export function create<T extends Service>(signatures: FunctionType<Function>[], resources: NamespaceResourceType[], wasm: ParamWasmInterface, context: Context): T {
 		const result: WriteableServiceInterface  = Object.create(null);
 		for (const signature of signatures) {
 			result[signature.name] = createServiceFunction(signature, wasm, context);
@@ -2051,8 +2045,8 @@ export namespace Service {
 		return result as unknown as T;
 	}
 
-	function createServiceFunction(func: FunctionType<ServiceFunction>, wasm: WasmInterface, context: Context): ServiceFunction {
-		const wasmFunction = wasm[func.witName];
+	function createServiceFunction(func: FunctionType<ServiceFunction>, wasm: ParamWasmInterface, context: Context): ServiceFunction {
+		const wasmFunction = wasm[func.witName] as WasmFunction;
 		return (...params: JType[]): JType | void => {
 			return func.callWasm(params, wasmFunction, context.memory, context.options);
 		};

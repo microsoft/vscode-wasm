@@ -254,6 +254,9 @@ namespace _TypeScriptNameProvider {
 	}
 
 	function _asMethodName(name: string): string {
+		if (name.startsWith('[constructor]')) {
+			return 'constructor';
+		}
 		const index = name.indexOf('.');
 		if (index === -1) {
 			return _asPropertyName(name);
@@ -681,9 +684,9 @@ namespace MetaModel {
 
 		public readonly name: string;
 		private readonly witName: string;
-		private readonly functionEmitters: FunctionEmitter[];
+		public readonly functionEmitters: AbstractFunctionEmitter[];
 
-		constructor(name: string, witName: string, functionEmitters: MetaModel.AbstractFunctionEmitter[]) {
+		constructor(name: string, witName: string, functionEmitters: AbstractFunctionEmitter[]) {
 			this.name = name;
 			this.witName = witName;
 			this.functionEmitters = functionEmitters;
@@ -691,11 +694,6 @@ namespace MetaModel {
 
 		public emit(code: Code, emitted: Set<String>): void {
 			code.push(`export const ${this.name} = new $wcm.NamespaceResourceType('${this.name}', '${this.witName}');`);
-			if (this.functionEmitters.length > 0) {
-				for (const emitter of this.functionEmitters) {
-					emitter.emit(code, emitted);
-				}
-			}
 			emitted.add(this.name);
 		}
 	}
@@ -1111,13 +1109,18 @@ namespace TypeScript {
 					code.increaseIndent();
 					const functions: string[] = [];
 					const namespaceResources: string[] = [];
+					const resourceFunctionEmitters: MetaModel.AbstractFunctionEmitter[] = [];
 					for (const emitter of emitters) {
 						emitter.emit(code, emitted);
 						if (emitter instanceof MetaModel.FunctionEmitter) {
 							functions.push(emitter.name);
 						} else if (emitter instanceof MetaModel.NamespaceResourceEmitter) {
 							namespaceResources.push(emitter.name);
+							resourceFunctionEmitters.push(...emitter.functionEmitters);
 						}
+					}
+					for (const emitter of resourceFunctionEmitters) {
+						emitter.emit(code, emitted);
 					}
 					code.decreaseIndent();
 					code.push('}');
@@ -1152,12 +1155,12 @@ namespace TypeScript {
 					}
 					code.decreaseIndent();
 					code.push(`};`);
-					code.push(`export function createHost<T extends $wcm.Host>(service: ${ifaceName}, context: $wcm.Context): T {`);
+					code.push(`export function createHost(service: ${ifaceName}, context: $wcm.Context): WasmInterface {`);
 					code.increaseIndent();
-					code.push(`return $wcm.Host.create<T>(functions, resources, service, context);`);
+					code.push(`return $wcm.Host.create<WasmInterface>(functions, resources, service, context);`);
 					code.decreaseIndent();
 					code.push(`}`);
-					code.push(`export function createService(wasmInterface: $wcm.WasmInterface, context: $wcm.Context): ${ifaceName} {`);
+					code.push(`export function createService(wasmInterface: WasmInterface, context: $wcm.Context): ${ifaceName} {`);
 					code.increaseIndent();
 					code.push(`return $wcm.Service.create<${ifaceName}>(functions, resources, wasmInterface, context);`);
 					code.decreaseIndent();
@@ -1888,8 +1891,8 @@ namespace TypeScript {
 				}
 			} else if (Type.isOptionType(type)) {
 				this.imports.addBaseType('i32');
-				result.push({ name: `${prefix}_discriminant`, type: 'i32' });
-				this.flattenParamType(result, type.kind.option, prefix);
+				result.push({ name: `${prefix}_case`, type: 'i32' });
+				this.flattenParamType(result, type.kind.option, `${prefix}_option`);
 			} else if (Type.isResultType(type)) {
 				const cases: (TypeReference | undefined)[] = [];
 				cases.push(type.kind.result.ok === null ? undefined : type.kind.result.ok);
@@ -1909,8 +1912,12 @@ namespace TypeScript {
 				if (flatTypes.length > 0) {
 					this.imports.addBaseType(flatTypes[0]);
 				}
-				for (let i = 0; i < flatTypes.length; i++) {
-					result.push({ name: `${prefix}_${i}`, type: flatTypes[i] });
+				if (flatTypes.length === 1) {
+					result.push({ name: `${prefix}`, type: flatTypes[0] });
+				} else {
+					for (let i = 0; i < flatTypes.length; i++) {
+						result.push({ name: `${prefix}_${i}`, type: flatTypes[i] });
+					}
 				}
 			} else if (Type.isRecordType(type)) {
 				for (const field of type.kind.record.fields) {
@@ -1932,7 +1939,7 @@ namespace TypeScript {
 
 		private flattenParamVariantType(result: FlattenedParam[], cases: (TypeReference | undefined)[], prefix: string): void {
 			this.imports.addBaseType('i32');
-			result.push({ name: `${prefix}_discriminant`, type: 'i32' });
+			result.push({ name: `${prefix}_case`, type: 'i32' });
 			const variantResult: FlattenedParam[] = [];
 			for (const c of cases) {
 				if (c === undefined) {

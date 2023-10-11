@@ -50,12 +50,12 @@ const context: Context = {
 
 suite('sample', () => {
 	test('host', () => {
-		const host: TestHost = t.Sample._.createHost<TestHost>(sampleImpl, context);
+		const host: TestHost = t.Sample._.createHost(sampleImpl, context);
 		assert.strictEqual(host.call(1, 2), 3);
 	});
 	test('service', () => {
-		const host: TestHost = t.Sample._.createHost<TestHost>(sampleImpl, context);
-		const service: t.Sample = t.Sample._.createService(Host.asWasmInterface(host), context);
+		const host: TestHost = t.Sample._.createHost(sampleImpl, context);
+		const service: t.Sample = t.Sample._.createService(host, context);
 		assert.strictEqual(service.call({ x: 1, y: 2 }), 3);
 	});
 });

@@ -906,10 +906,10 @@ export namespace sockets {
 		const resources: $wcm.NamespaceResourceType[] = [$.Network];
 		export type WasmInterface = {
 		};
-		export function createHost<T extends $wcm.Host>(service: sockets.Network, context: $wcm.Context): T {
-			return $wcm.Host.create<T>(functions, resources, service, context);
+		export function createHost(service: sockets.Network, context: $wcm.Context): WasmInterface {
+			return $wcm.Host.create<WasmInterface>(functions, resources, service, context);
 		}
-		export function createService(wasmInterface: $wcm.WasmInterface, context: $wcm.Context): sockets.Network {
+		export function createService(wasmInterface: WasmInterface, context: $wcm.Context): sockets.Network {
 			return $wcm.Service.create<sockets.Network>(functions, resources, wasmInterface, context);
 		}
 	}
@@ -923,10 +923,10 @@ export namespace sockets {
 		export type WasmInterface = {
 			'instance-network': () => i32;
 		};
-		export function createHost<T extends $wcm.Host>(service: sockets.InstanceNetwork, context: $wcm.Context): T {
-			return $wcm.Host.create<T>(functions, resources, service, context);
+		export function createHost(service: sockets.InstanceNetwork, context: $wcm.Context): WasmInterface {
+			return $wcm.Host.create<WasmInterface>(functions, resources, service, context);
 		}
-		export function createService(wasmInterface: $wcm.WasmInterface, context: $wcm.Context): sockets.InstanceNetwork {
+		export function createService(wasmInterface: WasmInterface, context: $wcm.Context): sockets.InstanceNetwork {
 			return $wcm.Service.create<sockets.InstanceNetwork>(functions, resources, wasmInterface, context);
 		}
 	}
@@ -937,31 +937,31 @@ export namespace sockets {
 		export const IpAddress = sockets.Network.$.IpAddress;
 		export const IpAddressFamily = sockets.Network.$.IpAddressFamily;
 		export const ResolveAddressStream = new $wcm.NamespaceResourceType('ResolveAddressStream', 'resolve-address-stream');
-		ResolveAddressStream.addFunction(new $wcm.FunctionType<typeof sockets.IpNameLookup.ResolveAddressStream.resolveNextAddress>('resolveNextAddress', '[method]resolve-address-stream.resolve-next-address', [
-			['self', new $wcm.BorrowType<sockets.IpNameLookup.ResolveAddressStream>(ResolveAddressStream)],
-		], new $wcm.ResultType<option<sockets.IpNameLookup.IpAddress>, sockets.IpNameLookup.ErrorCode>(new $wcm.OptionType<sockets.IpNameLookup.IpAddress>(IpAddress), ErrorCode)));
-		ResolveAddressStream.addFunction(new $wcm.FunctionType<typeof sockets.IpNameLookup.ResolveAddressStream.subscribe>('subscribe', '[method]resolve-address-stream.subscribe', [
-			['self', new $wcm.BorrowType<sockets.IpNameLookup.ResolveAddressStream>(ResolveAddressStream)],
-		], new $wcm.OwnType<sockets.IpNameLookup.Pollable>(Pollable)));
 		export const resolveAddresses = new $wcm.FunctionType<typeof sockets.IpNameLookup.resolveAddresses>('resolveAddresses', 'resolve-addresses',[
 			['network', new $wcm.BorrowType<sockets.IpNameLookup.Network>(Network)],
 			['name', $wcm.wstring],
 			['addressFamily', new $wcm.OptionType<sockets.IpNameLookup.IpAddressFamily>(IpAddressFamily)],
 			['includeUnavailable', $wcm.bool],
 		], new $wcm.ResultType<sockets.IpNameLookup.ResolveAddressStream, sockets.IpNameLookup.ErrorCode>(new $wcm.OwnType<sockets.IpNameLookup.ResolveAddressStream>(ResolveAddressStream), ErrorCode));
+		ResolveAddressStream.addFunction(new $wcm.FunctionType<typeof sockets.IpNameLookup.ResolveAddressStream.resolveNextAddress>('resolveNextAddress', '[method]resolve-address-stream.resolve-next-address', [
+			['self', new $wcm.BorrowType<sockets.IpNameLookup.ResolveAddressStream>(ResolveAddressStream)],
+		], new $wcm.ResultType<option<sockets.IpNameLookup.IpAddress>, sockets.IpNameLookup.ErrorCode>(new $wcm.OptionType<sockets.IpNameLookup.IpAddress>(IpAddress), ErrorCode)));
+		ResolveAddressStream.addFunction(new $wcm.FunctionType<typeof sockets.IpNameLookup.ResolveAddressStream.subscribe>('subscribe', '[method]resolve-address-stream.subscribe', [
+			['self', new $wcm.BorrowType<sockets.IpNameLookup.ResolveAddressStream>(ResolveAddressStream)],
+		], new $wcm.OwnType<sockets.IpNameLookup.Pollable>(Pollable)));
 	}
 	export namespace IpNameLookup._ {
 		const functions: $wcm.FunctionType<$wcm.ServiceFunction>[] = [$.resolveAddresses];
 		const resources: $wcm.NamespaceResourceType[] = [$.ResolveAddressStream];
 		export type WasmInterface = {
-			'resolve-addresses': (network: i32, name_ptr: i32, name_len: i32, addressFamily_discriminant: i32, addressFamily_IpAddressFamily_IpAddressFamily: i32, includeUnavailable: i32, result: ptr<[i32, i32]>) => void;
+			'resolve-addresses': (network: i32, name_ptr: i32, name_len: i32, addressFamily_case: i32, addressFamily_option_IpAddressFamily_IpAddressFamily: i32, includeUnavailable: i32, result: ptr<[i32, i32]>) => void;
 			'[method]resolve-address-stream.resolve-next-address': (self: i32, result: ptr<[i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32]>) => void;
 			'[method]resolve-address-stream.subscribe': (self: i32) => i32;
 		};
-		export function createHost<T extends $wcm.Host>(service: sockets.IpNameLookup, context: $wcm.Context): T {
-			return $wcm.Host.create<T>(functions, resources, service, context);
+		export function createHost(service: sockets.IpNameLookup, context: $wcm.Context): WasmInterface {
+			return $wcm.Host.create<WasmInterface>(functions, resources, service, context);
 		}
-		export function createService(wasmInterface: $wcm.WasmInterface, context: $wcm.Context): sockets.IpNameLookup {
+		export function createService(wasmInterface: WasmInterface, context: $wcm.Context): sockets.IpNameLookup {
 			return $wcm.Service.create<sockets.IpNameLookup>(functions, resources, wasmInterface, context);
 		}
 	}
@@ -1067,9 +1067,9 @@ export namespace sockets {
 		const functions: $wcm.FunctionType<$wcm.ServiceFunction>[] = [];
 		const resources: $wcm.NamespaceResourceType[] = [$.TcpSocket];
 		export type WasmInterface = {
-			'[method]tcp-socket.start-bind': (self: i32, network: i32, localAddress_IpSocketAddress_discriminant: i32, localAddress_IpSocketAddress_0: i32, localAddress_IpSocketAddress_1: i32, localAddress_IpSocketAddress_2: i32, localAddress_IpSocketAddress_3: i32, localAddress_IpSocketAddress_4: i32, localAddress_IpSocketAddress_5: i32, localAddress_IpSocketAddress_6: i32, localAddress_IpSocketAddress_7: i32, localAddress_IpSocketAddress_8: i32, localAddress_IpSocketAddress_9: i32, localAddress_IpSocketAddress_10: i32, result: ptr<[i32, i32]>) => void;
+			'[method]tcp-socket.start-bind': (self: i32, network: i32, localAddress_IpSocketAddress_case: i32, localAddress_IpSocketAddress_0: i32, localAddress_IpSocketAddress_1: i32, localAddress_IpSocketAddress_2: i32, localAddress_IpSocketAddress_3: i32, localAddress_IpSocketAddress_4: i32, localAddress_IpSocketAddress_5: i32, localAddress_IpSocketAddress_6: i32, localAddress_IpSocketAddress_7: i32, localAddress_IpSocketAddress_8: i32, localAddress_IpSocketAddress_9: i32, localAddress_IpSocketAddress_10: i32, result: ptr<[i32, i32]>) => void;
 			'[method]tcp-socket.finish-bind': (self: i32, result: ptr<[i32, i32]>) => void;
-			'[method]tcp-socket.start-connect': (self: i32, network: i32, remoteAddress_IpSocketAddress_discriminant: i32, remoteAddress_IpSocketAddress_0: i32, remoteAddress_IpSocketAddress_1: i32, remoteAddress_IpSocketAddress_2: i32, remoteAddress_IpSocketAddress_3: i32, remoteAddress_IpSocketAddress_4: i32, remoteAddress_IpSocketAddress_5: i32, remoteAddress_IpSocketAddress_6: i32, remoteAddress_IpSocketAddress_7: i32, remoteAddress_IpSocketAddress_8: i32, remoteAddress_IpSocketAddress_9: i32, remoteAddress_IpSocketAddress_10: i32, result: ptr<[i32, i32]>) => void;
+			'[method]tcp-socket.start-connect': (self: i32, network: i32, remoteAddress_IpSocketAddress_case: i32, remoteAddress_IpSocketAddress_0: i32, remoteAddress_IpSocketAddress_1: i32, remoteAddress_IpSocketAddress_2: i32, remoteAddress_IpSocketAddress_3: i32, remoteAddress_IpSocketAddress_4: i32, remoteAddress_IpSocketAddress_5: i32, remoteAddress_IpSocketAddress_6: i32, remoteAddress_IpSocketAddress_7: i32, remoteAddress_IpSocketAddress_8: i32, remoteAddress_IpSocketAddress_9: i32, remoteAddress_IpSocketAddress_10: i32, result: ptr<[i32, i32]>) => void;
 			'[method]tcp-socket.finish-connect': (self: i32, result: ptr<[i32, i32, i32]>) => void;
 			'[method]tcp-socket.start-listen': (self: i32, result: ptr<[i32, i32]>) => void;
 			'[method]tcp-socket.finish-listen': (self: i32, result: ptr<[i32, i32]>) => void;
@@ -1093,10 +1093,10 @@ export namespace sockets {
 			'[method]tcp-socket.subscribe': (self: i32) => i32;
 			'[method]tcp-socket.shutdown': (self: i32, shutdownType_ShutdownType: i32, result: ptr<[i32, i32]>) => void;
 		};
-		export function createHost<T extends $wcm.Host>(service: sockets.Tcp, context: $wcm.Context): T {
-			return $wcm.Host.create<T>(functions, resources, service, context);
+		export function createHost(service: sockets.Tcp, context: $wcm.Context): WasmInterface {
+			return $wcm.Host.create<WasmInterface>(functions, resources, service, context);
 		}
-		export function createService(wasmInterface: $wcm.WasmInterface, context: $wcm.Context): sockets.Tcp {
+		export function createService(wasmInterface: WasmInterface, context: $wcm.Context): sockets.Tcp {
 			return $wcm.Service.create<sockets.Tcp>(functions, resources, wasmInterface, context);
 		}
 	}
@@ -1115,10 +1115,10 @@ export namespace sockets {
 		export type WasmInterface = {
 			'create-tcp-socket': (addressFamily_IpAddressFamily_IpAddressFamily: i32, result: ptr<[i32, i32]>) => void;
 		};
-		export function createHost<T extends $wcm.Host>(service: sockets.TcpCreateSocket, context: $wcm.Context): T {
-			return $wcm.Host.create<T>(functions, resources, service, context);
+		export function createHost(service: sockets.TcpCreateSocket, context: $wcm.Context): WasmInterface {
+			return $wcm.Host.create<WasmInterface>(functions, resources, service, context);
 		}
-		export function createService(wasmInterface: $wcm.WasmInterface, context: $wcm.Context): sockets.TcpCreateSocket {
+		export function createService(wasmInterface: WasmInterface, context: $wcm.Context): sockets.TcpCreateSocket {
 			return $wcm.Service.create<sockets.TcpCreateSocket>(functions, resources, wasmInterface, context);
 		}
 	}
@@ -1202,9 +1202,9 @@ export namespace sockets {
 		const functions: $wcm.FunctionType<$wcm.ServiceFunction>[] = [];
 		const resources: $wcm.NamespaceResourceType[] = [$.UdpSocket];
 		export type WasmInterface = {
-			'[method]udp-socket.start-bind': (self: i32, network: i32, localAddress_IpSocketAddress_discriminant: i32, localAddress_IpSocketAddress_0: i32, localAddress_IpSocketAddress_1: i32, localAddress_IpSocketAddress_2: i32, localAddress_IpSocketAddress_3: i32, localAddress_IpSocketAddress_4: i32, localAddress_IpSocketAddress_5: i32, localAddress_IpSocketAddress_6: i32, localAddress_IpSocketAddress_7: i32, localAddress_IpSocketAddress_8: i32, localAddress_IpSocketAddress_9: i32, localAddress_IpSocketAddress_10: i32, result: ptr<[i32, i32]>) => void;
+			'[method]udp-socket.start-bind': (self: i32, network: i32, localAddress_IpSocketAddress_case: i32, localAddress_IpSocketAddress_0: i32, localAddress_IpSocketAddress_1: i32, localAddress_IpSocketAddress_2: i32, localAddress_IpSocketAddress_3: i32, localAddress_IpSocketAddress_4: i32, localAddress_IpSocketAddress_5: i32, localAddress_IpSocketAddress_6: i32, localAddress_IpSocketAddress_7: i32, localAddress_IpSocketAddress_8: i32, localAddress_IpSocketAddress_9: i32, localAddress_IpSocketAddress_10: i32, result: ptr<[i32, i32]>) => void;
 			'[method]udp-socket.finish-bind': (self: i32, result: ptr<[i32, i32]>) => void;
-			'[method]udp-socket.start-connect': (self: i32, network: i32, remoteAddress_IpSocketAddress_discriminant: i32, remoteAddress_IpSocketAddress_0: i32, remoteAddress_IpSocketAddress_1: i32, remoteAddress_IpSocketAddress_2: i32, remoteAddress_IpSocketAddress_3: i32, remoteAddress_IpSocketAddress_4: i32, remoteAddress_IpSocketAddress_5: i32, remoteAddress_IpSocketAddress_6: i32, remoteAddress_IpSocketAddress_7: i32, remoteAddress_IpSocketAddress_8: i32, remoteAddress_IpSocketAddress_9: i32, remoteAddress_IpSocketAddress_10: i32, result: ptr<[i32, i32]>) => void;
+			'[method]udp-socket.start-connect': (self: i32, network: i32, remoteAddress_IpSocketAddress_case: i32, remoteAddress_IpSocketAddress_0: i32, remoteAddress_IpSocketAddress_1: i32, remoteAddress_IpSocketAddress_2: i32, remoteAddress_IpSocketAddress_3: i32, remoteAddress_IpSocketAddress_4: i32, remoteAddress_IpSocketAddress_5: i32, remoteAddress_IpSocketAddress_6: i32, remoteAddress_IpSocketAddress_7: i32, remoteAddress_IpSocketAddress_8: i32, remoteAddress_IpSocketAddress_9: i32, remoteAddress_IpSocketAddress_10: i32, result: ptr<[i32, i32]>) => void;
 			'[method]udp-socket.finish-connect': (self: i32, result: ptr<[i32, i32]>) => void;
 			'[method]udp-socket.receive': (self: i32, maxResults: i64, result: ptr<[i32, i32, i32]>) => void;
 			'[method]udp-socket.send': (self: i32, datagrams_ptr: i32, datagrams_len: i32, result: ptr<[i32, i64]>) => void;
@@ -1221,10 +1221,10 @@ export namespace sockets {
 			'[method]udp-socket.set-send-buffer-size': (self: i32, value: i64, result: ptr<[i32, i32]>) => void;
 			'[method]udp-socket.subscribe': (self: i32) => i32;
 		};
-		export function createHost<T extends $wcm.Host>(service: sockets.Udp, context: $wcm.Context): T {
-			return $wcm.Host.create<T>(functions, resources, service, context);
+		export function createHost(service: sockets.Udp, context: $wcm.Context): WasmInterface {
+			return $wcm.Host.create<WasmInterface>(functions, resources, service, context);
 		}
-		export function createService(wasmInterface: $wcm.WasmInterface, context: $wcm.Context): sockets.Udp {
+		export function createService(wasmInterface: WasmInterface, context: $wcm.Context): sockets.Udp {
 			return $wcm.Service.create<sockets.Udp>(functions, resources, wasmInterface, context);
 		}
 	}
@@ -1243,10 +1243,10 @@ export namespace sockets {
 		export type WasmInterface = {
 			'create-udp-socket': (addressFamily_IpAddressFamily_IpAddressFamily: i32, result: ptr<[i32, i32]>) => void;
 		};
-		export function createHost<T extends $wcm.Host>(service: sockets.UdpCreateSocket, context: $wcm.Context): T {
-			return $wcm.Host.create<T>(functions, resources, service, context);
+		export function createHost(service: sockets.UdpCreateSocket, context: $wcm.Context): WasmInterface {
+			return $wcm.Host.create<WasmInterface>(functions, resources, service, context);
 		}
-		export function createService(wasmInterface: $wcm.WasmInterface, context: $wcm.Context): sockets.UdpCreateSocket {
+		export function createService(wasmInterface: WasmInterface, context: $wcm.Context): sockets.UdpCreateSocket {
 			return $wcm.Service.create<sockets.UdpCreateSocket>(functions, resources, wasmInterface, context);
 		}
 	}

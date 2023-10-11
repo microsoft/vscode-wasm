@@ -415,21 +415,22 @@ export namespace io {
 			'poll-list': (in__ptr: i32, in__len: i32, result: ptr<[i32, i32]>) => void;
 			'poll-one': (in_: i32) => void;
 		};
-		export function createHost<T extends $wcm.Host>(service: io.Poll, context: $wcm.Context): T {
-			return $wcm.Host.create<T>(functions, resources, service, context);
+		export function createHost(service: io.Poll, context: $wcm.Context): WasmInterface {
+			return $wcm.Host.create<WasmInterface>(functions, resources, service, context);
 		}
-		export function createService(wasmInterface: $wcm.WasmInterface, context: $wcm.Context): io.Poll {
+		export function createService(wasmInterface: WasmInterface, context: $wcm.Context): io.Poll {
 			return $wcm.Service.create<io.Poll>(functions, resources, wasmInterface, context);
 		}
 	}
 	export namespace Streams.$ {
 		export const Pollable = io.Poll.$.Pollable;
 		export const Error = new $wcm.NamespaceResourceType('Error', 'error');
+		export const StreamError = new $wcm.VariantType<io.Streams.StreamError, io.Streams.StreamError._ct, io.Streams.StreamError._vt>([new $wcm.OwnType<io.Streams.Error>(Error), undefined], io.Streams.StreamError._ctor);
+		export const InputStream = new $wcm.NamespaceResourceType('InputStream', 'input-stream');
+		export const OutputStream = new $wcm.NamespaceResourceType('OutputStream', 'output-stream');
 		Error.addFunction(new $wcm.FunctionType<typeof io.Streams.Error.toDebugString>('toDebugString', '[method]error.to-debug-string', [
 			['self', new $wcm.BorrowType<io.Streams.Error>(Error)],
 		], $wcm.wstring));
-		export const StreamError = new $wcm.VariantType<io.Streams.StreamError, io.Streams.StreamError._ct, io.Streams.StreamError._vt>([new $wcm.OwnType<io.Streams.Error>(Error), undefined], io.Streams.StreamError._ctor);
-		export const InputStream = new $wcm.NamespaceResourceType('InputStream', 'input-stream');
 		InputStream.addFunction(new $wcm.FunctionType<typeof io.Streams.InputStream.read>('read', '[method]input-stream.read', [
 			['self', new $wcm.BorrowType<io.Streams.InputStream>(InputStream)],
 			['len', $wcm.u64],
@@ -449,7 +450,6 @@ export namespace io {
 		InputStream.addFunction(new $wcm.FunctionType<typeof io.Streams.InputStream.subscribe>('subscribe', '[method]input-stream.subscribe', [
 			['self', new $wcm.BorrowType<io.Streams.InputStream>(InputStream)],
 		], new $wcm.OwnType<io.Streams.Pollable>(Pollable)));
-		export const OutputStream = new $wcm.NamespaceResourceType('OutputStream', 'output-stream');
 		OutputStream.addFunction(new $wcm.FunctionType<typeof io.Streams.OutputStream.checkWrite>('checkWrite', '[method]output-stream.check-write', [
 			['self', new $wcm.BorrowType<io.Streams.OutputStream>(OutputStream)],
 		], new $wcm.ResultType<u64, io.Streams.StreamError>($wcm.u64, StreamError)));
@@ -515,10 +515,10 @@ export namespace io {
 			'[method]output-stream.blocking-splice': (self: i32, src: i32, len: i64, result: ptr<[i32, i64, i32]>) => void;
 			'[method]output-stream.forward': (self: i32, src: i32, result: ptr<[i32, i64, i32]>) => void;
 		};
-		export function createHost<T extends $wcm.Host>(service: io.Streams, context: $wcm.Context): T {
-			return $wcm.Host.create<T>(functions, resources, service, context);
+		export function createHost(service: io.Streams, context: $wcm.Context): WasmInterface {
+			return $wcm.Host.create<WasmInterface>(functions, resources, service, context);
 		}
-		export function createService(wasmInterface: $wcm.WasmInterface, context: $wcm.Context): io.Streams {
+		export function createService(wasmInterface: WasmInterface, context: $wcm.Context): io.Streams {
 			return $wcm.Service.create<io.Streams>(functions, resources, wasmInterface, context);
 		}
 	}

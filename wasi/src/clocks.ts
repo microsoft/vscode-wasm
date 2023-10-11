@@ -186,10 +186,10 @@ export namespace clocks {
 			'resolution': () => i64;
 			'subscribe': (when: i64, absolute: i32) => i32;
 		};
-		export function createHost<T extends $wcm.Host>(service: clocks.MonotonicClock, context: $wcm.Context): T {
-			return $wcm.Host.create<T>(functions, resources, service, context);
+		export function createHost(service: clocks.MonotonicClock, context: $wcm.Context): WasmInterface {
+			return $wcm.Host.create<WasmInterface>(functions, resources, service, context);
 		}
-		export function createService(wasmInterface: $wcm.WasmInterface, context: $wcm.Context): clocks.MonotonicClock {
+		export function createService(wasmInterface: WasmInterface, context: $wcm.Context): clocks.MonotonicClock {
 			return $wcm.Service.create<clocks.MonotonicClock>(functions, resources, wasmInterface, context);
 		}
 	}
@@ -208,10 +208,10 @@ export namespace clocks {
 			'now': (result: ptr<[i64, i32]>) => void;
 			'resolution': (result: ptr<[i64, i32]>) => void;
 		};
-		export function createHost<T extends $wcm.Host>(service: clocks.WallClock, context: $wcm.Context): T {
-			return $wcm.Host.create<T>(functions, resources, service, context);
+		export function createHost(service: clocks.WallClock, context: $wcm.Context): WasmInterface {
+			return $wcm.Host.create<WasmInterface>(functions, resources, service, context);
 		}
-		export function createService(wasmInterface: $wcm.WasmInterface, context: $wcm.Context): clocks.WallClock {
+		export function createService(wasmInterface: WasmInterface, context: $wcm.Context): clocks.WallClock {
 			return $wcm.Service.create<clocks.WallClock>(functions, resources, wasmInterface, context);
 		}
 	}
@@ -236,10 +236,10 @@ export namespace clocks {
 			'display': (when_Datetime_seconds: i64, when_Datetime_nanoseconds: i32, result: ptr<[i32, i32, i32, i32]>) => void;
 			'utc-offset': (when_Datetime_seconds: i64, when_Datetime_nanoseconds: i32) => i32;
 		};
-		export function createHost<T extends $wcm.Host>(service: clocks.Timezone, context: $wcm.Context): T {
-			return $wcm.Host.create<T>(functions, resources, service, context);
+		export function createHost(service: clocks.Timezone, context: $wcm.Context): WasmInterface {
+			return $wcm.Host.create<WasmInterface>(functions, resources, service, context);
 		}
-		export function createService(wasmInterface: $wcm.WasmInterface, context: $wcm.Context): clocks.Timezone {
+		export function createService(wasmInterface: WasmInterface, context: $wcm.Context): clocks.Timezone {
 			return $wcm.Service.create<clocks.Timezone>(functions, resources, wasmInterface, context);
 		}
 	}

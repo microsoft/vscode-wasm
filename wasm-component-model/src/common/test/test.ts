@@ -35,10 +35,17 @@ export namespace test {
 		export type WasmInterface = {
 			'call': (point_x: i32, point_y: i32) => i32;
 		};
-		export function createHost<T extends $wcm.Host>(service: test.Sample, context: $wcm.Context): T {
-			return $wcm.Host.create<T>(functions, resources, service, context);
+		type internalWasmInterface = {
+			[ket: string]: (...args: (number & bigint)[]) => number | bigint;
+		};
+
+		let c: WasmInterface | undefined;
+		let i: internalWasmInterface | undefined;
+		i = c;
+		export function createHost(service: test.Sample, context: $wcm.Context): WasmInterface {
+			return $wcm.Host.create<WasmInterface>(functions, resources, service, context);
 		}
-		export function createService(wasmInterface: $wcm.WasmInterface, context: $wcm.Context): test.Sample {
+		export function createService(wasmInterface: WasmInterface, context: $wcm.Context): test.Sample {
 			return $wcm.Service.create<test.Sample>(functions, resources, wasmInterface, context);
 		}
 	}

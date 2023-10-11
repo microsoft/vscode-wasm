@@ -113,10 +113,10 @@ export namespace random {
 		export type WasmInterface = {
 			'insecure-seed': (result: ptr<[i64, i64]>) => void;
 		};
-		export function createHost<T extends $wcm.Host>(service: random.InsecureSeed, context: $wcm.Context): T {
-			return $wcm.Host.create<T>(functions, resources, service, context);
+		export function createHost(service: random.InsecureSeed, context: $wcm.Context): WasmInterface {
+			return $wcm.Host.create<WasmInterface>(functions, resources, service, context);
 		}
-		export function createService(wasmInterface: $wcm.WasmInterface, context: $wcm.Context): random.InsecureSeed {
+		export function createService(wasmInterface: WasmInterface, context: $wcm.Context): random.InsecureSeed {
 			return $wcm.Service.create<random.InsecureSeed>(functions, resources, wasmInterface, context);
 		}
 	}
@@ -133,10 +133,10 @@ export namespace random {
 			'get-insecure-random-bytes': (len: i64, result: ptr<[i32, i32]>) => void;
 			'get-insecure-random-u64': () => i64;
 		};
-		export function createHost<T extends $wcm.Host>(service: random.Insecure, context: $wcm.Context): T {
-			return $wcm.Host.create<T>(functions, resources, service, context);
+		export function createHost(service: random.Insecure, context: $wcm.Context): WasmInterface {
+			return $wcm.Host.create<WasmInterface>(functions, resources, service, context);
 		}
-		export function createService(wasmInterface: $wcm.WasmInterface, context: $wcm.Context): random.Insecure {
+		export function createService(wasmInterface: WasmInterface, context: $wcm.Context): random.Insecure {
 			return $wcm.Service.create<random.Insecure>(functions, resources, wasmInterface, context);
 		}
 	}
@@ -153,10 +153,10 @@ export namespace random {
 			'get-random-bytes': (len: i64, result: ptr<[i32, i32]>) => void;
 			'get-random-u64': () => i64;
 		};
-		export function createHost<T extends $wcm.Host>(service: random.Random, context: $wcm.Context): T {
-			return $wcm.Host.create<T>(functions, resources, service, context);
+		export function createHost(service: random.Random, context: $wcm.Context): WasmInterface {
+			return $wcm.Host.create<WasmInterface>(functions, resources, service, context);
 		}
-		export function createService(wasmInterface: $wcm.WasmInterface, context: $wcm.Context): random.Random {
+		export function createService(wasmInterface: WasmInterface, context: $wcm.Context): random.Random {
 			return $wcm.Service.create<random.Random>(functions, resources, wasmInterface, context);
 		}
 	}

@@ -53,10 +53,10 @@ export namespace logging {
 		export type WasmInterface = {
 			'log': (level_Level: i32, context_ptr: i32, context_len: i32, message_ptr: i32, message_len: i32) => void;
 		};
-		export function createHost<T extends $wcm.Host>(service: logging.Logging, context: $wcm.Context): T {
-			return $wcm.Host.create<T>(functions, resources, service, context);
+		export function createHost(service: logging.Logging, context: $wcm.Context): WasmInterface {
+			return $wcm.Host.create<WasmInterface>(functions, resources, service, context);
 		}
-		export function createService(wasmInterface: $wcm.WasmInterface, context: $wcm.Context): logging.Logging {
+		export function createService(wasmInterface: WasmInterface, context: $wcm.Context): logging.Logging {
 			return $wcm.Service.create<logging.Logging>(functions, resources, wasmInterface, context);
 		}
 	}
