@@ -569,17 +569,6 @@ namespace MetaModel {
 		emit(code: Code, emitted: Set<String>): void;
 	}
 
-	export interface HasDependencies {
-		readonly dependencies: Set<string>;
-	}
-
-	export namespace HasDependencies {
-		export function is(value: any): value is HasDependencies {
-			const candidate = value as HasDependencies;
-			return candidate.dependencies instanceof Set;
-		}
-	}
-
 	export class TypeNameEmitter implements Emitter {
 
 		private readonly name: string;
@@ -596,19 +585,16 @@ namespace MetaModel {
 		}
 	}
 
-	export class RecordEmitter implements Emitter, HasDependencies {
+	export class RecordEmitter implements Emitter {
 
 		private readonly name: string;
 		private readonly typeParam: string;
 		private readonly fields: string[][];
 
-		public readonly dependencies: Set<string>;
-
 		constructor(name: string, typeParam: string, fields: string[][]) {
 			this.name = name;
 			this.typeParam = typeParam;
 			this.fields = fields;
-			this.dependencies = new Set();
 		}
 
 		public emit(code: Code, emitted: Set<String>): void {
@@ -659,19 +645,16 @@ namespace MetaModel {
 		}
 	}
 
-	export class VariantEmitter implements Emitter, HasDependencies {
+	export class VariantEmitter implements Emitter {
 
 		private readonly name: string;
 		private readonly typeParam: string;
 		private readonly cases: (string | undefined)[];
 
-		public readonly dependencies: Set<string>;
-
 		constructor(name: string, typeParam: string, cases: (string | undefined)[]) {
 			this.name = name;
 			this.typeParam = typeParam;
 			this.cases = cases;
-			this.dependencies = new Set();
 		}
 
 		public emit(code: Code, emitted: Set<String>): void {
