@@ -35,13 +35,6 @@ export namespace test {
 		export type WasmInterface = {
 			'call': (point_x: i32, point_y: i32) => i32;
 		};
-		type internalWasmInterface = {
-			[ket: string]: (...args: (number & bigint)[]) => number | bigint;
-		};
-
-		let c: WasmInterface | undefined;
-		let i: internalWasmInterface | undefined;
-		i = c;
 		export function createHost(service: test.Sample, context: $wcm.Context): WasmInterface {
 			return $wcm.Host.create<WasmInterface>(functions, resources, service, context);
 		}
