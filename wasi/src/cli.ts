@@ -254,31 +254,11 @@ export namespace cli {
 		export const TerminalInput = new $wcm.NamespaceResourceType('TerminalInput', 'terminal-input');
 	}
 	export namespace TerminalInput._ {
-		const functions: $wcm.FunctionType<$wcm.ServiceFunction>[] = [];
-		const resources: $wcm.NamespaceResourceType[] = [$.TerminalInput];
-		export type WasmInterface = {
-		};
-		export function createHost(service: cli.TerminalInput, context: $wcm.Context): WasmInterface {
-			return $wcm.Host.create<WasmInterface>(functions, resources, service, context);
-		}
-		export function createService(wasmInterface: WasmInterface, context: $wcm.Context): cli.TerminalInput {
-			return $wcm.Service.create<cli.TerminalInput>(functions, resources, wasmInterface, context);
-		}
 	}
 	export namespace TerminalOutput.$ {
 		export const TerminalOutput = new $wcm.NamespaceResourceType('TerminalOutput', 'terminal-output');
 	}
 	export namespace TerminalOutput._ {
-		const functions: $wcm.FunctionType<$wcm.ServiceFunction>[] = [];
-		const resources: $wcm.NamespaceResourceType[] = [$.TerminalOutput];
-		export type WasmInterface = {
-		};
-		export function createHost(service: cli.TerminalOutput, context: $wcm.Context): WasmInterface {
-			return $wcm.Host.create<WasmInterface>(functions, resources, service, context);
-		}
-		export function createService(wasmInterface: WasmInterface, context: $wcm.Context): cli.TerminalOutput {
-			return $wcm.Service.create<cli.TerminalOutput>(functions, resources, wasmInterface, context);
-		}
 	}
 	export namespace TerminalStdin.$ {
 		export const TerminalInput = cli.TerminalInput.$.TerminalInput;

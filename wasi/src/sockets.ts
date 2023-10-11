@@ -902,16 +902,6 @@ export namespace sockets {
 		export const IpSocketAddress = new $wcm.VariantType<sockets.Network.IpSocketAddress, sockets.Network.IpSocketAddress._ct, sockets.Network.IpSocketAddress._vt>([Ipv4SocketAddress, Ipv6SocketAddress], sockets.Network.IpSocketAddress._ctor);
 	}
 	export namespace Network._ {
-		const functions: $wcm.FunctionType<$wcm.ServiceFunction>[] = [];
-		const resources: $wcm.NamespaceResourceType[] = [$.Network];
-		export type WasmInterface = {
-		};
-		export function createHost(service: sockets.Network, context: $wcm.Context): WasmInterface {
-			return $wcm.Host.create<WasmInterface>(functions, resources, service, context);
-		}
-		export function createService(wasmInterface: WasmInterface, context: $wcm.Context): sockets.Network {
-			return $wcm.Service.create<sockets.Network>(functions, resources, wasmInterface, context);
-		}
 	}
 	export namespace InstanceNetwork.$ {
 		export const Network = sockets.Network.$.Network;

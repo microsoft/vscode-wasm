@@ -2004,14 +2004,15 @@ interface ParamServiceInterface {
 
 export type Host = ParamWasmInterface;
 export namespace Host {
-	export function create<T extends Host>(signatures: FunctionType<ServiceFunction>[], resources: NamespaceResourceType[], service: ParamServiceInterface | {}, context: Context): T {
+	export function create<T extends Host>(signatures: FunctionType<ServiceFunction>[], resources: NamespaceResourceType[], service: ParamServiceInterface, context: Context): T {
 		const result: { [key: string]: WasmFunction }  = Object.create(null);
 		for (const signature of signatures) {
 			result[signature.witName] = createHostFunction(signature, service, context);
 		}
 		for (const resource of resources) {
+			const resourceInterface = service[resource.name] as ParamServiceInterface;
 			for (const callable of resource.functions.values()) {
-				result[callable.witName] = createHostFunction(callable, service, context);
+				result[callable.witName] = createHostFunction(callable, resourceInterface, context);
 			}
 		}
 		return result as unknown as T;
@@ -2037,9 +2038,10 @@ export namespace Service {
 			result[signature.name] = createServiceFunction(signature, wasm, context);
 		}
 		for (const resource of resources) {
-			result[resource.name] = Object.create(null);
+			const resourceService: WriteableServiceInterface = Object.create(null);
+			result[resource.name] = resourceService;
 			for (const callable of resource.functions.values()) {
-				result[callable.name] = createServiceFunction(callable, wasm, context);
+				resourceService[callable.name] = createServiceFunction(callable, wasm, context);
 			}
 		}
 		return result as unknown as T;

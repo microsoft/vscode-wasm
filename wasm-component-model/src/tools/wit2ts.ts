@@ -1080,8 +1080,8 @@ namespace TypeScript {
 				code.push('');
 				code.push(`export namespace ${pkgName} {`);
 				code.increaseIndent();
-				for (const [jface, emitters] of this.metaModelEmitters) {
-					code.push(`export namespace ${jface}.$ {`);
+				for (const [interfaceName, emitters] of this.metaModelEmitters) {
+					code.push(`export namespace ${interfaceName}.$ {`);
 					code.increaseIndent();
 					const functions: string[] = [];
 					const namespaceResources: string[] = [];
@@ -1101,49 +1101,50 @@ namespace TypeScript {
 					code.decreaseIndent();
 					code.push('}');
 
-					code.push(`export namespace ${jface}._ {`);
-					code.increaseIndent();
+					const iface = interfaces.get(interfaceName)!;
+					code.push(`export namespace ${interfaceName}._ {`);
+					if (this.hasFunctions(iface)) {
+						code.increaseIndent();
 
-					code.push(`const functions: ${MetaModel.qualifier}.FunctionType<${MetaModel.qualifier}.ServiceFunction>[] = [${functions.map(name => `$.${name}`).join(', ')}];`);
-					code.push(`const resources: ${MetaModel.qualifier}.NamespaceResourceType[] = [${namespaceResources.map(name => `$.${name}`).join(', ')}];`);
-					const iface = interfaces.get(jface)!;
-					const ifaceName = this.symbols.interfaces.getFullyQualifiedName(iface);
-					code.push(`export type WasmInterface = {`);
-					code.increaseIndent();
-					const typeFlattener = new TypeFlattener(this.symbols, this.nameProvider, code.imports);
-					for (const func of Object.values(iface.functions)) {
-						const params = typeFlattener.flattenParams(func);
-						let returnType: string;
-						const results = typeFlattener.flattenResult(func);
-						if (results.length === PackageEmitter.MAX_FLAT_RESULTS) {
-							returnType = results[0];
-						} else {
-							returnType = 'void';
-							code.imports.addBaseType('ptr');
-							params.push({ name: 'result', type: `ptr<[${results.join(', ')}]>`});
+						code.push(`const functions: ${MetaModel.qualifier}.FunctionType<${MetaModel.qualifier}.ServiceFunction>[] = [${functions.map(name => `$.${name}`).join(', ')}];`);
+						code.push(`const resources: ${MetaModel.qualifier}.NamespaceResourceType[] = [${namespaceResources.map(name => `$.${name}`).join(', ')}];`);
+						const ifaceName = this.symbols.interfaces.getFullyQualifiedName(iface);
+						code.push(`export type WasmInterface = {`);
+						code.increaseIndent();
+						const typeFlattener = new TypeFlattener(this.symbols, this.nameProvider, code.imports);
+						for (const func of Object.values(iface.functions)) {
+							const params = typeFlattener.flattenParams(func);
+							let returnType: string;
+							const results = typeFlattener.flattenResult(func);
+							if (results.length === PackageEmitter.MAX_FLAT_RESULTS) {
+								returnType = results[0];
+							} else {
+								returnType = 'void';
+								code.imports.addBaseType('ptr');
+								params.push({ name: 'result', type: `ptr<[${results.join(', ')}]>`});
+							}
+							if (params.length <= PackageEmitter.MAX_FLAT_PARAMS) {
+								code.push(`'${func.name}': (${params.map(p => `${p.name}: ${p.type}`).join(', ')}) => ${returnType};`);
+							} else {
+								code.imports.addBaseType('ptr');
+								code.push(`'${func.name}': (args: ptr<[${params.map(p => p.type).join(', ')}]>) => ${returnType};`);
+							}
 						}
-						if (params.length <= PackageEmitter.MAX_FLAT_PARAMS) {
-							code.push(`'${func.name}': (${params.map(p => `${p.name}: ${p.type}`).join(', ')}) => ${returnType};`);
-						} else {
-							code.imports.addBaseType('ptr');
-							code.push(`'${func.name}': (args: ptr<[${params.map(p => p.type).join(', ')}]>) => ${returnType};`);
-						}
+						code.decreaseIndent();
+						code.push(`};`);
+						code.push(`export function createHost(service: ${ifaceName}, context: $wcm.Context): WasmInterface {`);
+						code.increaseIndent();
+						code.push(`return $wcm.Host.create<WasmInterface>(functions, resources, service, context);`);
+						code.decreaseIndent();
+						code.push(`}`);
+						code.push(`export function createService(wasmInterface: WasmInterface, context: $wcm.Context): ${ifaceName} {`);
+						code.increaseIndent();
+						code.push(`return $wcm.Service.create<${ifaceName}>(functions, resources, wasmInterface, context);`);
+						code.decreaseIndent();
+						code.push(`}`);
+
+						code.decreaseIndent();
 					}
-					code.decreaseIndent();
-					code.push(`};`);
-					code.push(`export function createHost(service: ${ifaceName}, context: $wcm.Context): WasmInterface {`);
-					code.increaseIndent();
-					code.push(`return $wcm.Host.create<WasmInterface>(functions, resources, service, context);`);
-					code.decreaseIndent();
-					code.push(`}`);
-					code.push(`export function createService(wasmInterface: WasmInterface, context: $wcm.Context): ${ifaceName} {`);
-					code.increaseIndent();
-					code.push(`return $wcm.Service.create<${ifaceName}>(functions, resources, wasmInterface, context);`);
-					code.decreaseIndent();
-					code.push(`}`);
-
-
-					code.decreaseIndent();
 					code.push('}');
 				}
 				code.decreaseIndent();
@@ -1152,6 +1153,22 @@ namespace TypeScript {
 
 			this.mainCode.push(`export { ${pkgName} } from './${this.nameProvider.asImportName(this.pkg)}';`);
 			return code;
+		}
+
+		private hasFunctions(iface: Interface): boolean {
+			if (Object.values(iface.functions).length > 0) {
+				return true;
+			}
+			for (const t of Object.values(iface.types)) {
+				const type = this.symbols.getType(t);
+				if (Type.isResourceType(type)) {
+					const method = this.symbols.getMethods(type);
+					if (method !== undefined && method.length > 0) {
+						return true;
+					}
+				}
+			}
+			return false;
 		}
 
 		private processInterface(iface: Interface, qualifier: string, code: Code, printers: Printers): void {
