@@ -48,15 +48,16 @@ export namespace logging {
 		], undefined);
 	}
 	export namespace Logging._ {
-		const allFunctions = [$.log];
+		const functions: $wcm.FunctionType<$wcm.ServiceFunction>[] = [$.log];
+		const resources: $wcm.NamespaceResourceType[] = [];
 		export type WasmInterface = {
 			'log': (level_Level: i32, context_ptr: i32, context_len: i32, message_ptr: i32, message_len: i32) => void;
 		};
 		export function createHost<T extends $wcm.Host>(service: logging.Logging, context: $wcm.Context): T {
-			return $wcm.Host.create<T>(allFunctions, service, context);
+			return $wcm.Host.create<T>(functions, resources, service, context);
 		}
 		export function createService(wasmInterface: $wcm.WasmInterface, context: $wcm.Context): logging.Logging {
-			return $wcm.Service.create<logging.Logging>(allFunctions, wasmInterface, context);
+			return $wcm.Service.create<logging.Logging>(functions, resources, wasmInterface, context);
 		}
 	}
 }

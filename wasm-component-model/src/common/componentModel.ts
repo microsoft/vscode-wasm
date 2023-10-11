@@ -1476,16 +1476,25 @@ export class VariantType<T extends JVariantCase, I, V> implements ComponentModel
 	}
 
 	public liftFlat(memory: Memory, values: FlatValuesIter, options: Options): T {
+		// First one is the discriminant type. So skip it.
+		let valuesToReadOver = this.flatTypes.length - 1;
 		const caseIndex = this.discriminantType.liftFlat(memory, values, options);
 		const caseVariant = this.cases[caseIndex];
+		let result: T;
 		if (caseVariant.type === undefined) {
-			return this.ctor(caseIndex, undefined as any);
+			result = this.ctor(caseIndex, undefined as any);
 		} else {
 			// The first flat type is the discriminant type. So skip it.
-			const iter = new CoerceValueIter(values, this.flatTypes.slice(1), caseVariant.wantFlatTypes!);
+			const wantFlatTypes = caseVariant.wantFlatTypes!;
+			const iter = new CoerceValueIter(values, this.flatTypes.slice(1), wantFlatTypes);
 			const value = caseVariant.type.liftFlat(memory, iter, options);
-			return this.ctor(caseIndex, value);
+			result = this.ctor(caseIndex, value);
+			valuesToReadOver = valuesToReadOver - wantFlatTypes.length;
 		}
+		for (let i = 0; i < valuesToReadOver; i++) {
+			values.next();
+		}
+		return result;
 	}
 
 	public alloc(memory: Memory): ptr {
@@ -1503,15 +1512,18 @@ export class VariantType<T extends JVariantCase, I, V> implements ComponentModel
 	}
 
 	public lowerFlat(result: wasmType[], memory: Memory, value: T, options: Options): void {
+		const flatTypes = this.flatTypes;
 		this.discriminantType.lowerFlat(result, memory, value.case, options);
 		const c = this.cases[value.case];
+		// First one is the discriminant type. So skip it.
+		let valuesToFill = this.flatTypes.length - 1;
 		if (c.type !== undefined && value !== undefined) {
 			const payload: wasmType[] = [];
 			c.type.lowerFlat(payload, memory, value, options);
 			// First one is the discriminant type. So skip it.
-			const wantTypes = this.flatTypes.slice(1);
+			const wantTypes = flatTypes.slice(1);
 			const haveTypes = c.wantFlatTypes!;
-			if (wantTypes.length !== haveTypes.length || payload.length !== haveTypes.length) {
+			if (payload.length !== haveTypes.length) {
 				throw new ComponentModelError('Mismatched flat types');
 			}
 			for (let i = 0; i < wantTypes.length; i++) {
@@ -1527,7 +1539,16 @@ export class VariantType<T extends JVariantCase, I, V> implements ComponentModel
 					payload[i] = WasmTypes.reinterpret_f64_as_i64(payload[i] as number);
 				}
 			}
+			valuesToFill = valuesToFill - payload.length;
 			result.push(...payload);
+		}
+		for(let i = flatTypes.length - valuesToFill; i < flatTypes.length; i++) {
+			const type = flatTypes[i];
+			if (type === 'i64') {
+				result.push(0n);
+			} else {
+				result.push(0);
+			}
 		}
 	}
 

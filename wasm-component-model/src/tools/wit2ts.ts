@@ -677,9 +677,9 @@ namespace MetaModel {
 		}
 	}
 
-	export class ResourceEmitter implements Emitter {
+	export class NamespaceResourceEmitter implements Emitter {
 
-		private readonly name: string;
+		public readonly name: string;
 		private readonly witName: string;
 		private readonly functionEmitters: FunctionEmitter[];
 
@@ -1110,10 +1110,13 @@ namespace TypeScript {
 					code.push(`export namespace ${jface}.$ {`);
 					code.increaseIndent();
 					const functions: string[] = [];
+					const namespaceResources: string[] = [];
 					for (const emitter of emitters) {
 						emitter.emit(code, emitted);
 						if (emitter instanceof MetaModel.FunctionEmitter) {
 							functions.push(emitter.name);
+						} else if (emitter instanceof MetaModel.NamespaceResourceEmitter) {
+							namespaceResources.push(emitter.name);
 						}
 					}
 					code.decreaseIndent();
@@ -1122,73 +1125,41 @@ namespace TypeScript {
 					code.push(`export namespace ${jface}._ {`);
 					code.increaseIndent();
 
-					code.push(`const allFunctions: ${MetaModel.qualifier}.FunctionType<${MetaModel.qualifier}.ServiceFunction>[] = [${functions.map(name => `$.${name}`).join(', ')}];`);
+					code.push(`const functions: ${MetaModel.qualifier}.FunctionType<${MetaModel.qualifier}.ServiceFunction>[] = [${functions.map(name => `$.${name}`).join(', ')}];`);
+					code.push(`const resources: ${MetaModel.qualifier}.NamespaceResourceType[] = [${namespaceResources.map(name => `$.${name}`).join(', ')}];`);
 					const iface = interfaces.get(jface)!;
 					const ifaceName = this.symbols.interfaces.getFullyQualifiedName(iface);
 					code.push(`export type WasmInterface = {`);
 					code.increaseIndent();
 					const typeFlattener = new TypeFlattener(this.symbols, this.nameProvider, code.imports);
-					let variantParam: boolean = false;
 					for (const func of Object.values(iface.functions)) {
-						let params;
-						try {
-							params = typeFlattener.flattenParams(func);
-						} catch (err) {
-							if (err instanceof VariantError) {
-								code.imports.addBaseType('i32');
-								code.imports.addBaseType('i64');
-								code.imports.addBaseType('f32');
-								code.imports.addBaseType('f64');
-								params = [{ name: '...args', type: '(i32 | i64 | f32 | f64)[]'}];
-								variantParam = true;
-							} else {
-								throw err;
-							}
-						}
+						const params = typeFlattener.flattenParams(func);
 						let returnType: string;
-						try {
-							const results = typeFlattener.flattenResult(func);
-							if (results.length === PackageEmitter.MAX_FLAT_RESULTS) {
-								returnType = results[0];
-							} else {
-								returnType = 'void';
-								code.imports.addBaseType('ptr');
-								params.push({ name: 'result', type: `ptr<[${results.join(', ')}]>`});
-							}
-						} catch (err) {
-							if (err instanceof VariantError) {
-								returnType = 'void';
-								code.imports.addBaseType('i32');
-								code.imports.addBaseType('i64');
-								code.imports.addBaseType('f32');
-								code.imports.addBaseType('f64');
-								code.imports.addBaseType('ptr');
-								params.push({ name: 'result', type: 'ptr<(i32 | i64 | f32 | f64)[]>'});
-							} else {
-								throw err;
-							}
+						const results = typeFlattener.flattenResult(func);
+						if (results.length === PackageEmitter.MAX_FLAT_RESULTS) {
+							returnType = results[0];
+						} else {
+							returnType = 'void';
+							code.imports.addBaseType('ptr');
+							params.push({ name: 'result', type: `ptr<[${results.join(', ')}]>`});
 						}
 						if (params.length <= PackageEmitter.MAX_FLAT_PARAMS) {
 							code.push(`'${func.name}': (${params.map(p => `${p.name}: ${p.type}`).join(', ')}) => ${returnType};`);
 						} else {
 							code.imports.addBaseType('ptr');
-							if (variantParam) {
-								code.push(`'${func.name}': (args: ptr<(i32 | i64 | f32 | f64)[]>) => ${returnType};`);
-							} else {
-								code.push(`'${func.name}': (args: ptr<[${params.map(p => p.type).join(', ')}]>) => ${returnType};`);
-							}
+							code.push(`'${func.name}': (args: ptr<[${params.map(p => p.type).join(', ')}]>) => ${returnType};`);
 						}
 					}
 					code.decreaseIndent();
 					code.push(`};`);
 					code.push(`export function createHost<T extends $wcm.Host>(service: ${ifaceName}, context: $wcm.Context): T {`);
 					code.increaseIndent();
-					code.push(`return $wcm.Host.create<T>(allFunctions, service, context);`);
+					code.push(`return $wcm.Host.create<T>(functions, resources, service, context);`);
 					code.decreaseIndent();
 					code.push(`}`);
 					code.push(`export function createService(wasmInterface: $wcm.WasmInterface, context: $wcm.Context): ${ifaceName} {`);
 					code.increaseIndent();
-					code.push(`return $wcm.Service.create<${ifaceName}>(allFunctions, wasmInterface, context);`);
+					code.push(`return $wcm.Service.create<${ifaceName}>(functions, resources, wasmInterface, context);`);
 					code.decreaseIndent();
 					code.push(`}`);
 
@@ -1222,7 +1193,10 @@ namespace TypeScript {
 					metaModelEmitters.push(typeEmitter.metaModelEmitter);
 				}
 				if (Type.isResourceType(type)) {
-					exports.push(this.nameProvider.asTypeName(type));
+					const methods = this.symbols.getMethods(type);
+					if (methods !== undefined && methods.length > 0) {
+						exports.push(this.nameProvider.asTypeName(type));
+					}
 				}
 			}
 			for (const func of Object.values(iface.functions)) {
@@ -1496,7 +1470,7 @@ namespace TypeScript {
 				this.code.decreaseIndent();
 				this.code.push(`}`);
 			}
-			this.metaModelEmitter = new MetaModel.ResourceEmitter(tsName, type.name!, metaModelEmitters);
+			this.metaModelEmitter = new MetaModel.NamespaceResourceEmitter(tsName, type.name!, metaModelEmitters);
 		}
 
 		private computeQualifier(reference: Interface | World): string | undefined {
@@ -1839,13 +1813,7 @@ namespace TypeScript {
 
 	interface FlattenedParam {
 		name: string;
-		type: WasmTypeName;
-	}
-
-	class VariantError extends Error {
-		constructor () {
-			super('Variant detected');
-		}
+		type: string;
 	}
 
 	class TypeFlattener  {
@@ -1919,11 +1887,20 @@ namespace TypeScript {
 					this.flattenParamType(result, type.kind.tuple.types[i], `${prefix}_${i}`);
 				}
 			} else if (Type.isOptionType(type)) {
-				throw new VariantError();
+				this.imports.addBaseType('i32');
+				result.push({ name: `${prefix}_discriminant`, type: 'i32' });
+				this.flattenParamType(result, type.kind.option, prefix);
 			} else if (Type.isResultType(type)) {
-				throw new VariantError();
+				const cases: (TypeReference | undefined)[] = [];
+				cases.push(type.kind.result.ok === null ? undefined : type.kind.result.ok);
+				cases.push(type.kind.result.err === null ? undefined : type.kind.result.err);
+				this.flattenParamVariantType(result, cases, prefix);
 			} else if (Type.isVariantType(type)) {
-				throw new VariantError();
+				const cases: (TypeReference | undefined)[] = [];
+				for (const c of type.kind.variant.cases) {
+					cases.push(c.type === null ? undefined : c.type);
+				}
+				this.flattenParamVariantType(result, cases, prefix);
 			} else if (Type.isEnumType(type)) {
 				this.imports.addBaseType('i32');
 				result.push({ name: `${prefix}_${this.nameProvider.typeAsParameterName(type)}`, type: 'i32' });
@@ -1948,7 +1925,34 @@ namespace TypeScript {
 			} else if (Type.isOwnHandleType(type)) {
 				this.imports.addBaseType('i32');
 				result.push({ name: `${prefix}`, type: 'i32' });
+			} else {
+				throw new Error(`Unexpected type ${JSON.stringify(type)}.`);
 			}
+		}
+
+		private flattenParamVariantType(result: FlattenedParam[], cases: (TypeReference | undefined)[], prefix: string): void {
+			this.imports.addBaseType('i32');
+			result.push({ name: `${prefix}_discriminant`, type: 'i32' });
+			const variantResult: FlattenedParam[] = [];
+			for (const c of cases) {
+				if (c === undefined) {
+					continue;
+				}
+				const caseFlatTypes: FlattenedParam[] = [];
+				this.flattenParamType(caseFlatTypes, c, '');
+				for (let i = 0; i < caseFlatTypes.length; i++) {
+					const want = caseFlatTypes[i];
+					if (i < variantResult.length) {
+						const use = TypeFlattener.joinFlatType(this.assertWasmTypeName(variantResult[i].type), this.assertWasmTypeName(want.type));
+						this.imports.addBaseType(use);
+						variantResult[i].type = use;
+					} else {
+						this.imports.addBaseType(want.type);
+						variantResult.push({ name: `${prefix}_${i}`, type: want.type});
+					}
+				}
+			}
+			result.push(...variantResult);
 		}
 
 		private handleParamBaseType(result: FlattenedParam[], type: string, prefix: string): void {
@@ -1980,19 +1984,27 @@ namespace TypeScript {
 				const ref = this.symbols.getType(type.kind.type);
 				this.flattenResultType(result, ref);
 			} else if (Type.isListType(type)) {
-				this.imports.addBaseType('ptr');
 				this.imports.addBaseType('i32');
-				result.push('ptr<i32>', 'i32');
+				result.push('i32', 'i32');
 			} else if (Type.isTupleType(type)) {
 				for (let i = 0; i < type.kind.tuple.types.length; i++) {
 					this.flattenResultType(result, type.kind.tuple.types[i]);
 				}
 			} else if (Type.isOptionType(type)) {
-				throw new VariantError();
+				this.imports.addBaseType('i32');
+				result.push('i32' );
+				this.flattenResultType(result, type.kind.option);
 			} else if (Type.isResultType(type)) {
-				throw new VariantError();
+				const cases: (TypeReference | undefined)[] = [];
+				cases.push(type.kind.result.ok === null ? undefined : type.kind.result.ok);
+				cases.push(type.kind.result.err === null ? undefined : type.kind.result.err);
+				this.flattenResultVariantType(result, cases);
 			} else if (Type.isVariantType(type)) {
-				throw new VariantError();
+				const cases: (TypeReference | undefined)[] = [];
+				for (const c of type.kind.variant.cases) {
+					cases.push(c.type === null ? undefined : c.type);
+				}
+				this.flattenResultVariantType(result, cases);
 			} else if (Type.isEnumType(type)) {
 				this.imports.addBaseType('i32');
 				result.push('i32');
@@ -2015,14 +2027,47 @@ namespace TypeScript {
 			} else if (Type.isOwnHandleType(type)) {
 				this.imports.addBaseType('i32');
 				result.push('i32');
+			}  else {
+				throw new Error(`Unexpected type ${JSON.stringify(type)}.`);
 			}
+		}
+
+		private flattenResultVariantType(result: string[], cases: (TypeReference | undefined)[]): void {
+			this.imports.addBaseType('i32');
+			result.push('i32');
+			const variantResult: string[] = [];
+			for (const c of cases) {
+				if (c === undefined) {
+					continue;
+				}
+				const caseFlatTypes: string[] = [];
+				this.flattenResultType(caseFlatTypes, c);
+				for (let i = 0; i < caseFlatTypes.length; i++) {
+					const want = caseFlatTypes[i];
+					if (i < variantResult.length) {
+						const use = TypeFlattener.joinFlatType(this.assertWasmTypeName(variantResult[i]), this.assertWasmTypeName(want));
+						this.imports.addBaseType(use);
+						variantResult[i] = use;
+					} else {
+						this.imports.addBaseType(want);
+						variantResult.push(want);
+					}
+				}
+			}
+			result.push(...variantResult);
+		}
+
+		private assertWasmTypeName(type: string): WasmTypeName {
+			if (type === 'i32' || type === 'i64' || type === 'f32' || type === 'f64') {
+				return type;
+			}
+			throw new Error(`Type ${type} is not a wasm type name.`);
 		}
 
 		private handleResultBaseType(result: string[], type: string): void {
 			if (type === 'string') {
-				this.imports.addBaseType('ptr');
 				this.imports.addBaseType('i32');
-				result.push('ptr<i32>', 'i32');
+				result.push('i32', 'i32');
 			} else {
 				const t = TypeFlattener.baseTypes.get(type);
 				if (t === undefined) {
@@ -2047,6 +2092,16 @@ namespace TypeScript {
 
 		private static num32Flags(fields: number): number {
 			return Math.ceil(fields / 32);
+		}
+
+		private static joinFlatType(a: WasmTypeName, b: WasmTypeName) : WasmTypeName {
+			if (a === b) {
+				return a;
+			}
+			if ((a === 'i32' && b === 'f32') || (a === 'f32' && b === 'i32')) {
+				return 'i32';
+			}
+			return 'i64';
 		}
 	}
 }
