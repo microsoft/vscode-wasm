@@ -566,7 +566,7 @@ enum TypeUsage {
 namespace MetaModel {
 
 	export interface Emitter {
-		emit(code: Code, emitted: Set<String>): void;
+		emit(code: Code): void;
 	}
 
 	export class TypeNameEmitter implements Emitter {
@@ -579,9 +579,8 @@ namespace MetaModel {
 			this.reference = reference;
 		}
 
-		public emit(code: Code, emitted: Set<String>): void {
+		public emit(code: Code): void {
 			code.push(`export const ${this.name} = ${this.reference};`);
-			emitted.add(this.name);
 		}
 	}
 
@@ -597,7 +596,7 @@ namespace MetaModel {
 			this.fields = fields;
 		}
 
-		public emit(code: Code, emitted: Set<String>): void {
+		public emit(code: Code): void {
 			code.push(`export const ${this.name} = new $wcm.RecordType<${this.typeParam}>([`);
 			code.increaseIndent();
 			for (const [name, type] of this.fields) {
@@ -605,7 +604,6 @@ namespace MetaModel {
 			}
 			code.decreaseIndent();
 			code.push(`]);`);
-			emitted.add(this.name);
 		}
 	}
 
@@ -621,9 +619,8 @@ namespace MetaModel {
 			this.items = items;
 		}
 
-		public emit(code: Code, emitted: Set<String>): void {
+		public emit(code: Code): void {
 			code.push(`export const ${this.name} = new $wcm.EnumType<${this.typeParam}>(${this.items});`);
-			emitted.add(this.name);
 		}
 	}
 
@@ -639,9 +636,8 @@ namespace MetaModel {
 			this.flags = flags;
 		}
 
-		public emit(code: Code, emitted: Set<String>): void {
+		public emit(code: Code): void {
 			code.push(`export const ${this.name} = new $wcm.FlagsType<${this.typeParam}>([${this.flags.map(flag => `'${flag}'`).join(', ')}]);`);
-			emitted.add(this.name);
 		}
 	}
 
@@ -657,9 +653,8 @@ namespace MetaModel {
 			this.cases = cases;
 		}
 
-		public emit(code: Code, emitted: Set<String>): void {
+		public emit(code: Code): void {
 			code.push(`export const ${this.name} = new $wcm.VariantType<${this.typeParam}, ${this.typeParam}._ct, ${this.typeParam}._vt>([${this.cases.map(c => c !== undefined ? c : 'undefined').join(', ')}], ${this.typeParam}._ctor);`);
-			emitted.add(this.name);
 		}
 	}
 
@@ -675,9 +670,8 @@ namespace MetaModel {
 			this.functionEmitters = functionEmitters;
 		}
 
-		public emit(code: Code, emitted: Set<String>): void {
+		public emit(code: Code): void {
 			code.push(`export const ${this.name} = new $wcm.NamespaceResourceType('${this.name}', '${this.witName}');`);
-			emitted.add(this.name);
 		}
 	}
 
@@ -697,7 +691,7 @@ namespace MetaModel {
 			this.result = result;
 		}
 
-		public abstract emit(code: Code, emitted: Set<String>): void;
+		public abstract emit(code: Code): void;
 	}
 
 	export class FunctionEmitter extends AbstractFunctionEmitter {
@@ -706,7 +700,7 @@ namespace MetaModel {
 			super(typeParam, name, witName, params, result);
 		}
 
-		public emit(code: Code, _emitted: Set<String>): void {
+		public emit(code: Code): void {
 			if (this.params.length === 0) {
 				code.push(`export const ${this.name} = new $wcm.FunctionType<${this.typeParam}>('${this.name}', '${this.witName}', [], ${this.result});`);
 			} else {
@@ -730,7 +724,7 @@ namespace MetaModel {
 			this.resourceName = resourceName;
 		}
 
-		public emit(code: Code, _emitted: Set<String>): void {
+		public emit(code: Code): void {
 			if (this.params.length === 0) {
 				code.push(`${this.resourceName}.addFunction(new $wcm.FunctionType<${this.typeParam}>('${this.name}', '${this.witName}', [], ${this.result}));`);
 			} else {
@@ -1086,7 +1080,6 @@ namespace TypeScript {
 				code.push('');
 				code.push(`export namespace ${pkgName} {`);
 				code.increaseIndent();
-				const emitted = new Set<string>();
 				for (const [jface, emitters] of this.metaModelEmitters) {
 					code.push(`export namespace ${jface}.$ {`);
 					code.increaseIndent();
@@ -1094,7 +1087,7 @@ namespace TypeScript {
 					const namespaceResources: string[] = [];
 					const resourceFunctionEmitters: MetaModel.AbstractFunctionEmitter[] = [];
 					for (const emitter of emitters) {
-						emitter.emit(code, emitted);
+						emitter.emit(code);
 						if (emitter instanceof MetaModel.FunctionEmitter) {
 							functions.push(emitter.name);
 						} else if (emitter instanceof MetaModel.NamespaceResourceEmitter) {
@@ -1103,7 +1096,7 @@ namespace TypeScript {
 						}
 					}
 					for (const emitter of resourceFunctionEmitters) {
-						emitter.emit(code, emitted);
+						emitter.emit(code);
 					}
 					code.decreaseIndent();
 					code.push('}');
