@@ -3,7 +3,7 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 import * as $wcm from '../componentModel';
-import type { u32, resource, own, borrow, i32 } from '../componentModel';
+import type { u32, resource, own, borrow, i32, ptr } from '../componentModel';
 
 export namespace test {
 	export namespace Sample {
@@ -26,8 +26,10 @@ export namespace test {
 		}
 
 		export declare function call(point: Point): u32;
+
+		export declare function callOption(point: Point | undefined): u32 | undefined;
 	}
-	export type Sample = Pick<typeof Sample, 'PointResource' | 'call'>;
+	export type Sample = Pick<typeof Sample, 'PointResource' | 'call' | 'callOption'>;
 
 }
 
@@ -41,6 +43,9 @@ export namespace test {
 		export const call = new $wcm.FunctionType<typeof test.Sample.call>('call', 'call',[
 			['point', Point],
 		], $wcm.u32);
+		export const callOption = new $wcm.FunctionType<typeof test.Sample.callOption>('callOption', 'call-option',[
+			['point', new $wcm.OptionType<test.Sample.Point>(Point)],
+		], new $wcm.OptionType<u32>($wcm.u32));
 		PointResource.addFunction(new $wcm.FunctionType<typeof test.Sample.PointResource.constructor>('constructor', '[constructor]point-resource', [
 			['x', $wcm.u32],
 			['y', $wcm.u32],
@@ -56,7 +61,7 @@ export namespace test {
 		], $wcm.u32));
 	}
 	export namespace Sample._ {
-		const functions: $wcm.FunctionType<$wcm.ServiceFunction>[] = [$.call];
+		const functions: $wcm.FunctionType<$wcm.ServiceFunction>[] = [$.call, $.callOption];
 		const resources: $wcm.NamespaceResourceType[] = [$.PointResource];
 		export type WasmInterface = {
 			'[constructor]point-resource': (x: i32, y: i32) => i32;
@@ -64,6 +69,7 @@ export namespace test {
 			'[method]point-resource.get-y': (self: i32) => i32;
 			'[method]point-resource.add': (self: i32) => i32;
 			'call': (point_x: i32, point_y: i32) => i32;
+			'call-option': (point_case: i32, point_option_x: i32, point_option_y: i32, result: ptr<[i32, i32]>) => void;
 		};
 		export function createHost(service: test.Sample, context: $wcm.Context): WasmInterface {
 			return $wcm.Host.create<WasmInterface>(functions, resources, service, context);

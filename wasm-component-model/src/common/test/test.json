@@ -25,7 +25,7 @@
           ],
           "results": [
             {
-              "type": 3
+              "type": 5
             }
           ]
         },
@@ -94,6 +94,21 @@
               "type": "u32"
             }
           ]
+        },
+        "call-option": {
+          "name": "call-option",
+          "kind": "freestanding",
+          "params": [
+            {
+              "name": "point",
+              "type": 3
+            }
+          ],
+          "results": [
+            {
+              "type": 4
+            }
+          ]
         }
       },
       "package": 0
@@ -133,6 +148,20 @@
         "handle": {
           "borrow": 1
         }
+      },
+      "owner": null
+    },
+    {
+      "name": null,
+      "kind": {
+        "option": 0
+      },
+      "owner": null
+    },
+    {
+      "name": null,
+      "kind": {
+        "option": "u32"
       },
       "owner": null
     },

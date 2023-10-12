@@ -4,7 +4,7 @@
  *--------------------------------------------------------------------------------------------*/
 import assert from 'assert';
 
-import { u32, Memory as IMemory, ptr, size, Context, borrow, own } from '../componentModel';
+import { u32, Memory as IMemory, ptr, size, Context, borrow, own, alignment } from '../componentModel';
 
 class Memory implements IMemory {
 	public readonly buffer: ArrayBuffer;
@@ -20,14 +20,18 @@ class Memory implements IMemory {
 		this.index = 0;
 	}
 
-	public alloc(bytes: number): ptr {
-		const result = this.index;
+	public alloc(align: alignment, bytes: number): ptr {
+		const result = Memory.align(this.index, align);
 		this.index += bytes;
 		return result;
 	}
 
 	public realloc(ptr: ptr, _oldSize: size, _align: size, _newSize: size): ptr {
 		return ptr;
+	}
+
+	private static align(ptr: ptr, alignment: alignment): ptr {
+		return Math.ceil(ptr / alignment) * alignment;
 	}
 }
 
@@ -62,7 +66,16 @@ namespace PointResourceImpl {
 }
 
 const sampleImpl: t.Sample = {
-	call(point: t.Sample.Point): u32 {
+	call(point: t.Sample.Point | undefined): u32 {
+		if (point === undefined) {
+			return 0;
+		}
+		return point.x + point.y;
+	},
+	callOption(point: t.Sample.Point | undefined): u32 | undefined {
+		if (point === undefined) {
+			return undefined;
+		}
 		return point.x + point.y;
 	},
 	PointResource: PointResourceImpl
@@ -77,7 +90,6 @@ suite('sample', () => {
 	test('host', () => {
 		const host: t.Sample._.WasmInterface = t.Sample._.createHost(sampleImpl, context);
 		assert.strictEqual(host.call(1, 2), 3);
-
 		const point = host['[constructor]point-resource'](1, 2);
 		assert.strictEqual(host['[method]point-resource.get-x'](point), 1);
 		assert.strictEqual(host['[method]point-resource.get-y'](point), 2);
@@ -91,5 +103,16 @@ suite('sample', () => {
 		assert.strictEqual(service.PointResource.getX(point), 1);
 		assert.strictEqual(service.PointResource.getY(point), 2);
 		assert.strictEqual(service.PointResource.add(point), 3);
+	});
+});
+
+suite('option', () => {
+	test('host', () => {
+		const host: t.Sample._.WasmInterface = t.Sample._.createHost(sampleImpl, context);
+		const memory = context.memory;
+		const ptr = memory.alloc(4, 8);
+		host['call-option'](1, 1, 2, ptr);
+		assert.strictEqual(memory.view.getUint32(ptr, true), 1);
+		assert.strictEqual(memory.view.getUint32(ptr + 4, true), 3);
 	});
 });

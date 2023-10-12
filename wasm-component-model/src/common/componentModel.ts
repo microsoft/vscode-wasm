@@ -34,13 +34,14 @@ export interface Memory {
 	readonly buffer: ArrayBuffer;
 	readonly raw: Uint8Array;
 	readonly view: DataView;
-	alloc: (align: size, size: size) => ptr;
-	realloc: (ptr: ptr, oldSize: size, align: size, newSize: size) => ptr;
+	alloc: (align: alignment, size: size) => ptr;
+	realloc: (ptr: ptr, oldSize: size, align: alignment, newSize: size) => ptr;
 }
 
 export type encodings = 'utf-8' | 'utf-16' | 'latin1+utf-16';
 export interface Options {
 	encoding: encodings;
+	keepOption?: boolean;
 }
 
 export type alignment = 1 | 2 | 4 | 8;
@@ -196,7 +197,7 @@ export const bool: ComponentModelType<boolean> = {
 		return value !== 0;
 	},
 	alloc(memory): ptr<u8> {
-		return memory.alloc(bool.size, bool.alignment);
+		return memory.alloc(bool.alignment, bool.size);
 	},
 	store(memory, ptr: ptr<u8>, value: boolean): void {
 		memory.view.setUint8(ptr, value ? 1 : 0);
@@ -229,7 +230,7 @@ namespace $u8 {
 	}
 
 	export function alloc(memory: Memory): ptr<u8> {
-		return memory.alloc(size, alignment);
+		return memory.alloc(alignment, size);
 	}
 
 	export function store(memory: Memory, ptr: ptr<u8>, value: u8): void {
@@ -268,7 +269,7 @@ namespace $u16 {
 	}
 
 	export function alloc(memory: Memory): ptr<u16> {
-		return memory.alloc(size, alignment);
+		return memory.alloc(alignment, size);
 	}
 
 	export function store(memory: Memory, ptr: ptr<u16>, value: u16): void {
@@ -307,7 +308,7 @@ namespace $u32 {
 	}
 
 	export function alloc(memory: Memory): ptr<u32> {
-		return memory.alloc(size, alignment);
+		return memory.alloc(alignment, size);
 	}
 
 	export function store(memory: Memory, ptr: ptr<u32>, value: u32): void {
@@ -346,7 +347,7 @@ namespace $u64 {
 	}
 
 	export function alloc(memory: Memory): ptr<u64> {
-		return memory.alloc(size, alignment);
+		return memory.alloc(alignment, size);
 	}
 
 	export function store(memory: Memory, ptr: ptr<u64>, value: u64): void {
@@ -393,7 +394,7 @@ namespace $s8 {
 	}
 
 	export function alloc(memory: Memory): ptr<s8> {
-		return memory.alloc(size, alignment);
+		return memory.alloc(alignment, size);
 	}
 
 	export function store(memory: Memory, ptr: ptr<s8>, value: s8): void {
@@ -432,7 +433,7 @@ namespace $s16 {
 	}
 
 	export function alloc(memory: Memory): ptr<s16> {
-		return memory.alloc(size, alignment);
+		return memory.alloc(alignment, size);
 	}
 
 	export function store(memory: Memory, ptr: ptr<s16>, value: s16): void {
@@ -471,7 +472,7 @@ namespace $s32 {
 	}
 
 	export function alloc(memory: Memory): ptr<s32> {
-		return memory.alloc(size, alignment);
+		return memory.alloc(alignment, size);
 	}
 
 	export function store(memory: Memory, ptr: ptr<s32>, value: s32): void {
@@ -510,7 +511,7 @@ namespace $s64 {
 	}
 
 	export function alloc(memory: Memory): ptr<s64> {
-		return memory.alloc(size, alignment);
+		return memory.alloc(alignment, size);
 	}
 
 	export function store(memory: Memory, ptr: ptr<s64>, value: s64): void {
@@ -550,7 +551,7 @@ namespace $float32 {
 	}
 
 	export function alloc(memory: Memory): ptr<float32> {
-		return memory.alloc(size, alignment);
+		return memory.alloc(alignment, size);
 	}
 
 	export function store(memory: Memory, ptr: ptr<float32>, value: float32): void {
@@ -590,7 +591,7 @@ namespace $float64 {
 	}
 
 	export function alloc(memory: Memory): ptr<float64> {
-		return memory.alloc(size, alignment);
+		return memory.alloc(alignment, size);
 	}
 
 	export function store(memory: Memory, ptr: ptr<float64>, value: float64): void {
@@ -719,7 +720,7 @@ namespace $wstring {
 	}
 
 	export function alloc(memory: Memory): ptr {
-		return memory.alloc(size, alignment);
+		return memory.alloc(alignment, size);
 	}
 
 	export function store(memory: Memory, ptr: ptr, str: string, options: Options): void {
@@ -810,7 +811,7 @@ export class ListType<T> implements ComponentModelType<T[]> {
 	}
 
 	public alloc(memory: Memory): ptr {
-		return memory.alloc(this.size, this.alignment);
+		return memory.alloc(this.alignment, this.size);
 	}
 
 	public store(memory: Memory, ptr: ptr, values: T[], options: Options): void {
@@ -881,7 +882,7 @@ abstract class TypeArrayType<T> implements ComponentModelType<T> {
 	}
 
 	public alloc(memory: Memory): ptr {
-		return memory.alloc(this.size, this.alignment);
+		return memory.alloc(this.alignment, this.size);
 	}
 
 	public store(memory: Memory, ptr: ptr, value: T, options: Options): void {
@@ -1069,7 +1070,7 @@ abstract class BaseRecordType<T extends JRecord | JTuple, F extends TypedField> 
 	}
 
 	public alloc(memory: Memory): ptr {
-		return memory.alloc(this.size, this.alignment);
+		return memory.alloc(this.alignment, this.size);
 	}
 
 	public store(memory: Memory, ptr: ptr, record: T, options: Options): void {
@@ -1157,14 +1158,7 @@ export class RecordType<T extends JRecord> extends BaseRecordType<T, RecordField
 		const result: JType[] = [];
 		for (const field of fields) {
 			const value = record[field.name];
-			if (field.type.kind === ComponentModelTypeKind.option) {
-				result.push(value === undefined ? option._none() : option._some(value));
-			} else {
-				if (value === undefined) {
-					throw new Error(`Missing value for field ${field.name}. Field is declared as ${field.type.kind}`);
-				}
-				result.push(value);
-			}
+			result.push(value);
 		}
 		return result;
 	}
@@ -1303,7 +1297,7 @@ export class FlagsType<T extends JFlags> implements ComponentModelType<T> {
 	}
 
 	public alloc(memory: Memory): ptr<u8 | u16 | u32 | u32[]> {
-		return memory.alloc(this.size, this.alignment);
+		return memory.alloc(this.alignment, this.size);
 	}
 
 	public store(memory: Memory, ptr: ptr<u8 | u16 | u32 | u32[]>, flags: JFlags, options: Options): void {
@@ -1445,7 +1439,7 @@ export class VariantType<T extends JVariantCase, I, V> implements ComponentModel
 	public readonly alignment: alignment;
 	public readonly flatTypes: readonly wasmTypeName[];
 
-	constructor(variants: (GenericComponentModelType | undefined)[], ctor: (caseIndex: I, value: V) => T, kind: ComponentModelTypeKind.variant | ComponentModelTypeKind.option | ComponentModelTypeKind.result = ComponentModelTypeKind.variant) {
+	constructor(variants: (GenericComponentModelType | undefined)[], ctor: (caseIndex: I, value: V) => T, kind: ComponentModelTypeKind.variant | ComponentModelTypeKind.result = ComponentModelTypeKind.variant) {
 		const cases: VariantCase[] = [];
 		for (let i = 0; i < variants.length; i++) {
 			const type = variants[i];
@@ -1501,25 +1495,25 @@ export class VariantType<T extends JVariantCase, I, V> implements ComponentModel
 		return memory.alloc(this.alignment, this.size);
 	}
 
-	public store(memory: Memory, ptr: ptr, value: T, options: Options): void {
-		this.discriminantType.store(memory, ptr, value.case, options);
+	public store(memory: Memory, ptr: ptr, variantValue: T, options: Options): void {
+		this.discriminantType.store(memory, ptr, variantValue.case, options);
 		ptr += this.discriminantType.size;
-		const c = this.cases[value.case];
-		if (c.type !== undefined && value !== undefined) {
+		const c = this.cases[variantValue.case];
+		if (c.type !== undefined && variantValue.value !== undefined) {
 			ptr = align(ptr, this.maxCaseAlignment);
-			c.type.store(memory, ptr, value, options);
+			c.type.store(memory, ptr, variantValue.value, options);
 		}
 	}
 
-	public lowerFlat(result: wasmType[], memory: Memory, value: T, options: Options): void {
+	public lowerFlat(result: wasmType[], memory: Memory, variantValue: T, options: Options): void {
 		const flatTypes = this.flatTypes;
-		this.discriminantType.lowerFlat(result, memory, value.case, options);
-		const c = this.cases[value.case];
+		this.discriminantType.lowerFlat(result, memory, variantValue.case, options);
+		const c = this.cases[variantValue.case];
 		// First one is the discriminant type. So skip it.
 		let valuesToFill = this.flatTypes.length - 1;
-		if (c.type !== undefined && value !== undefined) {
+		if (c.type !== undefined && variantValue.value !== undefined) {
 			const payload: wasmType[] = [];
-			c.type.lowerFlat(payload, memory, value, options);
+			c.type.lowerFlat(payload, memory, variantValue.value, options);
 			// First one is the discriminant type. So skip it.
 			const wantTypes = flatTypes.slice(1);
 			const haveTypes = c.wantFlatTypes!;
@@ -1705,6 +1699,10 @@ export namespace option {
 		return new OptionImpl<T>(some, value ) as some<T>;
 	}
 
+	export function isOption<T extends JType>(value: T | option<T>): value is option<T> {
+		return value instanceof OptionImpl;
+	}
+
 	class OptionImpl<T extends JType> {
 		private readonly _case: _ct;
 		private readonly _value?: _vt<T>;
@@ -1733,9 +1731,107 @@ export namespace option {
 	}
 }
 export type option<T extends JType> = option.none<T> | option.some<T>;
-export class OptionType<T extends JType> extends VariantType<option<T>, option._ct, option._vt<T>> {
-	constructor(type: GenericComponentModelType) {
-		super([undefined, type], option._ctor<T>, ComponentModelTypeKind.option);
+export class OptionType<T extends JType> implements ComponentModelType<T | option<T> | undefined> {
+
+	private readonly valueType: GenericComponentModelType;
+
+	public readonly kind: ComponentModelTypeKind;
+	public readonly size: size;
+	public readonly alignment: alignment;
+	public readonly flatTypes: readonly wasmTypeName[];
+
+
+	constructor(valueType: GenericComponentModelType) {
+		this.valueType = valueType;
+		this.kind = ComponentModelTypeKind.option;
+		this.size = this.computeSize();
+		this.alignment = this.computeAlignment();
+		this.flatTypes = this.computeFlatTypes();
+	}
+
+	public load(memory: Memory, ptr: ptr, options: Options): T | option<T> | undefined {
+		const caseIndex = u8.load(memory, ptr, options);
+		if (caseIndex === option.none) {
+			return options.keepOption ? option._ctor<T>(option.none, undefined) : undefined;
+		} else {
+			ptr += u8.size;
+			ptr = align(ptr, this.alignment);
+			const value = this.valueType.load(memory, ptr, options);
+			return options.keepOption ? option._ctor(option.some, value) : value;
+		}
+	}
+
+	public liftFlat(memory: Memory, values: FlatValuesIter, options: Options): T | option<T> | undefined {
+		// First one is the discriminant type. So skip it.
+		const caseIndex = u8.liftFlat(memory, values, options);
+		if (caseIndex === option.none) {
+			// Read over the value params
+			for (let i = 0; i < this.valueType.flatTypes.length; i++) {
+				values.next();
+			}
+			return options.keepOption ? option._ctor<T>(option.none, undefined) : undefined;
+		} else {
+			const value = this.valueType.liftFlat(memory, values, options);
+			return options.keepOption ? option._ctor(option.some, value) : value;
+		}
+	}
+
+	public alloc(memory: Memory): ptr {
+		return memory.alloc(this.alignment, this.size);
+	}
+
+	public store(memory: Memory, ptr: ptr, value: T | option<T> | undefined, options: Options): void {
+		const optValue = this.asOptionValue(value, options);
+		u8.store(memory, ptr, optValue.case, options);
+		ptr += u8.size;
+		if (optValue.case === option.some) {
+			ptr = align(ptr, this.valueType.alignment);
+			this.valueType.store(memory, ptr, optValue.value, options);
+		}
+	}
+
+	public lowerFlat(result: wasmType[], memory: Memory, value: T | option<T> | undefined, options: Options): void {
+		const optValue = this.asOptionValue(value, options);
+		u8.lowerFlat(result, memory, optValue.case, options);
+		if (optValue.case === option.none) {
+			for (const type of this.valueType.flatTypes) {
+				if (type === 'i64') {
+					result.push(0n);
+				} else {
+					result.push(0);
+				}
+			}
+		} else {
+			this.valueType.lowerFlat(result, memory, optValue.value, options);
+		}
+	}
+
+	private asOptionValue(value: T | option<T> | undefined, options: Options): option<T> {
+		if (option.isOption(value)) {
+			if (!options.keepOption) {
+				throw new ComponentModelError('Received an option value although options should be unpacked.');
+			}
+			return value as option<T>;
+		} else {
+			if (options.keepOption) {
+				throw new ComponentModelError('Received a unpacked option value although options should NOT be unpacked.');
+			}
+			return value === undefined ? option._ctor<T>(option.none, undefined) : option._ctor(option.some, value);
+		}
+	}
+
+	private computeSize(): size {
+		let result = u8.size;
+		result = align(result, this.valueType.alignment);
+		return result + this.valueType.size;
+	}
+
+	private computeAlignment(): alignment {
+		return Math.max(u8.alignment, this.valueType.alignment) as alignment;
+	}
+
+	private computeFlatTypes(): readonly wasmTypeName[] {
+		return [...u8.flatTypes, ...this.valueType.flatTypes];
 	}
 }
 
@@ -1797,7 +1893,7 @@ export class ResultType<O extends JType | void, E extends JType | void = void> e
 	}
 }
 
-export type JType = number | bigint | string | boolean | JArray | JRecord | JVariantCase | JFlags | JTuple | JEnum | option<any> | result<any, any> | Int8Array | Int16Array | Int32Array | BigInt64Array | Uint8Array | Uint16Array | Uint32Array | BigUint64Array | Float32Array | Float64Array;
+export type JType = number | bigint | string | boolean | JArray | JRecord | JVariantCase | JFlags | JTuple | JEnum | option<any> | undefined | result<any, any> | Int8Array | Int16Array | Int32Array | BigInt64Array | Uint8Array | Uint16Array | Uint32Array | BigUint64Array | Float32Array | Float64Array;
 
 export type CallableParameter = [/* name */string, /* type */GenericComponentModelType];
 
@@ -1814,6 +1910,7 @@ abstract class AbstractResourceCallable {
 
 	protected readonly paramFlatTypes: number;
 	protected readonly returnFlatTypes: number;
+	protected readonly mode: 'lift' | 'lower';
 
 	constructor(name: string, witName: string, params: CallableParameter[], returnType?: GenericComponentModelType) {
 		this.name = name;
@@ -1829,9 +1926,10 @@ abstract class AbstractResourceCallable {
 		this.paramFlatTypes = paramFlatTypes;
 		this.paramTupleType = new TupleType(paramTypes);
 		this.returnFlatTypes = returnType !== undefined ? returnType.flatTypes.length : 0;
+		this.mode = 'lower';
 	}
 
-	protected liftParamValues(wasmValues: (number | bigint)[], memory: Memory, options: Options): JType[] {
+	public liftParamValues(wasmValues: (number | bigint)[], memory: Memory, options: Options): JType[] {
 		if (this.paramFlatTypes > AbstractResourceCallable.MAX_FLAT_PARAMS) {
 			const p0 = wasmValues[0];
 			if (!Number.isInteger(p0)) {
@@ -1843,7 +1941,7 @@ abstract class AbstractResourceCallable {
 		}
 	}
 
-	protected liftReturnValue(value: wasmType | void, memory: Memory, options: Options): JType | void {
+	public liftReturnValue(value: wasmType | void, memory: Memory, options: Options): JType | void {
 		if (this.returnFlatTypes === 0) {
 			return;
 		} else if (this.returnFlatTypes <= FunctionType.MAX_FLAT_RESULTS) {
@@ -1855,9 +1953,9 @@ abstract class AbstractResourceCallable {
 		}
 	}
 
-	protected lowerParamValues(values: JType[], memory: Memory, options: Options, out: ptr | undefined): wasmType[] {
+	public lowerParamValues(values: JType[], memory: Memory, options: Options, out: ptr | undefined): wasmType[] {
 		if (this.paramFlatTypes > FunctionType.MAX_FLAT_PARAMS) {
-			const ptr = out !== undefined ? out : memory.alloc(this.paramTupleType.size, this.paramTupleType.alignment);
+			const ptr = out !== undefined ? out : memory.alloc(this.paramTupleType.alignment, this.paramTupleType.size);
 			this.paramTupleType.store(memory, ptr, values as JTuple, options);
 			return [ptr];
 		} else {
@@ -1867,7 +1965,7 @@ abstract class AbstractResourceCallable {
 		}
 	}
 
-	protected lowerReturnValue(value: JType | void, memory: Memory, options: Options, out: ptr | undefined): wasmType | void {
+	public lowerReturnValue(value: JType | void, memory: Memory, options: Options, out: ptr | undefined): wasmType | void {
 		if (this.returnFlatTypes === 0) {
 			return;
 		} else if (this.returnFlatTypes <= FunctionType.MAX_FLAT_RESULTS) {
@@ -1879,9 +1977,9 @@ abstract class AbstractResourceCallable {
 			return result[0];
 		} else {
 			const type = this.returnType!;
-			const ptr = out !== undefined ? out : memory.alloc(type.size, type.alignment);
+			const ptr = out !== undefined ? out : memory.alloc(type.alignment, type.size);
 			type.store(memory, ptr, value, options);
-			return ptr;
+			return;
 		}
 	}
 }
@@ -1900,15 +1998,36 @@ export class FunctionType<_T extends Function> extends AbstractResourceCallable 
 	}
 
 	public callService(params: (number | bigint)[], serviceFunction: ServiceFunction, memory: Memory, options: Options): number | bigint | void {
+		// We currently only support 'lower' mode for results > MAX_FLAT_RESULTS.
+		if (this.returnFlatTypes > FunctionType.MAX_FLAT_RESULTS && params.length !== this.paramFlatTypes + 1) {
+			throw new ComponentModelError(`Invalid number of parameters. Received ${params.length} but expected ${this.paramFlatTypes + 1}`);
+		}
 		const jParams = this.liftParamValues(params, memory, options);
 		const result: JType | void = serviceFunction(...jParams);
-		return this.lowerReturnValue(result, memory, options, undefined);
+		const out = params[params.length - 1];
+		if (typeof out !== 'number') {
+			throw new ComponentModelError(`Result pointer must be a number (u32), but got ${out}.`);
+		}
+		return this.lowerReturnValue(result, memory, options, out);
 	}
 
 	public callWasm(params: JType[], wasmFunction: WasmFunction, memory: Memory, options: Options): JType | void {
 		const wasmValues = this.lowerParamValues(params, memory, options, undefined);
+		// We currently only support 'lower' mode for results > MAX_FLAT_RESULTS.
+		let resultPtr: ptr | undefined = undefined;
+		if (this.returnFlatTypes > FunctionType.MAX_FLAT_RESULTS) {
+			resultPtr = memory.alloc(this.returnType!.alignment, this.returnType!.size);
+			wasmValues.push(resultPtr);
+		}
 		const result = wasmFunction(...wasmValues);
-		return this.liftReturnValue(result, memory, options);
+		switch(this.returnFlatTypes) {
+			case 0:
+				return;
+			case 1:
+				return result;
+			default:
+				return this.liftReturnValue(resultPtr, memory, options);
+		}
 	}
 }
 
@@ -1991,7 +2110,7 @@ export interface Context {
 	readonly options: Options;
 }
 
-type UnionJType = number & bigint & string & boolean & JArray & JRecord & JVariantCase & JFlags & JTuple & JEnum & option<any> & result<any, any> & Int8Array & Int16Array & Int32Array & BigInt64Array & Uint8Array & Uint16Array & Uint32Array & BigUint64Array & Float32Array & Float64Array;
+type UnionJType = number & bigint & string & boolean & JArray & JRecord & JVariantCase & JFlags & JTuple & JEnum & option<any> & undefined & result<any, any> & Int8Array & Int16Array & Int32Array & BigInt64Array & Uint8Array & Uint16Array & Uint32Array & BigUint64Array & Float32Array & Float64Array;
 
 type UnionWasmType = number & bigint;
 type ParamWasmFunction = (...params: UnionWasmType[]) => wasmType | void;
