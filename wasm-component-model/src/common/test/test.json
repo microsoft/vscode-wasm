@@ -86,6 +86,21 @@
           "params": [
             {
               "name": "point",
+              "type": 0
+            }
+          ],
+          "results": [
+            {
+              "type": "u32"
+            }
+          ]
+        },
+        "call-option": {
+          "name": "call-option",
+          "kind": "freestanding",
+          "params": [
+            {
+              "name": "point",
               "type": 3
             }
           ],
