@@ -67,7 +67,7 @@ namespace PointResourceImpl {
 	}
 }
 
-const sampleImpl: Types = {
+const serviceImpl: Types = {
 	call(point: Types.Point | undefined): u32 {
 		if (point === undefined) {
 			return 0;
@@ -109,7 +109,7 @@ const context: Context = {
 };
 
 suite('point', () => {
-	const host: Types._.WasmInterface = Types._.createHost(sampleImpl, context);
+	const host: Types._.WasmInterface = Types._.createHost(serviceImpl, context);
 	const service: Types = Types._.createService(host, context);
 	test('host:call', () => {
 		assert.strictEqual(host.call(1, 2), 3);
@@ -120,7 +120,7 @@ suite('point', () => {
 });
 
 suite ('point-resource', () => {
-	const host: Types._.WasmInterface = Types._.createHost(sampleImpl, context);
+	const host: Types._.WasmInterface = Types._.createHost(serviceImpl, context);
 	const service: Types = Types._.createService(host, context);
 	test('host:call', () => {
 		const point = host['[constructor]point-resource'](1, 2);
@@ -138,7 +138,7 @@ suite ('point-resource', () => {
 
 suite('option', () => {
 	test('host:call', () => {
-		const host: Types._.WasmInterface = Types._.createHost(sampleImpl, context);
+		const host: Types._.WasmInterface = Types._.createHost(serviceImpl, context);
 		const memory = context.memory;
 		const ptr = memory.alloc(4, 8);
 		host['call-option'](1, 1, 2, ptr);
@@ -148,7 +148,7 @@ suite('option', () => {
 });
 
 suite('variant', () => {
-	const host: Types._.WasmInterface = Types._.createHost(sampleImpl, context);
+	const host: Types._.WasmInterface = Types._.createHost(serviceImpl, context);
 	const service: Types = Types._.createService(host, context);
 
 	test('empty', () => {

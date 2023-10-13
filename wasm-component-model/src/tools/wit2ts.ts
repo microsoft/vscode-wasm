@@ -110,10 +110,10 @@ class Code {
 	private readonly source: string[];
 	private indent: number;
 
-	constructor() {
-		this.imports = new Imports();
+	constructor(code?: Code) {
+		this.imports = code !== undefined ? code.imports : new Imports();
 		this.source = [];
-		this.indent = 0;
+		this.indent = code !== undefined ? code.indent : 0;
 	}
 
 	public increaseIndent(): void {
@@ -151,6 +151,10 @@ class Code {
 		this.source.unshift(' *  Copyright (c) Microsoft Corporation. All rights reserved.');
 		this.source.unshift('/*---------------------------------------------------------------------------------------------');
 		return this.source.join('\n');
+	}
+
+	public append(code: Code): void {
+		this.source.push(...code.source);
 	}
 }
 
@@ -1178,7 +1182,16 @@ namespace TypeScript {
 				code.push(`}`);
 			}
 
-			this.mainCode.push(`export { ${pkgName} } from './${this.nameProvider.asImportName(this.pkg)}';`);
+			if (this.options.hoist) {
+				this.mainCode.push(`import { ${pkgName} } from './${this.nameProvider.asImportName(this.pkg)}';`);
+				const names = Array.from(interfaces.keys());
+				for (const name of names) {
+					this.mainCode.push(`import ${name} = ${pkgName}.${name};`);
+				}
+				this.mainCode.push(`export { ${pkgName}, ${names.join(', ')} };`);
+			} else {
+				this.mainCode.push(`export { ${pkgName} } from './${this.nameProvider.asImportName(this.pkg)}';`);
+			}
 			return code;
 		}
 
@@ -1199,6 +1212,7 @@ namespace TypeScript {
 		}
 
 		private processInterface(iface: Interface, qualifier: string, code: Code, printers: Printers): void {
+			const typeCode = new Code(code);
 			const name = this.nameProvider.asNamespaceName(iface);
 			const metaModelEmitters: MetaModel.Emitter[] = [];
 			this.metaModelEmitters.set(name, metaModelEmitters);
@@ -1206,12 +1220,14 @@ namespace TypeScript {
 			emitDocumentation(iface, code);
 			code.push(`export namespace ${name} {`);
 			code.increaseIndent();
+			typeCode.push(`export type ${name} = {`);
+			typeCode.increaseIndent();
 			code.push(`export const id = '${this.pkg.name}/${iface.name}' as const;`);
 			const exports: string[] = [];
 			for (const t of Object.values(iface.types)) {
 				code.push('');
 				const type = this.symbols.getType(t);
-				const typeEmitter = new TypeEmitter(type, iface, `${qualifier}.${name}`, code, this.symbols, printers, this.nameProvider, this.options);
+				const typeEmitter = new TypeEmitter(type, iface, `${qualifier}.${name}`, code, typeCode, this.symbols, printers, this.nameProvider, this.options);
 				typeEmitter.emit();
 				if (typeEmitter.metaModelEmitter !== undefined) {
 					metaModelEmitters.push(typeEmitter.metaModelEmitter);
@@ -1228,7 +1244,7 @@ namespace TypeScript {
 					continue;
 				}
 				code.push('');
-				const funcEmitter = new FunctionEmitter(func, `${qualifier}.${name}`, code, printers, this.nameProvider);
+				const funcEmitter = new FunctionEmitter(func, `${qualifier}.${name}`, name, code, typeCode, printers, this.nameProvider);
 				funcEmitter.emit();
 				if (funcEmitter.metaModelEmitter !== undefined) {
 					metaModelEmitters.push(funcEmitter.metaModelEmitter);
@@ -1237,11 +1253,9 @@ namespace TypeScript {
 			}
 			code.decreaseIndent();
 			code.push(`}`);
-			if (exports.length > 0) {
-				code.push(`export type ${name} = Pick<typeof ${name}, ${exports.map(item => `'${item}'`).join(' | ')}>;`);
-			} else {
-				code.push(`export type ${name} = typeof ${name};`);
-			}
+			typeCode.decreaseIndent();
+			typeCode.push(`};`);
+			code.append(typeCode);
 		}
 	}
 
@@ -1250,18 +1264,20 @@ namespace TypeScript {
 		private readonly type: Type;
 		private readonly scope: Interface;
 		private readonly qualifier: string;
-		private readonly code: Code;
+		private readonly namespaceCode: Code;
+		private readonly typeCode: Code;
 		private readonly symbols: SymbolTable;
 		private readonly printers: Printers;
 		private readonly nameProvider: NameProvider;
 		private readonly options: ResolvedOptions;
 		public metaModelEmitter: MetaModel.Emitter | undefined;
 
-		constructor(type: Type, scope: Interface, qualifier: string, code: Code, symbols: SymbolTable, printers: Printers, nameProvider: NameProvider, options: ResolvedOptions) {
+		constructor(type: Type, scope: Interface, qualifier: string, namespaceCode: Code, typeCode: Code, symbols: SymbolTable, printers: Printers, nameProvider: NameProvider, options: ResolvedOptions) {
 			this.type = type;
 			this.scope = scope;
 			this.qualifier = qualifier;
-			this.code = code;
+			this.namespaceCode = namespaceCode;
+			this.typeCode = typeCode;
 			this.symbols = symbols;
 			this.printers = printers;
 			this.nameProvider = nameProvider;
@@ -1272,7 +1288,7 @@ namespace TypeScript {
 			if (this.type.name === null) {
 				throw new Error(`Type ${this.type.kind} has no name.`);
 			}
-			emitDocumentation(this.type, this.code);
+			emitDocumentation(this.type, this.namespaceCode);
 			if (Type.isRecordType(this.type)) {
 				this.emitRecord(this.type);
 			} else if (Type.isVariantType(this.type)) {
@@ -1288,7 +1304,7 @@ namespace TypeScript {
 					const qualifier = referenced.owner !== null ? this.computeQualifier(this.symbols.resolveOwner(referenced.owner)) : undefined;
 					const typeName = qualifier !== undefined ? `${qualifier}.${referencedName}` : referencedName;
 					const tsName = this.nameProvider.asTypeName(this.type);
-					this.code.push(`export type ${tsName} = ${typeName};`);
+					this.namespaceCode.push(`export type ${tsName} = ${typeName};`);
 					this.metaModelEmitter = new MetaModel.TypeNameEmitter(tsName, qualifier !== undefined ? `${qualifier}.$.${referencedName}` : referencedName);
 				} else {
 					throw new Error(`Cannot reference type ${JSON.stringify(referenced)} from ${JSON.stringify(this.scope)}`);
@@ -1297,7 +1313,7 @@ namespace TypeScript {
 				this.emitResource(this.type);
 			} else {
 				const name = this.nameProvider.asTypeName(this.type);
-				this.code.push(`export type ${name} = ${this.printers.typeScript.print(this.type, TypeUsage.typeDeclaration)};`);
+				this.namespaceCode.push(`export type ${name} = ${this.printers.typeScript.print(this.type, TypeUsage.typeDeclaration)};`);
 				this.metaModelEmitter = new MetaModel.TypeNameEmitter(name, this.printers.metaModel.print(this.type, TypeUsage.typeDeclaration));
 			}
 		}
@@ -1305,30 +1321,30 @@ namespace TypeScript {
 		private emitRecord(type: RecordType): void {
 			const kind = type.kind;
 			const tsName = this.nameProvider.asTypeName(type);
-			this.code.push(`export type ${tsName} = {`);
-			this.code.increaseIndent();
+			this.namespaceCode.push(`export type ${tsName} = {`);
+			this.namespaceCode.increaseIndent();
 			const metaFields: string[][] = [];
 			for (const field of kind.record.fields) {
-				emitDocumentation(field, this.code, true);
+				emitDocumentation(field, this.namespaceCode, true);
 				const isOptional = TypeReference.isString(field.type)
 					? false
 					: Type.isOptionType(this.symbols.getType(field.type));
 				const fieldName = this.nameProvider.asFieldName(field);
-				this.code.push(`${fieldName}${isOptional ? '?' : ''}: ${this.printers.typeScript.printTypeReference(field.type, TypeUsage.property)};`);
+				this.namespaceCode.push(`${fieldName}${isOptional ? '?' : ''}: ${this.printers.typeScript.printTypeReference(field.type, TypeUsage.property)};`);
 				metaFields.push([fieldName, this.printers.metaModel.printTypeReference(field.type, TypeUsage.property)]);
 			}
-			this.code.decreaseIndent();
-			this.code.push(`};`);
+			this.namespaceCode.decreaseIndent();
+			this.namespaceCode.push(`};`);
 			this.metaModelEmitter= new MetaModel.RecordEmitter(tsName, `${this.qualifier}.${tsName}`, metaFields);
 		}
 
 		private emitVariant(type: VariantType): void {
-			const code = this.code;
+			const code = this.namespaceCode;
 			const kind = type.kind;
 			const variantName = this.nameProvider.asTypeName(type);
 
-			this.code.push(`export namespace ${variantName} {`);
-			this.code.increaseIndent();
+			this.namespaceCode.push(`export namespace ${variantName} {`);
+			this.namespaceCode.increaseIndent();
 			const names: string[] = [];
 			const types: (string | undefined)[] = [];
 			const metaTypes: (string | undefined)[] = [];
@@ -1435,14 +1451,14 @@ namespace TypeScript {
 		private emitEnum(type: EnumType): void {
 			const kind = type.kind;
 			const tsName = this.nameProvider.asTypeName(type);
-			this.code.push(`export enum ${tsName} {`);
-			this.code.increaseIndent();
+			this.namespaceCode.push(`export enum ${tsName} {`);
+			this.namespaceCode.increaseIndent();
 			for (let i = 0; i < kind.enum.cases.length; i++) {
 				const item = kind.enum.cases[i];
-				this.code.push(`${this.nameProvider.asEnumCaseName(item)} = ${i},`);
+				this.namespaceCode.push(`${this.nameProvider.asEnumCaseName(item)} = ${i},`);
 			}
-			this.code.decreaseIndent();
-			this.code.push(`}`);
+			this.namespaceCode.decreaseIndent();
+			this.namespaceCode.push(`}`);
 			this.metaModelEmitter = new MetaModel.EnumerationEmitter(tsName, `${this.qualifier}.${tsName}`, kind.enum.cases.length);
 		}
 
@@ -1450,15 +1466,15 @@ namespace TypeScript {
 			const kind = type.kind;
 			const tsName = this.nameProvider.asTypeName(type);
 			const flags: string[] = [];
-			this.code.push(`export type ${tsName} = {`);
-			this.code.increaseIndent();
+			this.namespaceCode.push(`export type ${tsName} = {`);
+			this.namespaceCode.increaseIndent();
 			for (const flag of kind.flags.flags) {
 				const flagName = this.nameProvider.asFlagName(flag);
-				this.code.push(`${flagName}: boolean;`);
+				this.namespaceCode.push(`${flagName}: boolean;`);
 				flags.push(flagName);
 			}
-			this.code.decreaseIndent();
-			this.code.push(`};`);
+			this.namespaceCode.decreaseIndent();
+			this.namespaceCode.push(`};`);
 			this.metaModelEmitter = new MetaModel.FlagsEmitter(tsName, `${this.qualifier}.${tsName}`, flags);
 		}
 
@@ -1467,22 +1483,24 @@ namespace TypeScript {
 			const methods = this.symbols.getMethods(type);
 			const metaModelEmitters: MetaModel.FunctionEmitter[] = [];
 			if (methods === undefined || methods.length === 0) {
-				this.code.imports.addBaseType('resource');
-				this.code.push(`export type ${tsName} = resource;`);
+				this.namespaceCode.imports.addBaseType('resource');
+				this.namespaceCode.push(`export type ${tsName} = resource;`);
 			} else {
-				this.code.imports.addBaseType('resource');
-				this.code.push(`export type ${tsName} = resource;`);
-				this.code.push(`export namespace ${tsName} {`);
-				this.code.increaseIndent();
+				this.namespaceCode.imports.addBaseType('resource');
+				this.namespaceCode.push(`export namespace ${tsName} {`);
+				this.typeCode.push(`${tsName}: {`);
+				this.typeCode.increaseIndent();
+				this.namespaceCode.increaseIndent();
+				const localQualifier = this.computeLocalQualifier(type);
 				for (const method of methods) {
-					this.code.push('');
+					this.namespaceCode.push('');
 					let emitter: MethodEmitter | StaticMethodEmitter | ConstructorEmitter;
 					if (Callable.isMethod(method)) {
-						emitter = new MethodEmitter(tsName, method, this.qualifier, this.code, this.printers, this.nameProvider, this.options);
+						emitter = new MethodEmitter(tsName, method, this.qualifier, localQualifier, this.namespaceCode, this.typeCode, this.printers, this.nameProvider, this.options);
 					} else if (Callable.isStaticMethod(method)) {
-						emitter = new StaticMethodEmitter(tsName, method, this.qualifier, this.code, this.printers, this.nameProvider, this.options);
+						emitter = new StaticMethodEmitter(tsName, method, this.qualifier, localQualifier, this.namespaceCode, this.typeCode, this.printers, this.nameProvider, this.options);
 					} else if (Callable.isConstructor(method)) {
-						emitter = new ConstructorEmitter(tsName, method, this.qualifier, this.code, this.printers, this.nameProvider, this.options);
+						emitter = new ConstructorEmitter(tsName, method, this.qualifier, localQualifier, this.namespaceCode, this.typeCode, this.printers, this.nameProvider, this.options);
 					} else {
 						throw new Error(`Unexpected callable ${JSON.stringify(method)}.`);
 					}
@@ -1491,10 +1509,25 @@ namespace TypeScript {
 						metaModelEmitters.push(emitter.metaModelEmitter);
 					}
 				}
-				this.code.decreaseIndent();
-				this.code.push(`}`);
+				this.typeCode.decreaseIndent();
+				this.typeCode.push(`};`);
+				this.namespaceCode.decreaseIndent();
+				this.namespaceCode.push(`}`);
+				this.namespaceCode.push(`export type ${tsName} = resource;`);
 			}
 			this.metaModelEmitter = new MetaModel.NamespaceResourceEmitter(tsName, type.name!, metaModelEmitters);
+		}
+
+		private computeLocalQualifier(type: ResourceType): string {
+			if (type.owner === null) {
+				return this.nameProvider.asTypeName(type);
+			}
+			const owner = this.symbols.resolveOwner(type.owner);
+			if (Interface.is(owner)) {
+				return `${this.nameProvider.asNamespaceName(owner)}.${this.nameProvider.asTypeName(type)}`;
+			} else {
+				return this.nameProvider.asTypeName(type);
+			}
 		}
 
 		private computeQualifier(reference: Interface | World): string | undefined {
@@ -1514,7 +1547,7 @@ namespace TypeScript {
 					const [referencedNamespaceName, referencePackagedName] = this.nameProvider.getNamespaceAndName(referencedPackage);
 					if (typeNamespaceName === referencedNamespaceName) {
 						const referencedTypeName = this.nameProvider.asNamespaceName(reference);
-						this.code.imports.add(referencePackagedName, `./${referencePackagedName}`);
+						this.namespaceCode.imports.add(referencePackagedName, `./${referencePackagedName}`);
 						return `${referencePackagedName}.${referencedTypeName}`;
 					} else {
 						throw new Error(`Cannot compute qualifier to import ${JSON.stringify(reference)} into scope  ${JSON.stringify(scope)}.`);
@@ -1528,14 +1561,16 @@ namespace TypeScript {
 	abstract class CallableEmitter {
 
 		protected readonly callable: Callable;
+		protected readonly rootQualifier: string;
 		protected readonly qualifier: string;
 		protected readonly code: Code;
 		protected readonly printers: Printers;
 		protected readonly nameProvider: NameProvider;
 		public metaModelEmitter: MetaModel.FunctionEmitter | undefined;
 
-		constructor(callable: Callable, qualifier: string, code: Code, printers: Printers, nameProvider: NameProvider) {
+		constructor(callable: Callable, rootQualifier: string, qualifier: string, code: Code, printers: Printers, nameProvider: NameProvider) {
 			this.callable = callable;
+			this.rootQualifier = rootQualifier;
 			this.qualifier = qualifier;
 			this.code = code;
 			this.printers = printers;
@@ -1569,10 +1604,12 @@ namespace TypeScript {
 	class FunctionEmitter extends CallableEmitter {
 
 		private readonly func: Func;
+		private readonly typeCode: Code;
 
-		constructor(func: Func, qualifier: string, code: Code, printers: Printers, nameProvider: NameProvider) {
-			super(func, qualifier, code, printers, nameProvider);
+		constructor(func: Func, rootQualifier: string, qualifier: string, code: Code, typeCode: Code, printers: Printers, nameProvider: NameProvider) {
+			super(func, rootQualifier, qualifier, code, printers, nameProvider);
 			this.func = func;
+			this.typeCode = typeCode;
 		}
 
 		protected doEmit(params: string[], returnType: string | undefined, metaData: string[][], metaReturnType: string | undefined): MetaModel.FunctionEmitter {
@@ -1580,8 +1617,9 @@ namespace TypeScript {
 				returnType = 'void';
 			}
 			const funcName = this.nameProvider.asFunctionName(this.func);
-			this.code.push(`export declare function ${funcName}(${params.join(', ')}): ${returnType};`);
-			return new MetaModel.FunctionEmitter(`typeof ${this.qualifier}.${funcName}`, funcName, this.callable.name, metaData, metaReturnType);
+			this.code.push(`export type ${funcName} = (${params.join(', ')}) => ${returnType};`);
+			this.typeCode.push(`${funcName}: ${this.qualifier}.${funcName};`);
+			return new MetaModel.FunctionEmitter(`${this.rootQualifier}.${funcName}`, funcName, this.callable.name, metaData, metaReturnType);
 		}
 	}
 
@@ -1589,12 +1627,14 @@ namespace TypeScript {
 
 		private readonly resourceName: string;
 		private readonly method: Method;
+		private readonly typeCode: Code;
 		private readonly options: ResolvedOptions;
 
-		constructor(resourceName: string, method: Method, qualifier: string, code: Code, printers: Printers, nameProvider: NameProvider, options: ResolvedOptions) {
-			super(method, qualifier, code, printers, nameProvider);
+		constructor(resourceName: string, method: Method, rootQualifier: string, qualifier: string, code: Code, typeCode: Code, printers: Printers, nameProvider: NameProvider, options: ResolvedOptions) {
+			super(method, rootQualifier, qualifier, code, printers, nameProvider);
 			this.resourceName = resourceName;
 			this.method = method;
+			this.typeCode = typeCode;
 			this.options = options;
 		}
 
@@ -1603,9 +1643,10 @@ namespace TypeScript {
 				returnType = 'void';
 			}
 			const methodName = this.nameProvider.asMethodName(this.method);
-			if (this.options.resourceStyle === 'namespace') {
-				this.code.push(`export declare function ${methodName}(${params.join(', ')}): ${returnType};`);
-				return new MetaModel.ResourceFunctionEmitter(this.resourceName, `typeof ${this.qualifier}.${this.resourceName}.${methodName}`, methodName, this.callable.name, metaData, metaReturnType);
+			if (this.options.resourceStyle === 'module') {
+				this.code.push(`export type ${methodName} = (${params.join(', ')}) => ${returnType};`);
+				this.typeCode.push(`${methodName}: ${this.qualifier}.${methodName};`);
+				return new MetaModel.ResourceFunctionEmitter(this.resourceName, `${this.rootQualifier}.${this.resourceName}.${methodName}`, methodName, this.callable.name, metaData, metaReturnType);
 			} else if (this.options.resourceStyle === 'class') {
 				throw new Error(`Unknown resource style ${this.options.resourceStyle}.`);
 			} else {
@@ -1618,12 +1659,14 @@ namespace TypeScript {
 
 		private readonly resourceName: string;
 		private readonly method: StaticMethod;
+		private readonly typeCode: Code;
 		private readonly options: ResolvedOptions;
 
-		constructor(resourceName: string, method: StaticMethod, qualifier: string, code: Code, printers: Printers, nameProvider: NameProvider, options: ResolvedOptions) {
-			super(method, qualifier, code, printers, nameProvider);
+		constructor(resourceName: string, method: StaticMethod, rootQualifier: string, qualifier: string, code: Code, typeCode: Code, printers: Printers, nameProvider: NameProvider, options: ResolvedOptions) {
+			super(method, rootQualifier, qualifier, code, printers, nameProvider);
 			this.resourceName = resourceName;
 			this.method = method;
+			this.typeCode = typeCode;
 			this.options = options;
 		}
 
@@ -1632,9 +1675,10 @@ namespace TypeScript {
 				returnType = 'void';
 			}
 			const methodName = this.nameProvider.asStaticMethodName(this.method);
-			if (this.options.resourceStyle === 'namespace') {
-				this.code.push(`export declare function ${methodName}(${params.join(', ')}): ${returnType};`);
-				return new MetaModel.ResourceFunctionEmitter(this.resourceName, `typeof ${this.qualifier}.${this.resourceName}.${methodName}`, methodName, this.callable.name, metaData, metaReturnType);
+			if (this.options.resourceStyle === 'module') {
+				this.code.push(`export type ${methodName} = (${params.join(', ')}) => ${returnType};`);
+				this.typeCode.push(`${methodName}: ${this.qualifier}.${methodName};`);
+				return new MetaModel.ResourceFunctionEmitter(this.resourceName, `${this.rootQualifier}.${this.resourceName}.${methodName}`, methodName, this.callable.name, metaData, metaReturnType);
 			} else if (this.options.resourceStyle === 'class') {
 				throw new Error(`Unknown resource style ${this.options.resourceStyle}.`);
 			} else {
@@ -1647,12 +1691,14 @@ namespace TypeScript {
 
 		private readonly resourceName: string;
 		private readonly method: Constructor;
+		private readonly typeCode: Code;
 		private readonly options: ResolvedOptions;
 
-		constructor(resourceName: string, method: Constructor, qualifier: string, code: Code, printers: Printers, nameProvider: NameProvider, options: ResolvedOptions) {
-			super(method, qualifier, code, printers, nameProvider);
+		constructor(resourceName: string, method: Constructor, rootQualifier: string, qualifier: string, code: Code, typeCode: Code, printers: Printers, nameProvider: NameProvider, options: ResolvedOptions) {
+			super(method, rootQualifier, qualifier, code, printers, nameProvider);
 			this.resourceName = resourceName;
 			this.method = method;
+			this.typeCode = typeCode;
 			this.options = options;
 		}
 
@@ -1661,9 +1707,10 @@ namespace TypeScript {
 				returnType = 'void';
 			}
 			const methodName = this.nameProvider.asConstructorName(this.method);
-			if (this.options.resourceStyle === 'namespace') {
-				this.code.push(`export declare function ${methodName}(${params.join(', ')}): ${returnType};`);
-				return new MetaModel.ResourceFunctionEmitter(this.resourceName, `typeof ${this.qualifier}.${this.resourceName}.${methodName}`, methodName, this.callable.name, metaData, metaReturnType);
+			if (this.options.resourceStyle === 'module') {
+				this.code.push(`export type ${methodName} = (${params.join(', ')}) => ${returnType};`);
+				this.typeCode.push(`${methodName}: ${this.qualifier}.${methodName};`);
+				return new MetaModel.ResourceFunctionEmitter(this.resourceName, `${this.rootQualifier}.${this.resourceName}.${methodName}`, methodName, this.callable.name, metaData, metaReturnType);
 			} else if (this.options.resourceStyle === 'class') {
 				throw new Error(`Unknown resource style ${this.options.resourceStyle}.`);
 			} else {

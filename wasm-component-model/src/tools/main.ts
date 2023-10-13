@@ -97,6 +97,11 @@ export async function main(): Promise<number> {
 			boolean: true,
 			default: false
 		}).
+		option('hoist', {
+			description: 'Hoist all interface name into the package namespace for easier access.',
+			boolean: true,
+			default: false
+		}).
 		option('noMain', {
 			description: 'Do not generate a main entry point file.',
 			boolean: true,

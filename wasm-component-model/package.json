@@ -50,6 +50,6 @@
 		"test:desktop": "node ../node_modules/mocha/bin/_mocha",
 		"all": "npm run clean && npm run compile && npm run lint",
 		"all:publish": "git clean -xfd . && npm install && npm run compile:publish && npm run lint",
-		"generate:testCase": "wasm-tools component wit --json ./src/common/test/test-data.wit | node ./lib/tools/main.js --stdin --noMain --resourceStyle namespace --outDir ./src/common/test"
+		"generate:testCase": "wasm-tools component wit --json ./src/common/test/test-data.wit | node ./lib/tools/main.js --stdin --noMain --resourceStyle module --outDir ./src/common/test"
 	}
 }

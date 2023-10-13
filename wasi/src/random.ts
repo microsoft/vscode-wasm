@@ -34,9 +34,11 @@ export namespace random {
 		 * called multiple times and potentially used for purposes other than DoS
 		 * protection.
 		 */
-		export declare function insecureSeed(): [u64, u64];
+		export type insecureSeed = () => [u64, u64];
 	}
-	export type InsecureSeed = Pick<typeof InsecureSeed, 'insecureSeed'>;
+	export type InsecureSeed = {
+		insecureSeed: InsecureSeed.insecureSeed;
+	};
 	
 	/**
 	 * The insecure interface for insecure pseudo-random numbers.
@@ -57,7 +59,7 @@ export namespace random {
 		 * implementations are encouraged to return evenly distributed values with
 		 * a long period.
 		 */
-		export declare function getInsecureRandomBytes(len: u64): Uint8Array;
+		export type getInsecureRandomBytes = (len: u64) => Uint8Array;
 		
 		/**
 		 * Return an insecure pseudo-random `u64` value.
@@ -65,9 +67,12 @@ export namespace random {
 		 * This function returns the same type of pseudo-random data as
 		 * `get-insecure-random-bytes`, represented as a `u64`.
 		 */
-		export declare function getInsecureRandomU64(): u64;
+		export type getInsecureRandomU64 = () => u64;
 	}
-	export type Insecure = Pick<typeof Insecure, 'getInsecureRandomBytes' | 'getInsecureRandomU64'>;
+	export type Insecure = {
+		getInsecureRandomBytes: Insecure.getInsecureRandomBytes;
+		getInsecureRandomU64: Insecure.getInsecureRandomU64;
+	};
 	
 	/**
 	 * WASI Random is a random data API.
@@ -92,7 +97,7 @@ export namespace random {
 		 * must omit this function, rather than implementing it with deterministic
 		 * data.
 		 */
-		export declare function getRandomBytes(len: u64): Uint8Array;
+		export type getRandomBytes = (len: u64) => Uint8Array;
 		
 		/**
 		 * Return a cryptographically-secure random or pseudo-random `u64` value.
@@ -100,15 +105,18 @@ export namespace random {
 		 * This function returns the same type of data as `get-random-bytes`,
 		 * represented as a `u64`.
 		 */
-		export declare function getRandomU64(): u64;
+		export type getRandomU64 = () => u64;
 	}
-	export type Random = Pick<typeof Random, 'getRandomBytes' | 'getRandomU64'>;
+	export type Random = {
+		getRandomBytes: Random.getRandomBytes;
+		getRandomU64: Random.getRandomU64;
+	};
 	
 }
 
 export namespace random {
 	export namespace InsecureSeed.$ {
-		export const insecureSeed = new $wcm.FunctionType<typeof random.InsecureSeed.insecureSeed>('insecureSeed', 'insecure-seed', [], new $wcm.TupleType<[u64, u64]>([$wcm.u64, $wcm.u64]));
+		export const insecureSeed = new $wcm.FunctionType<random.InsecureSeed.insecureSeed>('insecureSeed', 'insecure-seed', [], new $wcm.TupleType<[u64, u64]>([$wcm.u64, $wcm.u64]));
 	}
 	export namespace InsecureSeed._ {
 		const functions: $wcm.FunctionType<$wcm.ServiceFunction>[] = [$.insecureSeed];
@@ -124,10 +132,10 @@ export namespace random {
 		}
 	}
 	export namespace Insecure.$ {
-		export const getInsecureRandomBytes = new $wcm.FunctionType<typeof random.Insecure.getInsecureRandomBytes>('getInsecureRandomBytes', 'get-insecure-random-bytes',[
+		export const getInsecureRandomBytes = new $wcm.FunctionType<random.Insecure.getInsecureRandomBytes>('getInsecureRandomBytes', 'get-insecure-random-bytes',[
 			['len', $wcm.u64],
 		], new $wcm.Uint8ArrayType());
-		export const getInsecureRandomU64 = new $wcm.FunctionType<typeof random.Insecure.getInsecureRandomU64>('getInsecureRandomU64', 'get-insecure-random-u64', [], $wcm.u64);
+		export const getInsecureRandomU64 = new $wcm.FunctionType<random.Insecure.getInsecureRandomU64>('getInsecureRandomU64', 'get-insecure-random-u64', [], $wcm.u64);
 	}
 	export namespace Insecure._ {
 		const functions: $wcm.FunctionType<$wcm.ServiceFunction>[] = [$.getInsecureRandomBytes, $.getInsecureRandomU64];
@@ -144,10 +152,10 @@ export namespace random {
 		}
 	}
 	export namespace Random.$ {
-		export const getRandomBytes = new $wcm.FunctionType<typeof random.Random.getRandomBytes>('getRandomBytes', 'get-random-bytes',[
+		export const getRandomBytes = new $wcm.FunctionType<random.Random.getRandomBytes>('getRandomBytes', 'get-random-bytes',[
 			['len', $wcm.u64],
 		], new $wcm.Uint8ArrayType());
-		export const getRandomU64 = new $wcm.FunctionType<typeof random.Random.getRandomU64>('getRandomU64', 'get-random-u64', [], $wcm.u64);
+		export const getRandomU64 = new $wcm.FunctionType<random.Random.getRandomU64>('getRandomU64', 'get-random-u64', [], $wcm.u64);
 	}
 	export namespace Random._ {
 		const functions: $wcm.FunctionType<$wcm.ServiceFunction>[] = [$.getRandomBytes, $.getRandomU64];

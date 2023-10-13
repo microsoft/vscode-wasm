@@ -38,7 +38,7 @@ export namespace io {
 		 * the pollables has an error, it is indicated by marking the source as
 		 * being reaedy for I/O.
 		 */
-		export declare function pollList(in_: borrow<Pollable>[]): Uint32Array;
+		export type pollList = (in_: borrow<Pollable>[]) => Uint32Array;
 		
 		/**
 		 * Poll for completion on a single pollable.
@@ -46,9 +46,12 @@ export namespace io {
 		 * This function is similar to `poll-list`, but operates on only a single
 		 * pollable. When it returns, the handle is ready for I/O.
 		 */
-		export declare function pollOne(in_: borrow<Pollable>): void;
+		export type pollOne = (in_: borrow<Pollable>) => void;
 	}
-	export type Poll = Pick<typeof Poll, 'pollList' | 'pollOne'>;
+	export type Poll = {
+		pollList: Poll.pollList;
+		pollOne: Poll.pollOne;
+	};
 	
 	/**
 	 * WASI I/O is an I/O abstraction API which is currently focused on providing
@@ -74,7 +77,6 @@ export namespace io {
 		 * Interfaces such as `wasi:filesystem/types` provide functionality to
 		 * further "downcast" this error into interface-specific error information.
 		 */
-		export type Error = resource;
 		export namespace Error {
 			
 			/**
@@ -85,8 +87,9 @@ export namespace io {
 			 * means that parsing it, for example, would be a
 			 * platform-compatibility hazard.
 			 */
-			export declare function toDebugString(self: borrow<Error>): string;
+			export type toDebugString = (self: borrow<Error>) => string;
 		}
+		export type Error = resource;
 		
 		/**
 		 * An error for input-stream and output-stream operations.
@@ -155,7 +158,6 @@ export namespace io {
 		 * use the `subscribe` function to obtain a `pollable` which can be polled
 		 * for using `wasi:io/poll`.
 		 */
-		export type InputStream = resource;
 		export namespace InputStream {
 			
 			/**
@@ -182,13 +184,13 @@ export namespace io {
 			 * as a return value by the callee. The callee may return a list of bytes
 			 * less than `len` in size while more bytes are available for reading.
 			 */
-			export declare function read(self: borrow<InputStream>, len: u64): result<Uint8Array, StreamError>;
+			export type read = (self: borrow<InputStream>, len: u64) => result<Uint8Array, StreamError>;
 			
 			/**
 			 * Read bytes from a stream, after blocking until at least one byte can
 			 * be read. Except for blocking, identical to `read`.
 			 */
-			export declare function blockingRead(self: borrow<InputStream>, len: u64): result<Uint8Array, StreamError>;
+			export type blockingRead = (self: borrow<InputStream>, len: u64) => result<Uint8Array, StreamError>;
 			
 			/**
 			 * Skip bytes from a stream.
@@ -204,13 +206,13 @@ export namespace io {
 			 * `stream-status` indicating whether the end of the stream was
 			 * reached. The returned value will be at most `len`; it may be less.
 			 */
-			export declare function skip(self: borrow<InputStream>, len: u64): result<u64, StreamError>;
+			export type skip = (self: borrow<InputStream>, len: u64) => result<u64, StreamError>;
 			
 			/**
 			 * Skip bytes from a stream, after blocking until at least one byte
 			 * can be skipped. Except for blocking behavior, identical to `skip`.
 			 */
-			export declare function blockingSkip(self: borrow<InputStream>, len: u64): result<u64, StreamError>;
+			export type blockingSkip = (self: borrow<InputStream>, len: u64) => result<u64, StreamError>;
 			
 			/**
 			 * Create a `pollable` which will resolve once either the specified stream
@@ -220,8 +222,9 @@ export namespace io {
 			 * Implementations may trap if the `input-stream` is dropped before
 			 * all derived `pollable`s created with this function are dropped.
 			 */
-			export declare function subscribe(self: borrow<InputStream>): own<Pollable>;
+			export type subscribe = (self: borrow<InputStream>) => own<Pollable>;
 		}
+		export type InputStream = resource;
 		
 		/**
 		 * An output bytestream.
@@ -233,7 +236,6 @@ export namespace io {
 		 * accept data, the `subscribe` function to obtain a `pollable` which can be
 		 * polled for using `wasi:io/poll`.
 		 */
-		export type OutputStream = resource;
 		export namespace OutputStream {
 			
 			/**
@@ -247,7 +249,7 @@ export namespace io {
 			 * become ready when this function will report at least 1 byte, or an
 			 * error.
 			 */
-			export declare function checkWrite(self: borrow<OutputStream>): result<u64, StreamError>;
+			export type checkWrite = (self: borrow<OutputStream>) => result<u64, StreamError>;
 			
 			/**
 			 * Perform a write. This function never blocks.
@@ -258,7 +260,7 @@ export namespace io {
 			 * returns Err(closed) without writing if the stream has closed since
 			 * the last call to check-write provided a permit.
 			 */
-			export declare function write(self: borrow<OutputStream>, contents: Uint8Array): result<void, StreamError>;
+			export type write = (self: borrow<OutputStream>, contents: Uint8Array) => result<void, StreamError>;
 			
 			/**
 			 * Perform a write of up to 4096 bytes, and then flush the stream. Block
@@ -286,7 +288,7 @@ export namespace io {
 			 * let _ = this.check-write();         // eliding error handling
 			 * ```
 			 */
-			export declare function blockingWriteAndFlush(self: borrow<OutputStream>, contents: Uint8Array): result<void, StreamError>;
+			export type blockingWriteAndFlush = (self: borrow<OutputStream>, contents: Uint8Array) => result<void, StreamError>;
 			
 			/**
 			 * Request to flush buffered output. This function never blocks.
@@ -300,13 +302,13 @@ export namespace io {
 			 * completed. The `subscribe` pollable will become ready when the
 			 * flush has completed and the stream can accept more writes.
 			 */
-			export declare function flush(self: borrow<OutputStream>): result<void, StreamError>;
+			export type flush = (self: borrow<OutputStream>) => result<void, StreamError>;
 			
 			/**
 			 * Request to flush buffered output, and block until flush completes
 			 * and stream is ready for writing again.
 			 */
-			export declare function blockingFlush(self: borrow<OutputStream>): result<void, StreamError>;
+			export type blockingFlush = (self: borrow<OutputStream>) => result<void, StreamError>;
 			
 			/**
 			 * Create a `pollable` which will resolve once the output-stream
@@ -320,7 +322,7 @@ export namespace io {
 			 * Implementations may trap if the `output-stream` is dropped before
 			 * all derived `pollable`s created with this function are dropped.
 			 */
-			export declare function subscribe(self: borrow<OutputStream>): own<Pollable>;
+			export type subscribe = (self: borrow<OutputStream>) => own<Pollable>;
 			
 			/**
 			 * Write zeroes to a stream.
@@ -330,7 +332,7 @@ export namespace io {
 			 * passing a list of bytes, you simply pass the number of zero-bytes
 			 * that should be written.
 			 */
-			export declare function writeZeroes(self: borrow<OutputStream>, len: u64): result<void, StreamError>;
+			export type writeZeroes = (self: borrow<OutputStream>, len: u64) => result<void, StreamError>;
 			
 			/**
 			 * Perform a write of up to 4096 zeroes, and then flush the stream.
@@ -358,7 +360,7 @@ export namespace io {
 			 * let _ = this.check-write();         // eliding error handling
 			 * ```
 			 */
-			export declare function blockingWriteZeroesAndFlush(self: borrow<OutputStream>, len: u64): result<void, StreamError>;
+			export type blockingWriteZeroesAndFlush = (self: borrow<OutputStream>, len: u64) => result<void, StreamError>;
 			
 			/**
 			 * Read from one stream and write to another.
@@ -369,7 +371,7 @@ export namespace io {
 			 * Unlike other I/O functions, this function blocks until all the data
 			 * read from the input stream has been written to the output stream.
 			 */
-			export declare function splice(self: borrow<OutputStream>, src: own<InputStream>, len: u64): result<u64, StreamError>;
+			export type splice = (self: borrow<OutputStream>, src: own<InputStream>, len: u64) => result<u64, StreamError>;
 			
 			/**
 			 * Read from one stream and write to another, with blocking.
@@ -377,7 +379,7 @@ export namespace io {
 			 * This is similar to `splice`, except that it blocks until at least
 			 * one byte can be read.
 			 */
-			export declare function blockingSplice(self: borrow<OutputStream>, src: own<InputStream>, len: u64): result<u64, StreamError>;
+			export type blockingSplice = (self: borrow<OutputStream>, src: own<InputStream>, len: u64) => result<u64, StreamError>;
 			
 			/**
 			 * Forward the entire contents of an input stream to an output stream.
@@ -393,20 +395,45 @@ export namespace io {
 			 * This function returns the number of bytes transferred, and the status of
 			 * the output stream.
 			 */
-			export declare function forward(self: borrow<OutputStream>, src: own<InputStream>): result<u64, StreamError>;
+			export type forward = (self: borrow<OutputStream>, src: own<InputStream>) => result<u64, StreamError>;
 		}
+		export type OutputStream = resource;
 	}
-	export type Streams = Pick<typeof Streams, 'Error' | 'InputStream' | 'OutputStream'>;
+	export type Streams = {
+		Error: {
+			toDebugString: Streams.Error.toDebugString;
+		};
+		InputStream: {
+			read: Streams.InputStream.read;
+			blockingRead: Streams.InputStream.blockingRead;
+			skip: Streams.InputStream.skip;
+			blockingSkip: Streams.InputStream.blockingSkip;
+			subscribe: Streams.InputStream.subscribe;
+		};
+		OutputStream: {
+			checkWrite: Streams.OutputStream.checkWrite;
+			write: Streams.OutputStream.write;
+			blockingWriteAndFlush: Streams.OutputStream.blockingWriteAndFlush;
+			flush: Streams.OutputStream.flush;
+			blockingFlush: Streams.OutputStream.blockingFlush;
+			subscribe: Streams.OutputStream.subscribe;
+			writeZeroes: Streams.OutputStream.writeZeroes;
+			blockingWriteZeroesAndFlush: Streams.OutputStream.blockingWriteZeroesAndFlush;
+			splice: Streams.OutputStream.splice;
+			blockingSplice: Streams.OutputStream.blockingSplice;
+			forward: Streams.OutputStream.forward;
+		};
+	};
 	
 }
 
 export namespace io {
 	export namespace Poll.$ {
 		export const Pollable = new $wcm.NamespaceResourceType('Pollable', 'pollable');
-		export const pollList = new $wcm.FunctionType<typeof io.Poll.pollList>('pollList', 'poll-list',[
+		export const pollList = new $wcm.FunctionType<io.Poll.pollList>('pollList', 'poll-list',[
 			['in_', new $wcm.ListType<borrow<io.Poll.Pollable>>(new $wcm.BorrowType<io.Poll.Pollable>(Pollable))],
 		], new $wcm.Uint32ArrayType());
-		export const pollOne = new $wcm.FunctionType<typeof io.Poll.pollOne>('pollOne', 'poll-one',[
+		export const pollOne = new $wcm.FunctionType<io.Poll.pollOne>('pollOne', 'poll-one',[
 			['in_', new $wcm.BorrowType<io.Poll.Pollable>(Pollable)],
 		], undefined);
 	}
@@ -430,67 +457,67 @@ export namespace io {
 		export const StreamError = new $wcm.VariantType<io.Streams.StreamError, io.Streams.StreamError._ct, io.Streams.StreamError._vt>([new $wcm.OwnType<io.Streams.Error>(Error), undefined], io.Streams.StreamError._ctor);
 		export const InputStream = new $wcm.NamespaceResourceType('InputStream', 'input-stream');
 		export const OutputStream = new $wcm.NamespaceResourceType('OutputStream', 'output-stream');
-		Error.addFunction(new $wcm.FunctionType<typeof io.Streams.Error.toDebugString>('toDebugString', '[method]error.to-debug-string', [
+		Error.addFunction(new $wcm.FunctionType<io.Streams.Error.toDebugString>('toDebugString', '[method]error.to-debug-string', [
 			['self', new $wcm.BorrowType<io.Streams.Error>(Error)],
 		], $wcm.wstring));
-		InputStream.addFunction(new $wcm.FunctionType<typeof io.Streams.InputStream.read>('read', '[method]input-stream.read', [
+		InputStream.addFunction(new $wcm.FunctionType<io.Streams.InputStream.read>('read', '[method]input-stream.read', [
 			['self', new $wcm.BorrowType<io.Streams.InputStream>(InputStream)],
 			['len', $wcm.u64],
 		], new $wcm.ResultType<Uint8Array, io.Streams.StreamError>(new $wcm.Uint8ArrayType(), StreamError)));
-		InputStream.addFunction(new $wcm.FunctionType<typeof io.Streams.InputStream.blockingRead>('blockingRead', '[method]input-stream.blocking-read', [
+		InputStream.addFunction(new $wcm.FunctionType<io.Streams.InputStream.blockingRead>('blockingRead', '[method]input-stream.blocking-read', [
 			['self', new $wcm.BorrowType<io.Streams.InputStream>(InputStream)],
 			['len', $wcm.u64],
 		], new $wcm.ResultType<Uint8Array, io.Streams.StreamError>(new $wcm.Uint8ArrayType(), StreamError)));
-		InputStream.addFunction(new $wcm.FunctionType<typeof io.Streams.InputStream.skip>('skip', '[method]input-stream.skip', [
+		InputStream.addFunction(new $wcm.FunctionType<io.Streams.InputStream.skip>('skip', '[method]input-stream.skip', [
 			['self', new $wcm.BorrowType<io.Streams.InputStream>(InputStream)],
 			['len', $wcm.u64],
 		], new $wcm.ResultType<u64, io.Streams.StreamError>($wcm.u64, StreamError)));
-		InputStream.addFunction(new $wcm.FunctionType<typeof io.Streams.InputStream.blockingSkip>('blockingSkip', '[method]input-stream.blocking-skip', [
+		InputStream.addFunction(new $wcm.FunctionType<io.Streams.InputStream.blockingSkip>('blockingSkip', '[method]input-stream.blocking-skip', [
 			['self', new $wcm.BorrowType<io.Streams.InputStream>(InputStream)],
 			['len', $wcm.u64],
 		], new $wcm.ResultType<u64, io.Streams.StreamError>($wcm.u64, StreamError)));
-		InputStream.addFunction(new $wcm.FunctionType<typeof io.Streams.InputStream.subscribe>('subscribe', '[method]input-stream.subscribe', [
+		InputStream.addFunction(new $wcm.FunctionType<io.Streams.InputStream.subscribe>('subscribe', '[method]input-stream.subscribe', [
 			['self', new $wcm.BorrowType<io.Streams.InputStream>(InputStream)],
 		], new $wcm.OwnType<io.Streams.Pollable>(Pollable)));
-		OutputStream.addFunction(new $wcm.FunctionType<typeof io.Streams.OutputStream.checkWrite>('checkWrite', '[method]output-stream.check-write', [
+		OutputStream.addFunction(new $wcm.FunctionType<io.Streams.OutputStream.checkWrite>('checkWrite', '[method]output-stream.check-write', [
 			['self', new $wcm.BorrowType<io.Streams.OutputStream>(OutputStream)],
 		], new $wcm.ResultType<u64, io.Streams.StreamError>($wcm.u64, StreamError)));
-		OutputStream.addFunction(new $wcm.FunctionType<typeof io.Streams.OutputStream.write>('write', '[method]output-stream.write', [
+		OutputStream.addFunction(new $wcm.FunctionType<io.Streams.OutputStream.write>('write', '[method]output-stream.write', [
 			['self', new $wcm.BorrowType<io.Streams.OutputStream>(OutputStream)],
 			['contents', new $wcm.Uint8ArrayType()],
 		], new $wcm.ResultType<void, io.Streams.StreamError>(undefined, StreamError)));
-		OutputStream.addFunction(new $wcm.FunctionType<typeof io.Streams.OutputStream.blockingWriteAndFlush>('blockingWriteAndFlush', '[method]output-stream.blocking-write-and-flush', [
+		OutputStream.addFunction(new $wcm.FunctionType<io.Streams.OutputStream.blockingWriteAndFlush>('blockingWriteAndFlush', '[method]output-stream.blocking-write-and-flush', [
 			['self', new $wcm.BorrowType<io.Streams.OutputStream>(OutputStream)],
 			['contents', new $wcm.Uint8ArrayType()],
 		], new $wcm.ResultType<void, io.Streams.StreamError>(undefined, StreamError)));
-		OutputStream.addFunction(new $wcm.FunctionType<typeof io.Streams.OutputStream.flush>('flush', '[method]output-stream.flush', [
+		OutputStream.addFunction(new $wcm.FunctionType<io.Streams.OutputStream.flush>('flush', '[method]output-stream.flush', [
 			['self', new $wcm.BorrowType<io.Streams.OutputStream>(OutputStream)],
 		], new $wcm.ResultType<void, io.Streams.StreamError>(undefined, StreamError)));
-		OutputStream.addFunction(new $wcm.FunctionType<typeof io.Streams.OutputStream.blockingFlush>('blockingFlush', '[method]output-stream.blocking-flush', [
+		OutputStream.addFunction(new $wcm.FunctionType<io.Streams.OutputStream.blockingFlush>('blockingFlush', '[method]output-stream.blocking-flush', [
 			['self', new $wcm.BorrowType<io.Streams.OutputStream>(OutputStream)],
 		], new $wcm.ResultType<void, io.Streams.StreamError>(undefined, StreamError)));
-		OutputStream.addFunction(new $wcm.FunctionType<typeof io.Streams.OutputStream.subscribe>('subscribe', '[method]output-stream.subscribe', [
+		OutputStream.addFunction(new $wcm.FunctionType<io.Streams.OutputStream.subscribe>('subscribe', '[method]output-stream.subscribe', [
 			['self', new $wcm.BorrowType<io.Streams.OutputStream>(OutputStream)],
 		], new $wcm.OwnType<io.Streams.Pollable>(Pollable)));
-		OutputStream.addFunction(new $wcm.FunctionType<typeof io.Streams.OutputStream.writeZeroes>('writeZeroes', '[method]output-stream.write-zeroes', [
+		OutputStream.addFunction(new $wcm.FunctionType<io.Streams.OutputStream.writeZeroes>('writeZeroes', '[method]output-stream.write-zeroes', [
 			['self', new $wcm.BorrowType<io.Streams.OutputStream>(OutputStream)],
 			['len', $wcm.u64],
 		], new $wcm.ResultType<void, io.Streams.StreamError>(undefined, StreamError)));
-		OutputStream.addFunction(new $wcm.FunctionType<typeof io.Streams.OutputStream.blockingWriteZeroesAndFlush>('blockingWriteZeroesAndFlush', '[method]output-stream.blocking-write-zeroes-and-flush', [
+		OutputStream.addFunction(new $wcm.FunctionType<io.Streams.OutputStream.blockingWriteZeroesAndFlush>('blockingWriteZeroesAndFlush', '[method]output-stream.blocking-write-zeroes-and-flush', [
 			['self', new $wcm.BorrowType<io.Streams.OutputStream>(OutputStream)],
 			['len', $wcm.u64],
 		], new $wcm.ResultType<void, io.Streams.StreamError>(undefined, StreamError)));
-		OutputStream.addFunction(new $wcm.FunctionType<typeof io.Streams.OutputStream.splice>('splice', '[method]output-stream.splice', [
+		OutputStream.addFunction(new $wcm.FunctionType<io.Streams.OutputStream.splice>('splice', '[method]output-stream.splice', [
 			['self', new $wcm.BorrowType<io.Streams.OutputStream>(OutputStream)],
 			['src', new $wcm.OwnType<io.Streams.InputStream>(InputStream)],
 			['len', $wcm.u64],
 		], new $wcm.ResultType<u64, io.Streams.StreamError>($wcm.u64, StreamError)));
-		OutputStream.addFunction(new $wcm.FunctionType<typeof io.Streams.OutputStream.blockingSplice>('blockingSplice', '[method]output-stream.blocking-splice', [
+		OutputStream.addFunction(new $wcm.FunctionType<io.Streams.OutputStream.blockingSplice>('blockingSplice', '[method]output-stream.blocking-splice', [
 			['self', new $wcm.BorrowType<io.Streams.OutputStream>(OutputStream)],
 			['src', new $wcm.OwnType<io.Streams.InputStream>(InputStream)],
 			['len', $wcm.u64],
 		], new $wcm.ResultType<u64, io.Streams.StreamError>($wcm.u64, StreamError)));
-		OutputStream.addFunction(new $wcm.FunctionType<typeof io.Streams.OutputStream.forward>('forward', '[method]output-stream.forward', [
+		OutputStream.addFunction(new $wcm.FunctionType<io.Streams.OutputStream.forward>('forward', '[method]output-stream.forward', [
 			['self', new $wcm.BorrowType<io.Streams.OutputStream>(OutputStream)],
 			['src', new $wcm.OwnType<io.Streams.InputStream>(InputStream)],
 		], new $wcm.ResultType<u64, io.Streams.StreamError>($wcm.u64, StreamError)));

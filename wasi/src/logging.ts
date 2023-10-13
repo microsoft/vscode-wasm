@@ -33,16 +33,18 @@ export namespace logging {
 		 * consumers group similar messages, and a string containing the message
 		 * text.
 		 */
-		export declare function log(level: Level, context: string, message: string): void;
+		export type log = (level: Level, context: string, message: string) => void;
 	}
-	export type Logging = Pick<typeof Logging, 'log'>;
+	export type Logging = {
+		log: Logging.log;
+	};
 	
 }
 
 export namespace logging {
 	export namespace Logging.$ {
 		export const Level = new $wcm.EnumType<logging.Logging.Level>(6);
-		export const log = new $wcm.FunctionType<typeof logging.Logging.log>('log', 'log',[
+		export const log = new $wcm.FunctionType<logging.Logging.log>('log', 'log',[
 			['level', Level],
 			['context', $wcm.wstring],
 			['message', $wcm.wstring],

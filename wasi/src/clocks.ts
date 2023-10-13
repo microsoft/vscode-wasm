@@ -35,20 +35,24 @@ export namespace clocks {
 		 * The clock is monotonic, therefore calling this function repeatedly will
 		 * produce a sequence of non-decreasing values.
 		 */
-		export declare function now(): Instant;
+		export type now = () => Instant;
 		
 		/**
 		 * Query the resolution of the clock.
 		 */
-		export declare function resolution(): Instant;
+		export type resolution = () => Instant;
 		
 		/**
 		 * Create a `pollable` which will resolve once the specified time has been
 		 * reached.
 		 */
-		export declare function subscribe(when: Instant, absolute: boolean): own<Pollable>;
+		export type subscribe = (when: Instant, absolute: boolean) => own<Pollable>;
 	}
-	export type MonotonicClock = Pick<typeof MonotonicClock, 'now' | 'resolution' | 'subscribe'>;
+	export type MonotonicClock = {
+		now: MonotonicClock.now;
+		resolution: MonotonicClock.resolution;
+		subscribe: MonotonicClock.subscribe;
+	};
 	
 	/**
 	 * WASI Wall Clock is a clock API intended to let users query the current
@@ -92,16 +96,19 @@ export namespace clocks {
 		 * [POSIX's Seconds Since the Epoch]: https://pubs.opengroup.org/onlinepubs/9699919799/xrat/V4_xbd_chap04.html#tag_21_04_16
 		 * [Unix Time]: https://en.wikipedia.org/wiki/Unix_time
 		 */
-		export declare function now(): Datetime;
+		export type now = () => Datetime;
 		
 		/**
 		 * Query the resolution of the clock.
 		 * 
 		 * The nanoseconds field of the output is always less than 1000000000.
 		 */
-		export declare function resolution(): Datetime;
+		export type resolution = () => Datetime;
 	}
-	export type WallClock = Pick<typeof WallClock, 'now' | 'resolution'>;
+	export type WallClock = {
+		now: WallClock.now;
+		resolution: WallClock.resolution;
+	};
 	
 	export namespace Timezone {
 		export const id = 'wasi:clocks/timezone' as const;
@@ -159,14 +166,17 @@ export namespace clocks {
 		 * `timezone-display` for `UTC` with a `utc-offset` of 0 and no daylight
 		 * saving time.
 		 */
-		export declare function display(when: Datetime): TimezoneDisplay;
+		export type display = (when: Datetime) => TimezoneDisplay;
 		
 		/**
 		 * The same as `display`, but only return the UTC offset.
 		 */
-		export declare function utcOffset(when: Datetime): s32;
+		export type utcOffset = (when: Datetime) => s32;
 	}
-	export type Timezone = Pick<typeof Timezone, 'display' | 'utcOffset'>;
+	export type Timezone = {
+		display: Timezone.display;
+		utcOffset: Timezone.utcOffset;
+	};
 	
 }
 
@@ -174,9 +184,9 @@ export namespace clocks {
 	export namespace MonotonicClock.$ {
 		export const Pollable = io.Poll.$.Pollable;
 		export const Instant = $wcm.u64;
-		export const now = new $wcm.FunctionType<typeof clocks.MonotonicClock.now>('now', 'now', [], Instant);
-		export const resolution = new $wcm.FunctionType<typeof clocks.MonotonicClock.resolution>('resolution', 'resolution', [], Instant);
-		export const subscribe = new $wcm.FunctionType<typeof clocks.MonotonicClock.subscribe>('subscribe', 'subscribe',[
+		export const now = new $wcm.FunctionType<clocks.MonotonicClock.now>('now', 'now', [], Instant);
+		export const resolution = new $wcm.FunctionType<clocks.MonotonicClock.resolution>('resolution', 'resolution', [], Instant);
+		export const subscribe = new $wcm.FunctionType<clocks.MonotonicClock.subscribe>('subscribe', 'subscribe',[
 			['when', Instant],
 			['absolute', $wcm.bool],
 		], new $wcm.OwnType<clocks.MonotonicClock.Pollable>(Pollable));
@@ -201,8 +211,8 @@ export namespace clocks {
 			['seconds', $wcm.u64],
 			['nanoseconds', $wcm.u32],
 		]);
-		export const now = new $wcm.FunctionType<typeof clocks.WallClock.now>('now', 'now', [], Datetime);
-		export const resolution = new $wcm.FunctionType<typeof clocks.WallClock.resolution>('resolution', 'resolution', [], Datetime);
+		export const now = new $wcm.FunctionType<clocks.WallClock.now>('now', 'now', [], Datetime);
+		export const resolution = new $wcm.FunctionType<clocks.WallClock.resolution>('resolution', 'resolution', [], Datetime);
 	}
 	export namespace WallClock._ {
 		const functions: $wcm.FunctionType<$wcm.ServiceFunction>[] = [$.now, $.resolution];
@@ -225,10 +235,10 @@ export namespace clocks {
 			['name', $wcm.wstring],
 			['inDaylightSavingTime', $wcm.bool],
 		]);
-		export const display = new $wcm.FunctionType<typeof clocks.Timezone.display>('display', 'display',[
+		export const display = new $wcm.FunctionType<clocks.Timezone.display>('display', 'display',[
 			['when', Datetime],
 		], TimezoneDisplay);
-		export const utcOffset = new $wcm.FunctionType<typeof clocks.Timezone.utcOffset>('utcOffset', 'utc-offset',[
+		export const utcOffset = new $wcm.FunctionType<clocks.Timezone.utcOffset>('utcOffset', 'utc-offset',[
 			['when', Datetime],
 		], $wcm.s32);
 	}

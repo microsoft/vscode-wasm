@@ -170,7 +170,8 @@ export namespace sockets {
 		}
 		export type IpSocketAddress = IpSocketAddress.ipv4 | IpSocketAddress.ipv6;
 	}
-	export type Network = typeof Network;
+	export type Network = {
+	};
 	
 	/**
 	 * This interface provides a value-export of the default network handle..
@@ -183,9 +184,11 @@ export namespace sockets {
 		/**
 		 * Get a handle to the default network.
 		 */
-		export declare function instanceNetwork(): own<Network>;
+		export type instanceNetwork = () => own<Network>;
 	}
-	export type InstanceNetwork = Pick<typeof InstanceNetwork, 'instanceNetwork'>;
+	export type InstanceNetwork = {
+		instanceNetwork: InstanceNetwork.instanceNetwork;
+	};
 	
 	export namespace IpNameLookup {
 		export const id = 'wasi:sockets/ip-name-lookup' as const;
@@ -200,7 +203,6 @@ export namespace sockets {
 		
 		export type IpAddressFamily = sockets.Network.IpAddressFamily;
 		
-		export type ResolveAddressStream = resource;
 		export namespace ResolveAddressStream {
 			
 			/**
@@ -218,7 +220,7 @@ export namespace sockets {
 			 * - `permanent-resolver-failure`: A permanent failure in name resolution occurred. (EAI_FAIL)
 			 * - `would-block`:                A result is not available yet. (EWOULDBLOCK, EAGAIN)
 			 */
-			export declare function resolveNextAddress(self: borrow<ResolveAddressStream>): result<IpAddress | undefined, ErrorCode>;
+			export type resolveNextAddress = (self: borrow<ResolveAddressStream>) => result<IpAddress | undefined, ErrorCode>;
 			
 			/**
 			 * Create a `pollable` which will resolve once the stream is ready for I/O.
@@ -226,8 +228,9 @@ export namespace sockets {
 			 * Note: this function is here for WASI Preview2 only.
 			 * It's planned to be removed when `future` is natively supported in Preview3.
 			 */
-			export declare function subscribe(self: borrow<ResolveAddressStream>): own<Pollable>;
+			export type subscribe = (self: borrow<ResolveAddressStream>) => own<Pollable>;
 		}
+		export type ResolveAddressStream = resource;
 		
 		/**
 		 * Resolve an internet host name to a list of IP addresses.
@@ -261,9 +264,15 @@ export namespace sockets {
 		 * - <https://learn.microsoft.com/en-us/windows/win32/api/ws2tcpip/nf-ws2tcpip-getaddrinfo>
 		 * - <https://man.freebsd.org/cgi/man.cgi?query=getaddrinfo&sektion=3>
 		 */
-		export declare function resolveAddresses(network: borrow<Network>, name: string, addressFamily: IpAddressFamily | undefined, includeUnavailable: boolean): result<own<ResolveAddressStream>, ErrorCode>;
+		export type resolveAddresses = (network: borrow<Network>, name: string, addressFamily: IpAddressFamily | undefined, includeUnavailable: boolean) => result<own<ResolveAddressStream>, ErrorCode>;
 	}
-	export type IpNameLookup = Pick<typeof IpNameLookup, 'ResolveAddressStream' | 'resolveAddresses'>;
+	export type IpNameLookup = {
+		ResolveAddressStream: {
+			resolveNextAddress: IpNameLookup.ResolveAddressStream.resolveNextAddress;
+			subscribe: IpNameLookup.ResolveAddressStream.subscribe;
+		};
+		resolveAddresses: IpNameLookup.resolveAddresses;
+	};
 	
 	export namespace Tcp {
 		export const id = 'wasi:sockets/tcp' as const;
@@ -291,7 +300,6 @@ export namespace sockets {
 		/**
 		 * A TCP socket handle.
 		 */
-		export type TcpSocket = resource;
 		export namespace TcpSocket {
 			
 			/**
@@ -324,9 +332,9 @@ export namespace sockets {
 			 * - <https://learn.microsoft.com/en-us/windows/win32/api/winsock/nf-winsock-bind>
 			 * - <https://man.freebsd.org/cgi/man.cgi?query=bind&sektion=2&format=html>
 			 */
-			export declare function startBind(self: borrow<TcpSocket>, network: borrow<Network>, localAddress: IpSocketAddress): result<void, ErrorCode>;
+			export type startBind = (self: borrow<TcpSocket>, network: borrow<Network>, localAddress: IpSocketAddress) => result<void, ErrorCode>;
 			
-			export declare function finishBind(self: borrow<TcpSocket>): result<void, ErrorCode>;
+			export type finishBind = (self: borrow<TcpSocket>) => result<void, ErrorCode>;
 			
 			/**
 			 * Connect to a remote endpoint.
@@ -359,9 +367,9 @@ export namespace sockets {
 			 * - <https://learn.microsoft.com/en-us/windows/win32/api/winsock2/nf-winsock2-connect>
 			 * - <https://man.freebsd.org/cgi/man.cgi?connect>
 			 */
-			export declare function startConnect(self: borrow<TcpSocket>, network: borrow<Network>, remoteAddress: IpSocketAddress): result<void, ErrorCode>;
+			export type startConnect = (self: borrow<TcpSocket>, network: borrow<Network>, remoteAddress: IpSocketAddress) => result<void, ErrorCode>;
 			
-			export declare function finishConnect(self: borrow<TcpSocket>): result<[own<InputStream>, own<OutputStream>], ErrorCode>;
+			export type finishConnect = (self: borrow<TcpSocket>) => result<[own<InputStream>, own<OutputStream>], ErrorCode>;
 			
 			/**
 			 * Start listening for new connections.
@@ -389,9 +397,9 @@ export namespace sockets {
 			 * - <https://learn.microsoft.com/en-us/windows/win32/api/winsock2/nf-winsock2-listen>
 			 * - <https://man.freebsd.org/cgi/man.cgi?query=listen&sektion=2>
 			 */
-			export declare function startListen(self: borrow<TcpSocket>): result<void, ErrorCode>;
+			export type startListen = (self: borrow<TcpSocket>) => result<void, ErrorCode>;
 			
-			export declare function finishListen(self: borrow<TcpSocket>): result<void, ErrorCode>;
+			export type finishListen = (self: borrow<TcpSocket>) => result<void, ErrorCode>;
 			
 			/**
 			 * Accept a new client socket.
@@ -413,7 +421,7 @@ export namespace sockets {
 			 * - <https://learn.microsoft.com/en-us/windows/win32/api/winsock2/nf-winsock2-accept>
 			 * - <https://man.freebsd.org/cgi/man.cgi?query=accept&sektion=2>
 			 */
-			export declare function accept(self: borrow<TcpSocket>): result<[own<TcpSocket>, own<InputStream>, own<OutputStream>], ErrorCode>;
+			export type accept = (self: borrow<TcpSocket>) => result<[own<TcpSocket>, own<InputStream>, own<OutputStream>], ErrorCode>;
 			
 			/**
 			 * Get the bound local address.
@@ -427,7 +435,7 @@ export namespace sockets {
 			 * - <https://learn.microsoft.com/en-us/windows/win32/api/winsock/nf-winsock-getsockname>
 			 * - <https://man.freebsd.org/cgi/man.cgi?getsockname>
 			 */
-			export declare function localAddress(self: borrow<TcpSocket>): result<IpSocketAddress, ErrorCode>;
+			export type localAddress = (self: borrow<TcpSocket>) => result<IpSocketAddress, ErrorCode>;
 			
 			/**
 			 * Get the bound remote address.
@@ -441,14 +449,14 @@ export namespace sockets {
 			 * - <https://learn.microsoft.com/en-us/windows/win32/api/winsock/nf-winsock-getpeername>
 			 * - <https://man.freebsd.org/cgi/man.cgi?query=getpeername&sektion=2&n=1>
 			 */
-			export declare function remoteAddress(self: borrow<TcpSocket>): result<IpSocketAddress, ErrorCode>;
+			export type remoteAddress = (self: borrow<TcpSocket>) => result<IpSocketAddress, ErrorCode>;
 			
 			/**
 			 * Whether this is a IPv4 or IPv6 socket.
 			 * 
 			 * Equivalent to the SO_DOMAIN socket option.
 			 */
-			export declare function addressFamily(self: borrow<TcpSocket>): IpAddressFamily;
+			export type addressFamily = (self: borrow<TcpSocket>) => IpAddressFamily;
 			
 			/**
 			 * Whether IPv4 compatibility (dual-stack) mode is disabled or not.
@@ -461,9 +469,9 @@ export namespace sockets {
 			 * - `not-supported`:        (set) Host does not support dual-stack sockets. (Implementations are not required to.)
 			 * - `concurrency-conflict`: (set) A `bind`, `connect` or `listen` operation is already in progress. (EALREADY)
 			 */
-			export declare function ipv6Only(self: borrow<TcpSocket>): result<boolean, ErrorCode>;
+			export type ipv6Only = (self: borrow<TcpSocket>) => result<boolean, ErrorCode>;
 			
-			export declare function setIpv6Only(self: borrow<TcpSocket>, value: boolean): result<void, ErrorCode>;
+			export type setIpv6Only = (self: borrow<TcpSocket>, value: boolean) => result<void, ErrorCode>;
 			
 			/**
 			 * Hints the desired listen queue size. Implementations are free to ignore this.
@@ -472,7 +480,7 @@ export namespace sockets {
 			 * - `already-connected`:    (set) The socket is already in the Connection state.
 			 * - `concurrency-conflict`: (set) A `bind`, `connect` or `listen` operation is already in progress. (EALREADY)
 			 */
-			export declare function setListenBacklogSize(self: borrow<TcpSocket>, value: u64): result<void, ErrorCode>;
+			export type setListenBacklogSize = (self: borrow<TcpSocket>, value: u64) => result<void, ErrorCode>;
 			
 			/**
 			 * Equivalent to the SO_KEEPALIVE socket option.
@@ -480,9 +488,9 @@ export namespace sockets {
 			 * # Typical errors
 			 * - `concurrency-conflict`: (set) A `bind`, `connect` or `listen` operation is already in progress. (EALREADY)
 			 */
-			export declare function keepAlive(self: borrow<TcpSocket>): result<boolean, ErrorCode>;
+			export type keepAlive = (self: borrow<TcpSocket>) => result<boolean, ErrorCode>;
 			
-			export declare function setKeepAlive(self: borrow<TcpSocket>, value: boolean): result<void, ErrorCode>;
+			export type setKeepAlive = (self: borrow<TcpSocket>, value: boolean) => result<void, ErrorCode>;
 			
 			/**
 			 * Equivalent to the TCP_NODELAY socket option.
@@ -490,9 +498,9 @@ export namespace sockets {
 			 * # Typical errors
 			 * - `concurrency-conflict`: (set) A `bind`, `connect` or `listen` operation is already in progress. (EALREADY)
 			 */
-			export declare function noDelay(self: borrow<TcpSocket>): result<boolean, ErrorCode>;
+			export type noDelay = (self: borrow<TcpSocket>) => result<boolean, ErrorCode>;
 			
-			export declare function setNoDelay(self: borrow<TcpSocket>, value: boolean): result<void, ErrorCode>;
+			export type setNoDelay = (self: borrow<TcpSocket>, value: boolean) => result<void, ErrorCode>;
 			
 			/**
 			 * Equivalent to the IP_TTL & IPV6_UNICAST_HOPS socket options.
@@ -502,9 +510,9 @@ export namespace sockets {
 			 * - `already-listening`:    (set) The socket is already in the Listener state.
 			 * - `concurrency-conflict`: (set) A `bind`, `connect` or `listen` operation is already in progress. (EALREADY)
 			 */
-			export declare function unicastHopLimit(self: borrow<TcpSocket>): result<u8, ErrorCode>;
+			export type unicastHopLimit = (self: borrow<TcpSocket>) => result<u8, ErrorCode>;
 			
-			export declare function setUnicastHopLimit(self: borrow<TcpSocket>, value: u8): result<void, ErrorCode>;
+			export type setUnicastHopLimit = (self: borrow<TcpSocket>, value: u8) => result<void, ErrorCode>;
 			
 			/**
 			 * The kernel buffer space reserved for sends/receives on this socket.
@@ -523,13 +531,13 @@ export namespace sockets {
 			 * - `already-listening`:    (set) The socket is already in the Listener state.
 			 * - `concurrency-conflict`: (set) A `bind`, `connect` or `listen` operation is already in progress. (EALREADY)
 			 */
-			export declare function receiveBufferSize(self: borrow<TcpSocket>): result<u64, ErrorCode>;
+			export type receiveBufferSize = (self: borrow<TcpSocket>) => result<u64, ErrorCode>;
 			
-			export declare function setReceiveBufferSize(self: borrow<TcpSocket>, value: u64): result<void, ErrorCode>;
+			export type setReceiveBufferSize = (self: borrow<TcpSocket>, value: u64) => result<void, ErrorCode>;
 			
-			export declare function sendBufferSize(self: borrow<TcpSocket>): result<u64, ErrorCode>;
+			export type sendBufferSize = (self: borrow<TcpSocket>) => result<u64, ErrorCode>;
 			
-			export declare function setSendBufferSize(self: borrow<TcpSocket>, value: u64): result<void, ErrorCode>;
+			export type setSendBufferSize = (self: borrow<TcpSocket>, value: u64) => result<void, ErrorCode>;
 			
 			/**
 			 * Create a `pollable` which will resolve once the socket is ready for I/O.
@@ -537,7 +545,7 @@ export namespace sockets {
 			 * Note: this function is here for WASI Preview2 only.
 			 * It's planned to be removed when `future` is natively supported in Preview3.
 			 */
-			export declare function subscribe(self: borrow<TcpSocket>): own<Pollable>;
+			export type subscribe = (self: borrow<TcpSocket>) => own<Pollable>;
 			
 			/**
 			 * Initiate a graceful shutdown.
@@ -560,10 +568,39 @@ export namespace sockets {
 			 * - <https://learn.microsoft.com/en-us/windows/win32/api/winsock/nf-winsock-shutdown>
 			 * - <https://man.freebsd.org/cgi/man.cgi?query=shutdown&sektion=2>
 			 */
-			export declare function shutdown(self: borrow<TcpSocket>, shutdownType: ShutdownType): result<void, ErrorCode>;
+			export type shutdown = (self: borrow<TcpSocket>, shutdownType: ShutdownType) => result<void, ErrorCode>;
 		}
+		export type TcpSocket = resource;
 	}
-	export type Tcp = Pick<typeof Tcp, 'TcpSocket'>;
+	export type Tcp = {
+		TcpSocket: {
+			startBind: Tcp.TcpSocket.startBind;
+			finishBind: Tcp.TcpSocket.finishBind;
+			startConnect: Tcp.TcpSocket.startConnect;
+			finishConnect: Tcp.TcpSocket.finishConnect;
+			startListen: Tcp.TcpSocket.startListen;
+			finishListen: Tcp.TcpSocket.finishListen;
+			accept: Tcp.TcpSocket.accept;
+			localAddress: Tcp.TcpSocket.localAddress;
+			remoteAddress: Tcp.TcpSocket.remoteAddress;
+			addressFamily: Tcp.TcpSocket.addressFamily;
+			ipv6Only: Tcp.TcpSocket.ipv6Only;
+			setIpv6Only: Tcp.TcpSocket.setIpv6Only;
+			setListenBacklogSize: Tcp.TcpSocket.setListenBacklogSize;
+			keepAlive: Tcp.TcpSocket.keepAlive;
+			setKeepAlive: Tcp.TcpSocket.setKeepAlive;
+			noDelay: Tcp.TcpSocket.noDelay;
+			setNoDelay: Tcp.TcpSocket.setNoDelay;
+			unicastHopLimit: Tcp.TcpSocket.unicastHopLimit;
+			setUnicastHopLimit: Tcp.TcpSocket.setUnicastHopLimit;
+			receiveBufferSize: Tcp.TcpSocket.receiveBufferSize;
+			setReceiveBufferSize: Tcp.TcpSocket.setReceiveBufferSize;
+			sendBufferSize: Tcp.TcpSocket.sendBufferSize;
+			setSendBufferSize: Tcp.TcpSocket.setSendBufferSize;
+			subscribe: Tcp.TcpSocket.subscribe;
+			shutdown: Tcp.TcpSocket.shutdown;
+		};
+	};
 	
 	export namespace TcpCreateSocket {
 		export const id = 'wasi:sockets/tcp-create-socket' as const;
@@ -598,9 +635,11 @@ export namespace sockets {
 		 * - <https://learn.microsoft.com/en-us/windows/win32/api/winsock2/nf-winsock2-wsasocketw>
 		 * - <https://man.freebsd.org/cgi/man.cgi?query=socket&sektion=2>
 		 */
-		export declare function createTcpSocket(addressFamily: IpAddressFamily): result<own<TcpSocket>, ErrorCode>;
+		export type createTcpSocket = (addressFamily: IpAddressFamily) => result<own<TcpSocket>, ErrorCode>;
 	}
-	export type TcpCreateSocket = Pick<typeof TcpCreateSocket, 'createTcpSocket'>;
+	export type TcpCreateSocket = {
+		createTcpSocket: TcpCreateSocket.createTcpSocket;
+	};
 	
 	export namespace Udp {
 		export const id = 'wasi:sockets/udp' as const;
@@ -623,7 +662,6 @@ export namespace sockets {
 		/**
 		 * A UDP socket handle.
 		 */
-		export type UdpSocket = resource;
 		export namespace UdpSocket {
 			
 			/**
@@ -655,9 +693,9 @@ export namespace sockets {
 			 * - <https://learn.microsoft.com/en-us/windows/win32/api/winsock/nf-winsock-bind>
 			 * - <https://man.freebsd.org/cgi/man.cgi?query=bind&sektion=2&format=html>
 			 */
-			export declare function startBind(self: borrow<UdpSocket>, network: borrow<Network>, localAddress: IpSocketAddress): result<void, ErrorCode>;
+			export type startBind = (self: borrow<UdpSocket>, network: borrow<Network>, localAddress: IpSocketAddress) => result<void, ErrorCode>;
 			
-			export declare function finishBind(self: borrow<UdpSocket>): result<void, ErrorCode>;
+			export type finishBind = (self: borrow<UdpSocket>) => result<void, ErrorCode>;
 			
 			/**
 			 * Set the destination address.
@@ -690,9 +728,9 @@ export namespace sockets {
 			 * - <https://learn.microsoft.com/en-us/windows/win32/api/winsock2/nf-winsock2-connect>
 			 * - <https://man.freebsd.org/cgi/man.cgi?connect>
 			 */
-			export declare function startConnect(self: borrow<UdpSocket>, network: borrow<Network>, remoteAddress: IpSocketAddress): result<void, ErrorCode>;
+			export type startConnect = (self: borrow<UdpSocket>, network: borrow<Network>, remoteAddress: IpSocketAddress) => result<void, ErrorCode>;
 			
-			export declare function finishConnect(self: borrow<UdpSocket>): result<void, ErrorCode>;
+			export type finishConnect = (self: borrow<UdpSocket>) => result<void, ErrorCode>;
 			
 			/**
 			 * Receive messages on the socket.
@@ -716,7 +754,7 @@ export namespace sockets {
 			 * - <https://learn.microsoft.com/en-us/previous-versions/windows/desktop/legacy/ms741687(v=vs.85)>
 			 * - <https://man.freebsd.org/cgi/man.cgi?query=recv&sektion=2>
 			 */
-			export declare function receive(self: borrow<UdpSocket>, maxResults: u64): result<Datagram[], ErrorCode>;
+			export type receive = (self: borrow<UdpSocket>, maxResults: u64) => result<Datagram[], ErrorCode>;
 			
 			/**
 			 * Send messages on the socket.
@@ -753,7 +791,7 @@ export namespace sockets {
 			 * - <https://learn.microsoft.com/en-us/windows/win32/api/winsock2/nf-winsock2-wsasendmsg>
 			 * - <https://man.freebsd.org/cgi/man.cgi?query=send&sektion=2>
 			 */
-			export declare function send(self: borrow<UdpSocket>, datagrams: Datagram[]): result<u64, ErrorCode>;
+			export type send = (self: borrow<UdpSocket>, datagrams: Datagram[]) => result<u64, ErrorCode>;
 			
 			/**
 			 * Get the current bound address.
@@ -767,7 +805,7 @@ export namespace sockets {
 			 * - <https://learn.microsoft.com/en-us/windows/win32/api/winsock/nf-winsock-getsockname>
 			 * - <https://man.freebsd.org/cgi/man.cgi?getsockname>
 			 */
-			export declare function localAddress(self: borrow<UdpSocket>): result<IpSocketAddress, ErrorCode>;
+			export type localAddress = (self: borrow<UdpSocket>) => result<IpSocketAddress, ErrorCode>;
 			
 			/**
 			 * Get the address set with `connect`.
@@ -781,14 +819,14 @@ export namespace sockets {
 			 * - <https://learn.microsoft.com/en-us/windows/win32/api/winsock/nf-winsock-getpeername>
 			 * - <https://man.freebsd.org/cgi/man.cgi?query=getpeername&sektion=2&n=1>
 			 */
-			export declare function remoteAddress(self: borrow<UdpSocket>): result<IpSocketAddress, ErrorCode>;
+			export type remoteAddress = (self: borrow<UdpSocket>) => result<IpSocketAddress, ErrorCode>;
 			
 			/**
 			 * Whether this is a IPv4 or IPv6 socket.
 			 * 
 			 * Equivalent to the SO_DOMAIN socket option.
 			 */
-			export declare function addressFamily(self: borrow<UdpSocket>): IpAddressFamily;
+			export type addressFamily = (self: borrow<UdpSocket>) => IpAddressFamily;
 			
 			/**
 			 * Whether IPv4 compatibility (dual-stack) mode is disabled or not.
@@ -801,9 +839,9 @@ export namespace sockets {
 			 * - `not-supported`:        (set) Host does not support dual-stack sockets. (Implementations are not required to.)
 			 * - `concurrency-conflict`: (set) Another `bind` or `connect` operation is already in progress. (EALREADY)
 			 */
-			export declare function ipv6Only(self: borrow<UdpSocket>): result<boolean, ErrorCode>;
+			export type ipv6Only = (self: borrow<UdpSocket>) => result<boolean, ErrorCode>;
 			
-			export declare function setIpv6Only(self: borrow<UdpSocket>, value: boolean): result<void, ErrorCode>;
+			export type setIpv6Only = (self: borrow<UdpSocket>, value: boolean) => result<void, ErrorCode>;
 			
 			/**
 			 * Equivalent to the IP_TTL & IPV6_UNICAST_HOPS socket options.
@@ -811,9 +849,9 @@ export namespace sockets {
 			 * # Typical errors
 			 * - `concurrency-conflict`: (set) Another `bind` or `connect` operation is already in progress. (EALREADY)
 			 */
-			export declare function unicastHopLimit(self: borrow<UdpSocket>): result<u8, ErrorCode>;
+			export type unicastHopLimit = (self: borrow<UdpSocket>) => result<u8, ErrorCode>;
 			
-			export declare function setUnicastHopLimit(self: borrow<UdpSocket>, value: u8): result<void, ErrorCode>;
+			export type setUnicastHopLimit = (self: borrow<UdpSocket>, value: u8) => result<void, ErrorCode>;
 			
 			/**
 			 * The kernel buffer space reserved for sends/receives on this socket.
@@ -830,13 +868,13 @@ export namespace sockets {
 			 * # Typical errors
 			 * - `concurrency-conflict`: (set) Another `bind` or `connect` operation is already in progress. (EALREADY)
 			 */
-			export declare function receiveBufferSize(self: borrow<UdpSocket>): result<u64, ErrorCode>;
+			export type receiveBufferSize = (self: borrow<UdpSocket>) => result<u64, ErrorCode>;
 			
-			export declare function setReceiveBufferSize(self: borrow<UdpSocket>, value: u64): result<void, ErrorCode>;
+			export type setReceiveBufferSize = (self: borrow<UdpSocket>, value: u64) => result<void, ErrorCode>;
 			
-			export declare function sendBufferSize(self: borrow<UdpSocket>): result<u64, ErrorCode>;
+			export type sendBufferSize = (self: borrow<UdpSocket>) => result<u64, ErrorCode>;
 			
-			export declare function setSendBufferSize(self: borrow<UdpSocket>, value: u64): result<void, ErrorCode>;
+			export type setSendBufferSize = (self: borrow<UdpSocket>, value: u64) => result<void, ErrorCode>;
 			
 			/**
 			 * Create a `pollable` which will resolve once the socket is ready for I/O.
@@ -844,10 +882,32 @@ export namespace sockets {
 			 * Note: this function is here for WASI Preview2 only.
 			 * It's planned to be removed when `future` is natively supported in Preview3.
 			 */
-			export declare function subscribe(self: borrow<UdpSocket>): own<Pollable>;
+			export type subscribe = (self: borrow<UdpSocket>) => own<Pollable>;
 		}
+		export type UdpSocket = resource;
 	}
-	export type Udp = Pick<typeof Udp, 'UdpSocket'>;
+	export type Udp = {
+		UdpSocket: {
+			startBind: Udp.UdpSocket.startBind;
+			finishBind: Udp.UdpSocket.finishBind;
+			startConnect: Udp.UdpSocket.startConnect;
+			finishConnect: Udp.UdpSocket.finishConnect;
+			receive: Udp.UdpSocket.receive;
+			send: Udp.UdpSocket.send;
+			localAddress: Udp.UdpSocket.localAddress;
+			remoteAddress: Udp.UdpSocket.remoteAddress;
+			addressFamily: Udp.UdpSocket.addressFamily;
+			ipv6Only: Udp.UdpSocket.ipv6Only;
+			setIpv6Only: Udp.UdpSocket.setIpv6Only;
+			unicastHopLimit: Udp.UdpSocket.unicastHopLimit;
+			setUnicastHopLimit: Udp.UdpSocket.setUnicastHopLimit;
+			receiveBufferSize: Udp.UdpSocket.receiveBufferSize;
+			setReceiveBufferSize: Udp.UdpSocket.setReceiveBufferSize;
+			sendBufferSize: Udp.UdpSocket.sendBufferSize;
+			setSendBufferSize: Udp.UdpSocket.setSendBufferSize;
+			subscribe: Udp.UdpSocket.subscribe;
+		};
+	};
 	
 	export namespace UdpCreateSocket {
 		export const id = 'wasi:sockets/udp-create-socket' as const;
@@ -882,9 +942,11 @@ export namespace sockets {
 		 * - <https://learn.microsoft.com/en-us/windows/win32/api/winsock2/nf-winsock2-wsasocketw>
 		 * - <https://man.freebsd.org/cgi/man.cgi?query=socket&sektion=2>
 		 */
-		export declare function createUdpSocket(addressFamily: IpAddressFamily): result<own<UdpSocket>, ErrorCode>;
+		export type createUdpSocket = (addressFamily: IpAddressFamily) => result<own<UdpSocket>, ErrorCode>;
 	}
-	export type UdpCreateSocket = Pick<typeof UdpCreateSocket, 'createUdpSocket'>;
+	export type UdpCreateSocket = {
+		createUdpSocket: UdpCreateSocket.createUdpSocket;
+	};
 	
 }
 
@@ -912,7 +974,7 @@ export namespace sockets {
 	}
 	export namespace InstanceNetwork.$ {
 		export const Network = sockets.Network.$.Network;
-		export const instanceNetwork = new $wcm.FunctionType<typeof sockets.InstanceNetwork.instanceNetwork>('instanceNetwork', 'instance-network', [], new $wcm.OwnType<sockets.InstanceNetwork.Network>(Network));
+		export const instanceNetwork = new $wcm.FunctionType<sockets.InstanceNetwork.instanceNetwork>('instanceNetwork', 'instance-network', [], new $wcm.OwnType<sockets.InstanceNetwork.Network>(Network));
 	}
 	export namespace InstanceNetwork._ {
 		const functions: $wcm.FunctionType<$wcm.ServiceFunction>[] = [$.instanceNetwork];
@@ -934,16 +996,16 @@ export namespace sockets {
 		export const IpAddress = sockets.Network.$.IpAddress;
 		export const IpAddressFamily = sockets.Network.$.IpAddressFamily;
 		export const ResolveAddressStream = new $wcm.NamespaceResourceType('ResolveAddressStream', 'resolve-address-stream');
-		export const resolveAddresses = new $wcm.FunctionType<typeof sockets.IpNameLookup.resolveAddresses>('resolveAddresses', 'resolve-addresses',[
+		export const resolveAddresses = new $wcm.FunctionType<sockets.IpNameLookup.resolveAddresses>('resolveAddresses', 'resolve-addresses',[
 			['network', new $wcm.BorrowType<sockets.IpNameLookup.Network>(Network)],
 			['name', $wcm.wstring],
 			['addressFamily', new $wcm.OptionType<sockets.IpNameLookup.IpAddressFamily>(IpAddressFamily)],
 			['includeUnavailable', $wcm.bool],
 		], new $wcm.ResultType<own<sockets.IpNameLookup.ResolveAddressStream>, sockets.IpNameLookup.ErrorCode>(new $wcm.OwnType<sockets.IpNameLookup.ResolveAddressStream>(ResolveAddressStream), ErrorCode));
-		ResolveAddressStream.addFunction(new $wcm.FunctionType<typeof sockets.IpNameLookup.ResolveAddressStream.resolveNextAddress>('resolveNextAddress', '[method]resolve-address-stream.resolve-next-address', [
+		ResolveAddressStream.addFunction(new $wcm.FunctionType<sockets.IpNameLookup.ResolveAddressStream.resolveNextAddress>('resolveNextAddress', '[method]resolve-address-stream.resolve-next-address', [
 			['self', new $wcm.BorrowType<sockets.IpNameLookup.ResolveAddressStream>(ResolveAddressStream)],
 		], new $wcm.ResultType<option<sockets.IpNameLookup.IpAddress>, sockets.IpNameLookup.ErrorCode>(new $wcm.OptionType<sockets.IpNameLookup.IpAddress>(IpAddress), ErrorCode)));
-		ResolveAddressStream.addFunction(new $wcm.FunctionType<typeof sockets.IpNameLookup.ResolveAddressStream.subscribe>('subscribe', '[method]resolve-address-stream.subscribe', [
+		ResolveAddressStream.addFunction(new $wcm.FunctionType<sockets.IpNameLookup.ResolveAddressStream.subscribe>('subscribe', '[method]resolve-address-stream.subscribe', [
 			['self', new $wcm.BorrowType<sockets.IpNameLookup.ResolveAddressStream>(ResolveAddressStream)],
 		], new $wcm.OwnType<sockets.IpNameLookup.Pollable>(Pollable)));
 	}
@@ -972,90 +1034,90 @@ export namespace sockets {
 		export const IpAddressFamily = sockets.Network.$.IpAddressFamily;
 		export const ShutdownType = new $wcm.EnumType<sockets.Tcp.ShutdownType>(3);
 		export const TcpSocket = new $wcm.NamespaceResourceType('TcpSocket', 'tcp-socket');
-		TcpSocket.addFunction(new $wcm.FunctionType<typeof sockets.Tcp.TcpSocket.startBind>('startBind', '[method]tcp-socket.start-bind', [
+		TcpSocket.addFunction(new $wcm.FunctionType<sockets.Tcp.TcpSocket.startBind>('startBind', '[method]tcp-socket.start-bind', [
 			['self', new $wcm.BorrowType<sockets.Tcp.TcpSocket>(TcpSocket)],
 			['network', new $wcm.BorrowType<sockets.Tcp.Network>(Network)],
 			['localAddress', IpSocketAddress],
 		], new $wcm.ResultType<void, sockets.Tcp.ErrorCode>(undefined, ErrorCode)));
-		TcpSocket.addFunction(new $wcm.FunctionType<typeof sockets.Tcp.TcpSocket.finishBind>('finishBind', '[method]tcp-socket.finish-bind', [
+		TcpSocket.addFunction(new $wcm.FunctionType<sockets.Tcp.TcpSocket.finishBind>('finishBind', '[method]tcp-socket.finish-bind', [
 			['self', new $wcm.BorrowType<sockets.Tcp.TcpSocket>(TcpSocket)],
 		], new $wcm.ResultType<void, sockets.Tcp.ErrorCode>(undefined, ErrorCode)));
-		TcpSocket.addFunction(new $wcm.FunctionType<typeof sockets.Tcp.TcpSocket.startConnect>('startConnect', '[method]tcp-socket.start-connect', [
+		TcpSocket.addFunction(new $wcm.FunctionType<sockets.Tcp.TcpSocket.startConnect>('startConnect', '[method]tcp-socket.start-connect', [
 			['self', new $wcm.BorrowType<sockets.Tcp.TcpSocket>(TcpSocket)],
 			['network', new $wcm.BorrowType<sockets.Tcp.Network>(Network)],
 			['remoteAddress', IpSocketAddress],
 		], new $wcm.ResultType<void, sockets.Tcp.ErrorCode>(undefined, ErrorCode)));
-		TcpSocket.addFunction(new $wcm.FunctionType<typeof sockets.Tcp.TcpSocket.finishConnect>('finishConnect', '[method]tcp-socket.finish-connect', [
+		TcpSocket.addFunction(new $wcm.FunctionType<sockets.Tcp.TcpSocket.finishConnect>('finishConnect', '[method]tcp-socket.finish-connect', [
 			['self', new $wcm.BorrowType<sockets.Tcp.TcpSocket>(TcpSocket)],
 		], new $wcm.ResultType<[own<sockets.Tcp.InputStream>, own<sockets.Tcp.OutputStream>], sockets.Tcp.ErrorCode>(new $wcm.TupleType<[own<sockets.Tcp.InputStream>, own<sockets.Tcp.OutputStream>]>([new $wcm.OwnType<sockets.Tcp.InputStream>(InputStream), new $wcm.OwnType<sockets.Tcp.OutputStream>(OutputStream)]), ErrorCode)));
-		TcpSocket.addFunction(new $wcm.FunctionType<typeof sockets.Tcp.TcpSocket.startListen>('startListen', '[method]tcp-socket.start-listen', [
+		TcpSocket.addFunction(new $wcm.FunctionType<sockets.Tcp.TcpSocket.startListen>('startListen', '[method]tcp-socket.start-listen', [
 			['self', new $wcm.BorrowType<sockets.Tcp.TcpSocket>(TcpSocket)],
 		], new $wcm.ResultType<void, sockets.Tcp.ErrorCode>(undefined, ErrorCode)));
-		TcpSocket.addFunction(new $wcm.FunctionType<typeof sockets.Tcp.TcpSocket.finishListen>('finishListen', '[method]tcp-socket.finish-listen', [
+		TcpSocket.addFunction(new $wcm.FunctionType<sockets.Tcp.TcpSocket.finishListen>('finishListen', '[method]tcp-socket.finish-listen', [
 			['self', new $wcm.BorrowType<sockets.Tcp.TcpSocket>(TcpSocket)],
 		], new $wcm.ResultType<void, sockets.Tcp.ErrorCode>(undefined, ErrorCode)));
-		TcpSocket.addFunction(new $wcm.FunctionType<typeof sockets.Tcp.TcpSocket.accept>('accept', '[method]tcp-socket.accept', [
+		TcpSocket.addFunction(new $wcm.FunctionType<sockets.Tcp.TcpSocket.accept>('accept', '[method]tcp-socket.accept', [
 			['self', new $wcm.BorrowType<sockets.Tcp.TcpSocket>(TcpSocket)],
 		], new $wcm.ResultType<[own<sockets.Tcp.TcpSocket>, own<sockets.Tcp.InputStream>, own<sockets.Tcp.OutputStream>], sockets.Tcp.ErrorCode>(new $wcm.TupleType<[own<sockets.Tcp.TcpSocket>, own<sockets.Tcp.InputStream>, own<sockets.Tcp.OutputStream>]>([new $wcm.OwnType<sockets.Tcp.TcpSocket>(TcpSocket), new $wcm.OwnType<sockets.Tcp.InputStream>(InputStream), new $wcm.OwnType<sockets.Tcp.OutputStream>(OutputStream)]), ErrorCode)));
-		TcpSocket.addFunction(new $wcm.FunctionType<typeof sockets.Tcp.TcpSocket.localAddress>('localAddress', '[method]tcp-socket.local-address', [
+		TcpSocket.addFunction(new $wcm.FunctionType<sockets.Tcp.TcpSocket.localAddress>('localAddress', '[method]tcp-socket.local-address', [
 			['self', new $wcm.BorrowType<sockets.Tcp.TcpSocket>(TcpSocket)],
 		], new $wcm.ResultType<sockets.Tcp.IpSocketAddress, sockets.Tcp.ErrorCode>(IpSocketAddress, ErrorCode)));
-		TcpSocket.addFunction(new $wcm.FunctionType<typeof sockets.Tcp.TcpSocket.remoteAddress>('remoteAddress', '[method]tcp-socket.remote-address', [
+		TcpSocket.addFunction(new $wcm.FunctionType<sockets.Tcp.TcpSocket.remoteAddress>('remoteAddress', '[method]tcp-socket.remote-address', [
 			['self', new $wcm.BorrowType<sockets.Tcp.TcpSocket>(TcpSocket)],
 		], new $wcm.ResultType<sockets.Tcp.IpSocketAddress, sockets.Tcp.ErrorCode>(IpSocketAddress, ErrorCode)));
-		TcpSocket.addFunction(new $wcm.FunctionType<typeof sockets.Tcp.TcpSocket.addressFamily>('addressFamily', '[method]tcp-socket.address-family', [
+		TcpSocket.addFunction(new $wcm.FunctionType<sockets.Tcp.TcpSocket.addressFamily>('addressFamily', '[method]tcp-socket.address-family', [
 			['self', new $wcm.BorrowType<sockets.Tcp.TcpSocket>(TcpSocket)],
 		], IpAddressFamily));
-		TcpSocket.addFunction(new $wcm.FunctionType<typeof sockets.Tcp.TcpSocket.ipv6Only>('ipv6Only', '[method]tcp-socket.ipv6-only', [
+		TcpSocket.addFunction(new $wcm.FunctionType<sockets.Tcp.TcpSocket.ipv6Only>('ipv6Only', '[method]tcp-socket.ipv6-only', [
 			['self', new $wcm.BorrowType<sockets.Tcp.TcpSocket>(TcpSocket)],
 		], new $wcm.ResultType<boolean, sockets.Tcp.ErrorCode>($wcm.bool, ErrorCode)));
-		TcpSocket.addFunction(new $wcm.FunctionType<typeof sockets.Tcp.TcpSocket.setIpv6Only>('setIpv6Only', '[method]tcp-socket.set-ipv6-only', [
+		TcpSocket.addFunction(new $wcm.FunctionType<sockets.Tcp.TcpSocket.setIpv6Only>('setIpv6Only', '[method]tcp-socket.set-ipv6-only', [
 			['self', new $wcm.BorrowType<sockets.Tcp.TcpSocket>(TcpSocket)],
 			['value', $wcm.bool],
 		], new $wcm.ResultType<void, sockets.Tcp.ErrorCode>(undefined, ErrorCode)));
-		TcpSocket.addFunction(new $wcm.FunctionType<typeof sockets.Tcp.TcpSocket.setListenBacklogSize>('setListenBacklogSize', '[method]tcp-socket.set-listen-backlog-size', [
+		TcpSocket.addFunction(new $wcm.FunctionType<sockets.Tcp.TcpSocket.setListenBacklogSize>('setListenBacklogSize', '[method]tcp-socket.set-listen-backlog-size', [
 			['self', new $wcm.BorrowType<sockets.Tcp.TcpSocket>(TcpSocket)],
 			['value', $wcm.u64],
 		], new $wcm.ResultType<void, sockets.Tcp.ErrorCode>(undefined, ErrorCode)));
-		TcpSocket.addFunction(new $wcm.FunctionType<typeof sockets.Tcp.TcpSocket.keepAlive>('keepAlive', '[method]tcp-socket.keep-alive', [
+		TcpSocket.addFunction(new $wcm.FunctionType<sockets.Tcp.TcpSocket.keepAlive>('keepAlive', '[method]tcp-socket.keep-alive', [
 			['self', new $wcm.BorrowType<sockets.Tcp.TcpSocket>(TcpSocket)],
 		], new $wcm.ResultType<boolean, sockets.Tcp.ErrorCode>($wcm.bool, ErrorCode)));
-		TcpSocket.addFunction(new $wcm.FunctionType<typeof sockets.Tcp.TcpSocket.setKeepAlive>('setKeepAlive', '[method]tcp-socket.set-keep-alive', [
+		TcpSocket.addFunction(new $wcm.FunctionType<sockets.Tcp.TcpSocket.setKeepAlive>('setKeepAlive', '[method]tcp-socket.set-keep-alive', [
 			['self', new $wcm.BorrowType<sockets.Tcp.TcpSocket>(TcpSocket)],
 			['value', $wcm.bool],
 		], new $wcm.ResultType<void, sockets.Tcp.ErrorCode>(undefined, ErrorCode)));
-		TcpSocket.addFunction(new $wcm.FunctionType<typeof sockets.Tcp.TcpSocket.noDelay>('noDelay', '[method]tcp-socket.no-delay', [
+		TcpSocket.addFunction(new $wcm.FunctionType<sockets.Tcp.TcpSocket.noDelay>('noDelay', '[method]tcp-socket.no-delay', [
 			['self', new $wcm.BorrowType<sockets.Tcp.TcpSocket>(TcpSocket)],
 		], new $wcm.ResultType<boolean, sockets.Tcp.ErrorCode>($wcm.bool, ErrorCode)));
-		TcpSocket.addFunction(new $wcm.FunctionType<typeof sockets.Tcp.TcpSocket.setNoDelay>('setNoDelay', '[method]tcp-socket.set-no-delay', [
+		TcpSocket.addFunction(new $wcm.FunctionType<sockets.Tcp.TcpSocket.setNoDelay>('setNoDelay', '[method]tcp-socket.set-no-delay', [
 			['self', new $wcm.BorrowType<sockets.Tcp.TcpSocket>(TcpSocket)],
 			['value', $wcm.bool],
 		], new $wcm.ResultType<void, sockets.Tcp.ErrorCode>(undefined, ErrorCode)));
-		TcpSocket.addFunction(new $wcm.FunctionType<typeof sockets.Tcp.TcpSocket.unicastHopLimit>('unicastHopLimit', '[method]tcp-socket.unicast-hop-limit', [
+		TcpSocket.addFunction(new $wcm.FunctionType<sockets.Tcp.TcpSocket.unicastHopLimit>('unicastHopLimit', '[method]tcp-socket.unicast-hop-limit', [
 			['self', new $wcm.BorrowType<sockets.Tcp.TcpSocket>(TcpSocket)],
 		], new $wcm.ResultType<u8, sockets.Tcp.ErrorCode>($wcm.u8, ErrorCode)));
-		TcpSocket.addFunction(new $wcm.FunctionType<typeof sockets.Tcp.TcpSocket.setUnicastHopLimit>('setUnicastHopLimit', '[method]tcp-socket.set-unicast-hop-limit', [
+		TcpSocket.addFunction(new $wcm.FunctionType<sockets.Tcp.TcpSocket.setUnicastHopLimit>('setUnicastHopLimit', '[method]tcp-socket.set-unicast-hop-limit', [
 			['self', new $wcm.BorrowType<sockets.Tcp.TcpSocket>(TcpSocket)],
 			['value', $wcm.u8],
 		], new $wcm.ResultType<void, sockets.Tcp.ErrorCode>(undefined, ErrorCode)));
-		TcpSocket.addFunction(new $wcm.FunctionType<typeof sockets.Tcp.TcpSocket.receiveBufferSize>('receiveBufferSize', '[method]tcp-socket.receive-buffer-size', [
+		TcpSocket.addFunction(new $wcm.FunctionType<sockets.Tcp.TcpSocket.receiveBufferSize>('receiveBufferSize', '[method]tcp-socket.receive-buffer-size', [
 			['self', new $wcm.BorrowType<sockets.Tcp.TcpSocket>(TcpSocket)],
 		], new $wcm.ResultType<u64, sockets.Tcp.ErrorCode>($wcm.u64, ErrorCode)));
-		TcpSocket.addFunction(new $wcm.FunctionType<typeof sockets.Tcp.TcpSocket.setReceiveBufferSize>('setReceiveBufferSize', '[method]tcp-socket.set-receive-buffer-size', [
+		TcpSocket.addFunction(new $wcm.FunctionType<sockets.Tcp.TcpSocket.setReceiveBufferSize>('setReceiveBufferSize', '[method]tcp-socket.set-receive-buffer-size', [
 			['self', new $wcm.BorrowType<sockets.Tcp.TcpSocket>(TcpSocket)],
 			['value', $wcm.u64],
 		], new $wcm.ResultType<void, sockets.Tcp.ErrorCode>(undefined, ErrorCode)));
-		TcpSocket.addFunction(new $wcm.FunctionType<typeof sockets.Tcp.TcpSocket.sendBufferSize>('sendBufferSize', '[method]tcp-socket.send-buffer-size', [
+		TcpSocket.addFunction(new $wcm.FunctionType<sockets.Tcp.TcpSocket.sendBufferSize>('sendBufferSize', '[method]tcp-socket.send-buffer-size', [
 			['self', new $wcm.BorrowType<sockets.Tcp.TcpSocket>(TcpSocket)],
 		], new $wcm.ResultType<u64, sockets.Tcp.ErrorCode>($wcm.u64, ErrorCode)));
-		TcpSocket.addFunction(new $wcm.FunctionType<typeof sockets.Tcp.TcpSocket.setSendBufferSize>('setSendBufferSize', '[method]tcp-socket.set-send-buffer-size', [
+		TcpSocket.addFunction(new $wcm.FunctionType<sockets.Tcp.TcpSocket.setSendBufferSize>('setSendBufferSize', '[method]tcp-socket.set-send-buffer-size', [
 			['self', new $wcm.BorrowType<sockets.Tcp.TcpSocket>(TcpSocket)],
 			['value', $wcm.u64],
 		], new $wcm.ResultType<void, sockets.Tcp.ErrorCode>(undefined, ErrorCode)));
-		TcpSocket.addFunction(new $wcm.FunctionType<typeof sockets.Tcp.TcpSocket.subscribe>('subscribe', '[method]tcp-socket.subscribe', [
+		TcpSocket.addFunction(new $wcm.FunctionType<sockets.Tcp.TcpSocket.subscribe>('subscribe', '[method]tcp-socket.subscribe', [
 			['self', new $wcm.BorrowType<sockets.Tcp.TcpSocket>(TcpSocket)],
 		], new $wcm.OwnType<sockets.Tcp.Pollable>(Pollable)));
-		TcpSocket.addFunction(new $wcm.FunctionType<typeof sockets.Tcp.TcpSocket.shutdown>('shutdown', '[method]tcp-socket.shutdown', [
+		TcpSocket.addFunction(new $wcm.FunctionType<sockets.Tcp.TcpSocket.shutdown>('shutdown', '[method]tcp-socket.shutdown', [
 			['self', new $wcm.BorrowType<sockets.Tcp.TcpSocket>(TcpSocket)],
 			['shutdownType', ShutdownType],
 		], new $wcm.ResultType<void, sockets.Tcp.ErrorCode>(undefined, ErrorCode)));
@@ -1102,7 +1164,7 @@ export namespace sockets {
 		export const ErrorCode = sockets.Network.$.ErrorCode;
 		export const IpAddressFamily = sockets.Network.$.IpAddressFamily;
 		export const TcpSocket = sockets.Tcp.$.TcpSocket;
-		export const createTcpSocket = new $wcm.FunctionType<typeof sockets.TcpCreateSocket.createTcpSocket>('createTcpSocket', 'create-tcp-socket',[
+		export const createTcpSocket = new $wcm.FunctionType<sockets.TcpCreateSocket.createTcpSocket>('createTcpSocket', 'create-tcp-socket',[
 			['addressFamily', IpAddressFamily],
 		], new $wcm.ResultType<own<sockets.TcpCreateSocket.TcpSocket>, sockets.TcpCreateSocket.ErrorCode>(new $wcm.OwnType<sockets.TcpCreateSocket.TcpSocket>(TcpSocket), ErrorCode));
 	}
@@ -1130,68 +1192,68 @@ export namespace sockets {
 			['remoteAddress', IpSocketAddress],
 		]);
 		export const UdpSocket = new $wcm.NamespaceResourceType('UdpSocket', 'udp-socket');
-		UdpSocket.addFunction(new $wcm.FunctionType<typeof sockets.Udp.UdpSocket.startBind>('startBind', '[method]udp-socket.start-bind', [
+		UdpSocket.addFunction(new $wcm.FunctionType<sockets.Udp.UdpSocket.startBind>('startBind', '[method]udp-socket.start-bind', [
 			['self', new $wcm.BorrowType<sockets.Udp.UdpSocket>(UdpSocket)],
 			['network', new $wcm.BorrowType<sockets.Udp.Network>(Network)],
 			['localAddress', IpSocketAddress],
 		], new $wcm.ResultType<void, sockets.Udp.ErrorCode>(undefined, ErrorCode)));
-		UdpSocket.addFunction(new $wcm.FunctionType<typeof sockets.Udp.UdpSocket.finishBind>('finishBind', '[method]udp-socket.finish-bind', [
+		UdpSocket.addFunction(new $wcm.FunctionType<sockets.Udp.UdpSocket.finishBind>('finishBind', '[method]udp-socket.finish-bind', [
 			['self', new $wcm.BorrowType<sockets.Udp.UdpSocket>(UdpSocket)],
 		], new $wcm.ResultType<void, sockets.Udp.ErrorCode>(undefined, ErrorCode)));
-		UdpSocket.addFunction(new $wcm.FunctionType<typeof sockets.Udp.UdpSocket.startConnect>('startConnect', '[method]udp-socket.start-connect', [
+		UdpSocket.addFunction(new $wcm.FunctionType<sockets.Udp.UdpSocket.startConnect>('startConnect', '[method]udp-socket.start-connect', [
 			['self', new $wcm.BorrowType<sockets.Udp.UdpSocket>(UdpSocket)],
 			['network', new $wcm.BorrowType<sockets.Udp.Network>(Network)],
 			['remoteAddress', IpSocketAddress],
 		], new $wcm.ResultType<void, sockets.Udp.ErrorCode>(undefined, ErrorCode)));
-		UdpSocket.addFunction(new $wcm.FunctionType<typeof sockets.Udp.UdpSocket.finishConnect>('finishConnect', '[method]udp-socket.finish-connect', [
+		UdpSocket.addFunction(new $wcm.FunctionType<sockets.Udp.UdpSocket.finishConnect>('finishConnect', '[method]udp-socket.finish-connect', [
 			['self', new $wcm.BorrowType<sockets.Udp.UdpSocket>(UdpSocket)],
 		], new $wcm.ResultType<void, sockets.Udp.ErrorCode>(undefined, ErrorCode)));
-		UdpSocket.addFunction(new $wcm.FunctionType<typeof sockets.Udp.UdpSocket.receive>('receive', '[method]udp-socket.receive', [
+		UdpSocket.addFunction(new $wcm.FunctionType<sockets.Udp.UdpSocket.receive>('receive', '[method]udp-socket.receive', [
 			['self', new $wcm.BorrowType<sockets.Udp.UdpSocket>(UdpSocket)],
 			['maxResults', $wcm.u64],
 		], new $wcm.ResultType<sockets.Udp.Datagram[], sockets.Udp.ErrorCode>(new $wcm.ListType<sockets.Udp.Datagram>(Datagram), ErrorCode)));
-		UdpSocket.addFunction(new $wcm.FunctionType<typeof sockets.Udp.UdpSocket.send>('send', '[method]udp-socket.send', [
+		UdpSocket.addFunction(new $wcm.FunctionType<sockets.Udp.UdpSocket.send>('send', '[method]udp-socket.send', [
 			['self', new $wcm.BorrowType<sockets.Udp.UdpSocket>(UdpSocket)],
 			['datagrams', new $wcm.ListType<sockets.Udp.Datagram>(Datagram)],
 		], new $wcm.ResultType<u64, sockets.Udp.ErrorCode>($wcm.u64, ErrorCode)));
-		UdpSocket.addFunction(new $wcm.FunctionType<typeof sockets.Udp.UdpSocket.localAddress>('localAddress', '[method]udp-socket.local-address', [
+		UdpSocket.addFunction(new $wcm.FunctionType<sockets.Udp.UdpSocket.localAddress>('localAddress', '[method]udp-socket.local-address', [
 			['self', new $wcm.BorrowType<sockets.Udp.UdpSocket>(UdpSocket)],
 		], new $wcm.ResultType<sockets.Udp.IpSocketAddress, sockets.Udp.ErrorCode>(IpSocketAddress, ErrorCode)));
-		UdpSocket.addFunction(new $wcm.FunctionType<typeof sockets.Udp.UdpSocket.remoteAddress>('remoteAddress', '[method]udp-socket.remote-address', [
+		UdpSocket.addFunction(new $wcm.FunctionType<sockets.Udp.UdpSocket.remoteAddress>('remoteAddress', '[method]udp-socket.remote-address', [
 			['self', new $wcm.BorrowType<sockets.Udp.UdpSocket>(UdpSocket)],
 		], new $wcm.ResultType<sockets.Udp.IpSocketAddress, sockets.Udp.ErrorCode>(IpSocketAddress, ErrorCode)));
-		UdpSocket.addFunction(new $wcm.FunctionType<typeof sockets.Udp.UdpSocket.addressFamily>('addressFamily', '[method]udp-socket.address-family', [
+		UdpSocket.addFunction(new $wcm.FunctionType<sockets.Udp.UdpSocket.addressFamily>('addressFamily', '[method]udp-socket.address-family', [
 			['self', new $wcm.BorrowType<sockets.Udp.UdpSocket>(UdpSocket)],
 		], IpAddressFamily));
-		UdpSocket.addFunction(new $wcm.FunctionType<typeof sockets.Udp.UdpSocket.ipv6Only>('ipv6Only', '[method]udp-socket.ipv6-only', [
+		UdpSocket.addFunction(new $wcm.FunctionType<sockets.Udp.UdpSocket.ipv6Only>('ipv6Only', '[method]udp-socket.ipv6-only', [
 			['self', new $wcm.BorrowType<sockets.Udp.UdpSocket>(UdpSocket)],
 		], new $wcm.ResultType<boolean, sockets.Udp.ErrorCode>($wcm.bool, ErrorCode)));
-		UdpSocket.addFunction(new $wcm.FunctionType<typeof sockets.Udp.UdpSocket.setIpv6Only>('setIpv6Only', '[method]udp-socket.set-ipv6-only', [
+		UdpSocket.addFunction(new $wcm.FunctionType<sockets.Udp.UdpSocket.setIpv6Only>('setIpv6Only', '[method]udp-socket.set-ipv6-only', [
 			['self', new $wcm.BorrowType<sockets.Udp.UdpSocket>(UdpSocket)],
 			['value', $wcm.bool],
 		], new $wcm.ResultType<void, sockets.Udp.ErrorCode>(undefined, ErrorCode)));
-		UdpSocket.addFunction(new $wcm.FunctionType<typeof sockets.Udp.UdpSocket.unicastHopLimit>('unicastHopLimit', '[method]udp-socket.unicast-hop-limit', [
+		UdpSocket.addFunction(new $wcm.FunctionType<sockets.Udp.UdpSocket.unicastHopLimit>('unicastHopLimit', '[method]udp-socket.unicast-hop-limit', [
 			['self', new $wcm.BorrowType<sockets.Udp.UdpSocket>(UdpSocket)],
 		], new $wcm.ResultType<u8, sockets.Udp.ErrorCode>($wcm.u8, ErrorCode)));
-		UdpSocket.addFunction(new $wcm.FunctionType<typeof sockets.Udp.UdpSocket.setUnicastHopLimit>('setUnicastHopLimit', '[method]udp-socket.set-unicast-hop-limit', [
+		UdpSocket.addFunction(new $wcm.FunctionType<sockets.Udp.UdpSocket.setUnicastHopLimit>('setUnicastHopLimit', '[method]udp-socket.set-unicast-hop-limit', [
 			['self', new $wcm.BorrowType<sockets.Udp.UdpSocket>(UdpSocket)],
 			['value', $wcm.u8],
 		], new $wcm.ResultType<void, sockets.Udp.ErrorCode>(undefined, ErrorCode)));
-		UdpSocket.addFunction(new $wcm.FunctionType<typeof sockets.Udp.UdpSocket.receiveBufferSize>('receiveBufferSize', '[method]udp-socket.receive-buffer-size', [
+		UdpSocket.addFunction(new $wcm.FunctionType<sockets.Udp.UdpSocket.receiveBufferSize>('receiveBufferSize', '[method]udp-socket.receive-buffer-size', [
 			['self', new $wcm.BorrowType<sockets.Udp.UdpSocket>(UdpSocket)],
 		], new $wcm.ResultType<u64, sockets.Udp.ErrorCode>($wcm.u64, ErrorCode)));
-		UdpSocket.addFunction(new $wcm.FunctionType<typeof sockets.Udp.UdpSocket.setReceiveBufferSize>('setReceiveBufferSize', '[method]udp-socket.set-receive-buffer-size', [
+		UdpSocket.addFunction(new $wcm.FunctionType<sockets.Udp.UdpSocket.setReceiveBufferSize>('setReceiveBufferSize', '[method]udp-socket.set-receive-buffer-size', [
 			['self', new $wcm.BorrowType<sockets.Udp.UdpSocket>(UdpSocket)],
 			['value', $wcm.u64],
 		], new $wcm.ResultType<void, sockets.Udp.ErrorCode>(undefined, ErrorCode)));
-		UdpSocket.addFunction(new $wcm.FunctionType<typeof sockets.Udp.UdpSocket.sendBufferSize>('sendBufferSize', '[method]udp-socket.send-buffer-size', [
+		UdpSocket.addFunction(new $wcm.FunctionType<sockets.Udp.UdpSocket.sendBufferSize>('sendBufferSize', '[method]udp-socket.send-buffer-size', [
 			['self', new $wcm.BorrowType<sockets.Udp.UdpSocket>(UdpSocket)],
 		], new $wcm.ResultType<u64, sockets.Udp.ErrorCode>($wcm.u64, ErrorCode)));
-		UdpSocket.addFunction(new $wcm.FunctionType<typeof sockets.Udp.UdpSocket.setSendBufferSize>('setSendBufferSize', '[method]udp-socket.set-send-buffer-size', [
+		UdpSocket.addFunction(new $wcm.FunctionType<sockets.Udp.UdpSocket.setSendBufferSize>('setSendBufferSize', '[method]udp-socket.set-send-buffer-size', [
 			['self', new $wcm.BorrowType<sockets.Udp.UdpSocket>(UdpSocket)],
 			['value', $wcm.u64],
 		], new $wcm.ResultType<void, sockets.Udp.ErrorCode>(undefined, ErrorCode)));
-		UdpSocket.addFunction(new $wcm.FunctionType<typeof sockets.Udp.UdpSocket.subscribe>('subscribe', '[method]udp-socket.subscribe', [
+		UdpSocket.addFunction(new $wcm.FunctionType<sockets.Udp.UdpSocket.subscribe>('subscribe', '[method]udp-socket.subscribe', [
 			['self', new $wcm.BorrowType<sockets.Udp.UdpSocket>(UdpSocket)],
 		], new $wcm.OwnType<sockets.Udp.Pollable>(Pollable)));
 	}
@@ -1230,7 +1292,7 @@ export namespace sockets {
 		export const ErrorCode = sockets.Network.$.ErrorCode;
 		export const IpAddressFamily = sockets.Network.$.IpAddressFamily;
 		export const UdpSocket = sockets.Udp.$.UdpSocket;
-		export const createUdpSocket = new $wcm.FunctionType<typeof sockets.UdpCreateSocket.createUdpSocket>('createUdpSocket', 'create-udp-socket',[
+		export const createUdpSocket = new $wcm.FunctionType<sockets.UdpCreateSocket.createUdpSocket>('createUdpSocket', 'create-udp-socket',[
 			['addressFamily', IpAddressFamily],
 		], new $wcm.ResultType<own<sockets.UdpCreateSocket.UdpSocket>, sockets.UdpCreateSocket.ErrorCode>(new $wcm.OwnType<sockets.UdpCreateSocket.UdpSocket>(UdpSocket), ErrorCode));
 	}

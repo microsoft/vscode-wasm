@@ -14,17 +14,17 @@ export namespace testData {
 			y: u32;
 		};
 
-		export type PointResource = resource;
 		export namespace PointResource {
 
-			export declare function constructor(x: u32, y: u32): own<PointResource>;
+			export type constructor = (x: u32, y: u32) => own<PointResource>;
 
-			export declare function getX(self: borrow<PointResource>): u32;
+			export type getX = (self: borrow<PointResource>) => u32;
 
-			export declare function getY(self: borrow<PointResource>): u32;
+			export type getY = (self: borrow<PointResource>) => u32;
 
-			export declare function add(self: borrow<PointResource>): u32;
+			export type add = (self: borrow<PointResource>) => u32;
 		}
+		export type PointResource = resource;
 
 		export type PointOption = {
 			x?: u32 | undefined;
@@ -127,13 +127,23 @@ export namespace testData {
 		}
 		export type TestVariant = TestVariant.empty | TestVariant.unsigned32 | TestVariant.unsigned64 | TestVariant.signed32 | TestVariant.signed64 | TestVariant.floatingPoint32 | TestVariant.floatingPoint64 | TestVariant.structure;
 
-		export declare function call(point: Point): u32;
+		export type call = (point: Point) => u32;
 
-		export declare function callOption(point: Point | undefined): u32 | undefined;
+		export type callOption = (point: Point | undefined) => u32 | undefined;
 
-		export declare function checkVariant(value: TestVariant): TestVariant;
+		export type checkVariant = (value: TestVariant) => TestVariant;
 	}
-	export type Types = Pick<typeof Types, 'PointResource' | 'call' | 'callOption' | 'checkVariant'>;
+	export type Types = {
+		PointResource: {
+			constructor: Types.PointResource.constructor;
+			getX: Types.PointResource.getX;
+			getY: Types.PointResource.getY;
+			add: Types.PointResource.add;
+		};
+		call: Types.call;
+		callOption: Types.callOption;
+		checkVariant: Types.checkVariant;
+	};
 
 }
 
@@ -149,26 +159,26 @@ export namespace testData {
 			['y', new $wcm.OptionType<u32>($wcm.u32)],
 		]);
 		export const TestVariant = new $wcm.VariantType<testData.Types.TestVariant, testData.Types.TestVariant._ct, testData.Types.TestVariant._vt>([undefined, $wcm.u32, $wcm.u64, $wcm.s32, $wcm.s64, $wcm.float32, $wcm.float64, Point], testData.Types.TestVariant._ctor);
-		export const call = new $wcm.FunctionType<typeof testData.Types.call>('call', 'call',[
+		export const call = new $wcm.FunctionType<testData.Types.call>('call', 'call',[
 			['point', Point],
 		], $wcm.u32);
-		export const callOption = new $wcm.FunctionType<typeof testData.Types.callOption>('callOption', 'call-option',[
+		export const callOption = new $wcm.FunctionType<testData.Types.callOption>('callOption', 'call-option',[
 			['point', new $wcm.OptionType<testData.Types.Point>(Point)],
 		], new $wcm.OptionType<u32>($wcm.u32));
-		export const checkVariant = new $wcm.FunctionType<typeof testData.Types.checkVariant>('checkVariant', 'check-variant',[
+		export const checkVariant = new $wcm.FunctionType<testData.Types.checkVariant>('checkVariant', 'check-variant',[
 			['value', TestVariant],
 		], TestVariant);
-		PointResource.addFunction(new $wcm.FunctionType<typeof testData.Types.PointResource.constructor>('constructor', '[constructor]point-resource', [
+		PointResource.addFunction(new $wcm.FunctionType<testData.Types.PointResource.constructor>('constructor', '[constructor]point-resource', [
 			['x', $wcm.u32],
 			['y', $wcm.u32],
 		], new $wcm.OwnType<testData.Types.PointResource>(PointResource)));
-		PointResource.addFunction(new $wcm.FunctionType<typeof testData.Types.PointResource.getX>('getX', '[method]point-resource.get-x', [
+		PointResource.addFunction(new $wcm.FunctionType<testData.Types.PointResource.getX>('getX', '[method]point-resource.get-x', [
 			['self', new $wcm.BorrowType<testData.Types.PointResource>(PointResource)],
 		], $wcm.u32));
-		PointResource.addFunction(new $wcm.FunctionType<typeof testData.Types.PointResource.getY>('getY', '[method]point-resource.get-y', [
+		PointResource.addFunction(new $wcm.FunctionType<testData.Types.PointResource.getY>('getY', '[method]point-resource.get-y', [
 			['self', new $wcm.BorrowType<testData.Types.PointResource>(PointResource)],
 		], $wcm.u32));
-		PointResource.addFunction(new $wcm.FunctionType<typeof testData.Types.PointResource.add>('add', '[method]point-resource.add', [
+		PointResource.addFunction(new $wcm.FunctionType<testData.Types.PointResource.add>('add', '[method]point-resource.add', [
 			['self', new $wcm.BorrowType<testData.Types.PointResource>(PointResource)],
 		], $wcm.u32));
 	}
