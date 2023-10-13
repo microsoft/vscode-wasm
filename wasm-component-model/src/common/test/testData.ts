@@ -5,8 +5,9 @@
 import * as $wcm from '../componentModel';
 import type { u32, resource, own, borrow, u64, s32, s64, float32, float64, i32, ptr, i64 } from '../componentModel';
 
-export namespace TestData {
-	export namespace TestCases {
+export namespace testData {
+	export namespace Types {
+		export const id = 'vscode:test-data/types' as const;
 
 		export type Point = {
 			x: u32;
@@ -132,46 +133,46 @@ export namespace TestData {
 
 		export declare function checkVariant(value: TestVariant): TestVariant;
 	}
-	export type TestCases = Pick<typeof TestCases, 'PointResource' | 'call' | 'callOption' | 'checkVariant'>;
+	export type Types = Pick<typeof Types, 'PointResource' | 'call' | 'callOption' | 'checkVariant'>;
 
 }
 
-export namespace TestData {
-	export namespace TestCases.$ {
-		export const Point = new $wcm.RecordType<TestData.TestCases.Point>([
+export namespace testData {
+	export namespace Types.$ {
+		export const Point = new $wcm.RecordType<testData.Types.Point>([
 			['x', $wcm.u32],
 			['y', $wcm.u32],
 		]);
 		export const PointResource = new $wcm.NamespaceResourceType('PointResource', 'point-resource');
-		export const PointOption = new $wcm.RecordType<TestData.TestCases.PointOption>([
+		export const PointOption = new $wcm.RecordType<testData.Types.PointOption>([
 			['x', new $wcm.OptionType<u32>($wcm.u32)],
 			['y', new $wcm.OptionType<u32>($wcm.u32)],
 		]);
-		export const TestVariant = new $wcm.VariantType<TestData.TestCases.TestVariant, TestData.TestCases.TestVariant._ct, TestData.TestCases.TestVariant._vt>([undefined, $wcm.u32, $wcm.u64, $wcm.s32, $wcm.s64, $wcm.float32, $wcm.float64, Point], TestData.TestCases.TestVariant._ctor);
-		export const call = new $wcm.FunctionType<typeof TestData.TestCases.call>('call', 'call',[
+		export const TestVariant = new $wcm.VariantType<testData.Types.TestVariant, testData.Types.TestVariant._ct, testData.Types.TestVariant._vt>([undefined, $wcm.u32, $wcm.u64, $wcm.s32, $wcm.s64, $wcm.float32, $wcm.float64, Point], testData.Types.TestVariant._ctor);
+		export const call = new $wcm.FunctionType<typeof testData.Types.call>('call', 'call',[
 			['point', Point],
 		], $wcm.u32);
-		export const callOption = new $wcm.FunctionType<typeof TestData.TestCases.callOption>('callOption', 'call-option',[
-			['point', new $wcm.OptionType<TestData.TestCases.Point>(Point)],
+		export const callOption = new $wcm.FunctionType<typeof testData.Types.callOption>('callOption', 'call-option',[
+			['point', new $wcm.OptionType<testData.Types.Point>(Point)],
 		], new $wcm.OptionType<u32>($wcm.u32));
-		export const checkVariant = new $wcm.FunctionType<typeof TestData.TestCases.checkVariant>('checkVariant', 'check-variant',[
+		export const checkVariant = new $wcm.FunctionType<typeof testData.Types.checkVariant>('checkVariant', 'check-variant',[
 			['value', TestVariant],
 		], TestVariant);
-		PointResource.addFunction(new $wcm.FunctionType<typeof TestData.TestCases.PointResource.constructor>('constructor', '[constructor]point-resource', [
+		PointResource.addFunction(new $wcm.FunctionType<typeof testData.Types.PointResource.constructor>('constructor', '[constructor]point-resource', [
 			['x', $wcm.u32],
 			['y', $wcm.u32],
-		], new $wcm.OwnType<TestData.TestCases.PointResource>(PointResource)));
-		PointResource.addFunction(new $wcm.FunctionType<typeof TestData.TestCases.PointResource.getX>('getX', '[method]point-resource.get-x', [
-			['self', new $wcm.BorrowType<TestData.TestCases.PointResource>(PointResource)],
+		], new $wcm.OwnType<testData.Types.PointResource>(PointResource)));
+		PointResource.addFunction(new $wcm.FunctionType<typeof testData.Types.PointResource.getX>('getX', '[method]point-resource.get-x', [
+			['self', new $wcm.BorrowType<testData.Types.PointResource>(PointResource)],
 		], $wcm.u32));
-		PointResource.addFunction(new $wcm.FunctionType<typeof TestData.TestCases.PointResource.getY>('getY', '[method]point-resource.get-y', [
-			['self', new $wcm.BorrowType<TestData.TestCases.PointResource>(PointResource)],
+		PointResource.addFunction(new $wcm.FunctionType<typeof testData.Types.PointResource.getY>('getY', '[method]point-resource.get-y', [
+			['self', new $wcm.BorrowType<testData.Types.PointResource>(PointResource)],
 		], $wcm.u32));
-		PointResource.addFunction(new $wcm.FunctionType<typeof TestData.TestCases.PointResource.add>('add', '[method]point-resource.add', [
-			['self', new $wcm.BorrowType<TestData.TestCases.PointResource>(PointResource)],
+		PointResource.addFunction(new $wcm.FunctionType<typeof testData.Types.PointResource.add>('add', '[method]point-resource.add', [
+			['self', new $wcm.BorrowType<testData.Types.PointResource>(PointResource)],
 		], $wcm.u32));
 	}
-	export namespace TestCases._ {
+	export namespace Types._ {
 		const functions: $wcm.FunctionType<$wcm.ServiceFunction>[] = [$.call, $.callOption, $.checkVariant];
 		const resources: $wcm.NamespaceResourceType[] = [$.PointResource];
 		export type WasmInterface = {
@@ -183,11 +184,11 @@ export namespace TestData {
 			'[method]point-resource.add': (self: i32) => i32;
 			'check-variant': (value_case: i32, value_0: i64, value_1: i32, result: ptr<[i32, i64, i32]>) => void;
 		};
-		export function createHost(service: TestData.TestCases, context: $wcm.Context): WasmInterface {
+		export function createHost(service: testData.Types, context: $wcm.Context): WasmInterface {
 			return $wcm.Host.create<WasmInterface>(functions, resources, service, context);
 		}
-		export function createService(wasmInterface: WasmInterface, context: $wcm.Context): TestData.TestCases {
-			return $wcm.Service.create<TestData.TestCases>(functions, resources, wasmInterface, context);
+		export function createService(wasmInterface: WasmInterface, context: $wcm.Context): testData.Types {
+			return $wcm.Service.create<testData.Types>(functions, resources, wasmInterface, context);
 		}
 	}
 }

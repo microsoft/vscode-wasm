@@ -1,6 +1,6 @@
 package vscode:test-data
 
-interface test-cases {
+interface types {
 
 	record point {
         x: u32,

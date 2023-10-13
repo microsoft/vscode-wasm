@@ -4,7 +4,7 @@
  *--------------------------------------------------------------------------------------------*/
 import assert from 'assert';
 
-import { u32, Memory as IMemory, ptr, size, Context, borrow, own, alignment, float32 } from '../componentModel';
+import { u32, Memory as IMemory, ptr, size, Context, borrow, own, alignment } from '../componentModel';
 
 class Memory implements IMemory {
 	public readonly buffer: ArrayBuffer;
@@ -35,9 +35,8 @@ class Memory implements IMemory {
 	}
 }
 
-import { TestData as t } from './testData';
-import { setup } from 'mocha';
-const TestVariant = t.TestCases.TestVariant;
+import { testData as t } from './testData';
+const TestVariant = t.Types.TestVariant;
 
 namespace PointResourceImpl {
 
@@ -48,33 +47,33 @@ namespace PointResourceImpl {
 
 	const data: Map<u32, Point> = new Map();
 
-	export function constructor(x: u32, y: u32): own<t.TestCases.PointResource> {
+	export function constructor(x: u32, y: u32): own<t.Types.PointResource> {
 		const id = counter++;
 		data.set(id, new Point(x, y));
 		return id;
 	}
 
-	export function getX(self: borrow<t.TestCases.PointResource>): u32 {
+	export function getX(self: borrow<t.Types.PointResource>): u32 {
 		return data.get(self)!.x;
 	}
 
-	export function getY(self: borrow<t.TestCases.PointResource>): u32 {
+	export function getY(self: borrow<t.Types.PointResource>): u32 {
 		return data.get(self)!.y;
 	}
 
-	export function add(self: borrow<t.TestCases.PointResource>): u32 {
+	export function add(self: borrow<t.Types.PointResource>): u32 {
 		return data.get(self)!.x + data.get(self)!.y;
 	}
 }
 
-const sampleImpl: t.TestCases = {
-	call(point: t.TestCases.Point | undefined): u32 {
+const sampleImpl: t.Types = {
+	call(point: t.Types.Point | undefined): u32 {
 		if (point === undefined) {
 			return 0;
 		}
 		return point.x + point.y;
 	},
-	callOption(point: t.TestCases.Point | undefined): u32 | undefined {
+	callOption(point: t.Types.Point | undefined): u32 | undefined {
 		if (point === undefined) {
 			return undefined;
 		}
@@ -83,7 +82,7 @@ const sampleImpl: t.TestCases = {
 	PointResource: PointResourceImpl,
 	checkVariant(value)  {
 		switch (value.case) {
-			case t.TestCases.TestVariant.unsigned32:
+			case t.Types.TestVariant.unsigned32:
 				return TestVariant._unsigned32(value.value + 1);
 			case TestVariant.unsigned64:
 				return TestVariant._unsigned64(value.value + 1n);
@@ -95,7 +94,7 @@ const sampleImpl: t.TestCases = {
 				return TestVariant._floatingPoint32(value.value + 1.3);
 			case TestVariant.floatingPoint64:
 				return TestVariant._floatingPoint64(value.value + 1.3);
-			case t.TestCases.TestVariant.structure:
+			case t.Types.TestVariant.structure:
 				return TestVariant._structure({ x: value.value.x + 1, y: value.value.y + 1});
 			default:
 				return TestVariant._empty();
@@ -109,8 +108,8 @@ const context: Context = {
 };
 
 suite('point', () => {
-	const host: t.TestCases._.WasmInterface = t.TestCases._.createHost(sampleImpl, context);
-	const service: t.TestCases = t.TestCases._.createService(host, context);
+	const host: t.Types._.WasmInterface = t.Types._.createHost(sampleImpl, context);
+	const service: t.Types = t.Types._.createService(host, context);
 	test('host:call', () => {
 		assert.strictEqual(host.call(1, 2), 3);
 	});
@@ -120,8 +119,8 @@ suite('point', () => {
 });
 
 suite ('point-resource', () => {
-	const host: t.TestCases._.WasmInterface = t.TestCases._.createHost(sampleImpl, context);
-	const service: t.TestCases = t.TestCases._.createService(host, context);
+	const host: t.Types._.WasmInterface = t.Types._.createHost(sampleImpl, context);
+	const service: t.Types = t.Types._.createService(host, context);
 	test('host:call', () => {
 		const point = host['[constructor]point-resource'](1, 2);
 		assert.strictEqual(host['[method]point-resource.get-x'](point), 1);
@@ -138,7 +137,7 @@ suite ('point-resource', () => {
 
 suite('option', () => {
 	test('host:call', () => {
-		const host: t.TestCases._.WasmInterface = t.TestCases._.createHost(sampleImpl, context);
+		const host: t.Types._.WasmInterface = t.Types._.createHost(sampleImpl, context);
 		const memory = context.memory;
 		const ptr = memory.alloc(4, 8);
 		host['call-option'](1, 1, 2, ptr);
@@ -148,8 +147,8 @@ suite('option', () => {
 });
 
 suite('variant', () => {
-	const host: t.TestCases._.WasmInterface = t.TestCases._.createHost(sampleImpl, context);
-	const service: t.TestCases = t.TestCases._.createService(host, context);
+	const host: t.Types._.WasmInterface = t.Types._.createHost(sampleImpl, context);
+	const service: t.Types = t.Types._.createService(host, context);
 
 	test('empty', () => {
 		const empty = service.checkVariant(TestVariant._empty());
