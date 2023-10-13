@@ -20,6 +20,7 @@ export namespace clocks {
 	 * It is intended for measuring elapsed time.
 	 */
 	export namespace MonotonicClock {
+		export const id = 'wasi:clocks/monotonic-clock' as const;
 		
 		export type Pollable = io.Poll.Pollable;
 		
@@ -66,6 +67,7 @@ export namespace clocks {
 	 * It is intended for reporting the current date and time for humans.
 	 */
 	export namespace WallClock {
+		export const id = 'wasi:clocks/wall-clock' as const;
 		
 		/**
 		 * A time and date in seconds plus nanoseconds.
@@ -102,6 +104,7 @@ export namespace clocks {
 	export type WallClock = Pick<typeof WallClock, 'now' | 'resolution'>;
 	
 	export namespace Timezone {
+		export const id = 'wasi:clocks/timezone' as const;
 		
 		export type Datetime = clocks.WallClock.Datetime;
 		

@@ -8,6 +8,7 @@ import { io } from './io';
 
 export namespace sockets {
 	export namespace Network {
+		export const id = 'wasi:sockets/network' as const;
 		
 		/**
 		 * An opaque resource that represents access to (a subset of) the network.
@@ -175,6 +176,7 @@ export namespace sockets {
 	 * This interface provides a value-export of the default network handle..
 	 */
 	export namespace InstanceNetwork {
+		export const id = 'wasi:sockets/instance-network' as const;
 		
 		export type Network = sockets.Network.Network;
 		
@@ -186,6 +188,7 @@ export namespace sockets {
 	export type InstanceNetwork = Pick<typeof InstanceNetwork, 'instanceNetwork'>;
 	
 	export namespace IpNameLookup {
+		export const id = 'wasi:sockets/ip-name-lookup' as const;
 		
 		export type Pollable = io.Poll.Pollable;
 		
@@ -263,6 +266,7 @@ export namespace sockets {
 	export type IpNameLookup = Pick<typeof IpNameLookup, 'ResolveAddressStream' | 'resolveAddresses'>;
 	
 	export namespace Tcp {
+		export const id = 'wasi:sockets/tcp' as const;
 		
 		export type InputStream = io.Streams.InputStream;
 		
@@ -562,6 +566,7 @@ export namespace sockets {
 	export type Tcp = Pick<typeof Tcp, 'TcpSocket'>;
 	
 	export namespace TcpCreateSocket {
+		export const id = 'wasi:sockets/tcp-create-socket' as const;
 		
 		export type Network = sockets.Network.Network;
 		
@@ -598,6 +603,7 @@ export namespace sockets {
 	export type TcpCreateSocket = Pick<typeof TcpCreateSocket, 'createTcpSocket'>;
 	
 	export namespace Udp {
+		export const id = 'wasi:sockets/udp' as const;
 		
 		export type Pollable = io.Poll.Pollable;
 		
@@ -844,6 +850,7 @@ export namespace sockets {
 	export type Udp = Pick<typeof Udp, 'UdpSocket'>;
 	
 	export namespace UdpCreateSocket {
+		export const id = 'wasi:sockets/udp-create-socket' as const;
 		
 		export type Network = sockets.Network.Network;
 		

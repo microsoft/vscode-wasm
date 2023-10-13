@@ -13,6 +13,7 @@ export namespace random {
 	 * Windows.
 	 */
 	export namespace InsecureSeed {
+		export const id = 'wasi:random/insecure-seed' as const;
 		
 		/**
 		 * Return a 128-bit value that may contain a pseudo-random value.
@@ -44,6 +45,7 @@ export namespace random {
 	 * Windows.
 	 */
 	export namespace Insecure {
+		export const id = 'wasi:random/insecure' as const;
 		
 		/**
 		 * Return `len` insecure pseudo-random bytes.
@@ -74,6 +76,7 @@ export namespace random {
 	 * Windows.
 	 */
 	export namespace Random {
+		export const id = 'wasi:random/random' as const;
 		
 		/**
 		 * Return `len` cryptographically-secure random or pseudo-random bytes.

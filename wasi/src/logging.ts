@@ -11,6 +11,7 @@ export namespace logging {
 	 * simple priority levels and context values.
 	 */
 	export namespace Logging {
+		export const id = 'wasi:logging/logging' as const;
 		
 		/**
 		 * A log level, describing a kind of message.

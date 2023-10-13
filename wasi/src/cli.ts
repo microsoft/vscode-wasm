@@ -8,6 +8,7 @@ import { io } from './io';
 
 export namespace cli {
 	export namespace Environment {
+		export const id = 'wasi:cli/environment' as const;
 		
 		/**
 		 * Get the POSIX-style environment variables.
@@ -35,6 +36,7 @@ export namespace cli {
 	export type Environment = Pick<typeof Environment, 'getEnvironment' | 'getArguments' | 'initialCwd'>;
 	
 	export namespace Exit {
+		export const id = 'wasi:cli/exit' as const;
 		
 		/**
 		 * Exit the current instance and any linked instances.
@@ -44,6 +46,7 @@ export namespace cli {
 	export type Exit = Pick<typeof Exit, 'exit'>;
 	
 	export namespace Run {
+		export const id = 'wasi:cli/run' as const;
 		
 		/**
 		 * Run the program.
@@ -53,6 +56,7 @@ export namespace cli {
 	export type Run = Pick<typeof Run, 'run'>;
 	
 	export namespace Stdin {
+		export const id = 'wasi:cli/stdin' as const;
 		
 		export type InputStream = io.Streams.InputStream;
 		
@@ -61,6 +65,7 @@ export namespace cli {
 	export type Stdin = Pick<typeof Stdin, 'getStdin'>;
 	
 	export namespace Stdout {
+		export const id = 'wasi:cli/stdout' as const;
 		
 		export type OutputStream = io.Streams.OutputStream;
 		
@@ -69,6 +74,7 @@ export namespace cli {
 	export type Stdout = Pick<typeof Stdout, 'getStdout'>;
 	
 	export namespace Stderr {
+		export const id = 'wasi:cli/stderr' as const;
 		
 		export type OutputStream = io.Streams.OutputStream;
 		
@@ -77,6 +83,7 @@ export namespace cli {
 	export type Stderr = Pick<typeof Stderr, 'getStderr'>;
 	
 	export namespace TerminalInput {
+		export const id = 'wasi:cli/terminal-input' as const;
 		
 		/**
 		 * The input side of a terminal.
@@ -86,6 +93,7 @@ export namespace cli {
 	export type TerminalInput = typeof TerminalInput;
 	
 	export namespace TerminalOutput {
+		export const id = 'wasi:cli/terminal-output' as const;
 		
 		/**
 		 * The output side of a terminal.
@@ -99,6 +107,7 @@ export namespace cli {
 	 * link-time authority.
 	 */
 	export namespace TerminalStdin {
+		export const id = 'wasi:cli/terminal-stdin' as const;
 		
 		export type TerminalInput = cli.TerminalInput.TerminalInput;
 		
@@ -115,6 +124,7 @@ export namespace cli {
 	 * link-time authority.
 	 */
 	export namespace TerminalStdout {
+		export const id = 'wasi:cli/terminal-stdout' as const;
 		
 		export type TerminalOutput = cli.TerminalOutput.TerminalOutput;
 		
@@ -131,6 +141,7 @@ export namespace cli {
 	 * link-time authority.
 	 */
 	export namespace TerminalStderr {
+		export const id = 'wasi:cli/terminal-stderr' as const;
 		
 		export type TerminalOutput = cli.TerminalOutput.TerminalOutput;
 		

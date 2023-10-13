@@ -23,8 +23,8 @@ export function processDocument(document: Document, options: ResolvedOptions): v
 		}
 
 		const symbols = new SymbolTable(document, nameProvider);
-		const visitor = new TypeScript.PackageEmitter(pkg, mainCode, symbols, nameProvider, options);
-		const code = visitor.emit();
+		const pkgEmitter = new TypeScript.PackageEmitter(pkg, mainCode, symbols, nameProvider, options);
+		const code = pkgEmitter.emit();
 		const fileName = nameProvider.asFileName(pkg);
 		fs.writeFileSync(path.join(options.outDir, fileName), code.toString());
 	}
@@ -181,9 +181,7 @@ namespace _TypeScriptNameProvider {
 	]);
 
 	export function asFileName(pkg: Package): string {
-		let result = asPackageName(pkg);
-		result = result[0].toLowerCase() + result.substring(1);
-		return `${result}.ts`;
+		return `${asPackageName(pkg)}.ts`;
 	}
 
 	export function asImportName(pkg: Package): string {
@@ -193,9 +191,9 @@ namespace _TypeScriptNameProvider {
 	export function asPackageName(pkg: Package): string {
 		const index = pkg.name.indexOf(':');
 		if (index === -1) {
-			return _asTypeName(pkg.name);
+			return _asPropertyName(pkg.name);
 		}
-		return _asTypeName(pkg.name.substring(index + 1));
+		return _asPropertyName(pkg.name.substring(index + 1));
 	}
 
 	export function asNamespaceName(iface: Interface): string {
@@ -1208,6 +1206,7 @@ namespace TypeScript {
 			emitDocumentation(iface, code);
 			code.push(`export namespace ${name} {`);
 			code.increaseIndent();
+			code.push(`export const id = '${this.pkg.name}/${iface.name}' as const;`);
 			const exports: string[] = [];
 			for (const t of Object.values(iface.types)) {
 				code.push('');

@@ -11,6 +11,7 @@ export namespace io {
 	 * at once.
 	 */
 	export namespace Poll {
+		export const id = 'wasi:io/poll' as const;
 		
 		/**
 		 * A "pollable" handle.
@@ -57,6 +58,7 @@ export namespace io {
 	 * when it does, they are expected to subsume this API.
 	 */
 	export namespace Streams {
+		export const id = 'wasi:io/streams' as const;
 		
 		export type Pollable = io.Poll.Pollable;
 		

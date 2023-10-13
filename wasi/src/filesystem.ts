@@ -35,6 +35,7 @@ export namespace filesystem {
 	 * [WASI filesystem path resolution]: https://github.com/WebAssembly/wasi-filesystem/blob/main/path-resolution.md
 	 */
 	export namespace Types {
+		export const id = 'wasi:filesystem/types' as const;
 		
 		export type InputStream = io.Streams.InputStream;
 		
@@ -851,6 +852,7 @@ export namespace filesystem {
 	export type Types = Pick<typeof Types, 'Descriptor' | 'DirectoryEntryStream' | 'filesystemErrorCode'>;
 	
 	export namespace Preopens {
+		export const id = 'wasi:filesystem/preopens' as const;
 		
 		export type Descriptor = filesystem.Types.Descriptor;
 		

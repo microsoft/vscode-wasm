@@ -8,6 +8,7 @@ import { io } from './io';
 
 export namespace http {
 	export namespace Types {
+		export const id = 'wasi:http/types' as const;
 		
 		export type InputStream = io.Streams.InputStream;
 		
@@ -391,6 +392,7 @@ export namespace http {
 	export type Types = Pick<typeof Types, 'Fields' | 'IncomingRequest' | 'OutgoingRequest' | 'ResponseOutparam' | 'IncomingResponse' | 'IncomingBody' | 'FutureTrailers' | 'OutgoingResponse' | 'OutgoingBody' | 'FutureIncomingResponse'>;
 	
 	export namespace IncomingHandler {
+		export const id = 'wasi:http/incoming-handler' as const;
 		
 		export type IncomingRequest = http.Types.IncomingRequest;
 		
@@ -401,6 +403,7 @@ export namespace http {
 	export type IncomingHandler = Pick<typeof IncomingHandler, 'handle'>;
 	
 	export namespace OutgoingHandler {
+		export const id = 'wasi:http/outgoing-handler' as const;
 		
 		export type OutgoingRequest = http.Types.OutgoingRequest;
 		
