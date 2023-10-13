@@ -35,8 +35,9 @@ class Memory implements IMemory {
 	}
 }
 
-import { testData as t } from './testData';
-const TestVariant = t.Types.TestVariant;
+import * as td from './testData';
+import Types = td.testData.Types;
+import TestVariant = Types.TestVariant;
 
 namespace PointResourceImpl {
 
@@ -47,33 +48,33 @@ namespace PointResourceImpl {
 
 	const data: Map<u32, Point> = new Map();
 
-	export function constructor(x: u32, y: u32): own<t.Types.PointResource> {
+	export function constructor(x: u32, y: u32): own<Types.PointResource> {
 		const id = counter++;
 		data.set(id, new Point(x, y));
 		return id;
 	}
 
-	export function getX(self: borrow<t.Types.PointResource>): u32 {
+	export function getX(self: borrow<Types.PointResource>): u32 {
 		return data.get(self)!.x;
 	}
 
-	export function getY(self: borrow<t.Types.PointResource>): u32 {
+	export function getY(self: borrow<Types.PointResource>): u32 {
 		return data.get(self)!.y;
 	}
 
-	export function add(self: borrow<t.Types.PointResource>): u32 {
+	export function add(self: borrow<Types.PointResource>): u32 {
 		return data.get(self)!.x + data.get(self)!.y;
 	}
 }
 
-const sampleImpl: t.Types = {
-	call(point: t.Types.Point | undefined): u32 {
+const sampleImpl: Types = {
+	call(point: Types.Point | undefined): u32 {
 		if (point === undefined) {
 			return 0;
 		}
 		return point.x + point.y;
 	},
-	callOption(point: t.Types.Point | undefined): u32 | undefined {
+	callOption(point: Types.Point | undefined): u32 | undefined {
 		if (point === undefined) {
 			return undefined;
 		}
@@ -82,7 +83,7 @@ const sampleImpl: t.Types = {
 	PointResource: PointResourceImpl,
 	checkVariant(value)  {
 		switch (value.case) {
-			case t.Types.TestVariant.unsigned32:
+			case TestVariant.unsigned32:
 				return TestVariant._unsigned32(value.value + 1);
 			case TestVariant.unsigned64:
 				return TestVariant._unsigned64(value.value + 1n);
@@ -94,7 +95,7 @@ const sampleImpl: t.Types = {
 				return TestVariant._floatingPoint32(value.value + 1.3);
 			case TestVariant.floatingPoint64:
 				return TestVariant._floatingPoint64(value.value + 1.3);
-			case t.Types.TestVariant.structure:
+			case TestVariant.structure:
 				return TestVariant._structure({ x: value.value.x + 1, y: value.value.y + 1});
 			default:
 				return TestVariant._empty();
@@ -108,8 +109,8 @@ const context: Context = {
 };
 
 suite('point', () => {
-	const host: t.Types._.WasmInterface = t.Types._.createHost(sampleImpl, context);
-	const service: t.Types = t.Types._.createService(host, context);
+	const host: Types._.WasmInterface = Types._.createHost(sampleImpl, context);
+	const service: Types = Types._.createService(host, context);
 	test('host:call', () => {
 		assert.strictEqual(host.call(1, 2), 3);
 	});
@@ -119,8 +120,8 @@ suite('point', () => {
 });
 
 suite ('point-resource', () => {
-	const host: t.Types._.WasmInterface = t.Types._.createHost(sampleImpl, context);
-	const service: t.Types = t.Types._.createService(host, context);
+	const host: Types._.WasmInterface = Types._.createHost(sampleImpl, context);
+	const service: Types = Types._.createService(host, context);
 	test('host:call', () => {
 		const point = host['[constructor]point-resource'](1, 2);
 		assert.strictEqual(host['[method]point-resource.get-x'](point), 1);
@@ -137,7 +138,7 @@ suite ('point-resource', () => {
 
 suite('option', () => {
 	test('host:call', () => {
-		const host: t.Types._.WasmInterface = t.Types._.createHost(sampleImpl, context);
+		const host: Types._.WasmInterface = Types._.createHost(sampleImpl, context);
 		const memory = context.memory;
 		const ptr = memory.alloc(4, 8);
 		host['call-option'](1, 1, 2, ptr);
@@ -147,8 +148,8 @@ suite('option', () => {
 });
 
 suite('variant', () => {
-	const host: t.Types._.WasmInterface = t.Types._.createHost(sampleImpl, context);
-	const service: t.Types = t.Types._.createService(host, context);
+	const host: Types._.WasmInterface = Types._.createHost(sampleImpl, context);
+	const service: Types = Types._.createService(host, context);
 
 	test('empty', () => {
 		const empty = service.checkVariant(TestVariant._empty());
