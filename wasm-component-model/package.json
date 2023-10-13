@@ -50,6 +50,6 @@
 		"test:desktop": "node ../node_modules/mocha/bin/_mocha",
 		"all": "npm run clean && npm run compile && npm run lint",
 		"all:publish": "git clean -xfd . && npm install && npm run compile:publish && npm run lint",
-		"peggy": "../node_modules/.bin/make-dir ./lib/tools && peggy -o lib/tools/wit.js src/tools/wit.pegjs"
+		"generate:testCase": "wasm-tools component wit --json ./src/common/test/test-data.wit | node ./lib/tools/main.js --stdin --noMain --resourceStyle namespace --outDir ./src/common/test"
 	}
 }

@@ -40,8 +40,8 @@ interface Printers {
 
 class Imports {
 
-	public readonly baseTypes: Set<string> = new Set();
 	public readonly starImports = new Map<string, string>();
+	private readonly baseTypes: Map<string, number> = new Map();
 	private readonly imports: Map<string, Set<string>> = new Map();
 	private uniqueName: number = 1;
 
@@ -57,7 +57,29 @@ class Imports {
 	}
 
 	public addBaseType(name: string): void {
-		this.baseTypes.add(name);
+		const value = this.baseTypes.get(name);
+		if (value === undefined) {
+			this.baseTypes.set(name, 1);
+		} else {
+			this.baseTypes.set(name, value + 1);
+		}
+	}
+
+	public removeBaseType(name: string): void {
+		let value = this.baseTypes.get(name);
+		if (value === undefined) {
+			return;
+		}
+		value -= 1;
+		if (value === 0) {
+			this.baseTypes.delete(name);
+		} else {
+			this.baseTypes.set(name, value);
+		}
+	}
+
+	public getBaseTypes(): readonly string[] {
+		return Array.from(this.baseTypes.keys());
 	}
 
 	public add(value: string, from: string): void {
@@ -115,8 +137,9 @@ class Code {
 		for (const [from, values] of this.imports) {
 			this.source.unshift(`import { ${Array.from(values).join(', ')} } from '${from}';`);
 		}
-		if (this.imports.baseTypes.size > 0) {
-			this.source.unshift(`import type { ${Array.from(this.imports.baseTypes).join(', ')} } from '@vscode/wasm-component-model';`);
+		const baseTypes = this.imports.getBaseTypes();
+		if (baseTypes.length > 0) {
+			this.source.unshift(`import type { ${baseTypes.join(', ')} } from '@vscode/wasm-component-model';`);
 		}
 		const starImports = this.imports.starImports;
 		for (const from of Array.from(starImports.keys()).reverse()) {
@@ -158,7 +181,9 @@ namespace _TypeScriptNameProvider {
 	]);
 
 	export function asFileName(pkg: Package): string {
-		return `${asPackageName(pkg)}.ts`;
+		let result = asPackageName(pkg);
+		result = result[0].toLowerCase() + result.substring(1);
+		return `${result}.ts`;
 	}
 
 	export function asImportName(pkg: Package): string {
@@ -168,9 +193,9 @@ namespace _TypeScriptNameProvider {
 	export function asPackageName(pkg: Package): string {
 		const index = pkg.name.indexOf(':');
 		if (index === -1) {
-			return pkg.name;
+			return _asTypeName(pkg.name);
 		}
-		return `${pkg.name.substring(index + 1)}`;
+		return _asTypeName(pkg.name.substring(index + 1));
 	}
 
 	export function asNamespaceName(iface: Interface): string {
@@ -287,7 +312,7 @@ namespace _WitNameProvider {
 		if (index === -1) {
 			return pkg.name;
 		}
-		return `${pkg.name.substring(index + 1)}`;
+		return toTs(pkg.name.substring(index + 1));
 	}
 
 	export function asNamespaceName(iface: Interface): string {
@@ -886,10 +911,10 @@ namespace MetaModel {
 					return qualify('s32');
 				case 's64':
 					return qualify('s64');
-				case 'f32':
-					return qualify('f32');
-				case 'f64':
-					return qualify('f64');
+				case 'float32':
+					return qualify('float32');
+				case 'float64':
+					return qualify('float64');
 				case 'bool':
 					return qualify('bool');
 				case 'string':
@@ -1796,12 +1821,12 @@ namespace TypeScript {
 				case 's64':
 					this.imports.addBaseType('s64');
 					return 's64';
-				case 'f32':
-					this.imports.addBaseType('f32');
-					return 'f32';
-				case 'f64':
-					this.imports.addBaseType('f64');
-					return 'f64';
+				case 'float32':
+					this.imports.addBaseType('float32');
+					return 'float32';
+				case 'float64':
+					this.imports.addBaseType('float64');
+					return 'float64';
 				case 'bool':
 					return 'boolean';
 				case 'string':
@@ -1835,8 +1860,8 @@ namespace TypeScript {
 			['s16', 'i32'],
 			['s32', 'i32'],
 			['s64', 'i64'],
-			['f32', 'f32'],
-			['f64', 'f64'],
+			['float32', 'f32'],
+			['float64', 'f64'],
 			['bool', 'i32'],
 		]);
 
@@ -1951,8 +1976,12 @@ namespace TypeScript {
 				for (let i = 0; i < caseFlatTypes.length; i++) {
 					const want = caseFlatTypes[i];
 					if (i < variantResult.length) {
-						const use = TypeFlattener.joinFlatType(this.assertWasmTypeName(variantResult[i].type), this.assertWasmTypeName(want.type));
+						const currentWasmType = this.assertWasmTypeName(variantResult[i].type);
+						const wantWasmType = this.assertWasmTypeName(want.type);
+						const use = TypeFlattener.joinFlatType(currentWasmType, wantWasmType);
 						this.imports.addBaseType(use);
+						this.imports.removeBaseType(currentWasmType);
+						this.imports.removeBaseType(wantWasmType);
 						variantResult[i].type = use;
 					} else {
 						this.imports.addBaseType(want.type);
@@ -2053,8 +2082,12 @@ namespace TypeScript {
 				for (let i = 0; i < caseFlatTypes.length; i++) {
 					const want = caseFlatTypes[i];
 					if (i < variantResult.length) {
-						const use = TypeFlattener.joinFlatType(this.assertWasmTypeName(variantResult[i]), this.assertWasmTypeName(want));
+						const currentWasmType = this.assertWasmTypeName(variantResult[i]);
+						const wantWasmType = this.assertWasmTypeName(want);
+						const use = TypeFlattener.joinFlatType(currentWasmType, wantWasmType);
 						this.imports.addBaseType(use);
+						this.imports.removeBaseType(currentWasmType);
+						this.imports.removeBaseType(wantWasmType);
 						variantResult[i] = use;
 					} else {
 						this.imports.addBaseType(want);

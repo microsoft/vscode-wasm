@@ -107,8 +107,8 @@ class CoerceValueIter implements Iterator<wasmType, wasmType> {
 	private index: number;
 
 	constructor(private readonly values: FlatValuesIter, private haveFlatTypes: readonly wasmTypeName[], private wantFlatTypes: readonly wasmTypeName[]) {
-		if (haveFlatTypes.length !== wantFlatTypes.length) {
-			throw new ComponentModelError('Invalid coercion');
+		if (haveFlatTypes.length < wantFlatTypes.length) {
+			throw new ComponentModelError(`Invalid coercion: have ${haveFlatTypes.length} values, want ${wantFlatTypes.length} values`);
 		}
 		this.index = 0;
 	}
