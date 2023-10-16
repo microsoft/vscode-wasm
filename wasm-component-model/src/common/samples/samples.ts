@@ -3,7 +3,7 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { ComponentModelType, EnumType, FlagsType, JFlags, JRecord, ListType, option, RecordType, result, TupleType, VariantType, u32, u8, wstring } from '../componentModel';
+import { ComponentModelType, EnumType, JRecord, ListType, option, RecordType, result, TupleType, VariantType, u32, u8, wstring } from '../componentModel';
 
 
 /****************************************************************************************
