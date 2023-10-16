@@ -1196,7 +1196,6 @@ export class TupleType<T extends JTuple> extends BaseRecordType<T, TupleField> {
 }
 
 export interface JFlags {
-	[key: string]: boolean;
 }
 
 interface FlagField {
@@ -1211,88 +1210,85 @@ export namespace FlagField {
 	}
 }
 
-enum FlagsStorageType {
+export enum FlagsStorageKind {
 	Empty,
 	Single,
 	Array
 }
 
-interface SingleFlags {
-	readonly _bits: u8 | u16 | u32;
+
+interface EmptyFlagsInfo {
+	readonly kind: FlagsStorageKind.Empty;
+	readonly create: () => JFlags;
 }
 
-interface ArrayFlags {
-	readonly _bits: u32[];
+interface SingleFlags {
+	readonly kind: FlagsStorageKind.Single;
+	readonly type: typeof u8 | typeof u16 | typeof u32;
+	readonly create: (bits?: u8 | u16 | u32) => JFlags;
+	readonly value: (flags: JFlags) => u8 | u16 | u32;
 }
+export type SingleFlagsValueFunc = (flags: JFlags) => u8 | u16 | u32;
+
+interface ArrayFlags {
+	readonly kind: FlagsStorageKind.Array;
+	readonly length: number;
+	readonly type: typeof u32;
+	readonly create: (bits?: u32[]) => JFlags;
+	readonly value: (flags: JFlags) => u32[];
+}
+export type ArrayFlagsValueFunc = (flags: JFlags) => u32[];
+
+type FlagsInfo = EmptyFlagsInfo | SingleFlags | ArrayFlags;
 
 export type flags<K extends keyof any> = Record<K, boolean> & JFlags;
 export class FlagsType<T extends JFlags> implements ComponentModelType<T> {
 
-	private readonly fields: FlagField[];
-	private readonly num32Flags: number;
-	private type: [FlagsStorageType, typeof u8 | typeof u16 | typeof u32 | undefined];
+	private readonly flagsInfo: FlagsInfo;
 
 	public readonly kind: ComponentModelTypeKind;
 	public readonly size: size;
 	public readonly alignment: alignment;
 	public readonly flatTypes: readonly wasmTypeName[];
 
-	constructor(fields: string[]) {
-		this.fields = [];
-		for (let i = 0; i < fields.length; i++) {
-			this.fields.push(FlagField.create(fields[i], i >>> 5, 1 << (i & 31)));
-		}
-
-		const nr = fields.length;
-		const size = this.size = FlagsType.size(nr);
+	constructor(numberOfFlags: number,  info: FlagsInfo) {
+		this.flagsInfo = info;
 		this.kind = ComponentModelTypeKind.flags;
-		this.type = FlagsType.getType(size);
-		this.num32Flags = FlagsType.num32Flags(nr);
-		this.alignment = FlagsType.alignment(nr);
-		this.flatTypes = FlagsType.flatTypes(nr);
-	}
-
-	public create(): T {
-		switch (this.type[0]) {
-			case FlagsStorageType.Empty:
-				return Object.create(null) as T;
-			case FlagsStorageType.Single:
-				return this.createSingle(0) as T;
-			case FlagsStorageType.Array:
-				return this.createArray(new Array(this.num32Flags)) as T;
-		}
+		this.size = FlagsType.size(numberOfFlags);
+		this.alignment = FlagsType.alignment(numberOfFlags);
+		this.flatTypes = FlagsType.flatTypes(numberOfFlags);
 	}
 
 	public load(memory: Memory, ptr: ptr<u8 | u16 | u32 | u32[]>, options: Options): T {
-		switch (this.type[0]) {
-			case FlagsStorageType.Empty:
-				return Object.create(null) as T;
-			case FlagsStorageType.Single:
-				return this.createSingle(this.type[1]!.load(memory, ptr, options)) as T;
-			case FlagsStorageType.Array:
-				const bits: u32[] = new Array(this.num32Flags);
-				const type = this.type[1]!;
-				for (let i = 0; i < this.num32Flags; i++) {
+		switch (this.flagsInfo.kind) {
+			case FlagsStorageKind.Empty:
+				return this.flagsInfo.create() as T;
+			case FlagsStorageKind.Single:
+				return this.flagsInfo.create(this.flagsInfo.type.load(memory, ptr, options)) as T;
+			case FlagsStorageKind.Array:
+				const bits: u32[] = new Array(this.flagsInfo.length);
+				const type = this.flagsInfo.type;
+				for (let i = 0; i < bits.length; i++) {
 					bits[i] = type.load(memory, ptr, options);
 					ptr += type.size;
 				}
-				return this.createArray(bits) as T;
+				return this.flagsInfo.create(bits) as T;
 		}
 	}
 
 	public liftFlat(_memory: Memory, values: FlatValuesIter, options: Options): T {
-		switch (this.type[0]) {
-			case FlagsStorageType.Empty:
-				return Object.create(null) as T;
-			case FlagsStorageType.Single:
-				return this.createSingle(this.type[1]!.liftFlat(_memory, values, options)) as T;
-			case FlagsStorageType.Array:
-				const bits: i32[] = new Array(this.num32Flags);
-				const type = this.type[1]!;
-				for (let i = 0; i < this.num32Flags; i++) {
+		switch (this.flagsInfo.kind) {
+			case FlagsStorageKind.Empty:
+				return this.flagsInfo.create() as T;
+			case FlagsStorageKind.Single:
+				return this.flagsInfo.create(this.flagsInfo.type.liftFlat(_memory, values, options)) as T;
+			case FlagsStorageKind.Array:
+				const bits: i32[] = new Array(this.flagsInfo.length);
+				const type = this.flagsInfo.type;
+				for (let i = 0; i < bits.length; i++) {
 					bits[i] = type.liftFlat(_memory, values, options);
 				}
-				return this.createArray(bits) as T;
+				return this.flagsInfo.create(bits) as T;
 		}
 	}
 
@@ -1301,15 +1297,15 @@ export class FlagsType<T extends JFlags> implements ComponentModelType<T> {
 	}
 
 	public store(memory: Memory, ptr: ptr<u8 | u16 | u32 | u32[]>, flags: JFlags, options: Options): void {
-		switch (this.type[0]) {
-			case FlagsStorageType.Empty:
+		switch (this.flagsInfo.kind) {
+			case FlagsStorageKind.Empty:
 				return;
-			case FlagsStorageType.Single:
-				this.type[1]!.store(memory, ptr, (flags as unknown as SingleFlags)._bits, options);
+			case FlagsStorageKind.Single:
+				this.flagsInfo.type.store(memory, ptr, this.flagsInfo.value(flags), options);
 				break;
-			case FlagsStorageType.Array:
-				const type = this.type[1]!;
-				for (const flag of (flags as unknown as ArrayFlags)._bits) {
+			case FlagsStorageKind.Array:
+				const type = this.flagsInfo.type;
+				for (const flag of this.flagsInfo.value(flags)) {
 					type.store(memory, ptr, flag, options);
 					ptr += type.size;
 				}
@@ -1318,55 +1314,20 @@ export class FlagsType<T extends JFlags> implements ComponentModelType<T> {
 	}
 
 	public lowerFlat(result: wasmType[], _memory: Memory, flags: JFlags, options: Options): void {
-		switch (this.type[0]) {
-			case FlagsStorageType.Empty:
+		switch (this.flagsInfo.kind) {
+			case FlagsStorageKind.Empty:
 				return;
-			case FlagsStorageType.Single:
-				this.type[1]!.lowerFlat(result, _memory, (flags as unknown as SingleFlags)._bits, options);
+			case FlagsStorageKind.Single:
+				this.flagsInfo.type.lowerFlat(result, _memory, this.flagsInfo.value(flags), options);
 				break;
-			case FlagsStorageType.Array:
-				const type = this.type[1]!;
-				for (const flag of (flags as unknown as ArrayFlags)._bits) {
+			case FlagsStorageKind.Array:
+				const type = this.flagsInfo.type;
+				const values = this.flagsInfo.value(flags);
+				for (const flag of values) {
 					type.lowerFlat(result, _memory, flag, options);
 				}
 				break;
 		}
-	}
-
-	private createSingle(bits: number): JFlags {
-		const result: SingleFlags = { _bits: bits };
-		const props = Object.create(null);
-		for (const field of this.fields) {
-			props[field.name] = {
-				get: () => (bits & field.mask) !== 0,
-				set: (newVal: boolean) => {
-					if (newVal) {
-						bits |= field.mask;
-					} else {
-						bits &= ~field.mask;
-					}
-				}
-			};
-		}
-		return Object.defineProperties(result as object, props) as JFlags;
-	}
-
-	private createArray(bits: u32[]): JFlags {
-		const result: ArrayFlags = { _bits: bits };
-		const props = Object.create(null);
-		for (const field of this.fields) {
-			props[field.name] = {
-				get: () => (bits[field.index] & field.mask) !== 0,
-				set: (newVal: boolean) => {
-					if (newVal) {
-						bits[field.index] |= field.mask;
-					} else {
-						bits[field.index] &= ~field.mask;
-					}
-				}
-			};
-		}
-		return Object.defineProperties(result as object, props) as JFlags;
 	}
 
 	private static size(fields: number): size {
@@ -1393,16 +1354,6 @@ export class FlagsType<T extends JFlags> implements ComponentModelType<T> {
 
 	private static flatTypes(fields: number): 'i32'[] {
 		return new Array(this.num32Flags(fields)).fill('i32');
-	}
-
-	private static getType(size: number): [FlagsStorageType, GenericComponentModelType | undefined] {
-		switch (size) {
-			case 0: return [FlagsStorageType.Empty, undefined];
-			case 1: return [FlagsStorageType.Single, u8];
-			case 2: return [FlagsStorageType.Single, u16];
-			case 4: return [FlagsStorageType.Single, u32];
-			default: return [FlagsStorageType.Array, u32];
-		}
 	}
 
 	private static num32Flags(fields: number): number {
@@ -2020,11 +1971,12 @@ export class FunctionType<_T extends Function> extends AbstractResourceCallable 
 			wasmValues.push(resultPtr);
 		}
 		const result = wasmFunction(...wasmValues);
+		this.liftReturnValue(result, memory, options);
 		switch(this.returnFlatTypes) {
 			case 0:
 				return;
 			case 1:
-				return result;
+				return this.liftReturnValue(result, memory, options);
 			default:
 				return this.liftReturnValue(resultPtr, memory, options);
 		}

@@ -35,4 +35,22 @@ interface types {
 		structure(point),
 	}
 	check-variant: func(value: test-variant) -> test-variant;
+
+	flags test-flags-short {
+		one,
+		two,
+		three,
+		four,
+		five,
+		six
+	}
+	check-flags-short: func(value: test-flags-short) -> test-flags-short;
+
+	flags test-flags-long {
+		one, two, three, four, five, six, seven, eight, nine, ten,
+		eleven, twelve, thirteen, fourteen, fifteen, sixteen, seventeen, eighteen, nineteen, twenty,
+		twenty-one, twenty-two, twenty-three, twenty-four, twenty-five, twenty-six, twenty-seven, twenty-eight, twenty-nine, thirty,
+		thirty-one, thirty-two, thirty-three, thirty-four, thirty-five, thirty-six, thirty-seven, thirty-eight, thirty-nine, forty
+	}
+	check-flags-long: func(value: test-flags-long) -> test-flags-long;
 }

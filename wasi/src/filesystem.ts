@@ -3,7 +3,7 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 import * as $wcm from '@vscode/wasm-component-model';
-import type { u64, resource, borrow, own, result, option, i32, i64, ptr } from '@vscode/wasm-component-model';
+import type { u64, u8, resource, borrow, own, result, option, i32, i64, ptr } from '@vscode/wasm-component-model';
 import { clocks } from './clocks';
 import { io } from './io';
 
@@ -79,6 +79,60 @@ export namespace filesystem {
 			requestedWriteSync: boolean;
 			mutateDirectory: boolean;
 		};
+		export namespace DescriptorFlags {
+			class FlagsImpl implements DescriptorFlags {
+				private bits: u8;
+				constructor(bits: u8 = 0) {
+					this.bits = bits;
+				}
+				get _value(): u8 {
+					return this.bits;
+				}
+				get read(): boolean {
+					return (this.bits & 1) !== 0;
+				}
+				set read(value: boolean) {
+					this.bits = value ? this.bits | 1 : this.bits & ~1;
+				}
+				get write(): boolean {
+					return (this.bits & 2) !== 0;
+				}
+				set write(value: boolean) {
+					this.bits = value ? this.bits | 2 : this.bits & ~2;
+				}
+				get fileIntegritySync(): boolean {
+					return (this.bits & 4) !== 0;
+				}
+				set fileIntegritySync(value: boolean) {
+					this.bits = value ? this.bits | 4 : this.bits & ~4;
+				}
+				get dataIntegritySync(): boolean {
+					return (this.bits & 8) !== 0;
+				}
+				set dataIntegritySync(value: boolean) {
+					this.bits = value ? this.bits | 8 : this.bits & ~8;
+				}
+				get requestedWriteSync(): boolean {
+					return (this.bits & 16) !== 0;
+				}
+				set requestedWriteSync(value: boolean) {
+					this.bits = value ? this.bits | 16 : this.bits & ~16;
+				}
+				get mutateDirectory(): boolean {
+					return (this.bits & 32) !== 0;
+				}
+				set mutateDirectory(value: boolean) {
+					this.bits = value ? this.bits | 32 : this.bits & ~32;
+				}
+			}
+			
+			export function create(bits?: u8): DescriptorFlags {
+				return new FlagsImpl(bits);
+			}
+			export function value(flags: DescriptorFlags): u8 {
+				return (flags as FlagsImpl)._value;
+			}
+		}
 		
 		/**
 		 * Flags determining the method of how paths are resolved.
@@ -86,6 +140,30 @@ export namespace filesystem {
 		export type PathFlags = {
 			symlinkFollow: boolean;
 		};
+		export namespace PathFlags {
+			class FlagsImpl implements PathFlags {
+				private bits: u8;
+				constructor(bits: u8 = 0) {
+					this.bits = bits;
+				}
+				get _value(): u8 {
+					return this.bits;
+				}
+				get symlinkFollow(): boolean {
+					return (this.bits & 1) !== 0;
+				}
+				set symlinkFollow(value: boolean) {
+					this.bits = value ? this.bits | 1 : this.bits & ~1;
+				}
+			}
+			
+			export function create(bits?: u8): PathFlags {
+				return new FlagsImpl(bits);
+			}
+			export function value(flags: PathFlags): u8 {
+				return (flags as FlagsImpl)._value;
+			}
+		}
 		
 		/**
 		 * Open flags used by `open-at`.
@@ -96,6 +174,48 @@ export namespace filesystem {
 			exclusive: boolean;
 			truncate: boolean;
 		};
+		export namespace OpenFlags {
+			class FlagsImpl implements OpenFlags {
+				private bits: u8;
+				constructor(bits: u8 = 0) {
+					this.bits = bits;
+				}
+				get _value(): u8 {
+					return this.bits;
+				}
+				get create(): boolean {
+					return (this.bits & 1) !== 0;
+				}
+				set create(value: boolean) {
+					this.bits = value ? this.bits | 1 : this.bits & ~1;
+				}
+				get directory(): boolean {
+					return (this.bits & 2) !== 0;
+				}
+				set directory(value: boolean) {
+					this.bits = value ? this.bits | 2 : this.bits & ~2;
+				}
+				get exclusive(): boolean {
+					return (this.bits & 4) !== 0;
+				}
+				set exclusive(value: boolean) {
+					this.bits = value ? this.bits | 4 : this.bits & ~4;
+				}
+				get truncate(): boolean {
+					return (this.bits & 8) !== 0;
+				}
+				set truncate(value: boolean) {
+					this.bits = value ? this.bits | 8 : this.bits & ~8;
+				}
+			}
+			
+			export function create(bits?: u8): OpenFlags {
+				return new FlagsImpl(bits);
+			}
+			export function value(flags: OpenFlags): u8 {
+				return (flags as FlagsImpl)._value;
+			}
+		}
 		
 		/**
 		 * Permissions mode used by `open-at`, `change-file-permissions-at`, and
@@ -106,6 +226,42 @@ export namespace filesystem {
 			writable: boolean;
 			executable: boolean;
 		};
+		export namespace Modes {
+			class FlagsImpl implements Modes {
+				private bits: u8;
+				constructor(bits: u8 = 0) {
+					this.bits = bits;
+				}
+				get _value(): u8 {
+					return this.bits;
+				}
+				get readable(): boolean {
+					return (this.bits & 1) !== 0;
+				}
+				set readable(value: boolean) {
+					this.bits = value ? this.bits | 1 : this.bits & ~1;
+				}
+				get writable(): boolean {
+					return (this.bits & 2) !== 0;
+				}
+				set writable(value: boolean) {
+					this.bits = value ? this.bits | 2 : this.bits & ~2;
+				}
+				get executable(): boolean {
+					return (this.bits & 4) !== 0;
+				}
+				set executable(value: boolean) {
+					this.bits = value ? this.bits | 4 : this.bits & ~4;
+				}
+			}
+			
+			export function create(bits?: u8): Modes {
+				return new FlagsImpl(bits);
+			}
+			export function value(flags: Modes): u8 {
+				return (flags as FlagsImpl)._value;
+			}
+		}
 		
 		/**
 		 * Access type used by `access-at`.
@@ -917,10 +1073,10 @@ export namespace filesystem {
 		export const Datetime = clocks.WallClock.$.Datetime;
 		export const Filesize = $wcm.u64;
 		export const DescriptorType = new $wcm.EnumType<filesystem.Types.DescriptorType>(8);
-		export const DescriptorFlags = new $wcm.FlagsType<filesystem.Types.DescriptorFlags>(['read', 'write', 'fileIntegritySync', 'dataIntegritySync', 'requestedWriteSync', 'mutateDirectory']);
-		export const PathFlags = new $wcm.FlagsType<filesystem.Types.PathFlags>(['symlinkFollow']);
-		export const OpenFlags = new $wcm.FlagsType<filesystem.Types.OpenFlags>(['create', 'directory', 'exclusive', 'truncate']);
-		export const Modes = new $wcm.FlagsType<filesystem.Types.Modes>(['readable', 'writable', 'executable']);
+		export const DescriptorFlags = new $wcm.FlagsType<filesystem.Types.DescriptorFlags>(6, { kind: $wcm.FlagsStorageKind.Single, type: $wcm.u8, create: filesystem.Types.DescriptorFlags.create, value: filesystem.Types.DescriptorFlags.value as $wcm.SingleFlagsValueFunc });
+		export const PathFlags = new $wcm.FlagsType<filesystem.Types.PathFlags>(1, { kind: $wcm.FlagsStorageKind.Single, type: $wcm.u8, create: filesystem.Types.PathFlags.create, value: filesystem.Types.PathFlags.value as $wcm.SingleFlagsValueFunc });
+		export const OpenFlags = new $wcm.FlagsType<filesystem.Types.OpenFlags>(4, { kind: $wcm.FlagsStorageKind.Single, type: $wcm.u8, create: filesystem.Types.OpenFlags.create, value: filesystem.Types.OpenFlags.value as $wcm.SingleFlagsValueFunc });
+		export const Modes = new $wcm.FlagsType<filesystem.Types.Modes>(3, { kind: $wcm.FlagsStorageKind.Single, type: $wcm.u8, create: filesystem.Types.Modes.create, value: filesystem.Types.Modes.value as $wcm.SingleFlagsValueFunc });
 		export const AccessType = new $wcm.VariantType<filesystem.Types.AccessType, filesystem.Types.AccessType._ct, filesystem.Types.AccessType._vt>([Modes, undefined], filesystem.Types.AccessType._ctor);
 		export const LinkCount = $wcm.u64;
 		export const DescriptorStat = new $wcm.RecordType<filesystem.Types.DescriptorStat>([

@@ -655,16 +655,18 @@ namespace MetaModel {
 
 		private readonly name: string;
 		private readonly typeParam: string;
-		private readonly flags: string[];
+		private readonly numberOfFlags: number;
+		private readonly flagsInfo: string;
 
-		constructor(name: string, typeParam: string, flags: string[]) {
+		constructor(name: string, typeParam: string, numberOfFlags: number, flagsInfo: string) {
 			this.name = name;
 			this.typeParam = typeParam;
-			this.flags = flags;
+			this.numberOfFlags = numberOfFlags;
+			this.flagsInfo = flagsInfo;
 		}
 
 		public emit(code: Code): void {
-			code.push(`export const ${this.name} = new $wcm.FlagsType<${this.typeParam}>([${this.flags.map(flag => `'${flag}'`).join(', ')}]);`);
+			code.push(`export const ${this.name} = new $wcm.FlagsType<${this.typeParam}>(${this.numberOfFlags}, ${this.flagsInfo});`);
 		}
 	}
 
@@ -1467,15 +1469,155 @@ namespace TypeScript {
 			const tsName = this.nameProvider.asTypeName(type);
 			const flags: string[] = [];
 			this.namespaceCode.push(`export type ${tsName} = {`);
+			const flagNames: string[] = [];
 			this.namespaceCode.increaseIndent();
 			for (const flag of kind.flags.flags) {
 				const flagName = this.nameProvider.asFlagName(flag);
+				flagNames.push(flagName);
 				this.namespaceCode.push(`${flagName}: boolean;`);
 				flags.push(flagName);
 			}
 			this.namespaceCode.decreaseIndent();
 			this.namespaceCode.push(`};`);
-			this.metaModelEmitter = new MetaModel.FlagsEmitter(tsName, `${this.qualifier}.${tsName}`, flags);
+			const flagSize = TypeEmitter.getFlagSize(kind.flags.flags.length);
+			let flagsInfo: string;
+			this.namespaceCode.push(`export namespace ${tsName} {`);
+			this.namespaceCode.increaseIndent();
+			this.namespaceCode.push(`class FlagsImpl implements ${tsName} {`);
+			this.namespaceCode.increaseIndent();
+			if (flagSize === 0) {
+				this.namespaceCode.push(`constructor() {`);
+				this.namespaceCode.push(`}`);
+				this.namespaceCode.decreaseIndent();
+				this.namespaceCode.push(`}`);
+				this.namespaceCode.push('');
+				this.namespaceCode.push(`export function create(): ${tsName} {`);
+				this.namespaceCode.increaseIndent();
+				this.namespaceCode.push(`return new FlagsImpl();`);
+				this.namespaceCode.decreaseIndent();
+				this.namespaceCode.push(`}`);
+				flagsInfo = `{ kind: ${MetaModel.qualify('FlagsStorageKind.Empty')}, create: () => ${this.qualifier}.${tsName}.create()}`;
+			} else if (flagSize <= 4) {
+				const type = TypeEmitter.getFlagType(flagSize);
+				this.namespaceCode.imports.addBaseType(type);
+				this.namespaceCode.push(`private bits: ${type};`);
+				this.namespaceCode.push(`constructor(bits: ${type} = 0) {`);
+				this.namespaceCode.increaseIndent();
+				this.namespaceCode.push(`this.bits = bits;`);
+				this.namespaceCode.decreaseIndent();
+				this.namespaceCode.push(`}`);
+				this.namespaceCode.push(`get _value(): ${type} {`);
+				this.namespaceCode.increaseIndent();
+				this.namespaceCode.push(`return this.bits;`);
+				this.namespaceCode.decreaseIndent();
+				this.namespaceCode.push(`}`);
+				for (let i = 0; i < flagNames.length; i++) {
+					const flagName = flagNames[i];
+					const mask = 1 << i;
+					this.namespaceCode.push(`get ${flagName}(): boolean {`);
+					this.namespaceCode.increaseIndent();
+					this.namespaceCode.push(`return (this.bits & ${mask}) !== 0;`);
+					this.namespaceCode.decreaseIndent();
+					this.namespaceCode.push(`}`);
+					this.namespaceCode.push(`set ${flagName}(value: boolean) {`);
+					this.namespaceCode.increaseIndent();
+					this.namespaceCode.push(`this.bits = value ? this.bits | ${mask} : this.bits & ~${mask};`);
+					this.namespaceCode.decreaseIndent();
+					this.namespaceCode.push(`}`);
+				}
+				this.namespaceCode.decreaseIndent();
+				this.namespaceCode.push(`}`);
+				this.namespaceCode.push('');
+				this.namespaceCode.push(`export function create(bits?: ${type}): ${tsName} {`);
+				this.namespaceCode.increaseIndent();
+				this.namespaceCode.push(`return new FlagsImpl(bits);`);
+				this.namespaceCode.decreaseIndent();
+				this.namespaceCode.push(`}`);
+				this.namespaceCode.push(`export function value(flags: ${tsName}): ${type} {`);
+				this.namespaceCode.increaseIndent();
+				this.namespaceCode.push(`return (flags as FlagsImpl)._value;`);
+				this.namespaceCode.decreaseIndent();
+				this.namespaceCode.push(`}`);
+
+				flagsInfo = `{ kind: ${MetaModel.qualify('FlagsStorageKind.Single')}, type: ${MetaModel.qualify(type)}, create: ${this.qualifier}.${tsName}.create, value: ${this.qualifier}.${tsName}.value as ${MetaModel.qualify('SingleFlagsValueFunc')} }`;
+			} else {
+				const arrayLength = TypeEmitter.num32Flags(kind.flags.flags.length);
+				const type = 'u32[]';
+				this.namespaceCode.imports.addBaseType('u32');
+				this.namespaceCode.push(`private bits: ${type};`);
+				this.namespaceCode.push(`constructor(bits: ${type} = new Array(${arrayLength}).fill(0)) {`);
+				this.namespaceCode.increaseIndent();
+				this.namespaceCode.push(`if (bits.length !== ${arrayLength}) {`);
+				this.namespaceCode.increaseIndent();
+				this.namespaceCode.push(`throw new Error('Invalid array length. Expected ${arrayLength} but got ' + bits.length + '.');`);
+				this.namespaceCode.decreaseIndent();
+				this.namespaceCode.push(`}`);
+				this.namespaceCode.push(`this.bits = bits;`);
+				this.namespaceCode.decreaseIndent();
+				this.namespaceCode.push(`}`);
+				this.namespaceCode.push(`get _value(): ${type} {`);
+				this.namespaceCode.increaseIndent();
+				this.namespaceCode.push(`return this.bits;`);
+				this.namespaceCode.decreaseIndent();
+				this.namespaceCode.push(`}`);
+				for (let i = 0; i < flagNames.length; i++) {
+					const flagName = flagNames[i];
+					const mask = 1 << (i & 31);
+					const index = i >>> 5;
+					this.namespaceCode.push(`get ${flagName}(): boolean {`);
+					this.namespaceCode.increaseIndent();
+					this.namespaceCode.push(`return (this.bits[${index}] & ${mask}) !== 0;`);
+					this.namespaceCode.decreaseIndent();
+					this.namespaceCode.push(`}`);
+					this.namespaceCode.push(`set ${flagName}(value: boolean) {`);
+					this.namespaceCode.increaseIndent();
+					this.namespaceCode.push(`this.bits[${index}] = value ? this.bits[${index}] | ${mask} : this.bits[${index}] & ~${mask};`);
+					this.namespaceCode.decreaseIndent();
+					this.namespaceCode.push(`}`);
+				}
+				this.namespaceCode.decreaseIndent();
+				this.namespaceCode.push(`}`);
+				this.namespaceCode.push('');
+				this.namespaceCode.push(`export function create(bits?: ${type}): ${tsName} {`);
+				this.namespaceCode.increaseIndent();
+				this.namespaceCode.push(`return new FlagsImpl(bits);`);
+				this.namespaceCode.decreaseIndent();
+				this.namespaceCode.push(`}`);
+				this.namespaceCode.push(`export function value(flags: ${tsName}): ${type} {`);
+				this.namespaceCode.increaseIndent();
+				this.namespaceCode.push(`return (flags as FlagsImpl)._value;`);
+				this.namespaceCode.decreaseIndent();
+				this.namespaceCode.push(`}`);
+				flagsInfo = `{ kind: ${MetaModel.qualify('FlagsStorageKind.Array')}, length: ${arrayLength}, type: ${MetaModel.qualify('u32')}, create: ${this.qualifier}.${tsName}.create, value: ${this.qualifier}.${tsName}.value as ${MetaModel.qualify('ArrayFlagsValueFunc')} }`;
+			}
+			this.namespaceCode.decreaseIndent();
+			this.namespaceCode.push(`}`);
+			this.metaModelEmitter = new MetaModel.FlagsEmitter(tsName, `${this.qualifier}.${tsName}`, flagNames.length, flagsInfo);
+		}
+
+		private static getFlagSize(flags: number): number {
+			if (flags === 0) {
+				return 0;
+			} else if (flags <= 8) {
+				return 1;
+			} else if (flags <= 16) {
+				return 2;
+			} else {
+				return 4 * this.num32Flags(flags);
+			}
+		}
+
+		private static num32Flags(fields: number): number {
+			return Math.ceil(fields / 32);
+		}
+
+		private static getFlagType(size: number): string {
+			switch (size) {
+				case 1: return 'u8';
+				case 2: return 'u16';
+				case 4: return 'u32';
+			}
+			throw new Error(`Unexpected flag size ${size}.`);
 		}
 
 		private emitResource(type: ResourceType): void {

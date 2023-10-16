@@ -38,6 +38,8 @@ class Memory implements IMemory {
 import * as td from './testData';
 import Types = td.testData.Types;
 import TestVariant = Types.TestVariant;
+import TestFlagsShort = Types.TestFlagsShort;
+import TestFlagsLong = Types.TestFlagsLong;
 
 namespace PointResourceImpl {
 
@@ -100,7 +102,15 @@ const serviceImpl: Types = {
 			default:
 				return TestVariant._empty();
 		}
-	}
+	},
+	checkFlagsShort(value) {
+		value.six = true;
+		return value;
+	},
+	checkFlagsLong(value) {
+		value.thirtyNine = true;
+		return value;
+	},
 };
 
 const context: Context = {
@@ -203,5 +213,24 @@ suite('variant', () => {
 		assert.strictEqual(structure.case, TestVariant.structure);
 		assert.strictEqual(structure.value.x, 2);
 		assert.strictEqual(structure.value.y, 3);
+	});
+});
+
+suite('flags', () => {
+	const host: Types._.WasmInterface = Types._.createHost(serviceImpl, context);
+	const service: Types = Types._.createService(host, context);
+	test('short', () => {
+		const flags = TestFlagsShort.create();
+		flags.one = true;
+		const returned = service.checkFlagsShort(flags);
+		assert.strictEqual(returned.one, true, 'one');
+		assert.strictEqual(returned.six, true, 'six');
+	});
+	test('long', () => {
+		const flags = TestFlagsLong.create();
+		flags.one = true;
+		const returned = service.checkFlagsLong(flags);
+		assert.strictEqual(returned.one, true, 'one');
+		assert.strictEqual(returned.thirtyNine, true, 'thirty nine');
 	});
 });

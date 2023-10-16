@@ -26,11 +26,6 @@ export const ListTestRecordType = new ListType<TestRecord>(TestRecordType);
 export type TestTuple = [u8, string];
 export const TestTupleType: ComponentModelType<TestTuple> = new TupleType<TestTuple>([u8, wstring]);
 
-export type TestFlags = Record<'a' | 'b' | 'c', boolean> & JFlags;
-export const TestFlagsType: FlagsType<TestFlags> = new FlagsType<TestFlags>(['a', 'b', 'c']);
-let flags: TestFlags = TestFlagsType.create();
-flags.a = true;
-
 export namespace TestVariant {
 
 	export const red = 0 as const;
