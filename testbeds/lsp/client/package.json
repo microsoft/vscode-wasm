@@ -1,0 +1,19 @@
+{
+	"name": "client",
+	"displayName": "LSP WASM Test client",
+	"version": "0.1.0",
+	"private": true,
+	"author": "Microsoft Corporation",
+	"license": "MIT",
+	"engines": {
+		"vscode": "^1.83.0"
+	},
+	"devDependencies": {
+		"@types/vscode": "1.83.0"
+	},
+	"dependencies": {
+		"vscode-languageclient": "9.0.1"
+	},
+	"scripts": {
+	}
+}
