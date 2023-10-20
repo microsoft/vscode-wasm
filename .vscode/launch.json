@@ -36,7 +36,7 @@
 			"name": "LSP Testbed",
 			"runtimeExecutable": "${execPath}",
 			"args": [
-				"--extensionDevelopmentPath=${workspaceRoot}/testbeds/lsp",
+				"--extensionDevelopmentPath=${workspaceRoot}/testbeds/lsp-rust",
 				"--extensionDevelopmentPath=${workspaceRoot}/wasm-wasi-core",
 				"--extensionDevelopmentPath=${workspaceRoot}/webshell"
 			],

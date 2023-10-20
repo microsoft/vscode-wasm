@@ -51,7 +51,7 @@
 			"label": "Build LSP Example",
 			"type": "npm",
 			"script": "build",
-			"path": "testbeds/lsp/client",
+			"path": "testbeds/lsp-rust/client",
 			"group": "build",
 			"presentation": {
 				"panel": "dedicated",

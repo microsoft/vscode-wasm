@@ -1,3 +1,0 @@
-Content-Length: 85
-
-{"jsonrpc": "2.0", "method": "initialize", "id": 1, "params": {"capabilities": {}}}
