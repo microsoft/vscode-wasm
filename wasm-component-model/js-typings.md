@@ -118,7 +118,7 @@ export const AccessType = {
 
 let accessType = AccessType.createExists();
 ....
-if (acessType === AccessType.access) {
+if (accessType === AccessType.access) {
 	....
 }
 ```
@@ -143,6 +143,35 @@ export const AccessType = {
 	createExists: (): AccessType.exists => {
 		return { case: AccessType.exists };
 	}
+};
+export type AccessType = AccessType.access | AccessType.exists;
+```
+
+which when compile produces a nice d.ts file as well:
+
+```TypeScript
+export declare namespace AccessType {
+    type access = {
+        readonly case: typeof AccessType.access;
+        readonly value: Modes;
+    };
+    type exists = {
+        readonly case: typeof AccessType.exists;
+    };
+}
+export declare const AccessType: {
+    /**
+     * The access type
+     */
+    access: 0;
+    /**
+     * The exists type
+     */
+    exists: 1;
+    0: string;
+    1: string;
+    createAccess: (mode: Modes) => AccessType.access;
+    createExists: () => AccessType.exists;
 };
 export type AccessType = AccessType.access | AccessType.exists;
 ```
