@@ -25,7 +25,9 @@ fn main() -> Result<(), Box<dyn Error + Sync + Send>> {
         ..Default::default()
     })
     .unwrap();
+    eprintln!("connection.initialize");
     let initialization_params = connection.initialize(server_capabilities)?;
+    eprintln!("main loop");
     main_loop(connection, initialization_params)?;
     io_threads.join()?;
 

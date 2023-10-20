@@ -48,6 +48,20 @@
 			]
 		},
 		{
+			"label": "Build LSP Example",
+			"type": "npm",
+			"script": "build",
+			"path": "testbeds/lsp/client",
+			"group": "build",
+			"presentation": {
+				"panel": "dedicated",
+				"reveal": "never"
+			},
+			"problemMatcher": [
+				"$tsc"
+			]
+		},
+		{
 			"label": "Build C++ Example",
 			"type": "npm",
 			"script": "build",
@@ -66,6 +80,20 @@
 			"type": "npm",
 			"script": "build",
 			"path": "testbeds/rust",
+			"group": "build",
+			"presentation": {
+				"panel": "dedicated",
+				"reveal": "never"
+			},
+			"problemMatcher": [
+				"$tsc"
+			]
+		},
+		{
+			"label": "Build Rust Threads Example",
+			"type": "npm",
+			"script": "build",
+			"path": "testbeds/rust-threads",
 			"group": "build",
 			"presentation": {
 				"panel": "dedicated",
