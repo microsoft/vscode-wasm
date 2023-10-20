@@ -168,8 +168,8 @@ export declare const AccessType: {
      * The exists type
      */
     exists: 1;
-    0: string;
-    1: string;
+    0: "access";
+    1: "exists";
     createAccess: (mode: Modes) => AccessType.access;
     createExists: () => AccessType.exists;
 };
