@@ -207,5 +207,10 @@
 	"files.associations": {
 		"iostream": "cpp"
 	},
-	"task.allowAutomaticTasks": "on"
+	"task.allowAutomaticTasks": "on",
+	"rust-analyzer.linkedProjects": [
+		"./testbeds/lsp-rust/server/Cargo.toml",
+		"./testbeds/rust/Cargo.toml",
+		"./testbeds/rust-threads/Cargo.toml"
+	]
 }

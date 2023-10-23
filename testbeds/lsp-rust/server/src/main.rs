@@ -7,6 +7,7 @@ use std::error::Error;
 use lsp_types::OneOf;
 use lsp_types::{
     request::GotoDefinition, GotoDefinitionResponse, InitializeParams, ServerCapabilities,
+    Location
 };
 
 use lsp_server::{Connection, ExtractError, Message, Request, RequestId, Response};
@@ -53,7 +54,10 @@ fn main_loop(
                 match cast::<GotoDefinition>(req) {
                     Ok((id, params)) => {
                         eprintln!("got gotoDefinition request #{id}: {params:?}");
-                        let result = Some(GotoDefinitionResponse::Array(Vec::new()));
+                        let loc = Location::new(params.text_document_position_params.text_document.uri, lsp_types::Range::new(lsp_types::Position::new(0, 0), lsp_types::Position::new(0, 0)));
+                        let mut vec = Vec::new();
+                        vec.push(loc);
+                        let result = Some(GotoDefinitionResponse::Array(vec));
                         let result = serde_json::to_value(&result).unwrap();
                         let resp = Response { id, result: Some(result), error: None };
                         connection.sender.send(Message::Response(resp))?;
