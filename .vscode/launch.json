@@ -33,6 +33,24 @@
 		{
 			"type": "extensionHost",
 			"request": "launch",
+			"name": "LSP Testbed",
+			"runtimeExecutable": "${execPath}",
+			"args": [
+				"--extensionDevelopmentPath=${workspaceRoot}/testbeds/lsp-rust",
+				"--extensionDevelopmentPath=${workspaceRoot}/wasm-wasi-core",
+				"--extensionDevelopmentPath=${workspaceRoot}/webshell"
+			],
+			"outFiles": [
+				"${workspaceRoot}/testbeds/lsp/client/out/**/*.js",
+				"${workspaceRoot}/wasm-wasi-core/lib/**/*.js",
+				"${workspaceRoot}/webshell/lib/**/*.js"
+			],
+			"sourceMaps": true,
+			"preLaunchTask": "Build LSP Example"
+		},
+		{
+			"type": "extensionHost",
+			"request": "launch",
 			"name": "Rust Testbed",
 			"runtimeExecutable": "${execPath}",
 			"args": [
@@ -45,6 +63,22 @@
 			],
 			"sourceMaps": true,
 			"preLaunchTask": "Build Rust Example"
+		},
+		{
+			"type": "extensionHost",
+			"request": "launch",
+			"name": "Rust Threads Testbed",
+			"runtimeExecutable": "${execPath}",
+			"args": [
+				"--extensionDevelopmentPath=${workspaceRoot}/testbeds/rust-threads",
+				"--extensionDevelopmentPath=${workspaceRoot}/wasm-wasi-core"
+			],
+			"outFiles": [
+				"${workspaceRoot}/testbeds/rust-threads/out/**/*.js",
+				"${workspaceRoot}/wasm-wasi-core/lib/**/*.js",
+			],
+			"sourceMaps": true,
+			"preLaunchTask": "Build Rust Threads Example"
 		},
 		{
 			"type": "extensionHost",

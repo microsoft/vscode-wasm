@@ -1,0 +1,21 @@
+{
+	"compilerOptions": {
+		"noImplicitAny": true,
+		"noImplicitReturns": true,
+		"noUnusedLocals": true,
+		"noUnusedParameters": true,
+		"strict": true,
+		"module": "commonjs",
+		"target": "es2020",
+		"outDir": "out",
+		"rootDir": "src",
+		"lib": [ "es2020", "WebWorker" ],
+		"sourceMap": true
+	},
+	"include": [
+		"src"
+	],
+	"exclude": [
+		"node_modules"
+	]
+}

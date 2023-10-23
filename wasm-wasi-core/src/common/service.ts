@@ -1049,6 +1049,7 @@ export namespace DeviceWasiService {
 			return def;
 		}
 
+		// Used when writing data
 		function read_ciovs (memory: ArrayBuffer, iovs: ptr, iovsLen: u32): Uint8Array[] {
 			const view = new DataView(memory);
 
@@ -1056,12 +1057,17 @@ export namespace DeviceWasiService {
 			let ptr: ptr = iovs;
 			for (let i = 0; i < iovsLen; i++) {
 				const vec = Ciovec.create(view, ptr);
-				buffers.push(new Uint8Array(memory, vec.buf, vec.buf_len));
+				// We need to copy the underlying memory since if it is a shared buffer
+				// the WASM executable could already change it before we finally read it.
+				const copy = new Uint8Array(vec.buf_len);
+				copy.set(new Uint8Array(memory, vec.buf, vec.buf_len));
+				buffers.push(copy);
 				ptr += Ciovec.size;
 			}
 			return buffers;
 		}
 
+		// Used when reading data
 		function read_iovs (memory: ArrayBuffer, iovs: ptr, iovsLen: u32): Uint8Array[] {
 			const view = new DataView(memory);
 
@@ -1069,6 +1075,7 @@ export namespace DeviceWasiService {
 			let ptr: ptr = iovs;
 			for (let i = 0; i < iovsLen; i++) {
 				const vec = Iovec.create(view, ptr);
+				// We need a view onto the memory since we write the result into it.
 				buffers.push(new Uint8Array(memory, vec.buf, vec.buf_len));
 				ptr += Iovec.size;
 			}
