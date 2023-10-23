@@ -9,7 +9,7 @@
 		"vscode": "^1.78.0"
 	},
 	"activationEvents": [
-		"*"
+		"onLanguage:bat"
 	],
 	"devDependencies": {
 		"@types/vscode": "1.78.0"

@@ -1,7 +1,16 @@
 {
 	"extends": "../.eslintrc.base.json",
 	"parserOptions": {
-		"project": ["./cpp/tsconfig.json", "./python/tsconfig.json", "./rust/tsconfig.json", "./ruby/tsconfig.json", "./php/tsconfig.json", "./threads/tsconfig.json", "lsp/client/tsconfig.json"]
+		"project": [
+			"./cpp/tsconfig.json",
+			"./lsp-rust/client/tsconfig.json",
+			"./python/tsconfig.json",
+			"./php/tsconfig.json",
+			"./ruby/tsconfig.json",
+			"./rust/tsconfig.json",
+			"./rust-threads/tsconfig.json",
+			"./threads/tsconfig.json"
+		]
 	},
 	"rules": {
 		"@typescript-eslint/no-floating-promises": "error"
