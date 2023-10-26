@@ -54,3 +54,7 @@ interface types {
 	}
 	check-flags-long: func(value: test-flags-long) -> test-flags-long;
 }
+
+world test {
+    import types;
+}
