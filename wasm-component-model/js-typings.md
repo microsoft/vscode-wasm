@@ -33,7 +33,7 @@ To determine an idiomatic implementation for these types I used the following da
 
 - usage of these programming constructs in [NodeJS](https://nodejs.org/en/docs) and the [standard libraries](https://developer.mozilla.org/en-US/)
 - searching on public GitHub repositories to find implementation of the prgramming constructs
-- asked ChatGPT 4 to generate JavaScript code for the constructor in a JavaScript idiomatic way.
+- asked ChatGPT 4 to generate JavaScript code for the construct in a JavaScript idiomatic way.
 
 ### Enum
 
