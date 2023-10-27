@@ -1570,21 +1570,27 @@ export class VariantType<T extends JVariantCase, I, V> implements ComponentModel
 	}
 }
 
-export type JEnum = number;
+export type JEnum = string;
 
 export class EnumType<T extends JEnum> implements ComponentModelType<T> {
 
 	private readonly discriminantType: ComponentModelType<u8> | ComponentModelType<u16> | ComponentModelType<u32>;
-	private readonly cases: number;
+	private readonly cases: string[];
+	private readonly case2index: Map<string, number>;
 
 	public readonly kind: ComponentModelTypeKind;
 	public readonly size: size;
 	public readonly alignment: alignment;
 	public readonly flatTypes: readonly wasmTypeName[];
 
-	constructor(cases: number) {
+	constructor(cases: string[]) {
+		this.discriminantType = EnumType.discriminantType(cases.length);
 		this.cases = cases;
-		this.discriminantType = EnumType.discriminantType(cases);
+		this.case2index = new Map();
+		for (let i = 0; i < cases.length; i++) {
+			const c = cases[i];
+			this.case2index.set(c, i);
+		}
 		this.kind = ComponentModelTypeKind.enum;
 		this.size = this.discriminantType.size;
 		this.alignment = this.discriminantType.alignment;
@@ -1592,23 +1598,33 @@ export class EnumType<T extends JEnum> implements ComponentModelType<T> {
 	}
 
 	public load(memory: Memory, ptr: ptr, options: Options): T {
-		return this.assertRange(this.discriminantType.load(memory, ptr, options)) as T;
+		const index = this.assertRange(this.discriminantType.load(memory, ptr, options));
+		return this.cases[index] as T;
 	}
 	public liftFlat(memory: Memory, values: FlatValuesIter, options: Options): T {
-		return this.assertRange(this.discriminantType.liftFlat(memory, values, options)) as T;
+		const index = this.assertRange(this.discriminantType.liftFlat(memory, values, options));
+		return this.cases[index] as T;
 	}
 	public alloc(memory: Memory): ptr {
 		return memory.alloc(this.alignment, this.size);
 	}
 	public store(memory: Memory, ptr: ptr, value: T, options: Options): void {
-		this.discriminantType.store(memory, ptr, value, options);
+		const index = this.case2index.get(value);
+		if (index === undefined) {
+			throw new ComponentModelError('Enumeration value not found');
+		}
+		this.discriminantType.store(memory, ptr, index, options);
 	}
 	public lowerFlat(result: wasmType[], memory: Memory, value: T, options: Options): void {
-		this. discriminantType.lowerFlat(result, memory, value, options);
+		const index = this.case2index.get(value);
+		if (index === undefined) {
+			throw new ComponentModelError('Enumeration value not found');
+		}
+		this.discriminantType.lowerFlat(result, memory, index, options);
 	}
 
 	private assertRange(value: number): number {
-		if (value < 0 || value > this.cases) {
+		if (value < 0 || value > this.cases.length) {
 			throw new ComponentModelError('Enumeration value out of range');
 		}
 		return value;

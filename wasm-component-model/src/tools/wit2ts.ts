@@ -638,16 +638,16 @@ namespace MetaModel {
 
 		private readonly name: string;
 		private readonly typeParam: string;
-		private readonly items: number;
+		private readonly cases: string[];
 
-		constructor(name: string, typeParam: string, items: number) {
+		constructor(name: string, typeParam: string, cases: string[]) {
 			this.name = name;
 			this.typeParam = typeParam;
-			this.items = items;
+			this.cases = cases;
 		}
 
 		public emit(code: Code): void {
-			code.push(`export const ${this.name} = new $wcm.EnumType<${this.typeParam}>(${this.items});`);
+			code.push(`export const ${this.name} = new $wcm.EnumType<${this.typeParam}>([${this.cases.map(value => `'${value}'`).join(', ')}]);`);
 		}
 	}
 
@@ -1455,13 +1455,16 @@ namespace TypeScript {
 			const tsName = this.nameProvider.asTypeName(type);
 			this.namespaceCode.push(`export enum ${tsName} {`);
 			this.namespaceCode.increaseIndent();
+			const cases: string[] = [];
 			for (let i = 0; i < kind.enum.cases.length; i++) {
 				const item = kind.enum.cases[i];
-				this.namespaceCode.push(`${this.nameProvider.asEnumCaseName(item)} = ${i},`);
+				const name = this.nameProvider.asEnumCaseName(item);
+				this.namespaceCode.push(`${name} = '${name}',`);
+				cases.push(name);
 			}
 			this.namespaceCode.decreaseIndent();
 			this.namespaceCode.push(`}`);
-			this.metaModelEmitter = new MetaModel.EnumerationEmitter(tsName, `${this.qualifier}.${tsName}`, kind.enum.cases.length);
+			this.metaModelEmitter = new MetaModel.EnumerationEmitter(tsName, `${this.qualifier}.${tsName}`, cases);
 		}
 
 		private emitFlags(type: FlagsType): void {

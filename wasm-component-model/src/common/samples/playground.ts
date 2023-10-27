@@ -17,29 +17,28 @@ if (typeof x === 'string') {
 
 type Modes = number;
 export namespace AccessType {
-	export type access = { readonly kind: typeof AccessType.access; readonly value: Modes };
-	export type exists = { readonly kind: typeof AccessType.exists };
+	export type Access = { readonly tag: typeof AccessType.access; readonly value: Modes };
+	export type Exists = { readonly tag: typeof AccessType.exists };
 }
 export const AccessType = {
 	access: 'access' as const,
 	exists: 'exists' as const,
 
-	createAccess: (mode: Modes): AccessType.access => {
-		return { kind: AccessType.access, value: mode };
+	Access: (mode: Modes): AccessType.Access => {
+		return Object.freeze({ tag: AccessType.access, value: mode });
 	},
 
-	createExists: (): AccessType.exists => {
-		return { kind: AccessType.exists };
+	Exists: (): AccessType.Exists => {
+		return { tag: AccessType.exists };
 	}
 };
-export type AccessType = AccessType.access | AccessType.exists;
+export type AccessType = AccessType.Access | AccessType.Exists;
 
 let a: AccessType = {} as any;
 
-if (a.kind === AccessType.access) {
+if (a.tag === AccessType.access) {
 	a.value;
-} else if (a.kind === AccessType.exists) {
-	a.value;
+} else if (a.tag === AccessType.exists) {
 }
 
 

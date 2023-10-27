@@ -31,43 +31,43 @@ export namespace sockets {
 		 * See each individual API for what the POSIX equivalents are. They sometimes differ per API.
 		 */
 		export enum ErrorCode {
-			unknown = 0,
-			accessDenied = 1,
-			notSupported = 2,
-			outOfMemory = 3,
-			timeout = 4,
-			concurrencyConflict = 5,
-			notInProgress = 6,
-			wouldBlock = 7,
-			addressFamilyNotSupported = 8,
-			addressFamilyMismatch = 9,
-			invalidRemoteAddress = 10,
-			ipv4OnlyOperation = 11,
-			ipv6OnlyOperation = 12,
-			newSocketLimit = 13,
-			alreadyAttached = 14,
-			alreadyBound = 15,
-			alreadyConnected = 16,
-			notBound = 17,
-			notConnected = 18,
-			addressNotBindable = 19,
-			addressInUse = 20,
-			ephemeralPortsExhausted = 21,
-			remoteUnreachable = 22,
-			alreadyListening = 23,
-			notListening = 24,
-			connectionRefused = 25,
-			connectionReset = 26,
-			datagramTooLarge = 27,
-			invalidName = 28,
-			nameUnresolvable = 29,
-			temporaryResolverFailure = 30,
-			permanentResolverFailure = 31,
+			unknown = 'unknown',
+			accessDenied = 'accessDenied',
+			notSupported = 'notSupported',
+			outOfMemory = 'outOfMemory',
+			timeout = 'timeout',
+			concurrencyConflict = 'concurrencyConflict',
+			notInProgress = 'notInProgress',
+			wouldBlock = 'wouldBlock',
+			addressFamilyNotSupported = 'addressFamilyNotSupported',
+			addressFamilyMismatch = 'addressFamilyMismatch',
+			invalidRemoteAddress = 'invalidRemoteAddress',
+			ipv4OnlyOperation = 'ipv4OnlyOperation',
+			ipv6OnlyOperation = 'ipv6OnlyOperation',
+			newSocketLimit = 'newSocketLimit',
+			alreadyAttached = 'alreadyAttached',
+			alreadyBound = 'alreadyBound',
+			alreadyConnected = 'alreadyConnected',
+			notBound = 'notBound',
+			notConnected = 'notConnected',
+			addressNotBindable = 'addressNotBindable',
+			addressInUse = 'addressInUse',
+			ephemeralPortsExhausted = 'ephemeralPortsExhausted',
+			remoteUnreachable = 'remoteUnreachable',
+			alreadyListening = 'alreadyListening',
+			notListening = 'notListening',
+			connectionRefused = 'connectionRefused',
+			connectionReset = 'connectionReset',
+			datagramTooLarge = 'datagramTooLarge',
+			invalidName = 'invalidName',
+			nameUnresolvable = 'nameUnresolvable',
+			temporaryResolverFailure = 'temporaryResolverFailure',
+			permanentResolverFailure = 'permanentResolverFailure',
 		}
 		
 		export enum IpAddressFamily {
-			ipv4 = 0,
-			ipv6 = 1,
+			ipv4 = 'ipv4',
+			ipv6 = 'ipv6',
 		}
 		
 		export type Ipv4Address = [u8, u8, u8, u8];
@@ -292,9 +292,9 @@ export namespace sockets {
 		export type IpAddressFamily = sockets.Network.IpAddressFamily;
 		
 		export enum ShutdownType {
-			receive = 0,
-			send = 1,
-			both = 2,
+			receive = 'receive',
+			send = 'send',
+			both = 'both',
 		}
 		
 		/**
@@ -953,8 +953,8 @@ export namespace sockets {
 export namespace sockets {
 	export namespace Network.$ {
 		export const Network = new $wcm.NamespaceResourceType('Network', 'network');
-		export const ErrorCode = new $wcm.EnumType<sockets.Network.ErrorCode>(32);
-		export const IpAddressFamily = new $wcm.EnumType<sockets.Network.IpAddressFamily>(2);
+		export const ErrorCode = new $wcm.EnumType<sockets.Network.ErrorCode>(['unknown', 'accessDenied', 'notSupported', 'outOfMemory', 'timeout', 'concurrencyConflict', 'notInProgress', 'wouldBlock', 'addressFamilyNotSupported', 'addressFamilyMismatch', 'invalidRemoteAddress', 'ipv4OnlyOperation', 'ipv6OnlyOperation', 'newSocketLimit', 'alreadyAttached', 'alreadyBound', 'alreadyConnected', 'notBound', 'notConnected', 'addressNotBindable', 'addressInUse', 'ephemeralPortsExhausted', 'remoteUnreachable', 'alreadyListening', 'notListening', 'connectionRefused', 'connectionReset', 'datagramTooLarge', 'invalidName', 'nameUnresolvable', 'temporaryResolverFailure', 'permanentResolverFailure']);
+		export const IpAddressFamily = new $wcm.EnumType<sockets.Network.IpAddressFamily>(['ipv4', 'ipv6']);
 		export const Ipv4Address = new $wcm.TupleType<[u8, u8, u8, u8]>([$wcm.u8, $wcm.u8, $wcm.u8, $wcm.u8]);
 		export const Ipv6Address = new $wcm.TupleType<[u16, u16, u16, u16, u16, u16, u16, u16]>([$wcm.u16, $wcm.u16, $wcm.u16, $wcm.u16, $wcm.u16, $wcm.u16, $wcm.u16, $wcm.u16]);
 		export const IpAddress = new $wcm.VariantType<sockets.Network.IpAddress, sockets.Network.IpAddress._ct, sockets.Network.IpAddress._vt>([Ipv4Address, Ipv6Address], sockets.Network.IpAddress._ctor);
@@ -1032,7 +1032,7 @@ export namespace sockets {
 		export const ErrorCode = sockets.Network.$.ErrorCode;
 		export const IpSocketAddress = sockets.Network.$.IpSocketAddress;
 		export const IpAddressFamily = sockets.Network.$.IpAddressFamily;
-		export const ShutdownType = new $wcm.EnumType<sockets.Tcp.ShutdownType>(3);
+		export const ShutdownType = new $wcm.EnumType<sockets.Tcp.ShutdownType>(['receive', 'send', 'both']);
 		export const TcpSocket = new $wcm.NamespaceResourceType('TcpSocket', 'tcp-socket');
 		TcpSocket.addFunction(new $wcm.FunctionType<sockets.Tcp.TcpSocket.startBind>('startBind', '[method]tcp-socket.start-bind', [
 			['self', new $wcm.BorrowType<sockets.Tcp.TcpSocket>(TcpSocket)],

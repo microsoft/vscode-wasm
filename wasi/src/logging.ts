@@ -17,12 +17,12 @@ export namespace logging {
 		 * A log level, describing a kind of message.
 		 */
 		export enum Level {
-			trace = 0,
-			debug = 1,
-			info = 2,
-			warn = 3,
-			error = 4,
-			critical = 5,
+			trace = 'trace',
+			debug = 'debug',
+			info = 'info',
+			warn = 'warn',
+			error = 'error',
+			critical = 'critical',
 		}
 		
 		/**
@@ -43,7 +43,7 @@ export namespace logging {
 
 export namespace logging {
 	export namespace Logging.$ {
-		export const Level = new $wcm.EnumType<logging.Logging.Level>(6);
+		export const Level = new $wcm.EnumType<logging.Logging.Level>(['trace', 'debug', 'info', 'warn', 'error', 'critical']);
 		export const log = new $wcm.FunctionType<logging.Logging.log>('log', 'log',[
 			['level', Level],
 			['context', $wcm.wstring],

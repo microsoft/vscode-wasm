@@ -56,14 +56,14 @@ export namespace filesystem {
 		 * Note: This was called `filetype` in earlier versions of WASI.
 		 */
 		export enum DescriptorType {
-			unknown = 0,
-			blockDevice = 1,
-			characterDevice = 2,
-			directory = 3,
-			fifo = 4,
-			symbolicLink = 5,
-			regularFile = 6,
-			socket = 7,
+			unknown = 'unknown',
+			blockDevice = 'blockDevice',
+			characterDevice = 'characterDevice',
+			directory = 'directory',
+			fifo = 'fifo',
+			symbolicLink = 'symbolicLink',
+			regularFile = 'regularFile',
+			socket = 'socket',
 		}
 		
 		/**
@@ -459,55 +459,55 @@ export namespace filesystem {
 		 * merely for alignment with POSIX.
 		 */
 		export enum ErrorCode {
-			access = 0,
-			wouldBlock = 1,
-			already = 2,
-			badDescriptor = 3,
-			busy = 4,
-			deadlock = 5,
-			quota = 6,
-			exist = 7,
-			fileTooLarge = 8,
-			illegalByteSequence = 9,
-			inProgress = 10,
-			interrupted = 11,
-			invalid = 12,
-			io = 13,
-			isDirectory = 14,
-			loop = 15,
-			tooManyLinks = 16,
-			messageSize = 17,
-			nameTooLong = 18,
-			noDevice = 19,
-			noEntry = 20,
-			noLock = 21,
-			insufficientMemory = 22,
-			insufficientSpace = 23,
-			notDirectory = 24,
-			notEmpty = 25,
-			notRecoverable = 26,
-			unsupported = 27,
-			noTty = 28,
-			noSuchDevice = 29,
-			overflow = 30,
-			notPermitted = 31,
-			pipe = 32,
-			readOnly = 33,
-			invalidSeek = 34,
-			textFileBusy = 35,
-			crossDevice = 36,
+			access = 'access',
+			wouldBlock = 'wouldBlock',
+			already = 'already',
+			badDescriptor = 'badDescriptor',
+			busy = 'busy',
+			deadlock = 'deadlock',
+			quota = 'quota',
+			exist = 'exist',
+			fileTooLarge = 'fileTooLarge',
+			illegalByteSequence = 'illegalByteSequence',
+			inProgress = 'inProgress',
+			interrupted = 'interrupted',
+			invalid = 'invalid',
+			io = 'io',
+			isDirectory = 'isDirectory',
+			loop = 'loop',
+			tooManyLinks = 'tooManyLinks',
+			messageSize = 'messageSize',
+			nameTooLong = 'nameTooLong',
+			noDevice = 'noDevice',
+			noEntry = 'noEntry',
+			noLock = 'noLock',
+			insufficientMemory = 'insufficientMemory',
+			insufficientSpace = 'insufficientSpace',
+			notDirectory = 'notDirectory',
+			notEmpty = 'notEmpty',
+			notRecoverable = 'notRecoverable',
+			unsupported = 'unsupported',
+			noTty = 'noTty',
+			noSuchDevice = 'noSuchDevice',
+			overflow = 'overflow',
+			notPermitted = 'notPermitted',
+			pipe = 'pipe',
+			readOnly = 'readOnly',
+			invalidSeek = 'invalidSeek',
+			textFileBusy = 'textFileBusy',
+			crossDevice = 'crossDevice',
 		}
 		
 		/**
 		 * File or memory access pattern advisory information.
 		 */
 		export enum Advice {
-			normal = 0,
-			sequential = 1,
-			random = 2,
-			willNeed = 3,
-			dontNeed = 4,
-			noReuse = 5,
+			normal = 'normal',
+			sequential = 'sequential',
+			random = 'random',
+			willNeed = 'willNeed',
+			dontNeed = 'dontNeed',
+			noReuse = 'noReuse',
 		}
 		
 		/**
@@ -1072,7 +1072,7 @@ export namespace filesystem {
 		export const Error = io.Streams.$.Error;
 		export const Datetime = clocks.WallClock.$.Datetime;
 		export const Filesize = $wcm.u64;
-		export const DescriptorType = new $wcm.EnumType<filesystem.Types.DescriptorType>(8);
+		export const DescriptorType = new $wcm.EnumType<filesystem.Types.DescriptorType>(['unknown', 'blockDevice', 'characterDevice', 'directory', 'fifo', 'symbolicLink', 'regularFile', 'socket']);
 		export const DescriptorFlags = new $wcm.FlagsType<filesystem.Types.DescriptorFlags>(6, { kind: $wcm.FlagsStorageKind.Single, type: $wcm.u8, create: filesystem.Types.DescriptorFlags.create, value: filesystem.Types.DescriptorFlags.value as $wcm.SingleFlagsValueFunc });
 		export const PathFlags = new $wcm.FlagsType<filesystem.Types.PathFlags>(1, { kind: $wcm.FlagsStorageKind.Single, type: $wcm.u8, create: filesystem.Types.PathFlags.create, value: filesystem.Types.PathFlags.value as $wcm.SingleFlagsValueFunc });
 		export const OpenFlags = new $wcm.FlagsType<filesystem.Types.OpenFlags>(4, { kind: $wcm.FlagsStorageKind.Single, type: $wcm.u8, create: filesystem.Types.OpenFlags.create, value: filesystem.Types.OpenFlags.value as $wcm.SingleFlagsValueFunc });
@@ -1092,8 +1092,8 @@ export namespace filesystem {
 			['type', DescriptorType],
 			['name', $wcm.wstring],
 		]);
-		export const ErrorCode = new $wcm.EnumType<filesystem.Types.ErrorCode>(37);
-		export const Advice = new $wcm.EnumType<filesystem.Types.Advice>(6);
+		export const ErrorCode = new $wcm.EnumType<filesystem.Types.ErrorCode>(['access', 'wouldBlock', 'already', 'badDescriptor', 'busy', 'deadlock', 'quota', 'exist', 'fileTooLarge', 'illegalByteSequence', 'inProgress', 'interrupted', 'invalid', 'io', 'isDirectory', 'loop', 'tooManyLinks', 'messageSize', 'nameTooLong', 'noDevice', 'noEntry', 'noLock', 'insufficientMemory', 'insufficientSpace', 'notDirectory', 'notEmpty', 'notRecoverable', 'unsupported', 'noTty', 'noSuchDevice', 'overflow', 'notPermitted', 'pipe', 'readOnly', 'invalidSeek', 'textFileBusy', 'crossDevice']);
+		export const Advice = new $wcm.EnumType<filesystem.Types.Advice>(['normal', 'sequential', 'random', 'willNeed', 'dontNeed', 'noReuse']);
 		export const MetadataHashValue = new $wcm.RecordType<filesystem.Types.MetadataHashValue>([
 			['lower', $wcm.u64],
 			['upper', $wcm.u64],

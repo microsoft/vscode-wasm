@@ -193,8 +193,8 @@ export const TestResultType: ComponentModelType<result<TestTuple, u32>> = new Va
 );
 
 export enum TestEnum {
-	a = 0,
-	b = 1,
-	c = 2
+	a = 'a',
+	b = 'b',
+	c = 'c'
 }
-export const TestEnumType: ComponentModelType<TestEnum> = new EnumType<TestEnum>(3);
+export const TestEnumType: ComponentModelType<TestEnum> = new EnumType<TestEnum>(['a', 'b', 'c']);
