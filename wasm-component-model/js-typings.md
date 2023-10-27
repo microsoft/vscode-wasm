@@ -299,7 +299,7 @@ let accessType: AccessType = ...;
 if (AccessType.isAccess(accessType)) {
 	accessType.value; // No compile error
 } else if (AccessType.isExists(accessType)) {
-	access.Type.value; // Compile error since exists has no value.
+	accessType.value; // Compile error since exists has no value.
 }
 ```
 
