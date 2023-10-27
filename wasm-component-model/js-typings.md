@@ -305,7 +305,7 @@ if (AccessType.isAccess(accessType)) {
 
 ### Flags
 
-Existing idiomatic usages of flags in JavaScript seem to map flags onto the `number` type and use the provided bit operations (&, |, ~, <<, >>, ... ) to manipulate the bitset. Using the `number` type has also the advantage that flags will have value semantic out of the box.
+Existing idiomatic usages of flags in JavaScript (see usage in NodeJS) seem to map flags onto the `number` type and use the provided bit operations (&, |, ~, <<, >>, ... ) to manipulate the bitset. Using the `number` type has also the advantage that flags will have value semantic out of the box.
 
 Since JavaScript only supports bit operations on numbers on the lower 32 bits we need a solution for flags with more and 32 bits. Those should be mapped onto `bigint` which provides integers with unlimited size, including their corresponding bit operations. Besides the base type holding the value a code generation tool must generate a supporting JavaScript structure as well. For the following Wit variant definition
 
