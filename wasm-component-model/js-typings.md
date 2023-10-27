@@ -186,7 +186,7 @@ export const AccessType = {
 
 let accessType = AccessType.Exists();
 ....
-if (accessType.kind === AccessType.access) {
+if (accessType.tag === AccessType.access) {
 	....
 }
 ```
@@ -224,11 +224,11 @@ which when compile produces a nice d.ts file as well:
 ```TypeScript
 export declare namespace AccessType {
     type Access = {
-        readonly case: typeof AccessType.access;
+        readonly tag: typeof AccessType.access;
         readonly value: Modes;
     };
     type Exists = {
-        readonly case: typeof AccessType.exists;
+        readonly tag: typeof AccessType.exists;
     };
 }
 export declare const AccessType: {
