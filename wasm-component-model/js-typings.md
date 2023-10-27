@@ -1,9 +1,58 @@
+## Mapping Wit types onto JavaScript / TypeScript types
+
+To support interoperability between different component interfaces written in JavaScript / Typescript a standard should be established specifying how Wit types are to be mapped onto corresponding JavaScript / TypeScript files.
+
+The mapping we should be idiomatic for both JavaScript and TypeScript programmers. Pure JavaScript programmers should be able to use the mappings intuitively without corresponding TypeScript declaration files.
+
+For the following Wit types the mapping is straight forward and captured in the following table:
+
+| Wit         | JavaScript | TypeScript declaration |
+|-------------|------------|------------|
+| u8 | number | type u8 = number; |
+| u16 | number | type u16 = number; |
+| u32 | number | type u32 = number; |
+| u64 | bigint | type u64 = bigint; |
+| s8 | number | type s8 = number; |
+| s16 | number | type s16 = number; |
+| s32 | number | type s32 = number; |
+| s64 | bigint | type s64 = bigint; |
+| float32 | number | type float32 = number; |
+| float64 | number | type float64 = number; |
+| bool | | boolean |  boolean |
+| string | string | string |
+| char | string[0] | string |
+| record | object literal | type declaration |
+| list\<T\> | [] | Array\<T\>|
+| tuple\<T1, T2\> | [] | [T1, T2] |
+| option\<T\> | variable | T \| undefined |
+| result\<ok, err\> | variant | result\<ok, err\> |
+
+Enums, variants and flags need some supporting JavaScript / TypeScript code since they are not natively supported in JavaScript. The proposed code should be aligned whenever possible with existing efforts to standardize these types in JavaScript.
+
+To determine an idiomatic implementation for these types I used the following data sources:
+
+- usage of these programming constructs in [NodeJS](https://nodejs.org/en/docs) and the [standard libraries](https://developer.mozilla.org/en-US/)
+- searching on public GitHub repositories to find implementation of the prgramming constructs
+- asked ChatGPT 4 to generate JavaScript code for the constructor in a JavaScript idiomatic way.
+
 ### Enum
 
-Component model enums (u32 value) should be mapped onto a string value, where the valid values of the string value are the names of the enumeration fields. In addition it is recommended to generate a supporting JS structure that allows accessing the enumeration value using an identifier instead of a literal string. The ensures that:
+Actually, enumerations are implemented in many ways on JavaScript. Typical approaches are:
+
+- string literal
+- object keys, were the value is either a string or number
+- Symbols
+- classes
+- Proxies
+
+String literals are mainly used in NodeJS and the standard libraries. You find all kind of implementation on GitHub. ChatGPT generated object keys with numbers as values.
+
+To keep things idiomatic for JavaScript developers but sill have decent TypeScript and tooling support component model enums (u32 value) should be mapped onto a string value, where the valid values of the string value are the names of the enumeration fields. In addition a supporting JS structure must be generated that allows accessing the enumeration value using a key on an object literal. This ensures that:
 
 - we have a place to add corresponding documentation of an enum field
 - tools can support operations like hover, goto declaration, find all references
+
+This mapping makes enumeration value types in JavaScript.
 
 For the following Wit enum definition
 
@@ -89,12 +138,15 @@ export enum DescriptorType = {
 ```
 The JavaScript representation of such a TypeScript enumeration will be a string. So JavaScript developers are not forced to use any of the support structures.
 
+
 ### Variants
 
 Component model variants are mapped onto an object literal with the following two properties:
 
-- kind/case: a string denoting the case of the variant. The component model uses case to refer to the variant case. However when writing code using kind might be more appropriate.
+- tag/case: a string denoting the case of the variant. The component model uses case to refer to the variant case. However when writing code using tag might be more appropriate.
 - value: carrying the value of the variant if there is any
+
+To match the semantic of variants/enums in other programming languages the object literals should have value semantic (e.g. being immutable).
 
 Besides the object literal holding the value of the variant a code generation tool should generate a supporting JavaScript structure as well. For the following Wit variant definition
 
@@ -113,14 +165,20 @@ the supporting JS structure would look like this:
 
 ```js
 export const AccessType = {
+	/**
+	 * Test for readability, writeability, or executability.
+	 */
 	access: 'access',
+	/**
+	 * Test whether the path exists.
+	 */
 	exists: 'exists',
 
 	Access: (modes) => {
-		return Object.freeze({ kind: AccessType.access, value: modes });
+		return Object.freeze({ tag: AccessType.access, value: modes });
 	},
 	Exists: () => {
-		return Object.freeze({ kind: AccessType.exists });
+		return Object.freeze({ tag: AccessType.exists });
 	}
 }
 
@@ -137,56 +195,119 @@ If TypeScript code is generated the following definition can be used
 
 ```TypeScript
 export namespace AccessType {
-	export type access = { readonly kind: typeof AccessType.access; readonly value: Modes };
-	export type exists = { readonly kind: typeof AccessType.exists };
+	export type Access = { readonly tag: typeof AccessType.access; readonly value: Modes };
+	export type Exists = { readonly tag: typeof AccessType.exists };
 }
 export const AccessType = {
+	/**
+	 * Test for readability, writeability, or executability.
+	 */
 	access: 'access' as const,
+	/**
+	 * Test whether the path exists.
+	 */
 	exists: 'exists' as const,
 
-	Access: (mode: Modes): AccessType.access => {
-		return { kind: AccessType.access, value: mode };
+	Access: (mode: Modes): AccessType.Access => {
+		return Object.freeze({ kind: AccessType.access, value: mode });
 	},
 
-	Exists: (): AccessType.exists => {
-		return { kind: AccessType.exists };
+	Exists: (): AccessType.Exists => {
+		return Object.freeze({ kind: AccessType.exists });
 	}
 };
-export type AccessType = AccessType.access | AccessType.exists;
+export type AccessType = AccessType.Access | AccessType.Exists;
 ```
 
 which when compile produces a nice d.ts file as well:
 
 ```TypeScript
 export declare namespace AccessType {
-    type access = {
+    type Access = {
         readonly case: typeof AccessType.access;
         readonly value: Modes;
     };
-    type exists = {
+    type Exists = {
         readonly case: typeof AccessType.exists;
     };
 }
 export declare const AccessType: {
-    /**
-     * The access type
-     */
+	/**
+	 * Test for readability, writeability, or executability.
+	 */
     access: "access";
-    /**
-     * The exists type
-     */
+	/**
+	 * Test whether the path exists.
+	 */
     exists: "exists";
-    Access: (mode: Modes) => AccessType.access;
-    Exists: () => AccessType.exists;
+    Access: (mode: Modes) => AccessType.Access;
+    Exists: () => AccessType.Exists;
 };
-export type AccessType = AccessType.access | AccessType.exists;
+export type AccessType = AccessType.Access | AccessType.Exists;
+```
+
+For variant cases that don't carry a value we could use a singleton and make that one a const declaration instead of providing a creator function. For the above example this would look like this:
+
+```js
+export const AccessType = {
+
+	// as above
+
+	Exists: Object.freeze({ tag: AccessType.exists })
+}
+```
+
+However this would lead to inconsistencies when comparing variant cases. For the cases without value someone could write:
+
+```js
+let accessType = AccessType.Exists();
+if (accessType === AccessType.Exists) {
+
+}
+```
+
+which would do the correct checking since the object literals are identical. However it will not work for variant cases carrying a value since we would compare a object literal to a function.
+
+To further ease the variant case checking we could generate additional checking functions in the form of
+
+```js
+export const AccessType = {
+
+	// As above
+
+	isAccess: (value) => value.tag === AccessType.access,
+	isExists: (value) => value.tag === AccessType.exists
+}
+```
+
+In TypeScript we would type this using the `is` keyword which will allow the compiler to do the correct type narrowing.
+
+```typescript
+export const AccessType = {
+
+	// As above
+
+	isAccess: (value: AccessType): value is AccessType.Access => value.tag === AccessType.access,
+	isExists: (value: AccessType): value is AccessType.Exists => value.tag === AccessType.exists
+};
+```
+
+Which then supports writing TypeScript code like this with proper type checking
+
+```typescript
+let accessType: AccessType = ...;
+if (AccessType.isAccess(accessType)) {
+	accessType.value; // No compile error
+} else if (AccessType.isExists(accessType)) {
+	access.Type.value; // Compile error since exists has no value.
+}
 ```
 
 ### Flags
 
 Existing idiomatic usages of flags in JavaScript seem to map flags onto the `number` type and use the provided bit operations (&, |, ~, <<, >>, ... ) to manipulate the bitset. Using the `number` type has also the advantage that flags will have value semantic out of the box.
 
-Since JavaScript only supports bit operations on numbers on the lower 32 bits we need a solution for flags with more and 32 bits. Those should be mapped onto `bigint` which provides integers with unlimited size, including their corresponding bit operations. Besides the base type holding the value a code generation tool should generate a supporting JavaScript structure as well. For the following Wit variant definition
+Since JavaScript only supports bit operations on numbers on the lower 32 bits we need a solution for flags with more and 32 bits. Those should be mapped onto `bigint` which provides integers with unlimited size, including their corresponding bit operations. Besides the base type holding the value a code generation tool must generate a supporting JavaScript structure as well. For the following Wit variant definition
 
 ```wit
 /// Descriptor flags.
