@@ -268,40 +268,33 @@ if (accessType === AccessType.Exists) {
 
 which would do the correct checking since the object literals are identical. However it will not work for variant cases carrying a value since we would compare a object literal to a function.
 
-To further ease the variant case checking we could generate additional checking functions in the form of
+To further ease the variant case checking we could generate additional checking functions on the variant literal. The TypeScript interfaces for this would look like this:
 
-```js
-export const AccessType = {
-
-	// As above
-
-	isAccess: (value) => value.tag === AccessType.access,
-	isExists: (value) => value.tag === AccessType.exists
+```typescript
+export namespace AccessType {
+	type common = {
+		isAccess(): this is AccessType.Access;
+		isExists(): this is AccessType.Exists;
+	}
+	export type Access = { readonly tag: typeof AccessType.access; readonly value: Modes } & common;
+	export type Exists = { readonly tag: typeof AccessType.exists } & common;
 }
 ```
 
-In TypeScript we would type this using the `is` keyword which will allow the compiler to do the correct type narrowing.
-
-```typescript
-export const AccessType = {
-
-	// As above
-
-	isAccess: (value: AccessType): value is AccessType.Access => value.tag === AccessType.access,
-	isExists: (value: AccessType): value is AccessType.Exists => value.tag === AccessType.exists
-};
-```
-
-Which then supports writing TypeScript code like this with proper type checking
+Which then supports writing JavaScript and TypeScript code like this
 
 ```typescript
 let accessType: AccessType = ...;
-if (AccessType.isAccess(accessType)) {
+if (accessType.isAccess()) {
 	accessType.value; // No compile error
-} else if (AccessType.isExists(accessType)) {
+} else if (accessType.isExists()) {
 	accessType.value; // Compile error since exists has no value.
 }
 ```
+
+with the benefit of TypeScript providing correct error messages.
+
+Implementation wise the variant would be implemented using a class instead of using a frozen object literal. However, this will have no impact on the user of the variant, especially not how a JavaScript developer can interact with it. There will still be a `tag` and a `value` property with direct access to it.
 
 ### Flags
 
