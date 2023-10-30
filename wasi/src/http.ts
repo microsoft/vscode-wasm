@@ -17,229 +17,229 @@ export namespace http {
 		export type Pollable = io.Poll.Pollable;
 		
 		export namespace Method {
-			export const get = 0 as const;
-			export type get = { readonly case: typeof get } & _common;
+			export const get = 'get' as const;
+			export type Get = { readonly tag: typeof get } & _common;
+			export function Get(): Get {
+				return new VariantImpl(get, undefined) as Get;
+			}
 			
-			export const head = 1 as const;
-			export type head = { readonly case: typeof head } & _common;
+			export const head = 'head' as const;
+			export type Head = { readonly tag: typeof head } & _common;
+			export function Head(): Head {
+				return new VariantImpl(head, undefined) as Head;
+			}
 			
-			export const post = 2 as const;
-			export type post = { readonly case: typeof post } & _common;
+			export const post = 'post' as const;
+			export type Post = { readonly tag: typeof post } & _common;
+			export function Post(): Post {
+				return new VariantImpl(post, undefined) as Post;
+			}
 			
-			export const put = 3 as const;
-			export type put = { readonly case: typeof put } & _common;
+			export const put = 'put' as const;
+			export type Put = { readonly tag: typeof put } & _common;
+			export function Put(): Put {
+				return new VariantImpl(put, undefined) as Put;
+			}
 			
-			export const delete_ = 4 as const;
-			export type delete_ = { readonly case: typeof delete_ } & _common;
+			export const delete_ = 'delete_' as const;
+			export type Delete = { readonly tag: typeof delete_ } & _common;
+			export function Delete(): Delete {
+				return new VariantImpl(delete_, undefined) as Delete;
+			}
 			
-			export const connect = 5 as const;
-			export type connect = { readonly case: typeof connect } & _common;
+			export const connect = 'connect' as const;
+			export type Connect = { readonly tag: typeof connect } & _common;
+			export function Connect(): Connect {
+				return new VariantImpl(connect, undefined) as Connect;
+			}
 			
-			export const options = 6 as const;
-			export type options = { readonly case: typeof options } & _common;
+			export const options = 'options' as const;
+			export type Options = { readonly tag: typeof options } & _common;
+			export function Options(): Options {
+				return new VariantImpl(options, undefined) as Options;
+			}
 			
-			export const trace = 7 as const;
-			export type trace = { readonly case: typeof trace } & _common;
+			export const trace = 'trace' as const;
+			export type Trace = { readonly tag: typeof trace } & _common;
+			export function Trace(): Trace {
+				return new VariantImpl(trace, undefined) as Trace;
+			}
 			
-			export const patch = 8 as const;
-			export type patch = { readonly case: typeof patch } & _common;
+			export const patch = 'patch' as const;
+			export type Patch = { readonly tag: typeof patch } & _common;
+			export function Patch(): Patch {
+				return new VariantImpl(patch, undefined) as Patch;
+			}
 			
-			export const other = 9 as const;
-			export type other = { readonly case: typeof other; readonly value: string } & _common;
+			export const other = 'other' as const;
+			export type Other = { readonly tag: typeof other; readonly value: string } & _common;
+			export function Other(value: string): Other {
+				return new VariantImpl(other, value) as Other;
+			}
 			
-			export type _ct = typeof get | typeof head | typeof post | typeof put | typeof delete_ | typeof connect | typeof options | typeof trace | typeof patch | typeof other;
+			export type _tt = typeof get | typeof head | typeof post | typeof put | typeof delete_ | typeof connect | typeof options | typeof trace | typeof patch | typeof other;
 			export type _vt = string | undefined;
-			type _common = Omit<VariantImpl, 'case' | 'value'>;
-			export function _ctor(c: _ct, v: _vt): Method {
-				return new VariantImpl(c, v) as Method;
-			}
-			export function _get(): get {
-				return new VariantImpl(get, undefined) as get;
-			}
-			export function _head(): head {
-				return new VariantImpl(head, undefined) as head;
-			}
-			export function _post(): post {
-				return new VariantImpl(post, undefined) as post;
-			}
-			export function _put(): put {
-				return new VariantImpl(put, undefined) as put;
-			}
-			export function _delete_(): delete_ {
-				return new VariantImpl(delete_, undefined) as delete_;
-			}
-			export function _connect(): connect {
-				return new VariantImpl(connect, undefined) as connect;
-			}
-			export function _options(): options {
-				return new VariantImpl(options, undefined) as options;
-			}
-			export function _trace(): trace {
-				return new VariantImpl(trace, undefined) as trace;
-			}
-			export function _patch(): patch {
-				return new VariantImpl(patch, undefined) as patch;
-			}
-			export function _other(value: string): other {
-				return new VariantImpl(other, value) as other;
+			type _common = Omit<VariantImpl, 'tag' | 'value'>;
+			export function _ctor(t: _tt, v: _vt): Method {
+				return new VariantImpl(t, v) as Method;
 			}
 			class VariantImpl {
-				private readonly _case: _ct;
+				private readonly _tag: _tt;
 				private readonly _value?: _vt;
-				constructor(c: _ct, value: _vt) {
-					this._case = c;
+				constructor(t: _tt, value: _vt) {
+					this._tag = t;
 					this._value = value;
 				}
-				get case(): _ct {
-					return this._case;
+				get tag(): _tt {
+					return this._tag;
 				}
 				get value(): _vt {
 					return this._value;
 				}
-				get(): this is get {
-					return this._case === Method.get;
+				isGet(): this is Get {
+					return this._tag === Method.get;
 				}
-				head(): this is head {
-					return this._case === Method.head;
+				isHead(): this is Head {
+					return this._tag === Method.head;
 				}
-				post(): this is post {
-					return this._case === Method.post;
+				isPost(): this is Post {
+					return this._tag === Method.post;
 				}
-				put(): this is put {
-					return this._case === Method.put;
+				isPut(): this is Put {
+					return this._tag === Method.put;
 				}
-				delete_(): this is delete_ {
-					return this._case === Method.delete_;
+				isDelete(): this is Delete {
+					return this._tag === Method.delete_;
 				}
-				connect(): this is connect {
-					return this._case === Method.connect;
+				isConnect(): this is Connect {
+					return this._tag === Method.connect;
 				}
-				options(): this is options {
-					return this._case === Method.options;
+				isOptions(): this is Options {
+					return this._tag === Method.options;
 				}
-				trace(): this is trace {
-					return this._case === Method.trace;
+				isTrace(): this is Trace {
+					return this._tag === Method.trace;
 				}
-				patch(): this is patch {
-					return this._case === Method.patch;
+				isPatch(): this is Patch {
+					return this._tag === Method.patch;
 				}
-				other(): this is other {
-					return this._case === Method.other;
+				isOther(): this is Other {
+					return this._tag === Method.other;
 				}
 			}
 		}
-		export type Method = Method.get | Method.head | Method.post | Method.put | Method.delete_ | Method.connect | Method.options | Method.trace | Method.patch | Method.other;
+		export type Method = Method.Get | Method.Head | Method.Post | Method.Put | Method.Delete | Method.Connect | Method.Options | Method.Trace | Method.Patch | Method.Other;
 		
 		export namespace Scheme {
-			export const HTTP = 0 as const;
-			export type HTTP = { readonly case: typeof HTTP } & _common;
+			export const http = 'HTTP' as const;
+			export type HTTP = { readonly tag: typeof http } & _common;
+			export function HTTP(): HTTP {
+				return new VariantImpl(http, undefined) as HTTP;
+			}
 			
-			export const HTTPS = 1 as const;
-			export type HTTPS = { readonly case: typeof HTTPS } & _common;
+			export const https = 'HTTPS' as const;
+			export type HTTPS = { readonly tag: typeof https } & _common;
+			export function HTTPS(): HTTPS {
+				return new VariantImpl(https, undefined) as HTTPS;
+			}
 			
-			export const other = 2 as const;
-			export type other = { readonly case: typeof other; readonly value: string } & _common;
+			export const other = 'other' as const;
+			export type Other = { readonly tag: typeof other; readonly value: string } & _common;
+			export function Other(value: string): Other {
+				return new VariantImpl(other, value) as Other;
+			}
 			
-			export type _ct = typeof HTTP | typeof HTTPS | typeof other;
+			export type _tt = typeof http | typeof https | typeof other;
 			export type _vt = string | undefined;
-			type _common = Omit<VariantImpl, 'case' | 'value'>;
-			export function _ctor(c: _ct, v: _vt): Scheme {
-				return new VariantImpl(c, v) as Scheme;
-			}
-			export function _HTTP(): HTTP {
-				return new VariantImpl(HTTP, undefined) as HTTP;
-			}
-			export function _HTTPS(): HTTPS {
-				return new VariantImpl(HTTPS, undefined) as HTTPS;
-			}
-			export function _other(value: string): other {
-				return new VariantImpl(other, value) as other;
+			type _common = Omit<VariantImpl, 'tag' | 'value'>;
+			export function _ctor(t: _tt, v: _vt): Scheme {
+				return new VariantImpl(t, v) as Scheme;
 			}
 			class VariantImpl {
-				private readonly _case: _ct;
+				private readonly _tag: _tt;
 				private readonly _value?: _vt;
-				constructor(c: _ct, value: _vt) {
-					this._case = c;
+				constructor(t: _tt, value: _vt) {
+					this._tag = t;
 					this._value = value;
 				}
-				get case(): _ct {
-					return this._case;
+				get tag(): _tt {
+					return this._tag;
 				}
 				get value(): _vt {
 					return this._value;
 				}
-				HTTP(): this is HTTP {
-					return this._case === Scheme.HTTP;
+				isHTTP(): this is HTTP {
+					return this._tag === Scheme.http;
 				}
-				HTTPS(): this is HTTPS {
-					return this._case === Scheme.HTTPS;
+				isHTTPS(): this is HTTPS {
+					return this._tag === Scheme.https;
 				}
-				other(): this is other {
-					return this._case === Scheme.other;
+				isOther(): this is Other {
+					return this._tag === Scheme.other;
 				}
 			}
 		}
-		export type Scheme = Scheme.HTTP | Scheme.HTTPS | Scheme.other;
+		export type Scheme = Scheme.HTTP | Scheme.HTTPS | Scheme.Other;
 		
 		export namespace Error {
-			export const invalidUrl = 0 as const;
-			export type invalidUrl = { readonly case: typeof invalidUrl; readonly value: string } & _common;
+			export const invalidUrl = 'invalidUrl' as const;
+			export type InvalidUrl = { readonly tag: typeof invalidUrl; readonly value: string } & _common;
+			export function InvalidUrl(value: string): InvalidUrl {
+				return new VariantImpl(invalidUrl, value) as InvalidUrl;
+			}
 			
-			export const timeoutError = 1 as const;
-			export type timeoutError = { readonly case: typeof timeoutError; readonly value: string } & _common;
+			export const timeoutError = 'timeoutError' as const;
+			export type TimeoutError = { readonly tag: typeof timeoutError; readonly value: string } & _common;
+			export function TimeoutError(value: string): TimeoutError {
+				return new VariantImpl(timeoutError, value) as TimeoutError;
+			}
 			
-			export const protocolError = 2 as const;
-			export type protocolError = { readonly case: typeof protocolError; readonly value: string } & _common;
+			export const protocolError = 'protocolError' as const;
+			export type ProtocolError = { readonly tag: typeof protocolError; readonly value: string } & _common;
+			export function ProtocolError(value: string): ProtocolError {
+				return new VariantImpl(protocolError, value) as ProtocolError;
+			}
 			
-			export const unexpectedError = 3 as const;
-			export type unexpectedError = { readonly case: typeof unexpectedError; readonly value: string } & _common;
+			export const unexpectedError = 'unexpectedError' as const;
+			export type UnexpectedError = { readonly tag: typeof unexpectedError; readonly value: string } & _common;
+			export function UnexpectedError(value: string): UnexpectedError {
+				return new VariantImpl(unexpectedError, value) as UnexpectedError;
+			}
 			
-			export type _ct = typeof invalidUrl | typeof timeoutError | typeof protocolError | typeof unexpectedError;
+			export type _tt = typeof invalidUrl | typeof timeoutError | typeof protocolError | typeof unexpectedError;
 			export type _vt = string | string | string | string;
-			type _common = Omit<VariantImpl, 'case' | 'value'>;
-			export function _ctor(c: _ct, v: _vt): Error {
-				return new VariantImpl(c, v) as Error;
-			}
-			export function _invalidUrl(value: string): invalidUrl {
-				return new VariantImpl(invalidUrl, value) as invalidUrl;
-			}
-			export function _timeoutError(value: string): timeoutError {
-				return new VariantImpl(timeoutError, value) as timeoutError;
-			}
-			export function _protocolError(value: string): protocolError {
-				return new VariantImpl(protocolError, value) as protocolError;
-			}
-			export function _unexpectedError(value: string): unexpectedError {
-				return new VariantImpl(unexpectedError, value) as unexpectedError;
+			type _common = Omit<VariantImpl, 'tag' | 'value'>;
+			export function _ctor(t: _tt, v: _vt): Error {
+				return new VariantImpl(t, v) as Error;
 			}
 			class VariantImpl {
-				private readonly _case: _ct;
+				private readonly _tag: _tt;
 				private readonly _value: _vt;
-				constructor(c: _ct, value: _vt) {
-					this._case = c;
+				constructor(t: _tt, value: _vt) {
+					this._tag = t;
 					this._value = value;
 				}
-				get case(): _ct {
-					return this._case;
+				get tag(): _tt {
+					return this._tag;
 				}
 				get value(): _vt {
 					return this._value;
 				}
-				invalidUrl(): this is invalidUrl {
-					return this._case === Error.invalidUrl;
+				isInvalidUrl(): this is InvalidUrl {
+					return this._tag === Error.invalidUrl;
 				}
-				timeoutError(): this is timeoutError {
-					return this._case === Error.timeoutError;
+				isTimeoutError(): this is TimeoutError {
+					return this._tag === Error.timeoutError;
 				}
-				protocolError(): this is protocolError {
-					return this._case === Error.protocolError;
+				isProtocolError(): this is ProtocolError {
+					return this._tag === Error.protocolError;
 				}
-				unexpectedError(): this is unexpectedError {
-					return this._case === Error.unexpectedError;
+				isUnexpectedError(): this is UnexpectedError {
+					return this._tag === Error.unexpectedError;
 				}
 			}
 		}
-		export type Error = Error.invalidUrl | Error.timeoutError | Error.protocolError | Error.unexpectedError;
+		export type Error = Error.InvalidUrl | Error.TimeoutError | Error.ProtocolError | Error.UnexpectedError;
 		
 		export namespace Fields {
 			
@@ -478,9 +478,9 @@ export namespace http {
 		export const InputStream = io.Streams.$.InputStream;
 		export const OutputStream = io.Streams.$.OutputStream;
 		export const Pollable = io.Poll.$.Pollable;
-		export const Method = new $wcm.VariantType<http.Types.Method, http.Types.Method._ct, http.Types.Method._vt>([undefined, undefined, undefined, undefined, undefined, undefined, undefined, undefined, undefined, $wcm.wstring], http.Types.Method._ctor);
-		export const Scheme = new $wcm.VariantType<http.Types.Scheme, http.Types.Scheme._ct, http.Types.Scheme._vt>([undefined, undefined, $wcm.wstring], http.Types.Scheme._ctor);
-		export const Error = new $wcm.VariantType<http.Types.Error, http.Types.Error._ct, http.Types.Error._vt>([$wcm.wstring, $wcm.wstring, $wcm.wstring, $wcm.wstring], http.Types.Error._ctor);
+		export const Method = new $wcm.VariantType<http.Types.Method, http.Types.Method._tt, http.Types.Method._vt>([['get', undefined], ['head', undefined], ['post', undefined], ['put', undefined], ['delete_', undefined], ['connect', undefined], ['options', undefined], ['trace', undefined], ['patch', undefined], ['other', $wcm.wstring]], http.Types.Method._ctor);
+		export const Scheme = new $wcm.VariantType<http.Types.Scheme, http.Types.Scheme._tt, http.Types.Scheme._vt>([['HTTP', undefined], ['HTTPS', undefined], ['other', $wcm.wstring]], http.Types.Scheme._ctor);
+		export const Error = new $wcm.VariantType<http.Types.Error, http.Types.Error._tt, http.Types.Error._vt>([['invalidUrl', $wcm.wstring], ['timeoutError', $wcm.wstring], ['protocolError', $wcm.wstring], ['unexpectedError', $wcm.wstring]], http.Types.Error._ctor);
 		export const Fields = new $wcm.NamespaceResourceType('Fields', 'fields');
 		export const Headers = Fields;
 		export const Trailers = Fields;

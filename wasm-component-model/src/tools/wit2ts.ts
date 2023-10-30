@@ -163,7 +163,7 @@ interface NameProvider {
 	asImportName(pkg: Package): string;
 	asPackageName(pkg: Package): string;
 	asNamespaceName(iface: Interface): string;
-	asTypeName(type: Type): string;
+	asTypeName(type: Type | VariantCase): string;
 	asFunctionName(func: Func): string;
 	asMethodName(method: Method): string;
 	asStaticMethodName(method: StaticMethod): string;
@@ -204,7 +204,7 @@ namespace _TypeScriptNameProvider {
 		return _asTypeName(iface.name);
 	}
 
-	export function asTypeName(type: Type): string {
+	export function asTypeName(type: Type | VariantCase): string {
 		if (type.name === null) {
 			throw new Error(`Type ${JSON.stringify(type)} has no name.`);
 		}
@@ -321,7 +321,7 @@ namespace _WitNameProvider {
 		return toTs(iface.name);
 	}
 
-	export function asTypeName(type: Type): string {
+	export function asTypeName(type: Type | VariantCase): string {
 		if (type.name === null) {
 			throw new Error(`Type ${JSON.stringify(type)} has no name.`);
 		}
@@ -674,16 +674,20 @@ namespace MetaModel {
 
 		private readonly name: string;
 		private readonly typeParam: string;
-		private readonly cases: (string | undefined)[];
+		private readonly cases: [string, (string | undefined)][];
 
-		constructor(name: string, typeParam: string, cases: (string | undefined)[]) {
+		constructor(name: string, typeParam: string, cases: [string, (string | undefined)][]) {
 			this.name = name;
 			this.typeParam = typeParam;
 			this.cases = cases;
 		}
 
 		public emit(code: Code): void {
-			code.push(`export const ${this.name} = new $wcm.VariantType<${this.typeParam}, ${this.typeParam}._ct, ${this.typeParam}._vt>([${this.cases.map(c => c !== undefined ? c : 'undefined').join(', ')}], ${this.typeParam}._ctor);`);
+			const cases: string[] = [];
+			for (const [name, type] of this.cases) {
+				cases.push(`['${name}', ${type !== undefined ? type : 'undefined'}]`);
+			}
+			code.push(`export const ${this.name} = new $wcm.VariantType<${this.typeParam}, ${this.typeParam}._tt, ${this.typeParam}._vt>([${cases.join(', ')}], ${this.typeParam}._ctor);`);
 		}
 	}
 
@@ -1341,90 +1345,101 @@ namespace TypeScript {
 		}
 
 		private emitVariant(type: VariantType): void {
+
+			function asTagName(name: string): string {
+				if (name[0] === name[0].toLowerCase()) {
+					return name;
+				}
+				let isAllUpperCase = true;
+				for (let i = 1; i < name.length; i++) {
+					if (name[i] !== name[i].toUpperCase()) {
+						isAllUpperCase = false;
+						break;
+					}
+				}
+				if (isAllUpperCase) {
+					return name.toLowerCase();
+				} else {
+					return name[0].toLowerCase() + name.substring(1);
+				}
+			}
+
 			const code = this.namespaceCode;
 			const kind = type.kind;
 			const variantName = this.nameProvider.asTypeName(type);
 
 			this.namespaceCode.push(`export namespace ${variantName} {`);
 			this.namespaceCode.increaseIndent();
-			const names: string[] = [];
-			const types: (string | undefined)[] = [];
-			const metaTypes: (string | undefined)[] = [];
+			const cases: { name: string; typeName: string; tagName: string; type: string | undefined; metaType: string | undefined }[] = [];
 			for (const item of kind.variant.cases) {
-				names.push(this.nameProvider.asVariantCaseName(item));
+				const name = this.nameProvider.asVariantCaseName(item);
+				const typeName = this.nameProvider.asTypeName(item);
+				let type, metaType: string | undefined;
 				if (item.type !== null) {
-					types.push(this.printers.typeScript.printTypeReference(item.type, TypeUsage.property));
-					metaTypes.push(this.printers.metaModel.printTypeReference(item.type, TypeUsage.property));
+					type = this.printers.typeScript.printTypeReference(item.type, TypeUsage.property);
+					metaType = this.printers.metaModel.printTypeReference(item.type, TypeUsage.property);
 				} else {
-					types.push(undefined);
-					metaTypes.push(undefined);
+					type = undefined;
+					metaType = undefined;
 				}
+				cases.push({ name, typeName, tagName: asTagName(name), type, metaType });
 			}
 
-			for (let i = 0; i < names.length; i++) {
+			for (let i = 0; i < cases.length; i++) {
 				emitDocumentation(kind.variant.cases[i], code, true);
-				const name = names[i];
-				const type = types[i];
-				code.push(`export const ${name} = ${i} as const;`);
-				if (type !== undefined) {
-					code.push(`export type ${name} = { readonly case: typeof ${name}; readonly value: ${type} } & _common;`);
+				const c = cases[i];
+				code.push(`export const ${c.tagName} = '${c.name}' as const;`);
+				if (c.type !== undefined) {
+					code.push(`export type ${c.typeName} = { readonly tag: typeof ${c.tagName}; readonly value: ${c.type} } & _common;`);
+					code.push(`export function ${c.typeName}(value: ${c.type}): ${c.typeName} {`);
+					code.increaseIndent();
+					code.push(`return new VariantImpl(${c.tagName}, value) as ${c.typeName};`);
+					code.decreaseIndent();
+					code.push(`}`);
 				} else {
-					code.push(`export type ${name} = { readonly case: typeof ${name} } & _common;`);
+					code.push(`export type ${c.typeName} = { readonly tag: typeof ${c.tagName} } & _common;`);
+					code.push(`export function ${c.typeName}(): ${c.typeName} {`);
+					code.increaseIndent();
+					code.push(`return new VariantImpl(${c.tagName}, undefined) as ${c.typeName};`);
+					code.decreaseIndent();
+					code.push(`}`);
 				}
 				code.push('');
 			}
-			code.push(`export type _ct = ${names.map(value => `typeof ${value}`).join(' | ')};`);
+			code.push(`export type _tt = ${cases.map(value => `typeof ${value.tagName}`).join(' | ')};`);
 			let needsUndefined = false;
 			const items: string[] = [];
-			for (const type of types) {
-				if (type === undefined) {
+			for (const c of cases) {
+				if (c.type === undefined) {
 					needsUndefined = true;
 				} else {
-					items.push(type);
+					items.push(c.type);
 				}
 			}
 			if (needsUndefined) {
 				items.push('undefined');
 			}
 			code.push(`export type _vt = ${items.join(' | ')};`);
-			code.push(`type _common = Omit<VariantImpl, 'case' | 'value'>;`);
-			code.push(`export function _ctor(c: _ct, v: _vt): ${variantName} {`);
+			code.push(`type _common = Omit<VariantImpl, 'tag' | 'value'>;`);
+			code.push(`export function _ctor(t: _tt, v: _vt): ${variantName} {`);
 			code.increaseIndent();
-			code.push(`return new VariantImpl(c, v) as ${variantName};`);
+			code.push(`return new VariantImpl(t, v) as ${variantName};`);
 			code.decreaseIndent();
 			code.push(`}`);
-
-			for (let i = 0; i < names.length; i++) {
-				const name = names[i];
-				const type = types[i];
-				if (type !== undefined) {
-					code.push(`export function _${name}(value: ${type}): ${name} {`);
-					code.increaseIndent();
-					code.push(`return new VariantImpl(${name}, value) as ${name};`);
-					code.decreaseIndent();
-					code.push(`}`);
-				} else {
-					code.push(`export function _${name}(): ${name} {`);
-					code.increaseIndent();
-					code.push(`return new VariantImpl(${name}, undefined) as ${name};`);
-					code.decreaseIndent();
-					code.push(`}`);
-				}
-			}
 
 			code.push(`class VariantImpl {`);
 			code.increaseIndent();
-			code.push(`private readonly _case: _ct;`);
+			code.push(`private readonly _tag: _tt;`);
 			code.push(`private readonly _value${needsUndefined ? '?' : ''}: _vt;`);
-			code.push(`constructor(c: _ct, value: _vt) {`);
+			code.push(`constructor(t: _tt, value: _vt) {`);
 			code.increaseIndent();
-			code.push(`this._case = c;`);
+			code.push(`this._tag = t;`);
 			code.push(`this._value = value;`);
 			code.decreaseIndent();
 			code.push(`}`);
-			code.push(`get case(): _ct {`);
+			code.push(`get tag(): _tt {`);
 			code.increaseIndent();
-			code.push(`return this._case;`);
+			code.push(`return this._tag;`);
 			code.decreaseIndent();
 			code.push(`}`);
 			code.push(`get value(): _vt {`);
@@ -1432,10 +1447,11 @@ namespace TypeScript {
 			code.push(`return this._value;`);
 			code.decreaseIndent();
 			code.push(`}`);
-			for (const name of names) {
-				code.push(`${name}(): this is ${name} {`);
+			for (let i = 0; i < cases.length; i++) {
+				const c = cases[i];
+				code.push(`is${c.typeName}(): this is ${c.typeName} {`);
 				code.increaseIndent();
-				code.push(`return this._case === ${variantName}.${name};`);
+				code.push(`return this._tag === ${variantName}.${c.tagName};`);
 				code.decreaseIndent();
 				code.push(`}`);
 			}
@@ -1446,8 +1462,12 @@ namespace TypeScript {
 			code.decreaseIndent();
 			code.push(`}`);
 
-			code.push(`export type ${variantName} = ${names.map(value => `${variantName}.${value}`).join(' | ')};`);
-			this.metaModelEmitter = new MetaModel.VariantEmitter(variantName, `${this.qualifier}.${variantName}`, metaTypes);
+			code.push(`export type ${variantName} = ${cases.map(value => `${variantName}.${value.typeName}`).join(' | ')};`);
+			const metaCases: [string, string | undefined][] = [];
+			for (let i = 0; i < cases.length; i++) {
+				metaCases.push([cases[i].name, cases[i].metaType]);
+			}
+			this.metaModelEmitter = new MetaModel.VariantEmitter(variantName, `${this.qualifier}.${variantName}`, metaCases);
 		}
 
 		private emitEnum(type: EnumType): void {

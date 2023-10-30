@@ -75,46 +75,46 @@ export namespace sockets {
 		export type Ipv6Address = [u16, u16, u16, u16, u16, u16, u16, u16];
 		
 		export namespace IpAddress {
-			export const ipv4 = 0 as const;
-			export type ipv4 = { readonly case: typeof ipv4; readonly value: Ipv4Address } & _common;
+			export const ipv4 = 'ipv4' as const;
+			export type Ipv4 = { readonly tag: typeof ipv4; readonly value: Ipv4Address } & _common;
+			export function Ipv4(value: Ipv4Address): Ipv4 {
+				return new VariantImpl(ipv4, value) as Ipv4;
+			}
 			
-			export const ipv6 = 1 as const;
-			export type ipv6 = { readonly case: typeof ipv6; readonly value: Ipv6Address } & _common;
+			export const ipv6 = 'ipv6' as const;
+			export type Ipv6 = { readonly tag: typeof ipv6; readonly value: Ipv6Address } & _common;
+			export function Ipv6(value: Ipv6Address): Ipv6 {
+				return new VariantImpl(ipv6, value) as Ipv6;
+			}
 			
-			export type _ct = typeof ipv4 | typeof ipv6;
+			export type _tt = typeof ipv4 | typeof ipv6;
 			export type _vt = Ipv4Address | Ipv6Address;
-			type _common = Omit<VariantImpl, 'case' | 'value'>;
-			export function _ctor(c: _ct, v: _vt): IpAddress {
-				return new VariantImpl(c, v) as IpAddress;
-			}
-			export function _ipv4(value: Ipv4Address): ipv4 {
-				return new VariantImpl(ipv4, value) as ipv4;
-			}
-			export function _ipv6(value: Ipv6Address): ipv6 {
-				return new VariantImpl(ipv6, value) as ipv6;
+			type _common = Omit<VariantImpl, 'tag' | 'value'>;
+			export function _ctor(t: _tt, v: _vt): IpAddress {
+				return new VariantImpl(t, v) as IpAddress;
 			}
 			class VariantImpl {
-				private readonly _case: _ct;
+				private readonly _tag: _tt;
 				private readonly _value: _vt;
-				constructor(c: _ct, value: _vt) {
-					this._case = c;
+				constructor(t: _tt, value: _vt) {
+					this._tag = t;
 					this._value = value;
 				}
-				get case(): _ct {
-					return this._case;
+				get tag(): _tt {
+					return this._tag;
 				}
 				get value(): _vt {
 					return this._value;
 				}
-				ipv4(): this is ipv4 {
-					return this._case === IpAddress.ipv4;
+				isIpv4(): this is Ipv4 {
+					return this._tag === IpAddress.ipv4;
 				}
-				ipv6(): this is ipv6 {
-					return this._case === IpAddress.ipv6;
+				isIpv6(): this is Ipv6 {
+					return this._tag === IpAddress.ipv6;
 				}
 			}
 		}
-		export type IpAddress = IpAddress.ipv4 | IpAddress.ipv6;
+		export type IpAddress = IpAddress.Ipv4 | IpAddress.Ipv6;
 		
 		export type Ipv4SocketAddress = {
 			port: u16;
@@ -129,46 +129,46 @@ export namespace sockets {
 		};
 		
 		export namespace IpSocketAddress {
-			export const ipv4 = 0 as const;
-			export type ipv4 = { readonly case: typeof ipv4; readonly value: Ipv4SocketAddress } & _common;
+			export const ipv4 = 'ipv4' as const;
+			export type Ipv4 = { readonly tag: typeof ipv4; readonly value: Ipv4SocketAddress } & _common;
+			export function Ipv4(value: Ipv4SocketAddress): Ipv4 {
+				return new VariantImpl(ipv4, value) as Ipv4;
+			}
 			
-			export const ipv6 = 1 as const;
-			export type ipv6 = { readonly case: typeof ipv6; readonly value: Ipv6SocketAddress } & _common;
+			export const ipv6 = 'ipv6' as const;
+			export type Ipv6 = { readonly tag: typeof ipv6; readonly value: Ipv6SocketAddress } & _common;
+			export function Ipv6(value: Ipv6SocketAddress): Ipv6 {
+				return new VariantImpl(ipv6, value) as Ipv6;
+			}
 			
-			export type _ct = typeof ipv4 | typeof ipv6;
+			export type _tt = typeof ipv4 | typeof ipv6;
 			export type _vt = Ipv4SocketAddress | Ipv6SocketAddress;
-			type _common = Omit<VariantImpl, 'case' | 'value'>;
-			export function _ctor(c: _ct, v: _vt): IpSocketAddress {
-				return new VariantImpl(c, v) as IpSocketAddress;
-			}
-			export function _ipv4(value: Ipv4SocketAddress): ipv4 {
-				return new VariantImpl(ipv4, value) as ipv4;
-			}
-			export function _ipv6(value: Ipv6SocketAddress): ipv6 {
-				return new VariantImpl(ipv6, value) as ipv6;
+			type _common = Omit<VariantImpl, 'tag' | 'value'>;
+			export function _ctor(t: _tt, v: _vt): IpSocketAddress {
+				return new VariantImpl(t, v) as IpSocketAddress;
 			}
 			class VariantImpl {
-				private readonly _case: _ct;
+				private readonly _tag: _tt;
 				private readonly _value: _vt;
-				constructor(c: _ct, value: _vt) {
-					this._case = c;
+				constructor(t: _tt, value: _vt) {
+					this._tag = t;
 					this._value = value;
 				}
-				get case(): _ct {
-					return this._case;
+				get tag(): _tt {
+					return this._tag;
 				}
 				get value(): _vt {
 					return this._value;
 				}
-				ipv4(): this is ipv4 {
-					return this._case === IpSocketAddress.ipv4;
+				isIpv4(): this is Ipv4 {
+					return this._tag === IpSocketAddress.ipv4;
 				}
-				ipv6(): this is ipv6 {
-					return this._case === IpSocketAddress.ipv6;
+				isIpv6(): this is Ipv6 {
+					return this._tag === IpSocketAddress.ipv6;
 				}
 			}
 		}
-		export type IpSocketAddress = IpSocketAddress.ipv4 | IpSocketAddress.ipv6;
+		export type IpSocketAddress = IpSocketAddress.Ipv4 | IpSocketAddress.Ipv6;
 	}
 	export type Network = {
 	};
@@ -957,7 +957,7 @@ export namespace sockets {
 		export const IpAddressFamily = new $wcm.EnumType<sockets.Network.IpAddressFamily>(['ipv4', 'ipv6']);
 		export const Ipv4Address = new $wcm.TupleType<[u8, u8, u8, u8]>([$wcm.u8, $wcm.u8, $wcm.u8, $wcm.u8]);
 		export const Ipv6Address = new $wcm.TupleType<[u16, u16, u16, u16, u16, u16, u16, u16]>([$wcm.u16, $wcm.u16, $wcm.u16, $wcm.u16, $wcm.u16, $wcm.u16, $wcm.u16, $wcm.u16]);
-		export const IpAddress = new $wcm.VariantType<sockets.Network.IpAddress, sockets.Network.IpAddress._ct, sockets.Network.IpAddress._vt>([Ipv4Address, Ipv6Address], sockets.Network.IpAddress._ctor);
+		export const IpAddress = new $wcm.VariantType<sockets.Network.IpAddress, sockets.Network.IpAddress._tt, sockets.Network.IpAddress._vt>([['ipv4', Ipv4Address], ['ipv6', Ipv6Address]], sockets.Network.IpAddress._ctor);
 		export const Ipv4SocketAddress = new $wcm.RecordType<sockets.Network.Ipv4SocketAddress>([
 			['port', $wcm.u16],
 			['address', Ipv4Address],
@@ -968,7 +968,7 @@ export namespace sockets {
 			['address', Ipv6Address],
 			['scopeId', $wcm.u32],
 		]);
-		export const IpSocketAddress = new $wcm.VariantType<sockets.Network.IpSocketAddress, sockets.Network.IpSocketAddress._ct, sockets.Network.IpSocketAddress._vt>([Ipv4SocketAddress, Ipv6SocketAddress], sockets.Network.IpSocketAddress._ctor);
+		export const IpSocketAddress = new $wcm.VariantType<sockets.Network.IpSocketAddress, sockets.Network.IpSocketAddress._tt, sockets.Network.IpSocketAddress._vt>([['ipv4', Ipv4SocketAddress], ['ipv6', Ipv6SocketAddress]], sockets.Network.IpSocketAddress._ctor);
 	}
 	export namespace Network._ {
 	}

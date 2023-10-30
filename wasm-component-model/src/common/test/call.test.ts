@@ -84,23 +84,23 @@ const serviceImpl: Types = {
 	},
 	PointResource: PointResourceImpl,
 	checkVariant(value)  {
-		switch (value.case) {
+		switch (value.tag) {
 			case TestVariant.unsigned32:
-				return TestVariant._unsigned32(value.value + 1);
+				return TestVariant.Unsigned32(value.value + 1);
 			case TestVariant.unsigned64:
-				return TestVariant._unsigned64(value.value + 1n);
+				return TestVariant.Unsigned64(value.value + 1n);
 			case TestVariant.signed32:
-				return TestVariant._signed32(value.value + 1);
+				return TestVariant.Signed32(value.value + 1);
 			case TestVariant.signed64:
-				return TestVariant._signed64(value.value + 1n);
+				return TestVariant.Signed64(value.value + 1n);
 			case TestVariant.floatingPoint32:
-				return TestVariant._floatingPoint32(value.value + 1.3);
+				return TestVariant.FloatingPoint32(value.value + 1.3);
 			case TestVariant.floatingPoint64:
-				return TestVariant._floatingPoint64(value.value + 1.3);
+				return TestVariant.FloatingPoint64(value.value + 1.3);
 			case TestVariant.structure:
-				return TestVariant._structure({ x: value.value.x + 1, y: value.value.y + 1});
+				return TestVariant.Structure({ x: value.value.x + 1, y: value.value.y + 1});
 			default:
-				return TestVariant._empty();
+				return TestVariant.Empty();
 		}
 	},
 	checkFlagsShort(value) {
@@ -162,55 +162,55 @@ suite('variant', () => {
 	const service: Types = Types._.createService(host, context);
 
 	test('empty', () => {
-		const empty = service.checkVariant(TestVariant._empty());
-		assert.strictEqual(empty.case, TestVariant.empty);
+		const empty = service.checkVariant(TestVariant.Empty());
+		assert.strictEqual(empty.tag, TestVariant.empty);
 	});
 
 	test('u32', () => {
-		const u32 = service.checkVariant(TestVariant._unsigned32(1));
-		assert.strictEqual(u32.case, TestVariant.unsigned32);
+		const u32 = service.checkVariant(TestVariant.Unsigned32(1));
+		assert.strictEqual(u32.tag, TestVariant.unsigned32);
 		assert.strictEqual(u32.value, 2);
 	});
 
 	test('u64', () => {
-		const u64 = service.checkVariant(TestVariant._unsigned64(10n));
-		assert.strictEqual(u64.case, TestVariant.unsigned64);
+		const u64 = service.checkVariant(TestVariant.Unsigned64(10n));
+		assert.strictEqual(u64.tag, TestVariant.unsigned64);
 		assert.strictEqual(u64.value, 11n);
 	});
 
 	test('s32', () => {
-		const s32 = service.checkVariant(TestVariant._signed32(-2));
-		assert.strictEqual(s32.case, TestVariant.signed32);
+		const s32 = service.checkVariant(TestVariant.Signed32(-2));
+		assert.strictEqual(s32.tag, TestVariant.signed32);
 		assert.strictEqual(s32.value, -1);
 	});
 
 	test('u64', () => {
-		const u64 = service.checkVariant(TestVariant._unsigned64(9007199254740991n));
-		assert.strictEqual(u64.case, TestVariant.unsigned64);
+		const u64 = service.checkVariant(TestVariant.Unsigned64(9007199254740991n));
+		assert.strictEqual(u64.tag, TestVariant.unsigned64);
 		assert.strictEqual(u64.value, 9007199254740992n);
 	});
 
 	test('s64', () => {
-		const s64 = service.checkVariant(TestVariant._signed64(-9007199254740991n));
-		assert.strictEqual(s64.case, TestVariant.signed64);
+		const s64 = service.checkVariant(TestVariant.Signed64(-9007199254740991n));
+		assert.strictEqual(s64.tag, TestVariant.signed64);
 		assert.strictEqual(s64.value, -9007199254740990n);
 	});
 
 	test('float32', () => {
-		const float32 = service.checkVariant(TestVariant._floatingPoint32(1.5));
-		assert.strictEqual(float32.case, TestVariant.floatingPoint32);
+		const float32 = service.checkVariant(TestVariant.FloatingPoint32(1.5));
+		assert.strictEqual(float32.tag, TestVariant.floatingPoint32);
 		assert.strictEqual(float32.value, 2.799999952316284);
 	});
 
 	test('float64', () => {
-		const float64 = service.checkVariant(TestVariant._floatingPoint64(1.5));
-		assert.strictEqual(float64.case, TestVariant.floatingPoint64);
+		const float64 = service.checkVariant(TestVariant.FloatingPoint64(1.5));
+		assert.strictEqual(float64.tag, TestVariant.floatingPoint64);
 		assert.strictEqual(float64.value, 2.8);
 	});
 
 	test('structure', () => {
-		const structure = service.checkVariant(TestVariant._structure({ x: 1, y: 2 }));
-		assert.strictEqual(structure.case, TestVariant.structure);
+		const structure = service.checkVariant(TestVariant.Structure({ x: 1, y: 2 }));
+		assert.strictEqual(structure.tag, TestVariant.structure);
 		assert.strictEqual(structure.value.x, 2);
 		assert.strictEqual(structure.value.y, 3);
 	});

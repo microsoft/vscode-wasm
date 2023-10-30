@@ -3,7 +3,7 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { ComponentModelType, EnumType, JRecord, ListType, option, RecordType, result, TupleType, VariantType, u32, u8, wstring } from '../componentModel';
+import { ComponentModelType, EnumType, JRecord, ListType, option, RecordType, result, TupleType, VariantType, u32, u8, wstring, OptionType } from '../componentModel';
 
 
 /****************************************************************************************
@@ -28,109 +28,108 @@ export const TestTupleType: ComponentModelType<TestTuple> = new TupleType<TestTu
 
 export namespace TestVariant {
 
-	export const red = 0 as const;
-	export const green = 1 as const;
-	export const nothing = 2 as const;
-	export const blue = 3 as const;
+	export const red = 'red' as const;
+	export type Red = { readonly tag: typeof red; readonly value: u8 } & _common;
+	export function Red(value: u8): Red {
+		return new VariantImpl(red, value) as Red;
+	}
 
-	export type _ct = typeof red | typeof green | typeof nothing | typeof blue;
+	export const green = 'green' as const;
+	export type Green = { readonly tag: typeof green; readonly value: u32 } & _common;
+	export function Green(value: u32): Green {
+		return new VariantImpl (green, value ) as Green;
+	}
+
+	export const nothing = 'nothing' as const;
+	export type Nothing = { readonly tag: typeof nothing } & _common;
+	export function Nothing(): Nothing {
+		return new VariantImpl (nothing, undefined) as Nothing;
+	}
+
+
+	export const blue = 'blue' as const;
+	export type Blue = { readonly tag: typeof blue; readonly value: string } & _common;
+	export function Blue(value: string): Blue {
+		return new VariantImpl (blue, value) as Blue;
+	}
+
+	export type _tt = typeof red | typeof green | typeof nothing | typeof blue;
 	export type _vt = u8 | u32 | undefined | string;
 
+	type _common = Omit<VariantImpl, 'tag' | 'value'>;
 
-	type _common = Omit<VariantImpl, 'case' | 'value'>;
-	export type red = { readonly case: typeof red; readonly value: u8 } & _common;
-	export type green = { readonly case: typeof green; readonly value: u32 } & _common;
-	export type nothing = { readonly case: typeof nothing } & _common;
-	export type blue = { readonly case: typeof blue; readonly value: string } & _common;
-
-	export function _ctor(c: _ct, v: _vt): TestVariant {
+	export function _ctor(c: _tt, v: _vt): TestVariant {
 		return new VariantImpl (c, v) as TestVariant;
 	}
 
-	export function _red(value: u8): red {
-		return new VariantImpl(red, value) as red;
-	}
-
-	export function _green(value: u32): green {
-		return new VariantImpl (green, value ) as green;
-	}
-
-	export function _nothing(): nothing {
-		return new VariantImpl (nothing, undefined) as nothing;
-	}
-
-	export function _blue(value: string): blue {
-		return new VariantImpl (blue, value) as blue;
-	}
-
 	class VariantImpl {
-		private readonly _case: _ct;
+		private readonly _tag: _tt;
 		private readonly _value?: _vt;
 
-		constructor(c: _ct, value: _vt) {
-			this._case = c;
+		constructor(tag: _tt, value: _vt) {
+			this._tag = tag;
 			this._value = value;
 		}
 
-		get case(): _ct {
-			return this._case;
+		get tag(): _tt {
+			return this._tag;
 		}
 
 		get value(): _vt {
 			return this._value;
 		}
 
-		red(): this is red {
-			return this._case === 0;
+		isRed(): this is Red {
+			return this._tag === TestVariant.red;
 		}
 
-		green(): this is green {
-			return this._case === 1;
+		isGreen(): this is Green {
+			return this._tag === TestVariant.green;
 		}
 
-		nothing(): this is nothing {
-			return this._case === 2;
+		isNothing(): this is Nothing {
+			return this._tag === TestVariant.nothing;
 		}
 
-		blue(): this is blue {
-			return this._case === 3;
+		isBlue(): this is Blue {
+			return this._tag === TestVariant.blue;
 		}
 	}
 }
-export type TestVariant = TestVariant.red | TestVariant.green | TestVariant.nothing | TestVariant.blue;
-export const TestVariantType: ComponentModelType<TestVariant> = new VariantType<TestVariant, TestVariant._ct, TestVariant._vt>(
-	[ u8, u32, undefined, wstring ],
+export type TestVariant = TestVariant.Red | TestVariant.Green | TestVariant.Nothing | TestVariant.Blue;
+export const TestVariantType: ComponentModelType<TestVariant> = new VariantType<TestVariant, TestVariant._tt, TestVariant._vt>(
+	[ ['u8', u8], ['u32', u32], ['nothing', undefined], ['string', wstring] ],
 	TestVariant._ctor
 );
 
 
 let t1: TestVariant = {} as any;
-if (t1.red()) {
+if (t1.isRed()) {
 	t1.value;
 }
-if (t1.blue()) {
+if (t1.isBlue()) {
 	t1.value;
 }
-if (t1.nothing()) {
+if (t1.isNothing()) {
 	// t1.value;
 }
 
 export namespace TestUnion {
 
-	export const u8 = 0 as const;
-	export const u32 = 1 as const;
-	export const string = 2 as const;
+	export const u8 = 'u8' as const;
+	export const u32 = 'u32' as const;
+	export const string = 'string' as const;
 
-	export type _ct = typeof u8 | typeof u32 | typeof string;
+	export type _tt = typeof u8 | typeof u32 | typeof string;
 	export type _vt = u8 | u32 | undefined | string;
 
-	type _common = Omit<UnionImpl, 'case' | 'value'>;
+	type _common = Omit<UnionImpl, 'tag' | 'value'>;
 
-	export type $u8 = { readonly case: typeof u8; readonly value: u8 } & _common;
-	export type $u32 = { readonly case: typeof u32; readonly value: u32 } & _common;
-	export type $string = { readonly case: typeof string; readonly value: string } & _common;
+	export type $u8 = { readonly tag: typeof u8; readonly value: u8 } & _common;
+	export type $u32 = { readonly tag: typeof u32; readonly value: u32 } & _common;
+	export type $string = { readonly tag: typeof string; readonly value: string } & _common;
 
-	export function _ctor(c: _ct, v: _vt): TestUnion {
+	export function _ctor(c: _tt, v: _vt): TestUnion {
 		return new UnionImpl(c, v) as TestUnion;
 	}
 
@@ -147,48 +146,45 @@ export namespace TestUnion {
 	}
 
 	class UnionImpl {
-		private readonly _case: _ct;
+		private readonly _tag: _tt;
 		private readonly _value?: _vt;
 
-		constructor(c: _ct, value: _vt) {
-			this._case = c;
+		constructor(tag: _tt, value: _vt) {
+			this._tag = tag;
 			this._value = value;
 		}
 
-		get case(): _ct {
-			return this._case;
+		get tag(): _tt {
+			return this._tag;
 		}
 
 		get value(): _vt {
 			return this._value;
 		}
 
-		u8(): this is $u8 {
-			return this._case === u8;
+		isU8(): this is $u8 {
+			return this._tag === u8;
 		}
 
-		u32(): this is $u32 {
-			return this._case === u32;
+		isU32(): this is $u32 {
+			return this._tag === u32;
 		}
 
-		string(): this is $string {
-			return this._case === string;
+		isString(): this is $string {
+			return this._tag === string;
 		}
 	}
 }
 export type TestUnion = TestUnion.$u8 | TestUnion.$u32 | TestUnion.$string;
-export const TestUnionType: ComponentModelType<TestUnion> = new VariantType<TestUnion, TestUnion._ct, TestUnion._vt>(
-	[ u8, u32, wstring ],
+export const TestUnionType: ComponentModelType<TestUnion> = new VariantType<TestUnion, TestUnion._tt, TestUnion._vt>(
+	[ ['u8', u8], ['u32', u32], ['string', wstring] ],
 	TestUnion._ctor
 );
 
-export const TestOptionType: ComponentModelType<option<TestRecord>> = new VariantType<option<TestRecord>, option._ct, option._vt<TestRecord>>(
-	[ undefined, TestRecordType],
-	option._ctor<TestRecord>
-);
+export const TestOptionType = new OptionType<TestRecord>(TestRecordType);
 
-export const TestResultType: ComponentModelType<result<TestTuple, u32>> = new VariantType<result<TestTuple, u32>, 0 | 1, TestTuple | u32>(
-	[ TestTupleType, u32 ],
+export const TestResultType: ComponentModelType<result<TestTuple, u32>> = new VariantType<result<TestTuple, u32>, 'ok' | 'error', TestTuple | u32>(
+	[ ['ok', TestTupleType], ['error', u32] ],
 	result._ctor<TestTuple, u32>
 );
 

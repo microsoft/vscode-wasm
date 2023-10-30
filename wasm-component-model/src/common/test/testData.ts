@@ -32,100 +32,100 @@ export namespace testData {
 		};
 
 		export namespace TestVariant {
-			export const empty = 0 as const;
-			export type empty = { readonly case: typeof empty } & _common;
+			export const empty = 'empty' as const;
+			export type Empty = { readonly tag: typeof empty } & _common;
+			export function Empty(): Empty {
+				return new VariantImpl(empty, undefined) as Empty;
+			}
 
-			export const unsigned32 = 1 as const;
-			export type unsigned32 = { readonly case: typeof unsigned32; readonly value: u32 } & _common;
+			export const unsigned32 = 'unsigned32' as const;
+			export type Unsigned32 = { readonly tag: typeof unsigned32; readonly value: u32 } & _common;
+			export function Unsigned32(value: u32): Unsigned32 {
+				return new VariantImpl(unsigned32, value) as Unsigned32;
+			}
 
-			export const unsigned64 = 2 as const;
-			export type unsigned64 = { readonly case: typeof unsigned64; readonly value: u64 } & _common;
+			export const unsigned64 = 'unsigned64' as const;
+			export type Unsigned64 = { readonly tag: typeof unsigned64; readonly value: u64 } & _common;
+			export function Unsigned64(value: u64): Unsigned64 {
+				return new VariantImpl(unsigned64, value) as Unsigned64;
+			}
 
-			export const signed32 = 3 as const;
-			export type signed32 = { readonly case: typeof signed32; readonly value: s32 } & _common;
+			export const signed32 = 'signed32' as const;
+			export type Signed32 = { readonly tag: typeof signed32; readonly value: s32 } & _common;
+			export function Signed32(value: s32): Signed32 {
+				return new VariantImpl(signed32, value) as Signed32;
+			}
 
-			export const signed64 = 4 as const;
-			export type signed64 = { readonly case: typeof signed64; readonly value: s64 } & _common;
+			export const signed64 = 'signed64' as const;
+			export type Signed64 = { readonly tag: typeof signed64; readonly value: s64 } & _common;
+			export function Signed64(value: s64): Signed64 {
+				return new VariantImpl(signed64, value) as Signed64;
+			}
 
-			export const floatingPoint32 = 5 as const;
-			export type floatingPoint32 = { readonly case: typeof floatingPoint32; readonly value: float32 } & _common;
+			export const floatingPoint32 = 'floatingPoint32' as const;
+			export type FloatingPoint32 = { readonly tag: typeof floatingPoint32; readonly value: float32 } & _common;
+			export function FloatingPoint32(value: float32): FloatingPoint32 {
+				return new VariantImpl(floatingPoint32, value) as FloatingPoint32;
+			}
 
-			export const floatingPoint64 = 6 as const;
-			export type floatingPoint64 = { readonly case: typeof floatingPoint64; readonly value: float64 } & _common;
+			export const floatingPoint64 = 'floatingPoint64' as const;
+			export type FloatingPoint64 = { readonly tag: typeof floatingPoint64; readonly value: float64 } & _common;
+			export function FloatingPoint64(value: float64): FloatingPoint64 {
+				return new VariantImpl(floatingPoint64, value) as FloatingPoint64;
+			}
 
-			export const structure = 7 as const;
-			export type structure = { readonly case: typeof structure; readonly value: Point } & _common;
+			export const structure = 'structure' as const;
+			export type Structure = { readonly tag: typeof structure; readonly value: Point } & _common;
+			export function Structure(value: Point): Structure {
+				return new VariantImpl(structure, value) as Structure;
+			}
 
-			export type _ct = typeof empty | typeof unsigned32 | typeof unsigned64 | typeof signed32 | typeof signed64 | typeof floatingPoint32 | typeof floatingPoint64 | typeof structure;
+			export type _tt = typeof empty | typeof unsigned32 | typeof unsigned64 | typeof signed32 | typeof signed64 | typeof floatingPoint32 | typeof floatingPoint64 | typeof structure;
 			export type _vt = u32 | u64 | s32 | s64 | float32 | float64 | Point | undefined;
-			type _common = Omit<VariantImpl, 'case' | 'value'>;
-			export function _ctor(c: _ct, v: _vt): TestVariant {
-				return new VariantImpl(c, v) as TestVariant;
-			}
-			export function _empty(): empty {
-				return new VariantImpl(empty, undefined) as empty;
-			}
-			export function _unsigned32(value: u32): unsigned32 {
-				return new VariantImpl(unsigned32, value) as unsigned32;
-			}
-			export function _unsigned64(value: u64): unsigned64 {
-				return new VariantImpl(unsigned64, value) as unsigned64;
-			}
-			export function _signed32(value: s32): signed32 {
-				return new VariantImpl(signed32, value) as signed32;
-			}
-			export function _signed64(value: s64): signed64 {
-				return new VariantImpl(signed64, value) as signed64;
-			}
-			export function _floatingPoint32(value: float32): floatingPoint32 {
-				return new VariantImpl(floatingPoint32, value) as floatingPoint32;
-			}
-			export function _floatingPoint64(value: float64): floatingPoint64 {
-				return new VariantImpl(floatingPoint64, value) as floatingPoint64;
-			}
-			export function _structure(value: Point): structure {
-				return new VariantImpl(structure, value) as structure;
+			type _common = Omit<VariantImpl, 'tag' | 'value'>;
+			export function _ctor(t: _tt, v: _vt): TestVariant {
+				return new VariantImpl(t, v) as TestVariant;
 			}
 			class VariantImpl {
-				private readonly _case: _ct;
+				private readonly _tag: _tt;
 				private readonly _value?: _vt;
-				constructor(c: _ct, value: _vt) {
-					this._case = c;
+				constructor(t: _tt, value: _vt) {
+					this._tag = t;
 					this._value = value;
 				}
-				get case(): _ct {
-					return this._case;
+				get tag(): _tt {
+					return this._tag;
 				}
 				get value(): _vt {
 					return this._value;
 				}
-				empty(): this is empty {
-					return this._case === TestVariant.empty;
+				isEmpty(): this is Empty {
+					return this._tag === TestVariant.empty;
 				}
-				unsigned32(): this is unsigned32 {
-					return this._case === TestVariant.unsigned32;
+				isUnsigned32(): this is Unsigned32 {
+					return this._tag === TestVariant.unsigned32;
 				}
-				unsigned64(): this is unsigned64 {
-					return this._case === TestVariant.unsigned64;
+				isUnsigned64(): this is Unsigned64 {
+					return this._tag === TestVariant.unsigned64;
 				}
-				signed32(): this is signed32 {
-					return this._case === TestVariant.signed32;
+				isSigned32(): this is Signed32 {
+					return this._tag === TestVariant.signed32;
 				}
-				signed64(): this is signed64 {
-					return this._case === TestVariant.signed64;
+				isSigned64(): this is Signed64 {
+					return this._tag === TestVariant.signed64;
 				}
-				floatingPoint32(): this is floatingPoint32 {
-					return this._case === TestVariant.floatingPoint32;
+				isFloatingPoint32(): this is FloatingPoint32 {
+					return this._tag === TestVariant.floatingPoint32;
 				}
-				floatingPoint64(): this is floatingPoint64 {
-					return this._case === TestVariant.floatingPoint64;
+				isFloatingPoint64(): this is FloatingPoint64 {
+					return this._tag === TestVariant.floatingPoint64;
 				}
-				structure(): this is structure {
-					return this._case === TestVariant.structure;
+				isStructure(): this is Structure {
+					return this._tag === TestVariant.structure;
 				}
 			}
 		}
-		export type TestVariant = TestVariant.empty | TestVariant.unsigned32 | TestVariant.unsigned64 | TestVariant.signed32 | TestVariant.signed64 | TestVariant.floatingPoint32 | TestVariant.floatingPoint64 | TestVariant.structure;
+		export type TestVariant = TestVariant.Empty | TestVariant.Unsigned32 | TestVariant.Unsigned64 | TestVariant.Signed32 | TestVariant.Signed64 | TestVariant.FloatingPoint32 | TestVariant.FloatingPoint64 | TestVariant.Structure;
 
 		export type TestFlagsShort = {
 			one: boolean;
@@ -531,7 +531,7 @@ export namespace testData {
 			['x', new $wcm.OptionType<u32>($wcm.u32)],
 			['y', new $wcm.OptionType<u32>($wcm.u32)],
 		]);
-		export const TestVariant = new $wcm.VariantType<testData.Types.TestVariant, testData.Types.TestVariant._ct, testData.Types.TestVariant._vt>([undefined, $wcm.u32, $wcm.u64, $wcm.s32, $wcm.s64, $wcm.float32, $wcm.float64, Point], testData.Types.TestVariant._ctor);
+		export const TestVariant = new $wcm.VariantType<testData.Types.TestVariant, testData.Types.TestVariant._tt, testData.Types.TestVariant._vt>([['empty', undefined], ['unsigned32', $wcm.u32], ['unsigned64', $wcm.u64], ['signed32', $wcm.s32], ['signed64', $wcm.s64], ['floatingPoint32', $wcm.float32], ['floatingPoint64', $wcm.float64], ['structure', Point]], testData.Types.TestVariant._ctor);
 		export const TestFlagsShort = new $wcm.FlagsType<testData.Types.TestFlagsShort>(6, { kind: $wcm.FlagsStorageKind.Single, type: $wcm.u8, create: testData.Types.TestFlagsShort.create, value: testData.Types.TestFlagsShort.value as $wcm.SingleFlagsValueFunc });
 		export const TestFlagsLong = new $wcm.FlagsType<testData.Types.TestFlagsLong>(40, { kind: $wcm.FlagsStorageKind.Array, length: 2, type: $wcm.u32, create: testData.Types.TestFlagsLong.create, value: testData.Types.TestFlagsLong.value as $wcm.ArrayFlagsValueFunc });
 		export const call = new $wcm.FunctionType<testData.Types.call>('call', 'call',[

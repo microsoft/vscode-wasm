@@ -101,8 +101,11 @@ export namespace io {
 			 * 
 			 * More information is available in the `error` payload.
 			 */
-			export const lastOperationFailed = 0 as const;
-			export type lastOperationFailed = { readonly case: typeof lastOperationFailed; readonly value: own<Error> } & _common;
+			export const lastOperationFailed = 'lastOperationFailed' as const;
+			export type LastOperationFailed = { readonly tag: typeof lastOperationFailed; readonly value: own<Error> } & _common;
+			export function LastOperationFailed(value: own<Error>): LastOperationFailed {
+				return new VariantImpl(lastOperationFailed, value) as LastOperationFailed;
+			}
 			
 			
 			/**
@@ -110,43 +113,40 @@ export namespace io {
 			 * stream. A closed output-stream will return this error on all
 			 * future operations.
 			 */
-			export const closed = 1 as const;
-			export type closed = { readonly case: typeof closed } & _common;
+			export const closed = 'closed' as const;
+			export type Closed = { readonly tag: typeof closed } & _common;
+			export function Closed(): Closed {
+				return new VariantImpl(closed, undefined) as Closed;
+			}
 			
-			export type _ct = typeof lastOperationFailed | typeof closed;
+			export type _tt = typeof lastOperationFailed | typeof closed;
 			export type _vt = own<Error> | undefined;
-			type _common = Omit<VariantImpl, 'case' | 'value'>;
-			export function _ctor(c: _ct, v: _vt): StreamError {
-				return new VariantImpl(c, v) as StreamError;
-			}
-			export function _lastOperationFailed(value: own<Error>): lastOperationFailed {
-				return new VariantImpl(lastOperationFailed, value) as lastOperationFailed;
-			}
-			export function _closed(): closed {
-				return new VariantImpl(closed, undefined) as closed;
+			type _common = Omit<VariantImpl, 'tag' | 'value'>;
+			export function _ctor(t: _tt, v: _vt): StreamError {
+				return new VariantImpl(t, v) as StreamError;
 			}
 			class VariantImpl {
-				private readonly _case: _ct;
+				private readonly _tag: _tt;
 				private readonly _value?: _vt;
-				constructor(c: _ct, value: _vt) {
-					this._case = c;
+				constructor(t: _tt, value: _vt) {
+					this._tag = t;
 					this._value = value;
 				}
-				get case(): _ct {
-					return this._case;
+				get tag(): _tt {
+					return this._tag;
 				}
 				get value(): _vt {
 					return this._value;
 				}
-				lastOperationFailed(): this is lastOperationFailed {
-					return this._case === StreamError.lastOperationFailed;
+				isLastOperationFailed(): this is LastOperationFailed {
+					return this._tag === StreamError.lastOperationFailed;
 				}
-				closed(): this is closed {
-					return this._case === StreamError.closed;
+				isClosed(): this is Closed {
+					return this._tag === StreamError.closed;
 				}
 			}
 		}
-		export type StreamError = StreamError.lastOperationFailed | StreamError.closed;
+		export type StreamError = StreamError.LastOperationFailed | StreamError.Closed;
 		
 		/**
 		 * An input bytestream.
@@ -454,7 +454,7 @@ export namespace io {
 	export namespace Streams.$ {
 		export const Pollable = io.Poll.$.Pollable;
 		export const Error = new $wcm.NamespaceResourceType('Error', 'error');
-		export const StreamError = new $wcm.VariantType<io.Streams.StreamError, io.Streams.StreamError._ct, io.Streams.StreamError._vt>([new $wcm.OwnType<io.Streams.Error>(Error), undefined], io.Streams.StreamError._ctor);
+		export const StreamError = new $wcm.VariantType<io.Streams.StreamError, io.Streams.StreamError._tt, io.Streams.StreamError._vt>([['lastOperationFailed', new $wcm.OwnType<io.Streams.Error>(Error)], ['closed', undefined]], io.Streams.StreamError._ctor);
 		export const InputStream = new $wcm.NamespaceResourceType('InputStream', 'input-stream');
 		export const OutputStream = new $wcm.NamespaceResourceType('OutputStream', 'output-stream');
 		Error.addFunction(new $wcm.FunctionType<io.Streams.Error.toDebugString>('toDebugString', '[method]error.to-debug-string', [

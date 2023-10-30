@@ -1363,24 +1363,26 @@ export class FlagsType<T extends JFlags> implements ComponentModelType<T> {
 
 interface VariantCase {
 	readonly index: u32;
+	readonly tag: string;
 	readonly type: GenericComponentModelType | undefined;
 	readonly wantFlatTypes: wasmTypeName[] | undefined;
 }
 
 namespace VariantCase {
-	export function create(index: number, type: GenericComponentModelType | undefined): VariantCase {
-		return { index, type, wantFlatTypes: type !== undefined ? [] : undefined };
+	export function create(index: number, tag: string, type: GenericComponentModelType | undefined): VariantCase {
+		return { index, tag, type, wantFlatTypes: type !== undefined ? [] : undefined };
 	}
 }
 
 export interface JVariantCase {
-	readonly case: u32;
+	readonly tag: string;
 	readonly value?: JType | undefined | void;
 }
 
 export class VariantType<T extends JVariantCase, I, V> implements ComponentModelType<T> {
 
 	private readonly cases: VariantCase[];
+	private readonly case2Index: Map<string, u32>;
 	private readonly ctor: (caseIndex: I, value: V) => T;
 	private readonly discriminantType: GenericComponentModelType;
 	private readonly maxCaseAlignment: alignment;
@@ -1390,11 +1392,14 @@ export class VariantType<T extends JVariantCase, I, V> implements ComponentModel
 	public readonly alignment: alignment;
 	public readonly flatTypes: readonly wasmTypeName[];
 
-	constructor(variants: (GenericComponentModelType | undefined)[], ctor: (caseIndex: I, value: V) => T, kind: ComponentModelTypeKind.variant | ComponentModelTypeKind.result = ComponentModelTypeKind.variant) {
+	constructor(variants: [string, (GenericComponentModelType | undefined)][], ctor: (caseIndex: I, value: V) => T, kind: ComponentModelTypeKind.variant | ComponentModelTypeKind.result = ComponentModelTypeKind.variant) {
 		const cases: VariantCase[] = [];
+		this.case2Index = new Map();
 		for (let i = 0; i < variants.length; i++) {
-			const type = variants[i];
-			cases.push(VariantCase.create(i, type));
+			const type = variants[i][1];
+			const name = variants[i][0];
+			this.case2Index.set(name, i);
+			cases.push(VariantCase.create(i, name, type));
 		}
 		this.cases = cases;
 		this.ctor = ctor;
@@ -1412,11 +1417,11 @@ export class VariantType<T extends JVariantCase, I, V> implements ComponentModel
 		ptr += this.discriminantType.size;
 		const caseVariant = this.cases[caseIndex];
 		if (caseVariant.type === undefined) {
-			return this.ctor(caseIndex, undefined as any);
+			return this.ctor(caseVariant.tag as I, undefined as any);
 		} else {
 			ptr = align(ptr, this.maxCaseAlignment);
 			const value = caseVariant.type.load(memory, ptr, options);
-			return this.ctor(caseIndex, value);
+			return this.ctor(caseVariant.tag as I, value);
 		}
 	}
 
@@ -1427,13 +1432,13 @@ export class VariantType<T extends JVariantCase, I, V> implements ComponentModel
 		const caseVariant = this.cases[caseIndex];
 		let result: T;
 		if (caseVariant.type === undefined) {
-			result = this.ctor(caseIndex, undefined as any);
+			result = this.ctor(caseVariant.tag as I, undefined as any);
 		} else {
 			// The first flat type is the discriminant type. So skip it.
 			const wantFlatTypes = caseVariant.wantFlatTypes!;
 			const iter = new CoerceValueIter(values, this.flatTypes.slice(1), wantFlatTypes);
 			const value = caseVariant.type.liftFlat(memory, iter, options);
-			result = this.ctor(caseIndex, value);
+			result = this.ctor(caseVariant.tag as I, value);
 			valuesToReadOver = valuesToReadOver - wantFlatTypes.length;
 		}
 		for (let i = 0; i < valuesToReadOver; i++) {
@@ -1447,9 +1452,13 @@ export class VariantType<T extends JVariantCase, I, V> implements ComponentModel
 	}
 
 	public store(memory: Memory, ptr: ptr, variantValue: T, options: Options): void {
-		this.discriminantType.store(memory, ptr, variantValue.case, options);
+		const index = this.case2Index.get(variantValue.tag);
+		if (index === undefined) {
+			throw new ComponentModelError(`Variant case ${variantValue.tag} not found`);
+		}
+		this.discriminantType.store(memory, ptr, index, options);
 		ptr += this.discriminantType.size;
-		const c = this.cases[variantValue.case];
+		const c = this.cases[index];
 		if (c.type !== undefined && variantValue.value !== undefined) {
 			ptr = align(ptr, this.maxCaseAlignment);
 			c.type.store(memory, ptr, variantValue.value, options);
@@ -1458,8 +1467,12 @@ export class VariantType<T extends JVariantCase, I, V> implements ComponentModel
 
 	public lowerFlat(result: wasmType[], memory: Memory, variantValue: T, options: Options): void {
 		const flatTypes = this.flatTypes;
-		this.discriminantType.lowerFlat(result, memory, variantValue.case, options);
-		const c = this.cases[variantValue.case];
+		const index = this.case2Index.get(variantValue.tag);
+		if (index === undefined) {
+			throw new ComponentModelError(`Variant case ${variantValue.tag} not found`);
+		}
+		this.discriminantType.lowerFlat(result, memory, index, options);
+		const c = this.cases[index];
 		// First one is the discriminant type. So skip it.
 		let valuesToFill = this.flatTypes.length - 1;
 		if (c.type !== undefined && variantValue.value !== undefined) {
@@ -1643,27 +1656,26 @@ export class EnumType<T extends JEnum> implements ComponentModelType<T> {
 
 
 export namespace option {
-	export const none = 0 as const;
-	export const some = 1 as const;
+	export const none = 'none' as const;
+	export type None<T extends JType> = { readonly tag: typeof none } & _common<T>;
+	export function None<T extends JType>(): None<T> {
+		return new OptionImpl<T>(none, undefined) as None<T>;
+	}
 
-	export type _ct = typeof none | typeof some;
+	export const some = 'some' as const;
+	export type Some<T extends JType> = { readonly tag: typeof some; readonly value: T } & _common<T>;
+	export function Some<T extends JType>(value: T): Some<T> {
+		return new OptionImpl<T>(some, value ) as Some<T>;
+	}
+
+	export type _tt = typeof none | typeof some;
 	export type _vt<T extends JType> = undefined | T;
 
 	type _common<T extends JType> = Omit<OptionImpl<T>, 'case' | 'value'>;
 
-	export type none<T extends JType> = { readonly case: typeof none } & _common<T>;
-	export type some<T extends JType> = { readonly case: typeof some; readonly value: T } & _common<T>;
 
-	export function _ctor<T extends JType>(c: _ct, v: _vt<T>): option<T> {
+	export function _ctor<T extends JType>(c: _tt, v: _vt<T>): option<T> {
 		return new OptionImpl(c, v) as option<T>;
-	}
-
-	export function _none<T extends JType>(): none<T> {
-		return new OptionImpl<T>(none, undefined) as none<T>;
-	}
-
-	export function _some<T extends JType>(value: T): some<T> {
-		return new OptionImpl<T>(some, value ) as some<T>;
 	}
 
 	export function isOption<T extends JType>(value: T | option<T>): value is option<T> {
@@ -1671,33 +1683,33 @@ export namespace option {
 	}
 
 	class OptionImpl<T extends JType> {
-		private readonly _case: _ct;
+		private readonly _tag: _tt;
 		private readonly _value?: _vt<T>;
 
-		constructor(c: typeof option.none | typeof option.some, value: undefined | T) {
-			this._case = c;
+		constructor(tag: typeof option.none | typeof option.some, value: undefined | T) {
+			this._tag = tag;
 			this._value = value;
 		}
 
-		get case():  typeof option.none | typeof option.some {
-			return this._case;
+		get tag():  typeof option.none | typeof option.some {
+			return this._tag;
 		}
 
 		get value(): undefined | T {
 			return this._value;
 		}
 
-		public none(): this is none<T> {
-			return this._case === option.none;
+		public isNone(): this is None<T> {
+			return this._tag === option.none;
 		}
 
-		public some(): this is some<T> {
-			return this._case === option.some;
+		public isSome(): this is Some<T> {
+			return this._tag === option.some;
 		}
 
 	}
 }
-export type option<T extends JType> = option.none<T> | option.some<T>;
+export type option<T extends JType> = option.None<T> | option.Some<T>;
 export class OptionType<T extends JType> implements ComponentModelType<T | option<T> | undefined> {
 
 	private readonly valueType: GenericComponentModelType;
@@ -1718,7 +1730,7 @@ export class OptionType<T extends JType> implements ComponentModelType<T | optio
 
 	public load(memory: Memory, ptr: ptr, options: Options): T | option<T> | undefined {
 		const caseIndex = u8.load(memory, ptr, options);
-		if (caseIndex === option.none) {
+		if (caseIndex === 0) { // index 0 is none
 			return options.keepOption ? option._ctor<T>(option.none, undefined) : undefined;
 		} else {
 			ptr += u8.size;
@@ -1731,7 +1743,7 @@ export class OptionType<T extends JType> implements ComponentModelType<T | optio
 	public liftFlat(memory: Memory, values: FlatValuesIter, options: Options): T | option<T> | undefined {
 		// First one is the discriminant type. So skip it.
 		const caseIndex = u8.liftFlat(memory, values, options);
-		if (caseIndex === option.none) {
+		if (caseIndex === 0) { // Index 0 is none
 			// Read over the value params
 			for (let i = 0; i < this.valueType.flatTypes.length; i++) {
 				values.next();
@@ -1749,9 +1761,10 @@ export class OptionType<T extends JType> implements ComponentModelType<T | optio
 
 	public store(memory: Memory, ptr: ptr, value: T | option<T> | undefined, options: Options): void {
 		const optValue = this.asOptionValue(value, options);
-		u8.store(memory, ptr, optValue.case, options);
+		const index = optValue.tag === option.none ? 0 : 1;
+		u8.store(memory, ptr, index, options);
 		ptr += u8.size;
-		if (optValue.case === option.some) {
+		if (optValue.tag === option.some) {
 			ptr = align(ptr, this.valueType.alignment);
 			this.valueType.store(memory, ptr, optValue.value, options);
 		}
@@ -1759,8 +1772,9 @@ export class OptionType<T extends JType> implements ComponentModelType<T | optio
 
 	public lowerFlat(result: wasmType[], memory: Memory, value: T | option<T> | undefined, options: Options): void {
 		const optValue = this.asOptionValue(value, options);
-		u8.lowerFlat(result, memory, optValue.case, options);
-		if (optValue.case === option.none) {
+		const index = optValue.tag === option.none ? 0 : 1;
+		u8.lowerFlat(result, memory, index, options);
+		if (optValue.tag === option.none) {
 			for (const type of this.valueType.flatTypes) {
 				if (type === 'i64') {
 					result.push(0n);
@@ -1803,60 +1817,57 @@ export class OptionType<T extends JType> implements ComponentModelType<T | optio
 }
 
 export namespace result {
-	export const ok = 0 as const;
-	export const error = 1 as const;
+	export const ok = 'ok' as const;
+	export type Ok<O extends JType | void, E extends JType | void> = { readonly tag: typeof ok; readonly value: O } & _common<O, E>;
+	export function Ok<O extends JType | void , E extends JType | void>(value: O): Ok<O, E> {
+		return new ResultImpl<O, E>(ok, value) as Ok<O, E>;
+	}
 
-	export type _ct = typeof ok | typeof error;
+	export const error = 'error' as const;
+	export type Error<O extends JType | void, E extends JType | void> = { readonly tag: typeof error; readonly value: E } & _common<O, E>;
+	export function Error<O extends JType | void, E extends JType | void>(value: E): Error<O, E> {
+		return new ResultImpl<O, E>(error, value) as Error<O, E>;
+	}
+
+	export type _tt = typeof ok | typeof error;
 	export type _vt<O extends JType | void, E extends JType | void> = O | E;
+	type _common<O extends JType | void, E extends JType | void> = Omit<ResultImpl<O, E>, 'tag' | 'value'>;
 
-	type _common<O extends JType | void, E extends JType | void> = Omit<ResultImpl<O, E>, 'case' | 'value'>;
-
-	export type ok<O extends JType | void, E extends JType | void> = { readonly case: typeof ok; readonly value: O } & _common<O, E>;
-	export type error<O extends JType | void, E extends JType | void> = { readonly case: typeof error; readonly value: E } & _common<O, E>;
-
-	export function _ctor<O extends JType | void, E extends JType | void>(c: _ct, v: _vt<O, E>): result<O, E> {
+	export function _ctor<O extends JType | void, E extends JType | void>(c: _tt, v: _vt<O, E>): result<O, E> {
 		return new ResultImpl<O, E>(c, v) as result<O, E>;
-	}
-
-	export function _ok<O extends JType | void , E extends JType | void>(value: O): ok<O, E> {
-		return new ResultImpl<O, E>(ok, value) as ok<O, E>;
-	}
-
-	export function _error<O extends JType | void, E extends JType | void>(value: E): error<O, E> {
-		return new ResultImpl<O, E>(error, value ) as error<O, E>;
 	}
 
 	export class ResultImpl<O extends JType | void, E extends JType | void> implements JVariantCase {
 
-		private readonly _case: _ct;
+		private readonly _tag: _tt;
 		private readonly _value: _vt<O, E>;
 
-		constructor(c: _ct, value: _vt<O, E>) {
-			this._case = c;
+		constructor(tag: _tt, value: _vt<O, E>) {
+			this._tag = tag;
 			this._value = value;
 		}
 
-		get case(): _ct {
-			return this._case;
+		get tag(): _tt {
+			return this._tag;
 		}
 
 		get value(): _vt<O, E> {
 			return this._value;
 		}
 
-		public ok(): this is ok<O, E> {
-			return this._case === ok;
+		public isOk(): this is Ok<O, E> {
+			return this._tag === ok;
 		}
 
-		public error(): this is error<O, E> {
-			return this._case === error;
+		public isError(): this is Error<O, E> {
+			return this._tag === error;
 		}
 	}
 }
-export type result<O extends JType | void, E extends JType | void = void> = result.ok<O, E> | result.error<O, E>;
-export class ResultType<O extends JType | void, E extends JType | void = void> extends VariantType<result<O, E>, 0 | 1, O | E> {
+export type result<O extends JType | void, E extends JType | void = void> = result.Ok<O, E> | result.Error<O, E>;
+export class ResultType<O extends JType | void, E extends JType | void = void> extends VariantType<result<O, E>, 'ok' | 'error', O | E> {
 	constructor(okType: GenericComponentModelType | undefined, errorType: GenericComponentModelType | undefined) {
-		super([okType, errorType], result._ctor<O, E>, ComponentModelTypeKind.result);
+		super([['ok', okType], ['error', errorType]], result._ctor<O, E>, ComponentModelTypeKind.result);
 	}
 }
 

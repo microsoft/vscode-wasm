@@ -271,50 +271,50 @@ export namespace filesystem {
 			/**
 			 * Test for readability, writeability, or executability.
 			 */
-			export const access = 0 as const;
-			export type access = { readonly case: typeof access; readonly value: Modes } & _common;
+			export const access = 'access' as const;
+			export type Access = { readonly tag: typeof access; readonly value: Modes } & _common;
+			export function Access(value: Modes): Access {
+				return new VariantImpl(access, value) as Access;
+			}
 			
 			
 			/**
 			 * Test whether the path exists.
 			 */
-			export const exists = 1 as const;
-			export type exists = { readonly case: typeof exists } & _common;
+			export const exists = 'exists' as const;
+			export type Exists = { readonly tag: typeof exists } & _common;
+			export function Exists(): Exists {
+				return new VariantImpl(exists, undefined) as Exists;
+			}
 			
-			export type _ct = typeof access | typeof exists;
+			export type _tt = typeof access | typeof exists;
 			export type _vt = Modes | undefined;
-			type _common = Omit<VariantImpl, 'case' | 'value'>;
-			export function _ctor(c: _ct, v: _vt): AccessType {
-				return new VariantImpl(c, v) as AccessType;
-			}
-			export function _access(value: Modes): access {
-				return new VariantImpl(access, value) as access;
-			}
-			export function _exists(): exists {
-				return new VariantImpl(exists, undefined) as exists;
+			type _common = Omit<VariantImpl, 'tag' | 'value'>;
+			export function _ctor(t: _tt, v: _vt): AccessType {
+				return new VariantImpl(t, v) as AccessType;
 			}
 			class VariantImpl {
-				private readonly _case: _ct;
+				private readonly _tag: _tt;
 				private readonly _value?: _vt;
-				constructor(c: _ct, value: _vt) {
-					this._case = c;
+				constructor(t: _tt, value: _vt) {
+					this._tag = t;
 					this._value = value;
 				}
-				get case(): _ct {
-					return this._case;
+				get tag(): _tt {
+					return this._tag;
 				}
 				get value(): _vt {
 					return this._value;
 				}
-				access(): this is access {
-					return this._case === AccessType.access;
+				isAccess(): this is Access {
+					return this._tag === AccessType.access;
 				}
-				exists(): this is exists {
-					return this._case === AccessType.exists;
+				isExists(): this is Exists {
+					return this._tag === AccessType.exists;
 				}
 			}
 		}
-		export type AccessType = AccessType.access | AccessType.exists;
+		export type AccessType = AccessType.Access | AccessType.Exists;
 		
 		/**
 		 * Number of hard links to an inode.
@@ -377,64 +377,64 @@ export namespace filesystem {
 			/**
 			 * Leave the timestamp set to its previous value.
 			 */
-			export const noChange = 0 as const;
-			export type noChange = { readonly case: typeof noChange } & _common;
+			export const noChange = 'noChange' as const;
+			export type NoChange = { readonly tag: typeof noChange } & _common;
+			export function NoChange(): NoChange {
+				return new VariantImpl(noChange, undefined) as NoChange;
+			}
 			
 			
 			/**
 			 * Set the timestamp to the current time of the system clock associated
 			 * with the filesystem.
 			 */
-			export const now = 1 as const;
-			export type now = { readonly case: typeof now } & _common;
+			export const now = 'now' as const;
+			export type Now = { readonly tag: typeof now } & _common;
+			export function Now(): Now {
+				return new VariantImpl(now, undefined) as Now;
+			}
 			
 			
 			/**
 			 * Set the timestamp to the given value.
 			 */
-			export const timestamp = 2 as const;
-			export type timestamp = { readonly case: typeof timestamp; readonly value: Datetime } & _common;
+			export const timestamp = 'timestamp' as const;
+			export type Timestamp = { readonly tag: typeof timestamp; readonly value: Datetime } & _common;
+			export function Timestamp(value: Datetime): Timestamp {
+				return new VariantImpl(timestamp, value) as Timestamp;
+			}
 			
-			export type _ct = typeof noChange | typeof now | typeof timestamp;
+			export type _tt = typeof noChange | typeof now | typeof timestamp;
 			export type _vt = Datetime | undefined;
-			type _common = Omit<VariantImpl, 'case' | 'value'>;
-			export function _ctor(c: _ct, v: _vt): NewTimestamp {
-				return new VariantImpl(c, v) as NewTimestamp;
-			}
-			export function _noChange(): noChange {
-				return new VariantImpl(noChange, undefined) as noChange;
-			}
-			export function _now(): now {
-				return new VariantImpl(now, undefined) as now;
-			}
-			export function _timestamp(value: Datetime): timestamp {
-				return new VariantImpl(timestamp, value) as timestamp;
+			type _common = Omit<VariantImpl, 'tag' | 'value'>;
+			export function _ctor(t: _tt, v: _vt): NewTimestamp {
+				return new VariantImpl(t, v) as NewTimestamp;
 			}
 			class VariantImpl {
-				private readonly _case: _ct;
+				private readonly _tag: _tt;
 				private readonly _value?: _vt;
-				constructor(c: _ct, value: _vt) {
-					this._case = c;
+				constructor(t: _tt, value: _vt) {
+					this._tag = t;
 					this._value = value;
 				}
-				get case(): _ct {
-					return this._case;
+				get tag(): _tt {
+					return this._tag;
 				}
 				get value(): _vt {
 					return this._value;
 				}
-				noChange(): this is noChange {
-					return this._case === NewTimestamp.noChange;
+				isNoChange(): this is NoChange {
+					return this._tag === NewTimestamp.noChange;
 				}
-				now(): this is now {
-					return this._case === NewTimestamp.now;
+				isNow(): this is Now {
+					return this._tag === NewTimestamp.now;
 				}
-				timestamp(): this is timestamp {
-					return this._case === NewTimestamp.timestamp;
+				isTimestamp(): this is Timestamp {
+					return this._tag === NewTimestamp.timestamp;
 				}
 			}
 		}
-		export type NewTimestamp = NewTimestamp.noChange | NewTimestamp.now | NewTimestamp.timestamp;
+		export type NewTimestamp = NewTimestamp.NoChange | NewTimestamp.Now | NewTimestamp.Timestamp;
 		
 		/**
 		 * A directory entry.
@@ -1077,7 +1077,7 @@ export namespace filesystem {
 		export const PathFlags = new $wcm.FlagsType<filesystem.Types.PathFlags>(1, { kind: $wcm.FlagsStorageKind.Single, type: $wcm.u8, create: filesystem.Types.PathFlags.create, value: filesystem.Types.PathFlags.value as $wcm.SingleFlagsValueFunc });
 		export const OpenFlags = new $wcm.FlagsType<filesystem.Types.OpenFlags>(4, { kind: $wcm.FlagsStorageKind.Single, type: $wcm.u8, create: filesystem.Types.OpenFlags.create, value: filesystem.Types.OpenFlags.value as $wcm.SingleFlagsValueFunc });
 		export const Modes = new $wcm.FlagsType<filesystem.Types.Modes>(3, { kind: $wcm.FlagsStorageKind.Single, type: $wcm.u8, create: filesystem.Types.Modes.create, value: filesystem.Types.Modes.value as $wcm.SingleFlagsValueFunc });
-		export const AccessType = new $wcm.VariantType<filesystem.Types.AccessType, filesystem.Types.AccessType._ct, filesystem.Types.AccessType._vt>([Modes, undefined], filesystem.Types.AccessType._ctor);
+		export const AccessType = new $wcm.VariantType<filesystem.Types.AccessType, filesystem.Types.AccessType._tt, filesystem.Types.AccessType._vt>([['access', Modes], ['exists', undefined]], filesystem.Types.AccessType._ctor);
 		export const LinkCount = $wcm.u64;
 		export const DescriptorStat = new $wcm.RecordType<filesystem.Types.DescriptorStat>([
 			['type', DescriptorType],
@@ -1087,7 +1087,7 @@ export namespace filesystem {
 			['dataModificationTimestamp', new $wcm.OptionType<filesystem.Types.Datetime>(Datetime)],
 			['statusChangeTimestamp', new $wcm.OptionType<filesystem.Types.Datetime>(Datetime)],
 		]);
-		export const NewTimestamp = new $wcm.VariantType<filesystem.Types.NewTimestamp, filesystem.Types.NewTimestamp._ct, filesystem.Types.NewTimestamp._vt>([undefined, undefined, Datetime], filesystem.Types.NewTimestamp._ctor);
+		export const NewTimestamp = new $wcm.VariantType<filesystem.Types.NewTimestamp, filesystem.Types.NewTimestamp._tt, filesystem.Types.NewTimestamp._vt>([['noChange', undefined], ['now', undefined], ['timestamp', Datetime]], filesystem.Types.NewTimestamp._ctor);
 		export const DirectoryEntry = new $wcm.RecordType<filesystem.Types.DirectoryEntry>([
 			['type', DescriptorType],
 			['name', $wcm.wstring],
