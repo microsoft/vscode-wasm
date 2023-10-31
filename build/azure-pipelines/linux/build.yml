@@ -1,3 +1,10 @@
+on:
+  pull_request_target:
+    branches:
+      - master
+      - 'releases/*'
+  workflow_dispatch:
+
 steps:
 - script: |
     set -e
