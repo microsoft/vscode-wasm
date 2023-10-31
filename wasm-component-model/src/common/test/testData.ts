@@ -3,8 +3,7 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 import * as $wcm from '../componentModel';
-import type { u32, resource, own, borrow, u64, s32, s64, float32, float64, u8, i32, ptr, i64 } from '../componentModel';
-
+import type { u32, resource, own, borrow, u64, s32, s64, float32, float64, i32, ptr, i64 } from '../componentModel';
 export namespace testData {
 	export namespace Types {
 		export const id = 'vscode:test-data/types' as const;
@@ -127,372 +126,59 @@ export namespace testData {
 		}
 		export type TestVariant = TestVariant.Empty | TestVariant.Unsigned32 | TestVariant.Unsigned64 | TestVariant.Signed32 | TestVariant.Signed64 | TestVariant.FloatingPoint32 | TestVariant.FloatingPoint64 | TestVariant.Structure;
 
-		export type TestFlagsShort = {
-			one: boolean;
-			two: boolean;
-			three: boolean;
-			four: boolean;
-			five: boolean;
-			six: boolean;
-		};
-		export namespace TestFlagsShort {
-			class FlagsImpl implements TestFlagsShort {
-				private bits: u8;
-				constructor(bits: u8 = 0) {
-					this.bits = bits;
-				}
-				get _value(): u8 {
-					return this.bits;
-				}
-				get one(): boolean {
-					return (this.bits & 1) !== 0;
-				}
-				set one(value: boolean) {
-					this.bits = value ? this.bits | 1 : this.bits & ~1;
-				}
-				get two(): boolean {
-					return (this.bits & 2) !== 0;
-				}
-				set two(value: boolean) {
-					this.bits = value ? this.bits | 2 : this.bits & ~2;
-				}
-				get three(): boolean {
-					return (this.bits & 4) !== 0;
-				}
-				set three(value: boolean) {
-					this.bits = value ? this.bits | 4 : this.bits & ~4;
-				}
-				get four(): boolean {
-					return (this.bits & 8) !== 0;
-				}
-				set four(value: boolean) {
-					this.bits = value ? this.bits | 8 : this.bits & ~8;
-				}
-				get five(): boolean {
-					return (this.bits & 16) !== 0;
-				}
-				set five(value: boolean) {
-					this.bits = value ? this.bits | 16 : this.bits & ~16;
-				}
-				get six(): boolean {
-					return (this.bits & 32) !== 0;
-				}
-				set six(value: boolean) {
-					this.bits = value ? this.bits | 32 : this.bits & ~32;
-				}
-			}
+		export const TestFlagsShort = Object.freeze({
+			one: 1 << 0,
+			two: 1 << 1,
+			three: 1 << 2,
+			four: 1 << 3,
+			five: 1 << 4,
+			six: 1 << 5,
+		});
+		export type TestFlagsShort = u32;
 
-			export function create(bits?: u8): TestFlagsShort {
-				return new FlagsImpl(bits);
-			}
-			export function value(flags: TestFlagsShort): u8 {
-				return (flags as FlagsImpl)._value;
-			}
-		}
-
-		export type TestFlagsLong = {
-			one: boolean;
-			two: boolean;
-			three: boolean;
-			four: boolean;
-			five: boolean;
-			six: boolean;
-			seven: boolean;
-			eight: boolean;
-			nine: boolean;
-			ten: boolean;
-			eleven: boolean;
-			twelve: boolean;
-			thirteen: boolean;
-			fourteen: boolean;
-			fifteen: boolean;
-			sixteen: boolean;
-			seventeen: boolean;
-			eighteen: boolean;
-			nineteen: boolean;
-			twenty: boolean;
-			twentyOne: boolean;
-			twentyTwo: boolean;
-			twentyThree: boolean;
-			twentyFour: boolean;
-			twentyFive: boolean;
-			twentySix: boolean;
-			twentySeven: boolean;
-			twentyEight: boolean;
-			twentyNine: boolean;
-			thirty: boolean;
-			thirtyOne: boolean;
-			thirtyTwo: boolean;
-			thirtyThree: boolean;
-			thirtyFour: boolean;
-			thirtyFive: boolean;
-			thirtySix: boolean;
-			thirtySeven: boolean;
-			thirtyEight: boolean;
-			thirtyNine: boolean;
-			forty: boolean;
-		};
-		export namespace TestFlagsLong {
-			class FlagsImpl implements TestFlagsLong {
-				private bits: u32[];
-				constructor(bits: u32[] = new Array(2).fill(0)) {
-					if (bits.length !== 2) {
-						throw new Error('Invalid array length. Expected 2 but got ' + bits.length + '.');
-					}
-					this.bits = bits;
-				}
-				get _value(): u32[] {
-					return this.bits;
-				}
-				get one(): boolean {
-					return (this.bits[0] & 1) !== 0;
-				}
-				set one(value: boolean) {
-					this.bits[0] = value ? this.bits[0] | 1 : this.bits[0] & ~1;
-				}
-				get two(): boolean {
-					return (this.bits[0] & 2) !== 0;
-				}
-				set two(value: boolean) {
-					this.bits[0] = value ? this.bits[0] | 2 : this.bits[0] & ~2;
-				}
-				get three(): boolean {
-					return (this.bits[0] & 4) !== 0;
-				}
-				set three(value: boolean) {
-					this.bits[0] = value ? this.bits[0] | 4 : this.bits[0] & ~4;
-				}
-				get four(): boolean {
-					return (this.bits[0] & 8) !== 0;
-				}
-				set four(value: boolean) {
-					this.bits[0] = value ? this.bits[0] | 8 : this.bits[0] & ~8;
-				}
-				get five(): boolean {
-					return (this.bits[0] & 16) !== 0;
-				}
-				set five(value: boolean) {
-					this.bits[0] = value ? this.bits[0] | 16 : this.bits[0] & ~16;
-				}
-				get six(): boolean {
-					return (this.bits[0] & 32) !== 0;
-				}
-				set six(value: boolean) {
-					this.bits[0] = value ? this.bits[0] | 32 : this.bits[0] & ~32;
-				}
-				get seven(): boolean {
-					return (this.bits[0] & 64) !== 0;
-				}
-				set seven(value: boolean) {
-					this.bits[0] = value ? this.bits[0] | 64 : this.bits[0] & ~64;
-				}
-				get eight(): boolean {
-					return (this.bits[0] & 128) !== 0;
-				}
-				set eight(value: boolean) {
-					this.bits[0] = value ? this.bits[0] | 128 : this.bits[0] & ~128;
-				}
-				get nine(): boolean {
-					return (this.bits[0] & 256) !== 0;
-				}
-				set nine(value: boolean) {
-					this.bits[0] = value ? this.bits[0] | 256 : this.bits[0] & ~256;
-				}
-				get ten(): boolean {
-					return (this.bits[0] & 512) !== 0;
-				}
-				set ten(value: boolean) {
-					this.bits[0] = value ? this.bits[0] | 512 : this.bits[0] & ~512;
-				}
-				get eleven(): boolean {
-					return (this.bits[0] & 1024) !== 0;
-				}
-				set eleven(value: boolean) {
-					this.bits[0] = value ? this.bits[0] | 1024 : this.bits[0] & ~1024;
-				}
-				get twelve(): boolean {
-					return (this.bits[0] & 2048) !== 0;
-				}
-				set twelve(value: boolean) {
-					this.bits[0] = value ? this.bits[0] | 2048 : this.bits[0] & ~2048;
-				}
-				get thirteen(): boolean {
-					return (this.bits[0] & 4096) !== 0;
-				}
-				set thirteen(value: boolean) {
-					this.bits[0] = value ? this.bits[0] | 4096 : this.bits[0] & ~4096;
-				}
-				get fourteen(): boolean {
-					return (this.bits[0] & 8192) !== 0;
-				}
-				set fourteen(value: boolean) {
-					this.bits[0] = value ? this.bits[0] | 8192 : this.bits[0] & ~8192;
-				}
-				get fifteen(): boolean {
-					return (this.bits[0] & 16384) !== 0;
-				}
-				set fifteen(value: boolean) {
-					this.bits[0] = value ? this.bits[0] | 16384 : this.bits[0] & ~16384;
-				}
-				get sixteen(): boolean {
-					return (this.bits[0] & 32768) !== 0;
-				}
-				set sixteen(value: boolean) {
-					this.bits[0] = value ? this.bits[0] | 32768 : this.bits[0] & ~32768;
-				}
-				get seventeen(): boolean {
-					return (this.bits[0] & 65536) !== 0;
-				}
-				set seventeen(value: boolean) {
-					this.bits[0] = value ? this.bits[0] | 65536 : this.bits[0] & ~65536;
-				}
-				get eighteen(): boolean {
-					return (this.bits[0] & 131072) !== 0;
-				}
-				set eighteen(value: boolean) {
-					this.bits[0] = value ? this.bits[0] | 131072 : this.bits[0] & ~131072;
-				}
-				get nineteen(): boolean {
-					return (this.bits[0] & 262144) !== 0;
-				}
-				set nineteen(value: boolean) {
-					this.bits[0] = value ? this.bits[0] | 262144 : this.bits[0] & ~262144;
-				}
-				get twenty(): boolean {
-					return (this.bits[0] & 524288) !== 0;
-				}
-				set twenty(value: boolean) {
-					this.bits[0] = value ? this.bits[0] | 524288 : this.bits[0] & ~524288;
-				}
-				get twentyOne(): boolean {
-					return (this.bits[0] & 1048576) !== 0;
-				}
-				set twentyOne(value: boolean) {
-					this.bits[0] = value ? this.bits[0] | 1048576 : this.bits[0] & ~1048576;
-				}
-				get twentyTwo(): boolean {
-					return (this.bits[0] & 2097152) !== 0;
-				}
-				set twentyTwo(value: boolean) {
-					this.bits[0] = value ? this.bits[0] | 2097152 : this.bits[0] & ~2097152;
-				}
-				get twentyThree(): boolean {
-					return (this.bits[0] & 4194304) !== 0;
-				}
-				set twentyThree(value: boolean) {
-					this.bits[0] = value ? this.bits[0] | 4194304 : this.bits[0] & ~4194304;
-				}
-				get twentyFour(): boolean {
-					return (this.bits[0] & 8388608) !== 0;
-				}
-				set twentyFour(value: boolean) {
-					this.bits[0] = value ? this.bits[0] | 8388608 : this.bits[0] & ~8388608;
-				}
-				get twentyFive(): boolean {
-					return (this.bits[0] & 16777216) !== 0;
-				}
-				set twentyFive(value: boolean) {
-					this.bits[0] = value ? this.bits[0] | 16777216 : this.bits[0] & ~16777216;
-				}
-				get twentySix(): boolean {
-					return (this.bits[0] & 33554432) !== 0;
-				}
-				set twentySix(value: boolean) {
-					this.bits[0] = value ? this.bits[0] | 33554432 : this.bits[0] & ~33554432;
-				}
-				get twentySeven(): boolean {
-					return (this.bits[0] & 67108864) !== 0;
-				}
-				set twentySeven(value: boolean) {
-					this.bits[0] = value ? this.bits[0] | 67108864 : this.bits[0] & ~67108864;
-				}
-				get twentyEight(): boolean {
-					return (this.bits[0] & 134217728) !== 0;
-				}
-				set twentyEight(value: boolean) {
-					this.bits[0] = value ? this.bits[0] | 134217728 : this.bits[0] & ~134217728;
-				}
-				get twentyNine(): boolean {
-					return (this.bits[0] & 268435456) !== 0;
-				}
-				set twentyNine(value: boolean) {
-					this.bits[0] = value ? this.bits[0] | 268435456 : this.bits[0] & ~268435456;
-				}
-				get thirty(): boolean {
-					return (this.bits[0] & 536870912) !== 0;
-				}
-				set thirty(value: boolean) {
-					this.bits[0] = value ? this.bits[0] | 536870912 : this.bits[0] & ~536870912;
-				}
-				get thirtyOne(): boolean {
-					return (this.bits[0] & 1073741824) !== 0;
-				}
-				set thirtyOne(value: boolean) {
-					this.bits[0] = value ? this.bits[0] | 1073741824 : this.bits[0] & ~1073741824;
-				}
-				get thirtyTwo(): boolean {
-					return (this.bits[0] & -2147483648) !== 0;
-				}
-				set thirtyTwo(value: boolean) {
-					this.bits[0] = value ? this.bits[0] | -2147483648 : this.bits[0] & ~-2147483648;
-				}
-				get thirtyThree(): boolean {
-					return (this.bits[1] & 1) !== 0;
-				}
-				set thirtyThree(value: boolean) {
-					this.bits[1] = value ? this.bits[1] | 1 : this.bits[1] & ~1;
-				}
-				get thirtyFour(): boolean {
-					return (this.bits[1] & 2) !== 0;
-				}
-				set thirtyFour(value: boolean) {
-					this.bits[1] = value ? this.bits[1] | 2 : this.bits[1] & ~2;
-				}
-				get thirtyFive(): boolean {
-					return (this.bits[1] & 4) !== 0;
-				}
-				set thirtyFive(value: boolean) {
-					this.bits[1] = value ? this.bits[1] | 4 : this.bits[1] & ~4;
-				}
-				get thirtySix(): boolean {
-					return (this.bits[1] & 8) !== 0;
-				}
-				set thirtySix(value: boolean) {
-					this.bits[1] = value ? this.bits[1] | 8 : this.bits[1] & ~8;
-				}
-				get thirtySeven(): boolean {
-					return (this.bits[1] & 16) !== 0;
-				}
-				set thirtySeven(value: boolean) {
-					this.bits[1] = value ? this.bits[1] | 16 : this.bits[1] & ~16;
-				}
-				get thirtyEight(): boolean {
-					return (this.bits[1] & 32) !== 0;
-				}
-				set thirtyEight(value: boolean) {
-					this.bits[1] = value ? this.bits[1] | 32 : this.bits[1] & ~32;
-				}
-				get thirtyNine(): boolean {
-					return (this.bits[1] & 64) !== 0;
-				}
-				set thirtyNine(value: boolean) {
-					this.bits[1] = value ? this.bits[1] | 64 : this.bits[1] & ~64;
-				}
-				get forty(): boolean {
-					return (this.bits[1] & 128) !== 0;
-				}
-				set forty(value: boolean) {
-					this.bits[1] = value ? this.bits[1] | 128 : this.bits[1] & ~128;
-				}
-			}
-
-			export function create(bits?: u32[]): TestFlagsLong {
-				return new FlagsImpl(bits);
-			}
-			export function value(flags: TestFlagsLong): u32[] {
-				return (flags as FlagsImpl)._value;
-			}
-		}
+		export const TestFlagsLong = Object.freeze({
+			one: 1n << 0n,
+			two: 1n << 1n,
+			three: 1n << 2n,
+			four: 1n << 3n,
+			five: 1n << 4n,
+			six: 1n << 5n,
+			seven: 1n << 6n,
+			eight: 1n << 7n,
+			nine: 1n << 8n,
+			ten: 1n << 9n,
+			eleven: 1n << 10n,
+			twelve: 1n << 11n,
+			thirteen: 1n << 12n,
+			fourteen: 1n << 13n,
+			fifteen: 1n << 14n,
+			sixteen: 1n << 15n,
+			seventeen: 1n << 16n,
+			eighteen: 1n << 17n,
+			nineteen: 1n << 18n,
+			twenty: 1n << 19n,
+			twentyOne: 1n << 20n,
+			twentyTwo: 1n << 21n,
+			twentyThree: 1n << 22n,
+			twentyFour: 1n << 23n,
+			twentyFive: 1n << 24n,
+			twentySix: 1n << 25n,
+			twentySeven: 1n << 26n,
+			twentyEight: 1n << 27n,
+			twentyNine: 1n << 28n,
+			thirty: 1n << 29n,
+			thirtyOne: 1n << 30n,
+			thirtyTwo: 1n << 31n,
+			thirtyThree: 1n << 32n,
+			thirtyFour: 1n << 33n,
+			thirtyFive: 1n << 34n,
+			thirtySix: 1n << 35n,
+			thirtySeven: 1n << 36n,
+			thirtyEight: 1n << 37n,
+			thirtyNine: 1n << 38n,
+			forty: 1n << 39n,
+		});
+		export type TestFlagsLong = bigint;
 
 		export type call = (point: Point) => u32;
 
@@ -532,8 +218,8 @@ export namespace testData {
 			['y', new $wcm.OptionType<u32>($wcm.u32)],
 		]);
 		export const TestVariant = new $wcm.VariantType<testData.Types.TestVariant, testData.Types.TestVariant._tt, testData.Types.TestVariant._vt>([['empty', undefined], ['unsigned32', $wcm.u32], ['unsigned64', $wcm.u64], ['signed32', $wcm.s32], ['signed64', $wcm.s64], ['floatingPoint32', $wcm.float32], ['floatingPoint64', $wcm.float64], ['structure', Point]], testData.Types.TestVariant._ctor);
-		export const TestFlagsShort = new $wcm.FlagsType<testData.Types.TestFlagsShort>(6, { kind: $wcm.FlagsStorageKind.Single, type: $wcm.u8, create: testData.Types.TestFlagsShort.create, value: testData.Types.TestFlagsShort.value as $wcm.SingleFlagsValueFunc });
-		export const TestFlagsLong = new $wcm.FlagsType<testData.Types.TestFlagsLong>(40, { kind: $wcm.FlagsStorageKind.Array, length: 2, type: $wcm.u32, create: testData.Types.TestFlagsLong.create, value: testData.Types.TestFlagsLong.value as $wcm.ArrayFlagsValueFunc });
+		export const TestFlagsShort = new $wcm.FlagsType<testData.Types.TestFlagsShort>(6);
+		export const TestFlagsLong = new $wcm.FlagsType<testData.Types.TestFlagsLong>(40);
 		export const call = new $wcm.FunctionType<testData.Types.call>('call', 'call',[
 			['point', Point],
 		], $wcm.u32);

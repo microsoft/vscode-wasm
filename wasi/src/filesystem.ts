@@ -3,7 +3,7 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 import * as $wcm from '@vscode/wasm-component-model';
-import type { u64, u8, resource, borrow, own, result, option, i32, i64, ptr } from '@vscode/wasm-component-model';
+import type { u64, u32, resource, borrow, own, result, option, i32, i64, ptr } from '@vscode/wasm-component-model';
 import { clocks } from './clocks';
 import { io } from './io';
 
@@ -56,13 +56,46 @@ export namespace filesystem {
 		 * Note: This was called `filetype` in earlier versions of WASI.
 		 */
 		export enum DescriptorType {
+			
+			/**
+			 * The type of the descriptor or file is unknown or is different from
+			 * any of the other types specified.
+			 */
 			unknown = 'unknown',
+			
+			/**
+			 * The descriptor refers to a block device inode.
+			 */
 			blockDevice = 'blockDevice',
+			
+			/**
+			 * The descriptor refers to a character device inode.
+			 */
 			characterDevice = 'characterDevice',
+			
+			/**
+			 * The descriptor refers to a directory inode.
+			 */
 			directory = 'directory',
+			
+			/**
+			 * The descriptor refers to a named pipe.
+			 */
 			fifo = 'fifo',
+			
+			/**
+			 * The file refers to a symbolic link inode.
+			 */
 			symbolicLink = 'symbolicLink',
+			
+			/**
+			 * The descriptor refers to a regular file inode.
+			 */
 			regularFile = 'regularFile',
+			
+			/**
+			 * The descriptor refers to a socket.
+			 */
 			socket = 'socket',
 		}
 		
@@ -71,197 +104,130 @@ export namespace filesystem {
 		 * 
 		 * Note: This was called `fdflags` in earlier versions of WASI.
 		 */
-		export type DescriptorFlags = {
-			read: boolean;
-			write: boolean;
-			fileIntegritySync: boolean;
-			dataIntegritySync: boolean;
-			requestedWriteSync: boolean;
-			mutateDirectory: boolean;
-		};
-		export namespace DescriptorFlags {
-			class FlagsImpl implements DescriptorFlags {
-				private bits: u8;
-				constructor(bits: u8 = 0) {
-					this.bits = bits;
-				}
-				get _value(): u8 {
-					return this.bits;
-				}
-				get read(): boolean {
-					return (this.bits & 1) !== 0;
-				}
-				set read(value: boolean) {
-					this.bits = value ? this.bits | 1 : this.bits & ~1;
-				}
-				get write(): boolean {
-					return (this.bits & 2) !== 0;
-				}
-				set write(value: boolean) {
-					this.bits = value ? this.bits | 2 : this.bits & ~2;
-				}
-				get fileIntegritySync(): boolean {
-					return (this.bits & 4) !== 0;
-				}
-				set fileIntegritySync(value: boolean) {
-					this.bits = value ? this.bits | 4 : this.bits & ~4;
-				}
-				get dataIntegritySync(): boolean {
-					return (this.bits & 8) !== 0;
-				}
-				set dataIntegritySync(value: boolean) {
-					this.bits = value ? this.bits | 8 : this.bits & ~8;
-				}
-				get requestedWriteSync(): boolean {
-					return (this.bits & 16) !== 0;
-				}
-				set requestedWriteSync(value: boolean) {
-					this.bits = value ? this.bits | 16 : this.bits & ~16;
-				}
-				get mutateDirectory(): boolean {
-					return (this.bits & 32) !== 0;
-				}
-				set mutateDirectory(value: boolean) {
-					this.bits = value ? this.bits | 32 : this.bits & ~32;
-				}
-			}
+		export const DescriptorFlags = Object.freeze({
 			
-			export function create(bits?: u8): DescriptorFlags {
-				return new FlagsImpl(bits);
-			}
-			export function value(flags: DescriptorFlags): u8 {
-				return (flags as FlagsImpl)._value;
-			}
-		}
+			/**
+			 * Read mode: Data can be read.
+			 */
+			read: 1 << 0,
+			
+			/**
+			 * Write mode: Data can be written to.
+			 */
+			write: 1 << 1,
+			
+			/**
+			 * Request that writes be performed according to synchronized I/O file
+			 * integrity completion. The data stored in the file and the file's
+			 * metadata are synchronized. This is similar to `O_SYNC` in POSIX.
+			 * 
+			 * The precise semantics of this operation have not yet been defined for
+			 * WASI. At this time, it should be interpreted as a request, and not a
+			 * requirement.
+			 */
+			fileIntegritySync: 1 << 2,
+			
+			/**
+			 * Request that writes be performed according to synchronized I/O data
+			 * integrity completion. Only the data stored in the file is
+			 * synchronized. This is similar to `O_DSYNC` in POSIX.
+			 * 
+			 * The precise semantics of this operation have not yet been defined for
+			 * WASI. At this time, it should be interpreted as a request, and not a
+			 * requirement.
+			 */
+			dataIntegritySync: 1 << 3,
+			
+			/**
+			 * Requests that reads be performed at the same level of integrety
+			 * requested for writes. This is similar to `O_RSYNC` in POSIX.
+			 * 
+			 * The precise semantics of this operation have not yet been defined for
+			 * WASI. At this time, it should be interpreted as a request, and not a
+			 * requirement.
+			 */
+			requestedWriteSync: 1 << 4,
+			
+			/**
+			 * Mutating directories mode: Directory contents may be mutated.
+			 * 
+			 * When this flag is unset on a descriptor, operations using the
+			 * descriptor which would create, rename, delete, modify the data or
+			 * metadata of filesystem objects, or obtain another handle which
+			 * would permit any of those, shall fail with `error-code::read-only` if
+			 * they would otherwise succeed.
+			 * 
+			 * This may only be set on directories.
+			 */
+			mutateDirectory: 1 << 5,
+		});
+		export type DescriptorFlags = u32;
 		
 		/**
 		 * Flags determining the method of how paths are resolved.
 		 */
-		export type PathFlags = {
-			symlinkFollow: boolean;
-		};
-		export namespace PathFlags {
-			class FlagsImpl implements PathFlags {
-				private bits: u8;
-				constructor(bits: u8 = 0) {
-					this.bits = bits;
-				}
-				get _value(): u8 {
-					return this.bits;
-				}
-				get symlinkFollow(): boolean {
-					return (this.bits & 1) !== 0;
-				}
-				set symlinkFollow(value: boolean) {
-					this.bits = value ? this.bits | 1 : this.bits & ~1;
-				}
-			}
+		export const PathFlags = Object.freeze({
 			
-			export function create(bits?: u8): PathFlags {
-				return new FlagsImpl(bits);
-			}
-			export function value(flags: PathFlags): u8 {
-				return (flags as FlagsImpl)._value;
-			}
-		}
+			/**
+			 * As long as the resolved path corresponds to a symbolic link, it is
+			 * expanded.
+			 */
+			symlinkFollow: 1 << 0,
+		});
+		export type PathFlags = u32;
 		
 		/**
 		 * Open flags used by `open-at`.
 		 */
-		export type OpenFlags = {
-			create: boolean;
-			directory: boolean;
-			exclusive: boolean;
-			truncate: boolean;
-		};
-		export namespace OpenFlags {
-			class FlagsImpl implements OpenFlags {
-				private bits: u8;
-				constructor(bits: u8 = 0) {
-					this.bits = bits;
-				}
-				get _value(): u8 {
-					return this.bits;
-				}
-				get create(): boolean {
-					return (this.bits & 1) !== 0;
-				}
-				set create(value: boolean) {
-					this.bits = value ? this.bits | 1 : this.bits & ~1;
-				}
-				get directory(): boolean {
-					return (this.bits & 2) !== 0;
-				}
-				set directory(value: boolean) {
-					this.bits = value ? this.bits | 2 : this.bits & ~2;
-				}
-				get exclusive(): boolean {
-					return (this.bits & 4) !== 0;
-				}
-				set exclusive(value: boolean) {
-					this.bits = value ? this.bits | 4 : this.bits & ~4;
-				}
-				get truncate(): boolean {
-					return (this.bits & 8) !== 0;
-				}
-				set truncate(value: boolean) {
-					this.bits = value ? this.bits | 8 : this.bits & ~8;
-				}
-			}
+		export const OpenFlags = Object.freeze({
 			
-			export function create(bits?: u8): OpenFlags {
-				return new FlagsImpl(bits);
-			}
-			export function value(flags: OpenFlags): u8 {
-				return (flags as FlagsImpl)._value;
-			}
-		}
+			/**
+			 * Create file if it does not exist, similar to `O_CREAT` in POSIX.
+			 */
+			create: 1 << 0,
+			
+			/**
+			 * Fail if not a directory, similar to `O_DIRECTORY` in POSIX.
+			 */
+			directory: 1 << 1,
+			
+			/**
+			 * Fail if file already exists, similar to `O_EXCL` in POSIX.
+			 */
+			exclusive: 1 << 2,
+			
+			/**
+			 * Truncate file to size 0, similar to `O_TRUNC` in POSIX.
+			 */
+			truncate: 1 << 3,
+		});
+		export type OpenFlags = u32;
 		
 		/**
 		 * Permissions mode used by `open-at`, `change-file-permissions-at`, and
 		 * similar.
 		 */
-		export type Modes = {
-			readable: boolean;
-			writable: boolean;
-			executable: boolean;
-		};
-		export namespace Modes {
-			class FlagsImpl implements Modes {
-				private bits: u8;
-				constructor(bits: u8 = 0) {
-					this.bits = bits;
-				}
-				get _value(): u8 {
-					return this.bits;
-				}
-				get readable(): boolean {
-					return (this.bits & 1) !== 0;
-				}
-				set readable(value: boolean) {
-					this.bits = value ? this.bits | 1 : this.bits & ~1;
-				}
-				get writable(): boolean {
-					return (this.bits & 2) !== 0;
-				}
-				set writable(value: boolean) {
-					this.bits = value ? this.bits | 2 : this.bits & ~2;
-				}
-				get executable(): boolean {
-					return (this.bits & 4) !== 0;
-				}
-				set executable(value: boolean) {
-					this.bits = value ? this.bits | 4 : this.bits & ~4;
-				}
-			}
+		export const Modes = Object.freeze({
 			
-			export function create(bits?: u8): Modes {
-				return new FlagsImpl(bits);
-			}
-			export function value(flags: Modes): u8 {
-				return (flags as FlagsImpl)._value;
-			}
-		}
+			/**
+			 * True if the resource is considered readable by the containing
+			 * filesystem.
+			 */
+			readable: 1 << 0,
+			
+			/**
+			 * True if the resource is considered writable by the containing
+			 * filesystem.
+			 */
+			writable: 1 << 1,
+			
+			/**
+			 * True if the resource is considered executable by the containing
+			 * filesystem. This does not apply to directories.
+			 */
+			executable: 1 << 2,
+		});
+		export type Modes = u32;
 		
 		/**
 		 * Access type used by `access-at`.
@@ -459,42 +425,190 @@ export namespace filesystem {
 		 * merely for alignment with POSIX.
 		 */
 		export enum ErrorCode {
+			
+			/**
+			 * Permission denied, similar to `EACCES` in POSIX.
+			 */
 			access = 'access',
+			
+			/**
+			 * Resource unavailable, or operation would block, similar to `EAGAIN` and `EWOULDBLOCK` in POSIX.
+			 */
 			wouldBlock = 'wouldBlock',
+			
+			/**
+			 * Connection already in progress, similar to `EALREADY` in POSIX.
+			 */
 			already = 'already',
+			
+			/**
+			 * Bad descriptor, similar to `EBADF` in POSIX.
+			 */
 			badDescriptor = 'badDescriptor',
+			
+			/**
+			 * Device or resource busy, similar to `EBUSY` in POSIX.
+			 */
 			busy = 'busy',
+			
+			/**
+			 * Resource deadlock would occur, similar to `EDEADLK` in POSIX.
+			 */
 			deadlock = 'deadlock',
+			
+			/**
+			 * Storage quota exceeded, similar to `EDQUOT` in POSIX.
+			 */
 			quota = 'quota',
+			
+			/**
+			 * File exists, similar to `EEXIST` in POSIX.
+			 */
 			exist = 'exist',
+			
+			/**
+			 * File too large, similar to `EFBIG` in POSIX.
+			 */
 			fileTooLarge = 'fileTooLarge',
+			
+			/**
+			 * Illegal byte sequence, similar to `EILSEQ` in POSIX.
+			 */
 			illegalByteSequence = 'illegalByteSequence',
+			
+			/**
+			 * Operation in progress, similar to `EINPROGRESS` in POSIX.
+			 */
 			inProgress = 'inProgress',
+			
+			/**
+			 * Interrupted function, similar to `EINTR` in POSIX.
+			 */
 			interrupted = 'interrupted',
+			
+			/**
+			 * Invalid argument, similar to `EINVAL` in POSIX.
+			 */
 			invalid = 'invalid',
+			
+			/**
+			 * I/O error, similar to `EIO` in POSIX.
+			 */
 			io = 'io',
+			
+			/**
+			 * Is a directory, similar to `EISDIR` in POSIX.
+			 */
 			isDirectory = 'isDirectory',
+			
+			/**
+			 * Too many levels of symbolic links, similar to `ELOOP` in POSIX.
+			 */
 			loop = 'loop',
+			
+			/**
+			 * Too many links, similar to `EMLINK` in POSIX.
+			 */
 			tooManyLinks = 'tooManyLinks',
+			
+			/**
+			 * Message too large, similar to `EMSGSIZE` in POSIX.
+			 */
 			messageSize = 'messageSize',
+			
+			/**
+			 * Filename too long, similar to `ENAMETOOLONG` in POSIX.
+			 */
 			nameTooLong = 'nameTooLong',
+			
+			/**
+			 * No such device, similar to `ENODEV` in POSIX.
+			 */
 			noDevice = 'noDevice',
+			
+			/**
+			 * No such file or directory, similar to `ENOENT` in POSIX.
+			 */
 			noEntry = 'noEntry',
+			
+			/**
+			 * No locks available, similar to `ENOLCK` in POSIX.
+			 */
 			noLock = 'noLock',
+			
+			/**
+			 * Not enough space, similar to `ENOMEM` in POSIX.
+			 */
 			insufficientMemory = 'insufficientMemory',
+			
+			/**
+			 * No space left on device, similar to `ENOSPC` in POSIX.
+			 */
 			insufficientSpace = 'insufficientSpace',
+			
+			/**
+			 * Not a directory or a symbolic link to a directory, similar to `ENOTDIR` in POSIX.
+			 */
 			notDirectory = 'notDirectory',
+			
+			/**
+			 * Directory not empty, similar to `ENOTEMPTY` in POSIX.
+			 */
 			notEmpty = 'notEmpty',
+			
+			/**
+			 * State not recoverable, similar to `ENOTRECOVERABLE` in POSIX.
+			 */
 			notRecoverable = 'notRecoverable',
+			
+			/**
+			 * Not supported, similar to `ENOTSUP` and `ENOSYS` in POSIX.
+			 */
 			unsupported = 'unsupported',
+			
+			/**
+			 * Inappropriate I/O control operation, similar to `ENOTTY` in POSIX.
+			 */
 			noTty = 'noTty',
+			
+			/**
+			 * No such device or address, similar to `ENXIO` in POSIX.
+			 */
 			noSuchDevice = 'noSuchDevice',
+			
+			/**
+			 * Value too large to be stored in data type, similar to `EOVERFLOW` in POSIX.
+			 */
 			overflow = 'overflow',
+			
+			/**
+			 * Operation not permitted, similar to `EPERM` in POSIX.
+			 */
 			notPermitted = 'notPermitted',
+			
+			/**
+			 * Broken pipe, similar to `EPIPE` in POSIX.
+			 */
 			pipe = 'pipe',
+			
+			/**
+			 * Read-only file system, similar to `EROFS` in POSIX.
+			 */
 			readOnly = 'readOnly',
+			
+			/**
+			 * Invalid seek, similar to `ESPIPE` in POSIX.
+			 */
 			invalidSeek = 'invalidSeek',
+			
+			/**
+			 * Text file busy, similar to `ETXTBSY` in POSIX.
+			 */
 			textFileBusy = 'textFileBusy',
+			
+			/**
+			 * Cross-device link, similar to `EXDEV` in POSIX.
+			 */
 			crossDevice = 'crossDevice',
 		}
 		
@@ -502,11 +616,41 @@ export namespace filesystem {
 		 * File or memory access pattern advisory information.
 		 */
 		export enum Advice {
+			
+			/**
+			 * The application has no advice to give on its behavior with respect
+			 * to the specified data.
+			 */
 			normal = 'normal',
+			
+			/**
+			 * The application expects to access the specified data sequentially
+			 * from lower offsets to higher offsets.
+			 */
 			sequential = 'sequential',
+			
+			/**
+			 * The application expects to access the specified data in a random
+			 * order.
+			 */
 			random = 'random',
+			
+			/**
+			 * The application expects to access the specified data in the near
+			 * future.
+			 */
 			willNeed = 'willNeed',
+			
+			/**
+			 * The application expects that it will not access the specified data
+			 * in the near future.
+			 */
 			dontNeed = 'dontNeed',
+			
+			/**
+			 * The application expects to access the specified data once and then
+			 * not reuse it thereafter.
+			 */
 			noReuse = 'noReuse',
 		}
 		
@@ -1073,10 +1217,10 @@ export namespace filesystem {
 		export const Datetime = clocks.WallClock.$.Datetime;
 		export const Filesize = $wcm.u64;
 		export const DescriptorType = new $wcm.EnumType<filesystem.Types.DescriptorType>(['unknown', 'blockDevice', 'characterDevice', 'directory', 'fifo', 'symbolicLink', 'regularFile', 'socket']);
-		export const DescriptorFlags = new $wcm.FlagsType<filesystem.Types.DescriptorFlags>(6, { kind: $wcm.FlagsStorageKind.Single, type: $wcm.u8, create: filesystem.Types.DescriptorFlags.create, value: filesystem.Types.DescriptorFlags.value as $wcm.SingleFlagsValueFunc });
-		export const PathFlags = new $wcm.FlagsType<filesystem.Types.PathFlags>(1, { kind: $wcm.FlagsStorageKind.Single, type: $wcm.u8, create: filesystem.Types.PathFlags.create, value: filesystem.Types.PathFlags.value as $wcm.SingleFlagsValueFunc });
-		export const OpenFlags = new $wcm.FlagsType<filesystem.Types.OpenFlags>(4, { kind: $wcm.FlagsStorageKind.Single, type: $wcm.u8, create: filesystem.Types.OpenFlags.create, value: filesystem.Types.OpenFlags.value as $wcm.SingleFlagsValueFunc });
-		export const Modes = new $wcm.FlagsType<filesystem.Types.Modes>(3, { kind: $wcm.FlagsStorageKind.Single, type: $wcm.u8, create: filesystem.Types.Modes.create, value: filesystem.Types.Modes.value as $wcm.SingleFlagsValueFunc });
+		export const DescriptorFlags = new $wcm.FlagsType<filesystem.Types.DescriptorFlags>(6);
+		export const PathFlags = new $wcm.FlagsType<filesystem.Types.PathFlags>(1);
+		export const OpenFlags = new $wcm.FlagsType<filesystem.Types.OpenFlags>(4);
+		export const Modes = new $wcm.FlagsType<filesystem.Types.Modes>(3);
 		export const AccessType = new $wcm.VariantType<filesystem.Types.AccessType, filesystem.Types.AccessType._tt, filesystem.Types.AccessType._vt>([['access', Modes], ['exists', undefined]], filesystem.Types.AccessType._ctor);
 		export const LinkCount = $wcm.u64;
 		export const DescriptorStat = new $wcm.RecordType<filesystem.Types.DescriptorStat>([

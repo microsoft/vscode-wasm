@@ -1195,100 +1195,43 @@ export class TupleType<T extends JTuple> extends BaseRecordType<T, TupleField> {
 	}
 }
 
-export interface JFlags {
-}
+export class FlagsType<_T> implements ComponentModelType<u32 | bigint> {
 
-interface FlagField {
-	readonly name: string;
-	readonly index: number;
-	readonly mask: u32;
-}
-
-export namespace FlagField {
-	export function create(name: string, index: number, mask: u32): FlagField {
-		return { name, index, mask };
-	}
-}
-
-export enum FlagsStorageKind {
-	Empty,
-	Single,
-	Array
-}
-
-
-interface EmptyFlagsInfo {
-	readonly kind: FlagsStorageKind.Empty;
-	readonly create: () => JFlags;
-}
-
-interface SingleFlags {
-	readonly kind: FlagsStorageKind.Single;
-	readonly type: typeof u8 | typeof u16 | typeof u32;
-	readonly create: (bits?: u8 | u16 | u32) => JFlags;
-	readonly value: (flags: JFlags) => u8 | u16 | u32;
-}
-export type SingleFlagsValueFunc = (flags: JFlags) => u8 | u16 | u32;
-
-interface ArrayFlags {
-	readonly kind: FlagsStorageKind.Array;
-	readonly length: number;
-	readonly type: typeof u32;
-	readonly create: (bits?: u32[]) => JFlags;
-	readonly value: (flags: JFlags) => u32[];
-}
-export type ArrayFlagsValueFunc = (flags: JFlags) => u32[];
-
-type FlagsInfo = EmptyFlagsInfo | SingleFlags | ArrayFlags;
-
-export type flags<K extends keyof any> = Record<K, boolean> & JFlags;
-export class FlagsType<T extends JFlags> implements ComponentModelType<T> {
-
-	private readonly flagsInfo: FlagsInfo;
+	private readonly type: GenericComponentModelType | undefined;
+	private readonly arraySize: number;
 
 	public readonly kind: ComponentModelTypeKind;
 	public readonly size: size;
 	public readonly alignment: alignment;
 	public readonly flatTypes: readonly wasmTypeName[];
 
-	constructor(numberOfFlags: number,  info: FlagsInfo) {
-		this.flagsInfo = info;
+	constructor(numberOfFlags: number) {
 		this.kind = ComponentModelTypeKind.flags;
 		this.size = FlagsType.size(numberOfFlags);
 		this.alignment = FlagsType.alignment(numberOfFlags);
 		this.flatTypes = FlagsType.flatTypes(numberOfFlags);
+		this.type = FlagsType.getType(numberOfFlags);
+		this.arraySize = FlagsType.num32Flags(numberOfFlags);
 	}
 
-	public load(memory: Memory, ptr: ptr<u8 | u16 | u32 | u32[]>, options: Options): T {
-		switch (this.flagsInfo.kind) {
-			case FlagsStorageKind.Empty:
-				return this.flagsInfo.create() as T;
-			case FlagsStorageKind.Single:
-				return this.flagsInfo.create(this.flagsInfo.type.load(memory, ptr, options)) as T;
-			case FlagsStorageKind.Array:
-				const bits: u32[] = new Array(this.flagsInfo.length);
-				const type = this.flagsInfo.type;
-				for (let i = 0; i < bits.length; i++) {
-					bits[i] = type.load(memory, ptr, options);
-					ptr += type.size;
-				}
-				return this.flagsInfo.create(bits) as T;
-		}
+	public load(memory: Memory, ptr: ptr<u8 | u16 | u32 | u32[]>, options: Options): u32 | bigint {
+		return this.type === undefined ? 0 : this.loadFrom(this.type.load(memory, ptr, options));
 	}
 
-	public liftFlat(_memory: Memory, values: FlatValuesIter, options: Options): T {
-		switch (this.flagsInfo.kind) {
-			case FlagsStorageKind.Empty:
-				return this.flagsInfo.create() as T;
-			case FlagsStorageKind.Single:
-				return this.flagsInfo.create(this.flagsInfo.type.liftFlat(_memory, values, options)) as T;
-			case FlagsStorageKind.Array:
-				const bits: i32[] = new Array(this.flagsInfo.length);
-				const type = this.flagsInfo.type;
-				for (let i = 0; i < bits.length; i++) {
-					bits[i] = type.liftFlat(_memory, values, options);
-				}
-				return this.flagsInfo.create(bits) as T;
+	public liftFlat(_memory: Memory, values: FlatValuesIter, options: Options): u32 | bigint {
+		return this.type === undefined ? 0 : this.loadFrom(this.type.liftFlat(_memory, values, options));
+	}
+
+	private loadFrom(value: u32 | u32[]): u32 | bigint {
+		if (typeof value === 'number') {
+			return value;
+		} else {
+			let result = 0n;
+			for (let f = 0, i = value.length - 1; f < value.length; f++, i--) {
+				const bits = value[i];
+				result = result | (BigInt(bits) << BigInt(f * 32));
+			}
+			return result;
 		}
 	}
 
@@ -1296,70 +1239,77 @@ export class FlagsType<T extends JFlags> implements ComponentModelType<T> {
 		return memory.alloc(this.alignment, this.size);
 	}
 
-	public store(memory: Memory, ptr: ptr<u8 | u16 | u32 | u32[]>, flags: JFlags, options: Options): void {
-		switch (this.flagsInfo.kind) {
-			case FlagsStorageKind.Empty:
-				return;
-			case FlagsStorageKind.Single:
-				this.flagsInfo.type.store(memory, ptr, this.flagsInfo.value(flags), options);
-				break;
-			case FlagsStorageKind.Array:
-				const type = this.flagsInfo.type;
-				for (const flag of this.flagsInfo.value(flags)) {
-					type.store(memory, ptr, flag, options);
-					ptr += type.size;
-				}
-				break;
+	public store(memory: Memory, ptr: ptr<u8 | u16 | u32 | u32[]>, flags: u32 | bigint, options: Options): void {
+		if (this.type !== undefined) {
+			this.type.store(memory, ptr, this.storeInto(flags), options);
 		}
 	}
 
-	public lowerFlat(result: wasmType[], _memory: Memory, flags: JFlags, options: Options): void {
-		switch (this.flagsInfo.kind) {
-			case FlagsStorageKind.Empty:
-				return;
-			case FlagsStorageKind.Single:
-				this.flagsInfo.type.lowerFlat(result, _memory, this.flagsInfo.value(flags), options);
-				break;
-			case FlagsStorageKind.Array:
-				const type = this.flagsInfo.type;
-				const values = this.flagsInfo.value(flags);
-				for (const flag of values) {
-					type.lowerFlat(result, _memory, flag, options);
-				}
-				break;
+	public lowerFlat(result: wasmType[], _memory: Memory, flags: u32 | bigint, options: Options): void {
+		if (this.type !== undefined) {
+			this.type.lowerFlat(result, _memory, this.storeInto(flags), options);
 		}
 	}
 
-	private static size(fields: number): size {
-		if (fields === 0) {
+	private storeInto(value: number | bigint): u32 | u32[] {
+		if (typeof value === 'number') {
+			return value;
+		} else {
+			const result: u32[] = new Array(this.arraySize).fill(0);
+			for (let f = 0, i = result.length - 1; f < result.length; f++, i--) {
+				const bits = Number((value >> BigInt(f * 32)) & BigInt(0xffffffff));
+				result[i] = bits;
+			}
+			return result;
+		}
+	}
+
+	private static size(numberOfFlags: number): size {
+		if (numberOfFlags === 0) {
 			return 0;
-		} else if (fields <= 8) {
+		} else if (numberOfFlags <= 8) {
 			return 1;
-		} else if (fields <= 16) {
+		} else if (numberOfFlags <= 16) {
 			return 2;
 		} else {
-			return 4 * this.num32Flags(fields);
+			return 4 * this.num32Flags(numberOfFlags);
 		}
 	}
 
-	private static alignment(fields: number): alignment {
-		if (fields <= 8) {
+	private static alignment(numberOfFlags: number): alignment {
+		if (numberOfFlags <= 8) {
 			return 1;
-		} else if (fields <= 16) {
+		} else if (numberOfFlags <= 16) {
 			return 2;
 		} else {
 			return 4;
 		}
 	}
 
-	private static flatTypes(fields: number): 'i32'[] {
-		return new Array(this.num32Flags(fields)).fill('i32');
+	private static getType(numberOfFlags: number): GenericComponentModelType | undefined {
+		if (numberOfFlags === 0) {
+			return undefined;
+		} else if (numberOfFlags <= 8) {
+			return u8;
+		} else if (numberOfFlags <= 16) {
+			return u16;
+		} else if (numberOfFlags <= 32) {
+			return u32;
+		} else {
+			return new TupleType(new Array(this.num32Flags(numberOfFlags)).fill(u32));
+		}
 	}
 
-	private static num32Flags(fields: number): number {
-		return Math.ceil(fields / 32);
+	private static flatTypes(numberOfFlags: number): 'i32'[] {
+		return new Array(this.num32Flags(numberOfFlags)).fill('i32');
+	}
+
+	private static num32Flags(numberOfFlags: number): number {
+		return Math.ceil(numberOfFlags / 32);
 	}
 }
+
+
 
 interface VariantCase {
 	readonly index: u32;
@@ -1871,7 +1821,7 @@ export class ResultType<O extends JType | void, E extends JType | void = void> e
 	}
 }
 
-export type JType = number | bigint | string | boolean | JArray | JRecord | JVariantCase | JFlags | JTuple | JEnum | option<any> | undefined | result<any, any> | Int8Array | Int16Array | Int32Array | BigInt64Array | Uint8Array | Uint16Array | Uint32Array | BigUint64Array | Float32Array | Float64Array;
+export type JType = number | bigint | string | boolean | JArray | JRecord | JVariantCase | JTuple | JEnum | option<any> | undefined | result<any, any> | Int8Array | Int16Array | Int32Array | BigInt64Array | Uint8Array | Uint16Array | Uint32Array | BigUint64Array | Float32Array | Float64Array;
 
 export type CallableParameter = [/* name */string, /* type */GenericComponentModelType];
 
@@ -2089,7 +2039,7 @@ export interface Context {
 	readonly options: Options;
 }
 
-type UnionJType = number & bigint & string & boolean & JArray & JRecord & JVariantCase & JFlags & JTuple & JEnum & option<any> & undefined & result<any, any> & Int8Array & Int16Array & Int32Array & BigInt64Array & Uint8Array & Uint16Array & Uint32Array & BigUint64Array & Float32Array & Float64Array;
+type UnionJType = number & bigint & string & boolean & JArray & JRecord & JVariantCase & JTuple & JEnum & option<any> & undefined & result<any, any> & Int8Array & Int16Array & Int32Array & BigInt64Array & Uint8Array & Uint16Array & Uint32Array & BigUint64Array & Float32Array & Float64Array;
 
 type UnionWasmType = number & bigint;
 type ParamWasmFunction = (...params: UnionWasmType[]) => wasmType | void;

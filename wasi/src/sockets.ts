@@ -31,42 +31,186 @@ export namespace sockets {
 		 * See each individual API for what the POSIX equivalents are. They sometimes differ per API.
 		 */
 		export enum ErrorCode {
+			
+			/**
+			 * Unknown error
+			 */
 			unknown = 'unknown',
+			
+			/**
+			 * Access denied.
+			 * 
+			 * POSIX equivalent: EACCES, EPERM
+			 */
 			accessDenied = 'accessDenied',
+			
+			/**
+			 * The operation is not supported.
+			 * 
+			 * POSIX equivalent: EOPNOTSUPP
+			 */
 			notSupported = 'notSupported',
+			
+			/**
+			 * Not enough memory to complete the operation.
+			 * 
+			 * POSIX equivalent: ENOMEM, ENOBUFS, EAI_MEMORY
+			 */
 			outOfMemory = 'outOfMemory',
+			
+			/**
+			 * The operation timed out before it could finish completely.
+			 */
 			timeout = 'timeout',
+			
+			/**
+			 * This operation is incompatible with another asynchronous operation that is already in progress.
+			 */
 			concurrencyConflict = 'concurrencyConflict',
+			
+			/**
+			 * Trying to finish an asynchronous operation that:
+			 * - has not been started yet, or:
+			 * - was already finished by a previous `finish-*` call.
+			 * 
+			 * Note: this is scheduled to be removed when `future`s are natively supported.
+			 */
 			notInProgress = 'notInProgress',
+			
+			/**
+			 * The operation has been aborted because it could not be completed immediately.
+			 * 
+			 * Note: this is scheduled to be removed when `future`s are natively supported.
+			 */
 			wouldBlock = 'wouldBlock',
+			
+			/**
+			 * The specified address-family is not supported.
+			 */
 			addressFamilyNotSupported = 'addressFamilyNotSupported',
+			
+			/**
+			 * An IPv4 address was passed to an IPv6 resource, or vice versa.
+			 */
 			addressFamilyMismatch = 'addressFamilyMismatch',
+			
+			/**
+			 * The socket address is not a valid remote address. E.g. the IP address is set to INADDR_ANY, or the port is set to 0.
+			 */
 			invalidRemoteAddress = 'invalidRemoteAddress',
+			
+			/**
+			 * The operation is only supported on IPv4 resources.
+			 */
 			ipv4OnlyOperation = 'ipv4OnlyOperation',
+			
+			/**
+			 * The operation is only supported on IPv6 resources.
+			 */
 			ipv6OnlyOperation = 'ipv6OnlyOperation',
+			
+			/**
+			 * A new socket resource could not be created because of a system limit.
+			 */
 			newSocketLimit = 'newSocketLimit',
+			
+			/**
+			 * The socket is already attached to another network.
+			 */
 			alreadyAttached = 'alreadyAttached',
+			
+			/**
+			 * The socket is already bound.
+			 */
 			alreadyBound = 'alreadyBound',
+			
+			/**
+			 * The socket is already in the Connection state.
+			 */
 			alreadyConnected = 'alreadyConnected',
+			
+			/**
+			 * The socket is not bound to any local address.
+			 */
 			notBound = 'notBound',
+			
+			/**
+			 * The socket is not in the Connection state.
+			 */
 			notConnected = 'notConnected',
+			
+			/**
+			 * A bind operation failed because the provided address is not an address that the `network` can bind to.
+			 */
 			addressNotBindable = 'addressNotBindable',
+			
+			/**
+			 * A bind operation failed because the provided address is already in use.
+			 */
 			addressInUse = 'addressInUse',
+			
+			/**
+			 * A bind operation failed because there are no ephemeral ports available.
+			 */
 			ephemeralPortsExhausted = 'ephemeralPortsExhausted',
+			
+			/**
+			 * The remote address is not reachable
+			 */
 			remoteUnreachable = 'remoteUnreachable',
+			
+			/**
+			 * The socket is already in the Listener state.
+			 */
 			alreadyListening = 'alreadyListening',
+			
+			/**
+			 * The socket is already in the Listener state.
+			 */
 			notListening = 'notListening',
+			
+			/**
+			 * The connection was forcefully rejected
+			 */
 			connectionRefused = 'connectionRefused',
+			
+			/**
+			 * The connection was reset.
+			 */
 			connectionReset = 'connectionReset',
 			datagramTooLarge = 'datagramTooLarge',
+			
+			/**
+			 * The provided name is a syntactically invalid domain name.
+			 */
 			invalidName = 'invalidName',
+			
+			/**
+			 * Name does not exist or has no suitable associated IP addresses.
+			 */
 			nameUnresolvable = 'nameUnresolvable',
+			
+			/**
+			 * A temporary failure in name resolution occurred.
+			 */
 			temporaryResolverFailure = 'temporaryResolverFailure',
+			
+			/**
+			 * A permanent failure in name resolution occurred.
+			 */
 			permanentResolverFailure = 'permanentResolverFailure',
 		}
 		
 		export enum IpAddressFamily {
+			
+			/**
+			 * Similar to `AF_INET` in POSIX.
+			 */
 			ipv4 = 'ipv4',
+			
+			/**
+			 * Similar to `AF_INET6` in POSIX.
+			 */
 			ipv6 = 'ipv6',
 		}
 		
@@ -292,8 +436,20 @@ export namespace sockets {
 		export type IpAddressFamily = sockets.Network.IpAddressFamily;
 		
 		export enum ShutdownType {
+			
+			/**
+			 * Similar to `SHUT_RD` in POSIX.
+			 */
 			receive = 'receive',
+			
+			/**
+			 * Similar to `SHUT_WR` in POSIX.
+			 */
 			send = 'send',
+			
+			/**
+			 * Similar to `SHUT_RDWR` in POSIX.
+			 */
 			both = 'both',
 		}
 		

@@ -17,11 +17,38 @@ export namespace logging {
 		 * A log level, describing a kind of message.
 		 */
 		export enum Level {
+			
+			/**
+			 * Describes messages about the values of variables and the flow of
+			 * control within a program.
+			 */
 			trace = 'trace',
+			
+			/**
+			 * Describes messages likely to be of interest to someone debugging a
+			 * program.
+			 */
 			debug = 'debug',
+			
+			/**
+			 * Describes messages likely to be of interest to someone monitoring a
+			 * program.
+			 */
 			info = 'info',
+			
+			/**
+			 * Describes messages indicating hazardous situations.
+			 */
 			warn = 'warn',
+			
+			/**
+			 * Describes messages indicating serious errors.
+			 */
 			error = 'error',
+			
+			/**
+			 * Describes messages indicating fatal errors.
+			 */
 			critical = 'critical',
 		}
 		

@@ -104,11 +104,11 @@ const serviceImpl: Types = {
 		}
 	},
 	checkFlagsShort(value) {
-		value.six = true;
+		value = value | TestFlagsShort.six;
 		return value;
 	},
 	checkFlagsLong(value) {
-		value.thirtyNine = true;
+		value =  value | TestFlagsLong.thirtyNine;
 		return value;
 	},
 };
@@ -220,17 +220,15 @@ suite('flags', () => {
 	const host: Types._.WasmInterface = Types._.createHost(serviceImpl, context);
 	const service: Types = Types._.createService(host, context);
 	test('short', () => {
-		const flags = TestFlagsShort.create();
-		flags.one = true;
+		const flags: TestFlagsShort = TestFlagsShort.one;
 		const returned = service.checkFlagsShort(flags);
-		assert.strictEqual(returned.one, true, 'one');
-		assert.strictEqual(returned.six, true, 'six');
+		assert.strictEqual((returned & TestFlagsShort.one) !== 0, true, 'one');
+		assert.strictEqual((returned & TestFlagsShort.six) !== 0, true, 'six');
 	});
 	test('long', () => {
-		const flags = TestFlagsLong.create();
-		flags.one = true;
+		const flags:TestFlagsLong = TestFlagsLong.one;
 		const returned = service.checkFlagsLong(flags);
-		assert.strictEqual(returned.one, true, 'one');
-		assert.strictEqual(returned.thirtyNine, true, 'thirty nine');
+		assert.strictEqual((returned & TestFlagsLong.one) !== 0n, true, 'one');
+		assert.strictEqual((returned & TestFlagsLong.thirtyNine) !== 0n, true, 'thirty nine');
 	});
 });
