@@ -3,6 +3,8 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
+import { NamespaceResourceType, borrow, own, result } from '../componentModel';
+
 export enum TestEnum2 {
 	a = 'a',
 	b = 'b',
@@ -93,3 +95,89 @@ export const DescriptorFlags = Object.freeze({
 	 */
 	mutateDirectory: 1 << 5
 });
+
+export type Types = {
+	Descriptor: {
+		constructor(path: string): Types.Descriptor;
+		readViaStream(self: borrow<Types.Descriptor>, offset: number): result<own<string>, number>;
+	};
+};
+
+type ArrayConstructor = {
+	new(arrayLength?: number): any[];
+	new <T>(arrayLength: number): T[];
+	new <T>(...items: T[]): T[];
+	(arrayLength?: number): any[];
+	<T>(arrayLength: number): T[];
+	<T>(...items: T[]): T[];
+	isArray(arg: any): arg is any[];
+	readonly prototype: any[];
+};
+declare var Array2: ArrayConstructor;
+
+new Array2();
+
+type ModuleFunction = (self: borrow<any>, ...args: any[]) => any;
+type RemoveFirstArg<F extends ModuleFunction> = F extends (self: borrow<any>, ...args: infer A) => infer R ? (...args: A) => R : never;
+type Module2Interface<T> = {
+	[F in keyof T as Exclude<F, 'constructor'>]: T[F] extends ModuleFunction ? RemoveFirstArg<T[F]> : never;
+};
+export namespace Types {
+	export namespace Descriptor {
+		export type Module = Types['Descriptor'];
+		export type Interface = Module2Interface<Types.Descriptor.Module>;
+		export type Constructor = {
+			new(path: string): Types.Descriptor.Interface;
+		};
+		export type readViaStream = (self: borrow<Descriptor>, offset: number) => result<own<string>, number>;
+	}
+	export type Descriptor = number;
+}
+
+namespace ClassAdapter {
+	export function create<M, I>
+}
+
+
+let z: Types.Descriptor.Interface = {} as any;
+z.readViaStream(1);
+
+class D implements Module2Interface<Types.Descriptor.Module> {
+	constructor(path: string) {
+	}
+	readViaStream(offset: number): result<string, number> {
+		throw new Error('Method not implemented.');
+	}
+}
+
+let d: Types.Descriptor.Constructor = D;
+new d('foo');
+
+type X = {
+	foo: number;
+	bar: (a: number) => string;
+};
+
+class Y implements X {
+	foo = 1;
+	bar(a: number) {
+		return '';
+	}
+}
+
+
+declare class XX {
+	constructor(s: string);
+	foo: number;
+	bar(a: number): string;
+}
+
+class YY implements XX {
+	constructor() {
+
+	}
+	foo = 1;
+	bar(a: number) {
+		return '';
+	}
+}
