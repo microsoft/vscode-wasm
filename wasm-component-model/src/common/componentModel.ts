@@ -10,6 +10,12 @@ export class ComponentModelError extends Error {
 	}
 }
 
+type ModuleFunction = (self: borrow<any>, ...args: any[]) => any;
+type RemoveFirstArg<F extends ModuleFunction> = F extends (self: borrow<any>, ...args: infer A) => infer R ? (...args: A) => R : never;
+export type Module2Interface<T> = {
+	[F in keyof T as Exclude<F, 'constructor'>]: T[F] extends ModuleFunction ? RemoveFirstArg<T[F]> : never;
+};
+
 namespace BigInts {
 	const MAX_VALUE_AS_BIGINT = BigInt(Number.MAX_VALUE);
 	export function asNumber(value: bigint): number {

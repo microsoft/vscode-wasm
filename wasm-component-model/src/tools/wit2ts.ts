@@ -1216,16 +1216,17 @@ namespace TypeScript {
 		}
 
 		private processInterface(iface: Interface, qualifier: string, code: Code, printers: Printers): void {
-			const typeCode = new Code(code);
 			const name = this.nameProvider.asNamespaceName(iface);
+			const typeCode = new Code(code);
+			typeCode.push(`export type ${name} = {`);
+			typeCode.increaseIndent();
+
 			const metaModelEmitters: MetaModel.Emitter[] = [];
 			this.metaModelEmitters.set(name, metaModelEmitters);
 
 			emitDocumentation(iface, code);
 			code.push(`export namespace ${name} {`);
 			code.increaseIndent();
-			typeCode.push(`export type ${name} = {`);
-			typeCode.increaseIndent();
 			code.push(`export const id = '${this.pkg.name}/${iface.name}' as const;`);
 			const exports: string[] = [];
 			for (const t of Object.values(iface.types)) {
@@ -1541,16 +1542,13 @@ namespace TypeScript {
 			const tsName = this.nameProvider.asTypeName(type);
 			const methods = this.symbols.getMethods(type);
 			const metaModelEmitters: MetaModel.FunctionEmitter[] = [];
-			if (methods === undefined || methods.length === 0) {
-				this.namespaceCode.imports.addBaseType('resource');
-				this.namespaceCode.push(`export type ${tsName} = resource;`);
-			} else {
-				this.namespaceCode.imports.addBaseType('resource');
+			if (methods !== undefined && methods.length >= 0) {
 				this.namespaceCode.push(`export namespace ${tsName} {`);
-				this.typeCode.push(`${tsName}: {`);
-				this.typeCode.increaseIndent();
+				this.namespaceCode.increaseIndent();
+				this.namespaceCode.push('export type Module = {');
 				this.namespaceCode.increaseIndent();
 				const localQualifier = this.computeLocalQualifier(type);
+				const constructors: Constructor[] = [];
 				for (const method of methods) {
 					this.namespaceCode.push('');
 					let emitter: MethodEmitter | StaticMethodEmitter | ConstructorEmitter;
@@ -1559,6 +1557,7 @@ namespace TypeScript {
 					} else if (Callable.isStaticMethod(method)) {
 						emitter = new StaticMethodEmitter(tsName, method, this.qualifier, localQualifier, this.namespaceCode, this.typeCode, this.printers, this.nameProvider, this.options);
 					} else if (Callable.isConstructor(method)) {
+						constructors.push(method);
 						emitter = new ConstructorEmitter(tsName, method, this.qualifier, localQualifier, this.namespaceCode, this.typeCode, this.printers, this.nameProvider, this.options);
 					} else {
 						throw new Error(`Unexpected callable ${JSON.stringify(method)}.`);
@@ -1568,12 +1567,28 @@ namespace TypeScript {
 						metaModelEmitters.push(emitter.metaModelEmitter);
 					}
 				}
-				this.typeCode.decreaseIndent();
-				this.typeCode.push(`};`);
+				this.namespaceCode.decreaseIndent();
+				this.namespaceCode.push(`};`);
+				this.namespaceCode.push(`export type Interface = $wcm.Module2Interface<Module>;`);
+				if (constructors.length > 0) {
+					this.namespaceCode.push(`export type Constructor = {`);
+					this.namespaceCode.increaseIndent();
+					for (const constructor of constructors) {
+						const params: string[] = [];
+						for (const param of constructor.params) {
+							const paramName = this.nameProvider.asParameterName(param);
+							params.push(`${paramName}: ${this.printers.typeScript.printTypeReference(param.type, TypeUsage.parameter)}`);
+						}
+						this.namespaceCode.push(`new(${params.join(', ')}): Interface;`);
+					}
+					this.namespaceCode.decreaseIndent();
+					this.namespaceCode.push(`};`);
+				}
 				this.namespaceCode.decreaseIndent();
 				this.namespaceCode.push(`}`);
-				this.namespaceCode.push(`export type ${tsName} = resource;`);
 			}
+			this.namespaceCode.imports.addBaseType('resource');
+			this.namespaceCode.push(`export type ${tsName} = resource;`);
 			this.metaModelEmitter = new MetaModel.NamespaceResourceEmitter(tsName, type.name!, metaModelEmitters);
 		}
 
@@ -1686,14 +1701,12 @@ namespace TypeScript {
 
 		private readonly resourceName: string;
 		private readonly method: Method;
-		private readonly typeCode: Code;
 		private readonly options: ResolvedOptions;
 
-		constructor(resourceName: string, method: Method, rootQualifier: string, qualifier: string, code: Code, typeCode: Code, printers: Printers, nameProvider: NameProvider, options: ResolvedOptions) {
+		constructor(resourceName: string, method: Method, rootQualifier: string, qualifier: string, code: Code, _typeCode: Code, printers: Printers, nameProvider: NameProvider, options: ResolvedOptions) {
 			super(method, rootQualifier, qualifier, code, printers, nameProvider);
 			this.resourceName = resourceName;
 			this.method = method;
-			this.typeCode = typeCode;
 			this.options = options;
 		}
 
@@ -1703,8 +1716,7 @@ namespace TypeScript {
 			}
 			const methodName = this.nameProvider.asMethodName(this.method);
 			if (this.options.resourceStyle === 'module') {
-				this.code.push(`export type ${methodName} = (${params.join(', ')}) => ${returnType};`);
-				this.typeCode.push(`${methodName}: ${this.qualifier}.${methodName};`);
+				this.code.push(`${methodName}(${params.join(', ')}): ${returnType};`);
 				return new MetaModel.ResourceFunctionEmitter(this.resourceName, `${this.rootQualifier}.${this.resourceName}.${methodName}`, methodName, this.callable.name, metaData, metaReturnType);
 			} else if (this.options.resourceStyle === 'class') {
 				throw new Error(`Unknown resource style ${this.options.resourceStyle}.`);
@@ -1718,14 +1730,12 @@ namespace TypeScript {
 
 		private readonly resourceName: string;
 		private readonly method: StaticMethod;
-		private readonly typeCode: Code;
 		private readonly options: ResolvedOptions;
 
-		constructor(resourceName: string, method: StaticMethod, rootQualifier: string, qualifier: string, code: Code, typeCode: Code, printers: Printers, nameProvider: NameProvider, options: ResolvedOptions) {
+		constructor(resourceName: string, method: StaticMethod, rootQualifier: string, qualifier: string, code: Code, _typeCode: Code, printers: Printers, nameProvider: NameProvider, options: ResolvedOptions) {
 			super(method, rootQualifier, qualifier, code, printers, nameProvider);
 			this.resourceName = resourceName;
 			this.method = method;
-			this.typeCode = typeCode;
 			this.options = options;
 		}
 
@@ -1735,8 +1745,7 @@ namespace TypeScript {
 			}
 			const methodName = this.nameProvider.asStaticMethodName(this.method);
 			if (this.options.resourceStyle === 'module') {
-				this.code.push(`export type ${methodName} = (${params.join(', ')}) => ${returnType};`);
-				this.typeCode.push(`${methodName}: ${this.qualifier}.${methodName};`);
+				this.code.push(`${methodName}(${params.join(', ')}): ${returnType};`);
 				return new MetaModel.ResourceFunctionEmitter(this.resourceName, `${this.rootQualifier}.${this.resourceName}.${methodName}`, methodName, this.callable.name, metaData, metaReturnType);
 			} else if (this.options.resourceStyle === 'class') {
 				throw new Error(`Unknown resource style ${this.options.resourceStyle}.`);
@@ -1750,14 +1759,12 @@ namespace TypeScript {
 
 		private readonly resourceName: string;
 		private readonly method: Constructor;
-		private readonly typeCode: Code;
 		private readonly options: ResolvedOptions;
 
-		constructor(resourceName: string, method: Constructor, rootQualifier: string, qualifier: string, code: Code, typeCode: Code, printers: Printers, nameProvider: NameProvider, options: ResolvedOptions) {
+		constructor(resourceName: string, method: Constructor, rootQualifier: string, qualifier: string, code: Code, _typeCode: Code, printers: Printers, nameProvider: NameProvider, options: ResolvedOptions) {
 			super(method, rootQualifier, qualifier, code, printers, nameProvider);
 			this.resourceName = resourceName;
 			this.method = method;
-			this.typeCode = typeCode;
 			this.options = options;
 		}
 
@@ -1767,8 +1774,7 @@ namespace TypeScript {
 			}
 			const methodName = this.nameProvider.asConstructorName(this.method);
 			if (this.options.resourceStyle === 'module') {
-				this.code.push(`export type ${methodName} = (${params.join(', ')}) => ${returnType};`);
-				this.typeCode.push(`${methodName}: ${this.qualifier}.${methodName};`);
+				this.code.push(`${methodName}(${params.join(', ')}): ${returnType};`);
 				return new MetaModel.ResourceFunctionEmitter(this.resourceName, `${this.rootQualifier}.${this.resourceName}.${methodName}`, methodName, this.callable.name, metaData, metaReturnType);
 			} else if (this.options.resourceStyle === 'class') {
 				throw new Error(`Unknown resource style ${this.options.resourceStyle}.`);
