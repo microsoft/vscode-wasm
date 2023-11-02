@@ -3,7 +3,7 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { NamespaceResourceType, borrow, own, result } from '../componentModel';
+import { borrow, i32, i64, own, ptr, result } from '../componentModel';
 
 export enum TestEnum2 {
 	a = 'a',
@@ -96,13 +96,6 @@ export const DescriptorFlags = Object.freeze({
 	mutateDirectory: 1 << 5
 });
 
-export type Types = {
-	Descriptor: {
-		constructor(path: string): Types.Descriptor;
-		readViaStream(self: borrow<Types.Descriptor>, offset: number): result<own<string>, number>;
-	};
-};
-
 type ArrayConstructor = {
 	new(arrayLength?: number): any[];
 	new <T>(arrayLength: number): T[];
@@ -124,7 +117,10 @@ type Module2Interface<T> = {
 };
 export namespace Types {
 	export namespace Descriptor {
-		export type Module = Types['Descriptor'];
+		export type Module = {
+			constructor(path: string): Types.Descriptor;
+			readViaStream(self: borrow<Types.Descriptor>, offset: number): result<own<string>, number>;
+		};
 		export type Interface = Module2Interface<Types.Descriptor.Module>;
 		export type Constructor = {
 			new(path: string): Types.Descriptor.Interface;
@@ -134,50 +130,61 @@ export namespace Types {
 	export type Descriptor = number;
 }
 
-namespace ClassAdapter {
-	export function create<M, I>
-}
-
-
-let z: Types.Descriptor.Interface = {} as any;
-z.readViaStream(1);
-
-class D implements Module2Interface<Types.Descriptor.Module> {
-	constructor(path: string) {
-	}
-	readViaStream(offset: number): result<string, number> {
-		throw new Error('Method not implemented.');
-	}
-}
-
-let d: Types.Descriptor.Constructor = D;
-new d('foo');
-
-type X = {
-	foo: number;
-	bar: (a: number) => string;
+export type Types<D extends Types.Descriptor.Module | Types.Descriptor.Constructor = Types.Descriptor.Module | Types.Descriptor.Constructor> = {
+	Descriptor: D;
 };
 
-class Y implements X {
-	foo = 1;
-	bar(a: number) {
-		return '';
+export namespace Types._ {
+	export type WasmInterface = {
+		'[method]descriptor.read-via-stream': (self: i32, offset: i64, result: ptr<[i32, i32]>) => void;
+	};
+	export function createService(wasmInterface: WasmInterface): Types {
+		return $wcm.Service.create<filesystem.Types>(functions, resources, wasmInterface, context);
+	}
+
+	export namespace Descriptor {
+		class Impl implements Types.Descriptor.Interface {
+
+			private readonly handle: number;
+			protected module!: Types.Descriptor.Module;
+
+			constructor(path: string) {
+				this.handle = this.module.constructor(path);
+			}
+
+			protected initialize(module: Types.Descriptor.Module): void {
+				this.module = module;
+			}
+
+			readViaStream(offset: number): result<own<string>, number> {
+				return this.module.readViaStream(this.handle, offset);
+			}
+		}
+
+		export function Module(_wasmInterface: WasmInterface): Types.Descriptor.Module {
+			return [] as any;
+		}
+		export function Class(wasmInterface: WasmInterface): Types.Descriptor.Constructor {
+			return class extends Impl {
+				constructor(path: string) {
+					super(path);
+					this.initialize(Module(wasmInterface));
+				}
+			};
+		}
 	}
 }
 
 
-declare class XX {
-	constructor(s: string);
-	foo: number;
-	bar(a: number): string;
+function createService<D extends Types.Descriptor.Module | Types.Descriptor.Constructor>(_descriptor: (wasmInterface: Types._.WasmInterface) => D): Types<D> {
+	return {} as any;
 }
 
-class YY implements XX {
-	constructor() {
+let moduleService = createService(Types._.Descriptor.Module);
+const handle = moduleService.Descriptor.constructor('foo');
+moduleService.Descriptor.readViaStream(handle, 1);
 
-	}
-	foo = 1;
-	bar(a: number) {
-		return '';
-	}
-}
+
+let classService = createService(Types._.Descriptor.Class);
+let descriptor = new classService.Descriptor('foo');
+descriptor.readViaStream(1);
