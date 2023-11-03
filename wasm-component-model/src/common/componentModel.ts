@@ -2045,7 +2045,7 @@ export class OwnType<_T extends resource> extends AbstractResourceType {
 	}
 }
 
-export class NamespaceResourceType extends AbstractResourceType {
+export class ResourceType extends AbstractResourceType {
 
 	public readonly name: string;
 	public readonly witName: string;
@@ -2063,15 +2063,14 @@ export class NamespaceResourceType extends AbstractResourceType {
 	}
 }
 
-export class ClassResourceType extends AbstractResourceType {
-	constructor() {
-		super(ComponentModelTypeKind.resource);
-	}
-}
-
 export interface Context {
 	readonly memory: Memory;
 	readonly options: Options;
+}
+
+export enum ResourceStyle {
+	module = 'module',
+	class = 'class'
 }
 
 type UnionJType = number & bigint & string & boolean & JArray & JRecord & JVariantCase & JTuple & JEnum & option<any> & undefined & result<any, any> & Int8Array & Int16Array & Int32Array & BigInt64Array & Uint8Array & Uint16Array & Uint32Array & BigUint64Array & Float32Array & Float64Array;
@@ -2083,19 +2082,20 @@ interface ParamWasmInterface {
 }
 
 type ParamServiceFunction = (...params: UnionJType[]) => JType | void;
-interface ParamServiceInterface {
-	readonly [key: string]: (ParamServiceFunction | ParamServiceInterface);
+type GenericConstructor<T> = new (...args: any[]) => T;
+interface ParamModuleInterface {
+	readonly [key: string]: (ParamServiceFunction | ParamModuleInterface | ResourceManager<any> | GenericConstructor<any>);
 }
 
 export type Host = ParamWasmInterface;
 export namespace Host {
-	export function create<T extends Host>(signatures: FunctionType<ServiceFunction>[], resources: NamespaceResourceType[], service: ParamServiceInterface, context: Context): T {
+	export function create<T extends Host>(signatures: FunctionType<ServiceFunction>[], resources: ResourceType[], service: ParamModuleInterface, context: Context): T {
 		const result: { [key: string]: WasmFunction }  = Object.create(null);
 		for (const signature of signatures) {
 			result[signature.witName] = createHostFunction(signature, service, context);
 		}
 		for (const resource of resources) {
-			const resourceInterface = service[resource.name] as ParamServiceInterface;
+			const resourceInterface = service[resource.name] as ParamModuleInterface;
 			for (const callable of resource.functions.values()) {
 				result[callable.witName] = createHostFunction(callable, resourceInterface, context);
 			}
@@ -2103,7 +2103,7 @@ export namespace Host {
 		return result as unknown as T;
 	}
 
-	function createHostFunction(func: FunctionType<ServiceFunction>, service: ParamServiceInterface, context: Context): WasmFunction {
+	function createHostFunction(func: FunctionType<ServiceFunction>, service: ParamModuleInterface, context: Context): WasmFunction {
 		const serviceFunction = service[func.name] as ServiceFunction;
 		return (...params: wasmType[]): number | bigint | void => {
 			return func.callService(params, serviceFunction, context.memory, context.options);
@@ -2114,10 +2114,10 @@ export namespace Host {
 interface WriteableServiceInterface {
 	[key: string]: (ServiceFunction | WriteableServiceInterface);
 }
-export type Service = ParamServiceInterface | {};
+export type Service = ParamModuleInterface | {};
 export namespace Service {
 
-	export function create<T extends Service>(signatures: FunctionType<Function>[], resources: NamespaceResourceType[], wasm: ParamWasmInterface, context: Context): T {
+	export function create<T extends Service>(signatures: FunctionType<Function>[], resources: ResourceType[], wasm: ParamWasmInterface, context: Context): T {
 		const result: WriteableServiceInterface  = Object.create(null);
 		for (const signature of signatures) {
 			result[signature.name] = createServiceFunction(signature, wasm, context);

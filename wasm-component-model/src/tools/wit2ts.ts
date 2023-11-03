@@ -689,7 +689,7 @@ namespace MetaModel {
 		}
 	}
 
-	export class NamespaceResourceEmitter implements Emitter {
+	export class ResourceEmitter implements Emitter {
 
 		public readonly name: string;
 		private readonly witName: string;
@@ -702,7 +702,7 @@ namespace MetaModel {
 		}
 
 		public emit(code: Code): void {
-			code.push(`export const ${this.name} = new $wcm.NamespaceResourceType('${this.name}', '${this.witName}');`);
+			code.push(`export const ${this.name} = new $wcm.ResourceType('${this.name}', '${this.witName}');`);
 		}
 	}
 
@@ -1100,11 +1100,15 @@ namespace TypeScript {
 			code.push(`export namespace ${pkgName} {`);
 			code.increaseIndent();
 
-			const interfaces: Map<string, Interface> = new Map();
+			const interfaces: Map<string, { iface: Interface; createHostEmitter: CreateHostEmitter; createServiceEmitter: CreateServiceEmitter}> = new Map();
 			for (const ref of Object.values(this.pkg.interfaces)) {
 				const iface = this.symbols.getInterface(ref);
-				interfaces.set(this.nameProvider.asNamespaceName(iface), iface);
-				this.processInterface(iface, pkgName, code, printers);
+				const name = this.nameProvider.asNamespaceName(iface);
+				const qualifiedName = this.symbols.interfaces.getFullyQualifiedName(iface);
+				const createHostEmitter: CreateHostEmitter = new CreateHostEmitter(qualifiedName);
+				const createServiceEmitter: CreateServiceEmitter = new CreateServiceEmitter(qualifiedName);
+				interfaces.set(name, { iface, createHostEmitter, createServiceEmitter });
+				this.processInterface(iface, pkgName, code, createHostEmitter, createServiceEmitter, printers);
 				code.push('');
 			}
 
@@ -1119,14 +1123,14 @@ namespace TypeScript {
 					code.push(`export namespace ${interfaceName}.$ {`);
 					code.increaseIndent();
 					const functions: string[] = [];
-					const namespaceResources: string[] = [];
+					const resources: string[] = [];
 					const resourceFunctionEmitters: MetaModel.AbstractFunctionEmitter[] = [];
 					for (const emitter of emitters) {
 						emitter.emit(code);
 						if (emitter instanceof MetaModel.FunctionEmitter) {
 							functions.push(emitter.name);
-						} else if (emitter instanceof MetaModel.NamespaceResourceEmitter) {
-							namespaceResources.push(emitter.name);
+						} else if (emitter instanceof MetaModel.ResourceEmitter) {
+							resources.push(emitter.name);
 							resourceFunctionEmitters.push(...emitter.functionEmitters);
 						}
 					}
@@ -1136,14 +1140,13 @@ namespace TypeScript {
 					code.decreaseIndent();
 					code.push('}');
 
-					const iface = interfaces.get(interfaceName)!;
+					const { iface, createHostEmitter, createServiceEmitter } = interfaces.get(interfaceName)!;
 					code.push(`export namespace ${interfaceName}._ {`);
 					if (this.hasFunctions(iface)) {
 						code.increaseIndent();
 
 						code.push(`const functions: ${MetaModel.qualifier}.FunctionType<${MetaModel.qualifier}.ServiceFunction>[] = [${functions.map(name => `$.${name}`).join(', ')}];`);
-						code.push(`const resources: ${MetaModel.qualifier}.NamespaceResourceType[] = [${namespaceResources.map(name => `$.${name}`).join(', ')}];`);
-						const ifaceName = this.symbols.interfaces.getFullyQualifiedName(iface);
+						code.push(`const resources: ${MetaModel.qualifier}.ResourceType[] = [${resources.map(name => `$.${name}`).join(', ')}];`);
 						code.push(`export type WasmInterface = {`);
 						code.increaseIndent();
 						const typeFlattener = new TypeFlattener(this.symbols, this.nameProvider, code.imports);
@@ -1167,16 +1170,8 @@ namespace TypeScript {
 						}
 						code.decreaseIndent();
 						code.push(`};`);
-						code.push(`export function createHost(service: ${ifaceName}, context: $wcm.Context): WasmInterface {`);
-						code.increaseIndent();
-						code.push(`return $wcm.Host.create<WasmInterface>(functions, resources, service, context);`);
-						code.decreaseIndent();
-						code.push(`}`);
-						code.push(`export function createService(wasmInterface: WasmInterface, context: $wcm.Context): ${ifaceName} {`);
-						code.increaseIndent();
-						code.push(`return $wcm.Service.create<${ifaceName}>(functions, resources, wasmInterface, context);`);
-						code.decreaseIndent();
-						code.push(`}`);
+						createHostEmitter.emit(code);
+						createServiceEmitter.emit(code);
 
 						code.decreaseIndent();
 					}
@@ -1215,12 +1210,12 @@ namespace TypeScript {
 			return false;
 		}
 
-		private processInterface(iface: Interface, qualifier: string, code: Code, printers: Printers): void {
+		private processInterface(iface: Interface, qualifier: string, code: Code, createHostEmitter: CreateHostEmitter, createServiceEmitter: CreateServiceEmitter, printers: Printers): void {
 			const name = this.nameProvider.asNamespaceName(iface);
 
 			const metaModelEmitters: MetaModel.Emitter[] = [];
 			this.metaModelEmitters.set(name, metaModelEmitters);
-			const typeDeclarationEmitter = new TypeDeclarationEmitter(name);
+			const typeDeclarationEmitter = new TypeDeclarationEmitter(name, createHostEmitter, createServiceEmitter);
 
 			emitDocumentation(iface, code);
 			code.push(`export namespace ${name} {`);
@@ -1254,9 +1249,9 @@ namespace TypeScript {
 				}
 				exports.push(this.nameProvider.asFunctionName(func));
 			}
-			typeDeclarationEmitter.emit(code);
 			code.decreaseIndent();
 			code.push(`}`);
+			typeDeclarationEmitter.emit(code);
 		}
 	}
 
@@ -1269,11 +1264,13 @@ namespace TypeScript {
 	class TypeDeclarationEmitter {
 
 		private readonly name: string;
+		private readonly createServiceEmitter: CreateServiceEmitter;
 		private readonly functions: string[];
 		private readonly resources: ResourceInfo[];
 
-		constructor(name: string) {
+		constructor(name: string, _createHostEmitter: CreateHostEmitter, createServiceEmitter: CreateServiceEmitter) {
 			this.name = name;
+			this.createServiceEmitter = createServiceEmitter;
 			this.functions = [];
 			this.resources = [];
 		}
@@ -1293,14 +1290,15 @@ namespace TypeScript {
 			for (const info of this.resources) {
 				const typeParamName = this.makeUniqueTypeParamName(info.name, used);
 				typeParamNames.push(typeParamName);
-				let typeParam = `${typeParamName} extends ${this.name}.${info.name}.Module`;
+				let typeParam = `${this.name}.${info.name}.Module`;
 				if (info.constructor) {
 					typeParam = `${typeParam} | ${this.name}.${info.name}.Constructor`;
 				}
 				if (info.manager) {
 					typeParam = `${typeParam} | ${this.name}.${info.name}.Manager`;
 				}
-				typeParams.push(typeParam);
+				typeParams.push(`${typeParamName} extends ${typeParam} = ${typeParam}`);
+				this.createServiceEmitter.addTypeParam(typeParamName, typeParam);
 			}
 			if (typeParams.length > 0) {
 				code.push(`export type ${this.name}<${typeParams.join(', ')}> = {`);
@@ -1344,6 +1342,59 @@ namespace TypeScript {
 				return name[0].toUpperCase();
 			} else {
 				return result.join('');
+			}
+		}
+	}
+
+	class CreateHostEmitter {
+		private readonly name: string;
+
+		constructor(name: string) {
+			this.name = name;
+		}
+
+		emit(code: Code): void {
+			code.push(`export function createHost(service: ${this.name}, context: $wcm.Context): WasmInterface {`);
+			code.increaseIndent();
+			code.push(`return $wcm.Host.create<WasmInterface>(functions, resources, service, context);`);
+			code.decreaseIndent();
+			code.push('}');
+		}
+	}
+
+	class CreateServiceEmitter {
+
+		private readonly returnType: string;
+		private readonly typeParams: Map<string, string>;
+
+		constructor(returnType: string) {
+			this.returnType = returnType;
+			this.typeParams = new Map();
+		}
+
+		public addTypeParam(name: string, type: string): void {
+			this.typeParams.set(name, type);
+		}
+
+		emit(code: Code): void {
+			if (this.typeParams.size === 0) {
+				code.push(`export function createService(wasmInterface: WasmInterface, context: $wcm.Context): ${this.returnType} {`);
+				code.increaseIndent();
+
+				code.decreaseIndent();
+				code.push(`}`);
+			} else {
+				code.push(`export function createService(wasmInterface: WasmInterface, context: $wcm.Context, style: $wcm.ResourceStyle.class): ${this.returnType};`);
+				code.push(`export function createService(wasmInterface: WasmInterface, context: $wcm.Context, style: $wcm.ResourceStyle.module): ${this.returnType};`);
+				const typeParams: string[] = [];
+				const params: string[] = [];
+				const returnTypeParams: string[] = [];
+				for (const [name, type] of this.typeParams) {
+					typeParams.push(`${name} extends ${type}`);
+					params.push(`${name.toLowerCase()}: ${name}`);
+					returnTypeParams.push(name);
+				}
+				code.push(`export function createService<${typeParams.join(', ')}>(wasmInterface: WasmInterface, context: $wcm.Context, ${params.join(', ')}): ${this.returnType}<${returnTypeParams.join(', ')}>;`);
 			}
 		}
 	}
@@ -1675,7 +1726,7 @@ namespace TypeScript {
 			}
 			this.code.imports.addBaseType('resource');
 			this.code.push(`export type ${tsName} = resource;`);
-			this.metaModelEmitter = new MetaModel.NamespaceResourceEmitter(tsName, type.name!, metaModelEmitters);
+			this.metaModelEmitter = new MetaModel.ResourceEmitter(tsName, type.name!, metaModelEmitters);
 		}
 
 		private computeLocalQualifier(type: ResourceType): string {
