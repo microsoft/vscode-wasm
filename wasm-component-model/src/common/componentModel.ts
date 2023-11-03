@@ -16,6 +16,35 @@ export type Module2Interface<T> = {
 	[F in keyof T as Exclude<F, 'constructor'>]: T[F] extends ModuleFunction ? RemoveFirstArg<T[F]> : never;
 };
 
+export class ResourceManager<T> {
+
+	private readonly resources: Map<resource, T>;
+
+	constructor() {
+		this.resources = new Map();
+	}
+
+	register(resource: resource, value: T): void {
+		this.resources.set(resource, value);
+	}
+
+	get(resource: resource): T {
+		const value = this.resources.get(resource);
+		if (value === undefined) {
+			throw new ComponentModelError(`Unknown resource ${resource}`);
+		}
+		return value;
+	}
+
+	has(resource: resource): boolean {
+		return this.resources.has(resource);
+	}
+
+	unregister(resource: resource): void {
+		this.resources.delete(resource);
+	}
+}
+
 namespace BigInts {
 	const MAX_VALUE_AS_BIGINT = BigInt(Number.MAX_VALUE);
 	export function asNumber(value: bigint): number {
