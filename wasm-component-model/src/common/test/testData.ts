@@ -212,7 +212,7 @@ export namespace testData {
 			['x', $wcm.u32],
 			['y', $wcm.u32],
 		]);
-		export const PointResource = new $wcm.NamespaceResourceType('PointResource', 'point-resource');
+		export const PointResource = new $wcm.ResourceType('PointResource', 'point-resource');
 		export const PointOption = new $wcm.RecordType<testData.Types.PointOption>([
 			['x', new $wcm.OptionType<u32>($wcm.u32)],
 			['y', new $wcm.OptionType<u32>($wcm.u32)],
@@ -251,7 +251,7 @@ export namespace testData {
 	}
 	export namespace Types._ {
 		const functions: $wcm.FunctionType<$wcm.ServiceFunction>[] = [$.call, $.callOption, $.checkVariant, $.checkFlagsShort, $.checkFlagsLong];
-		const resources: $wcm.NamespaceResourceType[] = [$.PointResource];
+		const resources: $wcm.ResourceType[] = [$.PointResource];
 		export type WasmInterface = {
 			'call': (point_x: i32, point_y: i32) => i32;
 			'call-option': (point_case: i32, point_option_x: i32, point_option_y: i32, result: ptr<[i32, i32]>) => void;

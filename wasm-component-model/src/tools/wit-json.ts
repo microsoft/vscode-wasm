@@ -155,6 +155,9 @@ export namespace Type {
 	export function isOwnHandleType(type: Type): type is OwnHandleType {
 		return TypeKind.isOwnHandle(type.kind);
 	}
+	export function hasName(type: Type): type is Type & { name: string } {
+		return typeof type.name === 'string';
+	}
 }
 
 export interface AbstractType {

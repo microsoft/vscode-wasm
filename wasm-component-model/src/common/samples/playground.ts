@@ -138,7 +138,7 @@ export namespace Types._ {
 	export type WasmInterface = {
 		'[method]descriptor.read-via-stream': (self: i32, offset: i64, result: ptr<[i32, i32]>) => void;
 	};
-	export function createService(wasmInterface: WasmInterface): Types {
+	export function createService(_wasmInterface: WasmInterface): Types {
 		return {} as any; //return $wcm.Service.create<filesystem.Types>(functions, resources, wasmInterface, context);
 	}
 
