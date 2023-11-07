@@ -1054,8 +1054,6 @@ namespace TypeScript {
 			}
 		}
 	}
-
-
 }
 
 type WasmTypeName = 'i32' | 'i64' | 'f32' | 'f64';
@@ -1605,16 +1603,29 @@ class InterfaceEmitter extends Emitter {
 	}
 
 	public emitMetaModel(code: Code): void {
-		const { nameProvider } = this.config;
+		const { nameProvider, symbols } = this.config;
 		const name = nameProvider.asNamespaceName(this.iface);
 		code.push(`export namespace ${name}.$ {`);
 		code.increaseIndent();
+
+		const order = new Map<Type, Emitter>();
 		for (const type of this.typeEmitters) {
-			type.emitMetaModel(code);
+			order.set(type.type, type);
 		}
 		for (const resource of this.resourceEmitters) {
-			resource.emitMetaModel(code);
+			order.set(resource.resource, resource);
 		}
+
+		for (const t of Object.values(this.iface.types)) {
+			const type = symbols.getType(t);
+			const emitter = order.get(type);
+			emitter?.emitMetaModel(code);
+		}
+
+		for (const resource of this.resourceEmitters) {
+			resource.emitMetaModelFunctions(code);
+		}
+
 		for (const func of this.functionEmitters) {
 			func.emitMetaModel(code);
 		}
@@ -1651,6 +1662,17 @@ class InterfaceEmitter extends Emitter {
 		}
 		code.decreaseIndent();
 		code.push(`};`);
+
+		for (const emitter of this.resourceEmitters) {
+			emitter.emitService(code);
+		}
+
+		code.push(`export function createHost(service: ${name}, context: $wcm.Context): WasmInterface {`);
+		code.increaseIndent();
+		code.push(`return $wcm.Host.create<WasmInterface>(functions, resources, service, context);`);
+		code.decreaseIndent();
+		code.push('}');
+
 		code.decreaseIndent();
 		code.push('}');
 	}
@@ -1754,7 +1776,7 @@ class FunctionEmitter extends InterfaceMemberEmitter {
 
 class TypeDeclarationEmitter extends InterfaceMemberEmitter {
 
-	private readonly type: Type;
+	public readonly type: Type;
 
 	constructor(type: Type, iface: Interface, config: EmitterConfig) {
 		super(iface, type, config);
@@ -1777,7 +1799,7 @@ class TypeDeclarationEmitter extends InterfaceMemberEmitter {
 
 class TypeReferenceEmitter extends InterfaceMemberEmitter {
 
-	private readonly type: Type;
+	public readonly type: Type;
 
 	constructor(type: Type, iface: Interface, config: EmitterConfig) {
 		super(iface, type, config);
@@ -1854,18 +1876,18 @@ class TypeReferenceEmitter extends InterfaceMemberEmitter {
 
 class RecordEmitter extends InterfaceMemberEmitter {
 
-	private readonly record: RecordType;
+	public readonly type: RecordType;
 
 	constructor(record: RecordType, iface: Interface, config: EmitterConfig) {
 		super(iface, record, config);
-		this.record = record;
+		this.type = record;
 	}
 
 	public emitNamespace(code: Code): void {
-		const kind = this.record.kind;
+		const kind = this.type.kind;
 		const { nameProvider, symbols, printers } = this.config;
-		const name = nameProvider.asTypeName(this.record);
-		this.emitDocumentation(this.record, code);
+		const name = nameProvider.asTypeName(this.type);
+		this.emitDocumentation(this.type, code);
 		code.push(`export type ${name} = {`);
 		code.increaseIndent();
 		for (const field of kind.record.fields) {
@@ -1882,10 +1904,10 @@ class RecordEmitter extends InterfaceMemberEmitter {
 
 	public emitMetaModel(code: Code): void {
 		const { nameProvider, printers } = this.config;
-		const name = nameProvider.asTypeName(this.record);
+		const name = nameProvider.asTypeName(this.type);
 		code.push(`export const ${name} = new $wcm.RecordType<${this.getMergeQualifier()}${name}>([`);
 		code.increaseIndent();
-		for (const field of this.record.kind.record.fields) {
+		for (const field of this.type.kind.record.fields) {
 			const name = nameProvider.asFieldName(field);
 			const type = printers.metaModel.printTypeReference(field.type, TypeUsage.property);
 			code.push(`['${name}', ${type}],`);
@@ -1897,11 +1919,11 @@ class RecordEmitter extends InterfaceMemberEmitter {
 
 class VariantEmitter extends InterfaceMemberEmitter {
 
-	private readonly variant: VariantType;
+	public readonly type: VariantType;
 
 	constructor(variant: VariantType, iface: Interface, config: EmitterConfig) {
 		super(iface, variant, config);
-		this.variant = variant;
+		this.type = variant;
 	}
 
 	public emitNamespace(code: Code): void {
@@ -1924,11 +1946,11 @@ class VariantEmitter extends InterfaceMemberEmitter {
 			}
 		}
 
-		const kind = this.variant.kind;
+		const kind = this.type.kind;
 		const { nameProvider, printers } = this.config;
-		const variantName = nameProvider.asTypeName(this.variant);
+		const variantName = nameProvider.asTypeName(this.type);
 
-		this.emitDocumentation(this.variant, code, true);
+		this.emitDocumentation(this.type, code, true);
 		code.push(`export namespace ${variantName} {`);
 		code.increaseIndent();
 		const cases: { name: string; typeName: string; tagName: string; type: string | undefined }[] = [];
@@ -2026,9 +2048,9 @@ class VariantEmitter extends InterfaceMemberEmitter {
 
 	public emitMetaModel(code: Code): void {
 		const { nameProvider, printers } = this.config;
-		const name = nameProvider.asTypeName(this.variant);
+		const name = nameProvider.asTypeName(this.type);
 		const cases: string[] = [];
-		for (const item of this.variant.kind.variant.cases) {
+		for (const item of this.type.kind.variant.cases) {
 			const name = nameProvider.asVariantCaseName(item);
 			const type = item.type === null ? 'undefined' : printers.metaModel.printTypeReference(item.type, TypeUsage.property);
 			cases.push(`['${name}', ${type}]`);
@@ -2040,18 +2062,18 @@ class VariantEmitter extends InterfaceMemberEmitter {
 
 class EnumEmitter extends InterfaceMemberEmitter {
 
-	private readonly enum: EnumType;
+	public readonly type: EnumType;
 
 	constructor(type: EnumType, iface: Interface, config: EmitterConfig) {
 		super(iface, type, config);
-		this.enum = type;
+		this.type = type;
 	}
 
 	public emitNamespace(code: Code): void {
 		const { nameProvider } = this.config;
-		const kind = this.enum.kind;
-		const enumName = nameProvider.asTypeName(this.enum);
-		this.emitDocumentation(this.enum, code, true);
+		const kind = this.type.kind;
+		const enumName = nameProvider.asTypeName(this.type);
+		this.emitDocumentation(this.type, code, true);
 		code.push(`export enum ${enumName} {`);
 		code.increaseIndent();
 		for (let i = 0; i < kind.enum.cases.length; i++) {
@@ -2066,9 +2088,9 @@ class EnumEmitter extends InterfaceMemberEmitter {
 
 	public emitMetaModel(code: Code): void {
 		const { nameProvider } = this.config;
-		const enumName = nameProvider.asTypeName(this.enum);
+		const enumName = nameProvider.asTypeName(this.type);
 		const cases: string[] = [];
-		for (const item of this.enum.kind.enum.cases) {
+		for (const item of this.type.kind.enum.cases) {
 			cases.push(`'${nameProvider.asEnumCaseName(item)}'`);
 		}
 		code.push(`export const ${enumName} = new $wcm.EnumType<${this.getMergeQualifier()}${enumName}>([${cases.join(', ')}]);`);
@@ -2077,20 +2099,20 @@ class EnumEmitter extends InterfaceMemberEmitter {
 
 class FlagsEmitter extends InterfaceMemberEmitter {
 
-	private readonly flags: FlagsType;
+	public readonly type: FlagsType;
 
 	constructor(flags: FlagsType, iface: Interface, config: EmitterConfig) {
 		super(iface, flags, config);
-		this.flags = flags;
+		this.type = flags;
 	}
 
 	public emitNamespace(code: Code): void {
 		const { nameProvider } = this.config;
-		const kind = this.flags.kind;
-		const flagsName = nameProvider.asTypeName(this.flags);
+		const kind = this.type.kind;
+		const flagsName = nameProvider.asTypeName(this.type);
 		const flagSize = FlagsEmitter.getFlagSize(kind.flags.flags.length);
 
-		this.emitDocumentation(this.flags, code, true);
+		this.emitDocumentation(this.type, code, true);
 		code.push(`export const ${flagsName} = Object.freeze({`);
 		code.increaseIndent();
 		for (let i = 0; i < kind.flags.flags.length; i++) {
@@ -2120,8 +2142,8 @@ class FlagsEmitter extends InterfaceMemberEmitter {
 
 	public emitMetaModel(code: Code): void {
 		const { nameProvider } = this.config;
-		const kind = this.flags.kind;
-		const flagsName = nameProvider.asTypeName(this.flags);
+		const kind = this.type.kind;
+		const flagsName = nameProvider.asTypeName(this.type);
 		code.push(`export const ${flagsName} = new $wcm.FlagsType<${this.getMergeQualifier()}${flagsName}>(${kind.flags.flags.length});`);
 	}
 
@@ -2147,7 +2169,8 @@ class ResourceEmitter extends InterfaceMemberEmitter {
 	public readonly resource: ResourceType;
 	protected readonly typeParamName: string;
 
-	protected constructors: Constructor[];
+	protected readonly constructors: ResourceEmitter.ConstructorEmitter[];
+	protected readonly methods: (ResourceEmitter.MethodEmitter | ResourceEmitter.StaticMethodEmitter)[];
 	protected readonly emitters: CallableEmitter<Constructor | StaticMethod | Method>[];
 
 	constructor(resource: ResourceType, iface: Interface, typeParamNameGenerator: TypeParamNameGenerator, config: EmitterConfig) {
@@ -2156,24 +2179,26 @@ class ResourceEmitter extends InterfaceMemberEmitter {
 		const name = this.config.nameProvider.asTypeName(this.resource);
 		this.typeParamName = typeParamNameGenerator.generate(name);
 		this.constructors = [];
+		this.methods = [];
 		this.emitters = [];
 	}
 
 	public build(): void {
 		const methods = this.config.symbols.getMethods(this.resource);
 		if (methods !== undefined && methods.length >= 0) {
-			const ConstructorEmitter = CallableEmitter(ResourceEmitter.ConstructorEmitter);
-			const StaticMethodEmitter = CallableEmitter(ResourceEmitter.StaticMethodEmitter);
-			const MethodEmitter = CallableEmitter(ResourceEmitter.MethodEmitter);
-
 			for (const method of methods) {
 				if (Callable.isMethod(method)) {
-					this.emitters.push(new MethodEmitter(method, this.resource, this.config));
+					const emitter = new ResourceEmitter.MethodEmitter(method, this.resource, this.config);
+					this.emitters.push(emitter);
+					this.methods.push(emitter as ResourceEmitter.MethodEmitter);
 				} else if (Callable.isStaticMethod(method)) {
-					this.emitters.push(new StaticMethodEmitter(method, this.resource, this.config));
+					const emitter = new ResourceEmitter.StaticMethodEmitter(method, this.resource, this.config);
+					this.emitters.push(emitter);
+					this.methods.push(emitter as ResourceEmitter.StaticMethodEmitter);
 				} else if (Callable.isConstructor(method)) {
-					this.constructors.push(method);
-					this.emitters.push(new ConstructorEmitter(method, this.resource, this.config));
+					const emitter = new ResourceEmitter.ConstructorEmitter(method, this.resource, this.config);
+					this.emitters.push(emitter);
+					this.constructors.push(emitter as ResourceEmitter.ConstructorEmitter);
 				}
 			}
 		}
@@ -2196,7 +2221,7 @@ class ResourceEmitter extends InterfaceMemberEmitter {
 
 	public emitNamespace(code: Code): void {
 		const type = this.resource;
-		const { nameProvider, printers } = this.config;
+		const { nameProvider } = this.config;
 		const tsName = nameProvider.asTypeName(type);
 		if (this.emitters.length > 0) {
 			code.push(`export namespace ${tsName} {`);
@@ -2214,12 +2239,7 @@ class ResourceEmitter extends InterfaceMemberEmitter {
 				code.push(`export type Constructor = {`);
 				code.increaseIndent();
 				for (const constructor of this.constructors) {
-					const params: string[] = [];
-					for (const param of constructor.params) {
-						const paramName = nameProvider.asParameterName(param);
-						params.push(`${paramName}: ${printers.typeScript.printTypeReference(param.type, TypeUsage.parameter)}`);
-					}
-					code.push(`new(${params.join(', ')}): Interface;`);
+					constructor.emitConstructorDeclaration(code);
 				}
 				code.decreaseIndent();
 				code.push(`};`);
@@ -2241,16 +2261,68 @@ class ResourceEmitter extends InterfaceMemberEmitter {
 		code.push(`${name}: ${this.typeParamName};`);
 	}
 
-	emitMetaModel(code: Code): void {
+	public emitMetaModel(code: Code): void {
 		const { nameProvider } = this.config;
 		const name = nameProvider.asTypeName(this.resource);
 		code.push(`export const ${name} = new $wcm.ResourceType('${name}', '${this.resource.name}');`);
+	}
+
+	public emitMetaModelFunctions(code: Code): void {
+		for (const emitter of this.emitters) {
+			emitter.emitMetaModel(code);
+		}
 	}
 
 	public emitWasmInterface(code: Code) : void {
 		for (const emitter of this.emitters) {
 			emitter.emitWasmInterface(code);
 		}
+	}
+
+	public emitService(code: Code): void {
+		const { nameProvider } = this.config;
+		const name = nameProvider.asTypeName(this.resource);
+		const qualifier = this.getMergeQualifier();
+		const qualifiedName = `${qualifier}${name}`;
+		code.push(`export namespace ${name}  {`);
+		code.increaseIndent();
+		for (const emitter of this.emitters) {
+			emitter.emitService(code);
+		}
+		const moduleType = `${qualifiedName}.Module`;
+		code.push(`export function Module(wasmInterface: WasmInterface, context: $wcm.Context): ${moduleType} {`);
+		code.increaseIndent();
+		code.decreaseIndent();
+		code.push(`}`);
+		if (this.constructors.length > 0) {
+			code.push(`class Impl implements ${qualifiedName}.Interface {`);
+			code.increaseIndent();
+			code.push(`private readonly _handle: ${qualifiedName};`);
+			code.push(`private readonly _module: ${moduleType};`);
+			for (const constructor of this.constructors) {
+				constructor.emitConstructorImplementation(code, moduleType);
+			}
+			for (const method of this.methods) {
+				method.emitClassMember(code);
+			}
+			code.decreaseIndent();
+			code.push(`}`);
+			code.push(`export function Class(wasmInterface: WasmInterface, context: $wcm.Context): ${qualifiedName}.Constructor {`);
+			code.increaseIndent();
+			code.push(`return class extends Impl {`);
+			code.increaseIndent();
+			for (const constructor of this.constructors) {
+				constructor.emitAnonymousConstructorImplementation(code);
+			}
+			code.decreaseIndent();
+			code.push(`};`);
+			code.decreaseIndent();
+			code.push(`}`);
+		}
+		code.push(`export const Manager = new $wcm.ResourceManager<${qualifiedName}>();`);
+
+		code.decreaseIndent();
+		code.push(`}`);
 	}
 }
 namespace ResourceEmitter {
@@ -2278,7 +2350,7 @@ namespace ResourceEmitter {
 			const { nameProvider } = this.config;
 			const methodName = this.getFunctionName();
 			const resourceName = nameProvider.asTypeName(this.resource);
-			const typeParam = `${this.computeLocalQualifier()}.${resourceName}.Module['${methodName}']`;
+			const typeParam = `${this.computeLocalQualifier()}.Module['${methodName}']`;
 			if (params.length === 0) {
 				code.push(`${resourceName}.addFunction(new $wcm.FunctionType<${typeParam}>('${methodName}', '${this.method.name}', [], ${result}));`);
 			} else {
@@ -2309,7 +2381,7 @@ namespace ResourceEmitter {
 		}
 	}
 
-	export class MethodEmitter extends ResourceFunctionEmitter {
+	class _MethodEmitter extends ResourceFunctionEmitter {
 
 		public readonly callable: Method;
 
@@ -2321,9 +2393,40 @@ namespace ResourceEmitter {
 		protected getFunctionName(): string {
 			return this.config.nameProvider.asMethodName(this.callable);
 		}
+
+		public emitClassMember(code: Code): void {
+			const { nameProvider, printers } = this.config;
+			const params: string[] = [];
+			const paramNames: string[] = [];
+			for (let i = 1; i < this.callable.params.length; i++) {
+				const param = this.callable.params[i];
+				const paramName = nameProvider.asParameterName(param);
+				const paramType = printers.typeScript.printTypeReference(param.type, TypeUsage.parameter);
+				paramNames.push(paramName);
+				params.push(`${paramName}: ${paramType}`);
+			}
+			let returnType: string = 'void';
+			if (this.callable.results !== null) {
+				if (this.callable.results.length === 1) {
+					returnType = printers.typeScript.printTypeReference(this.callable.results[0].type, TypeUsage.function);
+				} else if (this.callable.results.length > 1) {
+					returnType = `[${this.callable.results.map(r => printers.typeScript.printTypeReference(r.type, TypeUsage.function)).join(', ')}]`;
+				}
+			}
+			code.push(`public ${this.getFunctionName()}(${params.join(', ')}): ${returnType} {`);
+			code.increaseIndent();
+			if (paramNames.length > 0) {
+				code.push(`return this._module.${this.getFunctionName()}(this._handle, ${paramNames.join(', ')});`);
+			} else {
+				code.push(`return this._module.${this.getFunctionName()}(this._handle);`);
+			}
+			code.decreaseIndent();
+			code.push('}');
+
+		}
 	}
 
-	export class StaticMethodEmitter extends ResourceFunctionEmitter {
+	class _StaticMethodEmitter extends ResourceFunctionEmitter {
 
 		public readonly callable: StaticMethod;
 
@@ -2335,9 +2438,12 @@ namespace ResourceEmitter {
 		protected getFunctionName(): string {
 			return this.config.nameProvider.asStaticMethodName(this.callable);
 		}
+
+		public emitClassMember(code: Code): void {
+		}
 	}
 
-	export class ConstructorEmitter extends ResourceFunctionEmitter {
+	class _ConstructorEmitter extends ResourceFunctionEmitter {
 
 		public readonly callable: Constructor;
 
@@ -2349,7 +2455,58 @@ namespace ResourceEmitter {
 		protected getFunctionName(): string {
 			return this.config.nameProvider.asConstructorName(this.callable);
 		}
+
+		public emitConstructorDeclaration(code: Code): void {
+			const { nameProvider, printers } = this.config;
+			const params: string[] = [];
+			for (const param of this.callable.params) {
+				const paramName = nameProvider.asParameterName(param);
+				params.push(`${paramName}: ${printers.typeScript.printTypeReference(param.type, TypeUsage.parameter)}`);
+			}
+			code.push(`new(${params.join(', ')}): Interface;`);
+		}
+
+		public emitConstructorImplementation(code: Code, moduleType: string): void {
+			const { nameProvider, printers } = this.config;
+			const params: string[] = [];
+			const paramNames: string[] = [];
+			for (const param of this.callable.params) {
+				const paramName = nameProvider.asParameterName(param);
+				const paramType = printers.typeScript.printTypeReference(param.type, TypeUsage.parameter);
+				paramNames.push(paramName);
+				params.push(`${paramName}: ${paramType}`);
+			}
+			code.push(`constructor(${params.join(', ')}, module: ${moduleType}) {`);
+			code.increaseIndent();
+			code.push(`this._module = module;`);
+			code.push(`this._handle = module.${this.getFunctionName()}(${paramNames.join(', ')});`);
+			code.decreaseIndent();
+			code.push('}');
+		}
+
+		public emitAnonymousConstructorImplementation(code: Code): void {
+			const { nameProvider, printers } = this.config;
+			const params: string[] = [];
+			const paramNames: string[] = [];
+			for (const param of this.callable.params) {
+				const paramName = nameProvider.asParameterName(param);
+				paramNames.push(paramName);
+				params.push(`${paramName}: ${printers.typeScript.printTypeReference(param.type, TypeUsage.parameter)}`);
+			}
+			code.push(`constructor(${params.join(', ')}) {`);
+			code.increaseIndent();
+			code.push(`super(${paramNames.join(', ')}, Module(wasmInterface, context));`);
+			code.decreaseIndent();
+			code.push('}');
+		}
 	}
+
+	export const ConstructorEmitter = CallableEmitter(_ConstructorEmitter);
+	export type ConstructorEmitter = _ConstructorEmitter;
+	export const StaticMethodEmitter = CallableEmitter(_StaticMethodEmitter);
+	export type StaticMethodEmitter = _StaticMethodEmitter;
+	export const MethodEmitter = CallableEmitter(_MethodEmitter);
+	export type MethodEmitter = _MethodEmitter;
 }
 
 type TypeEmitter = TypeDeclarationEmitter | TypeReferenceEmitter | RecordEmitter | VariantEmitter | EnumEmitter | FlagsEmitter;
@@ -2362,7 +2519,7 @@ interface CallableEmitter<C extends Callable> extends Emitter {
 
 const MAX_FLAT_PARAMS = 16;
 const MAX_FLAT_RESULTS = 1;
-function CallableEmitter<C extends Callable, P extends Interface | ResourceType>(base: new (callable: C, container: P, config: EmitterConfig) => CallableEmitter<C>): (new (callable: C, container: P, config: EmitterConfig) => CallableEmitter<C>) {
+function CallableEmitter<C extends Callable, P extends Interface | ResourceType, S extends Emitter>(base: new (callable: C, container: P, config: EmitterConfig) => CallableEmitter<C>): (new (callable: C, container: P, config: EmitterConfig) => CallableEmitter<C>) {
 	return class extends base {
 		public callable: C;
 		constructor(callable: C, parent: P, config: EmitterConfig) {
