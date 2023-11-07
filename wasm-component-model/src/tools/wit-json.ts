@@ -73,6 +73,9 @@ export namespace Callable {
 		const candidate = value as Method;
 		return typeof candidate.kind === 'object' && typeof candidate.kind.method === 'number';
 	}
+	export function is(value: any): value is Callable {
+		return isFunction(value) || isStaticMethod(value) || isConstructor(value) || isMethod(value);
+	}
 	export function containingType(value: Method | StaticMethod | Constructor): number {
 		if (isMethod(value)) {
 			return value.kind.method;
