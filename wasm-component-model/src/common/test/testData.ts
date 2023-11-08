@@ -2,72 +2,72 @@
  *  Copyright (c) Microsoft Corporation. All rights reserved.
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
-import * as $wcm from '@vscode/wasm-component-model';
-import type { u32, u64, s32, s64, float32, float64, own, borrow, resource, i32, ptr, i64 } from '@vscode/wasm-component-model';
+import * as $wcm from '../componentModel';
+import type { u32, u64, s32, s64, float32, float64, own, borrow, resource, i32, ptr, i64 } from '../componentModel';
 
 export namespace testData {
 	export namespace Types {
 		export const id = 'vscode:test-data/types' as const;
-		
+
 		export type Point = {
 			x: u32;
 			y: u32;
 		};
-		
+
 		export type PointOption = {
 			x?: u32 | undefined;
 			y?: u32 | undefined;
 		};
-		
+
 		export namespace TestVariant {
 			export const empty = 'empty' as const;
 			export type Empty = { readonly tag: typeof empty } & _common;
 			export function Empty(): Empty {
 				return new VariantImpl(empty, undefined) as Empty;
 			}
-			
+
 			export const unsigned32 = 'unsigned32' as const;
 			export type Unsigned32 = { readonly tag: typeof unsigned32; readonly value: u32 } & _common;
 			export function Unsigned32(value: u32): Unsigned32 {
 				return new VariantImpl(unsigned32, value) as Unsigned32;
 			}
-			
+
 			export const unsigned64 = 'unsigned64' as const;
 			export type Unsigned64 = { readonly tag: typeof unsigned64; readonly value: u64 } & _common;
 			export function Unsigned64(value: u64): Unsigned64 {
 				return new VariantImpl(unsigned64, value) as Unsigned64;
 			}
-			
+
 			export const signed32 = 'signed32' as const;
 			export type Signed32 = { readonly tag: typeof signed32; readonly value: s32 } & _common;
 			export function Signed32(value: s32): Signed32 {
 				return new VariantImpl(signed32, value) as Signed32;
 			}
-			
+
 			export const signed64 = 'signed64' as const;
 			export type Signed64 = { readonly tag: typeof signed64; readonly value: s64 } & _common;
 			export function Signed64(value: s64): Signed64 {
 				return new VariantImpl(signed64, value) as Signed64;
 			}
-			
+
 			export const floatingPoint32 = 'floatingPoint32' as const;
 			export type FloatingPoint32 = { readonly tag: typeof floatingPoint32; readonly value: float32 } & _common;
 			export function FloatingPoint32(value: float32): FloatingPoint32 {
 				return new VariantImpl(floatingPoint32, value) as FloatingPoint32;
 			}
-			
+
 			export const floatingPoint64 = 'floatingPoint64' as const;
 			export type FloatingPoint64 = { readonly tag: typeof floatingPoint64; readonly value: float64 } & _common;
 			export function FloatingPoint64(value: float64): FloatingPoint64 {
 				return new VariantImpl(floatingPoint64, value) as FloatingPoint64;
 			}
-			
+
 			export const structure = 'structure' as const;
 			export type Structure = { readonly tag: typeof structure; readonly value: Point } & _common;
 			export function Structure(value: Point): Structure {
 				return new VariantImpl(structure, value) as Structure;
 			}
-			
+
 			export type _tt = typeof empty | typeof unsigned32 | typeof unsigned64 | typeof signed32 | typeof signed64 | typeof floatingPoint32 | typeof floatingPoint64 | typeof structure;
 			export type _vt = u32 | u64 | s32 | s64 | float32 | float64 | Point | undefined;
 			type _common = Omit<VariantImpl, 'tag' | 'value'>;
@@ -114,7 +114,7 @@ export namespace testData {
 			}
 		}
 		export type TestVariant = TestVariant.Empty | TestVariant.Unsigned32 | TestVariant.Unsigned64 | TestVariant.Signed32 | TestVariant.Signed64 | TestVariant.FloatingPoint32 | TestVariant.FloatingPoint64 | TestVariant.Structure;
-		
+
 		export const TestFlagsShort = Object.freeze({
 			one: 1 << 0,
 			two: 1 << 1,
@@ -124,7 +124,7 @@ export namespace testData {
 			six: 1 << 5,
 		});
 		export type TestFlagsShort = u32;
-		
+
 		export const TestFlagsLong = Object.freeze({
 			one: 1n << 0n,
 			two: 1n << 1n,
@@ -168,16 +168,16 @@ export namespace testData {
 			forty: 1n << 39n,
 		});
 		export type TestFlagsLong = bigint;
-		
+
 		export namespace PointResource {
 			export type Module = {
-				
+
 				constructor(x: u32, y: u32): own<PointResource>;
-				
+
 				getX(self: borrow<PointResource>): u32;
-				
+
 				getY(self: borrow<PointResource>): u32;
-				
+
 				add(self: borrow<PointResource>): u32;
 			};
 			export type Interface = $wcm.Module2Interface<Module>;
@@ -187,15 +187,15 @@ export namespace testData {
 			export type Manager = $wcm.ResourceManager<Interface>;
 		}
 		export type PointResource = resource;
-		
+
 		export type call = (point: Point) => u32;
-		
+
 		export type callOption = (point: Point | undefined) => u32 | undefined;
-		
+
 		export type checkVariant = (value: TestVariant) => TestVariant;
-		
+
 		export type checkFlagsShort = (value: TestFlagsShort) => TestFlagsShort;
-		
+
 		export type checkFlagsLong = (value: TestFlagsLong) => TestFlagsLong;
 	}
 	export type Types<PR extends testData.Types.PointResource.Module | testData.Types.PointResource.Constructor | testData.Types.PointResource.Manager = testData.Types.PointResource.Module | testData.Types.PointResource.Constructor | testData.Types.PointResource.Manager> = {
@@ -206,7 +206,7 @@ export namespace testData {
 		checkFlagsShort: Types.checkFlagsShort;
 		checkFlagsLong: Types.checkFlagsLong;
 	};
-	
+
 }
 
 export namespace testData {

@@ -41,7 +41,7 @@ import TestVariant = Types.TestVariant;
 import TestFlagsShort = Types.TestFlagsShort;
 import TestFlagsLong = Types.TestFlagsLong;
 
-namespace PointResourceImpl {
+namespace PointResourceModule {
 
 	class Point {
 		constructor(public x: u32, public y: u32) { }
@@ -69,6 +69,22 @@ namespace PointResourceImpl {
 	}
 }
 
+class PointResourceClass implements Types.PointResource.Interface {
+	constructor(public x: u32, public y: u32) { }
+
+	public getX(): u32 {
+		return this.x;
+	}
+
+	public getY(): u32 {
+		return this.y;
+	}
+
+	public add(): u32 {
+		return this.x + this.y;
+	}
+}
+
 const serviceImpl: Types = {
 	call(point: Types.Point | undefined): u32 {
 		if (point === undefined) {
@@ -82,7 +98,7 @@ const serviceImpl: Types = {
 		}
 		return point.x + point.y;
 	},
-	PointResource: PointResourceImpl,
+	PointResource: PointResourceClass,
 	checkVariant(value)  {
 		switch (value.tag) {
 			case TestVariant.unsigned32:
@@ -129,7 +145,9 @@ suite('point', () => {
 	});
 });
 
-suite ('point-resource', () => {
+suite ('point-resource - Module', () => {
+	const moduleImplementation = Object.assign({}, serviceImpl);
+	moduleImplementation.PointResource = PointResourceModule;
 	const host: Types._.WasmInterface = Types._.createHost(serviceImpl, context);
 	const service = Types._.createService(Types._.PointResource.Module, host, context);
 	test('host:call', () => {
@@ -143,6 +161,25 @@ suite ('point-resource', () => {
 		assert.strictEqual(service.PointResource.getX(point), 1);
 		assert.strictEqual(service.PointResource.getY(point), 2);
 		assert.strictEqual(service.PointResource.add(point), 3);
+	});
+});
+
+suite ('point-resource - Class', () => {
+	const moduleImplementation = Object.assign({}, serviceImpl);
+	moduleImplementation.PointResource = PointResourceClass;
+	const host: Types._.WasmInterface = Types._.createHost(serviceImpl, context);
+	const service = Types._.createService(Types._.PointResource.Class, host, context);
+	test('host:call', () => {
+		const point = host['[constructor]point-resource'](1, 2);
+		assert.strictEqual(host['[method]point-resource.get-x'](point), 1);
+		assert.strictEqual(host['[method]point-resource.get-y'](point), 2);
+		assert.strictEqual(host['[method]point-resource.add'](point), 3);
+	});
+	test('service:call', () => {
+		const point = new service.PointResource(1, 2);
+		assert.strictEqual(point.getX(), 1);
+		assert.strictEqual(point.getY(), 2);
+		assert.strictEqual(point.add(), 3);
 	});
 });
 

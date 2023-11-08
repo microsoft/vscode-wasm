@@ -19,13 +19,17 @@ export type Module2Interface<T> = {
 export class ResourceManager<T> {
 
 	private readonly resources: Map<resource, T>;
+	private handleCounter: resource;
 
 	constructor() {
 		this.resources = new Map();
+		this.handleCounter = 1;
 	}
 
-	register(resource: resource, value: T): void {
-		this.resources.set(resource, value);
+	register(value: T): resource {
+		const handle = this.handleCounter++;
+		this.resources.set(handle, value);
+		return handle;
 	}
 
 	get(resource: resource): T {
@@ -2095,9 +2099,19 @@ export namespace Host {
 			result[signature.witName] = createHostFunction(signature, service, context);
 		}
 		for (const resource of resources) {
-			const resourceInterface = service[resource.name] as ParamModuleInterface;
+			let moduleInterface: ParamModuleInterface;
+			const implementation = service[resource.name];
+			if (typeof implementation === 'function') {
+				moduleInterface = Module.createClassProxy(implementation as GenericConstructor<any>, resource);
+			} else if (implementation instanceof ResourceManager) {
+				moduleInterface = Module.createManagerProxy(implementation, resource);
+			} else if (typeof implementation === 'object') {
+				moduleInterface = implementation as ParamModuleInterface;
+			} else {
+				throw new ComponentModelError(`Unknown service implementation ${typeof implementation}.`);
+			}
 			for (const callable of resource.functions.values()) {
-				result[callable.witName] = createHostFunction(callable, resourceInterface, context);
+				result[callable.witName] = createHostFunction(callable, moduleInterface, context);
 			}
 		}
 		return result as unknown as T;
@@ -2111,6 +2125,9 @@ export namespace Host {
 	}
 }
 
+
+type ResourceFunction = (self: number, ...params: JType[]) => JType | void;
+type ConstructorFunction = (...params: JType[]) => resource;
 export namespace Module {
 	export function create<T>(resource: ResourceType, wasm: ParamWasmInterface, context: Context): T {
 		const result: { [key: string]: ServiceFunction }  = Object.create(null);
@@ -2126,6 +2143,46 @@ export namespace Module {
 			return func.callWasm(params, wasmFunction, context.memory, context.options);
 		};
 	}
+
+	export function createClassProxy(constructor: GenericConstructor<any>, resource: ResourceType): { [key: string]: ParamServiceFunction } {
+		const result: { [key: string]: ParamServiceFunction } = Object.create(null);
+		const manager = new ResourceManager<any>;
+		for  (const callable of resource.functions.values()) {
+			if (callable.name === 'constructor') {
+				result[callable.name] = createConstructorFunction(manager, constructor);
+			} else {
+				result[callable.name] = createMethodFunction(manager, callable);
+			}
+		}
+		return result;
+	}
+
+	export function createManagerProxy(manager: ResourceManager<any>, resource: ResourceType): { [key: string]: ParamServiceFunction } {
+		const result: { [key: string]: ParamServiceFunction } = Object.create(null);
+		for  (const callable of resource.functions.values()) {
+			if (callable.name === 'constructor') {
+				throw new ComponentModelError(`Resource manager can't handle constructor calls`);
+			} else {
+				result[callable.name] = createMethodFunction(manager, callable);
+			}
+		}
+		return result;
+	}
+
+	function createConstructorFunction(manager: ResourceManager<any>, constructor: GenericConstructor<any>): ConstructorFunction {
+		return (...params: JType[]): resource => {
+			const obj = new constructor(...params);
+			return manager.register(obj);
+		}
+	}
+
+	function createMethodFunction(manager: ResourceManager<any>, func: FunctionType<ServiceFunction>): ResourceFunction {
+		return (self: number, ...params: JType[]): JType | void => {
+			const object = manager.get(self);
+			return object[func.name](...params);
+		}
+	}
+
 }
 
 export type ResourceKind<T> = (wasmInterface: any, context: Context) => T;
@@ -2137,15 +2194,11 @@ export namespace Service {
 
 	export function create<T extends Service>(signatures: FunctionType<Function>[], resources: [ResourceType, ResourceKind<any>][], wasm: ParamWasmInterface, context: Context): T {
 		const result: WriteableServiceInterface  = Object.create(null);
+		for (const [resource, factory] of resources) {
+			result[resource.name] = factory(wasm, context);
+		}
 		for (const signature of signatures) {
 			result[signature.name] = createServiceFunction(signature, wasm, context);
-		}
-		for (const resource of resources) {
-			const resourceService: WriteableServiceInterface = Object.create(null);
-			result[resource[0].name] = resourceService;
-			for (const callable of resource[0].functions.values()) {
-				resourceService[callable.name] = createServiceFunction(callable, wasm, context);
-			}
 		}
 		return result as unknown as T;
 	}
