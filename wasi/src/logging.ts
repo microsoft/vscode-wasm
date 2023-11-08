@@ -13,6 +13,7 @@ export namespace logging {
 	export namespace Logging {
 		export const id = 'wasi:logging/logging' as const;
 		
+		
 		/**
 		 * A log level, describing a kind of message.
 		 */
@@ -70,8 +71,8 @@ export namespace logging {
 
 export namespace logging {
 	export namespace Logging.$ {
-		export const Level = new $wcm.EnumType<logging.Logging.Level>(['trace', 'debug', 'info', 'warn', 'error', 'critical']);
-		export const log = new $wcm.FunctionType<logging.Logging.log>('log', 'log',[
+		export const Level = new $wcm.EnumType<Logging.Level>(['trace', 'debug', 'info', 'warn', 'error', 'critical']);
+		export const log = new $wcm.FunctionType<Logging.log>('log', 'log',[
 			['level', Level],
 			['context', $wcm.wstring],
 			['message', $wcm.wstring],
@@ -79,7 +80,7 @@ export namespace logging {
 	}
 	export namespace Logging._ {
 		const functions: $wcm.FunctionType<$wcm.ServiceFunction>[] = [$.log];
-		const resources: $wcm.NamespaceResourceType[] = [];
+		const resources: $wcm.ResourceType[] = [];
 		export type WasmInterface = {
 			'log': (level_Level: i32, context_ptr: i32, context_len: i32, message_ptr: i32, message_len: i32) => void;
 		};
@@ -87,7 +88,7 @@ export namespace logging {
 			return $wcm.Host.create<WasmInterface>(functions, resources, service, context);
 		}
 		export function createService(wasmInterface: WasmInterface, context: $wcm.Context): logging.Logging {
-			return $wcm.Service.create<logging.Logging>(functions, resources, wasmInterface, context);
+			return $wcm.Service.create<logging.Logging>(functions, [], wasmInterface, context);
 		}
 	}
 }

@@ -2111,21 +2111,39 @@ export namespace Host {
 	}
 }
 
+export namespace Module {
+	export function create<T>(resource: ResourceType, wasm: ParamWasmInterface, context: Context): T {
+		const result: { [key: string]: ServiceFunction }  = Object.create(null);
+		for (const callable of resource.functions.values()) {
+			result[callable.name] = createModuleFunction(callable, wasm, context);
+		}
+		return result as unknown as T;
+	}
+
+	function createModuleFunction(func: FunctionType<ServiceFunction>, wasm: ParamWasmInterface, context: Context): ServiceFunction {
+		const wasmFunction = wasm[func.witName] as WasmFunction;
+		return (...params: JType[]): JType | void => {
+			return func.callWasm(params, wasmFunction, context.memory, context.options);
+		};
+	}
+}
+
+export type ResourceKind<T> = (wasmInterface: any, context: Context) => T;
 interface WriteableServiceInterface {
 	[key: string]: (ServiceFunction | WriteableServiceInterface);
 }
 export type Service = ParamModuleInterface | {};
 export namespace Service {
 
-	export function create<T extends Service>(signatures: FunctionType<Function>[], resources: ResourceType[], wasm: ParamWasmInterface, context: Context): T {
+	export function create<T extends Service>(signatures: FunctionType<Function>[], resources: [ResourceType, ResourceKind<any>][], wasm: ParamWasmInterface, context: Context): T {
 		const result: WriteableServiceInterface  = Object.create(null);
 		for (const signature of signatures) {
 			result[signature.name] = createServiceFunction(signature, wasm, context);
 		}
 		for (const resource of resources) {
 			const resourceService: WriteableServiceInterface = Object.create(null);
-			result[resource.name] = resourceService;
-			for (const callable of resource.functions.values()) {
+			result[resource[0].name] = resourceService;
+			for (const callable of resource[0].functions.values()) {
 				resourceService[callable.name] = createServiceFunction(callable, wasm, context);
 			}
 		}

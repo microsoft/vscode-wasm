@@ -116,11 +116,11 @@ export namespace random {
 
 export namespace random {
 	export namespace InsecureSeed.$ {
-		export const insecureSeed = new $wcm.FunctionType<random.InsecureSeed.insecureSeed>('insecureSeed', 'insecure-seed', [], new $wcm.TupleType<[u64, u64]>([$wcm.u64, $wcm.u64]));
+		export const insecureSeed = new $wcm.FunctionType<InsecureSeed.insecureSeed>('insecureSeed', 'insecure-seed', [], new $wcm.TupleType<[u64, u64]>([$wcm.u64, $wcm.u64]));
 	}
 	export namespace InsecureSeed._ {
 		const functions: $wcm.FunctionType<$wcm.ServiceFunction>[] = [$.insecureSeed];
-		const resources: $wcm.NamespaceResourceType[] = [];
+		const resources: $wcm.ResourceType[] = [];
 		export type WasmInterface = {
 			'insecure-seed': (result: ptr<[i64, i64]>) => void;
 		};
@@ -128,18 +128,19 @@ export namespace random {
 			return $wcm.Host.create<WasmInterface>(functions, resources, service, context);
 		}
 		export function createService(wasmInterface: WasmInterface, context: $wcm.Context): random.InsecureSeed {
-			return $wcm.Service.create<random.InsecureSeed>(functions, resources, wasmInterface, context);
+			return $wcm.Service.create<random.InsecureSeed>(functions, [], wasmInterface, context);
 		}
 	}
+	
 	export namespace Insecure.$ {
-		export const getInsecureRandomBytes = new $wcm.FunctionType<random.Insecure.getInsecureRandomBytes>('getInsecureRandomBytes', 'get-insecure-random-bytes',[
+		export const getInsecureRandomBytes = new $wcm.FunctionType<Insecure.getInsecureRandomBytes>('getInsecureRandomBytes', 'get-insecure-random-bytes',[
 			['len', $wcm.u64],
 		], new $wcm.Uint8ArrayType());
-		export const getInsecureRandomU64 = new $wcm.FunctionType<random.Insecure.getInsecureRandomU64>('getInsecureRandomU64', 'get-insecure-random-u64', [], $wcm.u64);
+		export const getInsecureRandomU64 = new $wcm.FunctionType<Insecure.getInsecureRandomU64>('getInsecureRandomU64', 'get-insecure-random-u64', [], $wcm.u64);
 	}
 	export namespace Insecure._ {
 		const functions: $wcm.FunctionType<$wcm.ServiceFunction>[] = [$.getInsecureRandomBytes, $.getInsecureRandomU64];
-		const resources: $wcm.NamespaceResourceType[] = [];
+		const resources: $wcm.ResourceType[] = [];
 		export type WasmInterface = {
 			'get-insecure-random-bytes': (len: i64, result: ptr<[i32, i32]>) => void;
 			'get-insecure-random-u64': () => i64;
@@ -148,18 +149,19 @@ export namespace random {
 			return $wcm.Host.create<WasmInterface>(functions, resources, service, context);
 		}
 		export function createService(wasmInterface: WasmInterface, context: $wcm.Context): random.Insecure {
-			return $wcm.Service.create<random.Insecure>(functions, resources, wasmInterface, context);
+			return $wcm.Service.create<random.Insecure>(functions, [], wasmInterface, context);
 		}
 	}
+	
 	export namespace Random.$ {
-		export const getRandomBytes = new $wcm.FunctionType<random.Random.getRandomBytes>('getRandomBytes', 'get-random-bytes',[
+		export const getRandomBytes = new $wcm.FunctionType<Random.getRandomBytes>('getRandomBytes', 'get-random-bytes',[
 			['len', $wcm.u64],
 		], new $wcm.Uint8ArrayType());
-		export const getRandomU64 = new $wcm.FunctionType<random.Random.getRandomU64>('getRandomU64', 'get-random-u64', [], $wcm.u64);
+		export const getRandomU64 = new $wcm.FunctionType<Random.getRandomU64>('getRandomU64', 'get-random-u64', [], $wcm.u64);
 	}
 	export namespace Random._ {
 		const functions: $wcm.FunctionType<$wcm.ServiceFunction>[] = [$.getRandomBytes, $.getRandomU64];
-		const resources: $wcm.NamespaceResourceType[] = [];
+		const resources: $wcm.ResourceType[] = [];
 		export type WasmInterface = {
 			'get-random-bytes': (len: i64, result: ptr<[i32, i32]>) => void;
 			'get-random-u64': () => i64;
@@ -168,7 +170,7 @@ export namespace random {
 			return $wcm.Host.create<WasmInterface>(functions, resources, service, context);
 		}
 		export function createService(wasmInterface: WasmInterface, context: $wcm.Context): random.Random {
-			return $wcm.Service.create<random.Random>(functions, resources, wasmInterface, context);
+			return $wcm.Service.create<random.Random>(functions, [], wasmInterface, context);
 		}
 	}
 }

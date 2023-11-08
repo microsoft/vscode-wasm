@@ -1493,12 +1493,16 @@ class PackageEmitter extends Emitter {
 	public emitMetaData(code: Code): void {
 		const { nameProvider } = this.config;
 		const pkgName = nameProvider.asPackageName(this.pkg);
+		code.push('');
 		code.push(`export namespace ${pkgName} {`);
 		code.increaseIndent();
-		for (const ifaceEmitter of this.ifaceEmitters) {
+		for (let i = 0; i < this.ifaceEmitters.length; i++) {
+			const ifaceEmitter = this.ifaceEmitters[i];
 			ifaceEmitter.emitMetaModel(code);
 			ifaceEmitter.emitAPI(code);
-			code.push('');
+			if (i < this.ifaceEmitters.length - 1) {
+				code.push('');
+			}
 		}
 		code.decreaseIndent();
 		code.push(`}`);
@@ -1583,7 +1587,7 @@ class InterfaceEmitter extends Emitter {
 		const typeParams: string[] = [];
 		for (const resource of this.resourceEmitters) {
 			if (resource.needsTypeParameter()) {
-				typeParams.push(resource.getTypeParameter());
+				typeParams.push(resource.getTypeParameter(true));
 			}
 		}
 		if (typeParams.length > 0) {
@@ -1636,6 +1640,7 @@ class InterfaceEmitter extends Emitter {
 	public emitAPI(code: Code): void {
 		const { nameProvider } = this.config;
 		const name = nameProvider.asNamespaceName(this.iface);
+		const qualifiedTypeName = this.getFullQualifiedTypeName();
 		const functions: string[] = [];
 		for (const func of this.functionEmitters) {
 			functions.push(nameProvider.asFunctionName(func.callable));
@@ -1646,12 +1651,8 @@ class InterfaceEmitter extends Emitter {
 		}
 		code.push(`export namespace ${name}._ {`);
 		code.increaseIndent();
-		if (functions.length > 0) {
-			code.push(`const functions: ${MetaModel.qualifier}.FunctionType<${MetaModel.qualifier}.ServiceFunction>[] = [${functions.map(name => `$.${name}`).join(', ')}];`);
-		}
-		if (resources.length > 0) {
-			code.push(`const resources: ${MetaModel.qualifier}.ResourceType[] = [${resources.map(name => `$.${name}`).join(', ')}];`);
-		}
+		code.push(`const functions: ${MetaModel.qualifier}.FunctionType<${MetaModel.qualifier}.ServiceFunction>[] = [${functions.map(name => `$.${name}`).join(', ')}];`);
+		code.push(`const resources: ${MetaModel.qualifier}.ResourceType[] = [${resources.map(name => `$.${name}`).join(', ')}];`);
 		code.push(`export type WasmInterface = {`);
 		code.increaseIndent();
 		for(const resource of this.resourceEmitters) {
@@ -1667,14 +1668,108 @@ class InterfaceEmitter extends Emitter {
 			emitter.emitService(code);
 		}
 
-		code.push(`export function createHost(service: ${name}, context: $wcm.Context): WasmInterface {`);
+		code.push(`export function createHost(service: ${qualifiedTypeName}, context: $wcm.Context): WasmInterface {`);
 		code.increaseIndent();
 		code.push(`return $wcm.Host.create<WasmInterface>(functions, resources, service, context);`);
 		code.decreaseIndent();
 		code.push('}');
 
+		if (this.resourceEmitters.length === 0) {
+			code.push(`export function createService(wasmInterface: WasmInterface, context: $wcm.Context): ${qualifiedTypeName} {`);
+			code.increaseIndent();
+			code.push(`return $wcm.Service.create<${qualifiedTypeName}>(functions, [], wasmInterface, context);`);
+			code.decreaseIndent();
+			code.push(`}`);
+		} else {
+			type ResourceInfo = { name: string;
+				custom: { typeParamName: string; typeParam: string; paramName: string; paramType: string };
+				class: { typeParam: string; func: string };
+				module: { typeParam: string };
+			};
+			const resourceInfos: Map<string, ResourceInfo | undefined> = new Map();
+			for (const emitter of this.resourceEmitters) {
+				const resourceName = nameProvider.asTypeName(emitter.resource);
+				if (emitter.needsTypeParameter()) {
+					const typeParamName = emitter.getTypeParamName();
+					resourceInfos.set(resourceName, { name: resourceName,
+						custom: { typeParamName, typeParam: emitter.getTypeParameter(false), paramName: typeParamName.toLowerCase(), paramType: `$wcm.ResourceKind<${typeParamName}>` },
+						class: { typeParam: emitter.getClassType(), func: emitter.hasConstructors() ? `${resourceName}.Class` : `${resourceName}.Manager` },
+						module: { typeParam: emitter.getModuleType()},
+					});
+				} else {
+					resourceInfos.set(resourceName, undefined);
+				}
+			}
+			{
+				const typeParams: string[] = [];
+				const typeParamNames: string[] = [];
+				const params: string[] = [];
+				const resources: string[] = [];
+				for (const info of resourceInfos.values()) {
+					if (info !== undefined) {
+						typeParams.push(info.custom.typeParam);
+						typeParamNames.push(info.custom.typeParamName);
+						params.push(`${info.custom.paramName}: ${info.custom.paramType}`);
+						resources.push(`[$.${info.name}, ${info.custom.paramName}]`);
+					}
+				}
+				const typeName = typeParams.length > 0 ? `${qualifiedTypeName}<${typeParamNames.join(', ')}>` : qualifiedTypeName;
+				if (typeParams.length > 0) {
+					code.push(`export function createService<${typeParams.join(', ')}>(${params.join(`, `)}, wasmInterface: WasmInterface, context: $wcm.Context): ${typeName} {`);
+				} else {
+					code.push(`export function createService(wasmInterface: WasmInterface, context: $wcm.Context): ${typeName} {`);
+				}
+				code.increaseIndent();
+				code.push(`return $wcm.Service.create<${typeName}>(functions, [${resources.join(', ')}], wasmInterface, context);`);
+				code.decreaseIndent();
+				code.push(`}`);
+			}
+			{
+				const typeParams: string[] = [];
+				const resources: string[] = [];
+				for (const info of resourceInfos.values()) {
+					if (info !== undefined) {
+						typeParams.push(info.class.typeParam);
+						resources.push(`[$.${info.name}, ${info.class.func}]`);
+					}
+				}
+				const typeName = typeParams.length > 0 ? `${qualifiedTypeName}<${typeParams.join(', ')}>` : qualifiedTypeName;
+				code.push(`type ClassService = ${typeName};`);
+				code.push(`export function createClassService(wasmInterface: WasmInterface, context: $wcm.Context): ClassService {`);
+				code.increaseIndent();
+				code.push(`return $wcm.Service.create<ClassService>(functions, [${resources.join(', ')}], wasmInterface, context);`);
+				code.decreaseIndent();
+				code.push(`}`);
+			}
+			{
+				const typeParams: string[] = [];
+				const resources: string[] = [];
+				for (const info of resourceInfos.values()) {
+					if (info !== undefined) {
+						typeParams.push(info.module.typeParam);
+						resources.push(`[$.${info.name}, ${info.name}.Module]`);
+					}
+				}
+				const typeName = typeParams.length > 0 ? `${qualifiedTypeName}<${typeParams.join(', ')}>` : qualifiedTypeName;
+				code.push(`type ModuleService = ${typeName};`);
+				code.push(`export function createModuleService(wasmInterface: WasmInterface, context: $wcm.Context): ModuleService {`);
+				code.increaseIndent();
+				code.push(`return $wcm.Service.create<ModuleService>(functions, [${resources.join(', ')}], wasmInterface, context);`);
+				code.decreaseIndent();
+				code.push(`}`);
+			}
+
+		}
 		code.decreaseIndent();
 		code.push('}');
+	}
+
+	private getFullQualifiedTypeName(): string {
+		const { symbols, nameProvider } = this.config;
+		const ifaceName = nameProvider.asNamespaceName(this.iface);
+		const pkg = nameProvider.asPackageName(this.pkg);
+		return `${pkg}.${ifaceName}`;
+
 	}
 }
 
@@ -1866,7 +1961,8 @@ class TypeReferenceEmitter extends InterfaceMemberEmitter {
 					code.imports.add(referencePackagedName, `./${referencePackagedName}`);
 					return `${referencePackagedName}.${referencedTypeName}`;
 				} else {
-					throw new Error(`Cannot compute qualifier to import ${JSON.stringify(reference)} into scope  ${JSON.stringify(scope)}.`);
+					throw new Error(`Cannot compute qualifier to import $import { type } from 'node:os';
+{JSON.stringify(reference)} into scope  ${JSON.stringify(scope)}.`);
 				}
 			}
 		}
@@ -2208,7 +2304,15 @@ class ResourceEmitter extends InterfaceMemberEmitter {
 		return this.emitters.length > 0;
 	}
 
-	public getTypeParameter(): string {
+	public hasConstructors(): boolean {
+		return this.constructors.length > 0;
+	}
+
+	public getTypeParamName(): string {
+		return this.typeParamName;
+	}
+
+	public getTypeParameter(withDefault: boolean): string {
 		const qualifier = this.getPackageQualifier();
 		const name = this.config.nameProvider.asTypeName(this.resource);
 		let typeParam = `${qualifier}${name}.Module`;
@@ -2216,38 +2320,54 @@ class ResourceEmitter extends InterfaceMemberEmitter {
 			typeParam = `${typeParam} | ${qualifier}${name}.Constructor`;
 		}
 		typeParam = `${typeParam} | ${qualifier}${name}.Manager`;
-		return `${this.typeParamName} extends ${typeParam} = ${typeParam}`;
+		return withDefault
+			? `${this.typeParamName} extends ${typeParam} = ${typeParam}`
+			: `${this.typeParamName} extends ${typeParam}`;
+	}
+
+	public getModuleType(): string {
+		const qualifier = this.getPackageQualifier();
+		const name = this.config.nameProvider.asTypeName(this.resource);
+		return `${qualifier}${name}.Module`;
+	}
+
+	public getClassType(): string {
+		const qualifier = this.getPackageQualifier();
+		const name = this.config.nameProvider.asTypeName(this.resource);
+		if (this.constructors.length > 0) {
+			return `${qualifier}${name}.Constructor`;
+		} else {
+			return `${qualifier}${name}.Manager`;
+		}
 	}
 
 	public emitNamespace(code: Code): void {
 		const type = this.resource;
 		const { nameProvider } = this.config;
 		const tsName = nameProvider.asTypeName(type);
-		if (this.emitters.length > 0) {
-			code.push(`export namespace ${tsName} {`);
+		code.push(`export namespace ${tsName} {`);
+		code.increaseIndent();
+		code.push('export type Module = {');
+		code.increaseIndent();
+		for (const emitter of this.emitters) {
+			code.push('');
+			emitter.emitNamespace(code);
+		}
+		code.decreaseIndent();
+		code.push(`};`);
+		code.push(`export type Interface = $wcm.Module2Interface<Module>;`);
+		if (this.constructors.length > 0) {
+			code.push(`export type Constructor = {`);
 			code.increaseIndent();
-			code.push('export type Module = {');
-			code.increaseIndent();
-			for (const emitter of this.emitters) {
-				code.push('');
-				emitter.emitNamespace(code);
+			for (const constructor of this.constructors) {
+				constructor.emitConstructorDeclaration(code);
 			}
 			code.decreaseIndent();
 			code.push(`};`);
-			code.push(`export type Interface = $wcm.Module2Interface<Module>;`);
-			if (this.constructors.length > 0) {
-				code.push(`export type Constructor = {`);
-				code.increaseIndent();
-				for (const constructor of this.constructors) {
-					constructor.emitConstructorDeclaration(code);
-				}
-				code.decreaseIndent();
-				code.push(`};`);
-			}
-			code.push(`export type Manager = $wcm.ResourceManager<Interface>;`);
-			code.decreaseIndent();
-			code.push(`}`);
 		}
+		code.push(`export type Manager = $wcm.ResourceManager<Interface>;`);
+		code.decreaseIndent();
+		code.push(`}`);
 		code.imports.addBaseType('resource');
 		code.push(`export type ${tsName} = resource;`);
 	}
@@ -2282,7 +2402,7 @@ class ResourceEmitter extends InterfaceMemberEmitter {
 	public emitService(code: Code): void {
 		const { nameProvider } = this.config;
 		const name = nameProvider.asTypeName(this.resource);
-		const qualifier = this.getMergeQualifier();
+		const qualifier = this.getPackageQualifier();
 		const qualifiedName = `${qualifier}${name}`;
 		code.push(`export namespace ${name}  {`);
 		code.increaseIndent();
@@ -2292,6 +2412,7 @@ class ResourceEmitter extends InterfaceMemberEmitter {
 		const moduleType = `${qualifiedName}.Module`;
 		code.push(`export function Module(wasmInterface: WasmInterface, context: $wcm.Context): ${moduleType} {`);
 		code.increaseIndent();
+		code.push(`return $wcm.Module.create<${moduleType}>($.${name}, wasmInterface, context);`);
 		code.decreaseIndent();
 		code.push(`}`);
 		if (this.constructors.length > 0) {
@@ -2319,7 +2440,11 @@ class ResourceEmitter extends InterfaceMemberEmitter {
 			code.decreaseIndent();
 			code.push(`}`);
 		}
-		code.push(`export const Manager = new $wcm.ResourceManager<${qualifiedName}>();`);
+		code.push(`export function Manager(): ${qualifiedName}.Manager {`);
+		code.increaseIndent();
+		code.push(`return new $wcm.ResourceManager<${qualifiedName}.Interface>();`);
+		code.decreaseIndent();
+		code.push('}');
 
 		code.decreaseIndent();
 		code.push(`}`);
