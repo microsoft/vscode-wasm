@@ -1765,7 +1765,7 @@ class InterfaceEmitter extends Emitter {
 	}
 
 	private getFullQualifiedTypeName(): string {
-		const { symbols, nameProvider } = this.config;
+		const { nameProvider } = this.config;
 		const ifaceName = nameProvider.asNamespaceName(this.iface);
 		const pkg = nameProvider.asPackageName(this.pkg);
 		return `${pkg}.${ifaceName}`;
@@ -2564,7 +2564,7 @@ namespace ResourceEmitter {
 			return this.config.nameProvider.asStaticMethodName(this.callable);
 		}
 
-		public emitClassMember(code: Code): void {
+		public emitClassMember(_code: Code): void {
 		}
 	}
 
