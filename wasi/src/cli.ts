@@ -104,6 +104,8 @@ export namespace cli {
 			};
 			export type Interface = $wcm.Module2Interface<Module>;
 			export type Manager = $wcm.ResourceManager<Interface>;
+			export type WasmInterface = {
+			};
 		}
 		export type TerminalInput = resource;
 	}
@@ -118,6 +120,8 @@ export namespace cli {
 			};
 			export type Interface = $wcm.Module2Interface<Module>;
 			export type Manager = $wcm.ResourceManager<Interface>;
+			export type WasmInterface = {
+			};
 		}
 		export type TerminalOutput = resource;
 	}
@@ -302,7 +306,7 @@ export namespace cli {
 		const functions: $wcm.FunctionType<$wcm.ServiceFunction>[] = [];
 		const resources: $wcm.ResourceType[] = [$.TerminalInput];
 		export type WasmInterface = {
-		};
+		} & cli.TerminalInput.TerminalInput.WasmInterface;
 		export namespace TerminalInput  {
 			export function Module(wasmInterface: WasmInterface, context: $wcm.Context): cli.TerminalInput.TerminalInput.Module {
 				return $wcm.Module.create<cli.TerminalInput.TerminalInput.Module>($.TerminalInput, wasmInterface, context);
@@ -334,7 +338,7 @@ export namespace cli {
 		const functions: $wcm.FunctionType<$wcm.ServiceFunction>[] = [];
 		const resources: $wcm.ResourceType[] = [$.TerminalOutput];
 		export type WasmInterface = {
-		};
+		} & cli.TerminalOutput.TerminalOutput.WasmInterface;
 		export namespace TerminalOutput  {
 			export function Module(wasmInterface: WasmInterface, context: $wcm.Context): cli.TerminalOutput.TerminalOutput.Module {
 				return $wcm.Module.create<cli.TerminalOutput.TerminalOutput.Module>($.TerminalOutput, wasmInterface, context);

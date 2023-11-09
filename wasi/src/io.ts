@@ -3,7 +3,7 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 import * as $wcm from '@vscode/wasm-component-model';
-import type { resource, borrow, own, u64, result, i32, ptr, i64 } from '@vscode/wasm-component-model';
+import type { resource, borrow, own, i32, ptr, u64, result, i64 } from '@vscode/wasm-component-model';
 
 export namespace io {
 	/**
@@ -18,6 +18,8 @@ export namespace io {
 			};
 			export type Interface = $wcm.Module2Interface<Module>;
 			export type Manager = $wcm.ResourceManager<Interface>;
+			export type WasmInterface = {
+			};
 		}
 		export type Pollable = resource;
 		
@@ -141,6 +143,9 @@ export namespace io {
 			};
 			export type Interface = $wcm.Module2Interface<Module>;
 			export type Manager = $wcm.ResourceManager<Interface>;
+			export type WasmInterface = {
+				'[method]error.to-debug-string': (self: i32, result: ptr<[i32, i32]>) => void;
+			};
 		}
 		export type Error = resource;
 		
@@ -213,6 +218,13 @@ export namespace io {
 			};
 			export type Interface = $wcm.Module2Interface<Module>;
 			export type Manager = $wcm.ResourceManager<Interface>;
+			export type WasmInterface = {
+				'[method]input-stream.read': (self: i32, len: i64, result: ptr<[i32, i32, i32]>) => void;
+				'[method]input-stream.blocking-read': (self: i32, len: i64, result: ptr<[i32, i32, i32]>) => void;
+				'[method]input-stream.skip': (self: i32, len: i64, result: ptr<[i32, i64, i32]>) => void;
+				'[method]input-stream.blocking-skip': (self: i32, len: i64, result: ptr<[i32, i64, i32]>) => void;
+				'[method]input-stream.subscribe': (self: i32) => i32;
+			};
 		}
 		export type InputStream = resource;
 		
@@ -380,6 +392,19 @@ export namespace io {
 			};
 			export type Interface = $wcm.Module2Interface<Module>;
 			export type Manager = $wcm.ResourceManager<Interface>;
+			export type WasmInterface = {
+				'[method]output-stream.check-write': (self: i32, result: ptr<[i32, i64, i32]>) => void;
+				'[method]output-stream.write': (self: i32, contents_ptr: i32, contents_len: i32, result: ptr<[i32, i32, i32]>) => void;
+				'[method]output-stream.blocking-write-and-flush': (self: i32, contents_ptr: i32, contents_len: i32, result: ptr<[i32, i32, i32]>) => void;
+				'[method]output-stream.flush': (self: i32, result: ptr<[i32, i32, i32]>) => void;
+				'[method]output-stream.blocking-flush': (self: i32, result: ptr<[i32, i32, i32]>) => void;
+				'[method]output-stream.subscribe': (self: i32) => i32;
+				'[method]output-stream.write-zeroes': (self: i32, len: i64, result: ptr<[i32, i32, i32]>) => void;
+				'[method]output-stream.blocking-write-zeroes-and-flush': (self: i32, len: i64, result: ptr<[i32, i32, i32]>) => void;
+				'[method]output-stream.splice': (self: i32, src: i32, len: i64, result: ptr<[i32, i64, i32]>) => void;
+				'[method]output-stream.blocking-splice': (self: i32, src: i32, len: i64, result: ptr<[i32, i64, i32]>) => void;
+				'[method]output-stream.forward': (self: i32, src: i32, result: ptr<[i32, i64, i32]>) => void;
+			};
 		}
 		export type OutputStream = resource;
 	}
@@ -407,7 +432,7 @@ export namespace io {
 		export type WasmInterface = {
 			'poll-list': (in__ptr: i32, in__len: i32, result: ptr<[i32, i32]>) => void;
 			'poll-one': (in_: i32) => void;
-		};
+		} & io.Poll.Pollable.WasmInterface;
 		export namespace Pollable  {
 			export function Module(wasmInterface: WasmInterface, context: $wcm.Context): io.Poll.Pollable.Module {
 				return $wcm.Module.create<io.Poll.Pollable.Module>($.Pollable, wasmInterface, context);
@@ -507,24 +532,7 @@ export namespace io {
 		const functions: $wcm.FunctionType<$wcm.ServiceFunction>[] = [];
 		const resources: $wcm.ResourceType[] = [$.Error, $.InputStream, $.OutputStream];
 		export type WasmInterface = {
-			'[method]error.to-debug-string': (self: i32, result: ptr<[i32, i32]>) => void;
-			'[method]input-stream.read': (self: i32, len: i64, result: ptr<[i32, i32, i32]>) => void;
-			'[method]input-stream.blocking-read': (self: i32, len: i64, result: ptr<[i32, i32, i32]>) => void;
-			'[method]input-stream.skip': (self: i32, len: i64, result: ptr<[i32, i64, i32]>) => void;
-			'[method]input-stream.blocking-skip': (self: i32, len: i64, result: ptr<[i32, i64, i32]>) => void;
-			'[method]input-stream.subscribe': (self: i32) => i32;
-			'[method]output-stream.check-write': (self: i32, result: ptr<[i32, i64, i32]>) => void;
-			'[method]output-stream.write': (self: i32, contents_ptr: i32, contents_len: i32, result: ptr<[i32, i32, i32]>) => void;
-			'[method]output-stream.blocking-write-and-flush': (self: i32, contents_ptr: i32, contents_len: i32, result: ptr<[i32, i32, i32]>) => void;
-			'[method]output-stream.flush': (self: i32, result: ptr<[i32, i32, i32]>) => void;
-			'[method]output-stream.blocking-flush': (self: i32, result: ptr<[i32, i32, i32]>) => void;
-			'[method]output-stream.subscribe': (self: i32) => i32;
-			'[method]output-stream.write-zeroes': (self: i32, len: i64, result: ptr<[i32, i32, i32]>) => void;
-			'[method]output-stream.blocking-write-zeroes-and-flush': (self: i32, len: i64, result: ptr<[i32, i32, i32]>) => void;
-			'[method]output-stream.splice': (self: i32, src: i32, len: i64, result: ptr<[i32, i64, i32]>) => void;
-			'[method]output-stream.blocking-splice': (self: i32, src: i32, len: i64, result: ptr<[i32, i64, i32]>) => void;
-			'[method]output-stream.forward': (self: i32, src: i32, result: ptr<[i32, i64, i32]>) => void;
-		};
+		} & io.Streams.Error.WasmInterface & io.Streams.InputStream.WasmInterface & io.Streams.OutputStream.WasmInterface;
 		export namespace Error  {
 			export function Module(wasmInterface: WasmInterface, context: $wcm.Context): io.Streams.Error.Module {
 				return $wcm.Module.create<io.Streams.Error.Module>($.Error, wasmInterface, context);

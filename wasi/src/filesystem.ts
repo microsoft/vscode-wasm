@@ -3,7 +3,7 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 import * as $wcm from '@vscode/wasm-component-model';
-import type { u64, u32, borrow, own, result, resource, option, i32, i64, ptr } from '@vscode/wasm-component-model';
+import type { u64, u32, borrow, own, result, i32, i64, ptr, resource, option } from '@vscode/wasm-component-model';
 import { clocks } from './clocks';
 import { io } from './io';
 
@@ -1128,6 +1128,43 @@ export namespace filesystem {
 			};
 			export type Interface = $wcm.Module2Interface<Module>;
 			export type Manager = $wcm.ResourceManager<Interface>;
+			export type WasmInterface = {
+				'[method]descriptor.read-via-stream': (self: i32, offset: i64, result: ptr<[i32, i32]>) => void;
+				'[method]descriptor.write-via-stream': (self: i32, offset: i64, result: ptr<[i32, i32]>) => void;
+				'[method]descriptor.append-via-stream': (self: i32, result: ptr<[i32, i32]>) => void;
+				'[method]descriptor.advise': (self: i32, offset: i64, length: i64, advice_Advice: i32, result: ptr<[i32, i32]>) => void;
+				'[method]descriptor.sync-data': (self: i32, result: ptr<[i32, i32]>) => void;
+				'[method]descriptor.get-flags': (self: i32, result: ptr<[i32, i32]>) => void;
+				'[method]descriptor.get-type': (self: i32, result: ptr<[i32, i32]>) => void;
+				'[method]descriptor.set-size': (self: i32, size: i64, result: ptr<[i32, i32]>) => void;
+				'[method]descriptor.set-times': (self: i32, dataAccessTimestamp_case: i32, dataAccessTimestamp_0: i64, dataAccessTimestamp_1: i32, dataModificationTimestamp_case: i32, dataModificationTimestamp_0: i64, dataModificationTimestamp_1: i32, result: ptr<[i32, i32]>) => void;
+				'[method]descriptor.read': (self: i32, length: i64, offset: i64, result: ptr<[i32, i32, i32, i32]>) => void;
+				'[method]descriptor.write': (self: i32, buffer_ptr: i32, buffer_len: i32, offset: i64, result: ptr<[i32, i64]>) => void;
+				'[method]descriptor.read-directory': (self: i32, result: ptr<[i32, i32]>) => void;
+				'[method]descriptor.sync': (self: i32, result: ptr<[i32, i32]>) => void;
+				'[method]descriptor.create-directory-at': (self: i32, path_ptr: i32, path_len: i32, result: ptr<[i32, i32]>) => void;
+				'[method]descriptor.stat': (self: i32, result: ptr<[i32, i32, i64, i64, i32, i64, i32, i32, i64, i32, i32, i64, i32]>) => void;
+				'[method]descriptor.stat-at': (self: i32, pathFlags: i32, path_ptr: i32, path_len: i32, result: ptr<[i32, i32, i64, i64, i32, i64, i32, i32, i64, i32, i32, i64, i32]>) => void;
+				'[method]descriptor.set-times-at': (self: i32, pathFlags: i32, path_ptr: i32, path_len: i32, dataAccessTimestamp_case: i32, dataAccessTimestamp_0: i64, dataAccessTimestamp_1: i32, dataModificationTimestamp_case: i32, dataModificationTimestamp_0: i64, dataModificationTimestamp_1: i32, result: ptr<[i32, i32]>) => void;
+				'[method]descriptor.link-at': (self: i32, oldPathFlags: i32, oldPath_ptr: i32, oldPath_len: i32, newDescriptor: i32, newPath_ptr: i32, newPath_len: i32, result: ptr<[i32, i32]>) => void;
+				'[method]descriptor.open-at': (self: i32, pathFlags: i32, path_ptr: i32, path_len: i32, openFlags: i32, flags: i32, modes: i32, result: ptr<[i32, i32]>) => void;
+				'[method]descriptor.readlink-at': (self: i32, path_ptr: i32, path_len: i32, result: ptr<[i32, i32, i32]>) => void;
+				'[method]descriptor.remove-directory-at': (self: i32, path_ptr: i32, path_len: i32, result: ptr<[i32, i32]>) => void;
+				'[method]descriptor.rename-at': (self: i32, oldPath_ptr: i32, oldPath_len: i32, newDescriptor: i32, newPath_ptr: i32, newPath_len: i32, result: ptr<[i32, i32]>) => void;
+				'[method]descriptor.symlink-at': (self: i32, oldPath_ptr: i32, oldPath_len: i32, newPath_ptr: i32, newPath_len: i32, result: ptr<[i32, i32]>) => void;
+				'[method]descriptor.access-at': (self: i32, pathFlags: i32, path_ptr: i32, path_len: i32, type_case: i32, type_0: i32, result: ptr<[i32, i32]>) => void;
+				'[method]descriptor.unlink-file-at': (self: i32, path_ptr: i32, path_len: i32, result: ptr<[i32, i32]>) => void;
+				'[method]descriptor.change-file-permissions-at': (self: i32, pathFlags: i32, path_ptr: i32, path_len: i32, modes: i32, result: ptr<[i32, i32]>) => void;
+				'[method]descriptor.change-directory-permissions-at': (self: i32, pathFlags: i32, path_ptr: i32, path_len: i32, modes: i32, result: ptr<[i32, i32]>) => void;
+				'[method]descriptor.lock-shared': (self: i32, result: ptr<[i32, i32]>) => void;
+				'[method]descriptor.lock-exclusive': (self: i32, result: ptr<[i32, i32]>) => void;
+				'[method]descriptor.try-lock-shared': (self: i32, result: ptr<[i32, i32]>) => void;
+				'[method]descriptor.try-lock-exclusive': (self: i32, result: ptr<[i32, i32]>) => void;
+				'[method]descriptor.unlock': (self: i32, result: ptr<[i32, i32]>) => void;
+				'[method]descriptor.is-same-object': (self: i32, other: i32) => i32;
+				'[method]descriptor.metadata-hash': (self: i32, result: ptr<[i32, i64, i64]>) => void;
+				'[method]descriptor.metadata-hash-at': (self: i32, pathFlags: i32, path_ptr: i32, path_len: i32, result: ptr<[i32, i64, i64]>) => void;
+			};
 		}
 		export type Descriptor = resource;
 		
@@ -1141,6 +1178,9 @@ export namespace filesystem {
 			};
 			export type Interface = $wcm.Module2Interface<Module>;
 			export type Manager = $wcm.ResourceManager<Interface>;
+			export type WasmInterface = {
+				'[method]directory-entry-stream.read-directory-entry': (self: i32, result: ptr<[i32, i32, i32, i32, i32]>) => void;
+			};
 		}
 		export type DirectoryEntryStream = resource;
 		
@@ -1379,44 +1419,8 @@ export namespace filesystem {
 		const functions: $wcm.FunctionType<$wcm.ServiceFunction>[] = [$.filesystemErrorCode];
 		const resources: $wcm.ResourceType[] = [$.Descriptor, $.DirectoryEntryStream];
 		export type WasmInterface = {
-			'[method]descriptor.read-via-stream': (self: i32, offset: i64, result: ptr<[i32, i32]>) => void;
-			'[method]descriptor.write-via-stream': (self: i32, offset: i64, result: ptr<[i32, i32]>) => void;
-			'[method]descriptor.append-via-stream': (self: i32, result: ptr<[i32, i32]>) => void;
-			'[method]descriptor.advise': (self: i32, offset: i64, length: i64, advice_Advice: i32, result: ptr<[i32, i32]>) => void;
-			'[method]descriptor.sync-data': (self: i32, result: ptr<[i32, i32]>) => void;
-			'[method]descriptor.get-flags': (self: i32, result: ptr<[i32, i32]>) => void;
-			'[method]descriptor.get-type': (self: i32, result: ptr<[i32, i32]>) => void;
-			'[method]descriptor.set-size': (self: i32, size: i64, result: ptr<[i32, i32]>) => void;
-			'[method]descriptor.set-times': (self: i32, dataAccessTimestamp_case: i32, dataAccessTimestamp_0: i64, dataAccessTimestamp_1: i32, dataModificationTimestamp_case: i32, dataModificationTimestamp_0: i64, dataModificationTimestamp_1: i32, result: ptr<[i32, i32]>) => void;
-			'[method]descriptor.read': (self: i32, length: i64, offset: i64, result: ptr<[i32, i32, i32, i32]>) => void;
-			'[method]descriptor.write': (self: i32, buffer_ptr: i32, buffer_len: i32, offset: i64, result: ptr<[i32, i64]>) => void;
-			'[method]descriptor.read-directory': (self: i32, result: ptr<[i32, i32]>) => void;
-			'[method]descriptor.sync': (self: i32, result: ptr<[i32, i32]>) => void;
-			'[method]descriptor.create-directory-at': (self: i32, path_ptr: i32, path_len: i32, result: ptr<[i32, i32]>) => void;
-			'[method]descriptor.stat': (self: i32, result: ptr<[i32, i32, i64, i64, i32, i64, i32, i32, i64, i32, i32, i64, i32]>) => void;
-			'[method]descriptor.stat-at': (self: i32, pathFlags: i32, path_ptr: i32, path_len: i32, result: ptr<[i32, i32, i64, i64, i32, i64, i32, i32, i64, i32, i32, i64, i32]>) => void;
-			'[method]descriptor.set-times-at': (self: i32, pathFlags: i32, path_ptr: i32, path_len: i32, dataAccessTimestamp_case: i32, dataAccessTimestamp_0: i64, dataAccessTimestamp_1: i32, dataModificationTimestamp_case: i32, dataModificationTimestamp_0: i64, dataModificationTimestamp_1: i32, result: ptr<[i32, i32]>) => void;
-			'[method]descriptor.link-at': (self: i32, oldPathFlags: i32, oldPath_ptr: i32, oldPath_len: i32, newDescriptor: i32, newPath_ptr: i32, newPath_len: i32, result: ptr<[i32, i32]>) => void;
-			'[method]descriptor.open-at': (self: i32, pathFlags: i32, path_ptr: i32, path_len: i32, openFlags: i32, flags: i32, modes: i32, result: ptr<[i32, i32]>) => void;
-			'[method]descriptor.readlink-at': (self: i32, path_ptr: i32, path_len: i32, result: ptr<[i32, i32, i32]>) => void;
-			'[method]descriptor.remove-directory-at': (self: i32, path_ptr: i32, path_len: i32, result: ptr<[i32, i32]>) => void;
-			'[method]descriptor.rename-at': (self: i32, oldPath_ptr: i32, oldPath_len: i32, newDescriptor: i32, newPath_ptr: i32, newPath_len: i32, result: ptr<[i32, i32]>) => void;
-			'[method]descriptor.symlink-at': (self: i32, oldPath_ptr: i32, oldPath_len: i32, newPath_ptr: i32, newPath_len: i32, result: ptr<[i32, i32]>) => void;
-			'[method]descriptor.access-at': (self: i32, pathFlags: i32, path_ptr: i32, path_len: i32, type_case: i32, type_0: i32, result: ptr<[i32, i32]>) => void;
-			'[method]descriptor.unlink-file-at': (self: i32, path_ptr: i32, path_len: i32, result: ptr<[i32, i32]>) => void;
-			'[method]descriptor.change-file-permissions-at': (self: i32, pathFlags: i32, path_ptr: i32, path_len: i32, modes: i32, result: ptr<[i32, i32]>) => void;
-			'[method]descriptor.change-directory-permissions-at': (self: i32, pathFlags: i32, path_ptr: i32, path_len: i32, modes: i32, result: ptr<[i32, i32]>) => void;
-			'[method]descriptor.lock-shared': (self: i32, result: ptr<[i32, i32]>) => void;
-			'[method]descriptor.lock-exclusive': (self: i32, result: ptr<[i32, i32]>) => void;
-			'[method]descriptor.try-lock-shared': (self: i32, result: ptr<[i32, i32]>) => void;
-			'[method]descriptor.try-lock-exclusive': (self: i32, result: ptr<[i32, i32]>) => void;
-			'[method]descriptor.unlock': (self: i32, result: ptr<[i32, i32]>) => void;
-			'[method]descriptor.is-same-object': (self: i32, other: i32) => i32;
-			'[method]descriptor.metadata-hash': (self: i32, result: ptr<[i32, i64, i64]>) => void;
-			'[method]descriptor.metadata-hash-at': (self: i32, pathFlags: i32, path_ptr: i32, path_len: i32, result: ptr<[i32, i64, i64]>) => void;
-			'[method]directory-entry-stream.read-directory-entry': (self: i32, result: ptr<[i32, i32, i32, i32, i32]>) => void;
 			'filesystem-error-code': (err: i32, result: ptr<[i32, i32]>) => void;
-		};
+		} & filesystem.Types.Descriptor.WasmInterface & filesystem.Types.DirectoryEntryStream.WasmInterface;
 		export namespace Descriptor  {
 			export function Module(wasmInterface: WasmInterface, context: $wcm.Context): filesystem.Types.Descriptor.Module {
 				return $wcm.Module.create<filesystem.Types.Descriptor.Module>($.Descriptor, wasmInterface, context);

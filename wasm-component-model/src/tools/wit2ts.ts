@@ -1653,16 +1653,21 @@ class InterfaceEmitter extends Emitter {
 		code.increaseIndent();
 		code.push(`const functions: ${MetaModel.qualifier}.FunctionType<${MetaModel.qualifier}.ServiceFunction>[] = [${functions.map(name => `$.${name}`).join(', ')}];`);
 		code.push(`const resources: ${MetaModel.qualifier}.ResourceType[] = [${resources.map(name => `$.${name}`).join(', ')}];`);
+		const resourceWasmInterfaces: string[] = [];
+		for (const emitter of this.resourceEmitters) {
+			resourceWasmInterfaces.push(`${qualifiedTypeName}.${nameProvider.asTypeName(emitter.resource)}.WasmInterface`);
+		}
 		code.push(`export type WasmInterface = {`);
 		code.increaseIndent();
-		for(const resource of this.resourceEmitters) {
-			resource.emitWasmInterface(code);
-		}
 		for(const func of this.functionEmitters) {
 			func.emitWasmInterface(code);
 		}
 		code.decreaseIndent();
-		code.push(`};`);
+		if (resourceWasmInterfaces.length > 0) {
+			code.push(`} & ${resourceWasmInterfaces.join(' & ')};`);
+		} else {
+			code.push(`};`);
+		}
 
 		for (const emitter of this.resourceEmitters) {
 			emitter.emitService(code);
@@ -2366,6 +2371,13 @@ class ResourceEmitter extends InterfaceMemberEmitter {
 			code.push(`};`);
 		}
 		code.push(`export type Manager = $wcm.ResourceManager<Interface>;`);
+		code.push(`export type WasmInterface = {`);
+		code.increaseIndent();
+		for (const emitter of this.emitters) {
+			emitter.emitWasmInterface(code);
+		}
+		code.decreaseIndent();
+		code.push(`};`);
 		code.decreaseIndent();
 		code.push(`}`);
 		code.imports.addBaseType('resource');

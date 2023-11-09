@@ -3,7 +3,7 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 import * as $wcm from '@vscode/wasm-component-model';
-import type { u32, u16, own, borrow, resource, result, i32, ptr } from '@vscode/wasm-component-model';
+import type { u32, u16, own, borrow, i32, ptr, resource, result } from '@vscode/wasm-component-model';
 import { io } from './io';
 
 export namespace http {
@@ -275,6 +275,15 @@ export namespace http {
 				new(entries: [string, Uint8Array][]): Interface;
 			};
 			export type Manager = $wcm.ResourceManager<Interface>;
+			export type WasmInterface = {
+				'[constructor]fields': (entries_ptr: i32, entries_len: i32) => i32;
+				'[method]fields.get': (self: i32, name_ptr: i32, name_len: i32, result: ptr<[i32, i32]>) => void;
+				'[method]fields.set': (self: i32, name_ptr: i32, name_len: i32, value_ptr: i32, value_len: i32) => void;
+				'[method]fields.delete': (self: i32, name_ptr: i32, name_len: i32) => void;
+				'[method]fields.append': (self: i32, name_ptr: i32, name_len: i32, value_ptr: i32, value_len: i32) => void;
+				'[method]fields.entries': (self: i32, result: ptr<[i32, i32]>) => void;
+				'[method]fields.clone': (self: i32) => i32;
+			};
 		}
 		export type Fields = resource;
 		
@@ -295,6 +304,14 @@ export namespace http {
 			};
 			export type Interface = $wcm.Module2Interface<Module>;
 			export type Manager = $wcm.ResourceManager<Interface>;
+			export type WasmInterface = {
+				'[method]incoming-request.method': (self: i32, result: ptr<[i32, i32, i32]>) => void;
+				'[method]incoming-request.path-with-query': (self: i32, result: ptr<[i32, i32, i32]>) => void;
+				'[method]incoming-request.scheme': (self: i32, result: ptr<[i32, i32, i32, i32]>) => void;
+				'[method]incoming-request.authority': (self: i32, result: ptr<[i32, i32, i32]>) => void;
+				'[method]incoming-request.headers': (self: i32) => i32;
+				'[method]incoming-request.consume': (self: i32, result: ptr<[i32, i32]>) => void;
+			};
 		}
 		export type IncomingRequest = resource;
 		
@@ -310,6 +327,10 @@ export namespace http {
 				new(method: Method, pathWithQuery: string | undefined, scheme: Scheme | undefined, authority: string | undefined, headers: borrow<Headers>): Interface;
 			};
 			export type Manager = $wcm.ResourceManager<Interface>;
+			export type WasmInterface = {
+				'[constructor]outgoing-request': (method_case: i32, method_0: i32, method_1: i32, pathWithQuery_case: i32, pathWithQuery_option_ptr: i32, pathWithQuery_option_len: i32, scheme_case: i32, scheme_option_case: i32, scheme_option_0: i32, scheme_option_1: i32, authority_case: i32, authority_option_ptr: i32, authority_option_len: i32, headers: i32) => i32;
+				'[method]outgoing-request.write': (self: i32, result: ptr<[i32, i32]>) => void;
+			};
 		}
 		export type OutgoingRequest = resource;
 		
@@ -320,6 +341,9 @@ export namespace http {
 			};
 			export type Interface = $wcm.Module2Interface<Module>;
 			export type Manager = $wcm.ResourceManager<Interface>;
+			export type WasmInterface = {
+				'[static]response-outparam.set': (param: i32, response_case: i32, response_0: i32, response_1: i32, response_2: i32) => void;
+			};
 		}
 		export type ResponseOutparam = resource;
 		
@@ -334,6 +358,11 @@ export namespace http {
 			};
 			export type Interface = $wcm.Module2Interface<Module>;
 			export type Manager = $wcm.ResourceManager<Interface>;
+			export type WasmInterface = {
+				'[method]incoming-response.status': (self: i32) => i32;
+				'[method]incoming-response.headers': (self: i32) => i32;
+				'[method]incoming-response.consume': (self: i32, result: ptr<[i32, i32]>) => void;
+			};
 		}
 		export type IncomingResponse = resource;
 		
@@ -346,6 +375,10 @@ export namespace http {
 			};
 			export type Interface = $wcm.Module2Interface<Module>;
 			export type Manager = $wcm.ResourceManager<Interface>;
+			export type WasmInterface = {
+				'[method]incoming-body.stream': (self: i32, result: ptr<[i32, i32]>) => void;
+				'[static]incoming-body.finish': (this_: i32) => i32;
+			};
 		}
 		export type IncomingBody = resource;
 		
@@ -365,6 +398,10 @@ export namespace http {
 			};
 			export type Interface = $wcm.Module2Interface<Module>;
 			export type Manager = $wcm.ResourceManager<Interface>;
+			export type WasmInterface = {
+				'[method]future-trailers.subscribe': (self: i32) => i32;
+				'[method]future-trailers.get': (self: i32, result: ptr<[i32, i32, i32, i32, i32]>) => void;
+			};
 		}
 		export type FutureTrailers = resource;
 		
@@ -384,6 +421,10 @@ export namespace http {
 				new(statusCode: StatusCode, headers: borrow<Headers>): Interface;
 			};
 			export type Manager = $wcm.ResourceManager<Interface>;
+			export type WasmInterface = {
+				'[constructor]outgoing-response': (statusCode: i32, headers: i32) => i32;
+				'[method]outgoing-response.write': (self: i32, result: ptr<[i32, i32]>) => void;
+			};
 		}
 		export type OutgoingResponse = resource;
 		
@@ -406,6 +447,10 @@ export namespace http {
 			};
 			export type Interface = $wcm.Module2Interface<Module>;
 			export type Manager = $wcm.ResourceManager<Interface>;
+			export type WasmInterface = {
+				'[method]outgoing-body.write': (self: i32, result: ptr<[i32, i32]>) => void;
+				'[static]outgoing-body.finish': (this_: i32, trailers_case: i32, trailers_option: i32) => void;
+			};
 		}
 		export type OutgoingBody = resource;
 		
@@ -426,6 +471,10 @@ export namespace http {
 			};
 			export type Interface = $wcm.Module2Interface<Module>;
 			export type Manager = $wcm.ResourceManager<Interface>;
+			export type WasmInterface = {
+				'[method]future-incoming-response.get': (self: i32, result: ptr<[i32, i32, i32, i32, i32, i32]>) => void;
+				'[method]future-incoming-response.subscribe': (self: i32) => i32;
+			};
 		}
 		export type FutureIncomingResponse = resource;
 	}
@@ -605,36 +654,7 @@ export namespace http {
 		const functions: $wcm.FunctionType<$wcm.ServiceFunction>[] = [];
 		const resources: $wcm.ResourceType[] = [$.Fields, $.IncomingRequest, $.OutgoingRequest, $.ResponseOutparam, $.IncomingResponse, $.IncomingBody, $.FutureTrailers, $.OutgoingResponse, $.OutgoingBody, $.FutureIncomingResponse];
 		export type WasmInterface = {
-			'[constructor]fields': (entries_ptr: i32, entries_len: i32) => i32;
-			'[method]fields.get': (self: i32, name_ptr: i32, name_len: i32, result: ptr<[i32, i32]>) => void;
-			'[method]fields.set': (self: i32, name_ptr: i32, name_len: i32, value_ptr: i32, value_len: i32) => void;
-			'[method]fields.delete': (self: i32, name_ptr: i32, name_len: i32) => void;
-			'[method]fields.append': (self: i32, name_ptr: i32, name_len: i32, value_ptr: i32, value_len: i32) => void;
-			'[method]fields.entries': (self: i32, result: ptr<[i32, i32]>) => void;
-			'[method]fields.clone': (self: i32) => i32;
-			'[method]incoming-request.method': (self: i32, result: ptr<[i32, i32, i32]>) => void;
-			'[method]incoming-request.path-with-query': (self: i32, result: ptr<[i32, i32, i32]>) => void;
-			'[method]incoming-request.scheme': (self: i32, result: ptr<[i32, i32, i32, i32]>) => void;
-			'[method]incoming-request.authority': (self: i32, result: ptr<[i32, i32, i32]>) => void;
-			'[method]incoming-request.headers': (self: i32) => i32;
-			'[method]incoming-request.consume': (self: i32, result: ptr<[i32, i32]>) => void;
-			'[constructor]outgoing-request': (method_case: i32, method_0: i32, method_1: i32, pathWithQuery_case: i32, pathWithQuery_option_ptr: i32, pathWithQuery_option_len: i32, scheme_case: i32, scheme_option_case: i32, scheme_option_0: i32, scheme_option_1: i32, authority_case: i32, authority_option_ptr: i32, authority_option_len: i32, headers: i32) => i32;
-			'[method]outgoing-request.write': (self: i32, result: ptr<[i32, i32]>) => void;
-			'[static]response-outparam.set': (param: i32, response_case: i32, response_0: i32, response_1: i32, response_2: i32) => void;
-			'[method]incoming-response.status': (self: i32) => i32;
-			'[method]incoming-response.headers': (self: i32) => i32;
-			'[method]incoming-response.consume': (self: i32, result: ptr<[i32, i32]>) => void;
-			'[method]incoming-body.stream': (self: i32, result: ptr<[i32, i32]>) => void;
-			'[static]incoming-body.finish': (this_: i32) => i32;
-			'[method]future-trailers.subscribe': (self: i32) => i32;
-			'[method]future-trailers.get': (self: i32, result: ptr<[i32, i32, i32, i32, i32]>) => void;
-			'[constructor]outgoing-response': (statusCode: i32, headers: i32) => i32;
-			'[method]outgoing-response.write': (self: i32, result: ptr<[i32, i32]>) => void;
-			'[method]outgoing-body.write': (self: i32, result: ptr<[i32, i32]>) => void;
-			'[static]outgoing-body.finish': (this_: i32, trailers_case: i32, trailers_option: i32) => void;
-			'[method]future-incoming-response.get': (self: i32, result: ptr<[i32, i32, i32, i32, i32, i32]>) => void;
-			'[method]future-incoming-response.subscribe': (self: i32) => i32;
-		};
+		} & http.Types.Fields.WasmInterface & http.Types.IncomingRequest.WasmInterface & http.Types.OutgoingRequest.WasmInterface & http.Types.ResponseOutparam.WasmInterface & http.Types.IncomingResponse.WasmInterface & http.Types.IncomingBody.WasmInterface & http.Types.FutureTrailers.WasmInterface & http.Types.OutgoingResponse.WasmInterface & http.Types.OutgoingBody.WasmInterface & http.Types.FutureIncomingResponse.WasmInterface;
 		export namespace Fields  {
 			export function Module(wasmInterface: WasmInterface, context: $wcm.Context): http.Types.Fields.Module {
 				return $wcm.Module.create<http.Types.Fields.Module>($.Fields, wasmInterface, context);

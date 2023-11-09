@@ -3,7 +3,7 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 import * as $wcm from '@vscode/wasm-component-model';
-import type { u8, u16, u32, resource, own, borrow, result, u64, i32, option, ptr, i64 } from '@vscode/wasm-component-model';
+import type { u8, u16, u32, resource, own, borrow, result, i32, ptr, u64, i64, option } from '@vscode/wasm-component-model';
 import { io } from './io';
 
 export namespace sockets {
@@ -313,6 +313,8 @@ export namespace sockets {
 			};
 			export type Interface = $wcm.Module2Interface<Module>;
 			export type Manager = $wcm.ResourceManager<Interface>;
+			export type WasmInterface = {
+			};
 		}
 		export type Network = resource;
 	}
@@ -379,6 +381,10 @@ export namespace sockets {
 			};
 			export type Interface = $wcm.Module2Interface<Module>;
 			export type Manager = $wcm.ResourceManager<Interface>;
+			export type WasmInterface = {
+				'[method]resolve-address-stream.resolve-next-address': (self: i32, result: ptr<[i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32]>) => void;
+				'[method]resolve-address-stream.subscribe': (self: i32) => i32;
+			};
 		}
 		export type ResolveAddressStream = resource;
 		
@@ -729,6 +735,33 @@ export namespace sockets {
 			};
 			export type Interface = $wcm.Module2Interface<Module>;
 			export type Manager = $wcm.ResourceManager<Interface>;
+			export type WasmInterface = {
+				'[method]tcp-socket.start-bind': (self: i32, network: i32, localAddress_IpSocketAddress_case: i32, localAddress_IpSocketAddress_0: i32, localAddress_IpSocketAddress_1: i32, localAddress_IpSocketAddress_2: i32, localAddress_IpSocketAddress_3: i32, localAddress_IpSocketAddress_4: i32, localAddress_IpSocketAddress_5: i32, localAddress_IpSocketAddress_6: i32, localAddress_IpSocketAddress_7: i32, localAddress_IpSocketAddress_8: i32, localAddress_IpSocketAddress_9: i32, localAddress_IpSocketAddress_10: i32, result: ptr<[i32, i32]>) => void;
+				'[method]tcp-socket.finish-bind': (self: i32, result: ptr<[i32, i32]>) => void;
+				'[method]tcp-socket.start-connect': (self: i32, network: i32, remoteAddress_IpSocketAddress_case: i32, remoteAddress_IpSocketAddress_0: i32, remoteAddress_IpSocketAddress_1: i32, remoteAddress_IpSocketAddress_2: i32, remoteAddress_IpSocketAddress_3: i32, remoteAddress_IpSocketAddress_4: i32, remoteAddress_IpSocketAddress_5: i32, remoteAddress_IpSocketAddress_6: i32, remoteAddress_IpSocketAddress_7: i32, remoteAddress_IpSocketAddress_8: i32, remoteAddress_IpSocketAddress_9: i32, remoteAddress_IpSocketAddress_10: i32, result: ptr<[i32, i32]>) => void;
+				'[method]tcp-socket.finish-connect': (self: i32, result: ptr<[i32, i32, i32]>) => void;
+				'[method]tcp-socket.start-listen': (self: i32, result: ptr<[i32, i32]>) => void;
+				'[method]tcp-socket.finish-listen': (self: i32, result: ptr<[i32, i32]>) => void;
+				'[method]tcp-socket.accept': (self: i32, result: ptr<[i32, i32, i32, i32]>) => void;
+				'[method]tcp-socket.local-address': (self: i32, result: ptr<[i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32]>) => void;
+				'[method]tcp-socket.remote-address': (self: i32, result: ptr<[i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32]>) => void;
+				'[method]tcp-socket.address-family': (self: i32) => i32;
+				'[method]tcp-socket.ipv6-only': (self: i32, result: ptr<[i32, i32]>) => void;
+				'[method]tcp-socket.set-ipv6-only': (self: i32, value: i32, result: ptr<[i32, i32]>) => void;
+				'[method]tcp-socket.set-listen-backlog-size': (self: i32, value: i64, result: ptr<[i32, i32]>) => void;
+				'[method]tcp-socket.keep-alive': (self: i32, result: ptr<[i32, i32]>) => void;
+				'[method]tcp-socket.set-keep-alive': (self: i32, value: i32, result: ptr<[i32, i32]>) => void;
+				'[method]tcp-socket.no-delay': (self: i32, result: ptr<[i32, i32]>) => void;
+				'[method]tcp-socket.set-no-delay': (self: i32, value: i32, result: ptr<[i32, i32]>) => void;
+				'[method]tcp-socket.unicast-hop-limit': (self: i32, result: ptr<[i32, i32]>) => void;
+				'[method]tcp-socket.set-unicast-hop-limit': (self: i32, value: i32, result: ptr<[i32, i32]>) => void;
+				'[method]tcp-socket.receive-buffer-size': (self: i32, result: ptr<[i32, i64]>) => void;
+				'[method]tcp-socket.set-receive-buffer-size': (self: i32, value: i64, result: ptr<[i32, i32]>) => void;
+				'[method]tcp-socket.send-buffer-size': (self: i32, result: ptr<[i32, i64]>) => void;
+				'[method]tcp-socket.set-send-buffer-size': (self: i32, value: i64, result: ptr<[i32, i32]>) => void;
+				'[method]tcp-socket.subscribe': (self: i32) => i32;
+				'[method]tcp-socket.shutdown': (self: i32, shutdownType_ShutdownType: i32, result: ptr<[i32, i32]>) => void;
+			};
 		}
 		export type TcpSocket = resource;
 	}
@@ -1018,6 +1051,26 @@ export namespace sockets {
 			};
 			export type Interface = $wcm.Module2Interface<Module>;
 			export type Manager = $wcm.ResourceManager<Interface>;
+			export type WasmInterface = {
+				'[method]udp-socket.start-bind': (self: i32, network: i32, localAddress_IpSocketAddress_case: i32, localAddress_IpSocketAddress_0: i32, localAddress_IpSocketAddress_1: i32, localAddress_IpSocketAddress_2: i32, localAddress_IpSocketAddress_3: i32, localAddress_IpSocketAddress_4: i32, localAddress_IpSocketAddress_5: i32, localAddress_IpSocketAddress_6: i32, localAddress_IpSocketAddress_7: i32, localAddress_IpSocketAddress_8: i32, localAddress_IpSocketAddress_9: i32, localAddress_IpSocketAddress_10: i32, result: ptr<[i32, i32]>) => void;
+				'[method]udp-socket.finish-bind': (self: i32, result: ptr<[i32, i32]>) => void;
+				'[method]udp-socket.start-connect': (self: i32, network: i32, remoteAddress_IpSocketAddress_case: i32, remoteAddress_IpSocketAddress_0: i32, remoteAddress_IpSocketAddress_1: i32, remoteAddress_IpSocketAddress_2: i32, remoteAddress_IpSocketAddress_3: i32, remoteAddress_IpSocketAddress_4: i32, remoteAddress_IpSocketAddress_5: i32, remoteAddress_IpSocketAddress_6: i32, remoteAddress_IpSocketAddress_7: i32, remoteAddress_IpSocketAddress_8: i32, remoteAddress_IpSocketAddress_9: i32, remoteAddress_IpSocketAddress_10: i32, result: ptr<[i32, i32]>) => void;
+				'[method]udp-socket.finish-connect': (self: i32, result: ptr<[i32, i32]>) => void;
+				'[method]udp-socket.receive': (self: i32, maxResults: i64, result: ptr<[i32, i32, i32]>) => void;
+				'[method]udp-socket.send': (self: i32, datagrams_ptr: i32, datagrams_len: i32, result: ptr<[i32, i64]>) => void;
+				'[method]udp-socket.local-address': (self: i32, result: ptr<[i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32]>) => void;
+				'[method]udp-socket.remote-address': (self: i32, result: ptr<[i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32]>) => void;
+				'[method]udp-socket.address-family': (self: i32) => i32;
+				'[method]udp-socket.ipv6-only': (self: i32, result: ptr<[i32, i32]>) => void;
+				'[method]udp-socket.set-ipv6-only': (self: i32, value: i32, result: ptr<[i32, i32]>) => void;
+				'[method]udp-socket.unicast-hop-limit': (self: i32, result: ptr<[i32, i32]>) => void;
+				'[method]udp-socket.set-unicast-hop-limit': (self: i32, value: i32, result: ptr<[i32, i32]>) => void;
+				'[method]udp-socket.receive-buffer-size': (self: i32, result: ptr<[i32, i64]>) => void;
+				'[method]udp-socket.set-receive-buffer-size': (self: i32, value: i64, result: ptr<[i32, i32]>) => void;
+				'[method]udp-socket.send-buffer-size': (self: i32, result: ptr<[i32, i64]>) => void;
+				'[method]udp-socket.set-send-buffer-size': (self: i32, value: i64, result: ptr<[i32, i32]>) => void;
+				'[method]udp-socket.subscribe': (self: i32) => i32;
+			};
 		}
 		export type UdpSocket = resource;
 	}
@@ -1090,7 +1143,7 @@ export namespace sockets {
 		const functions: $wcm.FunctionType<$wcm.ServiceFunction>[] = [];
 		const resources: $wcm.ResourceType[] = [$.Network];
 		export type WasmInterface = {
-		};
+		} & sockets.Network.Network.WasmInterface;
 		export namespace Network  {
 			export function Module(wasmInterface: WasmInterface, context: $wcm.Context): sockets.Network.Network.Module {
 				return $wcm.Module.create<sockets.Network.Network.Module>($.Network, wasmInterface, context);
@@ -1157,10 +1210,8 @@ export namespace sockets {
 		const functions: $wcm.FunctionType<$wcm.ServiceFunction>[] = [$.resolveAddresses];
 		const resources: $wcm.ResourceType[] = [$.ResolveAddressStream];
 		export type WasmInterface = {
-			'[method]resolve-address-stream.resolve-next-address': (self: i32, result: ptr<[i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32]>) => void;
-			'[method]resolve-address-stream.subscribe': (self: i32) => i32;
 			'resolve-addresses': (network: i32, name_ptr: i32, name_len: i32, addressFamily_case: i32, addressFamily_option_IpAddressFamily_IpAddressFamily: i32, includeUnavailable: i32, result: ptr<[i32, i32]>) => void;
-		};
+		} & sockets.IpNameLookup.ResolveAddressStream.WasmInterface;
 		export namespace ResolveAddressStream  {
 			export function Module(wasmInterface: WasmInterface, context: $wcm.Context): sockets.IpNameLookup.ResolveAddressStream.Module {
 				return $wcm.Module.create<sockets.IpNameLookup.ResolveAddressStream.Module>($.ResolveAddressStream, wasmInterface, context);
@@ -1287,32 +1338,7 @@ export namespace sockets {
 		const functions: $wcm.FunctionType<$wcm.ServiceFunction>[] = [];
 		const resources: $wcm.ResourceType[] = [$.TcpSocket];
 		export type WasmInterface = {
-			'[method]tcp-socket.start-bind': (self: i32, network: i32, localAddress_IpSocketAddress_case: i32, localAddress_IpSocketAddress_0: i32, localAddress_IpSocketAddress_1: i32, localAddress_IpSocketAddress_2: i32, localAddress_IpSocketAddress_3: i32, localAddress_IpSocketAddress_4: i32, localAddress_IpSocketAddress_5: i32, localAddress_IpSocketAddress_6: i32, localAddress_IpSocketAddress_7: i32, localAddress_IpSocketAddress_8: i32, localAddress_IpSocketAddress_9: i32, localAddress_IpSocketAddress_10: i32, result: ptr<[i32, i32]>) => void;
-			'[method]tcp-socket.finish-bind': (self: i32, result: ptr<[i32, i32]>) => void;
-			'[method]tcp-socket.start-connect': (self: i32, network: i32, remoteAddress_IpSocketAddress_case: i32, remoteAddress_IpSocketAddress_0: i32, remoteAddress_IpSocketAddress_1: i32, remoteAddress_IpSocketAddress_2: i32, remoteAddress_IpSocketAddress_3: i32, remoteAddress_IpSocketAddress_4: i32, remoteAddress_IpSocketAddress_5: i32, remoteAddress_IpSocketAddress_6: i32, remoteAddress_IpSocketAddress_7: i32, remoteAddress_IpSocketAddress_8: i32, remoteAddress_IpSocketAddress_9: i32, remoteAddress_IpSocketAddress_10: i32, result: ptr<[i32, i32]>) => void;
-			'[method]tcp-socket.finish-connect': (self: i32, result: ptr<[i32, i32, i32]>) => void;
-			'[method]tcp-socket.start-listen': (self: i32, result: ptr<[i32, i32]>) => void;
-			'[method]tcp-socket.finish-listen': (self: i32, result: ptr<[i32, i32]>) => void;
-			'[method]tcp-socket.accept': (self: i32, result: ptr<[i32, i32, i32, i32]>) => void;
-			'[method]tcp-socket.local-address': (self: i32, result: ptr<[i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32]>) => void;
-			'[method]tcp-socket.remote-address': (self: i32, result: ptr<[i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32]>) => void;
-			'[method]tcp-socket.address-family': (self: i32) => i32;
-			'[method]tcp-socket.ipv6-only': (self: i32, result: ptr<[i32, i32]>) => void;
-			'[method]tcp-socket.set-ipv6-only': (self: i32, value: i32, result: ptr<[i32, i32]>) => void;
-			'[method]tcp-socket.set-listen-backlog-size': (self: i32, value: i64, result: ptr<[i32, i32]>) => void;
-			'[method]tcp-socket.keep-alive': (self: i32, result: ptr<[i32, i32]>) => void;
-			'[method]tcp-socket.set-keep-alive': (self: i32, value: i32, result: ptr<[i32, i32]>) => void;
-			'[method]tcp-socket.no-delay': (self: i32, result: ptr<[i32, i32]>) => void;
-			'[method]tcp-socket.set-no-delay': (self: i32, value: i32, result: ptr<[i32, i32]>) => void;
-			'[method]tcp-socket.unicast-hop-limit': (self: i32, result: ptr<[i32, i32]>) => void;
-			'[method]tcp-socket.set-unicast-hop-limit': (self: i32, value: i32, result: ptr<[i32, i32]>) => void;
-			'[method]tcp-socket.receive-buffer-size': (self: i32, result: ptr<[i32, i64]>) => void;
-			'[method]tcp-socket.set-receive-buffer-size': (self: i32, value: i64, result: ptr<[i32, i32]>) => void;
-			'[method]tcp-socket.send-buffer-size': (self: i32, result: ptr<[i32, i64]>) => void;
-			'[method]tcp-socket.set-send-buffer-size': (self: i32, value: i64, result: ptr<[i32, i32]>) => void;
-			'[method]tcp-socket.subscribe': (self: i32) => i32;
-			'[method]tcp-socket.shutdown': (self: i32, shutdownType_ShutdownType: i32, result: ptr<[i32, i32]>) => void;
-		};
+		} & sockets.Tcp.TcpSocket.WasmInterface;
 		export namespace TcpSocket  {
 			export function Module(wasmInterface: WasmInterface, context: $wcm.Context): sockets.Tcp.TcpSocket.Module {
 				return $wcm.Module.create<sockets.Tcp.TcpSocket.Module>($.TcpSocket, wasmInterface, context);
@@ -1440,25 +1466,7 @@ export namespace sockets {
 		const functions: $wcm.FunctionType<$wcm.ServiceFunction>[] = [];
 		const resources: $wcm.ResourceType[] = [$.UdpSocket];
 		export type WasmInterface = {
-			'[method]udp-socket.start-bind': (self: i32, network: i32, localAddress_IpSocketAddress_case: i32, localAddress_IpSocketAddress_0: i32, localAddress_IpSocketAddress_1: i32, localAddress_IpSocketAddress_2: i32, localAddress_IpSocketAddress_3: i32, localAddress_IpSocketAddress_4: i32, localAddress_IpSocketAddress_5: i32, localAddress_IpSocketAddress_6: i32, localAddress_IpSocketAddress_7: i32, localAddress_IpSocketAddress_8: i32, localAddress_IpSocketAddress_9: i32, localAddress_IpSocketAddress_10: i32, result: ptr<[i32, i32]>) => void;
-			'[method]udp-socket.finish-bind': (self: i32, result: ptr<[i32, i32]>) => void;
-			'[method]udp-socket.start-connect': (self: i32, network: i32, remoteAddress_IpSocketAddress_case: i32, remoteAddress_IpSocketAddress_0: i32, remoteAddress_IpSocketAddress_1: i32, remoteAddress_IpSocketAddress_2: i32, remoteAddress_IpSocketAddress_3: i32, remoteAddress_IpSocketAddress_4: i32, remoteAddress_IpSocketAddress_5: i32, remoteAddress_IpSocketAddress_6: i32, remoteAddress_IpSocketAddress_7: i32, remoteAddress_IpSocketAddress_8: i32, remoteAddress_IpSocketAddress_9: i32, remoteAddress_IpSocketAddress_10: i32, result: ptr<[i32, i32]>) => void;
-			'[method]udp-socket.finish-connect': (self: i32, result: ptr<[i32, i32]>) => void;
-			'[method]udp-socket.receive': (self: i32, maxResults: i64, result: ptr<[i32, i32, i32]>) => void;
-			'[method]udp-socket.send': (self: i32, datagrams_ptr: i32, datagrams_len: i32, result: ptr<[i32, i64]>) => void;
-			'[method]udp-socket.local-address': (self: i32, result: ptr<[i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32]>) => void;
-			'[method]udp-socket.remote-address': (self: i32, result: ptr<[i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32]>) => void;
-			'[method]udp-socket.address-family': (self: i32) => i32;
-			'[method]udp-socket.ipv6-only': (self: i32, result: ptr<[i32, i32]>) => void;
-			'[method]udp-socket.set-ipv6-only': (self: i32, value: i32, result: ptr<[i32, i32]>) => void;
-			'[method]udp-socket.unicast-hop-limit': (self: i32, result: ptr<[i32, i32]>) => void;
-			'[method]udp-socket.set-unicast-hop-limit': (self: i32, value: i32, result: ptr<[i32, i32]>) => void;
-			'[method]udp-socket.receive-buffer-size': (self: i32, result: ptr<[i32, i64]>) => void;
-			'[method]udp-socket.set-receive-buffer-size': (self: i32, value: i64, result: ptr<[i32, i32]>) => void;
-			'[method]udp-socket.send-buffer-size': (self: i32, result: ptr<[i32, i64]>) => void;
-			'[method]udp-socket.set-send-buffer-size': (self: i32, value: i64, result: ptr<[i32, i32]>) => void;
-			'[method]udp-socket.subscribe': (self: i32) => i32;
-		};
+		} & sockets.Udp.UdpSocket.WasmInterface;
 		export namespace UdpSocket  {
 			export function Module(wasmInterface: WasmInterface, context: $wcm.Context): sockets.Udp.UdpSocket.Module {
 				return $wcm.Module.create<sockets.Udp.UdpSocket.Module>($.UdpSocket, wasmInterface, context);
