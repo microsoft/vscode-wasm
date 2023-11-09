@@ -2173,14 +2173,14 @@ export namespace Module {
 		return (...params: JType[]): resource => {
 			const obj = new constructor(...params);
 			return manager.register(obj);
-		}
+		};
 	}
 
 	function createMethodFunction(manager: ResourceManager<any>, func: FunctionType<ServiceFunction>): ResourceFunction {
 		return (self: number, ...params: JType[]): JType | void => {
 			const object = manager.get(self);
 			return object[func.name](...params);
-		}
+		};
 	}
 
 }
