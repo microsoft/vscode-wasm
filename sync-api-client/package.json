@@ -23,7 +23,7 @@
 	},
 	"homepage": "https://github.com/microsoft/vscode-wasm/blob/main/sync-api-client/README.md",
 	"dependencies": {
-		"vscode-uri": "^3.0.7",
+		"vscode-uri": "^3.0.8",
 		"@vscode/sync-api-common": "0.9.0"
 	},
 	"devDependencies": {

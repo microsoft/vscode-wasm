@@ -8,7 +8,7 @@ RIL.install();
 import path from 'node:path';
 import {  MessagePort, Worker } from 'node:worker_threads';
 
-import glob from 'glob';
+import { glob } from 'glob';
 import Mocha from 'mocha';
 
 import { NodeServiceConnection } from '../process';

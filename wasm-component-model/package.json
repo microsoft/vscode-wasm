@@ -36,8 +36,7 @@
 		"yargs": "^17.7.2"
 	},
 	"devDependencies": {
-		"peggy": "^3.0.2",
-		"@types/yargs": "^17.0.24"
+		"@types/yargs": "^17.0.31"
 	},
 	"scripts": {
 		"prepublishOnly": "echo \"⛔ Can only publish from a secure pipeline ⛔\" && node ../build/npm/fail",
