@@ -45,7 +45,7 @@ async function run(): Promise<void> {
 	}
 
 	const testsRoot = path.join(__dirname, '..', '..', 'common', 'test');
-	const files = (await glob('**/**.test.js', { cwd: testsRoot })).map(f => path.resolve(testsRoot, f));
+	const files = (await glob('**/**worker.test.js', { cwd: testsRoot })).map(f => path.resolve(testsRoot, f));
 
 	const connection = new TestNodeHostConnection(parentPort);
 	connection.postMessage({ method: 'workerReady' });

@@ -1,9 +1,6 @@
 name: $(Date:yyyyMMdd)$(Rev:.r)
 
-trigger:
-  tags:
-    include:
-      - pre-release/*
+trigger: none
 pr: none
 
 resources:
@@ -14,10 +11,15 @@ resources:
       ref: main
       endpoint: Monaco
 
+parameters:
+  - name: publishExtension
+    displayName: 🚀 Publish Extension
+    type: boolean
+    default: false
+
 extends:
   template: azure-pipelines/extension/pre-release.yml@templates
   parameters:
-    customNPMRegistry: ''
     nodeVersion: 16.17.1
     buildSteps:
       - script: |
@@ -31,4 +33,9 @@ extends:
           npm run esbuild
         workingDirectory: $(Build.SourcesDirectory)/wasm-wasi-core
         displayName: "Lint & Compile"
+
+    ghCreateTag: true
+    ghTagPrefix: pre-release/wasm-wasi-core/
+
+    publishExtension: ${{ parameters.publishExtension }}
     workingDirectory: $(Build.SourcesDirectory)/wasm-wasi-core

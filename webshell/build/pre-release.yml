@@ -1,9 +1,6 @@
 name: $(Date:yyyyMMdd)$(Rev:.r)
 
-trigger:
-  tags:
-    include:
-      - pre-release/*
+trigger: none
 pr: none
 
 resources:
@@ -14,10 +11,15 @@ resources:
       ref: main
       endpoint: Monaco
 
+parameters:
+  - name: publishExtension
+    displayName: 🚀 Publish Extension
+    type: boolean
+    default: false
+
 extends:
   template: azure-pipelines/extension/pre-release.yml@templates
   parameters:
-    customNPMRegistry: ''
     generateNotice: false
     nodeVersion: 16.17.1
     buildSteps:
@@ -32,4 +34,9 @@ extends:
           npm run esbuild
         workingDirectory: $(Build.SourcesDirectory)/webshell
         displayName: "Lint & Compile"
+
+    ghCreateTag: true
+    ghTagPrefix: pre-release/webshell/
+
+    publishExtension: ${{ parameters.publishExtension }}
     workingDirectory: $(Build.SourcesDirectory)/webshell

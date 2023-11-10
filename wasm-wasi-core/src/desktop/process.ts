@@ -104,6 +104,13 @@ export class NodeWasiProcess extends WasiProcess {
 		return Promise.resolve();
 	}
 
+	protected async procExit(): Promise<void> {
+		await this.mainWorker?.terminate();
+		await this.cleanUpWorkers();
+		await this.destroyStreams();
+		await this.cleanupFileDescriptors();
+	}
+
 	public async terminate(): Promise<number> {
 		let result = 0;
 		if (this.mainWorker !== undefined) {

@@ -30,6 +30,26 @@ export async function run(): Promise<void> {
 	} catch (err) {
 		console.error(err);
 	}
+
+	require('mocha/mocha');
+	// Create the mocha test
+	mocha.setup({
+		ui: 'tdd',
+		color: true,
+		reporter: undefined
+	});
+
+	require('../../common/test/deviceDriver.main.test');
+
+	return new Promise<void>((resolve, reject) => {
+		mocha.run(failures => {
+			if (failures > 0) {
+				reject(new Error(`${failures} tests failed.`));
+			} else {
+				resolve();
+			}
+		});
+	});
 }
 
 class TestBrowserServiceConnection extends BrowserServiceConnection {

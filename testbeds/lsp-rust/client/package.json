@@ -1,0 +1,25 @@
+{
+	"name": "client",
+	"displayName": "LSP WASM Test client",
+	"version": "0.1.0",
+	"private": true,
+	"author": "Microsoft Corporation",
+	"license": "MIT",
+	"engines": {
+		"vscode": "^1.78.0"
+	},
+	"activationEvents": [
+		"onLanguage:bat"
+	],
+	"devDependencies": {
+		"@types/vscode": "1.78.0"
+	},
+	"dependencies": {
+		"vscode-languageclient": "9.0.1"
+	},
+	"scripts": {
+		"build": "npm run compile",
+		"compile": "node ../../../node_modules/typescript/lib/tsc.js -b tsconfig.json",
+		"watch": "node ../../../node_modules/typescript/lib/tsc.js -b tsconfig.json -w"
+	}
+}
