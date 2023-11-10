@@ -1,0 +1,60 @@
+package vscode:test-data
+
+interface types {
+
+	record point {
+        x: u32,
+        y: u32
+	}
+
+	call: func(point: point) -> u32;
+	call-option: func(point: option<point>) -> option<u32>;
+
+	resource point-resource {
+
+        constructor(x: u32, y: u32);
+
+        get-x: func() -> u32;
+        get-y: func() -> u32;
+        add: func() -> u32;
+	}
+
+	record point-option {
+		x: option<u32>,
+		y: option<u32>
+	}
+
+	variant test-variant {
+		empty,
+		unsigned32(u32),
+		unsigned64(u64),
+		signed32(s32),
+		signed64(s64),
+		floating-point32(float32),
+		floating-point64(float64),
+		structure(point),
+	}
+	check-variant: func(value: test-variant) -> test-variant;
+
+	flags test-flags-short {
+		one,
+		two,
+		three,
+		four,
+		five,
+		six
+	}
+	check-flags-short: func(value: test-flags-short) -> test-flags-short;
+
+	flags test-flags-long {
+		one, two, three, four, five, six, seven, eight, nine, ten,
+		eleven, twelve, thirteen, fourteen, fifteen, sixteen, seventeen, eighteen, nineteen, twenty,
+		twenty-one, twenty-two, twenty-three, twenty-four, twenty-five, twenty-six, twenty-seven, twenty-eight, twenty-nine, thirty,
+		thirty-one, thirty-two, thirty-three, thirty-four, thirty-five, thirty-six, thirty-seven, thirty-eight, thirty-nine, forty
+	}
+	check-flags-long: func(value: test-flags-long) -> test-flags-long;
+}
+
+world test {
+    import types;
+}

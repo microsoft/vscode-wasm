@@ -1,0 +1,25 @@
+{
+    "cells": [
+        {
+            "language": "typescript",
+            "source": [
+                "function create(x: number) {\n\treturn { print() { console.log(x); } };\n}\n\nlet x = create(10);\nlet y = create(11);\n\nx.print();\ny.print();\nconsole.log(x.print === y.print);"
+            ],
+            "outputs": [
+                {
+                    "items": [
+                        {
+                            "mime": "application/vnd.code.notebook.stdout",
+                            "value": [
+                                "10",
+                                "11",
+                                "false",
+                                ""
+                            ]
+                        }
+                    ]
+                }
+            ]
+        }
+    ]
+}

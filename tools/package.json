@@ -24,7 +24,9 @@
 		"lint": "node ../node_modules/eslint/bin/eslint.js --ext ts src"
 	},
 	"dependencies": {
+		"yargs": "^17.7.2"
 	},
 	"devDependencies": {
+		"peggy": "^3.0.2"
 	}
 }
