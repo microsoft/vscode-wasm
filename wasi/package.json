@@ -1,4 +1,5 @@
 {
+	"private": true,
 	"name": "@vscode/wasi",
 	"version": "0.1.0-pre.1",
 	"description": "WASI preview 2 interfaces for VS Code",
