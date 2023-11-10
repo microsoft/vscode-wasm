@@ -8,7 +8,6 @@ import { io } from './io';
 
 export namespace sockets {
 	export namespace Network {
-		export const id = 'wasi:sockets/network' as const;
 		
 		
 		/**
@@ -325,7 +324,6 @@ export namespace sockets {
 	 * This interface provides a value-export of the default network handle..
 	 */
 	export namespace InstanceNetwork {
-		export const id = 'wasi:sockets/instance-network' as const;
 		
 		export type Network = sockets.Network.Network;
 		
@@ -339,7 +337,6 @@ export namespace sockets {
 	};
 	
 	export namespace IpNameLookup {
-		export const id = 'wasi:sockets/ip-name-lookup' as const;
 		
 		export type Pollable = io.Poll.Pollable;
 		
@@ -428,7 +425,6 @@ export namespace sockets {
 	};
 	
 	export namespace Tcp {
-		export const id = 'wasi:sockets/tcp' as const;
 		
 		export type InputStream = io.Streams.InputStream;
 		
@@ -770,7 +766,6 @@ export namespace sockets {
 	};
 	
 	export namespace TcpCreateSocket {
-		export const id = 'wasi:sockets/tcp-create-socket' as const;
 		
 		export type Network = sockets.Network.Network;
 		
@@ -809,7 +804,6 @@ export namespace sockets {
 	};
 	
 	export namespace Udp {
-		export const id = 'wasi:sockets/udp' as const;
 		
 		export type Pollable = io.Poll.Pollable;
 		
@@ -1079,7 +1073,6 @@ export namespace sockets {
 	};
 	
 	export namespace UdpCreateSocket {
-		export const id = 'wasi:sockets/udp-create-socket' as const;
 		
 		export type Network = sockets.Network.Network;
 		
@@ -1121,7 +1114,7 @@ export namespace sockets {
 
 export namespace sockets {
 	export namespace Network.$ {
-		export const Network = new $wcm.ResourceType('Network', 'network');
+		export const Network = new $wcm.ResourceType('network');
 		export const ErrorCode = new $wcm.EnumType<Network.ErrorCode>(['unknown', 'accessDenied', 'notSupported', 'outOfMemory', 'timeout', 'concurrencyConflict', 'notInProgress', 'wouldBlock', 'addressFamilyNotSupported', 'addressFamilyMismatch', 'invalidRemoteAddress', 'ipv4OnlyOperation', 'ipv6OnlyOperation', 'newSocketLimit', 'alreadyAttached', 'alreadyBound', 'alreadyConnected', 'notBound', 'notConnected', 'addressNotBindable', 'addressInUse', 'ephemeralPortsExhausted', 'remoteUnreachable', 'alreadyListening', 'notListening', 'connectionRefused', 'connectionReset', 'datagramTooLarge', 'invalidName', 'nameUnresolvable', 'temporaryResolverFailure', 'permanentResolverFailure']);
 		export const IpAddressFamily = new $wcm.EnumType<Network.IpAddressFamily>(['ipv4', 'ipv6']);
 		export const Ipv4Address = new $wcm.TupleType<[u8, u8, u8, u8]>([$wcm.u8, $wcm.u8, $wcm.u8, $wcm.u8]);
@@ -1140,8 +1133,24 @@ export namespace sockets {
 		export const IpSocketAddress = new $wcm.VariantType<Network.IpSocketAddress, Network.IpSocketAddress._tt, Network.IpSocketAddress._vt>([['ipv4', Ipv4SocketAddress], ['ipv6', Ipv6SocketAddress]], Network.IpSocketAddress._ctor);
 	}
 	export namespace Network._ {
-		const functions: $wcm.FunctionType<$wcm.ServiceFunction>[] = [];
-		const resources: $wcm.ResourceType[] = [$.Network];
+		export const id = 'wasi:sockets/network' as const;
+		export const witName = 'network' as const;
+		export const types: Map<string, $wcm.GenericComponentModelType> = new Map<string, $wcm.GenericComponentModelType>([
+			['ErrorCode', $.ErrorCode],
+			['IpAddressFamily', $.IpAddressFamily],
+			['Ipv4Address', $.Ipv4Address],
+			['Ipv6Address', $.Ipv6Address],
+			['IpAddress', $.IpAddress],
+			['Ipv4SocketAddress', $.Ipv4SocketAddress],
+			['Ipv6SocketAddress', $.Ipv6SocketAddress],
+			['IpSocketAddress', $.IpSocketAddress],
+			['Network', $.Network]
+		]);
+		export const functions: Map<string, $wcm.FunctionType<$wcm.ServiceFunction>> = new Map([
+		]);
+		export const resources: Map<string, $wcm.ResourceType> = new Map([
+			['Network', $.Network]
+		]);
 		export type WasmInterface = {
 		} & sockets.Network.Network.WasmInterface;
 		export namespace Network  {
@@ -1170,11 +1179,19 @@ export namespace sockets {
 	
 	export namespace InstanceNetwork.$ {
 		export const Network = sockets.Network.$.Network;
-		export const instanceNetwork = new $wcm.FunctionType<InstanceNetwork.instanceNetwork>('instanceNetwork', 'instance-network', [], new $wcm.OwnType<sockets.InstanceNetwork.Network>(Network));
+		export const instanceNetwork = new $wcm.FunctionType<InstanceNetwork.instanceNetwork>('instance-network', [], new $wcm.OwnType<sockets.InstanceNetwork.Network>(Network));
 	}
 	export namespace InstanceNetwork._ {
-		const functions: $wcm.FunctionType<$wcm.ServiceFunction>[] = [$.instanceNetwork];
-		const resources: $wcm.ResourceType[] = [];
+		export const id = 'wasi:sockets/instance-network' as const;
+		export const witName = 'instance-network' as const;
+		export const types: Map<string, $wcm.GenericComponentModelType> = new Map<string, $wcm.GenericComponentModelType>([
+			['Network', $.Network]
+		]);
+		export const functions: Map<string, $wcm.FunctionType<$wcm.ServiceFunction>> = new Map([
+			['instanceNetwork', $.instanceNetwork]
+		]);
+		export const resources: Map<string, $wcm.ResourceType> = new Map([
+		]);
 		export type WasmInterface = {
 			'instance-network': () => i32;
 		};
@@ -1192,14 +1209,14 @@ export namespace sockets {
 		export const ErrorCode = sockets.Network.$.ErrorCode;
 		export const IpAddress = sockets.Network.$.IpAddress;
 		export const IpAddressFamily = sockets.Network.$.IpAddressFamily;
-		export const ResolveAddressStream = new $wcm.ResourceType('ResolveAddressStream', 'resolve-address-stream');
-		ResolveAddressStream.addFunction(new $wcm.FunctionType<IpNameLookup.ResolveAddressStream.Module['resolveNextAddress']>('resolveNextAddress', '[method]resolve-address-stream.resolve-next-address', [
+		export const ResolveAddressStream = new $wcm.ResourceType('resolve-address-stream');
+		ResolveAddressStream.addFunction('resolveNextAddress', new $wcm.FunctionType<IpNameLookup.ResolveAddressStream.Module['resolveNextAddress']>('[method]resolve-address-stream.resolve-next-address', [
 			['self', new $wcm.BorrowType<sockets.IpNameLookup.ResolveAddressStream>(ResolveAddressStream)],
 		], new $wcm.ResultType<option<sockets.IpNameLookup.IpAddress>, sockets.IpNameLookup.ErrorCode>(new $wcm.OptionType<sockets.IpNameLookup.IpAddress>(IpAddress), ErrorCode)));
-		ResolveAddressStream.addFunction(new $wcm.FunctionType<IpNameLookup.ResolveAddressStream.Module['subscribe']>('subscribe', '[method]resolve-address-stream.subscribe', [
+		ResolveAddressStream.addFunction('subscribe', new $wcm.FunctionType<IpNameLookup.ResolveAddressStream.Module['subscribe']>('[method]resolve-address-stream.subscribe', [
 			['self', new $wcm.BorrowType<sockets.IpNameLookup.ResolveAddressStream>(ResolveAddressStream)],
 		], new $wcm.OwnType<sockets.IpNameLookup.Pollable>(Pollable)));
-		export const resolveAddresses = new $wcm.FunctionType<IpNameLookup.resolveAddresses>('resolveAddresses', 'resolve-addresses',[
+		export const resolveAddresses = new $wcm.FunctionType<IpNameLookup.resolveAddresses>('resolve-addresses',[
 			['network', new $wcm.BorrowType<sockets.IpNameLookup.Network>(Network)],
 			['name', $wcm.wstring],
 			['addressFamily', new $wcm.OptionType<sockets.IpNameLookup.IpAddressFamily>(IpAddressFamily)],
@@ -1207,8 +1224,22 @@ export namespace sockets {
 		], new $wcm.ResultType<own<sockets.IpNameLookup.ResolveAddressStream>, sockets.IpNameLookup.ErrorCode>(new $wcm.OwnType<sockets.IpNameLookup.ResolveAddressStream>(ResolveAddressStream), ErrorCode));
 	}
 	export namespace IpNameLookup._ {
-		const functions: $wcm.FunctionType<$wcm.ServiceFunction>[] = [$.resolveAddresses];
-		const resources: $wcm.ResourceType[] = [$.ResolveAddressStream];
+		export const id = 'wasi:sockets/ip-name-lookup' as const;
+		export const witName = 'ip-name-lookup' as const;
+		export const types: Map<string, $wcm.GenericComponentModelType> = new Map<string, $wcm.GenericComponentModelType>([
+			['Pollable', $.Pollable],
+			['Network', $.Network],
+			['ErrorCode', $.ErrorCode],
+			['IpAddress', $.IpAddress],
+			['IpAddressFamily', $.IpAddressFamily],
+			['ResolveAddressStream', $.ResolveAddressStream]
+		]);
+		export const functions: Map<string, $wcm.FunctionType<$wcm.ServiceFunction>> = new Map([
+			['resolveAddresses', $.resolveAddresses]
+		]);
+		export const resources: Map<string, $wcm.ResourceType> = new Map([
+			['ResolveAddressStream', $.ResolveAddressStream]
+		]);
 		export type WasmInterface = {
 			'resolve-addresses': (network: i32, name_ptr: i32, name_len: i32, addressFamily_case: i32, addressFamily_option_IpAddressFamily_IpAddressFamily: i32, includeUnavailable: i32, result: ptr<[i32, i32]>) => void;
 		} & sockets.IpNameLookup.ResolveAddressStream.WasmInterface;
@@ -1224,15 +1255,15 @@ export namespace sockets {
 			return $wcm.Host.create<WasmInterface>(functions, resources, service, context);
 		}
 		export function createService<RAS extends sockets.IpNameLookup.ResolveAddressStream.Module | sockets.IpNameLookup.ResolveAddressStream.Manager>(ras: $wcm.ResourceKind<RAS>, wasmInterface: WasmInterface, context: $wcm.Context): sockets.IpNameLookup<RAS> {
-			return $wcm.Service.create<sockets.IpNameLookup<RAS>>(functions, [[$.ResolveAddressStream, ras]], wasmInterface, context);
+			return $wcm.Service.create<sockets.IpNameLookup<RAS>>(functions, [['ResolveAddressStream', $.ResolveAddressStream, ras]], wasmInterface, context);
 		}
 		type ClassService = sockets.IpNameLookup<sockets.IpNameLookup.ResolveAddressStream.Manager>;
 		export function createClassService(wasmInterface: WasmInterface, context: $wcm.Context): ClassService {
-			return $wcm.Service.create<ClassService>(functions, [[$.ResolveAddressStream, ResolveAddressStream.Manager]], wasmInterface, context);
+			return $wcm.Service.create<ClassService>(functions, [['ResolveAddressStream', $.ResolveAddressStream, ResolveAddressStream.Manager]], wasmInterface, context);
 		}
 		type ModuleService = sockets.IpNameLookup<sockets.IpNameLookup.ResolveAddressStream.Module>;
 		export function createModuleService(wasmInterface: WasmInterface, context: $wcm.Context): ModuleService {
-			return $wcm.Service.create<ModuleService>(functions, [[$.ResolveAddressStream, ResolveAddressStream.Module]], wasmInterface, context);
+			return $wcm.Service.create<ModuleService>(functions, [['ResolveAddressStream', $.ResolveAddressStream, ResolveAddressStream.Module]], wasmInterface, context);
 		}
 	}
 	
@@ -1245,98 +1276,114 @@ export namespace sockets {
 		export const IpSocketAddress = sockets.Network.$.IpSocketAddress;
 		export const IpAddressFamily = sockets.Network.$.IpAddressFamily;
 		export const ShutdownType = new $wcm.EnumType<Tcp.ShutdownType>(['receive', 'send', 'both']);
-		export const TcpSocket = new $wcm.ResourceType('TcpSocket', 'tcp-socket');
-		TcpSocket.addFunction(new $wcm.FunctionType<Tcp.TcpSocket.Module['startBind']>('startBind', '[method]tcp-socket.start-bind', [
+		export const TcpSocket = new $wcm.ResourceType('tcp-socket');
+		TcpSocket.addFunction('startBind', new $wcm.FunctionType<Tcp.TcpSocket.Module['startBind']>('[method]tcp-socket.start-bind', [
 			['self', new $wcm.BorrowType<sockets.Tcp.TcpSocket>(TcpSocket)],
 			['network', new $wcm.BorrowType<sockets.Tcp.Network>(Network)],
 			['localAddress', IpSocketAddress],
 		], new $wcm.ResultType<void, sockets.Tcp.ErrorCode>(undefined, ErrorCode)));
-		TcpSocket.addFunction(new $wcm.FunctionType<Tcp.TcpSocket.Module['finishBind']>('finishBind', '[method]tcp-socket.finish-bind', [
+		TcpSocket.addFunction('finishBind', new $wcm.FunctionType<Tcp.TcpSocket.Module['finishBind']>('[method]tcp-socket.finish-bind', [
 			['self', new $wcm.BorrowType<sockets.Tcp.TcpSocket>(TcpSocket)],
 		], new $wcm.ResultType<void, sockets.Tcp.ErrorCode>(undefined, ErrorCode)));
-		TcpSocket.addFunction(new $wcm.FunctionType<Tcp.TcpSocket.Module['startConnect']>('startConnect', '[method]tcp-socket.start-connect', [
+		TcpSocket.addFunction('startConnect', new $wcm.FunctionType<Tcp.TcpSocket.Module['startConnect']>('[method]tcp-socket.start-connect', [
 			['self', new $wcm.BorrowType<sockets.Tcp.TcpSocket>(TcpSocket)],
 			['network', new $wcm.BorrowType<sockets.Tcp.Network>(Network)],
 			['remoteAddress', IpSocketAddress],
 		], new $wcm.ResultType<void, sockets.Tcp.ErrorCode>(undefined, ErrorCode)));
-		TcpSocket.addFunction(new $wcm.FunctionType<Tcp.TcpSocket.Module['finishConnect']>('finishConnect', '[method]tcp-socket.finish-connect', [
+		TcpSocket.addFunction('finishConnect', new $wcm.FunctionType<Tcp.TcpSocket.Module['finishConnect']>('[method]tcp-socket.finish-connect', [
 			['self', new $wcm.BorrowType<sockets.Tcp.TcpSocket>(TcpSocket)],
 		], new $wcm.ResultType<[own<sockets.Tcp.InputStream>, own<sockets.Tcp.OutputStream>], sockets.Tcp.ErrorCode>(new $wcm.TupleType<[own<sockets.Tcp.InputStream>, own<sockets.Tcp.OutputStream>]>([new $wcm.OwnType<sockets.Tcp.InputStream>(InputStream), new $wcm.OwnType<sockets.Tcp.OutputStream>(OutputStream)]), ErrorCode)));
-		TcpSocket.addFunction(new $wcm.FunctionType<Tcp.TcpSocket.Module['startListen']>('startListen', '[method]tcp-socket.start-listen', [
+		TcpSocket.addFunction('startListen', new $wcm.FunctionType<Tcp.TcpSocket.Module['startListen']>('[method]tcp-socket.start-listen', [
 			['self', new $wcm.BorrowType<sockets.Tcp.TcpSocket>(TcpSocket)],
 		], new $wcm.ResultType<void, sockets.Tcp.ErrorCode>(undefined, ErrorCode)));
-		TcpSocket.addFunction(new $wcm.FunctionType<Tcp.TcpSocket.Module['finishListen']>('finishListen', '[method]tcp-socket.finish-listen', [
+		TcpSocket.addFunction('finishListen', new $wcm.FunctionType<Tcp.TcpSocket.Module['finishListen']>('[method]tcp-socket.finish-listen', [
 			['self', new $wcm.BorrowType<sockets.Tcp.TcpSocket>(TcpSocket)],
 		], new $wcm.ResultType<void, sockets.Tcp.ErrorCode>(undefined, ErrorCode)));
-		TcpSocket.addFunction(new $wcm.FunctionType<Tcp.TcpSocket.Module['accept']>('accept', '[method]tcp-socket.accept', [
+		TcpSocket.addFunction('accept', new $wcm.FunctionType<Tcp.TcpSocket.Module['accept']>('[method]tcp-socket.accept', [
 			['self', new $wcm.BorrowType<sockets.Tcp.TcpSocket>(TcpSocket)],
 		], new $wcm.ResultType<[own<sockets.Tcp.TcpSocket>, own<sockets.Tcp.InputStream>, own<sockets.Tcp.OutputStream>], sockets.Tcp.ErrorCode>(new $wcm.TupleType<[own<sockets.Tcp.TcpSocket>, own<sockets.Tcp.InputStream>, own<sockets.Tcp.OutputStream>]>([new $wcm.OwnType<sockets.Tcp.TcpSocket>(TcpSocket), new $wcm.OwnType<sockets.Tcp.InputStream>(InputStream), new $wcm.OwnType<sockets.Tcp.OutputStream>(OutputStream)]), ErrorCode)));
-		TcpSocket.addFunction(new $wcm.FunctionType<Tcp.TcpSocket.Module['localAddress']>('localAddress', '[method]tcp-socket.local-address', [
+		TcpSocket.addFunction('localAddress', new $wcm.FunctionType<Tcp.TcpSocket.Module['localAddress']>('[method]tcp-socket.local-address', [
 			['self', new $wcm.BorrowType<sockets.Tcp.TcpSocket>(TcpSocket)],
 		], new $wcm.ResultType<sockets.Tcp.IpSocketAddress, sockets.Tcp.ErrorCode>(IpSocketAddress, ErrorCode)));
-		TcpSocket.addFunction(new $wcm.FunctionType<Tcp.TcpSocket.Module['remoteAddress']>('remoteAddress', '[method]tcp-socket.remote-address', [
+		TcpSocket.addFunction('remoteAddress', new $wcm.FunctionType<Tcp.TcpSocket.Module['remoteAddress']>('[method]tcp-socket.remote-address', [
 			['self', new $wcm.BorrowType<sockets.Tcp.TcpSocket>(TcpSocket)],
 		], new $wcm.ResultType<sockets.Tcp.IpSocketAddress, sockets.Tcp.ErrorCode>(IpSocketAddress, ErrorCode)));
-		TcpSocket.addFunction(new $wcm.FunctionType<Tcp.TcpSocket.Module['addressFamily']>('addressFamily', '[method]tcp-socket.address-family', [
+		TcpSocket.addFunction('addressFamily', new $wcm.FunctionType<Tcp.TcpSocket.Module['addressFamily']>('[method]tcp-socket.address-family', [
 			['self', new $wcm.BorrowType<sockets.Tcp.TcpSocket>(TcpSocket)],
 		], IpAddressFamily));
-		TcpSocket.addFunction(new $wcm.FunctionType<Tcp.TcpSocket.Module['ipv6Only']>('ipv6Only', '[method]tcp-socket.ipv6-only', [
+		TcpSocket.addFunction('ipv6Only', new $wcm.FunctionType<Tcp.TcpSocket.Module['ipv6Only']>('[method]tcp-socket.ipv6-only', [
 			['self', new $wcm.BorrowType<sockets.Tcp.TcpSocket>(TcpSocket)],
 		], new $wcm.ResultType<boolean, sockets.Tcp.ErrorCode>($wcm.bool, ErrorCode)));
-		TcpSocket.addFunction(new $wcm.FunctionType<Tcp.TcpSocket.Module['setIpv6Only']>('setIpv6Only', '[method]tcp-socket.set-ipv6-only', [
+		TcpSocket.addFunction('setIpv6Only', new $wcm.FunctionType<Tcp.TcpSocket.Module['setIpv6Only']>('[method]tcp-socket.set-ipv6-only', [
 			['self', new $wcm.BorrowType<sockets.Tcp.TcpSocket>(TcpSocket)],
 			['value', $wcm.bool],
 		], new $wcm.ResultType<void, sockets.Tcp.ErrorCode>(undefined, ErrorCode)));
-		TcpSocket.addFunction(new $wcm.FunctionType<Tcp.TcpSocket.Module['setListenBacklogSize']>('setListenBacklogSize', '[method]tcp-socket.set-listen-backlog-size', [
+		TcpSocket.addFunction('setListenBacklogSize', new $wcm.FunctionType<Tcp.TcpSocket.Module['setListenBacklogSize']>('[method]tcp-socket.set-listen-backlog-size', [
 			['self', new $wcm.BorrowType<sockets.Tcp.TcpSocket>(TcpSocket)],
 			['value', $wcm.u64],
 		], new $wcm.ResultType<void, sockets.Tcp.ErrorCode>(undefined, ErrorCode)));
-		TcpSocket.addFunction(new $wcm.FunctionType<Tcp.TcpSocket.Module['keepAlive']>('keepAlive', '[method]tcp-socket.keep-alive', [
+		TcpSocket.addFunction('keepAlive', new $wcm.FunctionType<Tcp.TcpSocket.Module['keepAlive']>('[method]tcp-socket.keep-alive', [
 			['self', new $wcm.BorrowType<sockets.Tcp.TcpSocket>(TcpSocket)],
 		], new $wcm.ResultType<boolean, sockets.Tcp.ErrorCode>($wcm.bool, ErrorCode)));
-		TcpSocket.addFunction(new $wcm.FunctionType<Tcp.TcpSocket.Module['setKeepAlive']>('setKeepAlive', '[method]tcp-socket.set-keep-alive', [
+		TcpSocket.addFunction('setKeepAlive', new $wcm.FunctionType<Tcp.TcpSocket.Module['setKeepAlive']>('[method]tcp-socket.set-keep-alive', [
 			['self', new $wcm.BorrowType<sockets.Tcp.TcpSocket>(TcpSocket)],
 			['value', $wcm.bool],
 		], new $wcm.ResultType<void, sockets.Tcp.ErrorCode>(undefined, ErrorCode)));
-		TcpSocket.addFunction(new $wcm.FunctionType<Tcp.TcpSocket.Module['noDelay']>('noDelay', '[method]tcp-socket.no-delay', [
+		TcpSocket.addFunction('noDelay', new $wcm.FunctionType<Tcp.TcpSocket.Module['noDelay']>('[method]tcp-socket.no-delay', [
 			['self', new $wcm.BorrowType<sockets.Tcp.TcpSocket>(TcpSocket)],
 		], new $wcm.ResultType<boolean, sockets.Tcp.ErrorCode>($wcm.bool, ErrorCode)));
-		TcpSocket.addFunction(new $wcm.FunctionType<Tcp.TcpSocket.Module['setNoDelay']>('setNoDelay', '[method]tcp-socket.set-no-delay', [
+		TcpSocket.addFunction('setNoDelay', new $wcm.FunctionType<Tcp.TcpSocket.Module['setNoDelay']>('[method]tcp-socket.set-no-delay', [
 			['self', new $wcm.BorrowType<sockets.Tcp.TcpSocket>(TcpSocket)],
 			['value', $wcm.bool],
 		], new $wcm.ResultType<void, sockets.Tcp.ErrorCode>(undefined, ErrorCode)));
-		TcpSocket.addFunction(new $wcm.FunctionType<Tcp.TcpSocket.Module['unicastHopLimit']>('unicastHopLimit', '[method]tcp-socket.unicast-hop-limit', [
+		TcpSocket.addFunction('unicastHopLimit', new $wcm.FunctionType<Tcp.TcpSocket.Module['unicastHopLimit']>('[method]tcp-socket.unicast-hop-limit', [
 			['self', new $wcm.BorrowType<sockets.Tcp.TcpSocket>(TcpSocket)],
 		], new $wcm.ResultType<u8, sockets.Tcp.ErrorCode>($wcm.u8, ErrorCode)));
-		TcpSocket.addFunction(new $wcm.FunctionType<Tcp.TcpSocket.Module['setUnicastHopLimit']>('setUnicastHopLimit', '[method]tcp-socket.set-unicast-hop-limit', [
+		TcpSocket.addFunction('setUnicastHopLimit', new $wcm.FunctionType<Tcp.TcpSocket.Module['setUnicastHopLimit']>('[method]tcp-socket.set-unicast-hop-limit', [
 			['self', new $wcm.BorrowType<sockets.Tcp.TcpSocket>(TcpSocket)],
 			['value', $wcm.u8],
 		], new $wcm.ResultType<void, sockets.Tcp.ErrorCode>(undefined, ErrorCode)));
-		TcpSocket.addFunction(new $wcm.FunctionType<Tcp.TcpSocket.Module['receiveBufferSize']>('receiveBufferSize', '[method]tcp-socket.receive-buffer-size', [
+		TcpSocket.addFunction('receiveBufferSize', new $wcm.FunctionType<Tcp.TcpSocket.Module['receiveBufferSize']>('[method]tcp-socket.receive-buffer-size', [
 			['self', new $wcm.BorrowType<sockets.Tcp.TcpSocket>(TcpSocket)],
 		], new $wcm.ResultType<u64, sockets.Tcp.ErrorCode>($wcm.u64, ErrorCode)));
-		TcpSocket.addFunction(new $wcm.FunctionType<Tcp.TcpSocket.Module['setReceiveBufferSize']>('setReceiveBufferSize', '[method]tcp-socket.set-receive-buffer-size', [
+		TcpSocket.addFunction('setReceiveBufferSize', new $wcm.FunctionType<Tcp.TcpSocket.Module['setReceiveBufferSize']>('[method]tcp-socket.set-receive-buffer-size', [
 			['self', new $wcm.BorrowType<sockets.Tcp.TcpSocket>(TcpSocket)],
 			['value', $wcm.u64],
 		], new $wcm.ResultType<void, sockets.Tcp.ErrorCode>(undefined, ErrorCode)));
-		TcpSocket.addFunction(new $wcm.FunctionType<Tcp.TcpSocket.Module['sendBufferSize']>('sendBufferSize', '[method]tcp-socket.send-buffer-size', [
+		TcpSocket.addFunction('sendBufferSize', new $wcm.FunctionType<Tcp.TcpSocket.Module['sendBufferSize']>('[method]tcp-socket.send-buffer-size', [
 			['self', new $wcm.BorrowType<sockets.Tcp.TcpSocket>(TcpSocket)],
 		], new $wcm.ResultType<u64, sockets.Tcp.ErrorCode>($wcm.u64, ErrorCode)));
-		TcpSocket.addFunction(new $wcm.FunctionType<Tcp.TcpSocket.Module['setSendBufferSize']>('setSendBufferSize', '[method]tcp-socket.set-send-buffer-size', [
+		TcpSocket.addFunction('setSendBufferSize', new $wcm.FunctionType<Tcp.TcpSocket.Module['setSendBufferSize']>('[method]tcp-socket.set-send-buffer-size', [
 			['self', new $wcm.BorrowType<sockets.Tcp.TcpSocket>(TcpSocket)],
 			['value', $wcm.u64],
 		], new $wcm.ResultType<void, sockets.Tcp.ErrorCode>(undefined, ErrorCode)));
-		TcpSocket.addFunction(new $wcm.FunctionType<Tcp.TcpSocket.Module['subscribe']>('subscribe', '[method]tcp-socket.subscribe', [
+		TcpSocket.addFunction('subscribe', new $wcm.FunctionType<Tcp.TcpSocket.Module['subscribe']>('[method]tcp-socket.subscribe', [
 			['self', new $wcm.BorrowType<sockets.Tcp.TcpSocket>(TcpSocket)],
 		], new $wcm.OwnType<sockets.Tcp.Pollable>(Pollable)));
-		TcpSocket.addFunction(new $wcm.FunctionType<Tcp.TcpSocket.Module['shutdown']>('shutdown', '[method]tcp-socket.shutdown', [
+		TcpSocket.addFunction('shutdown', new $wcm.FunctionType<Tcp.TcpSocket.Module['shutdown']>('[method]tcp-socket.shutdown', [
 			['self', new $wcm.BorrowType<sockets.Tcp.TcpSocket>(TcpSocket)],
 			['shutdownType', ShutdownType],
 		], new $wcm.ResultType<void, sockets.Tcp.ErrorCode>(undefined, ErrorCode)));
 	}
 	export namespace Tcp._ {
-		const functions: $wcm.FunctionType<$wcm.ServiceFunction>[] = [];
-		const resources: $wcm.ResourceType[] = [$.TcpSocket];
+		export const id = 'wasi:sockets/tcp' as const;
+		export const witName = 'tcp' as const;
+		export const types: Map<string, $wcm.GenericComponentModelType> = new Map<string, $wcm.GenericComponentModelType>([
+			['InputStream', $.InputStream],
+			['OutputStream', $.OutputStream],
+			['Pollable', $.Pollable],
+			['Network', $.Network],
+			['ErrorCode', $.ErrorCode],
+			['IpSocketAddress', $.IpSocketAddress],
+			['IpAddressFamily', $.IpAddressFamily],
+			['ShutdownType', $.ShutdownType],
+			['TcpSocket', $.TcpSocket]
+		]);
+		export const functions: Map<string, $wcm.FunctionType<$wcm.ServiceFunction>> = new Map([
+		]);
+		export const resources: Map<string, $wcm.ResourceType> = new Map([
+			['TcpSocket', $.TcpSocket]
+		]);
 		export type WasmInterface = {
 		} & sockets.Tcp.TcpSocket.WasmInterface;
 		export namespace TcpSocket  {
@@ -1351,15 +1398,15 @@ export namespace sockets {
 			return $wcm.Host.create<WasmInterface>(functions, resources, service, context);
 		}
 		export function createService<TS extends sockets.Tcp.TcpSocket.Module | sockets.Tcp.TcpSocket.Manager>(ts: $wcm.ResourceKind<TS>, wasmInterface: WasmInterface, context: $wcm.Context): sockets.Tcp<TS> {
-			return $wcm.Service.create<sockets.Tcp<TS>>(functions, [[$.TcpSocket, ts]], wasmInterface, context);
+			return $wcm.Service.create<sockets.Tcp<TS>>(functions, [['TcpSocket', $.TcpSocket, ts]], wasmInterface, context);
 		}
 		type ClassService = sockets.Tcp<sockets.Tcp.TcpSocket.Manager>;
 		export function createClassService(wasmInterface: WasmInterface, context: $wcm.Context): ClassService {
-			return $wcm.Service.create<ClassService>(functions, [[$.TcpSocket, TcpSocket.Manager]], wasmInterface, context);
+			return $wcm.Service.create<ClassService>(functions, [['TcpSocket', $.TcpSocket, TcpSocket.Manager]], wasmInterface, context);
 		}
 		type ModuleService = sockets.Tcp<sockets.Tcp.TcpSocket.Module>;
 		export function createModuleService(wasmInterface: WasmInterface, context: $wcm.Context): ModuleService {
-			return $wcm.Service.create<ModuleService>(functions, [[$.TcpSocket, TcpSocket.Module]], wasmInterface, context);
+			return $wcm.Service.create<ModuleService>(functions, [['TcpSocket', $.TcpSocket, TcpSocket.Module]], wasmInterface, context);
 		}
 	}
 	
@@ -1368,13 +1415,24 @@ export namespace sockets {
 		export const ErrorCode = sockets.Network.$.ErrorCode;
 		export const IpAddressFamily = sockets.Network.$.IpAddressFamily;
 		export const TcpSocket = sockets.Tcp.$.TcpSocket;
-		export const createTcpSocket = new $wcm.FunctionType<TcpCreateSocket.createTcpSocket>('createTcpSocket', 'create-tcp-socket',[
+		export const createTcpSocket = new $wcm.FunctionType<TcpCreateSocket.createTcpSocket>('create-tcp-socket',[
 			['addressFamily', IpAddressFamily],
 		], new $wcm.ResultType<own<sockets.TcpCreateSocket.TcpSocket>, sockets.TcpCreateSocket.ErrorCode>(new $wcm.OwnType<sockets.TcpCreateSocket.TcpSocket>(TcpSocket), ErrorCode));
 	}
 	export namespace TcpCreateSocket._ {
-		const functions: $wcm.FunctionType<$wcm.ServiceFunction>[] = [$.createTcpSocket];
-		const resources: $wcm.ResourceType[] = [];
+		export const id = 'wasi:sockets/tcp-create-socket' as const;
+		export const witName = 'tcp-create-socket' as const;
+		export const types: Map<string, $wcm.GenericComponentModelType> = new Map<string, $wcm.GenericComponentModelType>([
+			['Network', $.Network],
+			['ErrorCode', $.ErrorCode],
+			['IpAddressFamily', $.IpAddressFamily],
+			['TcpSocket', $.TcpSocket]
+		]);
+		export const functions: Map<string, $wcm.FunctionType<$wcm.ServiceFunction>> = new Map([
+			['createTcpSocket', $.createTcpSocket]
+		]);
+		export const resources: Map<string, $wcm.ResourceType> = new Map([
+		]);
 		export type WasmInterface = {
 			'create-tcp-socket': (addressFamily_IpAddressFamily_IpAddressFamily: i32, result: ptr<[i32, i32]>) => void;
 		};
@@ -1396,75 +1454,89 @@ export namespace sockets {
 			['data', new $wcm.Uint8ArrayType()],
 			['remoteAddress', IpSocketAddress],
 		]);
-		export const UdpSocket = new $wcm.ResourceType('UdpSocket', 'udp-socket');
-		UdpSocket.addFunction(new $wcm.FunctionType<Udp.UdpSocket.Module['startBind']>('startBind', '[method]udp-socket.start-bind', [
+		export const UdpSocket = new $wcm.ResourceType('udp-socket');
+		UdpSocket.addFunction('startBind', new $wcm.FunctionType<Udp.UdpSocket.Module['startBind']>('[method]udp-socket.start-bind', [
 			['self', new $wcm.BorrowType<sockets.Udp.UdpSocket>(UdpSocket)],
 			['network', new $wcm.BorrowType<sockets.Udp.Network>(Network)],
 			['localAddress', IpSocketAddress],
 		], new $wcm.ResultType<void, sockets.Udp.ErrorCode>(undefined, ErrorCode)));
-		UdpSocket.addFunction(new $wcm.FunctionType<Udp.UdpSocket.Module['finishBind']>('finishBind', '[method]udp-socket.finish-bind', [
+		UdpSocket.addFunction('finishBind', new $wcm.FunctionType<Udp.UdpSocket.Module['finishBind']>('[method]udp-socket.finish-bind', [
 			['self', new $wcm.BorrowType<sockets.Udp.UdpSocket>(UdpSocket)],
 		], new $wcm.ResultType<void, sockets.Udp.ErrorCode>(undefined, ErrorCode)));
-		UdpSocket.addFunction(new $wcm.FunctionType<Udp.UdpSocket.Module['startConnect']>('startConnect', '[method]udp-socket.start-connect', [
+		UdpSocket.addFunction('startConnect', new $wcm.FunctionType<Udp.UdpSocket.Module['startConnect']>('[method]udp-socket.start-connect', [
 			['self', new $wcm.BorrowType<sockets.Udp.UdpSocket>(UdpSocket)],
 			['network', new $wcm.BorrowType<sockets.Udp.Network>(Network)],
 			['remoteAddress', IpSocketAddress],
 		], new $wcm.ResultType<void, sockets.Udp.ErrorCode>(undefined, ErrorCode)));
-		UdpSocket.addFunction(new $wcm.FunctionType<Udp.UdpSocket.Module['finishConnect']>('finishConnect', '[method]udp-socket.finish-connect', [
+		UdpSocket.addFunction('finishConnect', new $wcm.FunctionType<Udp.UdpSocket.Module['finishConnect']>('[method]udp-socket.finish-connect', [
 			['self', new $wcm.BorrowType<sockets.Udp.UdpSocket>(UdpSocket)],
 		], new $wcm.ResultType<void, sockets.Udp.ErrorCode>(undefined, ErrorCode)));
-		UdpSocket.addFunction(new $wcm.FunctionType<Udp.UdpSocket.Module['receive']>('receive', '[method]udp-socket.receive', [
+		UdpSocket.addFunction('receive', new $wcm.FunctionType<Udp.UdpSocket.Module['receive']>('[method]udp-socket.receive', [
 			['self', new $wcm.BorrowType<sockets.Udp.UdpSocket>(UdpSocket)],
 			['maxResults', $wcm.u64],
 		], new $wcm.ResultType<sockets.Udp.Datagram[], sockets.Udp.ErrorCode>(new $wcm.ListType<sockets.Udp.Datagram>(Datagram), ErrorCode)));
-		UdpSocket.addFunction(new $wcm.FunctionType<Udp.UdpSocket.Module['send']>('send', '[method]udp-socket.send', [
+		UdpSocket.addFunction('send', new $wcm.FunctionType<Udp.UdpSocket.Module['send']>('[method]udp-socket.send', [
 			['self', new $wcm.BorrowType<sockets.Udp.UdpSocket>(UdpSocket)],
 			['datagrams', new $wcm.ListType<sockets.Udp.Datagram>(Datagram)],
 		], new $wcm.ResultType<u64, sockets.Udp.ErrorCode>($wcm.u64, ErrorCode)));
-		UdpSocket.addFunction(new $wcm.FunctionType<Udp.UdpSocket.Module['localAddress']>('localAddress', '[method]udp-socket.local-address', [
+		UdpSocket.addFunction('localAddress', new $wcm.FunctionType<Udp.UdpSocket.Module['localAddress']>('[method]udp-socket.local-address', [
 			['self', new $wcm.BorrowType<sockets.Udp.UdpSocket>(UdpSocket)],
 		], new $wcm.ResultType<sockets.Udp.IpSocketAddress, sockets.Udp.ErrorCode>(IpSocketAddress, ErrorCode)));
-		UdpSocket.addFunction(new $wcm.FunctionType<Udp.UdpSocket.Module['remoteAddress']>('remoteAddress', '[method]udp-socket.remote-address', [
+		UdpSocket.addFunction('remoteAddress', new $wcm.FunctionType<Udp.UdpSocket.Module['remoteAddress']>('[method]udp-socket.remote-address', [
 			['self', new $wcm.BorrowType<sockets.Udp.UdpSocket>(UdpSocket)],
 		], new $wcm.ResultType<sockets.Udp.IpSocketAddress, sockets.Udp.ErrorCode>(IpSocketAddress, ErrorCode)));
-		UdpSocket.addFunction(new $wcm.FunctionType<Udp.UdpSocket.Module['addressFamily']>('addressFamily', '[method]udp-socket.address-family', [
+		UdpSocket.addFunction('addressFamily', new $wcm.FunctionType<Udp.UdpSocket.Module['addressFamily']>('[method]udp-socket.address-family', [
 			['self', new $wcm.BorrowType<sockets.Udp.UdpSocket>(UdpSocket)],
 		], IpAddressFamily));
-		UdpSocket.addFunction(new $wcm.FunctionType<Udp.UdpSocket.Module['ipv6Only']>('ipv6Only', '[method]udp-socket.ipv6-only', [
+		UdpSocket.addFunction('ipv6Only', new $wcm.FunctionType<Udp.UdpSocket.Module['ipv6Only']>('[method]udp-socket.ipv6-only', [
 			['self', new $wcm.BorrowType<sockets.Udp.UdpSocket>(UdpSocket)],
 		], new $wcm.ResultType<boolean, sockets.Udp.ErrorCode>($wcm.bool, ErrorCode)));
-		UdpSocket.addFunction(new $wcm.FunctionType<Udp.UdpSocket.Module['setIpv6Only']>('setIpv6Only', '[method]udp-socket.set-ipv6-only', [
+		UdpSocket.addFunction('setIpv6Only', new $wcm.FunctionType<Udp.UdpSocket.Module['setIpv6Only']>('[method]udp-socket.set-ipv6-only', [
 			['self', new $wcm.BorrowType<sockets.Udp.UdpSocket>(UdpSocket)],
 			['value', $wcm.bool],
 		], new $wcm.ResultType<void, sockets.Udp.ErrorCode>(undefined, ErrorCode)));
-		UdpSocket.addFunction(new $wcm.FunctionType<Udp.UdpSocket.Module['unicastHopLimit']>('unicastHopLimit', '[method]udp-socket.unicast-hop-limit', [
+		UdpSocket.addFunction('unicastHopLimit', new $wcm.FunctionType<Udp.UdpSocket.Module['unicastHopLimit']>('[method]udp-socket.unicast-hop-limit', [
 			['self', new $wcm.BorrowType<sockets.Udp.UdpSocket>(UdpSocket)],
 		], new $wcm.ResultType<u8, sockets.Udp.ErrorCode>($wcm.u8, ErrorCode)));
-		UdpSocket.addFunction(new $wcm.FunctionType<Udp.UdpSocket.Module['setUnicastHopLimit']>('setUnicastHopLimit', '[method]udp-socket.set-unicast-hop-limit', [
+		UdpSocket.addFunction('setUnicastHopLimit', new $wcm.FunctionType<Udp.UdpSocket.Module['setUnicastHopLimit']>('[method]udp-socket.set-unicast-hop-limit', [
 			['self', new $wcm.BorrowType<sockets.Udp.UdpSocket>(UdpSocket)],
 			['value', $wcm.u8],
 		], new $wcm.ResultType<void, sockets.Udp.ErrorCode>(undefined, ErrorCode)));
-		UdpSocket.addFunction(new $wcm.FunctionType<Udp.UdpSocket.Module['receiveBufferSize']>('receiveBufferSize', '[method]udp-socket.receive-buffer-size', [
+		UdpSocket.addFunction('receiveBufferSize', new $wcm.FunctionType<Udp.UdpSocket.Module['receiveBufferSize']>('[method]udp-socket.receive-buffer-size', [
 			['self', new $wcm.BorrowType<sockets.Udp.UdpSocket>(UdpSocket)],
 		], new $wcm.ResultType<u64, sockets.Udp.ErrorCode>($wcm.u64, ErrorCode)));
-		UdpSocket.addFunction(new $wcm.FunctionType<Udp.UdpSocket.Module['setReceiveBufferSize']>('setReceiveBufferSize', '[method]udp-socket.set-receive-buffer-size', [
+		UdpSocket.addFunction('setReceiveBufferSize', new $wcm.FunctionType<Udp.UdpSocket.Module['setReceiveBufferSize']>('[method]udp-socket.set-receive-buffer-size', [
 			['self', new $wcm.BorrowType<sockets.Udp.UdpSocket>(UdpSocket)],
 			['value', $wcm.u64],
 		], new $wcm.ResultType<void, sockets.Udp.ErrorCode>(undefined, ErrorCode)));
-		UdpSocket.addFunction(new $wcm.FunctionType<Udp.UdpSocket.Module['sendBufferSize']>('sendBufferSize', '[method]udp-socket.send-buffer-size', [
+		UdpSocket.addFunction('sendBufferSize', new $wcm.FunctionType<Udp.UdpSocket.Module['sendBufferSize']>('[method]udp-socket.send-buffer-size', [
 			['self', new $wcm.BorrowType<sockets.Udp.UdpSocket>(UdpSocket)],
 		], new $wcm.ResultType<u64, sockets.Udp.ErrorCode>($wcm.u64, ErrorCode)));
-		UdpSocket.addFunction(new $wcm.FunctionType<Udp.UdpSocket.Module['setSendBufferSize']>('setSendBufferSize', '[method]udp-socket.set-send-buffer-size', [
+		UdpSocket.addFunction('setSendBufferSize', new $wcm.FunctionType<Udp.UdpSocket.Module['setSendBufferSize']>('[method]udp-socket.set-send-buffer-size', [
 			['self', new $wcm.BorrowType<sockets.Udp.UdpSocket>(UdpSocket)],
 			['value', $wcm.u64],
 		], new $wcm.ResultType<void, sockets.Udp.ErrorCode>(undefined, ErrorCode)));
-		UdpSocket.addFunction(new $wcm.FunctionType<Udp.UdpSocket.Module['subscribe']>('subscribe', '[method]udp-socket.subscribe', [
+		UdpSocket.addFunction('subscribe', new $wcm.FunctionType<Udp.UdpSocket.Module['subscribe']>('[method]udp-socket.subscribe', [
 			['self', new $wcm.BorrowType<sockets.Udp.UdpSocket>(UdpSocket)],
 		], new $wcm.OwnType<sockets.Udp.Pollable>(Pollable)));
 	}
 	export namespace Udp._ {
-		const functions: $wcm.FunctionType<$wcm.ServiceFunction>[] = [];
-		const resources: $wcm.ResourceType[] = [$.UdpSocket];
+		export const id = 'wasi:sockets/udp' as const;
+		export const witName = 'udp' as const;
+		export const types: Map<string, $wcm.GenericComponentModelType> = new Map<string, $wcm.GenericComponentModelType>([
+			['Pollable', $.Pollable],
+			['Network', $.Network],
+			['ErrorCode', $.ErrorCode],
+			['IpSocketAddress', $.IpSocketAddress],
+			['IpAddressFamily', $.IpAddressFamily],
+			['Datagram', $.Datagram],
+			['UdpSocket', $.UdpSocket]
+		]);
+		export const functions: Map<string, $wcm.FunctionType<$wcm.ServiceFunction>> = new Map([
+		]);
+		export const resources: Map<string, $wcm.ResourceType> = new Map([
+			['UdpSocket', $.UdpSocket]
+		]);
 		export type WasmInterface = {
 		} & sockets.Udp.UdpSocket.WasmInterface;
 		export namespace UdpSocket  {
@@ -1479,15 +1551,15 @@ export namespace sockets {
 			return $wcm.Host.create<WasmInterface>(functions, resources, service, context);
 		}
 		export function createService<US extends sockets.Udp.UdpSocket.Module | sockets.Udp.UdpSocket.Manager>(us: $wcm.ResourceKind<US>, wasmInterface: WasmInterface, context: $wcm.Context): sockets.Udp<US> {
-			return $wcm.Service.create<sockets.Udp<US>>(functions, [[$.UdpSocket, us]], wasmInterface, context);
+			return $wcm.Service.create<sockets.Udp<US>>(functions, [['UdpSocket', $.UdpSocket, us]], wasmInterface, context);
 		}
 		type ClassService = sockets.Udp<sockets.Udp.UdpSocket.Manager>;
 		export function createClassService(wasmInterface: WasmInterface, context: $wcm.Context): ClassService {
-			return $wcm.Service.create<ClassService>(functions, [[$.UdpSocket, UdpSocket.Manager]], wasmInterface, context);
+			return $wcm.Service.create<ClassService>(functions, [['UdpSocket', $.UdpSocket, UdpSocket.Manager]], wasmInterface, context);
 		}
 		type ModuleService = sockets.Udp<sockets.Udp.UdpSocket.Module>;
 		export function createModuleService(wasmInterface: WasmInterface, context: $wcm.Context): ModuleService {
-			return $wcm.Service.create<ModuleService>(functions, [[$.UdpSocket, UdpSocket.Module]], wasmInterface, context);
+			return $wcm.Service.create<ModuleService>(functions, [['UdpSocket', $.UdpSocket, UdpSocket.Module]], wasmInterface, context);
 		}
 	}
 	
@@ -1496,13 +1568,24 @@ export namespace sockets {
 		export const ErrorCode = sockets.Network.$.ErrorCode;
 		export const IpAddressFamily = sockets.Network.$.IpAddressFamily;
 		export const UdpSocket = sockets.Udp.$.UdpSocket;
-		export const createUdpSocket = new $wcm.FunctionType<UdpCreateSocket.createUdpSocket>('createUdpSocket', 'create-udp-socket',[
+		export const createUdpSocket = new $wcm.FunctionType<UdpCreateSocket.createUdpSocket>('create-udp-socket',[
 			['addressFamily', IpAddressFamily],
 		], new $wcm.ResultType<own<sockets.UdpCreateSocket.UdpSocket>, sockets.UdpCreateSocket.ErrorCode>(new $wcm.OwnType<sockets.UdpCreateSocket.UdpSocket>(UdpSocket), ErrorCode));
 	}
 	export namespace UdpCreateSocket._ {
-		const functions: $wcm.FunctionType<$wcm.ServiceFunction>[] = [$.createUdpSocket];
-		const resources: $wcm.ResourceType[] = [];
+		export const id = 'wasi:sockets/udp-create-socket' as const;
+		export const witName = 'udp-create-socket' as const;
+		export const types: Map<string, $wcm.GenericComponentModelType> = new Map<string, $wcm.GenericComponentModelType>([
+			['Network', $.Network],
+			['ErrorCode', $.ErrorCode],
+			['IpAddressFamily', $.IpAddressFamily],
+			['UdpSocket', $.UdpSocket]
+		]);
+		export const functions: Map<string, $wcm.FunctionType<$wcm.ServiceFunction>> = new Map([
+			['createUdpSocket', $.createUdpSocket]
+		]);
+		export const resources: Map<string, $wcm.ResourceType> = new Map([
+		]);
 		export type WasmInterface = {
 			'create-udp-socket': (addressFamily_IpAddressFamily_IpAddressFamily: i32, result: ptr<[i32, i32]>) => void;
 		};
@@ -1513,4 +1596,17 @@ export namespace sockets {
 			return $wcm.Service.create<sockets.UdpCreateSocket>(functions, [], wasmInterface, context);
 		}
 	}
+}
+
+export namespace sockets._ {
+	export const witName = 'wasi:sockets' as const;
+	export const interfaces: Map<string, $wcm.InterfaceType> = new Map<string, $wcm.InterfaceType>([
+		['Network', Network._],
+		['InstanceNetwork', InstanceNetwork._],
+		['IpNameLookup', IpNameLookup._],
+		['Tcp', Tcp._],
+		['TcpCreateSocket', TcpCreateSocket._],
+		['Udp', Udp._],
+		['UdpCreateSocket', UdpCreateSocket._]
+	]);
 }

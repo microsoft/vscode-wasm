@@ -1,7 +1,7 @@
 
 import { clocks } from './main';
 
-clocks.MonotonicClock.id;
+clocks.MonotonicClock._.id;
 
 import MonotonicClock = clocks.MonotonicClock;
 

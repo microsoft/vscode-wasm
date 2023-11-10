@@ -4,11 +4,25 @@
  *--------------------------------------------------------------------------------------------*/
 import * as $wcm from '@vscode/wasm-component-model';
 
-export { io } from './io';
-export { clocks } from './clocks';
-export { filesystem } from './filesystem';
-export { sockets } from './sockets';
-export { random } from './random';
-export { cli } from './cli';
-export { http } from './http';
-export { logging } from './logging';
+import { io } from './io';
+import { clocks } from './clocks';
+import { filesystem } from './filesystem';
+import { sockets } from './sockets';
+import { random } from './random';
+import { cli } from './cli';
+import { http } from './http';
+import { logging } from './logging';
+
+export namespace _ {
+	export const packages: Map<string, $wcm.PackageType> =  new Map<string, $wcm.PackageType>([
+		['io', io._],
+		['clocks', clocks._],
+		['filesystem', filesystem._],
+		['sockets', sockets._],
+		['random', random._],
+		['cli', cli._],
+		['http', http._],
+		['logging', logging._],
+	]);
+}
+export { io, clocks, filesystem, sockets, random, cli, http, logging};

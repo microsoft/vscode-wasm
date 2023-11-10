@@ -8,7 +8,6 @@ import { io } from './io';
 
 export namespace http {
 	export namespace Types {
-		export const id = 'wasi:http/types' as const;
 		
 		export type InputStream = io.Streams.InputStream;
 		
@@ -492,7 +491,6 @@ export namespace http {
 	};
 	
 	export namespace IncomingHandler {
-		export const id = 'wasi:http/incoming-handler' as const;
 		
 		export type IncomingRequest = http.Types.IncomingRequest;
 		
@@ -505,7 +503,6 @@ export namespace http {
 	};
 	
 	export namespace OutgoingHandler {
-		export const id = 'wasi:http/outgoing-handler' as const;
 		
 		export type OutgoingRequest = http.Types.OutgoingRequest;
 		
@@ -531,128 +528,164 @@ export namespace http {
 		export const Method = new $wcm.VariantType<Types.Method, Types.Method._tt, Types.Method._vt>([['get', undefined], ['head', undefined], ['post', undefined], ['put', undefined], ['delete_', undefined], ['connect', undefined], ['options', undefined], ['trace', undefined], ['patch', undefined], ['other', $wcm.wstring]], Types.Method._ctor);
 		export const Scheme = new $wcm.VariantType<Types.Scheme, Types.Scheme._tt, Types.Scheme._vt>([['HTTP', undefined], ['HTTPS', undefined], ['other', $wcm.wstring]], Types.Scheme._ctor);
 		export const Error = new $wcm.VariantType<Types.Error, Types.Error._tt, Types.Error._vt>([['invalidUrl', $wcm.wstring], ['timeoutError', $wcm.wstring], ['protocolError', $wcm.wstring], ['unexpectedError', $wcm.wstring]], Types.Error._ctor);
-		export const Fields = new $wcm.ResourceType('Fields', 'fields');
+		export const Fields = new $wcm.ResourceType('fields');
 		export const Headers = Fields;
 		export const Trailers = Fields;
-		export const IncomingRequest = new $wcm.ResourceType('IncomingRequest', 'incoming-request');
-		export const OutgoingRequest = new $wcm.ResourceType('OutgoingRequest', 'outgoing-request');
+		export const IncomingRequest = new $wcm.ResourceType('incoming-request');
+		export const OutgoingRequest = new $wcm.ResourceType('outgoing-request');
 		export const RequestOptions = new $wcm.RecordType<Types.RequestOptions>([
 			['connectTimeoutMs', new $wcm.OptionType<u32>($wcm.u32)],
 			['firstByteTimeoutMs', new $wcm.OptionType<u32>($wcm.u32)],
 			['betweenBytesTimeoutMs', new $wcm.OptionType<u32>($wcm.u32)],
 		]);
-		export const ResponseOutparam = new $wcm.ResourceType('ResponseOutparam', 'response-outparam');
+		export const ResponseOutparam = new $wcm.ResourceType('response-outparam');
 		export const StatusCode = $wcm.u16;
-		export const IncomingResponse = new $wcm.ResourceType('IncomingResponse', 'incoming-response');
-		export const IncomingBody = new $wcm.ResourceType('IncomingBody', 'incoming-body');
-		export const FutureTrailers = new $wcm.ResourceType('FutureTrailers', 'future-trailers');
-		export const OutgoingResponse = new $wcm.ResourceType('OutgoingResponse', 'outgoing-response');
-		export const OutgoingBody = new $wcm.ResourceType('OutgoingBody', 'outgoing-body');
-		export const FutureIncomingResponse = new $wcm.ResourceType('FutureIncomingResponse', 'future-incoming-response');
-		Fields.addFunction(new $wcm.FunctionType<Types.Fields.Module['constructor']>('constructor', '[constructor]fields', [
+		export const IncomingResponse = new $wcm.ResourceType('incoming-response');
+		export const IncomingBody = new $wcm.ResourceType('incoming-body');
+		export const FutureTrailers = new $wcm.ResourceType('future-trailers');
+		export const OutgoingResponse = new $wcm.ResourceType('outgoing-response');
+		export const OutgoingBody = new $wcm.ResourceType('outgoing-body');
+		export const FutureIncomingResponse = new $wcm.ResourceType('future-incoming-response');
+		Fields.addFunction('constructor', new $wcm.FunctionType<Types.Fields.Module['constructor']>('[constructor]fields', [
 			['entries', new $wcm.ListType<[string, Uint8Array]>(new $wcm.TupleType<[string, Uint8Array]>([$wcm.wstring, new $wcm.Uint8ArrayType()]))],
 		], new $wcm.OwnType<http.Types.Fields>(Fields)));
-		Fields.addFunction(new $wcm.FunctionType<Types.Fields.Module['get']>('get', '[method]fields.get', [
+		Fields.addFunction('get', new $wcm.FunctionType<Types.Fields.Module['get']>('[method]fields.get', [
 			['self', new $wcm.BorrowType<http.Types.Fields>(Fields)],
 			['name', $wcm.wstring],
 		], new $wcm.ListType<Uint8Array>(new $wcm.Uint8ArrayType())));
-		Fields.addFunction(new $wcm.FunctionType<Types.Fields.Module['set']>('set', '[method]fields.set', [
+		Fields.addFunction('set', new $wcm.FunctionType<Types.Fields.Module['set']>('[method]fields.set', [
 			['self', new $wcm.BorrowType<http.Types.Fields>(Fields)],
 			['name', $wcm.wstring],
 			['value', new $wcm.ListType<Uint8Array>(new $wcm.Uint8ArrayType())],
 		], undefined));
-		Fields.addFunction(new $wcm.FunctionType<Types.Fields.Module['delete_']>('delete_', '[method]fields.delete', [
+		Fields.addFunction('delete_', new $wcm.FunctionType<Types.Fields.Module['delete_']>('[method]fields.delete', [
 			['self', new $wcm.BorrowType<http.Types.Fields>(Fields)],
 			['name', $wcm.wstring],
 		], undefined));
-		Fields.addFunction(new $wcm.FunctionType<Types.Fields.Module['append']>('append', '[method]fields.append', [
+		Fields.addFunction('append', new $wcm.FunctionType<Types.Fields.Module['append']>('[method]fields.append', [
 			['self', new $wcm.BorrowType<http.Types.Fields>(Fields)],
 			['name', $wcm.wstring],
 			['value', new $wcm.Uint8ArrayType()],
 		], undefined));
-		Fields.addFunction(new $wcm.FunctionType<Types.Fields.Module['entries']>('entries', '[method]fields.entries', [
+		Fields.addFunction('entries', new $wcm.FunctionType<Types.Fields.Module['entries']>('[method]fields.entries', [
 			['self', new $wcm.BorrowType<http.Types.Fields>(Fields)],
 		], new $wcm.ListType<[string, Uint8Array]>(new $wcm.TupleType<[string, Uint8Array]>([$wcm.wstring, new $wcm.Uint8ArrayType()]))));
-		Fields.addFunction(new $wcm.FunctionType<Types.Fields.Module['clone']>('clone', '[method]fields.clone', [
+		Fields.addFunction('clone', new $wcm.FunctionType<Types.Fields.Module['clone']>('[method]fields.clone', [
 			['self', new $wcm.BorrowType<http.Types.Fields>(Fields)],
 		], new $wcm.OwnType<http.Types.Fields>(Fields)));
-		IncomingRequest.addFunction(new $wcm.FunctionType<Types.IncomingRequest.Module['method']>('method', '[method]incoming-request.method', [
+		IncomingRequest.addFunction('method', new $wcm.FunctionType<Types.IncomingRequest.Module['method']>('[method]incoming-request.method', [
 			['self', new $wcm.BorrowType<http.Types.IncomingRequest>(IncomingRequest)],
 		], Method));
-		IncomingRequest.addFunction(new $wcm.FunctionType<Types.IncomingRequest.Module['pathWithQuery']>('pathWithQuery', '[method]incoming-request.path-with-query', [
+		IncomingRequest.addFunction('pathWithQuery', new $wcm.FunctionType<Types.IncomingRequest.Module['pathWithQuery']>('[method]incoming-request.path-with-query', [
 			['self', new $wcm.BorrowType<http.Types.IncomingRequest>(IncomingRequest)],
 		], new $wcm.OptionType<string>($wcm.wstring)));
-		IncomingRequest.addFunction(new $wcm.FunctionType<Types.IncomingRequest.Module['scheme']>('scheme', '[method]incoming-request.scheme', [
+		IncomingRequest.addFunction('scheme', new $wcm.FunctionType<Types.IncomingRequest.Module['scheme']>('[method]incoming-request.scheme', [
 			['self', new $wcm.BorrowType<http.Types.IncomingRequest>(IncomingRequest)],
 		], new $wcm.OptionType<http.Types.Scheme>(Scheme)));
-		IncomingRequest.addFunction(new $wcm.FunctionType<Types.IncomingRequest.Module['authority']>('authority', '[method]incoming-request.authority', [
+		IncomingRequest.addFunction('authority', new $wcm.FunctionType<Types.IncomingRequest.Module['authority']>('[method]incoming-request.authority', [
 			['self', new $wcm.BorrowType<http.Types.IncomingRequest>(IncomingRequest)],
 		], new $wcm.OptionType<string>($wcm.wstring)));
-		IncomingRequest.addFunction(new $wcm.FunctionType<Types.IncomingRequest.Module['headers']>('headers', '[method]incoming-request.headers', [
+		IncomingRequest.addFunction('headers', new $wcm.FunctionType<Types.IncomingRequest.Module['headers']>('[method]incoming-request.headers', [
 			['self', new $wcm.BorrowType<http.Types.IncomingRequest>(IncomingRequest)],
 		], new $wcm.OwnType<http.Types.Headers>(Headers)));
-		IncomingRequest.addFunction(new $wcm.FunctionType<Types.IncomingRequest.Module['consume']>('consume', '[method]incoming-request.consume', [
+		IncomingRequest.addFunction('consume', new $wcm.FunctionType<Types.IncomingRequest.Module['consume']>('[method]incoming-request.consume', [
 			['self', new $wcm.BorrowType<http.Types.IncomingRequest>(IncomingRequest)],
 		], new $wcm.ResultType<own<http.Types.IncomingBody>, void>(new $wcm.OwnType<http.Types.IncomingBody>(IncomingBody), undefined)));
-		OutgoingRequest.addFunction(new $wcm.FunctionType<Types.OutgoingRequest.Module['constructor']>('constructor', '[constructor]outgoing-request', [
+		OutgoingRequest.addFunction('constructor', new $wcm.FunctionType<Types.OutgoingRequest.Module['constructor']>('[constructor]outgoing-request', [
 			['method', Method],
 			['pathWithQuery', new $wcm.OptionType<string>($wcm.wstring)],
 			['scheme', new $wcm.OptionType<http.Types.Scheme>(Scheme)],
 			['authority', new $wcm.OptionType<string>($wcm.wstring)],
 			['headers', new $wcm.BorrowType<http.Types.Headers>(Headers)],
 		], new $wcm.OwnType<http.Types.OutgoingRequest>(OutgoingRequest)));
-		OutgoingRequest.addFunction(new $wcm.FunctionType<Types.OutgoingRequest.Module['write']>('write', '[method]outgoing-request.write', [
+		OutgoingRequest.addFunction('write', new $wcm.FunctionType<Types.OutgoingRequest.Module['write']>('[method]outgoing-request.write', [
 			['self', new $wcm.BorrowType<http.Types.OutgoingRequest>(OutgoingRequest)],
 		], new $wcm.ResultType<own<http.Types.OutgoingBody>, void>(new $wcm.OwnType<http.Types.OutgoingBody>(OutgoingBody), undefined)));
-		ResponseOutparam.addFunction(new $wcm.FunctionType<Types.ResponseOutparam.Module['set']>('set', '[static]response-outparam.set', [
+		ResponseOutparam.addFunction('set', new $wcm.FunctionType<Types.ResponseOutparam.Module['set']>('[static]response-outparam.set', [
 			['param', new $wcm.OwnType<http.Types.ResponseOutparam>(ResponseOutparam)],
 			['response', new $wcm.ResultType<own<http.Types.OutgoingResponse>, http.Types.Error>(new $wcm.OwnType<http.Types.OutgoingResponse>(OutgoingResponse), Error)],
 		], undefined));
-		IncomingResponse.addFunction(new $wcm.FunctionType<Types.IncomingResponse.Module['status']>('status', '[method]incoming-response.status', [
+		IncomingResponse.addFunction('status', new $wcm.FunctionType<Types.IncomingResponse.Module['status']>('[method]incoming-response.status', [
 			['self', new $wcm.BorrowType<http.Types.IncomingResponse>(IncomingResponse)],
 		], StatusCode));
-		IncomingResponse.addFunction(new $wcm.FunctionType<Types.IncomingResponse.Module['headers']>('headers', '[method]incoming-response.headers', [
+		IncomingResponse.addFunction('headers', new $wcm.FunctionType<Types.IncomingResponse.Module['headers']>('[method]incoming-response.headers', [
 			['self', new $wcm.BorrowType<http.Types.IncomingResponse>(IncomingResponse)],
 		], new $wcm.OwnType<http.Types.Headers>(Headers)));
-		IncomingResponse.addFunction(new $wcm.FunctionType<Types.IncomingResponse.Module['consume']>('consume', '[method]incoming-response.consume', [
+		IncomingResponse.addFunction('consume', new $wcm.FunctionType<Types.IncomingResponse.Module['consume']>('[method]incoming-response.consume', [
 			['self', new $wcm.BorrowType<http.Types.IncomingResponse>(IncomingResponse)],
 		], new $wcm.ResultType<own<http.Types.IncomingBody>, void>(new $wcm.OwnType<http.Types.IncomingBody>(IncomingBody), undefined)));
-		IncomingBody.addFunction(new $wcm.FunctionType<Types.IncomingBody.Module['stream']>('stream', '[method]incoming-body.stream', [
+		IncomingBody.addFunction('stream', new $wcm.FunctionType<Types.IncomingBody.Module['stream']>('[method]incoming-body.stream', [
 			['self', new $wcm.BorrowType<http.Types.IncomingBody>(IncomingBody)],
 		], new $wcm.ResultType<own<http.Types.InputStream>, void>(new $wcm.OwnType<http.Types.InputStream>(InputStream), undefined)));
-		IncomingBody.addFunction(new $wcm.FunctionType<Types.IncomingBody.Module['finish']>('finish', '[static]incoming-body.finish', [
+		IncomingBody.addFunction('finish', new $wcm.FunctionType<Types.IncomingBody.Module['finish']>('[static]incoming-body.finish', [
 			['this_', new $wcm.OwnType<http.Types.IncomingBody>(IncomingBody)],
 		], new $wcm.OwnType<http.Types.FutureTrailers>(FutureTrailers)));
-		FutureTrailers.addFunction(new $wcm.FunctionType<Types.FutureTrailers.Module['subscribe']>('subscribe', '[method]future-trailers.subscribe', [
+		FutureTrailers.addFunction('subscribe', new $wcm.FunctionType<Types.FutureTrailers.Module['subscribe']>('[method]future-trailers.subscribe', [
 			['self', new $wcm.BorrowType<http.Types.FutureTrailers>(FutureTrailers)],
 		], new $wcm.OwnType<http.Types.Pollable>(Pollable)));
-		FutureTrailers.addFunction(new $wcm.FunctionType<Types.FutureTrailers.Module['get']>('get', '[method]future-trailers.get', [
+		FutureTrailers.addFunction('get', new $wcm.FunctionType<Types.FutureTrailers.Module['get']>('[method]future-trailers.get', [
 			['self', new $wcm.BorrowType<http.Types.FutureTrailers>(FutureTrailers)],
 		], new $wcm.OptionType<result<own<http.Types.Trailers>, http.Types.Error>>(new $wcm.ResultType<own<http.Types.Trailers>, http.Types.Error>(new $wcm.OwnType<http.Types.Trailers>(Trailers), Error))));
-		OutgoingResponse.addFunction(new $wcm.FunctionType<Types.OutgoingResponse.Module['constructor']>('constructor', '[constructor]outgoing-response', [
+		OutgoingResponse.addFunction('constructor', new $wcm.FunctionType<Types.OutgoingResponse.Module['constructor']>('[constructor]outgoing-response', [
 			['statusCode', StatusCode],
 			['headers', new $wcm.BorrowType<http.Types.Headers>(Headers)],
 		], new $wcm.OwnType<http.Types.OutgoingResponse>(OutgoingResponse)));
-		OutgoingResponse.addFunction(new $wcm.FunctionType<Types.OutgoingResponse.Module['write']>('write', '[method]outgoing-response.write', [
+		OutgoingResponse.addFunction('write', new $wcm.FunctionType<Types.OutgoingResponse.Module['write']>('[method]outgoing-response.write', [
 			['self', new $wcm.BorrowType<http.Types.OutgoingResponse>(OutgoingResponse)],
 		], new $wcm.ResultType<own<http.Types.OutgoingBody>, void>(new $wcm.OwnType<http.Types.OutgoingBody>(OutgoingBody), undefined)));
-		OutgoingBody.addFunction(new $wcm.FunctionType<Types.OutgoingBody.Module['write']>('write', '[method]outgoing-body.write', [
+		OutgoingBody.addFunction('write', new $wcm.FunctionType<Types.OutgoingBody.Module['write']>('[method]outgoing-body.write', [
 			['self', new $wcm.BorrowType<http.Types.OutgoingBody>(OutgoingBody)],
 		], new $wcm.ResultType<own<http.Types.OutputStream>, void>(new $wcm.OwnType<http.Types.OutputStream>(OutputStream), undefined)));
-		OutgoingBody.addFunction(new $wcm.FunctionType<Types.OutgoingBody.Module['finish']>('finish', '[static]outgoing-body.finish', [
+		OutgoingBody.addFunction('finish', new $wcm.FunctionType<Types.OutgoingBody.Module['finish']>('[static]outgoing-body.finish', [
 			['this_', new $wcm.OwnType<http.Types.OutgoingBody>(OutgoingBody)],
 			['trailers', new $wcm.OptionType<own<http.Types.Trailers>>(new $wcm.OwnType<http.Types.Trailers>(Trailers))],
 		], undefined));
-		FutureIncomingResponse.addFunction(new $wcm.FunctionType<Types.FutureIncomingResponse.Module['get']>('get', '[method]future-incoming-response.get', [
+		FutureIncomingResponse.addFunction('get', new $wcm.FunctionType<Types.FutureIncomingResponse.Module['get']>('[method]future-incoming-response.get', [
 			['self', new $wcm.BorrowType<http.Types.FutureIncomingResponse>(FutureIncomingResponse)],
 		], new $wcm.OptionType<result<result<own<http.Types.IncomingResponse>, http.Types.Error>, void>>(new $wcm.ResultType<result<own<http.Types.IncomingResponse>, http.Types.Error>, void>(new $wcm.ResultType<own<http.Types.IncomingResponse>, http.Types.Error>(new $wcm.OwnType<http.Types.IncomingResponse>(IncomingResponse), Error), undefined))));
-		FutureIncomingResponse.addFunction(new $wcm.FunctionType<Types.FutureIncomingResponse.Module['subscribe']>('subscribe', '[method]future-incoming-response.subscribe', [
+		FutureIncomingResponse.addFunction('subscribe', new $wcm.FunctionType<Types.FutureIncomingResponse.Module['subscribe']>('[method]future-incoming-response.subscribe', [
 			['self', new $wcm.BorrowType<http.Types.FutureIncomingResponse>(FutureIncomingResponse)],
 		], new $wcm.OwnType<http.Types.Pollable>(Pollable)));
 	}
 	export namespace Types._ {
-		const functions: $wcm.FunctionType<$wcm.ServiceFunction>[] = [];
-		const resources: $wcm.ResourceType[] = [$.Fields, $.IncomingRequest, $.OutgoingRequest, $.ResponseOutparam, $.IncomingResponse, $.IncomingBody, $.FutureTrailers, $.OutgoingResponse, $.OutgoingBody, $.FutureIncomingResponse];
+		export const id = 'wasi:http/types' as const;
+		export const witName = 'types' as const;
+		export const types: Map<string, $wcm.GenericComponentModelType> = new Map<string, $wcm.GenericComponentModelType>([
+			['InputStream', $.InputStream],
+			['OutputStream', $.OutputStream],
+			['Pollable', $.Pollable],
+			['Method', $.Method],
+			['Scheme', $.Scheme],
+			['Error', $.Error],
+			['Headers', $.Headers],
+			['Trailers', $.Trailers],
+			['RequestOptions', $.RequestOptions],
+			['StatusCode', $.StatusCode],
+			['Fields', $.Fields],
+			['IncomingRequest', $.IncomingRequest],
+			['OutgoingRequest', $.OutgoingRequest],
+			['ResponseOutparam', $.ResponseOutparam],
+			['IncomingResponse', $.IncomingResponse],
+			['IncomingBody', $.IncomingBody],
+			['FutureTrailers', $.FutureTrailers],
+			['OutgoingResponse', $.OutgoingResponse],
+			['OutgoingBody', $.OutgoingBody],
+			['FutureIncomingResponse', $.FutureIncomingResponse]
+		]);
+		export const functions: Map<string, $wcm.FunctionType<$wcm.ServiceFunction>> = new Map([
+		]);
+		export const resources: Map<string, $wcm.ResourceType> = new Map([
+			['Fields', $.Fields],
+			['IncomingRequest', $.IncomingRequest],
+			['OutgoingRequest', $.OutgoingRequest],
+			['ResponseOutparam', $.ResponseOutparam],
+			['IncomingResponse', $.IncomingResponse],
+			['IncomingBody', $.IncomingBody],
+			['FutureTrailers', $.FutureTrailers],
+			['OutgoingResponse', $.OutgoingResponse],
+			['OutgoingBody', $.OutgoingBody],
+			['FutureIncomingResponse', $.FutureIncomingResponse]
+		]);
 		export type WasmInterface = {
 		} & http.Types.Fields.WasmInterface & http.Types.IncomingRequest.WasmInterface & http.Types.OutgoingRequest.WasmInterface & http.Types.ResponseOutparam.WasmInterface & http.Types.IncomingResponse.WasmInterface & http.Types.IncomingBody.WasmInterface & http.Types.FutureTrailers.WasmInterface & http.Types.OutgoingResponse.WasmInterface & http.Types.OutgoingBody.WasmInterface & http.Types.FutureIncomingResponse.WasmInterface;
 		export namespace Fields  {
@@ -808,29 +841,38 @@ export namespace http {
 			return $wcm.Host.create<WasmInterface>(functions, resources, service, context);
 		}
 		export function createService<F extends http.Types.Fields.Module | http.Types.Fields.Constructor | http.Types.Fields.Manager, IR extends http.Types.IncomingRequest.Module | http.Types.IncomingRequest.Manager, OR extends http.Types.OutgoingRequest.Module | http.Types.OutgoingRequest.Constructor | http.Types.OutgoingRequest.Manager, RO extends http.Types.ResponseOutparam.Module | http.Types.ResponseOutparam.Manager, IR1 extends http.Types.IncomingResponse.Module | http.Types.IncomingResponse.Manager, IB extends http.Types.IncomingBody.Module | http.Types.IncomingBody.Manager, FT extends http.Types.FutureTrailers.Module | http.Types.FutureTrailers.Manager, OR1 extends http.Types.OutgoingResponse.Module | http.Types.OutgoingResponse.Constructor | http.Types.OutgoingResponse.Manager, OB extends http.Types.OutgoingBody.Module | http.Types.OutgoingBody.Manager, FIR extends http.Types.FutureIncomingResponse.Module | http.Types.FutureIncomingResponse.Manager>(f: $wcm.ResourceKind<F>, ir: $wcm.ResourceKind<IR>, or: $wcm.ResourceKind<OR>, ro: $wcm.ResourceKind<RO>, ir1: $wcm.ResourceKind<IR1>, ib: $wcm.ResourceKind<IB>, ft: $wcm.ResourceKind<FT>, or1: $wcm.ResourceKind<OR1>, ob: $wcm.ResourceKind<OB>, fir: $wcm.ResourceKind<FIR>, wasmInterface: WasmInterface, context: $wcm.Context): http.Types<F, IR, OR, RO, IR1, IB, FT, OR1, OB, FIR> {
-			return $wcm.Service.create<http.Types<F, IR, OR, RO, IR1, IB, FT, OR1, OB, FIR>>(functions, [[$.Fields, f], [$.IncomingRequest, ir], [$.OutgoingRequest, or], [$.ResponseOutparam, ro], [$.IncomingResponse, ir1], [$.IncomingBody, ib], [$.FutureTrailers, ft], [$.OutgoingResponse, or1], [$.OutgoingBody, ob], [$.FutureIncomingResponse, fir]], wasmInterface, context);
+			return $wcm.Service.create<http.Types<F, IR, OR, RO, IR1, IB, FT, OR1, OB, FIR>>(functions, [['Fields', $.Fields, f], ['IncomingRequest', $.IncomingRequest, ir], ['OutgoingRequest', $.OutgoingRequest, or], ['ResponseOutparam', $.ResponseOutparam, ro], ['IncomingResponse', $.IncomingResponse, ir1], ['IncomingBody', $.IncomingBody, ib], ['FutureTrailers', $.FutureTrailers, ft], ['OutgoingResponse', $.OutgoingResponse, or1], ['OutgoingBody', $.OutgoingBody, ob], ['FutureIncomingResponse', $.FutureIncomingResponse, fir]], wasmInterface, context);
 		}
 		type ClassService = http.Types<http.Types.Fields.Constructor, http.Types.IncomingRequest.Manager, http.Types.OutgoingRequest.Constructor, http.Types.ResponseOutparam.Manager, http.Types.IncomingResponse.Manager, http.Types.IncomingBody.Manager, http.Types.FutureTrailers.Manager, http.Types.OutgoingResponse.Constructor, http.Types.OutgoingBody.Manager, http.Types.FutureIncomingResponse.Manager>;
 		export function createClassService(wasmInterface: WasmInterface, context: $wcm.Context): ClassService {
-			return $wcm.Service.create<ClassService>(functions, [[$.Fields, Fields.Class], [$.IncomingRequest, IncomingRequest.Manager], [$.OutgoingRequest, OutgoingRequest.Class], [$.ResponseOutparam, ResponseOutparam.Manager], [$.IncomingResponse, IncomingResponse.Manager], [$.IncomingBody, IncomingBody.Manager], [$.FutureTrailers, FutureTrailers.Manager], [$.OutgoingResponse, OutgoingResponse.Class], [$.OutgoingBody, OutgoingBody.Manager], [$.FutureIncomingResponse, FutureIncomingResponse.Manager]], wasmInterface, context);
+			return $wcm.Service.create<ClassService>(functions, [['Fields', $.Fields, Fields.Class], ['IncomingRequest', $.IncomingRequest, IncomingRequest.Manager], ['OutgoingRequest', $.OutgoingRequest, OutgoingRequest.Class], ['ResponseOutparam', $.ResponseOutparam, ResponseOutparam.Manager], ['IncomingResponse', $.IncomingResponse, IncomingResponse.Manager], ['IncomingBody', $.IncomingBody, IncomingBody.Manager], ['FutureTrailers', $.FutureTrailers, FutureTrailers.Manager], ['OutgoingResponse', $.OutgoingResponse, OutgoingResponse.Class], ['OutgoingBody', $.OutgoingBody, OutgoingBody.Manager], ['FutureIncomingResponse', $.FutureIncomingResponse, FutureIncomingResponse.Manager]], wasmInterface, context);
 		}
 		type ModuleService = http.Types<http.Types.Fields.Module, http.Types.IncomingRequest.Module, http.Types.OutgoingRequest.Module, http.Types.ResponseOutparam.Module, http.Types.IncomingResponse.Module, http.Types.IncomingBody.Module, http.Types.FutureTrailers.Module, http.Types.OutgoingResponse.Module, http.Types.OutgoingBody.Module, http.Types.FutureIncomingResponse.Module>;
 		export function createModuleService(wasmInterface: WasmInterface, context: $wcm.Context): ModuleService {
-			return $wcm.Service.create<ModuleService>(functions, [[$.Fields, Fields.Module], [$.IncomingRequest, IncomingRequest.Module], [$.OutgoingRequest, OutgoingRequest.Module], [$.ResponseOutparam, ResponseOutparam.Module], [$.IncomingResponse, IncomingResponse.Module], [$.IncomingBody, IncomingBody.Module], [$.FutureTrailers, FutureTrailers.Module], [$.OutgoingResponse, OutgoingResponse.Module], [$.OutgoingBody, OutgoingBody.Module], [$.FutureIncomingResponse, FutureIncomingResponse.Module]], wasmInterface, context);
+			return $wcm.Service.create<ModuleService>(functions, [['Fields', $.Fields, Fields.Module], ['IncomingRequest', $.IncomingRequest, IncomingRequest.Module], ['OutgoingRequest', $.OutgoingRequest, OutgoingRequest.Module], ['ResponseOutparam', $.ResponseOutparam, ResponseOutparam.Module], ['IncomingResponse', $.IncomingResponse, IncomingResponse.Module], ['IncomingBody', $.IncomingBody, IncomingBody.Module], ['FutureTrailers', $.FutureTrailers, FutureTrailers.Module], ['OutgoingResponse', $.OutgoingResponse, OutgoingResponse.Module], ['OutgoingBody', $.OutgoingBody, OutgoingBody.Module], ['FutureIncomingResponse', $.FutureIncomingResponse, FutureIncomingResponse.Module]], wasmInterface, context);
 		}
 	}
 	
 	export namespace IncomingHandler.$ {
 		export const IncomingRequest = http.Types.$.IncomingRequest;
 		export const ResponseOutparam = http.Types.$.ResponseOutparam;
-		export const handle = new $wcm.FunctionType<IncomingHandler.handle>('handle', 'handle',[
+		export const handle = new $wcm.FunctionType<IncomingHandler.handle>('handle',[
 			['request', new $wcm.OwnType<http.IncomingHandler.IncomingRequest>(IncomingRequest)],
 			['responseOut', new $wcm.OwnType<http.IncomingHandler.ResponseOutparam>(ResponseOutparam)],
 		], undefined);
 	}
 	export namespace IncomingHandler._ {
-		const functions: $wcm.FunctionType<$wcm.ServiceFunction>[] = [$.handle];
-		const resources: $wcm.ResourceType[] = [];
+		export const id = 'wasi:http/incoming-handler' as const;
+		export const witName = 'incoming-handler' as const;
+		export const types: Map<string, $wcm.GenericComponentModelType> = new Map<string, $wcm.GenericComponentModelType>([
+			['IncomingRequest', $.IncomingRequest],
+			['ResponseOutparam', $.ResponseOutparam]
+		]);
+		export const functions: Map<string, $wcm.FunctionType<$wcm.ServiceFunction>> = new Map([
+			['handle', $.handle]
+		]);
+		export const resources: Map<string, $wcm.ResourceType> = new Map([
+		]);
 		export type WasmInterface = {
 			'handle': (request: i32, responseOut: i32) => void;
 		};
@@ -847,14 +889,25 @@ export namespace http {
 		export const RequestOptions = http.Types.$.RequestOptions;
 		export const FutureIncomingResponse = http.Types.$.FutureIncomingResponse;
 		export const Error = http.Types.$.Error;
-		export const handle = new $wcm.FunctionType<OutgoingHandler.handle>('handle', 'handle',[
+		export const handle = new $wcm.FunctionType<OutgoingHandler.handle>('handle',[
 			['request', new $wcm.OwnType<http.OutgoingHandler.OutgoingRequest>(OutgoingRequest)],
 			['options', new $wcm.OptionType<http.OutgoingHandler.RequestOptions>(RequestOptions)],
 		], new $wcm.ResultType<own<http.OutgoingHandler.FutureIncomingResponse>, http.OutgoingHandler.Error>(new $wcm.OwnType<http.OutgoingHandler.FutureIncomingResponse>(FutureIncomingResponse), Error));
 	}
 	export namespace OutgoingHandler._ {
-		const functions: $wcm.FunctionType<$wcm.ServiceFunction>[] = [$.handle];
-		const resources: $wcm.ResourceType[] = [];
+		export const id = 'wasi:http/outgoing-handler' as const;
+		export const witName = 'outgoing-handler' as const;
+		export const types: Map<string, $wcm.GenericComponentModelType> = new Map<string, $wcm.GenericComponentModelType>([
+			['OutgoingRequest', $.OutgoingRequest],
+			['RequestOptions', $.RequestOptions],
+			['FutureIncomingResponse', $.FutureIncomingResponse],
+			['Error', $.Error]
+		]);
+		export const functions: Map<string, $wcm.FunctionType<$wcm.ServiceFunction>> = new Map([
+			['handle', $.handle]
+		]);
+		export const resources: Map<string, $wcm.ResourceType> = new Map([
+		]);
 		export type WasmInterface = {
 			'handle': (request: i32, options_case: i32, options_option_RequestOptions_connectTimeoutMs_case: i32, options_option_RequestOptions_connectTimeoutMs_option: i32, options_option_RequestOptions_firstByteTimeoutMs_case: i32, options_option_RequestOptions_firstByteTimeoutMs_option: i32, options_option_RequestOptions_betweenBytesTimeoutMs_case: i32, options_option_RequestOptions_betweenBytesTimeoutMs_option: i32, result: ptr<[i32, i32, i32, i32]>) => void;
 		};
@@ -865,4 +918,13 @@ export namespace http {
 			return $wcm.Service.create<http.OutgoingHandler>(functions, [], wasmInterface, context);
 		}
 	}
+}
+
+export namespace http._ {
+	export const witName = 'wasi:http' as const;
+	export const interfaces: Map<string, $wcm.InterfaceType> = new Map<string, $wcm.InterfaceType>([
+		['Types', Types._],
+		['IncomingHandler', IncomingHandler._],
+		['OutgoingHandler', OutgoingHandler._]
+	]);
 }
