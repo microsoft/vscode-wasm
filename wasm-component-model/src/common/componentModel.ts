@@ -1136,7 +1136,7 @@ abstract class BaseRecordType<T extends JRecord | JTuple, F extends TypedField> 
 	private static size(fields: TypedField[]): size {
 		let result: ptr = 0;
 		for (const field of fields) {
-			align(result, field.type.alignment);
+			result = align(result, field.type.alignment);
 			result += field.type.size;
 		}
 		return result;
@@ -2201,7 +2201,7 @@ export namespace Service {
 
 	export function create<T extends Service>(signatures: Map<string, FunctionType<Function>>, resources: [string, ResourceType, ResourceKind<any>][], wasm: ParamWasmInterface, context: Context): T {
 		const result: WriteableServiceInterface  = Object.create(null);
-		for (const [name, resource, factory] of resources) {
+		for (const [name, , factory] of resources) {
 			result[name] = factory(wasm, context);
 		}
 		for (const [name, signature] of signatures) {
