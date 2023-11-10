@@ -28,13 +28,13 @@
 	"browser": "./dist/web/extension.js",
 	"activationEvents": [],
 	"dependencies": {
-		"uuid": "^9.0.0"
+		"uuid": "^9.0.1"
 	},
 	"devDependencies": {
 		"@types/vscode": "1.78.0",
-		"@types/uuid": "^9.0.1",
-		"@types/assert": "^1.5.6",
-		"assert": "^2.0.0",
+		"@types/uuid": "^9.0.7",
+		"@types/assert": "^1.5.9",
+		"assert": "^2.1.0",
 		"find-process": "^1.4.7"
 	},
 	"scripts": {
