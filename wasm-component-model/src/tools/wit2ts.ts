@@ -18,11 +18,14 @@ export function processDocument(document: Document, options: ResolvedOptions): v
 	const mainCode = new Code();
 
 	const nameProvider = options.nameStyle === 'wit' ? WitNameProvider : TypeScriptNameProvider;
+	const packages: Package[] = [];
+	const exports: string[] = [];
 	for (const pkg of document.packages) {
 		if (!regExp.test(pkg.name)) {
 			continue;
 		}
 
+		packages.push(pkg);
 		const code = new Code();
 		const symbols = new SymbolTable(document, nameProvider);
 		const printers: Printers = {
@@ -36,10 +39,25 @@ export function processDocument(document: Document, options: ResolvedOptions): v
 		pkgEmitter.build();
 		pkgEmitter.emit(code);
 		const pkgName = nameProvider.asPackageName(pkg);
-		mainCode.push(`export { ${pkgName} } from './${nameProvider.asImportName(pkg)}';`);
+		mainCode.push(`import { ${pkgName} } from './${nameProvider.asImportName(pkg)}';`);
+		exports.push(pkgName);
 		const fileName = nameProvider.asFileName(pkg);
 		fs.writeFileSync(path.join(options.outDir, fileName), code.toString());
 	}
+	mainCode.push();
+	mainCode.push(`export namespace _ {`);
+	mainCode.increaseIndent();
+	mainCode.push(`export const packages: Map<string, ${MetaModel.qualifier}.PackageType> =  new Map<string, ${MetaModel.qualifier}.PackageType>([`);
+	mainCode.increaseIndent();
+	for (const pkg of packages) {
+		const pkgName = nameProvider.asPackageName(pkg);
+		mainCode.push(`['${pkgName}', ${pkgName}._],`);
+	}
+	mainCode.decreaseIndent();
+	mainCode.push(`]);`);
+	mainCode.decreaseIndent();
+	mainCode.push(`}`);
+	mainCode.push(`export { ${exports.join(', ')}};`);
 	if (!options.noMain) {
 		fs.writeFileSync(path.join(options.outDir, 'main.ts'), mainCode.toString());
 	}
@@ -1474,6 +1492,7 @@ class PackageEmitter extends Emitter {
 	public emit(code: Code): void {
 		this.emitTypes(code);
 		this.emitMetaData(code);
+		this.emitApi(code);
 	}
 
 	public emitTypes(code: Code): void {
@@ -1507,11 +1526,31 @@ class PackageEmitter extends Emitter {
 		code.decreaseIndent();
 		code.push(`}`);
 	}
+
+	public emitApi(code: Code): void {
+		const { nameProvider } = this.config;
+		const pkgName = nameProvider.asPackageName(this.pkg);
+		code.push('');
+		code.push(`export namespace ${pkgName}._ {`);
+		code.increaseIndent();
+		code.push(`export const witName = '${this.pkg.name}' as const;`);
+		code.push(`export const interfaces: Map<string, ${MetaModel.qualifier}.InterfaceType> = new Map<string, ${MetaModel.qualifier}.InterfaceType>([`);
+		code.increaseIndent();
+		for (let i = 0; i < this.ifaceEmitters.length; i++) {
+			const ifaceEmitter = this.ifaceEmitters[i];
+			const name = nameProvider.asNamespaceName(ifaceEmitter.iface);
+			code.push(`['${name}', ${name}._]${i < this.ifaceEmitters.length - 1 ? ',' : ''}`);
+		}
+		code.decreaseIndent();
+		code.push(`]);`);
+		code.decreaseIndent();
+		code.push(`}`);
+	}
 }
 
 class InterfaceEmitter extends Emitter {
 
-	private readonly iface: Interface;
+	public readonly iface: Interface;
 	private readonly pkg: Package;
 	private typeEmitters: TypeEmitter[];
 	private functionEmitters: CallableEmitter<Func>[];
@@ -1564,7 +1603,6 @@ class InterfaceEmitter extends Emitter {
 		this.emitDocumentation(this.iface, code);
 		code.push(`export namespace ${name} {`);
 		code.increaseIndent();
-		code.push(`export const id = '${this.pkg.name}/${this.iface.name}' as const;`);
 		for (const type of this.typeEmitters) {
 			code.push('');
 			type.emitNamespace(code);
@@ -1641,18 +1679,42 @@ class InterfaceEmitter extends Emitter {
 		const { nameProvider } = this.config;
 		const name = nameProvider.asNamespaceName(this.iface);
 		const qualifiedTypeName = this.getFullQualifiedTypeName();
-		const functions: string[] = [];
-		for (const func of this.functionEmitters) {
-			functions.push(nameProvider.asFunctionName(func.callable));
-		}
+		const types: string[] = [];
 		const resources: string[] = [];
+		for (const type of this.typeEmitters) {
+			types.push(nameProvider.asTypeName(type.type));
+		}
 		for (const resource of this.resourceEmitters) {
-			resources.push(nameProvider.asTypeName(resource.resource));
+			const name = nameProvider.asTypeName(resource.resource);
+			types.push(name);
+			resources.push(name);
 		}
 		code.push(`export namespace ${name}._ {`);
 		code.increaseIndent();
-		code.push(`const functions: ${MetaModel.qualifier}.FunctionType<${MetaModel.qualifier}.ServiceFunction>[] = [${functions.map(name => `$.${name}`).join(', ')}];`);
-		code.push(`const resources: ${MetaModel.qualifier}.ResourceType[] = [${resources.map(name => `$.${name}`).join(', ')}];`);
+		code.push(`export const id = '${this.pkg.name}/${this.iface.name}' as const;`);
+		code.push(`export const witName = '${this.iface.name}' as const;`);
+		code.push(`export const types: Map<string, ${MetaModel.qualifier}.GenericComponentModelType> = new Map<string, ${MetaModel.qualifier}.GenericComponentModelType>([`);
+		code.increaseIndent();
+		for (let i = 0; i < types.length; i++) {
+			code.push(`['${types[i]}', $.${types[i]}]${i < types.length - 1 ? ',' : ''}`);
+		}
+		code.decreaseIndent();
+		code.push(']);');
+		code.push(`export const functions: Map<string, ${MetaModel.qualifier}.FunctionType<${MetaModel.qualifier}.ServiceFunction>> = new Map([`);
+		code.increaseIndent();
+		for (let i = 0; i < this.functionEmitters.length; i++) {
+			const name = nameProvider.asFunctionName(this.functionEmitters[i].callable);
+			code.push(`['${name}', $.${name}]${i < this.functionEmitters.length - 1 ? ',' : ''}`);
+		}
+		code.decreaseIndent();
+		code.push(']);');
+		code.push(`export const resources: Map<string, ${MetaModel.qualifier}.ResourceType> = new Map([`);
+		code.increaseIndent();
+		for (let i = 0; i < resources.length; i++) {
+			code.push(`['${resources[i]}', $.${resources[i]}]${i < resources.length - 1 ? ',' : ''}`);
+		}
+		code.decreaseIndent();
+		code.push(']);');
 		const resourceWasmInterfaces: string[] = [];
 		for (const emitter of this.resourceEmitters) {
 			resourceWasmInterfaces.push(`${qualifiedTypeName}.${nameProvider.asTypeName(emitter.resource)}.WasmInterface`);
@@ -1715,7 +1777,7 @@ class InterfaceEmitter extends Emitter {
 						typeParams.push(info.custom.typeParam);
 						typeParamNames.push(info.custom.typeParamName);
 						params.push(`${info.custom.paramName}: ${info.custom.paramType}`);
-						resources.push(`[$.${info.name}, ${info.custom.paramName}]`);
+						resources.push(`['${info.name}', $.${info.name}, ${info.custom.paramName}]`);
 					}
 				}
 				const typeName = typeParams.length > 0 ? `${qualifiedTypeName}<${typeParamNames.join(', ')}>` : qualifiedTypeName;
@@ -1735,7 +1797,7 @@ class InterfaceEmitter extends Emitter {
 				for (const info of resourceInfos.values()) {
 					if (info !== undefined) {
 						typeParams.push(info.class.typeParam);
-						resources.push(`[$.${info.name}, ${info.class.func}]`);
+						resources.push(`['${info.name}', $.${info.name}, ${info.class.func}]`);
 					}
 				}
 				const typeName = typeParams.length > 0 ? `${qualifiedTypeName}<${typeParams.join(', ')}>` : qualifiedTypeName;
@@ -1752,7 +1814,7 @@ class InterfaceEmitter extends Emitter {
 				for (const info of resourceInfos.values()) {
 					if (info !== undefined) {
 						typeParams.push(info.module.typeParam);
-						resources.push(`[$.${info.name}, ${info.name}.Module]`);
+						resources.push(`['${info.name}', $.${info.name}, ${info.name}.Module]`);
 					}
 				}
 				const typeName = typeParams.length > 0 ? `${qualifiedTypeName}<${typeParams.join(', ')}>` : qualifiedTypeName;
@@ -1861,9 +1923,9 @@ class FunctionEmitter extends InterfaceMemberEmitter {
 		const name = this.config.nameProvider.asFunctionName(this.func);
 		const qualifier = this.getMergeQualifier();
 		if (params.length === 0) {
-			code.push(`export const ${name} = new $wcm.FunctionType<${qualifier}${name}>('${name}', '${this.func.name}', [], ${result});`);
+			code.push(`export const ${name} = new $wcm.FunctionType<${qualifier}${name}>('${this.func.name}', [], ${result});`);
 		} else {
-			code.push(`export const ${name} = new $wcm.FunctionType<${qualifier}${name}>('${name}', '${this.func.name}',[`);
+			code.push(`export const ${name} = new $wcm.FunctionType<${qualifier}${name}>('${this.func.name}',[`);
 			code.increaseIndent();
 			for (const [name, type] of params) {
 				code.push(`['${name}', ${type}],`);
@@ -2396,7 +2458,7 @@ class ResourceEmitter extends InterfaceMemberEmitter {
 	public emitMetaModel(code: Code): void {
 		const { nameProvider } = this.config;
 		const name = nameProvider.asTypeName(this.resource);
-		code.push(`export const ${name} = new $wcm.ResourceType('${name}', '${this.resource.name}');`);
+		code.push(`export const ${name} = new $wcm.ResourceType('${this.resource.name}');`);
 	}
 
 	public emitMetaModelFunctions(code: Code): void {
@@ -2489,9 +2551,9 @@ namespace ResourceEmitter {
 			const resourceName = nameProvider.asTypeName(this.resource);
 			const typeParam = `${this.computeLocalQualifier()}.Module['${methodName}']`;
 			if (params.length === 0) {
-				code.push(`${resourceName}.addFunction(new $wcm.FunctionType<${typeParam}>('${methodName}', '${this.method.name}', [], ${result}));`);
+				code.push(`${resourceName}.addFunction('${methodName}', new $wcm.FunctionType<${typeParam}>('${this.method.name}', [], ${result}));`);
 			} else {
-				code.push(`${resourceName}.addFunction(new $wcm.FunctionType<${typeParam}>('${methodName}', '${this.method.name}', [`);
+				code.push(`${resourceName}.addFunction('${methodName}', new $wcm.FunctionType<${typeParam}>('${this.method.name}', [`);
 				code.increaseIndent();
 				for (const [name, type] of params) {
 					code.push(`['${name}', ${type}],`);

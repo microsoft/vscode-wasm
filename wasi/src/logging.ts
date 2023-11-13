@@ -11,7 +11,6 @@ export namespace logging {
 	 * simple priority levels and context values.
 	 */
 	export namespace Logging {
-		export const id = 'wasi:logging/logging' as const;
 		
 		
 		/**
@@ -72,15 +71,23 @@ export namespace logging {
 export namespace logging {
 	export namespace Logging.$ {
 		export const Level = new $wcm.EnumType<Logging.Level>(['trace', 'debug', 'info', 'warn', 'error', 'critical']);
-		export const log = new $wcm.FunctionType<Logging.log>('log', 'log',[
+		export const log = new $wcm.FunctionType<Logging.log>('log',[
 			['level', Level],
 			['context', $wcm.wstring],
 			['message', $wcm.wstring],
 		], undefined);
 	}
 	export namespace Logging._ {
-		const functions: $wcm.FunctionType<$wcm.ServiceFunction>[] = [$.log];
-		const resources: $wcm.ResourceType[] = [];
+		export const id = 'wasi:logging/logging' as const;
+		export const witName = 'logging' as const;
+		export const types: Map<string, $wcm.GenericComponentModelType> = new Map<string, $wcm.GenericComponentModelType>([
+			['Level', $.Level]
+		]);
+		export const functions: Map<string, $wcm.FunctionType<$wcm.ServiceFunction>> = new Map([
+			['log', $.log]
+		]);
+		export const resources: Map<string, $wcm.ResourceType> = new Map([
+		]);
 		export type WasmInterface = {
 			'log': (level_Level: i32, context_ptr: i32, context_len: i32, message_ptr: i32, message_len: i32) => void;
 		};
@@ -91,4 +98,11 @@ export namespace logging {
 			return $wcm.Service.create<logging.Logging>(functions, [], wasmInterface, context);
 		}
 	}
+}
+
+export namespace logging._ {
+	export const witName = 'wasi:logging' as const;
+	export const interfaces: Map<string, $wcm.InterfaceType> = new Map<string, $wcm.InterfaceType>([
+		['Logging', Logging._]
+	]);
 }

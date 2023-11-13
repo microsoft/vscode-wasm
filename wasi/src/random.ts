@@ -13,7 +13,6 @@ export namespace random {
 	 * Windows.
 	 */
 	export namespace InsecureSeed {
-		export const id = 'wasi:random/insecure-seed' as const;
 		
 		/**
 		 * Return a 128-bit value that may contain a pseudo-random value.
@@ -47,7 +46,6 @@ export namespace random {
 	 * Windows.
 	 */
 	export namespace Insecure {
-		export const id = 'wasi:random/insecure' as const;
 		
 		/**
 		 * Return `len` insecure pseudo-random bytes.
@@ -81,7 +79,6 @@ export namespace random {
 	 * Windows.
 	 */
 	export namespace Random {
-		export const id = 'wasi:random/random' as const;
 		
 		/**
 		 * Return `len` cryptographically-secure random or pseudo-random bytes.
@@ -116,11 +113,18 @@ export namespace random {
 
 export namespace random {
 	export namespace InsecureSeed.$ {
-		export const insecureSeed = new $wcm.FunctionType<InsecureSeed.insecureSeed>('insecureSeed', 'insecure-seed', [], new $wcm.TupleType<[u64, u64]>([$wcm.u64, $wcm.u64]));
+		export const insecureSeed = new $wcm.FunctionType<InsecureSeed.insecureSeed>('insecure-seed', [], new $wcm.TupleType<[u64, u64]>([$wcm.u64, $wcm.u64]));
 	}
 	export namespace InsecureSeed._ {
-		const functions: $wcm.FunctionType<$wcm.ServiceFunction>[] = [$.insecureSeed];
-		const resources: $wcm.ResourceType[] = [];
+		export const id = 'wasi:random/insecure-seed' as const;
+		export const witName = 'insecure-seed' as const;
+		export const types: Map<string, $wcm.GenericComponentModelType> = new Map<string, $wcm.GenericComponentModelType>([
+		]);
+		export const functions: Map<string, $wcm.FunctionType<$wcm.ServiceFunction>> = new Map([
+			['insecureSeed', $.insecureSeed]
+		]);
+		export const resources: Map<string, $wcm.ResourceType> = new Map([
+		]);
 		export type WasmInterface = {
 			'insecure-seed': (result: ptr<[i64, i64]>) => void;
 		};
@@ -133,14 +137,22 @@ export namespace random {
 	}
 	
 	export namespace Insecure.$ {
-		export const getInsecureRandomBytes = new $wcm.FunctionType<Insecure.getInsecureRandomBytes>('getInsecureRandomBytes', 'get-insecure-random-bytes',[
+		export const getInsecureRandomBytes = new $wcm.FunctionType<Insecure.getInsecureRandomBytes>('get-insecure-random-bytes',[
 			['len', $wcm.u64],
 		], new $wcm.Uint8ArrayType());
-		export const getInsecureRandomU64 = new $wcm.FunctionType<Insecure.getInsecureRandomU64>('getInsecureRandomU64', 'get-insecure-random-u64', [], $wcm.u64);
+		export const getInsecureRandomU64 = new $wcm.FunctionType<Insecure.getInsecureRandomU64>('get-insecure-random-u64', [], $wcm.u64);
 	}
 	export namespace Insecure._ {
-		const functions: $wcm.FunctionType<$wcm.ServiceFunction>[] = [$.getInsecureRandomBytes, $.getInsecureRandomU64];
-		const resources: $wcm.ResourceType[] = [];
+		export const id = 'wasi:random/insecure' as const;
+		export const witName = 'insecure' as const;
+		export const types: Map<string, $wcm.GenericComponentModelType> = new Map<string, $wcm.GenericComponentModelType>([
+		]);
+		export const functions: Map<string, $wcm.FunctionType<$wcm.ServiceFunction>> = new Map([
+			['getInsecureRandomBytes', $.getInsecureRandomBytes],
+			['getInsecureRandomU64', $.getInsecureRandomU64]
+		]);
+		export const resources: Map<string, $wcm.ResourceType> = new Map([
+		]);
 		export type WasmInterface = {
 			'get-insecure-random-bytes': (len: i64, result: ptr<[i32, i32]>) => void;
 			'get-insecure-random-u64': () => i64;
@@ -154,14 +166,22 @@ export namespace random {
 	}
 	
 	export namespace Random.$ {
-		export const getRandomBytes = new $wcm.FunctionType<Random.getRandomBytes>('getRandomBytes', 'get-random-bytes',[
+		export const getRandomBytes = new $wcm.FunctionType<Random.getRandomBytes>('get-random-bytes',[
 			['len', $wcm.u64],
 		], new $wcm.Uint8ArrayType());
-		export const getRandomU64 = new $wcm.FunctionType<Random.getRandomU64>('getRandomU64', 'get-random-u64', [], $wcm.u64);
+		export const getRandomU64 = new $wcm.FunctionType<Random.getRandomU64>('get-random-u64', [], $wcm.u64);
 	}
 	export namespace Random._ {
-		const functions: $wcm.FunctionType<$wcm.ServiceFunction>[] = [$.getRandomBytes, $.getRandomU64];
-		const resources: $wcm.ResourceType[] = [];
+		export const id = 'wasi:random/random' as const;
+		export const witName = 'random' as const;
+		export const types: Map<string, $wcm.GenericComponentModelType> = new Map<string, $wcm.GenericComponentModelType>([
+		]);
+		export const functions: Map<string, $wcm.FunctionType<$wcm.ServiceFunction>> = new Map([
+			['getRandomBytes', $.getRandomBytes],
+			['getRandomU64', $.getRandomU64]
+		]);
+		export const resources: Map<string, $wcm.ResourceType> = new Map([
+		]);
 		export type WasmInterface = {
 			'get-random-bytes': (len: i64, result: ptr<[i32, i32]>) => void;
 			'get-random-u64': () => i64;
@@ -173,4 +193,13 @@ export namespace random {
 			return $wcm.Service.create<random.Random>(functions, [], wasmInterface, context);
 		}
 	}
+}
+
+export namespace random._ {
+	export const witName = 'wasi:random' as const;
+	export const interfaces: Map<string, $wcm.InterfaceType> = new Map<string, $wcm.InterfaceType>([
+		['InsecureSeed', InsecureSeed._],
+		['Insecure', Insecure._],
+		['Random', Random._]
+	]);
 }

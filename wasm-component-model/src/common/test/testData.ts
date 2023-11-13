@@ -3,11 +3,10 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 import * as $wcm from '../componentModel';
-import type { u32, u64, s32, s64, float32, float64, own, borrow, resource, i32, ptr, i64 } from '../componentModel';
+import type { u32, u64, s32, s64, float32, float64, own, borrow, i32, resource, ptr, i64 } from '../componentModel';
 
 export namespace testData {
 	export namespace Types {
-		export const id = 'vscode:test-data/types' as const;
 
 		export type Point = {
 			x: u32;
@@ -185,6 +184,12 @@ export namespace testData {
 				new(x: u32, y: u32): Interface;
 			};
 			export type Manager = $wcm.ResourceManager<Interface>;
+			export type WasmInterface = {
+				'[constructor]point-resource': (x: i32, y: i32) => i32;
+				'[method]point-resource.get-x': (self: i32) => i32;
+				'[method]point-resource.get-y': (self: i32) => i32;
+				'[method]point-resource.add': (self: i32) => i32;
+			};
 		}
 		export type PointResource = resource;
 
@@ -215,7 +220,7 @@ export namespace testData {
 			['x', $wcm.u32],
 			['y', $wcm.u32],
 		]);
-		export const PointResource = new $wcm.ResourceType('PointResource', 'point-resource');
+		export const PointResource = new $wcm.ResourceType('point-resource');
 		export const PointOption = new $wcm.RecordType<Types.PointOption>([
 			['x', new $wcm.OptionType<u32>($wcm.u32)],
 			['y', new $wcm.OptionType<u32>($wcm.u32)],
@@ -223,49 +228,63 @@ export namespace testData {
 		export const TestVariant = new $wcm.VariantType<Types.TestVariant, Types.TestVariant._tt, Types.TestVariant._vt>([['empty', undefined], ['unsigned32', $wcm.u32], ['unsigned64', $wcm.u64], ['signed32', $wcm.s32], ['signed64', $wcm.s64], ['floatingPoint32', $wcm.float32], ['floatingPoint64', $wcm.float64], ['structure', Point]], Types.TestVariant._ctor);
 		export const TestFlagsShort = new $wcm.FlagsType<Types.TestFlagsShort>(6);
 		export const TestFlagsLong = new $wcm.FlagsType<Types.TestFlagsLong>(40);
-		PointResource.addFunction(new $wcm.FunctionType<Types.PointResource.Module['constructor']>('constructor', '[constructor]point-resource', [
+		PointResource.addFunction('constructor', new $wcm.FunctionType<Types.PointResource.Module['constructor']>('[constructor]point-resource', [
 			['x', $wcm.u32],
 			['y', $wcm.u32],
 		], new $wcm.OwnType<testData.Types.PointResource>(PointResource)));
-		PointResource.addFunction(new $wcm.FunctionType<Types.PointResource.Module['getX']>('getX', '[method]point-resource.get-x', [
+		PointResource.addFunction('getX', new $wcm.FunctionType<Types.PointResource.Module['getX']>('[method]point-resource.get-x', [
 			['self', new $wcm.BorrowType<testData.Types.PointResource>(PointResource)],
 		], $wcm.u32));
-		PointResource.addFunction(new $wcm.FunctionType<Types.PointResource.Module['getY']>('getY', '[method]point-resource.get-y', [
+		PointResource.addFunction('getY', new $wcm.FunctionType<Types.PointResource.Module['getY']>('[method]point-resource.get-y', [
 			['self', new $wcm.BorrowType<testData.Types.PointResource>(PointResource)],
 		], $wcm.u32));
-		PointResource.addFunction(new $wcm.FunctionType<Types.PointResource.Module['add']>('add', '[method]point-resource.add', [
+		PointResource.addFunction('add', new $wcm.FunctionType<Types.PointResource.Module['add']>('[method]point-resource.add', [
 			['self', new $wcm.BorrowType<testData.Types.PointResource>(PointResource)],
 		], $wcm.u32));
-		export const call = new $wcm.FunctionType<Types.call>('call', 'call',[
+		export const call = new $wcm.FunctionType<Types.call>('call',[
 			['point', Point],
 		], $wcm.u32);
-		export const callOption = new $wcm.FunctionType<Types.callOption>('callOption', 'call-option',[
+		export const callOption = new $wcm.FunctionType<Types.callOption>('call-option',[
 			['point', new $wcm.OptionType<testData.Types.Point>(Point)],
 		], new $wcm.OptionType<u32>($wcm.u32));
-		export const checkVariant = new $wcm.FunctionType<Types.checkVariant>('checkVariant', 'check-variant',[
+		export const checkVariant = new $wcm.FunctionType<Types.checkVariant>('check-variant',[
 			['value', TestVariant],
 		], TestVariant);
-		export const checkFlagsShort = new $wcm.FunctionType<Types.checkFlagsShort>('checkFlagsShort', 'check-flags-short',[
+		export const checkFlagsShort = new $wcm.FunctionType<Types.checkFlagsShort>('check-flags-short',[
 			['value', TestFlagsShort],
 		], TestFlagsShort);
-		export const checkFlagsLong = new $wcm.FunctionType<Types.checkFlagsLong>('checkFlagsLong', 'check-flags-long',[
+		export const checkFlagsLong = new $wcm.FunctionType<Types.checkFlagsLong>('check-flags-long',[
 			['value', TestFlagsLong],
 		], TestFlagsLong);
 	}
 	export namespace Types._ {
-		const functions: $wcm.FunctionType<$wcm.ServiceFunction>[] = [$.call, $.callOption, $.checkVariant, $.checkFlagsShort, $.checkFlagsLong];
-		const resources: $wcm.ResourceType[] = [$.PointResource];
+		export const id = 'vscode:test-data/types' as const;
+		export const witName = 'types' as const;
+		export const types: Map<string, $wcm.GenericComponentModelType> = new Map<string, $wcm.GenericComponentModelType>([
+			['Point', $.Point],
+			['PointOption', $.PointOption],
+			['TestVariant', $.TestVariant],
+			['TestFlagsShort', $.TestFlagsShort],
+			['TestFlagsLong', $.TestFlagsLong],
+			['PointResource', $.PointResource]
+		]);
+		export const functions: Map<string, $wcm.FunctionType<$wcm.ServiceFunction>> = new Map([
+			['call', $.call],
+			['callOption', $.callOption],
+			['checkVariant', $.checkVariant],
+			['checkFlagsShort', $.checkFlagsShort],
+			['checkFlagsLong', $.checkFlagsLong]
+		]);
+		export const resources: Map<string, $wcm.ResourceType> = new Map([
+			['PointResource', $.PointResource]
+		]);
 		export type WasmInterface = {
-			'[constructor]point-resource': (x: i32, y: i32) => i32;
-			'[method]point-resource.get-x': (self: i32) => i32;
-			'[method]point-resource.get-y': (self: i32) => i32;
-			'[method]point-resource.add': (self: i32) => i32;
 			'call': (point_x: i32, point_y: i32) => i32;
 			'call-option': (point_case: i32, point_option_x: i32, point_option_y: i32, result: ptr<[i32, i32]>) => void;
 			'check-variant': (value_case: i32, value_0: i64, value_1: i32, result: ptr<[i32, i64, i32]>) => void;
 			'check-flags-short': (value: i32) => i32;
 			'check-flags-long': (value_0: i32, value_1: i32, result: ptr<[i32, i32]>) => void;
-		};
+		} & testData.Types.PointResource.WasmInterface;
 		export namespace PointResource  {
 			export function Module(wasmInterface: WasmInterface, context: $wcm.Context): testData.Types.PointResource.Module {
 				return $wcm.Module.create<testData.Types.PointResource.Module>($.PointResource, wasmInterface, context);
@@ -302,15 +321,22 @@ export namespace testData {
 			return $wcm.Host.create<WasmInterface>(functions, resources, service, context);
 		}
 		export function createService<PR extends testData.Types.PointResource.Module | testData.Types.PointResource.Constructor | testData.Types.PointResource.Manager>(pr: $wcm.ResourceKind<PR>, wasmInterface: WasmInterface, context: $wcm.Context): testData.Types<PR> {
-			return $wcm.Service.create<testData.Types<PR>>(functions, [[$.PointResource, pr]], wasmInterface, context);
+			return $wcm.Service.create<testData.Types<PR>>(functions, [['PointResource', $.PointResource, pr]], wasmInterface, context);
 		}
 		type ClassService = testData.Types<testData.Types.PointResource.Constructor>;
 		export function createClassService(wasmInterface: WasmInterface, context: $wcm.Context): ClassService {
-			return $wcm.Service.create<ClassService>(functions, [[$.PointResource, PointResource.Class]], wasmInterface, context);
+			return $wcm.Service.create<ClassService>(functions, [['PointResource', $.PointResource, PointResource.Class]], wasmInterface, context);
 		}
 		type ModuleService = testData.Types<testData.Types.PointResource.Module>;
 		export function createModuleService(wasmInterface: WasmInterface, context: $wcm.Context): ModuleService {
-			return $wcm.Service.create<ModuleService>(functions, [[$.PointResource, PointResource.Module]], wasmInterface, context);
+			return $wcm.Service.create<ModuleService>(functions, [['PointResource', $.PointResource, PointResource.Module]], wasmInterface, context);
 		}
 	}
+}
+
+export namespace testData._ {
+	export const witName = 'vscode:test-data' as const;
+	export const interfaces: Map<string, $wcm.InterfaceType> = new Map<string, $wcm.InterfaceType>([
+		['Types', Types._]
+	]);
 }
