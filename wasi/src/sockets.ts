@@ -1251,22 +1251,22 @@ export type sockets<N extends sockets.Network, INL extends sockets.IpNameLookup,
 export namespace sockets {
 	export namespace Network.$ {
 		export const Network = new $wcm.ResourceType('network');
-		export const ErrorCode = new $wcm.EnumType<Network.ErrorCode>(['unknown', 'accessDenied', 'notSupported', 'invalidArgument', 'outOfMemory', 'timeout', 'concurrencyConflict', 'notInProgress', 'wouldBlock', 'invalidState', 'newSocketLimit', 'addressNotBindable', 'addressInUse', 'remoteUnreachable', 'connectionRefused', 'connectionReset', 'connectionAborted', 'datagramTooLarge', 'nameUnresolvable', 'temporaryResolverFailure', 'permanentResolverFailure']);
-		export const IpAddressFamily = new $wcm.EnumType<Network.IpAddressFamily>(['ipv4', 'ipv6']);
+		export const ErrorCode = new $wcm.EnumType<sockets.Network.ErrorCode>(['unknown', 'accessDenied', 'notSupported', 'invalidArgument', 'outOfMemory', 'timeout', 'concurrencyConflict', 'notInProgress', 'wouldBlock', 'invalidState', 'newSocketLimit', 'addressNotBindable', 'addressInUse', 'remoteUnreachable', 'connectionRefused', 'connectionReset', 'connectionAborted', 'datagramTooLarge', 'nameUnresolvable', 'temporaryResolverFailure', 'permanentResolverFailure']);
+		export const IpAddressFamily = new $wcm.EnumType<sockets.Network.IpAddressFamily>(['ipv4', 'ipv6']);
 		export const Ipv4Address = new $wcm.TupleType<[u8, u8, u8, u8]>([$wcm.u8, $wcm.u8, $wcm.u8, $wcm.u8]);
 		export const Ipv6Address = new $wcm.TupleType<[u16, u16, u16, u16, u16, u16, u16, u16]>([$wcm.u16, $wcm.u16, $wcm.u16, $wcm.u16, $wcm.u16, $wcm.u16, $wcm.u16, $wcm.u16]);
-		export const IpAddress = new $wcm.VariantType<Network.IpAddress, Network.IpAddress._tt, Network.IpAddress._vt>([['ipv4', Ipv4Address], ['ipv6', Ipv6Address]], Network.IpAddress._ctor);
-		export const Ipv4SocketAddress = new $wcm.RecordType<Network.Ipv4SocketAddress>([
+		export const IpAddress = new $wcm.VariantType<sockets.Network.IpAddress, sockets.Network.IpAddress._tt, sockets.Network.IpAddress._vt>([['ipv4', Ipv4Address], ['ipv6', Ipv6Address]], sockets.Network.IpAddress._ctor);
+		export const Ipv4SocketAddress = new $wcm.RecordType<sockets.Network.Ipv4SocketAddress>([
 			['port', $wcm.u16],
 			['address', Ipv4Address],
 		]);
-		export const Ipv6SocketAddress = new $wcm.RecordType<Network.Ipv6SocketAddress>([
+		export const Ipv6SocketAddress = new $wcm.RecordType<sockets.Network.Ipv6SocketAddress>([
 			['port', $wcm.u16],
 			['flowInfo', $wcm.u32],
 			['address', Ipv6Address],
 			['scopeId', $wcm.u32],
 		]);
-		export const IpSocketAddress = new $wcm.VariantType<Network.IpSocketAddress, Network.IpSocketAddress._tt, Network.IpSocketAddress._vt>([['ipv4', Ipv4SocketAddress], ['ipv6', Ipv6SocketAddress]], Network.IpSocketAddress._ctor);
+		export const IpSocketAddress = new $wcm.VariantType<sockets.Network.IpSocketAddress, sockets.Network.IpSocketAddress._tt, sockets.Network.IpSocketAddress._vt>([['ipv4', Ipv4SocketAddress], ['ipv6', Ipv6SocketAddress]], sockets.Network.IpSocketAddress._ctor);
 	}
 	export namespace Network._ {
 		export const id = 'wasi:sockets/network' as const;
@@ -1426,7 +1426,7 @@ export namespace sockets {
 		export const ErrorCode = sockets.Network.$.ErrorCode;
 		export const IpSocketAddress = sockets.Network.$.IpSocketAddress;
 		export const IpAddressFamily = sockets.Network.$.IpAddressFamily;
-		export const ShutdownType = new $wcm.EnumType<Tcp.ShutdownType>(['receive', 'send', 'both']);
+		export const ShutdownType = new $wcm.EnumType<sockets.Tcp.ShutdownType>(['receive', 'send', 'both']);
 		export const TcpSocket = new $wcm.ResourceType('tcp-socket');
 		TcpSocket.addFunction('startBind', new $wcm.FunctionType<sockets.Tcp.TcpSocket.Module['startBind']>('[method]tcp-socket.start-bind', [
 			['self', new $wcm.BorrowType<sockets.Tcp.TcpSocket>(TcpSocket)],
@@ -1657,11 +1657,11 @@ export namespace sockets {
 		export const ErrorCode = sockets.Network.$.ErrorCode;
 		export const IpSocketAddress = sockets.Network.$.IpSocketAddress;
 		export const IpAddressFamily = sockets.Network.$.IpAddressFamily;
-		export const IncomingDatagram = new $wcm.RecordType<Udp.IncomingDatagram>([
+		export const IncomingDatagram = new $wcm.RecordType<sockets.Udp.IncomingDatagram>([
 			['data', new $wcm.Uint8ArrayType()],
 			['remoteAddress', IpSocketAddress],
 		]);
-		export const OutgoingDatagram = new $wcm.RecordType<Udp.OutgoingDatagram>([
+		export const OutgoingDatagram = new $wcm.RecordType<sockets.Udp.OutgoingDatagram>([
 			['data', new $wcm.Uint8ArrayType()],
 			['remoteAddress', new $wcm.OptionType<sockets.Udp.IpSocketAddress>(IpSocketAddress)],
 		]);

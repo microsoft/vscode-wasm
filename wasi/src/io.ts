@@ -531,7 +531,7 @@ export namespace io {
 	export namespace Streams.$ {
 		export const Error = io.Error.$.Error;
 		export const Pollable = io.Poll.$.Pollable;
-		export const StreamError = new $wcm.VariantType<Streams.StreamError, Streams.StreamError._tt, Streams.StreamError._vt>([['lastOperationFailed', new $wcm.OwnType<io.Streams.Error>(Error)], ['closed', undefined]], Streams.StreamError._ctor);
+		export const StreamError = new $wcm.VariantType<io.Streams.StreamError, io.Streams.StreamError._tt, io.Streams.StreamError._vt>([['lastOperationFailed', new $wcm.OwnType<io.Streams.Error>(Error)], ['closed', undefined]], io.Streams.StreamError._ctor);
 		export const InputStream = new $wcm.ResourceType('input-stream');
 		export const OutputStream = new $wcm.ResourceType('output-stream');
 		InputStream.addFunction('read', new $wcm.FunctionType<io.Streams.InputStream.Module['read']>('[method]input-stream.read', [

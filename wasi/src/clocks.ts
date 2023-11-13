@@ -175,7 +175,7 @@ export namespace clocks {
 	}
 	
 	export namespace WallClock.$ {
-		export const Datetime = new $wcm.RecordType<WallClock.Datetime>([
+		export const Datetime = new $wcm.RecordType<clocks.WallClock.Datetime>([
 			['seconds', $wcm.u64],
 			['nanoseconds', $wcm.u32],
 		]);

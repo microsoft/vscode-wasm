@@ -991,12 +991,12 @@ export namespace filesystem {
 		export const Error = io.Streams.$.Error;
 		export const Datetime = clocks.WallClock.$.Datetime;
 		export const Filesize = $wcm.u64;
-		export const DescriptorType = new $wcm.EnumType<Types.DescriptorType>(['unknown', 'blockDevice', 'characterDevice', 'directory', 'fifo', 'symbolicLink', 'regularFile', 'socket']);
-		export const DescriptorFlags = new $wcm.FlagsType<Types.DescriptorFlags>(6);
-		export const PathFlags = new $wcm.FlagsType<Types.PathFlags>(1);
-		export const OpenFlags = new $wcm.FlagsType<Types.OpenFlags>(4);
+		export const DescriptorType = new $wcm.EnumType<filesystem.Types.DescriptorType>(['unknown', 'blockDevice', 'characterDevice', 'directory', 'fifo', 'symbolicLink', 'regularFile', 'socket']);
+		export const DescriptorFlags = new $wcm.FlagsType<filesystem.Types.DescriptorFlags>(6);
+		export const PathFlags = new $wcm.FlagsType<filesystem.Types.PathFlags>(1);
+		export const OpenFlags = new $wcm.FlagsType<filesystem.Types.OpenFlags>(4);
 		export const LinkCount = $wcm.u64;
-		export const DescriptorStat = new $wcm.RecordType<Types.DescriptorStat>([
+		export const DescriptorStat = new $wcm.RecordType<filesystem.Types.DescriptorStat>([
 			['type', DescriptorType],
 			['linkCount', LinkCount],
 			['size', Filesize],
@@ -1004,14 +1004,14 @@ export namespace filesystem {
 			['dataModificationTimestamp', new $wcm.OptionType<filesystem.Types.Datetime>(Datetime)],
 			['statusChangeTimestamp', new $wcm.OptionType<filesystem.Types.Datetime>(Datetime)],
 		]);
-		export const NewTimestamp = new $wcm.VariantType<Types.NewTimestamp, Types.NewTimestamp._tt, Types.NewTimestamp._vt>([['noChange', undefined], ['now', undefined], ['timestamp', Datetime]], Types.NewTimestamp._ctor);
-		export const DirectoryEntry = new $wcm.RecordType<Types.DirectoryEntry>([
+		export const NewTimestamp = new $wcm.VariantType<filesystem.Types.NewTimestamp, filesystem.Types.NewTimestamp._tt, filesystem.Types.NewTimestamp._vt>([['noChange', undefined], ['now', undefined], ['timestamp', Datetime]], filesystem.Types.NewTimestamp._ctor);
+		export const DirectoryEntry = new $wcm.RecordType<filesystem.Types.DirectoryEntry>([
 			['type', DescriptorType],
 			['name', $wcm.wstring],
 		]);
-		export const ErrorCode = new $wcm.EnumType<Types.ErrorCode>(['access', 'wouldBlock', 'already', 'badDescriptor', 'busy', 'deadlock', 'quota', 'exist', 'fileTooLarge', 'illegalByteSequence', 'inProgress', 'interrupted', 'invalid', 'io', 'isDirectory', 'loop', 'tooManyLinks', 'messageSize', 'nameTooLong', 'noDevice', 'noEntry', 'noLock', 'insufficientMemory', 'insufficientSpace', 'notDirectory', 'notEmpty', 'notRecoverable', 'unsupported', 'noTty', 'noSuchDevice', 'overflow', 'notPermitted', 'pipe', 'readOnly', 'invalidSeek', 'textFileBusy', 'crossDevice']);
-		export const Advice = new $wcm.EnumType<Types.Advice>(['normal', 'sequential', 'random', 'willNeed', 'dontNeed', 'noReuse']);
-		export const MetadataHashValue = new $wcm.RecordType<Types.MetadataHashValue>([
+		export const ErrorCode = new $wcm.EnumType<filesystem.Types.ErrorCode>(['access', 'wouldBlock', 'already', 'badDescriptor', 'busy', 'deadlock', 'quota', 'exist', 'fileTooLarge', 'illegalByteSequence', 'inProgress', 'interrupted', 'invalid', 'io', 'isDirectory', 'loop', 'tooManyLinks', 'messageSize', 'nameTooLong', 'noDevice', 'noEntry', 'noLock', 'insufficientMemory', 'insufficientSpace', 'notDirectory', 'notEmpty', 'notRecoverable', 'unsupported', 'noTty', 'noSuchDevice', 'overflow', 'notPermitted', 'pipe', 'readOnly', 'invalidSeek', 'textFileBusy', 'crossDevice']);
+		export const Advice = new $wcm.EnumType<filesystem.Types.Advice>(['normal', 'sequential', 'random', 'willNeed', 'dontNeed', 'noReuse']);
+		export const MetadataHashValue = new $wcm.RecordType<filesystem.Types.MetadataHashValue>([
 			['lower', $wcm.u64],
 			['upper', $wcm.u64],
 		]);

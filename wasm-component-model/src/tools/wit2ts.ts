@@ -2198,7 +2198,7 @@ class RecordEmitter extends InterfaceMemberEmitter {
 	public emitMetaModel(code: Code): void {
 		const { nameProvider, printers } = this.config;
 		const name = nameProvider.asTypeName(this.type);
-		code.push(`export const ${name} = new $wcm.RecordType<${this.getMergeQualifier()}${name}>([`);
+		code.push(`export const ${name} = new $wcm.RecordType<${this.getPackageQualifier()}${name}>([`);
 		code.increaseIndent();
 		for (const field of this.type.kind.record.fields) {
 			const name = nameProvider.asFieldName(field);
@@ -2348,7 +2348,7 @@ class VariantEmitter extends InterfaceMemberEmitter {
 			const type = item.type === null ? 'undefined' : printers.metaModel.printTypeReference(item.type, TypeUsage.property);
 			cases.push(`['${name}', ${type}]`);
 		}
-		const typeName = `${this.getMergeQualifier()}${name}`;
+		const typeName = `${this.getPackageQualifier()}${name}`;
 		code.push(`export const ${name} = new $wcm.VariantType<${typeName}, ${typeName}._tt, ${typeName}._vt>([${cases.join(', ')}], ${typeName}._ctor);`);
 	}
 }
@@ -2386,7 +2386,7 @@ class EnumEmitter extends InterfaceMemberEmitter {
 		for (const item of this.type.kind.enum.cases) {
 			cases.push(`'${nameProvider.asEnumCaseName(item)}'`);
 		}
-		code.push(`export const ${enumName} = new $wcm.EnumType<${this.getMergeQualifier()}${enumName}>([${cases.join(', ')}]);`);
+		code.push(`export const ${enumName} = new $wcm.EnumType<${this.getPackageQualifier()}${enumName}>([${cases.join(', ')}]);`);
 	}
 }
 
@@ -2437,7 +2437,7 @@ class FlagsEmitter extends InterfaceMemberEmitter {
 		const { nameProvider } = this.config;
 		const kind = this.type.kind;
 		const flagsName = nameProvider.asTypeName(this.type);
-		code.push(`export const ${flagsName} = new $wcm.FlagsType<${this.getMergeQualifier()}${flagsName}>(${kind.flags.flags.length});`);
+		code.push(`export const ${flagsName} = new $wcm.FlagsType<${this.getPackageQualifier()}${flagsName}>(${kind.flags.flags.length});`);
 	}
 
 	private static getFlagSize(numberOfFlags: number): number {
