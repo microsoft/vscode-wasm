@@ -1,0 +1,55 @@
+{
+	"private": true,
+	"name": "@vscode/wasm-component-model",
+	"version": "0.1.0-pre.1",
+	"description": "A VS Code specific component model implementation",
+	"engines": {
+		"node": ">=16.17.1",
+		"vscode": "^1.78.0"
+	},
+	"main": "./lib/desktop/main.js",
+	"browser": {
+		"./lib/desktop/main.js": "./lib/web/main.js"
+	},
+	"typings": "./lib/common/api.d.ts",
+	"bin": {
+		"wit2ts": "./bin/wit2ts"
+	},
+	"repository": {
+		"type": "git",
+		"url": "git+https://github.com/microsoft/vscode-wasm.git"
+	},
+	"keywords": [
+		"VSCode",
+		"WASM",
+		"Component Model"
+	],
+	"author": "Visual Studio Code Team",
+	"license": "MIT",
+	"bugs": {
+		"url": "https://github.com/microsoft/vscode-wasm/issues"
+	},
+	"homepage": "https://github.com/microsoft/vscode-wasi#readme",
+	"enabledApiProposals": [
+	],
+	"dependencies": {
+		"yargs": "^17.7.2"
+	},
+	"devDependencies": {
+		"@types/yargs": "^17.0.31"
+	},
+	"scripts": {
+		"prepublishOnly": "echo \"⛔ Can only publish from a secure pipeline ⛔\" && node ../build/npm/fail",
+		"prepack": "npm run all:publish",
+		"compile": "node ../node_modules/typescript/lib/tsc.js -b ./tsconfig.json",
+		"compile:publish": "node ../node_modules/typescript/lib/tsc.js -b ./tsconfig.publish.json",
+		"watch": "node ../node_modules/typescript/lib/tsc.js -b ./tsconfig.watch.json -w",
+		"clean": "node ../node_modules/rimraf/bin.js lib",
+		"lint": "node ../node_modules/eslint/bin/eslint.js --ext ts src",
+		"test": "npm run test:desktop",
+		"test:desktop": "node ../node_modules/mocha/bin/_mocha",
+		"all": "npm run clean && npm run compile && npm run lint",
+		"all:publish": "git clean -xfd . && npm install && npm run compile:publish && npm run lint",
+		"generate:testCase": "wasm-tools component wit --json ./src/common/test/test-data.wit | node ./lib/tools/main.js --stdin --noMain --resourceStyle module --outDir ./src/common/test"
+	}
+}

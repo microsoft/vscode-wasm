@@ -40,11 +40,14 @@
 		"./sync-api-client",
 		"./sync-api-service",
 		"./sync-api-tests",
+		"./wasm-component-model",
+		"./wasi",
 		"./wasm-wasi-core",
 		"./wasm-wasi",
 		"./webshell",
 		"./tools",
-		"./testbeds"
+		"./testbeds",
+		"./preview2"
 	],
 	"editor.codeActionsOnSave": {
 		"source.fixAll.eslint": true

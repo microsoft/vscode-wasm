@@ -6,9 +6,6 @@
     "files": [],
     "references": [
         {
-            "path": "./../testbeds/coreutils/tsconfig.json"
-        },
-        {
             "path": "./../testbeds/cpp/tsconfig.json"
         },
         {

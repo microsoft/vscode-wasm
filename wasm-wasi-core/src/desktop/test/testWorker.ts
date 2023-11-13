@@ -9,7 +9,7 @@ import * as path from 'node:path';
 import { MessagePort, parentPort, Worker } from 'node:worker_threads';
 
 import Mocha from 'mocha';
-import glob from 'glob';
+import { glob } from 'glob';
 
 import { TestSetup, TestSetupMessage, TestsDoneMessage } from '../../common/test/messages';
 import TestEnvironment from '../../common/test/testEnvironment';

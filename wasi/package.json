@@ -1,0 +1,45 @@
+{
+	"private": true,
+	"name": "@vscode/wasi",
+	"version": "0.1.0-pre.1",
+	"description": "WASI preview 2 interfaces for VS Code",
+	"engines": {
+		"node": ">=18.15.0",
+		"vscode": "^1.78.0"
+	},
+	"main": "./lib/main.js",
+	"typings": "./lib/main.d.ts",
+	"repository": {
+		"type": "git",
+		"url": "git+https://github.com/microsoft/vscode-wasm.git"
+	},
+	"keywords": [
+		"VSCode",
+		"WASM",
+		"Component Model"
+	],
+	"author": "Visual Studio Code Team",
+	"license": "MIT",
+	"bugs": {
+		"url": "https://github.com/microsoft/vscode-wasm/issues"
+	},
+	"homepage": "https://github.com/microsoft/vscode-wasi#readme",
+	"enabledApiProposals": [
+	],
+	"dependencies": {
+	},
+	"devDependencies": {
+	},
+	"scripts": {
+		"prepublishOnly": "echo \"⛔ Can only publish from a secure pipeline ⛔\" && node ../build/npm/fail",
+		"prepack": "npm run all:publish",
+		"compile": "node ../node_modules/typescript/lib/tsc.js -b ./tsconfig.json",
+		"compile:publish": "node ../node_modules/typescript/lib/tsc.js -b ./tsconfig.publish.json",
+		"watch": "node ../node_modules/typescript/lib/tsc.js -b ./tsconfig.watch.json -w",
+		"clean": "node ../node_modules/rimraf/bin.js lib",
+		"lint": "node ../node_modules/eslint/bin/eslint.js --ext ts src",
+		"all": "npm run clean && npm run compile && npm run lint",
+		"all:publish": "git clean -xfd . && npm install && npm run compile:publish && npm run lint",
+		"generate": "node ../wasm-component-model/lib/tools/main.js --outDir ./src --resourceStyle module --package wasi: ./src/wasi.json"
+	}
+}

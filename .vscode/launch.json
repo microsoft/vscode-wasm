@@ -147,6 +147,23 @@
 		{
 			"type": "extensionHost",
 			"request": "launch",
+			"name": "Dotnet Testbed",
+			"runtimeExecutable": "${execPath}",
+			"args": [
+				"--extensionDevelopmentPath=${workspaceRoot}/testbeds/dotnet",
+				"--extensionDevelopmentPath=${workspaceRoot}/wasm-wasi-core",
+				"--extensionDevelopmentPath=${workspaceRoot}/webshell"
+			],
+			"outFiles": [
+				"${workspaceRoot}/testbeds/python/out/**/*.js",
+				"${workspaceRoot}/wasm-wasi-core/lib/**/*.js",
+				"${workspaceRoot}/webshell/lib/**/*.js"
+			],
+			"sourceMaps": true
+		},
+		{
+			"type": "extensionHost",
+			"request": "launch",
 			"name": "WASM-WASI Example",
 			"runtimeExecutable": "${execPath}",
 			"args": [

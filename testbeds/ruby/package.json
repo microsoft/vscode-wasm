@@ -12,6 +12,10 @@
 	"main": "./out/extension.js",
 	"activationEvents": [
 	],
+	"extensionDependencies": [
+		"ms-vscode.wasm-wasi-core",
+		"ms-vscode.webshell"
+	],
 	"contributes": {
 		"commands": [
 			{

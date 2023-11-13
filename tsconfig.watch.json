@@ -18,6 +18,9 @@
             "path": "./sync-api-tests/tsconfig.watch.json"
         },
         {
+            "path": "./wasm-component-model/tsconfig.watch.json"
+        },
+        {
             "path": "./wasm-wasi-core/tsconfig.watch.json"
         },
         {

@@ -5,7 +5,7 @@
 
 import path from 'path';
 import Mocha from 'mocha';
-import glob from 'glob';
+import { glob } from 'glob';
 
 export function run(testsRoot: string, cb: (error: any, failures?: number) => void): void {
 	// Create the mocha test

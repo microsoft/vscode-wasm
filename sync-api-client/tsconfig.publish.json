@@ -8,6 +8,7 @@
             "es2020"
         ],
         "rootDir": "./src",
+        "types": [],
         "strict": true,
         "noImplicitAny": true,
         "noImplicitReturns": true,
