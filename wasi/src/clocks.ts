@@ -3,7 +3,7 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 import * as $wcm from '@vscode/wasm-component-model';
-import type { u64, own, u32, s32, i64, i32, ptr } from '@vscode/wasm-component-model';
+import type { u64, own, u32, i64, i32, ptr } from '@vscode/wasm-component-model';
 import { io } from './io';
 
 export namespace clocks {
@@ -24,9 +24,16 @@ export namespace clocks {
 		export type Pollable = io.Poll.Pollable;
 		
 		/**
-		 * A timestamp in nanoseconds.
+		 * An instant in time, in nanoseconds. An instant is relative to an
+		 * unspecified initial value, and can only be compared to instances from
+		 * the same monotonic-clock.
 		 */
 		export type Instant = u64;
+		
+		/**
+		 * A duration of time, in nanoseconds.
+		 */
+		export type Duration = u64;
 		
 		/**
 		 * Read the current value of the clock.
@@ -37,20 +44,29 @@ export namespace clocks {
 		export type now = () => Instant;
 		
 		/**
-		 * Query the resolution of the clock.
+		 * Query the resolution of the clock. Returns the duration of time
+		 * corresponding to a clock tick.
 		 */
-		export type resolution = () => Instant;
+		export type resolution = () => Duration;
 		
 		/**
-		 * Create a `pollable` which will resolve once the specified time has been
-		 * reached.
+		 * Create a `pollable` which will resolve once the specified instant
+		 * occured.
 		 */
-		export type subscribe = (when: Instant, absolute: boolean) => own<Pollable>;
+		export type subscribeInstant = (when: Instant) => own<Pollable>;
+		
+		/**
+		 * Create a `pollable` which will resolve once the given duration has
+		 * elapsed, starting at the time at which this function was called.
+		 * occured.
+		 */
+		export type subscribeDuration = (when: Duration) => own<Pollable>;
 	}
 	export type MonotonicClock = {
 		now: MonotonicClock.now;
 		resolution: MonotonicClock.resolution;
-		subscribe: MonotonicClock.subscribe;
+		subscribeInstant: MonotonicClock.subscribeInstant;
+		subscribeDuration: MonotonicClock.subscribeDuration;
 	};
 	
 	/**
@@ -108,84 +124,24 @@ export namespace clocks {
 		resolution: WallClock.resolution;
 	};
 	
-	export namespace Timezone {
-		
-		export type Datetime = clocks.WallClock.Datetime;
-		
-		/**
-		 * Information useful for displaying the timezone of a specific `datetime`.
-		 * 
-		 * This information may vary within a single `timezone` to reflect daylight
-		 * saving time adjustments.
-		 */
-		export type TimezoneDisplay = {
-			
-			/**
-			 * The number of seconds difference between UTC time and the local
-			 * time of the timezone.
-			 * 
-			 * The returned value will always be less than 86400 which is the
-			 * number of seconds in a day (24*60*60).
-			 * 
-			 * In implementations that do not expose an actual time zone, this
-			 * should return 0.
-			 */
-			utcOffset: s32;
-			
-			/**
-			 * The abbreviated name of the timezone to display to a user. The name
-			 * `UTC` indicates Coordinated Universal Time. Otherwise, this should
-			 * reference local standards for the name of the time zone.
-			 * 
-			 * In implementations that do not expose an actual time zone, this
-			 * should be the string `UTC`.
-			 * 
-			 * In time zones that do not have an applicable name, a formatted
-			 * representation of the UTC offset may be returned, such as `-04:00`.
-			 */
-			name: string;
-			
-			/**
-			 * Whether daylight saving time is active.
-			 * 
-			 * In implementations that do not expose an actual time zone, this
-			 * should return false.
-			 */
-			inDaylightSavingTime: boolean;
-		};
-		
-		/**
-		 * Return information needed to display the given `datetime`. This includes
-		 * the UTC offset, the time zone name, and a flag indicating whether
-		 * daylight saving time is active.
-		 * 
-		 * If the timezone cannot be determined for the given `datetime`, return a
-		 * `timezone-display` for `UTC` with a `utc-offset` of 0 and no daylight
-		 * saving time.
-		 */
-		export type display = (when: Datetime) => TimezoneDisplay;
-		
-		/**
-		 * The same as `display`, but only return the UTC offset.
-		 */
-		export type utcOffset = (when: Datetime) => s32;
-	}
-	export type Timezone = {
-		display: Timezone.display;
-		utcOffset: Timezone.utcOffset;
-	};
-	
 }
+export type clocks = {
+	MonotonicClock: clocks.MonotonicClock;
+	WallClock: clocks.WallClock;
+};
 
 export namespace clocks {
 	export namespace MonotonicClock.$ {
 		export const Pollable = io.Poll.$.Pollable;
 		export const Instant = $wcm.u64;
-		export const now = new $wcm.FunctionType<MonotonicClock.now>('now', [], Instant);
-		export const resolution = new $wcm.FunctionType<MonotonicClock.resolution>('resolution', [], Instant);
-		export const subscribe = new $wcm.FunctionType<MonotonicClock.subscribe>('subscribe',[
+		export const Duration = $wcm.u64;
+		export const now = new $wcm.FunctionType<clocks.MonotonicClock.now>('now', [], Instant);
+		export const resolution = new $wcm.FunctionType<clocks.MonotonicClock.resolution>('resolution', [], Duration);
+		export const subscribeInstant = new $wcm.FunctionType<clocks.MonotonicClock.subscribeInstant>('subscribe-instant',[
 			['when', Instant],
-			['absolute', $wcm.bool],
+		], new $wcm.OwnType<clocks.MonotonicClock.Pollable>(Pollable));
+		export const subscribeDuration = new $wcm.FunctionType<clocks.MonotonicClock.subscribeDuration>('subscribe-duration',[
+			['when', Duration],
 		], new $wcm.OwnType<clocks.MonotonicClock.Pollable>(Pollable));
 	}
 	export namespace MonotonicClock._ {
@@ -193,24 +149,27 @@ export namespace clocks {
 		export const witName = 'monotonic-clock' as const;
 		export const types: Map<string, $wcm.GenericComponentModelType> = new Map<string, $wcm.GenericComponentModelType>([
 			['Pollable', $.Pollable],
-			['Instant', $.Instant]
+			['Instant', $.Instant],
+			['Duration', $.Duration]
 		]);
 		export const functions: Map<string, $wcm.FunctionType<$wcm.ServiceFunction>> = new Map([
 			['now', $.now],
 			['resolution', $.resolution],
-			['subscribe', $.subscribe]
+			['subscribeInstant', $.subscribeInstant],
+			['subscribeDuration', $.subscribeDuration]
 		]);
 		export const resources: Map<string, $wcm.ResourceType> = new Map([
 		]);
 		export type WasmInterface = {
 			'now': () => i64;
 			'resolution': () => i64;
-			'subscribe': (when: i64, absolute: i32) => i32;
+			'subscribe-instant': (when: i64) => i32;
+			'subscribe-duration': (when: i64) => i32;
 		};
 		export function createHost(service: clocks.MonotonicClock, context: $wcm.Context): WasmInterface {
 			return $wcm.Host.create<WasmInterface>(functions, resources, service, context);
 		}
-		export function createService(wasmInterface: WasmInterface, context: $wcm.Context): clocks.MonotonicClock {
+		export function createService(wasmInterface: WasmInterface, context: $wcm.Context, _kind?: $wcm.ResourceKind): clocks.MonotonicClock {
 			return $wcm.Service.create<clocks.MonotonicClock>(functions, [], wasmInterface, context);
 		}
 	}
@@ -220,8 +179,8 @@ export namespace clocks {
 			['seconds', $wcm.u64],
 			['nanoseconds', $wcm.u32],
 		]);
-		export const now = new $wcm.FunctionType<WallClock.now>('now', [], Datetime);
-		export const resolution = new $wcm.FunctionType<WallClock.resolution>('resolution', [], Datetime);
+		export const now = new $wcm.FunctionType<clocks.WallClock.now>('now', [], Datetime);
+		export const resolution = new $wcm.FunctionType<clocks.WallClock.resolution>('resolution', [], Datetime);
 	}
 	export namespace WallClock._ {
 		export const id = 'wasi:clocks/wall-clock' as const;
@@ -242,56 +201,21 @@ export namespace clocks {
 		export function createHost(service: clocks.WallClock, context: $wcm.Context): WasmInterface {
 			return $wcm.Host.create<WasmInterface>(functions, resources, service, context);
 		}
-		export function createService(wasmInterface: WasmInterface, context: $wcm.Context): clocks.WallClock {
+		export function createService(wasmInterface: WasmInterface, context: $wcm.Context, _kind?: $wcm.ResourceKind): clocks.WallClock {
 			return $wcm.Service.create<clocks.WallClock>(functions, [], wasmInterface, context);
-		}
-	}
-	
-	export namespace Timezone.$ {
-		export const Datetime = clocks.WallClock.$.Datetime;
-		export const TimezoneDisplay = new $wcm.RecordType<Timezone.TimezoneDisplay>([
-			['utcOffset', $wcm.s32],
-			['name', $wcm.wstring],
-			['inDaylightSavingTime', $wcm.bool],
-		]);
-		export const display = new $wcm.FunctionType<Timezone.display>('display',[
-			['when', Datetime],
-		], TimezoneDisplay);
-		export const utcOffset = new $wcm.FunctionType<Timezone.utcOffset>('utc-offset',[
-			['when', Datetime],
-		], $wcm.s32);
-	}
-	export namespace Timezone._ {
-		export const id = 'wasi:clocks/timezone' as const;
-		export const witName = 'timezone' as const;
-		export const types: Map<string, $wcm.GenericComponentModelType> = new Map<string, $wcm.GenericComponentModelType>([
-			['Datetime', $.Datetime],
-			['TimezoneDisplay', $.TimezoneDisplay]
-		]);
-		export const functions: Map<string, $wcm.FunctionType<$wcm.ServiceFunction>> = new Map([
-			['display', $.display],
-			['utcOffset', $.utcOffset]
-		]);
-		export const resources: Map<string, $wcm.ResourceType> = new Map([
-		]);
-		export type WasmInterface = {
-			'display': (when_Datetime_seconds: i64, when_Datetime_nanoseconds: i32, result: ptr<[i32, i32, i32, i32]>) => void;
-			'utc-offset': (when_Datetime_seconds: i64, when_Datetime_nanoseconds: i32) => i32;
-		};
-		export function createHost(service: clocks.Timezone, context: $wcm.Context): WasmInterface {
-			return $wcm.Host.create<WasmInterface>(functions, resources, service, context);
-		}
-		export function createService(wasmInterface: WasmInterface, context: $wcm.Context): clocks.Timezone {
-			return $wcm.Service.create<clocks.Timezone>(functions, [], wasmInterface, context);
 		}
 	}
 }
 
 export namespace clocks._ {
-	export const witName = 'wasi:clocks' as const;
+	export const id = 'wasi:clocks' as const;
+	export const witName = 'clocks' as const;
 	export const interfaces: Map<string, $wcm.InterfaceType> = new Map<string, $wcm.InterfaceType>([
 		['MonotonicClock', MonotonicClock._],
-		['WallClock', WallClock._],
-		['Timezone', Timezone._]
+		['WallClock', WallClock._]
 	]);
+	export type WasmInterface = {
+		'wasi:clocks/monotonic-clock'?: MonotonicClock._.WasmInterface;
+		'wasi:clocks/wall-clock'?: WallClock._.WasmInterface;
+	};
 }

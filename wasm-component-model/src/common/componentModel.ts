@@ -2192,14 +2192,19 @@ export namespace Module {
 
 }
 
-export type ResourceKind<T> = (wasmInterface: any, context: Context) => T;
+export enum ResourceKind {
+	module = 'module',
+	class = 'class'
+}
+
+export type ResourceTag<T> = (wasmInterface: any, context: Context) => T;
 interface WriteableServiceInterface {
 	[key: string]: (ServiceFunction | WriteableServiceInterface);
 }
 export type Service = ParamModuleInterface | {};
 export namespace Service {
 
-	export function create<T extends Service>(signatures: Map<string, FunctionType<Function>>, resources: [string, ResourceType, ResourceKind<any>][], wasm: ParamWasmInterface, context: Context): T {
+	export function create<T extends Service>(signatures: Map<string, FunctionType<Function>>, resources: [string, ResourceType, ResourceTag<any>][], wasm: ParamWasmInterface, context: Context): T {
 		const result: WriteableServiceInterface  = Object.create(null);
 		for (const [name, , factory] of resources) {
 			result[name] = factory(wasm, context);

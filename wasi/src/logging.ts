@@ -105,4 +105,7 @@ export namespace logging._ {
 	export const interfaces: Map<string, $wcm.InterfaceType> = new Map<string, $wcm.InterfaceType>([
 		['Logging', Logging._]
 	]);
+	export type WasmInterface = {
+		'wasi:logging/logging': Logging._.WasmInterface;
+	};
 }

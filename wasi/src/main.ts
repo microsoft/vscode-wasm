@@ -11,7 +11,6 @@ import { sockets } from './sockets';
 import { random } from './random';
 import { cli } from './cli';
 import { http } from './http';
-import { logging } from './logging';
 
 export namespace _ {
 	export const packages: Map<string, $wcm.PackageType> =  new Map<string, $wcm.PackageType>([
@@ -22,7 +21,7 @@ export namespace _ {
 		['random', random._],
 		['cli', cli._],
 		['http', http._],
-		['logging', logging._],
 	]);
+	export type WasmInterface = io._.WasmInterface & clocks._.WasmInterface & filesystem._.WasmInterface & sockets._.WasmInterface & random._.WasmInterface & cli._.WasmInterface & http._.WasmInterface;
 }
-export { io, clocks, filesystem, sockets, random, cli, http, logging};
+export { io, clocks, filesystem, sockets, random, cli, http};
