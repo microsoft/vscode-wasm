@@ -173,18 +173,18 @@ export namespace cli {
 	};
 	
 }
-export type cli<TI extends cli.TerminalInput, TO extends cli.TerminalOutput> = {
-	Environment: cli.Environment;
-	Exit: cli.Exit;
-	Run: cli.Run;
-	Stdin: cli.Stdin;
-	Stdout: cli.Stdout;
-	Stderr: cli.Stderr;
-	TerminalInput: TI;
-	TerminalOutput: TO;
-	TerminalStdin: cli.TerminalStdin;
-	TerminalStdout: cli.TerminalStdout;
-	TerminalStderr: cli.TerminalStderr;
+export type cli<TI extends cli.TerminalInput = cli.TerminalInput, TO extends cli.TerminalOutput = cli.TerminalOutput> = {
+	Environment?: cli.Environment;
+	Exit?: cli.Exit;
+	Run?: cli.Run;
+	Stdin?: cli.Stdin;
+	Stdout?: cli.Stdout;
+	Stderr?: cli.Stderr;
+	TerminalInput?: TI;
+	TerminalOutput?: TO;
+	TerminalStdin?: cli.TerminalStdin;
+	TerminalStdout?: cli.TerminalStdout;
+	TerminalStderr?: cli.TerminalStderr;
 };
 
 export namespace cli {
@@ -377,20 +377,8 @@ export namespace cli {
 		export function createHost(service: cli.TerminalInput, context: $wcm.Context): WasmInterface {
 			return $wcm.Host.create<WasmInterface>(functions, resources, service, context);
 		}
-		export type ClassService = cli.TerminalInput;
-		export type ModuleService = cli.TerminalInput;
-		export function createService(wasmInterface: WasmInterface, context: $wcm.Context, kind: $wcm.ResourceKind.module): ModuleService;
-		export function createService(wasmInterface: WasmInterface, context: $wcm.Context, kind: $wcm.ResourceKind.class): ClassService;
-		export function createService(wasmInterface: WasmInterface, context: $wcm.Context): cli.TerminalInput;
-		export function createService(wasmInterface: WasmInterface, context: $wcm.Context, kind?: $wcm.ResourceKind): cli.TerminalInput {
-			kind = kind ?? $wcm.ResourceKind.class;
-			if (kind === $wcm.ResourceKind.class) {
-				return $wcm.Service.create<ClassService>(functions, [], wasmInterface, context);
-			} else if (kind === $wcm.ResourceKind.module) {
-				return $wcm.Service.create<ModuleService>(functions, [], wasmInterface, context);
-			} else {
-				return $wcm.Service.create<cli.TerminalInput>(functions, [], wasmInterface, context);
-			}
+		export function createService(wasmInterface: WasmInterface, context: $wcm.Context, _kind?: $wcm.ResourceKind): cli.TerminalInput {
+			return $wcm.Service.create<cli.TerminalInput>(functions, [], wasmInterface, context);
 		}
 	}
 	
@@ -425,20 +413,8 @@ export namespace cli {
 		export function createHost(service: cli.TerminalOutput, context: $wcm.Context): WasmInterface {
 			return $wcm.Host.create<WasmInterface>(functions, resources, service, context);
 		}
-		export type ClassService = cli.TerminalOutput;
-		export type ModuleService = cli.TerminalOutput;
-		export function createService(wasmInterface: WasmInterface, context: $wcm.Context, kind: $wcm.ResourceKind.module): ModuleService;
-		export function createService(wasmInterface: WasmInterface, context: $wcm.Context, kind: $wcm.ResourceKind.class): ClassService;
-		export function createService(wasmInterface: WasmInterface, context: $wcm.Context): cli.TerminalOutput;
-		export function createService(wasmInterface: WasmInterface, context: $wcm.Context, kind?: $wcm.ResourceKind): cli.TerminalOutput {
-			kind = kind ?? $wcm.ResourceKind.class;
-			if (kind === $wcm.ResourceKind.class) {
-				return $wcm.Service.create<ClassService>(functions, [], wasmInterface, context);
-			} else if (kind === $wcm.ResourceKind.module) {
-				return $wcm.Service.create<ModuleService>(functions, [], wasmInterface, context);
-			} else {
-				return $wcm.Service.create<cli.TerminalOutput>(functions, [], wasmInterface, context);
-			}
+		export function createService(wasmInterface: WasmInterface, context: $wcm.Context, _kind?: $wcm.ResourceKind): cli.TerminalOutput {
+			return $wcm.Service.create<cli.TerminalOutput>(functions, [], wasmInterface, context);
 		}
 	}
 	
@@ -550,4 +526,41 @@ export namespace cli._ {
 		'wasi:cli/terminal-stdout'?: TerminalStdout._.WasmInterface;
 		'wasi:cli/terminal-stderr'?: TerminalStderr._.WasmInterface;
 	};
+	export function createHost(service: cli, context: $wcm.Context): WasmInterface {
+		const result: WasmInterface = Object.create(null);
+		if (service.Environment !== undefined) {
+			result['wasi:cli/environment'] = Environment._.createHost(service.Environment, context);
+		}
+		if (service.Exit !== undefined) {
+			result['wasi:cli/exit'] = Exit._.createHost(service.Exit, context);
+		}
+		if (service.Run !== undefined) {
+			result['wasi:cli/run'] = Run._.createHost(service.Run, context);
+		}
+		if (service.Stdin !== undefined) {
+			result['wasi:cli/stdin'] = Stdin._.createHost(service.Stdin, context);
+		}
+		if (service.Stdout !== undefined) {
+			result['wasi:cli/stdout'] = Stdout._.createHost(service.Stdout, context);
+		}
+		if (service.Stderr !== undefined) {
+			result['wasi:cli/stderr'] = Stderr._.createHost(service.Stderr, context);
+		}
+		if (service.TerminalInput !== undefined) {
+			result['wasi:cli/terminal-input'] = TerminalInput._.createHost(service.TerminalInput, context);
+		}
+		if (service.TerminalOutput !== undefined) {
+			result['wasi:cli/terminal-output'] = TerminalOutput._.createHost(service.TerminalOutput, context);
+		}
+		if (service.TerminalStdin !== undefined) {
+			result['wasi:cli/terminal-stdin'] = TerminalStdin._.createHost(service.TerminalStdin, context);
+		}
+		if (service.TerminalStdout !== undefined) {
+			result['wasi:cli/terminal-stdout'] = TerminalStdout._.createHost(service.TerminalStdout, context);
+		}
+		if (service.TerminalStderr !== undefined) {
+			result['wasi:cli/terminal-stderr'] = TerminalStderr._.createHost(service.TerminalStderr, context);
+		}
+		return result;
+	}
 }

@@ -1569,7 +1569,7 @@ class PackageEmitter extends Emitter {
 		}
 		code.increaseIndent();
 		for (const ifaceInfo of ifaceInfos) {
-			code.push(`${ifaceInfo.name}: ${ifaceInfo.type};`);
+			code.push(`${ifaceInfo.name}?: ${ifaceInfo.type};`);
 		}
 		code.decreaseIndent();
 		code.push(`};`);
@@ -1619,8 +1619,39 @@ class PackageEmitter extends Emitter {
 		}
 		code.decreaseIndent();
 		code.push(`};`);
+		code.push(`export function createHost(service: ${pkgName}, context: ${MetaModel.qualifier}.Context): WasmInterface {`);
+		code.increaseIndent();
+		code.push(`const result: WasmInterface = Object.create(null);`);
+		for (const ifaceEmitter of this.ifaceEmitters) {
+			const ifaceName = nameProvider.asNamespaceName(ifaceEmitter.iface);
+			code.push(`if (service.${ifaceName} !== undefined) {`);
+			code.increaseIndent();
+			code.push(`result['${ifaceEmitter.getId()}'] = ${ifaceName}._.createHost(service.${ifaceName}, context);`);
+			code.decreaseIndent();
+			code.push(`}`);
+		}
+		code.push(`return result;`);
 		code.decreaseIndent();
 		code.push(`}`);
+		code.decreaseIndent();
+		code.push(`}`);
+		type InterfaceInfo = { name: string; typeParamName: string };
+		const ifaceInfos: Map<string, InterfaceInfo | undefined> = new Map();
+		let hasTypeParams = false;
+		for (const ifaceEmitter of this.ifaceEmitters) {
+			const name = nameProvider.asNamespaceName(ifaceEmitter.iface);
+			if (ifaceEmitter.needsTypeParameter()) {
+				hasTypeParams = true;
+				ifaceInfos.set(name, { name: name, typeParamName: ifaceEmitter.getTypeParameterName() });
+			} else {
+				ifaceInfos.set(ifaceEmitter.iface.name, undefined);
+			}
+		}
+		if (!hasTypeParams) {
+			return;
+		} else {
+			
+		}
 	}
 
 	private getWitName(): string {
@@ -1636,6 +1667,23 @@ class PackageEmitter extends Emitter {
 		return name;
 	}
 }
+
+
+/**
+	export function createService(wasmInterface: WasmInterface, context: $wcm.Context, kind?: $wcm.ResourceKind.class): filesystem<Types._.ClassService>;
+	export function createService(wasmInterface: WasmInterface, context: $wcm.Context, kind: $wcm.ResourceKind.module): filesystem<Types._.ModuleService>;
+	export function createService<T extends filesystem.Types>(wasmInterface: WasmInterface, context: $wcm.Context, t?: T | $wcm.ResourceKind): filesystem<T>;
+	export function createService(wasmInterface: WasmInterface, context: $wcm.Context, _kind?: $wcm.ResourceKind): filesystem {
+		const result: filesystem = Object.create(null);
+		if (wasmInterface['wasi:filesystem/types'] !== undefined) {
+			result.Types = Types._.createService(wasmInterface['wasi:filesystem/types']!, context);
+		}
+		if (wasmInterface['wasi:filesystem/preopens'] !== undefined) {
+			result.Preopens = Preopens._.createService(wasmInterface['wasi:filesystem/preopens']!, context);
+		}
+		return result;
+	}
+ */
 
 class InterfaceEmitter extends Emitter {
 
@@ -1667,7 +1715,12 @@ class InterfaceEmitter extends Emitter {
 	}
 
 	public needsTypeParameter(): boolean {
-		return this.resourceEmitters.length > 0;
+		for (const resource of this.resourceEmitters) {
+			if (resource.needsTypeParameter()) {
+				return true;
+			}
+		}
+		return false;
 	}
 
 	public getTypeParameterName(): string {
@@ -1675,7 +1728,7 @@ class InterfaceEmitter extends Emitter {
 	}
 
 	public getTypeParameter(): string {
-		return `${this.typeParameterName} extends ${this.getFullQualifiedTypeName()}`;
+		return `${this.typeParameterName} extends ${this.getFullQualifiedTypeName()} = ${this.getFullQualifiedTypeName()}`;
 	}
 
 	public build(): void {
@@ -1907,54 +1960,57 @@ class InterfaceEmitter extends Emitter {
 						moduleServiceTypeParams.push(info.module.typeParam);
 					}
 				}
-				const classServiceTypeName = classServiceTypeParams.length > 0 ? `${qualifiedTypeName}<${classServiceTypeParams.join(', ')}>` : qualifiedTypeName;
-				const moduleServiceTypeName = moduleServiceTypeParams.length > 0 ? `${qualifiedTypeName}<${moduleServiceTypeParams.join(', ')}>` : qualifiedTypeName;
-				code.push(`export type ClassService = ${classServiceTypeName};`);
-				code.push(`export type ModuleService = ${moduleServiceTypeName};`);
-				code.push(`export function createService(wasmInterface: WasmInterface, context: $wcm.Context, kind: ${MetaModel.qualifier}.ResourceKind.module): ModuleService;`);
-				code.push(`export function createService(wasmInterface: WasmInterface, context: $wcm.Context, kind: ${MetaModel.qualifier}.ResourceKind.class): ClassService;`);
 
-				const typeName = typeParams.length > 0 ? `${qualifiedTypeName}<${typeParamNames.join(', ')}>` : qualifiedTypeName;
 				if (typeParams.length === 0) {
-					code.push(`export function createService(wasmInterface: WasmInterface, context: $wcm.Context): ${typeName};`);
-					code.push(`export function createService(wasmInterface: WasmInterface, context: $wcm.Context, kind?: ${MetaModel.qualifier}.ResourceKind): ${typeName} {`);
+					code.push(`export function createService(wasmInterface: WasmInterface, context: $wcm.Context, _kind?: ${MetaModel.qualifier}.ResourceKind): ${qualifiedTypeName} {`);
+					code.increaseIndent();
+					code.push(`return $wcm.Service.create<${qualifiedTypeName}>(functions, [], wasmInterface, context);`);
+					code.decreaseIndent();
+					code.push(`}`);
 				} else {
+					const typeName = `${qualifiedTypeName}<${typeParamNames.join(', ')}>`;
+					const classServiceTypeName = classServiceTypeParams.length > 0 ? `${qualifiedTypeName}<${classServiceTypeParams.join(', ')}>` : qualifiedTypeName;
+					const moduleServiceTypeName = moduleServiceTypeParams.length > 0 ? `${qualifiedTypeName}<${moduleServiceTypeParams.join(', ')}>` : qualifiedTypeName;
+					code.push(`export type ClassService = ${classServiceTypeName};`);
+					code.push(`export type ModuleService = ${moduleServiceTypeName};`);
+					code.push(`export function createService(wasmInterface: WasmInterface, context: $wcm.Context, kind?: ${MetaModel.qualifier}.ResourceKind.class): ClassService;`);
+					code.push(`export function createService(wasmInterface: WasmInterface, context: $wcm.Context, kind: ${MetaModel.qualifier}.ResourceKind.module): ModuleService;`);
 					code.push(`export function createService<${typeParams.join(', ')}>(wasmInterface: WasmInterface, context: $wcm.Context, ${params.join(`, `)}): ${typeName};`);
 					code.push(`export function createService(wasmInterface: WasmInterface, context: $wcm.Context, ${implParams.join(`, `)}): ${qualifiedTypeName} {`);
-				}
-				code.increaseIndent();
-				code.push(`${kindParamName} = ${kindParamName} ?? ${MetaModel.qualifier}.ResourceKind.class;`);
-				code.push(`if (${kindParamName} === ${MetaModel.qualifier}.ResourceKind.class) {`);
-				{
-					const resources: string[] = [];
-					for (const info of resourceInfos.values()) {
-						if (info !== undefined) {
-							resources.push(`['${info.name}', $.${info.name}, ${info.class.func}]`);
-						}
-					}
 					code.increaseIndent();
-					code.push(`return $wcm.Service.create<ClassService>(functions, [${resources.join(', ')}], wasmInterface, context);`);
-					code.decreaseIndent();
-				}
-				code.push(`} else if (${kindParamName} === ${MetaModel.qualifier}.ResourceKind.module) {`);
-				{
-					const resources: string[] = [];
-					for (const info of resourceInfos.values()) {
-						if (info !== undefined) {
-							resources.push(`['${info.name}', $.${info.name}, ${info.name}.Module]`);
+					code.push(`${kindParamName} = ${kindParamName} ?? ${MetaModel.qualifier}.ResourceKind.class;`);
+					code.push(`if (${kindParamName} === ${MetaModel.qualifier}.ResourceKind.class) {`);
+					{
+						const resources: string[] = [];
+						for (const info of resourceInfos.values()) {
+							if (info !== undefined) {
+								resources.push(`['${info.name}', $.${info.name}, ${info.class.func}]`);
+							}
 						}
+						code.increaseIndent();
+						code.push(`return $wcm.Service.create<ClassService>(functions, [${resources.join(', ')}], wasmInterface, context);`);
+						code.decreaseIndent();
 					}
+					code.push(`} else if (${kindParamName} === ${MetaModel.qualifier}.ResourceKind.module) {`);
+					{
+						const resources: string[] = [];
+						for (const info of resourceInfos.values()) {
+							if (info !== undefined) {
+								resources.push(`['${info.name}', $.${info.name}, ${info.name}.Module]`);
+							}
+						}
+						code.increaseIndent();
+						code.push(`return $wcm.Service.create<ModuleService>(functions, [${resources.join(', ')}], wasmInterface, context);`);
+						code.decreaseIndent();
+					}
+					code.push('} else {');
 					code.increaseIndent();
-					code.push(`return $wcm.Service.create<ModuleService>(functions, [${resources.join(', ')}], wasmInterface, context);`);
+					code.push(`return $wcm.Service.create<${qualifiedTypeName}>(functions, [${resources.join(', ')}], wasmInterface, context);`);
 					code.decreaseIndent();
+					code.push('}');
+					code.decreaseIndent();
+					code.push(`}`);
 				}
-				code.push('} else {');
-				code.increaseIndent();
-				code.push(`return $wcm.Service.create<${qualifiedTypeName}>(functions, [${resources.join(', ')}], wasmInterface, context);`);
-				code.decreaseIndent();
-				code.push('}');
-				code.decreaseIndent();
-				code.push(`}`);
 			}
 		}
 		code.decreaseIndent();

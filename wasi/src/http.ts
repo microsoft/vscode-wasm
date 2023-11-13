@@ -1341,10 +1341,10 @@ export namespace http {
 	};
 	
 }
-export type http<T extends http.Types> = {
-	Types: T;
-	IncomingHandler: http.IncomingHandler;
-	OutgoingHandler: http.OutgoingHandler;
+export type http<T extends http.Types = http.Types> = {
+	Types?: T;
+	IncomingHandler?: http.IncomingHandler;
+	OutgoingHandler?: http.OutgoingHandler;
 };
 
 export namespace http {
@@ -1932,8 +1932,8 @@ export namespace http {
 		}
 		export type ClassService = http.Types<http.Types.Fields.Constructor, http.Types.IncomingRequest.Manager, http.Types.OutgoingRequest.Constructor, http.Types.RequestOptions.Constructor, http.Types.ResponseOutparam.Manager, http.Types.IncomingResponse.Manager, http.Types.IncomingBody.Manager, http.Types.FutureTrailers.Manager, http.Types.OutgoingResponse.Constructor, http.Types.OutgoingBody.Manager, http.Types.FutureIncomingResponse.Manager>;
 		export type ModuleService = http.Types<http.Types.Fields.Module, http.Types.IncomingRequest.Module, http.Types.OutgoingRequest.Module, http.Types.RequestOptions.Module, http.Types.ResponseOutparam.Module, http.Types.IncomingResponse.Module, http.Types.IncomingBody.Module, http.Types.FutureTrailers.Module, http.Types.OutgoingResponse.Module, http.Types.OutgoingBody.Module, http.Types.FutureIncomingResponse.Module>;
+		export function createService(wasmInterface: WasmInterface, context: $wcm.Context, kind?: $wcm.ResourceKind.class): ClassService;
 		export function createService(wasmInterface: WasmInterface, context: $wcm.Context, kind: $wcm.ResourceKind.module): ModuleService;
-		export function createService(wasmInterface: WasmInterface, context: $wcm.Context, kind: $wcm.ResourceKind.class): ClassService;
 		export function createService<F extends http.Types.Fields.Module | http.Types.Fields.Constructor | http.Types.Fields.Manager, IR extends http.Types.IncomingRequest.Module | http.Types.IncomingRequest.Manager, OR extends http.Types.OutgoingRequest.Module | http.Types.OutgoingRequest.Constructor | http.Types.OutgoingRequest.Manager, RO extends http.Types.RequestOptions.Module | http.Types.RequestOptions.Constructor | http.Types.RequestOptions.Manager, RO1 extends http.Types.ResponseOutparam.Module | http.Types.ResponseOutparam.Manager, IR1 extends http.Types.IncomingResponse.Module | http.Types.IncomingResponse.Manager, IB extends http.Types.IncomingBody.Module | http.Types.IncomingBody.Manager, FT extends http.Types.FutureTrailers.Module | http.Types.FutureTrailers.Manager, OR1 extends http.Types.OutgoingResponse.Module | http.Types.OutgoingResponse.Constructor | http.Types.OutgoingResponse.Manager, OB extends http.Types.OutgoingBody.Module | http.Types.OutgoingBody.Manager, FIR extends http.Types.FutureIncomingResponse.Module | http.Types.FutureIncomingResponse.Manager>(wasmInterface: WasmInterface, context: $wcm.Context, f: $wcm.ResourceTag<F>, ir: $wcm.ResourceTag<IR>, or: $wcm.ResourceTag<OR>, ro: $wcm.ResourceTag<RO>, ro1: $wcm.ResourceTag<RO1>, ir1: $wcm.ResourceTag<IR1>, ib: $wcm.ResourceTag<IB>, ft: $wcm.ResourceTag<FT>, or1: $wcm.ResourceTag<OR1>, ob: $wcm.ResourceTag<OB>, fir: $wcm.ResourceTag<FIR>): http.Types<F, IR, OR, RO, RO1, IR1, IB, FT, OR1, OB, FIR>;
 		export function createService(wasmInterface: WasmInterface, context: $wcm.Context, f?: $wcm.ResourceTag<any> | $wcm.ResourceKind, ir?: $wcm.ResourceTag<any>, or?: $wcm.ResourceTag<any>, ro?: $wcm.ResourceTag<any>, ro1?: $wcm.ResourceTag<any>, ir1?: $wcm.ResourceTag<any>, ib?: $wcm.ResourceTag<any>, ft?: $wcm.ResourceTag<any>, or1?: $wcm.ResourceTag<any>, ob?: $wcm.ResourceTag<any>, fir?: $wcm.ResourceTag<any>): http.Types {
 			f = f ?? $wcm.ResourceKind.class;
@@ -2027,4 +2027,17 @@ export namespace http._ {
 		'wasi:http/incoming-handler'?: IncomingHandler._.WasmInterface;
 		'wasi:http/outgoing-handler'?: OutgoingHandler._.WasmInterface;
 	};
+	export function createHost(service: http, context: $wcm.Context): WasmInterface {
+		const result: WasmInterface = Object.create(null);
+		if (service.Types !== undefined) {
+			result['wasi:http/types'] = Types._.createHost(service.Types, context);
+		}
+		if (service.IncomingHandler !== undefined) {
+			result['wasi:http/incoming-handler'] = IncomingHandler._.createHost(service.IncomingHandler, context);
+		}
+		if (service.OutgoingHandler !== undefined) {
+			result['wasi:http/outgoing-handler'] = OutgoingHandler._.createHost(service.OutgoingHandler, context);
+		}
+		return result;
+	}
 }

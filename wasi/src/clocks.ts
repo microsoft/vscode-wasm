@@ -126,8 +126,8 @@ export namespace clocks {
 	
 }
 export type clocks = {
-	MonotonicClock: clocks.MonotonicClock;
-	WallClock: clocks.WallClock;
+	MonotonicClock?: clocks.MonotonicClock;
+	WallClock?: clocks.WallClock;
 };
 
 export namespace clocks {
@@ -218,4 +218,14 @@ export namespace clocks._ {
 		'wasi:clocks/monotonic-clock'?: MonotonicClock._.WasmInterface;
 		'wasi:clocks/wall-clock'?: WallClock._.WasmInterface;
 	};
+	export function createHost(service: clocks, context: $wcm.Context): WasmInterface {
+		const result: WasmInterface = Object.create(null);
+		if (service.MonotonicClock !== undefined) {
+			result['wasi:clocks/monotonic-clock'] = MonotonicClock._.createHost(service.MonotonicClock, context);
+		}
+		if (service.WallClock !== undefined) {
+			result['wasi:clocks/wall-clock'] = WallClock._.createHost(service.WallClock, context);
+		}
+		return result;
+	}
 }
