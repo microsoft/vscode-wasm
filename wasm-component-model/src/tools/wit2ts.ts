@@ -1633,38 +1633,43 @@ class PackageEmitter extends Emitter {
 		code.push(`return result;`);
 		code.decreaseIndent();
 		code.push(`}`);
-		type InterfaceInfo = { name: string; typeParamName: string };
-		const ifaceInfos: Map<string, InterfaceInfo | undefined> = new Map();
+		type InterfaceInfo = { name: string; id: string; typeParamName: string | undefined; paramName: string | undefined };
+		const ifaceInfos: Map<string, InterfaceInfo> = new Map();
 		let hasTypeParams = false;
 		for (const ifaceEmitter of this.ifaceEmitters) {
 			const name = nameProvider.asNamespaceName(ifaceEmitter.iface);
 			if (ifaceEmitter.needsTypeParameter()) {
 				hasTypeParams = true;
-				ifaceInfos.set(name, { name: name, typeParamName: ifaceEmitter.getTypeParameterName() });
+				const typeParamName = ifaceEmitter.getTypeParameterName();
+				ifaceInfos.set(name, { name: name, id: ifaceEmitter.getId(), typeParamName: typeParamName, paramName: typeParamName.toLowerCase() });
 			} else {
-				ifaceInfos.set(ifaceEmitter.iface.name, undefined);
+				ifaceInfos.set(name, { name: name, id: ifaceEmitter.getId(), typeParamName: undefined, paramName: undefined });
 			}
 		}
 		if (!hasTypeParams) {
 			code.push(`export function createService(wasmInterface: WasmInterface, context: $wcm.Context, _kind?: ${MetaModel.qualifier}.ResourceKind): filesystem;`);
 		} else {
 			const typeParams: string[] = [];
-			const typeParamNames;
+			const typeParamNames: string[] = [];
 			const params: string[] = [];
 			const implParams: string[] = [];
 			const classServiceTypeParams: string[] = [];
 			const moduleServiceTypeParams: string[] = [];
 			let i = 0;
+			let kindName: string = 'kind';
 			for (const [name, info] of ifaceInfos) {
-				if (info !== undefined) {
+				if (info.typeParamName !== undefined && info.paramName !== undefined) {
 					classServiceTypeParams.push(`${pkgName}.${name}._.ClassService`);
 					moduleServiceTypeParams.push(`${pkgName}.${name}._.ModuleService`);
 					typeParams.push(`${info.typeParamName} extends ${pkgName}.${name}`);
-					params.push(`${info.typeParamName.toLowerCase()}: ${pkgName}.${name}`);
+					const paramName = info.paramName;
+					params.push(`${paramName}: ${pkgName}.${name}`);
+					typeParamNames.push(info.typeParamName);
 					if (i++ === 0) {
-						implParams.push(`${info.typeParamName.toLowerCase()}: ${pkgName}.${name} | ${MetaModel.qualifier}.ResourceKind`);
+						implParams.push(`${paramName}?: ${pkgName}.${name} | ${MetaModel.qualifier}.ResourceKind`);
+						kindName = paramName;
 					} else {
-						implParams.push(`${info.typeParamName.toLowerCase()}: ${pkgName}.${name}`);
+						implParams.push(`${paramName}: ${pkgName}.${name}`);
 					}
 				}
 			}
@@ -1672,7 +1677,39 @@ class PackageEmitter extends Emitter {
 			code.push(`export type ModuleService = ${pkgName}<${moduleServiceTypeParams.join(', ')}>;`);
 			code.push(`export function createService(wasmInterface: WasmInterface, context: ${MetaModel.qualifier}.Context, kind?: ${MetaModel.qualifier}.ResourceKind.class): ClassService;`);
 			code.push(`export function createService(wasmInterface: WasmInterface, context: ${MetaModel.qualifier}.Context, kind: ${MetaModel.qualifier}.ResourceKind.module): ModuleService;`);
-			code.push(`export function createService<${typeParams.join(', ')}>(wasmInterface: WasmInterface, context: ${MetaModel.qualifier}.Context, ${params.join(', ')}): ModuleService;`);
+			code.push(`export function createService<${typeParams.join(', ')}>(wasmInterface: WasmInterface, context: ${MetaModel.qualifier}.Context, ${params.join(', ')}): ${pkgName}<${typeParamNames.join(', ')}>;`);
+			code.push(`export function createService(wasmInterface: WasmInterface, context: ${MetaModel.qualifier}.Context, ${implParams.join(', ')}): ${pkgName} {`);
+			code.increaseIndent();
+			code.push(`const result: ${pkgName} = Object.create(null);`);
+			code.push(`${kindName} = ${kindName} ?? ${MetaModel.qualifier}.ResourceKind.class;`);
+			code.push(`if (${kindName} === ${MetaModel.qualifier}.ResourceKind.class || ${kindName} === ${MetaModel.qualifier}.ResourceKind.module) {`);
+			code.increaseIndent();
+			for (const [name, info] of ifaceInfos) {
+				code.push(`if (wasmInterface['${info.id}'] !== undefined) {`);
+				code.increaseIndent();
+				code.push(`result.${name} = ${name}._.createService(wasmInterface['${info.id}'], context, ${kindName});`);
+				code.decreaseIndent();
+				code.push('}');
+			}
+			code.decreaseIndent();
+			code.push(`} else {`);
+			code.increaseIndent();
+			for (const [name, info] of ifaceInfos) {
+				code.push(`if (wasmInterface['${info.id}'] !== undefined) {`);
+				code.increaseIndent();
+				if (info.typeParamName !== undefined) {
+					code.push(`result.${name} = ${info.paramName};`);
+				} else {
+					code.push(`result.${name} = ${name}._.createService(wasmInterface['${info.id}'], context);`);
+				}
+				code.decreaseIndent();
+				code.push('}');
+			}
+			code.decreaseIndent();
+			code.push(`}`);
+			code.push(`return result;`);
+			code.decreaseIndent();
+			code.push('}');
 		}
 		code.decreaseIndent();
 		code.push(`}`);
@@ -2001,6 +2038,7 @@ class InterfaceEmitter extends Emitter {
 					code.push(`export type ModuleService = ${moduleServiceTypeName};`);
 					code.push(`export function createService(wasmInterface: WasmInterface, context: $wcm.Context, kind?: ${MetaModel.qualifier}.ResourceKind.class): ClassService;`);
 					code.push(`export function createService(wasmInterface: WasmInterface, context: $wcm.Context, kind: ${MetaModel.qualifier}.ResourceKind.module): ModuleService;`);
+					code.push(`export function createService(wasmInterface: WasmInterface, context: $wcm.Context, kind: ${MetaModel.qualifier}.ResourceKind): ${qualifiedTypeName};`);
 					code.push(`export function createService<${typeParams.join(', ')}>(wasmInterface: WasmInterface, context: $wcm.Context, ${params.join(`, `)}): ${typeName};`);
 					code.push(`export function createService(wasmInterface: WasmInterface, context: $wcm.Context, ${implParams.join(`, `)}): ${qualifiedTypeName} {`);
 					code.increaseIndent();

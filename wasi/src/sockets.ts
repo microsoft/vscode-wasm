@@ -1392,6 +1392,7 @@ export namespace sockets {
 		export type ModuleService = sockets.IpNameLookup<sockets.IpNameLookup.ResolveAddressStream.Module>;
 		export function createService(wasmInterface: WasmInterface, context: $wcm.Context, kind?: $wcm.ResourceKind.class): ClassService;
 		export function createService(wasmInterface: WasmInterface, context: $wcm.Context, kind: $wcm.ResourceKind.module): ModuleService;
+		export function createService(wasmInterface: WasmInterface, context: $wcm.Context, kind: $wcm.ResourceKind): sockets.IpNameLookup;
 		export function createService<RAS extends sockets.IpNameLookup.ResolveAddressStream.Module | sockets.IpNameLookup.ResolveAddressStream.Manager>(wasmInterface: WasmInterface, context: $wcm.Context, ras: $wcm.ResourceTag<RAS>): sockets.IpNameLookup<RAS>;
 		export function createService(wasmInterface: WasmInterface, context: $wcm.Context, ras?: $wcm.ResourceTag<any> | $wcm.ResourceKind): sockets.IpNameLookup {
 			ras = ras ?? $wcm.ResourceKind.class;
@@ -1592,6 +1593,7 @@ export namespace sockets {
 		export type ModuleService = sockets.Tcp<sockets.Tcp.TcpSocket.Module>;
 		export function createService(wasmInterface: WasmInterface, context: $wcm.Context, kind?: $wcm.ResourceKind.class): ClassService;
 		export function createService(wasmInterface: WasmInterface, context: $wcm.Context, kind: $wcm.ResourceKind.module): ModuleService;
+		export function createService(wasmInterface: WasmInterface, context: $wcm.Context, kind: $wcm.ResourceKind): sockets.Tcp;
 		export function createService<TS extends sockets.Tcp.TcpSocket.Module | sockets.Tcp.TcpSocket.Manager>(wasmInterface: WasmInterface, context: $wcm.Context, ts: $wcm.ResourceTag<TS>): sockets.Tcp<TS>;
 		export function createService(wasmInterface: WasmInterface, context: $wcm.Context, ts?: $wcm.ResourceTag<any> | $wcm.ResourceKind): sockets.Tcp {
 			ts = ts ?? $wcm.ResourceKind.class;
@@ -1813,6 +1815,7 @@ export namespace sockets {
 		export type ModuleService = sockets.Udp<sockets.Udp.UdpSocket.Module, sockets.Udp.IncomingDatagramStream.Module, sockets.Udp.OutgoingDatagramStream.Module>;
 		export function createService(wasmInterface: WasmInterface, context: $wcm.Context, kind?: $wcm.ResourceKind.class): ClassService;
 		export function createService(wasmInterface: WasmInterface, context: $wcm.Context, kind: $wcm.ResourceKind.module): ModuleService;
+		export function createService(wasmInterface: WasmInterface, context: $wcm.Context, kind: $wcm.ResourceKind): sockets.Udp;
 		export function createService<US extends sockets.Udp.UdpSocket.Module | sockets.Udp.UdpSocket.Manager, IDS extends sockets.Udp.IncomingDatagramStream.Module | sockets.Udp.IncomingDatagramStream.Manager, ODS extends sockets.Udp.OutgoingDatagramStream.Module | sockets.Udp.OutgoingDatagramStream.Manager>(wasmInterface: WasmInterface, context: $wcm.Context, us: $wcm.ResourceTag<US>, ids: $wcm.ResourceTag<IDS>, ods: $wcm.ResourceTag<ODS>): sockets.Udp<US, IDS, ODS>;
 		export function createService(wasmInterface: WasmInterface, context: $wcm.Context, us?: $wcm.ResourceTag<any> | $wcm.ResourceKind, ids?: $wcm.ResourceTag<any>, ods?: $wcm.ResourceTag<any>): sockets.Udp {
 			us = us ?? $wcm.ResourceKind.class;
@@ -1911,5 +1914,55 @@ export namespace sockets._ {
 	export type ModuleService = sockets<sockets.IpNameLookup._.ModuleService, sockets.Tcp._.ModuleService, sockets.Udp._.ModuleService>;
 	export function createService(wasmInterface: WasmInterface, context: $wcm.Context, kind?: $wcm.ResourceKind.class): ClassService;
 	export function createService(wasmInterface: WasmInterface, context: $wcm.Context, kind: $wcm.ResourceKind.module): ModuleService;
-	export function createService<INL extends sockets.IpNameLookup, T extends sockets.Tcp, U extends sockets.Udp>(wasmInterface: WasmInterface, context: $wcm.Context, inl: sockets.IpNameLookup, t: sockets.Tcp, u: sockets.Udp): ModuleService;
+	export function createService<INL extends sockets.IpNameLookup, T extends sockets.Tcp, U extends sockets.Udp>(wasmInterface: WasmInterface, context: $wcm.Context, inl: sockets.IpNameLookup, t: sockets.Tcp, u: sockets.Udp): sockets<INL, T, U>;
+	export function createService(wasmInterface: WasmInterface, context: $wcm.Context, inl?: sockets.IpNameLookup | $wcm.ResourceKind, t: sockets.Tcp, u: sockets.Udp): sockets {
+		const result: sockets = Object.create(null);
+		inl = inl ?? $wcm.ResourceKind.class;
+		if (inl === $wcm.ResourceKind.class || inl === $wcm.ResourceKind.module) {
+			if (wasmInterface['wasi:sockets/network'] !== undefined) {
+				result.Network = Network._.createService(wasmInterface['wasi:sockets/network'], context, inl);
+			}
+			if (wasmInterface['wasi:sockets/instance-network'] !== undefined) {
+				result.InstanceNetwork = InstanceNetwork._.createService(wasmInterface['wasi:sockets/instance-network'], context, inl);
+			}
+			if (wasmInterface['wasi:sockets/ip-name-lookup'] !== undefined) {
+				result.IpNameLookup = IpNameLookup._.createService(wasmInterface['wasi:sockets/ip-name-lookup'], context, inl);
+			}
+			if (wasmInterface['wasi:sockets/tcp'] !== undefined) {
+				result.Tcp = Tcp._.createService(wasmInterface['wasi:sockets/tcp'], context, inl);
+			}
+			if (wasmInterface['wasi:sockets/tcp-create-socket'] !== undefined) {
+				result.TcpCreateSocket = TcpCreateSocket._.createService(wasmInterface['wasi:sockets/tcp-create-socket'], context, inl);
+			}
+			if (wasmInterface['wasi:sockets/udp'] !== undefined) {
+				result.Udp = Udp._.createService(wasmInterface['wasi:sockets/udp'], context, inl);
+			}
+			if (wasmInterface['wasi:sockets/udp-create-socket'] !== undefined) {
+				result.UdpCreateSocket = UdpCreateSocket._.createService(wasmInterface['wasi:sockets/udp-create-socket'], context, inl);
+			}
+		} else {
+			if (wasmInterface['wasi:sockets/network'] !== undefined) {
+				result.Network = Network._.createService(wasmInterface['wasi:sockets/network'], context);
+			}
+			if (wasmInterface['wasi:sockets/instance-network'] !== undefined) {
+				result.InstanceNetwork = InstanceNetwork._.createService(wasmInterface['wasi:sockets/instance-network'], context);
+			}
+			if (wasmInterface['wasi:sockets/ip-name-lookup'] !== undefined) {
+				result.IpNameLookup = inl;
+			}
+			if (wasmInterface['wasi:sockets/tcp'] !== undefined) {
+				result.Tcp = t;
+			}
+			if (wasmInterface['wasi:sockets/tcp-create-socket'] !== undefined) {
+				result.TcpCreateSocket = TcpCreateSocket._.createService(wasmInterface['wasi:sockets/tcp-create-socket'], context);
+			}
+			if (wasmInterface['wasi:sockets/udp'] !== undefined) {
+				result.Udp = u;
+			}
+			if (wasmInterface['wasi:sockets/udp-create-socket'] !== undefined) {
+				result.UdpCreateSocket = UdpCreateSocket._.createService(wasmInterface['wasi:sockets/udp-create-socket'], context);
+			}
+		}
+		return result;
+	}
 }

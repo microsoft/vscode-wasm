@@ -1235,6 +1235,7 @@ export namespace filesystem {
 		export type ModuleService = filesystem.Types<filesystem.Types.Descriptor.Module, filesystem.Types.DirectoryEntryStream.Module>;
 		export function createService(wasmInterface: WasmInterface, context: $wcm.Context, kind?: $wcm.ResourceKind.class): ClassService;
 		export function createService(wasmInterface: WasmInterface, context: $wcm.Context, kind: $wcm.ResourceKind.module): ModuleService;
+		export function createService(wasmInterface: WasmInterface, context: $wcm.Context, kind: $wcm.ResourceKind): filesystem.Types;
 		export function createService<D extends filesystem.Types.Descriptor.Module | filesystem.Types.Descriptor.Manager, DES extends filesystem.Types.DirectoryEntryStream.Module | filesystem.Types.DirectoryEntryStream.Manager>(wasmInterface: WasmInterface, context: $wcm.Context, d: $wcm.ResourceTag<D>, des: $wcm.ResourceTag<DES>): filesystem.Types<D, DES>;
 		export function createService(wasmInterface: WasmInterface, context: $wcm.Context, d?: $wcm.ResourceTag<any> | $wcm.ResourceKind, des?: $wcm.ResourceTag<any>): filesystem.Types {
 			d = d ?? $wcm.ResourceKind.class;
@@ -1300,5 +1301,25 @@ export namespace filesystem._ {
 	export type ModuleService = filesystem<filesystem.Types._.ModuleService>;
 	export function createService(wasmInterface: WasmInterface, context: $wcm.Context, kind?: $wcm.ResourceKind.class): ClassService;
 	export function createService(wasmInterface: WasmInterface, context: $wcm.Context, kind: $wcm.ResourceKind.module): ModuleService;
-	export function createService<T extends filesystem.Types>(wasmInterface: WasmInterface, context: $wcm.Context, t: filesystem.Types): ModuleService;
+	export function createService<T extends filesystem.Types>(wasmInterface: WasmInterface, context: $wcm.Context, t: filesystem.Types): filesystem<T>;
+	export function createService(wasmInterface: WasmInterface, context: $wcm.Context, t?: filesystem.Types | $wcm.ResourceKind): filesystem {
+		const result: filesystem = Object.create(null);
+		t = t ?? $wcm.ResourceKind.class;
+		if (t === $wcm.ResourceKind.class || t === $wcm.ResourceKind.module) {
+			if (wasmInterface['wasi:filesystem/types'] !== undefined) {
+				result.Types = Types._.createService(wasmInterface['wasi:filesystem/types'], context, t);
+			}
+			if (wasmInterface['wasi:filesystem/preopens'] !== undefined) {
+				result.Preopens = Preopens._.createService(wasmInterface['wasi:filesystem/preopens'], context, t);
+			}
+		} else {
+			if (wasmInterface['wasi:filesystem/types'] !== undefined) {
+				result.Types = t;
+			}
+			if (wasmInterface['wasi:filesystem/preopens'] !== undefined) {
+				result.Preopens = Preopens._.createService(wasmInterface['wasi:filesystem/preopens'], context);
+			}
+		}
+		return result;
+	}
 }

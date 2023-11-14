@@ -454,6 +454,7 @@ export namespace io {
 		export type ModuleService = io.Error<io.Error.Error.Module>;
 		export function createService(wasmInterface: WasmInterface, context: $wcm.Context, kind?: $wcm.ResourceKind.class): ClassService;
 		export function createService(wasmInterface: WasmInterface, context: $wcm.Context, kind: $wcm.ResourceKind.module): ModuleService;
+		export function createService(wasmInterface: WasmInterface, context: $wcm.Context, kind: $wcm.ResourceKind): io.Error;
 		export function createService<E extends io.Error.Error.Module | io.Error.Error.Manager>(wasmInterface: WasmInterface, context: $wcm.Context, e: $wcm.ResourceTag<E>): io.Error<E>;
 		export function createService(wasmInterface: WasmInterface, context: $wcm.Context, e?: $wcm.ResourceTag<any> | $wcm.ResourceKind): io.Error {
 			e = e ?? $wcm.ResourceKind.class;
@@ -515,6 +516,7 @@ export namespace io {
 		export type ModuleService = io.Poll<io.Poll.Pollable.Module>;
 		export function createService(wasmInterface: WasmInterface, context: $wcm.Context, kind?: $wcm.ResourceKind.class): ClassService;
 		export function createService(wasmInterface: WasmInterface, context: $wcm.Context, kind: $wcm.ResourceKind.module): ModuleService;
+		export function createService(wasmInterface: WasmInterface, context: $wcm.Context, kind: $wcm.ResourceKind): io.Poll;
 		export function createService<P extends io.Poll.Pollable.Module | io.Poll.Pollable.Manager>(wasmInterface: WasmInterface, context: $wcm.Context, p: $wcm.ResourceTag<P>): io.Poll<P>;
 		export function createService(wasmInterface: WasmInterface, context: $wcm.Context, p?: $wcm.ResourceTag<any> | $wcm.ResourceKind): io.Poll {
 			p = p ?? $wcm.ResourceKind.class;
@@ -656,6 +658,7 @@ export namespace io {
 		export type ModuleService = io.Streams<io.Streams.InputStream.Module, io.Streams.OutputStream.Module>;
 		export function createService(wasmInterface: WasmInterface, context: $wcm.Context, kind?: $wcm.ResourceKind.class): ClassService;
 		export function createService(wasmInterface: WasmInterface, context: $wcm.Context, kind: $wcm.ResourceKind.module): ModuleService;
+		export function createService(wasmInterface: WasmInterface, context: $wcm.Context, kind: $wcm.ResourceKind): io.Streams;
 		export function createService<IS extends io.Streams.InputStream.Module | io.Streams.InputStream.Manager, OS extends io.Streams.OutputStream.Module | io.Streams.OutputStream.Manager>(wasmInterface: WasmInterface, context: $wcm.Context, is: $wcm.ResourceTag<IS>, os: $wcm.ResourceTag<OS>): io.Streams<IS, OS>;
 		export function createService(wasmInterface: WasmInterface, context: $wcm.Context, is?: $wcm.ResourceTag<any> | $wcm.ResourceKind, os?: $wcm.ResourceTag<any>): io.Streams {
 			is = is ?? $wcm.ResourceKind.class;
@@ -700,5 +703,31 @@ export namespace io._ {
 	export type ModuleService = io<io.Error._.ModuleService, io.Poll._.ModuleService, io.Streams._.ModuleService>;
 	export function createService(wasmInterface: WasmInterface, context: $wcm.Context, kind?: $wcm.ResourceKind.class): ClassService;
 	export function createService(wasmInterface: WasmInterface, context: $wcm.Context, kind: $wcm.ResourceKind.module): ModuleService;
-	export function createService<E extends io.Error, P extends io.Poll, S extends io.Streams>(wasmInterface: WasmInterface, context: $wcm.Context, e: io.Error, p: io.Poll, s: io.Streams): ModuleService;
+	export function createService<E extends io.Error, P extends io.Poll, S extends io.Streams>(wasmInterface: WasmInterface, context: $wcm.Context, e: io.Error, p: io.Poll, s: io.Streams): io<E, P, S>;
+	export function createService(wasmInterface: WasmInterface, context: $wcm.Context, e?: io.Error | $wcm.ResourceKind, p: io.Poll, s: io.Streams): io {
+		const result: io = Object.create(null);
+		e = e ?? $wcm.ResourceKind.class;
+		if (e === $wcm.ResourceKind.class || e === $wcm.ResourceKind.module) {
+			if (wasmInterface['wasi:io/error'] !== undefined) {
+				result.Error = Error._.createService(wasmInterface['wasi:io/error'], context, e);
+			}
+			if (wasmInterface['wasi:io/poll'] !== undefined) {
+				result.Poll = Poll._.createService(wasmInterface['wasi:io/poll'], context, e);
+			}
+			if (wasmInterface['wasi:io/streams'] !== undefined) {
+				result.Streams = Streams._.createService(wasmInterface['wasi:io/streams'], context, e);
+			}
+		} else {
+			if (wasmInterface['wasi:io/error'] !== undefined) {
+				result.Error = e;
+			}
+			if (wasmInterface['wasi:io/poll'] !== undefined) {
+				result.Poll = p;
+			}
+			if (wasmInterface['wasi:io/streams'] !== undefined) {
+				result.Streams = s;
+			}
+		}
+		return result;
+	}
 }

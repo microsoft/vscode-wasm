@@ -2064,6 +2064,7 @@ export class ResourceType extends AbstractResourceType {
 }
 
 export type InterfaceType = {
+	readonly id: string;
 	readonly witName: string;
 	readonly types: Map<string, GenericComponentModelType>;
 	readonly functions: Map<string, FunctionType<ServiceFunction>>;
