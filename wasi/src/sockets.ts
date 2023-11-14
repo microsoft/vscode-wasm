@@ -1238,8 +1238,8 @@ export namespace sockets {
 	};
 	
 }
-export type sockets<N extends sockets.Network = sockets.Network, INL extends sockets.IpNameLookup = sockets.IpNameLookup, T extends sockets.Tcp = sockets.Tcp, U extends sockets.Udp = sockets.Udp> = {
-	Network?: N;
+export type sockets<INL extends sockets.IpNameLookup = sockets.IpNameLookup, T extends sockets.Tcp = sockets.Tcp, U extends sockets.Udp = sockets.Udp> = {
+	Network?: sockets.Network;
 	InstanceNetwork?: sockets.InstanceNetwork;
 	IpNameLookup?: INL;
 	Tcp?: T;
@@ -1907,4 +1907,9 @@ export namespace sockets._ {
 		}
 		return result;
 	}
+	export type ClassService = sockets<sockets.IpNameLookup._.ClassService, sockets.Tcp._.ClassService, sockets.Udp._.ClassService>;
+	export type ModuleService = sockets<sockets.IpNameLookup._.ModuleService, sockets.Tcp._.ModuleService, sockets.Udp._.ModuleService>;
+	export function createService(wasmInterface: WasmInterface, context: $wcm.Context, kind?: $wcm.ResourceKind.class): ClassService;
+	export function createService(wasmInterface: WasmInterface, context: $wcm.Context, kind: $wcm.ResourceKind.module): ModuleService;
+	export function createService<INL extends sockets.IpNameLookup, T extends sockets.Tcp, U extends sockets.Udp>(wasmInterface: WasmInterface, context: $wcm.Context, inl: sockets.IpNameLookup, t: sockets.Tcp, u: sockets.Udp): ModuleService;
 }

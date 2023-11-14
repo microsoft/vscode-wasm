@@ -2040,4 +2040,9 @@ export namespace http._ {
 		}
 		return result;
 	}
+	export type ClassService = http<http.Types._.ClassService>;
+	export type ModuleService = http<http.Types._.ModuleService>;
+	export function createService(wasmInterface: WasmInterface, context: $wcm.Context, kind?: $wcm.ResourceKind.class): ClassService;
+	export function createService(wasmInterface: WasmInterface, context: $wcm.Context, kind: $wcm.ResourceKind.module): ModuleService;
+	export function createService<T extends http.Types>(wasmInterface: WasmInterface, context: $wcm.Context, t: http.Types): ModuleService;
 }

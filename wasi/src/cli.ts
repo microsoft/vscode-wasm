@@ -173,15 +173,15 @@ export namespace cli {
 	};
 	
 }
-export type cli<TI extends cli.TerminalInput = cli.TerminalInput, TO extends cli.TerminalOutput = cli.TerminalOutput> = {
+export type cli = {
 	Environment?: cli.Environment;
 	Exit?: cli.Exit;
 	Run?: cli.Run;
 	Stdin?: cli.Stdin;
 	Stdout?: cli.Stdout;
 	Stderr?: cli.Stderr;
-	TerminalInput?: TI;
-	TerminalOutput?: TO;
+	TerminalInput?: cli.TerminalInput;
+	TerminalOutput?: cli.TerminalOutput;
 	TerminalStdin?: cli.TerminalStdin;
 	TerminalStdout?: cli.TerminalStdout;
 	TerminalStderr?: cli.TerminalStderr;
@@ -563,4 +563,5 @@ export namespace cli._ {
 		}
 		return result;
 	}
+	export function createService(wasmInterface: WasmInterface, context: $wcm.Context, _kind?: $wcm.ResourceKind): filesystem;
 }

@@ -228,4 +228,5 @@ export namespace clocks._ {
 		}
 		return result;
 	}
+	export function createService(wasmInterface: WasmInterface, context: $wcm.Context, _kind?: $wcm.ResourceKind): filesystem;
 }

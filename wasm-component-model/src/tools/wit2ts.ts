@@ -1633,8 +1633,6 @@ class PackageEmitter extends Emitter {
 		code.push(`return result;`);
 		code.decreaseIndent();
 		code.push(`}`);
-		code.decreaseIndent();
-		code.push(`}`);
 		type InterfaceInfo = { name: string; typeParamName: string };
 		const ifaceInfos: Map<string, InterfaceInfo | undefined> = new Map();
 		let hasTypeParams = false;
@@ -1648,10 +1646,36 @@ class PackageEmitter extends Emitter {
 			}
 		}
 		if (!hasTypeParams) {
-			return;
+			code.push(`export function createService(wasmInterface: WasmInterface, context: $wcm.Context, _kind?: ${MetaModel.qualifier}.ResourceKind): filesystem;`);
 		} else {
-			
+			const typeParams: string[] = [];
+			const typeParamNames;
+			const params: string[] = [];
+			const implParams: string[] = [];
+			const classServiceTypeParams: string[] = [];
+			const moduleServiceTypeParams: string[] = [];
+			let i = 0;
+			for (const [name, info] of ifaceInfos) {
+				if (info !== undefined) {
+					classServiceTypeParams.push(`${pkgName}.${name}._.ClassService`);
+					moduleServiceTypeParams.push(`${pkgName}.${name}._.ModuleService`);
+					typeParams.push(`${info.typeParamName} extends ${pkgName}.${name}`);
+					params.push(`${info.typeParamName.toLowerCase()}: ${pkgName}.${name}`);
+					if (i++ === 0) {
+						implParams.push(`${info.typeParamName.toLowerCase()}: ${pkgName}.${name} | ${MetaModel.qualifier}.ResourceKind`);
+					} else {
+						implParams.push(`${info.typeParamName.toLowerCase()}: ${pkgName}.${name}`);
+					}
+				}
+			}
+			code.push(`export type ClassService = ${pkgName}<${classServiceTypeParams.join(', ')}>;`);
+			code.push(`export type ModuleService = ${pkgName}<${moduleServiceTypeParams.join(', ')}>;`);
+			code.push(`export function createService(wasmInterface: WasmInterface, context: ${MetaModel.qualifier}.Context, kind?: ${MetaModel.qualifier}.ResourceKind.class): ClassService;`);
+			code.push(`export function createService(wasmInterface: WasmInterface, context: ${MetaModel.qualifier}.Context, kind: ${MetaModel.qualifier}.ResourceKind.module): ModuleService;`);
+			code.push(`export function createService<${typeParams.join(', ')}>(wasmInterface: WasmInterface, context: ${MetaModel.qualifier}.Context, ${params.join(', ')}): ModuleService;`);
 		}
+		code.decreaseIndent();
+		code.push(`}`);
 	}
 
 	private getWitName(): string {
@@ -1670,8 +1694,10 @@ class PackageEmitter extends Emitter {
 
 
 /**
-	export function createService(wasmInterface: WasmInterface, context: $wcm.Context, kind?: $wcm.ResourceKind.class): filesystem<Types._.ClassService>;
-	export function createService(wasmInterface: WasmInterface, context: $wcm.Context, kind: $wcm.ResourceKind.module): filesystem<Types._.ModuleService>;
+	export type ClassService = filesystem<Types._.ClassService>;
+	export type ModuleService = filesystem<Types._.ModuleService>;
+	export function createService(wasmInterface: WasmInterface, context: $wcm.Context, kind?: $wcm.ResourceKind.class): ClassService;
+	export function createService(wasmInterface: WasmInterface, context: $wcm.Context, kind: $wcm.ResourceKind.module): ModuleService;
 	export function createService<T extends filesystem.Types>(wasmInterface: WasmInterface, context: $wcm.Context, t?: T | $wcm.ResourceKind): filesystem<T>;
 	export function createService(wasmInterface: WasmInterface, context: $wcm.Context, _kind?: $wcm.ResourceKind): filesystem {
 		const result: filesystem = Object.create(null);
