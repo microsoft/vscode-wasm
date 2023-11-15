@@ -228,5 +228,14 @@ export namespace clocks._ {
 		}
 		return result;
 	}
-	export function createService(wasmInterface: WasmInterface, context: $wcm.Context, _kind?: $wcm.ResourceKind): filesystem;
+	export function createService(wasmInterface: WasmInterface, context: $wcm.Context, kind?: $wcm.ResourceKind): clocks {
+		const result: clocks = Object.create(null);
+		if (wasmInterface['wasi:clocks/monotonic-clock'] !== undefined) {
+			result.MonotonicClock = MonotonicClock._.createService(wasmInterface['wasi:clocks/monotonic-clock'], context, kind);
+		}
+		if (wasmInterface['wasi:clocks/wall-clock'] !== undefined) {
+			result.WallClock = WallClock._.createService(wasmInterface['wasi:clocks/wall-clock'], context, kind);
+		}
+		return result;
+	}
 }

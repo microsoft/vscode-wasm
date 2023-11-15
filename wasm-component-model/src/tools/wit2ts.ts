@@ -1647,7 +1647,19 @@ class PackageEmitter extends Emitter {
 			}
 		}
 		if (!hasTypeParams) {
-			code.push(`export function createService(wasmInterface: WasmInterface, context: $wcm.Context, _kind?: ${MetaModel.qualifier}.ResourceKind): filesystem;`);
+			code.push(`export function createService(wasmInterface: WasmInterface, context: $wcm.Context, kind?: ${MetaModel.qualifier}.ResourceKind): ${pkgName} {`);
+			code.increaseIndent();
+			code.push(`const result: ${pkgName} = Object.create(null);`);
+			for (const [name, info] of ifaceInfos) {
+				code.push(`if (wasmInterface['${info.id}'] !== undefined) {`);
+				code.increaseIndent();
+				code.push(`result.${name} = ${name}._.createService(wasmInterface['${info.id}'], context, kind);`);
+				code.decreaseIndent();
+				code.push('}');
+			}
+			code.push('return result;');
+			code.decreaseIndent();
+			code.push('}');
 		} else {
 			const typeParams: string[] = [];
 			const typeParamNames: string[] = [];
@@ -1669,7 +1681,7 @@ class PackageEmitter extends Emitter {
 						implParams.push(`${paramName}?: ${pkgName}.${name} | ${MetaModel.qualifier}.ResourceKind`);
 						kindName = paramName;
 					} else {
-						implParams.push(`${paramName}: ${pkgName}.${name}`);
+						implParams.push(`${paramName}?: ${pkgName}.${name}`);
 					}
 				}
 			}

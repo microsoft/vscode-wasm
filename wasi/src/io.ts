@@ -704,7 +704,7 @@ export namespace io._ {
 	export function createService(wasmInterface: WasmInterface, context: $wcm.Context, kind?: $wcm.ResourceKind.class): ClassService;
 	export function createService(wasmInterface: WasmInterface, context: $wcm.Context, kind: $wcm.ResourceKind.module): ModuleService;
 	export function createService<E extends io.Error, P extends io.Poll, S extends io.Streams>(wasmInterface: WasmInterface, context: $wcm.Context, e: io.Error, p: io.Poll, s: io.Streams): io<E, P, S>;
-	export function createService(wasmInterface: WasmInterface, context: $wcm.Context, e?: io.Error | $wcm.ResourceKind, p: io.Poll, s: io.Streams): io {
+	export function createService(wasmInterface: WasmInterface, context: $wcm.Context, e?: io.Error | $wcm.ResourceKind, p?: io.Poll, s?: io.Streams): io {
 		const result: io = Object.create(null);
 		e = e ?? $wcm.ResourceKind.class;
 		if (e === $wcm.ResourceKind.class || e === $wcm.ResourceKind.module) {

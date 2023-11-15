@@ -50,7 +50,7 @@
 		"./preview2"
 	],
 	"editor.codeActionsOnSave": {
-		"source.fixAll.eslint": true
+		"source.fixAll.eslint": "explicit"
 	},
 	"mochaExplorer.files": [
 		"sync-api-common/lib/node/test/*.test.js",

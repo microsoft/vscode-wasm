@@ -563,5 +563,41 @@ export namespace cli._ {
 		}
 		return result;
 	}
-	export function createService(wasmInterface: WasmInterface, context: $wcm.Context, _kind?: $wcm.ResourceKind): filesystem;
+	export function createService(wasmInterface: WasmInterface, context: $wcm.Context, kind?: $wcm.ResourceKind): cli {
+		const result: cli = Object.create(null);
+		if (wasmInterface['wasi:cli/environment'] !== undefined) {
+			result.Environment = Environment._.createService(wasmInterface['wasi:cli/environment'], context, kind);
+		}
+		if (wasmInterface['wasi:cli/exit'] !== undefined) {
+			result.Exit = Exit._.createService(wasmInterface['wasi:cli/exit'], context, kind);
+		}
+		if (wasmInterface['wasi:cli/run'] !== undefined) {
+			result.Run = Run._.createService(wasmInterface['wasi:cli/run'], context, kind);
+		}
+		if (wasmInterface['wasi:cli/stdin'] !== undefined) {
+			result.Stdin = Stdin._.createService(wasmInterface['wasi:cli/stdin'], context, kind);
+		}
+		if (wasmInterface['wasi:cli/stdout'] !== undefined) {
+			result.Stdout = Stdout._.createService(wasmInterface['wasi:cli/stdout'], context, kind);
+		}
+		if (wasmInterface['wasi:cli/stderr'] !== undefined) {
+			result.Stderr = Stderr._.createService(wasmInterface['wasi:cli/stderr'], context, kind);
+		}
+		if (wasmInterface['wasi:cli/terminal-input'] !== undefined) {
+			result.TerminalInput = TerminalInput._.createService(wasmInterface['wasi:cli/terminal-input'], context, kind);
+		}
+		if (wasmInterface['wasi:cli/terminal-output'] !== undefined) {
+			result.TerminalOutput = TerminalOutput._.createService(wasmInterface['wasi:cli/terminal-output'], context, kind);
+		}
+		if (wasmInterface['wasi:cli/terminal-stdin'] !== undefined) {
+			result.TerminalStdin = TerminalStdin._.createService(wasmInterface['wasi:cli/terminal-stdin'], context, kind);
+		}
+		if (wasmInterface['wasi:cli/terminal-stdout'] !== undefined) {
+			result.TerminalStdout = TerminalStdout._.createService(wasmInterface['wasi:cli/terminal-stdout'], context, kind);
+		}
+		if (wasmInterface['wasi:cli/terminal-stderr'] !== undefined) {
+			result.TerminalStderr = TerminalStderr._.createService(wasmInterface['wasi:cli/terminal-stderr'], context, kind);
+		}
+		return result;
+	}
 }

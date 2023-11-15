@@ -1915,7 +1915,7 @@ export namespace sockets._ {
 	export function createService(wasmInterface: WasmInterface, context: $wcm.Context, kind?: $wcm.ResourceKind.class): ClassService;
 	export function createService(wasmInterface: WasmInterface, context: $wcm.Context, kind: $wcm.ResourceKind.module): ModuleService;
 	export function createService<INL extends sockets.IpNameLookup, T extends sockets.Tcp, U extends sockets.Udp>(wasmInterface: WasmInterface, context: $wcm.Context, inl: sockets.IpNameLookup, t: sockets.Tcp, u: sockets.Udp): sockets<INL, T, U>;
-	export function createService(wasmInterface: WasmInterface, context: $wcm.Context, inl?: sockets.IpNameLookup | $wcm.ResourceKind, t: sockets.Tcp, u: sockets.Udp): sockets {
+	export function createService(wasmInterface: WasmInterface, context: $wcm.Context, inl?: sockets.IpNameLookup | $wcm.ResourceKind, t?: sockets.Tcp, u?: sockets.Udp): sockets {
 		const result: sockets = Object.create(null);
 		inl = inl ?? $wcm.ResourceKind.class;
 		if (inl === $wcm.ResourceKind.class || inl === $wcm.ResourceKind.module) {
