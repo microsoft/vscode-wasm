@@ -1,4 +1,4 @@
-package vscode:test-data
+package vscode:test-data;
 
 interface types {
 

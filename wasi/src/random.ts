@@ -110,10 +110,15 @@ export namespace random {
 	};
 	
 }
+export type random = {
+	InsecureSeed?: random.InsecureSeed;
+	Insecure?: random.Insecure;
+	Random?: random.Random;
+};
 
 export namespace random {
 	export namespace InsecureSeed.$ {
-		export const insecureSeed = new $wcm.FunctionType<InsecureSeed.insecureSeed>('insecure-seed', [], new $wcm.TupleType<[u64, u64]>([$wcm.u64, $wcm.u64]));
+		export const insecureSeed = new $wcm.FunctionType<random.InsecureSeed.insecureSeed>('insecure-seed', [], new $wcm.TupleType<[u64, u64]>([$wcm.u64, $wcm.u64]));
 	}
 	export namespace InsecureSeed._ {
 		export const id = 'wasi:random/insecure-seed' as const;
@@ -131,16 +136,16 @@ export namespace random {
 		export function createHost(service: random.InsecureSeed, context: $wcm.Context): WasmInterface {
 			return $wcm.Host.create<WasmInterface>(functions, resources, service, context);
 		}
-		export function createService(wasmInterface: WasmInterface, context: $wcm.Context): random.InsecureSeed {
+		export function createService(wasmInterface: WasmInterface, context: $wcm.Context, _kind?: $wcm.ResourceKind): random.InsecureSeed {
 			return $wcm.Service.create<random.InsecureSeed>(functions, [], wasmInterface, context);
 		}
 	}
 	
 	export namespace Insecure.$ {
-		export const getInsecureRandomBytes = new $wcm.FunctionType<Insecure.getInsecureRandomBytes>('get-insecure-random-bytes',[
+		export const getInsecureRandomBytes = new $wcm.FunctionType<random.Insecure.getInsecureRandomBytes>('get-insecure-random-bytes',[
 			['len', $wcm.u64],
 		], new $wcm.Uint8ArrayType());
-		export const getInsecureRandomU64 = new $wcm.FunctionType<Insecure.getInsecureRandomU64>('get-insecure-random-u64', [], $wcm.u64);
+		export const getInsecureRandomU64 = new $wcm.FunctionType<random.Insecure.getInsecureRandomU64>('get-insecure-random-u64', [], $wcm.u64);
 	}
 	export namespace Insecure._ {
 		export const id = 'wasi:random/insecure' as const;
@@ -160,16 +165,16 @@ export namespace random {
 		export function createHost(service: random.Insecure, context: $wcm.Context): WasmInterface {
 			return $wcm.Host.create<WasmInterface>(functions, resources, service, context);
 		}
-		export function createService(wasmInterface: WasmInterface, context: $wcm.Context): random.Insecure {
+		export function createService(wasmInterface: WasmInterface, context: $wcm.Context, _kind?: $wcm.ResourceKind): random.Insecure {
 			return $wcm.Service.create<random.Insecure>(functions, [], wasmInterface, context);
 		}
 	}
 	
 	export namespace Random.$ {
-		export const getRandomBytes = new $wcm.FunctionType<Random.getRandomBytes>('get-random-bytes',[
+		export const getRandomBytes = new $wcm.FunctionType<random.Random.getRandomBytes>('get-random-bytes',[
 			['len', $wcm.u64],
 		], new $wcm.Uint8ArrayType());
-		export const getRandomU64 = new $wcm.FunctionType<Random.getRandomU64>('get-random-u64', [], $wcm.u64);
+		export const getRandomU64 = new $wcm.FunctionType<random.Random.getRandomU64>('get-random-u64', [], $wcm.u64);
 	}
 	export namespace Random._ {
 		export const id = 'wasi:random/random' as const;
@@ -189,17 +194,49 @@ export namespace random {
 		export function createHost(service: random.Random, context: $wcm.Context): WasmInterface {
 			return $wcm.Host.create<WasmInterface>(functions, resources, service, context);
 		}
-		export function createService(wasmInterface: WasmInterface, context: $wcm.Context): random.Random {
+		export function createService(wasmInterface: WasmInterface, context: $wcm.Context, _kind?: $wcm.ResourceKind): random.Random {
 			return $wcm.Service.create<random.Random>(functions, [], wasmInterface, context);
 		}
 	}
 }
 
 export namespace random._ {
-	export const witName = 'wasi:random' as const;
+	export const id = 'wasi:random' as const;
+	export const witName = 'random' as const;
 	export const interfaces: Map<string, $wcm.InterfaceType> = new Map<string, $wcm.InterfaceType>([
 		['InsecureSeed', InsecureSeed._],
 		['Insecure', Insecure._],
 		['Random', Random._]
 	]);
+	export type WasmInterface = {
+		'wasi:random/insecure-seed'?: InsecureSeed._.WasmInterface;
+		'wasi:random/insecure'?: Insecure._.WasmInterface;
+		'wasi:random/random'?: Random._.WasmInterface;
+	};
+	export function createHost(service: random, context: $wcm.Context): WasmInterface {
+		const result: WasmInterface = Object.create(null);
+		if (service.InsecureSeed !== undefined) {
+			result['wasi:random/insecure-seed'] = InsecureSeed._.createHost(service.InsecureSeed, context);
+		}
+		if (service.Insecure !== undefined) {
+			result['wasi:random/insecure'] = Insecure._.createHost(service.Insecure, context);
+		}
+		if (service.Random !== undefined) {
+			result['wasi:random/random'] = Random._.createHost(service.Random, context);
+		}
+		return result;
+	}
+	export function createService(wasmInterface: WasmInterface, context: $wcm.Context, kind?: $wcm.ResourceKind): random {
+		const result: random = Object.create(null);
+		if (wasmInterface['wasi:random/insecure-seed'] !== undefined) {
+			result.InsecureSeed = InsecureSeed._.createService(wasmInterface['wasi:random/insecure-seed'], context, kind);
+		}
+		if (wasmInterface['wasi:random/insecure'] !== undefined) {
+			result.Insecure = Insecure._.createService(wasmInterface['wasi:random/insecure'], context, kind);
+		}
+		if (wasmInterface['wasi:random/random'] !== undefined) {
+			result.Random = Random._.createService(wasmInterface['wasi:random/random'], context, kind);
+		}
+		return result;
+	}
 }

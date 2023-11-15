@@ -136,7 +136,7 @@ const context: Context = {
 
 suite('point', () => {
 	const host: Types._.WasmInterface = Types._.createHost(serviceImpl, context);
-	const service: Types = Types._.createService(Types._.PointResource.Module, host, context);
+	const service: Types = Types._.createService(host, context, Types._.PointResource.Module);
 	test('host:call', () => {
 		assert.strictEqual(host.call(1, 2), 3);
 	});
@@ -149,7 +149,7 @@ suite ('point-resource - Module', () => {
 	const moduleImplementation = Object.assign({}, serviceImpl);
 	moduleImplementation.PointResource = PointResourceModule;
 	const host: Types._.WasmInterface = Types._.createHost(serviceImpl, context);
-	const service = Types._.createService(Types._.PointResource.Module, host, context);
+	const service = Types._.createService(host, context, Types._.PointResource.Module);
 	test('host:call', () => {
 		const point = host['[constructor]point-resource'](1, 2);
 		assert.strictEqual(host['[method]point-resource.get-x'](point), 1);
@@ -168,7 +168,7 @@ suite ('point-resource - Class', () => {
 	const moduleImplementation = Object.assign({}, serviceImpl);
 	moduleImplementation.PointResource = PointResourceClass;
 	const host: Types._.WasmInterface = Types._.createHost(serviceImpl, context);
-	const service = Types._.createService(Types._.PointResource.Class, host, context);
+	const service = Types._.createService(host, context, Types._.PointResource.Class);
 	test('host:call', () => {
 		const point = host['[constructor]point-resource'](1, 2);
 		assert.strictEqual(host['[method]point-resource.get-x'](point), 1);
@@ -196,7 +196,7 @@ suite('option', () => {
 
 suite('variant', () => {
 	const host: Types._.WasmInterface = Types._.createHost(serviceImpl, context);
-	const service: Types = Types._.createService(Types._.PointResource.Module, host, context);
+	const service: Types = Types._.createService(host, context, Types._.PointResource.Module);
 
 	test('empty', () => {
 		const empty = service.checkVariant(TestVariant.Empty());
@@ -255,7 +255,7 @@ suite('variant', () => {
 
 suite('flags', () => {
 	const host: Types._.WasmInterface = Types._.createHost(serviceImpl, context);
-	const service: Types = Types._.createService(Types._.PointResource.Module, host, context);
+	const service: Types = Types._.createService(host, context, Types._.PointResource.Module);
 	test('short', () => {
 		const flags: TestFlagsShort = TestFlagsShort.one;
 		const returned = service.checkFlagsShort(flags);
