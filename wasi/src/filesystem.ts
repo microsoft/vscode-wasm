@@ -1301,6 +1301,7 @@ export namespace filesystem._ {
 	export type ModuleService = filesystem<filesystem.Types._.ModuleService>;
 	export function createService(wasmInterface: WasmInterface, context: $wcm.Context, kind?: $wcm.ResourceKind.class): ClassService;
 	export function createService(wasmInterface: WasmInterface, context: $wcm.Context, kind: $wcm.ResourceKind.module): ModuleService;
+	export function createService(wasmInterface: WasmInterface, context: $wcm.Context, kind: $wcm.ResourceKind): filesystem;
 	export function createService<T extends filesystem.Types>(wasmInterface: WasmInterface, context: $wcm.Context, t: filesystem.Types): filesystem<T>;
 	export function createService(wasmInterface: WasmInterface, context: $wcm.Context, t?: filesystem.Types | $wcm.ResourceKind): filesystem {
 		const result: filesystem = Object.create(null);

@@ -14,56 +14,9 @@ import {
 } from './wit-json';
 
 export function processDocument(document: Document, options: ResolvedOptions): void {
-	const regExp = new RegExp(options.package);
-	const mainCode = new Code();
-
-	const nameProvider = options.nameStyle === 'wit' ? WitNameProvider : TypeScriptNameProvider;
-	const packages: Package[] = [];
-	const exports: string[] = [];
-	for (const pkg of document.packages) {
-		if (!regExp.test(pkg.name)) {
-			continue;
-		}
-
-		packages.push(pkg);
-		const code = new Code();
-		const symbols = new SymbolTable(document, nameProvider);
-		const printers: Printers = {
-			typeScript: new TypeScript.TypePrinter(symbols, nameProvider, code.imports),
-			metaModel: new MetaModel.TypePrinter(symbols, nameProvider, code.imports)
-		};
-		const typeFlattener = new TypeFlattener(symbols, nameProvider, code.imports);
-		const config: EmitterConfig = { symbols, printers, nameProvider, typeFlattener, options};
-
-		const pkgEmitter = new PackageEmitter(pkg, config);
-		pkgEmitter.build();
-		pkgEmitter.emit(code);
-		const pkgName = nameProvider.asPackageName(pkg);
-		mainCode.push(`import { ${pkgName} } from './${nameProvider.asImportName(pkg)}';`);
-		exports.push(pkgName);
-		const fileName = nameProvider.asFileName(pkg);
-		fs.writeFileSync(path.join(options.outDir, fileName), code.toString());
-	}
-	mainCode.push();
-	mainCode.push(`export namespace _ {`);
-	mainCode.increaseIndent();
-	mainCode.push(`export const packages: Map<string, ${MetaModel.qualifier}.PackageType> =  new Map<string, ${MetaModel.qualifier}.PackageType>([`);
-	mainCode.increaseIndent();
-	const wasmInterface: string[] = [];
-	for (const pkg of packages) {
-		const pkgName = nameProvider.asPackageName(pkg);
-		mainCode.push(`['${pkgName}', ${pkgName}._],`);
-		wasmInterface.push(`${pkgName}._.WasmInterface`);
-	}
-	mainCode.decreaseIndent();
-	mainCode.push(`]);`);
-	mainCode.push(`export type WasmInterface = ${wasmInterface.join(' & ')};`);
-	mainCode.decreaseIndent();
-	mainCode.push(`}`);
-	mainCode.push(`export { ${exports.join(', ')}};`);
-	if (!options.noMain) {
-		fs.writeFileSync(path.join(options.outDir, 'main.ts'), mainCode.toString());
-	}
+	const documentEmitter = new DocumentEmitter(document, options);
+	documentEmitter.build();
+	documentEmitter.emit();
 }
 
 interface Printers {
@@ -651,6 +604,11 @@ namespace MetaModel {
 
 
 	export const qualifier = '$wcm';
+	export const ResourceKind = `${qualifier}.ResourceKind`;
+	export const ResourceKindClass = `${qualifier}.ResourceKind.class`;
+	export const ResourceKindModule = `${qualifier}.ResourceKind.module`;
+	export const ContextType = `${qualifier}.Context`;
+
 	export function qualify(name: string): string {
 		return `${qualifier}.${name}`;
 	}
@@ -1495,14 +1453,210 @@ abstract class Emitter {
 	}
 }
 
+class DocumentEmitter {
+
+	private readonly document: Document;
+	private readonly options: ResolvedOptions;
+	private readonly mainCode: Code;
+	private readonly nameProvider: NameProvider;
+	private readonly packages: { emitter: PackageEmitter; code: Code }[];
+	private readonly exports: string[];
+
+	constructor(document: Document, options: ResolvedOptions) {
+		this.document = document;
+		this.options = options;
+		this.mainCode = new Code();
+		this.nameProvider = this.options.nameStyle === 'wit' ? WitNameProvider : TypeScriptNameProvider;
+		this.packages = [];
+		this.exports = [];
+	}
+
+	public build(): void {
+		const regExp = new RegExp(`${this.options.package}:`);
+		const typeParamNameGenerator = new TypeParamNameGenerator();
+		for (const pkg of this.document.packages) {
+			if (!regExp.test(pkg.name)) {
+				continue;
+			}
+
+			const code = new Code();
+			const symbols = new SymbolTable(this.document, this.nameProvider);
+			const printers: Printers = {
+				typeScript: new TypeScript.TypePrinter(symbols, this.nameProvider, code.imports),
+				metaModel: new MetaModel.TypePrinter(symbols, this.nameProvider, code.imports)
+			};
+			const typeFlattener = new TypeFlattener(symbols, this.nameProvider, code.imports);
+			const config: EmitterConfig = { symbols, printers, nameProvider: this.nameProvider, typeFlattener, options: this.options};
+
+			const pkgEmitter = new PackageEmitter(pkg, typeParamNameGenerator, config);
+			pkgEmitter.build();
+			this.packages.push({ emitter: pkgEmitter, code });
+		}
+	}
+
+	public emit(): void {
+		const typeParams: string[] = [];
+		const typeParamNames: string[] = [];
+		const typeDeclarations: string[] = [];
+		const params: string[] = [];
+		const implParams: string[] = [];
+		const classServiceTypeParams: string[] = [];
+		const moduleServiceTypeParams: string[] = [];
+		let i = 0;
+		let hasTypeParams = false;
+		let kindName: string = 'kind';
+		for (const { emitter, code } of this.packages) {
+			const pkgName = emitter.pkgName;
+			emitter.emit(code);
+			this.exports.push(pkgName);
+			const fileName = this.nameProvider.asFileName(emitter.pkg);
+			fs.writeFileSync(path.join(this.options.outDir, fileName), code.toString());
+			this.mainCode.push(`import { ${pkgName} } from './${this.nameProvider.asImportName(emitter.pkg)}';`);
+			if (emitter.needsTypeParameter()) {
+				hasTypeParams = true;
+				typeParams.push();
+				classServiceTypeParams.push(`${pkgName}._.ClassService`);
+				moduleServiceTypeParams.push(`${pkgName}._.ModuleService`);
+				typeParams.push(`${emitter.getTypeParameterName()} extends ${pkgName} = ${pkgName}`);
+				const paramName = emitter.getTypeParameterName().toLowerCase();
+				params.push(`${paramName}: ${pkgName}`);
+				typeParamNames.push(emitter.getTypeParameterName());
+				typeDeclarations.push(`${pkgName}?: ${emitter.getTypeParameterName()}`);
+				if (i++ === 0) {
+					kindName = paramName;
+					implParams.push(`${paramName}?: ${pkgName} | ${MetaModel.qualifier}.ResourceKind`);
+				} else {
+					implParams.push(`${paramName}?: ${pkgName}`);
+				}
+			} else {
+				typeDeclarations.push(`${pkgName}?: ${pkgName}`);
+			}
+		}
+		if (this.options.noMain) {
+			return;
+		}
+
+		const code = this.mainCode;
+		const namespace = this.options.package;
+		code.push();
+		code.push(`type ${namespace}<${typeParams.join(', ')}> = {`);
+		code.increaseIndent();
+		for (const typeDeclaration of typeDeclarations) {
+			code.push(`${typeDeclaration};`);
+		}
+		code.decreaseIndent();
+		code.push(`};`);
+		code.push(`namespace ${namespace}._ {`);
+		code.increaseIndent();
+		code.push(`export const packages: Map<string, ${MetaModel.qualifier}.PackageType> =  new Map<string, ${MetaModel.qualifier}.PackageType>([`);
+		code.increaseIndent();
+		const wasmInterface: string[] = [];
+		for (const { emitter } of this.packages) {
+			const pkgName = this.nameProvider.asPackageName(emitter.pkg);
+			code.push(`['${pkgName}', ${pkgName}._],`);
+			wasmInterface.push(`${pkgName}._.WasmInterface`);
+		}
+		code.decreaseIndent();
+		code.push(`]);`);
+		code.push(`export type WasmInterface = ${wasmInterface.join(' & ')};`);
+		code.push(`export function createHost(service: ${namespace}, context: ${MetaModel.ContextType}): WasmInterface {`);
+		code.increaseIndent();
+		code.push(`let result: WasmInterface = Object.create(null);`);
+		for (const { emitter } of this.packages) {
+			code.push(`if (service.${emitter.pkgName} !== undefined) {`);
+			code.increaseIndent();
+			code.push(`result = Object.assign(result, ${emitter.pkgName}._.createHost(service.${emitter.pkgName}, context));`);
+			code.decreaseIndent();
+			code.push(`}`);
+		}
+		code.push('return result;');
+		code.decreaseIndent();
+		code.push('}');
+		const classService = classServiceTypeParams.length === 0 ? namespace : `${namespace}<${classServiceTypeParams.join(', ')}>`;
+		const moduleService = moduleServiceTypeParams.length === 0 ? namespace : `${namespace}<${moduleServiceTypeParams.join(', ')}>`;
+		code.push(`export type ClassService = ${classService};`);
+		code.push(`export type ModuleService = ${moduleService};`);
+		if (!hasTypeParams) {
+			code.push(`export function createService(wasmInterface: WasmInterface, context: ${MetaModel.ContextType}, kind?: ${MetaModel.qualifier}.ResourceKind): ${namespace} {`);
+			code.increaseIndent();
+			code.push(`kind = kind ?? ${MetaModel.qualifier}.ResourceKind.class;`);
+			code.push(`let result: ${namespace} = Object.create(null);`);
+			for (const { emitter } of this.packages) {
+				let varName = `_${emitter.pkgName}`;
+				code.push(`const ${varName} = ${emitter.pkgName}._.createService(wasmInterface, context, kind);`);
+				code.push(`if (Object.keys(${varName}).length > 0) {`);
+				code.increaseIndent();
+				code.push(`result.${emitter.pkgName} = ${varName};`);
+				code.decreaseIndent();
+				code.push('}');
+			}
+			code.push('return result;');
+			code.decreaseIndent();
+			code.push('}');
+		} else {
+			code.push(`export function createService(wasmInterface: WasmInterface, context: ${MetaModel.ContextType}, kind?: ${MetaModel.ResourceKindClass}): ClassService;`);
+			code.push(`export function createService(wasmInterface: WasmInterface, context: ${MetaModel.ContextType}, kind: ${MetaModel.ResourceKindModule}): ModuleService;`);
+			code.push(`export function createService(wasmInterface: WasmInterface, context: ${MetaModel.ContextType}, kind: ${MetaModel.ResourceKind}): ${namespace};`);
+			code.push(`export function createService<${typeParams.join(', ')}>(wasmInterface: WasmInterface, context: ${MetaModel.ContextType}, ${params.join(', ')}): ${namespace}<${typeParamNames.join(', ')}>;`);
+			code.push(`export function createService(wasmInterface: WasmInterface, context: ${MetaModel.ContextType}, ${implParams.join(', ')}): ${namespace} {`);
+			code.increaseIndent();
+			code.push(`const result: ${namespace} = Object.create(null);`);
+			code.push(`${kindName} = ${kindName} ?? ${MetaModel.qualifier}.ResourceKind.class;`);
+			code.push(`if (${kindName} === ${MetaModel.qualifier}.ResourceKind.class || ${kindName} === ${MetaModel.qualifier}.ResourceKind.module) {`);
+			code.increaseIndent();
+			for (const { emitter } of this.packages) {
+				let varName = `_${emitter.pkgName}`;
+				code.push(`const ${varName} = ${emitter.pkgName}._.createService(wasmInterface, context, ${kindName});`);
+				code.push(`if (Object.keys(${varName}).length > 0) {`);
+				code.increaseIndent();
+				code.push(`result.${emitter.pkgName} = ${varName};`);
+				code.decreaseIndent();
+				code.push('}');
+			}
+			code.decreaseIndent();
+			code.push(`} else {`);
+			code.increaseIndent();
+			for (const { emitter } of this.packages) {
+				let varName = `_${emitter.pkgName}`;
+				if (emitter.needsTypeParameter()) {
+					code.push(`const ${varName} = ${emitter.getTypeParameterName().toLowerCase()};`);
+					code.push(`if (${varName} !== undefined && Object.keys(${varName}).length > 0) {`);
+				} else {
+					code.push(`const ${varName} = ${emitter.pkgName}._.createService(wasmInterface, context);`);
+					code.push(`if (Object.keys(${varName}).length > 0) {`);
+				}
+				code.increaseIndent();
+				code.push(`result.${emitter.pkgName} = ${varName};`);
+				code.decreaseIndent();
+				code.push('}');
+			}
+			code.decreaseIndent();
+			code.push(`}`);
+			code.push(`return result;`);
+			code.decreaseIndent();
+			code.push(`}`);
+
+		}
+		code.decreaseIndent();
+		code.push(`}`);
+		code.push(`export { ${this.exports.join(', ')}};`);
+		code.push(`export default ${this.options.package};`);
+		fs.writeFileSync(path.join(this.options.outDir, 'main.ts'), code.toString());
+	}
+}
+
 class PackageEmitter extends Emitter {
 
-	private readonly pkg: Package;
+	public readonly pkg: Package;
+	public readonly pkgName: string;
+	private readonly typeParameterName: string;
 	private ifaceEmitters: InterfaceEmitter[];
 
-	constructor(pkg: Package, config: EmitterConfig) {
+	constructor(pkg: Package, typeParamNameGenerator: TypeParamNameGenerator, config: EmitterConfig) {
 		super(config);
 		this.pkg = pkg;
+		this.pkgName = config.nameProvider.asPackageName(pkg);
+		this.typeParameterName = typeParamNameGenerator.generate(this.pkgName);
 		this.ifaceEmitters = [];
 	}
 
@@ -1513,6 +1667,23 @@ class PackageEmitter extends Emitter {
 			name = name.substring(0, index);
 		}
 		return name;
+	}
+
+	public needsTypeParameter(): boolean {
+		for (const resource of this.ifaceEmitters) {
+			if (resource.needsTypeParameter()) {
+				return true;
+			}
+		}
+		return false;
+	}
+
+	public getTypeParameterName(): string {
+		return this.typeParameterName;
+	}
+
+	public getTypeParameter(): string {
+		return `${this.typeParameterName} extends ${this.pkgName} = ${this.pkgName}`;
 	}
 
 	public build(): void {
@@ -1534,8 +1705,7 @@ class PackageEmitter extends Emitter {
 	}
 
 	public emitNamespace(code: Code): void {
-		const { nameProvider } = this.config;
-		const pkgName = nameProvider.asPackageName(this.pkg);
+		const pkgName = this.pkgName;
 		code.push(`export namespace ${pkgName} {`);
 		code.increaseIndent();
 		for (const ifaceEmitter of this.ifaceEmitters) {
@@ -1549,7 +1719,7 @@ class PackageEmitter extends Emitter {
 
 	public emitTypeDeclaration(code: Code): void {
 		const { nameProvider } = this.config;
-		const pkgName = nameProvider.asPackageName(this.pkg);
+		const pkgName = this.pkgName;
 		const typeParams: string[] = [];
 		const ifaceInfos: { name: string; type: string }[] = [];
 		for (const ifaceEmitter of this.ifaceEmitters) {
@@ -1576,8 +1746,7 @@ class PackageEmitter extends Emitter {
 	}
 
 	public emitMetaData(code: Code): void {
-		const { nameProvider } = this.config;
-		const pkgName = nameProvider.asPackageName(this.pkg);
+		const pkgName = this.pkgName;
 		code.push('');
 		code.push(`export namespace ${pkgName} {`);
 		code.increaseIndent();
@@ -1595,7 +1764,7 @@ class PackageEmitter extends Emitter {
 
 	public emitApi(code: Code): void {
 		const { nameProvider } = this.config;
-		const pkgName = nameProvider.asPackageName(this.pkg);
+		const pkgName = this.pkgName;
 		code.push('');
 		code.push(`export namespace ${pkgName}._ {`);
 		code.increaseIndent();
@@ -1619,7 +1788,7 @@ class PackageEmitter extends Emitter {
 		}
 		code.decreaseIndent();
 		code.push(`};`);
-		code.push(`export function createHost(service: ${pkgName}, context: ${MetaModel.qualifier}.Context): WasmInterface {`);
+		code.push(`export function createHost(service: ${pkgName}, context: ${MetaModel.ContextType}): WasmInterface {`);
 		code.increaseIndent();
 		code.push(`const result: WasmInterface = Object.create(null);`);
 		for (const ifaceEmitter of this.ifaceEmitters) {
@@ -1687,10 +1856,11 @@ class PackageEmitter extends Emitter {
 			}
 			code.push(`export type ClassService = ${pkgName}<${classServiceTypeParams.join(', ')}>;`);
 			code.push(`export type ModuleService = ${pkgName}<${moduleServiceTypeParams.join(', ')}>;`);
-			code.push(`export function createService(wasmInterface: WasmInterface, context: ${MetaModel.qualifier}.Context, kind?: ${MetaModel.qualifier}.ResourceKind.class): ClassService;`);
-			code.push(`export function createService(wasmInterface: WasmInterface, context: ${MetaModel.qualifier}.Context, kind: ${MetaModel.qualifier}.ResourceKind.module): ModuleService;`);
-			code.push(`export function createService<${typeParams.join(', ')}>(wasmInterface: WasmInterface, context: ${MetaModel.qualifier}.Context, ${params.join(', ')}): ${pkgName}<${typeParamNames.join(', ')}>;`);
-			code.push(`export function createService(wasmInterface: WasmInterface, context: ${MetaModel.qualifier}.Context, ${implParams.join(', ')}): ${pkgName} {`);
+			code.push(`export function createService(wasmInterface: WasmInterface, context: ${MetaModel.ContextType}, kind?: ${MetaModel.qualifier}.ResourceKind.class): ClassService;`);
+			code.push(`export function createService(wasmInterface: WasmInterface, context: ${MetaModel.ContextType}, kind: ${MetaModel.qualifier}.ResourceKind.module): ModuleService;`);
+			code.push(`export function createService(wasmInterface: WasmInterface, context: ${MetaModel.ContextType}, kind: ${MetaModel.qualifier}.ResourceKind): ${pkgName};`);
+			code.push(`export function createService<${typeParams.join(', ')}>(wasmInterface: WasmInterface, context: ${MetaModel.ContextType}, ${params.join(', ')}): ${pkgName}<${typeParamNames.join(', ')}>;`);
+			code.push(`export function createService(wasmInterface: WasmInterface, context: ${MetaModel.ContextType}, ${implParams.join(', ')}): ${pkgName} {`);
 			code.increaseIndent();
 			code.push(`const result: ${pkgName} = Object.create(null);`);
 			code.push(`${kindName} = ${kindName} ?? ${MetaModel.qualifier}.ResourceKind.class;`);
@@ -1740,25 +1910,6 @@ class PackageEmitter extends Emitter {
 		return name;
 	}
 }
-
-
-/**
-	export type ClassService = filesystem<Types._.ClassService>;
-	export type ModuleService = filesystem<Types._.ModuleService>;
-	export function createService(wasmInterface: WasmInterface, context: $wcm.Context, kind?: $wcm.ResourceKind.class): ClassService;
-	export function createService(wasmInterface: WasmInterface, context: $wcm.Context, kind: $wcm.ResourceKind.module): ModuleService;
-	export function createService<T extends filesystem.Types>(wasmInterface: WasmInterface, context: $wcm.Context, t?: T | $wcm.ResourceKind): filesystem<T>;
-	export function createService(wasmInterface: WasmInterface, context: $wcm.Context, _kind?: $wcm.ResourceKind): filesystem {
-		const result: filesystem = Object.create(null);
-		if (wasmInterface['wasi:filesystem/types'] !== undefined) {
-			result.Types = Types._.createService(wasmInterface['wasi:filesystem/types']!, context);
-		}
-		if (wasmInterface['wasi:filesystem/preopens'] !== undefined) {
-			result.Preopens = Preopens._.createService(wasmInterface['wasi:filesystem/preopens']!, context);
-		}
-		return result;
-	}
- */
 
 class InterfaceEmitter extends Emitter {
 

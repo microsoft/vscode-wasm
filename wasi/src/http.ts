@@ -2045,6 +2045,7 @@ export namespace http._ {
 	export type ModuleService = http<http.Types._.ModuleService>;
 	export function createService(wasmInterface: WasmInterface, context: $wcm.Context, kind?: $wcm.ResourceKind.class): ClassService;
 	export function createService(wasmInterface: WasmInterface, context: $wcm.Context, kind: $wcm.ResourceKind.module): ModuleService;
+	export function createService(wasmInterface: WasmInterface, context: $wcm.Context, kind: $wcm.ResourceKind): http;
 	export function createService<T extends http.Types>(wasmInterface: WasmInterface, context: $wcm.Context, t: http.Types): http<T>;
 	export function createService(wasmInterface: WasmInterface, context: $wcm.Context, t?: http.Types | $wcm.ResourceKind): http {
 		const result: http = Object.create(null);

@@ -2072,6 +2072,8 @@ export type InterfaceType = {
 };
 
 export type PackageType = {
+	readonly id: string;
+	readonly witName: string;
 	readonly interfaces: Map<string, InterfaceType>;
 };
 
