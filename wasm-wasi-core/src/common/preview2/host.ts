@@ -13,7 +13,7 @@ function paramSize(signature: wcm.FunctionType<any>): number {
 		size = 0;
 		for (const [, type] of signature.params) {
 			for (const flatType of type.flatTypes) {
-				size += wcm.WasmTypeName.size(flatType);
+				size += wcm.WasmTypeKind.byteLength(flatType);
 			}
 		}
 		paramSizes.set(signature, size);
@@ -95,10 +95,79 @@ class Memory implements wcm.Memory {
 }
 
 
+class TransferVisitor implements wcm.ComponentModelTypeVisitor {
+
+	private readonly signature: wcm.FunctionType<any>;
+	private readonly params: (number | bigint)[];
+	private readonly paramMemory: Memory;
+	private readonly heapMemory: Memory;
+	private readonly context: wcm.Context;
+
+	private index: number;
+
+	constructor(signature: wcm.FunctionType<any>, params: (number | bigint)[], paramMemory: Memory, heapMemory: Memory, context: wcm.Context) {
+		this.signature = signature;
+		this.params = params;
+		this.paramMemory = paramMemory;
+		this.heapMemory = heapMemory;
+		this.context = context;
+		this.index = 0;
+	}
+
+	visitString(type: typeof wcm.wstring): void {
+		const data: number = this.asNumber(this.params[this.index++]);
+		const ptr = this.heapMemory.alloc(1, type.size);
+		this.heapMemory.raw.set(type.bytes, ptr);
+	}
+
+	public run(): void {
+		this.index = 0;
+		for (const [index, type] of this.paramTypes.entries()) {
+			wcm.ComponentModelTypeVisitor.visit(type, this);
+		}
+
+	}
+
+	private asNumber(param: number | bigint): number {
+		if (typeof param !== 'number') {
+			throw new Error('Expected number');
+		}
+		return param;
+	}
+
+	private asBigInt(param: number | bigint): bigint {
+		if (typeof param !== 'bigint') {
+			throw new Error('Expected bigint');
+		}
+		return param;
+	}
+}
+
+class ParamOnlyTransfer {
+
+	private readonly signature: wcm.FunctionType<any>;
+	private readonly params: (number | bigint)[];
+	private readonly paramMemory: Memory;
+
+	constructor(signature: wcm.FunctionType<any>, params: (number | bigint)[], paramMemory: Memory) {
+		this.signature = signature;
+		this.params = params;
+		this.paramMemory = paramMemory;
+	}
+
+	public run(): void {
+		const flatTypes = this.signature.paramFlatTypes;
+		if (flatTypes.length > wcm.FunctionType.MAX_FLAT_PARAMS) {
+		}
+		if (flatTypes.length !== this.params.length) {
+			throw new Error('Invalid number of params');
+		}
+	}
+}
 
 function storeParams(signature: wcm.FunctionType<any>, params: (number | bigint)[], memory: wcm.Memory): void {
 
-	
+
 
 	for (const param of params) {
 		if (typeof param === 'number') {
