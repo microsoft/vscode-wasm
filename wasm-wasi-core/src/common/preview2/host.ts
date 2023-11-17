@@ -4,115 +4,113 @@
  *--------------------------------------------------------------------------------------------*/
 
 import wasi from '@vscode/wasi';
-import * as wcm from '@vscode/wasm-component-model';
+import { Options, Memory, Alignment, ptr, ComponentModelTypeVisitor, FunctionType, Context, wstring, FlagsType, u8, u16, u32, TupleType, ListType, WasmTypeKind } from '@vscode/wasm-component-model';
 
-const paramSizes: Map<wcm.FunctionType<any>, number> = new Map();
-function paramSize(signature: wcm.FunctionType<any>): number {
-	let size = paramSizes.get(signature);
-	if (size === undefined) {
-		size = 0;
-		for (const [, type] of signature.params) {
-			for (const flatType of type.flatTypes) {
-				size += wcm.WasmTypeKind.byteLength(flatType);
-			}
-		}
-		paramSizes.set(signature, size);
-	}
-	return size;
-}
-function heapSize(signature: wcm.FunctionType<any>, params: (number | bigint)[]): number {
-	let size = 0;
-	let index = 0;
-	for (const [, type] of signature.params) {
-		switch (type.kind) {
-			case wcm.ComponentModelTypeKind.string:
-				size += type.size;
-				break;
-			default:
-				index += type.flatTypes.length;
-				break;
-		}
-	}
-	return size;
-}
-function transferSize(signature: wcm.FunctionType<any>, params: (number | bigint)[], context: wcm.Context): { param: number; heap: number } {
-	let param: number = 0;
-	let heap: number = 0;
-	let index = 0;
-	for (const [, type] of signature.params) {
-		switch (type.kind) {
-			case wcm.ComponentModelTypeKind.string:
-				param += type.size;
+export { Options };
 
-			default:
-				index = type.flatTypes.length;
-				param += type.size;
-				break;
-		}
-	}
-	return { param, heap };
-}
+class LinearMemory implements Memory {
 
-class Memory implements wcm.Memory {
-
-	private readonly clazz: SharedArrayBufferConstructor | ArrayBufferConstructor;
-	public buffer: SharedArrayBuffer | ArrayBuffer;
-	public raw: Uint8Array;
-	public view: DataView;
+	public _buffer: SharedArrayBuffer;
+	public _raw: Uint8Array;
+	public _view: DataView;
 
 	private index: number;
 
-	constructor(initialSize: number = 65536, clazz: SharedArrayBufferConstructor | ArrayBufferConstructor = SharedArrayBuffer) {
-		this.clazz = clazz;
-		this.buffer = new clazz(initialSize);
-		this.raw = new Uint8Array(this.buffer);
-		this.view = new DataView(this.buffer);
+	constructor(initialSize: number = 65536) {
+		this._buffer = new SharedArrayBuffer(initialSize);
+		this._raw = new Uint8Array(this._buffer);
+		this._view = new DataView(this._buffer);
 		this.index = 0;
 	}
 
-	public alloc(alignment: wcm.Alignment, size: number): wcm.ptr {
+	public get buffer(): SharedArrayBuffer {
+		return this._buffer;
+	}
+
+	public get view(): DataView {
+		return this._view;
+	}
+
+	public get raw(): Uint8Array {
+		return this._raw;
+	}
+
+	public alloc(alignment: Alignment, size: number): ptr {
 		this.index = Math.ceil(this.index / alignment) * alignment;
-		if (this.index + size > this.buffer.byteLength) {
-			const newBuffer = new SharedArrayBuffer(this.buffer.byteLength * 2);
-			new Uint8Array(newBuffer).set(this.raw);
-			this.buffer = newBuffer;
-			this.raw = new Uint8Array(this.buffer);
-			this.view = new DataView(this.buffer);
+		if (this.index + size > this._buffer.byteLength) {
+			const newBuffer = new SharedArrayBuffer(this._buffer.byteLength * 2);
+			new Uint8Array(newBuffer).set(this._raw);
+			this._buffer = newBuffer;
+			this._raw = new Uint8Array(this._buffer);
+			this._view = new DataView(this._buffer);
 		}
 		const ptr = this.index;
 		this.index += size;
 		return ptr;
 	}
 
-	public realloc(ptr: wcm.ptr, oldSize: number, align: wcm.Alignment, newSize: number): wcm.ptr {
+	public realloc(ptr: ptr, oldSize: number, align: Alignment, newSize: number): ptr {
 		if (newSize <= oldSize) {
 			return ptr;
 		}
 		const newPtr = this.alloc(align, newSize);
-		this.raw.copyWithin(newPtr, ptr, ptr + oldSize);
+		this._raw.copyWithin(newPtr, ptr, ptr + oldSize);
 		return newPtr;
 	}
 }
 
+class ReadonlyMemory implements Memory {
 
-class TransferVisitor implements wcm.ComponentModelTypeVisitor {
+	public readonly buffer: ArrayBuffer;
 
-	private readonly signature: wcm.FunctionType<any>;
+	private _raw: Uint8Array | undefined;
+	private _view: DataView | undefined;
+
+	constructor(buffer: ArrayBuffer) {
+		this.buffer = buffer;
+	}
+
+	public get raw(): Uint8Array {
+		if (!this._raw) {
+			this._raw = new Uint8Array(this.buffer);
+		}
+		return this._raw;
+	}
+
+	public get view(): DataView {
+		if (!this._view) {
+			this._view = new DataView(this.buffer);
+		}
+		return this._view;
+	}
+
+	public alloc(): ptr {
+		throw new Error('Memory is readonly');
+	}
+
+	public realloc(): ptr {
+		throw new Error('Memory is readonly');
+	}
+}
+
+class ParamAndHeapTransfer implements ComponentModelTypeVisitor {
+
+	private readonly signature: FunctionType<any>;
 	private readonly params: (number | bigint)[];
-	private readonly paramMemory: Memory;
-	private readonly heapMemory: Memory;
-	private readonly context: wcm.Context;
+	private readonly paramMemory: LinearMemory;
+	private readonly heapMemory: LinearMemory;
+	private readonly context: Context;
 
 	private index: number;
 
-	constructor(signature: wcm.FunctionType<any>, params: (number | bigint)[], paramMemory: Memory, heapMemory: Memory, context: wcm.Context) {
+	constructor(signature: FunctionType<any>, params: (number | bigint)[], paramMemory: LinearMemory, heapMemory: LinearMemory, context: Context) {
 		this.signature = signature;
 		this.paramMemory = paramMemory;
 		this.heapMemory = heapMemory;
 		this.context = context;
 		this.index = 0;
 		const flatTypes = this.signature.paramFlatTypes;
-		if (flatTypes.length > wcm.FunctionType.MAX_FLAT_PARAMS) {
+		if (flatTypes.length > FunctionType.MAX_FLAT_PARAMS) {
 			const ptr = params[0] as number;
 			this.params = [];
 			this.signature.paramTupleType.loadFlat(this.params, this.context.memory, ptr, this.context.options);
@@ -170,8 +168,8 @@ class TransferVisitor implements wcm.ComponentModelTypeVisitor {
 		const options = this.context.options;
 		const wasmPtr = this.asNumber(this.params[this.index++]);
 		const codeUnits = this.asNumber(this.params[this.index++]);
-		const bytes = wcm.wstring.byteLength(codeUnits, options);
-		const ptr = this.heapMemory.alloc(wcm.wstring.dataAlignment(options), bytes);
+		const bytes = wstring.byteLength(codeUnits, options);
+		const ptr = this.heapMemory.alloc(wstring.dataAlignment(options), bytes);
 		this.heapMemory.raw.set(this.context.memory.raw.subarray(wasmPtr, wasmPtr + bytes), ptr);
 		this.storeNumber(ptr);
 		this.storeNumber(codeUnits);
@@ -193,17 +191,17 @@ class TransferVisitor implements wcm.ComponentModelTypeVisitor {
 		this.storeNumber(this.asNumber(this.params[this.index++]));
 	}
 
-	public visitFlags(type: wcm.FlagsType<any>): void {
-		if (type.type === wcm.u8 || type.type === wcm.u16 || type.type === wcm.u32) {
+	public visitFlags(type: FlagsType<any>): void {
+		if (type.type === u8 || type.type === u16 || type.type === u32) {
 			this.storeNumber(this.asNumber(this.params[this.index++]));
-		} else if (type.type instanceof wcm.TupleType) {
+		} else if (type.type instanceof TupleType) {
 			for (const field of type.type.fields) {
-				wcm.ComponentModelTypeVisitor.visit(field.type, this);
+				ComponentModelTypeVisitor.visit(field.type, this);
 			}
 		}
 	}
 
-	visitList(type: wcm.ListType<any>): boolean {
+	visitList(type: ListType<any>): boolean {
 		const wasmPtr = this.asNumber(this.params[this.index++]);
 		const length = this.asNumber(this.params[this.index++]);
 		const bytes = length * type.elementType.size;
@@ -215,24 +213,24 @@ class TransferVisitor implements wcm.ComponentModelTypeVisitor {
 	}
 
 	private storeNumber(value: number) {
-		this.paramMemory.view.setInt32(this.paramMemory.alloc(wcm.Alignment.word, 4), value);
+		this.paramMemory.view.setInt32(this.paramMemory.alloc(Alignment.word, 4), value);
 	}
 
 	private storeFloat32(value: number) {
-		this.paramMemory.view.setFloat32(this.paramMemory.alloc(wcm.Alignment.word, 4), value);
+		this.paramMemory.view.setFloat32(this.paramMemory.alloc(Alignment.word, 4), value);
 	}
 
 	private storeFloat64(value: number) {
-		this.paramMemory.view.setFloat64(this.paramMemory.alloc(wcm.Alignment.word, 4), value);
+		this.paramMemory.view.setFloat64(this.paramMemory.alloc(Alignment.word, 4), value);
 	}
 
 	private storeBigInt(value: bigint) {
-		this.paramMemory.view.setBigInt64(this.paramMemory.alloc(wcm.Alignment.doubleWord, 8), value);
+		this.paramMemory.view.setBigInt64(this.paramMemory.alloc(Alignment.doubleWord, 8), value);
 	}
 
 	public run(): void {
 		this.index = 0;
-		wcm.ComponentModelTypeVisitor.visit(this.signature.paramTupleType, this);
+		ComponentModelTypeVisitor.visit(this.signature.paramTupleType, this);
 	}
 
 	private asNumber(param: number | bigint): number {
@@ -252,17 +250,17 @@ class TransferVisitor implements wcm.ComponentModelTypeVisitor {
 
 class ParamOnlyTransfer {
 
-	private readonly signature: wcm.FunctionType<any>;
+	private readonly signature: FunctionType<any>;
 	private readonly params: (number | bigint)[];
-	private readonly paramMemory: Memory;
-	private readonly context: wcm.Context;
+	private readonly paramMemory: LinearMemory;
+	private readonly context: Context;
 
-	constructor(signature: wcm.FunctionType<any>, params: (number | bigint)[], paramMemory: Memory, context: wcm.Context) {
+	constructor(signature: FunctionType<any>, params: (number | bigint)[], paramMemory: LinearMemory, context: Context) {
 		this.signature = signature;
 		this.paramMemory = paramMemory;
 		this.context = context;
 		const flatTypes = this.signature.paramFlatTypes;
-		if (flatTypes.length > wcm.FunctionType.MAX_FLAT_PARAMS) {
+		if (flatTypes.length > FunctionType.MAX_FLAT_PARAMS) {
 			const ptr = params[0] as number;
 			this.params = [];
 			this.signature.paramTupleType.loadFlat(this.params, this.context.memory, ptr, this.context.options);
@@ -274,7 +272,7 @@ class ParamOnlyTransfer {
 	public run(): void {
 		const flatTypes = this.signature.paramFlatTypes;
 		let params: (number | bigint)[] = [];
-		if (flatTypes.length > wcm.FunctionType.MAX_FLAT_PARAMS) {
+		if (flatTypes.length > FunctionType.MAX_FLAT_PARAMS) {
 			const ptr = this.params[0] as number;
 			this.signature.paramTupleType.loadFlat(params, this.context.memory, ptr, this.context.options);
 		} else {
@@ -283,38 +281,117 @@ class ParamOnlyTransfer {
 		for (const [index, param] of params.entries()) {
 			const flatType = flatTypes[index];
 			switch (flatType) {
-				case wcm.WasmTypeKind.i32:
-					this.paramMemory.view.setInt32(this.paramMemory.alloc(wcm.Alignment.word, 4), param as number);
+				case WasmTypeKind.i32:
+					this.paramMemory.view.setInt32(this.paramMemory.alloc(Alignment.word, 4), param as number);
 					break;
-				case wcm.WasmTypeKind.f32:
-					this.paramMemory.view.setFloat32(this.paramMemory.alloc(wcm.Alignment.word, 4), param as number);
+				case WasmTypeKind.f32:
+					this.paramMemory.view.setFloat32(this.paramMemory.alloc(Alignment.word, 4), param as number);
 					break;
-				case wcm.WasmTypeKind.f64:
-					this.paramMemory.view.setFloat64(this.paramMemory.alloc(wcm.Alignment.word, 4), param as number);
+				case WasmTypeKind.f64:
+					this.paramMemory.view.setFloat64(this.paramMemory.alloc(Alignment.word, 4), param as number);
 					break;
-				case wcm.WasmTypeKind.i64:
-					this.paramMemory.view.setBigInt64(this.paramMemory.alloc(wcm.Alignment.doubleWord, 8), param as bigint);
+				case WasmTypeKind.i64:
+					this.paramMemory.view.setBigInt64(this.paramMemory.alloc(Alignment.doubleWord, 8), param as bigint);
 					break;
 			}
 		}
 	}
 }
 
-function storeParams(signature: wcm.FunctionType<any>, params: (number | bigint)[], memory: wcm.Memory): void {
+export class HostConnection {
 
+	constructor() {
+	}
 
-
-	for (const param of params) {
-		if (typeof param === 'number') {
-			memory.view.setUint32(memory.alloc(4, 4), param, true);
+	public call(signature: FunctionType<any>, params: (number | bigint)[], context: Context): (number | bigint)[] {
+		const paramMemory = new LinearMemory();
+		let memories: [SharedArrayBuffer, SharedArrayBuffer];
+		if (context.memory.buffer instanceof SharedArrayBuffer) {
+			const transfer = new ParamOnlyTransfer(signature, params, paramMemory, context);
+			transfer.run();
+			memories = [paramMemory.buffer, context.memory.buffer];
 		} else {
-			memory.view.setBigUint64(memory.alloc(4, 8), param, true);
+			const heapMemory = new LinearMemory();
+			const transfer = new ParamAndHeapTransfer(signature, params, paramMemory, heapMemory, context);
+			transfer.run();
+			memories = [paramMemory.buffer, heapMemory.buffer];
 		}
+		memories = memories;
+		return[];
 	}
 }
 
-export namespace WasiHost {
-	export function create(): void {
+declare namespace WebAssembly {
 
+	interface Global {
+		value: any;
+		valueOf(): any;
+	}
+	interface Table {
+		readonly length: number;
+		get(index: number): any;
+		grow(delta: number, value?: any): number;
+		set(index: number, value?: any): void;
+	}
+	interface Memory {
+		readonly buffer: ArrayBuffer;
+		grow(delta: number): number;
+	}
+	type ExportValue = Function | Global | Memory | Table;
+
+	interface Instance {
+		readonly exports: Record<string, ExportValue>;
+	}
+
+	var Instance: {
+    	prototype: Instance;
+    	new(): Instance;
+	};
+}
+
+export interface WasiHost extends wasi._.WasmInterface {
+	initialize: (instOrMemory: WebAssembly.Instance | WebAssembly.Memory) => void;
+	memory: () => ArrayBuffer;
+}
+
+export namespace WasiHost {
+	export function create(connection: HostConnection, options: Options): WasiHost {
+
+		let $instance: WebAssembly.Instance | undefined;
+		let $memory: WebAssembly.Memory | undefined;
+
+		function memory(): ReadonlyMemory {
+			if ($memory !== undefined) {
+				return new ReadonlyMemory($memory.buffer);
+			}
+			if ($instance === undefined || $instance.exports.memory === undefined) {
+				throw new Error(`WASI layer is not initialized. Missing WebAssembly instance or memory module.`);
+			}
+			return new ReadonlyMemory(($instance.exports.memory as WebAssembly.Memory).buffer);
+		}
+
+		const result = Object.create(null);
+		result.initialize = (instOrMemory: WebAssembly.Instance | WebAssembly.Memory): void => {
+			if (instOrMemory instanceof WebAssembly.Instance) {
+				$instance = instOrMemory;
+				$memory = undefined;
+			} else {
+				$instance = undefined;
+				$memory = instOrMemory;
+			}
+		};
+
+		for (const pkg of wasi._.packages.values()) {
+			for (const iface of pkg.interfaces.values()) {
+				const wasm = Object.create(null);
+				for (const func of iface.functions.values()) {
+					wasm[func.witName] = (...params: (number | bigint)[]) => {
+						connection.call(func, params, { memory: memory(), options });
+					};
+				}
+				result[iface.id] = wasm;
+			}
+		}
+		return result;
 	}
 }

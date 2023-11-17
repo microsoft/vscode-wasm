@@ -12,6 +12,9 @@
             "path": "./src/common/test/tsconfig.json"
         },
         {
+            "path": "./src/common/preview2/test/tsconfig.json"
+        },
+        {
             "path": "./src/web/tsconfig.json"
         },
         {

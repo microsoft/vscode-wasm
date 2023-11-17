@@ -1,8 +1,8 @@
 {
     "compilerOptions": {
         "types": [
-            "node",
-            "vscode"
+            "vscode",
+            "mocha"
         ],
         "module": "Node16",
         "moduleResolution": "Node16",
@@ -18,22 +18,19 @@
         "declaration": true,
         "stripInternal": true,
         "sourceMap": true,
-        "noUnusedLocals": true,
-        "noUnusedParameters": true,
-        "outDir": "../../lib/desktop",
-        "tsBuildInfoFile": "../../lib/desktop/compile.tsbuildInfo",
-        "incremental": true,
-        "composite": true
+        "noUnusedLocals": false,
+        "noUnusedParameters": false,
+        "assumeChangesOnlyAffectDirectDependencies": true,
+        "outDir": "../../../../lib/common/preview2/test",
+        "tsBuildInfoFile": "../../../../lib/common/preview2/test/watch.tsbuildInfo",
+        "incremental": true
     },
     "include": [
         "."
     ],
-    "exclude": [
-        "test"
-    ],
     "references": [
         {
-            "path": "../common/tsconfig.json"
+            "path": "../../tsconfig.watch.json"
         }
     ]
 }

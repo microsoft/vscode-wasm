@@ -12,6 +12,9 @@
             "path": "./src/common/test/tsconfig.watch.json"
         },
         {
+            "path": "./src/common/preview2/test/tsconfig.watch.json"
+        },
+        {
             "path": "./src/web/tsconfig.watch.json"
         },
         {
