@@ -4,7 +4,7 @@
  *--------------------------------------------------------------------------------------------*/
 import assert from 'assert';
 
-import { u32, Memory as IMemory, ptr, size, Context, borrow, own, alignment } from '../componentModel';
+import { u32, Memory as IMemory, ptr, size, Context, borrow, own, Alignment } from '../componentModel';
 
 class Memory implements IMemory {
 	public readonly buffer: ArrayBuffer;
@@ -20,7 +20,7 @@ class Memory implements IMemory {
 		this.index = 0;
 	}
 
-	public alloc(align: alignment, bytes: number): ptr {
+	public alloc(align: Alignment, bytes: number): ptr {
 		const result = Memory.align(this.index, align);
 		this.index += bytes;
 		return result;
@@ -30,7 +30,7 @@ class Memory implements IMemory {
 		return ptr;
 	}
 
-	private static align(ptr: ptr, alignment: alignment): ptr {
+	private static align(ptr: ptr, alignment: Alignment): ptr {
 		return Math.ceil(ptr / alignment) * alignment;
 	}
 }

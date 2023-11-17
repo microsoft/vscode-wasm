@@ -73,8 +73,8 @@ export interface Memory {
 	readonly buffer: ArrayBuffer;
 	readonly raw: Uint8Array;
 	readonly view: DataView;
-	alloc: (align: alignment, size: size) => size;
-	realloc: (ptr: ptr, oldSize: size, align: alignment, newSize: size) => size;
+	alloc: (align: Alignment, size: size) => size;
+	realloc: (ptr: ptr, oldSize: size, align: Alignment, newSize: size) => size;
 }
 
 export type encodings = 'utf-8' | 'utf-16' | 'latin1+utf-16';
@@ -83,8 +83,13 @@ export interface Options {
 	keepOption?: boolean;
 }
 
-export type alignment = 1 | 2 | 4 | 8;
-function align(ptr: ptr, alignment: alignment): size {
+export enum Alignment {
+	byte = 1,
+	halfWord = 2,
+	word = 4,
+	doubleWord = 8
+}
+function align(ptr: ptr, alignment: Alignment): size {
 	return Math.ceil(ptr / alignment) * alignment;
 }
 
@@ -222,7 +227,7 @@ export enum ComponentModelTypeKind {
 export interface ComponentModelType<J> {
 	readonly kind : ComponentModelTypeKind;
 	readonly size: number;
-	readonly alignment: alignment;
+	readonly alignment: Alignment;
 	readonly flatTypes: ReadonlyArray<WasmTypeKind>;
 	// Loads an object directly from the memory buffer
 	load(memory: Memory, ptr: ptr, options: Options): J;
@@ -273,7 +278,7 @@ export type u8 = number;
 namespace $u8 {
 	export const kind: ComponentModelTypeKind = ComponentModelTypeKind.u8;
 	export const size = 1;
-	export const alignment: alignment = 1;
+	export const alignment: Alignment = Alignment.byte;
 	export const flatTypes: readonly WasmTypeKind[] = [WasmTypeKind.i32];
 
 	export const LOW_VALUE = 0;
@@ -316,7 +321,7 @@ export type u16 = number;
 namespace $u16 {
 	export const kind: ComponentModelTypeKind = ComponentModelTypeKind.u16;
 	export const size = 2;
-	export const alignment: alignment = 2;
+	export const alignment: Alignment = Alignment.halfWord;
 	export const flatTypes: readonly WasmTypeKind[] = [WasmTypeKind.i32];
 
 	export const LOW_VALUE = 0;
@@ -359,7 +364,7 @@ export type u32 = number;
 namespace $u32 {
 	export const kind: ComponentModelTypeKind = ComponentModelTypeKind.u32;
 	export const size = 4;
-	export const alignment: alignment = 4;
+	export const alignment: Alignment = Alignment.word;
 	export const flatTypes: readonly WasmTypeKind[] = [WasmTypeKind.i32];
 
 	export const LOW_VALUE = 0;
@@ -402,7 +407,7 @@ export type u64 = bigint;
 namespace $u64 {
 	export const kind: ComponentModelTypeKind = ComponentModelTypeKind.u64;
 	export const size = 8;
-	export const alignment: alignment = 8;
+	export const alignment: Alignment = Alignment.doubleWord;
 	export const flatTypes: readonly WasmTypeKind[] = [WasmTypeKind.i64];
 
 	export const LOW_VALUE = 0n;
@@ -445,7 +450,7 @@ export type s8 = number;
 namespace $s8 {
 	export const kind: ComponentModelTypeKind = ComponentModelTypeKind.s8;
 	export const size = 1;
-	export const alignment: alignment = 1;
+	export const alignment: Alignment = Alignment.byte;
 	export const flatTypes: readonly WasmTypeKind[] = [WasmTypeKind.i32];
 
 	const LOW_VALUE = -128;
@@ -496,7 +501,7 @@ export type s16 = number;
 namespace $s16 {
 	export const kind: ComponentModelTypeKind = ComponentModelTypeKind.s16;
 	export const size = 2;
-	export const alignment: alignment = 2;
+	export const alignment: Alignment = Alignment.halfWord;
 	export const flatTypes: readonly WasmTypeKind[] = [WasmTypeKind.i32];
 
 	const LOW_VALUE = -32768; // -2 ^ 15
@@ -539,7 +544,7 @@ export type s32 = number;
 namespace $s32 {
 	export const kind: ComponentModelTypeKind = ComponentModelTypeKind.s32;
 	export const size = 4;
-	export const alignment: alignment = 4;
+	export const alignment: Alignment = Alignment.word;
 	export const flatTypes: readonly WasmTypeKind[] = [WasmTypeKind.i32];
 
 	const LOW_VALUE = -2147483648; // -2 ^ 31
@@ -582,7 +587,7 @@ export type s64 = bigint;
 namespace $s64 {
 	export const kind: ComponentModelTypeKind = ComponentModelTypeKind.s64;
 	export const size = 8;
-	export const alignment: alignment = 8;
+	export const alignment: Alignment = Alignment.doubleWord;
 	export const flatTypes: readonly WasmTypeKind[] = [WasmTypeKind.i64];
 
 	const LOW_VALUE = -9223372036854775808n; // -2 ^ 63
@@ -625,7 +630,7 @@ export type float32 = number;
 namespace $float32 {
 	export const kind: ComponentModelTypeKind = ComponentModelTypeKind.float32;
 	export const size = 4;
-	export const alignment:alignment = 4;
+	export const alignment:Alignment = Alignment.word;
 	export const flatTypes: readonly WasmTypeKind[] = [WasmTypeKind.f32];
 
 	const LOW_VALUE = -3.4028234663852886e+38;
@@ -669,7 +674,7 @@ export type float64 = number;
 namespace $float64 {
 	export const kind: ComponentModelTypeKind = ComponentModelTypeKind.float64;
 	export const size = 8;
-	export const alignment: alignment = 8;
+	export const alignment: Alignment = Alignment.doubleWord;
 	export const flatTypes: readonly WasmTypeKind[] = [WasmTypeKind.f64];
 
 	const LOW_VALUE = -1 * Number.MAX_VALUE;
@@ -756,7 +761,7 @@ export const ptr: ComponentModelType<size> = {
 namespace $wchar {
 	export const kind: ComponentModelTypeKind = ComponentModelTypeKind.char;
 	export const size = 4;
-	export const alignment: alignment = 4;
+	export const alignment: Alignment = Alignment.word;
 	export const flatTypes: readonly WasmTypeKind[] = [WasmTypeKind.i32];
 
 	export function load(memory: Memory, ptr: ptr, options: Options): string {
@@ -812,7 +817,7 @@ namespace $wstring {
 
 	export const kind: ComponentModelTypeKind = ComponentModelTypeKind.string;
 	export const size = 8;
-	export const alignment: alignment = 4;
+	export const alignment: Alignment = Alignment.word;
 	export const flatTypes: readonly WasmTypeKind[] = [WasmTypeKind.i32, WasmTypeKind.i32];
 
 	export function load(memory: Memory, ptr: ptr, options: Options): string {
@@ -862,6 +867,20 @@ namespace $wstring {
 		}
 	}
 
+	export function dataAlignment(options: Options): Alignment {
+		const encoding = options.encoding;
+		if (encoding === 'latin1+utf-16') {
+			throw new Error('latin1+utf-16 encoding not yet supported');
+		}
+		if (encoding === 'utf-8') {
+			return Alignment.byte;
+		} else if (encoding === 'utf-16') {
+			return Alignment.halfWord;
+		} else {
+			throw new Error('Unsupported encoding');
+		}
+	}
+
 	function loadFromRange(memory: Memory, data: size, codeUnits: u32, options: Options): string {
 		const encoding = options.encoding;
 		if (encoding === 'latin1+utf-16') {
@@ -888,7 +907,7 @@ namespace $wstring {
 			memory.raw.set(data, dataPtr);
 			return [dataPtr, data.length];
 		} else if (encoding === 'utf-16') {
-			const dataPtr = memory.alloc(u8.alignment, str.length * 2);
+			const dataPtr = memory.alloc(u16.alignment, str.length * 2);
 			const data = new Uint16Array(memory.buffer, dataPtr, str.length);
 			for (let i = 0; i < str.length; i++) {
 				data[i] = str.charCodeAt(i);
@@ -899,7 +918,7 @@ namespace $wstring {
 		}
 	}
 }
-export const wstring: ComponentModelType<string> = $wstring;
+export const wstring: typeof $wstring = $wstring;
 
 export type JArray = JType[];
 export class ListType<T> implements ComponentModelType<T[]> {
@@ -913,7 +932,7 @@ export class ListType<T> implements ComponentModelType<T[]> {
 
 	public readonly kind: ComponentModelTypeKind;
 	public readonly size: size;
-	public readonly alignment: alignment;
+	public readonly alignment: Alignment;
 	public readonly flatTypes: readonly WasmTypeKind[];
 
 	constructor(elementType: ComponentModelType<T>) {
@@ -991,7 +1010,7 @@ abstract class TypeArrayType<T> implements ComponentModelType<T> {
 
 	public readonly kind: ComponentModelTypeKind;
 	public readonly size: size;
-	public readonly alignment: alignment;
+	public readonly alignment: Alignment;
 	public readonly flatTypes: readonly WasmTypeKind[];
 
 	constructor() {
@@ -1178,7 +1197,7 @@ abstract class BaseRecordType<T extends JRecord | JTuple, F extends TypedField> 
 
 	public kind: ComponentModelTypeKind;
 	public readonly size: size;
-	public readonly alignment: alignment;
+	public readonly alignment: Alignment;
 	public readonly flatTypes: readonly WasmTypeKind[];
 
 	constructor(fields: F[], kind: ComponentModelTypeKind.record | ComponentModelTypeKind.tuple) {
@@ -1244,7 +1263,7 @@ abstract class BaseRecordType<T extends JRecord | JTuple, F extends TypedField> 
 	protected abstract create(fields: F[], values: JType[]): T;
 	protected abstract elements(record: T, fields: F[]): JType[];
 
-	private static size(fields: TypedField[], recordAlignment: alignment): size {
+	private static size(fields: TypedField[], recordAlignment: Alignment): size {
 		let result: size = 0;
 		for (const field of fields) {
 			result = align(result, field.type.alignment);
@@ -1253,10 +1272,10 @@ abstract class BaseRecordType<T extends JRecord | JTuple, F extends TypedField> 
 		return align(result, recordAlignment);
 	}
 
-	private static alignment(fields: TypedField[]): alignment {
-		let result: alignment = 1;
+	private static alignment(fields: TypedField[]): Alignment {
+		let result: Alignment = 1;
 		for (const field of fields) {
-			result = Math.max(result, field.type.alignment) as alignment;
+			result = Math.max(result, field.type.alignment) as Alignment;
 		}
 		return result;
 	}
@@ -1339,12 +1358,12 @@ export class TupleType<T extends JTuple> extends BaseRecordType<T, TupleField> {
 
 export class FlagsType<_T> implements ComponentModelType<u32 | bigint> {
 
-	private readonly type: GenericComponentModelType | undefined;
+	public readonly type: GenericComponentModelType | undefined;
 	private readonly arraySize: number;
 
 	public readonly kind: ComponentModelTypeKind;
 	public readonly size: size;
-	public readonly alignment: alignment;
+	public readonly alignment: Alignment;
 	public readonly flatTypes: readonly WasmTypeKind[];
 
 	constructor(numberOfFlags: number) {
@@ -1424,7 +1443,7 @@ export class FlagsType<_T> implements ComponentModelType<u32 | bigint> {
 		}
 	}
 
-	private static alignment(numberOfFlags: number): alignment {
+	private static alignment(numberOfFlags: number): Alignment {
 		if (numberOfFlags <= 8) {
 			return 1;
 		} else if (numberOfFlags <= 16) {
@@ -1481,11 +1500,11 @@ export class VariantType<T extends JVariantCase, I, V> implements ComponentModel
 	private readonly case2Index: Map<string, u32>;
 	private readonly ctor: (caseIndex: I, value: V) => T;
 	private readonly discriminantType: typeof u8 | typeof u16 | typeof u32;
-	private readonly maxCaseAlignment: alignment;
+	private readonly maxCaseAlignment: Alignment;
 
 	public readonly kind: ComponentModelTypeKind;
 	public readonly size: size;
-	public readonly alignment: alignment;
+	public readonly alignment: Alignment;
 	public readonly flatTypes: readonly WasmTypeKind[];
 
 	constructor(variants: [string, (GenericComponentModelType | undefined)][], ctor: (caseIndex: I, value: V) => T, kind: ComponentModelTypeKind.variant | ComponentModelTypeKind.result = ComponentModelTypeKind.variant) {
@@ -1624,8 +1643,8 @@ export class VariantType<T extends JVariantCase, I, V> implements ComponentModel
 		return result + this.maxCaseSize(cases);
 	}
 
-	private static alignment(discriminantType: GenericComponentModelType, cases: VariantCase[]): alignment {
-		return Math.max(discriminantType.alignment, this.maxCaseAlignment(cases)) as alignment;
+	private static alignment(discriminantType: GenericComponentModelType, cases: VariantCase[]): Alignment {
+		return Math.max(discriminantType.alignment, this.maxCaseAlignment(cases)) as Alignment;
 	}
 
 	private static flatTypes(discriminantType: GenericComponentModelType, cases: VariantCase[]): readonly WasmTypeKind[] {
@@ -1660,11 +1679,11 @@ export class VariantType<T extends JVariantCase, I, V> implements ComponentModel
 		throw new ComponentModelError(`Too many cases: ${cases}`);
 	}
 
-	private static maxCaseAlignment(cases: VariantCase[]): alignment {
-		let result: alignment = 1;
+	private static maxCaseAlignment(cases: VariantCase[]): Alignment {
+		let result: Alignment = 1;
 		for (const c of cases) {
 			if (c.type !== undefined) {
-				result = Math.max(result, c.type.alignment) as alignment;
+				result = Math.max(result, c.type.alignment) as Alignment;
 			}
 		}
 		return result;
@@ -1701,7 +1720,7 @@ export class EnumType<T extends JEnum> implements ComponentModelType<T> {
 
 	public readonly kind: ComponentModelTypeKind;
 	public readonly size: size;
-	public readonly alignment: alignment;
+	public readonly alignment: Alignment;
 	public readonly flatTypes: readonly WasmTypeKind[];
 
 	constructor(cases: string[]) {
@@ -1832,7 +1851,7 @@ export class OptionType<T extends JType> implements ComponentModelType<T | optio
 
 	public readonly kind: ComponentModelTypeKind;
 	public readonly size: size;
-	public readonly alignment: alignment;
+	public readonly alignment: Alignment;
 	public readonly flatTypes: readonly WasmTypeKind[];
 
 
@@ -1935,8 +1954,8 @@ export class OptionType<T extends JType> implements ComponentModelType<T | optio
 		return result + this.valueType.size;
 	}
 
-	private computeAlignment(): alignment {
-		return Math.max(u8.alignment, this.valueType.alignment) as alignment;
+	private computeAlignment(): Alignment {
+		return Math.max(u8.alignment, this.valueType.alignment) as Alignment;
 	}
 
 	private computeFlatTypes(): readonly WasmTypeKind[] {
@@ -2021,7 +2040,7 @@ export class FunctionType<_T extends Function>  {
 	public readonly paramFlatTypes: ReadonlyArray<WasmTypeKind>;
 	public readonly returnFlatTypes: ReadonlyArray<WasmTypeKind>;
 
-	protected readonly paramTupleType: TupleType<JTuple>;
+	public readonly paramTupleType: TupleType<JTuple>;
 	protected readonly mode: 'lift' | 'lower';
 
 	constructor(witName: string, params: CallableParameter[], returnType?: GenericComponentModelType) {
@@ -2134,7 +2153,7 @@ abstract class AbstractResourceType implements ComponentModelType<resource> {
 
 	public readonly kind: ComponentModelTypeKind;
 	public readonly size: size;
-	public readonly alignment: alignment;
+	public readonly alignment: Alignment;
 	public readonly flatTypes: readonly WasmTypeKind[];
 
 	constructor(kind: ComponentModelTypeKind) {
@@ -2291,7 +2310,7 @@ export namespace ComponentModelTypeVisitor {
 				visitor.endVisitList !== undefined && visitor.endVisitList(type as ListType<any>);
 				break;
 			case ComponentModelTypeKind.record:
-				if (visitor.visitRecord !== undefined && visitor.visitRecord(type as RecordType<any>)) {
+				if ((visitor.visitRecord !== undefined && visitor.visitRecord(type as RecordType<any>) || visitor.visitRecord === undefined)) {
 					for (const field of (type as RecordType<any>).fields) {
 						visit(field.type, visitor);
 					}
@@ -2299,7 +2318,7 @@ export namespace ComponentModelTypeVisitor {
 				visitor.endVisitRecord !== undefined && visitor.endVisitRecord(type as RecordType<any>);
 				break;
 			case ComponentModelTypeKind.tuple:
-				if (visitor.visitTuple !== undefined && visitor.visitTuple(type as TupleType<any>)) {
+				if ((visitor.visitTuple !== undefined && visitor.visitTuple(type as TupleType<any>) || visitor.visitTuple === undefined)) {
 					for (const field of (type as TupleType<any>).fields) {
 						visit(field.type, visitor);
 					}
@@ -2307,7 +2326,7 @@ export namespace ComponentModelTypeVisitor {
 				visitor.endVisitTuple !== undefined && visitor.endVisitTuple(type as TupleType<any>);
 				break;
 			case ComponentModelTypeKind.variant:
-				if (visitor.visitVariant !== undefined && visitor.visitVariant(type as VariantType<any, any, any>)) {
+				if ((visitor.visitVariant !== undefined && visitor.visitVariant(type as VariantType<any, any, any>) || visitor.visitVariant === undefined)) {
 					for (const field of (type as VariantType<any, any, any>).cases) {
 						field.type !== undefined && visit(field.type, visitor);
 					}
@@ -2315,13 +2334,13 @@ export namespace ComponentModelTypeVisitor {
 				visitor.endVisitVariant !== undefined && visitor.endVisitVariant(type as VariantType<any, any, any>);
 				break;
 			case ComponentModelTypeKind.option:
-				if (visitor.visitOption !== undefined && visitor.visitOption(type as OptionType<any>)) {
+				if ((visitor.visitOption !== undefined && visitor.visitOption(type as OptionType<any>) || visitor.visitOption === undefined)) {
 					visit((type as OptionType<any>).valueType, visitor);
 				}
 				visitor.endVisitOption !== undefined && visitor.endVisitOption(type as OptionType<any>);
 				break;
 			case ComponentModelTypeKind.result:
-				if (visitor.visitResult !== undefined && visitor.visitResult(type as ResultType<any, any>)) {
+				if ((visitor.visitResult !== undefined && visitor.visitResult(type as ResultType<any, any>) || visitor.visitResult === undefined)) {
 					for (const field of (type as ResultType<any, any>).cases) {
 						field.type !== undefined && visit(field.type, visitor);
 					}

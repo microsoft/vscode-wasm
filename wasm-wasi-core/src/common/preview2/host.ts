@@ -70,7 +70,7 @@ class Memory implements wcm.Memory {
 		this.index = 0;
 	}
 
-	public alloc(alignment: wcm.alignment, size: number): wcm.ptr {
+	public alloc(alignment: wcm.Alignment, size: number): wcm.ptr {
 		this.index = Math.ceil(this.index / alignment) * alignment;
 		if (this.index + size > this.buffer.byteLength) {
 			const newBuffer = new SharedArrayBuffer(this.buffer.byteLength * 2);
@@ -84,7 +84,7 @@ class Memory implements wcm.Memory {
 		return ptr;
 	}
 
-	public realloc(ptr: wcm.ptr, oldSize: number, align: wcm.alignment, newSize: number): wcm.ptr {
+	public realloc(ptr: wcm.ptr, oldSize: number, align: wcm.Alignment, newSize: number): wcm.ptr {
 		if (newSize <= oldSize) {
 			return ptr;
 		}
@@ -107,25 +107,132 @@ class TransferVisitor implements wcm.ComponentModelTypeVisitor {
 
 	constructor(signature: wcm.FunctionType<any>, params: (number | bigint)[], paramMemory: Memory, heapMemory: Memory, context: wcm.Context) {
 		this.signature = signature;
-		this.params = params;
 		this.paramMemory = paramMemory;
 		this.heapMemory = heapMemory;
 		this.context = context;
 		this.index = 0;
+		const flatTypes = this.signature.paramFlatTypes;
+		if (flatTypes.length > wcm.FunctionType.MAX_FLAT_PARAMS) {
+			const ptr = params[0] as number;
+			this.params = [];
+			this.signature.paramTupleType.loadFlat(this.params, this.context.memory, ptr, this.context.options);
+		} else {
+			this.params = params;
+		}
+
 	}
 
-	visitString(type: typeof wcm.wstring): void {
-		const data: number = this.asNumber(this.params[this.index++]);
-		const ptr = this.heapMemory.alloc(1, type.size);
-		this.heapMemory.raw.set(type.bytes, ptr);
+	public visitU8(): void {
+		this.storeNumber(this.asNumber(this.params[this.index++]));
+	}
+
+	public visitU16(): void {
+		this.storeNumber(this.asNumber(this.params[this.index++]));
+	}
+
+	public visitU32(): void {
+		this.storeNumber(this.asNumber(this.params[this.index++]));
+	}
+
+	public visitU64(): void {
+		this.storeBigInt(this.asBigInt(this.params[this.index++]));
+	}
+
+	public visitS8(): void {
+		this.storeNumber(this.asNumber(this.params[this.index++]));
+	}
+
+	public visitS16(): void {
+		this.storeNumber(this.asNumber(this.params[this.index++]));
+	}
+
+	public visitS32(): void {
+		this.storeNumber(this.asNumber(this.params[this.index++]));
+	}
+
+	public visitS64?(): void {
+		this.storeBigInt(this.asBigInt(this.params[this.index++]));
+	}
+
+	public visitFloat32(): void {
+		this.storeFloat32(this.asNumber(this.params[this.index++]));
+	}
+
+	public visitFloat64(): void {
+		this.storeFloat64(this.asNumber(this.params[this.index++]));
+	}
+
+	public visitBool(): void {
+		this.storeNumber(this.asNumber(this.params[this.index++]));
+	}
+
+	public visitString(): void {
+		const options = this.context.options;
+		const wasmPtr = this.asNumber(this.params[this.index++]);
+		const codeUnits = this.asNumber(this.params[this.index++]);
+		const bytes = wcm.wstring.byteLength(codeUnits, options);
+		const ptr = this.heapMemory.alloc(wcm.wstring.dataAlignment(options), bytes);
+		this.heapMemory.raw.set(this.context.memory.raw.subarray(wasmPtr, wasmPtr + bytes), ptr);
+		this.storeNumber(ptr);
+		this.storeNumber(codeUnits);
+	}
+
+	public visitBorrow(): void {
+		this.storeNumber(this.asNumber(this.params[this.index++]));
+	}
+
+	public visitOwn(): void {
+		this.storeNumber(this.asNumber(this.params[this.index++]));
+	}
+
+	public visitResource(): void {
+		this.storeNumber(this.asNumber(this.params[this.index++]));
+	}
+
+	public visitEnum(): void {
+		this.storeNumber(this.asNumber(this.params[this.index++]));
+	}
+
+	public visitFlags(type: wcm.FlagsType<any>): void {
+		if (type.type === wcm.u8 || type.type === wcm.u16 || type.type === wcm.u32) {
+			this.storeNumber(this.asNumber(this.params[this.index++]));
+		} else if (type.type instanceof wcm.TupleType) {
+			for (const field of type.type.fields) {
+				wcm.ComponentModelTypeVisitor.visit(field.type, this);
+			}
+		}
+	}
+
+	visitList(type: wcm.ListType<any>): boolean {
+		const wasmPtr = this.asNumber(this.params[this.index++]);
+		const length = this.asNumber(this.params[this.index++]);
+		const bytes = length * type.elementType.size;
+		const ptr = this.heapMemory.alloc(type.elementType.alignment, bytes);
+		this.heapMemory.raw.set(this.context.memory.raw.subarray(wasmPtr, wasmPtr + bytes), ptr);
+		this.storeNumber(ptr);
+		this.storeNumber(length);
+		return false;
+	}
+
+	private storeNumber(value: number) {
+		this.paramMemory.view.setInt32(this.paramMemory.alloc(wcm.Alignment.word, 4), value);
+	}
+
+	private storeFloat32(value: number) {
+		this.paramMemory.view.setFloat32(this.paramMemory.alloc(wcm.Alignment.word, 4), value);
+	}
+
+	private storeFloat64(value: number) {
+		this.paramMemory.view.setFloat64(this.paramMemory.alloc(wcm.Alignment.word, 4), value);
+	}
+
+	private storeBigInt(value: bigint) {
+		this.paramMemory.view.setBigInt64(this.paramMemory.alloc(wcm.Alignment.doubleWord, 8), value);
 	}
 
 	public run(): void {
 		this.index = 0;
-		for (const [index, type] of this.paramTypes.entries()) {
-			wcm.ComponentModelTypeVisitor.visit(type, this);
-		}
-
+		wcm.ComponentModelTypeVisitor.visit(this.signature.paramTupleType, this);
 	}
 
 	private asNumber(param: number | bigint): number {
@@ -148,19 +255,47 @@ class ParamOnlyTransfer {
 	private readonly signature: wcm.FunctionType<any>;
 	private readonly params: (number | bigint)[];
 	private readonly paramMemory: Memory;
+	private readonly context: wcm.Context;
 
-	constructor(signature: wcm.FunctionType<any>, params: (number | bigint)[], paramMemory: Memory) {
+	constructor(signature: wcm.FunctionType<any>, params: (number | bigint)[], paramMemory: Memory, context: wcm.Context) {
 		this.signature = signature;
-		this.params = params;
 		this.paramMemory = paramMemory;
+		this.context = context;
+		const flatTypes = this.signature.paramFlatTypes;
+		if (flatTypes.length > wcm.FunctionType.MAX_FLAT_PARAMS) {
+			const ptr = params[0] as number;
+			this.params = [];
+			this.signature.paramTupleType.loadFlat(this.params, this.context.memory, ptr, this.context.options);
+		} else {
+			this.params = params;
+		}
 	}
 
 	public run(): void {
 		const flatTypes = this.signature.paramFlatTypes;
+		let params: (number | bigint)[] = [];
 		if (flatTypes.length > wcm.FunctionType.MAX_FLAT_PARAMS) {
+			const ptr = this.params[0] as number;
+			this.signature.paramTupleType.loadFlat(params, this.context.memory, ptr, this.context.options);
+		} else {
+			params = this.params;
 		}
-		if (flatTypes.length !== this.params.length) {
-			throw new Error('Invalid number of params');
+		for (const [index, param] of params.entries()) {
+			const flatType = flatTypes[index];
+			switch (flatType) {
+				case wcm.WasmTypeKind.i32:
+					this.paramMemory.view.setInt32(this.paramMemory.alloc(wcm.Alignment.word, 4), param as number);
+					break;
+				case wcm.WasmTypeKind.f32:
+					this.paramMemory.view.setFloat32(this.paramMemory.alloc(wcm.Alignment.word, 4), param as number);
+					break;
+				case wcm.WasmTypeKind.f64:
+					this.paramMemory.view.setFloat64(this.paramMemory.alloc(wcm.Alignment.word, 4), param as number);
+					break;
+				case wcm.WasmTypeKind.i64:
+					this.paramMemory.view.setBigInt64(this.paramMemory.alloc(wcm.Alignment.doubleWord, 8), param as bigint);
+					break;
+			}
 		}
 	}
 }
