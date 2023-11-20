@@ -3,8 +3,19 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { HostConnection, Options, WasiHost } from '../host';
+import { Memory } from '@vscode/wasm-component-model';
+import { AbstractHostConnection, Options, WasiHost } from '../host';
 import { Memory } from './memory';
+
+class TestHostConnection extends AbstractHostConnection {
+	constructor() {
+		super();
+	}
+
+	protected doCall(paramMemory: SharedArrayBuffer, heapMemory: SharedArrayBuffer): void {
+
+	}
+}
 
 suite('WasiWorker', () => {
 	test('test', () => {

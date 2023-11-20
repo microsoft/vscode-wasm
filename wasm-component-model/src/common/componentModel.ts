@@ -241,6 +241,8 @@ export interface ComponentModelType<J> {
 	lowerFlat(result: wasmType[], memory: Memory, value: J, options: Options): void;
 	//load a list of flattened param values from memory
 	loadFlat(result: wasmType[], memory: Memory, ptr: ptr, options: Options): void;
+	// copy a list of flattened param values from one memory to another
+	copy(from: Memory, from_ptr: ptr<u8>, to: Memory, to_ptr: ptr<u8>): void;
 }
 export type GenericComponentModelType = ComponentModelType<any>;
 
@@ -271,6 +273,9 @@ export const bool: ComponentModelType<boolean> = {
 	},
 	loadFlat(result, memory, ptr: ptr<u8>): void {
 		result.push(memory.view.getUint8(ptr));
+	},
+	copy(from: Memory, from_ptr: ptr<u8>, to: Memory, to_ptr: ptr<u8>): void {
+		to.raw.set(from.raw.subarray(from_ptr, from_ptr + bool.size), to_ptr);
 	}
 };
 
@@ -313,6 +318,10 @@ namespace $u8 {
 
 	export function loadFlat(result: wasmType[], memory: Memory, ptr: ptr<u8>): void {
 		result.push(memory.view.getUint8(ptr));
+	}
+
+	export function copy(from: Memory, from_ptr: ptr<u8>, to: Memory, to_ptr: ptr<u8>): void {
+		to.view.setUint8(to_ptr, from.view.getUint8(from_ptr));
 	}
 }
 export const u8:ComponentModelType<number> = $u8;
@@ -2360,12 +2369,25 @@ export type InterfaceType = {
 	readonly functions: Map<string, FunctionType<ServiceFunction>>;
 	readonly resources: Map<string, ResourceType>;
 };
+export namespace InterfaceType {
+	export function is(value: any): value is InterfaceType {
+		return typeof value === 'object' && typeof value.id === 'string' && typeof value.witName === 'string'
+			&& value.types instanceof Map && value.functions instanceof Map && value.resources instanceof Map;
+	}
+}
 
 export type PackageType = {
 	readonly id: string;
 	readonly witName: string;
 	readonly interfaces: Map<string, InterfaceType>;
 };
+
+export namespace PackageType {
+	export function is(value: any): value is PackageType {
+		return typeof value === 'object' && typeof value.id === 'string' && typeof value.witName === 'string'
+			&& value.interfaces instanceof Map;
+	}
+}
 
 export interface Context {
 	readonly memory: Memory;
@@ -2390,6 +2412,16 @@ type GenericConstructor<T> = new (...args: any[]) => T;
 interface ParamModuleInterface {
 	readonly [key: string]: (ParamServiceFunction | ParamModuleInterface | ResourceManager<any> | GenericConstructor<any>);
 }
+
+
+
+export type WasmInterface = {
+	readonly [key: string]: WasmFunction;
+};
+
+export type WasmInterfaces = {
+	readonly [key: string]: WasmInterface;
+};
 
 export type Host = ParamWasmInterface;
 export namespace Host {

@@ -4,94 +4,12 @@
  *--------------------------------------------------------------------------------------------*/
 
 import wasi from '@vscode/wasi';
-import { Options, Memory, Alignment, ptr, ComponentModelTypeVisitor, FunctionType, Context, wstring, FlagsType, u8, u16, u32, TupleType, ListType, WasmTypeKind } from '@vscode/wasm-component-model';
+import { Options, Memory, Alignment, ptr, ComponentModelTypeVisitor, FunctionType, Context, wstring, FlagsType, u8, u16, u32, TupleType, ListType, WasmTypeKind, InterfaceType } from '@vscode/wasm-component-model';
+import { Header } from './connection';
+import RAL from '../ral';
+import { LinearMemory } from './memory';
 
 export { Options };
-
-class LinearMemory implements Memory {
-
-	public _buffer: SharedArrayBuffer;
-	public _raw: Uint8Array;
-	public _view: DataView;
-
-	private index: number;
-
-	constructor(initialSize: number = 65536) {
-		this._buffer = new SharedArrayBuffer(initialSize);
-		this._raw = new Uint8Array(this._buffer);
-		this._view = new DataView(this._buffer);
-		this.index = 0;
-	}
-
-	public get buffer(): SharedArrayBuffer {
-		return this._buffer;
-	}
-
-	public get view(): DataView {
-		return this._view;
-	}
-
-	public get raw(): Uint8Array {
-		return this._raw;
-	}
-
-	public alloc(alignment: Alignment, size: number): ptr {
-		this.index = Math.ceil(this.index / alignment) * alignment;
-		if (this.index + size > this._buffer.byteLength) {
-			const newBuffer = new SharedArrayBuffer(this._buffer.byteLength * 2);
-			new Uint8Array(newBuffer).set(this._raw);
-			this._buffer = newBuffer;
-			this._raw = new Uint8Array(this._buffer);
-			this._view = new DataView(this._buffer);
-		}
-		const ptr = this.index;
-		this.index += size;
-		return ptr;
-	}
-
-	public realloc(ptr: ptr, oldSize: number, align: Alignment, newSize: number): ptr {
-		if (newSize <= oldSize) {
-			return ptr;
-		}
-		const newPtr = this.alloc(align, newSize);
-		this._raw.copyWithin(newPtr, ptr, ptr + oldSize);
-		return newPtr;
-	}
-}
-
-class ReadonlyMemory implements Memory {
-
-	public readonly buffer: ArrayBuffer;
-
-	private _raw: Uint8Array | undefined;
-	private _view: DataView | undefined;
-
-	constructor(buffer: ArrayBuffer) {
-		this.buffer = buffer;
-	}
-
-	public get raw(): Uint8Array {
-		if (!this._raw) {
-			this._raw = new Uint8Array(this.buffer);
-		}
-		return this._raw;
-	}
-
-	public get view(): DataView {
-		if (!this._view) {
-			this._view = new DataView(this.buffer);
-		}
-		return this._view;
-	}
-
-	public alloc(): ptr {
-		throw new Error('Memory is readonly');
-	}
-
-	public realloc(): ptr {
-		throw new Error('Memory is readonly');
-	}
-}
 
 class ParamAndHeapTransfer implements ComponentModelTypeVisitor {
 
@@ -298,27 +216,48 @@ class ParamOnlyTransfer {
 	}
 }
 
-export class HostConnection {
+export abstract class AbstractHostConnection {
+
+	private readonly encoder: RAL.TextEncoder;
 
 	constructor() {
+		this.encoder = RAL().TextEncoder.create('utf-8');
 	}
 
-	public call(signature: FunctionType<any>, params: (number | bigint)[], context: Context): (number | bigint)[] {
-		const paramMemory = new LinearMemory();
-		let memories: [SharedArrayBuffer, SharedArrayBuffer];
+	public call(iface: InterfaceType, signature: FunctionType<any>, params: (number | bigint)[], context: Context): (number | bigint)[] {
+		const transferMemory = new LinearMemory();
+		transferMemory.alloc(Alignment.halfWord, Header.size);
+
+		Header.setLock(transferMemory.view, 0);
+
+		const ifaceName = this.encoder.encode(iface.witName);
+		const ifacePtr = transferMemory.alloc(Alignment.byte, ifaceName.byteLength);
+		transferMemory.raw.set(ifaceName, ifacePtr);
+		Header.setIface(transferMemory.view, ifacePtr, ifaceName.byteLength);
+
+		const funcName = this.encoder.encode(signature.witName);
+		const funcPtr = transferMemory.alloc(Alignment.byte, funcName.byteLength);
+		transferMemory.raw.set(funcName, funcPtr);
+		Header.setFunc(transferMemory.view, ifacePtr, funcName.byteLength);
+		const params_ptr = transferMemory.index;
+		let dataMemory: SharedArrayBuffer;
 		if (context.memory.buffer instanceof SharedArrayBuffer) {
-			const transfer = new ParamOnlyTransfer(signature, params, paramMemory, context);
+			const transfer = new ParamOnlyTransfer(signature, params, transferMemory, context);
 			transfer.run();
-			memories = [paramMemory.buffer, context.memory.buffer];
+			Header.setParams(transferMemory.view, params_ptr, transferMemory.index - params_ptr);
+			dataMemory = context.memory.buffer;
 		} else {
-			const heapMemory = new LinearMemory();
-			const transfer = new ParamAndHeapTransfer(signature, params, paramMemory, heapMemory, context);
+			const memory = new LinearMemory();
+			const transfer = new ParamAndHeapTransfer(signature, params, transferMemory, memory, context);
 			transfer.run();
-			memories = [paramMemory.buffer, heapMemory.buffer];
+			dataMemory = memory.buffer;
 		}
-		memories = memories;
+		Header.setReturn(transferMemory.view, transferMemory.index, 0);
+		this.doCall(transferMemory.buffer, dataMemory);
 		return[];
 	}
+
+	protected abstract doCall(transferMemory: SharedArrayBuffer, dataMemory: SharedArrayBuffer): void;
 }
 
 declare namespace WebAssembly {
@@ -355,7 +294,7 @@ export interface WasiHost extends wasi._.WasmInterface {
 }
 
 export namespace WasiHost {
-	export function create(connection: HostConnection, options: Options): WasiHost {
+	export function create(connection: AbstractHostConnection, options: Options): WasiHost {
 
 		let $instance: WebAssembly.Instance | undefined;
 		let $memory: WebAssembly.Memory | undefined;
@@ -386,7 +325,7 @@ export namespace WasiHost {
 				const wasm = Object.create(null);
 				for (const func of iface.functions.values()) {
 					wasm[func.witName] = (...params: (number | bigint)[]) => {
-						connection.call(func, params, { memory: memory(), options });
+						connection.call(iface, func, params, { memory: memory(), options });
 					};
 				}
 				result[iface.id] = wasm;
