@@ -242,7 +242,7 @@ export interface ComponentModelType<J> {
 	//load a list of flattened param values from memory
 	loadFlat(result: wasmType[], memory: Memory, ptr: ptr, options: Options): void;
 	// copy a list of flattened param values from one memory to another
-	copy(from: Memory, from_ptr: ptr<u8>, to: Memory, to_ptr: ptr<u8>): void;
+	copy(dest: Memory, dest_ptr: ptr<u8>, src: Memory, src_ptr: ptr<u8>, options: Options): void;
 }
 export type GenericComponentModelType = ComponentModelType<any>;
 
@@ -274,8 +274,8 @@ export const bool: ComponentModelType<boolean> = {
 	loadFlat(result, memory, ptr: ptr<u8>): void {
 		result.push(memory.view.getUint8(ptr));
 	},
-	copy(from: Memory, from_ptr: ptr<u8>, to: Memory, to_ptr: ptr<u8>): void {
-		to.raw.set(from.raw.subarray(from_ptr, from_ptr + bool.size), to_ptr);
+	copy(dest: Memory, dest_ptr: ptr<u8>, src: Memory, src_ptr: ptr<u8>): void {
+		dest.raw.set(src.raw.subarray(src_ptr, src_ptr + bool.size), dest_ptr);
 	}
 };
 
@@ -320,8 +320,8 @@ namespace $u8 {
 		result.push(memory.view.getUint8(ptr));
 	}
 
-	export function copy(from: Memory, from_ptr: ptr<u8>, to: Memory, to_ptr: ptr<u8>): void {
-		to.view.setUint8(to_ptr, from.view.getUint8(from_ptr));
+	export function copy(dest: Memory, dest_ptr: ptr<u8>, src: Memory, src_ptr: ptr<u8>): void {
+		dest.raw.set(src.raw.subarray(src_ptr, src_ptr + $u8.size), dest_ptr);
 	}
 }
 export const u8:ComponentModelType<number> = $u8;
@@ -366,6 +366,10 @@ namespace $u16 {
 	export function loadFlat(result: wasmType[], memory: Memory, ptr: ptr<u16>): void {
 		result.push(memory.view.getUint16(ptr, true));
 	}
+
+	export function copy(dest: Memory, dest_ptr: ptr<u8>, src: Memory, src_ptr: ptr<u8>): void {
+		dest.raw.set(src.raw.subarray(src_ptr, src_ptr + $u16.size), dest_ptr);
+	}
 }
 export const u16: ComponentModelType<number> = $u16;
 
@@ -409,6 +413,10 @@ namespace $u32 {
 	export function loadFlat(result: wasmType[], memory: Memory, ptr: ptr<u32>): void {
 		result.push(memory.view.getUint32(ptr, true));
 	}
+
+	export function copy(dest: Memory, dest_ptr: ptr<u8>, src: Memory, src_ptr: ptr<u8>): void {
+		dest.raw.set(src.raw.subarray(src_ptr, src_ptr + $u32.size), dest_ptr);
+	}
 }
 export const u32: ComponentModelType<number> = $u32;
 
@@ -451,6 +459,10 @@ namespace $u64 {
 
 	export function loadFlat(result: wasmType[], memory: Memory, ptr: ptr<u64>): void {
 		result.push(memory.view.getBigUint64(ptr, true));
+	}
+
+	export function copy(dest: Memory, dest_ptr: ptr<u8>, src: Memory, src_ptr: ptr<u8>): void {
+		dest.raw.set(src.raw.subarray(src_ptr, src_ptr + $u64.size), dest_ptr);
 	}
 }
 export const u64: ComponentModelType<bigint> = $u64;
@@ -503,6 +515,10 @@ namespace $s8 {
 	export function loadFlat(result: wasmType[], memory: Memory, ptr: ptr<s8>): void {
 		result.push(memory.view.getInt8(ptr));
 	}
+
+	export function copy(dest: Memory, dest_ptr: ptr<u8>, src: Memory, src_ptr: ptr<u8>): void {
+		dest.raw.set(src.raw.subarray(src_ptr, src_ptr + $s8.size), dest_ptr);
+	}
 }
 export const s8: ComponentModelType<number> = $s8;
 
@@ -545,6 +561,10 @@ namespace $s16 {
 
 	export function loadFlat(result: wasmType[], memory: Memory, ptr: ptr<s16>): void {
 		result.push(memory.view.getInt16(ptr, true));
+	}
+
+	export function copy(dest: Memory, dest_ptr: ptr<u8>, src: Memory, src_ptr: ptr<u8>): void {
+		dest.raw.set(src.raw.subarray(src_ptr, src_ptr + $s16.size), dest_ptr);
 	}
 }
 export const s16: ComponentModelType<number> = $s16;
@@ -589,6 +609,10 @@ namespace $s32 {
 	export function loadFlat(result: wasmType[], memory: Memory, ptr: ptr<s32>): void {
 		result.push(memory.view.getInt32(ptr, true));
 	}
+
+	export function copy(dest: Memory, dest_ptr: ptr<u8>, src: Memory, src_ptr: ptr<u8>): void {
+		dest.raw.set(src.raw.subarray(src_ptr, src_ptr + $s32.size), dest_ptr);
+	}
 }
 export const s32: ComponentModelType<number> = $s32;
 
@@ -631,6 +655,10 @@ namespace $s64 {
 
 	export function loadFlat(result: wasmType[], memory: Memory, ptr: ptr<s64>): void {
 		result.push(memory.view.getBigInt64(ptr, true));
+	}
+
+	export function copy(dest: Memory, dest_ptr: ptr<u8>, src: Memory, src_ptr: ptr<u8>): void {
+		dest.raw.set(src.raw.subarray(src_ptr, src_ptr + $s64.size), dest_ptr);
 	}
 }
 export const s64: ComponentModelType<bigint> = $s64;
@@ -676,6 +704,10 @@ namespace $float32 {
 	export function loadFlat(result: wasmType[], memory: Memory, ptr: ptr<float32>): void {
 		result.push(memory.view.getFloat32(ptr, true));
 	}
+
+	export function copy(dest: Memory, dest_ptr: ptr<u8>, src: Memory, src_ptr: ptr<u8>): void {
+		dest.raw.set(src.raw.subarray(src_ptr, src_ptr + $float32.size), dest_ptr);
+	}
 }
 export const float32: ComponentModelType<number> = $float32;
 
@@ -720,6 +752,10 @@ namespace $float64 {
 	export function loadFlat(result: wasmType[], memory: Memory, ptr: ptr<float64>): void {
 		result.push(memory.view.getFloat64(ptr, true));
 	}
+
+	export function copy(dest: Memory, dest_ptr: ptr<u8>, src: Memory, src_ptr: ptr<u8>): void {
+		dest.raw.set(src.raw.subarray(src_ptr, src_ptr + $float64.size), dest_ptr);
+	}
 }
 export const float64: ComponentModelType<number> = $float64;
 
@@ -735,7 +771,8 @@ export const byte: ComponentModelType<byte> = {
 	alloc: u8.alloc,
 	store: u8.store,
 	lowerFlat: u8.lowerFlat,
-	loadFlat: u8.loadFlat
+	loadFlat: u8.loadFlat,
+	copy: u8.copy
 };
 
 export type size = u32;
@@ -750,7 +787,8 @@ export const size: ComponentModelType<size> = {
 	alloc: u32.alloc,
 	store: u32.store,
 	lowerFlat: u32.lowerFlat,
-	loadFlat: u32.loadFlat
+	loadFlat: u32.loadFlat,
+	copy: u32.copy
 };
 
 export type ptr<_type = ArrayBuffer> = u32;
@@ -765,7 +803,8 @@ export const ptr: ComponentModelType<size> = {
 	alloc: u32.alloc,
 	store: u32.store,
 	lowerFlat: u32.lowerFlat,
-	loadFlat: u32.loadFlat
+	loadFlat: u32.loadFlat,
+	copy: u32.copy
 };
 namespace $wchar {
 	export const kind: ComponentModelTypeKind = ComponentModelTypeKind.char;
@@ -795,6 +834,10 @@ namespace $wchar {
 
 	export function loadFlat(result: wasmType[], memory: Memory, ptr: ptr, options: Options): void {
 		u32.loadFlat(result, memory, ptr, options);
+	}
+
+	export function copy(dest: Memory, dest_ptr: ptr<u8>, src: Memory, src_ptr: ptr<u8>): void {
+		dest.raw.set(src.raw.subarray(src_ptr, src_ptr + $wchar.size), dest_ptr);
 	}
 
 	function fromCodePoint(code: u32): string {
@@ -862,29 +905,25 @@ namespace $wstring {
 		result.push(memory.view.getUint32(ptr + offsets.codeUnits, true));
 	}
 
-	export function byteLength(codeUnits: u32, options: Options): number {
-		const encoding = options.encoding;
-		if (encoding === 'latin1+utf-16') {
-			throw new Error('latin1+utf-16 encoding not yet supported');
-		}
-		if (encoding === 'utf-8') {
-			return codeUnits;
-		} else if (encoding === 'utf-16') {
-			return codeUnits * 2;
-		} else {
-			throw new Error('Unsupported encoding');
-		}
+	export function copy(dest: Memory, dest_ptr: ptr<u8>, src: Memory, src_ptr: ptr<u8>, options: Options): void {
+		const data = src.view.getUint32(src_ptr + offsets.data, true);
+		const codeUnits = src.view.getUint32(src_ptr + offsets.codeUnits, true);
+		const [alignment, byteLength] = getAlignmentAndByteLength(codeUnits, options);
+		const destData = dest.alloc(alignment, byteLength);
+		dest.raw.set(src.raw.subarray(data, data + byteLength), destData);
+		dest.view.setUint32(dest_ptr + offsets.data, destData, true);
+		dest.view.setUint32(dest_ptr + offsets.codeUnits, codeUnits, true);
 	}
 
-	export function dataAlignment(options: Options): Alignment {
+	function getAlignmentAndByteLength(codeUnits: u32, options: Options): [Alignment, number] {
 		const encoding = options.encoding;
 		if (encoding === 'latin1+utf-16') {
 			throw new Error('latin1+utf-16 encoding not yet supported');
 		}
 		if (encoding === 'utf-8') {
-			return Alignment.byte;
+			return [u8.alignment, codeUnits];
 		} else if (encoding === 'utf-16') {
-			return Alignment.halfWord;
+			return [u16.alignment, codeUnits * 2];
 		} else {
 			throw new Error('Unsupported encoding');
 		}
@@ -988,6 +1027,17 @@ export class ListType<T> implements ComponentModelType<T[]> {
 		result.push(memory.view.getUint32(ptr + offsets.length, true));
 	}
 
+	public copy(dest: Memory, dest_ptr: ptr<u8>, src: Memory, src_ptr: ptr<u8>): void {
+		const offsets = ListType.offsets;
+		const data = src.view.getUint32(src_ptr + offsets.data, true);
+		const length = src.view.getUint32(src_ptr + offsets.length, true);
+		const byteLength = length * this.elementType.size;
+		const destData = dest.alloc(this.alignment, byteLength);
+		dest.raw.set(src.raw.subarray(data, data + byteLength), destData);
+		dest.view.setUint32(dest_ptr + offsets.data, destData, true);
+		dest.view.setUint32(dest_ptr + offsets.length, length, true);
+	}
+
 	private loadFromRange(memory: Memory, data: size, length: u32, options: Options): T[] {
 		const result: T[] = [];
 		let offset = 0;
@@ -1033,8 +1083,8 @@ abstract class TypeArrayType<T> implements ComponentModelType<T> {
 		const view = memory.view;
 		const offsets = TypeArrayType.offsets;
 		const dataPtr: ptr =  view.getUint32(ptr + offsets.data);
-		const codeUnits: u32 = view.getUint32(ptr + offsets.length);
-		return this.loadFromRange(memory, dataPtr, codeUnits, options);
+		const length: u32 = view.getUint32(ptr + offsets.length);
+		return this.loadFromRange(memory, dataPtr, length, options);
 	}
 
 	public liftFlat(memory: Memory, values: FlatValuesIter, options: Options): T {
@@ -1065,20 +1115,35 @@ abstract class TypeArrayType<T> implements ComponentModelType<T> {
 		result.push(memory.view.getUint32(ptr + offsets.length, true));
 	}
 
-	protected abstract loadFromRange(memory: Memory, data: size, length: u32, options: Options): T;
-	protected abstract storeIntoRange(memory: Memory, value: T, options: Options): [size, u32];
+	public copy(dest: Memory, dest_ptr: ptr<u8>, src: Memory, src_ptr: ptr<u8>): void {
+		const offsets = TypeArrayType.offsets;
+		const data = src.view.getUint32(src_ptr + offsets.data, true);
+		const length = src.view.getUint32(src_ptr + offsets.length, true);
+		const destData = this.copyArray(dest, src, data, length);
+		dest.view.setUint32(dest_ptr + offsets.data, destData, true);
+		dest.view.setUint32(dest_ptr + offsets.length, length, true);
+	}
+
+	protected abstract loadFromRange(memory: Memory, data: ptr, length: u32, options: Options): T;
+	protected abstract storeIntoRange(memory: Memory, value: T, options: Options): [ptr, u32];
+	protected abstract copyArray(dest: Memory, src: Memory, src_ptr: ptr<u8>, length: u32): ptr;
 
 }
 
 export class Int8ArrayType extends TypeArrayType<Int8Array> {
-	protected loadFromRange(memory: Memory, data: size, length: u32): Int8Array {
+	protected loadFromRange(memory: Memory, data: ptr, length: u32): Int8Array {
 		return new Int8Array(memory.buffer, data, length);
 	}
-	protected storeIntoRange(memory: Memory, value: Int8Array): [size, u32] {
+	protected storeIntoRange(memory: Memory, value: Int8Array): [ptr, u32] {
 		const ptr = memory.alloc(s8.alignment, value.byteLength);
 		const target = new Int8Array(memory.buffer, ptr, value.length);
 		target.set(value);
 		return [ptr, target.length];
+	}
+	protected copyArray(dest: Memory, src: Memory, src_ptr: ptr<u8>, length: u32): ptr {
+		const dest_ptr = dest.alloc(s8.alignment, length * Int8Array.BYTES_PER_ELEMENT);
+		dest.raw.set(src.raw.subarray(src_ptr, src_ptr + length), dest_ptr);
+		return dest_ptr;
 	}
 }
 
@@ -1092,6 +1157,11 @@ export class Int16ArrayType extends TypeArrayType<Int16Array> {
 		target.set(value);
 		return [ptr, target.length];
 	}
+	protected copyArray(dest: Memory, src: Memory, src_ptr: number, length: number): number {
+		const dest_ptr = dest.alloc(s16.alignment, length * Int16Array.BYTES_PER_ELEMENT);
+		dest.raw.set(src.raw.subarray(src_ptr, src_ptr + length), dest_ptr);
+		return dest_ptr;
+	}
 }
 
 export class Int32ArrayType extends TypeArrayType<Int32Array> {
@@ -1103,6 +1173,11 @@ export class Int32ArrayType extends TypeArrayType<Int32Array> {
 		const target = new Int32Array(memory.buffer, ptr, value.length);
 		target.set(value);
 		return [ptr, target.length];
+	}
+	protected copyArray(dest: Memory, src: Memory, src_ptr: number, length: number): number {
+		const dest_ptr = dest.alloc(s32.alignment, length * Int32Array.BYTES_PER_ELEMENT);
+		dest.raw.set(src.raw.subarray(src_ptr, src_ptr + length), dest_ptr);
+		return dest_ptr;
 	}
 }
 
@@ -1116,6 +1191,11 @@ export class BigInt64ArrayType extends TypeArrayType<BigInt64Array> {
 		target.set(value);
 		return [ptr, target.length];
 	}
+	protected copyArray(dest: Memory, src: Memory, src_ptr: number, length: number): number {
+		const dest_ptr = dest.alloc(s64.alignment, length * BigInt64Array.BYTES_PER_ELEMENT);
+		dest.raw.set(src.raw.subarray(src_ptr, src_ptr + length), dest_ptr);
+		return dest_ptr;
+	}
 }
 
 export class Uint8ArrayType extends TypeArrayType<Uint8Array> {
@@ -1127,6 +1207,11 @@ export class Uint8ArrayType extends TypeArrayType<Uint8Array> {
 		const target = new Uint8Array(memory.buffer, ptr, value.length);
 		target.set(value);
 		return [ptr, target.length];
+	}
+	protected copyArray(dest: Memory, src: Memory, src_ptr: number, length: number): number {
+		const dest_ptr = dest.alloc(u8.alignment, length * Uint8Array.BYTES_PER_ELEMENT);
+		dest.raw.set(src.raw.subarray(src_ptr, src_ptr + length), dest_ptr);
+		return dest_ptr;
 	}
 }
 
@@ -1140,6 +1225,11 @@ export class Uint16ArrayType extends TypeArrayType<Uint16Array> {
 		target.set(value);
 		return [ptr, target.length];
 	}
+	protected copyArray(dest: Memory, src: Memory, src_ptr: number, length: number): number {
+		const dest_ptr = dest.alloc(u16.alignment, length * Uint16Array.BYTES_PER_ELEMENT);
+		dest.raw.set(src.raw.subarray(src_ptr, src_ptr + length), dest_ptr);
+		return dest_ptr;
+	}
 }
 
 export class Uint32ArrayType extends TypeArrayType<Uint32Array> {
@@ -1151,6 +1241,11 @@ export class Uint32ArrayType extends TypeArrayType<Uint32Array> {
 		const target = new Uint32Array(memory.buffer, ptr, value.length);
 		target.set(value);
 		return [ptr, target.length];
+	}
+	protected copyArray(dest: Memory, src: Memory, src_ptr: number, length: number): number {
+		const dest_ptr = dest.alloc(u32.alignment, length * Uint32Array.BYTES_PER_ELEMENT);
+		dest.raw.set(src.raw.subarray(src_ptr, src_ptr + length), dest_ptr);
+		return dest_ptr;
 	}
 }
 
@@ -1164,6 +1259,11 @@ export class BigUint64ArrayType extends TypeArrayType<BigUint64Array> {
 		target.set(value);
 		return [ptr, target.length];
 	}
+	protected copyArray(dest: Memory, src: Memory, src_ptr: number, length: number): number {
+		const dest_ptr = dest.alloc(u64.alignment, length * BigUint64Array.BYTES_PER_ELEMENT);
+		dest.raw.set(src.raw.subarray(src_ptr, src_ptr + length), dest_ptr);
+		return dest_ptr;
+	}
 }
 
 export class Float32ArrayType extends TypeArrayType<Float32Array> {
@@ -1176,6 +1276,11 @@ export class Float32ArrayType extends TypeArrayType<Float32Array> {
 		target.set(value);
 		return [ptr, target.length];
 	}
+	protected copyArray(dest: Memory, src: Memory, src_ptr: number, length: number): number {
+		const dest_ptr = dest.alloc(float32.alignment, length * Float32Array.BYTES_PER_ELEMENT);
+		dest.raw.set(src.raw.subarray(src_ptr, src_ptr + length), dest_ptr);
+		return dest_ptr;
+	}
 }
 
 export class Float64ArrayType extends TypeArrayType<Float64Array> {
@@ -1187,6 +1292,11 @@ export class Float64ArrayType extends TypeArrayType<Float64Array> {
 		const target = new Float64Array(memory.buffer, ptr, value.length);
 		target.set(value);
 		return [ptr, target.length];
+	}
+	protected copyArray(dest: Memory, src: Memory, src_ptr: number, length: number): number {
+		const dest_ptr = dest.alloc(float64.alignment, length * Float64Array.BYTES_PER_ELEMENT);
+		dest.raw.set(src.raw.subarray(src_ptr, src_ptr + length), dest_ptr);
+		return dest_ptr;
 	}
 }
 
@@ -1266,6 +1376,16 @@ abstract class BaseRecordType<T extends JRecord | JTuple, F extends TypedField> 
 			ptr = align(ptr, field.type.alignment);
 			field.type.loadFlat(result, memory, ptr, options);
 			ptr += field.type.size;
+		}
+	}
+
+	public copy(dest: Memory, dest_ptr: number, src: Memory, src_ptr: number, options: Options): void {
+		for (const field of this.fields) {
+			dest_ptr = align(dest_ptr, field.type.alignment);
+			src_ptr = align(src_ptr, field.type.alignment);
+			field.type.copy(dest, dest_ptr, src, src_ptr, options);
+			dest_ptr += field.type.size;
+			src_ptr += field.type.size;
 		}
 	}
 
@@ -1424,6 +1544,12 @@ export class FlagsType<_T> implements ComponentModelType<u32 | bigint> {
 	public loadFlat(result: wasmType[], memory: Memory, ptr: number, options: Options): void {
 		if (this.type !== undefined) {
 			this.type.loadFlat(result, memory, ptr, options);
+		}
+	}
+
+	public copy(dest: Memory, dest_ptr: number, src: Memory, src_ptr: number, options: Options): void {
+		if (this.type !== undefined) {
+			this.type.copy(dest, dest_ptr, src, src_ptr, options);
 		}
 	}
 
@@ -1646,6 +1772,20 @@ export class VariantType<T extends JVariantCase, I, V> implements ComponentModel
 		caseVariant.type.loadFlat(result, memory, ptr, options);
 	}
 
+	public copy(dest: Memory, dest_ptr: number, src: Memory, src_ptr: number, options: Options): void {
+		this.discriminantType.copy(dest, dest_ptr, src, src_ptr, options);
+		const caseIndex = this.discriminantType.load(src, src_ptr, options);
+		const caseVariant = this.cases[caseIndex];
+		if (caseVariant.type === undefined) {
+			return;
+		}
+		src_ptr += this.discriminantType.size;
+		src_ptr = align(src_ptr, this.maxCaseAlignment);
+		dest_ptr += this.discriminantType.size;
+		dest_ptr = align(dest_ptr, this.maxCaseAlignment);
+		caseVariant.type.copy(dest, dest_ptr, src, src_ptr, options);
+	}
+
 	private static size(discriminantType: GenericComponentModelType, cases: VariantCase[]): size {
 		let result = discriminantType.size;
 		result = align(result, this.maxCaseAlignment(cases));
@@ -1778,6 +1918,10 @@ export class EnumType<T extends JEnum> implements ComponentModelType<T> {
 
 	public loadFlat(result: wasmType[], memory: Memory, ptr: number, options: Options): void {
 		this.discriminantType.loadFlat(result, memory, ptr, options);
+	}
+
+	public copy(dest: Memory, dest_ptr: number, src: Memory, src_ptr: number, options: Options): void {
+		this.discriminantType.copy(dest, dest_ptr, src, src_ptr, options);
 	}
 
 	private assertRange(value: number): number {
@@ -1940,6 +2084,20 @@ export class OptionType<T extends JType> implements ComponentModelType<T | optio
 			ptr += u8.size;
 			ptr = align(ptr, this.alignment);
 			this.valueType.loadFlat(result, memory, ptr, options);
+		}
+	}
+
+	public copy(dest: Memory, dest_ptr: number, src: Memory, src_ptr: number, options: Options): void {
+		u8.copy(dest, dest_ptr, src, src_ptr, options);
+		const caseIndex = u8.load(src, src_ptr, options);
+		if (caseIndex === 0) {
+			return;
+		} else {
+			src_ptr += u8.size;
+			src_ptr = align(src_ptr, this.alignment);
+			dest_ptr += u8.size;
+			dest_ptr = align(dest_ptr, this.alignment);
+			this.valueType.copy(dest, dest_ptr, src, src_ptr, options);
 		}
 	}
 
@@ -2194,6 +2352,10 @@ abstract class AbstractResourceType implements ComponentModelType<resource> {
 
 	public loadFlat(result: wasmType[], memory: Memory, ptr: number, options: Options): void {
 		u32.loadFlat(result, memory, ptr, options);
+	}
+
+	public copy(dest: Memory, dest_ptr: number, src: Memory, src_ptr: number, options: Options): void {
+		u32.copy(dest, dest_ptr, src, src_ptr, options);
 	}
 }
 

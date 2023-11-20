@@ -176,15 +176,8 @@ class ParamOnlyTransfer {
 	constructor(signature: FunctionType<any>, params: (number | bigint)[], paramMemory: LinearMemory, context: Context) {
 		this.signature = signature;
 		this.paramMemory = paramMemory;
+		this.params = params;
 		this.context = context;
-		const flatTypes = this.signature.paramFlatTypes;
-		if (flatTypes.length > FunctionType.MAX_FLAT_PARAMS) {
-			const ptr = params[0] as number;
-			this.params = [];
-			this.signature.paramTupleType.loadFlat(this.params, this.context.memory, ptr, this.context.options);
-		} else {
-			this.params = params;
-		}
 	}
 
 	public run(): void {
@@ -192,9 +185,24 @@ class ParamOnlyTransfer {
 		let params: (number | bigint)[] = [];
 		if (flatTypes.length > FunctionType.MAX_FLAT_PARAMS) {
 			const ptr = this.params[0] as number;
-			this.signature.paramTupleType.loadFlat(params, this.context.memory, ptr, this.context.options);
+			const alignment = this.signature.paramTupleType.alignment;
+			const size = this.signature.paramTupleType.size;
+			const dest_ptr = this.paramMemory.alloc(alignment, size);
+			this.paramMemory.raw.set(this.context.memory.raw.subarray(ptr, ptr + size), dest_ptr);
+			params = this.params.slice(0);
+			params[0] = dest_ptr;
 		} else {
-			params = this.params;
+			params = this.params.slice(0);
+		}
+		if (this.signature.returnType !== undefined && this.signature.returnFlatTypes.length > FunctionType.MAX_FLAT_RESULTS) {
+			// We currently only support 'lower' mode for results > MAX_FLAT_RESULTS.
+			if (params.length !== flatTypes.length + 1) {
+				throw new Error(`Invalid number of parameters. Received ${params.length} but expected ${flatTypes.length + 1}`);
+			}
+			const alignment = this.signature.returnType.alignment;
+			const size = this.signature.returnType.size;
+			const dest_ptr = this.paramMemory.alloc(alignment, size);
+			params[params.length - 1] = dest_ptr;
 		}
 		for (const [index, param] of params.entries()) {
 			const flatType = flatTypes[index];
