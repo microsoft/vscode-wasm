@@ -4,8 +4,8 @@
  *--------------------------------------------------------------------------------------------*/
 /// <reference path="../../../typings/webAssemblyCommon.d.ts" />
 
-import { FunctionType, ptr, u32 } from '@vscode/wasm-component-model';
-import { LinearMemory } from './memory';
+import { Alignment, ComponentModelTypeVisitor, Context, FlagsType, FunctionType, ListType, TupleType, WasmTypeKind, ptr, u16, u32, u8, wstring } from '@vscode/wasm-component-model';
+import { FixedLinearMemory, LinearMemory, Memory } from './memory';
 
 type Header = {
 	lock: u32;
@@ -73,33 +73,44 @@ export namespace Header {
 	}
 }
 
-export class ParamOnlyRestore {
+export class ParamTransfer {
 
 	private readonly signature: FunctionType<any>;
 	private readonly params: (number | bigint)[];
 	private readonly paramMemory: LinearMemory;
+	private readonly context: Context;
 
-	constructor(signature: FunctionType<any>, params: (number | bigint)[], paramMemory: LinearMemory) {
+	constructor(signature: FunctionType<any>, params: (number | bigint)[], paramMemory: LinearMemory, context: Context) {
 		this.signature = signature;
 		this.paramMemory = paramMemory;
-		const flatTypes = this.signature.paramFlatTypes;
-		if (flatTypes.length > FunctionType.MAX_FLAT_PARAMS) {
-			const ptr = params[0] as number;
-			this.params = [];
-			this.signature.paramTupleType.loadFlat(this.params, this.context.memory, ptr, this.context.options);
-		} else {
-			this.params = params;
-		}
+		this.params = params;
+		this.context = context;
 	}
 
 	public run(): void {
-		const flatTypes = this.signature.paramFlatTypes;
+		let flatTypes = this.signature.paramFlatTypes;
 		let params: (number | bigint)[] = [];
 		if (flatTypes.length > FunctionType.MAX_FLAT_PARAMS) {
 			const ptr = this.params[0] as number;
-			this.signature.paramTupleType.loadFlat(params, this.context.memory, ptr, this.context.options);
+			const alignment = this.signature.paramTupleType.alignment;
+			const size = this.signature.paramTupleType.size;
+			const dest_ptr = this.paramMemory.alloc(alignment, size);
+			this.paramMemory.raw.set(this.context.memory.raw.subarray(ptr, ptr + size), dest_ptr);
+			params = this.params.slice(0);
+			params[0] = dest_ptr;
 		} else {
-			params = this.params;
+			params = this.params.slice(0);
+		}
+		if (this.signature.returnType !== undefined && this.signature.returnFlatTypes.length > FunctionType.MAX_FLAT_RESULTS) {
+			// We currently only support 'lower' mode for results > MAX_FLAT_RESULTS.
+			if (params.length !== flatTypes.length + 1) {
+				throw new Error(`Invalid number of parameters. Received ${params.length} but expected ${flatTypes.length + 1}`);
+			}
+			const alignment = this.signature.returnType.alignment;
+			const size = this.signature.returnType.size;
+			const dest_ptr = this.paramMemory.alloc(alignment, size);
+			params[params.length - 1] = dest_ptr;
+			flatTypes = flatTypes.concat(this.signature.returnFlatTypes);
 		}
 		for (const [index, param] of params.entries()) {
 			const flatType = flatTypes[index];
@@ -111,12 +122,220 @@ export class ParamOnlyRestore {
 					this.paramMemory.view.setFloat32(this.paramMemory.alloc(Alignment.word, 4), param as number);
 					break;
 				case WasmTypeKind.f64:
-					this.paramMemory.view.setFloat64(this.paramMemory.alloc(Alignment.word, 4), param as number);
+					this.paramMemory.view.setFloat64(this.paramMemory.alloc(Alignment.doubleWord, 8), param as number);
 					break;
 				case WasmTypeKind.i64:
 					this.paramMemory.view.setBigInt64(this.paramMemory.alloc(Alignment.doubleWord, 8), param as bigint);
 					break;
 			}
 		}
+	}
+}
+
+export class ParamAndDataTransfer implements ComponentModelTypeVisitor {
+
+	private readonly signature: FunctionType<any>;
+	private readonly params: (number | bigint)[];
+	private readonly paramMemory: LinearMemory;
+	private readonly dataMemory: LinearMemory;
+	private readonly context: Context;
+
+	private index: number;
+
+	constructor(signature: FunctionType<any>, params: (number | bigint)[], paramMemory: LinearMemory, dataMemory: LinearMemory, context: Context) {
+		this.signature = signature;
+		this.paramMemory = paramMemory;
+		this.dataMemory = dataMemory;
+		this.context = context;
+		this.index = 0;
+		const flatTypes = this.signature.paramFlatTypes;
+		if (flatTypes.length > FunctionType.MAX_FLAT_PARAMS) {
+			const ptr = params[0] as number;
+			this.params = [];
+			this.signature.paramTupleType.loadFlat(this.params, this.context.memory, ptr, this.context.options);
+		} else {
+			this.params = params;
+		}
+
+	}
+
+	public visitU8(): void {
+		this.storeNumber(this.asNumber(this.params[this.index++]));
+	}
+
+	public visitU16(): void {
+		this.storeNumber(this.asNumber(this.params[this.index++]));
+	}
+
+	public visitU32(): void {
+		this.storeNumber(this.asNumber(this.params[this.index++]));
+	}
+
+	public visitU64(): void {
+		this.storeBigInt(this.asBigInt(this.params[this.index++]));
+	}
+
+	public visitS8(): void {
+		this.storeNumber(this.asNumber(this.params[this.index++]));
+	}
+
+	public visitS16(): void {
+		this.storeNumber(this.asNumber(this.params[this.index++]));
+	}
+
+	public visitS32(): void {
+		this.storeNumber(this.asNumber(this.params[this.index++]));
+	}
+
+	public visitS64?(): void {
+		this.storeBigInt(this.asBigInt(this.params[this.index++]));
+	}
+
+	public visitFloat32(): void {
+		this.storeFloat32(this.asNumber(this.params[this.index++]));
+	}
+
+	public visitFloat64(): void {
+		this.storeFloat64(this.asNumber(this.params[this.index++]));
+	}
+
+	public visitBool(): void {
+		this.storeNumber(this.asNumber(this.params[this.index++]));
+	}
+
+	public visitString(): void {
+		const options = this.context.options;
+		const wasmPtr = this.asNumber(this.params[this.index++]);
+		const codeUnits = this.asNumber(this.params[this.index++]);
+		const [alignment, bytes] = wstring.getAlignmentAndByteLength(codeUnits, options);
+		const ptr = this.dataMemory.alloc(alignment, bytes);
+		this.dataMemory.raw.set(this.context.memory.raw.subarray(wasmPtr, wasmPtr + bytes), ptr);
+		this.storeNumber(ptr);
+		this.storeNumber(codeUnits);
+	}
+
+	public visitBorrow(): void {
+		this.storeNumber(this.asNumber(this.params[this.index++]));
+	}
+
+	public visitOwn(): void {
+		this.storeNumber(this.asNumber(this.params[this.index++]));
+	}
+
+	public visitResource(): void {
+		this.storeNumber(this.asNumber(this.params[this.index++]));
+	}
+
+	public visitEnum(): void {
+		this.storeNumber(this.asNumber(this.params[this.index++]));
+	}
+
+	public visitFlags(type: FlagsType<any>): void {
+		if (type.type === u8 || type.type === u16 || type.type === u32) {
+			this.storeNumber(this.asNumber(this.params[this.index++]));
+		} else if (type.type instanceof TupleType) {
+			for (const field of type.type.fields) {
+				ComponentModelTypeVisitor.visit(field.type, this);
+			}
+		}
+	}
+
+	visitList(type: ListType<any>): boolean {
+		const wasmPtr = this.asNumber(this.params[this.index++]);
+		const length = this.asNumber(this.params[this.index++]);
+		const bytes = length * type.elementType.size;
+		const ptr = this.dataMemory.alloc(type.elementType.alignment, bytes);
+		this.dataMemory.raw.set(this.context.memory.raw.subarray(wasmPtr, wasmPtr + bytes), ptr);
+		this.storeNumber(ptr);
+		this.storeNumber(length);
+		return false;
+	}
+
+	private storeNumber(value: number) {
+		this.paramMemory.view.setInt32(this.paramMemory.alloc(Alignment.word, 4), value);
+	}
+
+	private storeFloat32(value: number) {
+		this.paramMemory.view.setFloat32(this.paramMemory.alloc(Alignment.word, 4), value);
+	}
+
+	private storeFloat64(value: number) {
+		this.paramMemory.view.setFloat64(this.paramMemory.alloc(Alignment.word, 4), value);
+	}
+
+	private storeBigInt(value: bigint) {
+		this.paramMemory.view.setBigInt64(this.paramMemory.alloc(Alignment.doubleWord, 8), value);
+	}
+
+	public run(): void {
+		this.index = 0;
+		ComponentModelTypeVisitor.visit(this.signature.paramTupleType, this);
+	}
+
+	private asNumber(param: number | bigint): number {
+		if (typeof param !== 'number') {
+			throw new Error('Expected number');
+		}
+		return param;
+	}
+
+	private asBigInt(param: number | bigint): bigint {
+		if (typeof param !== 'bigint') {
+			throw new Error('Expected bigint');
+		}
+		return param;
+	}
+}
+
+export class ParamRestore {
+
+	private readonly signature: FunctionType<any>;
+	private readonly paramMemory: FixedLinearMemory;
+
+	constructor(signature: FunctionType<any>, paramMemory: FixedLinearMemory) {
+		this.signature = signature;
+		this.paramMemory = paramMemory;
+	}
+
+	public run(): (number | bigint)[] {
+		const params: (number | bigint)[] = [];
+		const view = this.paramMemory.view;
+		let [ptr, ] = Header.getParams(this.paramMemory.view);
+		const flatTypes = this.signature.paramFlatTypes;
+		if (flatTypes.length > FunctionType.MAX_FLAT_PARAMS) {
+			ptr = Memory.align(ptr, Alignment.word);
+			params.push(view.getInt32(ptr));
+		} else {
+			for (const flatType of flatTypes) {
+				switch (flatType) {
+					case WasmTypeKind.i32:
+						ptr = Memory.align(ptr, Alignment.word);
+						params.push(view.getInt32(ptr));
+						ptr += 4;
+						break;
+					case WasmTypeKind.f32:
+						ptr = Memory.align(ptr, Alignment.word);
+						params.push(view.getFloat32(ptr));
+						ptr += 4;
+						break;
+					case WasmTypeKind.f64:
+						ptr = Memory.align(ptr, Alignment.doubleWord);
+						view.getFloat64(ptr);
+						ptr += 8;
+						break;
+					case WasmTypeKind.i64:
+						ptr = Memory.align(ptr, Alignment.doubleWord);
+						view.getBigInt64(ptr);
+						ptr += 8;
+						break;
+				}
+			}
+		}
+		if (this.signature.returnType !== undefined && this.signature.returnFlatTypes.length > FunctionType.MAX_FLAT_RESULTS) {
+			ptr = Memory.align(ptr, Alignment.word);
+			params.push(view.getInt32(ptr));
+			ptr += 4;
+		}
+		return params;
 	}
 }

@@ -602,7 +602,6 @@ enum TypeUsage {
 
 namespace MetaModel {
 
-
 	export const qualifier = '$wcm';
 	export const ResourceKind = `${qualifier}.ResourceKind`;
 	export const ResourceKindClass = `${qualifier}.ResourceKind.class`;
@@ -613,7 +612,7 @@ namespace MetaModel {
 		return `${qualifier}.${name}`;
 	}
 
-	export class TypePrinter extends AbstractTypePrinter<TypeUsage> {
+	export class TypePrinter extends AbstractTypePrinter<TypeUsage | { usage: TypeUsage.function; replace: string }> {
 
 		private readonly nameProvider: NameProvider;
 
@@ -894,7 +893,13 @@ namespace MetaModel {
 
 namespace TypeScript {
 
-	export class TypePrinter extends AbstractTypePrinter<TypeUsage> {
+	type FunctionUsage = { usage: TypeUsage; replace: string };
+	type TypePrinterContext = TypeUsage | FunctionUsage;
+	function isFunctionUsage(context: TypePrinterContext): context is FunctionUsage {
+		return typeof context !== 'string';
+	}
+
+	export class TypePrinter extends AbstractTypePrinter<TypePrinterContext> {
 
 		private readonly nameProvider: NameProvider;
 		private readonly imports: Imports;
@@ -905,32 +910,47 @@ namespace TypeScript {
 			this.imports = imports;
 		}
 
-		public perform(type: Type, usage: TypeUsage): string {
-			return this.print(type, usage);
+		private getTypeUsage(value: TypePrinterContext): TypeUsage {
+			if (typeof value === 'string') {
+				return value;
+			}
+			return value.usage;
 		}
 
-		public print(type: Type, usage: TypeUsage): string {
+		public perform(type: Type, context: TypePrinterContext): string {
+			return this.print(type, context);
+		}
+
+		public print(type: Type, context: TypePrinterContext): string {
+			const usage = this.getTypeUsage(context);
+			if (type.name !== null && (usage === TypeUsage.parameter || usage === TypeUsage.function || usage === TypeUsage.property)) {
+				const name = this.nameProvider.asTypeName(type);
+				if (Type.isResourceType(type) && isFunctionUsage(context) && name === context.replace) {
+					return 'Interface';
+				} else {
+					return name;
+				}
+			}
+			return super.print(type, context);
+		}
+
+		public printReference(type: ReferenceType, context: TypePrinterContext): string {
+			const usage = this.getTypeUsage(context);
 			if (type.name !== null && (usage === TypeUsage.parameter || usage === TypeUsage.function || usage === TypeUsage.property)) {
 				return this.nameProvider.asTypeName(type);
 			}
-			return super.print(type, usage);
+			return super.printReference(type, context);
 		}
 
-		public printReference(type: ReferenceType, usage: TypeUsage): string {
+		public printBase(type: BaseType, context: TypePrinterContext): string {
+			const usage = this.getTypeUsage(context);
 			if (type.name !== null && (usage === TypeUsage.parameter || usage === TypeUsage.function || usage === TypeUsage.property)) {
 				return this.nameProvider.asTypeName(type);
 			}
-			return super.printReference(type, usage);
+			return super.printBase(type, context);
 		}
 
-		public printBase(type: BaseType, usage: TypeUsage): string {
-			if (type.name !== null && (usage === TypeUsage.parameter || usage === TypeUsage.function || usage === TypeUsage.property)) {
-				return this.nameProvider.asTypeName(type);
-			}
-			return super.printBase(type, usage);
-		}
-
-		public printList(type: ListType, usage: TypeUsage): string {
+		public printList(type: ListType, context: TypePrinterContext): string {
 			const base = type.kind.list;
 			if (TypeReference.isString(base)) {
 				switch (base) {
@@ -958,62 +978,67 @@ namespace TypeScript {
 						return `${this.printBaseReference(base)}[]`;
 				}
 			} else {
-				return `${this.printTypeReference(base, usage)}[]`;
+				return `${this.printTypeReference(base, context)}[]`;
 			}
 		}
 
-		public printOption(type: OptionType, usage: TypeUsage): string {
-			return `${this.printTypeReference(type.kind.option, usage)} | undefined`;
+		public printOption(type: OptionType, context: TypePrinterContext): string {
+			return `${this.printTypeReference(type.kind.option, context)} | undefined`;
 		}
 
-		public printTuple(type: TupleType, usage: TypeUsage): string {
-			return `[${type.kind.tuple.types.map(t => this.printTypeReference(t, usage)).join(', ')}]`;
+		public printTuple(type: TupleType, context: TypePrinterContext): string {
+			return `[${type.kind.tuple.types.map(t => this.printTypeReference(t, context)).join(', ')}]`;
 		}
 
-		public printResult(type: ResultType, usage: TypeUsage): string {
+		public printResult(type: ResultType, context: TypePrinterContext): string {
 			let ok: string = 'void';
 			const result = type.kind.result;
 			if (result.ok !== null) {
-				ok = this.printTypeReference(result.ok, usage);
+				ok = this.printTypeReference(result.ok, context);
 			}
 			let error: string = 'void';
 			if (result.err !== null) {
-				error = this.printTypeReference(result.err, usage);
+				error = this.printTypeReference(result.err, context);
 			}
 			this.imports.addBaseType('result');
 			return `result<${ok}, ${error}>`;
 		}
 
-		public printBorrowHandle(type: BorrowHandleType, usage: TypeUsage): string {
-			const borrowed = this.printTypeReference(type.kind.handle.borrow, usage);
+		public printBorrowHandle(type: BorrowHandleType, context: TypePrinterContext): string {
+			const borrowed = this.printTypeReference(type.kind.handle.borrow, context);
 			this.imports.addBaseType('borrow');
 			return `borrow<${borrowed}>`;
 		}
 
-		public printOwnHandle(type: OwnHandleType, usage: TypeUsage): string {
-			const owned = this.printTypeReference(type.kind.handle.own, usage);
+		public printOwnHandle(type: OwnHandleType, context: TypePrinterContext): string {
+			const owned = this.printTypeReference(type.kind.handle.own, context);
 			this.imports.addBaseType('own');
 			return `own<${owned}>`;
 		}
 
-		public printRecord(type: RecordType, _usage: TypeUsage): string {
+		public printRecord(type: RecordType, _context: TypePrinterContext): string {
 			return this.nameProvider.asTypeName(type);
 		}
 
-		public printEnum(type: EnumType, _usage: TypeUsage): string {
+		public printEnum(type: EnumType, _context: TypePrinterContext): string {
 			return this.nameProvider.asTypeName(type);
 		}
 
-		public printFlags(type: FlagsType, _usage: TypeUsage): string {
+		public printFlags(type: FlagsType, _context: TypePrinterContext): string {
 			return this.nameProvider.asTypeName(type);
 		}
 
-		public printVariant(type: VariantType, _usage: TypeUsage): string {
+		public printVariant(type: VariantType, _context: TypePrinterContext): string {
 			return this.nameProvider.asTypeName(type);
 		}
 
-		public printResource(type: ResourceType, _usage: TypeUsage): string {
-			return this.nameProvider.asTypeName(type);
+		public printResource(type: ResourceType, context: TypePrinterContext): string {
+			const name = this.nameProvider.asTypeName(type);
+			if (isFunctionUsage(context) && name === context.replace) {
+				return 'Interface';
+			} else {
+				return name;
+			}
 		}
 
 		public printBaseReference(base: string): string {
@@ -2996,7 +3021,7 @@ namespace ResourceEmitter {
 
 		protected abstract getFunctionName(): string;
 
-		protected getSignatureParts(start: 0 | 1): [string[], string[], string] {
+		protected getSignatureParts(start: 0 | 1, replace?: string): [string[], string[], string] {
 			const { nameProvider, printers } = this.config;
 			const params: string[] = [];
 			const paramNames: string[] = [];
@@ -3009,10 +3034,11 @@ namespace ResourceEmitter {
 			}
 			let returnType: string = 'void';
 			if (this.method.results !== null) {
+				const context = replace === undefined ? TypeUsage.function : { usage: TypeUsage.function, replace };
 				if (this.method.results.length === 1) {
-					returnType = printers.typeScript.printTypeReference(this.method.results[0].type, TypeUsage.function);
+					returnType = printers.typeScript.printTypeReference(this.method.results[0].type, context);
 				} else if (this.method.results.length > 1) {
-					returnType = `[${this.method.results.map(r => printers.typeScript.printTypeReference(r.type, TypeUsage.function)).join(', ')}]`;
+					returnType = `[${this.method.results.map(r => printers.typeScript.printTypeReference(r.type, context)).join(', ')}]`;
 				}
 			}
 			return [params, paramNames, returnType];
@@ -3081,7 +3107,7 @@ namespace ResourceEmitter {
 		}
 
 		public emitConstructorDeclaration(code: Code): void {
-			const [params, , returnType] = this.getSignatureParts(0);
+			const [params, , returnType] = this.getSignatureParts(0, this.config.nameProvider.asTypeName(this.resource));
 			code.push(`${this.getFunctionName()}(${params.join(', ')}): ${returnType};`);
 		}
 

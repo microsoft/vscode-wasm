@@ -3,9 +3,15 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { Alignment, Memory, ptr } from '@vscode/wasm-component-model';
+import { Alignment, Memory as WMemory, ptr } from '@vscode/wasm-component-model';
 
-export class LinearMemory implements Memory {
+export namespace Memory {
+	export function align(ptr: ptr, alignment: Alignment): ptr {
+		return Math.ceil(ptr / alignment) * alignment;
+	}
+}
+
+abstract class AbstractLinearMemory implements WMemory {
 
 	private _buffer: SharedArrayBuffer;
 	private _raw: Uint8Array;
@@ -13,8 +19,6 @@ export class LinearMemory implements Memory {
 
 	private _index: number;
 
-	constructor(initialSize?: number);
-	constructor(buffer: SharedArrayBuffer, ptr: number);
 	constructor(arg0?: number | SharedArrayBuffer, arg1?: ptr) {
 		if (arg0 === undefined || typeof arg0 === 'number') {
 			this._buffer = new SharedArrayBuffer(arg0 || 65536);
@@ -45,7 +49,7 @@ export class LinearMemory implements Memory {
 
 	public alloc(alignment: Alignment, size: number): ptr {
 		this._index = Math.ceil(this._index / alignment) * alignment;
-		if (this._index + size > this._buffer.byteLength) {
+		if (this._index + size > this._buffer.byteLength && this.canGrow()) {
 			const newBuffer = new SharedArrayBuffer(this._buffer.byteLength * 2);
 			new Uint8Array(newBuffer).set(this._raw);
 			this._buffer = newBuffer;
@@ -65,9 +69,37 @@ export class LinearMemory implements Memory {
 		this._raw.copyWithin(newPtr, ptr, ptr + oldSize);
 		return newPtr;
 	}
+
+	protected abstract canGrow(): boolean;
 }
 
-export class ReadonlyMemory implements Memory {
+export class LinearMemory extends AbstractLinearMemory {
+
+	constructor(initialSize?: number);
+	constructor(buffer: SharedArrayBuffer, ptr: number);
+	constructor(arg0?: number | SharedArrayBuffer, arg1?: ptr) {
+		super(arg0, arg1);
+	}
+
+	protected canGrow(): boolean{
+		return true;
+	}
+}
+
+export class FixedLinearMemory extends AbstractLinearMemory {
+
+	constructor(initialSize?: number);
+	constructor(buffer: SharedArrayBuffer, ptr: number);
+	constructor(arg0?: number | SharedArrayBuffer, arg1?: ptr) {
+		super(arg0, arg1);
+	}
+
+	protected canGrow(): boolean{
+		throw new Error('Memory cannot grow');
+	}
+}
+
+export class ReadonlyMemory implements WMemory {
 
 	public readonly buffer: ArrayBuffer;
 

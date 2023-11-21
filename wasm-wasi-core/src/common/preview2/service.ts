@@ -3,19 +3,20 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { FunctionType, InterfaceType, PackageType, WasmInterfaces } from '@vscode/wasm-component-model';
+import { FunctionType, InterfaceType, JType, PackageType, Promisify, ResourceManager, UnionJType, WasmInterfaces } from '@vscode/wasm-component-model';
 import RAL from '../ral';
-import { Header } from './connection';
-import { LinearMemory, ReadonlyMemory } from './memory';
+import { Header, ParamRestore } from './connection';
+import { FixedLinearMemory, ReadonlyMemory } from './memory';
+import { http } from '@vscode/wasi';
 
 
 export abstract class AbstractServiceConnection {
 
-	private readonly interfaces: WasmInterfaces;
+	private readonly interfaces: Promisify<WasmInterfaces>;
 	private readonly decoder: RAL.TextDecoder;
 	private readonly signatures: Map<string, Map<string, FunctionType<any>>> = new Map();
 
-	constructor(interfaces: WasmInterfaces, metaTypes: (PackageType | InterfaceType)[]) {
+	constructor(interfaces: Promisify<WasmInterfaces>, metaTypes: (PackageType | InterfaceType)[]) {
 		this.interfaces = interfaces;
 		this.decoder = RAL().TextDecoder.create('utf-8');
 		for (const metaType of metaTypes) {
@@ -29,9 +30,9 @@ export abstract class AbstractServiceConnection {
 		}
 	}
 
-	protected unpack(transfer: SharedArrayBuffer, data: SharedArrayBuffer): [string, string, LinearMemory, ReadonlyMemory] {
+	protected unpack(transfer: SharedArrayBuffer, data: SharedArrayBuffer): [string, string, FixedLinearMemory, ReadonlyMemory] {
 		const [index] = Header.getReturn(new DataView(transfer));
-		const transferMemory = new LinearMemory(transfer, index);
+		const transferMemory = new FixedLinearMemory(transfer, index);
 		const dataMemory = new ReadonlyMemory(data);
 		const [iface_ptr, iface_bytes] = Header.getIface(transferMemory.view);
 		const ifaceName = this.decoder.decode(new Uint8Array(dataMemory.buffer, iface_ptr, iface_bytes));
@@ -40,7 +41,7 @@ export abstract class AbstractServiceConnection {
 		return [ifaceName, funcName, transferMemory, dataMemory];
 	}
 
-	protected doCall(transfer: SharedArrayBuffer, data: SharedArrayBuffer): void {
+	protected async doCall(transfer: SharedArrayBuffer, data: SharedArrayBuffer): Promise<void> {
 		const [ifaceName, funcName, transferMemory, dataMemory] = this.unpack(transfer, data);
 		const func = this.interfaces[ifaceName][funcName];
 		if (!func) {
@@ -50,7 +51,8 @@ export abstract class AbstractServiceConnection {
 		if (!signature) {
 			throw new Error(`Signature for ${ifaceName}/${funcName} not found`);
 		}
-		
+		const params = new ParamRestore(signature, transferMemory).run();
+		const result = await func.apply(undefined, params);
 	}
 
 	private fillInterface(iface: InterfaceType): void {
@@ -69,3 +71,31 @@ export abstract class AbstractServiceConnection {
 		return undefined;
 	}
 }
+
+
+type ParamWasmFunction = (...params: (number | bigint)[]) => Promise<number | bigint | void>;
+interface ParamWasmInterface {
+	readonly [key: string]: ParamWasmFunction;
+}
+
+type ParamServiceFunction = (...params: UnionJType[]) => Promise<JType | void>;
+type GenericConstructor<T> = (...args: any[]) => T;
+interface ParamModuleInterface {
+	readonly [key: string]: (ParamServiceFunction | ParamModuleInterface | ResourceManager<any> | GenericConstructor<any>);
+}
+
+
+export namespace Service {
+	export function createHost<T extends ParamWasmInterface>(service: Promisify<http.Types.Fields>): T;
+	export function createHost(service: any): any {
+		return {};
+	}
+}
+
+let s: http.Types.Fields = {} as any;
+let sp: Promisify<http.Types.Fields> = {} as any;
+
+const w = Service.createHost(s);
+const wp = Service.createHost(sp);
+
+w.

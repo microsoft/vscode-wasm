@@ -915,7 +915,7 @@ namespace $wstring {
 		dest.view.setUint32(dest_ptr + offsets.codeUnits, codeUnits, true);
 	}
 
-	function getAlignmentAndByteLength(codeUnits: u32, options: Options): [Alignment, number] {
+	export function getAlignmentAndByteLength(codeUnits: u32, options: Options): [Alignment, number] {
 		const encoding = options.encoding;
 		if (encoding === 'latin1+utf-16') {
 			throw new Error('latin1+utf-16 encoding not yet supported');
@@ -966,7 +966,7 @@ namespace $wstring {
 		}
 	}
 }
-export const wstring: typeof $wstring = $wstring;
+export const wstring: ComponentModelType<string> & { getAlignmentAndByteLength: typeof $wstring.getAlignmentAndByteLength } = $wstring;
 
 export type JArray = JType[];
 export class ListType<T> implements ComponentModelType<T[]> {
@@ -2185,7 +2185,10 @@ export class ResultType<O extends JType | void, E extends JType | void = void> e
 	}
 }
 
-export type JType = number | bigint | string | boolean | JArray | JRecord | JVariantCase | JTuple | JEnum | option<any> | undefined | result<any, any> | Int8Array | Int16Array | Int32Array | BigInt64Array | Uint8Array | Uint16Array | Uint32Array | BigUint64Array | Float32Array | Float64Array;
+export type JInterface = {
+	[key: string]: (...params: JType[]) => JType | void;
+};
+export type JType = number | bigint | string | boolean | JArray | JRecord | JVariantCase | JTuple | JEnum | JInterface | option<any> | undefined | result<any, any> | Int8Array | Int16Array | Int32Array | BigInt64Array | Uint8Array | Uint16Array | Uint32Array | BigUint64Array | Float32Array | Float64Array;
 
 export type CallableParameter = [/* name */string, /* type */GenericComponentModelType];
 
@@ -2561,9 +2564,9 @@ export enum ResourceStyle {
 	class = 'class'
 }
 
-type UnionJType = number & bigint & string & boolean & JArray & JRecord & JVariantCase & JTuple & JEnum & option<any> & undefined & result<any, any> & Int8Array & Int16Array & Int32Array & BigInt64Array & Uint8Array & Uint16Array & Uint32Array & BigUint64Array & Float32Array & Float64Array;
+export type UnionJType = number & bigint & string & boolean & JArray & JRecord & JVariantCase & JTuple & JEnum & JInterface & option<any> & undefined & result<any, any> & Int8Array & Int16Array & Int32Array & BigInt64Array & Uint8Array & Uint16Array & Uint32Array & BigUint64Array & Float32Array & Float64Array;
+export type UnionWasmType = number & bigint;
 
-type UnionWasmType = number & bigint;
 type ParamWasmFunction = (...params: UnionWasmType[]) => wasmType | void;
 interface ParamWasmInterface {
 	readonly [key: string]: ParamWasmFunction;
@@ -2574,8 +2577,6 @@ type GenericConstructor<T> = new (...args: any[]) => T;
 interface ParamModuleInterface {
 	readonly [key: string]: (ParamServiceFunction | ParamModuleInterface | ResourceManager<any> | GenericConstructor<any>);
 }
-
-
 
 export type WasmInterface = {
 	readonly [key: string]: WasmFunction;
@@ -2709,3 +2710,13 @@ export namespace Service {
 		};
 	}
 }
+
+type Distribute<T> = T extends any ? Promisify<T> : never;
+export type Promisify<T> = {
+	[K in keyof T]: T[K] extends (...args: infer A) => infer R
+		? (...args: A) => Promise<R>
+		: T[K] extends object
+			? Distribute<T[K]>
+			: T[K];
+};
+

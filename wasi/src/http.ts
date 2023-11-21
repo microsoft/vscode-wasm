@@ -783,7 +783,7 @@ export namespace http {
 			}
 			export type Constructor = {
 				new(): Interface;
-				fromList(entries: [FieldKey, FieldValue][]): result<own<Fields>, HeaderError>;
+				fromList(entries: [FieldKey, FieldValue][]): result<own<Interface>, HeaderError>;
 			};
 			export type Manager = $wcm.ResourceManager<Interface>;
 		}
