@@ -7,10 +7,10 @@ import type { borrow, resource, own, u64, result, i32, ptr, i64 } from '@vscode/
 
 export namespace io {
 	export namespace Error {
-		
+
 		export namespace Error {
 			export type Module = {
-				
+
 				/**
 				 * Returns a string that is suitable to assist humans in debugging
 				 * this error.
@@ -32,23 +32,23 @@ export namespace io {
 	export type Error<E extends io.Error.Error.Module | io.Error.Error.Manager = io.Error.Error.Module | io.Error.Error.Manager> = {
 		Error: E;
 	};
-	
+
 	/**
 	 * A poll API intended to let users wait for I/O events on multiple handles
 	 * at once.
 	 */
 	export namespace Poll {
-		
+
 		export namespace Pollable {
 			export type Module = {
-				
+
 				/**
 				 * Return the readiness of a pollable. This function never blocks.
 				 * 
 				 * Returns `true` when the pollable is ready, and `false` otherwise.
 				 */
 				ready(self: borrow<Pollable>): boolean;
-				
+
 				/**
 				 * `block` returns immediately if the pollable is ready, and otherwise
 				 * blocks until ready.
@@ -65,7 +65,7 @@ export namespace io {
 			export type Manager = $wcm.ResourceManager<Interface>;
 		}
 		export type Pollable = resource;
-		
+
 		/**
 		 * Poll for completion on a set of pollables.
 		 * 
@@ -92,7 +92,7 @@ export namespace io {
 		Pollable: P;
 		poll: Poll.poll;
 	};
-	
+
 	/**
 	 * WASI I/O is an I/O abstraction API which is currently focused on providing
 	 * stream types.
@@ -101,17 +101,17 @@ export namespace io {
 	 * when it does, they are expected to subsume this API.
 	 */
 	export namespace Streams {
-		
+
 		export type Error = io.Error.Error;
-		
+
 		export type Pollable = io.Poll.Pollable;
-		
-		
+
+
 		/**
 		 * An error for input-stream and output-stream operations.
 		 */
 		export namespace StreamError {
-			
+
 			/**
 			 * The last operation (a write or flush) failed before completion.
 			 * 
@@ -122,8 +122,8 @@ export namespace io {
 			export function LastOperationFailed(value: own<Error>): LastOperationFailed {
 				return new VariantImpl(lastOperationFailed, value) as LastOperationFailed;
 			}
-			
-			
+
+
 			/**
 			 * The stream is closed: no more input will be accepted by the
 			 * stream. A closed output-stream will return this error on all
@@ -134,7 +134,7 @@ export namespace io {
 			export function Closed(): Closed {
 				return new VariantImpl(closed, undefined) as Closed;
 			}
-			
+
 			export type _tt = typeof lastOperationFailed | typeof closed;
 			export type _vt = own<Error> | undefined;
 			type _common = Omit<VariantImpl, 'tag' | 'value'>;
@@ -163,10 +163,10 @@ export namespace io {
 			}
 		}
 		export type StreamError = StreamError.LastOperationFailed | StreamError.Closed;
-		
+
 		export namespace InputStream {
 			export type Module = {
-				
+
 				/**
 				 * Perform a non-blocking read from the stream.
 				 * 
@@ -191,13 +191,13 @@ export namespace io {
 				 * less than `len` in size while more bytes are available for reading.
 				 */
 				read(self: borrow<InputStream>, len: u64): result<Uint8Array, StreamError>;
-				
+
 				/**
 				 * Read bytes from a stream, after blocking until at least one byte can
 				 * be read. Except for blocking, behavior is identical to `read`.
 				 */
 				blockingRead(self: borrow<InputStream>, len: u64): result<Uint8Array, StreamError>;
-				
+
 				/**
 				 * Skip bytes from a stream. Returns number of bytes skipped.
 				 * 
@@ -205,13 +205,13 @@ export namespace io {
 				 * of bytes, returns the number of bytes consumed from the stream.
 				 */
 				skip(self: borrow<InputStream>, len: u64): result<u64, StreamError>;
-				
+
 				/**
 				 * Skip bytes from a stream, after blocking until at least one byte
 				 * can be skipped. Except for blocking behavior, identical to `skip`.
 				 */
 				blockingSkip(self: borrow<InputStream>, len: u64): result<u64, StreamError>;
-				
+
 				/**
 				 * Create a `pollable` which will resolve once either the specified stream
 				 * has bytes available to read or the other end of the stream has been
@@ -232,10 +232,10 @@ export namespace io {
 			export type Manager = $wcm.ResourceManager<Interface>;
 		}
 		export type InputStream = resource;
-		
+
 		export namespace OutputStream {
 			export type Module = {
-				
+
 				/**
 				 * Check readiness for writing. This function never blocks.
 				 * 
@@ -248,7 +248,7 @@ export namespace io {
 				 * error.
 				 */
 				checkWrite(self: borrow<OutputStream>): result<u64, StreamError>;
-				
+
 				/**
 				 * Perform a write. This function never blocks.
 				 * 
@@ -259,7 +259,7 @@ export namespace io {
 				 * the last call to check-write provided a permit.
 				 */
 				write(self: borrow<OutputStream>, contents: Uint8Array): result<void, StreamError>;
-				
+
 				/**
 				 * Perform a write of up to 4096 bytes, and then flush the stream. Block
 				 * until all of these operations are complete, or an error occurs.
@@ -287,7 +287,7 @@ export namespace io {
 				 * ```
 				 */
 				blockingWriteAndFlush(self: borrow<OutputStream>, contents: Uint8Array): result<void, StreamError>;
-				
+
 				/**
 				 * Request to flush buffered output. This function never blocks.
 				 * 
@@ -301,13 +301,13 @@ export namespace io {
 				 * flush has completed and the stream can accept more writes.
 				 */
 				flush(self: borrow<OutputStream>): result<void, StreamError>;
-				
+
 				/**
 				 * Request to flush buffered output, and block until flush completes
 				 * and stream is ready for writing again.
 				 */
 				blockingFlush(self: borrow<OutputStream>): result<void, StreamError>;
-				
+
 				/**
 				 * Create a `pollable` which will resolve once the output-stream
 				 * is ready for more writing, or an error has occured. When this
@@ -321,7 +321,7 @@ export namespace io {
 				 * all derived `pollable`s created with this function are dropped.
 				 */
 				subscribe(self: borrow<OutputStream>): own<Pollable>;
-				
+
 				/**
 				 * Write zeroes to a stream.
 				 * 
@@ -331,7 +331,7 @@ export namespace io {
 				 * that should be written.
 				 */
 				writeZeroes(self: borrow<OutputStream>, len: u64): result<void, StreamError>;
-				
+
 				/**
 				 * Perform a write of up to 4096 zeroes, and then flush the stream.
 				 * Block until all of these operations are complete, or an error
@@ -359,7 +359,7 @@ export namespace io {
 				 * ```
 				 */
 				blockingWriteZeroesAndFlush(self: borrow<OutputStream>, len: u64): result<void, StreamError>;
-				
+
 				/**
 				 * Read from one stream and write to another.
 				 * 
@@ -376,7 +376,7 @@ export namespace io {
 				 * than `len`.
 				 */
 				splice(self: borrow<OutputStream>, src: borrow<InputStream>, len: u64): result<u64, StreamError>;
-				
+
 				/**
 				 * Read from one stream and write to another, with blocking.
 				 * 
@@ -406,7 +406,7 @@ export namespace io {
 		InputStream: IS;
 		OutputStream: OS;
 	};
-	
+
 }
 export type io<E extends io.Error = io.Error, P extends io.Poll = io.Poll, S extends io.Streams = io.Streams> = {
 	Error?: E;
@@ -467,7 +467,7 @@ export namespace io {
 			}
 		}
 	}
-	
+
 	export namespace Poll.$ {
 		export const Pollable = new $wcm.ResourceType('pollable');
 		Pollable.addFunction('ready', new $wcm.FunctionType<io.Poll.Pollable.Module['ready']>('[method]pollable.ready', [
@@ -529,7 +529,7 @@ export namespace io {
 			}
 		}
 	}
-	
+
 	export namespace Streams.$ {
 		export const Error = io.Error.$.Error;
 		export const Pollable = io.Poll.$.Pollable;

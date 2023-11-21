@@ -111,7 +111,7 @@ class Code {
 	}
 
 	public push(content?: string): void {
-		if (content !== undefined) {
+		if (content !== undefined && content.length > 0) {
 			this.source.push(`${new Array(this.indent).fill('\t').join('')}${content}`);
 		} else {
 			this.source.push('');

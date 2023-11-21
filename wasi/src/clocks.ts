@@ -20,21 +20,21 @@ export namespace clocks {
 	 * It is intended for measuring elapsed time.
 	 */
 	export namespace MonotonicClock {
-		
+
 		export type Pollable = io.Poll.Pollable;
-		
+
 		/**
 		 * An instant in time, in nanoseconds. An instant is relative to an
 		 * unspecified initial value, and can only be compared to instances from
 		 * the same monotonic-clock.
 		 */
 		export type Instant = u64;
-		
+
 		/**
 		 * A duration of time, in nanoseconds.
 		 */
 		export type Duration = u64;
-		
+
 		/**
 		 * Read the current value of the clock.
 		 * 
@@ -42,19 +42,19 @@ export namespace clocks {
 		 * produce a sequence of non-decreasing values.
 		 */
 		export type now = () => Instant;
-		
+
 		/**
 		 * Query the resolution of the clock. Returns the duration of time
 		 * corresponding to a clock tick.
 		 */
 		export type resolution = () => Duration;
-		
+
 		/**
 		 * Create a `pollable` which will resolve once the specified instant
 		 * occured.
 		 */
 		export type subscribeInstant = (when: Instant) => own<Pollable>;
-		
+
 		/**
 		 * Create a `pollable` which will resolve once the given duration has
 		 * elapsed, starting at the time at which this function was called.
@@ -68,7 +68,7 @@ export namespace clocks {
 		subscribeInstant: MonotonicClock.subscribeInstant;
 		subscribeDuration: MonotonicClock.subscribeDuration;
 	};
-	
+
 	/**
 	 * WASI Wall Clock is a clock API intended to let users query the current
 	 * time. The name "wall" makes an analogy to a "clock on the wall", which
@@ -86,7 +86,7 @@ export namespace clocks {
 	 * It is intended for reporting the current date and time for humans.
 	 */
 	export namespace WallClock {
-		
+
 		/**
 		 * A time and date in seconds plus nanoseconds.
 		 */
@@ -94,7 +94,7 @@ export namespace clocks {
 			seconds: u64;
 			nanoseconds: u32;
 		};
-		
+
 		/**
 		 * Read the current value of the clock.
 		 * 
@@ -111,7 +111,7 @@ export namespace clocks {
 		 * [Unix Time]: https://en.wikipedia.org/wiki/Unix_time
 		 */
 		export type now = () => Datetime;
-		
+
 		/**
 		 * Query the resolution of the clock.
 		 * 
@@ -123,7 +123,7 @@ export namespace clocks {
 		now: WallClock.now;
 		resolution: WallClock.resolution;
 	};
-	
+
 }
 export type clocks = {
 	MonotonicClock?: clocks.MonotonicClock;
@@ -173,7 +173,7 @@ export namespace clocks {
 			return $wcm.Service.create<clocks.MonotonicClock>(functions, [], wasmInterface, context);
 		}
 	}
-	
+
 	export namespace WallClock.$ {
 		export const Datetime = new $wcm.RecordType<clocks.WallClock.Datetime>([
 			['seconds', $wcm.u64],

@@ -14,18 +14,18 @@ export namespace http {
 	 * their headers, trailers, and bodies.
 	 */
 	export namespace Types {
-		
+
 		export type Duration = clocks.MonotonicClock.Duration;
-		
+
 		export type InputStream = io.Streams.InputStream;
-		
+
 		export type OutputStream = io.Streams.OutputStream;
-		
+
 		export type StreamError = io.Streams.Error;
-		
+
 		export type Pollable = io.Poll.Pollable;
-		
-		
+
+
 		/**
 		 * This type corresponds to HTTP standard Methods.
 		 */
@@ -35,61 +35,61 @@ export namespace http {
 			export function Get(): Get {
 				return new VariantImpl(get, undefined) as Get;
 			}
-			
+
 			export const head = 'head' as const;
 			export type Head = { readonly tag: typeof head } & _common;
 			export function Head(): Head {
 				return new VariantImpl(head, undefined) as Head;
 			}
-			
+
 			export const post = 'post' as const;
 			export type Post = { readonly tag: typeof post } & _common;
 			export function Post(): Post {
 				return new VariantImpl(post, undefined) as Post;
 			}
-			
+
 			export const put = 'put' as const;
 			export type Put = { readonly tag: typeof put } & _common;
 			export function Put(): Put {
 				return new VariantImpl(put, undefined) as Put;
 			}
-			
+
 			export const delete_ = 'delete_' as const;
 			export type Delete = { readonly tag: typeof delete_ } & _common;
 			export function Delete(): Delete {
 				return new VariantImpl(delete_, undefined) as Delete;
 			}
-			
+
 			export const connect = 'connect' as const;
 			export type Connect = { readonly tag: typeof connect } & _common;
 			export function Connect(): Connect {
 				return new VariantImpl(connect, undefined) as Connect;
 			}
-			
+
 			export const options = 'options' as const;
 			export type Options = { readonly tag: typeof options } & _common;
 			export function Options(): Options {
 				return new VariantImpl(options, undefined) as Options;
 			}
-			
+
 			export const trace = 'trace' as const;
 			export type Trace = { readonly tag: typeof trace } & _common;
 			export function Trace(): Trace {
 				return new VariantImpl(trace, undefined) as Trace;
 			}
-			
+
 			export const patch = 'patch' as const;
 			export type Patch = { readonly tag: typeof patch } & _common;
 			export function Patch(): Patch {
 				return new VariantImpl(patch, undefined) as Patch;
 			}
-			
+
 			export const other = 'other' as const;
 			export type Other = { readonly tag: typeof other; readonly value: string } & _common;
 			export function Other(value: string): Other {
 				return new VariantImpl(other, value) as Other;
 			}
-			
+
 			export type _tt = typeof get | typeof head | typeof post | typeof put | typeof delete_ | typeof connect | typeof options | typeof trace | typeof patch | typeof other;
 			export type _vt = string | undefined;
 			type _common = Omit<VariantImpl, 'tag' | 'value'>;
@@ -142,8 +142,8 @@ export namespace http {
 			}
 		}
 		export type Method = Method.Get | Method.Head | Method.Post | Method.Put | Method.Delete | Method.Connect | Method.Options | Method.Trace | Method.Patch | Method.Other;
-		
-		
+
+
 		/**
 		 * This type corresponds to HTTP standard Related Schemes.
 		 */
@@ -153,19 +153,19 @@ export namespace http {
 			export function HTTP(): HTTP {
 				return new VariantImpl(http, undefined) as HTTP;
 			}
-			
+
 			export const https = 'HTTPS' as const;
 			export type HTTPS = { readonly tag: typeof https } & _common;
 			export function HTTPS(): HTTPS {
 				return new VariantImpl(https, undefined) as HTTPS;
 			}
-			
+
 			export const other = 'other' as const;
 			export type Other = { readonly tag: typeof other; readonly value: string } & _common;
 			export function Other(value: string): Other {
 				return new VariantImpl(other, value) as Other;
 			}
-			
+
 			export type _tt = typeof http | typeof https | typeof other;
 			export type _vt = string | undefined;
 			type _common = Omit<VariantImpl, 'tag' | 'value'>;
@@ -197,7 +197,7 @@ export namespace http {
 			}
 		}
 		export type Scheme = Scheme.HTTP | Scheme.HTTPS | Scheme.Other;
-		
+
 		/**
 		 * Defines the case payload type for `DNS-error` above:
 		 */
@@ -205,7 +205,7 @@ export namespace http {
 			rcode?: string | undefined;
 			infoCode?: u16 | undefined;
 		};
-		
+
 		/**
 		 * Defines the case payload type for `TLS-alert-received` above:
 		 */
@@ -213,7 +213,7 @@ export namespace http {
 			alertId?: u8 | undefined;
 			alertMessage?: string | undefined;
 		};
-		
+
 		/**
 		 * Defines the case payload type for `HTTP-response-{header,trailer}-size` above:
 		 */
@@ -221,8 +221,8 @@ export namespace http {
 			fieldName?: string | undefined;
 			fieldSize?: u32 | undefined;
 		};
-		
-		
+
+
 		/**
 		 * These cases are inspired by the IANA HTTP Proxy Error Types:
 		 * https://www.iana.org/assignments/http-proxy-status/http-proxy-status.xhtml#table-http-proxy-error-types
@@ -233,230 +233,230 @@ export namespace http {
 			export function DNSTimeout(): DNSTimeout {
 				return new VariantImpl(dNSTimeout, undefined) as DNSTimeout;
 			}
-			
+
 			export const dNSError = 'DNSError' as const;
 			export type DNSError = { readonly tag: typeof dNSError; readonly value: DNSErrorPayload } & _common;
 			export function DNSError(value: DNSErrorPayload): DNSError {
 				return new VariantImpl(dNSError, value) as DNSError;
 			}
-			
+
 			export const destinationNotFound = 'destinationNotFound' as const;
 			export type DestinationNotFound = { readonly tag: typeof destinationNotFound } & _common;
 			export function DestinationNotFound(): DestinationNotFound {
 				return new VariantImpl(destinationNotFound, undefined) as DestinationNotFound;
 			}
-			
+
 			export const destinationUnavailable = 'destinationUnavailable' as const;
 			export type DestinationUnavailable = { readonly tag: typeof destinationUnavailable } & _common;
 			export function DestinationUnavailable(): DestinationUnavailable {
 				return new VariantImpl(destinationUnavailable, undefined) as DestinationUnavailable;
 			}
-			
+
 			export const destinationIPProhibited = 'destinationIPProhibited' as const;
 			export type DestinationIPProhibited = { readonly tag: typeof destinationIPProhibited } & _common;
 			export function DestinationIPProhibited(): DestinationIPProhibited {
 				return new VariantImpl(destinationIPProhibited, undefined) as DestinationIPProhibited;
 			}
-			
+
 			export const destinationIPUnroutable = 'destinationIPUnroutable' as const;
 			export type DestinationIPUnroutable = { readonly tag: typeof destinationIPUnroutable } & _common;
 			export function DestinationIPUnroutable(): DestinationIPUnroutable {
 				return new VariantImpl(destinationIPUnroutable, undefined) as DestinationIPUnroutable;
 			}
-			
+
 			export const connectionRefused = 'connectionRefused' as const;
 			export type ConnectionRefused = { readonly tag: typeof connectionRefused } & _common;
 			export function ConnectionRefused(): ConnectionRefused {
 				return new VariantImpl(connectionRefused, undefined) as ConnectionRefused;
 			}
-			
+
 			export const connectionTerminated = 'connectionTerminated' as const;
 			export type ConnectionTerminated = { readonly tag: typeof connectionTerminated } & _common;
 			export function ConnectionTerminated(): ConnectionTerminated {
 				return new VariantImpl(connectionTerminated, undefined) as ConnectionTerminated;
 			}
-			
+
 			export const connectionTimeout = 'connectionTimeout' as const;
 			export type ConnectionTimeout = { readonly tag: typeof connectionTimeout } & _common;
 			export function ConnectionTimeout(): ConnectionTimeout {
 				return new VariantImpl(connectionTimeout, undefined) as ConnectionTimeout;
 			}
-			
+
 			export const connectionReadTimeout = 'connectionReadTimeout' as const;
 			export type ConnectionReadTimeout = { readonly tag: typeof connectionReadTimeout } & _common;
 			export function ConnectionReadTimeout(): ConnectionReadTimeout {
 				return new VariantImpl(connectionReadTimeout, undefined) as ConnectionReadTimeout;
 			}
-			
+
 			export const connectionWriteTimeout = 'connectionWriteTimeout' as const;
 			export type ConnectionWriteTimeout = { readonly tag: typeof connectionWriteTimeout } & _common;
 			export function ConnectionWriteTimeout(): ConnectionWriteTimeout {
 				return new VariantImpl(connectionWriteTimeout, undefined) as ConnectionWriteTimeout;
 			}
-			
+
 			export const connectionLimitReached = 'connectionLimitReached' as const;
 			export type ConnectionLimitReached = { readonly tag: typeof connectionLimitReached } & _common;
 			export function ConnectionLimitReached(): ConnectionLimitReached {
 				return new VariantImpl(connectionLimitReached, undefined) as ConnectionLimitReached;
 			}
-			
+
 			export const tLSProtocolError = 'TLSProtocolError' as const;
 			export type TLSProtocolError = { readonly tag: typeof tLSProtocolError } & _common;
 			export function TLSProtocolError(): TLSProtocolError {
 				return new VariantImpl(tLSProtocolError, undefined) as TLSProtocolError;
 			}
-			
+
 			export const tLSCertificateError = 'TLSCertificateError' as const;
 			export type TLSCertificateError = { readonly tag: typeof tLSCertificateError } & _common;
 			export function TLSCertificateError(): TLSCertificateError {
 				return new VariantImpl(tLSCertificateError, undefined) as TLSCertificateError;
 			}
-			
+
 			export const tLSAlertReceived = 'TLSAlertReceived' as const;
 			export type TLSAlertReceived = { readonly tag: typeof tLSAlertReceived; readonly value: TLSAlertReceivedPayload } & _common;
 			export function TLSAlertReceived(value: TLSAlertReceivedPayload): TLSAlertReceived {
 				return new VariantImpl(tLSAlertReceived, value) as TLSAlertReceived;
 			}
-			
+
 			export const hTTPRequestDenied = 'HTTPRequestDenied' as const;
 			export type HTTPRequestDenied = { readonly tag: typeof hTTPRequestDenied } & _common;
 			export function HTTPRequestDenied(): HTTPRequestDenied {
 				return new VariantImpl(hTTPRequestDenied, undefined) as HTTPRequestDenied;
 			}
-			
+
 			export const hTTPRequestLengthRequired = 'HTTPRequestLengthRequired' as const;
 			export type HTTPRequestLengthRequired = { readonly tag: typeof hTTPRequestLengthRequired } & _common;
 			export function HTTPRequestLengthRequired(): HTTPRequestLengthRequired {
 				return new VariantImpl(hTTPRequestLengthRequired, undefined) as HTTPRequestLengthRequired;
 			}
-			
+
 			export const hTTPRequestBodySize = 'HTTPRequestBodySize' as const;
 			export type HTTPRequestBodySize = { readonly tag: typeof hTTPRequestBodySize; readonly value: u64 | undefined } & _common;
 			export function HTTPRequestBodySize(value: u64 | undefined): HTTPRequestBodySize {
 				return new VariantImpl(hTTPRequestBodySize, value) as HTTPRequestBodySize;
 			}
-			
+
 			export const hTTPRequestMethodInvalid = 'HTTPRequestMethodInvalid' as const;
 			export type HTTPRequestMethodInvalid = { readonly tag: typeof hTTPRequestMethodInvalid } & _common;
 			export function HTTPRequestMethodInvalid(): HTTPRequestMethodInvalid {
 				return new VariantImpl(hTTPRequestMethodInvalid, undefined) as HTTPRequestMethodInvalid;
 			}
-			
+
 			export const hTTPRequestURIInvalid = 'HTTPRequestURIInvalid' as const;
 			export type HTTPRequestURIInvalid = { readonly tag: typeof hTTPRequestURIInvalid } & _common;
 			export function HTTPRequestURIInvalid(): HTTPRequestURIInvalid {
 				return new VariantImpl(hTTPRequestURIInvalid, undefined) as HTTPRequestURIInvalid;
 			}
-			
+
 			export const hTTPRequestURITooLong = 'HTTPRequestURITooLong' as const;
 			export type HTTPRequestURITooLong = { readonly tag: typeof hTTPRequestURITooLong } & _common;
 			export function HTTPRequestURITooLong(): HTTPRequestURITooLong {
 				return new VariantImpl(hTTPRequestURITooLong, undefined) as HTTPRequestURITooLong;
 			}
-			
+
 			export const hTTPRequestHeaderSectionSize = 'HTTPRequestHeaderSectionSize' as const;
 			export type HTTPRequestHeaderSectionSize = { readonly tag: typeof hTTPRequestHeaderSectionSize; readonly value: u32 | undefined } & _common;
 			export function HTTPRequestHeaderSectionSize(value: u32 | undefined): HTTPRequestHeaderSectionSize {
 				return new VariantImpl(hTTPRequestHeaderSectionSize, value) as HTTPRequestHeaderSectionSize;
 			}
-			
+
 			export const hTTPRequestHeaderSize = 'HTTPRequestHeaderSize' as const;
 			export type HTTPRequestHeaderSize = { readonly tag: typeof hTTPRequestHeaderSize; readonly value: FieldSizePayload | undefined } & _common;
 			export function HTTPRequestHeaderSize(value: FieldSizePayload | undefined): HTTPRequestHeaderSize {
 				return new VariantImpl(hTTPRequestHeaderSize, value) as HTTPRequestHeaderSize;
 			}
-			
+
 			export const hTTPRequestTrailerSectionSize = 'HTTPRequestTrailerSectionSize' as const;
 			export type HTTPRequestTrailerSectionSize = { readonly tag: typeof hTTPRequestTrailerSectionSize; readonly value: u32 | undefined } & _common;
 			export function HTTPRequestTrailerSectionSize(value: u32 | undefined): HTTPRequestTrailerSectionSize {
 				return new VariantImpl(hTTPRequestTrailerSectionSize, value) as HTTPRequestTrailerSectionSize;
 			}
-			
+
 			export const hTTPRequestTrailerSize = 'HTTPRequestTrailerSize' as const;
 			export type HTTPRequestTrailerSize = { readonly tag: typeof hTTPRequestTrailerSize; readonly value: FieldSizePayload } & _common;
 			export function HTTPRequestTrailerSize(value: FieldSizePayload): HTTPRequestTrailerSize {
 				return new VariantImpl(hTTPRequestTrailerSize, value) as HTTPRequestTrailerSize;
 			}
-			
+
 			export const hTTPResponseIncomplete = 'HTTPResponseIncomplete' as const;
 			export type HTTPResponseIncomplete = { readonly tag: typeof hTTPResponseIncomplete } & _common;
 			export function HTTPResponseIncomplete(): HTTPResponseIncomplete {
 				return new VariantImpl(hTTPResponseIncomplete, undefined) as HTTPResponseIncomplete;
 			}
-			
+
 			export const hTTPResponseHeaderSectionSize = 'HTTPResponseHeaderSectionSize' as const;
 			export type HTTPResponseHeaderSectionSize = { readonly tag: typeof hTTPResponseHeaderSectionSize; readonly value: u32 | undefined } & _common;
 			export function HTTPResponseHeaderSectionSize(value: u32 | undefined): HTTPResponseHeaderSectionSize {
 				return new VariantImpl(hTTPResponseHeaderSectionSize, value) as HTTPResponseHeaderSectionSize;
 			}
-			
+
 			export const hTTPResponseHeaderSize = 'HTTPResponseHeaderSize' as const;
 			export type HTTPResponseHeaderSize = { readonly tag: typeof hTTPResponseHeaderSize; readonly value: FieldSizePayload } & _common;
 			export function HTTPResponseHeaderSize(value: FieldSizePayload): HTTPResponseHeaderSize {
 				return new VariantImpl(hTTPResponseHeaderSize, value) as HTTPResponseHeaderSize;
 			}
-			
+
 			export const hTTPResponseBodySize = 'HTTPResponseBodySize' as const;
 			export type HTTPResponseBodySize = { readonly tag: typeof hTTPResponseBodySize; readonly value: u64 | undefined } & _common;
 			export function HTTPResponseBodySize(value: u64 | undefined): HTTPResponseBodySize {
 				return new VariantImpl(hTTPResponseBodySize, value) as HTTPResponseBodySize;
 			}
-			
+
 			export const hTTPResponseTrailerSectionSize = 'HTTPResponseTrailerSectionSize' as const;
 			export type HTTPResponseTrailerSectionSize = { readonly tag: typeof hTTPResponseTrailerSectionSize; readonly value: u32 | undefined } & _common;
 			export function HTTPResponseTrailerSectionSize(value: u32 | undefined): HTTPResponseTrailerSectionSize {
 				return new VariantImpl(hTTPResponseTrailerSectionSize, value) as HTTPResponseTrailerSectionSize;
 			}
-			
+
 			export const hTTPResponseTrailerSize = 'HTTPResponseTrailerSize' as const;
 			export type HTTPResponseTrailerSize = { readonly tag: typeof hTTPResponseTrailerSize; readonly value: FieldSizePayload } & _common;
 			export function HTTPResponseTrailerSize(value: FieldSizePayload): HTTPResponseTrailerSize {
 				return new VariantImpl(hTTPResponseTrailerSize, value) as HTTPResponseTrailerSize;
 			}
-			
+
 			export const hTTPResponseTransferCoding = 'HTTPResponseTransferCoding' as const;
 			export type HTTPResponseTransferCoding = { readonly tag: typeof hTTPResponseTransferCoding; readonly value: string | undefined } & _common;
 			export function HTTPResponseTransferCoding(value: string | undefined): HTTPResponseTransferCoding {
 				return new VariantImpl(hTTPResponseTransferCoding, value) as HTTPResponseTransferCoding;
 			}
-			
+
 			export const hTTPResponseContentCoding = 'HTTPResponseContentCoding' as const;
 			export type HTTPResponseContentCoding = { readonly tag: typeof hTTPResponseContentCoding; readonly value: string | undefined } & _common;
 			export function HTTPResponseContentCoding(value: string | undefined): HTTPResponseContentCoding {
 				return new VariantImpl(hTTPResponseContentCoding, value) as HTTPResponseContentCoding;
 			}
-			
+
 			export const hTTPResponseTimeout = 'HTTPResponseTimeout' as const;
 			export type HTTPResponseTimeout = { readonly tag: typeof hTTPResponseTimeout } & _common;
 			export function HTTPResponseTimeout(): HTTPResponseTimeout {
 				return new VariantImpl(hTTPResponseTimeout, undefined) as HTTPResponseTimeout;
 			}
-			
+
 			export const hTTPUpgradeFailed = 'HTTPUpgradeFailed' as const;
 			export type HTTPUpgradeFailed = { readonly tag: typeof hTTPUpgradeFailed } & _common;
 			export function HTTPUpgradeFailed(): HTTPUpgradeFailed {
 				return new VariantImpl(hTTPUpgradeFailed, undefined) as HTTPUpgradeFailed;
 			}
-			
+
 			export const hTTPProtocolError = 'HTTPProtocolError' as const;
 			export type HTTPProtocolError = { readonly tag: typeof hTTPProtocolError } & _common;
 			export function HTTPProtocolError(): HTTPProtocolError {
 				return new VariantImpl(hTTPProtocolError, undefined) as HTTPProtocolError;
 			}
-			
+
 			export const loopDetected = 'loopDetected' as const;
 			export type LoopDetected = { readonly tag: typeof loopDetected } & _common;
 			export function LoopDetected(): LoopDetected {
 				return new VariantImpl(loopDetected, undefined) as LoopDetected;
 			}
-			
+
 			export const configurationError = 'configurationError' as const;
 			export type ConfigurationError = { readonly tag: typeof configurationError } & _common;
 			export function ConfigurationError(): ConfigurationError {
 				return new VariantImpl(configurationError, undefined) as ConfigurationError;
 			}
-			
-			
+
+
 			/**
 			 * This is a catch-all error for anything that doesn't fit cleanly into a
 			 * more specific case. It also includes an optional string for an
@@ -469,7 +469,7 @@ export namespace http {
 			export function InternalError(value: string | undefined): InternalError {
 				return new VariantImpl(internalError, value) as InternalError;
 			}
-			
+
 			export type _tt = typeof dNSTimeout | typeof dNSError | typeof destinationNotFound | typeof destinationUnavailable | typeof destinationIPProhibited | typeof destinationIPUnroutable | typeof connectionRefused | typeof connectionTerminated | typeof connectionTimeout | typeof connectionReadTimeout | typeof connectionWriteTimeout | typeof connectionLimitReached | typeof tLSProtocolError | typeof tLSCertificateError | typeof tLSAlertReceived | typeof hTTPRequestDenied | typeof hTTPRequestLengthRequired | typeof hTTPRequestBodySize | typeof hTTPRequestMethodInvalid | typeof hTTPRequestURIInvalid | typeof hTTPRequestURITooLong | typeof hTTPRequestHeaderSectionSize | typeof hTTPRequestHeaderSize | typeof hTTPRequestTrailerSectionSize | typeof hTTPRequestTrailerSize | typeof hTTPResponseIncomplete | typeof hTTPResponseHeaderSectionSize | typeof hTTPResponseHeaderSize | typeof hTTPResponseBodySize | typeof hTTPResponseTrailerSectionSize | typeof hTTPResponseTrailerSize | typeof hTTPResponseTransferCoding | typeof hTTPResponseContentCoding | typeof hTTPResponseTimeout | typeof hTTPUpgradeFailed | typeof hTTPProtocolError | typeof loopDetected | typeof configurationError | typeof internalError;
 			export type _vt = DNSErrorPayload | TLSAlertReceivedPayload | u64 | undefined | u32 | undefined | FieldSizePayload | undefined | u32 | undefined | FieldSizePayload | u32 | undefined | FieldSizePayload | u64 | undefined | u32 | undefined | FieldSizePayload | string | undefined | string | undefined | string | undefined | undefined;
 			type _common = Omit<VariantImpl, 'tag' | 'value'>;
@@ -609,14 +609,14 @@ export namespace http {
 			}
 		}
 		export type ErrorCode = ErrorCode.DNSTimeout | ErrorCode.DNSError | ErrorCode.DestinationNotFound | ErrorCode.DestinationUnavailable | ErrorCode.DestinationIPProhibited | ErrorCode.DestinationIPUnroutable | ErrorCode.ConnectionRefused | ErrorCode.ConnectionTerminated | ErrorCode.ConnectionTimeout | ErrorCode.ConnectionReadTimeout | ErrorCode.ConnectionWriteTimeout | ErrorCode.ConnectionLimitReached | ErrorCode.TLSProtocolError | ErrorCode.TLSCertificateError | ErrorCode.TLSAlertReceived | ErrorCode.HTTPRequestDenied | ErrorCode.HTTPRequestLengthRequired | ErrorCode.HTTPRequestBodySize | ErrorCode.HTTPRequestMethodInvalid | ErrorCode.HTTPRequestURIInvalid | ErrorCode.HTTPRequestURITooLong | ErrorCode.HTTPRequestHeaderSectionSize | ErrorCode.HTTPRequestHeaderSize | ErrorCode.HTTPRequestTrailerSectionSize | ErrorCode.HTTPRequestTrailerSize | ErrorCode.HTTPResponseIncomplete | ErrorCode.HTTPResponseHeaderSectionSize | ErrorCode.HTTPResponseHeaderSize | ErrorCode.HTTPResponseBodySize | ErrorCode.HTTPResponseTrailerSectionSize | ErrorCode.HTTPResponseTrailerSize | ErrorCode.HTTPResponseTransferCoding | ErrorCode.HTTPResponseContentCoding | ErrorCode.HTTPResponseTimeout | ErrorCode.HTTPUpgradeFailed | ErrorCode.HTTPProtocolError | ErrorCode.LoopDetected | ErrorCode.ConfigurationError | ErrorCode.InternalError;
-		
-		
+
+
 		/**
 		 * This type enumerates the different kinds of errors that may occur when
 		 * setting or appending to a `fields` resource.
 		 */
 		export namespace HeaderError {
-			
+
 			/**
 			 * This error indicates that a `field-key` or `field-value` was
 			 * syntactically invalid when used with an operation that sets headers in a
@@ -627,8 +627,8 @@ export namespace http {
 			export function InvalidSyntax(): InvalidSyntax {
 				return new VariantImpl(invalidSyntax, undefined) as InvalidSyntax;
 			}
-			
-			
+
+
 			/**
 			 * This error indicates that a forbidden `field-key` was used when trying
 			 * to set a header in a `fields`.
@@ -638,8 +638,8 @@ export namespace http {
 			export function Forbidden(): Forbidden {
 				return new VariantImpl(forbidden, undefined) as Forbidden;
 			}
-			
-			
+
+
 			/**
 			 * This error indicates that the operation on the `fields` was not
 			 * permitted because the fields are immutable.
@@ -649,7 +649,7 @@ export namespace http {
 			export function Immutable(): Immutable {
 				return new VariantImpl(immutable, undefined) as Immutable;
 			}
-			
+
 			export type _tt = typeof invalidSyntax | typeof forbidden | typeof immutable;
 			export type _vt = undefined;
 			type _common = Omit<VariantImpl, 'tag' | 'value'>;
@@ -681,42 +681,42 @@ export namespace http {
 			}
 		}
 		export type HeaderError = HeaderError.InvalidSyntax | HeaderError.Forbidden | HeaderError.Immutable;
-		
+
 		/**
 		 * Field keys are always strings.
 		 */
 		export type FieldKey = string;
-		
+
 		/**
 		 * Field values should always be ASCII strings. However, in
 		 * reality, HTTP implementations often have to interpret malformed values,
 		 * so they are provided as a list of bytes.
 		 */
 		export type FieldValue = Uint8Array;
-		
+
 		/**
 		 * Headers is an alias for Fields.
 		 */
 		export type Headers = Fields;
-		
+
 		/**
 		 * Trailers is an alias for Fields.
 		 */
 		export type Trailers = Fields;
-		
+
 		/**
 		 * This type corresponds to the HTTP standard Status Code.
 		 */
 		export type StatusCode = u16;
-		
+
 		export namespace Fields {
 			export type Module = {
-				
+
 				/**
 				 * Construct an empty HTTP Fields.
 				 */
 				constructor(): own<Fields>;
-				
+
 				/**
 				 * Construct an HTTP Fields.
 				 * 
@@ -733,30 +733,30 @@ export namespace http {
 				 * syntactically invalid, or if a header was forbidden.
 				 */
 				fromList(entries: [FieldKey, FieldValue][]): result<own<Fields>, HeaderError>;
-				
+
 				/**
 				 * Get all of the values corresponding to a key.
 				 */
 				get(self: borrow<Fields>, name: FieldKey): FieldValue[];
-				
+
 				/**
 				 * Set all of the values for a key. Clears any existing values for that
 				 * key, if they have been set.
 				 */
 				set(self: borrow<Fields>, name: FieldKey, value: FieldValue[]): result<void, HeaderError>;
-				
+
 				/**
 				 * Delete all values for a key. Does nothing if no values for the key
 				 * exist.
 				 */
 				delete_(self: borrow<Fields>, name: FieldKey): result<void, HeaderError>;
-				
+
 				/**
 				 * Append a value for a key. Does not change or delete any existing
 				 * values for that key.
 				 */
 				append(self: borrow<Fields>, name: FieldKey, value: FieldValue): result<void, HeaderError>;
-				
+
 				/**
 				 * Retrieve the full set of keys and values in the Fields. Like the
 				 * constructor, the list represents each key-value pair.
@@ -766,7 +766,7 @@ export namespace http {
 				 * list with the same key.
 				 */
 				entries(self: borrow<Fields>): [FieldKey, FieldValue][];
-				
+
 				/**
 				 * Make a deep copy of the Fields. Equivelant in behavior to calling the
 				 * `fields` constructor on the return value of `entries`
@@ -788,30 +788,30 @@ export namespace http {
 			export type Manager = $wcm.ResourceManager<Interface>;
 		}
 		export type Fields = resource;
-		
+
 		export namespace IncomingRequest {
 			export type Module = {
-				
+
 				/**
 				 * Returns the method of the incoming request.
 				 */
 				method(self: borrow<IncomingRequest>): Method;
-				
+
 				/**
 				 * Returns the path with query parameters from the request, as a string.
 				 */
 				pathWithQuery(self: borrow<IncomingRequest>): string | undefined;
-				
+
 				/**
 				 * Returns the protocol scheme from the request.
 				 */
 				scheme(self: borrow<IncomingRequest>): Scheme | undefined;
-				
+
 				/**
 				 * Returns the authority from the request, if it was present.
 				 */
 				authority(self: borrow<IncomingRequest>): string | undefined;
-				
+
 				/**
 				 * Returns the `headers` from the request.
 				 * 
@@ -820,7 +820,7 @@ export namespace http {
 				 * `incoming-request` before all children are dropped will trap.
 				 */
 				headers(self: borrow<IncomingRequest>): own<Headers>;
-				
+
 				/**
 				 * Gives the `incoming-body` associated with this request. Will only
 				 * return success at most once, and subsequent calls will return error.
@@ -838,10 +838,10 @@ export namespace http {
 			export type Manager = $wcm.ResourceManager<Interface>;
 		}
 		export type IncomingRequest = resource;
-		
+
 		export namespace OutgoingRequest {
 			export type Module = {
-				
+
 				/**
 				 * Construct a new `outgoing-request` with a default `method` of `GET`, and
 				 * `none` values for `path-with-query`, `scheme`, and `authority`.
@@ -855,7 +855,7 @@ export namespace http {
 				 * to reject invalid constructions of `outgoing-request`.
 				 */
 				constructor(headers: own<Headers>): own<OutgoingRequest>;
-				
+
 				/**
 				 * Returns the resource corresponding to the outgoing Body for this
 				 * Request.
@@ -865,51 +865,51 @@ export namespace http {
 				 * calls will return error.
 				 */
 				body(self: borrow<OutgoingRequest>): result<own<OutgoingBody>, void>;
-				
+
 				/**
 				 * Get the Method for the Request.
 				 */
 				method(self: borrow<OutgoingRequest>): Method;
-				
+
 				/**
 				 * Set the Method for the Request. Fails if the string present in a
 				 * `method.other` argument is not a syntactically valid method.
 				 */
 				setMethod(self: borrow<OutgoingRequest>, method: Method): result<void, void>;
-				
+
 				/**
 				 * Get the combination of the HTTP Path and Query for the Request.
 				 * When `none`, this represents an empty Path and empty Query.
 				 */
 				pathWithQuery(self: borrow<OutgoingRequest>): string | undefined;
-				
+
 				/**
 				 * Set the combination of the HTTP Path and Query for the Request.
 				 * When `none`, this represents an empty Path and empty Query. Fails is the
 				 * string given is not a syntactically valid path and query uri component.
 				 */
 				setPathWithQuery(self: borrow<OutgoingRequest>, pathWithQuery: string | undefined): result<void, void>;
-				
+
 				/**
 				 * Get the HTTP Related Scheme for the Request. When `none`, the
 				 * implementation may choose an appropriate default scheme.
 				 */
 				scheme(self: borrow<OutgoingRequest>): Scheme | undefined;
-				
+
 				/**
 				 * Set the HTTP Related Scheme for the Request. When `none`, the
 				 * implementation may choose an appropriate default scheme. Fails if the
 				 * string given is not a syntactically valid uri scheme.
 				 */
 				setScheme(self: borrow<OutgoingRequest>, scheme: Scheme | undefined): result<void, void>;
-				
+
 				/**
 				 * Get the HTTP Authority for the Request. A value of `none` may be used
 				 * with Related Schemes which do not require an Authority. The HTTP and
 				 * HTTPS schemes always require an authority.
 				 */
 				authority(self: borrow<OutgoingRequest>): string | undefined;
-				
+
 				/**
 				 * Set the HTTP Authority for the Request. A value of `none` may be used
 				 * with Related Schemes which do not require an Authority. The HTTP and
@@ -917,7 +917,7 @@ export namespace http {
 				 * not a syntactically valid uri authority.
 				 */
 				setAuthority(self: borrow<OutgoingRequest>, authority: string | undefined): result<void, void>;
-				
+
 				/**
 				 * Get the headers associated with the Request.
 				 * 
@@ -945,43 +945,43 @@ export namespace http {
 			export type Manager = $wcm.ResourceManager<Interface>;
 		}
 		export type OutgoingRequest = resource;
-		
+
 		export namespace RequestOptions {
 			export type Module = {
-				
+
 				/**
 				 * Construct a default `request-options` value.
 				 */
 				constructor(): own<RequestOptions>;
-				
+
 				/**
 				 * The timeout for the initial connect to the HTTP Server.
 				 */
 				connectTimeoutMs(self: borrow<RequestOptions>): Duration | undefined;
-				
+
 				/**
 				 * Set the timeout for the initial connect to the HTTP Server. An error
 				 * return value indicates that this timeout is not supported.
 				 */
 				setConnectTimeoutMs(self: borrow<RequestOptions>, ms: Duration | undefined): result<void, void>;
-				
+
 				/**
 				 * The timeout for receiving the first byte of the Response body.
 				 */
 				firstByteTimeoutMs(self: borrow<RequestOptions>): Duration | undefined;
-				
+
 				/**
 				 * Set the timeout for receiving the first byte of the Response body. An
 				 * error return value indicates that this timeout is not supported.
 				 */
 				setFirstByteTimeoutMs(self: borrow<RequestOptions>, ms: Duration | undefined): result<void, void>;
-				
+
 				/**
 				 * The timeout for receiving subsequent chunks of bytes in the Response
 				 * body stream.
 				 */
 				betweenBytesTimeoutMs(self: borrow<RequestOptions>): Duration | undefined;
-				
+
 				/**
 				 * Set the timeout for receiving subsequent chunks of bytes in the Response
 				 * body stream. An error return value indicates that this timeout is not
@@ -1003,10 +1003,10 @@ export namespace http {
 			export type Manager = $wcm.ResourceManager<Interface>;
 		}
 		export type RequestOptions = resource;
-		
+
 		export namespace ResponseOutparam {
 			export type Module = {
-				
+
 				/**
 				 * Set the value of the `response-outparam` to either send a response,
 				 * or indicate an error.
@@ -1028,20 +1028,20 @@ export namespace http {
 			export type Manager = $wcm.ResourceManager<Interface>;
 		}
 		export type ResponseOutparam = resource;
-		
+
 		export namespace IncomingResponse {
 			export type Module = {
-				
+
 				/**
 				 * Returns the status code from the incoming response.
 				 */
 				status(self: borrow<IncomingResponse>): StatusCode;
-				
+
 				/**
 				 * Returns the headers from the incoming response.
 				 */
 				headers(self: borrow<IncomingResponse>): own<Headers>;
-				
+
 				/**
 				 * Returns the incoming body. May be called at most once. Returns error
 				 * if called additional times.
@@ -1056,10 +1056,10 @@ export namespace http {
 			export type Manager = $wcm.ResourceManager<Interface>;
 		}
 		export type IncomingResponse = resource;
-		
+
 		export namespace IncomingBody {
 			export type Module = {
-				
+
 				/**
 				 * Returns the contents of the body, as a stream of bytes.
 				 * 
@@ -1078,7 +1078,7 @@ export namespace http {
 				 * the user does not read the entire body.
 				 */
 				stream(self: borrow<IncomingBody>): result<own<InputStream>, void>;
-				
+
 				/**
 				 * Takes ownership of `incoming-body`, and returns a `future-trailers`.
 				 * This function will trap if the `input-stream` child is still alive.
@@ -1094,17 +1094,17 @@ export namespace http {
 			export type Manager = $wcm.ResourceManager<Interface>;
 		}
 		export type IncomingBody = resource;
-		
+
 		export namespace FutureTrailers {
 			export type Module = {
-				
+
 				/**
 				 * Returns a pollable which becomes ready when either the trailers have
 				 * been received, or an error has occured. When this pollable is ready,
 				 * the `get` method will return `some`.
 				 */
 				subscribe(self: borrow<FutureTrailers>): own<Pollable>;
-				
+
 				/**
 				 * Returns the contents of the trailers, or an error which occured,
 				 * once the future is ready.
@@ -1126,10 +1126,10 @@ export namespace http {
 			export type Manager = $wcm.ResourceManager<Interface>;
 		}
 		export type FutureTrailers = resource;
-		
+
 		export namespace OutgoingResponse {
 			export type Module = {
-				
+
 				/**
 				 * Construct an `outgoing-response`, with a default `status-code` of `200`.
 				 * If a different `status-code` is needed, it must be set via the
@@ -1138,18 +1138,18 @@ export namespace http {
 				 * * `headers` is the HTTP Headers for the Response.
 				 */
 				constructor(headers: own<Headers>): own<OutgoingResponse>;
-				
+
 				/**
 				 * Get the HTTP Status Code for the Response.
 				 */
 				statusCode(self: borrow<OutgoingResponse>): StatusCode;
-				
+
 				/**
 				 * Set the HTTP Status Code for the Response. Fails if the status-code
 				 * given is not a valid http status code.
 				 */
 				setStatusCode(self: borrow<OutgoingResponse>, statusCode: StatusCode): result<void, void>;
-				
+
 				/**
 				 * Get the headers associated with the Request.
 				 * 
@@ -1158,7 +1158,7 @@ export namespace http {
 				 * another component by e.g. `outgoing-handler.handle`.
 				 */
 				headers(self: borrow<OutgoingResponse>): own<Headers>;
-				
+
 				/**
 				 * Returns the resource corresponding to the outgoing Body for this Response.
 				 * 
@@ -1180,10 +1180,10 @@ export namespace http {
 			export type Manager = $wcm.ResourceManager<Interface>;
 		}
 		export type OutgoingResponse = resource;
-		
+
 		export namespace OutgoingBody {
 			export type Module = {
-				
+
 				/**
 				 * Returns a stream for writing the body contents.
 				 * 
@@ -1196,7 +1196,7 @@ export namespace http {
 				 * will return error.
 				 */
 				write(self: borrow<OutgoingBody>): result<own<OutputStream>, void>;
-				
+
 				/**
 				 * Finalize an outgoing body, optionally providing trailers. This must be
 				 * called to signal that the response is complete. If the `outgoing-body`
@@ -1214,17 +1214,17 @@ export namespace http {
 			export type Manager = $wcm.ResourceManager<Interface>;
 		}
 		export type OutgoingBody = resource;
-		
+
 		export namespace FutureIncomingResponse {
 			export type Module = {
-				
+
 				/**
 				 * Returns a pollable which becomes ready when either the Response has
 				 * been received, or an error has occured. When this pollable is ready,
 				 * the `get` method will return `some`.
 				 */
 				subscribe(self: borrow<FutureIncomingResponse>): own<Pollable>;
-				
+
 				/**
 				 * Returns the incoming HTTP Response, or an error, once one is ready.
 				 * 
@@ -1250,7 +1250,7 @@ export namespace http {
 			export type Manager = $wcm.ResourceManager<Interface>;
 		}
 		export type FutureIncomingResponse = resource;
-		
+
 		/**
 		 * Attempts to extract a http-related `error` from the stream `error`
 		 * provided.
@@ -1279,17 +1279,17 @@ export namespace http {
 		FutureIncomingResponse: FIR;
 		httpErrorCode: Types.httpErrorCode;
 	};
-	
+
 	/**
 	 * This interface defines a handler of incoming HTTP Requests. It should
 	 * be exported by components which can respond to HTTP Requests.
 	 */
 	export namespace IncomingHandler {
-		
+
 		export type IncomingRequest = http.Types.IncomingRequest;
-		
+
 		export type ResponseOutparam = http.Types.ResponseOutparam;
-		
+
 		/**
 		 * This function is invoked with an incoming HTTP Request, and a resource
 		 * `response-outparam` which provides the capability to reply with an HTTP
@@ -1307,21 +1307,21 @@ export namespace http {
 	export type IncomingHandler = {
 		handle: IncomingHandler.handle;
 	};
-	
+
 	/**
 	 * This interface defines a handler of outgoing HTTP Requests. It should be
 	 * imported by components which wish to make HTTP Requests.
 	 */
 	export namespace OutgoingHandler {
-		
+
 		export type OutgoingRequest = http.Types.OutgoingRequest;
-		
+
 		export type RequestOptions = http.Types.RequestOptions;
-		
+
 		export type FutureIncomingResponse = http.Types.FutureIncomingResponse;
-		
+
 		export type ErrorCode = http.Types.ErrorCode;
-		
+
 		/**
 		 * This function is invoked with an outgoing HTTP Request, and it returns
 		 * a resource `future-incoming-response` which represents an HTTP Response
@@ -1339,7 +1339,7 @@ export namespace http {
 	export type OutgoingHandler = {
 		handle: OutgoingHandler.handle;
 	};
-	
+
 }
 export type http<T extends http.Types = http.Types> = {
 	Types?: T;
@@ -1947,7 +1947,7 @@ export namespace http {
 			}
 		}
 	}
-	
+
 	export namespace IncomingHandler.$ {
 		export const IncomingRequest = http.Types.$.IncomingRequest;
 		export const ResponseOutparam = http.Types.$.ResponseOutparam;
@@ -1978,7 +1978,7 @@ export namespace http {
 			return $wcm.Service.create<http.IncomingHandler>(functions, [], wasmInterface, context);
 		}
 	}
-	
+
 	export namespace OutgoingHandler.$ {
 		export const OutgoingRequest = http.Types.$.OutgoingRequest;
 		export const RequestOptions = http.Types.$.RequestOptions;

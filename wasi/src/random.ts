@@ -13,7 +13,7 @@ export namespace random {
 	 * Windows.
 	 */
 	export namespace InsecureSeed {
-		
+
 		/**
 		 * Return a 128-bit value that may contain a pseudo-random value.
 		 * 
@@ -38,7 +38,7 @@ export namespace random {
 	export type InsecureSeed = {
 		insecureSeed: InsecureSeed.insecureSeed;
 	};
-	
+
 	/**
 	 * The insecure interface for insecure pseudo-random numbers.
 	 * 
@@ -46,7 +46,7 @@ export namespace random {
 	 * Windows.
 	 */
 	export namespace Insecure {
-		
+
 		/**
 		 * Return `len` insecure pseudo-random bytes.
 		 * 
@@ -58,7 +58,7 @@ export namespace random {
 		 * a long period.
 		 */
 		export type getInsecureRandomBytes = (len: u64) => Uint8Array;
-		
+
 		/**
 		 * Return an insecure pseudo-random `u64` value.
 		 * 
@@ -71,7 +71,7 @@ export namespace random {
 		getInsecureRandomBytes: Insecure.getInsecureRandomBytes;
 		getInsecureRandomU64: Insecure.getInsecureRandomU64;
 	};
-	
+
 	/**
 	 * WASI Random is a random data API.
 	 * 
@@ -79,7 +79,7 @@ export namespace random {
 	 * Windows.
 	 */
 	export namespace Random {
-		
+
 		/**
 		 * Return `len` cryptographically-secure random or pseudo-random bytes.
 		 * 
@@ -95,7 +95,7 @@ export namespace random {
 		 * data.
 		 */
 		export type getRandomBytes = (len: u64) => Uint8Array;
-		
+
 		/**
 		 * Return a cryptographically-secure random or pseudo-random `u64` value.
 		 * 
@@ -108,7 +108,7 @@ export namespace random {
 		getRandomBytes: Random.getRandomBytes;
 		getRandomU64: Random.getRandomU64;
 	};
-	
+
 }
 export type random = {
 	InsecureSeed?: random.InsecureSeed;
@@ -140,7 +140,7 @@ export namespace random {
 			return $wcm.Service.create<random.InsecureSeed>(functions, [], wasmInterface, context);
 		}
 	}
-	
+
 	export namespace Insecure.$ {
 		export const getInsecureRandomBytes = new $wcm.FunctionType<random.Insecure.getInsecureRandomBytes>('get-insecure-random-bytes',[
 			['len', $wcm.u64],
@@ -169,7 +169,7 @@ export namespace random {
 			return $wcm.Service.create<random.Insecure>(functions, [], wasmInterface, context);
 		}
 	}
-	
+
 	export namespace Random.$ {
 		export const getRandomBytes = new $wcm.FunctionType<random.Random.getRandomBytes>('get-random-bytes',[
 			['len', $wcm.u64],

@@ -8,7 +8,7 @@ import { io } from './io';
 
 export namespace cli {
 	export namespace Environment {
-		
+
 		/**
 		 * Get the POSIX-style environment variables.
 		 * 
@@ -20,12 +20,12 @@ export namespace cli {
 		 * values each time it is called.
 		 */
 		export type getEnvironment = () => [string, string][];
-		
+
 		/**
 		 * Get the POSIX-style arguments to the program.
 		 */
 		export type getArguments = () => string[];
-		
+
 		/**
 		 * Return a path that programs should use as their initial current working
 		 * directory, interpreting `.` as shorthand for this.
@@ -37,9 +37,9 @@ export namespace cli {
 		getArguments: Environment.getArguments;
 		initialCwd: Environment.initialCwd;
 	};
-	
+
 	export namespace Exit {
-		
+
 		/**
 		 * Exit the current instance and any linked instances.
 		 */
@@ -48,9 +48,9 @@ export namespace cli {
 	export type Exit = {
 		exit: Exit.exit;
 	};
-	
+
 	export namespace Run {
-		
+
 		/**
 		 * Run the program.
 		 */
@@ -59,39 +59,39 @@ export namespace cli {
 	export type Run = {
 		run: Run.run;
 	};
-	
+
 	export namespace Stdin {
-		
+
 		export type InputStream = io.Streams.InputStream;
-		
+
 		export type getStdin = () => own<InputStream>;
 	}
 	export type Stdin = {
 		getStdin: Stdin.getStdin;
 	};
-	
+
 	export namespace Stdout {
-		
+
 		export type OutputStream = io.Streams.OutputStream;
-		
+
 		export type getStdout = () => own<OutputStream>;
 	}
 	export type Stdout = {
 		getStdout: Stdout.getStdout;
 	};
-	
+
 	export namespace Stderr {
-		
+
 		export type OutputStream = io.Streams.OutputStream;
-		
+
 		export type getStderr = () => own<OutputStream>;
 	}
 	export type Stderr = {
 		getStderr: Stderr.getStderr;
 	};
-	
+
 	export namespace TerminalInput {
-		
+
 		export namespace TerminalInput {
 			export type Module = {
 			};
@@ -103,9 +103,9 @@ export namespace cli {
 	}
 	export type TerminalInput = {
 	};
-	
+
 	export namespace TerminalOutput {
-		
+
 		export namespace TerminalOutput {
 			export type Module = {
 			};
@@ -117,15 +117,15 @@ export namespace cli {
 	}
 	export type TerminalOutput = {
 	};
-	
+
 	/**
 	 * An interface providing an optional `terminal-input` for stdin as a
 	 * link-time authority.
 	 */
 	export namespace TerminalStdin {
-		
+
 		export type TerminalInput = cli.TerminalInput.TerminalInput;
-		
+
 		/**
 		 * If stdin is connected to a terminal, return a `terminal-input` handle
 		 * allowing further interaction with it.
@@ -135,15 +135,15 @@ export namespace cli {
 	export type TerminalStdin = {
 		getTerminalStdin: TerminalStdin.getTerminalStdin;
 	};
-	
+
 	/**
 	 * An interface providing an optional `terminal-output` for stdout as a
 	 * link-time authority.
 	 */
 	export namespace TerminalStdout {
-		
+
 		export type TerminalOutput = cli.TerminalOutput.TerminalOutput;
-		
+
 		/**
 		 * If stdout is connected to a terminal, return a `terminal-output` handle
 		 * allowing further interaction with it.
@@ -153,15 +153,15 @@ export namespace cli {
 	export type TerminalStdout = {
 		getTerminalStdout: TerminalStdout.getTerminalStdout;
 	};
-	
+
 	/**
 	 * An interface providing an optional `terminal-output` for stderr as a
 	 * link-time authority.
 	 */
 	export namespace TerminalStderr {
-		
+
 		export type TerminalOutput = cli.TerminalOutput.TerminalOutput;
-		
+
 		/**
 		 * If stderr is connected to a terminal, return a `terminal-output` handle
 		 * allowing further interaction with it.
@@ -171,7 +171,7 @@ export namespace cli {
 	export type TerminalStderr = {
 		getTerminalStderr: TerminalStderr.getTerminalStderr;
 	};
-	
+
 }
 export type cli = {
 	Environment?: cli.Environment;
@@ -217,7 +217,7 @@ export namespace cli {
 			return $wcm.Service.create<cli.Environment>(functions, [], wasmInterface, context);
 		}
 	}
-	
+
 	export namespace Exit.$ {
 		export const exit = new $wcm.FunctionType<cli.Exit.exit>('exit',[
 			['status', new $wcm.ResultType<void, void>(undefined, undefined)],
@@ -243,7 +243,7 @@ export namespace cli {
 			return $wcm.Service.create<cli.Exit>(functions, [], wasmInterface, context);
 		}
 	}
-	
+
 	export namespace Run.$ {
 		export const run = new $wcm.FunctionType<cli.Run.run>('run', [], new $wcm.ResultType<void, void>(undefined, undefined));
 	}
@@ -267,7 +267,7 @@ export namespace cli {
 			return $wcm.Service.create<cli.Run>(functions, [], wasmInterface, context);
 		}
 	}
-	
+
 	export namespace Stdin.$ {
 		export const InputStream = io.Streams.$.InputStream;
 		export const getStdin = new $wcm.FunctionType<cli.Stdin.getStdin>('get-stdin', [], new $wcm.OwnType<cli.Stdin.InputStream>(InputStream));
@@ -293,7 +293,7 @@ export namespace cli {
 			return $wcm.Service.create<cli.Stdin>(functions, [], wasmInterface, context);
 		}
 	}
-	
+
 	export namespace Stdout.$ {
 		export const OutputStream = io.Streams.$.OutputStream;
 		export const getStdout = new $wcm.FunctionType<cli.Stdout.getStdout>('get-stdout', [], new $wcm.OwnType<cli.Stdout.OutputStream>(OutputStream));
@@ -319,7 +319,7 @@ export namespace cli {
 			return $wcm.Service.create<cli.Stdout>(functions, [], wasmInterface, context);
 		}
 	}
-	
+
 	export namespace Stderr.$ {
 		export const OutputStream = io.Streams.$.OutputStream;
 		export const getStderr = new $wcm.FunctionType<cli.Stderr.getStderr>('get-stderr', [], new $wcm.OwnType<cli.Stderr.OutputStream>(OutputStream));
@@ -345,7 +345,7 @@ export namespace cli {
 			return $wcm.Service.create<cli.Stderr>(functions, [], wasmInterface, context);
 		}
 	}
-	
+
 	export namespace TerminalInput.$ {
 		export const TerminalInput = new $wcm.ResourceType('terminal-input');
 	}
@@ -381,7 +381,7 @@ export namespace cli {
 			return $wcm.Service.create<cli.TerminalInput>(functions, [], wasmInterface, context);
 		}
 	}
-	
+
 	export namespace TerminalOutput.$ {
 		export const TerminalOutput = new $wcm.ResourceType('terminal-output');
 	}
@@ -417,7 +417,7 @@ export namespace cli {
 			return $wcm.Service.create<cli.TerminalOutput>(functions, [], wasmInterface, context);
 		}
 	}
-	
+
 	export namespace TerminalStdin.$ {
 		export const TerminalInput = cli.TerminalInput.$.TerminalInput;
 		export const getTerminalStdin = new $wcm.FunctionType<cli.TerminalStdin.getTerminalStdin>('get-terminal-stdin', [], new $wcm.OptionType<own<cli.TerminalStdin.TerminalInput>>(new $wcm.OwnType<cli.TerminalStdin.TerminalInput>(TerminalInput)));
@@ -443,7 +443,7 @@ export namespace cli {
 			return $wcm.Service.create<cli.TerminalStdin>(functions, [], wasmInterface, context);
 		}
 	}
-	
+
 	export namespace TerminalStdout.$ {
 		export const TerminalOutput = cli.TerminalOutput.$.TerminalOutput;
 		export const getTerminalStdout = new $wcm.FunctionType<cli.TerminalStdout.getTerminalStdout>('get-terminal-stdout', [], new $wcm.OptionType<own<cli.TerminalStdout.TerminalOutput>>(new $wcm.OwnType<cli.TerminalStdout.TerminalOutput>(TerminalOutput)));
@@ -469,7 +469,7 @@ export namespace cli {
 			return $wcm.Service.create<cli.TerminalStdout>(functions, [], wasmInterface, context);
 		}
 	}
-	
+
 	export namespace TerminalStderr.$ {
 		export const TerminalOutput = cli.TerminalOutput.$.TerminalOutput;
 		export const getTerminalStderr = new $wcm.FunctionType<cli.TerminalStderr.getTerminalStderr>('get-terminal-stderr', [], new $wcm.OptionType<own<cli.TerminalStderr.TerminalOutput>>(new $wcm.OwnType<cli.TerminalStderr.TerminalOutput>(TerminalOutput)));

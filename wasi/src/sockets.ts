@@ -9,8 +9,8 @@ import { io } from './io';
 
 export namespace sockets {
 	export namespace Network {
-		
-		
+
+
 		/**
 		 * Error codes.
 		 * 
@@ -26,52 +26,52 @@ export namespace sockets {
 		 * See each individual API for what the POSIX equivalents are. They sometimes differ per API.
 		 */
 		export enum ErrorCode {
-			
+
 			/**
 			 * Unknown error
 			 */
 			unknown = 'unknown',
-			
+
 			/**
 			 * Access denied.
 			 * 
 			 * POSIX equivalent: EACCES, EPERM
 			 */
 			accessDenied = 'accessDenied',
-			
+
 			/**
 			 * The operation is not supported.
 			 * 
 			 * POSIX equivalent: EOPNOTSUPP
 			 */
 			notSupported = 'notSupported',
-			
+
 			/**
 			 * One of the arguments is invalid.
 			 * 
 			 * POSIX equivalent: EINVAL
 			 */
 			invalidArgument = 'invalidArgument',
-			
+
 			/**
 			 * Not enough memory to complete the operation.
 			 * 
 			 * POSIX equivalent: ENOMEM, ENOBUFS, EAI_MEMORY
 			 */
 			outOfMemory = 'outOfMemory',
-			
+
 			/**
 			 * The operation timed out before it could finish completely.
 			 */
 			timeout = 'timeout',
-			
+
 			/**
 			 * This operation is incompatible with another asynchronous operation that is already in progress.
 			 * 
 			 * POSIX equivalent: EALREADY
 			 */
 			concurrencyConflict = 'concurrencyConflict',
-			
+
 			/**
 			 * Trying to finish an asynchronous operation that:
 			 * - has not been started yet, or:
@@ -80,101 +80,101 @@ export namespace sockets {
 			 * Note: this is scheduled to be removed when `future`s are natively supported.
 			 */
 			notInProgress = 'notInProgress',
-			
+
 			/**
 			 * The operation has been aborted because it could not be completed immediately.
 			 * 
 			 * Note: this is scheduled to be removed when `future`s are natively supported.
 			 */
 			wouldBlock = 'wouldBlock',
-			
+
 			/**
 			 * The operation is not valid in the socket's current state.
 			 */
 			invalidState = 'invalidState',
-			
+
 			/**
 			 * A new socket resource could not be created because of a system limit.
 			 */
 			newSocketLimit = 'newSocketLimit',
-			
+
 			/**
 			 * A bind operation failed because the provided address is not an address that the `network` can bind to.
 			 */
 			addressNotBindable = 'addressNotBindable',
-			
+
 			/**
 			 * A bind operation failed because the provided address is already in use or because there are no ephemeral ports available.
 			 */
 			addressInUse = 'addressInUse',
-			
+
 			/**
 			 * The remote address is not reachable
 			 */
 			remoteUnreachable = 'remoteUnreachable',
-			
+
 			/**
 			 * The connection was forcefully rejected
 			 */
 			connectionRefused = 'connectionRefused',
-			
+
 			/**
 			 * The connection was reset.
 			 */
 			connectionReset = 'connectionReset',
-			
+
 			/**
 			 * A connection was aborted.
 			 */
 			connectionAborted = 'connectionAborted',
 			datagramTooLarge = 'datagramTooLarge',
-			
+
 			/**
 			 * Name does not exist or has no suitable associated IP addresses.
 			 */
 			nameUnresolvable = 'nameUnresolvable',
-			
+
 			/**
 			 * A temporary failure in name resolution occurred.
 			 */
 			temporaryResolverFailure = 'temporaryResolverFailure',
-			
+
 			/**
 			 * A permanent failure in name resolution occurred.
 			 */
 			permanentResolverFailure = 'permanentResolverFailure',
 		}
-		
+
 		export enum IpAddressFamily {
-			
+
 			/**
 			 * Similar to `AF_INET` in POSIX.
 			 */
 			ipv4 = 'ipv4',
-			
+
 			/**
 			 * Similar to `AF_INET6` in POSIX.
 			 */
 			ipv6 = 'ipv6',
 		}
-		
+
 		export type Ipv4Address = [u8, u8, u8, u8];
-		
+
 		export type Ipv6Address = [u16, u16, u16, u16, u16, u16, u16, u16];
-		
+
 		export namespace IpAddress {
 			export const ipv4 = 'ipv4' as const;
 			export type Ipv4 = { readonly tag: typeof ipv4; readonly value: Ipv4Address } & _common;
 			export function Ipv4(value: Ipv4Address): Ipv4 {
 				return new VariantImpl(ipv4, value) as Ipv4;
 			}
-			
+
 			export const ipv6 = 'ipv6' as const;
 			export type Ipv6 = { readonly tag: typeof ipv6; readonly value: Ipv6Address } & _common;
 			export function Ipv6(value: Ipv6Address): Ipv6 {
 				return new VariantImpl(ipv6, value) as Ipv6;
 			}
-			
+
 			export type _tt = typeof ipv4 | typeof ipv6;
 			export type _vt = Ipv4Address | Ipv6Address;
 			type _common = Omit<VariantImpl, 'tag' | 'value'>;
@@ -203,32 +203,32 @@ export namespace sockets {
 			}
 		}
 		export type IpAddress = IpAddress.Ipv4 | IpAddress.Ipv6;
-		
+
 		export type Ipv4SocketAddress = {
 			port: u16;
 			address: Ipv4Address;
 		};
-		
+
 		export type Ipv6SocketAddress = {
 			port: u16;
 			flowInfo: u32;
 			address: Ipv6Address;
 			scopeId: u32;
 		};
-		
+
 		export namespace IpSocketAddress {
 			export const ipv4 = 'ipv4' as const;
 			export type Ipv4 = { readonly tag: typeof ipv4; readonly value: Ipv4SocketAddress } & _common;
 			export function Ipv4(value: Ipv4SocketAddress): Ipv4 {
 				return new VariantImpl(ipv4, value) as Ipv4;
 			}
-			
+
 			export const ipv6 = 'ipv6' as const;
 			export type Ipv6 = { readonly tag: typeof ipv6; readonly value: Ipv6SocketAddress } & _common;
 			export function Ipv6(value: Ipv6SocketAddress): Ipv6 {
 				return new VariantImpl(ipv6, value) as Ipv6;
 			}
-			
+
 			export type _tt = typeof ipv4 | typeof ipv6;
 			export type _vt = Ipv4SocketAddress | Ipv6SocketAddress;
 			type _common = Omit<VariantImpl, 'tag' | 'value'>;
@@ -257,7 +257,7 @@ export namespace sockets {
 			}
 		}
 		export type IpSocketAddress = IpSocketAddress.Ipv4 | IpSocketAddress.Ipv6;
-		
+
 		export namespace Network {
 			export type Module = {
 			};
@@ -269,14 +269,14 @@ export namespace sockets {
 	}
 	export type Network = {
 	};
-	
+
 	/**
 	 * This interface provides a value-export of the default network handle..
 	 */
 	export namespace InstanceNetwork {
-		
+
 		export type Network = sockets.Network.Network;
-		
+
 		/**
 		 * Get a handle to the default network.
 		 */
@@ -285,20 +285,20 @@ export namespace sockets {
 	export type InstanceNetwork = {
 		instanceNetwork: InstanceNetwork.instanceNetwork;
 	};
-	
+
 	export namespace IpNameLookup {
-		
+
 		export type Pollable = io.Poll.Pollable;
-		
+
 		export type Network = sockets.Network.Network;
-		
+
 		export type ErrorCode = sockets.Network.ErrorCode;
-		
+
 		export type IpAddress = sockets.Network.IpAddress;
-		
+
 		export namespace ResolveAddressStream {
 			export type Module = {
-				
+
 				/**
 				 * Returns the next address from the resolver.
 				 * 
@@ -315,7 +315,7 @@ export namespace sockets {
 				 * - `would-block`:                A result is not available yet. (EWOULDBLOCK, EAGAIN)
 				 */
 				resolveNextAddress(self: borrow<ResolveAddressStream>): result<IpAddress | undefined, ErrorCode>;
-				
+
 				/**
 				 * Create a `pollable` which will resolve once the stream is ready for I/O.
 				 * 
@@ -331,7 +331,7 @@ export namespace sockets {
 			export type Manager = $wcm.ResourceManager<Interface>;
 		}
 		export type ResolveAddressStream = resource;
-		
+
 		/**
 		 * Resolve an internet host name to a list of IP addresses.
 		 * 
@@ -360,46 +360,46 @@ export namespace sockets {
 		ResolveAddressStream: RAS;
 		resolveAddresses: IpNameLookup.resolveAddresses;
 	};
-	
+
 	export namespace Tcp {
-		
+
 		export type InputStream = io.Streams.InputStream;
-		
+
 		export type OutputStream = io.Streams.OutputStream;
-		
+
 		export type Pollable = io.Poll.Pollable;
-		
+
 		export type Duration = clocks.MonotonicClock.Duration;
-		
+
 		export type Network = sockets.Network.Network;
-		
+
 		export type ErrorCode = sockets.Network.ErrorCode;
-		
+
 		export type IpSocketAddress = sockets.Network.IpSocketAddress;
-		
+
 		export type IpAddressFamily = sockets.Network.IpAddressFamily;
-		
+
 		export enum ShutdownType {
-			
+
 			/**
 			 * Similar to `SHUT_RD` in POSIX.
 			 */
 			receive = 'receive',
-			
+
 			/**
 			 * Similar to `SHUT_WR` in POSIX.
 			 */
 			send = 'send',
-			
+
 			/**
 			 * Similar to `SHUT_RDWR` in POSIX.
 			 */
 			both = 'both',
 		}
-		
+
 		export namespace TcpSocket {
 			export type Module = {
-				
+
 				/**
 				 * Bind the socket to a specific network on the provided IP address and port.
 				 * 
@@ -432,9 +432,9 @@ export namespace sockets {
 				 * - <https://man.freebsd.org/cgi/man.cgi?query=bind&sektion=2&format=html>
 				 */
 				startBind(self: borrow<TcpSocket>, network: borrow<Network>, localAddress: IpSocketAddress): result<void, ErrorCode>;
-				
+
 				finishBind(self: borrow<TcpSocket>): result<void, ErrorCode>;
-				
+
 				/**
 				 * Connect to a remote endpoint.
 				 * 
@@ -479,9 +479,9 @@ export namespace sockets {
 				 * - <https://man.freebsd.org/cgi/man.cgi?connect>
 				 */
 				startConnect(self: borrow<TcpSocket>, network: borrow<Network>, remoteAddress: IpSocketAddress): result<void, ErrorCode>;
-				
+
 				finishConnect(self: borrow<TcpSocket>): result<[own<InputStream>, own<OutputStream>], ErrorCode>;
-				
+
 				/**
 				 * Start listening for new connections.
 				 * 
@@ -508,9 +508,9 @@ export namespace sockets {
 				 * - <https://man.freebsd.org/cgi/man.cgi?query=listen&sektion=2>
 				 */
 				startListen(self: borrow<TcpSocket>): result<void, ErrorCode>;
-				
+
 				finishListen(self: borrow<TcpSocket>): result<void, ErrorCode>;
-				
+
 				/**
 				 * Accept a new client socket.
 				 * 
@@ -541,7 +541,7 @@ export namespace sockets {
 				 * - <https://man.freebsd.org/cgi/man.cgi?query=accept&sektion=2>
 				 */
 				accept(self: borrow<TcpSocket>): result<[own<TcpSocket>, own<InputStream>, own<OutputStream>], ErrorCode>;
-				
+
 				/**
 				 * Get the bound local address.
 				 * 
@@ -561,7 +561,7 @@ export namespace sockets {
 				 * - <https://man.freebsd.org/cgi/man.cgi?getsockname>
 				 */
 				localAddress(self: borrow<TcpSocket>): result<IpSocketAddress, ErrorCode>;
-				
+
 				/**
 				 * Get the remote address.
 				 * 
@@ -575,21 +575,21 @@ export namespace sockets {
 				 * - <https://man.freebsd.org/cgi/man.cgi?query=getpeername&sektion=2&n=1>
 				 */
 				remoteAddress(self: borrow<TcpSocket>): result<IpSocketAddress, ErrorCode>;
-				
+
 				/**
 				 * Whether the socket is listening for new connections.
 				 * 
 				 * Equivalent to the SO_ACCEPTCONN socket option.
 				 */
 				isListening(self: borrow<TcpSocket>): boolean;
-				
+
 				/**
 				 * Whether this is a IPv4 or IPv6 socket.
 				 * 
 				 * Equivalent to the SO_DOMAIN socket option.
 				 */
 				addressFamily(self: borrow<TcpSocket>): IpAddressFamily;
-				
+
 				/**
 				 * Whether IPv4 compatibility (dual-stack) mode is disabled or not.
 				 * 
@@ -601,9 +601,9 @@ export namespace sockets {
 				 * - `not-supported`:        (set) Host does not support dual-stack sockets. (Implementations are not required to.)
 				 */
 				ipv6Only(self: borrow<TcpSocket>): result<boolean, ErrorCode>;
-				
+
 				setIpv6Only(self: borrow<TcpSocket>, value: boolean): result<void, ErrorCode>;
-				
+
 				/**
 				 * Hints the desired listen queue size. Implementations are free to ignore this.
 				 * 
@@ -616,7 +616,7 @@ export namespace sockets {
 				 * - `invalid-state`:        (set) The socket is already in the Connection state.
 				 */
 				setListenBacklogSize(self: borrow<TcpSocket>, value: u64): result<void, ErrorCode>;
-				
+
 				/**
 				 * Enables or disables keepalive.
 				 * 
@@ -629,9 +629,9 @@ export namespace sockets {
 				 * Equivalent to the SO_KEEPALIVE socket option.
 				 */
 				keepAliveEnabled(self: borrow<TcpSocket>): result<boolean, ErrorCode>;
-				
+
 				setKeepAliveEnabled(self: borrow<TcpSocket>, value: boolean): result<void, ErrorCode>;
-				
+
 				/**
 				 * Amount of time the connection has to be idle before TCP starts sending keepalive packets.
 				 * 
@@ -645,9 +645,9 @@ export namespace sockets {
 				 * - `invalid-argument`:     (set) The provided value was 0.
 				 */
 				keepAliveIdleTime(self: borrow<TcpSocket>): result<Duration, ErrorCode>;
-				
+
 				setKeepAliveIdleTime(self: borrow<TcpSocket>, value: Duration): result<void, ErrorCode>;
-				
+
 				/**
 				 * The time between keepalive packets.
 				 * 
@@ -661,9 +661,9 @@ export namespace sockets {
 				 * - `invalid-argument`:     (set) The provided value was 0.
 				 */
 				keepAliveInterval(self: borrow<TcpSocket>): result<Duration, ErrorCode>;
-				
+
 				setKeepAliveInterval(self: borrow<TcpSocket>, value: Duration): result<void, ErrorCode>;
-				
+
 				/**
 				 * The maximum amount of keepalive packets TCP should send before aborting the connection.
 				 * 
@@ -677,9 +677,9 @@ export namespace sockets {
 				 * - `invalid-argument`:     (set) The provided value was 0.
 				 */
 				keepAliveCount(self: borrow<TcpSocket>): result<u32, ErrorCode>;
-				
+
 				setKeepAliveCount(self: borrow<TcpSocket>, value: u32): result<void, ErrorCode>;
-				
+
 				/**
 				 * Equivalent to the IP_TTL & IPV6_UNICAST_HOPS socket options.
 				 * 
@@ -691,9 +691,9 @@ export namespace sockets {
 				 * - `invalid-state`:        (set) The socket is already in the Listener state.
 				 */
 				hopLimit(self: borrow<TcpSocket>): result<u8, ErrorCode>;
-				
+
 				setHopLimit(self: borrow<TcpSocket>, value: u8): result<void, ErrorCode>;
-				
+
 				/**
 				 * The kernel buffer space reserved for sends/receives on this socket.
 				 * 
@@ -709,13 +709,13 @@ export namespace sockets {
 				 * - `invalid-state`:        (set) The socket is already in the Listener state.
 				 */
 				receiveBufferSize(self: borrow<TcpSocket>): result<u64, ErrorCode>;
-				
+
 				setReceiveBufferSize(self: borrow<TcpSocket>, value: u64): result<void, ErrorCode>;
-				
+
 				sendBufferSize(self: borrow<TcpSocket>): result<u64, ErrorCode>;
-				
+
 				setSendBufferSize(self: borrow<TcpSocket>, value: u64): result<void, ErrorCode>;
-				
+
 				/**
 				 * Create a `pollable` which will resolve once the socket is ready for I/O.
 				 * 
@@ -723,7 +723,7 @@ export namespace sockets {
 				 * It's planned to be removed when `future` is natively supported in Preview3.
 				 */
 				subscribe(self: borrow<TcpSocket>): own<Pollable>;
-				
+
 				/**
 				 * Initiate a graceful shutdown.
 				 * 
@@ -786,17 +786,17 @@ export namespace sockets {
 	export type Tcp<TS extends sockets.Tcp.TcpSocket.Module | sockets.Tcp.TcpSocket.Manager = sockets.Tcp.TcpSocket.Module | sockets.Tcp.TcpSocket.Manager> = {
 		TcpSocket: TS;
 	};
-	
+
 	export namespace TcpCreateSocket {
-		
+
 		export type Network = sockets.Network.Network;
-		
+
 		export type ErrorCode = sockets.Network.ErrorCode;
-		
+
 		export type IpAddressFamily = sockets.Network.IpAddressFamily;
-		
+
 		export type TcpSocket = sockets.Tcp.TcpSocket;
-		
+
 		/**
 		 * Create a new TCP socket.
 		 * 
@@ -823,31 +823,31 @@ export namespace sockets {
 	export type TcpCreateSocket = {
 		createTcpSocket: TcpCreateSocket.createTcpSocket;
 	};
-	
+
 	export namespace Udp {
-		
+
 		export type Pollable = io.Poll.Pollable;
-		
+
 		export type Network = sockets.Network.Network;
-		
+
 		export type ErrorCode = sockets.Network.ErrorCode;
-		
+
 		export type IpSocketAddress = sockets.Network.IpSocketAddress;
-		
+
 		export type IpAddressFamily = sockets.Network.IpAddressFamily;
-		
+
 		/**
 		 * A received datagram.
 		 */
 		export type IncomingDatagram = {
-			
+
 			/**
 			 * The payload.
 			 * 
 			 * Theoretical max size: ~64 KiB. In practice, typically less than 1500 bytes.
 			 */
 			data: Uint8Array;
-			
+
 			/**
 			 * The source address.
 			 * 
@@ -857,17 +857,17 @@ export namespace sockets {
 			 */
 			remoteAddress: IpSocketAddress;
 		};
-		
+
 		/**
 		 * A datagram to be sent out.
 		 */
 		export type OutgoingDatagram = {
-			
+
 			/**
 			 * The payload.
 			 */
 			data: Uint8Array;
-			
+
 			/**
 			 * The destination address.
 			 * 
@@ -879,10 +879,10 @@ export namespace sockets {
 			 */
 			remoteAddress?: IpSocketAddress | undefined;
 		};
-		
+
 		export namespace UdpSocket {
 			export type Module = {
-				
+
 				/**
 				 * Bind the socket to a specific network on the provided IP address and port.
 				 * 
@@ -910,9 +910,9 @@ export namespace sockets {
 				 * - <https://man.freebsd.org/cgi/man.cgi?query=bind&sektion=2&format=html>
 				 */
 				startBind(self: borrow<UdpSocket>, network: borrow<Network>, localAddress: IpSocketAddress): result<void, ErrorCode>;
-				
+
 				finishBind(self: borrow<UdpSocket>): result<void, ErrorCode>;
-				
+
 				/**
 				 * Set up inbound & outbound communication channels, optionally to a specific peer.
 				 * 
@@ -957,7 +957,7 @@ export namespace sockets {
 				 * - <https://man.freebsd.org/cgi/man.cgi?connect>
 				 */
 				stream(self: borrow<UdpSocket>, remoteAddress: IpSocketAddress | undefined): result<[own<IncomingDatagramStream>, own<OutgoingDatagramStream>], ErrorCode>;
-				
+
 				/**
 				 * Get the current bound address.
 				 * 
@@ -977,7 +977,7 @@ export namespace sockets {
 				 * - <https://man.freebsd.org/cgi/man.cgi?getsockname>
 				 */
 				localAddress(self: borrow<UdpSocket>): result<IpSocketAddress, ErrorCode>;
-				
+
 				/**
 				 * Get the address the socket is currently streaming to.
 				 * 
@@ -991,14 +991,14 @@ export namespace sockets {
 				 * - <https://man.freebsd.org/cgi/man.cgi?query=getpeername&sektion=2&n=1>
 				 */
 				remoteAddress(self: borrow<UdpSocket>): result<IpSocketAddress, ErrorCode>;
-				
+
 				/**
 				 * Whether this is a IPv4 or IPv6 socket.
 				 * 
 				 * Equivalent to the SO_DOMAIN socket option.
 				 */
 				addressFamily(self: borrow<UdpSocket>): IpAddressFamily;
-				
+
 				/**
 				 * Whether IPv4 compatibility (dual-stack) mode is disabled or not.
 				 * 
@@ -1010,9 +1010,9 @@ export namespace sockets {
 				 * - `not-supported`:        (set) Host does not support dual-stack sockets. (Implementations are not required to.)
 				 */
 				ipv6Only(self: borrow<UdpSocket>): result<boolean, ErrorCode>;
-				
+
 				setIpv6Only(self: borrow<UdpSocket>, value: boolean): result<void, ErrorCode>;
-				
+
 				/**
 				 * Equivalent to the IP_TTL & IPV6_UNICAST_HOPS socket options.
 				 * 
@@ -1022,9 +1022,9 @@ export namespace sockets {
 				 * - `invalid-argument`:     (set) The TTL value must be 1 or higher.
 				 */
 				unicastHopLimit(self: borrow<UdpSocket>): result<u8, ErrorCode>;
-				
+
 				setUnicastHopLimit(self: borrow<UdpSocket>, value: u8): result<void, ErrorCode>;
-				
+
 				/**
 				 * The kernel buffer space reserved for sends/receives on this socket.
 				 * 
@@ -1038,13 +1038,13 @@ export namespace sockets {
 				 * - `invalid-argument`:     (set) The provided value was 0.
 				 */
 				receiveBufferSize(self: borrow<UdpSocket>): result<u64, ErrorCode>;
-				
+
 				setReceiveBufferSize(self: borrow<UdpSocket>, value: u64): result<void, ErrorCode>;
-				
+
 				sendBufferSize(self: borrow<UdpSocket>): result<u64, ErrorCode>;
-				
+
 				setSendBufferSize(self: borrow<UdpSocket>, value: u64): result<void, ErrorCode>;
-				
+
 				/**
 				 * Create a `pollable` which will resolve once the socket is ready for I/O.
 				 * 
@@ -1073,10 +1073,10 @@ export namespace sockets {
 			export type Manager = $wcm.ResourceManager<Interface>;
 		}
 		export type UdpSocket = resource;
-		
+
 		export namespace IncomingDatagramStream {
 			export type Module = {
-				
+
 				/**
 				 * Receive messages on the socket.
 				 * 
@@ -1103,7 +1103,7 @@ export namespace sockets {
 				 * - <https://man.freebsd.org/cgi/man.cgi?query=recv&sektion=2>
 				 */
 				receive(self: borrow<IncomingDatagramStream>, maxResults: u64): result<IncomingDatagram[], ErrorCode>;
-				
+
 				/**
 				 * Create a `pollable` which will resolve once the stream is ready to receive again.
 				 * 
@@ -1119,10 +1119,10 @@ export namespace sockets {
 			export type Manager = $wcm.ResourceManager<Interface>;
 		}
 		export type IncomingDatagramStream = resource;
-		
+
 		export namespace OutgoingDatagramStream {
 			export type Module = {
-				
+
 				/**
 				 * Check readiness for sending. This function never blocks.
 				 * 
@@ -1137,7 +1137,7 @@ export namespace sockets {
 				 * Never returns `would-block`.
 				 */
 				checkSend(self: borrow<OutgoingDatagramStream>): result<u64, ErrorCode>;
-				
+
 				/**
 				 * Send messages on the socket.
 				 * 
@@ -1176,7 +1176,7 @@ export namespace sockets {
 				 * - <https://man.freebsd.org/cgi/man.cgi?query=send&sektion=2>
 				 */
 				send(self: borrow<OutgoingDatagramStream>, datagrams: OutgoingDatagram[]): result<u64, ErrorCode>;
-				
+
 				/**
 				 * Create a `pollable` which will resolve once the stream is ready to send again.
 				 * 
@@ -1199,17 +1199,17 @@ export namespace sockets {
 		IncomingDatagramStream: IDS;
 		OutgoingDatagramStream: ODS;
 	};
-	
+
 	export namespace UdpCreateSocket {
-		
+
 		export type Network = sockets.Network.Network;
-		
+
 		export type ErrorCode = sockets.Network.ErrorCode;
-		
+
 		export type IpAddressFamily = sockets.Network.IpAddressFamily;
-		
+
 		export type UdpSocket = sockets.Udp.UdpSocket;
-		
+
 		/**
 		 * Create a new UDP socket.
 		 * 
@@ -1236,7 +1236,7 @@ export namespace sockets {
 	export type UdpCreateSocket = {
 		createUdpSocket: UdpCreateSocket.createUdpSocket;
 	};
-	
+
 }
 export type sockets<INL extends sockets.IpNameLookup = sockets.IpNameLookup, T extends sockets.Tcp = sockets.Tcp, U extends sockets.Udp = sockets.Udp> = {
 	Network?: sockets.Network;
@@ -1308,7 +1308,7 @@ export namespace sockets {
 			return $wcm.Service.create<sockets.Network>(functions, [], wasmInterface, context);
 		}
 	}
-	
+
 	export namespace InstanceNetwork.$ {
 		export const Network = sockets.Network.$.Network;
 		export const instanceNetwork = new $wcm.FunctionType<sockets.InstanceNetwork.instanceNetwork>('instance-network', [], new $wcm.OwnType<sockets.InstanceNetwork.Network>(Network));
@@ -1334,7 +1334,7 @@ export namespace sockets {
 			return $wcm.Service.create<sockets.InstanceNetwork>(functions, [], wasmInterface, context);
 		}
 	}
-	
+
 	export namespace IpNameLookup.$ {
 		export const Pollable = io.Poll.$.Pollable;
 		export const Network = sockets.Network.$.Network;
@@ -1405,7 +1405,7 @@ export namespace sockets {
 			}
 		}
 	}
-	
+
 	export namespace Tcp.$ {
 		export const InputStream = io.Streams.$.InputStream;
 		export const OutputStream = io.Streams.$.OutputStream;
@@ -1606,7 +1606,7 @@ export namespace sockets {
 			}
 		}
 	}
-	
+
 	export namespace TcpCreateSocket.$ {
 		export const Network = sockets.Network.$.Network;
 		export const ErrorCode = sockets.Network.$.ErrorCode;
@@ -1640,7 +1640,7 @@ export namespace sockets {
 			return $wcm.Service.create<sockets.TcpCreateSocket>(functions, [], wasmInterface, context);
 		}
 	}
-	
+
 	export namespace Udp.$ {
 		export const Pollable = io.Poll.$.Pollable;
 		export const Network = sockets.Network.$.Network;
@@ -1828,7 +1828,7 @@ export namespace sockets {
 			}
 		}
 	}
-	
+
 	export namespace UdpCreateSocket.$ {
 		export const Network = sockets.Network.$.Network;
 		export const ErrorCode = sockets.Network.$.ErrorCode;
