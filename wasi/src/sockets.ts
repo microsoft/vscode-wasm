@@ -264,7 +264,6 @@ export namespace sockets {
 
 			}
 			export type Statics = {
-				_getResources(): $wcm.ResourceManager<Network>;
 			};
 			export type Class = Statics;
 		}
@@ -329,7 +328,6 @@ export namespace sockets {
 				subscribe(): own<Pollable>;
 			}
 			export type Statics = {
-				_getResources(): $wcm.ResourceManager<ResolveAddressStream>;
 			};
 			export type Class = Statics;
 		}
@@ -752,7 +750,6 @@ export namespace sockets {
 				shutdown(shutdownType: ShutdownType): result<void, ErrorCode>;
 			}
 			export type Statics = {
-				_getResources(): $wcm.ResourceManager<TcpSocket>;
 			};
 			export type Class = Statics;
 		}
@@ -1030,7 +1027,6 @@ export namespace sockets {
 				subscribe(): own<Pollable>;
 			}
 			export type Statics = {
-				_getResources(): $wcm.ResourceManager<UdpSocket>;
 			};
 			export type Class = Statics;
 		}
@@ -1076,7 +1072,6 @@ export namespace sockets {
 				subscribe(): own<Pollable>;
 			}
 			export type Statics = {
-				_getResources(): $wcm.ResourceManager<IncomingDatagramStream>;
 			};
 			export type Class = Statics;
 		}
@@ -1149,7 +1144,6 @@ export namespace sockets {
 				subscribe(): own<Pollable>;
 			}
 			export type Statics = {
-				_getResources(): $wcm.ResourceManager<OutgoingDatagramStream>;
 			};
 			export type Class = Statics;
 		}
@@ -1251,26 +1245,22 @@ export namespace sockets {
 		export namespace Network {
 			export type WasmInterface = {
 			};
-		}
-		export type WasmInterface = {
-		} & Network.WasmInterface;
-		export namespace Network  {
 			class Impl implements sockets.Network.Network.Interface {
-				private static readonly _resources: $wcm.ResourceManager<sockets.Network.Network.Interface> = new $wcm.ResourceManager<sockets.Network.Network.Interface>();
-				public static _getResources(): $wcm.ResourceManager<sockets.Network.Network.Interface> {
-					return this._resources;
-				}
+				private static readonly _resource = $.Network;
 				private readonly _handle: $wcm.ResourceHandle;
-				public getHandle(): $wcm.ResourceHandle {
+				private readonly _wasm: WasmInterface;
+				private readonly _context: $wcm.Context;
+				public _getHandle(): $wcm.ResourceHandle {
 					return this._handle;
 				}
 			}
 			export function Class(wasmInterface: WasmInterface, context: $wcm.Context): sockets.Network.Network.Class {
-				const module = Module(wasmInterface, context);
 				return class extends Impl {
 				};
 			}
 		}
+		export type WasmInterface = {
+		} & Network.WasmInterface;
 		export function createHost(service: sockets.Network, context: $wcm.Context): WasmInterface {
 			return $wcm.Host.create<WasmInterface>(functions, resources, service, context);
 		}
@@ -1343,33 +1333,33 @@ export namespace sockets {
 				'[method]resolve-address-stream.resolve-next-address': (self: i32, result: ptr<[i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32]>) => void;
 				'[method]resolve-address-stream.subscribe': (self: i32) => i32;
 			};
-		}
-		export type WasmInterface = {
-			'resolve-addresses': (network: i32, name_ptr: i32, name_len: i32, result: ptr<[i32, i32]>) => void;
-		} & ResolveAddressStream.WasmInterface;
-		export namespace ResolveAddressStream  {
 			class Impl implements sockets.IpNameLookup.ResolveAddressStream.Interface {
-				private static readonly _resources: $wcm.ResourceManager<sockets.IpNameLookup.ResolveAddressStream.Interface> = new $wcm.ResourceManager<sockets.IpNameLookup.ResolveAddressStream.Interface>();
-				public static _getResources(): $wcm.ResourceManager<sockets.IpNameLookup.ResolveAddressStream.Interface> {
-					return this._resources;
-				}
+				private static readonly _resource = $.ResolveAddressStream;
 				private readonly _handle: $wcm.ResourceHandle;
-				public getHandle(): $wcm.ResourceHandle {
+				private readonly _wasm: WasmInterface;
+				private readonly _context: $wcm.Context;
+				public _getHandle(): $wcm.ResourceHandle {
 					return this._handle;
 				}
 				public resolveNextAddress(): result<IpAddress | undefined, ErrorCode> {
-					return this._module.resolveNextAddress(this._handle);
+					const callable = Impl._resource.getMethod('resolveNextAddress');
+					const { memory, options } = this._context;
+					return callable.callWasm([], this._wasm[callable.witName], memory, options);
 				}
 				public subscribe(): own<Pollable> {
-					return this._module.subscribe(this._handle);
+					const callable = Impl._resource.getMethod('subscribe');
+					const { memory, options } = this._context;
+					return callable.callWasm([], this._wasm[callable.witName], memory, options);
 				}
 			}
 			export function Class(wasmInterface: WasmInterface, context: $wcm.Context): sockets.IpNameLookup.ResolveAddressStream.Class {
-				const module = Module(wasmInterface, context);
 				return class extends Impl {
 				};
 			}
 		}
+		export type WasmInterface = {
+			'resolve-addresses': (network: i32, name_ptr: i32, name_len: i32, result: ptr<[i32, i32]>) => void;
+		} & ResolveAddressStream.WasmInterface;
 		export function createHost(service: sockets.IpNameLookup, context: $wcm.Context): WasmInterface {
 			return $wcm.Host.create<WasmInterface>(functions, resources, service, context);
 		}
@@ -1547,116 +1537,172 @@ export namespace sockets {
 				'[method]tcp-socket.subscribe': (self: i32) => i32;
 				'[method]tcp-socket.shutdown': (self: i32, shutdownType_ShutdownType: i32, result: ptr<[i32, i32]>) => void;
 			};
-		}
-		export type WasmInterface = {
-		} & TcpSocket.WasmInterface;
-		export namespace TcpSocket  {
 			class Impl implements sockets.Tcp.TcpSocket.Interface {
-				private static readonly _resources: $wcm.ResourceManager<sockets.Tcp.TcpSocket.Interface> = new $wcm.ResourceManager<sockets.Tcp.TcpSocket.Interface>();
-				public static _getResources(): $wcm.ResourceManager<sockets.Tcp.TcpSocket.Interface> {
-					return this._resources;
-				}
+				private static readonly _resource = $.TcpSocket;
 				private readonly _handle: $wcm.ResourceHandle;
-				public getHandle(): $wcm.ResourceHandle {
+				private readonly _wasm: WasmInterface;
+				private readonly _context: $wcm.Context;
+				public _getHandle(): $wcm.ResourceHandle {
 					return this._handle;
 				}
 				public startBind(network: borrow<Network>, localAddress: IpSocketAddress): result<void, ErrorCode> {
-					return this._module.startBind(this._handle, network, localAddress);
+					const callable = Impl._resource.getMethod('startBind');
+					const { memory, options } = this._context;
+					return callable.callWasm([network, localAddress], this._wasm[callable.witName], memory, options);
 				}
 				public finishBind(): result<void, ErrorCode> {
-					return this._module.finishBind(this._handle);
+					const callable = Impl._resource.getMethod('finishBind');
+					const { memory, options } = this._context;
+					return callable.callWasm([], this._wasm[callable.witName], memory, options);
 				}
 				public startConnect(network: borrow<Network>, remoteAddress: IpSocketAddress): result<void, ErrorCode> {
-					return this._module.startConnect(this._handle, network, remoteAddress);
+					const callable = Impl._resource.getMethod('startConnect');
+					const { memory, options } = this._context;
+					return callable.callWasm([network, remoteAddress], this._wasm[callable.witName], memory, options);
 				}
 				public finishConnect(): result<[own<InputStream>, own<OutputStream>], ErrorCode> {
-					return this._module.finishConnect(this._handle);
+					const callable = Impl._resource.getMethod('finishConnect');
+					const { memory, options } = this._context;
+					return callable.callWasm([], this._wasm[callable.witName], memory, options);
 				}
 				public startListen(): result<void, ErrorCode> {
-					return this._module.startListen(this._handle);
+					const callable = Impl._resource.getMethod('startListen');
+					const { memory, options } = this._context;
+					return callable.callWasm([], this._wasm[callable.witName], memory, options);
 				}
 				public finishListen(): result<void, ErrorCode> {
-					return this._module.finishListen(this._handle);
+					const callable = Impl._resource.getMethod('finishListen');
+					const { memory, options } = this._context;
+					return callable.callWasm([], this._wasm[callable.witName], memory, options);
 				}
 				public accept(): result<[own<TcpSocket>, own<InputStream>, own<OutputStream>], ErrorCode> {
-					return this._module.accept(this._handle);
+					const callable = Impl._resource.getMethod('accept');
+					const { memory, options } = this._context;
+					return callable.callWasm([], this._wasm[callable.witName], memory, options);
 				}
 				public localAddress(): result<IpSocketAddress, ErrorCode> {
-					return this._module.localAddress(this._handle);
+					const callable = Impl._resource.getMethod('localAddress');
+					const { memory, options } = this._context;
+					return callable.callWasm([], this._wasm[callable.witName], memory, options);
 				}
 				public remoteAddress(): result<IpSocketAddress, ErrorCode> {
-					return this._module.remoteAddress(this._handle);
+					const callable = Impl._resource.getMethod('remoteAddress');
+					const { memory, options } = this._context;
+					return callable.callWasm([], this._wasm[callable.witName], memory, options);
 				}
 				public isListening(): boolean {
-					return this._module.isListening(this._handle);
+					const callable = Impl._resource.getMethod('isListening');
+					const { memory, options } = this._context;
+					return callable.callWasm([], this._wasm[callable.witName], memory, options);
 				}
 				public addressFamily(): IpAddressFamily {
-					return this._module.addressFamily(this._handle);
+					const callable = Impl._resource.getMethod('addressFamily');
+					const { memory, options } = this._context;
+					return callable.callWasm([], this._wasm[callable.witName], memory, options);
 				}
 				public ipv6Only(): result<boolean, ErrorCode> {
-					return this._module.ipv6Only(this._handle);
+					const callable = Impl._resource.getMethod('ipv6Only');
+					const { memory, options } = this._context;
+					return callable.callWasm([], this._wasm[callable.witName], memory, options);
 				}
 				public setIpv6Only(value: boolean): result<void, ErrorCode> {
-					return this._module.setIpv6Only(this._handle, value);
+					const callable = Impl._resource.getMethod('setIpv6Only');
+					const { memory, options } = this._context;
+					return callable.callWasm([value], this._wasm[callable.witName], memory, options);
 				}
 				public setListenBacklogSize(value: u64): result<void, ErrorCode> {
-					return this._module.setListenBacklogSize(this._handle, value);
+					const callable = Impl._resource.getMethod('setListenBacklogSize');
+					const { memory, options } = this._context;
+					return callable.callWasm([value], this._wasm[callable.witName], memory, options);
 				}
 				public keepAliveEnabled(): result<boolean, ErrorCode> {
-					return this._module.keepAliveEnabled(this._handle);
+					const callable = Impl._resource.getMethod('keepAliveEnabled');
+					const { memory, options } = this._context;
+					return callable.callWasm([], this._wasm[callable.witName], memory, options);
 				}
 				public setKeepAliveEnabled(value: boolean): result<void, ErrorCode> {
-					return this._module.setKeepAliveEnabled(this._handle, value);
+					const callable = Impl._resource.getMethod('setKeepAliveEnabled');
+					const { memory, options } = this._context;
+					return callable.callWasm([value], this._wasm[callable.witName], memory, options);
 				}
 				public keepAliveIdleTime(): result<Duration, ErrorCode> {
-					return this._module.keepAliveIdleTime(this._handle);
+					const callable = Impl._resource.getMethod('keepAliveIdleTime');
+					const { memory, options } = this._context;
+					return callable.callWasm([], this._wasm[callable.witName], memory, options);
 				}
 				public setKeepAliveIdleTime(value: Duration): result<void, ErrorCode> {
-					return this._module.setKeepAliveIdleTime(this._handle, value);
+					const callable = Impl._resource.getMethod('setKeepAliveIdleTime');
+					const { memory, options } = this._context;
+					return callable.callWasm([value], this._wasm[callable.witName], memory, options);
 				}
 				public keepAliveInterval(): result<Duration, ErrorCode> {
-					return this._module.keepAliveInterval(this._handle);
+					const callable = Impl._resource.getMethod('keepAliveInterval');
+					const { memory, options } = this._context;
+					return callable.callWasm([], this._wasm[callable.witName], memory, options);
 				}
 				public setKeepAliveInterval(value: Duration): result<void, ErrorCode> {
-					return this._module.setKeepAliveInterval(this._handle, value);
+					const callable = Impl._resource.getMethod('setKeepAliveInterval');
+					const { memory, options } = this._context;
+					return callable.callWasm([value], this._wasm[callable.witName], memory, options);
 				}
 				public keepAliveCount(): result<u32, ErrorCode> {
-					return this._module.keepAliveCount(this._handle);
+					const callable = Impl._resource.getMethod('keepAliveCount');
+					const { memory, options } = this._context;
+					return callable.callWasm([], this._wasm[callable.witName], memory, options);
 				}
 				public setKeepAliveCount(value: u32): result<void, ErrorCode> {
-					return this._module.setKeepAliveCount(this._handle, value);
+					const callable = Impl._resource.getMethod('setKeepAliveCount');
+					const { memory, options } = this._context;
+					return callable.callWasm([value], this._wasm[callable.witName], memory, options);
 				}
 				public hopLimit(): result<u8, ErrorCode> {
-					return this._module.hopLimit(this._handle);
+					const callable = Impl._resource.getMethod('hopLimit');
+					const { memory, options } = this._context;
+					return callable.callWasm([], this._wasm[callable.witName], memory, options);
 				}
 				public setHopLimit(value: u8): result<void, ErrorCode> {
-					return this._module.setHopLimit(this._handle, value);
+					const callable = Impl._resource.getMethod('setHopLimit');
+					const { memory, options } = this._context;
+					return callable.callWasm([value], this._wasm[callable.witName], memory, options);
 				}
 				public receiveBufferSize(): result<u64, ErrorCode> {
-					return this._module.receiveBufferSize(this._handle);
+					const callable = Impl._resource.getMethod('receiveBufferSize');
+					const { memory, options } = this._context;
+					return callable.callWasm([], this._wasm[callable.witName], memory, options);
 				}
 				public setReceiveBufferSize(value: u64): result<void, ErrorCode> {
-					return this._module.setReceiveBufferSize(this._handle, value);
+					const callable = Impl._resource.getMethod('setReceiveBufferSize');
+					const { memory, options } = this._context;
+					return callable.callWasm([value], this._wasm[callable.witName], memory, options);
 				}
 				public sendBufferSize(): result<u64, ErrorCode> {
-					return this._module.sendBufferSize(this._handle);
+					const callable = Impl._resource.getMethod('sendBufferSize');
+					const { memory, options } = this._context;
+					return callable.callWasm([], this._wasm[callable.witName], memory, options);
 				}
 				public setSendBufferSize(value: u64): result<void, ErrorCode> {
-					return this._module.setSendBufferSize(this._handle, value);
+					const callable = Impl._resource.getMethod('setSendBufferSize');
+					const { memory, options } = this._context;
+					return callable.callWasm([value], this._wasm[callable.witName], memory, options);
 				}
 				public subscribe(): own<Pollable> {
-					return this._module.subscribe(this._handle);
+					const callable = Impl._resource.getMethod('subscribe');
+					const { memory, options } = this._context;
+					return callable.callWasm([], this._wasm[callable.witName], memory, options);
 				}
 				public shutdown(shutdownType: ShutdownType): result<void, ErrorCode> {
-					return this._module.shutdown(this._handle, shutdownType);
+					const callable = Impl._resource.getMethod('shutdown');
+					const { memory, options } = this._context;
+					return callable.callWasm([shutdownType], this._wasm[callable.witName], memory, options);
 				}
 			}
 			export function Class(wasmInterface: WasmInterface, context: $wcm.Context): sockets.Tcp.TcpSocket.Class {
-				const module = Module(wasmInterface, context);
 				return class extends Impl {
 				};
 			}
 		}
+		export type WasmInterface = {
+		} & TcpSocket.WasmInterface;
 		export function createHost(service: sockets.Tcp, context: $wcm.Context): WasmInterface {
 			return $wcm.Host.create<WasmInterface>(functions, resources, service, context);
 		}
@@ -1826,12 +1872,123 @@ export namespace sockets {
 				'[method]udp-socket.set-send-buffer-size': (self: i32, value: i64, result: ptr<[i32, i32]>) => void;
 				'[method]udp-socket.subscribe': (self: i32) => i32;
 			};
+			class Impl implements sockets.Udp.UdpSocket.Interface {
+				private static readonly _resource = $.UdpSocket;
+				private readonly _handle: $wcm.ResourceHandle;
+				private readonly _wasm: WasmInterface;
+				private readonly _context: $wcm.Context;
+				public _getHandle(): $wcm.ResourceHandle {
+					return this._handle;
+				}
+				public startBind(network: borrow<Network>, localAddress: IpSocketAddress): result<void, ErrorCode> {
+					const callable = Impl._resource.getMethod('startBind');
+					const { memory, options } = this._context;
+					return callable.callWasm([network, localAddress], this._wasm[callable.witName], memory, options);
+				}
+				public finishBind(): result<void, ErrorCode> {
+					const callable = Impl._resource.getMethod('finishBind');
+					const { memory, options } = this._context;
+					return callable.callWasm([], this._wasm[callable.witName], memory, options);
+				}
+				public stream(remoteAddress: IpSocketAddress | undefined): result<[own<IncomingDatagramStream>, own<OutgoingDatagramStream>], ErrorCode> {
+					const callable = Impl._resource.getMethod('stream');
+					const { memory, options } = this._context;
+					return callable.callWasm([remoteAddress], this._wasm[callable.witName], memory, options);
+				}
+				public localAddress(): result<IpSocketAddress, ErrorCode> {
+					const callable = Impl._resource.getMethod('localAddress');
+					const { memory, options } = this._context;
+					return callable.callWasm([], this._wasm[callable.witName], memory, options);
+				}
+				public remoteAddress(): result<IpSocketAddress, ErrorCode> {
+					const callable = Impl._resource.getMethod('remoteAddress');
+					const { memory, options } = this._context;
+					return callable.callWasm([], this._wasm[callable.witName], memory, options);
+				}
+				public addressFamily(): IpAddressFamily {
+					const callable = Impl._resource.getMethod('addressFamily');
+					const { memory, options } = this._context;
+					return callable.callWasm([], this._wasm[callable.witName], memory, options);
+				}
+				public ipv6Only(): result<boolean, ErrorCode> {
+					const callable = Impl._resource.getMethod('ipv6Only');
+					const { memory, options } = this._context;
+					return callable.callWasm([], this._wasm[callable.witName], memory, options);
+				}
+				public setIpv6Only(value: boolean): result<void, ErrorCode> {
+					const callable = Impl._resource.getMethod('setIpv6Only');
+					const { memory, options } = this._context;
+					return callable.callWasm([value], this._wasm[callable.witName], memory, options);
+				}
+				public unicastHopLimit(): result<u8, ErrorCode> {
+					const callable = Impl._resource.getMethod('unicastHopLimit');
+					const { memory, options } = this._context;
+					return callable.callWasm([], this._wasm[callable.witName], memory, options);
+				}
+				public setUnicastHopLimit(value: u8): result<void, ErrorCode> {
+					const callable = Impl._resource.getMethod('setUnicastHopLimit');
+					const { memory, options } = this._context;
+					return callable.callWasm([value], this._wasm[callable.witName], memory, options);
+				}
+				public receiveBufferSize(): result<u64, ErrorCode> {
+					const callable = Impl._resource.getMethod('receiveBufferSize');
+					const { memory, options } = this._context;
+					return callable.callWasm([], this._wasm[callable.witName], memory, options);
+				}
+				public setReceiveBufferSize(value: u64): result<void, ErrorCode> {
+					const callable = Impl._resource.getMethod('setReceiveBufferSize');
+					const { memory, options } = this._context;
+					return callable.callWasm([value], this._wasm[callable.witName], memory, options);
+				}
+				public sendBufferSize(): result<u64, ErrorCode> {
+					const callable = Impl._resource.getMethod('sendBufferSize');
+					const { memory, options } = this._context;
+					return callable.callWasm([], this._wasm[callable.witName], memory, options);
+				}
+				public setSendBufferSize(value: u64): result<void, ErrorCode> {
+					const callable = Impl._resource.getMethod('setSendBufferSize');
+					const { memory, options } = this._context;
+					return callable.callWasm([value], this._wasm[callable.witName], memory, options);
+				}
+				public subscribe(): own<Pollable> {
+					const callable = Impl._resource.getMethod('subscribe');
+					const { memory, options } = this._context;
+					return callable.callWasm([], this._wasm[callable.witName], memory, options);
+				}
+			}
+			export function Class(wasmInterface: WasmInterface, context: $wcm.Context): sockets.Udp.UdpSocket.Class {
+				return class extends Impl {
+				};
+			}
 		}
 		export namespace IncomingDatagramStream {
 			export type WasmInterface = {
 				'[method]incoming-datagram-stream.receive': (self: i32, maxResults: i64, result: ptr<[i32, i32, i32]>) => void;
 				'[method]incoming-datagram-stream.subscribe': (self: i32) => i32;
 			};
+			class Impl implements sockets.Udp.IncomingDatagramStream.Interface {
+				private static readonly _resource = $.IncomingDatagramStream;
+				private readonly _handle: $wcm.ResourceHandle;
+				private readonly _wasm: WasmInterface;
+				private readonly _context: $wcm.Context;
+				public _getHandle(): $wcm.ResourceHandle {
+					return this._handle;
+				}
+				public receive(maxResults: u64): result<IncomingDatagram[], ErrorCode> {
+					const callable = Impl._resource.getMethod('receive');
+					const { memory, options } = this._context;
+					return callable.callWasm([maxResults], this._wasm[callable.witName], memory, options);
+				}
+				public subscribe(): own<Pollable> {
+					const callable = Impl._resource.getMethod('subscribe');
+					const { memory, options } = this._context;
+					return callable.callWasm([], this._wasm[callable.witName], memory, options);
+				}
+			}
+			export function Class(wasmInterface: WasmInterface, context: $wcm.Context): sockets.Udp.IncomingDatagramStream.Class {
+				return class extends Impl {
+				};
+			}
 		}
 		export namespace OutgoingDatagramStream {
 			export type WasmInterface = {
@@ -1839,120 +1996,37 @@ export namespace sockets {
 				'[method]outgoing-datagram-stream.send': (self: i32, datagrams_ptr: i32, datagrams_len: i32, result: ptr<[i32, i64]>) => void;
 				'[method]outgoing-datagram-stream.subscribe': (self: i32) => i32;
 			};
-		}
-		export type WasmInterface = {
-		} & UdpSocket.WasmInterface & IncomingDatagramStream.WasmInterface & OutgoingDatagramStream.WasmInterface;
-		export namespace UdpSocket  {
-			class Impl implements sockets.Udp.UdpSocket.Interface {
-				private static readonly _resources: $wcm.ResourceManager<sockets.Udp.UdpSocket.Interface> = new $wcm.ResourceManager<sockets.Udp.UdpSocket.Interface>();
-				public static _getResources(): $wcm.ResourceManager<sockets.Udp.UdpSocket.Interface> {
-					return this._resources;
-				}
-				private readonly _handle: $wcm.ResourceHandle;
-				public getHandle(): $wcm.ResourceHandle {
-					return this._handle;
-				}
-				public startBind(network: borrow<Network>, localAddress: IpSocketAddress): result<void, ErrorCode> {
-					return this._module.startBind(this._handle, network, localAddress);
-				}
-				public finishBind(): result<void, ErrorCode> {
-					return this._module.finishBind(this._handle);
-				}
-				public stream(remoteAddress: IpSocketAddress | undefined): result<[own<IncomingDatagramStream>, own<OutgoingDatagramStream>], ErrorCode> {
-					return this._module.stream(this._handle, remoteAddress);
-				}
-				public localAddress(): result<IpSocketAddress, ErrorCode> {
-					return this._module.localAddress(this._handle);
-				}
-				public remoteAddress(): result<IpSocketAddress, ErrorCode> {
-					return this._module.remoteAddress(this._handle);
-				}
-				public addressFamily(): IpAddressFamily {
-					return this._module.addressFamily(this._handle);
-				}
-				public ipv6Only(): result<boolean, ErrorCode> {
-					return this._module.ipv6Only(this._handle);
-				}
-				public setIpv6Only(value: boolean): result<void, ErrorCode> {
-					return this._module.setIpv6Only(this._handle, value);
-				}
-				public unicastHopLimit(): result<u8, ErrorCode> {
-					return this._module.unicastHopLimit(this._handle);
-				}
-				public setUnicastHopLimit(value: u8): result<void, ErrorCode> {
-					return this._module.setUnicastHopLimit(this._handle, value);
-				}
-				public receiveBufferSize(): result<u64, ErrorCode> {
-					return this._module.receiveBufferSize(this._handle);
-				}
-				public setReceiveBufferSize(value: u64): result<void, ErrorCode> {
-					return this._module.setReceiveBufferSize(this._handle, value);
-				}
-				public sendBufferSize(): result<u64, ErrorCode> {
-					return this._module.sendBufferSize(this._handle);
-				}
-				public setSendBufferSize(value: u64): result<void, ErrorCode> {
-					return this._module.setSendBufferSize(this._handle, value);
-				}
-				public subscribe(): own<Pollable> {
-					return this._module.subscribe(this._handle);
-				}
-			}
-			export function Class(wasmInterface: WasmInterface, context: $wcm.Context): sockets.Udp.UdpSocket.Class {
-				const module = Module(wasmInterface, context);
-				return class extends Impl {
-				};
-			}
-		}
-		export namespace IncomingDatagramStream  {
-			class Impl implements sockets.Udp.IncomingDatagramStream.Interface {
-				private static readonly _resources: $wcm.ResourceManager<sockets.Udp.IncomingDatagramStream.Interface> = new $wcm.ResourceManager<sockets.Udp.IncomingDatagramStream.Interface>();
-				public static _getResources(): $wcm.ResourceManager<sockets.Udp.IncomingDatagramStream.Interface> {
-					return this._resources;
-				}
-				private readonly _handle: $wcm.ResourceHandle;
-				public getHandle(): $wcm.ResourceHandle {
-					return this._handle;
-				}
-				public receive(maxResults: u64): result<IncomingDatagram[], ErrorCode> {
-					return this._module.receive(this._handle, maxResults);
-				}
-				public subscribe(): own<Pollable> {
-					return this._module.subscribe(this._handle);
-				}
-			}
-			export function Class(wasmInterface: WasmInterface, context: $wcm.Context): sockets.Udp.IncomingDatagramStream.Class {
-				const module = Module(wasmInterface, context);
-				return class extends Impl {
-				};
-			}
-		}
-		export namespace OutgoingDatagramStream  {
 			class Impl implements sockets.Udp.OutgoingDatagramStream.Interface {
-				private static readonly _resources: $wcm.ResourceManager<sockets.Udp.OutgoingDatagramStream.Interface> = new $wcm.ResourceManager<sockets.Udp.OutgoingDatagramStream.Interface>();
-				public static _getResources(): $wcm.ResourceManager<sockets.Udp.OutgoingDatagramStream.Interface> {
-					return this._resources;
-				}
+				private static readonly _resource = $.OutgoingDatagramStream;
 				private readonly _handle: $wcm.ResourceHandle;
-				public getHandle(): $wcm.ResourceHandle {
+				private readonly _wasm: WasmInterface;
+				private readonly _context: $wcm.Context;
+				public _getHandle(): $wcm.ResourceHandle {
 					return this._handle;
 				}
 				public checkSend(): result<u64, ErrorCode> {
-					return this._module.checkSend(this._handle);
+					const callable = Impl._resource.getMethod('checkSend');
+					const { memory, options } = this._context;
+					return callable.callWasm([], this._wasm[callable.witName], memory, options);
 				}
 				public send(datagrams: OutgoingDatagram[]): result<u64, ErrorCode> {
-					return this._module.send(this._handle, datagrams);
+					const callable = Impl._resource.getMethod('send');
+					const { memory, options } = this._context;
+					return callable.callWasm([datagrams], this._wasm[callable.witName], memory, options);
 				}
 				public subscribe(): own<Pollable> {
-					return this._module.subscribe(this._handle);
+					const callable = Impl._resource.getMethod('subscribe');
+					const { memory, options } = this._context;
+					return callable.callWasm([], this._wasm[callable.witName], memory, options);
 				}
 			}
 			export function Class(wasmInterface: WasmInterface, context: $wcm.Context): sockets.Udp.OutgoingDatagramStream.Class {
-				const module = Module(wasmInterface, context);
 				return class extends Impl {
 				};
 			}
 		}
+		export type WasmInterface = {
+		} & UdpSocket.WasmInterface & IncomingDatagramStream.WasmInterface & OutgoingDatagramStream.WasmInterface;
 		export function createHost(service: sockets.Udp, context: $wcm.Context): WasmInterface {
 			return $wcm.Host.create<WasmInterface>(functions, resources, service, context);
 		}

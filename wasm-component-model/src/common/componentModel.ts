@@ -2283,6 +2283,26 @@ class Callable {
 			return;
 		}
 	}
+
+	public callWasm(params: JType[], wasmFunction: WasmFunction, memory: Memory, options: Options): JType | void {
+		const wasmValues = this.lowerParamValues(params, memory, options, undefined);
+		// We currently only support 'lower' mode for results > MAX_FLAT_RESULTS.
+		let resultPtr: ptr | undefined = undefined;
+		if (this.returnFlatTypes.length > FunctionType.MAX_FLAT_RESULTS) {
+			resultPtr = memory.alloc(this.returnType!.alignment, this.returnType!.size);
+			wasmValues.push(resultPtr);
+		}
+		const result = wasmFunction(...wasmValues);
+		this.liftReturnValue(result, memory, options);
+		switch(this.returnFlatTypes.length) {
+			case 0:
+				return;
+			case 1:
+				return this.liftReturnValue(result, memory, options);
+			default:
+				return this.liftReturnValue(resultPtr, memory, options);
+		}
+	}
 }
 
 export class FunctionType<_T extends Function = Function> extends Callable  {
@@ -2303,26 +2323,6 @@ export class FunctionType<_T extends Function = Function> extends Callable  {
 			throw new ComponentModelError(`Result pointer must be a number (u32), but got ${out}.`);
 		}
 		return this.lowerReturnValue(result, memory, options, out);
-	}
-
-	public callWasm(params: JType[], wasmFunction: WasmFunction, memory: Memory, options: Options): JType | void {
-		const wasmValues = this.lowerParamValues(params, memory, options, undefined);
-		// We currently only support 'lower' mode for results > MAX_FLAT_RESULTS.
-		let resultPtr: ptr | undefined = undefined;
-		if (this.returnFlatTypes.length > FunctionType.MAX_FLAT_RESULTS) {
-			resultPtr = memory.alloc(this.returnType!.alignment, this.returnType!.size);
-			wasmValues.push(resultPtr);
-		}
-		const result = wasmFunction(...wasmValues);
-		this.liftReturnValue(result, memory, options);
-		switch(this.returnFlatTypes.length) {
-			case 0:
-				return;
-			case 1:
-				return this.liftReturnValue(result, memory, options);
-			default:
-				return this.liftReturnValue(resultPtr, memory, options);
-		}
 	}
 }
 
@@ -2421,6 +2421,14 @@ export class ResourceType extends AbstractResourceType {
 
 	public addMethod(jsName: string, func: ResourceCallable<Function>): void {
 		this.methods.set(jsName, func);
+	}
+
+	public getMethod(jsName: string): ResourceCallable<Function> {
+		const result = this.methods.get(jsName);
+		if (result === undefined) {
+			throw new ComponentModelError(`Method '${jsName}' not found on resource '${this.witName}'.`);
+		}
+		return result;
 	}
 }
 

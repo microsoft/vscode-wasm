@@ -24,7 +24,6 @@ export namespace io {
 				toDebugString(): string;
 			}
 			export type Statics = {
-				_getResources(): $wcm.ResourceManager<Error>;
 			};
 			export type Class = Statics;
 		}
@@ -61,7 +60,6 @@ export namespace io {
 				block(): void;
 			}
 			export type Statics = {
-				_getResources(): $wcm.ResourceManager<Pollable>;
 			};
 			export type Class = Statics;
 		}
@@ -225,7 +223,6 @@ export namespace io {
 				subscribe(): own<Pollable>;
 			}
 			export type Statics = {
-				_getResources(): $wcm.ResourceManager<InputStream>;
 			};
 			export type Class = Statics;
 		}
@@ -386,7 +383,6 @@ export namespace io {
 				blockingSplice(src: borrow<InputStream>, len: u64): result<u64, StreamError>;
 			}
 			export type Statics = {
-				_getResources(): $wcm.ResourceManager<OutputStream>;
 			};
 			export type Class = Statics;
 		}
@@ -426,29 +422,27 @@ export namespace io {
 			export type WasmInterface = {
 				'[method]error.to-debug-string': (self: i32, result: ptr<[i32, i32]>) => void;
 			};
-		}
-		export type WasmInterface = {
-		} & Error.WasmInterface;
-		export namespace Error  {
 			class Impl implements io.Error.Error.Interface {
-				private static readonly _resources: $wcm.ResourceManager<io.Error.Error.Interface> = new $wcm.ResourceManager<io.Error.Error.Interface>();
-				public static _getResources(): $wcm.ResourceManager<io.Error.Error.Interface> {
-					return this._resources;
-				}
+				private static readonly _resource = $.Error;
 				private readonly _handle: $wcm.ResourceHandle;
-				public getHandle(): $wcm.ResourceHandle {
+				private readonly _wasm: WasmInterface;
+				private readonly _context: $wcm.Context;
+				public _getHandle(): $wcm.ResourceHandle {
 					return this._handle;
 				}
 				public toDebugString(): string {
-					return this._module.toDebugString(this._handle);
+					const callable = Impl._resource.getMethod('toDebugString');
+					const { memory, options } = this._context;
+					return callable.callWasm([], this._wasm[callable.witName], memory, options);
 				}
 			}
 			export function Class(wasmInterface: WasmInterface, context: $wcm.Context): io.Error.Error.Class {
-				const module = Module(wasmInterface, context);
 				return class extends Impl {
 				};
 			}
 		}
+		export type WasmInterface = {
+		} & Error.WasmInterface;
 		export function createHost(service: io.Error, context: $wcm.Context): WasmInterface {
 			return $wcm.Host.create<WasmInterface>(functions, resources, service, context);
 		}
@@ -486,33 +480,33 @@ export namespace io {
 				'[method]pollable.ready': (self: i32) => i32;
 				'[method]pollable.block': (self: i32) => void;
 			};
-		}
-		export type WasmInterface = {
-			'poll': (in__ptr: i32, in__len: i32, result: ptr<[i32, i32]>) => void;
-		} & Pollable.WasmInterface;
-		export namespace Pollable  {
 			class Impl implements io.Poll.Pollable.Interface {
-				private static readonly _resources: $wcm.ResourceManager<io.Poll.Pollable.Interface> = new $wcm.ResourceManager<io.Poll.Pollable.Interface>();
-				public static _getResources(): $wcm.ResourceManager<io.Poll.Pollable.Interface> {
-					return this._resources;
-				}
+				private static readonly _resource = $.Pollable;
 				private readonly _handle: $wcm.ResourceHandle;
-				public getHandle(): $wcm.ResourceHandle {
+				private readonly _wasm: WasmInterface;
+				private readonly _context: $wcm.Context;
+				public _getHandle(): $wcm.ResourceHandle {
 					return this._handle;
 				}
 				public ready(): boolean {
-					return this._module.ready(this._handle);
+					const callable = Impl._resource.getMethod('ready');
+					const { memory, options } = this._context;
+					return callable.callWasm([], this._wasm[callable.witName], memory, options);
 				}
 				public block(): void {
-					return this._module.block(this._handle);
+					const callable = Impl._resource.getMethod('block');
+					const { memory, options } = this._context;
+					return callable.callWasm([], this._wasm[callable.witName], memory, options);
 				}
 			}
 			export function Class(wasmInterface: WasmInterface, context: $wcm.Context): io.Poll.Pollable.Class {
-				const module = Module(wasmInterface, context);
 				return class extends Impl {
 				};
 			}
 		}
+		export type WasmInterface = {
+			'poll': (in__ptr: i32, in__len: i32, result: ptr<[i32, i32]>) => void;
+		} & Pollable.WasmInterface;
 		export function createHost(service: io.Poll, context: $wcm.Context): WasmInterface {
 			return $wcm.Host.create<WasmInterface>(functions, resources, service, context);
 		}
@@ -609,6 +603,44 @@ export namespace io {
 				'[method]input-stream.blocking-skip': (self: i32, len: i64, result: ptr<[i32, i64, i32]>) => void;
 				'[method]input-stream.subscribe': (self: i32) => i32;
 			};
+			class Impl implements io.Streams.InputStream.Interface {
+				private static readonly _resource = $.InputStream;
+				private readonly _handle: $wcm.ResourceHandle;
+				private readonly _wasm: WasmInterface;
+				private readonly _context: $wcm.Context;
+				public _getHandle(): $wcm.ResourceHandle {
+					return this._handle;
+				}
+				public read(len: u64): result<Uint8Array, StreamError> {
+					const callable = Impl._resource.getMethod('read');
+					const { memory, options } = this._context;
+					return callable.callWasm([len], this._wasm[callable.witName], memory, options);
+				}
+				public blockingRead(len: u64): result<Uint8Array, StreamError> {
+					const callable = Impl._resource.getMethod('blockingRead');
+					const { memory, options } = this._context;
+					return callable.callWasm([len], this._wasm[callable.witName], memory, options);
+				}
+				public skip(len: u64): result<u64, StreamError> {
+					const callable = Impl._resource.getMethod('skip');
+					const { memory, options } = this._context;
+					return callable.callWasm([len], this._wasm[callable.witName], memory, options);
+				}
+				public blockingSkip(len: u64): result<u64, StreamError> {
+					const callable = Impl._resource.getMethod('blockingSkip');
+					const { memory, options } = this._context;
+					return callable.callWasm([len], this._wasm[callable.witName], memory, options);
+				}
+				public subscribe(): own<Pollable> {
+					const callable = Impl._resource.getMethod('subscribe');
+					const { memory, options } = this._context;
+					return callable.callWasm([], this._wasm[callable.witName], memory, options);
+				}
+			}
+			export function Class(wasmInterface: WasmInterface, context: $wcm.Context): io.Streams.InputStream.Class {
+				return class extends Impl {
+				};
+			}
 		}
 		export namespace OutputStream {
 			export type WasmInterface = {
@@ -623,88 +655,72 @@ export namespace io {
 				'[method]output-stream.splice': (self: i32, src: i32, len: i64, result: ptr<[i32, i64, i32]>) => void;
 				'[method]output-stream.blocking-splice': (self: i32, src: i32, len: i64, result: ptr<[i32, i64, i32]>) => void;
 			};
-		}
-		export type WasmInterface = {
-		} & InputStream.WasmInterface & OutputStream.WasmInterface;
-		export namespace InputStream  {
-			class Impl implements io.Streams.InputStream.Interface {
-				private static readonly _resources: $wcm.ResourceManager<io.Streams.InputStream.Interface> = new $wcm.ResourceManager<io.Streams.InputStream.Interface>();
-				public static _getResources(): $wcm.ResourceManager<io.Streams.InputStream.Interface> {
-					return this._resources;
-				}
-				private readonly _handle: $wcm.ResourceHandle;
-				public getHandle(): $wcm.ResourceHandle {
-					return this._handle;
-				}
-				public read(len: u64): result<Uint8Array, StreamError> {
-					return this._module.read(this._handle, len);
-				}
-				public blockingRead(len: u64): result<Uint8Array, StreamError> {
-					return this._module.blockingRead(this._handle, len);
-				}
-				public skip(len: u64): result<u64, StreamError> {
-					return this._module.skip(this._handle, len);
-				}
-				public blockingSkip(len: u64): result<u64, StreamError> {
-					return this._module.blockingSkip(this._handle, len);
-				}
-				public subscribe(): own<Pollable> {
-					return this._module.subscribe(this._handle);
-				}
-			}
-			export function Class(wasmInterface: WasmInterface, context: $wcm.Context): io.Streams.InputStream.Class {
-				const module = Module(wasmInterface, context);
-				return class extends Impl {
-				};
-			}
-		}
-		export namespace OutputStream  {
 			class Impl implements io.Streams.OutputStream.Interface {
-				private static readonly _resources: $wcm.ResourceManager<io.Streams.OutputStream.Interface> = new $wcm.ResourceManager<io.Streams.OutputStream.Interface>();
-				public static _getResources(): $wcm.ResourceManager<io.Streams.OutputStream.Interface> {
-					return this._resources;
-				}
+				private static readonly _resource = $.OutputStream;
 				private readonly _handle: $wcm.ResourceHandle;
-				public getHandle(): $wcm.ResourceHandle {
+				private readonly _wasm: WasmInterface;
+				private readonly _context: $wcm.Context;
+				public _getHandle(): $wcm.ResourceHandle {
 					return this._handle;
 				}
 				public checkWrite(): result<u64, StreamError> {
-					return this._module.checkWrite(this._handle);
+					const callable = Impl._resource.getMethod('checkWrite');
+					const { memory, options } = this._context;
+					return callable.callWasm([], this._wasm[callable.witName], memory, options);
 				}
 				public write(contents: Uint8Array): result<void, StreamError> {
-					return this._module.write(this._handle, contents);
+					const callable = Impl._resource.getMethod('write');
+					const { memory, options } = this._context;
+					return callable.callWasm([contents], this._wasm[callable.witName], memory, options);
 				}
 				public blockingWriteAndFlush(contents: Uint8Array): result<void, StreamError> {
-					return this._module.blockingWriteAndFlush(this._handle, contents);
+					const callable = Impl._resource.getMethod('blockingWriteAndFlush');
+					const { memory, options } = this._context;
+					return callable.callWasm([contents], this._wasm[callable.witName], memory, options);
 				}
 				public flush(): result<void, StreamError> {
-					return this._module.flush(this._handle);
+					const callable = Impl._resource.getMethod('flush');
+					const { memory, options } = this._context;
+					return callable.callWasm([], this._wasm[callable.witName], memory, options);
 				}
 				public blockingFlush(): result<void, StreamError> {
-					return this._module.blockingFlush(this._handle);
+					const callable = Impl._resource.getMethod('blockingFlush');
+					const { memory, options } = this._context;
+					return callable.callWasm([], this._wasm[callable.witName], memory, options);
 				}
 				public subscribe(): own<Pollable> {
-					return this._module.subscribe(this._handle);
+					const callable = Impl._resource.getMethod('subscribe');
+					const { memory, options } = this._context;
+					return callable.callWasm([], this._wasm[callable.witName], memory, options);
 				}
 				public writeZeroes(len: u64): result<void, StreamError> {
-					return this._module.writeZeroes(this._handle, len);
+					const callable = Impl._resource.getMethod('writeZeroes');
+					const { memory, options } = this._context;
+					return callable.callWasm([len], this._wasm[callable.witName], memory, options);
 				}
 				public blockingWriteZeroesAndFlush(len: u64): result<void, StreamError> {
-					return this._module.blockingWriteZeroesAndFlush(this._handle, len);
+					const callable = Impl._resource.getMethod('blockingWriteZeroesAndFlush');
+					const { memory, options } = this._context;
+					return callable.callWasm([len], this._wasm[callable.witName], memory, options);
 				}
 				public splice(src: borrow<InputStream>, len: u64): result<u64, StreamError> {
-					return this._module.splice(this._handle, src, len);
+					const callable = Impl._resource.getMethod('splice');
+					const { memory, options } = this._context;
+					return callable.callWasm([src, len], this._wasm[callable.witName], memory, options);
 				}
 				public blockingSplice(src: borrow<InputStream>, len: u64): result<u64, StreamError> {
-					return this._module.blockingSplice(this._handle, src, len);
+					const callable = Impl._resource.getMethod('blockingSplice');
+					const { memory, options } = this._context;
+					return callable.callWasm([src, len], this._wasm[callable.witName], memory, options);
 				}
 			}
 			export function Class(wasmInterface: WasmInterface, context: $wcm.Context): io.Streams.OutputStream.Class {
-				const module = Module(wasmInterface, context);
 				return class extends Impl {
 				};
 			}
 		}
+		export type WasmInterface = {
+		} & InputStream.WasmInterface & OutputStream.WasmInterface;
 		export function createHost(service: io.Streams, context: $wcm.Context): WasmInterface {
 			return $wcm.Host.create<WasmInterface>(functions, resources, service, context);
 		}

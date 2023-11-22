@@ -98,7 +98,6 @@ export namespace cli {
 
 			}
 			export type Statics = {
-				_getResources(): $wcm.ResourceManager<TerminalInput>;
 			};
 			export type Class = Statics;
 		}
@@ -115,7 +114,6 @@ export namespace cli {
 
 			}
 			export type Statics = {
-				_getResources(): $wcm.ResourceManager<TerminalOutput>;
 			};
 			export type Class = Statics;
 		}
@@ -369,26 +367,22 @@ export namespace cli {
 		export namespace TerminalInput {
 			export type WasmInterface = {
 			};
-		}
-		export type WasmInterface = {
-		} & TerminalInput.WasmInterface;
-		export namespace TerminalInput  {
 			class Impl implements cli.TerminalInput.TerminalInput.Interface {
-				private static readonly _resources: $wcm.ResourceManager<cli.TerminalInput.TerminalInput.Interface> = new $wcm.ResourceManager<cli.TerminalInput.TerminalInput.Interface>();
-				public static _getResources(): $wcm.ResourceManager<cli.TerminalInput.TerminalInput.Interface> {
-					return this._resources;
-				}
+				private static readonly _resource = $.TerminalInput;
 				private readonly _handle: $wcm.ResourceHandle;
-				public getHandle(): $wcm.ResourceHandle {
+				private readonly _wasm: WasmInterface;
+				private readonly _context: $wcm.Context;
+				public _getHandle(): $wcm.ResourceHandle {
 					return this._handle;
 				}
 			}
 			export function Class(wasmInterface: WasmInterface, context: $wcm.Context): cli.TerminalInput.TerminalInput.Class {
-				const module = Module(wasmInterface, context);
 				return class extends Impl {
 				};
 			}
 		}
+		export type WasmInterface = {
+		} & TerminalInput.WasmInterface;
 		export function createHost(service: cli.TerminalInput, context: $wcm.Context): WasmInterface {
 			return $wcm.Host.create<WasmInterface>(functions, resources, service, context);
 		}
@@ -414,26 +408,22 @@ export namespace cli {
 		export namespace TerminalOutput {
 			export type WasmInterface = {
 			};
-		}
-		export type WasmInterface = {
-		} & TerminalOutput.WasmInterface;
-		export namespace TerminalOutput  {
 			class Impl implements cli.TerminalOutput.TerminalOutput.Interface {
-				private static readonly _resources: $wcm.ResourceManager<cli.TerminalOutput.TerminalOutput.Interface> = new $wcm.ResourceManager<cli.TerminalOutput.TerminalOutput.Interface>();
-				public static _getResources(): $wcm.ResourceManager<cli.TerminalOutput.TerminalOutput.Interface> {
-					return this._resources;
-				}
+				private static readonly _resource = $.TerminalOutput;
 				private readonly _handle: $wcm.ResourceHandle;
-				public getHandle(): $wcm.ResourceHandle {
+				private readonly _wasm: WasmInterface;
+				private readonly _context: $wcm.Context;
+				public _getHandle(): $wcm.ResourceHandle {
 					return this._handle;
 				}
 			}
 			export function Class(wasmInterface: WasmInterface, context: $wcm.Context): cli.TerminalOutput.TerminalOutput.Class {
-				const module = Module(wasmInterface, context);
 				return class extends Impl {
 				};
 			}
 		}
+		export type WasmInterface = {
+		} & TerminalOutput.WasmInterface;
 		export function createHost(service: cli.TerminalOutput, context: $wcm.Context): WasmInterface {
 			return $wcm.Host.create<WasmInterface>(functions, resources, service, context);
 		}

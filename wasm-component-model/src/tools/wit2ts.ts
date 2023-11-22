@@ -1877,7 +1877,7 @@ class InterfaceEmitter extends Emitter {
 		code.push(']);');
 		const resourceWasmInterfaces: string[] = [];
 		for (const emitter of this.resourceEmitters) {
-			emitter.emitWasmInterface(code);
+			emitter.emitAPI(code);
 			resourceWasmInterfaces.push(`${nameProvider.asTypeName(emitter.resource)}.WasmInterface`);
 		}
 		code.push(`export type WasmInterface = {`);
@@ -1890,10 +1890,6 @@ class InterfaceEmitter extends Emitter {
 			code.push(`} & ${resourceWasmInterfaces.join(' & ')};`);
 		} else {
 			code.push(`};`);
-		}
-
-		for (const emitter of this.resourceEmitters) {
-			emitter.emitService(code);
 		}
 
 		code.push(`export function createHost(service: ${qualifiedTypeName}, context: $wcm.Context): WasmInterface {`);
@@ -2471,7 +2467,6 @@ class ResourceEmitter extends InterfaceMemberEmitter {
 		code.push(`}`);
 		code.push(`export type Statics = {`);
 		code.increaseIndent();
-		code.push(`_getResources(): ${MetaModel.qualify('ResourceManager')}<${tsName}>;`);
 		for (const method of this.statics) {
 			method.emitStaticsDeclaration(code);
 		}
@@ -2522,7 +2517,7 @@ class ResourceEmitter extends InterfaceMemberEmitter {
 		}
 	}
 
-	public emitWasmInterface(code: Code) : void {
+	public emitAPI(code: Code): void {
 		const { nameProvider } = this.config;
 		const name = nameProvider.asTypeName(this.resource);
 		code.push(`export namespace ${name} {`);
@@ -2534,17 +2529,9 @@ class ResourceEmitter extends InterfaceMemberEmitter {
 		}
 		code.decreaseIndent();
 		code.push(`};`);
-		code.decreaseIndent();
-		code.push(`}`);
-	}
 
-	public emitService(code: Code): void {
-		const { nameProvider } = this.config;
-		const name = nameProvider.asTypeName(this.resource);
 		const qualifier = this.getPackageQualifier();
 		const qualifiedName = `${qualifier}${name}`;
-		code.push(`export namespace ${name}  {`);
-		code.increaseIndent();
 		for (const emitter of this.emitters) {
 			emitter.emitService(code);
 		}
@@ -2552,17 +2539,15 @@ class ResourceEmitter extends InterfaceMemberEmitter {
 		const resourceHandleType = MetaModel.qualify('ResourceHandle');
 		code.push(`class Impl implements ${qualifiedName}.Interface {`);
 		code.increaseIndent();
-		code.push(`private static readonly _resources: ${resourceManagerType} = new ${resourceManagerType}();`);
-		code.push(`public static _getResources(): ${resourceManagerType} {`);
-		code.increaseIndent();
-		code.push(`return this._resources;`);
-		code.decreaseIndent();
-		code.push(`}`);
+		code.push(`private static readonly _resource = $.${name};`);
+
 		code.push(`private readonly _handle: ${resourceHandleType};`);
+		code.push(`private readonly _wasm: WasmInterface;`);
+		code.push(`private readonly _context: ${MetaModel.qualify('Context')};`);
 		for (const constructor of this.constructors) {
-			//constructor.emitConstructorImplementation(code, moduleType);
+			// constructor.emitConstructorImplementation(code, moduleType);
 		}
-		code.push(`public getHandle(): ${resourceHandleType} {`);
+		code.push(`public _getHandle(): ${resourceHandleType} {`);
 		code.increaseIndent();
 		code.push(`return this._handle;`);
 		code.decreaseIndent();
@@ -2574,7 +2559,6 @@ class ResourceEmitter extends InterfaceMemberEmitter {
 		code.push(`}`);
 		code.push(`export function Class(wasmInterface: WasmInterface, context: $wcm.Context): ${qualifiedName}.Class {`);
 		code.increaseIndent();
-		code.push(`const module = Module(wasmInterface, context);`);
 		code.push(`return class extends Impl {`);
 		code.increaseIndent();
 		for (const constructor of this.constructors) {
@@ -2699,11 +2683,9 @@ namespace ResourceEmitter {
 			const [params, paramNames, returnType] = this.getSignatureParts(1);
 			code.push(`public ${this.getMethodName()}(${params.join(', ')}): ${returnType} {`);
 			code.increaseIndent();
-			if (paramNames.length > 0) {
-				code.push(`return this._module.${this.getMethodName()}(this._handle, ${paramNames.join(', ')});`);
-			} else {
-				code.push(`return this._module.${this.getMethodName()}(this._handle);`);
-			}
+			code.push(`const callable = Impl._resource.getMethod('${this.getMethodName()}');`);
+			code.push(`const { memory, options } = this._context;`);
+			code.push(`return callable.callWasm([${paramNames.join(', ')}], this._wasm[callable.witName], memory, options);`);
 			code.decreaseIndent();
 			code.push('}');
 		}
@@ -2776,12 +2758,12 @@ namespace ResourceEmitter {
 			code.push(`$new(${params.join(', ')}): Interface;`);
 		}
 
-		public emitConstructorImplementation(code: Code, moduleType: string): void {
+		public emitConstructorImplementation(code: Code): void {
 			const [params, paramNames] = this.getSignatureParts(0);
 			if (params.length === 0) {
-				code.push(`constructor(module: ${moduleType}) {`);
+				code.push(`constructor(wasm: WasmInterface) {`);
 			} else {
-				code.push(`constructor(${params.join(', ')}, module: ${moduleType}) {`);
+				code.push(`constructor(${params.join(', ')}, wasm: WasmInterface) {`);
 			}
 			code.increaseIndent();
 			code.push(`this._module = module;`);
@@ -2792,6 +2774,7 @@ namespace ResourceEmitter {
 
 		public emitAnonymousConstructorImplementation(code: Code): void {
 			const { nameProvider, printers } = this.config;
+			const resourceName = nameProvider.asTypeName(this.resource);
 			const params: string[] = [];
 			const paramNames: string[] = [];
 			for (const param of this.callable.params) {
@@ -2802,9 +2785,9 @@ namespace ResourceEmitter {
 			code.push(`constructor(${params.join(', ')}) {`);
 			code.increaseIndent();
 			if (paramNames.length === 0) {
-				code.push(`super(module);`);
+				code.push(`super(wasmInterface);`);
 			} else {
-				code.push(`super(${paramNames.join(', ')}, module);`);
+				code.push(`super(${paramNames.join(', ')}, wasmInterface);`);
 			}
 			code.decreaseIndent();
 			code.push('}');
