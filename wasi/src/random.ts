@@ -226,16 +226,16 @@ export namespace random._ {
 		}
 		return result;
 	}
-	export function createService(wasmInterface: WasmInterface, context: $wcm.Context, kind?: $wcm.ResourceKind): random {
+	export function createService(wasmInterface: WasmInterface, context: $wcm.Context): random {
 		const result: random = Object.create(null);
 		if (wasmInterface['wasi:random/insecure-seed'] !== undefined) {
-			result.InsecureSeed = InsecureSeed._.createService(wasmInterface['wasi:random/insecure-seed'], context, kind);
+			result.InsecureSeed = InsecureSeed._.createService(wasmInterface['wasi:random/insecure-seed'], context);
 		}
 		if (wasmInterface['wasi:random/insecure'] !== undefined) {
-			result.Insecure = Insecure._.createService(wasmInterface['wasi:random/insecure'], context, kind);
+			result.Insecure = Insecure._.createService(wasmInterface['wasi:random/insecure'], context);
 		}
 		if (wasmInterface['wasi:random/random'] !== undefined) {
-			result.Random = Random._.createService(wasmInterface['wasi:random/random'], context, kind);
+			result.Random = Random._.createService(wasmInterface['wasi:random/random'], context);
 		}
 		return result;
 	}

@@ -93,13 +93,16 @@ export namespace cli {
 	export namespace TerminalInput {
 
 		export namespace TerminalInput {
-			export type Module = {
-			};
 			export interface Interface {
+				_getHandle(): $wcm.ResourceHandle;
+
 			}
-			export type Manager = $wcm.ResourceManager<Interface>;
+			export type Statics = {
+				_getResources(): $wcm.ResourceManager<TerminalInput>;
+			};
+			export type Class = Statics;
 		}
-		export type TerminalInput = resource;
+		export type TerminalInput = TerminalInput.Interface;
 	}
 	export type TerminalInput = {
 	};
@@ -107,13 +110,16 @@ export namespace cli {
 	export namespace TerminalOutput {
 
 		export namespace TerminalOutput {
-			export type Module = {
-			};
 			export interface Interface {
+				_getHandle(): $wcm.ResourceHandle;
+
 			}
-			export type Manager = $wcm.ResourceManager<Interface>;
+			export type Statics = {
+				_getResources(): $wcm.ResourceManager<TerminalOutput>;
+			};
+			export type Class = Statics;
 		}
-		export type TerminalOutput = resource;
+		export type TerminalOutput = TerminalOutput.Interface;
 	}
 	export type TerminalOutput = {
 	};
@@ -563,40 +569,40 @@ export namespace cli._ {
 		}
 		return result;
 	}
-	export function createService(wasmInterface: WasmInterface, context: $wcm.Context, kind?: $wcm.ResourceKind): cli {
+	export function createService(wasmInterface: WasmInterface, context: $wcm.Context): cli {
 		const result: cli = Object.create(null);
 		if (wasmInterface['wasi:cli/environment'] !== undefined) {
-			result.Environment = Environment._.createService(wasmInterface['wasi:cli/environment'], context, kind);
+			result.Environment = Environment._.createService(wasmInterface['wasi:cli/environment'], context);
 		}
 		if (wasmInterface['wasi:cli/exit'] !== undefined) {
-			result.Exit = Exit._.createService(wasmInterface['wasi:cli/exit'], context, kind);
+			result.Exit = Exit._.createService(wasmInterface['wasi:cli/exit'], context);
 		}
 		if (wasmInterface['wasi:cli/run'] !== undefined) {
-			result.Run = Run._.createService(wasmInterface['wasi:cli/run'], context, kind);
+			result.Run = Run._.createService(wasmInterface['wasi:cli/run'], context);
 		}
 		if (wasmInterface['wasi:cli/stdin'] !== undefined) {
-			result.Stdin = Stdin._.createService(wasmInterface['wasi:cli/stdin'], context, kind);
+			result.Stdin = Stdin._.createService(wasmInterface['wasi:cli/stdin'], context);
 		}
 		if (wasmInterface['wasi:cli/stdout'] !== undefined) {
-			result.Stdout = Stdout._.createService(wasmInterface['wasi:cli/stdout'], context, kind);
+			result.Stdout = Stdout._.createService(wasmInterface['wasi:cli/stdout'], context);
 		}
 		if (wasmInterface['wasi:cli/stderr'] !== undefined) {
-			result.Stderr = Stderr._.createService(wasmInterface['wasi:cli/stderr'], context, kind);
+			result.Stderr = Stderr._.createService(wasmInterface['wasi:cli/stderr'], context);
 		}
 		if (wasmInterface['wasi:cli/terminal-input'] !== undefined) {
-			result.TerminalInput = TerminalInput._.createService(wasmInterface['wasi:cli/terminal-input'], context, kind);
+			result.TerminalInput = TerminalInput._.createService(wasmInterface['wasi:cli/terminal-input'], context);
 		}
 		if (wasmInterface['wasi:cli/terminal-output'] !== undefined) {
-			result.TerminalOutput = TerminalOutput._.createService(wasmInterface['wasi:cli/terminal-output'], context, kind);
+			result.TerminalOutput = TerminalOutput._.createService(wasmInterface['wasi:cli/terminal-output'], context);
 		}
 		if (wasmInterface['wasi:cli/terminal-stdin'] !== undefined) {
-			result.TerminalStdin = TerminalStdin._.createService(wasmInterface['wasi:cli/terminal-stdin'], context, kind);
+			result.TerminalStdin = TerminalStdin._.createService(wasmInterface['wasi:cli/terminal-stdin'], context);
 		}
 		if (wasmInterface['wasi:cli/terminal-stdout'] !== undefined) {
-			result.TerminalStdout = TerminalStdout._.createService(wasmInterface['wasi:cli/terminal-stdout'], context, kind);
+			result.TerminalStdout = TerminalStdout._.createService(wasmInterface['wasi:cli/terminal-stdout'], context);
 		}
 		if (wasmInterface['wasi:cli/terminal-stderr'] !== undefined) {
-			result.TerminalStderr = TerminalStderr._.createService(wasmInterface['wasi:cli/terminal-stderr'], context, kind);
+			result.TerminalStderr = TerminalStderr._.createService(wasmInterface['wasi:cli/terminal-stderr'], context);
 		}
 		return result;
 	}

@@ -229,17 +229,17 @@ export namespace testData {
 		export const TestVariant = new $wcm.VariantType<Types.TestVariant, Types.TestVariant._tt, Types.TestVariant._vt>([['empty', undefined], ['unsigned32', $wcm.u32], ['unsigned64', $wcm.u64], ['signed32', $wcm.s32], ['signed64', $wcm.s64], ['floatingPoint32', $wcm.float32], ['floatingPoint64', $wcm.float64], ['structure', Point]], Types.TestVariant._ctor);
 		export const TestFlagsShort = new $wcm.FlagsType<Types.TestFlagsShort>(6);
 		export const TestFlagsLong = new $wcm.FlagsType<Types.TestFlagsLong>(40);
-		PointResource.addFunction('constructor', new $wcm.FunctionType<testData.Types.PointResource.Module['constructor']>('[constructor]point-resource', [
+		PointResource.addMethod('constructor', new $wcm.FunctionType<testData.Types.PointResource.Module['constructor']>('[constructor]point-resource', [
 			['x', $wcm.u32],
 			['y', $wcm.u32],
 		], new $wcm.OwnType<testData.Types.PointResource>(PointResource)));
-		PointResource.addFunction('getX', new $wcm.FunctionType<testData.Types.PointResource.Module['getX']>('[method]point-resource.get-x', [
+		PointResource.addMethod('getX', new $wcm.FunctionType<testData.Types.PointResource.Module['getX']>('[method]point-resource.get-x', [
 			['self', new $wcm.BorrowType<testData.Types.PointResource>(PointResource)],
 		], $wcm.u32));
-		PointResource.addFunction('getY', new $wcm.FunctionType<testData.Types.PointResource.Module['getY']>('[method]point-resource.get-y', [
+		PointResource.addMethod('getY', new $wcm.FunctionType<testData.Types.PointResource.Module['getY']>('[method]point-resource.get-y', [
 			['self', new $wcm.BorrowType<testData.Types.PointResource>(PointResource)],
 		], $wcm.u32));
-		PointResource.addFunction('add', new $wcm.FunctionType<testData.Types.PointResource.Module['add']>('[method]point-resource.add', [
+		PointResource.addMethod('add', new $wcm.FunctionType<testData.Types.PointResource.Module['add']>('[method]point-resource.add', [
 			['self', new $wcm.BorrowType<testData.Types.PointResource>(PointResource)],
 		], $wcm.u32));
 		export const call = new $wcm.FunctionType<testData.Types.call>('call',[

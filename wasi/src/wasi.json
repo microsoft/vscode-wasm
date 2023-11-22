@@ -523,10 +523,10 @@
           "interface": 27
         },
         "output-stream": {
-          "type": 278
+          "type": 279
         },
         "descriptor-stat": {
-          "type": 279
+          "type": 280
         }
       },
       "exports": {
@@ -537,7 +537,7 @@
             "params": [
               {
                 "name": "s",
-                "type": 280
+                "type": 281
               }
             ],
             "results": [
@@ -554,7 +554,7 @@
             "params": [],
             "results": [
               {
-                "type": 280
+                "type": 281
               }
             ]
           }
@@ -566,12 +566,12 @@
             "params": [
               {
                 "name": "o",
-                "type": 282
+                "type": 283
               }
             ],
             "results": [
               {
-                "type": 281
+                "type": 282
               }
             ]
           }
@@ -583,7 +583,7 @@
             "params": [
               {
                 "name": "d",
-                "type": 279
+                "type": 280
               }
             ],
             "results": [
@@ -3642,7 +3642,7 @@
         "duration": 186,
         "input-stream": 187,
         "output-stream": 188,
-        "stream-error": 189,
+        "io-error": 189,
         "pollable": 190,
         "method": 191,
         "scheme": 192,
@@ -3684,7 +3684,7 @@
             }
           ],
           "docs": {
-            "contents": "Attempts to extract a http-related `error` from the stream `error`\nprovided.\n\nStream operations which return `stream-error::last-operation-failed` have\na payload with more information about the operation that failed. This\npayload can be passed through to this function to see if there's\nhttp-related information about the error to return.\n\nNote that this function is fallible because not all stream-related errors\nare http-related errors."
+            "contents": "Attempts to extract a http-related `error` from the wasi:io `error`\nprovided.\n\nStream operations which return\n`wasi:io/stream/stream-error::last-operation-failed` have a payload of\ntype `wasi:io/error/error` with more information about the operation\nthat failed. This payload can be passed through to this function to see\nif there's http-related information about the error to return.\n\nNote that this function is fallible because not all io-errors are\nhttp-related errors."
           }
         },
         "[constructor]fields": {
@@ -3699,7 +3699,7 @@
             }
           ],
           "docs": {
-            "contents": "Construct an empty HTTP Fields."
+            "contents": "Construct an empty HTTP Fields.\n\nThe resulting `fields` is mutable."
           }
         },
         "[static]fields.from-list": {
@@ -3719,7 +3719,7 @@
             }
           ],
           "docs": {
-            "contents": "Construct an HTTP Fields.\n\nThe list represents each key-value pair in the Fields. Keys\nwhich have multiple values are represented by multiple entries in this\nlist with the same key.\n\nThe tuple is a pair of the field key, represented as a string, and\nValue, represented as a list of bytes. In a valid Fields, all keys\nand values are valid UTF-8 strings. However, values are not always\nwell-formed, so they are represented as a raw list of bytes.\n\nAn error result will be returned if any header or value was\nsyntactically invalid, or if a header was forbidden."
+            "contents": "Construct an HTTP Fields.\n\nThe resulting `fields` is mutable.\n\nThe list represents each key-value pair in the Fields. Keys\nwhich have multiple values are represented by multiple entries in this\nlist with the same key.\n\nThe tuple is a pair of the field key, represented as a string, and\nValue, represented as a list of bytes. In a valid Fields, all keys\nand values are valid UTF-8 strings. However, values are not always\nwell-formed, so they are represented as a raw list of bytes.\n\nAn error result will be returned if any header or value was\nsyntactically invalid, or if a header was forbidden."
           }
         },
         "[method]fields.get": {
@@ -3771,7 +3771,7 @@
             }
           ],
           "docs": {
-            "contents": "Set all of the values for a key. Clears any existing values for that\nkey, if they have been set."
+            "contents": "Set all of the values for a key. Clears any existing values for that\nkey, if they have been set.\n\nFails with `header-error.immutable` if the `fields` are immutable."
           }
         },
         "[method]fields.delete": {
@@ -3795,7 +3795,7 @@
             }
           ],
           "docs": {
-            "contents": "Delete all values for a key. Does nothing if no values for the key\nexist."
+            "contents": "Delete all values for a key. Does nothing if no values for the key\nexist.\n\nFails with `header-error.immutable` if the `fields` are immutable."
           }
         },
         "[method]fields.append": {
@@ -3823,7 +3823,7 @@
             }
           ],
           "docs": {
-            "contents": "Append a value for a key. Does not change or delete any existing\nvalues for that key."
+            "contents": "Append a value for a key. Does not change or delete any existing\nvalues for that key.\n\nFails with `header-error.immutable` if the `fields` are immutable."
           }
         },
         "[method]fields.entries": {
@@ -3863,7 +3863,7 @@
             }
           ],
           "docs": {
-            "contents": "Make a deep copy of the Fields. Equivelant in behavior to calling the\n`fields` constructor on the return value of `entries`"
+            "contents": "Make a deep copy of the Fields. Equivelant in behavior to calling the\n`fields` constructor on the return value of `entries`. The resulting\n`fields` is mutable."
           }
         },
         "[method]incoming-request.method": {
@@ -3959,11 +3959,11 @@
           ],
           "results": [
             {
-              "type": 269
+              "type": 270
             }
           ],
           "docs": {
-            "contents": "Returns the `headers` from the request.\n\nThe `headers` returned are a child resource: it must be dropped before\nthe parent `incoming-request` is dropped. Dropping this\n`incoming-request` before all children are dropped will trap."
+            "contents": "Get the `headers` associated with the request.\n\nThe returned `headers` resource is immutable: `set`, `append`, and\n`delete` operations will fail with `header-error.immutable`.\n\nThe `headers` returned are a child resource: it must be dropped before\nthe parent `incoming-request` is dropped. Dropping this\n`incoming-request` before all children are dropped will trap."
           }
         },
         "[method]incoming-request.consume": {
@@ -3994,12 +3994,12 @@
           "params": [
             {
               "name": "headers",
-              "type": 269
+              "type": 270
             }
           ],
           "results": [
             {
-              "type": 270
+              "type": 271
             }
           ],
           "docs": {
@@ -4023,7 +4023,7 @@
             }
           ],
           "docs": {
-            "contents": "Returns the resource corresponding to the outgoing Body for this\nRequest.\n\nReturns success on the first call: the `outgoing-body` resource for\nthis `outgoing-response` can be retrieved at most once. Subsequent\ncalls will return error."
+            "contents": "Returns the resource corresponding to the outgoing Body for this\nRequest.\n\nReturns success on the first call: the `outgoing-body` resource for\nthis `outgoing-request` can be retrieved at most once. Subsequent\ncalls will return error."
           }
         },
         "[method]outgoing-request.method": {
@@ -4215,11 +4215,11 @@
           ],
           "results": [
             {
-              "type": 269
+              "type": 270
             }
           ],
           "docs": {
-            "contents": "Get the headers associated with the Request.\n\nThis headers resource is a child: it must be dropped before the parent\n`outgoing-request` is dropped, or its ownership is transfered to\nanother component by e.g. `outgoing-handler.handle`."
+            "contents": "Get the headers associated with the Request.\n\nThe returned `headers` resource is immutable: `set`, `append`, and\n`delete` operations will fail with `header-error.immutable`.\n\nThis headers resource is a child: it must be dropped before the parent\n`outgoing-request` is dropped, or its ownership is transfered to\nanother component by e.g. `outgoing-handler.handle`."
           }
         },
         "[constructor]request-options": {
@@ -4230,7 +4230,7 @@
           "params": [],
           "results": [
             {
-              "type": 271
+              "type": 272
             }
           ],
           "docs": {
@@ -4377,7 +4377,7 @@
           "params": [
             {
               "name": "param",
-              "type": 272
+              "type": 273
             },
             {
               "name": "response",
@@ -4422,11 +4422,11 @@
           ],
           "results": [
             {
-              "type": 269
+              "type": 270
             }
           ],
           "docs": {
-            "contents": "Returns the headers from the incoming response."
+            "contents": "Returns the headers from the incoming response.\n\nThe returned `headers` resource is immutable: `set`, `append`, and\n`delete` operations will fail with `header-error.immutable`.\n\nThis headers resource is a child: it must be dropped before the parent\n`incoming-response` is dropped."
           }
         },
         "[method]incoming-response.consume": {
@@ -4482,7 +4482,7 @@
           ],
           "results": [
             {
-              "type": 273
+              "type": 274
             }
           ],
           "docs": {
@@ -4502,7 +4502,7 @@
           ],
           "results": [
             {
-              "type": 274
+              "type": 275
             }
           ],
           "docs": {
@@ -4526,7 +4526,7 @@
             }
           ],
           "docs": {
-            "contents": "Returns the contents of the trailers, or an error which occured,\nonce the future is ready.\n\nThe outer `option` represents future readiness. Users can wait on this\n`option` to become `some` using the `subscribe` method.\n\nThe `result` represents that either the HTTP Request or Response body,\nas well as any trailers, were received successfully, or that an error\noccured receiving them. The optional `trailers` indicates whether or not\ntrailers were present in the body."
+            "contents": "Returns the contents of the trailers, or an error which occured,\nonce the future is ready.\n\nThe outer `option` represents future readiness. Users can wait on this\n`option` to become `some` using the `subscribe` method.\n\nThe `result` represents that either the HTTP Request or Response body,\nas well as any trailers, were received successfully, or that an error\noccured receiving them. The optional `trailers` indicates whether or not\ntrailers were present in the body.\n\nWhen some `trailers` are returned by this method, the `trailers`\nresource is immutable, and a child. Use of the `set`, `append`, or\n`delete` methods will return an error, and the resource must be\ndropped before the parent `future-trailers` is dropped."
           }
         },
         "[constructor]outgoing-response": {
@@ -4537,7 +4537,7 @@
           "params": [
             {
               "name": "headers",
-              "type": 269
+              "type": 270
             }
           ],
           "results": [
@@ -4606,11 +4606,11 @@
           ],
           "results": [
             {
-              "type": 269
+              "type": 270
             }
           ],
           "docs": {
-            "contents": "Get the headers associated with the Request.\n\nThis headers resource is a child: it must be dropped before the parent\n`outgoing-request` is dropped, or its ownership is transfered to\nanother component by e.g. `outgoing-handler.handle`."
+            "contents": "Get the headers associated with the Request.\n\nThe returned `headers` resource is immutable: `set`, `append`, and\n`delete` operations will fail with `header-error.immutable`.\n\nThis headers resource is a child: it must be dropped before the parent\n`outgoing-request` is dropped, or its ownership is transfered to\nanother component by e.g. `outgoing-handler.handle`."
           }
         },
         "[method]outgoing-response.body": {
@@ -4668,9 +4668,13 @@
               "type": 247
             }
           ],
-          "results": [],
+          "results": [
+            {
+              "type": 254
+            }
+          ],
           "docs": {
-            "contents": "Finalize an outgoing body, optionally providing trailers. This must be\ncalled to signal that the response is complete. If the `outgoing-body`\nis dropped without calling `outgoing-body.finalize`, the implementation\nshould treat the body as corrupted."
+            "contents": "Finalize an outgoing body, optionally providing trailers. This must be\ncalled to signal that the response is complete. If the `outgoing-body`\nis dropped without calling `outgoing-body.finalize`, the implementation\nshould treat the body as corrupted.\n\nFails if the body's `outgoing-request` or `outgoing-response` was\nconstructed with a Content-Length header, and the contents written\nto the body (via `write`) does not match the value given in the\nContent-Length."
           }
         },
         "[method]future-incoming-response.subscribe": {
@@ -4681,12 +4685,12 @@
           "params": [
             {
               "name": "self",
-              "type": 254
+              "type": 255
             }
           ],
           "results": [
             {
-              "type": 274
+              "type": 275
             }
           ],
           "docs": {
@@ -4701,12 +4705,12 @@
           "params": [
             {
               "name": "self",
-              "type": 254
+              "type": 255
             }
           ],
           "results": [
             {
-              "type": 258
+              "type": 259
             }
           ],
           "docs": {
@@ -4722,8 +4726,8 @@
     {
       "name": "incoming-handler",
       "types": {
-        "incoming-request": 259,
-        "response-outparam": 260
+        "incoming-request": 260,
+        "response-outparam": 261
       },
       "functions": {
         "handle": {
@@ -4732,11 +4736,11 @@
           "params": [
             {
               "name": "request",
-              "type": 275
+              "type": 276
             },
             {
               "name": "response-out",
-              "type": 276
+              "type": 277
             }
           ],
           "results": [],
@@ -4753,10 +4757,10 @@
     {
       "name": "outgoing-handler",
       "types": {
-        "outgoing-request": 261,
-        "request-options": 262,
-        "future-incoming-response": 263,
-        "error-code": 264
+        "outgoing-request": 262,
+        "request-options": 263,
+        "future-incoming-response": 264,
+        "error-code": 265
       },
       "functions": {
         "handle": {
@@ -4765,16 +4769,16 @@
           "params": [
             {
               "name": "request",
-              "type": 277
+              "type": 278
             },
             {
               "name": "options",
-              "type": 266
+              "type": 267
             }
           ],
           "results": [
             {
-              "type": 268
+              "type": 269
             }
           ],
           "docs": {
@@ -7359,9 +7363,9 @@
       }
     },
     {
-      "name": "stream-error",
+      "name": "io-error",
       "kind": {
-        "type": 6
+        "type": 0
       },
       "owner": {
         "interface": 28
@@ -7810,7 +7814,7 @@
         "interface": 28
       },
       "docs": {
-        "contents": "This following block defines the `fields` resource which corresponds to\nHTTP standard Fields. Fields are a common representation used for both\nHeaders and Trailers."
+        "contents": "This following block defines the `fields` resource which corresponds to\nHTTP standard Fields. Fields are a common representation used for both\nHeaders and Trailers.\n\nA `fields` may be mutable or immutable. A `fields` created using the\nconstructor, `from-list`, or `clone` will be mutable, but a `fields`\nresource given by other means (including, but not limited to,\n`incoming-request.headers`, `outgoing-request.headers`) might be be\nimmutable. In an immutable fields, the `set`, `append`, and `delete`\noperations will fail with `header-error.immutable`."
       }
     },
     {
@@ -8256,6 +8260,16 @@
     {
       "name": null,
       "kind": {
+        "result": {
+          "ok": null,
+          "err": 202
+        }
+      },
+      "owner": null
+    },
+    {
+      "name": null,
+      "kind": {
         "handle": {
           "borrow": 219
         }
@@ -8275,7 +8289,7 @@
       "name": null,
       "kind": {
         "result": {
-          "ok": 255,
+          "ok": 256,
           "err": 202
         }
       },
@@ -8285,7 +8299,7 @@
       "name": null,
       "kind": {
         "result": {
-          "ok": 256,
+          "ok": 257,
           "err": null
         }
       },
@@ -8294,7 +8308,7 @@
     {
       "name": null,
       "kind": {
-        "option": 257
+        "option": 258
       },
       "owner": null
     },
@@ -8356,22 +8370,6 @@
       "name": null,
       "kind": {
         "handle": {
-          "own": 262
-        }
-      },
-      "owner": null
-    },
-    {
-      "name": null,
-      "kind": {
-        "option": 265
-      },
-      "owner": null
-    },
-    {
-      "name": null,
-      "kind": {
-        "handle": {
           "own": 263
         }
       },
@@ -8380,9 +8378,25 @@
     {
       "name": null,
       "kind": {
+        "option": 266
+      },
+      "owner": null
+    },
+    {
+      "name": null,
+      "kind": {
+        "handle": {
+          "own": 264
+        }
+      },
+      "owner": null
+    },
+    {
+      "name": null,
+      "kind": {
         "result": {
-          "ok": 267,
-          "err": 264
+          "ok": 268,
+          "err": 265
         }
       },
       "owner": null
@@ -8445,15 +8459,6 @@
       "name": null,
       "kind": {
         "handle": {
-          "own": 259
-        }
-      },
-      "owner": null
-    },
-    {
-      "name": null,
-      "kind": {
-        "handle": {
           "own": 260
         }
       },
@@ -8464,6 +8469,15 @@
       "kind": {
         "handle": {
           "own": 261
+        }
+      },
+      "owner": null
+    },
+    {
+      "name": null,
+      "kind": {
+        "handle": {
+          "own": 262
         }
       },
       "owner": null
@@ -8507,7 +8521,7 @@
       "name": null,
       "kind": {
         "handle": {
-          "own": 278
+          "own": 279
         }
       },
       "owner": null
@@ -8515,7 +8529,7 @@
   ],
   "packages": [
     {
-      "name": "wasi:io@0.2.0-rc-2023-11-05",
+      "name": "wasi:io@0.2.0-rc-2023-11-10",
       "interfaces": {
         "error": 0,
         "poll": 1,
@@ -8526,7 +8540,7 @@
       }
     },
     {
-      "name": "wasi:clocks@0.2.0-rc-2023-11-05",
+      "name": "wasi:clocks@0.2.0-rc-2023-11-10",
       "interfaces": {
         "monotonic-clock": 3,
         "wall-clock": 4
@@ -8536,7 +8550,7 @@
       }
     },
     {
-      "name": "wasi:filesystem@0.2.0-rc-2023-11-05",
+      "name": "wasi:filesystem@0.2.0-rc-2023-11-10",
       "interfaces": {
         "types": 5,
         "preopens": 6
@@ -8546,7 +8560,7 @@
       }
     },
     {
-      "name": "wasi:sockets@0.2.0-rc-2023-11-05",
+      "name": "wasi:sockets@0.2.0-rc-2023-11-10",
       "interfaces": {
         "network": 7,
         "instance-network": 8,
@@ -8561,7 +8575,7 @@
       }
     },
     {
-      "name": "wasi:random@0.2.0-rc-2023-11-05",
+      "name": "wasi:random@0.2.0-rc-2023-11-10",
       "interfaces": {
         "insecure-seed": 14,
         "insecure": 15,
@@ -8572,7 +8586,7 @@
       }
     },
     {
-      "name": "wasi:cli@0.2.0-rc-2023-11-05",
+      "name": "wasi:cli@0.2.0-rc-2023-11-10",
       "interfaces": {
         "environment": 17,
         "exit": 18,
@@ -8592,7 +8606,7 @@
       }
     },
     {
-      "name": "wasi:http@0.2.0-rc-2023-11-05",
+      "name": "wasi:http@0.2.0-rc-2023-11-10",
       "interfaces": {
         "types": 28,
         "incoming-handler": 29,

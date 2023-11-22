@@ -3,19 +3,19 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { ComponentModelType, EnumType, JRecord, ListType, RecordType, result, TupleType, VariantType, u32, u8, wstring, OptionType } from '../componentModel';
+import { ComponentModelType, EnumType, ListType, RecordType, result, TupleType, VariantType, u32, u8, wstring, OptionType } from '../componentModel';
 
 
 /****************************************************************************************
  * This are examples that can be fully generated from the Wit files.
  ****************************************************************************************/
 
-interface TestRecord extends JRecord {
+type TestRecord = {
 	a: u8;
 	b: u32;
 	c: u8;
 	d: string;
-}
+};
 
 export const TestRecordType: ComponentModelType<TestRecord> = new RecordType<TestRecord>([
 	['a', u8], ['b', u32], ['c', u8], ['d', wstring]

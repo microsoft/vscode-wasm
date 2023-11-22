@@ -97,5 +97,3 @@ let sp: Promisify<http.Types.Fields> = {} as any;
 
 const w = Service.createHost(s);
 const wp = Service.createHost(sp);
-
-w.

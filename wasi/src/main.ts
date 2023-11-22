@@ -12,14 +12,14 @@ import { random } from './random';
 import { cli } from './cli';
 import { http } from './http';
 
-type wasi<I extends io = io, F extends filesystem = filesystem, S extends sockets = sockets, H extends http = http> = {
-	io?: I;
+type wasi = {
+	io?: io;
 	clocks?: clocks;
-	filesystem?: F;
-	sockets?: S;
+	filesystem?: filesystem;
+	sockets?: sockets;
 	random?: random;
 	cli?: cli;
-	http?: H;
+	http?: http;
 };
 namespace wasi._ {
 	export const packages: Map<string, $wcm.PackageType> =  new Map<string, $wcm.PackageType>([
@@ -57,73 +57,36 @@ namespace wasi._ {
 		}
 		return result;
 	}
-	export type ClassService = wasi<io._.ClassService, filesystem._.ClassService, sockets._.ClassService, http._.ClassService>;
-	export type ModuleService = wasi<io._.ModuleService, filesystem._.ModuleService, sockets._.ModuleService, http._.ModuleService>;
-	export function createService(wasmInterface: WasmInterface, context: $wcm.Context, kind?: $wcm.ResourceKind.class): ClassService;
-	export function createService(wasmInterface: WasmInterface, context: $wcm.Context, kind: $wcm.ResourceKind.module): ModuleService;
-	export function createService(wasmInterface: WasmInterface, context: $wcm.Context, kind: $wcm.ResourceKind): wasi;
-	export function createService<I extends io = io, F extends filesystem = filesystem, S extends sockets = sockets, H extends http = http>(wasmInterface: WasmInterface, context: $wcm.Context, i: io, f: filesystem, s: sockets, h: http): wasi<I, F, S, H>;
-	export function createService(wasmInterface: WasmInterface, context: $wcm.Context, i?: io | $wcm.ResourceKind, f?: filesystem, s?: sockets, h?: http): wasi {
-		const result: wasi = Object.create(null);
-		i = i ?? $wcm.ResourceKind.class;
-		if (i === $wcm.ResourceKind.class || i === $wcm.ResourceKind.module) {
-			const _io = io._.createService(wasmInterface, context, i);
-			if (Object.keys(_io).length > 0) {
-				result.io = _io;
-			}
-			const _clocks = clocks._.createService(wasmInterface, context, i);
-			if (Object.keys(_clocks).length > 0) {
-				result.clocks = _clocks;
-			}
-			const _filesystem = filesystem._.createService(wasmInterface, context, i);
-			if (Object.keys(_filesystem).length > 0) {
-				result.filesystem = _filesystem;
-			}
-			const _sockets = sockets._.createService(wasmInterface, context, i);
-			if (Object.keys(_sockets).length > 0) {
-				result.sockets = _sockets;
-			}
-			const _random = random._.createService(wasmInterface, context, i);
-			if (Object.keys(_random).length > 0) {
-				result.random = _random;
-			}
-			const _cli = cli._.createService(wasmInterface, context, i);
-			if (Object.keys(_cli).length > 0) {
-				result.cli = _cli;
-			}
-			const _http = http._.createService(wasmInterface, context, i);
-			if (Object.keys(_http).length > 0) {
-				result.http = _http;
-			}
-		} else {
-			const _io = i;
-			if (_io !== undefined && Object.keys(_io).length > 0) {
-				result.io = _io;
-			}
-			const _clocks = clocks._.createService(wasmInterface, context);
-			if (Object.keys(_clocks).length > 0) {
-				result.clocks = _clocks;
-			}
-			const _filesystem = f;
-			if (_filesystem !== undefined && Object.keys(_filesystem).length > 0) {
-				result.filesystem = _filesystem;
-			}
-			const _sockets = s;
-			if (_sockets !== undefined && Object.keys(_sockets).length > 0) {
-				result.sockets = _sockets;
-			}
-			const _random = random._.createService(wasmInterface, context);
-			if (Object.keys(_random).length > 0) {
-				result.random = _random;
-			}
-			const _cli = cli._.createService(wasmInterface, context);
-			if (Object.keys(_cli).length > 0) {
-				result.cli = _cli;
-			}
-			const _http = h;
-			if (_http !== undefined && Object.keys(_http).length > 0) {
-				result.http = _http;
-			}
+	export function createService(wasmInterface: WasmInterface, context: $wcm.Context, kind?: $wcm.ResourceKind): wasi {
+		kind = kind ?? $wcm.ResourceKind.class;
+		let result: wasi = Object.create(null);
+		const _io = io._.createService(wasmInterface, context, kind);
+		if (Object.keys(_io).length > 0) {
+			result.io = _io;
+		}
+		const _clocks = clocks._.createService(wasmInterface, context, kind);
+		if (Object.keys(_clocks).length > 0) {
+			result.clocks = _clocks;
+		}
+		const _filesystem = filesystem._.createService(wasmInterface, context, kind);
+		if (Object.keys(_filesystem).length > 0) {
+			result.filesystem = _filesystem;
+		}
+		const _sockets = sockets._.createService(wasmInterface, context, kind);
+		if (Object.keys(_sockets).length > 0) {
+			result.sockets = _sockets;
+		}
+		const _random = random._.createService(wasmInterface, context, kind);
+		if (Object.keys(_random).length > 0) {
+			result.random = _random;
+		}
+		const _cli = cli._.createService(wasmInterface, context, kind);
+		if (Object.keys(_cli).length > 0) {
+			result.cli = _cli;
+		}
+		const _http = http._.createService(wasmInterface, context, kind);
+		if (Object.keys(_http).length > 0) {
+			result.http = _http;
 		}
 		return result;
 	}
