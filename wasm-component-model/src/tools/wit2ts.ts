@@ -1365,45 +1365,6 @@ class TypeFlattener  {
 	}
 }
 
-class TypeParamNameGenerator  {
-
-	private readonly used: Set<string>;
-
-	constructor() {
-		this.used = new Set();
-	}
-
-	public generate(name: string): string {
-		let candidate = this.makeTypeParamName(name);
-		if (!this.used.has(candidate)) {
-			this.used.add(candidate);
-			return candidate;
-		}
-		let counter: number = 0;
-		let next: string;
-		do {
-			counter++;
-			next = `${candidate}${counter}`;
-		} while (this.used.has(next));
-		return next;
-	}
-
-	private makeTypeParamName(name: string): string {
-		const result: string[] = [];
-		for (const c of name) {
-			if (c.toUpperCase() === c) {
-				result.push(c);
-			}
-		}
-		if (result.length === 0) {
-			return name[0].toUpperCase();
-		} else {
-			return result.join('');
-		}
-	}
-
-}
-
 type EmitterConfig = {
 	readonly symbols: SymbolTable;
 	readonly printers: Printers;
@@ -2587,46 +2548,45 @@ class ResourceEmitter extends InterfaceMemberEmitter {
 		for (const emitter of this.emitters) {
 			emitter.emitService(code);
 		}
-		const moduleType = `${qualifiedName}.Module`;
-		code.push(`export function Module(wasmInterface: WasmInterface, context: $wcm.Context): ${moduleType} {`);
+		const resourceManagerType = `${MetaModel.qualify('ResourceManager')}<${qualifiedName}.Interface>`;
+		const resourceHandleType = MetaModel.qualify('ResourceHandle');
+		code.push(`class Impl implements ${qualifiedName}.Interface {`);
 		code.increaseIndent();
-		code.push(`return $wcm.Module.create<${moduleType}>($.${name}, wasmInterface, context);`);
+		code.push(`private static readonly _resources: ${resourceManagerType} = new ${resourceManagerType}();`);
+		code.push(`public static _getResources(): ${resourceManagerType} {`);
+		code.increaseIndent();
+		code.push(`return this._resources;`);
 		code.decreaseIndent();
 		code.push(`}`);
-		if (this.constructors.length > 0) {
-			code.push(`class Impl implements ${qualifiedName}.Interface {`);
-			code.increaseIndent();
-			code.push(`private readonly _handle: ${qualifiedName};`);
-			code.push(`private readonly _module: ${moduleType};`);
-			for (const constructor of this.constructors) {
-				constructor.emitConstructorImplementation(code, moduleType);
-			}
-			for (const method of this.methods) {
-				method.emitClassMember(code);
-			}
-			code.decreaseIndent();
-			code.push(`}`);
-			code.push(`export function Class(wasmInterface: WasmInterface, context: $wcm.Context): ${qualifiedName}.Class {`);
-			code.increaseIndent();
-			code.push(`const module = Module(wasmInterface, context);`);
-			code.push(`return class extends Impl {`);
-			code.increaseIndent();
-			for (const constructor of this.constructors) {
-				constructor.emitAnonymousConstructorImplementation(code);
-			}
-			for (const method of this.statics) {
-				method.emitAnonymousClassMember(code);
-			}
-			code.decreaseIndent();
-			code.push(`};`);
-			code.decreaseIndent();
-			code.push(`}`);
+		code.push(`private readonly _handle: ${resourceHandleType};`);
+		for (const constructor of this.constructors) {
+			//constructor.emitConstructorImplementation(code, moduleType);
 		}
-		code.push(`export function Manager(): ${qualifiedName}.Manager {`);
+		code.push(`public getHandle(): ${resourceHandleType} {`);
 		code.increaseIndent();
-		code.push(`return new $wcm.ResourceManager<${qualifiedName}.Interface>();`);
+		code.push(`return this._handle;`);
 		code.decreaseIndent();
-		code.push('}');
+		code.push(`}`);
+		for (const method of this.methods) {
+			method.emitClassMember(code);
+		}
+		code.decreaseIndent();
+		code.push(`}`);
+		code.push(`export function Class(wasmInterface: WasmInterface, context: $wcm.Context): ${qualifiedName}.Class {`);
+		code.increaseIndent();
+		code.push(`const module = Module(wasmInterface, context);`);
+		code.push(`return class extends Impl {`);
+		code.increaseIndent();
+		for (const constructor of this.constructors) {
+			constructor.emitAnonymousConstructorImplementation(code);
+		}
+		for (const method of this.statics) {
+			method.emitAnonymousClassMember(code);
+		}
+		code.decreaseIndent();
+		code.push(`};`);
+		code.decreaseIndent();
+		code.push(`}`);
 
 		code.decreaseIndent();
 		code.push(`}`);

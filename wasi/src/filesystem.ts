@@ -1189,19 +1189,121 @@ export namespace filesystem {
 			'filesystem-error-code': (err: i32, result: ptr<[i32, i32]>) => void;
 		} & Descriptor.WasmInterface & DirectoryEntryStream.WasmInterface;
 		export namespace Descriptor  {
-			export function Module(wasmInterface: WasmInterface, context: $wcm.Context): filesystem.Types.Descriptor.Module {
-				return $wcm.Module.create<filesystem.Types.Descriptor.Module>($.Descriptor, wasmInterface, context);
+			class Impl implements filesystem.Types.Descriptor.Interface {
+				private static readonly _resources: $wcm.ResourceManager<filesystem.Types.Descriptor.Interface> = new $wcm.ResourceManager<filesystem.Types.Descriptor.Interface>();
+				public static _getResources(): $wcm.ResourceManager<filesystem.Types.Descriptor.Interface> {
+					return this._resources;
+				}
+				private readonly _handle: $wcm.ResourceHandle;
+				public getHandle(): $wcm.ResourceHandle {
+					return this._handle;
+				}
+				public readViaStream(offset: Filesize): result<own<InputStream>, ErrorCode> {
+					return this._module.readViaStream(this._handle, offset);
+				}
+				public writeViaStream(offset: Filesize): result<own<OutputStream>, ErrorCode> {
+					return this._module.writeViaStream(this._handle, offset);
+				}
+				public appendViaStream(): result<own<OutputStream>, ErrorCode> {
+					return this._module.appendViaStream(this._handle);
+				}
+				public advise(offset: Filesize, length: Filesize, advice: Advice): result<void, ErrorCode> {
+					return this._module.advise(this._handle, offset, length, advice);
+				}
+				public syncData(): result<void, ErrorCode> {
+					return this._module.syncData(this._handle);
+				}
+				public getFlags(): result<DescriptorFlags, ErrorCode> {
+					return this._module.getFlags(this._handle);
+				}
+				public getType(): result<DescriptorType, ErrorCode> {
+					return this._module.getType(this._handle);
+				}
+				public setSize(size: Filesize): result<void, ErrorCode> {
+					return this._module.setSize(this._handle, size);
+				}
+				public setTimes(dataAccessTimestamp: NewTimestamp, dataModificationTimestamp: NewTimestamp): result<void, ErrorCode> {
+					return this._module.setTimes(this._handle, dataAccessTimestamp, dataModificationTimestamp);
+				}
+				public read(length: Filesize, offset: Filesize): result<[Uint8Array, boolean], ErrorCode> {
+					return this._module.read(this._handle, length, offset);
+				}
+				public write(buffer: Uint8Array, offset: Filesize): result<Filesize, ErrorCode> {
+					return this._module.write(this._handle, buffer, offset);
+				}
+				public readDirectory(): result<own<DirectoryEntryStream>, ErrorCode> {
+					return this._module.readDirectory(this._handle);
+				}
+				public sync(): result<void, ErrorCode> {
+					return this._module.sync(this._handle);
+				}
+				public createDirectoryAt(path: string): result<void, ErrorCode> {
+					return this._module.createDirectoryAt(this._handle, path);
+				}
+				public stat(): result<DescriptorStat, ErrorCode> {
+					return this._module.stat(this._handle);
+				}
+				public statAt(pathFlags: PathFlags, path: string): result<DescriptorStat, ErrorCode> {
+					return this._module.statAt(this._handle, pathFlags, path);
+				}
+				public setTimesAt(pathFlags: PathFlags, path: string, dataAccessTimestamp: NewTimestamp, dataModificationTimestamp: NewTimestamp): result<void, ErrorCode> {
+					return this._module.setTimesAt(this._handle, pathFlags, path, dataAccessTimestamp, dataModificationTimestamp);
+				}
+				public linkAt(oldPathFlags: PathFlags, oldPath: string, newDescriptor: borrow<Descriptor>, newPath: string): result<void, ErrorCode> {
+					return this._module.linkAt(this._handle, oldPathFlags, oldPath, newDescriptor, newPath);
+				}
+				public openAt(pathFlags: PathFlags, path: string, openFlags: OpenFlags, flags: DescriptorFlags): result<own<Descriptor>, ErrorCode> {
+					return this._module.openAt(this._handle, pathFlags, path, openFlags, flags);
+				}
+				public readlinkAt(path: string): result<string, ErrorCode> {
+					return this._module.readlinkAt(this._handle, path);
+				}
+				public removeDirectoryAt(path: string): result<void, ErrorCode> {
+					return this._module.removeDirectoryAt(this._handle, path);
+				}
+				public renameAt(oldPath: string, newDescriptor: borrow<Descriptor>, newPath: string): result<void, ErrorCode> {
+					return this._module.renameAt(this._handle, oldPath, newDescriptor, newPath);
+				}
+				public symlinkAt(oldPath: string, newPath: string): result<void, ErrorCode> {
+					return this._module.symlinkAt(this._handle, oldPath, newPath);
+				}
+				public unlinkFileAt(path: string): result<void, ErrorCode> {
+					return this._module.unlinkFileAt(this._handle, path);
+				}
+				public isSameObject(other: borrow<Descriptor>): boolean {
+					return this._module.isSameObject(this._handle, other);
+				}
+				public metadataHash(): result<MetadataHashValue, ErrorCode> {
+					return this._module.metadataHash(this._handle);
+				}
+				public metadataHashAt(pathFlags: PathFlags, path: string): result<MetadataHashValue, ErrorCode> {
+					return this._module.metadataHashAt(this._handle, pathFlags, path);
+				}
 			}
-			export function Manager(): filesystem.Types.Descriptor.Manager {
-				return new $wcm.ResourceManager<filesystem.Types.Descriptor.Interface>();
+			export function Class(wasmInterface: WasmInterface, context: $wcm.Context): filesystem.Types.Descriptor.Class {
+				const module = Module(wasmInterface, context);
+				return class extends Impl {
+				};
 			}
 		}
 		export namespace DirectoryEntryStream  {
-			export function Module(wasmInterface: WasmInterface, context: $wcm.Context): filesystem.Types.DirectoryEntryStream.Module {
-				return $wcm.Module.create<filesystem.Types.DirectoryEntryStream.Module>($.DirectoryEntryStream, wasmInterface, context);
+			class Impl implements filesystem.Types.DirectoryEntryStream.Interface {
+				private static readonly _resources: $wcm.ResourceManager<filesystem.Types.DirectoryEntryStream.Interface> = new $wcm.ResourceManager<filesystem.Types.DirectoryEntryStream.Interface>();
+				public static _getResources(): $wcm.ResourceManager<filesystem.Types.DirectoryEntryStream.Interface> {
+					return this._resources;
+				}
+				private readonly _handle: $wcm.ResourceHandle;
+				public getHandle(): $wcm.ResourceHandle {
+					return this._handle;
+				}
+				public readDirectoryEntry(): result<DirectoryEntry | undefined, ErrorCode> {
+					return this._module.readDirectoryEntry(this._handle);
+				}
 			}
-			export function Manager(): filesystem.Types.DirectoryEntryStream.Manager {
-				return new $wcm.ResourceManager<filesystem.Types.DirectoryEntryStream.Interface>();
+			export function Class(wasmInterface: WasmInterface, context: $wcm.Context): filesystem.Types.DirectoryEntryStream.Class {
+				const module = Module(wasmInterface, context);
+				return class extends Impl {
+				};
 			}
 		}
 		export function createHost(service: filesystem.Types, context: $wcm.Context): WasmInterface {

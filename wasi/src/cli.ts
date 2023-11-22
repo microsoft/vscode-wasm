@@ -373,11 +373,20 @@ export namespace cli {
 		export type WasmInterface = {
 		} & TerminalInput.WasmInterface;
 		export namespace TerminalInput  {
-			export function Module(wasmInterface: WasmInterface, context: $wcm.Context): cli.TerminalInput.TerminalInput.Module {
-				return $wcm.Module.create<cli.TerminalInput.TerminalInput.Module>($.TerminalInput, wasmInterface, context);
+			class Impl implements cli.TerminalInput.TerminalInput.Interface {
+				private static readonly _resources: $wcm.ResourceManager<cli.TerminalInput.TerminalInput.Interface> = new $wcm.ResourceManager<cli.TerminalInput.TerminalInput.Interface>();
+				public static _getResources(): $wcm.ResourceManager<cli.TerminalInput.TerminalInput.Interface> {
+					return this._resources;
+				}
+				private readonly _handle: $wcm.ResourceHandle;
+				public getHandle(): $wcm.ResourceHandle {
+					return this._handle;
+				}
 			}
-			export function Manager(): cli.TerminalInput.TerminalInput.Manager {
-				return new $wcm.ResourceManager<cli.TerminalInput.TerminalInput.Interface>();
+			export function Class(wasmInterface: WasmInterface, context: $wcm.Context): cli.TerminalInput.TerminalInput.Class {
+				const module = Module(wasmInterface, context);
+				return class extends Impl {
+				};
 			}
 		}
 		export function createHost(service: cli.TerminalInput, context: $wcm.Context): WasmInterface {
@@ -409,11 +418,20 @@ export namespace cli {
 		export type WasmInterface = {
 		} & TerminalOutput.WasmInterface;
 		export namespace TerminalOutput  {
-			export function Module(wasmInterface: WasmInterface, context: $wcm.Context): cli.TerminalOutput.TerminalOutput.Module {
-				return $wcm.Module.create<cli.TerminalOutput.TerminalOutput.Module>($.TerminalOutput, wasmInterface, context);
+			class Impl implements cli.TerminalOutput.TerminalOutput.Interface {
+				private static readonly _resources: $wcm.ResourceManager<cli.TerminalOutput.TerminalOutput.Interface> = new $wcm.ResourceManager<cli.TerminalOutput.TerminalOutput.Interface>();
+				public static _getResources(): $wcm.ResourceManager<cli.TerminalOutput.TerminalOutput.Interface> {
+					return this._resources;
+				}
+				private readonly _handle: $wcm.ResourceHandle;
+				public getHandle(): $wcm.ResourceHandle {
+					return this._handle;
+				}
 			}
-			export function Manager(): cli.TerminalOutput.TerminalOutput.Manager {
-				return new $wcm.ResourceManager<cli.TerminalOutput.TerminalOutput.Interface>();
+			export function Class(wasmInterface: WasmInterface, context: $wcm.Context): cli.TerminalOutput.TerminalOutput.Class {
+				const module = Module(wasmInterface, context);
+				return class extends Impl {
+				};
 			}
 		}
 		export function createHost(service: cli.TerminalOutput, context: $wcm.Context): WasmInterface {
