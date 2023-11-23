@@ -932,6 +932,11 @@ export namespace filesystem {
 		 * errors are filesystem-related errors.
 		 */
 		export type filesystemErrorCode = (err: borrow<Error>) => ErrorCode | undefined;
+
+		export type Managers = {
+			Descriptor: $wcm.ResourceManager<Descriptor>;
+			DirectoryEntryStream: $wcm.ResourceManager<DirectoryEntryStream>;
+		};
 	}
 	export type Types = {
 		Descriptor: Types.Descriptor;
@@ -952,6 +957,9 @@ export namespace filesystem {
 		getDirectories: Preopens.getDirectories;
 	};
 
+	export type Managers = {
+		Types: Types.Managers;
+	};
 }
 export type filesystem = {
 	Types?: filesystem.Types;
@@ -989,8 +997,8 @@ export namespace filesystem {
 			['lower', $wcm.u64],
 			['upper', $wcm.u64],
 		]);
-		export const Descriptor = new $wcm.ResourceType('descriptor');
-		export const DirectoryEntryStream = new $wcm.ResourceType('directory-entry-stream');
+		export const Descriptor = new $wcm.ResourceType<Types.Descriptor>('descriptor', ['filesystem', 'Types', 'Descriptor']);
+		export const DirectoryEntryStream = new $wcm.ResourceType<Types.DirectoryEntryStream>('directory-entry-stream', ['filesystem', 'Types', 'DirectoryEntryStream']);
 		Descriptor.addMethod('readViaStream', new $wcm.MethodType<filesystem.Types.Descriptor.Interface['readViaStream']>('[method]descriptor.read-via-stream', [
 			['self', new $wcm.BorrowType<filesystem.Types.Descriptor>(Descriptor)],
 			['offset', Filesize],
@@ -1143,7 +1151,7 @@ export namespace filesystem {
 		export const functions: Map<string, $wcm.FunctionType<$wcm.ServiceFunction>> = new Map([
 			['filesystemErrorCode', $.filesystemErrorCode]
 		]);
-		export const resources: Map<string, $wcm.ResourceType> = new Map([
+		export const resources: Map<string, $wcm.ResourceType> = new Map<string, $wcm.ResourceType>([
 			['Descriptor', $.Descriptor],
 			['DirectoryEntryStream', $.DirectoryEntryStream]
 		]);
@@ -1177,148 +1185,123 @@ export namespace filesystem {
 				'[method]descriptor.metadata-hash': (self: i32, result: ptr<[i32, i64, i64]>) => void;
 				'[method]descriptor.metadata-hash-at': (self: i32, pathFlags: i32, path_ptr: i32, path_len: i32, result: ptr<[i32, i64, i64]>) => void;
 			};
+			type ObjectModule = {
+				readViaStream(self: Descriptor, offset: Filesize): result<own<InputStream>, ErrorCode>;
+				writeViaStream(self: Descriptor, offset: Filesize): result<own<OutputStream>, ErrorCode>;
+				appendViaStream(self: Descriptor): result<own<OutputStream>, ErrorCode>;
+				advise(self: Descriptor, offset: Filesize, length: Filesize, advice: Advice): result<void, ErrorCode>;
+				syncData(self: Descriptor): result<void, ErrorCode>;
+				getFlags(self: Descriptor): result<DescriptorFlags, ErrorCode>;
+				getType(self: Descriptor): result<DescriptorType, ErrorCode>;
+				setSize(self: Descriptor, size: Filesize): result<void, ErrorCode>;
+				setTimes(self: Descriptor, dataAccessTimestamp: NewTimestamp, dataModificationTimestamp: NewTimestamp): result<void, ErrorCode>;
+				read(self: Descriptor, length: Filesize, offset: Filesize): result<[Uint8Array, boolean], ErrorCode>;
+				write(self: Descriptor, buffer: Uint8Array, offset: Filesize): result<Filesize, ErrorCode>;
+				readDirectory(self: Descriptor): result<own<DirectoryEntryStream>, ErrorCode>;
+				sync(self: Descriptor): result<void, ErrorCode>;
+				createDirectoryAt(self: Descriptor, path: string): result<void, ErrorCode>;
+				stat(self: Descriptor): result<DescriptorStat, ErrorCode>;
+				statAt(self: Descriptor, pathFlags: PathFlags, path: string): result<DescriptorStat, ErrorCode>;
+				setTimesAt(self: Descriptor, pathFlags: PathFlags, path: string, dataAccessTimestamp: NewTimestamp, dataModificationTimestamp: NewTimestamp): result<void, ErrorCode>;
+				linkAt(self: Descriptor, oldPathFlags: PathFlags, oldPath: string, newDescriptor: borrow<Descriptor>, newPath: string): result<void, ErrorCode>;
+				openAt(self: Descriptor, pathFlags: PathFlags, path: string, openFlags: OpenFlags, flags: DescriptorFlags): result<own<Descriptor>, ErrorCode>;
+				readlinkAt(self: Descriptor, path: string): result<string, ErrorCode>;
+				removeDirectoryAt(self: Descriptor, path: string): result<void, ErrorCode>;
+				renameAt(self: Descriptor, oldPath: string, newDescriptor: borrow<Descriptor>, newPath: string): result<void, ErrorCode>;
+				symlinkAt(self: Descriptor, oldPath: string, newPath: string): result<void, ErrorCode>;
+				unlinkFileAt(self: Descriptor, path: string): result<void, ErrorCode>;
+				isSameObject(self: Descriptor, other: borrow<Descriptor>): boolean;
+				metadataHash(self: Descriptor): result<MetadataHashValue, ErrorCode>;
+				metadataHashAt(self: Descriptor, pathFlags: PathFlags, path: string): result<MetadataHashValue, ErrorCode>;
+			};
+			type ClassModule = {
+			};
 			class Impl implements filesystem.Types.Descriptor.Interface {
-				private static readonly _resource = $.Descriptor;
 				private readonly _handle: $wcm.ResourceHandle;
-				private readonly _wasm: WasmInterface;
-				private readonly _context: $wcm.Context;
+				private readonly _om: ObjectModule;
 				public _getHandle(): $wcm.ResourceHandle {
 					return this._handle;
 				}
 				public readViaStream(offset: Filesize): result<own<InputStream>, ErrorCode> {
-					const callable = Impl._resource.getMethod('readViaStream');
-					const { memory, options } = this._context;
-					return callable.callWasm([offset], this._wasm[callable.witName], memory, options);
+					return this._om.readViaStream(this, offset);
 				}
 				public writeViaStream(offset: Filesize): result<own<OutputStream>, ErrorCode> {
-					const callable = Impl._resource.getMethod('writeViaStream');
-					const { memory, options } = this._context;
-					return callable.callWasm([offset], this._wasm[callable.witName], memory, options);
+					return this._om.writeViaStream(this, offset);
 				}
 				public appendViaStream(): result<own<OutputStream>, ErrorCode> {
-					const callable = Impl._resource.getMethod('appendViaStream');
-					const { memory, options } = this._context;
-					return callable.callWasm([], this._wasm[callable.witName], memory, options);
+					return this._om.appendViaStream(this);
 				}
 				public advise(offset: Filesize, length: Filesize, advice: Advice): result<void, ErrorCode> {
-					const callable = Impl._resource.getMethod('advise');
-					const { memory, options } = this._context;
-					return callable.callWasm([offset, length, advice], this._wasm[callable.witName], memory, options);
+					return this._om.advise(this, offset, length, advice);
 				}
 				public syncData(): result<void, ErrorCode> {
-					const callable = Impl._resource.getMethod('syncData');
-					const { memory, options } = this._context;
-					return callable.callWasm([], this._wasm[callable.witName], memory, options);
+					return this._om.syncData(this);
 				}
 				public getFlags(): result<DescriptorFlags, ErrorCode> {
-					const callable = Impl._resource.getMethod('getFlags');
-					const { memory, options } = this._context;
-					return callable.callWasm([], this._wasm[callable.witName], memory, options);
+					return this._om.getFlags(this);
 				}
 				public getType(): result<DescriptorType, ErrorCode> {
-					const callable = Impl._resource.getMethod('getType');
-					const { memory, options } = this._context;
-					return callable.callWasm([], this._wasm[callable.witName], memory, options);
+					return this._om.getType(this);
 				}
 				public setSize(size: Filesize): result<void, ErrorCode> {
-					const callable = Impl._resource.getMethod('setSize');
-					const { memory, options } = this._context;
-					return callable.callWasm([size], this._wasm[callable.witName], memory, options);
+					return this._om.setSize(this, size);
 				}
 				public setTimes(dataAccessTimestamp: NewTimestamp, dataModificationTimestamp: NewTimestamp): result<void, ErrorCode> {
-					const callable = Impl._resource.getMethod('setTimes');
-					const { memory, options } = this._context;
-					return callable.callWasm([dataAccessTimestamp, dataModificationTimestamp], this._wasm[callable.witName], memory, options);
+					return this._om.setTimes(this, dataAccessTimestamp, dataModificationTimestamp);
 				}
 				public read(length: Filesize, offset: Filesize): result<[Uint8Array, boolean], ErrorCode> {
-					const callable = Impl._resource.getMethod('read');
-					const { memory, options } = this._context;
-					return callable.callWasm([length, offset], this._wasm[callable.witName], memory, options);
+					return this._om.read(this, length, offset);
 				}
 				public write(buffer: Uint8Array, offset: Filesize): result<Filesize, ErrorCode> {
-					const callable = Impl._resource.getMethod('write');
-					const { memory, options } = this._context;
-					return callable.callWasm([buffer, offset], this._wasm[callable.witName], memory, options);
+					return this._om.write(this, buffer, offset);
 				}
 				public readDirectory(): result<own<DirectoryEntryStream>, ErrorCode> {
-					const callable = Impl._resource.getMethod('readDirectory');
-					const { memory, options } = this._context;
-					return callable.callWasm([], this._wasm[callable.witName], memory, options);
+					return this._om.readDirectory(this);
 				}
 				public sync(): result<void, ErrorCode> {
-					const callable = Impl._resource.getMethod('sync');
-					const { memory, options } = this._context;
-					return callable.callWasm([], this._wasm[callable.witName], memory, options);
+					return this._om.sync(this);
 				}
 				public createDirectoryAt(path: string): result<void, ErrorCode> {
-					const callable = Impl._resource.getMethod('createDirectoryAt');
-					const { memory, options } = this._context;
-					return callable.callWasm([path], this._wasm[callable.witName], memory, options);
+					return this._om.createDirectoryAt(this, path);
 				}
 				public stat(): result<DescriptorStat, ErrorCode> {
-					const callable = Impl._resource.getMethod('stat');
-					const { memory, options } = this._context;
-					return callable.callWasm([], this._wasm[callable.witName], memory, options);
+					return this._om.stat(this);
 				}
 				public statAt(pathFlags: PathFlags, path: string): result<DescriptorStat, ErrorCode> {
-					const callable = Impl._resource.getMethod('statAt');
-					const { memory, options } = this._context;
-					return callable.callWasm([pathFlags, path], this._wasm[callable.witName], memory, options);
+					return this._om.statAt(this, pathFlags, path);
 				}
 				public setTimesAt(pathFlags: PathFlags, path: string, dataAccessTimestamp: NewTimestamp, dataModificationTimestamp: NewTimestamp): result<void, ErrorCode> {
-					const callable = Impl._resource.getMethod('setTimesAt');
-					const { memory, options } = this._context;
-					return callable.callWasm([pathFlags, path, dataAccessTimestamp, dataModificationTimestamp], this._wasm[callable.witName], memory, options);
+					return this._om.setTimesAt(this, pathFlags, path, dataAccessTimestamp, dataModificationTimestamp);
 				}
 				public linkAt(oldPathFlags: PathFlags, oldPath: string, newDescriptor: borrow<Descriptor>, newPath: string): result<void, ErrorCode> {
-					const callable = Impl._resource.getMethod('linkAt');
-					const { memory, options } = this._context;
-					return callable.callWasm([oldPathFlags, oldPath, newDescriptor, newPath], this._wasm[callable.witName], memory, options);
+					return this._om.linkAt(this, oldPathFlags, oldPath, newDescriptor, newPath);
 				}
 				public openAt(pathFlags: PathFlags, path: string, openFlags: OpenFlags, flags: DescriptorFlags): result<own<Descriptor>, ErrorCode> {
-					const callable = Impl._resource.getMethod('openAt');
-					const { memory, options } = this._context;
-					return callable.callWasm([pathFlags, path, openFlags, flags], this._wasm[callable.witName], memory, options);
+					return this._om.openAt(this, pathFlags, path, openFlags, flags);
 				}
 				public readlinkAt(path: string): result<string, ErrorCode> {
-					const callable = Impl._resource.getMethod('readlinkAt');
-					const { memory, options } = this._context;
-					return callable.callWasm([path], this._wasm[callable.witName], memory, options);
+					return this._om.readlinkAt(this, path);
 				}
 				public removeDirectoryAt(path: string): result<void, ErrorCode> {
-					const callable = Impl._resource.getMethod('removeDirectoryAt');
-					const { memory, options } = this._context;
-					return callable.callWasm([path], this._wasm[callable.witName], memory, options);
+					return this._om.removeDirectoryAt(this, path);
 				}
 				public renameAt(oldPath: string, newDescriptor: borrow<Descriptor>, newPath: string): result<void, ErrorCode> {
-					const callable = Impl._resource.getMethod('renameAt');
-					const { memory, options } = this._context;
-					return callable.callWasm([oldPath, newDescriptor, newPath], this._wasm[callable.witName], memory, options);
+					return this._om.renameAt(this, oldPath, newDescriptor, newPath);
 				}
 				public symlinkAt(oldPath: string, newPath: string): result<void, ErrorCode> {
-					const callable = Impl._resource.getMethod('symlinkAt');
-					const { memory, options } = this._context;
-					return callable.callWasm([oldPath, newPath], this._wasm[callable.witName], memory, options);
+					return this._om.symlinkAt(this, oldPath, newPath);
 				}
 				public unlinkFileAt(path: string): result<void, ErrorCode> {
-					const callable = Impl._resource.getMethod('unlinkFileAt');
-					const { memory, options } = this._context;
-					return callable.callWasm([path], this._wasm[callable.witName], memory, options);
+					return this._om.unlinkFileAt(this, path);
 				}
 				public isSameObject(other: borrow<Descriptor>): boolean {
-					const callable = Impl._resource.getMethod('isSameObject');
-					const { memory, options } = this._context;
-					return callable.callWasm([other], this._wasm[callable.witName], memory, options);
+					return this._om.isSameObject(this, other);
 				}
 				public metadataHash(): result<MetadataHashValue, ErrorCode> {
-					const callable = Impl._resource.getMethod('metadataHash');
-					const { memory, options } = this._context;
-					return callable.callWasm([], this._wasm[callable.witName], memory, options);
+					return this._om.metadataHash(this);
 				}
 				public metadataHashAt(pathFlags: PathFlags, path: string): result<MetadataHashValue, ErrorCode> {
-					const callable = Impl._resource.getMethod('metadataHashAt');
-					const { memory, options } = this._context;
-					return callable.callWasm([pathFlags, path], this._wasm[callable.witName], memory, options);
+					return this._om.metadataHashAt(this, pathFlags, path);
 				}
 			}
 			export function Class(wasmInterface: WasmInterface, context: $wcm.Context): filesystem.Types.Descriptor.Class {
@@ -1330,18 +1313,19 @@ export namespace filesystem {
 			export type WasmInterface = {
 				'[method]directory-entry-stream.read-directory-entry': (self: i32, result: ptr<[i32, i32, i32, i32, i32]>) => void;
 			};
+			type ObjectModule = {
+				readDirectoryEntry(self: DirectoryEntryStream): result<DirectoryEntry | undefined, ErrorCode>;
+			};
+			type ClassModule = {
+			};
 			class Impl implements filesystem.Types.DirectoryEntryStream.Interface {
-				private static readonly _resource = $.DirectoryEntryStream;
 				private readonly _handle: $wcm.ResourceHandle;
-				private readonly _wasm: WasmInterface;
-				private readonly _context: $wcm.Context;
+				private readonly _om: ObjectModule;
 				public _getHandle(): $wcm.ResourceHandle {
 					return this._handle;
 				}
 				public readDirectoryEntry(): result<DirectoryEntry | undefined, ErrorCode> {
-					const callable = Impl._resource.getMethod('readDirectoryEntry');
-					const { memory, options } = this._context;
-					return callable.callWasm([], this._wasm[callable.witName], memory, options);
+					return this._om.readDirectoryEntry(this);
 				}
 			}
 			export function Class(wasmInterface: WasmInterface, context: $wcm.Context): filesystem.Types.DirectoryEntryStream.Class {
@@ -1355,8 +1339,14 @@ export namespace filesystem {
 		export function createHost(service: filesystem.Types, context: $wcm.Context): WasmInterface {
 			return $wcm.Host.create<WasmInterface>(functions, resources, service, context);
 		}
-		export function createService(wasmInterface: WasmInterface, context: $wcm.Context, _kind?: $wcm.ResourceKind): filesystem.Types {
+		export function createService(wasmInterface: WasmInterface, context: $wcm.Context): filesystem.Types {
 			return $wcm.Service.create<filesystem.Types>(functions, [], wasmInterface, context);
+		}
+		export function createManagers(): Types.Managers {
+			return Object.freeze({
+				Descriptor: new $wcm.ResourceManager<Descriptor>(),
+				DirectoryEntryStream: new $wcm.ResourceManager<DirectoryEntryStream>(),
+			});
 		}
 	}
 
@@ -1373,7 +1363,7 @@ export namespace filesystem {
 		export const functions: Map<string, $wcm.FunctionType<$wcm.ServiceFunction>> = new Map([
 			['getDirectories', $.getDirectories]
 		]);
-		export const resources: Map<string, $wcm.ResourceType> = new Map([
+		export const resources: Map<string, $wcm.ResourceType> = new Map<string, $wcm.ResourceType>([
 		]);
 		export type WasmInterface = {
 			'get-directories': (result: ptr<[i32, i32]>) => void;
@@ -1381,7 +1371,7 @@ export namespace filesystem {
 		export function createHost(service: filesystem.Preopens, context: $wcm.Context): WasmInterface {
 			return $wcm.Host.create<WasmInterface>(functions, resources, service, context);
 		}
-		export function createService(wasmInterface: WasmInterface, context: $wcm.Context, _kind?: $wcm.ResourceKind): filesystem.Preopens {
+		export function createService(wasmInterface: WasmInterface, context: $wcm.Context): filesystem.Preopens {
 			return $wcm.Service.create<filesystem.Preopens>(functions, [], wasmInterface, context);
 		}
 	}
@@ -1417,5 +1407,10 @@ export namespace filesystem._ {
 			result.Preopens = Preopens._.createService(wasmInterface['wasi:filesystem/preopens'], context);
 		}
 		return result;
+	}
+	export function createManagers(): filesystem.Managers {
+		return Object.freeze({
+			Types: Types._.createManagers(),
+		});
 	}
 }

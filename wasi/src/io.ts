@@ -28,6 +28,10 @@ export namespace io {
 			export type Class = Statics;
 		}
 		export type Error = Error.Interface;
+
+		export type Managers = {
+			Error: $wcm.ResourceManager<Error>;
+		};
 	}
 	export type Error = {
 		Error: Error.Error;
@@ -86,6 +90,10 @@ export namespace io {
 		 * being reaedy for I/O.
 		 */
 		export type poll = (in_: borrow<Pollable>[]) => Uint32Array;
+
+		export type Managers = {
+			Pollable: $wcm.ResourceManager<Pollable>;
+		};
 	}
 	export type Poll = {
 		Pollable: Poll.Pollable;
@@ -387,12 +395,22 @@ export namespace io {
 			export type Class = Statics;
 		}
 		export type OutputStream = OutputStream.Interface;
+
+		export type Managers = {
+			InputStream: $wcm.ResourceManager<InputStream>;
+			OutputStream: $wcm.ResourceManager<OutputStream>;
+		};
 	}
 	export type Streams = {
 		InputStream: Streams.InputStream;
 		OutputStream: Streams.OutputStream;
 	};
 
+	export type Managers = {
+		Error: Error.Managers;
+		Poll: Poll.Managers;
+		Streams: Streams.Managers;
+	};
 }
 export type io = {
 	Error?: io.Error;
@@ -402,7 +420,7 @@ export type io = {
 
 export namespace io {
 	export namespace Error.$ {
-		export const Error = new $wcm.ResourceType('error');
+		export const Error = new $wcm.ResourceType<Error.Error>('error', ['io', 'Error', 'Error']);
 		Error.addMethod('toDebugString', new $wcm.MethodType<io.Error.Error.Interface['toDebugString']>('[method]error.to-debug-string', [
 			['self', new $wcm.BorrowType<io.Error.Error>(Error)],
 		], $wcm.wstring));
@@ -415,25 +433,26 @@ export namespace io {
 		]);
 		export const functions: Map<string, $wcm.FunctionType<$wcm.ServiceFunction>> = new Map([
 		]);
-		export const resources: Map<string, $wcm.ResourceType> = new Map([
+		export const resources: Map<string, $wcm.ResourceType> = new Map<string, $wcm.ResourceType>([
 			['Error', $.Error]
 		]);
 		export namespace Error {
 			export type WasmInterface = {
 				'[method]error.to-debug-string': (self: i32, result: ptr<[i32, i32]>) => void;
 			};
+			type ObjectModule = {
+				toDebugString(self: Error): string;
+			};
+			type ClassModule = {
+			};
 			class Impl implements io.Error.Error.Interface {
-				private static readonly _resource = $.Error;
 				private readonly _handle: $wcm.ResourceHandle;
-				private readonly _wasm: WasmInterface;
-				private readonly _context: $wcm.Context;
+				private readonly _om: ObjectModule;
 				public _getHandle(): $wcm.ResourceHandle {
 					return this._handle;
 				}
 				public toDebugString(): string {
-					const callable = Impl._resource.getMethod('toDebugString');
-					const { memory, options } = this._context;
-					return callable.callWasm([], this._wasm[callable.witName], memory, options);
+					return this._om.toDebugString(this);
 				}
 			}
 			export function Class(wasmInterface: WasmInterface, context: $wcm.Context): io.Error.Error.Class {
@@ -446,13 +465,18 @@ export namespace io {
 		export function createHost(service: io.Error, context: $wcm.Context): WasmInterface {
 			return $wcm.Host.create<WasmInterface>(functions, resources, service, context);
 		}
-		export function createService(wasmInterface: WasmInterface, context: $wcm.Context, _kind?: $wcm.ResourceKind): io.Error {
+		export function createService(wasmInterface: WasmInterface, context: $wcm.Context): io.Error {
 			return $wcm.Service.create<io.Error>(functions, [], wasmInterface, context);
+		}
+		export function createManagers(): Error.Managers {
+			return Object.freeze({
+				Error: new $wcm.ResourceManager<Error>(),
+			});
 		}
 	}
 
 	export namespace Poll.$ {
-		export const Pollable = new $wcm.ResourceType('pollable');
+		export const Pollable = new $wcm.ResourceType<Poll.Pollable>('pollable', ['io', 'Poll', 'Pollable']);
 		Pollable.addMethod('ready', new $wcm.MethodType<io.Poll.Pollable.Interface['ready']>('[method]pollable.ready', [
 			['self', new $wcm.BorrowType<io.Poll.Pollable>(Pollable)],
 		], $wcm.bool));
@@ -472,7 +496,7 @@ export namespace io {
 		export const functions: Map<string, $wcm.FunctionType<$wcm.ServiceFunction>> = new Map([
 			['poll', $.poll]
 		]);
-		export const resources: Map<string, $wcm.ResourceType> = new Map([
+		export const resources: Map<string, $wcm.ResourceType> = new Map<string, $wcm.ResourceType>([
 			['Pollable', $.Pollable]
 		]);
 		export namespace Pollable {
@@ -480,23 +504,23 @@ export namespace io {
 				'[method]pollable.ready': (self: i32) => i32;
 				'[method]pollable.block': (self: i32) => void;
 			};
+			type ObjectModule = {
+				ready(self: Pollable): boolean;
+				block(self: Pollable): void;
+			};
+			type ClassModule = {
+			};
 			class Impl implements io.Poll.Pollable.Interface {
-				private static readonly _resource = $.Pollable;
 				private readonly _handle: $wcm.ResourceHandle;
-				private readonly _wasm: WasmInterface;
-				private readonly _context: $wcm.Context;
+				private readonly _om: ObjectModule;
 				public _getHandle(): $wcm.ResourceHandle {
 					return this._handle;
 				}
 				public ready(): boolean {
-					const callable = Impl._resource.getMethod('ready');
-					const { memory, options } = this._context;
-					return callable.callWasm([], this._wasm[callable.witName], memory, options);
+					return this._om.ready(this);
 				}
 				public block(): void {
-					const callable = Impl._resource.getMethod('block');
-					const { memory, options } = this._context;
-					return callable.callWasm([], this._wasm[callable.witName], memory, options);
+					return this._om.block(this);
 				}
 			}
 			export function Class(wasmInterface: WasmInterface, context: $wcm.Context): io.Poll.Pollable.Class {
@@ -510,8 +534,13 @@ export namespace io {
 		export function createHost(service: io.Poll, context: $wcm.Context): WasmInterface {
 			return $wcm.Host.create<WasmInterface>(functions, resources, service, context);
 		}
-		export function createService(wasmInterface: WasmInterface, context: $wcm.Context, _kind?: $wcm.ResourceKind): io.Poll {
+		export function createService(wasmInterface: WasmInterface, context: $wcm.Context): io.Poll {
 			return $wcm.Service.create<io.Poll>(functions, [], wasmInterface, context);
+		}
+		export function createManagers(): Poll.Managers {
+			return Object.freeze({
+				Pollable: new $wcm.ResourceManager<Pollable>(),
+			});
 		}
 	}
 
@@ -519,8 +548,8 @@ export namespace io {
 		export const Error = io.Error.$.Error;
 		export const Pollable = io.Poll.$.Pollable;
 		export const StreamError = new $wcm.VariantType<io.Streams.StreamError, io.Streams.StreamError._tt, io.Streams.StreamError._vt>([['lastOperationFailed', new $wcm.OwnType<io.Streams.Error>(Error)], ['closed', undefined]], io.Streams.StreamError._ctor);
-		export const InputStream = new $wcm.ResourceType('input-stream');
-		export const OutputStream = new $wcm.ResourceType('output-stream');
+		export const InputStream = new $wcm.ResourceType<Streams.InputStream>('input-stream', ['io', 'Streams', 'InputStream']);
+		export const OutputStream = new $wcm.ResourceType<Streams.OutputStream>('output-stream', ['io', 'Streams', 'OutputStream']);
 		InputStream.addMethod('read', new $wcm.MethodType<io.Streams.InputStream.Interface['read']>('[method]input-stream.read', [
 			['self', new $wcm.BorrowType<io.Streams.InputStream>(InputStream)],
 			['len', $wcm.u64],
@@ -591,7 +620,7 @@ export namespace io {
 		]);
 		export const functions: Map<string, $wcm.FunctionType<$wcm.ServiceFunction>> = new Map([
 		]);
-		export const resources: Map<string, $wcm.ResourceType> = new Map([
+		export const resources: Map<string, $wcm.ResourceType> = new Map<string, $wcm.ResourceType>([
 			['InputStream', $.InputStream],
 			['OutputStream', $.OutputStream]
 		]);
@@ -603,38 +632,35 @@ export namespace io {
 				'[method]input-stream.blocking-skip': (self: i32, len: i64, result: ptr<[i32, i64, i32]>) => void;
 				'[method]input-stream.subscribe': (self: i32) => i32;
 			};
+			type ObjectModule = {
+				read(self: InputStream, len: u64): result<Uint8Array, StreamError>;
+				blockingRead(self: InputStream, len: u64): result<Uint8Array, StreamError>;
+				skip(self: InputStream, len: u64): result<u64, StreamError>;
+				blockingSkip(self: InputStream, len: u64): result<u64, StreamError>;
+				subscribe(self: InputStream): own<Pollable>;
+			};
+			type ClassModule = {
+			};
 			class Impl implements io.Streams.InputStream.Interface {
-				private static readonly _resource = $.InputStream;
 				private readonly _handle: $wcm.ResourceHandle;
-				private readonly _wasm: WasmInterface;
-				private readonly _context: $wcm.Context;
+				private readonly _om: ObjectModule;
 				public _getHandle(): $wcm.ResourceHandle {
 					return this._handle;
 				}
 				public read(len: u64): result<Uint8Array, StreamError> {
-					const callable = Impl._resource.getMethod('read');
-					const { memory, options } = this._context;
-					return callable.callWasm([len], this._wasm[callable.witName], memory, options);
+					return this._om.read(this, len);
 				}
 				public blockingRead(len: u64): result<Uint8Array, StreamError> {
-					const callable = Impl._resource.getMethod('blockingRead');
-					const { memory, options } = this._context;
-					return callable.callWasm([len], this._wasm[callable.witName], memory, options);
+					return this._om.blockingRead(this, len);
 				}
 				public skip(len: u64): result<u64, StreamError> {
-					const callable = Impl._resource.getMethod('skip');
-					const { memory, options } = this._context;
-					return callable.callWasm([len], this._wasm[callable.witName], memory, options);
+					return this._om.skip(this, len);
 				}
 				public blockingSkip(len: u64): result<u64, StreamError> {
-					const callable = Impl._resource.getMethod('blockingSkip');
-					const { memory, options } = this._context;
-					return callable.callWasm([len], this._wasm[callable.witName], memory, options);
+					return this._om.blockingSkip(this, len);
 				}
 				public subscribe(): own<Pollable> {
-					const callable = Impl._resource.getMethod('subscribe');
-					const { memory, options } = this._context;
-					return callable.callWasm([], this._wasm[callable.witName], memory, options);
+					return this._om.subscribe(this);
 				}
 			}
 			export function Class(wasmInterface: WasmInterface, context: $wcm.Context): io.Streams.InputStream.Class {
@@ -655,63 +681,55 @@ export namespace io {
 				'[method]output-stream.splice': (self: i32, src: i32, len: i64, result: ptr<[i32, i64, i32]>) => void;
 				'[method]output-stream.blocking-splice': (self: i32, src: i32, len: i64, result: ptr<[i32, i64, i32]>) => void;
 			};
+			type ObjectModule = {
+				checkWrite(self: OutputStream): result<u64, StreamError>;
+				write(self: OutputStream, contents: Uint8Array): result<void, StreamError>;
+				blockingWriteAndFlush(self: OutputStream, contents: Uint8Array): result<void, StreamError>;
+				flush(self: OutputStream): result<void, StreamError>;
+				blockingFlush(self: OutputStream): result<void, StreamError>;
+				subscribe(self: OutputStream): own<Pollable>;
+				writeZeroes(self: OutputStream, len: u64): result<void, StreamError>;
+				blockingWriteZeroesAndFlush(self: OutputStream, len: u64): result<void, StreamError>;
+				splice(self: OutputStream, src: borrow<InputStream>, len: u64): result<u64, StreamError>;
+				blockingSplice(self: OutputStream, src: borrow<InputStream>, len: u64): result<u64, StreamError>;
+			};
+			type ClassModule = {
+			};
 			class Impl implements io.Streams.OutputStream.Interface {
-				private static readonly _resource = $.OutputStream;
 				private readonly _handle: $wcm.ResourceHandle;
-				private readonly _wasm: WasmInterface;
-				private readonly _context: $wcm.Context;
+				private readonly _om: ObjectModule;
 				public _getHandle(): $wcm.ResourceHandle {
 					return this._handle;
 				}
 				public checkWrite(): result<u64, StreamError> {
-					const callable = Impl._resource.getMethod('checkWrite');
-					const { memory, options } = this._context;
-					return callable.callWasm([], this._wasm[callable.witName], memory, options);
+					return this._om.checkWrite(this);
 				}
 				public write(contents: Uint8Array): result<void, StreamError> {
-					const callable = Impl._resource.getMethod('write');
-					const { memory, options } = this._context;
-					return callable.callWasm([contents], this._wasm[callable.witName], memory, options);
+					return this._om.write(this, contents);
 				}
 				public blockingWriteAndFlush(contents: Uint8Array): result<void, StreamError> {
-					const callable = Impl._resource.getMethod('blockingWriteAndFlush');
-					const { memory, options } = this._context;
-					return callable.callWasm([contents], this._wasm[callable.witName], memory, options);
+					return this._om.blockingWriteAndFlush(this, contents);
 				}
 				public flush(): result<void, StreamError> {
-					const callable = Impl._resource.getMethod('flush');
-					const { memory, options } = this._context;
-					return callable.callWasm([], this._wasm[callable.witName], memory, options);
+					return this._om.flush(this);
 				}
 				public blockingFlush(): result<void, StreamError> {
-					const callable = Impl._resource.getMethod('blockingFlush');
-					const { memory, options } = this._context;
-					return callable.callWasm([], this._wasm[callable.witName], memory, options);
+					return this._om.blockingFlush(this);
 				}
 				public subscribe(): own<Pollable> {
-					const callable = Impl._resource.getMethod('subscribe');
-					const { memory, options } = this._context;
-					return callable.callWasm([], this._wasm[callable.witName], memory, options);
+					return this._om.subscribe(this);
 				}
 				public writeZeroes(len: u64): result<void, StreamError> {
-					const callable = Impl._resource.getMethod('writeZeroes');
-					const { memory, options } = this._context;
-					return callable.callWasm([len], this._wasm[callable.witName], memory, options);
+					return this._om.writeZeroes(this, len);
 				}
 				public blockingWriteZeroesAndFlush(len: u64): result<void, StreamError> {
-					const callable = Impl._resource.getMethod('blockingWriteZeroesAndFlush');
-					const { memory, options } = this._context;
-					return callable.callWasm([len], this._wasm[callable.witName], memory, options);
+					return this._om.blockingWriteZeroesAndFlush(this, len);
 				}
 				public splice(src: borrow<InputStream>, len: u64): result<u64, StreamError> {
-					const callable = Impl._resource.getMethod('splice');
-					const { memory, options } = this._context;
-					return callable.callWasm([src, len], this._wasm[callable.witName], memory, options);
+					return this._om.splice(this, src, len);
 				}
 				public blockingSplice(src: borrow<InputStream>, len: u64): result<u64, StreamError> {
-					const callable = Impl._resource.getMethod('blockingSplice');
-					const { memory, options } = this._context;
-					return callable.callWasm([src, len], this._wasm[callable.witName], memory, options);
+					return this._om.blockingSplice(this, src, len);
 				}
 			}
 			export function Class(wasmInterface: WasmInterface, context: $wcm.Context): io.Streams.OutputStream.Class {
@@ -724,8 +742,14 @@ export namespace io {
 		export function createHost(service: io.Streams, context: $wcm.Context): WasmInterface {
 			return $wcm.Host.create<WasmInterface>(functions, resources, service, context);
 		}
-		export function createService(wasmInterface: WasmInterface, context: $wcm.Context, _kind?: $wcm.ResourceKind): io.Streams {
+		export function createService(wasmInterface: WasmInterface, context: $wcm.Context): io.Streams {
 			return $wcm.Service.create<io.Streams>(functions, [], wasmInterface, context);
+		}
+		export function createManagers(): Streams.Managers {
+			return Object.freeze({
+				InputStream: new $wcm.ResourceManager<InputStream>(),
+				OutputStream: new $wcm.ResourceManager<OutputStream>(),
+			});
 		}
 	}
 }
@@ -768,5 +792,12 @@ export namespace io._ {
 			result.Streams = Streams._.createService(wasmInterface['wasi:io/streams'], context);
 		}
 		return result;
+	}
+	export function createManagers(): io.Managers {
+		return Object.freeze({
+			Error: Error._.createManagers(),
+			Poll: Poll._.createManagers(),
+			Streams: Streams._.createManagers(),
+		});
 	}
 }

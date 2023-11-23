@@ -158,7 +158,7 @@ export namespace clocks {
 			['subscribeInstant', $.subscribeInstant],
 			['subscribeDuration', $.subscribeDuration]
 		]);
-		export const resources: Map<string, $wcm.ResourceType> = new Map([
+		export const resources: Map<string, $wcm.ResourceType> = new Map<string, $wcm.ResourceType>([
 		]);
 		export type WasmInterface = {
 			'now': () => i64;
@@ -169,7 +169,7 @@ export namespace clocks {
 		export function createHost(service: clocks.MonotonicClock, context: $wcm.Context): WasmInterface {
 			return $wcm.Host.create<WasmInterface>(functions, resources, service, context);
 		}
-		export function createService(wasmInterface: WasmInterface, context: $wcm.Context, _kind?: $wcm.ResourceKind): clocks.MonotonicClock {
+		export function createService(wasmInterface: WasmInterface, context: $wcm.Context): clocks.MonotonicClock {
 			return $wcm.Service.create<clocks.MonotonicClock>(functions, [], wasmInterface, context);
 		}
 	}
@@ -192,7 +192,7 @@ export namespace clocks {
 			['now', $.now],
 			['resolution', $.resolution]
 		]);
-		export const resources: Map<string, $wcm.ResourceType> = new Map([
+		export const resources: Map<string, $wcm.ResourceType> = new Map<string, $wcm.ResourceType>([
 		]);
 		export type WasmInterface = {
 			'now': (result: ptr<[i64, i32]>) => void;
@@ -201,7 +201,7 @@ export namespace clocks {
 		export function createHost(service: clocks.WallClock, context: $wcm.Context): WasmInterface {
 			return $wcm.Host.create<WasmInterface>(functions, resources, service, context);
 		}
-		export function createService(wasmInterface: WasmInterface, context: $wcm.Context, _kind?: $wcm.ResourceKind): clocks.WallClock {
+		export function createService(wasmInterface: WasmInterface, context: $wcm.Context): clocks.WallClock {
 			return $wcm.Service.create<clocks.WallClock>(functions, [], wasmInterface, context);
 		}
 	}

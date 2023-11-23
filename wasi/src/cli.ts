@@ -102,6 +102,10 @@ export namespace cli {
 			export type Class = Statics;
 		}
 		export type TerminalInput = TerminalInput.Interface;
+
+		export type Managers = {
+			TerminalInput: $wcm.ResourceManager<TerminalInput>;
+		};
 	}
 	export type TerminalInput = {
 	};
@@ -118,6 +122,10 @@ export namespace cli {
 			export type Class = Statics;
 		}
 		export type TerminalOutput = TerminalOutput.Interface;
+
+		export type Managers = {
+			TerminalOutput: $wcm.ResourceManager<TerminalOutput>;
+		};
 	}
 	export type TerminalOutput = {
 	};
@@ -176,6 +184,10 @@ export namespace cli {
 		getTerminalStderr: TerminalStderr.getTerminalStderr;
 	};
 
+	export type Managers = {
+		TerminalInput: TerminalInput.Managers;
+		TerminalOutput: TerminalOutput.Managers;
+	};
 }
 export type cli = {
 	Environment?: cli.Environment;
@@ -207,7 +219,7 @@ export namespace cli {
 			['getArguments', $.getArguments],
 			['initialCwd', $.initialCwd]
 		]);
-		export const resources: Map<string, $wcm.ResourceType> = new Map([
+		export const resources: Map<string, $wcm.ResourceType> = new Map<string, $wcm.ResourceType>([
 		]);
 		export type WasmInterface = {
 			'get-environment': (result: ptr<[i32, i32]>) => void;
@@ -217,7 +229,7 @@ export namespace cli {
 		export function createHost(service: cli.Environment, context: $wcm.Context): WasmInterface {
 			return $wcm.Host.create<WasmInterface>(functions, resources, service, context);
 		}
-		export function createService(wasmInterface: WasmInterface, context: $wcm.Context, _kind?: $wcm.ResourceKind): cli.Environment {
+		export function createService(wasmInterface: WasmInterface, context: $wcm.Context): cli.Environment {
 			return $wcm.Service.create<cli.Environment>(functions, [], wasmInterface, context);
 		}
 	}
@@ -235,7 +247,7 @@ export namespace cli {
 		export const functions: Map<string, $wcm.FunctionType<$wcm.ServiceFunction>> = new Map([
 			['exit', $.exit]
 		]);
-		export const resources: Map<string, $wcm.ResourceType> = new Map([
+		export const resources: Map<string, $wcm.ResourceType> = new Map<string, $wcm.ResourceType>([
 		]);
 		export type WasmInterface = {
 			'exit': (status_case: i32) => void;
@@ -243,7 +255,7 @@ export namespace cli {
 		export function createHost(service: cli.Exit, context: $wcm.Context): WasmInterface {
 			return $wcm.Host.create<WasmInterface>(functions, resources, service, context);
 		}
-		export function createService(wasmInterface: WasmInterface, context: $wcm.Context, _kind?: $wcm.ResourceKind): cli.Exit {
+		export function createService(wasmInterface: WasmInterface, context: $wcm.Context): cli.Exit {
 			return $wcm.Service.create<cli.Exit>(functions, [], wasmInterface, context);
 		}
 	}
@@ -259,7 +271,7 @@ export namespace cli {
 		export const functions: Map<string, $wcm.FunctionType<$wcm.ServiceFunction>> = new Map([
 			['run', $.run]
 		]);
-		export const resources: Map<string, $wcm.ResourceType> = new Map([
+		export const resources: Map<string, $wcm.ResourceType> = new Map<string, $wcm.ResourceType>([
 		]);
 		export type WasmInterface = {
 			'run': () => i32;
@@ -267,7 +279,7 @@ export namespace cli {
 		export function createHost(service: cli.Run, context: $wcm.Context): WasmInterface {
 			return $wcm.Host.create<WasmInterface>(functions, resources, service, context);
 		}
-		export function createService(wasmInterface: WasmInterface, context: $wcm.Context, _kind?: $wcm.ResourceKind): cli.Run {
+		export function createService(wasmInterface: WasmInterface, context: $wcm.Context): cli.Run {
 			return $wcm.Service.create<cli.Run>(functions, [], wasmInterface, context);
 		}
 	}
@@ -285,7 +297,7 @@ export namespace cli {
 		export const functions: Map<string, $wcm.FunctionType<$wcm.ServiceFunction>> = new Map([
 			['getStdin', $.getStdin]
 		]);
-		export const resources: Map<string, $wcm.ResourceType> = new Map([
+		export const resources: Map<string, $wcm.ResourceType> = new Map<string, $wcm.ResourceType>([
 		]);
 		export type WasmInterface = {
 			'get-stdin': () => i32;
@@ -293,7 +305,7 @@ export namespace cli {
 		export function createHost(service: cli.Stdin, context: $wcm.Context): WasmInterface {
 			return $wcm.Host.create<WasmInterface>(functions, resources, service, context);
 		}
-		export function createService(wasmInterface: WasmInterface, context: $wcm.Context, _kind?: $wcm.ResourceKind): cli.Stdin {
+		export function createService(wasmInterface: WasmInterface, context: $wcm.Context): cli.Stdin {
 			return $wcm.Service.create<cli.Stdin>(functions, [], wasmInterface, context);
 		}
 	}
@@ -311,7 +323,7 @@ export namespace cli {
 		export const functions: Map<string, $wcm.FunctionType<$wcm.ServiceFunction>> = new Map([
 			['getStdout', $.getStdout]
 		]);
-		export const resources: Map<string, $wcm.ResourceType> = new Map([
+		export const resources: Map<string, $wcm.ResourceType> = new Map<string, $wcm.ResourceType>([
 		]);
 		export type WasmInterface = {
 			'get-stdout': () => i32;
@@ -319,7 +331,7 @@ export namespace cli {
 		export function createHost(service: cli.Stdout, context: $wcm.Context): WasmInterface {
 			return $wcm.Host.create<WasmInterface>(functions, resources, service, context);
 		}
-		export function createService(wasmInterface: WasmInterface, context: $wcm.Context, _kind?: $wcm.ResourceKind): cli.Stdout {
+		export function createService(wasmInterface: WasmInterface, context: $wcm.Context): cli.Stdout {
 			return $wcm.Service.create<cli.Stdout>(functions, [], wasmInterface, context);
 		}
 	}
@@ -337,7 +349,7 @@ export namespace cli {
 		export const functions: Map<string, $wcm.FunctionType<$wcm.ServiceFunction>> = new Map([
 			['getStderr', $.getStderr]
 		]);
-		export const resources: Map<string, $wcm.ResourceType> = new Map([
+		export const resources: Map<string, $wcm.ResourceType> = new Map<string, $wcm.ResourceType>([
 		]);
 		export type WasmInterface = {
 			'get-stderr': () => i32;
@@ -345,13 +357,13 @@ export namespace cli {
 		export function createHost(service: cli.Stderr, context: $wcm.Context): WasmInterface {
 			return $wcm.Host.create<WasmInterface>(functions, resources, service, context);
 		}
-		export function createService(wasmInterface: WasmInterface, context: $wcm.Context, _kind?: $wcm.ResourceKind): cli.Stderr {
+		export function createService(wasmInterface: WasmInterface, context: $wcm.Context): cli.Stderr {
 			return $wcm.Service.create<cli.Stderr>(functions, [], wasmInterface, context);
 		}
 	}
 
 	export namespace TerminalInput.$ {
-		export const TerminalInput = new $wcm.ResourceType('terminal-input');
+		export const TerminalInput = new $wcm.ResourceType<TerminalInput.TerminalInput>('terminal-input', ['cli', 'TerminalInput', 'TerminalInput']);
 	}
 	export namespace TerminalInput._ {
 		export const id = 'wasi:cli/terminal-input' as const;
@@ -361,17 +373,19 @@ export namespace cli {
 		]);
 		export const functions: Map<string, $wcm.FunctionType<$wcm.ServiceFunction>> = new Map([
 		]);
-		export const resources: Map<string, $wcm.ResourceType> = new Map([
+		export const resources: Map<string, $wcm.ResourceType> = new Map<string, $wcm.ResourceType>([
 			['TerminalInput', $.TerminalInput]
 		]);
 		export namespace TerminalInput {
 			export type WasmInterface = {
 			};
+			type ObjectModule = {
+			};
+			type ClassModule = {
+			};
 			class Impl implements cli.TerminalInput.TerminalInput.Interface {
-				private static readonly _resource = $.TerminalInput;
 				private readonly _handle: $wcm.ResourceHandle;
-				private readonly _wasm: WasmInterface;
-				private readonly _context: $wcm.Context;
+				private readonly _om: ObjectModule;
 				public _getHandle(): $wcm.ResourceHandle {
 					return this._handle;
 				}
@@ -386,13 +400,18 @@ export namespace cli {
 		export function createHost(service: cli.TerminalInput, context: $wcm.Context): WasmInterface {
 			return $wcm.Host.create<WasmInterface>(functions, resources, service, context);
 		}
-		export function createService(wasmInterface: WasmInterface, context: $wcm.Context, _kind?: $wcm.ResourceKind): cli.TerminalInput {
+		export function createService(wasmInterface: WasmInterface, context: $wcm.Context): cli.TerminalInput {
 			return $wcm.Service.create<cli.TerminalInput>(functions, [], wasmInterface, context);
+		}
+		export function createManagers(): TerminalInput.Managers {
+			return Object.freeze({
+				TerminalInput: new $wcm.ResourceManager<TerminalInput>(),
+			});
 		}
 	}
 
 	export namespace TerminalOutput.$ {
-		export const TerminalOutput = new $wcm.ResourceType('terminal-output');
+		export const TerminalOutput = new $wcm.ResourceType<TerminalOutput.TerminalOutput>('terminal-output', ['cli', 'TerminalOutput', 'TerminalOutput']);
 	}
 	export namespace TerminalOutput._ {
 		export const id = 'wasi:cli/terminal-output' as const;
@@ -402,17 +421,19 @@ export namespace cli {
 		]);
 		export const functions: Map<string, $wcm.FunctionType<$wcm.ServiceFunction>> = new Map([
 		]);
-		export const resources: Map<string, $wcm.ResourceType> = new Map([
+		export const resources: Map<string, $wcm.ResourceType> = new Map<string, $wcm.ResourceType>([
 			['TerminalOutput', $.TerminalOutput]
 		]);
 		export namespace TerminalOutput {
 			export type WasmInterface = {
 			};
+			type ObjectModule = {
+			};
+			type ClassModule = {
+			};
 			class Impl implements cli.TerminalOutput.TerminalOutput.Interface {
-				private static readonly _resource = $.TerminalOutput;
 				private readonly _handle: $wcm.ResourceHandle;
-				private readonly _wasm: WasmInterface;
-				private readonly _context: $wcm.Context;
+				private readonly _om: ObjectModule;
 				public _getHandle(): $wcm.ResourceHandle {
 					return this._handle;
 				}
@@ -427,8 +448,13 @@ export namespace cli {
 		export function createHost(service: cli.TerminalOutput, context: $wcm.Context): WasmInterface {
 			return $wcm.Host.create<WasmInterface>(functions, resources, service, context);
 		}
-		export function createService(wasmInterface: WasmInterface, context: $wcm.Context, _kind?: $wcm.ResourceKind): cli.TerminalOutput {
+		export function createService(wasmInterface: WasmInterface, context: $wcm.Context): cli.TerminalOutput {
 			return $wcm.Service.create<cli.TerminalOutput>(functions, [], wasmInterface, context);
+		}
+		export function createManagers(): TerminalOutput.Managers {
+			return Object.freeze({
+				TerminalOutput: new $wcm.ResourceManager<TerminalOutput>(),
+			});
 		}
 	}
 
@@ -445,7 +471,7 @@ export namespace cli {
 		export const functions: Map<string, $wcm.FunctionType<$wcm.ServiceFunction>> = new Map([
 			['getTerminalStdin', $.getTerminalStdin]
 		]);
-		export const resources: Map<string, $wcm.ResourceType> = new Map([
+		export const resources: Map<string, $wcm.ResourceType> = new Map<string, $wcm.ResourceType>([
 		]);
 		export type WasmInterface = {
 			'get-terminal-stdin': (result: ptr<[i32, i32]>) => void;
@@ -453,7 +479,7 @@ export namespace cli {
 		export function createHost(service: cli.TerminalStdin, context: $wcm.Context): WasmInterface {
 			return $wcm.Host.create<WasmInterface>(functions, resources, service, context);
 		}
-		export function createService(wasmInterface: WasmInterface, context: $wcm.Context, _kind?: $wcm.ResourceKind): cli.TerminalStdin {
+		export function createService(wasmInterface: WasmInterface, context: $wcm.Context): cli.TerminalStdin {
 			return $wcm.Service.create<cli.TerminalStdin>(functions, [], wasmInterface, context);
 		}
 	}
@@ -471,7 +497,7 @@ export namespace cli {
 		export const functions: Map<string, $wcm.FunctionType<$wcm.ServiceFunction>> = new Map([
 			['getTerminalStdout', $.getTerminalStdout]
 		]);
-		export const resources: Map<string, $wcm.ResourceType> = new Map([
+		export const resources: Map<string, $wcm.ResourceType> = new Map<string, $wcm.ResourceType>([
 		]);
 		export type WasmInterface = {
 			'get-terminal-stdout': (result: ptr<[i32, i32]>) => void;
@@ -479,7 +505,7 @@ export namespace cli {
 		export function createHost(service: cli.TerminalStdout, context: $wcm.Context): WasmInterface {
 			return $wcm.Host.create<WasmInterface>(functions, resources, service, context);
 		}
-		export function createService(wasmInterface: WasmInterface, context: $wcm.Context, _kind?: $wcm.ResourceKind): cli.TerminalStdout {
+		export function createService(wasmInterface: WasmInterface, context: $wcm.Context): cli.TerminalStdout {
 			return $wcm.Service.create<cli.TerminalStdout>(functions, [], wasmInterface, context);
 		}
 	}
@@ -497,7 +523,7 @@ export namespace cli {
 		export const functions: Map<string, $wcm.FunctionType<$wcm.ServiceFunction>> = new Map([
 			['getTerminalStderr', $.getTerminalStderr]
 		]);
-		export const resources: Map<string, $wcm.ResourceType> = new Map([
+		export const resources: Map<string, $wcm.ResourceType> = new Map<string, $wcm.ResourceType>([
 		]);
 		export type WasmInterface = {
 			'get-terminal-stderr': (result: ptr<[i32, i32]>) => void;
@@ -505,7 +531,7 @@ export namespace cli {
 		export function createHost(service: cli.TerminalStderr, context: $wcm.Context): WasmInterface {
 			return $wcm.Host.create<WasmInterface>(functions, resources, service, context);
 		}
-		export function createService(wasmInterface: WasmInterface, context: $wcm.Context, _kind?: $wcm.ResourceKind): cli.TerminalStderr {
+		export function createService(wasmInterface: WasmInterface, context: $wcm.Context): cli.TerminalStderr {
 			return $wcm.Service.create<cli.TerminalStderr>(functions, [], wasmInterface, context);
 		}
 	}
@@ -613,5 +639,11 @@ export namespace cli._ {
 			result.TerminalStderr = TerminalStderr._.createService(wasmInterface['wasi:cli/terminal-stderr'], context);
 		}
 		return result;
+	}
+	export function createManagers(): cli.Managers {
+		return Object.freeze({
+			TerminalInput: TerminalInput._.createManagers(),
+			TerminalOutput: TerminalOutput._.createManagers(),
+		});
 	}
 }

@@ -12,6 +12,15 @@ import { random } from './random';
 import { cli } from './cli';
 import { http } from './http';
 
+namespace wasi {
+	export type Managers = {
+		io: io.Managers;
+		filesystem: filesystem.Managers;
+		sockets: sockets.Managers;
+		cli: cli.Managers;
+		http: http.Managers;
+	};
+}
 type wasi = {
 	io?: io;
 	clocks?: clocks;
@@ -57,38 +66,46 @@ namespace wasi._ {
 		}
 		return result;
 	}
-	export function createService(wasmInterface: WasmInterface, context: $wcm.Context, kind?: $wcm.ResourceKind): wasi {
-		kind = kind ?? $wcm.ResourceKind.class;
+	export function createService(wasmInterface: WasmInterface, context: $wcm.Context): wasi {
 		let result: wasi = Object.create(null);
-		const _io = io._.createService(wasmInterface, context, kind);
+		const _io = io._.createService(wasmInterface, context);
 		if (Object.keys(_io).length > 0) {
 			result.io = _io;
 		}
-		const _clocks = clocks._.createService(wasmInterface, context, kind);
+		const _clocks = clocks._.createService(wasmInterface, context);
 		if (Object.keys(_clocks).length > 0) {
 			result.clocks = _clocks;
 		}
-		const _filesystem = filesystem._.createService(wasmInterface, context, kind);
+		const _filesystem = filesystem._.createService(wasmInterface, context);
 		if (Object.keys(_filesystem).length > 0) {
 			result.filesystem = _filesystem;
 		}
-		const _sockets = sockets._.createService(wasmInterface, context, kind);
+		const _sockets = sockets._.createService(wasmInterface, context);
 		if (Object.keys(_sockets).length > 0) {
 			result.sockets = _sockets;
 		}
-		const _random = random._.createService(wasmInterface, context, kind);
+		const _random = random._.createService(wasmInterface, context);
 		if (Object.keys(_random).length > 0) {
 			result.random = _random;
 		}
-		const _cli = cli._.createService(wasmInterface, context, kind);
+		const _cli = cli._.createService(wasmInterface, context);
 		if (Object.keys(_cli).length > 0) {
 			result.cli = _cli;
 		}
-		const _http = http._.createService(wasmInterface, context, kind);
+		const _http = http._.createService(wasmInterface, context);
 		if (Object.keys(_http).length > 0) {
 			result.http = _http;
 		}
 		return result;
+	}
+	export function createManagers(): wasi.Managers {
+		return Object.freeze({
+			io: io._.createManagers(),
+			filesystem: filesystem._.createManagers(),
+			sockets: sockets._.createManagers(),
+			cli: cli._.createManagers(),
+			http: http._.createManagers(),
+		});
 	}
 }
 export { io, clocks, filesystem, sockets, random, cli, http};
