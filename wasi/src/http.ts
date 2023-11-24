@@ -1309,30 +1309,30 @@ export namespace http {
 		export const HeaderError = new $wcm.VariantType<http.Types.HeaderError, http.Types.HeaderError._tt, http.Types.HeaderError._vt>([['invalidSyntax', undefined], ['forbidden', undefined], ['immutable', undefined]], http.Types.HeaderError._ctor);
 		export const FieldKey = $wcm.wstring;
 		export const FieldValue = new $wcm.Uint8ArrayType();
-		export const Fields = new $wcm.ResourceType<Types.Fields>('fields', 'wasi:http/types/fields');
+		export const Fields = new $wcm.ResourceType<http.Types.Fields>('fields', 'wasi:http/types/fields');
 		export const Fields_Handle = new $wcm.ResourceHandleType('fields');
 		export const Headers = Fields;
 		export const Trailers = Fields;
-		export const IncomingRequest = new $wcm.ResourceType<Types.IncomingRequest>('incoming-request', 'wasi:http/types/incoming-request');
+		export const IncomingRequest = new $wcm.ResourceType<http.Types.IncomingRequest>('incoming-request', 'wasi:http/types/incoming-request');
 		export const IncomingRequest_Handle = new $wcm.ResourceHandleType('incoming-request');
-		export const OutgoingRequest = new $wcm.ResourceType<Types.OutgoingRequest>('outgoing-request', 'wasi:http/types/outgoing-request');
+		export const OutgoingRequest = new $wcm.ResourceType<http.Types.OutgoingRequest>('outgoing-request', 'wasi:http/types/outgoing-request');
 		export const OutgoingRequest_Handle = new $wcm.ResourceHandleType('outgoing-request');
-		export const RequestOptions = new $wcm.ResourceType<Types.RequestOptions>('request-options', 'wasi:http/types/request-options');
+		export const RequestOptions = new $wcm.ResourceType<http.Types.RequestOptions>('request-options', 'wasi:http/types/request-options');
 		export const RequestOptions_Handle = new $wcm.ResourceHandleType('request-options');
-		export const ResponseOutparam = new $wcm.ResourceType<Types.ResponseOutparam>('response-outparam', 'wasi:http/types/response-outparam');
+		export const ResponseOutparam = new $wcm.ResourceType<http.Types.ResponseOutparam>('response-outparam', 'wasi:http/types/response-outparam');
 		export const ResponseOutparam_Handle = new $wcm.ResourceHandleType('response-outparam');
 		export const StatusCode = $wcm.u16;
-		export const IncomingResponse = new $wcm.ResourceType<Types.IncomingResponse>('incoming-response', 'wasi:http/types/incoming-response');
+		export const IncomingResponse = new $wcm.ResourceType<http.Types.IncomingResponse>('incoming-response', 'wasi:http/types/incoming-response');
 		export const IncomingResponse_Handle = new $wcm.ResourceHandleType('incoming-response');
-		export const IncomingBody = new $wcm.ResourceType<Types.IncomingBody>('incoming-body', 'wasi:http/types/incoming-body');
+		export const IncomingBody = new $wcm.ResourceType<http.Types.IncomingBody>('incoming-body', 'wasi:http/types/incoming-body');
 		export const IncomingBody_Handle = new $wcm.ResourceHandleType('incoming-body');
-		export const FutureTrailers = new $wcm.ResourceType<Types.FutureTrailers>('future-trailers', 'wasi:http/types/future-trailers');
+		export const FutureTrailers = new $wcm.ResourceType<http.Types.FutureTrailers>('future-trailers', 'wasi:http/types/future-trailers');
 		export const FutureTrailers_Handle = new $wcm.ResourceHandleType('future-trailers');
-		export const OutgoingResponse = new $wcm.ResourceType<Types.OutgoingResponse>('outgoing-response', 'wasi:http/types/outgoing-response');
+		export const OutgoingResponse = new $wcm.ResourceType<http.Types.OutgoingResponse>('outgoing-response', 'wasi:http/types/outgoing-response');
 		export const OutgoingResponse_Handle = new $wcm.ResourceHandleType('outgoing-response');
-		export const OutgoingBody = new $wcm.ResourceType<Types.OutgoingBody>('outgoing-body', 'wasi:http/types/outgoing-body');
+		export const OutgoingBody = new $wcm.ResourceType<http.Types.OutgoingBody>('outgoing-body', 'wasi:http/types/outgoing-body');
 		export const OutgoingBody_Handle = new $wcm.ResourceHandleType('outgoing-body');
-		export const FutureIncomingResponse = new $wcm.ResourceType<Types.FutureIncomingResponse>('future-incoming-response', 'wasi:http/types/future-incoming-response');
+		export const FutureIncomingResponse = new $wcm.ResourceType<http.Types.FutureIncomingResponse>('future-incoming-response', 'wasi:http/types/future-incoming-response');
 		export const FutureIncomingResponse_Handle = new $wcm.ResourceHandleType('future-incoming-response');
 		Fields.addMethod('constructor', new $wcm.ConstructorType<http.Types.Fields.Class['constructor']>('[constructor]fields', [], new $wcm.OwnType(Fields_Handle)));
 		Fields.addMethod('fromList', new $wcm.StaticMethodType<http.Types.Fields.Statics['fromList']>('[static]fields.from-list', [
@@ -1596,7 +1596,7 @@ export namespace http {
 				}
 			}
 			export function Class(wasmInterface: WasmInterface, context: $wcm.WasmContext): http.Types.Fields.Class {
-				const resource = Types.$.Fields;
+				const resource = http.Types.$.Fields;
 				const om: ObjectModule = $wcm.Module.createObjectModule(resource, wasmInterface, context);
 				const cm: ClassModule = $wcm.Module.createClassModule(resource, wasmInterface, context);
 				return class extends Impl {
@@ -1652,7 +1652,7 @@ export namespace http {
 				}
 			}
 			export function Class(wasmInterface: WasmInterface, context: $wcm.WasmContext): http.Types.IncomingRequest.Class {
-				const resource = Types.$.IncomingRequest;
+				const resource = http.Types.$.IncomingRequest;
 				const om: ObjectModule = $wcm.Module.createObjectModule(resource, wasmInterface, context);
 				return class extends Impl {
 					constructor() {
@@ -1727,7 +1727,7 @@ export namespace http {
 				}
 			}
 			export function Class(wasmInterface: WasmInterface, context: $wcm.WasmContext): http.Types.OutgoingRequest.Class {
-				const resource = Types.$.OutgoingRequest;
+				const resource = http.Types.$.OutgoingRequest;
 				const om: ObjectModule = $wcm.Module.createObjectModule(resource, wasmInterface, context);
 				return class extends Impl {
 					constructor(headers: own<Headers>) {
@@ -1782,7 +1782,7 @@ export namespace http {
 				}
 			}
 			export function Class(wasmInterface: WasmInterface, context: $wcm.WasmContext): http.Types.RequestOptions.Class {
-				const resource = Types.$.RequestOptions;
+				const resource = http.Types.$.RequestOptions;
 				const om: ObjectModule = $wcm.Module.createObjectModule(resource, wasmInterface, context);
 				return class extends Impl {
 					constructor() {
@@ -1798,10 +1798,12 @@ export namespace http {
 			type ClassModule = {
 				set(param: own<ResponseOutparam>, response: result<own<OutgoingResponse>, ErrorCode>): void;
 			};
+			class Impl extends $wcm.Resource implements http.Types.ResponseOutparam.Interface {
+			}
 			export function Class(wasmInterface: WasmInterface, context: $wcm.WasmContext): http.Types.ResponseOutparam.Class {
-				const resource = Types.$.ResponseOutparam;
+				const resource = http.Types.$.ResponseOutparam;
 				const cm: ClassModule = $wcm.Module.createClassModule(resource, wasmInterface, context);
-				return class {
+				return class extends Impl {
 					public static set(param: own<ResponseOutparam>, response: result<own<OutgoingResponse>, ErrorCode>): void {
 						return cm.set(param, response);
 					}
@@ -1836,7 +1838,7 @@ export namespace http {
 				}
 			}
 			export function Class(wasmInterface: WasmInterface, context: $wcm.WasmContext): http.Types.IncomingResponse.Class {
-				const resource = Types.$.IncomingResponse;
+				const resource = http.Types.$.IncomingResponse;
 				const om: ObjectModule = $wcm.Module.createObjectModule(resource, wasmInterface, context);
 				return class extends Impl {
 					constructor() {
@@ -1867,7 +1869,7 @@ export namespace http {
 				}
 			}
 			export function Class(wasmInterface: WasmInterface, context: $wcm.WasmContext): http.Types.IncomingBody.Class {
-				const resource = Types.$.IncomingBody;
+				const resource = http.Types.$.IncomingBody;
 				const om: ObjectModule = $wcm.Module.createObjectModule(resource, wasmInterface, context);
 				const cm: ClassModule = $wcm.Module.createClassModule(resource, wasmInterface, context);
 				return class extends Impl {
@@ -1903,7 +1905,7 @@ export namespace http {
 				}
 			}
 			export function Class(wasmInterface: WasmInterface, context: $wcm.WasmContext): http.Types.FutureTrailers.Class {
-				const resource = Types.$.FutureTrailers;
+				const resource = http.Types.$.FutureTrailers;
 				const om: ObjectModule = $wcm.Module.createObjectModule(resource, wasmInterface, context);
 				return class extends Impl {
 					constructor() {
@@ -1948,7 +1950,7 @@ export namespace http {
 				}
 			}
 			export function Class(wasmInterface: WasmInterface, context: $wcm.WasmContext): http.Types.OutgoingResponse.Class {
-				const resource = Types.$.OutgoingResponse;
+				const resource = http.Types.$.OutgoingResponse;
 				const om: ObjectModule = $wcm.Module.createObjectModule(resource, wasmInterface, context);
 				return class extends Impl {
 					constructor(headers: own<Headers>) {
@@ -1979,7 +1981,7 @@ export namespace http {
 				}
 			}
 			export function Class(wasmInterface: WasmInterface, context: $wcm.WasmContext): http.Types.OutgoingBody.Class {
-				const resource = Types.$.OutgoingBody;
+				const resource = http.Types.$.OutgoingBody;
 				const om: ObjectModule = $wcm.Module.createObjectModule(resource, wasmInterface, context);
 				const cm: ClassModule = $wcm.Module.createClassModule(resource, wasmInterface, context);
 				return class extends Impl {
@@ -2015,7 +2017,7 @@ export namespace http {
 				}
 			}
 			export function Class(wasmInterface: WasmInterface, context: $wcm.WasmContext): http.Types.FutureIncomingResponse.Class {
-				const resource = Types.$.FutureIncomingResponse;
+				const resource = http.Types.$.FutureIncomingResponse;
 				const om: ObjectModule = $wcm.Module.createObjectModule(resource, wasmInterface, context);
 				return class extends Impl {
 					constructor() {

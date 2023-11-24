@@ -357,7 +357,7 @@ export namespace cli {
 	}
 
 	export namespace TerminalInput.$ {
-		export const TerminalInput = new $wcm.ResourceType<TerminalInput.TerminalInput>('terminal-input', 'wasi:cli/terminal-input/terminal-input');
+		export const TerminalInput = new $wcm.ResourceType<cli.TerminalInput.TerminalInput>('terminal-input', 'wasi:cli/terminal-input/terminal-input');
 		export const TerminalInput_Handle = new $wcm.ResourceHandleType('terminal-input');
 	}
 	export namespace TerminalInput._ {
@@ -374,7 +374,10 @@ export namespace cli {
 		export namespace TerminalInput {
 			export type WasmInterface = {
 			};
-			export function Class(wasmInterface: WasmInterface, context: $wcm.WasmContext): cli.TerminalInput.TerminalInput.Class {
+			class Impl extends $wcm.Resource implements cli.TerminalInput.TerminalInput.Interface {
+			}
+			export function Class(): cli.TerminalInput.TerminalInput.Class {
+				return Impl;
 			}
 		}
 		export type WasmInterface = {
@@ -388,7 +391,7 @@ export namespace cli {
 	}
 
 	export namespace TerminalOutput.$ {
-		export const TerminalOutput = new $wcm.ResourceType<TerminalOutput.TerminalOutput>('terminal-output', 'wasi:cli/terminal-output/terminal-output');
+		export const TerminalOutput = new $wcm.ResourceType<cli.TerminalOutput.TerminalOutput>('terminal-output', 'wasi:cli/terminal-output/terminal-output');
 		export const TerminalOutput_Handle = new $wcm.ResourceHandleType('terminal-output');
 	}
 	export namespace TerminalOutput._ {
@@ -405,7 +408,10 @@ export namespace cli {
 		export namespace TerminalOutput {
 			export type WasmInterface = {
 			};
-			export function Class(wasmInterface: WasmInterface, context: $wcm.WasmContext): cli.TerminalOutput.TerminalOutput.Class {
+			class Impl extends $wcm.Resource implements cli.TerminalOutput.TerminalOutput.Interface {
+			}
+			export function Class(): cli.TerminalOutput.TerminalOutput.Class {
+				return Impl;
 			}
 		}
 		export type WasmInterface = {

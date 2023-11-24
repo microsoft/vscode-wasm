@@ -995,9 +995,9 @@ export namespace filesystem {
 			['lower', $wcm.u64],
 			['upper', $wcm.u64],
 		]);
-		export const Descriptor = new $wcm.ResourceType<Types.Descriptor>('descriptor', 'wasi:filesystem/types/descriptor');
+		export const Descriptor = new $wcm.ResourceType<filesystem.Types.Descriptor>('descriptor', 'wasi:filesystem/types/descriptor');
 		export const Descriptor_Handle = new $wcm.ResourceHandleType('descriptor');
-		export const DirectoryEntryStream = new $wcm.ResourceType<Types.DirectoryEntryStream>('directory-entry-stream', 'wasi:filesystem/types/directory-entry-stream');
+		export const DirectoryEntryStream = new $wcm.ResourceType<filesystem.Types.DirectoryEntryStream>('directory-entry-stream', 'wasi:filesystem/types/directory-entry-stream');
 		export const DirectoryEntryStream_Handle = new $wcm.ResourceHandleType('directory-entry-stream');
 		Descriptor.addMethod('readViaStream', new $wcm.MethodType<filesystem.Types.Descriptor.Interface['readViaStream']>('[method]descriptor.read-via-stream', [
 			['self', new $wcm.BorrowType<filesystem.Types.Descriptor>(Descriptor)],
@@ -1303,7 +1303,7 @@ export namespace filesystem {
 				}
 			}
 			export function Class(wasmInterface: WasmInterface, context: $wcm.WasmContext): filesystem.Types.Descriptor.Class {
-				const resource = Types.$.Descriptor;
+				const resource = filesystem.Types.$.Descriptor;
 				const om: ObjectModule = $wcm.Module.createObjectModule(resource, wasmInterface, context);
 				return class extends Impl {
 					constructor() {
@@ -1330,7 +1330,7 @@ export namespace filesystem {
 				}
 			}
 			export function Class(wasmInterface: WasmInterface, context: $wcm.WasmContext): filesystem.Types.DirectoryEntryStream.Class {
-				const resource = Types.$.DirectoryEntryStream;
+				const resource = filesystem.Types.$.DirectoryEntryStream;
 				const om: ObjectModule = $wcm.Module.createObjectModule(resource, wasmInterface, context);
 				return class extends Impl {
 					constructor() {

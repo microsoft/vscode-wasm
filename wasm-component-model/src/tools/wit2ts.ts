@@ -2465,8 +2465,6 @@ class ResourceEmitter extends InterfaceMemberEmitter {
 		return `${pkgName}/${iName}/${rName}`;
 	}
 
-
-
 	public hasConstructors(): boolean {
 		return this.conztructor !== undefined;
 	}
@@ -2541,8 +2539,7 @@ class ResourceEmitter extends InterfaceMemberEmitter {
 	public emitMetaModel(code: Code): void {
 		const { nameProvider } = this.config;
 		const name = nameProvider.asTypeName(this.resource);
-		const ifaceName = nameProvider.asNamespaceName(this.iface);
-		code.push(`export const ${name} = new ${MetaModel.ResourceType}<${ifaceName}.${name}>('${this.resource.name}', '${this.getId()}');`);
+		code.push(`export const ${name} = new ${MetaModel.ResourceType}<${this.getPackageQualifier()}${name}>('${this.resource.name}', '${this.getId()}');`);
 		code.push(`export const ${name}_Handle = new ${MetaModel.ResourceHandleType}('${this.resource.name}');`);
 	}
 
@@ -2589,15 +2586,16 @@ class ResourceEmitter extends InterfaceMemberEmitter {
 		}
 
 		const qualifier = this.getPackageQualifier();
-		const ifaceName = nameProvider.asNamespaceName(this.iface);
 		const qualifiedName = `${qualifier}${name}`;
+		code.push(`class Impl extends ${MetaModel.Resource} implements ${qualifiedName}.Interface {`);
+		code.increaseIndent();
 		if (needsObjectModule) {
-			code.push(`class Impl extends ${MetaModel.Resource} implements ${qualifiedName}.Interface {`);
-			code.increaseIndent();
 			code.push(`private readonly _om: ObjectModule;`);
-			if (this.conztructor !== undefined) {
-				this.conztructor.emitConstructorImplementation(code);
-			} else {
+		}
+		if (this.conztructor !== undefined) {
+			this.conztructor.emitConstructorImplementation(code);
+		} else {
+			if (needsObjectModule) {
 				code.push(`constructor(om: ObjectModule) {`);
 				code.increaseIndent();
 				code.push(`super();`);
@@ -2605,49 +2603,53 @@ class ResourceEmitter extends InterfaceMemberEmitter {
 				code.decreaseIndent();
 				code.push(`}`);
 			}
-			for (const method of this.methods) {
-				method.emitClassMember(code);
+		}
+		for (const method of this.methods) {
+			method.emitClassMember(code);
+		}
+		code.decreaseIndent();
+		code.push(`}`);
+		if (!needsObjectModule && !needsClassModule) {
+			code.push(`export function Class(): ${qualifiedName}.Class {`);
+			code.increaseIndent();
+			code.push(`return Impl;`);
+			code.decreaseIndent();
+			code.push(`}`);
+		} else {
+			code.push(`export function Class(wasmInterface: WasmInterface, context: ${MetaModel.WasmContext}): ${qualifiedName}.Class {`);
+			code.increaseIndent();
+			if (needsClassModule || needsObjectModule) {
+				code.push(`const resource = ${this.getPackageQualifier()}$.${name};`);
+			}
+			if (needsObjectModule) {
+				code.push(`const om: ObjectModule = ${MetaModel.Module}.createObjectModule(resource, wasmInterface, context);`);
+			}
+			if (needsClassModule) {
+				code.push(`const cm: ClassModule = ${MetaModel.Module}.createClassModule(resource, wasmInterface, context);`);
+			}
+			if (needsObjectModule || needsClassModule) {
+				code.push(`return class extends Impl {`);
+				code.increaseIndent();
+				if (needsObjectModule) {
+					if (this.conztructor !== undefined) {
+						this.conztructor.emitAnonymousConstructorImplementation(code);
+					} else {
+						code.push(`constructor() {`);
+						code.increaseIndent();
+						code.push(`super(om);`);
+						code.decreaseIndent();
+						code.push(`}`);
+					}
+				}
+				for (const method of this.statics) {
+					method.emitAnonymousClassMember(code);
+				}
+				code.decreaseIndent();
+				code.push(`};`);
 			}
 			code.decreaseIndent();
 			code.push(`}`);
 		}
-		code.push(`export function Class(wasmInterface: WasmInterface, context: ${MetaModel.WasmContext}): ${qualifiedName}.Class {`);
-		code.increaseIndent();
-		if (needsClassModule || needsObjectModule) {
-			code.push(`const resource = ${ifaceName}.$.${name};`);
-		}
-		if (needsObjectModule) {
-			code.push(`const om: ObjectModule = ${MetaModel.Module}.createObjectModule(resource, wasmInterface, context);`);
-		}
-		if (needsClassModule) {
-			code.push(`const cm: ClassModule = ${MetaModel.Module}.createClassModule(resource, wasmInterface, context);`);
-		}
-		if (needsObjectModule || needsClassModule) {
-			if (needsObjectModule) {
-				code.push(`return class extends Impl {`);
-			} else {
-				code.push(`return class {`);
-			}
-			code.increaseIndent();
-			if (needsObjectModule) {
-				if (this.conztructor !== undefined) {
-					this.conztructor.emitAnonymousConstructorImplementation(code);
-				} else {
-					code.push(`constructor() {`);
-					code.increaseIndent();
-					code.push(`super(om);`);
-					code.decreaseIndent();
-					code.push(`}`);
-				}
-			}
-			for (const method of this.statics) {
-				method.emitAnonymousClassMember(code);
-			}
-			code.decreaseIndent();
-			code.push(`};`);
-		}
-		code.decreaseIndent();
-		code.push(`}`);
 
 		code.decreaseIndent();
 		code.push(`}`);

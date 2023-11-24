@@ -2495,16 +2495,16 @@ export class ResourceType<T extends JInterface = JInterface> implements Componen
 	}
 }
 
-class AbstractWrapperType implements ComponentModelType<JType> {
+class AbstractWrapperType<T extends  NonNullable<JType>> implements ComponentModelType<T> {
 
 	public readonly kind: ComponentModelTypeKind;
 	public readonly size: size;
 	public readonly alignment: Alignment;
 	public readonly flatTypes: readonly WasmTypeKind[];
 
-	private readonly wrapped: ComponentModelType<JType>;
+	private readonly wrapped: ComponentModelType<T>;
 
-	constructor(kind: ComponentModelTypeKind, wrapped: ComponentModelType<JType>) {
+	constructor(kind: ComponentModelTypeKind, wrapped: ComponentModelType<T>) {
 		this.kind = kind;
 		this.wrapped = wrapped;
 		this.size = u32.size;
@@ -2512,11 +2512,11 @@ class AbstractWrapperType implements ComponentModelType<JType> {
 		this.flatTypes = u32.flatTypes;
 	}
 
-	public load(memory: Memory, ptr: ptr, context: ComponentModelContext): JType {
+	public load(memory: Memory, ptr: ptr, context: ComponentModelContext): T {
 		return this.wrapped.load(memory, ptr, context);
 	}
 
-	public liftFlat(memory: Memory, values: FlatValuesIter, context: ComponentModelContext): JType {
+	public liftFlat(memory: Memory, values: FlatValuesIter, context: ComponentModelContext): T {
 		return this.wrapped.liftFlat(memory, values, context);
 	}
 
@@ -2524,11 +2524,11 @@ class AbstractWrapperType implements ComponentModelType<JType> {
 		return u32.alloc(memory);
 	}
 
-	public store(memory: Memory, ptr: ptr, value: JInterface, context: ComponentModelContext): void {
+	public store(memory: Memory, ptr: ptr, value: T, context: ComponentModelContext): void {
 		return this.wrapped.store(memory, ptr, value, context);
 	}
 
-	public lowerFlat(result: wasmType[], memory: Memory, value: JInterface, context: ComponentModelContext): void {
+	public lowerFlat(result: wasmType[], memory: Memory, value: T, context: ComponentModelContext): void {
 		return this.wrapped.lowerFlat(result, memory, value, context);
 	}
 
@@ -2537,16 +2537,16 @@ class AbstractWrapperType implements ComponentModelType<JType> {
 	}
 }
 
-export type borrow<T extends JType> = T;
-export class BorrowType<_T extends JType> extends AbstractWrapperType {
-	constructor(type: GenericComponentModelType) {
+export type borrow<T extends NonNullable<JType>> = T;
+export class BorrowType<T extends NonNullable<JType>> extends AbstractWrapperType<T> {
+	constructor(type: ComponentModelType<T>) {
 		super(ComponentModelTypeKind.borrow, type);
 	}
 }
 
-export type own<T extends JType> = T;
-export class OwnType<_T extends JType> extends AbstractWrapperType {
-	constructor(type: GenericComponentModelType) {
+export type own<T extends  NonNullable<JType>> = T;
+export class OwnType<T extends  NonNullable<JType>> extends  AbstractWrapperType<T> {
+	constructor(type: ComponentModelType<T>) {
 		super(ComponentModelTypeKind.own, type);
 	}
 }

@@ -4,7 +4,7 @@
  *--------------------------------------------------------------------------------------------*/
 import assert from 'assert';
 
-import { u32, Memory as IMemory, ptr, size, WasmContext, borrow, own, Alignment, Resource, ResourceManagers } from '../componentModel';
+import { u32, Memory as IMemory, ptr, size, WasmContext, Alignment, Resource, ResourceManagers } from '../componentModel';
 
 class Memory implements IMemory {
 	public readonly buffer: ArrayBuffer;

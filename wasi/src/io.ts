@@ -414,7 +414,7 @@ export type io = {
 
 export namespace io {
 	export namespace Error.$ {
-		export const Error = new $wcm.ResourceType<Error.Error>('error', 'wasi:io/error/error');
+		export const Error = new $wcm.ResourceType<io.Error.Error>('error', 'wasi:io/error/error');
 		export const Error_Handle = new $wcm.ResourceHandleType('error');
 		Error.addMethod('toDebugString', new $wcm.MethodType<io.Error.Error.Interface['toDebugString']>('[method]error.to-debug-string', [
 			['self', new $wcm.BorrowType<io.Error.Error>(Error)],
@@ -449,7 +449,7 @@ export namespace io {
 				}
 			}
 			export function Class(wasmInterface: WasmInterface, context: $wcm.WasmContext): io.Error.Error.Class {
-				const resource = Error.$.Error;
+				const resource = io.Error.$.Error;
 				const om: ObjectModule = $wcm.Module.createObjectModule(resource, wasmInterface, context);
 				return class extends Impl {
 					constructor() {
@@ -469,7 +469,7 @@ export namespace io {
 	}
 
 	export namespace Poll.$ {
-		export const Pollable = new $wcm.ResourceType<Poll.Pollable>('pollable', 'wasi:io/poll/pollable');
+		export const Pollable = new $wcm.ResourceType<io.Poll.Pollable>('pollable', 'wasi:io/poll/pollable');
 		export const Pollable_Handle = new $wcm.ResourceHandleType('pollable');
 		Pollable.addMethod('ready', new $wcm.MethodType<io.Poll.Pollable.Interface['ready']>('[method]pollable.ready', [
 			['self', new $wcm.BorrowType<io.Poll.Pollable>(Pollable)],
@@ -516,7 +516,7 @@ export namespace io {
 				}
 			}
 			export function Class(wasmInterface: WasmInterface, context: $wcm.WasmContext): io.Poll.Pollable.Class {
-				const resource = Poll.$.Pollable;
+				const resource = io.Poll.$.Pollable;
 				const om: ObjectModule = $wcm.Module.createObjectModule(resource, wasmInterface, context);
 				return class extends Impl {
 					constructor() {
@@ -540,9 +540,9 @@ export namespace io {
 		export const Error = io.Error.$.Error;
 		export const Pollable = io.Poll.$.Pollable;
 		export const StreamError = new $wcm.VariantType<io.Streams.StreamError, io.Streams.StreamError._tt, io.Streams.StreamError._vt>([['lastOperationFailed', new $wcm.OwnType<io.Streams.Error>(Error)], ['closed', undefined]], io.Streams.StreamError._ctor);
-		export const InputStream = new $wcm.ResourceType<Streams.InputStream>('input-stream', 'wasi:io/streams/input-stream');
+		export const InputStream = new $wcm.ResourceType<io.Streams.InputStream>('input-stream', 'wasi:io/streams/input-stream');
 		export const InputStream_Handle = new $wcm.ResourceHandleType('input-stream');
-		export const OutputStream = new $wcm.ResourceType<Streams.OutputStream>('output-stream', 'wasi:io/streams/output-stream');
+		export const OutputStream = new $wcm.ResourceType<io.Streams.OutputStream>('output-stream', 'wasi:io/streams/output-stream');
 		export const OutputStream_Handle = new $wcm.ResourceHandleType('output-stream');
 		InputStream.addMethod('read', new $wcm.MethodType<io.Streams.InputStream.Interface['read']>('[method]input-stream.read', [
 			['self', new $wcm.BorrowType<io.Streams.InputStream>(InputStream)],
@@ -656,7 +656,7 @@ export namespace io {
 				}
 			}
 			export function Class(wasmInterface: WasmInterface, context: $wcm.WasmContext): io.Streams.InputStream.Class {
-				const resource = Streams.$.InputStream;
+				const resource = io.Streams.$.InputStream;
 				const om: ObjectModule = $wcm.Module.createObjectModule(resource, wasmInterface, context);
 				return class extends Impl {
 					constructor() {
@@ -728,7 +728,7 @@ export namespace io {
 				}
 			}
 			export function Class(wasmInterface: WasmInterface, context: $wcm.WasmContext): io.Streams.OutputStream.Class {
-				const resource = Streams.$.OutputStream;
+				const resource = io.Streams.$.OutputStream;
 				const om: ObjectModule = $wcm.Module.createObjectModule(resource, wasmInterface, context);
 				return class extends Impl {
 					constructor() {
