@@ -760,8 +760,8 @@ export namespace http {
 				clone(): own<Fields>;
 			}
 			export type Statics = {
-				fromList(entries: [FieldKey, FieldValue][]): result<own<Fields>, HeaderError>;
 				$new?(): Interface;
+				fromList(entries: [FieldKey, FieldValue][]): result<own<Fields>, HeaderError>;
 			};
 			export type Class = Statics & {
 				new(): Interface;
@@ -812,8 +812,11 @@ export namespace http {
 				consume(): result<own<IncomingBody>, void>;
 			}
 			export type Statics = {
+				$new?(): Interface;
 			};
-			export type Class = Statics;
+			export type Class = Statics & {
+				new(): Interface;
+			};
 		}
 		export type IncomingRequest = IncomingRequest.Interface;
 
@@ -896,6 +899,7 @@ export namespace http {
 				headers(): own<Headers>;
 			}
 			export type Statics = {
+				$new?(headers: own<Headers>): Interface;
 			};
 			export type Class = Statics & {
 				new(headers: own<Headers>): Interface;
@@ -943,6 +947,7 @@ export namespace http {
 				setBetweenBytesTimeoutMs(ms: Duration | undefined): result<void, void>;
 			}
 			export type Statics = {
+				$new?(): Interface;
 			};
 			export type Class = Statics & {
 				new(): Interface;
@@ -956,9 +961,12 @@ export namespace http {
 
 			}
 			export type Statics = {
+				$new?(): Interface;
 				set(param: own<ResponseOutparam>, response: result<own<OutgoingResponse>, ErrorCode>): void;
 			};
-			export type Class = Statics;
+			export type Class = Statics & {
+				new(): Interface;
+			};
 		}
 		export type ResponseOutparam = ResponseOutparam.Interface;
 
@@ -989,8 +997,11 @@ export namespace http {
 				consume(): result<own<IncomingBody>, void>;
 			}
 			export type Statics = {
+				$new?(): Interface;
 			};
-			export type Class = Statics;
+			export type Class = Statics & {
+				new(): Interface;
+			};
 		}
 		export type IncomingResponse = IncomingResponse.Interface;
 
@@ -1018,9 +1029,12 @@ export namespace http {
 				stream(): result<own<InputStream>, void>;
 			}
 			export type Statics = {
+				$new?(): Interface;
 				finish(this_: own<IncomingBody>): own<FutureTrailers>;
 			};
-			export type Class = Statics;
+			export type Class = Statics & {
+				new(): Interface;
+			};
 		}
 		export type IncomingBody = IncomingBody.Interface;
 
@@ -1055,8 +1069,11 @@ export namespace http {
 				get(): result<own<Trailers> | undefined, ErrorCode> | undefined;
 			}
 			export type Statics = {
+				$new?(): Interface;
 			};
-			export type Class = Statics;
+			export type Class = Statics & {
+				new(): Interface;
+			};
 		}
 		export type FutureTrailers = FutureTrailers.Interface;
 
@@ -1097,6 +1114,7 @@ export namespace http {
 				body(): result<own<OutgoingBody>, void>;
 			}
 			export type Statics = {
+				$new?(headers: own<Headers>): Interface;
 			};
 			export type Class = Statics & {
 				new(headers: own<Headers>): Interface;
@@ -1122,9 +1140,12 @@ export namespace http {
 				write(): result<own<OutputStream>, void>;
 			}
 			export type Statics = {
+				$new?(): Interface;
 				finish(this_: own<OutgoingBody>, trailers: own<Trailers> | undefined): result<void, ErrorCode>;
 			};
-			export type Class = Statics;
+			export type Class = Statics & {
+				new(): Interface;
+			};
 		}
 		export type OutgoingBody = OutgoingBody.Interface;
 
@@ -1158,8 +1179,11 @@ export namespace http {
 				get(): result<result<own<IncomingResponse>, ErrorCode>, void> | undefined;
 			}
 			export type Statics = {
+				$new?(): Interface;
 			};
-			export type Class = Statics;
+			export type Class = Statics & {
+				new(): Interface;
+			};
 		}
 		export type FutureIncomingResponse = FutureIncomingResponse.Interface;
 

@@ -2454,15 +2454,15 @@ class ResourceEmitter extends InterfaceMemberEmitter {
 	}
 
 	public getId(): string {
-		const rname = this.resource.name;
-		const iname = this.iface.name;
+		const rName = this.resource.name;
+		const iName = this.iface.name;
 		const pkg = this.config.symbols.getPackage(this.iface.package);
 		let pkgName = pkg.name;
 		let index = pkgName.indexOf('@');
 		if (index >= 0) {
 			pkgName = pkgName.substring(0, index);
 		}
-		return `${pkgName}/${iname}/${rname}`;
+		return `${pkgName}/${iName}/${rName}`;
 	}
 
 
@@ -2492,25 +2492,25 @@ class ResourceEmitter extends InterfaceMemberEmitter {
 		code.push(`}`);
 		code.push(`export type Statics = {`);
 		code.increaseIndent();
+		if (this.conztructor !== undefined) {
+			this.conztructor.emitStaticConstructorDeclaration(code);
+		} else {
+			code.push(`$new?(): Interface;`);
+		}
 		for (const method of this.statics) {
 			method.emitStaticsDeclaration(code);
-			if (this.conztructor !== undefined) {
-				this.conztructor.emitStaticConstructorDeclaration(code);
-			}
 		}
 		code.decreaseIndent();
 		code.push('};');
-		if (this.conztructor === undefined) {
-			code.push(`export type Class = Statics;`);
+		code.push(`export type Class = Statics & {`);
+		code.increaseIndent();
+		if (this.conztructor !== undefined) {
+			this.conztructor.emitConstructorDeclaration(code);
 		} else {
-			code.push(`export type Class = Statics & {`);
-			code.increaseIndent();
-			if (this.conztructor !== undefined) {
-				this.conztructor.emitConstructorDeclaration(code);
-			}
-			code.decreaseIndent();
-			code.push(`};`);
+			code.push(`new(): Interface;`);
 		}
+		code.decreaseIndent();
+		code.push(`};`);
 		code.decreaseIndent();
 		code.push(`}`);
 		code.push(`export type ${tsName} = ${iName};`);

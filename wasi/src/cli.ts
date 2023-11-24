@@ -98,8 +98,11 @@ export namespace cli {
 
 			}
 			export type Statics = {
+				$new?(): Interface;
 			};
-			export type Class = Statics;
+			export type Class = Statics & {
+				new(): Interface;
+			};
 		}
 		export type TerminalInput = TerminalInput.Interface;
 	}
@@ -114,8 +117,11 @@ export namespace cli {
 
 			}
 			export type Statics = {
+				$new?(): Interface;
 			};
-			export type Class = Statics;
+			export type Class = Statics & {
+				new(): Interface;
+			};
 		}
 		export type TerminalOutput = TerminalOutput.Interface;
 	}
