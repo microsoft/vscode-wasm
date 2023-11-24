@@ -12,15 +12,6 @@ import { random } from './random';
 import { cli } from './cli';
 import { http } from './http';
 
-namespace wasi {
-	export type Managers = {
-		io: io.Managers;
-		filesystem: filesystem.Managers;
-		sockets: sockets.Managers;
-		cli: cli.Managers;
-		http: http.Managers;
-	};
-}
 type wasi = {
 	io?: io;
 	clocks?: clocks;
@@ -97,15 +88,6 @@ namespace wasi._ {
 			result.http = _http;
 		}
 		return result;
-	}
-	export function createManagers(): wasi.Managers {
-		return Object.freeze({
-			io: io._.createManagers(),
-			filesystem: filesystem._.createManagers(),
-			sockets: sockets._.createManagers(),
-			cli: cli._.createManagers(),
-			http: http._.createManagers(),
-		});
 	}
 }
 export { io, clocks, filesystem, sockets, random, cli, http};

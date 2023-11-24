@@ -600,7 +600,7 @@ export namespace filesystem {
 
 		export namespace Descriptor {
 			export interface Interface {
-				_getHandle(): $wcm.ResourceHandle;
+				__handle?: $wcm.ResourceHandle;
 
 				/**
 				 * Return a stream for reading from a file, if available.
@@ -906,7 +906,7 @@ export namespace filesystem {
 
 		export namespace DirectoryEntryStream {
 			export interface Interface {
-				_getHandle(): $wcm.ResourceHandle;
+				__handle?: $wcm.ResourceHandle;
 
 				/**
 				 * Read a single directory entry from a `directory-entry-stream`.
@@ -932,15 +932,10 @@ export namespace filesystem {
 		 * errors are filesystem-related errors.
 		 */
 		export type filesystemErrorCode = (err: borrow<Error>) => ErrorCode | undefined;
-
-		export type Managers = {
-			Descriptor: $wcm.ResourceManager<Descriptor>;
-			DirectoryEntryStream: $wcm.ResourceManager<DirectoryEntryStream>;
-		};
 	}
 	export type Types = {
-		Descriptor: Types.Descriptor;
-		DirectoryEntryStream: Types.DirectoryEntryStream;
+		Descriptor: Types.Descriptor.Class;
+		DirectoryEntryStream: Types.DirectoryEntryStream.Class;
 		filesystemErrorCode: Types.filesystemErrorCode;
 	};
 
@@ -957,9 +952,6 @@ export namespace filesystem {
 		getDirectories: Preopens.getDirectories;
 	};
 
-	export type Managers = {
-		Types: Types.Managers;
-	};
 }
 export type filesystem = {
 	Types?: filesystem.Types;
@@ -997,9 +989,9 @@ export namespace filesystem {
 			['lower', $wcm.u64],
 			['upper', $wcm.u64],
 		]);
-		export const Descriptor = new $wcm.ResourceType<Types.Descriptor>('descriptor', ['filesystem', 'Types', 'Descriptor']);
+		export const Descriptor = new $wcm.ResourceType<Types.Descriptor>('descriptor', 'wasi:filesystem/types/descriptor');
 		export const Descriptor_Handle = new $wcm.ResourceHandleType('descriptor');
-		export const DirectoryEntryStream = new $wcm.ResourceType<Types.DirectoryEntryStream>('directory-entry-stream', ['filesystem', 'Types', 'DirectoryEntryStream']);
+		export const DirectoryEntryStream = new $wcm.ResourceType<Types.DirectoryEntryStream>('directory-entry-stream', 'wasi:filesystem/types/directory-entry-stream');
 		export const DirectoryEntryStream_Handle = new $wcm.ResourceHandleType('directory-entry-stream');
 		Descriptor.addMethod('readViaStream', new $wcm.MethodType<filesystem.Types.Descriptor.Interface['readViaStream']>('[method]descriptor.read-via-stream', [
 			['self', new $wcm.BorrowType<filesystem.Types.Descriptor>(Descriptor)],
@@ -1216,15 +1208,11 @@ export namespace filesystem {
 				metadataHash(self: Descriptor): result<MetadataHashValue, ErrorCode>;
 				metadataHashAt(self: Descriptor, pathFlags: PathFlags, path: string): result<MetadataHashValue, ErrorCode>;
 			};
-			class Impl implements filesystem.Types.Descriptor.Interface {
-				private readonly _handle: $wcm.ResourceHandle;
+			class Impl extends $wcm.Resource implements filesystem.Types.Descriptor.Interface {
 				private readonly _om: ObjectModule;
-				constructor(handle: $wcm.Handle, om: ObjectModule) {
-					this._handle = handle.value;
+				constructor(om: ObjectModule) {
+					super();
 					this._om = om;
-				}
-				public _getHandle(): $wcm.ResourceHandle {
-					return this._handle;
 				}
 				public readViaStream(offset: Filesize): result<own<InputStream>, ErrorCode> {
 					return this._om.readViaStream(this, offset);
@@ -1312,8 +1300,8 @@ export namespace filesystem {
 				const resource = Types.$.Descriptor;
 				const om: ObjectModule = $wcm.Module.createObjectModule(resource, wasmInterface, context);
 				return class extends Impl {
-					constructor(handle: $wcm.Handle) {
-						super(handle, om);
+					constructor() {
+						super(om);
 					}
 				};
 			}
@@ -1325,15 +1313,11 @@ export namespace filesystem {
 			type ObjectModule = {
 				readDirectoryEntry(self: DirectoryEntryStream): result<DirectoryEntry | undefined, ErrorCode>;
 			};
-			class Impl implements filesystem.Types.DirectoryEntryStream.Interface {
-				private readonly _handle: $wcm.ResourceHandle;
+			class Impl extends $wcm.Resource implements filesystem.Types.DirectoryEntryStream.Interface {
 				private readonly _om: ObjectModule;
-				constructor(handle: $wcm.Handle, om: ObjectModule) {
-					this._handle = handle.value;
+				constructor(om: ObjectModule) {
+					super();
 					this._om = om;
-				}
-				public _getHandle(): $wcm.ResourceHandle {
-					return this._handle;
 				}
 				public readDirectoryEntry(): result<DirectoryEntry | undefined, ErrorCode> {
 					return this._om.readDirectoryEntry(this);
@@ -1343,8 +1327,8 @@ export namespace filesystem {
 				const resource = Types.$.DirectoryEntryStream;
 				const om: ObjectModule = $wcm.Module.createObjectModule(resource, wasmInterface, context);
 				return class extends Impl {
-					constructor(handle: $wcm.Handle) {
-						super(handle, om);
+					constructor() {
+						super(om);
 					}
 				};
 			}
@@ -1357,12 +1341,6 @@ export namespace filesystem {
 		}
 		export function createService(wasmInterface: WasmInterface, context: $wcm.WasmContext): filesystem.Types {
 			return $wcm.Service.create<filesystem.Types>(functions, [], wasmInterface, context);
-		}
-		export function createManagers(): Types.Managers {
-			return Object.freeze({
-				Descriptor: new $wcm.ResourceManager<Descriptor>(),
-				DirectoryEntryStream: new $wcm.ResourceManager<DirectoryEntryStream>(),
-			});
 		}
 	}
 
@@ -1423,10 +1401,5 @@ export namespace filesystem._ {
 			result.Preopens = Preopens._.createService(wasmInterface['wasi:filesystem/preopens'], context);
 		}
 		return result;
-	}
-	export function createManagers(): filesystem.Managers {
-		return Object.freeze({
-			Types: Types._.createManagers(),
-		});
 	}
 }

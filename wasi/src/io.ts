@@ -10,7 +10,7 @@ export namespace io {
 
 		export namespace Error {
 			export interface Interface {
-				_getHandle(): $wcm.ResourceHandle;
+				__handle?: $wcm.ResourceHandle;
 
 				/**
 				 * Returns a string that is suitable to assist humans in debugging
@@ -28,13 +28,9 @@ export namespace io {
 			export type Class = Statics;
 		}
 		export type Error = Error.Interface;
-
-		export type Managers = {
-			Error: $wcm.ResourceManager<Error>;
-		};
 	}
 	export type Error = {
-		Error: Error.Error;
+		Error: Error.Error.Class;
 	};
 
 	/**
@@ -45,7 +41,7 @@ export namespace io {
 
 		export namespace Pollable {
 			export interface Interface {
-				_getHandle(): $wcm.ResourceHandle;
+				__handle?: $wcm.ResourceHandle;
 
 				/**
 				 * Return the readiness of a pollable. This function never blocks.
@@ -90,13 +86,9 @@ export namespace io {
 		 * being reaedy for I/O.
 		 */
 		export type poll = (in_: borrow<Pollable>[]) => Uint32Array;
-
-		export type Managers = {
-			Pollable: $wcm.ResourceManager<Pollable>;
-		};
 	}
 	export type Poll = {
-		Pollable: Poll.Pollable;
+		Pollable: Poll.Pollable.Class;
 		poll: Poll.poll;
 	};
 
@@ -173,7 +165,7 @@ export namespace io {
 
 		export namespace InputStream {
 			export interface Interface {
-				_getHandle(): $wcm.ResourceHandle;
+				__handle?: $wcm.ResourceHandle;
 
 				/**
 				 * Perform a non-blocking read from the stream.
@@ -238,7 +230,7 @@ export namespace io {
 
 		export namespace OutputStream {
 			export interface Interface {
-				_getHandle(): $wcm.ResourceHandle;
+				__handle?: $wcm.ResourceHandle;
 
 				/**
 				 * Check readiness for writing. This function never blocks.
@@ -395,22 +387,12 @@ export namespace io {
 			export type Class = Statics;
 		}
 		export type OutputStream = OutputStream.Interface;
-
-		export type Managers = {
-			InputStream: $wcm.ResourceManager<InputStream>;
-			OutputStream: $wcm.ResourceManager<OutputStream>;
-		};
 	}
 	export type Streams = {
-		InputStream: Streams.InputStream;
-		OutputStream: Streams.OutputStream;
+		InputStream: Streams.InputStream.Class;
+		OutputStream: Streams.OutputStream.Class;
 	};
 
-	export type Managers = {
-		Error: Error.Managers;
-		Poll: Poll.Managers;
-		Streams: Streams.Managers;
-	};
 }
 export type io = {
 	Error?: io.Error;
@@ -420,7 +402,7 @@ export type io = {
 
 export namespace io {
 	export namespace Error.$ {
-		export const Error = new $wcm.ResourceType<Error.Error>('error', ['io', 'Error', 'Error']);
+		export const Error = new $wcm.ResourceType<Error.Error>('error', 'wasi:io/error/error');
 		export const Error_Handle = new $wcm.ResourceHandleType('error');
 		Error.addMethod('toDebugString', new $wcm.MethodType<io.Error.Error.Interface['toDebugString']>('[method]error.to-debug-string', [
 			['self', new $wcm.BorrowType<io.Error.Error>(Error)],
@@ -444,15 +426,11 @@ export namespace io {
 			type ObjectModule = {
 				toDebugString(self: Error): string;
 			};
-			class Impl implements io.Error.Error.Interface {
-				private readonly _handle: $wcm.ResourceHandle;
+			class Impl extends $wcm.Resource implements io.Error.Error.Interface {
 				private readonly _om: ObjectModule;
-				constructor(handle: $wcm.Handle, om: ObjectModule) {
-					this._handle = handle.value;
+				constructor(om: ObjectModule) {
+					super();
 					this._om = om;
-				}
-				public _getHandle(): $wcm.ResourceHandle {
-					return this._handle;
 				}
 				public toDebugString(): string {
 					return this._om.toDebugString(this);
@@ -462,8 +440,8 @@ export namespace io {
 				const resource = Error.$.Error;
 				const om: ObjectModule = $wcm.Module.createObjectModule(resource, wasmInterface, context);
 				return class extends Impl {
-					constructor(handle: $wcm.Handle) {
-						super(handle, om);
+					constructor() {
+						super(om);
 					}
 				};
 			}
@@ -476,15 +454,10 @@ export namespace io {
 		export function createService(wasmInterface: WasmInterface, context: $wcm.WasmContext): io.Error {
 			return $wcm.Service.create<io.Error>(functions, [], wasmInterface, context);
 		}
-		export function createManagers(): Error.Managers {
-			return Object.freeze({
-				Error: new $wcm.ResourceManager<Error>(),
-			});
-		}
 	}
 
 	export namespace Poll.$ {
-		export const Pollable = new $wcm.ResourceType<Poll.Pollable>('pollable', ['io', 'Poll', 'Pollable']);
+		export const Pollable = new $wcm.ResourceType<Poll.Pollable>('pollable', 'wasi:io/poll/pollable');
 		export const Pollable_Handle = new $wcm.ResourceHandleType('pollable');
 		Pollable.addMethod('ready', new $wcm.MethodType<io.Poll.Pollable.Interface['ready']>('[method]pollable.ready', [
 			['self', new $wcm.BorrowType<io.Poll.Pollable>(Pollable)],
@@ -517,15 +490,11 @@ export namespace io {
 				ready(self: Pollable): boolean;
 				block(self: Pollable): void;
 			};
-			class Impl implements io.Poll.Pollable.Interface {
-				private readonly _handle: $wcm.ResourceHandle;
+			class Impl extends $wcm.Resource implements io.Poll.Pollable.Interface {
 				private readonly _om: ObjectModule;
-				constructor(handle: $wcm.Handle, om: ObjectModule) {
-					this._handle = handle.value;
+				constructor(om: ObjectModule) {
+					super();
 					this._om = om;
-				}
-				public _getHandle(): $wcm.ResourceHandle {
-					return this._handle;
 				}
 				public ready(): boolean {
 					return this._om.ready(this);
@@ -538,8 +507,8 @@ export namespace io {
 				const resource = Poll.$.Pollable;
 				const om: ObjectModule = $wcm.Module.createObjectModule(resource, wasmInterface, context);
 				return class extends Impl {
-					constructor(handle: $wcm.Handle) {
-						super(handle, om);
+					constructor() {
+						super(om);
 					}
 				};
 			}
@@ -553,20 +522,15 @@ export namespace io {
 		export function createService(wasmInterface: WasmInterface, context: $wcm.WasmContext): io.Poll {
 			return $wcm.Service.create<io.Poll>(functions, [], wasmInterface, context);
 		}
-		export function createManagers(): Poll.Managers {
-			return Object.freeze({
-				Pollable: new $wcm.ResourceManager<Pollable>(),
-			});
-		}
 	}
 
 	export namespace Streams.$ {
 		export const Error = io.Error.$.Error;
 		export const Pollable = io.Poll.$.Pollable;
 		export const StreamError = new $wcm.VariantType<io.Streams.StreamError, io.Streams.StreamError._tt, io.Streams.StreamError._vt>([['lastOperationFailed', new $wcm.OwnType<io.Streams.Error>(Error)], ['closed', undefined]], io.Streams.StreamError._ctor);
-		export const InputStream = new $wcm.ResourceType<Streams.InputStream>('input-stream', ['io', 'Streams', 'InputStream']);
+		export const InputStream = new $wcm.ResourceType<Streams.InputStream>('input-stream', 'wasi:io/streams/input-stream');
 		export const InputStream_Handle = new $wcm.ResourceHandleType('input-stream');
-		export const OutputStream = new $wcm.ResourceType<Streams.OutputStream>('output-stream', ['io', 'Streams', 'OutputStream']);
+		export const OutputStream = new $wcm.ResourceType<Streams.OutputStream>('output-stream', 'wasi:io/streams/output-stream');
 		export const OutputStream_Handle = new $wcm.ResourceHandleType('output-stream');
 		InputStream.addMethod('read', new $wcm.MethodType<io.Streams.InputStream.Interface['read']>('[method]input-stream.read', [
 			['self', new $wcm.BorrowType<io.Streams.InputStream>(InputStream)],
@@ -657,15 +621,11 @@ export namespace io {
 				blockingSkip(self: InputStream, len: u64): result<u64, StreamError>;
 				subscribe(self: InputStream): own<Pollable>;
 			};
-			class Impl implements io.Streams.InputStream.Interface {
-				private readonly _handle: $wcm.ResourceHandle;
+			class Impl extends $wcm.Resource implements io.Streams.InputStream.Interface {
 				private readonly _om: ObjectModule;
-				constructor(handle: $wcm.Handle, om: ObjectModule) {
-					this._handle = handle.value;
+				constructor(om: ObjectModule) {
+					super();
 					this._om = om;
-				}
-				public _getHandle(): $wcm.ResourceHandle {
-					return this._handle;
 				}
 				public read(len: u64): result<Uint8Array, StreamError> {
 					return this._om.read(this, len);
@@ -687,8 +647,8 @@ export namespace io {
 				const resource = Streams.$.InputStream;
 				const om: ObjectModule = $wcm.Module.createObjectModule(resource, wasmInterface, context);
 				return class extends Impl {
-					constructor(handle: $wcm.Handle) {
-						super(handle, om);
+					constructor() {
+						super(om);
 					}
 				};
 			}
@@ -718,15 +678,11 @@ export namespace io {
 				splice(self: OutputStream, src: borrow<InputStream>, len: u64): result<u64, StreamError>;
 				blockingSplice(self: OutputStream, src: borrow<InputStream>, len: u64): result<u64, StreamError>;
 			};
-			class Impl implements io.Streams.OutputStream.Interface {
-				private readonly _handle: $wcm.ResourceHandle;
+			class Impl extends $wcm.Resource implements io.Streams.OutputStream.Interface {
 				private readonly _om: ObjectModule;
-				constructor(handle: $wcm.Handle, om: ObjectModule) {
-					this._handle = handle.value;
+				constructor(om: ObjectModule) {
+					super();
 					this._om = om;
-				}
-				public _getHandle(): $wcm.ResourceHandle {
-					return this._handle;
 				}
 				public checkWrite(): result<u64, StreamError> {
 					return this._om.checkWrite(this);
@@ -763,8 +719,8 @@ export namespace io {
 				const resource = Streams.$.OutputStream;
 				const om: ObjectModule = $wcm.Module.createObjectModule(resource, wasmInterface, context);
 				return class extends Impl {
-					constructor(handle: $wcm.Handle) {
-						super(handle, om);
+					constructor() {
+						super(om);
 					}
 				};
 			}
@@ -776,12 +732,6 @@ export namespace io {
 		}
 		export function createService(wasmInterface: WasmInterface, context: $wcm.WasmContext): io.Streams {
 			return $wcm.Service.create<io.Streams>(functions, [], wasmInterface, context);
-		}
-		export function createManagers(): Streams.Managers {
-			return Object.freeze({
-				InputStream: new $wcm.ResourceManager<InputStream>(),
-				OutputStream: new $wcm.ResourceManager<OutputStream>(),
-			});
 		}
 	}
 }
@@ -824,12 +774,5 @@ export namespace io._ {
 			result.Streams = Streams._.createService(wasmInterface['wasi:io/streams'], context);
 		}
 		return result;
-	}
-	export function createManagers(): io.Managers {
-		return Object.freeze({
-			Error: Error._.createManagers(),
-			Poll: Poll._.createManagers(),
-			Streams: Streams._.createManagers(),
-		});
 	}
 }

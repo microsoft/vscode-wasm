@@ -94,7 +94,7 @@ export namespace cli {
 
 		export namespace TerminalInput {
 			export interface Interface {
-				_getHandle(): $wcm.ResourceHandle;
+				__handle?: $wcm.ResourceHandle;
 
 			}
 			export type Statics = {
@@ -102,10 +102,6 @@ export namespace cli {
 			export type Class = Statics;
 		}
 		export type TerminalInput = TerminalInput.Interface;
-
-		export type Managers = {
-			TerminalInput: $wcm.ResourceManager<TerminalInput>;
-		};
 	}
 	export type TerminalInput = {
 	};
@@ -114,7 +110,7 @@ export namespace cli {
 
 		export namespace TerminalOutput {
 			export interface Interface {
-				_getHandle(): $wcm.ResourceHandle;
+				__handle?: $wcm.ResourceHandle;
 
 			}
 			export type Statics = {
@@ -122,10 +118,6 @@ export namespace cli {
 			export type Class = Statics;
 		}
 		export type TerminalOutput = TerminalOutput.Interface;
-
-		export type Managers = {
-			TerminalOutput: $wcm.ResourceManager<TerminalOutput>;
-		};
 	}
 	export type TerminalOutput = {
 	};
@@ -184,10 +176,6 @@ export namespace cli {
 		getTerminalStderr: TerminalStderr.getTerminalStderr;
 	};
 
-	export type Managers = {
-		TerminalInput: TerminalInput.Managers;
-		TerminalOutput: TerminalOutput.Managers;
-	};
 }
 export type cli = {
 	Environment?: cli.Environment;
@@ -363,7 +351,7 @@ export namespace cli {
 	}
 
 	export namespace TerminalInput.$ {
-		export const TerminalInput = new $wcm.ResourceType<TerminalInput.TerminalInput>('terminal-input', ['cli', 'TerminalInput', 'TerminalInput']);
+		export const TerminalInput = new $wcm.ResourceType<TerminalInput.TerminalInput>('terminal-input', 'wasi:cli/terminal-input/terminal-input');
 		export const TerminalInput_Handle = new $wcm.ResourceHandleType('terminal-input');
 	}
 	export namespace TerminalInput._ {
@@ -391,15 +379,10 @@ export namespace cli {
 		export function createService(wasmInterface: WasmInterface, context: $wcm.WasmContext): cli.TerminalInput {
 			return $wcm.Service.create<cli.TerminalInput>(functions, [], wasmInterface, context);
 		}
-		export function createManagers(): TerminalInput.Managers {
-			return Object.freeze({
-				TerminalInput: new $wcm.ResourceManager<TerminalInput>(),
-			});
-		}
 	}
 
 	export namespace TerminalOutput.$ {
-		export const TerminalOutput = new $wcm.ResourceType<TerminalOutput.TerminalOutput>('terminal-output', ['cli', 'TerminalOutput', 'TerminalOutput']);
+		export const TerminalOutput = new $wcm.ResourceType<TerminalOutput.TerminalOutput>('terminal-output', 'wasi:cli/terminal-output/terminal-output');
 		export const TerminalOutput_Handle = new $wcm.ResourceHandleType('terminal-output');
 	}
 	export namespace TerminalOutput._ {
@@ -426,11 +409,6 @@ export namespace cli {
 		}
 		export function createService(wasmInterface: WasmInterface, context: $wcm.WasmContext): cli.TerminalOutput {
 			return $wcm.Service.create<cli.TerminalOutput>(functions, [], wasmInterface, context);
-		}
-		export function createManagers(): TerminalOutput.Managers {
-			return Object.freeze({
-				TerminalOutput: new $wcm.ResourceManager<TerminalOutput>(),
-			});
 		}
 	}
 
@@ -615,11 +593,5 @@ export namespace cli._ {
 			result.TerminalStderr = TerminalStderr._.createService(wasmInterface['wasi:cli/terminal-stderr'], context);
 		}
 		return result;
-	}
-	export function createManagers(): cli.Managers {
-		return Object.freeze({
-			TerminalInput: TerminalInput._.createManagers(),
-			TerminalOutput: TerminalOutput._.createManagers(),
-		});
 	}
 }

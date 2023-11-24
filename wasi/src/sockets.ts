@@ -260,7 +260,7 @@ export namespace sockets {
 
 		export namespace Network {
 			export interface Interface {
-				_getHandle(): $wcm.ResourceHandle;
+				__handle?: $wcm.ResourceHandle;
 
 			}
 			export type Statics = {
@@ -268,10 +268,6 @@ export namespace sockets {
 			export type Class = Statics;
 		}
 		export type Network = Network.Interface;
-
-		export type Managers = {
-			Network: $wcm.ResourceManager<Network>;
-		};
 	}
 	export type Network = {
 	};
@@ -304,7 +300,7 @@ export namespace sockets {
 
 		export namespace ResolveAddressStream {
 			export interface Interface {
-				_getHandle(): $wcm.ResourceHandle;
+				__handle?: $wcm.ResourceHandle;
 
 				/**
 				 * Returns the next address from the resolver.
@@ -360,13 +356,9 @@ export namespace sockets {
 		 * - <https://man.freebsd.org/cgi/man.cgi?query=getaddrinfo&sektion=3>
 		 */
 		export type resolveAddresses = (network: borrow<Network>, name: string) => result<own<ResolveAddressStream>, ErrorCode>;
-
-		export type Managers = {
-			ResolveAddressStream: $wcm.ResourceManager<ResolveAddressStream>;
-		};
 	}
 	export type IpNameLookup = {
-		ResolveAddressStream: IpNameLookup.ResolveAddressStream;
+		ResolveAddressStream: IpNameLookup.ResolveAddressStream.Class;
 		resolveAddresses: IpNameLookup.resolveAddresses;
 	};
 
@@ -408,7 +400,7 @@ export namespace sockets {
 
 		export namespace TcpSocket {
 			export interface Interface {
-				_getHandle(): $wcm.ResourceHandle;
+				__handle?: $wcm.ResourceHandle;
 
 				/**
 				 * Bind the socket to a specific network on the provided IP address and port.
@@ -762,13 +754,9 @@ export namespace sockets {
 			export type Class = Statics;
 		}
 		export type TcpSocket = TcpSocket.Interface;
-
-		export type Managers = {
-			TcpSocket: $wcm.ResourceManager<TcpSocket>;
-		};
 	}
 	export type Tcp = {
-		TcpSocket: Tcp.TcpSocket;
+		TcpSocket: Tcp.TcpSocket.Class;
 	};
 
 	export namespace TcpCreateSocket {
@@ -866,7 +854,7 @@ export namespace sockets {
 
 		export namespace UdpSocket {
 			export interface Interface {
-				_getHandle(): $wcm.ResourceHandle;
+				__handle?: $wcm.ResourceHandle;
 
 				/**
 				 * Bind the socket to a specific network on the provided IP address and port.
@@ -1046,7 +1034,7 @@ export namespace sockets {
 
 		export namespace IncomingDatagramStream {
 			export interface Interface {
-				_getHandle(): $wcm.ResourceHandle;
+				__handle?: $wcm.ResourceHandle;
 
 				/**
 				 * Receive messages on the socket.
@@ -1091,7 +1079,7 @@ export namespace sockets {
 
 		export namespace OutgoingDatagramStream {
 			export interface Interface {
-				_getHandle(): $wcm.ResourceHandle;
+				__handle?: $wcm.ResourceHandle;
 
 				/**
 				 * Check readiness for sending. This function never blocks.
@@ -1160,17 +1148,11 @@ export namespace sockets {
 			export type Class = Statics;
 		}
 		export type OutgoingDatagramStream = OutgoingDatagramStream.Interface;
-
-		export type Managers = {
-			UdpSocket: $wcm.ResourceManager<UdpSocket>;
-			IncomingDatagramStream: $wcm.ResourceManager<IncomingDatagramStream>;
-			OutgoingDatagramStream: $wcm.ResourceManager<OutgoingDatagramStream>;
-		};
 	}
 	export type Udp = {
-		UdpSocket: Udp.UdpSocket;
-		IncomingDatagramStream: Udp.IncomingDatagramStream;
-		OutgoingDatagramStream: Udp.OutgoingDatagramStream;
+		UdpSocket: Udp.UdpSocket.Class;
+		IncomingDatagramStream: Udp.IncomingDatagramStream.Class;
+		OutgoingDatagramStream: Udp.OutgoingDatagramStream.Class;
 	};
 
 	export namespace UdpCreateSocket {
@@ -1210,12 +1192,6 @@ export namespace sockets {
 		createUdpSocket: UdpCreateSocket.createUdpSocket;
 	};
 
-	export type Managers = {
-		Network: Network.Managers;
-		IpNameLookup: IpNameLookup.Managers;
-		Tcp: Tcp.Managers;
-		Udp: Udp.Managers;
-	};
 }
 export type sockets = {
 	Network?: sockets.Network;
@@ -1229,7 +1205,7 @@ export type sockets = {
 
 export namespace sockets {
 	export namespace Network.$ {
-		export const Network = new $wcm.ResourceType<Network.Network>('network', ['sockets', 'Network', 'Network']);
+		export const Network = new $wcm.ResourceType<Network.Network>('network', 'wasi:sockets/network/network');
 		export const Network_Handle = new $wcm.ResourceHandleType('network');
 		export const ErrorCode = new $wcm.EnumType<sockets.Network.ErrorCode>(['unknown', 'accessDenied', 'notSupported', 'invalidArgument', 'outOfMemory', 'timeout', 'concurrencyConflict', 'notInProgress', 'wouldBlock', 'invalidState', 'newSocketLimit', 'addressNotBindable', 'addressInUse', 'remoteUnreachable', 'connectionRefused', 'connectionReset', 'connectionAborted', 'datagramTooLarge', 'nameUnresolvable', 'temporaryResolverFailure', 'permanentResolverFailure']);
 		export const IpAddressFamily = new $wcm.EnumType<sockets.Network.IpAddressFamily>(['ipv4', 'ipv6']);
@@ -1281,11 +1257,6 @@ export namespace sockets {
 		export function createService(wasmInterface: WasmInterface, context: $wcm.WasmContext): sockets.Network {
 			return $wcm.Service.create<sockets.Network>(functions, [], wasmInterface, context);
 		}
-		export function createManagers(): Network.Managers {
-			return Object.freeze({
-				Network: new $wcm.ResourceManager<Network>(),
-			});
-		}
 	}
 
 	export namespace InstanceNetwork.$ {
@@ -1319,7 +1290,7 @@ export namespace sockets {
 		export const Network = sockets.Network.$.Network;
 		export const ErrorCode = sockets.Network.$.ErrorCode;
 		export const IpAddress = sockets.Network.$.IpAddress;
-		export const ResolveAddressStream = new $wcm.ResourceType<IpNameLookup.ResolveAddressStream>('resolve-address-stream', ['sockets', 'IpNameLookup', 'ResolveAddressStream']);
+		export const ResolveAddressStream = new $wcm.ResourceType<IpNameLookup.ResolveAddressStream>('resolve-address-stream', 'wasi:sockets/ip-name-lookup/resolve-address-stream');
 		export const ResolveAddressStream_Handle = new $wcm.ResourceHandleType('resolve-address-stream');
 		ResolveAddressStream.addMethod('resolveNextAddress', new $wcm.MethodType<sockets.IpNameLookup.ResolveAddressStream.Interface['resolveNextAddress']>('[method]resolve-address-stream.resolve-next-address', [
 			['self', new $wcm.BorrowType<sockets.IpNameLookup.ResolveAddressStream>(ResolveAddressStream)],
@@ -1357,15 +1328,11 @@ export namespace sockets {
 				resolveNextAddress(self: ResolveAddressStream): result<IpAddress | undefined, ErrorCode>;
 				subscribe(self: ResolveAddressStream): own<Pollable>;
 			};
-			class Impl implements sockets.IpNameLookup.ResolveAddressStream.Interface {
-				private readonly _handle: $wcm.ResourceHandle;
+			class Impl extends $wcm.Resource implements sockets.IpNameLookup.ResolveAddressStream.Interface {
 				private readonly _om: ObjectModule;
-				constructor(handle: $wcm.Handle, om: ObjectModule) {
-					this._handle = handle.value;
+				constructor(om: ObjectModule) {
+					super();
 					this._om = om;
-				}
-				public _getHandle(): $wcm.ResourceHandle {
-					return this._handle;
 				}
 				public resolveNextAddress(): result<IpAddress | undefined, ErrorCode> {
 					return this._om.resolveNextAddress(this);
@@ -1378,8 +1345,8 @@ export namespace sockets {
 				const resource = IpNameLookup.$.ResolveAddressStream;
 				const om: ObjectModule = $wcm.Module.createObjectModule(resource, wasmInterface, context);
 				return class extends Impl {
-					constructor(handle: $wcm.Handle) {
-						super(handle, om);
+					constructor() {
+						super(om);
 					}
 				};
 			}
@@ -1393,11 +1360,6 @@ export namespace sockets {
 		export function createService(wasmInterface: WasmInterface, context: $wcm.WasmContext): sockets.IpNameLookup {
 			return $wcm.Service.create<sockets.IpNameLookup>(functions, [], wasmInterface, context);
 		}
-		export function createManagers(): IpNameLookup.Managers {
-			return Object.freeze({
-				ResolveAddressStream: new $wcm.ResourceManager<ResolveAddressStream>(),
-			});
-		}
 	}
 
 	export namespace Tcp.$ {
@@ -1410,7 +1372,7 @@ export namespace sockets {
 		export const IpSocketAddress = sockets.Network.$.IpSocketAddress;
 		export const IpAddressFamily = sockets.Network.$.IpAddressFamily;
 		export const ShutdownType = new $wcm.EnumType<sockets.Tcp.ShutdownType>(['receive', 'send', 'both']);
-		export const TcpSocket = new $wcm.ResourceType<Tcp.TcpSocket>('tcp-socket', ['sockets', 'Tcp', 'TcpSocket']);
+		export const TcpSocket = new $wcm.ResourceType<Tcp.TcpSocket>('tcp-socket', 'wasi:sockets/tcp/tcp-socket');
 		export const TcpSocket_Handle = new $wcm.ResourceHandleType('tcp-socket');
 		TcpSocket.addMethod('startBind', new $wcm.MethodType<sockets.Tcp.TcpSocket.Interface['startBind']>('[method]tcp-socket.start-bind', [
 			['self', new $wcm.BorrowType<sockets.Tcp.TcpSocket>(TcpSocket)],
@@ -1602,15 +1564,11 @@ export namespace sockets {
 				subscribe(self: TcpSocket): own<Pollable>;
 				shutdown(self: TcpSocket, shutdownType: ShutdownType): result<void, ErrorCode>;
 			};
-			class Impl implements sockets.Tcp.TcpSocket.Interface {
-				private readonly _handle: $wcm.ResourceHandle;
+			class Impl extends $wcm.Resource implements sockets.Tcp.TcpSocket.Interface {
 				private readonly _om: ObjectModule;
-				constructor(handle: $wcm.Handle, om: ObjectModule) {
-					this._handle = handle.value;
+				constructor(om: ObjectModule) {
+					super();
 					this._om = om;
-				}
-				public _getHandle(): $wcm.ResourceHandle {
-					return this._handle;
 				}
 				public startBind(network: borrow<Network>, localAddress: IpSocketAddress): result<void, ErrorCode> {
 					return this._om.startBind(this, network, localAddress);
@@ -1707,8 +1665,8 @@ export namespace sockets {
 				const resource = Tcp.$.TcpSocket;
 				const om: ObjectModule = $wcm.Module.createObjectModule(resource, wasmInterface, context);
 				return class extends Impl {
-					constructor(handle: $wcm.Handle) {
-						super(handle, om);
+					constructor() {
+						super(om);
 					}
 				};
 			}
@@ -1720,11 +1678,6 @@ export namespace sockets {
 		}
 		export function createService(wasmInterface: WasmInterface, context: $wcm.WasmContext): sockets.Tcp {
 			return $wcm.Service.create<sockets.Tcp>(functions, [], wasmInterface, context);
-		}
-		export function createManagers(): Tcp.Managers {
-			return Object.freeze({
-				TcpSocket: new $wcm.ResourceManager<TcpSocket>(),
-			});
 		}
 	}
 
@@ -1776,11 +1729,11 @@ export namespace sockets {
 			['data', new $wcm.Uint8ArrayType()],
 			['remoteAddress', new $wcm.OptionType<sockets.Udp.IpSocketAddress>(IpSocketAddress)],
 		]);
-		export const UdpSocket = new $wcm.ResourceType<Udp.UdpSocket>('udp-socket', ['sockets', 'Udp', 'UdpSocket']);
+		export const UdpSocket = new $wcm.ResourceType<Udp.UdpSocket>('udp-socket', 'wasi:sockets/udp/udp-socket');
 		export const UdpSocket_Handle = new $wcm.ResourceHandleType('udp-socket');
-		export const IncomingDatagramStream = new $wcm.ResourceType<Udp.IncomingDatagramStream>('incoming-datagram-stream', ['sockets', 'Udp', 'IncomingDatagramStream']);
+		export const IncomingDatagramStream = new $wcm.ResourceType<Udp.IncomingDatagramStream>('incoming-datagram-stream', 'wasi:sockets/udp/incoming-datagram-stream');
 		export const IncomingDatagramStream_Handle = new $wcm.ResourceHandleType('incoming-datagram-stream');
-		export const OutgoingDatagramStream = new $wcm.ResourceType<Udp.OutgoingDatagramStream>('outgoing-datagram-stream', ['sockets', 'Udp', 'OutgoingDatagramStream']);
+		export const OutgoingDatagramStream = new $wcm.ResourceType<Udp.OutgoingDatagramStream>('outgoing-datagram-stream', 'wasi:sockets/udp/outgoing-datagram-stream');
 		export const OutgoingDatagramStream_Handle = new $wcm.ResourceHandleType('outgoing-datagram-stream');
 		UdpSocket.addMethod('startBind', new $wcm.MethodType<sockets.Udp.UdpSocket.Interface['startBind']>('[method]udp-socket.start-bind', [
 			['self', new $wcm.BorrowType<sockets.Udp.UdpSocket>(UdpSocket)],
@@ -1909,15 +1862,11 @@ export namespace sockets {
 				setSendBufferSize(self: UdpSocket, value: u64): result<void, ErrorCode>;
 				subscribe(self: UdpSocket): own<Pollable>;
 			};
-			class Impl implements sockets.Udp.UdpSocket.Interface {
-				private readonly _handle: $wcm.ResourceHandle;
+			class Impl extends $wcm.Resource implements sockets.Udp.UdpSocket.Interface {
 				private readonly _om: ObjectModule;
-				constructor(handle: $wcm.Handle, om: ObjectModule) {
-					this._handle = handle.value;
+				constructor(om: ObjectModule) {
+					super();
 					this._om = om;
-				}
-				public _getHandle(): $wcm.ResourceHandle {
-					return this._handle;
 				}
 				public startBind(network: borrow<Network>, localAddress: IpSocketAddress): result<void, ErrorCode> {
 					return this._om.startBind(this, network, localAddress);
@@ -1969,8 +1918,8 @@ export namespace sockets {
 				const resource = Udp.$.UdpSocket;
 				const om: ObjectModule = $wcm.Module.createObjectModule(resource, wasmInterface, context);
 				return class extends Impl {
-					constructor(handle: $wcm.Handle) {
-						super(handle, om);
+					constructor() {
+						super(om);
 					}
 				};
 			}
@@ -1984,15 +1933,11 @@ export namespace sockets {
 				receive(self: IncomingDatagramStream, maxResults: u64): result<IncomingDatagram[], ErrorCode>;
 				subscribe(self: IncomingDatagramStream): own<Pollable>;
 			};
-			class Impl implements sockets.Udp.IncomingDatagramStream.Interface {
-				private readonly _handle: $wcm.ResourceHandle;
+			class Impl extends $wcm.Resource implements sockets.Udp.IncomingDatagramStream.Interface {
 				private readonly _om: ObjectModule;
-				constructor(handle: $wcm.Handle, om: ObjectModule) {
-					this._handle = handle.value;
+				constructor(om: ObjectModule) {
+					super();
 					this._om = om;
-				}
-				public _getHandle(): $wcm.ResourceHandle {
-					return this._handle;
 				}
 				public receive(maxResults: u64): result<IncomingDatagram[], ErrorCode> {
 					return this._om.receive(this, maxResults);
@@ -2005,8 +1950,8 @@ export namespace sockets {
 				const resource = Udp.$.IncomingDatagramStream;
 				const om: ObjectModule = $wcm.Module.createObjectModule(resource, wasmInterface, context);
 				return class extends Impl {
-					constructor(handle: $wcm.Handle) {
-						super(handle, om);
+					constructor() {
+						super(om);
 					}
 				};
 			}
@@ -2022,15 +1967,11 @@ export namespace sockets {
 				send(self: OutgoingDatagramStream, datagrams: OutgoingDatagram[]): result<u64, ErrorCode>;
 				subscribe(self: OutgoingDatagramStream): own<Pollable>;
 			};
-			class Impl implements sockets.Udp.OutgoingDatagramStream.Interface {
-				private readonly _handle: $wcm.ResourceHandle;
+			class Impl extends $wcm.Resource implements sockets.Udp.OutgoingDatagramStream.Interface {
 				private readonly _om: ObjectModule;
-				constructor(handle: $wcm.Handle, om: ObjectModule) {
-					this._handle = handle.value;
+				constructor(om: ObjectModule) {
+					super();
 					this._om = om;
-				}
-				public _getHandle(): $wcm.ResourceHandle {
-					return this._handle;
 				}
 				public checkSend(): result<u64, ErrorCode> {
 					return this._om.checkSend(this);
@@ -2046,8 +1987,8 @@ export namespace sockets {
 				const resource = Udp.$.OutgoingDatagramStream;
 				const om: ObjectModule = $wcm.Module.createObjectModule(resource, wasmInterface, context);
 				return class extends Impl {
-					constructor(handle: $wcm.Handle) {
-						super(handle, om);
+					constructor() {
+						super(om);
 					}
 				};
 			}
@@ -2059,13 +2000,6 @@ export namespace sockets {
 		}
 		export function createService(wasmInterface: WasmInterface, context: $wcm.WasmContext): sockets.Udp {
 			return $wcm.Service.create<sockets.Udp>(functions, [], wasmInterface, context);
-		}
-		export function createManagers(): Udp.Managers {
-			return Object.freeze({
-				UdpSocket: new $wcm.ResourceManager<UdpSocket>(),
-				IncomingDatagramStream: new $wcm.ResourceManager<IncomingDatagramStream>(),
-				OutgoingDatagramStream: new $wcm.ResourceManager<OutgoingDatagramStream>(),
-			});
 		}
 	}
 
@@ -2174,13 +2108,5 @@ export namespace sockets._ {
 			result.UdpCreateSocket = UdpCreateSocket._.createService(wasmInterface['wasi:sockets/udp-create-socket'], context);
 		}
 		return result;
-	}
-	export function createManagers(): sockets.Managers {
-		return Object.freeze({
-			Network: Network._.createManagers(),
-			IpNameLookup: IpNameLookup._.createManagers(),
-			Tcp: Tcp._.createManagers(),
-			Udp: Udp._.createManagers(),
-		});
 	}
 }
