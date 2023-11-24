@@ -14,7 +14,6 @@ export type Options = {
 	stdin: boolean;
 	noMain: boolean;
 	hoist: boolean;
-	resourceStyle: 'class' | 'module';
 };
 
 export type ResolvedOptions = Required<Options> & { file: string; outDir: string };
@@ -30,8 +29,7 @@ export namespace Options {
 		nameStyle: 'ts',
 		stdin: false,
 		noMain: false,
-		hoist: false,
-		resourceStyle: 'module',
+		hoist: false
 	};
 
 	export function validate(options: Options): options is ResolvedOptions {

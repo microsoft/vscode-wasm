@@ -41,7 +41,7 @@ namespace wasi._ {
 		['http', http._],
 	]);
 	export type WasmInterface = io._.WasmInterface & clocks._.WasmInterface & filesystem._.WasmInterface & sockets._.WasmInterface & random._.WasmInterface & cli._.WasmInterface & http._.WasmInterface;
-	export function createHost(service: wasi, context: $wcm.Context): WasmInterface {
+	export function createHost(service: wasi, context: $wcm.WasmContext): WasmInterface {
 		let result: WasmInterface = Object.create(null);
 		if (service.io !== undefined) {
 			result = Object.assign(result, io._.createHost(service.io, context));
@@ -66,7 +66,7 @@ namespace wasi._ {
 		}
 		return result;
 	}
-	export function createService(wasmInterface: WasmInterface, context: $wcm.Context): wasi {
+	export function createService(wasmInterface: WasmInterface, context: $wcm.WasmContext): wasi {
 		let result: wasi = Object.create(null);
 		const _io = io._.createService(wasmInterface, context);
 		if (Object.keys(_io).length > 0) {

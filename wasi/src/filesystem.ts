@@ -3,7 +3,7 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 import * as $wcm from '@vscode/wasm-component-model';
-import type { u64, u32, own, result, borrow, resource, option, i32, i64, ptr } from '@vscode/wasm-component-model';
+import type { u64, u32, own, result, borrow, option, i32, i64, ptr } from '@vscode/wasm-component-model';
 import { clocks } from './clocks';
 import { io } from './io';
 
@@ -998,7 +998,9 @@ export namespace filesystem {
 			['upper', $wcm.u64],
 		]);
 		export const Descriptor = new $wcm.ResourceType<Types.Descriptor>('descriptor', ['filesystem', 'Types', 'Descriptor']);
+		export const Descriptor_Handle = new $wcm.ResourceHandleType('descriptor');
 		export const DirectoryEntryStream = new $wcm.ResourceType<Types.DirectoryEntryStream>('directory-entry-stream', ['filesystem', 'Types', 'DirectoryEntryStream']);
+		export const DirectoryEntryStream_Handle = new $wcm.ResourceHandleType('directory-entry-stream');
 		Descriptor.addMethod('readViaStream', new $wcm.MethodType<filesystem.Types.Descriptor.Interface['readViaStream']>('[method]descriptor.read-via-stream', [
 			['self', new $wcm.BorrowType<filesystem.Types.Descriptor>(Descriptor)],
 			['offset', Filesize],
@@ -1214,11 +1216,13 @@ export namespace filesystem {
 				metadataHash(self: Descriptor): result<MetadataHashValue, ErrorCode>;
 				metadataHashAt(self: Descriptor, pathFlags: PathFlags, path: string): result<MetadataHashValue, ErrorCode>;
 			};
-			type ClassModule = {
-			};
 			class Impl implements filesystem.Types.Descriptor.Interface {
 				private readonly _handle: $wcm.ResourceHandle;
 				private readonly _om: ObjectModule;
+				constructor(handle: $wcm.Handle, om: ObjectModule) {
+					this._handle = handle.value;
+					this._om = om;
+				}
 				public _getHandle(): $wcm.ResourceHandle {
 					return this._handle;
 				}
@@ -1304,8 +1308,13 @@ export namespace filesystem {
 					return this._om.metadataHashAt(this, pathFlags, path);
 				}
 			}
-			export function Class(wasmInterface: WasmInterface, context: $wcm.Context): filesystem.Types.Descriptor.Class {
+			export function Class(wasmInterface: WasmInterface, context: $wcm.WasmContext): filesystem.Types.Descriptor.Class {
+				const resource = Types.$.Descriptor;
+				const om: ObjectModule = $wcm.Module.createObjectModule(resource, wasmInterface, context);
 				return class extends Impl {
+					constructor(handle: $wcm.Handle) {
+						super(handle, om);
+					}
 				};
 			}
 		}
@@ -1316,11 +1325,13 @@ export namespace filesystem {
 			type ObjectModule = {
 				readDirectoryEntry(self: DirectoryEntryStream): result<DirectoryEntry | undefined, ErrorCode>;
 			};
-			type ClassModule = {
-			};
 			class Impl implements filesystem.Types.DirectoryEntryStream.Interface {
 				private readonly _handle: $wcm.ResourceHandle;
 				private readonly _om: ObjectModule;
+				constructor(handle: $wcm.Handle, om: ObjectModule) {
+					this._handle = handle.value;
+					this._om = om;
+				}
 				public _getHandle(): $wcm.ResourceHandle {
 					return this._handle;
 				}
@@ -1328,18 +1339,23 @@ export namespace filesystem {
 					return this._om.readDirectoryEntry(this);
 				}
 			}
-			export function Class(wasmInterface: WasmInterface, context: $wcm.Context): filesystem.Types.DirectoryEntryStream.Class {
+			export function Class(wasmInterface: WasmInterface, context: $wcm.WasmContext): filesystem.Types.DirectoryEntryStream.Class {
+				const resource = Types.$.DirectoryEntryStream;
+				const om: ObjectModule = $wcm.Module.createObjectModule(resource, wasmInterface, context);
 				return class extends Impl {
+					constructor(handle: $wcm.Handle) {
+						super(handle, om);
+					}
 				};
 			}
 		}
 		export type WasmInterface = {
 			'filesystem-error-code': (err: i32, result: ptr<[i32, i32]>) => void;
 		} & Descriptor.WasmInterface & DirectoryEntryStream.WasmInterface;
-		export function createHost(service: filesystem.Types, context: $wcm.Context): WasmInterface {
+		export function createHost(service: filesystem.Types, context: $wcm.WasmContext): WasmInterface {
 			return $wcm.Host.create<WasmInterface>(functions, resources, service, context);
 		}
-		export function createService(wasmInterface: WasmInterface, context: $wcm.Context): filesystem.Types {
+		export function createService(wasmInterface: WasmInterface, context: $wcm.WasmContext): filesystem.Types {
 			return $wcm.Service.create<filesystem.Types>(functions, [], wasmInterface, context);
 		}
 		export function createManagers(): Types.Managers {
@@ -1368,10 +1384,10 @@ export namespace filesystem {
 		export type WasmInterface = {
 			'get-directories': (result: ptr<[i32, i32]>) => void;
 		};
-		export function createHost(service: filesystem.Preopens, context: $wcm.Context): WasmInterface {
+		export function createHost(service: filesystem.Preopens, context: $wcm.WasmContext): WasmInterface {
 			return $wcm.Host.create<WasmInterface>(functions, resources, service, context);
 		}
-		export function createService(wasmInterface: WasmInterface, context: $wcm.Context): filesystem.Preopens {
+		export function createService(wasmInterface: WasmInterface, context: $wcm.WasmContext): filesystem.Preopens {
 			return $wcm.Service.create<filesystem.Preopens>(functions, [], wasmInterface, context);
 		}
 	}
@@ -1388,7 +1404,7 @@ export namespace filesystem._ {
 		'wasi:filesystem/types'?: Types._.WasmInterface;
 		'wasi:filesystem/preopens'?: Preopens._.WasmInterface;
 	};
-	export function createHost(service: filesystem, context: $wcm.Context): WasmInterface {
+	export function createHost(service: filesystem, context: $wcm.WasmContext): WasmInterface {
 		const result: WasmInterface = Object.create(null);
 		if (service.Types !== undefined) {
 			result['wasi:filesystem/types'] = Types._.createHost(service.Types, context);
@@ -1398,7 +1414,7 @@ export namespace filesystem._ {
 		}
 		return result;
 	}
-	export function createService(wasmInterface: WasmInterface, context: $wcm.Context): filesystem {
+	export function createService(wasmInterface: WasmInterface, context: $wcm.WasmContext): filesystem {
 		const result: filesystem = Object.create(null);
 		if (wasmInterface['wasi:filesystem/types'] !== undefined) {
 			result.Types = Types._.createService(wasmInterface['wasi:filesystem/types'], context);

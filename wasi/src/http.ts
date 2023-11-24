@@ -3,7 +3,7 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 import * as $wcm from '@vscode/wasm-component-model';
-import type { u16, u8, u32, u64, result, own, resource, borrow, option, i32, ptr, i64 } from '@vscode/wasm-component-model';
+import type { u16, u8, u32, u64, result, own, borrow, option, i32, ptr, i64 } from '@vscode/wasm-component-model';
 import { io } from './io';
 import { clocks } from './clocks';
 
@@ -1310,20 +1310,31 @@ export namespace http {
 		export const FieldKey = $wcm.wstring;
 		export const FieldValue = new $wcm.Uint8ArrayType();
 		export const Fields = new $wcm.ResourceType<Types.Fields>('fields', ['http', 'Types', 'Fields']);
+		export const Fields_Handle = new $wcm.ResourceHandleType('fields');
 		export const Headers = Fields;
 		export const Trailers = Fields;
 		export const IncomingRequest = new $wcm.ResourceType<Types.IncomingRequest>('incoming-request', ['http', 'Types', 'IncomingRequest']);
+		export const IncomingRequest_Handle = new $wcm.ResourceHandleType('incoming-request');
 		export const OutgoingRequest = new $wcm.ResourceType<Types.OutgoingRequest>('outgoing-request', ['http', 'Types', 'OutgoingRequest']);
+		export const OutgoingRequest_Handle = new $wcm.ResourceHandleType('outgoing-request');
 		export const RequestOptions = new $wcm.ResourceType<Types.RequestOptions>('request-options', ['http', 'Types', 'RequestOptions']);
+		export const RequestOptions_Handle = new $wcm.ResourceHandleType('request-options');
 		export const ResponseOutparam = new $wcm.ResourceType<Types.ResponseOutparam>('response-outparam', ['http', 'Types', 'ResponseOutparam']);
+		export const ResponseOutparam_Handle = new $wcm.ResourceHandleType('response-outparam');
 		export const StatusCode = $wcm.u16;
 		export const IncomingResponse = new $wcm.ResourceType<Types.IncomingResponse>('incoming-response', ['http', 'Types', 'IncomingResponse']);
+		export const IncomingResponse_Handle = new $wcm.ResourceHandleType('incoming-response');
 		export const IncomingBody = new $wcm.ResourceType<Types.IncomingBody>('incoming-body', ['http', 'Types', 'IncomingBody']);
+		export const IncomingBody_Handle = new $wcm.ResourceHandleType('incoming-body');
 		export const FutureTrailers = new $wcm.ResourceType<Types.FutureTrailers>('future-trailers', ['http', 'Types', 'FutureTrailers']);
+		export const FutureTrailers_Handle = new $wcm.ResourceHandleType('future-trailers');
 		export const OutgoingResponse = new $wcm.ResourceType<Types.OutgoingResponse>('outgoing-response', ['http', 'Types', 'OutgoingResponse']);
+		export const OutgoingResponse_Handle = new $wcm.ResourceHandleType('outgoing-response');
 		export const OutgoingBody = new $wcm.ResourceType<Types.OutgoingBody>('outgoing-body', ['http', 'Types', 'OutgoingBody']);
+		export const OutgoingBody_Handle = new $wcm.ResourceHandleType('outgoing-body');
 		export const FutureIncomingResponse = new $wcm.ResourceType<Types.FutureIncomingResponse>('future-incoming-response', ['http', 'Types', 'FutureIncomingResponse']);
-		Fields.addMethod('constructor', new $wcm.ConstructorType<http.Types.Fields.Class['constructor']>('[constructor]fields', [], new $wcm.OwnType<http.Types.Fields>(Fields)));
+		export const FutureIncomingResponse_Handle = new $wcm.ResourceHandleType('future-incoming-response');
+		Fields.addMethod('constructor', new $wcm.ConstructorType<http.Types.Fields.Class['constructor']>('[constructor]fields', [], new $wcm.OwnType(Fields_Handle)));
 		Fields.addMethod('fromList', new $wcm.StaticMethodType<http.Types.Fields.Statics['fromList']>('[static]fields.from-list', [
 			['entries', new $wcm.ListType<[http.Types.FieldKey, Uint8Array]>(new $wcm.TupleType<[http.Types.FieldKey, Uint8Array]>([FieldKey, FieldValue]))],
 		], new $wcm.ResultType<own<http.Types.Fields>, http.Types.HeaderError>(new $wcm.OwnType<http.Types.Fields>(Fields), HeaderError)));
@@ -1371,7 +1382,7 @@ export namespace http {
 		], new $wcm.ResultType<own<http.Types.IncomingBody>, void>(new $wcm.OwnType<http.Types.IncomingBody>(IncomingBody), undefined)));
 		OutgoingRequest.addMethod('constructor', new $wcm.ConstructorType<http.Types.OutgoingRequest.Class['constructor']>('[constructor]outgoing-request', [
 			['headers', new $wcm.OwnType<http.Types.Headers>(Headers)],
-		], new $wcm.OwnType<http.Types.OutgoingRequest>(OutgoingRequest)));
+		], new $wcm.OwnType(OutgoingRequest_Handle)));
 		OutgoingRequest.addMethod('body', new $wcm.MethodType<http.Types.OutgoingRequest.Interface['body']>('[method]outgoing-request.body', [
 			['self', new $wcm.BorrowType<http.Types.OutgoingRequest>(OutgoingRequest)],
 		], new $wcm.ResultType<own<http.Types.OutgoingBody>, void>(new $wcm.OwnType<http.Types.OutgoingBody>(OutgoingBody), undefined)));
@@ -1406,7 +1417,7 @@ export namespace http {
 		OutgoingRequest.addMethod('headers', new $wcm.MethodType<http.Types.OutgoingRequest.Interface['headers']>('[method]outgoing-request.headers', [
 			['self', new $wcm.BorrowType<http.Types.OutgoingRequest>(OutgoingRequest)],
 		], new $wcm.OwnType<http.Types.Headers>(Headers)));
-		RequestOptions.addMethod('constructor', new $wcm.ConstructorType<http.Types.RequestOptions.Class['constructor']>('[constructor]request-options', [], new $wcm.OwnType<http.Types.RequestOptions>(RequestOptions)));
+		RequestOptions.addMethod('constructor', new $wcm.ConstructorType<http.Types.RequestOptions.Class['constructor']>('[constructor]request-options', [], new $wcm.OwnType(RequestOptions_Handle)));
 		RequestOptions.addMethod('connectTimeoutMs', new $wcm.MethodType<http.Types.RequestOptions.Interface['connectTimeoutMs']>('[method]request-options.connect-timeout-ms', [
 			['self', new $wcm.BorrowType<http.Types.RequestOptions>(RequestOptions)],
 		], new $wcm.OptionType<http.Types.Duration>(Duration)));
@@ -1455,7 +1466,7 @@ export namespace http {
 		], new $wcm.OptionType<result<option<own<http.Types.Trailers>>, http.Types.ErrorCode>>(new $wcm.ResultType<option<own<http.Types.Trailers>>, http.Types.ErrorCode>(new $wcm.OptionType<own<http.Types.Trailers>>(new $wcm.OwnType<http.Types.Trailers>(Trailers)), ErrorCode))));
 		OutgoingResponse.addMethod('constructor', new $wcm.ConstructorType<http.Types.OutgoingResponse.Class['constructor']>('[constructor]outgoing-response', [
 			['headers', new $wcm.OwnType<http.Types.Headers>(Headers)],
-		], new $wcm.OwnType<http.Types.OutgoingResponse>(OutgoingResponse)));
+		], new $wcm.OwnType(OutgoingResponse_Handle)));
 		OutgoingResponse.addMethod('statusCode', new $wcm.MethodType<http.Types.OutgoingResponse.Interface['statusCode']>('[method]outgoing-response.status-code', [
 			['self', new $wcm.BorrowType<http.Types.OutgoingResponse>(OutgoingResponse)],
 		], StatusCode));
@@ -1547,7 +1558,7 @@ export namespace http {
 				'[method]fields.clone': (self: i32) => i32;
 			};
 			type ObjectModule = {
-				constructor(): own<Fields>;
+				constructor(): own<$wcm.ResourceHandle>;
 				get(self: Fields, name: FieldKey): FieldValue[];
 				set(self: Fields, name: FieldKey, value: FieldValue[]): result<void, HeaderError>;
 				delete(self: Fields, name: FieldKey): result<void, HeaderError>;
@@ -1561,9 +1572,9 @@ export namespace http {
 			class Impl implements http.Types.Fields.Interface {
 				private readonly _handle: $wcm.ResourceHandle;
 				private readonly _om: ObjectModule;
-				constructor(wasm: WasmInterface) {
-					this._module = module;
-					this._handle = module.constructor();
+				constructor(om: ObjectModule) {
+					this._om = om;
+					this._handle = om.constructor();
 				}
 				public _getHandle(): $wcm.ResourceHandle {
 					return this._handle;
@@ -1587,12 +1598,15 @@ export namespace http {
 					return this._om.clone(this);
 				}
 			}
-			export function Class(wasmInterface: WasmInterface, context: $wcm.Context): http.Types.Fields.Class {
+			export function Class(wasmInterface: WasmInterface, context: $wcm.WasmContext): http.Types.Fields.Class {
+				const resource = Types.$.Fields;
+				const om: ObjectModule = $wcm.Module.createObjectModule(resource, wasmInterface, context);
+				const cm: ClassModule = $wcm.Module.createClassModule(resource, wasmInterface, context);
 				return class extends Impl {
 					constructor() {
-						super(wasmInterface);
+						super(om);
 					}
-					static fromList(entries: [FieldKey, FieldValue][]): result<own<Fields>, HeaderError> {
+					public static fromList(entries: [FieldKey, FieldValue][]): result<own<Fields>, HeaderError> {
 						return cm.fromList(entries);
 					}
 				};
@@ -1615,11 +1629,13 @@ export namespace http {
 				headers(self: IncomingRequest): own<Headers>;
 				consume(self: IncomingRequest): result<own<IncomingBody>, void>;
 			};
-			type ClassModule = {
-			};
 			class Impl implements http.Types.IncomingRequest.Interface {
 				private readonly _handle: $wcm.ResourceHandle;
 				private readonly _om: ObjectModule;
+				constructor(handle: $wcm.Handle, om: ObjectModule) {
+					this._handle = handle.value;
+					this._om = om;
+				}
 				public _getHandle(): $wcm.ResourceHandle {
 					return this._handle;
 				}
@@ -1642,8 +1658,13 @@ export namespace http {
 					return this._om.consume(this);
 				}
 			}
-			export function Class(wasmInterface: WasmInterface, context: $wcm.Context): http.Types.IncomingRequest.Class {
+			export function Class(wasmInterface: WasmInterface, context: $wcm.WasmContext): http.Types.IncomingRequest.Class {
+				const resource = Types.$.IncomingRequest;
+				const om: ObjectModule = $wcm.Module.createObjectModule(resource, wasmInterface, context);
 				return class extends Impl {
+					constructor(handle: $wcm.Handle) {
+						super(handle, om);
+					}
 				};
 			}
 		}
@@ -1662,7 +1683,7 @@ export namespace http {
 				'[method]outgoing-request.headers': (self: i32) => i32;
 			};
 			type ObjectModule = {
-				constructor(headers: own<Headers>): own<OutgoingRequest>;
+				constructor(headers: own<Headers>): own<$wcm.ResourceHandle>;
 				body(self: OutgoingRequest): result<own<OutgoingBody>, void>;
 				method(self: OutgoingRequest): Method;
 				setMethod(self: OutgoingRequest, method: Method): result<void, void>;
@@ -1674,14 +1695,12 @@ export namespace http {
 				setAuthority(self: OutgoingRequest, authority: string | undefined): result<void, void>;
 				headers(self: OutgoingRequest): own<Headers>;
 			};
-			type ClassModule = {
-			};
 			class Impl implements http.Types.OutgoingRequest.Interface {
 				private readonly _handle: $wcm.ResourceHandle;
 				private readonly _om: ObjectModule;
-				constructor(headers: own<Headers>, wasm: WasmInterface) {
-					this._module = module;
-					this._handle = module.constructor(headers);
+				constructor(headers: own<Headers>, om: ObjectModule) {
+					this._om = om;
+					this._handle = om.constructor(headers);
 				}
 				public _getHandle(): $wcm.ResourceHandle {
 					return this._handle;
@@ -1717,10 +1736,12 @@ export namespace http {
 					return this._om.headers(this);
 				}
 			}
-			export function Class(wasmInterface: WasmInterface, context: $wcm.Context): http.Types.OutgoingRequest.Class {
+			export function Class(wasmInterface: WasmInterface, context: $wcm.WasmContext): http.Types.OutgoingRequest.Class {
+				const resource = Types.$.OutgoingRequest;
+				const om: ObjectModule = $wcm.Module.createObjectModule(resource, wasmInterface, context);
 				return class extends Impl {
 					constructor(headers: own<Headers>) {
-						super(headers, wasmInterface);
+						super(headers, om);
 					}
 				};
 			}
@@ -1736,7 +1757,7 @@ export namespace http {
 				'[method]request-options.set-between-bytes-timeout-ms': (self: i32, ms_case: i32, ms_option_Duration: i64) => i32;
 			};
 			type ObjectModule = {
-				constructor(): own<RequestOptions>;
+				constructor(): own<$wcm.ResourceHandle>;
 				connectTimeoutMs(self: RequestOptions): Duration | undefined;
 				setConnectTimeoutMs(self: RequestOptions, ms: Duration | undefined): result<void, void>;
 				firstByteTimeoutMs(self: RequestOptions): Duration | undefined;
@@ -1744,14 +1765,12 @@ export namespace http {
 				betweenBytesTimeoutMs(self: RequestOptions): Duration | undefined;
 				setBetweenBytesTimeoutMs(self: RequestOptions, ms: Duration | undefined): result<void, void>;
 			};
-			type ClassModule = {
-			};
 			class Impl implements http.Types.RequestOptions.Interface {
 				private readonly _handle: $wcm.ResourceHandle;
 				private readonly _om: ObjectModule;
-				constructor(wasm: WasmInterface) {
-					this._module = module;
-					this._handle = module.constructor();
+				constructor(om: ObjectModule) {
+					this._om = om;
+					this._handle = om.constructor();
 				}
 				public _getHandle(): $wcm.ResourceHandle {
 					return this._handle;
@@ -1775,10 +1794,12 @@ export namespace http {
 					return this._om.setBetweenBytesTimeoutMs(this, ms);
 				}
 			}
-			export function Class(wasmInterface: WasmInterface, context: $wcm.Context): http.Types.RequestOptions.Class {
+			export function Class(wasmInterface: WasmInterface, context: $wcm.WasmContext): http.Types.RequestOptions.Class {
+				const resource = Types.$.RequestOptions;
+				const om: ObjectModule = $wcm.Module.createObjectModule(resource, wasmInterface, context);
 				return class extends Impl {
 					constructor() {
-						super(wasmInterface);
+						super(om);
 					}
 				};
 			}
@@ -1787,21 +1808,14 @@ export namespace http {
 			export type WasmInterface = {
 				'[static]response-outparam.set': (param: i32, response_case: i32, response_0: i32, response_1: i32, response_2: i64, response_3: i32, response_4: i32, response_5: i32, response_6: i32) => void;
 			};
-			type ObjectModule = {
-			};
 			type ClassModule = {
 				set(param: own<ResponseOutparam>, response: result<own<OutgoingResponse>, ErrorCode>): void;
 			};
-			class Impl implements http.Types.ResponseOutparam.Interface {
-				private readonly _handle: $wcm.ResourceHandle;
-				private readonly _om: ObjectModule;
-				public _getHandle(): $wcm.ResourceHandle {
-					return this._handle;
-				}
-			}
-			export function Class(wasmInterface: WasmInterface, context: $wcm.Context): http.Types.ResponseOutparam.Class {
-				return class extends Impl {
-					static set(param: own<ResponseOutparam>, response: result<own<OutgoingResponse>, ErrorCode>): void {
+			export function Class(wasmInterface: WasmInterface, context: $wcm.WasmContext): http.Types.ResponseOutparam.Class {
+				const resource = Types.$.ResponseOutparam;
+				const cm: ClassModule = $wcm.Module.createClassModule(resource, wasmInterface, context);
+				return class {
+					public static set(param: own<ResponseOutparam>, response: result<own<OutgoingResponse>, ErrorCode>): void {
 						return cm.set(param, response);
 					}
 				};
@@ -1818,11 +1832,13 @@ export namespace http {
 				headers(self: IncomingResponse): own<Headers>;
 				consume(self: IncomingResponse): result<own<IncomingBody>, void>;
 			};
-			type ClassModule = {
-			};
 			class Impl implements http.Types.IncomingResponse.Interface {
 				private readonly _handle: $wcm.ResourceHandle;
 				private readonly _om: ObjectModule;
+				constructor(handle: $wcm.Handle, om: ObjectModule) {
+					this._handle = handle.value;
+					this._om = om;
+				}
 				public _getHandle(): $wcm.ResourceHandle {
 					return this._handle;
 				}
@@ -1836,8 +1852,13 @@ export namespace http {
 					return this._om.consume(this);
 				}
 			}
-			export function Class(wasmInterface: WasmInterface, context: $wcm.Context): http.Types.IncomingResponse.Class {
+			export function Class(wasmInterface: WasmInterface, context: $wcm.WasmContext): http.Types.IncomingResponse.Class {
+				const resource = Types.$.IncomingResponse;
+				const om: ObjectModule = $wcm.Module.createObjectModule(resource, wasmInterface, context);
 				return class extends Impl {
+					constructor(handle: $wcm.Handle) {
+						super(handle, om);
+					}
 				};
 			}
 		}
@@ -1855,6 +1876,10 @@ export namespace http {
 			class Impl implements http.Types.IncomingBody.Interface {
 				private readonly _handle: $wcm.ResourceHandle;
 				private readonly _om: ObjectModule;
+				constructor(handle: $wcm.Handle, om: ObjectModule) {
+					this._handle = handle.value;
+					this._om = om;
+				}
 				public _getHandle(): $wcm.ResourceHandle {
 					return this._handle;
 				}
@@ -1862,9 +1887,15 @@ export namespace http {
 					return this._om.stream(this);
 				}
 			}
-			export function Class(wasmInterface: WasmInterface, context: $wcm.Context): http.Types.IncomingBody.Class {
+			export function Class(wasmInterface: WasmInterface, context: $wcm.WasmContext): http.Types.IncomingBody.Class {
+				const resource = Types.$.IncomingBody;
+				const om: ObjectModule = $wcm.Module.createObjectModule(resource, wasmInterface, context);
+				const cm: ClassModule = $wcm.Module.createClassModule(resource, wasmInterface, context);
 				return class extends Impl {
-					static finish(this_: own<IncomingBody>): own<FutureTrailers> {
+					constructor(handle: $wcm.Handle) {
+						super(handle, om);
+					}
+					public static finish(this_: own<IncomingBody>): own<FutureTrailers> {
 						return cm.finish(this_);
 					}
 				};
@@ -1879,11 +1910,13 @@ export namespace http {
 				subscribe(self: FutureTrailers): own<Pollable>;
 				get(self: FutureTrailers): result<own<Trailers> | undefined, ErrorCode> | undefined;
 			};
-			type ClassModule = {
-			};
 			class Impl implements http.Types.FutureTrailers.Interface {
 				private readonly _handle: $wcm.ResourceHandle;
 				private readonly _om: ObjectModule;
+				constructor(handle: $wcm.Handle, om: ObjectModule) {
+					this._handle = handle.value;
+					this._om = om;
+				}
 				public _getHandle(): $wcm.ResourceHandle {
 					return this._handle;
 				}
@@ -1894,8 +1927,13 @@ export namespace http {
 					return this._om.get(this);
 				}
 			}
-			export function Class(wasmInterface: WasmInterface, context: $wcm.Context): http.Types.FutureTrailers.Class {
+			export function Class(wasmInterface: WasmInterface, context: $wcm.WasmContext): http.Types.FutureTrailers.Class {
+				const resource = Types.$.FutureTrailers;
+				const om: ObjectModule = $wcm.Module.createObjectModule(resource, wasmInterface, context);
 				return class extends Impl {
+					constructor(handle: $wcm.Handle) {
+						super(handle, om);
+					}
 				};
 			}
 		}
@@ -1908,20 +1946,18 @@ export namespace http {
 				'[method]outgoing-response.body': (self: i32, result: ptr<[i32, i32]>) => void;
 			};
 			type ObjectModule = {
-				constructor(headers: own<Headers>): own<OutgoingResponse>;
+				constructor(headers: own<Headers>): own<$wcm.ResourceHandle>;
 				statusCode(self: OutgoingResponse): StatusCode;
 				setStatusCode(self: OutgoingResponse, statusCode: StatusCode): result<void, void>;
 				headers(self: OutgoingResponse): own<Headers>;
 				body(self: OutgoingResponse): result<own<OutgoingBody>, void>;
 			};
-			type ClassModule = {
-			};
 			class Impl implements http.Types.OutgoingResponse.Interface {
 				private readonly _handle: $wcm.ResourceHandle;
 				private readonly _om: ObjectModule;
-				constructor(headers: own<Headers>, wasm: WasmInterface) {
-					this._module = module;
-					this._handle = module.constructor(headers);
+				constructor(headers: own<Headers>, om: ObjectModule) {
+					this._om = om;
+					this._handle = om.constructor(headers);
 				}
 				public _getHandle(): $wcm.ResourceHandle {
 					return this._handle;
@@ -1939,10 +1975,12 @@ export namespace http {
 					return this._om.body(this);
 				}
 			}
-			export function Class(wasmInterface: WasmInterface, context: $wcm.Context): http.Types.OutgoingResponse.Class {
+			export function Class(wasmInterface: WasmInterface, context: $wcm.WasmContext): http.Types.OutgoingResponse.Class {
+				const resource = Types.$.OutgoingResponse;
+				const om: ObjectModule = $wcm.Module.createObjectModule(resource, wasmInterface, context);
 				return class extends Impl {
 					constructor(headers: own<Headers>) {
-						super(headers, wasmInterface);
+						super(headers, om);
 					}
 				};
 			}
@@ -1961,6 +1999,10 @@ export namespace http {
 			class Impl implements http.Types.OutgoingBody.Interface {
 				private readonly _handle: $wcm.ResourceHandle;
 				private readonly _om: ObjectModule;
+				constructor(handle: $wcm.Handle, om: ObjectModule) {
+					this._handle = handle.value;
+					this._om = om;
+				}
 				public _getHandle(): $wcm.ResourceHandle {
 					return this._handle;
 				}
@@ -1968,9 +2010,15 @@ export namespace http {
 					return this._om.write(this);
 				}
 			}
-			export function Class(wasmInterface: WasmInterface, context: $wcm.Context): http.Types.OutgoingBody.Class {
+			export function Class(wasmInterface: WasmInterface, context: $wcm.WasmContext): http.Types.OutgoingBody.Class {
+				const resource = Types.$.OutgoingBody;
+				const om: ObjectModule = $wcm.Module.createObjectModule(resource, wasmInterface, context);
+				const cm: ClassModule = $wcm.Module.createClassModule(resource, wasmInterface, context);
 				return class extends Impl {
-					static finish(this_: own<OutgoingBody>, trailers: own<Trailers> | undefined): result<void, ErrorCode> {
+					constructor(handle: $wcm.Handle) {
+						super(handle, om);
+					}
+					public static finish(this_: own<OutgoingBody>, trailers: own<Trailers> | undefined): result<void, ErrorCode> {
 						return cm.finish(this_, trailers);
 					}
 				};
@@ -1985,11 +2033,13 @@ export namespace http {
 				subscribe(self: FutureIncomingResponse): own<Pollable>;
 				get(self: FutureIncomingResponse): result<result<own<IncomingResponse>, ErrorCode>, void> | undefined;
 			};
-			type ClassModule = {
-			};
 			class Impl implements http.Types.FutureIncomingResponse.Interface {
 				private readonly _handle: $wcm.ResourceHandle;
 				private readonly _om: ObjectModule;
+				constructor(handle: $wcm.Handle, om: ObjectModule) {
+					this._handle = handle.value;
+					this._om = om;
+				}
 				public _getHandle(): $wcm.ResourceHandle {
 					return this._handle;
 				}
@@ -2000,18 +2050,23 @@ export namespace http {
 					return this._om.get(this);
 				}
 			}
-			export function Class(wasmInterface: WasmInterface, context: $wcm.Context): http.Types.FutureIncomingResponse.Class {
+			export function Class(wasmInterface: WasmInterface, context: $wcm.WasmContext): http.Types.FutureIncomingResponse.Class {
+				const resource = Types.$.FutureIncomingResponse;
+				const om: ObjectModule = $wcm.Module.createObjectModule(resource, wasmInterface, context);
 				return class extends Impl {
+					constructor(handle: $wcm.Handle) {
+						super(handle, om);
+					}
 				};
 			}
 		}
 		export type WasmInterface = {
 			'http-error-code': (err: i32, result: ptr<[i32, i32, i32, i64, i32, i32, i32, i32]>) => void;
 		} & Fields.WasmInterface & IncomingRequest.WasmInterface & OutgoingRequest.WasmInterface & RequestOptions.WasmInterface & ResponseOutparam.WasmInterface & IncomingResponse.WasmInterface & IncomingBody.WasmInterface & FutureTrailers.WasmInterface & OutgoingResponse.WasmInterface & OutgoingBody.WasmInterface & FutureIncomingResponse.WasmInterface;
-		export function createHost(service: http.Types, context: $wcm.Context): WasmInterface {
+		export function createHost(service: http.Types, context: $wcm.WasmContext): WasmInterface {
 			return $wcm.Host.create<WasmInterface>(functions, resources, service, context);
 		}
-		export function createService(wasmInterface: WasmInterface, context: $wcm.Context): http.Types {
+		export function createService(wasmInterface: WasmInterface, context: $wcm.WasmContext): http.Types {
 			return $wcm.Service.create<http.Types>(functions, [], wasmInterface, context);
 		}
 		export function createManagers(): Types.Managers {
@@ -2054,10 +2109,10 @@ export namespace http {
 		export type WasmInterface = {
 			'handle': (request: i32, responseOut: i32) => void;
 		};
-		export function createHost(service: http.IncomingHandler, context: $wcm.Context): WasmInterface {
+		export function createHost(service: http.IncomingHandler, context: $wcm.WasmContext): WasmInterface {
 			return $wcm.Host.create<WasmInterface>(functions, resources, service, context);
 		}
-		export function createService(wasmInterface: WasmInterface, context: $wcm.Context): http.IncomingHandler {
+		export function createService(wasmInterface: WasmInterface, context: $wcm.WasmContext): http.IncomingHandler {
 			return $wcm.Service.create<http.IncomingHandler>(functions, [], wasmInterface, context);
 		}
 	}
@@ -2089,10 +2144,10 @@ export namespace http {
 		export type WasmInterface = {
 			'handle': (request: i32, options_case: i32, options_option: i32, result: ptr<[i32, i32, i32, i64, i32, i32, i32, i32]>) => void;
 		};
-		export function createHost(service: http.OutgoingHandler, context: $wcm.Context): WasmInterface {
+		export function createHost(service: http.OutgoingHandler, context: $wcm.WasmContext): WasmInterface {
 			return $wcm.Host.create<WasmInterface>(functions, resources, service, context);
 		}
-		export function createService(wasmInterface: WasmInterface, context: $wcm.Context): http.OutgoingHandler {
+		export function createService(wasmInterface: WasmInterface, context: $wcm.WasmContext): http.OutgoingHandler {
 			return $wcm.Service.create<http.OutgoingHandler>(functions, [], wasmInterface, context);
 		}
 	}
@@ -2111,7 +2166,7 @@ export namespace http._ {
 		'wasi:http/incoming-handler'?: IncomingHandler._.WasmInterface;
 		'wasi:http/outgoing-handler'?: OutgoingHandler._.WasmInterface;
 	};
-	export function createHost(service: http, context: $wcm.Context): WasmInterface {
+	export function createHost(service: http, context: $wcm.WasmContext): WasmInterface {
 		const result: WasmInterface = Object.create(null);
 		if (service.Types !== undefined) {
 			result['wasi:http/types'] = Types._.createHost(service.Types, context);
@@ -2124,7 +2179,7 @@ export namespace http._ {
 		}
 		return result;
 	}
-	export function createService(wasmInterface: WasmInterface, context: $wcm.Context): http {
+	export function createService(wasmInterface: WasmInterface, context: $wcm.WasmContext): http {
 		const result: http = Object.create(null);
 		if (wasmInterface['wasi:http/types'] !== undefined) {
 			result.Types = Types._.createService(wasmInterface['wasi:http/types'], context);

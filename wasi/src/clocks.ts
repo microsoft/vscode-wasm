@@ -166,10 +166,10 @@ export namespace clocks {
 			'subscribe-instant': (when: i64) => i32;
 			'subscribe-duration': (when: i64) => i32;
 		};
-		export function createHost(service: clocks.MonotonicClock, context: $wcm.Context): WasmInterface {
+		export function createHost(service: clocks.MonotonicClock, context: $wcm.WasmContext): WasmInterface {
 			return $wcm.Host.create<WasmInterface>(functions, resources, service, context);
 		}
-		export function createService(wasmInterface: WasmInterface, context: $wcm.Context): clocks.MonotonicClock {
+		export function createService(wasmInterface: WasmInterface, context: $wcm.WasmContext): clocks.MonotonicClock {
 			return $wcm.Service.create<clocks.MonotonicClock>(functions, [], wasmInterface, context);
 		}
 	}
@@ -198,10 +198,10 @@ export namespace clocks {
 			'now': (result: ptr<[i64, i32]>) => void;
 			'resolution': (result: ptr<[i64, i32]>) => void;
 		};
-		export function createHost(service: clocks.WallClock, context: $wcm.Context): WasmInterface {
+		export function createHost(service: clocks.WallClock, context: $wcm.WasmContext): WasmInterface {
 			return $wcm.Host.create<WasmInterface>(functions, resources, service, context);
 		}
-		export function createService(wasmInterface: WasmInterface, context: $wcm.Context): clocks.WallClock {
+		export function createService(wasmInterface: WasmInterface, context: $wcm.WasmContext): clocks.WallClock {
 			return $wcm.Service.create<clocks.WallClock>(functions, [], wasmInterface, context);
 		}
 	}
@@ -218,7 +218,7 @@ export namespace clocks._ {
 		'wasi:clocks/monotonic-clock'?: MonotonicClock._.WasmInterface;
 		'wasi:clocks/wall-clock'?: WallClock._.WasmInterface;
 	};
-	export function createHost(service: clocks, context: $wcm.Context): WasmInterface {
+	export function createHost(service: clocks, context: $wcm.WasmContext): WasmInterface {
 		const result: WasmInterface = Object.create(null);
 		if (service.MonotonicClock !== undefined) {
 			result['wasi:clocks/monotonic-clock'] = MonotonicClock._.createHost(service.MonotonicClock, context);
@@ -228,7 +228,7 @@ export namespace clocks._ {
 		}
 		return result;
 	}
-	export function createService(wasmInterface: WasmInterface, context: $wcm.Context): clocks {
+	export function createService(wasmInterface: WasmInterface, context: $wcm.WasmContext): clocks {
 		const result: clocks = Object.create(null);
 		if (wasmInterface['wasi:clocks/monotonic-clock'] !== undefined) {
 			result.MonotonicClock = MonotonicClock._.createService(wasmInterface['wasi:clocks/monotonic-clock'], context);

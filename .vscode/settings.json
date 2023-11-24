@@ -76,6 +76,7 @@
 		"clockid",
 		"connaborted",
 		"connreset",
+		"conztructor",
 		"coreutils",
 		"cputime",
 		"creat",

@@ -3,7 +3,7 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 import * as $wcm from '@vscode/wasm-component-model';
-import type { result, own, resource, i32, ptr } from '@vscode/wasm-component-model';
+import type { result, own, i32, ptr } from '@vscode/wasm-component-model';
 import { io } from './io';
 
 export namespace cli {
@@ -226,10 +226,10 @@ export namespace cli {
 			'get-arguments': (result: ptr<[i32, i32]>) => void;
 			'initial-cwd': (result: ptr<[i32, i32, i32]>) => void;
 		};
-		export function createHost(service: cli.Environment, context: $wcm.Context): WasmInterface {
+		export function createHost(service: cli.Environment, context: $wcm.WasmContext): WasmInterface {
 			return $wcm.Host.create<WasmInterface>(functions, resources, service, context);
 		}
-		export function createService(wasmInterface: WasmInterface, context: $wcm.Context): cli.Environment {
+		export function createService(wasmInterface: WasmInterface, context: $wcm.WasmContext): cli.Environment {
 			return $wcm.Service.create<cli.Environment>(functions, [], wasmInterface, context);
 		}
 	}
@@ -252,10 +252,10 @@ export namespace cli {
 		export type WasmInterface = {
 			'exit': (status_case: i32) => void;
 		};
-		export function createHost(service: cli.Exit, context: $wcm.Context): WasmInterface {
+		export function createHost(service: cli.Exit, context: $wcm.WasmContext): WasmInterface {
 			return $wcm.Host.create<WasmInterface>(functions, resources, service, context);
 		}
-		export function createService(wasmInterface: WasmInterface, context: $wcm.Context): cli.Exit {
+		export function createService(wasmInterface: WasmInterface, context: $wcm.WasmContext): cli.Exit {
 			return $wcm.Service.create<cli.Exit>(functions, [], wasmInterface, context);
 		}
 	}
@@ -276,10 +276,10 @@ export namespace cli {
 		export type WasmInterface = {
 			'run': () => i32;
 		};
-		export function createHost(service: cli.Run, context: $wcm.Context): WasmInterface {
+		export function createHost(service: cli.Run, context: $wcm.WasmContext): WasmInterface {
 			return $wcm.Host.create<WasmInterface>(functions, resources, service, context);
 		}
-		export function createService(wasmInterface: WasmInterface, context: $wcm.Context): cli.Run {
+		export function createService(wasmInterface: WasmInterface, context: $wcm.WasmContext): cli.Run {
 			return $wcm.Service.create<cli.Run>(functions, [], wasmInterface, context);
 		}
 	}
@@ -302,10 +302,10 @@ export namespace cli {
 		export type WasmInterface = {
 			'get-stdin': () => i32;
 		};
-		export function createHost(service: cli.Stdin, context: $wcm.Context): WasmInterface {
+		export function createHost(service: cli.Stdin, context: $wcm.WasmContext): WasmInterface {
 			return $wcm.Host.create<WasmInterface>(functions, resources, service, context);
 		}
-		export function createService(wasmInterface: WasmInterface, context: $wcm.Context): cli.Stdin {
+		export function createService(wasmInterface: WasmInterface, context: $wcm.WasmContext): cli.Stdin {
 			return $wcm.Service.create<cli.Stdin>(functions, [], wasmInterface, context);
 		}
 	}
@@ -328,10 +328,10 @@ export namespace cli {
 		export type WasmInterface = {
 			'get-stdout': () => i32;
 		};
-		export function createHost(service: cli.Stdout, context: $wcm.Context): WasmInterface {
+		export function createHost(service: cli.Stdout, context: $wcm.WasmContext): WasmInterface {
 			return $wcm.Host.create<WasmInterface>(functions, resources, service, context);
 		}
-		export function createService(wasmInterface: WasmInterface, context: $wcm.Context): cli.Stdout {
+		export function createService(wasmInterface: WasmInterface, context: $wcm.WasmContext): cli.Stdout {
 			return $wcm.Service.create<cli.Stdout>(functions, [], wasmInterface, context);
 		}
 	}
@@ -354,16 +354,17 @@ export namespace cli {
 		export type WasmInterface = {
 			'get-stderr': () => i32;
 		};
-		export function createHost(service: cli.Stderr, context: $wcm.Context): WasmInterface {
+		export function createHost(service: cli.Stderr, context: $wcm.WasmContext): WasmInterface {
 			return $wcm.Host.create<WasmInterface>(functions, resources, service, context);
 		}
-		export function createService(wasmInterface: WasmInterface, context: $wcm.Context): cli.Stderr {
+		export function createService(wasmInterface: WasmInterface, context: $wcm.WasmContext): cli.Stderr {
 			return $wcm.Service.create<cli.Stderr>(functions, [], wasmInterface, context);
 		}
 	}
 
 	export namespace TerminalInput.$ {
 		export const TerminalInput = new $wcm.ResourceType<TerminalInput.TerminalInput>('terminal-input', ['cli', 'TerminalInput', 'TerminalInput']);
+		export const TerminalInput_Handle = new $wcm.ResourceHandleType('terminal-input');
 	}
 	export namespace TerminalInput._ {
 		export const id = 'wasi:cli/terminal-input' as const;
@@ -379,28 +380,15 @@ export namespace cli {
 		export namespace TerminalInput {
 			export type WasmInterface = {
 			};
-			type ObjectModule = {
-			};
-			type ClassModule = {
-			};
-			class Impl implements cli.TerminalInput.TerminalInput.Interface {
-				private readonly _handle: $wcm.ResourceHandle;
-				private readonly _om: ObjectModule;
-				public _getHandle(): $wcm.ResourceHandle {
-					return this._handle;
-				}
-			}
-			export function Class(wasmInterface: WasmInterface, context: $wcm.Context): cli.TerminalInput.TerminalInput.Class {
-				return class extends Impl {
-				};
+			export function Class(wasmInterface: WasmInterface, context: $wcm.WasmContext): cli.TerminalInput.TerminalInput.Class {
 			}
 		}
 		export type WasmInterface = {
 		} & TerminalInput.WasmInterface;
-		export function createHost(service: cli.TerminalInput, context: $wcm.Context): WasmInterface {
+		export function createHost(service: cli.TerminalInput, context: $wcm.WasmContext): WasmInterface {
 			return $wcm.Host.create<WasmInterface>(functions, resources, service, context);
 		}
-		export function createService(wasmInterface: WasmInterface, context: $wcm.Context): cli.TerminalInput {
+		export function createService(wasmInterface: WasmInterface, context: $wcm.WasmContext): cli.TerminalInput {
 			return $wcm.Service.create<cli.TerminalInput>(functions, [], wasmInterface, context);
 		}
 		export function createManagers(): TerminalInput.Managers {
@@ -412,6 +400,7 @@ export namespace cli {
 
 	export namespace TerminalOutput.$ {
 		export const TerminalOutput = new $wcm.ResourceType<TerminalOutput.TerminalOutput>('terminal-output', ['cli', 'TerminalOutput', 'TerminalOutput']);
+		export const TerminalOutput_Handle = new $wcm.ResourceHandleType('terminal-output');
 	}
 	export namespace TerminalOutput._ {
 		export const id = 'wasi:cli/terminal-output' as const;
@@ -427,28 +416,15 @@ export namespace cli {
 		export namespace TerminalOutput {
 			export type WasmInterface = {
 			};
-			type ObjectModule = {
-			};
-			type ClassModule = {
-			};
-			class Impl implements cli.TerminalOutput.TerminalOutput.Interface {
-				private readonly _handle: $wcm.ResourceHandle;
-				private readonly _om: ObjectModule;
-				public _getHandle(): $wcm.ResourceHandle {
-					return this._handle;
-				}
-			}
-			export function Class(wasmInterface: WasmInterface, context: $wcm.Context): cli.TerminalOutput.TerminalOutput.Class {
-				return class extends Impl {
-				};
+			export function Class(wasmInterface: WasmInterface, context: $wcm.WasmContext): cli.TerminalOutput.TerminalOutput.Class {
 			}
 		}
 		export type WasmInterface = {
 		} & TerminalOutput.WasmInterface;
-		export function createHost(service: cli.TerminalOutput, context: $wcm.Context): WasmInterface {
+		export function createHost(service: cli.TerminalOutput, context: $wcm.WasmContext): WasmInterface {
 			return $wcm.Host.create<WasmInterface>(functions, resources, service, context);
 		}
-		export function createService(wasmInterface: WasmInterface, context: $wcm.Context): cli.TerminalOutput {
+		export function createService(wasmInterface: WasmInterface, context: $wcm.WasmContext): cli.TerminalOutput {
 			return $wcm.Service.create<cli.TerminalOutput>(functions, [], wasmInterface, context);
 		}
 		export function createManagers(): TerminalOutput.Managers {
@@ -476,10 +452,10 @@ export namespace cli {
 		export type WasmInterface = {
 			'get-terminal-stdin': (result: ptr<[i32, i32]>) => void;
 		};
-		export function createHost(service: cli.TerminalStdin, context: $wcm.Context): WasmInterface {
+		export function createHost(service: cli.TerminalStdin, context: $wcm.WasmContext): WasmInterface {
 			return $wcm.Host.create<WasmInterface>(functions, resources, service, context);
 		}
-		export function createService(wasmInterface: WasmInterface, context: $wcm.Context): cli.TerminalStdin {
+		export function createService(wasmInterface: WasmInterface, context: $wcm.WasmContext): cli.TerminalStdin {
 			return $wcm.Service.create<cli.TerminalStdin>(functions, [], wasmInterface, context);
 		}
 	}
@@ -502,10 +478,10 @@ export namespace cli {
 		export type WasmInterface = {
 			'get-terminal-stdout': (result: ptr<[i32, i32]>) => void;
 		};
-		export function createHost(service: cli.TerminalStdout, context: $wcm.Context): WasmInterface {
+		export function createHost(service: cli.TerminalStdout, context: $wcm.WasmContext): WasmInterface {
 			return $wcm.Host.create<WasmInterface>(functions, resources, service, context);
 		}
-		export function createService(wasmInterface: WasmInterface, context: $wcm.Context): cli.TerminalStdout {
+		export function createService(wasmInterface: WasmInterface, context: $wcm.WasmContext): cli.TerminalStdout {
 			return $wcm.Service.create<cli.TerminalStdout>(functions, [], wasmInterface, context);
 		}
 	}
@@ -528,10 +504,10 @@ export namespace cli {
 		export type WasmInterface = {
 			'get-terminal-stderr': (result: ptr<[i32, i32]>) => void;
 		};
-		export function createHost(service: cli.TerminalStderr, context: $wcm.Context): WasmInterface {
+		export function createHost(service: cli.TerminalStderr, context: $wcm.WasmContext): WasmInterface {
 			return $wcm.Host.create<WasmInterface>(functions, resources, service, context);
 		}
-		export function createService(wasmInterface: WasmInterface, context: $wcm.Context): cli.TerminalStderr {
+		export function createService(wasmInterface: WasmInterface, context: $wcm.WasmContext): cli.TerminalStderr {
 			return $wcm.Service.create<cli.TerminalStderr>(functions, [], wasmInterface, context);
 		}
 	}
@@ -566,7 +542,7 @@ export namespace cli._ {
 		'wasi:cli/terminal-stdout'?: TerminalStdout._.WasmInterface;
 		'wasi:cli/terminal-stderr'?: TerminalStderr._.WasmInterface;
 	};
-	export function createHost(service: cli, context: $wcm.Context): WasmInterface {
+	export function createHost(service: cli, context: $wcm.WasmContext): WasmInterface {
 		const result: WasmInterface = Object.create(null);
 		if (service.Environment !== undefined) {
 			result['wasi:cli/environment'] = Environment._.createHost(service.Environment, context);
@@ -603,7 +579,7 @@ export namespace cli._ {
 		}
 		return result;
 	}
-	export function createService(wasmInterface: WasmInterface, context: $wcm.Context): cli {
+	export function createService(wasmInterface: WasmInterface, context: $wcm.WasmContext): cli {
 		const result: cli = Object.create(null);
 		if (wasmInterface['wasi:cli/environment'] !== undefined) {
 			result.Environment = Environment._.createService(wasmInterface['wasi:cli/environment'], context);
