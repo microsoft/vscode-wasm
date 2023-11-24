@@ -264,10 +264,8 @@ export namespace sockets {
 
 			}
 			export type Statics = {
-				$new?(): Interface;
 			};
 			export type Class = Statics & {
-				new(): Interface;
 			};
 		}
 		export type Network = Network.Interface;
@@ -331,10 +329,8 @@ export namespace sockets {
 				subscribe(): own<Pollable>;
 			}
 			export type Statics = {
-				$new?(): Interface;
 			};
 			export type Class = Statics & {
-				new(): Interface;
 			};
 		}
 		export type ResolveAddressStream = ResolveAddressStream.Interface;
@@ -756,10 +752,8 @@ export namespace sockets {
 				shutdown(shutdownType: ShutdownType): result<void, ErrorCode>;
 			}
 			export type Statics = {
-				$new?(): Interface;
 			};
 			export type Class = Statics & {
-				new(): Interface;
 			};
 		}
 		export type TcpSocket = TcpSocket.Interface;
@@ -1036,10 +1030,8 @@ export namespace sockets {
 				subscribe(): own<Pollable>;
 			}
 			export type Statics = {
-				$new?(): Interface;
 			};
 			export type Class = Statics & {
-				new(): Interface;
 			};
 		}
 		export type UdpSocket = UdpSocket.Interface;
@@ -1084,10 +1076,8 @@ export namespace sockets {
 				subscribe(): own<Pollable>;
 			}
 			export type Statics = {
-				$new?(): Interface;
 			};
 			export type Class = Statics & {
-				new(): Interface;
 			};
 		}
 		export type IncomingDatagramStream = IncomingDatagramStream.Interface;
@@ -1159,10 +1149,8 @@ export namespace sockets {
 				subscribe(): own<Pollable>;
 			}
 			export type Statics = {
-				$new?(): Interface;
 			};
 			export type Class = Statics & {
-				new(): Interface;
 			};
 		}
 		export type OutgoingDatagramStream = OutgoingDatagramStream.Interface;

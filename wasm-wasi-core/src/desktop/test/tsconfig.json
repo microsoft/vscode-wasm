@@ -7,9 +7,9 @@
         ],
         "module": "Node16",
         "moduleResolution": "Node16",
-        "target": "es2020",
+        "target": "es2022",
         "lib": [
-            "es2020"
+            "es2022"
         ],
         "rootDir": ".",
         "strict": true,

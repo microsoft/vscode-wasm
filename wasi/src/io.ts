@@ -24,10 +24,8 @@ export namespace io {
 				toDebugString(): string;
 			}
 			export type Statics = {
-				$new?(): Interface;
 			};
 			export type Class = Statics & {
-				new(): Interface;
 			};
 		}
 		export type Error = Error.Interface;
@@ -63,10 +61,8 @@ export namespace io {
 				block(): void;
 			}
 			export type Statics = {
-				$new?(): Interface;
 			};
 			export type Class = Statics & {
-				new(): Interface;
 			};
 		}
 		export type Pollable = Pollable.Interface;
@@ -229,10 +225,8 @@ export namespace io {
 				subscribe(): own<Pollable>;
 			}
 			export type Statics = {
-				$new?(): Interface;
 			};
 			export type Class = Statics & {
-				new(): Interface;
 			};
 		}
 		export type InputStream = InputStream.Interface;
@@ -392,10 +386,8 @@ export namespace io {
 				blockingSplice(src: borrow<InputStream>, len: u64): result<u64, StreamError>;
 			}
 			export type Statics = {
-				$new?(): Interface;
 			};
 			export type Class = Statics & {
-				new(): Interface;
 			};
 		}
 		export type OutputStream = OutputStream.Interface;

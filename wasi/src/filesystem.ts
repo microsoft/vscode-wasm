@@ -899,10 +899,8 @@ export namespace filesystem {
 				metadataHashAt(pathFlags: PathFlags, path: string): result<MetadataHashValue, ErrorCode>;
 			}
 			export type Statics = {
-				$new?(): Interface;
 			};
 			export type Class = Statics & {
-				new(): Interface;
 			};
 		}
 		export type Descriptor = Descriptor.Interface;
@@ -917,10 +915,8 @@ export namespace filesystem {
 				readDirectoryEntry(): result<DirectoryEntry | undefined, ErrorCode>;
 			}
 			export type Statics = {
-				$new?(): Interface;
 			};
 			export type Class = Statics & {
-				new(): Interface;
 			};
 		}
 		export type DirectoryEntryStream = DirectoryEntryStream.Interface;

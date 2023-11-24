@@ -3,7 +3,7 @@
         "rootDir": ".",
         "skipLibCheck": true,
         "lib": [
-            "es2020",
+            "es2022",
             "webworker"
         ],
         "types": [

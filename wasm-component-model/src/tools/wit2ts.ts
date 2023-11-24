@@ -2492,8 +2492,6 @@ class ResourceEmitter extends InterfaceMemberEmitter {
 		code.increaseIndent();
 		if (this.conztructor !== undefined) {
 			this.conztructor.emitStaticConstructorDeclaration(code);
-		} else {
-			code.push(`$new?(): Interface;`);
 		}
 		for (const method of this.statics) {
 			method.emitStaticsDeclaration(code);
@@ -2504,8 +2502,6 @@ class ResourceEmitter extends InterfaceMemberEmitter {
 		code.increaseIndent();
 		if (this.conztructor !== undefined) {
 			this.conztructor.emitConstructorDeclaration(code);
-		} else {
-			code.push(`new(): Interface;`);
 		}
 		code.decreaseIndent();
 		code.push(`};`);
