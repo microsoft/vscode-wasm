@@ -1238,7 +1238,7 @@ export namespace sockets {
 			['IpSocketAddress', $.IpSocketAddress],
 			['Network', $.Network]
 		]);
-		export const functions: Map<string, $wcm.FunctionType<$wcm.ServiceFunction>> = new Map([
+		export const functions: Map<string, $wcm.FunctionType> = new Map([
 		]);
 		export const resources: Map<string, $wcm.ResourceType> = new Map<string, $wcm.ResourceType>([
 			['Network', $.Network]
@@ -1255,7 +1255,7 @@ export namespace sockets {
 			return $wcm.Host.create<WasmInterface>(functions, resources, service, context);
 		}
 		export function createService(wasmInterface: WasmInterface, context: $wcm.WasmContext): sockets.Network {
-			return $wcm.Service.create<sockets.Network>(functions, [], wasmInterface, context);
+			return $wcm.Service.create<sockets.Network>(functions, [['Network', $.Network, Network.Class]], wasmInterface, context);
 		}
 	}
 
@@ -1269,7 +1269,7 @@ export namespace sockets {
 		export const types: Map<string, $wcm.GenericComponentModelType> = new Map<string, $wcm.GenericComponentModelType>([
 			['Network', $.Network]
 		]);
-		export const functions: Map<string, $wcm.FunctionType<$wcm.ServiceFunction>> = new Map([
+		export const functions: Map<string, $wcm.FunctionType> = new Map([
 			['instanceNetwork', $.instanceNetwork]
 		]);
 		export const resources: Map<string, $wcm.ResourceType> = new Map<string, $wcm.ResourceType>([
@@ -1313,7 +1313,7 @@ export namespace sockets {
 			['IpAddress', $.IpAddress],
 			['ResolveAddressStream', $.ResolveAddressStream]
 		]);
-		export const functions: Map<string, $wcm.FunctionType<$wcm.ServiceFunction>> = new Map([
+		export const functions: Map<string, $wcm.FunctionType> = new Map([
 			['resolveAddresses', $.resolveAddresses]
 		]);
 		export const resources: Map<string, $wcm.ResourceType> = new Map<string, $wcm.ResourceType>([
@@ -1358,7 +1358,7 @@ export namespace sockets {
 			return $wcm.Host.create<WasmInterface>(functions, resources, service, context);
 		}
 		export function createService(wasmInterface: WasmInterface, context: $wcm.WasmContext): sockets.IpNameLookup {
-			return $wcm.Service.create<sockets.IpNameLookup>(functions, [], wasmInterface, context);
+			return $wcm.Service.create<sockets.IpNameLookup>(functions, [['ResolveAddressStream', $.ResolveAddressStream, ResolveAddressStream.Class]], wasmInterface, context);
 		}
 	}
 
@@ -1494,7 +1494,7 @@ export namespace sockets {
 			['ShutdownType', $.ShutdownType],
 			['TcpSocket', $.TcpSocket]
 		]);
-		export const functions: Map<string, $wcm.FunctionType<$wcm.ServiceFunction>> = new Map([
+		export const functions: Map<string, $wcm.FunctionType> = new Map([
 		]);
 		export const resources: Map<string, $wcm.ResourceType> = new Map<string, $wcm.ResourceType>([
 			['TcpSocket', $.TcpSocket]
@@ -1677,7 +1677,7 @@ export namespace sockets {
 			return $wcm.Host.create<WasmInterface>(functions, resources, service, context);
 		}
 		export function createService(wasmInterface: WasmInterface, context: $wcm.WasmContext): sockets.Tcp {
-			return $wcm.Service.create<sockets.Tcp>(functions, [], wasmInterface, context);
+			return $wcm.Service.create<sockets.Tcp>(functions, [['TcpSocket', $.TcpSocket, TcpSocket.Class]], wasmInterface, context);
 		}
 	}
 
@@ -1699,7 +1699,7 @@ export namespace sockets {
 			['IpAddressFamily', $.IpAddressFamily],
 			['TcpSocket', $.TcpSocket]
 		]);
-		export const functions: Map<string, $wcm.FunctionType<$wcm.ServiceFunction>> = new Map([
+		export const functions: Map<string, $wcm.FunctionType> = new Map([
 			['createTcpSocket', $.createTcpSocket]
 		]);
 		export const resources: Map<string, $wcm.ResourceType> = new Map<string, $wcm.ResourceType>([
@@ -1820,7 +1820,7 @@ export namespace sockets {
 			['IncomingDatagramStream', $.IncomingDatagramStream],
 			['OutgoingDatagramStream', $.OutgoingDatagramStream]
 		]);
-		export const functions: Map<string, $wcm.FunctionType<$wcm.ServiceFunction>> = new Map([
+		export const functions: Map<string, $wcm.FunctionType> = new Map([
 		]);
 		export const resources: Map<string, $wcm.ResourceType> = new Map<string, $wcm.ResourceType>([
 			['UdpSocket', $.UdpSocket],
@@ -1999,7 +1999,7 @@ export namespace sockets {
 			return $wcm.Host.create<WasmInterface>(functions, resources, service, context);
 		}
 		export function createService(wasmInterface: WasmInterface, context: $wcm.WasmContext): sockets.Udp {
-			return $wcm.Service.create<sockets.Udp>(functions, [], wasmInterface, context);
+			return $wcm.Service.create<sockets.Udp>(functions, [['UdpSocket', $.UdpSocket, UdpSocket.Class], ['IncomingDatagramStream', $.IncomingDatagramStream, IncomingDatagramStream.Class], ['OutgoingDatagramStream', $.OutgoingDatagramStream, OutgoingDatagramStream.Class]], wasmInterface, context);
 		}
 	}
 
@@ -2021,7 +2021,7 @@ export namespace sockets {
 			['IpAddressFamily', $.IpAddressFamily],
 			['UdpSocket', $.UdpSocket]
 		]);
-		export const functions: Map<string, $wcm.FunctionType<$wcm.ServiceFunction>> = new Map([
+		export const functions: Map<string, $wcm.FunctionType> = new Map([
 			['createUdpSocket', $.createUdpSocket]
 		]);
 		export const resources: Map<string, $wcm.ResourceType> = new Map<string, $wcm.ResourceType>([

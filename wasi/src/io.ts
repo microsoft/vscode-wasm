@@ -414,7 +414,7 @@ export namespace io {
 		export const types: Map<string, $wcm.GenericComponentModelType> = new Map<string, $wcm.GenericComponentModelType>([
 			['Error', $.Error]
 		]);
-		export const functions: Map<string, $wcm.FunctionType<$wcm.ServiceFunction>> = new Map([
+		export const functions: Map<string, $wcm.FunctionType> = new Map([
 		]);
 		export const resources: Map<string, $wcm.ResourceType> = new Map<string, $wcm.ResourceType>([
 			['Error', $.Error]
@@ -452,7 +452,7 @@ export namespace io {
 			return $wcm.Host.create<WasmInterface>(functions, resources, service, context);
 		}
 		export function createService(wasmInterface: WasmInterface, context: $wcm.WasmContext): io.Error {
-			return $wcm.Service.create<io.Error>(functions, [], wasmInterface, context);
+			return $wcm.Service.create<io.Error>(functions, [['Error', $.Error, Error.Class]], wasmInterface, context);
 		}
 	}
 
@@ -475,7 +475,7 @@ export namespace io {
 		export const types: Map<string, $wcm.GenericComponentModelType> = new Map<string, $wcm.GenericComponentModelType>([
 			['Pollable', $.Pollable]
 		]);
-		export const functions: Map<string, $wcm.FunctionType<$wcm.ServiceFunction>> = new Map([
+		export const functions: Map<string, $wcm.FunctionType> = new Map([
 			['poll', $.poll]
 		]);
 		export const resources: Map<string, $wcm.ResourceType> = new Map<string, $wcm.ResourceType>([
@@ -520,7 +520,7 @@ export namespace io {
 			return $wcm.Host.create<WasmInterface>(functions, resources, service, context);
 		}
 		export function createService(wasmInterface: WasmInterface, context: $wcm.WasmContext): io.Poll {
-			return $wcm.Service.create<io.Poll>(functions, [], wasmInterface, context);
+			return $wcm.Service.create<io.Poll>(functions, [['Pollable', $.Pollable, Pollable.Class]], wasmInterface, context);
 		}
 	}
 
@@ -600,7 +600,7 @@ export namespace io {
 			['InputStream', $.InputStream],
 			['OutputStream', $.OutputStream]
 		]);
-		export const functions: Map<string, $wcm.FunctionType<$wcm.ServiceFunction>> = new Map([
+		export const functions: Map<string, $wcm.FunctionType> = new Map([
 		]);
 		export const resources: Map<string, $wcm.ResourceType> = new Map<string, $wcm.ResourceType>([
 			['InputStream', $.InputStream],
@@ -731,7 +731,7 @@ export namespace io {
 			return $wcm.Host.create<WasmInterface>(functions, resources, service, context);
 		}
 		export function createService(wasmInterface: WasmInterface, context: $wcm.WasmContext): io.Streams {
-			return $wcm.Service.create<io.Streams>(functions, [], wasmInterface, context);
+			return $wcm.Service.create<io.Streams>(functions, [['InputStream', $.InputStream, InputStream.Class], ['OutputStream', $.OutputStream, OutputStream.Class]], wasmInterface, context);
 		}
 	}
 }

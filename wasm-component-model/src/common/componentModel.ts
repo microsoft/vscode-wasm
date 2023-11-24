@@ -25,7 +25,7 @@ export class Handle {
 	}
 }
 
-export class ResourceManager<T extends JInterface> {
+export class ResourceManager<T extends JInterface = JInterface> {
 
 	public readonly key: string;
 
@@ -2170,10 +2170,14 @@ export type JType = number | bigint | string | boolean | JArray | JRecord | JVar
 
 export type CallableParameter = [/* name */string, /* type */GenericComponentModelType];
 
-export type ServiceFunction = (...params: JType[]) => JType | void;
+export type JFunction = (...params: JType[]) => JType | void;
 export interface ServiceInterface {
-	readonly [key: string]: (ServiceFunction | ServiceInterface);
+	readonly [key: string]: (JFunction | ServiceInterface);
 }
+type GenericClass = {
+	new (...params: JType[]): JInterface;
+	[key: string]: JFunction;
+};
 
 export type WasmFunction = (...params: wasmType[]) => wasmType | void;
 
@@ -2289,7 +2293,7 @@ export class FunctionType<_T extends Function = Function> extends Callable  {
 		super(witName, params, returnType);
 	}
 
-	public callService(params: (number | bigint)[], serviceFunction: ServiceFunction, context: WasmContext): number | bigint | void {
+	public callService(serviceFunction: JFunction, params: (number | bigint)[], context: WasmContext): number | bigint | void {
 		const memory  = context.getMemory();
 		// We currently only support 'lower' mode for results > MAX_FLAT_RESULTS.
 		if (this.returnFlatTypes.length > FunctionType.MAX_FLAT_RESULTS && params.length !== this.paramFlatTypes.length + 1) {
@@ -2305,28 +2309,78 @@ export class FunctionType<_T extends Function = Function> extends Callable  {
 	}
 }
 
+export class ConstructorType<_T extends Function = Function> extends Callable {
+
+	constructor(witName: string, params: CallableParameter[], returnType?: GenericComponentModelType) {
+		super(witName, params, returnType);
+	}
+
+	public callConstructor(clazz: GenericClass, params: (number | bigint)[], resourceManager: ResourceManager, context: WasmContext): number | bigint | void {
+		// We currently only support 'lower' mode for results > MAX_FLAT_RESULTS.
+		if (this.returnFlatTypes.length > FunctionType.MAX_FLAT_RESULTS && params.length !== this.paramFlatTypes.length + 1) {
+			throw new ComponentModelError(`Invalid number of parameters. Received ${params.length} but expected ${this.paramFlatTypes.length + 1}`);
+		}
+		const memory  = context.getMemory();
+		const jParams = this.liftParamValues(params.slice(1), memory, context);
+		const obj: JInterface = new clazz(...jParams);
+		const handle = resourceManager.register(obj);
+		return handle;
+	}
+}
+
+export class StaticMethodType<_T extends Function = Function> extends Callable {
+
+	constructor(witName: string, params: CallableParameter[], returnType?: GenericComponentModelType) {
+		super(witName, params, returnType);
+	}
+
+	public callStaticMethod(func: JFunction, params: (number | bigint)[], context: WasmContext): number | bigint | void {
+		const memory  = context.getMemory();
+		// We currently only support 'lower' mode for results > MAX_FLAT_RESULTS.
+		if (this.returnFlatTypes.length > FunctionType.MAX_FLAT_RESULTS && params.length !== this.paramFlatTypes.length + 1) {
+			throw new ComponentModelError(`Invalid number of parameters. Received ${params.length} but expected ${this.paramFlatTypes.length + 1}`);
+		}
+		const jParams = this.liftParamValues(params, memory, context);
+		const result: JType | void = func(...jParams);
+		const out = params[params.length - 1];
+		if (typeof out !== 'number') {
+			throw new ComponentModelError(`Result pointer must be a number (u32), but got ${out}.`);
+		}
+		return this.lowerReturnValue(result, memory, context, out);
+	}
+}
+
 export class MethodType<_T extends Function = Function> extends Callable {
 
 	constructor(witName: string, params: CallableParameter[], returnType?: GenericComponentModelType) {
 		super(witName, params, returnType);
 	}
-}
 
-export class StaticMethodType<_T extends Function> extends Callable {
-
-	constructor(witName: string, params: CallableParameter[], returnType?: GenericComponentModelType) {
-		super(witName, params, returnType);
+	public callMethod(methodName: string, params: (number | bigint)[], resourceManager: ResourceManager, context: WasmContext): number | bigint | void {
+		if (params.length === 0) {
+			throw new ComponentModelError(`Method calls must have at least one parameter (the object pointer).`);
+		}
+		// We currently only support 'lower' mode for results > MAX_FLAT_RESULTS.
+		if (this.returnFlatTypes.length > FunctionType.MAX_FLAT_RESULTS && params.length !== this.paramFlatTypes.length + 1) {
+			throw new ComponentModelError(`Invalid number of parameters. Received ${params.length} but expected ${this.paramFlatTypes.length + 1}`);
+		}
+		const handle = params[0];
+		if (typeof handle !== 'number') {
+			throw new ComponentModelError(`Object handle must be a number (u32), but got ${handle}.`);
+		}
+		const obj = resourceManager.getResource(handle);
+		const memory  = context.getMemory();
+		const jParams = this.liftParamValues(params.slice(1), memory, context);
+		const result: JType | void = (obj as any)[methodName](...jParams);
+		const out = params[params.length - 1];
+		if (typeof out !== 'number') {
+			throw new ComponentModelError(`Result pointer must be a number (u32), but got ${out}.`);
+		}
+		return this.lowerReturnValue(result, memory, context, out);
 	}
 }
 
-export class ConstructorType<_T extends Function> extends Callable {
-
-	constructor(witName: string, params: CallableParameter[], returnType?: GenericComponentModelType) {
-		super(witName, params, returnType);
-	}
-}
-
-export type ResourceCallable<T extends Function = Function> = MethodType<T> | StaticMethodType<T> | ConstructorType<T>;
+export type ResourceCallable<T extends JFunction = JFunction> = MethodType<T> | StaticMethodType<T> | ConstructorType<T>;
 
 export type ResourceHandle = u32;
 export class ResourceHandleType implements ComponentModelType<ResourceHandle> {
@@ -2380,8 +2434,8 @@ export class ResourceType<T extends JInterface = JInterface> implements Componen
 
 
 	public readonly witName: string;
-	private id: string;
-	public readonly methods: Map<string, ResourceCallable<Function>>;
+	public readonly id: string;
+	public readonly methods: Map<string, ResourceCallable>;
 
 	constructor(witName: string, id: string) {
 		this.kind = ComponentModelTypeKind.resource;
@@ -2393,11 +2447,11 @@ export class ResourceType<T extends JInterface = JInterface> implements Componen
 		this.methods = new Map();
 	}
 
-	public addMethod(jsName: string, func: ResourceCallable<Function>): void {
+	public addMethod(jsName: string, func: ResourceCallable): void {
 		this.methods.set(jsName, func);
 	}
 
-	public getMethod(jsName: string): ResourceCallable<Function> {
+	public getMethod(jsName: string): ResourceCallable {
 		const result = this.methods.get(jsName);
 		if (result === undefined) {
 			throw new ComponentModelError(`Method '${jsName}' not found on resource '${this.witName}'.`);
@@ -2639,7 +2693,7 @@ export type InterfaceType = {
 	readonly id: string;
 	readonly witName: string;
 	readonly types: Map<string, GenericComponentModelType>;
-	readonly functions: Map<string, FunctionType<ServiceFunction>>;
+	readonly functions: Map<string, FunctionType<JFunction>>;
 	readonly resources: Map<string, ResourceType>;
 };
 export namespace InterfaceType {
@@ -2696,9 +2750,13 @@ interface ParamWasmInterface {
 }
 
 type ParamServiceFunction = (...params: UnionJType[]) => JType | void;
-type GenericConstructor<T> = new (...args: any[]) => T;
-interface ParamModuleInterface {
-	readonly [key: string]: (ParamServiceFunction | ParamModuleInterface | ResourceManager<any> | GenericConstructor<any>);
+type ParamGenericClass = {
+	new (...params: UnionJType[]): JInterface;
+} | {
+	[key: string]: ParamServiceFunction;
+};
+interface ParamServiceInterface {
+	readonly [key: string]: (ParamServiceFunction | ParamGenericClass);
 }
 
 export type WasmInterface = {
@@ -2711,43 +2769,54 @@ export type WasmInterfaces = {
 
 export type Host = ParamWasmInterface;
 export namespace Host {
-	export function create<T extends Host>(signatures: Map<string, FunctionType<ServiceFunction>>, resources: Map<string, ResourceType>, service: ParamModuleInterface, context: WasmContext): T {
+	export function create<T extends Host>(signatures: Map<string, FunctionType<JFunction>>, resources: Map<string, ResourceType>, service: ParamServiceInterface, context: WasmContext): T {
 		const result: { [key: string]: WasmFunction }  = Object.create(null);
 		for (const [funcName, signature] of signatures) {
-			result[signature.witName] = createHostFunction(funcName, signature, service, context);
+			result[signature.witName] = createHostFunction(signature, service[funcName] as JFunction, context);
 		}
 		for (const [resourceName, resource] of resources) {
-			let moduleInterface: ParamModuleInterface;
-			const implementation = service[resourceName];
-			if (typeof implementation === 'function') {
-				moduleInterface = Module.createClassProxy(implementation as GenericConstructor<any>, resource);
-			} else if (implementation instanceof ResourceManager) {
-				moduleInterface = Module.createManagerProxy(implementation, resource);
-			} else if (typeof implementation === 'object') {
-				moduleInterface = implementation as ParamModuleInterface;
-			} else {
-				throw new ComponentModelError(`Unknown service implementation ${typeof implementation}.`);
-			}
-			for (const [name, callable] of resource.methods) {
-				result[callable.witName] = createHostFunction(name, callable as any, moduleInterface, context);
+			const resourceManager = context.managers.get(resource.id);
+			for (const [callableName, callable] of resource.methods) {
+				if (callable instanceof ConstructorType) {
+					result[callable.witName] = createConstructorFunction(callable, (service[resourceName] as GenericClass), resourceManager, context);
+				} else if (callable instanceof StaticMethodType) {
+					result[callable.witName] = createStaticMethodFunction(callable, (service[resourceName] as GenericClass)[callableName], context);
+				} else if (callable instanceof MethodType) {
+					result[callable.witName] = createMethodFunction(callableName, callable, resourceManager, context);
+				}
 			}
 		}
 		return result as unknown as T;
 	}
 
-	function createHostFunction(jsName: string, func: FunctionType<ServiceFunction>, service: ParamModuleInterface, context: WasmContext): WasmFunction {
-		const serviceFunction = service[jsName] as ServiceFunction;
+	function createHostFunction(func: FunctionType<JFunction>, serviceFunction: JFunction, context: WasmContext): WasmFunction {
 		return (...params: wasmType[]): number | bigint | void => {
-			return func.callService(params, serviceFunction, context);
+			return func.callService(serviceFunction, params, context);
+		};
+	}
+
+	function createConstructorFunction(callable: ConstructorType, clazz: GenericClass, manager: ResourceManager, context: WasmContext): WasmFunction {
+		return (...params: wasmType[]): number | bigint | void => {
+			return callable.callConstructor(clazz, params, manager, context);
+		};
+	}
+
+	function createStaticMethodFunction(callable: StaticMethodType, func: JFunction, context: WasmContext): WasmFunction {
+		return (...params: wasmType[]): number | bigint | void => {
+			return callable.callStaticMethod(func, params, context);
+		};
+	}
+
+	function createMethodFunction(name: string, callable: MethodType, manager: ResourceManager, context: WasmContext): WasmFunction {
+		return (...params: wasmType[]): number | bigint | void => {
+			return callable.callMethod(name, params, manager, context);
 		};
 	}
 }
 
-type ResourceFunction = (self: number, ...params: JType[]) => JType | void;
-type ConstructorFunction = (...params: JType[]) => ResourceHandle;
 export namespace Module {
 	export function createObjectModule<T>(resource: ResourceType, wasm: ParamWasmInterface, context: WasmContext): T {
-		const result: { [key: string]: ServiceFunction }  = Object.create(null);
+		const result: { [key: string]: JFunction }  = Object.create(null);
 		for (const [name, callable] of resource.methods) {
 			if (callable instanceof StaticMethodType) {
 				continue;
@@ -2758,7 +2827,7 @@ export namespace Module {
 	}
 
 	export function createClassModule<T>(resource: ResourceType, wasm: ParamWasmInterface, context: WasmContext): T {
-		const result: { [key: string]: ServiceFunction }  = Object.create(null);
+		const result: { [key: string]: JFunction }  = Object.create(null);
 		for (const [name, callable] of resource.methods) {
 			if (callable instanceof StaticMethodType) {
 				result[name] = createModuleFunction(callable as any, wasm, context);
@@ -2767,75 +2836,21 @@ export namespace Module {
 		return result as unknown as T;
 	}
 
-	export function create<T>(resource: ResourceType, wasm: ParamWasmInterface, context: WasmContext): T {
-		const result: { [key: string]: ServiceFunction }  = Object.create(null);
-		for (const [name, callable] of resource.methods) {
-			result[name] = createModuleFunction(callable as any, wasm, context);
-		}
-		return result as unknown as T;
-	}
-
-	function createModuleFunction(func: FunctionType<ServiceFunction>, wasm: ParamWasmInterface, context: WasmContext): ServiceFunction {
+	function createModuleFunction(func: FunctionType<JFunction>, wasm: ParamWasmInterface, context: WasmContext): JFunction {
 		const wasmFunction = wasm[func.witName] as WasmFunction;
 		return (...params: JType[]): JType | void => {
 			return func.callWasm(params, wasmFunction, context);
 		};
 	}
-
-	export function createClassProxy(constructor: GenericConstructor<any>, resource: ResourceType): { [key: string]: ParamServiceFunction } {
-		const result: { [key: string]: ParamServiceFunction } = Object.create(null);
-		const manager = new ResourceManager<any>('cc');
-		for  (const name of resource.methods.keys()) {
-			if (name === 'constructor') {
-				result[name] = createConstructorFunction(manager, constructor);
-			} else {
-				result[name] = createMethodFunction(manager, name);
-			}
-		}
-		return result;
-	}
-
-	export function createManagerProxy(manager: ResourceManager<any>, resource: ResourceType): { [key: string]: ParamServiceFunction } {
-		const result: { [key: string]: ParamServiceFunction } = Object.create(null);
-		for  (const name of resource.methods.keys()) {
-			if (name === 'constructor') {
-				throw new ComponentModelError(`Resource manager can't handle constructor calls`);
-			} else {
-				result[name] = createMethodFunction(manager, name);
-			}
-		}
-		return result;
-	}
-
-	function createConstructorFunction(manager: ResourceManager<any>, constructor: GenericConstructor<any>): ConstructorFunction {
-		return (...params: JType[]): ResourceHandle => {
-			const obj = new constructor(...params);
-			return manager.register(obj);
-		};
-	}
-
-	function createMethodFunction(manager: ResourceManager<any>, jsName: string): ResourceFunction {
-		return (self: number, ...params: JType[]): JType | void => {
-			const object = manager.getResource(self);
-			return object[jsName](...params);
-		};
-	}
-
 }
 
-export enum ResourceKind {
-	module = 'module',
-	class = 'class'
-}
-
-export type ResourceTag<T> = (wasmInterface: any, context: WasmContext) => T;
+export type ClassFactory<T extends GenericClass = GenericClass> = (wasmInterface: any, context: WasmContext) => T;
 interface WriteableServiceInterface {
-	[key: string]: (ServiceFunction | WriteableServiceInterface);
+	[key: string]: (JFunction | WriteableServiceInterface);
 }
-export type Service = ParamModuleInterface | {};
+export type Service = ParamServiceInterface | {};
 export namespace Service {
-
-	export function create<T extends Service>(signatures: Map<string, FunctionType<Function>>, resources: [string, ResourceType, ResourceTag<any>][], wasm: ParamWasmInterface, context: WasmContext): T {
+	export function create<T extends Service>(signatures: Map<string, FunctionType>, resources: [string, ResourceType, ClassFactory<any>][], wasm: ParamWasmInterface, context: WasmContext): T {
 		const result: WriteableServiceInterface  = Object.create(null);
 		for (const [name, , factory] of resources) {
 			result[name] = factory(wasm, context);
@@ -2846,7 +2861,7 @@ export namespace Service {
 		return result as unknown as T;
 	}
 
-	function createServiceFunction(func: FunctionType<ServiceFunction>, wasm: ParamWasmInterface, context: WasmContext): ServiceFunction {
+	function createServiceFunction(func: FunctionType<JFunction>, wasm: ParamWasmInterface, context: WasmContext): JFunction {
 		const wasmFunction = wasm[func.witName] as WasmFunction;
 		return (...params: JType[]): JType | void => {
 			return func.callWasm(params, wasmFunction, context);

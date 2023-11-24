@@ -202,7 +202,7 @@ export namespace cli {
 		export const witName = 'environment' as const;
 		export const types: Map<string, $wcm.GenericComponentModelType> = new Map<string, $wcm.GenericComponentModelType>([
 		]);
-		export const functions: Map<string, $wcm.FunctionType<$wcm.ServiceFunction>> = new Map([
+		export const functions: Map<string, $wcm.FunctionType> = new Map([
 			['getEnvironment', $.getEnvironment],
 			['getArguments', $.getArguments],
 			['initialCwd', $.initialCwd]
@@ -232,7 +232,7 @@ export namespace cli {
 		export const witName = 'exit' as const;
 		export const types: Map<string, $wcm.GenericComponentModelType> = new Map<string, $wcm.GenericComponentModelType>([
 		]);
-		export const functions: Map<string, $wcm.FunctionType<$wcm.ServiceFunction>> = new Map([
+		export const functions: Map<string, $wcm.FunctionType> = new Map([
 			['exit', $.exit]
 		]);
 		export const resources: Map<string, $wcm.ResourceType> = new Map<string, $wcm.ResourceType>([
@@ -256,7 +256,7 @@ export namespace cli {
 		export const witName = 'run' as const;
 		export const types: Map<string, $wcm.GenericComponentModelType> = new Map<string, $wcm.GenericComponentModelType>([
 		]);
-		export const functions: Map<string, $wcm.FunctionType<$wcm.ServiceFunction>> = new Map([
+		export const functions: Map<string, $wcm.FunctionType> = new Map([
 			['run', $.run]
 		]);
 		export const resources: Map<string, $wcm.ResourceType> = new Map<string, $wcm.ResourceType>([
@@ -282,7 +282,7 @@ export namespace cli {
 		export const types: Map<string, $wcm.GenericComponentModelType> = new Map<string, $wcm.GenericComponentModelType>([
 			['InputStream', $.InputStream]
 		]);
-		export const functions: Map<string, $wcm.FunctionType<$wcm.ServiceFunction>> = new Map([
+		export const functions: Map<string, $wcm.FunctionType> = new Map([
 			['getStdin', $.getStdin]
 		]);
 		export const resources: Map<string, $wcm.ResourceType> = new Map<string, $wcm.ResourceType>([
@@ -308,7 +308,7 @@ export namespace cli {
 		export const types: Map<string, $wcm.GenericComponentModelType> = new Map<string, $wcm.GenericComponentModelType>([
 			['OutputStream', $.OutputStream]
 		]);
-		export const functions: Map<string, $wcm.FunctionType<$wcm.ServiceFunction>> = new Map([
+		export const functions: Map<string, $wcm.FunctionType> = new Map([
 			['getStdout', $.getStdout]
 		]);
 		export const resources: Map<string, $wcm.ResourceType> = new Map<string, $wcm.ResourceType>([
@@ -334,7 +334,7 @@ export namespace cli {
 		export const types: Map<string, $wcm.GenericComponentModelType> = new Map<string, $wcm.GenericComponentModelType>([
 			['OutputStream', $.OutputStream]
 		]);
-		export const functions: Map<string, $wcm.FunctionType<$wcm.ServiceFunction>> = new Map([
+		export const functions: Map<string, $wcm.FunctionType> = new Map([
 			['getStderr', $.getStderr]
 		]);
 		export const resources: Map<string, $wcm.ResourceType> = new Map<string, $wcm.ResourceType>([
@@ -360,7 +360,7 @@ export namespace cli {
 		export const types: Map<string, $wcm.GenericComponentModelType> = new Map<string, $wcm.GenericComponentModelType>([
 			['TerminalInput', $.TerminalInput]
 		]);
-		export const functions: Map<string, $wcm.FunctionType<$wcm.ServiceFunction>> = new Map([
+		export const functions: Map<string, $wcm.FunctionType> = new Map([
 		]);
 		export const resources: Map<string, $wcm.ResourceType> = new Map<string, $wcm.ResourceType>([
 			['TerminalInput', $.TerminalInput]
@@ -377,7 +377,7 @@ export namespace cli {
 			return $wcm.Host.create<WasmInterface>(functions, resources, service, context);
 		}
 		export function createService(wasmInterface: WasmInterface, context: $wcm.WasmContext): cli.TerminalInput {
-			return $wcm.Service.create<cli.TerminalInput>(functions, [], wasmInterface, context);
+			return $wcm.Service.create<cli.TerminalInput>(functions, [['TerminalInput', $.TerminalInput, TerminalInput.Class]], wasmInterface, context);
 		}
 	}
 
@@ -391,7 +391,7 @@ export namespace cli {
 		export const types: Map<string, $wcm.GenericComponentModelType> = new Map<string, $wcm.GenericComponentModelType>([
 			['TerminalOutput', $.TerminalOutput]
 		]);
-		export const functions: Map<string, $wcm.FunctionType<$wcm.ServiceFunction>> = new Map([
+		export const functions: Map<string, $wcm.FunctionType> = new Map([
 		]);
 		export const resources: Map<string, $wcm.ResourceType> = new Map<string, $wcm.ResourceType>([
 			['TerminalOutput', $.TerminalOutput]
@@ -408,7 +408,7 @@ export namespace cli {
 			return $wcm.Host.create<WasmInterface>(functions, resources, service, context);
 		}
 		export function createService(wasmInterface: WasmInterface, context: $wcm.WasmContext): cli.TerminalOutput {
-			return $wcm.Service.create<cli.TerminalOutput>(functions, [], wasmInterface, context);
+			return $wcm.Service.create<cli.TerminalOutput>(functions, [['TerminalOutput', $.TerminalOutput, TerminalOutput.Class]], wasmInterface, context);
 		}
 	}
 
@@ -422,7 +422,7 @@ export namespace cli {
 		export const types: Map<string, $wcm.GenericComponentModelType> = new Map<string, $wcm.GenericComponentModelType>([
 			['TerminalInput', $.TerminalInput]
 		]);
-		export const functions: Map<string, $wcm.FunctionType<$wcm.ServiceFunction>> = new Map([
+		export const functions: Map<string, $wcm.FunctionType> = new Map([
 			['getTerminalStdin', $.getTerminalStdin]
 		]);
 		export const resources: Map<string, $wcm.ResourceType> = new Map<string, $wcm.ResourceType>([
@@ -448,7 +448,7 @@ export namespace cli {
 		export const types: Map<string, $wcm.GenericComponentModelType> = new Map<string, $wcm.GenericComponentModelType>([
 			['TerminalOutput', $.TerminalOutput]
 		]);
-		export const functions: Map<string, $wcm.FunctionType<$wcm.ServiceFunction>> = new Map([
+		export const functions: Map<string, $wcm.FunctionType> = new Map([
 			['getTerminalStdout', $.getTerminalStdout]
 		]);
 		export const resources: Map<string, $wcm.ResourceType> = new Map<string, $wcm.ResourceType>([
@@ -474,7 +474,7 @@ export namespace cli {
 		export const types: Map<string, $wcm.GenericComponentModelType> = new Map<string, $wcm.GenericComponentModelType>([
 			['TerminalOutput', $.TerminalOutput]
 		]);
-		export const functions: Map<string, $wcm.FunctionType<$wcm.ServiceFunction>> = new Map([
+		export const functions: Map<string, $wcm.FunctionType> = new Map([
 			['getTerminalStderr', $.getTerminalStderr]
 		]);
 		export const resources: Map<string, $wcm.ResourceType> = new Map<string, $wcm.ResourceType>([

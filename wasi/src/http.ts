@@ -1506,7 +1506,7 @@ export namespace http {
 			['OutgoingBody', $.OutgoingBody],
 			['FutureIncomingResponse', $.FutureIncomingResponse]
 		]);
-		export const functions: Map<string, $wcm.FunctionType<$wcm.ServiceFunction>> = new Map([
+		export const functions: Map<string, $wcm.FunctionType> = new Map([
 			['httpErrorCode', $.httpErrorCode]
 		]);
 		export const resources: Map<string, $wcm.ResourceType> = new Map<string, $wcm.ResourceType>([
@@ -2007,7 +2007,7 @@ export namespace http {
 			return $wcm.Host.create<WasmInterface>(functions, resources, service, context);
 		}
 		export function createService(wasmInterface: WasmInterface, context: $wcm.WasmContext): http.Types {
-			return $wcm.Service.create<http.Types>(functions, [], wasmInterface, context);
+			return $wcm.Service.create<http.Types>(functions, [['Fields', $.Fields, Fields.Class], ['IncomingRequest', $.IncomingRequest, IncomingRequest.Class], ['OutgoingRequest', $.OutgoingRequest, OutgoingRequest.Class], ['RequestOptions', $.RequestOptions, RequestOptions.Class], ['ResponseOutparam', $.ResponseOutparam, ResponseOutparam.Class], ['IncomingResponse', $.IncomingResponse, IncomingResponse.Class], ['IncomingBody', $.IncomingBody, IncomingBody.Class], ['FutureTrailers', $.FutureTrailers, FutureTrailers.Class], ['OutgoingResponse', $.OutgoingResponse, OutgoingResponse.Class], ['OutgoingBody', $.OutgoingBody, OutgoingBody.Class], ['FutureIncomingResponse', $.FutureIncomingResponse, FutureIncomingResponse.Class]], wasmInterface, context);
 		}
 	}
 
@@ -2026,7 +2026,7 @@ export namespace http {
 			['IncomingRequest', $.IncomingRequest],
 			['ResponseOutparam', $.ResponseOutparam]
 		]);
-		export const functions: Map<string, $wcm.FunctionType<$wcm.ServiceFunction>> = new Map([
+		export const functions: Map<string, $wcm.FunctionType> = new Map([
 			['handle', $.handle]
 		]);
 		export const resources: Map<string, $wcm.ResourceType> = new Map<string, $wcm.ResourceType>([
@@ -2061,7 +2061,7 @@ export namespace http {
 			['FutureIncomingResponse', $.FutureIncomingResponse],
 			['ErrorCode', $.ErrorCode]
 		]);
-		export const functions: Map<string, $wcm.FunctionType<$wcm.ServiceFunction>> = new Map([
+		export const functions: Map<string, $wcm.FunctionType> = new Map([
 			['handle', $.handle]
 		]);
 		export const resources: Map<string, $wcm.ResourceType> = new Map<string, $wcm.ResourceType>([

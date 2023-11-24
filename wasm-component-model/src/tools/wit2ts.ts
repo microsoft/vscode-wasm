@@ -610,6 +610,7 @@ namespace MetaModel {
 	export const ResourceHandle: string = `${qualifier}.ResourceHandle`;
 	export const ResourceHandleType: string = `${qualifier}.ResourceHandleType`;
 	export const OwnType: string = `${qualifier}.OwnType`;
+	export const FunctionType: string = `${qualifier}.FunctionType`;
 
 	export function qualify(name: string): string {
 		return `${qualifier}.${name}`;
@@ -1853,7 +1854,7 @@ class InterfaceEmitter extends Emitter {
 		}
 		code.decreaseIndent();
 		code.push(']);');
-		code.push(`export const functions: Map<string, ${MetaModel.qualifier}.FunctionType<${MetaModel.qualifier}.ServiceFunction>> = new Map([`);
+		code.push(`export const functions: Map<string, ${MetaModel.FunctionType}> = new Map([`);
 		code.increaseIndent();
 		for (let i = 0; i < this.functionEmitters.length; i++) {
 			const name = nameProvider.asFunctionName(this.functionEmitters[i].callable);
@@ -1894,7 +1895,12 @@ class InterfaceEmitter extends Emitter {
 
 		code.push(`export function createService(wasmInterface: WasmInterface, context: ${MetaModel.WasmContext}): ${qualifiedTypeName} {`);
 		code.increaseIndent();
-		code.push(`return $wcm.Service.create<${qualifiedTypeName}>(functions, [], wasmInterface, context);`);
+		const resourcesParam: string[] = [];
+		for (const emitter of this.resourceEmitters) {
+			const resourceName = nameProvider.asTypeName(emitter.resource);
+			resourcesParam.push(`['${resourceName}', $.${resourceName}, ${resourceName}.Class]`);
+		}
+		code.push(`return $wcm.Service.create<${qualifiedTypeName}>(functions, [${resourcesParam.join(', ')}], wasmInterface, context);`);
 		code.decreaseIndent();
 		code.push(`}`);
 

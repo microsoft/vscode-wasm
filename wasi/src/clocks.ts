@@ -152,7 +152,7 @@ export namespace clocks {
 			['Instant', $.Instant],
 			['Duration', $.Duration]
 		]);
-		export const functions: Map<string, $wcm.FunctionType<$wcm.ServiceFunction>> = new Map([
+		export const functions: Map<string, $wcm.FunctionType> = new Map([
 			['now', $.now],
 			['resolution', $.resolution],
 			['subscribeInstant', $.subscribeInstant],
@@ -188,7 +188,7 @@ export namespace clocks {
 		export const types: Map<string, $wcm.GenericComponentModelType> = new Map<string, $wcm.GenericComponentModelType>([
 			['Datetime', $.Datetime]
 		]);
-		export const functions: Map<string, $wcm.FunctionType<$wcm.ServiceFunction>> = new Map([
+		export const functions: Map<string, $wcm.FunctionType> = new Map([
 			['now', $.now],
 			['resolution', $.resolution]
 		]);

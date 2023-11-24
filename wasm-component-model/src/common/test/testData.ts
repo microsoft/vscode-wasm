@@ -269,7 +269,7 @@ export namespace testData {
 			['TestFlagsLong', $.TestFlagsLong],
 			['PointResource', $.PointResource]
 		]);
-		export const functions: Map<string, $wcm.FunctionType<$wcm.ServiceFunction>> = new Map([
+		export const functions: Map<string, $wcm.FunctionType<$wcm.JFunction>> = new Map([
 			['call', $.call],
 			['callOption', $.callOption],
 			['checkVariant', $.checkVariant],

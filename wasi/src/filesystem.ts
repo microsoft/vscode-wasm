@@ -1142,7 +1142,7 @@ export namespace filesystem {
 			['Descriptor', $.Descriptor],
 			['DirectoryEntryStream', $.DirectoryEntryStream]
 		]);
-		export const functions: Map<string, $wcm.FunctionType<$wcm.ServiceFunction>> = new Map([
+		export const functions: Map<string, $wcm.FunctionType> = new Map([
 			['filesystemErrorCode', $.filesystemErrorCode]
 		]);
 		export const resources: Map<string, $wcm.ResourceType> = new Map<string, $wcm.ResourceType>([
@@ -1340,7 +1340,7 @@ export namespace filesystem {
 			return $wcm.Host.create<WasmInterface>(functions, resources, service, context);
 		}
 		export function createService(wasmInterface: WasmInterface, context: $wcm.WasmContext): filesystem.Types {
-			return $wcm.Service.create<filesystem.Types>(functions, [], wasmInterface, context);
+			return $wcm.Service.create<filesystem.Types>(functions, [['Descriptor', $.Descriptor, Descriptor.Class], ['DirectoryEntryStream', $.DirectoryEntryStream, DirectoryEntryStream.Class]], wasmInterface, context);
 		}
 	}
 
@@ -1354,7 +1354,7 @@ export namespace filesystem {
 		export const types: Map<string, $wcm.GenericComponentModelType> = new Map<string, $wcm.GenericComponentModelType>([
 			['Descriptor', $.Descriptor]
 		]);
-		export const functions: Map<string, $wcm.FunctionType<$wcm.ServiceFunction>> = new Map([
+		export const functions: Map<string, $wcm.FunctionType> = new Map([
 			['getDirectories', $.getDirectories]
 		]);
 		export const resources: Map<string, $wcm.ResourceType> = new Map<string, $wcm.ResourceType>([

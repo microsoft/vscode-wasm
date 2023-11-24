@@ -125,7 +125,7 @@ export namespace random {
 		export const witName = 'insecure-seed' as const;
 		export const types: Map<string, $wcm.GenericComponentModelType> = new Map<string, $wcm.GenericComponentModelType>([
 		]);
-		export const functions: Map<string, $wcm.FunctionType<$wcm.ServiceFunction>> = new Map([
+		export const functions: Map<string, $wcm.FunctionType> = new Map([
 			['insecureSeed', $.insecureSeed]
 		]);
 		export const resources: Map<string, $wcm.ResourceType> = new Map<string, $wcm.ResourceType>([
@@ -152,7 +152,7 @@ export namespace random {
 		export const witName = 'insecure' as const;
 		export const types: Map<string, $wcm.GenericComponentModelType> = new Map<string, $wcm.GenericComponentModelType>([
 		]);
-		export const functions: Map<string, $wcm.FunctionType<$wcm.ServiceFunction>> = new Map([
+		export const functions: Map<string, $wcm.FunctionType> = new Map([
 			['getInsecureRandomBytes', $.getInsecureRandomBytes],
 			['getInsecureRandomU64', $.getInsecureRandomU64]
 		]);
@@ -181,7 +181,7 @@ export namespace random {
 		export const witName = 'random' as const;
 		export const types: Map<string, $wcm.GenericComponentModelType> = new Map<string, $wcm.GenericComponentModelType>([
 		]);
-		export const functions: Map<string, $wcm.FunctionType<$wcm.ServiceFunction>> = new Map([
+		export const functions: Map<string, $wcm.FunctionType> = new Map([
 			['getRandomBytes', $.getRandomBytes],
 			['getRandomU64', $.getRandomU64]
 		]);
