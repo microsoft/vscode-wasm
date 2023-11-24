@@ -863,13 +863,17 @@ namespace MetaModel {
 
 		public printBorrowHandle(type: BorrowHandleType, depth: number): string {
 			const borrowed = this.printTypeReference(type.kind.handle.borrow, depth + 1);
-			this.imports.addBaseType('borrow');
+			if (depth > 0) {
+				this.imports.addBaseType('borrow');
+			}
 			return depth === 0 ? borrowed : `borrow<${borrowed}>`;
 		}
 
 		public printOwnHandle(type: OwnHandleType, depth: number): string {
 			const owned = this.printTypeReference(type.kind.handle.own, depth + 1);
-			this.imports.addBaseType('own');
+			if (depth > 0) {
+				this.imports.addBaseType('own');
+			}
 			return depth === 0 ? owned : `own<${owned}>`;
 		}
 
@@ -1433,9 +1437,9 @@ class DocumentEmitter {
 	}
 
 	public build(): void {
-		const regExp = new RegExp(`${this.options.package}:`);
+		const regExp = this.options.package !== undefined ? new RegExp(`${this.options.package}:`) : undefined;
 		for (const pkg of this.document.packages) {
-			if (!regExp.test(pkg.name)) {
+			if (regExp !== undefined && !regExp.test(pkg.name)) {
 				continue;
 			}
 

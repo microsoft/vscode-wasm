@@ -2321,7 +2321,7 @@ export class ConstructorType<_T extends Function = Function> extends Callable {
 			throw new ComponentModelError(`Invalid number of parameters. Received ${params.length} but expected ${this.paramFlatTypes.length + 1}`);
 		}
 		const memory  = context.getMemory();
-		const jParams = this.liftParamValues(params.slice(1), memory, context);
+		const jParams = this.liftParamValues(params, memory, context);
 		const obj: JInterface = new clazz(...jParams);
 		const handle = resourceManager.register(obj);
 		return handle;
@@ -2370,8 +2370,9 @@ export class MethodType<_T extends Function = Function> extends Callable {
 		}
 		const obj = resourceManager.getResource(handle);
 		const memory  = context.getMemory();
-		const jParams = this.liftParamValues(params.slice(1), memory, context);
-		const result: JType | void = (obj as any)[methodName](...jParams);
+		const jParams = this.liftParamValues(params, memory, context);
+		// We need to cut off the first parameter (the object handle).
+		const result: JType | void = (obj as any)[methodName](...jParams.slice(1));
 		const out = params[params.length - 1];
 		if (typeof out !== 'number') {
 			throw new ComponentModelError(`Result pointer must be a number (u32), but got ${out}.`);

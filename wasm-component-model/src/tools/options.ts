@@ -7,7 +7,7 @@ export type Options = {
 	help: boolean;
 	version: boolean;
 	outDir: string | undefined;
-	package: RegExp;
+	package: string | undefined;
 	file: string | undefined;
 	target: 'ts';
 	nameStyle: 'ts' | 'wit';
@@ -23,7 +23,7 @@ export namespace Options {
 		help: false,
 		version: false,
 		outDir: undefined,
-		package: /.*/,
+		package: undefined,
 		file: undefined,
 		target: 'ts',
 		nameStyle: 'ts',

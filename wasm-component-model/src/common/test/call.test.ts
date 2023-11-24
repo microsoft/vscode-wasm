@@ -4,7 +4,7 @@
  *--------------------------------------------------------------------------------------------*/
 import assert from 'assert';
 
-import { u32, Memory as IMemory, ptr, size, Context, borrow, own, Alignment } from '../componentModel';
+import { u32, Memory as IMemory, ptr, size, WasmContext, borrow, own, Alignment, Resource, ResourceManagers } from '../componentModel';
 
 class Memory implements IMemory {
 	public readonly buffer: ArrayBuffer;
@@ -41,36 +41,10 @@ import TestVariant = Types.TestVariant;
 import TestFlagsShort = Types.TestFlagsShort;
 import TestFlagsLong = Types.TestFlagsLong;
 
-namespace PointResourceModule {
-
-	class Point {
-		constructor(public x: u32, public y: u32) { }
+class PointResourceClass extends Resource implements Types.PointResource.Interface {
+	constructor(public x: u32, public y: u32) {
+		super();
 	}
-	let counter: u32 = 0;
-
-	const data: Map<u32, Point> = new Map();
-
-	export function constructor(x: u32, y: u32): own<Types.PointResource> {
-		const id = counter++;
-		data.set(id, new Point(x, y));
-		return id;
-	}
-
-	export function getX(self: borrow<Types.PointResource>): u32 {
-		return data.get(self)!.x;
-	}
-
-	export function getY(self: borrow<Types.PointResource>): u32 {
-		return data.get(self)!.y;
-	}
-
-	export function add(self: borrow<Types.PointResource>): u32 {
-		return data.get(self)!.x + data.get(self)!.y;
-	}
-}
-
-class PointResourceClass implements Types.PointResource.Interface {
-	constructor(public x: u32, public y: u32) { }
 
 	public getX(): u32 {
 		return this.x;
@@ -129,14 +103,17 @@ const serviceImpl: Types = {
 	},
 };
 
-const context: Context = {
-	memory: new Memory(),
-	options: { encoding: 'utf-8' }
+const memory = new Memory();
+const managers = new ResourceManagers();
+const context: WasmContext = {
+	getMemory: () => memory,
+	options: { encoding: 'utf-8' },
+	managers,
 };
 
 suite('point', () => {
 	const host: Types._.WasmInterface = Types._.createHost(serviceImpl, context);
-	const service: Types = Types._.createService(host, context, Types._.PointResource.Module);
+	const service: Types = Types._.createService(host, context);
 	test('host:call', () => {
 		assert.strictEqual(host.call(1, 2), 3);
 	});
@@ -145,30 +122,11 @@ suite('point', () => {
 	});
 });
 
-suite ('point-resource - Module', () => {
-	const moduleImplementation = Object.assign({}, serviceImpl);
-	moduleImplementation.PointResource = PointResourceModule;
-	const host: Types._.WasmInterface = Types._.createHost(serviceImpl, context);
-	const service = Types._.createService(host, context, Types._.PointResource.Module);
-	test('host:call', () => {
-		const point = host['[constructor]point-resource'](1, 2);
-		assert.strictEqual(host['[method]point-resource.get-x'](point), 1);
-		assert.strictEqual(host['[method]point-resource.get-y'](point), 2);
-		assert.strictEqual(host['[method]point-resource.add'](point), 3);
-	});
-	test('service:call', () => {
-		const point = service.PointResource.constructor(1, 2);
-		assert.strictEqual(service.PointResource.getX(point), 1);
-		assert.strictEqual(service.PointResource.getY(point), 2);
-		assert.strictEqual(service.PointResource.add(point), 3);
-	});
-});
-
-suite ('point-resource - Class', () => {
+suite ('point-resource', () => {
 	const moduleImplementation = Object.assign({}, serviceImpl);
 	moduleImplementation.PointResource = PointResourceClass;
 	const host: Types._.WasmInterface = Types._.createHost(serviceImpl, context);
-	const service = Types._.createService(host, context, Types._.PointResource.Class);
+	const service = Types._.createService(host, context);
 	test('host:call', () => {
 		const point = host['[constructor]point-resource'](1, 2);
 		assert.strictEqual(host['[method]point-resource.get-x'](point), 1);
@@ -186,7 +144,7 @@ suite ('point-resource - Class', () => {
 suite('option', () => {
 	test('host:call', () => {
 		const host: Types._.WasmInterface = Types._.createHost(serviceImpl, context);
-		const memory = context.memory;
+		const memory = context.getMemory();
 		const ptr = memory.alloc(4, 8);
 		host['call-option'](1, 1, 2, ptr);
 		assert.strictEqual(memory.view.getUint32(ptr, true), 1);
@@ -196,7 +154,7 @@ suite('option', () => {
 
 suite('variant', () => {
 	const host: Types._.WasmInterface = Types._.createHost(serviceImpl, context);
-	const service: Types = Types._.createService(host, context, Types._.PointResource.Module);
+	const service: Types = Types._.createService(host, context);
 
 	test('empty', () => {
 		const empty = service.checkVariant(TestVariant.Empty());
@@ -255,7 +213,7 @@ suite('variant', () => {
 
 suite('flags', () => {
 	const host: Types._.WasmInterface = Types._.createHost(serviceImpl, context);
-	const service: Types = Types._.createService(host, context, Types._.PointResource.Module);
+	const service: Types = Types._.createService(host, context);
 	test('short', () => {
 		const flags: TestFlagsShort = TestFlagsShort.one;
 		const returned = service.checkFlagsShort(flags);
