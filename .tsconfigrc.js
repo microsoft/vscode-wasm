@@ -405,6 +405,16 @@ const testbed_python = {
 }
 
 /** @type ProjectDescription */
+const testbed_performance = {
+	name: "performance",
+	path: './testbeds/performance',
+	extends: [ node ],
+	out:  {
+		dir: './out'
+	}
+}
+
+/** @type ProjectDescription */
 const testbed_rust = {
 	name: "rust",
 	path: './testbeds/rust',
@@ -418,7 +428,7 @@ const testbed_rust = {
 const testbeds = {
 	name: 'testbeds',
 	path: './testbeds',
-	references: [ testbed_cpp, testbed_python, testbed_rust ]
+	references: [ testbed_cpp, testbed_python, testbed_rust, testbed_performance ]
 }
 
 /** @type ProjectDescription */
@@ -509,6 +519,7 @@ const projects = [
 	[ testbed_cpp, [ compileProjectOptions ] ],
 	[ testbed_python, [ compileProjectOptions ] ],
 	[ testbed_rust, [ compileProjectOptions ] ],
+	[ testbed_performance, [ compileProjectOptions ] ],
 	[ testbeds, [ compileProjectOptions ] ]
 ];
 
