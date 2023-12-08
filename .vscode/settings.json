@@ -210,7 +210,8 @@
 		"Xvfb"
 	],
 	"files.associations": {
-		"iostream": "cpp"
+		"iostream": "cpp",
+		"malloc.h": "c"
 	},
 	"task.allowAutomaticTasks": "on",
 	"rust-analyzer.linkedProjects": [
