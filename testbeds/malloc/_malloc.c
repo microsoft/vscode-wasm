@@ -1,3 +1,4 @@
 #include <malloc.h>
 
-void* malloc(size_t);
+extern void* malloc(size_t);
+extern void free(void*);
