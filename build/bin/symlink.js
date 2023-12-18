@@ -28,5 +28,7 @@ const node_modules = 'node_modules';
 
 	ln.softLink(path.join(root, 'wasm-component-model'), path.join(root, 'wasi', node_modules, '@vscode', 'wasm-component-model'));
 	ln.softLink(path.join(root, 'wasm-component-model'), path.join(root, 'wasm-wasi-core', node_modules, '@vscode', 'wasm-component-model'));
+	ln.softLink(path.join(root, 'wasm-component-model'), path.join(root, 'wasm-component-model-std', node_modules, '@vscode', 'wasm-component-model'));
+
 	ln.softLink(path.join(root, 'wasi'), path.join(root, 'wasm-wasi-core', node_modules, '@vscode', 'wasi'));
 })();

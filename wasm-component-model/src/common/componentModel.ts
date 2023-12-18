@@ -153,9 +153,12 @@ export enum Alignment {
 	word = 4,
 	doubleWord = 8
 }
-function align(ptr: ptr, alignment: Alignment): size {
-	return Math.ceil(ptr / alignment) * alignment;
+export namespace Alignment {
+	export function align(ptr: ptr, alignment: Alignment): size {
+		return Math.ceil(ptr / alignment) * alignment;
+	}
 }
+const align = Alignment.align;
 
 export type i32 = number;
 export type i64 = bigint;
@@ -1006,7 +1009,7 @@ export class ListType<T> implements ComponentModelType<T[]> {
 		this.elementType = elementType;
 		this.kind = ComponentModelTypeKind.list;
 		this.size = 8;
-		this.alignment = 4;
+		this.alignment = Alignment.word;
 		this.flatTypes = [WasmTypeKind.i32, WasmTypeKind.i32];
 	}
 

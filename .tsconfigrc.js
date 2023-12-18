@@ -253,6 +253,23 @@ const wasm_component_model = {
 };
 
 /** @type ProjectDescription */
+const wasm_component_model_std = {
+	name: 'wasm-component-model-std',
+	path: './wasm-component-model-std',
+	extends: [ common, referenced ],
+	out: {
+		dir: './lib',
+		buildInfoFile: '${buildInfoFile}.tsbuildInfo'
+	},
+	compilerOptions: {
+		rootDir: './src'
+	},
+	references: [
+		'../wasm-component-model'
+	]
+};
+
+/** @type ProjectDescription */
 const wasi = {
 	name: 'wasi',
 	path: './wasi',
@@ -514,6 +531,8 @@ const projects = [
 	[ createPublishProjectDescription(wasm_wasi), [ publishProjectOptions ] ],
 	[ webshell, [ compileProjectOptions, watchProjectOptions ] ],
 	[ createPublishProjectDescription(webshell), [ publishProjectOptions ] ],
+	[ wasm_component_model_std, [ compileProjectOptions, watchProjectOptions ] ],
+	[ createPublishProjectDescription(wasm_component_model_std), [ publishProjectOptions ] ],
 	[ tools, [ compileProjectOptions, watchProjectOptions ] ],
 	[ root, [compileProjectOptions, watchProjectOptions ] ],
 	[ testbed_cpp, [ compileProjectOptions ] ],

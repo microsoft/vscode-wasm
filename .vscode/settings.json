@@ -41,6 +41,7 @@
 		"./sync-api-service",
 		"./sync-api-tests",
 		"./wasm-component-model",
+		"./wasm-component-model-std",
 		"./wasi",
 		"./wasm-wasi-core",
 		"./wasm-wasi",
