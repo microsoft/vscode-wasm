@@ -3,33 +3,55 @@
  * Licensed under the MIT License. See License.txt in the project root for license information.
  * ------------------------------------------------------------------------------------------ */
 
-import { alloc } from './memory';
-import { Alignment, ComponentModelType, JType, ptr } from '@vscode/wasm-component-model';
+import { ComponentModelType, GenericComponentModelType, JType, ptr, u32 } from '@vscode/wasm-component-model';
+import { SObject } from './sobject';
+import { memory } from './memory';
 
-export class SArray<T extends JType> {
+type SArrayProperties = {
+	capacity: u32;
+	start: u32;
+	next: u32;
+	elements: ptr;
+};
+
+export class SArray<T extends JType> extends SObject<SArrayProperties> {
+
+	static properties: { [key: string]: GenericComponentModelType } = {
+		capacity: u32,
+		start: u32,
+		next: u32,
+		elements: ptr
+	};
 
 	private readonly type: ComponentModelType<T>;
-	private ptr: ptr;
-	private capacity: number;
-	private start: number;
-	private next: number;
+	private readonly access: SArrayProperties;
 
 	constructor(type: ComponentModelType<T>) {
+		super(SArray.properties);
 		this.type = type;
-		this.start = 0;
-		this.next = 0;
-		const alignment = Math.max(type.alignment, Alignment.word);
-		// We start with 20 elements
-		this.capacity = 20;
-		this.ptr = alloc(alignment, type.size * this.capacity + 8);
-		
+		this.access = SObject.access(SArray.properties);
+		this.access.capacity = 20;
+		this.access.start = 0;
+		this.access.next = 0;
+		this.access.elements = memory().alloc(this.type.alignment, this.type.size * this.access.capacity);
 	}
 
 	push(value: T): void {
-		throw new Error('Not implemented');
+		if (this.access.next < this.access.capacity) {
+			this.type.store(memory(), this.access.elements + this.type.size * this.access.next, value, SObject.Context);
+			this.access.next = this.access.next + 1;
+		} else {
+			this.access.capacity = this.access.capacity * 2;
+			const newElements = memory().alloc(this.type.alignment, this.type.size * this.access.capacity);
+			memory().view.setUint32(newElements, this.access.next, true);
+			memory().view.setUint32(newElements + u32.size, this.access.next, true);
+			memory().view.setUint32(newElements + u32.size * 2, this.access.capacity, true);
+			memory().view.setUint32(newElements + u32.size * 3, this.access.elements, true);
+			this.access.elements = newElements;
+		}
 	}
 
 	public size(): number {
-		return this.next - this.start;
+		return this.access.next - this.access.start;
 	}
 }
