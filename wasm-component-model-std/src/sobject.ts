@@ -21,7 +21,6 @@ class MemoryImpl implements SMemory {
 
 	private readonly memory: WebAssembly.Memory;
 	private readonly exports: Exports;
-	private readonly registry: FinalizationRegistry<ptr>;
 
 	private _raw: Uint8Array | undefined;
 	private _view: DataView | undefined;
@@ -29,11 +28,6 @@ class MemoryImpl implements SMemory {
 	constructor(memory: WebAssembly.Memory, exports: Exports) {
 		this.memory = memory;
 		this.exports = exports;
-		this.registry = new FinalizationRegistry<ptr>((ptr) => {
-			const header = new Int32Array(this.memory.buffer, ptr, 2);
-			const value = Atomics.load(header, SObject.refs);
-			this.free(ptr);
-		});
 	}
 
 	public get buffer(): ArrayBuffer {
