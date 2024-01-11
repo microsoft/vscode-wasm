@@ -3,7 +3,8 @@
  * Licensed under the MIT License. See License.txt in the project root for license information.
  * ------------------------------------------------------------------------------------------ */
 
-import * as yargs from 'yargs';
+import fs from 'node:fs/promises';
+import yargs from 'yargs';
 
 type Options = {
 	help: boolean;
@@ -35,6 +36,56 @@ export async function run(options: Options): Promise<number> {
 		return 0;
 	}
 
+	if (options.wasm === undefined) {
+		process.stderr.write(`No wasm file specified.\n`);
+		return 1;
+	}
+
+	try {
+		const stat = await fs.stat(options.wasm, { bigint: true });
+		if (!stat.isFile()) {
+			process.stderr.write(`${options.wasm} is not a file.\n`);
+			return 1;
+		}
+	} catch (error: any) {
+		if (error.code === 'ENOENT') {
+			process.stderr.write(`${options.wasm} does not exist.\n`);
+			return 1;
+		} else {
+			throw error;
+		}
+	}
+	const bytes = await fs.readFile(options.wasm);
+	const buffer: string [] = [];
+	buffer.push(`/* --------------------------------------------------------------------------------------------`);
+	buffer.push(` * Copyright (c) Microsoft Corporation. All rights reserved.`);
+ 	buffer.push(` * Licensed under the MIT License. See License.txt in the project root for license information.`);
+ 	buffer.push(` * ------------------------------------------------------------------------------------------ */`);
+	buffer.push(``);
+	buffer.push(`const bytes = new Uint8Array([`);
+	let line: string[] = [];
+	const lines: string[] = [];
+	for (let i = 0; i < bytes.length; i++) {
+		line.push(`0x${bytes[i].toString(16)}`);
+		if ((i + 1) % 16 === 0) {
+			lines.push(`\t${line.join(', ')}`);
+			line = [];
+		}
+	}
+	if (line.length > 0) {
+		lines.push(`\t${line.join(', ')}`);
+	}
+	buffer.push(lines.join(',\n'));
+	buffer.push(`]);`);
+	buffer.push(``);
+	buffer.push(`const module = WebAssembly.compile(bytes);`);
+	buffer.push(`export default module;`);
+
+	if (options.ts === undefined) {
+		process.stdout.write(buffer.join('\n'));
+	} else {
+		await fs.writeFile(options.ts, buffer.join('\n'));
+	}
 	return 0;
 }
 

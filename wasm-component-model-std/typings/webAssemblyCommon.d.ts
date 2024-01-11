@@ -111,4 +111,6 @@ declare namespace WebAssembly {
     	prototype: Instance;
     	new(module: Module, importObject?: Imports): Instance;
     };
+
+    function compile(bytes: ArrayBufferView): Promise<Module>;
 }

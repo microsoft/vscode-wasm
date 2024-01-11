@@ -2,8 +2,11 @@
  * Copyright (c) Microsoft Corporation. All rights reserved.
  * Licensed under the MIT License. See License.txt in the project root for license information.
  * ------------------------------------------------------------------------------------------ */
+/// <reference path="../typings/webAssemblyCommon.d.ts" />
 
 import { Memory, Alignment, ComponentModelContext, GenericComponentModelType, ResourceManagers, ptr, u32, size } from '@vscode/wasm-component-model';
+
+import malloc from './malloc';
 
 export interface SMemory extends Memory {
 	free(ptr: ptr): void;
@@ -14,8 +17,6 @@ interface Exports {
 	free(ptr: number): void;
 	aligned_alloc(align: number, size: number): number;
 }
-
-let _memory: SMemory;
 
 class MemoryImpl implements SMemory {
 
@@ -65,45 +66,46 @@ class MemoryImpl implements SMemory {
 	}
 }
 
-export function initialize(module: WebAssembly.Module, memory: WebAssembly.Memory): void {
-	if (_memory !== undefined) {
-		throw new Error('Memory is already initialized');
-
-	}
-	const instance = new WebAssembly.Instance(module, {
-		env: {
-			memory
-		},
-		wasi_snapshot_preview1: {
-			sched_yield: () => 0
-		}
-	});
-	_memory = new MemoryImpl(memory, instance.exports as unknown as Exports);
-}
-
-export function memory(): SMemory {
-	if (!_memory) {
-		throw new Error('Memory is not initialized');
-	}
-	return _memory;
-}
-
 type Properties = {
 	[key: string]: GenericComponentModelType;
 };
 
 export class SObject<T> {
 
-	private static Context: ComponentModelContext = {
+	protected static Context: ComponentModelContext = {
 		options: { encoding: 'utf-8' },
 		managers: new ResourceManagers()
 	};
 
-	public static readonly sem: number = 0;
-	public static readonly refs: number = 1;
+	private static _memory: MemoryImpl | undefined;
+	public static async initialize(memory: WebAssembly.Memory): Promise<void> {
+		if (this._memory !== undefined) {
+			throw new Error('Memory is already initialized');
+		}
+		const module = await malloc;
+		const instance = new WebAssembly.Instance(module, {
+			env: {
+				memory
+			},
+			wasi_snapshot_preview1: {
+				sched_yield: () => 0
+			}
+		});
+		this._memory = new MemoryImpl(memory, instance.exports as unknown as Exports);
+	}
+
+	private static get memory(): SMemory {
+		if (this._memory === undefined) {
+			throw new Error('Memory is not initialized');
+		}
+		return this._memory;
+	}
+
+	private static readonly sem: number = 0;
+	private static readonly refs: number = 1;
 
 	private readonly header: Int32Array;
-	private readonly ptr: ptr;
+	protected readonly ptr: ptr;
 	protected readonly access: T;
 
 	protected constructor(properties: Properties, allocated?: ptr) {
@@ -116,7 +118,7 @@ export class SObject<T> {
 			offsets[key] = offset;
 			size = size + properties[key].size;
 		}
-		const mem = memory();
+		const mem = SObject.memory;
 		const ptr = allocated ?? mem.alloc(align, size);
 		const access = Object.create(null);
 		for (const key in properties) {
@@ -141,6 +143,10 @@ export class SObject<T> {
 		this.ptr = ptr;
 		this.access = access;
 		this.header = header;
+	}
+
+	protected get memory(): SMemory {
+		return SObject.memory;
 	}
 
 	protected lock(): void {

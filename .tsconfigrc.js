@@ -261,9 +261,18 @@ const wasm_component_model_std = {
 		dir: './lib',
 		buildInfoFile: '${buildInfoFile}.tsbuildInfo'
 	},
-	compilerOptions: {
-		rootDir: './src'
-	},
+	sourceFolders: [
+		{
+			path: './src',
+			extends: [ common ],
+			exclude: [ 'test', 'malloc' ]
+		},
+		{
+			path: './src/test',
+			extends: [ common, testMixin ],
+			references: [ '..' ]
+		},
+	],
 	references: [
 		'../wasm-component-model'
 	]

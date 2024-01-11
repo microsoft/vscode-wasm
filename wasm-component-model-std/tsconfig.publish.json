@@ -1,28 +1,15 @@
 {
     "compilerOptions": {
-        "composite": true,
-        "module": "Node16",
-        "moduleResolution": "Node16",
-        "target": "es2022",
-        "lib": [
-            "es2022"
-        ],
-        "rootDir": "./src",
-        "types": [],
-        "strict": true,
-        "noImplicitAny": true,
-        "noImplicitReturns": true,
-        "noImplicitThis": true,
-        "declaration": true,
-        "stripInternal": true,
-        "sourceMap": false,
-        "noUnusedLocals": true,
-        "noUnusedParameters": true,
-        "outDir": "./lib",
-        "tsBuildInfoFile": "lib/publish.tsbuildInfo",
-        "incremental": true
+        "incremental": true,
+        "composite": true
     },
-    "include": [
-        "."
+    "files": [],
+    "references": [
+        {
+            "path": "./src/tsconfig.publish.json"
+        },
+        {
+            "path": "./src/test/tsconfig.publish.json"
+        }
     ]
 }
