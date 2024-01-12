@@ -9,10 +9,13 @@
             "path": "../wasm-component-model/tsconfig.watch.json"
         },
         {
-            "path": "./src/tsconfig.watch.json"
+            "path": "./src/common/tsconfig.watch.json"
         },
         {
-            "path": "./src/test/tsconfig.watch.json"
+            "path": "./src/common/test/tsconfig.watch.json"
+        },
+        {
+            "path": "./src/desktop/test/tsconfig.watch.json"
         }
     ]
 }

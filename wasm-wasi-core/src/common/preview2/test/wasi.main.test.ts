@@ -3,9 +3,9 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { InterfaceType, PackageType, WasmInterfaces } from '@vscode/wasm-component-model';
-import { AbstractHostConnection, Options, WasiHost } from '../host';
-import { AbstractServiceConnection } from '../service';
+// import { InterfaceType, PackageType, WasmInterfaces } from '@vscode/wasm-component-model';
+// import { AbstractHostConnection, Options, WasiHost } from '../host';
+// import { AbstractServiceConnection } from '../service';
 
 // class TestHostConnection extends AbstractHostConnection {
 

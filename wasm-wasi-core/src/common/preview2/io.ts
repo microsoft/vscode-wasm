@@ -3,6 +3,7 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
+/*
 import { io } from '@vscode/wasi';
 import { Promisify, Resource, borrow } from '@vscode/wasm-component-model';
 
@@ -44,3 +45,4 @@ const Poll: Promisify<io.Poll> = {
 };
 
 let x: Promisify<string>;
+*/

@@ -4,7 +4,7 @@
  *--------------------------------------------------------------------------------------------*/
 /// <reference path="../../../typings/webAssemblyCommon.d.ts" />
 
-import { Alignment, ComponentModelTypeVisitor, Context, FlagsType, FunctionType, ListType, TupleType, WasmTypeKind, ptr, u16, u32, u8, wstring } from '@vscode/wasm-component-model';
+import { Alignment, ComponentModelTypeVisitor, FlagsType, FunctionType, ListType, TupleType, WasmContext, WasmTypeKind, ptr, u16, u32, u8, wstring } from '@vscode/wasm-component-model';
 import { FixedLinearMemory, LinearMemory, Memory } from './memory';
 
 type Header = {
@@ -78,9 +78,9 @@ export class ParamTransfer {
 	private readonly signature: FunctionType<any>;
 	private readonly params: (number | bigint)[];
 	private readonly paramMemory: LinearMemory;
-	private readonly context: Context;
+	private readonly context: WasmContext;
 
-	constructor(signature: FunctionType<any>, params: (number | bigint)[], paramMemory: LinearMemory, context: Context) {
+	constructor(signature: FunctionType<any>, params: (number | bigint)[], paramMemory: LinearMemory, context: WasmContext) {
 		this.signature = signature;
 		this.paramMemory = paramMemory;
 		this.params = params;
@@ -95,7 +95,7 @@ export class ParamTransfer {
 			const alignment = this.signature.paramTupleType.alignment;
 			const size = this.signature.paramTupleType.size;
 			const dest_ptr = this.paramMemory.alloc(alignment, size);
-			this.paramMemory.raw.set(this.context.memory.raw.subarray(ptr, ptr + size), dest_ptr);
+			this.paramMemory.raw.set(this.context.getMemory().raw.subarray(ptr, ptr + size), dest_ptr);
 			params = this.params.slice(0);
 			params[0] = dest_ptr;
 		} else {
@@ -138,11 +138,11 @@ export class ParamAndDataTransfer implements ComponentModelTypeVisitor {
 	private readonly params: (number | bigint)[];
 	private readonly paramMemory: LinearMemory;
 	private readonly dataMemory: LinearMemory;
-	private readonly context: Context;
+	private readonly context: WasmContext;
 
 	private index: number;
 
-	constructor(signature: FunctionType<any>, params: (number | bigint)[], paramMemory: LinearMemory, dataMemory: LinearMemory, context: Context) {
+	constructor(signature: FunctionType<any>, params: (number | bigint)[], paramMemory: LinearMemory, dataMemory: LinearMemory, context: WasmContext) {
 		this.signature = signature;
 		this.paramMemory = paramMemory;
 		this.dataMemory = dataMemory;
@@ -150,9 +150,9 @@ export class ParamAndDataTransfer implements ComponentModelTypeVisitor {
 		this.index = 0;
 		const flatTypes = this.signature.paramFlatTypes;
 		if (flatTypes.length > FunctionType.MAX_FLAT_PARAMS) {
-			const ptr = params[0] as number;
+			// const ptr = params[0] as number;
 			this.params = [];
-			this.signature.paramTupleType.loadFlat(this.params, this.context.memory, ptr, this.context.options);
+			// this.signature.paramTupleType.loadFlat(this.params, this.context.memory, ptr, this.context.options);
 		} else {
 			this.params = params;
 		}
@@ -209,7 +209,7 @@ export class ParamAndDataTransfer implements ComponentModelTypeVisitor {
 		const codeUnits = this.asNumber(this.params[this.index++]);
 		const [alignment, bytes] = wstring.getAlignmentAndByteLength(codeUnits, options);
 		const ptr = this.dataMemory.alloc(alignment, bytes);
-		this.dataMemory.raw.set(this.context.memory.raw.subarray(wasmPtr, wasmPtr + bytes), ptr);
+		this.dataMemory.raw.set(this.context.getMemory().raw.subarray(wasmPtr, wasmPtr + bytes), ptr);
 		this.storeNumber(ptr);
 		this.storeNumber(codeUnits);
 	}
@@ -245,7 +245,7 @@ export class ParamAndDataTransfer implements ComponentModelTypeVisitor {
 		const length = this.asNumber(this.params[this.index++]);
 		const bytes = length * type.elementType.size;
 		const ptr = this.dataMemory.alloc(type.elementType.alignment, bytes);
-		this.dataMemory.raw.set(this.context.memory.raw.subarray(wasmPtr, wasmPtr + bytes), ptr);
+		this.dataMemory.raw.set(this.context.getMemory().raw.subarray(wasmPtr, wasmPtr + bytes), ptr);
 		this.storeNumber(ptr);
 		this.storeNumber(length);
 		return false;

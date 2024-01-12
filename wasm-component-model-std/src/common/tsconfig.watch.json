@@ -18,8 +18,8 @@
         "noUnusedLocals": false,
         "noUnusedParameters": false,
         "assumeChangesOnlyAffectDirectDependencies": true,
-        "outDir": "../lib",
-        "tsBuildInfoFile": "../lib/watch.tsbuildInfo",
+        "outDir": "../../lib/common",
+        "tsBuildInfoFile": "../../lib/common/watch.tsbuildInfo",
         "incremental": true,
         "composite": true
     },

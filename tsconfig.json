@@ -21,6 +21,9 @@
             "path": "./wasm-component-model/tsconfig.json"
         },
         {
+            "path": "./wasm-component-model-std/tsconfig.json"
+        },
+        {
             "path": "./wasm-wasi-core/tsconfig.json"
         },
         {

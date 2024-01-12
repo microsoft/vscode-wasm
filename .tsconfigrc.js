@@ -263,15 +263,20 @@ const wasm_component_model_std = {
 	},
 	sourceFolders: [
 		{
-			path: './src',
+			path: './src/common',
 			extends: [ common ],
 			exclude: [ 'test', 'malloc' ]
 		},
 		{
-			path: './src/test',
+			path: './src/common/test',
 			extends: [ common, testMixin ],
 			references: [ '..' ]
 		},
+		{
+			path: './src/desktop/test',
+			extends: [ node, testMixin ],
+			references: [ '../../common' ]
+		}
 	],
 	references: [
 		'../wasm-component-model'
@@ -461,7 +466,7 @@ const testbeds = {
 const root = {
 	name: 'root',
 	path: './',
-	references: [ sync_api_common, sync_api_client, sync_api_service, sync_api_tests, wasm_component_model, wasm_wasi_core, wasm_wasi, webshell, tools ]
+	references: [ sync_api_common, sync_api_client, sync_api_service, sync_api_tests, wasm_component_model, wasm_component_model_std, wasm_wasi_core, wasm_wasi, webshell, tools ]
 };
 
 /** @type CompilerOptions */

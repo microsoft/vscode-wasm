@@ -1,5 +1,8 @@
 {
     "compilerOptions": {
+        "types": [
+            "mocha"
+        ],
         "module": "Node16",
         "moduleResolution": "Node16",
         "target": "es2022",
@@ -7,7 +10,6 @@
             "es2022"
         ],
         "rootDir": ".",
-        "types": [],
         "strict": true,
         "noImplicitAny": true,
         "noImplicitReturns": true,
@@ -17,16 +19,16 @@
         "sourceMap": true,
         "noUnusedLocals": true,
         "noUnusedParameters": true,
-        "outDir": "../lib",
-        "tsBuildInfoFile": "../lib/compile.tsbuildInfo",
-        "incremental": true,
-        "composite": true
+        "outDir": "../../../lib/common/test",
+        "tsBuildInfoFile": "../../../lib/common/test/compile.tsbuildInfo",
+        "incremental": true
     },
     "include": [
         "."
     ],
-    "exclude": [
-        "test",
-        "malloc"
+    "references": [
+        {
+            "path": "../tsconfig.json"
+        }
     ]
 }

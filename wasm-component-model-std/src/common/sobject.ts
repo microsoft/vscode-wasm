@@ -2,7 +2,7 @@
  * Copyright (c) Microsoft Corporation. All rights reserved.
  * Licensed under the MIT License. See License.txt in the project root for license information.
  * ------------------------------------------------------------------------------------------ */
-/// <reference path="../typings/webAssemblyCommon.d.ts" />
+/// <reference path="../../typings/webAssemblyCommon.d.ts" />
 
 import { Memory, Alignment, ComponentModelContext, GenericComponentModelType, ResourceManagers, ptr, u32, size } from '@vscode/wasm-component-model';
 
@@ -20,7 +20,7 @@ interface Exports {
 
 class MemoryImpl implements SMemory {
 
-	private readonly memory: WebAssembly.Memory;
+	public readonly memory: WebAssembly.Memory;
 	private readonly exports: Exports;
 
 	private _raw: Uint8Array | undefined;
@@ -70,6 +70,21 @@ type Properties = {
 	[key: string]: GenericComponentModelType;
 };
 
+export type MemoryLocation = {
+	ptr: ptr;
+};
+
+export namespace MemoryLocation {
+	export function create(ptr: ptr): MemoryLocation {
+		return { ptr };
+	}
+
+	export function is(value: unknown): value is MemoryLocation {
+		let candidate = value as MemoryLocation;
+		return typeof candidate === 'object' && candidate !== null && typeof candidate.ptr === 'number';
+	}
+}
+
 export class SObject<T> {
 
 	protected static Context: ComponentModelContext = {
@@ -79,6 +94,9 @@ export class SObject<T> {
 
 	private static _memory: MemoryImpl | undefined;
 	public static async initialize(memory: WebAssembly.Memory): Promise<void> {
+		if (this._memory?.memory === memory) {
+			return;
+		}
 		if (this._memory !== undefined) {
 			throw new Error('Memory is already initialized');
 		}
@@ -104,11 +122,12 @@ export class SObject<T> {
 	private static readonly sem: number = 0;
 	private static readonly refs: number = 1;
 
-	private readonly header: Int32Array;
 	protected readonly ptr: ptr;
+	private readonly header: Int32Array;
 	protected readonly access: T;
+	private lockCount: number;
 
-	protected constructor(properties: Properties, allocated?: ptr) {
+	protected constructor(properties: Properties, location?: MemoryLocation) {
 		let align: Alignment = Alignment.word;
 		let size = u32.size * 2;
 		const offsets: { [key: string]: number } = Object.create(null);
@@ -119,7 +138,7 @@ export class SObject<T> {
 			size = size + properties[key].size;
 		}
 		const mem = SObject.memory;
-		const ptr = allocated ?? mem.alloc(align, size);
+		const ptr = location?.ptr ?? mem.alloc(align, size);
 		const access = Object.create(null);
 		for (const key in properties) {
 			const offset = offsets[key];
@@ -134,7 +153,7 @@ export class SObject<T> {
 			});
 		}
 		const header = new Int32Array(mem.buffer, ptr, 2);
-		if (allocated === undefined) {
+		if (location === undefined) {
 			header[SObject.sem] = 1;
 			header[SObject.refs] = 1;
 		} else {
@@ -143,6 +162,16 @@ export class SObject<T> {
 		this.ptr = ptr;
 		this.access = access;
 		this.header = header;
+		this.lockCount = 0;
+	}
+
+	public runLocked(callback: (value: this) => void): void {
+		this.lock();
+		try {
+			callback(this);
+		} finally {
+			this.release();
+		}
 	}
 
 	protected get memory(): SMemory {
@@ -150,9 +179,15 @@ export class SObject<T> {
 	}
 
 	protected lock(): void {
+		// We already have a lock.
+		if (this.lockCount > 0) {
+			this.lockCount++;
+			return;
+		}
 		while (true) {
 			const value = Atomics.load(this.header, SObject.sem);
 			if (value > 0 && Atomics.compareExchange(this.header, SObject.sem, value, value - 1) === value) {
+				this.lockCount = 1;
 				return;
 			}
 			Atomics.wait(this.header, SObject.sem, value);
@@ -160,7 +195,12 @@ export class SObject<T> {
 	}
 
 	protected release(): void {
+		if (this.lockCount > 1) {
+			this.lockCount--;
+			return;
+		}
 		Atomics.add(this.header, SObject.sem, 1);
 		Atomics.notify(this.header, SObject.sem, 1);
+		this.lockCount = 0;
 	}
 }

@@ -5,7 +5,7 @@
 
 import wasi from '@vscode/wasi';
 import {
-	Options, Alignment, FunctionType, Context, InterfaceType
+	Options, Alignment, FunctionType, WasmContext, InterfaceType, ResourceManagers
 } from '@vscode/wasm-component-model';
 
 import RAL from '../ral';
@@ -22,7 +22,7 @@ export abstract class AbstractHostConnection {
 		this.encoder = RAL().TextEncoder.create('utf-8');
 	}
 
-	public call(iface: InterfaceType, signature: FunctionType<any>, params: (number | bigint)[], context: Context): number | bigint | void {
+	public call(iface: InterfaceType, signature: FunctionType<any>, params: (number | bigint)[], context: WasmContext): number | bigint | void {
 		const transferMemory = new LinearMemory();
 		transferMemory.alloc(Alignment.halfWord, Header.size);
 
@@ -39,11 +39,12 @@ export abstract class AbstractHostConnection {
 		Header.setFunc(transferMemory.view, ifacePtr, funcName.byteLength);
 		const params_ptr = transferMemory.index;
 		let dataMemory: SharedArrayBuffer;
-		if (context.memory.buffer instanceof SharedArrayBuffer) {
+		const memory = context.getMemory();
+		if (memory.buffer instanceof SharedArrayBuffer) {
 			const transfer = new ParamTransfer(signature, params, transferMemory, context);
 			transfer.run();
 			Header.setParams(transferMemory.view, params_ptr, transferMemory.index - params_ptr);
-			dataMemory = context.memory.buffer;
+			dataMemory = memory.buffer;
 		} else {
 			const memory = new LinearMemory();
 			const transfer = new ParamAndDataTransfer(signature, params, transferMemory, memory, context);
@@ -94,27 +95,52 @@ export interface WasiHost extends wasi._.WasmInterface {
 export namespace WasiHost {
 	export function create(connection: AbstractHostConnection, options: Options): WasiHost {
 
-		let $instance: WebAssembly.Instance | undefined;
-		let $memory: WebAssembly.Memory | undefined;
+		let $wasmContext: WasmContext | undefined;
 
-		function memory(): ReadonlyMemory {
-			if ($memory !== undefined) {
-				return new ReadonlyMemory($memory.buffer);
-			}
-			if ($instance === undefined || $instance.exports.memory === undefined) {
+		function wasmContext(): WasmContext {
+			if ($wasmContext === undefined) {
 				throw new Error(`WASI layer is not initialized. Missing WebAssembly instance or memory module.`);
 			}
-			return new ReadonlyMemory(($instance.exports.memory as WebAssembly.Memory).buffer);
+			return $wasmContext;
 		}
 
 		const result = Object.create(null);
 		result.initialize = (instOrMemory: WebAssembly.Instance | WebAssembly.Memory): void => {
+			let instance: WebAssembly.Instance | undefined;
+			let memory: WebAssembly.Memory;
+
 			if (instOrMemory instanceof WebAssembly.Instance) {
-				$instance = instOrMemory;
-				$memory = undefined;
+				instance = instOrMemory;
+				memory = instance.exports.memory as WebAssembly.Memory;
 			} else {
-				$instance = undefined;
-				$memory = instOrMemory;
+				instance = undefined;
+				memory = instOrMemory;
+			}
+
+			if (instance !== undefined) {
+				let buffer = memory.buffer;
+				let wasiMemory = new ReadonlyMemory(buffer);
+				$wasmContext = {
+					getMemory: () => {
+						const current = instance!.exports.memory as WebAssembly.Memory;
+						if (buffer !== current.buffer || buffer.byteLength !== current.buffer.byteLength) {
+							buffer = current.buffer;
+							wasiMemory = new ReadonlyMemory(buffer);
+						}
+						return wasiMemory;
+					},
+					options: options,
+					managers: new ResourceManagers()
+				};
+			} else {
+				const wasiMemory = new ReadonlyMemory(memory.buffer);
+				$wasmContext = {
+					getMemory: () => {
+						return wasiMemory;
+					},
+					options: options,
+					managers: new ResourceManagers()
+				};
 			}
 		};
 
@@ -123,7 +149,7 @@ export namespace WasiHost {
 				const wasm = Object.create(null);
 				for (const func of iface.functions.values()) {
 					wasm[func.witName] = (...params: (number | bigint)[]) => {
-						connection.call(iface, func, params, { memory: memory(), options });
+						connection.call(iface, func, params, wasmContext());
 					};
 				}
 				result[iface.id] = wasm;

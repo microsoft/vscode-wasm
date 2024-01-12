@@ -3,11 +3,10 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { FunctionType, InterfaceType, JType, PackageType, Promisify, ResourceManager, UnionJType, WasmInterfaces } from '@vscode/wasm-component-model';
+import { FunctionType, InterfaceType, PackageType, Promisify, WasmInterfaces } from '@vscode/wasm-component-model';
 import RAL from '../ral';
 import { Header, ParamRestore } from './connection';
 import { FixedLinearMemory, ReadonlyMemory } from './memory';
-import { http } from '@vscode/wasi';
 
 
 export abstract class AbstractServiceConnection {
@@ -42,7 +41,7 @@ export abstract class AbstractServiceConnection {
 	}
 
 	protected async doCall(transfer: SharedArrayBuffer, data: SharedArrayBuffer): Promise<void> {
-		const [ifaceName, funcName, transferMemory, dataMemory] = this.unpack(transfer, data);
+		const [ifaceName, funcName, transferMemory, /* dataMemory */] = this.unpack(transfer, data);
 		const func = this.interfaces[ifaceName][funcName];
 		if (!func) {
 			throw new Error(`Function ${ifaceName}/${funcName} not found`);
@@ -52,7 +51,7 @@ export abstract class AbstractServiceConnection {
 			throw new Error(`Signature for ${ifaceName}/${funcName} not found`);
 		}
 		const params = new ParamRestore(signature, transferMemory).run();
-		const result = await func.apply(undefined, params);
+		await func.apply(undefined, params);
 	}
 
 	private fillInterface(iface: InterfaceType): void {
@@ -73,6 +72,7 @@ export abstract class AbstractServiceConnection {
 }
 
 
+/*
 type ParamWasmFunction = (...params: (number | bigint)[]) => Promise<number | bigint | void>;
 interface ParamWasmInterface {
 	readonly [key: string]: ParamWasmFunction;
@@ -83,7 +83,6 @@ type GenericConstructor<T> = (...args: any[]) => T;
 interface ParamModuleInterface {
 	readonly [key: string]: (ParamServiceFunction | ParamModuleInterface | ResourceManager<any> | GenericConstructor<any>);
 }
-
 
 export namespace Service {
 	export function createHost<T extends ParamWasmInterface>(service: Promisify<http.Types.Fields>): T;
@@ -97,3 +96,4 @@ let sp: Promisify<http.Types.Fields> = {} as any;
 
 const w = Service.createHost(s);
 const wp = Service.createHost(sp);
+*/

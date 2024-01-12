@@ -1,8 +1,5 @@
 {
     "compilerOptions": {
-        "types": [
-            "mocha"
-        ],
         "module": "Node16",
         "moduleResolution": "Node16",
         "target": "es2022",
@@ -10,26 +7,26 @@
             "es2022"
         ],
         "rootDir": ".",
+        "types": [],
         "strict": true,
         "noImplicitAny": true,
         "noImplicitReturns": true,
         "noImplicitThis": true,
         "declaration": true,
         "stripInternal": true,
-        "sourceMap": true,
-        "noUnusedLocals": false,
-        "noUnusedParameters": false,
-        "assumeChangesOnlyAffectDirectDependencies": true,
-        "outDir": "../../lib/test",
-        "tsBuildInfoFile": "../../lib/test/watch.tsbuildInfo",
-        "incremental": true
+        "sourceMap": false,
+        "noUnusedLocals": true,
+        "noUnusedParameters": true,
+        "outDir": "../../lib/common",
+        "tsBuildInfoFile": "../../lib/common/publish.tsbuildInfo",
+        "incremental": true,
+        "composite": true
     },
     "include": [
         "."
     ],
-    "references": [
-        {
-            "path": "../tsconfig.watch.json"
-        }
+    "exclude": [
+        "test",
+        "malloc"
     ]
 }

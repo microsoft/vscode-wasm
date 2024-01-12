@@ -21,7 +21,7 @@ export namespace Options {
 		version: false,
 	};
 
-	export function validate(options: Options): options is ResolvedOptions {
+	export function validate(_options: Options): _options is ResolvedOptions {
 		return true;
 	}
 }

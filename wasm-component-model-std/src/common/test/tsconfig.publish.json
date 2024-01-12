@@ -16,11 +16,11 @@
         "noImplicitThis": true,
         "declaration": true,
         "stripInternal": true,
-        "sourceMap": true,
+        "sourceMap": false,
         "noUnusedLocals": true,
         "noUnusedParameters": true,
-        "outDir": "../../lib/test",
-        "tsBuildInfoFile": "../../lib/test/compile.tsbuildInfo",
+        "outDir": "../../../lib/common/test",
+        "tsBuildInfoFile": "../../../lib/common/test/publish.tsbuildInfo",
         "incremental": true
     },
     "include": [
@@ -28,7 +28,7 @@
     ],
     "references": [
         {
-            "path": "../tsconfig.json"
+            "path": "../tsconfig.publish.json"
         }
     ]
 }
