@@ -85,6 +85,44 @@ export namespace MemoryLocation {
 	}
 }
 
+export class Semaphore {
+
+	private readonly buffer: Int32Array;
+	private lockCount: number;
+
+	constructor(buffer: Int32Array) {
+		this.buffer = buffer;
+		this.lockCount = 0;
+	}
+
+	public acquire(): void {
+		// We already have a lock.
+		if (this.lockCount > 0) {
+			this.lockCount++;
+			return;
+		}
+		while (true) {
+			const value = Atomics.load(this.buffer, 0);
+			if (value > 0 && Atomics.compareExchange(this.buffer, 0, value, value - 1) === value) {
+				this.lockCount = 1;
+				return;
+			}
+			Atomics.wait(this.buffer, 0, value);
+		}
+	}
+
+	public release(): void {
+		if (this.lockCount > 1) {
+			this.lockCount--;
+			return;
+		}
+		Atomics.add(this.buffer, 0, 1);
+		Atomics.notify(this.buffer, 0, 1);
+		this.lockCount = 0;
+	}
+
+}
+
 export class SObject<T> {
 
 	protected static Context: ComponentModelContext = {
@@ -112,24 +150,21 @@ export class SObject<T> {
 		this._memory = new MemoryImpl(memory, instance.exports as unknown as Exports);
 	}
 
-	private static get memory(): SMemory {
+	public static get memory(): SMemory {
 		if (this._memory === undefined) {
 			throw new Error('Memory is not initialized');
 		}
 		return this._memory;
 	}
 
-	private static readonly sem: number = 0;
-	private static readonly refs: number = 1;
-
 	protected readonly ptr: ptr;
-	private readonly header: Int32Array;
 	protected readonly access: T;
-	private lockCount: number;
+	private readonly semaphore: Semaphore;
 
-	protected constructor(properties: Properties, location?: MemoryLocation) {
+	protected constructor(properties: Properties, location?: MemoryLocation, semaphore?: Semaphore) {
 		let align: Alignment = Alignment.word;
-		let size = u32.size * 2;
+		// For the semaphore
+		let size = u32.size;
 		const offsets: { [key: string]: number } = Object.create(null);
 		for (const key in properties) {
 			align = Math.max(align, properties[key].alignment);
@@ -152,17 +187,21 @@ export class SObject<T> {
 				}
 			});
 		}
-		const header = new Int32Array(mem.buffer, ptr, 2);
-		if (location === undefined) {
-			header[SObject.sem] = 1;
-			header[SObject.refs] = 1;
+		if (semaphore !== undefined) {
+			this.semaphore = semaphore;
 		} else {
-			Atomics.add(header, SObject.refs, 1);
+			const buffer = new Int32Array(mem.buffer, ptr, 1);
+			if (location === undefined) {
+				buffer[0] = 1;
+			}
+			this.semaphore = new Semaphore(buffer);
 		}
 		this.ptr = ptr;
 		this.access = access;
-		this.header = header;
-		this.lockCount = 0;
+	}
+
+	public location(): MemoryLocation {
+		return MemoryLocation.create(this.ptr);
 	}
 
 	public runLocked(callback: (value: this) => void): void {
@@ -179,28 +218,10 @@ export class SObject<T> {
 	}
 
 	protected lock(): void {
-		// We already have a lock.
-		if (this.lockCount > 0) {
-			this.lockCount++;
-			return;
-		}
-		while (true) {
-			const value = Atomics.load(this.header, SObject.sem);
-			if (value > 0 && Atomics.compareExchange(this.header, SObject.sem, value, value - 1) === value) {
-				this.lockCount = 1;
-				return;
-			}
-			Atomics.wait(this.header, SObject.sem, value);
-		}
+		this.semaphore.acquire();
 	}
 
 	protected release(): void {
-		if (this.lockCount > 1) {
-			this.lockCount--;
-			return;
-		}
-		Atomics.add(this.header, SObject.sem, 1);
-		Atomics.notify(this.header, SObject.sem, 1);
-		this.lockCount = 0;
+		this.semaphore.release();
 	}
 }

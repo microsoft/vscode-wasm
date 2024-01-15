@@ -41,10 +41,14 @@ export class SArray<T extends JType> extends SObject<SArrayProperties> {
 		}
 		super(SArray.properties, location);
 		this.type = type;
-		this.access.capacity = capacity;
-		this.access.start = 0;
-		this.access.next = 0;
-		this.access.elements = this.memory.alloc(u32.alignment, capacity * u32.size);
+		const access = this.access;
+		if (location === undefined) {
+			access.state = 0;
+			access.capacity = capacity;
+			access.start = 0;
+			access.next = 0;
+			access.elements = this.memory.alloc(u32.alignment, capacity * u32.size);
+		}
 	}
 
 	public get length(): number {
@@ -56,7 +60,7 @@ export class SArray<T extends JType> extends SObject<SArrayProperties> {
 		}
 	}
 
-	public size(): number {
+	public get size(): number {
 		return this.length;
 	}
 
@@ -110,12 +114,12 @@ export class SArray<T extends JType> extends SObject<SArrayProperties> {
 			this.lock();
 			const memory = this.memory;
 			const access = this.access;
-			access.state = access.state + 1;
 			const start = access.start;
 			const next = access.next;
 			if (next === start) {
 				return undefined;
 			}
+			access.state = access.state + 1;
 			const [value, ptr] = this.loadElementAndPtr(next - 1);
 			memory.free(ptr);
 			access.next = next - 1;

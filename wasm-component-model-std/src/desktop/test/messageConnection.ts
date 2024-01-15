@@ -3,10 +3,8 @@
  * Licensed under the MIT License. See License.txt in the project root for license information.
  * ------------------------------------------------------------------------------------------ */
 
-import RAL from '../common/ral';
-
-import { MessagePort, Worker, TransferListItem } from 'worker_threads';
-import { BaseMessageConnection } from '../common/messageConnection';
+import { MessagePort, Worker, TransferListItem, parentPort } from 'worker_threads';
+import { BaseMessageConnection } from '../../common/test/messageConnection';
 
 export class MessageConnection <Requests extends BaseMessageConnection.RequestType | undefined, Notifications extends BaseMessageConnection.NotificationType | undefined, RequestHandlers extends BaseMessageConnection.RequestType | undefined = undefined, NotificationHandlers extends BaseMessageConnection.NotificationType | undefined = undefined> extends BaseMessageConnection<Requests, Notifications, RequestHandlers, NotificationHandlers, TransferListItem> {
 
@@ -23,7 +21,10 @@ export class MessageConnection <Requests extends BaseMessageConnection.RequestTy
 
 	public listen(): void {
 		this.port.on('message', (value: BaseMessageConnection.Message) => {
-			this.handleMessage(value).catch(RAL().console.error);
+			// eslint-disable-next-line no-console
+			this.handleMessage(value).catch(console.error);
 		});
 	}
 }
+
+new MessageConnection<undefined, undefined, undefined, undefined>(parentPort!);
