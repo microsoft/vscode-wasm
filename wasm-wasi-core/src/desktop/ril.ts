@@ -60,7 +60,10 @@ const _ril: RIL = Object.freeze<RIL>({
 			return result;
 		}
 	}),
-	path: path.posix
+	path: path.posix,
+	workbench: Object.freeze({
+		hasTrash: true
+	})
 });
 
 
