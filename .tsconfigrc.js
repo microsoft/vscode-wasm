@@ -349,6 +349,9 @@ const wasm_wasi_core = {
 			extends: [ node, vscodeMixin, testMixin],
 			references: [ '..', '../../common/test' ]
 		}
+	],
+	references: [
+		wasi, wasm_component_model, wasm_component_model_std
 	]
 };
 

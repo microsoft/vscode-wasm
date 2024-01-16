@@ -6,6 +6,15 @@
     "files": [],
     "references": [
         {
+            "path": "./../wasi/tsconfig.json"
+        },
+        {
+            "path": "./../wasm-component-model/tsconfig.json"
+        },
+        {
+            "path": "./../wasm-component-model-std/tsconfig.json"
+        },
+        {
             "path": "./src/common/tsconfig.json"
         },
         {

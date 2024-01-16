@@ -6,6 +6,15 @@
     "files": [],
     "references": [
         {
+            "path": "./../wasi/tsconfig.watch.json"
+        },
+        {
+            "path": "./../wasm-component-model/tsconfig.watch.json"
+        },
+        {
+            "path": "./../wasm-component-model-std/tsconfig.watch.json"
+        },
+        {
             "path": "./src/common/tsconfig.watch.json"
         },
         {
