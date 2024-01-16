@@ -60,6 +60,10 @@ interface RAL {
 		normalize(path: string): string;
 		isAbsolute(path: string): boolean;
 	};
+
+	readonly workbench: {
+		readonly hasTrash: boolean;
+	};
 }
 
 let _ral: RAL | undefined;
