@@ -859,7 +859,7 @@ export function create(deviceId: DeviceId, baseUri: Uri, readOnly: boolean = fal
 					filestat = { type: FileType.Directory, ctime: Date.now(), mtime: Date.now(), size: 0 };
 				}
 			}
-			await vscode_fs.delete(fs.getUri(inode, path), { recursive: false, useTrash: true });
+			await vscode_fs.delete(fs.getUri(inode, path), { recursive: false, useTrash: RAL().workbench.hasTrash });
 			if (targetNode !== undefined) {
 				if (filestat !== undefined) {
 					fs.deleteNode(targetNode, filestat);
@@ -921,7 +921,7 @@ export function create(deviceId: DeviceId, baseUri: Uri, readOnly: boolean = fal
 					content = new Uint8Array(0);
 				}
 			}
-			await vscode_fs.delete(fs.getUri(inode, path), { recursive: false, useTrash: true });
+			await vscode_fs.delete(fs.getUri(inode, path), { recursive: false, useTrash: RAL().workbench.hasTrash });
 			if (targetNode !== undefined) {
 				if (filestat !== undefined && content !== undefined) {
 					fs.deleteNode(targetNode, filestat, content);
