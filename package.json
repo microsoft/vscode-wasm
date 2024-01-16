@@ -38,8 +38,8 @@
 		"serve": "^14.2.1",
 		"@types/path-browserify": "^1.0.2",
 		"path-browserify": "^1.0.1",
-		"@vscode/test-electron": "^2.3.6",
-		"@vscode/test-web": "^0.0.48",
+		"@vscode/test-electron": "^2.3.8",
+		"@vscode/test-web": "^0.0.50",
 		"@types/glob": "^8.1.0",
 		"glob": "^10.3.10"
 	},
