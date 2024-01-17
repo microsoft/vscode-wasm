@@ -3,46 +3,51 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-/*
 import { io } from '@vscode/wasi';
-import { Promisify, Resource, borrow } from '@vscode/wasm-component-model';
 
-export class Pollable extends Resource implements Promisify<io.Poll.Pollable> {
+import { ResourceHandle, u32 } from '@vscode/wasm-component-model';
+import { MemoryLocation, SharedObject } from '@vscode/wasm-component-model-std';
 
-	public readonly promise: Promise<boolean>;
-	private _ready: boolean = false;
+export class Pollable extends SharedObject implements io.Poll.Pollable {
 
-	constructor(promise: Promise<boolean>) {
-		super();
-		this.promise = promise;
-		// @spec what should ready return if the pollable errors.
-		promise.then(ready => this._ready = ready).catch(() => this._ready = false);
+	private buffer: Int32Array;
+
+	constructor(location?: MemoryLocation) {
+		super(location ?? u32.size);
+		this.buffer = new Int32Array(this.memory().buffer, this.ptr, 1);
 	}
 
-	public ready(): Promise<boolean> {
-		return Promise.resolve(this._ready);
+	public handle(): ResourceHandle {
+		return this.ptr;
 	}
 
-	public async block(): Promise<void> {
-		await this.promise;
+	public ready(): boolean {
+		return Atomics.load(this.buffer, 0) === 1;
 	}
 
-	public isReady(): boolean {
-		return this._ready;
+	public block(): void {
+		Atomics.wait(this.buffer, 0, 0);
 	}
 }
 
-const Poll: Promisify<io.Poll> = {
-	Pollable: Pollable,
-	poll: async (in_): Promise<Uint32Array> =>  {
-		const isReady: number[] = [];
-		for (const pollable of in_) {
-			if ((pollable as Pollable).isReady) {
-				isReady.push(pollable.__handle!);
-			}
-		}
-	}
-};
+export class PollableList extends SharedObject {
 
-let x: Promisify<string>;
-*/
+	private buffer: Int32Array;
+
+	constructor(locationOrValues: MemoryLocation | Pollable[]) {
+		super(u32.size);
+		this.buffer = new Int32Array(this.memory().buffer, this.ptr, 1);
+	}
+
+	public handle(): ResourceHandle {
+		return this.ptr;
+	}
+
+	public ready(): boolean {
+		return Atomics.load(this.buffer, 0) === 1;
+	}
+
+	public block(): void {
+		Atomics.wait(this.buffer, 0, 0);
+	}
+}

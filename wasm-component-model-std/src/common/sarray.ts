@@ -5,7 +5,7 @@
 
 import { ComponentModelType, GenericComponentModelType, JType, ptr, u32 } from '@vscode/wasm-component-model';
 
-import { MemoryLocation, LockableObject, SharedObject } from './sobject';
+import { MemoryLocation, LockableObject, SharedObject, Properties } from './sobject';
 
 type SArrayProperties = {
 	state: u32;
@@ -15,17 +15,16 @@ type SArrayProperties = {
 	elements: ptr;
 };
 
-new Array();
-
 export class SArray<T extends JType> extends LockableObject<SArrayProperties> {
 
-	static properties: { [key: string]: GenericComponentModelType } = {
-		state: u32,
-		capacity: u32,
-		start: u32,
-		next: u32,
-		elements: ptr
-	};
+	static properties: Properties = [
+		['_lock', u32],
+		['state', u32],
+		['capacity', u32],
+		['start', u32],
+		['next', u32],
+		['elements', ptr]
+	];
 
 	private readonly type: ComponentModelType<T>;
 

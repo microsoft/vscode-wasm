@@ -66,9 +66,7 @@ class MemoryImpl implements SMemory {
 	}
 }
 
-type Properties = {
-	[key: string]: GenericComponentModelType;
-};
+export type Properties = [string, GenericComponentModelType][];
 
 export type MemoryLocation = {
 	value: ptr;
@@ -176,6 +174,42 @@ export abstract class SharedObject {
 
 	public location(): MemoryLocation {
 		return MemoryLocation.create(this.ptr);
+	}
+}
+
+export abstract class SharedRecord<T> extends SharedObject {
+
+	protected readonly access: T;
+
+	constructor(properties: Properties, location?: MemoryLocation) {
+		let align: Alignment = Alignment.byte;
+		let size = 0;
+		const offsets: Map<string, number> = new Map();
+		for (const [name, type] of properties) {
+			align = Math.max(align, type.alignment);
+			size = Alignment.align(size, type.alignment);
+			offsets.set(name, size);
+			size = size + type.size;
+		}
+		super(location ?? size);
+		const ptr = this.ptr;
+		const mem = this.memory();
+		const access = Object.create(null);
+		for (const [name, type] of properties) {
+			if (name.startsWith('_')) {
+				continue;
+			}
+			const offset = offsets.get(name)!;
+			Object.defineProperty(access, name, {
+				get() {
+					return type.load(mem, ptr + offset, SharedObject.Context);
+				},
+				set(value) {
+					type.store(mem, ptr + offset, value, SharedObject.Context);
+				}
+			});
+		}
+		this.access = access as T;
 	}
 }
 

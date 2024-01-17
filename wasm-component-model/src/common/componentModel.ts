@@ -1418,7 +1418,7 @@ abstract class BaseRecordType<T extends JRecord | JTuple, F extends TypedField> 
 	private static alignment(fields: TypedField[]): Alignment {
 		let result: Alignment = 1;
 		for (const field of fields) {
-			result = Math.max(result, field.type.alignment) as Alignment;
+			result = Math.max(result, field.type.alignment);
 		}
 		return result;
 	}
