@@ -5,7 +5,7 @@
 
 import { ComponentModelType, GenericComponentModelType, JType, ptr, u32 } from '@vscode/wasm-component-model';
 
-import { MemoryLocation, SObject } from './sobject';
+import { MemoryLocation, LockableObject, SharedObject } from './sobject';
 
 type SArrayProperties = {
 	state: u32;
@@ -17,7 +17,7 @@ type SArrayProperties = {
 
 new Array();
 
-export class SArray<T extends JType> extends SObject<SArrayProperties> {
+export class SArray<T extends JType> extends LockableObject<SArrayProperties> {
 
 	static properties: { [key: string]: GenericComponentModelType } = {
 		state: u32,
@@ -47,7 +47,7 @@ export class SArray<T extends JType> extends SObject<SArrayProperties> {
 			access.capacity = capacity;
 			access.start = 0;
 			access.next = 0;
-			access.elements = this.memory.alloc(u32.alignment, capacity * u32.size);
+			access.elements = this.memory().alloc(u32.alignment, capacity * u32.size);
 		}
 	}
 
@@ -82,7 +82,7 @@ export class SArray<T extends JType> extends SObject<SArrayProperties> {
 	push(...items: T[]): void {
 		try {
 			this.lock();
-			const memory = this.memory;
+			const memory = this.memory();
 			const access = this.access;
 			access.state = access.state + 1;
 			const numberOfItems = items.length;
@@ -99,8 +99,8 @@ export class SArray<T extends JType> extends SObject<SArrayProperties> {
 			let next = access.next;
 			for(const value of items) {
 				const ptr = this.type.alloc(memory);
-				this.type.store(memory, ptr, value, SObject.Context);
-				u32.store(memory, access.elements + next * u32.size, ptr, SObject.Context);
+				this.type.store(memory, ptr, value, SharedObject.Context);
+				u32.store(memory, access.elements + next * u32.size, ptr, SharedObject.Context);
 				next = next + 1;
 			}
 			access.next = next;
@@ -112,7 +112,7 @@ export class SArray<T extends JType> extends SObject<SArrayProperties> {
 	public pop(): T | undefined {
 		try {
 			this.lock();
-			const memory = this.memory;
+			const memory = this.memory();
 			const access = this.access;
 			const start = access.start;
 			const next = access.next;
@@ -186,14 +186,14 @@ export class SArray<T extends JType> extends SObject<SArrayProperties> {
 
 	private loadElement(index: number, state?: number): T {
 		const access = this.access;
-		const memory = this.memory;
+		const memory = this.memory();
 		try {
 			this.lock();
 			if (state !== undefined && access.state !== state) {
 				throw new Error(`Array got modified during access.`);
 			}
-			const ptr = u32.load(memory, access.elements + u32.size * index, SObject.Context);
-			return this.type.load(memory, ptr, SObject.Context);
+			const ptr = u32.load(memory, access.elements + u32.size * index, SharedObject.Context);
+			return this.type.load(memory, ptr, SharedObject.Context);
 		} finally {
 			this.release();
 		}
@@ -201,14 +201,14 @@ export class SArray<T extends JType> extends SObject<SArrayProperties> {
 
 	private loadElementAndPtr(index: number, state?: number): [T, ptr] {
 		const access = this.access;
-		const memory = this.memory;
+		const memory = this.memory();
 		try {
 			this.lock();
 			if (state !== undefined && access.state !== state) {
 				throw new Error(`Array got modified during access.`);
 			}
-			const ptr = u32.load(memory, access.elements + u32.size * index, SObject.Context);
-			return [this.type.load(memory, ptr, SObject.Context), ptr];
+			const ptr = u32.load(memory, access.elements + u32.size * index, SharedObject.Context);
+			return [this.type.load(memory, ptr, SharedObject.Context), ptr];
 		} finally {
 			this.release();
 		}

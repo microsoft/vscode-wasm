@@ -6,13 +6,13 @@ import assert from 'assert';
 
 import { float64, u32} from '@vscode/wasm-component-model';
 
-import { SObject } from '../sobject';
+import { SharedObject } from '../sobject';
 import { SArray } from '../sarray';
 
 suite('SArray', () => {
 
 	suiteSetup(async () => {
-		await SObject.initialize(new WebAssembly.Memory({ initial: 2, maximum: 8, shared: true }));
+		await SharedObject.initialize(new WebAssembly.Memory({ initial: 2, maximum: 8, shared: true }));
 	});
 
 	test('push', () => {

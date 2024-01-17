@@ -10,7 +10,7 @@ import { float64, ptr } from '@vscode/wasm-component-model';
 import { SArray } from '../../common/sarray';
 import { MessageConnection } from './messageConnection';
 import { Notifications, Operations, Requests, ServerNotifications } from './messages';
-import { SObject } from '../../common/sobject';
+import { SharedObject } from '../../common/sobject';
 
 const connection = new MessageConnection<undefined, Operations | ServerNotifications, Requests, Notifications>(parentPort!);
 
@@ -25,15 +25,15 @@ const operations: string[] = [
 let workerId!: number;
 connection.onRequest('init', async (params) => {
 	workerId = params.workerId;
-	await SObject.initialize(params.memory);
+	await SharedObject.initialize(params.memory);
 });
 
 
 connection.onNotification('array/new', async (params) => {
-	const array = new SArray<float64>(float64, { ptr: params.array });
+	const array = new SArray<float64>(float64, { value: params.array });
 	arrays.set(params.array, array);
 
-	const counter = new Uint32Array(SObject.memory.buffer, params.counter, 1);
+	const counter = new Uint32Array(SharedObject.memory().buffer, params.counter, 1);
 
 	function push() {
 		const value = Math.random();

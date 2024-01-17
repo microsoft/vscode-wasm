@@ -71,17 +71,17 @@ type Properties = {
 };
 
 export type MemoryLocation = {
-	ptr: ptr;
+	value: ptr;
 };
 
 export namespace MemoryLocation {
 	export function create(ptr: ptr): MemoryLocation {
-		return { ptr };
+		return { value: ptr };
 	}
 
 	export function is(value: unknown): value is MemoryLocation {
 		let candidate = value as MemoryLocation;
-		return typeof candidate === 'object' && candidate !== null && typeof candidate.ptr === 'number';
+		return typeof candidate === 'object' && candidate !== null && typeof candidate.value === 'number';
 	}
 }
 
@@ -123,7 +123,7 @@ export class Semaphore {
 
 }
 
-export class SObject<T> {
+export abstract class SharedObject {
 
 	protected static Context: ComponentModelContext = {
 		options: { encoding: 'utf-8' },
@@ -136,7 +136,10 @@ export class SObject<T> {
 			return;
 		}
 		if (this._memory !== undefined) {
-			throw new Error('Memory is already initialized');
+			throw new Error('Memory is already initialized.');
+		}
+		if (!(memory.buffer instanceof SharedArrayBuffer)) {
+			throw new Error('Memory is not a shared memory.');
 		}
 		const module = await malloc;
 		const instance = new WebAssembly.Instance(module, {
@@ -150,7 +153,7 @@ export class SObject<T> {
 		this._memory = new MemoryImpl(memory, instance.exports as unknown as Exports);
 	}
 
-	public static get memory(): SMemory {
+	public static memory(): SMemory {
 		if (this._memory === undefined) {
 			throw new Error('Memory is not initialized');
 		}
@@ -158,13 +161,32 @@ export class SObject<T> {
 	}
 
 	protected readonly ptr: ptr;
+
+	protected constructor(size: u32 | MemoryLocation) {
+		if (typeof size === 'number') {
+			this.ptr = SharedObject.memory().alloc(Alignment.word, size);
+		} else {
+			this.ptr = size.value;
+		}
+	}
+
+	protected memory(): SMemory {
+		return SharedObject.memory();
+	}
+
+	public location(): MemoryLocation {
+		return MemoryLocation.create(this.ptr);
+	}
+}
+
+export class LockableObject<T> extends SharedObject {
+
 	protected readonly access: T;
 	private readonly semaphore: Semaphore;
 
 	protected constructor(properties: Properties, location?: MemoryLocation, semaphore?: Semaphore) {
 		let align: Alignment = Alignment.word;
-		// For the semaphore
-		let size = u32.size;
+		let size = semaphore === undefined ? u32.size : 0;
 		const offsets: { [key: string]: number } = Object.create(null);
 		for (const key in properties) {
 			align = Math.max(align, properties[key].alignment);
@@ -172,18 +194,19 @@ export class SObject<T> {
 			offsets[key] = offset;
 			size = size + properties[key].size;
 		}
-		const mem = SObject.memory;
-		const ptr = location?.ptr ?? mem.alloc(align, size);
+		super(location ?? size);
+		const ptr = this.ptr;
+		const mem = this.memory();
 		const access = Object.create(null);
 		for (const key in properties) {
 			const offset = offsets[key];
 			const type = properties[key];
 			Object.defineProperty(access, key, {
 				get() {
-					return type.load(mem, ptr + offset, SObject.Context);
+					return type.load(mem, ptr + offset, SharedObject.Context);
 				},
 				set(value) {
-					type.store(mem, ptr + offset, value, SObject.Context);
+					type.store(mem, ptr + offset, value, SharedObject.Context);
 				}
 			});
 		}
@@ -196,12 +219,7 @@ export class SObject<T> {
 			}
 			this.semaphore = new Semaphore(buffer);
 		}
-		this.ptr = ptr;
 		this.access = access;
-	}
-
-	public location(): MemoryLocation {
-		return MemoryLocation.create(this.ptr);
 	}
 
 	public runLocked(callback: (value: this) => void): void {
@@ -211,10 +229,6 @@ export class SObject<T> {
 		} finally {
 			this.release();
 		}
-	}
-
-	protected get memory(): SMemory {
-		return SObject.memory;
 	}
 
 	protected lock(): void {

@@ -10,7 +10,7 @@ import { Alignment, float64, u32  } from '@vscode/wasm-component-model';
 import { SArray } from '../../common/sarray';
 import { MessageConnection } from './messageConnection';
 import { Notifications, Operations, Requests, ServerNotifications } from './messages';
-import { SObject } from '../../common/sobject';
+import { SharedObject } from '../../common/sobject';
 
 declare const v8debug: object;
 const isDebugging = typeof v8debug === 'object' || /--debug|--inspect/.test(process.execArgv.join(' '));
@@ -95,9 +95,9 @@ class ArrayOperations {
 async function main(): Promise<void> {
 
 	const memory = new WebAssembly.Memory({ initial: 2, maximum: 8, shared: true });
-	await SObject.initialize(memory);
+	await SharedObject.initialize(memory);
 
-	const counter = SObject.memory.alloc(Alignment.halfWord, u32.size);
+	const counter = SharedObject.memory().alloc(Alignment.halfWord, u32.size);
 
 	const threads: { worker: Worker; connection: MessageConnection<Requests, Notifications, undefined, Operations | ServerNotifications> }[] = [];
 	const sarray = new SArray<float64>(float64);
@@ -131,7 +131,7 @@ async function main(): Promise<void> {
 			});
 		}));
 		threads.push({ worker, connection });
-		connection.sendNotification('array/new', { array: sarray.location().ptr, counter });
+		connection.sendNotification('array/new', { array: sarray.location().value, counter });
 	}
 
 	await Promise.all(promises);
