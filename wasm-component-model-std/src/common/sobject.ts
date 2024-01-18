@@ -80,8 +80,6 @@ class MemoryImpl implements SMemory {
 	}
 }
 
-export type Properties = [string, GenericComponentModelType][];
-
 export type MemoryLocation = {
 	value: ptr;
 };
@@ -118,7 +116,6 @@ export class Lock {
 
 	constructor(buffer: Int32Array) {
 		this.buffer = buffer;
-		Atomics.store(buffer, 0, 1);
 		this.lockCount = 0;
 	}
 
@@ -189,13 +186,11 @@ export abstract class SharedObject {
 
 	protected readonly ptr: ptr;
 
-	protected constructor(allocation: Allocation);
-	protected constructor(location: MemoryLocation);
-	protected constructor(arg0: Allocation | MemoryLocation) {
-		if (MemoryLocation.is(arg0)) {
-			this.ptr = arg0.value;
-		} else if (Allocation.is(arg0)) {
-			this.ptr = SharedObject.memory().alloc(arg0.align, arg0.size);
+	protected constructor(allocationOrLocation: Allocation | MemoryLocation) {
+		if (MemoryLocation.is(allocationOrLocation)) {
+			this.ptr = allocationOrLocation.value;
+		} else if (Allocation.is(allocationOrLocation)) {
+			this.ptr = SharedObject.memory().alloc(allocationOrLocation.align, allocationOrLocation.size);
 		} else {
 			throw new Error('Invalid argument');
 		}
@@ -210,37 +205,46 @@ export abstract class SharedObject {
 	}
 }
 
+export type Properties = [string, GenericComponentModelType][];
+export type RecordInfo = {
+	align: Alignment;
+	size: size;
+	fields: Map<string, [GenericComponentModelType, number]>;
+};
+
 export abstract class SharedRecord<T> extends SharedObject {
 
 	protected readonly access: T;
-	protected readonly offsets: Map<string, number>;
 
-	constructor(properties: Properties, location?: MemoryLocation) {
+	protected static createRecordInfo(properties: Properties): RecordInfo {
 		let align: Alignment = Alignment.byte;
 		let size = 0;
-		const offsets: Map<string, number> = new Map();
+		const fields: Map<string, [GenericComponentModelType, number]> = new Map();
 		for (const [name, type] of properties) {
-			if (offsets.has(name)) {
+			if (fields.has(name)) {
 				throw new Error(`Duplicate property ${name}`);
 			}
 			align = Math.max(align, type.alignment);
 			size = Alignment.align(size, type.alignment);
-			offsets.set(name, size);
+			fields.set(name, [type, size]);
 			size = size + type.size;
 		}
+		return Object.freeze({ align, size, fields });
+	}
+
+	constructor(recordInfo: RecordInfo, location?: MemoryLocation) {
 		if (location !== undefined) {
 			super(location);
 		} else {
-			super(Allocation.create(align, size));
+			super(Allocation.create(recordInfo.align, recordInfo.size));
 		}
 		const ptr = this.ptr;
 		const mem = this.memory();
 		const access = Object.create(null);
-		for (const [name, type] of properties) {
+		for (const [name, [type, offset]] of recordInfo.fields) {
 			if (name.startsWith('_')) {
 				continue;
 			}
-			const offset = offsets.get(name)!;
 			Object.defineProperty(access, name, {
 				get() {
 					return type.load(mem, ptr + offset, SharedObject.Context);
@@ -251,32 +255,46 @@ export abstract class SharedRecord<T> extends SharedObject {
 			});
 		}
 		this.access = access as T;
-		this.offsets = offsets;
 	}
+
+	protected abstract getRecordInfo(): RecordInfo;
 }
 
-export class LockableRecord<T> extends SharedRecord<T> {
+export abstract class LockableRecord<T> extends SharedRecord<T> {
+
+	protected static createRecordInfo(properties: Properties): RecordInfo {
+		let hasLock = false;
+		for (const [name, ] of properties) {
+			if (name === '_lock') {
+				hasLock = true;
+				break;
+			}
+		}
+		if (!hasLock) {
+			properties = properties.slice();
+			properties.push(['_lock', u32]);
+		}
+		return super.createRecordInfo(properties);
+	}
 
 	private readonly lock: Lock;
 
-	protected constructor(properties: Properties, location?: MemoryLocation, lock?: Lock) {
-		if (lock === undefined) {
-			let hasLock = false;
-			for (const [name, ] of properties) {
-				if (name === '_lock') {
-					hasLock = true;
-					break;
-				}
-			}
-			if (!hasLock) {
-				properties = properties.slice();
-				properties.push(['_lock', u32]);
-			}
+	protected constructor(recordInfo: RecordInfo, location?: MemoryLocation, lock?: Lock) {
+		if (!recordInfo.fields.has('_lock')) {
+			throw new Error('RecordInfo does not contain a lock field');
 		}
-		super(properties, location);
+		super(recordInfo, location);
 		if (lock === undefined) {
-			const offset = this.offsets.get('_lock')!;
-			this.lock = new Lock(new Int32Array(this.memory().buffer, this.ptr + offset, 1));
+			const offset = recordInfo.fields.get('_lock')![1];
+			const lockBuffer = new Int32Array(this.memory().buffer, this.ptr + offset, 1);
+			// We allocated the memory for this shared record so we need to initialize
+			// the lock count to 1. If we use an existing memory location, we need to
+			// leave the lock count untouched since the shared record could be locked in
+			// another thread.
+			if (location === undefined) {
+				Atomics.store(lockBuffer, 0, 1);
+			}
+			this.lock = new Lock(lockBuffer);
 		} else {
 			this.lock = lock;
 		}

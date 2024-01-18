@@ -5,7 +5,7 @@
 
 import { ComponentModelType, JType, ptr, u32 } from '@vscode/wasm-component-model';
 
-import { MemoryLocation, LockableRecord, SharedObject, Properties } from './sobject';
+import { MemoryLocation, LockableRecord, SharedObject, RecordInfo } from './sobject';
 
 type SArrayProperties = {
 	state: u32;
@@ -17,14 +17,14 @@ type SArrayProperties = {
 
 export class SArray<T extends JType> extends LockableRecord<SArrayProperties> {
 
-	static properties: Properties = [
+	static recordInfo: RecordInfo = LockableRecord.createRecordInfo([
 		['_lock', u32],
 		['state', u32],
 		['capacity', u32],
 		['start', u32],
 		['next', u32],
 		['elements', ptr]
-	];
+	]);
 
 	private readonly type: ComponentModelType<T>;
 
@@ -38,7 +38,7 @@ export class SArray<T extends JType> extends LockableRecord<SArrayProperties> {
 				capacity = capacityOrLocation;
 			}
 		}
-		super(SArray.properties, location);
+		super(SArray.recordInfo, location);
 		this.type = type;
 		const access = this.access;
 		if (location === undefined) {
@@ -48,6 +48,10 @@ export class SArray<T extends JType> extends LockableRecord<SArrayProperties> {
 			access.next = 0;
 			access.elements = this.memory().alloc(u32.alignment, capacity * u32.size);
 		}
+	}
+
+	protected getRecordInfo(): RecordInfo {
+		return SArray.recordInfo;
 	}
 
 	public get length(): number {
