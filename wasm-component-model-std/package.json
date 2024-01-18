@@ -7,8 +7,8 @@
 	"typings": "./lib/common/api.d.ts",
 
 	"scripts": {
-		"compile:malloc": "../node_modules/.bin/make-dir ./lib && $WASI_SDK_PREFIX/bin/clang --target=wasm32-wasi-threads -pthread -O3 -flto -c src/malloc/malloc.c -o lib/malloc.o",
-		"link:malloc": "$WASI_SDK_PREFIX/bin/wasm-ld -s -m wasm32 -L$WASI_SDK_PREFIX/share/wasi-sysroot/lib/wasm32-wasi-threads --no-entry --export=malloc --export=free --export=aligned_alloc --import-memory --max-memory=524288 -lpthread --shared-memory -lc $WASI_SDK_PREFIX/lib/clang/17/lib/wasi/libclang_rt.builtins-wasm32.a lib/malloc.o -o lib/malloc.wasm",
+		"compile:malloc": "../node_modules/.bin/make-dir ./lib/common && $WASI_SDK_PREFIX/bin/clang --target=wasm32-wasi-threads -pthread -O3 -flto -c src/common/malloc/malloc.c -o lib/common/malloc.o",
+		"link:malloc": "$WASI_SDK_PREFIX/bin/wasm-ld -s -m wasm32 -L$WASI_SDK_PREFIX/share/wasi-sysroot/lib/wasm32-wasi-threads --no-entry --export=malloc --export=free --export=aligned_alloc --import-memory --max-memory=524288 -lpthread --shared-memory -lc $WASI_SDK_PREFIX/lib/clang/17/lib/wasi/libclang_rt.builtins-wasm32.a lib/common/malloc.o -o lib/common/malloc.wasm",
 		"compile": "node ../node_modules/typescript/lib/tsc.js -b ./tsconfig.json",
 		"watch": "node ../node_modules/typescript/lib/tsc.js -b ./tsconfig.watch.json -w",
 		"clean": "node ../node_modules/rimraf/bin.js lib",

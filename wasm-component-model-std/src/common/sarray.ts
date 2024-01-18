@@ -3,9 +3,9 @@
  * Licensed under the MIT License. See License.txt in the project root for license information.
  * ------------------------------------------------------------------------------------------ */
 
-import { ComponentModelType, GenericComponentModelType, JType, ptr, u32 } from '@vscode/wasm-component-model';
+import { ComponentModelType, JType, ptr, u32 } from '@vscode/wasm-component-model';
 
-import { MemoryLocation, LockableObject, SharedObject, Properties } from './sobject';
+import { MemoryLocation, LockableRecord, SharedObject, Properties } from './sobject';
 
 type SArrayProperties = {
 	state: u32;
@@ -15,7 +15,7 @@ type SArrayProperties = {
 	elements: ptr;
 };
 
-export class SArray<T extends JType> extends LockableObject<SArrayProperties> {
+export class SArray<T extends JType> extends LockableRecord<SArrayProperties> {
 
 	static properties: Properties = [
 		['_lock', u32],
@@ -52,10 +52,10 @@ export class SArray<T extends JType> extends LockableObject<SArrayProperties> {
 
 	public get length(): number {
 		try {
-			this.lock();
+			this.acquireLock();
 			return this.access.next - this.access.start;
 		} finally {
-			this.release();
+			this.releaseLock();
 		}
 	}
 
@@ -65,7 +65,7 @@ export class SArray<T extends JType> extends LockableObject<SArrayProperties> {
 
 	public get(index: number): T | undefined {
 		try {
-			this.lock();
+			this.acquireLock();
 			const access = this.access;
 			const start = access.start;
 			const next = access.next;
@@ -74,13 +74,13 @@ export class SArray<T extends JType> extends LockableObject<SArrayProperties> {
 			}
 			return this.loadElement(start + index);
 		} finally {
-			this.release();
+			this.releaseLock();
 		}
 	}
 
 	push(...items: T[]): void {
 		try {
-			this.lock();
+			this.acquireLock();
 			const memory = this.memory();
 			const access = this.access;
 			access.state = access.state + 1;
@@ -104,13 +104,13 @@ export class SArray<T extends JType> extends LockableObject<SArrayProperties> {
 			}
 			access.next = next;
 		} finally {
-			this.release();
+			this.releaseLock();
 		}
 	}
 
 	public pop(): T | undefined {
 		try {
-			this.lock();
+			this.acquireLock();
 			const memory = this.memory();
 			const access = this.access;
 			const start = access.start;
@@ -124,7 +124,7 @@ export class SArray<T extends JType> extends LockableObject<SArrayProperties> {
 			access.next = next - 1;
 			return value;
 		} finally {
-			this.release();
+			this.releaseLock();
 		}
  	}
 
@@ -165,7 +165,7 @@ export class SArray<T extends JType> extends LockableObject<SArrayProperties> {
 
 	public asArray(): T[] {
 		try {
-			this.lock();
+			this.acquireLock();
 			const access = this.access;
 			const start = access.start;
 			const next = access.next;
@@ -175,7 +175,7 @@ export class SArray<T extends JType> extends LockableObject<SArrayProperties> {
 			}
 			return result;
 		} finally {
-			this.release();
+			this.releaseLock();
 		}
 	}
 
@@ -187,14 +187,14 @@ export class SArray<T extends JType> extends LockableObject<SArrayProperties> {
 		const access = this.access;
 		const memory = this.memory();
 		try {
-			this.lock();
+			this.acquireLock();
 			if (state !== undefined && access.state !== state) {
 				throw new Error(`Array got modified during access.`);
 			}
 			const ptr = u32.load(memory, access.elements + u32.size * index, SharedObject.Context);
 			return this.type.load(memory, ptr, SharedObject.Context);
 		} finally {
-			this.release();
+			this.releaseLock();
 		}
 	}
 
@@ -202,14 +202,14 @@ export class SArray<T extends JType> extends LockableObject<SArrayProperties> {
 		const access = this.access;
 		const memory = this.memory();
 		try {
-			this.lock();
+			this.acquireLock();
 			if (state !== undefined && access.state !== state) {
 				throw new Error(`Array got modified during access.`);
 			}
 			const ptr = u32.load(memory, access.elements + u32.size * index, SharedObject.Context);
 			return [this.type.load(memory, ptr, SharedObject.Context), ptr];
 		} finally {
-			this.release();
+			this.releaseLock();
 		}
 	}
 }

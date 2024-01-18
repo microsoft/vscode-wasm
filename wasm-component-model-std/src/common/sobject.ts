@@ -18,6 +18,8 @@ interface Exports {
 	aligned_alloc(align: number, size: number): number;
 }
 
+declare var console: any;
+
 class MemoryImpl implements SMemory {
 
 	public readonly memory: WebAssembly.Memory;
@@ -50,11 +52,17 @@ class MemoryImpl implements SMemory {
 	}
 
 	public alloc(align: Alignment, size: size): ptr {
-		const ptr = this.exports.aligned_alloc(align, size);
-		if (ptr === 0) {
-			throw new Error('Allocation failed');
+		try {
+			const ptr = this.exports.aligned_alloc(align, size);
+			if (ptr === 0) {
+				throw new Error('Allocation failed');
+			}
+			return ptr;
+		} catch (error) {
+			// eslint-disable-next-line no-console
+			console.error(`Alloc [${align}, ${size}] failed. Buffer size: ${this.memory.buffer.byteLength}`);
+			throw error;
 		}
-		return ptr;
 	}
 
 	public realloc(_ptr: ptr, _oldSize: size, _align: Alignment, _newSize: size): ptr {
@@ -62,7 +70,13 @@ class MemoryImpl implements SMemory {
 	}
 
 	public free(ptr: ptr): void {
-		this.exports.free(ptr);
+		try {
+			this.exports.free(ptr);
+		} catch (error) {
+			// eslint-disable-next-line no-console
+			console.error(`Free ptr ${ptr} failed. Buffer size: ${this.memory.buffer.byteLength}`);
+			throw error;
+		}
 	}
 }
 
@@ -71,7 +85,6 @@ export type Properties = [string, GenericComponentModelType][];
 export type MemoryLocation = {
 	value: ptr;
 };
-
 export namespace MemoryLocation {
 	export function create(ptr: ptr): MemoryLocation {
 		return { value: ptr };
@@ -83,13 +96,29 @@ export namespace MemoryLocation {
 	}
 }
 
-export class Semaphore {
+export type Allocation = {
+	align: Alignment;
+	size: size;
+};
+export namespace Allocation {
+	export function create(align: Alignment, size: size): Allocation {
+		return { align, size };
+	}
+	export function is(value: unknown): value is Allocation {
+		let candidate = value as Allocation;
+		return typeof candidate === 'object' && candidate !== null && typeof candidate.align === 'number' && typeof candidate.size === 'number';
+	}
+}
+
+
+export class Lock {
 
 	private readonly buffer: Int32Array;
 	private lockCount: number;
 
 	constructor(buffer: Int32Array) {
 		this.buffer = buffer;
+		Atomics.store(buffer, 0, 1);
 		this.lockCount = 0;
 	}
 
@@ -160,11 +189,15 @@ export abstract class SharedObject {
 
 	protected readonly ptr: ptr;
 
-	protected constructor(size: u32 | MemoryLocation) {
-		if (typeof size === 'number') {
-			this.ptr = SharedObject.memory().alloc(Alignment.word, size);
+	protected constructor(allocation: Allocation);
+	protected constructor(location: MemoryLocation);
+	protected constructor(arg0: Allocation | MemoryLocation) {
+		if (MemoryLocation.is(arg0)) {
+			this.ptr = arg0.value;
+		} else if (Allocation.is(arg0)) {
+			this.ptr = SharedObject.memory().alloc(arg0.align, arg0.size);
 		} else {
-			this.ptr = size.value;
+			throw new Error('Invalid argument');
 		}
 	}
 
@@ -180,18 +213,26 @@ export abstract class SharedObject {
 export abstract class SharedRecord<T> extends SharedObject {
 
 	protected readonly access: T;
+	protected readonly offsets: Map<string, number>;
 
 	constructor(properties: Properties, location?: MemoryLocation) {
 		let align: Alignment = Alignment.byte;
 		let size = 0;
 		const offsets: Map<string, number> = new Map();
 		for (const [name, type] of properties) {
+			if (offsets.has(name)) {
+				throw new Error(`Duplicate property ${name}`);
+			}
 			align = Math.max(align, type.alignment);
 			size = Alignment.align(size, type.alignment);
 			offsets.set(name, size);
 			size = size + type.size;
 		}
-		super(location ?? size);
+		if (location !== undefined) {
+			super(location);
+		} else {
+			super(Allocation.create(align, size));
+		}
 		const ptr = this.ptr;
 		const mem = this.memory();
 		const access = Object.create(null);
@@ -210,66 +251,51 @@ export abstract class SharedRecord<T> extends SharedObject {
 			});
 		}
 		this.access = access as T;
+		this.offsets = offsets;
 	}
 }
 
-export class LockableObject<T> extends SharedObject {
+export class LockableRecord<T> extends SharedRecord<T> {
 
-	protected readonly access: T;
-	private readonly semaphore: Semaphore;
+	private readonly lock: Lock;
 
-	protected constructor(properties: Properties, location?: MemoryLocation, semaphore?: Semaphore) {
-		let align: Alignment = Alignment.word;
-		let size = semaphore === undefined ? u32.size : 0;
-		const offsets: { [key: string]: number } = Object.create(null);
-		for (const key in properties) {
-			align = Math.max(align, properties[key].alignment);
-			const offset = size;
-			offsets[key] = offset;
-			size = size + properties[key].size;
-		}
-		super(location ?? size);
-		const ptr = this.ptr;
-		const mem = this.memory();
-		const access = Object.create(null);
-		for (const key in properties) {
-			const offset = offsets[key];
-			const type = properties[key];
-			Object.defineProperty(access, key, {
-				get() {
-					return type.load(mem, ptr + offset, SharedObject.Context);
-				},
-				set(value) {
-					type.store(mem, ptr + offset, value, SharedObject.Context);
+	protected constructor(properties: Properties, location?: MemoryLocation, lock?: Lock) {
+		if (lock === undefined) {
+			let hasLock = false;
+			for (const [name, ] of properties) {
+				if (name === '_lock') {
+					hasLock = true;
+					break;
 				}
-			});
-		}
-		if (semaphore !== undefined) {
-			this.semaphore = semaphore;
-		} else {
-			const buffer = new Int32Array(mem.buffer, ptr, 1);
-			if (location === undefined) {
-				buffer[0] = 1;
 			}
-			this.semaphore = new Semaphore(buffer);
+			if (!hasLock) {
+				properties = properties.slice();
+				properties.push(['_lock', u32]);
+			}
 		}
-		this.access = access;
+		super(properties, location);
+		if (lock === undefined) {
+			const offset = this.offsets.get('_lock')!;
+			this.lock = new Lock(new Int32Array(this.memory().buffer, this.ptr + offset, 1));
+		} else {
+			this.lock = lock;
+		}
 	}
 
 	public runLocked(callback: (value: this) => void): void {
-		this.lock();
+		this.acquireLock();
 		try {
 			callback(this);
 		} finally {
-			this.release();
+			this.releaseLock();
 		}
 	}
 
-	protected lock(): void {
-		this.semaphore.acquire();
+	protected acquireLock(): void {
+		this.lock.acquire();
 	}
 
-	protected release(): void {
-		this.semaphore.release();
+	protected releaseLock(): void {
+		this.lock.release();
 	}
 }

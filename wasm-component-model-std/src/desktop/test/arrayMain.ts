@@ -104,7 +104,7 @@ async function main(): Promise<void> {
 	const operations = new ArrayOperations(sarray);
 	const promises: Promise<void>[] = [];
 
-	const numberOfThreads = 8;
+	const numberOfThreads = 3;
 
 	process.stdout.write(`Starting array simulation using ${numberOfThreads} threads.\n`);
 

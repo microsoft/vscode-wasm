@@ -78,8 +78,8 @@ export async function run(options: Options): Promise<number> {
 	buffer.push(lines.join(',\n'));
 	buffer.push(`]);`);
 	buffer.push(``);
-	buffer.push(`const module = WebAssembly.compile(bytes);`);
-	buffer.push(`export default module;`);
+	buffer.push(`const _module = WebAssembly.compile(bytes);`);
+	buffer.push(`export default _module;`);
 
 	if (options.ts === undefined) {
 		process.stdout.write(buffer.join('\n'));
