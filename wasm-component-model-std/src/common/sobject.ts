@@ -4,7 +4,7 @@
  * ------------------------------------------------------------------------------------------ */
 /// <reference path="../../typings/webAssemblyCommon.d.ts" />
 
-import { Memory, Alignment, ComponentModelContext, GenericComponentModelType, ResourceManagers, ptr, u32, size } from '@vscode/wasm-component-model';
+import { Memory, Alignment, ComponentModelContext, GenericComponentModelType, ResourceManagers, ptr, u32, size, JType } from '@vscode/wasm-component-model';
 
 import malloc from './malloc';
 
@@ -149,7 +149,7 @@ export class Lock {
 
 export abstract class SharedObject {
 
-	protected static Context: ComponentModelContext = {
+	public static Context: ComponentModelContext = {
 		options: { encoding: 'utf-8' },
 		managers: new ResourceManagers()
 	};
@@ -185,15 +185,26 @@ export abstract class SharedObject {
 	}
 
 	protected readonly ptr: ptr;
+	private readonly allocated: boolean;
 
 	protected constructor(allocationOrLocation: Allocation | MemoryLocation) {
 		if (MemoryLocation.is(allocationOrLocation)) {
 			this.ptr = allocationOrLocation.value;
+			this.allocated = false;
 		} else if (Allocation.is(allocationOrLocation)) {
 			this.ptr = SharedObject.memory().alloc(allocationOrLocation.align, allocationOrLocation.size);
+			this.allocated = true;
 		} else {
 			throw new Error('Invalid argument');
 		}
+	}
+
+	public dispose(): void {
+		if (!this.allocated) {
+			// We should think about a trace when we dispose
+			// a shared object from a thread that hasn't allocated it.
+		}
+		this.memory().free(this.ptr);
 	}
 
 	protected memory(): SMemory {
@@ -206,63 +217,73 @@ export abstract class SharedObject {
 }
 
 export type Properties = [string, GenericComponentModelType][];
-export type RecordInfo = {
-	align: Alignment;
-	size: size;
-	fields: Map<string, [GenericComponentModelType, number]>;
-};
+type RecordProperties = { [key: string]: JType };
+export type RecordInfo<T extends RecordProperties> = { [key in keyof T]: { offset: number; type: GenericComponentModelType } };
 
-export abstract class SharedRecord<T> extends SharedObject {
+export class RecordDescriptor<T extends RecordProperties> {
+	public readonly alignment: Alignment;
+	public readonly size: size;
+	private readonly _fields: Map<string, { type: GenericComponentModelType; offset: number }>;
+	public readonly fields: RecordInfo<T>;
 
-	protected readonly access: T;
-
-	protected static createRecordInfo(properties: Properties): RecordInfo {
-		let align: Alignment = Alignment.byte;
+	constructor(properties: Properties) {
+		let alignment: Alignment = Alignment.byte;
 		let size = 0;
-		const fields: Map<string, [GenericComponentModelType, number]> = new Map();
+		const fieldsMap: Map<string, { type: GenericComponentModelType; offset: number }> = new Map();
 		for (const [name, type] of properties) {
-			if (fields.has(name)) {
+			if (fieldsMap.has(name)) {
 				throw new Error(`Duplicate property ${name}`);
 			}
-			align = Math.max(align, type.alignment);
+			alignment = Math.max(alignment, type.alignment);
 			size = Alignment.align(size, type.alignment);
-			fields.set(name, [type, size]);
+			fieldsMap.set(name, {type, offset: size});
 			size = size + type.size;
 		}
-		return Object.freeze({ align, size, fields });
+		this.alignment = alignment;
+		this.size = size;
+		this._fields = fieldsMap;
 	}
 
-	constructor(recordInfo: RecordInfo, location?: MemoryLocation) {
-		if (location !== undefined) {
-			super(location);
-		} else {
-			super(Allocation.create(recordInfo.align, recordInfo.size));
-		}
-		const ptr = this.ptr;
-		const mem = this.memory();
+	createAccess(memory: SMemory, ptr: ptr): T {
 		const access = Object.create(null);
-		for (const [name, [type, offset]] of recordInfo.fields) {
+		for (const [name, { type, offset }] of this._fields) {
 			if (name.startsWith('_')) {
 				continue;
 			}
 			Object.defineProperty(access, name, {
 				get() {
-					return type.load(mem, ptr + offset, SharedObject.Context);
+					return type.load(memory, ptr + offset, SharedObject.Context);
 				},
 				set(value) {
-					type.store(mem, ptr + offset, value, SharedObject.Context);
+					type.store(memory, ptr + offset, value, SharedObject.Context);
 				}
 			});
 		}
-		this.access = access as T;
+		return access as T;
 	}
-
-	protected abstract getRecordInfo(): RecordInfo;
 }
 
-export abstract class LockableRecord<T> extends SharedRecord<T> {
+export abstract class SharedRecord<T extends RecordProperties> extends SharedObject {
 
-	protected static createRecordInfo(properties: Properties): RecordInfo {
+	protected readonly access: T;
+
+	constructor(recordInfo: RecordDescriptor<T>, location?: MemoryLocation) {
+		if (location !== undefined) {
+			super(location);
+		} else {
+			super(Allocation.create(recordInfo.alignment, recordInfo.size));
+		}
+		const ptr = this.ptr;
+		const mem = this.memory();
+		this.access = recordInfo.createAccess(mem, ptr);
+	}
+
+	protected abstract getRecordInfo(): RecordDescriptor<T>;
+}
+
+export abstract class LockableRecord<T extends RecordProperties> extends SharedRecord<T> {
+
+	protected static createRecordInfo<T extends RecordProperties>(properties: Properties): RecordDescriptor<T> {
 		let hasLock = false;
 		for (const [name, ] of properties) {
 			if (name === '_lock') {
@@ -274,18 +295,18 @@ export abstract class LockableRecord<T> extends SharedRecord<T> {
 			properties = properties.slice();
 			properties.push(['_lock', u32]);
 		}
-		return super.createRecordInfo(properties);
+		return new RecordDescriptor(properties);
 	}
 
 	private readonly lock: Lock;
 
-	protected constructor(recordInfo: RecordInfo, location?: MemoryLocation, lock?: Lock) {
-		if (!recordInfo.fields.has('_lock')) {
+	protected constructor(recordInfo: RecordDescriptor<T>, location?: MemoryLocation, lock?: Lock) {
+		if (!recordInfo._fields.has('_lock')) {
 			throw new Error('RecordInfo does not contain a lock field');
 		}
 		super(recordInfo, location);
 		if (lock === undefined) {
-			const offset = recordInfo.fields.get('_lock')![1];
+			const offset = recordInfo._fields.get('_lock')!.offset;
 			const lockBuffer = new Int32Array(this.memory().buffer, this.ptr + offset, 1);
 			// We allocated the memory for this shared record so we need to initialize
 			// the lock count to 1. If we use an existing memory location, we need to

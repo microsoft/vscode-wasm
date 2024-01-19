@@ -5,15 +5,15 @@
 
 import { io } from '@vscode/wasi';
 
-import { ResourceHandle, ptr, u32 } from '@vscode/wasm-component-model';
-import { MemoryLocation, SharedObject } from '@vscode/wasm-component-model-std';
+import { ResourceHandle, ptr, s32, u32 } from '@vscode/wasm-component-model';
+import { MemoryLocation, RecordDescriptor, RecordInfo, SharedObject } from '@vscode/wasm-component-model-std';
 
 export class Pollable extends SharedObject implements io.Poll.Pollable {
 
 	private buffer: Int32Array;
 
 	constructor(location?: MemoryLocation) {
-		super(location ?? { align: u32.alignment, size: u32.size });
+		super(location ?? { align: s32.alignment, size: s32.size });
 		this.buffer = new Int32Array(this.memory().buffer, this.ptr, 1);
 	}
 
@@ -27,6 +27,21 @@ export class Pollable extends SharedObject implements io.Poll.Pollable {
 
 	public block(): void {
 		Atomics.wait(this.buffer, 0, 0);
+	}
+
+	public async blockAsync(): Promise<void> {
+		const result = Atomics.waitAsync(this.buffer, 0, 0);
+		if (result.async) {
+			const value = await result.value;
+			if (value === 'timed-out') {
+				throw new Error('timed-out should never happen.');
+			}
+		} else {
+			if (result.value === 'timed-out') {
+				throw new Error('timed-out should never happen.');
+			}
+			return Promise.resolve();
+		}
 	}
 
 	public markReady(): void {
@@ -35,24 +50,61 @@ export class Pollable extends SharedObject implements io.Poll.Pollable {
 	}
 }
 
+namespace PollableList {
+	export type Properties = {
+		signal: s32;
+		length: u32;
+		elements: ptr;
+	};
+}
+
 export class PollableList extends SharedObject {
 
-	private buffer: Int32Array;
+	private static RecordInfo: RecordDescriptor<PollableList.Properties> & RecordInfo<PollableList.Properties> = new RecordDescriptor([
+		['signal', s32],
+		['length', u32],
+		['elements', ptr],
+	]);
+
+	private readonly access: PollableList.Properties;
+	private readonly signal: Int32Array;
 
 	constructor(locationOrValues: MemoryLocation | Pollable[] | ptr<Pollable>[]) {
-		super(u32.size);
+		if (MemoryLocation.is(locationOrValues)) {
+			super(locationOrValues);
+		} else {
+			const length = locationOrValues.length;
+			const size = PollableList.RecordInfo.size + (length - 1) * ptr.size;
+			const align = PollableList.RecordInfo.align;
+			super({ align, size });
+			let mem = this.memory();
+			if (length > 0) {
+				let location = this.ptr + PollableList.RecordInfo.fields.get('elements')!.offset;
+				for (const value of locationOrValues) {
+					ptr.store(mem, location, typeof value === 'number' ? value : value.handle(), SharedObject.Context);
+					location += ptr.size;
+				}
+			}
+		}
+		this.access = PollableList.RecordInfo.createAccess(this.memory(), this.ptr);
+		const signalOffset = PollableList.RecordInfo.fields.get('signal')![1];
+		this.signal = new Int32Array(this.memory().buffer, this.ptr + signalOffset, 1);
 		this.buffer = new Int32Array(this.memory().buffer, this.ptr, 1);
+	}
+
+	public get length(): number {
+		return this.access.length;
 	}
 
 	public handle(): ResourceHandle {
 		return this.ptr;
 	}
 
-	public ready(): boolean {
-		return Atomics.load(this.buffer, 0) === 1;
-	}
-
-	public block(): void {
+	public block(): Uint32Array {
 		Atomics.wait(this.buffer, 0, 0);
+		let location = this.ptr + s32.size;
+		const mem = this.memory();
+
+
 	}
 }
