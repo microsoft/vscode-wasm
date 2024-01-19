@@ -66,7 +66,7 @@ connection.onNotification('array/new', async (params) => {
 		array.runLocked(() => {
 			index = Math.floor(Math.random() * array.length);
 			sequence = Atomics.add(counter, 0, 1);
-			result = array.get(index)!;
+			result = array.at(index)!;
 		});
 		connection.sendNotification('array/get', { workerId, sequence, index, result });
 	}

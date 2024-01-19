@@ -21,8 +21,8 @@ suite('SArray', () => {
 		arr.push(2.2);
 
 		assert.strictEqual(arr.length, 2);
-		assert.strictEqual(arr.get(0), 1.1);
-		assert.strictEqual(arr.get(1), 2.2);
+		assert.strictEqual(arr.at(0), 1.1);
+		assert.strictEqual(arr.at(1), 2.2);
 	});
 
 	test('pop', () => {
@@ -77,8 +77,8 @@ suite('SArray', () => {
 		arr.push(1.1);
 		arr.push(2.2);
 		arr.runLocked(arr => {
-			assert.strictEqual(arr.get(0), 1.1);
-			assert.strictEqual(arr.get(1), 2.2);
+			assert.strictEqual(arr.at(0), 1.1);
+			assert.strictEqual(arr.at(1), 2.2);
 		});
 	});
 
@@ -89,7 +89,7 @@ suite('SArray', () => {
 		}
 		assert.strictEqual(arr.length, 100);
 		for (let i = 0; i < 100; i++) {
-			assert.strictEqual(arr.get(i), i);
+			assert.strictEqual(arr.at(i), i);
 		}
 	});
 });

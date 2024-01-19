@@ -6,7 +6,7 @@
 import { io } from '@vscode/wasi';
 
 import { ResourceHandle, ptr, s32, u32 } from '@vscode/wasm-component-model';
-import { MemoryLocation, RecordDescriptor, RecordInfo, SharedObject } from '@vscode/wasm-component-model-std';
+import { MemoryLocation, RecordDescriptor, SharedObject } from '@vscode/wasm-component-model-std';
 
 export class Pollable extends SharedObject implements io.Poll.Pollable {
 
@@ -60,7 +60,7 @@ namespace PollableList {
 
 export class PollableList extends SharedObject {
 
-	private static RecordInfo: RecordDescriptor<PollableList.Properties> & RecordInfo<PollableList.Properties> = new RecordDescriptor([
+	private static RecordInfo: RecordDescriptor<PollableList.Properties> = new RecordDescriptor([
 		['signal', s32],
 		['length', u32],
 		['elements', ptr],
@@ -75,11 +75,11 @@ export class PollableList extends SharedObject {
 		} else {
 			const length = locationOrValues.length;
 			const size = PollableList.RecordInfo.size + (length - 1) * ptr.size;
-			const align = PollableList.RecordInfo.align;
-			super({ align, size });
+			const alignment = PollableList.RecordInfo.alignment;
+			super({ align: alignment, size });
 			let mem = this.memory();
 			if (length > 0) {
-				let location = this.ptr + PollableList.RecordInfo.fields.get('elements')!.offset;
+				let location = this.ptr + PollableList.RecordInfo.fields.elements.offset;
 				for (const value of locationOrValues) {
 					ptr.store(mem, location, typeof value === 'number' ? value : value.handle(), SharedObject.Context);
 					location += ptr.size;
@@ -87,9 +87,8 @@ export class PollableList extends SharedObject {
 			}
 		}
 		this.access = PollableList.RecordInfo.createAccess(this.memory(), this.ptr);
-		const signalOffset = PollableList.RecordInfo.fields.get('signal')![1];
+		const signalOffset = PollableList.RecordInfo.fields.signal.offset;
 		this.signal = new Int32Array(this.memory().buffer, this.ptr + signalOffset, 1);
-		this.buffer = new Int32Array(this.memory().buffer, this.ptr, 1);
 	}
 
 	public get length(): number {
@@ -101,10 +100,22 @@ export class PollableList extends SharedObject {
 	}
 
 	public block(): Uint32Array {
-		Atomics.wait(this.buffer, 0, 0);
-		let location = this.ptr + s32.size;
+		Atomics.wait(this.signal, 0, 0);
+		const length = this.access.length;
 		const mem = this.memory();
-
-
+		const pollables: Pollable[] = [];
+		let location = this.ptr + PollableList.RecordInfo.fields.elements.offset;
+		for (let i = 0; i < length; i++) {
+			const handle = ptr.load(mem, location, SharedObject.Context);
+			pollables.push(new Pollable(MemoryLocation.create(handle)));
+			location += ptr.size;
+		}
+		const result: number[] = [];
+		for (const [index, pollable] of pollables.entries()) {
+			if (pollable.ready()) {
+				result.push(index);
+			}
+		}
+		return new Uint32Array(result);
 	}
 }

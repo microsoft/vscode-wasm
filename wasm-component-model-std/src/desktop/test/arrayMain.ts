@@ -52,7 +52,7 @@ class ArrayOperations {
 		}
 		for (let i = 0; i < this.jarray.length; i++) {
 			const jvalue = this.jarray[i];
-			const svalue = this.sarray.get(i);
+			const svalue = this.sarray.at(i);
 			if (jvalue !== svalue) {
 				this.debugOrThrow(`Value mismatch at ${i}: ${jvalue} !== ${svalue}`);
 			}

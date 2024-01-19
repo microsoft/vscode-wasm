@@ -229,6 +229,7 @@ export class RecordDescriptor<T extends RecordProperties> {
 	constructor(properties: Properties) {
 		let alignment: Alignment = Alignment.byte;
 		let size = 0;
+		const fields = Object.create(null);
 		const fieldsMap: Map<string, { type: GenericComponentModelType; offset: number }> = new Map();
 		for (const [name, type] of properties) {
 			if (fieldsMap.has(name)) {
@@ -236,12 +237,23 @@ export class RecordDescriptor<T extends RecordProperties> {
 			}
 			alignment = Math.max(alignment, type.alignment);
 			size = Alignment.align(size, type.alignment);
-			fieldsMap.set(name, {type, offset: size});
+			const info = { offset: size, type };
+			fieldsMap.set(name, info);
+			fields[name] = info;
 			size = size + type.size;
 		}
 		this.alignment = alignment;
 		this.size = size;
+		this.fields = fields;
 		this._fields = fieldsMap;
+	}
+
+	getField(name: string): { type: GenericComponentModelType; offset: number } | undefined {
+		return this._fields.get(name);
+	}
+
+	hasField(name: string): boolean {
+		return this._fields.has(name);
 	}
 
 	createAccess(memory: SMemory, ptr: ptr): T {
@@ -301,12 +313,12 @@ export abstract class LockableRecord<T extends RecordProperties> extends SharedR
 	private readonly lock: Lock;
 
 	protected constructor(recordInfo: RecordDescriptor<T>, location?: MemoryLocation, lock?: Lock) {
-		if (!recordInfo._fields.has('_lock')) {
+		if (!recordInfo.hasField('_lock')) {
 			throw new Error('RecordInfo does not contain a lock field');
 		}
 		super(recordInfo, location);
 		if (lock === undefined) {
-			const offset = recordInfo._fields.get('_lock')!.offset;
+			const offset = recordInfo.getField('_lock')!.offset;
 			const lockBuffer = new Int32Array(this.memory().buffer, this.ptr + offset, 1);
 			// We allocated the memory for this shared record so we need to initialize
 			// the lock count to 1. If we use an existing memory location, we need to
