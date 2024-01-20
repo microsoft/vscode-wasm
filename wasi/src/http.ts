@@ -714,9 +714,18 @@ export namespace http {
 				__handle?: $wcm.ResourceHandle;
 
 				/**
-				 * Get all of the values corresponding to a key.
+				 * Get all of the values corresponding to a key. If the key is not present
+				 * in this `fields`, an empty list is returned. However, if the key is
+				 * present but empty, this is represented by a list with one or more
+				 * empty field-values present.
 				 */
 				get(name: FieldKey): FieldValue[];
+
+				/**
+				 * Returns `true` when the key is present in this `fields`. If the key is
+				 * syntactically invalid, `false` is returned.
+				 */
+				has(name: FieldKey): boolean;
 
 				/**
 				 * Set all of the values for a key. Clears any existing values for that
@@ -912,37 +921,37 @@ export namespace http {
 				/**
 				 * The timeout for the initial connect to the HTTP Server.
 				 */
-				connectTimeoutMs(): Duration | undefined;
+				connectTimeout(): Duration | undefined;
 
 				/**
 				 * Set the timeout for the initial connect to the HTTP Server. An error
 				 * return value indicates that this timeout is not supported.
 				 */
-				setConnectTimeoutMs(ms: Duration | undefined): result<void, void>;
+				setConnectTimeout(duration: Duration | undefined): result<void, void>;
 
 				/**
 				 * The timeout for receiving the first byte of the Response body.
 				 */
-				firstByteTimeoutMs(): Duration | undefined;
+				firstByteTimeout(): Duration | undefined;
 
 				/**
 				 * Set the timeout for receiving the first byte of the Response body. An
 				 * error return value indicates that this timeout is not supported.
 				 */
-				setFirstByteTimeoutMs(ms: Duration | undefined): result<void, void>;
+				setFirstByteTimeout(duration: Duration | undefined): result<void, void>;
 
 				/**
 				 * The timeout for receiving subsequent chunks of bytes in the Response
 				 * body stream.
 				 */
-				betweenBytesTimeoutMs(): Duration | undefined;
+				betweenBytesTimeout(): Duration | undefined;
 
 				/**
 				 * Set the timeout for receiving subsequent chunks of bytes in the Response
 				 * body stream. An error return value indicates that this timeout is not
 				 * supported.
 				 */
-				setBetweenBytesTimeoutMs(ms: Duration | undefined): result<void, void>;
+				setBetweenBytesTimeout(duration: Duration | undefined): result<void, void>;
 			}
 			export type Statics = {
 				$new?(): Interface;
@@ -1048,17 +1057,21 @@ export namespace http {
 				 * The outer `option` represents future readiness. Users can wait on this
 				 * `option` to become `some` using the `subscribe` method.
 				 * 
-				 * The `result` represents that either the HTTP Request or Response body,
-				 * as well as any trailers, were received successfully, or that an error
-				 * occured receiving them. The optional `trailers` indicates whether or not
-				 * trailers were present in the body.
+				 * The outer `result` is used to retrieve the trailers or error at most
+				 * once. It will be success on the first call in which the outer option
+				 * is `some`, and error on subsequent calls.
+				 * 
+				 * The inner `result` represents that either the HTTP Request or Response
+				 * body, as well as any trailers, were received successfully, or that an
+				 * error occured receiving them. The optional `trailers` indicates whether
+				 * or not trailers were present in the body.
 				 * 
 				 * When some `trailers` are returned by this method, the `trailers`
 				 * resource is immutable, and a child. Use of the `set`, `append`, or
 				 * `delete` methods will return an error, and the resource must be
 				 * dropped before the parent `future-trailers` is dropped.
 				 */
-				get(): result<own<Trailers> | undefined, ErrorCode> | undefined;
+				get(): result<result<own<Trailers> | undefined, ErrorCode>, void> | undefined;
 			}
 			export type Statics = {
 			};
@@ -1328,6 +1341,10 @@ export namespace http {
 			['self', new $wcm.BorrowType<http.Types.Fields>(Fields)],
 			['name', FieldKey],
 		], new $wcm.ListType<Uint8Array>(FieldValue)));
+		Fields.addMethod('has', new $wcm.MethodType<http.Types.Fields.Interface['has']>('[method]fields.has', [
+			['self', new $wcm.BorrowType<http.Types.Fields>(Fields)],
+			['name', FieldKey],
+		], $wcm.bool));
 		Fields.addMethod('set', new $wcm.MethodType<http.Types.Fields.Interface['set']>('[method]fields.set', [
 			['self', new $wcm.BorrowType<http.Types.Fields>(Fields)],
 			['name', FieldKey],
@@ -1404,26 +1421,26 @@ export namespace http {
 			['self', new $wcm.BorrowType<http.Types.OutgoingRequest>(OutgoingRequest)],
 		], new $wcm.OwnType<http.Types.Headers>(Headers)));
 		RequestOptions.addMethod('constructor', new $wcm.ConstructorType<http.Types.RequestOptions.Class['constructor']>('[constructor]request-options', [], new $wcm.OwnType(RequestOptions_Handle)));
-		RequestOptions.addMethod('connectTimeoutMs', new $wcm.MethodType<http.Types.RequestOptions.Interface['connectTimeoutMs']>('[method]request-options.connect-timeout-ms', [
+		RequestOptions.addMethod('connectTimeout', new $wcm.MethodType<http.Types.RequestOptions.Interface['connectTimeout']>('[method]request-options.connect-timeout', [
 			['self', new $wcm.BorrowType<http.Types.RequestOptions>(RequestOptions)],
 		], new $wcm.OptionType<http.Types.Duration>(Duration)));
-		RequestOptions.addMethod('setConnectTimeoutMs', new $wcm.MethodType<http.Types.RequestOptions.Interface['setConnectTimeoutMs']>('[method]request-options.set-connect-timeout-ms', [
+		RequestOptions.addMethod('setConnectTimeout', new $wcm.MethodType<http.Types.RequestOptions.Interface['setConnectTimeout']>('[method]request-options.set-connect-timeout', [
 			['self', new $wcm.BorrowType<http.Types.RequestOptions>(RequestOptions)],
-			['ms', new $wcm.OptionType<http.Types.Duration>(Duration)],
+			['duration', new $wcm.OptionType<http.Types.Duration>(Duration)],
 		], new $wcm.ResultType<void, void>(undefined, undefined)));
-		RequestOptions.addMethod('firstByteTimeoutMs', new $wcm.MethodType<http.Types.RequestOptions.Interface['firstByteTimeoutMs']>('[method]request-options.first-byte-timeout-ms', [
+		RequestOptions.addMethod('firstByteTimeout', new $wcm.MethodType<http.Types.RequestOptions.Interface['firstByteTimeout']>('[method]request-options.first-byte-timeout', [
 			['self', new $wcm.BorrowType<http.Types.RequestOptions>(RequestOptions)],
 		], new $wcm.OptionType<http.Types.Duration>(Duration)));
-		RequestOptions.addMethod('setFirstByteTimeoutMs', new $wcm.MethodType<http.Types.RequestOptions.Interface['setFirstByteTimeoutMs']>('[method]request-options.set-first-byte-timeout-ms', [
+		RequestOptions.addMethod('setFirstByteTimeout', new $wcm.MethodType<http.Types.RequestOptions.Interface['setFirstByteTimeout']>('[method]request-options.set-first-byte-timeout', [
 			['self', new $wcm.BorrowType<http.Types.RequestOptions>(RequestOptions)],
-			['ms', new $wcm.OptionType<http.Types.Duration>(Duration)],
+			['duration', new $wcm.OptionType<http.Types.Duration>(Duration)],
 		], new $wcm.ResultType<void, void>(undefined, undefined)));
-		RequestOptions.addMethod('betweenBytesTimeoutMs', new $wcm.MethodType<http.Types.RequestOptions.Interface['betweenBytesTimeoutMs']>('[method]request-options.between-bytes-timeout-ms', [
+		RequestOptions.addMethod('betweenBytesTimeout', new $wcm.MethodType<http.Types.RequestOptions.Interface['betweenBytesTimeout']>('[method]request-options.between-bytes-timeout', [
 			['self', new $wcm.BorrowType<http.Types.RequestOptions>(RequestOptions)],
 		], new $wcm.OptionType<http.Types.Duration>(Duration)));
-		RequestOptions.addMethod('setBetweenBytesTimeoutMs', new $wcm.MethodType<http.Types.RequestOptions.Interface['setBetweenBytesTimeoutMs']>('[method]request-options.set-between-bytes-timeout-ms', [
+		RequestOptions.addMethod('setBetweenBytesTimeout', new $wcm.MethodType<http.Types.RequestOptions.Interface['setBetweenBytesTimeout']>('[method]request-options.set-between-bytes-timeout', [
 			['self', new $wcm.BorrowType<http.Types.RequestOptions>(RequestOptions)],
-			['ms', new $wcm.OptionType<http.Types.Duration>(Duration)],
+			['duration', new $wcm.OptionType<http.Types.Duration>(Duration)],
 		], new $wcm.ResultType<void, void>(undefined, undefined)));
 		ResponseOutparam.addMethod('set', new $wcm.StaticMethodType<http.Types.ResponseOutparam.Statics['set']>('[static]response-outparam.set', [
 			['param', new $wcm.OwnType<http.Types.ResponseOutparam>(ResponseOutparam)],
@@ -1449,7 +1466,7 @@ export namespace http {
 		], new $wcm.OwnType<http.Types.Pollable>(Pollable)));
 		FutureTrailers.addMethod('get', new $wcm.MethodType<http.Types.FutureTrailers.Interface['get']>('[method]future-trailers.get', [
 			['self', new $wcm.BorrowType<http.Types.FutureTrailers>(FutureTrailers)],
-		], new $wcm.OptionType<result<option<own<http.Types.Trailers>>, http.Types.ErrorCode>>(new $wcm.ResultType<option<own<http.Types.Trailers>>, http.Types.ErrorCode>(new $wcm.OptionType<own<http.Types.Trailers>>(new $wcm.OwnType<http.Types.Trailers>(Trailers)), ErrorCode))));
+		], new $wcm.OptionType<result<result<option<own<http.Types.Trailers>>, http.Types.ErrorCode>, void>>(new $wcm.ResultType<result<option<own<http.Types.Trailers>>, http.Types.ErrorCode>, void>(new $wcm.ResultType<option<own<http.Types.Trailers>>, http.Types.ErrorCode>(new $wcm.OptionType<own<http.Types.Trailers>>(new $wcm.OwnType<http.Types.Trailers>(Trailers)), ErrorCode), undefined))));
 		OutgoingResponse.addMethod('constructor', new $wcm.ConstructorType<http.Types.OutgoingResponse.Class['constructor']>('[constructor]outgoing-response', [
 			['headers', new $wcm.OwnType<http.Types.Headers>(Headers)],
 		], new $wcm.OwnType(OutgoingResponse_Handle)));
@@ -1537,6 +1554,7 @@ export namespace http {
 				'[constructor]fields': () => i32;
 				'[static]fields.from-list': (entries_ptr: i32, entries_len: i32, result: ptr<[i32, i32]>) => void;
 				'[method]fields.get': (self: i32, name_ptr: i32, name_len: i32, result: ptr<[i32, i32]>) => void;
+				'[method]fields.has': (self: i32, name_ptr: i32, name_len: i32) => i32;
 				'[method]fields.set': (self: i32, name_ptr: i32, name_len: i32, value_ptr: i32, value_len: i32, result: ptr<[i32, i32]>) => void;
 				'[method]fields.delete': (self: i32, name_ptr: i32, name_len: i32, result: ptr<[i32, i32]>) => void;
 				'[method]fields.append': (self: i32, name_ptr: i32, name_len: i32, value_ptr: i32, value_len: i32, result: ptr<[i32, i32]>) => void;
@@ -1546,6 +1564,7 @@ export namespace http {
 			type ObjectModule = {
 				constructor(): own<$wcm.ResourceHandle>;
 				get(self: Fields, name: FieldKey): FieldValue[];
+				has(self: Fields, name: FieldKey): boolean;
 				set(self: Fields, name: FieldKey, value: FieldValue[]): result<void, HeaderError>;
 				delete(self: Fields, name: FieldKey): result<void, HeaderError>;
 				append(self: Fields, name: FieldKey, value: FieldValue): result<void, HeaderError>;
@@ -1564,6 +1583,9 @@ export namespace http {
 				}
 				public get(name: FieldKey): FieldValue[] {
 					return this._om.get(this, name);
+				}
+				public has(name: FieldKey): boolean {
+					return this._om.has(this, name);
 				}
 				public set(name: FieldKey, value: FieldValue[]): result<void, HeaderError> {
 					return this._om.set(this, name, value);
@@ -1725,21 +1747,21 @@ export namespace http {
 		export namespace RequestOptions {
 			export type WasmInterface = {
 				'[constructor]request-options': () => i32;
-				'[method]request-options.connect-timeout-ms': (self: i32, result: ptr<[i32, i64]>) => void;
-				'[method]request-options.set-connect-timeout-ms': (self: i32, ms_case: i32, ms_option_Duration: i64) => i32;
-				'[method]request-options.first-byte-timeout-ms': (self: i32, result: ptr<[i32, i64]>) => void;
-				'[method]request-options.set-first-byte-timeout-ms': (self: i32, ms_case: i32, ms_option_Duration: i64) => i32;
-				'[method]request-options.between-bytes-timeout-ms': (self: i32, result: ptr<[i32, i64]>) => void;
-				'[method]request-options.set-between-bytes-timeout-ms': (self: i32, ms_case: i32, ms_option_Duration: i64) => i32;
+				'[method]request-options.connect-timeout': (self: i32, result: ptr<[i32, i64]>) => void;
+				'[method]request-options.set-connect-timeout': (self: i32, duration_case: i32, duration_option_Duration: i64) => i32;
+				'[method]request-options.first-byte-timeout': (self: i32, result: ptr<[i32, i64]>) => void;
+				'[method]request-options.set-first-byte-timeout': (self: i32, duration_case: i32, duration_option_Duration: i64) => i32;
+				'[method]request-options.between-bytes-timeout': (self: i32, result: ptr<[i32, i64]>) => void;
+				'[method]request-options.set-between-bytes-timeout': (self: i32, duration_case: i32, duration_option_Duration: i64) => i32;
 			};
 			type ObjectModule = {
 				constructor(): own<$wcm.ResourceHandle>;
-				connectTimeoutMs(self: RequestOptions): Duration | undefined;
-				setConnectTimeoutMs(self: RequestOptions, ms: Duration | undefined): result<void, void>;
-				firstByteTimeoutMs(self: RequestOptions): Duration | undefined;
-				setFirstByteTimeoutMs(self: RequestOptions, ms: Duration | undefined): result<void, void>;
-				betweenBytesTimeoutMs(self: RequestOptions): Duration | undefined;
-				setBetweenBytesTimeoutMs(self: RequestOptions, ms: Duration | undefined): result<void, void>;
+				connectTimeout(self: RequestOptions): Duration | undefined;
+				setConnectTimeout(self: RequestOptions, duration: Duration | undefined): result<void, void>;
+				firstByteTimeout(self: RequestOptions): Duration | undefined;
+				setFirstByteTimeout(self: RequestOptions, duration: Duration | undefined): result<void, void>;
+				betweenBytesTimeout(self: RequestOptions): Duration | undefined;
+				setBetweenBytesTimeout(self: RequestOptions, duration: Duration | undefined): result<void, void>;
 			};
 			class Impl extends $wcm.Resource implements http.Types.RequestOptions.Interface {
 				private readonly _om: ObjectModule;
@@ -1748,23 +1770,23 @@ export namespace http {
 					this._om = om;
 					this.__handle = om.constructor();
 				}
-				public connectTimeoutMs(): Duration | undefined {
-					return this._om.connectTimeoutMs(this);
+				public connectTimeout(): Duration | undefined {
+					return this._om.connectTimeout(this);
 				}
-				public setConnectTimeoutMs(ms: Duration | undefined): result<void, void> {
-					return this._om.setConnectTimeoutMs(this, ms);
+				public setConnectTimeout(duration: Duration | undefined): result<void, void> {
+					return this._om.setConnectTimeout(this, duration);
 				}
-				public firstByteTimeoutMs(): Duration | undefined {
-					return this._om.firstByteTimeoutMs(this);
+				public firstByteTimeout(): Duration | undefined {
+					return this._om.firstByteTimeout(this);
 				}
-				public setFirstByteTimeoutMs(ms: Duration | undefined): result<void, void> {
-					return this._om.setFirstByteTimeoutMs(this, ms);
+				public setFirstByteTimeout(duration: Duration | undefined): result<void, void> {
+					return this._om.setFirstByteTimeout(this, duration);
 				}
-				public betweenBytesTimeoutMs(): Duration | undefined {
-					return this._om.betweenBytesTimeoutMs(this);
+				public betweenBytesTimeout(): Duration | undefined {
+					return this._om.betweenBytesTimeout(this);
 				}
-				public setBetweenBytesTimeoutMs(ms: Duration | undefined): result<void, void> {
-					return this._om.setBetweenBytesTimeoutMs(this, ms);
+				public setBetweenBytesTimeout(duration: Duration | undefined): result<void, void> {
+					return this._om.setBetweenBytesTimeout(this, duration);
 				}
 			}
 			export function Class(wasmInterface: WasmInterface, context: $wcm.WasmContext): http.Types.RequestOptions.Class {
@@ -1871,11 +1893,11 @@ export namespace http {
 		export namespace FutureTrailers {
 			export type WasmInterface = {
 				'[method]future-trailers.subscribe': (self: i32) => i32;
-				'[method]future-trailers.get': (self: i32, result: ptr<[i32, i32, i32, i32, i64, i32, i32, i32, i32]>) => void;
+				'[method]future-trailers.get': (self: i32, result: ptr<[i32, i32, i32, i32, i32, i64, i32, i32, i32, i32]>) => void;
 			};
 			type ObjectModule = {
 				subscribe(self: FutureTrailers): own<Pollable>;
-				get(self: FutureTrailers): result<own<Trailers> | undefined, ErrorCode> | undefined;
+				get(self: FutureTrailers): result<result<own<Trailers> | undefined, ErrorCode>, void> | undefined;
 			};
 			class Impl extends $wcm.Resource implements http.Types.FutureTrailers.Interface {
 				private readonly _om: ObjectModule;
@@ -1886,7 +1908,7 @@ export namespace http {
 				public subscribe(): own<Pollable> {
 					return this._om.subscribe(this);
 				}
-				public get(): result<own<Trailers> | undefined, ErrorCode> | undefined {
+				public get(): result<result<own<Trailers> | undefined, ErrorCode>, void> | undefined {
 					return this._om.get(this);
 				}
 			}

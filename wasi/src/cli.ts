@@ -90,6 +90,13 @@ export namespace cli {
 		getStderr: Stderr.getStderr;
 	};
 
+	/**
+	 * Terminal input.
+	 * 
+	 * In the future, this may include functions for disabling echoing,
+	 * disabling input buffering so that keyboard events are sent through
+	 * immediately, querying supported features, and so on.
+	 */
 	export namespace TerminalInput {
 
 		export namespace TerminalInput {
@@ -107,6 +114,13 @@ export namespace cli {
 	export type TerminalInput = {
 	};
 
+	/**
+	 * Terminal output.
+	 * 
+	 * In the future, this may include functions for querying the terminal
+	 * size, being notified of terminal size changes, querying supported
+	 * features, and so on.
+	 */
 	export namespace TerminalOutput {
 
 		export namespace TerminalOutput {
