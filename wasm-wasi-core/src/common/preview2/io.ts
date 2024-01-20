@@ -17,8 +17,12 @@ export class Pollable extends SharedObject implements io.Poll.Pollable {
 		this.buffer = new Int32Array(this.memory().buffer, this.ptr, 1);
 	}
 
-	public handle(): ResourceHandle {
+	public get __handle(): ResourceHandle {
 		return this.ptr;
+	}
+
+	public set __handle(_value: ResourceHandle) {
+		throw new Error('Pollable handles are immutable.');
 	}
 
 	public ready(): boolean {
@@ -95,7 +99,7 @@ export class PollableList extends SharedObject {
 		return this.access.length;
 	}
 
-	public handle(): ResourceHandle {
+	public $handle(): ResourceHandle {
 		return this.ptr;
 	}
 

@@ -711,7 +711,7 @@ export namespace http {
 
 		export namespace Fields {
 			export interface Interface {
-				__handle?: $wcm.ResourceHandle;
+				$handle?: $wcm.ResourceHandle;
 
 				/**
 				 * Get all of the values corresponding to a key. If the key is not present
@@ -780,7 +780,7 @@ export namespace http {
 
 		export namespace IncomingRequest {
 			export interface Interface {
-				__handle?: $wcm.ResourceHandle;
+				$handle?: $wcm.ResourceHandle;
 
 				/**
 				 * Returns the method of the incoming request.
@@ -829,7 +829,7 @@ export namespace http {
 
 		export namespace OutgoingRequest {
 			export interface Interface {
-				__handle?: $wcm.ResourceHandle;
+				$handle?: $wcm.ResourceHandle;
 
 				/**
 				 * Returns the resource corresponding to the outgoing Body for this
@@ -916,7 +916,7 @@ export namespace http {
 
 		export namespace RequestOptions {
 			export interface Interface {
-				__handle?: $wcm.ResourceHandle;
+				$handle?: $wcm.ResourceHandle;
 
 				/**
 				 * The timeout for the initial connect to the HTTP Server.
@@ -964,7 +964,7 @@ export namespace http {
 
 		export namespace ResponseOutparam {
 			export interface Interface {
-				__handle?: $wcm.ResourceHandle;
+				$handle?: $wcm.ResourceHandle;
 
 			}
 			export type Statics = {
@@ -977,7 +977,7 @@ export namespace http {
 
 		export namespace IncomingResponse {
 			export interface Interface {
-				__handle?: $wcm.ResourceHandle;
+				$handle?: $wcm.ResourceHandle;
 
 				/**
 				 * Returns the status code from the incoming response.
@@ -1010,7 +1010,7 @@ export namespace http {
 
 		export namespace IncomingBody {
 			export interface Interface {
-				__handle?: $wcm.ResourceHandle;
+				$handle?: $wcm.ResourceHandle;
 
 				/**
 				 * Returns the contents of the body, as a stream of bytes.
@@ -1041,7 +1041,7 @@ export namespace http {
 
 		export namespace FutureTrailers {
 			export interface Interface {
-				__handle?: $wcm.ResourceHandle;
+				$handle?: $wcm.ResourceHandle;
 
 				/**
 				 * Returns a pollable which becomes ready when either the trailers have
@@ -1082,7 +1082,7 @@ export namespace http {
 
 		export namespace OutgoingResponse {
 			export interface Interface {
-				__handle?: $wcm.ResourceHandle;
+				$handle?: $wcm.ResourceHandle;
 
 				/**
 				 * Get the HTTP Status Code for the Response.
@@ -1127,7 +1127,7 @@ export namespace http {
 
 		export namespace OutgoingBody {
 			export interface Interface {
-				__handle?: $wcm.ResourceHandle;
+				$handle?: $wcm.ResourceHandle;
 
 				/**
 				 * Returns a stream for writing the body contents.
@@ -1152,7 +1152,7 @@ export namespace http {
 
 		export namespace FutureIncomingResponse {
 			export interface Interface {
-				__handle?: $wcm.ResourceHandle;
+				$handle?: $wcm.ResourceHandle;
 
 				/**
 				 * Returns a pollable which becomes ready when either the Response has
@@ -1579,7 +1579,7 @@ export namespace http {
 				constructor(om: ObjectModule) {
 					super();
 					this._om = om;
-					this.__handle = om.constructor();
+					this.$handle = om.constructor();
 				}
 				public get(name: FieldKey): FieldValue[] {
 					return this._om.get(this, name);
@@ -1701,7 +1701,7 @@ export namespace http {
 				constructor(headers: own<Headers>, om: ObjectModule) {
 					super();
 					this._om = om;
-					this.__handle = om.constructor(headers);
+					this.$handle = om.constructor(headers);
 				}
 				public body(): result<own<OutgoingBody>, void> {
 					return this._om.body(this);
@@ -1768,7 +1768,7 @@ export namespace http {
 				constructor(om: ObjectModule) {
 					super();
 					this._om = om;
-					this.__handle = om.constructor();
+					this.$handle = om.constructor();
 				}
 				public connectTimeout(): Duration | undefined {
 					return this._om.connectTimeout(this);
@@ -1942,7 +1942,7 @@ export namespace http {
 				constructor(headers: own<Headers>, om: ObjectModule) {
 					super();
 					this._om = om;
-					this.__handle = om.constructor(headers);
+					this.$handle = om.constructor(headers);
 				}
 				public statusCode(): StatusCode {
 					return this._om.statusCode(this);

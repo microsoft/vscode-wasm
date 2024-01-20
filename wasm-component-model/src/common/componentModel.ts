@@ -51,13 +51,13 @@ export class ResourceManager<T extends JInterface = JInterface> {
 	}
 
 	public register(value: T): ResourceHandle {
-		if (value.__handle !== undefined) {
-			return value.__handle;
+		if (value.$handle !== undefined) {
+			return value.$handle;
 		}
 		const handle = this.handleCounter++;
 		this.h2r.set(handle, value);
 		this.r2h.set(value, handle);
-		value.__handle = handle;
+		value.$handle = handle;
 		return handle;
 	}
 
@@ -2285,7 +2285,7 @@ export class ResultType<O extends JType | void, E extends JType | void = void> e
 }
 
 export interface JInterface {
-	__handle?: ResourceHandle;
+	$handle?: ResourceHandle;
 }
 
 export type JType = number | bigint | string | boolean | JArray | JRecord | JVariantCase | JTuple | JEnum | JInterface | option<any> | undefined | result<any, any> | Int8Array | Int16Array | Int32Array | BigInt64Array | Uint8Array | Uint16Array | Uint32Array | BigUint64Array | Float32Array | Float64Array;
@@ -2597,7 +2597,7 @@ export class ResourceType<T extends JInterface = JInterface> implements Componen
 	}
 
 	public store(memory: Memory, ptr: ptr, value: JInterface, context: ComponentModelContext): void {
-		let handle: ResourceHandle | undefined = value.__handle;
+		let handle: ResourceHandle | undefined = value.$handle;
 		if (handle === undefined) {
 			handle = context.managers.get(this.id).register(value);
 		}
@@ -2605,7 +2605,7 @@ export class ResourceType<T extends JInterface = JInterface> implements Componen
 	}
 
 	public lowerFlat(result: WasmType[], memory: Memory, value: JInterface, context: ComponentModelContext): void {
-		let handle: ResourceHandle | undefined = value.__handle;
+		let handle: ResourceHandle | undefined = value.$handle;
 		if (handle === undefined) {
 			handle = context.managers.get(this.id).register(value);
 		}
@@ -2844,23 +2844,23 @@ export interface WasmContext extends ComponentModelContext {
 }
 
 export class Resource {
-	private $handle: ResourceHandle | undefined;
+	private _handle: ResourceHandle | undefined;
 	constructor() {
-		this.$handle = undefined;
+		this._handle = undefined;
 	}
 
-	get __handle(): ResourceHandle | undefined {
-		return this.$handle;
+	get $handle(): ResourceHandle | undefined {
+		return this._handle;
 	}
 
-	set __handle(value: ResourceHandle) {
+	set $handle(value: ResourceHandle) {
 		if (value === undefined) {
 			throw new ComponentModelError('Cannot set undefined handle');
 		}
-		if (this.$handle !== undefined) {
-			throw new ComponentModelError(`Cannot set handle twice. Current handle is ${this.$handle} new handle is ${value}.`);
+		if (this._handle !== undefined) {
+			throw new ComponentModelError(`Cannot set handle twice. Current handle is ${this._handle} new handle is ${value}.`);
 		}
-		this.$handle = value;
+		this._handle = value;
 	}
 }
 

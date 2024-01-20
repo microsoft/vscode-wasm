@@ -2478,7 +2478,7 @@ class ResourceEmitter extends InterfaceMemberEmitter {
 		code.increaseIndent();
 		code.push(`export interface Interface {`);
 		code.increaseIndent();
-		code.push(`__handle?: ${MetaModel.qualify('ResourceHandle')};`);
+		code.push(`$handle?: ${MetaModel.qualify('ResourceHandle')};`);
 		code.push();
 		for (const [index, method] of this.methods.entries()) {
 			method.emitInterfaceDeclaration(code);
@@ -2858,7 +2858,7 @@ namespace ResourceEmitter {
 			code.increaseIndent();
 			code.push(`super();`);
 			code.push(`this._om = om;`);
-			code.push(`this.__handle = om.${this.getMethodName()}(${paramNames.join(', ')});`);
+			code.push(`this.$handle = om.${this.getMethodName()}(${paramNames.join(', ')});`);
 			code.decreaseIndent();
 			code.push('}');
 		}

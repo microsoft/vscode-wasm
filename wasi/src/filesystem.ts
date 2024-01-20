@@ -600,7 +600,7 @@ export namespace filesystem {
 
 		export namespace Descriptor {
 			export interface Interface {
-				__handle?: $wcm.ResourceHandle;
+				$handle?: $wcm.ResourceHandle;
 
 				/**
 				 * Return a stream for reading from a file, if available.
@@ -907,7 +907,7 @@ export namespace filesystem {
 
 		export namespace DirectoryEntryStream {
 			export interface Interface {
-				__handle?: $wcm.ResourceHandle;
+				$handle?: $wcm.ResourceHandle;
 
 				/**
 				 * Read a single directory entry from a `directory-entry-stream`.

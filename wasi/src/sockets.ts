@@ -289,7 +289,7 @@ export namespace sockets {
 
 		export namespace Network {
 			export interface Interface {
-				__handle?: $wcm.ResourceHandle;
+				$handle?: $wcm.ResourceHandle;
 
 			}
 			export type Statics = {
@@ -330,7 +330,7 @@ export namespace sockets {
 
 		export namespace ResolveAddressStream {
 			export interface Interface {
-				__handle?: $wcm.ResourceHandle;
+				$handle?: $wcm.ResourceHandle;
 
 				/**
 				 * Returns the next address from the resolver.
@@ -431,7 +431,7 @@ export namespace sockets {
 
 		export namespace TcpSocket {
 			export interface Interface {
-				__handle?: $wcm.ResourceHandle;
+				$handle?: $wcm.ResourceHandle;
 
 				/**
 				 * Bind the socket to a specific network on the provided IP address and port.
@@ -872,7 +872,7 @@ export namespace sockets {
 
 		export namespace UdpSocket {
 			export interface Interface {
-				__handle?: $wcm.ResourceHandle;
+				$handle?: $wcm.ResourceHandle;
 
 				/**
 				 * Bind the socket to a specific network on the provided IP address and port.
@@ -1038,7 +1038,7 @@ export namespace sockets {
 
 		export namespace IncomingDatagramStream {
 			export interface Interface {
-				__handle?: $wcm.ResourceHandle;
+				$handle?: $wcm.ResourceHandle;
 
 				/**
 				 * Receive messages on the socket.
@@ -1084,7 +1084,7 @@ export namespace sockets {
 
 		export namespace OutgoingDatagramStream {
 			export interface Interface {
-				__handle?: $wcm.ResourceHandle;
+				$handle?: $wcm.ResourceHandle;
 
 				/**
 				 * Check readiness for sending. This function never blocks.

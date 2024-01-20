@@ -170,7 +170,7 @@ export namespace testData {
 
 		export namespace PointResource {
 			export interface Interface {
-				__handle?: $wcm.ResourceHandle;
+				$handle?: $wcm.ResourceHandle;
 
 				getX(): u32;
 
@@ -293,7 +293,7 @@ export namespace testData {
 				constructor(x: u32, y: u32, om: ObjectModule) {
 					super();
 					this._om = om;
-					this.__handle = om.constructor(x, y);
+					this.$handle = om.constructor(x, y);
 				}
 				public getX(): u32 {
 					return this._om.getX(this);

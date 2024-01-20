@@ -101,7 +101,7 @@ export namespace cli {
 
 		export namespace TerminalInput {
 			export interface Interface {
-				__handle?: $wcm.ResourceHandle;
+				$handle?: $wcm.ResourceHandle;
 
 			}
 			export type Statics = {
@@ -125,7 +125,7 @@ export namespace cli {
 
 		export namespace TerminalOutput {
 			export interface Interface {
-				__handle?: $wcm.ResourceHandle;
+				$handle?: $wcm.ResourceHandle;
 
 			}
 			export type Statics = {

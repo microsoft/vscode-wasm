@@ -8,7 +8,7 @@ import { clocks } from '@vscode/wasi';
 import { i32, i64, ptr, u64 } from '@vscode/wasm-component-model';
 import { Pollable } from './io';
 
-function createMonotonicClock(): clocks.MonotonicClock._.WasmInterface {
+function createMonotonicClock(): clocks.MonotonicClock {
 	return {
 		now: () => {
 			return RAL().clock.monotonic();
@@ -16,13 +16,13 @@ function createMonotonicClock(): clocks.MonotonicClock._.WasmInterface {
 		resolution: () => {
 			return 1n;
 		},
-		'subscribe-duration': (when: u64) => {
+		subscribeDuration: (when: u64) => {
 			const pollable = new Pollable();
-			return pollable.handle();
+			return pollable;
 		},
-		'subscribe-instant': (when : u64) => {
+		subscribeInstant: (when : u64) => {
 			const pollable = new Pollable();
-			return pollable.handle();
+			return pollable;
 		}
 	};
 }
@@ -31,11 +31,11 @@ function createMonotonicClock(): clocks.MonotonicClock._.WasmInterface {
 const DateTime = clocks.WallClock.$.Datetime;
 function createWallClock(): clocks.WallClock._.WasmInterface {
 	return {
-		now: (result: ptr<[i64, i32]>) => {
+		now: (result: ptr<clocks.WallClock.Datetime>) => {
 			const value: i64 = RAL().clock.monotonic();
 
 		},
-		resolution: (result: ptr<[i64, i32]>) => {
+		resolution: (result: ptr<clocks.WallClock.Datetime>) => {
 			return 1n;
 		}
 	};
