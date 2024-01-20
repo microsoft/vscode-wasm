@@ -131,7 +131,7 @@ export namespace random {
 		export const resources: Map<string, $wcm.ResourceType> = new Map<string, $wcm.ResourceType>([
 		]);
 		export type WasmInterface = {
-			'insecure-seed': (result: ptr<[i64, i64]>) => void;
+			'insecure-seed': (result: ptr<[u64, u64]>) => void;
 		};
 		export function createHost(service: random.InsecureSeed, context: $wcm.WasmContext): WasmInterface {
 			return $wcm.Host.create<WasmInterface>(functions, resources, service, context);
@@ -159,7 +159,7 @@ export namespace random {
 		export const resources: Map<string, $wcm.ResourceType> = new Map<string, $wcm.ResourceType>([
 		]);
 		export type WasmInterface = {
-			'get-insecure-random-bytes': (len: i64, result: ptr<[i32, i32]>) => void;
+			'get-insecure-random-bytes': (len: i64, result: ptr<Uint8Array>) => void;
 			'get-insecure-random-u64': () => i64;
 		};
 		export function createHost(service: random.Insecure, context: $wcm.WasmContext): WasmInterface {
@@ -188,7 +188,7 @@ export namespace random {
 		export const resources: Map<string, $wcm.ResourceType> = new Map<string, $wcm.ResourceType>([
 		]);
 		export type WasmInterface = {
-			'get-random-bytes': (len: i64, result: ptr<[i32, i32]>) => void;
+			'get-random-bytes': (len: i64, result: ptr<Uint8Array>) => void;
 			'get-random-u64': () => i64;
 		};
 		export function createHost(service: random.Random, context: $wcm.WasmContext): WasmInterface {

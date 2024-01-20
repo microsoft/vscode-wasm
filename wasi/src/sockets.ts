@@ -13,7 +13,7 @@ export namespace sockets {
 
 		/**
 		 * Error codes.
-		 *
+		 * 
 		 * In theory, every API can return any error code.
 		 * In practice, API's typically only return the errors documented per API
 		 * combined with a couple of errors that are always possible:
@@ -22,7 +22,7 @@ export namespace sockets {
 		 * - `not-supported`
 		 * - `out-of-memory`
 		 * - `concurrency-conflict`
-		 *
+		 * 
 		 * See each individual API for what the POSIX equivalents are. They sometimes differ per API.
 		 */
 		export enum ErrorCode {
@@ -34,28 +34,28 @@ export namespace sockets {
 
 			/**
 			 * Access denied.
-			 *
+			 * 
 			 * POSIX equivalent: EACCES, EPERM
 			 */
 			accessDenied = 'accessDenied',
 
 			/**
 			 * The operation is not supported.
-			 *
+			 * 
 			 * POSIX equivalent: EOPNOTSUPP
 			 */
 			notSupported = 'notSupported',
 
 			/**
 			 * One of the arguments is invalid.
-			 *
+			 * 
 			 * POSIX equivalent: EINVAL
 			 */
 			invalidArgument = 'invalidArgument',
 
 			/**
 			 * Not enough memory to complete the operation.
-			 *
+			 * 
 			 * POSIX equivalent: ENOMEM, ENOBUFS, EAI_MEMORY
 			 */
 			outOfMemory = 'outOfMemory',
@@ -67,7 +67,7 @@ export namespace sockets {
 
 			/**
 			 * This operation is incompatible with another asynchronous operation that is already in progress.
-			 *
+			 * 
 			 * POSIX equivalent: EALREADY
 			 */
 			concurrencyConflict = 'concurrencyConflict',
@@ -76,14 +76,14 @@ export namespace sockets {
 			 * Trying to finish an asynchronous operation that:
 			 * - has not been started yet, or:
 			 * - was already finished by a previous `finish-*` call.
-			 *
+			 * 
 			 * Note: this is scheduled to be removed when `future`s are natively supported.
 			 */
 			notInProgress = 'notInProgress',
 
 			/**
 			 * The operation has been aborted because it could not be completed immediately.
-			 *
+			 * 
 			 * Note: this is scheduled to be removed when `future`s are natively supported.
 			 */
 			wouldBlock = 'wouldBlock',
@@ -334,13 +334,13 @@ export namespace sockets {
 
 				/**
 				 * Returns the next address from the resolver.
-				 *
+				 * 
 				 * This function should be called multiple times. On each call, it will
 				 * return the next address in connection order preference. If all
 				 * addresses have been exhausted, this function returns `none`.
-				 *
+				 * 
 				 * This function never returns IPv4-mapped IPv6 addresses.
-				 *
+				 * 
 				 * # Typical errors
 				 * - `name-unresolvable`:          Name does not exist or has no suitable associated IP addresses. (EAI_NONAME, EAI_NODATA, EAI_ADDRFAMILY)
 				 * - `temporary-resolver-failure`: A temporary failure in name resolution occurred. (EAI_AGAIN)
@@ -351,7 +351,7 @@ export namespace sockets {
 
 				/**
 				 * Create a `pollable` which will resolve once the stream is ready for I/O.
-				 *
+				 * 
 				 * Note: this function is here for WASI Preview2 only.
 				 * It's planned to be removed when `future` is natively supported in Preview3.
 				 */
@@ -366,20 +366,20 @@ export namespace sockets {
 
 		/**
 		 * Resolve an internet host name to a list of IP addresses.
-		 *
+		 * 
 		 * Unicode domain names are automatically converted to ASCII using IDNA encoding.
 		 * If the input is an IP address string, the address is parsed and returned
 		 * as-is without making any external requests.
-		 *
+		 * 
 		 * See the wasi-socket proposal README.md for a comparison with getaddrinfo.
-		 *
+		 * 
 		 * This function never blocks. It either immediately fails or immediately
 		 * returns successfully with a `resolve-address-stream` that can be used
 		 * to (asynchronously) fetch the results.
-		 *
+		 * 
 		 * # Typical errors
 		 * - `invalid-argument`: `name` is a syntactically invalid domain name or IP address.
-		 *
+		 * 
 		 * # References:
 		 * - <https://pubs.opengroup.org/onlinepubs/9699919799/functions/getaddrinfo.html>
 		 * - <https://man7.org/linux/man-pages/man3/getaddrinfo.3.html>
@@ -435,32 +435,32 @@ export namespace sockets {
 
 				/**
 				 * Bind the socket to a specific network on the provided IP address and port.
-				 *
+				 * 
 				 * If the IP address is zero (`0.0.0.0` in IPv4, `::` in IPv6), it is left to the implementation to decide which
 				 * network interface(s) to bind to.
 				 * If the TCP/UDP port is zero, the socket will be bound to a random free port.
-				 *
+				 * 
 				 * Unlike in POSIX, this function is async. This enables interactive WASI hosts to inject permission prompts.
-				 *
+				 * 
 				 * # Typical `start` errors
 				 * - `invalid-argument`:          The `local-address` has the wrong address family. (EAFNOSUPPORT, EFAULT on Windows)
 				 * - `invalid-argument`:          `local-address` is not a unicast address. (EINVAL)
 				 * - `invalid-argument`:          `local-address` is an IPv4-mapped IPv6 address. (EINVAL)
 				 * - `invalid-state`:             The socket is already bound. (EINVAL)
-				 *
+				 * 
 				 * # Typical `finish` errors
 				 * - `address-in-use`:            No ephemeral ports available. (EADDRINUSE, ENOBUFS on Windows)
 				 * - `address-in-use`:            Address is already in use. (EADDRINUSE)
 				 * - `address-not-bindable`:      `local-address` is not an address that the `network` can bind to. (EADDRNOTAVAIL)
 				 * - `not-in-progress`:           A `bind` operation is not in progress.
 				 * - `would-block`:               Can't finish the operation, it is still in progress. (EWOULDBLOCK, EAGAIN)
-				 *
+				 * 
 				 * # Implementors note
 				 * When binding to a non-zero port, this bind operation shouldn't be affected by the TIME_WAIT
 				 * state of a recently closed socket on the same local address. In practice this means that the SO_REUSEADDR
 				 * socket option should be set implicitly on all platforms, except on Windows where this is the default behavior
 				 * and SO_REUSEADDR performs something different entirely.
-				 *
+				 * 
 				 * # References
 				 * - <https://pubs.opengroup.org/onlinepubs/9699919799/functions/bind.html>
 				 * - <https://man7.org/linux/man-pages/man2/bind.2.html>
@@ -473,14 +473,14 @@ export namespace sockets {
 
 				/**
 				 * Connect to a remote endpoint.
-				 *
+				 * 
 				 * On success:
 				 * - the socket is transitioned into the Connection state
 				 * - a pair of streams is returned that can be used to read & write to the connection
-				 *
+				 * 
 				 * After a failed connection attempt, the only valid action left is to
 				 * `drop` the socket. A single socket can not be used to connect more than once.
-				 *
+				 * 
 				 * # Typical `start` errors
 				 * - `invalid-argument`:          The `remote-address` has the wrong address family. (EAFNOSUPPORT)
 				 * - `invalid-argument`:          `remote-address` is not a unicast address. (EINVAL, ENETUNREACH on Linux, EAFNOSUPPORT on MacOS)
@@ -490,7 +490,7 @@ export namespace sockets {
 				 * - `invalid-argument`:          The socket is already attached to a different network. The `network` passed to `connect` must be identical to the one passed to `bind`.
 				 * - `invalid-state`:             The socket is already in the Connection state. (EISCONN)
 				 * - `invalid-state`:             The socket is already in the Listener state. (EOPNOTSUPP, EINVAL on Windows)
-				 *
+				 * 
 				 * # Typical `finish` errors
 				 * - `timeout`:                   Connection timed out. (ETIMEDOUT)
 				 * - `connection-refused`:        The connection was forcefully rejected. (ECONNREFUSED)
@@ -500,7 +500,7 @@ export namespace sockets {
 				 * - `address-in-use`:            Tried to perform an implicit bind, but there were no ephemeral ports available. (EADDRINUSE, EADDRNOTAVAIL on Linux, EAGAIN on BSD)
 				 * - `not-in-progress`:           A `connect` operation is not in progress.
 				 * - `would-block`:               Can't finish the operation, it is still in progress. (EWOULDBLOCK, EAGAIN)
-				 *
+				 * 
 				 * # References
 				 * - <https://pubs.opengroup.org/onlinepubs/9699919799/functions/connect.html>
 				 * - <https://man7.org/linux/man-pages/man2/connect.2.html>
@@ -513,23 +513,23 @@ export namespace sockets {
 
 				/**
 				 * Start listening for new connections.
-				 *
+				 * 
 				 * Transitions the socket into the Listener state.
-				 *
+				 * 
 				 * Unlike POSIX:
 				 * - this function is async. This enables interactive WASI hosts to inject permission prompts.
 				 * - the socket must already be explicitly bound.
-				 *
+				 * 
 				 * # Typical `start` errors
 				 * - `invalid-state`:             The socket is not bound to any local address. (EDESTADDRREQ)
 				 * - `invalid-state`:             The socket is already in the Connection state. (EISCONN, EINVAL on BSD)
 				 * - `invalid-state`:             The socket is already in the Listener state.
-				 *
+				 * 
 				 * # Typical `finish` errors
 				 * - `address-in-use`:            Tried to perform an implicit bind, but there were no ephemeral ports available. (EADDRINUSE)
 				 * - `not-in-progress`:           A `listen` operation is not in progress.
 				 * - `would-block`:               Can't finish the operation, it is still in progress. (EWOULDBLOCK, EAGAIN)
-				 *
+				 * 
 				 * # References
 				 * - <https://pubs.opengroup.org/onlinepubs/9699919799/functions/listen.html>
 				 * - <https://man7.org/linux/man-pages/man2/listen.2.html>
@@ -542,7 +542,7 @@ export namespace sockets {
 
 				/**
 				 * Accept a new client socket.
-				 *
+				 * 
 				 * The returned socket is bound and in the Connection state. The following properties are inherited from the listener socket:
 				 * - `address-family`
 				 * - `keep-alive-enabled`
@@ -552,16 +552,16 @@ export namespace sockets {
 				 * - `hop-limit`
 				 * - `receive-buffer-size`
 				 * - `send-buffer-size`
-				 *
+				 * 
 				 * On success, this function returns the newly accepted client socket along with
 				 * a pair of streams that can be used to read & write to the connection.
-				 *
+				 * 
 				 * # Typical errors
 				 * - `invalid-state`:      Socket is not in the Listener state. (EINVAL)
 				 * - `would-block`:        No pending connections at the moment. (EWOULDBLOCK, EAGAIN)
 				 * - `connection-aborted`: An incoming connection was pending, but was terminated by the client before this listener could accept it. (ECONNABORTED)
 				 * - `new-socket-limit`:   The new socket resource could not be created because of a system limit. (EMFILE, ENFILE)
-				 *
+				 * 
 				 * # References
 				 * - <https://pubs.opengroup.org/onlinepubs/9699919799/functions/accept.html>
 				 * - <https://man7.org/linux/man-pages/man2/accept.2.html>
@@ -572,16 +572,16 @@ export namespace sockets {
 
 				/**
 				 * Get the bound local address.
-				 *
+				 * 
 				 * POSIX mentions:
 				 * > If the socket has not been bound to a local name, the value
 				 * > stored in the object pointed to by `address` is unspecified.
-				 *
+				 * 
 				 * WASI is stricter and requires `local-address` to return `invalid-state` when the socket hasn't been bound yet.
-				 *
+				 * 
 				 * # Typical errors
 				 * - `invalid-state`: The socket is not bound to any local address.
-				 *
+				 * 
 				 * # References
 				 * - <https://pubs.opengroup.org/onlinepubs/9699919799/functions/getsockname.html>
 				 * - <https://man7.org/linux/man-pages/man2/getsockname.2.html>
@@ -592,10 +592,10 @@ export namespace sockets {
 
 				/**
 				 * Get the remote address.
-				 *
+				 * 
 				 * # Typical errors
 				 * - `invalid-state`: The socket is not connected to a remote address. (ENOTCONN)
-				 *
+				 * 
 				 * # References
 				 * - <https://pubs.opengroup.org/onlinepubs/9699919799/functions/getpeername.html>
 				 * - <https://man7.org/linux/man-pages/man2/getpeername.2.html>
@@ -606,24 +606,24 @@ export namespace sockets {
 
 				/**
 				 * Whether the socket is listening for new connections.
-				 *
+				 * 
 				 * Equivalent to the SO_ACCEPTCONN socket option.
 				 */
 				isListening(): boolean;
 
 				/**
 				 * Whether this is a IPv4 or IPv6 socket.
-				 *
+				 * 
 				 * Equivalent to the SO_DOMAIN socket option.
 				 */
 				addressFamily(): IpAddressFamily;
 
 				/**
 				 * Hints the desired listen queue size. Implementations are free to ignore this.
-				 *
+				 * 
 				 * If the provided value is 0, an `invalid-argument` error is returned.
 				 * Any other value will never cause an error, but it might be silently clamped and/or rounded.
-				 *
+				 * 
 				 * # Typical errors
 				 * - `not-supported`:        (set) The platform does not support changing the backlog size after the initial listen.
 				 * - `invalid-argument`:     (set) The provided value was 0.
@@ -633,13 +633,13 @@ export namespace sockets {
 
 				/**
 				 * Enables or disables keepalive.
-				 *
+				 * 
 				 * The keepalive behavior can be adjusted using:
 				 * - `keep-alive-idle-time`
 				 * - `keep-alive-interval`
 				 * - `keep-alive-count`
 				 * These properties can be configured while `keep-alive-enabled` is false, but only come into effect when `keep-alive-enabled` is true.
-				 *
+				 * 
 				 * Equivalent to the SO_KEEPALIVE socket option.
 				 */
 				keepAliveEnabled(): result<boolean, ErrorCode>;
@@ -648,13 +648,13 @@ export namespace sockets {
 
 				/**
 				 * Amount of time the connection has to be idle before TCP starts sending keepalive packets.
-				 *
+				 * 
 				 * If the provided value is 0, an `invalid-argument` error is returned.
 				 * Any other value will never cause an error, but it might be silently clamped and/or rounded.
 				 * I.e. after setting a value, reading the same setting back may return a different value.
-				 *
+				 * 
 				 * Equivalent to the TCP_KEEPIDLE socket option. (TCP_KEEPALIVE on MacOS)
-				 *
+				 * 
 				 * # Typical errors
 				 * - `invalid-argument`:     (set) The provided value was 0.
 				 */
@@ -664,13 +664,13 @@ export namespace sockets {
 
 				/**
 				 * The time between keepalive packets.
-				 *
+				 * 
 				 * If the provided value is 0, an `invalid-argument` error is returned.
 				 * Any other value will never cause an error, but it might be silently clamped and/or rounded.
 				 * I.e. after setting a value, reading the same setting back may return a different value.
-				 *
+				 * 
 				 * Equivalent to the TCP_KEEPINTVL socket option.
-				 *
+				 * 
 				 * # Typical errors
 				 * - `invalid-argument`:     (set) The provided value was 0.
 				 */
@@ -680,13 +680,13 @@ export namespace sockets {
 
 				/**
 				 * The maximum amount of keepalive packets TCP should send before aborting the connection.
-				 *
+				 * 
 				 * If the provided value is 0, an `invalid-argument` error is returned.
 				 * Any other value will never cause an error, but it might be silently clamped and/or rounded.
 				 * I.e. after setting a value, reading the same setting back may return a different value.
-				 *
+				 * 
 				 * Equivalent to the TCP_KEEPCNT socket option.
-				 *
+				 * 
 				 * # Typical errors
 				 * - `invalid-argument`:     (set) The provided value was 0.
 				 */
@@ -696,9 +696,9 @@ export namespace sockets {
 
 				/**
 				 * Equivalent to the IP_TTL & IPV6_UNICAST_HOPS socket options.
-				 *
+				 * 
 				 * If the provided value is 0, an `invalid-argument` error is returned.
-				 *
+				 * 
 				 * # Typical errors
 				 * - `invalid-argument`:     (set) The TTL value must be 1 or higher.
 				 * - `invalid-state`:        (set) The socket is already in the Connection state.
@@ -710,13 +710,13 @@ export namespace sockets {
 
 				/**
 				 * The kernel buffer space reserved for sends/receives on this socket.
-				 *
+				 * 
 				 * If the provided value is 0, an `invalid-argument` error is returned.
 				 * Any other value will never cause an error, but it might be silently clamped and/or rounded.
 				 * I.e. after setting a value, reading the same setting back may return a different value.
-				 *
+				 * 
 				 * Equivalent to the SO_RCVBUF and SO_SNDBUF socket options.
-				 *
+				 * 
 				 * # Typical errors
 				 * - `invalid-argument`:     (set) The provided value was 0.
 				 * - `invalid-state`:        (set) The socket is already in the Connection state.
@@ -732,7 +732,7 @@ export namespace sockets {
 
 				/**
 				 * Create a `pollable` which will resolve once the socket is ready for I/O.
-				 *
+				 * 
 				 * Note: this function is here for WASI Preview2 only.
 				 * It's planned to be removed when `future` is natively supported in Preview3.
 				 */
@@ -740,7 +740,7 @@ export namespace sockets {
 
 				/**
 				 * Initiate a graceful shutdown.
-				 *
+				 * 
 				 * - `receive`: The socket is not expecting to receive any data from
 				 * the peer. The `input-stream` associated with this socket will be
 				 * closed. Any data still in the receive queue at time of calling
@@ -748,15 +748,15 @@ export namespace sockets {
 				 * - `send`: The socket has no more data to send to the peer. The `output-stream`
 				 * associated with this socket will be closed and a FIN packet will be sent.
 				 * - `both`: Same effect as `receive` & `send` combined.
-				 *
+				 * 
 				 * This function is idempotent. Shutting a down a direction more than once
 				 * has no effect and returns `ok`.
-				 *
+				 * 
 				 * The shutdown function does not close (drop) the socket.
-				 *
+				 * 
 				 * # Typical errors
 				 * - `invalid-state`: The socket is not in the Connection state. (ENOTCONN)
-				 *
+				 * 
 				 * # References
 				 * - <https://pubs.opengroup.org/onlinepubs/9699919799/functions/shutdown.html>
 				 * - <https://man7.org/linux/man-pages/man2/shutdown.2.html>
@@ -788,20 +788,20 @@ export namespace sockets {
 
 		/**
 		 * Create a new TCP socket.
-		 *
+		 * 
 		 * Similar to `socket(AF_INET or AF_INET6, SOCK_STREAM, IPPROTO_TCP)` in POSIX.
 		 * On IPv6 sockets, IPV6_V6ONLY is enabled by default and can't be configured otherwise.
-		 *
+		 * 
 		 * This function does not require a network capability handle. This is considered to be safe because
 		 * at time of creation, the socket is not bound to any `network` yet. Up to the moment `bind`/`connect`
 		 * is called, the socket is effectively an in-memory configuration object, unable to communicate with the outside world.
-		 *
+		 * 
 		 * All sockets are non-blocking. Use the wasi-poll interface to block on asynchronous operations.
-		 *
+		 * 
 		 * # Typical errors
 		 * - `not-supported`:     The specified `address-family` is not supported. (EAFNOSUPPORT)
 		 * - `new-socket-limit`:  The new socket resource could not be created because of a system limit. (EMFILE, ENFILE)
-		 *
+		 * 
 		 * # References
 		 * - <https://pubs.opengroup.org/onlinepubs/9699919799/functions/socket.html>
 		 * - <https://man7.org/linux/man-pages/man2/socket.2.html>
@@ -833,16 +833,16 @@ export namespace sockets {
 
 			/**
 			 * The payload.
-			 *
+			 * 
 			 * Theoretical max size: ~64 KiB. In practice, typically less than 1500 bytes.
 			 */
 			data: Uint8Array;
 
 			/**
 			 * The source address.
-			 *
+			 * 
 			 * This field is guaranteed to match the remote address the stream was initialized with, if any.
-			 *
+			 * 
 			 * Equivalent to the `src_addr` out parameter of `recvfrom`.
 			 */
 			remoteAddress: IpSocketAddress;
@@ -860,11 +860,11 @@ export namespace sockets {
 
 			/**
 			 * The destination address.
-			 *
+			 * 
 			 * The requirements on this field depend on how the stream was initialized:
 			 * - with a remote address: this field must be None or match the stream's remote address exactly.
 			 * - without a remote address: this field is required.
-			 *
+			 * 
 			 * If this value is None, the send operation is equivalent to `send` in POSIX. Otherwise it is equivalent to `sendto`.
 			 */
 			remoteAddress?: IpSocketAddress | undefined;
@@ -876,24 +876,24 @@ export namespace sockets {
 
 				/**
 				 * Bind the socket to a specific network on the provided IP address and port.
-				 *
+				 * 
 				 * If the IP address is zero (`0.0.0.0` in IPv4, `::` in IPv6), it is left to the implementation to decide which
 				 * network interface(s) to bind to.
 				 * If the port is zero, the socket will be bound to a random free port.
-				 *
+				 * 
 				 * Unlike in POSIX, this function is async. This enables interactive WASI hosts to inject permission prompts.
-				 *
+				 * 
 				 * # Typical `start` errors
 				 * - `invalid-argument`:          The `local-address` has the wrong address family. (EAFNOSUPPORT, EFAULT on Windows)
 				 * - `invalid-state`:             The socket is already bound. (EINVAL)
-				 *
+				 * 
 				 * # Typical `finish` errors
 				 * - `address-in-use`:            No ephemeral ports available. (EADDRINUSE, ENOBUFS on Windows)
 				 * - `address-in-use`:            Address is already in use. (EADDRINUSE)
 				 * - `address-not-bindable`:      `local-address` is not an address that the `network` can bind to. (EADDRNOTAVAIL)
 				 * - `not-in-progress`:           A `bind` operation is not in progress.
 				 * - `would-block`:               Can't finish the operation, it is still in progress. (EWOULDBLOCK, EAGAIN)
-				 *
+				 * 
 				 * # References
 				 * - <https://pubs.opengroup.org/onlinepubs/9699919799/functions/bind.html>
 				 * - <https://man7.org/linux/man-pages/man2/bind.2.html>
@@ -906,19 +906,19 @@ export namespace sockets {
 
 				/**
 				 * Set up inbound & outbound communication channels, optionally to a specific peer.
-				 *
+				 * 
 				 * This function only changes the local socket configuration and does not generate any network traffic.
 				 * On success, the `remote-address` of the socket is updated. The `local-address` may be updated as well,
 				 * based on the best network path to `remote-address`.
-				 *
+				 * 
 				 * When a `remote-address` is provided, the returned streams are limited to communicating with that specific peer:
 				 * - `send` can only be used to send to this destination.
 				 * - `receive` will only return datagrams sent from the provided `remote-address`.
-				 *
+				 * 
 				 * This method may be called multiple times on the same socket to change its association, but
 				 * only the most recently returned pair of streams will be operational. Implementations may trap if
 				 * the streams returned by a previous invocation haven't been dropped yet before calling `stream` again.
-				 *
+				 * 
 				 * The POSIX equivalent in pseudo-code is:
 				 * ```text
 				 * if (was previously connected) {
@@ -928,9 +928,9 @@ export namespace sockets {
 				 * connect(s, remote_address)
 				 * }
 				 * ```
-				 *
+				 * 
 				 * Unlike in POSIX, the socket must already be explicitly bound.
-				 *
+				 * 
 				 * # Typical errors
 				 * - `invalid-argument`:          The `remote-address` has the wrong address family. (EAFNOSUPPORT)
 				 * - `invalid-argument`:          The IP address in `remote-address` is set to INADDR_ANY (`0.0.0.0` / `::`). (EDESTADDRREQ, EADDRNOTAVAIL)
@@ -939,7 +939,7 @@ export namespace sockets {
 				 * - `address-in-use`:            Tried to perform an implicit bind, but there were no ephemeral ports available. (EADDRINUSE, EADDRNOTAVAIL on Linux, EAGAIN on BSD)
 				 * - `remote-unreachable`:        The remote address is not reachable. (ECONNRESET, ENETRESET, EHOSTUNREACH, EHOSTDOWN, ENETUNREACH, ENETDOWN, ENONET)
 				 * - `connection-refused`:        The connection was refused. (ECONNREFUSED)
-				 *
+				 * 
 				 * # References
 				 * - <https://pubs.opengroup.org/onlinepubs/9699919799/functions/connect.html>
 				 * - <https://man7.org/linux/man-pages/man2/connect.2.html>
@@ -950,16 +950,16 @@ export namespace sockets {
 
 				/**
 				 * Get the current bound address.
-				 *
+				 * 
 				 * POSIX mentions:
 				 * > If the socket has not been bound to a local name, the value
 				 * > stored in the object pointed to by `address` is unspecified.
-				 *
+				 * 
 				 * WASI is stricter and requires `local-address` to return `invalid-state` when the socket hasn't been bound yet.
-				 *
+				 * 
 				 * # Typical errors
 				 * - `invalid-state`: The socket is not bound to any local address.
-				 *
+				 * 
 				 * # References
 				 * - <https://pubs.opengroup.org/onlinepubs/9699919799/functions/getsockname.html>
 				 * - <https://man7.org/linux/man-pages/man2/getsockname.2.html>
@@ -970,10 +970,10 @@ export namespace sockets {
 
 				/**
 				 * Get the address the socket is currently streaming to.
-				 *
+				 * 
 				 * # Typical errors
 				 * - `invalid-state`: The socket is not streaming to a specific remote address. (ENOTCONN)
-				 *
+				 * 
 				 * # References
 				 * - <https://pubs.opengroup.org/onlinepubs/9699919799/functions/getpeername.html>
 				 * - <https://man7.org/linux/man-pages/man2/getpeername.2.html>
@@ -984,16 +984,16 @@ export namespace sockets {
 
 				/**
 				 * Whether this is a IPv4 or IPv6 socket.
-				 *
+				 * 
 				 * Equivalent to the SO_DOMAIN socket option.
 				 */
 				addressFamily(): IpAddressFamily;
 
 				/**
 				 * Equivalent to the IP_TTL & IPV6_UNICAST_HOPS socket options.
-				 *
+				 * 
 				 * If the provided value is 0, an `invalid-argument` error is returned.
-				 *
+				 * 
 				 * # Typical errors
 				 * - `invalid-argument`:     (set) The TTL value must be 1 or higher.
 				 */
@@ -1003,13 +1003,13 @@ export namespace sockets {
 
 				/**
 				 * The kernel buffer space reserved for sends/receives on this socket.
-				 *
+				 * 
 				 * If the provided value is 0, an `invalid-argument` error is returned.
 				 * Any other value will never cause an error, but it might be silently clamped and/or rounded.
 				 * I.e. after setting a value, reading the same setting back may return a different value.
-				 *
+				 * 
 				 * Equivalent to the SO_RCVBUF and SO_SNDBUF socket options.
-				 *
+				 * 
 				 * # Typical errors
 				 * - `invalid-argument`:     (set) The provided value was 0.
 				 */
@@ -1023,7 +1023,7 @@ export namespace sockets {
 
 				/**
 				 * Create a `pollable` which will resolve once the socket is ready for I/O.
-				 *
+				 * 
 				 * Note: this function is here for WASI Preview2 only.
 				 * It's planned to be removed when `future` is natively supported in Preview3.
 				 */
@@ -1042,19 +1042,19 @@ export namespace sockets {
 
 				/**
 				 * Receive messages on the socket.
-				 *
+				 * 
 				 * This function attempts to receive up to `max-results` datagrams on the socket without blocking.
 				 * The returned list may contain fewer elements than requested, but never more.
-				 *
+				 * 
 				 * This function returns successfully with an empty list when either:
 				 * - `max-results` is 0, or:
 				 * - `max-results` is greater than 0, but no results are immediately available.
 				 * This function never returns `error(would-block)`.
-				 *
+				 * 
 				 * # Typical errors
 				 * - `remote-unreachable`: The remote address is not reachable. (ECONNRESET, ENETRESET on Windows, EHOSTUNREACH, EHOSTDOWN, ENETUNREACH, ENETDOWN, ENONET)
 				 * - `connection-refused`: The connection was refused. (ECONNREFUSED)
-				 *
+				 * 
 				 * # References
 				 * - <https://pubs.opengroup.org/onlinepubs/9699919799/functions/recvfrom.html>
 				 * - <https://pubs.opengroup.org/onlinepubs/9699919799/functions/recvmsg.html>
@@ -1069,7 +1069,7 @@ export namespace sockets {
 
 				/**
 				 * Create a `pollable` which will resolve once the stream is ready to receive again.
-				 *
+				 * 
 				 * Note: this function is here for WASI Preview2 only.
 				 * It's planned to be removed when `future` is natively supported in Preview3.
 				 */
@@ -1088,35 +1088,35 @@ export namespace sockets {
 
 				/**
 				 * Check readiness for sending. This function never blocks.
-				 *
+				 * 
 				 * Returns the number of datagrams permitted for the next call to `send`,
 				 * or an error. Calling `send` with more datagrams than this function has
 				 * permitted will trap.
-				 *
+				 * 
 				 * When this function returns ok(0), the `subscribe` pollable will
 				 * become ready when this function will report at least ok(1), or an
 				 * error.
-				 *
+				 * 
 				 * Never returns `would-block`.
 				 */
 				checkSend(): result<u64, ErrorCode>;
 
 				/**
 				 * Send messages on the socket.
-				 *
+				 * 
 				 * This function attempts to send all provided `datagrams` on the socket without blocking and
 				 * returns how many messages were actually sent (or queued for sending). This function never
 				 * returns `error(would-block)`. If none of the datagrams were able to be sent, `ok(0)` is returned.
-				 *
+				 * 
 				 * This function semantically behaves the same as iterating the `datagrams` list and sequentially
 				 * sending each individual datagram until either the end of the list has been reached or the first error occurred.
 				 * If at least one datagram has been sent successfully, this function never returns an error.
-				 *
+				 * 
 				 * If the input list is empty, the function returns `ok(0)`.
-				 *
+				 * 
 				 * Each call to `send` must be permitted by a preceding `check-send`. Implementations must trap if
 				 * either `check-send` was not called or `datagrams` contains more items than `check-send` permitted.
-				 *
+				 * 
 				 * # Typical errors
 				 * - `invalid-argument`:        The `remote-address` has the wrong address family. (EAFNOSUPPORT)
 				 * - `invalid-argument`:        The IP address in `remote-address` is set to INADDR_ANY (`0.0.0.0` / `::`). (EDESTADDRREQ, EADDRNOTAVAIL)
@@ -1126,7 +1126,7 @@ export namespace sockets {
 				 * - `remote-unreachable`:      The remote address is not reachable. (ECONNRESET, ENETRESET on Windows, EHOSTUNREACH, EHOSTDOWN, ENETUNREACH, ENETDOWN, ENONET)
 				 * - `connection-refused`:      The connection was refused. (ECONNREFUSED)
 				 * - `datagram-too-large`:      The datagram is too large. (EMSGSIZE)
-				 *
+				 * 
 				 * # References
 				 * - <https://pubs.opengroup.org/onlinepubs/9699919799/functions/sendto.html>
 				 * - <https://pubs.opengroup.org/onlinepubs/9699919799/functions/sendmsg.html>
@@ -1141,7 +1141,7 @@ export namespace sockets {
 
 				/**
 				 * Create a `pollable` which will resolve once the stream is ready to send again.
-				 *
+				 * 
 				 * Note: this function is here for WASI Preview2 only.
 				 * It's planned to be removed when `future` is natively supported in Preview3.
 				 */
@@ -1172,20 +1172,20 @@ export namespace sockets {
 
 		/**
 		 * Create a new UDP socket.
-		 *
+		 * 
 		 * Similar to `socket(AF_INET or AF_INET6, SOCK_DGRAM, IPPROTO_UDP)` in POSIX.
 		 * On IPv6 sockets, IPV6_V6ONLY is enabled by default and can't be configured otherwise.
-		 *
+		 * 
 		 * This function does not require a network capability handle. This is considered to be safe because
 		 * at time of creation, the socket is not bound to any `network` yet. Up to the moment `bind` is called,
 		 * the socket is effectively an in-memory configuration object, unable to communicate with the outside world.
-		 *
+		 * 
 		 * All sockets are non-blocking. Use the wasi-poll interface to block on asynchronous operations.
-		 *
+		 * 
 		 * # Typical errors
 		 * - `not-supported`:     The specified `address-family` is not supported. (EAFNOSUPPORT)
 		 * - `new-socket-limit`:  The new socket resource could not be created because of a system limit. (EMFILE, ENFILE)
-		 *
+		 * 
 		 * # References:
 		 * - <https://pubs.opengroup.org/onlinepubs/9699919799/functions/socket.html>
 		 * - <https://man7.org/linux/man-pages/man2/socket.2.html>
@@ -1330,7 +1330,7 @@ export namespace sockets {
 		]);
 		export namespace ResolveAddressStream {
 			export type WasmInterface = {
-				'[method]resolve-address-stream.resolve-next-address': (self: i32, result: ptr<[i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32]>) => void;
+				'[method]resolve-address-stream.resolve-next-address': (self: i32, result: ptr<result<IpAddress | undefined, ErrorCode>>) => void;
 				'[method]resolve-address-stream.subscribe': (self: i32) => i32;
 			};
 			type ObjectModule = {
@@ -1361,7 +1361,7 @@ export namespace sockets {
 			}
 		}
 		export type WasmInterface = {
-			'resolve-addresses': (network: i32, name_ptr: i32, name_len: i32, result: ptr<[i32, i32]>) => void;
+			'resolve-addresses': (network: i32, name_ptr: i32, name_len: i32, result: ptr<result<own<ResolveAddressStream>, ErrorCode>>) => void;
 		} & ResolveAddressStream.WasmInterface;
 		export function createHost(service: sockets.IpNameLookup, context: $wcm.WasmContext): WasmInterface {
 			return $wcm.Host.create<WasmInterface>(functions, resources, service, context);
@@ -1503,34 +1503,34 @@ export namespace sockets {
 		]);
 		export namespace TcpSocket {
 			export type WasmInterface = {
-				'[method]tcp-socket.start-bind': (self: i32, network: i32, localAddress_IpSocketAddress_case: i32, localAddress_IpSocketAddress_0: i32, localAddress_IpSocketAddress_1: i32, localAddress_IpSocketAddress_2: i32, localAddress_IpSocketAddress_3: i32, localAddress_IpSocketAddress_4: i32, localAddress_IpSocketAddress_5: i32, localAddress_IpSocketAddress_6: i32, localAddress_IpSocketAddress_7: i32, localAddress_IpSocketAddress_8: i32, localAddress_IpSocketAddress_9: i32, localAddress_IpSocketAddress_10: i32, result: ptr<[i32, i32]>) => void;
-				'[method]tcp-socket.finish-bind': (self: i32, result: ptr<[i32, i32]>) => void;
-				'[method]tcp-socket.start-connect': (self: i32, network: i32, remoteAddress_IpSocketAddress_case: i32, remoteAddress_IpSocketAddress_0: i32, remoteAddress_IpSocketAddress_1: i32, remoteAddress_IpSocketAddress_2: i32, remoteAddress_IpSocketAddress_3: i32, remoteAddress_IpSocketAddress_4: i32, remoteAddress_IpSocketAddress_5: i32, remoteAddress_IpSocketAddress_6: i32, remoteAddress_IpSocketAddress_7: i32, remoteAddress_IpSocketAddress_8: i32, remoteAddress_IpSocketAddress_9: i32, remoteAddress_IpSocketAddress_10: i32, result: ptr<[i32, i32]>) => void;
-				'[method]tcp-socket.finish-connect': (self: i32, result: ptr<[i32, i32, i32]>) => void;
-				'[method]tcp-socket.start-listen': (self: i32, result: ptr<[i32, i32]>) => void;
-				'[method]tcp-socket.finish-listen': (self: i32, result: ptr<[i32, i32]>) => void;
-				'[method]tcp-socket.accept': (self: i32, result: ptr<[i32, i32, i32, i32]>) => void;
-				'[method]tcp-socket.local-address': (self: i32, result: ptr<[i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32]>) => void;
-				'[method]tcp-socket.remote-address': (self: i32, result: ptr<[i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32]>) => void;
+				'[method]tcp-socket.start-bind': (self: i32, network: i32, localAddress_IpSocketAddress_case: i32, localAddress_IpSocketAddress_0: i32, localAddress_IpSocketAddress_1: i32, localAddress_IpSocketAddress_2: i32, localAddress_IpSocketAddress_3: i32, localAddress_IpSocketAddress_4: i32, localAddress_IpSocketAddress_5: i32, localAddress_IpSocketAddress_6: i32, localAddress_IpSocketAddress_7: i32, localAddress_IpSocketAddress_8: i32, localAddress_IpSocketAddress_9: i32, localAddress_IpSocketAddress_10: i32, result: ptr<result<void, ErrorCode>>) => void;
+				'[method]tcp-socket.finish-bind': (self: i32, result: ptr<result<void, ErrorCode>>) => void;
+				'[method]tcp-socket.start-connect': (self: i32, network: i32, remoteAddress_IpSocketAddress_case: i32, remoteAddress_IpSocketAddress_0: i32, remoteAddress_IpSocketAddress_1: i32, remoteAddress_IpSocketAddress_2: i32, remoteAddress_IpSocketAddress_3: i32, remoteAddress_IpSocketAddress_4: i32, remoteAddress_IpSocketAddress_5: i32, remoteAddress_IpSocketAddress_6: i32, remoteAddress_IpSocketAddress_7: i32, remoteAddress_IpSocketAddress_8: i32, remoteAddress_IpSocketAddress_9: i32, remoteAddress_IpSocketAddress_10: i32, result: ptr<result<void, ErrorCode>>) => void;
+				'[method]tcp-socket.finish-connect': (self: i32, result: ptr<result<[own<InputStream>, own<OutputStream>], ErrorCode>>) => void;
+				'[method]tcp-socket.start-listen': (self: i32, result: ptr<result<void, ErrorCode>>) => void;
+				'[method]tcp-socket.finish-listen': (self: i32, result: ptr<result<void, ErrorCode>>) => void;
+				'[method]tcp-socket.accept': (self: i32, result: ptr<result<[own<TcpSocket>, own<InputStream>, own<OutputStream>], ErrorCode>>) => void;
+				'[method]tcp-socket.local-address': (self: i32, result: ptr<result<IpSocketAddress, ErrorCode>>) => void;
+				'[method]tcp-socket.remote-address': (self: i32, result: ptr<result<IpSocketAddress, ErrorCode>>) => void;
 				'[method]tcp-socket.is-listening': (self: i32) => i32;
 				'[method]tcp-socket.address-family': (self: i32) => i32;
-				'[method]tcp-socket.set-listen-backlog-size': (self: i32, value: i64, result: ptr<[i32, i32]>) => void;
-				'[method]tcp-socket.keep-alive-enabled': (self: i32, result: ptr<[i32, i32]>) => void;
-				'[method]tcp-socket.set-keep-alive-enabled': (self: i32, value: i32, result: ptr<[i32, i32]>) => void;
-				'[method]tcp-socket.keep-alive-idle-time': (self: i32, result: ptr<[i32, i64]>) => void;
-				'[method]tcp-socket.set-keep-alive-idle-time': (self: i32, value_Duration: i64, result: ptr<[i32, i32]>) => void;
-				'[method]tcp-socket.keep-alive-interval': (self: i32, result: ptr<[i32, i64]>) => void;
-				'[method]tcp-socket.set-keep-alive-interval': (self: i32, value_Duration: i64, result: ptr<[i32, i32]>) => void;
-				'[method]tcp-socket.keep-alive-count': (self: i32, result: ptr<[i32, i32]>) => void;
-				'[method]tcp-socket.set-keep-alive-count': (self: i32, value: i32, result: ptr<[i32, i32]>) => void;
-				'[method]tcp-socket.hop-limit': (self: i32, result: ptr<[i32, i32]>) => void;
-				'[method]tcp-socket.set-hop-limit': (self: i32, value: i32, result: ptr<[i32, i32]>) => void;
-				'[method]tcp-socket.receive-buffer-size': (self: i32, result: ptr<[i32, i64]>) => void;
-				'[method]tcp-socket.set-receive-buffer-size': (self: i32, value: i64, result: ptr<[i32, i32]>) => void;
-				'[method]tcp-socket.send-buffer-size': (self: i32, result: ptr<[i32, i64]>) => void;
-				'[method]tcp-socket.set-send-buffer-size': (self: i32, value: i64, result: ptr<[i32, i32]>) => void;
+				'[method]tcp-socket.set-listen-backlog-size': (self: i32, value: i64, result: ptr<result<void, ErrorCode>>) => void;
+				'[method]tcp-socket.keep-alive-enabled': (self: i32, result: ptr<result<boolean, ErrorCode>>) => void;
+				'[method]tcp-socket.set-keep-alive-enabled': (self: i32, value: i32, result: ptr<result<void, ErrorCode>>) => void;
+				'[method]tcp-socket.keep-alive-idle-time': (self: i32, result: ptr<result<Duration, ErrorCode>>) => void;
+				'[method]tcp-socket.set-keep-alive-idle-time': (self: i32, value_Duration: i64, result: ptr<result<void, ErrorCode>>) => void;
+				'[method]tcp-socket.keep-alive-interval': (self: i32, result: ptr<result<Duration, ErrorCode>>) => void;
+				'[method]tcp-socket.set-keep-alive-interval': (self: i32, value_Duration: i64, result: ptr<result<void, ErrorCode>>) => void;
+				'[method]tcp-socket.keep-alive-count': (self: i32, result: ptr<result<u32, ErrorCode>>) => void;
+				'[method]tcp-socket.set-keep-alive-count': (self: i32, value: i32, result: ptr<result<void, ErrorCode>>) => void;
+				'[method]tcp-socket.hop-limit': (self: i32, result: ptr<result<u8, ErrorCode>>) => void;
+				'[method]tcp-socket.set-hop-limit': (self: i32, value: i32, result: ptr<result<void, ErrorCode>>) => void;
+				'[method]tcp-socket.receive-buffer-size': (self: i32, result: ptr<result<u64, ErrorCode>>) => void;
+				'[method]tcp-socket.set-receive-buffer-size': (self: i32, value: i64, result: ptr<result<void, ErrorCode>>) => void;
+				'[method]tcp-socket.send-buffer-size': (self: i32, result: ptr<result<u64, ErrorCode>>) => void;
+				'[method]tcp-socket.set-send-buffer-size': (self: i32, value: i64, result: ptr<result<void, ErrorCode>>) => void;
 				'[method]tcp-socket.subscribe': (self: i32) => i32;
-				'[method]tcp-socket.shutdown': (self: i32, shutdownType_ShutdownType: i32, result: ptr<[i32, i32]>) => void;
+				'[method]tcp-socket.shutdown': (self: i32, shutdownType_ShutdownType: i32, result: ptr<result<void, ErrorCode>>) => void;
 			};
 			type ObjectModule = {
 				startBind(self: TcpSocket, network: borrow<Network>, localAddress: IpSocketAddress): result<void, ErrorCode>;
@@ -1697,7 +1697,7 @@ export namespace sockets {
 		export const resources: Map<string, $wcm.ResourceType> = new Map<string, $wcm.ResourceType>([
 		]);
 		export type WasmInterface = {
-			'create-tcp-socket': (addressFamily_IpAddressFamily_IpAddressFamily: i32, result: ptr<[i32, i32]>) => void;
+			'create-tcp-socket': (addressFamily_IpAddressFamily_IpAddressFamily: i32, result: ptr<result<own<TcpSocket>, ErrorCode>>) => void;
 		};
 		export function createHost(service: sockets.TcpCreateSocket, context: $wcm.WasmContext): WasmInterface {
 			return $wcm.Host.create<WasmInterface>(functions, resources, service, context);
@@ -1814,18 +1814,18 @@ export namespace sockets {
 		]);
 		export namespace UdpSocket {
 			export type WasmInterface = {
-				'[method]udp-socket.start-bind': (self: i32, network: i32, localAddress_IpSocketAddress_case: i32, localAddress_IpSocketAddress_0: i32, localAddress_IpSocketAddress_1: i32, localAddress_IpSocketAddress_2: i32, localAddress_IpSocketAddress_3: i32, localAddress_IpSocketAddress_4: i32, localAddress_IpSocketAddress_5: i32, localAddress_IpSocketAddress_6: i32, localAddress_IpSocketAddress_7: i32, localAddress_IpSocketAddress_8: i32, localAddress_IpSocketAddress_9: i32, localAddress_IpSocketAddress_10: i32, result: ptr<[i32, i32]>) => void;
-				'[method]udp-socket.finish-bind': (self: i32, result: ptr<[i32, i32]>) => void;
-				'[method]udp-socket.stream': (self: i32, remoteAddress_case: i32, remoteAddress_option_IpSocketAddress_case: i32, remoteAddress_option_IpSocketAddress_0: i32, remoteAddress_option_IpSocketAddress_1: i32, remoteAddress_option_IpSocketAddress_2: i32, remoteAddress_option_IpSocketAddress_3: i32, remoteAddress_option_IpSocketAddress_4: i32, remoteAddress_option_IpSocketAddress_5: i32, remoteAddress_option_IpSocketAddress_6: i32, remoteAddress_option_IpSocketAddress_7: i32, remoteAddress_option_IpSocketAddress_8: i32, remoteAddress_option_IpSocketAddress_9: i32, remoteAddress_option_IpSocketAddress_10: i32, result: ptr<[i32, i32, i32]>) => void;
-				'[method]udp-socket.local-address': (self: i32, result: ptr<[i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32]>) => void;
-				'[method]udp-socket.remote-address': (self: i32, result: ptr<[i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32]>) => void;
+				'[method]udp-socket.start-bind': (self: i32, network: i32, localAddress_IpSocketAddress_case: i32, localAddress_IpSocketAddress_0: i32, localAddress_IpSocketAddress_1: i32, localAddress_IpSocketAddress_2: i32, localAddress_IpSocketAddress_3: i32, localAddress_IpSocketAddress_4: i32, localAddress_IpSocketAddress_5: i32, localAddress_IpSocketAddress_6: i32, localAddress_IpSocketAddress_7: i32, localAddress_IpSocketAddress_8: i32, localAddress_IpSocketAddress_9: i32, localAddress_IpSocketAddress_10: i32, result: ptr<result<void, ErrorCode>>) => void;
+				'[method]udp-socket.finish-bind': (self: i32, result: ptr<result<void, ErrorCode>>) => void;
+				'[method]udp-socket.stream': (self: i32, remoteAddress_case: i32, remoteAddress_option_IpSocketAddress_case: i32, remoteAddress_option_IpSocketAddress_0: i32, remoteAddress_option_IpSocketAddress_1: i32, remoteAddress_option_IpSocketAddress_2: i32, remoteAddress_option_IpSocketAddress_3: i32, remoteAddress_option_IpSocketAddress_4: i32, remoteAddress_option_IpSocketAddress_5: i32, remoteAddress_option_IpSocketAddress_6: i32, remoteAddress_option_IpSocketAddress_7: i32, remoteAddress_option_IpSocketAddress_8: i32, remoteAddress_option_IpSocketAddress_9: i32, remoteAddress_option_IpSocketAddress_10: i32, result: ptr<result<[own<IncomingDatagramStream>, own<OutgoingDatagramStream>], ErrorCode>>) => void;
+				'[method]udp-socket.local-address': (self: i32, result: ptr<result<IpSocketAddress, ErrorCode>>) => void;
+				'[method]udp-socket.remote-address': (self: i32, result: ptr<result<IpSocketAddress, ErrorCode>>) => void;
 				'[method]udp-socket.address-family': (self: i32) => i32;
-				'[method]udp-socket.unicast-hop-limit': (self: i32, result: ptr<[i32, i32]>) => void;
-				'[method]udp-socket.set-unicast-hop-limit': (self: i32, value: i32, result: ptr<[i32, i32]>) => void;
-				'[method]udp-socket.receive-buffer-size': (self: i32, result: ptr<[i32, i64]>) => void;
-				'[method]udp-socket.set-receive-buffer-size': (self: i32, value: i64, result: ptr<[i32, i32]>) => void;
-				'[method]udp-socket.send-buffer-size': (self: i32, result: ptr<[i32, i64]>) => void;
-				'[method]udp-socket.set-send-buffer-size': (self: i32, value: i64, result: ptr<[i32, i32]>) => void;
+				'[method]udp-socket.unicast-hop-limit': (self: i32, result: ptr<result<u8, ErrorCode>>) => void;
+				'[method]udp-socket.set-unicast-hop-limit': (self: i32, value: i32, result: ptr<result<void, ErrorCode>>) => void;
+				'[method]udp-socket.receive-buffer-size': (self: i32, result: ptr<result<u64, ErrorCode>>) => void;
+				'[method]udp-socket.set-receive-buffer-size': (self: i32, value: i64, result: ptr<result<void, ErrorCode>>) => void;
+				'[method]udp-socket.send-buffer-size': (self: i32, result: ptr<result<u64, ErrorCode>>) => void;
+				'[method]udp-socket.set-send-buffer-size': (self: i32, value: i64, result: ptr<result<void, ErrorCode>>) => void;
 				'[method]udp-socket.subscribe': (self: i32) => i32;
 			};
 			type ObjectModule = {
@@ -1901,7 +1901,7 @@ export namespace sockets {
 		}
 		export namespace IncomingDatagramStream {
 			export type WasmInterface = {
-				'[method]incoming-datagram-stream.receive': (self: i32, maxResults: i64, result: ptr<[i32, i32, i32]>) => void;
+				'[method]incoming-datagram-stream.receive': (self: i32, maxResults: i64, result: ptr<result<IncomingDatagram[], ErrorCode>>) => void;
 				'[method]incoming-datagram-stream.subscribe': (self: i32) => i32;
 			};
 			type ObjectModule = {
@@ -1933,8 +1933,8 @@ export namespace sockets {
 		}
 		export namespace OutgoingDatagramStream {
 			export type WasmInterface = {
-				'[method]outgoing-datagram-stream.check-send': (self: i32, result: ptr<[i32, i64]>) => void;
-				'[method]outgoing-datagram-stream.send': (self: i32, datagrams_ptr: i32, datagrams_len: i32, result: ptr<[i32, i64]>) => void;
+				'[method]outgoing-datagram-stream.check-send': (self: i32, result: ptr<result<u64, ErrorCode>>) => void;
+				'[method]outgoing-datagram-stream.send': (self: i32, datagrams_ptr: i32, datagrams_len: i32, result: ptr<result<u64, ErrorCode>>) => void;
 				'[method]outgoing-datagram-stream.subscribe': (self: i32) => i32;
 			};
 			type ObjectModule = {
@@ -2002,7 +2002,7 @@ export namespace sockets {
 		export const resources: Map<string, $wcm.ResourceType> = new Map<string, $wcm.ResourceType>([
 		]);
 		export type WasmInterface = {
-			'create-udp-socket': (addressFamily_IpAddressFamily_IpAddressFamily: i32, result: ptr<[i32, i32]>) => void;
+			'create-udp-socket': (addressFamily_IpAddressFamily_IpAddressFamily: i32, result: ptr<result<own<UdpSocket>, ErrorCode>>) => void;
 		};
 		export function createHost(service: sockets.UdpCreateSocket, context: $wcm.WasmContext): WasmInterface {
 			return $wcm.Host.create<WasmInterface>(functions, resources, service, context);

@@ -425,7 +425,7 @@ export namespace io {
 		]);
 		export namespace Error {
 			export type WasmInterface = {
-				'[method]error.to-debug-string': (self: i32, result: ptr<[i32, i32]>) => void;
+				'[method]error.to-debug-string': (self: i32, result: ptr<string>) => void;
 			};
 			type ObjectModule = {
 				toDebugString(self: Error): string;
@@ -518,7 +518,7 @@ export namespace io {
 			}
 		}
 		export type WasmInterface = {
-			'poll': (in__ptr: i32, in__len: i32, result: ptr<[i32, i32]>) => void;
+			'poll': (in__ptr: i32, in__len: i32, result: ptr<Uint32Array>) => void;
 		} & Pollable.WasmInterface;
 		export function createHost(service: io.Poll, context: $wcm.WasmContext): WasmInterface {
 			return $wcm.Host.create<WasmInterface>(functions, resources, service, context);
@@ -612,10 +612,10 @@ export namespace io {
 		]);
 		export namespace InputStream {
 			export type WasmInterface = {
-				'[method]input-stream.read': (self: i32, len: i64, result: ptr<[i32, i32, i32]>) => void;
-				'[method]input-stream.blocking-read': (self: i32, len: i64, result: ptr<[i32, i32, i32]>) => void;
-				'[method]input-stream.skip': (self: i32, len: i64, result: ptr<[i32, i64, i32]>) => void;
-				'[method]input-stream.blocking-skip': (self: i32, len: i64, result: ptr<[i32, i64, i32]>) => void;
+				'[method]input-stream.read': (self: i32, len: i64, result: ptr<result<Uint8Array, StreamError>>) => void;
+				'[method]input-stream.blocking-read': (self: i32, len: i64, result: ptr<result<Uint8Array, StreamError>>) => void;
+				'[method]input-stream.skip': (self: i32, len: i64, result: ptr<result<u64, StreamError>>) => void;
+				'[method]input-stream.blocking-skip': (self: i32, len: i64, result: ptr<result<u64, StreamError>>) => void;
 				'[method]input-stream.subscribe': (self: i32) => i32;
 			};
 			type ObjectModule = {
@@ -659,16 +659,16 @@ export namespace io {
 		}
 		export namespace OutputStream {
 			export type WasmInterface = {
-				'[method]output-stream.check-write': (self: i32, result: ptr<[i32, i64, i32]>) => void;
-				'[method]output-stream.write': (self: i32, contents_ptr: i32, contents_len: i32, result: ptr<[i32, i32, i32]>) => void;
-				'[method]output-stream.blocking-write-and-flush': (self: i32, contents_ptr: i32, contents_len: i32, result: ptr<[i32, i32, i32]>) => void;
-				'[method]output-stream.flush': (self: i32, result: ptr<[i32, i32, i32]>) => void;
-				'[method]output-stream.blocking-flush': (self: i32, result: ptr<[i32, i32, i32]>) => void;
+				'[method]output-stream.check-write': (self: i32, result: ptr<result<u64, StreamError>>) => void;
+				'[method]output-stream.write': (self: i32, contents_ptr: i32, contents_len: i32, result: ptr<result<void, StreamError>>) => void;
+				'[method]output-stream.blocking-write-and-flush': (self: i32, contents_ptr: i32, contents_len: i32, result: ptr<result<void, StreamError>>) => void;
+				'[method]output-stream.flush': (self: i32, result: ptr<result<void, StreamError>>) => void;
+				'[method]output-stream.blocking-flush': (self: i32, result: ptr<result<void, StreamError>>) => void;
 				'[method]output-stream.subscribe': (self: i32) => i32;
-				'[method]output-stream.write-zeroes': (self: i32, len: i64, result: ptr<[i32, i32, i32]>) => void;
-				'[method]output-stream.blocking-write-zeroes-and-flush': (self: i32, len: i64, result: ptr<[i32, i32, i32]>) => void;
-				'[method]output-stream.splice': (self: i32, src: i32, len: i64, result: ptr<[i32, i64, i32]>) => void;
-				'[method]output-stream.blocking-splice': (self: i32, src: i32, len: i64, result: ptr<[i32, i64, i32]>) => void;
+				'[method]output-stream.write-zeroes': (self: i32, len: i64, result: ptr<result<void, StreamError>>) => void;
+				'[method]output-stream.blocking-write-zeroes-and-flush': (self: i32, len: i64, result: ptr<result<void, StreamError>>) => void;
+				'[method]output-stream.splice': (self: i32, src: i32, len: i64, result: ptr<result<u64, StreamError>>) => void;
+				'[method]output-stream.blocking-splice': (self: i32, src: i32, len: i64, result: ptr<result<u64, StreamError>>) => void;
 			};
 			type ObjectModule = {
 				checkWrite(self: OutputStream): result<u64, StreamError>;

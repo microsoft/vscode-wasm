@@ -264,7 +264,7 @@ export const f64: FlatType<f64> = $f64;
 export type WasmType = i32 | i64 | f32 | f64;
 type GenericFlatType = FlatType<WasmType>;
 
-class FlatTuple {
+export class FlatTuple {
 
 	private readonly types: readonly GenericFlatType[];
 
@@ -321,7 +321,6 @@ class FlatTuple {
 		return align(result, tupleAlignment);
 	}
 }
-
 
 namespace WasmTypes {
 

@@ -2918,12 +2918,7 @@ function CallableEmitter<C extends Callable, P extends Interface | ResourceType,
 				const paramName = this.config.nameProvider.asParameterName(param);
 				params.push(`${paramName}: ${this.config.printers.typeScript.printTypeReference(param.type, TypeUsage.parameter)}`);
 			}
-			let returnType: string | undefined = undefined;
-			if (this.callable.results.length === 1) {
-				returnType = this.config.printers.typeScript.printTypeReference(this.callable.results[0].type, TypeUsage.function);
-			} else if (this.callable.results.length > 1) {
-				returnType = `[${this.callable.results.map(r => this.config.printers.typeScript.printTypeReference(r.type, TypeUsage.function)).join(', ')}]`;
-			}
+			let returnType = this.getReturnType();
 			this.doEmitNamespace(code, params, returnType);
 		}
 
@@ -2950,22 +2945,38 @@ function CallableEmitter<C extends Callable, P extends Interface | ResourceType,
 
 		public emitWasmInterface(code: Code): void {
 			const { typeFlattener } = this.config;
-			const params = typeFlattener.flattenParams(this.callable);
+			const flattenedParams = typeFlattener.flattenParams(this.callable);
 			let returnType: string;
-			const results = typeFlattener.flattenResult(this.callable);
-			if (results.length === MAX_FLAT_RESULTS) {
-				returnType = results[0];
+			const flattenedResults = typeFlattener.flattenResult(this.callable);
+			if (flattenedResults.length === 0) {
+				returnType = 'void';
+			} else if (flattenedResults.length <= MAX_FLAT_RESULTS) {
+				returnType = flattenedResults[0];
 			} else {
 				returnType = 'void';
 				code.imports.addBaseType('ptr');
-				params.push({ name: 'result', type: `ptr<[${results.join(', ')}]>`});
+				flattenedParams.push({ name: 'result', type: `ptr<${this.getReturnType()!}>`});
 			}
-			if (params.length <= MAX_FLAT_PARAMS) {
-				code.push(`'${this.callable.name}': (${params.map(p => `${p.name}: ${p.type}`).join(', ')}) => ${returnType};`);
+			if (flattenedParams.length <= MAX_FLAT_PARAMS) {
+				code.push(`'${this.callable.name}': (${flattenedParams.map(p => `${p.name}: ${p.type}`).join(', ')}) => ${returnType};`);
 			} else {
 				code.imports.addBaseType('ptr');
-				code.push(`'${this.callable.name}': (args: ptr<[${params.map(p => p.type).join(', ')}]>) => ${returnType};`);
+				const params: string[] = [];
+				for (const param of this.callable.params) {
+					params.push(this.config.printers.metaModel.printTypeReference(param.type, TypeUsage.parameter));
+				}
+				code.push(`'${this.callable.name}': (args: ptr<[${params.join(', ')}]>) => ${returnType};`);
 			}
+		}
+
+		private getReturnType(): string | undefined {
+			let returnType: string | undefined = undefined;
+			if (this.callable.results.length === 1) {
+				returnType = this.config.printers.typeScript.printTypeReference(this.callable.results[0].type, TypeUsage.function);
+			} else if (this.callable.results.length > 1) {
+				returnType = `[${this.callable.results.map(r => this.config.printers.typeScript.printTypeReference(r.type, TypeUsage.function)).join(', ')}]`;
+			}
+			return returnType;
 		}
 	};
 }

@@ -195,8 +195,8 @@ export namespace clocks {
 		export const resources: Map<string, $wcm.ResourceType> = new Map<string, $wcm.ResourceType>([
 		]);
 		export type WasmInterface = {
-			'now': (result: ptr<[i64, i32]>) => void;
-			'resolution': (result: ptr<[i64, i32]>) => void;
+			'now': (result: ptr<Datetime>) => void;
+			'resolution': (result: ptr<Datetime>) => void;
 		};
 		export function createHost(service: clocks.WallClock, context: $wcm.WasmContext): WasmInterface {
 			return $wcm.Host.create<WasmInterface>(functions, resources, service, context);

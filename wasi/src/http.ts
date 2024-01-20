@@ -1552,13 +1552,13 @@ export namespace http {
 		export namespace Fields {
 			export type WasmInterface = {
 				'[constructor]fields': () => i32;
-				'[static]fields.from-list': (entries_ptr: i32, entries_len: i32, result: ptr<[i32, i32]>) => void;
-				'[method]fields.get': (self: i32, name_ptr: i32, name_len: i32, result: ptr<[i32, i32]>) => void;
+				'[static]fields.from-list': (entries_ptr: i32, entries_len: i32, result: ptr<result<own<Fields>, HeaderError>>) => void;
+				'[method]fields.get': (self: i32, name_ptr: i32, name_len: i32, result: ptr<FieldValue[]>) => void;
 				'[method]fields.has': (self: i32, name_ptr: i32, name_len: i32) => i32;
-				'[method]fields.set': (self: i32, name_ptr: i32, name_len: i32, value_ptr: i32, value_len: i32, result: ptr<[i32, i32]>) => void;
-				'[method]fields.delete': (self: i32, name_ptr: i32, name_len: i32, result: ptr<[i32, i32]>) => void;
-				'[method]fields.append': (self: i32, name_ptr: i32, name_len: i32, value_ptr: i32, value_len: i32, result: ptr<[i32, i32]>) => void;
-				'[method]fields.entries': (self: i32, result: ptr<[i32, i32]>) => void;
+				'[method]fields.set': (self: i32, name_ptr: i32, name_len: i32, value_ptr: i32, value_len: i32, result: ptr<result<void, HeaderError>>) => void;
+				'[method]fields.delete': (self: i32, name_ptr: i32, name_len: i32, result: ptr<result<void, HeaderError>>) => void;
+				'[method]fields.append': (self: i32, name_ptr: i32, name_len: i32, value_ptr: i32, value_len: i32, result: ptr<result<void, HeaderError>>) => void;
+				'[method]fields.entries': (self: i32, result: ptr<[FieldKey, FieldValue][]>) => void;
 				'[method]fields.clone': (self: i32) => i32;
 			};
 			type ObjectModule = {
@@ -1619,12 +1619,12 @@ export namespace http {
 		}
 		export namespace IncomingRequest {
 			export type WasmInterface = {
-				'[method]incoming-request.method': (self: i32, result: ptr<[i32, i32, i32]>) => void;
-				'[method]incoming-request.path-with-query': (self: i32, result: ptr<[i32, i32, i32]>) => void;
-				'[method]incoming-request.scheme': (self: i32, result: ptr<[i32, i32, i32, i32]>) => void;
-				'[method]incoming-request.authority': (self: i32, result: ptr<[i32, i32, i32]>) => void;
+				'[method]incoming-request.method': (self: i32, result: ptr<Method>) => void;
+				'[method]incoming-request.path-with-query': (self: i32, result: ptr<string | undefined>) => void;
+				'[method]incoming-request.scheme': (self: i32, result: ptr<Scheme | undefined>) => void;
+				'[method]incoming-request.authority': (self: i32, result: ptr<string | undefined>) => void;
 				'[method]incoming-request.headers': (self: i32) => i32;
-				'[method]incoming-request.consume': (self: i32, result: ptr<[i32, i32]>) => void;
+				'[method]incoming-request.consume': (self: i32, result: ptr<result<own<IncomingBody>, void>>) => void;
 			};
 			type ObjectModule = {
 				method(self: IncomingRequest): Method;
@@ -1672,14 +1672,14 @@ export namespace http {
 		export namespace OutgoingRequest {
 			export type WasmInterface = {
 				'[constructor]outgoing-request': (headers: i32) => i32;
-				'[method]outgoing-request.body': (self: i32, result: ptr<[i32, i32]>) => void;
-				'[method]outgoing-request.method': (self: i32, result: ptr<[i32, i32, i32]>) => void;
+				'[method]outgoing-request.body': (self: i32, result: ptr<result<own<OutgoingBody>, void>>) => void;
+				'[method]outgoing-request.method': (self: i32, result: ptr<Method>) => void;
 				'[method]outgoing-request.set-method': (self: i32, method_case: i32, method_0: i32, method_1: i32) => i32;
-				'[method]outgoing-request.path-with-query': (self: i32, result: ptr<[i32, i32, i32]>) => void;
+				'[method]outgoing-request.path-with-query': (self: i32, result: ptr<string | undefined>) => void;
 				'[method]outgoing-request.set-path-with-query': (self: i32, pathWithQuery_case: i32, pathWithQuery_option_ptr: i32, pathWithQuery_option_len: i32) => i32;
-				'[method]outgoing-request.scheme': (self: i32, result: ptr<[i32, i32, i32, i32]>) => void;
+				'[method]outgoing-request.scheme': (self: i32, result: ptr<Scheme | undefined>) => void;
 				'[method]outgoing-request.set-scheme': (self: i32, scheme_case: i32, scheme_option_case: i32, scheme_option_0: i32, scheme_option_1: i32) => i32;
-				'[method]outgoing-request.authority': (self: i32, result: ptr<[i32, i32, i32]>) => void;
+				'[method]outgoing-request.authority': (self: i32, result: ptr<string | undefined>) => void;
 				'[method]outgoing-request.set-authority': (self: i32, authority_case: i32, authority_option_ptr: i32, authority_option_len: i32) => i32;
 				'[method]outgoing-request.headers': (self: i32) => i32;
 			};
@@ -1747,11 +1747,11 @@ export namespace http {
 		export namespace RequestOptions {
 			export type WasmInterface = {
 				'[constructor]request-options': () => i32;
-				'[method]request-options.connect-timeout': (self: i32, result: ptr<[i32, i64]>) => void;
+				'[method]request-options.connect-timeout': (self: i32, result: ptr<Duration | undefined>) => void;
 				'[method]request-options.set-connect-timeout': (self: i32, duration_case: i32, duration_option_Duration: i64) => i32;
-				'[method]request-options.first-byte-timeout': (self: i32, result: ptr<[i32, i64]>) => void;
+				'[method]request-options.first-byte-timeout': (self: i32, result: ptr<Duration | undefined>) => void;
 				'[method]request-options.set-first-byte-timeout': (self: i32, duration_case: i32, duration_option_Duration: i64) => i32;
-				'[method]request-options.between-bytes-timeout': (self: i32, result: ptr<[i32, i64]>) => void;
+				'[method]request-options.between-bytes-timeout': (self: i32, result: ptr<Duration | undefined>) => void;
 				'[method]request-options.set-between-bytes-timeout': (self: i32, duration_case: i32, duration_option_Duration: i64) => i32;
 			};
 			type ObjectModule = {
@@ -1822,7 +1822,7 @@ export namespace http {
 			export type WasmInterface = {
 				'[method]incoming-response.status': (self: i32) => i32;
 				'[method]incoming-response.headers': (self: i32) => i32;
-				'[method]incoming-response.consume': (self: i32, result: ptr<[i32, i32]>) => void;
+				'[method]incoming-response.consume': (self: i32, result: ptr<result<own<IncomingBody>, void>>) => void;
 			};
 			type ObjectModule = {
 				status(self: IncomingResponse): StatusCode;
@@ -1857,7 +1857,7 @@ export namespace http {
 		}
 		export namespace IncomingBody {
 			export type WasmInterface = {
-				'[method]incoming-body.stream': (self: i32, result: ptr<[i32, i32]>) => void;
+				'[method]incoming-body.stream': (self: i32, result: ptr<result<own<InputStream>, void>>) => void;
 				'[static]incoming-body.finish': (this_: i32) => i32;
 			};
 			type ObjectModule = {
@@ -1893,7 +1893,7 @@ export namespace http {
 		export namespace FutureTrailers {
 			export type WasmInterface = {
 				'[method]future-trailers.subscribe': (self: i32) => i32;
-				'[method]future-trailers.get': (self: i32, result: ptr<[i32, i32, i32, i32, i32, i64, i32, i32, i32, i32]>) => void;
+				'[method]future-trailers.get': (self: i32, result: ptr<result<result<own<Trailers> | undefined, ErrorCode>, void> | undefined>) => void;
 			};
 			type ObjectModule = {
 				subscribe(self: FutureTrailers): own<Pollable>;
@@ -1928,7 +1928,7 @@ export namespace http {
 				'[method]outgoing-response.status-code': (self: i32) => i32;
 				'[method]outgoing-response.set-status-code': (self: i32, statusCode: i32) => i32;
 				'[method]outgoing-response.headers': (self: i32) => i32;
-				'[method]outgoing-response.body': (self: i32, result: ptr<[i32, i32]>) => void;
+				'[method]outgoing-response.body': (self: i32, result: ptr<result<own<OutgoingBody>, void>>) => void;
 			};
 			type ObjectModule = {
 				constructor(headers: own<Headers>): own<$wcm.ResourceHandle>;
@@ -1969,8 +1969,8 @@ export namespace http {
 		}
 		export namespace OutgoingBody {
 			export type WasmInterface = {
-				'[method]outgoing-body.write': (self: i32, result: ptr<[i32, i32]>) => void;
-				'[static]outgoing-body.finish': (this_: i32, trailers_case: i32, trailers_option: i32, result: ptr<[i32, i32, i32, i64, i32, i32, i32, i32]>) => void;
+				'[method]outgoing-body.write': (self: i32, result: ptr<result<own<OutputStream>, void>>) => void;
+				'[static]outgoing-body.finish': (this_: i32, trailers_case: i32, trailers_option: i32, result: ptr<result<void, ErrorCode>>) => void;
 			};
 			type ObjectModule = {
 				write(self: OutgoingBody): result<own<OutputStream>, void>;
@@ -2005,7 +2005,7 @@ export namespace http {
 		export namespace FutureIncomingResponse {
 			export type WasmInterface = {
 				'[method]future-incoming-response.subscribe': (self: i32) => i32;
-				'[method]future-incoming-response.get': (self: i32, result: ptr<[i32, i32, i32, i32, i32, i64, i32, i32, i32, i32]>) => void;
+				'[method]future-incoming-response.get': (self: i32, result: ptr<result<result<own<IncomingResponse>, ErrorCode>, void> | undefined>) => void;
 			};
 			type ObjectModule = {
 				subscribe(self: FutureIncomingResponse): own<Pollable>;
@@ -2035,7 +2035,7 @@ export namespace http {
 			}
 		}
 		export type WasmInterface = {
-			'http-error-code': (err: i32, result: ptr<[i32, i32, i32, i64, i32, i32, i32, i32]>) => void;
+			'http-error-code': (err: i32, result: ptr<ErrorCode | undefined>) => void;
 		} & Fields.WasmInterface & IncomingRequest.WasmInterface & OutgoingRequest.WasmInterface & RequestOptions.WasmInterface & ResponseOutparam.WasmInterface & IncomingResponse.WasmInterface & IncomingBody.WasmInterface & FutureTrailers.WasmInterface & OutgoingResponse.WasmInterface & OutgoingBody.WasmInterface & FutureIncomingResponse.WasmInterface;
 		export function createHost(service: http.Types, context: $wcm.WasmContext): WasmInterface {
 			return $wcm.Host.create<WasmInterface>(functions, resources, service, context);
@@ -2101,7 +2101,7 @@ export namespace http {
 		export const resources: Map<string, $wcm.ResourceType> = new Map<string, $wcm.ResourceType>([
 		]);
 		export type WasmInterface = {
-			'handle': (request: i32, options_case: i32, options_option: i32, result: ptr<[i32, i32, i32, i64, i32, i32, i32, i32]>) => void;
+			'handle': (request: i32, options_case: i32, options_option: i32, result: ptr<result<own<FutureIncomingResponse>, ErrorCode>>) => void;
 		};
 		export function createHost(service: http.OutgoingHandler, context: $wcm.WasmContext): WasmInterface {
 			return $wcm.Host.create<WasmInterface>(functions, resources, service, context);

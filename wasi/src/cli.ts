@@ -226,9 +226,9 @@ export namespace cli {
 		export const resources: Map<string, $wcm.ResourceType> = new Map<string, $wcm.ResourceType>([
 		]);
 		export type WasmInterface = {
-			'get-environment': (result: ptr<[i32, i32]>) => void;
-			'get-arguments': (result: ptr<[i32, i32]>) => void;
-			'initial-cwd': (result: ptr<[i32, i32, i32]>) => void;
+			'get-environment': (result: ptr<[string, string][]>) => void;
+			'get-arguments': (result: ptr<string[]>) => void;
+			'initial-cwd': (result: ptr<string | undefined>) => void;
 		};
 		export function createHost(service: cli.Environment, context: $wcm.WasmContext): WasmInterface {
 			return $wcm.Host.create<WasmInterface>(functions, resources, service, context);
@@ -450,7 +450,7 @@ export namespace cli {
 		export const resources: Map<string, $wcm.ResourceType> = new Map<string, $wcm.ResourceType>([
 		]);
 		export type WasmInterface = {
-			'get-terminal-stdin': (result: ptr<[i32, i32]>) => void;
+			'get-terminal-stdin': (result: ptr<own<TerminalInput> | undefined>) => void;
 		};
 		export function createHost(service: cli.TerminalStdin, context: $wcm.WasmContext): WasmInterface {
 			return $wcm.Host.create<WasmInterface>(functions, resources, service, context);
@@ -476,7 +476,7 @@ export namespace cli {
 		export const resources: Map<string, $wcm.ResourceType> = new Map<string, $wcm.ResourceType>([
 		]);
 		export type WasmInterface = {
-			'get-terminal-stdout': (result: ptr<[i32, i32]>) => void;
+			'get-terminal-stdout': (result: ptr<own<TerminalOutput> | undefined>) => void;
 		};
 		export function createHost(service: cli.TerminalStdout, context: $wcm.WasmContext): WasmInterface {
 			return $wcm.Host.create<WasmInterface>(functions, resources, service, context);
@@ -502,7 +502,7 @@ export namespace cli {
 		export const resources: Map<string, $wcm.ResourceType> = new Map<string, $wcm.ResourceType>([
 		]);
 		export type WasmInterface = {
-			'get-terminal-stderr': (result: ptr<[i32, i32]>) => void;
+			'get-terminal-stderr': (result: ptr<own<TerminalOutput> | undefined>) => void;
 		};
 		export function createHost(service: cli.TerminalStderr, context: $wcm.WasmContext): WasmInterface {
 			return $wcm.Host.create<WasmInterface>(functions, resources, service, context);
