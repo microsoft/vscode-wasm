@@ -2410,9 +2410,11 @@ export class FunctionType<_T extends Function = Function> extends Callable  {
 
 	public callService(serviceFunction: JFunction, params: (number | bigint)[], context: WasmContext): number | bigint | void {
 		const memory  = context.getMemory();
+		const returnFlatTypes = this.returnType === undefined ? 0 : this.returnType.flatTypes.length;
+		const paramFlatTypes = this.paramTupleType.flatTypes.length;
 		// We currently only support 'lower' mode for results > MAX_FLAT_RESULTS.
-		if (this.returnFlatTypes.length > FunctionType.MAX_FLAT_RESULTS && params.length !== this.paramFlatTypes.length + 1) {
-			throw new ComponentModelError(`Invalid number of parameters. Received ${params.length} but expected ${this.paramFlatTypes.length + 1}`);
+		if (returnFlatTypes > FunctionType.MAX_FLAT_RESULTS && params.length !== paramFlatTypes + 1) {
+			throw new ComponentModelError(`Invalid number of parameters. Received ${params.length} but expected ${paramFlatTypes + 1}`);
 		}
 		const jParams = this.liftParamValues(params, memory, context);
 		const result: JType | void = serviceFunction(...jParams);
@@ -2432,8 +2434,10 @@ export class ConstructorType<_T extends Function = Function> extends Callable {
 
 	public callConstructor(clazz: GenericClass, params: (number | bigint)[], resourceManager: ResourceManager, context: WasmContext): number | bigint | void {
 		// We currently only support 'lower' mode for results > MAX_FLAT_RESULTS.
-		if (this.returnFlatTypes.length > FunctionType.MAX_FLAT_RESULTS && params.length !== this.paramFlatTypes.length + 1) {
-			throw new ComponentModelError(`Invalid number of parameters. Received ${params.length} but expected ${this.paramFlatTypes.length + 1}`);
+		const returnFlatTypes = this.returnType === undefined ? 0 : this.returnType.flatTypes.length;
+		const paramFlatTypes = this.paramTupleType.flatTypes.length;
+		if (returnFlatTypes > FunctionType.MAX_FLAT_RESULTS && params.length !== paramFlatTypes + 1) {
+			throw new ComponentModelError(`Invalid number of parameters. Received ${params.length} but expected ${paramFlatTypes + 1}`);
 		}
 		const memory  = context.getMemory();
 		const jParams = this.liftParamValues(params, memory, context);
@@ -2452,8 +2456,10 @@ export class StaticMethodType<_T extends Function = Function> extends Callable {
 	public callStaticMethod(func: JFunction, params: (number | bigint)[], context: WasmContext): number | bigint | void {
 		const memory  = context.getMemory();
 		// We currently only support 'lower' mode for results > MAX_FLAT_RESULTS.
-		if (this.returnFlatTypes.length > FunctionType.MAX_FLAT_RESULTS && params.length !== this.paramFlatTypes.length + 1) {
-			throw new ComponentModelError(`Invalid number of parameters. Received ${params.length} but expected ${this.paramFlatTypes.length + 1}`);
+		const returnFlatTypes = this.returnType === undefined ? 0 : this.returnType.flatTypes.length;
+		const paramFlatTypes = this.paramTupleType.flatTypes.length;
+		if (returnFlatTypes > FunctionType.MAX_FLAT_RESULTS && params.length !== paramFlatTypes + 1) {
+			throw new ComponentModelError(`Invalid number of parameters. Received ${params.length} but expected ${paramFlatTypes + 1}`);
 		}
 		const jParams = this.liftParamValues(params, memory, context);
 		const result: JType | void = func(...jParams);
@@ -2475,9 +2481,11 @@ export class MethodType<_T extends Function = Function> extends Callable {
 		if (params.length === 0) {
 			throw new ComponentModelError(`Method calls must have at least one parameter (the object pointer).`);
 		}
+		const returnFlatTypes = this.returnType === undefined ? 0 : this.returnType.flatTypes.length;
+		const paramFlatTypes = this.paramTupleType.flatTypes.length;
 		// We currently only support 'lower' mode for results > MAX_FLAT_RESULTS.
-		if (this.returnFlatTypes.length > FunctionType.MAX_FLAT_RESULTS && params.length !== this.paramFlatTypes.length + 1) {
-			throw new ComponentModelError(`Invalid number of parameters. Received ${params.length} but expected ${this.paramFlatTypes.length + 1}`);
+		if (returnFlatTypes > FunctionType.MAX_FLAT_RESULTS && params.length !== paramFlatTypes + 1) {
+			throw new ComponentModelError(`Invalid number of parameters. Received ${params.length} but expected ${paramFlatTypes + 1}`);
 		}
 		const handle = params[0];
 		if (typeof handle !== 'number') {
