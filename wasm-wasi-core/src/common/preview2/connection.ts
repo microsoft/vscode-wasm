@@ -4,7 +4,7 @@
  *--------------------------------------------------------------------------------------------*/
 /// <reference path="../../../typings/webAssemblyCommon.d.ts" />
 
-import { Alignment, ComponentModelTypeVisitor, FlagsType, FunctionType, ListType, TupleType, WasmContext, WasmTypeKind, ptr, u16, u32, u8, wstring } from '@vscode/wasm-component-model';
+import { Alignment, ComponentModelTypeVisitor, FlagsType, FunctionType, ListType, TupleType, WasmContext, f32, f64, i32, i64, ptr, u16, u32, u8, wstring } from '@vscode/wasm-component-model';
 import { FixedLinearMemory, LinearMemory, Memory } from './memory';
 
 type Header = {
@@ -88,7 +88,7 @@ export class ParamTransfer {
 	}
 
 	public run(): void {
-		let flatTypes = this.signature.paramFlatTypes;
+		let flatTypes = this.signature.paramTupleType.flatTypes;
 		let params: (number | bigint)[] = [];
 		if (flatTypes.length > FunctionType.MAX_FLAT_PARAMS) {
 			const ptr = this.params[0] as number;
@@ -101,7 +101,7 @@ export class ParamTransfer {
 		} else {
 			params = this.params.slice(0);
 		}
-		if (this.signature.returnType !== undefined && this.signature.returnFlatTypes.length > FunctionType.MAX_FLAT_RESULTS) {
+		if (this.signature.returnType !== undefined && this.signature.returnType.flatTypes.length > FunctionType.MAX_FLAT_RESULTS) {
 			// We currently only support 'lower' mode for results > MAX_FLAT_RESULTS.
 			if (params.length !== flatTypes.length + 1) {
 				throw new Error(`Invalid number of parameters. Received ${params.length} but expected ${flatTypes.length + 1}`);
@@ -110,21 +110,21 @@ export class ParamTransfer {
 			const size = this.signature.returnType.size;
 			const dest_ptr = this.paramMemory.alloc(alignment, size);
 			params[params.length - 1] = dest_ptr;
-			flatTypes = flatTypes.concat(this.signature.returnFlatTypes);
+			flatTypes = flatTypes.concat(this.signature.returnType.flatTypes);
 		}
 		for (const [index, param] of params.entries()) {
 			const flatType = flatTypes[index];
 			switch (flatType) {
-				case WasmTypeKind.i32:
+				case i32:
 					this.paramMemory.view.setInt32(this.paramMemory.alloc(Alignment.word, 4), param as number);
 					break;
-				case WasmTypeKind.f32:
+				case f32:
 					this.paramMemory.view.setFloat32(this.paramMemory.alloc(Alignment.word, 4), param as number);
 					break;
-				case WasmTypeKind.f64:
+				case f64:
 					this.paramMemory.view.setFloat64(this.paramMemory.alloc(Alignment.doubleWord, 8), param as number);
 					break;
-				case WasmTypeKind.i64:
+				case i64:
 					this.paramMemory.view.setBigInt64(this.paramMemory.alloc(Alignment.doubleWord, 8), param as bigint);
 					break;
 			}
@@ -148,7 +148,7 @@ export class ParamAndDataTransfer implements ComponentModelTypeVisitor {
 		this.dataMemory = dataMemory;
 		this.context = context;
 		this.index = 0;
-		const flatTypes = this.signature.paramFlatTypes;
+		const flatTypes = this.signature.paramTupleType.flatTypes;
 		if (flatTypes.length > FunctionType.MAX_FLAT_PARAMS) {
 			// const ptr = params[0] as number;
 			this.params = [];
@@ -301,29 +301,29 @@ export class ParamRestore {
 		const params: (number | bigint)[] = [];
 		const view = this.paramMemory.view;
 		let [ptr, ] = Header.getParams(this.paramMemory.view);
-		const flatTypes = this.signature.paramFlatTypes;
+		const flatTypes = this.signature.paramTupleType.flatTypes;
 		if (flatTypes.length > FunctionType.MAX_FLAT_PARAMS) {
 			ptr = Memory.align(ptr, Alignment.word);
 			params.push(view.getInt32(ptr));
 		} else {
 			for (const flatType of flatTypes) {
 				switch (flatType) {
-					case WasmTypeKind.i32:
+					case i32:
 						ptr = Memory.align(ptr, Alignment.word);
 						params.push(view.getInt32(ptr));
 						ptr += 4;
 						break;
-					case WasmTypeKind.f32:
+					case f32:
 						ptr = Memory.align(ptr, Alignment.word);
 						params.push(view.getFloat32(ptr));
 						ptr += 4;
 						break;
-					case WasmTypeKind.f64:
+					case f64:
 						ptr = Memory.align(ptr, Alignment.doubleWord);
 						view.getFloat64(ptr);
 						ptr += 8;
 						break;
-					case WasmTypeKind.i64:
+					case i64:
 						ptr = Memory.align(ptr, Alignment.doubleWord);
 						view.getBigInt64(ptr);
 						ptr += 8;
@@ -331,7 +331,7 @@ export class ParamRestore {
 				}
 			}
 		}
-		if (this.signature.returnType !== undefined && this.signature.returnFlatTypes.length > FunctionType.MAX_FLAT_RESULTS) {
+		if (this.signature.returnType !== undefined && this.signature.returnType.flatTypes.length > FunctionType.MAX_FLAT_RESULTS) {
 			ptr = Memory.align(ptr, Alignment.word);
 			params.push(view.getInt32(ptr));
 			ptr += 4;

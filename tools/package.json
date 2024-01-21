@@ -18,7 +18,7 @@
 	},
 	"homepage": "https://github.com/microsoft/vscode-wasm#readme",
 	"scripts": {
-		"clean": "node ../node_modules/rimraf/bin.js lib",
+		"clean": "node ../node_modules/.bin/rimraf lib",
 		"compile": "node ../node_modules/typescript/lib/tsc.js -b ./tsconfig.json",
 		"watch": "node ../node_modules/typescript/lib/tsc.js -b ./tsconfig.watch.json -w",
 		"lint": "node ../node_modules/eslint/bin/eslint.js --ext ts src"

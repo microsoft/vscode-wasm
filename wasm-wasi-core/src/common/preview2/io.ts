@@ -17,11 +17,11 @@ export class Pollable extends SharedObject implements io.Poll.Pollable {
 		this.buffer = new Int32Array(this.memory().buffer, this.ptr, 1);
 	}
 
-	public get __handle(): ResourceHandle {
+	public get $handle(): ResourceHandle {
 		return this.ptr;
 	}
 
-	public set __handle(_value: ResourceHandle) {
+	public set $handle(_value: ResourceHandle) {
 		throw new Error('Pollable handles are immutable.');
 	}
 
@@ -85,7 +85,7 @@ export class PollableList extends SharedObject {
 			if (length > 0) {
 				let location = this.ptr + PollableList.RecordInfo.fields.elements.offset;
 				for (const value of locationOrValues) {
-					ptr.store(mem, location, typeof value === 'number' ? value : value.handle(), SharedObject.Context);
+					ptr.store(mem, location, typeof value === 'number' ? value : value.$handle, SharedObject.Context);
 					location += ptr.size;
 				}
 			}
@@ -99,7 +99,7 @@ export class PollableList extends SharedObject {
 		return this.access.length;
 	}
 
-	public $handle(): ResourceHandle {
+	public get $handle(): ResourceHandle {
 		return this.ptr;
 	}
 

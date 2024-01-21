@@ -23,7 +23,7 @@
 		]
 	},
 	"scripts": {
-		"clean": "node ../../node_modules/rimraf/bin.js out",
+		"clean": "node ../../node_modules/.bin/rimraf out",
 		"compile:ts": "node ../../node_modules/typescript/lib/tsc.js -b tsconfig.json",
 		"watch:ts": "node ../../node_modules/typescript/lib/tsc.js -b tsconfig.json -w",
 		"build": "npm run compile:ts && npm run build:cpp && npm run build:wasi",

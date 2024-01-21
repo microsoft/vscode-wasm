@@ -5,10 +5,10 @@
 import RAL from '../ral';
 
 import { clocks } from '@vscode/wasi';
-import { i32, i64, ptr, u64 } from '@vscode/wasm-component-model';
+import { u64 } from '@vscode/wasm-component-model';
 import { Pollable } from './io';
 
-function createMonotonicClock(): clocks.MonotonicClock {
+export function createMonotonicClock(): clocks.MonotonicClock {
 	return {
 		now: () => {
 			return RAL().clock.monotonic();
@@ -16,11 +16,11 @@ function createMonotonicClock(): clocks.MonotonicClock {
 		resolution: () => {
 			return 1n;
 		},
-		subscribeDuration: (when: u64) => {
+		subscribeDuration: (_when: u64) => {
 			const pollable = new Pollable();
 			return pollable;
 		},
-		subscribeInstant: (when : u64) => {
+		subscribeInstant: (_when : u64) => {
 			const pollable = new Pollable();
 			return pollable;
 		}
@@ -28,15 +28,14 @@ function createMonotonicClock(): clocks.MonotonicClock {
 }
 
 
-const DateTime = clocks.WallClock.$.Datetime;
-function createWallClock(): clocks.WallClock._.WasmInterface {
+export function createWallClock(): clocks.WallClock {
 	return {
-		now: (result: ptr<clocks.WallClock.Datetime>) => {
-			const value: i64 = RAL().clock.monotonic();
-
+		now: () => {
+			// const value: i64 = RAL().clock.monotonic();
+			return { seconds: 0n, nanoseconds: 0 };
 		},
-		resolution: (result: ptr<clocks.WallClock.Datetime>) => {
-			return 1n;
+		resolution: () => {
+			return { seconds: 0n, nanoseconds: 1 };
 		}
 	};
 }

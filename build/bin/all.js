@@ -13,7 +13,7 @@ const child_process = require('child_process');
 const root = path.dirname(path.dirname(__dirname));
 const args = process.argv.slice(2);
 
-const folders = ['sync-api-common', 'sync-api-client', 'sync-api-service', 'sync-api-tests', 'wasi', 'wasm-component-model', 'wasm-wasi', 'wasm-wasi-core', 'webshell', 'tools', 'testbeds'];
+const folders = ['sync-api-common', 'sync-api-client', 'sync-api-service', 'sync-api-tests', 'wasi', 'wasm-component-model', 'wasm-component-model-std', 'wasm-wasi', 'wasm-wasi-core', 'webshell', 'tools', 'testbeds'];
 
 function main() {
 	// When we install in a package pipeline then we don't want to call install in

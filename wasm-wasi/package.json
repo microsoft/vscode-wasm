@@ -42,7 +42,7 @@
 		"compile": "node ../node_modules/typescript/lib/tsc.js -b ./tsconfig.json",
 		"compile:publish": "node ../node_modules/typescript/lib/tsc.js -b ./tsconfig.publish.json",
 		"watch": "node ../node_modules/typescript/lib/tsc.js -b ./tsconfig.watch.json -w",
-		"clean": "node ../node_modules/rimraf/bin.js lib",
+		"clean": "node ../node_modules/.bin/rimraf lib",
 		"lint": "node ../node_modules/eslint/bin/eslint.js --ext ts src",
 		"all": "npm run clean && npm run compile && npm run lint",
 		"all:publish": "git clean -xfd . && npm install && npm run update:version && npm run compile:publish && npm run lint",
