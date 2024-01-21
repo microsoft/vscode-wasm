@@ -60,6 +60,44 @@
                     ]
                 }
             ]
+        },
+        {
+            "language": "typescript",
+            "source": [
+                "const sbuffer = new SharedArrayBuffer(1024);\nconst view = new DataView(sbuffer);\nconst p = { a: 305419896, b: 305419896, c: 305419896, d: 305419896 };\nconst start = Date.now();\nfor (let i = 0; i < 10000000; i++) {\n\tview.setUint32(0, p.a);\n\tview.setUint32(4, p.b);\n\tview.setUint32(8, p.c);\n\tview.setUint32(12, p.d);\n}\nconsole.log(Date.now() - start);"
+            ],
+            "outputs": [
+                {
+                    "items": [
+                        {
+                            "mime": "application/vnd.code.notebook.stdout",
+                            "value": [
+                                "5021",
+                                ""
+                            ]
+                        }
+                    ]
+                }
+            ]
+        },
+        {
+            "language": "typescript",
+            "source": [
+                "const param = { a: 305419896, b: 305419896, c: 305419896, d: 305419896, e: 'dirk' };\nconst start2 = Date.now();\nfor (let i = 0; i < 10000000; i++) {\n\tJSON.stringify(param);\n}\nconsole.log(Date.now() - start2);"
+            ],
+            "outputs": [
+                {
+                    "items": [
+                        {
+                            "mime": "application/vnd.code.notebook.stdout",
+                            "value": [
+                                "3655",
+                                ""
+                            ]
+                        }
+                    ]
+                }
+            ]
         }
     ]
 }

@@ -30,7 +30,7 @@
     ],
     "references": [
         {
-            "path": "../../common/tsconfig.watch.json"
+            "path": "../tsconfig.watch.json"
         },
         {
             "path": "../../common/test/tsconfig.watch.json"

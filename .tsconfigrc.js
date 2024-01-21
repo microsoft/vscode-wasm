@@ -273,9 +273,14 @@ const wasm_component_model_std = {
 			references: [ '..' ]
 		},
 		{
+			path: './src/desktop',
+			extends: [ node ],
+			references: [ '../common' ]
+		},
+		{
 			path: './src/desktop/test',
 			extends: [ node, testMixin ],
-			references: [ '../../common', '../../common/test' ]
+			references: [ '..', '../../common/test' ]
 		}
 	],
 	references: [

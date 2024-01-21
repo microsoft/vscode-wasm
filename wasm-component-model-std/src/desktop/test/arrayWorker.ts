@@ -8,7 +8,7 @@ import { parentPort } from 'node:worker_threads';
 import { float64, ptr } from '@vscode/wasm-component-model';
 
 import { SArray } from '../../common/sarray';
-import { MessageConnection } from './messageConnection';
+import { MessageConnection } from '../connection';
 import { Notifications, Operations, Requests, ServerNotifications } from './messages';
 import { SharedObject } from '../../common/sobject';
 

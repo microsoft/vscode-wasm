@@ -29,7 +29,7 @@
     ],
     "references": [
         {
-            "path": "../../common/tsconfig.publish.json"
+            "path": "../tsconfig.publish.json"
         },
         {
             "path": "../../common/test/tsconfig.publish.json"

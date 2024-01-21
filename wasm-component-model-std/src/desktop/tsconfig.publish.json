@@ -1,9 +1,5 @@
 {
     "compilerOptions": {
-        "types": [
-            "node",
-            "mocha"
-        ],
         "module": "Node16",
         "moduleResolution": "Node16",
         "target": "es2022",
@@ -11,28 +7,29 @@
             "es2022"
         ],
         "rootDir": ".",
+        "types": [
+            "node"
+        ],
         "strict": true,
         "noImplicitAny": true,
         "noImplicitReturns": true,
         "noImplicitThis": true,
         "declaration": true,
         "stripInternal": true,
-        "sourceMap": true,
+        "sourceMap": false,
         "noUnusedLocals": true,
         "noUnusedParameters": true,
-        "outDir": "../../../lib/desktop/test",
-        "tsBuildInfoFile": "../../../lib/desktop/test/compile.tsbuildInfo",
-        "incremental": true
+        "outDir": "../../lib/desktop",
+        "tsBuildInfoFile": "../../lib/desktop/publish.tsbuildInfo",
+        "incremental": true,
+        "composite": true
     },
     "include": [
         "."
     ],
     "references": [
         {
-            "path": "../tsconfig.json"
-        },
-        {
-            "path": "../../common/test/tsconfig.json"
+            "path": "../common/tsconfig.publish.json"
         }
     ]
 }

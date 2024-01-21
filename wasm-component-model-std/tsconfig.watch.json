@@ -15,6 +15,9 @@
             "path": "./src/common/test/tsconfig.watch.json"
         },
         {
+            "path": "./src/desktop/tsconfig.watch.json"
+        },
+        {
             "path": "./src/desktop/test/tsconfig.watch.json"
         }
     ]

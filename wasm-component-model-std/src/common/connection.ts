@@ -105,7 +105,7 @@ type _HandleNotificationSignatures<Notifications extends _NotificationType> = Un
 
 type HandleNotificationSignatures<Notifications extends _NotificationType | undefined> = [Notifications] extends [_NotificationType] ? _HandleNotificationSignatures<Notifications> : undefined;
 
-export abstract class BaseMessageConnection<Requests extends _RequestType | undefined, Notifications extends _NotificationType | undefined, RequestHandlers extends _RequestType | undefined = undefined, NotificationHandlers extends _NotificationType | undefined = undefined, TLI = unknown> {
+export abstract class BaseConnection<Requests extends _RequestType | undefined, Notifications extends _NotificationType | undefined, RequestHandlers extends _RequestType | undefined = undefined, NotificationHandlers extends _NotificationType | undefined = undefined, TLI = unknown> {
 
 	private id: number;
 	private readonly responsePromises: Map<number, ResponsePromise>;
@@ -215,7 +215,7 @@ export abstract class BaseMessageConnection<Requests extends _RequestType | unde
 	}
 }
 
-export namespace BaseMessageConnection {
+export namespace BaseConnection {
 	export type MessageType  = _MessageType;
 	export type RequestType = _RequestType;
 	export type NotificationType = _NotificationType;
