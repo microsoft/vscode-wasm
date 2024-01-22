@@ -24,6 +24,26 @@
         {
             "language": "typescript",
             "source": [
+                "const ab = new ArrayBuffer(1024);\nconst ib = new Int32Array(ab, 256, 2);\nconsole.log(ib.byteOffset);\nconsole.log(ib.byteLength);"
+            ],
+            "outputs": [
+                {
+                    "items": [
+                        {
+                            "mime": "application/vnd.code.notebook.stdout",
+                            "value": [
+                                "256",
+                                "8",
+                                ""
+                            ]
+                        }
+                    ]
+                }
+            ]
+        },
+        {
+            "language": "typescript",
+            "source": [
                 "const buffer = new ArrayBuffer(4);\n\nconst array = new Uint32Array(buffer);\narray[0] = 305419896;\n\nconst bytes = new Uint8Array(buffer);\n\nfor (const byte of bytes) {\n\tconsole.log(byte.toString(16));\n}\n"
             ],
             "outputs": [

@@ -5,3 +5,4 @@
 
 export * from './sobject';
 export * from './sarray';
+export * from './connection';
