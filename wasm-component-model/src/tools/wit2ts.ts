@@ -2679,9 +2679,9 @@ namespace ResourceEmitter {
 			const resourceName = nameProvider.asTypeName(this.resource);
 			const typeParam = `${this.getPackageQualifier()}.${this.getTypeQualifier()}['${methodName}']`;
 			if (params.length === 0) {
-				code.push(`${resourceName}.addMethod('${methodName}', new $wcm.${this.getMetaModelType()}<${typeParam}>('${this.method.name}', [], ${result}));`);
+				code.push(`${resourceName}.addCallable('${methodName}', new $wcm.${this.getMetaModelType()}<${typeParam}>('${this.method.name}', [], ${result}));`);
 			} else {
-				code.push(`${resourceName}.addMethod('${methodName}', new $wcm.${this.getMetaModelType()}<${typeParam}>('${this.method.name}', [`);
+				code.push(`${resourceName}.addCallable('${methodName}', new $wcm.${this.getMetaModelType()}<${typeParam}>('${this.method.name}', [`);
 				code.increaseIndent();
 				for (const [name, type] of params) {
 					code.push(`['${name}', ${type}],`);

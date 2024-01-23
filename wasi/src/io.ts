@@ -412,7 +412,7 @@ export namespace io {
 	export namespace Error.$ {
 		export const Error = new $wcm.ResourceType<io.Error.Error>('error', 'wasi:io/error/error');
 		export const Error_Handle = new $wcm.ResourceHandleType('error');
-		Error.addMethod('toDebugString', new $wcm.MethodType<io.Error.Error.Interface['toDebugString']>('[method]error.to-debug-string', [
+		Error.addCallable('toDebugString', new $wcm.MethodType<io.Error.Error.Interface['toDebugString']>('[method]error.to-debug-string', [
 			['self', new $wcm.BorrowType<io.Error.Error>(Error)],
 		], $wcm.wstring));
 	}
@@ -472,10 +472,10 @@ export namespace io {
 	export namespace Poll.$ {
 		export const Pollable = new $wcm.ResourceType<io.Poll.Pollable>('pollable', 'wasi:io/poll/pollable');
 		export const Pollable_Handle = new $wcm.ResourceHandleType('pollable');
-		Pollable.addMethod('ready', new $wcm.MethodType<io.Poll.Pollable.Interface['ready']>('[method]pollable.ready', [
+		Pollable.addCallable('ready', new $wcm.MethodType<io.Poll.Pollable.Interface['ready']>('[method]pollable.ready', [
 			['self', new $wcm.BorrowType<io.Poll.Pollable>(Pollable)],
 		], $wcm.bool));
-		Pollable.addMethod('block', new $wcm.MethodType<io.Poll.Pollable.Interface['block']>('[method]pollable.block', [
+		Pollable.addCallable('block', new $wcm.MethodType<io.Poll.Pollable.Interface['block']>('[method]pollable.block', [
 			['self', new $wcm.BorrowType<io.Poll.Pollable>(Pollable)],
 		], undefined));
 		export const poll = new $wcm.FunctionType<io.Poll.poll>('poll',[
@@ -550,59 +550,59 @@ export namespace io {
 		export const InputStream_Handle = new $wcm.ResourceHandleType('input-stream');
 		export const OutputStream = new $wcm.ResourceType<io.Streams.OutputStream>('output-stream', 'wasi:io/streams/output-stream');
 		export const OutputStream_Handle = new $wcm.ResourceHandleType('output-stream');
-		InputStream.addMethod('read', new $wcm.MethodType<io.Streams.InputStream.Interface['read']>('[method]input-stream.read', [
+		InputStream.addCallable('read', new $wcm.MethodType<io.Streams.InputStream.Interface['read']>('[method]input-stream.read', [
 			['self', new $wcm.BorrowType<io.Streams.InputStream>(InputStream)],
 			['len', $wcm.u64],
 		], new $wcm.ResultType<Uint8Array, io.Streams.StreamError>(new $wcm.Uint8ArrayType(), StreamError)));
-		InputStream.addMethod('blockingRead', new $wcm.MethodType<io.Streams.InputStream.Interface['blockingRead']>('[method]input-stream.blocking-read', [
+		InputStream.addCallable('blockingRead', new $wcm.MethodType<io.Streams.InputStream.Interface['blockingRead']>('[method]input-stream.blocking-read', [
 			['self', new $wcm.BorrowType<io.Streams.InputStream>(InputStream)],
 			['len', $wcm.u64],
 		], new $wcm.ResultType<Uint8Array, io.Streams.StreamError>(new $wcm.Uint8ArrayType(), StreamError)));
-		InputStream.addMethod('skip', new $wcm.MethodType<io.Streams.InputStream.Interface['skip']>('[method]input-stream.skip', [
+		InputStream.addCallable('skip', new $wcm.MethodType<io.Streams.InputStream.Interface['skip']>('[method]input-stream.skip', [
 			['self', new $wcm.BorrowType<io.Streams.InputStream>(InputStream)],
 			['len', $wcm.u64],
 		], new $wcm.ResultType<u64, io.Streams.StreamError>($wcm.u64, StreamError)));
-		InputStream.addMethod('blockingSkip', new $wcm.MethodType<io.Streams.InputStream.Interface['blockingSkip']>('[method]input-stream.blocking-skip', [
+		InputStream.addCallable('blockingSkip', new $wcm.MethodType<io.Streams.InputStream.Interface['blockingSkip']>('[method]input-stream.blocking-skip', [
 			['self', new $wcm.BorrowType<io.Streams.InputStream>(InputStream)],
 			['len', $wcm.u64],
 		], new $wcm.ResultType<u64, io.Streams.StreamError>($wcm.u64, StreamError)));
-		InputStream.addMethod('subscribe', new $wcm.MethodType<io.Streams.InputStream.Interface['subscribe']>('[method]input-stream.subscribe', [
+		InputStream.addCallable('subscribe', new $wcm.MethodType<io.Streams.InputStream.Interface['subscribe']>('[method]input-stream.subscribe', [
 			['self', new $wcm.BorrowType<io.Streams.InputStream>(InputStream)],
 		], new $wcm.OwnType<io.Streams.Pollable>(Pollable)));
-		OutputStream.addMethod('checkWrite', new $wcm.MethodType<io.Streams.OutputStream.Interface['checkWrite']>('[method]output-stream.check-write', [
+		OutputStream.addCallable('checkWrite', new $wcm.MethodType<io.Streams.OutputStream.Interface['checkWrite']>('[method]output-stream.check-write', [
 			['self', new $wcm.BorrowType<io.Streams.OutputStream>(OutputStream)],
 		], new $wcm.ResultType<u64, io.Streams.StreamError>($wcm.u64, StreamError)));
-		OutputStream.addMethod('write', new $wcm.MethodType<io.Streams.OutputStream.Interface['write']>('[method]output-stream.write', [
+		OutputStream.addCallable('write', new $wcm.MethodType<io.Streams.OutputStream.Interface['write']>('[method]output-stream.write', [
 			['self', new $wcm.BorrowType<io.Streams.OutputStream>(OutputStream)],
 			['contents', new $wcm.Uint8ArrayType()],
 		], new $wcm.ResultType<void, io.Streams.StreamError>(undefined, StreamError)));
-		OutputStream.addMethod('blockingWriteAndFlush', new $wcm.MethodType<io.Streams.OutputStream.Interface['blockingWriteAndFlush']>('[method]output-stream.blocking-write-and-flush', [
+		OutputStream.addCallable('blockingWriteAndFlush', new $wcm.MethodType<io.Streams.OutputStream.Interface['blockingWriteAndFlush']>('[method]output-stream.blocking-write-and-flush', [
 			['self', new $wcm.BorrowType<io.Streams.OutputStream>(OutputStream)],
 			['contents', new $wcm.Uint8ArrayType()],
 		], new $wcm.ResultType<void, io.Streams.StreamError>(undefined, StreamError)));
-		OutputStream.addMethod('flush', new $wcm.MethodType<io.Streams.OutputStream.Interface['flush']>('[method]output-stream.flush', [
+		OutputStream.addCallable('flush', new $wcm.MethodType<io.Streams.OutputStream.Interface['flush']>('[method]output-stream.flush', [
 			['self', new $wcm.BorrowType<io.Streams.OutputStream>(OutputStream)],
 		], new $wcm.ResultType<void, io.Streams.StreamError>(undefined, StreamError)));
-		OutputStream.addMethod('blockingFlush', new $wcm.MethodType<io.Streams.OutputStream.Interface['blockingFlush']>('[method]output-stream.blocking-flush', [
+		OutputStream.addCallable('blockingFlush', new $wcm.MethodType<io.Streams.OutputStream.Interface['blockingFlush']>('[method]output-stream.blocking-flush', [
 			['self', new $wcm.BorrowType<io.Streams.OutputStream>(OutputStream)],
 		], new $wcm.ResultType<void, io.Streams.StreamError>(undefined, StreamError)));
-		OutputStream.addMethod('subscribe', new $wcm.MethodType<io.Streams.OutputStream.Interface['subscribe']>('[method]output-stream.subscribe', [
+		OutputStream.addCallable('subscribe', new $wcm.MethodType<io.Streams.OutputStream.Interface['subscribe']>('[method]output-stream.subscribe', [
 			['self', new $wcm.BorrowType<io.Streams.OutputStream>(OutputStream)],
 		], new $wcm.OwnType<io.Streams.Pollable>(Pollable)));
-		OutputStream.addMethod('writeZeroes', new $wcm.MethodType<io.Streams.OutputStream.Interface['writeZeroes']>('[method]output-stream.write-zeroes', [
+		OutputStream.addCallable('writeZeroes', new $wcm.MethodType<io.Streams.OutputStream.Interface['writeZeroes']>('[method]output-stream.write-zeroes', [
 			['self', new $wcm.BorrowType<io.Streams.OutputStream>(OutputStream)],
 			['len', $wcm.u64],
 		], new $wcm.ResultType<void, io.Streams.StreamError>(undefined, StreamError)));
-		OutputStream.addMethod('blockingWriteZeroesAndFlush', new $wcm.MethodType<io.Streams.OutputStream.Interface['blockingWriteZeroesAndFlush']>('[method]output-stream.blocking-write-zeroes-and-flush', [
+		OutputStream.addCallable('blockingWriteZeroesAndFlush', new $wcm.MethodType<io.Streams.OutputStream.Interface['blockingWriteZeroesAndFlush']>('[method]output-stream.blocking-write-zeroes-and-flush', [
 			['self', new $wcm.BorrowType<io.Streams.OutputStream>(OutputStream)],
 			['len', $wcm.u64],
 		], new $wcm.ResultType<void, io.Streams.StreamError>(undefined, StreamError)));
-		OutputStream.addMethod('splice', new $wcm.MethodType<io.Streams.OutputStream.Interface['splice']>('[method]output-stream.splice', [
+		OutputStream.addCallable('splice', new $wcm.MethodType<io.Streams.OutputStream.Interface['splice']>('[method]output-stream.splice', [
 			['self', new $wcm.BorrowType<io.Streams.OutputStream>(OutputStream)],
 			['src', new $wcm.BorrowType<io.Streams.InputStream>(InputStream)],
 			['len', $wcm.u64],
 		], new $wcm.ResultType<u64, io.Streams.StreamError>($wcm.u64, StreamError)));
-		OutputStream.addMethod('blockingSplice', new $wcm.MethodType<io.Streams.OutputStream.Interface['blockingSplice']>('[method]output-stream.blocking-splice', [
+		OutputStream.addCallable('blockingSplice', new $wcm.MethodType<io.Streams.OutputStream.Interface['blockingSplice']>('[method]output-stream.blocking-splice', [
 			['self', new $wcm.BorrowType<io.Streams.OutputStream>(OutputStream)],
 			['src', new $wcm.BorrowType<io.Streams.InputStream>(InputStream)],
 			['len', $wcm.u64],

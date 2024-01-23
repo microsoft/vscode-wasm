@@ -2570,11 +2570,11 @@ export class ResourceType<T extends JInterface = JInterface> implements Componen
 		this.methods = new Map();
 	}
 
-	public addMethod(jsName: string, func: ResourceCallable): void {
+	public addCallable(jsName: string, func: ResourceCallable): void {
 		this.methods.set(jsName, func);
 	}
 
-	public getMethod(jsName: string): ResourceCallable {
+	public getCallable(jsName: string): ResourceCallable {
 		const result = this.methods.get(jsName);
 		if (result === undefined) {
 			throw new ComponentModelError(`Method '${jsName}' not found on resource '${this.witName}'.`);

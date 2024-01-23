@@ -1308,10 +1308,10 @@ export namespace sockets {
 		export const IpAddress = sockets.Network.$.IpAddress;
 		export const ResolveAddressStream = new $wcm.ResourceType<sockets.IpNameLookup.ResolveAddressStream>('resolve-address-stream', 'wasi:sockets/ip-name-lookup/resolve-address-stream');
 		export const ResolveAddressStream_Handle = new $wcm.ResourceHandleType('resolve-address-stream');
-		ResolveAddressStream.addMethod('resolveNextAddress', new $wcm.MethodType<sockets.IpNameLookup.ResolveAddressStream.Interface['resolveNextAddress']>('[method]resolve-address-stream.resolve-next-address', [
+		ResolveAddressStream.addCallable('resolveNextAddress', new $wcm.MethodType<sockets.IpNameLookup.ResolveAddressStream.Interface['resolveNextAddress']>('[method]resolve-address-stream.resolve-next-address', [
 			['self', new $wcm.BorrowType<sockets.IpNameLookup.ResolveAddressStream>(ResolveAddressStream)],
 		], new $wcm.ResultType<option<sockets.IpNameLookup.IpAddress>, sockets.IpNameLookup.ErrorCode>(new $wcm.OptionType<sockets.IpNameLookup.IpAddress>(IpAddress), ErrorCode)));
-		ResolveAddressStream.addMethod('subscribe', new $wcm.MethodType<sockets.IpNameLookup.ResolveAddressStream.Interface['subscribe']>('[method]resolve-address-stream.subscribe', [
+		ResolveAddressStream.addCallable('subscribe', new $wcm.MethodType<sockets.IpNameLookup.ResolveAddressStream.Interface['subscribe']>('[method]resolve-address-stream.subscribe', [
 			['self', new $wcm.BorrowType<sockets.IpNameLookup.ResolveAddressStream>(ResolveAddressStream)],
 		], new $wcm.OwnType<sockets.IpNameLookup.Pollable>(Pollable)));
 		export const resolveAddresses = new $wcm.FunctionType<sockets.IpNameLookup.resolveAddresses>('resolve-addresses',[
@@ -1395,100 +1395,100 @@ export namespace sockets {
 		export const ShutdownType = new $wcm.EnumType<sockets.Tcp.ShutdownType>(['receive', 'send', 'both']);
 		export const TcpSocket = new $wcm.ResourceType<sockets.Tcp.TcpSocket>('tcp-socket', 'wasi:sockets/tcp/tcp-socket');
 		export const TcpSocket_Handle = new $wcm.ResourceHandleType('tcp-socket');
-		TcpSocket.addMethod('startBind', new $wcm.MethodType<sockets.Tcp.TcpSocket.Interface['startBind']>('[method]tcp-socket.start-bind', [
+		TcpSocket.addCallable('startBind', new $wcm.MethodType<sockets.Tcp.TcpSocket.Interface['startBind']>('[method]tcp-socket.start-bind', [
 			['self', new $wcm.BorrowType<sockets.Tcp.TcpSocket>(TcpSocket)],
 			['network', new $wcm.BorrowType<sockets.Tcp.Network>(Network)],
 			['localAddress', IpSocketAddress],
 		], new $wcm.ResultType<void, sockets.Tcp.ErrorCode>(undefined, ErrorCode)));
-		TcpSocket.addMethod('finishBind', new $wcm.MethodType<sockets.Tcp.TcpSocket.Interface['finishBind']>('[method]tcp-socket.finish-bind', [
+		TcpSocket.addCallable('finishBind', new $wcm.MethodType<sockets.Tcp.TcpSocket.Interface['finishBind']>('[method]tcp-socket.finish-bind', [
 			['self', new $wcm.BorrowType<sockets.Tcp.TcpSocket>(TcpSocket)],
 		], new $wcm.ResultType<void, sockets.Tcp.ErrorCode>(undefined, ErrorCode)));
-		TcpSocket.addMethod('startConnect', new $wcm.MethodType<sockets.Tcp.TcpSocket.Interface['startConnect']>('[method]tcp-socket.start-connect', [
+		TcpSocket.addCallable('startConnect', new $wcm.MethodType<sockets.Tcp.TcpSocket.Interface['startConnect']>('[method]tcp-socket.start-connect', [
 			['self', new $wcm.BorrowType<sockets.Tcp.TcpSocket>(TcpSocket)],
 			['network', new $wcm.BorrowType<sockets.Tcp.Network>(Network)],
 			['remoteAddress', IpSocketAddress],
 		], new $wcm.ResultType<void, sockets.Tcp.ErrorCode>(undefined, ErrorCode)));
-		TcpSocket.addMethod('finishConnect', new $wcm.MethodType<sockets.Tcp.TcpSocket.Interface['finishConnect']>('[method]tcp-socket.finish-connect', [
+		TcpSocket.addCallable('finishConnect', new $wcm.MethodType<sockets.Tcp.TcpSocket.Interface['finishConnect']>('[method]tcp-socket.finish-connect', [
 			['self', new $wcm.BorrowType<sockets.Tcp.TcpSocket>(TcpSocket)],
 		], new $wcm.ResultType<[own<sockets.Tcp.InputStream>, own<sockets.Tcp.OutputStream>], sockets.Tcp.ErrorCode>(new $wcm.TupleType<[own<sockets.Tcp.InputStream>, own<sockets.Tcp.OutputStream>]>([new $wcm.OwnType<sockets.Tcp.InputStream>(InputStream), new $wcm.OwnType<sockets.Tcp.OutputStream>(OutputStream)]), ErrorCode)));
-		TcpSocket.addMethod('startListen', new $wcm.MethodType<sockets.Tcp.TcpSocket.Interface['startListen']>('[method]tcp-socket.start-listen', [
+		TcpSocket.addCallable('startListen', new $wcm.MethodType<sockets.Tcp.TcpSocket.Interface['startListen']>('[method]tcp-socket.start-listen', [
 			['self', new $wcm.BorrowType<sockets.Tcp.TcpSocket>(TcpSocket)],
 		], new $wcm.ResultType<void, sockets.Tcp.ErrorCode>(undefined, ErrorCode)));
-		TcpSocket.addMethod('finishListen', new $wcm.MethodType<sockets.Tcp.TcpSocket.Interface['finishListen']>('[method]tcp-socket.finish-listen', [
+		TcpSocket.addCallable('finishListen', new $wcm.MethodType<sockets.Tcp.TcpSocket.Interface['finishListen']>('[method]tcp-socket.finish-listen', [
 			['self', new $wcm.BorrowType<sockets.Tcp.TcpSocket>(TcpSocket)],
 		], new $wcm.ResultType<void, sockets.Tcp.ErrorCode>(undefined, ErrorCode)));
-		TcpSocket.addMethod('accept', new $wcm.MethodType<sockets.Tcp.TcpSocket.Interface['accept']>('[method]tcp-socket.accept', [
+		TcpSocket.addCallable('accept', new $wcm.MethodType<sockets.Tcp.TcpSocket.Interface['accept']>('[method]tcp-socket.accept', [
 			['self', new $wcm.BorrowType<sockets.Tcp.TcpSocket>(TcpSocket)],
 		], new $wcm.ResultType<[own<sockets.Tcp.TcpSocket>, own<sockets.Tcp.InputStream>, own<sockets.Tcp.OutputStream>], sockets.Tcp.ErrorCode>(new $wcm.TupleType<[own<sockets.Tcp.TcpSocket>, own<sockets.Tcp.InputStream>, own<sockets.Tcp.OutputStream>]>([new $wcm.OwnType<sockets.Tcp.TcpSocket>(TcpSocket), new $wcm.OwnType<sockets.Tcp.InputStream>(InputStream), new $wcm.OwnType<sockets.Tcp.OutputStream>(OutputStream)]), ErrorCode)));
-		TcpSocket.addMethod('localAddress', new $wcm.MethodType<sockets.Tcp.TcpSocket.Interface['localAddress']>('[method]tcp-socket.local-address', [
+		TcpSocket.addCallable('localAddress', new $wcm.MethodType<sockets.Tcp.TcpSocket.Interface['localAddress']>('[method]tcp-socket.local-address', [
 			['self', new $wcm.BorrowType<sockets.Tcp.TcpSocket>(TcpSocket)],
 		], new $wcm.ResultType<sockets.Tcp.IpSocketAddress, sockets.Tcp.ErrorCode>(IpSocketAddress, ErrorCode)));
-		TcpSocket.addMethod('remoteAddress', new $wcm.MethodType<sockets.Tcp.TcpSocket.Interface['remoteAddress']>('[method]tcp-socket.remote-address', [
+		TcpSocket.addCallable('remoteAddress', new $wcm.MethodType<sockets.Tcp.TcpSocket.Interface['remoteAddress']>('[method]tcp-socket.remote-address', [
 			['self', new $wcm.BorrowType<sockets.Tcp.TcpSocket>(TcpSocket)],
 		], new $wcm.ResultType<sockets.Tcp.IpSocketAddress, sockets.Tcp.ErrorCode>(IpSocketAddress, ErrorCode)));
-		TcpSocket.addMethod('isListening', new $wcm.MethodType<sockets.Tcp.TcpSocket.Interface['isListening']>('[method]tcp-socket.is-listening', [
+		TcpSocket.addCallable('isListening', new $wcm.MethodType<sockets.Tcp.TcpSocket.Interface['isListening']>('[method]tcp-socket.is-listening', [
 			['self', new $wcm.BorrowType<sockets.Tcp.TcpSocket>(TcpSocket)],
 		], $wcm.bool));
-		TcpSocket.addMethod('addressFamily', new $wcm.MethodType<sockets.Tcp.TcpSocket.Interface['addressFamily']>('[method]tcp-socket.address-family', [
+		TcpSocket.addCallable('addressFamily', new $wcm.MethodType<sockets.Tcp.TcpSocket.Interface['addressFamily']>('[method]tcp-socket.address-family', [
 			['self', new $wcm.BorrowType<sockets.Tcp.TcpSocket>(TcpSocket)],
 		], IpAddressFamily));
-		TcpSocket.addMethod('setListenBacklogSize', new $wcm.MethodType<sockets.Tcp.TcpSocket.Interface['setListenBacklogSize']>('[method]tcp-socket.set-listen-backlog-size', [
+		TcpSocket.addCallable('setListenBacklogSize', new $wcm.MethodType<sockets.Tcp.TcpSocket.Interface['setListenBacklogSize']>('[method]tcp-socket.set-listen-backlog-size', [
 			['self', new $wcm.BorrowType<sockets.Tcp.TcpSocket>(TcpSocket)],
 			['value', $wcm.u64],
 		], new $wcm.ResultType<void, sockets.Tcp.ErrorCode>(undefined, ErrorCode)));
-		TcpSocket.addMethod('keepAliveEnabled', new $wcm.MethodType<sockets.Tcp.TcpSocket.Interface['keepAliveEnabled']>('[method]tcp-socket.keep-alive-enabled', [
+		TcpSocket.addCallable('keepAliveEnabled', new $wcm.MethodType<sockets.Tcp.TcpSocket.Interface['keepAliveEnabled']>('[method]tcp-socket.keep-alive-enabled', [
 			['self', new $wcm.BorrowType<sockets.Tcp.TcpSocket>(TcpSocket)],
 		], new $wcm.ResultType<boolean, sockets.Tcp.ErrorCode>($wcm.bool, ErrorCode)));
-		TcpSocket.addMethod('setKeepAliveEnabled', new $wcm.MethodType<sockets.Tcp.TcpSocket.Interface['setKeepAliveEnabled']>('[method]tcp-socket.set-keep-alive-enabled', [
+		TcpSocket.addCallable('setKeepAliveEnabled', new $wcm.MethodType<sockets.Tcp.TcpSocket.Interface['setKeepAliveEnabled']>('[method]tcp-socket.set-keep-alive-enabled', [
 			['self', new $wcm.BorrowType<sockets.Tcp.TcpSocket>(TcpSocket)],
 			['value', $wcm.bool],
 		], new $wcm.ResultType<void, sockets.Tcp.ErrorCode>(undefined, ErrorCode)));
-		TcpSocket.addMethod('keepAliveIdleTime', new $wcm.MethodType<sockets.Tcp.TcpSocket.Interface['keepAliveIdleTime']>('[method]tcp-socket.keep-alive-idle-time', [
+		TcpSocket.addCallable('keepAliveIdleTime', new $wcm.MethodType<sockets.Tcp.TcpSocket.Interface['keepAliveIdleTime']>('[method]tcp-socket.keep-alive-idle-time', [
 			['self', new $wcm.BorrowType<sockets.Tcp.TcpSocket>(TcpSocket)],
 		], new $wcm.ResultType<sockets.Tcp.Duration, sockets.Tcp.ErrorCode>(Duration, ErrorCode)));
-		TcpSocket.addMethod('setKeepAliveIdleTime', new $wcm.MethodType<sockets.Tcp.TcpSocket.Interface['setKeepAliveIdleTime']>('[method]tcp-socket.set-keep-alive-idle-time', [
+		TcpSocket.addCallable('setKeepAliveIdleTime', new $wcm.MethodType<sockets.Tcp.TcpSocket.Interface['setKeepAliveIdleTime']>('[method]tcp-socket.set-keep-alive-idle-time', [
 			['self', new $wcm.BorrowType<sockets.Tcp.TcpSocket>(TcpSocket)],
 			['value', Duration],
 		], new $wcm.ResultType<void, sockets.Tcp.ErrorCode>(undefined, ErrorCode)));
-		TcpSocket.addMethod('keepAliveInterval', new $wcm.MethodType<sockets.Tcp.TcpSocket.Interface['keepAliveInterval']>('[method]tcp-socket.keep-alive-interval', [
+		TcpSocket.addCallable('keepAliveInterval', new $wcm.MethodType<sockets.Tcp.TcpSocket.Interface['keepAliveInterval']>('[method]tcp-socket.keep-alive-interval', [
 			['self', new $wcm.BorrowType<sockets.Tcp.TcpSocket>(TcpSocket)],
 		], new $wcm.ResultType<sockets.Tcp.Duration, sockets.Tcp.ErrorCode>(Duration, ErrorCode)));
-		TcpSocket.addMethod('setKeepAliveInterval', new $wcm.MethodType<sockets.Tcp.TcpSocket.Interface['setKeepAliveInterval']>('[method]tcp-socket.set-keep-alive-interval', [
+		TcpSocket.addCallable('setKeepAliveInterval', new $wcm.MethodType<sockets.Tcp.TcpSocket.Interface['setKeepAliveInterval']>('[method]tcp-socket.set-keep-alive-interval', [
 			['self', new $wcm.BorrowType<sockets.Tcp.TcpSocket>(TcpSocket)],
 			['value', Duration],
 		], new $wcm.ResultType<void, sockets.Tcp.ErrorCode>(undefined, ErrorCode)));
-		TcpSocket.addMethod('keepAliveCount', new $wcm.MethodType<sockets.Tcp.TcpSocket.Interface['keepAliveCount']>('[method]tcp-socket.keep-alive-count', [
+		TcpSocket.addCallable('keepAliveCount', new $wcm.MethodType<sockets.Tcp.TcpSocket.Interface['keepAliveCount']>('[method]tcp-socket.keep-alive-count', [
 			['self', new $wcm.BorrowType<sockets.Tcp.TcpSocket>(TcpSocket)],
 		], new $wcm.ResultType<u32, sockets.Tcp.ErrorCode>($wcm.u32, ErrorCode)));
-		TcpSocket.addMethod('setKeepAliveCount', new $wcm.MethodType<sockets.Tcp.TcpSocket.Interface['setKeepAliveCount']>('[method]tcp-socket.set-keep-alive-count', [
+		TcpSocket.addCallable('setKeepAliveCount', new $wcm.MethodType<sockets.Tcp.TcpSocket.Interface['setKeepAliveCount']>('[method]tcp-socket.set-keep-alive-count', [
 			['self', new $wcm.BorrowType<sockets.Tcp.TcpSocket>(TcpSocket)],
 			['value', $wcm.u32],
 		], new $wcm.ResultType<void, sockets.Tcp.ErrorCode>(undefined, ErrorCode)));
-		TcpSocket.addMethod('hopLimit', new $wcm.MethodType<sockets.Tcp.TcpSocket.Interface['hopLimit']>('[method]tcp-socket.hop-limit', [
+		TcpSocket.addCallable('hopLimit', new $wcm.MethodType<sockets.Tcp.TcpSocket.Interface['hopLimit']>('[method]tcp-socket.hop-limit', [
 			['self', new $wcm.BorrowType<sockets.Tcp.TcpSocket>(TcpSocket)],
 		], new $wcm.ResultType<u8, sockets.Tcp.ErrorCode>($wcm.u8, ErrorCode)));
-		TcpSocket.addMethod('setHopLimit', new $wcm.MethodType<sockets.Tcp.TcpSocket.Interface['setHopLimit']>('[method]tcp-socket.set-hop-limit', [
+		TcpSocket.addCallable('setHopLimit', new $wcm.MethodType<sockets.Tcp.TcpSocket.Interface['setHopLimit']>('[method]tcp-socket.set-hop-limit', [
 			['self', new $wcm.BorrowType<sockets.Tcp.TcpSocket>(TcpSocket)],
 			['value', $wcm.u8],
 		], new $wcm.ResultType<void, sockets.Tcp.ErrorCode>(undefined, ErrorCode)));
-		TcpSocket.addMethod('receiveBufferSize', new $wcm.MethodType<sockets.Tcp.TcpSocket.Interface['receiveBufferSize']>('[method]tcp-socket.receive-buffer-size', [
+		TcpSocket.addCallable('receiveBufferSize', new $wcm.MethodType<sockets.Tcp.TcpSocket.Interface['receiveBufferSize']>('[method]tcp-socket.receive-buffer-size', [
 			['self', new $wcm.BorrowType<sockets.Tcp.TcpSocket>(TcpSocket)],
 		], new $wcm.ResultType<u64, sockets.Tcp.ErrorCode>($wcm.u64, ErrorCode)));
-		TcpSocket.addMethod('setReceiveBufferSize', new $wcm.MethodType<sockets.Tcp.TcpSocket.Interface['setReceiveBufferSize']>('[method]tcp-socket.set-receive-buffer-size', [
+		TcpSocket.addCallable('setReceiveBufferSize', new $wcm.MethodType<sockets.Tcp.TcpSocket.Interface['setReceiveBufferSize']>('[method]tcp-socket.set-receive-buffer-size', [
 			['self', new $wcm.BorrowType<sockets.Tcp.TcpSocket>(TcpSocket)],
 			['value', $wcm.u64],
 		], new $wcm.ResultType<void, sockets.Tcp.ErrorCode>(undefined, ErrorCode)));
-		TcpSocket.addMethod('sendBufferSize', new $wcm.MethodType<sockets.Tcp.TcpSocket.Interface['sendBufferSize']>('[method]tcp-socket.send-buffer-size', [
+		TcpSocket.addCallable('sendBufferSize', new $wcm.MethodType<sockets.Tcp.TcpSocket.Interface['sendBufferSize']>('[method]tcp-socket.send-buffer-size', [
 			['self', new $wcm.BorrowType<sockets.Tcp.TcpSocket>(TcpSocket)],
 		], new $wcm.ResultType<u64, sockets.Tcp.ErrorCode>($wcm.u64, ErrorCode)));
-		TcpSocket.addMethod('setSendBufferSize', new $wcm.MethodType<sockets.Tcp.TcpSocket.Interface['setSendBufferSize']>('[method]tcp-socket.set-send-buffer-size', [
+		TcpSocket.addCallable('setSendBufferSize', new $wcm.MethodType<sockets.Tcp.TcpSocket.Interface['setSendBufferSize']>('[method]tcp-socket.set-send-buffer-size', [
 			['self', new $wcm.BorrowType<sockets.Tcp.TcpSocket>(TcpSocket)],
 			['value', $wcm.u64],
 		], new $wcm.ResultType<void, sockets.Tcp.ErrorCode>(undefined, ErrorCode)));
-		TcpSocket.addMethod('subscribe', new $wcm.MethodType<sockets.Tcp.TcpSocket.Interface['subscribe']>('[method]tcp-socket.subscribe', [
+		TcpSocket.addCallable('subscribe', new $wcm.MethodType<sockets.Tcp.TcpSocket.Interface['subscribe']>('[method]tcp-socket.subscribe', [
 			['self', new $wcm.BorrowType<sockets.Tcp.TcpSocket>(TcpSocket)],
 		], new $wcm.OwnType<sockets.Tcp.Pollable>(Pollable)));
-		TcpSocket.addMethod('shutdown', new $wcm.MethodType<sockets.Tcp.TcpSocket.Interface['shutdown']>('[method]tcp-socket.shutdown', [
+		TcpSocket.addCallable('shutdown', new $wcm.MethodType<sockets.Tcp.TcpSocket.Interface['shutdown']>('[method]tcp-socket.shutdown', [
 			['self', new $wcm.BorrowType<sockets.Tcp.TcpSocket>(TcpSocket)],
 			['shutdownType', ShutdownType],
 		], new $wcm.ResultType<void, sockets.Tcp.ErrorCode>(undefined, ErrorCode)));
@@ -1744,66 +1744,66 @@ export namespace sockets {
 		export const IncomingDatagramStream_Handle = new $wcm.ResourceHandleType('incoming-datagram-stream');
 		export const OutgoingDatagramStream = new $wcm.ResourceType<sockets.Udp.OutgoingDatagramStream>('outgoing-datagram-stream', 'wasi:sockets/udp/outgoing-datagram-stream');
 		export const OutgoingDatagramStream_Handle = new $wcm.ResourceHandleType('outgoing-datagram-stream');
-		UdpSocket.addMethod('startBind', new $wcm.MethodType<sockets.Udp.UdpSocket.Interface['startBind']>('[method]udp-socket.start-bind', [
+		UdpSocket.addCallable('startBind', new $wcm.MethodType<sockets.Udp.UdpSocket.Interface['startBind']>('[method]udp-socket.start-bind', [
 			['self', new $wcm.BorrowType<sockets.Udp.UdpSocket>(UdpSocket)],
 			['network', new $wcm.BorrowType<sockets.Udp.Network>(Network)],
 			['localAddress', IpSocketAddress],
 		], new $wcm.ResultType<void, sockets.Udp.ErrorCode>(undefined, ErrorCode)));
-		UdpSocket.addMethod('finishBind', new $wcm.MethodType<sockets.Udp.UdpSocket.Interface['finishBind']>('[method]udp-socket.finish-bind', [
+		UdpSocket.addCallable('finishBind', new $wcm.MethodType<sockets.Udp.UdpSocket.Interface['finishBind']>('[method]udp-socket.finish-bind', [
 			['self', new $wcm.BorrowType<sockets.Udp.UdpSocket>(UdpSocket)],
 		], new $wcm.ResultType<void, sockets.Udp.ErrorCode>(undefined, ErrorCode)));
-		UdpSocket.addMethod('stream', new $wcm.MethodType<sockets.Udp.UdpSocket.Interface['stream']>('[method]udp-socket.stream', [
+		UdpSocket.addCallable('stream', new $wcm.MethodType<sockets.Udp.UdpSocket.Interface['stream']>('[method]udp-socket.stream', [
 			['self', new $wcm.BorrowType<sockets.Udp.UdpSocket>(UdpSocket)],
 			['remoteAddress', new $wcm.OptionType<sockets.Udp.IpSocketAddress>(IpSocketAddress)],
 		], new $wcm.ResultType<[own<sockets.Udp.IncomingDatagramStream>, own<sockets.Udp.OutgoingDatagramStream>], sockets.Udp.ErrorCode>(new $wcm.TupleType<[own<sockets.Udp.IncomingDatagramStream>, own<sockets.Udp.OutgoingDatagramStream>]>([new $wcm.OwnType<sockets.Udp.IncomingDatagramStream>(IncomingDatagramStream), new $wcm.OwnType<sockets.Udp.OutgoingDatagramStream>(OutgoingDatagramStream)]), ErrorCode)));
-		UdpSocket.addMethod('localAddress', new $wcm.MethodType<sockets.Udp.UdpSocket.Interface['localAddress']>('[method]udp-socket.local-address', [
+		UdpSocket.addCallable('localAddress', new $wcm.MethodType<sockets.Udp.UdpSocket.Interface['localAddress']>('[method]udp-socket.local-address', [
 			['self', new $wcm.BorrowType<sockets.Udp.UdpSocket>(UdpSocket)],
 		], new $wcm.ResultType<sockets.Udp.IpSocketAddress, sockets.Udp.ErrorCode>(IpSocketAddress, ErrorCode)));
-		UdpSocket.addMethod('remoteAddress', new $wcm.MethodType<sockets.Udp.UdpSocket.Interface['remoteAddress']>('[method]udp-socket.remote-address', [
+		UdpSocket.addCallable('remoteAddress', new $wcm.MethodType<sockets.Udp.UdpSocket.Interface['remoteAddress']>('[method]udp-socket.remote-address', [
 			['self', new $wcm.BorrowType<sockets.Udp.UdpSocket>(UdpSocket)],
 		], new $wcm.ResultType<sockets.Udp.IpSocketAddress, sockets.Udp.ErrorCode>(IpSocketAddress, ErrorCode)));
-		UdpSocket.addMethod('addressFamily', new $wcm.MethodType<sockets.Udp.UdpSocket.Interface['addressFamily']>('[method]udp-socket.address-family', [
+		UdpSocket.addCallable('addressFamily', new $wcm.MethodType<sockets.Udp.UdpSocket.Interface['addressFamily']>('[method]udp-socket.address-family', [
 			['self', new $wcm.BorrowType<sockets.Udp.UdpSocket>(UdpSocket)],
 		], IpAddressFamily));
-		UdpSocket.addMethod('unicastHopLimit', new $wcm.MethodType<sockets.Udp.UdpSocket.Interface['unicastHopLimit']>('[method]udp-socket.unicast-hop-limit', [
+		UdpSocket.addCallable('unicastHopLimit', new $wcm.MethodType<sockets.Udp.UdpSocket.Interface['unicastHopLimit']>('[method]udp-socket.unicast-hop-limit', [
 			['self', new $wcm.BorrowType<sockets.Udp.UdpSocket>(UdpSocket)],
 		], new $wcm.ResultType<u8, sockets.Udp.ErrorCode>($wcm.u8, ErrorCode)));
-		UdpSocket.addMethod('setUnicastHopLimit', new $wcm.MethodType<sockets.Udp.UdpSocket.Interface['setUnicastHopLimit']>('[method]udp-socket.set-unicast-hop-limit', [
+		UdpSocket.addCallable('setUnicastHopLimit', new $wcm.MethodType<sockets.Udp.UdpSocket.Interface['setUnicastHopLimit']>('[method]udp-socket.set-unicast-hop-limit', [
 			['self', new $wcm.BorrowType<sockets.Udp.UdpSocket>(UdpSocket)],
 			['value', $wcm.u8],
 		], new $wcm.ResultType<void, sockets.Udp.ErrorCode>(undefined, ErrorCode)));
-		UdpSocket.addMethod('receiveBufferSize', new $wcm.MethodType<sockets.Udp.UdpSocket.Interface['receiveBufferSize']>('[method]udp-socket.receive-buffer-size', [
+		UdpSocket.addCallable('receiveBufferSize', new $wcm.MethodType<sockets.Udp.UdpSocket.Interface['receiveBufferSize']>('[method]udp-socket.receive-buffer-size', [
 			['self', new $wcm.BorrowType<sockets.Udp.UdpSocket>(UdpSocket)],
 		], new $wcm.ResultType<u64, sockets.Udp.ErrorCode>($wcm.u64, ErrorCode)));
-		UdpSocket.addMethod('setReceiveBufferSize', new $wcm.MethodType<sockets.Udp.UdpSocket.Interface['setReceiveBufferSize']>('[method]udp-socket.set-receive-buffer-size', [
+		UdpSocket.addCallable('setReceiveBufferSize', new $wcm.MethodType<sockets.Udp.UdpSocket.Interface['setReceiveBufferSize']>('[method]udp-socket.set-receive-buffer-size', [
 			['self', new $wcm.BorrowType<sockets.Udp.UdpSocket>(UdpSocket)],
 			['value', $wcm.u64],
 		], new $wcm.ResultType<void, sockets.Udp.ErrorCode>(undefined, ErrorCode)));
-		UdpSocket.addMethod('sendBufferSize', new $wcm.MethodType<sockets.Udp.UdpSocket.Interface['sendBufferSize']>('[method]udp-socket.send-buffer-size', [
+		UdpSocket.addCallable('sendBufferSize', new $wcm.MethodType<sockets.Udp.UdpSocket.Interface['sendBufferSize']>('[method]udp-socket.send-buffer-size', [
 			['self', new $wcm.BorrowType<sockets.Udp.UdpSocket>(UdpSocket)],
 		], new $wcm.ResultType<u64, sockets.Udp.ErrorCode>($wcm.u64, ErrorCode)));
-		UdpSocket.addMethod('setSendBufferSize', new $wcm.MethodType<sockets.Udp.UdpSocket.Interface['setSendBufferSize']>('[method]udp-socket.set-send-buffer-size', [
+		UdpSocket.addCallable('setSendBufferSize', new $wcm.MethodType<sockets.Udp.UdpSocket.Interface['setSendBufferSize']>('[method]udp-socket.set-send-buffer-size', [
 			['self', new $wcm.BorrowType<sockets.Udp.UdpSocket>(UdpSocket)],
 			['value', $wcm.u64],
 		], new $wcm.ResultType<void, sockets.Udp.ErrorCode>(undefined, ErrorCode)));
-		UdpSocket.addMethod('subscribe', new $wcm.MethodType<sockets.Udp.UdpSocket.Interface['subscribe']>('[method]udp-socket.subscribe', [
+		UdpSocket.addCallable('subscribe', new $wcm.MethodType<sockets.Udp.UdpSocket.Interface['subscribe']>('[method]udp-socket.subscribe', [
 			['self', new $wcm.BorrowType<sockets.Udp.UdpSocket>(UdpSocket)],
 		], new $wcm.OwnType<sockets.Udp.Pollable>(Pollable)));
-		IncomingDatagramStream.addMethod('receive', new $wcm.MethodType<sockets.Udp.IncomingDatagramStream.Interface['receive']>('[method]incoming-datagram-stream.receive', [
+		IncomingDatagramStream.addCallable('receive', new $wcm.MethodType<sockets.Udp.IncomingDatagramStream.Interface['receive']>('[method]incoming-datagram-stream.receive', [
 			['self', new $wcm.BorrowType<sockets.Udp.IncomingDatagramStream>(IncomingDatagramStream)],
 			['maxResults', $wcm.u64],
 		], new $wcm.ResultType<sockets.Udp.IncomingDatagram[], sockets.Udp.ErrorCode>(new $wcm.ListType<sockets.Udp.IncomingDatagram>(IncomingDatagram), ErrorCode)));
-		IncomingDatagramStream.addMethod('subscribe', new $wcm.MethodType<sockets.Udp.IncomingDatagramStream.Interface['subscribe']>('[method]incoming-datagram-stream.subscribe', [
+		IncomingDatagramStream.addCallable('subscribe', new $wcm.MethodType<sockets.Udp.IncomingDatagramStream.Interface['subscribe']>('[method]incoming-datagram-stream.subscribe', [
 			['self', new $wcm.BorrowType<sockets.Udp.IncomingDatagramStream>(IncomingDatagramStream)],
 		], new $wcm.OwnType<sockets.Udp.Pollable>(Pollable)));
-		OutgoingDatagramStream.addMethod('checkSend', new $wcm.MethodType<sockets.Udp.OutgoingDatagramStream.Interface['checkSend']>('[method]outgoing-datagram-stream.check-send', [
+		OutgoingDatagramStream.addCallable('checkSend', new $wcm.MethodType<sockets.Udp.OutgoingDatagramStream.Interface['checkSend']>('[method]outgoing-datagram-stream.check-send', [
 			['self', new $wcm.BorrowType<sockets.Udp.OutgoingDatagramStream>(OutgoingDatagramStream)],
 		], new $wcm.ResultType<u64, sockets.Udp.ErrorCode>($wcm.u64, ErrorCode)));
-		OutgoingDatagramStream.addMethod('send', new $wcm.MethodType<sockets.Udp.OutgoingDatagramStream.Interface['send']>('[method]outgoing-datagram-stream.send', [
+		OutgoingDatagramStream.addCallable('send', new $wcm.MethodType<sockets.Udp.OutgoingDatagramStream.Interface['send']>('[method]outgoing-datagram-stream.send', [
 			['self', new $wcm.BorrowType<sockets.Udp.OutgoingDatagramStream>(OutgoingDatagramStream)],
 			['datagrams', new $wcm.ListType<sockets.Udp.OutgoingDatagram>(OutgoingDatagram)],
 		], new $wcm.ResultType<u64, sockets.Udp.ErrorCode>($wcm.u64, ErrorCode)));
-		OutgoingDatagramStream.addMethod('subscribe', new $wcm.MethodType<sockets.Udp.OutgoingDatagramStream.Interface['subscribe']>('[method]outgoing-datagram-stream.subscribe', [
+		OutgoingDatagramStream.addCallable('subscribe', new $wcm.MethodType<sockets.Udp.OutgoingDatagramStream.Interface['subscribe']>('[method]outgoing-datagram-stream.subscribe', [
 			['self', new $wcm.BorrowType<sockets.Udp.OutgoingDatagramStream>(OutgoingDatagramStream)],
 		], new $wcm.OwnType<sockets.Udp.Pollable>(Pollable)));
 	}
