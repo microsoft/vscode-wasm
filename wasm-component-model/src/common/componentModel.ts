@@ -35,93 +35,121 @@ export class Handle {
 	}
 }
 
-export class ResourceManager<T extends JInterface = JInterface> {
+export interface ResourceManager<T extends JInterface = JInterface> {
+	register(value: T): ResourceHandle;
+	getResource(resource: ResourceHandle): T;
+	getHandle(value: T): ResourceHandle;
+	managesHandle(resource: ResourceHandle): boolean;
+	managesResource(value: T): boolean;
+	unregister(resource: ResourceHandle): void;
+	reserve(): ResourceHandle;
+	use(resource: ResourceHandle, value: T): void;
+}
 
-	public readonly key: string;
+export namespace ResourceManager {
 
-	private readonly h2r: Map<ResourceHandle, T | undefined>;
-	private readonly r2h: Map<T, ResourceHandle>;
-	private handleCounter: ResourceHandle;
+	class Default<T extends JInterface = JInterface> {
 
-	constructor(key: string) {
-		this.key = key;
-		this.h2r = new Map();
-		this.r2h = new Map();
-		this.handleCounter = 1;
-	}
+		public readonly key: string;
 
-	public register(value: T): ResourceHandle {
-		if (value.$handle !== undefined) {
-			return value.$handle;
+		private readonly h2r: Map<ResourceHandle, T | undefined>;
+		private readonly r2h: Map<T, ResourceHandle>;
+		private handleCounter: ResourceHandle;
+
+		constructor(key: string) {
+			this.key = key;
+			this.h2r = new Map();
+			this.r2h = new Map();
+			this.handleCounter = 1;
 		}
-		const handle = this.handleCounter++;
-		this.h2r.set(handle, value);
-		this.r2h.set(value, handle);
-		value.$handle = handle;
-		return handle;
-	}
 
-	public getResource(resource: ResourceHandle): T {
-		const value = this.h2r.get(resource);
-		if (value === undefined) {
-			throw new ComponentModelError(`Unknown resource handle ${resource}`);
+		public register(value: T): ResourceHandle {
+			if (value.$handle !== undefined) {
+				return value.$handle;
+			}
+			const handle = this.handleCounter++;
+			this.h2r.set(handle, value);
+			this.r2h.set(value, handle);
+			value.$handle = handle;
+			return handle;
 		}
-		return value;
-	}
 
-	public getHandle(value: T): ResourceHandle {
-		const handle = this.r2h.get(value);
-		if (handle === undefined) {
-			throw new ComponentModelError(`Unknown resource ${JSON.stringify(value, undefined, 0)}`);
+		public getResource(resource: ResourceHandle): T {
+			const value = this.h2r.get(resource);
+			if (value === undefined) {
+				throw new ComponentModelError(`Unknown resource handle ${resource}`);
+			}
+			return value;
 		}
-		return handle;
-	}
 
-	public managesHandle(resource: ResourceHandle): boolean {
-		return this.h2r.has(resource);
-	}
-
-	public managesResource(value: T): boolean {
-		return this.r2h.has(value);
-	}
-
-	public unregister(resource: ResourceHandle): void {
-		this.h2r.delete(resource);
-	}
-
-	public reserve(): ResourceHandle {
-		const result = this.handleCounter++;
-		this.h2r.set(result, undefined);
-		return result;
-	}
-
-	public use(resource: ResourceHandle, value: T): void {
-		if (!this.h2r.has(resource)) {
-			throw new ComponentModelError(`Resource handle ${resource} is not reserved`);
+		public getHandle(value: T): ResourceHandle {
+			const handle = this.r2h.get(value);
+			if (handle === undefined) {
+				throw new ComponentModelError(`Unknown resource ${JSON.stringify(value, undefined, 0)}`);
+			}
+			return handle;
 		}
-		if (this.h2r.get(resource) !== undefined) {
-			throw new ComponentModelError(`Resource handle ${resource} is already in use`);
+
+		public managesHandle(resource: ResourceHandle): boolean {
+			return this.h2r.has(resource);
 		}
-		this.h2r.set(resource, value);
+
+		public managesResource(value: T): boolean {
+			return this.r2h.has(value);
+		}
+
+		public unregister(resource: ResourceHandle): void {
+			this.h2r.delete(resource);
+		}
+
+		public reserve(): ResourceHandle {
+			const result = this.handleCounter++;
+			this.h2r.set(result, undefined);
+			return result;
+		}
+
+		public use(resource: ResourceHandle, value: T): void {
+			if (!this.h2r.has(resource)) {
+				throw new ComponentModelError(`Resource handle ${resource} is not reserved`);
+			}
+			if (this.h2r.get(resource) !== undefined) {
+				throw new ComponentModelError(`Resource handle ${resource} is already in use`);
+			}
+			this.h2r.set(resource, value);
+		}
+	}
+
+	export function create<T extends JInterface>(key: string): ResourceManager<T> {
+		return new Default<T>(key);
 	}
 }
 
-export class ResourceManagers {
-	private readonly managers: Map<string, ResourceManager<any>>;
+export interface ResourceManagers {
+	get(key: string): ResourceManager<any>;
+}
+export namespace ResourceManagers {
+	class Default {
+		private readonly managers: Map<string, ResourceManager<any>>;
 
-	constructor() {
-		this.managers = new Map();
+		constructor() {
+			this.managers = new Map();
+		}
+
+		public get(key: string): ResourceManager<any> {
+			let manager = this.managers.get(key);
+			if (manager === undefined) {
+				manager = ResourceManager.create(key);
+				this.managers.set(key, manager);
+			}
+			return manager;
+		}
 	}
 
-	public get(key: string): ResourceManager<any> {
-		let manager = this.managers.get(key);
-		if (manager === undefined) {
-			manager = new ResourceManager(key);
-			this.managers.set(key, manager);
-		}
-		return manager;
+	export function createDefault(): ResourceManagers {
+		return new Default();
 	}
 }
+
 
 namespace BigInts {
 	const MAX_VALUE_AS_BIGINT = BigInt(Number.MAX_VALUE);
@@ -2446,6 +2474,22 @@ export class ConstructorType<_T extends Function = Function> extends Callable {
 	}
 }
 
+export class DestructorType<_T extends Function = Function> extends Callable {
+
+	constructor(witName: string, params: CallableParameter[], returnType?: GenericComponentModelType) {
+		super(witName, params, returnType);
+	}
+
+	public callDestructor(objHandle: number, resourceManager: ResourceManager, context: WasmContext): void {
+		const obj = resourceManager.get(objHandle);
+		if (obj === undefined) {
+			throw new ComponentModelError(`Invalid object handle ${objHandle}.`);
+		}
+		resourceManager.unregister(objHandle);
+		obj.destroy();
+	}
+}
+
 export class StaticMethodType<_T extends Function = Function> extends Callable {
 
 	constructor(witName: string, params: CallableParameter[], returnType?: GenericComponentModelType) {
@@ -2503,7 +2547,7 @@ export class MethodType<_T extends Function = Function> extends Callable {
 	}
 }
 
-export type ResourceCallable<T extends JFunction = JFunction> = MethodType<T> | StaticMethodType<T> | ConstructorType<T>;
+export type ResourceCallable<T extends JFunction = JFunction> = MethodType<T> | StaticMethodType<T> | ConstructorType<T> | DestructorType;
 
 export type ResourceHandle = u32;
 export class ResourceHandleType implements ComponentModelType<ResourceHandle> {
@@ -2906,6 +2950,8 @@ export namespace Host {
 					result[callable.witName] = createStaticMethodFunction(callable, (service[resourceName] as GenericClass)[callableName], context);
 				} else if (callable instanceof MethodType) {
 					result[callable.witName] = createMethodFunction(callableName, callable, resourceManager, context);
+				} else if (callable instanceof DestructorType) {
+					result[callable.witName] = createDestructorFunction(callable, resourceManager, context);
 				}
 			}
 		}
@@ -2921,6 +2967,12 @@ export namespace Host {
 	function createConstructorFunction(callable: ConstructorType, clazz: GenericClass, manager: ResourceManager, context: WasmContext): WasmFunction {
 		return (...params: WasmType[]): number | bigint | void => {
 			return callable.callConstructor(clazz, params, manager, context);
+		};
+	}
+
+	function createDestructorFunction(callable: DestructorType, manager: ResourceManager, context: WasmContext): WasmFunction {
+		return (...params: WasmType[]): number | bigint | void => {
+			return callable.callDestructor(params, manager, context);
 		};
 	}
 
