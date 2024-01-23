@@ -2418,12 +2418,14 @@ class ResourceEmitter extends InterfaceMemberEmitter {
 	private conztructor: ResourceEmitter.ConstructorEmitter | undefined;
 	private readonly statics: ResourceEmitter.StaticMethodEmitter[];
 	private readonly methods: ResourceEmitter.MethodEmitter[];
+	private readonly destructor: ResourceEmitter.DestructorEmitter;
 	private readonly emitters: CallableEmitter<Constructor | StaticMethod | Method>[];
 
 	constructor(resource: ResourceType, iface: Interface, config: EmitterConfig) {
 		super(iface, resource, config);
 		this.resource = resource;
 		this.conztructor = undefined;
+		this.destructor = new ResourceEmitter.DestructorEmitter(resource, config);
 		this.statics = [];
 		this.methods = [];
 		this.emitters = [];
@@ -2493,6 +2495,7 @@ class ResourceEmitter extends InterfaceMemberEmitter {
 		if (this.conztructor !== undefined) {
 			this.conztructor.emitStaticConstructorDeclaration(code);
 		}
+		this.destructor.emitStaticsDeclaration(code);
 		for (const method of this.statics) {
 			method.emitStaticsDeclaration(code);
 		}
@@ -2555,6 +2558,7 @@ class ResourceEmitter extends InterfaceMemberEmitter {
 		for (const emitter of this.emitters) {
 			emitter.emitWasmInterface(code);
 		}
+		this.destructor.emitWasmInterface(code);
 		code.decreaseIndent();
 		code.push(`};`);
 		const needsClassModule = this.statics.length > 0;
@@ -2565,6 +2569,7 @@ class ResourceEmitter extends InterfaceMemberEmitter {
 			if (this.conztructor !== undefined) {
 				this.conztructor.emitObjectModule(code);
 			}
+			this.destructor.emitObjectModule(code);
 			for (const emitter of this.methods) {
 				emitter.emitObjectModule(code);
 			}
@@ -2637,6 +2642,7 @@ class ResourceEmitter extends InterfaceMemberEmitter {
 						code.push(`}`);
 					}
 				}
+				this.destructor.emitAnonymousClassMember(code);
 				for (const method of this.statics) {
 					method.emitAnonymousClassMember(code);
 				}
@@ -2884,8 +2890,45 @@ namespace ResourceEmitter {
 		}
 	}
 
+	class _DestructorEmitter extends Emitter {
+
+		private readonly resource: ResourceType;
+
+		constructor(resource: ResourceType, config: EmitterConfig) {
+			super(config);
+			this.resource = resource;
+		}
+
+		public emitClassMember(code: Code): void {
+		}
+
+		public emitStaticsDeclaration(code: Code): void {
+			code.push(`$drop(inst: Interface): void;`);
+		}
+
+		public emitWasmInterface(code: Code): void {
+			code.push(`'[resource-drop]${this.resource.name}': (self: i32) => void;`);
+		}
+
+		public emitObjectModule(code: Code): void {
+			const ifaceName = this.config.nameProvider.asTypeName(this.resource);
+			code.push(`$drop(self: ${ifaceName}): void;`);
+		}
+
+		public emitAnonymousClassMember(code: Code): void {
+			const ifaceName = this.config.nameProvider.asTypeName(this.resource);
+			code.push(`public static $drop(self: ${ifaceName}): void {`);
+			code.increaseIndent();
+			code.push(`return om.$drop(self);`);
+			code.decreaseIndent();
+			code.push('}');
+		}
+	}
+
 	export const ConstructorEmitter = CallableEmitter(_ConstructorEmitter);
 	export type ConstructorEmitter = _ConstructorEmitter;
+	export const DestructorEmitter = _DestructorEmitter;
+	export type DestructorEmitter = _DestructorEmitter;
 	export const StaticMethodEmitter = CallableEmitter(_StaticMethodEmitter);
 	export type StaticMethodEmitter = _StaticMethodEmitter;
 	export const MethodEmitter = CallableEmitter(_MethodEmitter);

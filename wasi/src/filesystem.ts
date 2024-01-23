@@ -899,6 +899,7 @@ export namespace filesystem {
 				metadataHashAt(pathFlags: PathFlags, path: string): result<MetadataHashValue, ErrorCode>;
 			}
 			export type Statics = {
+				$drop(inst: Interface): void;
 			};
 			export type Class = Statics & {
 			};
@@ -915,6 +916,7 @@ export namespace filesystem {
 				readDirectoryEntry(): result<DirectoryEntry | undefined, ErrorCode>;
 			}
 			export type Statics = {
+				$drop(inst: Interface): void;
 			};
 			export type Class = Statics & {
 			};
@@ -1180,8 +1182,10 @@ export namespace filesystem {
 				'[method]descriptor.is-same-object': (self: i32, other: i32) => i32;
 				'[method]descriptor.metadata-hash': (self: i32, result: ptr<result<MetadataHashValue, ErrorCode>>) => void;
 				'[method]descriptor.metadata-hash-at': (self: i32, pathFlags: i32, path_ptr: i32, path_len: i32, result: ptr<result<MetadataHashValue, ErrorCode>>) => void;
+				'[resource-drop]descriptor': (self: i32) => void;
 			};
 			type ObjectModule = {
+				$drop(self: Descriptor): void;
 				readViaStream(self: Descriptor, offset: Filesize): result<own<InputStream>, ErrorCode>;
 				writeViaStream(self: Descriptor, offset: Filesize): result<own<OutputStream>, ErrorCode>;
 				appendViaStream(self: Descriptor): result<own<OutputStream>, ErrorCode>;
@@ -1305,14 +1309,19 @@ export namespace filesystem {
 					constructor() {
 						super(om);
 					}
+					public static $drop(self: Descriptor): void {
+						return om.$drop(self);
+					}
 				};
 			}
 		}
 		export namespace DirectoryEntryStream {
 			export type WasmInterface = {
 				'[method]directory-entry-stream.read-directory-entry': (self: i32, result: ptr<result<DirectoryEntry | undefined, ErrorCode>>) => void;
+				'[resource-drop]directory-entry-stream': (self: i32) => void;
 			};
 			type ObjectModule = {
+				$drop(self: DirectoryEntryStream): void;
 				readDirectoryEntry(self: DirectoryEntryStream): result<DirectoryEntry | undefined, ErrorCode>;
 			};
 			class Impl extends $wcm.Resource implements filesystem.Types.DirectoryEntryStream.Interface {
@@ -1331,6 +1340,9 @@ export namespace filesystem {
 				return class extends Impl {
 					constructor() {
 						super(om);
+					}
+					public static $drop(self: DirectoryEntryStream): void {
+						return om.$drop(self);
 					}
 				};
 			}

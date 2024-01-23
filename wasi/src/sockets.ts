@@ -293,6 +293,7 @@ export namespace sockets {
 
 			}
 			export type Statics = {
+				$drop(inst: Interface): void;
 			};
 			export type Class = Statics & {
 			};
@@ -358,6 +359,7 @@ export namespace sockets {
 				subscribe(): own<Pollable>;
 			}
 			export type Statics = {
+				$drop(inst: Interface): void;
 			};
 			export type Class = Statics & {
 			};
@@ -766,6 +768,7 @@ export namespace sockets {
 				shutdown(shutdownType: ShutdownType): result<void, ErrorCode>;
 			}
 			export type Statics = {
+				$drop(inst: Interface): void;
 			};
 			export type Class = Statics & {
 			};
@@ -1030,6 +1033,7 @@ export namespace sockets {
 				subscribe(): own<Pollable>;
 			}
 			export type Statics = {
+				$drop(inst: Interface): void;
 			};
 			export type Class = Statics & {
 			};
@@ -1076,6 +1080,7 @@ export namespace sockets {
 				subscribe(): own<Pollable>;
 			}
 			export type Statics = {
+				$drop(inst: Interface): void;
 			};
 			export type Class = Statics & {
 			};
@@ -1148,6 +1153,7 @@ export namespace sockets {
 				subscribe(): own<Pollable>;
 			}
 			export type Statics = {
+				$drop(inst: Interface): void;
 			};
 			export type Class = Statics & {
 			};
@@ -1251,6 +1257,7 @@ export namespace sockets {
 		]);
 		export namespace Network {
 			export type WasmInterface = {
+				'[resource-drop]network': (self: i32) => void;
 			};
 			class Impl extends $wcm.Resource implements sockets.Network.Network.Interface {
 			}
@@ -1332,8 +1339,10 @@ export namespace sockets {
 			export type WasmInterface = {
 				'[method]resolve-address-stream.resolve-next-address': (self: i32, result: ptr<result<IpAddress | undefined, ErrorCode>>) => void;
 				'[method]resolve-address-stream.subscribe': (self: i32) => i32;
+				'[resource-drop]resolve-address-stream': (self: i32) => void;
 			};
 			type ObjectModule = {
+				$drop(self: ResolveAddressStream): void;
 				resolveNextAddress(self: ResolveAddressStream): result<IpAddress | undefined, ErrorCode>;
 				subscribe(self: ResolveAddressStream): own<Pollable>;
 			};
@@ -1356,6 +1365,9 @@ export namespace sockets {
 				return class extends Impl {
 					constructor() {
 						super(om);
+					}
+					public static $drop(self: ResolveAddressStream): void {
+						return om.$drop(self);
 					}
 				};
 			}
@@ -1531,8 +1543,10 @@ export namespace sockets {
 				'[method]tcp-socket.set-send-buffer-size': (self: i32, value: i64, result: ptr<result<void, ErrorCode>>) => void;
 				'[method]tcp-socket.subscribe': (self: i32) => i32;
 				'[method]tcp-socket.shutdown': (self: i32, shutdownType_ShutdownType: i32, result: ptr<result<void, ErrorCode>>) => void;
+				'[resource-drop]tcp-socket': (self: i32) => void;
 			};
 			type ObjectModule = {
+				$drop(self: TcpSocket): void;
 				startBind(self: TcpSocket, network: borrow<Network>, localAddress: IpSocketAddress): result<void, ErrorCode>;
 				finishBind(self: TcpSocket): result<void, ErrorCode>;
 				startConnect(self: TcpSocket, network: borrow<Network>, remoteAddress: IpSocketAddress): result<void, ErrorCode>;
@@ -1659,6 +1673,9 @@ export namespace sockets {
 				return class extends Impl {
 					constructor() {
 						super(om);
+					}
+					public static $drop(self: TcpSocket): void {
+						return om.$drop(self);
 					}
 				};
 			}
@@ -1827,8 +1844,10 @@ export namespace sockets {
 				'[method]udp-socket.send-buffer-size': (self: i32, result: ptr<result<u64, ErrorCode>>) => void;
 				'[method]udp-socket.set-send-buffer-size': (self: i32, value: i64, result: ptr<result<void, ErrorCode>>) => void;
 				'[method]udp-socket.subscribe': (self: i32) => i32;
+				'[resource-drop]udp-socket': (self: i32) => void;
 			};
 			type ObjectModule = {
+				$drop(self: UdpSocket): void;
 				startBind(self: UdpSocket, network: borrow<Network>, localAddress: IpSocketAddress): result<void, ErrorCode>;
 				finishBind(self: UdpSocket): result<void, ErrorCode>;
 				stream(self: UdpSocket, remoteAddress: IpSocketAddress | undefined): result<[own<IncomingDatagramStream>, own<OutgoingDatagramStream>], ErrorCode>;
@@ -1896,6 +1915,9 @@ export namespace sockets {
 					constructor() {
 						super(om);
 					}
+					public static $drop(self: UdpSocket): void {
+						return om.$drop(self);
+					}
 				};
 			}
 		}
@@ -1903,8 +1925,10 @@ export namespace sockets {
 			export type WasmInterface = {
 				'[method]incoming-datagram-stream.receive': (self: i32, maxResults: i64, result: ptr<result<IncomingDatagram[], ErrorCode>>) => void;
 				'[method]incoming-datagram-stream.subscribe': (self: i32) => i32;
+				'[resource-drop]incoming-datagram-stream': (self: i32) => void;
 			};
 			type ObjectModule = {
+				$drop(self: IncomingDatagramStream): void;
 				receive(self: IncomingDatagramStream, maxResults: u64): result<IncomingDatagram[], ErrorCode>;
 				subscribe(self: IncomingDatagramStream): own<Pollable>;
 			};
@@ -1928,6 +1952,9 @@ export namespace sockets {
 					constructor() {
 						super(om);
 					}
+					public static $drop(self: IncomingDatagramStream): void {
+						return om.$drop(self);
+					}
 				};
 			}
 		}
@@ -1936,8 +1963,10 @@ export namespace sockets {
 				'[method]outgoing-datagram-stream.check-send': (self: i32, result: ptr<result<u64, ErrorCode>>) => void;
 				'[method]outgoing-datagram-stream.send': (self: i32, datagrams_ptr: i32, datagrams_len: i32, result: ptr<result<u64, ErrorCode>>) => void;
 				'[method]outgoing-datagram-stream.subscribe': (self: i32) => i32;
+				'[resource-drop]outgoing-datagram-stream': (self: i32) => void;
 			};
 			type ObjectModule = {
+				$drop(self: OutgoingDatagramStream): void;
 				checkSend(self: OutgoingDatagramStream): result<u64, ErrorCode>;
 				send(self: OutgoingDatagramStream, datagrams: OutgoingDatagram[]): result<u64, ErrorCode>;
 				subscribe(self: OutgoingDatagramStream): own<Pollable>;
@@ -1964,6 +1993,9 @@ export namespace sockets {
 				return class extends Impl {
 					constructor() {
 						super(om);
+					}
+					public static $drop(self: OutgoingDatagramStream): void {
+						return om.$drop(self);
 					}
 				};
 			}

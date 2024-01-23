@@ -105,6 +105,7 @@ export namespace cli {
 
 			}
 			export type Statics = {
+				$drop(inst: Interface): void;
 			};
 			export type Class = Statics & {
 			};
@@ -129,6 +130,7 @@ export namespace cli {
 
 			}
 			export type Statics = {
+				$drop(inst: Interface): void;
 			};
 			export type Class = Statics & {
 			};
@@ -383,6 +385,7 @@ export namespace cli {
 		]);
 		export namespace TerminalInput {
 			export type WasmInterface = {
+				'[resource-drop]terminal-input': (self: i32) => void;
 			};
 			class Impl extends $wcm.Resource implements cli.TerminalInput.TerminalInput.Interface {
 			}
@@ -417,6 +420,7 @@ export namespace cli {
 		]);
 		export namespace TerminalOutput {
 			export type WasmInterface = {
+				'[resource-drop]terminal-output': (self: i32) => void;
 			};
 			class Impl extends $wcm.Resource implements cli.TerminalOutput.TerminalOutput.Interface {
 			}

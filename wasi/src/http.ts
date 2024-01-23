@@ -770,6 +770,7 @@ export namespace http {
 			}
 			export type Statics = {
 				$new?(): Interface;
+				$drop(inst: Interface): void;
 				fromList(entries: [FieldKey, FieldValue][]): result<own<Fields>, HeaderError>;
 			};
 			export type Class = Statics & {
@@ -821,6 +822,7 @@ export namespace http {
 				consume(): result<own<IncomingBody>, void>;
 			}
 			export type Statics = {
+				$drop(inst: Interface): void;
 			};
 			export type Class = Statics & {
 			};
@@ -907,6 +909,7 @@ export namespace http {
 			}
 			export type Statics = {
 				$new?(headers: own<Headers>): Interface;
+				$drop(inst: Interface): void;
 			};
 			export type Class = Statics & {
 				new(headers: own<Headers>): Interface;
@@ -955,6 +958,7 @@ export namespace http {
 			}
 			export type Statics = {
 				$new?(): Interface;
+				$drop(inst: Interface): void;
 			};
 			export type Class = Statics & {
 				new(): Interface;
@@ -968,6 +972,7 @@ export namespace http {
 
 			}
 			export type Statics = {
+				$drop(inst: Interface): void;
 				set(param: own<ResponseOutparam>, response: result<own<OutgoingResponse>, ErrorCode>): void;
 			};
 			export type Class = Statics & {
@@ -1002,6 +1007,7 @@ export namespace http {
 				consume(): result<own<IncomingBody>, void>;
 			}
 			export type Statics = {
+				$drop(inst: Interface): void;
 			};
 			export type Class = Statics & {
 			};
@@ -1032,6 +1038,7 @@ export namespace http {
 				stream(): result<own<InputStream>, void>;
 			}
 			export type Statics = {
+				$drop(inst: Interface): void;
 				finish(this_: own<IncomingBody>): own<FutureTrailers>;
 			};
 			export type Class = Statics & {
@@ -1074,6 +1081,7 @@ export namespace http {
 				get(): result<result<own<Trailers> | undefined, ErrorCode>, void> | undefined;
 			}
 			export type Statics = {
+				$drop(inst: Interface): void;
 			};
 			export type Class = Statics & {
 			};
@@ -1118,6 +1126,7 @@ export namespace http {
 			}
 			export type Statics = {
 				$new?(headers: own<Headers>): Interface;
+				$drop(inst: Interface): void;
 			};
 			export type Class = Statics & {
 				new(headers: own<Headers>): Interface;
@@ -1143,6 +1152,7 @@ export namespace http {
 				write(): result<own<OutputStream>, void>;
 			}
 			export type Statics = {
+				$drop(inst: Interface): void;
 				finish(this_: own<OutgoingBody>, trailers: own<Trailers> | undefined): result<void, ErrorCode>;
 			};
 			export type Class = Statics & {
@@ -1180,6 +1190,7 @@ export namespace http {
 				get(): result<result<own<IncomingResponse>, ErrorCode>, void> | undefined;
 			}
 			export type Statics = {
+				$drop(inst: Interface): void;
 			};
 			export type Class = Statics & {
 			};
@@ -1560,9 +1571,11 @@ export namespace http {
 				'[method]fields.append': (self: i32, name_ptr: i32, name_len: i32, value_ptr: i32, value_len: i32, result: ptr<result<void, HeaderError>>) => void;
 				'[method]fields.entries': (self: i32, result: ptr<[FieldKey, FieldValue][]>) => void;
 				'[method]fields.clone': (self: i32) => i32;
+				'[resource-drop]fields': (self: i32) => void;
 			};
 			type ObjectModule = {
 				constructor(): own<$wcm.ResourceHandle>;
+				$drop(self: Fields): void;
 				get(self: Fields, name: FieldKey): FieldValue[];
 				has(self: Fields, name: FieldKey): boolean;
 				set(self: Fields, name: FieldKey, value: FieldValue[]): result<void, HeaderError>;
@@ -1611,6 +1624,9 @@ export namespace http {
 					constructor() {
 						super(om);
 					}
+					public static $drop(self: Fields): void {
+						return om.$drop(self);
+					}
 					public static fromList(entries: [FieldKey, FieldValue][]): result<own<Fields>, HeaderError> {
 						return cm.fromList(entries);
 					}
@@ -1625,8 +1641,10 @@ export namespace http {
 				'[method]incoming-request.authority': (self: i32, result: ptr<string | undefined>) => void;
 				'[method]incoming-request.headers': (self: i32) => i32;
 				'[method]incoming-request.consume': (self: i32, result: ptr<result<own<IncomingBody>, void>>) => void;
+				'[resource-drop]incoming-request': (self: i32) => void;
 			};
 			type ObjectModule = {
+				$drop(self: IncomingRequest): void;
 				method(self: IncomingRequest): Method;
 				pathWithQuery(self: IncomingRequest): string | undefined;
 				scheme(self: IncomingRequest): Scheme | undefined;
@@ -1666,6 +1684,9 @@ export namespace http {
 					constructor() {
 						super(om);
 					}
+					public static $drop(self: IncomingRequest): void {
+						return om.$drop(self);
+					}
 				};
 			}
 		}
@@ -1682,9 +1703,11 @@ export namespace http {
 				'[method]outgoing-request.authority': (self: i32, result: ptr<string | undefined>) => void;
 				'[method]outgoing-request.set-authority': (self: i32, authority_case: i32, authority_option_ptr: i32, authority_option_len: i32) => i32;
 				'[method]outgoing-request.headers': (self: i32) => i32;
+				'[resource-drop]outgoing-request': (self: i32) => void;
 			};
 			type ObjectModule = {
 				constructor(headers: own<Headers>): own<$wcm.ResourceHandle>;
+				$drop(self: OutgoingRequest): void;
 				body(self: OutgoingRequest): result<own<OutgoingBody>, void>;
 				method(self: OutgoingRequest): Method;
 				setMethod(self: OutgoingRequest, method: Method): result<void, void>;
@@ -1741,6 +1764,9 @@ export namespace http {
 					constructor(headers: own<Headers>) {
 						super(headers, om);
 					}
+					public static $drop(self: OutgoingRequest): void {
+						return om.$drop(self);
+					}
 				};
 			}
 		}
@@ -1753,9 +1779,11 @@ export namespace http {
 				'[method]request-options.set-first-byte-timeout': (self: i32, duration_case: i32, duration_option_Duration: i64) => i32;
 				'[method]request-options.between-bytes-timeout': (self: i32, result: ptr<Duration | undefined>) => void;
 				'[method]request-options.set-between-bytes-timeout': (self: i32, duration_case: i32, duration_option_Duration: i64) => i32;
+				'[resource-drop]request-options': (self: i32) => void;
 			};
 			type ObjectModule = {
 				constructor(): own<$wcm.ResourceHandle>;
+				$drop(self: RequestOptions): void;
 				connectTimeout(self: RequestOptions): Duration | undefined;
 				setConnectTimeout(self: RequestOptions, duration: Duration | undefined): result<void, void>;
 				firstByteTimeout(self: RequestOptions): Duration | undefined;
@@ -1796,12 +1824,16 @@ export namespace http {
 					constructor() {
 						super(om);
 					}
+					public static $drop(self: RequestOptions): void {
+						return om.$drop(self);
+					}
 				};
 			}
 		}
 		export namespace ResponseOutparam {
 			export type WasmInterface = {
 				'[static]response-outparam.set': (param: i32, response_case: i32, response_0: i32, response_1: i32, response_2: i64, response_3: i32, response_4: i32, response_5: i32, response_6: i32) => void;
+				'[resource-drop]response-outparam': (self: i32) => void;
 			};
 			type ClassModule = {
 				set(param: own<ResponseOutparam>, response: result<own<OutgoingResponse>, ErrorCode>): void;
@@ -1812,6 +1844,9 @@ export namespace http {
 				const resource = http.Types.$.ResponseOutparam;
 				const cm: ClassModule = $wcm.Module.createClassModule(resource, wasmInterface, context);
 				return class extends Impl {
+					public static $drop(self: ResponseOutparam): void {
+						return om.$drop(self);
+					}
 					public static set(param: own<ResponseOutparam>, response: result<own<OutgoingResponse>, ErrorCode>): void {
 						return cm.set(param, response);
 					}
@@ -1823,8 +1858,10 @@ export namespace http {
 				'[method]incoming-response.status': (self: i32) => i32;
 				'[method]incoming-response.headers': (self: i32) => i32;
 				'[method]incoming-response.consume': (self: i32, result: ptr<result<own<IncomingBody>, void>>) => void;
+				'[resource-drop]incoming-response': (self: i32) => void;
 			};
 			type ObjectModule = {
+				$drop(self: IncomingResponse): void;
 				status(self: IncomingResponse): StatusCode;
 				headers(self: IncomingResponse): own<Headers>;
 				consume(self: IncomingResponse): result<own<IncomingBody>, void>;
@@ -1852,6 +1889,9 @@ export namespace http {
 					constructor() {
 						super(om);
 					}
+					public static $drop(self: IncomingResponse): void {
+						return om.$drop(self);
+					}
 				};
 			}
 		}
@@ -1859,8 +1899,10 @@ export namespace http {
 			export type WasmInterface = {
 				'[method]incoming-body.stream': (self: i32, result: ptr<result<own<InputStream>, void>>) => void;
 				'[static]incoming-body.finish': (this_: i32) => i32;
+				'[resource-drop]incoming-body': (self: i32) => void;
 			};
 			type ObjectModule = {
+				$drop(self: IncomingBody): void;
 				stream(self: IncomingBody): result<own<InputStream>, void>;
 			};
 			type ClassModule = {
@@ -1884,6 +1926,9 @@ export namespace http {
 					constructor() {
 						super(om);
 					}
+					public static $drop(self: IncomingBody): void {
+						return om.$drop(self);
+					}
 					public static finish(this_: own<IncomingBody>): own<FutureTrailers> {
 						return cm.finish(this_);
 					}
@@ -1894,8 +1939,10 @@ export namespace http {
 			export type WasmInterface = {
 				'[method]future-trailers.subscribe': (self: i32) => i32;
 				'[method]future-trailers.get': (self: i32, result: ptr<result<result<own<Trailers> | undefined, ErrorCode>, void> | undefined>) => void;
+				'[resource-drop]future-trailers': (self: i32) => void;
 			};
 			type ObjectModule = {
+				$drop(self: FutureTrailers): void;
 				subscribe(self: FutureTrailers): own<Pollable>;
 				get(self: FutureTrailers): result<result<own<Trailers> | undefined, ErrorCode>, void> | undefined;
 			};
@@ -1919,6 +1966,9 @@ export namespace http {
 					constructor() {
 						super(om);
 					}
+					public static $drop(self: FutureTrailers): void {
+						return om.$drop(self);
+					}
 				};
 			}
 		}
@@ -1929,9 +1979,11 @@ export namespace http {
 				'[method]outgoing-response.set-status-code': (self: i32, statusCode: i32) => i32;
 				'[method]outgoing-response.headers': (self: i32) => i32;
 				'[method]outgoing-response.body': (self: i32, result: ptr<result<own<OutgoingBody>, void>>) => void;
+				'[resource-drop]outgoing-response': (self: i32) => void;
 			};
 			type ObjectModule = {
 				constructor(headers: own<Headers>): own<$wcm.ResourceHandle>;
+				$drop(self: OutgoingResponse): void;
 				statusCode(self: OutgoingResponse): StatusCode;
 				setStatusCode(self: OutgoingResponse, statusCode: StatusCode): result<void, void>;
 				headers(self: OutgoingResponse): own<Headers>;
@@ -1964,6 +2016,9 @@ export namespace http {
 					constructor(headers: own<Headers>) {
 						super(headers, om);
 					}
+					public static $drop(self: OutgoingResponse): void {
+						return om.$drop(self);
+					}
 				};
 			}
 		}
@@ -1971,8 +2026,10 @@ export namespace http {
 			export type WasmInterface = {
 				'[method]outgoing-body.write': (self: i32, result: ptr<result<own<OutputStream>, void>>) => void;
 				'[static]outgoing-body.finish': (this_: i32, trailers_case: i32, trailers_option: i32, result: ptr<result<void, ErrorCode>>) => void;
+				'[resource-drop]outgoing-body': (self: i32) => void;
 			};
 			type ObjectModule = {
+				$drop(self: OutgoingBody): void;
 				write(self: OutgoingBody): result<own<OutputStream>, void>;
 			};
 			type ClassModule = {
@@ -1996,6 +2053,9 @@ export namespace http {
 					constructor() {
 						super(om);
 					}
+					public static $drop(self: OutgoingBody): void {
+						return om.$drop(self);
+					}
 					public static finish(this_: own<OutgoingBody>, trailers: own<Trailers> | undefined): result<void, ErrorCode> {
 						return cm.finish(this_, trailers);
 					}
@@ -2006,8 +2066,10 @@ export namespace http {
 			export type WasmInterface = {
 				'[method]future-incoming-response.subscribe': (self: i32) => i32;
 				'[method]future-incoming-response.get': (self: i32, result: ptr<result<result<own<IncomingResponse>, ErrorCode>, void> | undefined>) => void;
+				'[resource-drop]future-incoming-response': (self: i32) => void;
 			};
 			type ObjectModule = {
+				$drop(self: FutureIncomingResponse): void;
 				subscribe(self: FutureIncomingResponse): own<Pollable>;
 				get(self: FutureIncomingResponse): result<result<own<IncomingResponse>, ErrorCode>, void> | undefined;
 			};
@@ -2030,6 +2092,9 @@ export namespace http {
 				return class extends Impl {
 					constructor() {
 						super(om);
+					}
+					public static $drop(self: FutureIncomingResponse): void {
+						return om.$drop(self);
 					}
 				};
 			}
