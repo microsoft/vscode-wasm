@@ -1235,6 +1235,7 @@ export namespace sockets {
 			['scopeId', $wcm.u32],
 		]);
 		export const IpSocketAddress = new $wcm.VariantType<sockets.Network.IpSocketAddress, sockets.Network.IpSocketAddress._tt, sockets.Network.IpSocketAddress._vt>([['ipv4', Ipv4SocketAddress], ['ipv6', Ipv6SocketAddress]], sockets.Network.IpSocketAddress._ctor);
+		Network.addCallable('$drop', new $wcm.DestructorType<sockets.Network.Network.Statics['$drop']>('[resource-drop]network', [['inst', Network]]));
 	}
 	export namespace Network._ {
 		export const id = 'wasi:sockets/network' as const;
@@ -1259,10 +1260,19 @@ export namespace sockets {
 			export type WasmInterface = {
 				'[resource-drop]network': (self: i32) => void;
 			};
+			type ClassModule = {
+				$drop(self: Network): void;
+			};
 			class Impl extends $wcm.Resource implements sockets.Network.Network.Interface {
 			}
-			export function Class(): sockets.Network.Network.Class {
-				return Impl;
+			export function Class(wasmInterface: WasmInterface, context: $wcm.WasmContext): sockets.Network.Network.Class {
+				const resource = sockets.Network.$.Network;
+				const cm: ClassModule = $wcm.Module.createClassModule(resource, wasmInterface, context);
+				return class extends Impl {
+					public static $drop(self: Network): void {
+						return cm.$drop(self);
+					}
+				};
 			}
 		}
 		export type WasmInterface = {
@@ -1314,6 +1324,7 @@ export namespace sockets {
 		ResolveAddressStream.addCallable('subscribe', new $wcm.MethodType<sockets.IpNameLookup.ResolveAddressStream.Interface['subscribe']>('[method]resolve-address-stream.subscribe', [
 			['self', new $wcm.BorrowType<sockets.IpNameLookup.ResolveAddressStream>(ResolveAddressStream)],
 		], new $wcm.OwnType<sockets.IpNameLookup.Pollable>(Pollable)));
+		ResolveAddressStream.addCallable('$drop', new $wcm.DestructorType<sockets.IpNameLookup.ResolveAddressStream.Statics['$drop']>('[resource-drop]resolve-address-stream', [['inst', ResolveAddressStream]]));
 		export const resolveAddresses = new $wcm.FunctionType<sockets.IpNameLookup.resolveAddresses>('resolve-addresses',[
 			['network', new $wcm.BorrowType<sockets.IpNameLookup.Network>(Network)],
 			['name', $wcm.wstring],
@@ -1342,9 +1353,11 @@ export namespace sockets {
 				'[resource-drop]resolve-address-stream': (self: i32) => void;
 			};
 			type ObjectModule = {
-				$drop(self: ResolveAddressStream): void;
 				resolveNextAddress(self: ResolveAddressStream): result<IpAddress | undefined, ErrorCode>;
 				subscribe(self: ResolveAddressStream): own<Pollable>;
+			};
+			type ClassModule = {
+				$drop(self: ResolveAddressStream): void;
 			};
 			class Impl extends $wcm.Resource implements sockets.IpNameLookup.ResolveAddressStream.Interface {
 				private readonly _om: ObjectModule;
@@ -1362,12 +1375,13 @@ export namespace sockets {
 			export function Class(wasmInterface: WasmInterface, context: $wcm.WasmContext): sockets.IpNameLookup.ResolveAddressStream.Class {
 				const resource = sockets.IpNameLookup.$.ResolveAddressStream;
 				const om: ObjectModule = $wcm.Module.createObjectModule(resource, wasmInterface, context);
+				const cm: ClassModule = $wcm.Module.createClassModule(resource, wasmInterface, context);
 				return class extends Impl {
 					constructor() {
 						super(om);
 					}
 					public static $drop(self: ResolveAddressStream): void {
-						return om.$drop(self);
+						return cm.$drop(self);
 					}
 				};
 			}
@@ -1492,6 +1506,7 @@ export namespace sockets {
 			['self', new $wcm.BorrowType<sockets.Tcp.TcpSocket>(TcpSocket)],
 			['shutdownType', ShutdownType],
 		], new $wcm.ResultType<void, sockets.Tcp.ErrorCode>(undefined, ErrorCode)));
+		TcpSocket.addCallable('$drop', new $wcm.DestructorType<sockets.Tcp.TcpSocket.Statics['$drop']>('[resource-drop]tcp-socket', [['inst', TcpSocket]]));
 	}
 	export namespace Tcp._ {
 		export const id = 'wasi:sockets/tcp' as const;
@@ -1546,7 +1561,6 @@ export namespace sockets {
 				'[resource-drop]tcp-socket': (self: i32) => void;
 			};
 			type ObjectModule = {
-				$drop(self: TcpSocket): void;
 				startBind(self: TcpSocket, network: borrow<Network>, localAddress: IpSocketAddress): result<void, ErrorCode>;
 				finishBind(self: TcpSocket): result<void, ErrorCode>;
 				startConnect(self: TcpSocket, network: borrow<Network>, remoteAddress: IpSocketAddress): result<void, ErrorCode>;
@@ -1575,6 +1589,9 @@ export namespace sockets {
 				setSendBufferSize(self: TcpSocket, value: u64): result<void, ErrorCode>;
 				subscribe(self: TcpSocket): own<Pollable>;
 				shutdown(self: TcpSocket, shutdownType: ShutdownType): result<void, ErrorCode>;
+			};
+			type ClassModule = {
+				$drop(self: TcpSocket): void;
 			};
 			class Impl extends $wcm.Resource implements sockets.Tcp.TcpSocket.Interface {
 				private readonly _om: ObjectModule;
@@ -1670,12 +1687,13 @@ export namespace sockets {
 			export function Class(wasmInterface: WasmInterface, context: $wcm.WasmContext): sockets.Tcp.TcpSocket.Class {
 				const resource = sockets.Tcp.$.TcpSocket;
 				const om: ObjectModule = $wcm.Module.createObjectModule(resource, wasmInterface, context);
+				const cm: ClassModule = $wcm.Module.createClassModule(resource, wasmInterface, context);
 				return class extends Impl {
 					constructor() {
 						super(om);
 					}
 					public static $drop(self: TcpSocket): void {
-						return om.$drop(self);
+						return cm.$drop(self);
 					}
 				};
 			}
@@ -1789,6 +1807,7 @@ export namespace sockets {
 		UdpSocket.addCallable('subscribe', new $wcm.MethodType<sockets.Udp.UdpSocket.Interface['subscribe']>('[method]udp-socket.subscribe', [
 			['self', new $wcm.BorrowType<sockets.Udp.UdpSocket>(UdpSocket)],
 		], new $wcm.OwnType<sockets.Udp.Pollable>(Pollable)));
+		UdpSocket.addCallable('$drop', new $wcm.DestructorType<sockets.Udp.UdpSocket.Statics['$drop']>('[resource-drop]udp-socket', [['inst', UdpSocket]]));
 		IncomingDatagramStream.addCallable('receive', new $wcm.MethodType<sockets.Udp.IncomingDatagramStream.Interface['receive']>('[method]incoming-datagram-stream.receive', [
 			['self', new $wcm.BorrowType<sockets.Udp.IncomingDatagramStream>(IncomingDatagramStream)],
 			['maxResults', $wcm.u64],
@@ -1796,6 +1815,7 @@ export namespace sockets {
 		IncomingDatagramStream.addCallable('subscribe', new $wcm.MethodType<sockets.Udp.IncomingDatagramStream.Interface['subscribe']>('[method]incoming-datagram-stream.subscribe', [
 			['self', new $wcm.BorrowType<sockets.Udp.IncomingDatagramStream>(IncomingDatagramStream)],
 		], new $wcm.OwnType<sockets.Udp.Pollable>(Pollable)));
+		IncomingDatagramStream.addCallable('$drop', new $wcm.DestructorType<sockets.Udp.IncomingDatagramStream.Statics['$drop']>('[resource-drop]incoming-datagram-stream', [['inst', IncomingDatagramStream]]));
 		OutgoingDatagramStream.addCallable('checkSend', new $wcm.MethodType<sockets.Udp.OutgoingDatagramStream.Interface['checkSend']>('[method]outgoing-datagram-stream.check-send', [
 			['self', new $wcm.BorrowType<sockets.Udp.OutgoingDatagramStream>(OutgoingDatagramStream)],
 		], new $wcm.ResultType<u64, sockets.Udp.ErrorCode>($wcm.u64, ErrorCode)));
@@ -1806,6 +1826,7 @@ export namespace sockets {
 		OutgoingDatagramStream.addCallable('subscribe', new $wcm.MethodType<sockets.Udp.OutgoingDatagramStream.Interface['subscribe']>('[method]outgoing-datagram-stream.subscribe', [
 			['self', new $wcm.BorrowType<sockets.Udp.OutgoingDatagramStream>(OutgoingDatagramStream)],
 		], new $wcm.OwnType<sockets.Udp.Pollable>(Pollable)));
+		OutgoingDatagramStream.addCallable('$drop', new $wcm.DestructorType<sockets.Udp.OutgoingDatagramStream.Statics['$drop']>('[resource-drop]outgoing-datagram-stream', [['inst', OutgoingDatagramStream]]));
 	}
 	export namespace Udp._ {
 		export const id = 'wasi:sockets/udp' as const;
@@ -1847,7 +1868,6 @@ export namespace sockets {
 				'[resource-drop]udp-socket': (self: i32) => void;
 			};
 			type ObjectModule = {
-				$drop(self: UdpSocket): void;
 				startBind(self: UdpSocket, network: borrow<Network>, localAddress: IpSocketAddress): result<void, ErrorCode>;
 				finishBind(self: UdpSocket): result<void, ErrorCode>;
 				stream(self: UdpSocket, remoteAddress: IpSocketAddress | undefined): result<[own<IncomingDatagramStream>, own<OutgoingDatagramStream>], ErrorCode>;
@@ -1861,6 +1881,9 @@ export namespace sockets {
 				sendBufferSize(self: UdpSocket): result<u64, ErrorCode>;
 				setSendBufferSize(self: UdpSocket, value: u64): result<void, ErrorCode>;
 				subscribe(self: UdpSocket): own<Pollable>;
+			};
+			type ClassModule = {
+				$drop(self: UdpSocket): void;
 			};
 			class Impl extends $wcm.Resource implements sockets.Udp.UdpSocket.Interface {
 				private readonly _om: ObjectModule;
@@ -1911,12 +1934,13 @@ export namespace sockets {
 			export function Class(wasmInterface: WasmInterface, context: $wcm.WasmContext): sockets.Udp.UdpSocket.Class {
 				const resource = sockets.Udp.$.UdpSocket;
 				const om: ObjectModule = $wcm.Module.createObjectModule(resource, wasmInterface, context);
+				const cm: ClassModule = $wcm.Module.createClassModule(resource, wasmInterface, context);
 				return class extends Impl {
 					constructor() {
 						super(om);
 					}
 					public static $drop(self: UdpSocket): void {
-						return om.$drop(self);
+						return cm.$drop(self);
 					}
 				};
 			}
@@ -1928,9 +1952,11 @@ export namespace sockets {
 				'[resource-drop]incoming-datagram-stream': (self: i32) => void;
 			};
 			type ObjectModule = {
-				$drop(self: IncomingDatagramStream): void;
 				receive(self: IncomingDatagramStream, maxResults: u64): result<IncomingDatagram[], ErrorCode>;
 				subscribe(self: IncomingDatagramStream): own<Pollable>;
+			};
+			type ClassModule = {
+				$drop(self: IncomingDatagramStream): void;
 			};
 			class Impl extends $wcm.Resource implements sockets.Udp.IncomingDatagramStream.Interface {
 				private readonly _om: ObjectModule;
@@ -1948,12 +1974,13 @@ export namespace sockets {
 			export function Class(wasmInterface: WasmInterface, context: $wcm.WasmContext): sockets.Udp.IncomingDatagramStream.Class {
 				const resource = sockets.Udp.$.IncomingDatagramStream;
 				const om: ObjectModule = $wcm.Module.createObjectModule(resource, wasmInterface, context);
+				const cm: ClassModule = $wcm.Module.createClassModule(resource, wasmInterface, context);
 				return class extends Impl {
 					constructor() {
 						super(om);
 					}
 					public static $drop(self: IncomingDatagramStream): void {
-						return om.$drop(self);
+						return cm.$drop(self);
 					}
 				};
 			}
@@ -1966,10 +1993,12 @@ export namespace sockets {
 				'[resource-drop]outgoing-datagram-stream': (self: i32) => void;
 			};
 			type ObjectModule = {
-				$drop(self: OutgoingDatagramStream): void;
 				checkSend(self: OutgoingDatagramStream): result<u64, ErrorCode>;
 				send(self: OutgoingDatagramStream, datagrams: OutgoingDatagram[]): result<u64, ErrorCode>;
 				subscribe(self: OutgoingDatagramStream): own<Pollable>;
+			};
+			type ClassModule = {
+				$drop(self: OutgoingDatagramStream): void;
 			};
 			class Impl extends $wcm.Resource implements sockets.Udp.OutgoingDatagramStream.Interface {
 				private readonly _om: ObjectModule;
@@ -1990,12 +2019,13 @@ export namespace sockets {
 			export function Class(wasmInterface: WasmInterface, context: $wcm.WasmContext): sockets.Udp.OutgoingDatagramStream.Class {
 				const resource = sockets.Udp.$.OutgoingDatagramStream;
 				const om: ObjectModule = $wcm.Module.createObjectModule(resource, wasmInterface, context);
+				const cm: ClassModule = $wcm.Module.createClassModule(resource, wasmInterface, context);
 				return class extends Impl {
 					constructor() {
 						super(om);
 					}
 					public static $drop(self: OutgoingDatagramStream): void {
-						return om.$drop(self);
+						return cm.$drop(self);
 					}
 				};
 			}

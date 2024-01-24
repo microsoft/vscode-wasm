@@ -1116,9 +1116,11 @@ export namespace filesystem {
 			['pathFlags', PathFlags],
 			['path', $wcm.wstring],
 		], new $wcm.ResultType<filesystem.Types.MetadataHashValue, filesystem.Types.ErrorCode>(MetadataHashValue, ErrorCode)));
+		Descriptor.addCallable('$drop', new $wcm.DestructorType<filesystem.Types.Descriptor.Statics['$drop']>('[resource-drop]descriptor', [['inst', Descriptor]]));
 		DirectoryEntryStream.addCallable('readDirectoryEntry', new $wcm.MethodType<filesystem.Types.DirectoryEntryStream.Interface['readDirectoryEntry']>('[method]directory-entry-stream.read-directory-entry', [
 			['self', new $wcm.BorrowType<filesystem.Types.DirectoryEntryStream>(DirectoryEntryStream)],
 		], new $wcm.ResultType<option<filesystem.Types.DirectoryEntry>, filesystem.Types.ErrorCode>(new $wcm.OptionType<filesystem.Types.DirectoryEntry>(DirectoryEntry), ErrorCode)));
+		DirectoryEntryStream.addCallable('$drop', new $wcm.DestructorType<filesystem.Types.DirectoryEntryStream.Statics['$drop']>('[resource-drop]directory-entry-stream', [['inst', DirectoryEntryStream]]));
 		export const filesystemErrorCode = new $wcm.FunctionType<filesystem.Types.filesystemErrorCode>('filesystem-error-code',[
 			['err', new $wcm.BorrowType<filesystem.Types.Error>(Error)],
 		], new $wcm.OptionType<filesystem.Types.ErrorCode>(ErrorCode));
@@ -1185,7 +1187,6 @@ export namespace filesystem {
 				'[resource-drop]descriptor': (self: i32) => void;
 			};
 			type ObjectModule = {
-				$drop(self: Descriptor): void;
 				readViaStream(self: Descriptor, offset: Filesize): result<own<InputStream>, ErrorCode>;
 				writeViaStream(self: Descriptor, offset: Filesize): result<own<OutputStream>, ErrorCode>;
 				appendViaStream(self: Descriptor): result<own<OutputStream>, ErrorCode>;
@@ -1213,6 +1214,9 @@ export namespace filesystem {
 				isSameObject(self: Descriptor, other: borrow<Descriptor>): boolean;
 				metadataHash(self: Descriptor): result<MetadataHashValue, ErrorCode>;
 				metadataHashAt(self: Descriptor, pathFlags: PathFlags, path: string): result<MetadataHashValue, ErrorCode>;
+			};
+			type ClassModule = {
+				$drop(self: Descriptor): void;
 			};
 			class Impl extends $wcm.Resource implements filesystem.Types.Descriptor.Interface {
 				private readonly _om: ObjectModule;
@@ -1305,12 +1309,13 @@ export namespace filesystem {
 			export function Class(wasmInterface: WasmInterface, context: $wcm.WasmContext): filesystem.Types.Descriptor.Class {
 				const resource = filesystem.Types.$.Descriptor;
 				const om: ObjectModule = $wcm.Module.createObjectModule(resource, wasmInterface, context);
+				const cm: ClassModule = $wcm.Module.createClassModule(resource, wasmInterface, context);
 				return class extends Impl {
 					constructor() {
 						super(om);
 					}
 					public static $drop(self: Descriptor): void {
-						return om.$drop(self);
+						return cm.$drop(self);
 					}
 				};
 			}
@@ -1321,8 +1326,10 @@ export namespace filesystem {
 				'[resource-drop]directory-entry-stream': (self: i32) => void;
 			};
 			type ObjectModule = {
-				$drop(self: DirectoryEntryStream): void;
 				readDirectoryEntry(self: DirectoryEntryStream): result<DirectoryEntry | undefined, ErrorCode>;
+			};
+			type ClassModule = {
+				$drop(self: DirectoryEntryStream): void;
 			};
 			class Impl extends $wcm.Resource implements filesystem.Types.DirectoryEntryStream.Interface {
 				private readonly _om: ObjectModule;
@@ -1337,12 +1344,13 @@ export namespace filesystem {
 			export function Class(wasmInterface: WasmInterface, context: $wcm.WasmContext): filesystem.Types.DirectoryEntryStream.Class {
 				const resource = filesystem.Types.$.DirectoryEntryStream;
 				const om: ObjectModule = $wcm.Module.createObjectModule(resource, wasmInterface, context);
+				const cm: ClassModule = $wcm.Module.createClassModule(resource, wasmInterface, context);
 				return class extends Impl {
 					constructor() {
 						super(om);
 					}
 					public static $drop(self: DirectoryEntryStream): void {
-						return om.$drop(self);
+						return cm.$drop(self);
 					}
 				};
 			}

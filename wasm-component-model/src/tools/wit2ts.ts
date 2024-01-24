@@ -2546,6 +2546,7 @@ class ResourceEmitter extends InterfaceMemberEmitter {
 		for (const emitter of this.emitters) {
 			emitter.emitMetaModel(code);
 		}
+		this.destructor.emitMetaModel(code);
 	}
 
 	public emitAPI(code: Code): void {
@@ -2561,7 +2562,7 @@ class ResourceEmitter extends InterfaceMemberEmitter {
 		this.destructor.emitWasmInterface(code);
 		code.decreaseIndent();
 		code.push(`};`);
-		const needsClassModule = this.statics.length > 0;
+		const needsClassModule = this.statics.length > 0 || this.destructor !== undefined;
 		const needsObjectModule = this.conztructor !== undefined || this.methods.length > 0;
 		if (needsObjectModule) {
 			code.push(`type ObjectModule = {`);
@@ -2569,7 +2570,6 @@ class ResourceEmitter extends InterfaceMemberEmitter {
 			if (this.conztructor !== undefined) {
 				this.conztructor.emitObjectModule(code);
 			}
-			this.destructor.emitObjectModule(code);
 			for (const emitter of this.methods) {
 				emitter.emitObjectModule(code);
 			}
@@ -2582,6 +2582,7 @@ class ResourceEmitter extends InterfaceMemberEmitter {
 			for (const emitter of this.statics) {
 				emitter.emitStaticsModule(code);
 			}
+			this.destructor.emitStaticsModule(code);
 			code.decreaseIndent();
 			code.push(`};`);
 		}
@@ -2659,15 +2660,38 @@ class ResourceEmitter extends InterfaceMemberEmitter {
 }
 namespace ResourceEmitter {
 
-	export abstract class ResourceFunctionEmitter extends Emitter {
+	export abstract class ResourceElementEmitter extends Emitter {
 
 		protected readonly resource: ResourceType;
+
+		constructor(resource: ResourceType, config: EmitterConfig) {
+			super(config);
+			this.resource = resource;
+		}
+
+		protected getPackageQualifier(): string {
+			const type = this.resource;
+			const { symbols, nameProvider } = this.config;
+			if (type.owner === null) {
+				return nameProvider.asTypeName(type);
+			}
+			const owner = symbols.resolveOwner(type.owner);
+			if (Interface.is(owner)) {
+				const pkg = symbols.getPackage(owner.package);
+				return `${nameProvider.asPackageName(pkg)}.${nameProvider.asNamespaceName(owner)}.${nameProvider.asTypeName(type)}`;
+			} else {
+				return nameProvider.asTypeName(type);
+			}
+		}
+	}
+
+	export abstract class ResourceFunctionEmitter extends ResourceElementEmitter {
+
 		protected readonly method: StaticMethod | Method | Constructor;
 
 		constructor(method: StaticMethod | Method | Constructor, resource: ResourceType, config: EmitterConfig) {
-			super(config);
+			super(resource, config);
 			this.method = method;
-			this.resource = resource;
 		}
 
 		public doEmitNamespace(): void {
@@ -2717,20 +2741,6 @@ namespace ResourceEmitter {
 			return [params, paramNames, returnType];
 		}
 
-		private getPackageQualifier(): string {
-			const type = this.resource;
-			const { symbols, nameProvider } = this.config;
-			if (type.owner === null) {
-				return nameProvider.asTypeName(type);
-			}
-			const owner = symbols.resolveOwner(type.owner);
-			if (Interface.is(owner)) {
-				const pkg = symbols.getPackage(owner.package);
-				return `${nameProvider.asPackageName(pkg)}.${nameProvider.asNamespaceName(owner)}.${nameProvider.asTypeName(type)}`;
-			} else {
-				return nameProvider.asTypeName(type);
-			}
-		}
 	}
 
 	class _MethodEmitter extends ResourceFunctionEmitter {
@@ -2890,16 +2900,16 @@ namespace ResourceEmitter {
 		}
 	}
 
-	class _DestructorEmitter extends Emitter {
-
-		private readonly resource: ResourceType;
+	class _DestructorEmitter extends ResourceElementEmitter {
 
 		constructor(resource: ResourceType, config: EmitterConfig) {
-			super(config);
-			this.resource = resource;
+			super(resource, config);
 		}
 
-		public emitClassMember(code: Code): void {
+		public emitMetaModel(code: Code): void {
+			const resourceName = this.config.nameProvider.asTypeName(this.resource);
+			const typeParam = `${this.getPackageQualifier()}.Statics['$drop']`;
+			code.push(`${resourceName}.addCallable('$drop', new $wcm.DestructorType<${typeParam}>('[resource-drop]${this.resource.name}', [['inst', ${resourceName}]]));`);
 		}
 
 		public emitStaticsDeclaration(code: Code): void {
@@ -2910,7 +2920,7 @@ namespace ResourceEmitter {
 			code.push(`'[resource-drop]${this.resource.name}': (self: i32) => void;`);
 		}
 
-		public emitObjectModule(code: Code): void {
+		public emitStaticsModule(code: Code): void {
 			const ifaceName = this.config.nameProvider.asTypeName(this.resource);
 			code.push(`$drop(self: ${ifaceName}): void;`);
 		}
@@ -2919,7 +2929,7 @@ namespace ResourceEmitter {
 			const ifaceName = this.config.nameProvider.asTypeName(this.resource);
 			code.push(`public static $drop(self: ${ifaceName}): void {`);
 			code.increaseIndent();
-			code.push(`return om.$drop(self);`);
+			code.push(`return cm.$drop(self);`);
 			code.decreaseIndent();
 			code.push('}');
 		}

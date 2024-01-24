@@ -415,6 +415,7 @@ export namespace io {
 		Error.addCallable('toDebugString', new $wcm.MethodType<io.Error.Error.Interface['toDebugString']>('[method]error.to-debug-string', [
 			['self', new $wcm.BorrowType<io.Error.Error>(Error)],
 		], $wcm.wstring));
+		Error.addCallable('$drop', new $wcm.DestructorType<io.Error.Error.Statics['$drop']>('[resource-drop]error', [['inst', Error]]));
 	}
 	export namespace Error._ {
 		export const id = 'wasi:io/error' as const;
@@ -433,8 +434,10 @@ export namespace io {
 				'[resource-drop]error': (self: i32) => void;
 			};
 			type ObjectModule = {
-				$drop(self: Error): void;
 				toDebugString(self: Error): string;
+			};
+			type ClassModule = {
+				$drop(self: Error): void;
 			};
 			class Impl extends $wcm.Resource implements io.Error.Error.Interface {
 				private readonly _om: ObjectModule;
@@ -449,12 +452,13 @@ export namespace io {
 			export function Class(wasmInterface: WasmInterface, context: $wcm.WasmContext): io.Error.Error.Class {
 				const resource = io.Error.$.Error;
 				const om: ObjectModule = $wcm.Module.createObjectModule(resource, wasmInterface, context);
+				const cm: ClassModule = $wcm.Module.createClassModule(resource, wasmInterface, context);
 				return class extends Impl {
 					constructor() {
 						super(om);
 					}
 					public static $drop(self: Error): void {
-						return om.$drop(self);
+						return cm.$drop(self);
 					}
 				};
 			}
@@ -478,6 +482,7 @@ export namespace io {
 		Pollable.addCallable('block', new $wcm.MethodType<io.Poll.Pollable.Interface['block']>('[method]pollable.block', [
 			['self', new $wcm.BorrowType<io.Poll.Pollable>(Pollable)],
 		], undefined));
+		Pollable.addCallable('$drop', new $wcm.DestructorType<io.Poll.Pollable.Statics['$drop']>('[resource-drop]pollable', [['inst', Pollable]]));
 		export const poll = new $wcm.FunctionType<io.Poll.poll>('poll',[
 			['in_', new $wcm.ListType<borrow<io.Poll.Pollable>>(new $wcm.BorrowType<io.Poll.Pollable>(Pollable))],
 		], new $wcm.Uint32ArrayType());
@@ -501,9 +506,11 @@ export namespace io {
 				'[resource-drop]pollable': (self: i32) => void;
 			};
 			type ObjectModule = {
-				$drop(self: Pollable): void;
 				ready(self: Pollable): boolean;
 				block(self: Pollable): void;
+			};
+			type ClassModule = {
+				$drop(self: Pollable): void;
 			};
 			class Impl extends $wcm.Resource implements io.Poll.Pollable.Interface {
 				private readonly _om: ObjectModule;
@@ -521,12 +528,13 @@ export namespace io {
 			export function Class(wasmInterface: WasmInterface, context: $wcm.WasmContext): io.Poll.Pollable.Class {
 				const resource = io.Poll.$.Pollable;
 				const om: ObjectModule = $wcm.Module.createObjectModule(resource, wasmInterface, context);
+				const cm: ClassModule = $wcm.Module.createClassModule(resource, wasmInterface, context);
 				return class extends Impl {
 					constructor() {
 						super(om);
 					}
 					public static $drop(self: Pollable): void {
-						return om.$drop(self);
+						return cm.$drop(self);
 					}
 				};
 			}
@@ -569,6 +577,7 @@ export namespace io {
 		InputStream.addCallable('subscribe', new $wcm.MethodType<io.Streams.InputStream.Interface['subscribe']>('[method]input-stream.subscribe', [
 			['self', new $wcm.BorrowType<io.Streams.InputStream>(InputStream)],
 		], new $wcm.OwnType<io.Streams.Pollable>(Pollable)));
+		InputStream.addCallable('$drop', new $wcm.DestructorType<io.Streams.InputStream.Statics['$drop']>('[resource-drop]input-stream', [['inst', InputStream]]));
 		OutputStream.addCallable('checkWrite', new $wcm.MethodType<io.Streams.OutputStream.Interface['checkWrite']>('[method]output-stream.check-write', [
 			['self', new $wcm.BorrowType<io.Streams.OutputStream>(OutputStream)],
 		], new $wcm.ResultType<u64, io.Streams.StreamError>($wcm.u64, StreamError)));
@@ -607,6 +616,7 @@ export namespace io {
 			['src', new $wcm.BorrowType<io.Streams.InputStream>(InputStream)],
 			['len', $wcm.u64],
 		], new $wcm.ResultType<u64, io.Streams.StreamError>($wcm.u64, StreamError)));
+		OutputStream.addCallable('$drop', new $wcm.DestructorType<io.Streams.OutputStream.Statics['$drop']>('[resource-drop]output-stream', [['inst', OutputStream]]));
 	}
 	export namespace Streams._ {
 		export const id = 'wasi:io/streams' as const;
@@ -634,12 +644,14 @@ export namespace io {
 				'[resource-drop]input-stream': (self: i32) => void;
 			};
 			type ObjectModule = {
-				$drop(self: InputStream): void;
 				read(self: InputStream, len: u64): result<Uint8Array, StreamError>;
 				blockingRead(self: InputStream, len: u64): result<Uint8Array, StreamError>;
 				skip(self: InputStream, len: u64): result<u64, StreamError>;
 				blockingSkip(self: InputStream, len: u64): result<u64, StreamError>;
 				subscribe(self: InputStream): own<Pollable>;
+			};
+			type ClassModule = {
+				$drop(self: InputStream): void;
 			};
 			class Impl extends $wcm.Resource implements io.Streams.InputStream.Interface {
 				private readonly _om: ObjectModule;
@@ -666,12 +678,13 @@ export namespace io {
 			export function Class(wasmInterface: WasmInterface, context: $wcm.WasmContext): io.Streams.InputStream.Class {
 				const resource = io.Streams.$.InputStream;
 				const om: ObjectModule = $wcm.Module.createObjectModule(resource, wasmInterface, context);
+				const cm: ClassModule = $wcm.Module.createClassModule(resource, wasmInterface, context);
 				return class extends Impl {
 					constructor() {
 						super(om);
 					}
 					public static $drop(self: InputStream): void {
-						return om.$drop(self);
+						return cm.$drop(self);
 					}
 				};
 			}
@@ -691,7 +704,6 @@ export namespace io {
 				'[resource-drop]output-stream': (self: i32) => void;
 			};
 			type ObjectModule = {
-				$drop(self: OutputStream): void;
 				checkWrite(self: OutputStream): result<u64, StreamError>;
 				write(self: OutputStream, contents: Uint8Array): result<void, StreamError>;
 				blockingWriteAndFlush(self: OutputStream, contents: Uint8Array): result<void, StreamError>;
@@ -702,6 +714,9 @@ export namespace io {
 				blockingWriteZeroesAndFlush(self: OutputStream, len: u64): result<void, StreamError>;
 				splice(self: OutputStream, src: borrow<InputStream>, len: u64): result<u64, StreamError>;
 				blockingSplice(self: OutputStream, src: borrow<InputStream>, len: u64): result<u64, StreamError>;
+			};
+			type ClassModule = {
+				$drop(self: OutputStream): void;
 			};
 			class Impl extends $wcm.Resource implements io.Streams.OutputStream.Interface {
 				private readonly _om: ObjectModule;
@@ -743,12 +758,13 @@ export namespace io {
 			export function Class(wasmInterface: WasmInterface, context: $wcm.WasmContext): io.Streams.OutputStream.Class {
 				const resource = io.Streams.$.OutputStream;
 				const om: ObjectModule = $wcm.Module.createObjectModule(resource, wasmInterface, context);
+				const cm: ClassModule = $wcm.Module.createClassModule(resource, wasmInterface, context);
 				return class extends Impl {
 					constructor() {
 						super(om);
 					}
 					public static $drop(self: OutputStream): void {
-						return om.$drop(self);
+						return cm.$drop(self);
 					}
 				};
 			}

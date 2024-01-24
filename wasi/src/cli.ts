@@ -371,6 +371,7 @@ export namespace cli {
 	export namespace TerminalInput.$ {
 		export const TerminalInput = new $wcm.ResourceType<cli.TerminalInput.TerminalInput>('terminal-input', 'wasi:cli/terminal-input/terminal-input');
 		export const TerminalInput_Handle = new $wcm.ResourceHandleType('terminal-input');
+		TerminalInput.addCallable('$drop', new $wcm.DestructorType<cli.TerminalInput.TerminalInput.Statics['$drop']>('[resource-drop]terminal-input', [['inst', TerminalInput]]));
 	}
 	export namespace TerminalInput._ {
 		export const id = 'wasi:cli/terminal-input' as const;
@@ -387,10 +388,19 @@ export namespace cli {
 			export type WasmInterface = {
 				'[resource-drop]terminal-input': (self: i32) => void;
 			};
+			type ClassModule = {
+				$drop(self: TerminalInput): void;
+			};
 			class Impl extends $wcm.Resource implements cli.TerminalInput.TerminalInput.Interface {
 			}
-			export function Class(): cli.TerminalInput.TerminalInput.Class {
-				return Impl;
+			export function Class(wasmInterface: WasmInterface, context: $wcm.WasmContext): cli.TerminalInput.TerminalInput.Class {
+				const resource = cli.TerminalInput.$.TerminalInput;
+				const cm: ClassModule = $wcm.Module.createClassModule(resource, wasmInterface, context);
+				return class extends Impl {
+					public static $drop(self: TerminalInput): void {
+						return cm.$drop(self);
+					}
+				};
 			}
 		}
 		export type WasmInterface = {
@@ -406,6 +416,7 @@ export namespace cli {
 	export namespace TerminalOutput.$ {
 		export const TerminalOutput = new $wcm.ResourceType<cli.TerminalOutput.TerminalOutput>('terminal-output', 'wasi:cli/terminal-output/terminal-output');
 		export const TerminalOutput_Handle = new $wcm.ResourceHandleType('terminal-output');
+		TerminalOutput.addCallable('$drop', new $wcm.DestructorType<cli.TerminalOutput.TerminalOutput.Statics['$drop']>('[resource-drop]terminal-output', [['inst', TerminalOutput]]));
 	}
 	export namespace TerminalOutput._ {
 		export const id = 'wasi:cli/terminal-output' as const;
@@ -422,10 +433,19 @@ export namespace cli {
 			export type WasmInterface = {
 				'[resource-drop]terminal-output': (self: i32) => void;
 			};
+			type ClassModule = {
+				$drop(self: TerminalOutput): void;
+			};
 			class Impl extends $wcm.Resource implements cli.TerminalOutput.TerminalOutput.Interface {
 			}
-			export function Class(): cli.TerminalOutput.TerminalOutput.Class {
-				return Impl;
+			export function Class(wasmInterface: WasmInterface, context: $wcm.WasmContext): cli.TerminalOutput.TerminalOutput.Class {
+				const resource = cli.TerminalOutput.$.TerminalOutput;
+				const cm: ClassModule = $wcm.Module.createClassModule(resource, wasmInterface, context);
+				return class extends Impl {
+					public static $drop(self: TerminalOutput): void {
+						return cm.$drop(self);
+					}
+				};
 			}
 		}
 		export type WasmInterface = {

@@ -608,6 +608,10 @@ namespace $u32 {
 	export const LOW_VALUE = 0;
 	export const HIGH_VALUE = 4294967295; // 2 ^ 32 - 1
 
+	export function valid(value: u32): boolean {
+		return value >= LOW_VALUE && value <= HIGH_VALUE && Number.isInteger(value);
+	}
+
 	export function load(memory: Memory, ptr: ptr): u32 {
 		return memory.view.getUint32(ptr, true);
 	}
@@ -2476,17 +2480,18 @@ export class ConstructorType<_T extends Function = Function> extends Callable {
 
 export class DestructorType<_T extends Function = Function> extends Callable {
 
-	constructor(witName: string, params: CallableParameter[], returnType?: GenericComponentModelType) {
-		super(witName, params, returnType);
+	constructor(witName: string, params: CallableParameter[]) {
+		super(witName, params);
 	}
 
-	public callDestructor(objHandle: number, resourceManager: ResourceManager, context: WasmContext): void {
-		const obj = resourceManager.get(objHandle);
-		if (obj === undefined) {
-			throw new ComponentModelError(`Invalid object handle ${objHandle}.`);
+	public callDestructor(func: JFunction, params: (number | bigint)[], resourceManager: ResourceManager): void {
+		const handle = params[0];
+		if (typeof handle === 'bigint' || !$u32.valid(handle)) {
+			throw new ComponentModelError(`Object handle must be a number (u32), but got ${handle}.`);
 		}
-		resourceManager.unregister(objHandle);
-		obj.destroy();
+		const obj = resourceManager.getResource(handle);
+		func(obj);
+		resourceManager.unregister(handle);
 	}
 }
 
@@ -2951,7 +2956,7 @@ export namespace Host {
 				} else if (callable instanceof MethodType) {
 					result[callable.witName] = createMethodFunction(callableName, callable, resourceManager, context);
 				} else if (callable instanceof DestructorType) {
-					result[callable.witName] = createDestructorFunction(callable, resourceManager, context);
+					result[callable.witName] = createDestructorFunction(callable, (service[resourceName] as GenericClass)[callableName], resourceManager);
 				}
 			}
 		}
@@ -2970,9 +2975,9 @@ export namespace Host {
 		};
 	}
 
-	function createDestructorFunction(callable: DestructorType, manager: ResourceManager, context: WasmContext): WasmFunction {
+	function createDestructorFunction(callable: DestructorType, func: JFunction, manager: ResourceManager): WasmFunction {
 		return (...params: WasmType[]): number | bigint | void => {
-			return callable.callDestructor(params, manager, context);
+			return callable.callDestructor(func, params, manager);
 		};
 	}
 
