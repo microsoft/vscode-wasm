@@ -119,7 +119,7 @@ export namespace ResourceManager {
 		}
 	}
 
-	export function create<T extends JInterface>(key: string): ResourceManager<T> {
+	export function createDefault<T extends JInterface>(key: string): ResourceManager<T> {
 		return new Default<T>(key);
 	}
 }
@@ -138,7 +138,7 @@ export namespace ResourceManagers {
 		public get(key: string): ResourceManager<any> {
 			let manager = this.managers.get(key);
 			if (manager === undefined) {
-				manager = ResourceManager.create(key);
+				manager = ResourceManager.createDefault(key);
 				this.managers.set(key, manager);
 			}
 			return manager;
@@ -3010,6 +3010,8 @@ export namespace Module {
 		const result: { [key: string]: JFunction }  = Object.create(null);
 		for (const [name, callable] of resource.methods) {
 			if (callable instanceof StaticMethodType) {
+				result[name] = createModuleFunction(callable as any, wasm, context);
+			} else if (callable instanceof DestructorType) {
 				result[name] = createModuleFunction(callable as any, wasm, context);
 			}
 		}

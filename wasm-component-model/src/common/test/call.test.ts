@@ -46,6 +46,9 @@ class PointResourceClass extends Resource implements Types.PointResource.Interfa
 		super();
 	}
 
+	public static $drop(_resource: Types.PointResource.Interface): void {
+	}
+
 	public getX(): u32 {
 		return this.x;
 	}
@@ -104,7 +107,7 @@ const serviceImpl: Types = {
 };
 
 const memory = new Memory();
-const managers = new ResourceManagers();
+const managers = ResourceManagers.createDefault();
 const context: WasmContext = {
 	getMemory: () => memory,
 	options: { encoding: 'utf-8' },
@@ -128,16 +131,26 @@ suite ('point-resource', () => {
 	const host: Types._.WasmInterface = Types._.createHost(serviceImpl, context);
 	const service = Types._.createService(host, context);
 	test('host:call', () => {
+		const pointResourceManager = context.managers.get('vscode:test-data/types/point-resource');
 		const point = host['[constructor]point-resource'](1, 2);
+		assert.strictEqual(pointResourceManager.managesHandle(point), true);
 		assert.strictEqual(host['[method]point-resource.get-x'](point), 1);
 		assert.strictEqual(host['[method]point-resource.get-y'](point), 2);
 		assert.strictEqual(host['[method]point-resource.add'](point), 3);
+		host['[resource-drop]point-resource'](point);
+		assert.strictEqual(pointResourceManager.managesHandle(point), false);
 	});
 	test('service:call', () => {
+		const pointResourceManager = context.managers.get('vscode:test-data/types/point-resource');
 		const point = new service.PointResource(1, 2);
+		const handle = point.$handle;
+		assert.ok(typeof handle === 'number');
+		assert.strictEqual(pointResourceManager.managesHandle(handle), true);
 		assert.strictEqual(point.getX(), 1);
 		assert.strictEqual(point.getY(), 2);
 		assert.strictEqual(point.add(), 3);
+		service.PointResource.$drop(point);
+		assert.strictEqual(pointResourceManager.managesHandle(handle), false);
 	});
 });
 

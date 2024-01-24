@@ -179,6 +179,8 @@ export namespace testData {
 				add(): u32;
 			}
 			export type Statics = {
+				$new?(x: u32, y: u32): Interface;
+				$drop(inst: Interface): void;
 			};
 			export type Class = Statics & {
 				new(x: u32, y: u32): Interface;
@@ -216,7 +218,7 @@ export namespace testData {
 			['x', $wcm.u32],
 			['y', $wcm.u32],
 		]);
-		export const PointResource = new $wcm.ResourceType<Types.PointResource>('point-resource', 'vscode:test-data/types/point-resource');
+		export const PointResource = new $wcm.ResourceType<testData.Types.PointResource>('point-resource', 'vscode:test-data/types/point-resource');
 		export const PointResource_Handle = new $wcm.ResourceHandleType('point-resource');
 		export const PointOption = new $wcm.RecordType<testData.Types.PointOption>([
 			['x', new $wcm.OptionType<u32>($wcm.u32)],
@@ -238,6 +240,7 @@ export namespace testData {
 		PointResource.addCallable('add', new $wcm.MethodType<testData.Types.PointResource.Interface['add']>('[method]point-resource.add', [
 			['self', new $wcm.BorrowType<testData.Types.PointResource>(PointResource)],
 		], $wcm.u32));
+		PointResource.addCallable('$drop', new $wcm.DestructorType<testData.Types.PointResource.Statics['$drop']>('[resource-drop]point-resource', [['inst', PointResource]]));
 		export const call = new $wcm.FunctionType<testData.Types.call>('call',[
 			['point', Point],
 		], $wcm.u32);
@@ -281,12 +284,16 @@ export namespace testData {
 				'[method]point-resource.get-x': (self: i32) => i32;
 				'[method]point-resource.get-y': (self: i32) => i32;
 				'[method]point-resource.add': (self: i32) => i32;
+				'[resource-drop]point-resource': (self: i32) => void;
 			};
 			type ObjectModule = {
 				constructor(x: u32, y: u32): own<$wcm.ResourceHandle>;
 				getX(self: PointResource): u32;
 				getY(self: PointResource): u32;
 				add(self: PointResource): u32;
+			};
+			type ClassModule = {
+				$drop(self: PointResource): void;
 			};
 			class Impl extends $wcm.Resource implements testData.Types.PointResource.Interface {
 				private readonly _om: ObjectModule;
@@ -306,21 +313,25 @@ export namespace testData {
 				}
 			}
 			export function Class(wasmInterface: WasmInterface, context: $wcm.WasmContext): testData.Types.PointResource.Class {
-				const resource = Types.$.PointResource;
+				const resource = testData.Types.$.PointResource;
 				const om: ObjectModule = $wcm.Module.createObjectModule(resource, wasmInterface, context);
+				const cm: ClassModule = $wcm.Module.createClassModule(resource, wasmInterface, context);
 				return class extends Impl {
 					constructor(x: u32, y: u32) {
 						super(x, y, om);
+					}
+					public static $drop(self: PointResource): void {
+						return cm.$drop(self);
 					}
 				};
 			}
 		}
 		export type WasmInterface = {
 			'call': (point_x: i32, point_y: i32) => i32;
-			'call-option': (point_case: i32, point_option_x: i32, point_option_y: i32, result: ptr<[i32, i32]>) => void;
-			'check-variant': (value_case: i32, value_0: i64, value_1: i32, result: ptr<[i32, i64, i32]>) => void;
+			'call-option': (point_case: i32, point_option_x: i32, point_option_y: i32, result: ptr<u32 | undefined>) => void;
+			'check-variant': (value_case: i32, value_0: i64, value_1: i32, result: ptr<TestVariant>) => void;
 			'check-flags-short': (value: i32) => i32;
-			'check-flags-long': (value_0: i32, value_1: i32, result: ptr<[i32, i32]>) => void;
+			'check-flags-long': (value_0: i32, value_1: i32, result: ptr<TestFlagsLong>) => void;
 		} & PointResource.WasmInterface;
 		export function createHost(service: testData.Types, context: $wcm.WasmContext): WasmInterface {
 			return $wcm.Host.create<WasmInterface>(functions, resources, service, context);
