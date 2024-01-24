@@ -5,13 +5,12 @@
 
 import { ptr } from '@vscode/wasm-component-model';
 
-export type Requests = {
+export type ManagementCalls = {
 	method: 'init';
 	params: {
 		workerId: number;
 		memory: WebAssembly.Memory;
 	};
-	result: null;
 };
 
 export type Notifications = {
@@ -20,10 +19,8 @@ export type Notifications = {
 		array: ptr;
 		counter: ptr;
 	};
-	result: null;
 } | {
 	method: 'exit';
-	params: null;
 };
 
 export type Operations = {
@@ -54,5 +51,4 @@ export type Operations = {
 
 export type ServerNotifications = {
 	method: 'done';
-	params: null;
 };

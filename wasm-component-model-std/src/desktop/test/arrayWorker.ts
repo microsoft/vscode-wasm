@@ -8,11 +8,11 @@ import { parentPort } from 'node:worker_threads';
 import { float64, ptr } from '@vscode/wasm-component-model';
 
 import { SArray } from '../../common/sarray';
-import { MessageConnection } from '../connection';
-import { Notifications, Operations, Requests, ServerNotifications } from './messages';
+import { Connection } from '../connection';
+import { Notifications, Operations, ManagementCalls, ServerNotifications } from './messages';
 import { SharedObject } from '../../common/sobject';
 
-const connection = new MessageConnection<undefined, Operations | ServerNotifications, Requests, Notifications>(parentPort!);
+const connection = new Connection<undefined, undefined, Operations | ServerNotifications, ManagementCalls, undefined, Notifications>(parentPort!);
 
 const arrays: Map<ptr, SArray<float64>> = new Map();
 

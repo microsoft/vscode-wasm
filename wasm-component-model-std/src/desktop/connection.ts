@@ -6,7 +6,11 @@
 import { MessagePort, Worker, TransferListItem } from 'worker_threads';
 import { BaseConnection } from '../common/connection';
 
-export class MessageConnection <Requests extends BaseConnection.RequestType | undefined, Notifications extends BaseConnection.NotifyType | undefined, RequestHandlers extends BaseConnection.RequestType | undefined = undefined, NotificationHandlers extends BaseConnection.NotifyType | undefined = undefined> extends BaseConnection<Requests, Notifications, RequestHandlers, NotificationHandlers, TransferListItem> {
+export { BaseConnection };
+export class Connection<
+	AsyncCalls extends BaseConnection.AsyncCallType | undefined, SyncCalls extends BaseConnection.SyncCallType | undefined, Notifications extends BaseConnection.NotifyType | undefined,
+	AsyncCallHandlers extends BaseConnection.AsyncCallType | undefined = undefined, SyncCallHandlers extends BaseConnection.SyncCallType | undefined = undefined, NotifyHandlers extends BaseConnection.NotifyType | undefined = undefined
+> extends BaseConnection<AsyncCalls, SyncCalls, Notifications, AsyncCallHandlers, SyncCallHandlers, NotifyHandlers, TransferListItem> {
 
 	private readonly port: MessagePort | Worker;
 

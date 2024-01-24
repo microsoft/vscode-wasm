@@ -8,8 +8,8 @@ import { Worker } from 'node:worker_threads';
 import { Alignment, float64, u32  } from '@vscode/wasm-component-model';
 
 import { SArray } from '../../common/sarray';
-import { MessageConnection } from '../connection';
-import { Notifications, Operations, Requests, ServerNotifications } from './messages';
+import { Connection } from '../connection';
+import { Notifications, Operations, ManagementCalls, ServerNotifications } from './messages';
 import { SharedObject } from '../../common/sobject';
 
 declare const v8debug: object;
@@ -92,6 +92,8 @@ class ArrayOperations {
 	}
 }
 
+type ConnectionType = Connection<ManagementCalls, undefined, Notifications, undefined, undefined, Operations | ServerNotifications>;
+
 async function main(): Promise<void> {
 
 	const memory = new WebAssembly.Memory({ initial: 2, maximum: 8, shared: true });
@@ -99,7 +101,7 @@ async function main(): Promise<void> {
 
 	const counter = SharedObject.memory().alloc(Alignment.halfWord, u32.size);
 
-	const threads: { worker: Worker; connection: MessageConnection<Requests, Notifications, undefined, Operations | ServerNotifications> }[] = [];
+	const threads: { worker: Worker; connection: ConnectionType }[] = [];
 	const sarray = new SArray<float64>(float64);
 	const operations = new ArrayOperations(sarray);
 	const promises: Promise<void>[] = [];
@@ -110,28 +112,29 @@ async function main(): Promise<void> {
 
 	for (let i = 0; i < numberOfThreads; i++) {
 		const worker = new Worker(path.join(__dirname, './arrayWorker.js'));
-		const connection = new MessageConnection<Requests, Notifications, undefined, Operations | ServerNotifications>(worker);
+		const connection: ConnectionType = new Connection<ManagementCalls, undefined, Notifications, undefined, undefined, Operations | ServerNotifications>(worker);
+		connection.initializeSyncCall(SharedObject.memory());
 		connection.listen();
 
-		await connection.sendRequest('init', { workerId: i, memory });
-		connection.onNotification('array/push', (params) => {
+		await connection.callAsync('init', { workerId: i, memory });
+		connection.onNotify('array/push', (params) => {
 			operations.record({ method: 'array/push', params });
 		});
-		connection.onNotification('array/pop', (params) => {
+		connection.onNotify('array/pop', (params) => {
 			operations.record({ method: 'array/pop', params });
 		});
-		connection.onNotification('array/get', (params) => {
+		connection.onNotify('array/get', (params) => {
 			operations.record({ method: 'array/get', params });
 		});
 
 		promises.push(new Promise<void>((resolve) => {
-			connection.onNotification('done', () => {
-				connection.sendNotification('exit');
+			connection.onNotify('done', () => {
+				connection.notify('exit');
 				resolve();
 			});
 		}));
 		threads.push({ worker, connection });
-		connection.sendNotification('array/new', { array: sarray.location().value, counter });
+		connection.notify('array/new', { array: sarray.location().value, counter });
 	}
 
 	await Promise.all(promises);
