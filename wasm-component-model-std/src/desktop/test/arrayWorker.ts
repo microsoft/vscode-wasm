@@ -23,13 +23,14 @@ const operations: string[] = [
 ];
 
 let workerId!: number;
-connection.onRequest('init', async (params) => {
+connection.onAsyncCall('init', async (params) => {
 	workerId = params.workerId;
 	await SharedObject.initialize(params.memory);
+	connection.initializeSyncCall(SharedObject.memory());
 });
 
 
-connection.onNotification('array/new', async (params) => {
+connection.onNotify('array/new', async (params) => {
 	const array = new SArray<float64>(float64, { value: params.array });
 	arrays.set(params.array, array);
 
@@ -44,7 +45,7 @@ connection.onNotification('array/new', async (params) => {
 			array.push(value);
 			length = array.length;
 		});
-		connection.sendNotification('array/push', { workerId, sequence, value, length });
+		connection.notify('array/push', { workerId, sequence, value, length });
 	}
 
 	function pop() {
@@ -56,7 +57,7 @@ connection.onNotification('array/new', async (params) => {
 			result = array.pop();
 			length = array.length;
 		});
-		connection.sendNotification('array/pop', { workerId, sequence, result, length });
+		connection.notify('array/pop', { workerId, sequence, result, length });
 	}
 
 	function get() {
@@ -68,7 +69,7 @@ connection.onNotification('array/new', async (params) => {
 			sequence = Atomics.add(counter, 0, 1);
 			result = array.at(index)!;
 		});
-		connection.sendNotification('array/get', { workerId, sequence, index, result });
+		connection.notify('array/get', { workerId, sequence, index, result });
 	}
 
 	let start = Date.now();
@@ -87,10 +88,10 @@ connection.onNotification('array/new', async (params) => {
 				break;
 		}
 	}
-	connection.sendNotification('done');
+	connection.notify('done');
 });
 
-connection.onNotification('exit', async () => {
+connection.onNotify('exit', async () => {
 	process.exit(0);
 });
 

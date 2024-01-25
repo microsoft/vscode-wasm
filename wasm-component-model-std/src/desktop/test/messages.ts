@@ -11,6 +11,7 @@ export type ManagementCalls = {
 		workerId: number;
 		memory: WebAssembly.Memory;
 	};
+	result: void;
 };
 
 export type Notifications = {

@@ -151,7 +151,7 @@ export abstract class SharedObject {
 
 	public static Context: ComponentModelContext = {
 		options: { encoding: 'utf-8' },
-		managers: new ResourceManagers()
+		managers: ResourceManagers.createDefault()
 	};
 
 	private static _memory: MemoryImpl | undefined;

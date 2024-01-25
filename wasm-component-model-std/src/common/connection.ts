@@ -12,17 +12,24 @@ type _MessageType = {
 };
 
 type _AsyncCallType = _MessageType & {
-	result?: null | undefined | void | any;
+	result: void | null | any;
 	error?: undefined;
 };
 type _AsyncCallHandler = (params: any) => Promise<any>;
 
-type _ResultDescriptor = {
+type _SharedObjectResult = {
 	new (location: MemoryLocation): SharedObject;
 	alloc(): ptr;
 };
+namespace _SharedObjectResult {
+	export function is(value: any): value is _SharedObjectResult {
+		const candidate: _SharedObjectResult = value;
+		return candidate !== undefined && candidate !== null && typeof candidate.alloc === 'function';
+	}
+}
+
 type _SyncCallType = _MessageType & {
-	result?: undefined | _ResultDescriptor;
+	result: void | _SharedObjectResult;
 };
 type _SyncCallHandler = (params: any, result?: MemoryLocation) => number | undefined;
 type SyncCallParams = {
@@ -92,57 +99,57 @@ type MethodKeys<Messages extends _MessageType> = {
 };
 
 type _AsyncCallSignatures<AsyncCalls extends _AsyncCallType, TLI> = UnionToIntersection<{
- 	[call in AsyncCalls as call['method']]: call['params'] extends undefined | void
-	 	? (method: call['method']) => Promise<call['result'] extends unknown | undefined | void ? void : call['result']>
-		: (method: call['method'], params: call['params'], transferList?: ReadonlyArray<TLI>) => Promise<call['result'] extends unknown | undefined | void ? void : call['result']>;
+ 	[call in AsyncCalls as call['method']]: call['params'] extends object
+		? (method: call['method'], params: call['params'], transferList?: ReadonlyArray<TLI>) => Promise<call['result'] extends undefined | void ? void : call['result']>
+	 	: (method: call['method']) => Promise<call['result'] extends undefined | void ? void : call['result']>
 }[keyof MethodKeys<AsyncCalls>]>;
 
 type AsyncCallSignatures<AsyncCalls extends _AsyncCallType | undefined, TLI> = [AsyncCalls] extends [_AsyncCallType] ? _AsyncCallSignatures<AsyncCalls, TLI> : undefined;
 
 type _AsyncCallHandlerSignatures<AsyncCalls extends _AsyncCallType> = UnionToIntersection<{
- 	[call in AsyncCalls as call['method']]: call['params'] extends undefined | void
-	 	? (method: call['method'], handler: () => Promise<call['result'] extends unknown | undefined | void ? void : call['result']>) => void
-		: (method: call['method'], handler: (params: call['params']) => Promise<call['result'] extends unknown | undefined | void ? void : call['result']>) => void
+ 	[call in AsyncCalls as call['method']]: call['params'] extends object
+		? (method: call['method'], handler: (params: call['params']) => Promise<call['result'] extends undefined | void ? void : call['result']>) => void
+	 	: (method: call['method'], handler: () => Promise<call['result'] extends undefined | void ? void : call['result']>) => void;
 }[keyof MethodKeys<AsyncCalls>]>;
 
 type AsyncCallHandlerSignatures<AsyncCalls extends _AsyncCallType | undefined> = [AsyncCalls] extends [_AsyncCallType] ?_AsyncCallHandlerSignatures<AsyncCalls> : undefined;
 
 type _SyncCallSignatures<SyncCalls extends _SyncCallType, TLI> = UnionToIntersection<{
- 	[call in SyncCalls as call['method']]: call['params'] extends undefined | void
-	 	? call['result'] extends object
-			? (method: call['method'], resultDescriptor: _ResultDescriptor, timeout?: number | undefined) => InstanceType<call['result']>
-			: (method: call['method'], timeout?: number | undefined) => void
-		: call['result'] extends object
-			? (method: call['method'], params: call['params'], resultDescriptor: _ResultDescriptor, timeout?: number | undefined, transferList?: ReadonlyArray<TLI>) => InstanceType<call['result']>
-			: (method: call['method'], params: call['params'], timeout?: number | undefined, transferList?: ReadonlyArray<TLI>) => void;
+ 	[call in SyncCalls as call['method']]: call['params'] extends object
+		? call['result'] extends _SharedObjectResult
+			? (method: call['method'], params: call['params'], resultDescriptor: _SharedObjectResult, timeout?: number | undefined, transferList?: ReadonlyArray<TLI>) => InstanceType<call['result']>
+			: (method: call['method'], params: call['params'], timeout?: number | undefined, transferList?: ReadonlyArray<TLI>) => void
+	 	: call['result'] extends _SharedObjectResult
+			? (method: call['method'], resultDescriptor: _SharedObjectResult, timeout?: number | undefined) => InstanceType<call['result']>
+			: (method: call['method'], timeout?: number | undefined) => void;
 }[keyof MethodKeys<SyncCalls>]>;
 
 type SyncCallSignatures<SyncCalls extends _SyncCallType | undefined, TLI> = [SyncCalls] extends [_SyncCallType] ? _SyncCallSignatures<SyncCalls, TLI> : undefined;
 
 type _SyncCallHandlerSignatures<SyncCalls extends _SyncCallType> = UnionToIntersection<{
- 	[call in SyncCalls as call['method']]: call['params'] extends undefined | void
-	 	? call['result'] extends object
-			? (method: call['method'], handler: (result: MemoryLocation) => number) => void
-			: (method: call['method'], handler: () => void) => void
-		: call['result'] extends object
-		 ? (method: call['method'], handler: (params: call['params'], result: MemoryLocation) => number) => void
-		 : (method: call['method'], handler: (params: call['params']) => void) => void
+ 	[call in SyncCalls as call['method']]: call['params'] extends object
+		? call['result'] extends _SharedObjectResult
+			? (method: call['method'], handler: (params: call['params'], result: MemoryLocation) => number | void) => void
+			: (method: call['method'], handler: (params: call['params']) => number | void) => void
+	 	: call['result'] extends _SharedObjectResult
+			? (method: call['method'], handler: (result: MemoryLocation) => number | void) => void
+			: (method: call['method'], handler: () => number | void) => void;
 }[keyof MethodKeys<SyncCalls>]>;
 
 type SyncCallHandlerSignatures<SyncCalls extends _SyncCallType | undefined> = [SyncCalls] extends [_SyncCallType] ? _SyncCallHandlerSignatures<SyncCalls> : undefined;
 
 type _NotifySignatures<Notifications extends _NotifyType, TLI> = UnionToIntersection<{
-	[N in Notifications as N['method']]: N['params'] extends unknown | undefined | void
-		? (method: N['method']) => void
-		: (method: N['method'], params: N['params'], transferList?: ReadonlyArray<TLI>) => void;
+	[N in Notifications as N['method']]: N['params'] extends object
+		? (method: N['method'], params: N['params'], transferList?: ReadonlyArray<TLI>) => void
+		: (method: N['method']) => void;
 }[keyof MethodKeys<Notifications>]>;
 
 type NotifySignatures<Notifications extends _NotifyType | undefined, TLI> = [Notifications] extends [_NotifyType] ? _NotifySignatures<Notifications, TLI> : undefined;
 
 type _NotifyHandlerSignatures<Notifications extends _NotifyType> = UnionToIntersection<{
-	[N in Notifications as N['method']]: N['params'] extends unknown | undefined | void
-		? (method: N['method'], handler: () => void) => void
-		: (method: N['method'], handler: (params: N['params']) => void) => void;
+	[N in Notifications as N['method']]: N['params'] extends object
+		? (method: N['method'], handler: (params: N['params']) => void) => void
+		: (method: N['method'], handler: () => void) => void;
 }[keyof MethodKeys<Notifications>]>;
 
 type NotifyHandlerSignatures<Notifications extends _NotifyType | undefined> = [Notifications] extends [_NotifyType] ? _NotifyHandlerSignatures<Notifications> : undefined;
@@ -212,7 +219,7 @@ export abstract class BaseConnection<AsyncCalls extends _AsyncCallType | undefin
 
 	public readonly callSync: SyncCallSignatures<SyncCalls, TLI> = this._callSync as SyncCallSignatures<SyncCalls, TLI>;
 
-	private _callSync(method: string, params: any, result?: _ResultDescriptor | undefined, timeout?: number | undefined, transferList?: ReadonlyArray<TLI>): any {
+	private _callSync(method: string, params: any, result?: _SharedObjectResult | undefined, timeout?: number | undefined, transferList?: ReadonlyArray<TLI>): any {
 		if (this.syncCallBuffer === undefined) {
 			throw new Error('Sync calls are not initialized with shared memory.');
 		}
@@ -369,31 +376,3 @@ export namespace BaseConnection {
 	export const Response = _Response;
 	export type Message = _Message;
 }
-
-type AsyncCalls = {
-	method: 'timeout';
-	params: { ms: number };
-	result: number;
-};
-
-type SyncCalls = {
-	method: 'timeout';
-	params: { ms: number };
-	result: undefined;
-};
-
-type Notifications = {
-	method: 'exit';
-};
-
-let connection!: BaseConnection<AsyncCalls, SyncCalls, Notifications, AsyncCalls, SyncCalls, Notifications>;
-
-connection.callSync('timeout', { ms: 1000 });
-
-connection.onSyncCall('timeout', (params) => {
-});
-
-connection.onNotify('exit', () => {
-});
-
-connection.notify('exit');
