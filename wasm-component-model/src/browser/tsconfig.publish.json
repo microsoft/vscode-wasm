@@ -15,12 +15,11 @@
         "noImplicitThis": true,
         "declaration": true,
         "stripInternal": true,
-        "sourceMap": true,
-        "noUnusedLocals": false,
-        "noUnusedParameters": false,
-        "assumeChangesOnlyAffectDirectDependencies": true,
-        "outDir": "../../lib/web",
-        "tsBuildInfoFile": "../../lib/web/watch.tsbuildInfo",
+        "sourceMap": false,
+        "noUnusedLocals": true,
+        "noUnusedParameters": true,
+        "outDir": "../../lib/browser",
+        "tsBuildInfoFile": "../../lib/browser/publish.tsbuildInfo",
         "incremental": true
     },
     "include": [
@@ -28,7 +27,7 @@
     ],
     "references": [
         {
-            "path": "../common/tsconfig.watch.json"
+            "path": "../common/tsconfig.publish.json"
         }
     ]
 }

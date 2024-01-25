@@ -17,11 +17,10 @@
         "declaration": true,
         "stripInternal": true,
         "sourceMap": true,
-        "noUnusedLocals": false,
-        "noUnusedParameters": false,
-        "assumeChangesOnlyAffectDirectDependencies": true,
-        "outDir": "../../lib/desktop",
-        "tsBuildInfoFile": "../../lib/desktop/watch.tsbuildInfo",
+        "noUnusedLocals": true,
+        "noUnusedParameters": true,
+        "outDir": "../../lib/node",
+        "tsBuildInfoFile": "../../lib/node/compile.tsbuildInfo",
         "incremental": true,
         "composite": true
     },
@@ -33,7 +32,7 @@
     ],
     "references": [
         {
-            "path": "../common/tsconfig.watch.json"
+            "path": "../common/tsconfig.json"
         }
     ]
 }

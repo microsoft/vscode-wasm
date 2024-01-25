@@ -1,25 +1,28 @@
 {
     "compilerOptions": {
+        "types": [
+            "node",
+            "mocha"
+        ],
         "module": "Node16",
         "moduleResolution": "Node16",
         "target": "es2022",
         "lib": [
-            "webworker",
             "es2022"
         ],
         "rootDir": ".",
-        "types": [],
         "strict": true,
         "noImplicitAny": true,
         "noImplicitReturns": true,
         "noImplicitThis": true,
         "declaration": true,
         "stripInternal": true,
-        "sourceMap": false,
-        "noUnusedLocals": true,
-        "noUnusedParameters": true,
-        "outDir": "../../lib/web",
-        "tsBuildInfoFile": "../../lib/web/publish.tsbuildInfo",
+        "sourceMap": true,
+        "noUnusedLocals": false,
+        "noUnusedParameters": false,
+        "assumeChangesOnlyAffectDirectDependencies": true,
+        "outDir": "../../../lib/node/test",
+        "tsBuildInfoFile": "../../../lib/node/test/watch.tsbuildInfo",
         "incremental": true
     },
     "include": [
@@ -27,7 +30,10 @@
     ],
     "references": [
         {
-            "path": "../common/tsconfig.publish.json"
+            "path": "../tsconfig.watch.json"
+        },
+        {
+            "path": "../../common/test/tsconfig.watch.json"
         }
     ]
 }

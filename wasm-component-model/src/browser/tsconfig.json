@@ -1,16 +1,14 @@
 {
     "compilerOptions": {
-        "types": [
-            "node",
-            "mocha"
-        ],
         "module": "Node16",
         "moduleResolution": "Node16",
         "target": "es2022",
         "lib": [
+            "webworker",
             "es2022"
         ],
         "rootDir": ".",
+        "types": [],
         "strict": true,
         "noImplicitAny": true,
         "noImplicitReturns": true,
@@ -18,11 +16,10 @@
         "declaration": true,
         "stripInternal": true,
         "sourceMap": true,
-        "noUnusedLocals": false,
-        "noUnusedParameters": false,
-        "assumeChangesOnlyAffectDirectDependencies": true,
-        "outDir": "../../../lib/desktop/test",
-        "tsBuildInfoFile": "../../../lib/desktop/test/watch.tsbuildInfo",
+        "noUnusedLocals": true,
+        "noUnusedParameters": true,
+        "outDir": "../../lib/browser",
+        "tsBuildInfoFile": "../../lib/browser/compile.tsbuildInfo",
         "incremental": true
     },
     "include": [
@@ -30,10 +27,7 @@
     ],
     "references": [
         {
-            "path": "../tsconfig.watch.json"
-        },
-        {
-            "path": "../../common/test/tsconfig.watch.json"
+            "path": "../common/tsconfig.json"
         }
     ]
 }

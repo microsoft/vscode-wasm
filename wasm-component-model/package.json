@@ -4,12 +4,11 @@
 	"version": "0.1.0-pre.1",
 	"description": "A VS Code specific component model implementation",
 	"engines": {
-		"node": ">=16.17.1",
-		"vscode": "^1.78.0"
+		"node": ">=18.17.1"
 	},
-	"main": "./lib/desktop/main.js",
+	"main": "./lib/node/main.js",
 	"browser": {
-		"./lib/desktop/main.js": "./lib/web/main.js"
+		"./lib/node/main.js": "./lib/browser/main.js"
 	},
 	"typings": "./lib/common/api.d.ts",
 	"bin": {
