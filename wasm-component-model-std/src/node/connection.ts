@@ -2,8 +2,10 @@
  * Copyright (c) Microsoft Corporation. All rights reserved.
  * Licensed under the MIT License. See License.txt in the project root for license information.
  * ------------------------------------------------------------------------------------------ */
-
 import { MessagePort, Worker, TransferListItem } from 'worker_threads';
+
+import { RAL } from '@vscode/wasm-component-model';
+
 import { BaseConnection } from '../common/connection';
 
 export { BaseConnection };
@@ -25,8 +27,7 @@ export class Connection<
 
 	public listen(): void {
 		this.port.on('message', (value: BaseConnection.Message) => {
-			// eslint-disable-next-line no-console
-			this.handleMessage(value).catch(console.error);
+			this.handleMessage(value).catch(RAL().console.error);
 		});
 	}
 }

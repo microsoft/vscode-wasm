@@ -1,7 +1,7 @@
 {
-	"name": "@vscode/shared-utils",
+	"name": "@vscode/wasm-component-model-std",
 	"version": "0.0.1",
-	"description": "Utilities operating on shared memory",
+	"description": "Utilities operating on shared memory to implement component model interfaces",
 	"author": "MS",
 	"license": "MIT",
 	"typings": "./lib/common/api.d.ts",

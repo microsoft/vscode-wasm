@@ -15,10 +15,13 @@
             "path": "./src/common/test/tsconfig.watch.json"
         },
         {
-            "path": "./src/desktop/tsconfig.watch.json"
+            "path": "./src/browser/tsconfig.watch.json"
         },
         {
-            "path": "./src/desktop/test/tsconfig.watch.json"
+            "path": "./src/node/tsconfig.watch.json"
+        },
+        {
+            "path": "./src/node/test/tsconfig.watch.json"
         }
     ]
 }

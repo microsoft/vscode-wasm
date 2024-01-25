@@ -4,33 +4,40 @@
  * ------------------------------------------------------------------------------------------ */
 /// <reference path="../../typings/webAssemblyCommon.d.ts" />
 
-import { Memory, Alignment, ComponentModelContext, GenericComponentModelType, ResourceManagers, ptr, u32, size, JType } from '@vscode/wasm-component-model';
+import RAL from './ral';
 
-import malloc from './malloc';
+import { Memory as _Memory, Alignment, ComponentModelContext, GenericComponentModelType, ResourceManagers, ptr, u32, size, JType, RAL as _RAL } from '@vscode/wasm-component-model';
 
-export interface SMemory extends Memory {
+export interface Memory extends _Memory {
 	free(ptr: ptr): void;
+	isSame(memory: WebAssembly.Memory): boolean;
+}
+export namespace Memory {
+	export function create(memory: WebAssembly.Memory, exports: Exports): Memory {
+		return new MemoryImpl(memory, exports);
+	}
+	export interface Exports {
+		malloc(size: number): number;
+		free(ptr: number): void;
+		aligned_alloc(align: number, size: number): number;
+	}
 }
 
-interface Exports {
-	malloc(size: number): number;
-	free(ptr: number): void;
-	aligned_alloc(align: number, size: number): number;
-}
-
-declare var console: any;
-
-class MemoryImpl implements SMemory {
+class MemoryImpl implements Memory {
 
 	public readonly memory: WebAssembly.Memory;
-	private readonly exports: Exports;
+	private readonly exports: Memory.Exports;
 
 	private _raw: Uint8Array | undefined;
 	private _view: DataView | undefined;
 
-	constructor(memory: WebAssembly.Memory, exports: Exports) {
+	constructor(memory: WebAssembly.Memory, exports: Memory.Exports) {
 		this.memory = memory;
 		this.exports = exports;
+	}
+
+	public isSame(memory: WebAssembly.Memory): boolean {
+		return this.memory === memory;
 	}
 
 	public get buffer(): ArrayBuffer {
@@ -59,8 +66,7 @@ class MemoryImpl implements SMemory {
 			}
 			return ptr;
 		} catch (error) {
-			// eslint-disable-next-line no-console
-			console.error(`Alloc [${align}, ${size}] failed. Buffer size: ${this.memory.buffer.byteLength}`);
+			_RAL().console.error(`Alloc [${align}, ${size}] failed. Buffer size: ${this.memory.buffer.byteLength}`);
 			throw error;
 		}
 	}
@@ -73,8 +79,7 @@ class MemoryImpl implements SMemory {
 		try {
 			this.exports.free(ptr);
 		} catch (error) {
-			// eslint-disable-next-line no-console
-			console.error(`Free ptr ${ptr} failed. Buffer size: ${this.memory.buffer.byteLength}`);
+			_RAL().console.error(`Free ptr ${ptr} failed. Buffer size: ${this.memory.buffer.byteLength}`);
 			throw error;
 		}
 	}
@@ -107,7 +112,6 @@ export namespace Allocation {
 		return typeof candidate === 'object' && candidate !== null && typeof candidate.align === 'number' && typeof candidate.size === 'number';
 	}
 }
-
 
 export class Lock {
 
@@ -154,9 +158,9 @@ export abstract class SharedObject {
 		managers: ResourceManagers.createDefault()
 	};
 
-	private static _memory: MemoryImpl | undefined;
+	private static _memory: Memory | undefined;
 	public static async initialize(memory: WebAssembly.Memory): Promise<void> {
-		if (this._memory?.memory === memory) {
+		if (this._memory !== undefined && this._memory.isSame(memory)) {
 			return;
 		}
 		if (this._memory !== undefined) {
@@ -165,19 +169,10 @@ export abstract class SharedObject {
 		if (!(memory.buffer instanceof SharedArrayBuffer)) {
 			throw new Error('Memory is not a shared memory.');
 		}
-		const module = await malloc;
-		const instance = new WebAssembly.Instance(module, {
-			env: {
-				memory
-			},
-			wasi_snapshot_preview1: {
-				sched_yield: () => 0
-			}
-		});
-		this._memory = new MemoryImpl(memory, instance.exports as unknown as Exports);
+		this._memory = await RAL().Memory.create(memory);
 	}
 
-	public static memory(): SMemory {
+	public static memory(): Memory {
 		if (this._memory === undefined) {
 			throw new Error('Memory is not initialized');
 		}
@@ -207,7 +202,7 @@ export abstract class SharedObject {
 		this.memory().free(this.ptr);
 	}
 
-	protected memory(): SMemory {
+	protected memory(): Memory {
 		return SharedObject.memory();
 	}
 
@@ -256,7 +251,7 @@ export class RecordDescriptor<T extends RecordProperties> {
 		return this._fields.has(name);
 	}
 
-	createAccess(memory: SMemory, ptr: ptr): T {
+	createAccess(memory: Memory, ptr: ptr): T {
 		const access = Object.create(null);
 		for (const [name, { type, offset }] of this._fields) {
 			if (name.startsWith('_')) {

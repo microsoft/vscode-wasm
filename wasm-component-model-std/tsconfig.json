@@ -15,10 +15,13 @@
             "path": "./src/common/test/tsconfig.json"
         },
         {
-            "path": "./src/desktop/tsconfig.json"
+            "path": "./src/browser/tsconfig.json"
         },
         {
-            "path": "./src/desktop/test/tsconfig.json"
+            "path": "./src/node/tsconfig.json"
+        },
+        {
+            "path": "./src/node/test/tsconfig.json"
         }
     ]
 }

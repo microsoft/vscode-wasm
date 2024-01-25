@@ -1,5 +1,5 @@
 {
-	"spec": ["lib/common/test"],
+	"spec": ["lib/node/test/*.test"],
 	"extension": ["js"],
 	"recursive": false,
 	"ui": "tdd"

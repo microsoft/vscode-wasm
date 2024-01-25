@@ -12,10 +12,13 @@
             "path": "./src/common/test/tsconfig.publish.json"
         },
         {
-            "path": "./src/desktop/tsconfig.publish.json"
+            "path": "./src/browser/tsconfig.publish.json"
         },
         {
-            "path": "./src/desktop/test/tsconfig.publish.json"
+            "path": "./src/node/tsconfig.publish.json"
+        },
+        {
+            "path": "./src/node/test/tsconfig.publish.json"
         }
     ]
 }

@@ -4,10 +4,10 @@
  *--------------------------------------------------------------------------------------------*/
 import assert from 'assert';
 
-import { float64, u32} from '@vscode/wasm-component-model';
+import { float64, u32 } from '@vscode/wasm-component-model';
 
-import { SharedObject } from '../sobject';
-import { SArray } from '../sarray';
+import { SharedObject } from '../../common/sobject';
+import { SArray } from '../../common/sarray';
 
 suite('SArray', () => {
 

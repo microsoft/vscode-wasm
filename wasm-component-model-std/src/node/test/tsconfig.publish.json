@@ -20,8 +20,8 @@
         "sourceMap": false,
         "noUnusedLocals": true,
         "noUnusedParameters": true,
-        "outDir": "../../../lib/desktop/test",
-        "tsBuildInfoFile": "../../../lib/desktop/test/publish.tsbuildInfo",
+        "outDir": "../../../lib/node/test",
+        "tsBuildInfoFile": "../../../lib/node/test/publish.tsbuildInfo",
         "incremental": true
     },
     "include": [
