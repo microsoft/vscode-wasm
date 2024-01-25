@@ -6,7 +6,7 @@
 			"./src/common/test/tsconfig.json",
 			"./src/node/tsconfig.json",
 			"./src/node/test/tsconfig.json",
-			"./src/browser`/tsconfig.json"
+			"./src/browser/tsconfig.json"
 		]
 	},
 	"rules": {

@@ -37,7 +37,7 @@ class MemoryImpl implements Memory {
 	}
 
 	public isSame(memory: WebAssembly.Memory): boolean {
-		return this.memory === memory;
+		return this.memory.buffer === memory.buffer;
 	}
 
 	public get buffer(): ArrayBuffer {

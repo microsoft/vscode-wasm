@@ -280,7 +280,8 @@ const wasm_component_model_std = {
 		{
 			path: './src/node',
 			extends: [ node ],
-			references: [ '../common' ]
+			references: [ '../common' ],
+			exclude: [ 'test' ]
 		},
 		{
 			path: './src/node/test',

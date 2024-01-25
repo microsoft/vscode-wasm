@@ -27,6 +27,9 @@
     "include": [
         "."
     ],
+    "exclude": [
+        "test"
+    ],
     "references": [
         {
             "path": "../common/tsconfig.json"
