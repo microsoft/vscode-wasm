@@ -4,11 +4,21 @@
  * ------------------------------------------------------------------------------------------ */
 /// <reference path="../../typings/webAssemblyCommon.d.ts" />
 
-import { Memory } from './sobject';
+import { RAL as _RAL } from '@vscode/wasm-component-model';
 
-interface RAL {
+import { Memory } from './sobject';
+import type { BaseConnection } from './connection';
+
+interface RAL extends _RAL {
 	readonly Memory: {
-		create(memory: WebAssembly.Memory): Promise<Memory>;
+		module(): Promise<WebAssembly.Module>;
+		create(module: WebAssembly.Module, memory: WebAssembly.Memory): Promise<Memory>;
+	};
+	readonly Worker: {
+		getArgs(): string[];
+	};
+	readonly Connection: {
+		create(port: MessagePort): BaseConnection<undefined, undefined, undefined>;
 	};
 }
 

@@ -27,10 +27,9 @@ const operations: string[] = [
 let workerId!: number;
 connection.onAsyncCall('init', async (params) => {
 	workerId = params.workerId;
-	await SharedObject.initialize(params.memory);
+	SharedObject.initialize(await RIL().Memory.create(params.module, params.memory));
 	connection.initializeSyncCall(SharedObject.memory());
 });
-
 
 connection.onNotify('array/new', async (params) => {
 	const array = new SArray<float64>(float64, { value: params.array });

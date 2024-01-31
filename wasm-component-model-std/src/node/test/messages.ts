@@ -9,6 +9,7 @@ export type ManagementCalls = {
 	method: 'init';
 	params: {
 		workerId: number;
+		module: WebAssembly.Module;
 		memory: WebAssembly.Memory;
 	};
 	result: void;

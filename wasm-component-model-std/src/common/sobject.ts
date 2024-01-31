@@ -6,11 +6,11 @@
 
 import RAL from './ral';
 
-import { Memory as _Memory, Alignment, ComponentModelContext, GenericComponentModelType, ResourceManagers, ptr, u32, size, JType, RAL as _RAL } from '@vscode/wasm-component-model';
+import { Memory as _Memory, Alignment, ComponentModelContext, GenericComponentModelType, ResourceManagers, ptr, u32, size, JType } from '@vscode/wasm-component-model';
 
 export interface Memory extends _Memory {
 	free(ptr: ptr): void;
-	isSame(memory: WebAssembly.Memory): boolean;
+	isSame(memory: Memory): boolean;
 }
 export namespace Memory {
 	export function create(memory: WebAssembly.Memory, exports: Exports): Memory {
@@ -36,8 +36,8 @@ class MemoryImpl implements Memory {
 		this.exports = exports;
 	}
 
-	public isSame(memory: WebAssembly.Memory): boolean {
-		return this.memory.buffer === memory.buffer;
+	public isSame(memory: Memory): boolean {
+		return this.buffer === memory.buffer;
 	}
 
 	public get buffer(): ArrayBuffer {
@@ -66,7 +66,7 @@ class MemoryImpl implements Memory {
 			}
 			return ptr;
 		} catch (error) {
-			_RAL().console.error(`Alloc [${align}, ${size}] failed. Buffer size: ${this.memory.buffer.byteLength}`);
+			RAL().console.error(`Alloc [${align}, ${size}] failed. Buffer size: ${this.memory.buffer.byteLength}`);
 			throw error;
 		}
 	}
@@ -79,7 +79,7 @@ class MemoryImpl implements Memory {
 		try {
 			this.exports.free(ptr);
 		} catch (error) {
-			_RAL().console.error(`Free ptr ${ptr} failed. Buffer size: ${this.memory.buffer.byteLength}`);
+			RAL().console.error(`Free ptr ${ptr} failed. Buffer size: ${this.memory.buffer.byteLength}`);
 			throw error;
 		}
 	}
@@ -159,7 +159,7 @@ export abstract class SharedObject {
 	};
 
 	private static _memory: Memory | undefined;
-	public static async initialize(memory: WebAssembly.Memory): Promise<void> {
+	public static initialize(memory: Memory): void {
 		if (this._memory !== undefined && this._memory.isSame(memory)) {
 			return;
 		}
@@ -169,7 +169,7 @@ export abstract class SharedObject {
 		if (!(memory.buffer instanceof SharedArrayBuffer)) {
 			throw new Error('Memory is not a shared memory.');
 		}
-		this._memory = await RAL().Memory.create(memory);
+		this._memory = memory;
 	}
 
 	public static memory(): Memory {

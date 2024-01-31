@@ -10,11 +10,11 @@ import { MemoryLocation, RecordDescriptor, SharedObject } from '@vscode/wasm-com
 
 export class Pollable extends SharedObject implements io.Poll.Pollable {
 
-	private buffer: Int32Array;
+	private signal: Int32Array;
 
 	constructor(location?: MemoryLocation) {
 		super(location ?? { align: s32.alignment, size: s32.size });
-		this.buffer = new Int32Array(this.memory().buffer, this.ptr, 1);
+		this.signal = new Int32Array(this.memory().buffer, this.ptr, 1);
 	}
 
 	public get $handle(): ResourceHandle {
@@ -26,15 +26,15 @@ export class Pollable extends SharedObject implements io.Poll.Pollable {
 	}
 
 	public ready(): boolean {
-		return Atomics.load(this.buffer, 0) === 1;
+		return Atomics.load(this.signal, 0) === 1;
 	}
 
 	public block(): void {
-		Atomics.wait(this.buffer, 0, 0);
+		Atomics.wait(this.signal, 0, 0);
 	}
 
 	public async blockAsync(): Promise<void> {
-		const result = Atomics.waitAsync(this.buffer, 0, 0);
+		const result = Atomics.waitAsync(this.signal, 0, 0);
 		if (result.async) {
 			const value = await result.value;
 			if (value === 'timed-out') {
@@ -49,8 +49,8 @@ export class Pollable extends SharedObject implements io.Poll.Pollable {
 	}
 
 	public markReady(): void {
-		Atomics.store(this.buffer, 0, 1);
-		Atomics.notify(this.buffer, 0);
+		Atomics.store(this.signal, 0, 1);
+		Atomics.notify(this.signal, 0);
 	}
 }
 

@@ -2,6 +2,7 @@
  * Copyright (c) Microsoft Corporation. All rights reserved.
  * Licensed under the MIT License. See License.txt in the project root for license information.
  * ------------------------------------------------------------------------------------------ */
+/// <reference path="../../typings/workerCommon.d.ts" />
 
 import { Memory, ptr, s32 } from '@vscode/wasm-component-model';
 import { MemoryLocation, SharedObject } from './sobject';
@@ -15,7 +16,7 @@ type _AsyncCallType = _MessageType & {
 	result: void | null | any;
 	error?: undefined;
 };
-type _AsyncCallHandler = (params: any) => Promise<any>;
+type _AsyncCallHandler = (params: any) => Promise<any> | any;
 
 type _SharedObjectResult = {
 	new (location: MemoryLocation): SharedObject;
@@ -98,23 +99,24 @@ type MethodKeys<Messages extends _MessageType> = {
 	[M in Messages as M['method']]: M['method'];
 };
 
-type _AsyncCallSignatures<AsyncCalls extends _AsyncCallType, TLI> = UnionToIntersection<{
+type HandlerResult<T> = T | Promise<T>;
+type _AsyncCallSignatures<AsyncCalls extends _AsyncCallType, TLI = TransferItems> = UnionToIntersection<{
  	[call in AsyncCalls as call['method']]: call['params'] extends object
-		? (method: call['method'], params: call['params'], transferList?: ReadonlyArray<TLI>) => Promise<call['result'] extends undefined | void ? void : call['result']>
-	 	: (method: call['method']) => Promise<call['result'] extends undefined | void ? void : call['result']>
+		? (method: call['method'], params: call['params'], transferList?: ReadonlyArray<TLI>) => HandlerResult<call['result'] extends undefined | void ? void : call['result']>
+	 	: (method: call['method']) => HandlerResult<call['result'] extends undefined | void ? void : call['result']>
 }[keyof MethodKeys<AsyncCalls>]>;
 
 type AsyncCallSignatures<AsyncCalls extends _AsyncCallType | undefined, TLI> = [AsyncCalls] extends [_AsyncCallType] ? _AsyncCallSignatures<AsyncCalls, TLI> : undefined;
 
 type _AsyncCallHandlerSignatures<AsyncCalls extends _AsyncCallType> = UnionToIntersection<{
  	[call in AsyncCalls as call['method']]: call['params'] extends object
-		? (method: call['method'], handler: (params: call['params']) => Promise<call['result'] extends undefined | void ? void : call['result']>) => void
-	 	: (method: call['method'], handler: () => Promise<call['result'] extends undefined | void ? void : call['result']>) => void;
+		? (method: call['method'], handler: (params: call['params']) => HandlerResult<call['result'] extends undefined | void ? void : call['result']>) => void
+	 	: (method: call['method'], handler: () => HandlerResult<call['result'] extends undefined | void ? void : call['result']>) => void;
 }[keyof MethodKeys<AsyncCalls>]>;
 
 type AsyncCallHandlerSignatures<AsyncCalls extends _AsyncCallType | undefined> = [AsyncCalls] extends [_AsyncCallType] ?_AsyncCallHandlerSignatures<AsyncCalls> : undefined;
 
-type _SyncCallSignatures<SyncCalls extends _SyncCallType, TLI> = UnionToIntersection<{
+type _SyncCallSignatures<SyncCalls extends _SyncCallType, TLI = TransferItems> = UnionToIntersection<{
  	[call in SyncCalls as call['method']]: call['params'] extends object
 		? call['result'] extends _SharedObjectResult
 			? (method: call['method'], params: call['params'], resultDescriptor: _SharedObjectResult, timeout?: number | undefined, transferList?: ReadonlyArray<TLI>) => InstanceType<call['result']>
@@ -124,7 +126,7 @@ type _SyncCallSignatures<SyncCalls extends _SyncCallType, TLI> = UnionToIntersec
 			: (method: call['method'], timeout?: number | undefined) => void;
 }[keyof MethodKeys<SyncCalls>]>;
 
-type SyncCallSignatures<SyncCalls extends _SyncCallType | undefined, TLI> = [SyncCalls] extends [_SyncCallType] ? _SyncCallSignatures<SyncCalls, TLI> : undefined;
+type SyncCallSignatures<SyncCalls extends _SyncCallType | undefined, TLI= TransferItems> = [SyncCalls] extends [_SyncCallType] ? _SyncCallSignatures<SyncCalls, TLI> : undefined;
 
 type _SyncCallHandlerSignatures<SyncCalls extends _SyncCallType> = UnionToIntersection<{
  	[call in SyncCalls as call['method']]: call['params'] extends object
@@ -138,13 +140,13 @@ type _SyncCallHandlerSignatures<SyncCalls extends _SyncCallType> = UnionToInters
 
 type SyncCallHandlerSignatures<SyncCalls extends _SyncCallType | undefined> = [SyncCalls] extends [_SyncCallType] ? _SyncCallHandlerSignatures<SyncCalls> : undefined;
 
-type _NotifySignatures<Notifications extends _NotifyType, TLI> = UnionToIntersection<{
+type _NotifySignatures<Notifications extends _NotifyType, TLI= TransferItems> = UnionToIntersection<{
 	[N in Notifications as N['method']]: N['params'] extends object
 		? (method: N['method'], params: N['params'], transferList?: ReadonlyArray<TLI>) => void
 		: (method: N['method']) => void;
 }[keyof MethodKeys<Notifications>]>;
 
-type NotifySignatures<Notifications extends _NotifyType | undefined, TLI> = [Notifications] extends [_NotifyType] ? _NotifySignatures<Notifications, TLI> : undefined;
+type NotifySignatures<Notifications extends _NotifyType | undefined, TLI = TransferItems> = [Notifications] extends [_NotifyType] ? _NotifySignatures<Notifications, TLI> : undefined;
 
 type _NotifyHandlerSignatures<Notifications extends _NotifyType> = UnionToIntersection<{
 	[N in Notifications as N['method']]: N['params'] extends object
@@ -162,7 +164,7 @@ export class TimeoutError extends Error {
 	}
 }
 
-export abstract class BaseConnection<AsyncCalls extends _AsyncCallType | undefined, SyncCalls extends _SyncCallType | undefined, Notifications extends _NotifyType | undefined, AsyncCallHandlers extends _AsyncCallType | undefined = undefined, SyncCallHandlers extends _SyncCallType | undefined = undefined, NotifyHandlers extends _NotifyType | undefined = undefined, TLI = unknown> {
+export abstract class BaseConnection<AsyncCalls extends _AsyncCallType | undefined, SyncCalls extends _SyncCallType | undefined, Notifications extends _NotifyType | undefined, AsyncCallHandlers extends _AsyncCallType | undefined = undefined, SyncCallHandlers extends _SyncCallType | undefined = undefined, NotifyHandlers extends _NotifyType | undefined = undefined, TLI = TransferItems> {
 
 	private static sync: number = 0;
 	private static error: number = 1;
@@ -187,6 +189,15 @@ export abstract class BaseConnection<AsyncCalls extends _AsyncCallType | undefin
 		this.syncCallHandlers = new Map();
 
 		this.notifyHandlers = new Map();
+	}
+
+	public dispose(): void {
+		this.memory = undefined;
+		this.syncCallBuffer = undefined;
+		this.asyncCallResultPromises.clear();
+		this.asyncCallHandlers.clear();
+		this.syncCallHandlers.clear();
+		this.notifyHandlers.clear();
 	}
 
 	public readonly callAsync: AsyncCallSignatures<AsyncCalls, TLI> = this._callAsync as AsyncCallSignatures<AsyncCalls, TLI>;

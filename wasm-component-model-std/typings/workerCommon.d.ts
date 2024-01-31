@@ -13,24 +13,10 @@ See the Apache Version 2.0 License for specific language governing permissions
 and limitations under the License.
 ***************************************************************************** */
 
-declare namespace WebAssembly {
+declare type TransferItems = ArrayBuffer | MessagePort;
 
-	interface MemoryDescriptor {
-		initial: number;
-		maximum?: number;
-		shared?: boolean;
-	}
-
-	interface Memory {
-		readonly buffer: ArrayBuffer;
-		grow(delta: number): number;
-	}
-
-	var Memory: {
-		prototype: Memory;
-		new(descriptor: MemoryDescriptor): Memory;
-	};
-
-	interface Module {
-	}
+declare interface MessagePort {
+	start(): void;
+	postMessage(value: any, transferList?: ReadonlyArray<TransferItems>): void;
+	close(): void;
 }

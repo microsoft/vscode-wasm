@@ -8,11 +8,13 @@ import { float64, u32 } from '@vscode/wasm-component-model';
 
 import { SharedObject } from '../sobject';
 import { SArray } from '../sarray';
+import RAL from '../ral';
 
 suite('SArray', () => {
 
 	suiteSetup(async () => {
-		await SharedObject.initialize(new WebAssembly.Memory({ initial: 2, maximum: 8, shared: true }));
+		const module = await RAL().Memory.module();
+		await SharedObject.initialize(await RAL().Memory.create(module, new WebAssembly.Memory({ initial: 2, maximum: 8, shared: true })));
 	});
 
 	test('push', () => {

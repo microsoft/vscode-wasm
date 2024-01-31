@@ -16,147 +16,147 @@ and limitations under the License.
 
 type BufferSource = ArrayBufferView | ArrayBuffer;
 declare namespace WebAssembly {
-    interface CompileError extends Error {
-    }
+	interface CompileError extends Error {
+	}
 
-    var CompileError: {
-        prototype: CompileError;
-        new(message?: string): CompileError;
-        (message?: string): CompileError;
-    };
+	var CompileError: {
+		prototype: CompileError;
+		new(message?: string): CompileError;
+		(message?: string): CompileError;
+	};
 
-    /** [MDN Reference](https://developer.mozilla.org/docs/Web/JavaScript/Reference/Global_Objects/WebAssembly/Global) */
-    interface Global<T extends ValueType = ValueType> {
-        /** [MDN Reference](https://developer.mozilla.org/docs/Web/JavaScript/Reference/Global_Objects/WebAssembly/Global/value) */
-        value: ValueTypeMap[T];
-        /** [MDN Reference](https://developer.mozilla.org/docs/Web/JavaScript/Reference/Global_Objects/WebAssembly/Global/valueOf) */
-        valueOf(): ValueTypeMap[T];
-    }
+	/** [MDN Reference](https://developer.mozilla.org/docs/Web/JavaScript/Reference/Global_Objects/WebAssembly/Global) */
+	interface Global<T extends ValueType = ValueType> {
+		/** [MDN Reference](https://developer.mozilla.org/docs/Web/JavaScript/Reference/Global_Objects/WebAssembly/Global/value) */
+		value: ValueTypeMap[T];
+		/** [MDN Reference](https://developer.mozilla.org/docs/Web/JavaScript/Reference/Global_Objects/WebAssembly/Global/valueOf) */
+		valueOf(): ValueTypeMap[T];
+	}
 
-    var Global: {
-        prototype: Global;
-        new<T extends ValueType = ValueType>(descriptor: GlobalDescriptor<T>, v?: ValueTypeMap[T]): Global<T>;
-    };
+	var Global: {
+		prototype: Global;
+		new<T extends ValueType = ValueType>(descriptor: GlobalDescriptor<T>, v?: ValueTypeMap[T]): Global<T>;
+	};
 
-    /** [MDN Reference](https://developer.mozilla.org/docs/Web/JavaScript/Reference/Global_Objects/WebAssembly/Instance) */
-    interface Instance {
-        /** [MDN Reference](https://developer.mozilla.org/docs/Web/JavaScript/Reference/Global_Objects/WebAssembly/Instance/exports) */
-        readonly exports: Exports;
-    }
+	/** [MDN Reference](https://developer.mozilla.org/docs/Web/JavaScript/Reference/Global_Objects/WebAssembly/Instance) */
+	interface Instance {
+		/** [MDN Reference](https://developer.mozilla.org/docs/Web/JavaScript/Reference/Global_Objects/WebAssembly/Instance/exports) */
+		readonly exports: Exports;
+	}
 
-    var Instance: {
-        prototype: Instance;
-        new(module: Module, importObject?: Imports): Instance;
-    };
+	var Instance: {
+		prototype: Instance;
+		new(module: Module, importObject?: Imports): Instance;
+	};
 
-    interface LinkError extends Error {
-    }
+	interface LinkError extends Error {
+	}
 
-    var LinkError: {
-        prototype: LinkError;
-        new(message?: string): LinkError;
-        (message?: string): LinkError;
-    };
+	var LinkError: {
+		prototype: LinkError;
+		new(message?: string): LinkError;
+		(message?: string): LinkError;
+	};
 
-    /** [MDN Reference](https://developer.mozilla.org/docs/Web/JavaScript/Reference/Global_Objects/WebAssembly/Memory) */
-    interface Memory {
-        /** [MDN Reference](https://developer.mozilla.org/docs/Web/JavaScript/Reference/Global_Objects/WebAssembly/Memory/buffer) */
-        readonly buffer: ArrayBuffer;
-        /** [MDN Reference](https://developer.mozilla.org/docs/Web/JavaScript/Reference/Global_Objects/WebAssembly/Memory/grow) */
-        grow(delta: number): number;
-    }
+	/** [MDN Reference](https://developer.mozilla.org/docs/Web/JavaScript/Reference/Global_Objects/WebAssembly/Memory) */
+	interface Memory {
+		/** [MDN Reference](https://developer.mozilla.org/docs/Web/JavaScript/Reference/Global_Objects/WebAssembly/Memory/buffer) */
+		readonly buffer: ArrayBuffer;
+		/** [MDN Reference](https://developer.mozilla.org/docs/Web/JavaScript/Reference/Global_Objects/WebAssembly/Memory/grow) */
+		grow(delta: number): number;
+	}
 
-    var Memory: {
-        prototype: Memory;
-        new(descriptor: MemoryDescriptor): Memory;
-    };
+	var Memory: {
+		prototype: Memory;
+		new(descriptor: MemoryDescriptor): Memory;
+	};
 
-    /** [MDN Reference](https://developer.mozilla.org/docs/Web/JavaScript/Reference/Global_Objects/WebAssembly/Module) */
-    interface Module {
-    }
+	/** [MDN Reference](https://developer.mozilla.org/docs/Web/JavaScript/Reference/Global_Objects/WebAssembly/Module) */
+	interface Module {
+	}
 
-    var Module: {
-        prototype: Module;
-        new(bytes: BufferSource): Module;
-        /** [MDN Reference](https://developer.mozilla.org/docs/Web/JavaScript/Reference/Global_Objects/WebAssembly/Module/customSections) */
-        customSections(moduleObject: Module, sectionName: string): ArrayBuffer[];
-        /** [MDN Reference](https://developer.mozilla.org/docs/Web/JavaScript/Reference/Global_Objects/WebAssembly/Module/exports) */
-        exports(moduleObject: Module): ModuleExportDescriptor[];
-        /** [MDN Reference](https://developer.mozilla.org/docs/Web/JavaScript/Reference/Global_Objects/WebAssembly/Module/imports) */
-        imports(moduleObject: Module): ModuleImportDescriptor[];
-    };
+	var Module: {
+		prototype: Module;
+		new(bytes: BufferSource): Module;
+		/** [MDN Reference](https://developer.mozilla.org/docs/Web/JavaScript/Reference/Global_Objects/WebAssembly/Module/customSections) */
+		customSections(moduleObject: Module, sectionName: string): ArrayBuffer[];
+		/** [MDN Reference](https://developer.mozilla.org/docs/Web/JavaScript/Reference/Global_Objects/WebAssembly/Module/exports) */
+		exports(moduleObject: Module): ModuleExportDescriptor[];
+		/** [MDN Reference](https://developer.mozilla.org/docs/Web/JavaScript/Reference/Global_Objects/WebAssembly/Module/imports) */
+		imports(moduleObject: Module): ModuleImportDescriptor[];
+	};
 
-    interface RuntimeError extends Error {
-    }
+	interface RuntimeError extends Error {
+	}
 
-    var RuntimeError: {
-        prototype: RuntimeError;
-        new(message?: string): RuntimeError;
-        (message?: string): RuntimeError;
-    };
+	var RuntimeError: {
+		prototype: RuntimeError;
+		new(message?: string): RuntimeError;
+		(message?: string): RuntimeError;
+	};
 
-    /** [MDN Reference](https://developer.mozilla.org/docs/Web/JavaScript/Reference/Global_Objects/WebAssembly/Table) */
-    interface Table {
-        /** [MDN Reference](https://developer.mozilla.org/docs/Web/JavaScript/Reference/Global_Objects/WebAssembly/Table/length) */
-        readonly length: number;
-        /** [MDN Reference](https://developer.mozilla.org/docs/Web/JavaScript/Reference/Global_Objects/WebAssembly/Table/get) */
-        get(index: number): any;
-        /** [MDN Reference](https://developer.mozilla.org/docs/Web/JavaScript/Reference/Global_Objects/WebAssembly/Table/grow) */
-        grow(delta: number, value?: any): number;
-        /** [MDN Reference](https://developer.mozilla.org/docs/Web/JavaScript/Reference/Global_Objects/WebAssembly/Table/set) */
-        set(index: number, value?: any): void;
-    }
+	/** [MDN Reference](https://developer.mozilla.org/docs/Web/JavaScript/Reference/Global_Objects/WebAssembly/Table) */
+	interface Table {
+		/** [MDN Reference](https://developer.mozilla.org/docs/Web/JavaScript/Reference/Global_Objects/WebAssembly/Table/length) */
+		readonly length: number;
+		/** [MDN Reference](https://developer.mozilla.org/docs/Web/JavaScript/Reference/Global_Objects/WebAssembly/Table/get) */
+		get(index: number): any;
+		/** [MDN Reference](https://developer.mozilla.org/docs/Web/JavaScript/Reference/Global_Objects/WebAssembly/Table/grow) */
+		grow(delta: number, value?: any): number;
+		/** [MDN Reference](https://developer.mozilla.org/docs/Web/JavaScript/Reference/Global_Objects/WebAssembly/Table/set) */
+		set(index: number, value?: any): void;
+	}
 
-    var Table: {
-        prototype: Table;
-        new(descriptor: TableDescriptor, value?: any): Table;
-    };
+	var Table: {
+		prototype: Table;
+		new(descriptor: TableDescriptor, value?: any): Table;
+	};
 
-    interface GlobalDescriptor<T extends ValueType = ValueType> {
-        mutable?: boolean;
-        value: T;
-    }
+	interface GlobalDescriptor<T extends ValueType = ValueType> {
+		mutable?: boolean;
+		value: T;
+	}
 
-    interface MemoryDescriptor {
-        initial: number;
-        maximum?: number;
-        shared?: boolean;
-    }
+	interface MemoryDescriptor {
+		initial: number;
+		maximum?: number;
+		shared?: boolean;
+	}
 
-    interface ModuleExportDescriptor {
-        kind: ImportExportKind;
-        name: string;
-    }
+	interface ModuleExportDescriptor {
+		kind: ImportExportKind;
+		name: string;
+	}
 
-    interface ModuleImportDescriptor {
-        kind: ImportExportKind;
-        module: string;
-        name: string;
-    }
+	interface ModuleImportDescriptor {
+		kind: ImportExportKind;
+		module: string;
+		name: string;
+	}
 
-    interface TableDescriptor {
-        element: TableKind;
-        initial: number;
-        maximum?: number;
-    }
+	interface TableDescriptor {
+		element: TableKind;
+		initial: number;
+		maximum?: number;
+	}
 
-    interface ValueTypeMap {
-        anyfunc: Function;
-        externref: any;
-        f32: number;
-        f64: number;
-        i32: number;
-        i64: bigint;
-        v128: never;
-    }
+	interface ValueTypeMap {
+		anyfunc: Function;
+		externref: any;
+		f32: number;
+		f64: number;
+		i32: number;
+		i64: bigint;
+		v128: never;
+	}
 
-    interface WebAssemblyInstantiatedSource {
-        instance: Instance;
-        module: Module;
-    }
+	interface WebAssemblyInstantiatedSource {
+		instance: Instance;
+		module: Module;
+	}
 
-    type ImportExportKind = "function" | "global" | "memory" | "table";
-    type TableKind = "anyfunc" | "externref";
+    type ImportExportKind = 'function' | 'global' | 'memory' | 'table';
+    type TableKind = 'anyfunc' | 'externref';
     type ExportValue = Function | Global | Memory | Table;
     type Exports = Record<string, ExportValue>;
     type ImportValue = ExportValue | number;
