@@ -130,7 +130,7 @@ export namespace WasiHost {
 						return wasiMemory;
 					},
 					options: options,
-					managers: new ResourceManagers()
+					managers: ResourceManagers.createDefault()
 				};
 			} else {
 				const wasiMemory = new ReadonlyMemory(memory.buffer);
@@ -139,7 +139,7 @@ export namespace WasiHost {
 						return wasiMemory;
 					},
 					options: options,
-					managers: new ResourceManagers()
+					managers: ResourceManagers.createDefault()
 				};
 			}
 		};
