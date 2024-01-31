@@ -28,7 +28,7 @@ const _ril: RIL = Object.freeze<RIL>(Object.assign({}, _RAL(), {
 					sched_yield: () => 0
 				}
 			});
-			return Memory.create(memory, instance.exports as unknown as Memory.Exports);
+			return Memory.create(module, memory, instance.exports as unknown as Memory.Exports);
 		}
 	}),
 	Worker: Object.freeze({

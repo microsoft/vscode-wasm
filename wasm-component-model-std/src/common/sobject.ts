@@ -11,10 +11,11 @@ import { Memory as _Memory, Alignment, ComponentModelContext, GenericComponentMo
 export interface Memory extends _Memory {
 	free(ptr: ptr): void;
 	isSame(memory: Memory): boolean;
+	getTransferable(): { module: WebAssembly.Module; memory: WebAssembly.Memory };
 }
 export namespace Memory {
-	export function create(memory: WebAssembly.Memory, exports: Exports): Memory {
-		return new MemoryImpl(memory, exports);
+	export function create(module: WebAssembly.Module, memory: WebAssembly.Memory, exports: Exports): Memory {
+		return new MemoryImpl(module, memory, exports);
 	}
 	export interface Exports {
 		malloc(size: number): number;
@@ -25,19 +26,25 @@ export namespace Memory {
 
 class MemoryImpl implements Memory {
 
-	public readonly memory: WebAssembly.Memory;
+	private readonly module: WebAssembly.Module;
+	private readonly memory: WebAssembly.Memory;
 	private readonly exports: Memory.Exports;
 
 	private _raw: Uint8Array | undefined;
 	private _view: DataView | undefined;
 
-	constructor(memory: WebAssembly.Memory, exports: Memory.Exports) {
+	constructor(module: WebAssembly.Module, memory: WebAssembly.Memory, exports: Memory.Exports) {
+		this.module = module;
 		this.memory = memory;
 		this.exports = exports;
 	}
 
 	public isSame(memory: Memory): boolean {
 		return this.buffer === memory.buffer;
+	}
+
+	public getTransferable(): { module: WebAssembly.Module; memory: WebAssembly.Memory } {
+		return { module: this.module, memory: this.memory };
 	}
 
 	public get buffer(): ArrayBuffer {

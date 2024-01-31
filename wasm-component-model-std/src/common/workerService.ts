@@ -3,7 +3,6 @@
  * Licensed under the MIT License. See License.txt in the project root for license information.
  * ------------------------------------------------------------------------------------------ */
 import RAL from './ral';
-import type { BaseConnection } from './connection';
 import type * as Messages from './workerMessages';
 import { SharedObject } from './sobject';
 
@@ -20,7 +19,7 @@ export abstract class BaseWorker {
 	}
 }
 export namespace BaseWorker {
-	export type ConnectionType<TIL = TransferItems> = BaseConnection<undefined, undefined, Messages.Service.Notifications, Messages.Client.AsyncCalls, undefined, undefined, TIL>;
+	export type ConnectionType<TIL = TransferItems> = Messages.Service.ConnectionType<TIL>;
 	export type Constructor = new (connection: ConnectionType, args?: string[]) => BaseWorker;
 }
 

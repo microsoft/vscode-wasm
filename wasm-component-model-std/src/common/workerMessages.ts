@@ -4,6 +4,8 @@
  * ------------------------------------------------------------------------------------------ */
 /// <reference path="../../typings/workerCommon.d.ts" />
 
+import type { BaseConnection } from './connection';
+
 export namespace Client {
 	export type AsyncCalls = {
 		method: 'initialize';
@@ -28,10 +30,12 @@ export namespace Client {
 		};
 		result: void;
 	};
+	export type ConnectionType<TIL = TransferItems> = BaseConnection<Client.AsyncCalls, undefined, undefined, undefined, undefined, Service.Notifications, TIL>;
 }
 
 export namespace Service {
 	export type Notifications = {
 		method: 'workerReady';
 	};
+	export type ConnectionType<TIL = TransferItems> = BaseConnection<undefined, undefined, Notifications, Client.AsyncCalls, undefined, undefined, TIL>;
 }

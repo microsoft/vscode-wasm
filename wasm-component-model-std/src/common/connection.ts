@@ -102,8 +102,8 @@ type MethodKeys<Messages extends _MessageType> = {
 type HandlerResult<T> = T | Promise<T>;
 type _AsyncCallSignatures<AsyncCalls extends _AsyncCallType, TLI = TransferItems> = UnionToIntersection<{
  	[call in AsyncCalls as call['method']]: call['params'] extends object
-		? (method: call['method'], params: call['params'], transferList?: ReadonlyArray<TLI>) => HandlerResult<call['result'] extends undefined | void ? void : call['result']>
-	 	: (method: call['method']) => HandlerResult<call['result'] extends undefined | void ? void : call['result']>
+		? (method: call['method'], params: call['params'], transferList?: ReadonlyArray<TLI>) => Promise<call['result'] extends undefined | void ? void : call['result']>
+	 	: (method: call['method']) => Promise<call['result'] extends undefined | void ? void : call['result']>
 }[keyof MethodKeys<AsyncCalls>]>;
 
 type AsyncCallSignatures<AsyncCalls extends _AsyncCallType | undefined, TLI> = [AsyncCalls] extends [_AsyncCallType] ? _AsyncCallSignatures<AsyncCalls, TLI> : undefined;
