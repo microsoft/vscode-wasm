@@ -2,10 +2,9 @@
  * Copyright (c) Microsoft Corporation. All rights reserved.
  * Licensed under the MIT License. See License.txt in the project root for license information.
  * ------------------------------------------------------------------------------------------ */
-
 import RAL from '../common/ral';
 
-import { BaseConnection } from '../common/connection';
+import { BaseConnection, AnyConnection as _AnyConnection } from '../common/connection';
 
 export class Connection<
 	AsyncCalls extends BaseConnection.AsyncCallType | undefined, SyncCalls extends BaseConnection.SyncCallType | undefined, Notifications extends BaseConnection.NotifyType | undefined,
@@ -37,5 +36,11 @@ export class Connection<
 				RAL().console.error(error);
 			});
 		};
+	}
+}
+
+export class AnyConnection extends Connection<_AnyConnection.AsyncCall, _AnyConnection.SyncCall, _AnyConnection.Notification, _AnyConnection.AsyncCall, _AnyConnection.SyncCall, _AnyConnection.Notification> {
+	constructor(port: MessagePort | Worker) {
+		super(port);
 	}
 }

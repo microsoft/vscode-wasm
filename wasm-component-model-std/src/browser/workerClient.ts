@@ -2,9 +2,6 @@
  * Copyright (c) Microsoft Corporation. All rights reserved.
  * Licensed under the MIT License. See License.txt in the project root for license information.
  * ------------------------------------------------------------------------------------------ */
-import path from 'node:path';
-import { Worker } from 'node:worker_threads';
-
 import type * as Messages from '../common/workerMessages';
 import { Connection } from './connection';
 import { SharedObject } from '../common/sobject';
@@ -22,8 +19,9 @@ export function WorkerClient<C>(base: new () => WorkerClientBase, module: string
 
 		public async launch(): Promise<void> {
 			return new Promise<void>((resolve, reject) => {
-				const fileName = path.join(__dirname, 'workerMain.js');
-				this.worker = new Worker(fileName, { argv: [module] });
+				const url: URL = new URL('./workerMain.js');
+				url.searchParams.set('0', module);
+				this.worker = new Worker(url);
 				const connection = new Connection<Messages.Client.AsyncCalls, undefined, undefined, undefined, undefined, Messages.Service.Notifications>(this.worker);
 				connection.onNotify('workerReady', () => {
 					const { module, memory } = SharedObject.memory().getTransferable();
@@ -38,7 +36,8 @@ export function WorkerClient<C>(base: new () => WorkerClientBase, module: string
 			if (this.worker === undefined) {
 				return Promise.resolve(0);
 			} else {
-				return this.worker.terminate();
+				this.worker.terminate();
+				return Promise.resolve(0);
 			}
 		}
 	}) as unknown as (new () => WorkerClient & C);

@@ -7,9 +7,11 @@ import RAL from '../common/ral';
 
 import { Memory } from '../common/sobject';
 import bytes from '../common/malloc';
-import type { BaseConnection } from '../common/connection';
+import type * as commonConnection from '../common/connection';
+import type { WorkerClient, WorkerClientBase } from '../common/workerClient';
 
-import { Connection } from './connection';
+import { AnyConnection } from './connection';
+import { WorkerClient  as _WorkerClient } from './workerClient';
 
 interface RIL extends RAL {
 }
@@ -31,6 +33,9 @@ const _ril: RIL = Object.freeze<RIL>(Object.assign({}, _RAL(), {
 			return Memory.create(module, memory, instance.exports as unknown as Memory.Exports);
 		}
 	}),
+	WorkerClient<C>(base: new () => WorkerClientBase, module: string): (new () => WorkerClient & C) {
+		return _WorkerClient(base, module);
+	},
 	Worker: Object.freeze({
 		getArgs: () => {
 			// remove the ?
@@ -39,11 +44,11 @@ const _ril: RIL = Object.freeze<RIL>(Object.assign({}, _RAL(), {
 		}
 	}),
 	Connection: Object.freeze({
-		create: (port: any): BaseConnection<undefined, undefined, undefined> => {
+		create: (port: any): commonConnection.AnyConnection => {
 			if (!(port instanceof MessagePort)) {
 				throw new Error(`Expected MessagePort`);
 			}
-			return new Connection<undefined, undefined, undefined, undefined>(port) as BaseConnection<undefined, undefined, undefined>;
+			return new AnyConnection(port) as commonConnection.AnyConnection;
 		}
 	})
 }));

@@ -6,13 +6,15 @@
 import { RAL as _RAL} from '@vscode/wasm-component-model';
 import RAL from '../common/ral';
 
-import { MessagePort } from 'worker_threads';
+import { MessagePort, Worker } from 'worker_threads';
 
 import { Memory } from '../common/sobject';
 import bytes from '../common/malloc';
-import type { BaseConnection } from '../common/connection';
+import type * as commonConnection from '../common/connection';
+import type { WorkerClient, WorkerClientBase } from '../common/workerClient';
 
-import { Connection } from './connection';
+import { AnyConnection } from './connection';
+import { WorkerClient  as _WorkerClient } from './workerClient';
 
 interface RIL extends RAL {
 }
@@ -34,17 +36,20 @@ const _ril: RIL = Object.freeze<RIL>(Object.assign({}, _RAL(), {
 			return Memory.create(module, memory, instance.exports as unknown as Memory.Exports);
 		}
 	}),
+	WorkerClient<C>(base: new () => WorkerClientBase, module: string): (new () => WorkerClient & C) {
+		return _WorkerClient(base, module);
+	},
 	Worker: Object.freeze({
 		getArgs: () => {
 			return process.argv.slice(2);
 		}
 	}),
 	Connection: Object.freeze({
-		create: (port: any): BaseConnection<undefined, undefined, undefined> => {
-			if (!(port instanceof MessagePort)) {
-				throw new Error(`Expected MessagePort`);
+		create: (port: any): commonConnection.AnyConnection => {
+			if (!(port instanceof MessagePort) && !(port instanceof Worker)) {
+				throw new Error(`Expected MessagePort or Worker`);
 			}
-			return new Connection<undefined, undefined, undefined, undefined>(port) as BaseConnection<undefined, undefined, undefined>;
+			return new AnyConnection(port) as commonConnection.AnyConnection;
 		}
 	})
 }));

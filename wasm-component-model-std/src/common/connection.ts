@@ -7,6 +7,8 @@
 import { Memory, ptr, s32 } from '@vscode/wasm-component-model';
 import { MemoryLocation, SharedObject } from './sobject';
 
+type HandlerResult<T> = T | Promise<T>;
+
 type _MessageType = {
 	method: string;
 	params?: object | undefined;
@@ -16,7 +18,7 @@ type _AsyncCallType = _MessageType & {
 	result: void | null | any;
 	error?: undefined;
 };
-type _AsyncCallHandler = (params: any) => Promise<any> | any;
+type _AsyncCallHandler = (params: any) => HandlerResult<any>;
 
 type _SharedObjectResult = {
 	new (location: MemoryLocation): SharedObject;
@@ -32,7 +34,7 @@ namespace _SharedObjectResult {
 type _SyncCallType = _MessageType & {
 	result: void | _SharedObjectResult;
 };
-type _SyncCallHandler = (params: any, result?: MemoryLocation) => number | undefined;
+type _SyncCallHandler = (params: any, result?: MemoryLocation) => HandlerResult<number | undefined>;
 type SyncCallParams = {
 	$sync: MemoryLocation;
 	$result: MemoryLocation;
@@ -99,7 +101,6 @@ type MethodKeys<Messages extends _MessageType> = {
 	[M in Messages as M['method']]: M['method'];
 };
 
-type HandlerResult<T> = T | Promise<T>;
 type _AsyncCallSignatures<AsyncCalls extends _AsyncCallType, TLI = TransferItems> = UnionToIntersection<{
  	[call in AsyncCalls as call['method']]: call['params'] extends object
 		? (method: call['method'], params: call['params'], transferList?: ReadonlyArray<TLI>) => Promise<call['result'] extends undefined | void ? void : call['result']>
@@ -131,11 +132,11 @@ type SyncCallSignatures<SyncCalls extends _SyncCallType | undefined, TLI= Transf
 type _SyncCallHandlerSignatures<SyncCalls extends _SyncCallType> = UnionToIntersection<{
  	[call in SyncCalls as call['method']]: call['params'] extends object
 		? call['result'] extends _SharedObjectResult
-			? (method: call['method'], handler: (params: call['params'], result: MemoryLocation) => number | void) => void
-			: (method: call['method'], handler: (params: call['params']) => number | void) => void
+			? (method: call['method'], handler: (params: call['params'], result: MemoryLocation) => HandlerResult<number | void>) => void
+			: (method: call['method'], handler: (params: call['params']) => HandlerResult<number | void>) => void
 	 	: call['result'] extends _SharedObjectResult
-			? (method: call['method'], handler: (result: MemoryLocation) => number | void) => void
-			: (method: call['method'], handler: () => number | void) => void;
+			? (method: call['method'], handler: (result: MemoryLocation) => HandlerResult<number | void>) => void
+			: (method: call['method'], handler: () => HandlerResult<number | void>) => void;
 }[keyof MethodKeys<SyncCalls>]>;
 
 type SyncCallHandlerSignatures<SyncCalls extends _SyncCallType | undefined> = [SyncCalls] extends [_SyncCallType] ? _SyncCallHandlerSignatures<SyncCalls> : undefined;
@@ -320,7 +321,7 @@ export abstract class BaseConnection<AsyncCalls extends _AsyncCallType | undefin
 					delete params.$result;
 					let errorCode: number = 0;
 					try {
-						errorCode = handler(params, message.params.$result) ?? 0;
+						errorCode = await handler(params, message.params.$result) ?? 0;
 					} catch (error: any) {
 						if (typeof error.code === 'number') {
 							errorCode = error.code;
@@ -386,4 +387,14 @@ export namespace BaseConnection {
 	export type Response = _Response;
 	export const Response = _Response;
 	export type Message = _Message;
+}
+
+export type AnyConnection = BaseConnection<AnyConnection.AsyncCall, AnyConnection.SyncCall, AnyConnection.Notification, AnyConnection.AsyncCall, AnyConnection.SyncCall, AnyConnection.Notification>;
+export namespace AnyConnection {
+	export type AsyncCall = { method: string; params: any; result: any };
+	export type SyncCall = { method: string; params: any; result: void };
+	export type Notification = { method: string; params: any };
+	export function cast<T>(connection: AnyConnection): T {
+		return connection as unknown as T;
+	}
 }

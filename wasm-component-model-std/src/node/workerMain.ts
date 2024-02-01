@@ -10,6 +10,6 @@ import { main } from '../common/workerMain';
 
 main(parentPort! as MessagePort, process.argv.slice(2)).catch((error) => {
 	RIL().console.error(error);
-	process.exit(-1);
+	process.exitCode = -1;
 }).finally(() => {
 });

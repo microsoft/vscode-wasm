@@ -3,7 +3,7 @@
  * Licensed under the MIT License. See License.txt in the project root for license information.
  * ------------------------------------------------------------------------------------------ */
 
-import type { Disposable } from './disposable';
+import type * as d from './disposable';
 
 interface _TextEncoder {
 	encode(input?: string): Uint8Array;
@@ -31,9 +31,9 @@ interface RAL {
 	};
 
 	readonly timer: {
-		setTimeout(callback: (...args: any[]) => void, ms: number, ...args: any[]): Disposable;
-		setImmediate(callback: (...args: any[]) => void, ...args: any[]): Disposable;
-		setInterval(callback: (...args: any[]) => void, ms: number, ...args: any[]): Disposable;
+		setTimeout(callback: (...args: any[]) => void, ms: number, ...args: any[]): d.Disposable;
+		setImmediate(callback: (...args: any[]) => void, ...args: any[]): d.Disposable;
+		setInterval(callback: (...args: any[]) => void, ms: number, ...args: any[]): d.Disposable;
 	};
 }
 
@@ -49,6 +49,7 @@ function RAL(): RAL {
 namespace RAL {
 	export type TextEncoder = _TextEncoder;
 	export type TextDecoder = _TextDecoder;
+	export type Disposable = d.Disposable;
 	export function install(ral: RAL): void {
 		if (ral === undefined) {
 			throw new Error(`No runtime abstraction layer provided`);
