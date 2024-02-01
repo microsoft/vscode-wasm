@@ -50,39 +50,46 @@ type _NotifyType = _MessageType;
 type _NotifyHandler = (params: any) => void;
 
 
+const enum MessageKind {
+	Request = 1,
+	Response = 2,
+	Notification = 3
+}
+
 interface AbstractMessage {
+	kind: MessageKind;
 	method: string;
 	params?: null | undefined | object;
 }
 
 interface _Request extends AbstractMessage {
+	kind: MessageKind.Request;
 	id: number;
 }
 namespace _Request {
-	export function is(value: any): value is _Request {
-		const candidate: _Request = value;
-		return candidate !== undefined && candidate !== null && typeof candidate.id === 'number' && typeof candidate.method === 'string';
+	export function is(value: _Message): value is _Request {
+		return value.kind === MessageKind.Request;
 	}
 }
 
 interface _Response {
+	kind: MessageKind.Response;
 	id: number;
 	result?: any;
 	error?: any;
 }
 namespace _Response {
-	export function is(value: any): value is _Response {
-		const candidate: _Response = value;
-		return candidate !== undefined && candidate !== null && typeof candidate.id === 'number' && (candidate.error !== undefined || candidate.result !== undefined);
+	export function is(value: _Message): value is _Response {
+		return value.kind === MessageKind.Response;
 	}
 }
 
 interface _Notification extends AbstractMessage {
+	kind: MessageKind.Notification;
 }
 namespace _Notification {
-	export function is(value: any): value is _NotifyType {
-		const candidate: _NotifyType & { id: undefined } = value;
-		return candidate !== undefined && candidate !== null && typeof candidate.method === 'string' && candidate.id === undefined;
+	export function is(value: _Message): value is _Notification {
+		return value.kind === MessageKind.Notification;
 	}
 }
 
@@ -206,7 +213,7 @@ export abstract class BaseConnection<AsyncCalls extends _AsyncCallType | undefin
 	private _callAsync(method: string, params?: any, transferList?: ReadonlyArray<TLI>): Promise<any> {
 		return new Promise((resolve, reject) => {
 			const id = this.id++;
-			const request: _Request = { id, method };
+			const request: _Request = { kind: MessageKind.Request, id, method };
 			if (params !== undefined) {
 				request.params = params;
 			}
@@ -235,7 +242,7 @@ export abstract class BaseConnection<AsyncCalls extends _AsyncCallType | undefin
 		if (this.syncCallBuffer === undefined) {
 			throw new Error('Sync calls are not initialized with shared memory.');
 		}
-		const call: _Notification = { method };
+		const call: _Notification = { kind: MessageKind.Notification, method };
 		let $result: MemoryLocation | undefined;
 		if (result !== undefined && result !== null) {
 			$result = { value: result.alloc() };
@@ -277,7 +284,7 @@ export abstract class BaseConnection<AsyncCalls extends _AsyncCallType | undefin
 	public readonly notify: NotifySignatures<Notifications, TLI> = this._notify as NotifySignatures<Notifications, TLI>;
 
 	private _notify(method: string, params?: any, transferList?: ReadonlyArray<TLI>): void {
-		const notification: _Notification = { method };
+		const notification: _Notification = { kind: MessageKind.Notification, method };
 		if (params !== undefined) {
 			notification.params = params;
 		}
@@ -350,24 +357,22 @@ export abstract class BaseConnection<AsyncCalls extends _AsyncCallType | undefin
 			const promise = this.asyncCallResultPromises.get(id);
 			if (promise !== undefined) {
 				this.asyncCallResultPromises.delete(id);
-				if (message.result !== undefined) {
-					promise.resolve(message.result);
-				} else if (message.error !== undefined) {
+				if (message.error !== undefined) {
 					promise.reject(typeof message.error === 'string' ? new Error(message.error) : message.error);
 				} else {
-					promise.reject(new Error('Response has neither a result nor an error value'));
+					promise.resolve(message.result);
 				}
 			}
 		}
 	}
 
 	private sendResultResponse(id: number, result: any): void {
-		const response: _Response =  { id, result: result === undefined ? null : result };
+		const response: _Response =  { kind: MessageKind.Response, id, result: result };
 		this.postMessage(response);
 	}
 
 	private sendErrorResponse(id: number, error: any): void {
-		const response: _Response =  { id, error: error === undefined ? 'Unknown error' : error instanceof Error ? error.message : error };
+		const response: _Response =  { kind: MessageKind.Response, id, error: error === undefined ? 'Unknown error' : error instanceof Error ? error.message : error };
 		this.postMessage(response);
 	}
 }
