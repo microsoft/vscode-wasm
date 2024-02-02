@@ -5,16 +5,18 @@
 import RAL from './ral';
 import type * as Messages from './workerMessages';
 import { SharedObject } from './sobject';
+import type { ConnectionPort, TransferItems } from './connection';
 
 export abstract class BaseWorker {
 
-	private readonly connection: BaseWorker.ConnectionType;
+	protected readonly connection: BaseWorker.ConnectionType;
 
 	constructor(connection: BaseWorker.ConnectionType) {
 		this.connection = connection;
 		this.connection.onAsyncCall('initialize', async (params) => {
 			const memory = await RAL().Memory.create(params.sharedMemory.module, params.sharedMemory.memory);
 			SharedObject.initialize(memory);
+			this.connection.initializeSyncCall(memory);
 		});
 	}
 }
@@ -44,6 +46,6 @@ export abstract class MultiConnectionWorker<C> extends BaseWorker {
 		});
 	}
 
-	protected abstract createConnection(port: MessagePort): Promise<C>;
+	protected abstract createConnection(port: ConnectionPort): Promise<C>;
 	protected abstract dropConnection(connection:C): Promise<void>;
 }

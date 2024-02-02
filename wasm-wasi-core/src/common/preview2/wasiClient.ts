@@ -4,9 +4,7 @@
  * ------------------------------------------------------------------------------------------ */
 import RAL from './ral';
 
-import { AnyConnection, BaseConnection } from './connection';
-import { type MemoryLocation } from './sobject';
-import { WorkerClientBase } from './workerClient';
+import { AnyConnection, BaseConnection, ConnectionPort, type MemoryLocation } from '@vscode/wasm-component-model-std';
 
 export namespace Client {
 	export type Jobs = {
@@ -28,19 +26,13 @@ export namespace Client {
 
 type ConnectionType = BaseConnection<undefined, Client.SyncCalls, Client.Jobs, undefined, undefined, undefined>;
 
-class _WasiClient extends WorkerClientBase {
+export class WasiClient {
 
-	private _connection: ConnectionType | undefined;
+	private readonly connection: ConnectionType;
 
-	protected setConnection(connection: AnyConnection): void {
-		this._connection = AnyConnection.cast<ConnectionType>(connection);
-	}
-
-	protected get connection(): ConnectionType {
-		if (this._connection === undefined) {
-			throw new Error('Connection is not initialized.');
-		}
-		return this._connection;
+	constructor(port: ConnectionPort) {
+		this.connection = AnyConnection.cast<ConnectionType>(RAL().Connection.create(port));
+		this.connection.listen();
 	}
 
 	public setTimeout(signal: MemoryLocation, timeout: bigint): void {
@@ -52,4 +44,3 @@ class _WasiClient extends WorkerClientBase {
 		this.connection.callSync('clearTimeout', { signal });
 	}
 }
-export const WasiClient = RAL().WorkerClient<_WasiClient>(_WasiClient, './wasiWorker.js');

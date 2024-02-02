@@ -7,7 +7,7 @@
 import { RAL as _RAL } from '@vscode/wasm-component-model';
 
 import { Memory } from './sobject';
-import type { AnyConnection } from './connection';
+import type { AnyConnection, ConnectionPort } from './connection';
 import type { WorkerClient, WorkerClientBase } from './workerClient';
 
 interface RAL extends _RAL {
@@ -15,8 +15,11 @@ interface RAL extends _RAL {
 		module(): Promise<WebAssembly.Module>;
 		create(module: WebAssembly.Module, memory: WebAssembly.Memory): Promise<Memory>;
 	};
+	readonly MessageChannel: {
+		create(): Promise<[ConnectionPort, ConnectionPort]>;
+	};
 	readonly Connection: {
-		create(port: MessagePort): AnyConnection;
+		create(port: ConnectionPort): AnyConnection;
 	};
 	WorkerClient<C>(base: new () => WorkerClientBase, module: string): (new () => WorkerClient & C);
 	readonly Worker: {

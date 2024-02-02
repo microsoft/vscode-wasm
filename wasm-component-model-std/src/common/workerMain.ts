@@ -4,9 +4,10 @@
  * ------------------------------------------------------------------------------------------ */
 import RAL from './ral';
 
+import type { ConnectionPort } from './connection';
 import type { BaseWorker } from './workerService';
 
-export async function main(port: MessagePort, args: string[]): Promise<void> {
+export async function main(port: ConnectionPort, args: string[]): Promise<void> {
 	const toLoad = args[0];
 	const constructor: BaseWorker.Constructor = (await import(toLoad)).Constructor;
 	if (typeof constructor !== 'function') {

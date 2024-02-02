@@ -3,7 +3,7 @@
  * Licensed under the MIT License. See License.txt in the project root for license information.
  * ------------------------------------------------------------------------------------------ */
 import RAL from './ral';
-import { AnyConnection, BaseConnection } from './connection';
+import { AnyConnection, BaseConnection, type ConnectionPort } from './connection';
 import { SharedObject } from './sobject';
 import { MultiConnectionWorker, type BaseWorker } from './workerService';
 import type { Client } from './wasiClient';
@@ -19,8 +19,9 @@ class WasiWorker extends MultiConnectionWorker<ConnectionType> {
 		this.timeouts = new Map();
 	}
 
-	protected createConnection(port: MessagePort): Promise<ConnectionType> {
-		const connection = RAL().Connection.create(port) as unknown as ConnectionType;
+	protected createConnection(port: ConnectionPort): Promise<ConnectionType> {
+		const connection = AnyConnection.cast<ConnectionType>(RAL().Connection.create(port));
+		connection.initializeSyncCall(this.connection.getSyncMemory());
 		connection.onNotify('setTimeout', async (params) => {
 			const diff = Date.now() - params.currentTime;
 			const ms = params.timeout - diff;
@@ -42,6 +43,7 @@ class WasiWorker extends MultiConnectionWorker<ConnectionType> {
 				disposable.dispose();
 			}
 		});
+		connection.listen();
 		return Promise.resolve(connection);
 	}
 

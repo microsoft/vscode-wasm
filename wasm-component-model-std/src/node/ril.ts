@@ -6,7 +6,7 @@
 import { RAL as _RAL} from '@vscode/wasm-component-model';
 import RAL from '../common/ral';
 
-import { MessagePort, Worker } from 'worker_threads';
+import { MessagePort, MessageChannel, Worker } from 'worker_threads';
 
 import { Memory } from '../common/sobject';
 import bytes from '../common/malloc';
@@ -34,6 +34,12 @@ const _ril: RIL = Object.freeze<RIL>(Object.assign({}, _RAL(), {
 				}
 			});
 			return Memory.create(module, memory, instance.exports as unknown as Memory.Exports);
+		}
+	}),
+	MessageChannel: Object.freeze({
+		create: async (): Promise<[commonConnection.ConnectionPort, commonConnection.ConnectionPort]> => {
+			const channel = new MessageChannel();
+			return [channel.port1, channel.port2];
 		}
 	}),
 	WorkerClient<C>(base: new () => WorkerClientBase, module: string): (new () => WorkerClient & C) {

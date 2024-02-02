@@ -2,9 +2,7 @@
  * Copyright (c) Microsoft Corporation. All rights reserved.
  * Licensed under the MIT License. See License.txt in the project root for license information.
  * ------------------------------------------------------------------------------------------ */
-/// <reference path="../../typings/workerCommon.d.ts" />
-
-import type { BaseConnection } from './connection';
+import type { BaseConnection, ConnectionPort, TransferItems } from './connection';
 
 export namespace Client {
 	export type AsyncCalls = {
@@ -20,7 +18,7 @@ export namespace Client {
 		method: 'connection/create';
 		params: {
 			id: number | string;
-			port: MessagePort;
+			port: ConnectionPort;
 		};
 		result: void;
 	} | {
