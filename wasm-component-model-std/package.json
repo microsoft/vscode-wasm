@@ -5,6 +5,10 @@
 	"author": "MS",
 	"license": "MIT",
 	"typings": "./lib/common/api.d.ts",
+	"main": "./lib/node/main.js",
+	"browser": {
+		"./lib/node/main.js": "./lib/browser/main.js"
+	},
 
 	"scripts": {
 		"compile:malloc": "../node_modules/.bin/make-dir ./lib/common && $WASI_SDK_PREFIX/bin/clang --target=wasm32-wasi-threads -pthread -O3 -flto -c src/common/malloc/malloc.c -o lib/common/malloc.o",

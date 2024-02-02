@@ -25,6 +25,9 @@
         },
         {
             "path": "./src/desktop/test/tsconfig.publish.json"
+        },
+        {
+            "path": "./src/desktop/preview2/test/tsconfig.publish.json"
         }
     ]
 }

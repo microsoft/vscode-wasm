@@ -2,13 +2,9 @@
  * Copyright (c) Microsoft Corporation. All rights reserved.
  * Licensed under the MIT License. See License.txt in the project root for license information.
  * ------------------------------------------------------------------------------------------ */
-import RAL from './ral';
+import { AnyConnection, BaseConnection, type ConnectionPort, WorkerClientBase, type WorkerMessages, WorkerClient } from '@vscode/wasm-component-model-std';
 
-import { AnyConnection, BaseConnection, type ConnectionPort } from './connection';
-import { WorkerClientBase } from './workerClient';
-import type { Client } from './workerMessages';
-
-type ConnectionType = BaseConnection<Client.AsyncCalls, undefined, undefined, undefined, undefined, undefined>;
+type ConnectionType = BaseConnection<WorkerMessages.Client.AsyncCalls, undefined, undefined, undefined, undefined, undefined>;
 
 type WasiConnectionInfo = {
 	id: number;
@@ -37,7 +33,7 @@ class _WasiManagementClient extends WorkerClientBase {
 	}
 
 	public async createConnection(): Promise<WasiConnectionInfo> {
-		const [port1, port2] = await RAL().MessageChannel.create();
+		const [port1, port2] = AnyConnection.createPorts();
 		const id = _WasiManagementClient.id++;
 		await this.connection.callAsync('connection/create', { id, port: port2 }, [port2]);
 		return { id, port: port1 };
@@ -47,4 +43,4 @@ class _WasiManagementClient extends WorkerClientBase {
 		await this.connection.callAsync('connection/drop', { id });
 	}
 }
-export const WasiManagementClient = RAL().WorkerClient<_WasiManagementClient>(_WasiManagementClient, './wasiWorker.js');
+export const WasiManagementClient = WorkerClient<_WasiManagementClient>(_WasiManagementClient, './wasiWorker.js');

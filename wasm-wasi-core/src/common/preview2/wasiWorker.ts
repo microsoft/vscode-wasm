@@ -2,17 +2,17 @@
  * Copyright (c) Microsoft Corporation. All rights reserved.
  * Licensed under the MIT License. See License.txt in the project root for license information.
  * ------------------------------------------------------------------------------------------ */
-import RAL from './ral';
-import { AnyConnection, BaseConnection, type ConnectionPort } from './connection';
-import { SharedObject } from './sobject';
-import { MultiConnectionWorker, type BaseWorker } from './workerService';
+import RAL from '../ral';
+
+import type { Disposable } from 'vscode';
+import { AnyConnection, BaseConnection, type ConnectionPort, SharedObject, MultiConnectionWorker, BaseWorker } from '@vscode/wasm-component-model-std';
 import type { Client } from './wasiClient';
 
 type ConnectionType = BaseConnection<undefined, undefined, undefined, undefined, Client.SyncCalls, Client.Jobs>;
 
 class WasiWorker extends MultiConnectionWorker<ConnectionType> {
 
-	private readonly timeouts: Map<number, RAL.Disposable>;
+	private readonly timeouts: Map<number, Disposable>;
 
 	constructor(connection: AnyConnection) {
 		super(AnyConnection.cast<BaseWorker.ConnectionType>(connection));
@@ -20,7 +20,7 @@ class WasiWorker extends MultiConnectionWorker<ConnectionType> {
 	}
 
 	protected createConnection(port: ConnectionPort): Promise<ConnectionType> {
-		const connection = AnyConnection.cast<ConnectionType>(RAL().Connection.create(port));
+		const connection: ConnectionType = AnyConnection.create(port);
 		connection.initializeSyncCall(this.connection.getSyncMemory());
 		connection.onNotify('setTimeout', async (params) => {
 			const diff = Date.now() - params.currentTime;

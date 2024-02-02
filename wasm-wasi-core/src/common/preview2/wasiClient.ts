@@ -2,8 +2,6 @@
  * Copyright (c) Microsoft Corporation. All rights reserved.
  * Licensed under the MIT License. See License.txt in the project root for license information.
  * ------------------------------------------------------------------------------------------ */
-import RAL from './ral';
-
 import { AnyConnection, BaseConnection, ConnectionPort, type MemoryLocation } from '@vscode/wasm-component-model-std';
 
 export namespace Client {
@@ -31,7 +29,7 @@ export class WasiClient {
 	private readonly connection: ConnectionType;
 
 	constructor(port: ConnectionPort) {
-		this.connection = AnyConnection.cast<ConnectionType>(RAL().Connection.create(port));
+		this.connection = AnyConnection.create(port);
 		this.connection.listen();
 	}
 

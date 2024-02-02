@@ -30,7 +30,8 @@
         "."
     ],
     "exclude": [
-        "test"
+        "test",
+        "preview2/test"
     ],
     "references": [
         {

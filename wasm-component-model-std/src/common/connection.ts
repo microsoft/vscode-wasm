@@ -422,8 +422,8 @@ export namespace AnyConnection {
 	export function cast<T>(connection: AnyConnection): T {
 		return connection as unknown as T;
 	}
-	export function create(port: ConnectionPort): AnyConnection {
-		return RAL().Connection.create(port);
+	export function create<T>(port: ConnectionPort): T {
+		return RAL().Connection.create(port) as unknown as T;
 	}
 	export function createPorts(): [ConnectionPort, ConnectionPort] {
 		return RAL().MessageChannel.create();

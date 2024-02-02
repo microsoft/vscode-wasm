@@ -352,13 +352,18 @@ const wasm_wasi_core = {
 		{
 			path: './src/desktop',
 			extends: [ node, vscodeMixin ],
-			exclude: [ 'test' ],
+			exclude: [ 'test', 'preview2/test' ],
 			references: [ '../common' ]
 		},
 		{
 			path: './src/desktop/test',
 			extends: [ node, vscodeMixin, testMixin],
 			references: [ '..', '../../common/test' ]
+		},
+		{
+			path: './src/desktop/preview2/test',
+			extends: [ node, vscodeMixin, testMixin],
+			references: [ '../..', '../../../common/preview2/test' ]
 		}
 	],
 	references: [

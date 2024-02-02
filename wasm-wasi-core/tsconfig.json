@@ -34,6 +34,9 @@
         },
         {
             "path": "./src/desktop/test/tsconfig.json"
+        },
+        {
+            "path": "./src/desktop/preview2/test/tsconfig.json"
         }
     ]
 }
