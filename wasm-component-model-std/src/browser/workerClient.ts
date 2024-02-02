@@ -7,8 +7,9 @@ import { Connection } from './connection';
 import { SharedObject } from '../common/sobject';
 import type { AnyConnection } from '../common/connection';
 import * as cc from '../common/workerClient';
+import type { URI } from 'vscode-uri';
 
-export function WorkerClient<C>(base: new () => cc.WorkerClientBase, module: string): (new () => cc.WorkerClient & C) {
+export function WorkerClient<C>(base: new () => cc.WorkerClientBase, workerLocation: URI, _args?: string[]): (new () => cc.WorkerClient & C) {
 	return (class extends base {
 
 		private worker: Worker | undefined;
@@ -19,9 +20,7 @@ export function WorkerClient<C>(base: new () => cc.WorkerClientBase, module: str
 
 		public async launch(): Promise<void> {
 			return new Promise<void>((resolve, reject) => {
-				const url: URL = new URL('./workerMain.js');
-				url.searchParams.set('0', module);
-				this.worker = new Worker(url);
+				this.worker = new Worker(new URL(workerLocation.toString()));
 				const connection = new Connection<Messages.Client.AsyncCalls, undefined, undefined, undefined, undefined, Messages.Service.Notifications>(this.worker);
 				connection.onNotify('workerReady', () => {
 					const { module, memory } = SharedObject.memory().getTransferable();

@@ -4,7 +4,7 @@
  * ------------------------------------------------------------------------------------------ */
 import type * as Messages from './workerMessages';
 import { SharedObject, Memory } from './sobject';
-import type { ConnectionPort, TransferItems } from './connection';
+import type { AnyConnection, ConnectionPort, TransferItems } from './connection';
 
 export abstract class BaseWorker {
 
@@ -21,7 +21,7 @@ export abstract class BaseWorker {
 }
 export namespace BaseWorker {
 	export type ConnectionType<TIL = TransferItems> = Messages.Service.ConnectionType<TIL>;
-	export type Constructor = new (connection: ConnectionType, args?: string[]) => BaseWorker;
+	export type Constructor = new (connection: AnyConnection, args?: string[]) => BaseWorker;
 }
 
 

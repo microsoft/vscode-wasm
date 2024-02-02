@@ -3,10 +3,12 @@
  * Licensed under the MIT License. See License.txt in the project root for license information.
  * ------------------------------------------------------------------------------------------ */
 /// <reference path="../../typings/webAssemblyNode.d.ts" />
-import { RAL as _RAL} from '@vscode/wasm-component-model';
 import RAL from '../common/ral';
 
-import { MessagePort, MessageChannel, Worker } from 'worker_threads';
+import { MessagePort, MessageChannel, Worker, parentPort } from 'worker_threads';
+
+import type { URI } from 'vscode-uri';
+import { RAL as _RAL} from '@vscode/wasm-component-model';
 
 import { Memory } from '../common/sobject';
 import * as malloc  from '../common/malloc';
@@ -21,7 +23,7 @@ interface RIL extends RAL {
 
 const _ril: RIL = Object.freeze<RIL>(Object.assign({}, _RAL(), {
 	Memory: Object.freeze({
-		create: async (constructor: new (module: WebAssembly.Module, memory: WebAssembly.Memory, exports: Memory.Exports) => Memory): Promise<Memory> => {
+		async create(constructor: new (module: WebAssembly.Module, memory: WebAssembly.Memory, exports: Memory.Exports) => Memory): Promise<Memory> {
 			const memory = new WebAssembly.Memory(malloc.descriptor);
 			const module = await WebAssembly.compile(malloc.bytes);
 			const instance = new WebAssembly.Instance(module, {
@@ -34,7 +36,7 @@ const _ril: RIL = Object.freeze<RIL>(Object.assign({}, _RAL(), {
 			});
 			return new constructor(module, memory, instance.exports as unknown as Memory.Exports);
 		},
-		createFrom: async (constructor: new (module: WebAssembly.Module, memory: WebAssembly.Memory, exports: Memory.Exports) => Memory, module: WebAssembly.Module, memory: WebAssembly.Memory): Promise<Memory> => {
+		async createFrom(constructor: new (module: WebAssembly.Module, memory: WebAssembly.Memory, exports: Memory.Exports) => Memory, module: WebAssembly.Module, memory: WebAssembly.Memory): Promise<Memory> {
 			const instance = new WebAssembly.Instance(module, {
 				env: {
 					memory
@@ -47,20 +49,34 @@ const _ril: RIL = Object.freeze<RIL>(Object.assign({}, _RAL(), {
 		}
 	}),
 	MessageChannel: Object.freeze({
-		create: (): [commonConnection.ConnectionPort, commonConnection.ConnectionPort] => {
+		create(): [commonConnection.ConnectionPort, commonConnection.ConnectionPort] {
 			const channel = new MessageChannel();
 			return [channel.port1, channel.port2];
 		}
 	}),
-	WorkerClient<C>(base: new () => WorkerClientBase, module: string): (new () => WorkerClient & C) {
-		return _WorkerClient(base, module);
+	WorkerClient<C>(base: new () => WorkerClientBase, workerLocation: URI, args?: string[]): (new () => WorkerClient & C) {
+		return _WorkerClient(base, workerLocation, args);
 	},
 	Connection: Object.freeze({
-		create: (port: any): commonConnection.AnyConnection => {
+		create(port: any): commonConnection.AnyConnection {
 			if (!(port instanceof MessagePort) && !(port instanceof Worker)) {
 				throw new Error(`Expected MessagePort or Worker`);
 			}
 			return new AnyConnection(port) as commonConnection.AnyConnection;
+		}
+	}),
+	Worker: Object.freeze({
+		getPort(): commonConnection.ConnectionPort {
+			return parentPort!;
+		},
+		getArgs(): string[] {
+			return process.argv.slice(2);
+		},
+		get exitCode(): number | undefined {
+			return process.exitCode;
+		},
+		set exitCode(value: number | undefined) {
+			process.exitCode = value;
 		}
 	})
 }));

@@ -43,4 +43,5 @@ class _WasiManagementClient extends WorkerClientBase {
 		await this.connection.callAsync('connection/drop', { id });
 	}
 }
+
 export const WasiManagementClient = WorkerClient<_WasiManagementClient>(_WasiManagementClient, './wasiWorker.js');

@@ -8,3 +8,4 @@ import RIL from './ril';
 RIL.install();
 
 export * from '../common/api';
+export * from '../common/workerMain';

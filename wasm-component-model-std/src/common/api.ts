@@ -12,6 +12,7 @@ export * from './sarray';
 export * from './connection';
 export * from './workerClient';
 export * from './workerService';
+export * from './workerMain';
 
 export namespace WorkerMessages {
 	export namespace Client {

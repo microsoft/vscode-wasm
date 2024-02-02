@@ -18,7 +18,7 @@ interface RIL extends RAL {
 
 const _ril: RIL = Object.freeze<RIL>(Object.assign({}, _RAL(), {
 	Memory: Object.freeze({
-		create: async (constructor: new (module: WebAssembly.Module, memory: WebAssembly.Memory, exports: Memory.Exports) => Memory): Promise<Memory> => {
+		async create(constructor: new (module: WebAssembly.Module, memory: WebAssembly.Memory, exports: Memory.Exports) => Memory): Promise<Memory> {
 			const memory = new WebAssembly.Memory(malloc.descriptor);
 			const module = await WebAssembly.compile(malloc.bytes);
 			const instance = new WebAssembly.Instance(module, {
@@ -31,7 +31,7 @@ const _ril: RIL = Object.freeze<RIL>(Object.assign({}, _RAL(), {
 			});
 			return new constructor(module, memory, instance.exports as unknown as Memory.Exports);
 		},
-		createFrom: async (constructor: new (module: WebAssembly.Module, memory: WebAssembly.Memory, exports: Memory.Exports) => Memory, module: WebAssembly.Module, memory: WebAssembly.Memory): Promise<Memory> => {
+		async createFrom(constructor: new (module: WebAssembly.Module, memory: WebAssembly.Memory, exports: Memory.Exports) => Memory, module: WebAssembly.Module, memory: WebAssembly.Memory): Promise<Memory> {
 			const instance = new WebAssembly.Instance(module, {
 				env: {
 					memory
@@ -44,7 +44,7 @@ const _ril: RIL = Object.freeze<RIL>(Object.assign({}, _RAL(), {
 		}
 	}),
 	MessageChannel: Object.freeze({
-		create: ():[commonConnection.ConnectionPort, commonConnection.ConnectionPort] => {
+		create():[commonConnection.ConnectionPort, commonConnection.ConnectionPort] {
 			const channel = new MessageChannel();
 			return [channel.port1, channel.port2];
 		}
@@ -53,11 +53,24 @@ const _ril: RIL = Object.freeze<RIL>(Object.assign({}, _RAL(), {
 		return _WorkerClient(base, module);
 	},
 	Connection: Object.freeze({
-		create: (port: any): commonConnection.AnyConnection => {
+		create(port: any): commonConnection.AnyConnection {
 			if (!(port instanceof MessagePort)) {
 				throw new Error(`Expected MessagePort`);
 			}
 			return new AnyConnection(port) as commonConnection.AnyConnection;
+		}
+	}),
+	Worker: Object.freeze({
+		getPort(): commonConnection.ConnectionPort {
+			return self;
+		},
+		getArgs(): string[] {
+			return [];
+		},
+		get exitCode(): number | undefined {
+			return 0;
+		},
+		set exitCode(_value: number | undefined) {
 		}
 	})
 }));

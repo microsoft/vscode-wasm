@@ -7,8 +7,9 @@ import { ptr, s32 } from '@vscode/wasm-component-model';
 import { Memory, MemoryLocation, SharedObject } from './sobject';
 
 export interface ConnectionPort {
-	start(): void;
-	close(): void;
+	postMessage(message: any, ...args: any[]): void;
+	on?(event: 'message', listener: (value: any) => void): this;
+	onmessage?: ((this: any, ev: any) => any) | null;
 }
 
 export type TransferItems = ArrayBuffer | ConnectionPort;
@@ -422,7 +423,7 @@ export namespace AnyConnection {
 	export function cast<T>(connection: AnyConnection): T {
 		return connection as unknown as T;
 	}
-	export function create<T>(port: ConnectionPort): T {
+	export function create<T = AnyConnection>(port: ConnectionPort): T {
 		return RAL().Connection.create(port) as unknown as T;
 	}
 	export function createPorts(): [ConnectionPort, ConnectionPort] {

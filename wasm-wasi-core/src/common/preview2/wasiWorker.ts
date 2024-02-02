@@ -10,7 +10,7 @@ import type { Client } from './wasiClient';
 
 type ConnectionType = BaseConnection<undefined, undefined, undefined, undefined, Client.SyncCalls, Client.Jobs>;
 
-class WasiWorker extends MultiConnectionWorker<ConnectionType> {
+export class WasiWorker extends MultiConnectionWorker<ConnectionType> {
 
 	private readonly timeouts: Map<number, Disposable>;
 
@@ -52,5 +52,3 @@ class WasiWorker extends MultiConnectionWorker<ConnectionType> {
 		return Promise.resolve();
 	}
 }
-
-export const Constructor = WasiWorker;

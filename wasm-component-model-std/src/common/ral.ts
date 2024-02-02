@@ -3,6 +3,7 @@
  * Licensed under the MIT License. See License.txt in the project root for license information.
  * ------------------------------------------------------------------------------------------ */
 /// <reference path="../../typings/webAssemblyCommon.d.ts" />
+import type { URI } from 'vscode-uri';
 
 import { RAL as _RAL } from '@vscode/wasm-component-model';
 
@@ -21,7 +22,12 @@ interface RAL extends _RAL {
 	readonly Connection: {
 		create(port: ConnectionPort): AnyConnection;
 	};
-	WorkerClient<C>(base: new () => WorkerClientBase, module: string): (new () => WorkerClient & C);
+	WorkerClient<C>(base: new () => WorkerClientBase, worker: URI, args?: string[]): (new () => WorkerClient & C);
+	readonly Worker: {
+		getPort(): ConnectionPort;
+		getArgs(): string[];
+		exitCode: number | undefined;
+	};
 }
 
 let _ral: RAL | undefined;
