@@ -2,9 +2,8 @@
  * Copyright (c) Microsoft Corporation. All rights reserved.
  * Licensed under the MIT License. See License.txt in the project root for license information.
  * ------------------------------------------------------------------------------------------ */
-import RAL from './ral';
 import type * as Messages from './workerMessages';
-import { SharedObject } from './sobject';
+import { SharedObject, Memory } from './sobject';
 import type { ConnectionPort, TransferItems } from './connection';
 
 export abstract class BaseWorker {
@@ -14,7 +13,7 @@ export abstract class BaseWorker {
 	constructor(connection: BaseWorker.ConnectionType) {
 		this.connection = connection;
 		this.connection.onAsyncCall('initialize', async (params) => {
-			const memory = await RAL().Memory.create(params.sharedMemory.module, params.sharedMemory.memory);
+			const memory = await Memory.createFrom(params.sharedMemory.module, params.sharedMemory.memory);
 			SharedObject.initialize(memory);
 			this.connection.initializeSyncCall(memory);
 		});

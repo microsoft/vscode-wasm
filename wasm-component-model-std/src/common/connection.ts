@@ -2,6 +2,7 @@
  * Copyright (c) Microsoft Corporation. All rights reserved.
  * Licensed under the MIT License. See License.txt in the project root for license information.
  * ------------------------------------------------------------------------------------------ */
+import RAL from './ral';
 import { ptr, s32 } from '@vscode/wasm-component-model';
 import { Memory, MemoryLocation, SharedObject } from './sobject';
 
@@ -420,5 +421,11 @@ export namespace AnyConnection {
 	export type Notification = { method: string; params: any };
 	export function cast<T>(connection: AnyConnection): T {
 		return connection as unknown as T;
+	}
+	export function create(port: ConnectionPort): AnyConnection {
+		return RAL().Connection.create(port);
+	}
+	export function createPorts(): [ConnectionPort, ConnectionPort] {
+		return RAL().MessageChannel.create();
 	}
 }

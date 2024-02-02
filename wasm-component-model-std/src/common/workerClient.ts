@@ -4,6 +4,7 @@
  * ------------------------------------------------------------------------------------------ */
 import type * as Messages from './workerMessages';
 import { BaseConnection, type AnyConnection } from './connection';
+import RAL from './ral';
 
 export interface WorkerClient {
 	launch(): Promise<void>;
@@ -12,6 +13,7 @@ export interface WorkerClient {
 export namespace WorkerClient {
 	export type ConnectionType = BaseConnection<Messages.Client.AsyncCalls, undefined, undefined, undefined, undefined, Messages.Service.Notifications>;
 }
+export const WorkerClient = RAL().WorkerClient;
 
 export abstract class WorkerClientBase {
 	protected setConnection(_connection: AnyConnection): void {

@@ -12,7 +12,7 @@ import { float64, ptr } from '@vscode/wasm-component-model';
 import { SArray } from '../../common/sarray';
 import { Connection } from '../connection';
 import { Notifications, Operations, ManagementCalls, ServerNotifications } from './messages';
-import { SharedObject } from '../../common/sobject';
+import { Memory, SharedObject } from '../../common/sobject';
 
 const connection = new Connection<undefined, undefined, Operations | ServerNotifications, ManagementCalls, undefined, Notifications>(parentPort!);
 
@@ -27,7 +27,7 @@ const operations: string[] = [
 let workerId!: number;
 connection.onAsyncCall('init', async (params) => {
 	workerId = params.workerId;
-	SharedObject.initialize(await RIL().Memory.create(params.module, params.memory));
+	SharedObject.initialize(await Memory.createFrom(params.module, params.memory));
 	connection.initializeSyncCall(SharedObject.memory());
 });
 

@@ -14,8 +14,11 @@ export interface Memory extends _Memory {
 	getTransferable(): { module: WebAssembly.Module; memory: WebAssembly.Memory };
 }
 export namespace Memory {
-	export function create(module: WebAssembly.Module, memory: WebAssembly.Memory, exports: Exports): Memory {
-		return new MemoryImpl(module, memory, exports);
+	export function create(): Promise<Memory> {
+		return RAL().Memory.create(MemoryImpl);
+	}
+	export function createFrom(module: WebAssembly.Module, memory: WebAssembly.Memory): Promise<Memory> {
+		return RAL().Memory.createFrom(MemoryImpl, module, memory);
 	}
 	export interface Exports {
 		malloc(size: number): number;

@@ -9,9 +9,9 @@ import type * as Messages from '../common/workerMessages';
 import { Connection } from './connection';
 import { SharedObject } from '../common/sobject';
 import type { AnyConnection } from '../common/connection';
-import { WorkerClient, WorkerClientBase } from '../common/workerClient';
+import * as cc from '../common/workerClient';
 
-export function WorkerClient<C>(base: new () => WorkerClientBase, module: string): (new () => WorkerClient & C) {
+export function WorkerClient<C>(base: new () => cc.WorkerClientBase, module: string): (new () => cc.WorkerClient & C) {
 	return (class extends base {
 
 		private worker: Worker | undefined;
@@ -41,5 +41,5 @@ export function WorkerClient<C>(base: new () => WorkerClientBase, module: string
 				return this.worker.terminate();
 			}
 		}
-	}) as unknown as (new () => WorkerClient & C);
+	}) as unknown as (new () => cc.WorkerClient & C);
 }

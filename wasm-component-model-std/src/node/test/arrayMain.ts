@@ -10,9 +10,8 @@ import { Worker } from 'node:worker_threads';
 
 import { Alignment, float64, u32  } from '@vscode/wasm-component-model';
 
-import { SharedObject } from '../../common/sobject';
+import { Memory, SharedObject } from '../../common/sobject';
 import { SArray } from '../../common/sarray';
-import malloc from '../../common/malloc';
 
 import { Notifications, Operations, ManagementCalls, ServerNotifications } from './messages';
 import { Connection } from '../connection';
@@ -101,9 +100,8 @@ type ConnectionType = Connection<ManagementCalls, undefined, Notifications, unde
 
 async function main(): Promise<void> {
 
-	const module = await WebAssembly.compile(malloc);
-	const memory = new WebAssembly.Memory({ initial: 2, maximum: 8, shared: true });
-	await SharedObject.initialize(await RIL().Memory.create(module, memory));
+	const memory = await Memory.create();
+	await SharedObject.initialize(memory);
 
 	const counter = SharedObject.memory().alloc(Alignment.halfWord, u32.size);
 
@@ -122,7 +120,7 @@ async function main(): Promise<void> {
 		connection.initializeSyncCall(SharedObject.memory());
 		connection.listen();
 
-		await connection.callAsync('init', { workerId: i, module, memory });
+		await connection.callAsync('init', { workerId: i, ...memory.getTransferable() });
 		connection.onNotify('array/push', (params) => {
 			operations.record({ method: 'array/push', params });
 		});

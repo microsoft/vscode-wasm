@@ -12,19 +12,16 @@ import type { WorkerClient, WorkerClientBase } from './workerClient';
 
 interface RAL extends _RAL {
 	readonly Memory: {
-		module(): Promise<WebAssembly.Module>;
-		create(module: WebAssembly.Module, memory: WebAssembly.Memory): Promise<Memory>;
+		create(constructor: new (module: WebAssembly.Module, memory: WebAssembly.Memory, exports: Memory.Exports) => Memory): Promise<Memory>;
+		createFrom(constructor: new (module: WebAssembly.Module, memory: WebAssembly.Memory, exports: Memory.Exports) => Memory, module: WebAssembly.Module, memory: WebAssembly.Memory): Promise<Memory>;
 	};
 	readonly MessageChannel: {
-		create(): Promise<[ConnectionPort, ConnectionPort]>;
+		create(): [ConnectionPort, ConnectionPort];
 	};
 	readonly Connection: {
 		create(port: ConnectionPort): AnyConnection;
 	};
 	WorkerClient<C>(base: new () => WorkerClientBase, module: string): (new () => WorkerClient & C);
-	readonly Worker: {
-		getArgs(): string[];
-	};
 }
 
 let _ral: RAL | undefined;
