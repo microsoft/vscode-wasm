@@ -6,10 +6,14 @@ import RIL from '../ril';
 RIL.install();
 
 import path from 'node:path';
-import {  MessagePort, Worker } from 'node:worker_threads';
+import { MessagePort, Worker } from 'node:worker_threads';
 
 import { glob } from 'glob';
 import Mocha from 'mocha';
+
+import { Uri } from 'vscode';
+const baseUri: Uri = Uri.file(path.join(__dirname, '..', '..', '..'));
+RIL().Worker.setBaseUri(baseUri);
 
 import { NodeServiceConnection } from '../process';
 import { createWorkspaceContent, createTmp, cleanupTmp, cleanupWorkspaceContent, createWasiService, WorkspaceContent } from '../../common/test/index';
@@ -77,10 +81,10 @@ export async function run(_testRoot: string): Promise<void> {
 	const preview1TestRoot = path.join(__dirname, '..', '..', 'common', 'test');
 	const preview1 = (await glob('**/**main.test.js', { cwd: preview1TestRoot })).map(f => path.resolve(preview1TestRoot, f));
 
-	const prevew2TestRoot = path.join(__dirname, '..', '..', 'common', 'preview2', 'test');
-	const preview2 = (await glob('**/**main.test.js', { cwd: prevew2TestRoot })).map(f => path.resolve(prevew2TestRoot, f));
-	const files = [...preview1, ...preview2];
+	const preview2TestRoot = path.join(__dirname, '..', '..', 'common', 'preview2', 'test');
+	const preview2 = (await glob('**/**main.test.js', { cwd: preview2TestRoot })).map(f => path.resolve(preview2TestRoot, f));
 
+	const files = [...preview1, ...preview2];
 
 	// Create the mocha test
 	const mocha = new Mocha({

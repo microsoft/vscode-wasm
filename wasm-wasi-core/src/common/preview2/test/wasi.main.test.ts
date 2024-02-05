@@ -2,65 +2,37 @@
  *  Copyright (c) Microsoft Corporation. All rights reserved.
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
+import assert from 'assert';
 
-// import { InterfaceType, PackageType, WasmInterfaces } from '@vscode/wasm-component-model';
-// import { AbstractHostConnection, Options, WasiHost } from '../host';
-// import { AbstractServiceConnection } from '../service';
+import { Alignment, u32 } from '@vscode/wasm-component-model';
+import { Memory, MemoryLocation, SharedObject } from '@vscode/wasm-component-model-std';
 
-// class TestHostConnection extends AbstractHostConnection {
+import { WasiManagementClient } from '../wasiManagementClient';
+import { WasiClient } from '../wasiClient';
 
-// 	private readonly serviceConnection: TestServiceConnection;
+suite(`Wasi Worker Tests`, () => {
 
-// 	constructor(serviceConnection: TestServiceConnection) {
-// 		super();
-// 		this.serviceConnection = serviceConnection;
-// 	}
+	suiteSetup(async () => {
+		if (!SharedObject.isInitialized()) {
+			const memory = await Memory.create();
+			SharedObject.initialize(memory);
+		}
+	});
 
-// 	protected doCall(paramMemory: SharedArrayBuffer, heapMemory: SharedArrayBuffer): void {
-// 		this.serviceConnection.call(paramMemory, heapMemory);
-// 	}
-// }
+	test(`setTimeout`, async () => {
+		const memory = SharedObject.memory();
+		const ptr = memory.alloc(Alignment.word, u32.size * 2);
+		const signal = new Int32Array(memory.buffer, ptr, 1);
 
-// class TestServiceConnection extends AbstractServiceConnection {
+		const managementClient = new WasiManagementClient();
+		await managementClient.launch();
+		const connectionInfo = await managementClient.createConnection();
 
-// 	constructor(interfaces: WasmInterfaces, metaTypes: (PackageType | InterfaceType)[]) {
-// 		super(interfaces, metaTypes);
-// 	}
-
-// 	public call(paramMemory: SharedArrayBuffer, heapMemory: SharedArrayBuffer): void {
-// 		this.doCall(paramMemory, heapMemory);
-// 	}
-
-// }
-
-
-// export class Memory {
-
-// 	private readonly _buffer: ArrayBuffer;
-
-// 	constructor(buffer: ArrayBuffer) {
-// 		this._buffer = buffer;
-// 	}
-
-// 	get buffer(): ArrayBuffer {
-// 		return this._buffer;
-// 	}
-
-// 	public grow(_delta: number): number {
-// 		throw new Error('Memory.grow not implemented');
-// 	}
-// }
-
-// suite('WasiWorker', () => {
-// 	const serviceConnection = new TestServiceConnection();
-// 	const hostConnection = new TestHostConnection(serviceConnection);
-
-// 	test('test', () => {
-// 		const options: Options = { encoding: 'utf-8' };
-// 		let host = WasiHost.create(hostConnection, options);
-// 		let memory = new Memory(new ArrayBuffer(65536));
-// 		host.initialize(memory);
-// 		const monotonic = host['wasi:clocks/monotonic-clock']!;
-// 		monotonic['subscribe-duration'](10n);
-// 	});
-// });
+		const client = new WasiClient(connectionInfo.port);
+		const start = Date.now();
+		client.setTimeout(MemoryLocation.create(ptr), BigInt(500 * 1e6));
+		Atomics.wait(signal, 0, 0);
+		const diff = Date.now() - start;
+		assert.ok(diff >= 500 && diff <= 600);
+	});
+});

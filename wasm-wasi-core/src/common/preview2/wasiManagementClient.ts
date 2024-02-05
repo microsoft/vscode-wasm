@@ -2,6 +2,8 @@
  * Copyright (c) Microsoft Corporation. All rights reserved.
  * Licensed under the MIT License. See License.txt in the project root for license information.
  * ------------------------------------------------------------------------------------------ */
+import RAL from '../ral';
+
 import { AnyConnection, BaseConnection, type ConnectionPort, WorkerClientBase, type WorkerMessages, WorkerClient } from '@vscode/wasm-component-model-std';
 
 type ConnectionType = BaseConnection<WorkerMessages.Client.AsyncCalls, undefined, undefined, undefined, undefined, undefined>;
@@ -44,4 +46,4 @@ class _WasiManagementClient extends WorkerClientBase {
 	}
 }
 
-export const WasiManagementClient = WorkerClient<_WasiManagementClient>(_WasiManagementClient, './wasiWorker.js');
+export const WasiManagementClient = WorkerClient<_WasiManagementClient>(_WasiManagementClient, RAL().Worker.getWorkerUri('common/preview2/wasiWorker.js'));

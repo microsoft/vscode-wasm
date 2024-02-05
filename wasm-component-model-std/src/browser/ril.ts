@@ -5,6 +5,8 @@
 import { RAL as _RAL} from '@vscode/wasm-component-model';
 import RAL from '../common/ral';
 
+import type { URI } from 'vscode-uri';
+
 import { Memory } from '../common/sobject';
 import * as malloc from '../common/malloc';
 import type * as commonConnection from '../common/connection';
@@ -49,8 +51,8 @@ const _ril: RIL = Object.freeze<RIL>(Object.assign({}, _RAL(), {
 			return [channel.port1, channel.port2];
 		}
 	}),
-	WorkerClient<C>(base: new () => WorkerClientBase, module: string): (new () => WorkerClient & C) {
-		return _WorkerClient(base, module);
+	WorkerClient<C>(base: new () => WorkerClientBase, workerLocation: URI, args?: string[]): (new () => WorkerClient & C) {
+		return _WorkerClient(base, workerLocation, args);
 	},
 	Connection: Object.freeze({
 		create(port: any): commonConnection.AnyConnection {

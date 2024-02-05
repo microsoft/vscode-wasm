@@ -5,7 +5,7 @@
 import RIL from '../ril';
 RIL.install();
 
-import { Worker } from '@vscode/wasm-component-model-std/node';
+import { Worker } from '@vscode/wasm-component-model-std/browser';
 import { WasiWorker} from '../../common/preview2/wasiWorker';
 
 void Worker.main(WasiWorker);

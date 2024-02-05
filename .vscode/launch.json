@@ -224,6 +224,9 @@
 			"request": "launch",
 			"type": "extensionHost",
 			"name": "test:wasm-wasi-core",
+			"env": {
+				"WASM_WASI_BUNDLED_WORKERS": "false"
+			},
 			"runtimeExecutable": "${execPath}",
 			"args": [
 				"--extensionDevelopmentPath=${workspaceFolder}/wasm-wasi-core",

@@ -5,6 +5,9 @@
 import RIL from '../ril';
 RIL.install();
 
+import { Uri } from 'vscode';
+const uri: Uri = Uri.parse('http://localhost:3000/static/devextensions');
+RIL().Worker.setBaseUri(uri);
 
 import { ConsoleMessage, TestSetupMessage, TestsDoneMessage } from '../../common/test/messages';
 import { createWorkspaceContent, createTmp, cleanupTmp, cleanupWorkspaceContent, createWasiService, WorkspaceContent } from '../../common/test/index';
@@ -40,6 +43,7 @@ export async function run(): Promise<void> {
 	});
 
 	require('../../common/test/deviceDriver.main.test');
+	require('../../common/preview2/test/wasi.main.test');
 
 	return new Promise<void>((resolve, reject) => {
 		mocha.run(failures => {

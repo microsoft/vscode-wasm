@@ -182,6 +182,10 @@ export abstract class SharedObject {
 		this._memory = memory;
 	}
 
+	public static isInitialized(): boolean {
+		return this._memory !== undefined;
+	}
+
 	public static memory(): Memory {
 		if (this._memory === undefined) {
 			throw new Error('Memory is not initialized');

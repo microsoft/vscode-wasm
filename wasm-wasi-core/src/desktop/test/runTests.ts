@@ -12,11 +12,13 @@ import fp from 'find-process';
 import { runTests } from '@vscode/test-electron';
 
 async function main() {
+	let testDir: string | undefined;
 	try {
+		process.env['WASM_WASI_BUNDLED_WORKERS'] = 'false';
 		const extensionDevelopmentPath = path.resolve(__dirname, '../../../');
 		const extensionTestsPath = path.resolve(__dirname, './index');
 
-		const testDir = path.join(os.tmpdir(), uuid.v4());
+		testDir = path.join(os.tmpdir(), uuid.v4());
 		await fs.mkdir(testDir, { recursive: true });
 		const userDataDir = path.join(testDir, 'userData');
 		await fs.mkdir(userDataDir);
@@ -60,6 +62,10 @@ async function main() {
 	} catch (err) {
 		console.error('Failed to run tests', err);
 		process.exit(1);
+	} finally {
+		if (testDir !== undefined) {
+			await fs.rmdir(testDir, { recursive: true });
+		}
 	}
 }
 

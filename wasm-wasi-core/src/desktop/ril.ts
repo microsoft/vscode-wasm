@@ -7,11 +7,14 @@ import * as path from 'path';
 import * as crypto from 'crypto';
 
 import type { Disposable } from 'vscode';
+import { URI } from 'vscode-uri';
 
 import RAL from '../common/ral';
 
 interface RIL extends RAL {
 }
+
+let _baseUri: URI | undefined;
 
 const _ril: RIL = Object.freeze<RIL>({
 	TextEncoder: Object.freeze({
@@ -63,6 +66,29 @@ const _ril: RIL = Object.freeze<RIL>({
 	path: path.posix,
 	workbench: Object.freeze({
 		hasTrash: true
+	}),
+	Worker: Object.freeze({
+		setBaseUri(uri: RAL.UriComponents): void {
+			_baseUri = URI.revive(uri);
+		},
+		getWorkerUri(location: string): URI {
+			if (_baseUri === undefined) {
+				throw new Error('Environment.baseUri is not set.');
+			}
+			if (location.indexOf('/') !== 0) {
+				const bundledWorkers = process.env['WASM_WASI_BUNDLED_WORKERS'];
+				if (bundledWorkers === '0' || bundledWorkers === 'false') {
+					const parts = location.split('/');
+					parts[0] = 'desktop';
+					return _baseUri.with({ path: path.join(_baseUri.path, 'lib', ...parts)});
+				} else {
+					const basename = path.basename(location);
+					return _baseUri.with( { path: path.join(_baseUri.path, 'dist', 'desktop', basename)});
+				}
+			} else {
+				return _baseUri.with({ path: path.join(_baseUri.path, 'dist', 'desktop', location)});
+			}
+		}
 	})
 });
 
