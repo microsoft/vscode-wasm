@@ -40,7 +40,7 @@ export class Connection<
 }
 
 export class AnyConnection extends Connection<_AnyConnection.AsyncCall, _AnyConnection.SyncCall, _AnyConnection.Notification, _AnyConnection.AsyncCall, _AnyConnection.SyncCall, _AnyConnection.Notification> {
-	constructor(port: MessagePort | Worker) {
+	constructor(port: MessagePort | Worker | DedicatedWorkerGlobalScope) {
 		super(port);
 	}
 }

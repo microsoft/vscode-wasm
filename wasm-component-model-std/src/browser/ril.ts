@@ -56,8 +56,8 @@ const _ril: RIL = Object.freeze<RIL>(Object.assign({}, _RAL(), {
 	},
 	Connection: Object.freeze({
 		create(port: any): commonConnection.AnyConnection {
-			if (!(port instanceof MessagePort)) {
-				throw new Error(`Expected MessagePort`);
+			if (!(port instanceof MessagePort) && !(port instanceof Worker) && !(port instanceof DedicatedWorkerGlobalScope)) {
+				throw new Error(`Expected MessagePort, Worker or DedicatedWorkerGlobalScope.`);
 			}
 			return new AnyConnection(port) as commonConnection.AnyConnection;
 		}

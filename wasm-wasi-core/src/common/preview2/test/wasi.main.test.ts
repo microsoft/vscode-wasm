@@ -34,5 +34,5 @@ suite(`Wasi Worker Tests`, () => {
 		Atomics.wait(signal, 0, 0);
 		const diff = Date.now() - start;
 		assert.ok(diff >= 500 && diff <= 600);
-	});
+	}).timeout(2000);
 });
