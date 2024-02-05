@@ -21,7 +21,7 @@
             "path": "./wasm-component-model/tsconfig.watch.json"
         },
         {
-            "path": "./wasm-component-model-std/tsconfig.watch.json"
+            "path": "./wasm-wasi-kit/tsconfig.watch.json"
         },
         {
             "path": "./wasm-wasi-core/tsconfig.watch.json"

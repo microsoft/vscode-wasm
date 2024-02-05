@@ -12,7 +12,7 @@
             "path": "./../wasm-component-model/tsconfig.json"
         },
         {
-            "path": "./../wasm-component-model-std/tsconfig.json"
+            "path": "./../wasm-wasi-kit/tsconfig.json"
         },
         {
             "path": "./src/common/tsconfig.json"

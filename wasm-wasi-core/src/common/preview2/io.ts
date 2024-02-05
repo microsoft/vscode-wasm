@@ -6,7 +6,7 @@
 import { io } from '@vscode/wasi';
 
 import { ResourceHandle, ptr, s32, u32 } from '@vscode/wasm-component-model';
-import { MemoryLocation, RecordDescriptor, SharedObject } from '@vscode/wasm-component-model-std';
+import { MemoryLocation, RecordDescriptor, SharedObject } from '@vscode/wasm-wasi-kit';
 
 export class Pollable extends SharedObject implements io.Poll.Pollable {
 

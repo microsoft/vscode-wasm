@@ -253,9 +253,9 @@ const wasm_component_model = {
 };
 
 /** @type ProjectDescription */
-const wasm_component_model_std = {
-	name: 'wasm-component-model-std',
-	path: './wasm-component-model-std',
+const wasm_wasi_kit = {
+	name: 'wasm-wasi-kit',
+	path: './wasm-wasi-kit',
 	extends: [ common, referenced ],
 	out: {
 		dir: './lib',
@@ -367,7 +367,7 @@ const wasm_wasi_core = {
 		}
 	],
 	references: [
-		wasi, wasm_component_model, wasm_component_model_std
+		wasi, wasm_component_model, wasm_wasi_kit
 	]
 };
 
@@ -485,7 +485,7 @@ const testbeds = {
 const root = {
 	name: 'root',
 	path: './',
-	references: [ sync_api_common, sync_api_client, sync_api_service, sync_api_tests, wasm_component_model, wasm_component_model_std, wasm_wasi_core, wasm_wasi, webshell, tools ]
+	references: [ sync_api_common, sync_api_client, sync_api_service, sync_api_tests, wasm_component_model, wasm_wasi_kit, wasm_wasi_core, wasm_wasi, webshell, tools ]
 };
 
 /** @type CompilerOptions */
@@ -564,8 +564,8 @@ const projects = [
 	[ createPublishProjectDescription(wasm_wasi), [ publishProjectOptions ] ],
 	[ webshell, [ compileProjectOptions, watchProjectOptions ] ],
 	[ createPublishProjectDescription(webshell), [ publishProjectOptions ] ],
-	[ wasm_component_model_std, [ compileProjectOptions, watchProjectOptions ] ],
-	[ createPublishProjectDescription(wasm_component_model_std), [ publishProjectOptions ] ],
+	[ wasm_wasi_kit, [ compileProjectOptions, watchProjectOptions ] ],
+	[ createPublishProjectDescription(wasm_wasi_kit), [ publishProjectOptions ] ],
 	[ tools, [ compileProjectOptions, watchProjectOptions ] ],
 	[ root, [compileProjectOptions, watchProjectOptions ] ],
 	[ testbed_cpp, [ compileProjectOptions ] ],

@@ -5,7 +5,7 @@
 import RAL from '../ral';
 
 import type { Disposable } from 'vscode';
-import { AnyConnection, BaseConnection, type ConnectionPort, SharedObject, MultiConnectionWorker, BaseWorker } from '@vscode/wasm-component-model-std';
+import { AnyConnection, BaseConnection, type ConnectionPort, SharedObject, MultiConnectionWorker, BaseWorker } from '@vscode/wasm-wasi-kit';
 import type { Client } from './wasiClient';
 
 type ConnectionType = BaseConnection<undefined, undefined, undefined, undefined, Client.SyncCalls, Client.Jobs>;

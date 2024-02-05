@@ -5,7 +5,7 @@
 import assert from 'assert';
 
 import { Alignment, u32 } from '@vscode/wasm-component-model';
-import { Memory, MemoryLocation, SharedObject } from '@vscode/wasm-component-model-std';
+import { Memory, MemoryLocation, SharedObject } from '@vscode/wasm-wasi-kit';
 
 import { WasiManagementClient } from '../wasiManagementClient';
 import { WasiClient } from '../wasiClient';

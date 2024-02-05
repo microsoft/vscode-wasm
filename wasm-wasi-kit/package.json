@@ -1,7 +1,7 @@
 {
-	"name": "@vscode/wasm-component-model-std",
+	"name": "@vscode/wasm-wasi-kit",
 	"version": "0.0.1",
-	"description": "Utilities operating on shared memory to implement component model interfaces",
+	"description": "Utilities operating on shared memory to implement the component model based wasi preview 2.",
 	"author": "MS",
 	"license": "MIT",
 	"typings": "./lib/common/api.d.ts",
@@ -18,7 +18,8 @@
 		"clean": "node ../node_modules/.bin/rimraf lib",
 		"lint": "node ../node_modules/eslint/bin/eslint.js --ext ts src",
 		"test": "npm run test:desktop",
-		"test:desktop": "node ../node_modules/mocha/bin/_mocha"
+		"test:desktop": "node ../node_modules/mocha/bin/_mocha",
+		"simulation": "node ./lib/node/test/arrayMain.js"
 	},
 	"dependencies": {
 		"vscode-uri": "^3.0.8"
