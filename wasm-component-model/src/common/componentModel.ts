@@ -42,8 +42,6 @@ export interface ResourceManager<T extends JInterface = JInterface> {
 	managesHandle(resource: ResourceHandle): boolean;
 	managesResource(value: T): boolean;
 	unregister(resource: ResourceHandle): void;
-	reserve(): ResourceHandle;
-	use(resource: ResourceHandle, value: T): void;
 }
 
 export namespace ResourceManager {
@@ -100,22 +98,6 @@ export namespace ResourceManager {
 
 		public unregister(resource: ResourceHandle): void {
 			this.h2r.delete(resource);
-		}
-
-		public reserve(): ResourceHandle {
-			const result = this.handleCounter++;
-			this.h2r.set(result, undefined);
-			return result;
-		}
-
-		public use(resource: ResourceHandle, value: T): void {
-			if (!this.h2r.has(resource)) {
-				throw new ComponentModelError(`Resource handle ${resource} is not reserved`);
-			}
-			if (this.h2r.get(resource) !== undefined) {
-				throw new ComponentModelError(`Resource handle ${resource} is already in use`);
-			}
-			this.h2r.set(resource, value);
 		}
 	}
 

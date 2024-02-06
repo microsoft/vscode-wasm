@@ -4,8 +4,9 @@
  *--------------------------------------------------------------------------------------------*/
 import RAL from '../ral';
 
-import { clocks } from '@vscode/wasi';
 import { u64 } from '@vscode/wasm-component-model';
+
+import { clocks } from '@vscode/wasi';
 import { Pollable } from './io';
 
 export function createMonotonicClock(): clocks.MonotonicClock {

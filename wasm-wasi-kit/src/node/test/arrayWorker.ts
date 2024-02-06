@@ -32,7 +32,7 @@ connection.onAsyncCall('init', async (params) => {
 });
 
 connection.onNotify('array/new', async (params) => {
-	const array = new SArray<float64>(float64, { value: params.array });
+	const array = new SArray<float64>(float64, { ptr: params.array });
 	arrays.set(params.array, array);
 
 	const counter = new Uint32Array(SharedObject.memory().buffer, params.counter, 1);

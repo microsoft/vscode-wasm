@@ -13,8 +13,7 @@ export abstract class BaseWorker {
 	constructor(connection: BaseWorker.ConnectionType) {
 		this.connection = connection;
 		this.connection.onAsyncCall('initialize', async (params) => {
-			const memory = await Memory.createFrom(params.sharedMemory.module, params.sharedMemory.memory);
-			SharedObject.initialize(memory);
+			const memory = await Memory.createFrom(params.sharedMemory);
 			this.connection.initializeSyncCall(memory);
 		});
 	}

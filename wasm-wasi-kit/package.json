@@ -22,6 +22,10 @@
 		"simulation": "node ./lib/node/test/arrayMain.js"
 	},
 	"dependencies": {
+		"uuid": "^9.0.1",
 		"vscode-uri": "^3.0.8"
+	},
+	"devDependencies": {
+		"@types/uuid": "^9.0.8"
 	}
 }

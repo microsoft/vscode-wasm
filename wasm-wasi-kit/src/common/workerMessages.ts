@@ -3,15 +3,13 @@
  * Licensed under the MIT License. See License.txt in the project root for license information.
  * ------------------------------------------------------------------------------------------ */
 import type { BaseConnection, ConnectionPort, TransferItems } from './connection';
+import type { Memory } from './sobject';
 
 export namespace Client {
 	export type AsyncCalls = {
 		method: 'initialize';
 		params: {
-			sharedMemory: {
-				module: WebAssembly.Module;
-				memory: WebAssembly.Memory;
-			};
+			sharedMemory: Memory.Transferable;
 		};
 		result: void;
 	} | {

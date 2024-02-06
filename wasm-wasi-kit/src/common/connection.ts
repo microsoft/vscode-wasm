@@ -29,7 +29,7 @@ type _AsyncCallHandler = (params: any) => HandlerResult<any>;
 
 type _SharedObjectResult = {
 	new (location: MemoryLocation): SharedObject;
-	alloc(): ptr;
+	alloc(memory: Memory): ptr;
 };
 namespace _SharedObjectResult {
 	export function is(value: any): value is _SharedObjectResult {
@@ -84,8 +84,8 @@ namespace _AsyncResponse {
 
 interface _SyncCall extends AbstractMessage {
 	kind: MessageKind.SyncCall;
-	sync: MemoryLocation;
-	result?: MemoryLocation;
+	sync: MemoryLocation.Surrogate;
+	result?: MemoryLocation.Surrogate;
 }
 namespace _SyncCall {
 	export function is(value: _Message): value is _SyncCall {
@@ -175,9 +175,24 @@ type NotifyHandlerSignatures<Notifications extends _NotifyType | undefined> = [N
 
 
 export class TimeoutError extends Error {
-	constructor(message: string) {
+	public readonly method: string;
+	public readonly timeout: number;
+	constructor(message: string, method: string, timeout: number) {
 		super(message);
 		this.name = 'TimeoutError';
+		this.method = method;
+		this.timeout = timeout;
+	}
+}
+
+export class SyncCallError extends Error {
+	public readonly method: string;
+	public readonly errorCode: number;
+	constructor(message: string, method: string, errorCode: number) {
+		super(message);
+		this.name = 'SyncCallError';
+		this.method = method;
+		this.errorCode = errorCode;
 	}
 }
 
@@ -264,15 +279,15 @@ export abstract class BaseConnection<AsyncCalls extends _AsyncCallType | undefin
 	public readonly callSync: SyncCallSignatures<SyncCalls, TLI> = this._callSync as SyncCallSignatures<SyncCalls, TLI>;
 
 	private _callSync(method: string, params?: any, result?: _SharedObjectResult | undefined, timeout?: number | undefined, transferList?: ReadonlyArray<TLI>): any {
-		if (this.syncCallBuffer === undefined) {
+		if (this.syncCallBuffer === undefined || this.memory === undefined) {
 			throw new Error('Sync calls are not initialized with shared memory.');
 		}
-		const call: _SyncCall = { kind: MessageKind.SyncCall, method, sync: MemoryLocation.create(this.syncCallBuffer.byteOffset) };
+		const call: _SyncCall = { kind: MessageKind.SyncCall, method, sync: new MemoryLocation(this.memory, this.syncCallBuffer.byteOffset).getSurrogate() };
 		if (params !== undefined) {
 			call.params = params;
 		}
 		if (result !== undefined && result !== null) {
-			call.result = MemoryLocation.create(result.alloc());
+			call.result = new MemoryLocation(this.memory, result.alloc(this.memory)).getSurrogate();
 		}
 		this.postMessage(call, transferList);
 		this.syncCallBuffer[BaseConnection.error] = 0;
@@ -282,12 +297,19 @@ export abstract class BaseConnection<AsyncCalls extends _AsyncCallType | undefin
 			case 'ok':
 				const error = this.syncCallBuffer[BaseConnection.error];
 				if (error === 0) {
+					if (result === undefined || result === null || call.result === undefined || call.result === null) {
+						return undefined;
+					} else {
+						if (call.result.memory.id !== this.memory.id) {
+							throw new Error('Memory mismatch');
+						}
+					}
 					return (result === undefined || result === null || !MemoryLocation.is(call.result)) ? undefined : new result(call.result);
 				} else {
-					throw new Error(`Sync call ${method} failed with error code ${error}`);
+					throw new SyncCallError(`Sync call ${method} failed with error code ${error}`, method, error);
 				}
 			case 'timed-out':
-				throw new TimeoutError(`Sync call ${method} timed out after ${timeout}ms`);
+				throw new TimeoutError(`Sync call ${method} timed out after ${timeout}ms`, method, timeout!);
 			case 'not-equal':
 				const current = Atomics.load(this.syncCallBuffer, BaseConnection.sync);
 				if (current === 1) {
@@ -369,7 +391,7 @@ export abstract class BaseConnection<AsyncCalls extends _AsyncCallType | undefin
 						errorCode = -1;
 					}
 				} finally {
-					const syncCallBuffer = new Int32Array(this.memory.buffer, message.sync.value, 2);
+					const syncCallBuffer = new Int32Array(this.memory.buffer, message.sync.ptr, 2);
 					syncCallBuffer[BaseConnection.error] = errorCode;
 					Atomics.store(this.syncCallBuffer, BaseConnection.sync, 1);
 					Atomics.notify(this.syncCallBuffer, BaseConnection.sync, 1);

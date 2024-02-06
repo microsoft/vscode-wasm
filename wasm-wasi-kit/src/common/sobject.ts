@@ -3,23 +3,38 @@
  * Licensed under the MIT License. See License.txt in the project root for license information.
  * ------------------------------------------------------------------------------------------ */
 /// <reference path="../../typings/webAssemblyCommon.d.ts" />
-
 import RAL from './ral';
+
+import uuid from 'uuid';
 
 import { Memory as _Memory, Alignment, ComponentModelContext, GenericComponentModelType, ResourceManagers, ptr, u32, size, JType } from '@vscode/wasm-component-model';
 
 export interface Memory extends _Memory {
+	id: string;
 	free(ptr: ptr): void;
 	isSame(memory: Memory): boolean;
-	getTransferable(): { module: WebAssembly.Module; memory: WebAssembly.Memory };
+	getTransferable(): Memory.Transferable;
 }
+
 export namespace Memory {
+
+	export function is(value: any): value is Memory {
+		return value instanceof MemoryImpl;
+	}
+
 	export function create(): Promise<Memory> {
 		return RAL().Memory.create(MemoryImpl);
 	}
-	export function createFrom(module: WebAssembly.Module, memory: WebAssembly.Memory): Promise<Memory> {
-		return RAL().Memory.createFrom(MemoryImpl, module, memory);
+
+	export function createFrom(transferable: Memory.Transferable): Promise<Memory> {
+		return RAL().Memory.createFrom(MemoryImpl, transferable);
 	}
+
+	export type Transferable = {
+		id: string;
+		module: WebAssembly.Module;
+		memory: WebAssembly.Memory;
+	};
 	export interface Exports {
 		malloc(size: number): number;
 		free(ptr: number): void;
@@ -27,8 +42,9 @@ export namespace Memory {
 	}
 }
 
-class MemoryImpl implements Memory {
+class MemoryImpl implements _Memory {
 
+	public readonly id: string;
 	private readonly module: WebAssembly.Module;
 	private readonly memory: WebAssembly.Memory;
 	private readonly exports: Memory.Exports;
@@ -36,7 +52,8 @@ class MemoryImpl implements Memory {
 	private _raw: Uint8Array | undefined;
 	private _view: DataView | undefined;
 
-	constructor(module: WebAssembly.Module, memory: WebAssembly.Memory, exports: Memory.Exports) {
+	public constructor(module: WebAssembly.Module, memory: WebAssembly.Memory, exports: Memory.Exports, id?: string) {
+		this.id = id ?? uuid.v4();
 		this.module = module;
 		this.memory = memory;
 		this.exports = exports;
@@ -46,8 +63,8 @@ class MemoryImpl implements Memory {
 		return this.buffer === memory.buffer;
 	}
 
-	public getTransferable(): { module: WebAssembly.Module; memory: WebAssembly.Memory } {
-		return { module: this.module, memory: this.memory };
+	public getTransferable(): Memory.Transferable {
+		return { id: this.id, module: this.module, memory: this.memory };
 	}
 
 	public get buffer(): ArrayBuffer {
@@ -95,31 +112,70 @@ class MemoryImpl implements Memory {
 	}
 }
 
-export type MemoryLocation = {
-	value: ptr;
-};
-export namespace MemoryLocation {
-	export function create(ptr: ptr): MemoryLocation {
-		return { value: ptr };
+export class MemoryLocation {
+
+	private readonly _memory: Memory;
+	private _ptr: ptr;
+
+	constructor(memory: Memory, ptr: ptr) {
+		this._memory = memory;
+		this._ptr = ptr;
 	}
 
-	export function is(value: unknown): value is MemoryLocation {
-		let candidate = value as MemoryLocation;
-		return typeof candidate === 'object' && candidate !== null && typeof candidate.value === 'number';
+	public get memory(): Memory {
+		return this._memory;
+	}
+
+	public get ptr(): ptr {
+		if (this._ptr === -1) {
+			throw new Error('MemoryLocation has been freed');
+		}
+		return this._ptr;
+	}
+
+	public free(): void {
+		this._memory.free(this._ptr);
+		this._ptr = -1;
+	}
+
+	public getTransferable(): MemoryLocation.Transferable {
+		return { memory: this._memory.getTransferable(), ptr: this._ptr };
+	}
+
+	public getSurrogate(): MemoryLocation.Surrogate {
+		return { memory: { id: this._memory.id }, ptr: this._ptr };
+	}
+
+	public getInt32Array(offset: number, length: number): Int32Array {
+		return new Int32Array(this._memory.buffer, this._ptr + offset, length);
 	}
 }
+export namespace MemoryLocation {
+	export type Transferable = {
+		memory: Memory.Transferable;
+		ptr: ptr;
+	};
+	export type Surrogate = {
+		memory: { id: string };
+		ptr: ptr;
+	};
+}
 
-export type Allocation = {
-	align: Alignment;
-	size: size;
-};
-export namespace Allocation {
-	export function create(align: Alignment, size: size): Allocation {
-		return { align, size };
+export class Allocation {
+
+	private readonly memory: Memory;
+	private readonly align: Alignment;
+	private readonly size: size;
+
+	constructor(memory: Memory, align: Alignment, size: size) {
+		this.memory = memory;
+		this.align = align;
+		this.size = size;
 	}
-	export function is(value: unknown): value is Allocation {
-		let candidate = value as Allocation;
-		return typeof candidate === 'object' && candidate !== null && typeof candidate.align === 'number' && typeof candidate.size === 'number';
+
+	public alloc(): MemoryLocation {
+		const ptr = this.memory.alloc(this.align, this.size);
+		return new MemoryLocation(this.memory, ptr);
 	}
 }
 
@@ -168,40 +224,15 @@ export abstract class SharedObject {
 		managers: ResourceManagers.createDefault()
 	};
 
-	private static _memory: Memory | undefined;
-	public static initialize(memory: Memory): void {
-		if (this._memory !== undefined && this._memory.isSame(memory)) {
-			return;
-		}
-		if (this._memory !== undefined) {
-			throw new Error('Memory is already initialized.');
-		}
-		if (!(memory.buffer instanceof SharedArrayBuffer)) {
-			throw new Error('Memory is not a shared memory.');
-		}
-		this._memory = memory;
-	}
-
-	public static isInitialized(): boolean {
-		return this._memory !== undefined;
-	}
-
-	public static memory(): Memory {
-		if (this._memory === undefined) {
-			throw new Error('Memory is not initialized');
-		}
-		return this._memory;
-	}
-
-	protected readonly ptr: ptr;
+	protected readonly location: MemoryLocation;
 	private readonly allocated: boolean;
 
 	protected constructor(allocationOrLocation: Allocation | MemoryLocation) {
-		if (MemoryLocation.is(allocationOrLocation)) {
-			this.ptr = allocationOrLocation.value;
+		if (allocationOrLocation instanceof MemoryLocation) {
+			this.location = allocationOrLocation;
 			this.allocated = false;
-		} else if (Allocation.is(allocationOrLocation)) {
-			this.ptr = SharedObject.memory().alloc(allocationOrLocation.align, allocationOrLocation.size);
+		} else if (allocationOrLocation instanceof Allocation) {
+			this.location = allocationOrLocation.alloc();
 			this.allocated = true;
 		} else {
 			throw new Error('Invalid argument');
@@ -213,15 +244,11 @@ export abstract class SharedObject {
 			// We should think about a trace when we dispose
 			// a shared object from a thread that hasn't allocated it.
 		}
-		this.memory().free(this.ptr);
+		this.location.free();
 	}
 
 	protected memory(): Memory {
-		return SharedObject.memory();
-	}
-
-	public location(): MemoryLocation {
-		return MemoryLocation.create(this.ptr);
+		return this.location.memory;
 	}
 }
 
@@ -265,7 +292,9 @@ export class RecordDescriptor<T extends RecordProperties> {
 		return this._fields.has(name);
 	}
 
-	createAccess(memory: Memory, ptr: ptr): T {
+	createAccess(location: MemoryLocation): T {
+		const memory = location.memory;
+		const ptr = location.ptr;
 		const access = Object.create(null);
 		for (const [name, { type, offset }] of this._fields) {
 			if (name.startsWith('_')) {
@@ -288,15 +317,13 @@ export abstract class SharedRecord<T extends RecordProperties> extends SharedObj
 
 	protected readonly access: T;
 
-	constructor(recordInfo: RecordDescriptor<T>, location?: MemoryLocation) {
-		if (location !== undefined) {
+	constructor(recordInfo: RecordDescriptor<T>, location: MemoryLocation | Memory) {
+		if (location instanceof MemoryLocation) {
 			super(location);
 		} else {
-			super(Allocation.create(recordInfo.alignment, recordInfo.size));
+			super(new Allocation(location, recordInfo.alignment, recordInfo.size));
 		}
-		const ptr = this.ptr;
-		const mem = this.memory();
-		this.access = recordInfo.createAccess(mem, ptr);
+		this.access = recordInfo.createAccess(this.location);
 	}
 
 	protected abstract getRecordInfo(): RecordDescriptor<T>;
@@ -321,14 +348,14 @@ export abstract class LockableRecord<T extends RecordProperties> extends SharedR
 
 	private readonly lock: Lock;
 
-	protected constructor(recordInfo: RecordDescriptor<T>, location?: MemoryLocation, lock?: Lock) {
+	protected constructor(recordInfo: RecordDescriptor<T>, location: MemoryLocation | Memory, lock?: Lock) {
 		if (!recordInfo.hasField('_lock')) {
 			throw new Error('RecordInfo does not contain a lock field');
 		}
 		super(recordInfo, location);
 		if (lock === undefined) {
 			const offset = recordInfo.getField('_lock')!.offset;
-			const lockBuffer = new Int32Array(this.memory().buffer, this.ptr + offset, 1);
+			const lockBuffer = this.location.getInt32Array(offset, 1);
 			// We allocated the memory for this shared record so we need to initialize
 			// the lock count to 1. If we use an existing memory location, we need to
 			// leave the lock count untouched since the shared record could be locked in

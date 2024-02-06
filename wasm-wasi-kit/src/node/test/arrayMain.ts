@@ -138,7 +138,7 @@ async function main(): Promise<void> {
 			});
 		}));
 		threads.push({ worker, connection });
-		connection.notify('array/new', { array: sarray.location().value, counter });
+		connection.notify('array/new', { array: sarray.location().ptr, counter });
 	}
 
 	await Promise.all(promises);
