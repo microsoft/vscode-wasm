@@ -75,18 +75,21 @@ const _ril: RIL = Object.freeze<RIL>({
 			if (_baseUri === undefined) {
 				throw new Error('Environment.baseUri is not set.');
 			}
+			if (_baseUri.scheme !== 'file') {
+				throw new Error('Environment.baseUri must be a file URI.');
+			}
 			if (location.indexOf('/') !== 0) {
 				const bundledWorkers = process.env['WASM_WASI_BUNDLED_WORKERS'];
 				if (bundledWorkers === '0' || bundledWorkers === 'false') {
 					const parts = location.split('/');
 					parts[0] = 'desktop';
-					return _baseUri.with({ path: path.join(_baseUri.path, 'lib', ...parts)});
+					return URI.file(path.join(_baseUri.fsPath, 'lib', ...parts));
 				} else {
 					const basename = path.basename(location);
-					return _baseUri.with( { path: path.join(_baseUri.path, 'dist', 'desktop', basename)});
+					return URI.file(path.join(_baseUri.fsPath, 'dist', 'desktop', basename));
 				}
 			} else {
-				return _baseUri.with({ path: path.join(_baseUri.path, 'dist', 'desktop', location)});
+				return URI.file(path.join(_baseUri.fsPath, 'dist', 'desktop', location));
 			}
 		}
 	})
