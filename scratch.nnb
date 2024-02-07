@@ -24,6 +24,26 @@
         {
             "language": "typescript",
             "source": [
+                "{\n\tconst buffer = new ArrayBuffer(16);\n\tconst view = new DataView(buffer, 0, 4);\n\tview.getInt32(16);\n}"
+            ],
+            "outputs": [
+                {
+                    "items": [
+                        {
+                            "mime": "application/vnd.code.notebook.error",
+                            "value": {
+                                "name": "RangeError",
+                                "message": "Offset is outside the bounds of the DataView",
+                                "stack": "    at DataView.getInt32 (<anonymous>)\n    at <Cell 2> [4, 14]\n    at <Cell 2> [8, 46]\n    at Script.runInContext (node:vm:135:12)\n    at Script.runInNewContext (node:vm:140:17)\n    at Object.runInNewContext (node:vm:292:38)\n    at C (/home/dirkb/.vscode-server-insiders/extensions/donjayamanne.typescript-notebook-2.0.6/out/extension/server/index.js:2:113345)\n    at t.execCode (/home/dirkb/.vscode-server-insiders/extensions/donjayamanne.typescript-notebook-2.0.6/out/extension/server/index.js:2:114312)\n    at k.<anonymous> (/home/dirkb/.vscode-server-insiders/extensions/donjayamanne.typescript-notebook-2.0.6/out/extension/server/index.js:2:142156)\n    at k.emit (node:events:514:28)"
+                            }
+                        }
+                    ]
+                }
+            ]
+        },
+        {
+            "language": "typescript",
+            "source": [
                 "const ab = new ArrayBuffer(1024);\nconst ib = new Int32Array(ab, 256, 2);\nconsole.log(ib.byteOffset);\nconsole.log(ib.byteLength);"
             ],
             "outputs": [

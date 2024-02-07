@@ -153,20 +153,6 @@ namespace BigInts {
 const utf8Decoder = RAL().TextDecoder.create('utf-8');
 const utf8Encoder = RAL().TextEncoder.create('utf-8');
 
-export interface Memory {
-	readonly buffer: ArrayBuffer;
-	readonly raw: Uint8Array;
-	readonly view: DataView;
-	alloc: (align: Alignment, size: size) => size;
-	realloc: (ptr: ptr, oldSize: size, align: Alignment, newSize: size) => size;
-}
-
-export type encodings = 'utf-8' | 'utf-16' | 'latin1+utf-16';
-export interface Options {
-	encoding: encodings;
-	keepOption?: boolean;
-}
-
 export enum Alignment {
 	byte = 1,
 	halfWord = 2,
@@ -177,8 +163,152 @@ export namespace Alignment {
 	export function align(ptr: ptr, alignment: Alignment): size {
 		return Math.ceil(ptr / alignment) * alignment;
 	}
+	export function getAlignment(ptr: ptr): Alignment {
+		if (ptr % Alignment.doubleWord === 0) {
+			return Alignment.doubleWord;
+		}
+		if (ptr % Alignment.word === 0) {
+			return Alignment.word;
+		}
+		if (ptr % Alignment.halfWord === 0) {
+			return Alignment.halfWord;
+		}
+		return Alignment.byte;
+	}
 }
 const align = Alignment.align;
+
+export class MemoryLocationError extends Error {
+	constructor(message: string) {
+		super(message);
+	}
+}
+
+export class MemoryLocation {
+
+	private readonly _memory: Memory;
+	private readonly _ptr: ptr;
+	private readonly _size: size;
+	private readonly _alignment: Alignment;
+
+	private _view: DataView | undefined;
+	private _raw: Uint8Array | undefined;
+
+	constructor(memory: Memory, ptr: ptr, size: size) {
+		this._memory = memory;
+		this._ptr = ptr;
+		this._size = size;
+		this._alignment = Alignment.getAlignment(ptr);
+	}
+
+	get ptr(): ptr {
+		return this._ptr;
+	}
+
+	get size(): size {
+		return this._size;
+	}
+
+	get alignment(): Alignment {
+		return this._alignment;
+	}
+
+	get view(): DataView {
+		if (this._view === undefined || this._view.buffer !== this._memory.buffer) {
+			this._view = new DataView(this._memory.buffer, this._ptr, this._size);
+		}
+		return this._view;
+	}
+
+	get raw(): Uint8Array {
+		if (this._raw === undefined || this._raw.buffer !== this._memory.buffer) {
+			this._raw = new Uint8Array(this._memory.buffer, this._ptr, this._size);
+		}
+		return this._raw;
+	}
+}
+
+export class MemoryReadStream {
+
+	private readonly location: MemoryLocation;
+	private offset: size;
+
+	constructor(location: MemoryLocation) {
+		this.location = location;
+		this.offset = 0;
+	}
+
+	public getUint8(_align: boolean = true): u8 {
+		this.assertInBounds(u8.size);
+		const location = this.location;
+		const result = location.view.getUint8(location.ptr + this.offset);
+		this.offset += u8.size;
+		return result;
+	}
+
+	public getUint16(align: boolean = true): u16 {
+		if (align) {
+			this.assertAlignment(Alignment.halfWord);
+			this.offset = Alignment.align(this.offset, Alignment.halfWord);
+		}
+		this.assertInBounds(offset, u16.size);
+		return this.view.getUint16(this._ptr + offset, true);
+	}
+
+	public setUint8(value: u8, offset: size = 0): void {
+		this.assertInBounds(offset, u8.size);
+		return this.view.setUint8(this._ptr + offset, value);
+	}
+
+	public setUint16(value: u16, offset: size = 0): void {
+		this.assertInBounds(offset, u16.size);
+		return this.view.setUint16(this._ptr + offset, value, true);
+	}
+
+	public getUint32(offset: size = 0): u32 {
+		this.assertInBounds(offset, u32.size);
+		return this.view.getUint32(this._ptr + offset, true);
+	}
+
+	public setUint32(value: u32, offset: size = 0): void {
+		this.assertInBounds(offset, u16.size);
+		return this.view.setUint16(this._ptr + offset, value, true);
+	}
+
+	public getUint64(offset: size = 0): u64 {
+		this.assertInBounds(offset, u64.size);
+		return this.view.getBigUint64(this._ptr + offset, true);
+	}
+
+	private assertAlignment(alignment: Alignment): void {
+		const location = this.location;
+		if (alignment > location.alignment) {
+			throw new MemoryLocationError(`Memory location is not aligned to ${alignment}. Allocated[${location.ptr},${location.size}]`);
+		}
+	}
+
+	private assertInBounds(size: size): void {
+		const location = this.location;
+		if (this.offset + size > location.size) {
+			throw new MemoryLocationError(`Memory access is out of bounds. Accessing ${this.offset}, allocated[${location.ptr},${location.size}]`);
+		}
+	}
+}
+
+export interface Memory {
+	readonly buffer: ArrayBuffer;
+	readonly raw: Uint8Array;
+	readonly view: DataView;
+	alloc: (align: Alignment, size: size) => MemoryLocation;
+	realloc: (location: MemoryLocation, align: Alignment, newSize: size) => MemoryLocation;
+}
+
+export type encodings = 'utf-8' | 'utf-16' | 'latin1+utf-16';
+export interface Options {
+	encoding: encodings;
+	keepOption?: boolean;
+}
+
 
 
 export enum FlatTypeKind {
@@ -193,11 +323,11 @@ export interface FlatType<F extends i32 | i64 | f32 | f64> {
 	readonly size: size;
 	readonly alignment: Alignment;
 	// Loads a flat value directly from the memory buffer
-	load(memory: Memory, ptr: ptr): F;
+	load(location: MemoryLocation): F;
 	// Stores a flat value directly into the memory buffer
-	store(memory: Memory, ptr: ptr, value: F): void;
+	store(location: MemoryLocation, value: F): void;
 	// copy a flat value from one memory to another
-	copy(dest: Memory, dest_ptr: ptr<u8>, src: Memory, src_ptr: ptr<u8>): void;
+	copy(dest: MemoryLocation, src: MemoryLocation): void;
 }
 
 export type i32 = number;
@@ -206,7 +336,7 @@ namespace $i32 {
 	export const size = 4;
 	export const alignment: Alignment = Alignment.word;
 
-	export function load(memory: Memory, ptr: ptr): i32 {
+	export function load(location: MemoryLocation): i32 {
 		return memory.view.getUint32(ptr, true);
 	}
 	export function store(memory: Memory, ptr: ptr<i32>, value: i32): void {
