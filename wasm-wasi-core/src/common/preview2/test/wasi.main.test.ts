@@ -12,20 +12,17 @@ import { WasiClient } from '../wasiClient';
 
 suite(`Wasi Worker Tests`, () => {
 
+	let memory: Memory;
 	suiteSetup(async () => {
-		if (!SharedObject.isInitialized()) {
-			const memory = await Memory.create();
-			SharedObject.initialize(memory);
-		}
+		memory = await Memory.create();
 	});
 
 	test(`setTimeout`, async () => {
-		const memory = SharedObject.memory();
 		const ptr = memory.alloc(Alignment.word, u32.size * 2);
 		const signal = new Int32Array(memory.buffer, ptr, 1);
 
 		const managementClient = new WasiManagementClient();
-		await managementClient.launch();
+		await managementClient.launch(memory);
 		const connectionInfo = await managementClient.createConnection();
 
 		const client = new WasiClient(connectionInfo.port);

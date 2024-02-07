@@ -15,8 +15,11 @@ export abstract class BaseWorker {
 		this.connection.onAsyncCall('initialize', async (params) => {
 			const memory = await Memory.createFrom(params.sharedMemory);
 			this.connection.initializeSyncCall(memory);
+			this.initialize(memory);
 		});
 	}
+
+	protected abstract initialize(memory: Memory): void;
 }
 export namespace BaseWorker {
 	export type ConnectionType<TIL = TransferItems> = Messages.Service.ConnectionType<TIL>;

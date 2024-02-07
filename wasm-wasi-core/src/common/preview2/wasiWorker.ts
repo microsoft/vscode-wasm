@@ -5,13 +5,14 @@
 import RAL from '../ral';
 
 import type { Disposable } from 'vscode';
-import { AnyConnection, BaseConnection, type ConnectionPort, SharedObject, MultiConnectionWorker, BaseWorker } from '@vscode/wasm-wasi-kit';
+import { AnyConnection, BaseConnection, type ConnectionPort, SharedObject, MultiConnectionWorker, BaseWorker, type Memory } from '@vscode/wasm-wasi-kit';
 import type { Client } from './wasiClient';
 
 type ConnectionType = BaseConnection<undefined, undefined, undefined, undefined, Client.SyncCalls, Client.Jobs>;
 
 export class WasiWorker extends MultiConnectionWorker<ConnectionType> {
 
+	private memory!: Memory;
 	private readonly timeouts: Map<number, Disposable>;
 
 	constructor(connection: AnyConnection) {
@@ -19,24 +20,34 @@ export class WasiWorker extends MultiConnectionWorker<ConnectionType> {
 		this.timeouts = new Map();
 	}
 
+	protected initialize(memory: Memory): void {
+		this.memory = memory;
+	}
+
 	protected createConnection(port: ConnectionPort): Promise<ConnectionType> {
 		const connection: ConnectionType = AnyConnection.create(port);
 		connection.initializeSyncCall(this.connection.getSyncMemory());
 		connection.onNotify('setTimeout', async (params) => {
+			if (this.memory.id !== params.signal.memory.id) {
+				throw new Error('Memory mismatch');
+			}
 			const diff = Date.now() - params.currentTime;
 			const ms = params.timeout - diff;
-			const signal = new Int32Array(SharedObject.memory().buffer, params.signal.value, 1);
+			const signal = new Int32Array(this.memory.buffer, params.signal.ptr, 1);
 			if (ms <= 0) {
 				Atomics.notify(signal, 0);
 			} else {
 				const disposable = RAL().timer.setTimeout(() => {
 					Atomics.notify(signal, 0);
 				}, ms);
-				this.timeouts.set(params.signal.value, disposable);
+				this.timeouts.set(params.signal.ptr, disposable);
 			}
 		});
 		connection.onSyncCall('clearTimeout', async (params) => {
-			const key = params.signal.value;
+			if (this.memory.id !== params.signal.memory.id) {
+				throw new Error('Memory mismatch');
+			}
+			const key = params.signal.ptr;
 			const disposable = this.timeouts.get(key);
 			if (disposable !== undefined) {
 				this.timeouts.delete(key);

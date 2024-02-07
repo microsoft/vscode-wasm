@@ -8,7 +8,7 @@ export namespace Client {
 	export type Jobs = {
 		method: 'setTimeout';
 		params: {
-			signal: MemoryLocation;
+			signal: MemoryLocation.Surrogate;
 			currentTime: number;
 			timeout: number;
 		};
@@ -16,7 +16,7 @@ export namespace Client {
 	export type SyncCalls = {
 		method: 'clearTimeout';
 		params: {
-			signal: MemoryLocation;
+			signal: MemoryLocation.Surrogate;
 		};
 		result: void;
 	};
@@ -35,10 +35,10 @@ export class WasiClient {
 
 	public setTimeout(signal: MemoryLocation, timeout: bigint): void {
 		const ms = Number(timeout / 1000000n) ;
-		this.connection.notify('setTimeout', { signal, currentTime: Date.now(), timeout: ms });
+		this.connection.notify('setTimeout', { signal: signal.getSurrogate(), currentTime: Date.now(), timeout: ms });
 	}
 
 	public clearTimeout(signal: MemoryLocation): void {
-		this.connection.callSync('clearTimeout', { signal });
+		this.connection.callSync('clearTimeout', { signal: signal.getSurrogate() });
 	}
 }
