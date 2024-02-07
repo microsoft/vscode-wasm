@@ -33,16 +33,16 @@ const _ril: RIL = Object.freeze<RIL>(Object.assign({}, _RAL(), {
 			});
 			return new constructor(module, memory, instance.exports as unknown as Memory.Exports);
 		},
-		async createFrom(constructor: new (module: WebAssembly.Module, memory: WebAssembly.Memory, exports: Memory.Exports) => Memory, module: WebAssembly.Module, memory: WebAssembly.Memory): Promise<Memory> {
-			const instance = new WebAssembly.Instance(module, {
+		async createFrom(constructor: new (module: WebAssembly.Module, memory: WebAssembly.Memory, exports: Memory.Exports, id: string) => Memory, transferable: Memory.Transferable): Promise<Memory> {
+			const instance = new WebAssembly.Instance(transferable.module, {
 				env: {
-					memory
+					memory: transferable.memory
 				},
 				wasi_snapshot_preview1: {
 					sched_yield: () => 0
 				}
 			});
-			return new constructor(module, memory, instance.exports as unknown as Memory.Exports);
+			return new constructor(transferable.module, transferable.memory, instance.exports as unknown as Memory.Exports, transferable.id);
 		}
 	}),
 	MessageChannel: Object.freeze({

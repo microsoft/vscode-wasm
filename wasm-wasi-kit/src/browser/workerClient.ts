@@ -4,7 +4,7 @@
  * ------------------------------------------------------------------------------------------ */
 import type * as Messages from '../common/workerMessages';
 import { Connection } from './connection';
-import { SharedObject } from '../common/sobject';
+import { type Memory } from '../common/sobject';
 import type { AnyConnection } from '../common/connection';
 import * as cc from '../common/workerClient';
 import type { URI } from 'vscode-uri';
@@ -18,13 +18,12 @@ export function WorkerClient<C>(base: new () => cc.WorkerClientBase, workerLocat
 			super();
 		}
 
-		public async launch(): Promise<void> {
+		public async launch(memory: Memory): Promise<void> {
 			return new Promise<void>((resolve, reject) => {
 				this.worker = new Worker(new URL(workerLocation.toString()));
 				const connection = new Connection<Messages.Client.AsyncCalls, undefined, undefined, undefined, undefined, Messages.Service.Notifications>(this.worker);
 				connection.onNotify('workerReady', () => {
-					const { module, memory } = SharedObject.memory().getTransferable();
-					connection.callAsync('initialize', { sharedMemory: { module: module, memory: memory } }).then(resolve, reject);
+					connection.callAsync('initialize', { sharedMemory: memory.getTransferable() }).then(resolve, reject);
 				});
 				connection.listen();
 				this.setConnection(connection as unknown as AnyConnection);

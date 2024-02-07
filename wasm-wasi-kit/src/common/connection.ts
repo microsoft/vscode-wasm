@@ -282,38 +282,45 @@ export abstract class BaseConnection<AsyncCalls extends _AsyncCallType | undefin
 		if (this.syncCallBuffer === undefined || this.memory === undefined) {
 			throw new Error('Sync calls are not initialized with shared memory.');
 		}
+		const syncCallBuffer = this.syncCallBuffer;
+		const memory = this.memory;
 		const call: _SyncCall = { kind: MessageKind.SyncCall, method, sync: new MemoryLocation(this.memory, this.syncCallBuffer.byteOffset).getSurrogate() };
 		if (params !== undefined) {
 			call.params = params;
 		}
+		let resultLocation: MemoryLocation | undefined;
 		if (result !== undefined && result !== null) {
-			call.result = new MemoryLocation(this.memory, result.alloc(this.memory)).getSurrogate();
+			resultLocation = new MemoryLocation(this.memory, result.alloc(this.memory));
+			call.result = resultLocation.getSurrogate();
 		}
 		this.postMessage(call, transferList);
 		this.syncCallBuffer[BaseConnection.error] = 0;
 		Atomics.store(this.syncCallBuffer, BaseConnection.sync, 0);
 		const wait = Atomics.wait(this.syncCallBuffer, BaseConnection.sync, 0, timeout);
+		const handleResult = (): SharedObject | undefined => {
+			const error = syncCallBuffer[BaseConnection.error];
+			if (error === 0) {
+				if (result === undefined || result === null || resultLocation === undefined) {
+					return undefined;
+				} else {
+					if (resultLocation.memory.id !== memory!.id) {
+						throw new Error('Memory mismatch');
+					}
+					return new result(resultLocation);
+				}
+			} else {
+				throw new SyncCallError(`Sync call ${method} failed with error code ${error}`, method, error);
+			}
+		};
 		switch (wait) {
 			case 'ok':
-				const error = this.syncCallBuffer[BaseConnection.error];
-				if (error === 0) {
-					if (result === undefined || result === null || call.result === undefined || call.result === null) {
-						return undefined;
-					} else {
-						if (call.result.memory.id !== this.memory.id) {
-							throw new Error('Memory mismatch');
-						}
-					}
-					return (result === undefined || result === null || !MemoryLocation.is(call.result)) ? undefined : new result(call.result);
-				} else {
-					throw new SyncCallError(`Sync call ${method} failed with error code ${error}`, method, error);
-				}
+				return handleResult();
 			case 'timed-out':
 				throw new TimeoutError(`Sync call ${method} timed out after ${timeout}ms`, method, timeout!);
 			case 'not-equal':
 				const current = Atomics.load(this.syncCallBuffer, BaseConnection.sync);
 				if (current === 1) {
-					return (result === undefined || result === null || !MemoryLocation.is(call.result)) ? undefined : new result(call.result);
+					return handleResult();
 				} else {
 					throw new Error(`Sync call ${method} failed with unexpected value ${current}`);
 				}
@@ -381,9 +388,10 @@ export abstract class BaseConnection<AsyncCalls extends _AsyncCallType | undefin
 				if (this.memory === undefined || this.syncCallBuffer === undefined) {
 					throw new Error('Sync calls are not initialized with shared memory.');
 				}
+				const memory = this.memory;
 				let errorCode: number = 0;
 				try {
-					errorCode = await handler(message.params, message.result) ?? 0;
+					errorCode = await handler(message.params, message.result ? new MemoryLocation(memory, message.result) : undefined) ?? 0;
 				} catch (error: any) {
 					if (typeof error.code === 'number') {
 						errorCode = error.code;

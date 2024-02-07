@@ -12,7 +12,7 @@ import { float64, ptr } from '@vscode/wasm-component-model';
 import { SArray } from '../../common/sarray';
 import { Connection } from '../connection';
 import { Notifications, Operations, ManagementCalls, ServerNotifications } from './messages';
-import { Memory, SharedObject } from '../../common/sobject';
+import { Memory, MemoryLocation } from '../../common/sobject';
 
 const connection = new Connection<undefined, undefined, Operations | ServerNotifications, ManagementCalls, undefined, Notifications>(parentPort!);
 
@@ -25,17 +25,18 @@ const operations: string[] = [
 ];
 
 let workerId!: number;
+let memory: Memory;
 connection.onAsyncCall('init', async (params) => {
 	workerId = params.workerId;
-	SharedObject.initialize(await Memory.createFrom(params.module, params.memory));
-	connection.initializeSyncCall(SharedObject.memory());
+	memory = await Memory.createFrom(params.memory);
+	connection.initializeSyncCall(memory);
 });
 
 connection.onNotify('array/new', async (params) => {
-	const array = new SArray<float64>(float64, { ptr: params.array });
+	const array = new SArray<float64>(float64, new MemoryLocation(memory, params.array));
 	arrays.set(params.array, array);
 
-	const counter = new Uint32Array(SharedObject.memory().buffer, params.counter, 1);
+	const counter = new Uint32Array(memory.buffer, params.counter, 1);
 
 	function push() {
 		const value = Math.random();

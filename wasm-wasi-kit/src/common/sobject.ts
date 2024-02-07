@@ -5,7 +5,7 @@
 /// <reference path="../../typings/webAssemblyCommon.d.ts" />
 import RAL from './ral';
 
-import uuid from 'uuid';
+import * as uuid from 'uuid';
 
 import { Memory as _Memory, Alignment, ComponentModelContext, GenericComponentModelType, ResourceManagers, ptr, u32, size, JType } from '@vscode/wasm-component-model';
 
@@ -117,9 +117,17 @@ export class MemoryLocation {
 	private readonly _memory: Memory;
 	private _ptr: ptr;
 
-	constructor(memory: Memory, ptr: ptr) {
-		this._memory = memory;
-		this._ptr = ptr;
+	constructor(memory: Memory, ptr: ptr | MemoryLocation.Surrogate) {
+		if (typeof ptr === 'number') {
+			this._memory = memory;
+			this._ptr = ptr;
+		} else {
+			if (memory.id !== ptr.memory.id) {
+				throw new Error('MemoryLocation cannot be created from surrogate with different memory.');
+			}
+			this._memory = memory;
+			this._ptr = ptr.ptr;
+		}
 	}
 
 	public get memory(): Memory {
@@ -224,31 +232,35 @@ export abstract class SharedObject {
 		managers: ResourceManagers.createDefault()
 	};
 
-	protected readonly location: MemoryLocation;
-	private readonly allocated: boolean;
+	private readonly _location: MemoryLocation;
+	private readonly _allocated: boolean;
 
 	protected constructor(allocationOrLocation: Allocation | MemoryLocation) {
 		if (allocationOrLocation instanceof MemoryLocation) {
-			this.location = allocationOrLocation;
-			this.allocated = false;
+			this._location = allocationOrLocation;
+			this._allocated = false;
 		} else if (allocationOrLocation instanceof Allocation) {
-			this.location = allocationOrLocation.alloc();
-			this.allocated = true;
+			this._location = allocationOrLocation.alloc();
+			this._allocated = true;
 		} else {
 			throw new Error('Invalid argument');
 		}
 	}
 
 	public dispose(): void {
-		if (!this.allocated) {
+		if (!this._allocated) {
 			// We should think about a trace when we dispose
 			// a shared object from a thread that hasn't allocated it.
 		}
-		this.location.free();
+		this._location.free();
 	}
 
-	protected memory(): Memory {
-		return this.location.memory;
+	public get location(): MemoryLocation {
+		return this._location;
+	}
+
+	protected get memory(): Memory {
+		return this._location.memory;
 	}
 }
 
@@ -317,11 +329,11 @@ export abstract class SharedRecord<T extends RecordProperties> extends SharedObj
 
 	protected readonly access: T;
 
-	constructor(recordInfo: RecordDescriptor<T>, location: MemoryLocation | Memory) {
-		if (location instanceof MemoryLocation) {
-			super(location);
+	constructor(recordInfo: RecordDescriptor<T>, memoryOrLocation: Memory | MemoryLocation) {
+		if (memoryOrLocation instanceof MemoryLocation) {
+			super(memoryOrLocation);
 		} else {
-			super(new Allocation(location, recordInfo.alignment, recordInfo.size));
+			super(new Allocation(memoryOrLocation, recordInfo.alignment, recordInfo.size));
 		}
 		this.access = recordInfo.createAccess(this.location);
 	}
@@ -348,11 +360,11 @@ export abstract class LockableRecord<T extends RecordProperties> extends SharedR
 
 	private readonly lock: Lock;
 
-	protected constructor(recordInfo: RecordDescriptor<T>, location: MemoryLocation | Memory, lock?: Lock) {
+	protected constructor(recordInfo: RecordDescriptor<T>, memoryOrLocation: Memory | MemoryLocation, lock?: Lock) {
 		if (!recordInfo.hasField('_lock')) {
 			throw new Error('RecordInfo does not contain a lock field');
 		}
-		super(recordInfo, location);
+		super(recordInfo, memoryOrLocation);
 		if (lock === undefined) {
 			const offset = recordInfo.getField('_lock')!.offset;
 			const lockBuffer = this.location.getInt32Array(offset, 1);
@@ -360,7 +372,7 @@ export abstract class LockableRecord<T extends RecordProperties> extends SharedR
 			// the lock count to 1. If we use an existing memory location, we need to
 			// leave the lock count untouched since the shared record could be locked in
 			// another thread.
-			if (location === undefined) {
+			if (Memory.is(memoryOrLocation)) {
 				Atomics.store(lockBuffer, 0, 1);
 			}
 			this.lock = new Lock(lockBuffer);

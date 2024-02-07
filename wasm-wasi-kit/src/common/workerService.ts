@@ -3,7 +3,7 @@
  * Licensed under the MIT License. See License.txt in the project root for license information.
  * ------------------------------------------------------------------------------------------ */
 import type * as Messages from './workerMessages';
-import { SharedObject, Memory } from './sobject';
+import { Memory } from './sobject';
 import type { AnyConnection, ConnectionPort, TransferItems } from './connection';
 
 export abstract class BaseWorker {

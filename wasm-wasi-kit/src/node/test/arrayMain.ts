@@ -10,7 +10,7 @@ import { Worker } from 'node:worker_threads';
 
 import { Alignment, float64, u32  } from '@vscode/wasm-component-model';
 
-import { Memory, SharedObject } from '../../common/sobject';
+import { Memory } from '../../common/sobject';
 import { SArray } from '../../common/sarray';
 
 import { Notifications, Operations, ManagementCalls, ServerNotifications } from './messages';
@@ -101,12 +101,11 @@ type ConnectionType = Connection<ManagementCalls, undefined, Notifications, unde
 async function main(): Promise<void> {
 
 	const memory = await Memory.create();
-	await SharedObject.initialize(memory);
 
-	const counter = SharedObject.memory().alloc(Alignment.halfWord, u32.size);
+	const counter = memory.alloc(Alignment.halfWord, u32.size);
 
 	const threads: { worker: Worker; connection: ConnectionType }[] = [];
-	const sarray = new SArray<float64>(float64);
+	const sarray = new SArray<float64>(float64, memory);
 	const operations = new ArrayOperations(sarray);
 	const promises: Promise<void>[] = [];
 
@@ -117,10 +116,10 @@ async function main(): Promise<void> {
 	for (let i = 0; i < numberOfThreads; i++) {
 		const worker = new Worker(path.join(__dirname, './arrayWorker.js'));
 		const connection: ConnectionType = new Connection<ManagementCalls, undefined, Notifications, undefined, undefined, Operations | ServerNotifications>(worker);
-		connection.initializeSyncCall(SharedObject.memory());
+		connection.initializeSyncCall(memory);
 		connection.listen();
 
-		await connection.callAsync('init', { workerId: i, ...memory.getTransferable() });
+		await connection.callAsync('init', { workerId: i, memory: memory.getTransferable() });
 		connection.onNotify('array/push', (params) => {
 			operations.record({ method: 'array/push', params });
 		});
@@ -138,7 +137,7 @@ async function main(): Promise<void> {
 			});
 		}));
 		threads.push({ worker, connection });
-		connection.notify('array/new', { array: sarray.location().ptr, counter });
+		connection.notify('array/new', { array: sarray.location.ptr, counter });
 	}
 
 	await Promise.all(promises);

@@ -2,12 +2,13 @@
  * Copyright (c) Microsoft Corporation. All rights reserved.
  * Licensed under the MIT License. See License.txt in the project root for license information.
  * ------------------------------------------------------------------------------------------ */
-import type * as Messages from './workerMessages';
-import { BaseConnection, type AnyConnection } from './connection';
 import RAL from './ral';
+import type * as Messages from './workerMessages';
+import type { Memory } from './sobject';
+import { BaseConnection, type AnyConnection } from './connection';
 
 export interface WorkerClient {
-	launch(): Promise<void>;
+	launch(memory: Memory): Promise<void>;
 	terminate(): Promise<number>;
 }
 export namespace WorkerClient {

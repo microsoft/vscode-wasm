@@ -78,7 +78,7 @@ export class SArray<T extends JType> extends LockableRecord<SArray.Properties> {
 	push(...items: T[]): void {
 		try {
 			this.acquireLock();
-			const memory = this.memory();
+			const memory = this.memory;
 			const access = this.access;
 			access.state = access.state + 1;
 			const numberOfItems = items.length;
@@ -108,7 +108,7 @@ export class SArray<T extends JType> extends LockableRecord<SArray.Properties> {
 	public pop(): T | undefined {
 		try {
 			this.acquireLock();
-			const memory = this.memory();
+			const memory = this.memory;
 			const access = this.access;
 			const start = access.start;
 			const next = access.next;
@@ -182,7 +182,7 @@ export class SArray<T extends JType> extends LockableRecord<SArray.Properties> {
 
 	private loadElement(index: number, state?: number): T {
 		const access = this.access;
-		const memory = this.memory();
+		const memory = this.memory;
 		try {
 			this.acquireLock();
 			if (state !== undefined && access.state !== state) {
@@ -197,7 +197,7 @@ export class SArray<T extends JType> extends LockableRecord<SArray.Properties> {
 
 	private loadElementAndPtr(index: number, state?: number): [T, ptr] {
 		const access = this.access;
-		const memory = this.memory();
+		const memory = this.memory;
 		try {
 			this.acquireLock();
 			if (state !== undefined && access.state !== state) {
