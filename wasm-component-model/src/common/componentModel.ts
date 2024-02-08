@@ -180,224 +180,211 @@ const align = Alignment.align;
 
 export interface Memory {
 	readonly buffer: ArrayBuffer;
-	// readonly raw: Uint8Array;
-	// readonly view: DataView;
-	alloc: (align: Alignment, size: size) => MemoryLocation;
-	realloc: (location: MemoryLocation, align: Alignment, newSize: size) => MemoryLocation;
+	alloc(align: Alignment, size: size): MemoryLocation;
+	realloc(location: MemoryLocation, align: Alignment, newSize: size): MemoryLocation;
+	read(ptr: ptr, size: size): ReadonlyMemoryLocation;
 }
 
-export class MemoryLocationError extends Error {
+export class MemoryError extends Error {
 	constructor(message: string) {
 		super(message);
 	}
 }
 
-export class MemoryLocation {
+export class ReadonlyMemoryLocation {
 
-	private readonly _memory: Memory;
+	protected readonly _memory: Memory;
 	private readonly _ptr: ptr;
 	private readonly _size: size;
 	private readonly _alignment: Alignment;
 
 	private _view: DataView | undefined;
 
-	public readonly memory: {
-		getBytes(offset?: size | undefined, length?: size | undefined): Uint8Array;
-		getHalfWords(offset?: size | undefined, length?: size | undefined): Uint16Array;
-	};
-
 	constructor(memory: Memory, ptr: ptr, size: size) {
 		this._memory = memory;
 		this._ptr = ptr;
 		this._size = size;
 		this._alignment = Alignment.getAlignment(ptr);
-		this.memory = {
-			getBytes: (offset?: size, length?: size) => {
-				if (offset === undefined) {
-					offset = 0;
-				}
-				if (length === undefined) {
-					length = this._size - offset;
-				}
-				return new Uint8Array(this._memory.buffer, offset, length);
-			},
-			getHalfWords: (offset?: size, length?: size) => {
-				if (offset === undefined) {
-					offset = 0;
-				}
-				if (length === undefined) {
-					length = this._size - offset;
-				}
-				return new Uint16Array(this._memory.buffer, this._ptr + offset, length);
-			}
-		};
 	}
 
-	public create(ptr: ptr, size: size): MemoryLocation {
-		return new MemoryLocation(this._memory, ptr, size);
-	}
-
-	get ptr(): ptr {
+	public get ptr(): ptr {
 		return this._ptr;
 	}
 
-	get size(): size {
+	public get size(): size {
 		return this._size;
 	}
 
-	get alignment(): Alignment {
+	public get alignment(): Alignment {
 		return this._alignment;
 	}
 
-	private get view(): DataView {
+	protected get view(): DataView {
 		if (this._view === undefined || this._view.buffer !== this._memory.buffer) {
 			this._view = new DataView(this._memory.buffer, this._ptr, this._size);
 		}
 		return this._view;
 	}
 
-	public getUint8(offset: size = 0): u8 {
-		this.assertInBounds(offset, u8.size);
+	public read(ptr: ptr, size: size): ReadonlyMemoryLocation {
+		if (ptr + size > this._memory.buffer.byteLength) {
+			throw new MemoryError(`Memory access is out of bounds. Accessing [${ptr}, ${size}], allocated[${0},${this._memory.buffer.byteLength}]`);
+		}
+		return new ReadonlyMemoryLocation(this._memory, ptr, size);
+	}
+
+	public getUint8(offset: size): u8 {
 		return this.view.getUint8(offset);
 	}
 
-	public setUint8(arg0: size | u8, arg1?: u8): void {
-		const [offset, value] = this.offsetAndValue(arg0, arg1);
-		this.assertInBounds(offset, u8.size);
-		this.view.setUint8(offset, value);
-	}
-
-	public getInt8(offset: size = 0): s8 {
-		this.assertInBounds(offset, s8.size);
+	public getInt8(offset: size): s8 {
 		return this.view.getInt8(offset);
 	}
 
-	public setInt8(arg0: size | s8, arg1?: s8): void {
-		const [offset, value] = this.offsetAndValue(arg0, arg1);
-		this.assertInBounds(offset, s8.size);
-		this.view.setInt8(offset, value);
-	}
-
-	public getUint16(offset: size = 0): u16 {
+	public getUint16(offset: size): u16 {
 		this.assertAlignment(offset, Alignment.halfWord);
-		this.assertInBounds(offset, u16.size);
 		return this.view.getUint16(offset, true);
 	}
 
-	public setUint16(arg0: size | u16, arg1?: u16): void {
-		const [offset, value] = this.offsetAndValue(arg0, arg1);
+	public getInt16(offset: size): s16 {
 		this.assertAlignment(offset, Alignment.halfWord);
-		this.assertInBounds(offset, u16.size);
-		this.view.setUint16(offset, value, true);
-	}
-
-	public getInt16(offset: size = 0): s16 {
-		this.assertAlignment(offset, Alignment.halfWord);
-		this.assertInBounds(offset, s16.size);
 		return this.view.getInt16(offset, true);
 	}
 
-	public setInt16(arg0: size | s16, arg1?: s16): void {
-		const [offset, value] = this.offsetAndValue(arg0, arg1);
-		this.assertAlignment(offset, Alignment.halfWord);
-		this.assertInBounds(offset, s16.size);
-		this.view.setInt16(offset, value, true);
-	}
-
-	public getUint32(offset: size = 0): u32 {
+	public getUint32(offset: size): u32 {
 		this.assertAlignment(offset, Alignment.word);
-		this.assertInBounds(offset, u32.size);
 		return this.view.getUint32(offset, true);
 	}
 
-	public setUint32(arg0: size | u32, arg1?: u32): void {
-		const [offset, value] = this.offsetAndValue(arg0, arg1);
+	public getInt32(offset: size): s32 {
 		this.assertAlignment(offset, Alignment.word);
-		this.assertInBounds(offset, u32.size);
-		this.view.setUint32(offset, value, true);
-	}
-
-	public getInt32(offset: size = 0): s32 {
-		this.assertAlignment(offset, Alignment.word);
-		this.assertInBounds(offset, s32.size);
 		return this.view.getInt32(offset, true);
 	}
 
-	public setInt32(arg0: size | s32, arg1?: s32): void {
-		const [offset, value] = this.offsetAndValue(arg0, arg1);
-		this.assertAlignment(offset, Alignment.word);
-		this.assertInBounds(offset, s32.size);
-		this.view.setInt32(offset, value, true);
-	}
-
-	public getUint64(offset: size = 0): u64 {
+	public getUint64(offset: size): u64 {
 		this.assertAlignment(offset, Alignment.doubleWord);
-		this.assertInBounds(offset, u64.size);
 		return this.view.getBigUint64(offset, true);
 	}
 
-	public setUint64(arg0: size | u64, arg1?: u64): void {
-		const [offset, value] = this.bigOffsetAndValue(arg0, arg1);
+	public getInt64(offset: size): s64 {
 		this.assertAlignment(offset, Alignment.doubleWord);
-		this.assertInBounds(offset, u64.size);
-		this.view.setBigUint64(offset, value, true);
-	}
-
-	public getInt64(offset: size = 0): s64 {
-		this.assertAlignment(offset, Alignment.doubleWord);
-		this.assertInBounds(offset, s64.size);
 		return this.view.getBigInt64(offset, true);
 	}
 
-	public setInt64(arg0: size | s64, arg1?: s64): void {
-		const [offset, value] = this.bigOffsetAndValue(arg0, arg1);
-		this.assertAlignment(offset, Alignment.doubleWord);
-		this.assertInBounds(offset, s64.size);
-		this.view.setBigInt64(offset, value, true);
-	}
-
-	public getFloat32(offset: size = 0): f32 {
+	public getFloat32(offset: size): f32 {
 		this.assertAlignment(offset, Alignment.word);
-		this.assertInBounds(offset, f32.size);
 		return this.view.getFloat32(offset, true);
 	}
 
-	public setFloat32(arg0: size | f32, arg1?: f32): void {
-		const [offset, value] = this.offsetAndValue(arg0, arg1);
-		this.assertAlignment(offset, Alignment.word);
-		this.assertInBounds(offset, f32.size);
-		this.view.setFloat32(offset, value, true);
-	}
-
-	public getFloat64(offset: size = 0): f64 {
+	public getFloat64(offset: size): f64 {
 		this.assertAlignment(offset, Alignment.doubleWord);
-		this.assertInBounds(offset, f64.size);
 		return this.view.getFloat64(offset, true);
 	}
 
-	public setFloat64(arg0: size | f64, arg1?: f64): void {
-		const [offset, value] = this.offsetAndValue(arg0, arg1);
-		this.assertAlignment(offset, Alignment.doubleWord);
-		this.assertInBounds(offset, f64.size);
-		this.view.setFloat64(offset, value, true);
-	}
-
-	public getBytes(offset?: size | undefined, length?: size | undefined): Uint8Array {
+	public getBytes(offset: size, length?: size | undefined): Uint8Array {
 		offset = offset ?? 0;
 		length = length ?? this.size - offset;
 		if (offset + length > this.size) {
-			throw new MemoryLocationError(`Memory access is out of bounds. Accessing [${offset}, ${length}], allocated[${this.ptr},${this.size}]`);
+			throw new MemoryError(`Memory access is out of bounds. Accessing [${offset}, ${length}], allocated[${this.ptr}, ${this.size}]`);
 		}
 		const result = new Uint8Array(length);
 		result.set(new Uint8Array(this._memory.buffer, this.ptr + offset, length));
 		return result;
 	}
 
+	public getHalfWords(byteOffset: size, length?: size | undefined): Uint16Array {
+		byteOffset = byteOffset ?? 0;
+		length = length ?? (this.size - byteOffset) / u16.size;
+		if (byteOffset + length * u16.size > this.size) {
+			throw new MemoryError(`Memory access is out of bounds. Accessing [${byteOffset}, ${length * u16.size}], allocated[${this.ptr}, ${this.size}]`);
+		}
+		const result = new Uint16Array(length);
+		result.set(new Uint16Array(this._memory.buffer, this.ptr + byteOffset, length));
+		return result;
+	}
+
+	public copyBytes(offset: size, length: size, into: MemoryLocation, into_offset: size): void {
+		if (offset + length > this.size) {
+			throw new MemoryError(`Memory access is out of bounds. Accessing [${offset}, ${length}], allocated[${this.ptr}, ${this.size}]`);
+		}
+		const target = into.getBytesView(into_offset, length);
+		target.set(new Uint8Array(this._memory.buffer, this.ptr + offset, length));
+	}
+
+	public assertAlignment(offset: size, alignment: Alignment): void {
+		if (alignment > this.alignment || offset % alignment !== 0) {
+			throw new MemoryError(`Memory location is not aligned to ${alignment}. Allocated[${this.ptr},${this.size}]`);
+		}
+	}
+}
+
+export class MemoryLocation extends ReadonlyMemoryLocation {
+
+	constructor(memory: Memory, ptr: ptr, size: size) {
+		super(memory, ptr, size);
+	}
+
+	public alloc(align: Alignment, size: size): MemoryLocation {
+		return this._memory.alloc(align, size);
+	}
+
+	public get memory(): Memory {
+		return this._memory;
+	}
+
+	public setUint8(offset: size, value: u8): void {
+		this.view.setUint8(offset, value);
+	}
+
+	public setInt8(offset: size, value: s8): void {
+		this.view.setInt8(offset, value);
+	}
+
+	public setUint16(offset: size, value: u16): void {
+		this.assertAlignment(offset, Alignment.halfWord);
+		this.view.setUint16(offset, value, true);
+	}
+
+	public setInt16(offset: size, value: s16): void {
+		this.assertAlignment(offset, Alignment.halfWord);
+		this.view.setInt16(offset, value, true);
+	}
+
+	public setUint32(offset: size, value: u32): void {
+		this.assertAlignment(offset, Alignment.word);
+		this.view.setUint32(offset, value, true);
+	}
+
+	public setInt32(offset: size, value: s32): void {
+		this.assertAlignment(offset, Alignment.word);
+		this.view.setInt32(offset, value, true);
+	}
+
+	public setUint64(offset: size, value: u64): void {
+		this.assertAlignment(offset, Alignment.doubleWord);
+		this.view.setBigUint64(offset, value, true);
+	}
+
+	public setInt64(offset: size, value: s64): void {
+		this.assertAlignment(offset, Alignment.doubleWord);
+		this.view.setBigInt64(offset, value, true);
+	}
+
+	public setFloat32(offset: size, value: f32): void {
+		this.assertAlignment(offset, Alignment.word);
+		this.view.setFloat32(offset, value, true);
+	}
+
+	public setFloat64(offset: size, value: f64): void {
+		this.assertAlignment(offset, Alignment.doubleWord);
+		this.view.setFloat64(offset, value, true);
+	}
+
 	public getBytesView(offset?: size | undefined, length?: size | undefined): Uint8Array {
 		offset = offset ?? 0;
 		length = length ?? this.size - offset;
 		if (offset + length > this.size) {
-			throw new MemoryLocationError(`Memory access is out of bounds. Accessing [${offset}, ${length}], allocated[${this.ptr},${this.size}]`);
+			throw new MemoryError(`Memory access is out of bounds. Accessing [${offset}, ${length}], allocated[${this.ptr}, ${this.size}]`);
 		}
 		return new Uint8Array(this._memory.buffer, this.ptr + offset, length);
 	}
@@ -405,226 +392,26 @@ export class MemoryLocation {
 	public setBytes(bytes: Uint8Array, offset?: size | undefined): void {
 		offset = offset ?? 0;
 		if (offset + bytes.byteLength > this.size) {
-			throw new MemoryLocationError(`Memory access is out of bounds. Accessing [${offset}, ${bytes.length}], allocated[${this.ptr},${this.size}]`);
+			throw new MemoryError(`Memory access is out of bounds. Accessing [${offset}, ${bytes.length}], allocated[${this.ptr}, ${this.size}]`);
 		}
 		new Uint8Array(this._memory.buffer, this.ptr + offset, bytes.length).set(bytes);
 	}
 
-	public getHalfWords(byteOffset?: size | undefined, length?: size | undefined): Uint16Array {
+	public getHalfWordsView(byteOffset?: size | undefined, length?: size | undefined): Uint16Array {
 		byteOffset = byteOffset ?? 0;
 		length = length ?? (this.size - byteOffset) / u16.size;
 		if (byteOffset + length * u16.size > this.size) {
-			throw new MemoryLocationError(`Memory access is out of bounds. Accessing [${byteOffset}, ${length * u16.size}], allocated[${this.ptr},${this.size}]`);
+			throw new MemoryError(`Memory access is out of bounds. Accessing [${byteOffset}, ${length * u16.size}], allocated[${this.ptr}, ${this.size}]`);
 		}
-		const result = new Uint16Array(length);
-		result.set(new Uint16Array(this._memory.buffer, this.ptr + byteOffset, length));
-		return result;
+		return new Uint16Array(this._memory.buffer, this.ptr + byteOffset, length);
 	}
 
 	public setHalfWords(halfWords: Uint16Array, byteOffset?: size | undefined): void {
 		byteOffset = byteOffset ?? 0;
 		if (byteOffset + halfWords.byteLength > this.size) {
-			throw new MemoryLocationError(`Memory access is out of bounds. Accessing [${byteOffset}, ${halfWords.byteLength}], allocated[${this.ptr},${this.size}]`);
+			throw new MemoryError(`Memory access is out of bounds. Accessing [${byteOffset}, ${halfWords.byteLength}], allocated[${this.ptr}, ${this.size}]`);
 		}
 		new Uint16Array(this._memory.buffer, this.ptr + byteOffset, halfWords.length).set(halfWords);
-	}
-
-	private offsetAndValue(arg0: number, arg1?: number): [number, number] {
-		if (arg1 === undefined) {
-			return [0, arg0];
-		}
-		return [arg0, arg1];
-	}
-
-	private bigOffsetAndValue(arg0: number | bigint, arg1?: bigint): [number, bigint] {
-		if (typeof arg0 === 'bigint') {
-			return [0, arg0];
-		}
-		return [arg0, arg1!];
-	}
-
-	private assertAlignment(offset: size, alignment: Alignment): void {
-		if (alignment > this.alignment || offset % alignment !== 0) {
-			throw new MemoryLocationError(`Memory location is not aligned to ${alignment}. Allocated[${this.ptr},${this.size}]`);
-		}
-	}
-
-	private assertInBounds(offset: size, size: size): void {
-		if (offset + size > this.size) {
-			throw new MemoryLocationError(`Memory access is out of bounds. Accessing [${this.ptr}, ${size}], allocated[${this.ptr},${this.size}]`);
-		}
-	}
-}
-
-export class MemoryReadStream {
-
-	public readonly location: MemoryLocation;
-	private offset: size;
-
-	constructor(location: MemoryLocation) {
-		this.location = location;
-		this.offset = 0;
-	}
-
-	public getUint8(): u8 {
-		const result = this.location.getUint8(this.offset);
-		this.offset += u8.size;
-		return result;
-	}
-
-	public getInt8(): s8 {
-		const result = this.location.getInt8(this.offset);
-		this.offset += s8.size;
-		return result;
-	}
-
-	public getUint16(): u16 {
-		this.offset = Alignment.align(this.offset, Alignment.halfWord);
-		const result = this.location.getUint16(this.offset);
-		this.offset += u16.size;
-		return result;
-	}
-
-	public getInt16(): s16 {
-		this.offset = Alignment.align(this.offset, Alignment.halfWord);
-		const result = this.location.getInt16(this.offset);
-		this.offset += s16.size;
-		return result;
-	}
-
-	public getUint32(): u32 {
-		this.offset = Alignment.align(this.offset, Alignment.word);
-		const result = this.location.getUint32(this.offset);
-		this.offset += u32.size;
-		return result;
-	}
-
-	public getInt32(): s32 {
-		this.offset = Alignment.align(this.offset, Alignment.word);
-		const result = this.location.getInt32(this.offset);
-		this.offset += s32.size;
-		return result;
-	}
-
-	public getUint64(): u64 {
-		this.offset = Alignment.align(this.offset, Alignment.doubleWord);
-		const result = this.location.getUint64(this.offset);
-		this.offset += u64.size;
-		return result;
-	}
-
-	public getInt64(): s64 {
-		this.offset = Alignment.align(this.offset, Alignment.doubleWord);
-		const result = this.location.getInt64(this.offset);
-		this.offset += s64.size;
-		return result;
-	}
-
-	public getFloat32(): f32 {
-		this.offset = Alignment.align(this.offset, Alignment.word);
-		const result = this.location.getFloat32(this.offset);
-		this.offset += f32.size;
-		return result;
-	}
-
-	public getFloat64(): f64 {
-		this.offset = Alignment.align(this.offset, Alignment.doubleWord);
-		const result = this.location.getFloat64(this.offset);
-		this.offset += f64.size;
-		return result;
-	}
-
-	public getBytes(byteLength: size): Uint8Array {
-		const result = this.location.getBytes(this.offset, byteLength);
-		this.offset += byteLength;
-		return result;
-	}
-
-	public getHalfWords(length: size): Uint16Array {
-		this.offset = Alignment.align(this.offset, Alignment.halfWord);
-		const result = this.location.getHalfWords(this.offset, length);
-		this.offset += length * u16.size;
-		return result;
-	}
-}
-
-export class MemoryWriteStream {
-
-	private readonly location: MemoryLocation;
-	private offset: size;
-
-	constructor(location: MemoryLocation) {
-		this.location = location;
-		this.offset = 0;
-	}
-
-	public setUint8(value: u8): void {
-		this.location.setUint8(this.offset, value);
-		this.offset += u8.size;
-	}
-
-	public setInt8(value: s8): void {
-		this.location.setInt8(this.offset, value);
-		this.offset += s8.size;
-	}
-
-	public setUint16(value: u16): void {
-		this.offset = Alignment.align(this.offset, Alignment.halfWord);
-		this.location.setUint16(this.offset, value);
-		this.offset += u16.size;
-	}
-
-	public setInt16(value: s16): void {
-		this.offset = Alignment.align(this.offset, Alignment.halfWord);
-		this.location.setInt16(this.offset, value);
-		this.offset += s16.size;
-	}
-
-	public setUint32(value: u32): void {
-		this.offset = Alignment.align(this.offset, Alignment.word);
-		this.location.setUint32(this.offset, value);
-		this.offset += u32.size;
-	}
-
-	public setInt32(value: s32): void {
-		this.offset = Alignment.align(this.offset, Alignment.word);
-		this.location.setInt32(this.offset, value);
-		this.offset += s32.size;
-	}
-
-	public setUint64(value: u64): void {
-		this.offset = Alignment.align(this.offset, Alignment.doubleWord);
-		this.location.setUint64(this.offset, value);
-		this.offset += u64.size;
-	}
-
-	public setInt64(value: s64): void {
-		this.offset = Alignment.align(this.offset, Alignment.doubleWord);
-		this.location.setInt64(this.offset, value);
-		this.offset += s64.size;
-	}
-
-	public setFloat32(value: f32): void {
-		this.offset = Alignment.align(this.offset, Alignment.word);
-		this.location.setFloat32(this.offset, value);
-		this.offset += f32.size;
-	}
-
-	public setFloat64(value: f64): void {
-		this.offset = Alignment.align(this.offset, Alignment.doubleWord);
-		this.location.setFloat64(this.offset, value);
-		this.offset += f64.size;
-	}
-
-	public setBytes(bytes: Uint8Array): void {
-		this.location.setBytes(bytes, this.offset);
-		this.offset += bytes.length;
-	}
-
-	public setHalfWords(halfWords: Uint16Array): void {
-		this.offset = Alignment.align(this.offset, Alignment.halfWord);
-		this.location.setHalfWords(halfWords, this.offset);
-		this.offset += halfWords.length * u16.size;
 	}
 }
 
@@ -646,11 +433,11 @@ export interface FlatType<F extends i32 | i64 | f32 | f64> {
 	readonly size: size;
 	readonly alignment: Alignment;
 	// Loads a flat value directly from the memory buffer
-	load(location: MemoryReadStream): F;
+	load(memory: ReadonlyMemoryLocation, offset: size): F;
 	// Stores a flat value directly into the memory buffer
-	store(location: MemoryWriteStream, value: F): void;
+	store(memory: MemoryLocation, offset: size, value: F): void;
 	// copy a flat value from one memory to another
-	copy(dest: MemoryWriteStream, src: MemoryReadStream): void;
+	copy(dest: MemoryLocation, dest_offset: size, src: ReadonlyMemoryLocation, src_offset: size): void;
 }
 
 export type i32 = number;
@@ -659,14 +446,14 @@ namespace $i32 {
 	export const size = 4;
 	export const alignment: Alignment = Alignment.word;
 
-	export function load(access: MemoryReadStream): i32 {
-		return access.getUint32();
+	export function load(memory: ReadonlyMemoryLocation, offset: size): i32 {
+		return memory.getUint32(offset);
 	}
-	export function store(access: MemoryWriteStream, value: i32): void {
-		access.setUint32(value);
+	export function store(memory: MemoryLocation, offset: size, value: i32): void {
+		memory.setUint32(offset, value);
 	}
-	export function copy(dest: MemoryWriteStream, src: MemoryReadStream): void {
-		dest.setBytes(src.getBytes(size));
+	export function copy(dest: MemoryLocation, dest_offset: size, src: ReadonlyMemoryLocation, src_offset: size): void {
+		src.copyBytes(src_offset, size, dest, dest_offset);
 	}
 }
 export const i32: FlatType<i32> = $i32;
@@ -677,14 +464,14 @@ namespace $i64 {
 	export const size = 8;
 	export const alignment: Alignment = Alignment.doubleWord;
 
-	export function load(access: MemoryReadStream): i64 {
-		return access.getUint64();
+	export function load(memory: ReadonlyMemoryLocation, offset: size): i64 {
+		return memory.getUint64(offset);
 	}
-	export function store(access: MemoryWriteStream, value: i64): void {
-		access.setUint64(value);
+	export function store(memory: MemoryLocation, offset: size, value: i64): void {
+		memory.setUint64(offset, value);
 	}
-	export function copy(dest: MemoryWriteStream, src: MemoryReadStream): void {
-		dest.setBytes(src.getBytes(size));
+	export function copy(dest: MemoryLocation, dest_offset: size, src: ReadonlyMemoryLocation, src_offset: size): void {
+		src.copyBytes(src_offset, size, dest, dest_offset);
 	}
 }
 export const i64: FlatType<i64> = $i64;
@@ -695,14 +482,14 @@ namespace $f32 {
 	export const size = 4;
 	export const alignment:Alignment = Alignment.word;
 
-	export function load(access: MemoryReadStream): f32 {
-		return access.getFloat32();
+	export function load(memory: ReadonlyMemoryLocation, offset: size): f32 {
+		return memory.getFloat32(offset);
 	}
-	export function store(access: MemoryWriteStream, value: f32): void {
-		access.setFloat32(value);
+	export function store(memory: MemoryLocation, offset: size, value: f32): void {
+		memory.setFloat32(offset, value);
 	}
-	export function copy(dest: MemoryWriteStream, src: MemoryReadStream): void {
-		dest.setBytes(src.getBytes(size));
+	export function copy(dest: MemoryLocation, dest_offset: size, src: ReadonlyMemoryLocation, src_offset: size): void {
+		src.copyBytes(src_offset, size, dest, dest_offset);
 	}
 }
 export const f32: FlatType<f32> = $f32;
@@ -713,14 +500,14 @@ namespace $f64 {
 	export const size = 8;
 	export const alignment: Alignment = Alignment.doubleWord;
 
-	export function load(access: MemoryReadStream): f64 {
-		return access.getFloat64();
+	export function load(memory: ReadonlyMemoryLocation, offset: size): f64 {
+		return memory.getFloat64(offset);
 	}
-	export function store(access: MemoryWriteStream, value: f64): void {
-		access.setFloat64(value);
+	export function store(memory: MemoryLocation, offset: size, value: f64): void {
+		memory.setFloat64(offset, value);
 	}
-	export function copy(dest: MemoryWriteStream, src: MemoryReadStream): void {
-		dest.setBytes(src.getBytes(size));
+	export function copy(dest: MemoryLocation, dest_offset: size, src: ReadonlyMemoryLocation, src_offset: size): void {
+		src.copyBytes(src_offset, size, dest, dest_offset);
 	}
 }
 export const f64: FlatType<f64> = $f64;
@@ -740,10 +527,13 @@ export class FlatTuple {
 		this.size = FlatTuple.size(types, this.alignment);
 	}
 
-	public load(access: MemoryReadStream): readonly WasmType[] {
+	public load(memory: ReadonlyMemoryLocation, offset: size): readonly WasmType[] {
+		memory.assertAlignment(offset, this.alignment);
 		const result: WasmType[] = [];
 		for (const type of this.types) {
-			result.push(type.load(access));
+			offset = align(offset, type.alignment);
+			result.push(type.load(memory, offset));
+			offset += type.size;
 		}
 		return result;
 	}
@@ -752,19 +542,24 @@ export class FlatTuple {
 		return memory.alloc(this.alignment, this.size);
 	}
 
-	public store(access: MemoryWriteStream, values: readonly WasmType[]): void {
+	public store(memory: MemoryLocation, offset: size, values: readonly WasmType[]): void {
+		memory.assertAlignment(offset, this.alignment);
 		for (const [index, type] of this.types.entries()) {
 			const value = values[index];
-			type.store(access, value);
+			offset = align(offset, type.alignment);
+			type.store(memory, offset, value);
+			offset += type.size;
 		}
 	}
 
-	public copy(dest: Memory, dest_ptr: ptr<u8>, src: Memory, src_ptr: ptr<u8>): void {
-		dest.raw.set(src.raw.subarray(src_ptr, src_ptr + this.size), dest_ptr);
+	public copy(dest: MemoryLocation, dest_offset: size, src: ReadonlyMemoryLocation, src_offset: size): void {
+		dest.assertAlignment(dest_offset, this.alignment);
+		src.assertAlignment(src_offset, this.alignment);
+		src.copyBytes(src_offset, this.size, dest, dest_offset);
 	}
 
 	private static alignment(types: readonly GenericFlatType[]): Alignment {
-		let result: Alignment = 1;
+		let result: Alignment = Alignment.byte;
 		for (const type of types) {
 			result = Math.max(result, type.alignment);
 		}
@@ -899,7 +694,7 @@ export interface ComponentModelType<J> {
 	readonly alignment: Alignment;
 	readonly flatTypes: ReadonlyArray<GenericFlatType>;
 	// Loads a component model value directly from the memory buffer
-	load(access: MemoryReadStream, context: ComponentModelContext): J;
+	load(memory: ReadonlyMemoryLocation, context: ComponentModelContext): J;
 	// Loads a component model value from a flattened array
 	liftFlat(memory: Memory, values: FlatValuesIter, context: ComponentModelContext): J;
 	// Allocates a new component model value in the memory buffer
@@ -1509,11 +1304,10 @@ namespace $wstring {
 		return memory.alloc(alignment, size);
 	}
 
-	export function store(memory: Memory, ptr: ptr, str: string, context: ComponentModelContext): void {
-		const [ data, codeUnits ] = storeIntoRange(memory, str, context.options);
-		const view = memory.view;
-		view.setUint32(ptr + offsets.data, data, true);
-		view.setUint32(ptr + offsets.codeUnits, codeUnits, true);
+	export function store(access: MemoryWriteStream, str: string, context: ComponentModelContext): void {
+		const [location, codeUnits] = storeIntoRange(access, str, context.options);
+		access.setUint32(location.ptr);
+		access.setUint32(codeUnits);
 	}
 
 	export function lowerFlat(result: WasmType[], memory: Memory, str: string, context: ComponentModelContext): void {
@@ -1551,32 +1345,31 @@ namespace $wstring {
 		}
 		if (encoding === 'utf-8') {
 			const byteLength = codeUnits;
-			access.location.create(data, byteLength).getBytesView();
-			return utf8Decoder.decode(new Uint8Array(memory.buffer, data, byteLength));
+			return utf8Decoder.decode(access.memory.getBytes(data, byteLength));
 		} else if (encoding === 'utf-16') {
-			return String.fromCharCode(...(new Uint16Array(memory.buffer, data, codeUnits)));
+			return String.fromCharCode(...access.memory.getHalfWords(data, codeUnits));
 		} else {
 			throw new Error('Unsupported encoding');
 		}
 	}
 
-	function storeIntoRange(memory: Memory, str: string, options: Options): [size, u32] {
+	function storeIntoRange(access: MemoryWriteStream, str: string, options: Options): [MemoryLocation, u32] {
 		const { encoding } = options;
 		if (encoding === 'latin1+utf-16') {
 			throw new Error('latin1+utf-16 encoding not yet supported');
 		}
 		if (encoding === 'utf-8') {
 			const data = utf8Encoder.encode(str);
-			const dataPtr = memory.alloc(u8.alignment, data.length);
-			memory.raw.set(data, dataPtr);
-			return [dataPtr, data.length];
+			const location = access.alloc(u8.alignment, data.length);
+			location.setBytes(data);
+			return [location, data.length];
 		} else if (encoding === 'utf-16') {
-			const dataPtr = memory.alloc(u16.alignment, str.length * 2);
-			const data = new Uint16Array(memory.buffer, dataPtr, str.length);
+			const location = access.alloc(u16.alignment, str.length * 2);
+			const data = location.getHalfWordsView();
 			for (let i = 0; i < str.length; i++) {
 				data[i] = str.charCodeAt(i);
 			}
-			return [dataPtr, data.length];
+			return [location, data.length];
 		} else {
 			throw new Error('Unsupported encoding');
 		}
