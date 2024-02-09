@@ -4,7 +4,7 @@
  *--------------------------------------------------------------------------------------------*/
 import assert from 'assert';
 
-import { u32, Memory as IMemory, ptr, size, WasmContext, Alignment, Resource, ResourceManagers } from '../componentModel';
+import { u32, Memory as IMemory, ptr, size, WasmContext, Alignment, Resource, ResourceManagers, MemoryRange, ReadonlyMemoryRange } from '../componentModel';
 
 class Memory implements IMemory {
 	public readonly buffer: ArrayBuffer;
@@ -20,14 +20,22 @@ class Memory implements IMemory {
 		this.index = 0;
 	}
 
-	public alloc(align: Alignment, bytes: number): ptr {
-		const result = Memory.align(this.index, align);
+	public alloc(align: Alignment, bytes: number): MemoryRange {
+		const ptr = Memory.align(this.index, align);
 		this.index += bytes;
-		return result;
+		return new MemoryRange(this, ptr, bytes);
 	}
 
-	public realloc(ptr: ptr, _oldSize: size, _align: size, _newSize: size): ptr {
-		return ptr;
+	public realloc(memory: MemoryRange, _align: size, _newSize: size): MemoryRange {
+		return memory;
+	}
+
+	public range(ptr: ptr, bytes: number): ReadonlyMemoryRange {
+		return new ReadonlyMemoryRange(this, ptr, bytes);
+	}
+
+	preAllocated(ptr: number, size: size): MemoryRange {
+		return new MemoryRange(this, ptr, size);
 	}
 
 	private static align(ptr: ptr, alignment: Alignment): ptr {
@@ -158,10 +166,10 @@ suite('option', () => {
 	test('host:call', () => {
 		const host: Types._.WasmInterface = Types._.createHost(serviceImpl, context);
 		const memory = context.getMemory();
-		const ptr = memory.alloc(4, 8);
-		host['call-option'](1, 1, 2, ptr);
-		assert.strictEqual(memory.view.getUint32(ptr, true), 1);
-		assert.strictEqual(memory.view.getUint32(ptr + 4, true), 3);
+		const range = memory.alloc(4, 8);
+		host['call-option'](1, 1, 2, range.ptr);
+		assert.strictEqual(range.getUint32(0), 1);
+		assert.strictEqual(range.getUint32(4), 3);
 	});
 });
 

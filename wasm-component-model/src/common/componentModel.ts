@@ -180,9 +180,10 @@ const align = Alignment.align;
 
 export interface Memory {
 	readonly buffer: ArrayBuffer;
-	alloc(align: Alignment, size: size): MemoryLocation;
-	realloc(location: MemoryLocation, align: Alignment, newSize: size): MemoryLocation;
-	read(ptr: ptr, size: size): ReadonlyMemoryLocation;
+	alloc(align: Alignment, size: size): MemoryRange;
+	realloc(location: MemoryRange, align: Alignment, newSize: size): MemoryRange;
+	range(ptr: ptr, size: size): ReadonlyMemoryRange;
+	preAllocated(ptr: ptr, size: size): MemoryRange;
 }
 
 export class MemoryError extends Error {
@@ -191,7 +192,19 @@ export class MemoryError extends Error {
 	}
 }
 
-export class ReadonlyMemoryLocation {
+export type offset<_T = undefined> = u32;
+
+type ArrayClazz<T extends ArrayLike<number> & { set(array: ArrayLike<number>, offset?: number): void }> = {
+	new (buffer: ArrayBuffer, byteOffset: number, length: number): T;
+	new (length: number): T;
+	BYTES_PER_ELEMENT: number;
+};
+type BigArrayClazz<T extends ArrayLike<bigint> & { set(array: ArrayLike<bigint>, offset?: number): void }> = {
+	new (buffer: ArrayBuffer, byteOffset: number, length: number): T;
+	new (length: number): T;
+	BYTES_PER_ELEMENT: number;
+};
+export class ReadonlyMemoryRange {
 
 	protected readonly _memory: Memory;
 	private readonly _ptr: ptr;
@@ -226,105 +239,143 @@ export class ReadonlyMemoryLocation {
 		return this._view;
 	}
 
-	public read(ptr: ptr, size: size): ReadonlyMemoryLocation {
+	public range(ptr: ptr, size: size): ReadonlyMemoryRange {
 		if (ptr + size > this._memory.buffer.byteLength) {
 			throw new MemoryError(`Memory access is out of bounds. Accessing [${ptr}, ${size}], allocated[${0},${this._memory.buffer.byteLength}]`);
 		}
-		return new ReadonlyMemoryLocation(this._memory, ptr, size);
+		return new ReadonlyMemoryRange(this._memory, ptr, size);
 	}
 
-	public getUint8(offset: size): u8 {
+	public getUint8(offset: offset<u8>): u8 {
 		return this.view.getUint8(offset);
 	}
 
-	public getInt8(offset: size): s8 {
+	public getInt8(offset: offset<s8>): s8 {
 		return this.view.getInt8(offset);
 	}
 
-	public getUint16(offset: size): u16 {
+	public getUint16(offset: offset<u16>): u16 {
 		this.assertAlignment(offset, Alignment.halfWord);
 		return this.view.getUint16(offset, true);
 	}
 
-	public getInt16(offset: size): s16 {
+	public getInt16(offset: offset<s16>): s16 {
 		this.assertAlignment(offset, Alignment.halfWord);
 		return this.view.getInt16(offset, true);
 	}
 
-	public getUint32(offset: size): u32 {
+	public getUint32(offset: offset<u32>): u32 {
 		this.assertAlignment(offset, Alignment.word);
 		return this.view.getUint32(offset, true);
 	}
 
-	public getInt32(offset: size): s32 {
+	public getInt32(offset: offset<s32>): s32 {
 		this.assertAlignment(offset, Alignment.word);
 		return this.view.getInt32(offset, true);
 	}
 
-	public getUint64(offset: size): u64 {
+	public getUint64(offset: offset<u64>): u64 {
 		this.assertAlignment(offset, Alignment.doubleWord);
 		return this.view.getBigUint64(offset, true);
 	}
 
-	public getInt64(offset: size): s64 {
+	public getInt64(offset: offset<s64>): s64 {
 		this.assertAlignment(offset, Alignment.doubleWord);
 		return this.view.getBigInt64(offset, true);
 	}
 
-	public getFloat32(offset: size): f32 {
+	public getFloat32(offset: offset<f32>): f32 {
 		this.assertAlignment(offset, Alignment.word);
 		return this.view.getFloat32(offset, true);
 	}
 
-	public getFloat64(offset: size): f64 {
+	public getFloat64(offset: offset<f64>): f64 {
 		this.assertAlignment(offset, Alignment.doubleWord);
 		return this.view.getFloat64(offset, true);
 	}
 
-	public getBytes(offset: size, length?: size | undefined): Uint8Array {
-		offset = offset ?? 0;
-		length = length ?? this.size - offset;
+	public getUint8Array(offset: offset, length?: size | undefined): Uint8Array {
+		return this.getArray(offset, length, Uint8Array);
+	}
+
+	public getInt8Array(offset: offset, length?: size | undefined): Int8Array {
+		return this.getArray(offset, length, Int8Array);
+	}
+
+	public getUint16Array(byteOffset: offset, length?: size | undefined): Uint16Array {
+		return this.getArray(byteOffset, length, Uint16Array);
+	}
+
+	public getInt16Array(byteOffset: offset, length?: size | undefined): Int16Array {
+		return this.getArray(byteOffset, length, Int16Array);
+	}
+
+	public getUint32Array(byteOffset: offset, length?: size | undefined): Uint32Array {
+		return this.getArray(byteOffset, length, Uint32Array);
+	}
+
+	public getInt32Array(byteOffset: offset, length?: size | undefined): Int32Array {
+		return this.getArray(byteOffset, length, Int32Array);
+	}
+
+	public getUint64Array(byteOffset: offset, length?: size | undefined): BigUint64Array {
+		return this.getBigArray(byteOffset, length, BigUint64Array);
+	}
+
+	public getInt64Array(byteOffset: offset, length?: size | undefined): BigInt64Array {
+		return this.getBigArray(byteOffset, length, BigInt64Array);
+	}
+
+	public getFloat32Array(byteOffset: offset, length?: size | undefined): Float32Array {
+		return this.getArray(byteOffset, length, Float32Array);
+	}
+
+	public getFloat64Array(byteOffset: offset, length?: size | undefined): Float64Array {
+		return this.getArray(byteOffset, length, Float64Array);
+	}
+
+	public copyBytes(offset: offset, length: size, into: MemoryRange, into_offset: size): void {
 		if (offset + length > this.size) {
 			throw new MemoryError(`Memory access is out of bounds. Accessing [${offset}, ${length}], allocated[${this.ptr}, ${this.size}]`);
 		}
-		const result = new Uint8Array(length);
-		result.set(new Uint8Array(this._memory.buffer, this.ptr + offset, length));
-		return result;
-	}
-
-	public getHalfWords(byteOffset: size, length?: size | undefined): Uint16Array {
-		byteOffset = byteOffset ?? 0;
-		length = length ?? (this.size - byteOffset) / u16.size;
-		if (byteOffset + length * u16.size > this.size) {
-			throw new MemoryError(`Memory access is out of bounds. Accessing [${byteOffset}, ${length * u16.size}], allocated[${this.ptr}, ${this.size}]`);
-		}
-		const result = new Uint16Array(length);
-		result.set(new Uint16Array(this._memory.buffer, this.ptr + byteOffset, length));
-		return result;
-	}
-
-	public copyBytes(offset: size, length: size, into: MemoryLocation, into_offset: size): void {
-		if (offset + length > this.size) {
-			throw new MemoryError(`Memory access is out of bounds. Accessing [${offset}, ${length}], allocated[${this.ptr}, ${this.size}]`);
-		}
-		const target = into.getBytesView(into_offset, length);
+		const target = into.getUint8View(into_offset, length);
 		target.set(new Uint8Array(this._memory.buffer, this.ptr + offset, length));
 	}
 
-	public assertAlignment(offset: size, alignment: Alignment): void {
+	public assertAlignment(offset: offset, alignment: Alignment): void {
 		if (alignment > this.alignment || offset % alignment !== 0) {
 			throw new MemoryError(`Memory location is not aligned to ${alignment}. Allocated[${this.ptr},${this.size}]`);
 		}
 	}
+
+	public getArray<T extends ArrayLike<number> & { set(array: ArrayLike<number>, offset?: number): void }>(byteOffset: offset, length: size | undefined, clazz: ArrayClazz<T>): T {
+		length = length ?? (this.size - byteOffset) / clazz.BYTES_PER_ELEMENT;
+		if (!Number.isInteger(length)) {
+			throw new MemoryError(`Length must be an integer value. Got ${length}.`);
+		}
+		const result = new clazz(length);
+		result.set(new clazz(this._memory.buffer, this.ptr + byteOffset, length));
+		return result;
+	}
+
+	public getBigArray<T extends ArrayLike<bigint> & { set(array: ArrayLike<bigint>, offset?: number): void }>(byteOffset: offset, length: size | undefined, clazz: BigArrayClazz<T>): T {
+		length = length ?? (this.size - byteOffset) / clazz.BYTES_PER_ELEMENT;
+		if (!Number.isInteger(length)) {
+			throw new MemoryError(`Length must be an integer value. Got ${length}.`);
+		}
+		const result = new clazz(length);
+		result.set(new clazz(this._memory.buffer, this.ptr + byteOffset, length));
+		return result;
+	}
 }
 
-export class MemoryLocation extends ReadonlyMemoryLocation {
+export class MemoryRange extends ReadonlyMemoryRange {
 
 	constructor(memory: Memory, ptr: ptr, size: size) {
 		super(memory, ptr, size);
 	}
 
-	public alloc(align: Alignment, size: size): MemoryLocation {
+	public alloc(align: Alignment, size: size): MemoryRange {
 		return this._memory.alloc(align, size);
 	}
 
@@ -332,86 +383,156 @@ export class MemoryLocation extends ReadonlyMemoryLocation {
 		return this._memory;
 	}
 
-	public setUint8(offset: size, value: u8): void {
+	public setUint8(offset: offset<u8>, value: u8): void {
 		this.view.setUint8(offset, value);
 	}
 
-	public setInt8(offset: size, value: s8): void {
+	public setInt8(offset: offset<s8>, value: s8): void {
 		this.view.setInt8(offset, value);
 	}
 
-	public setUint16(offset: size, value: u16): void {
+	public setUint16(offset: offset<u16>, value: u16): void {
 		this.assertAlignment(offset, Alignment.halfWord);
 		this.view.setUint16(offset, value, true);
 	}
 
-	public setInt16(offset: size, value: s16): void {
+	public setInt16(offset: offset<s16>, value: s16): void {
 		this.assertAlignment(offset, Alignment.halfWord);
 		this.view.setInt16(offset, value, true);
 	}
 
-	public setUint32(offset: size, value: u32): void {
+	public setUint32(offset: offset<u32>, value: u32): void {
 		this.assertAlignment(offset, Alignment.word);
 		this.view.setUint32(offset, value, true);
 	}
 
-	public setInt32(offset: size, value: s32): void {
+	public setInt32(offset: offset<s32>, value: s32): void {
 		this.assertAlignment(offset, Alignment.word);
 		this.view.setInt32(offset, value, true);
 	}
 
-	public setUint64(offset: size, value: u64): void {
+	public setUint64(offset: offset<u64>, value: u64): void {
 		this.assertAlignment(offset, Alignment.doubleWord);
 		this.view.setBigUint64(offset, value, true);
 	}
 
-	public setInt64(offset: size, value: s64): void {
+	public setInt64(offset: offset<s64>, value: s64): void {
 		this.assertAlignment(offset, Alignment.doubleWord);
 		this.view.setBigInt64(offset, value, true);
 	}
 
-	public setFloat32(offset: size, value: f32): void {
+	public setFloat32(offset: offset<f32>, value: f32): void {
 		this.assertAlignment(offset, Alignment.word);
 		this.view.setFloat32(offset, value, true);
 	}
 
-	public setFloat64(offset: size, value: f64): void {
+	public setFloat64(offset: offset<f64>, value: f64): void {
 		this.assertAlignment(offset, Alignment.doubleWord);
 		this.view.setFloat64(offset, value, true);
 	}
 
-	public getBytesView(offset?: size | undefined, length?: size | undefined): Uint8Array {
-		offset = offset ?? 0;
-		length = length ?? this.size - offset;
-		if (offset + length > this.size) {
-			throw new MemoryError(`Memory access is out of bounds. Accessing [${offset}, ${length}], allocated[${this.ptr}, ${this.size}]`);
-		}
-		return new Uint8Array(this._memory.buffer, this.ptr + offset, length);
+	public getUint8View(offset: offset, length?: size | undefined): Uint8Array {
+		return this.getArrayView(offset, length, Uint8Array);
 	}
 
-	public setBytes(bytes: Uint8Array, offset?: size | undefined): void {
-		offset = offset ?? 0;
-		if (offset + bytes.byteLength > this.size) {
-			throw new MemoryError(`Memory access is out of bounds. Accessing [${offset}, ${bytes.length}], allocated[${this.ptr}, ${this.size}]`);
-		}
-		new Uint8Array(this._memory.buffer, this.ptr + offset, bytes.length).set(bytes);
+	public getInt8View(offset: offset, length?: size | undefined): Int8Array {
+		return this.getArrayView(offset, length, Int8Array);
 	}
 
-	public getHalfWordsView(byteOffset?: size | undefined, length?: size | undefined): Uint16Array {
-		byteOffset = byteOffset ?? 0;
-		length = length ?? (this.size - byteOffset) / u16.size;
-		if (byteOffset + length * u16.size > this.size) {
-			throw new MemoryError(`Memory access is out of bounds. Accessing [${byteOffset}, ${length * u16.size}], allocated[${this.ptr}, ${this.size}]`);
-		}
-		return new Uint16Array(this._memory.buffer, this.ptr + byteOffset, length);
+	public getUint16View(offset: offset, length?: size | undefined): Uint16Array {
+		return this.getArrayView(offset, length, Uint16Array);
 	}
 
-	public setHalfWords(halfWords: Uint16Array, byteOffset?: size | undefined): void {
-		byteOffset = byteOffset ?? 0;
-		if (byteOffset + halfWords.byteLength > this.size) {
-			throw new MemoryError(`Memory access is out of bounds. Accessing [${byteOffset}, ${halfWords.byteLength}], allocated[${this.ptr}, ${this.size}]`);
+	public getInt16View(offset: offset, length?: size | undefined): Int16Array {
+		return this.getArrayView(offset, length, Int16Array);
+	}
+
+	public getUint32View(offset: offset, length?: size | undefined): Uint32Array {
+		return this.getArrayView(offset, length, Uint32Array);
+	}
+
+	public getInt32View(offset: offset, length?: size | undefined): Int32Array {
+		return this.getArrayView(offset, length, Int32Array);
+	}
+
+	public getUint64View(offset: offset, length?: size | undefined): BigUint64Array {
+		return this.getBigArrayView(offset, length, BigUint64Array);
+	}
+
+	public getInt64View(offset: offset, length?: size | undefined): BigInt64Array {
+		return this.getBigArrayView(offset, length, BigInt64Array);
+	}
+
+	public getFloat32View(offset: offset, length?: size | undefined): Float32Array {
+		return this.getArrayView(offset, length, Float32Array);
+	}
+
+	public getFloat64View(offset: offset, length?: size | undefined): Float64Array {
+		return this.getArrayView(offset, length, Float64Array);
+	}
+
+	public setUint8Array(offset: offset, bytes: Uint8Array): void {
+		this.setArray(offset, bytes, Uint8Array);
+	}
+
+	public setInt8Array(offset: offset, bytes: Int8Array): void {
+		this.setArray(offset, bytes, Int8Array);
+	}
+
+	public setUint16Array(offset: offset, bytes: Uint16Array): void {
+		this.setArray(offset, bytes, Uint16Array);
+	}
+
+	public setInt16Array(offset: offset, bytes: Int16Array): void {
+		this.setArray(offset, bytes, Int16Array);
+	}
+
+	public setUint32Array(offset: offset, bytes: Uint32Array): void {
+		this.setArray(offset, bytes, Uint32Array);
+	}
+
+	public setInt32Array(offset: offset, bytes: Int32Array): void {
+		this.setArray(offset, bytes, Int32Array);
+	}
+
+	public setUint64Array(offset: offset, bytes: BigUint64Array): void {
+		this.setBigArray(offset, bytes, BigUint64Array);
+	}
+
+	public setInt64Array(offset: offset, bytes: BigInt64Array): void {
+		this.setBigArray(offset, bytes, BigInt64Array);
+	}
+
+	public setFloat32Array(offset: offset, bytes: Float32Array): void {
+		this.setArray(offset, bytes, Float32Array);
+	}
+
+	public setFloat64Array(offset: offset, bytes: Float64Array): void {
+		this.setArray(offset, bytes, Float64Array);
+	}
+
+	private getArrayView<T extends ArrayLike<number> & { set(array: ArrayLike<number>, offset?: number): void }>(byteOffset: offset, length: size | undefined, clazz: ArrayClazz<T>): T {
+		length = length ?? (this.size - byteOffset) / clazz.BYTES_PER_ELEMENT;
+		if (!Number.isInteger(length)) {
+			throw new MemoryError(`Length must be an integer value. Got ${length}.`);
 		}
-		new Uint16Array(this._memory.buffer, this.ptr + byteOffset, halfWords.length).set(halfWords);
+		return new clazz(this._memory.buffer, this.ptr + byteOffset, length);
+	}
+
+	private getBigArrayView<T extends ArrayLike<bigint> & { set(array: ArrayLike<bigint>, offset?: number): void }>(byteOffset: offset, length: size | undefined, clazz: BigArrayClazz<T>): T {
+		length = length ?? (this.size - byteOffset) / clazz.BYTES_PER_ELEMENT;
+		if (!Number.isInteger(length)) {
+			throw new MemoryError(`Length must be an integer value. Got ${length}.`);
+		}
+		return new clazz(this._memory.buffer, this.ptr + byteOffset, length);
+	}
+
+	private setArray<T extends ArrayLike<number> & { set(array: ArrayLike<number>, offset?: number): void }>(byteOffset: offset, bytes: T, clazz: ArrayClazz<T>): void {
+		new clazz(this._memory.buffer, this.ptr + byteOffset, bytes.length).set(bytes);
+	}
+
+	private setBigArray<T extends ArrayLike<bigint> & { set(array: ArrayLike<bigint>, offset?: number): void }>(byteOffset: offset, bytes: T, clazz: BigArrayClazz<T>): void {
+		new clazz(this._memory.buffer, this.ptr + byteOffset, bytes.length).set(bytes);
 	}
 }
 
@@ -433,11 +554,11 @@ export interface FlatType<F extends i32 | i64 | f32 | f64> {
 	readonly size: size;
 	readonly alignment: Alignment;
 	// Loads a flat value directly from the memory buffer
-	load(memory: ReadonlyMemoryLocation, offset: size): F;
+	load(memory: ReadonlyMemoryRange, offset: offset): F;
 	// Stores a flat value directly into the memory buffer
-	store(memory: MemoryLocation, offset: size, value: F): void;
+	store(memory: MemoryRange, offset: offset, value: F): void;
 	// copy a flat value from one memory to another
-	copy(dest: MemoryLocation, dest_offset: size, src: ReadonlyMemoryLocation, src_offset: size): void;
+	copy(dest: MemoryRange, dest_offset: offset, src: ReadonlyMemoryRange, src_offset: offset): void;
 }
 
 export type i32 = number;
@@ -446,13 +567,15 @@ namespace $i32 {
 	export const size = 4;
 	export const alignment: Alignment = Alignment.word;
 
-	export function load(memory: ReadonlyMemoryLocation, offset: size): i32 {
+	export function load(memory: ReadonlyMemoryRange, offset: offset<i32>): i32 {
 		return memory.getUint32(offset);
 	}
-	export function store(memory: MemoryLocation, offset: size, value: i32): void {
+	export function store(memory: MemoryRange, offset: offset<i32>, value: i32): void {
 		memory.setUint32(offset, value);
 	}
-	export function copy(dest: MemoryLocation, dest_offset: size, src: ReadonlyMemoryLocation, src_offset: size): void {
+	export function copy(dest: MemoryRange, dest_offset: offset<i32>, src: ReadonlyMemoryRange, src_offset: offset<i32>): void {
+		dest.assertAlignment(dest_offset, alignment);
+		src.assertAlignment(src_offset, alignment);
 		src.copyBytes(src_offset, size, dest, dest_offset);
 	}
 }
@@ -464,13 +587,15 @@ namespace $i64 {
 	export const size = 8;
 	export const alignment: Alignment = Alignment.doubleWord;
 
-	export function load(memory: ReadonlyMemoryLocation, offset: size): i64 {
+	export function load(memory: ReadonlyMemoryRange, offset: offset<i64>): i64 {
 		return memory.getUint64(offset);
 	}
-	export function store(memory: MemoryLocation, offset: size, value: i64): void {
+	export function store(memory: MemoryRange, offset: offset<i64>, value: i64): void {
 		memory.setUint64(offset, value);
 	}
-	export function copy(dest: MemoryLocation, dest_offset: size, src: ReadonlyMemoryLocation, src_offset: size): void {
+	export function copy(dest: MemoryRange, dest_offset: offset<i64>, src: ReadonlyMemoryRange, src_offset: offset<i64>): void {
+		dest.assertAlignment(dest_offset, alignment);
+		src.assertAlignment(src_offset, alignment);
 		src.copyBytes(src_offset, size, dest, dest_offset);
 	}
 }
@@ -482,13 +607,15 @@ namespace $f32 {
 	export const size = 4;
 	export const alignment:Alignment = Alignment.word;
 
-	export function load(memory: ReadonlyMemoryLocation, offset: size): f32 {
+	export function load(memory: ReadonlyMemoryRange, offset: offset<f32>): f32 {
 		return memory.getFloat32(offset);
 	}
-	export function store(memory: MemoryLocation, offset: size, value: f32): void {
+	export function store(memory: MemoryRange, offset: offset<f32>, value: f32): void {
 		memory.setFloat32(offset, value);
 	}
-	export function copy(dest: MemoryLocation, dest_offset: size, src: ReadonlyMemoryLocation, src_offset: size): void {
+	export function copy(dest: MemoryRange, dest_offset: offset<f32>, src: ReadonlyMemoryRange, src_offset: offset<f32>): void {
+		dest.assertAlignment(dest_offset, alignment);
+		src.assertAlignment(src_offset, alignment);
 		src.copyBytes(src_offset, size, dest, dest_offset);
 	}
 }
@@ -500,13 +627,15 @@ namespace $f64 {
 	export const size = 8;
 	export const alignment: Alignment = Alignment.doubleWord;
 
-	export function load(memory: ReadonlyMemoryLocation, offset: size): f64 {
+	export function load(memory: ReadonlyMemoryRange, offset: offset<f64>): f64 {
 		return memory.getFloat64(offset);
 	}
-	export function store(memory: MemoryLocation, offset: size, value: f64): void {
+	export function store(memory: MemoryRange, offset: offset<f64>, value: f64): void {
 		memory.setFloat64(offset, value);
 	}
-	export function copy(dest: MemoryLocation, dest_offset: size, src: ReadonlyMemoryLocation, src_offset: size): void {
+	export function copy(dest: MemoryRange, dest_offset: offset<f64>, src: ReadonlyMemoryRange, src_offset: offset<f64>): void {
+		dest.assertAlignment(dest_offset, alignment);
+		src.assertAlignment(src_offset, alignment);
 		src.copyBytes(src_offset, size, dest, dest_offset);
 	}
 }
@@ -527,7 +656,7 @@ export class FlatTuple {
 		this.size = FlatTuple.size(types, this.alignment);
 	}
 
-	public load(memory: ReadonlyMemoryLocation, offset: size): readonly WasmType[] {
+	public load(memory: ReadonlyMemoryRange, offset: size): readonly WasmType[] {
 		memory.assertAlignment(offset, this.alignment);
 		const result: WasmType[] = [];
 		for (const type of this.types) {
@@ -538,11 +667,11 @@ export class FlatTuple {
 		return result;
 	}
 
-	public alloc(memory: Memory): MemoryLocation {
+	public alloc(memory: Memory): MemoryRange {
 		return memory.alloc(this.alignment, this.size);
 	}
 
-	public store(memory: MemoryLocation, offset: size, values: readonly WasmType[]): void {
+	public store(memory: MemoryRange, offset: size, values: readonly WasmType[]): void {
 		memory.assertAlignment(offset, this.alignment);
 		for (const [index, type] of this.types.entries()) {
 			const value = values[index];
@@ -552,7 +681,7 @@ export class FlatTuple {
 		}
 	}
 
-	public copy(dest: MemoryLocation, dest_offset: size, src: ReadonlyMemoryLocation, src_offset: size): void {
+	public copy(dest: MemoryRange, dest_offset: size, src: ReadonlyMemoryRange, src_offset: size): void {
 		dest.assertAlignment(dest_offset, this.alignment);
 		src.assertAlignment(src_offset, this.alignment);
 		src.copyBytes(src_offset, this.size, dest, dest_offset);
@@ -694,17 +823,17 @@ export interface ComponentModelType<J> {
 	readonly alignment: Alignment;
 	readonly flatTypes: ReadonlyArray<GenericFlatType>;
 	// Loads a component model value directly from the memory buffer
-	load(memory: ReadonlyMemoryLocation, context: ComponentModelContext): J;
+	load(memory: ReadonlyMemoryRange, offset: offset, context: ComponentModelContext): J;
 	// Loads a component model value from a flattened array
 	liftFlat(memory: Memory, values: FlatValuesIter, context: ComponentModelContext): J;
 	// Allocates a new component model value in the memory buffer
-	alloc(memory: Memory): MemoryLocation;
+	alloc(memory: Memory): MemoryRange;
 	// Stores a component model value directly into the memory buffer
-	store(access: MemoryWriteStream, value: J, context: ComponentModelContext): void;
+	store(memory: MemoryRange, offset: offset, value: J, context: ComponentModelContext): void;
 	// Stores a component model value into a flattened array
 	lowerFlat(result: WasmType[], memory: Memory, value: J, context: ComponentModelContext): void;
 	// copy a component model value from one memory to another
-	copy(dest: MemoryWriteStream, src: MemoryReadStream, context: ComponentModelContext): void;
+	copy(dest: MemoryRange, dest_offset: offset, src: ReadonlyMemoryRange, src_offset: offset, context: ComponentModelContext): void;
 }
 export type GenericComponentModelType = ComponentModelType<any>;
 
@@ -714,8 +843,8 @@ export const bool: ComponentModelType<boolean> = {
 	size: 1,
 	alignment: 1,
 	flatTypes: [$i32],
-	load(access): boolean {
-		return access.getUint8() !== 0;
+	load(memory, offset): boolean {
+		return memory.getUint8(offset) !== 0;
 	},
 	liftFlat(_memory, values): boolean {
 		const value = values.next().value;
@@ -724,17 +853,17 @@ export const bool: ComponentModelType<boolean> = {
 		}
 		return value !== 0;
 	},
-	alloc(memory): MemoryLocation {
+	alloc(memory): MemoryRange {
 		return memory.alloc(bool.alignment, bool.size);
 	},
-	store(access, value: boolean): void {
-		access.setUint8(value ? 1 : 0);
+	store(memory, offset, value: boolean): void {
+		memory.setUint8(offset, value ? 1 : 0);
 	},
 	lowerFlat(result, _memory, value: boolean): void {
 		result.push(value ? 1 : 0);
 	},
-	copy(dest: MemoryWriteStream, src: MemoryReadStream): void {
-		dest.setBytes(src.getBytes(bool.size));
+	copy(dest: MemoryRange, dest_offset: offset<bool>, src: ReadonlyMemoryRange, src_offset: offset<bool>): void {
+		src.copyBytes(src_offset, bool.size, dest, dest_offset);
 	}
 };
 
@@ -748,8 +877,8 @@ namespace $u8 {
 	export const LOW_VALUE = 0;
 	export const HIGH_VALUE = 255;
 
-	export function load(access: MemoryReadStream): u8 {
-		return access.getUint8();
+	export function load(memory: ReadonlyMemoryRange, offset: offset<u8>): u8 {
+		return memory.getUint8(offset);
 	}
 
 	export function liftFlat(_memory: Memory, values: FlatValuesIter): u8 {
@@ -760,12 +889,12 @@ namespace $u8 {
 		return value as u8;
 	}
 
-	export function alloc(memory: Memory): MemoryLocation {
+	export function alloc(memory: Memory): MemoryRange {
 		return memory.alloc(alignment, size);
 	}
 
-	export function store(access: MemoryWriteStream, value: u8): void {
-		access.setUint8(value);
+	export function store(memory: MemoryRange, offset: offset<u8>, value: u8): void {
+		memory.setUint8(offset, value);
 	}
 
 	export function lowerFlat(result: WasmType[], _memory: Memory, value: u8): void {
@@ -775,8 +904,8 @@ namespace $u8 {
 		result.push(value);
 	}
 
-	export function copy(dest: MemoryWriteStream, src: MemoryReadStream): void {
-		dest.setBytes(src.getBytes(size));
+	export function copy(dest: MemoryRange, dest_offset: offset<u8>, src: ReadonlyMemoryRange, src_offset: offset<u8>): void {
+		src.copyBytes(src_offset, size, dest, dest_offset);
 	}
 }
 export const u8:ComponentModelType<number> = $u8;
@@ -791,8 +920,8 @@ namespace $u16 {
 	export const LOW_VALUE = 0;
 	export const HIGH_VALUE = 65535;
 
-	export function load(access: MemoryReadStream): u16 {
-		return access.getUint16();
+	export function load(memory: ReadonlyMemoryRange, offset: offset<u16>): u16 {
+		return memory.getUint16(offset);
 	}
 
 	export function liftFlat(_memory: Memory, values:FlatValuesIter): u16 {
@@ -803,12 +932,12 @@ namespace $u16 {
 		return value as u16;
 	}
 
-	export function alloc(memory: Memory): MemoryLocation {
+	export function alloc(memory: Memory): MemoryRange {
 		return memory.alloc(alignment, size);
 	}
 
-	export function store(access: MemoryWriteStream, value: u16): void {
-		access.setUint16(value);
+	export function store(memory: MemoryRange, offset: offset<u16>, value: u16): void {
+		memory.setUint16(offset, value);
 	}
 
 	export function lowerFlat(result: WasmType[], _memory: Memory, value: number): void {
@@ -818,8 +947,10 @@ namespace $u16 {
 		result.push(value);
 	}
 
-	export function copy(dest: MemoryWriteStream, src: MemoryReadStream): void {
-		dest.setBytes(src.getBytes(size));
+	export function copy(dest: MemoryRange, dest_offset: offset<u16>, src: ReadonlyMemoryRange, src_offset: offset<u16>): void {
+		dest.assertAlignment(dest_offset, alignment);
+		src.assertAlignment(src_offset, alignment);
+		src.copyBytes(src_offset, size, dest, dest_offset);
 	}
 }
 export const u16: ComponentModelType<number> = $u16;
@@ -838,8 +969,8 @@ namespace $u32 {
 		return value >= LOW_VALUE && value <= HIGH_VALUE && Number.isInteger(value);
 	}
 
-	export function load(access: MemoryReadStream): u32 {
-		return access.getUint32();
+	export function load(memory: ReadonlyMemoryRange, offset: offset<u32>): u32 {
+		return memory.getUint32(offset);
 	}
 
 	export function liftFlat(_memory: Memory, values: FlatValuesIter): u32 {
@@ -850,12 +981,12 @@ namespace $u32 {
 		return value as u32;
 	}
 
-	export function alloc(memory: Memory): MemoryLocation {
+	export function alloc(memory: Memory): MemoryRange {
 		return memory.alloc(alignment, size);
 	}
 
-	export function store(access: MemoryWriteStream, value: u32): void {
-		access.setUint32(value);
+	export function store(memory: MemoryRange, offset: offset<u32>, value: u32): void {
+		memory.setUint32(offset, value);
 	}
 
 	export function lowerFlat(result: WasmType[], _memory: Memory, value: number): void {
@@ -865,8 +996,10 @@ namespace $u32 {
 		result.push(value);
 	}
 
-	export function copy(dest: MemoryWriteStream, src: MemoryReadStream): void {
-		dest.setBytes(src.getBytes(size));
+	export function copy(dest: MemoryRange, dest_offset: offset<u32>, src: ReadonlyMemoryRange, src_offset: offset<u32>): void {
+		dest.assertAlignment(dest_offset, alignment);
+		src.assertAlignment(src_offset, alignment);
+		src.copyBytes(src_offset, size, dest, dest_offset);
 	}
 }
 export const u32: ComponentModelType<number> = $u32;
@@ -881,8 +1014,8 @@ namespace $u64 {
 	export const LOW_VALUE = 0n;
 	export const HIGH_VALUE = 18446744073709551615n; // 2 ^ 64 - 1
 
-	export function load(access: MemoryReadStream): u64 {
-		return access.getUint64();
+	export function load(memory: ReadonlyMemoryRange, offset: offset<u64>): u64 {
+		return memory.getUint64(offset);
 	}
 
 	export function liftFlat(_memory: Memory, values: FlatValuesIter): u64 {
@@ -893,12 +1026,12 @@ namespace $u64 {
 		return value as u64;
 	}
 
-	export function alloc(memory: Memory): MemoryLocation {
+	export function alloc(memory: Memory): MemoryRange {
 		return memory.alloc(alignment, size);
 	}
 
-	export function store(access: MemoryWriteStream, value: u64): void {
-		access.setUint64(value);
+	export function store(memory: MemoryRange, offset: offset<u64>, value: u64): void {
+		memory.setUint64(offset, value);
 	}
 
 	export function lowerFlat(result: WasmType[], _memory: Memory, value: bigint): void {
@@ -908,8 +1041,10 @@ namespace $u64 {
 		result.push(value);
 	}
 
-	export function copy(dest: MemoryWriteStream, src: MemoryReadStream): void {
-		dest.setBytes(src.getBytes(size));
+	export function copy(dest: MemoryRange, dest_offset: offset<u64>, src: ReadonlyMemoryRange, src_offset: offset<u64>): void {
+		dest.assertAlignment(dest_offset, alignment);
+		src.assertAlignment(src_offset, alignment);
+		src.copyBytes(src_offset, size, dest, dest_offset);
 	}
 }
 export const u64: ComponentModelType<bigint> = $u64;
@@ -924,8 +1059,8 @@ namespace $s8 {
 	const LOW_VALUE = -128;
 	const HIGH_VALUE = 127;
 
-	export function load(memory: Memory, ptr: ptr): s8 {
-		return memory.view.getInt8(ptr);
+	export function load(memory: ReadonlyMemoryRange, offset: offset<s8>): s8 {
+		return memory.getInt8(offset);
 	}
 
 	export function liftFlat(_memory: Memory, values: FlatValuesIter): s8 {
@@ -944,12 +1079,12 @@ namespace $s8 {
 		}
 	}
 
-	export function alloc(memory: Memory): ptr<s8> {
+	export function alloc(memory: Memory): MemoryRange {
 		return memory.alloc(alignment, size);
 	}
 
-	export function store(memory: Memory, ptr: ptr<s8>, value: s8): void {
-		memory.view.setInt8(ptr, value);
+	export function store(memory: MemoryRange, offset: offset<s8>, value: s8): void {
+		memory.setInt8(offset, value);
 	}
 
 	export function lowerFlat(result: WasmType[], _memory: Memory, value: number): void {
@@ -959,8 +1094,10 @@ namespace $s8 {
 		result.push((value < 0) ? (value + 256) : value);
 	}
 
-	export function copy(dest: Memory, dest_ptr: ptr<u8>, src: Memory, src_ptr: ptr<u8>): void {
-		dest.raw.set(src.raw.subarray(src_ptr, src_ptr + $s8.size), dest_ptr);
+	export function copy(dest: MemoryRange, dest_offset: offset<u64>, src: ReadonlyMemoryRange, src_offset: offset<u64>): void {
+		dest.assertAlignment(dest_offset, alignment);
+		src.assertAlignment(src_offset, alignment);
+		src.copyBytes(src_offset, size, dest, dest_offset);
 	}
 }
 export const s8: ComponentModelType<number> = $s8;
@@ -975,8 +1112,8 @@ namespace $s16 {
 	const LOW_VALUE = -32768; // -2 ^ 15
 	const HIGH_VALUE = 32767; // 2 ^ 15 - 1
 
-	export function load(memory: Memory, ptr: ptr): s16 {
-		return memory.view.getInt16(ptr, true);
+	export function load(memory: ReadonlyMemoryRange, offset: offset<16>): s16 {
+		return memory.getInt16(offset);
 	}
 
 	export function liftFlat(_memory: Memory, values: FlatValuesIter): s16 {
@@ -987,12 +1124,12 @@ namespace $s16 {
 		return (value <= HIGH_VALUE) ? value as s16 : (value as u16) - 65536;
 	}
 
-	export function alloc(memory: Memory): ptr<s16> {
+	export function alloc(memory: Memory): MemoryRange {
 		return memory.alloc(alignment, size);
 	}
 
-	export function store(memory: Memory, ptr: ptr<s16>, value: s16): void {
-		memory.view.setInt16(ptr, value, true);
+	export function store(memory: MemoryRange, offset: offset<s16>, value: s16): void {
+		memory.setInt16(offset, value);
 	}
 
 	export function lowerFlat(result: WasmType[], _memory: Memory, value: number): void {
@@ -1002,8 +1139,10 @@ namespace $s16 {
 		result.push((value < 0) ? (value + 65536) : value);
 	}
 
-	export function copy(dest: Memory, dest_ptr: ptr<u8>, src: Memory, src_ptr: ptr<u8>): void {
-		dest.raw.set(src.raw.subarray(src_ptr, src_ptr + $s16.size), dest_ptr);
+	export function copy(dest: MemoryRange, dest_offset: offset<s16>, src: ReadonlyMemoryRange, src_offset: offset<s16>): void {
+		dest.assertAlignment(dest_offset, alignment);
+		src.assertAlignment(src_offset, alignment);
+		src.copyBytes(src_offset, size, dest, dest_offset);
 	}
 }
 export const s16: ComponentModelType<number> = $s16;
@@ -1018,8 +1157,8 @@ namespace $s32 {
 	const LOW_VALUE = -2147483648; // -2 ^ 31
 	const HIGH_VALUE = 2147483647; // 2 ^ 31 - 1
 
-	export function load(memory: Memory, ptr: ptr): s32 {
-		return memory.view.getInt32(ptr, true);
+	export function load(memory: ReadonlyMemoryRange, offset: offset<32>): s32 {
+		return memory.getInt32(offset);
 	}
 
 	export function liftFlat(_memory: Memory, values: FlatValuesIter): s32 {
@@ -1030,12 +1169,12 @@ namespace $s32 {
 		return (value <= HIGH_VALUE) ? value as s32 : (value as u32) - 4294967296;
 	}
 
-	export function alloc(memory: Memory): ptr<s32> {
+	export function alloc(memory: Memory): MemoryRange {
 		return memory.alloc(alignment, size);
 	}
 
-	export function store(memory: Memory, ptr: ptr<s32>, value: s32): void {
-		memory.view.setInt32(ptr, value, true);
+	export function store(memory: MemoryRange, offset: offset<32>, value: s32): void {
+		memory.setInt32(offset, value);
 	}
 
 	export function lowerFlat(result: WasmType[], _memory: Memory, value: number): void {
@@ -1045,8 +1184,10 @@ namespace $s32 {
 		result.push((value < 0) ? (value + 4294967296) : value);
 	}
 
-	export function copy(dest: Memory, dest_ptr: ptr<u8>, src: Memory, src_ptr: ptr<u8>): void {
-		dest.raw.set(src.raw.subarray(src_ptr, src_ptr + $s32.size), dest_ptr);
+	export function copy(dest: MemoryRange, dest_offset: offset<s32>, src: ReadonlyMemoryRange, src_offset: offset<s32>): void {
+		dest.assertAlignment(dest_offset, alignment);
+		src.assertAlignment(src_offset, alignment);
+		src.copyBytes(src_offset, size, dest, dest_offset);
 	}
 }
 export const s32: ComponentModelType<number> = $s32;
@@ -1061,8 +1202,8 @@ namespace $s64 {
 	const LOW_VALUE = -9223372036854775808n; // -2 ^ 63
 	const HIGH_VALUE = 9223372036854775807n; // 2 ^ 63 - 1
 
-	export function load(memory: Memory, ptr: ptr<s64>): s64 {
-		return memory.view.getBigInt64(ptr, true);
+	export function load(memory: ReadonlyMemoryRange, offset: offset<s64>): s64 {
+		return memory.getInt64(offset);
 	}
 
 	export function liftFlat(_memory: Memory, values: FlatValuesIter): s64 {
@@ -1073,12 +1214,12 @@ namespace $s64 {
 		return (value <= HIGH_VALUE) ? value as s64 : (value as u64) - 18446744073709551616n;
 	}
 
-	export function alloc(memory: Memory): ptr<s64> {
+	export function alloc(memory: Memory): MemoryRange {
 		return memory.alloc(alignment, size);
 	}
 
-	export function store(memory: Memory, ptr: ptr<s64>, value: s64): void {
-		memory.view.setBigInt64(ptr, value, true);
+	export function store(memory: MemoryRange, offset: offset<s64>, value: s64): void {
+		memory.setInt64(offset, value);
 	}
 
 	export function lowerFlat(result: WasmType[], _memory: Memory, value: bigint): void {
@@ -1088,8 +1229,10 @@ namespace $s64 {
 		result.push((value < 0) ? (value + 18446744073709551616n) : value);
 	}
 
-	export function copy(dest: Memory, dest_ptr: ptr<u8>, src: Memory, src_ptr: ptr<u8>): void {
-		dest.raw.set(src.raw.subarray(src_ptr, src_ptr + $s64.size), dest_ptr);
+	export function copy(dest: MemoryRange, dest_offset: offset<s64>, src: ReadonlyMemoryRange, src_offset: offset<s64>): void {
+		dest.assertAlignment(dest_offset, alignment);
+		src.assertAlignment(src_offset, alignment);
+		src.copyBytes(src_offset, size, dest, dest_offset);
 	}
 }
 export const s64: ComponentModelType<bigint> = $s64;
@@ -1105,8 +1248,8 @@ namespace $float32 {
 	const HIGH_VALUE = 3.4028234663852886e+38;
 	const NAN = 0x7fc00000;
 
-	export function load(memory: Memory, ptr: ptr): float32 {
-		return memory.view.getFloat32(ptr, true);
+	export function load(memory: ReadonlyMemoryRange, offset: offset<float32>): float32 {
+		return memory.getFloat32(offset);
 	}
 
 	export function liftFlat(_memory: Memory, values: FlatValuesIter): float32 {
@@ -1117,12 +1260,12 @@ namespace $float32 {
 		return value === NAN ? Number.NaN : value as float32;
 	}
 
-	export function alloc(memory: Memory): ptr<float32> {
+	export function alloc(memory: Memory): MemoryRange {
 		return memory.alloc(alignment, size);
 	}
 
-	export function store(memory: Memory, ptr: ptr<float32>, value: float32): void {
-		memory.view.setFloat32(ptr, value, true);
+	export function store(memory: MemoryRange, offset: offset<float32>, value: float32): void {
+		memory.setFloat32(offset, value);
 	}
 
 	export function lowerFlat(result: WasmType[], _memory: Memory, value: number): void {
@@ -1132,8 +1275,10 @@ namespace $float32 {
 		result.push(Number.isNaN(value) ? NAN : value);
 	}
 
-	export function copy(dest: Memory, dest_ptr: ptr<u8>, src: Memory, src_ptr: ptr<u8>): void {
-		dest.raw.set(src.raw.subarray(src_ptr, src_ptr + $float32.size), dest_ptr);
+	export function copy(dest: MemoryRange, dest_offset: offset<float32>, src: ReadonlyMemoryRange, src_offset: offset<float32>): void {
+		dest.assertAlignment(dest_offset, alignment);
+		src.assertAlignment(src_offset, alignment);
+		src.copyBytes(src_offset, size, dest, dest_offset);
 	}
 }
 export const float32: ComponentModelType<number> = $float32;
@@ -1149,8 +1294,8 @@ namespace $float64 {
 	const HIGH_VALUE = Number.MAX_VALUE;
 	const NAN = 0x7ff8000000000000;
 
-	export function load(memory: Memory, ptr: ptr): float64 {
-		return memory.view.getFloat64(ptr, true);
+	export function load(memory: ReadonlyMemoryRange, offset: offset<float64>): float64 {
+		return memory.getFloat64(offset);
 	}
 
 	export function liftFlat(_memory: Memory, values: FlatValuesIter): float64 {
@@ -1161,12 +1306,12 @@ namespace $float64 {
 		return value === NAN ? Number.NaN : value as float64;
 	}
 
-	export function alloc(memory: Memory): ptr<float64> {
+	export function alloc(memory: Memory): MemoryRange {
 		return memory.alloc(alignment, size);
 	}
 
-	export function store(memory: Memory, ptr: ptr<float64>, value: float64): void {
-		memory.view.setFloat64(ptr, value, true);
+	export function store(memory: MemoryRange, offset: offset<float64>, value: float64): void {
+		memory.setFloat64(offset, value);
 	}
 
 	export function lowerFlat(result: WasmType[], _memory: Memory, value: number): void {
@@ -1176,8 +1321,10 @@ namespace $float64 {
 		result.push(Number.isNaN(value) ? NAN : value);
 	}
 
-	export function copy(dest: Memory, dest_ptr: ptr<u8>, src: Memory, src_ptr: ptr<u8>): void {
-		dest.raw.set(src.raw.subarray(src_ptr, src_ptr + $float64.size), dest_ptr);
+	export function copy(dest: MemoryRange, dest_offset: offset<float64>, src: ReadonlyMemoryRange, src_offset: offset<float64>): void {
+		dest.assertAlignment(dest_offset, alignment);
+		src.assertAlignment(src_offset, alignment);
+		src.copyBytes(src_offset, size, dest, dest_offset);
 	}
 }
 export const float64: ComponentModelType<number> = $float64;
@@ -1232,28 +1379,30 @@ namespace $wchar {
 	export const alignment: Alignment = Alignment.word;
 	export const flatTypes: ReadonlyArray<GenericFlatType> = [$i32];
 
-	export function load(memory: Memory, ptr: ptr, context: ComponentModelContext): string {
-		return fromCodePoint(u32.load(memory, ptr, context));
+	export function load(memory: ReadonlyMemoryRange, offset: offset<u32>, context: ComponentModelContext): string {
+		return fromCodePoint(u32.load(memory, offset, context));
 	}
 
 	export function liftFlat(memory: Memory, values: FlatValuesIter, context: ComponentModelContext): string {
 		return fromCodePoint(u32.liftFlat(memory, values, context));
 	}
 
-	export function alloc(memory: Memory): ptr {
+	export function alloc(memory: Memory): MemoryRange {
 		return u32.alloc(memory);
 	}
 
-	export function store(memory: Memory, ptr: ptr, value: string, context: ComponentModelContext): void {
-		u32.store(memory, ptr, asCodePoint(value), context);
+	export function store(memory: MemoryRange, offset: offset<u32>, value: string, context: ComponentModelContext): void {
+		u32.store(memory, offset, asCodePoint(value), context);
 	}
 
 	export function lowerFlat(result: WasmType[], memory: Memory, value: string, context: ComponentModelContext): void {
 		u32.lowerFlat(result, memory, asCodePoint(value), context);
 	}
 
-	export function copy(dest: Memory, dest_ptr: ptr<u8>, src: Memory, src_ptr: ptr<u8>): void {
-		dest.raw.set(src.raw.subarray(src_ptr, src_ptr + $wchar.size), dest_ptr);
+	export function copy(dest: MemoryRange, dest_offset: offset<u32>, src: ReadonlyMemoryRange, src_offset: offset<u32>): void {
+		dest.assertAlignment(dest_offset, alignment);
+		src.assertAlignment(src_offset, alignment);
+		src.copyBytes(src_offset, size, dest, dest_offset);
 	}
 
 	function fromCodePoint(code: u32): string {
@@ -1288,10 +1437,10 @@ namespace $wstring {
 	export const alignment: Alignment = Alignment.word;
 	export const flatTypes: ReadonlyArray<GenericFlatType> = [$i32, $i32];
 
-	export function load(access: MemoryReadStream, context: ComponentModelContext): string {
-		const dataPtr: ptr =  access.getUint32();
-		const codeUnits: u32 = access.getUint32();
-		return loadFromRange(access, dataPtr, codeUnits, context.options);
+	export function load(memory: ReadonlyMemoryRange, offset: offset<[u32, u32]>, context: ComponentModelContext): string {
+		const dataPtr: ptr =  memory.getUint32(offset + offsets.data);
+		const codeUnits: u32 = memory.getUint32(offset + offsets.codeUnits);
+		return loadFromRange(memory, dataPtr, codeUnits, context.options);
 	}
 
 	export function liftFlat(memory: Memory, values: FlatValuesIter, context: ComponentModelContext): string {
@@ -1300,28 +1449,30 @@ namespace $wstring {
 		return loadFromRange(memory, dataPtr, codeUnits, context.options);
 	}
 
-	export function alloc(memory: Memory): ptr {
+	export function alloc(memory: Memory): MemoryRange {
 		return memory.alloc(alignment, size);
 	}
 
-	export function store(access: MemoryWriteStream, str: string, context: ComponentModelContext): void {
-		const [location, codeUnits] = storeIntoRange(access, str, context.options);
-		access.setUint32(location.ptr);
-		access.setUint32(codeUnits);
+	export function store(memory: MemoryRange, offset: offset<[u32, u32]>, str: string, context: ComponentModelContext): void {
+		const [ptr, codeUnits] = storeIntoRange(memory, str, context.options);
+		memory.setUint32(offset + offsets.data, ptr);
+		memory.setUint32(offset + offsets.codeUnits, codeUnits);
 	}
 
 	export function lowerFlat(result: WasmType[], memory: Memory, str: string, context: ComponentModelContext): void {
 		result.push(...storeIntoRange(memory, str, context.options));
 	}
 
-	export function copy(dest: Memory, dest_ptr: ptr<u8>, src: Memory, src_ptr: ptr<u8>, context: ComponentModelContext): void {
-		const data = src.view.getUint32(src_ptr + offsets.data, true);
-		const codeUnits = src.view.getUint32(src_ptr + offsets.codeUnits, true);
+	export function copy(dest: MemoryRange, dest_offset: offset<[u32, u32]>, src: ReadonlyMemoryRange, src_offset: offset<[u32, u32]>, context: ComponentModelContext): void {
+		dest.assertAlignment(dest_offset, $wstring.alignment);
+		src.assertAlignment(src_offset, $wstring.alignment);
+		src.copyBytes(src_offset, size, dest, dest_offset);
+		const data = src.getUint32(src_offset + offsets.data);
+		const codeUnits = src.getUint32(src_offset + offsets.codeUnits);
 		const [alignment, byteLength] = getAlignmentAndByteLength(codeUnits, context.options);
-		const destData = dest.alloc(alignment, byteLength);
-		dest.raw.set(src.raw.subarray(data, data + byteLength), destData);
-		dest.view.setUint32(dest_ptr + offsets.data, destData, true);
-		dest.view.setUint32(dest_ptr + offsets.codeUnits, codeUnits, true);
+		const srcReader = src.range(data, byteLength);
+		const destWriter = dest.alloc(alignment, byteLength);
+		srcReader.copyBytes(0, byteLength, destWriter, 0);
 	}
 
 	export function getAlignmentAndByteLength(codeUnits: u32, options: Options): [Alignment, number] {
@@ -1338,38 +1489,40 @@ namespace $wstring {
 		}
 	}
 
-	function loadFromRange(access: MemoryReadStream, data: ptr, codeUnits: u32, options: Options): string {
+	function loadFromRange(memory: ReadonlyMemoryRange | Memory, data: ptr, codeUnits: u32, options: Options): string {
 		const encoding = options.encoding;
 		if (encoding === 'latin1+utf-16') {
 			throw new Error('latin1+utf-16 encoding not yet supported');
 		}
 		if (encoding === 'utf-8') {
 			const byteLength = codeUnits;
-			return utf8Decoder.decode(access.memory.getBytes(data, byteLength));
+			const reader = memory.range(data, byteLength);
+			return utf8Decoder.decode(reader.getUint8Array(0, byteLength));
 		} else if (encoding === 'utf-16') {
-			return String.fromCharCode(...access.memory.getHalfWords(data, codeUnits));
+			const reader = memory.range(data, codeUnits * 2);
+			return String.fromCharCode(...reader.getUint16Array(data, codeUnits));
 		} else {
 			throw new Error('Unsupported encoding');
 		}
 	}
 
-	function storeIntoRange(access: MemoryWriteStream, str: string, options: Options): [MemoryLocation, u32] {
+	function storeIntoRange(memory: MemoryRange | Memory, str: string, options: Options): [ptr, size] {
 		const { encoding } = options;
 		if (encoding === 'latin1+utf-16') {
 			throw new Error('latin1+utf-16 encoding not yet supported');
 		}
 		if (encoding === 'utf-8') {
 			const data = utf8Encoder.encode(str);
-			const location = access.alloc(u8.alignment, data.length);
-			location.setBytes(data);
-			return [location, data.length];
+			const writer = memory.alloc(u8.alignment, data.length);
+			writer.setUint8Array(0, data);
+			return [writer.ptr, data.length];
 		} else if (encoding === 'utf-16') {
-			const location = access.alloc(u16.alignment, str.length * 2);
-			const data = location.getHalfWordsView();
+			const writer = memory.alloc(u16.alignment, str.length * 2);
+			const data = writer.getUint16View(0);
 			for (let i = 0; i < str.length; i++) {
 				data[i] = str.charCodeAt(i);
 			}
-			return [location, data.length];
+			return [writer.ptr, data.length];
 		} else {
 			throw new Error('Unsupported encoding');
 		}
@@ -1400,70 +1553,70 @@ export class ListType<T> implements ComponentModelType<T[]> {
 		this.flatTypes = [$i32, $i32];
 	}
 
-	public load(memory: Memory, ptr: ptr, context: ComponentModelContext): T[] {
-		const view = memory.view;
+	public load(memory: ReadonlyMemoryRange, offset: offset<[u32, u32]>, context: ComponentModelContext): T[] {
 		const offsets = ListType.offsets;
-		const dataPtr: ptr =  view.getUint32(ptr + offsets.data);
-		const codeUnits: u32 = view.getUint32(ptr + offsets.length);
-		return this.loadFromRange(memory, dataPtr, codeUnits, context);
+		const dataPtr: ptr =  memory.getUint32(offset + offsets.data);
+		const length: u32 = memory.getUint32(offset + offsets.length);
+		return this.loadFromRange(memory.range(dataPtr, length * this.elementType.size), length, context);
 	}
 
 	public liftFlat(memory: Memory, values: FlatValuesIter, context: ComponentModelContext): T[] {
 		const dataPtr: ptr = values.next().value as size;
 		const length: u32 = values.next().value as u32;
-		return this.loadFromRange(memory, dataPtr, length, context);
+		return this.loadFromRange(memory.range(dataPtr, length * this.elementType.size), length, context);
 	}
 
-	public alloc(memory: Memory): ptr {
+	public alloc(memory: Memory): MemoryRange {
 		return memory.alloc(this.alignment, this.size);
 	}
 
-	public store(memory: Memory, ptr: ptr, values: T[], context: ComponentModelContext): void {
-		const [ data, length ] = this.storeIntoRange(memory, values, context);
-		const view = memory.view;
+	public store(memory: MemoryRange, offset: offset<[u32, u32]>, values: T[], context: ComponentModelContext): void {
+		const elementMemory = memory.alloc(this.elementType.alignment, this.elementType.size * values.length);
+		this.storeIntoRange(elementMemory, values, context);
 		const offsets = ListType.offsets;
-		view.setUint32(ptr + offsets.data, data, true);
-		view.setUint32(ptr + offsets.length, length, true);
+		memory.setUint32(offset + offsets.data, elementMemory.ptr);
+		memory.setUint32(offset + offsets.length, values.length);
 	}
 
 	public lowerFlat(result: WasmType[], memory: Memory, values: T[], context: ComponentModelContext): void {
-		result.push(...this.storeIntoRange(memory, values, context));
+		const elementMemory = memory.alloc(this.elementType.alignment, this.elementType.size * values.length);
+		this.storeIntoRange(elementMemory, values, context);
+		result.push(elementMemory.ptr, values.length);
 	}
 
-	public copy(dest: Memory, dest_ptr: ptr<u8>, src: Memory, src_ptr: ptr<u8>): void {
+	public copy(dest: MemoryRange, dest_offset: offset<[u32, u32]>, src: ReadonlyMemoryRange, src_offset: offset<[u32, u32]>): void {
+		dest.assertAlignment(dest_offset, this.alignment);
+		src.assertAlignment(src_offset, this.alignment);
 		const offsets = ListType.offsets;
-		const data = src.view.getUint32(src_ptr + offsets.data, true);
-		const length = src.view.getUint32(src_ptr + offsets.length, true);
-		const byteLength = length * this.elementType.size;
-		const destData = dest.alloc(this.alignment, byteLength);
-		dest.raw.set(src.raw.subarray(data, data + byteLength), destData);
-		dest.view.setUint32(dest_ptr + offsets.data, destData, true);
-		dest.view.setUint32(dest_ptr + offsets.length, length, true);
+		src.copyBytes(src_offset, this.size, dest, dest_offset);
+		const data = src.getUint32(src_offset + offsets.data);
+		const byteLength = src.getUint32(src_offset + offsets.length) * this.elementType.size;
+		const srcReader = src.range(data, byteLength);
+		const destWriter = dest.alloc(this.elementType.alignment, byteLength);
+		srcReader.copyBytes(0, byteLength, destWriter, 0);
 	}
 
-	private loadFromRange(memory: Memory, data: size, length: u32, context: ComponentModelContext): T[] {
+
+	private loadFromRange(memory: ReadonlyMemoryRange, length: u32, context: ComponentModelContext): T[] {
 		const result: T[] = [];
 		let offset = 0;
 		for (let i = 0; i < length; i++) {
-			result.push(this.elementType.load(memory, data + offset, context));
+			result.push(this.elementType.load(memory, offset, context));
 			offset += this.elementType.size;
 		}
 		return result;
 	}
 
-	private storeIntoRange(memory: Memory, values: T[], context: ComponentModelContext): [size, u32] {
-		const bytes = this.elementType.size * values.length;
-		const ptr = memory.alloc(this.elementType.alignment, bytes);
-		let indexPtr = ptr;
+	private storeIntoRange(memory: MemoryRange, values: T[], context: ComponentModelContext): void {
+		let offset = 0;
 		for (const item of values) {
-			this.elementType.store(memory, indexPtr, item, context);
-			indexPtr += this.elementType.size;
+			this.elementType.store(memory, offset, item, context);
+			offset += this.elementType.size;
 		}
-		return [ptr, values.length];
 	}
 }
 
-abstract class TypeArrayType<T> implements ComponentModelType<T> {
+abstract class TypeArrayType<T extends { length: number; byteLength: number }, ET> implements ComponentModelType<T> {
 
 	private static readonly offsets = {
 		data: 0,
@@ -1475,225 +1628,180 @@ abstract class TypeArrayType<T> implements ComponentModelType<T> {
 	public readonly alignment: Alignment;
 	public readonly flatTypes: ReadonlyArray<GenericFlatType>;
 
-	constructor() {
+	protected readonly elementType: ComponentModelType<ET>;
+
+	constructor(elementType: ComponentModelType<ET>) {
 		this.kind = ComponentModelTypeKind.list;
 		this.size = 8;
 		this.alignment = 4;
 		this.flatTypes = [$i32, $i32];
+		this.elementType = elementType;
 	}
 
-	public load(memory: Memory, ptr: ptr, context: ComponentModelContext): T {
-		const view = memory.view;
+	public load(memory: ReadonlyMemoryRange, offset: offset): T {
 		const offsets = TypeArrayType.offsets;
-		const dataPtr: ptr =  view.getUint32(ptr + offsets.data);
-		const length: u32 = view.getUint32(ptr + offsets.length);
-		return this.loadFromRange(memory, dataPtr, length, context.options);
+		const dataPtr: ptr =  memory.getUint32(offset + offsets.data);
+		const length: u32 = memory.getUint32(offset + offsets.length);
+		return this.loadFromRange(memory.range(dataPtr, length * this.elementType.size), length);
 	}
 
-	public liftFlat(memory: Memory, values: FlatValuesIter, context: ComponentModelContext): T {
+	public liftFlat(memory: Memory, values: FlatValuesIter): T {
 		const dataPtr: ptr = values.next().value as size;
 		const length: u32 = values.next().value as u32;
-		return this.loadFromRange(memory, dataPtr, length, context.options);
+		return this.loadFromRange(memory.range(dataPtr, length * this.elementType.size), length);
 	}
 
-	public alloc(memory: Memory): ptr {
+	public alloc(memory: Memory): MemoryRange {
 		return memory.alloc(this.alignment, this.size);
 	}
 
-	public store(memory: Memory, ptr: ptr, value: T, context: ComponentModelContext): void {
-		const [ data, length ] = this.storeIntoRange(memory, value, context.options);
-		const view = memory.view;
+	public store(memory: MemoryRange, offset: offset, value: T): void {
+		const writer = memory.alloc(this.elementType.alignment, value.byteLength);
+		this.storeIntoRange(writer, value);
 		const offsets = TypeArrayType.offsets;
-		view.setUint32(ptr + offsets.data, data, true);
-		view.setUint32(ptr + offsets.length, length, true);
+		memory.setUint32(offset + offsets.data, writer.ptr);
+		memory.setUint32(offset + offsets.length, value.length);
 	}
 
-	public lowerFlat(result: WasmType[], memory: Memory, value: T, context: ComponentModelContext): void {
-		result.push(...this.storeIntoRange(memory, value, context.options));
+	public lowerFlat(result: WasmType[], memory: Memory, value: T): void {
+		const writer = memory.alloc(this.elementType.alignment, value.byteLength);
+		this.storeIntoRange(writer, value);
+		result.push(writer.ptr, value.length);
 	}
 
-	public copy(dest: Memory, dest_ptr: ptr<u8>, src: Memory, src_ptr: ptr<u8>): void {
+	public copy(dest: MemoryRange, dest_offset: ptr<u8>, src: ReadonlyMemoryRange, src_offset: ptr<u8>): void {
+		dest.assertAlignment(dest_offset, this.alignment);
+		src.assertAlignment(src_offset, this.alignment);
 		const offsets = TypeArrayType.offsets;
-		const data = src.view.getUint32(src_ptr + offsets.data, true);
-		const length = src.view.getUint32(src_ptr + offsets.length, true);
-		const destData = this.copyArray(dest, src, data, length);
-		dest.view.setUint32(dest_ptr + offsets.data, destData, true);
-		dest.view.setUint32(dest_ptr + offsets.length, length, true);
+		src.copyBytes(src_offset, this.size, dest, dest_offset);
+		const data = src.getUint32(src_offset + offsets.data);
+		const byteLength = src.getUint32(src_offset + offsets.length) * this.elementType.size;
+		const srcReader = src.range(data, byteLength);
+		const destWriter = dest.alloc(this.elementType.alignment, byteLength);
+		srcReader.copyBytes(0, byteLength, destWriter, 0);
 	}
 
-	protected abstract loadFromRange(memory: Memory, data: ptr, length: u32, options: Options): T;
-	protected abstract storeIntoRange(memory: Memory, value: T, options: Options): [ptr, u32];
-	protected abstract copyArray(dest: Memory, src: Memory, src_ptr: ptr<u8>, length: u32): ptr;
-
+	protected abstract loadFromRange(memory: ReadonlyMemoryRange, length: number): T;
+	protected abstract storeIntoRange(memory: MemoryRange, value: T): void;
 }
 
-export class Int8ArrayType extends TypeArrayType<Int8Array> {
-	protected loadFromRange(memory: Memory, data: ptr, length: u32): Int8Array {
-		return new Int8Array(memory.buffer, data, length);
+export class Int8ArrayType extends TypeArrayType<Int8Array, s8> {
+	constructor() {
+		super($s8);
 	}
-	protected storeIntoRange(memory: Memory, value: Int8Array): [ptr, u32] {
-		const ptr = memory.alloc(s8.alignment, value.byteLength);
-		const target = new Int8Array(memory.buffer, ptr, value.length);
-		target.set(value);
-		return [ptr, target.length];
+	protected loadFromRange(memory: ReadonlyMemoryRange, length: number): Int8Array {
+		return memory.getInt8Array(0, length);
 	}
-	protected copyArray(dest: Memory, src: Memory, src_ptr: ptr<u8>, length: u32): ptr {
-		const dest_ptr = dest.alloc(s8.alignment, length * Int8Array.BYTES_PER_ELEMENT);
-		dest.raw.set(src.raw.subarray(src_ptr, src_ptr + length), dest_ptr);
-		return dest_ptr;
+	protected storeIntoRange(memory: MemoryRange, value: Int8Array): void {
+		memory.setInt8Array(0, value);
 	}
 }
 
-export class Int16ArrayType extends TypeArrayType<Int16Array> {
-	protected loadFromRange(memory: Memory, data: size, length: u32): Int16Array {
-		return new Int16Array(memory.buffer, data, length);
+export class Int16ArrayType extends TypeArrayType<Int16Array, s16> {
+	constructor() {
+		super($s16);
 	}
-	protected storeIntoRange(memory: Memory, value: Int16Array): [size, u32] {
-		const ptr = memory.alloc(s16.alignment, value.byteLength);
-		const target = new Int16Array(memory.buffer, ptr, value.length);
-		target.set(value);
-		return [ptr, target.length];
+	protected loadFromRange(memory: ReadonlyMemoryRange, length: number): Int16Array {
+		return memory.getInt16Array(0, length);
 	}
-	protected copyArray(dest: Memory, src: Memory, src_ptr: number, length: number): number {
-		const dest_ptr = dest.alloc(s16.alignment, length * Int16Array.BYTES_PER_ELEMENT);
-		dest.raw.set(src.raw.subarray(src_ptr, src_ptr + length), dest_ptr);
-		return dest_ptr;
+	protected storeIntoRange(memory: MemoryRange, value: Int16Array): void {
+		memory.setInt16Array(0, value);
 	}
 }
 
-export class Int32ArrayType extends TypeArrayType<Int32Array> {
-	protected loadFromRange(memory: Memory, data: size, length: u32): Int32Array {
-		return new Int32Array(memory.buffer, data, length);
+export class Int32ArrayType extends TypeArrayType<Int32Array, s32> {
+	constructor() {
+		super($s32);
 	}
-	protected storeIntoRange(memory: Memory, value: Int32Array): [size, u32] {
-		const ptr = memory.alloc(s32.alignment, value.byteLength);
-		const target = new Int32Array(memory.buffer, ptr, value.length);
-		target.set(value);
-		return [ptr, target.length];
+	protected loadFromRange(memory: ReadonlyMemoryRange, length: number): Int32Array {
+		return memory.getInt32Array(0, length);
 	}
-	protected copyArray(dest: Memory, src: Memory, src_ptr: number, length: number): number {
-		const dest_ptr = dest.alloc(s32.alignment, length * Int32Array.BYTES_PER_ELEMENT);
-		dest.raw.set(src.raw.subarray(src_ptr, src_ptr + length), dest_ptr);
-		return dest_ptr;
+	protected storeIntoRange(memory: MemoryRange, value: Int32Array): void {
+		memory.setInt32Array(0, value);
 	}
 }
 
-export class BigInt64ArrayType extends TypeArrayType<BigInt64Array> {
-	protected loadFromRange(memory: Memory, data: size, length: u32): BigInt64Array {
-		return new BigInt64Array(memory.buffer, data, length);
+export class BigInt64ArrayType extends TypeArrayType<BigInt64Array, s64> {
+	constructor() {
+		super($s64);
 	}
-	protected storeIntoRange(memory: Memory, value: BigInt64Array): [size, u32] {
-		const ptr = memory.alloc(s64.alignment, value.byteLength);
-		const target = new BigInt64Array(memory.buffer, ptr, value.length);
-		target.set(value);
-		return [ptr, target.length];
+	protected loadFromRange(memory: ReadonlyMemoryRange, length: number): BigInt64Array {
+		return memory.getInt64Array(0, length);
 	}
-	protected copyArray(dest: Memory, src: Memory, src_ptr: number, length: number): number {
-		const dest_ptr = dest.alloc(s64.alignment, length * BigInt64Array.BYTES_PER_ELEMENT);
-		dest.raw.set(src.raw.subarray(src_ptr, src_ptr + length), dest_ptr);
-		return dest_ptr;
+	protected storeIntoRange(memory: MemoryRange, value: BigInt64Array): void {
+		memory.setInt64Array(0, value);
 	}
 }
 
-export class Uint8ArrayType extends TypeArrayType<Uint8Array> {
-	protected loadFromRange(memory: Memory, data: size, length: u32): Uint8Array {
-		return new Uint8Array(memory.buffer, data, length);
+export class Uint8ArrayType extends TypeArrayType<Uint8Array, u8> {
+	constructor() {
+		super($u8);
 	}
-	protected storeIntoRange(memory: Memory, value: Uint8Array): [size, u32] {
-		const ptr = memory.alloc(u8.alignment, value.byteLength);
-		const target = new Uint8Array(memory.buffer, ptr, value.length);
-		target.set(value);
-		return [ptr, target.length];
+	protected loadFromRange(memory: ReadonlyMemoryRange, length: number): Uint8Array {
+		return memory.getUint8Array(0, length);
 	}
-	protected copyArray(dest: Memory, src: Memory, src_ptr: number, length: number): number {
-		const dest_ptr = dest.alloc(u8.alignment, length * Uint8Array.BYTES_PER_ELEMENT);
-		dest.raw.set(src.raw.subarray(src_ptr, src_ptr + length), dest_ptr);
-		return dest_ptr;
+	protected storeIntoRange(memory: MemoryRange, value: Uint8Array): void {
+		memory.setUint8Array(0, value);
 	}
 }
 
-export class Uint16ArrayType extends TypeArrayType<Uint16Array> {
-	protected loadFromRange(memory: Memory, data: size, length: u32): Uint16Array {
-		return new Uint16Array(memory.buffer, data, length);
+export class Uint16ArrayType extends TypeArrayType<Uint16Array, u16> {
+	constructor() {
+		super($u16);
 	}
-	protected storeIntoRange(memory: Memory, value: Uint16Array): [size, u32] {
-		const ptr = memory.alloc(u16.alignment, value.byteLength);
-		const target = new Uint16Array(memory.buffer, ptr, value.length);
-		target.set(value);
-		return [ptr, target.length];
+	protected loadFromRange(memory: ReadonlyMemoryRange, length: number): Uint16Array {
+		return memory.getUint16Array(0, length);
 	}
-	protected copyArray(dest: Memory, src: Memory, src_ptr: number, length: number): number {
-		const dest_ptr = dest.alloc(u16.alignment, length * Uint16Array.BYTES_PER_ELEMENT);
-		dest.raw.set(src.raw.subarray(src_ptr, src_ptr + length), dest_ptr);
-		return dest_ptr;
+	protected storeIntoRange(memory: MemoryRange, value: Uint16Array): void {
+		memory.setUint16Array(0, value);
 	}
 }
 
-export class Uint32ArrayType extends TypeArrayType<Uint32Array> {
-	protected loadFromRange(memory: Memory, data: size, length: u32): Uint32Array {
-		return new Uint32Array(memory.buffer, data, length);
+export class Uint32ArrayType extends TypeArrayType<Uint32Array, u32> {
+	constructor() {
+		super($u32);
 	}
-	protected storeIntoRange(memory: Memory, value: Uint32Array): [size, u32] {
-		const ptr = memory.alloc(u32.alignment, value.byteLength);
-		const target = new Uint32Array(memory.buffer, ptr, value.length);
-		target.set(value);
-		return [ptr, target.length];
+	protected loadFromRange(memory: ReadonlyMemoryRange, length: number): Uint32Array {
+		return memory.getUint32Array(0, length);
 	}
-	protected copyArray(dest: Memory, src: Memory, src_ptr: number, length: number): number {
-		const dest_ptr = dest.alloc(u32.alignment, length * Uint32Array.BYTES_PER_ELEMENT);
-		dest.raw.set(src.raw.subarray(src_ptr, src_ptr + length), dest_ptr);
-		return dest_ptr;
+	protected storeIntoRange(memory: MemoryRange, value: Uint32Array): void {
+		memory.setUint32Array(0, value);
 	}
 }
 
-export class BigUint64ArrayType extends TypeArrayType<BigUint64Array> {
-	protected loadFromRange(memory: Memory, data: size, length: u32): BigUint64Array {
-		return new BigUint64Array(memory.buffer, data, length);
+export class BigUint64ArrayType extends TypeArrayType<BigUint64Array, u64> {
+	constructor() {
+		super($u64);
 	}
-	protected storeIntoRange(memory: Memory, value: BigUint64Array): [size, u32] {
-		const ptr = memory.alloc(u64.alignment, value.byteLength);
-		const target = new BigUint64Array(memory.buffer, ptr, value.length);
-		target.set(value);
-		return [ptr, target.length];
+	protected loadFromRange(memory: ReadonlyMemoryRange, length: number): BigUint64Array {
+		return memory.getUint64Array(0, length);
 	}
-	protected copyArray(dest: Memory, src: Memory, src_ptr: number, length: number): number {
-		const dest_ptr = dest.alloc(u64.alignment, length * BigUint64Array.BYTES_PER_ELEMENT);
-		dest.raw.set(src.raw.subarray(src_ptr, src_ptr + length), dest_ptr);
-		return dest_ptr;
+	protected storeIntoRange(memory: MemoryRange, value: BigUint64Array): void {
+		memory.setUint64Array(0, value);
 	}
 }
 
-export class Float32ArrayType extends TypeArrayType<Float32Array> {
-	protected loadFromRange(memory: Memory, data: size, length: u32): Float32Array {
-		return new Float32Array(memory.buffer, data, length);
+export class Float32ArrayType extends TypeArrayType<Float32Array, float32> {
+	constructor() {
+		super($float32);
 	}
-	protected storeIntoRange(memory: Memory, value: Float32Array): [size, u32] {
-		const ptr = memory.alloc(float32.alignment, value.byteLength);
-		const target = new Float32Array(memory.buffer, ptr, value.length);
-		target.set(value);
-		return [ptr, target.length];
+	protected loadFromRange(memory: ReadonlyMemoryRange, length: number): Float32Array {
+		return memory.getFloat32Array(0, length);
 	}
-	protected copyArray(dest: Memory, src: Memory, src_ptr: number, length: number): number {
-		const dest_ptr = dest.alloc(float32.alignment, length * Float32Array.BYTES_PER_ELEMENT);
-		dest.raw.set(src.raw.subarray(src_ptr, src_ptr + length), dest_ptr);
-		return dest_ptr;
+	protected storeIntoRange(memory: MemoryRange, value: Float32Array): void {
+		memory.setFloat32Array(0, value);
 	}
 }
 
-export class Float64ArrayType extends TypeArrayType<Float64Array> {
-	protected loadFromRange(memory: Memory, data: size, length: u32): Float64Array {
-		return new Float64Array(memory.buffer, data, length);
+export class Float64ArrayType extends TypeArrayType<Float64Array, float64> {
+	constructor() {
+		super($float64);
 	}
-	protected storeIntoRange(memory: Memory, value: Float64Array): [size, u32] {
-		const ptr = memory.alloc(float32.alignment, value.byteLength);
-		const target = new Float64Array(memory.buffer, ptr, value.length);
-		target.set(value);
-		return [ptr, target.length];
+	protected loadFromRange(memory: ReadonlyMemoryRange, length: number): Float64Array {
+		return memory.getFloat64Array(0, length);
 	}
-	protected copyArray(dest: Memory, src: Memory, src_ptr: number, length: number): number {
-		const dest_ptr = dest.alloc(float64.alignment, length * Float64Array.BYTES_PER_ELEMENT);
-		dest.raw.set(src.raw.subarray(src_ptr, src_ptr + length), dest_ptr);
-		return dest_ptr;
+	protected storeIntoRange(memory: MemoryRange, value: Float64Array): void {
+		memory.setFloat64Array(0, value);
 	}
 }
 
@@ -1725,12 +1833,13 @@ abstract class BaseRecordType<T extends JRecord | JTuple, F extends TypedField> 
 		this.flatTypes = BaseRecordType.flatTypes(fields);
 	}
 
-	public load(memory: Memory, ptr: ptr, context: ComponentModelContext): T {
+	public load(memory: ReadonlyMemoryRange, offset: offset, context: ComponentModelContext): T {
+		memory.assertAlignment(offset, this.alignment);
 		const result: JType[] = [];
 		for (const field of this.fields) {
-			ptr = align(ptr, field.type.alignment);
-			result.push(field.type.load(memory, ptr, context));
-			ptr += field.type.size;
+			offset = align(offset, field.type.alignment);
+			result.push(field.type.load(memory, offset, context));
+			offset += field.type.size;
 		}
 		return this.create(this.fields, result);
 	}
@@ -1744,18 +1853,19 @@ abstract class BaseRecordType<T extends JRecord | JTuple, F extends TypedField> 
 		return this.create(this.fields, result);
 	}
 
-	public alloc(memory: Memory): ptr {
+	public alloc(memory: Memory): MemoryRange {
 		return memory.alloc(this.alignment, this.size);
 	}
 
-	public store(memory: Memory, ptr: ptr, record: T, context: ComponentModelContext): void {
+	public store(memory: MemoryRange, offset: offset, record: T, context: ComponentModelContext): void {
+		memory.assertAlignment(offset, this.alignment);
 		const values = this.elements(record, this.fields);
 		for (let i = 0; i < this.fields.length; i++) {
 			const field = this.fields[i];
 			const value = values[i];
-			ptr = align(ptr, field.type.alignment);
-			field.type.store(memory, ptr, value, context);
-			ptr += field.type.size;
+			offset = align(offset, field.type.alignment);
+			field.type.store(memory, offset, value, context);
+			offset += field.type.size;
 		}
 	}
 
@@ -1768,13 +1878,13 @@ abstract class BaseRecordType<T extends JRecord | JTuple, F extends TypedField> 
 		}
 	}
 
-	public copy(dest: Memory, dest_ptr: number, src: Memory, src_ptr: number, context: ComponentModelContext): void {
+	public copy(dest: MemoryRange, dest_offset: offset, src: ReadonlyMemoryRange, src_offset: offset, context: ComponentModelContext): void {
 		for (const field of this.fields) {
-			dest_ptr = align(dest_ptr, field.type.alignment);
-			src_ptr = align(src_ptr, field.type.alignment);
-			field.type.copy(dest, dest_ptr, src, src_ptr, context);
-			dest_ptr += field.type.size;
-			src_ptr += field.type.size;
+			dest_offset = align(dest_offset, field.type.alignment);
+			src_offset = align(src_offset, field.type.alignment);
+			field.type.copy(dest, dest_offset, src, src_offset, context);
+			dest_offset += field.type.size;
+			src_offset += field.type.size;
 		}
 	}
 
@@ -1893,8 +2003,8 @@ export class FlagsType<_T> implements ComponentModelType<u32 | bigint> {
 		this.arraySize = FlagsType.num32Flags(numberOfFlags);
 	}
 
-	public load(memory: Memory, ptr: ptr<u8 | u16 | u32 | u32[]>, context: ComponentModelContext): u32 | bigint {
-		return this.type === undefined ? 0 : this.loadFrom(this.type.load(memory, ptr, context));
+	public load(memory: ReadonlyMemoryRange, offset: offset<u8 | u16 | u32 | u32[]>, context: ComponentModelContext): u32 | bigint {
+		return this.type === undefined ? 0 : this.loadFrom(this.type.load(memory, offset, context));
 	}
 
 	public liftFlat(_memory: Memory, values: FlatValuesIter, context: ComponentModelContext): u32 | bigint {
@@ -1914,13 +2024,13 @@ export class FlagsType<_T> implements ComponentModelType<u32 | bigint> {
 		}
 	}
 
-	public alloc(memory: Memory): ptr<u8 | u16 | u32 | u32[]> {
+	public alloc(memory: Memory): MemoryRange {
 		return memory.alloc(this.alignment, this.size);
 	}
 
-	public store(memory: Memory, ptr: ptr<u8 | u16 | u32 | u32[]>, flags: u32 | bigint, context: ComponentModelContext): void {
+	public store(memory: MemoryRange, offset: offset<u8 | u16 | u32 | u32[]>, flags: u32 | bigint, context: ComponentModelContext): void {
 		if (this.type !== undefined) {
-			this.type.store(memory, ptr, this.storeInto(flags), context);
+			this.type.store(memory, offset, this.storeInto(flags), context);
 		}
 	}
 
@@ -1930,9 +2040,9 @@ export class FlagsType<_T> implements ComponentModelType<u32 | bigint> {
 		}
 	}
 
-	public copy(dest: Memory, dest_ptr: number, src: Memory, src_ptr: number, context: ComponentModelContext): void {
+	public copy(dest: MemoryRange, dest_offset: offset, src: ReadonlyMemoryRange, src_offset: offset, context: ComponentModelContext): void {
 		if (this.type !== undefined) {
-			this.type.copy(dest, dest_ptr, src, src_ptr, context);
+			this.type.copy(dest, dest_offset, src, src_offset, context);
 		}
 	}
 
@@ -2045,15 +2155,15 @@ export class VariantType<T extends JVariantCase, I, V> implements ComponentModel
 		this.flatTypes = VariantType.flatTypes(this.discriminantType, cases);
 	}
 
-	public load(memory: Memory, ptr: ptr, context: ComponentModelContext): T {
-		const caseIndex = this.discriminantType.load(memory, ptr, context);
+	public load(memory: ReadonlyMemoryRange, offset: offset, context: ComponentModelContext): T {
+		const caseIndex = this.discriminantType.load(memory, offset, context);
 		const caseVariant = this.cases[caseIndex];
 		if (caseVariant.type === undefined) {
 			return this.ctor(caseVariant.tag as I, undefined as any);
 		} else {
-			ptr += this.discriminantType.size;
-			ptr = align(ptr, this.maxCaseAlignment);
-			const value = caseVariant.type.load(memory, ptr, context);
+			offset += this.discriminantType.size;
+			offset = align(offset, this.maxCaseAlignment);
+			const value = caseVariant.type.load(memory, offset, context);
 			return this.ctor(caseVariant.tag as I, value);
 		}
 	}
@@ -2080,21 +2190,21 @@ export class VariantType<T extends JVariantCase, I, V> implements ComponentModel
 		return result;
 	}
 
-	public alloc(memory: Memory): ptr {
+	public alloc(memory: Memory): MemoryRange {
 		return memory.alloc(this.alignment, this.size);
 	}
 
-	public store(memory: Memory, ptr: ptr, variantValue: T, context: ComponentModelContext): void {
+	public store(memory: MemoryRange, offset: offset, variantValue: T, context: ComponentModelContext): void {
 		const index = this.case2Index.get(variantValue.tag);
 		if (index === undefined) {
 			throw new ComponentModelError(`Variant case ${variantValue.tag} not found`);
 		}
-		this.discriminantType.store(memory, ptr, index, context);
-		ptr += this.discriminantType.size;
+		this.discriminantType.store(memory, offset, index, context);
+		offset += this.discriminantType.size;
 		const c = this.cases[index];
 		if (c.type !== undefined && variantValue.value !== undefined) {
-			ptr = align(ptr, this.maxCaseAlignment);
-			c.type.store(memory, ptr, variantValue.value, context);
+			offset = align(offset, this.maxCaseAlignment);
+			c.type.store(memory, offset, variantValue.value, context);
 		}
 	}
 
@@ -2143,18 +2253,18 @@ export class VariantType<T extends JVariantCase, I, V> implements ComponentModel
 		}
 	}
 
-	public copy(dest: Memory, dest_ptr: number, src: Memory, src_ptr: number, context: ComponentModelContext): void {
-		this.discriminantType.copy(dest, dest_ptr, src, src_ptr, context);
-		const caseIndex = this.discriminantType.load(src, src_ptr, context);
+	public copy(dest: MemoryRange, dest_offset: offset, src: ReadonlyMemoryRange, src_offset: offset, context: ComponentModelContext): void {
+		this.discriminantType.copy(dest, dest_offset, src, src_offset, context);
+		const caseIndex = this.discriminantType.load(src, src_offset, context);
 		const caseVariant = this.cases[caseIndex];
 		if (caseVariant.type === undefined) {
 			return;
 		}
-		src_ptr += this.discriminantType.size;
-		src_ptr = align(src_ptr, this.maxCaseAlignment);
-		dest_ptr += this.discriminantType.size;
-		dest_ptr = align(dest_ptr, this.maxCaseAlignment);
-		caseVariant.type.copy(dest, dest_ptr, src, src_ptr, context);
+		src_offset += this.discriminantType.size;
+		src_offset = align(src_offset, this.maxCaseAlignment);
+		dest_offset += this.discriminantType.size;
+		dest_offset = align(dest_offset, this.maxCaseAlignment);
+		caseVariant.type.copy(dest, dest_offset, src, src_offset, context);
 	}
 
 	private static size(discriminantType: GenericComponentModelType, cases: VariantCase[]): size {
@@ -2257,8 +2367,8 @@ export class EnumType<T extends JEnum> implements ComponentModelType<T> {
 		this.flatTypes = this.discriminantType.flatTypes;
 	}
 
-	public load(memory: Memory, ptr: ptr, context: ComponentModelContext): T {
-		const index = this.assertRange(this.discriminantType.load(memory, ptr, context));
+	public load(memory: ReadonlyMemoryRange, offset: offset, context: ComponentModelContext): T {
+		const index = this.assertRange(this.discriminantType.load(memory, offset, context));
 		return this.cases[index] as T;
 	}
 
@@ -2267,16 +2377,16 @@ export class EnumType<T extends JEnum> implements ComponentModelType<T> {
 		return this.cases[index] as T;
 	}
 
-	public alloc(memory: Memory): ptr {
+	public alloc(memory: Memory): MemoryRange {
 		return memory.alloc(this.alignment, this.size);
 	}
 
-	public store(memory: Memory, ptr: ptr, value: T, context: ComponentModelContext): void {
+	public store(memory: MemoryRange, offset: offset, value: T, context: ComponentModelContext): void {
 		const index = this.case2index.get(value);
 		if (index === undefined) {
 			throw new ComponentModelError('Enumeration value not found');
 		}
-		this.discriminantType.store(memory, ptr, index, context);
+		this.discriminantType.store(memory, offset, index, context);
 	}
 
 	public lowerFlat(result: WasmType[], memory: Memory, value: T, context: ComponentModelContext): void {
@@ -2287,8 +2397,8 @@ export class EnumType<T extends JEnum> implements ComponentModelType<T> {
 		this.discriminantType.lowerFlat(result, memory, index, context);
 	}
 
-	public copy(dest: Memory, dest_ptr: number, src: Memory, src_ptr: number, context: ComponentModelContext): void {
-		this.discriminantType.copy(dest, dest_ptr, src, src_ptr, context);
+	public copy(dest: MemoryRange, dest_offset: offset, src: ReadonlyMemoryRange, src_offset: offset, context: ComponentModelContext): void {
+		this.discriminantType.copy(dest, dest_offset, src, src_offset, context);
 	}
 
 	private assertRange(value: number): number {
@@ -2383,14 +2493,14 @@ export class OptionType<T extends JType> implements ComponentModelType<T | optio
 		this.flatTypes = this.computeFlatTypes();
 	}
 
-	public load(memory: Memory, ptr: ptr, context: ComponentModelContext): T | option<T> | undefined {
-		const caseIndex = u8.load(memory, ptr, context);
+	public load(memory: ReadonlyMemoryRange, offset: offset, context: ComponentModelContext): T | option<T> | undefined {
+		const caseIndex = u8.load(memory, offset, context);
 		if (caseIndex === 0) { // index 0 is none
 			return context.options.keepOption ? option._ctor<T>(option.none, undefined) : undefined;
 		} else {
-			ptr += u8.size;
-			ptr = align(ptr, this.alignment);
-			const value = this.valueType.load(memory, ptr, context);
+			offset += u8.size;
+			offset = align(offset, this.alignment);
+			const value = this.valueType.load(memory, offset, context);
 			return context.options.keepOption ? option._ctor(option.some, value) : value;
 		}
 	}
@@ -2410,18 +2520,18 @@ export class OptionType<T extends JType> implements ComponentModelType<T | optio
 		}
 	}
 
-	public alloc(memory: Memory): ptr {
+	public alloc(memory: Memory): MemoryRange {
 		return memory.alloc(this.alignment, this.size);
 	}
 
-	public store(memory: Memory, ptr: ptr, value: T | option<T> | undefined, context: ComponentModelContext): void {
+	public store(memory: MemoryRange, offset: offset, value: T | option<T> | undefined, context: ComponentModelContext): void {
 		const optValue = this.asOptionValue(value, context.options);
 		const index = optValue.tag === option.none ? 0 : 1;
-		u8.store(memory, ptr, index, context);
-		ptr += u8.size;
+		u8.store(memory, offset, index, context);
+		offset += u8.size;
 		if (optValue.tag === option.some) {
-			ptr = align(ptr, this.valueType.alignment);
-			this.valueType.store(memory, ptr, optValue.value, context);
+			offset = align(offset, this.valueType.alignment);
+			this.valueType.store(memory, offset, optValue.value, context);
 		}
 	}
 
@@ -2442,17 +2552,17 @@ export class OptionType<T extends JType> implements ComponentModelType<T | optio
 		}
 	}
 
-	public copy(dest: Memory, dest_ptr: number, src: Memory, src_ptr: number, context: ComponentModelContext): void {
-		u8.copy(dest, dest_ptr, src, src_ptr, context);
-		const caseIndex = u8.load(src, src_ptr, context);
+	public copy(dest: MemoryRange, dest_offset: offset, src: ReadonlyMemoryRange, src_offset: offset, context: ComponentModelContext): void {
+		u8.copy(dest, dest_offset, src, src_offset, context);
+		const caseIndex = u8.load(src, src_offset, context);
 		if (caseIndex === 0) {
 			return;
 		} else {
-			src_ptr += u8.size;
-			src_ptr = align(src_ptr, this.alignment);
-			dest_ptr += u8.size;
-			dest_ptr = align(dest_ptr, this.alignment);
-			this.valueType.copy(dest, dest_ptr, src, src_ptr, context);
+			src_offset += u8.size;
+			src_offset = align(src_offset, this.alignment);
+			dest_offset += u8.size;
+			dest_offset = align(dest_offset, this.alignment);
+			this.valueType.copy(dest, dest_offset, src, src_offset, context);
 		}
 	}
 
@@ -2589,7 +2699,7 @@ class Callable {
 			if (!Number.isInteger(p0)) {
 				throw new ComponentModelError('Invalid pointer');
 			}
-			return this.paramTupleType.load(memory, p0 as size, context);
+			return this.paramTupleType.load(memory.range(p0 as ptr, this.paramTupleType.size), 0, context);
 		} else {
 			return this.paramTupleType.liftFlat(memory, wasmValues.values(), context);
 		}
@@ -2601,15 +2711,15 @@ class Callable {
 		} else if (this.returnType.flatTypes.length <= Callable.MAX_FLAT_RESULTS) {
 			return this.returnType.liftFlat(memory, [value!].values(), context);
 		} else {
-			return this.returnType.load(memory, value as ptr, context);
+			return this.returnType.load(memory.range(value as ptr, this.returnType.size), 0, context);
 		}
 	}
 
-	public lowerParamValues(values: JType[], memory: Memory, context: ComponentModelContext, out: size | undefined): WasmType[] {
+	public lowerParamValues(values: JType[], memory: Memory, context: ComponentModelContext, out: ptr | undefined): WasmType[] {
 		if (this.paramTupleType.flatTypes.length > Callable.MAX_FLAT_PARAMS) {
-			const ptr = out !== undefined ? out : this.paramTupleType.alloc(memory);
-			this.paramTupleType.store(memory, ptr, values, context);
-			return [ptr];
+			const writer = out !== undefined ? memory.preAllocated(out, this.paramTupleType.size) : this.paramTupleType.alloc(memory);
+			this.paramTupleType.store(writer, 0, values, context);
+			return [writer.ptr];
 		} else {
 			const result: WasmType[] = [];
 			this.paramTupleType.lowerFlat(result, memory, values, context);
@@ -2617,7 +2727,7 @@ class Callable {
 		}
 	}
 
-	public lowerReturnValue(value: JType | void, memory: Memory, context: ComponentModelContext, out: size | undefined): WasmType | void {
+	public lowerReturnValue(value: JType | void, memory: Memory, context: ComponentModelContext, out: ptr | undefined): WasmType | void {
 		if (this.returnType === undefined) {
 			return;
 		} else if (this.returnType.flatTypes.length <= Callable.MAX_FLAT_RESULTS) {
@@ -2628,8 +2738,8 @@ class Callable {
 			}
 			return result[0];
 		} else {
-			const ptr = out !== undefined ? out : this.returnType.alloc(memory);
-			this.returnType.store(memory, ptr, value, context);
+			const writer = out !== undefined ? memory.preAllocated(out, this.returnType.size) : this.returnType.alloc(memory);
+			this.returnType.store(writer, 0, value, context);
 			return;
 		}
 	}
@@ -2638,13 +2748,12 @@ class Callable {
 		const memory = context.getMemory();
 		const wasmValues = this.lowerParamValues(params, memory, context, undefined);
 		// We currently only support 'lower' mode for results > MAX_FLAT_RESULTS.
-		let resultPtr: ptr | undefined = undefined;
+		let resultRange: MemoryRange | undefined = undefined;
 		if (this.returnType !== undefined && this.returnType.flatTypes.length > FunctionType.MAX_FLAT_RESULTS) {
-			resultPtr = this.returnType.alloc(memory);
-			wasmValues.push(resultPtr);
+			resultRange = this.returnType.alloc(memory);
+			wasmValues.push(resultRange.ptr);
 		}
 		const result = wasmFunction(...wasmValues);
-		this.liftReturnValue(result, memory, context);
 		const flatReturnTypes = this.returnType === undefined ? 0 : this.returnType.flatTypes.length;
 		switch(flatReturnTypes) {
 			case 0:
@@ -2652,7 +2761,7 @@ class Callable {
 			case 1:
 				return this.liftReturnValue(result, memory, context);
 			default:
-				return this.liftReturnValue(resultPtr, memory, context);
+				return this.liftReturnValue(resultRange!.ptr, memory, context);
 		}
 	}
 }
@@ -2796,28 +2905,28 @@ export class ResourceHandleType implements ComponentModelType<ResourceHandle> {
 		this.flatTypes = u32.flatTypes;
 	}
 
-	public load(memory: Memory, ptr: ptr, context: ComponentModelContext): ResourceHandle {
-		return u32.load(memory, ptr, context);
+	public load(memory: ReadonlyMemoryRange, offset: offset, context: ComponentModelContext): ResourceHandle {
+		return u32.load(memory, offset, context);
 	}
 
 	public liftFlat(memory: Memory, values: FlatValuesIter, context: ComponentModelContext): ResourceHandle {
 		return u32.liftFlat(memory, values, context);
 	}
 
-	public alloc(memory: Memory): ptr {
+	public alloc(memory: Memory): MemoryRange {
 		return u32.alloc(memory);
 	}
 
-	public store(memory: Memory, ptr: ptr, value: ResourceHandle, context: ComponentModelContext): void {
-		u32.store(memory, ptr, value, context);
+	public store(memory: MemoryRange, offset: offset, value: ResourceHandle, context: ComponentModelContext): void {
+		u32.store(memory, offset, value, context);
 	}
 
 	public lowerFlat(result: WasmType[], memory: Memory, value: ResourceHandle, context: ComponentModelContext): void {
 		u32.lowerFlat(result, memory, value, context);
 	}
 
-	public copy(dest: Memory, dest_ptr: number, src: Memory, src_ptr: number, context: ComponentModelContext): void {
-		u32.copy(dest, dest_ptr, src, src_ptr, context);
+	public copy(dest: MemoryRange, dest_offset: offset, src: ReadonlyMemoryRange, src_offset: offset, context: ComponentModelContext): void {
+		u32.copy(dest, dest_offset, src, src_offset, context);
 	}
 }
 
@@ -2855,8 +2964,8 @@ export class ResourceType<T extends JInterface = JInterface> implements Componen
 		return result;
 	}
 
-	public load(memory: Memory, ptr: ptr, context: ComponentModelContext): T {
-		const handle = u32.load(memory, ptr, context);
+	public load(memory: ReadonlyMemoryRange, offset: offset, context: ComponentModelContext): T {
+		const handle = u32.load(memory, offset, context);
 		return context.managers.get(this.id).getResource(handle);
 	}
 
@@ -2865,16 +2974,16 @@ export class ResourceType<T extends JInterface = JInterface> implements Componen
 		return context.managers.get(this.id).getResource(handle);
 	}
 
-	public alloc(memory: Memory): ptr {
+	public alloc(memory: Memory): MemoryRange {
 		return u32.alloc(memory);
 	}
 
-	public store(memory: Memory, ptr: ptr, value: JInterface, context: ComponentModelContext): void {
+	public store(memory: MemoryRange, offset: offset, value: JInterface, context: ComponentModelContext): void {
 		let handle: ResourceHandle | undefined = value.$handle;
 		if (handle === undefined) {
 			handle = context.managers.get(this.id).register(value);
 		}
-		u32.store(memory, ptr, handle, context);
+		u32.store(memory, offset, handle, context);
 	}
 
 	public lowerFlat(result: WasmType[], memory: Memory, value: JInterface, context: ComponentModelContext): void {
@@ -2885,8 +2994,8 @@ export class ResourceType<T extends JInterface = JInterface> implements Componen
 		u32.lowerFlat(result, memory, handle, context);
 	}
 
-	public copy(dest: Memory, dest_ptr: number, src: Memory, src_ptr: number, context: ComponentModelContext): void {
-		u32.copy(dest, dest_ptr, src, src_ptr, context);
+	public copy(dest: MemoryRange, dest_offset: offset, src: ReadonlyMemoryRange, src_offset: offset, context: ComponentModelContext): void {
+		u32.copy(dest, dest_offset, src, src_offset, context);
 	}
 }
 
@@ -2907,28 +3016,28 @@ class AbstractWrapperType<T extends  NonNullable<JType>> implements ComponentMod
 		this.flatTypes = u32.flatTypes;
 	}
 
-	public load(memory: Memory, ptr: ptr, context: ComponentModelContext): T {
-		return this.wrapped.load(memory, ptr, context);
+	public load(memory: ReadonlyMemoryRange, offset: offset, context: ComponentModelContext): T {
+		return this.wrapped.load(memory, offset, context);
 	}
 
 	public liftFlat(memory: Memory, values: FlatValuesIter, context: ComponentModelContext): T {
 		return this.wrapped.liftFlat(memory, values, context);
 	}
 
-	public alloc(memory: Memory): ptr {
+	public alloc(memory: Memory): MemoryRange {
 		return u32.alloc(memory);
 	}
 
-	public store(memory: Memory, ptr: ptr, value: T, context: ComponentModelContext): void {
-		return this.wrapped.store(memory, ptr, value, context);
+	public store(memory: MemoryRange, offset: offset, value: T, context: ComponentModelContext): void {
+		return this.wrapped.store(memory, offset, value, context);
 	}
 
 	public lowerFlat(result: WasmType[], memory: Memory, value: T, context: ComponentModelContext): void {
 		return this.wrapped.lowerFlat(result, memory, value, context);
 	}
 
-	public copy(dest: Memory, dest_ptr: number, src: Memory, src_ptr: number, context: ComponentModelContext): void {
-		return this.wrapped.copy(dest, dest_ptr, src, src_ptr, context);
+	public copy(dest: MemoryRange, dest_offset: offset, src: ReadonlyMemoryRange, src_offset: offset, context: ComponentModelContext): void {
+		return this.wrapped.copy(dest, dest_offset, src, src_offset, context);
 	}
 }
 
