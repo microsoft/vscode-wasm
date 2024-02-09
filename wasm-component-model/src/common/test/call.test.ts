@@ -7,16 +7,16 @@ import assert from 'assert';
 import { u32, Memory as IMemory, ptr, size, WasmContext, Alignment, Resource, ResourceManagers, MemoryRange, ReadonlyMemoryRange } from '../componentModel';
 
 class Memory implements IMemory {
+
+
+	public readonly id: string;
 	public readonly buffer: ArrayBuffer;
-	public readonly raw: Uint8Array;
-	public readonly view: DataView;
 
 	private index: number;
 
 	constructor(byteLength: number = 65536, shared: boolean = false) {
 		this.buffer = shared ? new SharedArrayBuffer(byteLength) : new ArrayBuffer(byteLength);
-		this.raw = new Uint8Array(this.buffer);
-		this.view = new DataView(this.buffer);
+		this.id = Date.now().toString();
 		this.index = 0;
 	}
 

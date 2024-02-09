@@ -179,11 +179,12 @@ export namespace Alignment {
 const align = Alignment.align;
 
 export interface Memory {
+	readonly id: string;
 	readonly buffer: ArrayBuffer;
 	alloc(align: Alignment, size: size): MemoryRange;
 	realloc(location: MemoryRange, align: Alignment, newSize: size): MemoryRange;
-	range(ptr: ptr, size: size): ReadonlyMemoryRange;
 	preAllocated(ptr: ptr, size: size): MemoryRange;
+	range(ptr: ptr, size: size): ReadonlyMemoryRange;
 }
 
 export class MemoryError extends Error {
@@ -193,6 +194,15 @@ export class MemoryError extends Error {
 }
 
 export type offset<_T = undefined> = u32;
+
+export type MemoryRangeTransferable = {
+	kind: 'readonly' | 'writable';
+	memory: {
+		id: string;
+	};
+	ptr: ptr;
+	size: size;
+};
 
 type ArrayClazz<T extends ArrayLike<number> & { set(array: ArrayLike<number>, offset?: number): void }> = {
 	new (buffer: ArrayBuffer, byteOffset: number, length: number): T;
@@ -204,7 +214,8 @@ type BigArrayClazz<T extends ArrayLike<bigint> & { set(array: ArrayLike<bigint>,
 	new (length: number): T;
 	BYTES_PER_ELEMENT: number;
 };
-export class ReadonlyMemoryRange {
+
+export abstract class BaseMemoryRange {
 
 	protected readonly _memory: Memory;
 	private readonly _ptr: ptr;
@@ -238,6 +249,8 @@ export class ReadonlyMemoryRange {
 		}
 		return this._view;
 	}
+
+	public abstract getTransferable(): MemoryRangeTransferable;
 
 	public range(ptr: ptr, size: size): ReadonlyMemoryRange {
 		if (ptr + size > this._memory.buffer.byteLength) {
@@ -369,10 +382,31 @@ export class ReadonlyMemoryRange {
 	}
 }
 
-export class MemoryRange extends ReadonlyMemoryRange {
+export class ReadonlyMemoryRange extends BaseMemoryRange {
 
 	constructor(memory: Memory, ptr: ptr, size: size) {
 		super(memory, ptr, size);
+	}
+
+	public getTransferable(): MemoryRangeTransferable {
+		return {
+			kind: 'readonly',
+			memory: {
+				id: this._memory.id
+			},
+			ptr: this.ptr,
+			size: this.size
+		};
+	}
+}
+
+export class MemoryRange extends BaseMemoryRange {
+
+	public readonly isAllocated: boolean;
+
+	constructor(memory: Memory, ptr: ptr, size: size, isPreallocated: boolean = false) {
+		super(memory, ptr, size);
+		this.isAllocated = isPreallocated!;
 	}
 
 	public alloc(align: Alignment, size: size): MemoryRange {
@@ -381,6 +415,17 @@ export class MemoryRange extends ReadonlyMemoryRange {
 
 	public get memory(): Memory {
 		return this._memory;
+	}
+
+	public getTransferable(): MemoryRangeTransferable {
+		return {
+			kind: 'writable',
+			memory: {
+				id: this._memory.id
+			},
+			ptr: this.ptr,
+			size: this.size
+		};
 	}
 
 	public setUint8(offset: offset<u8>, value: u8): void {
