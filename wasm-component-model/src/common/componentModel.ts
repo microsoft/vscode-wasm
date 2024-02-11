@@ -259,6 +259,13 @@ export abstract class BaseMemoryRange {
 		return new ReadonlyMemoryRange(this._memory, ptr, size);
 	}
 
+	public preAllocated(ptr: ptr, size: size): MemoryRange {
+		if (ptr + size > this._memory.buffer.byteLength) {
+			throw new MemoryError(`Memory access is out of bounds. Accessing [${ptr}, ${size}], allocated[${0},${this._memory.buffer.byteLength}]`);
+		}
+		return new MemoryRange(this._memory, ptr, size);
+	}
+
 	public getUint8(offset: offset<u8>): u8 {
 		return this.view.getUint8(offset);
 	}
@@ -854,7 +861,9 @@ export enum ComponentModelTypeKind {
 	resource = 'resource',
 	resourceHandle = 'resourceHandle',
 	borrow = 'borrow',
-	own = 'own'
+	own = 'own',
+	memoryRange = 'memoryRange',
+	readonlyMemoryRange = 'readonlyMemoryRange'
 }
 
 export interface ComponentModelContext {
@@ -1574,6 +1583,74 @@ namespace $wstring {
 	}
 }
 export const wstring: ComponentModelType<string> & { getAlignmentAndByteLength: typeof $wstring.getAlignmentAndByteLength } = $wstring;
+
+namespace $MemoryRangeType {
+
+	export const kind: ComponentModelTypeKind.memoryRange = ComponentModelTypeKind.memoryRange;
+	export const size: size = ptr.size + u32.size;
+	export const alignment: Alignment = Math.max(ptr.alignment, u32.alignment);
+	export const flatTypes: readonly FlatType<WasmType>[] = [...ptr.flatTypes, ...u32.flatTypes];
+
+	export function load(memory: ReadonlyMemoryRange, offset: number): MemoryRange {
+		return memory.preAllocated(memory.getUint32(offset), memory.getUint32(offset + ptr.size));
+	}
+
+	export function liftFlat(memory: Memory, values: FlatValuesIter): MemoryRange {
+		return memory.preAllocated(values.next().value as ptr, values.next().value as u32);
+	}
+
+	export function alloc(memory: Memory): MemoryRange {
+		return memory.alloc(alignment, size);
+	}
+
+	export function store(memory: MemoryRange, offset: number, value: MemoryRange): void {
+		memory.setUint32(offset, value.ptr);
+		memory.setUint32(offset + ptr.size, value.size);
+	}
+
+	export function lowerFlat(result: WasmType[], _memory: Memory, value: MemoryRange): void {
+		result.push(value.ptr, value.size);
+	}
+
+	export function copy(dest: MemoryRange, dest_offset: number, src: ReadonlyMemoryRange, src_offset: number): void {
+		src.copyBytes(src_offset, size, dest, dest_offset);
+	}
+}
+export const MemoryRangeType: ComponentModelType<MemoryRange> = $MemoryRangeType;
+
+namespace $ReadonlyMemoryRangeType {
+
+	export const kind: ComponentModelTypeKind.readonlyMemoryRange = ComponentModelTypeKind.readonlyMemoryRange;
+	export const size: size = ptr.size + u32.size;
+	export const alignment: Alignment = Math.max(ptr.alignment, u32.alignment);
+	export const flatTypes: readonly FlatType<WasmType>[] = [...ptr.flatTypes, ...u32.flatTypes];
+
+	export function load(memory: ReadonlyMemoryRange, offset: number): ReadonlyMemoryRange {
+		return memory.range(memory.getUint32(offset), memory.getUint32(offset + ptr.size));
+	}
+
+	export function liftFlat(memory: Memory, values: FlatValuesIter): ReadonlyMemoryRange {
+		return memory.range(values.next().value as ptr, values.next().value as u32);
+	}
+
+	export function alloc(memory: Memory): MemoryRange {
+		return memory.alloc(alignment, size);
+	}
+
+	export function store(memory: MemoryRange, offset: number, value: ReadonlyMemoryRange): void {
+		memory.setUint32(offset, value.ptr);
+		memory.setUint32(offset + ptr.size, value.size);
+	}
+
+	export function lowerFlat(result: WasmType[], _memory: Memory, value: ReadonlyMemoryRange): void {
+		result.push(value.ptr, value.size);
+	}
+
+	export function copy(dest: MemoryRange, dest_offset: number, src: ReadonlyMemoryRange, src_offset: number): void {
+		src.copyBytes(src_offset, size, dest, dest_offset);
+	}
+}
+export const ReadonlyMemoryRangeType: ComponentModelType<ReadonlyMemoryRange> = $ReadonlyMemoryRangeType;
 
 export type JArray = JType[];
 export class ListType<T> implements ComponentModelType<T[]> {
@@ -2699,7 +2776,7 @@ export interface JInterface {
 	$handle?: ResourceHandle;
 }
 
-export type JType = number | bigint | string | boolean | JArray | JRecord | JVariantCase | JTuple | JEnum | JInterface | option<any> | undefined | result<any, any> | Int8Array | Int16Array | Int32Array | BigInt64Array | Uint8Array | Uint16Array | Uint32Array | BigUint64Array | Float32Array | Float64Array;
+export type JType = number | bigint | string | boolean | JArray | JRecord | JVariantCase | JTuple | JEnum | JInterface | option<any> | undefined | result<any, any> | Int8Array | Int16Array | Int32Array | BigInt64Array | Uint8Array | Uint16Array | Uint32Array | BigUint64Array | Float32Array | Float64Array | MemoryRange | ReadonlyMemoryRange ;
 
 export type CallableParameter = [/* name */string, /* type */GenericComponentModelType];
 

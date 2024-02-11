@@ -3,7 +3,7 @@
  * Licensed under the MIT License. See License.txt in the project root for license information.
  * ------------------------------------------------------------------------------------------ */
 
-import { ComponentModelType, JType, ptr, u32 } from '@vscode/wasm-component-model';
+import { ComponentModelType, JType, MemoryRangeType, ptr, u32 } from '@vscode/wasm-component-model';
 
 import { LockableRecord, SharedObject, RecordDescriptor, Memory, type MemoryRange } from './sobject';
 
@@ -13,7 +13,7 @@ namespace SArray {
 		capacity: u32;
 		start: u32;
 		next: u32;
-		elements: ptr;
+		elements: MemoryRange;
 	};
 }
 
@@ -22,10 +22,9 @@ export class SArray<T extends JType> extends LockableRecord<SArray.Properties> {
 	private static recordInfo: RecordDescriptor<SArray.Properties> = LockableRecord.createRecordInfo([
 		['_lock', u32],
 		['state', u32],
-		['capacity', u32],
 		['start', u32],
 		['next', u32],
-		['elements', ptr]
+		['elements', MemoryRangeType]
 	]);
 
 	private readonly type: ComponentModelType<T>;
@@ -39,7 +38,7 @@ export class SArray<T extends JType> extends LockableRecord<SArray.Properties> {
 			access.capacity = capacity;
 			access.start = 0;
 			access.next = 0;
-			access.elements = memoryOrLocation.alloc(u32.alignment, capacity * u32.size).ptr;
+			access.elements = memoryOrLocation.alloc(u32.alignment, capacity * u32.size);
 		}
 	}
 
@@ -90,7 +89,7 @@ export class SArray<T extends JType> extends LockableRecord<SArray.Properties> {
 				memory.raw.copyWithin(newElements, currentElements, currentElements + currentCapacity * u32.size);
 				access.elements = newElements;
 				access.capacity = newCapacity;
-				memory.free(currentElements);
+				currentElements.free();
 			}
 			let next = access.next;
 			for(const value of items) {
