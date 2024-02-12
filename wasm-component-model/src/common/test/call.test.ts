@@ -30,7 +30,7 @@ class Memory implements IMemory {
 		return memory;
 	}
 
-	public range(ptr: ptr, bytes: number): ReadonlyMemoryRange {
+	public readonly(ptr: ptr, bytes: number): ReadonlyMemoryRange {
 		return new ReadonlyMemoryRange(this, ptr, bytes);
 	}
 

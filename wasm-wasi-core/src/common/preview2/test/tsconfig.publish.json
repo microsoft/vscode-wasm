@@ -18,6 +18,7 @@
         "declaration": true,
         "stripInternal": true,
         "sourceMap": false,
+        "declarationMap": false,
         "noUnusedLocals": true,
         "noUnusedParameters": true,
         "outDir": "../../../../lib/common/preview2/test",

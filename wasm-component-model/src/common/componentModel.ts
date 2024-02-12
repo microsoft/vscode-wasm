@@ -184,7 +184,7 @@ export interface Memory {
 	alloc(align: Alignment, size: size): MemoryRange;
 	realloc(location: MemoryRange, align: Alignment, newSize: size): MemoryRange;
 	preAllocated(ptr: ptr, size: size): MemoryRange;
-	range(ptr: ptr, size: size): ReadonlyMemoryRange;
+	readonly(ptr: ptr, size: size): ReadonlyMemoryRange;
 	free?(range: MemoryRange): void;
 }
 
@@ -1524,7 +1524,7 @@ namespace $wstring {
 		const data = src.getUint32(src_offset + offsets.data);
 		const codeUnits = src.getUint32(src_offset + offsets.codeUnits);
 		const [alignment, byteLength] = getAlignmentAndByteLength(codeUnits, context.options);
-		const srcReader = src.memory.range(data, byteLength);
+		const srcReader = src.memory.readonly(data, byteLength);
 		const destWriter = dest.memory.alloc(alignment, byteLength);
 		srcReader.copyBytes(0, byteLength, destWriter, 0);
 	}
@@ -1550,10 +1550,10 @@ namespace $wstring {
 		}
 		if (encoding === 'utf-8') {
 			const byteLength = codeUnits;
-			const reader = memory.range(data, byteLength);
+			const reader = memory.readonly(data, byteLength);
 			return utf8Decoder.decode(reader.getUint8Array(0, byteLength));
 		} else if (encoding === 'utf-16') {
-			const reader = memory.range(data, codeUnits * 2);
+			const reader = memory.readonly(data, codeUnits * 2);
 			return String.fromCharCode(...reader.getUint16Array(data, codeUnits));
 		} else {
 			throw new Error('Unsupported encoding');
@@ -1625,11 +1625,11 @@ export namespace ReadonlyMemoryRange {
 	export const flatTypes: readonly FlatType<WasmType>[] = [...ptr.flatTypes, ...u32.flatTypes];
 
 	export function load(memRange: ReadonlyMemoryRange, offset: number): ReadonlyMemoryRange {
-		return memRange.memory.range(memRange.getUint32(offset), memRange.getUint32(offset + ptr.size));
+		return memRange.memory.readonly(memRange.getUint32(offset), memRange.getUint32(offset + ptr.size));
 	}
 
 	export function liftFlat(memory: Memory, values: FlatValuesIter): ReadonlyMemoryRange {
-		return memory.range(values.next().value as ptr, values.next().value as u32);
+		return memory.readonly(values.next().value as ptr, values.next().value as u32);
 	}
 
 	export function alloc(memory: Memory): MemoryRange {
@@ -1677,13 +1677,13 @@ export class ListType<T> implements ComponentModelType<T[]> {
 		const offsets = ListType.offsets;
 		const dataPtr: ptr =  memRange.getUint32(offset + offsets.data);
 		const length: u32 = memRange.getUint32(offset + offsets.length);
-		return this.loadFromRange(memRange.memory.range(dataPtr, length * this.elementType.size), length, context);
+		return this.loadFromRange(memRange.memory.readonly(dataPtr, length * this.elementType.size), length, context);
 	}
 
 	public liftFlat(memory: Memory, values: FlatValuesIter, context: ComponentModelContext): T[] {
 		const dataPtr: ptr = values.next().value as size;
 		const length: u32 = values.next().value as u32;
-		return this.loadFromRange(memory.range(dataPtr, length * this.elementType.size), length, context);
+		return this.loadFromRange(memory.readonly(dataPtr, length * this.elementType.size), length, context);
 	}
 
 	public alloc(memory: Memory): MemoryRange {
@@ -1711,7 +1711,7 @@ export class ListType<T> implements ComponentModelType<T[]> {
 		src.copyBytes(src_offset, this.size, dest, dest_offset);
 		const data = src.getUint32(src_offset + offsets.data);
 		const byteLength = src.getUint32(src_offset + offsets.length) * this.elementType.size;
-		const srcReader = src.memory.range(data, byteLength);
+		const srcReader = src.memory.readonly(data, byteLength);
 		const destWriter = dest.memory.alloc(this.elementType.alignment, byteLength);
 		srcReader.copyBytes(0, byteLength, destWriter, 0);
 	}
@@ -1762,13 +1762,13 @@ abstract class TypeArrayType<T extends { length: number; byteLength: number }, E
 		const offsets = TypeArrayType.offsets;
 		const dataPtr: ptr =  memRange.getUint32(offset + offsets.data);
 		const length: u32 = memRange.getUint32(offset + offsets.length);
-		return this.loadFromRange(memRange.memory.range(dataPtr, length * this.elementType.size), length);
+		return this.loadFromRange(memRange.memory.readonly(dataPtr, length * this.elementType.size), length);
 	}
 
 	public liftFlat(memory: Memory, values: FlatValuesIter): T {
 		const dataPtr: ptr = values.next().value as size;
 		const length: u32 = values.next().value as u32;
-		return this.loadFromRange(memory.range(dataPtr, length * this.elementType.size), length);
+		return this.loadFromRange(memory.readonly(dataPtr, length * this.elementType.size), length);
 	}
 
 	public alloc(memory: Memory): MemoryRange {
@@ -1796,7 +1796,7 @@ abstract class TypeArrayType<T extends { length: number; byteLength: number }, E
 		src.copyBytes(src_offset, this.size, dest, dest_offset);
 		const data = src.getUint32(src_offset + offsets.data);
 		const byteLength = src.getUint32(src_offset + offsets.length) * this.elementType.size;
-		const srcReader = src.memory.range(data, byteLength);
+		const srcReader = src.memory.readonly(data, byteLength);
 		const destWriter = dest.memory.alloc(this.elementType.alignment, byteLength);
 		srcReader.copyBytes(0, byteLength, destWriter, 0);
 	}
@@ -2819,7 +2819,7 @@ class Callable {
 			if (!Number.isInteger(p0)) {
 				throw new ComponentModelError('Invalid pointer');
 			}
-			return this.paramTupleType.load(memory.range(p0 as ptr, this.paramTupleType.size), 0, context);
+			return this.paramTupleType.load(memory.readonly(p0 as ptr, this.paramTupleType.size), 0, context);
 		} else {
 			return this.paramTupleType.liftFlat(memory, wasmValues.values(), context);
 		}
@@ -2831,7 +2831,7 @@ class Callable {
 		} else if (this.returnType.flatTypes.length <= Callable.MAX_FLAT_RESULTS) {
 			return this.returnType.liftFlat(memory, [value!].values(), context);
 		} else {
-			return this.returnType.load(memory.range(value as ptr, this.returnType.size), 0, context);
+			return this.returnType.load(memory.readonly(value as ptr, this.returnType.size), 0, context);
 		}
 	}
 

@@ -8,7 +8,7 @@ import { AnyConnection, BaseConnection, type ConnectionPort, WorkerClientBase, t
 
 type ConnectionType = BaseConnection<WorkerMessages.Client.AsyncCalls, undefined, undefined, undefined, undefined, undefined>;
 
-type WasiConnectionInfo = {
+export type WasiConnectionInfo = {
 	id: number;
 	port: ConnectionPort;
 };
@@ -46,4 +46,5 @@ class _WasiManagementClient extends WorkerClientBase {
 	}
 }
 
+export type WasiManagementClient = WorkerClient & { createConnection(): Promise<WasiConnectionInfo>; dropConnection(id: number): Promise<void> };
 export const WasiManagementClient = WorkerClient<_WasiManagementClient>(_WasiManagementClient, RAL().Worker.getWorkerUri('common/preview2/wasiWorker.js'));

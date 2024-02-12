@@ -22,6 +22,7 @@ export interface SharedMemory extends Memory {
 	range: {
 		fromWritable(transferable: MemoryRangeTransferable): MemoryRange;
 		fromReadonly(transferable: MemoryRangeTransferable): ReadonlyMemoryRange;
+		assertSameMemory(transferable: MemoryRangeTransferable | MemoryRangeTransferable[]): void;
 	};
 }
 
@@ -69,11 +70,25 @@ class MemoryImplRange {
 		return new MemoryRange(this.memory, transferable.ptr, transferable.size, true);
 
 	}
-	public fromReadonly(transferable: MemoryRangeTransferable): ReadonlyMemoryRange{
+	public fromReadonly(transferable: MemoryRangeTransferable): ReadonlyMemoryRange {
 		if (transferable.memory.id !== this.memory.id) {
 			throw new MemoryError('Memory transferable has different memory id.');
 		}
 		return new ReadonlyMemoryRange(this.memory, transferable.ptr, transferable.size);
+	}
+
+	public assertSameMemory(transferable: MemoryRangeTransferable | MemoryRangeTransferable[]): void {
+		if (Array.isArray(transferable)) {
+			for (const t of transferable) {
+				if (t.memory.id !== this.memory.id) {
+					throw new MemoryError('Memory transferable has different memory id.');
+				}
+			}
+		} else {
+			if (transferable.memory.id !== this.memory.id) {
+				throw new MemoryError('Memory transferable has different memory id.');
+			}
+		}
 	}
 }
 
@@ -235,6 +250,61 @@ export class Lock {
 
 }
 
+export class Signal {
+
+	private readonly buffer: Int32Array;
+
+	constructor(bufferOrRange: Int32Array | MemoryRange) {
+		if (bufferOrRange instanceof MemoryRange) {
+			this.buffer = bufferOrRange.getInt32View(0, 1);
+		} else {
+			this.buffer = bufferOrRange;
+		}
+		this.buffer[0] = 0;
+	}
+
+	public wait(): void {
+		const result = Atomics.wait(this.buffer, 0, 0);
+		if (result === 'timed-out') {
+			throw new Error(`timed-out should never happen.`);
+		} else if (result === 'not-equal') {
+			const value = Atomics.load(this.buffer, 0);
+			if (value !== 1) {
+				throw new Error(`Unexpected signal value ${value}`);
+			}
+		}
+	}
+
+	public waitAsync(): Promise<void> | void {
+		const p = Atomics.waitAsync(this.buffer, 0, 0);
+		if (p.async === false) {
+			if (p.value === 'timed-out') {
+				throw new Error(`timed-out should never happen.`);
+			} else if (p.value === 'not-equal') {
+				const value = Atomics.load(this.buffer, 0);
+				if (value !== 1) {
+					throw new Error(`Unexpected signal value ${value}`);
+				}
+			}
+		} else {
+			return p.value.then((result) => {
+				if (result === 'timed-out') {
+					throw new Error(`timed-out should never happen.`);
+				}
+			});
+		}
+	}
+
+	public isResolved(): boolean {
+		return Atomics.load(this.buffer, 0) === 1;
+	}
+
+	public resolve(): void {
+		Atomics.store(this.buffer, 0, 1);
+		Atomics.notify(this.buffer, 0);
+	}
+}
+
 export abstract class SharedObject {
 
 	public static Context: ComponentModelContext = {
@@ -243,22 +313,19 @@ export abstract class SharedObject {
 	};
 
 	private readonly _memoryRange: MemoryRange;
-	private readonly _allocated: boolean;
 
 	protected constructor(allocationOrLocation: Allocation | MemoryRange) {
 		if (allocationOrLocation instanceof MemoryRange) {
 			this._memoryRange = allocationOrLocation;
-			this._allocated = false;
 		} else if (allocationOrLocation instanceof Allocation) {
 			this._memoryRange = allocationOrLocation.alloc();
-			this._allocated = true;
 		} else {
 			throw new Error('Invalid argument');
 		}
 	}
 
-	public dispose(): void {
-		if (!this._allocated) {
+	public free(): void {
+		if (!this.memoryRange.isAllocated) {
 			// We should think about a trace when we dispose
 			// a shared object from a thread that hasn't allocated it.
 		}
@@ -275,6 +342,12 @@ export abstract class SharedObject {
 			throw new Error(`Memory is not a shared memory instance`);
 		}
 		return result as SharedMemory;
+	}
+
+	protected assertNoTimeout(value: ReturnType<Atomics['wait']>): void {
+		if (value === 'timed-out') {
+			throw new Error(`timed-out should never happen.`);
+		}
 	}
 }
 

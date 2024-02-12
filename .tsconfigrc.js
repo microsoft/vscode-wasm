@@ -501,6 +501,7 @@ const defaultCompilerOptions = {
 /** @type CompilerOptions */
 const compileCompilerOptions = CompilerOptions.assign(defaultCompilerOptions, {
 	sourceMap: true,
+	declarationMap: true,
 	noUnusedLocals: true,
 	noUnusedParameters: true,
 });
@@ -516,6 +517,7 @@ const compileProjectOptions = {
 /** @type CompilerOptions */
 const watchCompilerOptions = CompilerOptions.assign(defaultCompilerOptions, {
 	sourceMap: true,
+	declarationMap: true,
 	noUnusedLocals: false,
 	noUnusedParameters: false,
 	assumeChangesOnlyAffectDirectDependencies: true,
@@ -532,6 +534,7 @@ const watchProjectOptions = {
 /** @type CompilerOptions */
 const publishCompilerOptions = CompilerOptions.assign(defaultCompilerOptions, {
 	sourceMap: false,
+	declarationMap: false,
 	noUnusedLocals: true,
 	noUnusedParameters: true,
 });

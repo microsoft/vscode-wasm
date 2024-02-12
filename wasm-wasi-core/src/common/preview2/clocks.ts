@@ -8,35 +8,42 @@ import { u64 } from '@vscode/wasm-component-model';
 
 import { clocks } from '@vscode/wasi';
 import { Pollable } from './io';
+import type { WasiClient } from './wasiClient';
 
-export function createMonotonicClock(): clocks.MonotonicClock {
+export function createMonotonicClock(client: WasiClient) {
 	return {
-		now: () => {
+		now(): clocks.MonotonicClock.Instant {
 			return RAL().clock.monotonic();
 		},
-		resolution: () => {
+		resolution(): clocks.MonotonicClock.Duration {
 			return 1n;
 		},
-		subscribeDuration: (_when: u64) => {
-			const pollable = new Pollable();
+		subscribeDuration(when: u64): Pollable {
+			const pollable = new Pollable(client.getSharedMemory());
+			client.setTimeout(pollable.signalRange(), when);
 			return pollable;
 		},
-		subscribeInstant: (_when : u64) => {
-			const pollable = new Pollable();
+		subscribeInstant(when : u64): Pollable {
+			const pollable = new Pollable(client.getSharedMemory());
+			const duration = when - RAL().clock.realtime();
+			if (duration < 0) {
+				pollable.resolve();
+			} else {
+				client.setTimeout(pollable.signalRange(), duration);
+			}
 			return pollable;
 		}
-	};
+	} satisfies clocks.MonotonicClock;
 }
 
-
-export function createWallClock(): clocks.WallClock {
+export function createWallClock() {
 	return {
-		now: () => {
+		now(): clocks.WallClock.Datetime {
 			// const value: i64 = RAL().clock.monotonic();
 			return { seconds: 0n, nanoseconds: 0 };
 		},
-		resolution: () => {
+		resolution(): clocks.WallClock.Datetime {
 			return { seconds: 0n, nanoseconds: 1 };
 		}
-	};
+	} satisfies clocks.WallClock;
 }

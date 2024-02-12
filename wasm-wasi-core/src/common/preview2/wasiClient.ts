@@ -3,7 +3,7 @@
  * Licensed under the MIT License. See License.txt in the project root for license information.
  * ------------------------------------------------------------------------------------------ */
 import type { MemoryRange, MemoryRangeTransferable } from '@vscode/wasm-component-model';
-import { AnyConnection, BaseConnection, ConnectionPort } from '@vscode/wasm-wasi-kit';
+import { AnyConnection, BaseConnection, ConnectionPort, type SharedMemory } from '@vscode/wasm-wasi-kit';
 
 export namespace Client {
 	export type Jobs = {
@@ -12,6 +12,12 @@ export namespace Client {
 			signal: MemoryRangeTransferable;
 			currentTime: number;
 			timeout: number;
+		};
+	} | {
+		method: 'pollables/race';
+		params: {
+			signal: MemoryRangeTransferable;
+			pollables: MemoryRangeTransferable[];
 		};
 	};
 	export type SyncCalls = {
@@ -29,9 +35,14 @@ export class WasiClient {
 
 	private readonly connection: ConnectionType;
 
-	constructor(port: ConnectionPort) {
+	constructor(memory: SharedMemory, port: ConnectionPort) {
 		this.connection = AnyConnection.create(port);
+		this.connection.initializeSyncCall(memory);
 		this.connection.listen();
+	}
+
+	public getSharedMemory(): SharedMemory {
+		return this.connection.getSharedMemory();
 	}
 
 	public setTimeout(signal: MemoryRange, timeout: bigint): void {
@@ -41,5 +52,9 @@ export class WasiClient {
 
 	public clearTimeout(signal: MemoryRange): void {
 		this.connection.callSync('clearTimeout', { signal: signal.getTransferable() });
+	}
+
+	public racePollables(signal: MemoryRange, pollables: MemoryRange[]): void {
+		return this.connection.notify('pollables/race', { signal: signal.getTransferable(), pollables: pollables.map(p => p.getTransferable()) });
 	}
 }
