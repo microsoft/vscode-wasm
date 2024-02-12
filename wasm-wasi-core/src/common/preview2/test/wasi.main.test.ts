@@ -35,7 +35,7 @@ suite(`Wasi Worker Tests`, () => {
 		client.setTimeout(memRange, BigInt(100 * 1e6));
 		Atomics.wait(signal, 0, 0);
 		const diff = Date.now() - start;
-		assert.ok(diff >= 100 && diff <= 150, `Diff ${diff}`);
+		assert.ok(diff >= 100 && diff <= 150, `Time difference is: ${diff}`);
 		memRange.free();
 	}).timeout(2000);
 
@@ -59,7 +59,7 @@ suite(`Wasi Worker Tests`, () => {
 		assert.ok(!pollable.ready());
 		pollable.block();
 		const diff = Date.now() - start;
-		assert.ok(diff >= 100 && diff <= 150);
+		assert.ok(diff >= 100 && diff <= 150, `Time difference is: ${diff}`);
 		Pollable.$drop(pollable);
 	}).timeout(2000);
 
@@ -70,7 +70,7 @@ suite(`Wasi Worker Tests`, () => {
 		assert.ok(!pollable.ready());
 		pollable.block();
 		const diff = Date.now() - start;
-		assert.ok(diff >= 100 && diff <= 150);
+		assert.ok(diff >= 100 && diff <= 150, `Time difference is: ${diff}`);
 		Pollable.$drop(pollable);
 	}).timeout(2000);
 
