@@ -379,7 +379,7 @@ export abstract class LockableRecord<T extends RecordProperties> extends SharedR
 		super(recordInfo, memoryOrLocation);
 		if (lock === undefined) {
 			const offset = recordInfo.getField('_lock')!.offset;
-			const lockBuffer = this.memoryRange.getInt32Array(offset, 1);
+			const lockBuffer = this.memoryRange.getInt32View(offset, 1);
 			// We allocated the memory for this shared record so we need to initialize
 			// the lock count to 1. If we use an existing memory location, we need to
 			// leave the lock count untouched since the shared record could be locked in

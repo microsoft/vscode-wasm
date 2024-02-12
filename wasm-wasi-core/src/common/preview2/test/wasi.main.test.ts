@@ -5,21 +5,21 @@
 import assert from 'assert';
 
 import { Alignment, u32 } from '@vscode/wasm-component-model';
-import { Memory, MemoryLocation, SharedObject } from '@vscode/wasm-wasi-kit';
+import { SharedMemory } from '@vscode/wasm-wasi-kit';
 
 import { WasiManagementClient } from '../wasiManagementClient';
 import { WasiClient } from '../wasiClient';
 
 suite(`Wasi Worker Tests`, () => {
 
-	let memory: Memory;
+	let memory: SharedMemory;
 	suiteSetup(async () => {
-		memory = await Memory.create();
+		memory = await SharedMemory.create();
 	});
 
 	test(`setTimeout`, async () => {
-		const ptr = memory.alloc(Alignment.word, u32.size * 2);
-		const signal = new Int32Array(memory.buffer, ptr, 1);
+		const memRange = memory.alloc(Alignment.word, u32.size * 2);
+		const signal = memRange.getInt32View(0, 1);
 
 		const managementClient = new WasiManagementClient();
 		await managementClient.launch(memory);
@@ -27,7 +27,7 @@ suite(`Wasi Worker Tests`, () => {
 
 		const client = new WasiClient(connectionInfo.port);
 		const start = Date.now();
-		client.setTimeout(MemoryLocation.create(ptr), BigInt(500 * 1e6));
+		client.setTimeout(memRange, BigInt(500 * 1e6));
 		Atomics.wait(signal, 0, 0);
 		const diff = Date.now() - start;
 		assert.ok(diff >= 500 && diff <= 600);

@@ -2,13 +2,14 @@
  * Copyright (c) Microsoft Corporation. All rights reserved.
  * Licensed under the MIT License. See License.txt in the project root for license information.
  * ------------------------------------------------------------------------------------------ */
-import { AnyConnection, BaseConnection, ConnectionPort, type MemoryLocation } from '@vscode/wasm-wasi-kit';
+import type { MemoryRange, MemoryRangeTransferable } from '@vscode/wasm-component-model';
+import { AnyConnection, BaseConnection, ConnectionPort } from '@vscode/wasm-wasi-kit';
 
 export namespace Client {
 	export type Jobs = {
 		method: 'setTimeout';
 		params: {
-			signal: MemoryLocation.Surrogate;
+			signal: MemoryRangeTransferable;
 			currentTime: number;
 			timeout: number;
 		};
@@ -16,7 +17,7 @@ export namespace Client {
 	export type SyncCalls = {
 		method: 'clearTimeout';
 		params: {
-			signal: MemoryLocation.Surrogate;
+			signal: MemoryRangeTransferable;
 		};
 		result: void;
 	};
@@ -33,12 +34,12 @@ export class WasiClient {
 		this.connection.listen();
 	}
 
-	public setTimeout(signal: MemoryLocation, timeout: bigint): void {
+	public setTimeout(signal: MemoryRange, timeout: bigint): void {
 		const ms = Number(timeout / 1000000n) ;
-		this.connection.notify('setTimeout', { signal: signal.getSurrogate(), currentTime: Date.now(), timeout: ms });
+		this.connection.notify('setTimeout', { signal: signal.getTransferable(), currentTime: Date.now(), timeout: ms });
 	}
 
-	public clearTimeout(signal: MemoryLocation): void {
-		this.connection.callSync('clearTimeout', { signal: signal.getSurrogate() });
+	public clearTimeout(signal: MemoryRange): void {
+		this.connection.callSync('clearTimeout', { signal: signal.getTransferable() });
 	}
 }

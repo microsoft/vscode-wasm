@@ -5,14 +5,14 @@
 import RAL from '../ral';
 
 import type { Disposable } from 'vscode';
-import { AnyConnection, BaseConnection, type ConnectionPort, SharedObject, MultiConnectionWorker, BaseWorker, type Memory } from '@vscode/wasm-wasi-kit';
+import { AnyConnection, BaseConnection, type ConnectionPort, MultiConnectionWorker, BaseWorker, type SharedMemory } from '@vscode/wasm-wasi-kit';
 import type { Client } from './wasiClient';
 
 type ConnectionType = BaseConnection<undefined, undefined, undefined, undefined, Client.SyncCalls, Client.Jobs>;
 
 export class WasiWorker extends MultiConnectionWorker<ConnectionType> {
 
-	private memory!: Memory;
+	private memory!: SharedMemory;
 	private readonly timeouts: Map<number, Disposable>;
 
 	constructor(connection: AnyConnection) {
@@ -20,13 +20,13 @@ export class WasiWorker extends MultiConnectionWorker<ConnectionType> {
 		this.timeouts = new Map();
 	}
 
-	protected initialize(memory: Memory): void {
+	protected initialize(memory: SharedMemory): void {
 		this.memory = memory;
 	}
 
 	protected createConnection(port: ConnectionPort): Promise<ConnectionType> {
 		const connection: ConnectionType = AnyConnection.create(port);
-		connection.initializeSyncCall(this.connection.getSyncMemory());
+		connection.initializeSyncCall(this.connection.getSharedMemory());
 		connection.onNotify('setTimeout', async (params) => {
 			if (this.memory.id !== params.signal.memory.id) {
 				throw new Error('Memory mismatch');

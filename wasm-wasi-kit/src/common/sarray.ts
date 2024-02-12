@@ -58,7 +58,7 @@ export class SArray<T extends JType> extends LockableRecord<SArray.Properties> {
 	}
 
 	private get capacity(): number {
-		const result = this.access.elements.size / this.type.size;
+		const result = this.access.elements.size / ptr.size;
 		if (!Number.isInteger(result)) {
 			throw new Error(`Capacity must me an integer, but got [${result}]`);
 		}
