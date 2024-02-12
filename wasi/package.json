@@ -40,6 +40,6 @@
 		"lint": "node ../node_modules/eslint/bin/eslint.js --ext ts src",
 		"all": "npm run clean && npm run compile && npm run lint",
 		"all:publish": "git clean -xfd . && npm install && npm run compile:publish && npm run lint",
-		"generate": "node ../wasm-component-model/lib/tools/main.js --outDir ./src --resourceStyle module --package wasi: ./src/wasi.json"
+		"generate": "node ../wasm-component-model/lib/tools/main.js --outDir ./src --resourceStyle module --package wasi ./src/wasi.json"
 	}
 }

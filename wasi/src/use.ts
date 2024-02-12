@@ -1,5 +1,5 @@
 
-import { clocks } from './main';
+import wasi, { clocks } from './main';
 
 clocks.MonotonicClock._.id;
 
@@ -10,4 +10,7 @@ let i: MonotonicClock = {} as any;
 
 i.now();
 i.resolution();
-i.subscribe(x, false);
+
+let w: wasi = {} as any;
+w.io?.Poll?.poll;
+wasi._.packages.get('io');
