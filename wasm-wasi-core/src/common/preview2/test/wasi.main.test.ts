@@ -81,12 +81,14 @@ suite(`Wasi Worker Tests`, () => {
 		const poll = createPoll(client);
 		const start = Date.now();
 		let result = poll.poll([first, second]);
-		const diff = Date.now() - start;
+		let diff = Date.now() - start;
 		assert.ok(diff >= 100 && diff <= 150, `Time difference is: ${diff}`);
 		assert.strictEqual(result.length, 1);
 		assert.strictEqual(result[0], 0);
 		second.block();
 		result = poll.poll([first, second]);
+		diff = Date.now() - start;
+		assert.ok(diff >= 200 && diff <= 250, `Time difference is: ${diff}`);
 		assert.strictEqual(result.length, 2);
 		assert.strictEqual(result[0], 0);
 		assert.strictEqual(result[1], 1);
