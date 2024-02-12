@@ -68,10 +68,12 @@ export class WasiWorker extends MultiConnectionWorker<ConnectionType> {
 					break;
 				}
 			}
-			if (!isReady && promises.length > 0) {
+			if (isReady || promises.length === 0) {
+				signal.resolve();
+			} else {
 				await Promise.race(promises);
+				signal.resolve();
 			}
-			signal.resolve();
 		});
 		connection.listen();
 		return Promise.resolve(connection);

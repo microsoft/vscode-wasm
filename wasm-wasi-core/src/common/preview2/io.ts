@@ -63,9 +63,8 @@ export function createPoll(client: WasiClient) {
 		Pollable: Pollable,
 		poll(p: io.Poll.Pollable.Interface[]): Uint32Array {
 			const pollables: Pollable[] = p as Pollable[];
-			const signalMemory = client.getSharedMemory().alloc(s32.size, s32.alignment);
-			const signal = new Signal(signalMemory);
-			client.racePollables(signalMemory, pollables.map(p => p.signalRange()));
+			const signal = new Signal(new Allocation(client.getSharedMemory(), s32.alignment, s32.size));
+			client.racePollables(signal.memoryRange, pollables.map(p => p.signalRange()));
 			signal.wait();
 			const result: number[] = [];
 			for (const [index, pollable] of pollables.entries()) {

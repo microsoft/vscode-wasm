@@ -144,7 +144,9 @@ class MemoryImpl implements SharedMemory {
 			if (ptr === 0) {
 				throw new Error('Allocation failed');
 			}
-			return new MemoryRange(this, ptr, size);
+			const result = new MemoryRange(this, ptr, size);
+			result.getUint8View(0).fill(0);
+			return result;
 		} catch (error) {
 			RAL().console.error(`Alloc [${align}, ${size}] failed. Buffer size: ${this.memory.buffer.byteLength}`);
 			throw error;
@@ -252,15 +254,32 @@ export class Lock {
 
 export class Signal {
 
+	private readonly _memoryRange: MemoryRange | undefined;
 	private readonly buffer: Int32Array;
 
-	constructor(bufferOrRange: Int32Array | MemoryRange) {
-		if (bufferOrRange instanceof MemoryRange) {
-			this.buffer = bufferOrRange.getInt32View(0, 1);
+	constructor(param: Int32Array | MemoryRange | Allocation) {
+		if (param instanceof Allocation) {
+			this._memoryRange = param.alloc();
+			this.buffer = this.memoryRange.getInt32View(0, 1);
+			Atomics.store(this.buffer, 0, 0);
+		} else if (param instanceof MemoryRange) {
+			this.buffer = param.getInt32View(0, 1);
 		} else {
-			this.buffer = bufferOrRange;
+			this.buffer = param;
 		}
-		this.buffer[0] = 0;
+	}
+
+	public get memoryRange(): MemoryRange {
+		if (this._memoryRange === undefined) {
+			throw new Error(`Memory range not initialized`);
+		}
+		return this._memoryRange;
+	}
+
+	public free(): void {
+		if (this.memoryRange !== undefined) {
+			this.memoryRange.free();
+		}
 	}
 
 	public wait(): void {
@@ -342,12 +361,6 @@ export abstract class SharedObject {
 			throw new Error(`Memory is not a shared memory instance`);
 		}
 		return result as SharedMemory;
-	}
-
-	protected assertNoTimeout(value: ReturnType<Atomics['wait']>): void {
-		if (value === 'timed-out') {
-			throw new Error(`timed-out should never happen.`);
-		}
 	}
 }
 
