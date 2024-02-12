@@ -8,7 +8,7 @@ import type { URI } from 'vscode-uri';
 
 import type * as Messages from '../common/workerMessages';
 import { Connection } from './connection';
-import { type Memory } from '../common/sobject';
+import { type SharedMemory } from '../common/sobject';
 import type { AnyConnection } from '../common/connection';
 import * as cc from '../common/workerClient';
 
@@ -24,7 +24,7 @@ export function WorkerClient<C>(base: new () => cc.WorkerClientBase, workerLocat
 			super();
 		}
 
-		public async launch(memory: Memory): Promise<void> {
+		public async launch(memory: SharedMemory): Promise<void> {
 			return new Promise<void>((resolve, reject) => {
 				this.worker = new Worker(workerLocation.fsPath, { argv: args });
 				const connection = new Connection<Messages.Client.AsyncCalls, undefined, undefined, undefined, undefined, Messages.Service.Notifications>(this.worker);

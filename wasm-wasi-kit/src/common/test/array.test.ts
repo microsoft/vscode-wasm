@@ -6,14 +6,14 @@ import assert from 'assert';
 
 import { float64, u32 } from '@vscode/wasm-component-model';
 
-import { Memory } from '../sobject';
+import { SharedMemory } from '../sobject';
 import { SArray } from '../sarray';
 
 suite('SArray', () => {
 
-	let memory: Memory;
+	let memory: SharedMemory;
 	suiteSetup(async () => {
-		memory = await Memory.create();
+		memory = await SharedMemory.create();
 	});
 
 	test('push', () => {

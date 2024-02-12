@@ -7,7 +7,7 @@ import RAL from '../common/ral';
 
 import type { URI } from 'vscode-uri';
 
-import { Memory } from '../common/sobject';
+import { SharedMemory } from '../common/sobject';
 import * as malloc from '../common/malloc';
 import type * as commonConnection from '../common/connection';
 import type { WorkerClient, WorkerClientBase } from '../common/workerClient';
@@ -20,7 +20,7 @@ interface RIL extends RAL {
 
 const _ril: RIL = Object.freeze<RIL>(Object.assign({}, _RAL(), {
 	Memory: Object.freeze({
-		async create(constructor: new (module: WebAssembly.Module, memory: WebAssembly.Memory, exports: Memory.Exports) => Memory): Promise<Memory> {
+		async create(constructor: new (module: WebAssembly.Module, memory: WebAssembly.Memory, exports: SharedMemory.Exports) => SharedMemory): Promise<SharedMemory> {
 			const memory = new WebAssembly.Memory(malloc.descriptor);
 			const module = await WebAssembly.compile(malloc.bytes);
 			const instance = new WebAssembly.Instance(module, {
@@ -31,9 +31,9 @@ const _ril: RIL = Object.freeze<RIL>(Object.assign({}, _RAL(), {
 					sched_yield: () => 0
 				}
 			});
-			return new constructor(module, memory, instance.exports as unknown as Memory.Exports);
+			return new constructor(module, memory, instance.exports as unknown as SharedMemory.Exports);
 		},
-		async createFrom(constructor: new (module: WebAssembly.Module, memory: WebAssembly.Memory, exports: Memory.Exports, id: string) => Memory, transferable: Memory.Transferable): Promise<Memory> {
+		async createFrom(constructor: new (module: WebAssembly.Module, memory: WebAssembly.Memory, exports: SharedMemory.Exports, id: string) => SharedMemory, transferable: SharedMemory.Transferable): Promise<SharedMemory> {
 			const instance = new WebAssembly.Instance(transferable.module, {
 				env: {
 					memory: transferable.memory
@@ -42,7 +42,7 @@ const _ril: RIL = Object.freeze<RIL>(Object.assign({}, _RAL(), {
 					sched_yield: () => 0
 				}
 			});
-			return new constructor(transferable.module, transferable.memory, instance.exports as unknown as Memory.Exports, transferable.id);
+			return new constructor(transferable.module, transferable.memory, instance.exports as unknown as SharedMemory.Exports, transferable.id);
 		}
 	}),
 	MessageChannel: Object.freeze({

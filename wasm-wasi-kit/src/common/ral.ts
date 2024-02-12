@@ -7,14 +7,14 @@ import type { URI } from 'vscode-uri';
 
 import { RAL as _RAL } from '@vscode/wasm-component-model';
 
-import { Memory } from './sobject';
+import { SharedMemory } from './sobject';
 import type { AnyConnection, ConnectionPort } from './connection';
 import type { WorkerClient, WorkerClientBase } from './workerClient';
 
 interface RAL extends _RAL {
 	readonly Memory: {
-		create(constructor: new (module: WebAssembly.Module, memory: WebAssembly.Memory, exports: Memory.Exports) => Memory): Promise<Memory>;
-		createFrom(constructor: new (module: WebAssembly.Module, memory: WebAssembly.Memory, exports: Memory.Exports, id: string) => Memory, transferable: Memory.Transferable): Promise<Memory>;
+		create(constructor: new (module: WebAssembly.Module, memory: WebAssembly.Memory, exports: SharedMemory.Exports) => SharedMemory): Promise<SharedMemory>;
+		createFrom(constructor: new (module: WebAssembly.Module, memory: WebAssembly.Memory, exports: SharedMemory.Exports, id: string) => SharedMemory, transferable: SharedMemory.Transferable): Promise<SharedMemory>;
 	};
 	readonly MessageChannel: {
 		create(): [ConnectionPort, ConnectionPort];

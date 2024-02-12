@@ -185,6 +185,7 @@ export interface Memory {
 	realloc(location: MemoryRange, align: Alignment, newSize: size): MemoryRange;
 	preAllocated(ptr: ptr, size: size): MemoryRange;
 	range(ptr: ptr, size: size): ReadonlyMemoryRange;
+	free?(range: MemoryRange): void;
 }
 
 export class MemoryError extends Error {
@@ -224,11 +225,15 @@ export abstract class BaseMemoryRange {
 
 	private _view: DataView | undefined;
 
-	constructor(memory: Memory, ptr: ptr, size: size) {
+	protected constructor(memory: Memory, ptr: ptr, size: size) {
 		this._memory = memory;
 		this._ptr = ptr;
 		this._size = size;
 		this._alignment = Alignment.getAlignment(ptr);
+	}
+
+	public get memory(): Memory {
+		return this._memory;
 	}
 
 	public get ptr(): ptr {
@@ -251,20 +256,6 @@ export abstract class BaseMemoryRange {
 	}
 
 	public abstract getTransferable(): MemoryRangeTransferable;
-
-	public range(ptr: ptr, size: size): ReadonlyMemoryRange {
-		if (ptr + size > this._memory.buffer.byteLength) {
-			throw new MemoryError(`Memory access is out of bounds. Accessing [${ptr}, ${size}], allocated[${0},${this._memory.buffer.byteLength}]`);
-		}
-		return new ReadonlyMemoryRange(this._memory, ptr, size);
-	}
-
-	public preAllocated(ptr: ptr, size: size): MemoryRange {
-		if (ptr + size > this._memory.buffer.byteLength) {
-			throw new MemoryError(`Memory access is out of bounds. Accessing [${ptr}, ${size}], allocated[${0},${this._memory.buffer.byteLength}]`);
-		}
-		return new MemoryRange(this._memory, ptr, size);
-	}
 
 	public getUint8(offset: offset<u8>): u8 {
 		return this.view.getUint8(offset);
@@ -312,6 +303,11 @@ export abstract class BaseMemoryRange {
 	public getFloat64(offset: offset<f64>): f64 {
 		this.assertAlignment(offset, Alignment.doubleWord);
 		return this.view.getFloat64(offset, true);
+	}
+
+	public getPtr(offset: offset<ptr>): ptr {
+		this.assertAlignment(offset, Alignment.word);
+		return this.view.getUint32(offset, true);
 	}
 
 	public getUint8Array(offset: offset, length?: size | undefined): Uint8Array {
@@ -416,12 +412,11 @@ export class MemoryRange extends BaseMemoryRange {
 		this.isAllocated = isPreallocated!;
 	}
 
-	public alloc(align: Alignment, size: size): MemoryRange {
-		return this._memory.alloc(align, size);
-	}
-
-	public get memory(): Memory {
-		return this._memory;
+	public free(): void {
+		if (typeof this._memory.free !== 'function') {
+			throw new MemoryError(`Memory doesn't support free`);
+		}
+		this._memory.free(this);
 	}
 
 	public getTransferable(): MemoryRangeTransferable {
@@ -481,6 +476,11 @@ export class MemoryRange extends BaseMemoryRange {
 	public setFloat64(offset: offset<f64>, value: f64): void {
 		this.assertAlignment(offset, Alignment.doubleWord);
 		this.view.setFloat64(offset, value, true);
+	}
+
+	public setPtr(offset: offset<ptr>, value: ptr): void {
+		this.assertAlignment(offset, Alignment.word);
+		this.view.setUint32(offset, value, true);
 	}
 
 	public getUint8View(offset: offset, length?: size | undefined): Uint8Array {
@@ -1491,10 +1491,10 @@ namespace $wstring {
 	export const alignment: Alignment = Alignment.word;
 	export const flatTypes: ReadonlyArray<GenericFlatType> = [$i32, $i32];
 
-	export function load(memory: ReadonlyMemoryRange, offset: offset<[u32, u32]>, context: ComponentModelContext): string {
-		const dataPtr: ptr =  memory.getUint32(offset + offsets.data);
-		const codeUnits: u32 = memory.getUint32(offset + offsets.codeUnits);
-		return loadFromRange(memory, dataPtr, codeUnits, context.options);
+	export function load(memRange: ReadonlyMemoryRange, offset: offset<[u32, u32]>, context: ComponentModelContext): string {
+		const dataPtr: ptr =  memRange.getUint32(offset + offsets.data);
+		const codeUnits: u32 = memRange.getUint32(offset + offsets.codeUnits);
+		return loadFromRange(memRange.memory, dataPtr, codeUnits, context.options);
 	}
 
 	export function liftFlat(memory: Memory, values: FlatValuesIter, context: ComponentModelContext): string {
@@ -1508,7 +1508,7 @@ namespace $wstring {
 	}
 
 	export function store(memory: MemoryRange, offset: offset<[u32, u32]>, str: string, context: ComponentModelContext): void {
-		const [ptr, codeUnits] = storeIntoRange(memory, str, context.options);
+		const [ptr, codeUnits] = storeIntoRange(memory.memory, str, context.options);
 		memory.setUint32(offset + offsets.data, ptr);
 		memory.setUint32(offset + offsets.codeUnits, codeUnits);
 	}
@@ -1524,8 +1524,8 @@ namespace $wstring {
 		const data = src.getUint32(src_offset + offsets.data);
 		const codeUnits = src.getUint32(src_offset + offsets.codeUnits);
 		const [alignment, byteLength] = getAlignmentAndByteLength(codeUnits, context.options);
-		const srcReader = src.range(data, byteLength);
-		const destWriter = dest.alloc(alignment, byteLength);
+		const srcReader = src.memory.range(data, byteLength);
+		const destWriter = dest.memory.alloc(alignment, byteLength);
 		srcReader.copyBytes(0, byteLength, destWriter, 0);
 	}
 
@@ -1543,7 +1543,7 @@ namespace $wstring {
 		}
 	}
 
-	function loadFromRange(memory: ReadonlyMemoryRange | Memory, data: ptr, codeUnits: u32, options: Options): string {
+	function loadFromRange(memory: Memory, data: ptr, codeUnits: u32, options: Options): string {
 		const encoding = options.encoding;
 		if (encoding === 'latin1+utf-16') {
 			throw new Error('latin1+utf-16 encoding not yet supported');
@@ -1560,7 +1560,7 @@ namespace $wstring {
 		}
 	}
 
-	function storeIntoRange(memory: MemoryRange | Memory, str: string, options: Options): [ptr, size] {
+	function storeIntoRange(memory: Memory, str: string, options: Options): [ptr, size] {
 		const { encoding } = options;
 		if (encoding === 'latin1+utf-16') {
 			throw new Error('latin1+utf-16 encoding not yet supported');
@@ -1584,15 +1584,15 @@ namespace $wstring {
 }
 export const wstring: ComponentModelType<string> & { getAlignmentAndByteLength: typeof $wstring.getAlignmentAndByteLength } = $wstring;
 
-namespace $MemoryRangeType {
+export namespace MemoryRange {
 
 	export const kind: ComponentModelTypeKind.memoryRange = ComponentModelTypeKind.memoryRange;
 	export const size: size = ptr.size + u32.size;
 	export const alignment: Alignment = Math.max(ptr.alignment, u32.alignment);
 	export const flatTypes: readonly FlatType<WasmType>[] = [...ptr.flatTypes, ...u32.flatTypes];
 
-	export function load(memory: ReadonlyMemoryRange, offset: number): MemoryRange {
-		return memory.preAllocated(memory.getUint32(offset), memory.getUint32(offset + ptr.size));
+	export function load(memRange: ReadonlyMemoryRange, offset: number): MemoryRange {
+		return memRange.memory.preAllocated(memRange.getUint32(offset), memRange.getUint32(offset + ptr.size));
 	}
 
 	export function liftFlat(memory: Memory, values: FlatValuesIter): MemoryRange {
@@ -1616,17 +1616,16 @@ namespace $MemoryRangeType {
 		src.copyBytes(src_offset, size, dest, dest_offset);
 	}
 }
-export const MemoryRangeType: ComponentModelType<MemoryRange> = $MemoryRangeType;
 
-namespace $ReadonlyMemoryRangeType {
+export namespace ReadonlyMemoryRange {
 
 	export const kind: ComponentModelTypeKind.readonlyMemoryRange = ComponentModelTypeKind.readonlyMemoryRange;
 	export const size: size = ptr.size + u32.size;
 	export const alignment: Alignment = Math.max(ptr.alignment, u32.alignment);
 	export const flatTypes: readonly FlatType<WasmType>[] = [...ptr.flatTypes, ...u32.flatTypes];
 
-	export function load(memory: ReadonlyMemoryRange, offset: number): ReadonlyMemoryRange {
-		return memory.range(memory.getUint32(offset), memory.getUint32(offset + ptr.size));
+	export function load(memRange: ReadonlyMemoryRange, offset: number): ReadonlyMemoryRange {
+		return memRange.memory.range(memRange.getUint32(offset), memRange.getUint32(offset + ptr.size));
 	}
 
 	export function liftFlat(memory: Memory, values: FlatValuesIter): ReadonlyMemoryRange {
@@ -1650,7 +1649,6 @@ namespace $ReadonlyMemoryRangeType {
 		src.copyBytes(src_offset, size, dest, dest_offset);
 	}
 }
-export const ReadonlyMemoryRangeType: ComponentModelType<ReadonlyMemoryRange> = $ReadonlyMemoryRangeType;
 
 export type JArray = JType[];
 export class ListType<T> implements ComponentModelType<T[]> {
@@ -1675,11 +1673,11 @@ export class ListType<T> implements ComponentModelType<T[]> {
 		this.flatTypes = [$i32, $i32];
 	}
 
-	public load(memory: ReadonlyMemoryRange, offset: offset<[u32, u32]>, context: ComponentModelContext): T[] {
+	public load(memRange: ReadonlyMemoryRange, offset: offset<[u32, u32]>, context: ComponentModelContext): T[] {
 		const offsets = ListType.offsets;
-		const dataPtr: ptr =  memory.getUint32(offset + offsets.data);
-		const length: u32 = memory.getUint32(offset + offsets.length);
-		return this.loadFromRange(memory.range(dataPtr, length * this.elementType.size), length, context);
+		const dataPtr: ptr =  memRange.getUint32(offset + offsets.data);
+		const length: u32 = memRange.getUint32(offset + offsets.length);
+		return this.loadFromRange(memRange.memory.range(dataPtr, length * this.elementType.size), length, context);
 	}
 
 	public liftFlat(memory: Memory, values: FlatValuesIter, context: ComponentModelContext): T[] {
@@ -1692,12 +1690,12 @@ export class ListType<T> implements ComponentModelType<T[]> {
 		return memory.alloc(this.alignment, this.size);
 	}
 
-	public store(memory: MemoryRange, offset: offset<[u32, u32]>, values: T[], context: ComponentModelContext): void {
-		const elementMemory = memory.alloc(this.elementType.alignment, this.elementType.size * values.length);
+	public store(memRange: MemoryRange, offset: offset<[u32, u32]>, values: T[], context: ComponentModelContext): void {
+		const elementMemory = memRange.memory.alloc(this.elementType.alignment, this.elementType.size * values.length);
 		this.storeIntoRange(elementMemory, values, context);
 		const offsets = ListType.offsets;
-		memory.setUint32(offset + offsets.data, elementMemory.ptr);
-		memory.setUint32(offset + offsets.length, values.length);
+		memRange.setUint32(offset + offsets.data, elementMemory.ptr);
+		memRange.setUint32(offset + offsets.length, values.length);
 	}
 
 	public lowerFlat(result: WasmType[], memory: Memory, values: T[], context: ComponentModelContext): void {
@@ -1713,8 +1711,8 @@ export class ListType<T> implements ComponentModelType<T[]> {
 		src.copyBytes(src_offset, this.size, dest, dest_offset);
 		const data = src.getUint32(src_offset + offsets.data);
 		const byteLength = src.getUint32(src_offset + offsets.length) * this.elementType.size;
-		const srcReader = src.range(data, byteLength);
-		const destWriter = dest.alloc(this.elementType.alignment, byteLength);
+		const srcReader = src.memory.range(data, byteLength);
+		const destWriter = dest.memory.alloc(this.elementType.alignment, byteLength);
 		srcReader.copyBytes(0, byteLength, destWriter, 0);
 	}
 
@@ -1760,11 +1758,11 @@ abstract class TypeArrayType<T extends { length: number; byteLength: number }, E
 		this.elementType = elementType;
 	}
 
-	public load(memory: ReadonlyMemoryRange, offset: offset): T {
+	public load(memRange: ReadonlyMemoryRange, offset: offset): T {
 		const offsets = TypeArrayType.offsets;
-		const dataPtr: ptr =  memory.getUint32(offset + offsets.data);
-		const length: u32 = memory.getUint32(offset + offsets.length);
-		return this.loadFromRange(memory.range(dataPtr, length * this.elementType.size), length);
+		const dataPtr: ptr =  memRange.getUint32(offset + offsets.data);
+		const length: u32 = memRange.getUint32(offset + offsets.length);
+		return this.loadFromRange(memRange.memory.range(dataPtr, length * this.elementType.size), length);
 	}
 
 	public liftFlat(memory: Memory, values: FlatValuesIter): T {
@@ -1777,12 +1775,12 @@ abstract class TypeArrayType<T extends { length: number; byteLength: number }, E
 		return memory.alloc(this.alignment, this.size);
 	}
 
-	public store(memory: MemoryRange, offset: offset, value: T): void {
-		const writer = memory.alloc(this.elementType.alignment, value.byteLength);
+	public store(memRange: MemoryRange, offset: offset, value: T): void {
+		const writer = memRange.memory.alloc(this.elementType.alignment, value.byteLength);
 		this.storeIntoRange(writer, value);
 		const offsets = TypeArrayType.offsets;
-		memory.setUint32(offset + offsets.data, writer.ptr);
-		memory.setUint32(offset + offsets.length, value.length);
+		memRange.setUint32(offset + offsets.data, writer.ptr);
+		memRange.setUint32(offset + offsets.length, value.length);
 	}
 
 	public lowerFlat(result: WasmType[], memory: Memory, value: T): void {
@@ -1798,8 +1796,8 @@ abstract class TypeArrayType<T extends { length: number; byteLength: number }, E
 		src.copyBytes(src_offset, this.size, dest, dest_offset);
 		const data = src.getUint32(src_offset + offsets.data);
 		const byteLength = src.getUint32(src_offset + offsets.length) * this.elementType.size;
-		const srcReader = src.range(data, byteLength);
-		const destWriter = dest.alloc(this.elementType.alignment, byteLength);
+		const srcReader = src.memory.range(data, byteLength);
+		const destWriter = dest.memory.alloc(this.elementType.alignment, byteLength);
 		srcReader.copyBytes(0, byteLength, destWriter, 0);
 	}
 

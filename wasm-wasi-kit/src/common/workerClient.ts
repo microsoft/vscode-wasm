@@ -4,11 +4,11 @@
  * ------------------------------------------------------------------------------------------ */
 import RAL from './ral';
 import type * as Messages from './workerMessages';
-import type { Memory } from './sobject';
+import type { SharedMemory } from './sobject';
 import { BaseConnection, type AnyConnection } from './connection';
 
 export interface WorkerClient {
-	launch(memory: Memory): Promise<void>;
+	launch(memory: SharedMemory): Promise<void>;
 	terminate(): Promise<number>;
 }
 export namespace WorkerClient {

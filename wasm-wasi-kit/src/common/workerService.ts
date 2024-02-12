@@ -3,7 +3,7 @@
  * Licensed under the MIT License. See License.txt in the project root for license information.
  * ------------------------------------------------------------------------------------------ */
 import type * as Messages from './workerMessages';
-import { Memory } from './sobject';
+import { SharedMemory } from './sobject';
 import type { AnyConnection, ConnectionPort, TransferItems } from './connection';
 
 export abstract class BaseWorker {
@@ -13,13 +13,13 @@ export abstract class BaseWorker {
 	constructor(connection: BaseWorker.ConnectionType) {
 		this.connection = connection;
 		this.connection.onAsyncCall('initialize', async (params) => {
-			const memory = await Memory.createFrom(params.sharedMemory);
+			const memory = await SharedMemory.createFrom(params.sharedMemory);
 			this.connection.initializeSyncCall(memory);
 			this.initialize(memory);
 		});
 	}
 
-	protected abstract initialize(memory: Memory): void;
+	protected abstract initialize(memory: SharedMemory): void;
 }
 export namespace BaseWorker {
 	export type ConnectionType<TIL = TransferItems> = Messages.Service.ConnectionType<TIL>;

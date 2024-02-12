@@ -3,8 +3,8 @@
  * Licensed under the MIT License. See License.txt in the project root for license information.
  * ------------------------------------------------------------------------------------------ */
 import RAL from './ral';
-import { ptr, s32 } from '@vscode/wasm-component-model';
-import { Memory, MemoryLocation, SharedObject } from './sobject';
+import { s32, type MemoryRange, type MemoryRangeTransferable } from '@vscode/wasm-component-model';
+import { SharedMemory, SharedObject } from './sobject';
 
 export interface ConnectionPort {
 	postMessage(message: any, ...args: any[]): void;
@@ -28,8 +28,8 @@ type _AsyncCallType = _MessageType & {
 type _AsyncCallHandler = (params: any) => HandlerResult<any>;
 
 type _SharedObjectResult = {
-	new (location: MemoryLocation): SharedObject;
-	alloc(memory: Memory): ptr;
+	new (location: MemoryRange): SharedObject;
+	alloc(memory: SharedMemory): MemoryRange;
 };
 namespace _SharedObjectResult {
 	export function is(value: any): value is _SharedObjectResult {
@@ -41,7 +41,7 @@ namespace _SharedObjectResult {
 type _SyncCallType = _MessageType & {
 	result: void | _SharedObjectResult;
 };
-type _SyncCallHandler = (params: any, result?: MemoryLocation) => HandlerResult<number | undefined>;
+type _SyncCallHandler = (params: any, result?: MemoryRange) => HandlerResult<number | undefined>;
 
 type _NotifyType = _MessageType;
 type _NotifyHandler = (params: any) => void;
@@ -84,8 +84,8 @@ namespace _AsyncResponse {
 
 interface _SyncCall extends AbstractMessage {
 	kind: MessageKind.SyncCall;
-	sync: MemoryLocation.Surrogate;
-	result?: MemoryLocation.Surrogate;
+	sync: MemoryRangeTransferable;
+	result?: MemoryRangeTransferable;
 }
 namespace _SyncCall {
 	export function is(value: _Message): value is _SyncCall {
@@ -148,10 +148,10 @@ type SyncCallSignatures<SyncCalls extends _SyncCallType | undefined, TLI= Transf
 type _SyncCallHandlerSignatures<SyncCalls extends _SyncCallType> = UnionToIntersection<{
  	[call in SyncCalls as call['method']]: call['params'] extends object
 		? call['result'] extends _SharedObjectResult
-			? (method: call['method'], handler: (params: call['params'], result: MemoryLocation) => HandlerResult<number | void>) => void
+			? (method: call['method'], handler: (params: call['params'], result: MemoryRange) => HandlerResult<number | void>) => void
 			: (method: call['method'], handler: (params: call['params']) => HandlerResult<number | void>) => void
 	 	: call['result'] extends _SharedObjectResult
-			? (method: call['method'], handler: (result: MemoryLocation) => HandlerResult<number | void>) => void
+			? (method: call['method'], handler: (result: MemoryRange) => HandlerResult<number | void>) => void
 			: (method: call['method'], handler: () => HandlerResult<number | void>) => void;
 }[keyof MethodKeys<SyncCalls>]>;
 
@@ -205,8 +205,8 @@ export abstract class BaseConnection<AsyncCalls extends _AsyncCallType | undefin
 	private readonly asyncCallResultPromises: Map<number, ResultPromise>;
 	private readonly asyncCallHandlers: Map<string, _AsyncCallHandler>;
 
-	private memory: Memory | undefined;
-	private syncCallBuffer: Int32Array | undefined;
+	private memory: SharedMemory | undefined;
+	private syncMemoryRange: MemoryRange | undefined;
 	private readonly syncCallHandlers: Map<string, _SyncCallHandler>;
 
 	private readonly notifyHandlers: Map<string, _NotifyHandler>;
@@ -217,7 +217,7 @@ export abstract class BaseConnection<AsyncCalls extends _AsyncCallType | undefin
 		this.asyncCallHandlers = new Map();
 
 		this.memory = undefined;
-		this.syncCallBuffer = undefined;
+		this.syncMemoryRange = undefined;
 		this.syncCallHandlers = new Map();
 
 		this.notifyHandlers = new Map();
@@ -225,7 +225,7 @@ export abstract class BaseConnection<AsyncCalls extends _AsyncCallType | undefin
 
 	public dispose(): void {
 		this.memory = undefined;
-		this.syncCallBuffer = undefined;
+		this.syncMemoryRange = undefined;
 		this.asyncCallResultPromises.clear();
 		this.asyncCallHandlers.clear();
 		this.syncCallHandlers.clear();
@@ -252,7 +252,7 @@ export abstract class BaseConnection<AsyncCalls extends _AsyncCallType | undefin
 		this.asyncCallHandlers.set(method, handler);
 	}
 
-	public initializeSyncCall(memory: Memory): void {
+	public initializeSyncCall(memory: SharedMemory): void {
 		if (this.memory !== undefined && this.memory.isSame(memory)) {
 			return;
 		}
@@ -263,13 +263,13 @@ export abstract class BaseConnection<AsyncCalls extends _AsyncCallType | undefin
 			throw new Error('Memory is not a shared memory.');
 		}
 		this.memory = memory;
-		const ptr: ptr = memory.alloc(s32.alignment, 2 * s32.size);
-		this.syncCallBuffer = new Int32Array(memory.buffer, ptr, 2);
-		Atomics.store(this.syncCallBuffer, BaseConnection.sync, 0);
-		Atomics.store(this.syncCallBuffer, BaseConnection.error, 0);
+		this.syncMemoryRange = memory.alloc(s32.alignment, 2 * s32.size);
+		const syncCallBuffer = this.syncMemoryRange.getInt32View(0);
+		Atomics.store(syncCallBuffer, BaseConnection.sync, 0);
+		Atomics.store(syncCallBuffer, BaseConnection.error, 0);
 	}
 
-	public getSyncMemory(): Memory {
+	public getSharedMemory(): SharedMemory {
 		if (this.memory === undefined) {
 			throw new Error('Memory is not initialized.');
 		}
@@ -279,34 +279,34 @@ export abstract class BaseConnection<AsyncCalls extends _AsyncCallType | undefin
 	public readonly callSync: SyncCallSignatures<SyncCalls, TLI> = this._callSync as SyncCallSignatures<SyncCalls, TLI>;
 
 	private _callSync(method: string, params?: any, result?: _SharedObjectResult | undefined, timeout?: number | undefined, transferList?: ReadonlyArray<TLI>): any {
-		if (this.syncCallBuffer === undefined || this.memory === undefined) {
+		if (this.syncMemoryRange === undefined || this.memory === undefined) {
 			throw new Error('Sync calls are not initialized with shared memory.');
 		}
-		const syncCallBuffer = this.syncCallBuffer;
+		const syncCallBuffer = this.syncMemoryRange.getInt32View(0);
 		const memory = this.memory;
-		const call: _SyncCall = { kind: MessageKind.SyncCall, method, sync: new MemoryLocation(this.memory, this.syncCallBuffer.byteOffset).getSurrogate() };
+		const call: _SyncCall = { kind: MessageKind.SyncCall, method, sync: this.syncMemoryRange.getTransferable() };
 		if (params !== undefined) {
 			call.params = params;
 		}
-		let resultLocation: MemoryLocation | undefined;
+		let resultRange: MemoryRange | undefined;
 		if (result !== undefined && result !== null) {
-			resultLocation = new MemoryLocation(this.memory, result.alloc(this.memory));
-			call.result = resultLocation.getSurrogate();
+			resultRange = result.alloc(this.memory);
+			call.result = resultRange.getTransferable();
 		}
 		this.postMessage(call, transferList);
-		this.syncCallBuffer[BaseConnection.error] = 0;
-		Atomics.store(this.syncCallBuffer, BaseConnection.sync, 0);
-		const wait = Atomics.wait(this.syncCallBuffer, BaseConnection.sync, 0, timeout);
+		syncCallBuffer[BaseConnection.error] = 0;
+		Atomics.store(syncCallBuffer, BaseConnection.sync, 0);
+		const wait = Atomics.wait(syncCallBuffer, BaseConnection.sync, 0, timeout);
 		const handleResult = (): SharedObject | undefined => {
 			const error = syncCallBuffer[BaseConnection.error];
 			if (error === 0) {
-				if (result === undefined || result === null || resultLocation === undefined) {
+				if (result === undefined || result === null || resultRange === undefined) {
 					return undefined;
 				} else {
-					if (resultLocation.memory.id !== memory!.id) {
+					if (resultRange.memory.id !== memory!.id) {
 						throw new Error('Memory mismatch');
 					}
-					return new result(resultLocation);
+					return new result(resultRange);
 				}
 			} else {
 				throw new SyncCallError(`Sync call ${method} failed with error code ${error}`, method, error);
@@ -318,7 +318,7 @@ export abstract class BaseConnection<AsyncCalls extends _AsyncCallType | undefin
 			case 'timed-out':
 				throw new TimeoutError(`Sync call ${method} timed out after ${timeout}ms`, method, timeout!);
 			case 'not-equal':
-				const current = Atomics.load(this.syncCallBuffer, BaseConnection.sync);
+				const current = Atomics.load(syncCallBuffer, BaseConnection.sync);
 				if (current === 1) {
 					return handleResult();
 				} else {
@@ -385,13 +385,13 @@ export abstract class BaseConnection<AsyncCalls extends _AsyncCallType | undefin
 		} else if (_SyncCall.is(message)) {
 			const handler = this.syncCallHandlers.get(message.method);
 			if (handler !== undefined) {
-				if (this.memory === undefined || this.syncCallBuffer === undefined) {
+				if (this.memory === undefined || this.syncMemoryRange === undefined) {
 					throw new Error('Sync calls are not initialized with shared memory.');
 				}
-				const memory = this.memory;
+				const syncCallBuffer = this.syncMemoryRange.getInt32View(0);
 				let errorCode: number = 0;
 				try {
-					errorCode = await handler(message.params, message.result ? new MemoryLocation(memory, message.result) : undefined) ?? 0;
+					errorCode = await handler(message.params, message.result ? this.memory.range.fromWritable(message.result) : undefined) ?? 0;
 				} catch (error: any) {
 					if (typeof error.code === 'number') {
 						errorCode = error.code;
@@ -399,10 +399,9 @@ export abstract class BaseConnection<AsyncCalls extends _AsyncCallType | undefin
 						errorCode = -1;
 					}
 				} finally {
-					const syncCallBuffer = new Int32Array(this.memory.buffer, message.sync.ptr, 2);
 					syncCallBuffer[BaseConnection.error] = errorCode;
-					Atomics.store(this.syncCallBuffer, BaseConnection.sync, 1);
-					Atomics.notify(this.syncCallBuffer, BaseConnection.sync, 1);
+					Atomics.store(syncCallBuffer, BaseConnection.sync, 1);
+					Atomics.notify(syncCallBuffer, BaseConnection.sync, 1);
 				}
 			}
 		} else if (_Notification.is(message)) {

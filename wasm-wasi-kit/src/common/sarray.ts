@@ -3,18 +3,24 @@
  * Licensed under the MIT License. See License.txt in the project root for license information.
  * ------------------------------------------------------------------------------------------ */
 
-import { ComponentModelType, JType, MemoryRangeType, ptr, u32 } from '@vscode/wasm-component-model';
+import { ComponentModelType, JType, MemoryRange, ptr, u32 } from '@vscode/wasm-component-model';
 
-import { LockableRecord, SharedObject, RecordDescriptor, Memory, type MemoryRange } from './sobject';
+import { LockableRecord, SharedObject, RecordDescriptor, SharedMemory } from './sobject';
 
 namespace SArray {
 	export type Properties = {
 		state: u32;
-		capacity: u32;
 		start: u32;
 		next: u32;
+		elementSize: u32;
 		elements: MemoryRange;
 	};
+}
+
+export class ConcurrentModificationError extends Error {
+	constructor(message: string) {
+		super(message);
+	}
 }
 
 export class SArray<T extends JType> extends LockableRecord<SArray.Properties> {
@@ -24,26 +30,39 @@ export class SArray<T extends JType> extends LockableRecord<SArray.Properties> {
 		['state', u32],
 		['start', u32],
 		['next', u32],
-		['elements', MemoryRangeType]
+		['elementSize', u32],
+		['elements', MemoryRange]
 	]);
 
 	private readonly type: ComponentModelType<T>;
 
-	constructor(type: ComponentModelType<T>, memoryOrLocation: Memory | MemoryRange, capacity: number = 32) {
+	constructor(type: ComponentModelType<T>, memoryOrLocation: SharedMemory | MemoryRange, capacity: number = 32) {
 		super(SArray.recordInfo, memoryOrLocation);
 		this.type = type;
 		const access = this.access;
-		if (Memory.is(memoryOrLocation)) {
+		if (SharedMemory.is(memoryOrLocation)) {
 			access.state = 0;
-			access.capacity = capacity;
 			access.start = 0;
 			access.next = 0;
-			access.elements = memoryOrLocation.alloc(u32.alignment, capacity * u32.size);
+			access.elementSize = type.size;
+			access.elements = memoryOrLocation.alloc(u32.alignment, capacity * ptr.size);
+		} else {
+			if (type.size !== access.elementSize) {
+				throw new Error(`Element size differs between element type [${this.type.size}] and allocated memory [${access.elementSize}].`);
+			}
 		}
 	}
 
 	protected getRecordInfo(): RecordDescriptor<SArray.Properties> {
 		return SArray.recordInfo;
+	}
+
+	private get capacity(): number {
+		const result = this.access.elements.size / this.type.size;
+		if (!Number.isInteger(result)) {
+			throw new Error(`Capacity must me an integer, but got [${result}]`);
+		}
+		return result;
 	}
 
 	public get length(): number {
@@ -77,25 +96,24 @@ export class SArray<T extends JType> extends LockableRecord<SArray.Properties> {
 	push(...items: T[]): void {
 		try {
 			this.acquireLock();
-			const memory = this.memoryRange;
+			const memory = this.memory;
 			const access = this.access;
 			access.state = access.state + 1;
 			const numberOfItems = items.length;
-			if (access.next + numberOfItems > access.capacity) {
+			const currentCapacity = this.capacity;
+			if (access.next + numberOfItems > currentCapacity) {
 				const currentElements = access.elements;
-				const currentCapacity = access.capacity;
 				const newCapacity = Math.max(currentCapacity * 2, currentCapacity + numberOfItems);
 				const newElements = memory.alloc(u32.alignment, newCapacity * u32.size);
-				memory.raw.copyWithin(newElements, currentElements, currentElements + currentCapacity * u32.size);
+				memory.copyWithin(newElements, currentElements);
 				access.elements = newElements;
-				access.capacity = newCapacity;
 				currentElements.free();
 			}
 			let next = access.next;
 			for(const value of items) {
-				const ptr = this.type.alloc(memory);
-				this.type.store(memory, ptr, value, SharedObject.Context);
-				u32.store(memory, access.elements + next * u32.size, ptr, SharedObject.Context);
+				const range = this.type.alloc(this.memory);
+				this.type.store(range, 0, value, SharedObject.Context);
+				ptr.store(access.elements, next * ptr.size, range.ptr, SharedObject.Context);
 				next = next + 1;
 			}
 			access.next = next;
@@ -115,8 +133,8 @@ export class SArray<T extends JType> extends LockableRecord<SArray.Properties> {
 				return undefined;
 			}
 			access.state = access.state + 1;
-			const [value, ptr] = this.loadElementAndPtr(next - 1);
-			memory.free(ptr);
+			const [value, range] = this.loadElementAndPtr(next - 1);
+			memory.free(range);
 			access.next = next - 1;
 			return value;
 		} finally {
@@ -181,29 +199,29 @@ export class SArray<T extends JType> extends LockableRecord<SArray.Properties> {
 
 	private loadElement(index: number, state?: number): T {
 		const access = this.access;
-		const memory = this.memory;
 		try {
 			this.acquireLock();
 			if (state !== undefined && access.state !== state) {
-				throw new Error(`Array got modified during access.`);
+				throw new ConcurrentModificationError(`Array got modified during access.`);
 			}
-			const ptr = u32.load(memory, access.elements + u32.size * index, SharedObject.Context);
-			return this.type.load(memory, ptr, SharedObject.Context);
+			const ptr = access.elements.getPtr(u32.size * index);
+			const range = this.memory.readonly(ptr, access.elementSize);
+			return this.type.load(range, 0, SharedObject.Context);
 		} finally {
 			this.releaseLock();
 		}
 	}
 
-	private loadElementAndPtr(index: number, state?: number): [T, ptr] {
+	private loadElementAndPtr(index: number, state?: number): [T, MemoryRange] {
 		const access = this.access;
-		const memory = this.memory;
 		try {
 			this.acquireLock();
 			if (state !== undefined && access.state !== state) {
 				throw new Error(`Array got modified during access.`);
 			}
-			const ptr = u32.load(memory, access.elements + u32.size * index, SharedObject.Context);
-			return [this.type.load(memory, ptr, SharedObject.Context), ptr];
+			const ptr = access.elements.getPtr(u32.size * index);
+			const range = this.memory.preAllocated(ptr, access.elementSize);
+			return [this.type.load(range, 0, SharedObject.Context), range];
 		} finally {
 			this.releaseLock();
 		}

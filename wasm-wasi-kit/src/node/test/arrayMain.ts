@@ -10,7 +10,7 @@ import { Worker } from 'node:worker_threads';
 
 import { Alignment, float64, u32  } from '@vscode/wasm-component-model';
 
-import { Memory } from '../../common/sobject';
+import { SharedMemory } from '../../common/sobject';
 import { SArray } from '../../common/sarray';
 
 import { Notifications, Operations, ManagementCalls, ServerNotifications } from './messages';
@@ -100,7 +100,7 @@ type ConnectionType = Connection<ManagementCalls, undefined, Notifications, unde
 
 async function main(): Promise<void> {
 
-	const memory = await Memory.create();
+	const memory = await SharedMemory.create();
 
 	const counter = memory.alloc(Alignment.halfWord, u32.size);
 
@@ -137,7 +137,7 @@ async function main(): Promise<void> {
 			});
 		}));
 		threads.push({ worker, connection });
-		connection.notify('array/new', { array: sarray.location.ptr, counter });
+		connection.notify('array/new', { array: sarray.memoryRange.getTransferable(), counter: counter.getTransferable() });
 	}
 
 	await Promise.all(promises);

@@ -8,39 +8,24 @@ import RAL from './ral';
 import * as uuid from 'uuid';
 
 import {
-	Memory as _Memory, MemoryRange as _MemoryRange, ReadonlyMemoryRange, type BaseMemoryRange,
+	Memory, ReadonlyMemoryRange, type BaseMemoryRange,
 	Alignment, ComponentModelContext, GenericComponentModelType, ResourceManagers, ptr, u32, size, JType,
-	MemoryRangeTransferable, MemoryError
+	MemoryRangeTransferable, MemoryError, MemoryRange
 } from '@vscode/wasm-component-model';
 
-export interface Memory extends _Memory {
+export interface SharedMemory extends Memory {
 	id: string;
-	alloc(align: Alignment, size: size): MemoryRange;
-	realloc(location: MemoryRange, align: Alignment, newSize: size): MemoryRange;
-	preAllocated(ptr: ptr, size: size): MemoryRange;
-	free(range: _MemoryRange): void;
-	isSame(memory: Memory): boolean;
-	getTransferable(): Memory.Transferable;
-	fromTransferable(transferable: MemoryRangeTransferable): BaseMemoryRange;
+	free(range: MemoryRange): void;
+	isSame(memory: SharedMemory): boolean;
+	getTransferable(): SharedMemory.Transferable;
+	copyWithin(dest: MemoryRange, src: ReadonlyMemoryRange): void;
+	range: {
+		fromWritable(transferable: MemoryRangeTransferable): MemoryRange;
+		fromReadonly(transferable: MemoryRangeTransferable): ReadonlyMemoryRange;
+	};
 }
 
-export { BaseMemoryRange,  ReadonlyMemoryRange};
-
-export class MemoryRange extends _MemoryRange {
-
-	protected readonly _memory: Memory;
-
-	public constructor(memory: Memory, ptr: ptr, size: size, isPreAllocated: boolean = false) {
-		super(memory, ptr, size, isPreAllocated);
-		this._memory = memory;
-	}
-
-	public free(): void {
-		this._memory.free(this);
-	}
-}
-
-export namespace Memory {
+export namespace SharedMemory {
 
 	export type Transferable = {
 		id: string;
@@ -53,41 +38,70 @@ export namespace Memory {
 		aligned_alloc(align: number, size: number): number;
 	}
 
-	export function is(value: any): value is Memory {
+	export function is(value: any): value is SharedMemory {
 		return value instanceof MemoryImpl;
 	}
 
-	export function create(): Promise<Memory> {
+	export function create(): Promise<SharedMemory> {
 		return RAL().Memory.create(MemoryImpl);
 	}
 
-	export function createFrom(transferable: Memory.Transferable): Promise<Memory> {
+	export function createFrom(transferable: SharedMemory.Transferable): Promise<SharedMemory> {
 		return RAL().Memory.createFrom(MemoryImpl, transferable);
 	}
 }
 
-class MemoryImpl implements _Memory {
+class MemoryImplRange {
+
+	private readonly memory: SharedMemory;
+
+	constructor(memory: SharedMemory) {
+		this.memory = memory;
+	}
+
+	public fromWritable(transferable: MemoryRangeTransferable): MemoryRange {
+		if (transferable.memory.id !== this.memory.id) {
+			throw new MemoryError('Memory transferable has different memory id.');
+		}
+		if (transferable.kind !== 'writable') {
+			throw new Error(`Transferable doesn't denote a writeable memory range`);
+		}
+		return new MemoryRange(this.memory, transferable.ptr, transferable.size, true);
+
+	}
+	public fromReadonly(transferable: MemoryRangeTransferable): ReadonlyMemoryRange{
+		if (transferable.memory.id !== this.memory.id) {
+			throw new MemoryError('Memory transferable has different memory id.');
+		}
+		return new ReadonlyMemoryRange(this.memory, transferable.ptr, transferable.size);
+	}
+}
+
+class MemoryImpl implements SharedMemory {
 
 	public readonly id: string;
+	public readonly range: SharedMemory['range'];
+
 	private readonly module: WebAssembly.Module;
 	private readonly memory: WebAssembly.Memory;
-	private readonly exports: Memory.Exports;
+	private readonly exports: SharedMemory.Exports;
 
 	private _raw: Uint8Array | undefined;
 	private _view: DataView | undefined;
 
-	public constructor(module: WebAssembly.Module, memory: WebAssembly.Memory, exports: Memory.Exports, id?: string) {
+	public constructor(module: WebAssembly.Module, memory: WebAssembly.Memory, exports: SharedMemory.Exports, id?: string) {
 		this.id = id ?? uuid.v4();
 		this.module = module;
 		this.memory = memory;
 		this.exports = exports;
+		this.range = new MemoryImplRange(this);
 	}
 
-	public isSame(memory: Memory): boolean {
+	public isSame(memory: SharedMemory): boolean {
 		return this.buffer === memory.buffer;
 	}
 
-	public getTransferable(): Memory.Transferable {
+	public getTransferable(): SharedMemory.Transferable {
 		return { id: this.id, module: this.module, memory: this.memory };
 	}
 
@@ -127,6 +141,9 @@ class MemoryImpl implements _Memory {
 	}
 
 	public preAllocated(ptr: number, size: number): MemoryRange {
+		if (ptr + size > this.buffer.byteLength) {
+			throw new MemoryError(`Memory access is out of bounds. Accessing [${ptr}, ${size}], allocated[${0},${this.buffer.byteLength}]`);
+		}
 		return new MemoryRange(this, ptr, size, true);
 	}
 
@@ -139,7 +156,10 @@ class MemoryImpl implements _Memory {
 		}
 	}
 
-	public range(ptr: ptr, size: size): ReadonlyMemoryRange {
+	public readonly(ptr: ptr, size: size): ReadonlyMemoryRange {
+		if (ptr + size > this.buffer.byteLength) {
+			throw new MemoryError(`Memory access is out of bounds. Accessing [${ptr}, ${size}], allocated[${0},${this.buffer.byteLength}]`);
+		}
 		return new ReadonlyMemoryRange(this, ptr, size);
 	}
 
@@ -153,15 +173,20 @@ class MemoryImpl implements _Memory {
 			return new ReadonlyMemoryRange(this, transferable.ptr, transferable.size);
 		}
 	}
+
+	public copyWithin(dest: MemoryRange, src: ReadonlyMemoryRange): void {
+		const raw = new Uint8Array(this.buffer);
+		raw.copyWithin(dest.ptr, src.ptr, src.ptr + src.size);
+	}
 }
 
 export class Allocation {
 
-	private readonly memory: Memory;
+	private readonly memory: SharedMemory;
 	private readonly align: Alignment;
 	private readonly size: size;
 
-	constructor(memory: Memory, align: Alignment, size: size) {
+	constructor(memory: SharedMemory, align: Alignment, size: size) {
 		this.memory = memory;
 		this.align = align;
 		this.size = size;
@@ -217,15 +242,15 @@ export abstract class SharedObject {
 		managers: ResourceManagers.createDefault()
 	};
 
-	private readonly _memory: MemoryRange;
+	private readonly _memoryRange: MemoryRange;
 	private readonly _allocated: boolean;
 
 	protected constructor(allocationOrLocation: Allocation | MemoryRange) {
 		if (allocationOrLocation instanceof MemoryRange) {
-			this._memory = allocationOrLocation;
+			this._memoryRange = allocationOrLocation;
 			this._allocated = false;
 		} else if (allocationOrLocation instanceof Allocation) {
-			this._memory = allocationOrLocation.alloc();
+			this._memoryRange = allocationOrLocation.alloc();
 			this._allocated = true;
 		} else {
 			throw new Error('Invalid argument');
@@ -237,11 +262,19 @@ export abstract class SharedObject {
 			// We should think about a trace when we dispose
 			// a shared object from a thread that hasn't allocated it.
 		}
-		this._memory.free();
+		this._memoryRange.free();
 	}
 
 	public get memoryRange(): MemoryRange {
-		return this._memory;
+		return this._memoryRange;
+	}
+
+	protected get memory(): SharedMemory {
+		const result = this._memoryRange.memory;
+		if (!(result instanceof MemoryImpl)) {
+			throw new Error(`Memory is not a shared memory instance`);
+		}
+		return result as SharedMemory;
 	}
 }
 
@@ -308,7 +341,7 @@ export abstract class SharedRecord<T extends RecordProperties> extends SharedObj
 
 	protected readonly access: T;
 
-	constructor(recordInfo: RecordDescriptor<T>, memoryOrLocation: Memory | MemoryRange) {
+	constructor(recordInfo: RecordDescriptor<T>, memoryOrLocation: SharedMemory | MemoryRange) {
 		if (memoryOrLocation instanceof MemoryRange) {
 			super(memoryOrLocation);
 		} else {
@@ -339,7 +372,7 @@ export abstract class LockableRecord<T extends RecordProperties> extends SharedR
 
 	private readonly lock: Lock;
 
-	protected constructor(recordInfo: RecordDescriptor<T>, memoryOrLocation: Memory | MemoryRange, lock?: Lock) {
+	protected constructor(recordInfo: RecordDescriptor<T>, memoryOrLocation: SharedMemory | MemoryRange, lock?: Lock) {
 		if (!recordInfo.hasField('_lock')) {
 			throw new Error('RecordInfo does not contain a lock field');
 		}
@@ -351,7 +384,7 @@ export abstract class LockableRecord<T extends RecordProperties> extends SharedR
 			// the lock count to 1. If we use an existing memory location, we need to
 			// leave the lock count untouched since the shared record could be locked in
 			// another thread.
-			if (Memory.is(memoryOrLocation)) {
+			if (SharedMemory.is(memoryOrLocation)) {
 				Atomics.store(lockBuffer, 0, 1);
 			}
 			this.lock = new Lock(lockBuffer);

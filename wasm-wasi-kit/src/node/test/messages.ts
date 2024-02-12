@@ -3,14 +3,14 @@
  * Licensed under the MIT License. See License.txt in the project root for license information.
  * ------------------------------------------------------------------------------------------ */
 
-import { ptr } from '@vscode/wasm-component-model';
-import type { Memory } from '../../common/sobject';
+import { type MemoryRangeTransferable } from '@vscode/wasm-component-model';
+import type { SharedMemory } from '../../common/sobject';
 
 export type ManagementCalls = {
 	method: 'init';
 	params: {
 		workerId: number;
-		memory: Memory.Transferable;
+		memory: SharedMemory.Transferable;
 	};
 	result: void;
 };
@@ -18,8 +18,8 @@ export type ManagementCalls = {
 export type Notifications = {
 	method: 'array/new';
 	params: {
-		array: ptr;
-		counter: ptr;
+		array: MemoryRangeTransferable;
+		counter: MemoryRangeTransferable;
 	};
 } | {
 	method: 'exit';
