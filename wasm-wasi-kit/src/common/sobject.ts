@@ -318,9 +318,9 @@ export class Signal {
 		return Atomics.load(this.buffer, 0) === 1;
 	}
 
-	public resolve(): void {
+	public resolve(agentsToNotify?: number | undefined): void {
 		Atomics.store(this.buffer, 0, 1);
-		Atomics.notify(this.buffer, 0);
+		Atomics.notify(this.buffer, 0, agentsToNotify);
 	}
 }
 
@@ -374,7 +374,8 @@ export class RecordDescriptor<T extends RecordProperties> {
 	private readonly _fields: Map<string, { type: GenericComponentModelType; offset: number }>;
 	public readonly fields: RecordInfo<T>;
 
-	constructor(properties: Properties) {
+	constructor(...props: Properties[]) {
+		let properties: Properties =  props.length === 0 ? [] : props.length === 1 ? props[0] : props.reduce((r, p) => r.concat(p), []);
 		let alignment: Alignment = Alignment.byte;
 		let size = 0;
 		const fields = Object.create(null);
@@ -439,22 +440,17 @@ export abstract class SharedRecord<T extends RecordProperties> extends SharedObj
 	protected abstract getRecordInfo(): RecordDescriptor<T>;
 }
 
-export abstract class LockableRecord<T extends RecordProperties> extends SharedRecord<T> {
 
-	protected static createRecordInfo<T extends RecordProperties>(properties: Properties): RecordDescriptor<T> {
-		let hasLock = false;
-		for (const [name, ] of properties) {
-			if (name === '_lock') {
-				hasLock = true;
-				break;
-			}
-		}
-		if (!hasLock) {
-			properties = properties.slice();
-			properties.push(['_lock', u32]);
-		}
-		return new RecordDescriptor(properties);
-	}
+export namespace LockableRecord {
+	export type Properties = {
+		_lock: u32;
+	};
+}
+export abstract class LockableRecord<T extends LockableRecord.Properties> extends SharedRecord<T> {
+
+	protected static properties: Properties = [
+		['_lock', u32]
+	];
 
 	private readonly lock: Lock;
 

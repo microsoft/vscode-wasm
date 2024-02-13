@@ -8,7 +8,7 @@ import { ComponentModelType, JType, MemoryRange, ptr, u32 } from '@vscode/wasm-c
 import { LockableRecord, SharedObject, RecordDescriptor, SharedMemory } from './sobject';
 
 namespace SArray {
-	export type Properties = {
+	export type Properties = LockableRecord.Properties & {
 		state: u32;
 		start: u32;
 		next: u32;
@@ -25,8 +25,7 @@ export class ConcurrentModificationError extends Error {
 
 export class SArray<T extends JType> extends LockableRecord<SArray.Properties> {
 
-	private static recordInfo: RecordDescriptor<SArray.Properties> = LockableRecord.createRecordInfo([
-		['_lock', u32],
+	private static recordInfo: RecordDescriptor<SArray.Properties> = new RecordDescriptor(LockableRecord.properties, [
 		['state', u32],
 		['start', u32],
 		['next', u32],
