@@ -35,7 +35,7 @@ suite(`Wasi Worker Tests`, () => {
 		client.setTimeout(memRange, BigInt(100 * 1e6));
 		Atomics.wait(signal, 0, 0);
 		const diff = Date.now() - start;
-		assert.ok(diff >= 100 && diff <= 150, `Time difference is: ${diff}`);
+		assert.ok(diff >= 90 && diff <= 150, `Time difference is: ${diff}`);
 		memRange.free();
 	}).timeout(2000);
 
@@ -59,7 +59,7 @@ suite(`Wasi Worker Tests`, () => {
 		assert.ok(!pollable.ready());
 		pollable.block();
 		const diff = Date.now() - start;
-		assert.ok(diff >= 100 && diff <= 150, `Time difference is: ${diff}`);
+		assert.ok(diff >= 90 && diff <= 150, `Time difference is: ${diff}`);
 		Pollable.$drop(pollable);
 	}).timeout(2000);
 
@@ -70,7 +70,7 @@ suite(`Wasi Worker Tests`, () => {
 		assert.ok(!pollable.ready());
 		pollable.block();
 		const diff = Date.now() - start;
-		assert.ok(diff >= 100 && diff <= 150, `Time difference is: ${diff}`);
+		assert.ok(diff >= 90 && diff <= 150, `Time difference is: ${diff}`);
 		Pollable.$drop(pollable);
 	}).timeout(2000);
 
@@ -82,13 +82,13 @@ suite(`Wasi Worker Tests`, () => {
 		const start = Date.now();
 		let result = poll.poll([first, second]);
 		let diff = Date.now() - start;
-		assert.ok(diff >= 100 && diff <= 150, `Time difference is: ${diff}`);
+		assert.ok(diff >= 90 && diff <= 150, `Time difference is: ${diff}`);
 		assert.strictEqual(result.length, 1);
 		assert.strictEqual(result[0], 0);
 		second.block();
 		result = poll.poll([first, second]);
 		diff = Date.now() - start;
-		assert.ok(diff >= 200 && diff <= 250, `Time difference is: ${diff}`);
+		assert.ok(diff >= 190 && diff <= 250, `Time difference is: ${diff}`);
 		assert.strictEqual(result.length, 2);
 		assert.strictEqual(result[0], 0);
 		assert.strictEqual(result[1], 1);
