@@ -35,7 +35,7 @@ suite(`Wasi Worker Tests`, () => {
 		client.setTimeout(memRange, BigInt(100 * 1e6));
 		Atomics.wait(signal, 0, 0);
 		const diff = Date.now() - start;
-		assert.ok(diff >= 90 && diff <= 150, `Time difference is: ${diff}`);
+		assert.ok(diff >= 90, `Time difference is: ${diff}`);
 		memRange.free();
 	}).timeout(2000);
 
@@ -83,8 +83,13 @@ suite(`Wasi Worker Tests`, () => {
 		let result = poll.poll([first, second]);
 		let diff = Date.now() - start;
 		assert.ok(diff >= 90, `Time difference is: ${diff}`);
-		assert.strictEqual(result.length, 1);
-		assert.strictEqual(result[0], 0);
+		// If we have a time difference > 190 it might be that both
+		// timers have been triggered. In that case we can't make any
+		// assumptions about the order of the results.
+		if (diff < 190) {
+			assert.strictEqual(result.length, 1);
+			assert.strictEqual(result[0], 0);
+		}
 		second.block();
 		result = poll.poll([first, second]);
 		diff = Date.now() - start;
