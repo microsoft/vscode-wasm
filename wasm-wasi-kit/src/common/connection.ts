@@ -3,8 +3,8 @@
  * Licensed under the MIT License. See License.txt in the project root for license information.
  * ------------------------------------------------------------------------------------------ */
 import RAL from './ral';
-import { s32, type MemoryRange, type ptr, type u32 } from '@vscode/wasm-component-model';
-import { SharedMemory, SharedObject, type SharedObjectTransferable } from './sharedObject';
+import { s32, type MemoryRange, type ptr, type u32, type BaseMemoryRange } from '@vscode/wasm-component-model';
+import { SharedMemory, SharedObject } from './sharedObject';
 
 export interface ConnectionPort {
 	postMessage(message: any, ...args: any[]): void;
@@ -82,17 +82,29 @@ namespace _AsyncResponse {
 	}
 }
 
-type SyncLocation = {
+
+type MemoryLocation = {
 	memory: {
 		id: string;
 	};
 	ptr: ptr;
 	size: u32;
 };
+namespace MemoryLocation {
+	export function from(memRange: BaseMemoryRange): MemoryLocation {
+		return {
+			memory: {
+				id: memRange.memory.id
+			},
+			ptr: memRange.ptr,
+			size: memRange.size
+		};
+	}
+}
 interface _SyncCall extends AbstractMessage {
 	kind: MessageKind.SyncCall;
-	sync: SyncLocation;
-	result?: SharedObjectTransferable;
+	sync: MemoryLocation;
+	result?: MemoryLocation;
 }
 namespace _SyncCall {
 	export function is(value: _Message): value is _SyncCall {
@@ -214,6 +226,7 @@ export abstract class BaseConnection<AsyncCalls extends _AsyncCallType | undefin
 
 	private memory: SharedMemory | undefined;
 	private syncMemoryRange: MemoryRange | undefined;
+	private syncLocation: MemoryLocation | undefined;
 	private readonly syncCallHandlers: Map<string, _SyncCallHandler>;
 
 	private readonly notifyHandlers: Map<string, _NotifyHandler>;
@@ -274,6 +287,7 @@ export abstract class BaseConnection<AsyncCalls extends _AsyncCallType | undefin
 		const syncCallBuffer = this.syncMemoryRange.getInt32View(0);
 		Atomics.store(syncCallBuffer, BaseConnection.sync, 0);
 		Atomics.store(syncCallBuffer, BaseConnection.error, 0);
+		this.syncLocation = { memory: { id: memory.id }, ptr: this.syncMemoryRange.ptr, size: this.syncMemoryRange.size };
 	}
 
 	public getSharedMemory(): SharedMemory {
@@ -286,19 +300,19 @@ export abstract class BaseConnection<AsyncCalls extends _AsyncCallType | undefin
 	public readonly callSync: SyncCallSignatures<SyncCalls, TLI> = this._callSync as SyncCallSignatures<SyncCalls, TLI>;
 
 	private _callSync(method: string, params?: any, result?: _SharedObjectResult | undefined, timeout?: number | undefined, transferList?: ReadonlyArray<TLI>): any {
-		if (this.syncMemoryRange === undefined || this.memory === undefined) {
+		if (this.syncMemoryRange === undefined || this.syncLocation === undefined || this.memory === undefined) {
 			throw new Error('Sync calls are not initialized with shared memory.');
 		}
 		const syncCallBuffer = this.syncMemoryRange.getInt32View(0);
 		const memory = this.memory;
-		const call: _SyncCall = { kind: MessageKind.SyncCall, method, sync: this.syncMemoryRange.getTransferable() };
+		const call: _SyncCall = { kind: MessageKind.SyncCall, method, sync: this.syncLocation };
 		if (params !== undefined) {
 			call.params = params;
 		}
 		let resultRange: MemoryRange | undefined;
 		if (result !== undefined && result !== null) {
 			resultRange = result.alloc(this.memory);
-			call.result = resultRange.getTransferable();
+			call.result = MemoryLocation.from(resultRange);
 		}
 		this.postMessage(call, transferList);
 		syncCallBuffer[BaseConnection.error] = 0;

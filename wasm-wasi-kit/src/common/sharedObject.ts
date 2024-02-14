@@ -323,7 +323,7 @@ export class Signal {
 	}
 }
 
-export type SharedObjectTransferable = {
+export type SharedObjectLocation = {
 	memory: {
 		id: string;
 	};

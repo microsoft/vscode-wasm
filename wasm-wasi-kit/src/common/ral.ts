@@ -7,7 +7,7 @@ import type { URI } from 'vscode-uri';
 
 import { RAL as _RAL } from '@vscode/wasm-component-model';
 
-import { SharedMemory } from './sobject';
+import { SharedMemory } from './sharedObject';
 import type { AnyConnection, ConnectionPort } from './connection';
 import type { WorkerClient, WorkerClientBase } from './workerClient';
 

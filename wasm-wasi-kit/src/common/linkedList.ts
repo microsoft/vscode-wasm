@@ -4,7 +4,7 @@
  * ------------------------------------------------------------------------------------------ */
 
 import { ptr, u32, type JType, type ComponentModelType, type MemoryRange } from '@vscode/wasm-component-model';
-import { LockableRecord, RecordDescriptor, SharedMemory } from './sobject';
+import { LockableRecord, RecordDescriptor, SharedMemory } from './sharedObject';
 
 
 namespace SharedLinkedList {
