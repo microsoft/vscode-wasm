@@ -8,9 +8,8 @@ import RAL from './ral';
 import * as uuid from 'uuid';
 
 import {
-	Memory, ReadonlyMemoryRange, type BaseMemoryRange,
-	Alignment, ComponentModelContext, GenericComponentModelType, ResourceManagers, ptr, u32, size, JType,
-	MemoryRangeTransferable, MemoryError, MemoryRange
+	Memory, ReadonlyMemoryRange, type BaseMemoryRange, Alignment, ComponentModelContext, ResourceManagers, ptr, u32, size, JType as _JType,
+	MemoryError, MemoryRange, type offset, ComponentModelError
 } from '@vscode/wasm-component-model';
 
 export interface SharedMemory extends Memory {
@@ -324,6 +323,15 @@ export class Signal {
 	}
 }
 
+export type SharedObjectTransferable = {
+	memory: {
+		id: string;
+	};
+	id: u32;
+	ptr: ptr;
+	size: size;
+};
+
 export abstract class SharedObject {
 
 	public static Context: ComponentModelContext = {
@@ -364,14 +372,53 @@ export abstract class SharedObject {
 	}
 }
 
-export type Properties = [string, GenericComponentModelType][];
+export type JType = _JType | MemoryRange | ReadonlyMemoryRange;
+export interface PropertyType<T = JType> {
+	readonly size: size;
+	readonly alignment: Alignment;
+	load(memory: ReadonlyMemoryRange, offset: offset, context: ComponentModelContext): T;
+	store(memory: MemoryRange, offset: offset, value: T, context: ComponentModelContext): void;
+}
+export namespace PropertyType {
+	namespace $MemoryRange {
+		export const size: size = ptr.size + u32.size;
+		export const alignment: Alignment = Math.max(ptr.alignment, u32.alignment);
+
+		export function load(memRange: ReadonlyMemoryRange, offset: number): MemoryRange {
+			return memRange.memory.preAllocated(memRange.getUint32(offset), memRange.getUint32(offset + ptr.size));
+		}
+
+		export function store(memory: MemoryRange, offset: number, value: MemoryRange): void {
+			memory.setUint32(offset, value.ptr);
+			memory.setUint32(offset + ptr.size, value.size);
+		}
+	}
+	export const MemoryRange: PropertyType<MemoryRange> = $MemoryRange;
+
+	namespace $ReadonlyMemoryRange {
+		export const size: size = ptr.size + u32.size;
+		export const alignment: Alignment = Math.max(ptr.alignment, u32.alignment);
+
+		export function load(memRange: ReadonlyMemoryRange, offset: number): ReadonlyMemoryRange {
+			return memRange.memory.readonly(memRange.getUint32(offset), memRange.getUint32(offset + ptr.size));
+		}
+
+		export function store(memory: MemoryRange, offset: number, value: ReadonlyMemoryRange): void {
+			memory.setUint32(offset, value.ptr);
+			memory.setUint32(offset + ptr.size, value.size);
+		}
+	}
+	export const ReadonlyMemoryRange: PropertyType<ReadonlyMemoryRange> = $ReadonlyMemoryRange;
+}
+
+export type Properties = [string, PropertyType][];
 type RecordProperties = { [key: string]: JType };
-export type RecordInfo<T extends RecordProperties> = { [key in keyof T]: { offset: number; type: GenericComponentModelType } };
+export type RecordInfo<T extends RecordProperties> = { [key in keyof T]: { offset: number; type: PropertyType } };
 
 export class RecordDescriptor<T extends RecordProperties> {
 	public readonly alignment: Alignment;
 	public readonly size: size;
-	private readonly _fields: Map<string, { type: GenericComponentModelType; offset: number }>;
+	private readonly _fields: Map<string, { type: PropertyType; offset: number }>;
 	public readonly fields: RecordInfo<T>;
 
 	constructor(...props: Properties[]) {
@@ -379,7 +426,7 @@ export class RecordDescriptor<T extends RecordProperties> {
 		let alignment: Alignment = Alignment.byte;
 		let size = 0;
 		const fields = Object.create(null);
-		const fieldsMap: Map<string, { type: GenericComponentModelType; offset: number }> = new Map();
+		const fieldsMap: Map<string, { type: PropertyType; offset: number }> = new Map();
 		for (const [name, type] of properties) {
 			if (fieldsMap.has(name)) {
 				throw new Error(`Duplicate property ${name}`);
@@ -397,7 +444,7 @@ export class RecordDescriptor<T extends RecordProperties> {
 		this._fields = fieldsMap;
 	}
 
-	getField(name: string): { type: GenericComponentModelType; offset: number } | undefined {
+	getField(name: string): { type: PropertyType; offset: number } | undefined {
 		return this._fields.get(name);
 	}
 
@@ -421,6 +468,23 @@ export class RecordDescriptor<T extends RecordProperties> {
 			});
 		}
 		return access as T;
+	}
+}
+
+export abstract class SharedProperty {
+
+	protected readonly memoryRange: MemoryRange;
+
+	constructor(memoryRange: MemoryRange) {
+		this.memoryRange = memoryRange;
+	}
+
+	protected get memory(): SharedMemory {
+		const result = this.memoryRange.memory;
+		if (!SharedMemory.is(result)) {
+			throw new ComponentModelError(`Memory is not a shared memory instance.`);
+		}
+		return result;
 	}
 }
 

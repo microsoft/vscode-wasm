@@ -7,8 +7,8 @@ import * as wm from './workerMessages';
 import _Client = wm.Client;
 import _Service = wm.Service;
 
-export * from './sobject';
-export * from './sarray';
+export * from './sharedObject';
+export * from './array';
 export * from './connection';
 export * from './workerClient';
 export * from './workerService';

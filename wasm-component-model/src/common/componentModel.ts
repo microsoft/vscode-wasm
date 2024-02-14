@@ -196,15 +196,6 @@ export class MemoryError extends Error {
 
 export type offset<_T = undefined> = u32;
 
-export type MemoryRangeTransferable = {
-	kind: 'readonly' | 'writable';
-	memory: {
-		id: string;
-	};
-	ptr: ptr;
-	size: size;
-};
-
 type ArrayClazz<T extends ArrayLike<number> & { set(array: ArrayLike<number>, offset?: number): void }> = {
 	new (buffer: ArrayBuffer, byteOffset: number, length: number): T;
 	new (length: number): T;
@@ -254,8 +245,6 @@ export abstract class BaseMemoryRange {
 		}
 		return this._view;
 	}
-
-	public abstract getTransferable(): MemoryRangeTransferable;
 
 	public getUint8(offset: offset<u8>): u8 {
 		return this.view.getUint8(offset);
@@ -391,15 +380,11 @@ export class ReadonlyMemoryRange extends BaseMemoryRange {
 		super(memory, ptr, size);
 	}
 
-	public getTransferable(): MemoryRangeTransferable {
-		return {
-			kind: 'readonly',
-			memory: {
-				id: this._memory.id
-			},
-			ptr: this.ptr,
-			size: this.size
-		};
+	public range(offset: offset, size: size): ReadonlyMemoryRange {
+		if (offset + size > this.size) {
+			throw new MemoryError(`Memory access is out of bounds. Accessing [${offset}, ${size}], allocated[${this.ptr}, ${this.size}]`);
+		}
+		return new ReadonlyMemoryRange(this._memory, this.ptr + offset, size);
 	}
 }
 
@@ -419,15 +404,11 @@ export class MemoryRange extends BaseMemoryRange {
 		this._memory.free(this);
 	}
 
-	public getTransferable(): MemoryRangeTransferable {
-		return {
-			kind: 'writable',
-			memory: {
-				id: this._memory.id
-			},
-			ptr: this.ptr,
-			size: this.size
-		};
+	public range(offset: offset, size: size): MemoryRange {
+		if (offset + size > this.size) {
+			throw new MemoryError(`Memory access is out of bounds. Accessing [${offset}, ${size}], allocated[${this.ptr}, ${this.size}]`);
+		}
+		return new MemoryRange(this._memory, this.ptr + offset, size);
 	}
 
 	public setUint8(offset: offset<u8>, value: u8): void {
@@ -861,9 +842,7 @@ export enum ComponentModelTypeKind {
 	resource = 'resource',
 	resourceHandle = 'resourceHandle',
 	borrow = 'borrow',
-	own = 'own',
-	memoryRange = 'memoryRange',
-	readonlyMemoryRange = 'readonlyMemoryRange'
+	own = 'own'
 }
 
 export interface ComponentModelContext {
@@ -1583,72 +1562,6 @@ namespace $wstring {
 	}
 }
 export const wstring: ComponentModelType<string> & { getAlignmentAndByteLength: typeof $wstring.getAlignmentAndByteLength } = $wstring;
-
-export namespace MemoryRange {
-
-	export const kind: ComponentModelTypeKind.memoryRange = ComponentModelTypeKind.memoryRange;
-	export const size: size = ptr.size + u32.size;
-	export const alignment: Alignment = Math.max(ptr.alignment, u32.alignment);
-	export const flatTypes: readonly FlatType<WasmType>[] = [...ptr.flatTypes, ...u32.flatTypes];
-
-	export function load(memRange: ReadonlyMemoryRange, offset: number): MemoryRange {
-		return memRange.memory.preAllocated(memRange.getUint32(offset), memRange.getUint32(offset + ptr.size));
-	}
-
-	export function liftFlat(memory: Memory, values: FlatValuesIter): MemoryRange {
-		return memory.preAllocated(values.next().value as ptr, values.next().value as u32);
-	}
-
-	export function alloc(memory: Memory): MemoryRange {
-		return memory.alloc(alignment, size);
-	}
-
-	export function store(memory: MemoryRange, offset: number, value: MemoryRange): void {
-		memory.setUint32(offset, value.ptr);
-		memory.setUint32(offset + ptr.size, value.size);
-	}
-
-	export function lowerFlat(result: WasmType[], _memory: Memory, value: MemoryRange): void {
-		result.push(value.ptr, value.size);
-	}
-
-	export function copy(dest: MemoryRange, dest_offset: number, src: ReadonlyMemoryRange, src_offset: number): void {
-		src.copyBytes(src_offset, size, dest, dest_offset);
-	}
-}
-
-export namespace ReadonlyMemoryRange {
-
-	export const kind: ComponentModelTypeKind.readonlyMemoryRange = ComponentModelTypeKind.readonlyMemoryRange;
-	export const size: size = ptr.size + u32.size;
-	export const alignment: Alignment = Math.max(ptr.alignment, u32.alignment);
-	export const flatTypes: readonly FlatType<WasmType>[] = [...ptr.flatTypes, ...u32.flatTypes];
-
-	export function load(memRange: ReadonlyMemoryRange, offset: number): ReadonlyMemoryRange {
-		return memRange.memory.readonly(memRange.getUint32(offset), memRange.getUint32(offset + ptr.size));
-	}
-
-	export function liftFlat(memory: Memory, values: FlatValuesIter): ReadonlyMemoryRange {
-		return memory.readonly(values.next().value as ptr, values.next().value as u32);
-	}
-
-	export function alloc(memory: Memory): MemoryRange {
-		return memory.alloc(alignment, size);
-	}
-
-	export function store(memory: MemoryRange, offset: number, value: ReadonlyMemoryRange): void {
-		memory.setUint32(offset, value.ptr);
-		memory.setUint32(offset + ptr.size, value.size);
-	}
-
-	export function lowerFlat(result: WasmType[], _memory: Memory, value: ReadonlyMemoryRange): void {
-		result.push(value.ptr, value.size);
-	}
-
-	export function copy(dest: MemoryRange, dest_offset: number, src: ReadonlyMemoryRange, src_offset: number): void {
-		src.copyBytes(src_offset, size, dest, dest_offset);
-	}
-}
 
 export type JArray = JType[];
 export class ListType<T> implements ComponentModelType<T[]> {
@@ -2774,7 +2687,7 @@ export interface JInterface {
 	$handle?: ResourceHandle;
 }
 
-export type JType = number | bigint | string | boolean | JArray | JRecord | JVariantCase | JTuple | JEnum | JInterface | option<any> | undefined | result<any, any> | Int8Array | Int16Array | Int32Array | BigInt64Array | Uint8Array | Uint16Array | Uint32Array | BigUint64Array | Float32Array | Float64Array | MemoryRange | ReadonlyMemoryRange ;
+export type JType = number | bigint | string | boolean | JArray | JRecord | JVariantCase | JTuple | JEnum | JInterface | option<any> | undefined | result<any, any> | Int8Array | Int16Array | Int32Array | BigInt64Array | Uint8Array | Uint16Array | Uint32Array | BigUint64Array | Float32Array | Float64Array;
 
 export type CallableParameter = [/* name */string, /* type */GenericComponentModelType];
 

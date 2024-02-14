@@ -3,8 +3,8 @@
  * Licensed under the MIT License. See License.txt in the project root for license information.
  * ------------------------------------------------------------------------------------------ */
 import RAL from './ral';
-import { s32, type MemoryRange, type MemoryRangeTransferable } from '@vscode/wasm-component-model';
-import { SharedMemory, SharedObject } from './sobject';
+import { s32, type MemoryRange, type ptr, type u32 } from '@vscode/wasm-component-model';
+import { SharedMemory, SharedObject, type SharedObjectTransferable } from './sharedObject';
 
 export interface ConnectionPort {
 	postMessage(message: any, ...args: any[]): void;
@@ -82,10 +82,17 @@ namespace _AsyncResponse {
 	}
 }
 
+type SyncLocation = {
+	memory: {
+		id: string;
+	};
+	ptr: ptr;
+	size: u32;
+};
 interface _SyncCall extends AbstractMessage {
 	kind: MessageKind.SyncCall;
-	sync: MemoryRangeTransferable;
-	result?: MemoryRangeTransferable;
+	sync: SyncLocation;
+	result?: SharedObjectTransferable;
 }
 namespace _SyncCall {
 	export function is(value: _Message): value is _SyncCall {
