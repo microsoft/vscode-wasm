@@ -4,7 +4,7 @@
  * ------------------------------------------------------------------------------------------ */
 
 import { MemoryRange, ptr, u32, type Alignment, type offset, type size, ComponentModelTrap } from '@vscode/wasm-component-model';
-import { SharedObject, ValueType, SharedProperty, Record, type ObjectType, SharedObjectContext, ConcurrentModificationError } from './sharedObject';
+import { SharedObject, ValueType, SharedProperty, Record, type ObjectType, SharedObjectContext, ConcurrentModificationError, SharedMemory, Synchronize } from './sharedObject';
 
 
 export class SharedArray<T> extends SharedProperty {
@@ -12,7 +12,16 @@ export class SharedArray<T> extends SharedProperty {
 	private readonly elementType: ValueType<T>;
 	private readonly access: SharedArray.Properties;
 
-	constructor(elementType: ValueType<T>, memoryRange: MemoryRange, context: SharedObjectContext) {
+	constructor(elementType: ValueType<T>, memory: SharedMemory, capacity?: u32);
+	constructor(elementType: ValueType<T>, memoryRange: MemoryRange, context: SharedObjectContext);
+	constructor(elementType: ValueType<T>, arg1: SharedMemory | MemoryRange, arg2?: u32 | SharedObjectContext) {
+		const [memoryRange, context, capacity] = function () {
+			if (SharedMemory.is(arg1)) {
+				return [SharedArray.alloc(arg1), SharedObject.Context.new, arg2 as number ?? 32];
+			} else {
+				return [arg1, arg2 as SharedObjectContext, 32];
+			}
+		}();
 		super(memoryRange);
 		this.elementType = elementType;
 		const access = SharedArray.properties.load(memoryRange, 0, context);
@@ -21,7 +30,7 @@ export class SharedArray<T> extends SharedProperty {
 			access.start = 0;
 			access.next = 0;
 			access.elementSize = elementType.size;
-			access.elements = memoryRange.memory.alloc(u32.alignment, 32 * ptr.size);
+			access.elements = memoryRange.memory.alloc(u32.alignment, capacity * ptr.size);
 		} else {
 			if (elementType.size !== access.elementSize) {
 				throw new ComponentModelTrap(`Element size differs between element type [${this.elementType.size}] and allocated memory [${access.elementSize}].`);
@@ -183,6 +192,14 @@ export namespace SharedArray {
 		['elementSize', u32],
 		['elements', ValueType.MemoryRange]
 	]);
+
+	export function alloc(memory: SharedMemory): MemoryRange {
+		return memory.alloc(properties.alignment, properties.size);
+	}
+
+	export function synchronized<T>(memory: SharedMemory, array: SharedArray<T>): Synchronize.WithRunLocked<SharedArray<T>> {
+		return Synchronize(memory, array);
+	}
 
 	export class Type<T> implements ObjectType<SharedArray<T>>{
 		public size: size;

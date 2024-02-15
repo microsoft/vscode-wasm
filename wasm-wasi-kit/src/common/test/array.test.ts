@@ -6,8 +6,8 @@ import assert from 'assert';
 
 import { float64, u32 } from '@vscode/wasm-component-model';
 
-import { SharedMemory } from '../sobject';
-import { SArray } from '../sarray';
+import { SharedMemory, Synchronize } from '../sharedObject';
+import { SharedArray } from '../array';
 
 suite('SArray', () => {
 
@@ -17,7 +17,7 @@ suite('SArray', () => {
 	});
 
 	test('push', () => {
-		const arr = new SArray(float64, memory);
+		const arr = new SharedArray(float64, memory);
 		arr.push(1.1);
 		arr.push(2.2);
 
@@ -27,7 +27,7 @@ suite('SArray', () => {
 	});
 
 	test('pop', () => {
-		const arr = new SArray(float64, memory);
+		const arr = new SharedArray(float64, memory);
 		arr.push(1.1);
 		arr.push(2.2);
 
@@ -37,7 +37,7 @@ suite('SArray', () => {
 	});
 
 	test('keys', () => {
-		const arr = new SArray(float64, memory);
+		const arr = new SharedArray(float64, memory);
 		arr.push(1.1);
 		arr.push(2.2);
 
@@ -48,7 +48,7 @@ suite('SArray', () => {
 	});
 
 	test('values', () => {
-		const arr = new SArray(float64, memory);
+		const arr = new SharedArray(float64, memory);
 		arr.push(1.1);
 		arr.push(2.2);
 
@@ -59,7 +59,7 @@ suite('SArray', () => {
 	});
 
 	test('entries', () => {
-		const arr = new SArray(float64, memory);
+		const arr = new SharedArray(float64, memory);
 		arr.push(1.1);
 		arr.push(2.2);
 
@@ -74,17 +74,19 @@ suite('SArray', () => {
 	});
 
 	test('locked', () => {
-		const arr = new SArray(float64, memory);
+		const arr = SharedArray.synchronized(memory, new SharedArray(float64, memory));
 		arr.push(1.1);
 		arr.push(2.2);
+		assert.strictEqual(arr.length, 2);
 		arr.runLocked(arr => {
+			assert.strictEqual(arr.length, 2);
 			assert.strictEqual(arr.at(0), 1.1);
 			assert.strictEqual(arr.at(1), 2.2);
 		});
 	});
 
 	test('grow', () => {
-		const arr = new SArray(u32, memory, 1);
+		const arr = new SharedArray(u32, memory, 1);
 		for (let i = 0; i < 100; i++) {
 			arr.push(i);
 		}

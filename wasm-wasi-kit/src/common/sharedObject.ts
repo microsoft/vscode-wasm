@@ -325,8 +325,14 @@ export class Lock {
 	private readonly buffer: Int32Array;
 	private lockCount: number;
 
-	constructor(buffer: Int32Array) {
-		this.buffer = buffer;
+	constructor(memory: SharedMemory);
+	constructor(buffer: Int32Array);
+	constructor(arg: SharedMemory | Int32Array) {
+		const isMemory = SharedMemory.is(arg);
+		this.buffer = isMemory ? Lock.alloc(arg).getInt32View(0, 1): arg;
+		if (isMemory) {
+			Atomics.store(this.buffer, 0, 1);
+		}
 		this.lockCount = 0;
 	}
 
@@ -358,6 +364,11 @@ export class Lock {
 
 }
 export namespace Lock {
+
+	export function alloc(memory: SharedMemory): MemoryRange {
+		return memory.alloc(Type.alignment, Type.size);
+	}
+
 	class $Type extends ObjectType<Lock> {
 		public readonly alignment: Alignment = u32.alignment;
 		public readonly size: size = u32.size;
@@ -513,4 +524,84 @@ export abstract class SharedObject<T extends SharedObject.Properties = SharedObj
 	protected releaseLock(): void {
 		this.lock.release();
 	}
+}
+
+export namespace Synchronize {
+	export type WithRunLocked<T> = T & {
+		runLocked(callback: (value: T) => void): void;
+	};
+}
+export function Synchronize<T extends SharedProperty>(memory: SharedMemory, object: T): Synchronize.WithRunLocked<T> {
+	const lock = new Lock(memory);
+	function runLocked(target: T, callback: (value: T) => void): void {
+		lock.acquire();
+		try {
+			callback(target);
+		} finally {
+			lock.release();
+		}
+	}
+	function func(target: T, p: PropertyKey, ...args: any[]): any {
+		try {
+			lock.acquire();
+			return (target as any)[p](...args);
+		} finally {
+			lock.release();
+		}
+	}
+	function isPropertyOrGetter(target: any, p: PropertyKey): boolean {
+		if (Object.hasOwn(target, p)) {
+			return true;
+		}
+		const prototype = Reflect.getPrototypeOf(target);
+		const descriptor = prototype !== null ? Reflect.getOwnPropertyDescriptor(prototype, p) : Reflect.getOwnPropertyDescriptor(target, p);
+		if (descriptor !== undefined && descriptor.get !== undefined) {
+			return true;
+		}
+		return false;
+	}
+
+	function isPropertyOrSetter(target: any, p: PropertyKey): boolean {
+		if (Object.hasOwn(target, p)) {
+			return true;
+		}
+		const prototype = Reflect.getPrototypeOf(target);
+		const descriptor = prototype !== null ? Reflect.getOwnPropertyDescriptor(prototype, p) : Reflect.getOwnPropertyDescriptor(target, p);
+		if (descriptor !== undefined && descriptor.set !== undefined) {
+			return true;
+		}
+		return false;
+	}
+	return new Proxy<T & { runLocked(callback: (value: T) => void): void }>(object as any, {
+		get(target: T, p: PropertyKey, receiver: any): any {
+			if (p === 'runLocked') {
+				return runLocked.bind(null, target);
+			}
+			if (isPropertyOrGetter(target, p)) {
+				try {
+					lock.acquire();
+					return (target as any)[p];
+				} finally {
+					lock.release();
+				}
+			} else {
+				const value = Reflect.get(target, p, receiver);
+				if (typeof value === 'function') {
+					return func.bind(null, target, p);
+				}
+			}
+		},
+		set(target: T, p: PropertyKey, value: any, _receiver: any): boolean {
+			if (isPropertyOrSetter(target, p)) {
+				try {
+					lock.acquire();
+					(target as any)[p] = value;
+				} finally {
+					lock.release();
+				}
+				return true;
+			}
+			return false;
+		}
+	});
 }
