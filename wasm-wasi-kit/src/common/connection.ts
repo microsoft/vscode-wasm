@@ -3,8 +3,8 @@
  * Licensed under the MIT License. See License.txt in the project root for license information.
  * ------------------------------------------------------------------------------------------ */
 import RAL from './ral';
-import { s32, type MemoryRange, type ptr, type u32, type BaseMemoryRange, MemoryError } from '@vscode/wasm-component-model';
-import { SharedMemory, SharedObject } from './sharedObject';
+import { s32, type MemoryRange } from '@vscode/wasm-component-model';
+import { SharedMemory, SharedObject, MemoryLocation } from './sharedObject';
 
 export interface ConnectionPort {
 	postMessage(message: any, ...args: any[]): void;
@@ -82,31 +82,6 @@ namespace _AsyncResponse {
 	}
 }
 
-
-type MemoryLocation = {
-	memory: {
-		id: string;
-	};
-	ptr: ptr;
-	size: u32;
-};
-namespace MemoryLocation {
-	export function from(memRange: BaseMemoryRange): MemoryLocation {
-		return {
-			memory: {
-				id: memRange.memory.id
-			},
-			ptr: memRange.ptr,
-			size: memRange.size
-		};
-	}
-	export function to(memory: SharedMemory, location: MemoryLocation): MemoryRange {
-		if (memory.id !== location.memory.id) {
-			throw new MemoryError(`Memory location does not match`);
-		}
-		return memory.preAllocated(location.ptr, location.size);
-	}
-}
 interface _SyncCall extends AbstractMessage {
 	kind: MessageKind.SyncCall;
 	sync: MemoryLocation;

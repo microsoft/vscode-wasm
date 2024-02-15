@@ -4,14 +4,14 @@
  * ------------------------------------------------------------------------------------------ */
 
 import { ptr, u32, type MemoryRange, type size, type Alignment, type offset, ComponentModelTrap } from '@vscode/wasm-component-model';
-import { SharedProperty, Record, type ObjectType, type ValueType, SharedObjectContext } from './sharedObject';
+import { ObjectProperty, Record, type ObjectType, type ValueType, SharedObjectContext } from './sharedObject';
 
 
 
-export class SharedLinkedList<T> extends SharedProperty {
+export class SharedLinkedList<T> extends ObjectProperty {
 
 	private readonly elementType: ValueType<T>;
-	private readonly access: SharedLinkedList.Properties;
+	protected readonly access: SharedLinkedList.Properties;
 
 	constructor(elementType: ValueType<T>, memoryRange: MemoryRange, context: SharedObjectContext) {
 		super(memoryRange);

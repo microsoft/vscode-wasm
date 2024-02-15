@@ -4,22 +4,22 @@
  * ------------------------------------------------------------------------------------------ */
 
 import { MemoryRange, ptr, u32, type Alignment, type offset, type size, ComponentModelTrap } from '@vscode/wasm-component-model';
-import { SharedObject, ValueType, SharedProperty, Record, type ObjectType, SharedObjectContext, ConcurrentModificationError, SharedMemory, Synchronize } from './sharedObject';
+import { SharedObject, ValueType, ObjectProperty, Record, type ObjectType, SharedObjectContext, ConcurrentModificationError, SharedMemory, Synchronize, type Lock } from './sharedObject';
 
 
-export class SharedArray<T> extends SharedProperty {
+export class SharedArray<T> extends ObjectProperty {
 
 	private readonly elementType: ValueType<T>;
 	private readonly access: SharedArray.Properties;
 
 	constructor(elementType: ValueType<T>, memory: SharedMemory, capacity?: u32);
-	constructor(elementType: ValueType<T>, memoryRange: MemoryRange, context: SharedObjectContext);
+	constructor(elementType: ValueType<T>, memoryRange: MemoryRange, context?: SharedObjectContext);
 	constructor(elementType: ValueType<T>, arg1: SharedMemory | MemoryRange, arg2?: u32 | SharedObjectContext) {
 		const [memoryRange, context, capacity] = function () {
 			if (SharedMemory.is(arg1)) {
 				return [SharedArray.alloc(arg1), SharedObject.Context.new, arg2 as number ?? 32];
 			} else {
-				return [arg1, arg2 as SharedObjectContext, 32];
+				return [arg1, arg2 !== undefined ? arg2 as SharedObjectContext : SharedObject.Context.existing, 32];
 			}
 		}();
 		super(memoryRange);
@@ -197,7 +197,7 @@ export namespace SharedArray {
 		return memory.alloc(properties.alignment, properties.size);
 	}
 
-	export function synchronized<T>(memory: SharedMemory, array: SharedArray<T>): Synchronize.WithRunLocked<SharedArray<T>> {
+	export function synchronized<T>(memory: SharedMemory | Lock, array: SharedArray<T>): Synchronize.WithRunLocked<SharedArray<T>> {
 		return Synchronize(memory, array);
 	}
 
@@ -211,6 +211,7 @@ export namespace SharedArray {
 			this.alignment = properties.alignment;
 		}
 		public load(memory: MemoryRange, offset: offset, context: SharedObjectContext): SharedArray<any> {
+			memory.assertAlignment(this.alignment, offset);
 			const arrayMemory = memory.range(offset, this.size);
 			return new SharedArray<T>(this.elementType, arrayMemory, context);
 		}

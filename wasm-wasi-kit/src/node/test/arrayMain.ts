@@ -10,8 +10,8 @@ import { Worker } from 'node:worker_threads';
 
 import { Alignment, float64, u32  } from '@vscode/wasm-component-model';
 
-import { SharedMemory } from '../../common/sobject';
-import { SArray } from '../../common/sarray';
+import { Lock, MemoryLocation, SharedMemory } from '../../common/sharedObject';
+import { SharedArray } from '../../common/array';
 
 import { Notifications, Operations, ManagementCalls, ServerNotifications } from './messages';
 import { Connection } from '../connection';
@@ -21,11 +21,11 @@ const isDebugging = typeof v8debug === 'object' || /--debug|--inspect/.test(proc
 
 class ArrayOperations {
 
-	private readonly sarray: SArray<float64>;
+	private readonly sarray: SharedArray<float64>;
 	public readonly jarray: number[];
 	private operations: Operations[] = [];
 
-	constructor(sarray: SArray<float64>) {
+	constructor(sarray: SharedArray<float64>) {
 		this.sarray = sarray;
 		this.jarray = [];
 		this.operations = [];
@@ -105,8 +105,9 @@ async function main(): Promise<void> {
 	const counter = memory.alloc(Alignment.halfWord, u32.size);
 
 	const threads: { worker: Worker; connection: ConnectionType }[] = [];
-	const sarray = new SArray<float64>(float64, memory);
-	const operations = new ArrayOperations(sarray);
+	const arr = new SharedArray<float64>(float64, memory);
+	const lock = new Lock(memory);
+	const operations = new ArrayOperations(arr);
 	const promises: Promise<void>[] = [];
 
 	const numberOfThreads = 8;
@@ -137,7 +138,7 @@ async function main(): Promise<void> {
 			});
 		}));
 		threads.push({ worker, connection });
-		connection.notify('array/new', { array: sarray.memoryRange.getTransferable(), counter: counter.getTransferable() });
+		connection.notify('array/new', { counter: MemoryLocation.from(counter), lock: lock.getMemoryLocation(), array: arr.getMemoryLocation(),  });
 	}
 
 	await Promise.all(promises);

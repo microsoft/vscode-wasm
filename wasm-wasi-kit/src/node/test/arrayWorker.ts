@@ -9,14 +9,14 @@ import { parentPort } from 'node:worker_threads';
 
 import { float64, ptr } from '@vscode/wasm-component-model';
 
-import { SArray } from '../../common/sarray';
+import { SharedArray } from '../../common/array';
 import { Connection } from '../connection';
 import { Notifications, Operations, ManagementCalls, ServerNotifications } from './messages';
-import { SharedMemory } from '../../common/sobject';
+import { Lock, MemoryLocation, SharedMemory } from '../../common/sharedObject';
 
 const connection = new Connection<undefined, undefined, Operations | ServerNotifications, ManagementCalls, undefined, Notifications>(parentPort!);
 
-const arrays: Map<ptr, SArray<float64>> = new Map();
+const arrays: Map<ptr, SharedArray<float64>> = new Map();
 
 const operations: string[] = [
 	'array/push',
@@ -33,10 +33,11 @@ connection.onAsyncCall('init', async (params) => {
 });
 
 connection.onNotify('array/new', async (params) => {
-	const array = new SArray<float64>(float64, memory.range.fromWritable(params.array));
-	arrays.set(array.memoryRange.ptr, array);
+	const lock = new Lock(MemoryLocation.to(memory, params.lock));
+	const array = SharedArray.synchronized(lock, new SharedArray<float64>(float64, MemoryLocation.to(memory, params.array)));
+	arrays.set(array.getMemoryLocation().ptr, array);
 
-	const counter =  memory.range.fromWritable(params.counter).getUint32View(0);
+	const counter =  MemoryLocation.to(memory, params.counter).getUint32View(0);
 
 	function push() {
 		const value = Math.random();

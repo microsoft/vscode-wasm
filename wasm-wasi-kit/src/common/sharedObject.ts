@@ -9,7 +9,7 @@ import * as uuid from 'uuid';
 
 import {
 	Memory, ReadonlyMemoryRange, Alignment, ComponentModelContext, ResourceManagers, ptr, u32, size, JType as _JType,
-	MemoryError, MemoryRange, type offset, ComponentModelTrap
+	MemoryError, MemoryRange, type offset, ComponentModelTrap, type BaseMemoryRange
 } from '@vscode/wasm-component-model';
 
 export interface SharedMemory extends Memory {
@@ -137,6 +137,32 @@ class MemoryImpl implements SharedMemory {
 		raw.copyWithin(dest.ptr, src.ptr, src.ptr + src.size);
 	}
 }
+
+export type MemoryLocation = {
+	memory: {
+		id: string;
+	};
+	ptr: ptr;
+	size: u32;
+};
+export namespace MemoryLocation {
+	export function from(memRange: BaseMemoryRange): MemoryLocation {
+		return {
+			memory: {
+				id: memRange.memory.id
+			},
+			ptr: memRange.ptr,
+			size: memRange.size
+		};
+	}
+	export function to(memory: SharedMemory, location: MemoryLocation): MemoryRange {
+		if (memory.id !== location.memory.id) {
+			throw new MemoryError(`Memory location does not match`);
+		}
+		return memory.preAllocated(location.ptr, location.size);
+	}
+}
+
 
 export class Allocation {
 
@@ -303,7 +329,7 @@ export namespace Record {
 	}
 }
 
-export abstract class SharedProperty {
+export abstract class ObjectProperty {
 
 	protected readonly memoryRange: MemoryRange;
 
@@ -318,19 +344,25 @@ export abstract class SharedProperty {
 		}
 		return result;
 	}
+
+	public getMemoryLocation(): MemoryLocation {
+		return MemoryLocation.from(this.memoryRange);
+	}
 }
 
-export class Lock {
+export class Lock extends ObjectProperty{
 
 	private readonly buffer: Int32Array;
 	private lockCount: number;
 
 	constructor(memory: SharedMemory);
-	constructor(buffer: Int32Array);
-	constructor(arg: SharedMemory | Int32Array) {
+	constructor(memRange: MemoryRange, context?: SharedObjectContext);
+	constructor(arg: SharedMemory | MemoryRange, context?: SharedObjectContext) {
 		const isMemory = SharedMemory.is(arg);
-		this.buffer = isMemory ? Lock.alloc(arg).getInt32View(0, 1): arg;
-		if (isMemory) {
+		super(isMemory ? Lock.alloc(arg) : arg);
+		context = context ?? SharedObject.Context.existing;
+		this.buffer = this.memoryRange.getInt32View(0, 1);
+		if (isMemory || context?.mode === SharedObjectContext.Mode.new) {
 			Atomics.store(this.buffer, 0, 1);
 		}
 		this.lockCount = 0;
@@ -372,19 +404,27 @@ export namespace Lock {
 	class $Type extends ObjectType<Lock> {
 		public readonly alignment: Alignment = u32.alignment;
 		public readonly size: size = u32.size;
-		public load(memory: MemoryRange, offset: offset): Lock {
-			return new Lock(memory.getInt32View(offset, 1));
+		public load(memory: MemoryRange, offset: offset, context: SharedObjectContext): Lock {
+			memory.assertAlignment(offset, this.alignment);
+			return new Lock(memory.range(offset, this.size), context);
 		}
 	}
 	export const Type = new $Type();
 }
 
-export class Signal {
+export class Signal extends ObjectProperty {
 
 	private readonly buffer: Int32Array;
 
-	constructor(param: Int32Array) {
-		this.buffer = param;
+	constructor(memory: SharedMemory);
+	constructor(memRange: MemoryRange, context: SharedObjectContext);
+	constructor(arg: SharedMemory | MemoryRange, context?: SharedObjectContext) {
+		const isMemory = SharedMemory.is(arg);
+		super(isMemory ? Lock.alloc(arg) : arg);
+		this.buffer = this.memoryRange.getInt32View(0, 1);
+		if (isMemory || context?.mode === SharedObjectContext.Mode.new) {
+			Atomics.store(this.buffer, 0, 0);
+		}
 	}
 
 	public wait(): void {
@@ -433,8 +473,9 @@ export namespace Signal {
 	export class $Type extends ObjectType<Signal> {
 		public readonly alignment: Alignment = u32.alignment;
 		public readonly size: size = u32.size;
-		public load(memory: MemoryRange, offset: offset): Signal {
-			return new Signal(memory.getInt32View(offset, 1));
+		public load(memory: MemoryRange, offset: offset, context: SharedObjectContext): Signal {
+			memory.assertAlignment(offset, this.alignment);
+			return new Signal(memory.range(offset, this.size), context);
 		}
 	}
 	export const Type = new $Type();
@@ -531,8 +572,8 @@ export namespace Synchronize {
 		runLocked(callback: (value: T) => void): void;
 	};
 }
-export function Synchronize<T extends SharedProperty>(memory: SharedMemory, object: T): Synchronize.WithRunLocked<T> {
-	const lock = new Lock(memory);
+export function Synchronize<T extends ObjectProperty>(memoryOrLock: SharedMemory | Lock, object: T): Synchronize.WithRunLocked<T> {
+	const lock = memoryOrLock instanceof Lock ? memoryOrLock : new Lock(memoryOrLock);
 	function runLocked(target: T, callback: (value: T) => void): void {
 		lock.acquire();
 		try {

@@ -6,7 +6,7 @@ import assert from 'assert';
 
 import { float64, u32 } from '@vscode/wasm-component-model';
 
-import { SharedMemory, Synchronize } from '../sharedObject';
+import { SharedMemory } from '../sharedObject';
 import { SharedArray } from '../array';
 
 suite('SArray', () => {
