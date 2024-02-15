@@ -360,7 +360,6 @@ export class Lock extends ObjectProperty{
 	constructor(arg: SharedMemory | MemoryRange, context?: SharedObjectContext) {
 		const isMemory = SharedMemory.is(arg);
 		super(isMemory ? Lock.alloc(arg) : arg);
-		context = context ?? SharedObject.Context.existing;
 		this.buffer = this.memoryRange.getInt32View(0, 1);
 		if (isMemory || context?.mode === SharedObjectContext.Mode.new) {
 			Atomics.store(this.buffer, 0, 1);
@@ -397,10 +396,6 @@ export class Lock extends ObjectProperty{
 }
 export namespace Lock {
 
-	export function alloc(memory: SharedMemory): MemoryRange {
-		return memory.alloc(Type.alignment, Type.size);
-	}
-
 	class $Type extends ObjectType<Lock> {
 		public readonly alignment: Alignment = u32.alignment;
 		public readonly size: size = u32.size;
@@ -410,6 +405,10 @@ export namespace Lock {
 		}
 	}
 	export const Type = new $Type();
+
+	export function alloc(memory: SharedMemory): MemoryRange {
+		return memory.alloc(Type.alignment, Type.size);
+	}
 }
 
 export class Signal extends ObjectProperty {
@@ -417,10 +416,10 @@ export class Signal extends ObjectProperty {
 	private readonly buffer: Int32Array;
 
 	constructor(memory: SharedMemory);
-	constructor(memRange: MemoryRange, context: SharedObjectContext);
+	constructor(memRange: MemoryRange, context?: SharedObjectContext);
 	constructor(arg: SharedMemory | MemoryRange, context?: SharedObjectContext) {
 		const isMemory = SharedMemory.is(arg);
-		super(isMemory ? Lock.alloc(arg) : arg);
+		super(isMemory ? Signal.alloc(arg) : arg);
 		this.buffer = this.memoryRange.getInt32View(0, 1);
 		if (isMemory || context?.mode === SharedObjectContext.Mode.new) {
 			Atomics.store(this.buffer, 0, 0);
@@ -470,7 +469,7 @@ export class Signal extends ObjectProperty {
 }
 
 export namespace Signal {
-	export class $Type extends ObjectType<Signal> {
+	class $Type extends ObjectType<Signal> {
 		public readonly alignment: Alignment = u32.alignment;
 		public readonly size: size = u32.size;
 		public load(memory: MemoryRange, offset: offset, context: SharedObjectContext): Signal {
@@ -479,6 +478,10 @@ export namespace Signal {
 		}
 	}
 	export const Type = new $Type();
+
+	export function alloc(memory: SharedMemory): MemoryRange {
+		return memory.alloc(Type.alignment, Type.size);
+	}
 }
 
 export namespace SharedObject {
