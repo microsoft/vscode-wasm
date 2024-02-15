@@ -3,23 +3,45 @@
  * Licensed under the MIT License. See License.txt in the project root for license information.
  * ------------------------------------------------------------------------------------------ */
 
-import { ptr, u32, type JType, type ComponentModelType, type MemoryRange } from '@vscode/wasm-component-model';
-import { LockableRecord, RecordDescriptor, SharedMemory } from './sharedObject';
+import { ptr, u32, type MemoryRange, type size, type Alignment, type offset, ComponentModelTrap } from '@vscode/wasm-component-model';
+import { SharedProperty, Record, type ObjectType, type ValueType, SharedObjectContext } from './sharedObject';
 
 
-namespace SharedLinkedList {
-	export type Properties = LockableRecord.Properties & {
+
+export class SharedLinkedList<T> extends SharedProperty {
+
+	private readonly elementType: ValueType<T>;
+	private readonly access: SharedLinkedList.Properties;
+
+	constructor(elementType: ValueType<T>, memoryRange: MemoryRange, context: SharedObjectContext) {
+		super(memoryRange);
+		this.elementType = elementType;
+		const access = SharedLinkedList.properties.load(memoryRange, 0, context);
+		if (context.mode === SharedObjectContext.Mode.new) {
+			access.state = 0;
+			access.head = 0;
+			access.tail = 0;
+			access.size = 0;
+			access.elementSize = elementType.size;
+		} else {
+			if (elementType.size !== access.elementSize) {
+				throw new ComponentModelTrap(`Element size differs between element type [${this.elementType.size}] and allocated memory [${access.elementSize}].`);
+			}
+		}
+		this.access = access;
+	}
+}
+
+export namespace SharedLinkedList {
+	export type Properties = {
 		state: u32;
 		head: ptr;
 		tail: ptr;
 		size: u32;
 		elementSize: u32;
 	};
-}
 
-export class SharedLinkedList<T extends JType> extends LockableRecord<SharedLinkedList.Properties> {
-
-	private static recordInfo: RecordDescriptor<SharedLinkedList.Properties> = new RecordDescriptor(LockableRecord.properties, [
+	export const properties: Record.Type<Properties> = new Record.Type([
 		['state', u32],
 		['head', ptr],
 		['tail', ptr],
@@ -27,26 +49,18 @@ export class SharedLinkedList<T extends JType> extends LockableRecord<SharedLink
 		['elementSize', u32],
 	]);
 
-	private readonly type: ComponentModelType<T>;
-
-	constructor(type: ComponentModelType<T>, memoryOrLocation: SharedMemory | MemoryRange) {
-		super(SharedLinkedList.recordInfo, memoryOrLocation);
-		this.type = type;
-		const access = this.access;
-		if (SharedMemory.is(memoryOrLocation)) {
-			access.state = 0;
-			access.head = 0;
-			access.tail = 0;
-			access.size = 0;
-			access.elementSize = type.size;
-		} else {
-			if (type.size !== access.elementSize) {
-				throw new Error(`Element size differs between element type [${this.type.size}] and allocated memory [${access.elementSize}].`);
-			}
+	export class Type<T> implements ObjectType<SharedLinkedList<T>>{
+		public size: size;
+		public alignment: Alignment;
+		private elementType: ValueType<T>;
+		constructor(elementType: ValueType<T>) {
+			this.elementType = elementType;
+			this.size = properties.size;
+			this.alignment = properties.alignment;
 		}
-	}
-
-	protected getRecordInfo(): RecordDescriptor<SharedLinkedList.Properties> {
-		return SharedLinkedList.recordInfo;
+		public load(memory: MemoryRange, offset: offset, context: SharedObjectContext): SharedLinkedList<any> {
+			const linkedListMemory = memory.range(offset, this.size);
+			return new SharedLinkedList<T>(this.elementType, linkedListMemory, context);
+		}
 	}
 }

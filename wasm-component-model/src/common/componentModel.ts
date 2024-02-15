@@ -14,7 +14,7 @@ if (!isLittleEndian) {
 	throw new Error('Big endian platforms are currently not supported.');
 }
 
-export class ComponentModelError extends Error {
+export class ComponentModelTrap extends Error {
 	constructor(message: string) {
 		super(message);
 	}
@@ -75,7 +75,7 @@ export namespace ResourceManager {
 		public getResource(resource: ResourceHandle): T {
 			const value = this.h2r.get(resource);
 			if (value === undefined) {
-				throw new ComponentModelError(`Unknown resource handle ${resource}`);
+				throw new ComponentModelTrap(`Unknown resource handle ${resource}`);
 			}
 			return value;
 		}
@@ -83,7 +83,7 @@ export namespace ResourceManager {
 		public getHandle(value: T): ResourceHandle {
 			const handle = this.r2h.get(value);
 			if (handle === undefined) {
-				throw new ComponentModelError(`Unknown resource ${JSON.stringify(value, undefined, 0)}`);
+				throw new ComponentModelTrap(`Unknown resource ${JSON.stringify(value, undefined, 0)}`);
 			}
 			return handle;
 		}
@@ -137,7 +137,7 @@ namespace BigInts {
 	const MAX_VALUE_AS_BIGINT = BigInt(Number.MAX_VALUE);
 	export function asNumber(value: bigint): number {
 		if (value > MAX_VALUE_AS_BIGINT) {
-			throw new ComponentModelError('Value too big for number');
+			throw new ComponentModelTrap('Value too big for number');
 		}
 		return Number(value);
 	}
@@ -790,7 +790,7 @@ class CoerceValueIter implements Iterator<WasmType, WasmType> {
 
 	constructor(private readonly values: FlatValuesIter, private haveFlatTypes: readonly GenericFlatType[], private wantFlatTypes: readonly GenericFlatType[]) {
 		if (haveFlatTypes.length < wantFlatTypes.length) {
-			throw new ComponentModelError(`Invalid coercion: have ${haveFlatTypes.length} values, want ${wantFlatTypes.length} values`);
+			throw new ComponentModelTrap(`Invalid coercion: have ${haveFlatTypes.length} values, want ${wantFlatTypes.length} values`);
 		}
 		this.index = 0;
 	}
@@ -1440,18 +1440,18 @@ namespace $wchar {
 
 	function fromCodePoint(code: u32): string {
 		if (code >= 0x110000 || (0xD800 <= code && code <= 0xDFFF)) {
-			throw new ComponentModelError('Invalid code point');
+			throw new ComponentModelTrap('Invalid code point');
 		}
 		return String.fromCodePoint(code);
 	}
 
 	function asCodePoint(str: string): u32 {
 		if (str.length !== 1) {
-			throw new ComponentModelError('String length must be 1');
+			throw new ComponentModelTrap('String length must be 1');
 		}
 		const code = str.codePointAt(0)!;
 		if (!(code <= 0xD7FF || (0xD800 <= code && code <= 0x10FFFF))) {
-			throw new ComponentModelError('Invalid code point');
+			throw new ComponentModelTrap('Invalid code point');
 		}
 		return code;
 	}
@@ -2230,7 +2230,7 @@ export class VariantType<T extends JVariantCase, I, V> implements ComponentModel
 	public store(memory: MemoryRange, offset: offset, variantValue: T, context: ComponentModelContext): void {
 		const index = this.case2Index.get(variantValue.tag);
 		if (index === undefined) {
-			throw new ComponentModelError(`Variant case ${variantValue.tag} not found`);
+			throw new ComponentModelTrap(`Variant case ${variantValue.tag} not found`);
 		}
 		this.discriminantType.store(memory, offset, index, context);
 		offset += this.discriminantType.size;
@@ -2245,7 +2245,7 @@ export class VariantType<T extends JVariantCase, I, V> implements ComponentModel
 		const flatTypes = this.flatTypes;
 		const index = this.case2Index.get(variantValue.tag);
 		if (index === undefined) {
-			throw new ComponentModelError(`Variant case ${variantValue.tag} not found`);
+			throw new ComponentModelTrap(`Variant case ${variantValue.tag} not found`);
 		}
 		this.discriminantType.lowerFlat(result, memory, index, context);
 		const c = this.cases[index];
@@ -2258,7 +2258,7 @@ export class VariantType<T extends JVariantCase, I, V> implements ComponentModel
 			const wantTypes = flatTypes.slice(1);
 			const haveTypes = c.wantFlatTypes!;
 			if (payload.length !== haveTypes.length) {
-				throw new ComponentModelError('Mismatched flat types');
+				throw new ComponentModelTrap('Mismatched flat types');
 			}
 			for (let i = 0; i < wantTypes.length; i++) {
 				const have: GenericFlatType = haveTypes[i];
@@ -2339,7 +2339,7 @@ export class VariantType<T extends JVariantCase, I, V> implements ComponentModel
 			case 2: return u16;
 			case 3: return u32;
 		}
-		throw new ComponentModelError(`Too many cases: ${cases}`);
+		throw new ComponentModelTrap(`Too many cases: ${cases}`);
 	}
 
 	private static maxCaseAlignment(cases: VariantCase[]): Alignment {
@@ -2417,7 +2417,7 @@ export class EnumType<T extends JEnum> implements ComponentModelType<T> {
 	public store(memory: MemoryRange, offset: offset, value: T, context: ComponentModelContext): void {
 		const index = this.case2index.get(value);
 		if (index === undefined) {
-			throw new ComponentModelError('Enumeration value not found');
+			throw new ComponentModelTrap('Enumeration value not found');
 		}
 		this.discriminantType.store(memory, offset, index, context);
 	}
@@ -2425,7 +2425,7 @@ export class EnumType<T extends JEnum> implements ComponentModelType<T> {
 	public lowerFlat(result: WasmType[], memory: Memory, value: T, context: ComponentModelContext): void {
 		const index = this.case2index.get(value);
 		if (index === undefined) {
-			throw new ComponentModelError('Enumeration value not found');
+			throw new ComponentModelTrap('Enumeration value not found');
 		}
 		this.discriminantType.lowerFlat(result, memory, index, context);
 	}
@@ -2436,7 +2436,7 @@ export class EnumType<T extends JEnum> implements ComponentModelType<T> {
 
 	private assertRange(value: number): number {
 		if (value < 0 || value > this.cases.length) {
-			throw new ComponentModelError('Enumeration value out of range');
+			throw new ComponentModelTrap('Enumeration value out of range');
 		}
 		return value;
 	}
@@ -2448,7 +2448,7 @@ export class EnumType<T extends JEnum> implements ComponentModelType<T> {
 			case 2: return u16;
 			case 3: return u32;
 		}
-		throw new ComponentModelError(`Too many cases: ${cases}`);
+		throw new ComponentModelTrap(`Too many cases: ${cases}`);
 	}
 }
 
@@ -2602,12 +2602,12 @@ export class OptionType<T extends JType> implements ComponentModelType<T | optio
 	private asOptionValue(value: T | option<T> | undefined, options: Options): option<T> {
 		if (option.isOption(value)) {
 			if (!options.keepOption) {
-				throw new ComponentModelError('Received an option value although options should be unpacked.');
+				throw new ComponentModelTrap('Received an option value although options should be unpacked.');
 			}
 			return value as option<T>;
 		} else {
 			if (options.keepOption) {
-				throw new ComponentModelError('Received a unpacked option value although options should NOT be unpacked.');
+				throw new ComponentModelTrap('Received a unpacked option value although options should NOT be unpacked.');
 			}
 			return value === undefined ? option._ctor<T>(option.none, undefined) : option._ctor(option.some, value);
 		}
@@ -2730,7 +2730,7 @@ class Callable {
 		if (this.paramTupleType.flatTypes.length > Callable.MAX_FLAT_PARAMS) {
 			const p0 = wasmValues[0];
 			if (!Number.isInteger(p0)) {
-				throw new ComponentModelError('Invalid pointer');
+				throw new ComponentModelTrap('Invalid pointer');
 			}
 			return this.paramTupleType.load(memory.readonly(p0 as ptr, this.paramTupleType.size), 0, context);
 		} else {
@@ -2767,7 +2767,7 @@ class Callable {
 			const result: WasmType[] = [];
 			this.returnType.lowerFlat(result, memory, value, context);
 			if (result.length !== 1) {
-				throw new ComponentModelError('Invalid result');
+				throw new ComponentModelTrap('Invalid result');
 			}
 			return result[0];
 		} else {
@@ -2811,13 +2811,13 @@ export class FunctionType<_T extends Function = Function> extends Callable  {
 		const paramFlatTypes = this.paramTupleType.flatTypes.length;
 		// We currently only support 'lower' mode for results > MAX_FLAT_RESULTS.
 		if (returnFlatTypes > FunctionType.MAX_FLAT_RESULTS && params.length !== paramFlatTypes + 1) {
-			throw new ComponentModelError(`Invalid number of parameters. Received ${params.length} but expected ${paramFlatTypes + 1}`);
+			throw new ComponentModelTrap(`Invalid number of parameters. Received ${params.length} but expected ${paramFlatTypes + 1}`);
 		}
 		const jParams = this.liftParamValues(params, memory, context);
 		const result: JType | void = serviceFunction(...jParams);
 		const out = params[params.length - 1];
 		if (typeof out !== 'number') {
-			throw new ComponentModelError(`Result pointer must be a number (u32), but got ${out}.`);
+			throw new ComponentModelTrap(`Result pointer must be a number (u32), but got ${out}.`);
 		}
 		return this.lowerReturnValue(result, memory, context, out);
 	}
@@ -2834,7 +2834,7 @@ export class ConstructorType<_T extends Function = Function> extends Callable {
 		const returnFlatTypes = this.returnType === undefined ? 0 : this.returnType.flatTypes.length;
 		const paramFlatTypes = this.paramTupleType.flatTypes.length;
 		if (returnFlatTypes > FunctionType.MAX_FLAT_RESULTS && params.length !== paramFlatTypes + 1) {
-			throw new ComponentModelError(`Invalid number of parameters. Received ${params.length} but expected ${paramFlatTypes + 1}`);
+			throw new ComponentModelTrap(`Invalid number of parameters. Received ${params.length} but expected ${paramFlatTypes + 1}`);
 		}
 		const memory  = context.getMemory();
 		const jParams = this.liftParamValues(params, memory, context);
@@ -2853,7 +2853,7 @@ export class DestructorType<_T extends Function = Function> extends Callable {
 	public callDestructor(func: JFunction, params: (number | bigint)[], resourceManager: ResourceManager): void {
 		const handle = params[0];
 		if (typeof handle === 'bigint' || !$u32.valid(handle)) {
-			throw new ComponentModelError(`Object handle must be a number (u32), but got ${handle}.`);
+			throw new ComponentModelTrap(`Object handle must be a number (u32), but got ${handle}.`);
 		}
 		const obj = resourceManager.getResource(handle);
 		func(obj);
@@ -2873,13 +2873,13 @@ export class StaticMethodType<_T extends Function = Function> extends Callable {
 		const returnFlatTypes = this.returnType === undefined ? 0 : this.returnType.flatTypes.length;
 		const paramFlatTypes = this.paramTupleType.flatTypes.length;
 		if (returnFlatTypes > FunctionType.MAX_FLAT_RESULTS && params.length !== paramFlatTypes + 1) {
-			throw new ComponentModelError(`Invalid number of parameters. Received ${params.length} but expected ${paramFlatTypes + 1}`);
+			throw new ComponentModelTrap(`Invalid number of parameters. Received ${params.length} but expected ${paramFlatTypes + 1}`);
 		}
 		const jParams = this.liftParamValues(params, memory, context);
 		const result: JType | void = func(...jParams);
 		const out = params[params.length - 1];
 		if (typeof out !== 'number') {
-			throw new ComponentModelError(`Result pointer must be a number (u32), but got ${out}.`);
+			throw new ComponentModelTrap(`Result pointer must be a number (u32), but got ${out}.`);
 		}
 		return this.lowerReturnValue(result, memory, context, out);
 	}
@@ -2893,17 +2893,17 @@ export class MethodType<_T extends Function = Function> extends Callable {
 
 	public callMethod(methodName: string, params: (number | bigint)[], resourceManager: ResourceManager, context: WasmContext): number | bigint | void {
 		if (params.length === 0) {
-			throw new ComponentModelError(`Method calls must have at least one parameter (the object pointer).`);
+			throw new ComponentModelTrap(`Method calls must have at least one parameter (the object pointer).`);
 		}
 		const returnFlatTypes = this.returnType === undefined ? 0 : this.returnType.flatTypes.length;
 		const paramFlatTypes = this.paramTupleType.flatTypes.length;
 		// We currently only support 'lower' mode for results > MAX_FLAT_RESULTS.
 		if (returnFlatTypes > FunctionType.MAX_FLAT_RESULTS && params.length !== paramFlatTypes + 1) {
-			throw new ComponentModelError(`Invalid number of parameters. Received ${params.length} but expected ${paramFlatTypes + 1}`);
+			throw new ComponentModelTrap(`Invalid number of parameters. Received ${params.length} but expected ${paramFlatTypes + 1}`);
 		}
 		const handle = params[0];
 		if (typeof handle !== 'number') {
-			throw new ComponentModelError(`Object handle must be a number (u32), but got ${handle}.`);
+			throw new ComponentModelTrap(`Object handle must be a number (u32), but got ${handle}.`);
 		}
 		const obj = resourceManager.getResource(handle);
 		const memory  = context.getMemory();
@@ -2912,7 +2912,7 @@ export class MethodType<_T extends Function = Function> extends Callable {
 		const result: JType | void = (obj as any)[methodName](...jParams.slice(1));
 		const out = params[params.length - 1];
 		if (typeof out !== 'number') {
-			throw new ComponentModelError(`Result pointer must be a number (u32), but got ${out}.`);
+			throw new ComponentModelTrap(`Result pointer must be a number (u32), but got ${out}.`);
 		}
 		return this.lowerReturnValue(result, memory, context, out);
 	}
@@ -2992,7 +2992,7 @@ export class ResourceType<T extends JInterface = JInterface> implements Componen
 	public getCallable(jsName: string): ResourceCallable {
 		const result = this.methods.get(jsName);
 		if (result === undefined) {
-			throw new ComponentModelError(`Method '${jsName}' not found on resource '${this.witName}'.`);
+			throw new ComponentModelTrap(`Method '${jsName}' not found on resource '${this.witName}'.`);
 		}
 		return result;
 	}
@@ -3270,10 +3270,10 @@ export class Resource {
 
 	set $handle(value: ResourceHandle) {
 		if (value === undefined) {
-			throw new ComponentModelError('Cannot set undefined handle');
+			throw new ComponentModelTrap('Cannot set undefined handle');
 		}
 		if (this._handle !== undefined) {
-			throw new ComponentModelError(`Cannot set handle twice. Current handle is ${this._handle} new handle is ${value}.`);
+			throw new ComponentModelTrap(`Cannot set handle twice. Current handle is ${this._handle} new handle is ${value}.`);
 		}
 		this._handle = value;
 	}

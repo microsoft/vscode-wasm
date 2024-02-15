@@ -3,7 +3,7 @@
  * Licensed under the MIT License. See License.txt in the project root for license information.
  * ------------------------------------------------------------------------------------------ */
 import type { BaseConnection, ConnectionPort, TransferItems } from './connection';
-import type { SharedMemory } from './sobject';
+import type { SharedMemory } from './sharedObject';
 
 export namespace Client {
 	export type AsyncCalls = {

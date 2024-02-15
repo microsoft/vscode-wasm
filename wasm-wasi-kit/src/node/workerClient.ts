@@ -8,7 +8,7 @@ import type { URI } from 'vscode-uri';
 
 import type * as Messages from '../common/workerMessages';
 import { Connection } from './connection';
-import { type SharedMemory } from '../common/sobject';
+import { type SharedMemory } from '../common/sharedObject';
 import type { AnyConnection } from '../common/connection';
 import * as cc from '../common/workerClient';
 

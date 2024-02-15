@@ -4,7 +4,7 @@
  * ------------------------------------------------------------------------------------------ */
 import RAL from './ral';
 import type * as Messages from './workerMessages';
-import type { SharedMemory } from './sobject';
+import type { SharedMemory } from './sharedObject';
 import { BaseConnection, type AnyConnection } from './connection';
 
 export interface WorkerClient {

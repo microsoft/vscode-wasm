@@ -3,7 +3,7 @@
  * Licensed under the MIT License. See License.txt in the project root for license information.
  * ------------------------------------------------------------------------------------------ */
 import RAL from './ral';
-import { s32, type MemoryRange, type ptr, type u32, type BaseMemoryRange } from '@vscode/wasm-component-model';
+import { s32, type MemoryRange, type ptr, type u32, type BaseMemoryRange, MemoryError } from '@vscode/wasm-component-model';
 import { SharedMemory, SharedObject } from './sharedObject';
 
 export interface ConnectionPort {
@@ -99,6 +99,12 @@ namespace MemoryLocation {
 			ptr: memRange.ptr,
 			size: memRange.size
 		};
+	}
+	export function to(memory: SharedMemory, location: MemoryLocation): MemoryRange {
+		if (memory.id !== location.memory.id) {
+			throw new MemoryError(`Memory location does not match`);
+		}
+		return memory.preAllocated(location.ptr, location.size);
 	}
 }
 interface _SyncCall extends AbstractMessage {
@@ -412,7 +418,7 @@ export abstract class BaseConnection<AsyncCalls extends _AsyncCallType | undefin
 				const syncCallBuffer = this.syncMemoryRange.getInt32View(0);
 				let errorCode: number = 0;
 				try {
-					errorCode = await handler(message.params, message.result ? this.memory.range.fromWritable(message.result) : undefined) ?? 0;
+					errorCode = await handler(message.params, message.result ? MemoryLocation.to(this.memory, message.result) : undefined) ?? 0;
 				} catch (error: any) {
 					if (typeof error.code === 'number') {
 						errorCode = error.code;

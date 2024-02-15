@@ -7,7 +7,7 @@ import RAL from '../common/ral';
 
 import type { URI } from 'vscode-uri';
 
-import { SharedMemory } from '../common/sobject';
+import { SharedMemory } from '../common/sharedObject';
 import * as malloc from '../common/malloc';
 import type * as commonConnection from '../common/connection';
 import type { WorkerClient, WorkerClientBase } from '../common/workerClient';

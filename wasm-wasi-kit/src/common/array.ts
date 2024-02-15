@@ -3,45 +3,31 @@
  * Licensed under the MIT License. See License.txt in the project root for license information.
  * ------------------------------------------------------------------------------------------ */
 
-import { MemoryRange, ptr, u32, type Alignment, type offset, type size, ComponentModelError } from '@vscode/wasm-component-model';
-import { SharedObject, RecordDescriptor, PropertyType, JType, SharedProperty } from './sharedObject';
+import { MemoryRange, ptr, u32, type Alignment, type offset, type size, ComponentModelTrap } from '@vscode/wasm-component-model';
+import { SharedObject, ValueType, SharedProperty, Record, type ObjectType, SharedObjectContext, ConcurrentModificationError } from './sharedObject';
 
 
-export class ConcurrentModificationError extends Error {
-	constructor(message: string) {
-		super(message);
-	}
-}
+export class SharedArray<T> extends SharedProperty {
 
-export class SharedArray<T extends JType> extends SharedProperty {
+	private readonly elementType: ValueType<T>;
+	private readonly access: SharedArray.Properties;
 
-	private readonly elementType: PropertyType<T>;
-	private access: SharedArray.Properties;
-
-	constructor(elementType: PropertyType<T>, memoryRange: MemoryRange, capacity?: number | undefined) {
+	constructor(elementType: ValueType<T>, memoryRange: MemoryRange, context: SharedObjectContext) {
 		super(memoryRange);
 		this.elementType = elementType;
-		const access = SharedArray.recordInfo.createAccess(memoryRange);
-		if (capacity !== undefined) {
+		const access = SharedArray.properties.load(memoryRange, 0, context);
+		if (context.mode === SharedObjectContext.Mode.new) {
 			access.state = 0;
 			access.start = 0;
 			access.next = 0;
 			access.elementSize = elementType.size;
-			access.elements = memoryRange.memory.alloc(u32.alignment, capacity * ptr.size);
+			access.elements = memoryRange.memory.alloc(u32.alignment, 32 * ptr.size);
 		} else {
 			if (elementType.size !== access.elementSize) {
-				throw new ComponentModelError(`Element size differs between element type [${this.elementType.size}] and allocated memory [${access.elementSize}].`);
+				throw new ComponentModelTrap(`Element size differs between element type [${this.elementType.size}] and allocated memory [${access.elementSize}].`);
 			}
 		}
 		this.access = access;
-	}
-
-	storeInto(memory: MemoryRange): void {
-		this.memoryRange.copyBytes(0, this.getRecordInfo().size, memory, 0);
-	}
-
-	protected getRecordInfo(): RecordDescriptor<SharedArray.Properties> {
-		return SharedArray.recordInfo;
 	}
 
 	private get capacity(): number {
@@ -87,8 +73,8 @@ export class SharedArray<T extends JType> extends SharedProperty {
 		let next = access.next;
 		for(const value of items) {
 			const range = memory.alloc(this.elementType.alignment, this.elementType.size);
-			this.elementType.store(range, 0, value, SharedObject.Context);
-			ptr.store(access.elements, next * ptr.size, range.ptr, SharedObject.Context);
+			this.elementType.store(range, 0, value, SharedObject.Context.new);
+			ptr.store(access.elements, next * ptr.size, range.ptr, SharedObject.Context.existing);
 			next = next + 1;
 		}
 		access.next = next;
@@ -166,7 +152,7 @@ export class SharedArray<T extends JType> extends SharedProperty {
 		}
 		const ptr = access.elements.getPtr(u32.size * index);
 		const range = this.memory.readonly(ptr, access.elementSize);
-		return this.elementType.load(range, 0, SharedObject.Context);
+		return this.elementType.load(range, 0, SharedObject.Context.existing);
 	}
 
 	private loadElementAndPtr(index: number, state?: number): [T, MemoryRange] {
@@ -176,7 +162,7 @@ export class SharedArray<T extends JType> extends SharedProperty {
 		}
 		const ptr = access.elements.getPtr(u32.size * index);
 		const range = this.memory.preAllocated(ptr, access.elementSize);
-		return [this.elementType.load(range, 0, SharedObject.Context), range];
+		return [this.elementType.load(range, 0, SharedObject.Context.existing), range];
 	}
 }
 
@@ -190,30 +176,26 @@ export namespace SharedArray {
 		elements: MemoryRange;
 	};
 
-	export const recordInfo: RecordDescriptor<SharedArray.Properties> = new RecordDescriptor([
+	export const properties: Record.Type<Properties> = new Record.Type([
 		['state', u32],
 		['start', u32],
 		['next', u32],
 		['elementSize', u32],
-		['elements', PropertyType.MemoryRange]
+		['elements', ValueType.MemoryRange]
 	]);
 
-	export class Type<T extends JType> implements PropertyType<SharedArray<T>>{
+	export class Type<T> implements ObjectType<SharedArray<T>>{
 		public size: size;
 		public alignment: Alignment;
-		private elementType: PropertyType<T>;
-		constructor(elementType: PropertyType<T>) {
+		private elementType: ValueType<T>;
+		constructor(elementType: ValueType<T>) {
 			this.elementType = elementType;
-			this.size = recordInfo.size;
-			this.alignment = recordInfo.alignment;
+			this.size = properties.size;
+			this.alignment = properties.alignment;
 		}
-		public load(memory: MemoryRange, offset: offset): SharedArray<any> {
+		public load(memory: MemoryRange, offset: offset, context: SharedObjectContext): SharedArray<any> {
 			const arrayMemory = memory.range(offset, this.size);
-			return new SharedArray<T>(this.elementType, arrayMemory);
-		}
-		public store(memory: MemoryRange, offset: offset, value: SharedArray<any>): void {
-			const arrayMemory = memory.range(offset, this.size);
-			value.storeInto(arrayMemory);
+			return new SharedArray<T>(this.elementType, arrayMemory, context);
 		}
 	}
 }
