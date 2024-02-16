@@ -5,11 +5,10 @@
 
 import { io } from '@vscode/wasi';
 
-import { ResourceHandle, s32, MemoryRange } from '@vscode/wasm-component-model';
-import { Allocation, SharedObject, type SharedMemory, Signal } from '@vscode/wasm-wasi-kit';
+import { SharedObject, type SharedMemory, Signal, SharedResource, Record } from '@vscode/wasm-wasi-kit';
 import type { WasiClient } from './wasiClient';
 
-export class Pollable extends SharedObject implements io.Poll.Pollable {
+export class Pollable extends SharedResource<Pollable.Properties> implements io.Poll.Pollable {
 
 	public static $drop(inst: io.Poll.Pollable) {
 		if (!(inst instanceof this)) {
@@ -18,44 +17,37 @@ export class Pollable extends SharedObject implements io.Poll.Pollable {
 		inst.free();
 	}
 
-	private signal: Signal;
-
-	constructor(rangeOrMemory: MemoryRange | SharedMemory) {
-		if (rangeOrMemory instanceof MemoryRange) {
-			super(rangeOrMemory);
-		} else {
-			super(new Allocation(rangeOrMemory, s32.alignment, s32.size));
-		}
-		this.signal = new Signal(this.memoryRange.getInt32View(0, 1));
+	constructor(memoryOrSurrogate: SharedMemory | SharedObject.Surrogate) {
+		super(Pollable.record, memoryOrSurrogate);
 	}
 
-	public get $handle(): ResourceHandle {
-		return this.memoryRange.ptr;
-	}
-
-	public set $handle(_value: ResourceHandle) {
-		throw new Error('Pollable handles are immutable.');
-	}
-
-	public signalRange(): MemoryRange {
-		return this.memoryRange;
+	protected getRecord(): Record.Type<Pollable.Properties> {
+		return Pollable.record;
 	}
 
 	public ready(): boolean {
-		return this.signal.isResolved();
+		return this.access.signal.isResolved();
 	}
 
 	public block(): void {
-		this.signal.wait();
+		this.access.signal.wait();
 	}
 
 	public async blockAsync(): Promise<void> {
-		return this.signal.waitAsync();
+		return this.access.signal.waitAsync();
 	}
 
 	public resolve(): void {
-		this.signal.resolve();
+		this.access.signal.resolve();
 	}
+}
+
+export namespace Pollable {
+	export interface Properties extends SharedResource.Properties { signal: Signal }
+	export const properties: Record.PropertyTypes = SharedResource.properties.concat([
+		['signal', Signal.Type]
+	]);
+	export const record = new Record.Type<Properties>(properties);
 }
 
 export function createPoll(client: WasiClient) {
@@ -63,8 +55,8 @@ export function createPoll(client: WasiClient) {
 		Pollable: Pollable,
 		poll(p: io.Poll.Pollable.Interface[]): Uint32Array {
 			const pollables: Pollable[] = p as Pollable[];
-			const signal = new Signal(new Allocation(client.getSharedMemory(), s32.alignment, s32.size));
-			client.racePollables(signal.memoryRange, pollables.map(p => p.signalRange()));
+			const signal = new Signal(client.getSharedMemory());
+			client.racePollables(signal, pollables);
 			signal.wait();
 			const result: number[] = [];
 			for (const [index, pollable] of pollables.entries()) {

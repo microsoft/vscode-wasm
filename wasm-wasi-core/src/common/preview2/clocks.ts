@@ -20,7 +20,7 @@ export function createMonotonicClock(client: WasiClient) {
 		},
 		subscribeDuration(when: u64): Pollable {
 			const pollable = new Pollable(client.getSharedMemory());
-			client.setTimeout(pollable.signalRange(), when);
+			client.setTimeout(pollable, when);
 			return pollable;
 		},
 		subscribeInstant(when : u64): Pollable {
@@ -29,7 +29,7 @@ export function createMonotonicClock(client: WasiClient) {
 			if (duration < 0) {
 				pollable.resolve();
 			} else {
-				client.setTimeout(pollable.signalRange(), duration);
+				client.setTimeout(pollable, duration);
 			}
 			return pollable;
 		}

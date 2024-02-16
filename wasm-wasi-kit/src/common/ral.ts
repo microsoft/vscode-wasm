@@ -13,8 +13,8 @@ import type { WorkerClient, WorkerClientBase } from './workerClient';
 
 interface RAL extends _RAL {
 	readonly Memory: {
-		create(constructor: new (module: WebAssembly.Module, memory: WebAssembly.Memory, exports: SharedMemory.Exports) => SharedMemory): Promise<SharedMemory>;
-		createFrom(constructor: new (module: WebAssembly.Module, memory: WebAssembly.Memory, exports: SharedMemory.Exports, id: string) => SharedMemory, transferable: SharedMemory.Transferable): Promise<SharedMemory>;
+		create(constructor: SharedMemory.Constructor): Promise<SharedMemory>;
+		createFrom(constructor: SharedMemory.Constructor, transferable: SharedMemory.Transferable): Promise<SharedMemory>;
 	};
 	readonly MessageChannel: {
 		create(): [ConnectionPort, ConnectionPort];

@@ -2,28 +2,35 @@
  * Copyright (c) Microsoft Corporation. All rights reserved.
  * Licensed under the MIT License. See License.txt in the project root for license information.
  * ------------------------------------------------------------------------------------------ */
-import type { MemoryRange, MemoryRangeTransferable } from '@vscode/wasm-component-model';
-import { AnyConnection, BaseConnection, ConnectionPort, type SharedMemory } from '@vscode/wasm-wasi-kit';
+import { AnyConnection, BaseConnection, ConnectionPort, type MemoryLocation, type SharedMemory, type SharedObject, type Signal } from '@vscode/wasm-wasi-kit';
+import type { Pollable } from './io';
 
 export namespace Client {
 	export type Jobs = {
 		method: 'setTimeout';
 		params: {
-			signal: MemoryRangeTransferable;
+			signal: MemoryLocation;
+			currentTime: number;
+			timeout: number;
+		};
+	} | {
+		method: 'pollable/setTimeout';
+		params: {
+			pollable: SharedObject.Location;
 			currentTime: number;
 			timeout: number;
 		};
 	} | {
 		method: 'pollables/race';
 		params: {
-			signal: MemoryRangeTransferable;
-			pollables: MemoryRangeTransferable[];
+			signal: MemoryLocation;
+			pollables: SharedObject.Location[];
 		};
 	};
 	export type SyncCalls = {
-		method: 'clearTimeout';
+		method: 'pollable/clearTimeout';
 		params: {
-			signal: MemoryRangeTransferable;
+			pollable: SharedObject.Location;
 		};
 		result: void;
 	};
@@ -45,16 +52,21 @@ export class WasiClient {
 		return this.connection.getSharedMemory();
 	}
 
-	public setTimeout(signal: MemoryRange, timeout: bigint): void {
+	public rawSetTimeout(signal: Signal, timeout: bigint): void {
 		const ms = Number(timeout / 1000000n) ;
-		this.connection.notify('setTimeout', { signal: signal.getTransferable(), currentTime: Date.now(), timeout: ms });
+		this.connection.notify('setTimeout', { signal: signal.location(), currentTime: Date.now(), timeout: ms });
 	}
 
-	public clearTimeout(signal: MemoryRange): void {
-		this.connection.callSync('clearTimeout', { signal: signal.getTransferable() });
+	public setTimeout(pollable: Pollable, timeout: bigint): void {
+		const ms = Number(timeout / 1000000n) ;
+		this.connection.notify('pollable/setTimeout', { pollable: pollable.location(), currentTime: Date.now(), timeout: ms });
 	}
 
-	public racePollables(signal: MemoryRange, pollables: MemoryRange[]): void {
-		return this.connection.notify('pollables/race', { signal: signal.getTransferable(), pollables: pollables.map(p => p.getTransferable()) });
+	public clearTimeout(pollable: Pollable): void {
+		this.connection.callSync('pollable/clearTimeout', { pollable: pollable.location() });
+	}
+
+	public racePollables(signal: Signal, pollables: Pollable[]): void {
+		return this.connection.notify('pollables/race', { signal: signal.location(), pollables: pollables.map(p => p.location()) });
 	}
 }

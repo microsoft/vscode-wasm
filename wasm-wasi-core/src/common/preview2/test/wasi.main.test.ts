@@ -5,8 +5,7 @@
 import RAL from '../../ral';
 import assert from 'assert';
 
-import { Alignment, u32 } from '@vscode/wasm-component-model';
-import { SharedMemory } from '@vscode/wasm-wasi-kit';
+import { SharedMemory, Signal } from '@vscode/wasm-wasi-kit';
 
 import { WasiManagementClient } from '../wasiManagementClient';
 import { WasiClient } from '../wasiClient';
@@ -28,15 +27,13 @@ suite(`Wasi Worker Tests`, () => {
 	});
 
 	test(`setTimeout`, async () => {
-		const memRange = memory.alloc(Alignment.word, u32.size * 2);
-		const signal = memRange.getInt32View(0, 1);
-
+		const signal = new Signal(memory);
 		const start = Date.now();
-		client.setTimeout(memRange, BigInt(100 * 1e6));
-		Atomics.wait(signal, 0, 0);
+		client.rawSetTimeout(signal, BigInt(100 * 1e6));
+		signal.wait();
 		const diff = Date.now() - start;
 		assert.ok(diff >= 90, `Time difference is: ${diff}`);
-		memRange.free();
+		signal.free();
 	}).timeout(2000);
 
 	test('monotonic clock - resolution', () => {

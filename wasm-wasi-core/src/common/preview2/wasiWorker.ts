@@ -7,6 +7,7 @@ import RAL from '../ral';
 import type { Disposable } from 'vscode';
 import { AnyConnection, BaseConnection, type ConnectionPort, MultiConnectionWorker, BaseWorker, type SharedMemory, Signal } from '@vscode/wasm-wasi-kit';
 import type { Client } from './wasiClient';
+import { Pollable } from './io';
 
 type ConnectionType = BaseConnection<undefined, undefined, undefined, undefined, Client.SyncCalls, Client.Jobs>;
 
@@ -28,24 +29,33 @@ export class WasiWorker extends MultiConnectionWorker<ConnectionType> {
 		const connection: ConnectionType = AnyConnection.create(port);
 		connection.initializeSyncCall(this.connection.getSharedMemory());
 		connection.onNotify('setTimeout', async (params) => {
-			this.memory.range.assertSameMemory(params.signal);
+			const signal = new Signal(this.memory.range.fromLocation(params.signal));
 			const diff = Date.now() - params.currentTime;
 			const ms = params.timeout - diff;
-			const signal = new Int32Array(this.memory.buffer, params.signal.ptr, 1);
 			if (ms <= 0) {
-				Atomics.store(signal, 0, 1);
-				Atomics.notify(signal, 0);
+				signal.resolve();
 			} else {
-				const disposable = RAL().timer.setTimeout(() => {
-					Atomics.store(signal, 0, 1);
-					Atomics.notify(signal, 0);
+				RAL().timer.setTimeout(() => {
+					signal.resolve();
 				}, ms);
-				this.timeouts.set(params.signal.ptr, disposable);
 			}
 		});
-		connection.onSyncCall('clearTimeout', async (params) => {
-			this.memory.range.assertSameMemory(params.signal);
-			const key = params.signal.ptr;
+		connection.onNotify('pollable/setTimeout', async (params) => {
+			const memoryRange = this.memory.range.fromLocation(params.pollable);
+			const pollable = new Pollable({ memoryRange, id: params.pollable.id });
+			const diff = Date.now() - params.currentTime;
+			const ms = params.timeout - diff;
+			if (ms <= 0) {
+				pollable.resolve();
+			} else {
+				const disposable = RAL().timer.setTimeout(() => {
+					pollable.resolve();
+				}, ms);
+				this.timeouts.set(pollable.$handle, disposable);
+			}
+		});
+		connection.onSyncCall('pollable/clearTimeout', async (params) => {
+			const key = params.pollable.id;
 			const disposable = this.timeouts.get(key);
 			if (disposable !== undefined) {
 				this.timeouts.delete(key);
@@ -53,14 +63,12 @@ export class WasiWorker extends MultiConnectionWorker<ConnectionType> {
 			}
 		});
 		connection.onNotify('pollables/race', async (params) => {
-			this.memory.range.assertSameMemory(params.signal);
-			this.memory.range.assertSameMemory(params.pollables);
-			const signal = new Signal(new Int32Array(this.memory.buffer, params.signal.ptr, 1));
+			const signal = new Signal(this.memory.range.fromLocation(params.signal));
 			const promises: Promise<void>[] = [];
 			let isReady: boolean = false;
-			for (const pollable of params.pollables) {
-				const ps = new Signal(new Int32Array(this.memory.buffer, pollable.ptr, 1));
-				const result = ps.waitAsync();
+			for (const entry of params.pollables) {
+				const pollable = new Pollable({ memoryRange: this.memory.range.fromLocation(entry), id: entry.id });
+				const result = pollable.blockAsync();
 				if (result instanceof Promise) {
 					promises.push(result);
 				} else {

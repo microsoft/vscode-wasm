@@ -115,7 +115,7 @@ async function main(): Promise<void> {
 		const lock = new Lock(memory);
 		const array = new SharedArray<float64>(float64, memory);
 		arrays.push({ counter, lock, array });
-		array2Operations.set(array.getMemoryLocation().ptr, new ArrayOperations(array));
+		array2Operations.set(array.location().ptr, new ArrayOperations(array));
 	}
 
 	process.stdout.write(`Starting array simulation using ${numberOfArrays} arrays on ${numberOfThreads} threads.\n`);
@@ -128,7 +128,7 @@ async function main(): Promise<void> {
 
 		await connection.callAsync('init', { workerId: i, memory: memory.getTransferable() });
 		for (const array of arrays) {
-			await connection.callAsync('array/new', { counter: MemoryLocation.from(array.counter), lock: array.lock.getMemoryLocation(), array: array.array.getMemoryLocation() });
+			await connection.callAsync('array/new', { counter: MemoryLocation.from(array.counter), lock: array.lock.location(), array: array.array.location() });
 		}
 
 		connection.onNotify('array/push', (params) => {

@@ -23,7 +23,7 @@ interface RIL extends RAL {
 
 const _ril: RIL = Object.freeze<RIL>(Object.assign({}, _RAL(), {
 	Memory: Object.freeze({
-		async create(constructor: new (module: WebAssembly.Module, memory: WebAssembly.Memory, exports: SharedMemory.Exports) => SharedMemory): Promise<SharedMemory> {
+		async create(constructor: SharedMemory.Constructor): Promise<SharedMemory> {
 			const memory = new WebAssembly.Memory(malloc.descriptor);
 			const module = await WebAssembly.compile(malloc.bytes);
 			const instance = new WebAssembly.Instance(module, {
@@ -34,9 +34,9 @@ const _ril: RIL = Object.freeze<RIL>(Object.assign({}, _RAL(), {
 					sched_yield: () => 0
 				}
 			});
-			return new constructor(module, memory, instance.exports as unknown as SharedMemory.Exports);
+			return new constructor(module, memory, instance.exports as unknown as SharedMemory.Exports, malloc.descriptor.maximum * 65536);
 		},
-		async createFrom(constructor: new (module: WebAssembly.Module, memory: WebAssembly.Memory, exports: SharedMemory.Exports, id: string) => SharedMemory, transferable: SharedMemory.Transferable): Promise<SharedMemory> {
+		async createFrom(constructor: SharedMemory.Constructor, transferable: SharedMemory.Transferable): Promise<SharedMemory> {
 			const instance = new WebAssembly.Instance(transferable.module, {
 				env: {
 					memory: transferable.memory
@@ -45,7 +45,7 @@ const _ril: RIL = Object.freeze<RIL>(Object.assign({}, _RAL(), {
 					sched_yield: () => 0
 				}
 			});
-			return new constructor(transferable.module, transferable.memory, instance.exports as unknown as SharedMemory.Exports, transferable.id);
+			return new constructor(transferable.module, transferable.memory, instance.exports as unknown as SharedMemory.Exports, transferable.size, transferable.id, transferable.counter);
 		}
 	}),
 	MessageChannel: Object.freeze({

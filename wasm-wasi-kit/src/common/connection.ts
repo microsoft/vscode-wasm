@@ -393,7 +393,7 @@ export abstract class BaseConnection<AsyncCalls extends _AsyncCallType | undefin
 				const syncCallBuffer = this.syncMemoryRange.getInt32View(0);
 				let errorCode: number = 0;
 				try {
-					errorCode = await handler(message.params, message.result ? MemoryLocation.to(this.memory, message.result) : undefined) ?? 0;
+					errorCode = await handler(message.params, message.result ? this.memory.range.fromLocation(message.result) : undefined) ?? 0;
 				} catch (error: any) {
 					if (typeof error.code === 'number') {
 						errorCode = error.code;

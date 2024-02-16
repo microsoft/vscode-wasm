@@ -12,7 +12,7 @@ import { float64, ptr } from '@vscode/wasm-component-model';
 import { SharedArray } from '../../common/array';
 import { Connection } from '../connection';
 import { Notifications, Operations, ManagementCalls, ServerNotifications } from './messages';
-import { Lock, MemoryLocation, SharedMemory } from '../../common/sharedObject';
+import { Lock, SharedMemory } from '../../common/sharedObject';
 
 const connection = new Connection<undefined, undefined, Operations | ServerNotifications, ManagementCalls, undefined, Notifications>(parentPort!);
 
@@ -35,10 +35,10 @@ type ArrayInfo = { counter: Uint32Array; ptr: ptr; array: SharedArray.Synchroniz
 const arrays: ArrayInfo[] = [];
 
 connection.onAsyncCall('array/new', async (params) => {
-	const counter =  MemoryLocation.to(memory, params.counter).getUint32View(0);
-	const lock = new Lock(MemoryLocation.to(memory, params.lock));
-	const array = SharedArray.synchronized(lock, new SharedArray<float64>(float64, MemoryLocation.to(memory, params.array)));
-	arrays.push({ counter, ptr: array.getMemoryLocation().ptr, array });
+	const counter =  memory.range.fromLocation(params.counter).getUint32View(0);
+	const lock = new Lock(memory.range.fromLocation(params.lock));
+	const array = SharedArray.synchronized(lock, new SharedArray<float64>(float64, memory.range.fromLocation(params.array)));
+	arrays.push({ counter, ptr: array.location().ptr, array });
 });
 
 function push(info: ArrayInfo) {
