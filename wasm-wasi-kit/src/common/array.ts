@@ -197,7 +197,8 @@ export namespace SharedArray {
 		return memory.alloc(properties.alignment, properties.size);
 	}
 
-	export function synchronized<T>(memory: SharedMemory | Lock, array: SharedArray<T>): Synchronize.WithRunLocked<SharedArray<T>> {
+	export type Synchronized<T> = Synchronize.WithRunLocked<SharedArray<T>>;
+	export function synchronized<T>(memory: SharedMemory | Lock, array: SharedArray<T>): Synchronized<T> {
 		return Synchronize(memory, array);
 	}
 

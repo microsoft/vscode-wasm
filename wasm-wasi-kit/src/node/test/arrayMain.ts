@@ -8,7 +8,7 @@ RIL.install();
 import path from 'node:path';
 import { Worker } from 'node:worker_threads';
 
-import { Alignment, float64, u32  } from '@vscode/wasm-component-model';
+import { Alignment, float64, u32, type ptr, type MemoryRange  } from '@vscode/wasm-component-model';
 
 import { Lock, MemoryLocation, SharedMemory } from '../../common/sharedObject';
 import { SharedArray } from '../../common/array';
@@ -102,17 +102,23 @@ async function main(): Promise<void> {
 
 	const memory = await SharedMemory.create();
 
-	const counter = memory.alloc(Alignment.halfWord, u32.size);
-
 	const threads: { worker: Worker; connection: ConnectionType }[] = [];
-	const arr = new SharedArray<float64>(float64, memory);
-	const lock = new Lock(memory);
-	const operations = new ArrayOperations(arr);
+	const array2Operations: Map<ptr, ArrayOperations> = new Map();
+	const arrays: { counter: MemoryRange; lock: Lock; array: SharedArray<float64>}[] = [];
 	const promises: Promise<void>[] = [];
 
-	const numberOfThreads = 8;
+	const numberOfThreads = 16;
+	const numberOfArrays = Math.max(2, Math.ceil(numberOfThreads / 4));
 
-	process.stdout.write(`Starting array simulation using ${numberOfThreads} threads.\n`);
+	for (let i = 0; i < numberOfArrays; i++) {
+		const counter = memory.alloc(Alignment.halfWord, u32.size);
+		const lock = new Lock(memory);
+		const array = new SharedArray<float64>(float64, memory);
+		arrays.push({ counter, lock, array });
+		array2Operations.set(array.getMemoryLocation().ptr, new ArrayOperations(array));
+	}
+
+	process.stdout.write(`Starting array simulation using ${numberOfArrays} arrays on ${numberOfThreads} threads.\n`);
 
 	for (let i = 0; i < numberOfThreads; i++) {
 		const worker = new Worker(path.join(__dirname, './arrayWorker.js'));
@@ -121,15 +127,24 @@ async function main(): Promise<void> {
 		connection.listen();
 
 		await connection.callAsync('init', { workerId: i, memory: memory.getTransferable() });
+		for (const array of arrays) {
+			await connection.callAsync('array/new', { counter: MemoryLocation.from(array.counter), lock: array.lock.getMemoryLocation(), array: array.array.getMemoryLocation() });
+		}
+
 		connection.onNotify('array/push', (params) => {
+			const operations = array2Operations.get(params.array)!;
 			operations.record({ method: 'array/push', params });
 		});
 		connection.onNotify('array/pop', (params) => {
+			const operations = array2Operations.get(params.array)!;
 			operations.record({ method: 'array/pop', params });
 		});
 		connection.onNotify('array/get', (params) => {
+			const operations = array2Operations.get(params.array)!;
 			operations.record({ method: 'array/get', params });
 		});
+
+		connection.notify('start');
 
 		promises.push(new Promise<void>((resolve) => {
 			connection.onNotify('done', () => {
@@ -138,15 +153,16 @@ async function main(): Promise<void> {
 			});
 		}));
 		threads.push({ worker, connection });
-		connection.notify('array/new', { counter: MemoryLocation.from(counter), lock: lock.getMemoryLocation(), array: arr.getMemoryLocation(),  });
 	}
 
 	await Promise.all(promises);
 
 	try {
-		process.stdout.write(`Replaying ${operations.size()} operations.\n`);
-		operations.replay();
-		operations.compare();
+		process.stdout.write(`Replaying ${Array.from(array2Operations.values()).reduce((p, v) => p + v.size(), 0) } operations.\n`);
+		for (const operations of array2Operations.values()) {
+			operations.replay();
+			operations.compare();
+		}
 	} catch(error) {
 		// eslint-disable-next-line no-console
 		console.error(error);

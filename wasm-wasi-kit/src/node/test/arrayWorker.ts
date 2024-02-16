@@ -16,8 +16,6 @@ import { Lock, MemoryLocation, SharedMemory } from '../../common/sharedObject';
 
 const connection = new Connection<undefined, undefined, Operations | ServerNotifications, ManagementCalls, undefined, Notifications>(parentPort!);
 
-const arrays: Map<ptr, SharedArray<float64>> = new Map();
-
 const operations: string[] = [
 	'array/push',
 	'array/pop',
@@ -32,62 +30,71 @@ connection.onAsyncCall('init', async (params) => {
 	connection.initializeSyncCall(memory);
 });
 
-connection.onNotify('array/new', async (params) => {
+
+type ArrayInfo = { counter: Uint32Array; ptr: ptr; array: SharedArray.Synchronized<float64> };
+const arrays: ArrayInfo[] = [];
+
+connection.onAsyncCall('array/new', async (params) => {
+	const counter =  MemoryLocation.to(memory, params.counter).getUint32View(0);
 	const lock = new Lock(MemoryLocation.to(memory, params.lock));
 	const array = SharedArray.synchronized(lock, new SharedArray<float64>(float64, MemoryLocation.to(memory, params.array)));
-	arrays.set(array.getMemoryLocation().ptr, array);
+	arrays.push({ counter, ptr: array.getMemoryLocation().ptr, array });
+});
 
-	const counter =  MemoryLocation.to(memory, params.counter).getUint32View(0);
+function push(info: ArrayInfo) {
+	const array = info.array;
+	const value = Math.random();
+	let sequence!: number;
+	let length!: number;
+	array.runLocked(() => {
+		sequence = Atomics.add(info.counter, 0, 1);
+		array.push(value);
+		length = array.length;
+	});
+	connection.notify('array/push', { workerId, array: info.ptr, sequence, value, length });
+}
 
-	function push() {
-		const value = Math.random();
-		let sequence!: number;
-		let length!: number;
-		array.runLocked(() => {
-			sequence = Atomics.add(counter, 0, 1);
-			array.push(value);
-			length = array.length;
-		});
-		connection.notify('array/push', { workerId, sequence, value, length });
-	}
+function pop(info: ArrayInfo) {
+	const array = info.array;
+	let sequence!: number;
+	let result: number | undefined;
+	let length!: number;
+	array.runLocked(() => {
+		sequence = Atomics.add(info.counter, 0, 1);
+		result = array.pop();
+		length = array.length;
+	});
+	connection.notify('array/pop', { workerId, array: info.ptr, sequence, result, length });
+}
 
-	function pop() {
-		let sequence!: number;
-		let result: number | undefined;
-		let length!: number;
-		array.runLocked(() => {
-			sequence = Atomics.add(counter, 0, 1);
-			result = array.pop();
-			length = array.length;
-		});
-		connection.notify('array/pop', { workerId, sequence, result, length });
-	}
+function get(info: ArrayInfo) {
+	const array = info.array;
+	let sequence!: number;
+	let index!: number;
+	let result!: number;
+	array.runLocked(() => {
+		index = Math.floor(Math.random() * array.length);
+		sequence = Atomics.add(info.counter, 0, 1);
+		result = array.at(index)!;
+	});
+	connection.notify('array/get', { workerId, array: info.ptr, sequence, index, result });
+}
 
-	function get() {
-		let sequence!: number;
-		let index!: number;
-		let result!: number;
-		array.runLocked(() => {
-			index = Math.floor(Math.random() * array.length);
-			sequence = Atomics.add(counter, 0, 1);
-			result = array.at(index)!;
-		});
-		connection.notify('array/get', { workerId, sequence, index, result });
-	}
-
+connection.onNotify('start', async () => {
 	let start = Date.now();
 
 	while(Date.now() - start < 10000) {
+		const array = arrays[Math.floor(Math.random() * arrays.length)];
 		const operation = operations[Math.floor(Math.random() * operations.length)];
 		switch (operation) {
 			case 'array/push':
-				push();
+				push(array);
 				break;
 			case 'array/pop':
-				pop();
+				pop(array);
 				break;
 			case 'array/get':
-				get();
+				get(array);
 				break;
 		}
 	}
