@@ -344,12 +344,9 @@ export namespace Record {
 			for (const [name, fieldInfo] of this.fields) {
 				const type = fieldInfo.type;
 				if (type instanceof ObjectType) {
-					let propResult: any;
+					let propResult = type.load(memory, offset + fieldInfo.offset, context);
 					Object.defineProperty(result, name, {
 						get() {
-							if (propResult === undefined) {
-								propResult = type.load(memory, offset + fieldInfo.offset, context);
-							}
 							return propResult;
 						}
 						// We need to think about how to handle a set. Best would be to copy the new object into the memory.
