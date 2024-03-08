@@ -38,6 +38,10 @@ parameters:
     displayName: 🚀 Publish wasm-wasi
     type: boolean
     default: false
+  - name: publishWasmComponentModel
+    displayName: 🚀 Publish wasm-component-model
+    type: boolean
+    default: false
 
 extends:
   template: azure-pipelines/npm-package/pipeline.yml@templates
@@ -47,13 +51,13 @@ extends:
         testPlatforms:
           - name: Linux
             nodeVersions:
-              - 16.19.1
+              - 18.18.2
           - name: MacOS
             nodeVersions:
-              - 16.19.1
+              - 18.18.2
           - name: Windows
             nodeVersions:
-              - 16.19.1
+              - 18.18.2
         testSteps:
           - template: /build/azure-pipelines/templates/test-steps.yml@self
             parameters:
@@ -73,13 +77,13 @@ extends:
         testPlatforms:
           - name: Linux
             nodeVersions:
-              - 16.19.1
+              - 18.18.2
           - name: MacOS
             nodeVersions:
-              - 16.19.1
+              - 18.18.2
           - name: Windows
             nodeVersions:
-              - 16.19.1
+              - 18.18.2
         testSteps:
           - template: /build/azure-pipelines/templates/test-steps.yml@self
             parameters:
@@ -99,13 +103,13 @@ extends:
         testPlatforms:
           - name: Linux
             nodeVersions:
-              - 16.19.1
+              - 18.18.2
           - name: MacOS
             nodeVersions:
-              - 16.19.1
+              - 18.18.2
           - name: Windows
             nodeVersions:
-              - 16.19.1
+              - 18.18.2
         testSteps:
           - template: /build/azure-pipelines/templates/test-steps.yml@self
             parameters:
@@ -125,13 +129,13 @@ extends:
         testPlatforms:
           - name: Linux
             nodeVersions:
-              - 16.19.1
+              - 18.18.2
           - name: MacOS
             nodeVersions:
-              - 16.19.1
+              - 18.18.2
           - name: Windows
             nodeVersions:
-              - 16.19.1
+              - 18.18.2
         testSteps:
           - template: /build/azure-pipelines/templates/test-steps.yml@self
             parameters:
@@ -146,3 +150,29 @@ extends:
         preReleaseTagAddToLatest: true
         publishPackage: ${{ parameters.publishWasmWasi }}
         workingDirectory: $(Build.SourcesDirectory)/wasm-wasi
+
+      - name: wasm-component-model
+        testPlatforms:
+          - name: Linux
+            nodeVersions:
+              - 18.18.2
+          - name: MacOS
+            nodeVersions:
+              - 18.18.2
+          - name: Windows
+            nodeVersions:
+              - 18.18.2
+        testSteps:
+          - template: /build/azure-pipelines/templates/test-steps.yml@self
+            parameters:
+              package: wasm-component-model
+        buildSteps:
+          - template: /build/azure-pipelines/templates/pack-steps.yml@self
+            parameters:
+              package: wasm-component-model
+        ghTagPrefix: release/wasm-component-model/
+        tag: ${{ parameters.quality }}
+        preReleaseTag: next
+        preReleaseTagAddToLatest: true
+        publishPackage: ${{ parameters.publishWasmComponentModel }}
+        workingDirectory: $(Build.SourcesDirectory)/wasm-component-model

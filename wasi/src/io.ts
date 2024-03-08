@@ -78,8 +78,9 @@ export namespace io {
 		 * The result `list<u32>` contains one or more indices of handles in the
 		 * argument list that is ready for I/O.
 		 * 
-		 * If the list contains more elements than can be indexed with a `u32`
-		 * value, this function traps.
+		 * This function traps if either:
+		 * - the list is empty, or:
+		 * - the list contains more elements than can be indexed with a `u32` value.
 		 * 
 		 * A timeout can be implemented by adding a pollable from the
 		 * wasi-clocks API to the list.
@@ -411,13 +412,7 @@ export namespace io {
 		InputStream: Streams.InputStream.Class;
 		OutputStream: Streams.OutputStream.Class;
 	};
-
 }
-export type io = {
-	Error?: io.Error;
-	Poll?: io.Poll;
-	Streams?: io.Streams;
-};
 
 export namespace io {
 	export namespace Error.$ {
@@ -476,11 +471,14 @@ export namespace io {
 		}
 		export type WasmInterface = {
 		} & Error.WasmInterface;
-		export function createHost(service: io.Error, context: $wcm.WasmContext): WasmInterface {
-			return $wcm.Host.create<WasmInterface>(functions, resources, service, context);
+		export function createImports(service: io.Error, context: $wcm.WasmContext): WasmInterface {
+			return $wcm.Imports.create<WasmInterface>(functions, resources, service, context);
 		}
-		export function createService(wasmInterface: WasmInterface, context: $wcm.WasmContext): io.Error {
-			return $wcm.Service.create<io.Error>(functions, [['Error', $.Error, Error.Class]], wasmInterface, context);
+		export function filterExports(exports: object): WasmInterface {
+			return $wcm.Exports.filter<WasmInterface>(exports, functions, resources, id, io._.version);
+		}
+		export function bindExports(wasmInterface: WasmInterface, context: $wcm.WasmContext): io.Error {
+			return $wcm.Exports.bind<io.Error>(functions, [['Error', $.Error, Error.Class]], wasmInterface, context);
 		}
 	}
 
@@ -553,11 +551,14 @@ export namespace io {
 		export type WasmInterface = {
 			'poll': (in__ptr: i32, in__len: i32, result: ptr<Uint32Array>) => void;
 		} & Pollable.WasmInterface;
-		export function createHost(service: io.Poll, context: $wcm.WasmContext): WasmInterface {
-			return $wcm.Host.create<WasmInterface>(functions, resources, service, context);
+		export function createImports(service: io.Poll, context: $wcm.WasmContext): WasmInterface {
+			return $wcm.Imports.create<WasmInterface>(functions, resources, service, context);
 		}
-		export function createService(wasmInterface: WasmInterface, context: $wcm.WasmContext): io.Poll {
-			return $wcm.Service.create<io.Poll>(functions, [['Pollable', $.Pollable, Pollable.Class]], wasmInterface, context);
+		export function filterExports(exports: object): WasmInterface {
+			return $wcm.Exports.filter<WasmInterface>(exports, functions, resources, id, io._.version);
+		}
+		export function bindExports(wasmInterface: WasmInterface, context: $wcm.WasmContext): io.Poll {
+			return $wcm.Exports.bind<io.Poll>(functions, [['Pollable', $.Pollable, Pollable.Class]], wasmInterface, context);
 		}
 	}
 
@@ -782,16 +783,20 @@ export namespace io {
 		}
 		export type WasmInterface = {
 		} & InputStream.WasmInterface & OutputStream.WasmInterface;
-		export function createHost(service: io.Streams, context: $wcm.WasmContext): WasmInterface {
-			return $wcm.Host.create<WasmInterface>(functions, resources, service, context);
+		export function createImports(service: io.Streams, context: $wcm.WasmContext): WasmInterface {
+			return $wcm.Imports.create<WasmInterface>(functions, resources, service, context);
 		}
-		export function createService(wasmInterface: WasmInterface, context: $wcm.WasmContext): io.Streams {
-			return $wcm.Service.create<io.Streams>(functions, [['InputStream', $.InputStream, InputStream.Class], ['OutputStream', $.OutputStream, OutputStream.Class]], wasmInterface, context);
+		export function filterExports(exports: object): WasmInterface {
+			return $wcm.Exports.filter<WasmInterface>(exports, functions, resources, id, io._.version);
+		}
+		export function bindExports(wasmInterface: WasmInterface, context: $wcm.WasmContext): io.Streams {
+			return $wcm.Exports.bind<io.Streams>(functions, [['InputStream', $.InputStream, InputStream.Class], ['OutputStream', $.OutputStream, OutputStream.Class]], wasmInterface, context);
 		}
 	}
 }
 
 export namespace io._ {
+	export const version = '0.2.0' as const;
 	export const id = 'wasi:io' as const;
 	export const witName = 'io' as const;
 	export const interfaces: Map<string, $wcm.InterfaceType> = new Map<string, $wcm.InterfaceType>([

@@ -4,6 +4,8 @@
  *--------------------------------------------------------------------------------------------*/
 import * as $wcm from '@vscode/wasm-component-model';
 import type { u16, u8, u32, u64, result, own, borrow, option, i32, ptr, i64 } from '@vscode/wasm-component-model';
+import { cli } from './cli';
+import { random } from './random';
 import { io } from './io';
 import { clocks } from './clocks';
 
@@ -1286,13 +1288,40 @@ export namespace http {
 	export type OutgoingHandler = {
 		handle: OutgoingHandler.handle;
 	};
-
+	export namespace proxy {
+		export type Imports = {
+			random: random.Random;
+			error: io.Error;
+			poll: io.Poll;
+			streams: io.Streams;
+			stdout: cli.Stdout;
+			stderr: cli.Stderr;
+			stdin: cli.Stdin;
+			monotonicClock: clocks.MonotonicClock;
+			types: http.Types;
+			outgoingHandler: http.OutgoingHandler;
+			wallClock: clocks.WallClock;
+		};
+		export type Exports = {
+			incomingHandler: http.IncomingHandler;
+		};
+		export namespace Wasm {
+			export type Imports = {
+				'wasi:random/random@0.2.0': random.Random._.WasmInterface;
+				'wasi:io/error@0.2.0': io.Error._.WasmInterface;
+				'wasi:io/poll@0.2.0': io.Poll._.WasmInterface;
+				'wasi:io/streams@0.2.0': io.Streams._.WasmInterface;
+				'wasi:cli/stdout@0.2.0': cli.Stdout._.WasmInterface;
+				'wasi:cli/stderr@0.2.0': cli.Stderr._.WasmInterface;
+				'wasi:cli/stdin@0.2.0': cli.Stdin._.WasmInterface;
+				'wasi:clocks/monotonic-clock@0.2.0': clocks.MonotonicClock._.WasmInterface;
+				'wasi:http/types@0.2.0': http.Types._.WasmInterface;
+				'wasi:http/outgoing-handler@0.2.0': http.OutgoingHandler._.WasmInterface;
+				'wasi:clocks/wall-clock@0.2.0': clocks.WallClock._.WasmInterface;
+			};
+		}
+	}
 }
-export type http = {
-	Types?: http.Types;
-	IncomingHandler?: http.IncomingHandler;
-	OutgoingHandler?: http.OutgoingHandler;
-};
 
 export namespace http {
 	export namespace Types.$ {
@@ -2135,11 +2164,14 @@ export namespace http {
 		export type WasmInterface = {
 			'http-error-code': (err: i32, result: ptr<ErrorCode | undefined>) => void;
 		} & Fields.WasmInterface & IncomingRequest.WasmInterface & OutgoingRequest.WasmInterface & RequestOptions.WasmInterface & ResponseOutparam.WasmInterface & IncomingResponse.WasmInterface & IncomingBody.WasmInterface & FutureTrailers.WasmInterface & OutgoingResponse.WasmInterface & OutgoingBody.WasmInterface & FutureIncomingResponse.WasmInterface;
-		export function createHost(service: http.Types, context: $wcm.WasmContext): WasmInterface {
-			return $wcm.Host.create<WasmInterface>(functions, resources, service, context);
+		export function createImports(service: http.Types, context: $wcm.WasmContext): WasmInterface {
+			return $wcm.Imports.create<WasmInterface>(functions, resources, service, context);
 		}
-		export function createService(wasmInterface: WasmInterface, context: $wcm.WasmContext): http.Types {
-			return $wcm.Service.create<http.Types>(functions, [['Fields', $.Fields, Fields.Class], ['IncomingRequest', $.IncomingRequest, IncomingRequest.Class], ['OutgoingRequest', $.OutgoingRequest, OutgoingRequest.Class], ['RequestOptions', $.RequestOptions, RequestOptions.Class], ['ResponseOutparam', $.ResponseOutparam, ResponseOutparam.Class], ['IncomingResponse', $.IncomingResponse, IncomingResponse.Class], ['IncomingBody', $.IncomingBody, IncomingBody.Class], ['FutureTrailers', $.FutureTrailers, FutureTrailers.Class], ['OutgoingResponse', $.OutgoingResponse, OutgoingResponse.Class], ['OutgoingBody', $.OutgoingBody, OutgoingBody.Class], ['FutureIncomingResponse', $.FutureIncomingResponse, FutureIncomingResponse.Class]], wasmInterface, context);
+		export function filterExports(exports: object): WasmInterface {
+			return $wcm.Exports.filter<WasmInterface>(exports, functions, resources, id, http._.version);
+		}
+		export function bindExports(wasmInterface: WasmInterface, context: $wcm.WasmContext): http.Types {
+			return $wcm.Exports.bind<http.Types>(functions, [['Fields', $.Fields, Fields.Class], ['IncomingRequest', $.IncomingRequest, IncomingRequest.Class], ['OutgoingRequest', $.OutgoingRequest, OutgoingRequest.Class], ['RequestOptions', $.RequestOptions, RequestOptions.Class], ['ResponseOutparam', $.ResponseOutparam, ResponseOutparam.Class], ['IncomingResponse', $.IncomingResponse, IncomingResponse.Class], ['IncomingBody', $.IncomingBody, IncomingBody.Class], ['FutureTrailers', $.FutureTrailers, FutureTrailers.Class], ['OutgoingResponse', $.OutgoingResponse, OutgoingResponse.Class], ['OutgoingBody', $.OutgoingBody, OutgoingBody.Class], ['FutureIncomingResponse', $.FutureIncomingResponse, FutureIncomingResponse.Class]], wasmInterface, context);
 		}
 	}
 
@@ -2166,11 +2198,14 @@ export namespace http {
 		export type WasmInterface = {
 			'handle': (request: i32, responseOut: i32) => void;
 		};
-		export function createHost(service: http.IncomingHandler, context: $wcm.WasmContext): WasmInterface {
-			return $wcm.Host.create<WasmInterface>(functions, resources, service, context);
+		export function createImports(service: http.IncomingHandler, context: $wcm.WasmContext): WasmInterface {
+			return $wcm.Imports.create<WasmInterface>(functions, resources, service, context);
 		}
-		export function createService(wasmInterface: WasmInterface, context: $wcm.WasmContext): http.IncomingHandler {
-			return $wcm.Service.create<http.IncomingHandler>(functions, [], wasmInterface, context);
+		export function filterExports(exports: object): WasmInterface {
+			return $wcm.Exports.filter<WasmInterface>(exports, functions, resources, id, http._.version);
+		}
+		export function bindExports(wasmInterface: WasmInterface, context: $wcm.WasmContext): http.IncomingHandler {
+			return $wcm.Exports.bind<http.IncomingHandler>(functions, [], wasmInterface, context);
 		}
 	}
 
@@ -2201,16 +2236,20 @@ export namespace http {
 		export type WasmInterface = {
 			'handle': (request: i32, options_case: i32, options_option: i32, result: ptr<result<own<FutureIncomingResponse>, ErrorCode>>) => void;
 		};
-		export function createHost(service: http.OutgoingHandler, context: $wcm.WasmContext): WasmInterface {
-			return $wcm.Host.create<WasmInterface>(functions, resources, service, context);
+		export function createImports(service: http.OutgoingHandler, context: $wcm.WasmContext): WasmInterface {
+			return $wcm.Imports.create<WasmInterface>(functions, resources, service, context);
 		}
-		export function createService(wasmInterface: WasmInterface, context: $wcm.WasmContext): http.OutgoingHandler {
-			return $wcm.Service.create<http.OutgoingHandler>(functions, [], wasmInterface, context);
+		export function filterExports(exports: object): WasmInterface {
+			return $wcm.Exports.filter<WasmInterface>(exports, functions, resources, id, http._.version);
+		}
+		export function bindExports(wasmInterface: WasmInterface, context: $wcm.WasmContext): http.OutgoingHandler {
+			return $wcm.Exports.bind<http.OutgoingHandler>(functions, [], wasmInterface, context);
 		}
 	}
 }
 
 export namespace http._ {
+	export const version = '0.2.0' as const;
 	export const id = 'wasi:http' as const;
 	export const witName = 'http' as const;
 	export const interfaces: Map<string, $wcm.InterfaceType> = new Map<string, $wcm.InterfaceType>([

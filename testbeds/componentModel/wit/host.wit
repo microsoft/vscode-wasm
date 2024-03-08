@@ -1,6 +1,11 @@
 // wit/host.wit
 package example:host;
 
+interface host {
+  resource host {
+  }
+}
+
 world host {
   import print: func(msg: string);
 

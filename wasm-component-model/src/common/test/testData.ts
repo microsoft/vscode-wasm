@@ -334,10 +334,10 @@ export namespace testData {
 			'check-flags-long': (value_0: i32, value_1: i32, result: ptr<TestFlagsLong>) => void;
 		} & PointResource.WasmInterface;
 		export function createHost(service: testData.Types, context: $wcm.WasmContext): WasmInterface {
-			return $wcm.Host.create<WasmInterface>(functions, resources, service, context);
+			return $wcm.Imports.create<WasmInterface>(functions, resources, service, context);
 		}
 		export function createService(wasmInterface: WasmInterface, context: $wcm.WasmContext): testData.Types {
-			return $wcm.Service.create<testData.Types>(functions, [['PointResource', $.PointResource, PointResource.Class]], wasmInterface, context);
+			return $wcm.Exports.bind<testData.Types>(functions, [['PointResource', $.PointResource, PointResource.Class]], wasmInterface, context);
 		}
 	}
 }

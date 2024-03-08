@@ -1,0 +1,47 @@
+{
+  "worlds": [
+    {
+      "name": "host",
+      "imports": {
+        "print": {
+          "function": {
+            "name": "print",
+            "kind": "freestanding",
+            "params": [
+              {
+                "name": "msg",
+                "type": "string"
+              }
+            ],
+            "results": []
+          }
+        }
+      },
+      "exports": {
+        "run": {
+          "function": {
+            "name": "run",
+            "kind": "freestanding",
+            "params": [],
+            "results": []
+          }
+        }
+      },
+      "package": 0
+    }
+  ],
+  "interfaces": [],
+  "types": [],
+  "packages": [
+    {
+      "name": "example:host",
+      "docs": {
+        "contents": "wit/host.wit"
+      },
+      "interfaces": {},
+      "worlds": {
+        "host": 0
+      }
+    }
+  ]
+}

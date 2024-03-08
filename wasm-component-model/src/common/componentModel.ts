@@ -3305,12 +3305,12 @@ export type WasmInterfaces = {
 	readonly [key: string]: WasmInterface;
 };
 
-export type Host = ParamWasmInterface;
-export namespace Host {
-	export function create<T extends Host>(signatures: Map<string, FunctionType<JFunction>>, resources: Map<string, ResourceType>, service: ParamServiceInterface, context: WasmContext): T {
+export type Imports = ParamWasmInterface;
+export namespace Imports {
+	export function create<T extends Imports>(signatures: Map<string, FunctionType<JFunction>>, resources: Map<string, ResourceType>, service: ParamServiceInterface, context: WasmContext): T {
 		const result: { [key: string]: WasmFunction }  = Object.create(null);
 		for (const [funcName, signature] of signatures) {
-			result[signature.witName] = createHostFunction(signature, service[funcName] as JFunction, context);
+			result[signature.witName] = createFunction(signature, service[funcName] as JFunction, context);
 		}
 		for (const [resourceName, resource] of resources) {
 			const resourceManager = context.managers.get(resource.id);
@@ -3329,7 +3329,7 @@ export namespace Host {
 		return result as unknown as T;
 	}
 
-	function createHostFunction(func: FunctionType<JFunction>, serviceFunction: JFunction, context: WasmContext): WasmFunction {
+	function createFunction(func: FunctionType<JFunction>, serviceFunction: JFunction, context: WasmContext): WasmFunction {
 		return (...params: WasmType[]): number | bigint | void => {
 			return func.callService(serviceFunction, params, context);
 		};
@@ -3396,9 +3396,36 @@ export type ClassFactory<T extends GenericClass = GenericClass> = (wasmInterface
 interface WriteableServiceInterface {
 	[key: string]: (JFunction | WriteableServiceInterface);
 }
-export type Service = ParamServiceInterface | {};
-export namespace Service {
-	export function create<T extends Service>(signatures: Map<string, FunctionType>, resources: [string, ResourceType, ClassFactory<any>][], wasm: ParamWasmInterface, context: WasmContext): T {
+
+export type Exports = ParamServiceInterface | {};
+export namespace Exports {
+	export function filter<T extends ParamWasmInterface>(exports: { [key: string]: any}, signatures: Map<string, FunctionType>, resources: Map<string, ResourceType>, id: string, version: string): T {
+		const key = `${id}@${version}`;
+		let result: any = exports[key];
+		// We could actually check if all properties exist in the result.
+		if (result !== null && typeof result === 'object') {
+			return result;
+		}
+		result = Object.create(null);
+		for (const func of signatures.values()) {
+			const funcKey = `${key}#${func.witName}`;
+			const candidate = exports[funcKey];
+			if (candidate !== null && candidate !== undefined) {
+				result[func.witName] = candidate;
+			}
+		}
+		for (const resource of resources.values()) {
+			for (const callable of resource.methods.values()) {
+				const callableKey = `${key}#${callable.witName}`;
+				const candidate = exports[callableKey];
+				if (candidate !== null && candidate !== undefined) {
+					result[callable.witName] = candidate;
+				}
+			}
+		}
+		return result;
+	}
+	export function bind<T extends Exports>(signatures: Map<string, FunctionType>, resources: [string, ResourceType, ClassFactory<any>][], wasm: ParamWasmInterface, context: WasmContext): T {
 		const result: WriteableServiceInterface  = Object.create(null);
 		for (const [name, , factory] of resources) {
 			result[name] = factory(wasm, context);
@@ -3425,4 +3452,3 @@ export type Promisify<T> = {
 			? Distribute<T[K]>
 			: T[K];
 };
-

@@ -30,6 +30,11 @@ export namespace World {
 			&& typeof value.package === 'number';
 	}
 }
+export interface PackageNameParts {
+	namespace?: string | undefined;
+	name: string;
+	version?: string | undefined;
+}
 
 export interface Package {
 	name: string;
