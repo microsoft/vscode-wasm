@@ -3,7 +3,7 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 import * as $wcm from '@vscode/wasm-component-model';
-import type { u16, u8, u32, u64, result, own, borrow, option, i32, ptr, i64 } from '@vscode/wasm-component-model';
+import type { u16, u8, u32, u64, result, own, borrow, i32, option, ptr, i64 } from '@vscode/wasm-component-model';
 import { cli } from './cli';
 import { random } from './random';
 import { io } from './io';
@@ -1289,22 +1289,24 @@ export namespace http {
 		handle: OutgoingHandler.handle;
 	};
 	export namespace proxy {
-		export type Imports = {
-			random: random.Random;
-			error: io.Error;
-			poll: io.Poll;
-			streams: io.Streams;
-			stdout: cli.Stdout;
-			stderr: cli.Stderr;
-			stdin: cli.Stdin;
-			monotonicClock: clocks.MonotonicClock;
-			types: http.Types;
-			outgoingHandler: http.OutgoingHandler;
-			wallClock: clocks.WallClock;
-		};
-		export type Exports = {
-			incomingHandler: http.IncomingHandler;
-		};
+		export namespace Service {
+			export type Imports = {
+				random: random.Random;
+				error: io.Error;
+				poll: io.Poll;
+				streams: io.Streams;
+				stdout: cli.Stdout;
+				stderr: cli.Stderr;
+				stdin: cli.Stdin;
+				monotonicClock: clocks.MonotonicClock;
+				types: http.Types;
+				outgoingHandler: http.OutgoingHandler;
+				wallClock: clocks.WallClock;
+			};
+			export type Exports = {
+				incomingHandler: http.IncomingHandler;
+			};
+		}
 		export namespace Wasm {
 			export type Imports = {
 				'wasi:random/random@0.2.0': random.Random._.WasmInterface;
@@ -1319,6 +1321,30 @@ export namespace http {
 				'wasi:http/outgoing-handler@0.2.0': http.OutgoingHandler._.WasmInterface;
 				'wasi:clocks/wall-clock@0.2.0': clocks.WallClock._.WasmInterface;
 			};
+			export type Exports = {
+				'wasi:http/incoming-handler@0.2.0#handle': (request: i32, responseOut: i32) => void;
+			};
+		}
+
+		export function createImports(service: Service.Imports, context: $wcm.WasmContext): Wasm.Imports {
+			const result: Wasm.Imports = Object.create(null);
+			result['wasi:random/random@0.2.0'] = random.Random._.createImports(service.random, context);
+			result['wasi:io/error@0.2.0'] = io.Error._.createImports(service.error, context);
+			result['wasi:io/poll@0.2.0'] = io.Poll._.createImports(service.poll, context);
+			result['wasi:io/streams@0.2.0'] = io.Streams._.createImports(service.streams, context);
+			result['wasi:cli/stdout@0.2.0'] = cli.Stdout._.createImports(service.stdout, context);
+			result['wasi:cli/stderr@0.2.0'] = cli.Stderr._.createImports(service.stderr, context);
+			result['wasi:cli/stdin@0.2.0'] = cli.Stdin._.createImports(service.stdin, context);
+			result['wasi:clocks/monotonic-clock@0.2.0'] = clocks.MonotonicClock._.createImports(service.monotonicClock, context);
+			result['wasi:http/types@0.2.0'] = http.Types._.createImports(service.types, context);
+			result['wasi:http/outgoing-handler@0.2.0'] = http.OutgoingHandler._.createImports(service.outgoingHandler, context);
+			result['wasi:clocks/wall-clock@0.2.0'] = clocks.WallClock._.createImports(service.wallClock, context);
+			return result as Wasm.Imports;
+		}
+		export function bindExports(exports: Wasm.Exports, context: $wcm.WasmContext): Service.Exports {
+			const result: Service.Exports = Object.create(null);
+			result.incomingHandler = http.IncomingHandler._.bindExports(http.IncomingHandler._.filterExports(exports, context), context);
+			return result;
 		}
 	}
 }
@@ -2167,8 +2193,8 @@ export namespace http {
 		export function createImports(service: http.Types, context: $wcm.WasmContext): WasmInterface {
 			return $wcm.Imports.create<WasmInterface>(functions, resources, service, context);
 		}
-		export function filterExports(exports: object): WasmInterface {
-			return $wcm.Exports.filter<WasmInterface>(exports, functions, resources, id, http._.version);
+		export function filterExports(exports: object, context: $wcm.WasmContext): WasmInterface {
+			return $wcm.Exports.filter<WasmInterface>(exports, functions, resources, id, http._.version, context);
 		}
 		export function bindExports(wasmInterface: WasmInterface, context: $wcm.WasmContext): http.Types {
 			return $wcm.Exports.bind<http.Types>(functions, [['Fields', $.Fields, Fields.Class], ['IncomingRequest', $.IncomingRequest, IncomingRequest.Class], ['OutgoingRequest', $.OutgoingRequest, OutgoingRequest.Class], ['RequestOptions', $.RequestOptions, RequestOptions.Class], ['ResponseOutparam', $.ResponseOutparam, ResponseOutparam.Class], ['IncomingResponse', $.IncomingResponse, IncomingResponse.Class], ['IncomingBody', $.IncomingBody, IncomingBody.Class], ['FutureTrailers', $.FutureTrailers, FutureTrailers.Class], ['OutgoingResponse', $.OutgoingResponse, OutgoingResponse.Class], ['OutgoingBody', $.OutgoingBody, OutgoingBody.Class], ['FutureIncomingResponse', $.FutureIncomingResponse, FutureIncomingResponse.Class]], wasmInterface, context);
@@ -2201,8 +2227,8 @@ export namespace http {
 		export function createImports(service: http.IncomingHandler, context: $wcm.WasmContext): WasmInterface {
 			return $wcm.Imports.create<WasmInterface>(functions, resources, service, context);
 		}
-		export function filterExports(exports: object): WasmInterface {
-			return $wcm.Exports.filter<WasmInterface>(exports, functions, resources, id, http._.version);
+		export function filterExports(exports: object, context: $wcm.WasmContext): WasmInterface {
+			return $wcm.Exports.filter<WasmInterface>(exports, functions, resources, id, http._.version, context);
 		}
 		export function bindExports(wasmInterface: WasmInterface, context: $wcm.WasmContext): http.IncomingHandler {
 			return $wcm.Exports.bind<http.IncomingHandler>(functions, [], wasmInterface, context);
@@ -2239,8 +2265,8 @@ export namespace http {
 		export function createImports(service: http.OutgoingHandler, context: $wcm.WasmContext): WasmInterface {
 			return $wcm.Imports.create<WasmInterface>(functions, resources, service, context);
 		}
-		export function filterExports(exports: object): WasmInterface {
-			return $wcm.Exports.filter<WasmInterface>(exports, functions, resources, id, http._.version);
+		export function filterExports(exports: object, context: $wcm.WasmContext): WasmInterface {
+			return $wcm.Exports.filter<WasmInterface>(exports, functions, resources, id, http._.version, context);
 		}
 		export function bindExports(wasmInterface: WasmInterface, context: $wcm.WasmContext): http.OutgoingHandler {
 			return $wcm.Exports.bind<http.OutgoingHandler>(functions, [], wasmInterface, context);
@@ -2262,30 +2288,4 @@ export namespace http._ {
 		'wasi:http/incoming-handler'?: IncomingHandler._.WasmInterface;
 		'wasi:http/outgoing-handler'?: OutgoingHandler._.WasmInterface;
 	};
-	export function createHost(service: http, context: $wcm.WasmContext): WasmInterface {
-		const result: WasmInterface = Object.create(null);
-		if (service.Types !== undefined) {
-			result['wasi:http/types'] = Types._.createHost(service.Types, context);
-		}
-		if (service.IncomingHandler !== undefined) {
-			result['wasi:http/incoming-handler'] = IncomingHandler._.createHost(service.IncomingHandler, context);
-		}
-		if (service.OutgoingHandler !== undefined) {
-			result['wasi:http/outgoing-handler'] = OutgoingHandler._.createHost(service.OutgoingHandler, context);
-		}
-		return result;
-	}
-	export function createService(wasmInterface: WasmInterface, context: $wcm.WasmContext): http {
-		const result: http = Object.create(null);
-		if (wasmInterface['wasi:http/types'] !== undefined) {
-			result.Types = Types._.createService(wasmInterface['wasi:http/types'], context);
-		}
-		if (wasmInterface['wasi:http/incoming-handler'] !== undefined) {
-			result.IncomingHandler = IncomingHandler._.createService(wasmInterface['wasi:http/incoming-handler'], context);
-		}
-		if (wasmInterface['wasi:http/outgoing-handler'] !== undefined) {
-			result.OutgoingHandler = OutgoingHandler._.createService(wasmInterface['wasi:http/outgoing-handler'], context);
-		}
-		return result;
-	}
 }

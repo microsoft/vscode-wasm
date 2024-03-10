@@ -1356,8 +1356,8 @@ export namespace filesystem {
 		export function createImports(service: filesystem.Types, context: $wcm.WasmContext): WasmInterface {
 			return $wcm.Imports.create<WasmInterface>(functions, resources, service, context);
 		}
-		export function filterExports(exports: object): WasmInterface {
-			return $wcm.Exports.filter<WasmInterface>(exports, functions, resources, id, filesystem._.version);
+		export function filterExports(exports: object, context: $wcm.WasmContext): WasmInterface {
+			return $wcm.Exports.filter<WasmInterface>(exports, functions, resources, id, filesystem._.version, context);
 		}
 		export function bindExports(wasmInterface: WasmInterface, context: $wcm.WasmContext): filesystem.Types {
 			return $wcm.Exports.bind<filesystem.Types>(functions, [['Descriptor', $.Descriptor, Descriptor.Class], ['DirectoryEntryStream', $.DirectoryEntryStream, DirectoryEntryStream.Class]], wasmInterface, context);
@@ -1385,8 +1385,8 @@ export namespace filesystem {
 		export function createImports(service: filesystem.Preopens, context: $wcm.WasmContext): WasmInterface {
 			return $wcm.Imports.create<WasmInterface>(functions, resources, service, context);
 		}
-		export function filterExports(exports: object): WasmInterface {
-			return $wcm.Exports.filter<WasmInterface>(exports, functions, resources, id, filesystem._.version);
+		export function filterExports(exports: object, context: $wcm.WasmContext): WasmInterface {
+			return $wcm.Exports.filter<WasmInterface>(exports, functions, resources, id, filesystem._.version, context);
 		}
 		export function bindExports(wasmInterface: WasmInterface, context: $wcm.WasmContext): filesystem.Preopens {
 			return $wcm.Exports.bind<filesystem.Preopens>(functions, [], wasmInterface, context);
@@ -1406,24 +1406,4 @@ export namespace filesystem._ {
 		'wasi:filesystem/types'?: Types._.WasmInterface;
 		'wasi:filesystem/preopens'?: Preopens._.WasmInterface;
 	};
-	export function createHost(service: filesystem, context: $wcm.WasmContext): WasmInterface {
-		const result: WasmInterface = Object.create(null);
-		if (service.Types !== undefined) {
-			result['wasi:filesystem/types'] = Types._.createHost(service.Types, context);
-		}
-		if (service.Preopens !== undefined) {
-			result['wasi:filesystem/preopens'] = Preopens._.createHost(service.Preopens, context);
-		}
-		return result;
-	}
-	export function createService(wasmInterface: WasmInterface, context: $wcm.WasmContext): filesystem {
-		const result: filesystem = Object.create(null);
-		if (wasmInterface['wasi:filesystem/types'] !== undefined) {
-			result.Types = Types._.createService(wasmInterface['wasi:filesystem/types'], context);
-		}
-		if (wasmInterface['wasi:filesystem/preopens'] !== undefined) {
-			result.Preopens = Preopens._.createService(wasmInterface['wasi:filesystem/preopens'], context);
-		}
-		return result;
-	}
 }

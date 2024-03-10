@@ -3399,7 +3399,7 @@ interface WriteableServiceInterface {
 
 export type Exports = ParamServiceInterface | {};
 export namespace Exports {
-	export function filter<T extends ParamWasmInterface>(exports: { [key: string]: any}, signatures: Map<string, FunctionType>, resources: Map<string, ResourceType>, id: string, version: string): T {
+	export function filter<T extends ParamWasmInterface>(exports: { [key: string]: any}, signatures: Map<string, FunctionType>, resources: Map<string, ResourceType>, id: string, version: string, _context: WasmContext): T {
 		const key = `${id}@${version}`;
 		let result: any = exports[key];
 		// We could actually check if all properties exist in the result.

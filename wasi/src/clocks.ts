@@ -164,8 +164,8 @@ export namespace clocks {
 		export function createImports(service: clocks.MonotonicClock, context: $wcm.WasmContext): WasmInterface {
 			return $wcm.Imports.create<WasmInterface>(functions, resources, service, context);
 		}
-		export function filterExports(exports: object): WasmInterface {
-			return $wcm.Exports.filter<WasmInterface>(exports, functions, resources, id, clocks._.version);
+		export function filterExports(exports: object, context: $wcm.WasmContext): WasmInterface {
+			return $wcm.Exports.filter<WasmInterface>(exports, functions, resources, id, clocks._.version, context);
 		}
 		export function bindExports(wasmInterface: WasmInterface, context: $wcm.WasmContext): clocks.MonotonicClock {
 			return $wcm.Exports.bind<clocks.MonotonicClock>(functions, [], wasmInterface, context);
@@ -199,8 +199,8 @@ export namespace clocks {
 		export function createImports(service: clocks.WallClock, context: $wcm.WasmContext): WasmInterface {
 			return $wcm.Imports.create<WasmInterface>(functions, resources, service, context);
 		}
-		export function filterExports(exports: object): WasmInterface {
-			return $wcm.Exports.filter<WasmInterface>(exports, functions, resources, id, clocks._.version);
+		export function filterExports(exports: object, context: $wcm.WasmContext): WasmInterface {
+			return $wcm.Exports.filter<WasmInterface>(exports, functions, resources, id, clocks._.version, context);
 		}
 		export function bindExports(wasmInterface: WasmInterface, context: $wcm.WasmContext): clocks.WallClock {
 			return $wcm.Exports.bind<clocks.WallClock>(functions, [], wasmInterface, context);
@@ -220,24 +220,4 @@ export namespace clocks._ {
 		'wasi:clocks/monotonic-clock'?: MonotonicClock._.WasmInterface;
 		'wasi:clocks/wall-clock'?: WallClock._.WasmInterface;
 	};
-	export function createHost(service: clocks, context: $wcm.WasmContext): WasmInterface {
-		const result: WasmInterface = Object.create(null);
-		if (service.MonotonicClock !== undefined) {
-			result['wasi:clocks/monotonic-clock'] = MonotonicClock._.createHost(service.MonotonicClock, context);
-		}
-		if (service.WallClock !== undefined) {
-			result['wasi:clocks/wall-clock'] = WallClock._.createHost(service.WallClock, context);
-		}
-		return result;
-	}
-	export function createService(wasmInterface: WasmInterface, context: $wcm.WasmContext): clocks {
-		const result: clocks = Object.create(null);
-		if (wasmInterface['wasi:clocks/monotonic-clock'] !== undefined) {
-			result.MonotonicClock = MonotonicClock._.createService(wasmInterface['wasi:clocks/monotonic-clock'], context);
-		}
-		if (wasmInterface['wasi:clocks/wall-clock'] !== undefined) {
-			result.WallClock = WallClock._.createService(wasmInterface['wasi:clocks/wall-clock'], context);
-		}
-		return result;
-	}
 }

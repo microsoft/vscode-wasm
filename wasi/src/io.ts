@@ -474,8 +474,8 @@ export namespace io {
 		export function createImports(service: io.Error, context: $wcm.WasmContext): WasmInterface {
 			return $wcm.Imports.create<WasmInterface>(functions, resources, service, context);
 		}
-		export function filterExports(exports: object): WasmInterface {
-			return $wcm.Exports.filter<WasmInterface>(exports, functions, resources, id, io._.version);
+		export function filterExports(exports: object, context: $wcm.WasmContext): WasmInterface {
+			return $wcm.Exports.filter<WasmInterface>(exports, functions, resources, id, io._.version, context);
 		}
 		export function bindExports(wasmInterface: WasmInterface, context: $wcm.WasmContext): io.Error {
 			return $wcm.Exports.bind<io.Error>(functions, [['Error', $.Error, Error.Class]], wasmInterface, context);
@@ -554,8 +554,8 @@ export namespace io {
 		export function createImports(service: io.Poll, context: $wcm.WasmContext): WasmInterface {
 			return $wcm.Imports.create<WasmInterface>(functions, resources, service, context);
 		}
-		export function filterExports(exports: object): WasmInterface {
-			return $wcm.Exports.filter<WasmInterface>(exports, functions, resources, id, io._.version);
+		export function filterExports(exports: object, context: $wcm.WasmContext): WasmInterface {
+			return $wcm.Exports.filter<WasmInterface>(exports, functions, resources, id, io._.version, context);
 		}
 		export function bindExports(wasmInterface: WasmInterface, context: $wcm.WasmContext): io.Poll {
 			return $wcm.Exports.bind<io.Poll>(functions, [['Pollable', $.Pollable, Pollable.Class]], wasmInterface, context);
@@ -786,8 +786,8 @@ export namespace io {
 		export function createImports(service: io.Streams, context: $wcm.WasmContext): WasmInterface {
 			return $wcm.Imports.create<WasmInterface>(functions, resources, service, context);
 		}
-		export function filterExports(exports: object): WasmInterface {
-			return $wcm.Exports.filter<WasmInterface>(exports, functions, resources, id, io._.version);
+		export function filterExports(exports: object, context: $wcm.WasmContext): WasmInterface {
+			return $wcm.Exports.filter<WasmInterface>(exports, functions, resources, id, io._.version, context);
 		}
 		export function bindExports(wasmInterface: WasmInterface, context: $wcm.WasmContext): io.Streams {
 			return $wcm.Exports.bind<io.Streams>(functions, [['InputStream', $.InputStream, InputStream.Class], ['OutputStream', $.OutputStream, OutputStream.Class]], wasmInterface, context);
@@ -809,30 +809,4 @@ export namespace io._ {
 		'wasi:io/poll'?: Poll._.WasmInterface;
 		'wasi:io/streams'?: Streams._.WasmInterface;
 	};
-	export function createHost(service: io, context: $wcm.WasmContext): WasmInterface {
-		const result: WasmInterface = Object.create(null);
-		if (service.Error !== undefined) {
-			result['wasi:io/error'] = Error._.createHost(service.Error, context);
-		}
-		if (service.Poll !== undefined) {
-			result['wasi:io/poll'] = Poll._.createHost(service.Poll, context);
-		}
-		if (service.Streams !== undefined) {
-			result['wasi:io/streams'] = Streams._.createHost(service.Streams, context);
-		}
-		return result;
-	}
-	export function createService(wasmInterface: WasmInterface, context: $wcm.WasmContext): io {
-		const result: io = Object.create(null);
-		if (wasmInterface['wasi:io/error'] !== undefined) {
-			result.Error = Error._.createService(wasmInterface['wasi:io/error'], context);
-		}
-		if (wasmInterface['wasi:io/poll'] !== undefined) {
-			result.Poll = Poll._.createService(wasmInterface['wasi:io/poll'], context);
-		}
-		if (wasmInterface['wasi:io/streams'] !== undefined) {
-			result.Streams = Streams._.createService(wasmInterface['wasi:io/streams'], context);
-		}
-		return result;
-	}
 }

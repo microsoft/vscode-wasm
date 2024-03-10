@@ -198,38 +198,40 @@ export namespace cli {
 		getTerminalStderr: TerminalStderr.getTerminalStderr;
 	};
 	export namespace command {
-		export type Imports = {
-			environment: cli.Environment;
-			exit: cli.Exit;
-			error: io.Error;
-			poll: io.Poll;
-			streams: io.Streams;
-			stdin: cli.Stdin;
-			stdout: cli.Stdout;
-			stderr: cli.Stderr;
-			terminalInput: cli.TerminalInput;
-			terminalOutput: cli.TerminalOutput;
-			terminalStdin: cli.TerminalStdin;
-			terminalStdout: cli.TerminalStdout;
-			terminalStderr: cli.TerminalStderr;
-			monotonicClock: clocks.MonotonicClock;
-			wallClock: clocks.WallClock;
-			types: filesystem.Types;
-			preopens: filesystem.Preopens;
-			network: sockets.Network;
-			instanceNetwork: sockets.InstanceNetwork;
-			udp: sockets.Udp;
-			udpCreateSocket: sockets.UdpCreateSocket;
-			tcp: sockets.Tcp;
-			tcpCreateSocket: sockets.TcpCreateSocket;
-			ipNameLookup: sockets.IpNameLookup;
-			random: random.Random;
-			insecure: random.Insecure;
-			insecureSeed: random.InsecureSeed;
-		};
-		export type Exports = {
-			run: cli.Run;
-		};
+		export namespace Service {
+			export type Imports = {
+				environment: cli.Environment;
+				exit: cli.Exit;
+				error: io.Error;
+				poll: io.Poll;
+				streams: io.Streams;
+				stdin: cli.Stdin;
+				stdout: cli.Stdout;
+				stderr: cli.Stderr;
+				terminalInput: cli.TerminalInput;
+				terminalOutput: cli.TerminalOutput;
+				terminalStdin: cli.TerminalStdin;
+				terminalStdout: cli.TerminalStdout;
+				terminalStderr: cli.TerminalStderr;
+				monotonicClock: clocks.MonotonicClock;
+				wallClock: clocks.WallClock;
+				types: filesystem.Types;
+				preopens: filesystem.Preopens;
+				network: sockets.Network;
+				instanceNetwork: sockets.InstanceNetwork;
+				udp: sockets.Udp;
+				udpCreateSocket: sockets.UdpCreateSocket;
+				tcp: sockets.Tcp;
+				tcpCreateSocket: sockets.TcpCreateSocket;
+				ipNameLookup: sockets.IpNameLookup;
+				random: random.Random;
+				insecure: random.Insecure;
+				insecureSeed: random.InsecureSeed;
+			};
+			export type Exports = {
+				run: cli.Run;
+			};
+		}
 		export namespace Wasm {
 			export type Imports = {
 				'wasi:cli/environment@0.2.0': cli.Environment._.WasmInterface;
@@ -260,6 +262,46 @@ export namespace cli {
 				'wasi:random/insecure@0.2.0': random.Insecure._.WasmInterface;
 				'wasi:random/insecure-seed@0.2.0': random.InsecureSeed._.WasmInterface;
 			};
+			export type Exports = {
+				'wasi:cli/run@0.2.0#run': () => i32;
+			};
+		}
+
+		export function createImports(service: Service.Imports, context: $wcm.WasmContext): Wasm.Imports {
+			const result: Wasm.Imports = Object.create(null);
+			result['wasi:cli/environment@0.2.0'] = cli.Environment._.createImports(service.environment, context);
+			result['wasi:cli/exit@0.2.0'] = cli.Exit._.createImports(service.exit, context);
+			result['wasi:io/error@0.2.0'] = io.Error._.createImports(service.error, context);
+			result['wasi:io/poll@0.2.0'] = io.Poll._.createImports(service.poll, context);
+			result['wasi:io/streams@0.2.0'] = io.Streams._.createImports(service.streams, context);
+			result['wasi:cli/stdin@0.2.0'] = cli.Stdin._.createImports(service.stdin, context);
+			result['wasi:cli/stdout@0.2.0'] = cli.Stdout._.createImports(service.stdout, context);
+			result['wasi:cli/stderr@0.2.0'] = cli.Stderr._.createImports(service.stderr, context);
+			result['wasi:cli/terminal-input@0.2.0'] = cli.TerminalInput._.createImports(service.terminalInput, context);
+			result['wasi:cli/terminal-output@0.2.0'] = cli.TerminalOutput._.createImports(service.terminalOutput, context);
+			result['wasi:cli/terminal-stdin@0.2.0'] = cli.TerminalStdin._.createImports(service.terminalStdin, context);
+			result['wasi:cli/terminal-stdout@0.2.0'] = cli.TerminalStdout._.createImports(service.terminalStdout, context);
+			result['wasi:cli/terminal-stderr@0.2.0'] = cli.TerminalStderr._.createImports(service.terminalStderr, context);
+			result['wasi:clocks/monotonic-clock@0.2.0'] = clocks.MonotonicClock._.createImports(service.monotonicClock, context);
+			result['wasi:clocks/wall-clock@0.2.0'] = clocks.WallClock._.createImports(service.wallClock, context);
+			result['wasi:filesystem/types@0.2.0'] = filesystem.Types._.createImports(service.types, context);
+			result['wasi:filesystem/preopens@0.2.0'] = filesystem.Preopens._.createImports(service.preopens, context);
+			result['wasi:sockets/network@0.2.0'] = sockets.Network._.createImports(service.network, context);
+			result['wasi:sockets/instance-network@0.2.0'] = sockets.InstanceNetwork._.createImports(service.instanceNetwork, context);
+			result['wasi:sockets/udp@0.2.0'] = sockets.Udp._.createImports(service.udp, context);
+			result['wasi:sockets/udp-create-socket@0.2.0'] = sockets.UdpCreateSocket._.createImports(service.udpCreateSocket, context);
+			result['wasi:sockets/tcp@0.2.0'] = sockets.Tcp._.createImports(service.tcp, context);
+			result['wasi:sockets/tcp-create-socket@0.2.0'] = sockets.TcpCreateSocket._.createImports(service.tcpCreateSocket, context);
+			result['wasi:sockets/ip-name-lookup@0.2.0'] = sockets.IpNameLookup._.createImports(service.ipNameLookup, context);
+			result['wasi:random/random@0.2.0'] = random.Random._.createImports(service.random, context);
+			result['wasi:random/insecure@0.2.0'] = random.Insecure._.createImports(service.insecure, context);
+			result['wasi:random/insecure-seed@0.2.0'] = random.InsecureSeed._.createImports(service.insecureSeed, context);
+			return result as Wasm.Imports;
+		}
+		export function bindExports(exports: Wasm.Exports, context: $wcm.WasmContext): Service.Exports {
+			const result: Service.Exports = Object.create(null);
+			result.run = cli.Run._.bindExports(cli.Run._.filterExports(exports, context), context);
+			return result;
 		}
 	}
 }
@@ -290,8 +332,8 @@ export namespace cli {
 		export function createImports(service: cli.Environment, context: $wcm.WasmContext): WasmInterface {
 			return $wcm.Imports.create<WasmInterface>(functions, resources, service, context);
 		}
-		export function filterExports(exports: object): WasmInterface {
-			return $wcm.Exports.filter<WasmInterface>(exports, functions, resources, id, cli._.version);
+		export function filterExports(exports: object, context: $wcm.WasmContext): WasmInterface {
+			return $wcm.Exports.filter<WasmInterface>(exports, functions, resources, id, cli._.version, context);
 		}
 		export function bindExports(wasmInterface: WasmInterface, context: $wcm.WasmContext): cli.Environment {
 			return $wcm.Exports.bind<cli.Environment>(functions, [], wasmInterface, context);
@@ -319,8 +361,8 @@ export namespace cli {
 		export function createImports(service: cli.Exit, context: $wcm.WasmContext): WasmInterface {
 			return $wcm.Imports.create<WasmInterface>(functions, resources, service, context);
 		}
-		export function filterExports(exports: object): WasmInterface {
-			return $wcm.Exports.filter<WasmInterface>(exports, functions, resources, id, cli._.version);
+		export function filterExports(exports: object, context: $wcm.WasmContext): WasmInterface {
+			return $wcm.Exports.filter<WasmInterface>(exports, functions, resources, id, cli._.version, context);
 		}
 		export function bindExports(wasmInterface: WasmInterface, context: $wcm.WasmContext): cli.Exit {
 			return $wcm.Exports.bind<cli.Exit>(functions, [], wasmInterface, context);
@@ -346,8 +388,8 @@ export namespace cli {
 		export function createImports(service: cli.Run, context: $wcm.WasmContext): WasmInterface {
 			return $wcm.Imports.create<WasmInterface>(functions, resources, service, context);
 		}
-		export function filterExports(exports: object): WasmInterface {
-			return $wcm.Exports.filter<WasmInterface>(exports, functions, resources, id, cli._.version);
+		export function filterExports(exports: object, context: $wcm.WasmContext): WasmInterface {
+			return $wcm.Exports.filter<WasmInterface>(exports, functions, resources, id, cli._.version, context);
 		}
 		export function bindExports(wasmInterface: WasmInterface, context: $wcm.WasmContext): cli.Run {
 			return $wcm.Exports.bind<cli.Run>(functions, [], wasmInterface, context);
@@ -375,8 +417,8 @@ export namespace cli {
 		export function createImports(service: cli.Stdin, context: $wcm.WasmContext): WasmInterface {
 			return $wcm.Imports.create<WasmInterface>(functions, resources, service, context);
 		}
-		export function filterExports(exports: object): WasmInterface {
-			return $wcm.Exports.filter<WasmInterface>(exports, functions, resources, id, cli._.version);
+		export function filterExports(exports: object, context: $wcm.WasmContext): WasmInterface {
+			return $wcm.Exports.filter<WasmInterface>(exports, functions, resources, id, cli._.version, context);
 		}
 		export function bindExports(wasmInterface: WasmInterface, context: $wcm.WasmContext): cli.Stdin {
 			return $wcm.Exports.bind<cli.Stdin>(functions, [], wasmInterface, context);
@@ -404,8 +446,8 @@ export namespace cli {
 		export function createImports(service: cli.Stdout, context: $wcm.WasmContext): WasmInterface {
 			return $wcm.Imports.create<WasmInterface>(functions, resources, service, context);
 		}
-		export function filterExports(exports: object): WasmInterface {
-			return $wcm.Exports.filter<WasmInterface>(exports, functions, resources, id, cli._.version);
+		export function filterExports(exports: object, context: $wcm.WasmContext): WasmInterface {
+			return $wcm.Exports.filter<WasmInterface>(exports, functions, resources, id, cli._.version, context);
 		}
 		export function bindExports(wasmInterface: WasmInterface, context: $wcm.WasmContext): cli.Stdout {
 			return $wcm.Exports.bind<cli.Stdout>(functions, [], wasmInterface, context);
@@ -433,8 +475,8 @@ export namespace cli {
 		export function createImports(service: cli.Stderr, context: $wcm.WasmContext): WasmInterface {
 			return $wcm.Imports.create<WasmInterface>(functions, resources, service, context);
 		}
-		export function filterExports(exports: object): WasmInterface {
-			return $wcm.Exports.filter<WasmInterface>(exports, functions, resources, id, cli._.version);
+		export function filterExports(exports: object, context: $wcm.WasmContext): WasmInterface {
+			return $wcm.Exports.filter<WasmInterface>(exports, functions, resources, id, cli._.version, context);
 		}
 		export function bindExports(wasmInterface: WasmInterface, context: $wcm.WasmContext): cli.Stderr {
 			return $wcm.Exports.bind<cli.Stderr>(functions, [], wasmInterface, context);
@@ -481,8 +523,8 @@ export namespace cli {
 		export function createImports(service: cli.TerminalInput, context: $wcm.WasmContext): WasmInterface {
 			return $wcm.Imports.create<WasmInterface>(functions, resources, service, context);
 		}
-		export function filterExports(exports: object): WasmInterface {
-			return $wcm.Exports.filter<WasmInterface>(exports, functions, resources, id, cli._.version);
+		export function filterExports(exports: object, context: $wcm.WasmContext): WasmInterface {
+			return $wcm.Exports.filter<WasmInterface>(exports, functions, resources, id, cli._.version, context);
 		}
 		export function bindExports(wasmInterface: WasmInterface, context: $wcm.WasmContext): cli.TerminalInput {
 			return $wcm.Exports.bind<cli.TerminalInput>(functions, [['TerminalInput', $.TerminalInput, TerminalInput.Class]], wasmInterface, context);
@@ -529,8 +571,8 @@ export namespace cli {
 		export function createImports(service: cli.TerminalOutput, context: $wcm.WasmContext): WasmInterface {
 			return $wcm.Imports.create<WasmInterface>(functions, resources, service, context);
 		}
-		export function filterExports(exports: object): WasmInterface {
-			return $wcm.Exports.filter<WasmInterface>(exports, functions, resources, id, cli._.version);
+		export function filterExports(exports: object, context: $wcm.WasmContext): WasmInterface {
+			return $wcm.Exports.filter<WasmInterface>(exports, functions, resources, id, cli._.version, context);
 		}
 		export function bindExports(wasmInterface: WasmInterface, context: $wcm.WasmContext): cli.TerminalOutput {
 			return $wcm.Exports.bind<cli.TerminalOutput>(functions, [['TerminalOutput', $.TerminalOutput, TerminalOutput.Class]], wasmInterface, context);
@@ -558,8 +600,8 @@ export namespace cli {
 		export function createImports(service: cli.TerminalStdin, context: $wcm.WasmContext): WasmInterface {
 			return $wcm.Imports.create<WasmInterface>(functions, resources, service, context);
 		}
-		export function filterExports(exports: object): WasmInterface {
-			return $wcm.Exports.filter<WasmInterface>(exports, functions, resources, id, cli._.version);
+		export function filterExports(exports: object, context: $wcm.WasmContext): WasmInterface {
+			return $wcm.Exports.filter<WasmInterface>(exports, functions, resources, id, cli._.version, context);
 		}
 		export function bindExports(wasmInterface: WasmInterface, context: $wcm.WasmContext): cli.TerminalStdin {
 			return $wcm.Exports.bind<cli.TerminalStdin>(functions, [], wasmInterface, context);
@@ -587,8 +629,8 @@ export namespace cli {
 		export function createImports(service: cli.TerminalStdout, context: $wcm.WasmContext): WasmInterface {
 			return $wcm.Imports.create<WasmInterface>(functions, resources, service, context);
 		}
-		export function filterExports(exports: object): WasmInterface {
-			return $wcm.Exports.filter<WasmInterface>(exports, functions, resources, id, cli._.version);
+		export function filterExports(exports: object, context: $wcm.WasmContext): WasmInterface {
+			return $wcm.Exports.filter<WasmInterface>(exports, functions, resources, id, cli._.version, context);
 		}
 		export function bindExports(wasmInterface: WasmInterface, context: $wcm.WasmContext): cli.TerminalStdout {
 			return $wcm.Exports.bind<cli.TerminalStdout>(functions, [], wasmInterface, context);
@@ -616,8 +658,8 @@ export namespace cli {
 		export function createImports(service: cli.TerminalStderr, context: $wcm.WasmContext): WasmInterface {
 			return $wcm.Imports.create<WasmInterface>(functions, resources, service, context);
 		}
-		export function filterExports(exports: object): WasmInterface {
-			return $wcm.Exports.filter<WasmInterface>(exports, functions, resources, id, cli._.version);
+		export function filterExports(exports: object, context: $wcm.WasmContext): WasmInterface {
+			return $wcm.Exports.filter<WasmInterface>(exports, functions, resources, id, cli._.version, context);
 		}
 		export function bindExports(wasmInterface: WasmInterface, context: $wcm.WasmContext): cli.TerminalStderr {
 			return $wcm.Exports.bind<cli.TerminalStderr>(functions, [], wasmInterface, context);
@@ -655,78 +697,4 @@ export namespace cli._ {
 		'wasi:cli/terminal-stdout'?: TerminalStdout._.WasmInterface;
 		'wasi:cli/terminal-stderr'?: TerminalStderr._.WasmInterface;
 	};
-	export function createHost(service: cli, context: $wcm.WasmContext): WasmInterface {
-		const result: WasmInterface = Object.create(null);
-		if (service.Environment !== undefined) {
-			result['wasi:cli/environment'] = Environment._.createHost(service.Environment, context);
-		}
-		if (service.Exit !== undefined) {
-			result['wasi:cli/exit'] = Exit._.createHost(service.Exit, context);
-		}
-		if (service.Run !== undefined) {
-			result['wasi:cli/run'] = Run._.createHost(service.Run, context);
-		}
-		if (service.Stdin !== undefined) {
-			result['wasi:cli/stdin'] = Stdin._.createHost(service.Stdin, context);
-		}
-		if (service.Stdout !== undefined) {
-			result['wasi:cli/stdout'] = Stdout._.createHost(service.Stdout, context);
-		}
-		if (service.Stderr !== undefined) {
-			result['wasi:cli/stderr'] = Stderr._.createHost(service.Stderr, context);
-		}
-		if (service.TerminalInput !== undefined) {
-			result['wasi:cli/terminal-input'] = TerminalInput._.createHost(service.TerminalInput, context);
-		}
-		if (service.TerminalOutput !== undefined) {
-			result['wasi:cli/terminal-output'] = TerminalOutput._.createHost(service.TerminalOutput, context);
-		}
-		if (service.TerminalStdin !== undefined) {
-			result['wasi:cli/terminal-stdin'] = TerminalStdin._.createHost(service.TerminalStdin, context);
-		}
-		if (service.TerminalStdout !== undefined) {
-			result['wasi:cli/terminal-stdout'] = TerminalStdout._.createHost(service.TerminalStdout, context);
-		}
-		if (service.TerminalStderr !== undefined) {
-			result['wasi:cli/terminal-stderr'] = TerminalStderr._.createHost(service.TerminalStderr, context);
-		}
-		return result;
-	}
-	export function createService(wasmInterface: WasmInterface, context: $wcm.WasmContext): cli {
-		const result: cli = Object.create(null);
-		if (wasmInterface['wasi:cli/environment'] !== undefined) {
-			result.Environment = Environment._.createService(wasmInterface['wasi:cli/environment'], context);
-		}
-		if (wasmInterface['wasi:cli/exit'] !== undefined) {
-			result.Exit = Exit._.createService(wasmInterface['wasi:cli/exit'], context);
-		}
-		if (wasmInterface['wasi:cli/run'] !== undefined) {
-			result.Run = Run._.createService(wasmInterface['wasi:cli/run'], context);
-		}
-		if (wasmInterface['wasi:cli/stdin'] !== undefined) {
-			result.Stdin = Stdin._.createService(wasmInterface['wasi:cli/stdin'], context);
-		}
-		if (wasmInterface['wasi:cli/stdout'] !== undefined) {
-			result.Stdout = Stdout._.createService(wasmInterface['wasi:cli/stdout'], context);
-		}
-		if (wasmInterface['wasi:cli/stderr'] !== undefined) {
-			result.Stderr = Stderr._.createService(wasmInterface['wasi:cli/stderr'], context);
-		}
-		if (wasmInterface['wasi:cli/terminal-input'] !== undefined) {
-			result.TerminalInput = TerminalInput._.createService(wasmInterface['wasi:cli/terminal-input'], context);
-		}
-		if (wasmInterface['wasi:cli/terminal-output'] !== undefined) {
-			result.TerminalOutput = TerminalOutput._.createService(wasmInterface['wasi:cli/terminal-output'], context);
-		}
-		if (wasmInterface['wasi:cli/terminal-stdin'] !== undefined) {
-			result.TerminalStdin = TerminalStdin._.createService(wasmInterface['wasi:cli/terminal-stdin'], context);
-		}
-		if (wasmInterface['wasi:cli/terminal-stdout'] !== undefined) {
-			result.TerminalStdout = TerminalStdout._.createService(wasmInterface['wasi:cli/terminal-stdout'], context);
-		}
-		if (wasmInterface['wasi:cli/terminal-stderr'] !== undefined) {
-			result.TerminalStderr = TerminalStderr._.createService(wasmInterface['wasi:cli/terminal-stderr'], context);
-		}
-		return result;
-	}
 }

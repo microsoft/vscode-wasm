@@ -1297,8 +1297,8 @@ export namespace sockets {
 		export function createImports(service: sockets.Network, context: $wcm.WasmContext): WasmInterface {
 			return $wcm.Imports.create<WasmInterface>(functions, resources, service, context);
 		}
-		export function filterExports(exports: object): WasmInterface {
-			return $wcm.Exports.filter<WasmInterface>(exports, functions, resources, id, sockets._.version);
+		export function filterExports(exports: object, context: $wcm.WasmContext): WasmInterface {
+			return $wcm.Exports.filter<WasmInterface>(exports, functions, resources, id, sockets._.version, context);
 		}
 		export function bindExports(wasmInterface: WasmInterface, context: $wcm.WasmContext): sockets.Network {
 			return $wcm.Exports.bind<sockets.Network>(functions, [['Network', $.Network, Network.Class]], wasmInterface, context);
@@ -1326,8 +1326,8 @@ export namespace sockets {
 		export function createImports(service: sockets.InstanceNetwork, context: $wcm.WasmContext): WasmInterface {
 			return $wcm.Imports.create<WasmInterface>(functions, resources, service, context);
 		}
-		export function filterExports(exports: object): WasmInterface {
-			return $wcm.Exports.filter<WasmInterface>(exports, functions, resources, id, sockets._.version);
+		export function filterExports(exports: object, context: $wcm.WasmContext): WasmInterface {
+			return $wcm.Exports.filter<WasmInterface>(exports, functions, resources, id, sockets._.version, context);
 		}
 		export function bindExports(wasmInterface: WasmInterface, context: $wcm.WasmContext): sockets.InstanceNetwork {
 			return $wcm.Exports.bind<sockets.InstanceNetwork>(functions, [], wasmInterface, context);
@@ -1415,8 +1415,8 @@ export namespace sockets {
 		export function createImports(service: sockets.IpNameLookup, context: $wcm.WasmContext): WasmInterface {
 			return $wcm.Imports.create<WasmInterface>(functions, resources, service, context);
 		}
-		export function filterExports(exports: object): WasmInterface {
-			return $wcm.Exports.filter<WasmInterface>(exports, functions, resources, id, sockets._.version);
+		export function filterExports(exports: object, context: $wcm.WasmContext): WasmInterface {
+			return $wcm.Exports.filter<WasmInterface>(exports, functions, resources, id, sockets._.version, context);
 		}
 		export function bindExports(wasmInterface: WasmInterface, context: $wcm.WasmContext): sockets.IpNameLookup {
 			return $wcm.Exports.bind<sockets.IpNameLookup>(functions, [['ResolveAddressStream', $.ResolveAddressStream, ResolveAddressStream.Class]], wasmInterface, context);
@@ -1729,8 +1729,8 @@ export namespace sockets {
 		export function createImports(service: sockets.Tcp, context: $wcm.WasmContext): WasmInterface {
 			return $wcm.Imports.create<WasmInterface>(functions, resources, service, context);
 		}
-		export function filterExports(exports: object): WasmInterface {
-			return $wcm.Exports.filter<WasmInterface>(exports, functions, resources, id, sockets._.version);
+		export function filterExports(exports: object, context: $wcm.WasmContext): WasmInterface {
+			return $wcm.Exports.filter<WasmInterface>(exports, functions, resources, id, sockets._.version, context);
 		}
 		export function bindExports(wasmInterface: WasmInterface, context: $wcm.WasmContext): sockets.Tcp {
 			return $wcm.Exports.bind<sockets.Tcp>(functions, [['TcpSocket', $.TcpSocket, TcpSocket.Class]], wasmInterface, context);
@@ -1766,8 +1766,8 @@ export namespace sockets {
 		export function createImports(service: sockets.TcpCreateSocket, context: $wcm.WasmContext): WasmInterface {
 			return $wcm.Imports.create<WasmInterface>(functions, resources, service, context);
 		}
-		export function filterExports(exports: object): WasmInterface {
-			return $wcm.Exports.filter<WasmInterface>(exports, functions, resources, id, sockets._.version);
+		export function filterExports(exports: object, context: $wcm.WasmContext): WasmInterface {
+			return $wcm.Exports.filter<WasmInterface>(exports, functions, resources, id, sockets._.version, context);
 		}
 		export function bindExports(wasmInterface: WasmInterface, context: $wcm.WasmContext): sockets.TcpCreateSocket {
 			return $wcm.Exports.bind<sockets.TcpCreateSocket>(functions, [], wasmInterface, context);
@@ -2067,8 +2067,8 @@ export namespace sockets {
 		export function createImports(service: sockets.Udp, context: $wcm.WasmContext): WasmInterface {
 			return $wcm.Imports.create<WasmInterface>(functions, resources, service, context);
 		}
-		export function filterExports(exports: object): WasmInterface {
-			return $wcm.Exports.filter<WasmInterface>(exports, functions, resources, id, sockets._.version);
+		export function filterExports(exports: object, context: $wcm.WasmContext): WasmInterface {
+			return $wcm.Exports.filter<WasmInterface>(exports, functions, resources, id, sockets._.version, context);
 		}
 		export function bindExports(wasmInterface: WasmInterface, context: $wcm.WasmContext): sockets.Udp {
 			return $wcm.Exports.bind<sockets.Udp>(functions, [['UdpSocket', $.UdpSocket, UdpSocket.Class], ['IncomingDatagramStream', $.IncomingDatagramStream, IncomingDatagramStream.Class], ['OutgoingDatagramStream', $.OutgoingDatagramStream, OutgoingDatagramStream.Class]], wasmInterface, context);
@@ -2104,8 +2104,8 @@ export namespace sockets {
 		export function createImports(service: sockets.UdpCreateSocket, context: $wcm.WasmContext): WasmInterface {
 			return $wcm.Imports.create<WasmInterface>(functions, resources, service, context);
 		}
-		export function filterExports(exports: object): WasmInterface {
-			return $wcm.Exports.filter<WasmInterface>(exports, functions, resources, id, sockets._.version);
+		export function filterExports(exports: object, context: $wcm.WasmContext): WasmInterface {
+			return $wcm.Exports.filter<WasmInterface>(exports, functions, resources, id, sockets._.version, context);
 		}
 		export function bindExports(wasmInterface: WasmInterface, context: $wcm.WasmContext): sockets.UdpCreateSocket {
 			return $wcm.Exports.bind<sockets.UdpCreateSocket>(functions, [], wasmInterface, context);
@@ -2135,54 +2135,4 @@ export namespace sockets._ {
 		'wasi:sockets/udp'?: Udp._.WasmInterface;
 		'wasi:sockets/udp-create-socket'?: UdpCreateSocket._.WasmInterface;
 	};
-	export function createHost(service: sockets, context: $wcm.WasmContext): WasmInterface {
-		const result: WasmInterface = Object.create(null);
-		if (service.Network !== undefined) {
-			result['wasi:sockets/network'] = Network._.createHost(service.Network, context);
-		}
-		if (service.InstanceNetwork !== undefined) {
-			result['wasi:sockets/instance-network'] = InstanceNetwork._.createHost(service.InstanceNetwork, context);
-		}
-		if (service.IpNameLookup !== undefined) {
-			result['wasi:sockets/ip-name-lookup'] = IpNameLookup._.createHost(service.IpNameLookup, context);
-		}
-		if (service.Tcp !== undefined) {
-			result['wasi:sockets/tcp'] = Tcp._.createHost(service.Tcp, context);
-		}
-		if (service.TcpCreateSocket !== undefined) {
-			result['wasi:sockets/tcp-create-socket'] = TcpCreateSocket._.createHost(service.TcpCreateSocket, context);
-		}
-		if (service.Udp !== undefined) {
-			result['wasi:sockets/udp'] = Udp._.createHost(service.Udp, context);
-		}
-		if (service.UdpCreateSocket !== undefined) {
-			result['wasi:sockets/udp-create-socket'] = UdpCreateSocket._.createHost(service.UdpCreateSocket, context);
-		}
-		return result;
-	}
-	export function createService(wasmInterface: WasmInterface, context: $wcm.WasmContext): sockets {
-		const result: sockets = Object.create(null);
-		if (wasmInterface['wasi:sockets/network'] !== undefined) {
-			result.Network = Network._.createService(wasmInterface['wasi:sockets/network'], context);
-		}
-		if (wasmInterface['wasi:sockets/instance-network'] !== undefined) {
-			result.InstanceNetwork = InstanceNetwork._.createService(wasmInterface['wasi:sockets/instance-network'], context);
-		}
-		if (wasmInterface['wasi:sockets/ip-name-lookup'] !== undefined) {
-			result.IpNameLookup = IpNameLookup._.createService(wasmInterface['wasi:sockets/ip-name-lookup'], context);
-		}
-		if (wasmInterface['wasi:sockets/tcp'] !== undefined) {
-			result.Tcp = Tcp._.createService(wasmInterface['wasi:sockets/tcp'], context);
-		}
-		if (wasmInterface['wasi:sockets/tcp-create-socket'] !== undefined) {
-			result.TcpCreateSocket = TcpCreateSocket._.createService(wasmInterface['wasi:sockets/tcp-create-socket'], context);
-		}
-		if (wasmInterface['wasi:sockets/udp'] !== undefined) {
-			result.Udp = Udp._.createService(wasmInterface['wasi:sockets/udp'], context);
-		}
-		if (wasmInterface['wasi:sockets/udp-create-socket'] !== undefined) {
-			result.UdpCreateSocket = UdpCreateSocket._.createService(wasmInterface['wasi:sockets/udp-create-socket'], context);
-		}
-		return result;
-	}
 }
