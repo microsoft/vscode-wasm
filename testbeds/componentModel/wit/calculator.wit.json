@@ -1,0 +1,46 @@
+{
+  "worlds": [
+    {
+      "name": "calculator",
+      "imports": {},
+      "exports": {
+        "add": {
+          "function": {
+            "name": "add",
+            "kind": "freestanding",
+            "params": [
+              {
+                "name": "a",
+                "type": "u32"
+              },
+              {
+                "name": "b",
+                "type": "u32"
+              }
+            ],
+            "results": [
+              {
+                "type": "u32"
+              }
+            ]
+          }
+        }
+      },
+      "package": 0
+    }
+  ],
+  "interfaces": [],
+  "types": [],
+  "packages": [
+    {
+      "name": "vscode:example",
+      "docs": {
+        "contents": "wit/host.wit"
+      },
+      "interfaces": {},
+      "worlds": {
+        "calculator": 0
+      }
+    }
+  ]
+}

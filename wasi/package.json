@@ -40,6 +40,6 @@
 		"lint": "node ../node_modules/eslint/bin/eslint.js --ext ts src",
 		"all": "npm run clean && npm run compile && npm run lint",
 		"all:publish": "git clean -xfd . && npm install && npm run compile:publish && npm run lint",
-		"generate": " wasm-tools component wit --json ../dependencies/wasmtime/crates/wasi/wit | node ../wasm-component-model/lib/tools/main.js --outDir ./src --package wasi --stdin"
+		"generate": "wasm-tools component wit --json ../dependencies/wasmtime/crates/wasi/wit | node ../wasm-component-model/lib/tools/main.js --outDir ./src --package wasi --stdin"
 	}
 }

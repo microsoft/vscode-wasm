@@ -2,8 +2,8 @@
  *  Copyright (c) Microsoft Corporation. All rights reserved.
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
-import * as $wcm from '@vscode/wasm-component-model';
-import type { u32, u64, s32, s64, float32, float64, own, i32, ptr, i64 } from '@vscode/wasm-component-model';
+import * as $wcm from '../componentModel';
+import type { u32, u64, s32, s64, float32, float64, own, i32, ptr, i64 } from '../componentModel';
 
 export namespace testData {
 	export namespace Types {
@@ -359,8 +359,7 @@ export namespace testData {
 		export type Imports = {
 			'vscode:test-data/types': testData.Types._.WasmInterface;
 		};
-		export namespace Exports {
-		}
+		export const Exports = {};
 		export type Exports = {
 		};
 		export function createImports(service: test.Imports, context: $wcm.WasmContext): Imports {

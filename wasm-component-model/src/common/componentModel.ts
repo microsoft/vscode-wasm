@@ -569,6 +569,29 @@ export class MemoryRange extends BaseMemoryRange {
 	}
 }
 
+/**
+ * A memory of size 0. Doesn't allow any kind of operation on it.
+ */
+export class NullMemory implements Memory {
+	readonly id: string = 'b60336d2-c856-4767-af3b-f66e1ab6c507';
+	readonly buffer: ArrayBuffer = new ArrayBuffer(0);
+	alloc(): MemoryRange {
+		throw new MemoryError('Cannot allocate memory on a null memory.');
+	}
+	realloc(): MemoryRange {
+		throw new MemoryError('Cannot re-allocate memory on a null memory.');
+	}
+	preAllocated(): MemoryRange {
+		throw new MemoryError('Cannot point to pre-allocate memory on a null memory.');
+	}
+	readonly(): ReadonlyMemoryRange {
+		throw new MemoryError('Cannot point to readonly memory on a null memory.');
+	}
+	free(): void {
+		throw new MemoryError('Cannot free memory on a null memory.');
+	}
+}
+
 export type encodings = 'utf-8' | 'utf-16' | 'latin1+utf-16';
 export interface Options {
 	encoding: encodings;
