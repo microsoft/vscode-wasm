@@ -1255,7 +1255,7 @@ export namespace sockets {
 		Network.addCallable('$drop', new $wcm.DestructorType<sockets.Network.Network.Statics['$drop']>('[resource-drop]network', [['inst', Network]]));
 	}
 	export namespace Network._ {
-		export const id = 'wasi:sockets/network' as const;
+		export const id = 'wasi:sockets/network@0.2.0' as const;
 		export const witName = 'network' as const;
 		export const types: Map<string, $wcm.GenericComponentModelType> = new Map<string, $wcm.GenericComponentModelType>([
 			['ErrorCode', $.ErrorCode],
@@ -1310,7 +1310,7 @@ export namespace sockets {
 		export const instanceNetwork = new $wcm.FunctionType<sockets.InstanceNetwork.instanceNetwork>('instance-network', [], new $wcm.OwnType<sockets.InstanceNetwork.Network>(Network));
 	}
 	export namespace InstanceNetwork._ {
-		export const id = 'wasi:sockets/instance-network' as const;
+		export const id = 'wasi:sockets/instance-network@0.2.0' as const;
 		export const witName = 'instance-network' as const;
 		export const types: Map<string, $wcm.GenericComponentModelType> = new Map<string, $wcm.GenericComponentModelType>([
 			['Network', $.Network]
@@ -1354,7 +1354,7 @@ export namespace sockets {
 		], new $wcm.ResultType<own<sockets.IpNameLookup.ResolveAddressStream>, sockets.IpNameLookup.ErrorCode>(new $wcm.OwnType<sockets.IpNameLookup.ResolveAddressStream>(ResolveAddressStream), ErrorCode));
 	}
 	export namespace IpNameLookup._ {
-		export const id = 'wasi:sockets/ip-name-lookup' as const;
+		export const id = 'wasi:sockets/ip-name-lookup@0.2.0' as const;
 		export const witName = 'ip-name-lookup' as const;
 		export const types: Map<string, $wcm.GenericComponentModelType> = new Map<string, $wcm.GenericComponentModelType>([
 			['Pollable', $.Pollable],
@@ -1535,7 +1535,7 @@ export namespace sockets {
 		TcpSocket.addCallable('$drop', new $wcm.DestructorType<sockets.Tcp.TcpSocket.Statics['$drop']>('[resource-drop]tcp-socket', [['inst', TcpSocket]]));
 	}
 	export namespace Tcp._ {
-		export const id = 'wasi:sockets/tcp' as const;
+		export const id = 'wasi:sockets/tcp@0.2.0' as const;
 		export const witName = 'tcp' as const;
 		export const types: Map<string, $wcm.GenericComponentModelType> = new Map<string, $wcm.GenericComponentModelType>([
 			['InputStream', $.InputStream],
@@ -1747,7 +1747,7 @@ export namespace sockets {
 		], new $wcm.ResultType<own<sockets.TcpCreateSocket.TcpSocket>, sockets.TcpCreateSocket.ErrorCode>(new $wcm.OwnType<sockets.TcpCreateSocket.TcpSocket>(TcpSocket), ErrorCode));
 	}
 	export namespace TcpCreateSocket._ {
-		export const id = 'wasi:sockets/tcp-create-socket' as const;
+		export const id = 'wasi:sockets/tcp-create-socket@0.2.0' as const;
 		export const witName = 'tcp-create-socket' as const;
 		export const types: Map<string, $wcm.GenericComponentModelType> = new Map<string, $wcm.GenericComponentModelType>([
 			['Network', $.Network],
@@ -1861,7 +1861,7 @@ export namespace sockets {
 		OutgoingDatagramStream.addCallable('$drop', new $wcm.DestructorType<sockets.Udp.OutgoingDatagramStream.Statics['$drop']>('[resource-drop]outgoing-datagram-stream', [['inst', OutgoingDatagramStream]]));
 	}
 	export namespace Udp._ {
-		export const id = 'wasi:sockets/udp' as const;
+		export const id = 'wasi:sockets/udp@0.2.0' as const;
 		export const witName = 'udp' as const;
 		export const types: Map<string, $wcm.GenericComponentModelType> = new Map<string, $wcm.GenericComponentModelType>([
 			['Pollable', $.Pollable],
@@ -2085,7 +2085,7 @@ export namespace sockets {
 		], new $wcm.ResultType<own<sockets.UdpCreateSocket.UdpSocket>, sockets.UdpCreateSocket.ErrorCode>(new $wcm.OwnType<sockets.UdpCreateSocket.UdpSocket>(UdpSocket), ErrorCode));
 	}
 	export namespace UdpCreateSocket._ {
-		export const id = 'wasi:sockets/udp-create-socket' as const;
+		export const id = 'wasi:sockets/udp-create-socket@0.2.0' as const;
 		export const witName = 'udp-create-socket' as const;
 		export const types: Map<string, $wcm.GenericComponentModelType> = new Map<string, $wcm.GenericComponentModelType>([
 			['Network', $.Network],
@@ -2115,7 +2115,7 @@ export namespace sockets {
 
 export namespace sockets._ {
 	export const version = '0.2.0' as const;
-	export const id = 'wasi:sockets' as const;
+	export const id = 'wasi:sockets@0.2.0' as const;
 	export const witName = 'sockets' as const;
 	export const interfaces: Map<string, $wcm.InterfaceType> = new Map<string, $wcm.InterfaceType>([
 		['Network', Network._],
@@ -2126,13 +2126,4 @@ export namespace sockets._ {
 		['Udp', Udp._],
 		['UdpCreateSocket', UdpCreateSocket._]
 	]);
-	export type WasmInterface = {
-		'wasi:sockets/network'?: Network._.WasmInterface;
-		'wasi:sockets/instance-network'?: InstanceNetwork._.WasmInterface;
-		'wasi:sockets/ip-name-lookup'?: IpNameLookup._.WasmInterface;
-		'wasi:sockets/tcp'?: Tcp._.WasmInterface;
-		'wasi:sockets/tcp-create-socket'?: TcpCreateSocket._.WasmInterface;
-		'wasi:sockets/udp'?: Udp._.WasmInterface;
-		'wasi:sockets/udp-create-socket'?: UdpCreateSocket._.WasmInterface;
-	};
 }

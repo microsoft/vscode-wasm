@@ -3,7 +3,7 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 import * as $wcm from '@vscode/wasm-component-model';
-import type { u16, u8, u32, u64, result, own, borrow, i32, option, ptr, i64 } from '@vscode/wasm-component-model';
+import type { u16, u8, u32, u64, result, own, borrow, option, i32, ptr, i64 } from '@vscode/wasm-component-model';
 import { cli } from './cli';
 import { random } from './random';
 import { io } from './io';
@@ -1289,63 +1289,22 @@ export namespace http {
 		handle: OutgoingHandler.handle;
 	};
 	export namespace proxy {
-		export namespace Service {
-			export type Imports = {
-				random: random.Random;
-				error: io.Error;
-				poll: io.Poll;
-				streams: io.Streams;
-				stdout: cli.Stdout;
-				stderr: cli.Stderr;
-				stdin: cli.Stdin;
-				monotonicClock: clocks.MonotonicClock;
-				types: http.Types;
-				outgoingHandler: http.OutgoingHandler;
-				wallClock: clocks.WallClock;
-			};
-			export type Exports = {
-				incomingHandler: http.IncomingHandler;
-			};
-		}
-		export namespace Wasm {
-			export type Imports = {
-				'wasi:random/random@0.2.0': random.Random._.WasmInterface;
-				'wasi:io/error@0.2.0': io.Error._.WasmInterface;
-				'wasi:io/poll@0.2.0': io.Poll._.WasmInterface;
-				'wasi:io/streams@0.2.0': io.Streams._.WasmInterface;
-				'wasi:cli/stdout@0.2.0': cli.Stdout._.WasmInterface;
-				'wasi:cli/stderr@0.2.0': cli.Stderr._.WasmInterface;
-				'wasi:cli/stdin@0.2.0': cli.Stdin._.WasmInterface;
-				'wasi:clocks/monotonic-clock@0.2.0': clocks.MonotonicClock._.WasmInterface;
-				'wasi:http/types@0.2.0': http.Types._.WasmInterface;
-				'wasi:http/outgoing-handler@0.2.0': http.OutgoingHandler._.WasmInterface;
-				'wasi:clocks/wall-clock@0.2.0': clocks.WallClock._.WasmInterface;
-			};
-			export type Exports = {
-				'wasi:http/incoming-handler@0.2.0#handle': (request: i32, responseOut: i32) => void;
-			};
-		}
-
-		export function createImports(service: Service.Imports, context: $wcm.WasmContext): Wasm.Imports {
-			const result: Wasm.Imports = Object.create(null);
-			result['wasi:random/random@0.2.0'] = random.Random._.createImports(service.random, context);
-			result['wasi:io/error@0.2.0'] = io.Error._.createImports(service.error, context);
-			result['wasi:io/poll@0.2.0'] = io.Poll._.createImports(service.poll, context);
-			result['wasi:io/streams@0.2.0'] = io.Streams._.createImports(service.streams, context);
-			result['wasi:cli/stdout@0.2.0'] = cli.Stdout._.createImports(service.stdout, context);
-			result['wasi:cli/stderr@0.2.0'] = cli.Stderr._.createImports(service.stderr, context);
-			result['wasi:cli/stdin@0.2.0'] = cli.Stdin._.createImports(service.stdin, context);
-			result['wasi:clocks/monotonic-clock@0.2.0'] = clocks.MonotonicClock._.createImports(service.monotonicClock, context);
-			result['wasi:http/types@0.2.0'] = http.Types._.createImports(service.types, context);
-			result['wasi:http/outgoing-handler@0.2.0'] = http.OutgoingHandler._.createImports(service.outgoingHandler, context);
-			result['wasi:clocks/wall-clock@0.2.0'] = clocks.WallClock._.createImports(service.wallClock, context);
-			return result as Wasm.Imports;
-		}
-		export function bindExports(exports: Wasm.Exports, context: $wcm.WasmContext): Service.Exports {
-			const result: Service.Exports = Object.create(null);
-			result.incomingHandler = http.IncomingHandler._.bindExports(http.IncomingHandler._.filterExports(exports, context), context);
-			return result;
-		}
+		export type Imports = {
+			random: random.Random;
+			error: io.Error;
+			poll: io.Poll;
+			streams: io.Streams;
+			stdout: cli.Stdout;
+			stderr: cli.Stderr;
+			stdin: cli.Stdin;
+			monotonicClock: clocks.MonotonicClock;
+			types: http.Types;
+			outgoingHandler: http.OutgoingHandler;
+			wallClock: clocks.WallClock;
+		};
+		export type Exports = {
+			incomingHandler: http.IncomingHandler;
+		};
 	}
 }
 
@@ -1578,7 +1537,7 @@ export namespace http {
 		], new $wcm.OptionType<http.Types.ErrorCode>(ErrorCode));
 	}
 	export namespace Types._ {
-		export const id = 'wasi:http/types' as const;
+		export const id = 'wasi:http/types@0.2.0' as const;
 		export const witName = 'types' as const;
 		export const types: Map<string, $wcm.GenericComponentModelType> = new Map<string, $wcm.GenericComponentModelType>([
 			['Duration', $.Duration],
@@ -2210,7 +2169,7 @@ export namespace http {
 		], undefined);
 	}
 	export namespace IncomingHandler._ {
-		export const id = 'wasi:http/incoming-handler' as const;
+		export const id = 'wasi:http/incoming-handler@0.2.0' as const;
 		export const witName = 'incoming-handler' as const;
 		export const types: Map<string, $wcm.GenericComponentModelType> = new Map<string, $wcm.GenericComponentModelType>([
 			['IncomingRequest', $.IncomingRequest],
@@ -2246,7 +2205,7 @@ export namespace http {
 		], new $wcm.ResultType<own<http.OutgoingHandler.FutureIncomingResponse>, http.OutgoingHandler.ErrorCode>(new $wcm.OwnType<http.OutgoingHandler.FutureIncomingResponse>(FutureIncomingResponse), ErrorCode));
 	}
 	export namespace OutgoingHandler._ {
-		export const id = 'wasi:http/outgoing-handler' as const;
+		export const id = 'wasi:http/outgoing-handler@0.2.0' as const;
 		export const witName = 'outgoing-handler' as const;
 		export const types: Map<string, $wcm.GenericComponentModelType> = new Map<string, $wcm.GenericComponentModelType>([
 			['OutgoingRequest', $.OutgoingRequest],
@@ -2272,20 +2231,85 @@ export namespace http {
 			return $wcm.Exports.bind<http.OutgoingHandler>(functions, [], wasmInterface, context);
 		}
 	}
+	export namespace proxy.$ {
+	}
+	export namespace proxy._ {
+		export const id = 'wasi:http/proxy@0.2.0' as const;
+		export const witName = 'proxy' as const;
+		export namespace Imports {
+			export const functions: Map<string, $wcm.FunctionType> = new Map([
+			]);
+			export const interfaces: Map<string, $wcm.InterfaceType> = new Map<string, $wcm.InterfaceType>([
+				['random.Random', random.Random._],
+				['io.Error', io.Error._],
+				['io.Poll', io.Poll._],
+				['io.Streams', io.Streams._],
+				['cli.Stdout', cli.Stdout._],
+				['cli.Stderr', cli.Stderr._],
+				['cli.Stdin', cli.Stdin._],
+				['clocks.MonotonicClock', clocks.MonotonicClock._],
+				['Types', Types._],
+				['OutgoingHandler', OutgoingHandler._],
+				['clocks.WallClock', clocks.WallClock._]
+			]);
+		}
+		export type Imports = {
+			'wasi:random/random@0.2.0': random.Random._.WasmInterface;
+			'wasi:io/error@0.2.0': io.Error._.WasmInterface;
+			'wasi:io/poll@0.2.0': io.Poll._.WasmInterface;
+			'wasi:io/streams@0.2.0': io.Streams._.WasmInterface;
+			'wasi:cli/stdout@0.2.0': cli.Stdout._.WasmInterface;
+			'wasi:cli/stderr@0.2.0': cli.Stderr._.WasmInterface;
+			'wasi:cli/stdin@0.2.0': cli.Stdin._.WasmInterface;
+			'wasi:clocks/monotonic-clock@0.2.0': clocks.MonotonicClock._.WasmInterface;
+			'wasi:http/types@0.2.0': http.Types._.WasmInterface;
+			'wasi:http/outgoing-handler@0.2.0': http.OutgoingHandler._.WasmInterface;
+			'wasi:clocks/wall-clock@0.2.0': clocks.WallClock._.WasmInterface;
+		};
+		export namespace Exports {
+			export const functions: Map<string, $wcm.FunctionType> = new Map([
+			]);
+			export const interfaces: Map<string, $wcm.InterfaceType> = new Map<string, $wcm.InterfaceType>([
+				['IncomingHandler', IncomingHandler._],
+			]);
+		}
+		export type Exports = {
+			'wasi:http/incoming-handler@0.2.0#handle': (request: i32, responseOut: i32) => void;
+		};
+
+		export function createImports(service: proxy.Imports, context: $wcm.WasmContext): Imports {
+			const result: Imports = Object.create(null);
+			result['wasi:random/random@0.2.0'] = random.Random._.createImports(service.random, context);
+			result['wasi:io/error@0.2.0'] = io.Error._.createImports(service.error, context);
+			result['wasi:io/poll@0.2.0'] = io.Poll._.createImports(service.poll, context);
+			result['wasi:io/streams@0.2.0'] = io.Streams._.createImports(service.streams, context);
+			result['wasi:cli/stdout@0.2.0'] = cli.Stdout._.createImports(service.stdout, context);
+			result['wasi:cli/stderr@0.2.0'] = cli.Stderr._.createImports(service.stderr, context);
+			result['wasi:cli/stdin@0.2.0'] = cli.Stdin._.createImports(service.stdin, context);
+			result['wasi:clocks/monotonic-clock@0.2.0'] = clocks.MonotonicClock._.createImports(service.monotonicClock, context);
+			result['wasi:http/types@0.2.0'] = http.Types._.createImports(service.types, context);
+			result['wasi:http/outgoing-handler@0.2.0'] = http.OutgoingHandler._.createImports(service.outgoingHandler, context);
+			result['wasi:clocks/wall-clock@0.2.0'] = clocks.WallClock._.createImports(service.wallClock, context);
+			return result;
+		}
+		export function bindExports(exports: Exports, context: $wcm.WasmContext): proxy.Exports {
+			const result: proxy.Exports = Object.create(null);
+			result.incomingHandler = http.IncomingHandler._.bindExports(http.IncomingHandler._.filterExports(exports, context), context);
+			return result;
+		}
+	}
 }
 
 export namespace http._ {
 	export const version = '0.2.0' as const;
-	export const id = 'wasi:http' as const;
+	export const id = 'wasi:http@0.2.0' as const;
 	export const witName = 'http' as const;
 	export const interfaces: Map<string, $wcm.InterfaceType> = new Map<string, $wcm.InterfaceType>([
 		['Types', Types._],
 		['IncomingHandler', IncomingHandler._],
 		['OutgoingHandler', OutgoingHandler._]
 	]);
-	export type WasmInterface = {
-		'wasi:http/types'?: Types._.WasmInterface;
-		'wasi:http/incoming-handler'?: IncomingHandler._.WasmInterface;
-		'wasi:http/outgoing-handler'?: OutgoingHandler._.WasmInterface;
-	};
+	export const worlds: Map<string, $wcm.WorldType> = new Map<string, $wcm.WorldType>([
+		['proxy', proxy._],
+	]);
 }

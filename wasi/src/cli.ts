@@ -198,111 +198,38 @@ export namespace cli {
 		getTerminalStderr: TerminalStderr.getTerminalStderr;
 	};
 	export namespace command {
-		export namespace Service {
-			export type Imports = {
-				environment: cli.Environment;
-				exit: cli.Exit;
-				error: io.Error;
-				poll: io.Poll;
-				streams: io.Streams;
-				stdin: cli.Stdin;
-				stdout: cli.Stdout;
-				stderr: cli.Stderr;
-				terminalInput: cli.TerminalInput;
-				terminalOutput: cli.TerminalOutput;
-				terminalStdin: cli.TerminalStdin;
-				terminalStdout: cli.TerminalStdout;
-				terminalStderr: cli.TerminalStderr;
-				monotonicClock: clocks.MonotonicClock;
-				wallClock: clocks.WallClock;
-				types: filesystem.Types;
-				preopens: filesystem.Preopens;
-				network: sockets.Network;
-				instanceNetwork: sockets.InstanceNetwork;
-				udp: sockets.Udp;
-				udpCreateSocket: sockets.UdpCreateSocket;
-				tcp: sockets.Tcp;
-				tcpCreateSocket: sockets.TcpCreateSocket;
-				ipNameLookup: sockets.IpNameLookup;
-				random: random.Random;
-				insecure: random.Insecure;
-				insecureSeed: random.InsecureSeed;
-			};
-			export type Exports = {
-				run: cli.Run;
-			};
-		}
-		export namespace Wasm {
-			export type Imports = {
-				'wasi:cli/environment@0.2.0': cli.Environment._.WasmInterface;
-				'wasi:cli/exit@0.2.0': cli.Exit._.WasmInterface;
-				'wasi:io/error@0.2.0': io.Error._.WasmInterface;
-				'wasi:io/poll@0.2.0': io.Poll._.WasmInterface;
-				'wasi:io/streams@0.2.0': io.Streams._.WasmInterface;
-				'wasi:cli/stdin@0.2.0': cli.Stdin._.WasmInterface;
-				'wasi:cli/stdout@0.2.0': cli.Stdout._.WasmInterface;
-				'wasi:cli/stderr@0.2.0': cli.Stderr._.WasmInterface;
-				'wasi:cli/terminal-input@0.2.0': cli.TerminalInput._.WasmInterface;
-				'wasi:cli/terminal-output@0.2.0': cli.TerminalOutput._.WasmInterface;
-				'wasi:cli/terminal-stdin@0.2.0': cli.TerminalStdin._.WasmInterface;
-				'wasi:cli/terminal-stdout@0.2.0': cli.TerminalStdout._.WasmInterface;
-				'wasi:cli/terminal-stderr@0.2.0': cli.TerminalStderr._.WasmInterface;
-				'wasi:clocks/monotonic-clock@0.2.0': clocks.MonotonicClock._.WasmInterface;
-				'wasi:clocks/wall-clock@0.2.0': clocks.WallClock._.WasmInterface;
-				'wasi:filesystem/types@0.2.0': filesystem.Types._.WasmInterface;
-				'wasi:filesystem/preopens@0.2.0': filesystem.Preopens._.WasmInterface;
-				'wasi:sockets/network@0.2.0': sockets.Network._.WasmInterface;
-				'wasi:sockets/instance-network@0.2.0': sockets.InstanceNetwork._.WasmInterface;
-				'wasi:sockets/udp@0.2.0': sockets.Udp._.WasmInterface;
-				'wasi:sockets/udp-create-socket@0.2.0': sockets.UdpCreateSocket._.WasmInterface;
-				'wasi:sockets/tcp@0.2.0': sockets.Tcp._.WasmInterface;
-				'wasi:sockets/tcp-create-socket@0.2.0': sockets.TcpCreateSocket._.WasmInterface;
-				'wasi:sockets/ip-name-lookup@0.2.0': sockets.IpNameLookup._.WasmInterface;
-				'wasi:random/random@0.2.0': random.Random._.WasmInterface;
-				'wasi:random/insecure@0.2.0': random.Insecure._.WasmInterface;
-				'wasi:random/insecure-seed@0.2.0': random.InsecureSeed._.WasmInterface;
-			};
-			export type Exports = {
-				'wasi:cli/run@0.2.0#run': () => i32;
-			};
-		}
-
-		export function createImports(service: Service.Imports, context: $wcm.WasmContext): Wasm.Imports {
-			const result: Wasm.Imports = Object.create(null);
-			result['wasi:cli/environment@0.2.0'] = cli.Environment._.createImports(service.environment, context);
-			result['wasi:cli/exit@0.2.0'] = cli.Exit._.createImports(service.exit, context);
-			result['wasi:io/error@0.2.0'] = io.Error._.createImports(service.error, context);
-			result['wasi:io/poll@0.2.0'] = io.Poll._.createImports(service.poll, context);
-			result['wasi:io/streams@0.2.0'] = io.Streams._.createImports(service.streams, context);
-			result['wasi:cli/stdin@0.2.0'] = cli.Stdin._.createImports(service.stdin, context);
-			result['wasi:cli/stdout@0.2.0'] = cli.Stdout._.createImports(service.stdout, context);
-			result['wasi:cli/stderr@0.2.0'] = cli.Stderr._.createImports(service.stderr, context);
-			result['wasi:cli/terminal-input@0.2.0'] = cli.TerminalInput._.createImports(service.terminalInput, context);
-			result['wasi:cli/terminal-output@0.2.0'] = cli.TerminalOutput._.createImports(service.terminalOutput, context);
-			result['wasi:cli/terminal-stdin@0.2.0'] = cli.TerminalStdin._.createImports(service.terminalStdin, context);
-			result['wasi:cli/terminal-stdout@0.2.0'] = cli.TerminalStdout._.createImports(service.terminalStdout, context);
-			result['wasi:cli/terminal-stderr@0.2.0'] = cli.TerminalStderr._.createImports(service.terminalStderr, context);
-			result['wasi:clocks/monotonic-clock@0.2.0'] = clocks.MonotonicClock._.createImports(service.monotonicClock, context);
-			result['wasi:clocks/wall-clock@0.2.0'] = clocks.WallClock._.createImports(service.wallClock, context);
-			result['wasi:filesystem/types@0.2.0'] = filesystem.Types._.createImports(service.types, context);
-			result['wasi:filesystem/preopens@0.2.0'] = filesystem.Preopens._.createImports(service.preopens, context);
-			result['wasi:sockets/network@0.2.0'] = sockets.Network._.createImports(service.network, context);
-			result['wasi:sockets/instance-network@0.2.0'] = sockets.InstanceNetwork._.createImports(service.instanceNetwork, context);
-			result['wasi:sockets/udp@0.2.0'] = sockets.Udp._.createImports(service.udp, context);
-			result['wasi:sockets/udp-create-socket@0.2.0'] = sockets.UdpCreateSocket._.createImports(service.udpCreateSocket, context);
-			result['wasi:sockets/tcp@0.2.0'] = sockets.Tcp._.createImports(service.tcp, context);
-			result['wasi:sockets/tcp-create-socket@0.2.0'] = sockets.TcpCreateSocket._.createImports(service.tcpCreateSocket, context);
-			result['wasi:sockets/ip-name-lookup@0.2.0'] = sockets.IpNameLookup._.createImports(service.ipNameLookup, context);
-			result['wasi:random/random@0.2.0'] = random.Random._.createImports(service.random, context);
-			result['wasi:random/insecure@0.2.0'] = random.Insecure._.createImports(service.insecure, context);
-			result['wasi:random/insecure-seed@0.2.0'] = random.InsecureSeed._.createImports(service.insecureSeed, context);
-			return result as Wasm.Imports;
-		}
-		export function bindExports(exports: Wasm.Exports, context: $wcm.WasmContext): Service.Exports {
-			const result: Service.Exports = Object.create(null);
-			result.run = cli.Run._.bindExports(cli.Run._.filterExports(exports, context), context);
-			return result;
-		}
+		export type Imports = {
+			environment: cli.Environment;
+			exit: cli.Exit;
+			error: io.Error;
+			poll: io.Poll;
+			streams: io.Streams;
+			stdin: cli.Stdin;
+			stdout: cli.Stdout;
+			stderr: cli.Stderr;
+			terminalInput: cli.TerminalInput;
+			terminalOutput: cli.TerminalOutput;
+			terminalStdin: cli.TerminalStdin;
+			terminalStdout: cli.TerminalStdout;
+			terminalStderr: cli.TerminalStderr;
+			monotonicClock: clocks.MonotonicClock;
+			wallClock: clocks.WallClock;
+			types: filesystem.Types;
+			preopens: filesystem.Preopens;
+			network: sockets.Network;
+			instanceNetwork: sockets.InstanceNetwork;
+			udp: sockets.Udp;
+			udpCreateSocket: sockets.UdpCreateSocket;
+			tcp: sockets.Tcp;
+			tcpCreateSocket: sockets.TcpCreateSocket;
+			ipNameLookup: sockets.IpNameLookup;
+			random: random.Random;
+			insecure: random.Insecure;
+			insecureSeed: random.InsecureSeed;
+		};
+		export type Exports = {
+			run: cli.Run;
+		};
 	}
 }
 
@@ -313,7 +240,7 @@ export namespace cli {
 		export const initialCwd = new $wcm.FunctionType<cli.Environment.initialCwd>('initial-cwd', [], new $wcm.OptionType<string>($wcm.wstring));
 	}
 	export namespace Environment._ {
-		export const id = 'wasi:cli/environment' as const;
+		export const id = 'wasi:cli/environment@0.2.0' as const;
 		export const witName = 'environment' as const;
 		export const types: Map<string, $wcm.GenericComponentModelType> = new Map<string, $wcm.GenericComponentModelType>([
 		]);
@@ -346,7 +273,7 @@ export namespace cli {
 		], undefined);
 	}
 	export namespace Exit._ {
-		export const id = 'wasi:cli/exit' as const;
+		export const id = 'wasi:cli/exit@0.2.0' as const;
 		export const witName = 'exit' as const;
 		export const types: Map<string, $wcm.GenericComponentModelType> = new Map<string, $wcm.GenericComponentModelType>([
 		]);
@@ -373,7 +300,7 @@ export namespace cli {
 		export const run = new $wcm.FunctionType<cli.Run.run>('run', [], new $wcm.ResultType<void, void>(undefined, undefined));
 	}
 	export namespace Run._ {
-		export const id = 'wasi:cli/run' as const;
+		export const id = 'wasi:cli/run@0.2.0' as const;
 		export const witName = 'run' as const;
 		export const types: Map<string, $wcm.GenericComponentModelType> = new Map<string, $wcm.GenericComponentModelType>([
 		]);
@@ -401,7 +328,7 @@ export namespace cli {
 		export const getStdin = new $wcm.FunctionType<cli.Stdin.getStdin>('get-stdin', [], new $wcm.OwnType<cli.Stdin.InputStream>(InputStream));
 	}
 	export namespace Stdin._ {
-		export const id = 'wasi:cli/stdin' as const;
+		export const id = 'wasi:cli/stdin@0.2.0' as const;
 		export const witName = 'stdin' as const;
 		export const types: Map<string, $wcm.GenericComponentModelType> = new Map<string, $wcm.GenericComponentModelType>([
 			['InputStream', $.InputStream]
@@ -430,7 +357,7 @@ export namespace cli {
 		export const getStdout = new $wcm.FunctionType<cli.Stdout.getStdout>('get-stdout', [], new $wcm.OwnType<cli.Stdout.OutputStream>(OutputStream));
 	}
 	export namespace Stdout._ {
-		export const id = 'wasi:cli/stdout' as const;
+		export const id = 'wasi:cli/stdout@0.2.0' as const;
 		export const witName = 'stdout' as const;
 		export const types: Map<string, $wcm.GenericComponentModelType> = new Map<string, $wcm.GenericComponentModelType>([
 			['OutputStream', $.OutputStream]
@@ -459,7 +386,7 @@ export namespace cli {
 		export const getStderr = new $wcm.FunctionType<cli.Stderr.getStderr>('get-stderr', [], new $wcm.OwnType<cli.Stderr.OutputStream>(OutputStream));
 	}
 	export namespace Stderr._ {
-		export const id = 'wasi:cli/stderr' as const;
+		export const id = 'wasi:cli/stderr@0.2.0' as const;
 		export const witName = 'stderr' as const;
 		export const types: Map<string, $wcm.GenericComponentModelType> = new Map<string, $wcm.GenericComponentModelType>([
 			['OutputStream', $.OutputStream]
@@ -489,7 +416,7 @@ export namespace cli {
 		TerminalInput.addCallable('$drop', new $wcm.DestructorType<cli.TerminalInput.TerminalInput.Statics['$drop']>('[resource-drop]terminal-input', [['inst', TerminalInput]]));
 	}
 	export namespace TerminalInput._ {
-		export const id = 'wasi:cli/terminal-input' as const;
+		export const id = 'wasi:cli/terminal-input@0.2.0' as const;
 		export const witName = 'terminal-input' as const;
 		export const types: Map<string, $wcm.GenericComponentModelType> = new Map<string, $wcm.GenericComponentModelType>([
 			['TerminalInput', $.TerminalInput]
@@ -537,7 +464,7 @@ export namespace cli {
 		TerminalOutput.addCallable('$drop', new $wcm.DestructorType<cli.TerminalOutput.TerminalOutput.Statics['$drop']>('[resource-drop]terminal-output', [['inst', TerminalOutput]]));
 	}
 	export namespace TerminalOutput._ {
-		export const id = 'wasi:cli/terminal-output' as const;
+		export const id = 'wasi:cli/terminal-output@0.2.0' as const;
 		export const witName = 'terminal-output' as const;
 		export const types: Map<string, $wcm.GenericComponentModelType> = new Map<string, $wcm.GenericComponentModelType>([
 			['TerminalOutput', $.TerminalOutput]
@@ -584,7 +511,7 @@ export namespace cli {
 		export const getTerminalStdin = new $wcm.FunctionType<cli.TerminalStdin.getTerminalStdin>('get-terminal-stdin', [], new $wcm.OptionType<own<cli.TerminalStdin.TerminalInput>>(new $wcm.OwnType<cli.TerminalStdin.TerminalInput>(TerminalInput)));
 	}
 	export namespace TerminalStdin._ {
-		export const id = 'wasi:cli/terminal-stdin' as const;
+		export const id = 'wasi:cli/terminal-stdin@0.2.0' as const;
 		export const witName = 'terminal-stdin' as const;
 		export const types: Map<string, $wcm.GenericComponentModelType> = new Map<string, $wcm.GenericComponentModelType>([
 			['TerminalInput', $.TerminalInput]
@@ -613,7 +540,7 @@ export namespace cli {
 		export const getTerminalStdout = new $wcm.FunctionType<cli.TerminalStdout.getTerminalStdout>('get-terminal-stdout', [], new $wcm.OptionType<own<cli.TerminalStdout.TerminalOutput>>(new $wcm.OwnType<cli.TerminalStdout.TerminalOutput>(TerminalOutput)));
 	}
 	export namespace TerminalStdout._ {
-		export const id = 'wasi:cli/terminal-stdout' as const;
+		export const id = 'wasi:cli/terminal-stdout@0.2.0' as const;
 		export const witName = 'terminal-stdout' as const;
 		export const types: Map<string, $wcm.GenericComponentModelType> = new Map<string, $wcm.GenericComponentModelType>([
 			['TerminalOutput', $.TerminalOutput]
@@ -642,7 +569,7 @@ export namespace cli {
 		export const getTerminalStderr = new $wcm.FunctionType<cli.TerminalStderr.getTerminalStderr>('get-terminal-stderr', [], new $wcm.OptionType<own<cli.TerminalStderr.TerminalOutput>>(new $wcm.OwnType<cli.TerminalStderr.TerminalOutput>(TerminalOutput)));
 	}
 	export namespace TerminalStderr._ {
-		export const id = 'wasi:cli/terminal-stderr' as const;
+		export const id = 'wasi:cli/terminal-stderr@0.2.0' as const;
 		export const witName = 'terminal-stderr' as const;
 		export const types: Map<string, $wcm.GenericComponentModelType> = new Map<string, $wcm.GenericComponentModelType>([
 			['TerminalOutput', $.TerminalOutput]
@@ -665,11 +592,126 @@ export namespace cli {
 			return $wcm.Exports.bind<cli.TerminalStderr>(functions, [], wasmInterface, context);
 		}
 	}
+	export namespace command.$ {
+	}
+	export namespace command._ {
+		export const id = 'wasi:cli/command@0.2.0' as const;
+		export const witName = 'command' as const;
+		export namespace Imports {
+			export const functions: Map<string, $wcm.FunctionType> = new Map([
+			]);
+			export const interfaces: Map<string, $wcm.InterfaceType> = new Map<string, $wcm.InterfaceType>([
+				['Environment', Environment._],
+				['Exit', Exit._],
+				['io.Error', io.Error._],
+				['io.Poll', io.Poll._],
+				['io.Streams', io.Streams._],
+				['Stdin', Stdin._],
+				['Stdout', Stdout._],
+				['Stderr', Stderr._],
+				['TerminalInput', TerminalInput._],
+				['TerminalOutput', TerminalOutput._],
+				['TerminalStdin', TerminalStdin._],
+				['TerminalStdout', TerminalStdout._],
+				['TerminalStderr', TerminalStderr._],
+				['clocks.MonotonicClock', clocks.MonotonicClock._],
+				['clocks.WallClock', clocks.WallClock._],
+				['filesystem.Types', filesystem.Types._],
+				['filesystem.Preopens', filesystem.Preopens._],
+				['sockets.Network', sockets.Network._],
+				['sockets.InstanceNetwork', sockets.InstanceNetwork._],
+				['sockets.Udp', sockets.Udp._],
+				['sockets.UdpCreateSocket', sockets.UdpCreateSocket._],
+				['sockets.Tcp', sockets.Tcp._],
+				['sockets.TcpCreateSocket', sockets.TcpCreateSocket._],
+				['sockets.IpNameLookup', sockets.IpNameLookup._],
+				['random.Random', random.Random._],
+				['random.Insecure', random.Insecure._],
+				['random.InsecureSeed', random.InsecureSeed._]
+			]);
+		}
+		export type Imports = {
+			'wasi:cli/environment@0.2.0': cli.Environment._.WasmInterface;
+			'wasi:cli/exit@0.2.0': cli.Exit._.WasmInterface;
+			'wasi:io/error@0.2.0': io.Error._.WasmInterface;
+			'wasi:io/poll@0.2.0': io.Poll._.WasmInterface;
+			'wasi:io/streams@0.2.0': io.Streams._.WasmInterface;
+			'wasi:cli/stdin@0.2.0': cli.Stdin._.WasmInterface;
+			'wasi:cli/stdout@0.2.0': cli.Stdout._.WasmInterface;
+			'wasi:cli/stderr@0.2.0': cli.Stderr._.WasmInterface;
+			'wasi:cli/terminal-input@0.2.0': cli.TerminalInput._.WasmInterface;
+			'wasi:cli/terminal-output@0.2.0': cli.TerminalOutput._.WasmInterface;
+			'wasi:cli/terminal-stdin@0.2.0': cli.TerminalStdin._.WasmInterface;
+			'wasi:cli/terminal-stdout@0.2.0': cli.TerminalStdout._.WasmInterface;
+			'wasi:cli/terminal-stderr@0.2.0': cli.TerminalStderr._.WasmInterface;
+			'wasi:clocks/monotonic-clock@0.2.0': clocks.MonotonicClock._.WasmInterface;
+			'wasi:clocks/wall-clock@0.2.0': clocks.WallClock._.WasmInterface;
+			'wasi:filesystem/types@0.2.0': filesystem.Types._.WasmInterface;
+			'wasi:filesystem/preopens@0.2.0': filesystem.Preopens._.WasmInterface;
+			'wasi:sockets/network@0.2.0': sockets.Network._.WasmInterface;
+			'wasi:sockets/instance-network@0.2.0': sockets.InstanceNetwork._.WasmInterface;
+			'wasi:sockets/udp@0.2.0': sockets.Udp._.WasmInterface;
+			'wasi:sockets/udp-create-socket@0.2.0': sockets.UdpCreateSocket._.WasmInterface;
+			'wasi:sockets/tcp@0.2.0': sockets.Tcp._.WasmInterface;
+			'wasi:sockets/tcp-create-socket@0.2.0': sockets.TcpCreateSocket._.WasmInterface;
+			'wasi:sockets/ip-name-lookup@0.2.0': sockets.IpNameLookup._.WasmInterface;
+			'wasi:random/random@0.2.0': random.Random._.WasmInterface;
+			'wasi:random/insecure@0.2.0': random.Insecure._.WasmInterface;
+			'wasi:random/insecure-seed@0.2.0': random.InsecureSeed._.WasmInterface;
+		};
+		export namespace Exports {
+			export const functions: Map<string, $wcm.FunctionType> = new Map([
+			]);
+			export const interfaces: Map<string, $wcm.InterfaceType> = new Map<string, $wcm.InterfaceType>([
+				['Run', Run._],
+			]);
+		}
+		export type Exports = {
+			'wasi:cli/run@0.2.0#run': () => i32;
+		};
+
+		export function createImports(service: command.Imports, context: $wcm.WasmContext): Imports {
+			const result: Imports = Object.create(null);
+			result['wasi:cli/environment@0.2.0'] = cli.Environment._.createImports(service.environment, context);
+			result['wasi:cli/exit@0.2.0'] = cli.Exit._.createImports(service.exit, context);
+			result['wasi:io/error@0.2.0'] = io.Error._.createImports(service.error, context);
+			result['wasi:io/poll@0.2.0'] = io.Poll._.createImports(service.poll, context);
+			result['wasi:io/streams@0.2.0'] = io.Streams._.createImports(service.streams, context);
+			result['wasi:cli/stdin@0.2.0'] = cli.Stdin._.createImports(service.stdin, context);
+			result['wasi:cli/stdout@0.2.0'] = cli.Stdout._.createImports(service.stdout, context);
+			result['wasi:cli/stderr@0.2.0'] = cli.Stderr._.createImports(service.stderr, context);
+			result['wasi:cli/terminal-input@0.2.0'] = cli.TerminalInput._.createImports(service.terminalInput, context);
+			result['wasi:cli/terminal-output@0.2.0'] = cli.TerminalOutput._.createImports(service.terminalOutput, context);
+			result['wasi:cli/terminal-stdin@0.2.0'] = cli.TerminalStdin._.createImports(service.terminalStdin, context);
+			result['wasi:cli/terminal-stdout@0.2.0'] = cli.TerminalStdout._.createImports(service.terminalStdout, context);
+			result['wasi:cli/terminal-stderr@0.2.0'] = cli.TerminalStderr._.createImports(service.terminalStderr, context);
+			result['wasi:clocks/monotonic-clock@0.2.0'] = clocks.MonotonicClock._.createImports(service.monotonicClock, context);
+			result['wasi:clocks/wall-clock@0.2.0'] = clocks.WallClock._.createImports(service.wallClock, context);
+			result['wasi:filesystem/types@0.2.0'] = filesystem.Types._.createImports(service.types, context);
+			result['wasi:filesystem/preopens@0.2.0'] = filesystem.Preopens._.createImports(service.preopens, context);
+			result['wasi:sockets/network@0.2.0'] = sockets.Network._.createImports(service.network, context);
+			result['wasi:sockets/instance-network@0.2.0'] = sockets.InstanceNetwork._.createImports(service.instanceNetwork, context);
+			result['wasi:sockets/udp@0.2.0'] = sockets.Udp._.createImports(service.udp, context);
+			result['wasi:sockets/udp-create-socket@0.2.0'] = sockets.UdpCreateSocket._.createImports(service.udpCreateSocket, context);
+			result['wasi:sockets/tcp@0.2.0'] = sockets.Tcp._.createImports(service.tcp, context);
+			result['wasi:sockets/tcp-create-socket@0.2.0'] = sockets.TcpCreateSocket._.createImports(service.tcpCreateSocket, context);
+			result['wasi:sockets/ip-name-lookup@0.2.0'] = sockets.IpNameLookup._.createImports(service.ipNameLookup, context);
+			result['wasi:random/random@0.2.0'] = random.Random._.createImports(service.random, context);
+			result['wasi:random/insecure@0.2.0'] = random.Insecure._.createImports(service.insecure, context);
+			result['wasi:random/insecure-seed@0.2.0'] = random.InsecureSeed._.createImports(service.insecureSeed, context);
+			return result;
+		}
+		export function bindExports(exports: Exports, context: $wcm.WasmContext): command.Exports {
+			const result: command.Exports = Object.create(null);
+			result.run = cli.Run._.bindExports(cli.Run._.filterExports(exports, context), context);
+			return result;
+		}
+	}
 }
 
 export namespace cli._ {
 	export const version = '0.2.0' as const;
-	export const id = 'wasi:cli' as const;
+	export const id = 'wasi:cli@0.2.0' as const;
 	export const witName = 'cli' as const;
 	export const interfaces: Map<string, $wcm.InterfaceType> = new Map<string, $wcm.InterfaceType>([
 		['Environment', Environment._],
@@ -684,17 +726,7 @@ export namespace cli._ {
 		['TerminalStdout', TerminalStdout._],
 		['TerminalStderr', TerminalStderr._]
 	]);
-	export type WasmInterface = {
-		'wasi:cli/environment'?: Environment._.WasmInterface;
-		'wasi:cli/exit'?: Exit._.WasmInterface;
-		'wasi:cli/run'?: Run._.WasmInterface;
-		'wasi:cli/stdin'?: Stdin._.WasmInterface;
-		'wasi:cli/stdout'?: Stdout._.WasmInterface;
-		'wasi:cli/stderr'?: Stderr._.WasmInterface;
-		'wasi:cli/terminal-input'?: TerminalInput._.WasmInterface;
-		'wasi:cli/terminal-output'?: TerminalOutput._.WasmInterface;
-		'wasi:cli/terminal-stdin'?: TerminalStdin._.WasmInterface;
-		'wasi:cli/terminal-stdout'?: TerminalStdout._.WasmInterface;
-		'wasi:cli/terminal-stderr'?: TerminalStderr._.WasmInterface;
-	};
+	export const worlds: Map<string, $wcm.WorldType> = new Map<string, $wcm.WorldType>([
+		['command', command._],
+	]);
 }

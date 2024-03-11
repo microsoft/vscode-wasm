@@ -115,7 +115,7 @@ export namespace random {
 		export const insecureSeed = new $wcm.FunctionType<random.InsecureSeed.insecureSeed>('insecure-seed', [], new $wcm.TupleType<[u64, u64]>([$wcm.u64, $wcm.u64]));
 	}
 	export namespace InsecureSeed._ {
-		export const id = 'wasi:random/insecure-seed' as const;
+		export const id = 'wasi:random/insecure-seed@0.2.0' as const;
 		export const witName = 'insecure-seed' as const;
 		export const types: Map<string, $wcm.GenericComponentModelType> = new Map<string, $wcm.GenericComponentModelType>([
 		]);
@@ -145,7 +145,7 @@ export namespace random {
 		export const getInsecureRandomU64 = new $wcm.FunctionType<random.Insecure.getInsecureRandomU64>('get-insecure-random-u64', [], $wcm.u64);
 	}
 	export namespace Insecure._ {
-		export const id = 'wasi:random/insecure' as const;
+		export const id = 'wasi:random/insecure@0.2.0' as const;
 		export const witName = 'insecure' as const;
 		export const types: Map<string, $wcm.GenericComponentModelType> = new Map<string, $wcm.GenericComponentModelType>([
 		]);
@@ -177,7 +177,7 @@ export namespace random {
 		export const getRandomU64 = new $wcm.FunctionType<random.Random.getRandomU64>('get-random-u64', [], $wcm.u64);
 	}
 	export namespace Random._ {
-		export const id = 'wasi:random/random' as const;
+		export const id = 'wasi:random/random@0.2.0' as const;
 		export const witName = 'random' as const;
 		export const types: Map<string, $wcm.GenericComponentModelType> = new Map<string, $wcm.GenericComponentModelType>([
 		]);
@@ -205,16 +205,11 @@ export namespace random {
 
 export namespace random._ {
 	export const version = '0.2.0' as const;
-	export const id = 'wasi:random' as const;
+	export const id = 'wasi:random@0.2.0' as const;
 	export const witName = 'random' as const;
 	export const interfaces: Map<string, $wcm.InterfaceType> = new Map<string, $wcm.InterfaceType>([
 		['InsecureSeed', InsecureSeed._],
 		['Insecure', Insecure._],
 		['Random', Random._]
 	]);
-	export type WasmInterface = {
-		'wasi:random/insecure-seed'?: InsecureSeed._.WasmInterface;
-		'wasi:random/insecure'?: Insecure._.WasmInterface;
-		'wasi:random/random'?: Random._.WasmInterface;
-	};
 }

@@ -424,7 +424,7 @@ export namespace io {
 		Error.addCallable('$drop', new $wcm.DestructorType<io.Error.Error.Statics['$drop']>('[resource-drop]error', [['inst', Error]]));
 	}
 	export namespace Error._ {
-		export const id = 'wasi:io/error' as const;
+		export const id = 'wasi:io/error@0.2.0' as const;
 		export const witName = 'error' as const;
 		export const types: Map<string, $wcm.GenericComponentModelType> = new Map<string, $wcm.GenericComponentModelType>([
 			['Error', $.Error]
@@ -497,7 +497,7 @@ export namespace io {
 		], new $wcm.Uint32ArrayType());
 	}
 	export namespace Poll._ {
-		export const id = 'wasi:io/poll' as const;
+		export const id = 'wasi:io/poll@0.2.0' as const;
 		export const witName = 'poll' as const;
 		export const types: Map<string, $wcm.GenericComponentModelType> = new Map<string, $wcm.GenericComponentModelType>([
 			['Pollable', $.Pollable]
@@ -631,7 +631,7 @@ export namespace io {
 		OutputStream.addCallable('$drop', new $wcm.DestructorType<io.Streams.OutputStream.Statics['$drop']>('[resource-drop]output-stream', [['inst', OutputStream]]));
 	}
 	export namespace Streams._ {
-		export const id = 'wasi:io/streams' as const;
+		export const id = 'wasi:io/streams@0.2.0' as const;
 		export const witName = 'streams' as const;
 		export const types: Map<string, $wcm.GenericComponentModelType> = new Map<string, $wcm.GenericComponentModelType>([
 			['Error', $.Error],
@@ -797,16 +797,11 @@ export namespace io {
 
 export namespace io._ {
 	export const version = '0.2.0' as const;
-	export const id = 'wasi:io' as const;
+	export const id = 'wasi:io@0.2.0' as const;
 	export const witName = 'io' as const;
 	export const interfaces: Map<string, $wcm.InterfaceType> = new Map<string, $wcm.InterfaceType>([
 		['Error', Error._],
 		['Poll', Poll._],
 		['Streams', Streams._]
 	]);
-	export type WasmInterface = {
-		'wasi:io/error'?: Error._.WasmInterface;
-		'wasi:io/poll'?: Poll._.WasmInterface;
-		'wasi:io/streams'?: Streams._.WasmInterface;
-	};
 }

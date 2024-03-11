@@ -3241,12 +3241,25 @@ export namespace InterfaceType {
 	}
 }
 
+export type WorldType = {
+	readonly id: string;
+	readonly witName: string;
+	readonly Exports: {
+		readonly functions: Map<string, FunctionType<JFunction>>;
+		readonly interfaces: Map<string, InterfaceType>;
+	};
+	readonly Imports: {
+		readonly functions: Map<string, FunctionType<JFunction>>;
+		readonly interfaces: Map<string, InterfaceType>;
+	};
+};
+
 export type PackageType = {
 	readonly id: string;
 	readonly witName: string;
 	readonly interfaces: Map<string, InterfaceType>;
+	readonly worlds?: Map<string, WorldType>;
 };
-
 export namespace PackageType {
 	export function is(value: any): value is PackageType {
 		return typeof value === 'object' && typeof value.id === 'string' && typeof value.witName === 'string'
@@ -3307,22 +3320,24 @@ export type WasmInterfaces = {
 
 export type Imports = ParamWasmInterface;
 export namespace Imports {
-	export function create<T extends Imports>(signatures: Map<string, FunctionType<JFunction>>, resources: Map<string, ResourceType>, service: ParamServiceInterface, context: WasmContext): T {
+	export function create<T extends Imports>(signatures: Map<string, FunctionType<JFunction>>, resources: Map<string, ResourceType> | undefined, service: ParamServiceInterface, context: WasmContext): T {
 		const result: { [key: string]: WasmFunction }  = Object.create(null);
 		for (const [funcName, signature] of signatures) {
 			result[signature.witName] = createFunction(signature, service[funcName] as JFunction, context);
 		}
-		for (const [resourceName, resource] of resources) {
-			const resourceManager = context.managers.get(resource.id);
-			for (const [callableName, callable] of resource.methods) {
-				if (callable instanceof ConstructorType) {
-					result[callable.witName] = createConstructorFunction(callable, (service[resourceName] as GenericClass), resourceManager, context);
-				} else if (callable instanceof StaticMethodType) {
-					result[callable.witName] = createStaticMethodFunction(callable, (service[resourceName] as GenericClass)[callableName], context);
-				} else if (callable instanceof MethodType) {
-					result[callable.witName] = createMethodFunction(callableName, callable, resourceManager, context);
-				} else if (callable instanceof DestructorType) {
-					result[callable.witName] = createDestructorFunction(callable, (service[resourceName] as GenericClass)[callableName], resourceManager);
+		if (resources !== undefined) {
+			for (const [resourceName, resource] of resources) {
+				const resourceManager = context.managers.get(resource.id);
+				for (const [callableName, callable] of resource.methods) {
+					if (callable instanceof ConstructorType) {
+						result[callable.witName] = createConstructorFunction(callable, (service[resourceName] as GenericClass), resourceManager, context);
+					} else if (callable instanceof StaticMethodType) {
+						result[callable.witName] = createStaticMethodFunction(callable, (service[resourceName] as GenericClass)[callableName], context);
+					} else if (callable instanceof MethodType) {
+						result[callable.witName] = createMethodFunction(callableName, callable, resourceManager, context);
+					} else if (callable instanceof DestructorType) {
+						result[callable.witName] = createDestructorFunction(callable, (service[resourceName] as GenericClass)[callableName], resourceManager);
+					}
 				}
 			}
 		}
@@ -3399,7 +3414,7 @@ interface WriteableServiceInterface {
 
 export type Exports = ParamServiceInterface | {};
 export namespace Exports {
-	export function filter<T extends ParamWasmInterface>(exports: { [key: string]: any}, signatures: Map<string, FunctionType>, resources: Map<string, ResourceType>, id: string, version: string, _context: WasmContext): T {
+	export function filter<T extends ParamWasmInterface>(exports: { [key: string]: any}, functions: Map<string, FunctionType>, resources: Map<string, ResourceType> | undefined, id: string, version: string, _context: WasmContext): T {
 		const key = `${id}@${version}`;
 		let result: any = exports[key];
 		// We could actually check if all properties exist in the result.
@@ -3407,31 +3422,36 @@ export namespace Exports {
 			return result;
 		}
 		result = Object.create(null);
-		for (const func of signatures.values()) {
+		for (const func of functions.values()) {
 			const funcKey = `${key}#${func.witName}`;
 			const candidate = exports[funcKey];
 			if (candidate !== null && candidate !== undefined) {
 				result[func.witName] = candidate;
 			}
 		}
-		for (const resource of resources.values()) {
-			for (const callable of resource.methods.values()) {
-				const callableKey = `${key}#${callable.witName}`;
-				const candidate = exports[callableKey];
-				if (candidate !== null && candidate !== undefined) {
-					result[callable.witName] = candidate;
+		if (resources !== undefined) {
+			for (const resource of resources.values()) {
+				for (const callable of resource.methods.values()) {
+					const callableKey = `${key}#${callable.witName}`;
+					const candidate = exports[callableKey];
+					if (candidate !== null && candidate !== undefined) {
+						result[callable.witName] = candidate;
+					}
 				}
 			}
+
 		}
 		return result;
 	}
-	export function bind<T extends Exports>(signatures: Map<string, FunctionType>, resources: [string, ResourceType, ClassFactory<any>][], wasm: ParamWasmInterface, context: WasmContext): T {
+	export function bind<T extends Exports>(functions: Map<string, FunctionType>, resources: ([string, ResourceType, ClassFactory<any>][]) | undefined, wasm: ParamWasmInterface, context: WasmContext): T {
 		const result: WriteableServiceInterface  = Object.create(null);
-		for (const [name, , factory] of resources) {
-			result[name] = factory(wasm, context);
-		}
-		for (const [name, signature] of signatures) {
+		for (const [name, signature] of functions) {
 			result[name] = createServiceFunction(signature, wasm, context);
+		}
+		if (resources !== undefined) {
+			for (const [name, , factory] of resources) {
+				result[name] = factory(wasm, context);
+			}
 		}
 		return result as unknown as T;
 	}

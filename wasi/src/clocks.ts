@@ -140,7 +140,7 @@ export namespace clocks {
 		], new $wcm.OwnType<clocks.MonotonicClock.Pollable>(Pollable));
 	}
 	export namespace MonotonicClock._ {
-		export const id = 'wasi:clocks/monotonic-clock' as const;
+		export const id = 'wasi:clocks/monotonic-clock@0.2.0' as const;
 		export const witName = 'monotonic-clock' as const;
 		export const types: Map<string, $wcm.GenericComponentModelType> = new Map<string, $wcm.GenericComponentModelType>([
 			['Pollable', $.Pollable],
@@ -181,7 +181,7 @@ export namespace clocks {
 		export const resolution = new $wcm.FunctionType<clocks.WallClock.resolution>('resolution', [], Datetime);
 	}
 	export namespace WallClock._ {
-		export const id = 'wasi:clocks/wall-clock' as const;
+		export const id = 'wasi:clocks/wall-clock@0.2.0' as const;
 		export const witName = 'wall-clock' as const;
 		export const types: Map<string, $wcm.GenericComponentModelType> = new Map<string, $wcm.GenericComponentModelType>([
 			['Datetime', $.Datetime]
@@ -210,14 +210,10 @@ export namespace clocks {
 
 export namespace clocks._ {
 	export const version = '0.2.0' as const;
-	export const id = 'wasi:clocks' as const;
+	export const id = 'wasi:clocks@0.2.0' as const;
 	export const witName = 'clocks' as const;
 	export const interfaces: Map<string, $wcm.InterfaceType> = new Map<string, $wcm.InterfaceType>([
 		['MonotonicClock', MonotonicClock._],
 		['WallClock', WallClock._]
 	]);
-	export type WasmInterface = {
-		'wasi:clocks/monotonic-clock'?: MonotonicClock._.WasmInterface;
-		'wasi:clocks/wall-clock'?: WallClock._.WasmInterface;
-	};
 }

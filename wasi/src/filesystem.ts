@@ -1121,7 +1121,7 @@ export namespace filesystem {
 		], new $wcm.OptionType<filesystem.Types.ErrorCode>(ErrorCode));
 	}
 	export namespace Types._ {
-		export const id = 'wasi:filesystem/types' as const;
+		export const id = 'wasi:filesystem/types@0.2.0' as const;
 		export const witName = 'types' as const;
 		export const types: Map<string, $wcm.GenericComponentModelType> = new Map<string, $wcm.GenericComponentModelType>([
 			['InputStream', $.InputStream],
@@ -1369,7 +1369,7 @@ export namespace filesystem {
 		export const getDirectories = new $wcm.FunctionType<filesystem.Preopens.getDirectories>('get-directories', [], new $wcm.ListType<[own<filesystem.Preopens.Descriptor>, string]>(new $wcm.TupleType<[own<filesystem.Preopens.Descriptor>, string]>([new $wcm.OwnType<filesystem.Preopens.Descriptor>(Descriptor), $wcm.wstring])));
 	}
 	export namespace Preopens._ {
-		export const id = 'wasi:filesystem/preopens' as const;
+		export const id = 'wasi:filesystem/preopens@0.2.0' as const;
 		export const witName = 'preopens' as const;
 		export const types: Map<string, $wcm.GenericComponentModelType> = new Map<string, $wcm.GenericComponentModelType>([
 			['Descriptor', $.Descriptor]
@@ -1396,14 +1396,10 @@ export namespace filesystem {
 
 export namespace filesystem._ {
 	export const version = '0.2.0' as const;
-	export const id = 'wasi:filesystem' as const;
+	export const id = 'wasi:filesystem@0.2.0' as const;
 	export const witName = 'filesystem' as const;
 	export const interfaces: Map<string, $wcm.InterfaceType> = new Map<string, $wcm.InterfaceType>([
 		['Types', Types._],
 		['Preopens', Preopens._]
 	]);
-	export type WasmInterface = {
-		'wasi:filesystem/types'?: Types._.WasmInterface;
-		'wasi:filesystem/preopens'?: Preopens._.WasmInterface;
-	};
 }
