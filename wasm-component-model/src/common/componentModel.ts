@@ -572,7 +572,7 @@ export class MemoryRange extends BaseMemoryRange {
 /**
  * A memory of size 0. Doesn't allow any kind of operation on it.
  */
-export class NullMemory implements Memory {
+class NullMemory implements Memory {
 	readonly id: string = 'b60336d2-c856-4767-af3b-f66e1ab6c507';
 	readonly buffer: ArrayBuffer = new ArrayBuffer(0);
 	alloc(): MemoryRange {
@@ -590,6 +590,46 @@ export class NullMemory implements Memory {
 	free(): void {
 		throw new MemoryError('Cannot free memory on a null memory.');
 	}
+}
+// cabi_realloc(void *ptr, size_t orig_size, size_t org_align, size_t new_size)
+class DefaultMemory implements Memory {
+
+	public readonly id: string;
+	private readonly memory: { buffer: ArrayBuffer };
+	private readonly cabi_realloc: (orig: ptr, orig_size: size, orig_align: size, new_size: size) => ptr;
+
+	constructor(id: string, exports: { memory: { buffer: ArrayBuffer }, cabi_realloc: (orig: ptr, orig_size: size, orig_align: size, new_size: size) => ptr }) {
+		this.id = id;
+		this.memory = exports.memory;
+		this.cabi_realloc = exports.cabi_realloc;
+	}
+
+	public get buffer(): ArrayBuffer {
+		return this.memory.buffer;
+	}
+
+	alloc(align: Alignment, size: number): MemoryRange {
+		const ptr = this.cabi_realloc(0, 0, align, size);
+		return new MemoryRange(this, ptr, size);
+	}
+
+	realloc(location: MemoryRange, align: Alignment, newSize: size): MemoryRange {
+
+	}
+	preAllocated(ptr: ptr, size: size): MemoryRange {
+
+	}
+	readonly(ptr: ptr, size: size): ReadonlyMemoryRange {
+
+	}
+
+}
+
+
+export namespace Memory {
+	export const Null = new NullMemory();
+	export function
+
 }
 
 export type encodings = 'utf-8' | 'utf-16' | 'latin1+utf-16';
