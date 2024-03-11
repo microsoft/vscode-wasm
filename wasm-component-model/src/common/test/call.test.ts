@@ -123,8 +123,8 @@ const context: WasmContext = {
 };
 
 suite('point', () => {
-	const host: Types._.WasmInterface = Types._.createHost(serviceImpl, context);
-	const service: Types = Types._.createService(host, context);
+	const host: Types._.WasmInterface = Types._.createImports(serviceImpl, context);
+	const service: Types = Types._.bindExports(host, context);
 	test('host:call', () => {
 		assert.strictEqual(host.call(1, 2), 3);
 	});
@@ -136,8 +136,8 @@ suite('point', () => {
 suite ('point-resource', () => {
 	const moduleImplementation = Object.assign({}, serviceImpl);
 	moduleImplementation.PointResource = PointResourceClass;
-	const host: Types._.WasmInterface = Types._.createHost(serviceImpl, context);
-	const service = Types._.createService(host, context);
+	const host: Types._.WasmInterface = Types._.createImports(serviceImpl, context);
+	const service = Types._.bindExports(host, context);
 	test('host:call', () => {
 		const pointResourceManager = context.managers.get('vscode:test-data/types/point-resource');
 		const point = host['[constructor]point-resource'](1, 2);
@@ -164,7 +164,7 @@ suite ('point-resource', () => {
 
 suite('option', () => {
 	test('host:call', () => {
-		const host: Types._.WasmInterface = Types._.createHost(serviceImpl, context);
+		const host: Types._.WasmInterface = Types._.createImports(serviceImpl, context);
 		const memory = context.getMemory();
 		const range = memory.alloc(4, 8);
 		host['call-option'](1, 1, 2, range.ptr);
@@ -174,8 +174,8 @@ suite('option', () => {
 });
 
 suite('variant', () => {
-	const host: Types._.WasmInterface = Types._.createHost(serviceImpl, context);
-	const service: Types = Types._.createService(host, context);
+	const host: Types._.WasmInterface = Types._.createImports(serviceImpl, context);
+	const service: Types = Types._.bindExports(host, context);
 
 	test('empty', () => {
 		const empty = service.checkVariant(TestVariant.Empty());
@@ -233,8 +233,8 @@ suite('variant', () => {
 });
 
 suite('flags', () => {
-	const host: Types._.WasmInterface = Types._.createHost(serviceImpl, context);
-	const service: Types = Types._.createService(host, context);
+	const host: Types._.WasmInterface = Types._.createImports(serviceImpl, context);
+	const service: Types = Types._.bindExports(host, context);
 	test('short', () => {
 		const flags: TestFlagsShort = TestFlagsShort.one;
 		const returned = service.checkFlagsShort(flags);

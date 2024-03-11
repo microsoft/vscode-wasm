@@ -2,8 +2,8 @@
  *  Copyright (c) Microsoft Corporation. All rights reserved.
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
-import * as $wcm from '../componentModel';
-import type { u32, u64, s32, s64, float32, float64, own, i32, ptr, i64 } from '../componentModel';
+import * as $wcm from '@vscode/wasm-component-model';
+import type { u32, u64, s32, s64, float32, float64, own, i32, ptr, i64 } from '@vscode/wasm-component-model';
 
 export namespace testData {
 	export namespace Types {
@@ -206,11 +206,14 @@ export namespace testData {
 		checkFlagsShort: Types.checkFlagsShort;
 		checkFlagsLong: Types.checkFlagsLong;
 	};
-
+	export namespace test {
+		export type Imports = {
+			types: testData.Types;
+		};
+		export type Exports = {
+		};
+	}
 }
-export type testData = {
-	Types?: testData.Types;
-};
 
 export namespace testData {
 	export namespace Types.$ {
@@ -333,11 +336,37 @@ export namespace testData {
 			'check-flags-short': (value: i32) => i32;
 			'check-flags-long': (value_0: i32, value_1: i32, result: ptr<TestFlagsLong>) => void;
 		} & PointResource.WasmInterface;
-		export function createHost(service: testData.Types, context: $wcm.WasmContext): WasmInterface {
+		export function createImports(service: testData.Types, context: $wcm.WasmContext): WasmInterface {
 			return $wcm.Imports.create<WasmInterface>(functions, resources, service, context);
 		}
-		export function createService(wasmInterface: WasmInterface, context: $wcm.WasmContext): testData.Types {
+		export function filterExports(exports: object, context: $wcm.WasmContext): WasmInterface {
+			return $wcm.Exports.filter<WasmInterface>(exports, functions, resources, id, undefined, context);
+		}
+		export function bindExports(wasmInterface: WasmInterface, context: $wcm.WasmContext): testData.Types {
 			return $wcm.Exports.bind<testData.Types>(functions, [['PointResource', $.PointResource, PointResource.Class]], wasmInterface, context);
+		}
+	}
+	export namespace test.$ {
+	}
+	export namespace test._ {
+		export const id = 'vscode:test-data/test' as const;
+		export const witName = 'test' as const;
+		export namespace Imports {
+			export const interfaces: Map<string, $wcm.InterfaceType> = new Map<string, $wcm.InterfaceType>([
+				['Types', Types._]
+			]);
+		}
+		export type Imports = {
+			'vscode:test-data/types': testData.Types._.WasmInterface;
+		};
+		export namespace Exports {
+		}
+		export type Exports = {
+		};
+		export function createImports(service: test.Imports, context: $wcm.WasmContext): Imports {
+			const result: Imports = Object.create(null);
+			result['vscode:test-data/types'] = testData.Types._.createImports(service.types, context);
+			return result;
 		}
 	}
 }
@@ -348,21 +377,7 @@ export namespace testData._ {
 	export const interfaces: Map<string, $wcm.InterfaceType> = new Map<string, $wcm.InterfaceType>([
 		['Types', Types._]
 	]);
-	export type WasmInterface = {
-		'vscode:test-data/types'?: Types._.WasmInterface;
-	};
-	export function createHost(service: testData, context: $wcm.WasmContext): WasmInterface {
-		const result: WasmInterface = Object.create(null);
-		if (service.Types !== undefined) {
-			result['vscode:test-data/types'] = Types._.createHost(service.Types, context);
-		}
-		return result;
-	}
-	export function createService(wasmInterface: WasmInterface, context: $wcm.WasmContext): testData {
-		const result: testData = Object.create(null);
-		if (wasmInterface['vscode:test-data/types'] !== undefined) {
-			result.Types = Types._.createService(wasmInterface['vscode:test-data/types'], context);
-		}
-		return result;
-	}
+	export const worlds: Map<string, $wcm.WorldType> = new Map<string, $wcm.WorldType>([
+		['test', test._]
+	]);
 }

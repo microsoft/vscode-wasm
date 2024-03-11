@@ -3245,12 +3245,12 @@ export type WorldType = {
 	readonly id: string;
 	readonly witName: string;
 	readonly Exports: {
-		readonly functions: Map<string, FunctionType<JFunction>>;
-		readonly interfaces: Map<string, InterfaceType>;
+		readonly functions?: Map<string, FunctionType<JFunction>>;
+		readonly interfaces?: Map<string, InterfaceType>;
 	};
 	readonly Imports: {
-		readonly functions: Map<string, FunctionType<JFunction>>;
-		readonly interfaces: Map<string, InterfaceType>;
+		readonly functions?: Map<string, FunctionType<JFunction>>;
+		readonly interfaces?: Map<string, InterfaceType>;
 	};
 };
 
@@ -3414,8 +3414,8 @@ interface WriteableServiceInterface {
 
 export type Exports = ParamServiceInterface | {};
 export namespace Exports {
-	export function filter<T extends ParamWasmInterface>(exports: { [key: string]: any}, functions: Map<string, FunctionType>, resources: Map<string, ResourceType> | undefined, id: string, version: string, _context: WasmContext): T {
-		const key = `${id}@${version}`;
+	export function filter<T extends ParamWasmInterface>(exports: { [key: string]: any}, functions: Map<string, FunctionType>, resources: Map<string, ResourceType> | undefined, id: string, version: string | undefined, _context: WasmContext): T {
+		const key = version !== undefined ? `${id}@${version}` : id;
 		let result: any = exports[key];
 		// We could actually check if all properties exist in the result.
 		if (result !== null && typeof result === 'object') {
