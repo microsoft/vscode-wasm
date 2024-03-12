@@ -598,8 +598,6 @@ export namespace cli {
 		export const id = 'wasi:cli/command@0.2.0' as const;
 		export const witName = 'command' as const;
 		export namespace Imports {
-			export const functions: Map<string, $wcm.FunctionType> = new Map([
-			]);
 			export const interfaces: Map<string, $wcm.InterfaceType> = new Map<string, $wcm.InterfaceType>([
 				['Environment', Environment._],
 				['Exit', Exit._],
@@ -660,16 +658,13 @@ export namespace cli {
 			'wasi:random/insecure-seed@0.2.0': random.InsecureSeed._.WasmInterface;
 		};
 		export namespace Exports {
-			export const functions: Map<string, $wcm.FunctionType> = new Map([
-			]);
 			export const interfaces: Map<string, $wcm.InterfaceType> = new Map<string, $wcm.InterfaceType>([
-				['Run', Run._],
+				['Run', Run._]
 			]);
 		}
 		export type Exports = {
 			'wasi:cli/run@0.2.0#run': () => i32;
 		};
-
 		export function createImports(service: command.Imports, context: $wcm.WasmContext): Imports {
 			const result: Imports = Object.create(null);
 			result['wasi:cli/environment@0.2.0'] = cli.Environment._.createImports(service.environment, context);

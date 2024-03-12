@@ -2237,8 +2237,6 @@ export namespace http {
 		export const id = 'wasi:http/proxy@0.2.0' as const;
 		export const witName = 'proxy' as const;
 		export namespace Imports {
-			export const functions: Map<string, $wcm.FunctionType> = new Map([
-			]);
 			export const interfaces: Map<string, $wcm.InterfaceType> = new Map<string, $wcm.InterfaceType>([
 				['random.Random', random.Random._],
 				['io.Error', io.Error._],
@@ -2267,16 +2265,13 @@ export namespace http {
 			'wasi:clocks/wall-clock@0.2.0': clocks.WallClock._.WasmInterface;
 		};
 		export namespace Exports {
-			export const functions: Map<string, $wcm.FunctionType> = new Map([
-			]);
 			export const interfaces: Map<string, $wcm.InterfaceType> = new Map<string, $wcm.InterfaceType>([
-				['IncomingHandler', IncomingHandler._],
+				['IncomingHandler', IncomingHandler._]
 			]);
 		}
 		export type Exports = {
 			'wasi:http/incoming-handler@0.2.0#handle': (request: i32, responseOut: i32) => void;
 		};
-
 		export function createImports(service: proxy.Imports, context: $wcm.WasmContext): Imports {
 			const result: Imports = Object.create(null);
 			result['wasi:random/random@0.2.0'] = random.Random._.createImports(service.random, context);
