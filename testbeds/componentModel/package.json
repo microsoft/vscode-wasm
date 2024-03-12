@@ -28,6 +28,8 @@
 		"watch:ts": "node ../../node_modules/typescript/lib/tsc.js -b tsconfig.json -w",
 		"build:rust": "cargo build --target wasm32-unknown-unknown",
 		"generate:json": "wasm-tools component wit --json ./wit/ > ./wit/calculator.wit.json",
-		"generate:model": "node ../../wasm-component-model/lib/tools/main.js --noMain --outDir ./src/ ./wit/calculator.wit.json"
+		"generate:model": "node ../../wasm-component-model/lib/tools/main.js --noMain --outDir ./src/ ./wit/calculator.wit.json",
+		"generate:wat": "wasm-tools print ./target/wasm32-unknown-unknown/debug/calculator.wasm > ./target/wasm32-unknown-unknown/debug/calculator.wat",
+		"run": "npm run build:rust && npm run compile:ts && node ./out/main.js"
 	}
 }

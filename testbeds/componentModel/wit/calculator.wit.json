@@ -2,7 +2,57 @@
   "worlds": [
     {
       "name": "calculator",
-      "imports": {},
+      "imports": {
+        "iface": {
+          "interface": 1
+        },
+        "interface-0": {
+          "interface": 0
+        },
+        "op-code": {
+          "type": 2
+        },
+        "operation": {
+          "type": 3
+        },
+        "bits": {
+          "type": 4
+        },
+        "handle": {
+          "type": 5
+        },
+        "[method]handle.foo": {
+          "function": {
+            "name": "[method]handle.foo",
+            "kind": {
+              "method": 5
+            },
+            "params": [
+              {
+                "name": "self",
+                "type": 6
+              }
+            ],
+            "results": [
+              {
+                "type": "u32"
+              }
+            ]
+          }
+        },
+        "bar": {
+          "function": {
+            "name": "bar",
+            "kind": "freestanding",
+            "params": [],
+            "results": [
+              {
+                "type": "u32"
+              }
+            ]
+          }
+        }
+      },
       "exports": {
         "add": {
           "function": {
@@ -24,20 +74,161 @@
               }
             ]
           }
+        },
+        "calc": {
+          "function": {
+            "name": "calc",
+            "kind": "freestanding",
+            "params": [
+              {
+                "name": "o",
+                "type": 3
+              }
+            ],
+            "results": [
+              {
+                "type": "u32"
+              }
+            ]
+          }
         }
       },
       "package": 0
     }
   ],
-  "interfaces": [],
-  "types": [],
+  "interfaces": [
+    {
+      "name": "types",
+      "types": {
+        "op-code": 0,
+        "operation": 1
+      },
+      "functions": {},
+      "package": 0
+    },
+    {
+      "name": null,
+      "types": {},
+      "functions": {
+        "foo": {
+          "name": "foo",
+          "kind": "freestanding",
+          "params": [],
+          "results": [
+            {
+              "type": "u32"
+            }
+          ]
+        }
+      },
+      "package": 0
+    }
+  ],
+  "types": [
+    {
+      "name": "op-code",
+      "kind": {
+        "enum": {
+          "cases": [
+            {
+              "name": "add"
+            },
+            {
+              "name": "sub"
+            },
+            {
+              "name": "mul"
+            },
+            {
+              "name": "div"
+            }
+          ]
+        }
+      },
+      "owner": {
+        "interface": 0
+      }
+    },
+    {
+      "name": "operation",
+      "kind": {
+        "record": {
+          "fields": [
+            {
+              "name": "code",
+              "type": 0
+            },
+            {
+              "name": "a",
+              "type": "u32"
+            },
+            {
+              "name": "b",
+              "type": "u32"
+            }
+          ]
+        }
+      },
+      "owner": {
+        "interface": 0
+      }
+    },
+    {
+      "name": "op-code",
+      "kind": {
+        "type": 0
+      },
+      "owner": {
+        "world": 0
+      }
+    },
+    {
+      "name": "operation",
+      "kind": {
+        "type": 1
+      },
+      "owner": {
+        "world": 0
+      }
+    },
+    {
+      "name": "bits",
+      "kind": {
+        "enum": {
+          "cases": [
+            {
+              "name": "one"
+            }
+          ]
+        }
+      },
+      "owner": {
+        "world": 0
+      }
+    },
+    {
+      "name": "handle",
+      "kind": "resource",
+      "owner": {
+        "world": 0
+      }
+    },
+    {
+      "name": null,
+      "kind": {
+        "handle": {
+          "borrow": 5
+        }
+      },
+      "owner": null
+    }
+  ],
   "packages": [
     {
       "name": "vscode:example",
-      "docs": {
-        "contents": "wit/host.wit"
+      "interfaces": {
+        "types": 0
       },
-      "interfaces": {},
       "worlds": {
         "calculator": 0
       }

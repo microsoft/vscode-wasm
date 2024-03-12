@@ -24,8 +24,12 @@ async function main(): Promise<void> {
 	}
 	const instance = await WebAssembly.instantiate(module, {});
 	memory = Memory.createDefault(Date.now().toString(), instance.exports);
-	const api = calculator._.bindExports(instance.exports as calculator.Exports, context);
+	const api = calculator._.bindExports(instance.exports as calculator._.Exports, context);
 	console.log(api.add(1, 2));
+	console.log(`Add ${api.calc({ code: example.Types.OpCode.add, a: 1, b: 2 })}`);
+	console.log(`Sub ${api.calc({ code: example.Types.OpCode.sub, a: 10, b: 8 })}`);
+	console.log(`Mul ${api.calc({ code: example.Types.OpCode.mul, a: 3, b: 7 })}`);
+	console.log(`Div ${api.calc({ code: example.Types.OpCode.div, a: 10, b: 2 })}`);
 }
 
 main().catch(console.error);

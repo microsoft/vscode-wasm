@@ -1878,19 +1878,36 @@ class PackageEmitter extends Emitter {
 class WorldEmitter extends Emitter {
 	public readonly world: World;
 	private readonly pkg: Package;
-	private importFuncEmitters: CallableEmitter<Func>[];
-	private importInterfaceEmitters: InterfaceEmitter[];
-	private exportFuncEmitters: CallableEmitter<Func>[];
-	private exportInterfaceEmitters: InterfaceEmitter[];
+
+	private readonly imports: {
+		funcEmitters: CallableEmitter<Func>[];
+		interfaceEmitters: InterfaceEmitter[];
+		typeEmitters: TypeEmitter[];
+		resourceEmitters: ResourceEmitter[];
+	};
+	private readonly exports: {
+		funcEmitters: CallableEmitter<Func>[];
+		interfaceEmitters: InterfaceEmitter[];
+		typeEmitters: TypeEmitter[];
+		resourceEmitters: ResourceEmitter[];
+	};
 
 	constructor(world: World, pkg: Package, context: EmitterContext) {
 		super(context);
 		this.world = world;
 		this.pkg = pkg;
-		this.importFuncEmitters = [];
-		this.importInterfaceEmitters = [];
-		this.exportFuncEmitters = [];
-		this.exportInterfaceEmitters = [];
+		this.imports = {
+			funcEmitters: [],
+			interfaceEmitters: [],
+			typeEmitters: [],
+			resourceEmitters: []
+		};
+		this.exports = {
+			funcEmitters: [],
+			interfaceEmitters: [],
+			typeEmitters: [],
+			resourceEmitters: []
+		};
 	}
 
 	public build(): void {
@@ -1898,14 +1915,14 @@ class WorldEmitter extends Emitter {
 		const imports = Object.values(this.world.imports);
 		for (const item of imports) {
 			if (ObjectKind.isFuncObject(item)) {
-				this.importFuncEmitters.push(new ImportEmitter(item.function, this.world, this.context));
+				this.imports.funcEmitters.push(new ImportEmitter(item.function, this.world, this.context));
 			}
 		}
 		const ExportEmitter = CallableEmitter(WorldExportFunctionEmitter);
 		const exports = Object.values(this.world.exports);
 		for (const item of exports) {
 			if (ObjectKind.isFuncObject(item)) {
-				this.exportFuncEmitters.push(new ExportEmitter(item.function, this.world, this.context));
+				this.exports.funcEmitters.push(new ExportEmitter(item.function, this.world, this.context));
 			}
 		}
 	}
@@ -1914,13 +1931,17 @@ class WorldEmitter extends Emitter {
 		const imports = Object.values(this.world.imports);
 		for (const item of imports) {
 			if (ObjectKind.isInterfaceObject(item)) {
-				this.importInterfaceEmitters.push(this.getInterfaceEmitter(item));
+				this.imports.interfaceEmitters.push(this.getInterfaceEmitter(item));
+			} else if (ObjectKind.isTypeObject(item)) {
+				this.imports.typeEmitters.push(this.getTypeEmitter(item));
+			} else if (ObjectKind.isResourceObject(item)) {
+				this.imports.resourceEmitters.push(this.getResourceEmitter(item));
 			}
 		}
 		const exports = Object.values(this.world.exports);
 		for (const item of exports) {
 			if (ObjectKind.isInterfaceObject(item)) {
-				this.exportInterfaceEmitters.push(this.getInterfaceEmitter(item));
+				this.exports.interfaceEmitters.push(this.getInterfaceEmitter(item));
 			}
 		}
 	}
@@ -1939,11 +1960,14 @@ class WorldEmitter extends Emitter {
 	private getInterfaceEmitter(item: InterfaceObject): InterfaceEmitter {
 		const { symbols } = this.context;
 		const iface = symbols.getInterface(item.interface);
-		const emitter = this.context.ifaceEmitters.get(iface);
-		if (emitter === undefined) {
-			throw new Error(`No emitter found for interface ${item.interface}`);
+		const result = this.context.ifaceEmitters.get(iface);
+		if (result !== undefined) {
+			return result;
 		}
-		return emitter;
+		if (iface.name.match(/interface-\d+/)) {
+			throw new Error(`Invalid interface name: ${iface.name}`);
+		}
+		return new InterfaceEmitter(iface, this.pkg, this.context);
 	}
 
 	public emitNamespace(code: Code): void {
@@ -2089,7 +2113,7 @@ class WorldEmitter extends Emitter {
 				code.increaseIndent();
 				for (const [index, emitter] of this.exportFuncEmitters.entries()) {
 					const name = nameProvider.func.name(emitter.callable);
-					code.push(`['${name}', $.Exports.${name}]${index < this.importFuncEmitters.length - 1 ? ',' : ''}`);
+					code.push(`['${name}', $.Exports.${name}]${index < this.exportFuncEmitters.length - 1 ? ',' : ''}`);
 				}
 				code.decreaseIndent();
 				code.push(']);');
@@ -2100,10 +2124,10 @@ class WorldEmitter extends Emitter {
 				for (const [index, emitter] of this.exportInterfaceEmitters.entries()) {
 					const name = nameProvider.iface.name(emitter.iface);
 					if (this.pkg === emitter.pkg) {
-						code.push(`['${name}', ${name}._]${index < this.importInterfaceEmitters.length - 1 ? ',' : ''}`);
+						code.push(`['${name}', ${name}._]${index < this.exportInterfaceEmitters.length - 1 ? ',' : ''}`);
 					} else {
 						const pkgName = nameProvider.pack.name(emitter.pkg);
-						code.push(`['${pkgName}.${name}', ${pkgName}.${name}._]${index < this.importInterfaceEmitters.length - 1 ? ',' : ''}`);
+						code.push(`['${pkgName}.${name}', ${pkgName}.${name}._]${index < this.exportInterfaceEmitters.length - 1 ? ',' : ''}`);
 					}
 				}
 				code.decreaseIndent();
@@ -3585,16 +3609,22 @@ function CallableEmitter<C extends Callable, P extends Interface | ResourceType 
 		}
 
 		public emitMetaModel(code: Code): void {
-			const [metaDataParams, metaReturnType] = this.getMetaModelParamsAndReturnType();
-			this.doEmitMetaModel(code, metaDataParams, metaReturnType);
+			const [params, returnType] = this.getMetaModelParamsAndReturnType();
+			this.doEmitMetaModel(code, params, returnType);
 		}
 
 		private getMetaModelParamsAndReturnType(): [string[][], string | undefined] {
-			const { nameProvider } = this.context;
+			const { nameProvider, symbols } = this.context;
 			const metaDataParams: string[][] = [];
 			for (const param of this.callable.params) {
 				const paramName = this.context.nameProvider.parameter.name(param);
-				metaDataParams.push([paramName, this.context.printers.metaModel.printTypeReference(param.type, TypeUsage.parameter)]);
+				const typeName = this.context.printers.metaModel.printTypeReference(param.type, TypeUsage.parameter);
+				if (TypeReference.isNumber(param.type)) {
+					const type = symbols.getType(param.type);
+					// eslint-disable-next-line no-console
+					console.log(type.owner);
+				}
+				metaDataParams.push([paramName, typeName]);
 			}
 			let metaReturnType: string | undefined = undefined;
 			if (Callable.isConstructor(this.callable)) {
