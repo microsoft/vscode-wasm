@@ -35,7 +35,6 @@ export namespace filesystem {
 	 * [WASI filesystem path resolution]: https://github.com/WebAssembly/wasi-filesystem/blob/main/path-resolution.md
 	 */
 	export namespace Types {
-
 		export type InputStream = io.Streams.InputStream;
 
 		export type OutputStream = io.Streams.OutputStream;
@@ -96,7 +95,7 @@ export namespace filesystem {
 			/**
 			 * The descriptor refers to a socket.
 			 */
-			socket = 'socket',
+			socket = 'socket'
 		}
 
 
@@ -535,7 +534,7 @@ export namespace filesystem {
 			/**
 			 * Cross-device link, similar to `EXDEV` in POSIX.
 			 */
-			crossDevice = 'crossDevice',
+			crossDevice = 'crossDevice'
 		}
 
 
@@ -578,7 +577,7 @@ export namespace filesystem {
 			 * The application expects to access the specified data once and then
 			 * not reuse it thereafter.
 			 */
-			noReuse = 'noReuse',
+			noReuse = 'noReuse'
 		}
 
 		/**
@@ -944,7 +943,6 @@ export namespace filesystem {
 	};
 
 	export namespace Preopens {
-
 		export type Descriptor = filesystem.Types.Descriptor;
 
 		/**
@@ -1377,16 +1375,14 @@ export namespace filesystem {
 		export const functions: Map<string, $wcm.FunctionType> = new Map([
 			['getDirectories', $.getDirectories]
 		]);
-		export const resources: Map<string, $wcm.ResourceType> = new Map<string, $wcm.ResourceType>([
-		]);
 		export type WasmInterface = {
 			'get-directories': (result: ptr<[own<Descriptor>, string][]>) => void;
 		};
 		export function createImports(service: filesystem.Preopens, context: $wcm.WasmContext): WasmInterface {
-			return $wcm.Imports.create<WasmInterface>(functions, resources, service, context);
+			return $wcm.Imports.create<WasmInterface>(functions, undefined, service, context);
 		}
 		export function filterExports(exports: object, context: $wcm.WasmContext): WasmInterface {
-			return $wcm.Exports.filter<WasmInterface>(exports, functions, resources, id, filesystem._.version, context);
+			return $wcm.Exports.filter<WasmInterface>(exports, functions, undefined, id, filesystem._.version, context);
 		}
 		export function bindExports(wasmInterface: WasmInterface, context: $wcm.WasmContext): filesystem.Preopens {
 			return $wcm.Exports.bind<filesystem.Preopens>(functions, [], wasmInterface, context);

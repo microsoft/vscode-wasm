@@ -3302,9 +3302,9 @@ export namespace ComponentModelTypeVisitor {
 export type InterfaceType = {
 	readonly id: string;
 	readonly witName: string;
-	readonly types: Map<string, GenericComponentModelType>;
-	readonly functions: Map<string, FunctionType<JFunction>>;
-	readonly resources: Map<string, ResourceType>;
+	readonly types?: Map<string, GenericComponentModelType>;
+	readonly functions?: Map<string, FunctionType<JFunction>>;
+	readonly resources?: Map<string, ResourceType>;
 };
 export namespace InterfaceType {
 	export function is(value: any): value is InterfaceType {
@@ -3329,7 +3329,7 @@ export type WorldType = {
 export type PackageType = {
 	readonly id: string;
 	readonly witName: string;
-	readonly interfaces: Map<string, InterfaceType>;
+	readonly interfaces?: Map<string, InterfaceType>;
 	readonly worlds?: Map<string, WorldType>;
 };
 export namespace PackageType {
@@ -3392,10 +3392,12 @@ export type WasmInterfaces = {
 
 export type Imports = ParamWasmInterface;
 export namespace Imports {
-	export function create<T extends Imports>(signatures: Map<string, FunctionType<JFunction>>, resources: Map<string, ResourceType> | undefined, service: ParamServiceInterface, context: WasmContext): T {
+	export function create<T extends Imports>(functions: Map<string, FunctionType<JFunction>> | undefined, resources: Map<string, ResourceType> | undefined, service: ParamServiceInterface, context: WasmContext): T {
 		const result: { [key: string]: WasmFunction }  = Object.create(null);
-		for (const [funcName, signature] of signatures) {
-			result[signature.witName] = createFunction(signature, service[funcName] as JFunction, context);
+		if (functions !== undefined) {
+			for (const [funcName, func] of functions) {
+				result[func.witName] = createFunction(func, service[funcName] as JFunction, context);
+			}
 		}
 		if (resources !== undefined) {
 			for (const [resourceName, resource] of resources) {
@@ -3486,7 +3488,7 @@ interface WriteableServiceInterface {
 
 export type Exports = ParamServiceInterface | {};
 export namespace Exports {
-	export function filter<T extends ParamWasmInterface>(exports: { [key: string]: any}, functions: Map<string, FunctionType>, resources: Map<string, ResourceType> | undefined, id: string, version: string | undefined, _context: WasmContext): T {
+	export function filter<T extends ParamWasmInterface>(exports: { [key: string]: any}, functions: Map<string, FunctionType> | undefined, resources: Map<string, ResourceType> | undefined, id: string, version: string | undefined, _context: WasmContext): T {
 		const key = version !== undefined ? `${id}@${version}` : id;
 		let result: any = exports[key];
 		// We could actually check if all properties exist in the result.
@@ -3494,11 +3496,13 @@ export namespace Exports {
 			return result;
 		}
 		result = Object.create(null);
-		for (const func of functions.values()) {
-			const funcKey = `${key}#${func.witName}`;
-			const candidate = exports[funcKey];
-			if (candidate !== null && candidate !== undefined) {
-				result[func.witName] = candidate;
+		if (functions !== undefined) {
+			for (const func of functions.values()) {
+				const funcKey = `${key}#${func.witName}`;
+				const candidate = exports[funcKey];
+				if (candidate !== null && candidate !== undefined) {
+					result[func.witName] = candidate;
+				}
 			}
 		}
 		if (resources !== undefined) {
@@ -3515,10 +3519,12 @@ export namespace Exports {
 		}
 		return result;
 	}
-	export function bind<T extends Exports>(functions: Map<string, FunctionType>, resources: ([string, ResourceType, ClassFactory<any>][]) | undefined, wasm: ParamWasmInterface, context: WasmContext): T {
+	export function bind<T extends Exports>(functions: Map<string, FunctionType> | undefined, resources: ([string, ResourceType, ClassFactory<any>][]) | undefined, wasm: ParamWasmInterface, context: WasmContext): T {
 		const result: WriteableServiceInterface  = Object.create(null);
-		for (const [name, signature] of functions) {
-			result[name] = createServiceFunction(signature, wasm, context);
+		if (functions !== undefined) {
+			for (const [name, signature] of functions) {
+				result[name] = createServiceFunction(signature, wasm, context);
+			}
 		}
 		if (resources !== undefined) {
 			for (const [name, , factory] of resources) {

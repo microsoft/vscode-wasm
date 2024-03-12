@@ -42,6 +42,14 @@ export interface Package {
 	interfaces: References;
 	worlds: References;
 }
+export namespace Package {
+	export function is(value: any): value is Package {
+		return typeof value === 'object'
+			&& typeof value.name === 'string'
+			&& typeof value.interfaces === 'object'
+			&& typeof value.worlds === 'object';
+	}
+}
 
 export interface Interface {
 	name: string;

@@ -16,7 +16,6 @@ export namespace http {
 	 * their headers, trailers, and bodies.
 	 */
 	export namespace Types {
-
 		export type Duration = clocks.MonotonicClock.Duration;
 
 		export type InputStream = io.Streams.InputStream;
@@ -1234,7 +1233,6 @@ export namespace http {
 	 * be exported by components which can respond to HTTP Requests.
 	 */
 	export namespace IncomingHandler {
-
 		export type IncomingRequest = http.Types.IncomingRequest;
 
 		export type ResponseOutparam = http.Types.ResponseOutparam;
@@ -1262,7 +1260,6 @@ export namespace http {
 	 * imported by components which wish to make HTTP Requests.
 	 */
 	export namespace OutgoingHandler {
-
 		export type OutgoingRequest = http.Types.OutgoingRequest;
 
 		export type RequestOptions = http.Types.RequestOptions;
@@ -2178,16 +2175,14 @@ export namespace http {
 		export const functions: Map<string, $wcm.FunctionType> = new Map([
 			['handle', $.handle]
 		]);
-		export const resources: Map<string, $wcm.ResourceType> = new Map<string, $wcm.ResourceType>([
-		]);
 		export type WasmInterface = {
 			'handle': (request: i32, responseOut: i32) => void;
 		};
 		export function createImports(service: http.IncomingHandler, context: $wcm.WasmContext): WasmInterface {
-			return $wcm.Imports.create<WasmInterface>(functions, resources, service, context);
+			return $wcm.Imports.create<WasmInterface>(functions, undefined, service, context);
 		}
 		export function filterExports(exports: object, context: $wcm.WasmContext): WasmInterface {
-			return $wcm.Exports.filter<WasmInterface>(exports, functions, resources, id, http._.version, context);
+			return $wcm.Exports.filter<WasmInterface>(exports, functions, undefined, id, http._.version, context);
 		}
 		export function bindExports(wasmInterface: WasmInterface, context: $wcm.WasmContext): http.IncomingHandler {
 			return $wcm.Exports.bind<http.IncomingHandler>(functions, [], wasmInterface, context);
@@ -2216,16 +2211,14 @@ export namespace http {
 		export const functions: Map<string, $wcm.FunctionType> = new Map([
 			['handle', $.handle]
 		]);
-		export const resources: Map<string, $wcm.ResourceType> = new Map<string, $wcm.ResourceType>([
-		]);
 		export type WasmInterface = {
 			'handle': (request: i32, options_case: i32, options_option: i32, result: ptr<result<own<FutureIncomingResponse>, ErrorCode>>) => void;
 		};
 		export function createImports(service: http.OutgoingHandler, context: $wcm.WasmContext): WasmInterface {
-			return $wcm.Imports.create<WasmInterface>(functions, resources, service, context);
+			return $wcm.Imports.create<WasmInterface>(functions, undefined, service, context);
 		}
 		export function filterExports(exports: object, context: $wcm.WasmContext): WasmInterface {
-			return $wcm.Exports.filter<WasmInterface>(exports, functions, resources, id, http._.version, context);
+			return $wcm.Exports.filter<WasmInterface>(exports, functions, undefined, id, http._.version, context);
 		}
 		export function bindExports(wasmInterface: WasmInterface, context: $wcm.WasmContext): http.OutgoingHandler {
 			return $wcm.Exports.bind<http.OutgoingHandler>(functions, [], wasmInterface, context);

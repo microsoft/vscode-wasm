@@ -20,7 +20,6 @@ export namespace clocks {
 	 * It is intended for measuring elapsed time.
 	 */
 	export namespace MonotonicClock {
-
 		export type Pollable = io.Poll.Pollable;
 
 		/**
@@ -86,7 +85,6 @@ export namespace clocks {
 	 * It is intended for reporting the current date and time for humans.
 	 */
 	export namespace WallClock {
-
 		/**
 		 * A time and date in seconds plus nanoseconds.
 		 */
@@ -153,8 +151,6 @@ export namespace clocks {
 			['subscribeInstant', $.subscribeInstant],
 			['subscribeDuration', $.subscribeDuration]
 		]);
-		export const resources: Map<string, $wcm.ResourceType> = new Map<string, $wcm.ResourceType>([
-		]);
 		export type WasmInterface = {
 			'now': () => i64;
 			'resolution': () => i64;
@@ -162,10 +158,10 @@ export namespace clocks {
 			'subscribe-duration': (when: i64) => i32;
 		};
 		export function createImports(service: clocks.MonotonicClock, context: $wcm.WasmContext): WasmInterface {
-			return $wcm.Imports.create<WasmInterface>(functions, resources, service, context);
+			return $wcm.Imports.create<WasmInterface>(functions, undefined, service, context);
 		}
 		export function filterExports(exports: object, context: $wcm.WasmContext): WasmInterface {
-			return $wcm.Exports.filter<WasmInterface>(exports, functions, resources, id, clocks._.version, context);
+			return $wcm.Exports.filter<WasmInterface>(exports, functions, undefined, id, clocks._.version, context);
 		}
 		export function bindExports(wasmInterface: WasmInterface, context: $wcm.WasmContext): clocks.MonotonicClock {
 			return $wcm.Exports.bind<clocks.MonotonicClock>(functions, [], wasmInterface, context);
@@ -190,17 +186,15 @@ export namespace clocks {
 			['now', $.now],
 			['resolution', $.resolution]
 		]);
-		export const resources: Map<string, $wcm.ResourceType> = new Map<string, $wcm.ResourceType>([
-		]);
 		export type WasmInterface = {
 			'now': (result: ptr<Datetime>) => void;
 			'resolution': (result: ptr<Datetime>) => void;
 		};
 		export function createImports(service: clocks.WallClock, context: $wcm.WasmContext): WasmInterface {
-			return $wcm.Imports.create<WasmInterface>(functions, resources, service, context);
+			return $wcm.Imports.create<WasmInterface>(functions, undefined, service, context);
 		}
 		export function filterExports(exports: object, context: $wcm.WasmContext): WasmInterface {
-			return $wcm.Exports.filter<WasmInterface>(exports, functions, resources, id, clocks._.version, context);
+			return $wcm.Exports.filter<WasmInterface>(exports, functions, undefined, id, clocks._.version, context);
 		}
 		export function bindExports(wasmInterface: WasmInterface, context: $wcm.WasmContext): clocks.WallClock {
 			return $wcm.Exports.bind<clocks.WallClock>(functions, [], wasmInterface, context);
