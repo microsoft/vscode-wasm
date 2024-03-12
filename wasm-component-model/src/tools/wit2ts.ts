@@ -2155,6 +2155,9 @@ class WorldEmitter extends Emitter {
 		code.push(`export const id = '${this.getId()}' as const;`);
 		code.push(`export const witName = '${this.world.name}' as const;`);
 
+		const importsAllInterfaceEmitters = this.imports.locals.interfaceEmitter.concat(this.imports.interfaceEmitters);
+		const exportsAllInterfaceEmitters = this.exports.locals.interfaceEmitter.concat(this.exports.interfaceEmitters);
+
 		for (const emitter of this.imports.locals.interfaceEmitter) {
 			emitter.emitAPI(code);
 		}
@@ -2207,7 +2210,10 @@ class WorldEmitter extends Emitter {
 			if (this.imports.funcEmitters.length > 0) {
 				code.push(`'$root': $Root;`);
 			}
-			for (const emitter of this.imports.interfaceEmitters) {
+			for (const emitter of importsAllInterfaceEmitters) {
+				if (!emitter.hasCode()) {
+					continue;
+				}
 				emitter.emitWorldWasmImport(code);
 			}
 			code.decreaseIndent();
@@ -2254,7 +2260,10 @@ class WorldEmitter extends Emitter {
 			for (const emitter of this.exports.funcEmitters) {
 				emitter.emitWorldWasmExport(code);
 			}
-			for (const emitter of this.exports.interfaceEmitters) {
+			for (const emitter of exportsAllInterfaceEmitters) {
+				if (!emitter.hasCode()) {
+					continue;
+				}
 				emitter.emitWorldWasmExport(code);
 			}
 			code.decreaseIndent();
@@ -2262,14 +2271,14 @@ class WorldEmitter extends Emitter {
 		}
 
 
-		if (this.imports.funcEmitters.length + this.imports.interfaceEmitters.length > 0) {
+		if (this.imports.funcEmitters.length + importsAllInterfaceEmitters.length > 0) {
 			code.push(`export function createImports(service: ${name}.Imports, context: ${MetaModel.WasmContext}): Imports {`);
 			code.increaseIndent();
 			code.push(`const result: Imports = Object.create(null);`);
 			if (this.imports.funcEmitters.length > 0) {
 				code.push(`result['$root'] = ${MetaModel.Imports}.create<$Root>(Imports.functions, undefined, service, context);`);
 			}
-			for (const emitter of this.imports.interfaceEmitters.concat(this.imports.locals.interfaceEmitter)) {
+			for (const emitter of importsAllInterfaceEmitters) {
 				if (!emitter.hasCode()) {
 					continue;
 				}
@@ -2280,14 +2289,14 @@ class WorldEmitter extends Emitter {
 			code.push('}');
 		}
 
-		if (this.exports.funcEmitters.length + this.exports.interfaceEmitters.length > 0) {
+		if (this.exports.funcEmitters.length + exportsAllInterfaceEmitters.length > 0) {
 			code.push(`export function bindExports(exports: Exports, context: ${MetaModel.WasmContext}): ${name}.Exports {`);
 			code.increaseIndent();
 			code.push(`const result: ${name}.Exports = Object.create(null);`);
 			if (this.exports.funcEmitters.length > 0) {
 				code.push(`Object.assign(result, ${MetaModel.Exports}.bind(Exports.functions, undefined, exports, context));`);
 			}
-			for (const emitter of this.exports.interfaceEmitters.concat(this.exports.locals.interfaceEmitter)) {
+			for (const emitter of exportsAllInterfaceEmitters) {
 				if (!emitter.hasCode()) {
 					continue;
 				}

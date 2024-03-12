@@ -7,12 +7,11 @@ import type { u32, i32 } from '@vscode/wasm-component-model';
 
 export namespace example {
 	export namespace Types {
-
 		export enum OpCode {
 			add = 'add',
 			sub = 'sub',
 			mul = 'mul',
-			div = 'div',
+			div = 'div'
 		}
 
 		export type Operation = {
@@ -24,8 +23,20 @@ export namespace example {
 	export type Types = {
 	};
 	export namespace calculator {
+		export type OpCode = Types.OpCode;
+		export type Operation = Types.Operation;
+		export enum Bits {
+			one = 'one'
+		}
+		export namespace Iface {
+			export type foo = () => u32;
+		}
+		export type Iface = {
+			foo: Iface.foo;
+		};
 		export type Imports = {
-			types: example.Types;
+			bar: () => u32;
+			iface: Iface;
 		};
 		export type Exports = {
 			add: (a: u32, b: u32) => u32;
@@ -50,23 +61,17 @@ export namespace example {
 			['OpCode', $.OpCode],
 			['Operation', $.Operation]
 		]);
-		export const functions: Map<string, $wcm.FunctionType> = new Map([
-		]);
-		export const resources: Map<string, $wcm.ResourceType> = new Map<string, $wcm.ResourceType>([
-		]);
-		export type WasmInterface = {
-		};
-		export function createImports(service: example.Types, context: $wcm.WasmContext): WasmInterface {
-			return $wcm.Imports.create<WasmInterface>(functions, resources, service, context);
-		}
-		export function filterExports(exports: object, context: $wcm.WasmContext): WasmInterface {
-			return $wcm.Exports.filter<WasmInterface>(exports, functions, resources, id, undefined, context);
-		}
-		export function bindExports(wasmInterface: WasmInterface, context: $wcm.WasmContext): example.Types {
-			return $wcm.Exports.bind<example.Types>(functions, [], wasmInterface, context);
-		}
 	}
 	export namespace calculator.$ {
+		export const OpCode = Types.$.OpCode;
+		export const Operation = Types.$.Operation;
+		export const Bits = new $wcm.EnumType<Bits>(['one']);
+		export namespace Iface.$ {
+			export const foo = new $wcm.FunctionType<example.Iface.foo>('foo', [], $wcm.u32);
+		}
+		export namespace Imports {
+			export const bar = new $wcm.FunctionType<calculator.Imports['bar']>('bar', [], $wcm.u32);
+		}
 		export namespace Exports {
 			export const add = new $wcm.FunctionType<calculator.Exports['add']>('add',[
 				['a', $wcm.u32],
@@ -80,13 +85,39 @@ export namespace example {
 	export namespace calculator._ {
 		export const id = 'vscode:example/calculator' as const;
 		export const witName = 'calculator' as const;
+		export namespace Iface._ {
+			export const id = 'vscode:example/iface' as const;
+			export const witName = 'iface' as const;
+			export const functions: Map<string, $wcm.FunctionType> = new Map([
+				['foo', $.foo]
+			]);
+			export type WasmInterface = {
+				'foo': () => i32;
+			};
+			export function createImports(service: example.calculator.Iface, context: $wcm.WasmContext): WasmInterface {
+				return $wcm.Imports.create<WasmInterface>(functions, undefined, service, context);
+			}
+			export function filterExports(exports: object, context: $wcm.WasmContext): WasmInterface {
+				return $wcm.Exports.filter<WasmInterface>(exports, functions, undefined, id, undefined, context);
+			}
+			export function bindExports(wasmInterface: WasmInterface, context: $wcm.WasmContext): example.calculator.Iface {
+				return $wcm.Exports.bind<example.calculator.Iface>(functions, [], wasmInterface, context);
+			}
+		}
+		export type $Root = {
+			'bar': () => i32;
+		}
 		export namespace Imports {
+			export const functions: Map<string, $wcm.FunctionType> = new Map([
+				['bar', $.Imports.bar]
+			]);
 			export const interfaces: Map<string, $wcm.InterfaceType> = new Map<string, $wcm.InterfaceType>([
 				['Types', Types._]
 			]);
 		}
 		export type Imports = {
-			'vscode:example/types': example.Types._.WasmInterface;
+			'$root': $Root;
+			'vscode:example/iface': example.calculator._.Iface._.WasmInterface;
 		};
 		export namespace Exports {
 			export const functions: Map<string, $wcm.FunctionType> = new Map([
@@ -100,7 +131,8 @@ export namespace example {
 		};
 		export function createImports(service: calculator.Imports, context: $wcm.WasmContext): Imports {
 			const result: Imports = Object.create(null);
-			result['vscode:example/types'] = example.Types._.createImports(service.types, context);
+			result['$root'] = $wcm.Imports.create<$Root>(Imports.functions, undefined, service, context);
+			result['vscode:example/iface'] = example.Iface._.createImports(service.iface, context);
 			return result;
 		}
 		export function bindExports(exports: Exports, context: $wcm.WasmContext): calculator.Exports {

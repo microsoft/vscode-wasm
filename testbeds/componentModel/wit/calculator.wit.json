@@ -18,28 +18,6 @@
         "bits": {
           "type": 4
         },
-        "handle": {
-          "type": 5
-        },
-        "[method]handle.foo": {
-          "function": {
-            "name": "[method]handle.foo",
-            "kind": {
-              "method": 5
-            },
-            "params": [
-              {
-                "name": "self",
-                "type": 6
-              }
-            ],
-            "results": [
-              {
-                "type": "u32"
-              }
-            ]
-          }
-        },
         "bar": {
           "function": {
             "name": "bar",
@@ -205,27 +183,14 @@
       "owner": {
         "world": 0
       }
-    },
-    {
-      "name": "handle",
-      "kind": "resource",
-      "owner": {
-        "world": 0
-      }
-    },
-    {
-      "name": null,
-      "kind": {
-        "handle": {
-          "borrow": 5
-        }
-      },
-      "owner": null
     }
   ],
   "packages": [
     {
       "name": "vscode:example",
+      "docs": {
+        "contents": "wit/host.wit"
+      },
       "interfaces": {
         "types": 0
       },

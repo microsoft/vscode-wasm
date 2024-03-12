@@ -20,9 +20,6 @@ world calculator {
 	enum bits {
 		one
 	}
-	resource handle {
-		foo: func() -> u32;
-	}
 	import iface: interface {
 		foo: func() -> u32;
 	}
