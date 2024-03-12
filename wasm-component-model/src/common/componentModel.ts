@@ -182,7 +182,7 @@ export interface Memory {
 	readonly id: string;
 	readonly buffer: ArrayBuffer;
 	alloc(align: Alignment, size: size): MemoryRange;
-	realloc(location: MemoryRange, align: Alignment, newSize: size): MemoryRange;
+	realloc(range: MemoryRange, align: Alignment, newSize: size): MemoryRange;
 	preAllocated(ptr: ptr, size: size): MemoryRange;
 	readonly(ptr: ptr, size: size): ReadonlyMemoryRange;
 	free?(range: MemoryRange): void;
@@ -591,14 +591,19 @@ class NullMemory implements Memory {
 		throw new MemoryError('Cannot free memory on a null memory.');
 	}
 }
-// cabi_realloc(void *ptr, size_t orig_size, size_t org_align, size_t new_size)
+
+export type MemoryExports = {
+	memory: { buffer: ArrayBuffer };
+	cabi_realloc: (orig: ptr, orig_size: size, orig_align: size, new_size: size) => ptr;
+};
+
 class DefaultMemory implements Memory {
 
 	public readonly id: string;
-	private readonly memory: { buffer: ArrayBuffer };
-	private readonly cabi_realloc: (orig: ptr, orig_size: size, orig_align: size, new_size: size) => ptr;
+	private readonly memory: MemoryExports['memory'];
+	private readonly cabi_realloc: MemoryExports['cabi_realloc'];
 
-	constructor(id: string, exports: { memory: { buffer: ArrayBuffer }, cabi_realloc: (orig: ptr, orig_size: size, orig_align: size, new_size: size) => ptr }) {
+	constructor(id: string, exports: MemoryExports) {
 		this.id = id;
 		this.memory = exports.memory;
 		this.cabi_realloc = exports.cabi_realloc;
@@ -613,23 +618,27 @@ class DefaultMemory implements Memory {
 		return new MemoryRange(this, ptr, size);
 	}
 
-	realloc(location: MemoryRange, align: Alignment, newSize: size): MemoryRange {
-
+	realloc(range: MemoryRange, newSize: size): MemoryRange {
+		const ptr = this.cabi_realloc(range.ptr, range.size, range.alignment, newSize);
+		return new MemoryRange(this, ptr, newSize);
 	}
-	preAllocated(ptr: ptr, size: size): MemoryRange {
 
+	preAllocated(ptr: ptr, size: size): MemoryRange {
+		return new MemoryRange(this, ptr, size);
 	}
 	readonly(ptr: ptr, size: size): ReadonlyMemoryRange {
-
+		return new ReadonlyMemoryRange(this, ptr, size);
 	}
-
 }
-
 
 export namespace Memory {
 	export const Null = new NullMemory();
-	export function
-
+	export function createDefault(id: string, exports: Record<string, any>): Memory {
+		if (exports.memory === undefined || exports.cabi_realloc === undefined) {
+			throw new MemoryError('The exports object must contain a memory object and a cabi_realloc function.');
+		}
+		return new DefaultMemory(id, exports as MemoryExports);
+	}
 }
 
 export type encodings = 'utf-8' | 'utf-16' | 'latin1+utf-16';
