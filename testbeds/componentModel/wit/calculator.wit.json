@@ -3,32 +3,11 @@
     {
       "name": "calculator",
       "imports": {
-        "iface": {
-          "interface": 1
-        },
         "interface-0": {
           "interface": 0
         },
-        "op-code": {
-          "type": 2
-        },
         "operation": {
-          "type": 3
-        },
-        "bits": {
-          "type": 4
-        },
-        "bar": {
-          "function": {
-            "name": "bar",
-            "kind": "freestanding",
-            "params": [],
-            "results": [
-              {
-                "type": "u32"
-              }
-            ]
-          }
+          "type": 2
         }
       },
       "exports": {
@@ -60,7 +39,7 @@
             "params": [
               {
                 "name": "o",
-                "type": 3
+                "type": 2
               }
             ],
             "results": [
@@ -78,47 +57,26 @@
     {
       "name": "types",
       "types": {
-        "op-code": 0,
+        "operands": 0,
         "operation": 1
       },
       "functions": {},
-      "package": 0
-    },
-    {
-      "name": null,
-      "types": {},
-      "functions": {
-        "foo": {
-          "name": "foo",
-          "kind": "freestanding",
-          "params": [],
-          "results": [
-            {
-              "type": "u32"
-            }
-          ]
-        }
-      },
       "package": 0
     }
   ],
   "types": [
     {
-      "name": "op-code",
+      "name": "operands",
       "kind": {
-        "enum": {
-          "cases": [
+        "record": {
+          "fields": [
             {
-              "name": "add"
+              "name": "left",
+              "type": "u32"
             },
             {
-              "name": "sub"
-            },
-            {
-              "name": "mul"
-            },
-            {
-              "name": "div"
+              "name": "right",
+              "type": "u32"
             }
           ]
         }
@@ -130,55 +88,35 @@
     {
       "name": "operation",
       "kind": {
-        "record": {
-          "fields": [
+        "variant": {
+          "cases": [
             {
-              "name": "code",
+              "name": "add",
               "type": 0
             },
             {
-              "name": "a",
-              "type": "u32"
+              "name": "sub",
+              "type": 0
             },
             {
-              "name": "b",
-              "type": "u32"
+              "name": "mul",
+              "type": 0
+            },
+            {
+              "name": "div",
+              "type": 0
             }
           ]
         }
       },
       "owner": {
         "interface": 0
-      }
-    },
-    {
-      "name": "op-code",
-      "kind": {
-        "type": 0
-      },
-      "owner": {
-        "world": 0
       }
     },
     {
       "name": "operation",
       "kind": {
         "type": 1
-      },
-      "owner": {
-        "world": 0
-      }
-    },
-    {
-      "name": "bits",
-      "kind": {
-        "enum": {
-          "cases": [
-            {
-              "name": "one"
-            }
-          ]
-        }
       },
       "owner": {
         "world": 0

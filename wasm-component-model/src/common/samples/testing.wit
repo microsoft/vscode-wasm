@@ -1,0 +1,35 @@
+// wit/host.wit
+package vscode:example;
+
+interface types {
+	enum op-code {
+		add,
+		sub,
+		mul,
+		div,
+	}
+	record operation {
+		code: op-code,
+		a: u32,
+		b: u32,
+	}
+}
+
+world calculator {
+	use types.{ op-code, operation };
+	enum bits {
+		one
+	}
+	import iface: interface {
+		foo: func() -> u32;
+	}
+
+	import bar: func() -> u32;
+
+	export iface: interface {
+		foo: func() -> u32;
+	}
+
+	export add: func(a: u32, b: u32) -> u32;
+	export calc: func(o: operation) -> u32;
+}

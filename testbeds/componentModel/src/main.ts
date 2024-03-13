@@ -7,6 +7,7 @@ import { WasmContext, ResourceManagers, Memory, MemoryError, type MemoryExports 
 
 import { example } from './example';
 import calculator = example.calculator;
+import Types = example.Types;
 
 async function main(): Promise<void> {
 	const bytes = await fs.readFile('./target/wasm32-unknown-unknown/debug/calculator.wasm');
@@ -26,10 +27,10 @@ async function main(): Promise<void> {
 	memory = Memory.createDefault(Date.now().toString(), instance.exports);
 	const api = calculator._.bindExports(instance.exports as calculator._.Exports, context);
 	console.log(api.add(1, 2));
-	console.log(`Add ${api.calc({ code: example.Types.OpCode.add, a: 1, b: 2 })}`);
-	console.log(`Sub ${api.calc({ code: example.Types.OpCode.sub, a: 10, b: 8 })}`);
-	console.log(`Mul ${api.calc({ code: example.Types.OpCode.mul, a: 3, b: 7 })}`);
-	console.log(`Div ${api.calc({ code: example.Types.OpCode.div, a: 10, b: 2 })}`);
+	console.log(`Add ${api.calc(Types.Operation.Add({ left: 1, right: 2}))}`);
+	console.log(`Sub ${api.calc(Types.Operation.Sub({ left: 10, right: 8 }))}`);
+	console.log(`Mul ${api.calc(Types.Operation.Mul({ left: 3, right: 7 }))}`);
+	console.log(`Div ${api.calc(Types.Operation.Div({ left: 10, right: 2 }))}`);
 }
 
 main().catch(console.error);

@@ -12,6 +12,7 @@ import {
 	World, BaseType, ListType, OptionType, ResultType, TupleType, ReferenceType, RecordType, VariantType, VariantCase,
 	EnumType, FlagsType, Field, Callable, ResourceType, BorrowHandleType, OwnHandleType, Method, AbstractType, Constructor, StaticMethod, ObjectKind, type PackageNameParts, type InterfaceObject, type TypeObject
 } from './wit-json';
+import { runInThisContext } from 'node:vm';
 
 export function processDocument(document: Document, options: ResolvedOptions): void {
 	const documentEmitter = new DocumentEmitter(document, options);
@@ -1533,7 +1534,7 @@ abstract class Emitter {
 		throw new Error('Needs to be implemented in concrete subclasses');
 	}
 
-	public emitWorldMember(_code: Code) : void {
+	public emitWorldMember(_code: Code, _scope: string) : void {
 		throw new Error('Needs to be implemented in concrete subclasses');
 	}
 
@@ -2059,19 +2060,25 @@ class WorldEmitter extends Emitter {
 
 		code.push(`export namespace ${nameProvider.world.name(this.world)} {`);
 		code.increaseIndent();
-		for (const emitter of this.imports.locals.typeEmitters.concat(this.exports.locals.typeEmitters)) {
+		for (const emitter of [...this.imports.locals.typeEmitters, ...this.exports.locals.typeEmitters]) {
 			emitter.emitNamespace(code);
 		}
-		for (const emitter of this.imports.locals.interfaceEmitter.concat(this.exports.locals.interfaceEmitter)) {
-			emitter.emitNamespace(code);
-			if (emitter.hasCode()) {
-				emitter.emitTypeDeclaration(code);
+		if (this.imports.locals.interfaceEmitter.length > 0) {
+			code.push(`export namespace Imports {`);
+			code.increaseIndent();
+			for (const emitter of this.imports.locals.interfaceEmitter) {
+				emitter.emitNamespace(code);
+				if (emitter.hasCode()) {
+					emitter.emitTypeDeclaration(code);
+				}
 			}
+			code.decreaseIndent();
+			code.push(`}`);
 		}
 		code.push(`export type Imports = {`);
 		code.increaseIndent();
 		for (const emitter of this.imports.funcEmitters) {
-			emitter.emitWorldMember(code);
+			emitter.emitWorldMember(code, 'Imports');
 		}
 		for (const emitter of this.imports.interfaceEmitters.concat(this.imports.locals.interfaceEmitter)) {
 			if (!emitter.hasCode()) {
@@ -2080,15 +2087,27 @@ class WorldEmitter extends Emitter {
 			if (this.pkg !== emitter.getPkg()) {
 				emitter.emitImport(code);
 			}
-			emitter.emitWorldMember(code);
+			emitter.emitWorldMember(code, 'Imports');
 		}
 		code.decreaseIndent();
 		code.push(`};`);
 
+		if (this.exports.locals.interfaceEmitter.length > 0) {
+			code.push(`export namespace Exports {`);
+			code.increaseIndent();
+			for (const emitter of this.exports.locals.interfaceEmitter) {
+				emitter.emitNamespace(code);
+				if (emitter.hasCode()) {
+					emitter.emitTypeDeclaration(code);
+				}
+			}
+			code.decreaseIndent();
+			code.push(`}`);
+		}
 		code.push(`export type Exports = {`);
 		code.increaseIndent();
 		for (const emitter of this.exports.funcEmitters) {
-			emitter.emitWorldMember(code);
+			emitter.emitWorldMember(code, 'Exports');
 		}
 		for (const emitter of this.exports.interfaceEmitters.concat(this.exports.locals.interfaceEmitter)) {
 			if (!emitter.hasCode()) {
@@ -2097,7 +2116,7 @@ class WorldEmitter extends Emitter {
 			if (this.pkg !== emitter.getPkg()) {
 				emitter.emitImport(code);
 			}
-			emitter.emitWorldMember(code);
+			emitter.emitWorldMember(code, 'Exports');
 		}
 		code.decreaseIndent();
 		code.push(`};`);
@@ -2578,9 +2597,9 @@ class InterfaceEmitter extends Emitter {
 		code.imports.add(name, `./${name}`);
 	}
 
-	public emitWorldMember(code: Code): void {
+	public emitWorldMember(code: Code, scope: string): void {
 		const { symbols, nameProvider } = this.context;
-		const name = World.is(this.container) ? nameProvider.iface.name(this.iface) : symbols.interfaces.getFullyQualifiedName(this.iface);
+		const name = World.is(this.container) ? `${scope}.${nameProvider.iface.name(this.iface)}` : symbols.interfaces.getFullyQualifiedName(this.iface);
 		code.push(`${nameProvider.iface.propertyName(this.iface)}: ${name};`);
 	}
 
