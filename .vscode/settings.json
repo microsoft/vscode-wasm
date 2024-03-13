@@ -229,6 +229,6 @@
 		"./testbeds/lsp-rust/server/Cargo.toml",
 		"./testbeds/rust/Cargo.toml",
 		"./testbeds/rust-threads/Cargo.toml",
-		"./testbeds/componentModel/Cargo.toml"
+		"./testbeds/component-model/Cargo.toml"
 	]
 }

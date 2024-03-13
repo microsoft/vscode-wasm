@@ -1,0 +1,281 @@
+{
+  "worlds": [
+    {
+      "name": "calculator",
+      "imports": {
+        "interface-0": {
+          "interface": 0
+        },
+        "interface-1": {
+          "interface": 1
+        },
+        "operation": {
+          "type": 5
+        }
+      },
+      "exports": {
+        "add": {
+          "function": {
+            "name": "add",
+            "kind": "freestanding",
+            "params": [
+              {
+                "name": "a",
+                "type": "u32"
+              },
+              {
+                "name": "b",
+                "type": "u32"
+              }
+            ],
+            "results": [
+              {
+                "type": "u32"
+              }
+            ]
+          }
+        },
+        "calc": {
+          "function": {
+            "name": "calc",
+            "kind": "freestanding",
+            "params": [
+              {
+                "name": "o",
+                "type": 5
+              }
+            ],
+            "results": [
+              {
+                "type": "u32"
+              }
+            ]
+          }
+        }
+      },
+      "package": 0
+    }
+  ],
+  "interfaces": [
+    {
+      "name": "window",
+      "types": {
+        "output-channel": 0
+      },
+      "functions": {
+        "[method]output-channel.name": {
+          "name": "[method]output-channel.name",
+          "kind": {
+            "method": 0
+          },
+          "params": [
+            {
+              "name": "self",
+              "type": 1
+            }
+          ],
+          "results": [
+            {
+              "type": "string"
+            }
+          ]
+        },
+        "[method]output-channel.append": {
+          "name": "[method]output-channel.append",
+          "kind": {
+            "method": 0
+          },
+          "params": [
+            {
+              "name": "self",
+              "type": 1
+            },
+            {
+              "name": "value",
+              "type": "string"
+            }
+          ],
+          "results": []
+        },
+        "[method]output-channel.append-line": {
+          "name": "[method]output-channel.append-line",
+          "kind": {
+            "method": 0
+          },
+          "params": [
+            {
+              "name": "self",
+              "type": 1
+            },
+            {
+              "name": "value",
+              "type": "string"
+            }
+          ],
+          "results": []
+        },
+        "[method]output-channel.clear": {
+          "name": "[method]output-channel.clear",
+          "kind": {
+            "method": 0
+          },
+          "params": [
+            {
+              "name": "self",
+              "type": 1
+            }
+          ],
+          "results": []
+        },
+        "[method]output-channel.show": {
+          "name": "[method]output-channel.show",
+          "kind": {
+            "method": 0
+          },
+          "params": [
+            {
+              "name": "self",
+              "type": 1
+            }
+          ],
+          "results": []
+        },
+        "create-output-channel": {
+          "name": "create-output-channel",
+          "kind": "freestanding",
+          "params": [
+            {
+              "name": "name",
+              "type": "string"
+            },
+            {
+              "name": "language-id",
+              "type": 2
+            }
+          ],
+          "results": [
+            {
+              "type": 6
+            }
+          ]
+        }
+      },
+      "package": 0
+    },
+    {
+      "name": "types",
+      "types": {
+        "operands": 3,
+        "operation": 4
+      },
+      "functions": {},
+      "package": 0
+    }
+  ],
+  "types": [
+    {
+      "name": "output-channel",
+      "kind": "resource",
+      "owner": {
+        "interface": 0
+      }
+    },
+    {
+      "name": null,
+      "kind": {
+        "handle": {
+          "borrow": 0
+        }
+      },
+      "owner": null
+    },
+    {
+      "name": null,
+      "kind": {
+        "option": "string"
+      },
+      "owner": null
+    },
+    {
+      "name": "operands",
+      "kind": {
+        "record": {
+          "fields": [
+            {
+              "name": "left",
+              "type": "u32"
+            },
+            {
+              "name": "right",
+              "type": "u32"
+            }
+          ]
+        }
+      },
+      "owner": {
+        "interface": 1
+      }
+    },
+    {
+      "name": "operation",
+      "kind": {
+        "variant": {
+          "cases": [
+            {
+              "name": "add",
+              "type": 3
+            },
+            {
+              "name": "sub",
+              "type": 3
+            },
+            {
+              "name": "mul",
+              "type": 3
+            },
+            {
+              "name": "div",
+              "type": 3
+            }
+          ]
+        }
+      },
+      "owner": {
+        "interface": 1
+      }
+    },
+    {
+      "name": "operation",
+      "kind": {
+        "type": 4
+      },
+      "owner": {
+        "world": 0
+      }
+    },
+    {
+      "name": null,
+      "kind": {
+        "handle": {
+          "own": 0
+        }
+      },
+      "owner": null
+    }
+  ],
+  "packages": [
+    {
+      "name": "vscode:example",
+      "docs": {
+        "contents": "wit/host.wit"
+      },
+      "interfaces": {
+        "window": 0,
+        "types": 1
+      },
+      "worlds": {
+        "calculator": 0
+      }
+    }
+  ]
+}

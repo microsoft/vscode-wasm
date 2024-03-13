@@ -15,6 +15,21 @@
 		{
 			"type": "extensionHost",
 			"request": "launch",
+			"name": "Component Model Testbed",
+			"runtimeExecutable": "${execPath}",
+			"args": [
+				"--extensionDevelopmentPath=${workspaceRoot}/testbeds/component-model",
+			],
+			"outFiles": [
+				"${workspaceRoot}/testbeds/component-model/out/**/*.js",
+				"${workspaceRoot}/wasm-component-model/lib/**/*.js",
+			],
+			"sourceMaps": true,
+			"preLaunchTask": "Build Component Model Example"
+		},
+		{
+			"type": "extensionHost",
+			"request": "launch",
 			"name": "Python Testbed",
 			"runtimeExecutable": "${execPath}",
 			"args": [

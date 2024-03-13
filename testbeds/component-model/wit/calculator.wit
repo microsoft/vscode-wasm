@@ -1,6 +1,17 @@
 // wit/host.wit
 package vscode:example;
 
+interface window {
+	resource output-channel {
+		name: func() -> string;
+    	append: func(value: string);
+        append-line: func(value: string);
+        clear: func();
+		show: func();
+	}
+	create-output-channel: func(name: string, language-id: option<string>) -> output-channel;
+}
+
 interface types {
 	record operands {
 		left: u32,
@@ -17,6 +28,8 @@ interface types {
 
 world calculator {
 	use types.{ operation };
+	import window;
+
 	export add: func(a: u32, b: u32) -> u32;
 	export calc: func(o: operation) -> u32;
 }
