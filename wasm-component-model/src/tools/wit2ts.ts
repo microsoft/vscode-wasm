@@ -12,7 +12,6 @@ import {
 	World, BaseType, ListType, OptionType, ResultType, TupleType, ReferenceType, RecordType, VariantType, VariantCase,
 	EnumType, FlagsType, Field, Callable, ResourceType, BorrowHandleType, OwnHandleType, Method, AbstractType, Constructor, StaticMethod, ObjectKind, type PackageNameParts, type InterfaceObject, type TypeObject
 } from './wit-json';
-import { runInThisContext } from 'node:vm';
 
 export function processDocument(document: Document, options: ResolvedOptions): void {
 	const documentEmitter = new DocumentEmitter(document, options);
