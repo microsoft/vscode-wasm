@@ -1,4 +1,4 @@
-// wit/host.wit
+// wit/calculator.wit
 package vscode:example;
 
 interface window {

@@ -2,8 +2,7 @@
  *  Copyright (c) Microsoft Corporation. All rights reserved.
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
-import * as fs from 'fs/promises';
-import { WasmContext, ResourceManagers, Memory, MemoryError, type MemoryExports } from '@vscode/wasm-component-model';
+import { WasmContext, ResourceManagers, Memory, MemoryError, type ResourceHandle } from '@vscode/wasm-component-model';
 import * as vscode from 'vscode';
 
 import { example } from './example';
@@ -11,14 +10,18 @@ import calculator = example.calculator;
 import Types = example.Types;
 import OutputChannel = example.Window.OutputChannel
 
+// Channel implementation
 class OutputChannelImpl implements OutputChannel {
+	public $handle: ResourceHandle | undefined;
 	private channel: vscode.OutputChannel;
 
-	constructor(name: string) {
-		this.channel = vscode.window.createOutputChannel(name);
+	constructor(name: string, languageId?: string) {
+		this.$handle = undefined;
+		this.channel = vscode.window.createOutputChannel(name, languageId);
 	}
 
-	public static $drop(_instance: OutputChannel): void {
+	public static $drop(_instance: OutputChannelImpl): void {
+		_instance.channel.dispose();
 	}
 
 	name(): string {
@@ -56,8 +59,8 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
 	const service: calculator.Imports = {
 		window: {
 			OutputChannel: OutputChannelImpl,
-			createOutputChannel: (name: string) => {
-				return new OutputChannelImpl(name);
+			createOutputChannel: (name: string, languageId?: string) => {
+				return new OutputChannelImpl(name, languageId);
 			}
 		}
 	}
