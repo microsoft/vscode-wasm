@@ -4,12 +4,17 @@
  * ------------------------------------------------------------------------------------------ */
 
 import * as fs from 'node:fs/promises';
+import * as cp from 'node:child_process';
 
 import * as yargs from 'yargs';
+
+import semverParse = require('semver/functions/parse');
+import semverGte = require('semver/functions/gte');
 
 import { Document } from './wit-json';
 import { processDocument } from './wit2ts';
 import { Options } from './options';
+import path from 'node:path';
 
 async function run(options: Options): Promise<number> {
 	if (options.help) {
@@ -39,13 +44,36 @@ async function run(options: Options): Promise<number> {
 			});
 		} else {
 			const stat = await fs.stat(options.file, { bigint: true });
-			if (!stat.isFile()) {
-				process.stderr.write(`${options.file} is not a file.\n`);
+			if (stat.isFile()) {
+				if (path.extname(options.file) === '.json') {
+					const content: Document = JSON.parse(await fs.readFile(options.file, { encoding: 'utf8' }));
+					processDocument(content, options);
+				} else {
+					process.stderr.write(`${options.file} is not a JSON file.\n`);
+					return 1;
+				}
+			} else if (stat.isDirectory()) {
+				try {
+					const output = cp.execFileSync('wasm-tools', ['--version'], { shell: true, encoding: 'utf8' });
+					const version = output.trim().split(' ')[1];
+					const semVersion = semverParse(version);
+					if (semVersion === null) {
+						process.stderr.write(`wasm-tools --version didn't provide a parsable version number. Output was ${output}.\n`);
+						return 1;
+					} else if (!semverGte(semVersion, '1.200.0')) {
+						process.stderr.write(`wit2ts required wasm-tools >= 1.200.0, but found version ${version}.\n`);
+						return 1;
+					}
+					const data = cp.execFileSync('wasm-tools', ['component', 'wit', '--json', options.file], { shell: true, encoding: 'utf8' });
+					const content: Document = JSON.parse(data);
+					processDocument(content, options);
+				} catch (error: any) {
+					process.stderr.write(`Launching wasm-tools failed: ${error.toString()}\n`);
+				}
+			} else {
+				process.stderr.write(`${options.file} doesn't exist.\n`);
 				return 1;
 			}
-
-			const content: Document = JSON.parse(await fs.readFile(options.file, { encoding: 'utf8' }));
-			processDocument(content, options);
 		}
 
 		return 0;
@@ -61,6 +89,7 @@ export async function main(): Promise<number> {
 		exitProcess(false).
 		usage(`Tool to generate a TypeScript file and the corresponding meta data from a WIT JSON file.\nVersion: ${require('../../package.json').version}\nUsage: wit2ts [options] wasi.json`).
 		example(`wit2ts --outDir . wasi.json`, `Creates a TypeScript file for the given Wit JSON file and writes the files into the provided output directory.`).
+		example(`wit2ts --outDir . ./wit`, `Creates a TypeScript file for the files in the given wit directory and writes the files into the provided output directory. Requires a wasm-tools installation.`).
 		version(false).
 		wrap(Math.min(100, yargs.terminalWidth())).
 		option('v', {
