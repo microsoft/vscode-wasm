@@ -2776,6 +2776,9 @@ export type WasmFunction = (...params: WasmType[]) => WasmType | void;
 
 class Callable {
 
+	private static readonly EMPTY_JTYPE: ReadonlyArray<JType> = Object.freeze([]);
+	private static readonly EMPTY_WASM_TYPE: ReadonlyArray<WasmType> = Object.freeze([]);
+
 	public static readonly MAX_FLAT_PARAMS = 16;
 	public static readonly MAX_FLAT_RESULTS = 1;
 
@@ -2783,31 +2786,45 @@ class Callable {
 	public readonly params: CallableParameter[];
 	public readonly returnType: GenericComponentModelType | undefined;
 
-	public readonly paramTupleType: TupleType<JTuple>;
+	public readonly paramType: GenericComponentModelType | TupleType<JTuple> | undefined;
+	protected readonly isSingleParam: boolean;
 	protected readonly mode: 'lift' | 'lower';
 
 	constructor(witName: string, params: CallableParameter[], returnType?: GenericComponentModelType) {
 		this.witName = witName;
 		this.params = params;
 		this.returnType = returnType;
-		const paramTypes: GenericComponentModelType[] = [];
-		for (const param of params) {
-			paramTypes.push(param[1]);
+		switch (params.length) {
+			case 0:
+				this.paramType = undefined;
+				this.isSingleParam = false;
+				break;
+			case 1:
+				this.paramType = params[0][1];
+				this.isSingleParam = true;
+				break;
+			default:
+				this.paramType = new TupleType(params.map(p => p[1]));
+				this.isSingleParam = false;
 		}
-		this.paramTupleType = new TupleType(paramTypes);
 		this.mode = 'lower';
 	}
 
-	public liftParamValues(wasmValues: (number | bigint)[], memory: Memory, context: ComponentModelContext): JType[] {
-		if (this.paramTupleType.flatTypes.length > Callable.MAX_FLAT_PARAMS) {
+	public liftParamValues(wasmValues: (number | bigint)[], memory: Memory, context: ComponentModelContext): ReadonlyArray<JType> {
+		if (this.paramType === undefined) {
+			return Callable.EMPTY_JTYPE;
+		}
+		let result: JType;
+		if (this.paramType.flatTypes.length > Callable.MAX_FLAT_PARAMS) {
 			const p0 = wasmValues[0];
 			if (!Number.isInteger(p0)) {
 				throw new ComponentModelTrap('Invalid pointer');
 			}
-			return this.paramTupleType.load(memory.readonly(p0 as ptr, this.paramTupleType.size), 0, context);
+			result = this.paramType.load(memory.readonly(p0 as ptr, this.paramType.size), 0, context);
 		} else {
-			return this.paramTupleType.liftFlat(memory, wasmValues.values(), context);
+			result = this.paramType.liftFlat(memory, wasmValues.values(), context);
 		}
+		return this.isSingleParam ? [result] : result as JType[];
 	}
 
 	public liftReturnValue(value: WasmType | void, memory: Memory, context: ComponentModelContext): JType | void {
@@ -2820,14 +2837,16 @@ class Callable {
 		}
 	}
 
-	public lowerParamValues(values: JType[], memory: Memory, context: ComponentModelContext, out: ptr | undefined): WasmType[] {
-		if (this.paramTupleType.flatTypes.length > Callable.MAX_FLAT_PARAMS) {
-			const writer = out !== undefined ? memory.preAllocated(out, this.paramTupleType.size) : this.paramTupleType.alloc(memory);
-			this.paramTupleType.store(writer, 0, values, context);
+	public lowerParamValues(values: JType[], memory: Memory, context: ComponentModelContext, out: ptr | undefined): ReadonlyArray<WasmType> {
+		if (this.paramType === undefined) {
+			return Callable.EMPTY_WASM_TYPE;
+		} else if (this.paramType.flatTypes.length > Callable.MAX_FLAT_PARAMS) {
+			const writer = out !== undefined ? memory.preAllocated(out, this.paramType.size) : this.paramType.alloc(memory);
+			this.paramType.store(writer, 0, values, context);
 			return [writer.ptr];
 		} else {
 			const result: WasmType[] = [];
-			this.paramTupleType.lowerFlat(result, memory, values, context);
+			this.paramType.lowerFlat(result, memory, values, context);
 			return result;
 		}
 	}
@@ -2854,11 +2873,13 @@ class Callable {
 		const wasmValues = this.lowerParamValues(params, memory, context, undefined);
 		// We currently only support 'lower' mode for results > MAX_FLAT_RESULTS.
 		let resultRange: MemoryRange | undefined = undefined;
+		let result: WasmType | void;
 		if (this.returnType !== undefined && this.returnType.flatTypes.length > FunctionType.MAX_FLAT_RESULTS) {
 			resultRange = this.returnType.alloc(memory);
-			wasmValues.push(resultRange.ptr);
+			result = wasmFunction(...wasmValues, resultRange.ptr);
+		} else {
+			result = wasmFunction(...wasmValues);
 		}
-		const result = wasmFunction(...wasmValues);
 		const flatReturnTypes = this.returnType === undefined ? 0 : this.returnType.flatTypes.length;
 		switch(flatReturnTypes) {
 			case 0:
@@ -2870,13 +2891,13 @@ class Callable {
 		}
 	}
 
-	protected getParamValues(params: (number | bigint)[], context: WasmContext): [JType[], ptr | undefined] {
+	protected getParamValues(params: (number | bigint)[], context: WasmContext): [ReadonlyArray<JType>, ptr | undefined] {
 		const memory = context.getMemory();
 		const returnFlatTypes = this.returnType === undefined ? 0 : this.returnType.flatTypes.length;
 		// We currently only support 'lower' mode for results > MAX_FLAT_RESULTS.
 		let out: number | undefined;
 		if (returnFlatTypes > FunctionType.MAX_FLAT_RESULTS) {
-			const paramFlatTypes = this.paramTupleType.flatTypes.length;
+			const paramFlatTypes = this.paramType !== undefined ? this.paramType.flatTypes.length : 0;
 			// The caller allocated the memory. We just need to pass the pointer.
 			if (params.length === paramFlatTypes + 1) {
 				const last = params[paramFlatTypes];
@@ -3417,31 +3438,31 @@ export namespace Imports {
 	}
 
 	function createFunction(func: FunctionType<JFunction>, serviceFunction: JFunction, context: WasmContext): WasmFunction {
-		return (...params: WasmType[]): number | bigint | void => {
+		return function (this: void, ...params: WasmType[]): number | bigint | void {
 			return func.callService(serviceFunction, params, context);
 		};
 	}
 
 	function createConstructorFunction(callable: ConstructorType, clazz: GenericClass, manager: ResourceManager, context: WasmContext): WasmFunction {
-		return (...params: WasmType[]): number | bigint | void => {
+		return function (this: void, ...params: WasmType[]): number | bigint | void {
 			return callable.callConstructor(clazz, params, manager, context);
 		};
 	}
 
 	function createDestructorFunction(callable: DestructorType, func: JFunction, manager: ResourceManager): WasmFunction {
-		return (...params: WasmType[]): number | bigint | void => {
+		return function (this: void, ...params: WasmType[]): number | bigint | void {
 			return callable.callDestructor(func, params, manager);
 		};
 	}
 
 	function createStaticMethodFunction(callable: StaticMethodType, func: JFunction, context: WasmContext): WasmFunction {
-		return (...params: WasmType[]): number | bigint | void => {
+		return function (this: void, ...params: WasmType[]): number | bigint | void {
 			return callable.callStaticMethod(func, params, context);
 		};
 	}
 
 	function createMethodFunction(name: string, callable: MethodType, manager: ResourceManager, context: WasmContext): WasmFunction {
-		return (...params: WasmType[]): number | bigint | void => {
+		return function (this: void, ...params: WasmType[]): number | bigint | void {
 			return callable.callMethod(name, params, manager, context);
 		};
 	}
