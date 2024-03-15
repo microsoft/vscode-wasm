@@ -2838,8 +2838,8 @@ class Callable {
 		} else if (this.returnType.flatTypes.length <= Callable.MAX_FLAT_RESULTS) {
 			const result: WasmType[] = [];
 			this.returnType.lowerFlat(result, memory, value, context);
-			if (result.length !== 1) {
-				throw new ComponentModelTrap('Invalid result');
+			if (result.length !== this.returnType.flatTypes.length) {
+				throw new ComponentModelTrap(`Expected flat result of length ${this.returnType.flatTypes.length}, but got ${JSON.stringify(result, undefined, undefined)}`);
 			}
 			return result[0];
 		} else {
@@ -2869,6 +2869,25 @@ class Callable {
 				return this.liftReturnValue(resultRange!.ptr, memory, context);
 		}
 	}
+
+	protected getParamValues(params: (number | bigint)[], context: WasmContext): [JType[], ptr | undefined] {
+		const memory = context.getMemory();
+		const returnFlatTypes = this.returnType === undefined ? 0 : this.returnType.flatTypes.length;
+		// We currently only support 'lower' mode for results > MAX_FLAT_RESULTS.
+		let out: number | undefined;
+		if (returnFlatTypes > FunctionType.MAX_FLAT_RESULTS) {
+			const paramFlatTypes = this.paramTupleType.flatTypes.length;
+			// The caller allocated the memory. We just need to pass the pointer.
+			if (params.length === paramFlatTypes + 1) {
+				const last = params[paramFlatTypes];
+				if (typeof last !== 'number') {
+					throw new ComponentModelTrap(`Result pointer must be a number (u32), but got ${out}.`);
+				}
+				out = last as number;
+			}
+		}
+		return [this.liftParamValues(params, memory, context), out];
+	}
 }
 
 export class FunctionType<_T extends Function = Function> extends Callable  {
@@ -2878,35 +2897,23 @@ export class FunctionType<_T extends Function = Function> extends Callable  {
 	}
 
 	public callService(serviceFunction: JFunction, params: (number | bigint)[], context: WasmContext): number | bigint | void {
-		const memory  = context.getMemory();
-		const returnFlatTypes = this.returnType === undefined ? 0 : this.returnType.flatTypes.length;
-		const paramFlatTypes = this.paramTupleType.flatTypes.length;
-		// We currently only support 'lower' mode for results > MAX_FLAT_RESULTS.
-		if (returnFlatTypes > FunctionType.MAX_FLAT_RESULTS && params.length !== paramFlatTypes + 1) {
-			throw new ComponentModelTrap(`Invalid number of parameters. Received ${params.length} but expected ${paramFlatTypes + 1}`);
-		}
-		const jParams = this.liftParamValues(params, memory, context);
+		const [jParams, out] = this.getParamValues(params, context);
 		const result: JType | void = serviceFunction(...jParams);
-		const out = params[params.length - 1];
-		if (typeof out !== 'number') {
-			throw new ComponentModelTrap(`Result pointer must be a number (u32), but got ${out}.`);
-		}
-		return this.lowerReturnValue(result, memory, context, out);
+		return this.lowerReturnValue(result, context.getMemory(), context, out);
 	}
 }
 
 export class ConstructorType<_T extends Function = Function> extends Callable {
 
-	constructor(witName: string, params: CallableParameter[], returnType?: GenericComponentModelType) {
+	constructor(witName: string, params: CallableParameter[], returnType: GenericComponentModelType) {
 		super(witName, params, returnType);
 	}
 
 	public callConstructor(clazz: GenericClass, params: (number | bigint)[], resourceManager: ResourceManager, context: WasmContext): number | bigint | void {
 		// We currently only support 'lower' mode for results > MAX_FLAT_RESULTS.
 		const returnFlatTypes = this.returnType === undefined ? 0 : this.returnType.flatTypes.length;
-		const paramFlatTypes = this.paramTupleType.flatTypes.length;
-		if (returnFlatTypes > FunctionType.MAX_FLAT_RESULTS && params.length !== paramFlatTypes + 1) {
-			throw new ComponentModelTrap(`Invalid number of parameters. Received ${params.length} but expected ${paramFlatTypes + 1}`);
+		if (returnFlatTypes !== 1) {
+			throw new ComponentModelTrap(`Expected exactly one return type, but got ${returnFlatTypes}.`);
 		}
 		const memory  = context.getMemory();
 		const jParams = this.liftParamValues(params, memory, context);
@@ -2940,20 +2947,9 @@ export class StaticMethodType<_T extends Function = Function> extends Callable {
 	}
 
 	public callStaticMethod(func: JFunction, params: (number | bigint)[], context: WasmContext): number | bigint | void {
-		const memory  = context.getMemory();
-		// We currently only support 'lower' mode for results > MAX_FLAT_RESULTS.
-		const returnFlatTypes = this.returnType === undefined ? 0 : this.returnType.flatTypes.length;
-		const paramFlatTypes = this.paramTupleType.flatTypes.length;
-		if (returnFlatTypes > FunctionType.MAX_FLAT_RESULTS && params.length !== paramFlatTypes + 1) {
-			throw new ComponentModelTrap(`Invalid number of parameters. Received ${params.length} but expected ${paramFlatTypes + 1}`);
-		}
-		const jParams = this.liftParamValues(params, memory, context);
+		const [jParams, out] = this.getParamValues(params, context);
 		const result: JType | void = func(...jParams);
-		const out = params[params.length - 1];
-		if (typeof out !== 'number') {
-			throw new ComponentModelTrap(`Result pointer must be a number (u32), but got ${out}.`);
-		}
-		return this.lowerReturnValue(result, memory, context, out);
+		return this.lowerReturnValue(result, context.getMemory(), context, out);
 	}
 }
 
@@ -2967,25 +2963,15 @@ export class MethodType<_T extends Function = Function> extends Callable {
 		if (params.length === 0) {
 			throw new ComponentModelTrap(`Method calls must have at least one parameter (the object pointer).`);
 		}
-		const returnFlatTypes = this.returnType === undefined ? 0 : this.returnType.flatTypes.length;
-		const paramFlatTypes = this.paramTupleType.flatTypes.length;
-		// We currently only support 'lower' mode for results > MAX_FLAT_RESULTS.
-		if (returnFlatTypes > FunctionType.MAX_FLAT_RESULTS && params.length !== paramFlatTypes + 1) {
-			throw new ComponentModelTrap(`Invalid number of parameters. Received ${params.length} but expected ${paramFlatTypes + 1}`);
-		}
 		const handle = params[0];
 		if (typeof handle !== 'number') {
 			throw new ComponentModelTrap(`Object handle must be a number (u32), but got ${handle}.`);
 		}
+		// We need to cut off the first parameter (the object handle).
+		const [jParams, out] = this.getParamValues(params.slice(1), context);
 		const obj = resourceManager.getResource(handle);
 		const memory  = context.getMemory();
-		const jParams = this.liftParamValues(params, memory, context);
-		// We need to cut off the first parameter (the object handle).
-		const result: JType | void = (obj as any)[methodName](...jParams.slice(1));
-		const out = params[params.length - 1];
-		if (typeof out !== 'number') {
-			throw new ComponentModelTrap(`Result pointer must be a number (u32), but got ${out}.`);
-		}
+		const result: JType | void = (obj as any)[methodName](...jParams);
 		return this.lowerReturnValue(result, memory, context, out);
 	}
 }
@@ -3045,7 +3031,7 @@ export class ResourceType<T extends JInterface = JInterface> implements Componen
 
 	public readonly witName: string;
 	public readonly id: string;
-	public readonly methods: Map<string, ResourceCallable>;
+	public readonly callables: Map<string, ResourceCallable>;
 
 	constructor(witName: string, id: string) {
 		this.kind = ComponentModelTypeKind.resource;
@@ -3054,15 +3040,27 @@ export class ResourceType<T extends JInterface = JInterface> implements Componen
 		this.flatTypes = u32.flatTypes;
 		this.witName = witName;
 		this.id = id;
-		this.methods = new Map();
+		this.callables = new Map();
 	}
 
-	public addCallable(jsName: string, func: ResourceCallable): void {
-		this.methods.set(jsName, func);
+	public addConstructor(jsName: string, func: ConstructorType): void {
+		this.callables.set(jsName, func);
+	}
+
+	public addDestructor(jsName: string, func: DestructorType): void {
+		this.callables.set(jsName, func);
+	}
+
+	public addStaticMethod(jsName: string, func: StaticMethodType): void {
+		this.callables.set(jsName, func);
+	}
+
+	public addMethod(jsName: string, func: MethodType): void {
+		this.callables.set(jsName, func);
 	}
 
 	public getCallable(jsName: string): ResourceCallable {
-		const result = this.methods.get(jsName);
+		const result = this.callables.get(jsName);
 		if (result === undefined) {
 			throw new ComponentModelTrap(`Method '${jsName}' not found on resource '${this.witName}'.`);
 		}
@@ -3402,7 +3400,7 @@ export namespace Imports {
 		if (resources !== undefined) {
 			for (const [resourceName, resource] of resources) {
 				const resourceManager = context.managers.get(resource.id);
-				for (const [callableName, callable] of resource.methods) {
+				for (const [callableName, callable] of resource.callables) {
 					if (callable instanceof ConstructorType) {
 						result[callable.witName] = createConstructorFunction(callable, (service[resourceName] as GenericClass), resourceManager, context);
 					} else if (callable instanceof StaticMethodType) {
@@ -3452,7 +3450,7 @@ export namespace Imports {
 export namespace Module {
 	export function createObjectModule<T>(resource: ResourceType, wasm: ParamWasmInterface, context: WasmContext): T {
 		const result: { [key: string]: JFunction }  = Object.create(null);
-		for (const [name, callable] of resource.methods) {
+		for (const [name, callable] of resource.callables) {
 			if (callable instanceof StaticMethodType) {
 				continue;
 			}
@@ -3463,7 +3461,7 @@ export namespace Module {
 
 	export function createClassModule<T>(resource: ResourceType, wasm: ParamWasmInterface, context: WasmContext): T {
 		const result: { [key: string]: JFunction }  = Object.create(null);
-		for (const [name, callable] of resource.methods) {
+		for (const [name, callable] of resource.callables) {
 			if (callable instanceof StaticMethodType) {
 				result[name] = createModuleFunction(callable as any, wasm, context);
 			} else if (callable instanceof DestructorType) {
@@ -3507,7 +3505,7 @@ export namespace Exports {
 		}
 		if (resources !== undefined) {
 			for (const resource of resources.values()) {
-				for (const callable of resource.methods.values()) {
+				for (const callable of resource.callables.values()) {
 					const callableKey = `${key}#${callable.witName}`;
 					const candidate = exports[callableKey];
 					if (candidate !== null && candidate !== undefined) {

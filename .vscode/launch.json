@@ -30,6 +30,21 @@
 		{
 			"type": "extensionHost",
 			"request": "launch",
+			"name": "Component Model Performance",
+			"runtimeExecutable": "${execPath}",
+			"args": [
+				"--extensionDevelopmentPath=${workspaceRoot}/testbeds/component-model-performance",
+			],
+			"outFiles": [
+				"${workspaceRoot}/testbeds/component-model-performance/out/**/*.js",
+				"${workspaceRoot}/wasm-component-model/lib/**/*.js",
+			],
+			"sourceMaps": true,
+			"preLaunchTask": "Build Component Model Performance"
+		},
+		{
+			"type": "extensionHost",
+			"request": "launch",
 			"name": "Python Testbed",
 			"runtimeExecutable": "${execPath}",
 			"args": [

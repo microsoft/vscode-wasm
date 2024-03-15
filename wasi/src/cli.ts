@@ -14,10 +14,10 @@ export namespace cli {
 	export namespace Environment {
 		/**
 		 * Get the POSIX-style environment variables.
-		 *
+		 * 
 		 * Each environment variable is provided as a pair of string variable names
 		 * and string value.
-		 *
+		 * 
 		 * Morally, these are a value import, but until value imports are available
 		 * in the component model, this import function should return the same
 		 * values each time it is called.
@@ -90,7 +90,7 @@ export namespace cli {
 
 	/**
 	 * Terminal input.
-	 *
+	 * 
 	 * In the future, this may include functions for disabling echoing,
 	 * disabling input buffering so that keyboard events are sent through
 	 * immediately, querying supported features, and so on.
@@ -114,7 +114,7 @@ export namespace cli {
 
 	/**
 	 * Terminal output.
-	 *
+	 * 
 	 * In the future, this may include functions for querying the terminal
 	 * size, being notified of terminal size changes, querying supported
 	 * features, and so on.
@@ -384,7 +384,7 @@ export namespace cli {
 	export namespace TerminalInput.$ {
 		export const TerminalInput = new $wcm.ResourceType<cli.TerminalInput.TerminalInput>('terminal-input', 'wasi:cli/terminal-input/terminal-input');
 		export const TerminalInput_Handle = new $wcm.ResourceHandleType('terminal-input');
-		TerminalInput.addCallable('$drop', new $wcm.DestructorType<cli.TerminalInput.TerminalInput.Statics['$drop']>('[resource-drop]terminal-input', [['inst', TerminalInput]]));
+		TerminalInput.addDestructor('$drop', new $wcm.DestructorType<cli.TerminalInput.TerminalInput.Statics['$drop']>('[resource-drop]terminal-input', [['inst', TerminalInput]]));
 	}
 	export namespace TerminalInput._ {
 		export const id = 'wasi:cli/terminal-input@0.2.0' as const;
@@ -430,7 +430,7 @@ export namespace cli {
 	export namespace TerminalOutput.$ {
 		export const TerminalOutput = new $wcm.ResourceType<cli.TerminalOutput.TerminalOutput>('terminal-output', 'wasi:cli/terminal-output/terminal-output');
 		export const TerminalOutput_Handle = new $wcm.ResourceHandleType('terminal-output');
-		TerminalOutput.addCallable('$drop', new $wcm.DestructorType<cli.TerminalOutput.TerminalOutput.Statics['$drop']>('[resource-drop]terminal-output', [['inst', TerminalOutput]]));
+		TerminalOutput.addDestructor('$drop', new $wcm.DestructorType<cli.TerminalOutput.TerminalOutput.Statics['$drop']>('[resource-drop]terminal-output', [['inst', TerminalOutput]]));
 	}
 	export namespace TerminalOutput._ {
 		export const id = 'wasi:cli/terminal-output@0.2.0' as const;

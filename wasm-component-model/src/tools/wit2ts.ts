@@ -3497,10 +3497,11 @@ namespace ResourceEmitter {
 			const methodName = this.getMethodName();
 			const resourceName = nameProvider.type.name(this.resource);
 			const typeParam = `${this.getPackageQualifier()}.${this.getTypeQualifier()}['${methodName}']`;
+			const [addMethod, metaModelType] = this.getMetaModelInfo();
 			if (params.length === 0) {
-				code.push(`${resourceName}.addCallable('${methodName}', new $wcm.${this.getMetaModelType()}<${typeParam}>('${this.method.name}', [], ${result}));`);
+				code.push(`${resourceName}.${addMethod}('${methodName}', new $wcm.${metaModelType}<${typeParam}>('${this.method.name}', [], ${result}));`);
 			} else {
-				code.push(`${resourceName}.addCallable('${methodName}', new $wcm.${this.getMetaModelType()}<${typeParam}>('${this.method.name}', [`);
+				code.push(`${resourceName}.${addMethod}('${methodName}', new $wcm.${metaModelType}<${typeParam}>('${this.method.name}', [`);
 				code.increaseIndent();
 				for (const [name, type] of params) {
 					code.push(`['${name}', ${type}],`);
@@ -3514,7 +3515,7 @@ namespace ResourceEmitter {
 			return this.getMethodName();
 		}
 		protected abstract getMethodName(): string;
-		protected abstract getMetaModelType(): string;
+		protected abstract getMetaModelInfo(): [string, string];
 		protected abstract getTypeQualifier(): string;
 
 		protected getSignatureParts(start: 0 | 1): [string[], string[], string] {
@@ -3554,8 +3555,8 @@ namespace ResourceEmitter {
 			return this.context.nameProvider.method.name(this.callable);
 		}
 
-		protected getMetaModelType(): string {
-			return 'MethodType';
+		protected getMetaModelInfo(): [string, string] {
+			return ['addMethod', 'MethodType'];
 		}
 
 		protected getTypeQualifier(): string {
@@ -3597,8 +3598,8 @@ namespace ResourceEmitter {
 			return this.context.nameProvider.method.staticName(this.callable);
 		}
 
-		protected getMetaModelType(): string {
-			return 'StaticMethodType';
+		protected getMetaModelInfo(): [string, string] {
+			return ['addStaticMethod', 'StaticMethodType'];
 		}
 
 		protected getTypeQualifier(): string {
@@ -3638,8 +3639,8 @@ namespace ResourceEmitter {
 			return this.context.nameProvider.method.constructorName(this.callable);
 		}
 
-		protected getMetaModelType(): string {
-			return 'ConstructorType';
+		protected getMetaModelInfo(): [string, string] {
+			return ['addConstructor', 'ConstructorType'];
 		}
 
 		protected getTypeQualifier(): string {
@@ -3707,7 +3708,7 @@ namespace ResourceEmitter {
 		public emitMetaModel(code: Code): void {
 			const resourceName = this.context.nameProvider.type.name(this.resource);
 			const typeParam = `${this.getPackageQualifier()}.Statics['$drop']`;
-			code.push(`${resourceName}.addCallable('$drop', new $wcm.DestructorType<${typeParam}>('[resource-drop]${this.resource.name}', [['inst', ${resourceName}]]));`);
+			code.push(`${resourceName}.addDestructor('$drop', new $wcm.DestructorType<${typeParam}>('[resource-drop]${this.resource.name}', [['inst', ${resourceName}]]));`);
 		}
 
 		public emitStaticsDeclaration(code: Code): void {
@@ -3813,7 +3814,9 @@ function CallableEmitter<C extends Callable, P extends Interface | ResourceType 
 		private getMetaModelParamsAndReturnType(): [string[][], string | undefined] {
 			const { nameProvider } = this.context;
 			const metaDataParams: string[][] = [];
-			for (const param of this.callable.params) {
+			const start: number = Callable.isMethod(this.callable) ? 1 : 0;
+			for (let i = start; i < this.callable.params.length; i++) {
+				const param = this.callable.params[i];
 				const paramName = this.context.nameProvider.parameter.name(param);
 				const typeName = this.context.printers.metaModel.printTypeReference(param.type, TypeUsage.parameter);
 				metaDataParams.push([paramName, typeName]);

@@ -1355,180 +1355,109 @@ export namespace http {
 		export const OutgoingBody_Handle = new $wcm.ResourceHandleType('outgoing-body');
 		export const FutureIncomingResponse = new $wcm.ResourceType<http.Types.FutureIncomingResponse>('future-incoming-response', 'wasi:http/types/future-incoming-response');
 		export const FutureIncomingResponse_Handle = new $wcm.ResourceHandleType('future-incoming-response');
-		Fields.addCallable('constructor', new $wcm.ConstructorType<http.Types.Fields.Class['constructor']>('[constructor]fields', [], new $wcm.OwnType(Fields_Handle)));
-		Fields.addCallable('fromList', new $wcm.StaticMethodType<http.Types.Fields.Statics['fromList']>('[static]fields.from-list', [
+		Fields.addConstructor('constructor', new $wcm.ConstructorType<http.Types.Fields.Class['constructor']>('[constructor]fields', [], new $wcm.OwnType(Fields_Handle)));
+		Fields.addStaticMethod('fromList', new $wcm.StaticMethodType<http.Types.Fields.Statics['fromList']>('[static]fields.from-list', [
 			['entries', new $wcm.ListType<[http.Types.FieldKey, Uint8Array]>(new $wcm.TupleType<[http.Types.FieldKey, Uint8Array]>([FieldKey, FieldValue]))],
 		], new $wcm.ResultType<own<http.Types.Fields>, http.Types.HeaderError>(new $wcm.OwnType<http.Types.Fields>(Fields), HeaderError)));
-		Fields.addCallable('get', new $wcm.MethodType<http.Types.Fields.Interface['get']>('[method]fields.get', [
-			['self', new $wcm.BorrowType<http.Types.Fields>(Fields)],
+		Fields.addMethod('get', new $wcm.MethodType<http.Types.Fields.Interface['get']>('[method]fields.get', [
 			['name', FieldKey],
 		], new $wcm.ListType<Uint8Array>(FieldValue)));
-		Fields.addCallable('has', new $wcm.MethodType<http.Types.Fields.Interface['has']>('[method]fields.has', [
-			['self', new $wcm.BorrowType<http.Types.Fields>(Fields)],
+		Fields.addMethod('has', new $wcm.MethodType<http.Types.Fields.Interface['has']>('[method]fields.has', [
 			['name', FieldKey],
 		], $wcm.bool));
-		Fields.addCallable('set', new $wcm.MethodType<http.Types.Fields.Interface['set']>('[method]fields.set', [
-			['self', new $wcm.BorrowType<http.Types.Fields>(Fields)],
+		Fields.addMethod('set', new $wcm.MethodType<http.Types.Fields.Interface['set']>('[method]fields.set', [
 			['name', FieldKey],
 			['value', new $wcm.ListType<Uint8Array>(FieldValue)],
 		], new $wcm.ResultType<void, http.Types.HeaderError>(undefined, HeaderError)));
-		Fields.addCallable('delete', new $wcm.MethodType<http.Types.Fields.Interface['delete']>('[method]fields.delete', [
-			['self', new $wcm.BorrowType<http.Types.Fields>(Fields)],
+		Fields.addMethod('delete', new $wcm.MethodType<http.Types.Fields.Interface['delete']>('[method]fields.delete', [
 			['name', FieldKey],
 		], new $wcm.ResultType<void, http.Types.HeaderError>(undefined, HeaderError)));
-		Fields.addCallable('append', new $wcm.MethodType<http.Types.Fields.Interface['append']>('[method]fields.append', [
-			['self', new $wcm.BorrowType<http.Types.Fields>(Fields)],
+		Fields.addMethod('append', new $wcm.MethodType<http.Types.Fields.Interface['append']>('[method]fields.append', [
 			['name', FieldKey],
 			['value', FieldValue],
 		], new $wcm.ResultType<void, http.Types.HeaderError>(undefined, HeaderError)));
-		Fields.addCallable('entries', new $wcm.MethodType<http.Types.Fields.Interface['entries']>('[method]fields.entries', [
-			['self', new $wcm.BorrowType<http.Types.Fields>(Fields)],
-		], new $wcm.ListType<[http.Types.FieldKey, Uint8Array]>(new $wcm.TupleType<[http.Types.FieldKey, Uint8Array]>([FieldKey, FieldValue]))));
-		Fields.addCallable('clone', new $wcm.MethodType<http.Types.Fields.Interface['clone']>('[method]fields.clone', [
-			['self', new $wcm.BorrowType<http.Types.Fields>(Fields)],
-		], new $wcm.OwnType<http.Types.Fields>(Fields)));
-		Fields.addCallable('$drop', new $wcm.DestructorType<http.Types.Fields.Statics['$drop']>('[resource-drop]fields', [['inst', Fields]]));
-		IncomingRequest.addCallable('method', new $wcm.MethodType<http.Types.IncomingRequest.Interface['method']>('[method]incoming-request.method', [
-			['self', new $wcm.BorrowType<http.Types.IncomingRequest>(IncomingRequest)],
-		], Method));
-		IncomingRequest.addCallable('pathWithQuery', new $wcm.MethodType<http.Types.IncomingRequest.Interface['pathWithQuery']>('[method]incoming-request.path-with-query', [
-			['self', new $wcm.BorrowType<http.Types.IncomingRequest>(IncomingRequest)],
-		], new $wcm.OptionType<string>($wcm.wstring)));
-		IncomingRequest.addCallable('scheme', new $wcm.MethodType<http.Types.IncomingRequest.Interface['scheme']>('[method]incoming-request.scheme', [
-			['self', new $wcm.BorrowType<http.Types.IncomingRequest>(IncomingRequest)],
-		], new $wcm.OptionType<http.Types.Scheme>(Scheme)));
-		IncomingRequest.addCallable('authority', new $wcm.MethodType<http.Types.IncomingRequest.Interface['authority']>('[method]incoming-request.authority', [
-			['self', new $wcm.BorrowType<http.Types.IncomingRequest>(IncomingRequest)],
-		], new $wcm.OptionType<string>($wcm.wstring)));
-		IncomingRequest.addCallable('headers', new $wcm.MethodType<http.Types.IncomingRequest.Interface['headers']>('[method]incoming-request.headers', [
-			['self', new $wcm.BorrowType<http.Types.IncomingRequest>(IncomingRequest)],
-		], new $wcm.OwnType<http.Types.Headers>(Headers)));
-		IncomingRequest.addCallable('consume', new $wcm.MethodType<http.Types.IncomingRequest.Interface['consume']>('[method]incoming-request.consume', [
-			['self', new $wcm.BorrowType<http.Types.IncomingRequest>(IncomingRequest)],
-		], new $wcm.ResultType<own<http.Types.IncomingBody>, void>(new $wcm.OwnType<http.Types.IncomingBody>(IncomingBody), undefined)));
-		IncomingRequest.addCallable('$drop', new $wcm.DestructorType<http.Types.IncomingRequest.Statics['$drop']>('[resource-drop]incoming-request', [['inst', IncomingRequest]]));
-		OutgoingRequest.addCallable('constructor', new $wcm.ConstructorType<http.Types.OutgoingRequest.Class['constructor']>('[constructor]outgoing-request', [
+		Fields.addMethod('entries', new $wcm.MethodType<http.Types.Fields.Interface['entries']>('[method]fields.entries', [], new $wcm.ListType<[http.Types.FieldKey, Uint8Array]>(new $wcm.TupleType<[http.Types.FieldKey, Uint8Array]>([FieldKey, FieldValue]))));
+		Fields.addMethod('clone', new $wcm.MethodType<http.Types.Fields.Interface['clone']>('[method]fields.clone', [], new $wcm.OwnType<http.Types.Fields>(Fields)));
+		Fields.addDestructor('$drop', new $wcm.DestructorType<http.Types.Fields.Statics['$drop']>('[resource-drop]fields', [['inst', Fields]]));
+		IncomingRequest.addMethod('method', new $wcm.MethodType<http.Types.IncomingRequest.Interface['method']>('[method]incoming-request.method', [], Method));
+		IncomingRequest.addMethod('pathWithQuery', new $wcm.MethodType<http.Types.IncomingRequest.Interface['pathWithQuery']>('[method]incoming-request.path-with-query', [], new $wcm.OptionType<string>($wcm.wstring)));
+		IncomingRequest.addMethod('scheme', new $wcm.MethodType<http.Types.IncomingRequest.Interface['scheme']>('[method]incoming-request.scheme', [], new $wcm.OptionType<http.Types.Scheme>(Scheme)));
+		IncomingRequest.addMethod('authority', new $wcm.MethodType<http.Types.IncomingRequest.Interface['authority']>('[method]incoming-request.authority', [], new $wcm.OptionType<string>($wcm.wstring)));
+		IncomingRequest.addMethod('headers', new $wcm.MethodType<http.Types.IncomingRequest.Interface['headers']>('[method]incoming-request.headers', [], new $wcm.OwnType<http.Types.Headers>(Headers)));
+		IncomingRequest.addMethod('consume', new $wcm.MethodType<http.Types.IncomingRequest.Interface['consume']>('[method]incoming-request.consume', [], new $wcm.ResultType<own<http.Types.IncomingBody>, void>(new $wcm.OwnType<http.Types.IncomingBody>(IncomingBody), undefined)));
+		IncomingRequest.addDestructor('$drop', new $wcm.DestructorType<http.Types.IncomingRequest.Statics['$drop']>('[resource-drop]incoming-request', [['inst', IncomingRequest]]));
+		OutgoingRequest.addConstructor('constructor', new $wcm.ConstructorType<http.Types.OutgoingRequest.Class['constructor']>('[constructor]outgoing-request', [
 			['headers', new $wcm.OwnType<http.Types.Headers>(Headers)],
 		], new $wcm.OwnType(OutgoingRequest_Handle)));
-		OutgoingRequest.addCallable('body', new $wcm.MethodType<http.Types.OutgoingRequest.Interface['body']>('[method]outgoing-request.body', [
-			['self', new $wcm.BorrowType<http.Types.OutgoingRequest>(OutgoingRequest)],
-		], new $wcm.ResultType<own<http.Types.OutgoingBody>, void>(new $wcm.OwnType<http.Types.OutgoingBody>(OutgoingBody), undefined)));
-		OutgoingRequest.addCallable('method', new $wcm.MethodType<http.Types.OutgoingRequest.Interface['method']>('[method]outgoing-request.method', [
-			['self', new $wcm.BorrowType<http.Types.OutgoingRequest>(OutgoingRequest)],
-		], Method));
-		OutgoingRequest.addCallable('setMethod', new $wcm.MethodType<http.Types.OutgoingRequest.Interface['setMethod']>('[method]outgoing-request.set-method', [
-			['self', new $wcm.BorrowType<http.Types.OutgoingRequest>(OutgoingRequest)],
+		OutgoingRequest.addMethod('body', new $wcm.MethodType<http.Types.OutgoingRequest.Interface['body']>('[method]outgoing-request.body', [], new $wcm.ResultType<own<http.Types.OutgoingBody>, void>(new $wcm.OwnType<http.Types.OutgoingBody>(OutgoingBody), undefined)));
+		OutgoingRequest.addMethod('method', new $wcm.MethodType<http.Types.OutgoingRequest.Interface['method']>('[method]outgoing-request.method', [], Method));
+		OutgoingRequest.addMethod('setMethod', new $wcm.MethodType<http.Types.OutgoingRequest.Interface['setMethod']>('[method]outgoing-request.set-method', [
 			['method', Method],
 		], new $wcm.ResultType<void, void>(undefined, undefined)));
-		OutgoingRequest.addCallable('pathWithQuery', new $wcm.MethodType<http.Types.OutgoingRequest.Interface['pathWithQuery']>('[method]outgoing-request.path-with-query', [
-			['self', new $wcm.BorrowType<http.Types.OutgoingRequest>(OutgoingRequest)],
-		], new $wcm.OptionType<string>($wcm.wstring)));
-		OutgoingRequest.addCallable('setPathWithQuery', new $wcm.MethodType<http.Types.OutgoingRequest.Interface['setPathWithQuery']>('[method]outgoing-request.set-path-with-query', [
-			['self', new $wcm.BorrowType<http.Types.OutgoingRequest>(OutgoingRequest)],
+		OutgoingRequest.addMethod('pathWithQuery', new $wcm.MethodType<http.Types.OutgoingRequest.Interface['pathWithQuery']>('[method]outgoing-request.path-with-query', [], new $wcm.OptionType<string>($wcm.wstring)));
+		OutgoingRequest.addMethod('setPathWithQuery', new $wcm.MethodType<http.Types.OutgoingRequest.Interface['setPathWithQuery']>('[method]outgoing-request.set-path-with-query', [
 			['pathWithQuery', new $wcm.OptionType<string>($wcm.wstring)],
 		], new $wcm.ResultType<void, void>(undefined, undefined)));
-		OutgoingRequest.addCallable('scheme', new $wcm.MethodType<http.Types.OutgoingRequest.Interface['scheme']>('[method]outgoing-request.scheme', [
-			['self', new $wcm.BorrowType<http.Types.OutgoingRequest>(OutgoingRequest)],
-		], new $wcm.OptionType<http.Types.Scheme>(Scheme)));
-		OutgoingRequest.addCallable('setScheme', new $wcm.MethodType<http.Types.OutgoingRequest.Interface['setScheme']>('[method]outgoing-request.set-scheme', [
-			['self', new $wcm.BorrowType<http.Types.OutgoingRequest>(OutgoingRequest)],
+		OutgoingRequest.addMethod('scheme', new $wcm.MethodType<http.Types.OutgoingRequest.Interface['scheme']>('[method]outgoing-request.scheme', [], new $wcm.OptionType<http.Types.Scheme>(Scheme)));
+		OutgoingRequest.addMethod('setScheme', new $wcm.MethodType<http.Types.OutgoingRequest.Interface['setScheme']>('[method]outgoing-request.set-scheme', [
 			['scheme', new $wcm.OptionType<http.Types.Scheme>(Scheme)],
 		], new $wcm.ResultType<void, void>(undefined, undefined)));
-		OutgoingRequest.addCallable('authority', new $wcm.MethodType<http.Types.OutgoingRequest.Interface['authority']>('[method]outgoing-request.authority', [
-			['self', new $wcm.BorrowType<http.Types.OutgoingRequest>(OutgoingRequest)],
-		], new $wcm.OptionType<string>($wcm.wstring)));
-		OutgoingRequest.addCallable('setAuthority', new $wcm.MethodType<http.Types.OutgoingRequest.Interface['setAuthority']>('[method]outgoing-request.set-authority', [
-			['self', new $wcm.BorrowType<http.Types.OutgoingRequest>(OutgoingRequest)],
+		OutgoingRequest.addMethod('authority', new $wcm.MethodType<http.Types.OutgoingRequest.Interface['authority']>('[method]outgoing-request.authority', [], new $wcm.OptionType<string>($wcm.wstring)));
+		OutgoingRequest.addMethod('setAuthority', new $wcm.MethodType<http.Types.OutgoingRequest.Interface['setAuthority']>('[method]outgoing-request.set-authority', [
 			['authority', new $wcm.OptionType<string>($wcm.wstring)],
 		], new $wcm.ResultType<void, void>(undefined, undefined)));
-		OutgoingRequest.addCallable('headers', new $wcm.MethodType<http.Types.OutgoingRequest.Interface['headers']>('[method]outgoing-request.headers', [
-			['self', new $wcm.BorrowType<http.Types.OutgoingRequest>(OutgoingRequest)],
-		], new $wcm.OwnType<http.Types.Headers>(Headers)));
-		OutgoingRequest.addCallable('$drop', new $wcm.DestructorType<http.Types.OutgoingRequest.Statics['$drop']>('[resource-drop]outgoing-request', [['inst', OutgoingRequest]]));
-		RequestOptions.addCallable('constructor', new $wcm.ConstructorType<http.Types.RequestOptions.Class['constructor']>('[constructor]request-options', [], new $wcm.OwnType(RequestOptions_Handle)));
-		RequestOptions.addCallable('connectTimeout', new $wcm.MethodType<http.Types.RequestOptions.Interface['connectTimeout']>('[method]request-options.connect-timeout', [
-			['self', new $wcm.BorrowType<http.Types.RequestOptions>(RequestOptions)],
-		], new $wcm.OptionType<http.Types.Duration>(Duration)));
-		RequestOptions.addCallable('setConnectTimeout', new $wcm.MethodType<http.Types.RequestOptions.Interface['setConnectTimeout']>('[method]request-options.set-connect-timeout', [
-			['self', new $wcm.BorrowType<http.Types.RequestOptions>(RequestOptions)],
+		OutgoingRequest.addMethod('headers', new $wcm.MethodType<http.Types.OutgoingRequest.Interface['headers']>('[method]outgoing-request.headers', [], new $wcm.OwnType<http.Types.Headers>(Headers)));
+		OutgoingRequest.addDestructor('$drop', new $wcm.DestructorType<http.Types.OutgoingRequest.Statics['$drop']>('[resource-drop]outgoing-request', [['inst', OutgoingRequest]]));
+		RequestOptions.addConstructor('constructor', new $wcm.ConstructorType<http.Types.RequestOptions.Class['constructor']>('[constructor]request-options', [], new $wcm.OwnType(RequestOptions_Handle)));
+		RequestOptions.addMethod('connectTimeout', new $wcm.MethodType<http.Types.RequestOptions.Interface['connectTimeout']>('[method]request-options.connect-timeout', [], new $wcm.OptionType<http.Types.Duration>(Duration)));
+		RequestOptions.addMethod('setConnectTimeout', new $wcm.MethodType<http.Types.RequestOptions.Interface['setConnectTimeout']>('[method]request-options.set-connect-timeout', [
 			['duration', new $wcm.OptionType<http.Types.Duration>(Duration)],
 		], new $wcm.ResultType<void, void>(undefined, undefined)));
-		RequestOptions.addCallable('firstByteTimeout', new $wcm.MethodType<http.Types.RequestOptions.Interface['firstByteTimeout']>('[method]request-options.first-byte-timeout', [
-			['self', new $wcm.BorrowType<http.Types.RequestOptions>(RequestOptions)],
-		], new $wcm.OptionType<http.Types.Duration>(Duration)));
-		RequestOptions.addCallable('setFirstByteTimeout', new $wcm.MethodType<http.Types.RequestOptions.Interface['setFirstByteTimeout']>('[method]request-options.set-first-byte-timeout', [
-			['self', new $wcm.BorrowType<http.Types.RequestOptions>(RequestOptions)],
+		RequestOptions.addMethod('firstByteTimeout', new $wcm.MethodType<http.Types.RequestOptions.Interface['firstByteTimeout']>('[method]request-options.first-byte-timeout', [], new $wcm.OptionType<http.Types.Duration>(Duration)));
+		RequestOptions.addMethod('setFirstByteTimeout', new $wcm.MethodType<http.Types.RequestOptions.Interface['setFirstByteTimeout']>('[method]request-options.set-first-byte-timeout', [
 			['duration', new $wcm.OptionType<http.Types.Duration>(Duration)],
 		], new $wcm.ResultType<void, void>(undefined, undefined)));
-		RequestOptions.addCallable('betweenBytesTimeout', new $wcm.MethodType<http.Types.RequestOptions.Interface['betweenBytesTimeout']>('[method]request-options.between-bytes-timeout', [
-			['self', new $wcm.BorrowType<http.Types.RequestOptions>(RequestOptions)],
-		], new $wcm.OptionType<http.Types.Duration>(Duration)));
-		RequestOptions.addCallable('setBetweenBytesTimeout', new $wcm.MethodType<http.Types.RequestOptions.Interface['setBetweenBytesTimeout']>('[method]request-options.set-between-bytes-timeout', [
-			['self', new $wcm.BorrowType<http.Types.RequestOptions>(RequestOptions)],
+		RequestOptions.addMethod('betweenBytesTimeout', new $wcm.MethodType<http.Types.RequestOptions.Interface['betweenBytesTimeout']>('[method]request-options.between-bytes-timeout', [], new $wcm.OptionType<http.Types.Duration>(Duration)));
+		RequestOptions.addMethod('setBetweenBytesTimeout', new $wcm.MethodType<http.Types.RequestOptions.Interface['setBetweenBytesTimeout']>('[method]request-options.set-between-bytes-timeout', [
 			['duration', new $wcm.OptionType<http.Types.Duration>(Duration)],
 		], new $wcm.ResultType<void, void>(undefined, undefined)));
-		RequestOptions.addCallable('$drop', new $wcm.DestructorType<http.Types.RequestOptions.Statics['$drop']>('[resource-drop]request-options', [['inst', RequestOptions]]));
-		ResponseOutparam.addCallable('set', new $wcm.StaticMethodType<http.Types.ResponseOutparam.Statics['set']>('[static]response-outparam.set', [
+		RequestOptions.addDestructor('$drop', new $wcm.DestructorType<http.Types.RequestOptions.Statics['$drop']>('[resource-drop]request-options', [['inst', RequestOptions]]));
+		ResponseOutparam.addStaticMethod('set', new $wcm.StaticMethodType<http.Types.ResponseOutparam.Statics['set']>('[static]response-outparam.set', [
 			['param', new $wcm.OwnType<http.Types.ResponseOutparam>(ResponseOutparam)],
 			['response', new $wcm.ResultType<own<http.Types.OutgoingResponse>, http.Types.ErrorCode>(new $wcm.OwnType<http.Types.OutgoingResponse>(OutgoingResponse), ErrorCode)],
 		], undefined));
-		ResponseOutparam.addCallable('$drop', new $wcm.DestructorType<http.Types.ResponseOutparam.Statics['$drop']>('[resource-drop]response-outparam', [['inst', ResponseOutparam]]));
-		IncomingResponse.addCallable('status', new $wcm.MethodType<http.Types.IncomingResponse.Interface['status']>('[method]incoming-response.status', [
-			['self', new $wcm.BorrowType<http.Types.IncomingResponse>(IncomingResponse)],
-		], StatusCode));
-		IncomingResponse.addCallable('headers', new $wcm.MethodType<http.Types.IncomingResponse.Interface['headers']>('[method]incoming-response.headers', [
-			['self', new $wcm.BorrowType<http.Types.IncomingResponse>(IncomingResponse)],
-		], new $wcm.OwnType<http.Types.Headers>(Headers)));
-		IncomingResponse.addCallable('consume', new $wcm.MethodType<http.Types.IncomingResponse.Interface['consume']>('[method]incoming-response.consume', [
-			['self', new $wcm.BorrowType<http.Types.IncomingResponse>(IncomingResponse)],
-		], new $wcm.ResultType<own<http.Types.IncomingBody>, void>(new $wcm.OwnType<http.Types.IncomingBody>(IncomingBody), undefined)));
-		IncomingResponse.addCallable('$drop', new $wcm.DestructorType<http.Types.IncomingResponse.Statics['$drop']>('[resource-drop]incoming-response', [['inst', IncomingResponse]]));
-		IncomingBody.addCallable('stream', new $wcm.MethodType<http.Types.IncomingBody.Interface['stream']>('[method]incoming-body.stream', [
-			['self', new $wcm.BorrowType<http.Types.IncomingBody>(IncomingBody)],
-		], new $wcm.ResultType<own<http.Types.InputStream>, void>(new $wcm.OwnType<http.Types.InputStream>(InputStream), undefined)));
-		IncomingBody.addCallable('finish', new $wcm.StaticMethodType<http.Types.IncomingBody.Statics['finish']>('[static]incoming-body.finish', [
+		ResponseOutparam.addDestructor('$drop', new $wcm.DestructorType<http.Types.ResponseOutparam.Statics['$drop']>('[resource-drop]response-outparam', [['inst', ResponseOutparam]]));
+		IncomingResponse.addMethod('status', new $wcm.MethodType<http.Types.IncomingResponse.Interface['status']>('[method]incoming-response.status', [], StatusCode));
+		IncomingResponse.addMethod('headers', new $wcm.MethodType<http.Types.IncomingResponse.Interface['headers']>('[method]incoming-response.headers', [], new $wcm.OwnType<http.Types.Headers>(Headers)));
+		IncomingResponse.addMethod('consume', new $wcm.MethodType<http.Types.IncomingResponse.Interface['consume']>('[method]incoming-response.consume', [], new $wcm.ResultType<own<http.Types.IncomingBody>, void>(new $wcm.OwnType<http.Types.IncomingBody>(IncomingBody), undefined)));
+		IncomingResponse.addDestructor('$drop', new $wcm.DestructorType<http.Types.IncomingResponse.Statics['$drop']>('[resource-drop]incoming-response', [['inst', IncomingResponse]]));
+		IncomingBody.addMethod('stream', new $wcm.MethodType<http.Types.IncomingBody.Interface['stream']>('[method]incoming-body.stream', [], new $wcm.ResultType<own<http.Types.InputStream>, void>(new $wcm.OwnType<http.Types.InputStream>(InputStream), undefined)));
+		IncomingBody.addStaticMethod('finish', new $wcm.StaticMethodType<http.Types.IncomingBody.Statics['finish']>('[static]incoming-body.finish', [
 			['this_', new $wcm.OwnType<http.Types.IncomingBody>(IncomingBody)],
 		], new $wcm.OwnType<http.Types.FutureTrailers>(FutureTrailers)));
-		IncomingBody.addCallable('$drop', new $wcm.DestructorType<http.Types.IncomingBody.Statics['$drop']>('[resource-drop]incoming-body', [['inst', IncomingBody]]));
-		FutureTrailers.addCallable('subscribe', new $wcm.MethodType<http.Types.FutureTrailers.Interface['subscribe']>('[method]future-trailers.subscribe', [
-			['self', new $wcm.BorrowType<http.Types.FutureTrailers>(FutureTrailers)],
-		], new $wcm.OwnType<http.Types.Pollable>(Pollable)));
-		FutureTrailers.addCallable('get', new $wcm.MethodType<http.Types.FutureTrailers.Interface['get']>('[method]future-trailers.get', [
-			['self', new $wcm.BorrowType<http.Types.FutureTrailers>(FutureTrailers)],
-		], new $wcm.OptionType<result<result<option<own<http.Types.Trailers>>, http.Types.ErrorCode>, void>>(new $wcm.ResultType<result<option<own<http.Types.Trailers>>, http.Types.ErrorCode>, void>(new $wcm.ResultType<option<own<http.Types.Trailers>>, http.Types.ErrorCode>(new $wcm.OptionType<own<http.Types.Trailers>>(new $wcm.OwnType<http.Types.Trailers>(Trailers)), ErrorCode), undefined))));
-		FutureTrailers.addCallable('$drop', new $wcm.DestructorType<http.Types.FutureTrailers.Statics['$drop']>('[resource-drop]future-trailers', [['inst', FutureTrailers]]));
-		OutgoingResponse.addCallable('constructor', new $wcm.ConstructorType<http.Types.OutgoingResponse.Class['constructor']>('[constructor]outgoing-response', [
+		IncomingBody.addDestructor('$drop', new $wcm.DestructorType<http.Types.IncomingBody.Statics['$drop']>('[resource-drop]incoming-body', [['inst', IncomingBody]]));
+		FutureTrailers.addMethod('subscribe', new $wcm.MethodType<http.Types.FutureTrailers.Interface['subscribe']>('[method]future-trailers.subscribe', [], new $wcm.OwnType<http.Types.Pollable>(Pollable)));
+		FutureTrailers.addMethod('get', new $wcm.MethodType<http.Types.FutureTrailers.Interface['get']>('[method]future-trailers.get', [], new $wcm.OptionType<result<result<option<own<http.Types.Trailers>>, http.Types.ErrorCode>, void>>(new $wcm.ResultType<result<option<own<http.Types.Trailers>>, http.Types.ErrorCode>, void>(new $wcm.ResultType<option<own<http.Types.Trailers>>, http.Types.ErrorCode>(new $wcm.OptionType<own<http.Types.Trailers>>(new $wcm.OwnType<http.Types.Trailers>(Trailers)), ErrorCode), undefined))));
+		FutureTrailers.addDestructor('$drop', new $wcm.DestructorType<http.Types.FutureTrailers.Statics['$drop']>('[resource-drop]future-trailers', [['inst', FutureTrailers]]));
+		OutgoingResponse.addConstructor('constructor', new $wcm.ConstructorType<http.Types.OutgoingResponse.Class['constructor']>('[constructor]outgoing-response', [
 			['headers', new $wcm.OwnType<http.Types.Headers>(Headers)],
 		], new $wcm.OwnType(OutgoingResponse_Handle)));
-		OutgoingResponse.addCallable('statusCode', new $wcm.MethodType<http.Types.OutgoingResponse.Interface['statusCode']>('[method]outgoing-response.status-code', [
-			['self', new $wcm.BorrowType<http.Types.OutgoingResponse>(OutgoingResponse)],
-		], StatusCode));
-		OutgoingResponse.addCallable('setStatusCode', new $wcm.MethodType<http.Types.OutgoingResponse.Interface['setStatusCode']>('[method]outgoing-response.set-status-code', [
-			['self', new $wcm.BorrowType<http.Types.OutgoingResponse>(OutgoingResponse)],
+		OutgoingResponse.addMethod('statusCode', new $wcm.MethodType<http.Types.OutgoingResponse.Interface['statusCode']>('[method]outgoing-response.status-code', [], StatusCode));
+		OutgoingResponse.addMethod('setStatusCode', new $wcm.MethodType<http.Types.OutgoingResponse.Interface['setStatusCode']>('[method]outgoing-response.set-status-code', [
 			['statusCode', StatusCode],
 		], new $wcm.ResultType<void, void>(undefined, undefined)));
-		OutgoingResponse.addCallable('headers', new $wcm.MethodType<http.Types.OutgoingResponse.Interface['headers']>('[method]outgoing-response.headers', [
-			['self', new $wcm.BorrowType<http.Types.OutgoingResponse>(OutgoingResponse)],
-		], new $wcm.OwnType<http.Types.Headers>(Headers)));
-		OutgoingResponse.addCallable('body', new $wcm.MethodType<http.Types.OutgoingResponse.Interface['body']>('[method]outgoing-response.body', [
-			['self', new $wcm.BorrowType<http.Types.OutgoingResponse>(OutgoingResponse)],
-		], new $wcm.ResultType<own<http.Types.OutgoingBody>, void>(new $wcm.OwnType<http.Types.OutgoingBody>(OutgoingBody), undefined)));
-		OutgoingResponse.addCallable('$drop', new $wcm.DestructorType<http.Types.OutgoingResponse.Statics['$drop']>('[resource-drop]outgoing-response', [['inst', OutgoingResponse]]));
-		OutgoingBody.addCallable('write', new $wcm.MethodType<http.Types.OutgoingBody.Interface['write']>('[method]outgoing-body.write', [
-			['self', new $wcm.BorrowType<http.Types.OutgoingBody>(OutgoingBody)],
-		], new $wcm.ResultType<own<http.Types.OutputStream>, void>(new $wcm.OwnType<http.Types.OutputStream>(OutputStream), undefined)));
-		OutgoingBody.addCallable('finish', new $wcm.StaticMethodType<http.Types.OutgoingBody.Statics['finish']>('[static]outgoing-body.finish', [
+		OutgoingResponse.addMethod('headers', new $wcm.MethodType<http.Types.OutgoingResponse.Interface['headers']>('[method]outgoing-response.headers', [], new $wcm.OwnType<http.Types.Headers>(Headers)));
+		OutgoingResponse.addMethod('body', new $wcm.MethodType<http.Types.OutgoingResponse.Interface['body']>('[method]outgoing-response.body', [], new $wcm.ResultType<own<http.Types.OutgoingBody>, void>(new $wcm.OwnType<http.Types.OutgoingBody>(OutgoingBody), undefined)));
+		OutgoingResponse.addDestructor('$drop', new $wcm.DestructorType<http.Types.OutgoingResponse.Statics['$drop']>('[resource-drop]outgoing-response', [['inst', OutgoingResponse]]));
+		OutgoingBody.addMethod('write', new $wcm.MethodType<http.Types.OutgoingBody.Interface['write']>('[method]outgoing-body.write', [], new $wcm.ResultType<own<http.Types.OutputStream>, void>(new $wcm.OwnType<http.Types.OutputStream>(OutputStream), undefined)));
+		OutgoingBody.addStaticMethod('finish', new $wcm.StaticMethodType<http.Types.OutgoingBody.Statics['finish']>('[static]outgoing-body.finish', [
 			['this_', new $wcm.OwnType<http.Types.OutgoingBody>(OutgoingBody)],
 			['trailers', new $wcm.OptionType<own<http.Types.Trailers>>(new $wcm.OwnType<http.Types.Trailers>(Trailers))],
 		], new $wcm.ResultType<void, http.Types.ErrorCode>(undefined, ErrorCode)));
-		OutgoingBody.addCallable('$drop', new $wcm.DestructorType<http.Types.OutgoingBody.Statics['$drop']>('[resource-drop]outgoing-body', [['inst', OutgoingBody]]));
-		FutureIncomingResponse.addCallable('subscribe', new $wcm.MethodType<http.Types.FutureIncomingResponse.Interface['subscribe']>('[method]future-incoming-response.subscribe', [
-			['self', new $wcm.BorrowType<http.Types.FutureIncomingResponse>(FutureIncomingResponse)],
-		], new $wcm.OwnType<http.Types.Pollable>(Pollable)));
-		FutureIncomingResponse.addCallable('get', new $wcm.MethodType<http.Types.FutureIncomingResponse.Interface['get']>('[method]future-incoming-response.get', [
-			['self', new $wcm.BorrowType<http.Types.FutureIncomingResponse>(FutureIncomingResponse)],
-		], new $wcm.OptionType<result<result<own<http.Types.IncomingResponse>, http.Types.ErrorCode>, void>>(new $wcm.ResultType<result<own<http.Types.IncomingResponse>, http.Types.ErrorCode>, void>(new $wcm.ResultType<own<http.Types.IncomingResponse>, http.Types.ErrorCode>(new $wcm.OwnType<http.Types.IncomingResponse>(IncomingResponse), ErrorCode), undefined))));
-		FutureIncomingResponse.addCallable('$drop', new $wcm.DestructorType<http.Types.FutureIncomingResponse.Statics['$drop']>('[resource-drop]future-incoming-response', [['inst', FutureIncomingResponse]]));
+		OutgoingBody.addDestructor('$drop', new $wcm.DestructorType<http.Types.OutgoingBody.Statics['$drop']>('[resource-drop]outgoing-body', [['inst', OutgoingBody]]));
+		FutureIncomingResponse.addMethod('subscribe', new $wcm.MethodType<http.Types.FutureIncomingResponse.Interface['subscribe']>('[method]future-incoming-response.subscribe', [], new $wcm.OwnType<http.Types.Pollable>(Pollable)));
+		FutureIncomingResponse.addMethod('get', new $wcm.MethodType<http.Types.FutureIncomingResponse.Interface['get']>('[method]future-incoming-response.get', [], new $wcm.OptionType<result<result<own<http.Types.IncomingResponse>, http.Types.ErrorCode>, void>>(new $wcm.ResultType<result<own<http.Types.IncomingResponse>, http.Types.ErrorCode>, void>(new $wcm.ResultType<own<http.Types.IncomingResponse>, http.Types.ErrorCode>(new $wcm.OwnType<http.Types.IncomingResponse>(IncomingResponse), ErrorCode), undefined))));
+		FutureIncomingResponse.addDestructor('$drop', new $wcm.DestructorType<http.Types.FutureIncomingResponse.Statics['$drop']>('[resource-drop]future-incoming-response', [['inst', FutureIncomingResponse]]));
 		export const httpErrorCode = new $wcm.FunctionType<http.Types.httpErrorCode>('http-error-code',[
 			['err', new $wcm.BorrowType<http.Types.IoError>(IoError)],
 		], new $wcm.OptionType<http.Types.ErrorCode>(ErrorCode));

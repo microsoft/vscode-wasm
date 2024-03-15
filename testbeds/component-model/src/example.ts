@@ -120,24 +120,16 @@ export namespace example {
 	export namespace Window.$ {
 		export const OutputChannel = new $wcm.ResourceType<example.Window.OutputChannel>('output-channel', 'vscode:example/window/output-channel');
 		export const OutputChannel_Handle = new $wcm.ResourceHandleType('output-channel');
-		OutputChannel.addCallable('name', new $wcm.MethodType<example.Window.OutputChannel.Interface['name']>('[method]output-channel.name', [
-			['self', new $wcm.BorrowType<example.Window.OutputChannel>(OutputChannel)],
-		], $wcm.wstring));
-		OutputChannel.addCallable('append', new $wcm.MethodType<example.Window.OutputChannel.Interface['append']>('[method]output-channel.append', [
-			['self', new $wcm.BorrowType<example.Window.OutputChannel>(OutputChannel)],
+		OutputChannel.addMethod('name', new $wcm.MethodType<example.Window.OutputChannel.Interface['name']>('[method]output-channel.name', [], $wcm.wstring));
+		OutputChannel.addMethod('append', new $wcm.MethodType<example.Window.OutputChannel.Interface['append']>('[method]output-channel.append', [
 			['value', $wcm.wstring],
 		], undefined));
-		OutputChannel.addCallable('appendLine', new $wcm.MethodType<example.Window.OutputChannel.Interface['appendLine']>('[method]output-channel.append-line', [
-			['self', new $wcm.BorrowType<example.Window.OutputChannel>(OutputChannel)],
+		OutputChannel.addMethod('appendLine', new $wcm.MethodType<example.Window.OutputChannel.Interface['appendLine']>('[method]output-channel.append-line', [
 			['value', $wcm.wstring],
 		], undefined));
-		OutputChannel.addCallable('clear', new $wcm.MethodType<example.Window.OutputChannel.Interface['clear']>('[method]output-channel.clear', [
-			['self', new $wcm.BorrowType<example.Window.OutputChannel>(OutputChannel)],
-		], undefined));
-		OutputChannel.addCallable('show', new $wcm.MethodType<example.Window.OutputChannel.Interface['show']>('[method]output-channel.show', [
-			['self', new $wcm.BorrowType<example.Window.OutputChannel>(OutputChannel)],
-		], undefined));
-		OutputChannel.addCallable('$drop', new $wcm.DestructorType<example.Window.OutputChannel.Statics['$drop']>('[resource-drop]output-channel', [['inst', OutputChannel]]));
+		OutputChannel.addMethod('clear', new $wcm.MethodType<example.Window.OutputChannel.Interface['clear']>('[method]output-channel.clear', [], undefined));
+		OutputChannel.addMethod('show', new $wcm.MethodType<example.Window.OutputChannel.Interface['show']>('[method]output-channel.show', [], undefined));
+		OutputChannel.addDestructor('$drop', new $wcm.DestructorType<example.Window.OutputChannel.Statics['$drop']>('[resource-drop]output-channel', [['inst', OutputChannel]]));
 		export const createOutputChannel = new $wcm.FunctionType<example.Window.createOutputChannel>('create-output-channel',[
 			['name', $wcm.wstring],
 			['languageId', new $wcm.OptionType<string>($wcm.wstring)],
