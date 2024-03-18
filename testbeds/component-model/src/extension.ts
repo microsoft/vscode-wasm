@@ -8,10 +8,11 @@ import * as vscode from 'vscode';
 import { example } from './example';
 import calculator = example.calculator;
 import Types = example.Types;
-import OutputChannel = example.Window.OutputChannel
+import OutputChannel = Types.OutputChannel;
+import TextDocument = Types.TextDocument;
 
 // Channel implementation
-class OutputChannelImpl implements OutputChannel {
+class OutputChannelProxy implements OutputChannel {
 	public $handle: ResourceHandle | undefined;
 	private channel: vscode.OutputChannel;
 
@@ -20,7 +21,7 @@ class OutputChannelImpl implements OutputChannel {
 		this.channel = vscode.window.createOutputChannel(name, languageId);
 	}
 
-	public static $drop(_instance: OutputChannelImpl): void {
+	public static $drop(_instance: OutputChannelProxy): void {
 		_instance.channel.dispose();
 	}
 
@@ -41,11 +42,69 @@ class OutputChannelImpl implements OutputChannel {
 	}
 }
 
+class TextDocumentProxy implements TextDocument {
+
+	public $handle: ResourceHandle | undefined;
+	private textDocument: vscode.TextDocument;
+
+	constructor(document: vscode.TextDocument) {
+		this.$handle = undefined;
+		this.textDocument = document;
+	}
+
+	public static $drop(_instance: TextDocumentProxy): void {
+	}
+
+	public uri(): string {
+		return this.textDocument.uri.toString();
+	}
+
+	public languageId(): string {
+		return this.textDocument.languageId;
+	}
+
+	public version(): number {
+		return this.textDocument.version;
+	}
+
+	public getText(): string {
+		return this.textDocument.getText();
+	}
+}
+
+class CommandRegistry {
+
+	private commands: Map<string, vscode.Disposable> = new Map();
+	private api!: example.CommandsEvents;
+
+	constructor() {
+	}
+
+	initialize(api: example.CommandsEvents): void {
+		this.api = api;
+	}
+
+	register(command: string): void {
+		const disposable = vscode.commands.registerCommand(command, () => {
+			this.api.execute(command);
+		});
+		this.commands.set(command, disposable);
+	}
+
+	dispose(): void {
+		for (const disposable of this.commands.values()) {
+			disposable.dispose();
+		}
+	}
+
+}
+
 export async function activate(context: vscode.ExtensionContext): Promise<void> {
 	const filename = vscode.Uri.joinPath(context.extensionUri, 'target', 'wasm32-unknown-unknown', 'debug', 'calculator.wasm');
 	const bits = await vscode.workspace.fs.readFile(filename);
 	const module = await WebAssembly.compile(bits);
 	let memory: Memory | undefined;
+	const commandRegistry = new CommandRegistry();
 	const wasmContext: WasmContext = {
 		options: { encoding: 'utf-8' },
 		managers: ResourceManagers.createDefault(),
@@ -57,10 +116,23 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
 		}
 	}
 	const service: calculator.Imports = {
+		types: {
+			OutputChannel: OutputChannelProxy,
+			TextDocument: TextDocumentProxy
+		},
 		window: {
-			OutputChannel: OutputChannelImpl,
 			createOutputChannel: (name: string, languageId?: string) => {
-				return new OutputChannelImpl(name, languageId);
+				return new OutputChannelProxy(name, languageId);
+			}
+		},
+		workspace: {
+			registerOnDidChangeTextDocument: () => {
+			}
+		},
+		commands: {
+			register: (command: string) => {
+				commandRegistry.register(command);
+
 			}
 		}
 	}
@@ -68,9 +140,9 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
 	const instance = await WebAssembly.instantiate(module, imports);
 	memory = Memory.createDefault(Date.now().toString(), instance.exports);
 	const api = calculator._.bindExports(instance.exports as calculator._.Exports, wasmContext);
+	commandRegistry.initialize(api.commandsEvents);
 
 	vscode.commands.registerCommand('testbed-component-model.run', () => {
-		console.log(api.add(1, 2));
 		console.log(`Add ${api.calc(Types.Operation.Add({ left: 1, right: 2}))}`);
 		console.log(`Sub ${api.calc(Types.Operation.Sub({ left: 10, right: 8 }))}`);
 		console.log(`Mul ${api.calc(Types.Operation.Mul({ left: 3, right: 7 }))}`);
