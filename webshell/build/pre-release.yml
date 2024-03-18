@@ -38,5 +38,11 @@ extends:
     ghCreateTag: true
     ghTagPrefix: pre-release/webshell/
 
+    tsa:
+      config:
+        areaPath: 'Visual Studio Code Language Extensions'
+        serviceTreeID: 'c4cd3983-4977-4bcd-931f-a9822d2e950c'
+      enabled: true
+
     publishExtension: ${{ parameters.publishExtension }}
     workingDirectory: $(Build.SourcesDirectory)/webshell
