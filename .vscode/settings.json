@@ -231,6 +231,7 @@
 		"./testbeds/rust/Cargo.toml",
 		"./testbeds/rust-threads/Cargo.toml",
 		"./testbeds/component-model/Cargo.toml",
-		"./testbeds/component-model-performance/Cargo.toml"
+		"./testbeds/component-model-performance/Cargo.toml",
+		"./testbeds/component-model-vscode/Cargo.toml"
 	]
 }

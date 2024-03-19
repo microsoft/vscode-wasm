@@ -940,7 +940,7 @@ export interface ComponentModelType<J> {
 	// copy a component model value from one memory to another
 	copy(dest: MemoryRange, dest_offset: offset, src: ReadonlyMemoryRange, src_offset: offset, context: ComponentModelContext): void;
 }
-export type GenericComponentModelType = ComponentModelType<any>;
+export type GenericComponentModelType = ComponentModelType<JType>;
 
 export type bool = number;
 export const bool: ComponentModelType<boolean> = {
@@ -2109,11 +2109,11 @@ export class FlagsType<_T> implements ComponentModelType<u32 | bigint> {
 	}
 
 	public load(memory: ReadonlyMemoryRange, offset: offset<u8 | u16 | u32 | u32[]>, context: ComponentModelContext): u32 | bigint {
-		return this.type === undefined ? 0 : this.loadFrom(this.type.load(memory, offset, context));
+		return this.type === undefined ? 0 : this.loadFrom(this.type.load(memory, offset, context) as (u32 | u32[]));
 	}
 
-	public liftFlat(_memory: Memory, values: FlatValuesIter, context: ComponentModelContext): u32 | bigint {
-		return this.type === undefined ? 0 : this.loadFrom(this.type.liftFlat(_memory, values, context));
+	public liftFlat(memory: Memory, values: FlatValuesIter, context: ComponentModelContext): u32 | bigint {
+		return this.type === undefined ? 0 : this.loadFrom(this.type.liftFlat(memory, values, context) as (u32 | u32[]));
 	}
 
 	private loadFrom(value: u32 | u32[]): u32 | bigint {
@@ -2186,7 +2186,7 @@ export class FlagsType<_T> implements ComponentModelType<u32 | bigint> {
 		}
 	}
 
-	private static getType(numberOfFlags: number): GenericComponentModelType | undefined {
+	private static getType(numberOfFlags: number): typeof u32 | TupleType<any> | undefined {
 		if (numberOfFlags === 0) {
 			return undefined;
 		} else if (numberOfFlags <= 8) {
@@ -2227,7 +2227,7 @@ export interface JVariantCase {
 	readonly value?: JType | undefined | void;
 }
 
-export class VariantType<T extends JVariantCase, I, V> implements ComponentModelType<T> {
+export class VariantType<T extends JVariantCase, I, V extends JType> implements ComponentModelType<T> {
 
 	public readonly cases: VariantCase[];
 	private readonly case2Index: Map<string, u32>;
@@ -2269,7 +2269,7 @@ export class VariantType<T extends JVariantCase, I, V> implements ComponentModel
 			offset += this.discriminantType.size;
 			offset = align(offset, this.maxCaseAlignment);
 			const value = caseVariant.type.load(memory, offset, context);
-			return this.ctor(caseVariant.tag as I, value);
+			return this.ctor(caseVariant.tag as I, value as V);
 		}
 	}
 
@@ -2286,7 +2286,7 @@ export class VariantType<T extends JVariantCase, I, V> implements ComponentModel
 			const wantFlatTypes = caseVariant.wantFlatTypes!;
 			const iter = new CoerceValueIter(values, this.flatTypes.slice(1), wantFlatTypes);
 			const value = caseVariant.type.liftFlat(memory, iter, context);
-			result = this.ctor(caseVariant.tag as I, value);
+			result = this.ctor(caseVariant.tag as I, value as V);
 			valuesToReadOver = valuesToReadOver - wantFlatTypes.length;
 		}
 		for (let i = 0; i < valuesToReadOver; i++) {
@@ -2606,7 +2606,7 @@ export class OptionType<T extends JType> implements ComponentModelType<T | optio
 			offset += u8.size;
 			offset = align(offset, this.alignment);
 			const value = this.valueType.load(memory, offset, context);
-			return context.options.keepOption ? option._ctor(option.some, value) : value;
+			return (context.options.keepOption ? option._ctor(option.some, value) : value) as T | option<T> | undefined;
 		}
 	}
 
@@ -2621,7 +2621,7 @@ export class OptionType<T extends JType> implements ComponentModelType<T | optio
 			return context.options.keepOption ? option._ctor<T>(option.none, undefined) : undefined;
 		} else {
 			const value = this.valueType.liftFlat(memory, values, context);
-			return context.options.keepOption ? option._ctor(option.some, value) : value;
+			return (context.options.keepOption ? option._ctor(option.some, value) : value) as T | option<T> | undefined;
 		}
 	}
 
@@ -2759,7 +2759,7 @@ export interface JInterface {
 	$handle?: ResourceHandle;
 }
 
-export type JType = number | bigint | string | boolean | JArray | JRecord | JVariantCase | JTuple | JEnum | JInterface | option<any> | undefined | result<any, any> | Int8Array | Int16Array | Int32Array | BigInt64Array | Uint8Array | Uint16Array | Uint32Array | BigUint64Array | Float32Array | Float64Array;
+export type JType = number | bigint | string | boolean | JArray | JRecord | JVariantCase | JTuple | JEnum | JInterface | option<any> | undefined | void | result<any, any> | Int8Array | Int16Array | Int32Array | BigInt64Array | Uint8Array | Uint16Array | Uint32Array | BigUint64Array | Float32Array | Float64Array;
 
 export type CallableParameter = [/* name */string, /* type */GenericComponentModelType];
 
@@ -2786,7 +2786,7 @@ class Callable {
 	public readonly params: CallableParameter[];
 	public readonly returnType: GenericComponentModelType | undefined;
 
-	public readonly paramType: GenericComponentModelType | TupleType<JTuple> | undefined;
+	public readonly paramType: GenericComponentModelType | undefined;
 	protected readonly isSingleParam: boolean;
 	protected readonly mode: 'lift' | 'lower';
 
@@ -2840,13 +2840,18 @@ class Callable {
 	public lowerParamValues(values: JType[], memory: Memory, context: ComponentModelContext, out: ptr | undefined): ReadonlyArray<WasmType> {
 		if (this.paramType === undefined) {
 			return Callable.EMPTY_WASM_TYPE;
-		} else if (this.paramType.flatTypes.length > Callable.MAX_FLAT_PARAMS) {
+		}
+		if (this.isSingleParam && values.length !== 1) {
+			throw new ComponentModelTrap(`Expected a single parameter, but got ${values.length}`);
+		}
+		const toLower = this.isSingleParam ? values[0] : values;
+		if (this.paramType.flatTypes.length > Callable.MAX_FLAT_PARAMS) {
 			const writer = out !== undefined ? memory.preAllocated(out, this.paramType.size) : this.paramType.alloc(memory);
-			this.paramType.store(writer, 0, values, context);
+			this.paramType.store(writer, 0, toLower, context);
 			return [writer.ptr];
 		} else {
 			const result: WasmType[] = [];
-			this.paramType.lowerFlat(result, memory, values, context);
+			this.paramType.lowerFlat(result, memory, toLower, context);
 			return result;
 		}
 	}

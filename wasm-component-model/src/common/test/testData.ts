@@ -7,7 +7,6 @@ import type { u32, u64, s32, s64, float32, float64, own, i32, ptr, i64 } from '.
 
 export namespace testData {
 	export namespace Types {
-
 		export type Point = {
 			x: u32;
 			y: u32;
@@ -230,20 +229,14 @@ export namespace testData {
 		export const TestVariant = new $wcm.VariantType<testData.Types.TestVariant, testData.Types.TestVariant._tt, testData.Types.TestVariant._vt>([['empty', undefined], ['unsigned32', $wcm.u32], ['unsigned64', $wcm.u64], ['signed32', $wcm.s32], ['signed64', $wcm.s64], ['floatingPoint32', $wcm.float32], ['floatingPoint64', $wcm.float64], ['structure', Point]], testData.Types.TestVariant._ctor);
 		export const TestFlagsShort = new $wcm.FlagsType<testData.Types.TestFlagsShort>(6);
 		export const TestFlagsLong = new $wcm.FlagsType<testData.Types.TestFlagsLong>(40);
-		PointResource.addCallable('constructor', new $wcm.ConstructorType<testData.Types.PointResource.Class['constructor']>('[constructor]point-resource', [
+		PointResource.addConstructor('constructor', new $wcm.ConstructorType<testData.Types.PointResource.Class['constructor']>('[constructor]point-resource', [
 			['x', $wcm.u32],
 			['y', $wcm.u32],
 		], new $wcm.OwnType(PointResource_Handle)));
-		PointResource.addCallable('getX', new $wcm.MethodType<testData.Types.PointResource.Interface['getX']>('[method]point-resource.get-x', [
-			['self', new $wcm.BorrowType<testData.Types.PointResource>(PointResource)],
-		], $wcm.u32));
-		PointResource.addCallable('getY', new $wcm.MethodType<testData.Types.PointResource.Interface['getY']>('[method]point-resource.get-y', [
-			['self', new $wcm.BorrowType<testData.Types.PointResource>(PointResource)],
-		], $wcm.u32));
-		PointResource.addCallable('add', new $wcm.MethodType<testData.Types.PointResource.Interface['add']>('[method]point-resource.add', [
-			['self', new $wcm.BorrowType<testData.Types.PointResource>(PointResource)],
-		], $wcm.u32));
-		PointResource.addCallable('$drop', new $wcm.DestructorType<testData.Types.PointResource.Statics['$drop']>('[resource-drop]point-resource', [['inst', PointResource]]));
+		PointResource.addMethod('getX', new $wcm.MethodType<testData.Types.PointResource.Interface['getX']>('[method]point-resource.get-x', [], $wcm.u32));
+		PointResource.addMethod('getY', new $wcm.MethodType<testData.Types.PointResource.Interface['getY']>('[method]point-resource.get-y', [], $wcm.u32));
+		PointResource.addMethod('add', new $wcm.MethodType<testData.Types.PointResource.Interface['add']>('[method]point-resource.add', [], $wcm.u32));
+		PointResource.addDestructor('$drop', new $wcm.DestructorType<testData.Types.PointResource.Statics['$drop']>('[resource-drop]point-resource', [['inst', PointResource]]));
 		export const call = new $wcm.FunctionType<testData.Types.call>('call',[
 			['point', Point],
 		], $wcm.u32);
@@ -360,8 +353,7 @@ export namespace testData {
 			'vscode:test-data/types': testData.Types._.WasmInterface;
 		};
 		export const Exports = {};
-		export type Exports = {
-		};
+		export type Exports = {};
 		export function createImports(service: test.Imports, context: $wcm.WasmContext): Imports {
 			const result: Imports = Object.create(null);
 			result['vscode:test-data/types'] = testData.Types._.createImports(service.types, context);
