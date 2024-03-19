@@ -105,6 +105,9 @@
   "packages": [
     {
       "name": "vscode:example",
+      "docs": {
+        "contents": "wit/calculator.wit"
+      },
       "interfaces": {
         "types": 0
       },
