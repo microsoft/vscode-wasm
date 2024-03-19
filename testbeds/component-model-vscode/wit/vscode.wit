@@ -1,19 +1,7 @@
-// wit/calculator.wit
-package vscode:example;
+// wit/vscode.wit
+package ms:vscode;
 
 interface types {
-	record operands {
-		left: u32,
-		right: u32
-	}
-
-	variant operation {
-		add(operands),
-		sub(operands),
-		mul(operands),
-		div(operands)
-	}
-
 	record position {
 		line: u32,
 		character: u32
@@ -81,13 +69,11 @@ interface commands-events {
 	execute: func(command: string);
 }
 
-world calculator {
-	use types.{ operation };
+world api {
 	import workspace;
 	import commands;
 	import window;
 
-	export calc: func(o: operation) -> u32;
 	export workspace-events;
 	export commands-events;
 }

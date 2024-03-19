@@ -1,13 +1,14 @@
 use once_cell::sync::Lazy;
 
-use vscode::example::window;
-use exports::vscode::example::{ workspace_events, commands_events };
+use ms::vscode::types::{ TextDocumentChangeEvent };
+use ms::vscode::window;
+use exports::ms::vscode::{ workspace_events, commands_events };
 
 // Use a procedural macro to generate bindings for the world we specified in
 // `host.wit`
 wit_bindgen::generate!({
 	// the name of the world in the `*.wit` input file
-	world: "calculator",
+	world: "api",
 });
 
 trait Event: 'static {
@@ -36,7 +37,7 @@ impl<E: Event> EventEmitter<E> {
 	}
 }
 
-impl Event for vscode::example::types::TextDocumentChangeEvent {
+impl Event for TextDocumentChangeEvent {
 	fn get_type(&self) -> &'static str {
 		"TextDocumentChangeEvent"
 	}

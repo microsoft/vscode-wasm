@@ -5,73 +5,8 @@
 import * as $wcm from '@vscode/wasm-component-model';
 import type { u32, own, i32, ptr } from '@vscode/wasm-component-model';
 
-export namespace example {
+export namespace vscode {
 	export namespace Types {
-		export type Operands = {
-			left: u32;
-			right: u32;
-		};
-
-		export namespace Operation {
-			export const add = 'add' as const;
-			export type Add = { readonly tag: typeof add; readonly value: Operands } & _common;
-			export function Add(value: Operands): Add {
-				return new VariantImpl(add, value) as Add;
-			}
-
-			export const sub = 'sub' as const;
-			export type Sub = { readonly tag: typeof sub; readonly value: Operands } & _common;
-			export function Sub(value: Operands): Sub {
-				return new VariantImpl(sub, value) as Sub;
-			}
-
-			export const mul = 'mul' as const;
-			export type Mul = { readonly tag: typeof mul; readonly value: Operands } & _common;
-			export function Mul(value: Operands): Mul {
-				return new VariantImpl(mul, value) as Mul;
-			}
-
-			export const div = 'div' as const;
-			export type Div = { readonly tag: typeof div; readonly value: Operands } & _common;
-			export function Div(value: Operands): Div {
-				return new VariantImpl(div, value) as Div;
-			}
-
-			export type _tt = typeof add | typeof sub | typeof mul | typeof div;
-			export type _vt = Operands | Operands | Operands | Operands;
-			type _common = Omit<VariantImpl, 'tag' | 'value'>;
-			export function _ctor(t: _tt, v: _vt): Operation {
-				return new VariantImpl(t, v) as Operation;
-			}
-			class VariantImpl {
-				private readonly _tag: _tt;
-				private readonly _value: _vt;
-				constructor(t: _tt, value: _vt) {
-					this._tag = t;
-					this._value = value;
-				}
-				get tag(): _tt {
-					return this._tag;
-				}
-				get value(): _vt {
-					return this._value;
-				}
-				isAdd(): this is Add {
-					return this._tag === Operation.add;
-				}
-				isSub(): this is Sub {
-					return this._tag === Operation.sub;
-				}
-				isMul(): this is Mul {
-					return this._tag === Operation.mul;
-				}
-				isDiv(): this is Div {
-					return this._tag === Operation.div;
-				}
-			}
-		}
-		export type Operation = Operation.Add | Operation.Sub | Operation.Mul | Operation.Div;
-
 		export type Position = {
 			line: u32;
 			character: u32;
@@ -148,7 +83,7 @@ export namespace example {
 	};
 
 	export namespace Window {
-		export type OutputChannel = example.Types.OutputChannel;
+		export type OutputChannel = vscode.Types.OutputChannel;
 
 		export type createOutputChannel = (name: string, languageId: string | undefined) => own<OutputChannel>;
 	}
@@ -164,7 +99,9 @@ export namespace example {
 	};
 
 	export namespace WorkspaceEvents {
-		export type didChangeTextDocument = (uri: string, content: string) => void;
+		export type TextDocumentChangeEvent = vscode.Types.TextDocumentChangeEvent;
+
+		export type didChangeTextDocument = (id: string, event: TextDocumentChangeEvent) => void;
 	}
 	export type WorkspaceEvents = {
 		didChangeTextDocument: WorkspaceEvents.didChangeTextDocument;
@@ -183,75 +120,66 @@ export namespace example {
 	export type CommandsEvents = {
 		execute: CommandsEvents.execute;
 	};
-	export namespace calculator {
-		export type Operation = Types.Operation;
+	export namespace api {
 		export type Imports = {
-			workspace: example.Workspace;
-			commands: example.Commands;
-			types: example.Types;
-			window: example.Window;
+			workspace: vscode.Workspace;
+			commands: vscode.Commands;
+			types: vscode.Types;
+			window: vscode.Window;
 		};
 		export type Exports = {
-			calc: (o: Operation) => u32;
-			workspaceEvents: example.WorkspaceEvents;
-			commandsEvents: example.CommandsEvents;
+			workspaceEvents: vscode.WorkspaceEvents;
+			commandsEvents: vscode.CommandsEvents;
 		};
 	}
 }
 
-export namespace example {
+export namespace vscode {
 	export namespace Types.$ {
-		export const Operands = new $wcm.RecordType<example.Types.Operands>([
-			['left', $wcm.u32],
-			['right', $wcm.u32],
-		]);
-		export const Operation = new $wcm.VariantType<example.Types.Operation, example.Types.Operation._tt, example.Types.Operation._vt>([['add', Operands], ['sub', Operands], ['mul', Operands], ['div', Operands]], example.Types.Operation._ctor);
-		export const Position = new $wcm.RecordType<example.Types.Position>([
+		export const Position = new $wcm.RecordType<vscode.Types.Position>([
 			['line', $wcm.u32],
 			['character', $wcm.u32],
 		]);
-		export const Range = new $wcm.RecordType<example.Types.Range>([
+		export const Range = new $wcm.RecordType<vscode.Types.Range>([
 			['start', Position],
 			['end', Position],
 		]);
-		export const TextDocumentContentChangeEvent = new $wcm.RecordType<example.Types.TextDocumentContentChangeEvent>([
+		export const TextDocumentContentChangeEvent = new $wcm.RecordType<vscode.Types.TextDocumentContentChangeEvent>([
 			['range', Range],
 			['rangeOffset', $wcm.u32],
 			['rangeLength', $wcm.u32],
 			['text', $wcm.wstring],
 		]);
-		export const TextDocument = new $wcm.ResourceType<example.Types.TextDocument>('text-document', 'vscode:example/types/text-document');
+		export const TextDocument = new $wcm.ResourceType<vscode.Types.TextDocument>('text-document', 'ms:vscode/types/text-document');
 		export const TextDocument_Handle = new $wcm.ResourceHandleType('text-document');
-		export const TextDocumentChangeReason = new $wcm.EnumType<example.Types.TextDocumentChangeReason>(['undo', 'redo']);
-		export const TextDocumentChangeEvent = new $wcm.RecordType<example.Types.TextDocumentChangeEvent>([
-			['document', new $wcm.OwnType<example.Types.TextDocument>(TextDocument)],
-			['contentChanges', new $wcm.ListType<example.Types.TextDocumentContentChangeEvent>(TextDocumentContentChangeEvent)],
-			['reason', new $wcm.OptionType<example.Types.TextDocumentChangeReason>(TextDocumentChangeReason)],
+		export const TextDocumentChangeReason = new $wcm.EnumType<vscode.Types.TextDocumentChangeReason>(['undo', 'redo']);
+		export const TextDocumentChangeEvent = new $wcm.RecordType<vscode.Types.TextDocumentChangeEvent>([
+			['document', new $wcm.OwnType<vscode.Types.TextDocument>(TextDocument)],
+			['contentChanges', new $wcm.ListType<vscode.Types.TextDocumentContentChangeEvent>(TextDocumentContentChangeEvent)],
+			['reason', new $wcm.OptionType<vscode.Types.TextDocumentChangeReason>(TextDocumentChangeReason)],
 		]);
-		export const OutputChannel = new $wcm.ResourceType<example.Types.OutputChannel>('output-channel', 'vscode:example/types/output-channel');
+		export const OutputChannel = new $wcm.ResourceType<vscode.Types.OutputChannel>('output-channel', 'ms:vscode/types/output-channel');
 		export const OutputChannel_Handle = new $wcm.ResourceHandleType('output-channel');
-		TextDocument.addMethod('uri', new $wcm.MethodType<example.Types.TextDocument.Interface['uri']>('[method]text-document.uri', [], $wcm.wstring));
-		TextDocument.addMethod('languageId', new $wcm.MethodType<example.Types.TextDocument.Interface['languageId']>('[method]text-document.language-id', [], $wcm.wstring));
-		TextDocument.addMethod('version', new $wcm.MethodType<example.Types.TextDocument.Interface['version']>('[method]text-document.version', [], $wcm.u32));
-		TextDocument.addMethod('getText', new $wcm.MethodType<example.Types.TextDocument.Interface['getText']>('[method]text-document.get-text', [], $wcm.wstring));
-		TextDocument.addDestructor('$drop', new $wcm.DestructorType<example.Types.TextDocument.Statics['$drop']>('[resource-drop]text-document', [['inst', TextDocument]]));
-		OutputChannel.addMethod('name', new $wcm.MethodType<example.Types.OutputChannel.Interface['name']>('[method]output-channel.name', [], $wcm.wstring));
-		OutputChannel.addMethod('append', new $wcm.MethodType<example.Types.OutputChannel.Interface['append']>('[method]output-channel.append', [
+		TextDocument.addMethod('uri', new $wcm.MethodType<vscode.Types.TextDocument.Interface['uri']>('[method]text-document.uri', [], $wcm.wstring));
+		TextDocument.addMethod('languageId', new $wcm.MethodType<vscode.Types.TextDocument.Interface['languageId']>('[method]text-document.language-id', [], $wcm.wstring));
+		TextDocument.addMethod('version', new $wcm.MethodType<vscode.Types.TextDocument.Interface['version']>('[method]text-document.version', [], $wcm.u32));
+		TextDocument.addMethod('getText', new $wcm.MethodType<vscode.Types.TextDocument.Interface['getText']>('[method]text-document.get-text', [], $wcm.wstring));
+		TextDocument.addDestructor('$drop', new $wcm.DestructorType<vscode.Types.TextDocument.Statics['$drop']>('[resource-drop]text-document', [['inst', TextDocument]]));
+		OutputChannel.addMethod('name', new $wcm.MethodType<vscode.Types.OutputChannel.Interface['name']>('[method]output-channel.name', [], $wcm.wstring));
+		OutputChannel.addMethod('append', new $wcm.MethodType<vscode.Types.OutputChannel.Interface['append']>('[method]output-channel.append', [
 			['value', $wcm.wstring],
 		], undefined));
-		OutputChannel.addMethod('appendLine', new $wcm.MethodType<example.Types.OutputChannel.Interface['appendLine']>('[method]output-channel.append-line', [
+		OutputChannel.addMethod('appendLine', new $wcm.MethodType<vscode.Types.OutputChannel.Interface['appendLine']>('[method]output-channel.append-line', [
 			['value', $wcm.wstring],
 		], undefined));
-		OutputChannel.addMethod('clear', new $wcm.MethodType<example.Types.OutputChannel.Interface['clear']>('[method]output-channel.clear', [], undefined));
-		OutputChannel.addMethod('show', new $wcm.MethodType<example.Types.OutputChannel.Interface['show']>('[method]output-channel.show', [], undefined));
-		OutputChannel.addDestructor('$drop', new $wcm.DestructorType<example.Types.OutputChannel.Statics['$drop']>('[resource-drop]output-channel', [['inst', OutputChannel]]));
+		OutputChannel.addMethod('clear', new $wcm.MethodType<vscode.Types.OutputChannel.Interface['clear']>('[method]output-channel.clear', [], undefined));
+		OutputChannel.addMethod('show', new $wcm.MethodType<vscode.Types.OutputChannel.Interface['show']>('[method]output-channel.show', [], undefined));
+		OutputChannel.addDestructor('$drop', new $wcm.DestructorType<vscode.Types.OutputChannel.Statics['$drop']>('[resource-drop]output-channel', [['inst', OutputChannel]]));
 	}
 	export namespace Types._ {
-		export const id = 'vscode:example/types' as const;
+		export const id = 'ms:vscode/types' as const;
 		export const witName = 'types' as const;
 		export const types: Map<string, $wcm.GenericComponentModelType> = new Map<string, $wcm.GenericComponentModelType>([
-			['Operands', $.Operands],
-			['Operation', $.Operation],
 			['Position', $.Position],
 			['Range', $.Range],
 			['TextDocumentContentChangeEvent', $.TextDocumentContentChangeEvent],
@@ -281,7 +209,7 @@ export namespace example {
 			type ClassModule = {
 				$drop(self: TextDocument): void;
 			};
-			class Impl extends $wcm.Resource implements example.Types.TextDocument.Interface {
+			class Impl extends $wcm.Resource implements vscode.Types.TextDocument.Interface {
 				private readonly _om: ObjectModule;
 				constructor(om: ObjectModule) {
 					super();
@@ -300,8 +228,8 @@ export namespace example {
 					return this._om.getText(this);
 				}
 			}
-			export function Class(wasmInterface: WasmInterface, context: $wcm.WasmContext): example.Types.TextDocument.Class {
-				const resource = example.Types.$.TextDocument;
+			export function Class(wasmInterface: WasmInterface, context: $wcm.WasmContext): vscode.Types.TextDocument.Class {
+				const resource = vscode.Types.$.TextDocument;
 				const om: ObjectModule = $wcm.Module.createObjectModule(resource, wasmInterface, context);
 				const cm: ClassModule = $wcm.Module.createClassModule(resource, wasmInterface, context);
 				return class extends Impl {
@@ -333,7 +261,7 @@ export namespace example {
 			type ClassModule = {
 				$drop(self: OutputChannel): void;
 			};
-			class Impl extends $wcm.Resource implements example.Types.OutputChannel.Interface {
+			class Impl extends $wcm.Resource implements vscode.Types.OutputChannel.Interface {
 				private readonly _om: ObjectModule;
 				constructor(om: ObjectModule) {
 					super();
@@ -355,8 +283,8 @@ export namespace example {
 					return this._om.show(this);
 				}
 			}
-			export function Class(wasmInterface: WasmInterface, context: $wcm.WasmContext): example.Types.OutputChannel.Class {
-				const resource = example.Types.$.OutputChannel;
+			export function Class(wasmInterface: WasmInterface, context: $wcm.WasmContext): vscode.Types.OutputChannel.Class {
+				const resource = vscode.Types.$.OutputChannel;
 				const om: ObjectModule = $wcm.Module.createObjectModule(resource, wasmInterface, context);
 				const cm: ClassModule = $wcm.Module.createClassModule(resource, wasmInterface, context);
 				return class extends Impl {
@@ -371,26 +299,26 @@ export namespace example {
 		}
 		export type WasmInterface = {
 		} & TextDocument.WasmInterface & OutputChannel.WasmInterface;
-		export function createImports(service: example.Types, context: $wcm.WasmContext): WasmInterface {
+		export function createImports(service: vscode.Types, context: $wcm.WasmContext): WasmInterface {
 			return $wcm.Imports.create<WasmInterface>(undefined, resources, service, context);
 		}
 		export function filterExports(exports: object, context: $wcm.WasmContext): WasmInterface {
 			return $wcm.Exports.filter<WasmInterface>(exports, undefined, resources, id, undefined, context);
 		}
-		export function bindExports(wasmInterface: WasmInterface, context: $wcm.WasmContext): example.Types {
-			return $wcm.Exports.bind<example.Types>(undefined, [['TextDocument', $.TextDocument, TextDocument.Class], ['OutputChannel', $.OutputChannel, OutputChannel.Class]], wasmInterface, context);
+		export function bindExports(wasmInterface: WasmInterface, context: $wcm.WasmContext): vscode.Types {
+			return $wcm.Exports.bind<vscode.Types>(undefined, [['TextDocument', $.TextDocument, TextDocument.Class], ['OutputChannel', $.OutputChannel, OutputChannel.Class]], wasmInterface, context);
 		}
 	}
 
 	export namespace Window.$ {
-		export const OutputChannel = example.Types.$.OutputChannel;
-		export const createOutputChannel = new $wcm.FunctionType<example.Window.createOutputChannel>('create-output-channel',[
+		export const OutputChannel = vscode.Types.$.OutputChannel;
+		export const createOutputChannel = new $wcm.FunctionType<vscode.Window.createOutputChannel>('create-output-channel',[
 			['name', $wcm.wstring],
 			['languageId', new $wcm.OptionType<string>($wcm.wstring)],
-		], new $wcm.OwnType<example.Window.OutputChannel>(OutputChannel));
+		], new $wcm.OwnType<vscode.Window.OutputChannel>(OutputChannel));
 	}
 	export namespace Window._ {
-		export const id = 'vscode:example/window' as const;
+		export const id = 'ms:vscode/window' as const;
 		export const witName = 'window' as const;
 		export const types: Map<string, $wcm.GenericComponentModelType> = new Map<string, $wcm.GenericComponentModelType>([
 			['OutputChannel', $.OutputChannel]
@@ -401,22 +329,22 @@ export namespace example {
 		export type WasmInterface = {
 			'create-output-channel': (name_ptr: i32, name_len: i32, languageId_case: i32, languageId_option_ptr: i32, languageId_option_len: i32) => i32;
 		};
-		export function createImports(service: example.Window, context: $wcm.WasmContext): WasmInterface {
+		export function createImports(service: vscode.Window, context: $wcm.WasmContext): WasmInterface {
 			return $wcm.Imports.create<WasmInterface>(functions, undefined, service, context);
 		}
 		export function filterExports(exports: object, context: $wcm.WasmContext): WasmInterface {
 			return $wcm.Exports.filter<WasmInterface>(exports, functions, undefined, id, undefined, context);
 		}
-		export function bindExports(wasmInterface: WasmInterface, context: $wcm.WasmContext): example.Window {
-			return $wcm.Exports.bind<example.Window>(functions, [], wasmInterface, context);
+		export function bindExports(wasmInterface: WasmInterface, context: $wcm.WasmContext): vscode.Window {
+			return $wcm.Exports.bind<vscode.Window>(functions, [], wasmInterface, context);
 		}
 	}
 
 	export namespace Workspace.$ {
-		export const registerOnDidChangeTextDocument = new $wcm.FunctionType<example.Workspace.registerOnDidChangeTextDocument>('register-on-did-change-text-document', [], undefined);
+		export const registerOnDidChangeTextDocument = new $wcm.FunctionType<vscode.Workspace.registerOnDidChangeTextDocument>('register-on-did-change-text-document', [], undefined);
 	}
 	export namespace Workspace._ {
-		export const id = 'vscode:example/workspace' as const;
+		export const id = 'ms:vscode/workspace' as const;
 		export const witName = 'workspace' as const;
 		export const functions: Map<string, $wcm.FunctionType> = new Map([
 			['registerOnDidChangeTextDocument', $.registerOnDidChangeTextDocument]
@@ -424,50 +352,54 @@ export namespace example {
 		export type WasmInterface = {
 			'register-on-did-change-text-document': () => void;
 		};
-		export function createImports(service: example.Workspace, context: $wcm.WasmContext): WasmInterface {
+		export function createImports(service: vscode.Workspace, context: $wcm.WasmContext): WasmInterface {
 			return $wcm.Imports.create<WasmInterface>(functions, undefined, service, context);
 		}
 		export function filterExports(exports: object, context: $wcm.WasmContext): WasmInterface {
 			return $wcm.Exports.filter<WasmInterface>(exports, functions, undefined, id, undefined, context);
 		}
-		export function bindExports(wasmInterface: WasmInterface, context: $wcm.WasmContext): example.Workspace {
-			return $wcm.Exports.bind<example.Workspace>(functions, [], wasmInterface, context);
+		export function bindExports(wasmInterface: WasmInterface, context: $wcm.WasmContext): vscode.Workspace {
+			return $wcm.Exports.bind<vscode.Workspace>(functions, [], wasmInterface, context);
 		}
 	}
 
 	export namespace WorkspaceEvents.$ {
-		export const didChangeTextDocument = new $wcm.FunctionType<example.WorkspaceEvents.didChangeTextDocument>('did-change-text-document',[
-			['uri', $wcm.wstring],
-			['content', $wcm.wstring],
+		export const TextDocumentChangeEvent = vscode.Types.$.TextDocumentChangeEvent;
+		export const didChangeTextDocument = new $wcm.FunctionType<vscode.WorkspaceEvents.didChangeTextDocument>('did-change-text-document',[
+			['id', $wcm.wstring],
+			['event', TextDocumentChangeEvent],
 		], undefined);
 	}
 	export namespace WorkspaceEvents._ {
-		export const id = 'vscode:example/workspace-events' as const;
+		export const id = 'ms:vscode/workspace-events' as const;
 		export const witName = 'workspace-events' as const;
+		export const types: Map<string, $wcm.GenericComponentModelType> = new Map<string, $wcm.GenericComponentModelType>([
+			['TextDocumentChangeEvent', $.TextDocumentChangeEvent]
+		]);
 		export const functions: Map<string, $wcm.FunctionType> = new Map([
 			['didChangeTextDocument', $.didChangeTextDocument]
 		]);
 		export type WasmInterface = {
-			'did-change-text-document': (uri_ptr: i32, uri_len: i32, content_ptr: i32, content_len: i32) => void;
+			'did-change-text-document': (id_ptr: i32, id_len: i32, event_TextDocumentChangeEvent_document: i32, event_TextDocumentChangeEvent_contentChanges_ptr: i32, event_TextDocumentChangeEvent_contentChanges_len: i32, event_TextDocumentChangeEvent_reason_case: i32, event_TextDocumentChangeEvent_reason_option_TextDocumentChangeReason: i32) => void;
 		};
-		export function createImports(service: example.WorkspaceEvents, context: $wcm.WasmContext): WasmInterface {
+		export function createImports(service: vscode.WorkspaceEvents, context: $wcm.WasmContext): WasmInterface {
 			return $wcm.Imports.create<WasmInterface>(functions, undefined, service, context);
 		}
 		export function filterExports(exports: object, context: $wcm.WasmContext): WasmInterface {
 			return $wcm.Exports.filter<WasmInterface>(exports, functions, undefined, id, undefined, context);
 		}
-		export function bindExports(wasmInterface: WasmInterface, context: $wcm.WasmContext): example.WorkspaceEvents {
-			return $wcm.Exports.bind<example.WorkspaceEvents>(functions, [], wasmInterface, context);
+		export function bindExports(wasmInterface: WasmInterface, context: $wcm.WasmContext): vscode.WorkspaceEvents {
+			return $wcm.Exports.bind<vscode.WorkspaceEvents>(functions, [], wasmInterface, context);
 		}
 	}
 
 	export namespace Commands.$ {
-		export const register = new $wcm.FunctionType<example.Commands.register>('register',[
+		export const register = new $wcm.FunctionType<vscode.Commands.register>('register',[
 			['command', $wcm.wstring],
 		], undefined);
 	}
 	export namespace Commands._ {
-		export const id = 'vscode:example/commands' as const;
+		export const id = 'ms:vscode/commands' as const;
 		export const witName = 'commands' as const;
 		export const functions: Map<string, $wcm.FunctionType> = new Map([
 			['register', $.register]
@@ -475,24 +407,24 @@ export namespace example {
 		export type WasmInterface = {
 			'register': (command_ptr: i32, command_len: i32) => void;
 		};
-		export function createImports(service: example.Commands, context: $wcm.WasmContext): WasmInterface {
+		export function createImports(service: vscode.Commands, context: $wcm.WasmContext): WasmInterface {
 			return $wcm.Imports.create<WasmInterface>(functions, undefined, service, context);
 		}
 		export function filterExports(exports: object, context: $wcm.WasmContext): WasmInterface {
 			return $wcm.Exports.filter<WasmInterface>(exports, functions, undefined, id, undefined, context);
 		}
-		export function bindExports(wasmInterface: WasmInterface, context: $wcm.WasmContext): example.Commands {
-			return $wcm.Exports.bind<example.Commands>(functions, [], wasmInterface, context);
+		export function bindExports(wasmInterface: WasmInterface, context: $wcm.WasmContext): vscode.Commands {
+			return $wcm.Exports.bind<vscode.Commands>(functions, [], wasmInterface, context);
 		}
 	}
 
 	export namespace CommandsEvents.$ {
-		export const execute = new $wcm.FunctionType<example.CommandsEvents.execute>('execute',[
+		export const execute = new $wcm.FunctionType<vscode.CommandsEvents.execute>('execute',[
 			['command', $wcm.wstring],
 		], undefined);
 	}
 	export namespace CommandsEvents._ {
-		export const id = 'vscode:example/commands-events' as const;
+		export const id = 'ms:vscode/commands-events' as const;
 		export const witName = 'commands-events' as const;
 		export const functions: Map<string, $wcm.FunctionType> = new Map([
 			['execute', $.execute]
@@ -500,27 +432,21 @@ export namespace example {
 		export type WasmInterface = {
 			'execute': (command_ptr: i32, command_len: i32) => void;
 		};
-		export function createImports(service: example.CommandsEvents, context: $wcm.WasmContext): WasmInterface {
+		export function createImports(service: vscode.CommandsEvents, context: $wcm.WasmContext): WasmInterface {
 			return $wcm.Imports.create<WasmInterface>(functions, undefined, service, context);
 		}
 		export function filterExports(exports: object, context: $wcm.WasmContext): WasmInterface {
 			return $wcm.Exports.filter<WasmInterface>(exports, functions, undefined, id, undefined, context);
 		}
-		export function bindExports(wasmInterface: WasmInterface, context: $wcm.WasmContext): example.CommandsEvents {
-			return $wcm.Exports.bind<example.CommandsEvents>(functions, [], wasmInterface, context);
+		export function bindExports(wasmInterface: WasmInterface, context: $wcm.WasmContext): vscode.CommandsEvents {
+			return $wcm.Exports.bind<vscode.CommandsEvents>(functions, [], wasmInterface, context);
 		}
 	}
-	export namespace calculator.$ {
-		export const Operation = Types.$.Operation;
-		export namespace Exports {
-			export const calc = new $wcm.FunctionType<calculator.Exports['calc']>('calc',[
-				['o', Operation],
-			], $wcm.u32);
-		}
+	export namespace api.$ {
 	}
-	export namespace calculator._ {
-		export const id = 'vscode:example/calculator' as const;
-		export const witName = 'calculator' as const;
+	export namespace api._ {
+		export const id = 'ms:vscode/api' as const;
+		export const witName = 'api' as const;
 		export namespace Imports {
 			export const interfaces: Map<string, $wcm.InterfaceType> = new Map<string, $wcm.InterfaceType>([
 				['Workspace', Workspace._],
@@ -530,46 +456,41 @@ export namespace example {
 			]);
 		}
 		export type Imports = {
-			'vscode:example/workspace': example.Workspace._.WasmInterface;
-			'vscode:example/commands': example.Commands._.WasmInterface;
-			'vscode:example/types': example.Types._.WasmInterface;
-			'vscode:example/window': example.Window._.WasmInterface;
+			'ms:vscode/workspace': vscode.Workspace._.WasmInterface;
+			'ms:vscode/commands': vscode.Commands._.WasmInterface;
+			'ms:vscode/types': vscode.Types._.WasmInterface;
+			'ms:vscode/window': vscode.Window._.WasmInterface;
 		};
 		export namespace Exports {
-			export const functions: Map<string, $wcm.FunctionType> = new Map([
-				['calc', $.Exports.calc]
-			]);
 			export const interfaces: Map<string, $wcm.InterfaceType> = new Map<string, $wcm.InterfaceType>([
 				['WorkspaceEvents', WorkspaceEvents._],
 				['CommandsEvents', CommandsEvents._]
 			]);
 		}
 		export type Exports = {
-			'calc': (o_Operation_case: i32, o_Operation_0: i32, o_Operation_1: i32) => i32;
-			'vscode:example/workspace-events#did-change-text-document': (uri_ptr: i32, uri_len: i32, content_ptr: i32, content_len: i32) => void;
-			'vscode:example/commands-events#execute': (command_ptr: i32, command_len: i32) => void;
+			'ms:vscode/workspace-events#did-change-text-document': (id_ptr: i32, id_len: i32, event_TextDocumentChangeEvent_document: i32, event_TextDocumentChangeEvent_contentChanges_ptr: i32, event_TextDocumentChangeEvent_contentChanges_len: i32, event_TextDocumentChangeEvent_reason_case: i32, event_TextDocumentChangeEvent_reason_option_TextDocumentChangeReason: i32) => void;
+			'ms:vscode/commands-events#execute': (command_ptr: i32, command_len: i32) => void;
 		};
-		export function createImports(service: calculator.Imports, context: $wcm.WasmContext): Imports {
+		export function createImports(service: api.Imports, context: $wcm.WasmContext): Imports {
 			const result: Imports = Object.create(null);
-			result['vscode:example/workspace'] = example.Workspace._.createImports(service.workspace, context);
-			result['vscode:example/commands'] = example.Commands._.createImports(service.commands, context);
-			result['vscode:example/types'] = example.Types._.createImports(service.types, context);
-			result['vscode:example/window'] = example.Window._.createImports(service.window, context);
+			result['ms:vscode/workspace'] = vscode.Workspace._.createImports(service.workspace, context);
+			result['ms:vscode/commands'] = vscode.Commands._.createImports(service.commands, context);
+			result['ms:vscode/types'] = vscode.Types._.createImports(service.types, context);
+			result['ms:vscode/window'] = vscode.Window._.createImports(service.window, context);
 			return result;
 		}
-		export function bindExports(exports: Exports, context: $wcm.WasmContext): calculator.Exports {
-			const result: calculator.Exports = Object.create(null);
-			Object.assign(result, $wcm.Exports.bind(Exports.functions, undefined, exports, context));
-			result.workspaceEvents = example.WorkspaceEvents._.bindExports(example.WorkspaceEvents._.filterExports(exports, context), context);
-			result.commandsEvents = example.CommandsEvents._.bindExports(example.CommandsEvents._.filterExports(exports, context), context);
+		export function bindExports(exports: Exports, context: $wcm.WasmContext): api.Exports {
+			const result: api.Exports = Object.create(null);
+			result.workspaceEvents = vscode.WorkspaceEvents._.bindExports(vscode.WorkspaceEvents._.filterExports(exports, context), context);
+			result.commandsEvents = vscode.CommandsEvents._.bindExports(vscode.CommandsEvents._.filterExports(exports, context), context);
 			return result;
 		}
 	}
 }
 
-export namespace example._ {
-	export const id = 'vscode:example' as const;
-	export const witName = 'example' as const;
+export namespace vscode._ {
+	export const id = 'ms:vscode' as const;
+	export const witName = 'vscode' as const;
 	export const interfaces: Map<string, $wcm.InterfaceType> = new Map<string, $wcm.InterfaceType>([
 		['Types', Types._],
 		['Window', Window._],
@@ -579,6 +500,6 @@ export namespace example._ {
 		['CommandsEvents', CommandsEvents._]
 	]);
 	export const worlds: Map<string, $wcm.WorldType> = new Map<string, $wcm.WorldType>([
-		['calculator', calculator._],
+		['api', api._],
 	]);
 }
