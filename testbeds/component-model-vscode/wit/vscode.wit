@@ -62,11 +62,11 @@ interface workspace-events {
 }
 
 interface commands {
-	register: func(command: string);
+	register-command: func(command: string);
 }
 
 interface commands-events {
-	execute: func(command: string);
+	execute-command: func(command: string);
 }
 
 world api {
@@ -76,4 +76,6 @@ world api {
 
 	export workspace-events;
 	export commands-events;
+	export activate: func();
+	export deactivate: func();
 }
