@@ -45,6 +45,21 @@
 		{
 			"type": "extensionHost",
 			"request": "launch",
+			"name": "Component Model VS Code",
+			"runtimeExecutable": "${execPath}",
+			"args": [
+				"--extensionDevelopmentPath=${workspaceRoot}/testbeds/component-model-vscode",
+			],
+			"outFiles": [
+				"${workspaceRoot}/testbeds/component-model-vscode/out/**/*.js",
+				"${workspaceRoot}/wasm-component-model/lib/**/*.js",
+			],
+			"sourceMaps": true,
+			"preLaunchTask": "Build Component Model VSCode"
+		},
+		{
+			"type": "extensionHost",
+			"request": "launch",
 			"name": "Python Testbed",
 			"runtimeExecutable": "${execPath}",
 			"args": [

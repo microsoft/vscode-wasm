@@ -1,5 +1,5 @@
 {
-	"name": "testbed-component-model",
+	"name": "testbed-component-model-vscode",
 	"private": "true",
 	"publisher": "ms-vscode",
 	"version": "0.0.1",
@@ -16,9 +16,9 @@
 	"contributes": {
 		"commands": [
 			{
-				"command": "testbed-component-model.run",
+				"command": "testbed-component-model-vscode.run",
 				"category": "wasm",
-				"title": "Run Calc Service"
+				"title": "Run Wasm Extension Code"
 			}
 		]
 	},

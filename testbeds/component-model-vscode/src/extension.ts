@@ -5,9 +5,8 @@
 import { WasmContext, ResourceManagers, Memory, MemoryError, type ResourceHandle } from '@vscode/wasm-component-model';
 import * as vscode from 'vscode';
 
-import { example } from './example';
-import calculator = example.calculator;
-import Types = example.Types;
+import { vscode as vs } from './vscode';
+import Types = vs.Types;
 import OutputChannel = Types.OutputChannel;
 import TextDocument = Types.TextDocument;
 
@@ -75,18 +74,18 @@ class TextDocumentProxy implements TextDocument {
 class CommandRegistry {
 
 	private commands: Map<string, vscode.Disposable> = new Map();
-	private api!: example.CommandsEvents;
+	private api!: vs.CommandsEvents;
 
 	constructor() {
 	}
 
-	initialize(api: example.CommandsEvents): void {
+	initialize(api: vs.CommandsEvents): void {
 		this.api = api;
 	}
 
 	register(command: string): void {
 		const disposable = vscode.commands.registerCommand(command, () => {
-			this.api.execute(command);
+			this.api.executeCommand(command);
 		});
 		this.commands.set(command, disposable);
 	}
@@ -115,7 +114,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
 			return memory;
 		}
 	}
-	const service: calculator.Imports = {
+	const service: vs.api.Imports = {
 		types: {
 			OutputChannel: OutputChannelProxy,
 			TextDocument: TextDocumentProxy
@@ -130,22 +129,15 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
 			}
 		},
 		commands: {
-			register: (command: string) => {
+			registerCommand: (command: string) => {
 				commandRegistry.register(command);
-
 			}
 		}
 	}
-	const imports = calculator._.createImports(service, wasmContext)
+	const imports = vs.api._.createImports(service, wasmContext)
 	const instance = await WebAssembly.instantiate(module, imports);
 	memory = Memory.createDefault(Date.now().toString(), instance.exports);
-	const api = calculator._.bindExports(instance.exports as calculator._.Exports, wasmContext);
+	const api = vs.api._.bindExports(instance.exports as vs.api._.Exports, wasmContext);
 	commandRegistry.initialize(api.commandsEvents);
-
-	vscode.commands.registerCommand('testbed-component-model.run', () => {
-		console.log(`Add ${api.calc(Types.Operation.Add({ left: 1, right: 2}))}`);
-		console.log(`Sub ${api.calc(Types.Operation.Sub({ left: 10, right: 8 }))}`);
-		console.log(`Mul ${api.calc(Types.Operation.Mul({ left: 3, right: 7 }))}`);
-		console.log(`Div ${api.calc(Types.Operation.Div({ left: 10, right: 2 }))}`);
-	});
+	api.activate();
 }

@@ -108,17 +108,17 @@ export namespace vscode {
 	};
 
 	export namespace Commands {
-		export type register = (command: string) => void;
+		export type registerCommand = (command: string) => void;
 	}
 	export type Commands = {
-		register: Commands.register;
+		registerCommand: Commands.registerCommand;
 	};
 
 	export namespace CommandsEvents {
-		export type execute = (command: string) => void;
+		export type executeCommand = (command: string) => void;
 	}
 	export type CommandsEvents = {
-		execute: CommandsEvents.execute;
+		executeCommand: CommandsEvents.executeCommand;
 	};
 	export namespace api {
 		export type Imports = {
@@ -128,6 +128,8 @@ export namespace vscode {
 			window: vscode.Window;
 		};
 		export type Exports = {
+			activate: () => void;
+			deactivate: () => void;
 			workspaceEvents: vscode.WorkspaceEvents;
 			commandsEvents: vscode.CommandsEvents;
 		};
@@ -394,7 +396,7 @@ export namespace vscode {
 	}
 
 	export namespace Commands.$ {
-		export const register = new $wcm.FunctionType<vscode.Commands.register>('register',[
+		export const registerCommand = new $wcm.FunctionType<vscode.Commands.registerCommand>('register-command',[
 			['command', $wcm.wstring],
 		], undefined);
 	}
@@ -402,10 +404,10 @@ export namespace vscode {
 		export const id = 'ms:vscode/commands' as const;
 		export const witName = 'commands' as const;
 		export const functions: Map<string, $wcm.FunctionType> = new Map([
-			['register', $.register]
+			['registerCommand', $.registerCommand]
 		]);
 		export type WasmInterface = {
-			'register': (command_ptr: i32, command_len: i32) => void;
+			'register-command': (command_ptr: i32, command_len: i32) => void;
 		};
 		export function createImports(service: vscode.Commands, context: $wcm.WasmContext): WasmInterface {
 			return $wcm.Imports.create<WasmInterface>(functions, undefined, service, context);
@@ -419,7 +421,7 @@ export namespace vscode {
 	}
 
 	export namespace CommandsEvents.$ {
-		export const execute = new $wcm.FunctionType<vscode.CommandsEvents.execute>('execute',[
+		export const executeCommand = new $wcm.FunctionType<vscode.CommandsEvents.executeCommand>('execute-command',[
 			['command', $wcm.wstring],
 		], undefined);
 	}
@@ -427,10 +429,10 @@ export namespace vscode {
 		export const id = 'ms:vscode/commands-events' as const;
 		export const witName = 'commands-events' as const;
 		export const functions: Map<string, $wcm.FunctionType> = new Map([
-			['execute', $.execute]
+			['executeCommand', $.executeCommand]
 		]);
 		export type WasmInterface = {
-			'execute': (command_ptr: i32, command_len: i32) => void;
+			'execute-command': (command_ptr: i32, command_len: i32) => void;
 		};
 		export function createImports(service: vscode.CommandsEvents, context: $wcm.WasmContext): WasmInterface {
 			return $wcm.Imports.create<WasmInterface>(functions, undefined, service, context);
@@ -443,6 +445,10 @@ export namespace vscode {
 		}
 	}
 	export namespace api.$ {
+		export namespace Exports {
+			export const activate = new $wcm.FunctionType<api.Exports['activate']>('activate', [], undefined);
+			export const deactivate = new $wcm.FunctionType<api.Exports['deactivate']>('deactivate', [], undefined);
+		}
 	}
 	export namespace api._ {
 		export const id = 'ms:vscode/api' as const;
@@ -462,14 +468,20 @@ export namespace vscode {
 			'ms:vscode/window': vscode.Window._.WasmInterface;
 		};
 		export namespace Exports {
+			export const functions: Map<string, $wcm.FunctionType> = new Map([
+				['activate', $.Exports.activate],
+				['deactivate', $.Exports.deactivate]
+			]);
 			export const interfaces: Map<string, $wcm.InterfaceType> = new Map<string, $wcm.InterfaceType>([
 				['WorkspaceEvents', WorkspaceEvents._],
 				['CommandsEvents', CommandsEvents._]
 			]);
 		}
 		export type Exports = {
+			'activate': () => void;
+			'deactivate': () => void;
 			'ms:vscode/workspace-events#did-change-text-document': (id_ptr: i32, id_len: i32, event_TextDocumentChangeEvent_document: i32, event_TextDocumentChangeEvent_contentChanges_ptr: i32, event_TextDocumentChangeEvent_contentChanges_len: i32, event_TextDocumentChangeEvent_reason_case: i32, event_TextDocumentChangeEvent_reason_option_TextDocumentChangeReason: i32) => void;
-			'ms:vscode/commands-events#execute': (command_ptr: i32, command_len: i32) => void;
+			'ms:vscode/commands-events#execute-command': (command_ptr: i32, command_len: i32) => void;
 		};
 		export function createImports(service: api.Imports, context: $wcm.WasmContext): Imports {
 			const result: Imports = Object.create(null);
@@ -481,6 +493,7 @@ export namespace vscode {
 		}
 		export function bindExports(exports: Exports, context: $wcm.WasmContext): api.Exports {
 			const result: api.Exports = Object.create(null);
+			Object.assign(result, $wcm.Exports.bind(Exports.functions, undefined, exports, context));
 			result.workspaceEvents = vscode.WorkspaceEvents._.bindExports(vscode.WorkspaceEvents._.filterExports(exports, context), context);
 			result.commandsEvents = vscode.CommandsEvents._.bindExports(vscode.CommandsEvents._.filterExports(exports, context), context);
 			return result;

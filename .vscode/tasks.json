@@ -76,6 +76,20 @@
 			]
 		},
 		{
+			"label": "Build Component Model VSCode",
+			"type": "npm",
+			"script": "build",
+			"path": "testbeds/component-model-vscode",
+			"group": "build",
+			"presentation": {
+				"panel": "dedicated",
+				"reveal": "never"
+			},
+			"problemMatcher": [
+				"$tsc"
+			]
+		},
+		{
 			"label": "Build LSP Example",
 			"type": "npm",
 			"script": "build",
