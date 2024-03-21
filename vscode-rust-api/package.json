@@ -1,3 +1,30 @@
 {
+	"name": "@vscode/rust-api",
+	"private": "true",
+	"publisher": "ms-vscode",
+	"version": "0.0.1",
+	"description": "Rust VS Code API bindings",
+	"author": "MS",
+	"license": "MIT",
+	"engines": {
+		"vscode": "^1.87.0"
+	},
+	"main": "./out/extension.js",
+	"activationEvents": [
+	],
+	"contributes": {
+	},
+	"devDependencies": {
+		"@types/vscode": "1.87.0"
+	},
+	"scripts": {
+		"build": "npm run compile:ts && npm run build:rust",
+		"compile:ts": "node ../../node_modules/typescript/lib/tsc.js -b tsconfig.json",
+		"watch:ts": "node ../../node_modules/typescript/lib/tsc.js -b tsconfig.json -w",
+		"build:rust": "cargo build --target wasm32-unknown-unknown",
+		"generate:model": "node ../../wasm-component-model/lib/tools/main.js --noMain --outDir ./src/ ./wit",
+		"generate:wat": "wasm-tools print ./target/wasm32-unknown-unknown/debug/calculator.wasm > ./target/wasm32-unknown-unknown/debug/calculator.wat",
+		"run": "npm run build:rust && npm run compile:ts && node ./out/main.js"
+	}
 
 }

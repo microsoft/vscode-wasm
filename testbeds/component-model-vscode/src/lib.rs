@@ -4,14 +4,15 @@
  *--------------------------------------------------------------------------------------------*/
 
 use std::rc::Rc;
-use exports::ms::vscode::{ workspace_events, commands_events };
+use exports::host::api::callbacks;
+
 pub mod vscode;
 
 // Use a procedural macro to generate bindings for the world we specified in
 // `host.wit`
 wit_bindgen::generate!({
 	// the name of the world in the `*.wit` input file
-	world: "api",
+	world: "all"
 });
 
 
@@ -50,21 +51,18 @@ wit_bindgen::generate!({
 
 struct Extension;
 
-impl commands_events::Guest for Extension {
+impl callbacks::Guest for Extension {
 	fn execute_command(command: String) {
 		vscode::commands::execute_command(&command);
 	}
-}
-
-impl workspace_events::Guest for Extension {
-	fn did_change_text_document(_id: String, _event: ms::vscode::types::TextDocumentChangeEvent) {
+	fn did_change_text_document(_id: String, _event: host::api::types::TextDocumentChangeEvent) {
 	}
 }
 
 impl Guest for Extension {
 
     fn activate() {
-    	let channel = Rc::new(vscode::window::create_output_channel("Rust Extension", Some("plaintext")));
+    	let channel: Rc<vscode::OutputChannel> = Rc::new(vscode::window::create_output_channel("Rust Extension", Some("plaintext")));
 		let channel_clone = channel.clone();
 		vscode::commands::register_command("testbed-component-model-vscode.run", Box::new(move || {
 			channel_clone.append_line("Hello World!");

@@ -5,3 +5,7 @@
 
 pub mod commands;
 pub mod window;
+
+use crate::host;
+
+pub type OutputChannel = host::api::types::OutputChannel;

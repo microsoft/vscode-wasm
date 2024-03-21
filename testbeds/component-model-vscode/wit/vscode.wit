@@ -1,5 +1,6 @@
-// wit/vscode.wit
-package ms:vscode;
+// The naming is chosen to have good module names in the generated Rust code
+// It doesn't reflect the actual names on the VS Code side.
+package host:api;
 
 interface types {
 	record position {
@@ -46,6 +47,10 @@ interface types {
 	}
 }
 
+interface commands {
+	register-command: func(command: string);
+}
+
 
 interface window {
 	use types.{ output-channel };
@@ -56,26 +61,19 @@ interface workspace {
 	register-on-did-change-text-document: func();
 }
 
-interface workspace-events {
+
+interface callbacks {
 	use types.{ text-document-change-event };
 	did-change-text-document: func(id: string, event: text-document-change-event);
-}
-
-interface commands {
-	register-command: func(command: string);
-}
-
-interface commands-events {
 	execute-command: func(command: string);
 }
 
-world api {
+world all {
 	import workspace;
 	import commands;
 	import window;
 
-	export workspace-events;
-	export commands-events;
+	export callbacks;
 	export activate: func();
 	export deactivate: func();
 }

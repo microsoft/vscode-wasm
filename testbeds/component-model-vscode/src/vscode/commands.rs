@@ -5,7 +5,7 @@
 
 use std::collections::HashMap;
 use once_cell::sync::Lazy;
-use crate::ms::vscode::commands;
+use crate::host::api::commands;
 
 static mut HANDLERS: Lazy<HashMap<String, Box<dyn Fn()>>> = Lazy::new(|| HashMap::new());
 

@@ -5,8 +5,8 @@
 import { WasmContext, ResourceManagers, Memory, MemoryError, type ResourceHandle } from '@vscode/wasm-component-model';
 import * as vscode from 'vscode';
 
-import { vscode as vs } from './vscode';
-import Types = vs.Types;
+import { api } from './api';
+import Types = api.Types;
 import OutputChannel = Types.OutputChannel;
 import TextDocument = Types.TextDocument;
 
@@ -74,18 +74,18 @@ class TextDocumentProxy implements TextDocument {
 class CommandRegistry {
 
 	private commands: Map<string, vscode.Disposable> = new Map();
-	private api!: vs.CommandsEvents;
+	private callback!: api.Callbacks.executeCommand;
 
 	constructor() {
 	}
 
-	initialize(api: vs.CommandsEvents): void {
-		this.api = api;
+	initialize(callback: api.Callbacks.executeCommand): void {
+		this.callback = callback;
 	}
 
 	register(command: string): void {
 		const disposable = vscode.commands.registerCommand(command, () => {
-			this.api.executeCommand(command);
+			this.callback(command);
 		});
 		this.commands.set(command, disposable);
 	}
@@ -114,7 +114,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
 			return memory;
 		}
 	}
-	const service: vs.api.Imports = {
+	const service: api.all.Imports = {
 		types: {
 			OutputChannel: OutputChannelProxy,
 			TextDocument: TextDocumentProxy
@@ -134,10 +134,10 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
 			}
 		}
 	}
-	const imports = vs.api._.createImports(service, wasmContext)
+	const imports = api.all._.createImports(service, wasmContext)
 	const instance = await WebAssembly.instantiate(module, imports);
 	memory = Memory.createDefault(Date.now().toString(), instance.exports);
-	const api = vs.api._.bindExports(instance.exports as vs.api._.Exports, wasmContext);
-	commandRegistry.initialize(api.commandsEvents);
-	api.activate();
+	const exports = api.all._.bindExports(instance.exports as api.all._.Exports, wasmContext);
+	commandRegistry.initialize(exports.callbacks.executeCommand);
+	exports.activate();
 }
