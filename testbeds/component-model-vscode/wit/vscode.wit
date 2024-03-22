@@ -58,6 +58,8 @@ interface window {
 }
 
 interface workspace {
+	use types.{ text-document };
+	text-documents: func() -> list<text-document>;
 	register-on-did-change-text-document: func();
 }
 

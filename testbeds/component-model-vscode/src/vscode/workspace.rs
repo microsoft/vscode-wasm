@@ -3,11 +3,7 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-pub mod commands;
-pub mod window;
-pub mod workspace;
+use crate::host::api::workspace;
 
-use crate::host;
-
-pub type OutputChannel = host::api::types::OutputChannel;
-pub type TextDocument = host::api::types::TextDocument;
+#[allow(non_upper_case_globals)]
+pub const text_documents: fn() -> Vec<super::TextDocument> = workspace::text_documents;

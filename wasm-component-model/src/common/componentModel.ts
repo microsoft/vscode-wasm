@@ -26,53 +26,45 @@ export type Module2Interface<T> = {
 	[F in keyof T as Exclude<F, 'constructor'>]: T[F] extends ModuleFunction ? RemoveFirstArg<T[F]> : never;
 };
 
-export class Handle {
-
-	public readonly value: number;
-
-	constructor(value: number) {
-		this.value = value;
-	}
-}
-
 export interface ResourceManager<T extends JInterface = JInterface> {
-	register(value: T): ResourceHandle;
-	getResource(resource: ResourceHandle): T;
-	getHandle(value: T): ResourceHandle;
-	managesHandle(resource: ResourceHandle): boolean;
-	managesResource(value: T): boolean;
-	unregister(resource: ResourceHandle): void;
+	$handle(value: T): ResourceHandle<T>;
+	$resource(handle: ResourceHandle<T>): T;
+	$drop(handle: ResourceHandle<T>): void;
 }
 
 export namespace ResourceManager {
+	export function from<T extends JInterface = JInterface>(obj: any): ResourceManager<T> {
+		while (obj !== undefined) {
+			const self = obj as ResourceManager;
+			if (typeof self.$drop === 'function' && typeof self.$handle === 'function' && typeof self.$resource === 'function') {
+				return self as ResourceManager<T>;
+			}
+			obj = obj.$manager;
+		}
+		throw new ComponentModelTrap('No resource manager found');
+	}
 
-	class Default<T extends JInterface = JInterface> {
-
-		public readonly key: string;
+	class Default<T extends JInterface = JInterface> implements ResourceManager<T> {
 
 		private readonly h2r: Map<ResourceHandle, T | undefined>;
-		private readonly r2h: Map<T, ResourceHandle>;
 		private handleCounter: ResourceHandle;
 
-		constructor(key: string) {
-			this.key = key;
+		constructor() {
 			this.h2r = new Map();
-			this.r2h = new Map();
 			this.handleCounter = 1;
 		}
 
-		public register(value: T): ResourceHandle {
+		public $handle(value: T): ResourceHandle {
 			if (value.$handle !== undefined) {
 				return value.$handle;
 			}
 			const handle = this.handleCounter++;
 			this.h2r.set(handle, value);
-			this.r2h.set(value, handle);
 			value.$handle = handle;
 			return handle;
 		}
 
-		public getResource(resource: ResourceHandle): T {
+		public $resource(resource: ResourceHandle): T {
 			const value = this.h2r.get(resource);
 			if (value === undefined) {
 				throw new ComponentModelTrap(`Unknown resource handle ${resource}`);
@@ -80,58 +72,15 @@ export namespace ResourceManager {
 			return value;
 		}
 
-		public getHandle(value: T): ResourceHandle {
-			const handle = this.r2h.get(value);
-			if (handle === undefined) {
-				throw new ComponentModelTrap(`Unknown resource ${JSON.stringify(value, undefined, 0)}`);
-			}
-			return handle;
-		}
-
-		public managesHandle(resource: ResourceHandle): boolean {
-			return this.h2r.has(resource);
-		}
-
-		public managesResource(value: T): boolean {
-			return this.r2h.has(value);
-		}
-
-		public unregister(resource: ResourceHandle): void {
+		public $drop(resource: ResourceHandle): void {
 			this.h2r.delete(resource);
 		}
 	}
 
-	export function createDefault<T extends JInterface>(key: string): ResourceManager<T> {
-		return new Default<T>(key);
+	export function createDefault<T extends JInterface>(): ResourceManager<T> {
+		return new Default<T>();
 	}
 }
-
-export interface ResourceManagers {
-	get(key: string): ResourceManager<any>;
-}
-export namespace ResourceManagers {
-	class Default {
-		private readonly managers: Map<string, ResourceManager<any>>;
-
-		constructor() {
-			this.managers = new Map();
-		}
-
-		public get(key: string): ResourceManager<any> {
-			let manager = this.managers.get(key);
-			if (manager === undefined) {
-				manager = ResourceManager.createDefault(key);
-				this.managers.set(key, manager);
-			}
-			return manager;
-		}
-	}
-
-	export function createDefault(): ResourceManagers {
-		return new Default();
-	}
-}
-
 
 namespace BigInts {
 	const MAX_VALUE_AS_BIGINT = BigInt(Number.MAX_VALUE);
@@ -919,7 +868,6 @@ export enum ComponentModelTypeKind {
 
 export interface ComponentModelContext {
 	readonly options: Options;
-	readonly managers: ResourceManagers;
 }
 
 export interface ComponentModelType<J> {
@@ -2937,7 +2885,7 @@ export class ConstructorType<_T extends Function = Function> extends Callable {
 		const memory  = context.getMemory();
 		const jParams = this.liftParamValues(params, memory, context);
 		const obj: JInterface = new clazz(...jParams);
-		const handle = resourceManager.register(obj);
+		const handle = resourceManager.$handle(obj);
 		return handle;
 	}
 }
@@ -2988,7 +2936,7 @@ export class MethodType<_T extends Function = Function> extends Callable {
 			throw new ComponentModelTrap(`Object handle must be a number (u32), but got ${handle}.`);
 		}
 		const [jParams, out] = this.getParamValuesForHostCall(params, context);
-		const resource = resourceManager.getResource(handle);
+		const resource = resourceManager.$resource(handle);
 		const memory  = context.getMemory();
 		const result: JType | void = (resource as any)[methodName](...jParams);
 		return this.lowerReturnValue(result, memory, context, out);
@@ -2997,7 +2945,7 @@ export class MethodType<_T extends Function = Function> extends Callable {
 	public callWasmMethod(params: JType[], wasmFunction: WasmFunction, resourceManager: ResourceManager, context: WasmContext): JType {
 		const memory = context.getMemory();
 		const obj: JInterface = params.shift() as JInterface;
-		const handle = obj.$handle ?? resourceManager.register(obj);
+		const handle = obj.$handle ?? resourceManager.$handle(obj);
 		const wasmValues = this.lowerParamValues(params, memory, context, undefined);
 		let resultRange: MemoryRange | undefined = undefined;
 		let result: WasmType | void;
@@ -3015,7 +2963,7 @@ export class MethodType<_T extends Function = Function> extends Callable {
 
 export type ResourceCallable<T extends JFunction = JFunction> = MethodType<T> | StaticMethodType<T> | ConstructorType<T> | DestructorType;
 
-export type ResourceHandle = u32;
+export type ResourceHandle<_T extends JInterface = JInterface> = u32;
 export class ResourceHandleType implements ComponentModelType<ResourceHandle> {
 
 	public readonly kind: ComponentModelTypeKind;
@@ -3058,7 +3006,7 @@ export class ResourceHandleType implements ComponentModelType<ResourceHandle> {
 	}
 }
 
-export class ResourceType<T extends JInterface = JInterface> implements ComponentModelType<T> {
+export class ResourceType<_T extends JInterface = JInterface> implements ComponentModelType<u32> {
 
 	public readonly kind: ComponentModelTypeKind;
 	public readonly size: size;
@@ -3104,34 +3052,24 @@ export class ResourceType<T extends JInterface = JInterface> implements Componen
 		return result;
 	}
 
-	public load(memory: ReadonlyMemoryRange, offset: offset, context: ComponentModelContext): T {
-		const handle = u32.load(memory, offset, context);
-		return context.managers.get(this.id).getResource(handle);
+	public load(memory: ReadonlyMemoryRange, offset: offset, context: ComponentModelContext): u32 {
+		return u32.load(memory, offset, context);
 	}
 
-	public liftFlat(memory: Memory, values: FlatValuesIter, context: ComponentModelContext): T {
-		const handle = u32.liftFlat(memory, values, context);
-		return context.managers.get(this.id).getResource(handle);
+	public liftFlat(memory: Memory, values: FlatValuesIter, context: ComponentModelContext): u32 {
+		return u32.liftFlat(memory, values, context);
 	}
 
 	public alloc(memory: Memory): MemoryRange {
 		return u32.alloc(memory);
 	}
 
-	public store(memory: MemoryRange, offset: offset, value: JInterface, context: ComponentModelContext): void {
-		let handle: ResourceHandle | undefined = value.$handle;
-		if (handle === undefined) {
-			handle = context.managers.get(this.id).register(value);
-		}
-		u32.store(memory, offset, handle, context);
+	public store(memory: MemoryRange, offset: offset, value: u32, context: ComponentModelContext): void {
+		u32.store(memory, offset, value, context);
 	}
 
-	public lowerFlat(result: WasmType[], memory: Memory, value: JInterface, context: ComponentModelContext): void {
-		let handle: ResourceHandle | undefined = value.$handle;
-		if (handle === undefined) {
-			handle = context.managers.get(this.id).register(value);
-		}
-		u32.lowerFlat(result, memory, handle, context);
+	public lowerFlat(result: WasmType[], memory: Memory, value: u32, context: ComponentModelContext): void {
+		u32.lowerFlat(result, memory, value, context);
 	}
 
 	public copy(dest: MemoryRange, dest_offset: offset, src: ReadonlyMemoryRange, src_offset: offset, context: ComponentModelContext): void {
@@ -3436,16 +3374,17 @@ export namespace Imports {
 		}
 		if (resources !== undefined) {
 			for (const [resourceName, resource] of resources) {
-				const resourceManager = context.managers.get(resource.id);
+				const clazz = service[resourceName] as GenericClass;
 				for (const [callableName, callable] of resource.callables) {
 					if (callable instanceof ConstructorType) {
-						result[callable.witName] = createConstructorFunction(callable, (service[resourceName] as GenericClass), resourceManager, context);
+						result[callable.witName] = createConstructorFunction(callable, clazz, ResourceManager.from(clazz), context);
 					} else if (callable instanceof StaticMethodType) {
 						result[callable.witName] = createStaticMethodFunction(callable, (service[resourceName] as GenericClass)[callableName], context);
 					} else if (callable instanceof MethodType) {
-						result[callable.witName] = createMethodFunction(callableName, callable, resourceManager, context);
+						result[callable.witName] = createMethodFunction(callableName, callable, ResourceManager.from(clazz), context);
 					} else if (callable instanceof DestructorType) {
-						result[callable.witName] = createDestructorFunction(callable, (service[resourceName] as GenericClass)[callableName], resourceManager);
+						const clazz = service[resourceName] as GenericClass;
+						result[callable.witName] = createDestructorFunction(callable, clazz[callableName], ResourceManager.from(clazz));
 					}
 				}
 			}

@@ -52,6 +52,7 @@ class TextDocumentProxy implements TextDocument {
 	}
 
 	public static $drop(_instance: TextDocumentProxy): void {
+		console.log('TextDocumentProxy.$drop');
 	}
 
 	public uri(): string {
@@ -114,6 +115,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
 			return memory;
 		}
 	}
+	let cachedTextDocuments: TextDocumentProxy[] | undefined;
 	const service: api.all.Imports = {
 		types: {
 			OutputChannel: OutputChannelProxy,
@@ -126,6 +128,12 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
 		},
 		workspace: {
 			registerOnDidChangeTextDocument: () => {
+			},
+			textDocuments: () => {
+				if (cachedTextDocuments === undefined) {
+					cachedTextDocuments = vscode.workspace.textDocuments.map(document => new TextDocumentProxy(document));
+				}
+				return cachedTextDocuments;
 			}
 		},
 		commands: {

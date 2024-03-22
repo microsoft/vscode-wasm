@@ -291,12 +291,14 @@ export namespace testData {
 			type ClassModule = {
 				$drop(self: PointResource): void;
 			};
-			class Impl extends $wcm.Resource implements testData.Types.PointResource.Interface {
+			export class Impl extends $wcm.Resource implements testData.Types.PointResource.Interface {
 				private readonly _om: ObjectModule;
+				public static readonly $manager = $wcm.ResourceManager.createDefault();
 				constructor(x: u32, y: u32, om: ObjectModule) {
 					super();
 					this._om = om;
 					this.$handle = om.constructor(x, y);
+					Impl.$manager.$handle(this);
 				}
 				public getX(): u32 {
 					return this._om.getX(this);

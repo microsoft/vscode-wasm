@@ -99,9 +99,14 @@ export namespace api {
 	};
 
 	export namespace Workspace {
+		export type TextDocument = api.Types.TextDocument;
+
+		export type textDocuments = () => own<TextDocument>[];
+
 		export type registerOnDidChangeTextDocument = () => void;
 	}
 	export type Workspace = {
+		textDocuments: Workspace.textDocuments;
 		registerOnDidChangeTextDocument: Workspace.registerOnDidChangeTextDocument;
 	};
 
@@ -118,9 +123,9 @@ export namespace api {
 	};
 	export namespace all {
 		export type Imports = {
+			types: api.Types;
 			workspace: api.Workspace;
 			commands: api.Commands;
-			types: api.Types;
 			window: api.Window;
 		};
 		export type Exports = {
@@ -363,15 +368,22 @@ export namespace api {
 	}
 
 	export namespace Workspace.$ {
+		export const TextDocument = api.Types.$.TextDocument;
+		export const textDocuments = new $wcm.FunctionType<api.Workspace.textDocuments>('text-documents', [], new $wcm.ListType<own<api.Workspace.TextDocument>>(new $wcm.OwnType<api.Workspace.TextDocument>(TextDocument)));
 		export const registerOnDidChangeTextDocument = new $wcm.FunctionType<api.Workspace.registerOnDidChangeTextDocument>('register-on-did-change-text-document', [], undefined);
 	}
 	export namespace Workspace._ {
 		export const id = 'host:api/workspace' as const;
 		export const witName = 'workspace' as const;
+		export const types: Map<string, $wcm.GenericComponentModelType> = new Map<string, $wcm.GenericComponentModelType>([
+			['TextDocument', $.TextDocument]
+		]);
 		export const functions: Map<string, $wcm.FunctionType> = new Map([
+			['textDocuments', $.textDocuments],
 			['registerOnDidChangeTextDocument', $.registerOnDidChangeTextDocument]
 		]);
 		export type WasmInterface = {
+			'text-documents': (result: ptr<own<TextDocument>[]>) => void;
 			'register-on-did-change-text-document': () => void;
 		};
 		export function createImports(service: api.Workspace, context: $wcm.WasmContext): WasmInterface {
@@ -430,16 +442,16 @@ export namespace api {
 		export const witName = 'all' as const;
 		export namespace Imports {
 			export const interfaces: Map<string, $wcm.InterfaceType> = new Map<string, $wcm.InterfaceType>([
+				['Types', Types._],
 				['Workspace', Workspace._],
 				['Commands', Commands._],
-				['Types', Types._],
 				['Window', Window._]
 			]);
 		}
 		export type Imports = {
+			'host:api/types': api.Types._.WasmInterface;
 			'host:api/workspace': api.Workspace._.WasmInterface;
 			'host:api/commands': api.Commands._.WasmInterface;
-			'host:api/types': api.Types._.WasmInterface;
 			'host:api/window': api.Window._.WasmInterface;
 		};
 		export namespace Exports {
@@ -459,9 +471,9 @@ export namespace api {
 		};
 		export function createImports(service: all.Imports, context: $wcm.WasmContext): Imports {
 			const result: Imports = Object.create(null);
+			result['host:api/types'] = api.Types._.createImports(service.types, context);
 			result['host:api/workspace'] = api.Workspace._.createImports(service.workspace, context);
 			result['host:api/commands'] = api.Commands._.createImports(service.commands, context);
-			result['host:api/types'] = api.Types._.createImports(service.types, context);
 			result['host:api/window'] = api.Window._.createImports(service.window, context);
 			return result;
 		}
