@@ -33,7 +33,7 @@ export interface ResourceManager<T extends JInterface = JInterface> {
 }
 
 export namespace ResourceManager {
-	export function from<T extends JInterface = JInterface>(obj: any): ResourceManager<T> {
+	export function from<T extends JInterface = JInterface>(obj: any): ResourceManager<T> | undefined {
 		while (obj !== undefined) {
 			const self = obj as ResourceManager;
 			if (typeof self.$drop === 'function' && typeof self.$handle === 'function' && typeof self.$resource === 'function') {
@@ -41,10 +41,10 @@ export namespace ResourceManager {
 			}
 			obj = obj.$manager;
 		}
-		throw new ComponentModelTrap('No resource manager found');
+		return undefined;
 	}
 
-	class Default<T extends JInterface = JInterface> implements ResourceManager<T> {
+	export class Default<T extends JInterface = JInterface> implements ResourceManager<T> {
 
 		private readonly h2r: Map<ResourceHandle, T | undefined>;
 		private handleCounter: ResourceHandle;
@@ -76,9 +76,41 @@ export namespace ResourceManager {
 			this.h2r.delete(resource);
 		}
 	}
+}
 
-	export function createDefault<T extends JInterface>(): ResourceManager<T> {
-		return new Default<T>();
+export interface ResourceManagers {
+	has(id: string): boolean;
+	set(id: string, manager: ResourceManager): void;
+	get<T extends JInterface = JInterface>(id: string): ResourceManager<T>;
+}
+
+export namespace ResourceManagers {
+	export class Default {
+
+		private readonly managers: Map<string, ResourceManager>;
+
+		constructor() {
+			this.managers = new Map();
+		}
+
+		public has(id: string): boolean {
+			return this.managers.has(id);
+		}
+
+		public set(id: string, manager: ResourceManager): void {
+			if (this.managers.has(id)) {
+				throw new ComponentModelTrap(`Resource manager ${id} already registered.`);
+			}
+			this.managers.set(id, manager);
+		}
+
+		public get<T extends JInterface = JInterface>(id: string): ResourceManager<T> {
+			const manager = this.managers.get(id);
+			if (manager === undefined) {
+				throw new ComponentModelTrap(`Resource manager ${id} not found.`);
+			}
+			return manager as ResourceManager<T>;
+		}
 	}
 }
 
@@ -868,6 +900,7 @@ export enum ComponentModelTypeKind {
 
 export interface ComponentModelContext {
 	readonly options: Options;
+	readonly resources: ResourceManagers;
 }
 
 export interface ComponentModelType<J> {
@@ -2896,14 +2929,14 @@ export class DestructorType<_T extends Function = Function> extends Callable {
 		super(witName, params);
 	}
 
-	public callHost(func: JFunction, params: WasmType[], resourceManager: ResourceManager): void {
+	public callHost(params: WasmType[], resourceManager: ResourceManager): void {
 		const handle = params[0];
 		if (typeof handle === 'bigint' || !$u32.valid(handle)) {
 			throw new ComponentModelTrap(`Object handle must be a number (u32), but got ${handle}.`);
 		}
-		const obj = resourceManager.getResource(handle);
-		func(obj);
-		resourceManager.unregister(handle);
+		const resource: any = resourceManager.$resource(handle);
+		resource['$drop'] !== undefined && resource['$drop']();
+		resourceManager.$drop(handle);
 	}
 }
 
@@ -3006,7 +3039,7 @@ export class ResourceHandleType implements ComponentModelType<ResourceHandle> {
 	}
 }
 
-export class ResourceType<_T extends JInterface = JInterface> implements ComponentModelType<u32> {
+export class ResourceType<T extends JInterface = JInterface> implements ComponentModelType<T> {
 
 	public readonly kind: ComponentModelTypeKind;
 	public readonly size: size;
@@ -3052,24 +3085,28 @@ export class ResourceType<_T extends JInterface = JInterface> implements Compone
 		return result;
 	}
 
-	public load(memory: ReadonlyMemoryRange, offset: offset, context: ComponentModelContext): u32 {
-		return u32.load(memory, offset, context);
+	public load(memory: ReadonlyMemoryRange, offset: offset, context: ComponentModelContext): T {
+		const handle = u32.load(memory, offset, context);
+		return context.resources.get(this.id).$resource(handle) as T;
 	}
 
-	public liftFlat(memory: Memory, values: FlatValuesIter, context: ComponentModelContext): u32 {
-		return u32.liftFlat(memory, values, context);
+	public liftFlat(memory: Memory, values: FlatValuesIter, context: ComponentModelContext): T {
+		const handle = u32.liftFlat(memory, values, context);
+		return context.resources.get(this.id).$resource(handle) as T;
 	}
 
 	public alloc(memory: Memory): MemoryRange {
 		return u32.alloc(memory);
 	}
 
-	public store(memory: MemoryRange, offset: offset, value: u32, context: ComponentModelContext): void {
-		u32.store(memory, offset, value, context);
+	public store(memory: MemoryRange, offset: offset, value: T, context: ComponentModelContext): void {
+		const handle = context.resources.get(this.id).$handle(value);
+		u32.store(memory, offset, handle, context);
 	}
 
-	public lowerFlat(result: WasmType[], memory: Memory, value: u32, context: ComponentModelContext): void {
-		u32.lowerFlat(result, memory, value, context);
+	public lowerFlat(result: WasmType[], memory: Memory, value: T, context: ComponentModelContext): void {
+		const handle = context.resources.get(this.id).$handle(value);
+		u32.lowerFlat(result, memory, handle, context);
 	}
 
 	public copy(dest: MemoryRange, dest_offset: offset, src: ReadonlyMemoryRange, src_offset: offset, context: ComponentModelContext): void {
@@ -3375,16 +3412,22 @@ export namespace Imports {
 		if (resources !== undefined) {
 			for (const [resourceName, resource] of resources) {
 				const clazz = service[resourceName] as GenericClass;
+				let resourceManager: ResourceManager;
+				if (context.resources.has(resource.id)) {
+					resourceManager = context.resources.get(resource.id);
+				} else {
+					resourceManager = ResourceManager.from(clazz) ?? new ResourceManager.Default();
+					context.resources.set(resource.id, resourceManager);
+				}
 				for (const [callableName, callable] of resource.callables) {
 					if (callable instanceof ConstructorType) {
-						result[callable.witName] = createConstructorFunction(callable, clazz, ResourceManager.from(clazz), context);
+						result[callable.witName] = createConstructorFunction(callable, clazz, resourceManager, context);
 					} else if (callable instanceof StaticMethodType) {
 						result[callable.witName] = createStaticMethodFunction(callable, (service[resourceName] as GenericClass)[callableName], context);
 					} else if (callable instanceof MethodType) {
-						result[callable.witName] = createMethodFunction(callableName, callable, ResourceManager.from(clazz), context);
+						result[callable.witName] = createMethodFunction(callableName, callable, resourceManager, context);
 					} else if (callable instanceof DestructorType) {
-						const clazz = service[resourceName] as GenericClass;
-						result[callable.witName] = createDestructorFunction(callable, clazz[callableName], ResourceManager.from(clazz));
+						result[callable.witName] = createDestructorFunction(callable, resourceManager);
 					}
 				}
 			}
@@ -3404,9 +3447,9 @@ export namespace Imports {
 		};
 	}
 
-	function createDestructorFunction(callable: DestructorType, func: JFunction, manager: ResourceManager): WasmFunction {
+	function createDestructorFunction(callable: DestructorType, manager: ResourceManager): WasmFunction {
 		return function (this: void, ...params: WasmType[]): number | bigint | void {
-			return callable.callHost(func, params, manager);
+			return callable.callHost(params, manager);
 		};
 	}
 
@@ -3425,7 +3468,13 @@ export namespace Imports {
 
 export namespace Module {
 	export function createObjectModule<T>(resource: ResourceType, wasm: ParamWasmInterface, context: WasmContext): T {
-		const resourceManager = context.managers.get(resource.id);
+		let resourceManager: ResourceManager;
+		if (context.resources.has(resource.id)) {
+			resourceManager = context.resources.get(resource.id);
+		} else {
+			resourceManager = new ResourceManager.Default();
+			context.resources.set(resource.id, resourceManager);
+		}
 		const result: { [key: string]: JFunction }  = Object.create(null);
 		for (const [name, callable] of resource.callables) {
 			if (callable instanceof ConstructorType) {
@@ -3438,6 +3487,9 @@ export namespace Module {
 	}
 
 	export function createClassModule<T>(resource: ResourceType, wasm: ParamWasmInterface, context: WasmContext): T {
+		if (!context.resources.has(resource.id)) {
+			context.resources.set(resource.id, new ResourceManager.Default());
+		}
 		const result: { [key: string]: JFunction }  = Object.create(null);
 		for (const [name, callable] of resource.callables) {
 			if (callable instanceof StaticMethodType) {

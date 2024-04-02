@@ -43,6 +43,7 @@
 		"./wasm-component-model",
 		"./wasi",
 		"./wasm-wasi-kit",
+		"./vscode-rust-api",
 		"./wasm-wasi-core",
 		"./wasm-wasi",
 		"./webshell",

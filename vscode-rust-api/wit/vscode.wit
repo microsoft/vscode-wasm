@@ -66,7 +66,7 @@ interface workspace {
 
 interface callbacks {
 	use types.{ text-document-change-event };
-	did-change-text-document: func(id: string, event: text-document-change-event);
+	did-change-text-document: func(event: text-document-change-event);
 	execute-command: func(command: string);
 }
 

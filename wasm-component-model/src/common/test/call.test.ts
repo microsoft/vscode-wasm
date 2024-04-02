@@ -115,11 +115,11 @@ const serviceImpl: Types = {
 };
 
 const memory = new Memory();
-const managers = ResourceManagers.createDefault();
+const resources = new ResourceManagers.Default();
 const context: WasmContext = {
 	getMemory: () => memory,
 	options: { encoding: 'utf-8' },
-	managers,
+	resources
 };
 
 suite('point', () => {
@@ -139,26 +139,26 @@ suite ('point-resource', () => {
 	const host: Types._.WasmInterface = Types._.createImports(serviceImpl, context);
 	const service = Types._.bindExports(host, context);
 	test('host:call', () => {
-		const pointResourceManager = context.managers.get('vscode:test-data/types/point-resource');
+		const pointResourceManager = context.resources.get('vscode:test-data/types/point-resource');
 		const point = host['[constructor]point-resource'](1, 2);
-		assert.strictEqual(pointResourceManager.managesHandle(point), true);
+		assert.ok(pointResourceManager.$resource(point) !== undefined);
 		assert.strictEqual(host['[method]point-resource.get-x'](point), 1);
 		assert.strictEqual(host['[method]point-resource.get-y'](point), 2);
 		assert.strictEqual(host['[method]point-resource.add'](point), 3);
 		host['[resource-drop]point-resource'](point);
-		assert.strictEqual(pointResourceManager.managesHandle(point), false);
+		assert.throws(() => pointResourceManager.$resource(point));
 	});
 	test('service:call', () => {
-		const pointResourceManager = context.managers.get('vscode:test-data/types/point-resource');
+		const pointResourceManager = context.resources.get('vscode:test-data/types/point-resource');
 		const point = new service.PointResource(1, 2);
 		const handle = point.$handle;
 		assert.ok(typeof handle === 'number');
-		assert.strictEqual(pointResourceManager.managesHandle(handle), true);
+		assert.ok(pointResourceManager.$resource(handle) !== undefined);
 		assert.strictEqual(point.getX(), 1);
 		assert.strictEqual(point.getY(), 2);
 		assert.strictEqual(point.add(), 3);
 		service.PointResource.$drop(point);
-		assert.strictEqual(pointResourceManager.managesHandle(handle), false);
+		assert.throws(() => pointResourceManager.$resource(handle));
 	});
 });
 

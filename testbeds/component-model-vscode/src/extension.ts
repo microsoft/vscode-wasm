@@ -107,7 +107,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
 	const commandRegistry = new CommandRegistry();
 	const wasmContext: WasmContext = {
 		options: { encoding: 'utf-8' },
-		managers: ResourceManagers.createDefault(),
+		resources: new ResourceManagers.Default(),
 		getMemory: () => {
 			if (memory === undefined) {
 				throw new MemoryError(`Memory not yet initialized`);

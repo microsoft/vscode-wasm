@@ -293,7 +293,7 @@ export namespace testData {
 			};
 			export class Impl extends $wcm.Resource implements testData.Types.PointResource.Interface {
 				private readonly _om: ObjectModule;
-				public static readonly $manager = $wcm.ResourceManager.createDefault();
+				public static readonly $manager = new $wcm.ResourceManager.Default();
 				constructor(x: u32, y: u32, om: ObjectModule) {
 					super();
 					this._om = om;
