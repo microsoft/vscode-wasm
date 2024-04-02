@@ -3338,10 +3338,10 @@ class ResourceEmitter extends InterfaceMemberEmitter {
 	}
 
 	public emitMetaModelFunctions(code: Code): void {
+		this.destructor.emitMetaModel(code);
 		for (const emitter of this.emitters) {
 			emitter.emitMetaModel(code);
 		}
-		this.destructor.emitMetaModel(code);
 	}
 
 	public emitAPI(code: Code): void {
@@ -3710,12 +3710,11 @@ namespace ResourceEmitter {
 
 		public emitMetaModel(code: Code): void {
 			const resourceName = this.context.nameProvider.type.name(this.resource);
-			const typeParam = `${this.getPackageQualifier()}['$drop']`;
-			code.push(`${resourceName}.addDestructor('$drop', new $wcm.DestructorType<${typeParam}>('[resource-drop]${this.resource.name}', [['inst', ${resourceName}]]));`);
+			code.push(`${resourceName}.addDestructor('$drop', new $wcm.DestructorType('[resource-drop]${this.resource.name}', [['inst', ${resourceName}]]));`);
 		}
 
 		public emitInterfaceDeclaration(code: Code): void {
-			code.push(`$drop(): void;`);
+			code.push(`$drop?(): void;`);
 		}
 
 		public emitWasmInterface(code: Code): void {

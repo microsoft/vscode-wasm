@@ -21,8 +21,8 @@ class OutputChannelProxy implements OutputChannel {
 		this.channel = vscode.window.createOutputChannel(name, languageId);
 	}
 
-	public static $drop(_instance: OutputChannelProxy): void {
-		_instance.channel.dispose();
+	public $drop(): void {
+		this.channel.dispose();
 	}
 
 	name(): string {
@@ -85,10 +85,6 @@ class TextDocumentProxy implements TextDocument {
 	private constructor(document: vscode.TextDocument) {
 		this.$handle = undefined;
 		this.textDocument = document;
-	}
-
-	public $drop(): void {
-		console.log('TextDocumentProxy.$drop');
 	}
 
 	public uri(): string {

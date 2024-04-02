@@ -38,6 +38,7 @@ export namespace api {
 		export namespace TextDocument {
 			export interface Interface {
 				$handle?: $wcm.ResourceHandle;
+				$drop?(): void;
 
 				uri(): string;
 
@@ -48,7 +49,6 @@ export namespace api {
 				getText(): string;
 			}
 			export type Statics = {
-				$drop(inst: Interface): void;
 			};
 			export type Class = Statics & {
 			};
@@ -58,6 +58,7 @@ export namespace api {
 		export namespace OutputChannel {
 			export interface Interface {
 				$handle?: $wcm.ResourceHandle;
+				$drop?(): void;
 
 				name(): string;
 
@@ -70,7 +71,6 @@ export namespace api {
 				show(): void;
 			}
 			export type Statics = {
-				$drop(inst: Interface): void;
 			};
 			export type Class = Statics & {
 			};
@@ -162,11 +162,12 @@ export namespace api {
 		]);
 		export const OutputChannel = new $wcm.ResourceType<api.Types.OutputChannel>('output-channel', 'host:api/types/output-channel');
 		export const OutputChannel_Handle = new $wcm.ResourceHandleType('output-channel');
+		TextDocument.addDestructor('$drop', new $wcm.DestructorType('[resource-drop]text-document', [['inst', TextDocument]]));
 		TextDocument.addMethod('uri', new $wcm.MethodType<api.Types.TextDocument.Interface['uri']>('[method]text-document.uri', [], $wcm.wstring));
 		TextDocument.addMethod('languageId', new $wcm.MethodType<api.Types.TextDocument.Interface['languageId']>('[method]text-document.language-id', [], $wcm.wstring));
 		TextDocument.addMethod('version', new $wcm.MethodType<api.Types.TextDocument.Interface['version']>('[method]text-document.version', [], $wcm.u32));
 		TextDocument.addMethod('getText', new $wcm.MethodType<api.Types.TextDocument.Interface['getText']>('[method]text-document.get-text', [], $wcm.wstring));
-		TextDocument.addDestructor('$drop', new $wcm.DestructorType<api.Types.TextDocument.Statics['$drop']>('[resource-drop]text-document', [['inst', TextDocument]]));
+		OutputChannel.addDestructor('$drop', new $wcm.DestructorType('[resource-drop]output-channel', [['inst', OutputChannel]]));
 		OutputChannel.addMethod('name', new $wcm.MethodType<api.Types.OutputChannel.Interface['name']>('[method]output-channel.name', [], $wcm.wstring));
 		OutputChannel.addMethod('append', new $wcm.MethodType<api.Types.OutputChannel.Interface['append']>('[method]output-channel.append', [
 			['value', $wcm.wstring],
@@ -176,7 +177,6 @@ export namespace api {
 		], undefined));
 		OutputChannel.addMethod('clear', new $wcm.MethodType<api.Types.OutputChannel.Interface['clear']>('[method]output-channel.clear', [], undefined));
 		OutputChannel.addMethod('show', new $wcm.MethodType<api.Types.OutputChannel.Interface['show']>('[method]output-channel.show', [], undefined));
-		OutputChannel.addDestructor('$drop', new $wcm.DestructorType<api.Types.OutputChannel.Statics['$drop']>('[resource-drop]output-channel', [['inst', OutputChannel]]));
 	}
 	export namespace Types._ {
 		export const id = 'host:api/types' as const;
@@ -203,19 +203,20 @@ export namespace api {
 				'[resource-drop]text-document': (self: i32) => void;
 			};
 			type ObjectModule = {
+				$drop(self: TextDocument): void;
 				uri(self: TextDocument): string;
 				languageId(self: TextDocument): string;
 				version(self: TextDocument): u32;
 				getText(self: TextDocument): string;
-			};
-			type ClassModule = {
-				$drop(self: TextDocument): void;
 			};
 			class Impl extends $wcm.Resource implements api.Types.TextDocument.Interface {
 				private readonly _om: ObjectModule;
 				constructor(om: ObjectModule) {
 					super();
 					this._om = om;
+				}
+				public $drop(): void {
+					return this._om.$drop(this);
 				}
 				public uri(): string {
 					return this._om.uri(this);
@@ -233,13 +234,9 @@ export namespace api {
 			export function Class(wasmInterface: WasmInterface, context: $wcm.WasmContext): api.Types.TextDocument.Class {
 				const resource = api.Types.$.TextDocument;
 				const om: ObjectModule = $wcm.Module.createObjectModule(resource, wasmInterface, context);
-				const cm: ClassModule = $wcm.Module.createClassModule(resource, wasmInterface, context);
 				return class extends Impl {
 					constructor() {
 						super(om);
-					}
-					public static $drop(self: TextDocument): void {
-						return cm.$drop(self);
 					}
 				};
 			}
@@ -254,20 +251,21 @@ export namespace api {
 				'[resource-drop]output-channel': (self: i32) => void;
 			};
 			type ObjectModule = {
+				$drop(self: OutputChannel): void;
 				name(self: OutputChannel): string;
 				append(self: OutputChannel, value: string): void;
 				appendLine(self: OutputChannel, value: string): void;
 				clear(self: OutputChannel): void;
 				show(self: OutputChannel): void;
 			};
-			type ClassModule = {
-				$drop(self: OutputChannel): void;
-			};
 			class Impl extends $wcm.Resource implements api.Types.OutputChannel.Interface {
 				private readonly _om: ObjectModule;
 				constructor(om: ObjectModule) {
 					super();
 					this._om = om;
+				}
+				public $drop(): void {
+					return this._om.$drop(this);
 				}
 				public name(): string {
 					return this._om.name(this);
@@ -288,13 +286,9 @@ export namespace api {
 			export function Class(wasmInterface: WasmInterface, context: $wcm.WasmContext): api.Types.OutputChannel.Class {
 				const resource = api.Types.$.OutputChannel;
 				const om: ObjectModule = $wcm.Module.createObjectModule(resource, wasmInterface, context);
-				const cm: ClassModule = $wcm.Module.createClassModule(resource, wasmInterface, context);
 				return class extends Impl {
 					constructor() {
 						super(om);
-					}
-					public static $drop(self: OutputChannel): void {
-						return cm.$drop(self);
 					}
 				};
 			}
