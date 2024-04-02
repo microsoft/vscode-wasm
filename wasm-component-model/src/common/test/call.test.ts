@@ -54,7 +54,7 @@ class PointResourceClass extends Resource implements Types.PointResource.Interfa
 		super();
 	}
 
-	public static $drop(_resource: Types.PointResource.Interface): void {
+	public $drop(): void {
 	}
 
 	public getX(): u32 {
@@ -157,7 +157,7 @@ suite ('point-resource', () => {
 		assert.strictEqual(point.getX(), 1);
 		assert.strictEqual(point.getY(), 2);
 		assert.strictEqual(point.add(), 3);
-		service.PointResource.$drop(point);
+		point.$drop();
 		assert.throws(() => pointResourceManager.$resource(handle));
 	});
 });

@@ -3481,6 +3481,8 @@ export namespace Module {
 				result[name] = createConstructorFunction(callable, wasm[callable.witName] as WasmFunction, context);
 			} else if (callable instanceof MethodType) {
 				result[name] = createMethodFunction(callable, wasm[callable.witName] as WasmFunction, resourceManager, context);
+			} else if (callable instanceof DestructorType) {
+				result[name] = createDestructorFunction(callable, wasm[callable.witName] as WasmFunction, context);
 			}
 		}
 		return result as unknown as T;
@@ -3494,8 +3496,6 @@ export namespace Module {
 		for (const [name, callable] of resource.callables) {
 			if (callable instanceof StaticMethodType) {
 				result[name] = createStaticMethodFunction(callable, wasm[callable.witName] as WasmFunction, context);
-			} else if (callable instanceof DestructorType) {
-				result[name] = createDestructorFunction(callable, wasm[callable.witName] as WasmFunction, context);
 			}
 		}
 		return result as unknown as T;

@@ -3276,6 +3276,7 @@ class ResourceEmitter extends InterfaceMemberEmitter {
 		code.push(`export interface Interface {`);
 		code.increaseIndent();
 		code.push(`$handle?: ${MetaModel.qualify('ResourceHandle')};`);
+		this.destructor.emitInterfaceDeclaration(code);
 		code.push();
 		for (const [index, method] of this.methods.entries()) {
 			method.emitInterfaceDeclaration(code);
@@ -3290,7 +3291,6 @@ class ResourceEmitter extends InterfaceMemberEmitter {
 		if (this.conztructor !== undefined) {
 			this.conztructor.emitStaticConstructorDeclaration(code);
 		}
-		this.destructor.emitStaticsDeclaration(code);
 		for (const method of this.statics) {
 			method.emitStaticsDeclaration(code);
 		}
@@ -3357,14 +3357,18 @@ class ResourceEmitter extends InterfaceMemberEmitter {
 		this.destructor.emitWasmInterface(code);
 		code.decreaseIndent();
 		code.push(`};`);
-		const needsClassModule = this.statics.length > 0 || this.destructor !== undefined;
-		const needsObjectModule = this.conztructor !== undefined || this.methods.length > 0;
+		const needsClassModule = this.statics.length > 0;
+		const needsObjectModule = this.conztructor !== undefined || this.methods.length > 0|| this.destructor !== undefined;
 		if (needsObjectModule) {
 			code.push(`type ObjectModule = {`);
 			code.increaseIndent();
 			if (this.conztructor !== undefined) {
 				this.conztructor.emitObjectModule(code);
 			}
+			if (this.destructor !== undefined) {
+				this.destructor.emitObjectModule(code);
+			}
+
 			for (const emitter of this.methods) {
 				emitter.emitObjectModule(code);
 			}
@@ -3377,7 +3381,6 @@ class ResourceEmitter extends InterfaceMemberEmitter {
 			for (const emitter of this.statics) {
 				emitter.emitStaticsModule(code);
 			}
-			this.destructor.emitStaticsModule(code);
 			code.decreaseIndent();
 			code.push(`};`);
 		}
@@ -3401,6 +3404,7 @@ class ResourceEmitter extends InterfaceMemberEmitter {
 				code.push(`}`);
 			}
 		}
+		this.destructor.emitClassMember(code);
 		for (const method of this.methods) {
 			method.emitClassMember(code);
 		}
@@ -3438,7 +3442,6 @@ class ResourceEmitter extends InterfaceMemberEmitter {
 						code.push(`}`);
 					}
 				}
-				this.destructor.emitAnonymousClassMember(code);
 				for (const method of this.statics) {
 					method.emitAnonymousClassMember(code);
 				}
@@ -3658,9 +3661,9 @@ namespace ResourceEmitter {
 			code.push(`new(${params.join(', ')}): Interface;`);
 		}
 
-		public emitStaticConstructorDeclaration(code: Code): void {
-			const [params] = this.getSignatureParts(0);
-			code.push(`$new?(${params.join(', ')}): Interface;`);
+		public emitStaticConstructorDeclaration(_code: Code): void {
+			// const [params] = this.getSignatureParts(0);
+			// code.push(`$new?(${params.join(', ')}): Interface;`);
 		}
 
 		public emitConstructorImplementation(code: Code): void {
@@ -3707,28 +3710,27 @@ namespace ResourceEmitter {
 
 		public emitMetaModel(code: Code): void {
 			const resourceName = this.context.nameProvider.type.name(this.resource);
-			const typeParam = `${this.getPackageQualifier()}.Statics['$drop']`;
+			const typeParam = `${this.getPackageQualifier()}['$drop']`;
 			code.push(`${resourceName}.addDestructor('$drop', new $wcm.DestructorType<${typeParam}>('[resource-drop]${this.resource.name}', [['inst', ${resourceName}]]));`);
 		}
 
-		public emitStaticsDeclaration(code: Code): void {
-			code.push(`$drop(inst: Interface): void;`);
+		public emitInterfaceDeclaration(code: Code): void {
+			code.push(`$drop(): void;`);
 		}
 
 		public emitWasmInterface(code: Code): void {
 			code.push(`'[resource-drop]${this.resource.name}': (self: i32) => void;`);
 		}
 
-		public emitStaticsModule(code: Code): void {
+		public emitObjectModule(code: Code): void {
 			const ifaceName = this.context.nameProvider.type.name(this.resource);
 			code.push(`$drop(self: ${ifaceName}): void;`);
 		}
 
-		public emitAnonymousClassMember(code: Code): void {
-			const ifaceName = this.context.nameProvider.type.name(this.resource);
-			code.push(`public static $drop(self: ${ifaceName}): void {`);
+		public emitClassMember(code: Code): void {
+			code.push(`public $drop(): void {`);
 			code.increaseIndent();
-			code.push(`return cm.$drop(self);`);
+			code.push(`return this._om.$drop(this);`);
 			code.decreaseIndent();
 			code.push('}');
 		}

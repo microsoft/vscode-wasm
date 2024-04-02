@@ -170,6 +170,7 @@ export namespace testData {
 		export namespace PointResource {
 			export interface Interface {
 				$handle?: $wcm.ResourceHandle;
+				$drop(): void;
 
 				getX(): u32;
 
@@ -178,8 +179,6 @@ export namespace testData {
 				add(): u32;
 			}
 			export type Statics = {
-				$new?(x: u32, y: u32): Interface;
-				$drop(inst: Interface): void;
 			};
 			export type Class = Statics & {
 				new(x: u32, y: u32): Interface;
@@ -236,7 +235,7 @@ export namespace testData {
 		PointResource.addMethod('getX', new $wcm.MethodType<testData.Types.PointResource.Interface['getX']>('[method]point-resource.get-x', [], $wcm.u32));
 		PointResource.addMethod('getY', new $wcm.MethodType<testData.Types.PointResource.Interface['getY']>('[method]point-resource.get-y', [], $wcm.u32));
 		PointResource.addMethod('add', new $wcm.MethodType<testData.Types.PointResource.Interface['add']>('[method]point-resource.add', [], $wcm.u32));
-		PointResource.addDestructor('$drop', new $wcm.DestructorType<testData.Types.PointResource.Statics['$drop']>('[resource-drop]point-resource', [['inst', PointResource]]));
+		PointResource.addDestructor('$drop', new $wcm.DestructorType<testData.Types.PointResource['$drop']>('[resource-drop]point-resource', [['inst', PointResource]]));
 		export const call = new $wcm.FunctionType<testData.Types.call>('call',[
 			['point', Point],
 		], $wcm.u32);
@@ -284,21 +283,20 @@ export namespace testData {
 			};
 			type ObjectModule = {
 				constructor(x: u32, y: u32): own<$wcm.ResourceHandle>;
+				$drop(self: PointResource): void;
 				getX(self: PointResource): u32;
 				getY(self: PointResource): u32;
 				add(self: PointResource): u32;
 			};
-			type ClassModule = {
-				$drop(self: PointResource): void;
-			};
-			export class Impl extends $wcm.Resource implements testData.Types.PointResource.Interface {
+			class Impl extends $wcm.Resource implements testData.Types.PointResource.Interface {
 				private readonly _om: ObjectModule;
-				public static readonly $manager = new $wcm.ResourceManager.Default();
 				constructor(x: u32, y: u32, om: ObjectModule) {
 					super();
 					this._om = om;
 					this.$handle = om.constructor(x, y);
-					Impl.$manager.$handle(this);
+				}
+				public $drop(): void {
+					return this._om.$drop(this);
 				}
 				public getX(): u32 {
 					return this._om.getX(this);
@@ -313,13 +311,9 @@ export namespace testData {
 			export function Class(wasmInterface: WasmInterface, context: $wcm.WasmContext): testData.Types.PointResource.Class {
 				const resource = testData.Types.$.PointResource;
 				const om: ObjectModule = $wcm.Module.createObjectModule(resource, wasmInterface, context);
-				const cm: ClassModule = $wcm.Module.createClassModule(resource, wasmInterface, context);
 				return class extends Impl {
 					constructor(x: u32, y: u32) {
 						super(x, y, om);
-					}
-					public static $drop(self: PointResource): void {
-						return cm.$drop(self);
 					}
 				};
 			}
