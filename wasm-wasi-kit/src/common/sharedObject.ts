@@ -31,14 +31,14 @@ export interface SharedMemory extends Memory {
 export namespace SharedMemory {
 
 	export interface Constructor {
-		new (module: WebAssembly.Module, memory: WebAssembly.Memory, exports: SharedMemory.Exports, size: u32): SharedMemory;
-		new (module: WebAssembly.Module, memory: WebAssembly.Memory, exports: SharedMemory.Exports, size: u32, id: string, counter: ptr): SharedMemory;
+		new (module: WebAssembly_.Module, memory: WebAssembly_.Memory, exports: SharedMemory.Exports, size: u32): SharedMemory;
+		new (module: WebAssembly_.Module, memory: WebAssembly_.Memory, exports: SharedMemory.Exports, size: u32, id: string, counter: ptr): SharedMemory;
 	}
 
 	export type Transferable = {
 		id: string;
-		module: WebAssembly.Module;
-		memory: WebAssembly.Memory;
+		module: WebAssembly_.Module;
+		memory: WebAssembly_.Memory;
 		size: u32;
 		counter: ptr;
 	};
@@ -116,17 +116,17 @@ class MemoryImpl implements SharedMemory {
 	public readonly range: _Range;
 	public readonly resources: _Resources;
 
-	private readonly module: WebAssembly.Module;
-	private readonly memory: WebAssembly.Memory;
+	private readonly module: WebAssembly_.Module;
+	private readonly memory: WebAssembly_.Memory;
 	private readonly exports: SharedMemory.Exports;
 	private readonly size: u32;
 	private readonly counter: Int32Array;
 
 	private _view: DataView | undefined;
 
-	public constructor(module: WebAssembly.Module, memory: WebAssembly.Memory, exports: SharedMemory.Exports, size: u32);
-	public constructor(module: WebAssembly.Module, memory: WebAssembly.Memory, exports: SharedMemory.Exports, size: u32, id: string, counter: ptr);
-	public constructor(module: WebAssembly.Module, memory: WebAssembly.Memory, exports: SharedMemory.Exports, size: u32, id?: string, counter?: ptr) {
+	public constructor(module: WebAssembly_.Module, memory: WebAssembly_.Memory, exports: SharedMemory.Exports, size: u32);
+	public constructor(module: WebAssembly_.Module, memory: WebAssembly_.Memory, exports: SharedMemory.Exports, size: u32, id: string, counter: ptr);
+	public constructor(module: WebAssembly_.Module, memory: WebAssembly_.Memory, exports: SharedMemory.Exports, size: u32, id?: string, counter?: ptr) {
 		this.id = id ?? uuid.v4();
 		this.module = module;
 		this.memory = memory;
@@ -533,12 +533,12 @@ export abstract class SharedObject<T extends SharedObject.Properties = SharedObj
 	public static Context = {
 		new: {
 			options: { encoding: 'utf-8' },
-			managers: ResourceManagers.createDefault(),
+			resources: new ResourceManagers.Default(),
 			mode: SharedObjectContext.Mode.new
 		} satisfies SharedObjectContext,
 		existing: {
 			options: { encoding: 'utf-8' },
-			managers: ResourceManagers.createDefault(),
+			resources: new ResourceManagers.Default(),
 			mode: SharedObjectContext.Mode.existing
 		} satisfies SharedObjectContext
 	};

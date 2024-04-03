@@ -3,6 +3,7 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 import * as wm from './workerMessages';
+import RAL from './ral';
 
 import _Client = wm.Client;
 import _Service = wm.Service;
@@ -13,6 +14,7 @@ export * from './connection';
 export * from './workerClient';
 export * from './workerService';
 export * from './workerMain';
+export { RAL };
 
 export namespace WorkerMessages {
 	export namespace Client {

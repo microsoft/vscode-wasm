@@ -78,6 +78,14 @@ const _ril: RIL = Object.freeze<RIL>(Object.assign({}, _RAL(), {
 		set exitCode(value: number | undefined) {
 			process.exitCode = value;
 		}
+	}),
+	WebAssembly: Object.freeze({
+		compile(bytes: ArrayBufferView | ArrayBuffer): Promise<WebAssembly.Module> {
+			return WebAssembly.compile(bytes);
+		},
+		instantiate(module: WebAssembly.Module, imports: Record<string, any>): Promise<WebAssembly.Instance> {
+			return WebAssembly.instantiate(module, imports);
+		}
 	})
 }));
 

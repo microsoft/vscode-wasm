@@ -14,8 +14,10 @@ and limitations under the License.
 ***************************************************************************** */
 /// <reference path="./webAssemblyCommon.d.ts" />
 
-type BufferSource = ArrayBufferView | ArrayBuffer;
 declare namespace WebAssembly {
+
+	type BufferSource = ArrayBufferView | ArrayBuffer;
+
 	interface CompileError extends Error {
 	}
 

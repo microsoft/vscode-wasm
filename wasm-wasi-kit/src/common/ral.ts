@@ -28,6 +28,10 @@ interface RAL extends _RAL {
 		getArgs(): string[];
 		exitCode: number | undefined;
 	};
+	readonly WebAssembly: {
+		compile(bytes: Uint8Array): Promise<WebAssembly_.Module>;
+		instantiate(module: WebAssembly_.Module, imports: WebAssembly_.Imports): Promise<WebAssembly_.Instance>;
+	};
 }
 
 let _ral: RAL | undefined;

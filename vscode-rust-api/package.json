@@ -1,18 +1,32 @@
 {
-	"name": "@vscode/rust-api",
 	"private": "true",
-	"publisher": "ms-vscode",
+	"name": "@vscode/rust-api",
 	"version": "0.0.1",
 	"description": "Rust VS Code API bindings",
-	"author": "MS",
+	"author": "Visual Studio Code Team",
 	"license": "MIT",
-	"engines": {
-		"vscode": "^1.87.0"
-	},
-	"main": "./out/extension.js",
-	"activationEvents": [
+	"keywords": [
+		"VSCode",
+		"Rust"
 	],
-	"contributes": {
+	"repository": {
+		"type": "git",
+		"url": "git+https://github.com/microsoft/vscode-wasm.git"
+	},
+	"bugs": {
+		"url": "https://github.com/microsoft/vscode-wasm/issues"
+	},
+	"homepage": "https://github.com/microsoft/vscode-wasm#readme",
+	"engines": {
+		"vscode": "^1.87.0",
+		"node": ">=18.18.2"
+	},
+	"exports": {
+		".": {
+			"types": "./lib/main.d.ts",
+			"node": "./lib/main.js",
+			"browser": "./lib/main.js"
+		}
 	},
 	"devDependencies": {
 		"@types/vscode": "1.87.0"
@@ -26,5 +40,4 @@
 		"generate:wat": "wasm-tools print ./target/wasm32-unknown-unknown/debug/calculator.wasm > ./target/wasm32-unknown-unknown/debug/calculator.wat",
 		"run": "npm run build:rust && npm run compile:ts && node ./out/main.js"
 	}
-
 }
