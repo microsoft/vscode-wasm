@@ -3,7 +3,7 @@
 	"root": true,
 	"parserOptions": {
 		"project": [
-			"./src/tsconfig.json"
+			"./ts/src/tsconfig.json"
 		]
 	},
 	"rules": {

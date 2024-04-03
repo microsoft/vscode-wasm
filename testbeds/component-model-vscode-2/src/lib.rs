@@ -4,55 +4,10 @@
  *--------------------------------------------------------------------------------------------*/
 
 use std::rc::Rc;
-use exports::host::api::callbacks;
+use once_cell;
+use vscode::host::api::commands;
 
-pub mod vscode;
-
-// Use a procedural macro to generate bindings for the world we specified in
-// `host.wit`
-wit_bindgen::generate!({
-	// the name of the world in the `*.wit` input file
-	world: "all"
-});
-
-
-// trait Event: 'static {
-// 	fn get_type(&self) -> &'static str;
-// }
-
-// struct EventEmitter<E: Event> {
-// 	listeners: Vec<Box<dyn Fn(&E)>>
-// }
-
-// impl<E: Event> EventEmitter<E> {
-// 	fn new() -> Self {
-// 		EventEmitter {
-// 			listeners: Vec::new()
-// 		}
-// 	}
-
-// 	fn on(&mut self, listener: Box<dyn Fn(&E)>) {
-// 		self.listeners.push(listener);
-// 	}
-
-// 	fn emit(&self, event: E) {
-// 		for listener in &self.listeners {
-// 			listener(&event);
-// 		}
-// 	}
-// }
-
-// impl Event for ms::vscode::types::TextDocumentChangeEvent {
-// 	fn get_type(&self) -> &'static str {
-// 		"TextDocumentChangeEvent"
-// 	}
-// }
-
-
-pub struct Extension;
-
-pub fn foo() {
-}
+struct Extension;
 
 impl callbacks::Guest for Extension {
 	fn execute_command(command: String) {
