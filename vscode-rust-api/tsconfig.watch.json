@@ -9,7 +9,7 @@
             "path": "../wasm-component-model/tsconfig.watch.json"
         },
         {
-            "path": "./src/tsconfig.watch.json"
+            "path": "./ts/src/tsconfig.watch.json"
         }
     ]
 }

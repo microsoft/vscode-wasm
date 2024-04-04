@@ -60,6 +60,22 @@
 		{
 			"type": "extensionHost",
 			"request": "launch",
+			"name": "Component Model VS Code (2)",
+			"runtimeExecutable": "${execPath}",
+			"args": [
+				"--extensionDevelopmentPath=${workspaceRoot}/testbeds/component-model-vscode-2",
+			],
+			"outFiles": [
+				"${workspaceRoot}/testbeds/component-model-vscode-2/out/**/*.js",
+				"${workspaceRoot}/wasm-component-model/lib/**/*.js",
+				"${workspaceRoot}/vscode-rust-api/lib/**/*.js",
+			],
+			"sourceMaps": true,
+			"preLaunchTask": "Build Component Model VSCode (2)"
+		},
+		{
+			"type": "extensionHost",
+			"request": "launch",
 			"name": "Python Testbed",
 			"runtimeExecutable": "${execPath}",
 			"args": [

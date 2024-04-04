@@ -305,7 +305,7 @@ const vscode_rust_api ={
 	},
 	sourceFolders: [
 		{
-			path: './src',
+			path: './ts/src',
 			extends: [ common ]
 		}
 	],

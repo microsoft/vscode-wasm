@@ -9,7 +9,7 @@
             "path": "../wasm-component-model/tsconfig.json"
         },
         {
-            "path": "./src/tsconfig.json"
+            "path": "./ts/src/tsconfig.json"
         }
     ]
 }

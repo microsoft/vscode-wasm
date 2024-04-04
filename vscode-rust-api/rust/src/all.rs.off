@@ -14,7 +14,7 @@ pub trait Guest {
 }
 #[doc(hidden)]
 
-macro_rules! __export_world_api_cabi{
+macro_rules! __export_world_all_cabi{
   ($ty:ident with_types_in $($path_to_types:tt)*) => (const _: () = {
 
     #[export_name = "activate"]
@@ -28,62 +28,9 @@ macro_rules! __export_world_api_cabi{
   };);
 }
 #[doc(hidden)]
-pub(crate) use __export_world_api_cabi;
-pub mod ms {
-  pub mod vscode {
-    #[allow(clippy::all)]
-    pub mod workspace {
-      #[used]
-      #[doc(hidden)]
-      #[cfg(target_arch = "wasm32")]
-      static __FORCE_SECTION_REF: fn() = super::super::super::__link_custom_section_describing_imports;
-      #[allow(unused_unsafe, clippy::all)]
-      pub fn register_on_did_change_text_document(){
-        unsafe {
-
-          #[cfg(target_arch = "wasm32")]
-          #[link(wasm_import_module = "ms:vscode/workspace")]
-          extern "C" {
-            #[link_name = "register-on-did-change-text-document"]
-            fn wit_import();
-          }
-
-          #[cfg(not(target_arch = "wasm32"))]
-          fn wit_import(){ unreachable!() }
-          wit_import();
-        }
-      }
-
-    }
-
-    #[allow(clippy::all)]
-    pub mod commands {
-      #[used]
-      #[doc(hidden)]
-      #[cfg(target_arch = "wasm32")]
-      static __FORCE_SECTION_REF: fn() = super::super::super::__link_custom_section_describing_imports;
-      #[allow(unused_unsafe, clippy::all)]
-      pub fn register_command(command: &str,){
-        unsafe {
-          let vec0 = command;
-          let ptr0 = vec0.as_ptr().cast::<u8>();
-          let len0 = vec0.len();
-
-          #[cfg(target_arch = "wasm32")]
-          #[link(wasm_import_module = "ms:vscode/commands")]
-          extern "C" {
-            #[link_name = "register-command"]
-            fn wit_import(_: *mut u8, _: usize, );
-          }
-
-          #[cfg(not(target_arch = "wasm32"))]
-          fn wit_import(_: *mut u8, _: usize, ){ unreachable!() }
-          wit_import(ptr0.cast_mut(), len0);
-        }
-      }
-
-    }
-
+pub(crate) use __export_world_all_cabi;
+pub mod host {
+  pub mod api {
     #[allow(clippy::all)]
     pub mod types {
       #[used]
@@ -160,7 +107,7 @@ pub mod ms {
 
           #[cfg(target_arch = "wasm32")]
           {
-            #[link(wasm_import_module = "ms:vscode/types")]
+            #[link(wasm_import_module = "host:api/types")]
             extern "C" {
               #[link_name = "[resource-drop]text-document"]
               fn drop(_: u32);
@@ -250,7 +197,7 @@ pub mod ms {
 
           #[cfg(target_arch = "wasm32")]
           {
-            #[link(wasm_import_module = "ms:vscode/types")]
+            #[link(wasm_import_module = "host:api/types")]
             extern "C" {
               #[link_name = "[resource-drop]output-channel"]
               fn drop(_: u32);
@@ -270,7 +217,7 @@ pub mod ms {
             let mut ret_area = RetArea([::core::mem::MaybeUninit::uninit(); 8]);
             let ptr0 = ret_area.0.as_mut_ptr().cast::<u8>();
             #[cfg(target_arch = "wasm32")]
-            #[link(wasm_import_module = "ms:vscode/types")]
+            #[link(wasm_import_module = "host:api/types")]
             extern "C" {
               #[link_name = "[method]text-document.uri"]
               fn wit_import(_: i32, _: *mut u8, );
@@ -296,7 +243,7 @@ pub mod ms {
             let mut ret_area = RetArea([::core::mem::MaybeUninit::uninit(); 8]);
             let ptr0 = ret_area.0.as_mut_ptr().cast::<u8>();
             #[cfg(target_arch = "wasm32")]
-            #[link(wasm_import_module = "ms:vscode/types")]
+            #[link(wasm_import_module = "host:api/types")]
             extern "C" {
               #[link_name = "[method]text-document.language-id"]
               fn wit_import(_: i32, _: *mut u8, );
@@ -319,7 +266,7 @@ pub mod ms {
           unsafe {
 
             #[cfg(target_arch = "wasm32")]
-            #[link(wasm_import_module = "ms:vscode/types")]
+            #[link(wasm_import_module = "host:api/types")]
             extern "C" {
               #[link_name = "[method]text-document.version"]
               fn wit_import(_: i32, ) -> i32;
@@ -341,7 +288,7 @@ pub mod ms {
             let mut ret_area = RetArea([::core::mem::MaybeUninit::uninit(); 8]);
             let ptr0 = ret_area.0.as_mut_ptr().cast::<u8>();
             #[cfg(target_arch = "wasm32")]
-            #[link(wasm_import_module = "ms:vscode/types")]
+            #[link(wasm_import_module = "host:api/types")]
             extern "C" {
               #[link_name = "[method]text-document.get-text"]
               fn wit_import(_: i32, _: *mut u8, );
@@ -367,7 +314,7 @@ pub mod ms {
             let mut ret_area = RetArea([::core::mem::MaybeUninit::uninit(); 8]);
             let ptr0 = ret_area.0.as_mut_ptr().cast::<u8>();
             #[cfg(target_arch = "wasm32")]
-            #[link(wasm_import_module = "ms:vscode/types")]
+            #[link(wasm_import_module = "host:api/types")]
             extern "C" {
               #[link_name = "[method]output-channel.name"]
               fn wit_import(_: i32, _: *mut u8, );
@@ -393,7 +340,7 @@ pub mod ms {
             let len0 = vec0.len();
 
             #[cfg(target_arch = "wasm32")]
-            #[link(wasm_import_module = "ms:vscode/types")]
+            #[link(wasm_import_module = "host:api/types")]
             extern "C" {
               #[link_name = "[method]output-channel.append"]
               fn wit_import(_: i32, _: *mut u8, _: usize, );
@@ -414,7 +361,7 @@ pub mod ms {
             let len0 = vec0.len();
 
             #[cfg(target_arch = "wasm32")]
-            #[link(wasm_import_module = "ms:vscode/types")]
+            #[link(wasm_import_module = "host:api/types")]
             extern "C" {
               #[link_name = "[method]output-channel.append-line"]
               fn wit_import(_: i32, _: *mut u8, _: usize, );
@@ -432,7 +379,7 @@ pub mod ms {
           unsafe {
 
             #[cfg(target_arch = "wasm32")]
-            #[link(wasm_import_module = "ms:vscode/types")]
+            #[link(wasm_import_module = "host:api/types")]
             extern "C" {
               #[link_name = "[method]output-channel.clear"]
               fn wit_import(_: i32, );
@@ -450,7 +397,7 @@ pub mod ms {
           unsafe {
 
             #[cfg(target_arch = "wasm32")]
-            #[link(wasm_import_module = "ms:vscode/types")]
+            #[link(wasm_import_module = "host:api/types")]
             extern "C" {
               #[link_name = "[method]output-channel.show"]
               fn wit_import(_: i32, );
@@ -466,12 +413,102 @@ pub mod ms {
     }
 
     #[allow(clippy::all)]
+    pub mod workspace {
+      #[used]
+      #[doc(hidden)]
+      #[cfg(target_arch = "wasm32")]
+      static __FORCE_SECTION_REF: fn() = super::super::super::__link_custom_section_describing_imports;
+      use super::super::super::_rt;
+      pub type TextDocument = super::super::super::host::api::types::TextDocument;
+      #[allow(unused_unsafe, clippy::all)]
+      pub fn text_documents() -> _rt::Vec::<TextDocument>{
+        unsafe {
+          #[repr(align(4))]
+          struct RetArea([::core::mem::MaybeUninit::<u8>; 8]);
+          let mut ret_area = RetArea([::core::mem::MaybeUninit::uninit(); 8]);
+          let ptr0 = ret_area.0.as_mut_ptr().cast::<u8>();
+          #[cfg(target_arch = "wasm32")]
+          #[link(wasm_import_module = "host:api/workspace")]
+          extern "C" {
+            #[link_name = "text-documents"]
+            fn wit_import(_: *mut u8, );
+          }
+
+          #[cfg(not(target_arch = "wasm32"))]
+          fn wit_import(_: *mut u8, ){ unreachable!() }
+          wit_import(ptr0);
+          let l1 = *ptr0.add(0).cast::<*mut u8>();
+          let l2 = *ptr0.add(4).cast::<usize>();
+          let base4 = l1;
+          let len4 = l2;
+          let mut result4 = _rt::Vec::with_capacity(len4);
+          for i in 0..len4 {
+            let base = base4.add(i * 4);
+            let e4 = {
+              let l3 = *base.add(0).cast::<i32>();
+
+              super::super::super::host::api::types::TextDocument::from_handle(l3 as u32)
+            };
+            result4.push(e4);
+          }
+          _rt::cabi_dealloc(base4, len4 * 4, 4);
+          result4
+        }
+      }
+      #[allow(unused_unsafe, clippy::all)]
+      pub fn register_on_did_change_text_document(){
+        unsafe {
+
+          #[cfg(target_arch = "wasm32")]
+          #[link(wasm_import_module = "host:api/workspace")]
+          extern "C" {
+            #[link_name = "register-on-did-change-text-document"]
+            fn wit_import();
+          }
+
+          #[cfg(not(target_arch = "wasm32"))]
+          fn wit_import(){ unreachable!() }
+          wit_import();
+        }
+      }
+
+    }
+
+    #[allow(clippy::all)]
+    pub mod commands {
+      #[used]
+      #[doc(hidden)]
+      #[cfg(target_arch = "wasm32")]
+      static __FORCE_SECTION_REF: fn() = super::super::super::__link_custom_section_describing_imports;
+      #[allow(unused_unsafe, clippy::all)]
+      pub fn register_command(command: &str,){
+        unsafe {
+          let vec0 = command;
+          let ptr0 = vec0.as_ptr().cast::<u8>();
+          let len0 = vec0.len();
+
+          #[cfg(target_arch = "wasm32")]
+          #[link(wasm_import_module = "host:api/commands")]
+          extern "C" {
+            #[link_name = "register-command"]
+            fn wit_import(_: *mut u8, _: usize, );
+          }
+
+          #[cfg(not(target_arch = "wasm32"))]
+          fn wit_import(_: *mut u8, _: usize, ){ unreachable!() }
+          wit_import(ptr0.cast_mut(), len0);
+        }
+      }
+
+    }
+
+    #[allow(clippy::all)]
     pub mod window {
       #[used]
       #[doc(hidden)]
       #[cfg(target_arch = "wasm32")]
       static __FORCE_SECTION_REF: fn() = super::super::super::__link_custom_section_describing_imports;
-      pub type OutputChannel = super::super::super::ms::vscode::types::OutputChannel;
+      pub type OutputChannel = super::super::super::host::api::types::OutputChannel;
       #[allow(unused_unsafe, clippy::all)]
       pub fn create_output_channel(name: &str,language_id: Option<&str>,) -> OutputChannel{
         unsafe {
@@ -491,7 +528,7 @@ pub mod ms {
             },
           };
           #[cfg(target_arch = "wasm32")]
-          #[link(wasm_import_module = "ms:vscode/window")]
+          #[link(wasm_import_module = "host:api/window")]
           extern "C" {
             #[link_name = "create-output-channel"]
             fn wit_import(_: *mut u8, _: usize, _: i32, _: *mut u8, _: usize, ) -> i32;
@@ -500,7 +537,7 @@ pub mod ms {
           #[cfg(not(target_arch = "wasm32"))]
           fn wit_import(_: *mut u8, _: usize, _: i32, _: *mut u8, _: usize, ) -> i32{ unreachable!() }
           let ret = wit_import(ptr0.cast_mut(), len0, result2_0, result2_1, result2_2);
-          super::super::super::ms::vscode::types::OutputChannel::from_handle(ret as u32)
+          super::super::super::host::api::types::OutputChannel::from_handle(ret as u32)
         }
       }
 
@@ -509,95 +546,67 @@ pub mod ms {
   }
 }
 pub mod exports {
-  pub mod ms {
-    pub mod vscode {
+  pub mod host {
+    pub mod api {
       #[allow(clippy::all)]
-      pub mod workspace_events {
+      pub mod callbacks {
         #[used]
         #[doc(hidden)]
         #[cfg(target_arch = "wasm32")]
         static __FORCE_SECTION_REF: fn() = super::super::super::super::__link_custom_section_describing_imports;
         use super::super::super::super::_rt;
-        pub type TextDocumentChangeEvent = super::super::super::super::ms::vscode::types::TextDocumentChangeEvent;
+        pub type TextDocumentChangeEvent = super::super::super::super::host::api::types::TextDocumentChangeEvent;
         #[doc(hidden)]
         #[allow(non_snake_case)]
-        pub unsafe fn _export_did_change_text_document_cabi<T: Guest>(arg0: *mut u8,arg1: usize,arg2: i32,arg3: *mut u8,arg4: usize,arg5: i32,arg6: i32,) {let len0 = arg1;
-        let bytes0 = _rt::Vec::from_raw_parts(arg0.cast(), len0, len0);
-        let base10 = arg3;
-        let len10 = arg4;
-        let mut result10 = _rt::Vec::with_capacity(len10);
-        for i in 0..len10 {
-          let base = base10.add(i * 32);
-          let e10 = {
-            let l1 = *base.add(0).cast::<i32>();
-            let l2 = *base.add(4).cast::<i32>();
-            let l3 = *base.add(8).cast::<i32>();
-            let l4 = *base.add(12).cast::<i32>();
-            let l5 = *base.add(16).cast::<i32>();
-            let l6 = *base.add(20).cast::<i32>();
-            let l7 = *base.add(24).cast::<*mut u8>();
-            let l8 = *base.add(28).cast::<usize>();
-            let len9 = l8;
-            let bytes9 = _rt::Vec::from_raw_parts(l7.cast(), len9, len9);
+        pub unsafe fn _export_did_change_text_document_cabi<T: Guest>(arg0: i32,arg1: *mut u8,arg2: usize,arg3: i32,arg4: i32,) {let base9 = arg1;
+        let len9 = arg2;
+        let mut result9 = _rt::Vec::with_capacity(len9);
+        for i in 0..len9 {
+          let base = base9.add(i * 32);
+          let e9 = {
+            let l0 = *base.add(0).cast::<i32>();
+            let l1 = *base.add(4).cast::<i32>();
+            let l2 = *base.add(8).cast::<i32>();
+            let l3 = *base.add(12).cast::<i32>();
+            let l4 = *base.add(16).cast::<i32>();
+            let l5 = *base.add(20).cast::<i32>();
+            let l6 = *base.add(24).cast::<*mut u8>();
+            let l7 = *base.add(28).cast::<usize>();
+            let len8 = l7;
+            let bytes8 = _rt::Vec::from_raw_parts(l6.cast(), len8, len8);
 
-            super::super::super::super::ms::vscode::types::TextDocumentContentChangeEvent{
-              range: super::super::super::super::ms::vscode::types::Range{
-                start: super::super::super::super::ms::vscode::types::Position{
-                  line: l1 as u32,
-                  character: l2 as u32,
+            super::super::super::super::host::api::types::TextDocumentContentChangeEvent{
+              range: super::super::super::super::host::api::types::Range{
+                start: super::super::super::super::host::api::types::Position{
+                  line: l0 as u32,
+                  character: l1 as u32,
                 },
-                end: super::super::super::super::ms::vscode::types::Position{
-                  line: l3 as u32,
-                  character: l4 as u32,
+                end: super::super::super::super::host::api::types::Position{
+                  line: l2 as u32,
+                  character: l3 as u32,
                 },
               },
-              range_offset: l5 as u32,
-              range_length: l6 as u32,
-              text: _rt::string_lift(bytes9),
+              range_offset: l4 as u32,
+              range_length: l5 as u32,
+              text: _rt::string_lift(bytes8),
             }
           };
-          result10.push(e10);
+          result9.push(e9);
         }
-        _rt::cabi_dealloc(base10, len10 * 32, 4);
-        T::did_change_text_document(_rt::string_lift(bytes0), super::super::super::super::ms::vscode::types::TextDocumentChangeEvent{
-          document: super::super::super::super::ms::vscode::types::TextDocument::from_handle(arg2 as u32),
-          content_changes: result10,
-          reason: match arg5 {
+        _rt::cabi_dealloc(base9, len9 * 32, 4);
+        T::did_change_text_document(super::super::super::super::host::api::types::TextDocumentChangeEvent{
+          document: super::super::super::super::host::api::types::TextDocument::from_handle(arg0 as u32),
+          content_changes: result9,
+          reason: match arg3 {
             0 => None,
             1 => {
-              let e = super::super::super::super::ms::vscode::types::TextDocumentChangeReason::_lift(arg6 as u8);
+              let e = super::super::super::super::host::api::types::TextDocumentChangeReason::_lift(arg4 as u8);
               Some(e)
             }
             _ => _rt::invalid_enum_discriminant(),
           },
         });
       }
-      pub trait Guest {
-        fn did_change_text_document(id: _rt::String,event: TextDocumentChangeEvent,);
-      }
-      #[doc(hidden)]
-
-      macro_rules! __export_ms_vscode_workspace_events_cabi{
-        ($ty:ident with_types_in $($path_to_types:tt)*) => (const _: () = {
-
-          #[export_name = "ms:vscode/workspace-events#did-change-text-document"]
-          unsafe extern "C" fn export_did_change_text_document(arg0: *mut u8,arg1: usize,arg2: i32,arg3: *mut u8,arg4: usize,arg5: i32,arg6: i32,) {
-            $($path_to_types)*::_export_did_change_text_document_cabi::<$ty>(arg0, arg1, arg2, arg3, arg4, arg5, arg6)
-          }
-        };);
-      }
-      #[doc(hidden)]
-      pub(crate) use __export_ms_vscode_workspace_events_cabi;
-
-    }
-
-    #[allow(clippy::all)]
-    pub mod commands_events {
-      #[used]
-      #[doc(hidden)]
-      #[cfg(target_arch = "wasm32")]
-      static __FORCE_SECTION_REF: fn() = super::super::super::super::__link_custom_section_describing_imports;
-      use super::super::super::super::_rt;
       #[doc(hidden)]
       #[allow(non_snake_case)]
       pub unsafe fn _export_execute_command_cabi<T: Guest>(arg0: *mut u8,arg1: usize,) {let len0 = arg1;
@@ -605,21 +614,26 @@ pub mod exports {
       T::execute_command(_rt::string_lift(bytes0));
     }
     pub trait Guest {
+      fn did_change_text_document(event: TextDocumentChangeEvent,);
       fn execute_command(command: _rt::String,);
     }
     #[doc(hidden)]
 
-    macro_rules! __export_ms_vscode_commands_events_cabi{
+    macro_rules! __export_host_api_callbacks_cabi{
       ($ty:ident with_types_in $($path_to_types:tt)*) => (const _: () = {
 
-        #[export_name = "ms:vscode/commands-events#execute-command"]
+        #[export_name = "host:api/callbacks#did-change-text-document"]
+        unsafe extern "C" fn export_did_change_text_document(arg0: i32,arg1: *mut u8,arg2: usize,arg3: i32,arg4: i32,) {
+          $($path_to_types)*::_export_did_change_text_document_cabi::<$ty>(arg0, arg1, arg2, arg3, arg4)
+        }
+        #[export_name = "host:api/callbacks#execute-command"]
         unsafe extern "C" fn export_execute_command(arg0: *mut u8,arg1: usize,) {
           $($path_to_types)*::_export_execute_command_cabi::<$ty>(arg0, arg1)
         }
       };);
     }
     #[doc(hidden)]
-    pub(crate) use __export_ms_vscode_commands_events_cabi;
+    pub(crate) use __export_host_api_callbacks_cabi;
 
   }
 
@@ -765,52 +779,71 @@ mod _rt {
 ///
 /// export!(MyType);
 /// ```
+
+struct MyType;
+impl exports::host::api::callbacks::Guest for MyType {
+  fn execute_command(_command: String) {
+  }
+  fn did_change_text_document(_event: host::api::types::TextDocumentChangeEvent) {
+  }
+}
+impl Guest for MyType {
+  fn activate() {
+
+  }
+  fn deactivate() {
+  }
+}
+
+export!(MyType);
+
 #[allow(unused_macros)]
 #[doc(hidden)]
 
-macro_rules! __export_api_impl {
+#[macro_export]
+macro_rules! __export_all_impl {
   ($ty:ident) => (self::export!($ty with_types_in self););
   ($ty:ident with_types_in $($path_to_types_root:tt)*) => (
-  $($path_to_types_root)*::__export_world_api_cabi!($ty with_types_in $($path_to_types_root)*);
-  $($path_to_types_root)*::exports::ms::vscode::workspace_events::__export_ms_vscode_workspace_events_cabi!($ty with_types_in $($path_to_types_root)*::exports::ms::vscode::workspace_events);
-  $($path_to_types_root)*::exports::ms::vscode::commands_events::__export_ms_vscode_commands_events_cabi!($ty with_types_in $($path_to_types_root)*::exports::ms::vscode::commands_events);
+  $($path_to_types_root)*::__export_world_all_cabi!($ty with_types_in $($path_to_types_root)*);
+  $($path_to_types_root)*::exports::host::api::callbacks::__export_host_api_callbacks_cabi!($ty with_types_in $($path_to_types_root)*::exports::host::api::callbacks);
   )
 }
 #[doc(inline)]
-pub(crate) use __export_api_impl as export;
+pub(crate) use __export_all_impl as export;
 
 #[cfg(target_arch = "wasm32")]
-#[link_section = "component-type:wit-bindgen:0.21.0:api:encoded world"]
+#[link_section = "component-type:wit-bindgen:0.21.0:all:encoded world"]
 #[doc(hidden)]
-pub static __WIT_BINDGEN_COMPONENT_TYPE: [u8; 1355] = *b"\
-\0asm\x0d\0\x01\0\0\x19\x16wit-component-encoding\x04\0\x07\xd1\x09\x01A\x02\x01\
-A\x11\x01B\x02\x01@\0\x01\0\x04\0$register-on-did-change-text-document\x01\0\x03\
-\x01\x13ms:vscode/workspace\x05\0\x01B\x02\x01@\x01\x07commands\x01\0\x04\0\x10r\
-egister-command\x01\0\x03\x01\x12ms:vscode/commands\x05\x01\x01B\x1f\x01r\x02\x04\
-liney\x09charactery\x04\0\x08position\x03\0\0\x01r\x02\x05start\x01\x03end\x01\x04\
-\0\x05range\x03\0\x02\x01r\x04\x05range\x03\x0crange-offsety\x0crange-lengthy\x04\
-texts\x04\0\"text-document-content-change-event\x03\0\x04\x04\0\x0dtext-document\
-\x03\x01\x01m\x02\x04undo\x04redo\x04\0\x1btext-document-change-reason\x03\0\x07\
-\x01i\x06\x01p\x05\x01k\x08\x01r\x03\x08document\x09\x0fcontent-changes\x0a\x06r\
-eason\x0b\x04\0\x1atext-document-change-event\x03\0\x0c\x04\0\x0eoutput-channel\x03\
-\x01\x01h\x06\x01@\x01\x04self\x0f\0s\x04\0\x19[method]text-document.uri\x01\x10\
-\x04\0![method]text-document.language-id\x01\x10\x01@\x01\x04self\x0f\0y\x04\0\x1d\
-[method]text-document.version\x01\x11\x04\0\x1e[method]text-document.get-text\x01\
-\x10\x01h\x0e\x01@\x01\x04self\x12\0s\x04\0\x1b[method]output-channel.name\x01\x13\
-\x01@\x02\x04self\x12\x05values\x01\0\x04\0\x1d[method]output-channel.append\x01\
-\x14\x04\0\"[method]output-channel.append-line\x01\x14\x01@\x01\x04self\x12\x01\0\
-\x04\0\x1c[method]output-channel.clear\x01\x15\x04\0\x1b[method]output-channel.s\
-how\x01\x15\x03\x01\x0fms:vscode/types\x05\x02\x02\x03\0\x02\x0eoutput-channel\x01\
-B\x06\x02\x03\x02\x01\x03\x04\0\x0eoutput-channel\x03\0\0\x01ks\x01i\x01\x01@\x02\
-\x04names\x0blanguage-id\x02\0\x03\x04\0\x15create-output-channel\x01\x04\x03\x01\
-\x10ms:vscode/window\x05\x04\x01@\0\x01\0\x04\0\x08activate\x01\x05\x04\0\x0adea\
-ctivate\x01\x05\x02\x03\0\x02\x1atext-document-change-event\x01B\x04\x02\x03\x02\
-\x01\x06\x04\0\x1atext-document-change-event\x03\0\0\x01@\x02\x02ids\x05event\x01\
-\x01\0\x04\0\x18did-change-text-document\x01\x02\x04\x01\x1ams:vscode/workspace-\
-events\x05\x07\x01B\x02\x01@\x01\x07commands\x01\0\x04\0\x0fexecute-command\x01\0\
-\x04\x01\x19ms:vscode/commands-events\x05\x08\x04\x01\x0dms:vscode/api\x04\0\x0b\
-\x09\x01\0\x03api\x03\0\0\0G\x09producers\x01\x0cprocessed-by\x02\x0dwit-compone\
-nt\x070.201.0\x10wit-bindgen-rust\x060.21.0";
+pub static __WIT_BINDGEN_COMPONENT_TYPE: [u8; 1377] = *b"\
+\0asm\x0d\0\x01\0\0\x19\x16wit-component-encoding\x04\0\x07\xe7\x09\x01A\x02\x01\
+A\x10\x01B\x1f\x01r\x02\x04liney\x09charactery\x04\0\x08position\x03\0\0\x01r\x02\
+\x05start\x01\x03end\x01\x04\0\x05range\x03\0\x02\x01r\x04\x05range\x03\x0crange\
+-offsety\x0crange-lengthy\x04texts\x04\0\"text-document-content-change-event\x03\
+\0\x04\x04\0\x0dtext-document\x03\x01\x01m\x02\x04undo\x04redo\x04\0\x1btext-doc\
+ument-change-reason\x03\0\x07\x01i\x06\x01p\x05\x01k\x08\x01r\x03\x08document\x09\
+\x0fcontent-changes\x0a\x06reason\x0b\x04\0\x1atext-document-change-event\x03\0\x0c\
+\x04\0\x0eoutput-channel\x03\x01\x01h\x06\x01@\x01\x04self\x0f\0s\x04\0\x19[meth\
+od]text-document.uri\x01\x10\x04\0![method]text-document.language-id\x01\x10\x01\
+@\x01\x04self\x0f\0y\x04\0\x1d[method]text-document.version\x01\x11\x04\0\x1e[me\
+thod]text-document.get-text\x01\x10\x01h\x0e\x01@\x01\x04self\x12\0s\x04\0\x1b[m\
+ethod]output-channel.name\x01\x13\x01@\x02\x04self\x12\x05values\x01\0\x04\0\x1d\
+[method]output-channel.append\x01\x14\x04\0\"[method]output-channel.append-line\x01\
+\x14\x01@\x01\x04self\x12\x01\0\x04\0\x1c[method]output-channel.clear\x01\x15\x04\
+\0\x1b[method]output-channel.show\x01\x15\x03\x01\x0ehost:api/types\x05\0\x02\x03\
+\0\0\x0dtext-document\x01B\x08\x02\x03\x02\x01\x01\x04\0\x0dtext-document\x03\0\0\
+\x01i\x01\x01p\x02\x01@\0\0\x03\x04\0\x0etext-documents\x01\x04\x01@\0\x01\0\x04\
+\0$register-on-did-change-text-document\x01\x05\x03\x01\x12host:api/workspace\x05\
+\x02\x01B\x02\x01@\x01\x07commands\x01\0\x04\0\x10register-command\x01\0\x03\x01\
+\x11host:api/commands\x05\x03\x02\x03\0\0\x0eoutput-channel\x01B\x06\x02\x03\x02\
+\x01\x04\x04\0\x0eoutput-channel\x03\0\0\x01ks\x01i\x01\x01@\x02\x04names\x0blan\
+guage-id\x02\0\x03\x04\0\x15create-output-channel\x01\x04\x03\x01\x0fhost:api/wi\
+ndow\x05\x05\x01@\0\x01\0\x04\0\x08activate\x01\x06\x04\0\x0adeactivate\x01\x06\x02\
+\x03\0\0\x1atext-document-change-event\x01B\x06\x02\x03\x02\x01\x07\x04\0\x1atex\
+t-document-change-event\x03\0\0\x01@\x01\x05event\x01\x01\0\x04\0\x18did-change-\
+text-document\x01\x02\x01@\x01\x07commands\x01\0\x04\0\x0fexecute-command\x01\x03\
+\x04\x01\x12host:api/callbacks\x05\x08\x04\x01\x0chost:api/all\x04\0\x0b\x09\x01\
+\0\x03all\x03\0\0\0G\x09producers\x01\x0cprocessed-by\x02\x0dwit-component\x070.\
+201.0\x10wit-bindgen-rust\x060.21.0";
 
 #[inline(never)]
 #[doc(hidden)]

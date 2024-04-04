@@ -6,7 +6,7 @@
     "files": [],
     "references": [
         {
-            "path": "./src/tsconfig.publish.json"
+            "path": "./ts/src/tsconfig.publish.json"
         }
     ]
 }

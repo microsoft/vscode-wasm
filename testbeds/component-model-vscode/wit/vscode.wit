@@ -76,4 +76,6 @@ world all {
 	import window;
 
 	export callbacks;
+	export activate: func();
+	export deactivate: func();
 }

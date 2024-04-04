@@ -90,6 +90,20 @@
 			]
 		},
 		{
+			"label": "Build Component Model VSCode (2)",
+			"type": "npm",
+			"script": "build",
+			"path": "testbeds/component-model-vscode-2",
+			"group": "build",
+			"presentation": {
+				"panel": "dedicated",
+				"reveal": "never"
+			},
+			"problemMatcher": [
+				"$tsc"
+			]
+		},
+		{
 			"label": "Build LSP Example",
 			"type": "npm",
 			"script": "build",

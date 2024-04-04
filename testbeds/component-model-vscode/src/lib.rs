@@ -55,7 +55,7 @@ impl callbacks::Guest for Extension {
 	fn execute_command(command: String) {
 		vscode::commands::execute_command(&command);
 	}
-	fn did_change_text_document(_id: String, _event: host::api::types::TextDocumentChangeEvent) {
+	fn did_change_text_document(_event: host::api::types::TextDocumentChangeEvent) {
 	}
 }
 

@@ -12,4 +12,5 @@ crate-type = ["cdylib"]
 vscode = { path = "../../vscode-rust-api/rust" }
 once_cell = "1.19.0"
 wit-bindgen = "0.21.0"
+wasm-bindgen = "0.2"
 lazy_static = "1.4.0"
