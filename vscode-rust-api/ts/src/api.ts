@@ -84,9 +84,12 @@ export namespace api {
 
 	export namespace Commands {
 		export type registerCommand = (command: string) => void;
+
+		export type unregisterCommand = (command: string) => void;
 	}
 	export type Commands = {
 		registerCommand: Commands.registerCommand;
+		unregisterCommand: Commands.unregisterCommand;
 	};
 
 	export namespace Window {
@@ -129,8 +132,6 @@ export namespace api {
 			window: api.Window;
 		};
 		export type Exports = {
-			activate: () => void;
-			deactivate: () => void;
 			callbacks: api.Callbacks;
 		};
 	}
@@ -310,15 +311,20 @@ export namespace api {
 		export const registerCommand = new $wcm.FunctionType<api.Commands.registerCommand>('register-command',[
 			['command', $wcm.wstring],
 		], undefined);
+		export const unregisterCommand = new $wcm.FunctionType<api.Commands.unregisterCommand>('unregister-command',[
+			['command', $wcm.wstring],
+		], undefined);
 	}
 	export namespace Commands._ {
 		export const id = 'host:api/commands' as const;
 		export const witName = 'commands' as const;
 		export const functions: Map<string, $wcm.FunctionType> = new Map([
-			['registerCommand', $.registerCommand]
+			['registerCommand', $.registerCommand],
+			['unregisterCommand', $.unregisterCommand]
 		]);
 		export type WasmInterface = {
 			'register-command': (command_ptr: i32, command_len: i32) => void;
+			'unregister-command': (command_ptr: i32, command_len: i32) => void;
 		};
 		export function createImports(service: api.Commands, context: $wcm.WasmContext): WasmInterface {
 			return $wcm.Imports.create<WasmInterface>(functions, undefined, service, context);
@@ -425,10 +431,6 @@ export namespace api {
 		}
 	}
 	export namespace all.$ {
-		export namespace Exports {
-			export const activate = new $wcm.FunctionType<all.Exports['activate']>('activate', [], undefined);
-			export const deactivate = new $wcm.FunctionType<all.Exports['deactivate']>('deactivate', [], undefined);
-		}
 	}
 	export namespace all._ {
 		export const id = 'host:api/all' as const;
@@ -448,17 +450,11 @@ export namespace api {
 			'host:api/window': api.Window._.WasmInterface;
 		};
 		export namespace Exports {
-			export const functions: Map<string, $wcm.FunctionType> = new Map([
-				['activate', $.Exports.activate],
-				['deactivate', $.Exports.deactivate]
-			]);
 			export const interfaces: Map<string, $wcm.InterfaceType> = new Map<string, $wcm.InterfaceType>([
 				['Callbacks', Callbacks._]
 			]);
 		}
 		export type Exports = {
-			'activate': () => void;
-			'deactivate': () => void;
 			'host:api/callbacks#did-change-text-document': (event_TextDocumentChangeEvent_document: i32, event_TextDocumentChangeEvent_contentChanges_ptr: i32, event_TextDocumentChangeEvent_contentChanges_len: i32, event_TextDocumentChangeEvent_reason_case: i32, event_TextDocumentChangeEvent_reason_option_TextDocumentChangeReason: i32) => void;
 			'host:api/callbacks#execute-command': (command_ptr: i32, command_len: i32) => void;
 		};
@@ -472,7 +468,6 @@ export namespace api {
 		}
 		export function bindExports(exports: Exports, context: $wcm.WasmContext): all.Exports {
 			const result: all.Exports = Object.create(null);
-			Object.assign(result, $wcm.Exports.bind(Exports.functions, undefined, exports, context));
 			result.callbacks = api.Callbacks._.bindExports(api.Callbacks._.filterExports(exports, context), context);
 			return result;
 		}

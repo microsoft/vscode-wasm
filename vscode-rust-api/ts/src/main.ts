@@ -12,6 +12,11 @@ import Types = api.Types;
 import OutputChannel = Types.OutputChannel;
 import TextDocument = Types.TextDocument;
 
+interface Extension {
+	activate?(): void;
+	deactivate?(): void;
+}
+
 // Channel implementation
 class OutputChannelResource implements OutputChannel {
 	public $handle: ResourceHandle | undefined;
@@ -131,6 +136,14 @@ class CommandRegistry {
 		this.commands.set(command, disposable);
 	}
 
+	unregister(command: string): void {
+		const disposable = this.commands.get(command);
+		if (disposable !== undefined) {
+			this.commands.delete(command);
+			disposable.dispose();
+		}
+	}
+
 	dispose(): void {
 		for (const disposable of this.commands.values()) {
 			disposable.dispose();
@@ -173,6 +186,9 @@ export async function activate(_context: vscode.ExtensionContext, module: WebAss
 		commands: {
 			registerCommand: (command: string) => {
 				commandRegistry.register(command);
+			},
+			unregisterCommand: (command: string) => {
+				commandRegistry.unregister(command);
 			}
 		}
 	};
@@ -181,10 +197,16 @@ export async function activate(_context: vscode.ExtensionContext, module: WebAss
 	memory = Memory.createDefault(Date.now().toString(), instance.exports);
 	$exports = api.all._.bindExports(instance.exports as api.all._.Exports, wasmContext);
 	commandRegistry.initialize($exports.callbacks.executeCommand);
-	$exports.activate();
+	const extension = $exports as Extension;
+	if (typeof extension.activate === 'function') {
+		extension.activate();
+	}
 }
 
 export function deactivate(): void {
 	commandRegistry.dispose();
-	$exports.deactivate();
+	const extension = $exports as Extension;
+	if (typeof extension.deactivate === 'function') {
+		extension.deactivate();
+	}
 }

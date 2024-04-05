@@ -5,15 +5,21 @@
 
 use std::collections::HashMap;
 use once_cell::sync::Lazy;
+
 use crate::host::api::commands;
 
 static mut HANDLERS: Lazy<HashMap<String, Box<dyn Fn()>>> = Lazy::new(|| HashMap::new());
 
-pub fn register_command(command: &str, callback: Box<dyn Fn()>) {
+pub fn register_command(command: &str, callback: Box<dyn Fn()>) -> Box<dyn Fn() + '_> {
 	unsafe {
 		HANDLERS.insert(command.to_string(), callback);
 	}
 	commands::register_command(command);
+	return Box::new(move || {
+		unsafe {
+			HANDLERS.remove(command);
+		}
+	});
 }
 
 pub fn execute_command(command: &str) {

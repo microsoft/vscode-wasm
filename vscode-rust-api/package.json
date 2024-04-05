@@ -1,7 +1,7 @@
 {
 	"private": "true",
 	"name": "@vscode/rust-api",
-	"version": "0.0.1",
+	"version": "0.1.0",
 	"description": "Rust VS Code API bindings",
 	"author": "Visual Studio Code Team",
 	"license": "MIT",
@@ -36,7 +36,7 @@
 		"compile:ts": "node ../node_modules/typescript/lib/tsc.js -b tsconfig.json",
 		"watch:ts": "node ../node_modules/typescript/lib/tsc.js -b tsconfig.json -w",
 		"build:rust": "cargo build --target wasm32-unknown-unknown",
-		"generate:model": "node ../wasm-component-model/lib/tools/main.js --noMain --outDir ./src/ ./rust/wit",
+		"generate:model": "node ../wasm-component-model/lib/tools/main.js --noMain --outDir ./ts/src/ ./rust/wit",
 		"generate:wat": "wasm-tools print ./target/wasm32-unknown-unknown/debug/vscode.wasm > ./target/wasm32-unknown-unknown/debug/vscode.wat",
 		"run": "npm run build:rust && npm run compile:ts && node ./out/main.js"
 	}

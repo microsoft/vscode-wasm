@@ -49,8 +49,8 @@ interface types {
 
 interface commands {
 	register-command: func(command: string);
+	unregister-command: func(command: string);
 }
-
 
 interface window {
 	use types.{ output-channel };
@@ -61,6 +61,7 @@ interface workspace {
 	use types.{ text-document };
 	text-documents: func() -> list<text-document>;
 	register-on-did-change-text-document: func();
+	unregister-on-did-change-text-document: func();
 }
 
 
