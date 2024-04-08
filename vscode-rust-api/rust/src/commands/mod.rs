@@ -10,16 +10,20 @@ use crate::host::api::commands;
 
 static mut HANDLERS: Lazy<HashMap<String, Box<dyn Fn()>>> = Lazy::new(|| HashMap::new());
 
-pub fn register_command(command: &str, callback: Box<dyn Fn()>) -> Box<dyn Fn() + '_> {
+pub fn register_command<F>(command: &str, callback: F) -> impl Fn() + 'static
+where
+	F: Fn() + 'static,
+{
 	unsafe {
-		HANDLERS.insert(command.to_string(), callback);
+		HANDLERS.insert(command.to_string(), Box::new(callback));
 	}
 	commands::register_command(command);
-	return Box::new(move || {
+	let unregister = command.to_string();
+	return move || {
 		unsafe {
-			HANDLERS.remove(command);
+			HANDLERS.remove(&unregister);
 		}
-	});
+	};
 }
 
 pub fn execute_command(command: &str) {

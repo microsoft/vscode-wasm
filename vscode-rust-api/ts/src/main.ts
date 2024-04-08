@@ -12,6 +12,31 @@ import Types = api.Types;
 import OutputChannel = Types.OutputChannel;
 import TextDocument = Types.TextDocument;
 
+namespace Converter {
+	export function asDocumentFilter(value: Types.DocumentFilter): vscode.DocumentFilter {
+		return {
+			language: value.language,
+			scheme: value.scheme,
+			pattern: asPattern(value.pattern)
+		};
+	}
+
+	export function asDocumentFilters(value: Types.DocumentFilter[]): vscode.DocumentFilter[] {
+		return value.map(asDocumentFilter);
+	}
+
+	function asPattern(value: Types.GlobPattern | undefined | null): vscode.GlobPattern | undefined {
+		if (value === undefined || value === null) {
+			return undefined;
+		}
+		switch(value.tag) {
+			case Types.GlobPattern.pattern:
+				return value.value;
+		}
+	}
+}
+
+
 interface Extension {
 	activate?(): void;
 	deactivate?(): void;
@@ -92,6 +117,10 @@ class TextDocumentResource implements TextDocument {
 		}
 	}
 
+	public static textDocument(document: Types.TextDocument): vscode.TextDocument {
+		return (document as TextDocumentResource).textDocument;
+	}
+
 	public $handle: ResourceHandle;
 	private textDocument: vscode.TextDocument;
 
@@ -153,7 +182,7 @@ class CommandRegistry {
 }
 
 const commandRegistry = new CommandRegistry();
-let $exports: api.all.Exports;
+let instance: WebAssembly_.Instance;
 export async function activate(_context: vscode.ExtensionContext, module: WebAssembly_.Module): Promise<void> {
 	let memory: Memory | undefined;
 	const wasmContext: WasmContext = {
@@ -166,6 +195,7 @@ export async function activate(_context: vscode.ExtensionContext, module: WebAss
 			return memory;
 		}
 	};
+	let textDocumentChangeListener: vscode.Disposable | undefined;
 	const service: api.all.Imports = {
 		types: {
 			OutputChannel: OutputChannelResource,
@@ -178,6 +208,27 @@ export async function activate(_context: vscode.ExtensionContext, module: WebAss
 		},
 		workspace: {
 			registerOnDidChangeTextDocument: () => {
+				if (textDocumentChangeListener !== undefined) {
+					return;
+				}
+				textDocumentChangeListener = vscode.workspace.onDidChangeTextDocument(e => {
+					const document = TextDocumentResource.getOrCreate(e.document);
+					$exports.callbacks.didChangeTextDocument({
+						document,
+						contentChanges: e.contentChanges.map(change => ({
+							range: change.range,
+							rangeOffset: change.rangeOffset,
+							rangeLength: change.rangeLength,
+							text: change.text
+						}))
+					});
+				});
+			},
+			unregisterOnDidChangeTextDocument: () => {
+				if (textDocumentChangeListener !== undefined) {
+					textDocumentChangeListener.dispose();
+					textDocumentChangeListener = undefined;
+				}
 			},
 			textDocuments: () => {
 				return vscode.workspace.textDocuments.map(document => TextDocumentResource.getOrCreate(document));
@@ -190,14 +241,25 @@ export async function activate(_context: vscode.ExtensionContext, module: WebAss
 			unregisterCommand: (command: string) => {
 				commandRegistry.unregister(command);
 			}
+		},
+		languages: {
+			matchSelector: (selector: Types.DocumentSelector, document: Types.TextDocument) => {
+				if (selector.isSingle()) {
+					return vscode.languages.match(Converter.asDocumentFilter(selector.value), TextDocumentResource.textDocument(document));
+				} else if (selector.isMany()) {
+					return vscode.languages.match(Converter.asDocumentFilters(selector.value), TextDocumentResource.textDocument(document));
+				} else {
+					return 0;
+				}
+			}
 		}
 	};
 	const imports = api.all._.createImports(service, wasmContext);
-	const instance = await RAL().WebAssembly.instantiate(module, imports);
+	instance = await RAL().WebAssembly.instantiate(module, imports);
 	memory = Memory.createDefault(Date.now().toString(), instance.exports);
-	$exports = api.all._.bindExports(instance.exports as api.all._.Exports, wasmContext);
+	const $exports = api.all._.bindExports(instance.exports as api.all._.Exports, wasmContext);
 	commandRegistry.initialize($exports.callbacks.executeCommand);
-	const extension = $exports as Extension;
+	const extension = instance.exports as Extension;
 	if (typeof extension.activate === 'function') {
 		extension.activate();
 	}
@@ -205,8 +267,10 @@ export async function activate(_context: vscode.ExtensionContext, module: WebAss
 
 export function deactivate(): void {
 	commandRegistry.dispose();
-	const extension = $exports as Extension;
-	if (typeof extension.deactivate === 'function') {
-		extension.deactivate();
+	if (instance !== undefined) {
+		const extension = instance.exports as Extension;
+		if (typeof extension.deactivate === 'function') {
+			extension.deactivate();
+		}
 	}
 }

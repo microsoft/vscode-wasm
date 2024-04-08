@@ -8,21 +8,24 @@ use crate::host::api::{
 	types,
 	workspace
 };
-use crate::common::{ Event, EventEmitter };
+use crate::common::EventEmitter;
 
 #[allow(non_upper_case_globals)]
 pub const text_documents: fn() -> Vec<super::TextDocument> = workspace::text_documents;
 
-impl Event for types::TextDocumentChangeEvent {
-	fn get_type(&self) -> &'static str {
-		"TextDocumentChangeEvent"
+static mut ON_DID_CHANGE_TEXT_DOCUMENT: Lazy<EventEmitter<types::TextDocumentChangeEvent>> = Lazy::new(|| EventEmitter::new(workspace::register_on_did_change_text_document, workspace::unregister_on_did_change_text_document));
+
+pub fn on_did_change_text_document<F>(listener: F) -> impl Fn() + 'static
+where
+		F: Fn(&types::TextDocumentChangeEvent) + 'static,
+{
+	unsafe {
+		ON_DID_CHANGE_TEXT_DOCUMENT.on(listener)
 	}
 }
 
-static mut ON_DID_CHANGE_TEXT_DOCUMENT: Lazy<EventEmitter<types::TextDocumentChangeEvent>> = Lazy::new(|| EventEmitter::new(Box::new(workspace::register_on_did_change_text_document), Box::new(workspace::unregister_on_did_change_text_document)));
-
-pub fn on_did_change_text_document(listener: Box<dyn Fn(&types::TextDocumentChangeEvent)>) -> Box<dyn Fn()> {
+pub fn fire_did_change_text_document(event: &types::TextDocumentChangeEvent) {
 	unsafe {
-		ON_DID_CHANGE_TEXT_DOCUMENT.on(listener)
+		ON_DID_CHANGE_TEXT_DOCUMENT.fire(event)
 	}
 }

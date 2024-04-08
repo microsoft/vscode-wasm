@@ -45,11 +45,32 @@ interface types {
         clear: func();
 		show: func();
 	}
+
+	variant glob-pattern {
+		pattern(string)
+	}
+
+	record document-filter {
+		language: option<string>,
+		scheme: option<string>,
+		notebook-type: option<string>,
+		pattern: option<glob-pattern>
+	}
+
+	variant document-selector {
+		many(list<document-filter>),
+		single(document-filter)
+	}
 }
 
 interface commands {
 	register-command: func(command: string);
 	unregister-command: func(command: string);
+}
+
+interface languages {
+	use types.{ document-selector, text-document };
+	match-selector: func(selector: document-selector, document: text-document) -> u32;
 }
 
 interface window {
@@ -75,6 +96,7 @@ world all {
 	import workspace;
 	import commands;
 	import window;
+	import languages;
 
 	export callbacks;
 }

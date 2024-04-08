@@ -35,6 +35,88 @@ export namespace api {
 			reason?: TextDocumentChangeReason | undefined;
 		};
 
+		export namespace GlobPattern {
+			export const pattern = 'pattern' as const;
+			export type Pattern = { readonly tag: typeof pattern; readonly value: string } & _common;
+			export function Pattern(value: string): Pattern {
+				return new VariantImpl(pattern, value) as Pattern;
+			}
+
+			export type _tt = typeof pattern;
+			export type _vt = string;
+			type _common = Omit<VariantImpl, 'tag' | 'value'>;
+			export function _ctor(t: _tt, v: _vt): GlobPattern {
+				return new VariantImpl(t, v) as GlobPattern;
+			}
+			class VariantImpl {
+				private readonly _tag: _tt;
+				private readonly _value: _vt;
+				constructor(t: _tt, value: _vt) {
+					this._tag = t;
+					this._value = value;
+				}
+				get tag(): _tt {
+					return this._tag;
+				}
+				get value(): _vt {
+					return this._value;
+				}
+				isPattern(): this is Pattern {
+					return this._tag === GlobPattern.pattern;
+				}
+			}
+		}
+		export type GlobPattern = GlobPattern.Pattern;
+
+		export type DocumentFilter = {
+			language?: string | undefined;
+			scheme?: string | undefined;
+			notebookType?: string | undefined;
+			pattern?: GlobPattern | undefined;
+		};
+
+		export namespace DocumentSelector {
+			export const many = 'many' as const;
+			export type Many = { readonly tag: typeof many; readonly value: DocumentFilter[] } & _common;
+			export function Many(value: DocumentFilter[]): Many {
+				return new VariantImpl(many, value) as Many;
+			}
+
+			export const single = 'single' as const;
+			export type Single = { readonly tag: typeof single; readonly value: DocumentFilter } & _common;
+			export function Single(value: DocumentFilter): Single {
+				return new VariantImpl(single, value) as Single;
+			}
+
+			export type _tt = typeof many | typeof single;
+			export type _vt = DocumentFilter[] | DocumentFilter;
+			type _common = Omit<VariantImpl, 'tag' | 'value'>;
+			export function _ctor(t: _tt, v: _vt): DocumentSelector {
+				return new VariantImpl(t, v) as DocumentSelector;
+			}
+			class VariantImpl {
+				private readonly _tag: _tt;
+				private readonly _value: _vt;
+				constructor(t: _tt, value: _vt) {
+					this._tag = t;
+					this._value = value;
+				}
+				get tag(): _tt {
+					return this._tag;
+				}
+				get value(): _vt {
+					return this._value;
+				}
+				isMany(): this is Many {
+					return this._tag === DocumentSelector.many;
+				}
+				isSingle(): this is Single {
+					return this._tag === DocumentSelector.single;
+				}
+			}
+		}
+		export type DocumentSelector = DocumentSelector.Many | DocumentSelector.Single;
+
 		export namespace TextDocument {
 			export interface Interface {
 				$handle?: $wcm.ResourceHandle;
@@ -92,6 +174,17 @@ export namespace api {
 		unregisterCommand: Commands.unregisterCommand;
 	};
 
+	export namespace Languages {
+		export type DocumentSelector = api.Types.DocumentSelector;
+
+		export type TextDocument = api.Types.TextDocument;
+
+		export type matchSelector = (selector: DocumentSelector, document: own<TextDocument>) => u32;
+	}
+	export type Languages = {
+		matchSelector: Languages.matchSelector;
+	};
+
 	export namespace Window {
 		export type OutputChannel = api.Types.OutputChannel;
 
@@ -107,10 +200,13 @@ export namespace api {
 		export type textDocuments = () => own<TextDocument>[];
 
 		export type registerOnDidChangeTextDocument = () => void;
+
+		export type unregisterOnDidChangeTextDocument = () => void;
 	}
 	export type Workspace = {
 		textDocuments: Workspace.textDocuments;
 		registerOnDidChangeTextDocument: Workspace.registerOnDidChangeTextDocument;
+		unregisterOnDidChangeTextDocument: Workspace.unregisterOnDidChangeTextDocument;
 	};
 
 	export namespace Callbacks {
@@ -130,6 +226,7 @@ export namespace api {
 			workspace: api.Workspace;
 			commands: api.Commands;
 			window: api.Window;
+			languages: api.Languages;
 		};
 		export type Exports = {
 			callbacks: api.Callbacks;
@@ -163,6 +260,14 @@ export namespace api {
 		]);
 		export const OutputChannel = new $wcm.ResourceType<api.Types.OutputChannel>('output-channel', 'host:api/types/output-channel');
 		export const OutputChannel_Handle = new $wcm.ResourceHandleType('output-channel');
+		export const GlobPattern = new $wcm.VariantType<api.Types.GlobPattern, api.Types.GlobPattern._tt, api.Types.GlobPattern._vt>([['pattern', $wcm.wstring]], api.Types.GlobPattern._ctor);
+		export const DocumentFilter = new $wcm.RecordType<api.Types.DocumentFilter>([
+			['language', new $wcm.OptionType<string>($wcm.wstring)],
+			['scheme', new $wcm.OptionType<string>($wcm.wstring)],
+			['notebookType', new $wcm.OptionType<string>($wcm.wstring)],
+			['pattern', new $wcm.OptionType<api.Types.GlobPattern>(GlobPattern)],
+		]);
+		export const DocumentSelector = new $wcm.VariantType<api.Types.DocumentSelector, api.Types.DocumentSelector._tt, api.Types.DocumentSelector._vt>([['many', new $wcm.ListType<api.Types.DocumentFilter>(DocumentFilter)], ['single', DocumentFilter]], api.Types.DocumentSelector._ctor);
 		TextDocument.addDestructor('$drop', new $wcm.DestructorType('[resource-drop]text-document', [['inst', TextDocument]]));
 		TextDocument.addMethod('uri', new $wcm.MethodType<api.Types.TextDocument.Interface['uri']>('[method]text-document.uri', [], $wcm.wstring));
 		TextDocument.addMethod('languageId', new $wcm.MethodType<api.Types.TextDocument.Interface['languageId']>('[method]text-document.language-id', [], $wcm.wstring));
@@ -188,6 +293,9 @@ export namespace api {
 			['TextDocumentContentChangeEvent', $.TextDocumentContentChangeEvent],
 			['TextDocumentChangeReason', $.TextDocumentChangeReason],
 			['TextDocumentChangeEvent', $.TextDocumentChangeEvent],
+			['GlobPattern', $.GlobPattern],
+			['DocumentFilter', $.DocumentFilter],
+			['DocumentSelector', $.DocumentSelector],
 			['TextDocument', $.TextDocument],
 			['OutputChannel', $.OutputChannel]
 		]);
@@ -337,6 +445,38 @@ export namespace api {
 		}
 	}
 
+	export namespace Languages.$ {
+		export const DocumentSelector = api.Types.$.DocumentSelector;
+		export const TextDocument = api.Types.$.TextDocument;
+		export const matchSelector = new $wcm.FunctionType<api.Languages.matchSelector>('match-selector',[
+			['selector', DocumentSelector],
+			['document', new $wcm.OwnType<api.Languages.TextDocument>(TextDocument)],
+		], $wcm.u32);
+	}
+	export namespace Languages._ {
+		export const id = 'host:api/languages' as const;
+		export const witName = 'languages' as const;
+		export const types: Map<string, $wcm.GenericComponentModelType> = new Map<string, $wcm.GenericComponentModelType>([
+			['DocumentSelector', $.DocumentSelector],
+			['TextDocument', $.TextDocument]
+		]);
+		export const functions: Map<string, $wcm.FunctionType> = new Map([
+			['matchSelector', $.matchSelector]
+		]);
+		export type WasmInterface = {
+			'match-selector': (selector_DocumentSelector_case: i32, selector_DocumentSelector_0: i32, selector_DocumentSelector_1: i32, selector_DocumentSelector_2: i32, selector_DocumentSelector_3: i32, selector_DocumentSelector_4: i32, selector_DocumentSelector_5: i32, selector_DocumentSelector_6: i32, selector_DocumentSelector_7: i32, selector_DocumentSelector_8: i32, selector_DocumentSelector_9: i32, selector_DocumentSelector_10: i32, selector_DocumentSelector_11: i32, selector_DocumentSelector_12: i32, document: i32) => i32;
+		};
+		export function createImports(service: api.Languages, context: $wcm.WasmContext): WasmInterface {
+			return $wcm.Imports.create<WasmInterface>(functions, undefined, service, context);
+		}
+		export function filterExports(exports: object, context: $wcm.WasmContext): WasmInterface {
+			return $wcm.Exports.filter<WasmInterface>(exports, functions, undefined, id, undefined, context);
+		}
+		export function bindExports(wasmInterface: WasmInterface, context: $wcm.WasmContext): api.Languages {
+			return $wcm.Exports.bind<api.Languages>(functions, [], wasmInterface, context);
+		}
+	}
+
 	export namespace Window.$ {
 		export const OutputChannel = api.Types.$.OutputChannel;
 		export const createOutputChannel = new $wcm.FunctionType<api.Window.createOutputChannel>('create-output-channel',[
@@ -371,6 +511,7 @@ export namespace api {
 		export const TextDocument = api.Types.$.TextDocument;
 		export const textDocuments = new $wcm.FunctionType<api.Workspace.textDocuments>('text-documents', [], new $wcm.ListType<own<api.Workspace.TextDocument>>(new $wcm.OwnType<api.Workspace.TextDocument>(TextDocument)));
 		export const registerOnDidChangeTextDocument = new $wcm.FunctionType<api.Workspace.registerOnDidChangeTextDocument>('register-on-did-change-text-document', [], undefined);
+		export const unregisterOnDidChangeTextDocument = new $wcm.FunctionType<api.Workspace.unregisterOnDidChangeTextDocument>('unregister-on-did-change-text-document', [], undefined);
 	}
 	export namespace Workspace._ {
 		export const id = 'host:api/workspace' as const;
@@ -380,11 +521,13 @@ export namespace api {
 		]);
 		export const functions: Map<string, $wcm.FunctionType> = new Map([
 			['textDocuments', $.textDocuments],
-			['registerOnDidChangeTextDocument', $.registerOnDidChangeTextDocument]
+			['registerOnDidChangeTextDocument', $.registerOnDidChangeTextDocument],
+			['unregisterOnDidChangeTextDocument', $.unregisterOnDidChangeTextDocument]
 		]);
 		export type WasmInterface = {
 			'text-documents': (result: ptr<own<TextDocument>[]>) => void;
 			'register-on-did-change-text-document': () => void;
+			'unregister-on-did-change-text-document': () => void;
 		};
 		export function createImports(service: api.Workspace, context: $wcm.WasmContext): WasmInterface {
 			return $wcm.Imports.create<WasmInterface>(functions, undefined, service, context);
@@ -440,7 +583,8 @@ export namespace api {
 				['Types', Types._],
 				['Workspace', Workspace._],
 				['Commands', Commands._],
-				['Window', Window._]
+				['Window', Window._],
+				['Languages', Languages._]
 			]);
 		}
 		export type Imports = {
@@ -448,6 +592,7 @@ export namespace api {
 			'host:api/workspace': api.Workspace._.WasmInterface;
 			'host:api/commands': api.Commands._.WasmInterface;
 			'host:api/window': api.Window._.WasmInterface;
+			'host:api/languages': api.Languages._.WasmInterface;
 		};
 		export namespace Exports {
 			export const interfaces: Map<string, $wcm.InterfaceType> = new Map<string, $wcm.InterfaceType>([
@@ -464,6 +609,7 @@ export namespace api {
 			result['host:api/workspace'] = api.Workspace._.createImports(service.workspace, context);
 			result['host:api/commands'] = api.Commands._.createImports(service.commands, context);
 			result['host:api/window'] = api.Window._.createImports(service.window, context);
+			result['host:api/languages'] = api.Languages._.createImports(service.languages, context);
 			return result;
 		}
 		export function bindExports(exports: Exports, context: $wcm.WasmContext): all.Exports {
@@ -480,6 +626,7 @@ export namespace api._ {
 	export const interfaces: Map<string, $wcm.InterfaceType> = new Map<string, $wcm.InterfaceType>([
 		['Types', Types._],
 		['Commands', Commands._],
+		['Languages', Languages._],
 		['Window', Window._],
 		['Workspace', Workspace._],
 		['Callbacks', Callbacks._]
