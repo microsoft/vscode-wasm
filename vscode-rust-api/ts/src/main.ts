@@ -146,6 +146,31 @@ class TextDocumentResource implements TextDocument {
 	}
 }
 
+class TextDocumentChangeEventResource implements Types.TextDocumentChangeEvent {
+
+	private readonly event: vscode.TextDocumentChangeEvent;
+	public $handle?: number | undefined;
+
+	constructor(event: vscode.TextDocumentChangeEvent) {
+		this.event = event;
+	}
+
+	$drop(): void {
+	}
+
+	document(): Types.TextDocument {
+		return TextDocumentResource.getOrCreate(this.event.document);
+	}
+
+	contentChanges(): Types.TextDocumentContentChangeEvent[] {
+		return [];
+	}
+
+	reason(): Types.TextDocumentChangeReason | undefined {
+		return undefined;
+	}
+}
+
 class CommandRegistry {
 
 	private commands: Map<string, vscode.Disposable> = new Map();
@@ -199,7 +224,8 @@ export async function activate(_context: vscode.ExtensionContext, module: WebAss
 	const service: api.all.Imports = {
 		types: {
 			OutputChannel: OutputChannelResource,
-			TextDocument: TextDocumentResource
+			TextDocument: TextDocumentResource,
+			TextDocumentChangeEvent: TextDocumentChangeEventResource
 		},
 		window: {
 			createOutputChannel: (name: string, languageId?: string) => {
@@ -212,16 +238,19 @@ export async function activate(_context: vscode.ExtensionContext, module: WebAss
 					return;
 				}
 				textDocumentChangeListener = vscode.workspace.onDidChangeTextDocument(e => {
-					const document = TextDocumentResource.getOrCreate(e.document);
-					$exports.callbacks.didChangeTextDocument({
-						document,
-						contentChanges: e.contentChanges.map(change => ({
-							range: change.range,
-							rangeOffset: change.rangeOffset,
-							rangeLength: change.rangeLength,
-							text: change.text
-						}))
-					});
+					const event = new TextDocumentChangeEventResource(e);
+					$exports.callbacks.didChangeTextDocument(event);
+
+					// const document = TextDocumentResource.getOrCreate(e.document);
+					// $exports.callbacks.didChangeTextDocument({
+					// 	document,
+					// 	contentChanges: e.contentChanges.map(change => ({
+					// 		range: change.range,
+					// 		rangeOffset: change.rangeOffset,
+					// 		rangeLength: change.rangeLength,
+					// 		text: change.text
+					// 	}))
+					// });
 				});
 			},
 			unregisterOnDidChangeTextDocument: () => {

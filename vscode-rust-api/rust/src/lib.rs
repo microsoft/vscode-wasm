@@ -19,6 +19,7 @@ mod common;
 pub type OutputChannel = host::api::types::OutputChannel;
 pub type TextDocument = host::api::types::TextDocument;
 pub type TextDocumentChangeEvent = host::api::types::TextDocumentChangeEvent;
+pub type DocumentFilter = host::api::types::DocumentFilter;
 pub type DocumentSelector = host::api::types::DocumentSelector;
 
 pub struct Disposables {

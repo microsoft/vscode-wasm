@@ -32,10 +32,10 @@ interface types {
 		redo
 	}
 
-	record text-document-change-event {
-		document: text-document,
-		content-changes: list<text-document-content-change-event>,
-		reason: option<text-document-change-reason>
+	resource text-document-change-event {
+		document: func() -> text-document;
+		content-changes: func() -> list<text-document-content-change-event>;
+		reason: func() -> option<text-document-change-reason>;
 	}
 
 	resource output-channel {

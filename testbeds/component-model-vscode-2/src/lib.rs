@@ -20,15 +20,21 @@ pub fn activate() {
 		}
 	}));
 
-	let channel_clone2 = channel.clone();
-	disposables.push(vscode::workspace::on_did_change_text_document(move |event: &vscode::TextDocumentChangeEvent| {
-		let selector = vscode::DocumentSelector("rust");
-		if vscode::languages::match_selector(&selector, event.document) != 0 {
-			channel_clone2.append_line("Rust document changed!");
+	disposables.push(vscode::workspace::on_did_change_text_document(move |event| {
+		let document = event.document();
+		let filter: vscode::DocumentFilter = vscode::DocumentFilter {
+			language: Some("python".to_string()),
+			scheme: None,
+			pattern: None,
+			notebook_type: None
+		};
+		let selector = vscode::DocumentSelector::Single(filter);
+		let channel_clone2 = channel.clone();
+		if vscode::languages::match_selector(&selector, document) != 0 {
+			let document2 = event.document();
+			channel_clone2.append_line(&format!("Document: {} {}", document2.uri(), document2.handle()));
 		}
-		channel_clone2.append_line(&format!("Document: {} {}", event.document.uri(), event.document.handle()));
 	}));
-	channel.append_line("Extension activated!");
 }
 
 #[export_name = "deactivate"]

@@ -29,12 +29,6 @@ export namespace api {
 			redo = 'redo'
 		}
 
-		export type TextDocumentChangeEvent = {
-			document: own<TextDocument>;
-			contentChanges: TextDocumentContentChangeEvent[];
-			reason?: TextDocumentChangeReason | undefined;
-		};
-
 		export namespace GlobPattern {
 			export const pattern = 'pattern' as const;
 			export type Pattern = { readonly tag: typeof pattern; readonly value: string } & _common;
@@ -137,6 +131,24 @@ export namespace api {
 		}
 		export type TextDocument = TextDocument.Interface;
 
+		export namespace TextDocumentChangeEvent {
+			export interface Interface {
+				$handle?: $wcm.ResourceHandle;
+				$drop?(): void;
+
+				document(): own<TextDocument>;
+
+				contentChanges(): TextDocumentContentChangeEvent[];
+
+				reason(): TextDocumentChangeReason | undefined;
+			}
+			export type Statics = {
+			};
+			export type Class = Statics & {
+			};
+		}
+		export type TextDocumentChangeEvent = TextDocumentChangeEvent.Interface;
+
 		export namespace OutputChannel {
 			export interface Interface {
 				$handle?: $wcm.ResourceHandle;
@@ -161,6 +173,7 @@ export namespace api {
 	}
 	export type Types = {
 		TextDocument: Types.TextDocument.Class;
+		TextDocumentChangeEvent: Types.TextDocumentChangeEvent.Class;
 		OutputChannel: Types.OutputChannel.Class;
 	};
 
@@ -212,7 +225,7 @@ export namespace api {
 	export namespace Callbacks {
 		export type TextDocumentChangeEvent = api.Types.TextDocumentChangeEvent;
 
-		export type didChangeTextDocument = (event: TextDocumentChangeEvent) => void;
+		export type didChangeTextDocument = (event: own<TextDocumentChangeEvent>) => void;
 
 		export type executeCommand = (command: string) => void;
 	}
@@ -253,11 +266,8 @@ export namespace api {
 		export const TextDocument = new $wcm.ResourceType<api.Types.TextDocument>('text-document', 'host:api/types/text-document');
 		export const TextDocument_Handle = new $wcm.ResourceHandleType('text-document');
 		export const TextDocumentChangeReason = new $wcm.EnumType<api.Types.TextDocumentChangeReason>(['undo', 'redo']);
-		export const TextDocumentChangeEvent = new $wcm.RecordType<api.Types.TextDocumentChangeEvent>([
-			['document', new $wcm.OwnType<api.Types.TextDocument>(TextDocument)],
-			['contentChanges', new $wcm.ListType<api.Types.TextDocumentContentChangeEvent>(TextDocumentContentChangeEvent)],
-			['reason', new $wcm.OptionType<api.Types.TextDocumentChangeReason>(TextDocumentChangeReason)],
-		]);
+		export const TextDocumentChangeEvent = new $wcm.ResourceType<api.Types.TextDocumentChangeEvent>('text-document-change-event', 'host:api/types/text-document-change-event');
+		export const TextDocumentChangeEvent_Handle = new $wcm.ResourceHandleType('text-document-change-event');
 		export const OutputChannel = new $wcm.ResourceType<api.Types.OutputChannel>('output-channel', 'host:api/types/output-channel');
 		export const OutputChannel_Handle = new $wcm.ResourceHandleType('output-channel');
 		export const GlobPattern = new $wcm.VariantType<api.Types.GlobPattern, api.Types.GlobPattern._tt, api.Types.GlobPattern._vt>([['pattern', $wcm.wstring]], api.Types.GlobPattern._ctor);
@@ -273,6 +283,10 @@ export namespace api {
 		TextDocument.addMethod('languageId', new $wcm.MethodType<api.Types.TextDocument.Interface['languageId']>('[method]text-document.language-id', [], $wcm.wstring));
 		TextDocument.addMethod('version', new $wcm.MethodType<api.Types.TextDocument.Interface['version']>('[method]text-document.version', [], $wcm.u32));
 		TextDocument.addMethod('getText', new $wcm.MethodType<api.Types.TextDocument.Interface['getText']>('[method]text-document.get-text', [], $wcm.wstring));
+		TextDocumentChangeEvent.addDestructor('$drop', new $wcm.DestructorType('[resource-drop]text-document-change-event', [['inst', TextDocumentChangeEvent]]));
+		TextDocumentChangeEvent.addMethod('document', new $wcm.MethodType<api.Types.TextDocumentChangeEvent.Interface['document']>('[method]text-document-change-event.document', [], new $wcm.OwnType<api.Types.TextDocument>(TextDocument)));
+		TextDocumentChangeEvent.addMethod('contentChanges', new $wcm.MethodType<api.Types.TextDocumentChangeEvent.Interface['contentChanges']>('[method]text-document-change-event.content-changes', [], new $wcm.ListType<api.Types.TextDocumentContentChangeEvent>(TextDocumentContentChangeEvent)));
+		TextDocumentChangeEvent.addMethod('reason', new $wcm.MethodType<api.Types.TextDocumentChangeEvent.Interface['reason']>('[method]text-document-change-event.reason', [], new $wcm.OptionType<api.Types.TextDocumentChangeReason>(TextDocumentChangeReason)));
 		OutputChannel.addDestructor('$drop', new $wcm.DestructorType('[resource-drop]output-channel', [['inst', OutputChannel]]));
 		OutputChannel.addMethod('name', new $wcm.MethodType<api.Types.OutputChannel.Interface['name']>('[method]output-channel.name', [], $wcm.wstring));
 		OutputChannel.addMethod('append', new $wcm.MethodType<api.Types.OutputChannel.Interface['append']>('[method]output-channel.append', [
@@ -292,15 +306,16 @@ export namespace api {
 			['Range', $.Range],
 			['TextDocumentContentChangeEvent', $.TextDocumentContentChangeEvent],
 			['TextDocumentChangeReason', $.TextDocumentChangeReason],
-			['TextDocumentChangeEvent', $.TextDocumentChangeEvent],
 			['GlobPattern', $.GlobPattern],
 			['DocumentFilter', $.DocumentFilter],
 			['DocumentSelector', $.DocumentSelector],
 			['TextDocument', $.TextDocument],
+			['TextDocumentChangeEvent', $.TextDocumentChangeEvent],
 			['OutputChannel', $.OutputChannel]
 		]);
 		export const resources: Map<string, $wcm.ResourceType> = new Map<string, $wcm.ResourceType>([
 			['TextDocument', $.TextDocument],
+			['TextDocumentChangeEvent', $.TextDocumentChangeEvent],
 			['OutputChannel', $.OutputChannel]
 		]);
 		export namespace TextDocument {
@@ -342,6 +357,48 @@ export namespace api {
 			}
 			export function Class(wasmInterface: WasmInterface, context: $wcm.WasmContext): api.Types.TextDocument.Class {
 				const resource = api.Types.$.TextDocument;
+				const om: ObjectModule = $wcm.Module.createObjectModule(resource, wasmInterface, context);
+				return class extends Impl {
+					constructor() {
+						super(om);
+					}
+				};
+			}
+		}
+		export namespace TextDocumentChangeEvent {
+			export type WasmInterface = {
+				'[method]text-document-change-event.document': (self: i32) => i32;
+				'[method]text-document-change-event.content-changes': (self: i32, result: ptr<TextDocumentContentChangeEvent[]>) => void;
+				'[method]text-document-change-event.reason': (self: i32, result: ptr<TextDocumentChangeReason | undefined>) => void;
+				'[resource-drop]text-document-change-event': (self: i32) => void;
+			};
+			type ObjectModule = {
+				$drop(self: TextDocumentChangeEvent): void;
+				document(self: TextDocumentChangeEvent): own<TextDocument>;
+				contentChanges(self: TextDocumentChangeEvent): TextDocumentContentChangeEvent[];
+				reason(self: TextDocumentChangeEvent): TextDocumentChangeReason | undefined;
+			};
+			class Impl extends $wcm.Resource implements api.Types.TextDocumentChangeEvent.Interface {
+				private readonly _om: ObjectModule;
+				constructor(om: ObjectModule) {
+					super();
+					this._om = om;
+				}
+				public $drop(): void {
+					return this._om.$drop(this);
+				}
+				public document(): own<TextDocument> {
+					return this._om.document(this);
+				}
+				public contentChanges(): TextDocumentContentChangeEvent[] {
+					return this._om.contentChanges(this);
+				}
+				public reason(): TextDocumentChangeReason | undefined {
+					return this._om.reason(this);
+				}
+			}
+			export function Class(wasmInterface: WasmInterface, context: $wcm.WasmContext): api.Types.TextDocumentChangeEvent.Class {
+				const resource = api.Types.$.TextDocumentChangeEvent;
 				const om: ObjectModule = $wcm.Module.createObjectModule(resource, wasmInterface, context);
 				return class extends Impl {
 					constructor() {
@@ -403,7 +460,7 @@ export namespace api {
 			}
 		}
 		export type WasmInterface = {
-		} & TextDocument.WasmInterface & OutputChannel.WasmInterface;
+		} & TextDocument.WasmInterface & TextDocumentChangeEvent.WasmInterface & OutputChannel.WasmInterface;
 		export function createImports(service: api.Types, context: $wcm.WasmContext): WasmInterface {
 			return $wcm.Imports.create<WasmInterface>(undefined, resources, service, context);
 		}
@@ -411,7 +468,7 @@ export namespace api {
 			return $wcm.Exports.filter<WasmInterface>(exports, undefined, resources, id, undefined, context);
 		}
 		export function bindExports(wasmInterface: WasmInterface, context: $wcm.WasmContext): api.Types {
-			return $wcm.Exports.bind<api.Types>(undefined, [['TextDocument', $.TextDocument, TextDocument.Class], ['OutputChannel', $.OutputChannel, OutputChannel.Class]], wasmInterface, context);
+			return $wcm.Exports.bind<api.Types>(undefined, [['TextDocument', $.TextDocument, TextDocument.Class], ['TextDocumentChangeEvent', $.TextDocumentChangeEvent, TextDocumentChangeEvent.Class], ['OutputChannel', $.OutputChannel, OutputChannel.Class]], wasmInterface, context);
 		}
 	}
 
@@ -543,7 +600,7 @@ export namespace api {
 	export namespace Callbacks.$ {
 		export const TextDocumentChangeEvent = api.Types.$.TextDocumentChangeEvent;
 		export const didChangeTextDocument = new $wcm.FunctionType<api.Callbacks.didChangeTextDocument>('did-change-text-document',[
-			['event', TextDocumentChangeEvent],
+			['event', new $wcm.OwnType<api.Callbacks.TextDocumentChangeEvent>(TextDocumentChangeEvent)],
 		], undefined);
 		export const executeCommand = new $wcm.FunctionType<api.Callbacks.executeCommand>('execute-command',[
 			['command', $wcm.wstring],
@@ -560,7 +617,7 @@ export namespace api {
 			['executeCommand', $.executeCommand]
 		]);
 		export type WasmInterface = {
-			'did-change-text-document': (event_TextDocumentChangeEvent_document: i32, event_TextDocumentChangeEvent_contentChanges_ptr: i32, event_TextDocumentChangeEvent_contentChanges_len: i32, event_TextDocumentChangeEvent_reason_case: i32, event_TextDocumentChangeEvent_reason_option_TextDocumentChangeReason: i32) => void;
+			'did-change-text-document': (event: i32) => void;
 			'execute-command': (command_ptr: i32, command_len: i32) => void;
 		};
 		export function createImports(service: api.Callbacks, context: $wcm.WasmContext): WasmInterface {
@@ -600,7 +657,7 @@ export namespace api {
 			]);
 		}
 		export type Exports = {
-			'host:api/callbacks#did-change-text-document': (event_TextDocumentChangeEvent_document: i32, event_TextDocumentChangeEvent_contentChanges_ptr: i32, event_TextDocumentChangeEvent_contentChanges_len: i32, event_TextDocumentChangeEvent_reason_case: i32, event_TextDocumentChangeEvent_reason_option_TextDocumentChangeReason: i32) => void;
+			'host:api/callbacks#did-change-text-document': (event: i32) => void;
 			'host:api/callbacks#execute-command': (command_ptr: i32, command_len: i32) => void;
 		};
 		export function createImports(service: all.Imports, context: $wcm.WasmContext): Imports {
