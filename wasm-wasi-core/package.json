@@ -22,7 +22,7 @@
 		"wasi"
 	],
 	"engines": {
-		"vscode": "^1.78.0"
+		"vscode": "^1.88.0"
 	},
 	"main": "./dist/desktop/extension.js",
 	"browser": "./dist/web/extension.js",
@@ -32,19 +32,19 @@
 		"vscode-uri": "^3.0.8"
 	},
 	"devDependencies": {
-		"@types/vscode": "1.78.0",
-		"@types/uuid": "^9.0.7",
-		"@types/assert": "^1.5.9",
+		"@types/vscode": "1.88.0",
+		"@types/uuid": "^9.0.8",
+		"@types/assert": "^1.5.10",
 		"assert": "^2.1.0",
 		"find-process": "^1.4.7"
 	},
 	"scripts": {
 		"vscode:prepublish": "git clean -xfd . && npm install && npm run compile && npm run lint && npm run update:version && npm run esbuild",
 		"build": "npm run compile",
-		"compile": "node ../node_modules/typescript/lib/tsc.js -b tsconfig.json",
-		"watch": "node ../node_modules/typescript/lib/tsc.js -b tsconfig.json -w",
-		"clean": "node ../node_modules/.bin/rimraf lib && node ../node_modules/.bin/rimraf dist",
-		"lint": "node ../node_modules/eslint/bin/eslint.js --ext ts src",
+		"compile": "tsc -b tsconfig.json",
+		"watch": "tsc -b tsconfig.json -w",
+		"clean": "rimraf lib && rimraf dist",
+		"lint": "eslint --ext ts src",
 		"esbuild": "node ./bin/esbuild.js",
 		"esbuild:watch": "node ./bin/esbuild.js --watch",
 		"test": "npm run test:desktop && npm run test:web",

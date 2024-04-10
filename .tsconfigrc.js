@@ -295,6 +295,26 @@ const wasm_wasi_kit = {
 };
 
 /** @type ProjectDescription */
+const wasm_wasi_lsp = {
+	name: 'wasm-wasi-lsp',
+	path: './wasm-wasi-lsp',
+	extends: [ common, referenced ],
+	out: {
+		dir: './lib',
+		buildInfoFile: '${buildInfoFile}.tsbuildInfo'
+	},
+	sourceFolders: [
+		{
+			path: './src',
+			extends: [ common ],
+		}
+	],
+	references: [
+		'../wasm-wasi-core'
+	]
+};
+
+/** @type ProjectDescription */
 const vscode_rust_api ={
 	name: 'vscode-rust-api',
 	path: './vscode-rust-api',
@@ -589,6 +609,8 @@ const projects = [
 	[ createPublishProjectDescription(webshell), [ publishProjectOptions ] ],
 	[ wasm_wasi_kit, [ compileProjectOptions, watchProjectOptions ] ],
 	[ createPublishProjectDescription(wasm_wasi_kit), [ publishProjectOptions ] ],
+	[ wasm_wasi_lsp, [ compileProjectOptions, watchProjectOptions ] ],
+	[ createPublishProjectDescription(wasm_wasi_lsp), [ publishProjectOptions ] ],
 	[ vscode_rust_api, [ compileProjectOptions, watchProjectOptions ] ],
 	[ createPublishProjectDescription(vscode_rust_api), [ publishProjectOptions ] ],
 	[ tools, [ compileProjectOptions, watchProjectOptions ] ],
