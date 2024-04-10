@@ -6,7 +6,6 @@
 import { WasmProcess, Readable, Writable, type Stdio } from '@vscode/wasm-wasi';
 import { Message, WriteableStreamMessageWriter, Disposable, Emitter, Event, ReadableStreamMessageReader, MessageTransports, RAL } from 'vscode-languageclient';
 
-
 class ReadableStreamImpl implements RAL.ReadableStream {
 
 	private readonly errorEmitter: Emitter<[Error, Message | undefined, number | undefined]>;

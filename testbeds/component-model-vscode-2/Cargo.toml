@@ -9,7 +9,7 @@ edition = "2021"
 crate-type = ["cdylib"]
 
 [dependencies]
-vscode = { path = "../../vscode-rust-api/rust" }
+vscode = { path = "../../rust-api/rust" }
 once_cell = "1.19.0"
 wit-bindgen = "0.21.0"
 wasm-bindgen = "0.2"
