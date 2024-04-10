@@ -2,7 +2,7 @@
  * Copyright (c) Microsoft Corporation. All rights reserved.
  * Licensed under the MIT License. See License.txt in the project root for license information.
  * ------------------------------------------------------------------------------------------ */
-import { AnyConnection, BaseConnection, ConnectionPort, type MemoryLocation, type SharedMemory, type SharedObject, type Signal } from '@vscode/wasm-wasi-kit';
+import { AnyConnection, BaseConnection, ConnectionPort, type MemoryLocation, type SharedMemory, type SharedObject, type Signal } from '@vscode/wasm-kit';
 import type { Pollable } from './io';
 
 export namespace Client {

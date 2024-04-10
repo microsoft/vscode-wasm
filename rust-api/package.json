@@ -36,7 +36,8 @@
 		"compile:ts": "tsc -b tsconfig.json",
 		"watch:ts": "tsc -b tsconfig.json -w",
 		"build:rust": "cd rust && cargo build --target wasm32-unknown-unknown && cd ..",
-		"clean": "rimraf rust/target && rimraf ts/src",
+		"clean": "rimraf rust/target && rimraf lib",
+		"lint": "eslint --ext .ts ts/src",
 		"generate:model": "node ../wasm-component-model/lib/tools/main.js --noMain --outDir ./ts/src/ ./rust/wit",
 		"generate:wat": "wasm-tools print ./target/wasm32-unknown-unknown/debug/vscode.wasm > ./target/wasm32-unknown-unknown/debug/vscode.wat",
 		"run": "npm run build:rust && npm run compile:ts && node ./out/main.js"

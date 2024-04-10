@@ -5,7 +5,7 @@
 import RIL from '../ril';
 RIL.install();
 
-import { Worker } from '@vscode/wasm-wasi-kit/browser';
+import { Worker } from '@vscode/wasm-kit/browser';
 import { WasiWorker} from '../../common/preview2/wasiWorker';
 
 void Worker.main(WasiWorker);

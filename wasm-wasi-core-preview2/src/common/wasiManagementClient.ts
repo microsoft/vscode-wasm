@@ -4,7 +4,7 @@
  * ------------------------------------------------------------------------------------------ */
 import RAL from '../ral';
 
-import { AnyConnection, BaseConnection, type ConnectionPort, WorkerClientBase, type WorkerMessages, WorkerClient } from '@vscode/wasm-wasi-kit';
+import { AnyConnection, BaseConnection, type ConnectionPort, WorkerClientBase, type WorkerMessages, WorkerClient } from '@vscode/wasm-kit';
 
 type ConnectionType = BaseConnection<WorkerMessages.Client.AsyncCalls, undefined, undefined, undefined, undefined, undefined>;
 

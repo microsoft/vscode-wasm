@@ -5,7 +5,7 @@
 import * as vscode from 'vscode';
 
 import { WasmContext, ResourceManagers, Memory, MemoryError, type ResourceHandle, ComponentModelTrap } from '@vscode/wasm-component-model';
-import { RAL } from '@vscode/wasm-wasi-kit';
+import { RAL } from '@vscode/wasm-kit';
 
 import { api } from './api';
 import Types = api.Types;

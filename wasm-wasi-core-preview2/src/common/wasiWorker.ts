@@ -5,7 +5,7 @@
 import RAL from '../ral';
 
 import type { Disposable } from 'vscode';
-import { AnyConnection, BaseConnection, type ConnectionPort, MultiConnectionWorker, BaseWorker, type SharedMemory, Signal } from '@vscode/wasm-wasi-kit';
+import { AnyConnection, BaseConnection, type ConnectionPort, MultiConnectionWorker, BaseWorker, type SharedMemory, Signal } from '@vscode/wasm-kit';
 import type { Client } from './wasiClient';
 import { Pollable } from './io';
 

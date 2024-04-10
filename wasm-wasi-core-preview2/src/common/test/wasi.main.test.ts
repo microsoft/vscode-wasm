@@ -5,7 +5,7 @@
 import RAL from '../../ral';
 import assert from 'assert';
 
-import { SharedMemory, Signal } from '@vscode/wasm-wasi-kit';
+import { SharedMemory, Signal } from '@vscode/wasm-kit';
 
 import { WasiManagementClient } from '../wasiManagementClient';
 import { WasiClient } from '../wasiClient';

@@ -20,9 +20,9 @@ const folders = [
 	'sync-api-tests',
 	'wasm-component-model',
 	'wasi',
-	'vscode-rust-api',
+	'rust-api',
 	'wasm-wasi',
-	'wasm-wasi-kit',
+	'wasm-kit',
 	'wasm-wasi-core',
 	'wasm-wasi-lsp',
 	'webshell',
@@ -39,7 +39,9 @@ function main() {
 	}
 
 	for (const folder of folders) {
+		console.log(`==> ${path.join(root, folder)} <==`);
 		child_process.spawnSync(`npm ${args.join(' ')}`, { cwd: path.join(root, folder), shell: true, stdio: 'inherit' });
+		console.log('');
 	}
 }
 

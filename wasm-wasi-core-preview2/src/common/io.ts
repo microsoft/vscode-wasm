@@ -5,7 +5,7 @@
 
 import { io } from '@vscode/wasi';
 
-import { SharedObject, type SharedMemory, Signal, SharedResource, Record } from '@vscode/wasm-wasi-kit';
+import { SharedObject, type SharedMemory, Signal, SharedResource, Record } from '@vscode/wasm-kit';
 import type { WasiClient } from './wasiClient';
 
 export class Pollable extends SharedResource<Pollable.Properties> implements io.Poll.Pollable {
