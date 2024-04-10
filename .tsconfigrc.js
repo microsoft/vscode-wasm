@@ -315,9 +315,9 @@ const wasm_wasi_lsp = {
 };
 
 /** @type ProjectDescription */
-const vscode_rust_api ={
-	name: 'vscode-rust-api',
-	path: './vscode-rust-api',
+const rust_api ={
+	name: 'rust-api',
+	path: './rust-api',
 	extends: [ common, referenced ],
 	out: {
 		dir: './lib',
@@ -613,8 +613,8 @@ const projects = [
 	[ createPublishProjectDescription(wasm_kit), [ publishProjectOptions ] ],
 	[ wasm_wasi_lsp, [ compileProjectOptions, watchProjectOptions ] ],
 	[ createPublishProjectDescription(wasm_wasi_lsp), [ publishProjectOptions ] ],
-	[ vscode_rust_api, [ compileProjectOptions, watchProjectOptions ] ],
-	[ createPublishProjectDescription(vscode_rust_api), [ publishProjectOptions ] ],
+	[ rust_api, [ compileProjectOptions, watchProjectOptions ] ],
+	[ createPublishProjectDescription(rust_api), [ publishProjectOptions ] ],
 	[ tools, [ compileProjectOptions, watchProjectOptions ] ],
 	[ root, [compileProjectOptions, watchProjectOptions ] ],
 	[ testbed_cpp, [ compileProjectOptions ] ],

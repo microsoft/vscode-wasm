@@ -19,8 +19,8 @@
         "noUnusedLocals": false,
         "noUnusedParameters": false,
         "assumeChangesOnlyAffectDirectDependencies": true,
-        "outDir": "../../lib/src",
-        "tsBuildInfoFile": "../../lib/src/watch.tsbuildInfo",
+        "outDir": "../../lib",
+        "tsBuildInfoFile": "../../lib/watch.tsbuildInfo",
         "incremental": true
     },
     "include": [

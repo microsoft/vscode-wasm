@@ -18,8 +18,8 @@
         "declarationMap": false,
         "noUnusedLocals": true,
         "noUnusedParameters": true,
-        "outDir": "../../lib/src",
-        "tsBuildInfoFile": "../../lib/src/publish.tsbuildInfo",
+        "outDir": "../../lib",
+        "tsBuildInfoFile": "../../lib/publish.tsbuildInfo",
         "incremental": true
     },
     "include": [
