@@ -3,7 +3,7 @@
  * Licensed under the MIT License. See License.txt in the project root for license information.
  * ------------------------------------------------------------------------------------------ */
 
-import { WasmProcess, Readable, Writable } from '@vscode/wasm-wasi';
+import { WasmProcess, Readable, Writable, type Stdio } from '@vscode/wasm-wasi';
 import { Message, WriteableStreamMessageWriter, Disposable, Emitter, Event, ReadableStreamMessageReader, MessageTransports, RAL } from 'vscode-languageclient';
 
 
@@ -104,14 +104,21 @@ class WritableStreamImpl implements RAL.WritableStream {
 	}
 }
 
-export async function createProcess(name: string, module: WebAssembly.Module | Promise<WebAssembly.Module>, options?: ProcessOptions): Promise<WasmProcess>;
-export async function createProcess(name: string, module: WebAssembly.Module | Promise<WebAssembly.Module>, memory: WebAssembly.MemoryDescriptor | WebAssembly.Memory, options?: ProcessOptions): Promise<WasmProcess>;
-
-export async function createServerProcess(): Promise<MessageTransports> {
-
+export function createStdioOptions(): Stdio {
+	return {
+		in: {
+			kind: 'pipeIn',
+		},
+		out: {
+			kind: 'pipeOut'
+		},
+		err: {
+			kind: 'pipeOut'
+		}
+	};
 }
 
-export async function runServerProcess(process: WasmProcess, readable: Readable | undefined = process.stdout, writable: Writable | undefined = process.stdin): Promise<MessageTransports> {
+export async function startServer(process: WasmProcess, readable: Readable | undefined = process.stdout, writable: Writable | undefined = process.stdin): Promise<MessageTransports> {
 
 	if (readable === undefined || writable === undefined) {
 		throw new Error('Process created without streams or no streams provided.');

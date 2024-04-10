@@ -34,6 +34,9 @@
 		"vscode-languageclient": "10.0.0-next.3",
 		"@vscode/wasm-wasi": "0.13.0-pre.1"
 	},
+	"devDependencies": {
+		"@types/vscode": "1.88.0"
+	},
 
 	"scripts": {
 		"vscode:prepublish": "git clean -xfd . && npm install && npm run compile && npm run lint && npm run update:version && npm run esbuild",

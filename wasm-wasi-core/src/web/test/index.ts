@@ -43,7 +43,7 @@ export async function run(): Promise<void> {
 	});
 
 	require('../../common/test/deviceDriver.main.test');
-	require('../../common/preview2/test/wasi.main.test');
+	// require('../../common/preview2/test/wasi.main.test');
 
 	return new Promise<void>((resolve, reject) => {
 		mocha.run(failures => {

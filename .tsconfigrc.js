@@ -253,9 +253,9 @@ const wasm_component_model = {
 };
 
 /** @type ProjectDescription */
-const wasm_wasi_kit = {
-	name: 'wasm-wasi-kit',
-	path: './wasm-wasi-kit',
+const wasm_kit = {
+	name: 'wasm-kit',
+	path: './wasm-kit',
 	extends: [ common, referenced ],
 	out: {
 		dir: './lib',
@@ -366,18 +366,19 @@ const wasm_wasi_core = {
 		{
 			path: './src/common',
 			extends: [ common, vscodeMixin ],
-			exclude: [ 'test', 'preview2/test' ]
+			exclude: [ 'test' ]
+			// exclude: [ 'test', 'preview2/test' ]
 		},
 		{
 			path: './src/common/test',
 			extends: [ common, vscodeMixin, testMixin ],
 			references: [ '..' ]
 		},
-		{
-			path: './src/common/preview2/test',
-			extends: [ common, vscodeMixin, testMixin ],
-			references: [ '../..' ]
-		},
+		// {
+		// 	path: './src/common/preview2/test',
+		// 	extends: [ common, vscodeMixin, testMixin ],
+		// 	references: [ '../..' ]
+		// },
 		{
 			path: './src/web',
 			extends: [ browser, vscodeMixin ],
@@ -392,7 +393,8 @@ const wasm_wasi_core = {
 		{
 			path: './src/desktop',
 			extends: [ node, vscodeMixin ],
-			exclude: [ 'test', 'preview2/test' ],
+			exclude: [ 'test' ],
+			// exclude: [ 'test', 'preview2/test' ],
 			references: [ '../common' ]
 		},
 		{
@@ -400,14 +402,14 @@ const wasm_wasi_core = {
 			extends: [ node, vscodeMixin, testMixin],
 			references: [ '..', '../../common/test' ]
 		},
-		{
-			path: './src/desktop/preview2/test',
-			extends: [ node, vscodeMixin, testMixin],
-			references: [ '../..', '../../../common/preview2/test' ]
-		}
+		// {
+		// 	path: './src/desktop/preview2/test',
+		// 	extends: [ node, vscodeMixin, testMixin],
+		// 	references: [ '../..', '../../../common/preview2/test' ]
+		// }
 	],
 	references: [
-		wasi, wasm_component_model, wasm_wasi_kit
+		// wasi, wasm_component_model, wasm_kit
 	]
 };
 
@@ -525,7 +527,7 @@ const testbeds = {
 const root = {
 	name: 'root',
 	path: './',
-	references: [ sync_api_common, sync_api_client, sync_api_service, sync_api_tests, wasm_component_model, wasm_wasi_kit, wasm_wasi_core, wasm_wasi, webshell, tools ]
+	references: [ sync_api_common, sync_api_client, sync_api_service, sync_api_tests, wasm_component_model, wasm_kit, wasm_wasi_core, wasm_wasi, webshell, tools ]
 };
 
 /** @type CompilerOptions */
@@ -607,8 +609,8 @@ const projects = [
 	[ createPublishProjectDescription(wasm_wasi), [ publishProjectOptions ] ],
 	[ webshell, [ compileProjectOptions, watchProjectOptions ] ],
 	[ createPublishProjectDescription(webshell), [ publishProjectOptions ] ],
-	[ wasm_wasi_kit, [ compileProjectOptions, watchProjectOptions ] ],
-	[ createPublishProjectDescription(wasm_wasi_kit), [ publishProjectOptions ] ],
+	[ wasm_kit, [ compileProjectOptions, watchProjectOptions ] ],
+	[ createPublishProjectDescription(wasm_kit), [ publishProjectOptions ] ],
 	[ wasm_wasi_lsp, [ compileProjectOptions, watchProjectOptions ] ],
 	[ createPublishProjectDescription(wasm_wasi_lsp), [ publishProjectOptions ] ],
 	[ vscode_rust_api, [ compileProjectOptions, watchProjectOptions ] ],

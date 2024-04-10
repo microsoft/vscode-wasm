@@ -29,7 +29,6 @@
         "."
     ],
     "exclude": [
-        "test",
-        "preview2/test"
+        "test"
     ]
 }

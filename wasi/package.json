@@ -33,11 +33,11 @@
 	"scripts": {
 		"prepublishOnly": "echo \"⛔ Can only publish from a secure pipeline ⛔\" && node ../build/npm/fail",
 		"prepack": "npm run all:publish",
-		"compile": "node ../node_modules/typescript/lib/tsc.js -b ./tsconfig.json",
-		"compile:publish": "node ../node_modules/typescript/lib/tsc.js -b ./tsconfig.publish.json",
-		"watch": "node ../node_modules/typescript/lib/tsc.js -b ./tsconfig.watch.json -w",
-		"clean": "node ../node_modules/.bin/rimraf lib",
-		"lint": "node ../node_modules/eslint/bin/eslint.js --ext ts src",
+		"compile": "tsc -b ./tsconfig.json",
+		"compile:publish": "tsc -b ./tsconfig.publish.json",
+		"watch": "tsc -b ./tsconfig.watch.json -w",
+		"clean": "rimraf lib",
+		"lint": "eslint --ext ts src",
 		"all": "npm run clean && npm run compile && npm run lint",
 		"all:publish": "git clean -xfd . && npm install && npm run compile:publish && npm run lint",
 		"generate": "wasm-tools component wit --json ../dependencies/wasmtime/crates/wasi/wit | node ../wasm-component-model/lib/tools/main.js --outDir ./src --package wasi --stdin"

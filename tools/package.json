@@ -18,10 +18,10 @@
 	},
 	"homepage": "https://github.com/microsoft/vscode-wasm#readme",
 	"scripts": {
-		"clean": "node ../node_modules/.bin/rimraf lib",
-		"compile": "node ../node_modules/typescript/lib/tsc.js -b ./tsconfig.json",
-		"watch": "node ../node_modules/typescript/lib/tsc.js -b ./tsconfig.watch.json -w",
-		"lint": "node ../node_modules/eslint/bin/eslint.js --ext ts src"
+		"clean": "rimraf lib",
+		"compile": "tsc -b ./tsconfig.json",
+		"watch": "tsc -b ./tsconfig.watch.json -w",
+		"lint": "eslint --ext ts src"
 	},
 	"dependencies": {
 		"yargs": "^17.7.2"

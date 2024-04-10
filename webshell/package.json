@@ -22,7 +22,7 @@
 		"shell"
 	],
 	"engines": {
-		"vscode": "^1.78.0"
+		"vscode": "^1.88.0"
 	},
 	"extensionDependencies": [
 		"ms-vscode.wasm-wasi-core"
@@ -43,15 +43,15 @@
 		"@vscode/wasm-wasi": "0.13.0-pre.1"
 	},
 	"devDependencies": {
-		"@types/vscode": "1.78.0"
+		"@types/vscode": "1.88.0"
 	},
 	"scripts": {
 		"vscode:prepublish": "git clean -xfd . && npm install && npm run compile && npm run lint && npm run esbuild",
 		"build": "npm run compile",
-		"compile": "node ../node_modules/typescript/lib/tsc.js -b tsconfig.json",
-		"watch": "node ../node_modules/typescript/lib/tsc.js -b tsconfig.json -w",
-		"clean": "node ../node_modules/.bin/rimraf lib && node ../node_modules/.bin/rimraf dist",
-		"lint": "node ../node_modules/eslint/bin/eslint.js --ext ts src",
+		"compile": "tsc -b tsconfig.json",
+		"watch": "tsc -b tsconfig.json -w",
+		"clean": "rimraf lib && rimraf dist",
+		"lint": "eslint --ext ts src",
 		"esbuild": "node ./bin/esbuild.js"
 	}
 }
