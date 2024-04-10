@@ -20,9 +20,11 @@ const folders = [
 	'sync-api-tests',
 	'wasm-component-model',
 	'wasi',
+	'vscode-rust-api',
 	'wasm-wasi',
 	'wasm-wasi-kit',
 	'wasm-wasi-core',
+	'wasm-wasi-lsp',
 	'webshell',
 	'tools',
 	'testbeds'

@@ -1,6 +1,6 @@
 {
 	"name": "@vscode/wasm-wasi-kit",
-	"version": "0.0.1",
+	"version": "0.1.0",
 	"description": "Utilities operating on shared memory to implement the component model based wasi preview 2.",
 	"author": "Visual Studio Code Team",
 	"license": "MIT",

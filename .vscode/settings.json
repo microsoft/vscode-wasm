@@ -47,6 +47,7 @@
 		"./wasm-wasi-core",
 		"./wasm-wasi",
 		"./webshell",
+		"./wasm-wasi-lsp",
 		"./tools",
 		"./testbeds",
 		"./preview2"

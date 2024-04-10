@@ -104,6 +104,13 @@ class WritableStreamImpl implements RAL.WritableStream {
 	}
 }
 
+export async function createProcess(name: string, module: WebAssembly.Module | Promise<WebAssembly.Module>, options?: ProcessOptions): Promise<WasmProcess>;
+export async function createProcess(name: string, module: WebAssembly.Module | Promise<WebAssembly.Module>, memory: WebAssembly.MemoryDescriptor | WebAssembly.Memory, options?: ProcessOptions): Promise<WasmProcess>;
+
+export async function createServerProcess(): Promise<MessageTransports> {
+
+}
+
 export async function runServerProcess(process: WasmProcess, readable: Readable | undefined = process.stdout, writable: Writable | undefined = process.stdin): Promise<MessageTransports> {
 
 	if (readable === undefined || writable === undefined) {
