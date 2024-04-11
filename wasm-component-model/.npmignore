@@ -12,3 +12,4 @@ test/
 tsconfig*.json
 bin/**
 !bin/dir-dump
+js-typings.md
