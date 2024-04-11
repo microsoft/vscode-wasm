@@ -39,11 +39,14 @@
 	},
 
 	"scripts": {
-		"vscode:prepublish": "git clean -xfd . && npm install && npm run compile && npm run lint && npm run update:version && npm run esbuild",
-		"build": "npm run compile",
-		"compile": "tsc -b tsconfig.json",
-		"watch": "tsc -b tsconfig.json -w",
+		"prepublishOnly": "echo \"⛔ Can only publish from a secure pipeline ⛔\" && node ../build/npm/fail",
+		"prepack": "npm run all:publish",
+		"compile": "tsc -b ./tsconfig.json",
+		"compile:publish": "tsc -b ./tsconfig.publish.json",
+		"watch": "tsc -b ./tsconfig.watch.json -w",
 		"clean": "rimraf lib && rimraf dist",
-		"lint": "eslint --ext ts src"
+		"lint": "eslint --ext ts src",
+		"all": "npm run clean && npm run compile && npm run lint",
+		"all:publish": "git clean -xfd . && npm install && npm run compile:publish && npm run lint"
 	}
 }
