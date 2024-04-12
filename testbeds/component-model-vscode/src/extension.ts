@@ -103,18 +103,8 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
 	const filename = vscode.Uri.joinPath(context.extensionUri, 'target', 'wasm32-unknown-unknown', 'debug', 'calculator.wasm');
 	const bits = await vscode.workspace.fs.readFile(filename);
 	const module = await WebAssembly.compile(bits);
-	let memory: Memory | undefined;
 	const commandRegistry = new CommandRegistry();
-	const wasmContext: WasmContext = {
-		options: { encoding: 'utf-8' },
-		resources: new ResourceManagers.Default(),
-		getMemory: () => {
-			if (memory === undefined) {
-				throw new MemoryError(`Memory not yet initialized`);
-			}
-			return memory;
-		}
-	}
+	const wasmContext: WasmContext.Default = new WasmContext.Default();
 	let cachedTextDocuments: TextDocumentProxy[] | undefined;
 	const service: api.all.Imports = {
 		types: {
@@ -144,7 +134,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
 	}
 	const imports = api.all._.createImports(service, wasmContext)
 	const instance = await WebAssembly.instantiate(module, imports);
-	memory = Memory.createDefault(Date.now().toString(), instance.exports);
+	wasmContext.initialize(new Memory.Default(instance.exports));
 	const exports = api.all._.bindExports(instance.exports as api.all._.Exports, wasmContext);
 	commandRegistry.initialize(exports.callbacks.executeCommand);
 	exports.activate();

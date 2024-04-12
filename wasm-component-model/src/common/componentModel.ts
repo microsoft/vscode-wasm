@@ -3,6 +3,7 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 import RAL from './ral';
+import * as uuid from 'uuid';
 
 // Type arrays are store either little or big endian depending on the platform.
 // The component model requires little endian so we throw for now if the platform
@@ -578,47 +579,44 @@ export type MemoryExports = {
 	cabi_realloc: (orig: ptr, orig_size: size, orig_align: size, new_size: size) => ptr;
 };
 
-class DefaultMemory implements Memory {
-
-	public readonly id: string;
-	private readonly memory: MemoryExports['memory'];
-	private readonly cabi_realloc: MemoryExports['cabi_realloc'];
-
-	constructor(id: string, exports: MemoryExports) {
-		this.id = id;
-		this.memory = exports.memory;
-		this.cabi_realloc = exports.cabi_realloc;
-	}
-
-	public get buffer(): ArrayBuffer {
-		return this.memory.buffer;
-	}
-
-	alloc(align: Alignment, size: number): MemoryRange {
-		const ptr = this.cabi_realloc(0, 0, align, size);
-		return new MemoryRange(this, ptr, size);
-	}
-
-	realloc(range: MemoryRange, newSize: size): MemoryRange {
-		const ptr = this.cabi_realloc(range.ptr, range.size, range.alignment, newSize);
-		return new MemoryRange(this, ptr, newSize);
-	}
-
-	preAllocated(ptr: ptr, size: size): MemoryRange {
-		return new MemoryRange(this, ptr, size);
-	}
-	readonly(ptr: ptr, size: size): ReadonlyMemoryRange {
-		return new ReadonlyMemoryRange(this, ptr, size);
-	}
-}
-
 export namespace Memory {
 	export const Null = new NullMemory();
-	export function createDefault(id: string, exports: Record<string, any>): Memory {
-		if (exports.memory === undefined || exports.cabi_realloc === undefined) {
-			throw new MemoryError('The exports object must contain a memory object and a cabi_realloc function.');
+
+	export class Default implements Memory {
+
+		public readonly id: string;
+		private readonly memory: MemoryExports['memory'];
+		private readonly cabi_realloc: MemoryExports['cabi_realloc'];
+
+		constructor(exports: Record<string, any>, id?: string) {
+			if (exports.memory === undefined || exports.cabi_realloc === undefined) {
+				throw new MemoryError('The exports object must contain a memory object and a cabi_realloc function.');
+			}
+			this.id = id ?? uuid.v4();
+			this.memory = exports.memory;
+			this.cabi_realloc = exports.cabi_realloc;
 		}
-		return new DefaultMemory(id, exports as MemoryExports);
+
+		public get buffer(): ArrayBuffer {
+			return this.memory.buffer;
+		}
+
+		alloc(align: Alignment, size: number): MemoryRange {
+			const ptr = this.cabi_realloc(0, 0, align, size);
+			return new MemoryRange(this, ptr, size);
+		}
+
+		realloc(range: MemoryRange, newSize: size): MemoryRange {
+			const ptr = this.cabi_realloc(range.ptr, range.size, range.alignment, newSize);
+			return new MemoryRange(this, ptr, newSize);
+		}
+
+		preAllocated(ptr: ptr, size: size): MemoryRange {
+			return new MemoryRange(this, ptr, size);
+		}
+		readonly(ptr: ptr, size: size): ReadonlyMemoryRange {
+			return new ReadonlyMemoryRange(this, ptr, size);
+		}
 	}
 }
 
@@ -3351,6 +3349,34 @@ export namespace PackageType {
 
 export interface WasmContext extends ComponentModelContext {
 	getMemory(): Memory;
+}
+
+export namespace WasmContext {
+	export class Default implements WasmContext {
+
+		private memory: Memory | undefined;
+		public readonly options: Options;
+		public readonly resources: ResourceManagers;
+
+		constructor() {
+			this.options = { encoding: 'utf-8' };
+			this.resources = new ResourceManagers.Default();
+		}
+
+		public initialize(memory: Memory) {
+			if (this.memory !== undefined) {
+				throw new MemoryError(`Memory is already initialized.`);
+			}
+			this.memory = memory;
+		}
+
+		public getMemory() {
+			if (this.memory === undefined) {
+				throw new MemoryError(`Memory not yet initialized.`);
+			}
+			return this.memory;
+		}
+	}
 }
 
 export class Resource {

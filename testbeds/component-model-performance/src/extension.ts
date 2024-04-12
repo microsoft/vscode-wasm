@@ -27,17 +27,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
 	const filename = vscode.Uri.joinPath(context.extensionUri, 'target', 'wasm32-unknown-unknown', 'debug', 'test.wasm');
 	const bits = await vscode.workspace.fs.readFile(filename);
 	const module = await WebAssembly.compile(bits);
-	let memory: Memory | undefined;
-	const wasmContext: WasmContext = {
-		options: { encoding: 'utf-8' },
-		managers: ResourceManagers.createDefault(),
-		getMemory: () => {
-			if (memory === undefined) {
-				throw new MemoryError(`Memory not yet initialized`);
-			}
-			return memory;
-		}
-	}
+	const wasmContext: WasmContext.Default = new WasmContext.Default();
 	const service: example.test.Imports = {
 		window: {
 			TestResource: TestResourceImpl,
@@ -48,7 +38,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
 	}
 	const imports = example.test._.createImports(service, wasmContext)
 	const instance = await WebAssembly.instantiate(module, imports);
-	memory = Memory.createDefault(Date.now().toString(), instance.exports);
+	wasmContext.initialize(new Memory.Default(instance.exports));
 	const api = example.test._.bindExports(instance.exports as example.test._.Exports, wasmContext);
 
 	vscode.commands.registerCommand('testbed-component-model-performance.run', () => {

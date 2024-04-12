@@ -285,7 +285,7 @@ export async function activate(_context: vscode.ExtensionContext, module: WebAss
 	};
 	const imports = api.all._.createImports(service, wasmContext);
 	instance = await RAL().WebAssembly.instantiate(module, imports);
-	memory = Memory.createDefault(Date.now().toString(), instance.exports);
+	memory = new Memory.Default(instance.exports);
 	const $exports = api.all._.bindExports(instance.exports as api.all._.Exports, wasmContext);
 	commandRegistry.initialize($exports.callbacks.executeCommand);
 	const extension = instance.exports as Extension;
