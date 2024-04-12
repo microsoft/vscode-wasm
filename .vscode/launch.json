@@ -102,7 +102,8 @@
 				"--extensionDevelopmentPath=${workspaceRoot}/webshell"
 			],
 			"outFiles": [
-				"${workspaceRoot}/testbeds/lsp/client/out/**/*.js",
+				"${workspaceRoot}/testbeds/lsp-rust/client/out/**/*.js",
+				"${workspaceRoot}/wasm-wasi/lib/**/*.js",
 				"${workspaceRoot}/wasm-wasi-core/lib/**/*.js",
 				"${workspaceRoot}/webshell/lib/**/*.js"
 			],

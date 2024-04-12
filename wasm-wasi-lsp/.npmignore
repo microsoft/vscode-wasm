@@ -1,0 +1,15 @@
+.vscode/
+dist/
+lib/**/test/
+lib/common/samples/
+lib/**/*.map
+lib/**/*.tsbuildInfo
+src/
+test/
+.eslintrc*
+.eslintignore
+.mocharc*
+.gitignore
+tsconfig*.json
+bin/**
+!bin/dir-dump
