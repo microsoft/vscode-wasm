@@ -9,7 +9,8 @@ import * as uuid from 'uuid';
 
 import {
 	Memory, ReadonlyMemoryRange, Alignment, ComponentModelContext, ResourceManagers, ptr, u32, size, JType as _JType,
-	MemoryError, MemoryRange, type offset, ComponentModelTrap, type BaseMemoryRange, type ResourceHandle
+	MemoryError, MemoryRange, type offset, ComponentModelTrap, type BaseMemoryRange, type ResourceHandle,
+	HandleTables
 } from '@vscode/wasm-component-model';
 
 export interface SharedMemory extends Memory {
@@ -534,11 +535,13 @@ export abstract class SharedObject<T extends SharedObject.Properties = SharedObj
 		new: {
 			options: { encoding: 'utf-8' },
 			resources: new ResourceManagers.Default(),
+			handles: new HandleTables.Default(),
 			mode: SharedObjectContext.Mode.new
 		} satisfies SharedObjectContext,
 		existing: {
 			options: { encoding: 'utf-8' },
 			resources: new ResourceManagers.Default(),
+			handles: new HandleTables.Default(),
 			mode: SharedObjectContext.Mode.existing
 		} satisfies SharedObjectContext
 	};

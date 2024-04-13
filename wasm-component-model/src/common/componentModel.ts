@@ -115,6 +115,87 @@ export namespace ResourceManagers {
 	}
 }
 
+export interface HandleTable {
+	add(value: u32): ResourceHandle;
+	get(value: u32): ResourceHandle;
+	remove(handle: ResourceHandle): u32;
+}
+
+export namespace HandleTable {
+	export class Default implements HandleTable {
+
+		private readonly values: (u32 | undefined)[];
+		private readonly free: ResourceHandle[];
+
+		constructor() {
+			this.values = [];
+			this.free = [];
+		}
+
+		public get(value: ResourceHandle): u32 {
+			const handle = this.values[value];
+			if (handle === undefined) {
+				throw new ComponentModelTrap(`Unknown resource handle ${value}`);
+			}
+			return handle;
+		}
+
+		public add(value: u32): ResourceHandle {
+			if (this.free.length > 0) {
+				const handle = this.free.pop()!;
+				if (this.values[handle] !== undefined) {
+					throw new ComponentModelTrap(`Handle ${handle} already in use`);
+				}
+				this.values[handle] = value;
+				return handle;
+			} else {
+				const handle = this.values.length;
+				this.values.push(value);
+				return handle;
+			}
+		}
+
+		public remove(handle: ResourceHandle): u32 {
+			if (this.values[handle] === undefined) {
+				throw new ComponentModelTrap(`Unknown resource handle ${handle}`);
+			}
+			const value = this.values[handle]!;
+			this.values[handle] = undefined;
+			this.free.push(handle);
+			return value;
+		}
+	}
+}
+
+export interface HandleTables {
+	has(resourceId: string): boolean;
+	get(resourceId: string): HandleTable;
+}
+
+export namespace HandleTables {
+	export class Default implements HandleTables {
+
+		private readonly tables: Map<string, HandleTable>;
+
+		constructor() {
+			this.tables = new Map();
+		}
+
+		public has(resourceId: string): boolean {
+			return this.tables.has(resourceId);
+		}
+
+		public get(resourceId: string): HandleTable {
+			let table = this.tables.get(resourceId);
+			if (table === undefined) {
+				table = new HandleTable.Default();
+				this.tables.set(resourceId, table);
+			}
+			return table;
+		}
+	}
+}
+
 namespace BigInts {
 	const MAX_VALUE_AS_BIGINT = BigInt(Number.MAX_VALUE);
 	export function asNumber(value: bigint): number {
@@ -899,6 +980,7 @@ export enum ComponentModelTypeKind {
 export interface ComponentModelContext {
 	readonly options: Options;
 	readonly resources: ResourceManagers;
+	readonly handles: HandleTables;
 }
 
 export interface ComponentModelType<J> {
@@ -3357,10 +3439,12 @@ export namespace WasmContext {
 		private memory: Memory | undefined;
 		public readonly options: Options;
 		public readonly resources: ResourceManagers;
+		public readonly handles: HandleTables;
 
 		constructor() {
 			this.options = { encoding: 'utf-8' };
 			this.resources = new ResourceManagers.Default();
+			this.handles = new HandleTables.Default();
 		}
 
 		public initialize(memory: Memory) {

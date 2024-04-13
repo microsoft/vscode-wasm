@@ -4,7 +4,7 @@
  *--------------------------------------------------------------------------------------------*/
 import * as vscode from 'vscode';
 
-import { WasmContext, ResourceManagers, Memory, MemoryError, type ResourceHandle, ComponentModelTrap } from '@vscode/wasm-component-model';
+import { WasmContext, ResourceManagers, Memory, MemoryError, type ResourceHandle, ComponentModelTrap, HandleTables } from '@vscode/wasm-component-model';
 import { RAL } from '@vscode/wasm-kit';
 
 import { api } from './api';
@@ -213,6 +213,7 @@ export async function activate(_context: vscode.ExtensionContext, module: WebAss
 	const wasmContext: WasmContext = {
 		options: { encoding: 'utf-8' },
 		resources: new ResourceManagers.Default(),
+		handles: new HandleTables.Default(),
 		getMemory: () => {
 			if (memory === undefined) {
 				throw new MemoryError(`Memory not yet initialized`);

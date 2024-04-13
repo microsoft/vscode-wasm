@@ -4,7 +4,7 @@
  *--------------------------------------------------------------------------------------------*/
 import assert from 'assert';
 
-import { u32, Memory as IMemory, ptr, size, WasmContext, Alignment, Resource, ResourceManagers, MemoryRange, ReadonlyMemoryRange } from '../componentModel';
+import { u32, Memory as IMemory, ptr, size, WasmContext, Alignment, Resource, ResourceManagers, MemoryRange, ReadonlyMemoryRange, HandleTables } from '../componentModel';
 
 class Memory implements IMemory {
 
@@ -119,7 +119,8 @@ const resources = new ResourceManagers.Default();
 const context: WasmContext = {
 	getMemory: () => memory,
 	options: { encoding: 'utf-8' },
-	resources
+	resources,
+	handles: new HandleTables.Default()
 };
 
 suite('point', () => {
