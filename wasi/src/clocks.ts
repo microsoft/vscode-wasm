@@ -19,8 +19,8 @@ export namespace clocks {
 	 * 
 	 * It is intended for measuring elapsed time.
 	 */
-	export namespace MonotonicClock {
-		export type Pollable = io.Poll.Pollable;
+	export namespace monotonicClock {
+		export type Pollable = io.poll.Pollable;
 
 		/**
 		 * An instant in time, in nanoseconds. An instant is relative to an
@@ -62,10 +62,10 @@ export namespace clocks {
 		export type subscribeDuration = (when: Duration) => own<Pollable>;
 	}
 	export type MonotonicClock = {
-		now: MonotonicClock.now;
-		resolution: MonotonicClock.resolution;
-		subscribeInstant: MonotonicClock.subscribeInstant;
-		subscribeDuration: MonotonicClock.subscribeDuration;
+		now: monotonicClock.now;
+		resolution: monotonicClock.resolution;
+		subscribeInstant: monotonicClock.subscribeInstant;
+		subscribeDuration: monotonicClock.subscribeDuration;
 	};
 
 	/**
@@ -84,7 +84,7 @@ export namespace clocks {
 	 * 
 	 * It is intended for reporting the current date and time for humans.
 	 */
-	export namespace WallClock {
+	export namespace wallClock {
 		/**
 		 * A time and date in seconds plus nanoseconds.
 		 */
@@ -118,26 +118,26 @@ export namespace clocks {
 		export type resolution = () => Datetime;
 	}
 	export type WallClock = {
-		now: WallClock.now;
-		resolution: WallClock.resolution;
+		now: wallClock.now;
+		resolution: wallClock.resolution;
 	};
 }
 
 export namespace clocks {
-	export namespace MonotonicClock.$ {
-		export const Pollable = io.Poll.$.Pollable;
+	export namespace monotonicClock.$ {
+		export const Pollable = io.poll.$.Pollable;
 		export const Instant = $wcm.u64;
 		export const Duration = $wcm.u64;
-		export const now = new $wcm.FunctionType<clocks.MonotonicClock.now>('now', [], Instant);
-		export const resolution = new $wcm.FunctionType<clocks.MonotonicClock.resolution>('resolution', [], Duration);
-		export const subscribeInstant = new $wcm.FunctionType<clocks.MonotonicClock.subscribeInstant>('subscribe-instant',[
+		export const now = new $wcm.FunctionType<clocks.monotonicClock.now>('now', [], Instant);
+		export const resolution = new $wcm.FunctionType<clocks.monotonicClock.resolution>('resolution', [], Duration);
+		export const subscribeInstant = new $wcm.FunctionType<clocks.monotonicClock.subscribeInstant>('subscribe-instant',[
 			['when', Instant],
-		], new $wcm.OwnType<clocks.MonotonicClock.Pollable>(Pollable));
-		export const subscribeDuration = new $wcm.FunctionType<clocks.MonotonicClock.subscribeDuration>('subscribe-duration',[
+		], new $wcm.OwnType<clocks.monotonicClock.Pollable>(Pollable));
+		export const subscribeDuration = new $wcm.FunctionType<clocks.monotonicClock.subscribeDuration>('subscribe-duration',[
 			['when', Duration],
-		], new $wcm.OwnType<clocks.MonotonicClock.Pollable>(Pollable));
+		], new $wcm.OwnType<clocks.monotonicClock.Pollable>(Pollable));
 	}
-	export namespace MonotonicClock._ {
+	export namespace monotonicClock._ {
 		export const id = 'wasi:clocks/monotonic-clock@0.2.0' as const;
 		export const witName = 'monotonic-clock' as const;
 		export const types: Map<string, $wcm.GenericComponentModelType> = new Map<string, $wcm.GenericComponentModelType>([
@@ -168,15 +168,15 @@ export namespace clocks {
 		}
 	}
 
-	export namespace WallClock.$ {
-		export const Datetime = new $wcm.RecordType<clocks.WallClock.Datetime>([
+	export namespace wallClock.$ {
+		export const Datetime = new $wcm.RecordType<clocks.wallClock.Datetime>([
 			['seconds', $wcm.u64],
 			['nanoseconds', $wcm.u32],
 		]);
-		export const now = new $wcm.FunctionType<clocks.WallClock.now>('now', [], Datetime);
-		export const resolution = new $wcm.FunctionType<clocks.WallClock.resolution>('resolution', [], Datetime);
+		export const now = new $wcm.FunctionType<clocks.wallClock.now>('now', [], Datetime);
+		export const resolution = new $wcm.FunctionType<clocks.wallClock.resolution>('resolution', [], Datetime);
 	}
-	export namespace WallClock._ {
+	export namespace wallClock._ {
 		export const id = 'wasi:clocks/wall-clock@0.2.0' as const;
 		export const witName = 'wall-clock' as const;
 		export const types: Map<string, $wcm.GenericComponentModelType> = new Map<string, $wcm.GenericComponentModelType>([
@@ -207,7 +207,7 @@ export namespace clocks._ {
 	export const id = 'wasi:clocks@0.2.0' as const;
 	export const witName = 'clocks' as const;
 	export const interfaces: Map<string, $wcm.InterfaceType> = new Map<string, $wcm.InterfaceType>([
-		['MonotonicClock', MonotonicClock._],
-		['WallClock', WallClock._]
+		['monotonicClock', monotonicClock._],
+		['wallClock', wallClock._]
 	]);
 }

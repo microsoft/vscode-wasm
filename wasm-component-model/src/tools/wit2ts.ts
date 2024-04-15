@@ -158,7 +158,8 @@ type NameProvider = {
 	};
 
 	iface: {
-		name(iface: Interface): string;
+		typeName(iface: Interface): string;
+		moduleName(iface: Interface): string;
 		propertyName(iface: Interface): string;
 	};
 
@@ -249,8 +250,11 @@ namespace _TypeScriptNameProvider {
 	}
 
 	export namespace iface {
-		export function name(iface: Interface): string {
+		export function typeName(iface: Interface): string {
 			return _asTypeName(iface.name);
+		}
+		export function moduleName(iface: Interface): string {
+			return _asNamespaceName(iface.name);
 		}
 		export function propertyName(iface: Interface): string {
 			return _asPropertyName(iface.name);
@@ -320,6 +324,16 @@ namespace _TypeScriptNameProvider {
 		export function name(field: Field): string {
 			return _asPropertyName(field.name);
 		}
+	}
+
+	function _asNamespaceName(name: string): string {
+		const parts = name.split('-');
+		// In VS Code namespace names start with lower case
+		parts[0] = parts[0][0].toLowerCase() + parts[0].substring(1);
+		for (let i = 1; i < parts.length; i++) {
+			parts[i] = parts[i][0].toUpperCase() + parts[i].substring(1);
+		}
+		return parts.join('');
 	}
 
 	function _asTypeName(name: string): string {
@@ -405,7 +419,10 @@ namespace _WitNameProvider {
 	}
 
 	export namespace iface {
-		export function name(iface: Interface): string {
+		export function typeName(iface: Interface): string {
+			return toTs(iface.name);
+		}
+		export function moduleName(iface: Interface): string {
 			return toTs(iface.name);
 		}
 		export function propertyName(iface: Interface): string {
@@ -519,7 +536,7 @@ class Types {
 		if (type.owner !== null) {
 			if (Owner.isInterface(type.owner)) {
 				const iface = this.symbols.getInterface(type.owner.interface);
-				return `${this.symbols.interfaces.getFullyQualifiedName(iface)}.${name}`;
+				return `${this.symbols.interfaces.getFullyQualifiedModuleName(iface)}.${name}`;
 			} else {
 				throw new Error(`Unsupported owner ${type.owner}`);
 			}
@@ -539,12 +556,20 @@ class Interfaces {
 		this.nameProvider = nameProvider;
 	}
 
-	getFullyQualifiedName(iface: Interface | number, separator: string = '.'): string {
+	getFullyQualifiedModuleName(iface: Interface | number, separator: string = '.'): string {
 		if (typeof iface === 'number') {
 			iface = this.symbols.getInterface(iface);
 		}
 		const pkg = this.symbols.getPackage(iface.package);
-		return `${this.nameProvider.pack.name(pkg)}${separator}${this.nameProvider.iface.name(iface)}`;
+		return `${this.nameProvider.pack.name(pkg)}${separator}${this.nameProvider.iface.moduleName(iface)}`;
+	}
+
+	getFullyQualifiedTypeName(iface: Interface | number, separator: string = '.'): string {
+		if (typeof iface === 'number') {
+			iface = this.symbols.getInterface(iface);
+		}
+		const pkg = this.symbols.getPackage(iface.package);
+		return `${this.nameProvider.pack.name(pkg)}${separator}${this.nameProvider.iface.typeName(iface)}`;
 	}
 }
 
@@ -1792,7 +1817,7 @@ class PackageEmitter extends Emitter {
 		code.increaseIndent();
 		for (let i = 0; i < this.ifaceEmitters.length; i++) {
 			const ifaceEmitter = this.ifaceEmitters[i];
-			const name = nameProvider.iface.name(ifaceEmitter.iface);
+			const name = nameProvider.iface.moduleName(ifaceEmitter.iface);
 			code.push(`['${name}', ${name}._]${i < this.ifaceEmitters.length - 1 ? ',' : ''}`);
 		}
 		code.decreaseIndent();
@@ -2210,7 +2235,7 @@ class WorldEmitter extends Emitter {
 				code.push(`export const interfaces: Map<string, ${MetaModel.qualifier}.InterfaceType> = new Map<string, ${MetaModel.qualifier}.InterfaceType>([`);
 				code.increaseIndent();
 				for (const [index, emitter] of this.imports.interfaceEmitters.entries()) {
-					const name = nameProvider.iface.name(emitter.iface);
+					const name = nameProvider.iface.moduleName(emitter.iface);
 					if (this.pkg === emitter.getPkg()) {
 						code.push(`['${name}', ${name}._]${index < this.imports.interfaceEmitters.length - 1 ? ',' : ''}`);
 					} else {
@@ -2260,7 +2285,7 @@ class WorldEmitter extends Emitter {
 				code.push(`export const interfaces: Map<string, ${MetaModel.qualifier}.InterfaceType> = new Map<string, ${MetaModel.qualifier}.InterfaceType>([`);
 				code.increaseIndent();
 				for (const [index, emitter] of this.exports.interfaceEmitters.entries()) {
-					const name = nameProvider.iface.name(emitter.iface);
+					const name = nameProvider.iface.moduleName(emitter.iface);
 					if (this.pkg === emitter.getPkg()) {
 						code.push(`['${name}', ${name}._]${index < this.exports.interfaceEmitters.length - 1 ? ',' : ''}`);
 					} else {
@@ -2434,7 +2459,7 @@ class InterfaceEmitter extends Emitter {
 
 	public emitNamespace(code: Code): void {
 		const { nameProvider } = this.context;
-		const name = nameProvider.iface.name(this.iface);
+		const name = nameProvider.iface.moduleName(this.iface);
 		this.emitDocumentation(this.iface, code);
 		code.push(`export namespace ${name} {`);
 		code.increaseIndent();
@@ -2451,7 +2476,7 @@ class InterfaceEmitter extends Emitter {
 
 	public emitTypeDeclaration(code: Code): void {
 		const { nameProvider } = this.context;
-		const name = nameProvider.iface.name(this.iface);
+		const name = nameProvider.iface.typeName(this.iface);
 		code.push(`export type ${name} = {`);
 		code.increaseIndent();
 		for (const resource of this.resourceEmitters) {
@@ -2466,7 +2491,7 @@ class InterfaceEmitter extends Emitter {
 
 	public emitMetaModel(code: Code): void {
 		const { nameProvider, symbols } = this.context;
-		const name = nameProvider.iface.name(this.iface);
+		const name = nameProvider.iface.moduleName(this.iface);
 		code.push(`export namespace ${name}.$ {`);
 		code.increaseIndent();
 
@@ -2497,7 +2522,7 @@ class InterfaceEmitter extends Emitter {
 
 	public emitAPI(code: Code): void {
 		const { nameProvider } = this.context;
-		const name = nameProvider.iface.name(this.iface);
+		const name = nameProvider.iface.moduleName(this.iface);
 		const qualifiedTypeName = this.getFullQualifiedTypeName();
 		const types: string[] = [];
 		const resources: string[] = [];
@@ -2598,7 +2623,7 @@ class InterfaceEmitter extends Emitter {
 
 	public emitWorldMember(code: Code, scope: string): void {
 		const { symbols, nameProvider } = this.context;
-		const name = World.is(this.container) ? `${scope}.${nameProvider.iface.name(this.iface)}` : symbols.interfaces.getFullyQualifiedName(this.iface);
+		const name = World.is(this.container) ? `${scope}.${nameProvider.iface.typeName(this.iface)}` : symbols.interfaces.getFullyQualifiedTypeName(this.iface);
 		code.push(`${nameProvider.iface.propertyName(this.iface)}: ${name};`);
 	}
 
@@ -2606,7 +2631,7 @@ class InterfaceEmitter extends Emitter {
 		const { symbols } = this.context;
 		const [name, version] = this.getQualifierAndVersion(this.getPkg());
 		const property = `${name}/${this.iface.name}${version !== undefined ? `@${version}` : ''}`;
-		code.push(`'${property}': ${symbols.interfaces.getFullyQualifiedName(this.iface)}._.WasmInterface;`);
+		code.push(`'${property}': ${symbols.interfaces.getFullyQualifiedModuleName(this.iface)}._.WasmInterface;`);
 	}
 
 	public emitWorldWasmExport(code: Code): void {
@@ -2621,18 +2646,18 @@ class InterfaceEmitter extends Emitter {
 		const { symbols, nameProvider } = this.context;
 		const [name, version] = this.getQualifierAndVersion(this.getPkg());
 		const property = `${name}/${this.iface.name}${version !== undefined ? `@${version}` : ''}`;
-		code.push(`${result}['${property}'] = ${symbols.interfaces.getFullyQualifiedName(this.iface)}._.createImports(service.${nameProvider.iface.propertyName(this.iface)}, context);`);
+		code.push(`${result}['${property}'] = ${symbols.interfaces.getFullyQualifiedModuleName(this.iface)}._.createImports(service.${nameProvider.iface.propertyName(this.iface)}, context);`);
 	}
 
 	public emitWorldBindExport(code: Code, result: string): void {
 		const { symbols, nameProvider } = this.context;
-		const qualifier = `${symbols.interfaces.getFullyQualifiedName(this.iface)}._`;
+		const qualifier = `${symbols.interfaces.getFullyQualifiedModuleName(this.iface)}._`;
 		code.push(`${result}.${nameProvider.iface.propertyName(this.iface)} = ${qualifier}.bindExports(${qualifier}.filterExports(exports, context), context);`);
 	}
 
 	private getFullQualifiedTypeName(): string {
 		const { nameProvider } = this.context;
-		const ifaceName = nameProvider.iface.name(this.iface);
+		const ifaceName = nameProvider.iface.typeName(this.iface);
 		const pkg = nameProvider.pack.name(this.getPkg());
 		if (Package.is(this.container)) {
 			return `${pkg}.${ifaceName}`;
@@ -2707,12 +2732,12 @@ class MemberEmitter extends Emitter {
 
 	protected getOwnerName(owner: Interface | World): string {
 		const { nameProvider } = this.context;
-		return Interface.is(owner) ? nameProvider.iface.name(owner) : nameProvider.world.name(owner);
+		return Interface.is(owner) ? nameProvider.iface.moduleName(owner) : nameProvider.world.name(owner);
 	}
 
 	protected getContainerName(): string {
 		const { nameProvider } = this.context;
-		return Interface.is(this.container) ? nameProvider.iface.name(this.container) : nameProvider.world.name(this.container);
+		return Interface.is(this.container) ? nameProvider.iface.moduleName(this.container) : nameProvider.world.name(this.container);
 	}
 }
 
@@ -2880,20 +2905,20 @@ class TypeReferenceEmitter extends MemberEmitter {
 		const { nameProvider, symbols } = this.context;
 		if (World.is(scope) && Interface.is(reference)) {
 			if (scope.package === reference.package) {
-				return `${nameProvider.iface.name(reference)}`;
+				return `${nameProvider.iface.moduleName(reference)}`;
 			}
 		} else if (Interface.is(scope) && Interface.is(reference)) {
 			if (scope.package === reference.package) {
 				const referencedPackage = symbols.getPackage(reference.package);
 				const parts = nameProvider.pack.parts(referencedPackage);
-				return `${parts.name}.${nameProvider.iface.name(reference)}`;
+				return `${parts.name}.${nameProvider.iface.moduleName(reference)}`;
 			} else {
 				const typePackage = symbols.getPackage(scope.package);
 				const referencedPackage = symbols.getPackage(reference.package);
 				const typeParts = nameProvider.pack.parts(typePackage);
 				const referencedParts = nameProvider.pack.parts(referencedPackage);
 				if (typeParts.namespace === referencedParts.namespace) {
-					const referencedTypeName = nameProvider.iface.name(reference);
+					const referencedTypeName = nameProvider.iface.moduleName(reference);
 					code.imports.add(referencedParts.name, `./${referencedParts.name}`);
 					return `${referencedParts.name}.${referencedTypeName}`;
 				}
@@ -3476,7 +3501,7 @@ namespace ResourceEmitter {
 			const owner = symbols.resolveOwner(type.owner);
 			if (Interface.is(owner)) {
 				const pkg = symbols.getPackage(owner.package);
-				return `${nameProvider.pack.name(pkg)}.${nameProvider.iface.name(owner)}.${nameProvider.type.name(type)}`;
+				return `${nameProvider.pack.name(pkg)}.${nameProvider.iface.moduleName(owner)}.${nameProvider.type.name(type)}`;
 			} else {
 				return nameProvider.type.name(type);
 			}
