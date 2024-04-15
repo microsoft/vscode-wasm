@@ -1,0 +1,475 @@
+{
+  "worlds": [
+    {
+      "name": "test",
+      "imports": {
+        "interface-0": {
+          "interface": 0
+        }
+      },
+      "exports": {},
+      "package": 0
+    }
+  ],
+  "interfaces": [
+    {
+      "name": "types",
+      "types": {
+        "point": 0,
+        "point-resource": 1,
+        "point-option": 3,
+        "test-variant": 4,
+        "test-flags-short": 5,
+        "test-flags-long": 6
+      },
+      "functions": {
+        "call": {
+          "name": "call",
+          "kind": "freestanding",
+          "params": [
+            {
+              "name": "point",
+              "type": 0
+            }
+          ],
+          "results": [
+            {
+              "type": "u32"
+            }
+          ]
+        },
+        "call-option": {
+          "name": "call-option",
+          "kind": "freestanding",
+          "params": [
+            {
+              "name": "point",
+              "type": 7
+            }
+          ],
+          "results": [
+            {
+              "type": 2
+            }
+          ]
+        },
+        "[constructor]point-resource": {
+          "name": "[constructor]point-resource",
+          "kind": {
+            "constructor": 1
+          },
+          "params": [
+            {
+              "name": "x",
+              "type": "u32"
+            },
+            {
+              "name": "y",
+              "type": "u32"
+            }
+          ],
+          "results": [
+            {
+              "type": 9
+            }
+          ]
+        },
+        "[method]point-resource.get-x": {
+          "name": "[method]point-resource.get-x",
+          "kind": {
+            "method": 1
+          },
+          "params": [
+            {
+              "name": "self",
+              "type": 8
+            }
+          ],
+          "results": [
+            {
+              "type": "u32"
+            }
+          ]
+        },
+        "[method]point-resource.get-y": {
+          "name": "[method]point-resource.get-y",
+          "kind": {
+            "method": 1
+          },
+          "params": [
+            {
+              "name": "self",
+              "type": 8
+            }
+          ],
+          "results": [
+            {
+              "type": "u32"
+            }
+          ]
+        },
+        "[method]point-resource.add": {
+          "name": "[method]point-resource.add",
+          "kind": {
+            "method": 1
+          },
+          "params": [
+            {
+              "name": "self",
+              "type": 8
+            }
+          ],
+          "results": [
+            {
+              "type": "u32"
+            }
+          ]
+        },
+        "check-variant": {
+          "name": "check-variant",
+          "kind": "freestanding",
+          "params": [
+            {
+              "name": "value",
+              "type": 4
+            }
+          ],
+          "results": [
+            {
+              "type": 4
+            }
+          ]
+        },
+        "check-flags-short": {
+          "name": "check-flags-short",
+          "kind": "freestanding",
+          "params": [
+            {
+              "name": "value",
+              "type": 5
+            }
+          ],
+          "results": [
+            {
+              "type": 5
+            }
+          ]
+        },
+        "check-flags-long": {
+          "name": "check-flags-long",
+          "kind": "freestanding",
+          "params": [
+            {
+              "name": "value",
+              "type": 6
+            }
+          ],
+          "results": [
+            {
+              "type": 6
+            }
+          ]
+        }
+      },
+      "package": 0
+    }
+  ],
+  "types": [
+    {
+      "name": "point",
+      "kind": {
+        "record": {
+          "fields": [
+            {
+              "name": "x",
+              "type": "u32"
+            },
+            {
+              "name": "y",
+              "type": "u32"
+            }
+          ]
+        }
+      },
+      "owner": {
+        "interface": 0
+      }
+    },
+    {
+      "name": "point-resource",
+      "kind": "resource",
+      "owner": {
+        "interface": 0
+      }
+    },
+    {
+      "name": null,
+      "kind": {
+        "option": "u32"
+      },
+      "owner": null
+    },
+    {
+      "name": "point-option",
+      "kind": {
+        "record": {
+          "fields": [
+            {
+              "name": "x",
+              "type": 2
+            },
+            {
+              "name": "y",
+              "type": 2
+            }
+          ]
+        }
+      },
+      "owner": {
+        "interface": 0
+      }
+    },
+    {
+      "name": "test-variant",
+      "kind": {
+        "variant": {
+          "cases": [
+            {
+              "name": "empty",
+              "type": null
+            },
+            {
+              "name": "unsigned32",
+              "type": "u32"
+            },
+            {
+              "name": "unsigned64",
+              "type": "u64"
+            },
+            {
+              "name": "signed32",
+              "type": "s32"
+            },
+            {
+              "name": "signed64",
+              "type": "s64"
+            },
+            {
+              "name": "floating-point32",
+              "type": "f32"
+            },
+            {
+              "name": "floating-point64",
+              "type": "f64"
+            },
+            {
+              "name": "structure",
+              "type": 0
+            }
+          ]
+        }
+      },
+      "owner": {
+        "interface": 0
+      }
+    },
+    {
+      "name": "test-flags-short",
+      "kind": {
+        "flags": {
+          "flags": [
+            {
+              "name": "one"
+            },
+            {
+              "name": "two"
+            },
+            {
+              "name": "three"
+            },
+            {
+              "name": "four"
+            },
+            {
+              "name": "five"
+            },
+            {
+              "name": "six"
+            }
+          ]
+        }
+      },
+      "owner": {
+        "interface": 0
+      }
+    },
+    {
+      "name": "test-flags-long",
+      "kind": {
+        "flags": {
+          "flags": [
+            {
+              "name": "one"
+            },
+            {
+              "name": "two"
+            },
+            {
+              "name": "three"
+            },
+            {
+              "name": "four"
+            },
+            {
+              "name": "five"
+            },
+            {
+              "name": "six"
+            },
+            {
+              "name": "seven"
+            },
+            {
+              "name": "eight"
+            },
+            {
+              "name": "nine"
+            },
+            {
+              "name": "ten"
+            },
+            {
+              "name": "eleven"
+            },
+            {
+              "name": "twelve"
+            },
+            {
+              "name": "thirteen"
+            },
+            {
+              "name": "fourteen"
+            },
+            {
+              "name": "fifteen"
+            },
+            {
+              "name": "sixteen"
+            },
+            {
+              "name": "seventeen"
+            },
+            {
+              "name": "eighteen"
+            },
+            {
+              "name": "nineteen"
+            },
+            {
+              "name": "twenty"
+            },
+            {
+              "name": "twenty-one"
+            },
+            {
+              "name": "twenty-two"
+            },
+            {
+              "name": "twenty-three"
+            },
+            {
+              "name": "twenty-four"
+            },
+            {
+              "name": "twenty-five"
+            },
+            {
+              "name": "twenty-six"
+            },
+            {
+              "name": "twenty-seven"
+            },
+            {
+              "name": "twenty-eight"
+            },
+            {
+              "name": "twenty-nine"
+            },
+            {
+              "name": "thirty"
+            },
+            {
+              "name": "thirty-one"
+            },
+            {
+              "name": "thirty-two"
+            },
+            {
+              "name": "thirty-three"
+            },
+            {
+              "name": "thirty-four"
+            },
+            {
+              "name": "thirty-five"
+            },
+            {
+              "name": "thirty-six"
+            },
+            {
+              "name": "thirty-seven"
+            },
+            {
+              "name": "thirty-eight"
+            },
+            {
+              "name": "thirty-nine"
+            },
+            {
+              "name": "forty"
+            }
+          ]
+        }
+      },
+      "owner": {
+        "interface": 0
+      }
+    },
+    {
+      "name": null,
+      "kind": {
+        "option": 0
+      },
+      "owner": null
+    },
+    {
+      "name": null,
+      "kind": {
+        "handle": {
+          "borrow": 1
+        }
+      },
+      "owner": null
+    },
+    {
+      "name": null,
+      "kind": {
+        "handle": {
+          "own": 1
+        }
+      },
+      "owner": null
+    }
+  ],
+  "packages": [
+    {
+      "name": "vscode:test-data",
+      "interfaces": {
+        "types": 0
+      },
+      "worlds": {
+        "test": 0
+      }
+    }
+  ]
+}

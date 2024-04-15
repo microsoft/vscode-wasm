@@ -49,7 +49,7 @@ import TestVariant = Types.TestVariant;
 import TestFlagsShort = Types.TestFlagsShort;
 import TestFlagsLong = Types.TestFlagsLong;
 
-class PointResourceClass extends Resource implements Types.PointResource.Interface {
+class PointResourceClass extends Resource implements Types.PointResource {
 	constructor(public x: u32, public y: u32) {
 		super();
 	}
@@ -124,8 +124,8 @@ const context: WasmContext = {
 };
 
 suite('point', () => {
-	const host: Types._.WasmInterface = Types._.createImports(serviceImpl, context);
-	const service: Types = Types._.bindExports(host, context);
+	const host = Types._.imports.create(serviceImpl, context);
+	const service: Types = Types._.exports.loop(host, context);
 	test('host:call', () => {
 		assert.strictEqual(host.call(1, 2), 3);
 	});
@@ -137,8 +137,8 @@ suite('point', () => {
 suite ('point-resource', () => {
 	const moduleImplementation = Object.assign({}, serviceImpl);
 	moduleImplementation.PointResource = PointResourceClass;
-	const host: Types._.WasmInterface = Types._.createImports(serviceImpl, context);
-	const service = Types._.bindExports(host, context);
+	const host = Types._.imports.create(serviceImpl, context);
+	const service = Types._.exports.loop(host, context);
 	test('host:call', () => {
 		const pointResourceManager = context.resources.get('vscode:test-data/types/point-resource');
 		const point = host['[constructor]point-resource'](1, 2);
@@ -158,14 +158,14 @@ suite ('point-resource', () => {
 		assert.strictEqual(point.getX(), 1);
 		assert.strictEqual(point.getY(), 2);
 		assert.strictEqual(point.add(), 3);
-		point.$drop();
+		point.$destructor();
 		assert.throws(() => pointResourceManager.$resource(handle));
 	});
 });
 
 suite('option', () => {
 	test('host:call', () => {
-		const host: Types._.WasmInterface = Types._.createImports(serviceImpl, context);
+		const host = Types._.imports.create(serviceImpl, context);
 		const memory = context.getMemory();
 		const range = memory.alloc(4, 8);
 		host['call-option'](1, 1, 2, range.ptr);
@@ -175,8 +175,8 @@ suite('option', () => {
 });
 
 suite('variant', () => {
-	const host: Types._.WasmInterface = Types._.createImports(serviceImpl, context);
-	const service: Types = Types._.bindExports(host, context);
+	const host = Types._.imports.create(serviceImpl, context);
+	const service: Types = Types._.exports.bind(host, context);
 
 	test('empty', () => {
 		const empty = service.checkVariant(TestVariant.Empty());
@@ -234,8 +234,8 @@ suite('variant', () => {
 });
 
 suite('flags', () => {
-	const host: Types._.WasmInterface = Types._.createImports(serviceImpl, context);
-	const service: Types = Types._.bindExports(host, context);
+	const host = Types._.imports.create(serviceImpl, context);
+	const service: Types = Types._.exports.bind(host, context);
 	test('short', () => {
 		const flags: TestFlagsShort = TestFlagsShort.one;
 		const returned = service.checkFlagsShort(flags);

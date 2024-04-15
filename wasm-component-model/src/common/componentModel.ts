@@ -3406,11 +3406,11 @@ export namespace InterfaceType {
 export type WorldType = {
 	readonly id: string;
 	readonly witName: string;
-	readonly Exports: {
+	readonly exports: {
 		readonly functions?: Map<string, FunctionType<JFunction>>;
 		readonly interfaces?: Map<string, InterfaceType>;
 	};
-	readonly Imports: {
+	readonly imports: {
 		readonly functions?: Map<string, FunctionType<JFunction>>;
 		readonly interfaces?: Map<string, InterfaceType>;
 	};
@@ -3687,6 +3687,10 @@ export namespace Exports {
 			}
 		}
 		return result as unknown as T;
+	}
+
+	export function loop<T extends Exports>(functions: Map<string, FunctionType> | undefined, resources: ([string, ResourceType, ClassFactory<any>][]) | undefined, wasm: ParamWasmInterface, context: WasmContext): T {
+		return bind(functions, resources, wasm, context);
 	}
 
 	function createFunction(func: FunctionType<JFunction>, wasmFunction: WasmFunction, context: WasmContext): JFunction {
