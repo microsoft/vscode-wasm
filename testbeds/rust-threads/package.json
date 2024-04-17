@@ -27,6 +27,6 @@
 		"compile:ts": "node ../../node_modules/typescript/lib/tsc.js -b tsconfig.json",
 		"watch:ts": "node ../../node_modules/typescript/lib/tsc.js -b tsconfig.json -w",
 		"build:rust": "cargo build --target wasm32-wasi-preview1-threads",
-		"wasmtime": "wasmtime --wasm-features=threads --wasi-modules=experimental-wasi-threads target/wasm32-wasi-preview1-threads/debug/rust-threads.wasm"
+		"wasmtime": "wasmtime --dir .::/workspace --wasi threads=y --wasm threads=y target/wasm32-wasi-preview1-threads/debug/rust-threads.wasm"
 	}
 }

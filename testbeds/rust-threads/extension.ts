@@ -4,7 +4,7 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { commands, ExtensionContext, Uri, window, workspace } from 'vscode';
-import { Wasm } from '@vscode/wasm-wasi';
+import { Wasm, ProcessOptions } from '@vscode/wasm-wasi';
 
 export async function activate(context: ExtensionContext) {
 	const wasm: Wasm = await Wasm.load();
@@ -12,13 +12,13 @@ export async function activate(context: ExtensionContext) {
 		const pty = wasm.createPseudoterminal();
 		const terminal = window.createTerminal({ name: 'Rust', pty, isTransient: true });
 		terminal.show(true);
-		const options = {
+		const options: ProcessOptions = {
 			stdio: pty.stdio,
-			mapDir: true
+			mountPoints: [ { kind: 'workspaceFolder' } ]
 		};
 		const filename = Uri.joinPath(context.extensionUri, 'target', 'wasm32-wasi-preview1-threads', 'debug', 'rust-threads.wasm');
 		const module = await WebAssembly.compile(await workspace.fs.readFile(filename));
-		const process = await wasm.createProcess('test-rust', module, {initial: 17, maximum: 16384, shared: true }, options);
+		const process = await wasm.createProcess('test-rust', module, { initial: 17, maximum: 17, shared: true }, options);
 		process.run().catch(err => {
 			void window.showErrorMessage(err.message);
 		});
