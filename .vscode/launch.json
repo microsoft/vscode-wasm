@@ -105,6 +105,7 @@
 				"${workspaceRoot}/testbeds/lsp-rust/client/out/**/*.js",
 				"${workspaceRoot}/wasm-wasi/lib/**/*.js",
 				"${workspaceRoot}/wasm-wasi-core/lib/**/*.js",
+				"${workspaceRoot}/wasm-wasi-lsp/lib/**/*.js",
 				"${workspaceRoot}/webshell/lib/**/*.js"
 			],
 			"sourceMaps": true,

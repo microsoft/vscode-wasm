@@ -41,4 +41,5 @@ const node_modules = 'node_modules';
 
 	ln.softLink(path.join(root, 'rust-api'), path.join(root, 'testbeds', 'component-model-vscode-2', node_modules, '@vscode', 'rust-api'));
 
+	ln.softLink(path.join(root, 'wasm-wasi-lsp'), path.join(root, 'testbeds', 'lsp-rust', 'client', node_modules, '@vscode', 'wasm-wasi-lsp'));
 })();

@@ -28,65 +28,144 @@ export type Module2Interface<T> = {
 };
 
 export interface ResourceManager<T extends JInterface = JInterface> {
-	$handle(value: T): ResourceHandle<T>;
-	$resource(handle: ResourceHandle<T>): T;
-	$drop(handle: ResourceHandle<T>): void;
+	// Handle management
+	newHandle(rep: u32): ResourceHandle<T>;
+	getRepresentation(handle: ResourceHandle<T>): u32;
+	freeHandle(handle: ResourceHandle<T>): u32;
+
+	// Resource management
+	setProxyInfo(ctor: (new (handleTag: Symbol, handle: ResourceHandle<T>) => T), dtor: (self: ResourceHandle<T>) => void): void;
+	getResource(handle: ResourceHandle<T>): T;
+	registerResource(resource: T): ResourceHandle<T>;
+	registerProxy(proxy: T): ResourceHandle<T>;
+	removeResource(value: ResourceHandle<T> | T): void;
 }
 
 export namespace ResourceManager {
-	export function from<T extends JInterface = JInterface>(obj: any): ResourceManager<T> | undefined {
-		while (obj !== undefined) {
-			const self = obj as ResourceManager;
-			if (typeof self.$drop === 'function' && typeof self.$handle === 'function' && typeof self.$resource === 'function') {
-				return self as ResourceManager<T>;
-			}
-			obj = obj.$manager;
-		}
-		return undefined;
-	}
+	export const handleTag:Symbol = Symbol('handleTag');
 
-	export class Default<T extends JInterface = JInterface> implements ResourceManager<T> {
+	export class Default2<T extends JInterface = JInterface> implements ResourceManager<T> {
 
-		private readonly h2r: Map<ResourceHandle, T | undefined>;
 		private handleCounter: ResourceHandle;
+		private handleTable: Map<ResourceHandle<T>, u32>;
+		private h2r: Map<ResourceHandle<T>, WeakRef<T> | T | undefined>;
+		private finalizer: FinalizationRegistry<ResourceHandle>;
+		private ctor: (new (handleTag: Symbol, handle: ResourceHandle<T>) => T) | undefined;
+		private dtor: ((self: ResourceHandle<T>) => void) | undefined;
 
 		constructor() {
-			this.h2r = new Map();
 			this.handleCounter = 1;
+			this.handleTable = new Map();
+			this.h2r = new Map();
+			this.finalizer = new FinalizationRegistry((handle: ResourceHandle<T>) => {
+				this.h2r.delete(handle);
+				// A proxy was collected, remove the resource.
+				this.dtor!(handle);
+			});
 		}
 
-		public $handle(value: T): ResourceHandle {
-			if (value.$handle !== undefined) {
-				return value.$handle;
-			}
+		public newHandle(rep: u32): ResourceHandle<T> {
 			const handle = this.handleCounter++;
-			this.h2r.set(handle, value);
-			value.$handle = handle;
+			this.handleTable.set(handle, rep);
 			return handle;
 		}
 
-		public $resource(resource: ResourceHandle): T {
-			const value = this.h2r.get(resource);
-			if (value === undefined) {
-				throw new ComponentModelTrap(`Unknown resource handle ${resource}`);
+		public getRepresentation(handle: ResourceHandle<T>): u32 {
+			const rep = this.handleTable.get(handle);
+			if (rep === undefined) {
+				throw new ComponentModelTrap(`Unknown resource handle ${handle}`);
 			}
-			return value;
+			return rep;
 		}
 
-		public $drop(resource: ResourceHandle): void {
-			this.h2r.delete(resource);
+		public freeHandle(handle: ResourceHandle<T>): u32 {
+			const rep = this.handleTable.get(handle);
+			if (rep === undefined) {
+				throw new ComponentModelTrap(`Unknown resource handle ${handle}`);
+			}
+			this.handleTable.delete(handle);
+			return rep;
 		}
+
+		public setProxyInfo(ctor: (new (handleTag: Symbol, handle: ResourceHandle<T>) => T), dtor: (self: ResourceHandle<T>) => void): void {
+			this.ctor = ctor;
+			this.dtor = dtor;
+		}
+
+		public getResource(handle: ResourceHandle<T>): T {
+			const value = this.h2r.get(handle);
+			if (value !== undefined) {
+				if (value instanceof WeakRef) {
+					const unwrapped = value.deref();
+					if (unwrapped === undefined) {
+						throw new ComponentModelTrap(`Resource for handle ${handle} has been collected`);
+					}
+					return unwrapped;
+				} else {
+					return value;
+				}
+			}
+			// This handle represents a resource that lives on the
+			// WebAssembly side. Since we don't have a resource for it
+			// yet we create one on the fly.
+			if (this.handleTable.has(handle)) {
+				if (this.ctor === undefined) {
+					throw new ComponentModelTrap(`No proxy constructor set`);
+				}
+				const proxy = new this.ctor(handleTag, handle);
+				this.setProxy(handle, proxy);
+				return proxy;
+			} else {
+				throw new ComponentModelTrap(`Unknown resource handle ${handle}`);
+			}
+		}
+
+		public registerResource(resource: T): ResourceHandle<T> {
+			const handle = this.handleCounter++;
+			this.h2r.set(handle, resource);
+			return handle;
+		}
+
+		public registerProxy(proxy: T): ResourceHandle<T> {
+			return this.setProxy(this.handleCounter++, proxy);
+		}
+
+		public removeResource(value: ResourceHandle<T> | T): void {
+			const handle = typeof value === 'number' ? value : value.$handle;
+			const resource = this.h2r.get(handle);
+			if (resource === undefined) {
+				throw new ComponentModelTrap(`Unknown resource handle ${handle}`);
+			}
+			if (resource instanceof WeakRef) {
+				throw new ComponentModelTrap(`Proxy resources should not be removed manually. They are removed via the GC.`);
+			}
+			this.h2r.delete(handle);
+		}
+
+		private setProxy(handle: ResourceHandle, proxy: T): ResourceHandle<T> {
+			if (this.dtor === undefined) {
+				throw new ComponentModelTrap(`No proxy destructor set`);
+			}
+			this.h2r.set(handle, new WeakRef(proxy));
+			this.finalizer.register(proxy, handle, proxy);
+			return handle;
+		}
+	}
+
+	export function from<T extends JInterface = JInterface>(obj: any): ResourceManager<T> | undefined {
+		return obj.$manager as ResourceManager<T>;
 	}
 }
 
 export interface ResourceManagers {
 	has(id: string): boolean;
 	set(id: string, manager: ResourceManager): void;
-	get<T extends JInterface = JInterface>(id: string): ResourceManager<T>;
+	ensure<T extends JInterface = JInterface>(id: string): ResourceManager<T>;
+	get<T extends JInterface = JInterface>(id: string): ResourceManager<T> | undefined;
 }
 
 export namespace ResourceManagers {
-	export class Default {
+	export class Default implements ResourceManagers {
 
 		private readonly managers: Map<string, ResourceManager>;
 
@@ -105,12 +184,16 @@ export namespace ResourceManagers {
 			this.managers.set(id, manager);
 		}
 
-		public get<T extends JInterface = JInterface>(id: string): ResourceManager<T> {
+		public ensure<T extends JInterface = JInterface>(id: string): ResourceManager<T> {
 			const manager = this.managers.get(id);
 			if (manager === undefined) {
 				throw new ComponentModelTrap(`Resource manager ${id} not found.`);
 			}
 			return manager as ResourceManager<T>;
+		}
+
+		public get<T extends JInterface = JInterface>(id: string): ResourceManager<T> | undefined {
+			return this.managers.get(id) as ResourceManager<T>;
 		}
 	}
 }
@@ -2817,7 +2900,7 @@ export class ResultType<O extends JType | void, E extends JType | void = void> e
 }
 
 export interface JInterface {
-	$handle?: ResourceHandle;
+	$handle: ResourceHandle;
 }
 
 export type JType = number | bigint | string | boolean | JArray | JRecord | JVariantCase | JTuple | JEnum | JInterface | option<any> | undefined | void | result<any, any> | Int8Array | Int16Array | Int32Array | BigInt64Array | Uint8Array | Uint16Array | Uint32Array | BigUint64Array | Float32Array | Float64Array;
@@ -3014,9 +3097,9 @@ export class DestructorType<_T extends Function = Function> extends Callable {
 		if (typeof handle === 'bigint' || !$u32.valid(handle)) {
 			throw new ComponentModelTrap(`Object handle must be a number (u32), but got ${handle}.`);
 		}
-		const resource: any = resourceManager.$resource(handle);
+		const resource: any = resourceManager.getResource(handle);
 		resource['$drop'] !== undefined && resource['$drop']();
-		resourceManager.$drop(handle);
+		resourceManager.removeResource(handle);
 	}
 }
 
@@ -3167,12 +3250,12 @@ export class ResourceType<T extends JInterface = JInterface> implements Componen
 
 	public load(memory: ReadonlyMemoryRange, offset: offset, context: ComponentModelContext): T {
 		const handle = u32.load(memory, offset, context);
-		return context.resources.get(this.id).$resource(handle) as T;
+		return context.resources.ensure(this.id).getResource(handle) as T;
 	}
 
 	public liftFlat(memory: Memory, values: FlatValuesIter, context: ComponentModelContext): T {
 		const handle = u32.liftFlat(memory, values, context);
-		return context.resources.get(this.id).$resource(handle) as T;
+		return context.resources.ensure(this.id).getResource(handle) as T;
 	}
 
 	public alloc(memory: Memory): MemoryRange {
@@ -3180,12 +3263,12 @@ export class ResourceType<T extends JInterface = JInterface> implements Componen
 	}
 
 	public store(memory: MemoryRange, offset: offset, value: T, context: ComponentModelContext): void {
-		const handle = context.resources.get(this.id).$handle(value);
+		const handle = value.$handle;
 		u32.store(memory, offset, handle, context);
 	}
 
 	public lowerFlat(result: WasmType[], memory: Memory, value: T, context: ComponentModelContext): void {
-		const handle = context.resources.get(this.id).$handle(value);
+		const handle = value.$handle;
 		u32.lowerFlat(result, memory, handle, context);
 	}
 
@@ -3524,7 +3607,7 @@ export namespace Imports {
 				const clazz = service[resourceName] as GenericClass;
 				let resourceManager: ResourceManager;
 				if (context.resources.has(resource.id)) {
-					resourceManager = context.resources.get(resource.id);
+					resourceManager = context.resources.ensure(resource.id);
 				} else {
 					resourceManager = ResourceManager.from(clazz) ?? new ResourceManager.Default();
 					context.resources.set(resource.id, resourceManager);
@@ -3580,7 +3663,7 @@ export namespace Module {
 	export function createObjectModule<T>(resource: ResourceType, wasm: ParamWasmInterface, context: WasmContext): T {
 		let resourceManager: ResourceManager;
 		if (context.resources.has(resource.id)) {
-			resourceManager = context.resources.get(resource.id);
+			resourceManager = context.resources.ensure(resource.id);
 		} else {
 			resourceManager = new ResourceManager.Default();
 			context.resources.set(resource.id, resourceManager);

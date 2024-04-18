@@ -15,11 +15,11 @@
 		"@types/vscode": "1.88.0"
 	},
 	"dependencies": {
-		"vscode-languageclient": "10.0.0-next.3"
+		"vscode-languageclient": "10.0.0-next.5"
 	},
 	"scripts": {
 		"build": "npm run compile",
-		"compile": "node ../../../node_modules/typescript/lib/tsc.js -b tsconfig.json",
-		"watch": "node ../../../node_modules/typescript/lib/tsc.js -b tsconfig.json -w"
+		"compile": "tsc -b tsconfig.json",
+		"watch": "tsc -b tsconfig.json -w"
 	}
 }

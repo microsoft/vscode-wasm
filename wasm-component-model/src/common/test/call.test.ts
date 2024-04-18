@@ -50,6 +50,11 @@ import TestFlagsShort = Types.TestFlagsShort;
 import TestFlagsLong = Types.TestFlagsLong;
 
 class PointResourceClass extends Resource implements Types.PointResource {
+
+	public static new(x: u32, y: u32): Types.PointResource {
+		return new PointResourceClass(x, y);
+	}
+
 	constructor(public x: u32, public y: u32) {
 		super();
 	}
@@ -140,7 +145,7 @@ suite ('point-resource', () => {
 	const host = Types._.imports.create(serviceImpl, context);
 	const service = Types._.exports.loop(host, context);
 	test('host:call', () => {
-		const pointResourceManager = context.resources.get('vscode:test-data/types/point-resource');
+		const pointResourceManager = context.resources.ensure('vscode:test-data/types/point-resource');
 		const point = host['[constructor]point-resource'](1, 2);
 		assert.ok(pointResourceManager.$resource(point) !== undefined);
 		assert.strictEqual(host['[method]point-resource.get-x'](point), 1);
@@ -150,7 +155,7 @@ suite ('point-resource', () => {
 		assert.throws(() => pointResourceManager.$resource(point));
 	});
 	test('service:call', () => {
-		const pointResourceManager = context.resources.get('vscode:test-data/types/point-resource');
+		const pointResourceManager = context.resources.ensure('vscode:test-data/types/point-resource');
 		const point = new service.PointResource(1, 2);
 		const handle = point.$handle;
 		assert.ok(typeof handle === 'number');
