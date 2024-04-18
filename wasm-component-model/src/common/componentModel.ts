@@ -44,7 +44,7 @@ export interface ResourceManager<T extends JInterface = JInterface> {
 export namespace ResourceManager {
 	export const handleTag:Symbol = Symbol('handleTag');
 
-	export class Default2<T extends JInterface = JInterface> implements ResourceManager<T> {
+	export class Default<T extends JInterface = JInterface> implements ResourceManager<T> {
 
 		private handleCounter: ResourceHandle;
 		private handleTable: Map<ResourceHandle<T>, u32>;
@@ -3072,7 +3072,7 @@ export class ConstructorType<_T extends Function = Function> extends Callable {
 		super(witName, params, returnType);
 	}
 
-	public callHost(clazz: GenericClass, params: WasmType[], resourceManager: ResourceManager, context: WasmContext): WasmType | void {
+	public callHost(clazz: GenericClass, params: WasmType[], _resourceManager: ResourceManager, context: WasmContext): WasmType | void {
 		// We currently only support 'lower' mode for results > MAX_FLAT_RESULTS.
 		const returnFlatTypes = this.returnType === undefined ? 0 : this.returnType.flatTypes.length;
 		if (returnFlatTypes !== 1) {
@@ -3081,8 +3081,7 @@ export class ConstructorType<_T extends Function = Function> extends Callable {
 		const memory  = context.getMemory();
 		const jParams = this.liftParamValues(params, memory, context);
 		const obj: JInterface = new clazz(...jParams);
-		const handle = resourceManager.$handle(obj);
-		return handle;
+		return obj.$handle;
 	}
 }
 
@@ -3132,16 +3131,16 @@ export class MethodType<_T extends Function = Function> extends Callable {
 			throw new ComponentModelTrap(`Object handle must be a number (u32), but got ${handle}.`);
 		}
 		const [jParams, out] = this.getParamValuesForHostCall(params, context);
-		const resource = resourceManager.$resource(handle);
+		const resource = resourceManager.getResource(handle);
 		const memory  = context.getMemory();
 		const result: JType | void = (resource as any)[methodName](...jParams);
 		return this.lowerReturnValue(result, memory, context, out);
 	}
 
-	public callWasmMethod(params: JType[], wasmFunction: WasmFunction, resourceManager: ResourceManager, context: WasmContext): JType {
+	public callWasmMethod(params: JType[], wasmFunction: WasmFunction, _resourceManager: ResourceManager, context: WasmContext): JType {
 		const memory = context.getMemory();
 		const obj: JInterface = params.shift() as JInterface;
-		const handle = obj.$handle ?? resourceManager.$handle(obj);
+		const handle = obj.$handle;
 		const wasmValues = this.lowerParamValues(params, memory, context, undefined);
 		let resultRange: MemoryRange | undefined = undefined;
 		let result: WasmType | void;
