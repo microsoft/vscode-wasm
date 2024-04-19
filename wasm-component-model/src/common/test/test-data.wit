@@ -65,6 +65,8 @@ interface text {
 
 world test {
     import types;
+	import foo: func() -> u32;
 
+	export bar: func() -> u32;
 	export text;
 }

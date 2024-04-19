@@ -2155,13 +2155,33 @@ class WorldEmitter extends Emitter {
 				emitter.emitWorldWasmImport(code);
 			}
 			code.decreaseIndent();
-			code.push(`}`);
+			code.push(`};`);
 		}
 
 		if (this.imports.funcEmitters.length + this.imports.interfaceEmitters.length  === 0) {
 			code.push(`export const imports = {};`);
 			code.push(`export type Imports = {};`);
 		} else {
+			code.push(`export type Imports = {`);
+			code.increaseIndent();
+			if (this.imports.funcEmitters.length > 0) {
+				code.push(`'$root': $Root;`);
+			}
+			for (const emitter of importsAllInterfaceEmitters) {
+				if (!emitter.hasCode()) {
+					continue;
+				}
+				emitter.emitWorldWasmImport(code);
+			}
+			for (const emitter of exportsAllInterfaceEmitters) {
+				if (!emitter.hasResources()) {
+					continue;
+				}
+				emitter.emitWorldWasmExportImport(code);
+			}
+			code.decreaseIndent();
+			code.push(`};`);
+
 			code.push(`export namespace imports {`);
 			code.increaseIndent();
 
@@ -2193,47 +2213,12 @@ class WorldEmitter extends Emitter {
 
 			code.push(`export function create(service: ${name}.Imports, context: ${MetaModel.WasmContext}): Imports {`);
 			code.increaseIndent();
-			code.push(`const result: Imports = Object.create(null);`);
-			if (this.imports.funcEmitters.length > 0) {
-				code.push(`result['$root'] = ${MetaModel.Imports}.create<$Root>(Imports.functions, undefined, service, context);`);
-			}
-			for (const emitter of importsAllInterfaceEmitters) {
-				if (!emitter.hasCode()) {
-					continue;
-				}
-				emitter.emitWorldCreateImport(code, 'result');
-			}
-			for (const emitter of exportsAllInterfaceEmitters) {
-				if (!emitter.hasResources()) {
-					continue;
-				}
-				emitter.emitWorldCreateExportImport(code, 'result');
-			}
-			code.push(`return result;`);
+			code.push(`return ${MetaModel.Imports}.create<Imports>(_, service, context);`);
 			code.decreaseIndent();
 			code.push('}');
 
 			code.decreaseIndent();
 			code.push('}');
-			code.push(`export type Imports = {`);
-			code.increaseIndent();
-			if (this.imports.funcEmitters.length > 0) {
-				code.push(`'$root': $Root;`);
-			}
-			for (const emitter of importsAllInterfaceEmitters) {
-				if (!emitter.hasCode()) {
-					continue;
-				}
-				emitter.emitWorldWasmImport(code);
-			}
-			for (const emitter of exportsAllInterfaceEmitters) {
-				if (!emitter.hasResources()) {
-					continue;
-				}
-				emitter.emitWorldWasmExportImport(code);
-			}
-			code.decreaseIndent();
-			code.push(`};`);
 		}
 
 
@@ -2241,6 +2226,20 @@ class WorldEmitter extends Emitter {
 			code.push(`export const exports = {};`);
 			code.push(`export type Exports = {};`);
 		} else {
+			code.push(`export type Exports = {`);
+			code.increaseIndent();
+			for (const emitter of this.exports.funcEmitters) {
+				emitter.emitWorldWasmExport(code);
+			}
+			for (const emitter of exportsAllInterfaceEmitters) {
+				if (!emitter.hasCode()) {
+					continue;
+				}
+				emitter.emitWorldWasmExport(code);
+			}
+			code.decreaseIndent();
+			code.push(`};`);
+
 			code.push(`export namespace exports {`);
 			code.increaseIndent();
 
@@ -2272,35 +2271,12 @@ class WorldEmitter extends Emitter {
 
 			code.push(`export function bind(exports: Exports, context: ${MetaModel.WasmContext}): ${name}.Exports {`);
 			code.increaseIndent();
-			code.push(`const result: ${name}.Exports = Object.create(null);`);
-			if (this.exports.funcEmitters.length > 0) {
-				code.push(`Object.assign(result, ${MetaModel.Exports}.bind(Exports.functions, undefined, exports, context));`);
-			}
-			for (const emitter of exportsAllInterfaceEmitters) {
-				if (!emitter.hasCode()) {
-					continue;
-				}
-				emitter.emitWorldBindExport(code, 'result');
-			}
-			code.push(`return result;`);
+			code.push(`return ${MetaModel.Exports}.bind<${name}.Exports>(_, exports, context);`);
 			code.decreaseIndent();
 			code.push('}');
 
 			code.decreaseIndent();
 			code.push('}');
-			code.push(`export type Exports = {`);
-			code.increaseIndent();
-			for (const emitter of this.exports.funcEmitters) {
-				emitter.emitWorldWasmExport(code);
-			}
-			for (const emitter of exportsAllInterfaceEmitters) {
-				if (!emitter.hasCode()) {
-					continue;
-				}
-				emitter.emitWorldWasmExport(code);
-			}
-			code.decreaseIndent();
-			code.push(`};`);
 		}
 
 
@@ -2449,7 +2425,6 @@ class InterfaceEmitter extends Emitter {
 	public emitAPI(code: Code): void {
 		const { nameProvider } = this.context;
 		const name = nameProvider.iface.moduleName(this.iface);
-		const qualifiedTypeName = this.getFullQualifiedTypeName();
 		const types: string[] = [];
 		const resources: string[] = [];
 		for (const type of this.typeEmitters) {
@@ -2464,6 +2439,9 @@ class InterfaceEmitter extends Emitter {
 		code.increaseIndent();
 		code.push(`export const id = '${this.getId()}' as const;`);
 		code.push(`export const witName = '${this.iface.name}' as const;`);
+		for (const emitter of this.resourceEmitters) {
+			emitter.emitAPI(code);
+		}
 		if (types.length > 0) {
 			code.push(`export const types: Map<string, ${MetaModel.qualifier}.GenericComponentModelType> = new Map<string, ${MetaModel.qualifier}.GenericComponentModelType>([`);
 			code.increaseIndent();
@@ -2484,17 +2462,14 @@ class InterfaceEmitter extends Emitter {
 			code.push(']);');
 		}
 		if (resources.length > 0) {
-			const mapType = `Map<string, ${MetaModel.qualifier}.ResourceType>`;
+			const mapType = `Map<string, { resource: ${MetaModel.qualifier}.ResourceType; factory: ${MetaModel.ClassFactory}}>`;
 			code.push(`export const resources: ${mapType} = new ${mapType}([`);
 			code.increaseIndent();
-			for (let i = 0; i < resources.length; i++) {
-				code.push(`['${resources[i]}', $.${resources[i]}]${i < resources.length - 1 ? ',' : ''}`);
+			for (const [index, resource] of resources.entries()) {
+				code.push(`['${resource}', { resource: $.${resource}, factory: ${resource}.exports.Class }]${index < resources.length - 1 ? ',' : ''}`);
 			}
 			code.decreaseIndent();
 			code.push(']);');
-		}
-		for (const emitter of this.resourceEmitters) {
-			emitter.emitAPI(code);
 		}
 		code.push(`export type WasmInterface = {`);
 		code.increaseIndent();
@@ -2515,14 +2490,6 @@ class InterfaceEmitter extends Emitter {
 			} else {
 				code.push('export WasmInterface = _.WasmInterface;');
 			}
-
-			const funcParam = this.functionEmitters.length > 0 ? 'functions': undefined;
-			const resourceParam = this.resourceEmitters.length > 0 ? 'resources': undefined;
-			code.push(`export function create(service: ${qualifiedTypeName}, context: ${MetaModel.WasmContext}): WasmInterface {`);
-			code.increaseIndent();
-			code.push(`return $wcm.Imports.create<WasmInterface>(${funcParam}, ${resourceParam}, service, context);`);
-			code.decreaseIndent();
-			code.push('}');
 			code.decreaseIndent();
 			code.push('}');
 
@@ -2538,36 +2505,11 @@ class InterfaceEmitter extends Emitter {
 				code.push('export WasmInterface = _.WasmInterface;');
 			}
 
-			code.push(`export function filter(exports: object, context: ${MetaModel.WasmContext}): WasmInterface {`);
-			code.increaseIndent();
-			const version = this.hasVersion() ? `${nameProvider.pack.name(this.getPkg())}._.version` : `undefined`;
-			code.push(`return $wcm.Exports.filter<WasmInterface>(exports, ${funcParam}, ${resourceParam}, id, ${version}, context);`);
-			code.decreaseIndent();
-			code.push('}');
-			const resources: string[] = [];
-			for (const emitter of this.resourceEmitters) {
-				const resourceName = nameProvider.type.name(emitter.resource);
-				resources.push(`['${resourceName}', $.${resourceName}, ${resourceName}.exports.Class]`);
-			}
-			code.push(`const resourceData: [string, ${MetaModel.ResourceType}, ${MetaModel.ClassFactory}][] = [${resources.join(', ')}];`);
-			code.push(`export function bind(wasmInterface: WasmInterface, context: ${MetaModel.WasmContext}): ${qualifiedTypeName} {`);
-			code.increaseIndent();
-			code.push(`return $wcm.Exports.bind<${qualifiedTypeName}>(${funcParam}, resourceData, wasmInterface, context);`);
-			code.decreaseIndent();
-			code.push(`}`);
-
-			code.push(`export function loop(wasmInterface: _.imports.WasmInterface, context: ${MetaModel.WasmContext}): ${qualifiedTypeName} {`);
-			code.increaseIndent();
-			code.push(`return $wcm.Exports.loop<${qualifiedTypeName}>(${funcParam}, resourceData, wasmInterface, context);`);
-			code.decreaseIndent();
-			code.push(`}`);
-
 			code.decreaseIndent();
 			code.push(`}`);
 		}
-
 		code.decreaseIndent();
-		code.push('}');
+		code.push(`}`);
 	}
 
 	public emitImport(code: Code): void {

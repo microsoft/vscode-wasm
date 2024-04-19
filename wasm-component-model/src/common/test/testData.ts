@@ -222,9 +222,11 @@ export namespace testData {
 	};
 	export namespace test {
 		export type Imports = {
+			foo: () => u32;
 			types: testData.Types;
 		};
 		export type Exports = {
+			bar: () => u32;
 			text: testData.Text;
 		};
 	}
@@ -272,24 +274,6 @@ export namespace testData {
 	export namespace Types._ {
 		export const id = 'vscode:test-data/types' as const;
 		export const witName = 'types' as const;
-		export const types: Map<string, $wcm.GenericComponentModelType> = new Map<string, $wcm.GenericComponentModelType>([
-			['Point', $.Point],
-			['PointOption', $.PointOption],
-			['TestVariant', $.TestVariant],
-			['TestFlagsShort', $.TestFlagsShort],
-			['TestFlagsLong', $.TestFlagsLong],
-			['PointResource', $.PointResource]
-		]);
-		export const functions: Map<string, $wcm.FunctionType> = new Map([
-			['call', $.call],
-			['callOption', $.callOption],
-			['checkVariant', $.checkVariant],
-			['checkFlagsShort', $.checkFlagsShort],
-			['checkFlagsLong', $.checkFlagsLong]
-		]);
-		export const resources: Map<string, $wcm.ResourceType> = new Map<string, $wcm.ResourceType>([
-			['PointResource', $.PointResource]
-		]);
 		export namespace PointResource {
 			export type WasmInterface = {
 				'[constructor]point-resource': (x: i32, y: i32) => i32;
@@ -346,6 +330,24 @@ export namespace testData {
 				}
 			}
 		}
+		export const types: Map<string, $wcm.GenericComponentModelType> = new Map<string, $wcm.GenericComponentModelType>([
+			['Point', $.Point],
+			['PointOption', $.PointOption],
+			['TestVariant', $.TestVariant],
+			['TestFlagsShort', $.TestFlagsShort],
+			['TestFlagsLong', $.TestFlagsLong],
+			['PointResource', $.PointResource]
+		]);
+		export const functions: Map<string, $wcm.FunctionType> = new Map([
+			['call', $.call],
+			['callOption', $.callOption],
+			['checkVariant', $.checkVariant],
+			['checkFlagsShort', $.checkFlagsShort],
+			['checkFlagsLong', $.checkFlagsLong]
+		]);
+		export const resources: Map<string, { resource: $wcm.ResourceType; factory: $wcm.ClassFactory<any>}> = new Map<string, { resource: $wcm.ResourceType; factory: $wcm.ClassFactory<any>}>([
+			['PointResource', { resource: $.PointResource, factory: PointResource.exports.Class }]
+		]);
 		export type WasmInterface = {
 			'call': (point_x: i32, point_y: i32) => i32;
 			'call-option': (point_case: i32, point_option_x: i32, point_option_y: i32, result: ptr<u32 | undefined>) => void;
@@ -355,22 +357,9 @@ export namespace testData {
 		};
 		export namespace imports {
 			export type WasmInterface = _.WasmInterface & PointResource.imports.WasmInterface;
-			export function create(service: testData.Types, context: $wcm.WasmContext): WasmInterface {
-				return $wcm.Imports.create<WasmInterface>(functions, resources, service, context);
-			}
 		}
 		export namespace exports {
 			export type WasmInterface = _.WasmInterface & PointResource.exports.WasmInterface;
-			export function filter(exports: object, context: $wcm.WasmContext): WasmInterface {
-				return $wcm.Exports.filter<WasmInterface>(exports, functions, resources, id, undefined, context);
-			}
-			const resourceData: [string, $wcm.ResourceType, $wcm.ClassFactory<any>][] = [['PointResource', $.PointResource, PointResource.exports.Class]];
-			export function bind(wasmInterface: WasmInterface, context: $wcm.WasmContext): testData.Types {
-				return $wcm.Exports.bind<testData.Types>(functions, resourceData, wasmInterface, context);
-			}
-			export function loop(wasmInterface: _.imports.WasmInterface, context: $wcm.WasmContext): testData.Types {
-				return $wcm.Exports.loop<testData.Types>(functions, resourceData, wasmInterface, context);
-			}
 		}
 	}
 
@@ -388,12 +377,6 @@ export namespace testData {
 	export namespace Text._ {
 		export const id = 'vscode:test-data/text' as const;
 		export const witName = 'text' as const;
-		export const types: Map<string, $wcm.GenericComponentModelType> = new Map<string, $wcm.GenericComponentModelType>([
-			['Position', $.Position]
-		]);
-		export const resources: Map<string, $wcm.ResourceType> = new Map<string, $wcm.ResourceType>([
-			['Position', $.Position]
-		]);
 		export namespace Position {
 			export type WasmInterface = {
 				'[constructor]position': (line: i32, character: i32) => i32;
@@ -407,11 +390,6 @@ export namespace testData {
 			};
 			export namespace imports {
 				export type WasmInterface = Position.WasmInterface & { '[resource-drop]position': (self: i32) => void };
-				export type HandleTable = {
-					'[resource-new]position': (rep: i32) => i32;
-					'[resource-rep]position': (rep: i32) => i32;
-					'[resource-drop]position': (handle: i32) => i32;
-				};
 			}
 			export namespace exports {
 				export type WasmInterface = Position.WasmInterface & { '[dtor]position': (self: i32) => void };
@@ -450,59 +428,65 @@ export namespace testData {
 				}
 			}
 		}
+		export const types: Map<string, $wcm.GenericComponentModelType> = new Map<string, $wcm.GenericComponentModelType>([
+			['Position', $.Position]
+		]);
+		export const resources: Map<string, { resource: $wcm.ResourceType; factory: $wcm.ClassFactory<any>}> = new Map<string, { resource: $wcm.ResourceType; factory: $wcm.ClassFactory<any>}>([
+			['Position', { resource: $.Position, factory: Position.exports.Class }]
+		]);
 		export type WasmInterface = {
 		};
 		export namespace imports {
 			export type WasmInterface = _.WasmInterface & Position.imports.WasmInterface;
-			export function create(service: testData.Text, context: $wcm.WasmContext): WasmInterface {
-				return $wcm.Imports.create<WasmInterface>(undefined, resources, service, context);
-			}
 		}
 		export namespace exports {
 			export type WasmInterface = _.WasmInterface & Position.exports.WasmInterface;
-			export function filter(exports: object, context: $wcm.WasmContext): WasmInterface {
-				return $wcm.Exports.filter<WasmInterface>(exports, undefined, resources, id, undefined, context);
-			}
-			const resourceData: [string, $wcm.ResourceType, $wcm.ClassFactory<any>][] = [['Position', $.Position, Position.exports.Class]];
-			export function bind(wasmInterface: WasmInterface, context: $wcm.WasmContext): testData.Text {
-				return $wcm.Exports.bind<testData.Text>(undefined, resourceData, wasmInterface, context);
-			}
-			export function loop(wasmInterface: _.imports.WasmInterface, context: $wcm.WasmContext): testData.Text {
-				return $wcm.Exports.loop<testData.Text>(undefined, resourceData, wasmInterface, context);
-			}
 		}
 	}
 	export namespace test.$ {
+		export namespace Imports {
+			export const foo = new $wcm.FunctionType<test.Imports['foo']>('foo', [], $wcm.u32);
+		}
+		export namespace Exports {
+			export const bar = new $wcm.FunctionType<test.Exports['bar']>('bar', [], $wcm.u32);
+		}
 	}
 	export namespace test._ {
 		export const id = 'vscode:test-data/test' as const;
 		export const witName = 'test' as const;
+		export type $Root = {
+			'foo': () => i32;
+		};
+		export type Imports = {
+			'$root': $Root;
+			'vscode:test-data/types': testData.Types._.imports.WasmInterface;
+			'vscode:test-data/text': testData.Text._.imports.WasmInterface;
+		};
 		export namespace imports {
+			export const functions: Map<string, $wcm.FunctionType> = new Map([
+				['foo', $.Imports.foo]
+			]);
 			export const interfaces: Map<string, $wcm.InterfaceType> = new Map<string, $wcm.InterfaceType>([
 				['Types', Types._]
 			]);
 			export function create(service: test.Imports, context: $wcm.WasmContext): Imports {
-				const result: Imports = Object.create(null);
-				result['vscode:test-data/types'] = testData.Types._.imports.create(service.types, context);
-				result['[export]vscode:test-data/text'] = testData.Text._.imports.create(service.text, context);
-				return result;
+				return $wcm.Imports.create<Imports>(_, service, context);
 			}
 		}
-		export type Imports = {
-			'vscode:test-data/types': testData.Types._.imports.WasmInterface;
+		export type Exports = {
+			'bar': () => i32;
 		};
 		export namespace exports {
+			export const functions: Map<string, $wcm.FunctionType> = new Map([
+				['bar', $.Exports.bar]
+			]);
 			export const interfaces: Map<string, $wcm.InterfaceType> = new Map<string, $wcm.InterfaceType>([
 				['Text', Text._]
 			]);
 			export function bind(exports: Exports, context: $wcm.WasmContext): test.Exports {
-				const result: test.Exports = Object.create(null);
-				result.text = testData.Text._.exports.bind(testData.Text._.exports.filter(exports, context), context);
-				return result;
+				return $wcm.Exports.bind<test.Exports>(_, exports, context);
 			}
 		}
-		export type Exports = {
-		};
 	}
 }
 

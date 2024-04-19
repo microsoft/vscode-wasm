@@ -152,8 +152,8 @@ export namespace ResourceManager {
 		}
 	}
 
-	export function from<T extends JInterface = JInterface>(obj: any): ResourceManager<T> | undefined {
-		return obj.$manager as ResourceManager<T>;
+	export function from<T extends JInterface = JInterface>(obj: any | undefined): ResourceManager<T> | undefined {
+		return obj?.$manager as ResourceManager<T>;
 	}
 }
 
@@ -3394,7 +3394,7 @@ export type InterfaceType = {
 	readonly witName: string;
 	readonly types?: Map<string, GenericComponentModelType>;
 	readonly functions?: Map<string, FunctionType<JFunction>>;
-	readonly resources?: Map<string, ResourceType>;
+	readonly resources?: Map<string, { resource: ResourceType; factory: ClassFactory<any> }>;
 };
 export namespace InterfaceType {
 	export function is(value: any): value is InterfaceType {
@@ -3500,9 +3500,51 @@ export type WasmInterfaces = {
 	readonly [key: string]: WasmInterface;
 };
 
+function getResourceManager(resource: ResourceType, clazz: GenericClass | undefined, context: WasmContext): ResourceManager {
+	let resourceManager: ResourceManager;
+	if (context.resources.has(resource.id)) {
+		resourceManager = context.resources.ensure(resource.id);
+	} else {
+		resourceManager = ResourceManager.from(clazz) ?? new ResourceManager.Default();
+		context.resources.set(resource.id, resourceManager);
+	}
+	return resourceManager;
+}
+
 export type Imports = ParamWasmInterface;
+export type WorldImports = { [key: string]: ParamWasmInterface };
+export type WorldServiceInterface = { [key: string]: ParamServiceFunction | ParamServiceInterface };
 export namespace Imports {
-	export function create<T extends Imports>(functions: Map<string, FunctionType<JFunction>> | undefined, resources: Map<string, ResourceType> | undefined, service: ParamServiceInterface, context: WasmContext): T {
+	export function create<T extends WorldImports>(world: WorldType, service: WorldServiceInterface, context: WasmContext): T {
+		const packageName = world.id.substring(0, world.id.indexOf('/'));
+		const result: { [key: string]: ParamWasmInterface }  = Object.create(null);
+		if (world.imports.functions !== undefined) {
+			result['$root'] = doCreate(world.imports.functions, undefined, service as ParamServiceInterface, context);
+		}
+		if (world.imports.interfaces !== undefined) {
+			for (const [name, iface] of world.imports.interfaces) {
+				result[`${packageName}/${iface.id}`] = doCreate(iface.functions, iface.resources, service[name] as ParamServiceInterface, context);
+			}
+		}
+		if (world.exports.interfaces !== undefined) {
+			for (const iface of world.exports.interfaces.values()) {
+				if (iface.resources === undefined) {
+					continue;
+				}
+				for (const { resource } of iface.resources.values()) {
+					const manager = getResourceManager(resource, undefined, context);
+					const exports = Object.create(null);
+					exports[`[resource-new]${resource.id}`] = (rep: u32) => manager.newHandle(rep);
+					exports[`[resource-rep]${resource.id}`] = (handle: u32) => manager.getRepresentation(handle);
+					exports[`[resource-drop]${resource.id}`] = (handle: u32) => manager.freeHandle(handle);
+					result[`[export]${packageName}/${iface.id}`] = exports;
+				}
+			}
+		}
+		return result as T;
+	}
+
+	export function doCreate<T extends Imports>(functions: Map<string, FunctionType<JFunction>> | undefined, resources: Map<string, { resource: ResourceType; factory: ClassFactory<any>}> | undefined, service: ParamServiceInterface, context: WasmContext): T {
 		const result: { [key: string]: WasmFunction }  = Object.create(null);
 		if (functions !== undefined) {
 			for (const [funcName, func] of functions) {
@@ -3510,15 +3552,9 @@ export namespace Imports {
 			}
 		}
 		if (resources !== undefined) {
-			for (const [resourceName, resource] of resources) {
+			for (const [resourceName, { resource }] of resources) {
 				const clazz = service[resourceName] as GenericClass;
-				let resourceManager: ResourceManager;
-				if (context.resources.has(resource.id)) {
-					resourceManager = context.resources.ensure(resource.id);
-				} else {
-					resourceManager = ResourceManager.from(clazz) ?? new ResourceManager.Default();
-					context.resources.set(resource.id, resourceManager);
-				}
+				const resourceManager: ResourceManager = getResourceManager(resource, clazz, context);
 				for (const [callableName, callable] of resource.callables) {
 					if (callable instanceof ConstructorType) {
 						result[callable.witName] = createConstructorFunction(callable, clazz, resourceManager, context);
@@ -3633,7 +3669,39 @@ interface WriteableServiceInterface {
 
 export type Exports = ParamServiceInterface | {};
 export namespace Exports {
-	export function filter<T extends ParamWasmInterface>(exports: { [key: string]: any}, functions: Map<string, FunctionType> | undefined, resources: Map<string, ResourceType> | undefined, id: string, version: string | undefined, _context: WasmContext): T {
+	export function bind<T>(world: WorldType, exports: { [key: string]: WasmFunction }, context: WasmContext): T {
+		const packageName = world.id.substring(0, world.id.indexOf('/'));
+		const result: { [key: string]: ParamWasmInterface } = Object.create(null);
+		if (world.exports.functions !== undefined) {
+			Object.assign(result, doBind(world.exports.functions, undefined, exports, context));
+		}
+		if (world.exports.interfaces !== undefined) {
+			for (const iface of world.exports.interfaces.values()) {
+				const wasm: ParamWasmInterface = filter(exports, iface) as ParamWasmInterface;
+			}
+			for (const [name, iface] of world.exports.interfaces) {
+
+			}
+		}
+		if (world.exports.interfaces !== undefined) {
+			for (const iface of world.exports.interfaces.values()) {
+				if (iface.resources === undefined) {
+					continue;
+				}
+				for (const { resource } of iface.resources.values()) {
+					const manager = getResourceManager(resource, undefined, context);
+					const exports = Object.create(null);
+					exports[`[resource-new]${resource.id}`] = (rep: u32) => manager.newHandle(rep);
+					exports[`[resource-rep]${resource.id}`] = (handle: u32) => manager.getRepresentation(handle);
+					exports[`[resource-drop]${resource.id}`] = (handle: u32) => manager.freeHandle(handle);
+					result[`[export]${packageName}/${iface.id}`] = exports;
+				}
+			}
+		}
+		return result as T;
+
+	}
+	function filter<T extends ParamWasmInterface>(exports: { [key: string]: any}, iface: InterfaceType, id: string, version: string | undefined, _context: WasmContext): T {
 		const key = version !== undefined ? `${id}@${version}` : id;
 		let result: any = exports[key];
 		// We could actually check if all properties exist in the result.
@@ -3641,8 +3709,8 @@ export namespace Exports {
 			return result;
 		}
 		result = Object.create(null);
-		if (functions !== undefined) {
-			for (const func of functions.values()) {
+		if (iface.functions !== undefined) {
+			for (const func of iface.functions.values()) {
 				const funcKey = `${key}#${func.witName}`;
 				const candidate = exports[funcKey];
 				if (candidate !== null && candidate !== undefined) {
@@ -3650,8 +3718,8 @@ export namespace Exports {
 				}
 			}
 		}
-		if (resources !== undefined) {
-			for (const resource of resources.values()) {
+		if (iface.resources !== undefined) {
+			for (const resource of iface.resources.values()) {
 				for (const callable of resource.callables.values()) {
 					const callableKey = `${key}#${callable.witName}`;
 					const candidate = exports[callableKey];
@@ -3664,23 +3732,18 @@ export namespace Exports {
 		}
 		return result;
 	}
-	export function bind<T extends Exports>(functions: Map<string, FunctionType> | undefined, resources: ([string, ResourceType, ClassFactory<any>][]) | undefined, wasm: ParamWasmInterface, context: WasmContext): T {
-		const result: WriteableServiceInterface  = Object.create(null);
+	export function doBind<T extends Exports>(functions: Map<string, FunctionType> | undefined, resources: Map<string, { resource: ResourceType; factory: ClassFactory<any> }> | undefined, wasm: ParamWasmInterface, context: WasmContext): T {
+		const result: WriteableServiceInterface = Object.create(null);
 		if (functions !== undefined) {
 			for (const [name, func] of functions) {
 				result[name] = createFunction(func, wasm[func.witName] as WasmFunction, context);
 			}
 		}
 		if (resources !== undefined) {
-			for (const [name, resource, factory] of resources) {
+			for (const [name, { resource, factory }] of resources) {
+				const resourceManager = getResourceManager(resource, undefined, context);
 				const clazz = factory(wasm, context);
-				let resourceManager = context.resources.get(resource.id);
-				if (resourceManager === undefined) {
-					resourceManager = new ResourceManager.Default();
-					context.resources.set(resource.id, resourceManager);
-				}
-
-				resourceManager.setProxyInfo(clazz, resource.callables);
+				resourceManager.setProxyInfo(clazz, wasm['dtor'] as (self: number) => void);
 				result[name] = clazz;
 			}
 		}
