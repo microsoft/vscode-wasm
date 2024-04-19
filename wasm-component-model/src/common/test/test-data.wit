@@ -55,6 +55,16 @@ interface types {
 	check-flags-long: func(value: test-flags-long) -> test-flags-long;
 }
 
+interface text {
+	resource position {
+		constructor(line: u32, character: u32);
+		line: func() -> u32;
+		character: func() -> u32;
+	}
+}
+
 world test {
     import types;
+
+	export text;
 }

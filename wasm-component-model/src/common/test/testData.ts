@@ -168,9 +168,7 @@ export namespace testData {
 		export type TestFlagsLong = bigint;
 
 		export namespace PointResource {
-			export interface Interface {
-				$handle?: $wcm.ResourceHandle;
-
+			export interface Interface extends $wcm.JInterface {
 				getX(): u32;
 
 				getY(): u32;
@@ -179,22 +177,9 @@ export namespace testData {
 			}
 			export type Statics = {
 			};
-			export namespace imports {
-				export interface Interface extends PointResource.Interface {
-					$drop?(): void;
-				}
-				export type Class = Statics & {
-					new(x: u32, y: u32): Interface;
-				};
-			}
-			export namespace exports {
-				export interface Interface extends PointResource.Interface {
-					destructor(): void;
-				}
-				export type Class = Statics & {
-					new(x: u32, y: u32): Interface;
-				};
-			}
+			export type Class = Statics & {
+				new(x: u32, y: u32): Interface;
+			};
 		}
 		export type PointResource = PointResource.Interface;
 
@@ -216,11 +201,31 @@ export namespace testData {
 		checkFlagsShort: Types.checkFlagsShort;
 		checkFlagsLong: Types.checkFlagsLong;
 	};
+
+	export namespace Text {
+		export namespace Position {
+			export interface Interface extends $wcm.JInterface {
+				line(): u32;
+
+				character(): u32;
+			}
+			export type Statics = {
+			};
+			export type Class = Statics & {
+				new(line: u32, character: u32): Interface;
+			};
+		}
+		export type Position = Position.Interface;
+	}
+	export type Text = {
+		Position: Text.Position.Class;
+	};
 	export namespace test {
 		export type Imports = {
 			types: testData.Types;
 		};
 		export type Exports = {
+			text: testData.Text;
 		};
 	}
 }
@@ -303,16 +308,20 @@ export namespace testData {
 			}
 			export namespace exports {
 				export type WasmInterface = PointResource.WasmInterface & { '[dtor]point-resource': (self: i32) => void };
-				export type ObjectModule = PointResource.ObjectModule & { $destructor(self: PointResource): void };
 				class Impl extends $wcm.Resource implements testData.Types.PointResource.Interface {
 					private readonly _om: ObjectModule;
-					constructor(x: u32, y: u32, om: ObjectModule) {
-						super();
-						this._om = om;
-						this.$handle = om.constructor(x, y);
-					}
-					public $destructor(): void {
-						return this._om.$destructor(this);
+					constructor(x: u32, y: u32, om: ObjectModule);
+					constructor(handleTag: Symbol, handle: $wcm.ResourceHandle, om: ObjectModule);
+					constructor(...args: any[]);
+					constructor(...args: any[]) {
+						if (args[0] === $wcm.ResourceManager.handleTag) {
+							super(args[1] as $wcm.ResourceHandle);
+							this._om = args[2] as ObjectModule;
+						} else {
+							const om = args[2] as ObjectModule;
+							super(om.constructor(args[0], args[1]));
+							this._om = om;
+						}
 					}
 					public getX(): u32 {
 						return this._om.getX(this);
@@ -328,8 +337,10 @@ export namespace testData {
 					const resource = testData.Types.$.PointResource;
 					const om: ObjectModule = $wcm.Module.createObjectModule(resource, wasmInterface, context);
 					return class extends Impl {
-						constructor(x: u32, y: u32) {
-							super(x, y, om);
+						constructor(x: u32, y: u32);
+						constructor(handleTag: Symbol, handle: $wcm.ResourceHandle);
+						constructor(...args: any[]) {
+							super(...args, om);
 						}
 					};
 				}
@@ -353,12 +364,106 @@ export namespace testData {
 			export function filter(exports: object, context: $wcm.WasmContext): WasmInterface {
 				return $wcm.Exports.filter<WasmInterface>(exports, functions, resources, id, undefined, context);
 			}
-			const resources = [['PointResource', $.PointResource, PointResource.exports.Class]];
+			const resourceData: [string, $wcm.ResourceType, $wcm.ClassFactory<any>][] = [['PointResource', $.PointResource, PointResource.exports.Class]];
 			export function bind(wasmInterface: WasmInterface, context: $wcm.WasmContext): testData.Types {
-				return $wcm.Exports.bind<testData.Types>(functions, resources, wasmInterface, context);
+				return $wcm.Exports.bind<testData.Types>(functions, resourceData, wasmInterface, context);
 			}
 			export function loop(wasmInterface: _.imports.WasmInterface, context: $wcm.WasmContext): testData.Types {
-				return $wcm.Exports.loop<testData.Types>(functions, resources, wasmInterface, context);
+				return $wcm.Exports.loop<testData.Types>(functions, resourceData, wasmInterface, context);
+			}
+		}
+	}
+
+	export namespace Text.$ {
+		export const Position = new $wcm.ResourceType<testData.Text.Position>('position', 'vscode:test-data/text/position');
+		export const Position_Handle = new $wcm.ResourceHandleType('position');
+		Position.addDestructor('$drop', new $wcm.DestructorType('[resource-drop]position', [['inst', Position]]));
+		Position.addConstructor('constructor', new $wcm.ConstructorType<testData.Text.Position.Class['constructor']>('[constructor]position', [
+			['line', $wcm.u32],
+			['character', $wcm.u32],
+		], new $wcm.OwnType(Position_Handle)));
+		Position.addMethod('line', new $wcm.MethodType<testData.Text.Position.Interface['line']>('[method]position.line', [], $wcm.u32));
+		Position.addMethod('character', new $wcm.MethodType<testData.Text.Position.Interface['character']>('[method]position.character', [], $wcm.u32));
+	}
+	export namespace Text._ {
+		export const id = 'vscode:test-data/text' as const;
+		export const witName = 'text' as const;
+		export const types: Map<string, $wcm.GenericComponentModelType> = new Map<string, $wcm.GenericComponentModelType>([
+			['Position', $.Position]
+		]);
+		export const resources: Map<string, $wcm.ResourceType> = new Map<string, $wcm.ResourceType>([
+			['Position', $.Position]
+		]);
+		export namespace Position {
+			export type WasmInterface = {
+				'[constructor]position': (line: i32, character: i32) => i32;
+				'[method]position.line': (self: i32) => i32;
+				'[method]position.character': (self: i32) => i32;
+			};
+			export type ObjectModule = {
+				constructor(line: u32, character: u32): own<$wcm.ResourceHandle>;
+				line(self: Position): u32;
+				character(self: Position): u32;
+			};
+			export namespace imports {
+				export type WasmInterface = Position.WasmInterface & { '[resource-drop]position': (self: i32) => void };
+			}
+			export namespace exports {
+				export type WasmInterface = Position.WasmInterface & { '[dtor]position': (self: i32) => void };
+				class Impl extends $wcm.Resource implements testData.Text.Position.Interface {
+					private readonly _om: ObjectModule;
+					constructor(line: u32, character: u32, om: ObjectModule);
+					constructor(handleTag: Symbol, handle: $wcm.ResourceHandle, om: ObjectModule);
+					constructor(...args: any[]);
+					constructor(...args: any[]) {
+						if (args[0] === $wcm.ResourceManager.handleTag) {
+							super(args[1] as $wcm.ResourceHandle);
+							this._om = args[2] as ObjectModule;
+						} else {
+							const om = args[2] as ObjectModule;
+							super(om.constructor(args[0], args[1]));
+							this._om = om;
+						}
+					}
+					public line(): u32 {
+						return this._om.line(this);
+					}
+					public character(): u32 {
+						return this._om.character(this);
+					}
+				}
+				export function Class(wasmInterface: WasmInterface, context: $wcm.WasmContext): testData.Text.Position.Class {
+					const resource = testData.Text.$.Position;
+					const om: ObjectModule = $wcm.Module.createObjectModule(resource, wasmInterface, context);
+					return class extends Impl {
+						constructor(line: u32, character: u32);
+						constructor(handleTag: Symbol, handle: $wcm.ResourceHandle);
+						constructor(...args: any[]) {
+							super(...args, om);
+						}
+					};
+				}
+			}
+		}
+		export type WasmInterface = {
+		};
+		export namespace imports {
+			export type WasmInterface = _.WasmInterface & Position.imports.WasmInterface;
+			export function create(service: testData.Text, context: $wcm.WasmContext): WasmInterface {
+				return $wcm.Imports.create<WasmInterface>(undefined, resources, service, context);
+			}
+		}
+		export namespace exports {
+			export type WasmInterface = _.WasmInterface & Position.exports.WasmInterface;
+			export function filter(exports: object, context: $wcm.WasmContext): WasmInterface {
+				return $wcm.Exports.filter<WasmInterface>(exports, undefined, resources, id, undefined, context);
+			}
+			const resourceData: [string, $wcm.ResourceType, $wcm.ClassFactory<any>][] = [['Position', $.Position, Position.exports.Class]];
+			export function bind(wasmInterface: WasmInterface, context: $wcm.WasmContext): testData.Text {
+				return $wcm.Exports.bind<testData.Text>(undefined, resourceData, wasmInterface, context);
+			}
+			export function loop(wasmInterface: _.imports.WasmInterface, context: $wcm.WasmContext): testData.Text {
+				return $wcm.Exports.loop<testData.Text>(undefined, resourceData, wasmInterface, context);
 			}
 		}
 	}
@@ -374,14 +479,31 @@ export namespace testData {
 			export function create(service: test.Imports, context: $wcm.WasmContext): Imports {
 				const result: Imports = Object.create(null);
 				result['vscode:test-data/types'] = testData.Types._.imports.create(service.types, context);
+				for (const iface of exports.interfaces.values()) {
+					if (iface.resources) {
+						for (const [name, resource] of iface.resources) {
+
+						}
+					}
+				}
 				return result;
 			}
 		}
 		export type Imports = {
 			'vscode:test-data/types': testData.Types._.imports.WasmInterface;
 		};
-		export const exports = {};
-		export type Exports = {};
+		export namespace exports {
+			export const interfaces: Map<string, $wcm.InterfaceType> = new Map<string, $wcm.InterfaceType>([
+				['Text', Text._]
+			]);
+			export function bind(exports: Exports, context: $wcm.WasmContext): test.Exports {
+				const result: test.Exports = Object.create(null);
+				result.text = testData.Text._.exports.bind(testData.Text._.exports.filter(exports, context), context);
+				return result;
+			}
+		}
+		export type Exports = {
+		};
 	}
 }
 
@@ -389,9 +511,10 @@ export namespace testData._ {
 	export const id = 'vscode:test-data' as const;
 	export const witName = 'test-data' as const;
 	export const interfaces: Map<string, $wcm.InterfaceType> = new Map<string, $wcm.InterfaceType>([
-		['Types', Types._]
+		['Types', Types._],
+		['Text', Text._]
 	]);
 	export const worlds: Map<string, $wcm.WorldType> = new Map<string, $wcm.WorldType>([
-		['test', test._]
+		['test', test._],
 	]);
 }

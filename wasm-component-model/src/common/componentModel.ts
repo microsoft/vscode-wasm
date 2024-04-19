@@ -131,7 +131,7 @@ export namespace ResourceManager {
 		}
 
 		public removeResource(value: ResourceHandle<T> | T): void {
-			const handle = typeof value === 'number' ? value : value.$handle;
+			const handle = typeof value === 'number' ? value : value.$handle();
 			const resource = this.h2r.get(handle);
 			if (resource === undefined) {
 				throw new ComponentModelTrap(`Unknown resource handle ${handle}`);
@@ -194,87 +194,6 @@ export namespace ResourceManagers {
 
 		public get<T extends JInterface = JInterface>(id: string): ResourceManager<T> | undefined {
 			return this.managers.get(id) as ResourceManager<T>;
-		}
-	}
-}
-
-export interface HandleTable {
-	add(value: u32): ResourceHandle;
-	get(value: u32): ResourceHandle;
-	remove(handle: ResourceHandle): u32;
-}
-
-export namespace HandleTable {
-	export class Default implements HandleTable {
-
-		private readonly values: (u32 | undefined)[];
-		private readonly free: ResourceHandle[];
-
-		constructor() {
-			this.values = [];
-			this.free = [];
-		}
-
-		public get(value: ResourceHandle): u32 {
-			const handle = this.values[value];
-			if (handle === undefined) {
-				throw new ComponentModelTrap(`Unknown resource handle ${value}`);
-			}
-			return handle;
-		}
-
-		public add(value: u32): ResourceHandle {
-			if (this.free.length > 0) {
-				const handle = this.free.pop()!;
-				if (this.values[handle] !== undefined) {
-					throw new ComponentModelTrap(`Handle ${handle} already in use`);
-				}
-				this.values[handle] = value;
-				return handle;
-			} else {
-				const handle = this.values.length;
-				this.values.push(value);
-				return handle;
-			}
-		}
-
-		public remove(handle: ResourceHandle): u32 {
-			if (this.values[handle] === undefined) {
-				throw new ComponentModelTrap(`Unknown resource handle ${handle}`);
-			}
-			const value = this.values[handle]!;
-			this.values[handle] = undefined;
-			this.free.push(handle);
-			return value;
-		}
-	}
-}
-
-export interface HandleTables {
-	has(resourceId: string): boolean;
-	get(resourceId: string): HandleTable;
-}
-
-export namespace HandleTables {
-	export class Default implements HandleTables {
-
-		private readonly tables: Map<string, HandleTable>;
-
-		constructor() {
-			this.tables = new Map();
-		}
-
-		public has(resourceId: string): boolean {
-			return this.tables.has(resourceId);
-		}
-
-		public get(resourceId: string): HandleTable {
-			let table = this.tables.get(resourceId);
-			if (table === undefined) {
-				table = new HandleTable.Default();
-				this.tables.set(resourceId, table);
-			}
-			return table;
 		}
 	}
 }
@@ -1063,7 +982,6 @@ export enum ComponentModelTypeKind {
 export interface ComponentModelContext {
 	readonly options: Options;
 	readonly resources: ResourceManagers;
-	readonly handles: HandleTables;
 }
 
 export interface ComponentModelType<J> {
@@ -2900,7 +2818,7 @@ export class ResultType<O extends JType | void, E extends JType | void = void> e
 }
 
 export interface JInterface {
-	$handle: ResourceHandle;
+	$handle(): ResourceHandle;
 }
 
 export type JType = number | bigint | string | boolean | JArray | JRecord | JVariantCase | JTuple | JEnum | JInterface | option<any> | undefined | void | result<any, any> | Int8Array | Int16Array | Int32Array | BigInt64Array | Uint8Array | Uint16Array | Uint32Array | BigUint64Array | Float32Array | Float64Array;
@@ -3081,7 +2999,7 @@ export class ConstructorType<_T extends Function = Function> extends Callable {
 		const memory  = context.getMemory();
 		const jParams = this.liftParamValues(params, memory, context);
 		const obj: JInterface = new clazz(...jParams);
-		return obj.$handle;
+		return obj.$handle();
 	}
 }
 
@@ -3140,7 +3058,7 @@ export class MethodType<_T extends Function = Function> extends Callable {
 	public callWasmMethod(params: JType[], wasmFunction: WasmFunction, _resourceManager: ResourceManager, context: WasmContext): JType {
 		const memory = context.getMemory();
 		const obj: JInterface = params.shift() as JInterface;
-		const handle = obj.$handle;
+		const handle = obj.$handle();
 		const wasmValues = this.lowerParamValues(params, memory, context, undefined);
 		let resultRange: MemoryRange | undefined = undefined;
 		let result: WasmType | void;
@@ -3262,12 +3180,12 @@ export class ResourceType<T extends JInterface = JInterface> implements Componen
 	}
 
 	public store(memory: MemoryRange, offset: offset, value: T, context: ComponentModelContext): void {
-		const handle = value.$handle;
+		const handle = value.$handle();
 		u32.store(memory, offset, handle, context);
 	}
 
 	public lowerFlat(result: WasmType[], memory: Memory, value: T, context: ComponentModelContext): void {
-		const handle = value.$handle;
+		const handle = value.$handle();
 		u32.lowerFlat(result, memory, handle, context);
 	}
 
@@ -3521,12 +3439,10 @@ export namespace WasmContext {
 		private memory: Memory | undefined;
 		public readonly options: Options;
 		public readonly resources: ResourceManagers;
-		public readonly handles: HandleTables;
 
 		constructor() {
 			this.options = { encoding: 'utf-8' };
 			this.resources = new ResourceManagers.Default();
-			this.handles = new HandleTables.Default();
 		}
 
 		public initialize(memory: Memory) {
@@ -3546,23 +3462,15 @@ export namespace WasmContext {
 }
 
 export class Resource {
-	private _handle: ResourceHandle | undefined;
-	constructor() {
-		this._handle = undefined;
+
+	private _handle: ResourceHandle;
+
+	constructor(handle: ResourceHandle) {
+		this._handle = handle;
 	}
 
-	get $handle(): ResourceHandle | undefined {
+	public $handle(): ResourceHandle {
 		return this._handle;
-	}
-
-	set $handle(value: ResourceHandle) {
-		if (value === undefined) {
-			throw new ComponentModelTrap('Cannot set undefined handle');
-		}
-		if (this._handle !== undefined) {
-			throw new ComponentModelTrap(`Cannot set handle twice. Current handle is ${this._handle} new handle is ${value}.`);
-		}
-		this._handle = value;
 	}
 }
 
@@ -3764,8 +3672,16 @@ export namespace Exports {
 			}
 		}
 		if (resources !== undefined) {
-			for (const [name, , factory] of resources) {
-				result[name] = factory(wasm, context);
+			for (const [name, resource, factory] of resources) {
+				const clazz = factory(wasm, context);
+				let resourceManager = context.resources.get(resource.id);
+				if (resourceManager === undefined) {
+					resourceManager = new ResourceManager.Default();
+					context.resources.set(resource.id, resourceManager);
+				}
+
+				resourceManager.setProxyInfo(clazz, resource.callables);
+				result[name] = clazz;
 			}
 		}
 		return result as unknown as T;
