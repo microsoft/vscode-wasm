@@ -2203,18 +2203,12 @@ class WorldEmitter extends Emitter {
 				}
 				emitter.emitWorldCreateImport(code, 'result');
 			}
-			code.push(`for (const iface of exports.interfaces.values()) {`);
-			code.increaseIndent();
-			code.push(`if (iface.resources) {`);
-			code.increaseIndent();
-			code.push(`for (const [name, resource] of iface.resources) {`);
-			code.increaseIndent();
-			code.decreaseIndent();
-			code.push(`}`);
-			code.decreaseIndent();
-			code.push('}');
-			code.decreaseIndent();
-			code.push(`}`);
+			for (const emitter of exportsAllInterfaceEmitters) {
+				if (!emitter.hasResources()) {
+					continue;
+				}
+				emitter.emitWorldCreateExportImport(code, 'result');
+			}
 			code.push(`return result;`);
 			code.decreaseIndent();
 			code.push('}');
@@ -2231,6 +2225,12 @@ class WorldEmitter extends Emitter {
 					continue;
 				}
 				emitter.emitWorldWasmImport(code);
+			}
+			for (const emitter of exportsAllInterfaceEmitters) {
+				if (!emitter.hasResources()) {
+					continue;
+				}
+				emitter.emitWorldWasmExportImport(code);
 			}
 			code.decreaseIndent();
 			code.push(`};`);
@@ -2377,6 +2377,10 @@ class InterfaceEmitter extends Emitter {
 
 	public hasCode(): boolean {
 		return this.functionEmitters.length > 0 || this.resourceEmitters.length > 0;
+	}
+
+	public hasResources(): boolean {
+		return this.resourceEmitters.length > 0;
 	}
 
 	public emitNamespace(code: Code): void {
@@ -2585,6 +2589,13 @@ class InterfaceEmitter extends Emitter {
 		code.push(`'${property}': ${symbols.interfaces.getFullyQualifiedModuleName(this.iface)}._.imports.WasmInterface;`);
 	}
 
+	public emitWorldWasmExportImport(code: Code): void {
+		const { symbols } = this.context;
+		const [name, version] = this.getQualifierAndVersion(this.getPkg());
+		const property = `${name}/${this.iface.name}${version !== undefined ? `@${version}` : ''}`;
+		code.push(`'${property}': ${symbols.interfaces.getFullyQualifiedModuleName(this.iface)}._.imports.WasmInterface;`);
+	}
+
 	public emitWorldWasmExport(code: Code): void {
 		const [name, version] = this.getQualifierAndVersion(this.getPkg());
 		const property = `${name}/${this.iface.name}${version !== undefined ? `@${version}` : ''}`;
@@ -2600,7 +2611,12 @@ class InterfaceEmitter extends Emitter {
 		code.push(`${result}['${property}'] = ${symbols.interfaces.getFullyQualifiedModuleName(this.iface)}._.imports.create(service.${nameProvider.iface.propertyName(this.iface)}, context);`);
 	}
 
-	public emitWorld
+	public emitWorldCreateExportImport(code: Code, result: string): void {
+		const { symbols, nameProvider } = this.context;
+		const [name, version] = this.getQualifierAndVersion(this.getPkg());
+		const property = `[export]${name}/${this.iface.name}${version !== undefined ? `@${version}` : ''}`;
+		code.push(`${result}['${property}'] = ${symbols.interfaces.getFullyQualifiedModuleName(this.iface)}._.imports.create(service.${nameProvider.iface.propertyName(this.iface)}, context);`);
+	}
 
 	public emitWorldBindExport(code: Code, result: string): void {
 		const { symbols, nameProvider } = this.context;

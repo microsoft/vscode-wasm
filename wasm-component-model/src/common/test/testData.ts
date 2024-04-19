@@ -407,6 +407,11 @@ export namespace testData {
 			};
 			export namespace imports {
 				export type WasmInterface = Position.WasmInterface & { '[resource-drop]position': (self: i32) => void };
+				export type HandleTable = {
+					'[resource-new]position': (rep: i32) => i32;
+					'[resource-rep]position': (rep: i32) => i32;
+					'[resource-drop]position': (handle: i32) => i32;
+				};
 			}
 			export namespace exports {
 				export type WasmInterface = Position.WasmInterface & { '[dtor]position': (self: i32) => void };
@@ -479,13 +484,7 @@ export namespace testData {
 			export function create(service: test.Imports, context: $wcm.WasmContext): Imports {
 				const result: Imports = Object.create(null);
 				result['vscode:test-data/types'] = testData.Types._.imports.create(service.types, context);
-				for (const iface of exports.interfaces.values()) {
-					if (iface.resources) {
-						for (const [name, resource] of iface.resources) {
-
-						}
-					}
-				}
+				result['[export]vscode:test-data/text'] = testData.Text._.imports.create(service.text, context);
 				return result;
 			}
 		}
