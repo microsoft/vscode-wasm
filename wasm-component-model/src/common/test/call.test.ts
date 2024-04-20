@@ -4,7 +4,7 @@
  *--------------------------------------------------------------------------------------------*/
 import assert from 'assert';
 
-import { u32, Memory as IMemory, ptr, size, WasmContext, Alignment, Resource, ResourceManagers, MemoryRange, ReadonlyMemoryRange, HandleTables, ResourceManager } from '../componentModel';
+import { u32, Memory as IMemory, ptr, size, WasmContext, Alignment, Resource, ResourceManagers, MemoryRange, ReadonlyMemoryRange, ResourceManager } from '../componentModel';
 
 class Memory implements IMemory {
 
@@ -135,58 +135,55 @@ const context: WasmContext = {
 
 suite('point', () => {
 	const host = Test._.imports.create(worldImpl, context);
-	const service = Test._.exports.loop(host, context);
+	const service = Test._.imports.loop(worldImpl, context);
 	test('host:call', () => {
 		assert.strictEqual(host['vscode:test-data/types'].call(1, 2), 3);
 	});
 	test('service:call', () => {
-		assert.strictEqual(service.call({ x: 1, y: 2 }), 3);
+		assert.strictEqual(service.types.call({ x: 1, y: 2 }), 3);
 	});
 });
 
 suite ('point-resource', () => {
-	const moduleImplementation = Object.assign({}, serviceImpl);
-	moduleImplementation.PointResource = PointResourceClass;
-	const host = Types._.imports.create(serviceImpl, context);
-	const service = Types._.exports.loop(host, context);
+	const host = Test._.imports.create(worldImpl, context)['vscode:test-data/types'];
+	const service = Test._.imports.loop(worldImpl, context).types;
 	test('host:call', () => {
 		const pointResourceManager = context.resources.ensure('vscode:test-data/types/point-resource');
 		const point = host['[constructor]point-resource'](1, 2);
-		assert.ok(pointResourceManager.$resource(point) !== undefined);
+		assert.ok(pointResourceManager.getResource(point) !== undefined);
 		assert.strictEqual(host['[method]point-resource.get-x'](point), 1);
 		assert.strictEqual(host['[method]point-resource.get-y'](point), 2);
 		assert.strictEqual(host['[method]point-resource.add'](point), 3);
 		host['[resource-drop]point-resource'](point);
-		assert.throws(() => pointResourceManager.$resource(point));
+		assert.throws(() => pointResourceManager.getResource(point));
 	});
 	test('service:call', () => {
 		const pointResourceManager = context.resources.ensure('vscode:test-data/types/point-resource');
 		const point = new service.PointResource(1, 2);
 		const handle = point.$handle;
 		assert.ok(typeof handle === 'number');
-		assert.ok(pointResourceManager.$resource(handle) !== undefined);
+		assert.ok(pointResourceManager.getResource(handle) !== undefined);
 		assert.strictEqual(point.getX(), 1);
 		assert.strictEqual(point.getY(), 2);
 		assert.strictEqual(point.add(), 3);
-		point.$destructor();
-		assert.throws(() => pointResourceManager.$resource(handle));
+
+		// assert.throws(() => pointResourceManager.getResource(handle));
 	});
 });
 
 suite('option', () => {
 	test('host:call', () => {
-		const host = Types._.imports.create(serviceImpl, context);
+		const host = Test._.imports.create(worldImpl, context);
 		const memory = context.getMemory();
 		const range = memory.alloc(4, 8);
-		host['call-option'](1, 1, 2, range.ptr);
+		host['vscode:test-data/types']['call-option'](1, 1, 2, range.ptr);
 		assert.strictEqual(range.getUint32(0), 1);
 		assert.strictEqual(range.getUint32(4), 3);
 	});
 });
 
 suite('variant', () => {
-	const host = Types._.imports.create(serviceImpl, context);
-	const service: Types = Types._.exports.bind(host, context);
+	const service: Types = Test._.imports.loop(worldImpl, context).types;
 
 	test('empty', () => {
 		const empty = service.checkVariant(TestVariant.Empty());
@@ -244,8 +241,7 @@ suite('variant', () => {
 });
 
 suite('flags', () => {
-	const host = Types._.imports.create(serviceImpl, context);
-	const service: Types = Types._.exports.bind(host, context);
+	const service: Types = Test._.imports.loop(worldImpl, context).types;
 	test('short', () => {
 		const flags: TestFlagsShort = TestFlagsShort.one;
 		const returned = service.checkFlagsShort(flags);

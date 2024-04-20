@@ -486,6 +486,9 @@ export namespace testData {
 			export function create(service: test.Imports, context: $wcm.WasmContext): Imports {
 				return $wcm.Imports.create<Imports>(_, service, context);
 			}
+			export function loop(service: test.Imports, context: $wcm.WasmContext): test.Imports {
+				return $wcm.Imports.loop(_, service, context);
+			}
 		}
 		export type Exports = {
 			'bar': () => i32;

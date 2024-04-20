@@ -3537,7 +3537,8 @@ export namespace Imports {
 		}
 		if (world.imports.interfaces !== undefined) {
 			for (const [name, iface] of world.imports.interfaces) {
-				result[`${packageName}/${iface.id}`] = doCreate(iface.functions, iface.resources, service[name] as ParamServiceInterface, context);
+				const propName = `${name[0].toLowerCase()}${name.substring(1)}`;
+				result[`${packageName}/${iface.witName}`] = doCreate(iface.functions, iface.resources, service[propName] as ParamServiceInterface, context);
 			}
 		}
 		if (world.exports.interfaces !== undefined) {
@@ -3548,17 +3549,58 @@ export namespace Imports {
 				for (const { resource } of iface.resources.values()) {
 					const manager = getResourceManager(resource, undefined, context);
 					const exports = Object.create(null);
-					exports[`[resource-new]${resource.id}`] = (rep: u32) => manager.newHandle(rep);
-					exports[`[resource-rep]${resource.id}`] = (handle: u32) => manager.getRepresentation(handle);
-					exports[`[resource-drop]${resource.id}`] = (handle: u32) => manager.freeHandle(handle);
-					result[`[export]${packageName}/${iface.id}`] = exports;
+					exports[`[resource-new]${resource.witName}`] = (rep: u32) => manager.newHandle(rep);
+					exports[`[resource-rep]${resource.witName}`] = (handle: u32) => manager.getRepresentation(handle);
+					exports[`[resource-drop]${resource.witName}`] = (handle: u32) => manager.freeHandle(handle);
+					result[`[export]${packageName}/${iface.witName}`] = exports;
 				}
 			}
 		}
 		return result as T;
 	}
 
-	export function doCreate<T extends Imports>(functions: Map<string, FunctionType<JFunction>> | undefined, resources: Map<string, { resource: ResourceType; factory: ClassFactory<any>}> | undefined, service: ParamServiceInterface, context: WasmContext): T {
+	export function loop<T>(world: WorldType, service: WorldServiceInterface, context: WasmContext) : T  {
+		const imports = create(world, service, context);
+		const exports = asExports(imports, context);
+		const loop: WorldType = {
+			id: world.id,
+			witName: world.witName,
+			imports: {
+				functions: world.exports.functions,
+				interfaces: world.exports.interfaces
+			},
+			exports: {
+				functions: world.imports.functions,
+				interfaces: world.imports.interfaces,
+			},
+		};
+		return Exports.bind<T>(loop, exports, context);
+	}
+
+	function asExports(imports: WorldImports, _context: WasmContext): { [key: string]: WasmFunction } {
+		const result: { [key: string]: WasmFunction }  = Object.create(null);
+		const keys = Object.keys(imports);
+		for (const ifaceName of keys) {
+			const iface = imports[ifaceName];
+			if (ifaceName === '$root') {
+				for (const funcName of Object.keys(iface)) {
+					result[funcName] = iface[funcName] as WasmFunction;
+				}
+			} else {
+				const qualifier = `${ifaceName}#`;
+				for (const funcName of Object.keys(iface)) {
+					if (funcName.startsWith('[resource-drop]')) {
+						result[`${qualifier}[dtor]${funcName.substring(15 /* length of [resource-drop] */)}`] = iface[funcName] as WasmFunction;
+					} else {
+						result[`${qualifier}${funcName}`] = iface[funcName] as WasmFunction;
+					}
+				}
+			}
+		}
+		return result;
+	}
+
+	function doCreate<T extends Imports>(functions: Map<string, FunctionType<JFunction>> | undefined, resources: Map<string, { resource: ResourceType; factory: ClassFactory<any>}> | undefined, service: ParamServiceInterface, context: WasmContext): T {
 		const result: { [key: string]: WasmFunction }  = Object.create(null);
 		if (functions !== undefined) {
 			for (const [funcName, func] of functions) {
@@ -3690,8 +3732,9 @@ export namespace Exports {
 		}
 		if (world.exports.interfaces !== undefined) {
 			for (const [name, iface] of world.exports.interfaces) {
+				const propName = `${name[0].toLowerCase()}${name.substring(1)}`;
 				const wasm: ParamWasmInterface = filter(exports, iface) as ParamWasmInterface;
-				result[name] = doBind(iface.functions, iface.resources, wasm, context);
+				result[propName] = doBind(iface.functions, iface.resources, wasm, context);
 			}
 		}
 		return result as T;
@@ -3729,7 +3772,7 @@ export namespace Exports {
 		return result;
 	}
 
-	export function doBind<T extends Exports>(functions: Map<string, FunctionType> | undefined, resources: Map<string, { resource: ResourceType; factory: ClassFactory<any> }> | undefined, wasm: ParamWasmInterface, context: WasmContext): T {
+	function doBind<T extends Exports>(functions: Map<string, FunctionType> | undefined, resources: Map<string, { resource: ResourceType; factory: ClassFactory<any> }> | undefined, wasm: ParamWasmInterface, context: WasmContext): T {
 		const result: WriteableServiceInterface = Object.create(null);
 		if (functions !== undefined) {
 			for (const [name, func] of functions) {
@@ -3745,10 +3788,6 @@ export namespace Exports {
 			}
 		}
 		return result as unknown as T;
-	}
-
-	export function loop<T extends Exports>(_functions: Map<string, FunctionType> | undefined, _resources: ([string, ResourceType, ClassFactory<any>][]) | undefined, _wasm: ParamWasmInterface, _context: WasmContext): T {
-		throw new Error('Not implemented');
 	}
 
 	function createFunction(func: FunctionType<JFunction>, wasmFunction: WasmFunction, context: WasmContext): JFunction {

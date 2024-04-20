@@ -2217,6 +2217,12 @@ class WorldEmitter extends Emitter {
 			code.decreaseIndent();
 			code.push('}');
 
+			code.push(`export function loop(service: ${name}.Imports, context: ${MetaModel.WasmContext}): ${name}.Imports {`);
+			code.increaseIndent();
+			code.push(`return ${MetaModel.Imports}.loop(_, service, context);`);
+			code.decreaseIndent();
+			code.push('}');
+
 			code.decreaseIndent();
 			code.push('}');
 		}
