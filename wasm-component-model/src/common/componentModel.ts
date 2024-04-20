@@ -36,7 +36,8 @@ export interface ResourceManager<T extends JInterface = JInterface> {
 	// Resource management
 	setProxyInfo(ctor: (new (handleTag: Symbol, handle: ResourceHandle<T>) => T), dtor: (self: ResourceHandle<T>) => void): void;
 	getResource(handle: ResourceHandle<T>): T;
-	registerResource(resource: T): ResourceHandle<T>;
+	reserveHandle(): ResourceHandle<T>;
+	registerResource(resource: T, handle?: ResourceHandle<T>): ResourceHandle<T>;
 	registerProxy(proxy: T): ResourceHandle<T>;
 	removeResource(value: ResourceHandle<T> | T): void;
 }
@@ -120,8 +121,21 @@ export namespace ResourceManager {
 			}
 		}
 
-		public registerResource(resource: T): ResourceHandle<T> {
-			const handle = this.handleCounter++;
+		public reserveHandle(): ResourceHandle<T> {
+			return this.handleCounter++;
+		}
+
+		public registerResource(resource: T, handle?: ResourceHandle<T>): ResourceHandle<T> {
+			if (handle !== undefined) {
+				if (handle >= this.handleCounter) {
+					throw new ComponentModelTrap(`Invalid handle ${handle}`);
+				}
+				if (this.h2r.has(handle)) {
+					throw new ComponentModelTrap(`Handle ${handle} already in use`);
+				}
+			} else {
+				handle = this.handleCounter++;
+			}
 			this.h2r.set(handle, resource);
 			return handle;
 		}
@@ -3669,40 +3683,22 @@ interface WriteableServiceInterface {
 
 export type Exports = ParamServiceInterface | {};
 export namespace Exports {
-	export function bind<T>(world: WorldType, exports: { [key: string]: WasmFunction }, context: WasmContext): T {
-		const packageName = world.id.substring(0, world.id.indexOf('/'));
-		const result: { [key: string]: ParamWasmInterface } = Object.create(null);
+	export function bind<T>(world: WorldType, exports: { [key: string]: ParamWasmFunction }, context: WasmContext): T {
+		const result: { [key: string]: Exports } = Object.create(null);
 		if (world.exports.functions !== undefined) {
 			Object.assign(result, doBind(world.exports.functions, undefined, exports, context));
 		}
 		if (world.exports.interfaces !== undefined) {
-			for (const iface of world.exports.interfaces.values()) {
-				const wasm: ParamWasmInterface = filter(exports, iface) as ParamWasmInterface;
-			}
 			for (const [name, iface] of world.exports.interfaces) {
-
-			}
-		}
-		if (world.exports.interfaces !== undefined) {
-			for (const iface of world.exports.interfaces.values()) {
-				if (iface.resources === undefined) {
-					continue;
-				}
-				for (const { resource } of iface.resources.values()) {
-					const manager = getResourceManager(resource, undefined, context);
-					const exports = Object.create(null);
-					exports[`[resource-new]${resource.id}`] = (rep: u32) => manager.newHandle(rep);
-					exports[`[resource-rep]${resource.id}`] = (handle: u32) => manager.getRepresentation(handle);
-					exports[`[resource-drop]${resource.id}`] = (handle: u32) => manager.freeHandle(handle);
-					result[`[export]${packageName}/${iface.id}`] = exports;
-				}
+				const wasm: ParamWasmInterface = filter(exports, iface) as ParamWasmInterface;
+				result[name] = doBind(iface.functions, iface.resources, wasm, context);
 			}
 		}
 		return result as T;
-
 	}
-	function filter<T extends ParamWasmInterface>(exports: { [key: string]: any}, iface: InterfaceType, id: string, version: string | undefined, _context: WasmContext): T {
-		const key = version !== undefined ? `${id}@${version}` : id;
+
+	function filter<T extends ParamWasmInterface>(exports: { [key: string]: any}, iface: InterfaceType): T {
+		const key = iface.id;
 		let result: any = exports[key];
 		// We could actually check if all properties exist in the result.
 		if (result !== null && typeof result === 'object') {
@@ -3719,7 +3715,7 @@ export namespace Exports {
 			}
 		}
 		if (iface.resources !== undefined) {
-			for (const resource of iface.resources.values()) {
+			for (const { resource } of iface.resources.values()) {
 				for (const callable of resource.callables.values()) {
 					const callableKey = `${key}#${callable.witName}`;
 					const candidate = exports[callableKey];
@@ -3732,6 +3728,7 @@ export namespace Exports {
 		}
 		return result;
 	}
+
 	export function doBind<T extends Exports>(functions: Map<string, FunctionType> | undefined, resources: Map<string, { resource: ResourceType; factory: ClassFactory<any> }> | undefined, wasm: ParamWasmInterface, context: WasmContext): T {
 		const result: WriteableServiceInterface = Object.create(null);
 		if (functions !== undefined) {
@@ -3751,7 +3748,7 @@ export namespace Exports {
 	}
 
 	export function loop<T extends Exports>(functions: Map<string, FunctionType> | undefined, resources: ([string, ResourceType, ClassFactory<any>][]) | undefined, wasm: ParamWasmInterface, context: WasmContext): T {
-		return bind(functions, resources, wasm, context);
+		throw new Error('Not implemented');
 	}
 
 	function createFunction(func: FunctionType<JFunction>, wasmFunction: WasmFunction, context: WasmContext): JFunction {

@@ -1566,7 +1566,7 @@ abstract class Emitter {
 	public emitMetaModel(_code: Code) : void {
 	}
 
-	public emitWasmInterface(_code: Code) : void {
+	public emitWasmInterface(_code: Code, qualifier?: string) : void {
 	}
 
 	public emitWasmExport(_code: Code, _property: string) : void {
@@ -2504,6 +2504,19 @@ class InterfaceEmitter extends Emitter {
 			} else {
 				code.push('export WasmInterface = _.WasmInterface;');
 			}
+			if (this.resourceEmitters.length > 0) {
+				code.push('export namespace imports {');
+				code.increaseIndent();
+				code.push(`export type WasmInterface = {`);
+				code.increaseIndent();
+				for (const emitter of this.resourceEmitters) {
+					emitter.emitWasmExportImport(code);
+				}
+				code.decreaseIndent();
+				code.push(`};`);
+				code.decreaseIndent();
+				code.push('}');
+			}
 
 			code.decreaseIndent();
 			code.push(`}`);
@@ -2534,8 +2547,8 @@ class InterfaceEmitter extends Emitter {
 	public emitWorldWasmExportImport(code: Code): void {
 		const { symbols } = this.context;
 		const [name, version] = this.getQualifierAndVersion(this.getPkg());
-		const property = `${name}/${this.iface.name}${version !== undefined ? `@${version}` : ''}`;
-		code.push(`'${property}': ${symbols.interfaces.getFullyQualifiedModuleName(this.iface)}._.imports.WasmInterface;`);
+		const property = `[export]${name}/${this.iface.name}${version !== undefined ? `@${version}` : ''}`;
+		code.push(`'${property}': ${symbols.interfaces.getFullyQualifiedModuleName(this.iface)}._.exports.imports.WasmInterface;`);
 	}
 
 	public emitWorldWasmExport(code: Code): void {
@@ -2544,19 +2557,15 @@ class InterfaceEmitter extends Emitter {
 		for (const func of this.functionEmitters) {
 			func.emitWasmExport(code, property);
 		}
+		for (const resource of this.resourceEmitters) {
+			resource.emitWasmExport(code);
+		}
 	}
 
 	public emitWorldCreateImport(code: Code, result: string): void {
 		const { symbols, nameProvider } = this.context;
 		const [name, version] = this.getQualifierAndVersion(this.getPkg());
 		const property = `${name}/${this.iface.name}${version !== undefined ? `@${version}` : ''}`;
-		code.push(`${result}['${property}'] = ${symbols.interfaces.getFullyQualifiedModuleName(this.iface)}._.imports.create(service.${nameProvider.iface.propertyName(this.iface)}, context);`);
-	}
-
-	public emitWorldCreateExportImport(code: Code, result: string): void {
-		const { symbols, nameProvider } = this.context;
-		const [name, version] = this.getQualifierAndVersion(this.getPkg());
-		const property = `[export]${name}/${this.iface.name}${version !== undefined ? `@${version}` : ''}`;
 		code.push(`${result}['${property}'] = ${symbols.interfaces.getFullyQualifiedModuleName(this.iface)}._.imports.create(service.${nameProvider.iface.propertyName(this.iface)}, context);`);
 	}
 
@@ -3191,10 +3200,6 @@ class ResourceEmitter extends InterfaceMemberEmitter {
 		const iName = this.container.name;
 		const pkg = this.context.symbols.getPackage(this.container.package);
 		let pkgName = pkg.name;
-		let index = pkgName.indexOf('@');
-		if (index >= 0) {
-			pkgName = pkgName.substring(0, index);
-		}
 		return `${pkgName}/${iName}/${rName}`;
 	}
 
@@ -3241,18 +3246,6 @@ class ResourceEmitter extends InterfaceMemberEmitter {
 		code.decreaseIndent();
 		code.push(`}`);
 		code.push(`export type ${tsName} = ${iName};`);
-	}
-
-	public emitManagerDeclaration(code: Code): void {
-		const { nameProvider } = this.context;
-		const name = nameProvider.type.name(this.resource);
-		code.push(`${name}: ${MetaModel.qualify('ResourceManager')}<${name}>;`);
-	}
-
-	public emitManagerCreation(code: Code): void {
-		const { nameProvider } = this.context;
-		const name = nameProvider.type.name(this.resource);
-		code.push(`${name}: new ${MetaModel.qualify('ResourceManager')}<${name}>(),`);
 	}
 
 	public emitTypeDeclaration(code: Code): void {
@@ -3401,6 +3394,21 @@ class ResourceEmitter extends InterfaceMemberEmitter {
 
 		code.decreaseIndent();
 		code.push(`}`);
+	}
+
+	public emitWasmExport(code: Code): void {
+		const iName = this.container.name;
+		const pkg = this.context.symbols.getPackage(this.container.package);
+		const qualifier = `${pkg.name}/${iName}#`;
+		for (const emitter of this.emitters) {
+			emitter.emitWasmInterface(code, qualifier);
+		}
+	}
+
+	public emitWasmExportImport(code: Code): void {
+		code.push(`'[resource-new]${this.resource.name}': (rep: i32) => i32;`);
+		code.push(`'[resource-rep]${this.resource.name}': (handle: i32) => i32;`);
+		code.push(`'[resource-drop]${this.resource.name}': (handle: i32) => i32;`);
 	}
 
 	public getImportDestructorSignature(): string {
@@ -3668,8 +3676,8 @@ namespace ResourceEmitter {
 			code.push(`${resourceName}.addDestructor('$drop', new $wcm.DestructorType('[resource-drop]${this.resource.name}', [['inst', ${resourceName}]]));`);
 		}
 
-		public emitWasmInterface(code: Code): void {
-			code.push(`${this.getWasmImportSignature()};`);
+		public emitWasmInterface(code: Code, qualifier: string = ''): void {
+			code.push(`${qualifier}${this.getWasmImportSignature()};`);
 		}
 
 		public getWasmImportSignature(): string {
@@ -3782,8 +3790,8 @@ function CallableEmitter<C extends Callable, P extends Interface | ResourceType 
 			return [metaDataParams, metaReturnType];
 		}
 
-		public emitWasmInterface(code: Code): void {
-			code.push(`'${this.callable.name}': ${this.getWasmSignature(code.imports)};`);
+		public emitWasmInterface(code: Code, qualifier: string = ''): void {
+			code.push(`'${qualifier}${this.callable.name}': ${this.getWasmSignature(code.imports)};`);
 		}
 
 		public emitWasmExport(code: Code, prefix: string): void {

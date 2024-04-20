@@ -4,7 +4,7 @@
  *--------------------------------------------------------------------------------------------*/
 import assert from 'assert';
 
-import { u32, Memory as IMemory, ptr, size, WasmContext, Alignment, Resource, ResourceManagers, MemoryRange, ReadonlyMemoryRange, HandleTables } from '../componentModel';
+import { u32, Memory as IMemory, ptr, size, WasmContext, Alignment, Resource, ResourceManagers, MemoryRange, ReadonlyMemoryRange, HandleTables, ResourceManager } from '../componentModel';
 
 class Memory implements IMemory {
 
@@ -48,15 +48,16 @@ import Types = td.testData.Types;
 import TestVariant = Types.TestVariant;
 import TestFlagsShort = Types.TestFlagsShort;
 import TestFlagsLong = Types.TestFlagsLong;
+import Test = td.testData.test;
 
 class PointResourceClass extends Resource implements Types.PointResource {
 
-	public static new(x: u32, y: u32): Types.PointResource {
-		return new PointResourceClass(x, y);
-	}
+	public static readonly $manager: ResourceManager<Types.PointResource> = new ResourceManager.Default();
 
 	constructor(public x: u32, public y: u32) {
-		super();
+		const handle = PointResourceClass.$manager.reserveHandle();
+		super(handle);
+		PointResourceClass.$manager.registerResource(this, handle);
 	}
 
 	public $drop(): void {
@@ -75,48 +76,53 @@ class PointResourceClass extends Resource implements Types.PointResource {
 	}
 }
 
-const serviceImpl: Types = {
-	call(point: Types.Point | undefined): u32 {
-		if (point === undefined) {
-			return 0;
+const worldImpl: Test.Imports = {
+	foo: () => {
+		return 10;
+	},
+	types: {
+		call(point: Types.Point | undefined): u32 {
+			if (point === undefined) {
+				return 0;
+			}
+			return point.x + point.y;
+		},
+		callOption(point: Types.Point | undefined): u32 | undefined {
+			if (point === undefined) {
+				return undefined;
+			}
+			return point.x + point.y;
+		},
+		PointResource: PointResourceClass,
+		checkVariant(value)  {
+			switch (value.tag) {
+				case TestVariant.unsigned32:
+					return TestVariant.Unsigned32(value.value + 1);
+				case TestVariant.unsigned64:
+					return TestVariant.Unsigned64(value.value + 1n);
+				case TestVariant.signed32:
+					return TestVariant.Signed32(value.value + 1);
+				case TestVariant.signed64:
+					return TestVariant.Signed64(value.value + 1n);
+				case TestVariant.floatingPoint32:
+					return TestVariant.FloatingPoint32(value.value + 1.3);
+				case TestVariant.floatingPoint64:
+					return TestVariant.FloatingPoint64(value.value + 1.3);
+				case TestVariant.structure:
+					return TestVariant.Structure({ x: value.value.x + 1, y: value.value.y + 1});
+				default:
+					return TestVariant.Empty();
+			}
+		},
+		checkFlagsShort(value) {
+			value = value | TestFlagsShort.six;
+			return value;
+		},
+		checkFlagsLong(value) {
+			value =  value | TestFlagsLong.thirtyNine;
+			return value;
 		}
-		return point.x + point.y;
-	},
-	callOption(point: Types.Point | undefined): u32 | undefined {
-		if (point === undefined) {
-			return undefined;
-		}
-		return point.x + point.y;
-	},
-	PointResource: PointResourceClass,
-	checkVariant(value)  {
-		switch (value.tag) {
-			case TestVariant.unsigned32:
-				return TestVariant.Unsigned32(value.value + 1);
-			case TestVariant.unsigned64:
-				return TestVariant.Unsigned64(value.value + 1n);
-			case TestVariant.signed32:
-				return TestVariant.Signed32(value.value + 1);
-			case TestVariant.signed64:
-				return TestVariant.Signed64(value.value + 1n);
-			case TestVariant.floatingPoint32:
-				return TestVariant.FloatingPoint32(value.value + 1.3);
-			case TestVariant.floatingPoint64:
-				return TestVariant.FloatingPoint64(value.value + 1.3);
-			case TestVariant.structure:
-				return TestVariant.Structure({ x: value.value.x + 1, y: value.value.y + 1});
-			default:
-				return TestVariant.Empty();
-		}
-	},
-	checkFlagsShort(value) {
-		value = value | TestFlagsShort.six;
-		return value;
-	},
-	checkFlagsLong(value) {
-		value =  value | TestFlagsLong.thirtyNine;
-		return value;
-	},
+	}
 };
 
 const memory = new Memory();
@@ -125,14 +131,13 @@ const context: WasmContext = {
 	getMemory: () => memory,
 	options: { encoding: 'utf-8' },
 	resources,
-	handles: new HandleTables.Default()
 };
 
 suite('point', () => {
-	const host = Types._.imports.create(serviceImpl, context);
-	const service: Types = Types._.exports.loop(host, context);
+	const host = Test._.imports.create(worldImpl, context);
+	const service = Test._.exports.loop(host, context);
 	test('host:call', () => {
-		assert.strictEqual(host.call(1, 2), 3);
+		assert.strictEqual(host['vscode:test-data/types'].call(1, 2), 3);
 	});
 	test('service:call', () => {
 		assert.strictEqual(service.call({ x: 1, y: 2 }), 3);

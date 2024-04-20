@@ -360,6 +360,13 @@ export namespace testData {
 		}
 		export namespace exports {
 			export type WasmInterface = _.WasmInterface & PointResource.exports.WasmInterface;
+			export namespace imports {
+				export type WasmInterface = {
+					'[resource-new]point-resource': (rep: i32) => i32;
+					'[resource-rep]point-resource': (handle: i32) => i32;
+					'[resource-drop]point-resource': (handle: i32) => i32;
+				};
+			}
 		}
 	}
 
@@ -441,6 +448,13 @@ export namespace testData {
 		}
 		export namespace exports {
 			export type WasmInterface = _.WasmInterface & Position.exports.WasmInterface;
+			export namespace imports {
+				export type WasmInterface = {
+					'[resource-new]position': (rep: i32) => i32;
+					'[resource-rep]position': (handle: i32) => i32;
+					'[resource-drop]position': (handle: i32) => i32;
+				};
+			}
 		}
 	}
 	export namespace test.$ {
@@ -460,7 +474,7 @@ export namespace testData {
 		export type Imports = {
 			'$root': $Root;
 			'vscode:test-data/types': testData.Types._.imports.WasmInterface;
-			'vscode:test-data/text': testData.Text._.imports.WasmInterface;
+			'[export]vscode:test-data/text': testData.Text._.exports.imports.WasmInterface;
 		};
 		export namespace imports {
 			export const functions: Map<string, $wcm.FunctionType> = new Map([
@@ -475,6 +489,9 @@ export namespace testData {
 		}
 		export type Exports = {
 			'bar': () => i32;
+			'vscode:test-data/text#[constructor]position': (line: i32, character: i32) => i32;
+			'vscode:test-data/text#[method]position.line': (self: i32) => i32;
+			'vscode:test-data/text#[method]position.character': (self: i32) => i32;
 		};
 		export namespace exports {
 			export const functions: Map<string, $wcm.FunctionType> = new Map([
