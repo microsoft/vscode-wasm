@@ -160,7 +160,7 @@ suite ('point-resource', () => {
 	test('service:call', () => {
 		const pointResourceManager = context.resources.ensure('vscode:test-data/types/point-resource');
 		const point = new service.PointResource(1, 2);
-		const handle = point.$handle;
+		const handle = point.$handle();
 		assert.ok(typeof handle === 'number');
 		assert.ok(pointResourceManager.getResource(handle) !== undefined);
 		assert.strictEqual(point.getX(), 1);
