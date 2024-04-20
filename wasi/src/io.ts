@@ -6,12 +6,9 @@ import * as $wcm from '@vscode/wasm-component-model';
 import type { borrow, own, u64, result, i32, ptr, i64 } from '@vscode/wasm-component-model';
 
 export namespace io {
-	export namespace error {
+	export namespace Error {
 		export namespace Error {
-			export interface Interface {
-				$handle?: $wcm.ResourceHandle;
-				$drop?(): void;
-
+			export interface Interface extends $wcm.JInterface {
 				/**
 				 * Returns a string that is suitable to assist humans in debugging
 				 * this error.
@@ -31,19 +28,16 @@ export namespace io {
 		export type Error = Error.Interface;
 	}
 	export type Error = {
-		Error: error.Error.Class;
+		Error: Error.Error.Class;
 	};
 
 	/**
 	 * A poll API intended to let users wait for I/O events on multiple handles
 	 * at once.
 	 */
-	export namespace poll {
+	export namespace Poll {
 		export namespace Pollable {
-			export interface Interface {
-				$handle?: $wcm.ResourceHandle;
-				$drop?(): void;
-
+			export interface Interface extends $wcm.JInterface {
 				/**
 				 * Return the readiness of a pollable. This function never blocks.
 				 * 
@@ -90,8 +84,8 @@ export namespace io {
 		export type poll = (in_: borrow<Pollable>[]) => Uint32Array;
 	}
 	export type Poll = {
-		Pollable: poll.Pollable.Class;
-		poll: poll.poll;
+		Pollable: Poll.Pollable.Class;
+		poll: Poll.poll;
 	};
 
 	/**
@@ -101,10 +95,10 @@ export namespace io {
 	 * In the future, the component model is expected to add built-in stream types;
 	 * when it does, they are expected to subsume this API.
 	 */
-	export namespace streams {
-		export type Error = io.error.Error;
+	export namespace Streams {
+		export type Error = io.Error.Error;
 
-		export type Pollable = io.poll.Pollable;
+		export type Pollable = io.Poll.Pollable;
 
 
 		/**
@@ -165,10 +159,7 @@ export namespace io {
 		export type StreamError = StreamError.LastOperationFailed | StreamError.Closed;
 
 		export namespace InputStream {
-			export interface Interface {
-				$handle?: $wcm.ResourceHandle;
-				$drop?(): void;
-
+			export interface Interface extends $wcm.JInterface {
 				/**
 				 * Perform a non-blocking read from the stream.
 				 * 
@@ -237,10 +228,7 @@ export namespace io {
 		export type InputStream = InputStream.Interface;
 
 		export namespace OutputStream {
-			export interface Interface {
-				$handle?: $wcm.ResourceHandle;
-				$drop?(): void;
-
+			export interface Interface extends $wcm.JInterface {
 				/**
 				 * Check readiness for writing. This function never blocks.
 				 * 
@@ -405,207 +393,206 @@ export namespace io {
 		export type OutputStream = OutputStream.Interface;
 	}
 	export type Streams = {
-		InputStream: streams.InputStream.Class;
-		OutputStream: streams.OutputStream.Class;
+		InputStream: Streams.InputStream.Class;
+		OutputStream: Streams.OutputStream.Class;
 	};
 }
 
 export namespace io {
-	export namespace error.$ {
-		export const Error = new $wcm.ResourceType<io.error.Error>('error', 'wasi:io/error/error');
+	export namespace Error.$ {
+		export const Error = new $wcm.ResourceType<io.Error.Error>('error', 'wasi:io@0.2.0/error/error');
 		export const Error_Handle = new $wcm.ResourceHandleType('error');
 		Error.addDestructor('$drop', new $wcm.DestructorType('[resource-drop]error', [['inst', Error]]));
-		Error.addMethod('toDebugString', new $wcm.MethodType<io.error.Error.Interface['toDebugString']>('[method]error.to-debug-string', [], $wcm.wstring));
+		Error.addMethod('toDebugString', new $wcm.MethodType<io.Error.Error.Interface['toDebugString']>('[method]error.to-debug-string', [], $wcm.wstring));
 	}
-	export namespace error._ {
+	export namespace Error._ {
 		export const id = 'wasi:io/error@0.2.0' as const;
 		export const witName = 'error' as const;
-		export const types: Map<string, $wcm.GenericComponentModelType> = new Map<string, $wcm.GenericComponentModelType>([
-			['Error', $.Error]
-		]);
-		export const resources: Map<string, $wcm.ResourceType> = new Map<string, $wcm.ResourceType>([
-			['Error', $.Error]
-		]);
 		export namespace Error {
 			export type WasmInterface = {
 				'[method]error.to-debug-string': (self: i32, result: ptr<string>) => void;
-				'[resource-drop]error': (self: i32) => void;
 			};
-			type ObjectModule = {
-				$drop(self: Error): void;
+			export type ObjectModule = {
 				toDebugString(self: Error): string;
 			};
-			class Impl extends $wcm.Resource implements io.error.Error.Interface {
-				private readonly _om: ObjectModule;
-				constructor(om: ObjectModule) {
-					super();
-					this._om = om;
+			export namespace imports {
+				export type WasmInterface = Error.WasmInterface & { '[resource-drop]error': (self: i32) => void };
+			}
+			export namespace exports {
+				export type WasmInterface = Error.WasmInterface & { '[dtor]error': (self: i32) => void };
+				class Impl extends $wcm.Resource implements io.Error.Error.Interface {
+					private readonly _om: ObjectModule;
+					constructor(_handleTag: Symbol, handle: $wcm.ResourceHandle, om: ObjectModule) {
+						super(handle);
+						this._om = om;
+					}
+					public toDebugString(): string {
+						return this._om.toDebugString(this);
+					}
 				}
-				public $drop(): void {
-					return this._om.$drop(this);
-				}
-				public toDebugString(): string {
-					return this._om.toDebugString(this);
+				export function Class(wasmInterface: WasmInterface, context: $wcm.WasmContext): io.Error.Error.Class {
+					const resource = io.Error.$.Error;
+					const om: ObjectModule = $wcm.Module.createObjectModule(resource, wasmInterface, context);
+					return class extends Impl {
+						constructor(handleTag: Symbol, handle: $wcm.ResourceHandle) {
+							super(handleTag, handle, om);
+						}
+					};
 				}
 			}
-			export function Class(wasmInterface: WasmInterface, context: $wcm.WasmContext): io.error.Error.Class {
-				const resource = io.error.$.Error;
-				const om: ObjectModule = $wcm.Module.createObjectModule(resource, wasmInterface, context);
-				return class extends Impl {
-					constructor() {
-						super(om);
-					}
+		}
+		export const types: Map<string, $wcm.GenericComponentModelType> = new Map<string, $wcm.GenericComponentModelType>([
+			['Error', $.Error]
+		]);
+		export const resources: Map<string, { resource: $wcm.ResourceType; factory: $wcm.ClassFactory<any>}> = new Map<string, { resource: $wcm.ResourceType; factory: $wcm.ClassFactory<any>}>([
+			['Error', { resource: $.Error, factory: Error.exports.Class }]
+		]);
+		export type WasmInterface = {
+		};
+		export namespace imports {
+			export type WasmInterface = _.WasmInterface & Error.imports.WasmInterface;
+		}
+		export namespace exports {
+			export type WasmInterface = _.WasmInterface & Error.exports.WasmInterface;
+			export namespace imports {
+				export type WasmInterface = {
+					'[resource-new]error': (rep: i32) => i32;
+					'[resource-rep]error': (handle: i32) => i32;
+					'[resource-drop]error': (handle: i32) => i32;
 				};
 			}
 		}
-		export type WasmInterface = {
-		} & Error.WasmInterface;
-		export function createImports(service: io.Error, context: $wcm.WasmContext): WasmInterface {
-			return $wcm.Imports.create<WasmInterface>(undefined, resources, service, context);
-		}
-		export function filterExports(exports: object, context: $wcm.WasmContext): WasmInterface {
-			return $wcm.Exports.filter<WasmInterface>(exports, undefined, resources, id, io._.version, context);
-		}
-		export function bindExports(wasmInterface: WasmInterface, context: $wcm.WasmContext): io.Error {
-			return $wcm.Exports.bind<io.Error>(undefined, [['Error', $.Error, Error.Class]], wasmInterface, context);
-		}
 	}
 
-	export namespace poll.$ {
-		export const Pollable = new $wcm.ResourceType<io.poll.Pollable>('pollable', 'wasi:io/poll/pollable');
+	export namespace Poll.$ {
+		export const Pollable = new $wcm.ResourceType<io.Poll.Pollable>('pollable', 'wasi:io@0.2.0/poll/pollable');
 		export const Pollable_Handle = new $wcm.ResourceHandleType('pollable');
 		Pollable.addDestructor('$drop', new $wcm.DestructorType('[resource-drop]pollable', [['inst', Pollable]]));
-		Pollable.addMethod('ready', new $wcm.MethodType<io.poll.Pollable.Interface['ready']>('[method]pollable.ready', [], $wcm.bool));
-		Pollable.addMethod('block', new $wcm.MethodType<io.poll.Pollable.Interface['block']>('[method]pollable.block', [], undefined));
-		export const poll = new $wcm.FunctionType<io.poll.poll>('poll',[
-			['in_', new $wcm.ListType<borrow<io.poll.Pollable>>(new $wcm.BorrowType<io.poll.Pollable>(Pollable))],
+		Pollable.addMethod('ready', new $wcm.MethodType<io.Poll.Pollable.Interface['ready']>('[method]pollable.ready', [], $wcm.bool));
+		Pollable.addMethod('block', new $wcm.MethodType<io.Poll.Pollable.Interface['block']>('[method]pollable.block', [], undefined));
+		export const poll = new $wcm.FunctionType<io.Poll.poll>('poll',[
+			['in_', new $wcm.ListType<borrow<io.Poll.Pollable>>(new $wcm.BorrowType<io.Poll.Pollable>(Pollable))],
 		], new $wcm.Uint32ArrayType());
 	}
-	export namespace poll._ {
+	export namespace Poll._ {
 		export const id = 'wasi:io/poll@0.2.0' as const;
 		export const witName = 'poll' as const;
+		export namespace Pollable {
+			export type WasmInterface = {
+				'[method]pollable.ready': (self: i32) => i32;
+				'[method]pollable.block': (self: i32) => void;
+			};
+			export type ObjectModule = {
+				ready(self: Pollable): boolean;
+				block(self: Pollable): void;
+			};
+			export namespace imports {
+				export type WasmInterface = Pollable.WasmInterface & { '[resource-drop]pollable': (self: i32) => void };
+			}
+			export namespace exports {
+				export type WasmInterface = Pollable.WasmInterface & { '[dtor]pollable': (self: i32) => void };
+				class Impl extends $wcm.Resource implements io.Poll.Pollable.Interface {
+					private readonly _om: ObjectModule;
+					constructor(_handleTag: Symbol, handle: $wcm.ResourceHandle, om: ObjectModule) {
+						super(handle);
+						this._om = om;
+					}
+					public ready(): boolean {
+						return this._om.ready(this);
+					}
+					public block(): void {
+						return this._om.block(this);
+					}
+				}
+				export function Class(wasmInterface: WasmInterface, context: $wcm.WasmContext): io.Poll.Pollable.Class {
+					const resource = io.Poll.$.Pollable;
+					const om: ObjectModule = $wcm.Module.createObjectModule(resource, wasmInterface, context);
+					return class extends Impl {
+						constructor(handleTag: Symbol, handle: $wcm.ResourceHandle) {
+							super(handleTag, handle, om);
+						}
+					};
+				}
+			}
+		}
 		export const types: Map<string, $wcm.GenericComponentModelType> = new Map<string, $wcm.GenericComponentModelType>([
 			['Pollable', $.Pollable]
 		]);
 		export const functions: Map<string, $wcm.FunctionType> = new Map([
 			['poll', $.poll]
 		]);
-		export const resources: Map<string, $wcm.ResourceType> = new Map<string, $wcm.ResourceType>([
-			['Pollable', $.Pollable]
+		export const resources: Map<string, { resource: $wcm.ResourceType; factory: $wcm.ClassFactory<any>}> = new Map<string, { resource: $wcm.ResourceType; factory: $wcm.ClassFactory<any>}>([
+			['Pollable', { resource: $.Pollable, factory: Pollable.exports.Class }]
 		]);
-		export namespace Pollable {
-			export type WasmInterface = {
-				'[method]pollable.ready': (self: i32) => i32;
-				'[method]pollable.block': (self: i32) => void;
-				'[resource-drop]pollable': (self: i32) => void;
-			};
-			type ObjectModule = {
-				$drop(self: Pollable): void;
-				ready(self: Pollable): boolean;
-				block(self: Pollable): void;
-			};
-			class Impl extends $wcm.Resource implements io.poll.Pollable.Interface {
-				private readonly _om: ObjectModule;
-				constructor(om: ObjectModule) {
-					super();
-					this._om = om;
-				}
-				public $drop(): void {
-					return this._om.$drop(this);
-				}
-				public ready(): boolean {
-					return this._om.ready(this);
-				}
-				public block(): void {
-					return this._om.block(this);
-				}
-			}
-			export function Class(wasmInterface: WasmInterface, context: $wcm.WasmContext): io.poll.Pollable.Class {
-				const resource = io.poll.$.Pollable;
-				const om: ObjectModule = $wcm.Module.createObjectModule(resource, wasmInterface, context);
-				return class extends Impl {
-					constructor() {
-						super(om);
-					}
+		export type WasmInterface = {
+			'poll': (in__ptr: i32, in__len: i32, result: ptr<Uint32Array>) => void;
+		};
+		export namespace imports {
+			export type WasmInterface = _.WasmInterface & Pollable.imports.WasmInterface;
+		}
+		export namespace exports {
+			export type WasmInterface = _.WasmInterface & Pollable.exports.WasmInterface;
+			export namespace imports {
+				export type WasmInterface = {
+					'[resource-new]pollable': (rep: i32) => i32;
+					'[resource-rep]pollable': (handle: i32) => i32;
+					'[resource-drop]pollable': (handle: i32) => i32;
 				};
 			}
 		}
-		export type WasmInterface = {
-			'poll': (in__ptr: i32, in__len: i32, result: ptr<Uint32Array>) => void;
-		} & Pollable.WasmInterface;
-		export function createImports(service: io.Poll, context: $wcm.WasmContext): WasmInterface {
-			return $wcm.Imports.create<WasmInterface>(functions, resources, service, context);
-		}
-		export function filterExports(exports: object, context: $wcm.WasmContext): WasmInterface {
-			return $wcm.Exports.filter<WasmInterface>(exports, functions, resources, id, io._.version, context);
-		}
-		export function bindExports(wasmInterface: WasmInterface, context: $wcm.WasmContext): io.Poll {
-			return $wcm.Exports.bind<io.Poll>(functions, [['Pollable', $.Pollable, Pollable.Class]], wasmInterface, context);
-		}
 	}
 
-	export namespace streams.$ {
-		export const Error = io.error.$.Error;
-		export const Pollable = io.poll.$.Pollable;
-		export const StreamError = new $wcm.VariantType<io.streams.StreamError, io.streams.StreamError._tt, io.streams.StreamError._vt>([['lastOperationFailed', new $wcm.OwnType<io.streams.Error>(Error)], ['closed', undefined]], io.streams.StreamError._ctor);
-		export const InputStream = new $wcm.ResourceType<io.streams.InputStream>('input-stream', 'wasi:io/streams/input-stream');
+	export namespace Streams.$ {
+		export const Error = io.Error.$.Error;
+		export const Pollable = io.Poll.$.Pollable;
+		export const StreamError = new $wcm.VariantType<io.Streams.StreamError, io.Streams.StreamError._tt, io.Streams.StreamError._vt>([['lastOperationFailed', new $wcm.OwnType<io.Streams.Error>(Error)], ['closed', undefined]], io.Streams.StreamError._ctor);
+		export const InputStream = new $wcm.ResourceType<io.Streams.InputStream>('input-stream', 'wasi:io@0.2.0/streams/input-stream');
 		export const InputStream_Handle = new $wcm.ResourceHandleType('input-stream');
-		export const OutputStream = new $wcm.ResourceType<io.streams.OutputStream>('output-stream', 'wasi:io/streams/output-stream');
+		export const OutputStream = new $wcm.ResourceType<io.Streams.OutputStream>('output-stream', 'wasi:io@0.2.0/streams/output-stream');
 		export const OutputStream_Handle = new $wcm.ResourceHandleType('output-stream');
 		InputStream.addDestructor('$drop', new $wcm.DestructorType('[resource-drop]input-stream', [['inst', InputStream]]));
-		InputStream.addMethod('read', new $wcm.MethodType<io.streams.InputStream.Interface['read']>('[method]input-stream.read', [
+		InputStream.addMethod('read', new $wcm.MethodType<io.Streams.InputStream.Interface['read']>('[method]input-stream.read', [
 			['len', $wcm.u64],
-		], new $wcm.ResultType<Uint8Array, io.streams.StreamError>(new $wcm.Uint8ArrayType(), StreamError)));
-		InputStream.addMethod('blockingRead', new $wcm.MethodType<io.streams.InputStream.Interface['blockingRead']>('[method]input-stream.blocking-read', [
+		], new $wcm.ResultType<Uint8Array, io.Streams.StreamError>(new $wcm.Uint8ArrayType(), StreamError)));
+		InputStream.addMethod('blockingRead', new $wcm.MethodType<io.Streams.InputStream.Interface['blockingRead']>('[method]input-stream.blocking-read', [
 			['len', $wcm.u64],
-		], new $wcm.ResultType<Uint8Array, io.streams.StreamError>(new $wcm.Uint8ArrayType(), StreamError)));
-		InputStream.addMethod('skip', new $wcm.MethodType<io.streams.InputStream.Interface['skip']>('[method]input-stream.skip', [
+		], new $wcm.ResultType<Uint8Array, io.Streams.StreamError>(new $wcm.Uint8ArrayType(), StreamError)));
+		InputStream.addMethod('skip', new $wcm.MethodType<io.Streams.InputStream.Interface['skip']>('[method]input-stream.skip', [
 			['len', $wcm.u64],
-		], new $wcm.ResultType<u64, io.streams.StreamError>($wcm.u64, StreamError)));
-		InputStream.addMethod('blockingSkip', new $wcm.MethodType<io.streams.InputStream.Interface['blockingSkip']>('[method]input-stream.blocking-skip', [
+		], new $wcm.ResultType<u64, io.Streams.StreamError>($wcm.u64, StreamError)));
+		InputStream.addMethod('blockingSkip', new $wcm.MethodType<io.Streams.InputStream.Interface['blockingSkip']>('[method]input-stream.blocking-skip', [
 			['len', $wcm.u64],
-		], new $wcm.ResultType<u64, io.streams.StreamError>($wcm.u64, StreamError)));
-		InputStream.addMethod('subscribe', new $wcm.MethodType<io.streams.InputStream.Interface['subscribe']>('[method]input-stream.subscribe', [], new $wcm.OwnType<io.streams.Pollable>(Pollable)));
+		], new $wcm.ResultType<u64, io.Streams.StreamError>($wcm.u64, StreamError)));
+		InputStream.addMethod('subscribe', new $wcm.MethodType<io.Streams.InputStream.Interface['subscribe']>('[method]input-stream.subscribe', [], new $wcm.OwnType<io.Streams.Pollable>(Pollable)));
 		OutputStream.addDestructor('$drop', new $wcm.DestructorType('[resource-drop]output-stream', [['inst', OutputStream]]));
-		OutputStream.addMethod('checkWrite', new $wcm.MethodType<io.streams.OutputStream.Interface['checkWrite']>('[method]output-stream.check-write', [], new $wcm.ResultType<u64, io.streams.StreamError>($wcm.u64, StreamError)));
-		OutputStream.addMethod('write', new $wcm.MethodType<io.streams.OutputStream.Interface['write']>('[method]output-stream.write', [
+		OutputStream.addMethod('checkWrite', new $wcm.MethodType<io.Streams.OutputStream.Interface['checkWrite']>('[method]output-stream.check-write', [], new $wcm.ResultType<u64, io.Streams.StreamError>($wcm.u64, StreamError)));
+		OutputStream.addMethod('write', new $wcm.MethodType<io.Streams.OutputStream.Interface['write']>('[method]output-stream.write', [
 			['contents', new $wcm.Uint8ArrayType()],
-		], new $wcm.ResultType<void, io.streams.StreamError>(undefined, StreamError)));
-		OutputStream.addMethod('blockingWriteAndFlush', new $wcm.MethodType<io.streams.OutputStream.Interface['blockingWriteAndFlush']>('[method]output-stream.blocking-write-and-flush', [
+		], new $wcm.ResultType<void, io.Streams.StreamError>(undefined, StreamError)));
+		OutputStream.addMethod('blockingWriteAndFlush', new $wcm.MethodType<io.Streams.OutputStream.Interface['blockingWriteAndFlush']>('[method]output-stream.blocking-write-and-flush', [
 			['contents', new $wcm.Uint8ArrayType()],
-		], new $wcm.ResultType<void, io.streams.StreamError>(undefined, StreamError)));
-		OutputStream.addMethod('flush', new $wcm.MethodType<io.streams.OutputStream.Interface['flush']>('[method]output-stream.flush', [], new $wcm.ResultType<void, io.streams.StreamError>(undefined, StreamError)));
-		OutputStream.addMethod('blockingFlush', new $wcm.MethodType<io.streams.OutputStream.Interface['blockingFlush']>('[method]output-stream.blocking-flush', [], new $wcm.ResultType<void, io.streams.StreamError>(undefined, StreamError)));
-		OutputStream.addMethod('subscribe', new $wcm.MethodType<io.streams.OutputStream.Interface['subscribe']>('[method]output-stream.subscribe', [], new $wcm.OwnType<io.streams.Pollable>(Pollable)));
-		OutputStream.addMethod('writeZeroes', new $wcm.MethodType<io.streams.OutputStream.Interface['writeZeroes']>('[method]output-stream.write-zeroes', [
+		], new $wcm.ResultType<void, io.Streams.StreamError>(undefined, StreamError)));
+		OutputStream.addMethod('flush', new $wcm.MethodType<io.Streams.OutputStream.Interface['flush']>('[method]output-stream.flush', [], new $wcm.ResultType<void, io.Streams.StreamError>(undefined, StreamError)));
+		OutputStream.addMethod('blockingFlush', new $wcm.MethodType<io.Streams.OutputStream.Interface['blockingFlush']>('[method]output-stream.blocking-flush', [], new $wcm.ResultType<void, io.Streams.StreamError>(undefined, StreamError)));
+		OutputStream.addMethod('subscribe', new $wcm.MethodType<io.Streams.OutputStream.Interface['subscribe']>('[method]output-stream.subscribe', [], new $wcm.OwnType<io.Streams.Pollable>(Pollable)));
+		OutputStream.addMethod('writeZeroes', new $wcm.MethodType<io.Streams.OutputStream.Interface['writeZeroes']>('[method]output-stream.write-zeroes', [
 			['len', $wcm.u64],
-		], new $wcm.ResultType<void, io.streams.StreamError>(undefined, StreamError)));
-		OutputStream.addMethod('blockingWriteZeroesAndFlush', new $wcm.MethodType<io.streams.OutputStream.Interface['blockingWriteZeroesAndFlush']>('[method]output-stream.blocking-write-zeroes-and-flush', [
+		], new $wcm.ResultType<void, io.Streams.StreamError>(undefined, StreamError)));
+		OutputStream.addMethod('blockingWriteZeroesAndFlush', new $wcm.MethodType<io.Streams.OutputStream.Interface['blockingWriteZeroesAndFlush']>('[method]output-stream.blocking-write-zeroes-and-flush', [
 			['len', $wcm.u64],
-		], new $wcm.ResultType<void, io.streams.StreamError>(undefined, StreamError)));
-		OutputStream.addMethod('splice', new $wcm.MethodType<io.streams.OutputStream.Interface['splice']>('[method]output-stream.splice', [
-			['src', new $wcm.BorrowType<io.streams.InputStream>(InputStream)],
+		], new $wcm.ResultType<void, io.Streams.StreamError>(undefined, StreamError)));
+		OutputStream.addMethod('splice', new $wcm.MethodType<io.Streams.OutputStream.Interface['splice']>('[method]output-stream.splice', [
+			['src', new $wcm.BorrowType<io.Streams.InputStream>(InputStream)],
 			['len', $wcm.u64],
-		], new $wcm.ResultType<u64, io.streams.StreamError>($wcm.u64, StreamError)));
-		OutputStream.addMethod('blockingSplice', new $wcm.MethodType<io.streams.OutputStream.Interface['blockingSplice']>('[method]output-stream.blocking-splice', [
-			['src', new $wcm.BorrowType<io.streams.InputStream>(InputStream)],
+		], new $wcm.ResultType<u64, io.Streams.StreamError>($wcm.u64, StreamError)));
+		OutputStream.addMethod('blockingSplice', new $wcm.MethodType<io.Streams.OutputStream.Interface['blockingSplice']>('[method]output-stream.blocking-splice', [
+			['src', new $wcm.BorrowType<io.Streams.InputStream>(InputStream)],
 			['len', $wcm.u64],
-		], new $wcm.ResultType<u64, io.streams.StreamError>($wcm.u64, StreamError)));
+		], new $wcm.ResultType<u64, io.Streams.StreamError>($wcm.u64, StreamError)));
 	}
-	export namespace streams._ {
+	export namespace Streams._ {
 		export const id = 'wasi:io/streams@0.2.0' as const;
 		export const witName = 'streams' as const;
-		export const types: Map<string, $wcm.GenericComponentModelType> = new Map<string, $wcm.GenericComponentModelType>([
-			['Error', $.Error],
-			['Pollable', $.Pollable],
-			['StreamError', $.StreamError],
-			['InputStream', $.InputStream],
-			['OutputStream', $.OutputStream]
-		]);
-		export const resources: Map<string, $wcm.ResourceType> = new Map<string, $wcm.ResourceType>([
-			['InputStream', $.InputStream],
-			['OutputStream', $.OutputStream]
-		]);
 		export namespace InputStream {
 			export type WasmInterface = {
 				'[method]input-stream.read': (self: i32, len: i64, result: ptr<result<Uint8Array, StreamError>>) => void;
@@ -613,49 +600,50 @@ export namespace io {
 				'[method]input-stream.skip': (self: i32, len: i64, result: ptr<result<u64, StreamError>>) => void;
 				'[method]input-stream.blocking-skip': (self: i32, len: i64, result: ptr<result<u64, StreamError>>) => void;
 				'[method]input-stream.subscribe': (self: i32) => i32;
-				'[resource-drop]input-stream': (self: i32) => void;
 			};
-			type ObjectModule = {
-				$drop(self: InputStream): void;
+			export type ObjectModule = {
 				read(self: InputStream, len: u64): result<Uint8Array, StreamError>;
 				blockingRead(self: InputStream, len: u64): result<Uint8Array, StreamError>;
 				skip(self: InputStream, len: u64): result<u64, StreamError>;
 				blockingSkip(self: InputStream, len: u64): result<u64, StreamError>;
 				subscribe(self: InputStream): own<Pollable>;
 			};
-			class Impl extends $wcm.Resource implements io.streams.InputStream.Interface {
-				private readonly _om: ObjectModule;
-				constructor(om: ObjectModule) {
-					super();
-					this._om = om;
-				}
-				public $drop(): void {
-					return this._om.$drop(this);
-				}
-				public read(len: u64): result<Uint8Array, StreamError> {
-					return this._om.read(this, len);
-				}
-				public blockingRead(len: u64): result<Uint8Array, StreamError> {
-					return this._om.blockingRead(this, len);
-				}
-				public skip(len: u64): result<u64, StreamError> {
-					return this._om.skip(this, len);
-				}
-				public blockingSkip(len: u64): result<u64, StreamError> {
-					return this._om.blockingSkip(this, len);
-				}
-				public subscribe(): own<Pollable> {
-					return this._om.subscribe(this);
-				}
+			export namespace imports {
+				export type WasmInterface = InputStream.WasmInterface & { '[resource-drop]input-stream': (self: i32) => void };
 			}
-			export function Class(wasmInterface: WasmInterface, context: $wcm.WasmContext): io.streams.InputStream.Class {
-				const resource = io.streams.$.InputStream;
-				const om: ObjectModule = $wcm.Module.createObjectModule(resource, wasmInterface, context);
-				return class extends Impl {
-					constructor() {
-						super(om);
+			export namespace exports {
+				export type WasmInterface = InputStream.WasmInterface & { '[dtor]input-stream': (self: i32) => void };
+				class Impl extends $wcm.Resource implements io.Streams.InputStream.Interface {
+					private readonly _om: ObjectModule;
+					constructor(_handleTag: Symbol, handle: $wcm.ResourceHandle, om: ObjectModule) {
+						super(handle);
+						this._om = om;
 					}
-				};
+					public read(len: u64): result<Uint8Array, StreamError> {
+						return this._om.read(this, len);
+					}
+					public blockingRead(len: u64): result<Uint8Array, StreamError> {
+						return this._om.blockingRead(this, len);
+					}
+					public skip(len: u64): result<u64, StreamError> {
+						return this._om.skip(this, len);
+					}
+					public blockingSkip(len: u64): result<u64, StreamError> {
+						return this._om.blockingSkip(this, len);
+					}
+					public subscribe(): own<Pollable> {
+						return this._om.subscribe(this);
+					}
+				}
+				export function Class(wasmInterface: WasmInterface, context: $wcm.WasmContext): io.Streams.InputStream.Class {
+					const resource = io.Streams.$.InputStream;
+					const om: ObjectModule = $wcm.Module.createObjectModule(resource, wasmInterface, context);
+					return class extends Impl {
+						constructor(handleTag: Symbol, handle: $wcm.ResourceHandle) {
+							super(handleTag, handle, om);
+						}
+					};
+				}
 			}
 		}
 		export namespace OutputStream {
@@ -670,10 +658,8 @@ export namespace io {
 				'[method]output-stream.blocking-write-zeroes-and-flush': (self: i32, len: i64, result: ptr<result<void, StreamError>>) => void;
 				'[method]output-stream.splice': (self: i32, src: i32, len: i64, result: ptr<result<u64, StreamError>>) => void;
 				'[method]output-stream.blocking-splice': (self: i32, src: i32, len: i64, result: ptr<result<u64, StreamError>>) => void;
-				'[resource-drop]output-stream': (self: i32) => void;
 			};
-			type ObjectModule = {
-				$drop(self: OutputStream): void;
+			export type ObjectModule = {
 				checkWrite(self: OutputStream): result<u64, StreamError>;
 				write(self: OutputStream, contents: Uint8Array): result<void, StreamError>;
 				blockingWriteAndFlush(self: OutputStream, contents: Uint8Array): result<void, StreamError>;
@@ -685,66 +671,87 @@ export namespace io {
 				splice(self: OutputStream, src: borrow<InputStream>, len: u64): result<u64, StreamError>;
 				blockingSplice(self: OutputStream, src: borrow<InputStream>, len: u64): result<u64, StreamError>;
 			};
-			class Impl extends $wcm.Resource implements io.streams.OutputStream.Interface {
-				private readonly _om: ObjectModule;
-				constructor(om: ObjectModule) {
-					super();
-					this._om = om;
+			export namespace imports {
+				export type WasmInterface = OutputStream.WasmInterface & { '[resource-drop]output-stream': (self: i32) => void };
+			}
+			export namespace exports {
+				export type WasmInterface = OutputStream.WasmInterface & { '[dtor]output-stream': (self: i32) => void };
+				class Impl extends $wcm.Resource implements io.Streams.OutputStream.Interface {
+					private readonly _om: ObjectModule;
+					constructor(_handleTag: Symbol, handle: $wcm.ResourceHandle, om: ObjectModule) {
+						super(handle);
+						this._om = om;
+					}
+					public checkWrite(): result<u64, StreamError> {
+						return this._om.checkWrite(this);
+					}
+					public write(contents: Uint8Array): result<void, StreamError> {
+						return this._om.write(this, contents);
+					}
+					public blockingWriteAndFlush(contents: Uint8Array): result<void, StreamError> {
+						return this._om.blockingWriteAndFlush(this, contents);
+					}
+					public flush(): result<void, StreamError> {
+						return this._om.flush(this);
+					}
+					public blockingFlush(): result<void, StreamError> {
+						return this._om.blockingFlush(this);
+					}
+					public subscribe(): own<Pollable> {
+						return this._om.subscribe(this);
+					}
+					public writeZeroes(len: u64): result<void, StreamError> {
+						return this._om.writeZeroes(this, len);
+					}
+					public blockingWriteZeroesAndFlush(len: u64): result<void, StreamError> {
+						return this._om.blockingWriteZeroesAndFlush(this, len);
+					}
+					public splice(src: borrow<InputStream>, len: u64): result<u64, StreamError> {
+						return this._om.splice(this, src, len);
+					}
+					public blockingSplice(src: borrow<InputStream>, len: u64): result<u64, StreamError> {
+						return this._om.blockingSplice(this, src, len);
+					}
 				}
-				public $drop(): void {
-					return this._om.$drop(this);
-				}
-				public checkWrite(): result<u64, StreamError> {
-					return this._om.checkWrite(this);
-				}
-				public write(contents: Uint8Array): result<void, StreamError> {
-					return this._om.write(this, contents);
-				}
-				public blockingWriteAndFlush(contents: Uint8Array): result<void, StreamError> {
-					return this._om.blockingWriteAndFlush(this, contents);
-				}
-				public flush(): result<void, StreamError> {
-					return this._om.flush(this);
-				}
-				public blockingFlush(): result<void, StreamError> {
-					return this._om.blockingFlush(this);
-				}
-				public subscribe(): own<Pollable> {
-					return this._om.subscribe(this);
-				}
-				public writeZeroes(len: u64): result<void, StreamError> {
-					return this._om.writeZeroes(this, len);
-				}
-				public blockingWriteZeroesAndFlush(len: u64): result<void, StreamError> {
-					return this._om.blockingWriteZeroesAndFlush(this, len);
-				}
-				public splice(src: borrow<InputStream>, len: u64): result<u64, StreamError> {
-					return this._om.splice(this, src, len);
-				}
-				public blockingSplice(src: borrow<InputStream>, len: u64): result<u64, StreamError> {
-					return this._om.blockingSplice(this, src, len);
+				export function Class(wasmInterface: WasmInterface, context: $wcm.WasmContext): io.Streams.OutputStream.Class {
+					const resource = io.Streams.$.OutputStream;
+					const om: ObjectModule = $wcm.Module.createObjectModule(resource, wasmInterface, context);
+					return class extends Impl {
+						constructor(handleTag: Symbol, handle: $wcm.ResourceHandle) {
+							super(handleTag, handle, om);
+						}
+					};
 				}
 			}
-			export function Class(wasmInterface: WasmInterface, context: $wcm.WasmContext): io.streams.OutputStream.Class {
-				const resource = io.streams.$.OutputStream;
-				const om: ObjectModule = $wcm.Module.createObjectModule(resource, wasmInterface, context);
-				return class extends Impl {
-					constructor() {
-						super(om);
-					}
+		}
+		export const types: Map<string, $wcm.GenericComponentModelType> = new Map<string, $wcm.GenericComponentModelType>([
+			['Error', $.Error],
+			['Pollable', $.Pollable],
+			['StreamError', $.StreamError],
+			['InputStream', $.InputStream],
+			['OutputStream', $.OutputStream]
+		]);
+		export const resources: Map<string, { resource: $wcm.ResourceType; factory: $wcm.ClassFactory<any>}> = new Map<string, { resource: $wcm.ResourceType; factory: $wcm.ClassFactory<any>}>([
+			['InputStream', { resource: $.InputStream, factory: InputStream.exports.Class }],
+			['OutputStream', { resource: $.OutputStream, factory: OutputStream.exports.Class }]
+		]);
+		export type WasmInterface = {
+		};
+		export namespace imports {
+			export type WasmInterface = _.WasmInterface & InputStream.imports.WasmInterface & OutputStream.imports.WasmInterface;
+		}
+		export namespace exports {
+			export type WasmInterface = _.WasmInterface & InputStream.exports.WasmInterface & OutputStream.exports.WasmInterface;
+			export namespace imports {
+				export type WasmInterface = {
+					'[resource-new]input-stream': (rep: i32) => i32;
+					'[resource-rep]input-stream': (handle: i32) => i32;
+					'[resource-drop]input-stream': (handle: i32) => i32;
+					'[resource-new]output-stream': (rep: i32) => i32;
+					'[resource-rep]output-stream': (handle: i32) => i32;
+					'[resource-drop]output-stream': (handle: i32) => i32;
 				};
 			}
-		}
-		export type WasmInterface = {
-		} & InputStream.WasmInterface & OutputStream.WasmInterface;
-		export function createImports(service: io.Streams, context: $wcm.WasmContext): WasmInterface {
-			return $wcm.Imports.create<WasmInterface>(undefined, resources, service, context);
-		}
-		export function filterExports(exports: object, context: $wcm.WasmContext): WasmInterface {
-			return $wcm.Exports.filter<WasmInterface>(exports, undefined, resources, id, io._.version, context);
-		}
-		export function bindExports(wasmInterface: WasmInterface, context: $wcm.WasmContext): io.Streams {
-			return $wcm.Exports.bind<io.Streams>(undefined, [['InputStream', $.InputStream, InputStream.Class], ['OutputStream', $.OutputStream, OutputStream.Class]], wasmInterface, context);
 		}
 	}
 }
@@ -754,8 +761,8 @@ export namespace io._ {
 	export const id = 'wasi:io@0.2.0' as const;
 	export const witName = 'io' as const;
 	export const interfaces: Map<string, $wcm.InterfaceType> = new Map<string, $wcm.InterfaceType>([
-		['error', error._],
-		['poll', poll._],
-		['streams', streams._]
+		['Error', Error._],
+		['Poll', Poll._],
+		['Streams', Streams._]
 	]);
 }

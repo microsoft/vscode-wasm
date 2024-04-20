@@ -34,14 +34,14 @@ export namespace filesystem {
 	 * 
 	 * [WASI filesystem path resolution]: https://github.com/WebAssembly/wasi-filesystem/blob/main/path-resolution.md
 	 */
-	export namespace types {
-		export type InputStream = io.streams.InputStream;
+	export namespace Types {
+		export type InputStream = io.Streams.InputStream;
 
-		export type OutputStream = io.streams.OutputStream;
+		export type OutputStream = io.Streams.OutputStream;
 
-		export type Error = io.streams.Error;
+		export type Error = io.Streams.Error;
 
-		export type Datetime = clocks.wallClock.Datetime;
+		export type Datetime = clocks.WallClock.Datetime;
 
 		/**
 		 * File size or length of a region within a file.
@@ -598,10 +598,7 @@ export namespace filesystem {
 		};
 
 		export namespace Descriptor {
-			export interface Interface {
-				$handle?: $wcm.ResourceHandle;
-				$drop?(): void;
-
+			export interface Interface extends $wcm.JInterface {
 				/**
 				 * Return a stream for reading from a file, if available.
 				 * 
@@ -906,10 +903,7 @@ export namespace filesystem {
 		export type Descriptor = Descriptor.Interface;
 
 		export namespace DirectoryEntryStream {
-			export interface Interface {
-				$handle?: $wcm.ResourceHandle;
-				$drop?(): void;
-
+			export interface Interface extends $wcm.JInterface {
 				/**
 				 * Read a single directory entry from a `directory-entry-stream`.
 				 */
@@ -937,13 +931,13 @@ export namespace filesystem {
 		export type filesystemErrorCode = (err: borrow<Error>) => ErrorCode | undefined;
 	}
 	export type Types = {
-		Descriptor: types.Descriptor.Class;
-		DirectoryEntryStream: types.DirectoryEntryStream.Class;
-		filesystemErrorCode: types.filesystemErrorCode;
+		Descriptor: Types.Descriptor.Class;
+		DirectoryEntryStream: Types.DirectoryEntryStream.Class;
+		filesystemErrorCode: Types.filesystemErrorCode;
 	};
 
-	export namespace preopens {
-		export type Descriptor = filesystem.types.Descriptor;
+	export namespace Preopens {
+		export type Descriptor = filesystem.Types.Descriptor;
 
 		/**
 		 * Return the set of preopened directories, and their path.
@@ -951,166 +945,139 @@ export namespace filesystem {
 		export type getDirectories = () => [own<Descriptor>, string][];
 	}
 	export type Preopens = {
-		getDirectories: preopens.getDirectories;
+		getDirectories: Preopens.getDirectories;
 	};
 }
 
 export namespace filesystem {
-	export namespace types.$ {
-		export const InputStream = io.streams.$.InputStream;
-		export const OutputStream = io.streams.$.OutputStream;
-		export const Error = io.streams.$.Error;
-		export const Datetime = clocks.wallClock.$.Datetime;
+	export namespace Types.$ {
+		export const InputStream = io.Streams.$.InputStream;
+		export const OutputStream = io.Streams.$.OutputStream;
+		export const Error = io.Streams.$.Error;
+		export const Datetime = clocks.WallClock.$.Datetime;
 		export const Filesize = $wcm.u64;
-		export const DescriptorType = new $wcm.EnumType<filesystem.types.DescriptorType>(['unknown', 'blockDevice', 'characterDevice', 'directory', 'fifo', 'symbolicLink', 'regularFile', 'socket']);
-		export const DescriptorFlags = new $wcm.FlagsType<filesystem.types.DescriptorFlags>(6);
-		export const PathFlags = new $wcm.FlagsType<filesystem.types.PathFlags>(1);
-		export const OpenFlags = new $wcm.FlagsType<filesystem.types.OpenFlags>(4);
+		export const DescriptorType = new $wcm.EnumType<filesystem.Types.DescriptorType>(['unknown', 'blockDevice', 'characterDevice', 'directory', 'fifo', 'symbolicLink', 'regularFile', 'socket']);
+		export const DescriptorFlags = new $wcm.FlagsType<filesystem.Types.DescriptorFlags>(6);
+		export const PathFlags = new $wcm.FlagsType<filesystem.Types.PathFlags>(1);
+		export const OpenFlags = new $wcm.FlagsType<filesystem.Types.OpenFlags>(4);
 		export const LinkCount = $wcm.u64;
-		export const DescriptorStat = new $wcm.RecordType<filesystem.types.DescriptorStat>([
+		export const DescriptorStat = new $wcm.RecordType<filesystem.Types.DescriptorStat>([
 			['type', DescriptorType],
 			['linkCount', LinkCount],
 			['size', Filesize],
-			['dataAccessTimestamp', new $wcm.OptionType<filesystem.types.Datetime>(Datetime)],
-			['dataModificationTimestamp', new $wcm.OptionType<filesystem.types.Datetime>(Datetime)],
-			['statusChangeTimestamp', new $wcm.OptionType<filesystem.types.Datetime>(Datetime)],
+			['dataAccessTimestamp', new $wcm.OptionType<filesystem.Types.Datetime>(Datetime)],
+			['dataModificationTimestamp', new $wcm.OptionType<filesystem.Types.Datetime>(Datetime)],
+			['statusChangeTimestamp', new $wcm.OptionType<filesystem.Types.Datetime>(Datetime)],
 		]);
-		export const NewTimestamp = new $wcm.VariantType<filesystem.types.NewTimestamp, filesystem.types.NewTimestamp._tt, filesystem.types.NewTimestamp._vt>([['noChange', undefined], ['now', undefined], ['timestamp', Datetime]], filesystem.types.NewTimestamp._ctor);
-		export const DirectoryEntry = new $wcm.RecordType<filesystem.types.DirectoryEntry>([
+		export const NewTimestamp = new $wcm.VariantType<filesystem.Types.NewTimestamp, filesystem.Types.NewTimestamp._tt, filesystem.Types.NewTimestamp._vt>([['noChange', undefined], ['now', undefined], ['timestamp', Datetime]], filesystem.Types.NewTimestamp._ctor);
+		export const DirectoryEntry = new $wcm.RecordType<filesystem.Types.DirectoryEntry>([
 			['type', DescriptorType],
 			['name', $wcm.wstring],
 		]);
-		export const ErrorCode = new $wcm.EnumType<filesystem.types.ErrorCode>(['access', 'wouldBlock', 'already', 'badDescriptor', 'busy', 'deadlock', 'quota', 'exist', 'fileTooLarge', 'illegalByteSequence', 'inProgress', 'interrupted', 'invalid', 'io', 'isDirectory', 'loop', 'tooManyLinks', 'messageSize', 'nameTooLong', 'noDevice', 'noEntry', 'noLock', 'insufficientMemory', 'insufficientSpace', 'notDirectory', 'notEmpty', 'notRecoverable', 'unsupported', 'noTty', 'noSuchDevice', 'overflow', 'notPermitted', 'pipe', 'readOnly', 'invalidSeek', 'textFileBusy', 'crossDevice']);
-		export const Advice = new $wcm.EnumType<filesystem.types.Advice>(['normal', 'sequential', 'random', 'willNeed', 'dontNeed', 'noReuse']);
-		export const MetadataHashValue = new $wcm.RecordType<filesystem.types.MetadataHashValue>([
+		export const ErrorCode = new $wcm.EnumType<filesystem.Types.ErrorCode>(['access', 'wouldBlock', 'already', 'badDescriptor', 'busy', 'deadlock', 'quota', 'exist', 'fileTooLarge', 'illegalByteSequence', 'inProgress', 'interrupted', 'invalid', 'io', 'isDirectory', 'loop', 'tooManyLinks', 'messageSize', 'nameTooLong', 'noDevice', 'noEntry', 'noLock', 'insufficientMemory', 'insufficientSpace', 'notDirectory', 'notEmpty', 'notRecoverable', 'unsupported', 'noTty', 'noSuchDevice', 'overflow', 'notPermitted', 'pipe', 'readOnly', 'invalidSeek', 'textFileBusy', 'crossDevice']);
+		export const Advice = new $wcm.EnumType<filesystem.Types.Advice>(['normal', 'sequential', 'random', 'willNeed', 'dontNeed', 'noReuse']);
+		export const MetadataHashValue = new $wcm.RecordType<filesystem.Types.MetadataHashValue>([
 			['lower', $wcm.u64],
 			['upper', $wcm.u64],
 		]);
-		export const Descriptor = new $wcm.ResourceType<filesystem.types.Descriptor>('descriptor', 'wasi:filesystem/types/descriptor');
+		export const Descriptor = new $wcm.ResourceType<filesystem.Types.Descriptor>('descriptor', 'wasi:filesystem@0.2.0/types/descriptor');
 		export const Descriptor_Handle = new $wcm.ResourceHandleType('descriptor');
-		export const DirectoryEntryStream = new $wcm.ResourceType<filesystem.types.DirectoryEntryStream>('directory-entry-stream', 'wasi:filesystem/types/directory-entry-stream');
+		export const DirectoryEntryStream = new $wcm.ResourceType<filesystem.Types.DirectoryEntryStream>('directory-entry-stream', 'wasi:filesystem@0.2.0/types/directory-entry-stream');
 		export const DirectoryEntryStream_Handle = new $wcm.ResourceHandleType('directory-entry-stream');
 		Descriptor.addDestructor('$drop', new $wcm.DestructorType('[resource-drop]descriptor', [['inst', Descriptor]]));
-		Descriptor.addMethod('readViaStream', new $wcm.MethodType<filesystem.types.Descriptor.Interface['readViaStream']>('[method]descriptor.read-via-stream', [
+		Descriptor.addMethod('readViaStream', new $wcm.MethodType<filesystem.Types.Descriptor.Interface['readViaStream']>('[method]descriptor.read-via-stream', [
 			['offset', Filesize],
-		], new $wcm.ResultType<own<filesystem.types.InputStream>, filesystem.types.ErrorCode>(new $wcm.OwnType<filesystem.types.InputStream>(InputStream), ErrorCode)));
-		Descriptor.addMethod('writeViaStream', new $wcm.MethodType<filesystem.types.Descriptor.Interface['writeViaStream']>('[method]descriptor.write-via-stream', [
+		], new $wcm.ResultType<own<filesystem.Types.InputStream>, filesystem.Types.ErrorCode>(new $wcm.OwnType<filesystem.Types.InputStream>(InputStream), ErrorCode)));
+		Descriptor.addMethod('writeViaStream', new $wcm.MethodType<filesystem.Types.Descriptor.Interface['writeViaStream']>('[method]descriptor.write-via-stream', [
 			['offset', Filesize],
-		], new $wcm.ResultType<own<filesystem.types.OutputStream>, filesystem.types.ErrorCode>(new $wcm.OwnType<filesystem.types.OutputStream>(OutputStream), ErrorCode)));
-		Descriptor.addMethod('appendViaStream', new $wcm.MethodType<filesystem.types.Descriptor.Interface['appendViaStream']>('[method]descriptor.append-via-stream', [], new $wcm.ResultType<own<filesystem.types.OutputStream>, filesystem.types.ErrorCode>(new $wcm.OwnType<filesystem.types.OutputStream>(OutputStream), ErrorCode)));
-		Descriptor.addMethod('advise', new $wcm.MethodType<filesystem.types.Descriptor.Interface['advise']>('[method]descriptor.advise', [
+		], new $wcm.ResultType<own<filesystem.Types.OutputStream>, filesystem.Types.ErrorCode>(new $wcm.OwnType<filesystem.Types.OutputStream>(OutputStream), ErrorCode)));
+		Descriptor.addMethod('appendViaStream', new $wcm.MethodType<filesystem.Types.Descriptor.Interface['appendViaStream']>('[method]descriptor.append-via-stream', [], new $wcm.ResultType<own<filesystem.Types.OutputStream>, filesystem.Types.ErrorCode>(new $wcm.OwnType<filesystem.Types.OutputStream>(OutputStream), ErrorCode)));
+		Descriptor.addMethod('advise', new $wcm.MethodType<filesystem.Types.Descriptor.Interface['advise']>('[method]descriptor.advise', [
 			['offset', Filesize],
 			['length', Filesize],
 			['advice', Advice],
-		], new $wcm.ResultType<void, filesystem.types.ErrorCode>(undefined, ErrorCode)));
-		Descriptor.addMethod('syncData', new $wcm.MethodType<filesystem.types.Descriptor.Interface['syncData']>('[method]descriptor.sync-data', [], new $wcm.ResultType<void, filesystem.types.ErrorCode>(undefined, ErrorCode)));
-		Descriptor.addMethod('getFlags', new $wcm.MethodType<filesystem.types.Descriptor.Interface['getFlags']>('[method]descriptor.get-flags', [], new $wcm.ResultType<filesystem.types.DescriptorFlags, filesystem.types.ErrorCode>(DescriptorFlags, ErrorCode)));
-		Descriptor.addMethod('getType', new $wcm.MethodType<filesystem.types.Descriptor.Interface['getType']>('[method]descriptor.get-type', [], new $wcm.ResultType<filesystem.types.DescriptorType, filesystem.types.ErrorCode>(DescriptorType, ErrorCode)));
-		Descriptor.addMethod('setSize', new $wcm.MethodType<filesystem.types.Descriptor.Interface['setSize']>('[method]descriptor.set-size', [
+		], new $wcm.ResultType<void, filesystem.Types.ErrorCode>(undefined, ErrorCode)));
+		Descriptor.addMethod('syncData', new $wcm.MethodType<filesystem.Types.Descriptor.Interface['syncData']>('[method]descriptor.sync-data', [], new $wcm.ResultType<void, filesystem.Types.ErrorCode>(undefined, ErrorCode)));
+		Descriptor.addMethod('getFlags', new $wcm.MethodType<filesystem.Types.Descriptor.Interface['getFlags']>('[method]descriptor.get-flags', [], new $wcm.ResultType<filesystem.Types.DescriptorFlags, filesystem.Types.ErrorCode>(DescriptorFlags, ErrorCode)));
+		Descriptor.addMethod('getType', new $wcm.MethodType<filesystem.Types.Descriptor.Interface['getType']>('[method]descriptor.get-type', [], new $wcm.ResultType<filesystem.Types.DescriptorType, filesystem.Types.ErrorCode>(DescriptorType, ErrorCode)));
+		Descriptor.addMethod('setSize', new $wcm.MethodType<filesystem.Types.Descriptor.Interface['setSize']>('[method]descriptor.set-size', [
 			['size', Filesize],
-		], new $wcm.ResultType<void, filesystem.types.ErrorCode>(undefined, ErrorCode)));
-		Descriptor.addMethod('setTimes', new $wcm.MethodType<filesystem.types.Descriptor.Interface['setTimes']>('[method]descriptor.set-times', [
+		], new $wcm.ResultType<void, filesystem.Types.ErrorCode>(undefined, ErrorCode)));
+		Descriptor.addMethod('setTimes', new $wcm.MethodType<filesystem.Types.Descriptor.Interface['setTimes']>('[method]descriptor.set-times', [
 			['dataAccessTimestamp', NewTimestamp],
 			['dataModificationTimestamp', NewTimestamp],
-		], new $wcm.ResultType<void, filesystem.types.ErrorCode>(undefined, ErrorCode)));
-		Descriptor.addMethod('read', new $wcm.MethodType<filesystem.types.Descriptor.Interface['read']>('[method]descriptor.read', [
+		], new $wcm.ResultType<void, filesystem.Types.ErrorCode>(undefined, ErrorCode)));
+		Descriptor.addMethod('read', new $wcm.MethodType<filesystem.Types.Descriptor.Interface['read']>('[method]descriptor.read', [
 			['length', Filesize],
 			['offset', Filesize],
-		], new $wcm.ResultType<[Uint8Array, boolean], filesystem.types.ErrorCode>(new $wcm.TupleType<[Uint8Array, boolean]>([new $wcm.Uint8ArrayType(), $wcm.bool]), ErrorCode)));
-		Descriptor.addMethod('write', new $wcm.MethodType<filesystem.types.Descriptor.Interface['write']>('[method]descriptor.write', [
+		], new $wcm.ResultType<[Uint8Array, boolean], filesystem.Types.ErrorCode>(new $wcm.TupleType<[Uint8Array, boolean]>([new $wcm.Uint8ArrayType(), $wcm.bool]), ErrorCode)));
+		Descriptor.addMethod('write', new $wcm.MethodType<filesystem.Types.Descriptor.Interface['write']>('[method]descriptor.write', [
 			['buffer', new $wcm.Uint8ArrayType()],
 			['offset', Filesize],
-		], new $wcm.ResultType<filesystem.types.Filesize, filesystem.types.ErrorCode>(Filesize, ErrorCode)));
-		Descriptor.addMethod('readDirectory', new $wcm.MethodType<filesystem.types.Descriptor.Interface['readDirectory']>('[method]descriptor.read-directory', [], new $wcm.ResultType<own<filesystem.types.DirectoryEntryStream>, filesystem.types.ErrorCode>(new $wcm.OwnType<filesystem.types.DirectoryEntryStream>(DirectoryEntryStream), ErrorCode)));
-		Descriptor.addMethod('sync', new $wcm.MethodType<filesystem.types.Descriptor.Interface['sync']>('[method]descriptor.sync', [], new $wcm.ResultType<void, filesystem.types.ErrorCode>(undefined, ErrorCode)));
-		Descriptor.addMethod('createDirectoryAt', new $wcm.MethodType<filesystem.types.Descriptor.Interface['createDirectoryAt']>('[method]descriptor.create-directory-at', [
+		], new $wcm.ResultType<filesystem.Types.Filesize, filesystem.Types.ErrorCode>(Filesize, ErrorCode)));
+		Descriptor.addMethod('readDirectory', new $wcm.MethodType<filesystem.Types.Descriptor.Interface['readDirectory']>('[method]descriptor.read-directory', [], new $wcm.ResultType<own<filesystem.Types.DirectoryEntryStream>, filesystem.Types.ErrorCode>(new $wcm.OwnType<filesystem.Types.DirectoryEntryStream>(DirectoryEntryStream), ErrorCode)));
+		Descriptor.addMethod('sync', new $wcm.MethodType<filesystem.Types.Descriptor.Interface['sync']>('[method]descriptor.sync', [], new $wcm.ResultType<void, filesystem.Types.ErrorCode>(undefined, ErrorCode)));
+		Descriptor.addMethod('createDirectoryAt', new $wcm.MethodType<filesystem.Types.Descriptor.Interface['createDirectoryAt']>('[method]descriptor.create-directory-at', [
 			['path', $wcm.wstring],
-		], new $wcm.ResultType<void, filesystem.types.ErrorCode>(undefined, ErrorCode)));
-		Descriptor.addMethod('stat', new $wcm.MethodType<filesystem.types.Descriptor.Interface['stat']>('[method]descriptor.stat', [], new $wcm.ResultType<filesystem.types.DescriptorStat, filesystem.types.ErrorCode>(DescriptorStat, ErrorCode)));
-		Descriptor.addMethod('statAt', new $wcm.MethodType<filesystem.types.Descriptor.Interface['statAt']>('[method]descriptor.stat-at', [
+		], new $wcm.ResultType<void, filesystem.Types.ErrorCode>(undefined, ErrorCode)));
+		Descriptor.addMethod('stat', new $wcm.MethodType<filesystem.Types.Descriptor.Interface['stat']>('[method]descriptor.stat', [], new $wcm.ResultType<filesystem.Types.DescriptorStat, filesystem.Types.ErrorCode>(DescriptorStat, ErrorCode)));
+		Descriptor.addMethod('statAt', new $wcm.MethodType<filesystem.Types.Descriptor.Interface['statAt']>('[method]descriptor.stat-at', [
 			['pathFlags', PathFlags],
 			['path', $wcm.wstring],
-		], new $wcm.ResultType<filesystem.types.DescriptorStat, filesystem.types.ErrorCode>(DescriptorStat, ErrorCode)));
-		Descriptor.addMethod('setTimesAt', new $wcm.MethodType<filesystem.types.Descriptor.Interface['setTimesAt']>('[method]descriptor.set-times-at', [
+		], new $wcm.ResultType<filesystem.Types.DescriptorStat, filesystem.Types.ErrorCode>(DescriptorStat, ErrorCode)));
+		Descriptor.addMethod('setTimesAt', new $wcm.MethodType<filesystem.Types.Descriptor.Interface['setTimesAt']>('[method]descriptor.set-times-at', [
 			['pathFlags', PathFlags],
 			['path', $wcm.wstring],
 			['dataAccessTimestamp', NewTimestamp],
 			['dataModificationTimestamp', NewTimestamp],
-		], new $wcm.ResultType<void, filesystem.types.ErrorCode>(undefined, ErrorCode)));
-		Descriptor.addMethod('linkAt', new $wcm.MethodType<filesystem.types.Descriptor.Interface['linkAt']>('[method]descriptor.link-at', [
+		], new $wcm.ResultType<void, filesystem.Types.ErrorCode>(undefined, ErrorCode)));
+		Descriptor.addMethod('linkAt', new $wcm.MethodType<filesystem.Types.Descriptor.Interface['linkAt']>('[method]descriptor.link-at', [
 			['oldPathFlags', PathFlags],
 			['oldPath', $wcm.wstring],
-			['newDescriptor', new $wcm.BorrowType<filesystem.types.Descriptor>(Descriptor)],
+			['newDescriptor', new $wcm.BorrowType<filesystem.Types.Descriptor>(Descriptor)],
 			['newPath', $wcm.wstring],
-		], new $wcm.ResultType<void, filesystem.types.ErrorCode>(undefined, ErrorCode)));
-		Descriptor.addMethod('openAt', new $wcm.MethodType<filesystem.types.Descriptor.Interface['openAt']>('[method]descriptor.open-at', [
+		], new $wcm.ResultType<void, filesystem.Types.ErrorCode>(undefined, ErrorCode)));
+		Descriptor.addMethod('openAt', new $wcm.MethodType<filesystem.Types.Descriptor.Interface['openAt']>('[method]descriptor.open-at', [
 			['pathFlags', PathFlags],
 			['path', $wcm.wstring],
 			['openFlags', OpenFlags],
 			['flags', DescriptorFlags],
-		], new $wcm.ResultType<own<filesystem.types.Descriptor>, filesystem.types.ErrorCode>(new $wcm.OwnType<filesystem.types.Descriptor>(Descriptor), ErrorCode)));
-		Descriptor.addMethod('readlinkAt', new $wcm.MethodType<filesystem.types.Descriptor.Interface['readlinkAt']>('[method]descriptor.readlink-at', [
+		], new $wcm.ResultType<own<filesystem.Types.Descriptor>, filesystem.Types.ErrorCode>(new $wcm.OwnType<filesystem.Types.Descriptor>(Descriptor), ErrorCode)));
+		Descriptor.addMethod('readlinkAt', new $wcm.MethodType<filesystem.Types.Descriptor.Interface['readlinkAt']>('[method]descriptor.readlink-at', [
 			['path', $wcm.wstring],
-		], new $wcm.ResultType<string, filesystem.types.ErrorCode>($wcm.wstring, ErrorCode)));
-		Descriptor.addMethod('removeDirectoryAt', new $wcm.MethodType<filesystem.types.Descriptor.Interface['removeDirectoryAt']>('[method]descriptor.remove-directory-at', [
+		], new $wcm.ResultType<string, filesystem.Types.ErrorCode>($wcm.wstring, ErrorCode)));
+		Descriptor.addMethod('removeDirectoryAt', new $wcm.MethodType<filesystem.Types.Descriptor.Interface['removeDirectoryAt']>('[method]descriptor.remove-directory-at', [
 			['path', $wcm.wstring],
-		], new $wcm.ResultType<void, filesystem.types.ErrorCode>(undefined, ErrorCode)));
-		Descriptor.addMethod('renameAt', new $wcm.MethodType<filesystem.types.Descriptor.Interface['renameAt']>('[method]descriptor.rename-at', [
+		], new $wcm.ResultType<void, filesystem.Types.ErrorCode>(undefined, ErrorCode)));
+		Descriptor.addMethod('renameAt', new $wcm.MethodType<filesystem.Types.Descriptor.Interface['renameAt']>('[method]descriptor.rename-at', [
 			['oldPath', $wcm.wstring],
-			['newDescriptor', new $wcm.BorrowType<filesystem.types.Descriptor>(Descriptor)],
+			['newDescriptor', new $wcm.BorrowType<filesystem.Types.Descriptor>(Descriptor)],
 			['newPath', $wcm.wstring],
-		], new $wcm.ResultType<void, filesystem.types.ErrorCode>(undefined, ErrorCode)));
-		Descriptor.addMethod('symlinkAt', new $wcm.MethodType<filesystem.types.Descriptor.Interface['symlinkAt']>('[method]descriptor.symlink-at', [
+		], new $wcm.ResultType<void, filesystem.Types.ErrorCode>(undefined, ErrorCode)));
+		Descriptor.addMethod('symlinkAt', new $wcm.MethodType<filesystem.Types.Descriptor.Interface['symlinkAt']>('[method]descriptor.symlink-at', [
 			['oldPath', $wcm.wstring],
 			['newPath', $wcm.wstring],
-		], new $wcm.ResultType<void, filesystem.types.ErrorCode>(undefined, ErrorCode)));
-		Descriptor.addMethod('unlinkFileAt', new $wcm.MethodType<filesystem.types.Descriptor.Interface['unlinkFileAt']>('[method]descriptor.unlink-file-at', [
+		], new $wcm.ResultType<void, filesystem.Types.ErrorCode>(undefined, ErrorCode)));
+		Descriptor.addMethod('unlinkFileAt', new $wcm.MethodType<filesystem.Types.Descriptor.Interface['unlinkFileAt']>('[method]descriptor.unlink-file-at', [
 			['path', $wcm.wstring],
-		], new $wcm.ResultType<void, filesystem.types.ErrorCode>(undefined, ErrorCode)));
-		Descriptor.addMethod('isSameObject', new $wcm.MethodType<filesystem.types.Descriptor.Interface['isSameObject']>('[method]descriptor.is-same-object', [
-			['other', new $wcm.BorrowType<filesystem.types.Descriptor>(Descriptor)],
+		], new $wcm.ResultType<void, filesystem.Types.ErrorCode>(undefined, ErrorCode)));
+		Descriptor.addMethod('isSameObject', new $wcm.MethodType<filesystem.Types.Descriptor.Interface['isSameObject']>('[method]descriptor.is-same-object', [
+			['other', new $wcm.BorrowType<filesystem.Types.Descriptor>(Descriptor)],
 		], $wcm.bool));
-		Descriptor.addMethod('metadataHash', new $wcm.MethodType<filesystem.types.Descriptor.Interface['metadataHash']>('[method]descriptor.metadata-hash', [], new $wcm.ResultType<filesystem.types.MetadataHashValue, filesystem.types.ErrorCode>(MetadataHashValue, ErrorCode)));
-		Descriptor.addMethod('metadataHashAt', new $wcm.MethodType<filesystem.types.Descriptor.Interface['metadataHashAt']>('[method]descriptor.metadata-hash-at', [
+		Descriptor.addMethod('metadataHash', new $wcm.MethodType<filesystem.Types.Descriptor.Interface['metadataHash']>('[method]descriptor.metadata-hash', [], new $wcm.ResultType<filesystem.Types.MetadataHashValue, filesystem.Types.ErrorCode>(MetadataHashValue, ErrorCode)));
+		Descriptor.addMethod('metadataHashAt', new $wcm.MethodType<filesystem.Types.Descriptor.Interface['metadataHashAt']>('[method]descriptor.metadata-hash-at', [
 			['pathFlags', PathFlags],
 			['path', $wcm.wstring],
-		], new $wcm.ResultType<filesystem.types.MetadataHashValue, filesystem.types.ErrorCode>(MetadataHashValue, ErrorCode)));
+		], new $wcm.ResultType<filesystem.Types.MetadataHashValue, filesystem.Types.ErrorCode>(MetadataHashValue, ErrorCode)));
 		DirectoryEntryStream.addDestructor('$drop', new $wcm.DestructorType('[resource-drop]directory-entry-stream', [['inst', DirectoryEntryStream]]));
-		DirectoryEntryStream.addMethod('readDirectoryEntry', new $wcm.MethodType<filesystem.types.DirectoryEntryStream.Interface['readDirectoryEntry']>('[method]directory-entry-stream.read-directory-entry', [], new $wcm.ResultType<option<filesystem.types.DirectoryEntry>, filesystem.types.ErrorCode>(new $wcm.OptionType<filesystem.types.DirectoryEntry>(DirectoryEntry), ErrorCode)));
-		export const filesystemErrorCode = new $wcm.FunctionType<filesystem.types.filesystemErrorCode>('filesystem-error-code',[
-			['err', new $wcm.BorrowType<filesystem.types.Error>(Error)],
-		], new $wcm.OptionType<filesystem.types.ErrorCode>(ErrorCode));
+		DirectoryEntryStream.addMethod('readDirectoryEntry', new $wcm.MethodType<filesystem.Types.DirectoryEntryStream.Interface['readDirectoryEntry']>('[method]directory-entry-stream.read-directory-entry', [], new $wcm.ResultType<option<filesystem.Types.DirectoryEntry>, filesystem.Types.ErrorCode>(new $wcm.OptionType<filesystem.Types.DirectoryEntry>(DirectoryEntry), ErrorCode)));
+		export const filesystemErrorCode = new $wcm.FunctionType<filesystem.Types.filesystemErrorCode>('filesystem-error-code',[
+			['err', new $wcm.BorrowType<filesystem.Types.Error>(Error)],
+		], new $wcm.OptionType<filesystem.Types.ErrorCode>(ErrorCode));
 	}
-	export namespace types._ {
+	export namespace Types._ {
 		export const id = 'wasi:filesystem/types@0.2.0' as const;
 		export const witName = 'types' as const;
-		export const types: Map<string, $wcm.GenericComponentModelType> = new Map<string, $wcm.GenericComponentModelType>([
-			['InputStream', $.InputStream],
-			['OutputStream', $.OutputStream],
-			['Error', $.Error],
-			['Datetime', $.Datetime],
-			['Filesize', $.Filesize],
-			['DescriptorType', $.DescriptorType],
-			['DescriptorFlags', $.DescriptorFlags],
-			['PathFlags', $.PathFlags],
-			['OpenFlags', $.OpenFlags],
-			['LinkCount', $.LinkCount],
-			['DescriptorStat', $.DescriptorStat],
-			['NewTimestamp', $.NewTimestamp],
-			['DirectoryEntry', $.DirectoryEntry],
-			['ErrorCode', $.ErrorCode],
-			['Advice', $.Advice],
-			['MetadataHashValue', $.MetadataHashValue],
-			['Descriptor', $.Descriptor],
-			['DirectoryEntryStream', $.DirectoryEntryStream]
-		]);
-		export const functions: Map<string, $wcm.FunctionType> = new Map([
-			['filesystemErrorCode', $.filesystemErrorCode]
-		]);
-		export const resources: Map<string, $wcm.ResourceType> = new Map<string, $wcm.ResourceType>([
-			['Descriptor', $.Descriptor],
-			['DirectoryEntryStream', $.DirectoryEntryStream]
-		]);
 		export namespace Descriptor {
 			export type WasmInterface = {
 				'[method]descriptor.read-via-stream': (self: i32, offset: i64, result: ptr<result<own<InputStream>, ErrorCode>>) => void;
@@ -1140,10 +1107,8 @@ export namespace filesystem {
 				'[method]descriptor.is-same-object': (self: i32, other: i32) => i32;
 				'[method]descriptor.metadata-hash': (self: i32, result: ptr<result<MetadataHashValue, ErrorCode>>) => void;
 				'[method]descriptor.metadata-hash-at': (self: i32, pathFlags: i32, path_ptr: i32, path_len: i32, result: ptr<result<MetadataHashValue, ErrorCode>>) => void;
-				'[resource-drop]descriptor': (self: i32) => void;
 			};
-			type ObjectModule = {
-				$drop(self: Descriptor): void;
+			export type ObjectModule = {
 				readViaStream(self: Descriptor, offset: Filesize): result<own<InputStream>, ErrorCode>;
 				writeViaStream(self: Descriptor, offset: Filesize): result<own<OutputStream>, ErrorCode>;
 				appendViaStream(self: Descriptor): result<own<OutputStream>, ErrorCode>;
@@ -1172,158 +1137,196 @@ export namespace filesystem {
 				metadataHash(self: Descriptor): result<MetadataHashValue, ErrorCode>;
 				metadataHashAt(self: Descriptor, pathFlags: PathFlags, path: string): result<MetadataHashValue, ErrorCode>;
 			};
-			class Impl extends $wcm.Resource implements filesystem.types.Descriptor.Interface {
-				private readonly _om: ObjectModule;
-				constructor(om: ObjectModule) {
-					super();
-					this._om = om;
-				}
-				public $drop(): void {
-					return this._om.$drop(this);
-				}
-				public readViaStream(offset: Filesize): result<own<InputStream>, ErrorCode> {
-					return this._om.readViaStream(this, offset);
-				}
-				public writeViaStream(offset: Filesize): result<own<OutputStream>, ErrorCode> {
-					return this._om.writeViaStream(this, offset);
-				}
-				public appendViaStream(): result<own<OutputStream>, ErrorCode> {
-					return this._om.appendViaStream(this);
-				}
-				public advise(offset: Filesize, length: Filesize, advice: Advice): result<void, ErrorCode> {
-					return this._om.advise(this, offset, length, advice);
-				}
-				public syncData(): result<void, ErrorCode> {
-					return this._om.syncData(this);
-				}
-				public getFlags(): result<DescriptorFlags, ErrorCode> {
-					return this._om.getFlags(this);
-				}
-				public getType(): result<DescriptorType, ErrorCode> {
-					return this._om.getType(this);
-				}
-				public setSize(size: Filesize): result<void, ErrorCode> {
-					return this._om.setSize(this, size);
-				}
-				public setTimes(dataAccessTimestamp: NewTimestamp, dataModificationTimestamp: NewTimestamp): result<void, ErrorCode> {
-					return this._om.setTimes(this, dataAccessTimestamp, dataModificationTimestamp);
-				}
-				public read(length: Filesize, offset: Filesize): result<[Uint8Array, boolean], ErrorCode> {
-					return this._om.read(this, length, offset);
-				}
-				public write(buffer: Uint8Array, offset: Filesize): result<Filesize, ErrorCode> {
-					return this._om.write(this, buffer, offset);
-				}
-				public readDirectory(): result<own<DirectoryEntryStream>, ErrorCode> {
-					return this._om.readDirectory(this);
-				}
-				public sync(): result<void, ErrorCode> {
-					return this._om.sync(this);
-				}
-				public createDirectoryAt(path: string): result<void, ErrorCode> {
-					return this._om.createDirectoryAt(this, path);
-				}
-				public stat(): result<DescriptorStat, ErrorCode> {
-					return this._om.stat(this);
-				}
-				public statAt(pathFlags: PathFlags, path: string): result<DescriptorStat, ErrorCode> {
-					return this._om.statAt(this, pathFlags, path);
-				}
-				public setTimesAt(pathFlags: PathFlags, path: string, dataAccessTimestamp: NewTimestamp, dataModificationTimestamp: NewTimestamp): result<void, ErrorCode> {
-					return this._om.setTimesAt(this, pathFlags, path, dataAccessTimestamp, dataModificationTimestamp);
-				}
-				public linkAt(oldPathFlags: PathFlags, oldPath: string, newDescriptor: borrow<Descriptor>, newPath: string): result<void, ErrorCode> {
-					return this._om.linkAt(this, oldPathFlags, oldPath, newDescriptor, newPath);
-				}
-				public openAt(pathFlags: PathFlags, path: string, openFlags: OpenFlags, flags: DescriptorFlags): result<own<Descriptor>, ErrorCode> {
-					return this._om.openAt(this, pathFlags, path, openFlags, flags);
-				}
-				public readlinkAt(path: string): result<string, ErrorCode> {
-					return this._om.readlinkAt(this, path);
-				}
-				public removeDirectoryAt(path: string): result<void, ErrorCode> {
-					return this._om.removeDirectoryAt(this, path);
-				}
-				public renameAt(oldPath: string, newDescriptor: borrow<Descriptor>, newPath: string): result<void, ErrorCode> {
-					return this._om.renameAt(this, oldPath, newDescriptor, newPath);
-				}
-				public symlinkAt(oldPath: string, newPath: string): result<void, ErrorCode> {
-					return this._om.symlinkAt(this, oldPath, newPath);
-				}
-				public unlinkFileAt(path: string): result<void, ErrorCode> {
-					return this._om.unlinkFileAt(this, path);
-				}
-				public isSameObject(other: borrow<Descriptor>): boolean {
-					return this._om.isSameObject(this, other);
-				}
-				public metadataHash(): result<MetadataHashValue, ErrorCode> {
-					return this._om.metadataHash(this);
-				}
-				public metadataHashAt(pathFlags: PathFlags, path: string): result<MetadataHashValue, ErrorCode> {
-					return this._om.metadataHashAt(this, pathFlags, path);
-				}
+			export namespace imports {
+				export type WasmInterface = Descriptor.WasmInterface & { '[resource-drop]descriptor': (self: i32) => void };
 			}
-			export function Class(wasmInterface: WasmInterface, context: $wcm.WasmContext): filesystem.types.Descriptor.Class {
-				const resource = filesystem.types.$.Descriptor;
-				const om: ObjectModule = $wcm.Module.createObjectModule(resource, wasmInterface, context);
-				return class extends Impl {
-					constructor() {
-						super(om);
+			export namespace exports {
+				export type WasmInterface = Descriptor.WasmInterface & { '[dtor]descriptor': (self: i32) => void };
+				class Impl extends $wcm.Resource implements filesystem.Types.Descriptor.Interface {
+					private readonly _om: ObjectModule;
+					constructor(_handleTag: Symbol, handle: $wcm.ResourceHandle, om: ObjectModule) {
+						super(handle);
+						this._om = om;
 					}
-				};
+					public readViaStream(offset: Filesize): result<own<InputStream>, ErrorCode> {
+						return this._om.readViaStream(this, offset);
+					}
+					public writeViaStream(offset: Filesize): result<own<OutputStream>, ErrorCode> {
+						return this._om.writeViaStream(this, offset);
+					}
+					public appendViaStream(): result<own<OutputStream>, ErrorCode> {
+						return this._om.appendViaStream(this);
+					}
+					public advise(offset: Filesize, length: Filesize, advice: Advice): result<void, ErrorCode> {
+						return this._om.advise(this, offset, length, advice);
+					}
+					public syncData(): result<void, ErrorCode> {
+						return this._om.syncData(this);
+					}
+					public getFlags(): result<DescriptorFlags, ErrorCode> {
+						return this._om.getFlags(this);
+					}
+					public getType(): result<DescriptorType, ErrorCode> {
+						return this._om.getType(this);
+					}
+					public setSize(size: Filesize): result<void, ErrorCode> {
+						return this._om.setSize(this, size);
+					}
+					public setTimes(dataAccessTimestamp: NewTimestamp, dataModificationTimestamp: NewTimestamp): result<void, ErrorCode> {
+						return this._om.setTimes(this, dataAccessTimestamp, dataModificationTimestamp);
+					}
+					public read(length: Filesize, offset: Filesize): result<[Uint8Array, boolean], ErrorCode> {
+						return this._om.read(this, length, offset);
+					}
+					public write(buffer: Uint8Array, offset: Filesize): result<Filesize, ErrorCode> {
+						return this._om.write(this, buffer, offset);
+					}
+					public readDirectory(): result<own<DirectoryEntryStream>, ErrorCode> {
+						return this._om.readDirectory(this);
+					}
+					public sync(): result<void, ErrorCode> {
+						return this._om.sync(this);
+					}
+					public createDirectoryAt(path: string): result<void, ErrorCode> {
+						return this._om.createDirectoryAt(this, path);
+					}
+					public stat(): result<DescriptorStat, ErrorCode> {
+						return this._om.stat(this);
+					}
+					public statAt(pathFlags: PathFlags, path: string): result<DescriptorStat, ErrorCode> {
+						return this._om.statAt(this, pathFlags, path);
+					}
+					public setTimesAt(pathFlags: PathFlags, path: string, dataAccessTimestamp: NewTimestamp, dataModificationTimestamp: NewTimestamp): result<void, ErrorCode> {
+						return this._om.setTimesAt(this, pathFlags, path, dataAccessTimestamp, dataModificationTimestamp);
+					}
+					public linkAt(oldPathFlags: PathFlags, oldPath: string, newDescriptor: borrow<Descriptor>, newPath: string): result<void, ErrorCode> {
+						return this._om.linkAt(this, oldPathFlags, oldPath, newDescriptor, newPath);
+					}
+					public openAt(pathFlags: PathFlags, path: string, openFlags: OpenFlags, flags: DescriptorFlags): result<own<Descriptor>, ErrorCode> {
+						return this._om.openAt(this, pathFlags, path, openFlags, flags);
+					}
+					public readlinkAt(path: string): result<string, ErrorCode> {
+						return this._om.readlinkAt(this, path);
+					}
+					public removeDirectoryAt(path: string): result<void, ErrorCode> {
+						return this._om.removeDirectoryAt(this, path);
+					}
+					public renameAt(oldPath: string, newDescriptor: borrow<Descriptor>, newPath: string): result<void, ErrorCode> {
+						return this._om.renameAt(this, oldPath, newDescriptor, newPath);
+					}
+					public symlinkAt(oldPath: string, newPath: string): result<void, ErrorCode> {
+						return this._om.symlinkAt(this, oldPath, newPath);
+					}
+					public unlinkFileAt(path: string): result<void, ErrorCode> {
+						return this._om.unlinkFileAt(this, path);
+					}
+					public isSameObject(other: borrow<Descriptor>): boolean {
+						return this._om.isSameObject(this, other);
+					}
+					public metadataHash(): result<MetadataHashValue, ErrorCode> {
+						return this._om.metadataHash(this);
+					}
+					public metadataHashAt(pathFlags: PathFlags, path: string): result<MetadataHashValue, ErrorCode> {
+						return this._om.metadataHashAt(this, pathFlags, path);
+					}
+				}
+				export function Class(wasmInterface: WasmInterface, context: $wcm.WasmContext): filesystem.Types.Descriptor.Class {
+					const resource = filesystem.Types.$.Descriptor;
+					const om: ObjectModule = $wcm.Module.createObjectModule(resource, wasmInterface, context);
+					return class extends Impl {
+						constructor(handleTag: Symbol, handle: $wcm.ResourceHandle) {
+							super(handleTag, handle, om);
+						}
+					};
+				}
 			}
 		}
 		export namespace DirectoryEntryStream {
 			export type WasmInterface = {
 				'[method]directory-entry-stream.read-directory-entry': (self: i32, result: ptr<result<DirectoryEntry | undefined, ErrorCode>>) => void;
-				'[resource-drop]directory-entry-stream': (self: i32) => void;
 			};
-			type ObjectModule = {
-				$drop(self: DirectoryEntryStream): void;
+			export type ObjectModule = {
 				readDirectoryEntry(self: DirectoryEntryStream): result<DirectoryEntry | undefined, ErrorCode>;
 			};
-			class Impl extends $wcm.Resource implements filesystem.types.DirectoryEntryStream.Interface {
-				private readonly _om: ObjectModule;
-				constructor(om: ObjectModule) {
-					super();
-					this._om = om;
+			export namespace imports {
+				export type WasmInterface = DirectoryEntryStream.WasmInterface & { '[resource-drop]directory-entry-stream': (self: i32) => void };
+			}
+			export namespace exports {
+				export type WasmInterface = DirectoryEntryStream.WasmInterface & { '[dtor]directory-entry-stream': (self: i32) => void };
+				class Impl extends $wcm.Resource implements filesystem.Types.DirectoryEntryStream.Interface {
+					private readonly _om: ObjectModule;
+					constructor(_handleTag: Symbol, handle: $wcm.ResourceHandle, om: ObjectModule) {
+						super(handle);
+						this._om = om;
+					}
+					public readDirectoryEntry(): result<DirectoryEntry | undefined, ErrorCode> {
+						return this._om.readDirectoryEntry(this);
+					}
 				}
-				public $drop(): void {
-					return this._om.$drop(this);
-				}
-				public readDirectoryEntry(): result<DirectoryEntry | undefined, ErrorCode> {
-					return this._om.readDirectoryEntry(this);
+				export function Class(wasmInterface: WasmInterface, context: $wcm.WasmContext): filesystem.Types.DirectoryEntryStream.Class {
+					const resource = filesystem.Types.$.DirectoryEntryStream;
+					const om: ObjectModule = $wcm.Module.createObjectModule(resource, wasmInterface, context);
+					return class extends Impl {
+						constructor(handleTag: Symbol, handle: $wcm.ResourceHandle) {
+							super(handleTag, handle, om);
+						}
+					};
 				}
 			}
-			export function Class(wasmInterface: WasmInterface, context: $wcm.WasmContext): filesystem.types.DirectoryEntryStream.Class {
-				const resource = filesystem.types.$.DirectoryEntryStream;
-				const om: ObjectModule = $wcm.Module.createObjectModule(resource, wasmInterface, context);
-				return class extends Impl {
-					constructor() {
-						super(om);
-					}
+		}
+		export const types: Map<string, $wcm.GenericComponentModelType> = new Map<string, $wcm.GenericComponentModelType>([
+			['InputStream', $.InputStream],
+			['OutputStream', $.OutputStream],
+			['Error', $.Error],
+			['Datetime', $.Datetime],
+			['Filesize', $.Filesize],
+			['DescriptorType', $.DescriptorType],
+			['DescriptorFlags', $.DescriptorFlags],
+			['PathFlags', $.PathFlags],
+			['OpenFlags', $.OpenFlags],
+			['LinkCount', $.LinkCount],
+			['DescriptorStat', $.DescriptorStat],
+			['NewTimestamp', $.NewTimestamp],
+			['DirectoryEntry', $.DirectoryEntry],
+			['ErrorCode', $.ErrorCode],
+			['Advice', $.Advice],
+			['MetadataHashValue', $.MetadataHashValue],
+			['Descriptor', $.Descriptor],
+			['DirectoryEntryStream', $.DirectoryEntryStream]
+		]);
+		export const functions: Map<string, $wcm.FunctionType> = new Map([
+			['filesystemErrorCode', $.filesystemErrorCode]
+		]);
+		export const resources: Map<string, { resource: $wcm.ResourceType; factory: $wcm.ClassFactory<any>}> = new Map<string, { resource: $wcm.ResourceType; factory: $wcm.ClassFactory<any>}>([
+			['Descriptor', { resource: $.Descriptor, factory: Descriptor.exports.Class }],
+			['DirectoryEntryStream', { resource: $.DirectoryEntryStream, factory: DirectoryEntryStream.exports.Class }]
+		]);
+		export type WasmInterface = {
+			'filesystem-error-code': (err: i32, result: ptr<ErrorCode | undefined>) => void;
+		};
+		export namespace imports {
+			export type WasmInterface = _.WasmInterface & Descriptor.imports.WasmInterface & DirectoryEntryStream.imports.WasmInterface;
+		}
+		export namespace exports {
+			export type WasmInterface = _.WasmInterface & Descriptor.exports.WasmInterface & DirectoryEntryStream.exports.WasmInterface;
+			export namespace imports {
+				export type WasmInterface = {
+					'[resource-new]descriptor': (rep: i32) => i32;
+					'[resource-rep]descriptor': (handle: i32) => i32;
+					'[resource-drop]descriptor': (handle: i32) => i32;
+					'[resource-new]directory-entry-stream': (rep: i32) => i32;
+					'[resource-rep]directory-entry-stream': (handle: i32) => i32;
+					'[resource-drop]directory-entry-stream': (handle: i32) => i32;
 				};
 			}
 		}
-		export type WasmInterface = {
-			'filesystem-error-code': (err: i32, result: ptr<ErrorCode | undefined>) => void;
-		} & Descriptor.WasmInterface & DirectoryEntryStream.WasmInterface;
-		export function createImports(service: filesystem.Types, context: $wcm.WasmContext): WasmInterface {
-			return $wcm.Imports.create<WasmInterface>(functions, resources, service, context);
-		}
-		export function filterExports(exports: object, context: $wcm.WasmContext): WasmInterface {
-			return $wcm.Exports.filter<WasmInterface>(exports, functions, resources, id, filesystem._.version, context);
-		}
-		export function bindExports(wasmInterface: WasmInterface, context: $wcm.WasmContext): filesystem.Types {
-			return $wcm.Exports.bind<filesystem.Types>(functions, [['Descriptor', $.Descriptor, Descriptor.Class], ['DirectoryEntryStream', $.DirectoryEntryStream, DirectoryEntryStream.Class]], wasmInterface, context);
-		}
 	}
 
-	export namespace preopens.$ {
-		export const Descriptor = filesystem.types.$.Descriptor;
-		export const getDirectories = new $wcm.FunctionType<filesystem.preopens.getDirectories>('get-directories', [], new $wcm.ListType<[own<filesystem.preopens.Descriptor>, string]>(new $wcm.TupleType<[own<filesystem.preopens.Descriptor>, string]>([new $wcm.OwnType<filesystem.preopens.Descriptor>(Descriptor), $wcm.wstring])));
+	export namespace Preopens.$ {
+		export const Descriptor = filesystem.Types.$.Descriptor;
+		export const getDirectories = new $wcm.FunctionType<filesystem.Preopens.getDirectories>('get-directories', [], new $wcm.ListType<[own<filesystem.Preopens.Descriptor>, string]>(new $wcm.TupleType<[own<filesystem.Preopens.Descriptor>, string]>([new $wcm.OwnType<filesystem.Preopens.Descriptor>(Descriptor), $wcm.wstring])));
 	}
-	export namespace preopens._ {
+	export namespace Preopens._ {
 		export const id = 'wasi:filesystem/preopens@0.2.0' as const;
 		export const witName = 'preopens' as const;
 		export const types: Map<string, $wcm.GenericComponentModelType> = new Map<string, $wcm.GenericComponentModelType>([
@@ -1335,14 +1338,11 @@ export namespace filesystem {
 		export type WasmInterface = {
 			'get-directories': (result: ptr<[own<Descriptor>, string][]>) => void;
 		};
-		export function createImports(service: filesystem.Preopens, context: $wcm.WasmContext): WasmInterface {
-			return $wcm.Imports.create<WasmInterface>(functions, undefined, service, context);
+		export namespace imports {
+			export type WasmInterface = _.WasmInterface;
 		}
-		export function filterExports(exports: object, context: $wcm.WasmContext): WasmInterface {
-			return $wcm.Exports.filter<WasmInterface>(exports, functions, undefined, id, filesystem._.version, context);
-		}
-		export function bindExports(wasmInterface: WasmInterface, context: $wcm.WasmContext): filesystem.Preopens {
-			return $wcm.Exports.bind<filesystem.Preopens>(functions, [], wasmInterface, context);
+		export namespace exports {
+			export type WasmInterface = _.WasmInterface;
 		}
 	}
 }
@@ -1352,7 +1352,7 @@ export namespace filesystem._ {
 	export const id = 'wasi:filesystem@0.2.0' as const;
 	export const witName = 'filesystem' as const;
 	export const interfaces: Map<string, $wcm.InterfaceType> = new Map<string, $wcm.InterfaceType>([
-		['types', types._],
-		['preopens', preopens._]
+		['Types', Types._],
+		['Preopens', Preopens._]
 	]);
 }

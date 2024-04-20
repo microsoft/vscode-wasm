@@ -1566,7 +1566,7 @@ abstract class Emitter {
 	public emitMetaModel(_code: Code) : void {
 	}
 
-	public emitWasmInterface(_code: Code, qualifier?: string) : void {
+	public emitWasmInterface(_code: Code, _qualifier?: string) : void {
 	}
 
 	public emitWasmExport(_code: Code, _property: string) : void {
@@ -2488,7 +2488,7 @@ class InterfaceEmitter extends Emitter {
 				}
 				code.push(`export type WasmInterface = _.WasmInterface & ${resourceWasmInterfaces.join(' & ')};`);
 			} else {
-				code.push('export WasmInterface = _.WasmInterface;');
+				code.push('export type WasmInterface = _.WasmInterface;');
 			}
 			code.decreaseIndent();
 			code.push('}');
@@ -2502,7 +2502,7 @@ class InterfaceEmitter extends Emitter {
 				}
 				code.push(`export type WasmInterface = _.WasmInterface & ${resourceWasmInterfaces.join(' & ')};`);
 			} else {
-				code.push('export WasmInterface = _.WasmInterface;');
+				code.push('export type WasmInterface = _.WasmInterface;');
 			}
 			if (this.resourceEmitters.length > 0) {
 				code.push('export namespace imports {');
@@ -2575,7 +2575,7 @@ class InterfaceEmitter extends Emitter {
 		code.push(`${result}.${nameProvider.iface.propertyName(this.iface)} = ${qualifier}.exports.bind(${qualifier}.exports.filter(exports, context), context);`);
 	}
 
-	private getFullQualifiedTypeName(): string {
+	public getFullQualifiedTypeName(): string {
 		const { nameProvider } = this.context;
 		const ifaceName = nameProvider.iface.typeName(this.iface);
 		const pkg = nameProvider.pack.name(this.getPkg());
@@ -3329,14 +3329,14 @@ class ResourceEmitter extends InterfaceMemberEmitter {
 			this.conztructor.emitConstructorImplementation(code);
 		} else {
 			if (needsObjectModule) {
-				code.push(`constructor(handleTag: Symbol, handle: ${MetaModel.ResourceHandle}, om: ObjectModule) {`);
+				code.push(`constructor(_handleTag: Symbol, handle: ${MetaModel.ResourceHandle}, om: ObjectModule) {`);
 				code.increaseIndent();
 				code.push(`super(handle);`);
 				code.push(`this._om = om;`);
 				code.decreaseIndent();
 				code.push(`}`);
 			} else {
-				code.push(`constructor(handleTag: Symbol, handle: ${MetaModel.ResourceHandle}) {`);
+				code.push(`constructor(_handleTag: Symbol, handle: ${MetaModel.ResourceHandle}) {`);
 				code.increaseIndent();
 				code.push(`super(handle);`);
 				code.decreaseIndent();
@@ -3373,9 +3373,9 @@ class ResourceEmitter extends InterfaceMemberEmitter {
 					if (this.conztructor !== undefined) {
 						this.conztructor.emitAnonymousConstructorImplementation(code);
 					} else {
-						code.push(`constructor() {`);
+						code.push(`constructor(handleTag: Symbol, handle: ${MetaModel.ResourceHandle}) {`);
 						code.increaseIndent();
-						code.push(`super(om);`);
+						code.push(`super(handleTag, handle, om);`);
 						code.decreaseIndent();
 						code.push(`}`);
 					}

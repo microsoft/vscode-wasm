@@ -8,11 +8,11 @@ import { clocks } from './clocks';
 import { io } from './io';
 
 export namespace sockets {
-	export namespace network {
+	export namespace Network {
 
 		/**
 		 * Error codes.
-		 * 
+		 *
 		 * In theory, every API can return any error code.
 		 * In practice, API's typically only return the errors documented per API
 		 * combined with a couple of errors that are always possible:
@@ -21,7 +21,7 @@ export namespace sockets {
 		 * - `not-supported`
 		 * - `out-of-memory`
 		 * - `concurrency-conflict`
-		 * 
+		 *
 		 * See each individual API for what the POSIX equivalents are. They sometimes differ per API.
 		 */
 		export enum ErrorCode {
@@ -33,28 +33,28 @@ export namespace sockets {
 
 			/**
 			 * Access denied.
-			 * 
+			 *
 			 * POSIX equivalent: EACCES, EPERM
 			 */
 			accessDenied = 'accessDenied',
 
 			/**
 			 * The operation is not supported.
-			 * 
+			 *
 			 * POSIX equivalent: EOPNOTSUPP
 			 */
 			notSupported = 'notSupported',
 
 			/**
 			 * One of the arguments is invalid.
-			 * 
+			 *
 			 * POSIX equivalent: EINVAL
 			 */
 			invalidArgument = 'invalidArgument',
 
 			/**
 			 * Not enough memory to complete the operation.
-			 * 
+			 *
 			 * POSIX equivalent: ENOMEM, ENOBUFS, EAI_MEMORY
 			 */
 			outOfMemory = 'outOfMemory',
@@ -66,7 +66,7 @@ export namespace sockets {
 
 			/**
 			 * This operation is incompatible with another asynchronous operation that is already in progress.
-			 * 
+			 *
 			 * POSIX equivalent: EALREADY
 			 */
 			concurrencyConflict = 'concurrencyConflict',
@@ -75,14 +75,14 @@ export namespace sockets {
 			 * Trying to finish an asynchronous operation that:
 			 * - has not been started yet, or:
 			 * - was already finished by a previous `finish-*` call.
-			 * 
+			 *
 			 * Note: this is scheduled to be removed when `future`s are natively supported.
 			 */
 			notInProgress = 'notInProgress',
 
 			/**
 			 * The operation has been aborted because it could not be completed immediately.
-			 * 
+			 *
 			 * Note: this is scheduled to be removed when `future`s are natively supported.
 			 */
 			wouldBlock = 'wouldBlock',
@@ -287,10 +287,7 @@ export namespace sockets {
 		export type IpSocketAddress = IpSocketAddress.Ipv4 | IpSocketAddress.Ipv6;
 
 		export namespace Network {
-			export interface Interface {
-				$handle?: $wcm.ResourceHandle;
-				$drop?(): void;
-
+			export interface Interface extends $wcm.JInterface {
 			}
 			export type Statics = {
 			};
@@ -305,8 +302,8 @@ export namespace sockets {
 	/**
 	 * This interface provides a value-export of the default network handle..
 	 */
-	export namespace instanceNetwork {
-		export type Network = sockets.network.Network;
+	export namespace InstanceNetwork {
+		export type Network = sockets.Network.Network;
 
 		/**
 		 * Get a handle to the default network.
@@ -314,32 +311,29 @@ export namespace sockets {
 		export type instanceNetwork = () => own<Network>;
 	}
 	export type InstanceNetwork = {
-		instanceNetwork: instanceNetwork.instanceNetwork;
+		instanceNetwork: InstanceNetwork.instanceNetwork;
 	};
 
-	export namespace ipNameLookup {
-		export type Pollable = io.poll.Pollable;
+	export namespace IpNameLookup {
+		export type Pollable = io.Poll.Pollable;
 
-		export type Network = sockets.network.Network;
+		export type Network = sockets.Network.Network;
 
-		export type ErrorCode = sockets.network.ErrorCode;
+		export type ErrorCode = sockets.Network.ErrorCode;
 
-		export type IpAddress = sockets.network.IpAddress;
+		export type IpAddress = sockets.Network.IpAddress;
 
 		export namespace ResolveAddressStream {
-			export interface Interface {
-				$handle?: $wcm.ResourceHandle;
-				$drop?(): void;
-
+			export interface Interface extends $wcm.JInterface {
 				/**
 				 * Returns the next address from the resolver.
-				 * 
+				 *
 				 * This function should be called multiple times. On each call, it will
 				 * return the next address in connection order preference. If all
 				 * addresses have been exhausted, this function returns `none`.
-				 * 
+				 *
 				 * This function never returns IPv4-mapped IPv6 addresses.
-				 * 
+				 *
 				 * # Typical errors
 				 * - `name-unresolvable`:          Name does not exist or has no suitable associated IP addresses. (EAI_NONAME, EAI_NODATA, EAI_ADDRFAMILY)
 				 * - `temporary-resolver-failure`: A temporary failure in name resolution occurred. (EAI_AGAIN)
@@ -350,7 +344,7 @@ export namespace sockets {
 
 				/**
 				 * Create a `pollable` which will resolve once the stream is ready for I/O.
-				 * 
+				 *
 				 * Note: this function is here for WASI Preview2 only.
 				 * It's planned to be removed when `future` is natively supported in Preview3.
 				 */
@@ -365,20 +359,20 @@ export namespace sockets {
 
 		/**
 		 * Resolve an internet host name to a list of IP addresses.
-		 * 
+		 *
 		 * Unicode domain names are automatically converted to ASCII using IDNA encoding.
 		 * If the input is an IP address string, the address is parsed and returned
 		 * as-is without making any external requests.
-		 * 
+		 *
 		 * See the wasi-socket proposal README.md for a comparison with getaddrinfo.
-		 * 
+		 *
 		 * This function never blocks. It either immediately fails or immediately
 		 * returns successfully with a `resolve-address-stream` that can be used
 		 * to (asynchronously) fetch the results.
-		 * 
+		 *
 		 * # Typical errors
 		 * - `invalid-argument`: `name` is a syntactically invalid domain name or IP address.
-		 * 
+		 *
 		 * # References:
 		 * - <https://pubs.opengroup.org/onlinepubs/9699919799/functions/getaddrinfo.html>
 		 * - <https://man7.org/linux/man-pages/man3/getaddrinfo.3.html>
@@ -388,26 +382,26 @@ export namespace sockets {
 		export type resolveAddresses = (network: borrow<Network>, name: string) => result<own<ResolveAddressStream>, ErrorCode>;
 	}
 	export type IpNameLookup = {
-		ResolveAddressStream: ipNameLookup.ResolveAddressStream.Class;
-		resolveAddresses: ipNameLookup.resolveAddresses;
+		ResolveAddressStream: IpNameLookup.ResolveAddressStream.Class;
+		resolveAddresses: IpNameLookup.resolveAddresses;
 	};
 
-	export namespace tcp {
-		export type InputStream = io.streams.InputStream;
+	export namespace Tcp {
+		export type InputStream = io.Streams.InputStream;
 
-		export type OutputStream = io.streams.OutputStream;
+		export type OutputStream = io.Streams.OutputStream;
 
-		export type Pollable = io.poll.Pollable;
+		export type Pollable = io.Poll.Pollable;
 
-		export type Duration = clocks.monotonicClock.Duration;
+		export type Duration = clocks.MonotonicClock.Duration;
 
-		export type Network = sockets.network.Network;
+		export type Network = sockets.Network.Network;
 
-		export type ErrorCode = sockets.network.ErrorCode;
+		export type ErrorCode = sockets.Network.ErrorCode;
 
-		export type IpSocketAddress = sockets.network.IpSocketAddress;
+		export type IpSocketAddress = sockets.Network.IpSocketAddress;
 
-		export type IpAddressFamily = sockets.network.IpAddressFamily;
+		export type IpAddressFamily = sockets.Network.IpAddressFamily;
 
 		export enum ShutdownType {
 
@@ -428,22 +422,19 @@ export namespace sockets {
 		}
 
 		export namespace TcpSocket {
-			export interface Interface {
-				$handle?: $wcm.ResourceHandle;
-				$drop?(): void;
-
+			export interface Interface extends $wcm.JInterface {
 				/**
 				 * Bind the socket to a specific network on the provided IP address and port.
-				 * 
+				 *
 				 * If the IP address is zero (`0.0.0.0` in IPv4, `::` in IPv6), it is left to the implementation to decide which
 				 * network interface(s) to bind to.
 				 * If the TCP/UDP port is zero, the socket will be bound to a random free port.
-				 * 
+				 *
 				 * Bind can be attempted multiple times on the same socket, even with
 				 * different arguments on each iteration. But never concurrently and
 				 * only as long as the previous bind failed. Once a bind succeeds, the
 				 * binding can't be changed anymore.
-				 * 
+				 *
 				 * # Typical errors
 				 * - `invalid-argument`:          The `local-address` has the wrong address family. (EAFNOSUPPORT, EFAULT on Windows)
 				 * - `invalid-argument`:          `local-address` is not a unicast address. (EINVAL)
@@ -454,18 +445,18 @@ export namespace sockets {
 				 * - `address-not-bindable`:      `local-address` is not an address that the `network` can bind to. (EADDRNOTAVAIL)
 				 * - `not-in-progress`:           A `bind` operation is not in progress.
 				 * - `would-block`:               Can't finish the operation, it is still in progress. (EWOULDBLOCK, EAGAIN)
-				 * 
+				 *
 				 * # Implementors note
 				 * When binding to a non-zero port, this bind operation shouldn't be affected by the TIME_WAIT
 				 * state of a recently closed socket on the same local address. In practice this means that the SO_REUSEADDR
 				 * socket option should be set implicitly on all platforms, except on Windows where this is the default behavior
 				 * and SO_REUSEADDR performs something different entirely.
-				 * 
+				 *
 				 * Unlike in POSIX, in WASI the bind operation is async. This enables
 				 * interactive WASI hosts to inject permission prompts. Runtimes that
 				 * don't want to make use of this ability can simply call the native
 				 * `bind` as part of either `start-bind` or `finish-bind`.
-				 * 
+				 *
 				 * # References
 				 * - <https://pubs.opengroup.org/onlinepubs/9699919799/functions/bind.html>
 				 * - <https://man7.org/linux/man-pages/man2/bind.2.html>
@@ -478,15 +469,15 @@ export namespace sockets {
 
 				/**
 				 * Connect to a remote endpoint.
-				 * 
+				 *
 				 * On success:
 				 * - the socket is transitioned into the `connection` state.
 				 * - a pair of streams is returned that can be used to read & write to the connection
-				 * 
+				 *
 				 * After a failed connection attempt, the socket will be in the `closed`
 				 * state and the only valid action left is to `drop` the socket. A single
 				 * socket can not be used to connect more than once.
-				 * 
+				 *
 				 * # Typical errors
 				 * - `invalid-argument`:          The `remote-address` has the wrong address family. (EAFNOSUPPORT)
 				 * - `invalid-argument`:          `remote-address` is not a unicast address. (EINVAL, ENETUNREACH on Linux, EAFNOSUPPORT on MacOS)
@@ -504,16 +495,16 @@ export namespace sockets {
 				 * - `address-in-use`:            Tried to perform an implicit bind, but there were no ephemeral ports available. (EADDRINUSE, EADDRNOTAVAIL on Linux, EAGAIN on BSD)
 				 * - `not-in-progress`:           A connect operation is not in progress.
 				 * - `would-block`:               Can't finish the operation, it is still in progress. (EWOULDBLOCK, EAGAIN)
-				 * 
+				 *
 				 * # Implementors note
 				 * The POSIX equivalent of `start-connect` is the regular `connect` syscall.
 				 * Because all WASI sockets are non-blocking this is expected to return
 				 * EINPROGRESS, which should be translated to `ok()` in WASI.
-				 * 
+				 *
 				 * The POSIX equivalent of `finish-connect` is a `poll` for event `POLLOUT`
 				 * with a timeout of 0 on the socket descriptor. Followed by a check for
 				 * the `SO_ERROR` socket option, in case the poll signaled readiness.
-				 * 
+				 *
 				 * # References
 				 * - <https://pubs.opengroup.org/onlinepubs/9699919799/functions/connect.html>
 				 * - <https://man7.org/linux/man-pages/man2/connect.2.html>
@@ -526,11 +517,11 @@ export namespace sockets {
 
 				/**
 				 * Start listening for new connections.
-				 * 
+				 *
 				 * Transitions the socket into the `listening` state.
-				 * 
+				 *
 				 * Unlike POSIX, the socket must already be explicitly bound.
-				 * 
+				 *
 				 * # Typical errors
 				 * - `invalid-state`:             The socket is not bound to any local address. (EDESTADDRREQ)
 				 * - `invalid-state`:             The socket is already in the `connected` state. (EISCONN, EINVAL on BSD)
@@ -538,13 +529,13 @@ export namespace sockets {
 				 * - `address-in-use`:            Tried to perform an implicit bind, but there were no ephemeral ports available. (EADDRINUSE)
 				 * - `not-in-progress`:           A listen operation is not in progress.
 				 * - `would-block`:               Can't finish the operation, it is still in progress. (EWOULDBLOCK, EAGAIN)
-				 * 
+				 *
 				 * # Implementors note
 				 * Unlike in POSIX, in WASI the listen operation is async. This enables
 				 * interactive WASI hosts to inject permission prompts. Runtimes that
 				 * don't want to make use of this ability can simply call the native
 				 * `listen` as part of either `start-listen` or `finish-listen`.
-				 * 
+				 *
 				 * # References
 				 * - <https://pubs.opengroup.org/onlinepubs/9699919799/functions/listen.html>
 				 * - <https://man7.org/linux/man-pages/man2/listen.2.html>
@@ -557,7 +548,7 @@ export namespace sockets {
 
 				/**
 				 * Accept a new client socket.
-				 * 
+				 *
 				 * The returned socket is bound and in the `connected` state. The following properties are inherited from the listener socket:
 				 * - `address-family`
 				 * - `keep-alive-enabled`
@@ -567,16 +558,16 @@ export namespace sockets {
 				 * - `hop-limit`
 				 * - `receive-buffer-size`
 				 * - `send-buffer-size`
-				 * 
+				 *
 				 * On success, this function returns the newly accepted client socket along with
 				 * a pair of streams that can be used to read & write to the connection.
-				 * 
+				 *
 				 * # Typical errors
 				 * - `invalid-state`:      Socket is not in the `listening` state. (EINVAL)
 				 * - `would-block`:        No pending connections at the moment. (EWOULDBLOCK, EAGAIN)
 				 * - `connection-aborted`: An incoming connection was pending, but was terminated by the client before this listener could accept it. (ECONNABORTED)
 				 * - `new-socket-limit`:   The new socket resource could not be created because of a system limit. (EMFILE, ENFILE)
-				 * 
+				 *
 				 * # References
 				 * - <https://pubs.opengroup.org/onlinepubs/9699919799/functions/accept.html>
 				 * - <https://man7.org/linux/man-pages/man2/accept.2.html>
@@ -587,16 +578,16 @@ export namespace sockets {
 
 				/**
 				 * Get the bound local address.
-				 * 
+				 *
 				 * POSIX mentions:
 				 * > If the socket has not been bound to a local name, the value
 				 * > stored in the object pointed to by `address` is unspecified.
-				 * 
+				 *
 				 * WASI is stricter and requires `local-address` to return `invalid-state` when the socket hasn't been bound yet.
-				 * 
+				 *
 				 * # Typical errors
 				 * - `invalid-state`: The socket is not bound to any local address.
-				 * 
+				 *
 				 * # References
 				 * - <https://pubs.opengroup.org/onlinepubs/9699919799/functions/getsockname.html>
 				 * - <https://man7.org/linux/man-pages/man2/getsockname.2.html>
@@ -607,10 +598,10 @@ export namespace sockets {
 
 				/**
 				 * Get the remote address.
-				 * 
+				 *
 				 * # Typical errors
 				 * - `invalid-state`: The socket is not connected to a remote address. (ENOTCONN)
-				 * 
+				 *
 				 * # References
 				 * - <https://pubs.opengroup.org/onlinepubs/9699919799/functions/getpeername.html>
 				 * - <https://man7.org/linux/man-pages/man2/getpeername.2.html>
@@ -621,24 +612,24 @@ export namespace sockets {
 
 				/**
 				 * Whether the socket is in the `listening` state.
-				 * 
+				 *
 				 * Equivalent to the SO_ACCEPTCONN socket option.
 				 */
 				isListening(): boolean;
 
 				/**
 				 * Whether this is a IPv4 or IPv6 socket.
-				 * 
+				 *
 				 * Equivalent to the SO_DOMAIN socket option.
 				 */
 				addressFamily(): IpAddressFamily;
 
 				/**
 				 * Hints the desired listen queue size. Implementations are free to ignore this.
-				 * 
+				 *
 				 * If the provided value is 0, an `invalid-argument` error is returned.
 				 * Any other value will never cause an error, but it might be silently clamped and/or rounded.
-				 * 
+				 *
 				 * # Typical errors
 				 * - `not-supported`:        (set) The platform does not support changing the backlog size after the initial listen.
 				 * - `invalid-argument`:     (set) The provided value was 0.
@@ -648,13 +639,13 @@ export namespace sockets {
 
 				/**
 				 * Enables or disables keepalive.
-				 * 
+				 *
 				 * The keepalive behavior can be adjusted using:
 				 * - `keep-alive-idle-time`
 				 * - `keep-alive-interval`
 				 * - `keep-alive-count`
 				 * These properties can be configured while `keep-alive-enabled` is false, but only come into effect when `keep-alive-enabled` is true.
-				 * 
+				 *
 				 * Equivalent to the SO_KEEPALIVE socket option.
 				 */
 				keepAliveEnabled(): result<boolean, ErrorCode>;
@@ -663,13 +654,13 @@ export namespace sockets {
 
 				/**
 				 * Amount of time the connection has to be idle before TCP starts sending keepalive packets.
-				 * 
+				 *
 				 * If the provided value is 0, an `invalid-argument` error is returned.
 				 * Any other value will never cause an error, but it might be silently clamped and/or rounded.
 				 * I.e. after setting a value, reading the same setting back may return a different value.
-				 * 
+				 *
 				 * Equivalent to the TCP_KEEPIDLE socket option. (TCP_KEEPALIVE on MacOS)
-				 * 
+				 *
 				 * # Typical errors
 				 * - `invalid-argument`:     (set) The provided value was 0.
 				 */
@@ -679,13 +670,13 @@ export namespace sockets {
 
 				/**
 				 * The time between keepalive packets.
-				 * 
+				 *
 				 * If the provided value is 0, an `invalid-argument` error is returned.
 				 * Any other value will never cause an error, but it might be silently clamped and/or rounded.
 				 * I.e. after setting a value, reading the same setting back may return a different value.
-				 * 
+				 *
 				 * Equivalent to the TCP_KEEPINTVL socket option.
-				 * 
+				 *
 				 * # Typical errors
 				 * - `invalid-argument`:     (set) The provided value was 0.
 				 */
@@ -695,13 +686,13 @@ export namespace sockets {
 
 				/**
 				 * The maximum amount of keepalive packets TCP should send before aborting the connection.
-				 * 
+				 *
 				 * If the provided value is 0, an `invalid-argument` error is returned.
 				 * Any other value will never cause an error, but it might be silently clamped and/or rounded.
 				 * I.e. after setting a value, reading the same setting back may return a different value.
-				 * 
+				 *
 				 * Equivalent to the TCP_KEEPCNT socket option.
-				 * 
+				 *
 				 * # Typical errors
 				 * - `invalid-argument`:     (set) The provided value was 0.
 				 */
@@ -711,9 +702,9 @@ export namespace sockets {
 
 				/**
 				 * Equivalent to the IP_TTL & IPV6_UNICAST_HOPS socket options.
-				 * 
+				 *
 				 * If the provided value is 0, an `invalid-argument` error is returned.
-				 * 
+				 *
 				 * # Typical errors
 				 * - `invalid-argument`:     (set) The TTL value must be 1 or higher.
 				 */
@@ -723,13 +714,13 @@ export namespace sockets {
 
 				/**
 				 * The kernel buffer space reserved for sends/receives on this socket.
-				 * 
+				 *
 				 * If the provided value is 0, an `invalid-argument` error is returned.
 				 * Any other value will never cause an error, but it might be silently clamped and/or rounded.
 				 * I.e. after setting a value, reading the same setting back may return a different value.
-				 * 
+				 *
 				 * Equivalent to the SO_RCVBUF and SO_SNDBUF socket options.
-				 * 
+				 *
 				 * # Typical errors
 				 * - `invalid-argument`:     (set) The provided value was 0.
 				 */
@@ -744,19 +735,19 @@ export namespace sockets {
 				/**
 				 * Create a `pollable` which can be used to poll for, or block on,
 				 * completion of any of the asynchronous operations of this socket.
-				 * 
+				 *
 				 * When `finish-bind`, `finish-listen`, `finish-connect` or `accept`
 				 * return `error(would-block)`, this pollable can be used to wait for
 				 * their success or failure, after which the method can be retried.
-				 * 
+				 *
 				 * The pollable is not limited to the async operation that happens to be
 				 * in progress at the time of calling `subscribe` (if any). Theoretically,
 				 * `subscribe` only has to be called once per socket and can then be
 				 * (re)used for the remainder of the socket's lifetime.
-				 * 
+				 *
 				 * See <https://github.com/WebAssembly/wasi-sockets/TcpSocketOperationalSemantics.md#Pollable-readiness>
 				 * for a more information.
-				 * 
+				 *
 				 * Note: this function is here for WASI Preview2 only.
 				 * It's planned to be removed when `future` is natively supported in Preview3.
 				 */
@@ -764,7 +755,7 @@ export namespace sockets {
 
 				/**
 				 * Initiate a graceful shutdown.
-				 * 
+				 *
 				 * - `receive`: The socket is not expecting to receive any data from
 				 * the peer. The `input-stream` associated with this socket will be
 				 * closed. Any data still in the receive queue at time of calling
@@ -772,15 +763,15 @@ export namespace sockets {
 				 * - `send`: The socket has no more data to send to the peer. The `output-stream`
 				 * associated with this socket will be closed and a FIN packet will be sent.
 				 * - `both`: Same effect as `receive` & `send` combined.
-				 * 
+				 *
 				 * This function is idempotent. Shutting a down a direction more than once
 				 * has no effect and returns `ok`.
-				 * 
+				 *
 				 * The shutdown function does not close (drop) the socket.
-				 * 
+				 *
 				 * # Typical errors
 				 * - `invalid-state`: The socket is not in the `connected` state. (ENOTCONN)
-				 * 
+				 *
 				 * # References
 				 * - <https://pubs.opengroup.org/onlinepubs/9699919799/functions/shutdown.html>
 				 * - <https://man7.org/linux/man-pages/man2/shutdown.2.html>
@@ -797,34 +788,34 @@ export namespace sockets {
 		export type TcpSocket = TcpSocket.Interface;
 	}
 	export type Tcp = {
-		TcpSocket: tcp.TcpSocket.Class;
+		TcpSocket: Tcp.TcpSocket.Class;
 	};
 
-	export namespace tcpCreateSocket {
-		export type Network = sockets.network.Network;
+	export namespace TcpCreateSocket {
+		export type Network = sockets.Network.Network;
 
-		export type ErrorCode = sockets.network.ErrorCode;
+		export type ErrorCode = sockets.Network.ErrorCode;
 
-		export type IpAddressFamily = sockets.network.IpAddressFamily;
+		export type IpAddressFamily = sockets.Network.IpAddressFamily;
 
-		export type TcpSocket = sockets.tcp.TcpSocket;
+		export type TcpSocket = sockets.Tcp.TcpSocket;
 
 		/**
 		 * Create a new TCP socket.
-		 * 
+		 *
 		 * Similar to `socket(AF_INET or AF_INET6, SOCK_STREAM, IPPROTO_TCP)` in POSIX.
 		 * On IPv6 sockets, IPV6_V6ONLY is enabled by default and can't be configured otherwise.
-		 * 
+		 *
 		 * This function does not require a network capability handle. This is considered to be safe because
 		 * at time of creation, the socket is not bound to any `network` yet. Up to the moment `bind`/`connect`
 		 * is called, the socket is effectively an in-memory configuration object, unable to communicate with the outside world.
-		 * 
+		 *
 		 * All sockets are non-blocking. Use the wasi-poll interface to block on asynchronous operations.
-		 * 
+		 *
 		 * # Typical errors
 		 * - `not-supported`:     The specified `address-family` is not supported. (EAFNOSUPPORT)
 		 * - `new-socket-limit`:  The new socket resource could not be created because of a system limit. (EMFILE, ENFILE)
-		 * 
+		 *
 		 * # References
 		 * - <https://pubs.opengroup.org/onlinepubs/9699919799/functions/socket.html>
 		 * - <https://man7.org/linux/man-pages/man2/socket.2.html>
@@ -834,19 +825,19 @@ export namespace sockets {
 		export type createTcpSocket = (addressFamily: IpAddressFamily) => result<own<TcpSocket>, ErrorCode>;
 	}
 	export type TcpCreateSocket = {
-		createTcpSocket: tcpCreateSocket.createTcpSocket;
+		createTcpSocket: TcpCreateSocket.createTcpSocket;
 	};
 
-	export namespace udp {
-		export type Pollable = io.poll.Pollable;
+	export namespace Udp {
+		export type Pollable = io.Poll.Pollable;
 
-		export type Network = sockets.network.Network;
+		export type Network = sockets.Network.Network;
 
-		export type ErrorCode = sockets.network.ErrorCode;
+		export type ErrorCode = sockets.Network.ErrorCode;
 
-		export type IpSocketAddress = sockets.network.IpSocketAddress;
+		export type IpSocketAddress = sockets.Network.IpSocketAddress;
 
-		export type IpAddressFamily = sockets.network.IpAddressFamily;
+		export type IpAddressFamily = sockets.Network.IpAddressFamily;
 
 		/**
 		 * A received datagram.
@@ -855,16 +846,16 @@ export namespace sockets {
 
 			/**
 			 * The payload.
-			 * 
+			 *
 			 * Theoretical max size: ~64 KiB. In practice, typically less than 1500 bytes.
 			 */
 			data: Uint8Array;
 
 			/**
 			 * The source address.
-			 * 
+			 *
 			 * This field is guaranteed to match the remote address the stream was initialized with, if any.
-			 * 
+			 *
 			 * Equivalent to the `src_addr` out parameter of `recvfrom`.
 			 */
 			remoteAddress: IpSocketAddress;
@@ -882,28 +873,25 @@ export namespace sockets {
 
 			/**
 			 * The destination address.
-			 * 
+			 *
 			 * The requirements on this field depend on how the stream was initialized:
 			 * - with a remote address: this field must be None or match the stream's remote address exactly.
 			 * - without a remote address: this field is required.
-			 * 
+			 *
 			 * If this value is None, the send operation is equivalent to `send` in POSIX. Otherwise it is equivalent to `sendto`.
 			 */
 			remoteAddress?: IpSocketAddress | undefined;
 		};
 
 		export namespace UdpSocket {
-			export interface Interface {
-				$handle?: $wcm.ResourceHandle;
-				$drop?(): void;
-
+			export interface Interface extends $wcm.JInterface {
 				/**
 				 * Bind the socket to a specific network on the provided IP address and port.
-				 * 
+				 *
 				 * If the IP address is zero (`0.0.0.0` in IPv4, `::` in IPv6), it is left to the implementation to decide which
 				 * network interface(s) to bind to.
 				 * If the port is zero, the socket will be bound to a random free port.
-				 * 
+				 *
 				 * # Typical errors
 				 * - `invalid-argument`:          The `local-address` has the wrong address family. (EAFNOSUPPORT, EFAULT on Windows)
 				 * - `invalid-state`:             The socket is already bound. (EINVAL)
@@ -912,13 +900,13 @@ export namespace sockets {
 				 * - `address-not-bindable`:      `local-address` is not an address that the `network` can bind to. (EADDRNOTAVAIL)
 				 * - `not-in-progress`:           A `bind` operation is not in progress.
 				 * - `would-block`:               Can't finish the operation, it is still in progress. (EWOULDBLOCK, EAGAIN)
-				 * 
+				 *
 				 * # Implementors note
 				 * Unlike in POSIX, in WASI the bind operation is async. This enables
 				 * interactive WASI hosts to inject permission prompts. Runtimes that
 				 * don't want to make use of this ability can simply call the native
 				 * `bind` as part of either `start-bind` or `finish-bind`.
-				 * 
+				 *
 				 * # References
 				 * - <https://pubs.opengroup.org/onlinepubs/9699919799/functions/bind.html>
 				 * - <https://man7.org/linux/man-pages/man2/bind.2.html>
@@ -931,19 +919,19 @@ export namespace sockets {
 
 				/**
 				 * Set up inbound & outbound communication channels, optionally to a specific peer.
-				 * 
+				 *
 				 * This function only changes the local socket configuration and does not generate any network traffic.
 				 * On success, the `remote-address` of the socket is updated. The `local-address` may be updated as well,
 				 * based on the best network path to `remote-address`.
-				 * 
+				 *
 				 * When a `remote-address` is provided, the returned streams are limited to communicating with that specific peer:
 				 * - `send` can only be used to send to this destination.
 				 * - `receive` will only return datagrams sent from the provided `remote-address`.
-				 * 
+				 *
 				 * This method may be called multiple times on the same socket to change its association, but
 				 * only the most recently returned pair of streams will be operational. Implementations may trap if
 				 * the streams returned by a previous invocation haven't been dropped yet before calling `stream` again.
-				 * 
+				 *
 				 * The POSIX equivalent in pseudo-code is:
 				 * ```text
 				 * if (was previously connected) {
@@ -953,9 +941,9 @@ export namespace sockets {
 				 * connect(s, remote_address)
 				 * }
 				 * ```
-				 * 
+				 *
 				 * Unlike in POSIX, the socket must already be explicitly bound.
-				 * 
+				 *
 				 * # Typical errors
 				 * - `invalid-argument`:          The `remote-address` has the wrong address family. (EAFNOSUPPORT)
 				 * - `invalid-argument`:          The IP address in `remote-address` is set to INADDR_ANY (`0.0.0.0` / `::`). (EDESTADDRREQ, EADDRNOTAVAIL)
@@ -964,7 +952,7 @@ export namespace sockets {
 				 * - `address-in-use`:            Tried to perform an implicit bind, but there were no ephemeral ports available. (EADDRINUSE, EADDRNOTAVAIL on Linux, EAGAIN on BSD)
 				 * - `remote-unreachable`:        The remote address is not reachable. (ECONNRESET, ENETRESET, EHOSTUNREACH, EHOSTDOWN, ENETUNREACH, ENETDOWN, ENONET)
 				 * - `connection-refused`:        The connection was refused. (ECONNREFUSED)
-				 * 
+				 *
 				 * # References
 				 * - <https://pubs.opengroup.org/onlinepubs/9699919799/functions/connect.html>
 				 * - <https://man7.org/linux/man-pages/man2/connect.2.html>
@@ -975,16 +963,16 @@ export namespace sockets {
 
 				/**
 				 * Get the current bound address.
-				 * 
+				 *
 				 * POSIX mentions:
 				 * > If the socket has not been bound to a local name, the value
 				 * > stored in the object pointed to by `address` is unspecified.
-				 * 
+				 *
 				 * WASI is stricter and requires `local-address` to return `invalid-state` when the socket hasn't been bound yet.
-				 * 
+				 *
 				 * # Typical errors
 				 * - `invalid-state`: The socket is not bound to any local address.
-				 * 
+				 *
 				 * # References
 				 * - <https://pubs.opengroup.org/onlinepubs/9699919799/functions/getsockname.html>
 				 * - <https://man7.org/linux/man-pages/man2/getsockname.2.html>
@@ -995,10 +983,10 @@ export namespace sockets {
 
 				/**
 				 * Get the address the socket is currently streaming to.
-				 * 
+				 *
 				 * # Typical errors
 				 * - `invalid-state`: The socket is not streaming to a specific remote address. (ENOTCONN)
-				 * 
+				 *
 				 * # References
 				 * - <https://pubs.opengroup.org/onlinepubs/9699919799/functions/getpeername.html>
 				 * - <https://man7.org/linux/man-pages/man2/getpeername.2.html>
@@ -1009,16 +997,16 @@ export namespace sockets {
 
 				/**
 				 * Whether this is a IPv4 or IPv6 socket.
-				 * 
+				 *
 				 * Equivalent to the SO_DOMAIN socket option.
 				 */
 				addressFamily(): IpAddressFamily;
 
 				/**
 				 * Equivalent to the IP_TTL & IPV6_UNICAST_HOPS socket options.
-				 * 
+				 *
 				 * If the provided value is 0, an `invalid-argument` error is returned.
-				 * 
+				 *
 				 * # Typical errors
 				 * - `invalid-argument`:     (set) The TTL value must be 1 or higher.
 				 */
@@ -1028,13 +1016,13 @@ export namespace sockets {
 
 				/**
 				 * The kernel buffer space reserved for sends/receives on this socket.
-				 * 
+				 *
 				 * If the provided value is 0, an `invalid-argument` error is returned.
 				 * Any other value will never cause an error, but it might be silently clamped and/or rounded.
 				 * I.e. after setting a value, reading the same setting back may return a different value.
-				 * 
+				 *
 				 * Equivalent to the SO_RCVBUF and SO_SNDBUF socket options.
-				 * 
+				 *
 				 * # Typical errors
 				 * - `invalid-argument`:     (set) The provided value was 0.
 				 */
@@ -1048,7 +1036,7 @@ export namespace sockets {
 
 				/**
 				 * Create a `pollable` which will resolve once the socket is ready for I/O.
-				 * 
+				 *
 				 * Note: this function is here for WASI Preview2 only.
 				 * It's planned to be removed when `future` is natively supported in Preview3.
 				 */
@@ -1062,25 +1050,22 @@ export namespace sockets {
 		export type UdpSocket = UdpSocket.Interface;
 
 		export namespace IncomingDatagramStream {
-			export interface Interface {
-				$handle?: $wcm.ResourceHandle;
-				$drop?(): void;
-
+			export interface Interface extends $wcm.JInterface {
 				/**
 				 * Receive messages on the socket.
-				 * 
+				 *
 				 * This function attempts to receive up to `max-results` datagrams on the socket without blocking.
 				 * The returned list may contain fewer elements than requested, but never more.
-				 * 
+				 *
 				 * This function returns successfully with an empty list when either:
 				 * - `max-results` is 0, or:
 				 * - `max-results` is greater than 0, but no results are immediately available.
 				 * This function never returns `error(would-block)`.
-				 * 
+				 *
 				 * # Typical errors
 				 * - `remote-unreachable`: The remote address is not reachable. (ECONNRESET, ENETRESET on Windows, EHOSTUNREACH, EHOSTDOWN, ENETUNREACH, ENETDOWN, ENONET)
 				 * - `connection-refused`: The connection was refused. (ECONNREFUSED)
-				 * 
+				 *
 				 * # References
 				 * - <https://pubs.opengroup.org/onlinepubs/9699919799/functions/recvfrom.html>
 				 * - <https://pubs.opengroup.org/onlinepubs/9699919799/functions/recvmsg.html>
@@ -1095,7 +1080,7 @@ export namespace sockets {
 
 				/**
 				 * Create a `pollable` which will resolve once the stream is ready to receive again.
-				 * 
+				 *
 				 * Note: this function is here for WASI Preview2 only.
 				 * It's planned to be removed when `future` is natively supported in Preview3.
 				 */
@@ -1109,41 +1094,38 @@ export namespace sockets {
 		export type IncomingDatagramStream = IncomingDatagramStream.Interface;
 
 		export namespace OutgoingDatagramStream {
-			export interface Interface {
-				$handle?: $wcm.ResourceHandle;
-				$drop?(): void;
-
+			export interface Interface extends $wcm.JInterface {
 				/**
 				 * Check readiness for sending. This function never blocks.
-				 * 
+				 *
 				 * Returns the number of datagrams permitted for the next call to `send`,
 				 * or an error. Calling `send` with more datagrams than this function has
 				 * permitted will trap.
-				 * 
+				 *
 				 * When this function returns ok(0), the `subscribe` pollable will
 				 * become ready when this function will report at least ok(1), or an
 				 * error.
-				 * 
+				 *
 				 * Never returns `would-block`.
 				 */
 				checkSend(): result<u64, ErrorCode>;
 
 				/**
 				 * Send messages on the socket.
-				 * 
+				 *
 				 * This function attempts to send all provided `datagrams` on the socket without blocking and
 				 * returns how many messages were actually sent (or queued for sending). This function never
 				 * returns `error(would-block)`. If none of the datagrams were able to be sent, `ok(0)` is returned.
-				 * 
+				 *
 				 * This function semantically behaves the same as iterating the `datagrams` list and sequentially
 				 * sending each individual datagram until either the end of the list has been reached or the first error occurred.
 				 * If at least one datagram has been sent successfully, this function never returns an error.
-				 * 
+				 *
 				 * If the input list is empty, the function returns `ok(0)`.
-				 * 
+				 *
 				 * Each call to `send` must be permitted by a preceding `check-send`. Implementations must trap if
 				 * either `check-send` was not called or `datagrams` contains more items than `check-send` permitted.
-				 * 
+				 *
 				 * # Typical errors
 				 * - `invalid-argument`:        The `remote-address` has the wrong address family. (EAFNOSUPPORT)
 				 * - `invalid-argument`:        The IP address in `remote-address` is set to INADDR_ANY (`0.0.0.0` / `::`). (EDESTADDRREQ, EADDRNOTAVAIL)
@@ -1153,7 +1135,7 @@ export namespace sockets {
 				 * - `remote-unreachable`:      The remote address is not reachable. (ECONNRESET, ENETRESET on Windows, EHOSTUNREACH, EHOSTDOWN, ENETUNREACH, ENETDOWN, ENONET)
 				 * - `connection-refused`:      The connection was refused. (ECONNREFUSED)
 				 * - `datagram-too-large`:      The datagram is too large. (EMSGSIZE)
-				 * 
+				 *
 				 * # References
 				 * - <https://pubs.opengroup.org/onlinepubs/9699919799/functions/sendto.html>
 				 * - <https://pubs.opengroup.org/onlinepubs/9699919799/functions/sendmsg.html>
@@ -1168,7 +1150,7 @@ export namespace sockets {
 
 				/**
 				 * Create a `pollable` which will resolve once the stream is ready to send again.
-				 * 
+				 *
 				 * Note: this function is here for WASI Preview2 only.
 				 * It's planned to be removed when `future` is natively supported in Preview3.
 				 */
@@ -1182,36 +1164,36 @@ export namespace sockets {
 		export type OutgoingDatagramStream = OutgoingDatagramStream.Interface;
 	}
 	export type Udp = {
-		UdpSocket: udp.UdpSocket.Class;
-		IncomingDatagramStream: udp.IncomingDatagramStream.Class;
-		OutgoingDatagramStream: udp.OutgoingDatagramStream.Class;
+		UdpSocket: Udp.UdpSocket.Class;
+		IncomingDatagramStream: Udp.IncomingDatagramStream.Class;
+		OutgoingDatagramStream: Udp.OutgoingDatagramStream.Class;
 	};
 
-	export namespace udpCreateSocket {
-		export type Network = sockets.network.Network;
+	export namespace UdpCreateSocket {
+		export type Network = sockets.Network.Network;
 
-		export type ErrorCode = sockets.network.ErrorCode;
+		export type ErrorCode = sockets.Network.ErrorCode;
 
-		export type IpAddressFamily = sockets.network.IpAddressFamily;
+		export type IpAddressFamily = sockets.Network.IpAddressFamily;
 
-		export type UdpSocket = sockets.udp.UdpSocket;
+		export type UdpSocket = sockets.Udp.UdpSocket;
 
 		/**
 		 * Create a new UDP socket.
-		 * 
+		 *
 		 * Similar to `socket(AF_INET or AF_INET6, SOCK_DGRAM, IPPROTO_UDP)` in POSIX.
 		 * On IPv6 sockets, IPV6_V6ONLY is enabled by default and can't be configured otherwise.
-		 * 
+		 *
 		 * This function does not require a network capability handle. This is considered to be safe because
 		 * at time of creation, the socket is not bound to any `network` yet. Up to the moment `bind` is called,
 		 * the socket is effectively an in-memory configuration object, unable to communicate with the outside world.
-		 * 
+		 *
 		 * All sockets are non-blocking. Use the wasi-poll interface to block on asynchronous operations.
-		 * 
+		 *
 		 * # Typical errors
 		 * - `not-supported`:     The specified `address-family` is not supported. (EAFNOSUPPORT)
 		 * - `new-socket-limit`:  The new socket resource could not be created because of a system limit. (EMFILE, ENFILE)
-		 * 
+		 *
 		 * # References:
 		 * - <https://pubs.opengroup.org/onlinepubs/9699919799/functions/socket.html>
 		 * - <https://man7.org/linux/man-pages/man2/socket.2.html>
@@ -1221,35 +1203,59 @@ export namespace sockets {
 		export type createUdpSocket = (addressFamily: IpAddressFamily) => result<own<UdpSocket>, ErrorCode>;
 	}
 	export type UdpCreateSocket = {
-		createUdpSocket: udpCreateSocket.createUdpSocket;
+		createUdpSocket: UdpCreateSocket.createUdpSocket;
 	};
 }
 
 export namespace sockets {
-	export namespace network.$ {
-		export const Network = new $wcm.ResourceType<sockets.network.Network>('network', 'wasi:sockets/network/network');
+	export namespace Network.$ {
+		export const Network = new $wcm.ResourceType<sockets.Network.Network>('network', 'wasi:sockets@0.2.0/network/network');
 		export const Network_Handle = new $wcm.ResourceHandleType('network');
-		export const ErrorCode = new $wcm.EnumType<sockets.network.ErrorCode>(['unknown', 'accessDenied', 'notSupported', 'invalidArgument', 'outOfMemory', 'timeout', 'concurrencyConflict', 'notInProgress', 'wouldBlock', 'invalidState', 'newSocketLimit', 'addressNotBindable', 'addressInUse', 'remoteUnreachable', 'connectionRefused', 'connectionReset', 'connectionAborted', 'datagramTooLarge', 'nameUnresolvable', 'temporaryResolverFailure', 'permanentResolverFailure']);
-		export const IpAddressFamily = new $wcm.EnumType<sockets.network.IpAddressFamily>(['ipv4', 'ipv6']);
+		export const ErrorCode = new $wcm.EnumType<sockets.Network.ErrorCode>(['unknown', 'accessDenied', 'notSupported', 'invalidArgument', 'outOfMemory', 'timeout', 'concurrencyConflict', 'notInProgress', 'wouldBlock', 'invalidState', 'newSocketLimit', 'addressNotBindable', 'addressInUse', 'remoteUnreachable', 'connectionRefused', 'connectionReset', 'connectionAborted', 'datagramTooLarge', 'nameUnresolvable', 'temporaryResolverFailure', 'permanentResolverFailure']);
+		export const IpAddressFamily = new $wcm.EnumType<sockets.Network.IpAddressFamily>(['ipv4', 'ipv6']);
 		export const Ipv4Address = new $wcm.TupleType<[u8, u8, u8, u8]>([$wcm.u8, $wcm.u8, $wcm.u8, $wcm.u8]);
 		export const Ipv6Address = new $wcm.TupleType<[u16, u16, u16, u16, u16, u16, u16, u16]>([$wcm.u16, $wcm.u16, $wcm.u16, $wcm.u16, $wcm.u16, $wcm.u16, $wcm.u16, $wcm.u16]);
-		export const IpAddress = new $wcm.VariantType<sockets.network.IpAddress, sockets.network.IpAddress._tt, sockets.network.IpAddress._vt>([['ipv4', Ipv4Address], ['ipv6', Ipv6Address]], sockets.network.IpAddress._ctor);
-		export const Ipv4SocketAddress = new $wcm.RecordType<sockets.network.Ipv4SocketAddress>([
+		export const IpAddress = new $wcm.VariantType<sockets.Network.IpAddress, sockets.Network.IpAddress._tt, sockets.Network.IpAddress._vt>([['ipv4', Ipv4Address], ['ipv6', Ipv6Address]], sockets.Network.IpAddress._ctor);
+		export const Ipv4SocketAddress = new $wcm.RecordType<sockets.Network.Ipv4SocketAddress>([
 			['port', $wcm.u16],
 			['address', Ipv4Address],
 		]);
-		export const Ipv6SocketAddress = new $wcm.RecordType<sockets.network.Ipv6SocketAddress>([
+		export const Ipv6SocketAddress = new $wcm.RecordType<sockets.Network.Ipv6SocketAddress>([
 			['port', $wcm.u16],
 			['flowInfo', $wcm.u32],
 			['address', Ipv6Address],
 			['scopeId', $wcm.u32],
 		]);
-		export const IpSocketAddress = new $wcm.VariantType<sockets.network.IpSocketAddress, sockets.network.IpSocketAddress._tt, sockets.network.IpSocketAddress._vt>([['ipv4', Ipv4SocketAddress], ['ipv6', Ipv6SocketAddress]], sockets.network.IpSocketAddress._ctor);
+		export const IpSocketAddress = new $wcm.VariantType<sockets.Network.IpSocketAddress, sockets.Network.IpSocketAddress._tt, sockets.Network.IpSocketAddress._vt>([['ipv4', Ipv4SocketAddress], ['ipv6', Ipv6SocketAddress]], sockets.Network.IpSocketAddress._ctor);
 		Network.addDestructor('$drop', new $wcm.DestructorType('[resource-drop]network', [['inst', Network]]));
 	}
-	export namespace network._ {
+	export namespace Network._ {
 		export const id = 'wasi:sockets/network@0.2.0' as const;
 		export const witName = 'network' as const;
+		export namespace Network {
+			export type WasmInterface = {
+			};
+			export type ObjectModule = {
+			};
+			export namespace imports {
+				export type WasmInterface = Network.WasmInterface & { '[resource-drop]network': (self: i32) => void };
+			}
+			export namespace exports {
+				export type WasmInterface = Network.WasmInterface & { '[dtor]network': (self: i32) => void };
+				class Impl extends $wcm.Resource implements sockets.Network.Network.Interface {
+					constructor(_handleTag: Symbol, handle: $wcm.ResourceHandle) {
+						super(handle);
+					}
+				}
+				export function Class(_wasmInterface: WasmInterface, _context: $wcm.WasmContext): sockets.Network.Network.Class {
+					return class extends Impl {
+						constructor(handleTag: Symbol, handle: $wcm.ResourceHandle) {
+							super(handleTag, handle);
+						}
+					};
+				}
+			}
+		}
 		export const types: Map<string, $wcm.GenericComponentModelType> = new Map<string, $wcm.GenericComponentModelType>([
 			['ErrorCode', $.ErrorCode],
 			['IpAddressFamily', $.IpAddressFamily],
@@ -1261,54 +1267,31 @@ export namespace sockets {
 			['IpSocketAddress', $.IpSocketAddress],
 			['Network', $.Network]
 		]);
-		export const resources: Map<string, $wcm.ResourceType> = new Map<string, $wcm.ResourceType>([
-			['Network', $.Network]
+		export const resources: Map<string, { resource: $wcm.ResourceType; factory: $wcm.ClassFactory<any>}> = new Map<string, { resource: $wcm.ResourceType; factory: $wcm.ClassFactory<any>}>([
+			['Network', { resource: $.Network, factory: Network.exports.Class }]
 		]);
-		export namespace Network {
-			export type WasmInterface = {
-				'[resource-drop]network': (self: i32) => void;
-			};
-			type ObjectModule = {
-				$drop(self: Network): void;
-			};
-			class Impl extends $wcm.Resource implements sockets.network.Network.Interface {
-				private readonly _om: ObjectModule;
-				constructor(om: ObjectModule) {
-					super();
-					this._om = om;
-				}
-				public $drop(): void {
-					return this._om.$drop(this);
-				}
-			}
-			export function Class(wasmInterface: WasmInterface, context: $wcm.WasmContext): sockets.network.Network.Class {
-				const resource = sockets.network.$.Network;
-				const om: ObjectModule = $wcm.Module.createObjectModule(resource, wasmInterface, context);
-				return class extends Impl {
-					constructor() {
-						super(om);
-					}
+		export type WasmInterface = {
+		};
+		export namespace imports {
+			export type WasmInterface = _.WasmInterface & Network.imports.WasmInterface;
+		}
+		export namespace exports {
+			export type WasmInterface = _.WasmInterface & Network.exports.WasmInterface;
+			export namespace imports {
+				export type WasmInterface = {
+					'[resource-new]network': (rep: i32) => i32;
+					'[resource-rep]network': (handle: i32) => i32;
+					'[resource-drop]network': (handle: i32) => i32;
 				};
 			}
 		}
-		export type WasmInterface = {
-		} & Network.WasmInterface;
-		export function createImports(service: sockets.Network, context: $wcm.WasmContext): WasmInterface {
-			return $wcm.Imports.create<WasmInterface>(undefined, resources, service, context);
-		}
-		export function filterExports(exports: object, context: $wcm.WasmContext): WasmInterface {
-			return $wcm.Exports.filter<WasmInterface>(exports, undefined, resources, id, sockets._.version, context);
-		}
-		export function bindExports(wasmInterface: WasmInterface, context: $wcm.WasmContext): sockets.Network {
-			return $wcm.Exports.bind<sockets.Network>(undefined, [['Network', $.Network, Network.Class]], wasmInterface, context);
-		}
 	}
 
-	export namespace instanceNetwork.$ {
-		export const Network = sockets.network.$.Network;
-		export const instanceNetwork = new $wcm.FunctionType<sockets.instanceNetwork.instanceNetwork>('instance-network', [], new $wcm.OwnType<sockets.instanceNetwork.Network>(Network));
+	export namespace InstanceNetwork.$ {
+		export const Network = sockets.Network.$.Network;
+		export const instanceNetwork = new $wcm.FunctionType<sockets.InstanceNetwork.instanceNetwork>('instance-network', [], new $wcm.OwnType<sockets.InstanceNetwork.Network>(Network));
 	}
-	export namespace instanceNetwork._ {
+	export namespace InstanceNetwork._ {
 		export const id = 'wasi:sockets/instance-network@0.2.0' as const;
 		export const witName = 'instance-network' as const;
 		export const types: Map<string, $wcm.GenericComponentModelType> = new Map<string, $wcm.GenericComponentModelType>([
@@ -1320,35 +1303,70 @@ export namespace sockets {
 		export type WasmInterface = {
 			'instance-network': () => i32;
 		};
-		export function createImports(service: sockets.InstanceNetwork, context: $wcm.WasmContext): WasmInterface {
-			return $wcm.Imports.create<WasmInterface>(functions, undefined, service, context);
+		export namespace imports {
+			export type WasmInterface = _.WasmInterface;
 		}
-		export function filterExports(exports: object, context: $wcm.WasmContext): WasmInterface {
-			return $wcm.Exports.filter<WasmInterface>(exports, functions, undefined, id, sockets._.version, context);
-		}
-		export function bindExports(wasmInterface: WasmInterface, context: $wcm.WasmContext): sockets.InstanceNetwork {
-			return $wcm.Exports.bind<sockets.InstanceNetwork>(functions, [], wasmInterface, context);
+		export namespace exports {
+			export type WasmInterface = _.WasmInterface;
 		}
 	}
 
-	export namespace ipNameLookup.$ {
-		export const Pollable = io.poll.$.Pollable;
-		export const Network = sockets.network.$.Network;
-		export const ErrorCode = sockets.network.$.ErrorCode;
-		export const IpAddress = sockets.network.$.IpAddress;
-		export const ResolveAddressStream = new $wcm.ResourceType<sockets.ipNameLookup.ResolveAddressStream>('resolve-address-stream', 'wasi:sockets/ip-name-lookup/resolve-address-stream');
+	export namespace IpNameLookup.$ {
+		export const Pollable = io.Poll.$.Pollable;
+		export const Network = sockets.Network.$.Network;
+		export const ErrorCode = sockets.Network.$.ErrorCode;
+		export const IpAddress = sockets.Network.$.IpAddress;
+		export const ResolveAddressStream = new $wcm.ResourceType<sockets.IpNameLookup.ResolveAddressStream>('resolve-address-stream', 'wasi:sockets@0.2.0/ip-name-lookup/resolve-address-stream');
 		export const ResolveAddressStream_Handle = new $wcm.ResourceHandleType('resolve-address-stream');
 		ResolveAddressStream.addDestructor('$drop', new $wcm.DestructorType('[resource-drop]resolve-address-stream', [['inst', ResolveAddressStream]]));
-		ResolveAddressStream.addMethod('resolveNextAddress', new $wcm.MethodType<sockets.ipNameLookup.ResolveAddressStream.Interface['resolveNextAddress']>('[method]resolve-address-stream.resolve-next-address', [], new $wcm.ResultType<option<sockets.ipNameLookup.IpAddress>, sockets.ipNameLookup.ErrorCode>(new $wcm.OptionType<sockets.ipNameLookup.IpAddress>(IpAddress), ErrorCode)));
-		ResolveAddressStream.addMethod('subscribe', new $wcm.MethodType<sockets.ipNameLookup.ResolveAddressStream.Interface['subscribe']>('[method]resolve-address-stream.subscribe', [], new $wcm.OwnType<sockets.ipNameLookup.Pollable>(Pollable)));
-		export const resolveAddresses = new $wcm.FunctionType<sockets.ipNameLookup.resolveAddresses>('resolve-addresses',[
-			['network', new $wcm.BorrowType<sockets.ipNameLookup.Network>(Network)],
+		ResolveAddressStream.addMethod('resolveNextAddress', new $wcm.MethodType<sockets.IpNameLookup.ResolveAddressStream.Interface['resolveNextAddress']>('[method]resolve-address-stream.resolve-next-address', [], new $wcm.ResultType<option<sockets.IpNameLookup.IpAddress>, sockets.IpNameLookup.ErrorCode>(new $wcm.OptionType<sockets.IpNameLookup.IpAddress>(IpAddress), ErrorCode)));
+		ResolveAddressStream.addMethod('subscribe', new $wcm.MethodType<sockets.IpNameLookup.ResolveAddressStream.Interface['subscribe']>('[method]resolve-address-stream.subscribe', [], new $wcm.OwnType<sockets.IpNameLookup.Pollable>(Pollable)));
+		export const resolveAddresses = new $wcm.FunctionType<sockets.IpNameLookup.resolveAddresses>('resolve-addresses',[
+			['network', new $wcm.BorrowType<sockets.IpNameLookup.Network>(Network)],
 			['name', $wcm.wstring],
-		], new $wcm.ResultType<own<sockets.ipNameLookup.ResolveAddressStream>, sockets.ipNameLookup.ErrorCode>(new $wcm.OwnType<sockets.ipNameLookup.ResolveAddressStream>(ResolveAddressStream), ErrorCode));
+		], new $wcm.ResultType<own<sockets.IpNameLookup.ResolveAddressStream>, sockets.IpNameLookup.ErrorCode>(new $wcm.OwnType<sockets.IpNameLookup.ResolveAddressStream>(ResolveAddressStream), ErrorCode));
 	}
-	export namespace ipNameLookup._ {
+	export namespace IpNameLookup._ {
 		export const id = 'wasi:sockets/ip-name-lookup@0.2.0' as const;
 		export const witName = 'ip-name-lookup' as const;
+		export namespace ResolveAddressStream {
+			export type WasmInterface = {
+				'[method]resolve-address-stream.resolve-next-address': (self: i32, result: ptr<result<IpAddress | undefined, ErrorCode>>) => void;
+				'[method]resolve-address-stream.subscribe': (self: i32) => i32;
+			};
+			export type ObjectModule = {
+				resolveNextAddress(self: ResolveAddressStream): result<IpAddress | undefined, ErrorCode>;
+				subscribe(self: ResolveAddressStream): own<Pollable>;
+			};
+			export namespace imports {
+				export type WasmInterface = ResolveAddressStream.WasmInterface & { '[resource-drop]resolve-address-stream': (self: i32) => void };
+			}
+			export namespace exports {
+				export type WasmInterface = ResolveAddressStream.WasmInterface & { '[dtor]resolve-address-stream': (self: i32) => void };
+				class Impl extends $wcm.Resource implements sockets.IpNameLookup.ResolveAddressStream.Interface {
+					private readonly _om: ObjectModule;
+					constructor(_handleTag: Symbol, handle: $wcm.ResourceHandle, om: ObjectModule) {
+						super(handle);
+						this._om = om;
+					}
+					public resolveNextAddress(): result<IpAddress | undefined, ErrorCode> {
+						return this._om.resolveNextAddress(this);
+					}
+					public subscribe(): own<Pollable> {
+						return this._om.subscribe(this);
+					}
+				}
+				export function Class(wasmInterface: WasmInterface, context: $wcm.WasmContext): sockets.IpNameLookup.ResolveAddressStream.Class {
+					const resource = sockets.IpNameLookup.$.ResolveAddressStream;
+					const om: ObjectModule = $wcm.Module.createObjectModule(resource, wasmInterface, context);
+					return class extends Impl {
+						constructor(handleTag: Symbol, handle: $wcm.ResourceHandle) {
+							super(handleTag, handle, om);
+						}
+					};
+				}
+			}
+		}
 		export const types: Map<string, $wcm.GenericComponentModelType> = new Map<string, $wcm.GenericComponentModelType>([
 			['Pollable', $.Pollable],
 			['Network', $.Network],
@@ -1359,144 +1377,96 @@ export namespace sockets {
 		export const functions: Map<string, $wcm.FunctionType> = new Map([
 			['resolveAddresses', $.resolveAddresses]
 		]);
-		export const resources: Map<string, $wcm.ResourceType> = new Map<string, $wcm.ResourceType>([
-			['ResolveAddressStream', $.ResolveAddressStream]
+		export const resources: Map<string, { resource: $wcm.ResourceType; factory: $wcm.ClassFactory<any>}> = new Map<string, { resource: $wcm.ResourceType; factory: $wcm.ClassFactory<any>}>([
+			['ResolveAddressStream', { resource: $.ResolveAddressStream, factory: ResolveAddressStream.exports.Class }]
 		]);
-		export namespace ResolveAddressStream {
-			export type WasmInterface = {
-				'[method]resolve-address-stream.resolve-next-address': (self: i32, result: ptr<result<IpAddress | undefined, ErrorCode>>) => void;
-				'[method]resolve-address-stream.subscribe': (self: i32) => i32;
-				'[resource-drop]resolve-address-stream': (self: i32) => void;
-			};
-			type ObjectModule = {
-				$drop(self: ResolveAddressStream): void;
-				resolveNextAddress(self: ResolveAddressStream): result<IpAddress | undefined, ErrorCode>;
-				subscribe(self: ResolveAddressStream): own<Pollable>;
-			};
-			class Impl extends $wcm.Resource implements sockets.ipNameLookup.ResolveAddressStream.Interface {
-				private readonly _om: ObjectModule;
-				constructor(om: ObjectModule) {
-					super();
-					this._om = om;
-				}
-				public $drop(): void {
-					return this._om.$drop(this);
-				}
-				public resolveNextAddress(): result<IpAddress | undefined, ErrorCode> {
-					return this._om.resolveNextAddress(this);
-				}
-				public subscribe(): own<Pollable> {
-					return this._om.subscribe(this);
-				}
-			}
-			export function Class(wasmInterface: WasmInterface, context: $wcm.WasmContext): sockets.ipNameLookup.ResolveAddressStream.Class {
-				const resource = sockets.ipNameLookup.$.ResolveAddressStream;
-				const om: ObjectModule = $wcm.Module.createObjectModule(resource, wasmInterface, context);
-				return class extends Impl {
-					constructor() {
-						super(om);
-					}
+		export type WasmInterface = {
+			'resolve-addresses': (network: i32, name_ptr: i32, name_len: i32, result: ptr<result<own<ResolveAddressStream>, ErrorCode>>) => void;
+		};
+		export namespace imports {
+			export type WasmInterface = _.WasmInterface & ResolveAddressStream.imports.WasmInterface;
+		}
+		export namespace exports {
+			export type WasmInterface = _.WasmInterface & ResolveAddressStream.exports.WasmInterface;
+			export namespace imports {
+				export type WasmInterface = {
+					'[resource-new]resolve-address-stream': (rep: i32) => i32;
+					'[resource-rep]resolve-address-stream': (handle: i32) => i32;
+					'[resource-drop]resolve-address-stream': (handle: i32) => i32;
 				};
 			}
 		}
-		export type WasmInterface = {
-			'resolve-addresses': (network: i32, name_ptr: i32, name_len: i32, result: ptr<result<own<ResolveAddressStream>, ErrorCode>>) => void;
-		} & ResolveAddressStream.WasmInterface;
-		export function createImports(service: sockets.IpNameLookup, context: $wcm.WasmContext): WasmInterface {
-			return $wcm.Imports.create<WasmInterface>(functions, resources, service, context);
-		}
-		export function filterExports(exports: object, context: $wcm.WasmContext): WasmInterface {
-			return $wcm.Exports.filter<WasmInterface>(exports, functions, resources, id, sockets._.version, context);
-		}
-		export function bindExports(wasmInterface: WasmInterface, context: $wcm.WasmContext): sockets.IpNameLookup {
-			return $wcm.Exports.bind<sockets.IpNameLookup>(functions, [['ResolveAddressStream', $.ResolveAddressStream, ResolveAddressStream.Class]], wasmInterface, context);
-		}
 	}
 
-	export namespace tcp.$ {
-		export const InputStream = io.streams.$.InputStream;
-		export const OutputStream = io.streams.$.OutputStream;
-		export const Pollable = io.poll.$.Pollable;
-		export const Duration = clocks.monotonicClock.$.Duration;
-		export const Network = sockets.network.$.Network;
-		export const ErrorCode = sockets.network.$.ErrorCode;
-		export const IpSocketAddress = sockets.network.$.IpSocketAddress;
-		export const IpAddressFamily = sockets.network.$.IpAddressFamily;
-		export const ShutdownType = new $wcm.EnumType<sockets.tcp.ShutdownType>(['receive', 'send', 'both']);
-		export const TcpSocket = new $wcm.ResourceType<sockets.tcp.TcpSocket>('tcp-socket', 'wasi:sockets/tcp/tcp-socket');
+	export namespace Tcp.$ {
+		export const InputStream = io.Streams.$.InputStream;
+		export const OutputStream = io.Streams.$.OutputStream;
+		export const Pollable = io.Poll.$.Pollable;
+		export const Duration = clocks.MonotonicClock.$.Duration;
+		export const Network = sockets.Network.$.Network;
+		export const ErrorCode = sockets.Network.$.ErrorCode;
+		export const IpSocketAddress = sockets.Network.$.IpSocketAddress;
+		export const IpAddressFamily = sockets.Network.$.IpAddressFamily;
+		export const ShutdownType = new $wcm.EnumType<sockets.Tcp.ShutdownType>(['receive', 'send', 'both']);
+		export const TcpSocket = new $wcm.ResourceType<sockets.Tcp.TcpSocket>('tcp-socket', 'wasi:sockets@0.2.0/tcp/tcp-socket');
 		export const TcpSocket_Handle = new $wcm.ResourceHandleType('tcp-socket');
 		TcpSocket.addDestructor('$drop', new $wcm.DestructorType('[resource-drop]tcp-socket', [['inst', TcpSocket]]));
-		TcpSocket.addMethod('startBind', new $wcm.MethodType<sockets.tcp.TcpSocket.Interface['startBind']>('[method]tcp-socket.start-bind', [
-			['network', new $wcm.BorrowType<sockets.tcp.Network>(Network)],
+		TcpSocket.addMethod('startBind', new $wcm.MethodType<sockets.Tcp.TcpSocket.Interface['startBind']>('[method]tcp-socket.start-bind', [
+			['network', new $wcm.BorrowType<sockets.Tcp.Network>(Network)],
 			['localAddress', IpSocketAddress],
-		], new $wcm.ResultType<void, sockets.tcp.ErrorCode>(undefined, ErrorCode)));
-		TcpSocket.addMethod('finishBind', new $wcm.MethodType<sockets.tcp.TcpSocket.Interface['finishBind']>('[method]tcp-socket.finish-bind', [], new $wcm.ResultType<void, sockets.tcp.ErrorCode>(undefined, ErrorCode)));
-		TcpSocket.addMethod('startConnect', new $wcm.MethodType<sockets.tcp.TcpSocket.Interface['startConnect']>('[method]tcp-socket.start-connect', [
-			['network', new $wcm.BorrowType<sockets.tcp.Network>(Network)],
+		], new $wcm.ResultType<void, sockets.Tcp.ErrorCode>(undefined, ErrorCode)));
+		TcpSocket.addMethod('finishBind', new $wcm.MethodType<sockets.Tcp.TcpSocket.Interface['finishBind']>('[method]tcp-socket.finish-bind', [], new $wcm.ResultType<void, sockets.Tcp.ErrorCode>(undefined, ErrorCode)));
+		TcpSocket.addMethod('startConnect', new $wcm.MethodType<sockets.Tcp.TcpSocket.Interface['startConnect']>('[method]tcp-socket.start-connect', [
+			['network', new $wcm.BorrowType<sockets.Tcp.Network>(Network)],
 			['remoteAddress', IpSocketAddress],
-		], new $wcm.ResultType<void, sockets.tcp.ErrorCode>(undefined, ErrorCode)));
-		TcpSocket.addMethod('finishConnect', new $wcm.MethodType<sockets.tcp.TcpSocket.Interface['finishConnect']>('[method]tcp-socket.finish-connect', [], new $wcm.ResultType<[own<sockets.tcp.InputStream>, own<sockets.tcp.OutputStream>], sockets.tcp.ErrorCode>(new $wcm.TupleType<[own<sockets.tcp.InputStream>, own<sockets.tcp.OutputStream>]>([new $wcm.OwnType<sockets.tcp.InputStream>(InputStream), new $wcm.OwnType<sockets.tcp.OutputStream>(OutputStream)]), ErrorCode)));
-		TcpSocket.addMethod('startListen', new $wcm.MethodType<sockets.tcp.TcpSocket.Interface['startListen']>('[method]tcp-socket.start-listen', [], new $wcm.ResultType<void, sockets.tcp.ErrorCode>(undefined, ErrorCode)));
-		TcpSocket.addMethod('finishListen', new $wcm.MethodType<sockets.tcp.TcpSocket.Interface['finishListen']>('[method]tcp-socket.finish-listen', [], new $wcm.ResultType<void, sockets.tcp.ErrorCode>(undefined, ErrorCode)));
-		TcpSocket.addMethod('accept', new $wcm.MethodType<sockets.tcp.TcpSocket.Interface['accept']>('[method]tcp-socket.accept', [], new $wcm.ResultType<[own<sockets.tcp.TcpSocket>, own<sockets.tcp.InputStream>, own<sockets.tcp.OutputStream>], sockets.tcp.ErrorCode>(new $wcm.TupleType<[own<sockets.tcp.TcpSocket>, own<sockets.tcp.InputStream>, own<sockets.tcp.OutputStream>]>([new $wcm.OwnType<sockets.tcp.TcpSocket>(TcpSocket), new $wcm.OwnType<sockets.tcp.InputStream>(InputStream), new $wcm.OwnType<sockets.tcp.OutputStream>(OutputStream)]), ErrorCode)));
-		TcpSocket.addMethod('localAddress', new $wcm.MethodType<sockets.tcp.TcpSocket.Interface['localAddress']>('[method]tcp-socket.local-address', [], new $wcm.ResultType<sockets.tcp.IpSocketAddress, sockets.tcp.ErrorCode>(IpSocketAddress, ErrorCode)));
-		TcpSocket.addMethod('remoteAddress', new $wcm.MethodType<sockets.tcp.TcpSocket.Interface['remoteAddress']>('[method]tcp-socket.remote-address', [], new $wcm.ResultType<sockets.tcp.IpSocketAddress, sockets.tcp.ErrorCode>(IpSocketAddress, ErrorCode)));
-		TcpSocket.addMethod('isListening', new $wcm.MethodType<sockets.tcp.TcpSocket.Interface['isListening']>('[method]tcp-socket.is-listening', [], $wcm.bool));
-		TcpSocket.addMethod('addressFamily', new $wcm.MethodType<sockets.tcp.TcpSocket.Interface['addressFamily']>('[method]tcp-socket.address-family', [], IpAddressFamily));
-		TcpSocket.addMethod('setListenBacklogSize', new $wcm.MethodType<sockets.tcp.TcpSocket.Interface['setListenBacklogSize']>('[method]tcp-socket.set-listen-backlog-size', [
+		], new $wcm.ResultType<void, sockets.Tcp.ErrorCode>(undefined, ErrorCode)));
+		TcpSocket.addMethod('finishConnect', new $wcm.MethodType<sockets.Tcp.TcpSocket.Interface['finishConnect']>('[method]tcp-socket.finish-connect', [], new $wcm.ResultType<[own<sockets.Tcp.InputStream>, own<sockets.Tcp.OutputStream>], sockets.Tcp.ErrorCode>(new $wcm.TupleType<[own<sockets.Tcp.InputStream>, own<sockets.Tcp.OutputStream>]>([new $wcm.OwnType<sockets.Tcp.InputStream>(InputStream), new $wcm.OwnType<sockets.Tcp.OutputStream>(OutputStream)]), ErrorCode)));
+		TcpSocket.addMethod('startListen', new $wcm.MethodType<sockets.Tcp.TcpSocket.Interface['startListen']>('[method]tcp-socket.start-listen', [], new $wcm.ResultType<void, sockets.Tcp.ErrorCode>(undefined, ErrorCode)));
+		TcpSocket.addMethod('finishListen', new $wcm.MethodType<sockets.Tcp.TcpSocket.Interface['finishListen']>('[method]tcp-socket.finish-listen', [], new $wcm.ResultType<void, sockets.Tcp.ErrorCode>(undefined, ErrorCode)));
+		TcpSocket.addMethod('accept', new $wcm.MethodType<sockets.Tcp.TcpSocket.Interface['accept']>('[method]tcp-socket.accept', [], new $wcm.ResultType<[own<sockets.Tcp.TcpSocket>, own<sockets.Tcp.InputStream>, own<sockets.Tcp.OutputStream>], sockets.Tcp.ErrorCode>(new $wcm.TupleType<[own<sockets.Tcp.TcpSocket>, own<sockets.Tcp.InputStream>, own<sockets.Tcp.OutputStream>]>([new $wcm.OwnType<sockets.Tcp.TcpSocket>(TcpSocket), new $wcm.OwnType<sockets.Tcp.InputStream>(InputStream), new $wcm.OwnType<sockets.Tcp.OutputStream>(OutputStream)]), ErrorCode)));
+		TcpSocket.addMethod('localAddress', new $wcm.MethodType<sockets.Tcp.TcpSocket.Interface['localAddress']>('[method]tcp-socket.local-address', [], new $wcm.ResultType<sockets.Tcp.IpSocketAddress, sockets.Tcp.ErrorCode>(IpSocketAddress, ErrorCode)));
+		TcpSocket.addMethod('remoteAddress', new $wcm.MethodType<sockets.Tcp.TcpSocket.Interface['remoteAddress']>('[method]tcp-socket.remote-address', [], new $wcm.ResultType<sockets.Tcp.IpSocketAddress, sockets.Tcp.ErrorCode>(IpSocketAddress, ErrorCode)));
+		TcpSocket.addMethod('isListening', new $wcm.MethodType<sockets.Tcp.TcpSocket.Interface['isListening']>('[method]tcp-socket.is-listening', [], $wcm.bool));
+		TcpSocket.addMethod('addressFamily', new $wcm.MethodType<sockets.Tcp.TcpSocket.Interface['addressFamily']>('[method]tcp-socket.address-family', [], IpAddressFamily));
+		TcpSocket.addMethod('setListenBacklogSize', new $wcm.MethodType<sockets.Tcp.TcpSocket.Interface['setListenBacklogSize']>('[method]tcp-socket.set-listen-backlog-size', [
 			['value', $wcm.u64],
-		], new $wcm.ResultType<void, sockets.tcp.ErrorCode>(undefined, ErrorCode)));
-		TcpSocket.addMethod('keepAliveEnabled', new $wcm.MethodType<sockets.tcp.TcpSocket.Interface['keepAliveEnabled']>('[method]tcp-socket.keep-alive-enabled', [], new $wcm.ResultType<boolean, sockets.tcp.ErrorCode>($wcm.bool, ErrorCode)));
-		TcpSocket.addMethod('setKeepAliveEnabled', new $wcm.MethodType<sockets.tcp.TcpSocket.Interface['setKeepAliveEnabled']>('[method]tcp-socket.set-keep-alive-enabled', [
+		], new $wcm.ResultType<void, sockets.Tcp.ErrorCode>(undefined, ErrorCode)));
+		TcpSocket.addMethod('keepAliveEnabled', new $wcm.MethodType<sockets.Tcp.TcpSocket.Interface['keepAliveEnabled']>('[method]tcp-socket.keep-alive-enabled', [], new $wcm.ResultType<boolean, sockets.Tcp.ErrorCode>($wcm.bool, ErrorCode)));
+		TcpSocket.addMethod('setKeepAliveEnabled', new $wcm.MethodType<sockets.Tcp.TcpSocket.Interface['setKeepAliveEnabled']>('[method]tcp-socket.set-keep-alive-enabled', [
 			['value', $wcm.bool],
-		], new $wcm.ResultType<void, sockets.tcp.ErrorCode>(undefined, ErrorCode)));
-		TcpSocket.addMethod('keepAliveIdleTime', new $wcm.MethodType<sockets.tcp.TcpSocket.Interface['keepAliveIdleTime']>('[method]tcp-socket.keep-alive-idle-time', [], new $wcm.ResultType<sockets.tcp.Duration, sockets.tcp.ErrorCode>(Duration, ErrorCode)));
-		TcpSocket.addMethod('setKeepAliveIdleTime', new $wcm.MethodType<sockets.tcp.TcpSocket.Interface['setKeepAliveIdleTime']>('[method]tcp-socket.set-keep-alive-idle-time', [
+		], new $wcm.ResultType<void, sockets.Tcp.ErrorCode>(undefined, ErrorCode)));
+		TcpSocket.addMethod('keepAliveIdleTime', new $wcm.MethodType<sockets.Tcp.TcpSocket.Interface['keepAliveIdleTime']>('[method]tcp-socket.keep-alive-idle-time', [], new $wcm.ResultType<sockets.Tcp.Duration, sockets.Tcp.ErrorCode>(Duration, ErrorCode)));
+		TcpSocket.addMethod('setKeepAliveIdleTime', new $wcm.MethodType<sockets.Tcp.TcpSocket.Interface['setKeepAliveIdleTime']>('[method]tcp-socket.set-keep-alive-idle-time', [
 			['value', Duration],
-		], new $wcm.ResultType<void, sockets.tcp.ErrorCode>(undefined, ErrorCode)));
-		TcpSocket.addMethod('keepAliveInterval', new $wcm.MethodType<sockets.tcp.TcpSocket.Interface['keepAliveInterval']>('[method]tcp-socket.keep-alive-interval', [], new $wcm.ResultType<sockets.tcp.Duration, sockets.tcp.ErrorCode>(Duration, ErrorCode)));
-		TcpSocket.addMethod('setKeepAliveInterval', new $wcm.MethodType<sockets.tcp.TcpSocket.Interface['setKeepAliveInterval']>('[method]tcp-socket.set-keep-alive-interval', [
+		], new $wcm.ResultType<void, sockets.Tcp.ErrorCode>(undefined, ErrorCode)));
+		TcpSocket.addMethod('keepAliveInterval', new $wcm.MethodType<sockets.Tcp.TcpSocket.Interface['keepAliveInterval']>('[method]tcp-socket.keep-alive-interval', [], new $wcm.ResultType<sockets.Tcp.Duration, sockets.Tcp.ErrorCode>(Duration, ErrorCode)));
+		TcpSocket.addMethod('setKeepAliveInterval', new $wcm.MethodType<sockets.Tcp.TcpSocket.Interface['setKeepAliveInterval']>('[method]tcp-socket.set-keep-alive-interval', [
 			['value', Duration],
-		], new $wcm.ResultType<void, sockets.tcp.ErrorCode>(undefined, ErrorCode)));
-		TcpSocket.addMethod('keepAliveCount', new $wcm.MethodType<sockets.tcp.TcpSocket.Interface['keepAliveCount']>('[method]tcp-socket.keep-alive-count', [], new $wcm.ResultType<u32, sockets.tcp.ErrorCode>($wcm.u32, ErrorCode)));
-		TcpSocket.addMethod('setKeepAliveCount', new $wcm.MethodType<sockets.tcp.TcpSocket.Interface['setKeepAliveCount']>('[method]tcp-socket.set-keep-alive-count', [
+		], new $wcm.ResultType<void, sockets.Tcp.ErrorCode>(undefined, ErrorCode)));
+		TcpSocket.addMethod('keepAliveCount', new $wcm.MethodType<sockets.Tcp.TcpSocket.Interface['keepAliveCount']>('[method]tcp-socket.keep-alive-count', [], new $wcm.ResultType<u32, sockets.Tcp.ErrorCode>($wcm.u32, ErrorCode)));
+		TcpSocket.addMethod('setKeepAliveCount', new $wcm.MethodType<sockets.Tcp.TcpSocket.Interface['setKeepAliveCount']>('[method]tcp-socket.set-keep-alive-count', [
 			['value', $wcm.u32],
-		], new $wcm.ResultType<void, sockets.tcp.ErrorCode>(undefined, ErrorCode)));
-		TcpSocket.addMethod('hopLimit', new $wcm.MethodType<sockets.tcp.TcpSocket.Interface['hopLimit']>('[method]tcp-socket.hop-limit', [], new $wcm.ResultType<u8, sockets.tcp.ErrorCode>($wcm.u8, ErrorCode)));
-		TcpSocket.addMethod('setHopLimit', new $wcm.MethodType<sockets.tcp.TcpSocket.Interface['setHopLimit']>('[method]tcp-socket.set-hop-limit', [
+		], new $wcm.ResultType<void, sockets.Tcp.ErrorCode>(undefined, ErrorCode)));
+		TcpSocket.addMethod('hopLimit', new $wcm.MethodType<sockets.Tcp.TcpSocket.Interface['hopLimit']>('[method]tcp-socket.hop-limit', [], new $wcm.ResultType<u8, sockets.Tcp.ErrorCode>($wcm.u8, ErrorCode)));
+		TcpSocket.addMethod('setHopLimit', new $wcm.MethodType<sockets.Tcp.TcpSocket.Interface['setHopLimit']>('[method]tcp-socket.set-hop-limit', [
 			['value', $wcm.u8],
-		], new $wcm.ResultType<void, sockets.tcp.ErrorCode>(undefined, ErrorCode)));
-		TcpSocket.addMethod('receiveBufferSize', new $wcm.MethodType<sockets.tcp.TcpSocket.Interface['receiveBufferSize']>('[method]tcp-socket.receive-buffer-size', [], new $wcm.ResultType<u64, sockets.tcp.ErrorCode>($wcm.u64, ErrorCode)));
-		TcpSocket.addMethod('setReceiveBufferSize', new $wcm.MethodType<sockets.tcp.TcpSocket.Interface['setReceiveBufferSize']>('[method]tcp-socket.set-receive-buffer-size', [
+		], new $wcm.ResultType<void, sockets.Tcp.ErrorCode>(undefined, ErrorCode)));
+		TcpSocket.addMethod('receiveBufferSize', new $wcm.MethodType<sockets.Tcp.TcpSocket.Interface['receiveBufferSize']>('[method]tcp-socket.receive-buffer-size', [], new $wcm.ResultType<u64, sockets.Tcp.ErrorCode>($wcm.u64, ErrorCode)));
+		TcpSocket.addMethod('setReceiveBufferSize', new $wcm.MethodType<sockets.Tcp.TcpSocket.Interface['setReceiveBufferSize']>('[method]tcp-socket.set-receive-buffer-size', [
 			['value', $wcm.u64],
-		], new $wcm.ResultType<void, sockets.tcp.ErrorCode>(undefined, ErrorCode)));
-		TcpSocket.addMethod('sendBufferSize', new $wcm.MethodType<sockets.tcp.TcpSocket.Interface['sendBufferSize']>('[method]tcp-socket.send-buffer-size', [], new $wcm.ResultType<u64, sockets.tcp.ErrorCode>($wcm.u64, ErrorCode)));
-		TcpSocket.addMethod('setSendBufferSize', new $wcm.MethodType<sockets.tcp.TcpSocket.Interface['setSendBufferSize']>('[method]tcp-socket.set-send-buffer-size', [
+		], new $wcm.ResultType<void, sockets.Tcp.ErrorCode>(undefined, ErrorCode)));
+		TcpSocket.addMethod('sendBufferSize', new $wcm.MethodType<sockets.Tcp.TcpSocket.Interface['sendBufferSize']>('[method]tcp-socket.send-buffer-size', [], new $wcm.ResultType<u64, sockets.Tcp.ErrorCode>($wcm.u64, ErrorCode)));
+		TcpSocket.addMethod('setSendBufferSize', new $wcm.MethodType<sockets.Tcp.TcpSocket.Interface['setSendBufferSize']>('[method]tcp-socket.set-send-buffer-size', [
 			['value', $wcm.u64],
-		], new $wcm.ResultType<void, sockets.tcp.ErrorCode>(undefined, ErrorCode)));
-		TcpSocket.addMethod('subscribe', new $wcm.MethodType<sockets.tcp.TcpSocket.Interface['subscribe']>('[method]tcp-socket.subscribe', [], new $wcm.OwnType<sockets.tcp.Pollable>(Pollable)));
-		TcpSocket.addMethod('shutdown', new $wcm.MethodType<sockets.tcp.TcpSocket.Interface['shutdown']>('[method]tcp-socket.shutdown', [
+		], new $wcm.ResultType<void, sockets.Tcp.ErrorCode>(undefined, ErrorCode)));
+		TcpSocket.addMethod('subscribe', new $wcm.MethodType<sockets.Tcp.TcpSocket.Interface['subscribe']>('[method]tcp-socket.subscribe', [], new $wcm.OwnType<sockets.Tcp.Pollable>(Pollable)));
+		TcpSocket.addMethod('shutdown', new $wcm.MethodType<sockets.Tcp.TcpSocket.Interface['shutdown']>('[method]tcp-socket.shutdown', [
 			['shutdownType', ShutdownType],
-		], new $wcm.ResultType<void, sockets.tcp.ErrorCode>(undefined, ErrorCode)));
+		], new $wcm.ResultType<void, sockets.Tcp.ErrorCode>(undefined, ErrorCode)));
 	}
-	export namespace tcp._ {
+	export namespace Tcp._ {
 		export const id = 'wasi:sockets/tcp@0.2.0' as const;
 		export const witName = 'tcp' as const;
-		export const types: Map<string, $wcm.GenericComponentModelType> = new Map<string, $wcm.GenericComponentModelType>([
-			['InputStream', $.InputStream],
-			['OutputStream', $.OutputStream],
-			['Pollable', $.Pollable],
-			['Duration', $.Duration],
-			['Network', $.Network],
-			['ErrorCode', $.ErrorCode],
-			['IpSocketAddress', $.IpSocketAddress],
-			['IpAddressFamily', $.IpAddressFamily],
-			['ShutdownType', $.ShutdownType],
-			['TcpSocket', $.TcpSocket]
-		]);
-		export const resources: Map<string, $wcm.ResourceType> = new Map<string, $wcm.ResourceType>([
-			['TcpSocket', $.TcpSocket]
-		]);
 		export namespace TcpSocket {
 			export type WasmInterface = {
 				'[method]tcp-socket.start-bind': (self: i32, network: i32, localAddress_IpSocketAddress_case: i32, localAddress_IpSocketAddress_0: i32, localAddress_IpSocketAddress_1: i32, localAddress_IpSocketAddress_2: i32, localAddress_IpSocketAddress_3: i32, localAddress_IpSocketAddress_4: i32, localAddress_IpSocketAddress_5: i32, localAddress_IpSocketAddress_6: i32, localAddress_IpSocketAddress_7: i32, localAddress_IpSocketAddress_8: i32, localAddress_IpSocketAddress_9: i32, localAddress_IpSocketAddress_10: i32, result: ptr<result<void, ErrorCode>>) => void;
@@ -1527,10 +1497,8 @@ export namespace sockets {
 				'[method]tcp-socket.set-send-buffer-size': (self: i32, value: i64, result: ptr<result<void, ErrorCode>>) => void;
 				'[method]tcp-socket.subscribe': (self: i32) => i32;
 				'[method]tcp-socket.shutdown': (self: i32, shutdownType_ShutdownType: i32, result: ptr<result<void, ErrorCode>>) => void;
-				'[resource-drop]tcp-socket': (self: i32) => void;
 			};
-			type ObjectModule = {
-				$drop(self: TcpSocket): void;
+			export type ObjectModule = {
 				startBind(self: TcpSocket, network: borrow<Network>, localAddress: IpSocketAddress): result<void, ErrorCode>;
 				finishBind(self: TcpSocket): result<void, ErrorCode>;
 				startConnect(self: TcpSocket, network: borrow<Network>, remoteAddress: IpSocketAddress): result<void, ErrorCode>;
@@ -1560,133 +1528,155 @@ export namespace sockets {
 				subscribe(self: TcpSocket): own<Pollable>;
 				shutdown(self: TcpSocket, shutdownType: ShutdownType): result<void, ErrorCode>;
 			};
-			class Impl extends $wcm.Resource implements sockets.tcp.TcpSocket.Interface {
-				private readonly _om: ObjectModule;
-				constructor(om: ObjectModule) {
-					super();
-					this._om = om;
+			export namespace imports {
+				export type WasmInterface = TcpSocket.WasmInterface & { '[resource-drop]tcp-socket': (self: i32) => void };
+			}
+			export namespace exports {
+				export type WasmInterface = TcpSocket.WasmInterface & { '[dtor]tcp-socket': (self: i32) => void };
+				class Impl extends $wcm.Resource implements sockets.Tcp.TcpSocket.Interface {
+					private readonly _om: ObjectModule;
+					constructor(_handleTag: Symbol, handle: $wcm.ResourceHandle, om: ObjectModule) {
+						super(handle);
+						this._om = om;
+					}
+					public startBind(network: borrow<Network>, localAddress: IpSocketAddress): result<void, ErrorCode> {
+						return this._om.startBind(this, network, localAddress);
+					}
+					public finishBind(): result<void, ErrorCode> {
+						return this._om.finishBind(this);
+					}
+					public startConnect(network: borrow<Network>, remoteAddress: IpSocketAddress): result<void, ErrorCode> {
+						return this._om.startConnect(this, network, remoteAddress);
+					}
+					public finishConnect(): result<[own<InputStream>, own<OutputStream>], ErrorCode> {
+						return this._om.finishConnect(this);
+					}
+					public startListen(): result<void, ErrorCode> {
+						return this._om.startListen(this);
+					}
+					public finishListen(): result<void, ErrorCode> {
+						return this._om.finishListen(this);
+					}
+					public accept(): result<[own<TcpSocket>, own<InputStream>, own<OutputStream>], ErrorCode> {
+						return this._om.accept(this);
+					}
+					public localAddress(): result<IpSocketAddress, ErrorCode> {
+						return this._om.localAddress(this);
+					}
+					public remoteAddress(): result<IpSocketAddress, ErrorCode> {
+						return this._om.remoteAddress(this);
+					}
+					public isListening(): boolean {
+						return this._om.isListening(this);
+					}
+					public addressFamily(): IpAddressFamily {
+						return this._om.addressFamily(this);
+					}
+					public setListenBacklogSize(value: u64): result<void, ErrorCode> {
+						return this._om.setListenBacklogSize(this, value);
+					}
+					public keepAliveEnabled(): result<boolean, ErrorCode> {
+						return this._om.keepAliveEnabled(this);
+					}
+					public setKeepAliveEnabled(value: boolean): result<void, ErrorCode> {
+						return this._om.setKeepAliveEnabled(this, value);
+					}
+					public keepAliveIdleTime(): result<Duration, ErrorCode> {
+						return this._om.keepAliveIdleTime(this);
+					}
+					public setKeepAliveIdleTime(value: Duration): result<void, ErrorCode> {
+						return this._om.setKeepAliveIdleTime(this, value);
+					}
+					public keepAliveInterval(): result<Duration, ErrorCode> {
+						return this._om.keepAliveInterval(this);
+					}
+					public setKeepAliveInterval(value: Duration): result<void, ErrorCode> {
+						return this._om.setKeepAliveInterval(this, value);
+					}
+					public keepAliveCount(): result<u32, ErrorCode> {
+						return this._om.keepAliveCount(this);
+					}
+					public setKeepAliveCount(value: u32): result<void, ErrorCode> {
+						return this._om.setKeepAliveCount(this, value);
+					}
+					public hopLimit(): result<u8, ErrorCode> {
+						return this._om.hopLimit(this);
+					}
+					public setHopLimit(value: u8): result<void, ErrorCode> {
+						return this._om.setHopLimit(this, value);
+					}
+					public receiveBufferSize(): result<u64, ErrorCode> {
+						return this._om.receiveBufferSize(this);
+					}
+					public setReceiveBufferSize(value: u64): result<void, ErrorCode> {
+						return this._om.setReceiveBufferSize(this, value);
+					}
+					public sendBufferSize(): result<u64, ErrorCode> {
+						return this._om.sendBufferSize(this);
+					}
+					public setSendBufferSize(value: u64): result<void, ErrorCode> {
+						return this._om.setSendBufferSize(this, value);
+					}
+					public subscribe(): own<Pollable> {
+						return this._om.subscribe(this);
+					}
+					public shutdown(shutdownType: ShutdownType): result<void, ErrorCode> {
+						return this._om.shutdown(this, shutdownType);
+					}
 				}
-				public $drop(): void {
-					return this._om.$drop(this);
-				}
-				public startBind(network: borrow<Network>, localAddress: IpSocketAddress): result<void, ErrorCode> {
-					return this._om.startBind(this, network, localAddress);
-				}
-				public finishBind(): result<void, ErrorCode> {
-					return this._om.finishBind(this);
-				}
-				public startConnect(network: borrow<Network>, remoteAddress: IpSocketAddress): result<void, ErrorCode> {
-					return this._om.startConnect(this, network, remoteAddress);
-				}
-				public finishConnect(): result<[own<InputStream>, own<OutputStream>], ErrorCode> {
-					return this._om.finishConnect(this);
-				}
-				public startListen(): result<void, ErrorCode> {
-					return this._om.startListen(this);
-				}
-				public finishListen(): result<void, ErrorCode> {
-					return this._om.finishListen(this);
-				}
-				public accept(): result<[own<TcpSocket>, own<InputStream>, own<OutputStream>], ErrorCode> {
-					return this._om.accept(this);
-				}
-				public localAddress(): result<IpSocketAddress, ErrorCode> {
-					return this._om.localAddress(this);
-				}
-				public remoteAddress(): result<IpSocketAddress, ErrorCode> {
-					return this._om.remoteAddress(this);
-				}
-				public isListening(): boolean {
-					return this._om.isListening(this);
-				}
-				public addressFamily(): IpAddressFamily {
-					return this._om.addressFamily(this);
-				}
-				public setListenBacklogSize(value: u64): result<void, ErrorCode> {
-					return this._om.setListenBacklogSize(this, value);
-				}
-				public keepAliveEnabled(): result<boolean, ErrorCode> {
-					return this._om.keepAliveEnabled(this);
-				}
-				public setKeepAliveEnabled(value: boolean): result<void, ErrorCode> {
-					return this._om.setKeepAliveEnabled(this, value);
-				}
-				public keepAliveIdleTime(): result<Duration, ErrorCode> {
-					return this._om.keepAliveIdleTime(this);
-				}
-				public setKeepAliveIdleTime(value: Duration): result<void, ErrorCode> {
-					return this._om.setKeepAliveIdleTime(this, value);
-				}
-				public keepAliveInterval(): result<Duration, ErrorCode> {
-					return this._om.keepAliveInterval(this);
-				}
-				public setKeepAliveInterval(value: Duration): result<void, ErrorCode> {
-					return this._om.setKeepAliveInterval(this, value);
-				}
-				public keepAliveCount(): result<u32, ErrorCode> {
-					return this._om.keepAliveCount(this);
-				}
-				public setKeepAliveCount(value: u32): result<void, ErrorCode> {
-					return this._om.setKeepAliveCount(this, value);
-				}
-				public hopLimit(): result<u8, ErrorCode> {
-					return this._om.hopLimit(this);
-				}
-				public setHopLimit(value: u8): result<void, ErrorCode> {
-					return this._om.setHopLimit(this, value);
-				}
-				public receiveBufferSize(): result<u64, ErrorCode> {
-					return this._om.receiveBufferSize(this);
-				}
-				public setReceiveBufferSize(value: u64): result<void, ErrorCode> {
-					return this._om.setReceiveBufferSize(this, value);
-				}
-				public sendBufferSize(): result<u64, ErrorCode> {
-					return this._om.sendBufferSize(this);
-				}
-				public setSendBufferSize(value: u64): result<void, ErrorCode> {
-					return this._om.setSendBufferSize(this, value);
-				}
-				public subscribe(): own<Pollable> {
-					return this._om.subscribe(this);
-				}
-				public shutdown(shutdownType: ShutdownType): result<void, ErrorCode> {
-					return this._om.shutdown(this, shutdownType);
+				export function Class(wasmInterface: WasmInterface, context: $wcm.WasmContext): sockets.Tcp.TcpSocket.Class {
+					const resource = sockets.Tcp.$.TcpSocket;
+					const om: ObjectModule = $wcm.Module.createObjectModule(resource, wasmInterface, context);
+					return class extends Impl {
+						constructor(handleTag: Symbol, handle: $wcm.ResourceHandle) {
+							super(handleTag, handle, om);
+						}
+					};
 				}
 			}
-			export function Class(wasmInterface: WasmInterface, context: $wcm.WasmContext): sockets.tcp.TcpSocket.Class {
-				const resource = sockets.tcp.$.TcpSocket;
-				const om: ObjectModule = $wcm.Module.createObjectModule(resource, wasmInterface, context);
-				return class extends Impl {
-					constructor() {
-						super(om);
-					}
+		}
+		export const types: Map<string, $wcm.GenericComponentModelType> = new Map<string, $wcm.GenericComponentModelType>([
+			['InputStream', $.InputStream],
+			['OutputStream', $.OutputStream],
+			['Pollable', $.Pollable],
+			['Duration', $.Duration],
+			['Network', $.Network],
+			['ErrorCode', $.ErrorCode],
+			['IpSocketAddress', $.IpSocketAddress],
+			['IpAddressFamily', $.IpAddressFamily],
+			['ShutdownType', $.ShutdownType],
+			['TcpSocket', $.TcpSocket]
+		]);
+		export const resources: Map<string, { resource: $wcm.ResourceType; factory: $wcm.ClassFactory<any>}> = new Map<string, { resource: $wcm.ResourceType; factory: $wcm.ClassFactory<any>}>([
+			['TcpSocket', { resource: $.TcpSocket, factory: TcpSocket.exports.Class }]
+		]);
+		export type WasmInterface = {
+		};
+		export namespace imports {
+			export type WasmInterface = _.WasmInterface & TcpSocket.imports.WasmInterface;
+		}
+		export namespace exports {
+			export type WasmInterface = _.WasmInterface & TcpSocket.exports.WasmInterface;
+			export namespace imports {
+				export type WasmInterface = {
+					'[resource-new]tcp-socket': (rep: i32) => i32;
+					'[resource-rep]tcp-socket': (handle: i32) => i32;
+					'[resource-drop]tcp-socket': (handle: i32) => i32;
 				};
 			}
 		}
-		export type WasmInterface = {
-		} & TcpSocket.WasmInterface;
-		export function createImports(service: sockets.Tcp, context: $wcm.WasmContext): WasmInterface {
-			return $wcm.Imports.create<WasmInterface>(undefined, resources, service, context);
-		}
-		export function filterExports(exports: object, context: $wcm.WasmContext): WasmInterface {
-			return $wcm.Exports.filter<WasmInterface>(exports, undefined, resources, id, sockets._.version, context);
-		}
-		export function bindExports(wasmInterface: WasmInterface, context: $wcm.WasmContext): sockets.Tcp {
-			return $wcm.Exports.bind<sockets.Tcp>(undefined, [['TcpSocket', $.TcpSocket, TcpSocket.Class]], wasmInterface, context);
-		}
 	}
 
-	export namespace tcpCreateSocket.$ {
-		export const Network = sockets.network.$.Network;
-		export const ErrorCode = sockets.network.$.ErrorCode;
-		export const IpAddressFamily = sockets.network.$.IpAddressFamily;
-		export const TcpSocket = sockets.tcp.$.TcpSocket;
-		export const createTcpSocket = new $wcm.FunctionType<sockets.tcpCreateSocket.createTcpSocket>('create-tcp-socket',[
+	export namespace TcpCreateSocket.$ {
+		export const Network = sockets.Network.$.Network;
+		export const ErrorCode = sockets.Network.$.ErrorCode;
+		export const IpAddressFamily = sockets.Network.$.IpAddressFamily;
+		export const TcpSocket = sockets.Tcp.$.TcpSocket;
+		export const createTcpSocket = new $wcm.FunctionType<sockets.TcpCreateSocket.createTcpSocket>('create-tcp-socket',[
 			['addressFamily', IpAddressFamily],
-		], new $wcm.ResultType<own<sockets.tcpCreateSocket.TcpSocket>, sockets.tcpCreateSocket.ErrorCode>(new $wcm.OwnType<sockets.tcpCreateSocket.TcpSocket>(TcpSocket), ErrorCode));
+		], new $wcm.ResultType<own<sockets.TcpCreateSocket.TcpSocket>, sockets.TcpCreateSocket.ErrorCode>(new $wcm.OwnType<sockets.TcpCreateSocket.TcpSocket>(TcpSocket), ErrorCode));
 	}
-	export namespace tcpCreateSocket._ {
+	export namespace TcpCreateSocket._ {
 		export const id = 'wasi:sockets/tcp-create-socket@0.2.0' as const;
 		export const witName = 'tcp-create-socket' as const;
 		export const types: Map<string, $wcm.GenericComponentModelType> = new Map<string, $wcm.GenericComponentModelType>([
@@ -1701,94 +1691,74 @@ export namespace sockets {
 		export type WasmInterface = {
 			'create-tcp-socket': (addressFamily_IpAddressFamily_IpAddressFamily: i32, result: ptr<result<own<TcpSocket>, ErrorCode>>) => void;
 		};
-		export function createImports(service: sockets.TcpCreateSocket, context: $wcm.WasmContext): WasmInterface {
-			return $wcm.Imports.create<WasmInterface>(functions, undefined, service, context);
+		export namespace imports {
+			export type WasmInterface = _.WasmInterface;
 		}
-		export function filterExports(exports: object, context: $wcm.WasmContext): WasmInterface {
-			return $wcm.Exports.filter<WasmInterface>(exports, functions, undefined, id, sockets._.version, context);
-		}
-		export function bindExports(wasmInterface: WasmInterface, context: $wcm.WasmContext): sockets.TcpCreateSocket {
-			return $wcm.Exports.bind<sockets.TcpCreateSocket>(functions, [], wasmInterface, context);
+		export namespace exports {
+			export type WasmInterface = _.WasmInterface;
 		}
 	}
 
-	export namespace udp.$ {
-		export const Pollable = io.poll.$.Pollable;
-		export const Network = sockets.network.$.Network;
-		export const ErrorCode = sockets.network.$.ErrorCode;
-		export const IpSocketAddress = sockets.network.$.IpSocketAddress;
-		export const IpAddressFamily = sockets.network.$.IpAddressFamily;
-		export const IncomingDatagram = new $wcm.RecordType<sockets.udp.IncomingDatagram>([
+	export namespace Udp.$ {
+		export const Pollable = io.Poll.$.Pollable;
+		export const Network = sockets.Network.$.Network;
+		export const ErrorCode = sockets.Network.$.ErrorCode;
+		export const IpSocketAddress = sockets.Network.$.IpSocketAddress;
+		export const IpAddressFamily = sockets.Network.$.IpAddressFamily;
+		export const IncomingDatagram = new $wcm.RecordType<sockets.Udp.IncomingDatagram>([
 			['data', new $wcm.Uint8ArrayType()],
 			['remoteAddress', IpSocketAddress],
 		]);
-		export const OutgoingDatagram = new $wcm.RecordType<sockets.udp.OutgoingDatagram>([
+		export const OutgoingDatagram = new $wcm.RecordType<sockets.Udp.OutgoingDatagram>([
 			['data', new $wcm.Uint8ArrayType()],
-			['remoteAddress', new $wcm.OptionType<sockets.udp.IpSocketAddress>(IpSocketAddress)],
+			['remoteAddress', new $wcm.OptionType<sockets.Udp.IpSocketAddress>(IpSocketAddress)],
 		]);
-		export const UdpSocket = new $wcm.ResourceType<sockets.udp.UdpSocket>('udp-socket', 'wasi:sockets/udp/udp-socket');
+		export const UdpSocket = new $wcm.ResourceType<sockets.Udp.UdpSocket>('udp-socket', 'wasi:sockets@0.2.0/udp/udp-socket');
 		export const UdpSocket_Handle = new $wcm.ResourceHandleType('udp-socket');
-		export const IncomingDatagramStream = new $wcm.ResourceType<sockets.udp.IncomingDatagramStream>('incoming-datagram-stream', 'wasi:sockets/udp/incoming-datagram-stream');
+		export const IncomingDatagramStream = new $wcm.ResourceType<sockets.Udp.IncomingDatagramStream>('incoming-datagram-stream', 'wasi:sockets@0.2.0/udp/incoming-datagram-stream');
 		export const IncomingDatagramStream_Handle = new $wcm.ResourceHandleType('incoming-datagram-stream');
-		export const OutgoingDatagramStream = new $wcm.ResourceType<sockets.udp.OutgoingDatagramStream>('outgoing-datagram-stream', 'wasi:sockets/udp/outgoing-datagram-stream');
+		export const OutgoingDatagramStream = new $wcm.ResourceType<sockets.Udp.OutgoingDatagramStream>('outgoing-datagram-stream', 'wasi:sockets@0.2.0/udp/outgoing-datagram-stream');
 		export const OutgoingDatagramStream_Handle = new $wcm.ResourceHandleType('outgoing-datagram-stream');
 		UdpSocket.addDestructor('$drop', new $wcm.DestructorType('[resource-drop]udp-socket', [['inst', UdpSocket]]));
-		UdpSocket.addMethod('startBind', new $wcm.MethodType<sockets.udp.UdpSocket.Interface['startBind']>('[method]udp-socket.start-bind', [
-			['network', new $wcm.BorrowType<sockets.udp.Network>(Network)],
+		UdpSocket.addMethod('startBind', new $wcm.MethodType<sockets.Udp.UdpSocket.Interface['startBind']>('[method]udp-socket.start-bind', [
+			['network', new $wcm.BorrowType<sockets.Udp.Network>(Network)],
 			['localAddress', IpSocketAddress],
-		], new $wcm.ResultType<void, sockets.udp.ErrorCode>(undefined, ErrorCode)));
-		UdpSocket.addMethod('finishBind', new $wcm.MethodType<sockets.udp.UdpSocket.Interface['finishBind']>('[method]udp-socket.finish-bind', [], new $wcm.ResultType<void, sockets.udp.ErrorCode>(undefined, ErrorCode)));
-		UdpSocket.addMethod('stream', new $wcm.MethodType<sockets.udp.UdpSocket.Interface['stream']>('[method]udp-socket.stream', [
-			['remoteAddress', new $wcm.OptionType<sockets.udp.IpSocketAddress>(IpSocketAddress)],
-		], new $wcm.ResultType<[own<sockets.udp.IncomingDatagramStream>, own<sockets.udp.OutgoingDatagramStream>], sockets.udp.ErrorCode>(new $wcm.TupleType<[own<sockets.udp.IncomingDatagramStream>, own<sockets.udp.OutgoingDatagramStream>]>([new $wcm.OwnType<sockets.udp.IncomingDatagramStream>(IncomingDatagramStream), new $wcm.OwnType<sockets.udp.OutgoingDatagramStream>(OutgoingDatagramStream)]), ErrorCode)));
-		UdpSocket.addMethod('localAddress', new $wcm.MethodType<sockets.udp.UdpSocket.Interface['localAddress']>('[method]udp-socket.local-address', [], new $wcm.ResultType<sockets.udp.IpSocketAddress, sockets.udp.ErrorCode>(IpSocketAddress, ErrorCode)));
-		UdpSocket.addMethod('remoteAddress', new $wcm.MethodType<sockets.udp.UdpSocket.Interface['remoteAddress']>('[method]udp-socket.remote-address', [], new $wcm.ResultType<sockets.udp.IpSocketAddress, sockets.udp.ErrorCode>(IpSocketAddress, ErrorCode)));
-		UdpSocket.addMethod('addressFamily', new $wcm.MethodType<sockets.udp.UdpSocket.Interface['addressFamily']>('[method]udp-socket.address-family', [], IpAddressFamily));
-		UdpSocket.addMethod('unicastHopLimit', new $wcm.MethodType<sockets.udp.UdpSocket.Interface['unicastHopLimit']>('[method]udp-socket.unicast-hop-limit', [], new $wcm.ResultType<u8, sockets.udp.ErrorCode>($wcm.u8, ErrorCode)));
-		UdpSocket.addMethod('setUnicastHopLimit', new $wcm.MethodType<sockets.udp.UdpSocket.Interface['setUnicastHopLimit']>('[method]udp-socket.set-unicast-hop-limit', [
+		], new $wcm.ResultType<void, sockets.Udp.ErrorCode>(undefined, ErrorCode)));
+		UdpSocket.addMethod('finishBind', new $wcm.MethodType<sockets.Udp.UdpSocket.Interface['finishBind']>('[method]udp-socket.finish-bind', [], new $wcm.ResultType<void, sockets.Udp.ErrorCode>(undefined, ErrorCode)));
+		UdpSocket.addMethod('stream', new $wcm.MethodType<sockets.Udp.UdpSocket.Interface['stream']>('[method]udp-socket.stream', [
+			['remoteAddress', new $wcm.OptionType<sockets.Udp.IpSocketAddress>(IpSocketAddress)],
+		], new $wcm.ResultType<[own<sockets.Udp.IncomingDatagramStream>, own<sockets.Udp.OutgoingDatagramStream>], sockets.Udp.ErrorCode>(new $wcm.TupleType<[own<sockets.Udp.IncomingDatagramStream>, own<sockets.Udp.OutgoingDatagramStream>]>([new $wcm.OwnType<sockets.Udp.IncomingDatagramStream>(IncomingDatagramStream), new $wcm.OwnType<sockets.Udp.OutgoingDatagramStream>(OutgoingDatagramStream)]), ErrorCode)));
+		UdpSocket.addMethod('localAddress', new $wcm.MethodType<sockets.Udp.UdpSocket.Interface['localAddress']>('[method]udp-socket.local-address', [], new $wcm.ResultType<sockets.Udp.IpSocketAddress, sockets.Udp.ErrorCode>(IpSocketAddress, ErrorCode)));
+		UdpSocket.addMethod('remoteAddress', new $wcm.MethodType<sockets.Udp.UdpSocket.Interface['remoteAddress']>('[method]udp-socket.remote-address', [], new $wcm.ResultType<sockets.Udp.IpSocketAddress, sockets.Udp.ErrorCode>(IpSocketAddress, ErrorCode)));
+		UdpSocket.addMethod('addressFamily', new $wcm.MethodType<sockets.Udp.UdpSocket.Interface['addressFamily']>('[method]udp-socket.address-family', [], IpAddressFamily));
+		UdpSocket.addMethod('unicastHopLimit', new $wcm.MethodType<sockets.Udp.UdpSocket.Interface['unicastHopLimit']>('[method]udp-socket.unicast-hop-limit', [], new $wcm.ResultType<u8, sockets.Udp.ErrorCode>($wcm.u8, ErrorCode)));
+		UdpSocket.addMethod('setUnicastHopLimit', new $wcm.MethodType<sockets.Udp.UdpSocket.Interface['setUnicastHopLimit']>('[method]udp-socket.set-unicast-hop-limit', [
 			['value', $wcm.u8],
-		], new $wcm.ResultType<void, sockets.udp.ErrorCode>(undefined, ErrorCode)));
-		UdpSocket.addMethod('receiveBufferSize', new $wcm.MethodType<sockets.udp.UdpSocket.Interface['receiveBufferSize']>('[method]udp-socket.receive-buffer-size', [], new $wcm.ResultType<u64, sockets.udp.ErrorCode>($wcm.u64, ErrorCode)));
-		UdpSocket.addMethod('setReceiveBufferSize', new $wcm.MethodType<sockets.udp.UdpSocket.Interface['setReceiveBufferSize']>('[method]udp-socket.set-receive-buffer-size', [
+		], new $wcm.ResultType<void, sockets.Udp.ErrorCode>(undefined, ErrorCode)));
+		UdpSocket.addMethod('receiveBufferSize', new $wcm.MethodType<sockets.Udp.UdpSocket.Interface['receiveBufferSize']>('[method]udp-socket.receive-buffer-size', [], new $wcm.ResultType<u64, sockets.Udp.ErrorCode>($wcm.u64, ErrorCode)));
+		UdpSocket.addMethod('setReceiveBufferSize', new $wcm.MethodType<sockets.Udp.UdpSocket.Interface['setReceiveBufferSize']>('[method]udp-socket.set-receive-buffer-size', [
 			['value', $wcm.u64],
-		], new $wcm.ResultType<void, sockets.udp.ErrorCode>(undefined, ErrorCode)));
-		UdpSocket.addMethod('sendBufferSize', new $wcm.MethodType<sockets.udp.UdpSocket.Interface['sendBufferSize']>('[method]udp-socket.send-buffer-size', [], new $wcm.ResultType<u64, sockets.udp.ErrorCode>($wcm.u64, ErrorCode)));
-		UdpSocket.addMethod('setSendBufferSize', new $wcm.MethodType<sockets.udp.UdpSocket.Interface['setSendBufferSize']>('[method]udp-socket.set-send-buffer-size', [
+		], new $wcm.ResultType<void, sockets.Udp.ErrorCode>(undefined, ErrorCode)));
+		UdpSocket.addMethod('sendBufferSize', new $wcm.MethodType<sockets.Udp.UdpSocket.Interface['sendBufferSize']>('[method]udp-socket.send-buffer-size', [], new $wcm.ResultType<u64, sockets.Udp.ErrorCode>($wcm.u64, ErrorCode)));
+		UdpSocket.addMethod('setSendBufferSize', new $wcm.MethodType<sockets.Udp.UdpSocket.Interface['setSendBufferSize']>('[method]udp-socket.set-send-buffer-size', [
 			['value', $wcm.u64],
-		], new $wcm.ResultType<void, sockets.udp.ErrorCode>(undefined, ErrorCode)));
-		UdpSocket.addMethod('subscribe', new $wcm.MethodType<sockets.udp.UdpSocket.Interface['subscribe']>('[method]udp-socket.subscribe', [], new $wcm.OwnType<sockets.udp.Pollable>(Pollable)));
+		], new $wcm.ResultType<void, sockets.Udp.ErrorCode>(undefined, ErrorCode)));
+		UdpSocket.addMethod('subscribe', new $wcm.MethodType<sockets.Udp.UdpSocket.Interface['subscribe']>('[method]udp-socket.subscribe', [], new $wcm.OwnType<sockets.Udp.Pollable>(Pollable)));
 		IncomingDatagramStream.addDestructor('$drop', new $wcm.DestructorType('[resource-drop]incoming-datagram-stream', [['inst', IncomingDatagramStream]]));
-		IncomingDatagramStream.addMethod('receive', new $wcm.MethodType<sockets.udp.IncomingDatagramStream.Interface['receive']>('[method]incoming-datagram-stream.receive', [
+		IncomingDatagramStream.addMethod('receive', new $wcm.MethodType<sockets.Udp.IncomingDatagramStream.Interface['receive']>('[method]incoming-datagram-stream.receive', [
 			['maxResults', $wcm.u64],
-		], new $wcm.ResultType<sockets.udp.IncomingDatagram[], sockets.udp.ErrorCode>(new $wcm.ListType<sockets.udp.IncomingDatagram>(IncomingDatagram), ErrorCode)));
-		IncomingDatagramStream.addMethod('subscribe', new $wcm.MethodType<sockets.udp.IncomingDatagramStream.Interface['subscribe']>('[method]incoming-datagram-stream.subscribe', [], new $wcm.OwnType<sockets.udp.Pollable>(Pollable)));
+		], new $wcm.ResultType<sockets.Udp.IncomingDatagram[], sockets.Udp.ErrorCode>(new $wcm.ListType<sockets.Udp.IncomingDatagram>(IncomingDatagram), ErrorCode)));
+		IncomingDatagramStream.addMethod('subscribe', new $wcm.MethodType<sockets.Udp.IncomingDatagramStream.Interface['subscribe']>('[method]incoming-datagram-stream.subscribe', [], new $wcm.OwnType<sockets.Udp.Pollable>(Pollable)));
 		OutgoingDatagramStream.addDestructor('$drop', new $wcm.DestructorType('[resource-drop]outgoing-datagram-stream', [['inst', OutgoingDatagramStream]]));
-		OutgoingDatagramStream.addMethod('checkSend', new $wcm.MethodType<sockets.udp.OutgoingDatagramStream.Interface['checkSend']>('[method]outgoing-datagram-stream.check-send', [], new $wcm.ResultType<u64, sockets.udp.ErrorCode>($wcm.u64, ErrorCode)));
-		OutgoingDatagramStream.addMethod('send', new $wcm.MethodType<sockets.udp.OutgoingDatagramStream.Interface['send']>('[method]outgoing-datagram-stream.send', [
-			['datagrams', new $wcm.ListType<sockets.udp.OutgoingDatagram>(OutgoingDatagram)],
-		], new $wcm.ResultType<u64, sockets.udp.ErrorCode>($wcm.u64, ErrorCode)));
-		OutgoingDatagramStream.addMethod('subscribe', new $wcm.MethodType<sockets.udp.OutgoingDatagramStream.Interface['subscribe']>('[method]outgoing-datagram-stream.subscribe', [], new $wcm.OwnType<sockets.udp.Pollable>(Pollable)));
+		OutgoingDatagramStream.addMethod('checkSend', new $wcm.MethodType<sockets.Udp.OutgoingDatagramStream.Interface['checkSend']>('[method]outgoing-datagram-stream.check-send', [], new $wcm.ResultType<u64, sockets.Udp.ErrorCode>($wcm.u64, ErrorCode)));
+		OutgoingDatagramStream.addMethod('send', new $wcm.MethodType<sockets.Udp.OutgoingDatagramStream.Interface['send']>('[method]outgoing-datagram-stream.send', [
+			['datagrams', new $wcm.ListType<sockets.Udp.OutgoingDatagram>(OutgoingDatagram)],
+		], new $wcm.ResultType<u64, sockets.Udp.ErrorCode>($wcm.u64, ErrorCode)));
+		OutgoingDatagramStream.addMethod('subscribe', new $wcm.MethodType<sockets.Udp.OutgoingDatagramStream.Interface['subscribe']>('[method]outgoing-datagram-stream.subscribe', [], new $wcm.OwnType<sockets.Udp.Pollable>(Pollable)));
 	}
-	export namespace udp._ {
+	export namespace Udp._ {
 		export const id = 'wasi:sockets/udp@0.2.0' as const;
 		export const witName = 'udp' as const;
-		export const types: Map<string, $wcm.GenericComponentModelType> = new Map<string, $wcm.GenericComponentModelType>([
-			['Pollable', $.Pollable],
-			['Network', $.Network],
-			['ErrorCode', $.ErrorCode],
-			['IpSocketAddress', $.IpSocketAddress],
-			['IpAddressFamily', $.IpAddressFamily],
-			['IncomingDatagram', $.IncomingDatagram],
-			['OutgoingDatagram', $.OutgoingDatagram],
-			['UdpSocket', $.UdpSocket],
-			['IncomingDatagramStream', $.IncomingDatagramStream],
-			['OutgoingDatagramStream', $.OutgoingDatagramStream]
-		]);
-		export const resources: Map<string, $wcm.ResourceType> = new Map<string, $wcm.ResourceType>([
-			['UdpSocket', $.UdpSocket],
-			['IncomingDatagramStream', $.IncomingDatagramStream],
-			['OutgoingDatagramStream', $.OutgoingDatagramStream]
-		]);
 		export namespace UdpSocket {
 			export type WasmInterface = {
 				'[method]udp-socket.start-bind': (self: i32, network: i32, localAddress_IpSocketAddress_case: i32, localAddress_IpSocketAddress_0: i32, localAddress_IpSocketAddress_1: i32, localAddress_IpSocketAddress_2: i32, localAddress_IpSocketAddress_3: i32, localAddress_IpSocketAddress_4: i32, localAddress_IpSocketAddress_5: i32, localAddress_IpSocketAddress_6: i32, localAddress_IpSocketAddress_7: i32, localAddress_IpSocketAddress_8: i32, localAddress_IpSocketAddress_9: i32, localAddress_IpSocketAddress_10: i32, result: ptr<result<void, ErrorCode>>) => void;
@@ -1804,10 +1774,8 @@ export namespace sockets {
 				'[method]udp-socket.send-buffer-size': (self: i32, result: ptr<result<u64, ErrorCode>>) => void;
 				'[method]udp-socket.set-send-buffer-size': (self: i32, value: i64, result: ptr<result<void, ErrorCode>>) => void;
 				'[method]udp-socket.subscribe': (self: i32) => i32;
-				'[resource-drop]udp-socket': (self: i32) => void;
 			};
-			type ObjectModule = {
-				$drop(self: UdpSocket): void;
+			export type ObjectModule = {
 				startBind(self: UdpSocket, network: borrow<Network>, localAddress: IpSocketAddress): result<void, ErrorCode>;
 				finishBind(self: UdpSocket): result<void, ErrorCode>;
 				stream(self: UdpSocket, remoteAddress: IpSocketAddress | undefined): result<[own<IncomingDatagramStream>, own<OutgoingDatagramStream>], ErrorCode>;
@@ -1822,100 +1790,104 @@ export namespace sockets {
 				setSendBufferSize(self: UdpSocket, value: u64): result<void, ErrorCode>;
 				subscribe(self: UdpSocket): own<Pollable>;
 			};
-			class Impl extends $wcm.Resource implements sockets.udp.UdpSocket.Interface {
-				private readonly _om: ObjectModule;
-				constructor(om: ObjectModule) {
-					super();
-					this._om = om;
-				}
-				public $drop(): void {
-					return this._om.$drop(this);
-				}
-				public startBind(network: borrow<Network>, localAddress: IpSocketAddress): result<void, ErrorCode> {
-					return this._om.startBind(this, network, localAddress);
-				}
-				public finishBind(): result<void, ErrorCode> {
-					return this._om.finishBind(this);
-				}
-				public stream(remoteAddress: IpSocketAddress | undefined): result<[own<IncomingDatagramStream>, own<OutgoingDatagramStream>], ErrorCode> {
-					return this._om.stream(this, remoteAddress);
-				}
-				public localAddress(): result<IpSocketAddress, ErrorCode> {
-					return this._om.localAddress(this);
-				}
-				public remoteAddress(): result<IpSocketAddress, ErrorCode> {
-					return this._om.remoteAddress(this);
-				}
-				public addressFamily(): IpAddressFamily {
-					return this._om.addressFamily(this);
-				}
-				public unicastHopLimit(): result<u8, ErrorCode> {
-					return this._om.unicastHopLimit(this);
-				}
-				public setUnicastHopLimit(value: u8): result<void, ErrorCode> {
-					return this._om.setUnicastHopLimit(this, value);
-				}
-				public receiveBufferSize(): result<u64, ErrorCode> {
-					return this._om.receiveBufferSize(this);
-				}
-				public setReceiveBufferSize(value: u64): result<void, ErrorCode> {
-					return this._om.setReceiveBufferSize(this, value);
-				}
-				public sendBufferSize(): result<u64, ErrorCode> {
-					return this._om.sendBufferSize(this);
-				}
-				public setSendBufferSize(value: u64): result<void, ErrorCode> {
-					return this._om.setSendBufferSize(this, value);
-				}
-				public subscribe(): own<Pollable> {
-					return this._om.subscribe(this);
-				}
+			export namespace imports {
+				export type WasmInterface = UdpSocket.WasmInterface & { '[resource-drop]udp-socket': (self: i32) => void };
 			}
-			export function Class(wasmInterface: WasmInterface, context: $wcm.WasmContext): sockets.udp.UdpSocket.Class {
-				const resource = sockets.udp.$.UdpSocket;
-				const om: ObjectModule = $wcm.Module.createObjectModule(resource, wasmInterface, context);
-				return class extends Impl {
-					constructor() {
-						super(om);
+			export namespace exports {
+				export type WasmInterface = UdpSocket.WasmInterface & { '[dtor]udp-socket': (self: i32) => void };
+				class Impl extends $wcm.Resource implements sockets.Udp.UdpSocket.Interface {
+					private readonly _om: ObjectModule;
+					constructor(_handleTag: Symbol, handle: $wcm.ResourceHandle, om: ObjectModule) {
+						super(handle);
+						this._om = om;
 					}
-				};
+					public startBind(network: borrow<Network>, localAddress: IpSocketAddress): result<void, ErrorCode> {
+						return this._om.startBind(this, network, localAddress);
+					}
+					public finishBind(): result<void, ErrorCode> {
+						return this._om.finishBind(this);
+					}
+					public stream(remoteAddress: IpSocketAddress | undefined): result<[own<IncomingDatagramStream>, own<OutgoingDatagramStream>], ErrorCode> {
+						return this._om.stream(this, remoteAddress);
+					}
+					public localAddress(): result<IpSocketAddress, ErrorCode> {
+						return this._om.localAddress(this);
+					}
+					public remoteAddress(): result<IpSocketAddress, ErrorCode> {
+						return this._om.remoteAddress(this);
+					}
+					public addressFamily(): IpAddressFamily {
+						return this._om.addressFamily(this);
+					}
+					public unicastHopLimit(): result<u8, ErrorCode> {
+						return this._om.unicastHopLimit(this);
+					}
+					public setUnicastHopLimit(value: u8): result<void, ErrorCode> {
+						return this._om.setUnicastHopLimit(this, value);
+					}
+					public receiveBufferSize(): result<u64, ErrorCode> {
+						return this._om.receiveBufferSize(this);
+					}
+					public setReceiveBufferSize(value: u64): result<void, ErrorCode> {
+						return this._om.setReceiveBufferSize(this, value);
+					}
+					public sendBufferSize(): result<u64, ErrorCode> {
+						return this._om.sendBufferSize(this);
+					}
+					public setSendBufferSize(value: u64): result<void, ErrorCode> {
+						return this._om.setSendBufferSize(this, value);
+					}
+					public subscribe(): own<Pollable> {
+						return this._om.subscribe(this);
+					}
+				}
+				export function Class(wasmInterface: WasmInterface, context: $wcm.WasmContext): sockets.Udp.UdpSocket.Class {
+					const resource = sockets.Udp.$.UdpSocket;
+					const om: ObjectModule = $wcm.Module.createObjectModule(resource, wasmInterface, context);
+					return class extends Impl {
+						constructor(handleTag: Symbol, handle: $wcm.ResourceHandle) {
+							super(handleTag, handle, om);
+						}
+					};
+				}
 			}
 		}
 		export namespace IncomingDatagramStream {
 			export type WasmInterface = {
 				'[method]incoming-datagram-stream.receive': (self: i32, maxResults: i64, result: ptr<result<IncomingDatagram[], ErrorCode>>) => void;
 				'[method]incoming-datagram-stream.subscribe': (self: i32) => i32;
-				'[resource-drop]incoming-datagram-stream': (self: i32) => void;
 			};
-			type ObjectModule = {
-				$drop(self: IncomingDatagramStream): void;
+			export type ObjectModule = {
 				receive(self: IncomingDatagramStream, maxResults: u64): result<IncomingDatagram[], ErrorCode>;
 				subscribe(self: IncomingDatagramStream): own<Pollable>;
 			};
-			class Impl extends $wcm.Resource implements sockets.udp.IncomingDatagramStream.Interface {
-				private readonly _om: ObjectModule;
-				constructor(om: ObjectModule) {
-					super();
-					this._om = om;
-				}
-				public $drop(): void {
-					return this._om.$drop(this);
-				}
-				public receive(maxResults: u64): result<IncomingDatagram[], ErrorCode> {
-					return this._om.receive(this, maxResults);
-				}
-				public subscribe(): own<Pollable> {
-					return this._om.subscribe(this);
-				}
+			export namespace imports {
+				export type WasmInterface = IncomingDatagramStream.WasmInterface & { '[resource-drop]incoming-datagram-stream': (self: i32) => void };
 			}
-			export function Class(wasmInterface: WasmInterface, context: $wcm.WasmContext): sockets.udp.IncomingDatagramStream.Class {
-				const resource = sockets.udp.$.IncomingDatagramStream;
-				const om: ObjectModule = $wcm.Module.createObjectModule(resource, wasmInterface, context);
-				return class extends Impl {
-					constructor() {
-						super(om);
+			export namespace exports {
+				export type WasmInterface = IncomingDatagramStream.WasmInterface & { '[dtor]incoming-datagram-stream': (self: i32) => void };
+				class Impl extends $wcm.Resource implements sockets.Udp.IncomingDatagramStream.Interface {
+					private readonly _om: ObjectModule;
+					constructor(_handleTag: Symbol, handle: $wcm.ResourceHandle, om: ObjectModule) {
+						super(handle);
+						this._om = om;
 					}
-				};
+					public receive(maxResults: u64): result<IncomingDatagram[], ErrorCode> {
+						return this._om.receive(this, maxResults);
+					}
+					public subscribe(): own<Pollable> {
+						return this._om.subscribe(this);
+					}
+				}
+				export function Class(wasmInterface: WasmInterface, context: $wcm.WasmContext): sockets.Udp.IncomingDatagramStream.Class {
+					const resource = sockets.Udp.$.IncomingDatagramStream;
+					const om: ObjectModule = $wcm.Module.createObjectModule(resource, wasmInterface, context);
+					return class extends Impl {
+						constructor(handleTag: Symbol, handle: $wcm.ResourceHandle) {
+							super(handleTag, handle, om);
+						}
+					};
+				}
 			}
 		}
 		export namespace OutgoingDatagramStream {
@@ -1923,66 +1895,94 @@ export namespace sockets {
 				'[method]outgoing-datagram-stream.check-send': (self: i32, result: ptr<result<u64, ErrorCode>>) => void;
 				'[method]outgoing-datagram-stream.send': (self: i32, datagrams_ptr: i32, datagrams_len: i32, result: ptr<result<u64, ErrorCode>>) => void;
 				'[method]outgoing-datagram-stream.subscribe': (self: i32) => i32;
-				'[resource-drop]outgoing-datagram-stream': (self: i32) => void;
 			};
-			type ObjectModule = {
-				$drop(self: OutgoingDatagramStream): void;
+			export type ObjectModule = {
 				checkSend(self: OutgoingDatagramStream): result<u64, ErrorCode>;
 				send(self: OutgoingDatagramStream, datagrams: OutgoingDatagram[]): result<u64, ErrorCode>;
 				subscribe(self: OutgoingDatagramStream): own<Pollable>;
 			};
-			class Impl extends $wcm.Resource implements sockets.udp.OutgoingDatagramStream.Interface {
-				private readonly _om: ObjectModule;
-				constructor(om: ObjectModule) {
-					super();
-					this._om = om;
+			export namespace imports {
+				export type WasmInterface = OutgoingDatagramStream.WasmInterface & { '[resource-drop]outgoing-datagram-stream': (self: i32) => void };
+			}
+			export namespace exports {
+				export type WasmInterface = OutgoingDatagramStream.WasmInterface & { '[dtor]outgoing-datagram-stream': (self: i32) => void };
+				class Impl extends $wcm.Resource implements sockets.Udp.OutgoingDatagramStream.Interface {
+					private readonly _om: ObjectModule;
+					constructor(_handleTag: Symbol, handle: $wcm.ResourceHandle, om: ObjectModule) {
+						super(handle);
+						this._om = om;
+					}
+					public checkSend(): result<u64, ErrorCode> {
+						return this._om.checkSend(this);
+					}
+					public send(datagrams: OutgoingDatagram[]): result<u64, ErrorCode> {
+						return this._om.send(this, datagrams);
+					}
+					public subscribe(): own<Pollable> {
+						return this._om.subscribe(this);
+					}
 				}
-				public $drop(): void {
-					return this._om.$drop(this);
-				}
-				public checkSend(): result<u64, ErrorCode> {
-					return this._om.checkSend(this);
-				}
-				public send(datagrams: OutgoingDatagram[]): result<u64, ErrorCode> {
-					return this._om.send(this, datagrams);
-				}
-				public subscribe(): own<Pollable> {
-					return this._om.subscribe(this);
+				export function Class(wasmInterface: WasmInterface, context: $wcm.WasmContext): sockets.Udp.OutgoingDatagramStream.Class {
+					const resource = sockets.Udp.$.OutgoingDatagramStream;
+					const om: ObjectModule = $wcm.Module.createObjectModule(resource, wasmInterface, context);
+					return class extends Impl {
+						constructor(handleTag: Symbol, handle: $wcm.ResourceHandle) {
+							super(handleTag, handle, om);
+						}
+					};
 				}
 			}
-			export function Class(wasmInterface: WasmInterface, context: $wcm.WasmContext): sockets.udp.OutgoingDatagramStream.Class {
-				const resource = sockets.udp.$.OutgoingDatagramStream;
-				const om: ObjectModule = $wcm.Module.createObjectModule(resource, wasmInterface, context);
-				return class extends Impl {
-					constructor() {
-						super(om);
-					}
+		}
+		export const types: Map<string, $wcm.GenericComponentModelType> = new Map<string, $wcm.GenericComponentModelType>([
+			['Pollable', $.Pollable],
+			['Network', $.Network],
+			['ErrorCode', $.ErrorCode],
+			['IpSocketAddress', $.IpSocketAddress],
+			['IpAddressFamily', $.IpAddressFamily],
+			['IncomingDatagram', $.IncomingDatagram],
+			['OutgoingDatagram', $.OutgoingDatagram],
+			['UdpSocket', $.UdpSocket],
+			['IncomingDatagramStream', $.IncomingDatagramStream],
+			['OutgoingDatagramStream', $.OutgoingDatagramStream]
+		]);
+		export const resources: Map<string, { resource: $wcm.ResourceType; factory: $wcm.ClassFactory<any>}> = new Map<string, { resource: $wcm.ResourceType; factory: $wcm.ClassFactory<any>}>([
+			['UdpSocket', { resource: $.UdpSocket, factory: UdpSocket.exports.Class }],
+			['IncomingDatagramStream', { resource: $.IncomingDatagramStream, factory: IncomingDatagramStream.exports.Class }],
+			['OutgoingDatagramStream', { resource: $.OutgoingDatagramStream, factory: OutgoingDatagramStream.exports.Class }]
+		]);
+		export type WasmInterface = {
+		};
+		export namespace imports {
+			export type WasmInterface = _.WasmInterface & UdpSocket.imports.WasmInterface & IncomingDatagramStream.imports.WasmInterface & OutgoingDatagramStream.imports.WasmInterface;
+		}
+		export namespace exports {
+			export type WasmInterface = _.WasmInterface & UdpSocket.exports.WasmInterface & IncomingDatagramStream.exports.WasmInterface & OutgoingDatagramStream.exports.WasmInterface;
+			export namespace imports {
+				export type WasmInterface = {
+					'[resource-new]udp-socket': (rep: i32) => i32;
+					'[resource-rep]udp-socket': (handle: i32) => i32;
+					'[resource-drop]udp-socket': (handle: i32) => i32;
+					'[resource-new]incoming-datagram-stream': (rep: i32) => i32;
+					'[resource-rep]incoming-datagram-stream': (handle: i32) => i32;
+					'[resource-drop]incoming-datagram-stream': (handle: i32) => i32;
+					'[resource-new]outgoing-datagram-stream': (rep: i32) => i32;
+					'[resource-rep]outgoing-datagram-stream': (handle: i32) => i32;
+					'[resource-drop]outgoing-datagram-stream': (handle: i32) => i32;
 				};
 			}
 		}
-		export type WasmInterface = {
-		} & UdpSocket.WasmInterface & IncomingDatagramStream.WasmInterface & OutgoingDatagramStream.WasmInterface;
-		export function createImports(service: sockets.Udp, context: $wcm.WasmContext): WasmInterface {
-			return $wcm.Imports.create<WasmInterface>(undefined, resources, service, context);
-		}
-		export function filterExports(exports: object, context: $wcm.WasmContext): WasmInterface {
-			return $wcm.Exports.filter<WasmInterface>(exports, undefined, resources, id, sockets._.version, context);
-		}
-		export function bindExports(wasmInterface: WasmInterface, context: $wcm.WasmContext): sockets.Udp {
-			return $wcm.Exports.bind<sockets.Udp>(undefined, [['UdpSocket', $.UdpSocket, UdpSocket.Class], ['IncomingDatagramStream', $.IncomingDatagramStream, IncomingDatagramStream.Class], ['OutgoingDatagramStream', $.OutgoingDatagramStream, OutgoingDatagramStream.Class]], wasmInterface, context);
-		}
 	}
 
-	export namespace udpCreateSocket.$ {
-		export const Network = sockets.network.$.Network;
-		export const ErrorCode = sockets.network.$.ErrorCode;
-		export const IpAddressFamily = sockets.network.$.IpAddressFamily;
-		export const UdpSocket = sockets.udp.$.UdpSocket;
-		export const createUdpSocket = new $wcm.FunctionType<sockets.udpCreateSocket.createUdpSocket>('create-udp-socket',[
+	export namespace UdpCreateSocket.$ {
+		export const Network = sockets.Network.$.Network;
+		export const ErrorCode = sockets.Network.$.ErrorCode;
+		export const IpAddressFamily = sockets.Network.$.IpAddressFamily;
+		export const UdpSocket = sockets.Udp.$.UdpSocket;
+		export const createUdpSocket = new $wcm.FunctionType<sockets.UdpCreateSocket.createUdpSocket>('create-udp-socket',[
 			['addressFamily', IpAddressFamily],
-		], new $wcm.ResultType<own<sockets.udpCreateSocket.UdpSocket>, sockets.udpCreateSocket.ErrorCode>(new $wcm.OwnType<sockets.udpCreateSocket.UdpSocket>(UdpSocket), ErrorCode));
+		], new $wcm.ResultType<own<sockets.UdpCreateSocket.UdpSocket>, sockets.UdpCreateSocket.ErrorCode>(new $wcm.OwnType<sockets.UdpCreateSocket.UdpSocket>(UdpSocket), ErrorCode));
 	}
-	export namespace udpCreateSocket._ {
+	export namespace UdpCreateSocket._ {
 		export const id = 'wasi:sockets/udp-create-socket@0.2.0' as const;
 		export const witName = 'udp-create-socket' as const;
 		export const types: Map<string, $wcm.GenericComponentModelType> = new Map<string, $wcm.GenericComponentModelType>([
@@ -1997,14 +1997,11 @@ export namespace sockets {
 		export type WasmInterface = {
 			'create-udp-socket': (addressFamily_IpAddressFamily_IpAddressFamily: i32, result: ptr<result<own<UdpSocket>, ErrorCode>>) => void;
 		};
-		export function createImports(service: sockets.UdpCreateSocket, context: $wcm.WasmContext): WasmInterface {
-			return $wcm.Imports.create<WasmInterface>(functions, undefined, service, context);
+		export namespace imports {
+			export type WasmInterface = _.WasmInterface;
 		}
-		export function filterExports(exports: object, context: $wcm.WasmContext): WasmInterface {
-			return $wcm.Exports.filter<WasmInterface>(exports, functions, undefined, id, sockets._.version, context);
-		}
-		export function bindExports(wasmInterface: WasmInterface, context: $wcm.WasmContext): sockets.UdpCreateSocket {
-			return $wcm.Exports.bind<sockets.UdpCreateSocket>(functions, [], wasmInterface, context);
+		export namespace exports {
+			export type WasmInterface = _.WasmInterface;
 		}
 	}
 }
@@ -2014,12 +2011,12 @@ export namespace sockets._ {
 	export const id = 'wasi:sockets@0.2.0' as const;
 	export const witName = 'sockets' as const;
 	export const interfaces: Map<string, $wcm.InterfaceType> = new Map<string, $wcm.InterfaceType>([
-		['network', network._],
-		['instanceNetwork', instanceNetwork._],
-		['ipNameLookup', ipNameLookup._],
-		['tcp', tcp._],
-		['tcpCreateSocket', tcpCreateSocket._],
-		['udp', udp._],
-		['udpCreateSocket', udpCreateSocket._]
+		['Network', Network._],
+		['InstanceNetwork', InstanceNetwork._],
+		['IpNameLookup', IpNameLookup._],
+		['Tcp', Tcp._],
+		['TcpCreateSocket', TcpCreateSocket._],
+		['Udp', Udp._],
+		['UdpCreateSocket', UdpCreateSocket._]
 	]);
 }

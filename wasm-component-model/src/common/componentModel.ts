@@ -3747,7 +3747,7 @@ export namespace Exports {
 		return result as unknown as T;
 	}
 
-	export function loop<T extends Exports>(functions: Map<string, FunctionType> | undefined, resources: ([string, ResourceType, ClassFactory<any>][]) | undefined, wasm: ParamWasmInterface, context: WasmContext): T {
+	export function loop<T extends Exports>(_functions: Map<string, FunctionType> | undefined, _resources: ([string, ResourceType, ClassFactory<any>][]) | undefined, _wasm: ParamWasmInterface, _context: WasmContext): T {
 		throw new Error('Not implemented');
 	}
 

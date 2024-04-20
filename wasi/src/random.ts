@@ -12,7 +12,7 @@ export namespace random {
 	 * It is intended to be portable at least between Unix-family platforms and
 	 * Windows.
 	 */
-	export namespace insecureSeed {
+	export namespace InsecureSeed {
 		/**
 		 * Return a 128-bit value that may contain a pseudo-random value.
 		 *
@@ -35,7 +35,7 @@ export namespace random {
 		export type insecureSeed = () => [u64, u64];
 	}
 	export type InsecureSeed = {
-		insecureSeed: insecureSeed.insecureSeed;
+		insecureSeed: InsecureSeed.insecureSeed;
 	};
 
 	/**
@@ -44,7 +44,7 @@ export namespace random {
 	 * It is intended to be portable at least between Unix-family platforms and
 	 * Windows.
 	 */
-	export namespace insecure {
+	export namespace Insecure {
 		/**
 		 * Return `len` insecure pseudo-random bytes.
 		 *
@@ -66,8 +66,8 @@ export namespace random {
 		export type getInsecureRandomU64 = () => u64;
 	}
 	export type Insecure = {
-		getInsecureRandomBytes: insecure.getInsecureRandomBytes;
-		getInsecureRandomU64: insecure.getInsecureRandomU64;
+		getInsecureRandomBytes: Insecure.getInsecureRandomBytes;
+		getInsecureRandomU64: Insecure.getInsecureRandomU64;
 	};
 
 	/**
@@ -76,7 +76,7 @@ export namespace random {
 	 * It is intended to be portable at least between Unix-family platforms and
 	 * Windows.
 	 */
-	export namespace random {
+	export namespace Random {
 		/**
 		 * Return `len` cryptographically-secure random or pseudo-random bytes.
 		 *
@@ -102,16 +102,16 @@ export namespace random {
 		export type getRandomU64 = () => u64;
 	}
 	export type Random = {
-		getRandomBytes: random.getRandomBytes;
-		getRandomU64: random.getRandomU64;
+		getRandomBytes: Random.getRandomBytes;
+		getRandomU64: Random.getRandomU64;
 	};
 }
 
 export namespace random {
-	export namespace insecureSeed.$ {
-		export const insecureSeed = new $wcm.FunctionType<$root.insecureSeed.insecureSeed>('insecure-seed', [], new $wcm.TupleType<[u64, u64]>([$wcm.u64, $wcm.u64]));
+	export namespace InsecureSeed.$ {
+		export const insecureSeed = new $wcm.FunctionType<random.InsecureSeed.insecureSeed>('insecure-seed', [], new $wcm.TupleType<[u64, u64]>([$wcm.u64, $wcm.u64]));
 	}
-	export namespace insecureSeed._ {
+	export namespace InsecureSeed._ {
 		export const id = 'wasi:random/insecure-seed@0.2.0' as const;
 		export const witName = 'insecure-seed' as const;
 		export const functions: Map<string, $wcm.FunctionType> = new Map([
@@ -120,24 +120,21 @@ export namespace random {
 		export type WasmInterface = {
 			'insecure-seed': (result: ptr<[u64, u64]>) => void;
 		};
-		export function createImports(service: $root.InsecureSeed, context: $wcm.WasmContext): WasmInterface {
-			return $wcm.Imports.create<WasmInterface>(functions, undefined, service, context);
+		export namespace imports {
+			export type WasmInterface = _.WasmInterface;
 		}
-		export function filterExports(exports: object, context: $wcm.WasmContext): WasmInterface {
-			return $wcm.Exports.filter<WasmInterface>(exports, functions, undefined, id, $root._.version, context);
-		}
-		export function bindExports(wasmInterface: WasmInterface, context: $wcm.WasmContext): $root.InsecureSeed {
-			return $wcm.Exports.bind<$root.InsecureSeed>(functions, [], wasmInterface, context);
+		export namespace exports {
+			export type WasmInterface = _.WasmInterface;
 		}
 	}
 
-	export namespace insecure.$ {
-		export const getInsecureRandomBytes = new $wcm.FunctionType<$root.insecure.getInsecureRandomBytes>('get-insecure-random-bytes',[
+	export namespace Insecure.$ {
+		export const getInsecureRandomBytes = new $wcm.FunctionType<random.Insecure.getInsecureRandomBytes>('get-insecure-random-bytes',[
 			['len', $wcm.u64],
 		], new $wcm.Uint8ArrayType());
-		export const getInsecureRandomU64 = new $wcm.FunctionType<$root.insecure.getInsecureRandomU64>('get-insecure-random-u64', [], $wcm.u64);
+		export const getInsecureRandomU64 = new $wcm.FunctionType<random.Insecure.getInsecureRandomU64>('get-insecure-random-u64', [], $wcm.u64);
 	}
-	export namespace insecure._ {
+	export namespace Insecure._ {
 		export const id = 'wasi:random/insecure@0.2.0' as const;
 		export const witName = 'insecure' as const;
 		export const functions: Map<string, $wcm.FunctionType> = new Map([
@@ -148,24 +145,21 @@ export namespace random {
 			'get-insecure-random-bytes': (len: i64, result: ptr<Uint8Array>) => void;
 			'get-insecure-random-u64': () => i64;
 		};
-		export function createImports(service: $root.Insecure, context: $wcm.WasmContext): WasmInterface {
-			return $wcm.Imports.create<WasmInterface>(functions, undefined, service, context);
+		export namespace imports {
+			export type WasmInterface = _.WasmInterface;
 		}
-		export function filterExports(exports: object, context: $wcm.WasmContext): WasmInterface {
-			return $wcm.Exports.filter<WasmInterface>(exports, functions, undefined, id, $root._.version, context);
-		}
-		export function bindExports(wasmInterface: WasmInterface, context: $wcm.WasmContext): $root.Insecure {
-			return $wcm.Exports.bind<$root.Insecure>(functions, [], wasmInterface, context);
+		export namespace exports {
+			export type WasmInterface = _.WasmInterface;
 		}
 	}
 
-	export namespace random.$ {
-		export const getRandomBytes = new $wcm.FunctionType<$root.random.getRandomBytes>('get-random-bytes',[
+	export namespace Random.$ {
+		export const getRandomBytes = new $wcm.FunctionType<random.Random.getRandomBytes>('get-random-bytes',[
 			['len', $wcm.u64],
 		], new $wcm.Uint8ArrayType());
-		export const getRandomU64 = new $wcm.FunctionType<$root.random.getRandomU64>('get-random-u64', [], $wcm.u64);
+		export const getRandomU64 = new $wcm.FunctionType<random.Random.getRandomU64>('get-random-u64', [], $wcm.u64);
 	}
-	export namespace random._ {
+	export namespace Random._ {
 		export const id = 'wasi:random/random@0.2.0' as const;
 		export const witName = 'random' as const;
 		export const functions: Map<string, $wcm.FunctionType> = new Map([
@@ -176,27 +170,22 @@ export namespace random {
 			'get-random-bytes': (len: i64, result: ptr<Uint8Array>) => void;
 			'get-random-u64': () => i64;
 		};
-		export function createImports(service: $root.Random, context: $wcm.WasmContext): WasmInterface {
-			return $wcm.Imports.create<WasmInterface>(functions, undefined, service, context);
+		export namespace imports {
+			export type WasmInterface = _.WasmInterface;
 		}
-		export function filterExports(exports: object, context: $wcm.WasmContext): WasmInterface {
-			return $wcm.Exports.filter<WasmInterface>(exports, functions, undefined, id, $root._.version, context);
-		}
-		export function bindExports(wasmInterface: WasmInterface, context: $wcm.WasmContext): $root.Random {
-			return $wcm.Exports.bind<$root.Random>(functions, [], wasmInterface, context);
+		export namespace exports {
+			export type WasmInterface = _.WasmInterface;
 		}
 	}
 }
-
-import $root = random;
 
 export namespace random._ {
 	export const version = '0.2.0' as const;
 	export const id = 'wasi:random@0.2.0' as const;
 	export const witName = 'random' as const;
 	export const interfaces: Map<string, $wcm.InterfaceType> = new Map<string, $wcm.InterfaceType>([
-		['insecureSeed', insecureSeed._],
-		['insecure', insecure._],
-		['random', random._]
+		['InsecureSeed', InsecureSeed._],
+		['Insecure', Insecure._],
+		['Random', Random._]
 	]);
 }
