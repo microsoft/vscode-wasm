@@ -3582,7 +3582,9 @@ export namespace Imports {
 		const keys = Object.keys(imports);
 		for (const ifaceName of keys) {
 			const iface = imports[ifaceName];
-			if (ifaceName === '$root') {
+			if (ifaceName.startsWith('[export]')) {
+				continue;
+			} else  if (ifaceName === '$root') {
 				for (const funcName of Object.keys(iface)) {
 					result[funcName] = iface[funcName] as WasmFunction;
 				}
@@ -3783,7 +3785,7 @@ export namespace Exports {
 			for (const [name, { resource, factory }] of resources) {
 				const resourceManager = getResourceManager(resource, undefined, context);
 				const clazz = factory(wasm, context);
-				resourceManager.setProxyInfo(clazz, wasm['dtor'] as (self: number) => void);
+				resourceManager.setProxyInfo(clazz, wasm[`[dtor]${resource.witName}`] as (self: number) => void);
 				result[name] = clazz;
 			}
 		}
