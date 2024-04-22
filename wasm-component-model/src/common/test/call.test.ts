@@ -52,10 +52,10 @@ import Test = td.testData.test;
 
 class PointResourceClass extends Resource implements Types.PointResource {
 
-	public static readonly $manager: ResourceManager<Types.PointResource> = new ResourceManager.Default();
+	public static readonly $resources: ResourceManager<Types.PointResource> = new ResourceManager.Default();
 
 	constructor(public x: u32, public y: u32) {
-		super(PointResourceClass.$manager);
+		super(PointResourceClass.$resources);
 	}
 
 	public $drop(): void {

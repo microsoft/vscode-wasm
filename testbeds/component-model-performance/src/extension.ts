@@ -2,20 +2,18 @@
  *  Copyright (c) Microsoft Corporation. All rights reserved.
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
-import { WasmContext, ResourceManagers, Memory, MemoryError, type ResourceHandle, type u32 } from '@vscode/wasm-component-model';
+import { WasmContext, ResourceManager, Memory, MemoryError, type ResourceHandle, type u32, Resource } from '@vscode/wasm-component-model';
 import * as vscode from 'vscode';
 
 import { example } from './example';
 
 // Channel implementation
-class TestResourceImpl implements example.Window.TestResource {
-	public $handle: ResourceHandle | undefined;
+class TestResourceImpl extends Resource implements example.Window.TestResource {
+
+	public static readonly $resourceManager = new ResourceManager.Default<example.Window.TestResource>();
 
 	constructor() {
-		this.$handle = undefined;
-	}
-
-	public static $drop(_instance: TestResourceImpl): void {
+		super(TestResourceImpl.$resourceManager);
 	}
 
 	call(value: u32): u32 {
@@ -36,10 +34,10 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
 			}
 		}
 	}
-	const imports = example.test._.createImports(service, wasmContext)
+	const imports = example.test._.imports.create(service, wasmContext)
 	const instance = await WebAssembly.instantiate(module, imports);
 	wasmContext.initialize(new Memory.Default(instance.exports));
-	const api = example.test._.bindExports(instance.exports as example.test._.Exports, wasmContext);
+	const api = example.test._.exports.bind(instance.exports as example.test._.Exports, wasmContext);
 
 	vscode.commands.registerCommand('testbed-component-model-performance.run', () => {
 		let start = Date.now();

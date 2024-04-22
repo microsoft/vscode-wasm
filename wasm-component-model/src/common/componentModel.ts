@@ -187,7 +187,10 @@ export namespace ResourceManager {
 	}
 
 	export function from<T extends JInterface = JInterface>(obj: any | undefined): ResourceManager<T> | undefined {
-		return obj?.$manager as ResourceManager<T>;
+		if (obj === undefined) {
+			return undefined;
+		}
+		return (obj.$resources ?? obj.$resourceManager ?? obj.$manager) as ResourceManager<T>;
 	}
 }
 

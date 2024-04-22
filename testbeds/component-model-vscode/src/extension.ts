@@ -2,7 +2,7 @@
  *  Copyright (c) Microsoft Corporation. All rights reserved.
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
-import { WasmContext, ResourceManagers, Memory, MemoryError, type ResourceHandle } from '@vscode/wasm-component-model';
+import { WasmContext, Memory, type ResourceHandle, ResourceManager, Resource } from '@vscode/wasm-component-model';
 import * as vscode from 'vscode';
 
 import { api } from './api';
@@ -11,17 +11,19 @@ import OutputChannel = Types.OutputChannel;
 import TextDocument = Types.TextDocument;
 
 // Channel implementation
-class OutputChannelProxy implements OutputChannel {
-	public $handle: ResourceHandle | undefined;
+class OutputChannelProxy extends Resource implements OutputChannel {
+
+	public static $resources: ResourceManager = new ResourceManager.Default<OutputChannel>();
+
 	private channel: vscode.OutputChannel;
 
 	constructor(name: string, languageId?: string) {
-		this.$handle = undefined;
+		super(OutputChannelProxy.$resources);
 		this.channel = vscode.window.createOutputChannel(name, languageId);
 	}
 
-	public static $drop(_instance: OutputChannelProxy): void {
-		_instance.channel.dispose();
+	public $drop(): void {
+		this.channel.dispose();
 	}
 
 	name(): string {
@@ -41,17 +43,18 @@ class OutputChannelProxy implements OutputChannel {
 	}
 }
 
-class TextDocumentProxy implements TextDocument {
+class TextDocumentProxy extends Resource implements TextDocument {
 
-	public $handle: ResourceHandle | undefined;
+	public static $resources: ResourceManager = new ResourceManager.Default<TextDocument>();
+
 	private textDocument: vscode.TextDocument;
 
 	constructor(document: vscode.TextDocument) {
-		this.$handle = undefined;
+		super(TextDocumentProxy.$resources);
 		this.textDocument = document;
 	}
 
-	public static $drop(_instance: TextDocumentProxy): void {
+	public $drop(): void {
 		console.log('TextDocumentProxy.$drop');
 	}
 
@@ -96,16 +99,14 @@ class CommandRegistry {
 			disposable.dispose();
 		}
 	}
-
 }
 
 export async function activate(context: vscode.ExtensionContext): Promise<void> {
-	const filename = vscode.Uri.joinPath(context.extensionUri, 'target', 'wasm32-unknown-unknown', 'debug', 'calculator.wasm');
+	const filename = vscode.Uri.joinPath(context.extensionUri, 'target', 'wasm32-unknown-unknown', 'debug', 'example.wasm');
 	const bits = await vscode.workspace.fs.readFile(filename);
 	const module = await WebAssembly.compile(bits);
 	const commandRegistry = new CommandRegistry();
 	const wasmContext: WasmContext.Default = new WasmContext.Default();
-	let cachedTextDocuments: TextDocumentProxy[] | undefined;
 	const service: api.all.Imports = {
 		types: {
 			OutputChannel: OutputChannelProxy,
@@ -120,10 +121,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
 			registerOnDidChangeTextDocument: () => {
 			},
 			textDocuments: () => {
-				if (cachedTextDocuments === undefined) {
-					cachedTextDocuments = vscode.workspace.textDocuments.map(document => new TextDocumentProxy(document));
-				}
-				return cachedTextDocuments;
+				return vscode.workspace.textDocuments.map(document => new TextDocumentProxy(document));
 			}
 		},
 		commands: {
@@ -132,10 +130,10 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
 			}
 		}
 	}
-	const imports = api.all._.createImports(service, wasmContext)
+	const imports = api.all._.imports.create(service, wasmContext)
 	const instance = await WebAssembly.instantiate(module, imports);
 	wasmContext.initialize(new Memory.Default(instance.exports));
-	const exports = api.all._.bindExports(instance.exports as api.all._.Exports, wasmContext);
+	const exports = api.all._.exports.bind(instance.exports as api.all._.Exports, wasmContext);
 	commandRegistry.initialize(exports.callbacks.executeCommand);
 	exports.activate();
 }

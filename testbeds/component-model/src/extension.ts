@@ -17,7 +17,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
 	const wasmContext: WasmContext.Default = new WasmContext.Default();
 	const instance = await WebAssembly.instantiate(module, {});
 	wasmContext.initialize(new Memory.Default(instance.exports));
-	const api = calculator._.bindExports(instance.exports as calculator._.Exports, wasmContext);
+	const api = calculator._.exports.bind(instance.exports as calculator._.Exports, wasmContext);
 
 	vscode.commands.registerCommand('testbed-component-model.run', () => {
 		console.log(`Add ${api.calc(Types.Operation.Add({ left: 1, right: 2}))}`);
