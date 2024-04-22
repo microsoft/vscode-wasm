@@ -35,8 +35,8 @@ export interface ResourceManager<T extends JInterface = JInterface> {
 
 	// Resource management
 	setProxyInfo(ctor: (new (handleTag: Symbol, handle: ResourceHandle<T>) => T), dtor: (self: ResourceHandle<T>) => void): void;
+	hasResource(handle: ResourceHandle<T>): boolean;
 	getResource(handle: ResourceHandle<T>): T;
-	reserveHandle(): ResourceHandle<T>;
 	registerResource(resource: T, handle?: ResourceHandle<T>): ResourceHandle<T>;
 	registerProxy(proxy: T): void;
 	removeResource(value: ResourceHandle<T> | T): void;
@@ -101,6 +101,10 @@ export namespace ResourceManager {
 			this.dtor = dtor;
 		}
 
+		public hasResource(handle: ResourceHandle<T>): boolean {
+			return this.h2r.has(handle);
+		}
+
 		public getResource(handle: ResourceHandle<T>): T {
 			const value = this.h2r.get(handle);
 			if (value !== undefined) {
@@ -129,12 +133,20 @@ export namespace ResourceManager {
 			}
 		}
 
-		public reserveHandle(): ResourceHandle<T> {
-			return this.handleCounter++;
-		}
-
-		public registerResource(resource: T): ResourceHandle<T> {
-			const handle = this.handleCounter++;
+		public registerResource(resource: T, handle?: ResourceHandle<T>): ResourceHandle<T> {
+			if (handle !== undefined) {
+				if (handle >= this.handleCounter) {
+					throw new ComponentModelTrap(`Handle ${handle} is out of bounds. Current handle counter is ${this.handleCounter}.`);
+				}
+				if (this.h2r.has(handle)) {
+					throw new ComponentModelTrap(`Handle ${handle} is already registered.`);
+				}
+				if (this.handleTable.has(handle)) {
+					throw new ComponentModelTrap(`Handle ${handle} is already in use as a proxy handle.`);
+				}
+			} else {
+				handle = this.handleCounter++;
+			}
 			this.h2r.set(handle, resource);
 			return handle;
 		}
@@ -152,7 +164,7 @@ export namespace ResourceManager {
 			const handle = typeof value === 'number' ? value : value.$handle();
 			const resource = this.h2r.get(handle);
 			if (resource === undefined) {
-				throw new ComponentModelTrap(`Unknown resource handle ${handle}`);
+				throw new ComponentModelTrap(`Unknown resource handle ${handle}.`);
 			}
 			if (resource instanceof WeakRef) {
 				throw new ComponentModelTrap(`Proxy resources should not be removed manually. They are removed via the GC.`);

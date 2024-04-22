@@ -4,7 +4,7 @@
  *--------------------------------------------------------------------------------------------*/
 import * as vscode from 'vscode';
 
-import { WasmContext, ResourceManagers, Memory, MemoryError, type ResourceHandle, ComponentModelTrap, HandleTables } from '@vscode/wasm-component-model';
+import { WasmContext, ResourceManagers, Memory, MemoryError, type ResourceHandle, Resource, ResourceManager } from '@vscode/wasm-component-model';
 import { RAL } from '@vscode/wasm-kit';
 
 import { api } from './api';
@@ -43,12 +43,14 @@ interface Extension {
 }
 
 // Channel implementation
-class OutputChannelResource implements OutputChannel {
-	public $handle: ResourceHandle | undefined;
+class OutputChannelResource extends Resource implements OutputChannel {
+
+	public static $resources: ResourceManager<OutputChannel> = new ResourceManager.Default();
+
 	private channel: vscode.OutputChannel;
 
 	constructor(name: string, languageId?: string) {
-		this.$handle = undefined;
+		super(OutputChannelResource.$resources);
 		this.channel = vscode.window.createOutputChannel(name, languageId);
 	}
 
@@ -73,59 +75,44 @@ class OutputChannelResource implements OutputChannel {
 	}
 }
 
-class TextDocumentResource implements TextDocument {
+class TextDocumentResourceManager extends ResourceManager.Default<TextDocumentResource> {
 
-	private static handleCounter: number = 1;
-	private static readonly handle2Resource: Map<ResourceHandle<TextDocumentResource>, TextDocumentResource> = new Map();
-	private static readonly document2Handle: WeakMap<vscode.TextDocument, ResourceHandle<TextDocumentResource>> = new WeakMap();
+	private readonly document2Handle: WeakMap<vscode.TextDocument, ResourceHandle<TextDocumentResource>> = new WeakMap();
 
-	public static $handle(value: TextDocumentResource): ResourceHandle {
-		return value.$handle;
-	}
-
-	public static $resource(handle: ResourceHandle<TextDocumentResource>): TextDocumentResource {
-		const result = TextDocumentResource.handle2Resource.get(handle);
-		if (result === undefined) {
-			throw new ComponentModelTrap(`No TextDocumentProxy found for handle ${handle}`);
-		}
-		return result;
-	}
-
-	public static $drop(handle: ResourceHandle<TextDocumentResource>) {
-		const proxy = TextDocumentResource.handle2Resource.get(handle);
-		if (proxy === undefined) {
-			throw new ComponentModelTrap(`No TextDocumentProxy found for handle ${handle}`);
-		}
-		TextDocumentResource.handle2Resource.delete(handle);
-	}
-
-	public static getOrCreate(document: vscode.TextDocument): TextDocumentResource {
-		const handle = TextDocumentResource.document2Handle.get(document);
+	public getOrCreate(document: vscode.TextDocument): TextDocumentResource {
+		const handle = this.document2Handle.get(document);
 		if (handle !== undefined) {
-			let resource = TextDocumentResource.handle2Resource.get(handle);
-			if (resource === undefined) {
-				resource = new TextDocumentResource(handle, document);
-				TextDocumentResource.handle2Resource.set(handle, resource);
+			if (this.hasResource(handle)) {
+				return this.getResource(handle);
+			} else {
+				const resource = new TextDocumentResource(document, handle);
+				this.registerResource(resource, handle);
+				return resource;
 			}
-			return resource;
 		} else {
-			const handle = TextDocumentResource.handleCounter++;
-			const resource = new TextDocumentResource(handle, document);
-			TextDocumentResource.handle2Resource.set(handle, resource);
-			TextDocumentResource.document2Handle.set(document, handle);
+			const resource = new TextDocumentResource(document);
+			this.document2Handle.set(document, resource.$handle());
 			return resource;
 		}
 	}
+}
+
+class TextDocumentResource extends Resource implements TextDocument {
+
+	public static readonly $resources: TextDocumentResourceManager = new TextDocumentResourceManager();
 
 	public static textDocument(document: Types.TextDocument): vscode.TextDocument {
 		return (document as TextDocumentResource).textDocument;
 	}
 
-	public $handle: ResourceHandle;
 	private textDocument: vscode.TextDocument;
 
-	private constructor(handle: ResourceHandle, document: vscode.TextDocument) {
-		this.$handle = handle;
+	public constructor(document: vscode.TextDocument, handle?: ResourceHandle<TextDocumentResource>) {
+		if (handle !== undefined) {
+			super(handle);
+		} else {
+			super(TextDocumentResource.$resources);
+		}
 		this.textDocument = document;
 	}
 
@@ -146,12 +133,14 @@ class TextDocumentResource implements TextDocument {
 	}
 }
 
-class TextDocumentChangeEventResource implements Types.TextDocumentChangeEvent {
+class TextDocumentChangeEventResource extends Resource implements Types.TextDocumentChangeEvent {
+
+	public static readonly $resources: ResourceManager<Types.TextDocumentChangeEvent> = new ResourceManager.Default();
 
 	private readonly event: vscode.TextDocumentChangeEvent;
-	public $handle?: number | undefined;
 
 	constructor(event: vscode.TextDocumentChangeEvent) {
+		super(TextDocumentChangeEventResource.$resources);
 		this.event = event;
 	}
 
@@ -159,7 +148,7 @@ class TextDocumentChangeEventResource implements Types.TextDocumentChangeEvent {
 	}
 
 	document(): Types.TextDocument {
-		return TextDocumentResource.getOrCreate(this.event.document);
+		return TextDocumentResource.$resources.getOrCreate(this.event.document);
 	}
 
 	contentChanges(): Types.TextDocumentContentChangeEvent[] {
@@ -213,7 +202,6 @@ export async function activate(_context: vscode.ExtensionContext, module: WebAss
 	const wasmContext: WasmContext = {
 		options: { encoding: 'utf-8' },
 		resources: new ResourceManagers.Default(),
-		handles: new HandleTables.Default(),
 		getMemory: () => {
 			if (memory === undefined) {
 				throw new MemoryError(`Memory not yet initialized`);
@@ -261,7 +249,7 @@ export async function activate(_context: vscode.ExtensionContext, module: WebAss
 				}
 			},
 			textDocuments: () => {
-				return vscode.workspace.textDocuments.map(document => TextDocumentResource.getOrCreate(document));
+				return vscode.workspace.textDocuments.map(document => TextDocumentResource.$resources.getOrCreate(document));
 			}
 		},
 		commands: {
@@ -284,10 +272,10 @@ export async function activate(_context: vscode.ExtensionContext, module: WebAss
 			}
 		}
 	};
-	const imports = api.all._.createImports(service, wasmContext);
+	const imports = api.all._.imports.create(service, wasmContext);
 	instance = await RAL().WebAssembly.instantiate(module, imports);
 	memory = new Memory.Default(instance.exports);
-	const $exports = api.all._.bindExports(instance.exports as api.all._.Exports, wasmContext);
+	const $exports = api.all._.exports.bind(instance.exports as api.all._.Exports, wasmContext);
 	commandRegistry.initialize($exports.callbacks.executeCommand);
 	const extension = instance.exports as Extension;
 	if (typeof extension.activate === 'function') {

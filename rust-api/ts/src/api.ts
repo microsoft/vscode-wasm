@@ -112,9 +112,7 @@ export namespace api {
 		export type DocumentSelector = DocumentSelector.Many | DocumentSelector.Single;
 
 		export namespace TextDocument {
-			export interface Interface {
-				$handle?: $wcm.ResourceHandle;
-
+			export interface Interface extends $wcm.JInterface {
 				uri(): string;
 
 				languageId(): string;
@@ -127,23 +125,11 @@ export namespace api {
 			};
 			export type Class = Statics & {
 			};
-			export namespace imports {
-				export interface Interface extends TextDocument.Interface {
-					$drop(): void;
-				}
-			}
-			export namespace exports {
-				export interface Interface extends TextDocument.Interface {
-					destructor(): void;
-				}
-			}
 		}
 		export type TextDocument = TextDocument.Interface;
 
 		export namespace TextDocumentChangeEvent {
-			export interface Interface {
-				$handle?: $wcm.ResourceHandle;
-
+			export interface Interface extends $wcm.JInterface {
 				document(): own<TextDocument>;
 
 				contentChanges(): TextDocumentContentChangeEvent[];
@@ -154,23 +140,11 @@ export namespace api {
 			};
 			export type Class = Statics & {
 			};
-			export namespace imports {
-				export interface Interface extends TextDocumentChangeEvent.Interface {
-					$drop(): void;
-				}
-			}
-			export namespace exports {
-				export interface Interface extends TextDocumentChangeEvent.Interface {
-					destructor(): void;
-				}
-			}
 		}
 		export type TextDocumentChangeEvent = TextDocumentChangeEvent.Interface;
 
 		export namespace OutputChannel {
-			export interface Interface {
-				$handle?: $wcm.ResourceHandle;
-
+			export interface Interface extends $wcm.JInterface {
 				name(): string;
 
 				append(value: string): void;
@@ -185,23 +159,8 @@ export namespace api {
 			};
 			export type Class = Statics & {
 			};
-			export namespace imports {
-				export interface Interface extends OutputChannel.Interface {
-					$drop(): void;
-				}
-			}
-			export namespace exports {
-				export interface Interface extends OutputChannel.Interface {
-					destructor(): void;
-				}
-			}
 		}
 		export type OutputChannel = OutputChannel.Interface;
-		export type Exports = {
-			TextDocument: TextDocument.exports.Interface;
-			TextDocumentChangeEvent: TextDocumentChangeEvent.exports.Interface;
-			OutputChannel: OutputChannel.exports.Interface;
-		}
 	}
 	export type Types = {
 		TextDocument: Types.TextDocument.Class;
@@ -333,23 +292,6 @@ export namespace api {
 	export namespace Types._ {
 		export const id = 'host:api/types' as const;
 		export const witName = 'types' as const;
-		export const types: Map<string, $wcm.GenericComponentModelType> = new Map<string, $wcm.GenericComponentModelType>([
-			['Position', $.Position],
-			['Range', $.Range],
-			['TextDocumentContentChangeEvent', $.TextDocumentContentChangeEvent],
-			['TextDocumentChangeReason', $.TextDocumentChangeReason],
-			['GlobPattern', $.GlobPattern],
-			['DocumentFilter', $.DocumentFilter],
-			['DocumentSelector', $.DocumentSelector],
-			['TextDocument', $.TextDocument],
-			['TextDocumentChangeEvent', $.TextDocumentChangeEvent],
-			['OutputChannel', $.OutputChannel]
-		]);
-		export const resources: Map<string, $wcm.ResourceType> = new Map<string, $wcm.ResourceType>([
-			['TextDocument', $.TextDocument],
-			['TextDocumentChangeEvent', $.TextDocumentChangeEvent],
-			['OutputChannel', $.OutputChannel]
-		]);
 		export namespace TextDocument {
 			export type WasmInterface = {
 				'[method]text-document.uri': (self: i32, result: ptr<string>) => void;
@@ -368,15 +310,11 @@ export namespace api {
 			}
 			export namespace exports {
 				export type WasmInterface = TextDocument.WasmInterface & { '[dtor]text-document': (self: i32) => void };
-				export type ObjectModule = TextDocument.ObjectModule & { $destructor(self: TextDocument): void };
 				class Impl extends $wcm.Resource implements api.Types.TextDocument.Interface {
 					private readonly _om: ObjectModule;
-					constructor(om: ObjectModule) {
-						super();
+					constructor(_handleTag: Symbol, handle: $wcm.ResourceHandle, om: ObjectModule) {
+						super(handle);
 						this._om = om;
-					}
-					public $destructor(): void {
-						return this._om.$destructor(this);
 					}
 					public uri(): string {
 						return this._om.uri(this);
@@ -394,9 +332,11 @@ export namespace api {
 				export function Class(wasmInterface: WasmInterface, context: $wcm.WasmContext): api.Types.TextDocument.Class {
 					const resource = api.Types.$.TextDocument;
 					const om: ObjectModule = $wcm.Module.createObjectModule(resource, wasmInterface, context);
+					const rm: $wcm.ResourceManager = context.resources.ensure('host:api/types/text-document');
 					return class extends Impl {
-						constructor() {
-							super(om);
+						constructor(handleTag: Symbol, handle: $wcm.ResourceHandle) {
+							super(handleTag, handle, om);
+							rm.registerProxy(this);
 						}
 					};
 				}
@@ -418,15 +358,11 @@ export namespace api {
 			}
 			export namespace exports {
 				export type WasmInterface = TextDocumentChangeEvent.WasmInterface & { '[dtor]text-document-change-event': (self: i32) => void };
-				export type ObjectModule = TextDocumentChangeEvent.ObjectModule & { $destructor(self: TextDocumentChangeEvent): void };
 				class Impl extends $wcm.Resource implements api.Types.TextDocumentChangeEvent.Interface {
 					private readonly _om: ObjectModule;
-					constructor(om: ObjectModule) {
-						super();
+					constructor(_handleTag: Symbol, handle: $wcm.ResourceHandle, om: ObjectModule) {
+						super(handle);
 						this._om = om;
-					}
-					public $destructor(): void {
-						return this._om.$destructor(this);
 					}
 					public document(): own<TextDocument> {
 						return this._om.document(this);
@@ -441,9 +377,11 @@ export namespace api {
 				export function Class(wasmInterface: WasmInterface, context: $wcm.WasmContext): api.Types.TextDocumentChangeEvent.Class {
 					const resource = api.Types.$.TextDocumentChangeEvent;
 					const om: ObjectModule = $wcm.Module.createObjectModule(resource, wasmInterface, context);
+					const rm: $wcm.ResourceManager = context.resources.ensure('host:api/types/text-document-change-event');
 					return class extends Impl {
-						constructor() {
-							super(om);
+						constructor(handleTag: Symbol, handle: $wcm.ResourceHandle) {
+							super(handleTag, handle, om);
+							rm.registerProxy(this);
 						}
 					};
 				}
@@ -469,15 +407,11 @@ export namespace api {
 			}
 			export namespace exports {
 				export type WasmInterface = OutputChannel.WasmInterface & { '[dtor]output-channel': (self: i32) => void };
-				export type ObjectModule = OutputChannel.ObjectModule & { $destructor(self: OutputChannel): void };
 				class Impl extends $wcm.Resource implements api.Types.OutputChannel.Interface {
 					private readonly _om: ObjectModule;
-					constructor(om: ObjectModule) {
-						super();
+					constructor(_handleTag: Symbol, handle: $wcm.ResourceHandle, om: ObjectModule) {
+						super(handle);
 						this._om = om;
-					}
-					public $destructor(): void {
-						return this._om.$destructor(this);
 					}
 					public name(): string {
 						return this._om.name(this);
@@ -498,33 +432,52 @@ export namespace api {
 				export function Class(wasmInterface: WasmInterface, context: $wcm.WasmContext): api.Types.OutputChannel.Class {
 					const resource = api.Types.$.OutputChannel;
 					const om: ObjectModule = $wcm.Module.createObjectModule(resource, wasmInterface, context);
+					const rm: $wcm.ResourceManager = context.resources.ensure('host:api/types/output-channel');
 					return class extends Impl {
-						constructor() {
-							super(om);
+						constructor(handleTag: Symbol, handle: $wcm.ResourceHandle) {
+							super(handleTag, handle, om);
+							rm.registerProxy(this);
 						}
 					};
 				}
 			}
 		}
+		export const types: Map<string, $wcm.GenericComponentModelType> = new Map<string, $wcm.GenericComponentModelType>([
+			['Position', $.Position],
+			['Range', $.Range],
+			['TextDocumentContentChangeEvent', $.TextDocumentContentChangeEvent],
+			['TextDocumentChangeReason', $.TextDocumentChangeReason],
+			['GlobPattern', $.GlobPattern],
+			['DocumentFilter', $.DocumentFilter],
+			['DocumentSelector', $.DocumentSelector],
+			['TextDocument', $.TextDocument],
+			['TextDocumentChangeEvent', $.TextDocumentChangeEvent],
+			['OutputChannel', $.OutputChannel]
+		]);
+		export const resources: Map<string, { resource: $wcm.ResourceType; factory: $wcm.ClassFactory<any>}> = new Map<string, { resource: $wcm.ResourceType; factory: $wcm.ClassFactory<any>}>([
+			['TextDocument', { resource: $.TextDocument, factory: TextDocument.exports.Class }],
+			['TextDocumentChangeEvent', { resource: $.TextDocumentChangeEvent, factory: TextDocumentChangeEvent.exports.Class }],
+			['OutputChannel', { resource: $.OutputChannel, factory: OutputChannel.exports.Class }]
+		]);
 		export type WasmInterface = {
 		};
 		export namespace imports {
 			export type WasmInterface = _.WasmInterface & TextDocument.imports.WasmInterface & TextDocumentChangeEvent.imports.WasmInterface & OutputChannel.imports.WasmInterface;
-			export function create(service: api.Types, context: $wcm.WasmContext): WasmInterface {
-				return $wcm.Imports.create<WasmInterface>(undefined, resources, service, context);
-			}
 		}
 		export namespace exports {
 			export type WasmInterface = _.WasmInterface & TextDocument.exports.WasmInterface & TextDocumentChangeEvent.exports.WasmInterface & OutputChannel.exports.WasmInterface;
-			export function filter(exports: object, context: $wcm.WasmContext): WasmInterface {
-				return $wcm.Exports.filter<WasmInterface>(exports, undefined, resources, id, undefined, context);
-			}
-			const resources = [['TextDocument', $.TextDocument, TextDocument.exports.Class], ['TextDocumentChangeEvent', $.TextDocumentChangeEvent, TextDocumentChangeEvent.exports.Class], ['OutputChannel', $.OutputChannel, OutputChannel.exports.Class]];
-			export function bind(wasmInterface: WasmInterface, context: $wcm.WasmContext): api.Types {
-				return $wcm.Exports.bind<api.Types>(undefined, resources, wasmInterface, context);
-			}
-			export function loop(wasmInterface: _.imports.WasmInterface, context: $wcm.WasmContext): api.Types {
-				return $wcm.Exports.loop<api.Types>(undefined, resources, wasmInterface, context);
+			export namespace imports {
+				export type WasmInterface = {
+					'[resource-new]text-document': (rep: i32) => i32;
+					'[resource-rep]text-document': (handle: i32) => i32;
+					'[resource-drop]text-document': (handle: i32) => i32;
+					'[resource-new]text-document-change-event': (rep: i32) => i32;
+					'[resource-rep]text-document-change-event': (handle: i32) => i32;
+					'[resource-drop]text-document-change-event': (handle: i32) => i32;
+					'[resource-new]output-channel': (rep: i32) => i32;
+					'[resource-rep]output-channel': (handle: i32) => i32;
+					'[resource-drop]output-channel': (handle: i32) => i32;
+				};
 			}
 		}
 	}
@@ -549,23 +502,10 @@ export namespace api {
 			'unregister-command': (command_ptr: i32, command_len: i32) => void;
 		};
 		export namespace imports {
-			export WasmInterface = _.WasmInterface;
-			export function create(service: api.Commands, context: $wcm.WasmContext): WasmInterface {
-				return $wcm.Imports.create<WasmInterface>(functions, undefined, service, context);
-			}
+			export type WasmInterface = _.WasmInterface;
 		}
 		export namespace exports {
-			export WasmInterface = _.WasmInterface;
-			export function filter(exports: object, context: $wcm.WasmContext): WasmInterface {
-				return $wcm.Exports.filter<WasmInterface>(exports, functions, undefined, id, undefined, context);
-			}
-			const resources = [];
-			export function bind(wasmInterface: WasmInterface, context: $wcm.WasmContext): api.Commands {
-				return $wcm.Exports.bind<api.Commands>(functions, resources, wasmInterface, context);
-			}
-			export function loop(wasmInterface: _.imports.WasmInterface, context: $wcm.WasmContext): api.Commands {
-				return $wcm.Exports.loop<api.Commands>(functions, resources, wasmInterface, context);
-			}
+			export type WasmInterface = _.WasmInterface;
 		}
 	}
 
@@ -591,23 +531,10 @@ export namespace api {
 			'match-selector': (selector_DocumentSelector_case: i32, selector_DocumentSelector_0: i32, selector_DocumentSelector_1: i32, selector_DocumentSelector_2: i32, selector_DocumentSelector_3: i32, selector_DocumentSelector_4: i32, selector_DocumentSelector_5: i32, selector_DocumentSelector_6: i32, selector_DocumentSelector_7: i32, selector_DocumentSelector_8: i32, selector_DocumentSelector_9: i32, selector_DocumentSelector_10: i32, selector_DocumentSelector_11: i32, selector_DocumentSelector_12: i32, document: i32) => i32;
 		};
 		export namespace imports {
-			export WasmInterface = _.WasmInterface;
-			export function create(service: api.Languages, context: $wcm.WasmContext): WasmInterface {
-				return $wcm.Imports.create<WasmInterface>(functions, undefined, service, context);
-			}
+			export type WasmInterface = _.WasmInterface;
 		}
 		export namespace exports {
-			export WasmInterface = _.WasmInterface;
-			export function filter(exports: object, context: $wcm.WasmContext): WasmInterface {
-				return $wcm.Exports.filter<WasmInterface>(exports, functions, undefined, id, undefined, context);
-			}
-			const resources = [];
-			export function bind(wasmInterface: WasmInterface, context: $wcm.WasmContext): api.Languages {
-				return $wcm.Exports.bind<api.Languages>(functions, resources, wasmInterface, context);
-			}
-			export function loop(wasmInterface: _.imports.WasmInterface, context: $wcm.WasmContext): api.Languages {
-				return $wcm.Exports.loop<api.Languages>(functions, resources, wasmInterface, context);
-			}
+			export type WasmInterface = _.WasmInterface;
 		}
 	}
 
@@ -631,23 +558,10 @@ export namespace api {
 			'create-output-channel': (name_ptr: i32, name_len: i32, languageId_case: i32, languageId_option_ptr: i32, languageId_option_len: i32) => i32;
 		};
 		export namespace imports {
-			export WasmInterface = _.WasmInterface;
-			export function create(service: api.Window, context: $wcm.WasmContext): WasmInterface {
-				return $wcm.Imports.create<WasmInterface>(functions, undefined, service, context);
-			}
+			export type WasmInterface = _.WasmInterface;
 		}
 		export namespace exports {
-			export WasmInterface = _.WasmInterface;
-			export function filter(exports: object, context: $wcm.WasmContext): WasmInterface {
-				return $wcm.Exports.filter<WasmInterface>(exports, functions, undefined, id, undefined, context);
-			}
-			const resources = [];
-			export function bind(wasmInterface: WasmInterface, context: $wcm.WasmContext): api.Window {
-				return $wcm.Exports.bind<api.Window>(functions, resources, wasmInterface, context);
-			}
-			export function loop(wasmInterface: _.imports.WasmInterface, context: $wcm.WasmContext): api.Window {
-				return $wcm.Exports.loop<api.Window>(functions, resources, wasmInterface, context);
-			}
+			export type WasmInterface = _.WasmInterface;
 		}
 	}
 
@@ -674,23 +588,10 @@ export namespace api {
 			'unregister-on-did-change-text-document': () => void;
 		};
 		export namespace imports {
-			export WasmInterface = _.WasmInterface;
-			export function create(service: api.Workspace, context: $wcm.WasmContext): WasmInterface {
-				return $wcm.Imports.create<WasmInterface>(functions, undefined, service, context);
-			}
+			export type WasmInterface = _.WasmInterface;
 		}
 		export namespace exports {
-			export WasmInterface = _.WasmInterface;
-			export function filter(exports: object, context: $wcm.WasmContext): WasmInterface {
-				return $wcm.Exports.filter<WasmInterface>(exports, functions, undefined, id, undefined, context);
-			}
-			const resources = [];
-			export function bind(wasmInterface: WasmInterface, context: $wcm.WasmContext): api.Workspace {
-				return $wcm.Exports.bind<api.Workspace>(functions, resources, wasmInterface, context);
-			}
-			export function loop(wasmInterface: _.imports.WasmInterface, context: $wcm.WasmContext): api.Workspace {
-				return $wcm.Exports.loop<api.Workspace>(functions, resources, wasmInterface, context);
-			}
+			export type WasmInterface = _.WasmInterface;
 		}
 	}
 
@@ -718,23 +619,10 @@ export namespace api {
 			'execute-command': (command_ptr: i32, command_len: i32) => void;
 		};
 		export namespace imports {
-			export WasmInterface = _.WasmInterface;
-			export function create(service: api.Callbacks, context: $wcm.WasmContext): WasmInterface {
-				return $wcm.Imports.create<WasmInterface>(functions, undefined, service, context);
-			}
+			export type WasmInterface = _.WasmInterface;
 		}
 		export namespace exports {
-			export WasmInterface = _.WasmInterface;
-			export function filter(exports: object, context: $wcm.WasmContext): WasmInterface {
-				return $wcm.Exports.filter<WasmInterface>(exports, functions, undefined, id, undefined, context);
-			}
-			const resources = [];
-			export function bind(wasmInterface: WasmInterface, context: $wcm.WasmContext): api.Callbacks {
-				return $wcm.Exports.bind<api.Callbacks>(functions, resources, wasmInterface, context);
-			}
-			export function loop(wasmInterface: _.imports.WasmInterface, context: $wcm.WasmContext): api.Callbacks {
-				return $wcm.Exports.loop<api.Callbacks>(functions, resources, wasmInterface, context);
-			}
+			export type WasmInterface = _.WasmInterface;
 		}
 	}
 	export namespace all.$ {
@@ -742,6 +630,13 @@ export namespace api {
 	export namespace all._ {
 		export const id = 'host:api/all' as const;
 		export const witName = 'all' as const;
+		export type Imports = {
+			'host:api/types': api.Types._.imports.WasmInterface;
+			'host:api/workspace': api.Workspace._.imports.WasmInterface;
+			'host:api/commands': api.Commands._.imports.WasmInterface;
+			'host:api/window': api.Window._.imports.WasmInterface;
+			'host:api/languages': api.Languages._.imports.WasmInterface;
+		};
 		export namespace imports {
 			export const interfaces: Map<string, $wcm.InterfaceType> = new Map<string, $wcm.InterfaceType>([
 				['Types', Types._],
@@ -751,36 +646,24 @@ export namespace api {
 				['Languages', Languages._]
 			]);
 			export function create(service: all.Imports, context: $wcm.WasmContext): Imports {
-				const result: Imports = Object.create(null);
-				result['host:api/types'] = api.Types._.imports.create(service.types, context);
-				result['host:api/workspace'] = api.Workspace._.imports.create(service.workspace, context);
-				result['host:api/commands'] = api.Commands._.imports.create(service.commands, context);
-				result['host:api/window'] = api.Window._.imports.create(service.window, context);
-				result['host:api/languages'] = api.Languages._.imports.create(service.languages, context);
-				return result;
+				return $wcm.Imports.create<Imports>(_, service, context);
 			}
-		}
-		export type Imports = {
-			'host:api/types': api.Types._.imports.WasmInterface;
-			'host:api/workspace': api.Workspace._.imports.WasmInterface;
-			'host:api/commands': api.Commands._.imports.WasmInterface;
-			'host:api/window': api.Window._.imports.WasmInterface;
-			'host:api/languages': api.Languages._.imports.WasmInterface;
-		};
-		export namespace exports {
-			export const interfaces: Map<string, $wcm.InterfaceType> = new Map<string, $wcm.InterfaceType>([
-				['Callbacks', Callbacks._]
-			]);
-			export function bind(exports: Exports, context: $wcm.WasmContext): all.Exports {
-				const result: all.Exports = Object.create(null);
-				result.callbacks = api.Callbacks._.exports.bind(api.Callbacks._.exports.filter(exports, context), context);
-				return result;
+			export function loop(service: all.Imports, context: $wcm.WasmContext): all.Imports {
+				return $wcm.Imports.loop(_, service, context);
 			}
 		}
 		export type Exports = {
 			'host:api/callbacks#did-change-text-document': (event: i32) => void;
 			'host:api/callbacks#execute-command': (command_ptr: i32, command_len: i32) => void;
 		};
+		export namespace exports {
+			export const interfaces: Map<string, $wcm.InterfaceType> = new Map<string, $wcm.InterfaceType>([
+				['Callbacks', Callbacks._]
+			]);
+			export function bind(exports: Exports, context: $wcm.WasmContext): all.Exports {
+				return $wcm.Exports.bind<all.Exports>(_, exports, context);
+			}
+		}
 	}
 }
 
