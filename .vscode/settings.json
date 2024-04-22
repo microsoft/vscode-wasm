@@ -236,7 +236,8 @@
 		"./testbeds/component-model/Cargo.toml",
 		"./testbeds/component-model-performance/Cargo.toml",
 		"./testbeds/component-model-vscode/Cargo.toml",
-		"./testbeds/component-model-vscode-2/Cargo.toml"
+		"./testbeds/component-model-vscode-2/Cargo.toml",
+		"./tmp/calculator/Cargo.toml"
 	],
 	"typescript.tsserver.experimental.useVsCodeWatcher": true,
 }

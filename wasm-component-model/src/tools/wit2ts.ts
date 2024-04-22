@@ -2158,10 +2158,7 @@ class WorldEmitter extends Emitter {
 			code.push(`};`);
 		}
 
-		if (this.imports.funcEmitters.length + this.imports.interfaceEmitters.length  === 0) {
-			code.push(`export const imports = {};`);
-			code.push(`export type Imports = {};`);
-		} else {
+		if (this.imports.funcEmitters.length + this.imports.interfaceEmitters.length + this.exports.interfaceEmitters.reduce((acc, emitter) => acc + (emitter.hasResources() ? 1 : 0), 0) > 0) {
 			code.push(`export type Imports = {`);
 			code.increaseIndent();
 			if (this.imports.funcEmitters.length > 0) {
@@ -2228,10 +2225,7 @@ class WorldEmitter extends Emitter {
 		}
 
 
-		if (this.exports.funcEmitters.length + this.exports.interfaceEmitters.length  === 0) {
-			code.push(`export const exports = {};`);
-			code.push(`export type Exports = {};`);
-		} else {
+		if (this.exports.funcEmitters.length + this.exports.interfaceEmitters.length  > 0) {
 			code.push(`export type Exports = {`);
 			code.increaseIndent();
 			for (const emitter of this.exports.funcEmitters) {
