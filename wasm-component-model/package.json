@@ -59,7 +59,7 @@
 		"clean": "rimraf lib",
 		"lint": "eslint --ext ts src",
 		"test": "npm run test:desktop",
-		"test:desktop": "node --expose-gc ../node_modules/.bin/mocha",
+		"test:desktop": "mocha",
 		"all": "npm run clean && npm run compile && npm run lint",
 		"all:publish": "git clean -xfd . && npm install && npm run compile:publish && npm run lint && npm test",
 		"generate:testCase": "wasm-tools component wit --json ./src/common/test/test-data.wit | node ./lib/tools/main.js --stdin --noMain --outDir ./src/common/test"

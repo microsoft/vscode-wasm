@@ -168,7 +168,7 @@ suite ('point-resource', () => {
 		if (typeof global?.gc === 'function') {
 			point = undefined;
 			global.gc();
-			// assert.throws(() => pointResourceManager.getResource(handle));
+			assert.throws(() => pointResourceManager.getResource(handle));
 		}
 	});
 });
