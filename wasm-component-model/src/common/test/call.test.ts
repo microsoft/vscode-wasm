@@ -55,9 +55,7 @@ class PointResourceClass extends Resource implements Types.PointResource {
 	public static readonly $manager: ResourceManager<Types.PointResource> = new ResourceManager.Default();
 
 	constructor(public x: u32, public y: u32) {
-		const handle = PointResourceClass.$manager.reserveHandle();
-		super(handle);
-		PointResourceClass.$manager.registerResource(this, handle);
+		super(PointResourceClass.$manager);
 	}
 
 	public $drop(): void {
@@ -144,6 +142,7 @@ suite('point', () => {
 	});
 });
 
+declare const global: { gc?: () => void } | undefined;
 suite ('point-resource', () => {
 	const host = Test._.imports.create(worldImpl, context)['vscode:test-data/types'];
 	const service = Test._.imports.loop(worldImpl, context).types;
@@ -159,15 +158,18 @@ suite ('point-resource', () => {
 	});
 	test('service:call', () => {
 		const pointResourceManager = context.resources.ensure('vscode:test-data/types/point-resource');
-		const point = new service.PointResource(1, 2);
+		let point: Types.PointResource | undefined = new service.PointResource(1, 2);
 		const handle = point.$handle();
 		assert.ok(typeof handle === 'number');
 		assert.ok(pointResourceManager.getResource(handle) !== undefined);
 		assert.strictEqual(point.getX(), 1);
 		assert.strictEqual(point.getY(), 2);
 		assert.strictEqual(point.add(), 3);
-
-		// assert.throws(() => pointResourceManager.getResource(handle));
+		if (typeof global?.gc === 'function') {
+			point = undefined;
+			global.gc();
+			// assert.throws(() => pointResourceManager.getResource(handle));
+		}
 	});
 });
 

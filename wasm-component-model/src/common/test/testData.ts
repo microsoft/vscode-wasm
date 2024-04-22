@@ -320,11 +320,13 @@ export namespace testData {
 				export function Class(wasmInterface: WasmInterface, context: $wcm.WasmContext): testData.Types.PointResource.Class {
 					const resource = testData.Types.$.PointResource;
 					const om: ObjectModule = $wcm.Module.createObjectModule(resource, wasmInterface, context);
+					const rm: $wcm.ResourceManager = context.resources.ensure('vscode:test-data/types/point-resource');
 					return class extends Impl {
 						constructor(x: u32, y: u32);
 						constructor(handleTag: Symbol, handle: $wcm.ResourceHandle);
 						constructor(...args: any[]) {
 							super(...args, om);
+							rm.registerProxy(this);
 						}
 					};
 				}
@@ -425,11 +427,13 @@ export namespace testData {
 				export function Class(wasmInterface: WasmInterface, context: $wcm.WasmContext): testData.Text.Position.Class {
 					const resource = testData.Text.$.Position;
 					const om: ObjectModule = $wcm.Module.createObjectModule(resource, wasmInterface, context);
+					const rm: $wcm.ResourceManager = context.resources.ensure('vscode:test-data/text/position');
 					return class extends Impl {
 						constructor(line: u32, character: u32);
 						constructor(handleTag: Symbol, handle: $wcm.ResourceHandle);
 						constructor(...args: any[]) {
 							super(...args, om);
+							rm.registerProxy(this);
 						}
 					};
 				}

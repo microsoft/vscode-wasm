@@ -38,8 +38,12 @@ export interface ResourceManager<T extends JInterface = JInterface> {
 	getResource(handle: ResourceHandle<T>): T;
 	reserveHandle(): ResourceHandle<T>;
 	registerResource(resource: T, handle?: ResourceHandle<T>): ResourceHandle<T>;
-	registerProxy(proxy: T): ResourceHandle<T>;
+	registerProxy(proxy: T): void;
 	removeResource(value: ResourceHandle<T> | T): void;
+
+	// Loop support
+	registerLoop(handle: ResourceHandle<T>): ResourceHandle<T>;
+	getLoop(handle: ResourceHandle<T>): ResourceHandle<T>;
 }
 
 export namespace ResourceManager {
@@ -53,6 +57,7 @@ export namespace ResourceManager {
 		private finalizer: FinalizationRegistry<ResourceHandle>;
 		private ctor: (new (handleTag: Symbol, handle: ResourceHandle<T>) => T) | undefined;
 		private dtor: ((self: ResourceHandle<T>) => void) | undefined;
+		private loopTable: undefined | Map<ResourceHandle<T>, ResourceHandle<T>>;
 
 		constructor() {
 			this.handleCounter = 1;
@@ -62,7 +67,10 @@ export namespace ResourceManager {
 				this.h2r.delete(handle);
 				// A proxy was collected, remove the resource.
 				this.dtor!(handle);
+				// Also remove the handle from the loop if existed
+				this.loopTable?.delete(handle);
 			});
+			this.loopTable = undefined;
 		}
 
 		public newHandle(rep: u32): ResourceHandle<T> {
@@ -125,23 +133,19 @@ export namespace ResourceManager {
 			return this.handleCounter++;
 		}
 
-		public registerResource(resource: T, handle?: ResourceHandle<T>): ResourceHandle<T> {
-			if (handle !== undefined) {
-				if (handle >= this.handleCounter) {
-					throw new ComponentModelTrap(`Invalid handle ${handle}`);
-				}
-				if (this.h2r.has(handle)) {
-					throw new ComponentModelTrap(`Handle ${handle} already in use`);
-				}
-			} else {
-				handle = this.handleCounter++;
-			}
+		public registerResource(resource: T): ResourceHandle<T> {
+			const handle = this.handleCounter++;
 			this.h2r.set(handle, resource);
 			return handle;
 		}
 
-		public registerProxy(proxy: T): ResourceHandle<T> {
-			return this.setProxy(this.handleCounter++, proxy);
+		public registerProxy(proxy: T): void {
+			const handle = proxy.$handle();
+			const value = this.handleTable.get(handle) ?? this.loopTable?.get(handle);
+			if (value === undefined) {
+				throw new ComponentModelTrap(`Unknown proxy handle ${handle}`);
+			}
+			this.setProxy(handle, proxy);
 		}
 
 		public removeResource(value: ResourceHandle<T> | T): void {
@@ -156,13 +160,29 @@ export namespace ResourceManager {
 			this.h2r.delete(handle);
 		}
 
-		private setProxy(handle: ResourceHandle, proxy: T): ResourceHandle<T> {
+		public registerLoop(handle: ResourceHandle<T>): ResourceHandle<T> {
+			if (this.loopTable === undefined) {
+				this.loopTable = new Map();
+			}
+			const result = this.handleCounter++;
+			this.loopTable.set(result, handle);
+			return result;
+		}
+
+		public getLoop(handle: ResourceHandle<T>): ResourceHandle<T> {
+			const result = this.loopTable?.get(handle);
+			if (result === undefined) {
+				throw new ComponentModelTrap(`Unknown loop handle ${handle}`);
+			}
+			return result;
+		}
+
+		private setProxy(handle: ResourceHandle, proxy: T): void {
 			if (this.dtor === undefined) {
 				throw new ComponentModelTrap(`No proxy destructor set`);
 			}
 			this.h2r.set(handle, new WeakRef(proxy));
 			this.finalizer.register(proxy, handle, proxy);
-			return handle;
 		}
 	}
 
@@ -3403,12 +3423,13 @@ export namespace ComponentModelTypeVisitor {
 	}
 }
 
+export type ResourceInfo = { resource: ResourceType; factory: ClassFactory<any> };
 export type InterfaceType = {
 	readonly id: string;
 	readonly witName: string;
 	readonly types?: Map<string, GenericComponentModelType>;
 	readonly functions?: Map<string, FunctionType<JFunction>>;
-	readonly resources?: Map<string, { resource: ResourceType; factory: ClassFactory<any> }>;
+	readonly resources?: Map<string, ResourceInfo>;
 };
 export namespace InterfaceType {
 	export function is(value: any): value is InterfaceType {
@@ -3479,8 +3500,14 @@ export class Resource {
 
 	private _handle: ResourceHandle;
 
-	constructor(handle: ResourceHandle) {
-		this._handle = handle;
+	constructor(handle: ResourceHandle);
+	constructor(manager: ResourceManager, proxy?: boolean);
+	constructor(handleOrManager: ResourceHandle | ResourceManager) {
+		if (typeof handleOrManager === 'number') {
+			this._handle = handleOrManager;
+		} else {
+			this._handle = handleOrManager.registerResource(this);
+		}
 	}
 
 	public $handle(): ResourceHandle {
@@ -3531,7 +3558,7 @@ export type WorldServiceInterface = { [key: string]: ParamServiceFunction | Para
 export namespace Imports {
 	export function create<T extends WorldImports>(world: WorldType, service: WorldServiceInterface, context: WasmContext): T {
 		const packageName = world.id.substring(0, world.id.indexOf('/'));
-		const result: { [key: string]: ParamWasmInterface }  = Object.create(null);
+		const result: Record<string, ParamWasmInterface>  = Object.create(null);
 		if (world.imports.functions !== undefined) {
 			result['$root'] = doCreate(world.imports.functions, undefined, service as ParamServiceInterface, context);
 		}
@@ -3577,8 +3604,8 @@ export namespace Imports {
 		return Exports.bind<T>(loop, exports, context);
 	}
 
-	function asExports(imports: WorldImports, _context: WasmContext): { [key: string]: WasmFunction } {
-		const result: { [key: string]: WasmFunction }  = Object.create(null);
+	function asExports(imports: WorldImports, context: WasmContext): Record<string, WasmFunction> {
+		const result: Record<string, WasmFunction> = Object.create(null);
 		const keys = Object.keys(imports);
 		for (const ifaceName of keys) {
 			const iface = imports[ifaceName];
@@ -3591,7 +3618,24 @@ export namespace Imports {
 			} else {
 				const qualifier = `${ifaceName}#`;
 				for (const funcName of Object.keys(iface)) {
-					if (funcName.startsWith('[resource-drop]')) {
+					if (funcName.startsWith('[constructor]')) {
+						const managerId = `${ifaceName}/${funcName.substring(13 /* length of [method] */)}`;
+						const resourceManager = context.resources.ensure(managerId);
+						result[`${qualifier}${funcName}`] = (...args: any[]) => {
+							const handle = (iface[funcName] as WasmFunction)(...args) as ResourceHandle;
+							return resourceManager.registerLoop(handle);
+						};
+					} else if (funcName.startsWith('[method]')) {
+						let resourceName = funcName.substring(8 /* length of [method] */);
+						if (resourceName.indexOf('.') !== -1) {
+							resourceName = resourceName.substring(0, resourceName.indexOf('.'));
+						}
+						const managerId = `${ifaceName}/${resourceName}`;
+						const resourceManager = context.resources.ensure(managerId);
+						result[`${qualifier}${funcName}`] = ((handle: ResourceHandle, ...args: any[]): any => {
+							return (iface[funcName] as WasmFunction)(resourceManager.getLoop(handle), ...args);
+						}) as WasmFunction;
+					} else if (funcName.startsWith('[resource-drop]')) {
 						result[`${qualifier}[dtor]${funcName.substring(15 /* length of [resource-drop] */)}`] = iface[funcName] as WasmFunction;
 					} else {
 						result[`${qualifier}${funcName}`] = iface[funcName] as WasmFunction;
@@ -3603,7 +3647,7 @@ export namespace Imports {
 	}
 
 	function doCreate<T extends Imports>(functions: Map<string, FunctionType<JFunction>> | undefined, resources: Map<string, { resource: ResourceType; factory: ClassFactory<any>}> | undefined, service: ParamServiceInterface, context: WasmContext): T {
-		const result: { [key: string]: WasmFunction }  = Object.create(null);
+		const result: Record<string, WasmFunction>  = Object.create(null);
 		if (functions !== undefined) {
 			for (const [funcName, func] of functions) {
 				result[func.witName] = createFunction(func, service[funcName] as JFunction, context);
@@ -3727,54 +3771,40 @@ interface WriteableServiceInterface {
 
 export type Exports = ParamServiceInterface | {};
 export namespace Exports {
-	export function bind<T>(world: WorldType, exports: { [key: string]: ParamWasmFunction }, context: WasmContext): T {
-		const result: { [key: string]: Exports } = Object.create(null);
+	export function bind<T>(world: WorldType, exports: Record<string, ParamWasmFunction>, context: WasmContext): T {
+		const [root, scoped] = partition(exports);
+		const result: Record<string, Exports> = Object.create(null);
 		if (world.exports.functions !== undefined) {
-			Object.assign(result, doBind(world.exports.functions, undefined, exports, context));
+			Object.assign(result, doBind(world.exports.functions, undefined, root, context));
 		}
 		if (world.exports.interfaces !== undefined) {
 			for (const [name, iface] of world.exports.interfaces) {
 				const propName = `${name[0].toLowerCase()}${name.substring(1)}`;
-				const wasm: ParamWasmInterface = filter(exports, iface) as ParamWasmInterface;
-				result[propName] = doBind(iface.functions, iface.resources, wasm, context);
+				result[propName] = doBind(iface.functions, iface.resources, scoped[iface.id], context);
 			}
 		}
 		return result as T;
 	}
 
-	function filter<T extends ParamWasmInterface>(exports: { [key: string]: any}, iface: InterfaceType): T {
-		const key = iface.id;
-		let result: any = exports[key];
-		// We could actually check if all properties exist in the result.
-		if (result !== null && typeof result === 'object') {
-			return result;
-		}
-		result = Object.create(null);
-		if (iface.functions !== undefined) {
-			for (const func of iface.functions.values()) {
-				const funcKey = `${key}#${func.witName}`;
-				const candidate = exports[funcKey];
-				if (candidate !== null && candidate !== undefined) {
-					result[func.witName] = candidate;
+	function partition(exports: Record<string, ParamWasmFunction>): [Record<string, ParamWasmFunction>, Record<string, Record<string, ParamWasmFunction>>] {
+		const root: Record<string, ParamWasmFunction> = Object.create(null);
+		const scoped: Record<string, Record<string, ParamWasmFunction>> = Object.create(null);
+		for (const [key, value] of Object.entries(exports)) {
+			const parts = key.split('#');
+			if (parts.length === 1) {
+				root[key] = value;
+			} else {
+				const [iface, func] = parts;
+				if (scoped[iface] === undefined) {
+					scoped[iface] = Object.create(null);
 				}
+				scoped[iface][func] = value;
 			}
 		}
-		if (iface.resources !== undefined) {
-			for (const { resource } of iface.resources.values()) {
-				for (const callable of resource.callables.values()) {
-					const callableKey = `${key}#${callable.witName}`;
-					const candidate = exports[callableKey];
-					if (candidate !== null && candidate !== undefined) {
-						result[callable.witName] = candidate;
-					}
-				}
-			}
-
-		}
-		return result;
+		return [root, scoped];
 	}
 
-	function doBind<T extends Exports>(functions: Map<string, FunctionType> | undefined, resources: Map<string, { resource: ResourceType; factory: ClassFactory<any> }> | undefined, wasm: ParamWasmInterface, context: WasmContext): T {
+	function doBind<T extends Exports>(functions: Map<string, FunctionType> | undefined, resources: Map<string, ResourceInfo> | undefined, wasm: ParamWasmInterface, context: WasmContext): T {
 		const result: WriteableServiceInterface = Object.create(null);
 		if (functions !== undefined) {
 			for (const [name, func] of functions) {

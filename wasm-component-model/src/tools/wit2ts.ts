@@ -3368,6 +3368,7 @@ class ResourceEmitter extends InterfaceMemberEmitter {
 			}
 			if (needsObjectModule) {
 				code.push(`const om: ObjectModule = ${MetaModel.Module}.createObjectModule(resource, wasmInterface, context);`);
+				code.push(`const rm: ${MetaModel.ResourceManager} = context.resources.ensure('${this.getId()}');`);
 			}
 			if (needsClassModule) {
 				code.push(`const cm: ClassModule = ${MetaModel.Module}.createClassModule(resource, wasmInterface, context);`);
@@ -3382,6 +3383,7 @@ class ResourceEmitter extends InterfaceMemberEmitter {
 						code.push(`constructor(handleTag: Symbol, handle: ${MetaModel.ResourceHandle}) {`);
 						code.increaseIndent();
 						code.push(`super(handleTag, handle, om);`);
+						code.push(`rm.registerProxy(this);`);
 						code.decreaseIndent();
 						code.push(`}`);
 					}
@@ -3666,6 +3668,7 @@ namespace ResourceEmitter {
 			code.push(`constructor(...args: any[]) {`);
 			code.increaseIndent();
 			code.push(`super(...args, om);`);
+			code.push(`rm.registerProxy(this);`);
 			code.decreaseIndent();
 			code.push('}');
 		}
