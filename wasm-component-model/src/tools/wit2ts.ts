@@ -744,6 +744,7 @@ namespace MetaModel {
 	export const ResourceType: string = `${qualifier}.ResourceType`;
 	export const ResourceHandle: string = `${qualifier}.ResourceHandle`;
 	export const ResourceHandleType: string = `${qualifier}.ResourceHandleType`;
+	export const ResourceRepresentation: string = `${qualifier}.ResourceRepresentation`;
 	export const OwnType: string = `${qualifier}.OwnType`;
 	export const FunctionType: string = `${qualifier}.FunctionType`;
 	export const WasmInterfaces: string = `${qualifier}.WasmInterfaces`;
@@ -3323,25 +3324,31 @@ class ResourceEmitter extends InterfaceMemberEmitter {
 		code.push(`class Impl extends ${MetaModel.DefaultResource} implements ${qualifiedName}.Interface {`);
 		code.increaseIndent();
 		if (needsObjectModule) {
+			code.push(`private readonly _rep: ${MetaModel.ResourceRepresentation};`);
 			code.push(`private readonly _om: ObjectModule;`);
 		}
 		if (this.conztructor !== undefined) {
 			this.conztructor.emitConstructorImplementation(code);
 		} else {
 			if (needsObjectModule) {
-				code.push(`constructor(_handleTag: Symbol, handle: ${MetaModel.ResourceHandle}, om: ObjectModule) {`);
+				code.push(`constructor(_handleTag: Symbol, handle: ${MetaModel.ResourceHandle}, rm: ${MetaModel.ResourceManager}, om: ObjectModule) {`);
 				code.increaseIndent();
 				code.push(`super(handle);`);
+				code.push(`this._rep = rm.getRepresentation(handle);`);
 				code.push(`this._om = om;`);
 				code.decreaseIndent();
 				code.push(`}`);
 			} else {
-				code.push(`constructor(_handleTag: Symbol, handle: ${MetaModel.ResourceHandle}) {`);
+				code.push(`constructor(_handleTag: Symbol, handle: ${MetaModel.ResourceHandle}, rm: ${MetaModel.ResourceManager}) {`);
 				code.increaseIndent();
 				code.push(`super(handle);`);
+				code.push(`this._rep = rm.getRepresentation(handle);`);
 				code.decreaseIndent();
 				code.push(`}`);
 			}
+		}
+		if (needsObjectModule) {
+			code.push(`public $rep(): ${MetaModel.ResourceRepresentation} { return this._rep; }`);
 		}
 		for (const method of this.methods) {
 			method.emitClassMember(code);
@@ -3361,8 +3368,8 @@ class ResourceEmitter extends InterfaceMemberEmitter {
 				code.push(`const resource = ${this.getPackageQualifier()}$.${name};`);
 			}
 			if (needsObjectModule) {
-				code.push(`const om: ObjectModule = ${MetaModel.Module}.createObjectModule(resource, wasmInterface, context);`);
 				code.push(`const rm: ${MetaModel.ResourceManager} = context.resources.ensure('${this.getId()}');`);
+				code.push(`const om: ObjectModule = ${MetaModel.Module}.createObjectModule(resource, wasmInterface, context);`);
 			}
 			if (needsClassModule) {
 				code.push(`const cm: ClassModule = ${MetaModel.Module}.createClassModule(resource, wasmInterface, context);`);
@@ -3376,7 +3383,7 @@ class ResourceEmitter extends InterfaceMemberEmitter {
 					} else {
 						code.push(`constructor(handleTag: Symbol, handle: ${MetaModel.ResourceHandle}) {`);
 						code.increaseIndent();
-						code.push(`super(handleTag, handle, om);`);
+						code.push(`super(handleTag, handle, rm, om);`);
 						code.push(`rm.registerProxy(this);`);
 						code.decreaseIndent();
 						code.push(`}`);
@@ -3414,7 +3421,7 @@ class ResourceEmitter extends InterfaceMemberEmitter {
 	}
 
 	public getImportDestructorSignature(): string {
-		return `'[resource-drop]${this.resource.name}': (self_rep: i32) => void`;
+		return `'[resource-drop]${this.resource.name}': (self: i32) => void`;
 	}
 }
 namespace ResourceEmitter {
@@ -3530,7 +3537,7 @@ namespace ResourceEmitter {
 		public emitObjectModule(code: Code): void {
 			const [params, , returnType] = this.getSignatureParts(1);
 			const ifaceName = this.context.nameProvider.type.name(this.resource);
-			code.push(`${this.getMethodName()}(self_rep: ${ifaceName}${params.length > 0 ? ', ' + params.join(', ') : ''}): ${returnType};`);
+			code.push(`${this.getMethodName()}(self: ${ifaceName}${params.length > 0 ? ', ' + params.join(', ') : ''}): ${returnType};`);
 		}
 
 		public emitInterfaceDeclaration(code: Code): void {
@@ -3626,28 +3633,32 @@ namespace ResourceEmitter {
 			const [params] = this.getSignatureParts(0);
 			if (params.length === 0) {
 				code.push(`constructor(om: ObjectModule);`);
-				code.push(`constructor(handleTag: Symbol, handle: ${MetaModel.ResourceHandle}, om: ObjectModule);`);
+				code.push(`constructor(handleTag: Symbol, handle: ${MetaModel.ResourceHandle}, rm: ${MetaModel.ResourceManager}, om: ObjectModule);`);
 			} else {
 				code.push(`constructor(${params.join(', ')}, om: ObjectModule);`);
-				code.push(`constructor(handleTag: Symbol, handle: ${MetaModel.ResourceHandle}, om: ObjectModule);`);
+				code.push(`constructor(handleTag: Symbol, handle: ${MetaModel.ResourceHandle}, rm: ${MetaModel.ResourceManager}, om: ObjectModule);`);
 			}
 			code.push(`constructor(...args: any[]);`);
 			code.push(`constructor(...args: any[]) {`);
 			code.increaseIndent();
 			code.push(`if (args[0] === ${MetaModel.ResourceManager}.handleTag) {`);
 			code.increaseIndent();
-			code.push(`super(args[1] as ${MetaModel.ResourceHandle});`);
-			code.push(`this._om = args[2] as ObjectModule;`);
+			code.push(`const handle = args[1] as ${MetaModel.ResourceHandle};`);
+			code.push(`super(handle);`);
+			code.push(`this._rep = (args[2] as ${MetaModel.ResourceManager}).getRepresentation(handle);`);
+			code.push(`this._om = args[3] as ObjectModule;`);
 			code.decreaseIndent();
 			code.push(`} else {`);
 			code.increaseIndent();
-			code.push(`const om = args[${params.length}] as ObjectModule;`);
+			code.push(`const rm = args[${params.length}] as ${MetaModel.ResourceManager};`);
+			code.push(`const om = args[${params.length + 1}] as ObjectModule;`);
 			if (params.length > 0) {
 				const argsNames = params.map((_, i) => `args[${i}]`);
 				code.push(`super(om.${this.getMethodName()}(${argsNames.join(', ')}));`);
 			} else {
 				code.push(`super(om.${this.getMethodName()}());`);
 			}
+			code.push(`this._rep = rm.getRepresentation(this.$handle());`);
 			code.push(`this._om = om;`);
 			code.decreaseIndent();
 			code.push('}');
@@ -3661,7 +3672,7 @@ namespace ResourceEmitter {
 			code.push(`constructor(handleTag: Symbol, handle: ${MetaModel.ResourceHandle});`);
 			code.push(`constructor(...args: any[]) {`);
 			code.increaseIndent();
-			code.push(`super(...args, om);`);
+			code.push(`super(...args, rm, om);`);
 			code.push(`rm.registerProxy(this);`);
 			code.decreaseIndent();
 			code.push('}');
@@ -3684,11 +3695,11 @@ namespace ResourceEmitter {
 		}
 
 		public getWasmImportSignature(): string {
-			return `'[resource-drop]${this.resource.name}': (self_rep: i32) => void`;
+			return `'[resource-drop]${this.resource.name}': (self: i32) => void`;
 		}
 
 		public getWasmExportSignature(): string {
-			return `'[dtor]${this.resource.name}': (self_rep: i32) => void`;
+			return `'[dtor]${this.resource.name}': (self: i32) => void`;
 		}
 	}
 

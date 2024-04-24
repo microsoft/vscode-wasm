@@ -2666,12 +2666,12 @@ export namespace Resource {
 	}
 }
 
-
+export type ResourceRepresentation = u32;
 export interface ResourceManager<T extends Resource = Resource> {
 	// Handle management
-	newHandle(rep: u32): ResourceHandle<T>;
-	getRepresentation(handle: ResourceHandle<T>): u32;
-	freeHandle(handle: ResourceHandle<T>): u32;
+	newHandle(rep: ResourceRepresentation): ResourceHandle<T>;
+	getRepresentation(handle: ResourceHandle<T>): ResourceRepresentation;
+	freeHandle(handle: ResourceHandle<T>): ResourceRepresentation;
 
 	// Resource management
 	setProxyInfo(ctor: (new (handleTag: Symbol, handle: ResourceHandle<T>) => T), dtor: (self: ResourceHandle<T>) => void): void;
@@ -2683,7 +2683,7 @@ export interface ResourceManager<T extends Resource = Resource> {
 
 	// Loop support
 	registerLoop(handle: ResourceHandle<T>): ResourceHandle<T>;
-	getLoop(handle: ResourceHandle<T>): ResourceHandle<T>;
+	getLoop(rep: ResourceRepresentation): ResourceHandle<T>;
 }
 
 export namespace ResourceManager {
@@ -2692,12 +2692,17 @@ export namespace ResourceManager {
 	export class Default<T extends Resource = Resource> implements ResourceManager<T> {
 
 		private handleCounter: ResourceHandle;
-		private handleTable: Map<ResourceHandle<T>, u32>;
+		private handleTable: Map<ResourceHandle<T>, ResourceRepresentation>;
 		private h2r: Map<ResourceHandle<T>, WeakRef<T> | T | undefined>;
 		private finalizer: FinalizationRegistry<ResourceHandle>;
 		private ctor: (new (handleTag: Symbol, handle: ResourceHandle<T>) => T) | undefined;
 		private dtor: ((self: ResourceHandle<T>) => void) | undefined;
-		private loopTable: undefined | Map<ResourceHandle<T>, ResourceHandle<T>>;
+
+		// We only need the representation counter for the loop implementation.
+		// To make them distinguishable from handles or normal representations we
+		// start with MaxValue and decrement it for each new representation.
+		private representationCounter: ResourceRepresentation;
+		private loopTable: undefined | Map<ResourceRepresentation, ResourceHandle<T>>;
 
 		constructor() {
 			this.handleCounter = 1;
@@ -2710,24 +2715,25 @@ export namespace ResourceManager {
 				// Also remove the handle from the loop if existed
 				this.loopTable?.delete(handle);
 			});
+			this.representationCounter = Number.MAX_VALUE;
 			this.loopTable = undefined;
 		}
 
-		public newHandle(rep: u32): ResourceHandle<T> {
+		public newHandle(rep: ResourceRepresentation): ResourceHandle<T> {
 			const handle = this.handleCounter++;
 			this.handleTable.set(handle, rep);
 			return handle;
 		}
 
-		public getRepresentation(handle: ResourceHandle<T>): u32 {
+		public getRepresentation(handle: ResourceHandle<T>): ResourceRepresentation {
 			const rep = this.handleTable.get(handle);
 			if (rep === undefined) {
-				throw new ComponentModelTrap(`Unknown resource handle ${handle}`);
+				throw new ComponentModelTrap(`No representation registered for resource handle ${handle}`);
 			}
 			return rep;
 		}
 
-		public freeHandle(handle: ResourceHandle<T>): u32 {
+		public freeHandle(handle: ResourceHandle<T>): ResourceRepresentation {
 			const rep = this.handleTable.get(handle);
 			if (rep === undefined) {
 				throw new ComponentModelTrap(`Unknown resource handle ${handle}`);
@@ -2817,14 +2823,18 @@ export namespace ResourceManager {
 				this.loopTable = new Map();
 			}
 			const result = this.handleCounter++;
-			this.loopTable.set(result, handle);
+			const representation = this.representationCounter--;
+
+			this.handleTable.set(result, representation);
+			this.loopTable.set(representation, handle);
+
 			return result;
 		}
 
-		public getLoop(handle: ResourceHandle<T>): ResourceHandle<T> {
-			const result = this.loopTable?.get(handle);
+		public getLoop(rep: ResourceRepresentation): ResourceHandle<T> {
+			const result = this.loopTable?.get(rep);
 			if (result === undefined) {
-				throw new ComponentModelTrap(`Unknown loop handle ${handle}`);
+				throw new ComponentModelTrap(`Unknown loop handle for representation ${rep}`);
 			}
 			return result;
 		}
@@ -3120,8 +3130,8 @@ export class MethodType<_T extends Function = Function> extends Callable {
 
 	public callWasmMethod(params: JType[], wasmFunction: WasmFunction, _resourceManager: ResourceManager, context: WasmContext): JType {
 		const memory = context.getMemory();
-		const obj: Resource = params.shift() as Resource;
-		const handle = obj.$handle();
+		const obj: Resource & { $rep(): ResourceRepresentation} = params.shift() as Resource & { $rep(): ResourceRepresentation};
+		const handle = obj.$rep();
 		const wasmValues = this.lowerParamValues(params, memory, context, undefined);
 		let resultRange: MemoryRange | undefined = undefined;
 		let result: WasmType | void;
@@ -3646,8 +3656,8 @@ export namespace Imports {
 						}
 						const managerId = `${ifaceName}/${resourceName}`;
 						const resourceManager = context.resources.ensure(managerId);
-						result[`${qualifier}${funcName}`] = ((handle: ResourceHandle, ...args: any[]): any => {
-							return (iface[funcName] as WasmFunction)(resourceManager.getLoop(handle), ...args);
+						result[`${qualifier}${funcName}`] = ((rep: ResourceRepresentation, ...args: any[]): any => {
+							return (iface[funcName] as WasmFunction)(resourceManager.getLoop(rep), ...args);
 						}) as WasmFunction;
 					} else if (funcName.startsWith('[resource-drop]')) {
 						result[`${qualifier}[dtor]${funcName.substring(15 /* length of [resource-drop] */)}`] = iface[funcName];

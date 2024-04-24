@@ -283,30 +283,36 @@ export namespace testData {
 			};
 			export type ObjectModule = {
 				constructor(x: u32, y: u32): own<$wcm.ResourceHandle>;
-				getX(self_rep: PointResource): u32;
-				getY(self_rep: PointResource): u32;
-				add(self_rep: PointResource): u32;
+				getX(self: PointResource): u32;
+				getY(self: PointResource): u32;
+				add(self: PointResource): u32;
 			};
 			export namespace imports {
-				export type WasmInterface = PointResource.WasmInterface & { '[resource-drop]point-resource': (self_rep: i32) => void };
+				export type WasmInterface = PointResource.WasmInterface & { '[resource-drop]point-resource': (self: i32) => void };
 			}
 			export namespace exports {
-				export type WasmInterface = PointResource.WasmInterface & { '[dtor]point-resource': (self_rep: i32) => void };
+				export type WasmInterface = PointResource.WasmInterface & { '[dtor]point-resource': (self: i32) => void };
 				class Impl extends $wcm.Resource.Default implements testData.Types.PointResource.Interface {
+					private readonly _rep: $wcm.ResourceRepresentation;
 					private readonly _om: ObjectModule;
 					constructor(x: u32, y: u32, om: ObjectModule);
-					constructor(handleTag: Symbol, handle: $wcm.ResourceHandle, om: ObjectModule);
+					constructor(handleTag: Symbol, handle: $wcm.ResourceHandle, rm: $wcm.ResourceManager, om: ObjectModule);
 					constructor(...args: any[]);
 					constructor(...args: any[]) {
 						if (args[0] === $wcm.ResourceManager.handleTag) {
-							super(args[1] as $wcm.ResourceHandle);
-							this._om = args[2] as ObjectModule;
+							const handle = args[1] as $wcm.ResourceHandle;
+							super(handle);
+							this._rep = (args[2] as $wcm.ResourceManager).getRepresentation(handle);
+							this._om = args[3] as ObjectModule;
 						} else {
-							const om = args[2] as ObjectModule;
+							const rm = args[2] as $wcm.ResourceManager;
+							const om = args[3] as ObjectModule;
 							super(om.constructor(args[0], args[1]));
+							this._rep = rm.getRepresentation(this.$handle());
 							this._om = om;
 						}
 					}
+					public $rep(): $wcm.ResourceRepresentation { return this._rep; }
 					public getX(): u32 {
 						return this._om.getX(this);
 					}
@@ -319,13 +325,13 @@ export namespace testData {
 				}
 				export function Class(wasmInterface: WasmInterface, context: $wcm.WasmContext): testData.Types.PointResource.Class {
 					const resource = testData.Types.$.PointResource;
-					const om: ObjectModule = $wcm.Module.createObjectModule(resource, wasmInterface, context);
 					const rm: $wcm.ResourceManager = context.resources.ensure('vscode:test-data/types/point-resource');
+					const om: ObjectModule = $wcm.Module.createObjectModule(resource, wasmInterface, context);
 					return class extends Impl {
 						constructor(x: u32, y: u32);
 						constructor(handleTag: Symbol, handle: $wcm.ResourceHandle);
 						constructor(...args: any[]) {
-							super(...args, om);
+							super(...args, rm, om);
 							rm.registerProxy(this);
 						}
 					};
@@ -394,29 +400,35 @@ export namespace testData {
 			};
 			export type ObjectModule = {
 				constructor(line: u32, character: u32): own<$wcm.ResourceHandle>;
-				line(self_rep: Position): u32;
-				character(self_rep: Position): u32;
+				line(self: Position): u32;
+				character(self: Position): u32;
 			};
 			export namespace imports {
-				export type WasmInterface = Position.WasmInterface & { '[resource-drop]position': (self_rep: i32) => void };
+				export type WasmInterface = Position.WasmInterface & { '[resource-drop]position': (self: i32) => void };
 			}
 			export namespace exports {
-				export type WasmInterface = Position.WasmInterface & { '[dtor]position': (self_rep: i32) => void };
+				export type WasmInterface = Position.WasmInterface & { '[dtor]position': (self: i32) => void };
 				class Impl extends $wcm.Resource.Default implements testData.Text.Position.Interface {
+					private readonly _rep: $wcm.ResourceRepresentation;
 					private readonly _om: ObjectModule;
 					constructor(line: u32, character: u32, om: ObjectModule);
-					constructor(handleTag: Symbol, handle: $wcm.ResourceHandle, om: ObjectModule);
+					constructor(handleTag: Symbol, handle: $wcm.ResourceHandle, rm: $wcm.ResourceManager, om: ObjectModule);
 					constructor(...args: any[]);
 					constructor(...args: any[]) {
 						if (args[0] === $wcm.ResourceManager.handleTag) {
-							super(args[1] as $wcm.ResourceHandle);
-							this._om = args[2] as ObjectModule;
+							const handle = args[1] as $wcm.ResourceHandle;
+							super(handle);
+							this._rep = (args[2] as $wcm.ResourceManager).getRepresentation(handle);
+							this._om = args[3] as ObjectModule;
 						} else {
-							const om = args[2] as ObjectModule;
+							const rm = args[2] as $wcm.ResourceManager;
+							const om = args[3] as ObjectModule;
 							super(om.constructor(args[0], args[1]));
+							this._rep = rm.getRepresentation(this.$handle());
 							this._om = om;
 						}
 					}
+					public $rep(): $wcm.ResourceRepresentation { return this._rep; }
 					public line(): u32 {
 						return this._om.line(this);
 					}
@@ -426,13 +438,13 @@ export namespace testData {
 				}
 				export function Class(wasmInterface: WasmInterface, context: $wcm.WasmContext): testData.Text.Position.Class {
 					const resource = testData.Text.$.Position;
-					const om: ObjectModule = $wcm.Module.createObjectModule(resource, wasmInterface, context);
 					const rm: $wcm.ResourceManager = context.resources.ensure('vscode:test-data/text/position');
+					const om: ObjectModule = $wcm.Module.createObjectModule(resource, wasmInterface, context);
 					return class extends Impl {
 						constructor(line: u32, character: u32);
 						constructor(handleTag: Symbol, handle: $wcm.ResourceHandle);
 						constructor(...args: any[]) {
-							super(...args, om);
+							super(...args, rm, om);
 							rm.registerProxy(this);
 						}
 					};
