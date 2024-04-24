@@ -2673,9 +2673,13 @@ export namespace Resource {
 export type ResourceRepresentation = u32;
 export interface ResourceManager<T extends Resource = Resource> {
 	// Handle management
+
+	/** [resource-new]${resource} */
 	newHandle(rep: ResourceRepresentation): ResourceHandle<T>;
+	/** [resource-rep]${resource} */
 	getRepresentation(handle: ResourceHandle<T>): ResourceRepresentation;
-	freeHandle(handle: ResourceHandle<T>): ResourceRepresentation;
+	/** [resource-drop]${resource} */
+	dropHandle(handle: ResourceHandle<T>): ResourceRepresentation;
 
 	// Resource management
 	setProxyInfo(ctor: (new (handleTag: Symbol, handle: ResourceHandle<T>) => T), dtor: (self: ResourceHandle<T>) => void): void;
@@ -2721,8 +2725,8 @@ export namespace ResourceManager {
 				try {
 					this.dtor!(rep);
 				} catch (error) {
-					// eslint-disable-next-line no-console
-					console.error(error);
+					// Log the error.
+					RAL().console.error(error);
 				}
 
 				// Clean up tables
@@ -2750,10 +2754,13 @@ export namespace ResourceManager {
 			return rep;
 		}
 
-		public freeHandle(handle: ResourceHandle<T>): ResourceRepresentation {
+		public dropHandle(handle: ResourceHandle<T>): ResourceRepresentation {
 			const rep = this.handleTable.get(handle);
 			if (rep === undefined) {
 				throw new ComponentModelTrap(`Unknown resource handle ${handle}`);
+			}
+			if (this.dtor !== undefined) {
+				this.dtor(rep);
 			}
 			this.handleTable.delete(handle);
 			return rep;
@@ -3616,7 +3623,7 @@ export namespace Imports {
 						const exports = Object.create(null);
 						exports[`[resource-new]${resource.witName}`] = (rep: u32) => manager.newHandle(rep);
 						exports[`[resource-rep]${resource.witName}`] = (handle: u32) => manager.getRepresentation(handle);
-						exports[`[resource-drop]${resource.witName}`] = (handle: u32) => manager.freeHandle(handle);
+						exports[`[resource-drop]${resource.witName}`] = (handle: u32) => manager.dropHandle(handle);
 						result[`[export]${packageName}/${iface.witName}`] = exports;
 					}
 				}
