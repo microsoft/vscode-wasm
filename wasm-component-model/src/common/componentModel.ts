@@ -2664,6 +2664,10 @@ export namespace Resource {
 			return this._handle;
 		}
 	}
+
+	export function getRepresentation(resource: Resource & { $rep?(): ResourceRepresentation }): ResourceRepresentation | undefined {
+		return typeof resource.$rep === 'function' ? resource.$rep() : undefined;
+	}
 }
 
 export type ResourceRepresentation = u32;
@@ -2686,15 +2690,18 @@ export interface ResourceManager<T extends Resource = Resource> {
 	getLoop(rep: ResourceRepresentation): ResourceHandle<T>;
 }
 
+declare const console: any;
 export namespace ResourceManager {
 	export const handleTag:Symbol = Symbol('handleTag');
 
+	type FinalizationRegistryData = { handle: ResourceHandle; rep: ResourceRepresentation };
 	export class Default<T extends Resource = Resource> implements ResourceManager<T> {
+
 
 		private handleCounter: ResourceHandle;
 		private handleTable: Map<ResourceHandle<T>, ResourceRepresentation>;
 		private h2r: Map<ResourceHandle<T>, WeakRef<T> | T | undefined>;
-		private finalizer: FinalizationRegistry<ResourceHandle>;
+		private finalizer: FinalizationRegistry<FinalizationRegistryData>;
 		private ctor: (new (handleTag: Symbol, handle: ResourceHandle<T>) => T) | undefined;
 		private dtor: ((self: ResourceHandle<T>) => void) | undefined;
 
@@ -2708,12 +2715,22 @@ export namespace ResourceManager {
 			this.handleCounter = 1;
 			this.handleTable = new Map();
 			this.h2r = new Map();
-			this.finalizer = new FinalizationRegistry((handle: ResourceHandle<T>) => {
-				this.h2r.delete(handle);
+			this.finalizer = new FinalizationRegistry((value: FinalizationRegistryData) => {
+				const { handle, rep } = value;
 				// A proxy was collected, remove the resource.
-				this.dtor!(handle);
-				// Also remove the handle from the loop if existed
-				this.loopTable?.delete(handle);
+				try {
+					this.dtor!(rep);
+				} catch (error) {
+					// eslint-disable-next-line no-console
+					console.error(error);
+				}
+
+				// Clean up tables
+				this.h2r.delete(handle);
+				this.handleTable.delete(handle);
+
+				// Also remove the representation from the loop if existed
+				this.loopTable?.delete(rep);
 			});
 			this.representationCounter = Number.MAX_VALUE;
 			this.loopTable = undefined;
@@ -2757,7 +2774,7 @@ export namespace ResourceManager {
 				if (value instanceof WeakRef) {
 					const unwrapped = value.deref();
 					if (unwrapped === undefined) {
-						throw new ComponentModelTrap(`Resource for handle ${handle} has been collected`);
+						throw new ComponentModelTrap(`Resource for handle ${handle} has been collected.`);
 					}
 					return unwrapped;
 				} else {
@@ -2767,12 +2784,13 @@ export namespace ResourceManager {
 			// This handle represents a resource that lives on the
 			// WebAssembly side. Since we don't have a resource for it
 			// yet we create one on the fly.
-			if (this.handleTable.has(handle)) {
+			const rep = this.handleTable.get(handle);
+			if (rep !== undefined) {
 				if (this.ctor === undefined) {
 					throw new ComponentModelTrap(`No proxy constructor set`);
 				}
 				const proxy = new this.ctor(handleTag, handle);
-				this.setProxy(handle, proxy);
+				this.setProxy(handle, rep, proxy);
 				return proxy;
 			} else {
 				throw new ComponentModelTrap(`Unknown resource handle ${handle}`);
@@ -2799,11 +2817,11 @@ export namespace ResourceManager {
 
 		public registerProxy(proxy: T): void {
 			const handle = proxy.$handle();
-			const value = this.handleTable.get(handle) ?? this.loopTable?.get(handle);
-			if (value === undefined) {
+			const rep =  Resource.getRepresentation(proxy) ?? this.handleTable.get(handle);
+			if (rep === undefined) {
 				throw new ComponentModelTrap(`Unknown proxy handle ${handle}`);
 			}
-			this.setProxy(handle, proxy);
+			this.setProxy(handle, rep, proxy);
 		}
 
 		public removeResource(value: ResourceHandle<T> | T): void {
@@ -2839,12 +2857,12 @@ export namespace ResourceManager {
 			return result;
 		}
 
-		private setProxy(handle: ResourceHandle, proxy: T): void {
+		private setProxy(handle: ResourceHandle, rep: ResourceRepresentation, proxy: T): void {
 			if (this.dtor === undefined) {
 				throw new ComponentModelTrap(`No proxy destructor set`);
 			}
 			this.h2r.set(handle, new WeakRef(proxy));
-			this.finalizer.register(proxy, handle, proxy);
+			this.finalizer.register(proxy, { handle, rep } , proxy);
 		}
 	}
 
