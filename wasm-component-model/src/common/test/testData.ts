@@ -168,7 +168,7 @@ export namespace testData {
 		export type TestFlagsLong = bigint;
 
 		export namespace PointResource {
-			export interface Interface extends $wcm.JInterface {
+			export interface Interface extends $wcm.Resource {
 				getX(): u32;
 
 				getY(): u32;
@@ -204,7 +204,7 @@ export namespace testData {
 
 	export namespace Text {
 		export namespace Position {
-			export interface Interface extends $wcm.JInterface {
+			export interface Interface extends $wcm.Resource {
 				line(): u32;
 
 				character(): u32;
@@ -283,16 +283,16 @@ export namespace testData {
 			};
 			export type ObjectModule = {
 				constructor(x: u32, y: u32): own<$wcm.ResourceHandle>;
-				getX(self: PointResource): u32;
-				getY(self: PointResource): u32;
-				add(self: PointResource): u32;
+				getX(self_rep: PointResource): u32;
+				getY(self_rep: PointResource): u32;
+				add(self_rep: PointResource): u32;
 			};
 			export namespace imports {
-				export type WasmInterface = PointResource.WasmInterface & { '[resource-drop]point-resource': (self: i32) => void };
+				export type WasmInterface = PointResource.WasmInterface & { '[resource-drop]point-resource': (self_rep: i32) => void };
 			}
 			export namespace exports {
-				export type WasmInterface = PointResource.WasmInterface & { '[dtor]point-resource': (self: i32) => void };
-				class Impl extends $wcm.Resource implements testData.Types.PointResource.Interface {
+				export type WasmInterface = PointResource.WasmInterface & { '[dtor]point-resource': (self_rep: i32) => void };
+				class Impl extends $wcm.Resource.Default implements testData.Types.PointResource.Interface {
 					private readonly _om: ObjectModule;
 					constructor(x: u32, y: u32, om: ObjectModule);
 					constructor(handleTag: Symbol, handle: $wcm.ResourceHandle, om: ObjectModule);
@@ -366,7 +366,7 @@ export namespace testData {
 				export type WasmInterface = {
 					'[resource-new]point-resource': (rep: i32) => i32;
 					'[resource-rep]point-resource': (handle: i32) => i32;
-					'[resource-drop]point-resource': (handle: i32) => i32;
+					'[resource-drop]point-resource': (handle: i32) => void;
 				};
 			}
 		}
@@ -394,15 +394,15 @@ export namespace testData {
 			};
 			export type ObjectModule = {
 				constructor(line: u32, character: u32): own<$wcm.ResourceHandle>;
-				line(self: Position): u32;
-				character(self: Position): u32;
+				line(self_rep: Position): u32;
+				character(self_rep: Position): u32;
 			};
 			export namespace imports {
-				export type WasmInterface = Position.WasmInterface & { '[resource-drop]position': (self: i32) => void };
+				export type WasmInterface = Position.WasmInterface & { '[resource-drop]position': (self_rep: i32) => void };
 			}
 			export namespace exports {
-				export type WasmInterface = Position.WasmInterface & { '[dtor]position': (self: i32) => void };
-				class Impl extends $wcm.Resource implements testData.Text.Position.Interface {
+				export type WasmInterface = Position.WasmInterface & { '[dtor]position': (self_rep: i32) => void };
+				class Impl extends $wcm.Resource.Default implements testData.Text.Position.Interface {
 					private readonly _om: ObjectModule;
 					constructor(line: u32, character: u32, om: ObjectModule);
 					constructor(handleTag: Symbol, handle: $wcm.ResourceHandle, om: ObjectModule);
@@ -456,7 +456,7 @@ export namespace testData {
 				export type WasmInterface = {
 					'[resource-new]position': (rep: i32) => i32;
 					'[resource-rep]position': (handle: i32) => i32;
-					'[resource-drop]position': (handle: i32) => i32;
+					'[resource-drop]position': (handle: i32) => void;
 				};
 			}
 		}

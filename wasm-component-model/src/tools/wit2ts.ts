@@ -739,6 +739,8 @@ namespace MetaModel {
 	export const Module: string = `${qualifier}.Module`;
 	export const Handle: string = `${qualifier}.Handle`;
 	export const Resource: string = `${qualifier}.Resource`;
+	export const ResourceManager: string = `${qualifier}.ResourceManager`;
+	export const DefaultResource: string = `${qualifier}.Resource.Default`;
 	export const ResourceType: string = `${qualifier}.ResourceType`;
 	export const ResourceHandle: string = `${qualifier}.ResourceHandle`;
 	export const ResourceHandleType: string = `${qualifier}.ResourceHandleType`;
@@ -749,8 +751,6 @@ namespace MetaModel {
 	export const Exports: string = `${qualifier}.Exports`;
 	export const InterfaceType: string = `${qualifier}.InterfaceType`;
 	export const WorldType: string = `${qualifier}.WorldType`;
-	export const JInterface: string = `${qualifier}.JInterface`;
-	export const ResourceManager: string = `${qualifier}.ResourceManager`;
 	export const ClassFactory: string = `${qualifier}.ClassFactory<any>`;
 
 	export function qualify(name: string): string {
@@ -3215,7 +3215,7 @@ class ResourceEmitter extends InterfaceMemberEmitter {
 		code.push(`export namespace ${tsName} {`);
 		code.increaseIndent();
 
-		code.push(`export interface Interface extends ${MetaModel.JInterface} {`);
+		code.push(`export interface Interface extends ${MetaModel.Resource} {`);
 		code.increaseIndent();
 		for (const [index, method] of this.methods.entries()) {
 			method.emitInterfaceDeclaration(code);
@@ -3320,7 +3320,7 @@ class ResourceEmitter extends InterfaceMemberEmitter {
 		code.push(`export type WasmInterface = ${name}.WasmInterface & { ${this.destructor.getWasmExportSignature()} };`);
 		const qualifier = this.getPackageQualifier();
 		const qualifiedName = `${qualifier}${name}`;
-		code.push(`class Impl extends ${MetaModel.Resource} implements ${qualifiedName}.Interface {`);
+		code.push(`class Impl extends ${MetaModel.DefaultResource} implements ${qualifiedName}.Interface {`);
 		code.increaseIndent();
 		if (needsObjectModule) {
 			code.push(`private readonly _om: ObjectModule;`);
@@ -3410,11 +3410,11 @@ class ResourceEmitter extends InterfaceMemberEmitter {
 	public emitWasmExportImport(code: Code): void {
 		code.push(`'[resource-new]${this.resource.name}': (rep: i32) => i32;`);
 		code.push(`'[resource-rep]${this.resource.name}': (handle: i32) => i32;`);
-		code.push(`'[resource-drop]${this.resource.name}': (handle: i32) => i32;`);
+		code.push(`'[resource-drop]${this.resource.name}': (handle: i32) => void;`);
 	}
 
 	public getImportDestructorSignature(): string {
-		return `'[resource-drop]${this.resource.name}': (self: i32) => void`;
+		return `'[resource-drop]${this.resource.name}': (self_rep: i32) => void`;
 	}
 }
 namespace ResourceEmitter {
@@ -3530,7 +3530,7 @@ namespace ResourceEmitter {
 		public emitObjectModule(code: Code): void {
 			const [params, , returnType] = this.getSignatureParts(1);
 			const ifaceName = this.context.nameProvider.type.name(this.resource);
-			code.push(`${this.getMethodName()}(self: ${ifaceName}${params.length > 0 ? ', ' + params.join(', ') : ''}): ${returnType};`);
+			code.push(`${this.getMethodName()}(self_rep: ${ifaceName}${params.length > 0 ? ', ' + params.join(', ') : ''}): ${returnType};`);
 		}
 
 		public emitInterfaceDeclaration(code: Code): void {
@@ -3684,11 +3684,11 @@ namespace ResourceEmitter {
 		}
 
 		public getWasmImportSignature(): string {
-			return `'[resource-drop]${this.resource.name}': (self: i32) => void`;
+			return `'[resource-drop]${this.resource.name}': (self_rep: i32) => void`;
 		}
 
 		public getWasmExportSignature(): string {
-			return `'[dtor]${this.resource.name}': (self: i32) => void`;
+			return `'[dtor]${this.resource.name}': (self_rep: i32) => void`;
 		}
 	}
 

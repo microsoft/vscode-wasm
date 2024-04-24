@@ -50,7 +50,7 @@ import TestFlagsShort = Types.TestFlagsShort;
 import TestFlagsLong = Types.TestFlagsLong;
 import Test = td.testData.test;
 
-class PointResourceClass extends Resource implements Types.PointResource {
+class PointResourceClass extends Resource.Default implements Types.PointResource {
 
 	public static readonly $resources: ResourceManager<Types.PointResource> = new ResourceManager.Default();
 
