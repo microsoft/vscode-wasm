@@ -8,7 +8,7 @@ import type { u32, own, i32 } from '@vscode/wasm-component-model';
 export namespace example {
 	export namespace Window {
 		export namespace TestResource {
-			export interface Interface extends $wcm.JInterface {
+			export interface Interface extends $wcm.Resource {
 				call(value: u32): u32;
 			}
 			export type Statics = {
@@ -59,23 +59,26 @@ export namespace example {
 			}
 			export namespace exports {
 				export type WasmInterface = TestResource.WasmInterface & { '[dtor]test-resource': (self: i32) => void };
-				class Impl extends $wcm.Resource implements example.Window.TestResource.Interface {
+				class Impl extends $wcm.Resource.Default implements example.Window.TestResource.Interface {
+					private readonly _rep: $wcm.ResourceRepresentation;
 					private readonly _om: ObjectModule;
-					constructor(_handleTag: Symbol, handle: $wcm.ResourceHandle, om: ObjectModule) {
+					constructor(_handleTag: Symbol, handle: $wcm.ResourceHandle, rm: $wcm.ResourceManager, om: ObjectModule) {
 						super(handle);
+						this._rep = rm.getRepresentation(handle);
 						this._om = om;
 					}
+					public $rep(): $wcm.ResourceRepresentation { return this._rep; }
 					public call(value: u32): u32 {
 						return this._om.call(this, value);
 					}
 				}
 				export function Class(wasmInterface: WasmInterface, context: $wcm.WasmContext): example.Window.TestResource.Class {
 					const resource = example.Window.$.TestResource;
-					const om: ObjectModule = $wcm.Module.createObjectModule(resource, wasmInterface, context);
 					const rm: $wcm.ResourceManager = context.resources.ensure('vscode:example/window/test-resource');
+					const om: ObjectModule = $wcm.Module.createObjectModule(resource, wasmInterface, context);
 					return class extends Impl {
 						constructor(handleTag: Symbol, handle: $wcm.ResourceHandle) {
-							super(handleTag, handle, om);
+							super(handleTag, handle, rm, om);
 							rm.registerProxy(this);
 						}
 					};
@@ -103,7 +106,7 @@ export namespace example {
 				export type WasmInterface = {
 					'[resource-new]test-resource': (rep: i32) => i32;
 					'[resource-rep]test-resource': (handle: i32) => i32;
-					'[resource-drop]test-resource': (handle: i32) => i32;
+					'[resource-drop]test-resource': (handle: i32) => void;
 				};
 			}
 		}

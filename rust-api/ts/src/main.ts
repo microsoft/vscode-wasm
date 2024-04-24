@@ -43,7 +43,7 @@ interface Extension {
 }
 
 // Channel implementation
-class OutputChannelResource extends Resource implements OutputChannel {
+class OutputChannelResource extends Resource.Default implements OutputChannel {
 
 	public static $resources: ResourceManager<OutputChannel> = new ResourceManager.Default();
 
@@ -97,7 +97,7 @@ class TextDocumentResourceManager extends ResourceManager.Default<TextDocumentRe
 	}
 }
 
-class TextDocumentResource extends Resource implements TextDocument {
+class TextDocumentResource extends Resource.Default implements TextDocument {
 
 	public static readonly $resources: TextDocumentResourceManager = new TextDocumentResourceManager();
 
@@ -133,7 +133,7 @@ class TextDocumentResource extends Resource implements TextDocument {
 	}
 }
 
-class TextDocumentChangeEventResource extends Resource implements Types.TextDocumentChangeEvent {
+class TextDocumentChangeEventResource extends Resource.Default implements Types.TextDocumentChangeEvent {
 
 	public static readonly $resources: ResourceManager<Types.TextDocumentChangeEvent> = new ResourceManager.Default();
 

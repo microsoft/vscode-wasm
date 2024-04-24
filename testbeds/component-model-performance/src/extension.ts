@@ -8,7 +8,7 @@ import * as vscode from 'vscode';
 import { example } from './example';
 
 // Channel implementation
-class TestResourceImpl extends Resource implements example.Window.TestResource {
+class TestResourceImpl extends Resource.Default implements example.Window.TestResource {
 
 	public static readonly $resourceManager = new ResourceManager.Default<example.Window.TestResource>();
 

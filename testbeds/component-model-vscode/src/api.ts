@@ -36,7 +36,7 @@ export namespace api {
 		};
 
 		export namespace TextDocument {
-			export interface Interface extends $wcm.JInterface {
+			export interface Interface extends $wcm.Resource {
 				uri(): string;
 
 				languageId(): string;
@@ -53,7 +53,7 @@ export namespace api {
 		export type TextDocument = TextDocument.Interface;
 
 		export namespace OutputChannel {
-			export interface Interface extends $wcm.JInterface {
+			export interface Interface extends $wcm.Resource {
 				name(): string;
 
 				append(value: string): void;
@@ -193,12 +193,15 @@ export namespace api {
 			}
 			export namespace exports {
 				export type WasmInterface = TextDocument.WasmInterface & { '[dtor]text-document': (self: i32) => void };
-				class Impl extends $wcm.Resource implements api.Types.TextDocument.Interface {
+				class Impl extends $wcm.Resource.Default implements api.Types.TextDocument.Interface {
+					private readonly _rep: $wcm.ResourceRepresentation;
 					private readonly _om: ObjectModule;
-					constructor(_handleTag: Symbol, handle: $wcm.ResourceHandle, om: ObjectModule) {
+					constructor(_handleTag: Symbol, handle: $wcm.ResourceHandle, rm: $wcm.ResourceManager, om: ObjectModule) {
 						super(handle);
+						this._rep = rm.getRepresentation(handle);
 						this._om = om;
 					}
+					public $rep(): $wcm.ResourceRepresentation { return this._rep; }
 					public uri(): string {
 						return this._om.uri(this);
 					}
@@ -214,11 +217,11 @@ export namespace api {
 				}
 				export function Class(wasmInterface: WasmInterface, context: $wcm.WasmContext): api.Types.TextDocument.Class {
 					const resource = api.Types.$.TextDocument;
-					const om: ObjectModule = $wcm.Module.createObjectModule(resource, wasmInterface, context);
 					const rm: $wcm.ResourceManager = context.resources.ensure('host:api/types/text-document');
+					const om: ObjectModule = $wcm.Module.createObjectModule(resource, wasmInterface, context);
 					return class extends Impl {
 						constructor(handleTag: Symbol, handle: $wcm.ResourceHandle) {
-							super(handleTag, handle, om);
+							super(handleTag, handle, rm, om);
 							rm.registerProxy(this);
 						}
 					};
@@ -245,12 +248,15 @@ export namespace api {
 			}
 			export namespace exports {
 				export type WasmInterface = OutputChannel.WasmInterface & { '[dtor]output-channel': (self: i32) => void };
-				class Impl extends $wcm.Resource implements api.Types.OutputChannel.Interface {
+				class Impl extends $wcm.Resource.Default implements api.Types.OutputChannel.Interface {
+					private readonly _rep: $wcm.ResourceRepresentation;
 					private readonly _om: ObjectModule;
-					constructor(_handleTag: Symbol, handle: $wcm.ResourceHandle, om: ObjectModule) {
+					constructor(_handleTag: Symbol, handle: $wcm.ResourceHandle, rm: $wcm.ResourceManager, om: ObjectModule) {
 						super(handle);
+						this._rep = rm.getRepresentation(handle);
 						this._om = om;
 					}
+					public $rep(): $wcm.ResourceRepresentation { return this._rep; }
 					public name(): string {
 						return this._om.name(this);
 					}
@@ -269,11 +275,11 @@ export namespace api {
 				}
 				export function Class(wasmInterface: WasmInterface, context: $wcm.WasmContext): api.Types.OutputChannel.Class {
 					const resource = api.Types.$.OutputChannel;
-					const om: ObjectModule = $wcm.Module.createObjectModule(resource, wasmInterface, context);
 					const rm: $wcm.ResourceManager = context.resources.ensure('host:api/types/output-channel');
+					const om: ObjectModule = $wcm.Module.createObjectModule(resource, wasmInterface, context);
 					return class extends Impl {
 						constructor(handleTag: Symbol, handle: $wcm.ResourceHandle) {
-							super(handleTag, handle, om);
+							super(handleTag, handle, rm, om);
 							rm.registerProxy(this);
 						}
 					};
@@ -304,10 +310,10 @@ export namespace api {
 				export type WasmInterface = {
 					'[resource-new]text-document': (rep: i32) => i32;
 					'[resource-rep]text-document': (handle: i32) => i32;
-					'[resource-drop]text-document': (handle: i32) => i32;
+					'[resource-drop]text-document': (handle: i32) => void;
 					'[resource-new]output-channel': (rep: i32) => i32;
 					'[resource-rep]output-channel': (handle: i32) => i32;
-					'[resource-drop]output-channel': (handle: i32) => i32;
+					'[resource-drop]output-channel': (handle: i32) => void;
 				};
 			}
 		}

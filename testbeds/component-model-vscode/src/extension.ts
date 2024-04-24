@@ -11,7 +11,7 @@ import OutputChannel = Types.OutputChannel;
 import TextDocument = Types.TextDocument;
 
 // Channel implementation
-class OutputChannelProxy extends Resource implements OutputChannel {
+class OutputChannelProxy extends Resource.Default implements OutputChannel {
 
 	public static $resources: ResourceManager = new ResourceManager.Default<OutputChannel>();
 
@@ -43,7 +43,7 @@ class OutputChannelProxy extends Resource implements OutputChannel {
 	}
 }
 
-class TextDocumentProxy extends Resource implements TextDocument {
+class TextDocumentProxy extends Resource.Default implements TextDocument {
 
 	public static $resources: ResourceManager = new ResourceManager.Default<TextDocument>();
 
