@@ -1,6 +1,6 @@
 {
 	"name": "@vscode/wasm-component-model",
-	"version": "0.1.0-pre.7",
+	"version": "0.1.0-pre.8",
 	"description": "A VS Code specific component model implementation",
 	"author": "Visual Studio Code Team",
 	"license": "MIT",
