@@ -2159,7 +2159,7 @@ class WorldEmitter extends Emitter {
 			emitter.emitMetaModel(code);
 		}
 		if (this.imports.funcEmitters.length > 0) {
-			code.push(`export namespace Imports {`);
+			code.push(`export namespace imports {`);
 			code.increaseIndent();
 			for (const emitter of this.imports.typeEmitters) {
 				emitter.emitMetaModel(code);
@@ -2171,7 +2171,7 @@ class WorldEmitter extends Emitter {
 			code.push('}');
 		}
 		if (this.exports.funcEmitters.length > 0) {
-			code.push(`export namespace Exports {`);
+			code.push(`export namespace exports {`);
 			code.increaseIndent();
 			for (const emitter of this.exports.typeEmitters) {
 				emitter.emitMetaModel(code);
@@ -2241,7 +2241,7 @@ class WorldEmitter extends Emitter {
 				code.increaseIndent();
 				for (const [index, emitter] of this.imports.funcEmitters.entries()) {
 					const name = nameProvider.func.name(emitter.callable);
-					code.push(`['${name}', $.Imports.${name}]${index < this.imports.funcEmitters.length - 1 ? ',' : ''}`);
+					code.push(`['${name}', $.imports.${name}]${index < this.imports.funcEmitters.length - 1 ? ',' : ''}`);
 				}
 				code.decreaseIndent();
 				code.push(']);');
@@ -2302,7 +2302,7 @@ class WorldEmitter extends Emitter {
 				code.increaseIndent();
 				for (const [index, emitter] of this.exports.funcEmitters.entries()) {
 					const name = nameProvider.func.name(emitter.callable);
-					code.push(`['${name}', $.Exports.${name}]${index < this.exports.funcEmitters.length - 1 ? ',' : ''}`);
+					code.push(`['${name}', $.exports.${name}]${index < this.exports.funcEmitters.length - 1 ? ',' : ''}`);
 				}
 				code.decreaseIndent();
 				code.push(']);');

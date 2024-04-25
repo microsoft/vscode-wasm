@@ -101,7 +101,7 @@ export namespace Types._ {
 }
 export namespace calculator.$ {
 	export const Operation = Types.$.Operation;
-	export namespace Exports {
+	export namespace exports {
 		export const calc = new $wcm.FunctionType<calculator.Exports['calc']>('calc',[
 			['o', Operation],
 		], $wcm.u32);
@@ -128,7 +128,7 @@ export namespace calculator._ {
 	};
 	export namespace exports {
 		export const functions: Map<string, $wcm.FunctionType> = new Map([
-			['calc', $.Exports.calc]
+			['calc', $.exports.calc]
 		]);
 		export function bind(exports: Exports, context: $wcm.WasmContext): calculator.Exports {
 			return $wcm.Exports.bind<calculator.Exports>(_, exports, context);
