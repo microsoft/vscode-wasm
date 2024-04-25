@@ -711,7 +711,7 @@ export namespace http {
 		export type StatusCode = u16;
 
 		export namespace Fields {
-			export interface Interface extends $wcm.JInterface {
+			export interface Interface extends $wcm.Resource {
 				/**
 				 * Get all of the values corresponding to a key. If the key is not present
 				 * in this `fields`, an empty list is returned. However, if the key is
@@ -729,7 +729,7 @@ export namespace http {
 				/**
 				 * Set all of the values for a key. Clears any existing values for that
 				 * key, if they have been set.
-				 *
+				 * 
 				 * Fails with `header-error.immutable` if the `fields` are immutable.
 				 */
 				set(name: FieldKey, value: FieldValue[]): result<void, HeaderError>;
@@ -737,7 +737,7 @@ export namespace http {
 				/**
 				 * Delete all values for a key. Does nothing if no values for the key
 				 * exist.
-				 *
+				 * 
 				 * Fails with `header-error.immutable` if the `fields` are immutable.
 				 */
 				delete(name: FieldKey): result<void, HeaderError>;
@@ -745,7 +745,7 @@ export namespace http {
 				/**
 				 * Append a value for a key. Does not change or delete any existing
 				 * values for that key.
-				 *
+				 * 
 				 * Fails with `header-error.immutable` if the `fields` are immutable.
 				 */
 				append(name: FieldKey, value: FieldValue): result<void, HeaderError>;
@@ -753,7 +753,7 @@ export namespace http {
 				/**
 				 * Retrieve the full set of keys and values in the Fields. Like the
 				 * constructor, the list represents each key-value pair.
-				 *
+				 * 
 				 * The outer list represents each key-value pair in the Fields. Keys
 				 * which have multiple values are represented by multiple entries in this
 				 * list with the same key.
@@ -777,7 +777,7 @@ export namespace http {
 		export type Fields = Fields.Interface;
 
 		export namespace IncomingRequest {
-			export interface Interface extends $wcm.JInterface {
+			export interface Interface extends $wcm.Resource {
 				/**
 				 * Returns the method of the incoming request.
 				 */
@@ -800,10 +800,10 @@ export namespace http {
 
 				/**
 				 * Get the `headers` associated with the request.
-				 *
+				 * 
 				 * The returned `headers` resource is immutable: `set`, `append`, and
 				 * `delete` operations will fail with `header-error.immutable`.
-				 *
+				 * 
 				 * The `headers` returned are a child resource: it must be dropped before
 				 * the parent `incoming-request` is dropped. Dropping this
 				 * `incoming-request` before all children are dropped will trap.
@@ -824,11 +824,11 @@ export namespace http {
 		export type IncomingRequest = IncomingRequest.Interface;
 
 		export namespace OutgoingRequest {
-			export interface Interface extends $wcm.JInterface {
+			export interface Interface extends $wcm.Resource {
 				/**
 				 * Returns the resource corresponding to the outgoing Body for this
 				 * Request.
-				 *
+				 * 
 				 * Returns success on the first call: the `outgoing-body` resource for
 				 * this `outgoing-request` can be retrieved at most once. Subsequent
 				 * calls will return error.
@@ -889,10 +889,10 @@ export namespace http {
 
 				/**
 				 * Get the headers associated with the Request.
-				 *
+				 * 
 				 * The returned `headers` resource is immutable: `set`, `append`, and
 				 * `delete` operations will fail with `header-error.immutable`.
-				 *
+				 * 
 				 * This headers resource is a child: it must be dropped before the parent
 				 * `outgoing-request` is dropped, or its ownership is transfered to
 				 * another component by e.g. `outgoing-handler.handle`.
@@ -908,7 +908,7 @@ export namespace http {
 		export type OutgoingRequest = OutgoingRequest.Interface;
 
 		export namespace RequestOptions {
-			export interface Interface extends $wcm.JInterface {
+			export interface Interface extends $wcm.Resource {
 				/**
 				 * The timeout for the initial connect to the HTTP Server.
 				 */
@@ -953,7 +953,7 @@ export namespace http {
 		export type RequestOptions = RequestOptions.Interface;
 
 		export namespace ResponseOutparam {
-			export interface Interface extends $wcm.JInterface {
+			export interface Interface extends $wcm.Resource {
 			}
 			export type Statics = {
 				set(param: own<ResponseOutparam>, response: result<own<OutgoingResponse>, ErrorCode>): void;
@@ -964,7 +964,7 @@ export namespace http {
 		export type ResponseOutparam = ResponseOutparam.Interface;
 
 		export namespace IncomingResponse {
-			export interface Interface extends $wcm.JInterface {
+			export interface Interface extends $wcm.Resource {
 				/**
 				 * Returns the status code from the incoming response.
 				 */
@@ -972,10 +972,10 @@ export namespace http {
 
 				/**
 				 * Returns the headers from the incoming response.
-				 *
+				 * 
 				 * The returned `headers` resource is immutable: `set`, `append`, and
 				 * `delete` operations will fail with `header-error.immutable`.
-				 *
+				 * 
 				 * This headers resource is a child: it must be dropped before the parent
 				 * `incoming-response` is dropped.
 				 */
@@ -995,17 +995,17 @@ export namespace http {
 		export type IncomingResponse = IncomingResponse.Interface;
 
 		export namespace IncomingBody {
-			export interface Interface extends $wcm.JInterface {
+			export interface Interface extends $wcm.Resource {
 				/**
 				 * Returns the contents of the body, as a stream of bytes.
-				 *
+				 * 
 				 * Returns success on first call: the stream representing the contents
 				 * can be retrieved at most once. Subsequent calls will return error.
-				 *
+				 * 
 				 * The returned `input-stream` resource is a child: it must be dropped
 				 * before the parent `incoming-body` is dropped, or consumed by
 				 * `incoming-body.finish`.
-				 *
+				 * 
 				 * This invariant ensures that the implementation can determine whether
 				 * the user is consuming the contents of the body, waiting on the
 				 * `future-trailers` to be ready, or neither. This allows for network
@@ -1024,7 +1024,7 @@ export namespace http {
 		export type IncomingBody = IncomingBody.Interface;
 
 		export namespace FutureTrailers {
-			export interface Interface extends $wcm.JInterface {
+			export interface Interface extends $wcm.Resource {
 				/**
 				 * Returns a pollable which becomes ready when either the trailers have
 				 * been received, or an error has occured. When this pollable is ready,
@@ -1035,19 +1035,19 @@ export namespace http {
 				/**
 				 * Returns the contents of the trailers, or an error which occured,
 				 * once the future is ready.
-				 *
+				 * 
 				 * The outer `option` represents future readiness. Users can wait on this
 				 * `option` to become `some` using the `subscribe` method.
-				 *
+				 * 
 				 * The outer `result` is used to retrieve the trailers or error at most
 				 * once. It will be success on the first call in which the outer option
 				 * is `some`, and error on subsequent calls.
-				 *
+				 * 
 				 * The inner `result` represents that either the HTTP Request or Response
 				 * body, as well as any trailers, were received successfully, or that an
 				 * error occured receiving them. The optional `trailers` indicates whether
 				 * or not trailers were present in the body.
-				 *
+				 * 
 				 * When some `trailers` are returned by this method, the `trailers`
 				 * resource is immutable, and a child. Use of the `set`, `append`, or
 				 * `delete` methods will return an error, and the resource must be
@@ -1063,7 +1063,7 @@ export namespace http {
 		export type FutureTrailers = FutureTrailers.Interface;
 
 		export namespace OutgoingResponse {
-			export interface Interface extends $wcm.JInterface {
+			export interface Interface extends $wcm.Resource {
 				/**
 				 * Get the HTTP Status Code for the Response.
 				 */
@@ -1077,10 +1077,10 @@ export namespace http {
 
 				/**
 				 * Get the headers associated with the Request.
-				 *
+				 * 
 				 * The returned `headers` resource is immutable: `set`, `append`, and
 				 * `delete` operations will fail with `header-error.immutable`.
-				 *
+				 * 
 				 * This headers resource is a child: it must be dropped before the parent
 				 * `outgoing-request` is dropped, or its ownership is transfered to
 				 * another component by e.g. `outgoing-handler.handle`.
@@ -1089,7 +1089,7 @@ export namespace http {
 
 				/**
 				 * Returns the resource corresponding to the outgoing Body for this Response.
-				 *
+				 * 
 				 * Returns success on the first call: the `outgoing-body` resource for
 				 * this `outgoing-response` can be retrieved at most once. Subsequent
 				 * calls will return error.
@@ -1105,14 +1105,14 @@ export namespace http {
 		export type OutgoingResponse = OutgoingResponse.Interface;
 
 		export namespace OutgoingBody {
-			export interface Interface extends $wcm.JInterface {
+			export interface Interface extends $wcm.Resource {
 				/**
 				 * Returns a stream for writing the body contents.
-				 *
+				 * 
 				 * The returned `output-stream` is a child resource: it must be dropped
 				 * before the parent `outgoing-body` resource is dropped (or finished),
 				 * otherwise the `outgoing-body` drop or `finish` will trap.
-				 *
+				 * 
 				 * Returns success on the first call: the `output-stream` resource for
 				 * this `outgoing-body` may be retrieved at most once. Subsequent calls
 				 * will return error.
@@ -1128,7 +1128,7 @@ export namespace http {
 		export type OutgoingBody = OutgoingBody.Interface;
 
 		export namespace FutureIncomingResponse {
-			export interface Interface extends $wcm.JInterface {
+			export interface Interface extends $wcm.Resource {
 				/**
 				 * Returns a pollable which becomes ready when either the Response has
 				 * been received, or an error has occured. When this pollable is ready,
@@ -1138,14 +1138,14 @@ export namespace http {
 
 				/**
 				 * Returns the incoming HTTP Response, or an error, once one is ready.
-				 *
+				 * 
 				 * The outer `option` represents future readiness. Users can wait on this
 				 * `option` to become `some` using the `subscribe` method.
-				 *
+				 * 
 				 * The outer `result` is used to retrieve the response or error at most
 				 * once. It will be success on the first call in which the outer option
 				 * is `some`, and error on subsequent calls.
-				 *
+				 * 
 				 * The inner `result` represents that either the incoming HTTP Response
 				 * status and headers have recieved successfully, or that an error
 				 * occured. Errors may also occur while consuming the response body,
@@ -1164,13 +1164,13 @@ export namespace http {
 		/**
 		 * Attempts to extract a http-related `error` from the wasi:io `error`
 		 * provided.
-		 *
+		 * 
 		 * Stream operations which return
 		 * `wasi:io/stream/stream-error::last-operation-failed` have a payload of
 		 * type `wasi:io/error/error` with more information about the operation
 		 * that failed. This payload can be passed through to this function to see
 		 * if there's http-related information about the error to return.
-		 *
+		 * 
 		 * Note that this function is fallible because not all io-errors are
 		 * http-related errors.
 		 */
@@ -1207,7 +1207,7 @@ export namespace http {
 		 * method, which allows execution to continue after the response has been
 		 * sent. This enables both streaming to the response body, and performing other
 		 * work.
-		 *
+		 * 
 		 * The implementor of this function must write a response to the
 		 * `response-outparam` before returning, or else the caller will respond
 		 * with an error on its behalf.
@@ -1235,10 +1235,10 @@ export namespace http {
 		 * This function is invoked with an outgoing HTTP Request, and it returns
 		 * a resource `future-incoming-response` which represents an HTTP Response
 		 * which may arrive in the future.
-		 *
+		 * 
 		 * The `options` argument accepts optional parameters for the HTTP
 		 * protocol's transport layer.
-		 *
+		 * 
 		 * This function may return an error if the `outgoing-request` is invalid
 		 * or not allowed to be made. Otherwise, protocol errors are reported
 		 * through the `future-incoming-response`.
@@ -1458,21 +1458,27 @@ export namespace http {
 			}
 			export namespace exports {
 				export type WasmInterface = Fields.WasmInterface & { '[dtor]fields': (self: i32) => void };
-				class Impl extends $wcm.Resource implements http.Types.Fields.Interface {
+				class Impl extends $wcm.Resource.Default implements http.Types.Fields.Interface {
+					private readonly _rep: $wcm.ResourceRepresentation;
 					private readonly _om: ObjectModule;
 					constructor(om: ObjectModule);
-					constructor(handleTag: Symbol, handle: $wcm.ResourceHandle, om: ObjectModule);
+					constructor(handleTag: Symbol, handle: $wcm.ResourceHandle, rm: $wcm.ResourceManager, om: ObjectModule);
 					constructor(...args: any[]);
 					constructor(...args: any[]) {
 						if (args[0] === $wcm.ResourceManager.handleTag) {
-							super(args[1] as $wcm.ResourceHandle);
-							this._om = args[2] as ObjectModule;
+							const handle = args[1] as $wcm.ResourceHandle;
+							super(handle);
+							this._rep = (args[2] as $wcm.ResourceManager).getRepresentation(handle);
+							this._om = args[3] as ObjectModule;
 						} else {
-							const om = args[0] as ObjectModule;
+							const rm = args[0] as $wcm.ResourceManager;
+							const om = args[1] as ObjectModule;
 							super(om.constructor());
+							this._rep = rm.getRepresentation(this.$handle());
 							this._om = om;
 						}
 					}
+					public $rep(): $wcm.ResourceRepresentation { return this._rep; }
 					public get(name: FieldKey): FieldValue[] {
 						return this._om.get(this, name);
 					}
@@ -1497,13 +1503,15 @@ export namespace http {
 				}
 				export function Class(wasmInterface: WasmInterface, context: $wcm.WasmContext): http.Types.Fields.Class {
 					const resource = http.Types.$.Fields;
+					const rm: $wcm.ResourceManager = context.resources.ensure('wasi:http@0.2.0/types/fields');
 					const om: ObjectModule = $wcm.Module.createObjectModule(resource, wasmInterface, context);
 					const cm: ClassModule = $wcm.Module.createClassModule(resource, wasmInterface, context);
 					return class extends Impl {
 						constructor();
 						constructor(handleTag: Symbol, handle: $wcm.ResourceHandle);
 						constructor(...args: any[]) {
-							super(...args, om);
+							super(...args, rm, om);
+							rm.registerProxy(this);
 						}
 						public static fromList(entries: [FieldKey, FieldValue][]): result<own<Fields>, HeaderError> {
 							return cm.fromList(entries);
@@ -1534,12 +1542,15 @@ export namespace http {
 			}
 			export namespace exports {
 				export type WasmInterface = IncomingRequest.WasmInterface & { '[dtor]incoming-request': (self: i32) => void };
-				class Impl extends $wcm.Resource implements http.Types.IncomingRequest.Interface {
+				class Impl extends $wcm.Resource.Default implements http.Types.IncomingRequest.Interface {
+					private readonly _rep: $wcm.ResourceRepresentation;
 					private readonly _om: ObjectModule;
-					constructor(_handleTag: Symbol, handle: $wcm.ResourceHandle, om: ObjectModule) {
+					constructor(_handleTag: Symbol, handle: $wcm.ResourceHandle, rm: $wcm.ResourceManager, om: ObjectModule) {
 						super(handle);
+						this._rep = rm.getRepresentation(handle);
 						this._om = om;
 					}
+					public $rep(): $wcm.ResourceRepresentation { return this._rep; }
 					public method(): Method {
 						return this._om.method(this);
 					}
@@ -1561,10 +1572,12 @@ export namespace http {
 				}
 				export function Class(wasmInterface: WasmInterface, context: $wcm.WasmContext): http.Types.IncomingRequest.Class {
 					const resource = http.Types.$.IncomingRequest;
+					const rm: $wcm.ResourceManager = context.resources.ensure('wasi:http@0.2.0/types/incoming-request');
 					const om: ObjectModule = $wcm.Module.createObjectModule(resource, wasmInterface, context);
 					return class extends Impl {
 						constructor(handleTag: Symbol, handle: $wcm.ResourceHandle) {
-							super(handleTag, handle, om);
+							super(handleTag, handle, rm, om);
+							rm.registerProxy(this);
 						}
 					};
 				}
@@ -1602,21 +1615,27 @@ export namespace http {
 			}
 			export namespace exports {
 				export type WasmInterface = OutgoingRequest.WasmInterface & { '[dtor]outgoing-request': (self: i32) => void };
-				class Impl extends $wcm.Resource implements http.Types.OutgoingRequest.Interface {
+				class Impl extends $wcm.Resource.Default implements http.Types.OutgoingRequest.Interface {
+					private readonly _rep: $wcm.ResourceRepresentation;
 					private readonly _om: ObjectModule;
 					constructor(headers: own<Headers>, om: ObjectModule);
-					constructor(handleTag: Symbol, handle: $wcm.ResourceHandle, om: ObjectModule);
+					constructor(handleTag: Symbol, handle: $wcm.ResourceHandle, rm: $wcm.ResourceManager, om: ObjectModule);
 					constructor(...args: any[]);
 					constructor(...args: any[]) {
 						if (args[0] === $wcm.ResourceManager.handleTag) {
-							super(args[1] as $wcm.ResourceHandle);
-							this._om = args[2] as ObjectModule;
+							const handle = args[1] as $wcm.ResourceHandle;
+							super(handle);
+							this._rep = (args[2] as $wcm.ResourceManager).getRepresentation(handle);
+							this._om = args[3] as ObjectModule;
 						} else {
-							const om = args[1] as ObjectModule;
+							const rm = args[1] as $wcm.ResourceManager;
+							const om = args[2] as ObjectModule;
 							super(om.constructor(args[0]));
+							this._rep = rm.getRepresentation(this.$handle());
 							this._om = om;
 						}
 					}
+					public $rep(): $wcm.ResourceRepresentation { return this._rep; }
 					public body(): result<own<OutgoingBody>, void> {
 						return this._om.body(this);
 					}
@@ -1650,12 +1669,14 @@ export namespace http {
 				}
 				export function Class(wasmInterface: WasmInterface, context: $wcm.WasmContext): http.Types.OutgoingRequest.Class {
 					const resource = http.Types.$.OutgoingRequest;
+					const rm: $wcm.ResourceManager = context.resources.ensure('wasi:http@0.2.0/types/outgoing-request');
 					const om: ObjectModule = $wcm.Module.createObjectModule(resource, wasmInterface, context);
 					return class extends Impl {
 						constructor(headers: own<Headers>);
 						constructor(handleTag: Symbol, handle: $wcm.ResourceHandle);
 						constructor(...args: any[]) {
-							super(...args, om);
+							super(...args, rm, om);
+							rm.registerProxy(this);
 						}
 					};
 				}
@@ -1685,21 +1706,27 @@ export namespace http {
 			}
 			export namespace exports {
 				export type WasmInterface = RequestOptions.WasmInterface & { '[dtor]request-options': (self: i32) => void };
-				class Impl extends $wcm.Resource implements http.Types.RequestOptions.Interface {
+				class Impl extends $wcm.Resource.Default implements http.Types.RequestOptions.Interface {
+					private readonly _rep: $wcm.ResourceRepresentation;
 					private readonly _om: ObjectModule;
 					constructor(om: ObjectModule);
-					constructor(handleTag: Symbol, handle: $wcm.ResourceHandle, om: ObjectModule);
+					constructor(handleTag: Symbol, handle: $wcm.ResourceHandle, rm: $wcm.ResourceManager, om: ObjectModule);
 					constructor(...args: any[]);
 					constructor(...args: any[]) {
 						if (args[0] === $wcm.ResourceManager.handleTag) {
-							super(args[1] as $wcm.ResourceHandle);
-							this._om = args[2] as ObjectModule;
+							const handle = args[1] as $wcm.ResourceHandle;
+							super(handle);
+							this._rep = (args[2] as $wcm.ResourceManager).getRepresentation(handle);
+							this._om = args[3] as ObjectModule;
 						} else {
-							const om = args[0] as ObjectModule;
+							const rm = args[0] as $wcm.ResourceManager;
+							const om = args[1] as ObjectModule;
 							super(om.constructor());
+							this._rep = rm.getRepresentation(this.$handle());
 							this._om = om;
 						}
 					}
+					public $rep(): $wcm.ResourceRepresentation { return this._rep; }
 					public connectTimeout(): Duration | undefined {
 						return this._om.connectTimeout(this);
 					}
@@ -1721,12 +1748,14 @@ export namespace http {
 				}
 				export function Class(wasmInterface: WasmInterface, context: $wcm.WasmContext): http.Types.RequestOptions.Class {
 					const resource = http.Types.$.RequestOptions;
+					const rm: $wcm.ResourceManager = context.resources.ensure('wasi:http@0.2.0/types/request-options');
 					const om: ObjectModule = $wcm.Module.createObjectModule(resource, wasmInterface, context);
 					return class extends Impl {
 						constructor();
 						constructor(handleTag: Symbol, handle: $wcm.ResourceHandle);
 						constructor(...args: any[]) {
-							super(...args, om);
+							super(...args, rm, om);
+							rm.registerProxy(this);
 						}
 					};
 				}
@@ -1736,8 +1765,6 @@ export namespace http {
 			export type WasmInterface = {
 				'[static]response-outparam.set': (param: i32, response_case: i32, response_0: i32, response_1: i32, response_2: i64, response_3: i32, response_4: i32, response_5: i32, response_6: i32) => void;
 			};
-			export type ObjectModule = {
-			};
 			type ClassModule = {
 				set(param: own<ResponseOutparam>, response: result<own<OutgoingResponse>, ErrorCode>): void;
 			};
@@ -1746,7 +1773,7 @@ export namespace http {
 			}
 			export namespace exports {
 				export type WasmInterface = ResponseOutparam.WasmInterface & { '[dtor]response-outparam': (self: i32) => void };
-				class Impl extends $wcm.Resource implements http.Types.ResponseOutparam.Interface {
+				class Impl extends $wcm.Resource.Default implements http.Types.ResponseOutparam.Interface {
 					constructor(_handleTag: Symbol, handle: $wcm.ResourceHandle) {
 						super(handle);
 					}
@@ -1755,9 +1782,6 @@ export namespace http {
 					const resource = http.Types.$.ResponseOutparam;
 					const cm: ClassModule = $wcm.Module.createClassModule(resource, wasmInterface, context);
 					return class extends Impl {
-						constructor(handleTag: Symbol, handle: $wcm.ResourceHandle) {
-							super(handleTag, handle);
-						}
 						public static set(param: own<ResponseOutparam>, response: result<own<OutgoingResponse>, ErrorCode>): void {
 							return cm.set(param, response);
 						}
@@ -1781,12 +1805,15 @@ export namespace http {
 			}
 			export namespace exports {
 				export type WasmInterface = IncomingResponse.WasmInterface & { '[dtor]incoming-response': (self: i32) => void };
-				class Impl extends $wcm.Resource implements http.Types.IncomingResponse.Interface {
+				class Impl extends $wcm.Resource.Default implements http.Types.IncomingResponse.Interface {
+					private readonly _rep: $wcm.ResourceRepresentation;
 					private readonly _om: ObjectModule;
-					constructor(_handleTag: Symbol, handle: $wcm.ResourceHandle, om: ObjectModule) {
+					constructor(_handleTag: Symbol, handle: $wcm.ResourceHandle, rm: $wcm.ResourceManager, om: ObjectModule) {
 						super(handle);
+						this._rep = rm.getRepresentation(handle);
 						this._om = om;
 					}
+					public $rep(): $wcm.ResourceRepresentation { return this._rep; }
 					public status(): StatusCode {
 						return this._om.status(this);
 					}
@@ -1799,10 +1826,12 @@ export namespace http {
 				}
 				export function Class(wasmInterface: WasmInterface, context: $wcm.WasmContext): http.Types.IncomingResponse.Class {
 					const resource = http.Types.$.IncomingResponse;
+					const rm: $wcm.ResourceManager = context.resources.ensure('wasi:http@0.2.0/types/incoming-response');
 					const om: ObjectModule = $wcm.Module.createObjectModule(resource, wasmInterface, context);
 					return class extends Impl {
 						constructor(handleTag: Symbol, handle: $wcm.ResourceHandle) {
-							super(handleTag, handle, om);
+							super(handleTag, handle, rm, om);
+							rm.registerProxy(this);
 						}
 					};
 				}
@@ -1824,23 +1853,28 @@ export namespace http {
 			}
 			export namespace exports {
 				export type WasmInterface = IncomingBody.WasmInterface & { '[dtor]incoming-body': (self: i32) => void };
-				class Impl extends $wcm.Resource implements http.Types.IncomingBody.Interface {
+				class Impl extends $wcm.Resource.Default implements http.Types.IncomingBody.Interface {
+					private readonly _rep: $wcm.ResourceRepresentation;
 					private readonly _om: ObjectModule;
-					constructor(_handleTag: Symbol, handle: $wcm.ResourceHandle, om: ObjectModule) {
+					constructor(_handleTag: Symbol, handle: $wcm.ResourceHandle, rm: $wcm.ResourceManager, om: ObjectModule) {
 						super(handle);
+						this._rep = rm.getRepresentation(handle);
 						this._om = om;
 					}
+					public $rep(): $wcm.ResourceRepresentation { return this._rep; }
 					public stream(): result<own<InputStream>, void> {
 						return this._om.stream(this);
 					}
 				}
 				export function Class(wasmInterface: WasmInterface, context: $wcm.WasmContext): http.Types.IncomingBody.Class {
 					const resource = http.Types.$.IncomingBody;
+					const rm: $wcm.ResourceManager = context.resources.ensure('wasi:http@0.2.0/types/incoming-body');
 					const om: ObjectModule = $wcm.Module.createObjectModule(resource, wasmInterface, context);
 					const cm: ClassModule = $wcm.Module.createClassModule(resource, wasmInterface, context);
 					return class extends Impl {
 						constructor(handleTag: Symbol, handle: $wcm.ResourceHandle) {
-							super(handleTag, handle, om);
+							super(handleTag, handle, rm, om);
+							rm.registerProxy(this);
 						}
 						public static finish(this_: own<IncomingBody>): own<FutureTrailers> {
 							return cm.finish(this_);
@@ -1863,12 +1897,15 @@ export namespace http {
 			}
 			export namespace exports {
 				export type WasmInterface = FutureTrailers.WasmInterface & { '[dtor]future-trailers': (self: i32) => void };
-				class Impl extends $wcm.Resource implements http.Types.FutureTrailers.Interface {
+				class Impl extends $wcm.Resource.Default implements http.Types.FutureTrailers.Interface {
+					private readonly _rep: $wcm.ResourceRepresentation;
 					private readonly _om: ObjectModule;
-					constructor(_handleTag: Symbol, handle: $wcm.ResourceHandle, om: ObjectModule) {
+					constructor(_handleTag: Symbol, handle: $wcm.ResourceHandle, rm: $wcm.ResourceManager, om: ObjectModule) {
 						super(handle);
+						this._rep = rm.getRepresentation(handle);
 						this._om = om;
 					}
+					public $rep(): $wcm.ResourceRepresentation { return this._rep; }
 					public subscribe(): own<Pollable> {
 						return this._om.subscribe(this);
 					}
@@ -1878,10 +1915,12 @@ export namespace http {
 				}
 				export function Class(wasmInterface: WasmInterface, context: $wcm.WasmContext): http.Types.FutureTrailers.Class {
 					const resource = http.Types.$.FutureTrailers;
+					const rm: $wcm.ResourceManager = context.resources.ensure('wasi:http@0.2.0/types/future-trailers');
 					const om: ObjectModule = $wcm.Module.createObjectModule(resource, wasmInterface, context);
 					return class extends Impl {
 						constructor(handleTag: Symbol, handle: $wcm.ResourceHandle) {
-							super(handleTag, handle, om);
+							super(handleTag, handle, rm, om);
+							rm.registerProxy(this);
 						}
 					};
 				}
@@ -1907,21 +1946,27 @@ export namespace http {
 			}
 			export namespace exports {
 				export type WasmInterface = OutgoingResponse.WasmInterface & { '[dtor]outgoing-response': (self: i32) => void };
-				class Impl extends $wcm.Resource implements http.Types.OutgoingResponse.Interface {
+				class Impl extends $wcm.Resource.Default implements http.Types.OutgoingResponse.Interface {
+					private readonly _rep: $wcm.ResourceRepresentation;
 					private readonly _om: ObjectModule;
 					constructor(headers: own<Headers>, om: ObjectModule);
-					constructor(handleTag: Symbol, handle: $wcm.ResourceHandle, om: ObjectModule);
+					constructor(handleTag: Symbol, handle: $wcm.ResourceHandle, rm: $wcm.ResourceManager, om: ObjectModule);
 					constructor(...args: any[]);
 					constructor(...args: any[]) {
 						if (args[0] === $wcm.ResourceManager.handleTag) {
-							super(args[1] as $wcm.ResourceHandle);
-							this._om = args[2] as ObjectModule;
+							const handle = args[1] as $wcm.ResourceHandle;
+							super(handle);
+							this._rep = (args[2] as $wcm.ResourceManager).getRepresentation(handle);
+							this._om = args[3] as ObjectModule;
 						} else {
-							const om = args[1] as ObjectModule;
+							const rm = args[1] as $wcm.ResourceManager;
+							const om = args[2] as ObjectModule;
 							super(om.constructor(args[0]));
+							this._rep = rm.getRepresentation(this.$handle());
 							this._om = om;
 						}
 					}
+					public $rep(): $wcm.ResourceRepresentation { return this._rep; }
 					public statusCode(): StatusCode {
 						return this._om.statusCode(this);
 					}
@@ -1937,12 +1982,14 @@ export namespace http {
 				}
 				export function Class(wasmInterface: WasmInterface, context: $wcm.WasmContext): http.Types.OutgoingResponse.Class {
 					const resource = http.Types.$.OutgoingResponse;
+					const rm: $wcm.ResourceManager = context.resources.ensure('wasi:http@0.2.0/types/outgoing-response');
 					const om: ObjectModule = $wcm.Module.createObjectModule(resource, wasmInterface, context);
 					return class extends Impl {
 						constructor(headers: own<Headers>);
 						constructor(handleTag: Symbol, handle: $wcm.ResourceHandle);
 						constructor(...args: any[]) {
-							super(...args, om);
+							super(...args, rm, om);
+							rm.registerProxy(this);
 						}
 					};
 				}
@@ -1964,23 +2011,28 @@ export namespace http {
 			}
 			export namespace exports {
 				export type WasmInterface = OutgoingBody.WasmInterface & { '[dtor]outgoing-body': (self: i32) => void };
-				class Impl extends $wcm.Resource implements http.Types.OutgoingBody.Interface {
+				class Impl extends $wcm.Resource.Default implements http.Types.OutgoingBody.Interface {
+					private readonly _rep: $wcm.ResourceRepresentation;
 					private readonly _om: ObjectModule;
-					constructor(_handleTag: Symbol, handle: $wcm.ResourceHandle, om: ObjectModule) {
+					constructor(_handleTag: Symbol, handle: $wcm.ResourceHandle, rm: $wcm.ResourceManager, om: ObjectModule) {
 						super(handle);
+						this._rep = rm.getRepresentation(handle);
 						this._om = om;
 					}
+					public $rep(): $wcm.ResourceRepresentation { return this._rep; }
 					public write(): result<own<OutputStream>, void> {
 						return this._om.write(this);
 					}
 				}
 				export function Class(wasmInterface: WasmInterface, context: $wcm.WasmContext): http.Types.OutgoingBody.Class {
 					const resource = http.Types.$.OutgoingBody;
+					const rm: $wcm.ResourceManager = context.resources.ensure('wasi:http@0.2.0/types/outgoing-body');
 					const om: ObjectModule = $wcm.Module.createObjectModule(resource, wasmInterface, context);
 					const cm: ClassModule = $wcm.Module.createClassModule(resource, wasmInterface, context);
 					return class extends Impl {
 						constructor(handleTag: Symbol, handle: $wcm.ResourceHandle) {
-							super(handleTag, handle, om);
+							super(handleTag, handle, rm, om);
+							rm.registerProxy(this);
 						}
 						public static finish(this_: own<OutgoingBody>, trailers: own<Trailers> | undefined): result<void, ErrorCode> {
 							return cm.finish(this_, trailers);
@@ -2003,12 +2055,15 @@ export namespace http {
 			}
 			export namespace exports {
 				export type WasmInterface = FutureIncomingResponse.WasmInterface & { '[dtor]future-incoming-response': (self: i32) => void };
-				class Impl extends $wcm.Resource implements http.Types.FutureIncomingResponse.Interface {
+				class Impl extends $wcm.Resource.Default implements http.Types.FutureIncomingResponse.Interface {
+					private readonly _rep: $wcm.ResourceRepresentation;
 					private readonly _om: ObjectModule;
-					constructor(_handleTag: Symbol, handle: $wcm.ResourceHandle, om: ObjectModule) {
+					constructor(_handleTag: Symbol, handle: $wcm.ResourceHandle, rm: $wcm.ResourceManager, om: ObjectModule) {
 						super(handle);
+						this._rep = rm.getRepresentation(handle);
 						this._om = om;
 					}
+					public $rep(): $wcm.ResourceRepresentation { return this._rep; }
 					public subscribe(): own<Pollable> {
 						return this._om.subscribe(this);
 					}
@@ -2018,10 +2073,12 @@ export namespace http {
 				}
 				export function Class(wasmInterface: WasmInterface, context: $wcm.WasmContext): http.Types.FutureIncomingResponse.Class {
 					const resource = http.Types.$.FutureIncomingResponse;
+					const rm: $wcm.ResourceManager = context.resources.ensure('wasi:http@0.2.0/types/future-incoming-response');
 					const om: ObjectModule = $wcm.Module.createObjectModule(resource, wasmInterface, context);
 					return class extends Impl {
 						constructor(handleTag: Symbol, handle: $wcm.ResourceHandle) {
-							super(handleTag, handle, om);
+							super(handleTag, handle, rm, om);
+							rm.registerProxy(this);
 						}
 					};
 				}
@@ -2085,37 +2142,37 @@ export namespace http {
 				export type WasmInterface = {
 					'[resource-new]fields': (rep: i32) => i32;
 					'[resource-rep]fields': (handle: i32) => i32;
-					'[resource-drop]fields': (handle: i32) => i32;
+					'[resource-drop]fields': (handle: i32) => void;
 					'[resource-new]incoming-request': (rep: i32) => i32;
 					'[resource-rep]incoming-request': (handle: i32) => i32;
-					'[resource-drop]incoming-request': (handle: i32) => i32;
+					'[resource-drop]incoming-request': (handle: i32) => void;
 					'[resource-new]outgoing-request': (rep: i32) => i32;
 					'[resource-rep]outgoing-request': (handle: i32) => i32;
-					'[resource-drop]outgoing-request': (handle: i32) => i32;
+					'[resource-drop]outgoing-request': (handle: i32) => void;
 					'[resource-new]request-options': (rep: i32) => i32;
 					'[resource-rep]request-options': (handle: i32) => i32;
-					'[resource-drop]request-options': (handle: i32) => i32;
+					'[resource-drop]request-options': (handle: i32) => void;
 					'[resource-new]response-outparam': (rep: i32) => i32;
 					'[resource-rep]response-outparam': (handle: i32) => i32;
-					'[resource-drop]response-outparam': (handle: i32) => i32;
+					'[resource-drop]response-outparam': (handle: i32) => void;
 					'[resource-new]incoming-response': (rep: i32) => i32;
 					'[resource-rep]incoming-response': (handle: i32) => i32;
-					'[resource-drop]incoming-response': (handle: i32) => i32;
+					'[resource-drop]incoming-response': (handle: i32) => void;
 					'[resource-new]incoming-body': (rep: i32) => i32;
 					'[resource-rep]incoming-body': (handle: i32) => i32;
-					'[resource-drop]incoming-body': (handle: i32) => i32;
+					'[resource-drop]incoming-body': (handle: i32) => void;
 					'[resource-new]future-trailers': (rep: i32) => i32;
 					'[resource-rep]future-trailers': (handle: i32) => i32;
-					'[resource-drop]future-trailers': (handle: i32) => i32;
+					'[resource-drop]future-trailers': (handle: i32) => void;
 					'[resource-new]outgoing-response': (rep: i32) => i32;
 					'[resource-rep]outgoing-response': (handle: i32) => i32;
-					'[resource-drop]outgoing-response': (handle: i32) => i32;
+					'[resource-drop]outgoing-response': (handle: i32) => void;
 					'[resource-new]outgoing-body': (rep: i32) => i32;
 					'[resource-rep]outgoing-body': (handle: i32) => i32;
-					'[resource-drop]outgoing-body': (handle: i32) => i32;
+					'[resource-drop]outgoing-body': (handle: i32) => void;
 					'[resource-new]future-incoming-response': (rep: i32) => i32;
 					'[resource-rep]future-incoming-response': (handle: i32) => i32;
-					'[resource-drop]future-incoming-response': (handle: i32) => i32;
+					'[resource-drop]future-incoming-response': (handle: i32) => void;
 				};
 			}
 		}
@@ -2216,6 +2273,9 @@ export namespace http {
 			]);
 			export function create(service: proxy.Imports, context: $wcm.WasmContext): Imports {
 				return $wcm.Imports.create<Imports>(_, service, context);
+			}
+			export function loop(service: proxy.Imports, context: $wcm.WasmContext): proxy.Imports {
+				return $wcm.Imports.loop(_, service, context);
 			}
 		}
 		export type Exports = {

@@ -7,33 +7,33 @@ export type Options = {
 	help: boolean;
 	version: boolean;
 	outDir: string | undefined;
-	package: string | undefined;
-	file: string | undefined;
+	filter: string | undefined;
+	input: string | undefined;
 	target: 'ts';
 	nameStyle: 'ts' | 'wit';
 	stdin: boolean;
-	noMain: boolean;
-	hoist: boolean;
+	structure: 'auto' | 'package' | 'namespace';
+	singleWorld: boolean;
 };
 
-export type ResolvedOptions = Required<Options> & { file: string; outDir: string };
+export type ResolvedOptions = Required<Options> & { input: string; outDir: string };
 
 export namespace Options {
 	export const defaults: Options = {
 		help: false,
 		version: false,
 		outDir: undefined,
-		package: undefined,
-		file: undefined,
+		filter: undefined,
+		input: undefined,
 		target: 'ts',
 		nameStyle: 'ts',
 		stdin: false,
-		noMain: false,
-		hoist: false
+		structure: 'auto',
+		singleWorld: false
 	};
 
 	export function validate(options: Options): options is ResolvedOptions {
-		if (options.stdin === false && !options.file) {
+		if (options.stdin === false && !options.input) {
 			process.stderr.write('Missing file argument.\n');
 			return false;
 		}

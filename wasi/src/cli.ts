@@ -14,10 +14,10 @@ export namespace cli {
 	export namespace Environment {
 		/**
 		 * Get the POSIX-style environment variables.
-		 *
+		 * 
 		 * Each environment variable is provided as a pair of string variable names
 		 * and string value.
-		 *
+		 * 
 		 * Morally, these are a value import, but until value imports are available
 		 * in the component model, this import function should return the same
 		 * values each time it is called.
@@ -90,14 +90,14 @@ export namespace cli {
 
 	/**
 	 * Terminal input.
-	 *
+	 * 
 	 * In the future, this may include functions for disabling echoing,
 	 * disabling input buffering so that keyboard events are sent through
 	 * immediately, querying supported features, and so on.
 	 */
 	export namespace TerminalInput {
 		export namespace TerminalInput {
-			export interface Interface extends $wcm.JInterface {
+			export interface Interface extends $wcm.Resource {
 			}
 			export type Statics = {
 			};
@@ -111,14 +111,14 @@ export namespace cli {
 
 	/**
 	 * Terminal output.
-	 *
+	 * 
 	 * In the future, this may include functions for querying the terminal
 	 * size, being notified of terminal size changes, querying supported
 	 * features, and so on.
 	 */
 	export namespace TerminalOutput {
 		export namespace TerminalOutput {
-			export interface Interface extends $wcm.JInterface {
+			export interface Interface extends $wcm.Resource {
 			}
 			export type Statics = {
 			};
@@ -368,24 +368,18 @@ export namespace cli {
 		export namespace TerminalInput {
 			export type WasmInterface = {
 			};
-			export type ObjectModule = {
-			};
 			export namespace imports {
 				export type WasmInterface = TerminalInput.WasmInterface & { '[resource-drop]terminal-input': (self: i32) => void };
 			}
 			export namespace exports {
 				export type WasmInterface = TerminalInput.WasmInterface & { '[dtor]terminal-input': (self: i32) => void };
-				class Impl extends $wcm.Resource implements cli.TerminalInput.TerminalInput.Interface {
+				class Impl extends $wcm.Resource.Default implements cli.TerminalInput.TerminalInput.Interface {
 					constructor(_handleTag: Symbol, handle: $wcm.ResourceHandle) {
 						super(handle);
 					}
 				}
-				export function Class(_wasmInterface: WasmInterface, _context: $wcm.WasmContext): cli.TerminalInput.TerminalInput.Class {
-					return class extends Impl {
-						constructor(handleTag: Symbol, handle: $wcm.ResourceHandle) {
-							super(handleTag, handle);
-						}
-					};
+				export function Class(): cli.TerminalInput.TerminalInput.Class {
+					return Impl;
 				}
 			}
 		}
@@ -406,7 +400,7 @@ export namespace cli {
 				export type WasmInterface = {
 					'[resource-new]terminal-input': (rep: i32) => i32;
 					'[resource-rep]terminal-input': (handle: i32) => i32;
-					'[resource-drop]terminal-input': (handle: i32) => i32;
+					'[resource-drop]terminal-input': (handle: i32) => void;
 				};
 			}
 		}
@@ -423,24 +417,18 @@ export namespace cli {
 		export namespace TerminalOutput {
 			export type WasmInterface = {
 			};
-			export type ObjectModule = {
-			};
 			export namespace imports {
 				export type WasmInterface = TerminalOutput.WasmInterface & { '[resource-drop]terminal-output': (self: i32) => void };
 			}
 			export namespace exports {
 				export type WasmInterface = TerminalOutput.WasmInterface & { '[dtor]terminal-output': (self: i32) => void };
-				class Impl extends $wcm.Resource implements cli.TerminalOutput.TerminalOutput.Interface {
+				class Impl extends $wcm.Resource.Default implements cli.TerminalOutput.TerminalOutput.Interface {
 					constructor(_handleTag: Symbol, handle: $wcm.ResourceHandle) {
 						super(handle);
 					}
 				}
-				export function Class(_wasmInterface: WasmInterface, _context: $wcm.WasmContext): cli.TerminalOutput.TerminalOutput.Class {
-					return class extends Impl {
-						constructor(handleTag: Symbol, handle: $wcm.ResourceHandle) {
-							super(handleTag, handle);
-						}
-					};
+				export function Class(): cli.TerminalOutput.TerminalOutput.Class {
+					return Impl;
 				}
 			}
 		}
@@ -461,7 +449,7 @@ export namespace cli {
 				export type WasmInterface = {
 					'[resource-new]terminal-output': (rep: i32) => i32;
 					'[resource-rep]terminal-output': (handle: i32) => i32;
-					'[resource-drop]terminal-output': (handle: i32) => i32;
+					'[resource-drop]terminal-output': (handle: i32) => void;
 				};
 			}
 		}
@@ -604,6 +592,9 @@ export namespace cli {
 			]);
 			export function create(service: command.Imports, context: $wcm.WasmContext): Imports {
 				return $wcm.Imports.create<Imports>(_, service, context);
+			}
+			export function loop(service: command.Imports, context: $wcm.WasmContext): command.Imports {
+				return $wcm.Imports.loop(_, service, context);
 			}
 		}
 		export type Exports = {

@@ -2,15 +2,15 @@
  *  Copyright (c) Microsoft Corporation. All rights reserved.
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
-import { WasmContext, ResourceManager, Memory, MemoryError, type ResourceHandle, type u32, Resource } from '@vscode/wasm-component-model';
+import { WasmContext, ResourceManager, Memory, type u32, Resource } from '@vscode/wasm-component-model';
 import * as vscode from 'vscode';
 
-import { example } from './example';
+import { test, Window } from './test';
 
 // Channel implementation
-class TestResourceImpl extends Resource.Default implements example.Window.TestResource {
+class TestResourceImpl extends Resource.Default implements Window.TestResource {
 
-	public static readonly $resourceManager = new ResourceManager.Default<example.Window.TestResource>();
+	public static readonly $resourceManager = new ResourceManager.Default<Window.TestResource>();
 
 	constructor() {
 		super(TestResourceImpl.$resourceManager);
@@ -26,7 +26,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
 	const bits = await vscode.workspace.fs.readFile(filename);
 	const module = await WebAssembly.compile(bits);
 	const wasmContext: WasmContext.Default = new WasmContext.Default();
-	const service: example.test.Imports = {
+	const service: test.Imports = {
 		window: {
 			TestResource: TestResourceImpl,
 			createTestResource: () => {
@@ -34,10 +34,10 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
 			}
 		}
 	}
-	const imports = example.test._.imports.create(service, wasmContext)
+	const imports = test._.imports.create(service, wasmContext)
 	const instance = await WebAssembly.instantiate(module, imports);
 	wasmContext.initialize(new Memory.Default(instance.exports));
-	const api = example.test._.exports.bind(instance.exports as example.test._.Exports, wasmContext);
+	const api = test._.exports.bind(instance.exports as test._.Exports, wasmContext);
 
 	vscode.commands.registerCommand('testbed-component-model-performance.run', () => {
 		let start = Date.now();

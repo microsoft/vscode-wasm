@@ -2,12 +2,10 @@
  *  Copyright (c) Microsoft Corporation. All rights reserved.
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
-import { WasmContext, ResourceManagers, Memory, MemoryError, type ResourceHandle } from '@vscode/wasm-component-model';
+import { WasmContext, Memory } from '@vscode/wasm-component-model';
 import * as vscode from 'vscode';
 
-import { example } from './example';
-import calculator = example.calculator;
-import Types = example.Types;
+import { calculator, Types } from './calculator';
 
 export async function activate(context: vscode.ExtensionContext): Promise<void> {
 	const filename = vscode.Uri.joinPath(context.extensionUri, 'target', 'wasm32-unknown-unknown', 'debug', 'calculator.wasm');

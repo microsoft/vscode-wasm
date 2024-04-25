@@ -14,6 +14,7 @@ import {
 } from './wit-json';
 
 export function processDocument(document: Document, options: ResolvedOptions): void {
+	options.singleWorld = false;
 	const documentEmitter = new DocumentEmitter(document, options);
 	documentEmitter.build();
 	documentEmitter.postBuild();
@@ -155,6 +156,7 @@ type NameProvider = {
 
 	world: {
 		name(world: World): string;
+		fileName(world: World): string;
 	};
 
 	iface: {
@@ -246,6 +248,9 @@ namespace _TypeScriptNameProvider {
 	export namespace world {
 		export function name(world: World): string {
 			return _asPropertyName(world.name);
+		}
+		export function fileName(world: World): string {
+			return `${name(world)}.ts`;
 		}
 	}
 
@@ -416,6 +421,9 @@ namespace _WitNameProvider {
 		export function name(world: World): string {
 			return toTs(world.name);
 		}
+		export function fileName(world: World): string {
+			return `${name(world)}.ts`;
+		}
 	}
 
 	export namespace iface {
@@ -550,26 +558,36 @@ class Interfaces {
 
 	private readonly symbols: SymbolTable;
 	private readonly nameProvider: NameProvider;
+	private readonly options: ResolvedOptions;
 
-	constructor(symbols: SymbolTable, nameProvider: NameProvider) {
+	constructor(symbols: SymbolTable, nameProvider: NameProvider, options: ResolvedOptions) {
 		this.symbols = symbols;
 		this.nameProvider = nameProvider;
+		this.options = options;
 	}
 
 	getFullyQualifiedModuleName(iface: Interface | number, separator: string = '.'): string {
 		if (typeof iface === 'number') {
 			iface = this.symbols.getInterface(iface);
 		}
-		const pkg = this.symbols.getPackage(iface.package);
-		return `${this.nameProvider.pack.name(pkg)}${separator}${this.nameProvider.iface.moduleName(iface)}`;
+		if (this.options.singleWorld) {
+			return this.nameProvider.iface.moduleName(iface);
+		} else {
+			const pkg = this.symbols.getPackage(iface.package);
+			return `${this.nameProvider.pack.name(pkg)}${separator}${this.nameProvider.iface.moduleName(iface)}`;
+		}
 	}
 
 	getFullyQualifiedTypeName(iface: Interface | number, separator: string = '.'): string {
 		if (typeof iface === 'number') {
 			iface = this.symbols.getInterface(iface);
 		}
-		const pkg = this.symbols.getPackage(iface.package);
-		return `${this.nameProvider.pack.name(pkg)}${separator}${this.nameProvider.iface.typeName(iface)}`;
+		if (this.options.singleWorld) {
+			return this.nameProvider.iface.moduleName(iface);
+		} else {
+			const pkg = this.symbols.getPackage(iface.package);
+			return `${this.nameProvider.pack.name(pkg)}${separator}${this.nameProvider.iface.typeName(iface)}`;
+		}
 	}
 }
 
@@ -602,11 +620,11 @@ class SymbolTable {
 	public readonly types: Types;
 
 
-	constructor(document: Document, nameProvider: NameProvider) {
+	constructor(document: Document, nameProvider: NameProvider, options: ResolvedOptions) {
 		this.document = document;
 		this.methods = new Map();
 		this.worlds = new Worlds(this, nameProvider);
-		this.interfaces = new Interfaces(this, nameProvider);
+		this.interfaces = new Interfaces(this, nameProvider, options);
 		this.types = new Types(this, nameProvider);
 		for (const iface of document.interfaces) {
 			for (const callable of Object.values(iface.functions)) {
@@ -1609,7 +1627,7 @@ class DocumentEmitter {
 	}
 
 	public build(): void {
-		const regExp = this.options.package !== undefined ? new RegExp(`${this.options.package}:`) : undefined;
+		const regExp = this.options.filter !== undefined ? new RegExp(`${this.options.filter}:`) : undefined;
 		const package2Worlds: Map<number, World[]> = new Map();
 		for (const world of this.document.worlds) {
 			// Ignore import worlds. They are used to include in other worlds
@@ -1632,7 +1650,7 @@ class DocumentEmitter {
 			}
 
 			const code = new Code();
-			const symbols = new SymbolTable(this.document, this.nameProvider);
+			const symbols = new SymbolTable(this.document, this.nameProvider, this.options);
 			const printers: Printers = {
 				typeScript: new TypeScript.TypePrinter(symbols, this.nameProvider, code.imports),
 				metaModel: new MetaModel.TypePrinter(symbols, this.nameProvider, code.imports)
@@ -1654,21 +1672,37 @@ class DocumentEmitter {
 
 	public emit(): void {
 		const typeDeclarations: string[] = [];
-		for (const { emitter, code } of this.packages) {
-			const pkgName = emitter.pkgName;
+		if (this.packages.length === 1 && this.packages[0].emitter.hasSingleWorlds() && this.options.structure === 'auto') {
+			this.options.singleWorld = true;
+			const { emitter, code } = this.packages[0];
+			const world = emitter.getWorld(0);
+			const fileName = this.nameProvider.world.fileName(world.world);
 			emitter.emit(code);
-			this.exports.push(pkgName);
-			const fileName = this.nameProvider.pack.fileName(emitter.pkg);
 			fs.writeFileSync(path.join(this.options.outDir, fileName), code.toString());
-			this.mainCode.push(`import { ${pkgName} } from './${this.nameProvider.pack.importName(emitter.pkg)}';`);
-			typeDeclarations.push(`${pkgName}?: ${pkgName}`);
+			return;
+		} else {
+			for (const { emitter, code } of this.packages) {
+				const pkgName = emitter.pkgName;
+				emitter.emit(code);
+				this.exports.push(pkgName);
+				const fileName = this.nameProvider.pack.fileName(emitter.pkg);
+				fs.writeFileSync(path.join(this.options.outDir, fileName), code.toString());
+				this.mainCode.push(`import { ${pkgName} } from './${this.nameProvider.pack.importName(emitter.pkg)}';`);
+				typeDeclarations.push(`${pkgName}?: ${pkgName}`);
+			}
 		}
-		if (this.options.noMain) {
+
+		if (this.packages.length === 1 && this.options.structure !== 'namespace') {
 			return;
 		}
 
+		const pkg = this.packages[0].emitter.pkg;
+		const parts = this.nameProvider.pack.parts(pkg);
+		if (parts.namespace === undefined) {
+			return;
+		}
 		const code = this.mainCode;
-		const namespace = this.options.package;
+		const namespace = parts.namespace;
 		code.push();
 
 		code.push(`namespace ${namespace}._ {`);
@@ -1686,8 +1720,8 @@ class DocumentEmitter {
 		code.decreaseIndent();
 		code.push(`}`);
 		code.push(`export { ${this.exports.join(', ')} };`);
-		code.push(`export default ${this.options.package};`);
-		fs.writeFileSync(path.join(this.options.outDir, 'main.ts'), code.toString());
+		code.push(`export default ${namespace};`);
+		fs.writeFileSync(path.join(this.options.outDir, `${namespace}.ts`), code.toString());
 	}
 }
 
@@ -1710,6 +1744,14 @@ class PackageEmitter extends Emitter {
 
 	public getId(): string {
 		return this.pkg.name;
+	}
+
+	public hasSingleWorlds(): boolean {
+		return this.worldEmitters.length === 1;
+	}
+
+	public getWorld(index: number): WorldEmitter {
+		return this.worldEmitters[index];
 	}
 
 	public build(): void {
@@ -1745,8 +1787,10 @@ class PackageEmitter extends Emitter {
 
 	public emitNamespace(code: Code): void {
 		const pkgName = this.pkgName;
-		code.push(`export namespace ${pkgName} {`);
-		code.increaseIndent();
+		if (!this.context.options.singleWorld) {
+			code.push(`export namespace ${pkgName} {`);
+			code.increaseIndent();
+		}
 		for (const [index, ifaceEmitter] of this.ifaceEmitters.entries()) {
 			ifaceEmitter.emitNamespace(code);
 			ifaceEmitter.emitTypeDeclaration(code);
@@ -1760,8 +1804,10 @@ class PackageEmitter extends Emitter {
 				code.push('');
 			}
 		}
-		code.decreaseIndent();
-		code.push(`}`);
+		if (!this.context.options.singleWorld) {
+			code.decreaseIndent();
+			code.push(`}`);
+		}
 	}
 
 	public emitTypeDeclaration(_code: Code): void {
@@ -1770,8 +1816,10 @@ class PackageEmitter extends Emitter {
 	public emitMetaData(code: Code): void {
 		const pkgName = this.pkgName;
 		code.push('');
-		code.push(`export namespace ${pkgName} {`);
-		code.increaseIndent();
+		if (!this.context.options.singleWorld) {
+			code.push(`export namespace ${pkgName} {`);
+			code.increaseIndent();
+		}
 		for (let i = 0; i < this.ifaceEmitters.length; i++) {
 			const ifaceEmitter = this.ifaceEmitters[i];
 			ifaceEmitter.emitMetaModel(code);
@@ -1787,11 +1835,16 @@ class PackageEmitter extends Emitter {
 				code.push('');
 			}
 		}
-		code.decreaseIndent();
-		code.push(`}`);
+		if (!this.context.options.singleWorld) {
+			code.decreaseIndent();
+			code.push(`}`);
+		}
 	}
 
 	public emitApi(code: Code): void {
+		if (this.context.options.singleWorld) {
+			return;
+		}
 		const { nameProvider } = this.context;
 		const pkgName = this.pkgName;
 		code.push('');
@@ -2645,10 +2698,14 @@ class MemberEmitter extends Emitter {
 		if (this.owner === undefined) {
 			return '';
 		}
-		const { symbols, nameProvider } = this.context;
+		const { symbols, nameProvider, options } = this.context;
 		const ownerName = this.getOwnerName(this.owner);
-		const pkg = nameProvider.pack.name(symbols.getPackage(this.owner.package));
-		return `${pkg}.${ownerName}.`;
+		if (options.singleWorld) {
+			return `${ownerName}.`;
+		} else {
+			const pkg = nameProvider.pack.name(symbols.getPackage(this.owner.package));
+			return `${pkg}.${ownerName}.`;
+		}
 	}
 
 	protected getOwnerName(owner: Interface | World): string {
@@ -3286,7 +3343,7 @@ class ResourceEmitter extends InterfaceMemberEmitter {
 		code.decreaseIndent();
 		code.push(`};`);
 		const needsClassModule = this.statics.length > 0;
-		const needsObjectModule = this.conztructor !== undefined || this.methods.length > 0|| this.destructor !== undefined;
+		const needsObjectModule = this.conztructor !== undefined || this.methods.length > 0;
 		if (needsObjectModule) {
 			code.push(`export type ObjectModule = {`);
 			code.increaseIndent();
@@ -3339,10 +3396,9 @@ class ResourceEmitter extends InterfaceMemberEmitter {
 				code.decreaseIndent();
 				code.push(`}`);
 			} else {
-				code.push(`constructor(_handleTag: Symbol, handle: ${MetaModel.ResourceHandle}, rm: ${MetaModel.ResourceManager}) {`);
+				code.push(`constructor(_handleTag: Symbol, handle: ${MetaModel.ResourceHandle}) {`);
 				code.increaseIndent();
 				code.push(`super(handle);`);
-				code.push(`this._rep = rm.getRepresentation(handle);`);
 				code.decreaseIndent();
 				code.push(`}`);
 			}
@@ -3444,7 +3500,11 @@ namespace ResourceEmitter {
 			const owner = symbols.resolveOwner(type.owner);
 			if (Interface.is(owner)) {
 				const pkg = symbols.getPackage(owner.package);
-				return `${nameProvider.pack.name(pkg)}.${nameProvider.iface.moduleName(owner)}.${nameProvider.type.name(type)}`;
+				if (this.context.options.singleWorld) {
+					return `${nameProvider.iface.moduleName(owner)}.${nameProvider.type.name(type)}`;
+				} else {
+					return `${nameProvider.pack.name(pkg)}.${nameProvider.iface.moduleName(owner)}.${nameProvider.type.name(type)}`;
+				}
 			} else {
 				return nameProvider.type.name(type);
 			}

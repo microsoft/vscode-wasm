@@ -43,13 +43,13 @@ async function run(options: Options): Promise<number> {
 				processDocument(content, options);
 			});
 		} else {
-			const stat = await fs.stat(options.file, { bigint: true });
+			const stat = await fs.stat(options.input, { bigint: true });
 			if (stat.isFile()) {
-				if (path.extname(options.file) === '.json') {
-					const content: Document = JSON.parse(await fs.readFile(options.file, { encoding: 'utf8' }));
+				if (path.extname(options.input) === '.json') {
+					const content: Document = JSON.parse(await fs.readFile(options.input, { encoding: 'utf8' }));
 					processDocument(content, options);
 				} else {
-					process.stderr.write(`${options.file} is not a JSON file.\n`);
+					process.stderr.write(`${options.input} is not a JSON file.\n`);
 					return 1;
 				}
 			} else if (stat.isDirectory()) {
@@ -65,7 +65,7 @@ async function run(options: Options): Promise<number> {
 						return 1;
 					}
 					try {
-						const data = cp.execFileSync('wasm-tools', ['component', 'wit', '--json', options.file], { shell: true, encoding: 'utf8' });
+						const data = cp.execFileSync('wasm-tools', ['component', 'wit', '--json', options.input], { shell: true, encoding: 'utf8' });
 						const content: Document = JSON.parse(data);
 						processDocument(content, options);
 					} catch (error: any) {
@@ -76,7 +76,7 @@ async function run(options: Options): Promise<number> {
 				} catch (error: any) {
 				}
 			} else {
-				process.stderr.write(`${options.file} doesn't exist.\n`);
+				process.stderr.write(`${options.input} doesn't exist.\n`);
 				return 1;
 			}
 		}
@@ -112,7 +112,7 @@ export async function main(): Promise<number> {
 			description: 'The directory the TypeScript files are written to.',
 			string: true
 		}).
-		option('package', {
+		option('filter', {
 			description: 'A regular expression to filter the packages to be included.',
 			string: true
 		}).
@@ -131,20 +131,21 @@ export async function main(): Promise<number> {
 			boolean: true,
 			default: false
 		}).
-		option('hoist', {
-			description: 'Hoist all interface name into the package namespace for easier access.',
-			boolean: true,
-			default: false
+		option('structure', {
+			description: 'By default wit2ts only generate the structure necessary to make names unique. This options force wit2ts to generate the package and or namespace names, even if they are not necessary.',
+			enum: ['auto', 'package', 'namespace'],
+			default: 'auto'
 		}).
-		option('noMain', {
-			description: 'Do not generate a main entry point file.',
-			boolean: true,
-			default: false
-		});
+		command('$0 <input>', 'Process the JSON file or WIT directory', (yargs) => {
+        	yargs.positional('input', {
+            	describe: 'File or directory to process',
+            	type: 'string'
+        	});
+		}).
+		strict();
 
 	const parsed = await yargs.argv;
 	const options: Options = Object.assign({}, Options.defaults, parsed);
-	options.file = parsed._[0] as string;
 	return run(options);
 }
 

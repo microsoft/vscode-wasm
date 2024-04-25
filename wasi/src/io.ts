@@ -8,7 +8,7 @@ import type { borrow, own, u64, result, i32, ptr, i64 } from '@vscode/wasm-compo
 export namespace io {
 	export namespace Error {
 		export namespace Error {
-			export interface Interface extends $wcm.JInterface {
+			export interface Interface extends $wcm.Resource {
 				/**
 				 * Returns a string that is suitable to assist humans in debugging
 				 * this error.
@@ -37,7 +37,7 @@ export namespace io {
 	 */
 	export namespace Poll {
 		export namespace Pollable {
-			export interface Interface extends $wcm.JInterface {
+			export interface Interface extends $wcm.Resource {
 				/**
 				 * Return the readiness of a pollable. This function never blocks.
 				 * 
@@ -159,7 +159,7 @@ export namespace io {
 		export type StreamError = StreamError.LastOperationFailed | StreamError.Closed;
 
 		export namespace InputStream {
-			export interface Interface extends $wcm.JInterface {
+			export interface Interface extends $wcm.Resource {
 				/**
 				 * Perform a non-blocking read from the stream.
 				 * 
@@ -228,7 +228,7 @@ export namespace io {
 		export type InputStream = InputStream.Interface;
 
 		export namespace OutputStream {
-			export interface Interface extends $wcm.JInterface {
+			export interface Interface extends $wcm.Resource {
 				/**
 				 * Check readiness for writing. This function never blocks.
 				 * 
@@ -420,22 +420,27 @@ export namespace io {
 			}
 			export namespace exports {
 				export type WasmInterface = Error.WasmInterface & { '[dtor]error': (self: i32) => void };
-				class Impl extends $wcm.Resource implements io.Error.Error.Interface {
+				class Impl extends $wcm.Resource.Default implements io.Error.Error.Interface {
+					private readonly _rep: $wcm.ResourceRepresentation;
 					private readonly _om: ObjectModule;
-					constructor(_handleTag: Symbol, handle: $wcm.ResourceHandle, om: ObjectModule) {
+					constructor(_handleTag: Symbol, handle: $wcm.ResourceHandle, rm: $wcm.ResourceManager, om: ObjectModule) {
 						super(handle);
+						this._rep = rm.getRepresentation(handle);
 						this._om = om;
 					}
+					public $rep(): $wcm.ResourceRepresentation { return this._rep; }
 					public toDebugString(): string {
 						return this._om.toDebugString(this);
 					}
 				}
 				export function Class(wasmInterface: WasmInterface, context: $wcm.WasmContext): io.Error.Error.Class {
 					const resource = io.Error.$.Error;
+					const rm: $wcm.ResourceManager = context.resources.ensure('wasi:io@0.2.0/error/error');
 					const om: ObjectModule = $wcm.Module.createObjectModule(resource, wasmInterface, context);
 					return class extends Impl {
 						constructor(handleTag: Symbol, handle: $wcm.ResourceHandle) {
-							super(handleTag, handle, om);
+							super(handleTag, handle, rm, om);
+							rm.registerProxy(this);
 						}
 					};
 				}
@@ -458,7 +463,7 @@ export namespace io {
 				export type WasmInterface = {
 					'[resource-new]error': (rep: i32) => i32;
 					'[resource-rep]error': (handle: i32) => i32;
-					'[resource-drop]error': (handle: i32) => i32;
+					'[resource-drop]error': (handle: i32) => void;
 				};
 			}
 		}
@@ -491,12 +496,15 @@ export namespace io {
 			}
 			export namespace exports {
 				export type WasmInterface = Pollable.WasmInterface & { '[dtor]pollable': (self: i32) => void };
-				class Impl extends $wcm.Resource implements io.Poll.Pollable.Interface {
+				class Impl extends $wcm.Resource.Default implements io.Poll.Pollable.Interface {
+					private readonly _rep: $wcm.ResourceRepresentation;
 					private readonly _om: ObjectModule;
-					constructor(_handleTag: Symbol, handle: $wcm.ResourceHandle, om: ObjectModule) {
+					constructor(_handleTag: Symbol, handle: $wcm.ResourceHandle, rm: $wcm.ResourceManager, om: ObjectModule) {
 						super(handle);
+						this._rep = rm.getRepresentation(handle);
 						this._om = om;
 					}
+					public $rep(): $wcm.ResourceRepresentation { return this._rep; }
 					public ready(): boolean {
 						return this._om.ready(this);
 					}
@@ -506,10 +514,12 @@ export namespace io {
 				}
 				export function Class(wasmInterface: WasmInterface, context: $wcm.WasmContext): io.Poll.Pollable.Class {
 					const resource = io.Poll.$.Pollable;
+					const rm: $wcm.ResourceManager = context.resources.ensure('wasi:io@0.2.0/poll/pollable');
 					const om: ObjectModule = $wcm.Module.createObjectModule(resource, wasmInterface, context);
 					return class extends Impl {
 						constructor(handleTag: Symbol, handle: $wcm.ResourceHandle) {
-							super(handleTag, handle, om);
+							super(handleTag, handle, rm, om);
+							rm.registerProxy(this);
 						}
 					};
 				}
@@ -536,7 +546,7 @@ export namespace io {
 				export type WasmInterface = {
 					'[resource-new]pollable': (rep: i32) => i32;
 					'[resource-rep]pollable': (handle: i32) => i32;
-					'[resource-drop]pollable': (handle: i32) => i32;
+					'[resource-drop]pollable': (handle: i32) => void;
 				};
 			}
 		}
@@ -613,12 +623,15 @@ export namespace io {
 			}
 			export namespace exports {
 				export type WasmInterface = InputStream.WasmInterface & { '[dtor]input-stream': (self: i32) => void };
-				class Impl extends $wcm.Resource implements io.Streams.InputStream.Interface {
+				class Impl extends $wcm.Resource.Default implements io.Streams.InputStream.Interface {
+					private readonly _rep: $wcm.ResourceRepresentation;
 					private readonly _om: ObjectModule;
-					constructor(_handleTag: Symbol, handle: $wcm.ResourceHandle, om: ObjectModule) {
+					constructor(_handleTag: Symbol, handle: $wcm.ResourceHandle, rm: $wcm.ResourceManager, om: ObjectModule) {
 						super(handle);
+						this._rep = rm.getRepresentation(handle);
 						this._om = om;
 					}
+					public $rep(): $wcm.ResourceRepresentation { return this._rep; }
 					public read(len: u64): result<Uint8Array, StreamError> {
 						return this._om.read(this, len);
 					}
@@ -637,10 +650,12 @@ export namespace io {
 				}
 				export function Class(wasmInterface: WasmInterface, context: $wcm.WasmContext): io.Streams.InputStream.Class {
 					const resource = io.Streams.$.InputStream;
+					const rm: $wcm.ResourceManager = context.resources.ensure('wasi:io@0.2.0/streams/input-stream');
 					const om: ObjectModule = $wcm.Module.createObjectModule(resource, wasmInterface, context);
 					return class extends Impl {
 						constructor(handleTag: Symbol, handle: $wcm.ResourceHandle) {
-							super(handleTag, handle, om);
+							super(handleTag, handle, rm, om);
+							rm.registerProxy(this);
 						}
 					};
 				}
@@ -676,12 +691,15 @@ export namespace io {
 			}
 			export namespace exports {
 				export type WasmInterface = OutputStream.WasmInterface & { '[dtor]output-stream': (self: i32) => void };
-				class Impl extends $wcm.Resource implements io.Streams.OutputStream.Interface {
+				class Impl extends $wcm.Resource.Default implements io.Streams.OutputStream.Interface {
+					private readonly _rep: $wcm.ResourceRepresentation;
 					private readonly _om: ObjectModule;
-					constructor(_handleTag: Symbol, handle: $wcm.ResourceHandle, om: ObjectModule) {
+					constructor(_handleTag: Symbol, handle: $wcm.ResourceHandle, rm: $wcm.ResourceManager, om: ObjectModule) {
 						super(handle);
+						this._rep = rm.getRepresentation(handle);
 						this._om = om;
 					}
+					public $rep(): $wcm.ResourceRepresentation { return this._rep; }
 					public checkWrite(): result<u64, StreamError> {
 						return this._om.checkWrite(this);
 					}
@@ -715,10 +733,12 @@ export namespace io {
 				}
 				export function Class(wasmInterface: WasmInterface, context: $wcm.WasmContext): io.Streams.OutputStream.Class {
 					const resource = io.Streams.$.OutputStream;
+					const rm: $wcm.ResourceManager = context.resources.ensure('wasi:io@0.2.0/streams/output-stream');
 					const om: ObjectModule = $wcm.Module.createObjectModule(resource, wasmInterface, context);
 					return class extends Impl {
 						constructor(handleTag: Symbol, handle: $wcm.ResourceHandle) {
-							super(handleTag, handle, om);
+							super(handleTag, handle, rm, om);
+							rm.registerProxy(this);
 						}
 					};
 				}
@@ -746,10 +766,10 @@ export namespace io {
 				export type WasmInterface = {
 					'[resource-new]input-stream': (rep: i32) => i32;
 					'[resource-rep]input-stream': (handle: i32) => i32;
-					'[resource-drop]input-stream': (handle: i32) => i32;
+					'[resource-drop]input-stream': (handle: i32) => void;
 					'[resource-new]output-stream': (rep: i32) => i32;
 					'[resource-rep]output-stream': (handle: i32) => i32;
-					'[resource-drop]output-stream': (handle: i32) => i32;
+					'[resource-drop]output-stream': (handle: i32) => void;
 				};
 			}
 		}

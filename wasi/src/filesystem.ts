@@ -598,7 +598,7 @@ export namespace filesystem {
 		};
 
 		export namespace Descriptor {
-			export interface Interface extends $wcm.JInterface {
+			export interface Interface extends $wcm.Resource {
 				/**
 				 * Return a stream for reading from a file, if available.
 				 * 
@@ -903,7 +903,7 @@ export namespace filesystem {
 		export type Descriptor = Descriptor.Interface;
 
 		export namespace DirectoryEntryStream {
-			export interface Interface extends $wcm.JInterface {
+			export interface Interface extends $wcm.Resource {
 				/**
 				 * Read a single directory entry from a `directory-entry-stream`.
 				 */
@@ -1142,12 +1142,15 @@ export namespace filesystem {
 			}
 			export namespace exports {
 				export type WasmInterface = Descriptor.WasmInterface & { '[dtor]descriptor': (self: i32) => void };
-				class Impl extends $wcm.Resource implements filesystem.Types.Descriptor.Interface {
+				class Impl extends $wcm.Resource.Default implements filesystem.Types.Descriptor.Interface {
+					private readonly _rep: $wcm.ResourceRepresentation;
 					private readonly _om: ObjectModule;
-					constructor(_handleTag: Symbol, handle: $wcm.ResourceHandle, om: ObjectModule) {
+					constructor(_handleTag: Symbol, handle: $wcm.ResourceHandle, rm: $wcm.ResourceManager, om: ObjectModule) {
 						super(handle);
+						this._rep = rm.getRepresentation(handle);
 						this._om = om;
 					}
+					public $rep(): $wcm.ResourceRepresentation { return this._rep; }
 					public readViaStream(offset: Filesize): result<own<InputStream>, ErrorCode> {
 						return this._om.readViaStream(this, offset);
 					}
@@ -1232,10 +1235,12 @@ export namespace filesystem {
 				}
 				export function Class(wasmInterface: WasmInterface, context: $wcm.WasmContext): filesystem.Types.Descriptor.Class {
 					const resource = filesystem.Types.$.Descriptor;
+					const rm: $wcm.ResourceManager = context.resources.ensure('wasi:filesystem@0.2.0/types/descriptor');
 					const om: ObjectModule = $wcm.Module.createObjectModule(resource, wasmInterface, context);
 					return class extends Impl {
 						constructor(handleTag: Symbol, handle: $wcm.ResourceHandle) {
-							super(handleTag, handle, om);
+							super(handleTag, handle, rm, om);
+							rm.registerProxy(this);
 						}
 					};
 				}
@@ -1253,22 +1258,27 @@ export namespace filesystem {
 			}
 			export namespace exports {
 				export type WasmInterface = DirectoryEntryStream.WasmInterface & { '[dtor]directory-entry-stream': (self: i32) => void };
-				class Impl extends $wcm.Resource implements filesystem.Types.DirectoryEntryStream.Interface {
+				class Impl extends $wcm.Resource.Default implements filesystem.Types.DirectoryEntryStream.Interface {
+					private readonly _rep: $wcm.ResourceRepresentation;
 					private readonly _om: ObjectModule;
-					constructor(_handleTag: Symbol, handle: $wcm.ResourceHandle, om: ObjectModule) {
+					constructor(_handleTag: Symbol, handle: $wcm.ResourceHandle, rm: $wcm.ResourceManager, om: ObjectModule) {
 						super(handle);
+						this._rep = rm.getRepresentation(handle);
 						this._om = om;
 					}
+					public $rep(): $wcm.ResourceRepresentation { return this._rep; }
 					public readDirectoryEntry(): result<DirectoryEntry | undefined, ErrorCode> {
 						return this._om.readDirectoryEntry(this);
 					}
 				}
 				export function Class(wasmInterface: WasmInterface, context: $wcm.WasmContext): filesystem.Types.DirectoryEntryStream.Class {
 					const resource = filesystem.Types.$.DirectoryEntryStream;
+					const rm: $wcm.ResourceManager = context.resources.ensure('wasi:filesystem@0.2.0/types/directory-entry-stream');
 					const om: ObjectModule = $wcm.Module.createObjectModule(resource, wasmInterface, context);
 					return class extends Impl {
 						constructor(handleTag: Symbol, handle: $wcm.ResourceHandle) {
-							super(handleTag, handle, om);
+							super(handleTag, handle, rm, om);
+							rm.registerProxy(this);
 						}
 					};
 				}
@@ -1313,10 +1323,10 @@ export namespace filesystem {
 				export type WasmInterface = {
 					'[resource-new]descriptor': (rep: i32) => i32;
 					'[resource-rep]descriptor': (handle: i32) => i32;
-					'[resource-drop]descriptor': (handle: i32) => i32;
+					'[resource-drop]descriptor': (handle: i32) => void;
 					'[resource-new]directory-entry-stream': (rep: i32) => i32;
 					'[resource-rep]directory-entry-stream': (handle: i32) => i32;
-					'[resource-drop]directory-entry-stream': (handle: i32) => i32;
+					'[resource-drop]directory-entry-stream': (handle: i32) => void;
 				};
 			}
 		}
