@@ -3345,7 +3345,7 @@ class ResourceEmitter extends InterfaceMemberEmitter {
 		const needsClassModule = this.statics.length > 0;
 		const needsObjectModule = this.conztructor !== undefined || this.methods.length > 0;
 		if (needsObjectModule) {
-			code.push(`export type ObjectModule = {`);
+			code.push(`type ObjectModule = {`);
 			code.increaseIndent();
 			if (this.conztructor !== undefined) {
 				this.conztructor.emitObjectModule(code);
