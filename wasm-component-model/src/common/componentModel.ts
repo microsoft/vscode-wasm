@@ -2682,7 +2682,7 @@ export interface ResourceManager<T extends Resource = Resource> {
 	dropHandle(handle: ResourceHandle<T>): ResourceRepresentation;
 
 	// Resource management
-	setProxyInfo(ctor: (new (handleTag: Symbol, handle: ResourceHandle<T>) => T), dtor: (self: ResourceHandle<T>) => void): void;
+	setProxyInfo(ctor: (new (handleTag: symbol, handle: ResourceHandle<T>) => T), dtor: (self: ResourceHandle<T>) => void): void;
 	hasResource(handle: ResourceHandle<T>): boolean;
 	getResource(handle: ResourceHandle<T>): T;
 	registerResource(resource: T, handle?: ResourceHandle<T>): ResourceHandle<T>;
@@ -2696,7 +2696,7 @@ export interface ResourceManager<T extends Resource = Resource> {
 
 declare const console: any;
 export namespace ResourceManager {
-	export const handleTag:Symbol = Symbol('handleTag');
+	export const handleTag: symbol = Symbol('handleTag');
 
 	type FinalizationRegistryData = { handle: ResourceHandle; rep: ResourceRepresentation };
 	export class Default<T extends Resource = Resource> implements ResourceManager<T> {
@@ -2706,7 +2706,7 @@ export namespace ResourceManager {
 		private handleTable: Map<ResourceHandle<T>, ResourceRepresentation>;
 		private h2r: Map<ResourceHandle<T>, WeakRef<T> | T | undefined>;
 		private finalizer: FinalizationRegistry<FinalizationRegistryData>;
-		private ctor: (new (handleTag: Symbol, handle: ResourceHandle<T>) => T) | undefined;
+		private ctor: (new (handleTag: symbol, handle: ResourceHandle<T>) => T) | undefined;
 		private dtor: ((self: ResourceHandle<T>) => void) | undefined;
 
 		// We only need the representation counter for the loop implementation.
@@ -2766,7 +2766,7 @@ export namespace ResourceManager {
 			return rep;
 		}
 
-		public setProxyInfo(ctor: (new (handleTag: Symbol, handle: ResourceHandle<T>) => T), dtor: (self: ResourceHandle<T>) => void): void {
+		public setProxyInfo(ctor: (new (handleTag: symbol, handle: ResourceHandle<T>) => T), dtor: (self: ResourceHandle<T>) => void): void {
 			this.ctor = ctor;
 			this.dtor = dtor;
 		}

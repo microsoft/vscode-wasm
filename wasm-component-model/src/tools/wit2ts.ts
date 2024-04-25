@@ -3388,7 +3388,7 @@ class ResourceEmitter extends InterfaceMemberEmitter {
 			this.conztructor.emitConstructorImplementation(code);
 		} else {
 			if (needsObjectModule) {
-				code.push(`constructor(_handleTag: Symbol, handle: ${MetaModel.ResourceHandle}, rm: ${MetaModel.ResourceManager}, om: ObjectModule) {`);
+				code.push(`constructor(_handleTag: symbol, handle: ${MetaModel.ResourceHandle}, rm: ${MetaModel.ResourceManager}, om: ObjectModule) {`);
 				code.increaseIndent();
 				code.push(`super(handle);`);
 				code.push(`this._rep = rm.getRepresentation(handle);`);
@@ -3396,7 +3396,7 @@ class ResourceEmitter extends InterfaceMemberEmitter {
 				code.decreaseIndent();
 				code.push(`}`);
 			} else {
-				code.push(`constructor(_handleTag: Symbol, handle: ${MetaModel.ResourceHandle}) {`);
+				code.push(`constructor(_handleTag: symbol, handle: ${MetaModel.ResourceHandle}) {`);
 				code.increaseIndent();
 				code.push(`super(handle);`);
 				code.decreaseIndent();
@@ -3437,7 +3437,7 @@ class ResourceEmitter extends InterfaceMemberEmitter {
 					if (this.conztructor !== undefined) {
 						this.conztructor.emitAnonymousConstructorImplementation(code);
 					} else {
-						code.push(`constructor(handleTag: Symbol, handle: ${MetaModel.ResourceHandle}) {`);
+						code.push(`constructor(handleTag: symbol, handle: ${MetaModel.ResourceHandle}) {`);
 						code.increaseIndent();
 						code.push(`super(handleTag, handle, rm, om);`);
 						code.push(`rm.registerProxy(this);`);
@@ -3681,7 +3681,7 @@ namespace ResourceEmitter {
 		public emitObjectModule(code: Code): void {
 			const [params] = this.getSignatureParts(0);
 			code.imports.addBaseType('own');
-			code.push(`${this.getMethodName()}(${params.join(', ')}): own<${MetaModel.ResourceHandle}>;`);
+			code.push(`'${this.getMethodName()}'(${params.join(', ')}): own<${MetaModel.ResourceHandle}>;`);
 		}
 
 		public emitConstructorDeclaration(code: Code): void {
@@ -3693,10 +3693,10 @@ namespace ResourceEmitter {
 			const [params] = this.getSignatureParts(0);
 			if (params.length === 0) {
 				code.push(`constructor(om: ObjectModule);`);
-				code.push(`constructor(handleTag: Symbol, handle: ${MetaModel.ResourceHandle}, rm: ${MetaModel.ResourceManager}, om: ObjectModule);`);
+				code.push(`constructor(handleTag: symbol, handle: ${MetaModel.ResourceHandle}, rm: ${MetaModel.ResourceManager}, om: ObjectModule);`);
 			} else {
 				code.push(`constructor(${params.join(', ')}, om: ObjectModule);`);
-				code.push(`constructor(handleTag: Symbol, handle: ${MetaModel.ResourceHandle}, rm: ${MetaModel.ResourceManager}, om: ObjectModule);`);
+				code.push(`constructor(handleTag: symbol, handle: ${MetaModel.ResourceHandle}, rm: ${MetaModel.ResourceManager}, om: ObjectModule);`);
 			}
 			code.push(`constructor(...args: any[]);`);
 			code.push(`constructor(...args: any[]) {`);
@@ -3729,7 +3729,7 @@ namespace ResourceEmitter {
 		public emitAnonymousConstructorImplementation(code: Code): void {
 			const [params] = this.getSignatureParts(0);
 			code.push(`constructor(${params.join(', ')});`);
-			code.push(`constructor(handleTag: Symbol, handle: ${MetaModel.ResourceHandle});`);
+			code.push(`constructor(handleTag: symbol, handle: ${MetaModel.ResourceHandle});`);
 			code.push(`constructor(...args: any[]) {`);
 			code.increaseIndent();
 			code.push(`super(...args, rm, om);`);
