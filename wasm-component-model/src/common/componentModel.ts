@@ -824,6 +824,8 @@ export interface ComponentModelType<J> {
 	lowerFlat(result: WasmType[], memory: Memory, value: J, context: ComponentModelContext): void;
 	// copy a component model value from one memory to another
 	copy(dest: MemoryRange, dest_offset: offset, src: ReadonlyMemoryRange, src_offset: offset, context: ComponentModelContext): void;
+	//
+	copyFlat(result: WasmType[], dest: Memory, values: FlatValuesIter, src: Memory, context: ComponentModelContext): void;
 }
 export type GenericComponentModelType = ComponentModelType<JType>;
 
@@ -839,7 +841,7 @@ export const bool: ComponentModelType<boolean> = {
 	liftFlat(_memory, values): boolean {
 		const value = values.next().value;
 		if (value < 0) {
-			throw new Error(`Invalid bool value ${value}`);
+			throw new ComponentModelTrap(`Invalid bool value ${value}`);
 		}
 		return value !== 0;
 	},
@@ -854,6 +856,9 @@ export const bool: ComponentModelType<boolean> = {
 	},
 	copy(dest: MemoryRange, dest_offset: offset<bool>, src: ReadonlyMemoryRange, src_offset: offset<bool>): void {
 		src.copyBytes(src_offset, bool.size, dest, dest_offset);
+	},
+	copyFlat(result: WasmType[], _dest: Memory, values: FlatValuesIter, _src: Memory): void {
+		result.push(values.next().value);
 	}
 };
 
@@ -874,7 +879,7 @@ namespace $u8 {
 	export function liftFlat(_memory: Memory, values: FlatValuesIter): u8 {
 		const value = values.next().value;
 		if (value < LOW_VALUE || value > HIGH_VALUE || !Number.isInteger(value)) {
-			throw new Error(`Invalid u8 value ${value}`);
+			throw new ComponentModelTrap(`Invalid u8 value ${value}`);
 		}
 		return value as u8;
 	}
@@ -889,13 +894,17 @@ namespace $u8 {
 
 	export function lowerFlat(result: WasmType[], _memory: Memory, value: u8): void {
 		if (value < LOW_VALUE || value > HIGH_VALUE || !Number.isInteger(value)) {
-			throw new Error(`Invalid u8 value ${value}`);
+			throw new ComponentModelTrap(`Invalid u8 value ${value}`);
 		}
 		result.push(value);
 	}
 
 	export function copy(dest: MemoryRange, dest_offset: offset<u8>, src: ReadonlyMemoryRange, src_offset: offset<u8>): void {
 		src.copyBytes(src_offset, size, dest, dest_offset);
+	}
+
+	export function copyFlat(result: WasmType[], _dest: Memory, values: FlatValuesIter, _src: Memory): void {
+		result.push(values.next().value);
 	}
 }
 export const u8:ComponentModelType<number> = $u8;
@@ -917,7 +926,7 @@ namespace $u16 {
 	export function liftFlat(_memory: Memory, values:FlatValuesIter): u16 {
 		const value = values.next().value;
 		if (value < LOW_VALUE || value > HIGH_VALUE || !Number.isInteger(value)) {
-			throw new Error(`Invalid u16 value ${value}`);
+			throw new ComponentModelTrap(`Invalid u16 value ${value}`);
 		}
 		return value as u16;
 	}
@@ -932,7 +941,7 @@ namespace $u16 {
 
 	export function lowerFlat(result: WasmType[], _memory: Memory, value: number): void {
 		if (value < LOW_VALUE || value > HIGH_VALUE || !Number.isInteger(value)) {
-			throw new Error(`Invalid u16 value ${value}`);
+			throw new ComponentModelTrap(`Invalid u16 value ${value}`);
 		}
 		result.push(value);
 	}
@@ -941,6 +950,9 @@ namespace $u16 {
 		dest.assertAlignment(dest_offset, alignment);
 		src.assertAlignment(src_offset, alignment);
 		src.copyBytes(src_offset, size, dest, dest_offset);
+	}
+	export function copyFlat(result: WasmType[], _dest: Memory, values: FlatValuesIter, _src: Memory): void {
+		result.push(values.next().value);
 	}
 }
 export const u16: ComponentModelType<number> = $u16;
@@ -966,7 +978,7 @@ namespace $u32 {
 	export function liftFlat(_memory: Memory, values: FlatValuesIter): u32 {
 		const value = values.next().value;
 		if (value < LOW_VALUE || value > HIGH_VALUE || !Number.isInteger(value)) {
-			throw new Error(`Invalid u32 value ${value}`);
+			throw new ComponentModelTrap(`Invalid u32 value ${value}`);
 		}
 		return value as u32;
 	}
@@ -981,7 +993,7 @@ namespace $u32 {
 
 	export function lowerFlat(result: WasmType[], _memory: Memory, value: number): void {
 		if (value < LOW_VALUE || value > HIGH_VALUE || !Number.isInteger(value)) {
-			throw new Error(`Invalid u32 value ${value}`);
+			throw new ComponentModelTrap(`Invalid u32 value ${value}`);
 		}
 		result.push(value);
 	}
@@ -990,6 +1002,10 @@ namespace $u32 {
 		dest.assertAlignment(dest_offset, alignment);
 		src.assertAlignment(src_offset, alignment);
 		src.copyBytes(src_offset, size, dest, dest_offset);
+	}
+
+	export function copyFlat(result: WasmType[], _dest: Memory, values: FlatValuesIter, _src: Memory): void {
+		result.push(values.next().value);
 	}
 }
 export const u32: ComponentModelType<number> = $u32;
@@ -1011,7 +1027,7 @@ namespace $u64 {
 	export function liftFlat(_memory: Memory, values: FlatValuesIter): u64 {
 		const value = values.next().value;
 		if (value < LOW_VALUE) {
-			throw new Error(`Invalid u64 value ${value}`);
+			throw new ComponentModelTrap(`Invalid u64 value ${value}`);
 		}
 		return value as u64;
 	}
@@ -1026,7 +1042,7 @@ namespace $u64 {
 
 	export function lowerFlat(result: WasmType[], _memory: Memory, value: bigint): void {
 		if (value < LOW_VALUE) {
-			throw new Error(`Invalid u64 value ${value}`);
+			throw new ComponentModelTrap(`Invalid u64 value ${value}`);
 		}
 		result.push(value);
 	}
@@ -1035,6 +1051,10 @@ namespace $u64 {
 		dest.assertAlignment(dest_offset, alignment);
 		src.assertAlignment(src_offset, alignment);
 		src.copyBytes(src_offset, size, dest, dest_offset);
+	}
+
+	export function copyFlat(result: WasmType[], _dest: Memory, values: FlatValuesIter, _src: Memory): void {
+		result.push(values.next().value);
 	}
 }
 export const u64: ComponentModelType<bigint> = $u64;
@@ -1060,7 +1080,7 @@ namespace $s8 {
 		// we check if the value is in range of the corresponding unsigned
 		// value and the convert it to a signed value.
 		if (value < $u8.LOW_VALUE || value > $u8.HIGH_VALUE || !Number.isInteger(value)) {
-			throw new Error(`Invalid u8 value ${value}`);
+			throw new ComponentModelTrap(`Invalid u8 value ${value}`);
 		}
 		if (value <= HIGH_VALUE) {
 			return value as s8;
@@ -1079,7 +1099,7 @@ namespace $s8 {
 
 	export function lowerFlat(result: WasmType[], _memory: Memory, value: number): void {
 		if (value < LOW_VALUE || value > HIGH_VALUE || !Number.isInteger(value)) {
-			throw new Error(`Invalid s8 value ${value}`);
+			throw new ComponentModelTrap(`Invalid s8 value ${value}`);
 		}
 		result.push((value < 0) ? (value + 256) : value);
 	}
@@ -1088,6 +1108,10 @@ namespace $s8 {
 		dest.assertAlignment(dest_offset, alignment);
 		src.assertAlignment(src_offset, alignment);
 		src.copyBytes(src_offset, size, dest, dest_offset);
+	}
+
+	export function copyFlat(result: WasmType[], _dest: Memory, values: FlatValuesIter, _src: Memory): void {
+		result.push(values.next().value);
 	}
 }
 export const s8: ComponentModelType<number> = $s8;
@@ -1109,7 +1133,7 @@ namespace $s16 {
 	export function liftFlat(_memory: Memory, values: FlatValuesIter): s16 {
 		const value = values.next().value;
 		if (value < $u16.LOW_VALUE || value > $u16.HIGH_VALUE || !Number.isInteger(value)) {
-			throw new Error(`Invalid s16 value ${value}`);
+			throw new ComponentModelTrap(`Invalid s16 value ${value}`);
 		}
 		return (value <= HIGH_VALUE) ? value as s16 : (value as u16) - 65536;
 	}
@@ -1124,7 +1148,7 @@ namespace $s16 {
 
 	export function lowerFlat(result: WasmType[], _memory: Memory, value: number): void {
 		if (value < LOW_VALUE || value > HIGH_VALUE || !Number.isInteger(value)) {
-			throw new Error(`Invalid s16 value ${value}`);
+			throw new ComponentModelTrap(`Invalid s16 value ${value}`);
 		}
 		result.push((value < 0) ? (value + 65536) : value);
 	}
@@ -1133,6 +1157,10 @@ namespace $s16 {
 		dest.assertAlignment(dest_offset, alignment);
 		src.assertAlignment(src_offset, alignment);
 		src.copyBytes(src_offset, size, dest, dest_offset);
+	}
+
+	export function copyFlat(result: WasmType[], _dest: Memory, values: FlatValuesIter, _src: Memory): void {
+		result.push(values.next().value);
 	}
 }
 export const s16: ComponentModelType<number> = $s16;
@@ -1154,7 +1182,7 @@ namespace $s32 {
 	export function liftFlat(_memory: Memory, values: FlatValuesIter): s32 {
 		const value = values.next().value;
 		if (value < $u32.LOW_VALUE || value > $u32.HIGH_VALUE || !Number.isInteger(value)) {
-			throw new Error(`Invalid s32 value ${value}`);
+			throw new ComponentModelTrap(`Invalid s32 value ${value}`);
 		}
 		return (value <= HIGH_VALUE) ? value as s32 : (value as u32) - 4294967296;
 	}
@@ -1169,7 +1197,7 @@ namespace $s32 {
 
 	export function lowerFlat(result: WasmType[], _memory: Memory, value: number): void {
 		if (value < LOW_VALUE || value > HIGH_VALUE || !Number.isInteger(value)) {
-			throw new Error(`Invalid s32 value ${value}`);
+			throw new ComponentModelTrap(`Invalid s32 value ${value}`);
 		}
 		result.push((value < 0) ? (value + 4294967296) : value);
 	}
@@ -1178,6 +1206,10 @@ namespace $s32 {
 		dest.assertAlignment(dest_offset, alignment);
 		src.assertAlignment(src_offset, alignment);
 		src.copyBytes(src_offset, size, dest, dest_offset);
+	}
+
+	export function copyFlat(result: WasmType[], _dest: Memory, values: FlatValuesIter, _src: Memory): void {
+		result.push(values.next().value);
 	}
 }
 export const s32: ComponentModelType<number> = $s32;
@@ -1199,7 +1231,7 @@ namespace $s64 {
 	export function liftFlat(_memory: Memory, values: FlatValuesIter): s64 {
 		const value = values.next().value;
 		if (value < $u64.LOW_VALUE) {
-			throw new Error(`Invalid s64 value ${value}`);
+			throw new ComponentModelTrap(`Invalid s64 value ${value}`);
 		}
 		return (value <= HIGH_VALUE) ? value as s64 : (value as u64) - 18446744073709551616n;
 	}
@@ -1214,7 +1246,7 @@ namespace $s64 {
 
 	export function lowerFlat(result: WasmType[], _memory: Memory, value: bigint): void {
 		if (value < LOW_VALUE || value > HIGH_VALUE) {
-			throw new Error(`Invalid s64 value ${value}`);
+			throw new ComponentModelTrap(`Invalid s64 value ${value}`);
 		}
 		result.push((value < 0) ? (value + 18446744073709551616n) : value);
 	}
@@ -1223,6 +1255,10 @@ namespace $s64 {
 		dest.assertAlignment(dest_offset, alignment);
 		src.assertAlignment(src_offset, alignment);
 		src.copyBytes(src_offset, size, dest, dest_offset);
+	}
+
+	export function copyFlat(result: WasmType[], _dest: Memory, values: FlatValuesIter, _src: Memory): void {
+		result.push(values.next().value);
 	}
 }
 export const s64: ComponentModelType<bigint> = $s64;
@@ -1245,7 +1281,7 @@ namespace $float32 {
 	export function liftFlat(_memory: Memory, values: FlatValuesIter): float32 {
 		const value = values.next().value;
 		if (value < LOW_VALUE || value > HIGH_VALUE) {
-			throw new Error(`Invalid float32 value ${value}`);
+			throw new ComponentModelTrap(`Invalid float32 value ${value}`);
 		}
 		return value === NAN ? Number.NaN : value as float32;
 	}
@@ -1260,7 +1296,7 @@ namespace $float32 {
 
 	export function lowerFlat(result: WasmType[], _memory: Memory, value: number): void {
 		if (value < LOW_VALUE || value > HIGH_VALUE) {
-			throw new Error(`Invalid float32 value ${value}`);
+			throw new ComponentModelTrap(`Invalid float32 value ${value}`);
 		}
 		result.push(Number.isNaN(value) ? NAN : value);
 	}
@@ -1269,6 +1305,10 @@ namespace $float32 {
 		dest.assertAlignment(dest_offset, alignment);
 		src.assertAlignment(src_offset, alignment);
 		src.copyBytes(src_offset, size, dest, dest_offset);
+	}
+
+	export function copyFlat(result: WasmType[], _dest: Memory, values: FlatValuesIter, _src: Memory): void {
+		result.push(values.next().value);
 	}
 }
 export const float32: ComponentModelType<number> = $float32;
@@ -1291,7 +1331,7 @@ namespace $float64 {
 	export function liftFlat(_memory: Memory, values: FlatValuesIter): float64 {
 		const value = values.next().value;
 		if (value < LOW_VALUE || value > HIGH_VALUE) {
-			throw new Error(`Invalid float64 value ${value}`);
+			throw new ComponentModelTrap(`Invalid float64 value ${value}`);
 		}
 		return value === NAN ? Number.NaN : value as float64;
 	}
@@ -1306,7 +1346,7 @@ namespace $float64 {
 
 	export function lowerFlat(result: WasmType[], _memory: Memory, value: number): void {
 		if (value < LOW_VALUE || value > HIGH_VALUE) {
-			throw new Error(`Invalid float64 value ${value}`);
+			throw new ComponentModelTrap(`Invalid float64 value ${value}`);
 		}
 		result.push(Number.isNaN(value) ? NAN : value);
 	}
@@ -1315,6 +1355,10 @@ namespace $float64 {
 		dest.assertAlignment(dest_offset, alignment);
 		src.assertAlignment(src_offset, alignment);
 		src.copyBytes(src_offset, size, dest, dest_offset);
+	}
+
+	export function copyFlat(result: WasmType[], _dest: Memory, values: FlatValuesIter, _src: Memory): void {
+		result.push(values.next().value);
 	}
 }
 export const float64: ComponentModelType<number> = $float64;
@@ -1331,7 +1375,8 @@ export const byte: ComponentModelType<byte> = {
 	alloc: u8.alloc,
 	store: u8.store,
 	lowerFlat: u8.lowerFlat,
-	copy: u8.copy
+	copy: u8.copy,
+	copyFlat: u8.copyFlat
 };
 
 export type size = u32;
@@ -1346,7 +1391,8 @@ export const size: ComponentModelType<size> = {
 	alloc: u32.alloc,
 	store: u32.store,
 	lowerFlat: u32.lowerFlat,
-	copy: u32.copy
+	copy: u32.copy,
+	copyFlat: u32.copyFlat
 };
 
 export type ptr<_type = ArrayBuffer> = u32;
@@ -1361,7 +1407,8 @@ export const ptr: ComponentModelType<size> = {
 	alloc: u32.alloc,
 	store: u32.store,
 	lowerFlat: u32.lowerFlat,
-	copy: u32.copy
+	copy: u32.copy,
+	copyFlat: u32.copyFlat
 };
 namespace $wchar {
 	export const kind: ComponentModelTypeKind = ComponentModelTypeKind.char;
@@ -1393,6 +1440,10 @@ namespace $wchar {
 		dest.assertAlignment(dest_offset, alignment);
 		src.assertAlignment(src_offset, alignment);
 		src.copyBytes(src_offset, size, dest, dest_offset);
+	}
+
+	export function copyFlat(result: WasmType[], _dest: Memory, values: FlatValuesIter, _src: Memory): void {
+		result.push(values.next().value);
 	}
 
 	function fromCodePoint(code: u32): string {
@@ -1456,7 +1507,9 @@ namespace $wstring {
 	export function copy(dest: MemoryRange, dest_offset: offset<[u32, u32]>, src: ReadonlyMemoryRange, src_offset: offset<[u32, u32]>, context: ComponentModelContext): void {
 		dest.assertAlignment(dest_offset, $wstring.alignment);
 		src.assertAlignment(src_offset, $wstring.alignment);
+		// Copy the data and codeUnits fields
 		src.copyBytes(src_offset, size, dest, dest_offset);
+		// Copy the actual string data
 		const data = src.getUint32(src_offset + offsets.data);
 		const codeUnits = src.getUint32(src_offset + offsets.codeUnits);
 		const [alignment, byteLength] = getAlignmentAndByteLength(codeUnits, context.options);
@@ -1465,24 +1518,36 @@ namespace $wstring {
 		srcReader.copyBytes(0, byteLength, destWriter, 0);
 	}
 
+	export function copyFlat(result: WasmType[], dest: Memory, values: FlatValuesIter, src: Memory, context: ComponentModelContext): void {
+		const data = values.next().value as ptr;
+		const codeUnits = values.next().value as u32;
+		// Copy the actual string data
+		const [alignment, byteLength] = getAlignmentAndByteLength(codeUnits, context.options);
+		const srcReader = src.readonly(data, byteLength);
+		const destWriter = dest.alloc(alignment, byteLength);
+		srcReader.copyBytes(0, byteLength, destWriter, 0);
+		// Push new ptr and codeUnits
+		result.push(destWriter.ptr, codeUnits);
+	}
+
 	export function getAlignmentAndByteLength(codeUnits: u32, options: Options): [Alignment, number] {
 		const encoding = options.encoding;
 		if (encoding === 'latin1+utf-16') {
-			throw new Error('latin1+utf-16 encoding not yet supported');
+			throw new ComponentModelTrap('latin1+utf-16 encoding not yet supported');
 		}
 		if (encoding === 'utf-8') {
 			return [u8.alignment, codeUnits];
 		} else if (encoding === 'utf-16') {
 			return [u16.alignment, codeUnits * 2];
 		} else {
-			throw new Error('Unsupported encoding');
+			throw new ComponentModelTrap('Unsupported encoding');
 		}
 	}
 
 	function loadFromRange(memory: Memory, data: ptr, codeUnits: u32, options: Options): string {
 		const encoding = options.encoding;
 		if (encoding === 'latin1+utf-16') {
-			throw new Error('latin1+utf-16 encoding not yet supported');
+			throw new ComponentModelTrap('latin1+utf-16 encoding not yet supported');
 		}
 		if (encoding === 'utf-8') {
 			const byteLength = codeUnits;
@@ -1492,14 +1557,14 @@ namespace $wstring {
 			const reader = memory.readonly(data, codeUnits * 2);
 			return String.fromCharCode(...reader.getUint16Array(data, codeUnits));
 		} else {
-			throw new Error('Unsupported encoding');
+			throw new ComponentModelTrap('Unsupported encoding');
 		}
 	}
 
 	function storeIntoRange(memory: Memory, str: string, options: Options): [ptr, size] {
 		const { encoding } = options;
 		if (encoding === 'latin1+utf-16') {
-			throw new Error('latin1+utf-16 encoding not yet supported');
+			throw new ComponentModelTrap('latin1+utf-16 encoding not yet supported');
 		}
 		if (encoding === 'utf-8') {
 			const data = utf8Encoder.encode(str);
@@ -1514,7 +1579,7 @@ namespace $wstring {
 			}
 			return [writer.ptr, data.length];
 		} else {
-			throw new Error('Unsupported encoding');
+			throw new ComponentModelTrap('Unsupported encoding');
 		}
 	}
 }
@@ -1586,6 +1651,15 @@ export class ListType<T> implements ComponentModelType<T[]> {
 		srcReader.copyBytes(0, byteLength, destWriter, 0);
 	}
 
+	public copyFlat(result: WasmType[], dest: Memory, values: FlatValuesIter, src: Memory, _context: ComponentModelContext): void {
+		const data = values.next().value as ptr;
+		const length = values.next().value as u32;
+		const byteLength = length * this.elementType.size;
+		const srcReader = src.readonly(data, byteLength);
+		const destWriter = dest.alloc(this.elementType.alignment, byteLength);
+		srcReader.copyBytes(0, byteLength, destWriter, 0);
+		result.push(destWriter.ptr, length);
+	}
 
 	private loadFromRange(memory: ReadonlyMemoryRange, length: u32, context: ComponentModelContext): T[] {
 		const result: T[] = [];
@@ -1669,6 +1743,16 @@ abstract class TypeArrayType<T extends { length: number; byteLength: number }, E
 		const srcReader = src.memory.readonly(data, byteLength);
 		const destWriter = dest.memory.alloc(this.elementType.alignment, byteLength);
 		srcReader.copyBytes(0, byteLength, destWriter, 0);
+	}
+
+	public copyFlat(result: WasmType[], dest: Memory, values: FlatValuesIter, src: Memory, _context: ComponentModelContext): void {
+		const data = values.next().value as ptr;
+		const length = values.next().value as u32;
+		const byteLength = length * this.elementType.size;
+		const srcReader = src.readonly(data, byteLength);
+		const destWriter = dest.alloc(this.elementType.alignment, byteLength);
+		srcReader.copyBytes(0, byteLength, destWriter, 0);
+		result.push(destWriter.ptr, length);
 	}
 
 	protected abstract loadFromRange(memory: ReadonlyMemoryRange, length: number): T;
@@ -1878,6 +1962,12 @@ abstract class BaseRecordType<T extends JRecord | JTuple, F extends TypedField> 
 		}
 	}
 
+	public copyFlat(result: WasmType[], dest: Memory, values: FlatValuesIter, src: Memory, context: ComponentModelContext): void {
+		for (const field of this.fields) {
+			field.type.copyFlat(result, dest, values, src, context);
+		}
+	}
+
 	protected abstract create(fields: F[], values: JType[]): T;
 	protected abstract elements(record: T, fields: F[]): JType[];
 
@@ -2033,6 +2123,12 @@ export class FlagsType<_T> implements ComponentModelType<u32 | bigint> {
 	public copy(dest: MemoryRange, dest_offset: offset, src: ReadonlyMemoryRange, src_offset: offset, context: ComponentModelContext): void {
 		if (this.type !== undefined) {
 			this.type.copy(dest, dest_offset, src, src_offset, context);
+		}
+	}
+
+	public copyFlat(result: WasmType[], dest: Memory, values: FlatValuesIter, src: Memory, context: ComponentModelContext): void {
+		if (this.type !== undefined) {
+			this.type.copyFlat(result, dest, values, src, context);
 		}
 	}
 
@@ -2257,6 +2353,23 @@ export class VariantType<T extends JVariantCase, I, V extends JType> implements 
 		caseVariant.type.copy(dest, dest_offset, src, src_offset, context);
 	}
 
+	public copyFlat(result: WasmType[], dest: Memory, values: FlatValuesIter, src: Memory, context: ComponentModelContext): void {
+		let valuesToCopy = this.flatTypes.length - 1;
+		this.discriminantType.copyFlat(result, dest, values, src, context);
+		const caseIndex = result[result.length - 1] as number;
+		const caseVariant = this.cases[caseIndex];
+		if (caseVariant.type !== undefined) {
+			const wantFlatTypes = caseVariant.wantFlatTypes!;
+			// The first flat type is the discriminant type. So skip it.
+			const iter = new CoerceValueIter(values, this.flatTypes.slice(1), wantFlatTypes);
+			caseVariant.type.copyFlat(result, dest, iter, src, context);
+			valuesToCopy = valuesToCopy - wantFlatTypes.length;
+		}
+		for (let i = 0; i < valuesToCopy; i++) {
+			result.push(values.next().value);
+		}
+	}
+
 	private static size(discriminantType: GenericComponentModelType, cases: VariantCase[]): size {
 		let result = discriminantType.size;
 		result = align(result, this.maxCaseAlignment(cases));
@@ -2389,6 +2502,10 @@ export class EnumType<T extends JEnum> implements ComponentModelType<T> {
 
 	public copy(dest: MemoryRange, dest_offset: offset, src: ReadonlyMemoryRange, src_offset: offset, context: ComponentModelContext): void {
 		this.discriminantType.copy(dest, dest_offset, src, src_offset, context);
+	}
+
+	public copyFlat(result: WasmType[], dest: Memory, values: FlatValuesIter, src: Memory, context: ComponentModelContext): void {
+		this.discriminantType.copyFlat(result, dest, values, src, context);
 	}
 
 	private assertRange(value: number): number {
@@ -2553,6 +2670,18 @@ export class OptionType<T extends JType> implements ComponentModelType<T | optio
 			dest_offset += u8.size;
 			dest_offset = align(dest_offset, this.alignment);
 			this.valueType.copy(dest, dest_offset, src, src_offset, context);
+		}
+	}
+
+	public copyFlat(result: WasmType[], dest: Memory, values: FlatValuesIter, src: Memory, context: ComponentModelContext): void {
+		u8.copyFlat(result, dest, values, src, context);
+		const caseIndex = result[result.length - 1] as number;
+		if (caseIndex === 0) {
+			for (const _type of this.valueType.flatTypes) {
+				result.push(values.next().value);
+			}
+		} else {
+			this.valueType.copyFlat(result, dest, values, src, context);
 		}
 	}
 
@@ -3215,6 +3344,10 @@ export class ResourceHandleType implements ComponentModelType<ResourceHandle> {
 	public copy(dest: MemoryRange, dest_offset: offset, src: ReadonlyMemoryRange, src_offset: offset, context: ComponentModelContext): void {
 		u32.copy(dest, dest_offset, src, src_offset, context);
 	}
+
+	public copyFlat(result: WasmType[], dest: Memory, values: FlatValuesIter, src: Memory, context: ComponentModelContext): void {
+		u32.copyFlat(result, dest, values, src, context);
+	}
 }
 
 export class ResourceType<T extends Resource = Resource> implements ComponentModelType<T> {
@@ -3290,6 +3423,10 @@ export class ResourceType<T extends Resource = Resource> implements ComponentMod
 	public copy(dest: MemoryRange, dest_offset: offset, src: ReadonlyMemoryRange, src_offset: offset, context: ComponentModelContext): void {
 		u32.copy(dest, dest_offset, src, src_offset, context);
 	}
+
+	public copyFlat(result: WasmType[], dest: Memory, values: FlatValuesIter, src: Memory, context: ComponentModelContext): void {
+		u32.copyFlat(result, dest, values, src, context);
+	}
 }
 
 class AbstractWrapperType<T extends  NonNullable<JType>> implements ComponentModelType<T> {
@@ -3331,6 +3468,10 @@ class AbstractWrapperType<T extends  NonNullable<JType>> implements ComponentMod
 
 	public copy(dest: MemoryRange, dest_offset: offset, src: ReadonlyMemoryRange, src_offset: offset, context: ComponentModelContext): void {
 		return this.wrapped.copy(dest, dest_offset, src, src_offset, context);
+	}
+
+	public copyFlat(result: WasmType[], dest: Memory, values: FlatValuesIter, src: Memory, context: ComponentModelContext): void {
+		return this.wrapped.copyFlat(result, dest, values, src, context);
 	}
 }
 
@@ -3482,7 +3623,7 @@ export namespace ComponentModelTypeVisitor {
 				visitor.endVisitResult !== undefined && visitor.endVisitResult(type as ResultType<any, any>);
 				break;
 			default:
-				throw new Error(`Unknown type kind ${type.kind}`);
+				throw new ComponentModelTrap(`Unknown type kind ${type.kind}`);
 		}
 	}
 }
