@@ -824,7 +824,7 @@ export interface ComponentModelType<J> {
 	lowerFlat(result: WasmType[], memory: Memory, value: J, context: ComponentModelContext): void;
 	// copy a component model value from one memory to another
 	copy(dest: MemoryRange, dest_offset: offset, src: ReadonlyMemoryRange, src_offset: offset, context: ComponentModelContext): void;
-	//
+	// copy a component model value from a flattened array to another
 	copyFlat(result: WasmType[], dest: Memory, values: FlatValuesIter, src: Memory, context: ComponentModelContext): void;
 }
 export type GenericComponentModelType = ComponentModelType<JType>;
@@ -3063,6 +3063,12 @@ export type GenericClass = {
 
 export type WasmFunction = (...params: WasmType[]) => WasmType | void;
 
+interface Connection {
+	prepareCall(): void;
+	getMemory(): Memory;
+	call(name: string, params: WasmType[]): WasmType | void;
+}
+
 class Callable {
 
 	private static readonly EMPTY_JTYPE: ReadonlyArray<JType> = Object.freeze([]);
@@ -3135,6 +3141,27 @@ class Callable {
 		}
 	}
 
+	protected copyParamValues(result: WasmType[], dest: Memory, wasmValues: WasmType[], src: Memory, context: ComponentModelContext): void {
+		if (this.paramType === undefined) {
+			if (wasmValues.length !== 0) {
+				throw new ComponentModelTrap(`Expected no parameters, but got ${wasmValues.length}`);
+			}
+			return;
+		}
+		if (this.paramType.flatTypes.length > Callable.MAX_FLAT_PARAMS) {
+			const p0 = wasmValues[0];
+			if (!Number.isInteger(p0)) {
+				throw new ComponentModelTrap('Invalid pointer');
+			}
+			const srcReader = src.readonly(p0 as ptr, this.paramType.size);
+			this.paramType.copy(this.paramType.alloc(dest), 0, srcReader, 0, context);
+		} else {
+			this.paramType.copyFlat(result, dest, wasmValues.values(), src, context);
+		}
+
+		@@@ we need to check if there is a result point. If so we need to alloc and pass a new OwnType.
+	}
+
 	protected lowerReturnValue(value: JType | void, memory: Memory, context: ComponentModelContext, out: ptr | undefined): WasmType | void {
 		if (this.returnType === undefined) {
 			return;
@@ -3149,6 +3176,19 @@ class Callable {
 			const writer = out !== undefined ? memory.preAllocated(out, this.returnType.size) : this.returnType.alloc(memory);
 			this.returnType.store(writer, 0, value, context);
 			return;
+		}
+	}
+
+	protected copyReturnValue(result: WasmType[], dest: Memory, wasmValues: WasmType[], src: Memory, context: ComponentModelContext): void {
+		if (this.returnType === undefined) {
+			if (wasmValues.length !== 0) {
+				throw new ComponentModelTrap(`Expected no results, but got ${wasmValues.length}`);
+			}
+			return;
+		} else if (this.returnType.flatTypes.length <= Callable.MAX_FLAT_RESULTS) {
+			this.returnType.copyFlat(result, dest, wasmValues.values(), src, context);
+		} else {
+			@@@;
 		}
 	}
 
@@ -3208,6 +3248,14 @@ export class FunctionType<_T extends Function = Function> extends Callable  {
 		const [jParams, out] = this.getParamValuesForHostCall(params, context);
 		const result: JType | void = func(...jParams);
 		return this.lowerReturnValue(result, context.getMemory(), context, out);
+	}
+
+	public forwardCall(connection: Connection, qualifier: string, params: WasmType[], context: WasmContext): WasmType | void {
+		connection.prepareCall();
+		const newParams: WasmType[] = [];
+		this.copyParamValues(newParams, connection.getMemory(), params, context.getMemory(), context);
+		const result = connection.call(`${qualifier}/${this.witName}`, newParams);
+
 	}
 }
 
@@ -3794,6 +3842,22 @@ export namespace Imports {
 		return Exports.bind<T>(loop, exports, context);
 	}
 
+	export function forward<T extends ParamWasmInterfaces>(world: WorldType, connection: Connection, context: WasmContext): T {
+		const packageName = world.id.substring(0, world.id.indexOf('/'));
+		const result: WasmInterfaces  = Object.create(null);
+		if (world.imports !== undefined) {
+			if (world.imports.functions !== undefined) {
+				result['$root'] = doCreate<WasmInterface>(world.imports.functions, undefined, service as ParamServiceInterface, context);
+			}
+			if (world.imports.interfaces !== undefined) {
+				for (const [name, iface] of world.imports.interfaces) {
+					const propName = `${name[0].toLowerCase()}${name.substring(1)}`;
+					result[`${packageName}/${iface.witName}`] = doCreate<WasmInterface>(iface.functions, iface.resources, service[propName] as ParamServiceInterface, context);
+				}
+			}
+		}
+	}
+
 	function asExports(imports: WasmInterfaces, context: WasmContext): WasmInterface {
 		const result: WasmInterface = Object.create(null);
 		const keys = Object.keys(imports);
@@ -3891,6 +3955,36 @@ export namespace Imports {
 		return function (this: void, ...params: WasmType[]): number | bigint | void {
 			return callable.callHost(name, params, manager, context);
 		};
+	}
+
+	function doForward<T extends ParamWasmInterface>(connection: Connection, qualifier: string, functions: Map<string, FunctionType<JFunction>> | undefined, resources: Map<string, { resource: ResourceType; factory: ClassFactory<any>}> | undefined, context: WasmContext): T {
+		const result: Record<string, WasmFunction>  = Object.create(null);
+		if (functions !== undefined) {
+			for (const [funcName, func] of functions) {
+				result[func.witName] = function(this: void, ...params: WasmType[]): number | bigint | void {
+					connection.prePrepareCall();
+					return func.callHost(params, context);
+				};
+			}
+		}
+		if (resources !== undefined) {
+			for (const [resourceName, { resource }] of resources) {
+				const clazz = service[resourceName] as GenericClass;
+				const resourceManager: ResourceManager = getResourceManager(resource, clazz, context);
+				for (const [callableName, callable] of resource.callables) {
+					if (callable instanceof ConstructorType) {
+						result[callable.witName] = createConstructorFunction(callable, clazz, resourceManager, context);
+					} else if (callable instanceof StaticMethodType) {
+						result[callable.witName] = createStaticMethodFunction(callable, (service[resourceName] as GenericClass)[callableName], context);
+					} else if (callable instanceof MethodType) {
+						result[callable.witName] = createMethodFunction(callableName, callable, resourceManager, context);
+					} else if (callable instanceof DestructorType) {
+						result[callable.witName] = createDestructorFunction(callable, resourceManager);
+					}
+				}
+			}
+		}
+		return result as unknown as T;
 	}
 }
 
