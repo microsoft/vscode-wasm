@@ -3063,10 +3063,16 @@ export type GenericClass = {
 
 export type WasmFunction = (...params: WasmType[]) => WasmType | void;
 
-interface Connection {
+interface WorkerConnection {
 	prepareCall(): void;
 	getMemory(): Memory;
-	call(name: string, params: WasmType[]): WasmType | void;
+	call(name: string, params: ReadonlyArray<WasmType>): WasmType | void;
+}
+
+interface MainConnection {
+	prepareCall(): void;
+	getMemory(): Memory;
+	call(name: string, params: ReadonlyArray<WasmType>): Promise<WasmType | void>;
 }
 
 class Callable {
@@ -3141,14 +3147,27 @@ class Callable {
 		}
 	}
 
-	protected copyParamValues(result: WasmType[], dest: Memory, wasmValues: WasmType[], src: Memory, context: ComponentModelContext): void {
+	protected copyParamValues(result: WasmType[], dest: Memory, wasmValues: WasmType[], src: Memory, context: ComponentModelContext): { originalResult: MemoryRange; transferResult: MemoryRange } | undefined {
+		const flatReturnTypes = this.returnType !== undefined ? this.returnType.flatTypes.length : 0;
+		const flatParamTypes = this.paramType !== undefined ? this.paramType.flatTypes.length : 0;
+
+		let out: ptr | undefined = undefined;
+		if (flatReturnTypes > Callable.MAX_FLAT_RESULTS) {
+			// Check if the result pointer got passed as the last value in the flat types
+			if (wasmValues.length === flatParamTypes + 1) {
+				const last = wasmValues[flatParamTypes];
+				if (!Number.isInteger(last)) {
+					throw new ComponentModelTrap(`Expected a pointer as return parameter, but got ${last}`);
+				}
+				out = last as ptr;
+			}
+		}
+
 		if (this.paramType === undefined) {
-			if (wasmValues.length !== 0) {
+			if ((out === undefined && wasmValues.length !== 0) || (out !== undefined && wasmValues.length !== 1)) {
 				throw new ComponentModelTrap(`Expected no parameters, but got ${wasmValues.length}`);
 			}
-			return;
-		}
-		if (this.paramType.flatTypes.length > Callable.MAX_FLAT_PARAMS) {
+		} else if (this.paramType.flatTypes.length > Callable.MAX_FLAT_PARAMS) {
 			const p0 = wasmValues[0];
 			if (!Number.isInteger(p0)) {
 				throw new ComponentModelTrap('Invalid pointer');
@@ -3158,8 +3177,14 @@ class Callable {
 		} else {
 			this.paramType.copyFlat(result, dest, wasmValues.values(), src, context);
 		}
-
-		@@@ we need to check if there is a result point. If so we need to alloc and pass a new OwnType.
+		// Allocate space for the result in dest and add it to the end of the flat values.
+		if (out !== undefined && this.returnType !== undefined) {
+			const destResult = this.returnType.alloc(dest);
+			result.push(destResult.ptr);
+			return { transferResult: destResult, originalResult: src.preAllocated(out, this.returnType.size) };
+		} else {
+			return undefined;
+		}
 	}
 
 	protected lowerReturnValue(value: JType | void, memory: Memory, context: ComponentModelContext, out: ptr | undefined): WasmType | void {
@@ -3179,16 +3204,32 @@ class Callable {
 		}
 	}
 
-	protected copyReturnValue(result: WasmType[], dest: Memory, wasmValues: WasmType[], src: Memory, context: ComponentModelContext): void {
-		if (this.returnType === undefined) {
-			if (wasmValues.length !== 0) {
-				throw new ComponentModelTrap(`Expected no results, but got ${wasmValues.length}`);
+	protected copyReturnValue(resultStorage: { originalResult: MemoryRange; transferResult: MemoryRange } | undefined, dest: Memory, src: Memory, value: WasmType | undefined | void, context: ComponentModelContext): WasmType | undefined {
+		if (resultStorage !== undefined) {
+			if (this.returnType === undefined) {
+				throw new ComponentModelTrap(`Result storage should not be set if there is no return type.`);
 			}
-			return;
-		} else if (this.returnType.flatTypes.length <= Callable.MAX_FLAT_RESULTS) {
-			this.returnType.copyFlat(result, dest, wasmValues.values(), src, context);
+			if (value !== undefined) {
+				throw new ComponentModelTrap(`Can't use both result storage and result value ${value}.`);
+			}
+			this.returnType.copy(resultStorage.originalResult, 0, resultStorage.transferResult, 0, context);
+			return undefined;
+		} else if (value !== undefined) {
+			if (this.returnType === undefined) {
+				throw new ComponentModelTrap(`Expected no return value, but got ${value}`);
+			}
+			if (this.returnType.flatTypes.length > Callable.MAX_FLAT_RESULTS) {
+				if (!Number.isInteger(value)) {
+					throw new ComponentModelTrap(`Expected a pointer as return value, but got ${value}`);
+				}
+				const destWriter = this.returnType.alloc(dest);
+				this.returnType.copy(destWriter, 0, src.preAllocated(value as ptr, this.returnType.size), 0, context);
+				return destWriter.ptr;
+			} else {
+				return value;
+			}
 		} else {
-			@@@;
+			return undefined;
 		}
 	}
 
@@ -3204,6 +3245,28 @@ class Callable {
 			result = wasmFunction(...wasmValues);
 		}
 
+		return this.liftReturnValue(result, resultRange?.ptr, memory, context);
+	}
+
+	public forwardHostCall(connection: WorkerConnection, qualifier: string, params: WasmType[], context: WasmContext): WasmType | void {
+		connection.prepareCall();
+		const newParams: WasmType[] = [];
+		const resultStorage =  this.copyParamValues(newParams, connection.getMemory(), params, context.getMemory(), context);
+		const result = connection.call(`${qualifier}/${this.witName}`, newParams);
+		return this.copyReturnValue(resultStorage, context.getMemory(), connection.getMemory(), result, context);
+	}
+
+	public async forwardWasmCall(connection: MainConnection, qualifier: string, params: JType[], context: ComponentModelContext): Promise<JType | void> {
+		const memory = connection.getMemory();
+		const wasmValues = this.lowerParamValues(params, memory, context, undefined);
+		let resultRange: MemoryRange | undefined = undefined;
+		let result: WasmType | void;
+		if (this.returnType !== undefined && this.returnType.flatTypes.length > FunctionType.MAX_FLAT_RESULTS) {
+			resultRange = this.returnType.alloc(memory);
+			result = await connection.call(`${qualifier}/${this.witName}`, wasmValues.concat(resultRange.ptr));
+		} else {
+			result = await connection.call(`${qualifier}/${this.witName}`, wasmValues);
+		}
 		return this.liftReturnValue(result, resultRange?.ptr, memory, context);
 	}
 
@@ -3248,14 +3311,6 @@ export class FunctionType<_T extends Function = Function> extends Callable  {
 		const [jParams, out] = this.getParamValuesForHostCall(params, context);
 		const result: JType | void = func(...jParams);
 		return this.lowerReturnValue(result, context.getMemory(), context, out);
-	}
-
-	public forwardCall(connection: Connection, qualifier: string, params: WasmType[], context: WasmContext): WasmType | void {
-		connection.prepareCall();
-		const newParams: WasmType[] = [];
-		this.copyParamValues(newParams, connection.getMemory(), params, context.getMemory(), context);
-		const result = connection.call(`${qualifier}/${this.witName}`, newParams);
-
 	}
 }
 
@@ -3842,20 +3897,21 @@ export namespace Imports {
 		return Exports.bind<T>(loop, exports, context);
 	}
 
-	export function forward<T extends ParamWasmInterfaces>(world: WorldType, connection: Connection, context: WasmContext): T {
+	export function forward<T extends ParamWasmInterfaces>(connection: WorkerConnection, world: WorldType, context: WasmContext): T {
 		const packageName = world.id.substring(0, world.id.indexOf('/'));
 		const result: WasmInterfaces  = Object.create(null);
 		if (world.imports !== undefined) {
 			if (world.imports.functions !== undefined) {
-				result['$root'] = doCreate<WasmInterface>(world.imports.functions, undefined, service as ParamServiceInterface, context);
+				result['$root'] = doForward<WasmInterface>(connection, '$root', world.imports.functions, undefined, context);
 			}
 			if (world.imports.interfaces !== undefined) {
-				for (const [name, iface] of world.imports.interfaces) {
-					const propName = `${name[0].toLowerCase()}${name.substring(1)}`;
-					result[`${packageName}/${iface.witName}`] = doCreate<WasmInterface>(iface.functions, iface.resources, service[propName] as ParamServiceInterface, context);
+				for (const iface of world.imports.interfaces.values()) {
+					const qualifier = `${packageName}/${iface.witName}`;
+					result[qualifier] = doForward<WasmInterface>(connection, qualifier, iface.functions, iface.resources, context);
 				}
 			}
 		}
+		return result as unknown as T;
 	}
 
 	function asExports(imports: WasmInterfaces, context: WasmContext): WasmInterface {
@@ -3957,30 +4013,21 @@ export namespace Imports {
 		};
 	}
 
-	function doForward<T extends ParamWasmInterface>(connection: Connection, qualifier: string, functions: Map<string, FunctionType<JFunction>> | undefined, resources: Map<string, { resource: ResourceType; factory: ClassFactory<any>}> | undefined, context: WasmContext): T {
+	function doForward<T extends ParamWasmInterface>(connection: WorkerConnection, qualifier: string, functions: Map<string, FunctionType<JFunction>> | undefined, resources: Map<string, { resource: ResourceType; factory: ClassFactory<any>}> | undefined, context: WasmContext): T {
 		const result: Record<string, WasmFunction>  = Object.create(null);
 		if (functions !== undefined) {
-			for (const [funcName, func] of functions) {
+			for (const [, func] of functions) {
 				result[func.witName] = function(this: void, ...params: WasmType[]): number | bigint | void {
-					connection.prePrepareCall();
-					return func.callHost(params, context);
+					return func.forwardHostCall(connection, qualifier, params, context);
 				};
 			}
 		}
 		if (resources !== undefined) {
-			for (const [resourceName, { resource }] of resources) {
-				const clazz = service[resourceName] as GenericClass;
-				const resourceManager: ResourceManager = getResourceManager(resource, clazz, context);
-				for (const [callableName, callable] of resource.callables) {
-					if (callable instanceof ConstructorType) {
-						result[callable.witName] = createConstructorFunction(callable, clazz, resourceManager, context);
-					} else if (callable instanceof StaticMethodType) {
-						result[callable.witName] = createStaticMethodFunction(callable, (service[resourceName] as GenericClass)[callableName], context);
-					} else if (callable instanceof MethodType) {
-						result[callable.witName] = createMethodFunction(callableName, callable, resourceManager, context);
-					} else if (callable instanceof DestructorType) {
-						result[callable.witName] = createDestructorFunction(callable, resourceManager);
-					}
+			for (const { resource } of resources.values()) {
+				for (const callable of resource.callables.values()) {
+					result[callable.witName] = function(this: void, ...params: WasmType[]): number | bigint | void {
+						return callable.forwardHostCall(connection, qualifier, params, context);
+					};
 				}
 			}
 		}
