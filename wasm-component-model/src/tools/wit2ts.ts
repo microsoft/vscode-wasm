@@ -546,6 +546,9 @@ class Types {
 			if (Owner.isInterface(type.owner)) {
 				const iface = this.symbols.getInterface(type.owner.interface);
 				return `${this.symbols.interfaces.getFullyQualifiedModuleName(iface)}.${name}`;
+			} else if (Owner.isWorld(type.owner)) {
+				const world = this.symbols.getWorld(type.owner.world);
+				return `${this.symbols.worlds.getFullyQualifiedName(world)}.${name}`;
 			} else {
 				throw new Error(`Unsupported owner ${type.owner}`);
 			}
@@ -596,18 +599,24 @@ class Worlds {
 
 	private readonly symbols: SymbolTable;
 	private readonly nameProvider: NameProvider;
+	private readonly options: ResolvedOptions;
 
-	constructor(symbols: SymbolTable, nameProvider: NameProvider) {
+	constructor(symbols: SymbolTable, nameProvider: NameProvider, options: ResolvedOptions) {
 		this.symbols = symbols;
 		this.nameProvider = nameProvider;
+		this.options = options;
 	}
 
 	getFullyQualifiedName(world: World | number, separator: string = '.'): string {
 		if (typeof world === 'number') {
 			world = this.symbols.getWorld(world);
 		}
-		const pkg = this.symbols.getPackage(world.package);
-		return `${this.nameProvider.pack.name(pkg)}${separator}${this.nameProvider.world.name(world)}`;
+		if (this.options.singleWorld) {
+			return this.nameProvider.world.name(world);
+		} else {
+			const pkg = this.symbols.getPackage(world.package);
+			return `${this.nameProvider.pack.name(pkg)}${separator}${this.nameProvider.world.name(world)}`;
+		}
 	}
 }
 
@@ -624,7 +633,7 @@ class SymbolTable {
 	constructor(document: Document, nameProvider: NameProvider, options: ResolvedOptions) {
 		this.document = document;
 		this.methods = new Map();
-		this.worlds = new Worlds(this, nameProvider);
+		this.worlds = new Worlds(this, nameProvider, options);
 		this.interfaces = new Interfaces(this, nameProvider, options);
 		this.types = new Types(this, nameProvider);
 		for (const iface of document.interfaces) {

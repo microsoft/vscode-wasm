@@ -64,16 +64,19 @@ async function run(options: Options): Promise<number> {
 						process.stderr.write(`wit2ts required wasm-tools >= 1.200.0, but found version ${version}.\n`);
 						return 1;
 					}
+					let data: string;
 					try {
-						const data = cp.execFileSync('wasm-tools', ['component', 'wit', '--json', options.input], { shell: true, encoding: 'utf8' });
-						const content: Document = JSON.parse(data);
-						processDocument(content, options);
+						data = cp.execFileSync('wasm-tools', ['component', 'wit', '--json', options.input], { shell: true, encoding: 'utf8' });
 					} catch (error: any) {
 						// The wasm-tools reported an error and wrote to output to stderr. So
 						// we simply return a failure.
 						return 1;
 					}
+					const content: Document = JSON.parse(data);
+					processDocument(content, options);
 				} catch (error: any) {
+					process.stderr.write(`Failed to process document\n${error.stack}\n`);
+					return 1;
 				}
 			} else {
 				process.stderr.write(`${options.input} doesn't exist.\n`);
