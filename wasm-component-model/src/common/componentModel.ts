@@ -3067,12 +3067,14 @@ interface WorkerConnection {
 	prepareCall(): void;
 	getMemory(): Memory;
 	call(name: string, params: ReadonlyArray<WasmType>): WasmType | void;
+	on(id: string, callback: (...params: WasmType[]) => WasmType | void): void;
 }
 
 interface MainConnection {
 	prepareCall(): void;
 	getMemory(): Memory;
 	call(name: string, params: ReadonlyArray<WasmType>): Promise<WasmType | void>;
+	on(id: string, callback: (...params: WasmType[]) => WasmType | void): void;
 }
 
 class Callable {
@@ -3248,12 +3250,19 @@ class Callable {
 		return this.liftReturnValue(result, resultRange?.ptr, memory, context);
 	}
 
-	public forwardHostCall(connection: WorkerConnection, qualifier: string, params: WasmType[], context: WasmContext): WasmType | void {
+	public callHostOnMain(connection: WorkerConnection, qualifier: string, params: WasmType[], context: WasmContext): WasmType | void {
 		connection.prepareCall();
 		const newParams: WasmType[] = [];
 		const resultStorage =  this.copyParamValues(newParams, connection.getMemory(), params, context.getMemory(), context);
 		const result = connection.call(`${qualifier}/${this.witName}`, newParams);
 		return this.copyReturnValue(resultStorage, context.getMemory(), connection.getMemory(), result, context);
+	}
+
+	public callWasmOnWorker(transferMemory: Memory, func: WasmFunction, params: WasmType[], context: WasmContext): WasmType | void {
+		const newParams: WasmType[] = [];
+		const resultStorage = this.copyParamValues(newParams, context.getMemory(), params, transferMemory, context);
+		const result = func(...newParams);
+		return this.copyReturnValue(resultStorage, transferMemory, context.getMemory(), result, context);
 	}
 
 	public async forwardWasmCall(connection: MainConnection, qualifier: string, params: JType[], context: ComponentModelContext): Promise<JType | void> {
@@ -3897,23 +3906,6 @@ export namespace Imports {
 		return Exports.bind<T>(loop, exports, context);
 	}
 
-	export function forward<T extends ParamWasmInterfaces>(connection: WorkerConnection, world: WorldType, context: WasmContext): T {
-		const packageName = world.id.substring(0, world.id.indexOf('/'));
-		const result: WasmInterfaces  = Object.create(null);
-		if (world.imports !== undefined) {
-			if (world.imports.functions !== undefined) {
-				result['$root'] = doForward<WasmInterface>(connection, '$root', world.imports.functions, undefined, context);
-			}
-			if (world.imports.interfaces !== undefined) {
-				for (const iface of world.imports.interfaces.values()) {
-					const qualifier = `${packageName}/${iface.witName}`;
-					result[qualifier] = doForward<WasmInterface>(connection, qualifier, iface.functions, iface.resources, context);
-				}
-			}
-		}
-		return result as unknown as T;
-	}
-
 	function asExports(imports: WasmInterfaces, context: WasmContext): WasmInterface {
 		const result: WasmInterface = Object.create(null);
 		const keys = Object.keys(imports);
@@ -4013,25 +4005,58 @@ export namespace Imports {
 		};
 	}
 
-	function doForward<T extends ParamWasmInterface>(connection: WorkerConnection, qualifier: string, functions: Map<string, FunctionType<JFunction>> | undefined, resources: Map<string, { resource: ResourceType; factory: ClassFactory<any>}> | undefined, context: WasmContext): T {
-		const result: Record<string, WasmFunction>  = Object.create(null);
-		if (functions !== undefined) {
-			for (const [, func] of functions) {
-				result[func.witName] = function(this: void, ...params: WasmType[]): number | bigint | void {
-					return func.forwardHostCall(connection, qualifier, params, context);
-				};
+	export namespace worker {
+		export function create<T extends ParamWasmInterfaces>(connection: WorkerConnection, world: WorldType, context: WasmContext): T {
+			const packageName = world.id.substring(0, world.id.indexOf('/'));
+			const result: WasmInterfaces  = Object.create(null);
+			if (world.imports !== undefined) {
+				if (world.imports.functions !== undefined) {
+					result['$root'] = doForward<WasmInterface>(connection, '$root', world.imports.functions, undefined, context);
+				}
+				if (world.imports.interfaces !== undefined) {
+					for (const iface of world.imports.interfaces.values()) {
+						const qualifier = `${packageName}/${iface.witName}`;
+						result[qualifier] = doForward<WasmInterface>(connection, qualifier, iface.functions, iface.resources, context);
+					}
+				}
 			}
+			return result as unknown as T;
 		}
-		if (resources !== undefined) {
-			for (const { resource } of resources.values()) {
-				for (const callable of resource.callables.values()) {
-					result[callable.witName] = function(this: void, ...params: WasmType[]): number | bigint | void {
-						return callable.forwardHostCall(connection, qualifier, params, context);
-					};
+
+		export function bind(connection: MainConnection, world: WorldType, service: ParamWorldServiceInterface, context: ComponentModelContext): void {
+			const wasmContext: WasmContext = {
+				...context,
+				getMemory: () => connection.getMemory(),
+			};
+			const imports = Imports.create<WasmInterfaces>(world, service, wasmContext);
+			for (const qualifier of Object.keys(imports)) {
+				for (const funcName of Object.keys(imports[qualifier])) {
+					const func = imports[qualifier][funcName];
+					connection.on(`${qualifier}/${funcName}`, func);
 				}
 			}
 		}
-		return result as unknown as T;
+
+		function doForward<T extends ParamWasmInterface>(connection: WorkerConnection, qualifier: string, functions: Map<string, FunctionType<JFunction>> | undefined, resources: Map<string, { resource: ResourceType; factory: ClassFactory<any>}> | undefined, context: WasmContext): T {
+			const result: Record<string, WasmFunction>  = Object.create(null);
+			if (functions !== undefined) {
+				for (const [, func] of functions) {
+					result[func.witName] = function(this: void, ...params: WasmType[]): number | bigint | void {
+						return func.callHostOnMain(connection, qualifier, params, context);
+					};
+				}
+			}
+			if (resources !== undefined) {
+				for (const { resource } of resources.values()) {
+					for (const callable of resource.callables.values()) {
+						result[callable.witName] = function(this: void, ...params: WasmType[]): number | bigint | void {
+							return callable.callHostOnMain(connection, qualifier, params, context);
+						};
+					}
+				}
+			}
+			return result as unknown as T;
+		}
 	}
 }
 
@@ -4159,6 +4184,97 @@ export namespace Exports {
 		return (...params: JType[]): JType | void => {
 			return func.callWasm(params, wasmFunction, context);
 		};
+	}
+
+	export namespace worker {
+		export function bind(connection: WorkerConnection, world: WorldType, exports: Record<string, ParamWasmFunction>, context: WasmContext): void {
+			const packageName = world.id.substring(0, world.id.indexOf('/'));
+			const [root, scoped] = partition(exports);
+			if (world.exports !== undefined) {
+				doBind(connection, packageName, world.exports.functions, undefined, root, context);
+				if (world.exports.interfaces !== undefined) {
+					for (const iface of world.exports.interfaces.values()) {
+						doBind(connection, packageName, iface.functions, iface.resources, scoped[iface.id], context);
+					}
+				}
+			}
+		}
+
+		function doBind(connection: WorkerConnection, qualifier: string, functions: Map<string, FunctionType> | undefined, resources: Map<string, ResourceInfo> | undefined, wasm: ParamWasmInterface, context: WasmContext) : void {
+			if (functions !== undefined) {
+				for (const func of functions.values()) {
+					connection.on(`${qualifier}/${func.witName}`, (...params: WasmType[]) => {
+						return func.callWasmOnWorker(connection.getMemory(), wasm[func.witName] as WasmFunction, params, context);
+					});
+				}
+			}
+			if (resources !== undefined) {
+				for (const { resource } of resources.values()) {
+					for (const callable of resource.callables.values()) {
+						connection.on(`${qualifier}/${callable.witName}`, (...params: WasmType[]) => {
+							return callable.callWasmOnWorker(connection.getMemory(), wasm[callable.witName] as WasmFunction, params, context);
+						});
+					}
+				}
+			}
+		}
+	}
+}
+
+export namespace main {
+	export function bind<T>(connection: MainConnection, world: WorldType, service: ParamWorldServiceInterface, context: ComponentModelContext): Promisify<T> {
+		const wasmContext: WasmContext = {
+			...context,
+			getMemory: () => connection.getMemory(),
+		};
+
+		// First we forward all imports from the worker to the service implementation. Since the communication between
+		// main and the worker is on flat types we can simply create an import object and hook it up to the connection.
+		const imports = Imports.create<WasmInterfaces>(world, service, wasmContext);
+		for (const qualifier of Object.keys(imports)) {
+			for (const funcName of Object.keys(imports[qualifier])) {
+				const func = imports[qualifier][funcName];
+				connection.on(`${qualifier}/${funcName}`, func);
+			}
+		}
+
+		//
+		const exports: Record<string, ParamWasmFunction> = Object.create(null);
+		const result: Record<string, Exports> = Object.create(null);
+		if (world.exports !== undefined) {
+			if (world.exports.functions !== undefined) {
+				for (const func of world.exports.functions.values()) {
+					exports[func.witName] = function (...params: WasmType[]): WasmType | void {
+						
+					};
+				}
+			}
+			if (world.exports.interfaces !== undefined) {
+				for (const [name, iface] of world.exports.interfaces) {
+					const propName = `${name[0].toLowerCase()}${name.substring(1)}`;
+					result[propName] = doBind(iface.functions, iface.resources, scoped[iface.id], context);
+				}
+			}
+		}
+		return result as Promisify<T>;
+	}
+
+	function doBind(connection: MainConnection, qualifier: string, functions: Map<string, FunctionType> | undefined, resources: Map<string, ResourceInfo> | undefined, wasm: ParamWasmInterface, context: WasmContext): Exports {
+		const result: WriteableServiceInterface = Object.create(null);
+		if (functions !== undefined) {
+			for (const [name, func] of functions) {
+				result[name] = createFunction(func, wasm[func.witName] as WasmFunction, context);
+			}
+		}
+		if (resources !== undefined) {
+			for (const [name, { resource, factory }] of resources) {
+				const resourceManager = getResourceManager(resource, undefined, context);
+				const clazz = factory(wasm, context);
+				resourceManager.setProxyInfo(clazz, wasm[`[dtor]${resource.witName}`] as (self: number) => void);
+				result[name] = clazz;
+			}
+		}
+		return result;
 	}
 }
 
