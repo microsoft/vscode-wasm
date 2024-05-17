@@ -3340,6 +3340,16 @@ export class ConstructorType<_T extends Function = Function> extends Callable {
 		const obj: Resource = new clazz(...jParams);
 		return obj.$handle();
 	}
+
+	public callWasmConstructor(params: JType[], wasmFunction: WasmFunction, context: WasmContext): number {
+		const memory = context.getMemory();
+		const wasmValues = this.lowerParamValues(params, memory, context, undefined);
+		const result: WasmType | void = wasmFunction(...wasmValues);
+		if (typeof result !== 'number') {
+			throw new ComponentModelTrap(`Expected a number (u32) as return value, but got ${result}.`);
+		}
+		return result;
+	}
 }
 
 export class DestructorType<_T extends Function = Function> extends Callable {
@@ -3394,7 +3404,7 @@ export class MethodType<_T extends Function = Function> extends Callable {
 		return this.lowerReturnValue(result, memory, context, out);
 	}
 
-	public callWasmMethod(params: JType[], wasmFunction: WasmFunction, _resourceManager: ResourceManager, context: WasmContext): JType {
+	public callWasmMethod(params: JType[], wasmFunction: WasmFunction, context: WasmContext): JType {
 		const memory = context.getMemory();
 		const obj: Resource & { $rep(): ResourceRepresentation} = params.shift() as Resource & { $rep(): ResourceRepresentation};
 		const handle = obj.$rep();
@@ -3851,6 +3861,15 @@ function getResourceManager(resource: ResourceType, clazz: GenericClass | undefi
 }
 
 export namespace Imports {
+	type Distribute<T> = T extends any ? Promisify<T> : never;
+	export type Promisify<T> = {
+		[K in keyof T]: T[K] extends (...args: infer A) => infer R
+			? (...args: A) => Promise<R> | R
+			: T[K] extends object
+				? Distribute<T[K]>
+				: T[K];
+	};
+
 	export function create<T extends ParamWasmInterfaces>(world: WorldType, service: ParamWorldServiceInterface, context: WasmContext): T {
 		const packageName = world.id.substring(0, world.id.indexOf('/'));
 		const result: WasmInterfaces  = Object.create(null);
@@ -4127,6 +4146,15 @@ interface WriteableServiceInterface {
 
 export type Exports = ParamServiceInterface | {};
 export namespace Exports {
+	type Distribute<T> = T extends any ? Promisify<T> : never;
+	export type Promisify<T> = {
+		[K in keyof T]: T[K] extends (...args: infer A) => infer R
+			? (...args: A) => Promise<R>
+			: T[K] extends object
+				? Distribute<T[K]>
+				: T[K];
+	};
+
 	export function bind<T>(world: WorldType, exports: Record<string, ParamWasmFunction>, context: WasmContext): T {
 		const [root, scoped] = partition(exports);
 		const result: Record<string, Exports> = Object.create(null);
@@ -4221,68 +4249,120 @@ export namespace Exports {
 	}
 }
 
-export namespace main {
-	export function bind<T>(connection: MainConnection, world: WorldType, service: ParamWorldServiceInterface, context: ComponentModelContext): Promisify<T> {
-		const wasmContext: WasmContext = {
-			...context,
-			getMemory: () => connection.getMemory(),
+export namespace clazz {
+	export function create<T>(resource: ResourceType, wasm: ParamWasmInterface, context: WasmContext, promise: boolean = false): T {
+		let resourceManager: ResourceManager;
+		if (context.resources.has(resource.id)) {
+			resourceManager = context.resources.ensure(resource.id);
+		} else {
+			resourceManager = new ResourceManager.Default();
+			context.resources.set(resource.id, resourceManager);
+		}
+		const clazz = class extends Resource.Default {
+			private readonly _rep: ResourceRepresentation;
+			constructor(...args: any[]) {
+				if (args[0] === ResourceManager.handleTag) {
+					const handle = args[1] as ResourceHandle;
+					super(handle);
+					this._rep = (args[2] as ResourceManager).getRepresentation(handle);
+				} else {
+					const ctor = resource.getCallable('constructor') as ConstructorType;
+					const handle = ctor.callWasmConstructor(args, wasm[ctor.witName] as WasmFunction, context);
+					super(handle);
+					this._rep = resourceManager.getRepresentation(this.$handle());
+				}
+			}
+			public $rep(): ResourceRepresentation {
+				return this._rep;
+			}
 		};
-
-		// First we forward all imports from the worker to the service implementation. Since the communication between
-		// main and the worker is on flat types we can simply create an import object and hook it up to the connection.
-		const imports = Imports.create<WasmInterfaces>(world, service, wasmContext);
-		for (const qualifier of Object.keys(imports)) {
-			for (const funcName of Object.keys(imports[qualifier])) {
-				const func = imports[qualifier][funcName];
-				connection.on(`${qualifier}/${funcName}`, func);
+		for (const [name, callable] of resource.callables) {
+			if (callable instanceof MethodType) {
+				(clazz.prototype as any)[name] = function (...params: JType[]): JType {
+					return callable.callWasmMethod(params, wasm[callable.witName] as WasmFunction, context);
+				};
+			} else if (callable instanceof DestructorType) {
+				(clazz.prototype as any)[name] = function (...params: JType[]): JType {
+					return callable.callWasm(params, wasm[callable.witName] as WasmFunction, context);
+				};
+			} else if (callable instanceof StaticMethodType) {
+				(clazz as any)[name] = (...params: JType[]): JType => {
+					return callable.callWasm(params,  wasm[callable.witName] as WasmFunction, context);
+				};
 			}
 		}
-
-		//
-		const exports: Record<string, ParamWasmFunction> = Object.create(null);
-		const result: Record<string, Exports> = Object.create(null);
-		if (world.exports !== undefined) {
-			if (world.exports.functions !== undefined) {
-				for (const func of world.exports.functions.values()) {
-					exports[func.witName] = function (...params: WasmType[]): WasmType | void {
-						
-					};
-				}
-			}
-			if (world.exports.interfaces !== undefined) {
-				for (const [name, iface] of world.exports.interfaces) {
-					const propName = `${name[0].toLowerCase()}${name.substring(1)}`;
-					result[propName] = doBind(iface.functions, iface.resources, scoped[iface.id], context);
-				}
-			}
+		if (promise) {
+			(clazz as any).$new = function(...args: JType[]): Promise<T> {
+				return new Promise((resolve, reject) => {
+					const ctor = resource.getCallable('constructor') as ConstructorType;
+					const result = ctor.callWasmConstructor(args, wasm[ctor.witName] as WasmFunction, context);
+					if ((result as any) instanceof Promise) {
+						(result as unknown as Promise<ResourceHandle>).then((handle: ResourceHandle) => {
+							resolve(new clazz(ResourceManager.handleTag, handle, resourceManager) as T);
+						}, reject);
+					}
+					resolve(new clazz(ResourceManager.handleTag, result as number, resourceManager) as T);
+				});
+			};
 		}
-		return result as Promisify<T>;
-	}
-
-	function doBind(connection: MainConnection, qualifier: string, functions: Map<string, FunctionType> | undefined, resources: Map<string, ResourceInfo> | undefined, wasm: ParamWasmInterface, context: WasmContext): Exports {
-		const result: WriteableServiceInterface = Object.create(null);
-		if (functions !== undefined) {
-			for (const [name, func] of functions) {
-				result[name] = createFunction(func, wasm[func.witName] as WasmFunction, context);
-			}
-		}
-		if (resources !== undefined) {
-			for (const [name, { resource, factory }] of resources) {
-				const resourceManager = getResourceManager(resource, undefined, context);
-				const clazz = factory(wasm, context);
-				resourceManager.setProxyInfo(clazz, wasm[`[dtor]${resource.witName}`] as (self: number) => void);
-				result[name] = clazz;
-			}
-		}
-		return result;
+		return clazz as T;
 	}
 }
 
-type Distribute<T> = T extends any ? Promisify<T> : never;
-export type Promisify<T> = {
-	[K in keyof T]: T[K] extends (...args: infer A) => infer R
-		? (...args: A) => Promise<R>
-		: T[K] extends object
-			? Distribute<T[K]>
-			: T[K];
-};
+// export namespace main {
+// 	export function bind<T>(connection: MainConnection, world: WorldType, service: ParamWorldServiceInterface, context: ComponentModelContext): Promisify<T> {
+// 		const wasmContext: WasmContext = {
+// 			...context,
+// 			getMemory: () => connection.getMemory(),
+// 		};
+
+// 		// First we forward all imports from the worker to the service implementation. Since the communication between
+// 		// main and the worker is on flat types we can simply create an import object and hook it up to the connection.
+// 		const imports = Imports.create<WasmInterfaces>(world, service, wasmContext);
+// 		for (const qualifier of Object.keys(imports)) {
+// 			for (const funcName of Object.keys(imports[qualifier])) {
+// 				const func = imports[qualifier][funcName];
+// 				connection.on(`${qualifier}/${funcName}`, func);
+// 			}
+// 		}
+
+// 		//
+// 		const exports: Record<string, ParamWasmFunction> = Object.create(null);
+// 		const result: Record<string, Exports> = Object.create(null);
+// 		if (world.exports !== undefined) {
+// 			if (world.exports.functions !== undefined) {
+// 				for (const func of world.exports.functions.values()) {
+// 					exports[func.witName] = function (...params: WasmType[]): WasmType | void {
+
+// 					};
+// 				}
+// 			}
+// 			if (world.exports.interfaces !== undefined) {
+// 				for (const [name, iface] of world.exports.interfaces) {
+// 					const propName = `${name[0].toLowerCase()}${name.substring(1)}`;
+// 					result[propName] = doBind(iface.functions, iface.resources, scoped[iface.id], context);
+// 				}
+// 			}
+// 		}
+// 		return result as Promisify<T>;
+// 	}
+
+// 	function doBind(connection: MainConnection, qualifier: string, functions: Map<string, FunctionType> | undefined, resources: Map<string, ResourceInfo> | undefined, wasm: ParamWasmInterface, context: WasmContext): Exports {
+// 		const result: WriteableServiceInterface = Object.create(null);
+// 		if (functions !== undefined) {
+// 			for (const [name, func] of functions) {
+// 				result[name] = createFunction(func, wasm[func.witName] as WasmFunction, context);
+// 			}
+// 		}
+// 		if (resources !== undefined) {
+// 			for (const [name, { resource, factory }] of resources) {
+// 				const resourceManager = getResourceManager(resource, undefined, context);
+// 				const clazz = factory(wasm, context);
+// 				resourceManager.setProxyInfo(clazz, wasm[`[dtor]${resource.witName}`] as (self: number) => void);
+// 				result[name] = clazz;
+// 			}
+// 		}
+// 		return result;
+// 	}
+// }
+

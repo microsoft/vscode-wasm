@@ -44,15 +44,10 @@ async function run(options: Options): Promise<number> {
 			});
 		} else {
 			const stat = await fs.stat(options.input, { bigint: true });
-			if (stat.isFile()) {
-				if (path.extname(options.input) === '.json') {
-					const content: Document = JSON.parse(await fs.readFile(options.input, { encoding: 'utf8' }));
-					processDocument(content, options);
-				} else {
-					process.stderr.write(`${options.input} is not a JSON file.\n`);
-					return 1;
-				}
-			} else if (stat.isDirectory()) {
+			if (stat.isFile() && path.extname(options.input) === '.json') {
+				const content: Document = JSON.parse(await fs.readFile(options.input, { encoding: 'utf8' }));
+				processDocument(content, options);
+			} else if (stat.isDirectory() || stat.isFile() && path.extname(options.input) === '.wit') {
 				try {
 					const output = cp.execFileSync('wasm-tools', ['--version'], { shell: true, encoding: 'utf8' });
 					const version = output.trim().split(' ')[1];
