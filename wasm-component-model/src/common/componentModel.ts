@@ -2811,7 +2811,7 @@ export interface ResourceManager<T extends Resource = Resource> {
 	dropHandle(handle: ResourceHandle<T>): ResourceRepresentation;
 
 	// Resource management
-	setProxyInfo(ctor: (new (handleTag: symbol, handle: ResourceHandle<T>) => T), dtor: (self: ResourceHandle<T>) => void): void;
+	setProxyInfo(ctor: (new (handleTag: symbol, handle: ResourceHandle<T>, manager: ResourceManager<T>) => T), dtor: (self: ResourceHandle<T>) => void): void;
 	hasResource(handle: ResourceHandle<T>): boolean;
 	getResource(handle: ResourceHandle<T>): T;
 	registerResource(resource: T, handle?: ResourceHandle<T>): ResourceHandle<T>;
@@ -2823,7 +2823,6 @@ export interface ResourceManager<T extends Resource = Resource> {
 	getLoop(rep: ResourceRepresentation): ResourceHandle<T>;
 }
 
-declare const console: any;
 export namespace ResourceManager {
 	export const handleTag: symbol = Symbol('handleTag');
 
@@ -2835,7 +2834,7 @@ export namespace ResourceManager {
 		private handleTable: Map<ResourceHandle<T>, ResourceRepresentation>;
 		private h2r: Map<ResourceHandle<T>, WeakRef<T> | T | undefined>;
 		private finalizer: FinalizationRegistry<FinalizationRegistryData>;
-		private ctor: (new (handleTag: symbol, handle: ResourceHandle<T>) => T) | undefined;
+		private ctor: (new (handleTag: symbol, handle: ResourceHandle<T>, manager: ResourceManager<T>) => T) | undefined;
 		private dtor: ((self: ResourceHandle<T>) => void) | undefined;
 
 		// We only need the representation counter for the loop implementation.
@@ -2895,7 +2894,7 @@ export namespace ResourceManager {
 			return rep;
 		}
 
-		public setProxyInfo(ctor: (new (handleTag: symbol, handle: ResourceHandle<T>) => T), dtor: (self: ResourceHandle<T>) => void): void {
+		public setProxyInfo(ctor: (new (handleTag: symbol, handle: ResourceHandle<T>, manager: ResourceManager<T>) => T), dtor: (self: ResourceHandle<T>) => void): void {
 			this.ctor = ctor;
 			this.dtor = dtor;
 		}
@@ -2925,7 +2924,7 @@ export namespace ResourceManager {
 				if (this.ctor === undefined) {
 					throw new ComponentModelTrap(`No proxy constructor set`);
 				}
-				const proxy = new this.ctor(handleTag, handle);
+				const proxy = new this.ctor(handleTag, handle, this);
 				this.setProxy(handle, rep, proxy);
 				return proxy;
 			} else {
@@ -3042,11 +3041,11 @@ export namespace ResourceManagers {
 			if (manager === undefined) {
 				throw new ComponentModelTrap(`Resource manager ${id} not found.`);
 			}
-			return manager as ResourceManager<T>;
+			return manager as unknown as ResourceManager<T>;
 		}
 
 		public get<T extends Resource = Resource>(id: string): ResourceManager<T> | undefined {
-			return this.managers.get(id) as ResourceManager<T>;
+			return this.managers.get(id) as unknown as ResourceManager<T>;
 		}
 	}
 }
@@ -3750,13 +3749,12 @@ export namespace ComponentModelTypeVisitor {
 	}
 }
 
-export type ResourceInfo = { resource: ResourceType; factory: ClassFactory<any> };
 export type InterfaceType = {
 	readonly id: string;
 	readonly witName: string;
 	readonly types?: Map<string, GenericComponentModelType>;
 	readonly functions?: Map<string, FunctionType<JFunction>>;
-	readonly resources?: Map<string, ResourceInfo>;
+	readonly resources?: Map<string, ResourceType>;
 };
 export namespace InterfaceType {
 	export function is(value: any): value is InterfaceType {
@@ -3890,7 +3888,7 @@ export namespace Imports {
 					if (iface.resources === undefined) {
 						continue;
 					}
-					for (const { resource } of iface.resources.values()) {
+					for (const resource of iface.resources.values()) {
 						const manager = getResourceManager(resource, undefined, context);
 						const exports = Object.create(null);
 						exports[`[resource-new]${resource.witName}`] = (rep: u32) => manager.newHandle(rep);
@@ -3967,7 +3965,7 @@ export namespace Imports {
 		return result;
 	}
 
-	function doCreate<T extends ParamWasmInterface>(functions: Map<string, FunctionType<JFunction>> | undefined, resources: Map<string, { resource: ResourceType; factory: ClassFactory<any>}> | undefined, service: ParamServiceInterface, context: WasmContext): T {
+	function doCreate<T extends ParamWasmInterface>(functions: Map<string, FunctionType<JFunction>> | undefined, resources: Map<string, ResourceType> | undefined, service: ParamServiceInterface, context: WasmContext): T {
 		const result: Record<string, WasmFunction>  = Object.create(null);
 		if (functions !== undefined) {
 			for (const [funcName, func] of functions) {
@@ -3975,7 +3973,7 @@ export namespace Imports {
 			}
 		}
 		if (resources !== undefined) {
-			for (const [resourceName, { resource }] of resources) {
+			for (const [resourceName, resource ] of resources) {
 				const clazz = service[resourceName] as GenericClass;
 				const resourceManager: ResourceManager = getResourceManager(resource, clazz, context);
 				for (const [callableName, callable] of resource.callables) {
@@ -4056,7 +4054,7 @@ export namespace Imports {
 			}
 		}
 
-		function doForward<T extends ParamWasmInterface>(connection: WorkerConnection, qualifier: string, functions: Map<string, FunctionType<JFunction>> | undefined, resources: Map<string, { resource: ResourceType; factory: ClassFactory<any>}> | undefined, context: WasmContext): T {
+		function doForward<T extends ParamWasmInterface>(connection: WorkerConnection, qualifier: string, functions: Map<string, FunctionType<JFunction>> | undefined, resources: Map<string, ResourceType> | undefined, context: WasmContext): T {
 			const result: Record<string, WasmFunction>  = Object.create(null);
 			if (functions !== undefined) {
 				for (const [, func] of functions) {
@@ -4066,7 +4064,7 @@ export namespace Imports {
 				}
 			}
 			if (resources !== undefined) {
-				for (const { resource } of resources.values()) {
+				for (const resource of resources.values()) {
 					for (const callable of resource.callables.values()) {
 						result[callable.witName] = function(this: void, ...params: WasmType[]): number | bigint | void {
 							return callable.callHostOnMain(connection, qualifier, params, context);
@@ -4132,16 +4130,15 @@ export namespace Module {
 		};
 	}
 
-	function createMethodFunction(callable: MethodType, wasmFunction: WasmFunction, manager: ResourceManager, context: WasmContext): JFunction {
+	function createMethodFunction(callable: MethodType, wasmFunction: WasmFunction, _manager: ResourceManager, context: WasmContext): JFunction {
 		return (...params: JType[]): JType | void => {
-			return callable.callWasmMethod(params, wasmFunction, manager, context);
+			return callable.callWasmMethod(params, wasmFunction, context);
 		};
 	}
 }
 
-export type ClassFactory<T extends GenericClass = GenericClass> = (wasmInterface: any, context: WasmContext) => T;
 interface WriteableServiceInterface {
-	[key: string]: (JFunction | WriteableServiceInterface);
+	[key: string]: (JFunction | WriteableServiceInterface | (new (...args: any[]) => any));
 }
 
 export type Exports = ParamServiceInterface | {};
@@ -4190,7 +4187,7 @@ export namespace Exports {
 		return [root, scoped];
 	}
 
-	function doBind<T extends Exports>(functions: Map<string, FunctionType> | undefined, resources: Map<string, ResourceInfo> | undefined, wasm: ParamWasmInterface, context: WasmContext): T {
+	function doBind<T extends Exports>(functions: Map<string, FunctionType> | undefined, resources: Map<string, ResourceType> | undefined, wasm: ParamWasmInterface, context: WasmContext): T {
 		const result: WriteableServiceInterface = Object.create(null);
 		if (functions !== undefined) {
 			for (const [name, func] of functions) {
@@ -4198,11 +4195,11 @@ export namespace Exports {
 			}
 		}
 		if (resources !== undefined) {
-			for (const [name, { resource, factory }] of resources) {
+			for (const [name, resource] of resources) {
 				const resourceManager = getResourceManager(resource, undefined, context);
-				const clazz = factory(wasm, context);
-				resourceManager.setProxyInfo(clazz, wasm[`[dtor]${resource.witName}`] as (self: number) => void);
-				result[name] = clazz;
+				const cl =  clazz.create(resource, wasm, context, false);
+				resourceManager.setProxyInfo(cl, wasm[`[dtor]${resource.witName}`] as (self: number) => void);
+				result[name] = cl;
 			}
 		}
 		return result as unknown as T;
@@ -4228,7 +4225,7 @@ export namespace Exports {
 			}
 		}
 
-		function doBind(connection: WorkerConnection, qualifier: string, functions: Map<string, FunctionType> | undefined, resources: Map<string, ResourceInfo> | undefined, wasm: ParamWasmInterface, context: WasmContext) : void {
+		function doBind(connection: WorkerConnection, qualifier: string, functions: Map<string, FunctionType> | undefined, resources: Map<string, ResourceType> | undefined, wasm: ParamWasmInterface, context: WasmContext) : void {
 			if (functions !== undefined) {
 				for (const func of functions.values()) {
 					connection.on(`${qualifier}/${func.witName}`, (...params: WasmType[]) => {
@@ -4237,7 +4234,7 @@ export namespace Exports {
 				}
 			}
 			if (resources !== undefined) {
-				for (const { resource } of resources.values()) {
+				for (const resource of resources.values()) {
 					for (const callable of resource.callables.values()) {
 						connection.on(`${qualifier}/${callable.witName}`, (...params: WasmType[]) => {
 							return callable.callWasmOnWorker(connection.getMemory(), wasm[callable.witName] as WasmFunction, params, context);
@@ -4250,7 +4247,10 @@ export namespace Exports {
 }
 
 export namespace clazz {
-	export function create<T>(resource: ResourceType, wasm: ParamWasmInterface, context: WasmContext, promise: boolean = false): T {
+	interface AnyProxyClass {
+		new (handleTag: symbol, handle: ResourceHandle<any>, manager: ResourceManager<any>): any;
+	}
+	export function create(resource: ResourceType, wasm: ParamWasmInterface, context: WasmContext, promise: boolean = false): AnyProxyClass {
 		let resourceManager: ResourceManager;
 		if (context.resources.has(resource.id)) {
 			resourceManager = context.resources.ensure(resource.id);
@@ -4260,6 +4260,8 @@ export namespace clazz {
 		}
 		const clazz = class extends Resource.Default {
 			private readonly _rep: ResourceRepresentation;
+			constructor(handleTag: symbol, handle: ResourceHandle, resourceManager: ResourceManager);
+			constructor(...args: any[]);
 			constructor(...args: any[]) {
 				if (args[0] === ResourceManager.handleTag) {
 					const handle = args[1] as ResourceHandle;
@@ -4292,20 +4294,20 @@ export namespace clazz {
 			}
 		}
 		if (promise) {
-			(clazz as any).$new = function(...args: JType[]): Promise<T> {
+			(clazz as any).$new = function(...args: JType[]): Promise<AnyProxyClass> {
 				return new Promise((resolve, reject) => {
 					const ctor = resource.getCallable('constructor') as ConstructorType;
 					const result = ctor.callWasmConstructor(args, wasm[ctor.witName] as WasmFunction, context);
 					if ((result as any) instanceof Promise) {
 						(result as unknown as Promise<ResourceHandle>).then((handle: ResourceHandle) => {
-							resolve(new clazz(ResourceManager.handleTag, handle, resourceManager) as T);
+							resolve(new clazz(ResourceManager.handleTag, handle, resourceManager) as unknown as AnyProxyClass);
 						}, reject);
 					}
-					resolve(new clazz(ResourceManager.handleTag, result as number, resourceManager) as T);
+					resolve(new clazz(ResourceManager.handleTag, result as number, resourceManager) as unknown as AnyProxyClass);
 				});
 			};
 		}
-		return clazz as T;
+		return clazz;
 	}
 }
 

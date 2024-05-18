@@ -29,7 +29,6 @@ export namespace Types {
 			execute(): u32;
 		}
 		export type Statics = {
-			$new(): Interface;
 		};
 		export type Class = Statics & {
 			new(): Interface;
@@ -86,21 +85,6 @@ export namespace calculator {
 		types: Types;
 		iface: exports.Iface;
 	};
-
-	export namespace main {
-		export type Exports = $wcm.Exports.Promisify<calculator.Exports>;
-		export type Imports = $wcm.Imports.Promisify<calculator.Imports>;
-	}
-
-}
-
-async function foo() {
-	let x!: calculator.main.Exports;
-	let r = await x.add(1, 2);
-
-	let eng = await x.types.Engine.$new();
-	eng.pushOperand(1);
-
 }
 
 export namespace Types.$ {
@@ -132,64 +116,11 @@ export namespace Types._ {
 			'[method]engine.push-operation': (self: i32, operation_code_OpCode: i32, operation_a: i32, operation_b: i32) => void;
 			'[method]engine.execute': (self: i32) => i32;
 		};
-		type ObjectModule = {
-			'constructor'(): own<$wcm.ResourceHandle>;
-			pushOperand(self: Engine, operand: u32): void;
-			pushOperation(self: Engine, operation: Operation): void;
-			execute(self: Engine): u32;
-		};
 		export namespace imports {
 			export type WasmInterface = Engine.WasmInterface & { '[resource-drop]engine': (self: i32) => void };
 		}
 		export namespace exports {
 			export type WasmInterface = Engine.WasmInterface & { '[dtor]engine': (self: i32) => void };
-			class Impl extends $wcm.Resource.Default implements Types.Engine.Interface {
-				private readonly _rep: $wcm.ResourceRepresentation;
-				private readonly _om: ObjectModule;
-				constructor(om: ObjectModule);
-				constructor(handleTag: symbol, handle: $wcm.ResourceHandle, rm: $wcm.ResourceManager, om: ObjectModule);
-				constructor(...args: any[]);
-				constructor(...args: any[]) {
-					if (args[0] === $wcm.ResourceManager.handleTag) {
-						const handle = args[1] as $wcm.ResourceHandle;
-						super(handle);
-						this._rep = (args[2] as $wcm.ResourceManager).getRepresentation(handle);
-						this._om = args[3] as ObjectModule;
-					} else {
-						const rm = args[0] as $wcm.ResourceManager;
-						const om = args[1] as ObjectModule;
-						super(om.constructor());
-						this._rep = rm.getRepresentation(this.$handle());
-						this._om = om;
-					}
-				}
-				public $rep(): $wcm.ResourceRepresentation { return this._rep; }
-				public pushOperand(operand: u32): void {
-					return this._om.pushOperand(this, operand);
-				}
-				public pushOperation(operation: Operation): void {
-					return this._om.pushOperation(this, operation);
-				}
-				public execute(): u32 {
-					return this._om.execute(this);
-				}
-			}
-			export function Class(wasmInterface: WasmInterface, context: $wcm.WasmContext): Types.Engine.Class {
-				const resource = Types.$.Engine;
-				const rm: $wcm.ResourceManager = context.resources.ensure('vscode:example/types/engine');
-				const om: ObjectModule = $wcm.Module.createObjectModule(resource, wasmInterface, context);
-				return class extends Impl {
-					public static $new(): Types.Engine.Interface {
-						return new this(rm, om);
-					}
-					constructor();
-					constructor(handleTag: symbol, handle: $wcm.ResourceHandle);
-					constructor(...args: any[]) {
-						super(...args, rm, om);
-						rm.registerProxy(this);
-					}
-				};
-			}
 		}
 	}
 	export const types: Map<string, $wcm.GenericComponentModelType> = new Map<string, $wcm.GenericComponentModelType>([
@@ -197,8 +128,8 @@ export namespace Types._ {
 		['Operation', $.Operation],
 		['Engine', $.Engine]
 	]);
-	export const resources: Map<string, { resource: $wcm.ResourceType; factory: $wcm.ClassFactory<any>}> = new Map<string, { resource: $wcm.ResourceType; factory: $wcm.ClassFactory<any>}>([
-		['Engine', { resource: $.Engine, factory: Engine.exports.Class }]
+	export const resources: Map<string, $wcm.ResourceType> = new Map<string, $wcm.ResourceType>([
+		['Engine', $.Engine]
 	]);
 	export type WasmInterface = {
 	};
