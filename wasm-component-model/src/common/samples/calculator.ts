@@ -4,7 +4,7 @@
  *--------------------------------------------------------------------------------------------*/
 /* eslint-disable @typescript-eslint/ban-types */
 import * as $wcm from '@vscode/wasm-component-model';
-import type { u32, i32 } from '@vscode/wasm-component-model';
+import type { u32, own, i32 } from '@vscode/wasm-component-model';
 
 export namespace Types {
 	export enum OpCode {
@@ -29,6 +29,7 @@ export namespace Types {
 			execute(): u32;
 		}
 		export type Statics = {
+			$new(): Interface;
 		};
 		export type Class = Statics & {
 			new(): Interface;
@@ -234,10 +235,15 @@ export namespace calculator._ {
 			['Functions', Functions._]
 		]);
 		export function create(service: calculator.Imports, context: $wcm.WasmContext): Imports {
-			return $wcm.Imports.create<Imports>(_, service, context);
+			return $wcm.$imports.create<Imports>(_, service, context);
 		}
 		export function loop(service: calculator.Imports, context: $wcm.WasmContext): calculator.Imports {
-			return $wcm.Imports.loop(_, service, context);
+			return $wcm.$imports.loop(_, service, context);
+		}
+		export namespace worker {
+			export function create(connection: $wcm.WorkerConnection, context: $wcm.WasmContext): Imports {
+				return $wcm.$imports.worker.create<Imports>(connection, _, context);
+			}
 		}
 	}
 	export type Imports = {
@@ -282,7 +288,22 @@ export namespace calculator._ {
 			['Types', Types._]
 		]);
 		export function bind(exports: Exports, context: $wcm.WasmContext): calculator.Exports {
-			return $wcm.Exports.bind<calculator.Exports>(_, exports, context);
+			return $wcm.$exports.bind<calculator.Exports>(_, exports, context);
+		}
+		export namespace worker {
+			export function bind(connection: $wcm.WorkerConnection, exports: Exports, context: $wcm.WasmContext): void {
+				$wcm.$exports.worker.bind(connection, _, exports, context);
+			}
+		}
+	}
+	export namespace main {
+		export function bind(connection: $wcm.MainConnection, context: $wcm.WasmContext): $wcm.$exports.Promisify<calculator.Exports> {
+			return $wcm.$main.bind<calculator.Exports>(connection, _, context);
+
 		}
 	}
 }
+
+let api = calculator._.main.bind();
+api.add(1, 2);
+api.iface.foo();

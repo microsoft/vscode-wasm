@@ -784,10 +784,13 @@ namespace MetaModel {
 	export const OwnType: string = `${qualifier}.OwnType`;
 	export const FunctionType: string = `${qualifier}.FunctionType`;
 	export const WasmInterfaces: string = `${qualifier}.WasmInterfaces`;
-	export const Imports: string = `${qualifier}.Imports`;
-	export const Exports: string = `${qualifier}.Exports`;
+	export const imports: string = `${qualifier}.$imports`;
+	export const exports: string = `${qualifier}.$exports`;
 	export const InterfaceType: string = `${qualifier}.InterfaceType`;
 	export const WorldType: string = `${qualifier}.WorldType`;
+	export const WorkerConnection: string = `${qualifier}.WorkerConnection`;
+	export const MainConnection: string = `${qualifier}.MainConnection`;
+	export const ComponentModelContext: string = `${qualifier}.ComponentModelContext`;
 
 	export function qualify(name: string): string {
 		return `${qualifier}.${name}`;
@@ -2220,7 +2223,7 @@ class WorldEmitter extends Emitter {
 	}
 
 	public emitAPI(code: Code): void {
-		const { nameProvider } = this.context;
+		const { nameProvider, options } = this.context;
 		const name = nameProvider.world.name(this.world);
 
 		code.push(`export namespace ${name}._ {`);
@@ -2280,15 +2283,27 @@ class WorldEmitter extends Emitter {
 
 			code.push(`export function create(service: ${name}.Imports, context: ${MetaModel.WasmContext}): Imports {`);
 			code.increaseIndent();
-			code.push(`return ${MetaModel.Imports}.create<Imports>(_, service, context);`);
+			code.push(`return ${MetaModel.imports}.create<Imports>(_, service, context);`);
 			code.decreaseIndent();
 			code.push('}');
 
 			code.push(`export function loop(service: ${name}.Imports, context: ${MetaModel.WasmContext}): ${name}.Imports {`);
 			code.increaseIndent();
-			code.push(`return ${MetaModel.Imports}.loop(_, service, context);`);
+			code.push(`return ${MetaModel.imports}.loop(_, service, context);`);
 			code.decreaseIndent();
 			code.push('}');
+
+			if (options.worker) {
+				code.push(`export namespace worker {`);
+				code.increaseIndent();
+				code.push(`export function create(connection: ${MetaModel.WorkerConnection}, context: ${MetaModel.WasmContext}): Imports {`);
+				code.increaseIndent();
+				code.push(`return ${MetaModel.imports}.worker.create<Imports>(connection, _, context);`);
+				code.decreaseIndent();
+				code.push('}');
+				code.decreaseIndent();
+				code.push(`}`);
+			}
 
 			code.decreaseIndent();
 			code.push('}');
@@ -2366,14 +2381,29 @@ class WorldEmitter extends Emitter {
 
 			code.push(`export function bind(exports: Exports, context: ${MetaModel.WasmContext}): ${name}.Exports {`);
 			code.increaseIndent();
-			code.push(`return ${MetaModel.Exports}.bind<${name}.Exports>(_, exports, context);`);
+			code.push(`return ${MetaModel.exports}.bind<${name}.Exports>(_, exports, context);`);
 			code.decreaseIndent();
 			code.push('}');
+			if (options.worker) {
+				code.push(`export namespace worker {`);
+				code.increaseIndent();
+				code.push(`export function bind(connection: ${MetaModel.WorkerConnection}, exports: Exports, context: ${MetaModel.WasmContext}): void {`);
+				code.increaseIndent();
+				code.push(`${MetaModel.exports}.worker.bind(connection, _, exports, context);`);
+				code.decreaseIndent();
+				code.push('}');
+				code.decreaseIndent();
+				code.push(`}`);
+			}
 
 			code.decreaseIndent();
 			code.push('}');
 		}
 
+		if (options.worker) {
+			code.push(`export namespace main {`);
+			code.push(`}`);
+		}
 
 		code.decreaseIndent();
 		code.push('}');
@@ -3354,6 +3384,9 @@ class ResourceEmitter extends InterfaceMemberEmitter {
 
 		code.push(`export type Statics = {`);
 		code.increaseIndent();
+		if (this.context.options.worker && this.conztructor !== undefined) {
+			this.conztructor.emitStaticConstructorDeclaration(code);
+		}
 		for (const method of this.statics) {
 			method.emitStaticsDeclaration(code);
 		}
@@ -3618,6 +3651,11 @@ namespace ResourceEmitter {
 		public emitConstructorDeclaration(code: Code): void {
 			const [params] = this.getSignatureParts(0);
 			code.push(`new(${params.join(', ')}): Interface;`);
+		}
+
+		public emitStaticConstructorDeclaration(code: Code): void {
+			const [params] = this.getSignatureParts(0);
+			code.push(`$new(${params.join(', ')}): Interface;`);
 		}
 	}
 

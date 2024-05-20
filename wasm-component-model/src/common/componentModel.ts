@@ -3062,14 +3062,14 @@ export type GenericClass = {
 
 export type WasmFunction = (...params: WasmType[]) => WasmType | void;
 
-interface WorkerConnection {
+export interface WorkerConnection {
 	prepareCall(): void;
 	getMemory(): Memory;
 	call(name: string, params: ReadonlyArray<WasmType>): WasmType | void;
 	on(id: string, callback: (...params: WasmType[]) => WasmType | void): void;
 }
 
-interface MainConnection {
+export interface MainConnection {
 	prepareCall(): void;
 	getMemory(): Memory;
 	call(name: string, params: ReadonlyArray<WasmType>): Promise<WasmType | void>;
@@ -3856,7 +3856,7 @@ function getResourceManager(resource: ResourceType, clazz: GenericClass | undefi
 	return resourceManager;
 }
 
-export namespace Imports {
+export namespace $imports {
 	type Distribute<T> = T extends any ? Promisify<T> : never;
 	export type Promisify<T> = {
 		[K in keyof T]: T[K] extends (...args: infer A) => infer R
@@ -3902,7 +3902,7 @@ export namespace Imports {
 
 	export function loop<T extends ParamWorldServiceInterface>(world: WorldType, service: ParamWorldServiceInterface, context: WasmContext) : T  {
 		const imports = create<WasmInterfaces>(world, service, context);
-		const exports = asExports(imports, context);
+		const wasmExports = asExports(imports, context);
 		const loop: WorldType = {
 			id: world.id,
 			witName: world.witName,
@@ -3918,7 +3918,7 @@ export namespace Imports {
 				bind: () => { throw new ComponentModelTrap('Illegal call to bind in loop'); },
 			} : undefined,
 		};
-		return Exports.bind<T>(loop, exports, context);
+		return $exports.bind<T>(loop, wasmExports, context);
 	}
 
 	function asExports(imports: WasmInterfaces, context: WasmContext): WasmInterface {
@@ -4043,10 +4043,10 @@ export namespace Imports {
 				...context,
 				getMemory: () => connection.getMemory(),
 			};
-			const imports = Imports.create<WasmInterfaces>(world, service, wasmContext);
-			for (const qualifier of Object.keys(imports)) {
-				for (const funcName of Object.keys(imports[qualifier])) {
-					const func = imports[qualifier][funcName];
+			const wasmImports = $imports.create<WasmInterfaces>(world, service, wasmContext);
+			for (const qualifier of Object.keys(wasmImports)) {
+				for (const funcName of Object.keys(wasmImports[qualifier])) {
+					const func = wasmImports[qualifier][funcName];
 					connection.on(`${qualifier}/${funcName}`, func);
 				}
 			}
@@ -4080,7 +4080,7 @@ interface WriteableServiceInterface {
 }
 
 export type Exports = ParamServiceInterface | {};
-export namespace Exports {
+export namespace $exports {
 	type Distribute<T> = T extends any ? Promisify<T> : never;
 	export type Promisify<T> = {
 		[K in keyof T]: T[K] extends (...args: infer A) => infer R
@@ -4249,60 +4249,60 @@ export namespace clazz {
 	}
 }
 
-// export namespace main {
-// 	export function bind<T>(connection: MainConnection, world: WorldType, service: ParamWorldServiceInterface, context: ComponentModelContext): Promisify<T> {
-// 		const wasmContext: WasmContext = {
-// 			...context,
-// 			getMemory: () => connection.getMemory(),
-// 		};
+export namespace $main {
+	export function bind<T>(connection: MainConnection, world: WorldType, service: ParamWorldServiceInterface, context: ComponentModelContext): $exports.Promisify<T> {
+		const wasmContext: WasmContext = {
+			...context,
+			getMemory: () => connection.getMemory(),
+		};
 
-// 		// First we forward all imports from the worker to the service implementation. Since the communication between
-// 		// main and the worker is on flat types we can simply create an import object and hook it up to the connection.
-// 		const imports = Imports.create<WasmInterfaces>(world, service, wasmContext);
-// 		for (const qualifier of Object.keys(imports)) {
-// 			for (const funcName of Object.keys(imports[qualifier])) {
-// 				const func = imports[qualifier][funcName];
-// 				connection.on(`${qualifier}/${funcName}`, func);
-// 			}
-// 		}
+		// First we forward all imports from the worker to the service implementation. Since the communication between
+		// main and the worker is on flat types we can simply create an import object and hook it up to the connection.
+		const wasmImports = $imports.create<WasmInterfaces>(world, service, wasmContext);
+		for (const qualifier of Object.keys(wasmImports)) {
+			for (const funcName of Object.keys(wasmImports[qualifier])) {
+				const func = wasmImports[qualifier][funcName];
+				connection.on(`${qualifier}/${funcName}`, func);
+			}
+		}
 
-// 		//
-// 		const exports: Record<string, ParamWasmFunction> = Object.create(null);
-// 		const result: Record<string, Exports> = Object.create(null);
-// 		if (world.exports !== undefined) {
-// 			if (world.exports.functions !== undefined) {
-// 				for (const func of world.exports.functions.values()) {
-// 					exports[func.witName] = function (...params: WasmType[]): WasmType | void {
+		//
+		const exports: Record<string, ParamWasmFunction> = Object.create(null);
+		const result: Record<string, Exports> = Object.create(null);
+		if (world.exports !== undefined) {
+			if (world.exports.functions !== undefined) {
+				for (const func of world.exports.functions.values()) {
+					exports[func.witName] = function (...params: WasmType[]): WasmType | void {
 
-// 					};
-// 				}
-// 			}
-// 			if (world.exports.interfaces !== undefined) {
-// 				for (const [name, iface] of world.exports.interfaces) {
-// 					const propName = `${name[0].toLowerCase()}${name.substring(1)}`;
-// 					result[propName] = doBind(iface.functions, iface.resources, scoped[iface.id], context);
-// 				}
-// 			}
-// 		}
-// 		return result as Promisify<T>;
-// 	}
+					};
+				}
+			}
+			if (world.exports.interfaces !== undefined) {
+				for (const [name, iface] of world.exports.interfaces) {
+					const propName = `${name[0].toLowerCase()}${name.substring(1)}`;
+					result[propName] = doBind(iface.functions, iface.resources, scoped[iface.id], context);
+				}
+			}
+		}
+		return result as Promisify<T>;
+	}
 
-// 	function doBind(connection: MainConnection, qualifier: string, functions: Map<string, FunctionType> | undefined, resources: Map<string, ResourceInfo> | undefined, wasm: ParamWasmInterface, context: WasmContext): Exports {
-// 		const result: WriteableServiceInterface = Object.create(null);
-// 		if (functions !== undefined) {
-// 			for (const [name, func] of functions) {
-// 				result[name] = createFunction(func, wasm[func.witName] as WasmFunction, context);
-// 			}
-// 		}
-// 		if (resources !== undefined) {
-// 			for (const [name, { resource, factory }] of resources) {
-// 				const resourceManager = getResourceManager(resource, undefined, context);
-// 				const clazz = factory(wasm, context);
-// 				resourceManager.setProxyInfo(clazz, wasm[`[dtor]${resource.witName}`] as (self: number) => void);
-// 				result[name] = clazz;
-// 			}
-// 		}
-// 		return result;
-// 	}
-// }
+	function doBind(connection: MainConnection, qualifier: string, functions: Map<string, FunctionType> | undefined, resources: Map<string, ResourceInfo> | undefined, wasm: ParamWasmInterface, context: WasmContext): Exports {
+		const result: WriteableServiceInterface = Object.create(null);
+		if (functions !== undefined) {
+			for (const [name, func] of functions) {
+				result[name] = createFunction(func, wasm[func.witName] as WasmFunction, context);
+			}
+		}
+		if (resources !== undefined) {
+			for (const [name, { resource, factory }] of resources) {
+				const resourceManager = getResourceManager(resource, undefined, context);
+				const clazz = factory(wasm, context);
+				resourceManager.setProxyInfo(clazz, wasm[`[dtor]${resource.witName}`] as (self: number) => void);
+				result[name] = clazz;
+			}
+		}
+		return result;
+	}
+}
 

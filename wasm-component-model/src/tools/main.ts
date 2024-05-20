@@ -134,6 +134,11 @@ export async function main(): Promise<number> {
 			enum: ['auto', 'package', 'namespace'],
 			default: 'auto'
 		}).
+		options('worker', {
+			description: 'Generate bindings for main and a worker.',
+			boolean: true,
+			default: false
+		}).
 		command('$0 [input]', 'Process the JSON file or WIT directory', (yargs) => {
 			yargs.positional('input', {
 				describe: 'File or directory to process',
