@@ -2,6 +2,7 @@
  *  Copyright (c) Microsoft Corporation. All rights reserved.
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
+/* eslint-disable @typescript-eslint/ban-types */
 import * as $wcm from '@vscode/wasm-component-model';
 import type { u32, i32 } from '@vscode/wasm-component-model';
 
@@ -110,8 +111,6 @@ export namespace calculator.$ {
 export namespace calculator._ {
 	export const id = 'vscode:example/calculator' as const;
 	export const witName = 'calculator' as const;
-	export type Imports = {
-	};
 	export namespace imports {
 		export const interfaces: Map<string, $wcm.InterfaceType> = new Map<string, $wcm.InterfaceType>([
 			['Types', Types._]
@@ -123,6 +122,8 @@ export namespace calculator._ {
 			return $wcm.Imports.loop(_, service, context);
 		}
 	}
+	export type Imports = {
+	};
 	export type Exports = {
 		'calc': (o_Operation_case: i32, o_Operation_0: i32, o_Operation_1: i32) => i32;
 	};
