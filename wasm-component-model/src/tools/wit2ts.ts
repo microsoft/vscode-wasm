@@ -574,11 +574,15 @@ class Interfaces {
 		if (typeof iface === 'number') {
 			iface = this.symbols.getInterface(iface);
 		}
+		let qualifier: string = '';
+		if (iface.world !== undefined) {
+			qualifier = `${iface.world.kind}.`;
+		}
 		if (this.options.singleWorld) {
-			return this.nameProvider.iface.moduleName(iface);
+			return `${qualifier}${this.nameProvider.iface.moduleName(iface)}`;
 		} else {
 			const pkg = this.symbols.getPackage(iface.package);
-			return `${this.nameProvider.pack.name(pkg)}${separator}${this.nameProvider.iface.moduleName(iface)}`;
+			return `${this.nameProvider.pack.name(pkg)}${separator}${qualifier}${this.nameProvider.iface.moduleName(iface)}`;
 		}
 	}
 
@@ -665,6 +669,10 @@ class SymbolTable {
 
 	public getWorld(ref: number): World {
 		return this.document.worlds[ref];
+	}
+
+	public getWorldIndex(world: World): number {
+		return this.document.worlds.indexOf(world);
 	}
 
 	public getMethods(type: ResourceType): (Method | Constructor | StaticMethod)[] | undefined {
@@ -2017,6 +2025,7 @@ class WorldEmitter extends Emitter {
 			this.imports.interfaceEmitters.push(emitter);
 			return;
 		}
+		iface.world = { ref: symbols.getWorldIndex(this.world), kind: 'imports' };
 		this.imports.locals.interfaceEmitter.push(this.createInterfaceEmitter(name, iface));
 	}
 
@@ -2028,6 +2037,7 @@ class WorldEmitter extends Emitter {
 			this.exports.interfaceEmitters.push(emitter);
 			return;
 		}
+		iface.world = { ref: symbols.getWorldIndex(this.world), kind: 'exports' };
 		this.exports.locals.interfaceEmitter.push(this.createInterfaceEmitter(name, iface));
 	}
 
@@ -2043,6 +2053,8 @@ class WorldEmitter extends Emitter {
 		}
 		const result = new InterfaceEmitter(iface, this.world, this.context);
 		result.build();
+		const { symbols } = this.context;
+		symbols.resolveOwner;
 		return result;
 	}
 
@@ -2164,16 +2176,25 @@ class WorldEmitter extends Emitter {
 		for (const emitter of this.imports.locals.typeEmitters) {
 			emitter.emitMetaModel(code);
 		}
-		for (const emitter of this.imports.locals.interfaceEmitter) {
+		for (const emitter of this.imports.typeEmitters) {
+			emitter.emitMetaModel(code);
+		}
+		for (const emitter of this.exports.locals.typeEmitters) {
+			emitter.emitMetaModel(code);
+		}
+		for (const emitter of this.exports.typeEmitters) {
 			emitter.emitMetaModel(code);
 		}
 		if (this.imports.funcEmitters.length > 0) {
 			code.push(`export namespace imports {`);
 			code.increaseIndent();
-			for (const emitter of this.imports.typeEmitters) {
+			for (const emitter of this.imports.funcEmitters) {
 				emitter.emitMetaModel(code);
 			}
-			for (const emitter of this.imports.funcEmitters) {
+			for (const emitter of this.imports.locals.interfaceEmitter) {
+				emitter.emitMetaModel(code);
+			}
+			for (const emitter of this.imports.locals.resourceEmitters) {
 				emitter.emitMetaModel(code);
 			}
 			code.decreaseIndent();
@@ -2182,10 +2203,13 @@ class WorldEmitter extends Emitter {
 		if (this.exports.funcEmitters.length > 0) {
 			code.push(`export namespace exports {`);
 			code.increaseIndent();
-			for (const emitter of this.exports.typeEmitters) {
+			for (const emitter of this.exports.funcEmitters) {
 				emitter.emitMetaModel(code);
 			}
-			for (const emitter of this.exports.funcEmitters) {
+			for (const emitter of this.exports.locals.interfaceEmitter) {
+				emitter.emitMetaModel(code);
+			}
+			for (const emitter of this.exports.locals.resourceEmitters) {
 				emitter.emitMetaModel(code);
 			}
 			code.decreaseIndent();
@@ -2208,9 +2232,6 @@ class WorldEmitter extends Emitter {
 		const importsAllInterfaceEmitters = this.imports.locals.interfaceEmitter.concat(this.imports.interfaceEmitters);
 		const exportsAllInterfaceEmitters = this.exports.locals.interfaceEmitter.concat(this.exports.interfaceEmitters);
 
-		for (const emitter of this.imports.locals.interfaceEmitter) {
-			emitter.emitAPI(code);
-		}
 		if (this.imports.funcEmitters.length > 0) {
 			code.push(`export type $Root = {`);
 			code.increaseIndent();
@@ -2222,28 +2243,12 @@ class WorldEmitter extends Emitter {
 		}
 
 		if (this.imports.funcEmitters.length + this.imports.interfaceEmitters.length + this.exports.interfaceEmitters.reduce((acc, emitter) => acc + (emitter.hasResources() ? 1 : 0), 0) > 0) {
-			code.push(`export type Imports = {`);
-			code.increaseIndent();
-			if (this.imports.funcEmitters.length > 0) {
-				code.push(`'$root': $Root;`);
-			}
-			for (const emitter of importsAllInterfaceEmitters) {
-				if (!emitter.hasCode()) {
-					continue;
-				}
-				emitter.emitWorldWasmImport(code);
-			}
-			for (const emitter of exportsAllInterfaceEmitters) {
-				if (!emitter.hasResources()) {
-					continue;
-				}
-				emitter.emitWorldWasmExportImport(code);
-			}
-			code.decreaseIndent();
-			code.push(`};`);
-
 			code.push(`export namespace imports {`);
 			code.increaseIndent();
+
+			for (const emitter of this.imports.locals.interfaceEmitter) {
+				emitter.emitAPI(code);
+			}
 
 			if (this.imports.funcEmitters.length > 0) {
 				code.push(`export const functions: Map<string, ${MetaModel.FunctionType}> = new Map([`);
@@ -2255,16 +2260,18 @@ class WorldEmitter extends Emitter {
 				code.decreaseIndent();
 				code.push(']);');
 			}
-			if (this.imports.interfaceEmitters.length > 0) {
+			if (importsAllInterfaceEmitters.length > 0) {
 				code.push(`export const interfaces: Map<string, ${MetaModel.qualifier}.InterfaceType> = new Map<string, ${MetaModel.qualifier}.InterfaceType>([`);
 				code.increaseIndent();
-				for (const [index, emitter] of this.imports.interfaceEmitters.entries()) {
+				for (const [index, emitter] of importsAllInterfaceEmitters.entries()) {
+					const iface = emitter.iface;
+					const qualifier = iface.world !== undefined ? `${iface.world.kind}.` : '';
 					const name = nameProvider.iface.moduleName(emitter.iface);
 					if (this.pkg === emitter.getPkg()) {
-						code.push(`['${name}', ${name}._]${index < this.imports.interfaceEmitters.length - 1 ? ',' : ''}`);
+						code.push(`['${name}', ${qualifier}${name}._]${index < importsAllInterfaceEmitters.length - 1 ? ',' : ''}`);
 					} else {
 						const pkgName = nameProvider.pack.name(emitter.getPkg());
-						code.push(`['${pkgName}.${name}', ${pkgName}.${name}._]${index < this.imports.interfaceEmitters.length - 1 ? ',' : ''}`);
+						code.push(`['${pkgName}.${name}', ${pkgName}.${qualifier}${name}._]${index < importsAllInterfaceEmitters.length - 1 ? ',' : ''}`);
 					}
 				}
 				code.decreaseIndent();
@@ -2285,6 +2292,26 @@ class WorldEmitter extends Emitter {
 
 			code.decreaseIndent();
 			code.push('}');
+
+			code.push(`export type Imports = {`);
+			code.increaseIndent();
+			if (this.imports.funcEmitters.length > 0) {
+				code.push(`'$root': $Root;`);
+			}
+			for (const emitter of importsAllInterfaceEmitters) {
+				if (!emitter.hasCode()) {
+					continue;
+				}
+				emitter.emitWorldWasmImport(code);
+			}
+			for (const emitter of exportsAllInterfaceEmitters) {
+				if (!emitter.hasResources()) {
+					continue;
+				}
+				emitter.emitWorldWasmExportImport(code);
+			}
+			code.decreaseIndent();
+			code.push(`};`);
 		}
 
 
@@ -2306,6 +2333,9 @@ class WorldEmitter extends Emitter {
 			code.push(`export namespace exports {`);
 			code.increaseIndent();
 
+			for (const emitter of this.exports.locals.interfaceEmitter) {
+				emitter.emitAPI(code);
+			}
 			if (this.exports.funcEmitters.length > 0) {
 				code.push(`export const functions: Map<string, ${MetaModel.FunctionType}> = new Map([`);
 				code.increaseIndent();
@@ -2316,16 +2346,18 @@ class WorldEmitter extends Emitter {
 				code.decreaseIndent();
 				code.push(']);');
 			}
-			if (this.exports.interfaceEmitters.length > 0) {
+			if (exportsAllInterfaceEmitters.length > 0) {
 				code.push(`export const interfaces: Map<string, ${MetaModel.qualifier}.InterfaceType> = new Map<string, ${MetaModel.qualifier}.InterfaceType>([`);
 				code.increaseIndent();
-				for (const [index, emitter] of this.exports.interfaceEmitters.entries()) {
-					const name = nameProvider.iface.moduleName(emitter.iface);
+				for (const [index, emitter] of exportsAllInterfaceEmitters.entries()) {
+					const iface = emitter.iface;
+					const qualifier = iface.world !== undefined ? `${iface.world.kind}.` : '';
+					const name = nameProvider.iface.moduleName(iface);
 					if (this.pkg === emitter.getPkg()) {
-						code.push(`['${name}', ${name}._]${index < this.exports.interfaceEmitters.length - 1 ? ',' : ''}`);
+						code.push(`['${name}', ${qualifier}${name}._]${index < exportsAllInterfaceEmitters.length - 1 ? ',' : ''}`);
 					} else {
 						const pkgName = nameProvider.pack.name(emitter.getPkg());
-						code.push(`['${pkgName}.${name}', ${pkgName}.${name}._]${index < this.exports.interfaceEmitters.length - 1 ? ',' : ''}`);
+						code.push(`['${pkgName}.${name}', ${pkgName}.${qualifier}${name}._]${index < exportsAllInterfaceEmitters.length - 1 ? ',' : ''}`);
 					}
 				}
 				code.decreaseIndent();
@@ -2505,11 +2537,18 @@ class InterfaceEmitter extends Emitter {
 		for (const emitter of this.resourceEmitters) {
 			emitter.emitAPI(code);
 		}
+		let qualifier = '';
+		if (this.iface.world !== undefined) {
+			// calculator.$.imports.Iface.
+			const { symbols } = this.context;
+			const world = symbols.getWorld(this.iface.world.ref);
+			qualifier = `${nameProvider.world.name(world)}.$.${this.iface.world.kind}.${nameProvider.iface.typeName(this.iface)}.`;
+		}
 		if (types.length > 0) {
 			code.push(`export const types: Map<string, ${MetaModel.qualifier}.GenericComponentModelType> = new Map<string, ${MetaModel.qualifier}.GenericComponentModelType>([`);
 			code.increaseIndent();
 			for (let i = 0; i < types.length; i++) {
-				code.push(`['${types[i]}', $.${types[i]}]${i < types.length - 1 ? ',' : ''}`);
+				code.push(`['${types[i]}', ${qualifier}$.${types[i]}]${i < types.length - 1 ? ',' : ''}`);
 			}
 			code.decreaseIndent();
 			code.push(']);');
@@ -2519,7 +2558,7 @@ class InterfaceEmitter extends Emitter {
 			code.increaseIndent();
 			for (let i = 0; i < this.functionEmitters.length; i++) {
 				const name = nameProvider.func.name(this.functionEmitters[i].callable);
-				code.push(`['${name}', $.${name}]${i < this.functionEmitters.length - 1 ? ',' : ''}`);
+				code.push(`['${name}', ${qualifier}$.${name}]${i < this.functionEmitters.length - 1 ? ',' : ''}`);
 			}
 			code.decreaseIndent();
 			code.push(']);');
@@ -2529,7 +2568,7 @@ class InterfaceEmitter extends Emitter {
 			code.push(`export const resources: ${mapType} = new ${mapType}([`);
 			code.increaseIndent();
 			for (const [index, resource] of resources.entries()) {
-				code.push(`['${resource}', $.${resource}]${index < resources.length - 1 ? ',' : ''}`);
+				code.push(`['${resource}', ${qualifier}$.${resource}]${index < resources.length - 1 ? ',' : ''}`);
 			}
 			code.decreaseIndent();
 			code.push(']);');
@@ -2711,12 +2750,19 @@ class MemberEmitter extends Emitter {
 		return `${this.getOwnerName(this.owner)}.`;
 	}
 
-	protected getPackageQualifier(): string {
+	protected getQualifier(): string {
 		if (this.owner === undefined) {
 			return '';
 		}
 		const { symbols, nameProvider, options } = this.context;
-		const ownerName = this.getOwnerName(this.owner);
+		let ownerName = this.getOwnerName(this.owner);
+		if (Interface.is(this.owner)) {
+			// The interface is local to a world
+			if (this.owner.world !== undefined) {
+				const world = symbols.getWorld(this.owner.world.ref);
+				ownerName = `${nameProvider.world.name(world)}.${this.owner.world.kind}.${ownerName}`;
+			}
+		}
 		if (options.singleWorld) {
 			return `${ownerName}.`;
 		} else {
@@ -2781,7 +2827,7 @@ class FunctionEmitter extends MemberEmitter {
 
 	protected getTypeParam(): string {
 		const name = this.context.nameProvider.func.name(this.func);
-		const qualifier = this.getPackageQualifier();
+		const qualifier = this.getQualifier();
 		return `${qualifier}${name}`;
 	}
 }
@@ -2960,7 +3006,7 @@ class RecordEmitter extends MemberEmitter {
 	public emitMetaModel(code: Code): void {
 		const { nameProvider, printers } = this.context;
 		const name = nameProvider.type.name(this.type);
-		code.push(`export const ${name} = new $wcm.RecordType<${this.getPackageQualifier()}${name}>([`);
+		code.push(`export const ${name} = new $wcm.RecordType<${this.getQualifier()}${name}>([`);
 		code.increaseIndent();
 		for (const field of this.type.kind.record.fields) {
 			const name = nameProvider.field.name(field);
@@ -3115,7 +3161,7 @@ class VariantEmitter extends MemberEmitter {
 			const type = item.type === null ? 'undefined' : printers.metaModel.printTypeReference(item.type, TypeUsage.property);
 			cases.push(`['${name}', ${type}]`);
 		}
-		const typeName = `${this.getPackageQualifier()}${name}`;
+		const typeName = `${this.getQualifier()}${name}`;
 		code.push(`export const ${name} = new $wcm.VariantType<${typeName}, ${typeName}._tt, ${typeName}._vt>([${cases.join(', ')}], ${typeName}._ctor);`);
 	}
 }
@@ -3154,7 +3200,7 @@ class EnumEmitter extends MemberEmitter {
 		for (const item of this.type.kind.enum.cases) {
 			cases.push(`'${nameProvider.enumeration.caseName(item)}'`);
 		}
-		code.push(`export const ${enumName} = new $wcm.EnumType<${this.getPackageQualifier()}${enumName}>([${cases.join(', ')}]);`);
+		code.push(`export const ${enumName} = new $wcm.EnumType<${this.getQualifier()}${enumName}>([${cases.join(', ')}]);`);
 	}
 }
 
@@ -3206,7 +3252,7 @@ class FlagsEmitter extends MemberEmitter {
 		const { nameProvider } = this.context;
 		const kind = this.type.kind;
 		const flagsName = nameProvider.type.name(this.type);
-		code.push(`export const ${flagsName} = new $wcm.FlagsType<${this.getPackageQualifier()}${flagsName}>(${kind.flags.flags.length});`);
+		code.push(`export const ${flagsName} = new $wcm.FlagsType<${this.getQualifier()}${flagsName}>(${kind.flags.flags.length});`);
 	}
 
 	private static getFlagSize(numberOfFlags: number): number {
@@ -3341,7 +3387,7 @@ class ResourceEmitter extends InterfaceMemberEmitter {
 	public emitMetaModel(code: Code): void {
 		const { nameProvider } = this.context;
 		const name = nameProvider.type.name(this.resource);
-		code.push(`export const ${name} = new ${MetaModel.ResourceType}<${this.getPackageQualifier()}${name}>('${this.resource.name}', '${this.getId()}');`);
+		code.push(`export const ${name} = new ${MetaModel.ResourceType}<${this.getQualifier()}${name}>('${this.resource.name}', '${this.getId()}');`);
 		code.push(`export const ${name}_Handle = new ${MetaModel.ResourceHandleType}('${this.resource.name}');`);
 	}
 
