@@ -4075,66 +4075,6 @@ export namespace Imports {
 	}
 }
 
-export namespace Module {
-	export function createObjectModule<T>(resource: ResourceType, wasm: ParamWasmInterface, context: WasmContext): T {
-		let resourceManager: ResourceManager;
-		if (context.resources.has(resource.id)) {
-			resourceManager = context.resources.ensure(resource.id);
-		} else {
-			resourceManager = new ResourceManager.Default();
-			context.resources.set(resource.id, resourceManager);
-		}
-		const result: { [key: string]: JFunction }  = Object.create(null);
-		for (const [name, callable] of resource.callables) {
-			if (callable instanceof ConstructorType) {
-				result[name] = createConstructorFunction(callable, wasm[callable.witName] as WasmFunction, context);
-			} else if (callable instanceof MethodType) {
-				result[name] = createMethodFunction(callable, wasm[callable.witName] as WasmFunction, resourceManager, context);
-			} else if (callable instanceof DestructorType) {
-				result[name] = createDestructorFunction(callable, wasm[callable.witName] as WasmFunction, context);
-			}
-		}
-		return result as unknown as T;
-	}
-
-	export function createClassModule<T>(resource: ResourceType, wasm: ParamWasmInterface, context: WasmContext): T {
-		if (!context.resources.has(resource.id)) {
-			context.resources.set(resource.id, new ResourceManager.Default());
-		}
-		const result: { [key: string]: JFunction }  = Object.create(null);
-		for (const [name, callable] of resource.callables) {
-			if (callable instanceof StaticMethodType) {
-				result[name] = createStaticMethodFunction(callable, wasm[callable.witName] as WasmFunction, context);
-			}
-		}
-		return result as unknown as T;
-	}
-
-	function createConstructorFunction(callable: ConstructorType, wasmFunction: WasmFunction, context: WasmContext): JFunction {
-		return (...params: JType[]): JType | void => {
-			return callable.callWasm(params, wasmFunction, context);
-		};
-	}
-
-	function createDestructorFunction(callable: DestructorType, wasmFunction: WasmFunction, context: WasmContext): JFunction {
-		return (...params: JType[]): JType | void => {
-			return callable.callWasm(params, wasmFunction, context);
-		};
-	}
-
-	function createStaticMethodFunction(callable: StaticMethodType, wasmFunction: WasmFunction, context: WasmContext): JFunction {
-		return (...params: JType[]): JType | void => {
-			return callable.callWasm(params, wasmFunction, context);
-		};
-	}
-
-	function createMethodFunction(_callable: MethodType, _wasmFunction: WasmFunction, _manager: ResourceManager, _context: WasmContext): JFunction {
-		return (...params: JType[]): JType | void => {
-			// return callable.callWasmMethod(params, wasmFunction, context);
-		};
-	}
-}
-
 interface WriteableServiceInterface {
 	[key: string]: (JFunction | WriteableServiceInterface | (new (...args: any[]) => any));
 }

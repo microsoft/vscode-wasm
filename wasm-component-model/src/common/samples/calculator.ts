@@ -4,7 +4,7 @@
  *--------------------------------------------------------------------------------------------*/
 /* eslint-disable @typescript-eslint/ban-types */
 import * as $wcm from '@vscode/wasm-component-model';
-import type { u32, own, i32 } from '@vscode/wasm-component-model';
+import type { u32, i32 } from '@vscode/wasm-component-model';
 
 export namespace Types {
 	export enum OpCode {
