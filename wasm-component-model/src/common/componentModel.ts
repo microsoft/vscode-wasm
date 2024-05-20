@@ -2770,17 +2770,17 @@ export class ResultType<O extends JType | void, E extends JType | void = void> e
 }
 
 export interface Resource {
-	$handle(): ResourceHandle;
+	$handle(): ResourceHandle<this>;
 }
 
 export namespace Resource {
 
-	export class Default {
+	export class Default implements Resource {
 
-		private _handle: ResourceHandle;
+		private _handle: ResourceHandle<this>;
 
 		constructor(handle: ResourceHandle);
-		constructor(manager: ResourceManager, proxy?: boolean);
+		constructor(manager: ResourceManager);
 		constructor(handleOrManager: ResourceHandle | ResourceManager) {
 			if (typeof handleOrManager === 'number') {
 				this._handle = handleOrManager;
@@ -2789,7 +2789,7 @@ export namespace Resource {
 			}
 		}
 
-		public $handle(): ResourceHandle {
+		public $handle(): ResourceHandle<this> {
 			return this._handle;
 		}
 	}
@@ -2811,7 +2811,7 @@ export interface ResourceManager<T extends Resource = Resource> {
 	dropHandle(handle: ResourceHandle<T>): ResourceRepresentation;
 
 	// Resource management
-	setProxyInfo(ctor: (new (handleTag: symbol, handle: ResourceHandle<T>, manager: ResourceManager<T>) => T), dtor: (self: ResourceHandle<T>) => void): void;
+	setProxyInfo(ctor: (new (handleTag: symbol, handle: ResourceHandle<T>, rep: ResourceRepresentation) => T), dtor: (self: ResourceHandle<T>) => void): void;
 	hasResource(handle: ResourceHandle<T>): boolean;
 	getResource(handle: ResourceHandle<T>): T;
 	registerResource(resource: T, handle?: ResourceHandle<T>): ResourceHandle<T>;
@@ -2834,7 +2834,7 @@ export namespace ResourceManager {
 		private handleTable: Map<ResourceHandle<T>, ResourceRepresentation>;
 		private h2r: Map<ResourceHandle<T>, WeakRef<T> | T | undefined>;
 		private finalizer: FinalizationRegistry<FinalizationRegistryData>;
-		private ctor: (new (handleTag: symbol, handle: ResourceHandle<T>, manager: ResourceManager<T>) => T) | undefined;
+		private ctor: (new (handleTag: symbol, handle: ResourceHandle<T>, rep: ResourceRepresentation) => T) | undefined;
 		private dtor: ((self: ResourceHandle<T>) => void) | undefined;
 
 		// We only need the representation counter for the loop implementation.
@@ -2894,7 +2894,7 @@ export namespace ResourceManager {
 			return rep;
 		}
 
-		public setProxyInfo(ctor: (new (handleTag: symbol, handle: ResourceHandle<T>, manager: ResourceManager<T>) => T), dtor: (self: ResourceHandle<T>) => void): void {
+		public setProxyInfo(ctor: (new (handleTag: symbol, handle: ResourceHandle<T>, rep: ResourceRepresentation) => T), dtor: (self: ResourceHandle<T>) => void): void {
 			this.ctor = ctor;
 			this.dtor = dtor;
 		}
@@ -2924,7 +2924,7 @@ export namespace ResourceManager {
 				if (this.ctor === undefined) {
 					throw new ComponentModelTrap(`No proxy constructor set`);
 				}
-				const proxy = new this.ctor(handleTag, handle, this);
+				const proxy = new this.ctor(handleTag, handle, rep);
 				this.setProxy(handle, rep, proxy);
 				return proxy;
 			} else {
@@ -3249,6 +3249,22 @@ class Callable {
 		return this.liftReturnValue(result, resultRange?.ptr, memory, context);
 	}
 
+	public callWasmMethod(obj: Resource & { $rep(): ResourceRepresentation}, params: JType[], wasmFunction: WasmFunction, context: WasmContext): JType {
+		const memory = context.getMemory();
+		const handle = obj.$rep();
+		const wasmValues = this.lowerParamValues(params, memory, context, undefined);
+		let resultRange: MemoryRange | undefined = undefined;
+		let result: WasmType | void;
+		if (this.returnType !== undefined && this.returnType.flatTypes.length > FunctionType.MAX_FLAT_RESULTS) {
+			resultRange = this.returnType.alloc(memory);
+			result = wasmFunction(handle, ...wasmValues, resultRange.ptr);
+		} else {
+			result = wasmFunction(handle, ...wasmValues);
+		}
+
+		return this.liftReturnValue(result, resultRange?.ptr, memory, context);
+	}
+
 	public callHostOnMain(connection: WorkerConnection, qualifier: string, params: WasmType[], context: WasmContext): WasmType | void {
 		connection.prepareCall();
 		const newParams: WasmType[] = [];
@@ -3402,24 +3418,6 @@ export class MethodType<_T extends Function = Function> extends Callable {
 		const result: JType | void = (resource as any)[methodName](...jParams);
 		return this.lowerReturnValue(result, memory, context, out);
 	}
-
-	public callWasmMethod(params: JType[], wasmFunction: WasmFunction, context: WasmContext): JType {
-		const memory = context.getMemory();
-		const obj: Resource & { $rep(): ResourceRepresentation} = params.shift() as Resource & { $rep(): ResourceRepresentation};
-		const handle = obj.$rep();
-		const wasmValues = this.lowerParamValues(params, memory, context, undefined);
-		let resultRange: MemoryRange | undefined = undefined;
-		let result: WasmType | void;
-		if (this.returnType !== undefined && this.returnType.flatTypes.length > FunctionType.MAX_FLAT_RESULTS) {
-			resultRange = this.returnType.alloc(memory);
-			result = wasmFunction(handle, ...wasmValues, resultRange.ptr);
-		} else {
-			result = wasmFunction(handle, ...wasmValues);
-		}
-
-		return this.liftReturnValue(result, resultRange?.ptr, memory, context);
-	}
-
 }
 
 export type ResourceCallable<T extends JFunction = JFunction> = MethodType<T> | StaticMethodType<T> | ConstructorType<T> | DestructorType;
@@ -4130,9 +4128,9 @@ export namespace Module {
 		};
 	}
 
-	function createMethodFunction(callable: MethodType, wasmFunction: WasmFunction, _manager: ResourceManager, context: WasmContext): JFunction {
+	function createMethodFunction(_callable: MethodType, _wasmFunction: WasmFunction, _manager: ResourceManager, _context: WasmContext): JFunction {
 		return (...params: JType[]): JType | void => {
-			return callable.callWasmMethod(params, wasmFunction, context);
+			// return callable.callWasmMethod(params, wasmFunction, context);
 		};
 	}
 }
@@ -4248,7 +4246,7 @@ export namespace Exports {
 
 export namespace clazz {
 	interface AnyProxyClass {
-		new (handleTag: symbol, handle: ResourceHandle<any>, manager: ResourceManager<any>): any;
+		new (handleTag: symbol, handle: ResourceHandle<any>, rep: ResourceRepresentation): any;
 	}
 	export function create(resource: ResourceType, wasm: ParamWasmInterface, context: WasmContext, promise: boolean = false): AnyProxyClass {
 		let resourceManager: ResourceManager;
@@ -4260,13 +4258,13 @@ export namespace clazz {
 		}
 		const clazz = class extends Resource.Default {
 			private readonly _rep: ResourceRepresentation;
-			constructor(handleTag: symbol, handle: ResourceHandle, resourceManager: ResourceManager);
+			constructor(handleTag: symbol, handle: ResourceHandle, rep: ResourceRepresentation);
 			constructor(...args: any[]);
 			constructor(...args: any[]) {
 				if (args[0] === ResourceManager.handleTag) {
 					const handle = args[1] as ResourceHandle;
 					super(handle);
-					this._rep = (args[2] as ResourceManager).getRepresentation(handle);
+					this._rep = (args[2] as ResourceRepresentation);
 				} else {
 					const ctor = resource.getCallable('constructor') as ConstructorType;
 					const handle = ctor.callWasmConstructor(args, wasm[ctor.witName] as WasmFunction, context);
@@ -4281,11 +4279,11 @@ export namespace clazz {
 		for (const [name, callable] of resource.callables) {
 			if (callable instanceof MethodType) {
 				(clazz.prototype as any)[name] = function (...params: JType[]): JType {
-					return callable.callWasmMethod(params, wasm[callable.witName] as WasmFunction, context);
+					return callable.callWasmMethod(this, params, wasm[callable.witName] as WasmFunction, context);
 				};
 			} else if (callable instanceof DestructorType) {
 				(clazz.prototype as any)[name] = function (...params: JType[]): JType {
-					return callable.callWasm(params, wasm[callable.witName] as WasmFunction, context);
+					return callable.callWasmMethod(this, params, wasm[callable.witName] as WasmFunction, context);
 				};
 			} else if (callable instanceof StaticMethodType) {
 				(clazz as any)[name] = (...params: JType[]): JType => {

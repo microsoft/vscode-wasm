@@ -63,7 +63,7 @@ interface text {
 	}
 }
 
-world test {
+world test-data {
     import types;
 	import foo: func() -> u32;
 
