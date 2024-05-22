@@ -1,6 +1,6 @@
 {
 	"name": "@vscode/wasm-wasi-lsp",
-	"version": "0.1.0-pre.5",
+	"version": "0.1.0-pre.6",
 	"description": "A npm package to ease implementing language servers in WebAssembly with WASI.",
 	"author": "Visual Studio Code Team",
 	"license": "MIT",
