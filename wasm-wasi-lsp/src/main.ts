@@ -2,9 +2,10 @@
  * Copyright (c) Microsoft Corporation. All rights reserved.
  * Licensed under the MIT License. See License.txt in the project root for license information.
  * ------------------------------------------------------------------------------------------ */
+import * as vscode from 'vscode';
 
-import { WasmProcess, Readable, Writable, type Stdio } from '@vscode/wasm-wasi';
-import { Message, WriteableStreamMessageWriter, Disposable, Emitter, Event, ReadableStreamMessageReader, MessageTransports, RAL } from 'vscode-languageclient';
+import { Readable, WasmProcess, Writable, type Stdio } from '@vscode/wasm-wasi';
+import { Disposable, Emitter, Event, Message, MessageTransports, RAL, ReadableStreamMessageReader, WriteableStreamMessageWriter } from 'vscode-languageclient';
 
 class ReadableStreamImpl implements RAL.ReadableStream {
 
@@ -137,4 +138,44 @@ export async function startServer(process: WasmProcess, readable: Readable | und
 	});
 
 	return { reader: new ReadableStreamMessageReader(reader), writer: new WriteableStreamMessageWriter(writer), detached: false };
+}
+
+export function createUriConverters(): { code2Protocol: (value: vscode.Uri) => string; protocol2Code: (value: string) => vscode.Uri } | undefined {
+	const folders = vscode.workspace.workspaceFolders;
+	if (folders === undefined || folders.length === 0) {
+		return undefined;
+	}
+	const c2p: Map<string, string> = new Map();
+	const p2c: Map<string, string> = new Map();
+	if (folders.length === 1) {
+		const folder = folders[0];
+		c2p.set(folder.uri.toString(), '/workspace');
+		p2c.set('/workspace', folder.uri.toString());
+	} else {
+		for (const folder of folders) {
+			const uri = folder.uri.toString();
+			c2p.set(uri, `/workspace/${folder.name}`);
+			p2c.set(`/workspace/${folder.name}`, uri);
+		}
+	}
+	return {
+		code2Protocol: (uri: vscode.Uri) => {
+			const str = uri.toString();
+			for (const key of c2p.keys()) {
+				if (str.startsWith(key)) {
+					const result = vscode.Uri.parse(str.replace(key, c2p.get(key) || ''));
+					return result.scheme === 'file' ? result.toString() : result.with({ scheme: 'file' }).toString();
+				}
+			}
+			return str;
+		},
+		protocol2Code: (value: string) => {
+			for (const key of p2c.keys()) {
+				if (value.startsWith(key)) {
+					return vscode.Uri.parse(value.replace(key, p2c.get(key) || ''));
+				}
+			}
+			return vscode.Uri.parse(value);
+		}
+	};
 }
