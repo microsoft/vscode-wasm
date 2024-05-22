@@ -389,11 +389,6 @@ export namespace testData._ {
 	export type $Root = {
 		'foo': () => i32;
 	};
-	export type Imports = {
-		'$root': $Root;
-		'vscode:test-data/types': Types._.imports.WasmInterface;
-		'[export]vscode:test-data/text': Text._.exports.imports.WasmInterface;
-	};
 	export namespace imports {
 		export const functions: Map<string, $wcm.FunctionType> = new Map([
 			['foo', $.imports.foo]
@@ -402,12 +397,17 @@ export namespace testData._ {
 			['Types', Types._]
 		]);
 		export function create(service: testData.Imports, context: $wcm.WasmContext): Imports {
-			return $wcm.Imports.create<Imports>(_, service, context);
+			return $wcm.$imports.create<Imports>(_, service, context);
 		}
 		export function loop(service: testData.Imports, context: $wcm.WasmContext): testData.Imports {
-			return $wcm.Imports.loop(_, service, context);
+			return $wcm.$imports.loop(_, service, context);
 		}
 	}
+	export type Imports = {
+		'$root': $Root;
+		'vscode:test-data/types': Types._.imports.WasmInterface;
+		'[export]vscode:test-data/text': Text._.exports.imports.WasmInterface;
+	};
 	export type Exports = {
 		'bar': () => i32;
 		'vscode:test-data/text#[constructor]position': (line: i32, character: i32) => i32;
@@ -422,7 +422,7 @@ export namespace testData._ {
 			['Text', Text._]
 		]);
 		export function bind(exports: Exports, context: $wcm.WasmContext): testData.Exports {
-			return $wcm.Exports.bind<testData.Exports>(_, exports, context);
+			return $wcm.$exports.bind<testData.Exports>(_, exports, context);
 		}
 	}
 }
