@@ -44,15 +44,17 @@ class Memory implements IMemory {
 }
 
 import * as td from './testData';
-import Types = td.testData.Types;
+import Types = td.Types;
 import TestVariant = Types.TestVariant;
 import TestFlagsShort = Types.TestFlagsShort;
 import TestFlagsLong = Types.TestFlagsLong;
-import Test = td.testData.test;
+import TestData = td.testData;
 
 class PointResourceClass extends Resource.Default implements Types.PointResource {
 
-	public static readonly $resources: ResourceManager<Types.PointResource> = new ResourceManager.Default();
+	public static readonly $resources: ResourceManager<Types.PointResource> = new ResourceManager.Default<Types.PointResource>();
+
+	public static readonly $rm: ResourceManager =  this.$resources;
 
 	constructor(public x: u32, public y: u32) {
 		super(PointResourceClass.$resources);
@@ -74,7 +76,7 @@ class PointResourceClass extends Resource.Default implements Types.PointResource
 	}
 }
 
-const worldImpl: Test.Imports = {
+const worldImpl: TestData.Imports = {
 	foo: () => {
 		return 10;
 	},
@@ -132,8 +134,8 @@ const context: WasmContext = {
 };
 
 suite('point', () => {
-	const host = Test._.imports.create(worldImpl, context);
-	const service = Test._.imports.loop(worldImpl, context);
+	const host = TestData._.imports.create(worldImpl, context);
+	const service = TestData._.imports.loop(worldImpl, context);
 	test('host:call', () => {
 		assert.strictEqual(host['vscode:test-data/types'].call(1, 2), 3);
 	});
@@ -144,8 +146,8 @@ suite('point', () => {
 
 declare const global: { gc?: () => void } | undefined;
 suite ('point-resource', () => {
-	const host = Test._.imports.create(worldImpl, context)['vscode:test-data/types'];
-	const service = Test._.imports.loop(worldImpl, context).types;
+	const host = TestData._.imports.create(worldImpl, context)['vscode:test-data/types'];
+	const service = TestData._.imports.loop(worldImpl, context).types;
 	test('host:call', () => {
 		const pointResourceManager = context.resources.ensure('vscode:test-data/types/point-resource');
 		const point = host['[constructor]point-resource'](1, 2);
@@ -175,7 +177,7 @@ suite ('point-resource', () => {
 
 suite('option', () => {
 	test('host:call', () => {
-		const host = Test._.imports.create(worldImpl, context);
+		const host = TestData._.imports.create(worldImpl, context);
 		const memory = context.getMemory();
 		const range = memory.alloc(4, 8);
 		host['vscode:test-data/types']['call-option'](1, 1, 2, range.ptr);
@@ -185,7 +187,7 @@ suite('option', () => {
 });
 
 suite('variant', () => {
-	const service: Types = Test._.imports.loop(worldImpl, context).types;
+	const service: Types = TestData._.imports.loop(worldImpl, context).types;
 
 	test('empty', () => {
 		const empty = service.checkVariant(TestVariant.Empty());
@@ -243,7 +245,7 @@ suite('variant', () => {
 });
 
 suite('flags', () => {
-	const service: Types = Test._.imports.loop(worldImpl, context).types;
+	const service: Types = TestData._.imports.loop(worldImpl, context).types;
 	test('short', () => {
 		const flags: TestFlagsShort = TestFlagsShort.one;
 		const returned = service.checkFlagsShort(flags);

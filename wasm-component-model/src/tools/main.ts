@@ -90,7 +90,7 @@ export async function main(): Promise<number> {
 	yargs.
 		parserConfiguration({ 'camel-case-expansion': false }).
 		exitProcess(false).
-		usage(`Tool to generate a TypeScript file and the corresponding meta data from a WIT JSON file.\nVersion: ${require('../../package.json').version}\nUsage: wit2ts [options] wasi.json`).
+		usage(`Tool to generate a TypeScript file and the corresponding meta data from a WIT JSON file.\nVersion: ${require('../../package.json').version}\nUsage: wit2ts [options] [wasi.json]`).
 		example(`wit2ts --outDir . wasi.json`, `Creates a TypeScript file for the given Wit JSON file and writes the files into the provided output directory.`).
 		example(`wit2ts --outDir . ./wit`, `Creates a TypeScript file for the files in the given wit directory and writes the files into the provided output directory. Requires a wasm-tools installation.`).
 		version(false).
@@ -134,11 +134,17 @@ export async function main(): Promise<number> {
 			enum: ['auto', 'package', 'namespace'],
 			default: 'auto'
 		}).
-		command('$0 <input>', 'Process the JSON file or WIT directory', (yargs) => {
-        	yargs.positional('input', {
-            	describe: 'File or directory to process',
-            	type: 'string'
-        	});
+		options('worker', {
+			description: 'Generate bindings for main and a worker.',
+			boolean: true,
+			default: false
+		}).
+		command('$0 [input]', 'Process the JSON file or WIT directory', (yargs) => {
+			yargs.positional('input', {
+				describe: 'File or directory to process',
+				type: 'string',
+				demandOption: false
+			});
 		}).
 		strict();
 

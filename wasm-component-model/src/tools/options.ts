@@ -13,6 +13,7 @@ export type Options = {
 	nameStyle: 'ts' | 'wit';
 	stdin: boolean;
 	structure: 'auto' | 'package' | 'namespace';
+	worker: boolean;
 	singleWorld: boolean;
 };
 
@@ -29,6 +30,7 @@ export namespace Options {
 		nameStyle: 'ts',
 		stdin: false,
 		structure: 'auto',
+		worker: false,
 		singleWorld: false
 	};
 

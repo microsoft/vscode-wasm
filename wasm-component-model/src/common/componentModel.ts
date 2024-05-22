@@ -2716,26 +2716,26 @@ export class OptionType<T extends JType> implements ComponentModelType<T | optio
 
 export namespace result {
 	export const ok = 'ok' as const;
-	export type Ok<O extends JType | void, E extends JType | void> = { readonly tag: typeof ok; readonly value: O } & _common<O, E>;
-	export function Ok<O extends JType | void , E extends JType | void>(value: O): Ok<O, E> {
+	export type Ok<O extends JType, E extends JType> = { readonly tag: typeof ok; readonly value: O } & _common<O, E>;
+	export function Ok<O extends JType, E extends JType>(value: O): Ok<O, E> {
 		return new ResultImpl<O, E>(ok, value) as Ok<O, E>;
 	}
 
 	export const error = 'error' as const;
-	export type Error<O extends JType | void, E extends JType | void> = { readonly tag: typeof error; readonly value: E } & _common<O, E>;
-	export function Error<O extends JType | void, E extends JType | void>(value: E): Error<O, E> {
+	export type Error<O extends JType, E extends JType> = { readonly tag: typeof error; readonly value: E } & _common<O, E>;
+	export function Error<O extends JType, E extends JType>(value: E): Error<O, E> {
 		return new ResultImpl<O, E>(error, value) as Error<O, E>;
 	}
 
 	export type _tt = typeof ok | typeof error;
-	export type _vt<O extends JType | void, E extends JType | void> = O | E;
-	type _common<O extends JType | void, E extends JType | void> = Omit<ResultImpl<O, E>, 'tag' | 'value'>;
+	export type _vt<O extends JType, E extends JType> = O | E;
+	type _common<O extends JType, E extends JType> = Omit<ResultImpl<O, E>, 'tag' | 'value'>;
 
-	export function _ctor<O extends JType | void, E extends JType | void>(c: _tt, v: _vt<O, E>): result<O, E> {
+	export function _ctor<O extends JType, E extends JType>(c: _tt, v: _vt<O, E>): result<O, E> {
 		return new ResultImpl<O, E>(c, v) as result<O, E>;
 	}
 
-	export class ResultImpl<O extends JType | void, E extends JType | void> implements JVariantCase {
+	export class ResultImpl<O extends JType, E extends JType> implements JVariantCase {
 
 		private readonly _tag: _tt;
 		private readonly _value: _vt<O, E>;
@@ -2762,25 +2762,25 @@ export namespace result {
 		}
 	}
 }
-export type result<O extends JType | void, E extends JType | void = void> = result.Ok<O, E> | result.Error<O, E>;
-export class ResultType<O extends JType | void, E extends JType | void = void> extends VariantType<result<O, E>, 'ok' | 'error', O | E> {
+export type result<O extends JType, E extends JType = void> = result.Ok<O, E> | result.Error<O, E>;
+export class ResultType<O extends JType, E extends JType = void> extends VariantType<result<O, E>, 'ok' | 'error', O | E> {
 	constructor(okType: GenericComponentModelType | undefined, errorType: GenericComponentModelType | undefined) {
 		super([['ok', okType], ['error', errorType]], result._ctor<O, E>, ComponentModelTypeKind.result);
 	}
 }
 
 export interface Resource {
-	$handle(): ResourceHandle;
+	$handle(): ResourceHandle<this>;
 }
 
 export namespace Resource {
 
-	export class Default {
+	export class Default implements Resource {
 
-		private _handle: ResourceHandle;
+		private _handle: ResourceHandle<this>;
 
 		constructor(handle: ResourceHandle);
-		constructor(manager: ResourceManager, proxy?: boolean);
+		constructor(manager: ResourceManager);
 		constructor(handleOrManager: ResourceHandle | ResourceManager) {
 			if (typeof handleOrManager === 'number') {
 				this._handle = handleOrManager;
@@ -2789,7 +2789,7 @@ export namespace Resource {
 			}
 		}
 
-		public $handle(): ResourceHandle {
+		public $handle(): ResourceHandle<this> {
 			return this._handle;
 		}
 	}
@@ -2811,7 +2811,7 @@ export interface ResourceManager<T extends Resource = Resource> {
 	dropHandle(handle: ResourceHandle<T>): ResourceRepresentation;
 
 	// Resource management
-	setProxyInfo(ctor: (new (handleTag: symbol, handle: ResourceHandle<T>) => T), dtor: (self: ResourceHandle<T>) => void): void;
+	setProxyInfo(ctor: (new (handleTag: symbol, handle: ResourceHandle<T>, rep: ResourceRepresentation) => T), dtor: (self: ResourceHandle<T>) => void): void;
 	hasResource(handle: ResourceHandle<T>): boolean;
 	getResource(handle: ResourceHandle<T>): T;
 	registerResource(resource: T, handle?: ResourceHandle<T>): ResourceHandle<T>;
@@ -2823,7 +2823,6 @@ export interface ResourceManager<T extends Resource = Resource> {
 	getLoop(rep: ResourceRepresentation): ResourceHandle<T>;
 }
 
-declare const console: any;
 export namespace ResourceManager {
 	export const handleTag: symbol = Symbol('handleTag');
 
@@ -2835,7 +2834,7 @@ export namespace ResourceManager {
 		private handleTable: Map<ResourceHandle<T>, ResourceRepresentation>;
 		private h2r: Map<ResourceHandle<T>, WeakRef<T> | T | undefined>;
 		private finalizer: FinalizationRegistry<FinalizationRegistryData>;
-		private ctor: (new (handleTag: symbol, handle: ResourceHandle<T>) => T) | undefined;
+		private ctor: (new (handleTag: symbol, handle: ResourceHandle<T>, rep: ResourceRepresentation) => T) | undefined;
 		private dtor: ((self: ResourceHandle<T>) => void) | undefined;
 
 		// We only need the representation counter for the loop implementation.
@@ -2895,7 +2894,7 @@ export namespace ResourceManager {
 			return rep;
 		}
 
-		public setProxyInfo(ctor: (new (handleTag: symbol, handle: ResourceHandle<T>) => T), dtor: (self: ResourceHandle<T>) => void): void {
+		public setProxyInfo(ctor: (new (handleTag: symbol, handle: ResourceHandle<T>, rep: ResourceRepresentation) => T), dtor: (self: ResourceHandle<T>) => void): void {
 			this.ctor = ctor;
 			this.dtor = dtor;
 		}
@@ -2925,7 +2924,7 @@ export namespace ResourceManager {
 				if (this.ctor === undefined) {
 					throw new ComponentModelTrap(`No proxy constructor set`);
 				}
-				const proxy = new this.ctor(handleTag, handle);
+				const proxy = new this.ctor(handleTag, handle, rep);
 				this.setProxy(handle, rep, proxy);
 				return proxy;
 			} else {
@@ -3042,11 +3041,11 @@ export namespace ResourceManagers {
 			if (manager === undefined) {
 				throw new ComponentModelTrap(`Resource manager ${id} not found.`);
 			}
-			return manager as ResourceManager<T>;
+			return manager as unknown as ResourceManager<T>;
 		}
 
 		public get<T extends Resource = Resource>(id: string): ResourceManager<T> | undefined {
-			return this.managers.get(id) as ResourceManager<T>;
+			return this.managers.get(id) as unknown as ResourceManager<T>;
 		}
 	}
 }
@@ -3055,26 +3054,33 @@ export type JType = number | bigint | string | boolean | JArray | JRecord | JVar
 
 export type CallableParameter = [/* name */string, /* type */GenericComponentModelType];
 
-export type JFunction = (...params: JType[]) => JType | void;
+export type JFunction = (...params: JType[]) => JType;
 export type GenericClass = {
 	new (...params: JType[]): Resource;
 	[key: string]: JFunction;
 };
 
+export type PromiseJFunction = (...params: JType[]) => Promise<JType> | JType;
+export type PromiseGenericClass = {
+	new$(...params: JType[]): Promise<Resource>;
+	[key: string]: PromiseJFunction;
+};
+
+
 export type WasmFunction = (...params: WasmType[]) => WasmType | void;
 
-interface WorkerConnection {
+export interface WorkerConnection {
 	prepareCall(): void;
 	getMemory(): Memory;
 	call(name: string, params: ReadonlyArray<WasmType>): WasmType | void;
 	on(id: string, callback: (...params: WasmType[]) => WasmType | void): void;
 }
 
-interface MainConnection {
+export interface MainConnection {
 	prepareCall(): void;
 	getMemory(): Memory;
 	call(name: string, params: ReadonlyArray<WasmType>): Promise<WasmType | void>;
-	on(id: string, callback: (...params: WasmType[]) => WasmType | void): void;
+	on(id: string, callback: (...params: WasmType[]) => WasmType | void | Promise<WasmType | void>): void;
 }
 
 class Callable {
@@ -3235,6 +3241,9 @@ class Callable {
 		}
 	}
 
+	/**
+	 * Calls a function inside a wasm module.
+	 */
 	public callWasm(params: JType[], wasmFunction: WasmFunction, context: WasmContext): JType {
 		const memory = context.getMemory();
 		const wasmValues = this.lowerParamValues(params, memory, context, undefined);
@@ -3250,7 +3259,29 @@ class Callable {
 		return this.liftReturnValue(result, resultRange?.ptr, memory, context);
 	}
 
-	public callHostOnMain(connection: WorkerConnection, qualifier: string, params: WasmType[], context: WasmContext): WasmType | void {
+	/**
+	 * Calls a resource method inside a wasm module.
+	 */
+	public callWasmMethod(obj: Resource & { $rep(): ResourceRepresentation}, params: JType[], wasmFunction: WasmFunction, context: WasmContext): JType {
+		const memory = context.getMemory();
+		const handle = obj.$rep();
+		const wasmValues = this.lowerParamValues(params, memory, context, undefined);
+		let resultRange: MemoryRange | undefined = undefined;
+		let result: WasmType | void;
+		if (this.returnType !== undefined && this.returnType.flatTypes.length > FunctionType.MAX_FLAT_RESULTS) {
+			resultRange = this.returnType.alloc(memory);
+			result = wasmFunction(handle, ...wasmValues, resultRange.ptr);
+		} else {
+			result = wasmFunction(handle, ...wasmValues);
+		}
+
+		return this.liftReturnValue(result, resultRange?.ptr, memory, context);
+	}
+
+	/**
+	 * Calls a host function on the main thread from a wasm module.
+	 */
+	public callMain(connection: WorkerConnection, qualifier: string, params: WasmType[], context: WasmContext): WasmType | void {
 		connection.prepareCall();
 		const newParams: WasmType[] = [];
 		const resultStorage =  this.copyParamValues(newParams, connection.getMemory(), params, context.getMemory(), context);
@@ -3258,14 +3289,22 @@ class Callable {
 		return this.copyReturnValue(resultStorage, context.getMemory(), connection.getMemory(), result, context);
 	}
 
-	public callWasmOnWorker(transferMemory: Memory, func: WasmFunction, params: WasmType[], context: WasmContext): WasmType | void {
+	/**
+	 * Calls a wasm function from a worker thread
+	 */
+	public callWasmFromWorker(connection: WorkerConnection, func: WasmFunction, params: WasmType[], context: WasmContext): WasmType | void {
+		const transferMemory = connection.getMemory();
 		const newParams: WasmType[] = [];
 		const resultStorage = this.copyParamValues(newParams, context.getMemory(), params, transferMemory, context);
 		const result = func(...newParams);
 		return this.copyReturnValue(resultStorage, transferMemory, context.getMemory(), result, context);
 	}
 
-	public async forwardWasmCall(connection: MainConnection, qualifier: string, params: JType[], context: ComponentModelContext): Promise<JType | void> {
+	/**
+	 * Calls the wasm function from the main thread.
+	 */
+	public async callWasmFromMain(connection: MainConnection, qualifier: string, params: JType[], context: ComponentModelContext): Promise<JType | void> {
+		connection.prepareCall();
 		const memory = connection.getMemory();
 		const wasmValues = this.lowerParamValues(params, memory, context, undefined);
 		let resultRange: MemoryRange | undefined = undefined;
@@ -3276,6 +3315,28 @@ class Callable {
 		} else {
 			result = await connection.call(`${qualifier}/${this.witName}`, wasmValues);
 		}
+
+		return this.liftReturnValue(result, resultRange?.ptr, memory, context);
+	}
+
+	/**
+	 * Calls a resource method inside a wasm module.
+	 */
+	public async callWasmMethodFromMain(connection: MainConnection, qualifier: string, obj: Resource & { $rep(): ResourceRepresentation}, params: JType[], context: ComponentModelContext): Promise<JType> {
+		const memory = connection.getMemory();
+		const handle = obj.$rep();
+		const wasmValues = this.lowerParamValues(params, memory, context, undefined).slice();
+		wasmValues.unshift(handle);
+		let resultRange: MemoryRange | undefined = undefined;
+		let result: WasmType | void;
+		if (this.returnType !== undefined && this.returnType.flatTypes.length > FunctionType.MAX_FLAT_RESULTS) {
+			resultRange = this.returnType.alloc(memory);
+			wasmValues.push(resultRange.ptr);
+			result = await connection.call(`${qualifier}/${this.witName}`, wasmValues);
+		} else {
+			result = await connection.call(`${qualifier}/${this.witName}`, wasmValues);
+		}
+
 		return this.liftReturnValue(result, resultRange?.ptr, memory, context);
 	}
 
@@ -3299,7 +3360,7 @@ class Callable {
 	}
 
 
-	protected liftReturnValue(value: WasmType | void, out: ptr | undefined, memory: Memory, context: ComponentModelContext): JType | void {
+	protected liftReturnValue(value: WasmType | void, out: ptr | undefined, memory: Memory, context: ComponentModelContext): JType {
 		if (this.returnType === undefined) {
 			return;
 		} else if (this.returnType.flatTypes.length <= Callable.MAX_FLAT_RESULTS) {
@@ -3316,10 +3377,20 @@ export class FunctionType<_T extends Function = Function> extends Callable  {
 		super(witName, params, returnType);
 	}
 
+	/**
+	 * Calls a host function from a wasm module.
+	 */
 	public callHost(func: JFunction, params: WasmType[], context: WasmContext): WasmType | void {
 		const [jParams, out] = this.getParamValuesForHostCall(params, context);
-		const result: JType | void = func(...jParams);
+		const result: JType = func(...jParams);
 		return this.lowerReturnValue(result, context.getMemory(), context, out);
+	}
+
+	public callHostFromMain(connection: MainConnection, func: JFunction, params: JType[], context: ComponentModelContext): JType | Promise<JType> {
+		const memory = connection.getMemory();
+		const wasmValues = this.lowerParamValues(params, memory, context, undefined);
+		const result: JType = func(...wasmValues);
+		return this.lowerReturnValue(result, memory, context, undefined);
 	}
 }
 
@@ -3350,6 +3421,12 @@ export class ConstructorType<_T extends Function = Function> extends Callable {
 		}
 		return result;
 	}
+
+	public callWasmConstructorFromMain(connection: MainConnection, qualifier: string, params: JType[], context: ComponentModelContext): Promise<ResourceHandle> {
+		const memory = connection.getMemory();
+		const wasmValues = this.lowerParamValues(params, memory, context, undefined);
+		return connection.call(`${qualifier}/${this.witName}`, wasmValues) as Promise<ResourceHandle>;
+	}
 }
 
 export class DestructorType<_T extends Function = Function> extends Callable {
@@ -3377,7 +3454,7 @@ export class StaticMethodType<_T extends Function = Function> extends Callable {
 
 	public callHost(func: JFunction, params: WasmType[], context: WasmContext): WasmType | void {
 		const [jParams, out] = this.getParamValuesForHostCall(params, context);
-		const result: JType | void = func(...jParams);
+		const result: JType = func(...jParams);
 		return this.lowerReturnValue(result, context.getMemory(), context, out);
 	}
 }
@@ -3400,27 +3477,9 @@ export class MethodType<_T extends Function = Function> extends Callable {
 		const [jParams, out] = this.getParamValuesForHostCall(params, context);
 		const resource = resourceManager.getResource(handle);
 		const memory  = context.getMemory();
-		const result: JType | void = (resource as any)[methodName](...jParams);
+		const result: JType = (resource as any)[methodName](...jParams);
 		return this.lowerReturnValue(result, memory, context, out);
 	}
-
-	public callWasmMethod(params: JType[], wasmFunction: WasmFunction, context: WasmContext): JType {
-		const memory = context.getMemory();
-		const obj: Resource & { $rep(): ResourceRepresentation} = params.shift() as Resource & { $rep(): ResourceRepresentation};
-		const handle = obj.$rep();
-		const wasmValues = this.lowerParamValues(params, memory, context, undefined);
-		let resultRange: MemoryRange | undefined = undefined;
-		let result: WasmType | void;
-		if (this.returnType !== undefined && this.returnType.flatTypes.length > FunctionType.MAX_FLAT_RESULTS) {
-			resultRange = this.returnType.alloc(memory);
-			result = wasmFunction(handle, ...wasmValues, resultRange.ptr);
-		} else {
-			result = wasmFunction(handle, ...wasmValues);
-		}
-
-		return this.liftReturnValue(result, resultRange?.ptr, memory, context);
-	}
-
 }
 
 export type ResourceCallable<T extends JFunction = JFunction> = MethodType<T> | StaticMethodType<T> | ConstructorType<T> | DestructorType;
@@ -3750,13 +3809,12 @@ export namespace ComponentModelTypeVisitor {
 	}
 }
 
-export type ResourceInfo = { resource: ResourceType; factory: ClassFactory<any> };
 export type InterfaceType = {
 	readonly id: string;
 	readonly witName: string;
 	readonly types?: Map<string, GenericComponentModelType>;
 	readonly functions?: Map<string, FunctionType<JFunction>>;
-	readonly resources?: Map<string, ResourceInfo>;
+	readonly resources?: Map<string, ResourceType>;
 };
 export namespace InterfaceType {
 	export function is(value: any): value is InterfaceType {
@@ -3775,7 +3833,7 @@ type ParamWasmInterfaces = Record<string, ParamWasmInterface>;
 export type ServiceInterface = Record<string, JFunction | GenericClass>;
 export type WorldServiceInterface = Record<string, JFunction | ServiceInterface>;
 
-type ParamServiceFunction = (...params: UnionJType[]) => JType | void;
+type ParamServiceFunction = (...params: UnionJType[]) => JType;
 type ParamGenericClass = {
 	new (...params: UnionJType[]): Resource;
 } | {
@@ -3860,7 +3918,7 @@ function getResourceManager(resource: ResourceType, clazz: GenericClass | undefi
 	return resourceManager;
 }
 
-export namespace Imports {
+export namespace $imports {
 	type Distribute<T> = T extends any ? Promisify<T> : never;
 	export type Promisify<T> = {
 		[K in keyof T]: T[K] extends (...args: infer A) => infer R
@@ -3890,7 +3948,7 @@ export namespace Imports {
 					if (iface.resources === undefined) {
 						continue;
 					}
-					for (const { resource } of iface.resources.values()) {
+					for (const resource of iface.resources.values()) {
 						const manager = getResourceManager(resource, undefined, context);
 						const exports = Object.create(null);
 						exports[`[resource-new]${resource.witName}`] = (rep: u32) => manager.newHandle(rep);
@@ -3906,7 +3964,7 @@ export namespace Imports {
 
 	export function loop<T extends ParamWorldServiceInterface>(world: WorldType, service: ParamWorldServiceInterface, context: WasmContext) : T  {
 		const imports = create<WasmInterfaces>(world, service, context);
-		const exports = asExports(imports, context);
+		const wasmExports = asExports(imports, context);
 		const loop: WorldType = {
 			id: world.id,
 			witName: world.witName,
@@ -3922,7 +3980,7 @@ export namespace Imports {
 				bind: () => { throw new ComponentModelTrap('Illegal call to bind in loop'); },
 			} : undefined,
 		};
-		return Exports.bind<T>(loop, exports, context);
+		return $exports.bind<T>(loop, wasmExports, context);
 	}
 
 	function asExports(imports: WasmInterfaces, context: WasmContext): WasmInterface {
@@ -3967,7 +4025,7 @@ export namespace Imports {
 		return result;
 	}
 
-	function doCreate<T extends ParamWasmInterface>(functions: Map<string, FunctionType<JFunction>> | undefined, resources: Map<string, { resource: ResourceType; factory: ClassFactory<any>}> | undefined, service: ParamServiceInterface, context: WasmContext): T {
+	function doCreate<T extends ParamWasmInterface>(functions: Map<string, FunctionType<JFunction>> | undefined, resources: Map<string, ResourceType> | undefined, service: ParamServiceInterface, context: WasmContext): T {
 		const result: Record<string, WasmFunction>  = Object.create(null);
 		if (functions !== undefined) {
 			for (const [funcName, func] of functions) {
@@ -3975,7 +4033,7 @@ export namespace Imports {
 			}
 		}
 		if (resources !== undefined) {
-			for (const [resourceName, { resource }] of resources) {
+			for (const [resourceName, resource ] of resources) {
 				const clazz = service[resourceName] as GenericClass;
 				const resourceManager: ResourceManager = getResourceManager(resource, clazz, context);
 				for (const [callableName, callable] of resource.callables) {
@@ -4030,12 +4088,12 @@ export namespace Imports {
 			const result: WasmInterfaces  = Object.create(null);
 			if (world.imports !== undefined) {
 				if (world.imports.functions !== undefined) {
-					result['$root'] = doForward<WasmInterface>(connection, '$root', world.imports.functions, undefined, context);
+					result['$root'] = doCreate<WasmInterface>(connection, '$root', world.imports.functions, undefined, context);
 				}
 				if (world.imports.interfaces !== undefined) {
 					for (const iface of world.imports.interfaces.values()) {
 						const qualifier = `${packageName}/${iface.witName}`;
-						result[qualifier] = doForward<WasmInterface>(connection, qualifier, iface.functions, iface.resources, context);
+						result[qualifier] = doCreate<WasmInterface>(connection, qualifier, iface.functions, iface.resources, context);
 					}
 				}
 			}
@@ -4047,29 +4105,29 @@ export namespace Imports {
 				...context,
 				getMemory: () => connection.getMemory(),
 			};
-			const imports = Imports.create<WasmInterfaces>(world, service, wasmContext);
-			for (const qualifier of Object.keys(imports)) {
-				for (const funcName of Object.keys(imports[qualifier])) {
-					const func = imports[qualifier][funcName];
+			const wasmImports = $imports.create<WasmInterfaces>(world, service, wasmContext);
+			for (const qualifier of Object.keys(wasmImports)) {
+				for (const funcName of Object.keys(wasmImports[qualifier])) {
+					const func = wasmImports[qualifier][funcName];
 					connection.on(`${qualifier}/${funcName}`, func);
 				}
 			}
 		}
 
-		function doForward<T extends ParamWasmInterface>(connection: WorkerConnection, qualifier: string, functions: Map<string, FunctionType<JFunction>> | undefined, resources: Map<string, { resource: ResourceType; factory: ClassFactory<any>}> | undefined, context: WasmContext): T {
+		function doCreate<T extends ParamWasmInterface>(connection: WorkerConnection, qualifier: string, functions: Map<string, FunctionType<JFunction>> | undefined, resources: Map<string, ResourceType> | undefined, context: WasmContext): T {
 			const result: Record<string, WasmFunction>  = Object.create(null);
 			if (functions !== undefined) {
 				for (const [, func] of functions) {
 					result[func.witName] = function(this: void, ...params: WasmType[]): number | bigint | void {
-						return func.callHostOnMain(connection, qualifier, params, context);
+						return func.callMain(connection, qualifier, params, context);
 					};
 				}
 			}
 			if (resources !== undefined) {
-				for (const { resource } of resources.values()) {
+				for (const resource of resources.values()) {
 					for (const callable of resource.callables.values()) {
 						result[callable.witName] = function(this: void, ...params: WasmType[]): number | bigint | void {
-							return callable.callHostOnMain(connection, qualifier, params, context);
+							return callable.callMain(connection, qualifier, params, context);
 						};
 					}
 				}
@@ -4079,73 +4137,12 @@ export namespace Imports {
 	}
 }
 
-export namespace Module {
-	export function createObjectModule<T>(resource: ResourceType, wasm: ParamWasmInterface, context: WasmContext): T {
-		let resourceManager: ResourceManager;
-		if (context.resources.has(resource.id)) {
-			resourceManager = context.resources.ensure(resource.id);
-		} else {
-			resourceManager = new ResourceManager.Default();
-			context.resources.set(resource.id, resourceManager);
-		}
-		const result: { [key: string]: JFunction }  = Object.create(null);
-		for (const [name, callable] of resource.callables) {
-			if (callable instanceof ConstructorType) {
-				result[name] = createConstructorFunction(callable, wasm[callable.witName] as WasmFunction, context);
-			} else if (callable instanceof MethodType) {
-				result[name] = createMethodFunction(callable, wasm[callable.witName] as WasmFunction, resourceManager, context);
-			} else if (callable instanceof DestructorType) {
-				result[name] = createDestructorFunction(callable, wasm[callable.witName] as WasmFunction, context);
-			}
-		}
-		return result as unknown as T;
-	}
-
-	export function createClassModule<T>(resource: ResourceType, wasm: ParamWasmInterface, context: WasmContext): T {
-		if (!context.resources.has(resource.id)) {
-			context.resources.set(resource.id, new ResourceManager.Default());
-		}
-		const result: { [key: string]: JFunction }  = Object.create(null);
-		for (const [name, callable] of resource.callables) {
-			if (callable instanceof StaticMethodType) {
-				result[name] = createStaticMethodFunction(callable, wasm[callable.witName] as WasmFunction, context);
-			}
-		}
-		return result as unknown as T;
-	}
-
-	function createConstructorFunction(callable: ConstructorType, wasmFunction: WasmFunction, context: WasmContext): JFunction {
-		return (...params: JType[]): JType | void => {
-			return callable.callWasm(params, wasmFunction, context);
-		};
-	}
-
-	function createDestructorFunction(callable: DestructorType, wasmFunction: WasmFunction, context: WasmContext): JFunction {
-		return (...params: JType[]): JType | void => {
-			return callable.callWasm(params, wasmFunction, context);
-		};
-	}
-
-	function createStaticMethodFunction(callable: StaticMethodType, wasmFunction: WasmFunction, context: WasmContext): JFunction {
-		return (...params: JType[]): JType | void => {
-			return callable.callWasm(params, wasmFunction, context);
-		};
-	}
-
-	function createMethodFunction(callable: MethodType, wasmFunction: WasmFunction, manager: ResourceManager, context: WasmContext): JFunction {
-		return (...params: JType[]): JType | void => {
-			return callable.callWasmMethod(params, wasmFunction, manager, context);
-		};
-	}
-}
-
-export type ClassFactory<T extends GenericClass = GenericClass> = (wasmInterface: any, context: WasmContext) => T;
 interface WriteableServiceInterface {
-	[key: string]: (JFunction | WriteableServiceInterface);
+	[key: string]: (JFunction | WriteableServiceInterface | (new (...args: any[]) => any));
 }
 
 export type Exports = ParamServiceInterface | {};
-export namespace Exports {
+export namespace $exports {
 	type Distribute<T> = T extends any ? Promisify<T> : never;
 	export type Promisify<T> = {
 		[K in keyof T]: T[K] extends (...args: infer A) => infer R
@@ -4190,7 +4187,7 @@ export namespace Exports {
 		return [root, scoped];
 	}
 
-	function doBind<T extends Exports>(functions: Map<string, FunctionType> | undefined, resources: Map<string, ResourceInfo> | undefined, wasm: ParamWasmInterface, context: WasmContext): T {
+	function doBind<T extends Exports>(functions: Map<string, FunctionType> | undefined, resources: Map<string, ResourceType> | undefined, wasm: ParamWasmInterface, context: WasmContext): T {
 		const result: WriteableServiceInterface = Object.create(null);
 		if (functions !== undefined) {
 			for (const [name, func] of functions) {
@@ -4198,18 +4195,18 @@ export namespace Exports {
 			}
 		}
 		if (resources !== undefined) {
-			for (const [name, { resource, factory }] of resources) {
+			for (const [name, resource] of resources) {
 				const resourceManager = getResourceManager(resource, undefined, context);
-				const clazz = factory(wasm, context);
-				resourceManager.setProxyInfo(clazz, wasm[`[dtor]${resource.witName}`] as (self: number) => void);
-				result[name] = clazz;
+				const cl =  clazz.create(resource, wasm, context);
+				resourceManager.setProxyInfo(cl, wasm[`[dtor]${resource.witName}`] as (self: number) => void);
+				result[name] = cl;
 			}
 		}
 		return result as unknown as T;
 	}
 
 	function createFunction(func: FunctionType<JFunction>, wasmFunction: WasmFunction, context: WasmContext): JFunction {
-		return (...params: JType[]): JType | void => {
+		return (...params: JType[]): JType => {
 			return func.callWasm(params, wasmFunction, context);
 		};
 	}
@@ -4228,19 +4225,19 @@ export namespace Exports {
 			}
 		}
 
-		function doBind(connection: WorkerConnection, qualifier: string, functions: Map<string, FunctionType> | undefined, resources: Map<string, ResourceInfo> | undefined, wasm: ParamWasmInterface, context: WasmContext) : void {
+		function doBind(connection: WorkerConnection, qualifier: string, functions: Map<string, FunctionType> | undefined, resources: Map<string, ResourceType> | undefined, wasm: ParamWasmInterface, context: WasmContext) : void {
 			if (functions !== undefined) {
 				for (const func of functions.values()) {
 					connection.on(`${qualifier}/${func.witName}`, (...params: WasmType[]) => {
-						return func.callWasmOnWorker(connection.getMemory(), wasm[func.witName] as WasmFunction, params, context);
+						return func.callWasmFromWorker(connection, wasm[func.witName] as WasmFunction, params, context);
 					});
 				}
 			}
 			if (resources !== undefined) {
-				for (const { resource } of resources.values()) {
+				for (const resource of resources.values()) {
 					for (const callable of resource.callables.values()) {
 						connection.on(`${qualifier}/${callable.witName}`, (...params: WasmType[]) => {
-							return callable.callWasmOnWorker(connection.getMemory(), wasm[callable.witName] as WasmFunction, params, context);
+							return callable.callWasmFromWorker(connection, wasm[callable.witName] as WasmFunction, params, context);
 						});
 					}
 				}
@@ -4249,8 +4246,11 @@ export namespace Exports {
 	}
 }
 
-export namespace clazz {
-	export function create<T>(resource: ResourceType, wasm: ParamWasmInterface, context: WasmContext, promise: boolean = false): T {
+namespace clazz {
+	interface AnyProxyClass {
+		new (handleTag: symbol, handle: ResourceHandle<any>, rep: ResourceRepresentation): any;
+	}
+	export function create(resource: ResourceType, wasm: ParamWasmInterface, context: WasmContext): AnyProxyClass {
 		let resourceManager: ResourceManager;
 		if (context.resources.has(resource.id)) {
 			resourceManager = context.resources.ensure(resource.id);
@@ -4260,11 +4260,13 @@ export namespace clazz {
 		}
 		const clazz = class extends Resource.Default {
 			private readonly _rep: ResourceRepresentation;
+			constructor(handleTag: symbol, handle: ResourceHandle, rep: ResourceRepresentation);
+			constructor(...args: any[]);
 			constructor(...args: any[]) {
 				if (args[0] === ResourceManager.handleTag) {
 					const handle = args[1] as ResourceHandle;
 					super(handle);
-					this._rep = (args[2] as ResourceManager).getRepresentation(handle);
+					this._rep = (args[2] as ResourceRepresentation);
 				} else {
 					const ctor = resource.getCallable('constructor') as ConstructorType;
 					const handle = ctor.callWasmConstructor(args, wasm[ctor.witName] as WasmFunction, context);
@@ -4279,11 +4281,11 @@ export namespace clazz {
 		for (const [name, callable] of resource.callables) {
 			if (callable instanceof MethodType) {
 				(clazz.prototype as any)[name] = function (...params: JType[]): JType {
-					return callable.callWasmMethod(params, wasm[callable.witName] as WasmFunction, context);
+					return callable.callWasmMethod(this, params, wasm[callable.witName] as WasmFunction, context);
 				};
 			} else if (callable instanceof DestructorType) {
 				(clazz.prototype as any)[name] = function (...params: JType[]): JType {
-					return callable.callWasm(params, wasm[callable.witName] as WasmFunction, context);
+					return callable.callWasmMethod(this, params, wasm[callable.witName] as WasmFunction, context);
 				};
 			} else if (callable instanceof StaticMethodType) {
 				(clazz as any)[name] = (...params: JType[]): JType => {
@@ -4291,26 +4293,125 @@ export namespace clazz {
 				};
 			}
 		}
-		if (promise) {
-			(clazz as any).$new = function(...args: JType[]): Promise<T> {
-				return new Promise((resolve, reject) => {
-					const ctor = resource.getCallable('constructor') as ConstructorType;
-					const result = ctor.callWasmConstructor(args, wasm[ctor.witName] as WasmFunction, context);
-					if ((result as any) instanceof Promise) {
-						(result as unknown as Promise<ResourceHandle>).then((handle: ResourceHandle) => {
-							resolve(new clazz(ResourceManager.handleTag, handle, resourceManager) as T);
-						}, reject);
-					}
-					resolve(new clazz(ResourceManager.handleTag, result as number, resourceManager) as T);
-				});
-			};
+		return clazz;
+	}
+
+	interface AnyPromiseProxyClass {
+		$new(...args: JType[]): any;
+	}
+	export function createPromise(connection: MainConnection, qualifier: string, resource: ResourceType, context: ComponentModelContext): AnyPromiseProxyClass {
+		let resourceManager: ResourceManager;
+		if (context.resources.has(resource.id)) {
+			resourceManager = context.resources.ensure(resource.id);
+		} else {
+			resourceManager = new ResourceManager.Default();
+			context.resources.set(resource.id, resourceManager);
 		}
-		return clazz as T;
+		const clazz = class extends Resource.Default {
+			private readonly _rep: ResourceRepresentation;
+
+			public static async $new(...args: JType[]): Promise<any> {
+				const ctor = resource.getCallable('constructor') as ConstructorType;
+				const result = await ctor.callWasmConstructorFromMain(connection, qualifier, args, context);
+				return new clazz(ResourceManager.handleTag, result, resourceManager.getRepresentation(result)) as unknown as AnyProxyClass;
+			}
+			constructor(_handleTag: symbol, handle: ResourceHandle, rep: ResourceRepresentation) {
+				super(handle);
+				this._rep = rep;
+			}
+			public $rep(): ResourceRepresentation {
+				return this._rep;
+			}
+		};
+		for (const [name, callable] of resource.callables) {
+			if (callable instanceof MethodType) {
+				(clazz.prototype as any)[name] = function (...params: JType[]): Promise<JType> {
+					return callable.callWasmMethodFromMain(connection, qualifier, this, params, context);
+				};
+			} else if (callable instanceof DestructorType) {
+				(clazz.prototype as any)[name] = function (...params: JType[]): Promise<JType> {
+					return callable.callWasmMethodFromMain(connection, qualifier, this, params, context);
+				};
+			} else if (callable instanceof StaticMethodType) {
+				(clazz as any)[name] = (...params: JType[]): Promise<JType> => {
+					return callable.callWasmFromMain(connection, qualifier, params, context);
+				};
+			}
+		}
+		return clazz;
 	}
 }
 
-// export namespace main {
-// 	export function bind<T>(connection: MainConnection, world: WorldType, service: ParamWorldServiceInterface, context: ComponentModelContext): Promisify<T> {
+// export namespace $main {
+// 	export namespace imports {
+// 		export function bind(connection: MainConnection, world: WorldType, service: ParamWorldServiceInterface, context: ComponentModelContext): T {
+// 			const packageName = world.id.substring(0, world.id.indexOf('/'));
+// 			const result = Object.create(null);
+// 			if (world.imports !== undefined) {
+// 				if (world.imports.functions !== undefined) {
+// 					connection.on(`${packageName}/$root`, doBind(connection, packageName, world.imports.functions, undefined, context));
+// 					Object.assign(result, doBind(connection, packageName, world.imports.functions, undefined, context));
+// 				}
+// 				if (world.imports.interfaces !== undefined) {
+// 					for (const [name, iface] of world.imports.interfaces) {
+// 						const propName = `${name[0].toLowerCase()}${name.substring(1)}`;
+// 						result[propName] = doBind(connection, packageName, iface.functions, iface.resources, context);
+// 					}
+// 				}
+// 			}
+// 			return result as T;
+// 		}
+
+// 		function doBind(connection: MainConnection, qualifier: string, functions: Map<string, FunctionType> | undefined, resources: Map<string, ResourceType> | undefined, context: ComponentModelContext): object {
+// 			const result = Object.create(null);
+// 			if (functions !== undefined) {
+// 				for (const [name, func] of functions) {
+
+// 					result[name] = function (...params: JType[]): Promise<JType> {
+// 						return func.callMain(connection, qualifier, params, context);
+// 					};
+// 				}
+// 			}
+// 			return result;
+// 		}
+// 	}
+// 	export namespace exports {
+// 		export function bind<T>(connection: MainConnection, world: WorldType, context: ComponentModelContext): T {
+// 			const packageName = world.id.substring(0, world.id.indexOf('/'));
+// 			const result = Object.create(null);
+// 			if (world.exports !== undefined) {
+// 				if (world.exports.functions !== undefined) {
+// 					Object.assign(result, doBind(connection, packageName, world.exports.functions, undefined, context));
+// 				}
+// 				if (world.exports.interfaces !== undefined) {
+// 					for (const [name, iface] of world.exports.interfaces) {
+// 						const propName = `${name[0].toLowerCase()}${name.substring(1)}`;
+// 						result[propName] = doBind(connection, packageName, iface.functions, iface.resources, context);
+// 					}
+// 				}
+// 			}
+// 			return result as T;
+// 		}
+
+// 		function doBind(connection: MainConnection, qualifier: string, functions: Map<string, FunctionType> | undefined, resources: Map<string, ResourceType> | undefined, context: ComponentModelContext): object {
+// 			const result = Object.create(null);
+// 			if (functions !== undefined) {
+// 				for (const [name, func] of functions) {
+// 					result[name] = function (...params: JType[]): Promise<JType> {
+// 						return func.callWasmFromMain(connection, qualifier, params, context);
+// 					};
+// 				}
+// 			}
+// 			if (resources !== undefined) {
+// 				for (const [name, resource] of resources) {
+// 					const cl =  clazz.createPromise(connection, qualifier, resource, context);
+// 					result[name] = cl;
+// 				}
+// 			}
+// 			return result;
+// 		}
+// 	}
+// 	export function bind<T>(connection: MainConnection, world: WorldType, service: ParamWorldServiceInterface, context: ComponentModelContext): $exports.Promisify<T> {
 // 		const wasmContext: WasmContext = {
 // 			...context,
 // 			getMemory: () => connection.getMemory(),
@@ -4318,10 +4419,10 @@ export namespace clazz {
 
 // 		// First we forward all imports from the worker to the service implementation. Since the communication between
 // 		// main and the worker is on flat types we can simply create an import object and hook it up to the connection.
-// 		const imports = Imports.create<WasmInterfaces>(world, service, wasmContext);
-// 		for (const qualifier of Object.keys(imports)) {
-// 			for (const funcName of Object.keys(imports[qualifier])) {
-// 				const func = imports[qualifier][funcName];
+// 		const wasmImports = $imports.create<WasmInterfaces>(world, service, wasmContext);
+// 		for (const qualifier of Object.keys(wasmImports)) {
+// 			for (const funcName of Object.keys(wasmImports[qualifier])) {
+// 				const func = wasmImports[qualifier][funcName];
 // 				connection.on(`${qualifier}/${funcName}`, func);
 // 			}
 // 		}

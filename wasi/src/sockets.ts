@@ -2,6 +2,7 @@
  *  Copyright (c) Microsoft Corporation. All rights reserved.
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
+/* eslint-disable @typescript-eslint/ban-types */
 import * as $wcm from '@vscode/wasm-component-model';
 import type { u8, u16, u32, own, result, borrow, u64, i32, option, ptr, i64 } from '@vscode/wasm-component-model';
 import { clocks } from './clocks';
@@ -1240,14 +1241,6 @@ export namespace sockets {
 			}
 			export namespace exports {
 				export type WasmInterface = Network.WasmInterface & { '[dtor]network': (self: i32) => void };
-				class Impl extends $wcm.Resource.Default implements sockets.Network.Network.Interface {
-					constructor(_handleTag: Symbol, handle: $wcm.ResourceHandle) {
-						super(handle);
-					}
-				}
-				export function Class(): sockets.Network.Network.Class {
-					return Impl;
-				}
 			}
 		}
 		export const types: Map<string, $wcm.GenericComponentModelType> = new Map<string, $wcm.GenericComponentModelType>([
@@ -1261,8 +1254,8 @@ export namespace sockets {
 			['IpSocketAddress', $.IpSocketAddress],
 			['Network', $.Network]
 		]);
-		export const resources: Map<string, { resource: $wcm.ResourceType; factory: $wcm.ClassFactory<any>}> = new Map<string, { resource: $wcm.ResourceType; factory: $wcm.ClassFactory<any>}>([
-			['Network', { resource: $.Network, factory: Network.exports.Class }]
+		export const resources: Map<string, $wcm.ResourceType> = new Map<string, $wcm.ResourceType>([
+			['Network', $.Network]
 		]);
 		export type WasmInterface = {
 		};
@@ -1328,42 +1321,11 @@ export namespace sockets {
 				'[method]resolve-address-stream.resolve-next-address': (self: i32, result: ptr<result<IpAddress | undefined, ErrorCode>>) => void;
 				'[method]resolve-address-stream.subscribe': (self: i32) => i32;
 			};
-			export type ObjectModule = {
-				resolveNextAddress(self: ResolveAddressStream): result<IpAddress | undefined, ErrorCode>;
-				subscribe(self: ResolveAddressStream): own<Pollable>;
-			};
 			export namespace imports {
 				export type WasmInterface = ResolveAddressStream.WasmInterface & { '[resource-drop]resolve-address-stream': (self: i32) => void };
 			}
 			export namespace exports {
 				export type WasmInterface = ResolveAddressStream.WasmInterface & { '[dtor]resolve-address-stream': (self: i32) => void };
-				class Impl extends $wcm.Resource.Default implements sockets.IpNameLookup.ResolveAddressStream.Interface {
-					private readonly _rep: $wcm.ResourceRepresentation;
-					private readonly _om: ObjectModule;
-					constructor(_handleTag: Symbol, handle: $wcm.ResourceHandle, rm: $wcm.ResourceManager, om: ObjectModule) {
-						super(handle);
-						this._rep = rm.getRepresentation(handle);
-						this._om = om;
-					}
-					public $rep(): $wcm.ResourceRepresentation { return this._rep; }
-					public resolveNextAddress(): result<IpAddress | undefined, ErrorCode> {
-						return this._om.resolveNextAddress(this);
-					}
-					public subscribe(): own<Pollable> {
-						return this._om.subscribe(this);
-					}
-				}
-				export function Class(wasmInterface: WasmInterface, context: $wcm.WasmContext): sockets.IpNameLookup.ResolveAddressStream.Class {
-					const resource = sockets.IpNameLookup.$.ResolveAddressStream;
-					const rm: $wcm.ResourceManager = context.resources.ensure('wasi:sockets@0.2.0/ip-name-lookup/resolve-address-stream');
-					const om: ObjectModule = $wcm.Module.createObjectModule(resource, wasmInterface, context);
-					return class extends Impl {
-						constructor(handleTag: Symbol, handle: $wcm.ResourceHandle) {
-							super(handleTag, handle, rm, om);
-							rm.registerProxy(this);
-						}
-					};
-				}
 			}
 		}
 		export const types: Map<string, $wcm.GenericComponentModelType> = new Map<string, $wcm.GenericComponentModelType>([
@@ -1376,8 +1338,8 @@ export namespace sockets {
 		export const functions: Map<string, $wcm.FunctionType> = new Map([
 			['resolveAddresses', $.resolveAddresses]
 		]);
-		export const resources: Map<string, { resource: $wcm.ResourceType; factory: $wcm.ClassFactory<any>}> = new Map<string, { resource: $wcm.ResourceType; factory: $wcm.ClassFactory<any>}>([
-			['ResolveAddressStream', { resource: $.ResolveAddressStream, factory: ResolveAddressStream.exports.Class }]
+		export const resources: Map<string, $wcm.ResourceType> = new Map<string, $wcm.ResourceType>([
+			['ResolveAddressStream', $.ResolveAddressStream]
 		]);
 		export type WasmInterface = {
 			'resolve-addresses': (network: i32, name_ptr: i32, name_len: i32, result: ptr<result<own<ResolveAddressStream>, ErrorCode>>) => void;
@@ -1497,146 +1459,11 @@ export namespace sockets {
 				'[method]tcp-socket.subscribe': (self: i32) => i32;
 				'[method]tcp-socket.shutdown': (self: i32, shutdownType_ShutdownType: i32, result: ptr<result<void, ErrorCode>>) => void;
 			};
-			export type ObjectModule = {
-				startBind(self: TcpSocket, network: borrow<Network>, localAddress: IpSocketAddress): result<void, ErrorCode>;
-				finishBind(self: TcpSocket): result<void, ErrorCode>;
-				startConnect(self: TcpSocket, network: borrow<Network>, remoteAddress: IpSocketAddress): result<void, ErrorCode>;
-				finishConnect(self: TcpSocket): result<[own<InputStream>, own<OutputStream>], ErrorCode>;
-				startListen(self: TcpSocket): result<void, ErrorCode>;
-				finishListen(self: TcpSocket): result<void, ErrorCode>;
-				accept(self: TcpSocket): result<[own<TcpSocket>, own<InputStream>, own<OutputStream>], ErrorCode>;
-				localAddress(self: TcpSocket): result<IpSocketAddress, ErrorCode>;
-				remoteAddress(self: TcpSocket): result<IpSocketAddress, ErrorCode>;
-				isListening(self: TcpSocket): boolean;
-				addressFamily(self: TcpSocket): IpAddressFamily;
-				setListenBacklogSize(self: TcpSocket, value: u64): result<void, ErrorCode>;
-				keepAliveEnabled(self: TcpSocket): result<boolean, ErrorCode>;
-				setKeepAliveEnabled(self: TcpSocket, value: boolean): result<void, ErrorCode>;
-				keepAliveIdleTime(self: TcpSocket): result<Duration, ErrorCode>;
-				setKeepAliveIdleTime(self: TcpSocket, value: Duration): result<void, ErrorCode>;
-				keepAliveInterval(self: TcpSocket): result<Duration, ErrorCode>;
-				setKeepAliveInterval(self: TcpSocket, value: Duration): result<void, ErrorCode>;
-				keepAliveCount(self: TcpSocket): result<u32, ErrorCode>;
-				setKeepAliveCount(self: TcpSocket, value: u32): result<void, ErrorCode>;
-				hopLimit(self: TcpSocket): result<u8, ErrorCode>;
-				setHopLimit(self: TcpSocket, value: u8): result<void, ErrorCode>;
-				receiveBufferSize(self: TcpSocket): result<u64, ErrorCode>;
-				setReceiveBufferSize(self: TcpSocket, value: u64): result<void, ErrorCode>;
-				sendBufferSize(self: TcpSocket): result<u64, ErrorCode>;
-				setSendBufferSize(self: TcpSocket, value: u64): result<void, ErrorCode>;
-				subscribe(self: TcpSocket): own<Pollable>;
-				shutdown(self: TcpSocket, shutdownType: ShutdownType): result<void, ErrorCode>;
-			};
 			export namespace imports {
 				export type WasmInterface = TcpSocket.WasmInterface & { '[resource-drop]tcp-socket': (self: i32) => void };
 			}
 			export namespace exports {
 				export type WasmInterface = TcpSocket.WasmInterface & { '[dtor]tcp-socket': (self: i32) => void };
-				class Impl extends $wcm.Resource.Default implements sockets.Tcp.TcpSocket.Interface {
-					private readonly _rep: $wcm.ResourceRepresentation;
-					private readonly _om: ObjectModule;
-					constructor(_handleTag: Symbol, handle: $wcm.ResourceHandle, rm: $wcm.ResourceManager, om: ObjectModule) {
-						super(handle);
-						this._rep = rm.getRepresentation(handle);
-						this._om = om;
-					}
-					public $rep(): $wcm.ResourceRepresentation { return this._rep; }
-					public startBind(network: borrow<Network>, localAddress: IpSocketAddress): result<void, ErrorCode> {
-						return this._om.startBind(this, network, localAddress);
-					}
-					public finishBind(): result<void, ErrorCode> {
-						return this._om.finishBind(this);
-					}
-					public startConnect(network: borrow<Network>, remoteAddress: IpSocketAddress): result<void, ErrorCode> {
-						return this._om.startConnect(this, network, remoteAddress);
-					}
-					public finishConnect(): result<[own<InputStream>, own<OutputStream>], ErrorCode> {
-						return this._om.finishConnect(this);
-					}
-					public startListen(): result<void, ErrorCode> {
-						return this._om.startListen(this);
-					}
-					public finishListen(): result<void, ErrorCode> {
-						return this._om.finishListen(this);
-					}
-					public accept(): result<[own<TcpSocket>, own<InputStream>, own<OutputStream>], ErrorCode> {
-						return this._om.accept(this);
-					}
-					public localAddress(): result<IpSocketAddress, ErrorCode> {
-						return this._om.localAddress(this);
-					}
-					public remoteAddress(): result<IpSocketAddress, ErrorCode> {
-						return this._om.remoteAddress(this);
-					}
-					public isListening(): boolean {
-						return this._om.isListening(this);
-					}
-					public addressFamily(): IpAddressFamily {
-						return this._om.addressFamily(this);
-					}
-					public setListenBacklogSize(value: u64): result<void, ErrorCode> {
-						return this._om.setListenBacklogSize(this, value);
-					}
-					public keepAliveEnabled(): result<boolean, ErrorCode> {
-						return this._om.keepAliveEnabled(this);
-					}
-					public setKeepAliveEnabled(value: boolean): result<void, ErrorCode> {
-						return this._om.setKeepAliveEnabled(this, value);
-					}
-					public keepAliveIdleTime(): result<Duration, ErrorCode> {
-						return this._om.keepAliveIdleTime(this);
-					}
-					public setKeepAliveIdleTime(value: Duration): result<void, ErrorCode> {
-						return this._om.setKeepAliveIdleTime(this, value);
-					}
-					public keepAliveInterval(): result<Duration, ErrorCode> {
-						return this._om.keepAliveInterval(this);
-					}
-					public setKeepAliveInterval(value: Duration): result<void, ErrorCode> {
-						return this._om.setKeepAliveInterval(this, value);
-					}
-					public keepAliveCount(): result<u32, ErrorCode> {
-						return this._om.keepAliveCount(this);
-					}
-					public setKeepAliveCount(value: u32): result<void, ErrorCode> {
-						return this._om.setKeepAliveCount(this, value);
-					}
-					public hopLimit(): result<u8, ErrorCode> {
-						return this._om.hopLimit(this);
-					}
-					public setHopLimit(value: u8): result<void, ErrorCode> {
-						return this._om.setHopLimit(this, value);
-					}
-					public receiveBufferSize(): result<u64, ErrorCode> {
-						return this._om.receiveBufferSize(this);
-					}
-					public setReceiveBufferSize(value: u64): result<void, ErrorCode> {
-						return this._om.setReceiveBufferSize(this, value);
-					}
-					public sendBufferSize(): result<u64, ErrorCode> {
-						return this._om.sendBufferSize(this);
-					}
-					public setSendBufferSize(value: u64): result<void, ErrorCode> {
-						return this._om.setSendBufferSize(this, value);
-					}
-					public subscribe(): own<Pollable> {
-						return this._om.subscribe(this);
-					}
-					public shutdown(shutdownType: ShutdownType): result<void, ErrorCode> {
-						return this._om.shutdown(this, shutdownType);
-					}
-				}
-				export function Class(wasmInterface: WasmInterface, context: $wcm.WasmContext): sockets.Tcp.TcpSocket.Class {
-					const resource = sockets.Tcp.$.TcpSocket;
-					const rm: $wcm.ResourceManager = context.resources.ensure('wasi:sockets@0.2.0/tcp/tcp-socket');
-					const om: ObjectModule = $wcm.Module.createObjectModule(resource, wasmInterface, context);
-					return class extends Impl {
-						constructor(handleTag: Symbol, handle: $wcm.ResourceHandle) {
-							super(handleTag, handle, rm, om);
-							rm.registerProxy(this);
-						}
-					};
-				}
 			}
 		}
 		export const types: Map<string, $wcm.GenericComponentModelType> = new Map<string, $wcm.GenericComponentModelType>([
@@ -1651,8 +1478,8 @@ export namespace sockets {
 			['ShutdownType', $.ShutdownType],
 			['TcpSocket', $.TcpSocket]
 		]);
-		export const resources: Map<string, { resource: $wcm.ResourceType; factory: $wcm.ClassFactory<any>}> = new Map<string, { resource: $wcm.ResourceType; factory: $wcm.ClassFactory<any>}>([
-			['TcpSocket', { resource: $.TcpSocket, factory: TcpSocket.exports.Class }]
+		export const resources: Map<string, $wcm.ResourceType> = new Map<string, $wcm.ResourceType>([
+			['TcpSocket', $.TcpSocket]
 		]);
 		export type WasmInterface = {
 		};
@@ -1779,86 +1606,11 @@ export namespace sockets {
 				'[method]udp-socket.set-send-buffer-size': (self: i32, value: i64, result: ptr<result<void, ErrorCode>>) => void;
 				'[method]udp-socket.subscribe': (self: i32) => i32;
 			};
-			export type ObjectModule = {
-				startBind(self: UdpSocket, network: borrow<Network>, localAddress: IpSocketAddress): result<void, ErrorCode>;
-				finishBind(self: UdpSocket): result<void, ErrorCode>;
-				stream(self: UdpSocket, remoteAddress: IpSocketAddress | undefined): result<[own<IncomingDatagramStream>, own<OutgoingDatagramStream>], ErrorCode>;
-				localAddress(self: UdpSocket): result<IpSocketAddress, ErrorCode>;
-				remoteAddress(self: UdpSocket): result<IpSocketAddress, ErrorCode>;
-				addressFamily(self: UdpSocket): IpAddressFamily;
-				unicastHopLimit(self: UdpSocket): result<u8, ErrorCode>;
-				setUnicastHopLimit(self: UdpSocket, value: u8): result<void, ErrorCode>;
-				receiveBufferSize(self: UdpSocket): result<u64, ErrorCode>;
-				setReceiveBufferSize(self: UdpSocket, value: u64): result<void, ErrorCode>;
-				sendBufferSize(self: UdpSocket): result<u64, ErrorCode>;
-				setSendBufferSize(self: UdpSocket, value: u64): result<void, ErrorCode>;
-				subscribe(self: UdpSocket): own<Pollable>;
-			};
 			export namespace imports {
 				export type WasmInterface = UdpSocket.WasmInterface & { '[resource-drop]udp-socket': (self: i32) => void };
 			}
 			export namespace exports {
 				export type WasmInterface = UdpSocket.WasmInterface & { '[dtor]udp-socket': (self: i32) => void };
-				class Impl extends $wcm.Resource.Default implements sockets.Udp.UdpSocket.Interface {
-					private readonly _rep: $wcm.ResourceRepresentation;
-					private readonly _om: ObjectModule;
-					constructor(_handleTag: Symbol, handle: $wcm.ResourceHandle, rm: $wcm.ResourceManager, om: ObjectModule) {
-						super(handle);
-						this._rep = rm.getRepresentation(handle);
-						this._om = om;
-					}
-					public $rep(): $wcm.ResourceRepresentation { return this._rep; }
-					public startBind(network: borrow<Network>, localAddress: IpSocketAddress): result<void, ErrorCode> {
-						return this._om.startBind(this, network, localAddress);
-					}
-					public finishBind(): result<void, ErrorCode> {
-						return this._om.finishBind(this);
-					}
-					public stream(remoteAddress: IpSocketAddress | undefined): result<[own<IncomingDatagramStream>, own<OutgoingDatagramStream>], ErrorCode> {
-						return this._om.stream(this, remoteAddress);
-					}
-					public localAddress(): result<IpSocketAddress, ErrorCode> {
-						return this._om.localAddress(this);
-					}
-					public remoteAddress(): result<IpSocketAddress, ErrorCode> {
-						return this._om.remoteAddress(this);
-					}
-					public addressFamily(): IpAddressFamily {
-						return this._om.addressFamily(this);
-					}
-					public unicastHopLimit(): result<u8, ErrorCode> {
-						return this._om.unicastHopLimit(this);
-					}
-					public setUnicastHopLimit(value: u8): result<void, ErrorCode> {
-						return this._om.setUnicastHopLimit(this, value);
-					}
-					public receiveBufferSize(): result<u64, ErrorCode> {
-						return this._om.receiveBufferSize(this);
-					}
-					public setReceiveBufferSize(value: u64): result<void, ErrorCode> {
-						return this._om.setReceiveBufferSize(this, value);
-					}
-					public sendBufferSize(): result<u64, ErrorCode> {
-						return this._om.sendBufferSize(this);
-					}
-					public setSendBufferSize(value: u64): result<void, ErrorCode> {
-						return this._om.setSendBufferSize(this, value);
-					}
-					public subscribe(): own<Pollable> {
-						return this._om.subscribe(this);
-					}
-				}
-				export function Class(wasmInterface: WasmInterface, context: $wcm.WasmContext): sockets.Udp.UdpSocket.Class {
-					const resource = sockets.Udp.$.UdpSocket;
-					const rm: $wcm.ResourceManager = context.resources.ensure('wasi:sockets@0.2.0/udp/udp-socket');
-					const om: ObjectModule = $wcm.Module.createObjectModule(resource, wasmInterface, context);
-					return class extends Impl {
-						constructor(handleTag: Symbol, handle: $wcm.ResourceHandle) {
-							super(handleTag, handle, rm, om);
-							rm.registerProxy(this);
-						}
-					};
-				}
 			}
 		}
 		export namespace IncomingDatagramStream {
@@ -1866,42 +1618,11 @@ export namespace sockets {
 				'[method]incoming-datagram-stream.receive': (self: i32, maxResults: i64, result: ptr<result<IncomingDatagram[], ErrorCode>>) => void;
 				'[method]incoming-datagram-stream.subscribe': (self: i32) => i32;
 			};
-			export type ObjectModule = {
-				receive(self: IncomingDatagramStream, maxResults: u64): result<IncomingDatagram[], ErrorCode>;
-				subscribe(self: IncomingDatagramStream): own<Pollable>;
-			};
 			export namespace imports {
 				export type WasmInterface = IncomingDatagramStream.WasmInterface & { '[resource-drop]incoming-datagram-stream': (self: i32) => void };
 			}
 			export namespace exports {
 				export type WasmInterface = IncomingDatagramStream.WasmInterface & { '[dtor]incoming-datagram-stream': (self: i32) => void };
-				class Impl extends $wcm.Resource.Default implements sockets.Udp.IncomingDatagramStream.Interface {
-					private readonly _rep: $wcm.ResourceRepresentation;
-					private readonly _om: ObjectModule;
-					constructor(_handleTag: Symbol, handle: $wcm.ResourceHandle, rm: $wcm.ResourceManager, om: ObjectModule) {
-						super(handle);
-						this._rep = rm.getRepresentation(handle);
-						this._om = om;
-					}
-					public $rep(): $wcm.ResourceRepresentation { return this._rep; }
-					public receive(maxResults: u64): result<IncomingDatagram[], ErrorCode> {
-						return this._om.receive(this, maxResults);
-					}
-					public subscribe(): own<Pollable> {
-						return this._om.subscribe(this);
-					}
-				}
-				export function Class(wasmInterface: WasmInterface, context: $wcm.WasmContext): sockets.Udp.IncomingDatagramStream.Class {
-					const resource = sockets.Udp.$.IncomingDatagramStream;
-					const rm: $wcm.ResourceManager = context.resources.ensure('wasi:sockets@0.2.0/udp/incoming-datagram-stream');
-					const om: ObjectModule = $wcm.Module.createObjectModule(resource, wasmInterface, context);
-					return class extends Impl {
-						constructor(handleTag: Symbol, handle: $wcm.ResourceHandle) {
-							super(handleTag, handle, rm, om);
-							rm.registerProxy(this);
-						}
-					};
-				}
 			}
 		}
 		export namespace OutgoingDatagramStream {
@@ -1910,46 +1631,11 @@ export namespace sockets {
 				'[method]outgoing-datagram-stream.send': (self: i32, datagrams_ptr: i32, datagrams_len: i32, result: ptr<result<u64, ErrorCode>>) => void;
 				'[method]outgoing-datagram-stream.subscribe': (self: i32) => i32;
 			};
-			export type ObjectModule = {
-				checkSend(self: OutgoingDatagramStream): result<u64, ErrorCode>;
-				send(self: OutgoingDatagramStream, datagrams: OutgoingDatagram[]): result<u64, ErrorCode>;
-				subscribe(self: OutgoingDatagramStream): own<Pollable>;
-			};
 			export namespace imports {
 				export type WasmInterface = OutgoingDatagramStream.WasmInterface & { '[resource-drop]outgoing-datagram-stream': (self: i32) => void };
 			}
 			export namespace exports {
 				export type WasmInterface = OutgoingDatagramStream.WasmInterface & { '[dtor]outgoing-datagram-stream': (self: i32) => void };
-				class Impl extends $wcm.Resource.Default implements sockets.Udp.OutgoingDatagramStream.Interface {
-					private readonly _rep: $wcm.ResourceRepresentation;
-					private readonly _om: ObjectModule;
-					constructor(_handleTag: Symbol, handle: $wcm.ResourceHandle, rm: $wcm.ResourceManager, om: ObjectModule) {
-						super(handle);
-						this._rep = rm.getRepresentation(handle);
-						this._om = om;
-					}
-					public $rep(): $wcm.ResourceRepresentation { return this._rep; }
-					public checkSend(): result<u64, ErrorCode> {
-						return this._om.checkSend(this);
-					}
-					public send(datagrams: OutgoingDatagram[]): result<u64, ErrorCode> {
-						return this._om.send(this, datagrams);
-					}
-					public subscribe(): own<Pollable> {
-						return this._om.subscribe(this);
-					}
-				}
-				export function Class(wasmInterface: WasmInterface, context: $wcm.WasmContext): sockets.Udp.OutgoingDatagramStream.Class {
-					const resource = sockets.Udp.$.OutgoingDatagramStream;
-					const rm: $wcm.ResourceManager = context.resources.ensure('wasi:sockets@0.2.0/udp/outgoing-datagram-stream');
-					const om: ObjectModule = $wcm.Module.createObjectModule(resource, wasmInterface, context);
-					return class extends Impl {
-						constructor(handleTag: Symbol, handle: $wcm.ResourceHandle) {
-							super(handleTag, handle, rm, om);
-							rm.registerProxy(this);
-						}
-					};
-				}
 			}
 		}
 		export const types: Map<string, $wcm.GenericComponentModelType> = new Map<string, $wcm.GenericComponentModelType>([
@@ -1964,10 +1650,10 @@ export namespace sockets {
 			['IncomingDatagramStream', $.IncomingDatagramStream],
 			['OutgoingDatagramStream', $.OutgoingDatagramStream]
 		]);
-		export const resources: Map<string, { resource: $wcm.ResourceType; factory: $wcm.ClassFactory<any>}> = new Map<string, { resource: $wcm.ResourceType; factory: $wcm.ClassFactory<any>}>([
-			['UdpSocket', { resource: $.UdpSocket, factory: UdpSocket.exports.Class }],
-			['IncomingDatagramStream', { resource: $.IncomingDatagramStream, factory: IncomingDatagramStream.exports.Class }],
-			['OutgoingDatagramStream', { resource: $.OutgoingDatagramStream, factory: OutgoingDatagramStream.exports.Class }]
+		export const resources: Map<string, $wcm.ResourceType> = new Map<string, $wcm.ResourceType>([
+			['UdpSocket', $.UdpSocket],
+			['IncomingDatagramStream', $.IncomingDatagramStream],
+			['OutgoingDatagramStream', $.OutgoingDatagramStream]
 		]);
 		export type WasmInterface = {
 		};

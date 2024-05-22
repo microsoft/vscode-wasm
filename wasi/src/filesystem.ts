@@ -2,6 +2,7 @@
  *  Copyright (c) Microsoft Corporation. All rights reserved.
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
+/* eslint-disable @typescript-eslint/ban-types */
 import * as $wcm from '@vscode/wasm-component-model';
 import type { u64, u32, own, result, borrow, option, i32, i64, ptr } from '@vscode/wasm-component-model';
 import { clocks } from './clocks';
@@ -1108,180 +1109,22 @@ export namespace filesystem {
 				'[method]descriptor.metadata-hash': (self: i32, result: ptr<result<MetadataHashValue, ErrorCode>>) => void;
 				'[method]descriptor.metadata-hash-at': (self: i32, pathFlags: i32, path_ptr: i32, path_len: i32, result: ptr<result<MetadataHashValue, ErrorCode>>) => void;
 			};
-			export type ObjectModule = {
-				readViaStream(self: Descriptor, offset: Filesize): result<own<InputStream>, ErrorCode>;
-				writeViaStream(self: Descriptor, offset: Filesize): result<own<OutputStream>, ErrorCode>;
-				appendViaStream(self: Descriptor): result<own<OutputStream>, ErrorCode>;
-				advise(self: Descriptor, offset: Filesize, length: Filesize, advice: Advice): result<void, ErrorCode>;
-				syncData(self: Descriptor): result<void, ErrorCode>;
-				getFlags(self: Descriptor): result<DescriptorFlags, ErrorCode>;
-				getType(self: Descriptor): result<DescriptorType, ErrorCode>;
-				setSize(self: Descriptor, size: Filesize): result<void, ErrorCode>;
-				setTimes(self: Descriptor, dataAccessTimestamp: NewTimestamp, dataModificationTimestamp: NewTimestamp): result<void, ErrorCode>;
-				read(self: Descriptor, length: Filesize, offset: Filesize): result<[Uint8Array, boolean], ErrorCode>;
-				write(self: Descriptor, buffer: Uint8Array, offset: Filesize): result<Filesize, ErrorCode>;
-				readDirectory(self: Descriptor): result<own<DirectoryEntryStream>, ErrorCode>;
-				sync(self: Descriptor): result<void, ErrorCode>;
-				createDirectoryAt(self: Descriptor, path: string): result<void, ErrorCode>;
-				stat(self: Descriptor): result<DescriptorStat, ErrorCode>;
-				statAt(self: Descriptor, pathFlags: PathFlags, path: string): result<DescriptorStat, ErrorCode>;
-				setTimesAt(self: Descriptor, pathFlags: PathFlags, path: string, dataAccessTimestamp: NewTimestamp, dataModificationTimestamp: NewTimestamp): result<void, ErrorCode>;
-				linkAt(self: Descriptor, oldPathFlags: PathFlags, oldPath: string, newDescriptor: borrow<Descriptor>, newPath: string): result<void, ErrorCode>;
-				openAt(self: Descriptor, pathFlags: PathFlags, path: string, openFlags: OpenFlags, flags: DescriptorFlags): result<own<Descriptor>, ErrorCode>;
-				readlinkAt(self: Descriptor, path: string): result<string, ErrorCode>;
-				removeDirectoryAt(self: Descriptor, path: string): result<void, ErrorCode>;
-				renameAt(self: Descriptor, oldPath: string, newDescriptor: borrow<Descriptor>, newPath: string): result<void, ErrorCode>;
-				symlinkAt(self: Descriptor, oldPath: string, newPath: string): result<void, ErrorCode>;
-				unlinkFileAt(self: Descriptor, path: string): result<void, ErrorCode>;
-				isSameObject(self: Descriptor, other: borrow<Descriptor>): boolean;
-				metadataHash(self: Descriptor): result<MetadataHashValue, ErrorCode>;
-				metadataHashAt(self: Descriptor, pathFlags: PathFlags, path: string): result<MetadataHashValue, ErrorCode>;
-			};
 			export namespace imports {
 				export type WasmInterface = Descriptor.WasmInterface & { '[resource-drop]descriptor': (self: i32) => void };
 			}
 			export namespace exports {
 				export type WasmInterface = Descriptor.WasmInterface & { '[dtor]descriptor': (self: i32) => void };
-				class Impl extends $wcm.Resource.Default implements filesystem.Types.Descriptor.Interface {
-					private readonly _rep: $wcm.ResourceRepresentation;
-					private readonly _om: ObjectModule;
-					constructor(_handleTag: Symbol, handle: $wcm.ResourceHandle, rm: $wcm.ResourceManager, om: ObjectModule) {
-						super(handle);
-						this._rep = rm.getRepresentation(handle);
-						this._om = om;
-					}
-					public $rep(): $wcm.ResourceRepresentation { return this._rep; }
-					public readViaStream(offset: Filesize): result<own<InputStream>, ErrorCode> {
-						return this._om.readViaStream(this, offset);
-					}
-					public writeViaStream(offset: Filesize): result<own<OutputStream>, ErrorCode> {
-						return this._om.writeViaStream(this, offset);
-					}
-					public appendViaStream(): result<own<OutputStream>, ErrorCode> {
-						return this._om.appendViaStream(this);
-					}
-					public advise(offset: Filesize, length: Filesize, advice: Advice): result<void, ErrorCode> {
-						return this._om.advise(this, offset, length, advice);
-					}
-					public syncData(): result<void, ErrorCode> {
-						return this._om.syncData(this);
-					}
-					public getFlags(): result<DescriptorFlags, ErrorCode> {
-						return this._om.getFlags(this);
-					}
-					public getType(): result<DescriptorType, ErrorCode> {
-						return this._om.getType(this);
-					}
-					public setSize(size: Filesize): result<void, ErrorCode> {
-						return this._om.setSize(this, size);
-					}
-					public setTimes(dataAccessTimestamp: NewTimestamp, dataModificationTimestamp: NewTimestamp): result<void, ErrorCode> {
-						return this._om.setTimes(this, dataAccessTimestamp, dataModificationTimestamp);
-					}
-					public read(length: Filesize, offset: Filesize): result<[Uint8Array, boolean], ErrorCode> {
-						return this._om.read(this, length, offset);
-					}
-					public write(buffer: Uint8Array, offset: Filesize): result<Filesize, ErrorCode> {
-						return this._om.write(this, buffer, offset);
-					}
-					public readDirectory(): result<own<DirectoryEntryStream>, ErrorCode> {
-						return this._om.readDirectory(this);
-					}
-					public sync(): result<void, ErrorCode> {
-						return this._om.sync(this);
-					}
-					public createDirectoryAt(path: string): result<void, ErrorCode> {
-						return this._om.createDirectoryAt(this, path);
-					}
-					public stat(): result<DescriptorStat, ErrorCode> {
-						return this._om.stat(this);
-					}
-					public statAt(pathFlags: PathFlags, path: string): result<DescriptorStat, ErrorCode> {
-						return this._om.statAt(this, pathFlags, path);
-					}
-					public setTimesAt(pathFlags: PathFlags, path: string, dataAccessTimestamp: NewTimestamp, dataModificationTimestamp: NewTimestamp): result<void, ErrorCode> {
-						return this._om.setTimesAt(this, pathFlags, path, dataAccessTimestamp, dataModificationTimestamp);
-					}
-					public linkAt(oldPathFlags: PathFlags, oldPath: string, newDescriptor: borrow<Descriptor>, newPath: string): result<void, ErrorCode> {
-						return this._om.linkAt(this, oldPathFlags, oldPath, newDescriptor, newPath);
-					}
-					public openAt(pathFlags: PathFlags, path: string, openFlags: OpenFlags, flags: DescriptorFlags): result<own<Descriptor>, ErrorCode> {
-						return this._om.openAt(this, pathFlags, path, openFlags, flags);
-					}
-					public readlinkAt(path: string): result<string, ErrorCode> {
-						return this._om.readlinkAt(this, path);
-					}
-					public removeDirectoryAt(path: string): result<void, ErrorCode> {
-						return this._om.removeDirectoryAt(this, path);
-					}
-					public renameAt(oldPath: string, newDescriptor: borrow<Descriptor>, newPath: string): result<void, ErrorCode> {
-						return this._om.renameAt(this, oldPath, newDescriptor, newPath);
-					}
-					public symlinkAt(oldPath: string, newPath: string): result<void, ErrorCode> {
-						return this._om.symlinkAt(this, oldPath, newPath);
-					}
-					public unlinkFileAt(path: string): result<void, ErrorCode> {
-						return this._om.unlinkFileAt(this, path);
-					}
-					public isSameObject(other: borrow<Descriptor>): boolean {
-						return this._om.isSameObject(this, other);
-					}
-					public metadataHash(): result<MetadataHashValue, ErrorCode> {
-						return this._om.metadataHash(this);
-					}
-					public metadataHashAt(pathFlags: PathFlags, path: string): result<MetadataHashValue, ErrorCode> {
-						return this._om.metadataHashAt(this, pathFlags, path);
-					}
-				}
-				export function Class(wasmInterface: WasmInterface, context: $wcm.WasmContext): filesystem.Types.Descriptor.Class {
-					const resource = filesystem.Types.$.Descriptor;
-					const rm: $wcm.ResourceManager = context.resources.ensure('wasi:filesystem@0.2.0/types/descriptor');
-					const om: ObjectModule = $wcm.Module.createObjectModule(resource, wasmInterface, context);
-					return class extends Impl {
-						constructor(handleTag: Symbol, handle: $wcm.ResourceHandle) {
-							super(handleTag, handle, rm, om);
-							rm.registerProxy(this);
-						}
-					};
-				}
 			}
 		}
 		export namespace DirectoryEntryStream {
 			export type WasmInterface = {
 				'[method]directory-entry-stream.read-directory-entry': (self: i32, result: ptr<result<DirectoryEntry | undefined, ErrorCode>>) => void;
 			};
-			export type ObjectModule = {
-				readDirectoryEntry(self: DirectoryEntryStream): result<DirectoryEntry | undefined, ErrorCode>;
-			};
 			export namespace imports {
 				export type WasmInterface = DirectoryEntryStream.WasmInterface & { '[resource-drop]directory-entry-stream': (self: i32) => void };
 			}
 			export namespace exports {
 				export type WasmInterface = DirectoryEntryStream.WasmInterface & { '[dtor]directory-entry-stream': (self: i32) => void };
-				class Impl extends $wcm.Resource.Default implements filesystem.Types.DirectoryEntryStream.Interface {
-					private readonly _rep: $wcm.ResourceRepresentation;
-					private readonly _om: ObjectModule;
-					constructor(_handleTag: Symbol, handle: $wcm.ResourceHandle, rm: $wcm.ResourceManager, om: ObjectModule) {
-						super(handle);
-						this._rep = rm.getRepresentation(handle);
-						this._om = om;
-					}
-					public $rep(): $wcm.ResourceRepresentation { return this._rep; }
-					public readDirectoryEntry(): result<DirectoryEntry | undefined, ErrorCode> {
-						return this._om.readDirectoryEntry(this);
-					}
-				}
-				export function Class(wasmInterface: WasmInterface, context: $wcm.WasmContext): filesystem.Types.DirectoryEntryStream.Class {
-					const resource = filesystem.Types.$.DirectoryEntryStream;
-					const rm: $wcm.ResourceManager = context.resources.ensure('wasi:filesystem@0.2.0/types/directory-entry-stream');
-					const om: ObjectModule = $wcm.Module.createObjectModule(resource, wasmInterface, context);
-					return class extends Impl {
-						constructor(handleTag: Symbol, handle: $wcm.ResourceHandle) {
-							super(handleTag, handle, rm, om);
-							rm.registerProxy(this);
-						}
-					};
-				}
 			}
 		}
 		export const types: Map<string, $wcm.GenericComponentModelType> = new Map<string, $wcm.GenericComponentModelType>([
@@ -1307,9 +1150,9 @@ export namespace filesystem {
 		export const functions: Map<string, $wcm.FunctionType> = new Map([
 			['filesystemErrorCode', $.filesystemErrorCode]
 		]);
-		export const resources: Map<string, { resource: $wcm.ResourceType; factory: $wcm.ClassFactory<any>}> = new Map<string, { resource: $wcm.ResourceType; factory: $wcm.ClassFactory<any>}>([
-			['Descriptor', { resource: $.Descriptor, factory: Descriptor.exports.Class }],
-			['DirectoryEntryStream', { resource: $.DirectoryEntryStream, factory: DirectoryEntryStream.exports.Class }]
+		export const resources: Map<string, $wcm.ResourceType> = new Map<string, $wcm.ResourceType>([
+			['Descriptor', $.Descriptor],
+			['DirectoryEntryStream', $.DirectoryEntryStream]
 		]);
 		export type WasmInterface = {
 			'filesystem-error-code': (err: i32, result: ptr<ErrorCode | undefined>) => void;

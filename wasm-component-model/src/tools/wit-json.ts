@@ -56,6 +56,10 @@ export interface Interface {
 	docs?: Documentation;
 	types: References;
 	functions: NameMap<Callable>;
+	world?: {
+		ref: number;
+		kind: 'imports' | 'exports';
+	};
 	package: number;
 }
 export namespace Interface {
