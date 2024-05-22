@@ -296,14 +296,4 @@ export namespace calculator._ {
 			}
 		}
 	}
-	export namespace main {
-		export function bind(connection: $wcm.MainConnection, context: $wcm.WasmContext): $wcm.$exports.Promisify<calculator.Exports> {
-			return $wcm.$main.bind<calculator.Exports>(connection, _, context);
-
-		}
-	}
 }
-
-let api = calculator._.main.bind();
-api.add(1, 2);
-api.iface.foo();

@@ -3063,7 +3063,7 @@ export type GenericClass = {
 export type PromiseJFunction = (...params: JType[]) => Promise<JType> | JType;
 export type PromiseGenericClass = {
 	new$(...params: JType[]): Promise<Resource>;
-	[key: string]: JFunction;
+	[key: string]: PromiseJFunction;
 };
 
 
@@ -3387,10 +3387,10 @@ export class FunctionType<_T extends Function = Function> extends Callable  {
 	}
 
 	public callHostFromMain(connection: MainConnection, func: JFunction, params: JType[], context: ComponentModelContext): JType | Promise<JType> {
-		const memory = context.getMemory();
+		const memory = connection.getMemory();
 		const wasmValues = this.lowerParamValues(params, memory, context, undefined);
-		const result: JType | void = func(...wasmValues);
-		return this.liftReturnValue(result, undefined, memory, context);
+		const result: JType = func(...wasmValues);
+		return this.lowerReturnValue(result, memory, context, undefined);
 	}
 }
 
@@ -4342,128 +4342,128 @@ namespace clazz {
 	}
 }
 
-export namespace $main {
-	export namespace imports {
-		export function bind(connection: MainConnection, world: WorldType, service: ParamWorldServiceInterface, context: ComponentModelContext): T {
-			const packageName = world.id.substring(0, world.id.indexOf('/'));
-			const result = Object.create(null);
-			if (world.imports !== undefined) {
-				if (world.imports.functions !== undefined) {
-					connection.on(`${packageName}/$root`, doBind(connection, packageName, world.imports.functions, undefined, context));
-					Object.assign(result, doBind(connection, packageName, world.imports.functions, undefined, context));
-				}
-				if (world.imports.interfaces !== undefined) {
-					for (const [name, iface] of world.imports.interfaces) {
-						const propName = `${name[0].toLowerCase()}${name.substring(1)}`;
-						result[propName] = doBind(connection, packageName, iface.functions, iface.resources, context);
-					}
-				}
-			}
-			return result as T;
-		}
+// export namespace $main {
+// 	export namespace imports {
+// 		export function bind(connection: MainConnection, world: WorldType, service: ParamWorldServiceInterface, context: ComponentModelContext): T {
+// 			const packageName = world.id.substring(0, world.id.indexOf('/'));
+// 			const result = Object.create(null);
+// 			if (world.imports !== undefined) {
+// 				if (world.imports.functions !== undefined) {
+// 					connection.on(`${packageName}/$root`, doBind(connection, packageName, world.imports.functions, undefined, context));
+// 					Object.assign(result, doBind(connection, packageName, world.imports.functions, undefined, context));
+// 				}
+// 				if (world.imports.interfaces !== undefined) {
+// 					for (const [name, iface] of world.imports.interfaces) {
+// 						const propName = `${name[0].toLowerCase()}${name.substring(1)}`;
+// 						result[propName] = doBind(connection, packageName, iface.functions, iface.resources, context);
+// 					}
+// 				}
+// 			}
+// 			return result as T;
+// 		}
 
-		function doBind(connection: MainConnection, qualifier: string, functions: Map<string, FunctionType> | undefined, resources: Map<string, ResourceType> | undefined, context: ComponentModelContext): object {
-			const result = Object.create(null);
-			if (functions !== undefined) {
-				for (const [name, func] of functions) {
+// 		function doBind(connection: MainConnection, qualifier: string, functions: Map<string, FunctionType> | undefined, resources: Map<string, ResourceType> | undefined, context: ComponentModelContext): object {
+// 			const result = Object.create(null);
+// 			if (functions !== undefined) {
+// 				for (const [name, func] of functions) {
 
-					result[name] = function (...params: JType[]): Promise<JType> {
-						return func.callMain(connection, qualifier, params, context);
-					};
-				}
-			}
-			return result;
-		}
-	}
-	export namespace exports {
-		export function bind<T>(connection: MainConnection, world: WorldType, context: ComponentModelContext): T {
-			const packageName = world.id.substring(0, world.id.indexOf('/'));
-			const result = Object.create(null);
-			if (world.exports !== undefined) {
-				if (world.exports.functions !== undefined) {
-					Object.assign(result, doBind(connection, packageName, world.exports.functions, undefined, context));
-				}
-				if (world.exports.interfaces !== undefined) {
-					for (const [name, iface] of world.exports.interfaces) {
-						const propName = `${name[0].toLowerCase()}${name.substring(1)}`;
-						result[propName] = doBind(connection, packageName, iface.functions, iface.resources, context);
-					}
-				}
-			}
-			return result as T;
-		}
+// 					result[name] = function (...params: JType[]): Promise<JType> {
+// 						return func.callMain(connection, qualifier, params, context);
+// 					};
+// 				}
+// 			}
+// 			return result;
+// 		}
+// 	}
+// 	export namespace exports {
+// 		export function bind<T>(connection: MainConnection, world: WorldType, context: ComponentModelContext): T {
+// 			const packageName = world.id.substring(0, world.id.indexOf('/'));
+// 			const result = Object.create(null);
+// 			if (world.exports !== undefined) {
+// 				if (world.exports.functions !== undefined) {
+// 					Object.assign(result, doBind(connection, packageName, world.exports.functions, undefined, context));
+// 				}
+// 				if (world.exports.interfaces !== undefined) {
+// 					for (const [name, iface] of world.exports.interfaces) {
+// 						const propName = `${name[0].toLowerCase()}${name.substring(1)}`;
+// 						result[propName] = doBind(connection, packageName, iface.functions, iface.resources, context);
+// 					}
+// 				}
+// 			}
+// 			return result as T;
+// 		}
 
-		function doBind(connection: MainConnection, qualifier: string, functions: Map<string, FunctionType> | undefined, resources: Map<string, ResourceType> | undefined, context: ComponentModelContext): object {
-			const result = Object.create(null);
-			if (functions !== undefined) {
-				for (const [name, func] of functions) {
-					result[name] = function (...params: JType[]): Promise<JType> {
-						return func.callWasmFromMain(connection, qualifier, params, context);
-					};
-				}
-			}
-			if (resources !== undefined) {
-				for (const [name, resource] of resources) {
-					const cl =  clazz.createPromise(connection, qualifier, resource, context);
-					result[name] = cl;
-				}
-			}
-			return result;
-		}
-	}
-	export function bind<T>(connection: MainConnection, world: WorldType, service: ParamWorldServiceInterface, context: ComponentModelContext): $exports.Promisify<T> {
-		const wasmContext: WasmContext = {
-			...context,
-			getMemory: () => connection.getMemory(),
-		};
+// 		function doBind(connection: MainConnection, qualifier: string, functions: Map<string, FunctionType> | undefined, resources: Map<string, ResourceType> | undefined, context: ComponentModelContext): object {
+// 			const result = Object.create(null);
+// 			if (functions !== undefined) {
+// 				for (const [name, func] of functions) {
+// 					result[name] = function (...params: JType[]): Promise<JType> {
+// 						return func.callWasmFromMain(connection, qualifier, params, context);
+// 					};
+// 				}
+// 			}
+// 			if (resources !== undefined) {
+// 				for (const [name, resource] of resources) {
+// 					const cl =  clazz.createPromise(connection, qualifier, resource, context);
+// 					result[name] = cl;
+// 				}
+// 			}
+// 			return result;
+// 		}
+// 	}
+// 	export function bind<T>(connection: MainConnection, world: WorldType, service: ParamWorldServiceInterface, context: ComponentModelContext): $exports.Promisify<T> {
+// 		const wasmContext: WasmContext = {
+// 			...context,
+// 			getMemory: () => connection.getMemory(),
+// 		};
 
-		// First we forward all imports from the worker to the service implementation. Since the communication between
-		// main and the worker is on flat types we can simply create an import object and hook it up to the connection.
-		const wasmImports = $imports.create<WasmInterfaces>(world, service, wasmContext);
-		for (const qualifier of Object.keys(wasmImports)) {
-			for (const funcName of Object.keys(wasmImports[qualifier])) {
-				const func = wasmImports[qualifier][funcName];
-				connection.on(`${qualifier}/${funcName}`, func);
-			}
-		}
+// 		// First we forward all imports from the worker to the service implementation. Since the communication between
+// 		// main and the worker is on flat types we can simply create an import object and hook it up to the connection.
+// 		const wasmImports = $imports.create<WasmInterfaces>(world, service, wasmContext);
+// 		for (const qualifier of Object.keys(wasmImports)) {
+// 			for (const funcName of Object.keys(wasmImports[qualifier])) {
+// 				const func = wasmImports[qualifier][funcName];
+// 				connection.on(`${qualifier}/${funcName}`, func);
+// 			}
+// 		}
 
-		//
-		const exports: Record<string, ParamWasmFunction> = Object.create(null);
-		const result: Record<string, Exports> = Object.create(null);
-		if (world.exports !== undefined) {
-			if (world.exports.functions !== undefined) {
-				for (const func of world.exports.functions.values()) {
-					exports[func.witName] = function (...params: WasmType[]): WasmType | void {
+// 		//
+// 		const exports: Record<string, ParamWasmFunction> = Object.create(null);
+// 		const result: Record<string, Exports> = Object.create(null);
+// 		if (world.exports !== undefined) {
+// 			if (world.exports.functions !== undefined) {
+// 				for (const func of world.exports.functions.values()) {
+// 					exports[func.witName] = function (...params: WasmType[]): WasmType | void {
 
-					};
-				}
-			}
-			if (world.exports.interfaces !== undefined) {
-				for (const [name, iface] of world.exports.interfaces) {
-					const propName = `${name[0].toLowerCase()}${name.substring(1)}`;
-					result[propName] = doBind(iface.functions, iface.resources, scoped[iface.id], context);
-				}
-			}
-		}
-		return result as Promisify<T>;
-	}
+// 					};
+// 				}
+// 			}
+// 			if (world.exports.interfaces !== undefined) {
+// 				for (const [name, iface] of world.exports.interfaces) {
+// 					const propName = `${name[0].toLowerCase()}${name.substring(1)}`;
+// 					result[propName] = doBind(iface.functions, iface.resources, scoped[iface.id], context);
+// 				}
+// 			}
+// 		}
+// 		return result as Promisify<T>;
+// 	}
 
-	function doBind(connection: MainConnection, qualifier: string, functions: Map<string, FunctionType> | undefined, resources: Map<string, ResourceInfo> | undefined, wasm: ParamWasmInterface, context: WasmContext): Exports {
-		const result: WriteableServiceInterface = Object.create(null);
-		if (functions !== undefined) {
-			for (const [name, func] of functions) {
-				result[name] = createFunction(func, wasm[func.witName] as WasmFunction, context);
-			}
-		}
-		if (resources !== undefined) {
-			for (const [name, { resource, factory }] of resources) {
-				const resourceManager = getResourceManager(resource, undefined, context);
-				const clazz = factory(wasm, context);
-				resourceManager.setProxyInfo(clazz, wasm[`[dtor]${resource.witName}`] as (self: number) => void);
-				result[name] = clazz;
-			}
-		}
-		return result;
-	}
-}
+// 	function doBind(connection: MainConnection, qualifier: string, functions: Map<string, FunctionType> | undefined, resources: Map<string, ResourceInfo> | undefined, wasm: ParamWasmInterface, context: WasmContext): Exports {
+// 		const result: WriteableServiceInterface = Object.create(null);
+// 		if (functions !== undefined) {
+// 			for (const [name, func] of functions) {
+// 				result[name] = createFunction(func, wasm[func.witName] as WasmFunction, context);
+// 			}
+// 		}
+// 		if (resources !== undefined) {
+// 			for (const [name, { resource, factory }] of resources) {
+// 				const resourceManager = getResourceManager(resource, undefined, context);
+// 				const clazz = factory(wasm, context);
+// 				resourceManager.setProxyInfo(clazz, wasm[`[dtor]${resource.witName}`] as (self: number) => void);
+// 				result[name] = clazz;
+// 			}
+// 		}
+// 		return result;
+// 	}
+// }
 
