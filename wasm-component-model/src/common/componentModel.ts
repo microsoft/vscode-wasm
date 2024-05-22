@@ -2716,26 +2716,26 @@ export class OptionType<T extends JType> implements ComponentModelType<T | optio
 
 export namespace result {
 	export const ok = 'ok' as const;
-	export type Ok<O extends JType | void, E extends JType | void> = { readonly tag: typeof ok; readonly value: O } & _common<O, E>;
-	export function Ok<O extends JType | void , E extends JType | void>(value: O): Ok<O, E> {
+	export type Ok<O extends JType, E extends JType> = { readonly tag: typeof ok; readonly value: O } & _common<O, E>;
+	export function Ok<O extends JType, E extends JType>(value: O): Ok<O, E> {
 		return new ResultImpl<O, E>(ok, value) as Ok<O, E>;
 	}
 
 	export const error = 'error' as const;
-	export type Error<O extends JType | void, E extends JType | void> = { readonly tag: typeof error; readonly value: E } & _common<O, E>;
-	export function Error<O extends JType | void, E extends JType | void>(value: E): Error<O, E> {
+	export type Error<O extends JType, E extends JType> = { readonly tag: typeof error; readonly value: E } & _common<O, E>;
+	export function Error<O extends JType, E extends JType>(value: E): Error<O, E> {
 		return new ResultImpl<O, E>(error, value) as Error<O, E>;
 	}
 
 	export type _tt = typeof ok | typeof error;
-	export type _vt<O extends JType | void, E extends JType | void> = O | E;
-	type _common<O extends JType | void, E extends JType | void> = Omit<ResultImpl<O, E>, 'tag' | 'value'>;
+	export type _vt<O extends JType, E extends JType> = O | E;
+	type _common<O extends JType, E extends JType> = Omit<ResultImpl<O, E>, 'tag' | 'value'>;
 
-	export function _ctor<O extends JType | void, E extends JType | void>(c: _tt, v: _vt<O, E>): result<O, E> {
+	export function _ctor<O extends JType, E extends JType>(c: _tt, v: _vt<O, E>): result<O, E> {
 		return new ResultImpl<O, E>(c, v) as result<O, E>;
 	}
 
-	export class ResultImpl<O extends JType | void, E extends JType | void> implements JVariantCase {
+	export class ResultImpl<O extends JType, E extends JType> implements JVariantCase {
 
 		private readonly _tag: _tt;
 		private readonly _value: _vt<O, E>;
@@ -2762,8 +2762,8 @@ export namespace result {
 		}
 	}
 }
-export type result<O extends JType | void, E extends JType | void = void> = result.Ok<O, E> | result.Error<O, E>;
-export class ResultType<O extends JType | void, E extends JType | void = void> extends VariantType<result<O, E>, 'ok' | 'error', O | E> {
+export type result<O extends JType, E extends JType = void> = result.Ok<O, E> | result.Error<O, E>;
+export class ResultType<O extends JType, E extends JType = void> extends VariantType<result<O, E>, 'ok' | 'error', O | E> {
 	constructor(okType: GenericComponentModelType | undefined, errorType: GenericComponentModelType | undefined) {
 		super([['ok', okType], ['error', errorType]], result._ctor<O, E>, ComponentModelTypeKind.result);
 	}
@@ -3054,11 +3054,18 @@ export type JType = number | bigint | string | boolean | JArray | JRecord | JVar
 
 export type CallableParameter = [/* name */string, /* type */GenericComponentModelType];
 
-export type JFunction = (...params: JType[]) => JType | void;
+export type JFunction = (...params: JType[]) => JType;
 export type GenericClass = {
 	new (...params: JType[]): Resource;
 	[key: string]: JFunction;
 };
+
+export type PromiseJFunction = (...params: JType[]) => Promise<JType> | JType;
+export type PromiseGenericClass = {
+	new$(...params: JType[]): Promise<Resource>;
+	[key: string]: JFunction;
+};
+
 
 export type WasmFunction = (...params: WasmType[]) => WasmType | void;
 
@@ -3073,7 +3080,7 @@ export interface MainConnection {
 	prepareCall(): void;
 	getMemory(): Memory;
 	call(name: string, params: ReadonlyArray<WasmType>): Promise<WasmType | void>;
-	on(id: string, callback: (...params: WasmType[]) => WasmType | void): void;
+	on(id: string, callback: (...params: WasmType[]) => WasmType | void | Promise<WasmType | void>): void;
 }
 
 class Callable {
@@ -3274,7 +3281,7 @@ class Callable {
 	/**
 	 * Calls a host function on the main thread from a wasm module.
 	 */
-	public callHostOnMain(connection: WorkerConnection, qualifier: string, params: WasmType[], context: WasmContext): WasmType | void {
+	public callMain(connection: WorkerConnection, qualifier: string, params: WasmType[], context: WasmContext): WasmType | void {
 		connection.prepareCall();
 		const newParams: WasmType[] = [];
 		const resultStorage =  this.copyParamValues(newParams, connection.getMemory(), params, context.getMemory(), context);
@@ -3353,7 +3360,7 @@ class Callable {
 	}
 
 
-	protected liftReturnValue(value: WasmType | void, out: ptr | undefined, memory: Memory, context: ComponentModelContext): JType | void {
+	protected liftReturnValue(value: WasmType | void, out: ptr | undefined, memory: Memory, context: ComponentModelContext): JType {
 		if (this.returnType === undefined) {
 			return;
 		} else if (this.returnType.flatTypes.length <= Callable.MAX_FLAT_RESULTS) {
@@ -3375,8 +3382,15 @@ export class FunctionType<_T extends Function = Function> extends Callable  {
 	 */
 	public callHost(func: JFunction, params: WasmType[], context: WasmContext): WasmType | void {
 		const [jParams, out] = this.getParamValuesForHostCall(params, context);
-		const result: JType | void = func(...jParams);
+		const result: JType = func(...jParams);
 		return this.lowerReturnValue(result, context.getMemory(), context, out);
+	}
+
+	public callHostFromMain(connection: MainConnection, func: JFunction, params: JType[], context: ComponentModelContext): JType | Promise<JType> {
+		const memory = context.getMemory();
+		const wasmValues = this.lowerParamValues(params, memory, context, undefined);
+		const result: JType | void = func(...wasmValues);
+		return this.liftReturnValue(result, undefined, memory, context);
 	}
 }
 
@@ -3440,7 +3454,7 @@ export class StaticMethodType<_T extends Function = Function> extends Callable {
 
 	public callHost(func: JFunction, params: WasmType[], context: WasmContext): WasmType | void {
 		const [jParams, out] = this.getParamValuesForHostCall(params, context);
-		const result: JType | void = func(...jParams);
+		const result: JType = func(...jParams);
 		return this.lowerReturnValue(result, context.getMemory(), context, out);
 	}
 }
@@ -3463,7 +3477,7 @@ export class MethodType<_T extends Function = Function> extends Callable {
 		const [jParams, out] = this.getParamValuesForHostCall(params, context);
 		const resource = resourceManager.getResource(handle);
 		const memory  = context.getMemory();
-		const result: JType | void = (resource as any)[methodName](...jParams);
+		const result: JType = (resource as any)[methodName](...jParams);
 		return this.lowerReturnValue(result, memory, context, out);
 	}
 }
@@ -3819,7 +3833,7 @@ type ParamWasmInterfaces = Record<string, ParamWasmInterface>;
 export type ServiceInterface = Record<string, JFunction | GenericClass>;
 export type WorldServiceInterface = Record<string, JFunction | ServiceInterface>;
 
-type ParamServiceFunction = (...params: UnionJType[]) => JType | void;
+type ParamServiceFunction = (...params: UnionJType[]) => JType;
 type ParamGenericClass = {
 	new (...params: UnionJType[]): Resource;
 } | {
@@ -4105,7 +4119,7 @@ export namespace $imports {
 			if (functions !== undefined) {
 				for (const [, func] of functions) {
 					result[func.witName] = function(this: void, ...params: WasmType[]): number | bigint | void {
-						return func.callHostOnMain(connection, qualifier, params, context);
+						return func.callMain(connection, qualifier, params, context);
 					};
 				}
 			}
@@ -4113,7 +4127,7 @@ export namespace $imports {
 				for (const resource of resources.values()) {
 					for (const callable of resource.callables.values()) {
 						result[callable.witName] = function(this: void, ...params: WasmType[]): number | bigint | void {
-							return callable.callHostOnMain(connection, qualifier, params, context);
+							return callable.callMain(connection, qualifier, params, context);
 						};
 					}
 				}
@@ -4192,7 +4206,7 @@ export namespace $exports {
 	}
 
 	function createFunction(func: FunctionType<JFunction>, wasmFunction: WasmFunction, context: WasmContext): JFunction {
-		return (...params: JType[]): JType | void => {
+		return (...params: JType[]): JType => {
 			return func.callWasm(params, wasmFunction, context);
 		};
 	}
@@ -4330,11 +4344,12 @@ namespace clazz {
 
 export namespace $main {
 	export namespace imports {
-		export function bind<T>(connection: MainConnection, world: WorldType, context: ComponentModelContext): T {
+		export function bind(connection: MainConnection, world: WorldType, service: ParamWorldServiceInterface, context: ComponentModelContext): T {
 			const packageName = world.id.substring(0, world.id.indexOf('/'));
 			const result = Object.create(null);
 			if (world.imports !== undefined) {
 				if (world.imports.functions !== undefined) {
+					connection.on(`${packageName}/$root`, doBind(connection, packageName, world.imports.functions, undefined, context));
 					Object.assign(result, doBind(connection, packageName, world.imports.functions, undefined, context));
 				}
 				if (world.imports.interfaces !== undefined) {
@@ -4348,7 +4363,16 @@ export namespace $main {
 		}
 
 		function doBind(connection: MainConnection, qualifier: string, functions: Map<string, FunctionType> | undefined, resources: Map<string, ResourceType> | undefined, context: ComponentModelContext): object {
+			const result = Object.create(null);
+			if (functions !== undefined) {
+				for (const [name, func] of functions) {
 
+					result[name] = function (...params: JType[]): Promise<JType> {
+						return func.callMain(connection, qualifier, params, context);
+					};
+				}
+			}
+			return result;
 		}
 	}
 	export namespace exports {
@@ -4373,7 +4397,7 @@ export namespace $main {
 			const result = Object.create(null);
 			if (functions !== undefined) {
 				for (const [name, func] of functions) {
-					result[name] = function (...params: JType[]): Promise<JType | void> {
+					result[name] = function (...params: JType[]): Promise<JType> {
 						return func.callWasmFromMain(connection, qualifier, params, context);
 					};
 				}
