@@ -3073,14 +3073,14 @@ export interface WorkerConnection {
 	prepareCall(): void;
 	getMemory(): Memory;
 	call(name: string, params: ReadonlyArray<WasmType>): WasmType | void;
-	on(id: string, callback: (...params: WasmType[]) => WasmType | void): void;
+	on(id: string, callback: (params: WasmType[]) => WasmType | void): void;
 }
 
 export interface MainConnection {
 	prepareCall(): void;
 	getMemory(): Memory;
 	call(name: string, params: ReadonlyArray<WasmType>): Promise<WasmType | void>;
-	on(id: string, callback: (...params: WasmType[]) => WasmType | void | Promise<WasmType | void>): void;
+	on(id: string, callback: (params: WasmType[]) => WasmType | void | Promise<WasmType | void>): void;
 }
 
 class Callable {
@@ -4228,7 +4228,7 @@ export namespace $exports {
 		function doBind(connection: WorkerConnection, qualifier: string, functions: Map<string, FunctionType> | undefined, resources: Map<string, ResourceType> | undefined, wasm: ParamWasmInterface, context: WasmContext) : void {
 			if (functions !== undefined) {
 				for (const func of functions.values()) {
-					connection.on(`${qualifier}/${func.witName}`, (...params: WasmType[]) => {
+					connection.on(`${qualifier}/${func.witName}`, (params: WasmType[]) => {
 						return func.callWasmFromWorker(connection, wasm[func.witName] as WasmFunction, params, context);
 					});
 				}
@@ -4236,7 +4236,7 @@ export namespace $exports {
 			if (resources !== undefined) {
 				for (const resource of resources.values()) {
 					for (const callable of resource.callables.values()) {
-						connection.on(`${qualifier}/${callable.witName}`, (...params: WasmType[]) => {
+						connection.on(`${qualifier}/${callable.witName}`, (params: WasmType[]) => {
 							return callable.callWasmFromWorker(connection, wasm[callable.witName] as WasmFunction, params, context);
 						});
 					}
@@ -4466,289 +4466,3 @@ namespace clazz {
 // 		return result;
 // 	}
 // }
-
-
-class ConnectionMemory implements Memory {
-
-	public static readonly Header = {
-		sync: { offset:0, size: 4 },
-		errorCode: { offset: 4, size: 4 },
-		resultType: { offset: 8, size: 4 },
-		result: { offset: 12, size: 8 },
-		end: { offset: 20, size: 0 },
-	};
-
-	private next: ptr;
-
-	public  buffer: SharedArrayBuffer;
-	public readonly id: string;
-
-	constructor(size: number = 64 * 1024) {
-		this.id = uuid.v4();
-		this.buffer = new SharedArrayBuffer(size);
-		this.next = ConnectionMemory.Header.end.offset;
-	}
-
-	public reset(): void {
-		this.next = ConnectionMemory.Header.end.offset;
-	}
-
-	public alloc(align: Alignment, size: number): MemoryRange {
-		const result = Alignment.align(this.next, align);
-		this.next = result + size;
-		return new MemoryRange(this, result, size);
-	}
-
-	public realloc(): MemoryRange {
-		throw new ComponentModelTrap('ConnectionMemory does not support realloc');
-	}
-
-	public preAllocated(ptr: number, size: number): MemoryRange {
-		return new MemoryRange(this, ptr, size);
-	}
-
-	public readonly(ptr: number, size: number): ReadonlyMemoryRange {
-		return new ReadonlyMemoryRange(this, ptr, size);
-	}
-}
-
-namespace Connection {
-
-	export enum ErrorCodes {
-		noHandler = 1,
-	}
-
-	export enum ParamType {
-		float = 1,
-		signed = 2,
-		unsigned = 3
-	}
-
-	export type MainCallMessage = {
-		method: 'callMain';
-		name: string;
-		params: (number | string)[];
-		buffer: SharedArrayBuffer;
-	};
-
-	export type ReportResultMessage = {
-		method: 'reportResult';
-		name: string;
-		result?: number | string;
-		error?: string;
-	};
-
-	export type WorkerCallMessage = {
-		method: 'callWorker';
-		name: string;
-		params: (number | string)[];
-	};
-}
-
-abstract class Connection {
-
-	protected readonly memory: ConnectionMemory;
-
-	constructor(memory: ConnectionMemory) {
-		this.memory = memory;
-	}
-
-	protected serializeParams(params: WasmType[]): (number | string)[] {
-		const result: (number | string)[] = [];
-		for (const param of params) {
-			if (typeof param === 'number') {
-				result.push(param);
-			} else {
-				result.push(param.toString());
-			}
-		}
-		return result;
-	}
-
-	protected deserializeParams(params: (string | number)[]): WasmType[] {
-		const result: WasmType[] = [];
-		for (const param of params) {
-			if (typeof param === 'string') {
-				result.push(BigInt(param));
-			} else {
-				result.push(param);
-			}
-		}
-		return result;
-	}
-
-	protected serializeResult(result: WasmType | undefined | void): number | string | undefined {
-		if (typeof result === 'bigint') {
-			return result.toString();
-		} else if (typeof result === 'number') {
-			return result;
-		}
-		return undefined;
-	}
-
-	protected deserializeResult(result: string | number | undefined): WasmType | undefined {
-	}
-
-	protected loadResult(): WasmType {
-		const view = new DataView(this.memory.buffer, 0, ConnectionMemory.Header.end.offset);
-		const resultType = view.getUint32(ConnectionMemory.Header.resultType.offset, true);
-		switch(resultType) {
-			case Connection.ParamType.float:
-				return view.getFloat64(ConnectionMemory.Header.result.offset, true);
-			case Connection.ParamType.signed:
-				return view.getBigInt64(ConnectionMemory.Header.result.offset, true);
-			case Connection.ParamType.unsigned:
-				return view.getBigUint64(ConnectionMemory.Header.result.offset, true);
-			default:
-				throw new ComponentModelTrap(`Unexpected result type ${resultType}`);
-		}
-	}
-
-	protected storeResult(buffer: SharedArrayBuffer, result: WasmType): void {
-	}
-}
-
-namespace WorkerConnection {
-
-	export abstract class Default extends Connection implements WorkerConnection {
-
-		private readonly timeout: number | undefined;
-		private readonly handlers: Map<string, WasmFunction> ;
-
-		constructor(timeout?: number) {
-			super(new ConnectionMemory());
-			this.timeout = timeout;
-			this.handlers = new Map();
-		}
-
-		public on(name: string, handler: WasmFunction): void {
-			this.handlers.set(name, handler);
-		}
-
-		public getMemory(): Memory {
-			return this.memory;
-		}
-
-		public prepareCall(): void {
-			this.memory.reset();
-		}
-
-		public call(name: string, params: WasmType[]): WasmType {
-			const buffer = this.memory.buffer;
-			const sync = new Int32Array(buffer, ConnectionMemory.Header.sync.offset, 1);
-			Atomics.store(sync, 0, 0);
-			const message: Connection.MainCallMessage = {
-				method: 'callMain',
-				name: name,
-				params: this.serializeParams(params),
-				buffer: this.memory.buffer,
-			};
-			this.postMessage(message);
-			// Wait for the answer
-			const result = Atomics.wait(sync, 0, 0, this.timeout);
-			switch (result) {
-				case 'timed-out':
-					throw new ComponentModelTrap(`Call ${name} to main thread timed out`);
-				case 'not-equal':
-					const value = Atomics.load(sync, 0);
-					// If the value === 1 the service has already
-					// provided the result. Otherwise we actually
-					// don't know what happened :-(.
-					if (value !== 1) {
-						throw new ComponentModelTrap(`Unexpected value ${value} in sync object`);
-					}
-			}
-			const view = new DataView(buffer, 0, ConnectionMemory.Header.end.offset);
-			const resultType = view.getUint32(ConnectionMemory.Header.resultType.offset, true);
-			switch(resultType) {
-				case Connection.ParamType.float:
-					return view.getFloat64(ConnectionMemory.Header.result.offset, true);
-				case Connection.ParamType.signed:
-					return view.getBigInt64(ConnectionMemory.Header.result.offset, true);
-				case Connection.ParamType.unsigned:
-					return view.getBigUint64(ConnectionMemory.Header.result.offset, true);
-				default:
-					throw new ComponentModelTrap(`Unexpected result type ${resultType}`);
-			}
-		}
-
-		protected abstract postMessage(message: Connection.MainCallMessage | Connection.ReportResultMessage): void;
-
-		protected handleMessage(message: Connection.WorkerCallMessage): void {
-			const handler = this.handlers.get(message.name);
-			if (handler === undefined) {
-				this.postMessage({ method: 'reportResult', name: message.name, error: `No handler found for ${message.name}` });
-				return;
-			}
-			const result = handler(...this.deserializeParams(message.params));
-			this.postMessage({ method: 'reportResult', name: message.name, result: this.serializeResult(result) });
-		}
-	}
-}
-
-namespace MainConnection {
-	export abstract class Default extends Connection implements MainConnection {
-		private readonly memory: ConnectionMemory;
-		private readonly handlers: Map<string, (...params: WasmType[]) => WasmType | void | Promise<WasmType | void>> ;
-
-		constructor() {
-			super(new ConnectionMemory());
-			this.handlers = new Map();
-		}
-
-		public getMemory(): Memory {
-			return this.memory;
-		}
-
-		public on(id: string, handler: (...params: WasmType[]) => WasmType | void | Promise<WasmType | void>): void {
-			this.handlers.set(id, handler);
-		}
-
-		protected handleMessage(message: Connection.MainCallMessage | Connection.ReportResultMessage): void {
-
-			if (message.method === 'callMain') {
-				const sync = new Int32Array(this.memory.buffer, ConnectionMemory.Header.sync.offset, 1);
-				const view = new DataView(this.memory.buffer, 0, ConnectionMemory.Header.end.offset);
-
-				const handler = this.handlers.get(message.name);
-				if (handler === undefined) {
-					view.setUint32(ConnectionMemory.Header.errorCode.offset, Connection.ErrorCodes.noHandler, true);
-					Atomics.store(sync, 0, 1);
-					Atomics.notify(sync, 0);
-					return;
-				} else {
-					const params = this.deserializeParams(message.params);
-					const result = handler(...params);
-					if (result instanceof Promise) {
-						result.then((value) => {
-							this.storeResult(view, sync, value);
-						}).catch((error) => {
-							view.setUint32(ConnectionMemory.Header.errorCode.offset, error, true);
-							Atomics.store(sync, 0, 1);
-							Atomics.notify(sync, 0);
-						});
-					} else {
-						this.storeResult(view, sync, result);
-					}
-				}
-			} else if (message.method === 'reportResult') {
-			}
-			if (handler === undefined) {
-				this.postMessage({ method: 'reportResult', name: message.name, error: `No handler found for ${message.name}` });
-				return;
-			}
-			const result = handler(...this.deserializeParams(message.params));
-			if (result instanceof Promise) {
-				result.then((value) => {
-					this.postMessage({ method: 'reportResult', name: message.name, result: this.serializeResult(value) });
-				}).catch((error) => {
-					this.postMessage({ method: 'reportResult', name: message.name, error: error.toString() });
-				});
-			} else {
-				this.postMessage({ method: 'reportResult', name: message.name, result: this.serializeResult(result) });
-			}
-		}
-
-		protected;
-	}
-}

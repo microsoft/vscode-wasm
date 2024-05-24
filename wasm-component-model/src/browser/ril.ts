@@ -5,6 +5,9 @@
 import type { Disposable } from '../common/disposable';
 
 import RAL from '../common/ral';
+import * as connection from './connection';
+import type { MainConnection, WorkerConnection } from './main';
+
 
 interface RIL extends RAL {
 }
@@ -50,6 +53,41 @@ const _ril: RIL = Object.freeze<RIL>({
 			const handle =  setInterval(callback, ms, ...args);
 			return { dispose: () => clearInterval(handle) };
 		},
+	}),
+	connection: Object.freeze({
+		createWorker(port: any): WorkerConnection {
+			if (!(port instanceof MessagePort)) {
+				throw new Error(`Expected MessagePort`);
+			}
+			return new connection.WorkerConnection(port);
+		},
+		createMain(port: any): MainConnection {
+			if (!(port instanceof MessagePort) && !(port instanceof Worker)) {
+				throw new Error(`Expected MessagePort or Worker`);
+			}
+			return new connection.MainConnection(port);
+		}
+	}),
+	Worker: Object.freeze({
+		getPort(): RAL.ConnectionPort {
+			return self;
+		},
+		getArgs(): string[] {
+			return [];
+		},
+		get exitCode(): number | undefined {
+			return 0;
+		},
+		set exitCode(_value: number | undefined) {
+		}
+	}),
+	WebAssembly: Object.freeze({
+		compile(bytes: ArrayBufferView | ArrayBuffer): Promise<WebAssembly.Module> {
+			return WebAssembly.compile(bytes);
+		},
+		instantiate(module: WebAssembly.Module, imports: Record<string, any>): Promise<WebAssembly.Instance> {
+			return WebAssembly.instantiate(module, imports);
+		}
 	})
 });
 

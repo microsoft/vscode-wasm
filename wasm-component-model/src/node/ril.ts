@@ -2,10 +2,14 @@
  * Copyright (c) Microsoft Corporation. All rights reserved.
  * Licensed under the MIT License. See License.txt in the project root for license information.
  * ------------------------------------------------------------------------------------------ */
+/// <reference path="../../typings/webAssemblyNode.d.ts" />
 import { TextDecoder } from 'util';
-
-import type { Disposable } from '../common/disposable';
 import RAL from '../common/ral';
+
+import { Worker, parentPort } from 'worker_threads';
+import type { Disposable } from '../common/disposable';
+import * as connection from './connection';
+import type { MainConnection, WorkerConnection } from './main';
 
 interface RIL extends RAL {
 }
@@ -38,6 +42,42 @@ const _ril: RIL = Object.freeze<RIL>({
 		setInterval(callback: (...args: any[]) => void, ms: number, ...args: any[]): Disposable {
 			const handle = setInterval(callback, ms, ...args);
 			return { dispose: () => clearInterval(handle) };
+		}
+	}),
+	connection: Object.freeze({
+		createWorker(port: any): WorkerConnection {
+			if (!(port instanceof MessagePort)) {
+				throw new Error(`Expected MessagePort`);
+			}
+			return new connection.WorkerConnection(port);
+		},
+		createMain(port: any): MainConnection {
+			if (!(port instanceof MessagePort) && !(port instanceof Worker)) {
+				throw new Error(`Expected MessagePort or Worker`);
+			}
+			return new connection.MainConnection(port);
+		}
+	}),
+	Worker: Object.freeze({
+		getPort(): RAL.ConnectionPort {
+			return parentPort!;
+		},
+		getArgs(): string[] {
+			return process.argv.slice(2);
+		},
+		get exitCode(): number | undefined {
+			return process.exitCode;
+		},
+		set exitCode(value: number | undefined) {
+			process.exitCode = value;
+		}
+	}),
+	WebAssembly: Object.freeze({
+		compile(bytes: ArrayBufferView | ArrayBuffer): Promise<WebAssembly.Module> {
+			return WebAssembly.compile(bytes);
+		},
+		instantiate(module: WebAssembly.Module, imports: Record<string, any>): Promise<WebAssembly.Instance> {
+			return WebAssembly.instantiate(module, imports);
 		}
 	})
 });
