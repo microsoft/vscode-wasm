@@ -3,7 +3,7 @@
  * Licensed under the MIT License. See License.txt in the project root for license information.
  * ------------------------------------------------------------------------------------------ */
 
-import type { MainConnection, WorkerConnection } from './componentModel';
+import type { MainConnection, WorkerConnection, WorldType } from './componentModel';
 import type * as d from './disposable';
 
 interface _TextEncoder {
@@ -43,9 +43,9 @@ interface RAL {
 		setInterval(callback: (...args: any[]) => void, ms: number, ...args: any[]): d.Disposable;
 	};
 
-	readonly connection: {
+	readonly Connection: {
 		createMain(port: RAL.ConnectionPort): MainConnection;
-		createWorker(port: RAL.ConnectionPort): WorkerConnection;
+		createWorker(port: RAL.ConnectionPort | undefined, world: WorldType, timeout?: number): WorkerConnection;
 	};
 
 	readonly Worker: {

@@ -3,6 +3,7 @@
  * Licensed under the MIT License. See License.txt in the project root for license information.
  * ------------------------------------------------------------------------------------------ */
 import { BaseMainConnection, BaseWorkerConnection, Connection } from '../common/connection';
+import type { WorldType } from './main';
 
 export class MainConnection extends BaseMainConnection {
 
@@ -36,8 +37,8 @@ export class WorkerConnection extends BaseWorkerConnection {
 
 	private readonly port: MessagePort | DedicatedWorkerGlobalScope;
 
-	constructor(port: MessagePort | DedicatedWorkerGlobalScope) {
-		super();
+	constructor(port: MessagePort | DedicatedWorkerGlobalScope, world: WorldType, timeout?: number) {
+		super(world, timeout);
 		this.port = port;
 	}
 

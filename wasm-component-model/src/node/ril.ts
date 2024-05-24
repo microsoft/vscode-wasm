@@ -9,7 +9,7 @@ import RAL from '../common/ral';
 import { Worker, parentPort } from 'worker_threads';
 import type { Disposable } from '../common/disposable';
 import * as connection from './connection';
-import type { MainConnection, WorkerConnection } from './main';
+import type { MainConnection, WorkerConnection, WorldType } from './main';
 
 interface RIL extends RAL {
 }
@@ -44,14 +44,17 @@ const _ril: RIL = Object.freeze<RIL>({
 			return { dispose: () => clearInterval(handle) };
 		}
 	}),
-	connection: Object.freeze({
-		createWorker(port: any): WorkerConnection {
+	Connection: Object.freeze({
+		createWorker(port: unknown, world: WorldType, timeout?: number): WorkerConnection {
+			if (port === undefined) {
+				port = parentPort;
+			}
 			if (!(port instanceof MessagePort)) {
 				throw new Error(`Expected MessagePort`);
 			}
-			return new connection.WorkerConnection(port);
+			return new connection.WorkerConnection(port, world, timeout);
 		},
-		createMain(port: any): MainConnection {
+		createMain(port: unknown): MainConnection {
 			if (!(port instanceof MessagePort) && !(port instanceof Worker)) {
 				throw new Error(`Expected MessagePort or Worker`);
 			}

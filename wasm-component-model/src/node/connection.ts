@@ -5,6 +5,7 @@
 import { MessagePort, Worker, type TransferListItem } from 'worker_threads';
 
 import { BaseMainConnection, BaseWorkerConnection, Connection } from '../common/connection';
+import type { WorldType } from './main';
 
 export class MainConnection extends BaseMainConnection {
 
@@ -38,8 +39,8 @@ export class WorkerConnection extends BaseWorkerConnection {
 
 	private readonly port: MessagePort;
 
-	constructor(port: MessagePort) {
-		super();
+	constructor(port: MessagePort, world: WorldType, timeout?: number) {
+		super(world, timeout);
 		this.port = port;
 	}
 

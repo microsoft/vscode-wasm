@@ -2,8 +2,8 @@
  *  Copyright (c) Microsoft Corporation. All rights reserved.
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
-import RAL from './ral';
 import * as uuid from 'uuid';
+import RAL from './ral';
 
 // Type arrays are store either little or big endian depending on the platform.
 // The component model requires little endian so we throw for now if the platform
@@ -3070,17 +3070,21 @@ export type PromiseGenericClass = {
 export type WasmFunction = (...params: WasmType[]) => WasmType | void;
 
 export interface WorkerConnection {
-	prepareCall(): void;
+	dispose(): void;
 	getMemory(): Memory;
-	call(name: string, params: ReadonlyArray<WasmType>): WasmType | void;
 	on(id: string, callback: (params: WasmType[]) => WasmType | void): void;
+	prepareCall(): void;
+	call(name: string, params: ReadonlyArray<WasmType>): WasmType | void;
+	listen(): void;
 }
 
 export interface MainConnection {
-	prepareCall(): void;
+	dispose(): void;
 	getMemory(): Memory;
-	call(name: string, params: ReadonlyArray<WasmType>): Promise<WasmType | void>;
 	on(id: string, callback: (params: WasmType[]) => WasmType | void | Promise<WasmType | void>): void;
+	prepareCall(): void;
+	call(name: string, params: ReadonlyArray<WasmType>): Promise<WasmType | void>;
+	listen(): void;
 }
 
 class Callable {
@@ -3882,9 +3886,9 @@ export namespace WasmContext {
 		public readonly options: Options;
 		public readonly resources: ResourceManagers;
 
-		constructor() {
-			this.options = { encoding: 'utf-8' };
-			this.resources = new ResourceManagers.Default();
+		constructor(options?: Options, resources?: ResourceManagers) {
+			this.options = options ?? { encoding: 'utf-8' };
+			this.resources = resources ?? new ResourceManagers.Default();
 		}
 
 		public initialize(memory: Memory) {
@@ -4108,8 +4112,8 @@ export namespace $imports {
 			const wasmImports = $imports.create<WasmInterfaces>(world, service, wasmContext);
 			for (const qualifier of Object.keys(wasmImports)) {
 				for (const funcName of Object.keys(wasmImports[qualifier])) {
-					const func = wasmImports[qualifier][funcName];
-					connection.on(`${qualifier}/${funcName}`, func);
+					// const func = wasmImports[qualifier][funcName];
+					//connection.on(`${qualifier}/${funcName}`, func);
 				}
 			}
 		}
@@ -4466,3 +4470,9 @@ namespace clazz {
 // 		return result;
 // 	}
 // }
+
+export namespace $main {
+	export function bind(word: WorldType, port: RAL.ConnectionPort, service: any, context: ComponentModelContext): any {
+		return undefined;
+	}
+}

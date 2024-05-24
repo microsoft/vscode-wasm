@@ -5,7 +5,7 @@
 /// <reference path="../../typings/webAssemblyCommon.d.ts" />
 import * as uuid from 'uuid';
 
-import { Alignment, ComponentModelTrap, Memory, MemoryRange, ReadonlyMemoryRange, type MainConnection, type WasmType, type WorkerConnection, type ptr } from './componentModel';
+import { $exports, $imports, Alignment, ComponentModelTrap, Memory, MemoryRange, ReadonlyMemoryRange, WasmContext, type MainConnection, type Options, type WasmType, type WorkerConnection, type WorldType, type ptr } from './componentModel';
 import RAL from './ral';
 
 class ConnectionMemory implements Memory {
@@ -53,6 +53,10 @@ class ConnectionMemory implements Memory {
 }
 
 export abstract class Connection {
+
+	public static createWorker(world: WorldType, port?: RAL.ConnectionPort, timeout?: number): WorkerConnection {
+		return RAL().Connection.createWorker(port, world, timeout);
+	}
 
 	protected readonly memory: ConnectionMemory;
 
@@ -170,6 +174,7 @@ export namespace Connection {
 		method: 'initializeWorker';
 		readonly module: WebAssembly_.Module;
 		readonly memory?: WebAssembly_.Memory;
+		readonly options: Options;
 	};
 
 	export type WorkerCallMessage = {
@@ -183,11 +188,13 @@ export namespace Connection {
 
 export abstract class BaseWorkerConnection extends Connection implements WorkerConnection {
 
+	private readonly world: WorldType;
 	private readonly timeout: number | undefined;
 	private readonly handlers: Map<string, (params: WasmType[]) => WasmType | void> ;
 
-	constructor(timeout?: number) {
+	constructor(world: WorldType, timeout?: number) {
 		super(new ConnectionMemory());
+		this.world = world;
 		this.timeout = timeout;
 		this.handlers = new Map();
 	}
@@ -239,8 +246,16 @@ export abstract class BaseWorkerConnection extends Connection implements WorkerC
 
 	protected handleMessage(message: Connection.WorkerMessages): void {
 		if (message.method === 'initializeWorker') {
-			
-			const module = RAL().WebAssembly.instantiate(message.module, );
+			const wasmContext = new WasmContext.Default(message.options);
+			const imports = $imports.worker.create(this, this.world, wasmContext);
+			RAL().WebAssembly.instantiate(message.module, imports).then((instance) => {
+				wasmContext.initialize(new Memory.Default(instance.exports));
+				$exports.worker.bind(this, this.world, instance.exports as any, wasmContext);
+				this.postMessage({ method: 'reportResult', name: '$initializeWorker', result: 'success' });
+			}).catch((error) => {
+				this.postMessage({ method: 'reportResult', name: '$initializeWorker', error: error.toString() });
+			});
+
 		} else if (message.method === 'callWorker') {
 			const handler = this.handlers.get(message.name);
 			if (handler === undefined) {
@@ -255,6 +270,8 @@ export abstract class BaseWorkerConnection extends Connection implements WorkerC
 			}
 		}
 	}
+
+	public abstract listen(): void;
 }
 
 type CallInfo = {
@@ -266,6 +283,7 @@ type CallInfo = {
 
 export abstract class BaseMainConnection extends Connection implements MainConnection {
 
+	private initializeCall: { resolve: () => void; reject: (error: any) => void } | undefined;
 	private readonly handlers: Map<string, (params: WasmType[]) => WasmType | void | Promise<WasmType | void>>;
 	private readonly callQueue: CallInfo[];
 	private currentCall: CallInfo | undefined;
@@ -289,6 +307,19 @@ export abstract class BaseMainConnection extends Connection implements MainConne
 
 	public getMemory(): Memory {
 		return this.memory;
+	}
+
+	public async initializeWorker(module: WebAssembly_.Module, memory: WebAssembly_.Memory | undefined, options: Options): Promise<void> {
+		return new Promise((resolve, reject) => {
+			const message: Connection.InitializeWorker = {
+				method: 'initializeWorker',
+				module: module,
+				memory: memory,
+				options: options,
+			};
+			this.initializeCall = { resolve, reject };
+			this.postMessage(message);
+		});
 	}
 
 	public call(name: string, params: ReadonlyArray<WasmType>): Promise<WasmType | void> {
@@ -348,18 +379,33 @@ export abstract class BaseMainConnection extends Connection implements MainConne
 				}
 			}
 		} else if (message.method === 'reportResult') {
-			if (this.currentCall === undefined) {
-				// Need to think about logging this.
-				return;
+			if (message.name === '$initializeWorker') {
+				if (this.initializeCall === undefined) {
+					// Need to think about logging this.
+					return;
+				}
+				if (message.error !== undefined) {
+					this.initializeCall.reject(new Error(message.error));
+				} else {
+					this.initializeCall.resolve();
+				}
+				this.initializeCall = undefined;
+			} else  {
+				if (this.currentCall === undefined) {
+					// Need to think about logging this.
+					return;
+				}
+				if (message.error !== undefined) {
+					this.currentCall.reject(new Error(message.error));
+				} else {
+					const result = Connection.deserializeResult(message.result);
+					this.currentCall.resolve(result);
+				}
+				this.currentCall = undefined;
+				this.triggerNextCall();
 			}
-			if (message.error !== undefined) {
-				this.currentCall.reject(new Error(message.error));
-			} else {
-				const result = Connection.deserializeResult(message.result);
-				this.currentCall.resolve(result);
-			}
-			this.currentCall = undefined;
-			this.triggerNextCall();
 		}
 	}
+
+	public abstract listen(): void;
 }
