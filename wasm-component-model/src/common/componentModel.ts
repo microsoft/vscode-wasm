@@ -3078,7 +3078,9 @@ export interface WorkerConnection {
 	listen(): void;
 }
 
+export type Code = WebAssembly_.Module | { module: WebAssembly_.Module; memory?: WebAssembly_.Memory };
 export interface MainConnection {
+	initialize(code: Code): Promise<void>;
 	dispose(): void;
 	getMemory(): Memory;
 	on(id: string, callback: (params: WasmType[]) => WasmType | void | Promise<WasmType | void>): void;
@@ -4472,7 +4474,9 @@ namespace clazz {
 // }
 
 export namespace $main {
-	export function bind(word: WorldType, port: RAL.ConnectionPort, service: any, context: ComponentModelContext): any {
+	export async function bind(word: WorldType, service: any, context: ComponentModelContext, port: RAL.ConnectionPort, code: Code): Promise<any> {
+		const connection = RAL().Connection.createMain(port);
+		await connection.initialize(code);
 		return undefined;
 	}
 }

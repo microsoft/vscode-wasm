@@ -13,7 +13,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
 	const module = await WebAssembly.compile(bits);
 
 	const worker = new Worker(vscode.Uri.joinPath(context.extensionUri, './out/worker.js').fsPath);
-	const api = calculator._.main.bind(worker, {}, context as any);
+	const api = await calculator._.main.bind({}, context as any, worker, module);
 	const result = await api.calc(Types.Operation.Add({ left: 1, right: 2 }));
 
 

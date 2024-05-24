@@ -136,8 +136,8 @@ export namespace calculator._ {
 		}
 	}
 	export namespace main {
-		export function bind(port: $wcm.RAL.ConnectionPort, service: $wcm.$imports.Promisify<calculator.Imports>, context: $wcm.ComponentModelContext): $wcm.$exports.Promisify<calculator.Exports> {
-			return $wcm.$main.bind(_, port, service, context);
+		export function bind(service: $wcm.$imports.Promisify<calculator.Imports>, context: $wcm.ComponentModelContext, port: $wcm.RAL.ConnectionPort, code: $wcm.Code): Promise<$wcm.$exports.Promisify<calculator.Exports>> {
+			return $wcm.$main.bind(_, service, context, port, code);
 		}
 	}
 }
