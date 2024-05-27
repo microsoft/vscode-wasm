@@ -531,6 +531,12 @@ export interface Options {
 	encoding: encodings;
 	keepOption?: boolean;
 }
+export namespace Options {
+	export function is(value: any): value is Options {
+		const candidate = value as Options;
+		return candidate && typeof candidate.encoding === 'string' && (candidate.keepOption === undefined || typeof candidate.keepOption === 'boolean');
+	}
+}
 
 export enum FlatTypeKind {
 	i32 = 'i32',
@@ -3048,6 +3054,11 @@ export namespace ResourceManagers {
 			return this.managers.get(id) as unknown as ResourceManager<T>;
 		}
 	}
+
+	export function is(value: any): value is ResourceManagers {
+		const candidate = value as ResourceManagers;
+		return candidate && typeof candidate.has === 'function' && typeof candidate.ensure === 'function' && typeof candidate.get === 'function' && typeof candidate.set === 'function';
+	}
 }
 
 export type JType = number | bigint | string | boolean | JArray | JRecord | JVariantCase | JTuple | JEnum | Resource | option<any> | undefined | void | result<any, any> | Int8Array | Int16Array | Int32Array | BigInt64Array | Uint8Array | Uint16Array | Uint32Array | BigUint64Array | Float32Array | Float64Array;
@@ -3920,6 +3931,7 @@ export namespace PackageType {
 }
 
 export interface WasmContext extends ComponentModelContext {
+	initialize(memory: Memory): void;
 	getMemory(): Memory;
 }
 
@@ -3948,6 +3960,10 @@ export namespace WasmContext {
 			}
 			return this.memory;
 		}
+	}
+	export function is(value: any): value is WasmContext {
+		const candidate = value as WasmContext;
+		return candidate && typeof candidate.initialize === 'function' && typeof candidate.getMemory === 'function' && Options.is(candidate.options) && ResourceManagers.is(candidate.resources);
 	}
 }
 
@@ -4378,10 +4394,36 @@ namespace clazz {
 }
 
 export namespace $main {
-	export async function bind(world: WorldType, service: any, context: ComponentModelContext, port: RAL.ConnectionPort, code: Code, options: Options): Promise<any> {
+	export function bind(world: WorldType, service: any, code: Code, portOrContext?: WasmContext | RAL.ConnectionPort, context?: ComponentModelContext): Promise<any> {
+		if (portOrContext === undefined) {
+			return bindSync(world, service, code, new WasmContext.Default());
+		} else if (WasmContext.is(portOrContext)) {
+			return bindSync(world, service, code, portOrContext);
+		} else {
+			return bindAsync(world, service, code, portOrContext, context ?? { options: { encoding: 'utf-8' }, resources: new ResourceManagers.Default() });
+		}
+	}
+
+	async function bindSync(world: WorldType, service: any, code: Code, context: WasmContext | undefined): Promise<any> {
+		context = context ?? new WasmContext.Default();
+		type literal = { module: WebAssembly_.Module; memory?: WebAssembly_.Memory };
+		let module: WebAssembly_.Module;
+		let memory: WebAssembly_.Memory | undefined = undefined;
+		if ((code as literal).module !== undefined) {
+			module = (code as literal).module;
+			memory = (code as literal).memory;
+		} else {
+			module = code;
+		}
+		const instance = await RAL().WebAssembly.instantiate(module, $imports.create(world, service, context));
+		context.initialize(new Memory.Default(instance.exports));
+		return $exports.bind(world, instance.exports as Record<string, ParamWasmFunction>, context);
+	}
+
+	async function bindAsync(world: WorldType, service: any, code: Code, port: RAL.ConnectionPort, context: ComponentModelContext): Promise<any> {
 		const connection = await RAL().Connection.createMain(port);
 		connection.listen();
-		await connection.initialize(code, options);
+		await connection.initialize(code, context.options);
 
 		bindService(connection, world, service, context);
 		return bindApi(connection, world, context);

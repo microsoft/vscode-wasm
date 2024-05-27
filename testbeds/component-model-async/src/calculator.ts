@@ -3,8 +3,8 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 /* eslint-disable @typescript-eslint/ban-types */
-import type { i32, u32 } from '@vscode/wasm-component-model';
 import * as $wcm from '@vscode/wasm-component-model';
+import type { u32, i32 } from '@vscode/wasm-component-model';
 
 export namespace Types {
 	export type Operands = {
@@ -124,9 +124,6 @@ export namespace calculator._ {
 	}
 	export type Imports = {
 	};
-	export type Exports = {
-		'calc': (o_Operation_case: i32, o_Operation_0: i32, o_Operation_1: i32) => i32;
-	};
 	export namespace exports {
 		export const functions: Map<string, $wcm.FunctionType> = new Map([
 			['calc', $.exports.calc]
@@ -135,9 +132,12 @@ export namespace calculator._ {
 			return $wcm.$exports.bind<calculator.Exports>(_, exports, context);
 		}
 	}
-	export namespace main {
-		export function bind(service: $wcm.$imports.Promisify<calculator.Imports>, context: $wcm.ComponentModelContext, port: $wcm.RAL.ConnectionPort, code: $wcm.Code, options: $wcm.Options): Promise<$wcm.$exports.Promisify<calculator.Exports>> {
-			return $wcm.$main.bind(_, service, context, port, code, options);
-		}
+	export type Exports = {
+		'calc': (o_Operation_case: i32, o_Operation_0: i32, o_Operation_1: i32) => i32;
+	};
+	export function bind(service: calculator.Imports, code: $wcm.Code, context?: $wcm.WasmContext): Promise<calculator.Exports>;
+	export function bind(service: $wcm.$imports.Promisify<calculator.Imports>, code: $wcm.Code, port: $wcm.RAL.ConnectionPort, context?: $wcm.ComponentModelContext): Promise<$wcm.$exports.Promisify<calculator.Exports>>;
+	export function bind(service: calculator.Imports | $wcm.$imports.Promisify<calculator.Imports>, code: $wcm.Code, portOrContext?: $wcm.RAL.ConnectionPort | $wcm.WasmContext, context?: $wcm.ComponentModelContext | undefined): Promise<calculator.Exports> | Promise<$wcm.$exports.Promisify<calculator.Exports>> {
+		return $wcm.$main.bind(_, service, code, portOrContext, context);
 	}
 }

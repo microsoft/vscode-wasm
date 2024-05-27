@@ -8,9 +8,36 @@ import * as path from 'node:path';
 
 import { ResolvedOptions } from './options';
 import {
-	Document, Documentation, EnumCase, Flag, Func, Interface, Owner, Package, Param, Type, TypeKind, TypeReference,
-	World, BaseType, ListType, OptionType, ResultType, TupleType, ReferenceType, RecordType, VariantType, VariantCase,
-	EnumType, FlagsType, Field, Callable, ResourceType, BorrowHandleType, OwnHandleType, Method, AbstractType, Constructor, StaticMethod, ObjectKind, type PackageNameParts, type InterfaceObject, type TypeObject
+	AbstractType,
+	BaseType,
+	BorrowHandleType,
+	Callable,
+	Constructor,
+	Document, Documentation, EnumCase,
+	EnumType,
+	Field,
+	Flag,
+	FlagsType,
+	Func, Interface,
+	ListType,
+	Method,
+	ObjectKind,
+	OptionType,
+	OwnHandleType,
+	Owner, Package, Param,
+	RecordType,
+	ReferenceType,
+	ResourceType,
+	ResultType,
+	StaticMethod,
+	TupleType,
+	Type, TypeKind, TypeReference,
+	VariantCase,
+	VariantType,
+	World,
+	type InterfaceObject,
+	type PackageNameParts,
+	type TypeObject
 } from './wit-json';
 
 export function processDocument(document: Document, options: ResolvedOptions): void {
@@ -791,6 +818,11 @@ namespace MetaModel {
 	export const WorkerConnection: string = `${qualifier}.WorkerConnection`;
 	export const MainConnection: string = `${qualifier}.MainConnection`;
 	export const ComponentModelContext: string = `${qualifier}.ComponentModelContext`;
+	export const ImportPromisify: string = `${qualifier}.$imports.Promisify`;
+	export const ExportPromisify: string = `${qualifier}.$exports.Promisify`;
+	export const Code: string = `${qualifier}.Code`;
+	export const ConnectionPort = `${qualifier}.RAL.ConnectionPort`;
+	export const bind = `${qualifier}.$main.bind`;
 
 	export function qualify(name: string): string {
 		return `${qualifier}.${name}`;
@@ -2223,7 +2255,7 @@ class WorldEmitter extends Emitter {
 	}
 
 	public emitAPI(code: Code): void {
-		const { nameProvider, options } = this.context;
+		const { nameProvider } = this.context;
 		const name = nameProvider.world.name(this.world);
 
 		code.push(`export namespace ${name}._ {`);
@@ -2293,18 +2325,6 @@ class WorldEmitter extends Emitter {
 			code.decreaseIndent();
 			code.push('}');
 
-			if (options.worker) {
-				code.push(`export namespace worker {`);
-				code.increaseIndent();
-				code.push(`export function create(connection: ${MetaModel.WorkerConnection}, context: ${MetaModel.WasmContext}): Imports {`);
-				code.increaseIndent();
-				code.push(`return ${MetaModel.imports}.worker.create<Imports>(connection, _, context);`);
-				code.decreaseIndent();
-				code.push('}');
-				code.decreaseIndent();
-				code.push(`}`);
-			}
-
 			code.decreaseIndent();
 			code.push('}');
 
@@ -2331,20 +2351,6 @@ class WorldEmitter extends Emitter {
 
 
 		if (this.exports.funcEmitters.length + this.exports.interfaceEmitters.length  > 0) {
-			code.push(`export type Exports = {`);
-			code.increaseIndent();
-			for (const emitter of this.exports.funcEmitters) {
-				emitter.emitWorldWasmExport(code);
-			}
-			for (const emitter of exportsAllInterfaceEmitters) {
-				if (!emitter.hasCode()) {
-					continue;
-				}
-				emitter.emitWorldWasmExport(code);
-			}
-			code.decreaseIndent();
-			code.push(`};`);
-
 			code.push(`export namespace exports {`);
 			code.increaseIndent();
 
@@ -2384,26 +2390,32 @@ class WorldEmitter extends Emitter {
 			code.push(`return ${MetaModel.exports}.bind<${name}.Exports>(_, exports, context);`);
 			code.decreaseIndent();
 			code.push('}');
-			if (options.worker) {
-				code.push(`export namespace worker {`);
-				code.increaseIndent();
-				code.push(`export function bind(connection: ${MetaModel.WorkerConnection}, exports: Exports, context: ${MetaModel.WasmContext}): void {`);
-				code.increaseIndent();
-				code.push(`${MetaModel.exports}.worker.bind(connection, _, exports, context);`);
-				code.decreaseIndent();
-				code.push('}');
-				code.decreaseIndent();
-				code.push(`}`);
-			}
 
 			code.decreaseIndent();
 			code.push('}');
+
+			code.push(`export type Exports = {`);
+			code.increaseIndent();
+			for (const emitter of this.exports.funcEmitters) {
+				emitter.emitWorldWasmExport(code);
+			}
+			for (const emitter of exportsAllInterfaceEmitters) {
+				if (!emitter.hasCode()) {
+					continue;
+				}
+				emitter.emitWorldWasmExport(code);
+			}
+			code.decreaseIndent();
+			code.push(`};`);
 		}
 
-		if (options.worker) {
-			code.push(`export namespace main {`);
-			code.push(`}`);
-		}
+		code.push(`export function bind(service: ${name}.Imports, code: ${MetaModel.Code}, context?: ${MetaModel.WasmContext}): Promise<${name}.Exports>;`);
+		code.push(`export function bind(service: ${MetaModel.ImportPromisify}<${name}.Imports>, code: ${MetaModel.Code}, port: ${MetaModel.ConnectionPort}, context?: ${MetaModel.ComponentModelContext}): Promise<${MetaModel.ExportPromisify}<${name}.Exports>>;`);
+		code.push(`export function bind(service: ${name}.Imports | ${MetaModel.ImportPromisify}<${name}.Imports>, code: ${MetaModel.Code}, portOrContext?: ${MetaModel.ConnectionPort} | ${MetaModel.WasmContext}, context?: ${MetaModel.ComponentModelContext} | undefined): Promise<${name}.Exports> | Promise<${MetaModel.ExportPromisify}<${name}.Exports>> {`);
+		code.increaseIndent();
+		code.push(`return ${MetaModel.bind}(_, service, code, portOrContext, context);`);
+		code.decreaseIndent();
+		code.push(`}`);
 
 		code.decreaseIndent();
 		code.push('}');
@@ -3384,7 +3396,7 @@ class ResourceEmitter extends InterfaceMemberEmitter {
 
 		code.push(`export type Statics = {`);
 		code.increaseIndent();
-		if (this.context.options.worker && this.conztructor !== undefined) {
+		if (this.conztructor !== undefined) {
 			this.conztructor.emitStaticConstructorDeclaration(code);
 		}
 		for (const method of this.statics) {
