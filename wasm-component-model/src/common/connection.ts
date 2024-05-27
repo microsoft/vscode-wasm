@@ -119,7 +119,7 @@ export abstract class Connection {
 		}
 	}
 
-	protected static storeResult(buffer: SharedArrayBuffer,result: WasmType | void | undefined): void {
+	protected static storeResult(buffer: SharedArrayBuffer, result: WasmType | void | undefined): void {
 		if (result === undefined) {
 			return;
 		}
