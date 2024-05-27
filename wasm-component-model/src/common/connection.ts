@@ -5,7 +5,7 @@
 /// <reference path="../../typings/webAssemblyCommon.d.ts" />
 import * as uuid from 'uuid';
 
-import { $exports, $imports, Alignment, ComponentModelTrap, Memory, MemoryRange, ReadonlyMemoryRange, WasmContext, type MainConnection, type Options, type WasmType, type WorkerConnection, type WorldType, type ptr } from './componentModel';
+import { $exports, $imports, Alignment, ComponentModelTrap, Memory, MemoryRange, ReadonlyMemoryRange, WasmContext, type Code, type MainConnection, type Options, type WasmType, type WorkerConnection, type WorldType, type ptr } from './componentModel';
 import RAL from './ral';
 
 class ConnectionMemory implements Memory {
@@ -309,7 +309,16 @@ export abstract class BaseMainConnection extends Connection implements MainConne
 		return this.memory;
 	}
 
-	public async initializeWorker(module: WebAssembly_.Module, memory: WebAssembly_.Memory | undefined, options: Options): Promise<void> {
+	public async initialize(code: Code, options: Options): Promise<void> {
+		type literal = { module: WebAssembly_.Module; memory?: WebAssembly_.Memory };
+		let module: WebAssembly_.Module;
+		let memory: WebAssembly_.Memory | undefined = undefined;
+		if ((code as literal).module !== undefined) {
+			module = (code as literal).module;
+			memory = (code as literal).memory;
+		} else {
+			module = code;
+		}
 		return new Promise((resolve, reject) => {
 			const message: Connection.InitializeWorker = {
 				method: 'initializeWorker',

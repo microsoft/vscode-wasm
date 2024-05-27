@@ -13,20 +13,8 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
 	const module = await WebAssembly.compile(bits);
 
 	const worker = new Worker(vscode.Uri.joinPath(context.extensionUri, './out/worker.js').fsPath);
-	const api = await calculator._.main.bind({}, context as any, worker, module);
-	const result = await api.calc(Types.Operation.Add({ left: 1, right: 2 }));
-
-
-
-	// const wasmContext: WasmContext.Default = new WasmContext.Default();
-	// const instance = await WebAssembly.instantiate(module, {});
-	// wasmContext.initialize(new Memory.Default(instance.exports));
-	// const api = calculator._.exports.bind(instance.exports as calculator._.Exports, wasmContext);
-
-	vscode.commands.registerCommand('testbed-component-model.run', () => {
-		console.log(`Add ${api.calc(Types.Operation.Add({ left: 1, right: 2}))}`);
-		console.log(`Sub ${api.calc(Types.Operation.Sub({ left: 10, right: 8 }))}`);
-		console.log(`Mul ${api.calc(Types.Operation.Mul({ left: 3, right: 7 }))}`);
-		console.log(`Div ${api.calc(Types.Operation.Div({ left: 10, right: 2 }))}`);
+	const api = await calculator._.main.bind({}, context as any, worker, module, { encoding: 'utf-8' });
+	vscode.commands.registerCommand('testbed-component-model.run', async () => {
+		console.log(`Add ${await api.calc(Types.Operation.Add({ left: 1, right: 2 }))}`);
 	});
 }

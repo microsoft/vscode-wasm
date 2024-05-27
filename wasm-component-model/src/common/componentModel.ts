@@ -3080,7 +3080,7 @@ export interface WorkerConnection {
 
 export type Code = WebAssembly_.Module | { module: WebAssembly_.Module; memory?: WebAssembly_.Memory };
 export interface MainConnection {
-	initialize(code: Code): Promise<void>;
+	initialize(code: Code, options: Options): Promise<void>;
 	dispose(): void;
 	getMemory(): Memory;
 	on(id: string, callback: (params: WasmType[]) => WasmType | void | Promise<WasmType | void>): void;
@@ -4331,6 +4331,7 @@ namespace clazz {
 	}
 
 	interface AnyPromiseProxyClass {
+		new (handleTag: symbol, handle: ResourceHandle<any>, rep: ResourceRepresentation): any;
 		$new(...args: JType[]): any;
 	}
 	export function createPromise(connection: MainConnection, qualifier: string, resource: ResourceType, context: ComponentModelContext): AnyPromiseProxyClass {
@@ -4377,9 +4378,9 @@ namespace clazz {
 }
 
 export namespace $main {
-	export async function bind2(word: WorldType, service: any, context: ComponentModelContext, port: RAL.ConnectionPort, code: Code): Promise<any> {
+	export async function bind(word: WorldType, service: any, context: ComponentModelContext, port: RAL.ConnectionPort, code: Code, options: Options): Promise<any> {
 		const connection = RAL().Connection.createMain(port);
-		await connection.initialize(code);
+		await connection.initialize(code, options);
 
 		bindService(connection, word, service, context);
 		return bindApi(connection, word, context);
@@ -4416,7 +4417,7 @@ export namespace $main {
 		}
 	}
 
-	function doBindService(connection: MainConnection, qualifier: string, functions: Map<string, FunctionType> | undefined, resources: Map<string, ResourceType> | undefined, service: any, context: ComponentModelContext): Exports {
+	function doBindService(connection: MainConnection, qualifier: string, functions: Map<string, FunctionType> | undefined, resources: Map<string, ResourceType> | undefined, service: any, context: ComponentModelContext): void {
 		if (functions !== undefined) {
 			for (const [funcName, func] of functions) {
 				connection.on(`${qualifier}/${func.witName}`, (params: WasmType[]) => {
@@ -4452,6 +4453,44 @@ export namespace $main {
 	}
 
 	function bindApi(connection: MainConnection, world: WorldType, context: ComponentModelContext): any {
+		const packageName = world.id.substring(0, world.id.indexOf('/'));
+		const result = Object.create(null);
+		if (world.exports !== undefined) {
+			if (world.exports.functions !== undefined) {
+				Object.assign(result, doBindApi(connection, packageName, world.exports.functions, undefined, context));
+			}
+			if (world.exports.interfaces !== undefined) {
+				for (const [name, iface] of world.exports.interfaces) {
+					const propName = `${name[0].toLowerCase()}${name.substring(1)}`;
+					result[propName] = doBindApi(connection, packageName, iface.functions, iface.resources, context);
+				}
+			}
+		}
+		return result;
+	}
 
+	function doBindApi(connection: MainConnection, qualifier: string, functions: Map<string, FunctionType> | undefined, resources: Map<string, ResourceType> | undefined, context: ComponentModelContext): any {
+		const result = Object.create(null);
+		if (functions !== undefined) {
+			for (const [name, func] of functions) {
+				result[name] = (...params: JType[]) => {
+					return func.callWorker(connection, qualifier, params, context);
+				};
+			}
+		}
+		if (resources !== undefined) {
+			for (const [name, resource] of resources) {
+				const resourceManager = getResourceManager(resource, undefined, context);
+				const cl =  clazz.createPromise(connection, qualifier, resource, context);
+				resourceManager.setProxyInfo(cl, (self: number) => {
+					connection.call(`${qualifier}/[dtor]${resource.witName}`, [self]).
+						catch(() => {
+							RAL().console.error(`Failed to call destructor for ${resource.witName}`);
+						});
+				});
+				result[name] = cl;
+			}
+		}
+		return result;
 	}
 }
