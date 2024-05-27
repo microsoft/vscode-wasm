@@ -14,7 +14,27 @@ interface types {
 		div(operands)
 	}
 }
+
+interface reverse-notation {
+
+	enum operation {
+		add,
+		sub,
+		mul,
+		div
+	}
+
+	resource engine {
+		constructor();
+		push-operand: func(operand: u32);
+		push-operation: func(operation: operation);
+		execute: func() -> u32;
+	}
+}
 world calculator {
 	use types.{ operation };
+	import log: func(msg: string);
+
+	export reverse-notation;
 	export calc: func(o: operation) -> u32;
 }

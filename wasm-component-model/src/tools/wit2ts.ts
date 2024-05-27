@@ -2409,9 +2409,9 @@ class WorldEmitter extends Emitter {
 			code.push(`};`);
 		}
 
-		code.push(`export function bind(service: ${name}.Imports, code: ${MetaModel.Code}, context?: ${MetaModel.WasmContext}): Promise<${name}.Exports>;`);
+		code.push(`export function bind(service: ${name}.Imports, code: ${MetaModel.Code}, context?: ${MetaModel.ComponentModelContext}): Promise<${name}.Exports>;`);
 		code.push(`export function bind(service: ${MetaModel.ImportPromisify}<${name}.Imports>, code: ${MetaModel.Code}, port: ${MetaModel.ConnectionPort}, context?: ${MetaModel.ComponentModelContext}): Promise<${MetaModel.ExportPromisify}<${name}.Exports>>;`);
-		code.push(`export function bind(service: ${name}.Imports | ${MetaModel.ImportPromisify}<${name}.Imports>, code: ${MetaModel.Code}, portOrContext?: ${MetaModel.ConnectionPort} | ${MetaModel.WasmContext}, context?: ${MetaModel.ComponentModelContext} | undefined): Promise<${name}.Exports> | Promise<${MetaModel.ExportPromisify}<${name}.Exports>> {`);
+		code.push(`export function bind(service: ${name}.Imports | ${MetaModel.ImportPromisify}<${name}.Imports>, code: ${MetaModel.Code}, portOrContext?: ${MetaModel.ConnectionPort} | ${MetaModel.ComponentModelContext}, context?: ${MetaModel.ComponentModelContext} | undefined): Promise<${name}.Exports> | Promise<${MetaModel.ExportPromisify}<${name}.Exports>> {`);
 		code.increaseIndent();
 		code.push(`return ${MetaModel.bind}(_, service, code, portOrContext, context);`);
 		code.decreaseIndent();
