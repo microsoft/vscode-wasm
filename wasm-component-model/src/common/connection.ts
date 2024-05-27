@@ -248,6 +248,9 @@ export abstract class BaseWorkerConnection extends Connection implements WorkerC
 		if (message.method === 'initializeWorker') {
 			const wasmContext = new WasmContext.Default(message.options);
 			const imports = $imports.worker.create(this, this.world, wasmContext);
+			if (message.memory !== undefined) {
+				(imports as any).env.memory = message.memory;
+			}
 			RAL().WebAssembly.instantiate(message.module, imports).then((instance) => {
 				wasmContext.initialize(new Memory.Default(instance.exports));
 				$exports.worker.bind(this, this.world, instance.exports as any, wasmContext);

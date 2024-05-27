@@ -4166,6 +4166,26 @@ export namespace $imports {
 					}
 				}
 			}
+			if (world.exports !== undefined) {
+				if (world.exports.interfaces !== undefined) {
+					for (const iface of world.exports.interfaces.values()) {
+						if (iface.resources === undefined) {
+							continue;
+						}
+						for (const resource of iface.resources.values()) {
+							const exports = Object.create(null);
+							const qualifier = `[export]${packageName}/${iface.witName}`;
+							const newName = `[resource-new]${resource.witName}`;
+							exports[newName] = (rep: u32) => connection.call(`${qualifier}/${newName}`, [rep]);
+							const repName = `[resource-rep]${resource.witName}`;
+							exports[repName] = (handle: u32) => connection.call(`${qualifier}/${repName}`, [handle]);
+							const dropName = `[resource-drop]${resource.witName}`;
+							exports[dropName] = (handle: u32) => connection.call(`${qualifier}/${dropName}`, [handle]);
+							result[`[export]${packageName}/${iface.witName}`] = exports;
+						}
+					}
+				}
+			}
 			return result as unknown as T;
 		}
 
@@ -4420,7 +4440,11 @@ export namespace $main {
 		} else {
 			module = code;
 		}
-		const instance = await RAL().WebAssembly.instantiate(module, $imports.create(world, service, wasmContext));
+		const imports = $imports.create(world, service, wasmContext);
+		if (memory !== undefined) {
+			(imports as any).env.memory = memory;
+		}
+		const instance = await RAL().WebAssembly.instantiate(module, imports);
 		wasmContext.initialize(new Memory.Default(instance.exports));
 		return $exports.bind(world, instance.exports as Record<string, ParamWasmFunction>, wasmContext);
 	}
