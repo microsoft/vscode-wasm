@@ -4,12 +4,11 @@
  * ------------------------------------------------------------------------------------------ */
 /// <reference path="../../typings/webAssemblyNode.d.ts" />
 import { TextDecoder } from 'util';
-import RAL from '../common/ral';
-
 import { Worker, parentPort } from 'worker_threads';
+
+import type { MainConnection, WorkerConnection, WorldType } from '../common/componentModel';
 import type { Disposable } from '../common/disposable';
-import * as connection from './connection';
-import type { MainConnection, WorkerConnection, WorldType } from './main';
+import RAL from '../common/ral';
 
 interface RIL extends RAL {
 }
@@ -45,19 +44,21 @@ const _ril: RIL = Object.freeze<RIL>({
 		}
 	}),
 	Connection: Object.freeze({
-		createWorker(port: unknown, world: WorldType, timeout?: number): WorkerConnection {
+		async createWorker(port: unknown, world: WorldType, timeout?: number): Promise<WorkerConnection> {
 			if (port === undefined) {
 				port = parentPort;
 			}
 			if (!(port instanceof MessagePort)) {
 				throw new Error(`Expected MessagePort`);
 			}
+			const connection = await import('./connection.js');
 			return new connection.WorkerConnection(port, world, timeout);
 		},
-		createMain(port: unknown): MainConnection {
+		async createMain(port: unknown): Promise<MainConnection> {
 			if (!(port instanceof MessagePort) && !(port instanceof Worker)) {
 				throw new Error(`Expected MessagePort or Worker`);
 			}
+			const connection = await import('./connection.js');
 			return new connection.MainConnection(port);
 		}
 	}),

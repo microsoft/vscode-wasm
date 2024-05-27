@@ -55,7 +55,7 @@ const _ril: RIL = Object.freeze<RIL>({
 		},
 	}),
 	Connection: Object.freeze({
-		createWorker(port: unknown, world: WorldType, timeout?: number): WorkerConnection {
+		async createWorker(port: unknown, world: WorldType, timeout?: number): Promise<WorkerConnection> {
 			if (port === undefined) {
 				port = self;
 			}
@@ -64,7 +64,7 @@ const _ril: RIL = Object.freeze<RIL>({
 			}
 			return new connection.WorkerConnection(port, world, timeout);
 		},
-		createMain(port: unknown): MainConnection {
+		async createMain(port: unknown): Promise<MainConnection> {
 			if (!(port instanceof MessagePort) && !(port instanceof Worker)) {
 				throw new Error(`Expected MessagePort or Worker`);
 			}

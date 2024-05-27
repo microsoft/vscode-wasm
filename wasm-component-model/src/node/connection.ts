@@ -4,8 +4,8 @@
  * ------------------------------------------------------------------------------------------ */
 import { MessagePort, Worker, type TransferListItem } from 'worker_threads';
 
+import type { WorldType } from '../common/componentModel';
 import { BaseMainConnection, BaseWorkerConnection, Connection } from '../common/connection';
-import type { WorldType } from './main';
 
 export class MainConnection extends BaseMainConnection {
 

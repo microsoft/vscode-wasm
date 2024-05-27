@@ -6,5 +6,9 @@
 import { Connection } from '@vscode/wasm-component-model';
 import { calculator } from './calculator';
 
-const connection = Connection.createWorker(calculator._);
-connection.listen()
+async function main(): Promise<void> {
+	const connection = await Connection.createWorker(calculator._);
+	connection.listen()
+};
+
+main().catch(console.error);

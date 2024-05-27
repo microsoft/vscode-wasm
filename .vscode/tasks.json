@@ -62,6 +62,20 @@
 			]
 		},
 		{
+			"label": "Build Component Model Async",
+			"type": "npm",
+			"script": "build",
+			"path": "testbeds/component-model-async",
+			"group": "build",
+			"presentation": {
+				"panel": "dedicated",
+				"reveal": "never"
+			},
+			"problemMatcher": [
+				"$tsc"
+			]
+		},
+		{
 			"label": "Build Component Model Performance",
 			"type": "npm",
 			"script": "build",

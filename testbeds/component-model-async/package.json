@@ -1,5 +1,5 @@
 {
-	"name": "testbed-component-model",
+	"name": "testbed-component-model-async",
 	"private": "true",
 	"publisher": "ms-vscode",
 	"version": "0.0.1",
@@ -16,7 +16,7 @@
 	"contributes": {
 		"commands": [
 			{
-				"command": "testbed-component-model.run",
+				"command": "testbed-component-model-async.run",
 				"category": "wasm",
 				"title": "Run Calc Service"
 			}

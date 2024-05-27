@@ -4378,12 +4378,13 @@ namespace clazz {
 }
 
 export namespace $main {
-	export async function bind(word: WorldType, service: any, context: ComponentModelContext, port: RAL.ConnectionPort, code: Code, options: Options): Promise<any> {
-		const connection = RAL().Connection.createMain(port);
+	export async function bind(world: WorldType, service: any, context: ComponentModelContext, port: RAL.ConnectionPort, code: Code, options: Options): Promise<any> {
+		const connection = await RAL().Connection.createMain(port);
+		connection.listen();
 		await connection.initialize(code, options);
 
-		bindService(connection, word, service, context);
-		return bindApi(connection, word, context);
+		bindService(connection, world, service, context);
+		return bindApi(connection, world, context);
 	}
 
 	function bindService(connection: MainConnection, world: WorldType, service: any, context: ComponentModelContext): void {

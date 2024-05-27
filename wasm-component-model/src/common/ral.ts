@@ -44,8 +44,8 @@ interface RAL {
 	};
 
 	readonly Connection: {
-		createMain(port: RAL.ConnectionPort): MainConnection;
-		createWorker(port: RAL.ConnectionPort | undefined, world: WorldType, timeout?: number): WorkerConnection;
+		createMain(port: RAL.ConnectionPort): Promise<MainConnection>;
+		createWorker(port: RAL.ConnectionPort | undefined, world: WorldType, timeout?: number): Promise<WorkerConnection>;
 	};
 
 	readonly Worker: {

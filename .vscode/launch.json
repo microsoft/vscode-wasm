@@ -40,7 +40,7 @@
 				"${workspaceRoot}/wasm-component-model/lib/**/*.js",
 			],
 			"sourceMaps": true,
-			"preLaunchTask": "Build Component Model VSCode"
+			"preLaunchTask": "Build Component Model Async"
 		},
 		{
 			"type": "extensionHost",

@@ -30,6 +30,7 @@ const node_modules = 'node_modules';
 	ln.softLink(path.join(root, 'wasm-component-model'), path.join(root, 'wasm-wasi-core', node_modules, '@vscode', 'wasm-component-model'));
 	ln.softLink(path.join(root, 'wasm-component-model'), path.join(root, 'wasm-kit', node_modules, '@vscode', 'wasm-component-model'));
 	ln.softLink(path.join(root, 'wasm-component-model'), path.join(root, 'testbeds', 'component-model', node_modules, '@vscode', 'wasm-component-model'));
+	ln.softLink(path.join(root, 'wasm-component-model'), path.join(root, 'testbeds', 'component-model-async', node_modules, '@vscode', 'wasm-component-model'));
 	ln.softLink(path.join(root, 'wasm-component-model'), path.join(root, 'testbeds', 'component-model-performance', node_modules, '@vscode', 'wasm-component-model'));
 	ln.softLink(path.join(root, 'wasm-component-model'), path.join(root, 'testbeds', 'component-model-vscode', node_modules, '@vscode', 'wasm-component-model'));
 	ln.softLink(path.join(root, 'wasm-component-model'), path.join(root, 'rust-api', node_modules, '@vscode', 'wasm-component-model'));

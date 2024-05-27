@@ -54,7 +54,7 @@ class ConnectionMemory implements Memory {
 
 export abstract class Connection {
 
-	public static createWorker(world: WorldType, port?: RAL.ConnectionPort, timeout?: number): WorkerConnection {
+	public static createWorker(world: WorldType, port?: RAL.ConnectionPort, timeout?: number): Promise<WorkerConnection> {
 		return RAL().Connection.createWorker(port, world, timeout);
 	}
 
@@ -332,9 +332,11 @@ export abstract class BaseMainConnection extends Connection implements MainConne
 	}
 
 	public call(name: string, params: ReadonlyArray<WasmType>): Promise<WasmType | void> {
-		return new Promise((resolve, reject) => {
+		const result = new Promise<WasmType | void>((resolve, reject) => {
 			this.callQueue.push({ resolve, reject, name: name, params });
 		});
+		this.triggerNextCall();
+		return result;
 	}
 
 	private triggerNextCall(): void {
