@@ -3089,7 +3089,7 @@ export type WasmFunction = (...params: WasmType[]) => WasmType | void;
 export interface WorkerConnection {
 	dispose(): void;
 	getMemory(): Memory;
-	on(id: string, callback: (params: WasmType[]) => WasmType | void): void;
+	on(id: string, callback: (memory: Memory, params: WasmType[]) => WasmType | void): void;
 	prepareCall(): void;
 	call(name: string, params: ReadonlyArray<WasmType>): WasmType | void;
 	listen(): void;
@@ -3100,8 +3100,7 @@ export interface MainConnection {
 	initialize(code: Code, options: Options): Promise<void>;
 	dispose(): void;
 	getMemory(): Memory;
-	on(id: string, callback: (params: WasmType[]) => WasmType | void | Promise<WasmType | void>): void;
-	prepareCall(): void;
+	on(id: string, callback: (memory: Memory, params: WasmType[]) => WasmType | void | Promise<WasmType | void>): void;
 	call(name: string, params: ReadonlyArray<WasmType>): Promise<WasmType | void>;
 	listen(): void;
 }
@@ -3408,10 +3407,10 @@ export class FunctionType<_T extends Function = Function> extends Callable  {
 		return this.lowerReturnValue(result, context.getMemory(), context, out);
 	}
 
-	public async callServiceAsync(connection: MainConnection, func: PromiseJFunction, params: WasmType[], context: ComponentModelContext): Promise<WasmType | void> {
-		const [jParams, out] = this.getParamValuesForHostCall(params, connection.getMemory(), context);
+	public async callServiceAsync(memory: Memory, func: PromiseJFunction, params: WasmType[], context: ComponentModelContext): Promise<WasmType | void> {
+		const [jParams, out] = this.getParamValuesForHostCall(params, memory, context);
 		const result: JType = await func(...jParams);
-		return this.lowerReturnValue(result, connection.getMemory(), context, out);
+		return this.lowerReturnValue(result, memory, context, out);
 	}
 }
 
@@ -3433,13 +3432,12 @@ export class ConstructorType<_T extends Function = Function> extends Callable {
 		return obj.$handle();
 	}
 
-	public async callServiceAsync(connection: MainConnection, clazz: PromiseGenericClass, params: WasmType[], context: ComponentModelContext): Promise<WasmType | void> {
+	public async callServiceAsync(memory: Memory, clazz: PromiseGenericClass, params: WasmType[], context: ComponentModelContext): Promise<WasmType | void> {
 		// We currently only support 'lower' mode for results > MAX_FLAT_RESULTS.
 		const returnFlatTypes = this.returnType === undefined ? 0 : this.returnType.flatTypes.length;
 		if (returnFlatTypes !== 1) {
 			throw new ComponentModelTrap(`Expected exactly one return type, but got ${returnFlatTypes}.`);
 		}
-		const memory  = connection.getMemory();
 		const jParams = this.liftParamValues(params, memory, context);
 		const obj: Resource = await clazz.$new(...jParams);
 		return obj.$handle();
@@ -3478,7 +3476,7 @@ export class DestructorType<_T extends Function = Function> extends Callable {
 		resourceManager.removeResource(handle);
 	}
 
-	public async callServiceAsync(_connection: MainConnection, params: WasmType[], resourceManager: ResourceManager): Promise<void> {
+	public async callServiceAsync(_memory: Memory, params: WasmType[], resourceManager: ResourceManager): Promise<void> {
 		const handle = params[0];
 		if (typeof handle === 'bigint' || !$u32.valid(handle)) {
 			throw new ComponentModelTrap(`Object handle must be a number (u32), but got ${handle}.`);
@@ -3501,10 +3499,10 @@ export class StaticMethodType<_T extends Function = Function> extends Callable {
 		return this.lowerReturnValue(result, context.getMemory(), context, out);
 	}
 
-	public async callServiceAsync(connection: MainConnection, func: PromiseJFunction, params: WasmType[], context: ComponentModelContext): Promise<WasmType | void> {
-		const [jParams, out] = this.getParamValuesForHostCall(params, connection.getMemory(), context);
+	public async callServiceAsync(memory: Memory, func: PromiseJFunction, params: WasmType[], context: ComponentModelContext): Promise<WasmType | void> {
+		const [jParams, out] = this.getParamValuesForHostCall(params, memory, context);
 		const result: JType = await func(...jParams);
-		return this.lowerReturnValue(result, connection.getMemory(), context, out);
+		return this.lowerReturnValue(result, memory, context, out);
 	}
 }
 
@@ -3530,7 +3528,7 @@ export class MethodType<_T extends Function = Function> extends Callable {
 		return this.lowerReturnValue(result, memory, context, out);
 	}
 
-	public async callServiceAsync(connection: MainConnection, methodName: string, params: WasmType[], resourceManager: ResourceManager, context: ComponentModelContext): Promise<WasmType | void> {
+	public async callServiceAsync(memory: Memory, methodName: string, params: WasmType[], resourceManager: ResourceManager, context: ComponentModelContext): Promise<WasmType | void> {
 		if (params.length === 0) {
 			throw new ComponentModelTrap(`Method calls must have at least one parameter (the object pointer).`);
 		}
@@ -3539,9 +3537,8 @@ export class MethodType<_T extends Function = Function> extends Callable {
 		if (typeof handle !== 'number') {
 			throw new ComponentModelTrap(`Object handle must be a number (u32), but got ${handle}.`);
 		}
-		const [jParams, out] = this.getParamValuesForHostCall(params, connection.getMemory(), context);
+		const [jParams, out] = this.getParamValuesForHostCall(params, memory, context);
 		const resource = resourceManager.getResource(handle);
-		const memory  = connection.getMemory();
 		const result: JType = await (resource as any)[methodName](...jParams);
 		return this.lowerReturnValue(result, memory, context, out);
 	}
@@ -4480,9 +4477,9 @@ export namespace $main {
 					const qualifier = `[export]${packageName}/${iface.witName}`;
 					for (const resource of iface.resources.values()) {
 						const manager = getResourceManager(resource, undefined, context);
-						connection.on(`${qualifier}/[resource-new]${resource.witName}`, (params: WasmType[]) => manager.newHandle(params[0] as u32));
-						connection.on(`${qualifier}/[resource-rep]${resource.witName}`, (params: WasmType[]) => manager.getRepresentation(params[0] as u32));
-						connection.on(`${qualifier}/[resource-drop]${resource.witName}`, (params: WasmType[]) => manager.dropHandle(params[0] as u32));
+						connection.on(`${qualifier}/[resource-new]${resource.witName}`, (_memory: Memory, params: WasmType[]) => manager.newHandle(params[0] as u32));
+						connection.on(`${qualifier}/[resource-rep]${resource.witName}`, (_memory: Memory, params: WasmType[]) => manager.getRepresentation(params[0] as u32));
+						connection.on(`${qualifier}/[resource-drop]${resource.witName}`, (_memory: Memory, params: WasmType[]) => manager.dropHandle(params[0] as u32));
 					}
 				}
 			}
@@ -4492,8 +4489,8 @@ export namespace $main {
 	function doBindService(connection: MainConnection, qualifier: string, functions: Map<string, FunctionType> | undefined, resources: Map<string, ResourceType> | undefined, service: any, context: ComponentModelContext): void {
 		if (functions !== undefined) {
 			for (const [funcName, func] of functions) {
-				connection.on(`${qualifier}/${func.witName}`, (params: WasmType[]) => {
-					return func.callServiceAsync(connection, service[funcName], params, context);
+				connection.on(`${qualifier}/${func.witName}`, (memory: Memory, params: WasmType[]) => {
+					return func.callServiceAsync(memory, service[funcName], params, context);
 				});
 			}
 		}
@@ -4503,20 +4500,20 @@ export namespace $main {
 				const resourceManager: ResourceManager = getResourceManager(resource, clazz, context);
 				for (const [callableName, callable] of resource.callables) {
 					if (callable instanceof ConstructorType) {
-						connection.on(`${qualifier}/${callable.witName}`, (params: WasmType[]) => {
-							return callable.callServiceAsync(connection, clazz, params, context);
+						connection.on(`${qualifier}/${callable.witName}`, (memory: Memory, params: WasmType[]) => {
+							return callable.callServiceAsync(memory, clazz, params, context);
 						});
 					} else if (callable instanceof StaticMethodType) {
-						connection.on(`${qualifier}/${callable.witName}`, (params: WasmType[]) => {
-							return callable.callServiceAsync(connection, (service[resourceName] as PromiseGenericClass)[callableName], params, context);
+						connection.on(`${qualifier}/${callable.witName}`, (memory: Memory, params: WasmType[]) => {
+							return callable.callServiceAsync(memory, (service[resourceName] as PromiseGenericClass)[callableName], params, context);
 						});
 					} else if (callable instanceof MethodType) {
-						connection.on(`${qualifier}/${callable.witName}`, (params: WasmType[]) => {
-							return callable.callServiceAsync(connection, callableName, params, resourceManager, context);
+						connection.on(`${qualifier}/${callable.witName}`, (memory: Memory, params: WasmType[]) => {
+							return callable.callServiceAsync(memory, callableName, params, resourceManager, context);
 						});
 					} else if (callable instanceof DestructorType) {
-						connection.on(`${qualifier}/${callable.witName}`, (params: WasmType[]) => {
-							return callable.callServiceAsync(connection, params, resourceManager);
+						connection.on(`${qualifier}/${callable.witName}`, (memory: Memory, params: WasmType[]) => {
+							return callable.callServiceAsync(memory, params, resourceManager);
 						});
 					}
 				}

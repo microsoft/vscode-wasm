@@ -3,8 +3,8 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 /* eslint-disable @typescript-eslint/ban-types */
+import type { i32, u32 } from '@vscode/wasm-component-model';
 import * as $wcm from '@vscode/wasm-component-model';
-import type { u32, i32 } from '@vscode/wasm-component-model';
 
 export namespace Types {
 	export type Operands = {
@@ -92,7 +92,7 @@ export namespace ReverseNotation {
 			execute(): u32;
 		}
 		export type Statics = {
-			$new(): Interface;
+			$new(): $wcm.$exports.Promisify<Interface>;
 		};
 		export type Class = Statics & {
 			new(): Interface;

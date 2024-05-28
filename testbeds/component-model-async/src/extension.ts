@@ -5,7 +5,7 @@
 import * as vscode from 'vscode';
 import { Worker } from 'worker_threads';
 
-import { Types, calculator } from './calculator';
+import { ReverseNotation, Types, calculator } from './calculator';
 
 export async function activate(context: vscode.ExtensionContext): Promise<void> {
 	// The channel for printing the result.
@@ -35,15 +35,13 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
 		channel.appendLine(`Mul ${await api.calc(Types.Operation.Mul({ left: 3, right: 7 }))}`);
 		channel.appendLine(`Div ${await api.calc(Types.Operation.Div({ left: 10, right: 2 }))}`);
 
-		// const calculator = await api.reverseNotation.Engine.$new();
-		// calculator.pushOperand(10);
-		// calculator.pushOperand(20);
-		// calculator.pushOperation(ReverseNotation.Operation.add);
-		// calculator.pushOperand(2);
-		// calculator.pushOperation(ReverseNotation.Operation.mul);
+		const calculator = await api.reverseNotation.Engine.$new();
+		await calculator.pushOperand(10);
+		await calculator.pushOperand(20);
+		await calculator.pushOperation(ReverseNotation.Operation.add);
 
-		// // Calculate the result
-		// const result = calculator.execute();
-		// channel.appendLine(`Result: ${result}`);
+		// Calculate the result
+		const result = await calculator.execute();
+		channel.appendLine(`Result: ${result}`);
 	});
 }
