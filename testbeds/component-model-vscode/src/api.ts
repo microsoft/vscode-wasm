@@ -361,10 +361,10 @@ export namespace api {
 				['Window', Window._]
 			]);
 			export function create(service: all.Imports, context: $wcm.WasmContext): Imports {
-				return $wcm.Imports.create<Imports>(_, service, context);
+				return $wcm.$imports.create<Imports>(_, service, context);
 			}
 			export function loop(service: all.Imports, context: $wcm.WasmContext): all.Imports {
-				return $wcm.Imports.loop(_, service, context);
+				return $wcm.$imports.loop(_, service, context);
 			}
 		}
 		export type Imports = {
@@ -372,12 +372,6 @@ export namespace api {
 			'host:api/workspace': api.Workspace._.imports.WasmInterface;
 			'host:api/commands': api.Commands._.imports.WasmInterface;
 			'host:api/window': api.Window._.imports.WasmInterface;
-		};
-		export type Exports = {
-			'activate': () => void;
-			'deactivate': () => void;
-			'host:api/callbacks#did-change-text-document': (event_TextDocumentChangeEvent_document: i32, event_TextDocumentChangeEvent_contentChanges_ptr: i32, event_TextDocumentChangeEvent_contentChanges_len: i32, event_TextDocumentChangeEvent_reason_case: i32, event_TextDocumentChangeEvent_reason_option_TextDocumentChangeReason: i32) => void;
-			'host:api/callbacks#execute-command': (command_ptr: i32, command_len: i32) => void;
 		};
 		export namespace exports {
 			export const functions: Map<string, $wcm.FunctionType> = new Map([
@@ -388,8 +382,19 @@ export namespace api {
 				['Callbacks', Callbacks._]
 			]);
 			export function bind(exports: Exports, context: $wcm.WasmContext): all.Exports {
-				return $wcm.Exports.bind<all.Exports>(_, exports, context);
+				return $wcm.$exports.bind<all.Exports>(_, exports, context);
 			}
+		}
+		export type Exports = {
+			'activate': () => void;
+			'deactivate': () => void;
+			'host:api/callbacks#did-change-text-document': (event_TextDocumentChangeEvent_document: i32, event_TextDocumentChangeEvent_contentChanges_ptr: i32, event_TextDocumentChangeEvent_contentChanges_len: i32, event_TextDocumentChangeEvent_reason_case: i32, event_TextDocumentChangeEvent_reason_option_TextDocumentChangeReason: i32) => void;
+			'host:api/callbacks#execute-command': (command_ptr: i32, command_len: i32) => void;
+		};
+		export function bind(service: all.Imports, code: $wcm.Code, context?: $wcm.ComponentModelContext): Promise<all.Exports>;
+		export function bind(service: $wcm.$imports.Promisify<all.Imports>, code: $wcm.Code, port: $wcm.RAL.ConnectionPort, context?: $wcm.ComponentModelContext): Promise<$wcm.$exports.Promisify<all.Exports>>;
+		export function bind(service: all.Imports | $wcm.$imports.Promisify<all.Imports>, code: $wcm.Code, portOrContext?: $wcm.RAL.ConnectionPort | $wcm.ComponentModelContext, context?: $wcm.ComponentModelContext | undefined): Promise<all.Exports> | Promise<$wcm.$exports.Promisify<all.Exports>> {
+			return $wcm.$main.bind(_, service, code, portOrContext, context);
 		}
 	}
 }

@@ -2,14 +2,21 @@
  * Copyright (c) Microsoft Corporation. All rights reserved.
  * Licensed under the MIT License. See License.txt in the project root for license information.
  * ------------------------------------------------------------------------------------------ */
-/// <reference path="../../typings/webAssemblyCommon.d.ts" />
 import RAL from './ral';
 
 import * as uuid from 'uuid';
 
 import {
-	Memory, ReadonlyMemoryRange, Alignment, ComponentModelContext, ResourceManagers, ptr, u32, size, JType as _JType,
-	MemoryError, MemoryRange, type offset, ComponentModelTrap, type BaseMemoryRange, type ResourceHandle
+	Alignment, ComponentModelContext,
+	ComponentModelTrap,
+	Memory,
+	MemoryError, MemoryRange,
+	ReadonlyMemoryRange,
+	ResourceManagers, ptr,
+	size,
+	u32,
+	type BaseMemoryRange, type ResourceHandle,
+	type offset
 } from '@vscode/wasm-component-model';
 
 export interface SharedMemory extends Memory {

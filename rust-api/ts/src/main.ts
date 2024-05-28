@@ -4,8 +4,7 @@
  *--------------------------------------------------------------------------------------------*/
 import * as vscode from 'vscode';
 
-import { WasmContext, ResourceManagers, Memory, MemoryError, type ResourceHandle, Resource, ResourceManager } from '@vscode/wasm-component-model';
-import { RAL } from '@vscode/wasm-kit';
+import { Memory, MemoryError, RAL, Resource, ResourceManager, ResourceManagers, WasmContext, type ResourceHandle } from '@vscode/wasm-component-model';
 
 import { api } from './api';
 import Types = api.Types;

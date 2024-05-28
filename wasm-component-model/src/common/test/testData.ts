@@ -408,12 +408,6 @@ export namespace testData._ {
 		'vscode:test-data/types': Types._.imports.WasmInterface;
 		'[export]vscode:test-data/text': Text._.exports.imports.WasmInterface;
 	};
-	export type Exports = {
-		'bar': () => i32;
-		'vscode:test-data/text#[constructor]position': (line: i32, character: i32) => i32;
-		'vscode:test-data/text#[method]position.line': (self: i32) => i32;
-		'vscode:test-data/text#[method]position.character': (self: i32) => i32;
-	};
 	export namespace exports {
 		export const functions: Map<string, $wcm.FunctionType> = new Map([
 			['bar', $.exports.bar]
@@ -424,5 +418,16 @@ export namespace testData._ {
 		export function bind(exports: Exports, context: $wcm.WasmContext): testData.Exports {
 			return $wcm.$exports.bind<testData.Exports>(_, exports, context);
 		}
+	}
+	export type Exports = {
+		'bar': () => i32;
+		'vscode:test-data/text#[constructor]position': (line: i32, character: i32) => i32;
+		'vscode:test-data/text#[method]position.line': (self: i32) => i32;
+		'vscode:test-data/text#[method]position.character': (self: i32) => i32;
+	};
+	export function bind(service: testData.Imports, code: $wcm.Code, context?: $wcm.ComponentModelContext): Promise<testData.Exports>;
+	export function bind(service: $wcm.$imports.Promisify<testData.Imports>, code: $wcm.Code, port: $wcm.RAL.ConnectionPort, context?: $wcm.ComponentModelContext): Promise<$wcm.$exports.Promisify<testData.Exports>>;
+	export function bind(service: testData.Imports | $wcm.$imports.Promisify<testData.Imports>, code: $wcm.Code, portOrContext?: $wcm.RAL.ConnectionPort | $wcm.ComponentModelContext, context?: $wcm.ComponentModelContext | undefined): Promise<testData.Exports> | Promise<$wcm.$exports.Promisify<testData.Exports>> {
+		return $wcm.$main.bind(_, service, code, portOrContext, context);
 	}
 }

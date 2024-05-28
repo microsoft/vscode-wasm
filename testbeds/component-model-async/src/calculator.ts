@@ -4,7 +4,7 @@
  *--------------------------------------------------------------------------------------------*/
 /* eslint-disable @typescript-eslint/ban-types */
 import * as $wcm from '@vscode/wasm-component-model';
-import type { u32, own, i32 } from '@vscode/wasm-component-model';
+import type { u32, i32 } from '@vscode/wasm-component-model';
 
 export namespace Types {
 	export type Operands = {
@@ -241,9 +241,9 @@ export namespace calculator._ {
 		'vscode:example/reverse-notation#[method]engine.push-operation': (self: i32, operation_Operation: i32) => void;
 		'vscode:example/reverse-notation#[method]engine.execute': (self: i32) => i32;
 	};
-	export function bind(service: calculator.Imports, code: $wcm.Code, context?: $wcm.WasmContext): Promise<calculator.Exports>;
+	export function bind(service: calculator.Imports, code: $wcm.Code, context?: $wcm.ComponentModelContext): Promise<calculator.Exports>;
 	export function bind(service: $wcm.$imports.Promisify<calculator.Imports>, code: $wcm.Code, port: $wcm.RAL.ConnectionPort, context?: $wcm.ComponentModelContext): Promise<$wcm.$exports.Promisify<calculator.Exports>>;
-	export function bind(service: calculator.Imports | $wcm.$imports.Promisify<calculator.Imports>, code: $wcm.Code, portOrContext?: $wcm.RAL.ConnectionPort | $wcm.WasmContext, context?: $wcm.ComponentModelContext | undefined): Promise<calculator.Exports> | Promise<$wcm.$exports.Promisify<calculator.Exports>> {
+	export function bind(service: calculator.Imports | $wcm.$imports.Promisify<calculator.Imports>, code: $wcm.Code, portOrContext?: $wcm.RAL.ConnectionPort | $wcm.ComponentModelContext, context?: $wcm.ComponentModelContext | undefined): Promise<calculator.Exports> | Promise<$wcm.$exports.Promisify<calculator.Exports>> {
 		return $wcm.$main.bind(_, service, code, portOrContext, context);
 	}
 }

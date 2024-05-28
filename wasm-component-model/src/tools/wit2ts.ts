@@ -3377,7 +3377,7 @@ class ResourceEmitter extends InterfaceMemberEmitter {
 
 	public emitNamespace(code: Code): void {
 		const type = this.resource;
-		const { nameProvider } = this.context;
+		const { nameProvider, options } = this.context;
 		const tsName = nameProvider.type.name(type);
 		const iName = `${tsName}.Interface`;
 		code.push(`export namespace ${tsName} {`);
@@ -3396,7 +3396,7 @@ class ResourceEmitter extends InterfaceMemberEmitter {
 
 		code.push(`export type Statics = {`);
 		code.increaseIndent();
-		if (this.conztructor !== undefined) {
+		if (this.conztructor !== undefined && options.worker) {
 			this.conztructor.emitStaticConstructorDeclaration(code);
 		}
 		for (const method of this.statics) {
@@ -3560,7 +3560,9 @@ namespace ResourceEmitter {
 		protected abstract getMetaModelInfo(): [string, string];
 		protected abstract getTypeQualifier(): string;
 
-		protected getSignatureParts(start: 0 | 1): [string[], string[], string] {
+		protected getSignatureParts(start: 0 | 1, omitReturn?: false): [string[], string[], string];
+		protected getSignatureParts(start: 0 | 1, omitReturn: true): [string[], string[], string];
+		protected getSignatureParts(start: 0 | 1, omitReturn: boolean = false): [string[], string[], string] {
 			const { nameProvider, printers } = this.context;
 			const params: string[] = [];
 			const paramNames: string[] = [];
@@ -3572,7 +3574,7 @@ namespace ResourceEmitter {
 				params.push(`${paramName}: ${paramType}`);
 			}
 			let returnType: string = 'void';
-			if (this.method.results !== null) {
+			if (this.method.results !== null && omitReturn === false) {
 				if (this.method.results.length === 1) {
 					returnType = printers.typeScript.printTypeReference(this.method.results[0].type, TypeUsage.function);
 				} else if (this.method.results.length > 1) {
@@ -3661,12 +3663,12 @@ namespace ResourceEmitter {
 		}
 
 		public emitConstructorDeclaration(code: Code): void {
-			const [params] = this.getSignatureParts(0);
+			const [params] = this.getSignatureParts(0, true);
 			code.push(`new(${params.join(', ')}): Interface;`);
 		}
 
 		public emitStaticConstructorDeclaration(code: Code): void {
-			const [params] = this.getSignatureParts(0);
+			const [params] = this.getSignatureParts(0, true);
 			code.push(`$new(${params.join(', ')}): Interface;`);
 		}
 	}

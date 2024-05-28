@@ -2,18 +2,18 @@
  * Copyright (c) Microsoft Corporation. All rights reserved.
  * Licensed under the MIT License. See License.txt in the project root for license information.
  * ------------------------------------------------------------------------------------------ */
-import { RAL as _RAL} from '@vscode/wasm-component-model';
+import { RAL as _RAL } from '@vscode/wasm-component-model';
 import RAL from '../common/ral';
 
 import type { URI } from 'vscode-uri';
 
-import { SharedMemory } from '../common/sharedObject';
-import * as malloc from '../common/malloc';
 import type * as commonConnection from '../common/connection';
+import * as malloc from '../common/malloc';
+import { SharedMemory } from '../common/sharedObject';
 import type { WorkerClient, WorkerClientBase } from '../common/workerClient';
 
 import { AnyConnection } from './connection';
-import { WorkerClient  as _WorkerClient } from './workerClient';
+import { WorkerClient as _WorkerClient } from './workerClient';
 
 interface RIL extends RAL {
 }
@@ -54,7 +54,7 @@ const _ril: RIL = Object.freeze<RIL>(Object.assign({}, _RAL(), {
 	WorkerClient<C>(base: new () => WorkerClientBase, workerLocation: URI, args?: string[]): (new () => WorkerClient & C) {
 		return _WorkerClient(base, workerLocation, args);
 	},
-	Connection: Object.freeze({
+	AnyConnection: Object.freeze({
 		create(port: any): commonConnection.AnyConnection {
 			if (!(port instanceof MessagePort) && !(port instanceof Worker) && !(port instanceof DedicatedWorkerGlobalScope)) {
 				throw new Error(`Expected MessagePort, Worker or DedicatedWorkerGlobalScope.`);

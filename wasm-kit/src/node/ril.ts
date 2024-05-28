@@ -5,18 +5,18 @@
 /// <reference path="../../typings/webAssemblyNode.d.ts" />
 import RAL from '../common/ral';
 
-import { MessagePort, MessageChannel, Worker, parentPort } from 'worker_threads';
+import { MessageChannel, MessagePort, Worker, parentPort } from 'worker_threads';
 
+import { RAL as _RAL } from '@vscode/wasm-component-model';
 import type { URI } from 'vscode-uri';
-import { RAL as _RAL} from '@vscode/wasm-component-model';
 
-import { SharedMemory } from '../common/sharedObject';
-import * as malloc  from '../common/malloc';
 import type * as commonConnection from '../common/connection';
+import * as malloc from '../common/malloc';
+import { SharedMemory } from '../common/sharedObject';
 import type { WorkerClient, WorkerClientBase } from '../common/workerClient';
 
 import { AnyConnection } from './connection';
-import { WorkerClient  as _WorkerClient } from './workerClient';
+import { WorkerClient as _WorkerClient } from './workerClient';
 
 interface RIL extends RAL {
 }
@@ -57,7 +57,7 @@ const _ril: RIL = Object.freeze<RIL>(Object.assign({}, _RAL(), {
 	WorkerClient<C>(base: new () => WorkerClientBase, workerLocation: URI, args?: string[]): (new () => WorkerClient & C) {
 		return _WorkerClient(base, workerLocation, args);
 	},
-	Connection: Object.freeze({
+	AnyConnection: Object.freeze({
 		create(port: any): commonConnection.AnyConnection {
 			if (!(port instanceof MessagePort) && !(port instanceof Worker)) {
 				throw new Error(`Expected MessagePort or Worker`);

@@ -95,24 +95,29 @@ export namespace test._ {
 			['Window', Window._]
 		]);
 		export function create(service: test.Imports, context: $wcm.WasmContext): Imports {
-			return $wcm.Imports.create<Imports>(_, service, context);
+			return $wcm.$imports.create<Imports>(_, service, context);
 		}
 		export function loop(service: test.Imports, context: $wcm.WasmContext): test.Imports {
-			return $wcm.Imports.loop(_, service, context);
+			return $wcm.$imports.loop(_, service, context);
 		}
 	}
 	export type Imports = {
 		'vscode:example/window': Window._.imports.WasmInterface;
-	};
-	export type Exports = {
-		'run': () => void;
 	};
 	export namespace exports {
 		export const functions: Map<string, $wcm.FunctionType> = new Map([
 			['run', $.exports.run]
 		]);
 		export function bind(exports: Exports, context: $wcm.WasmContext): test.Exports {
-			return $wcm.Exports.bind<test.Exports>(_, exports, context);
+			return $wcm.$exports.bind<test.Exports>(_, exports, context);
 		}
+	}
+	export type Exports = {
+		'run': () => void;
+	};
+	export function bind(service: test.Imports, code: $wcm.Code, context?: $wcm.ComponentModelContext): Promise<test.Exports>;
+	export function bind(service: $wcm.$imports.Promisify<test.Imports>, code: $wcm.Code, port: $wcm.RAL.ConnectionPort, context?: $wcm.ComponentModelContext): Promise<$wcm.$exports.Promisify<test.Exports>>;
+	export function bind(service: test.Imports | $wcm.$imports.Promisify<test.Imports>, code: $wcm.Code, portOrContext?: $wcm.RAL.ConnectionPort | $wcm.ComponentModelContext, context?: $wcm.ComponentModelContext | undefined): Promise<test.Exports> | Promise<$wcm.$exports.Promisify<test.Exports>> {
+		return $wcm.$main.bind(_, service, code, portOrContext, context);
 	}
 }
