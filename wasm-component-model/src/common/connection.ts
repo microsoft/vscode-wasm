@@ -5,7 +5,7 @@
 /// <reference path="../../typings/webAssemblyCommon.d.ts" />
 import * as uuid from 'uuid';
 
-import { $exports, $imports, Alignment, ComponentModelTrap, Memory, MemoryRange, ReadonlyMemoryRange, WasmContext, type Code, type MainConnection, type Options, type WasmType, type WorkerConnection, type WorldType } from './componentModel';
+import { $exports, $imports, Alignment, ComponentModelTrap, Memory, MemoryRange, ReadonlyMemoryRange, WasmContext, type Code, type JType, type MainConnection, type Options, type WasmType, type WorkerConnection, type WorldType } from './componentModel';
 import RAL from './ral';
 
 class ConnectionMemory implements Memory {
@@ -286,7 +286,8 @@ export abstract class BaseWorkerConnection extends Connection implements WorkerC
 				return;
 			}
 			try {
-				const result = handler(Connection.deserializeParams(message.params));
+				const memory: Memory = new ConnectionMemory(message.memory.buffer, message.memory.id);
+				const result = handler(memory, Connection.deserializeParams(message.params));
 				this.postMessage({ method: 'reportResult', name: message.name, result: Connection.serializeResult(result) });
 			} catch (error) {
 				this.postMessage({ method: 'reportResult', name: message.name, error: `Calling WASM function ${message.name} failed.` });
@@ -301,7 +302,8 @@ type CallInfo = {
 	resolve: (value: WasmType | undefined | void) => void;
 	reject: (error: any) => void;
 	name: string;
-	params: ReadonlyArray<WasmType>;
+	params: JType[];
+	wasmParams: (memory: Memory, params: JType[]) => WasmType[];
 };
 
 export abstract class BaseMainConnection extends Connection implements MainConnection {
@@ -350,9 +352,9 @@ export abstract class BaseMainConnection extends Connection implements MainConne
 		});
 	}
 
-	public call(name: string, params: ReadonlyArray<WasmType>): Promise<WasmType | void> {
+	public call(name: string, params: JType[], wasmParams: (memory: Memory, params: JType[]) => WasmType[]): Promise<WasmType | void> {
 		const result = new Promise<WasmType | void>((resolve, reject) => {
-			this.callQueue.push({ resolve, reject, name: name, params });
+			this.callQueue.push({ resolve, reject, name: name, params, wasmParams });
 		});
 		this.triggerNextCall();
 		return result;
@@ -370,7 +372,8 @@ export abstract class BaseMainConnection extends Connection implements MainConne
 		const message: Connection.WorkerCallMessage = {
 			method: 'callWorker',
 			name: this.currentCall.name,
-			params: Connection.serializeParams(this.currentCall.params),
+			params: Connection.serializeParams(this.currentCall.wasmParams(this.memory, this.currentCall.params)),
+			memory: { buffer: this.memory.buffer, id: this.memory.id }
 		};
 		this.postMessage(message);
 	}

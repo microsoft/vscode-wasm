@@ -3,7 +3,7 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { ComponentModelType, EnumType, ListType, RecordType, result, TupleType, VariantType, u32, u8, wstring, OptionType } from '../componentModel';
+import { ComponentModelType, EnumType, ListType, OptionType, RecordType, TupleType, VariantType, result, u32, u8, wstring } from '../componentModel';
 
 
 /****************************************************************************************
@@ -194,3 +194,14 @@ export enum TestEnum {
 	c = 'c'
 }
 export const TestEnumType: ComponentModelType<TestEnum> = new EnumType<TestEnum>(['a', 'b', 'c']);
+
+type X = {
+	foo(): void;
+};
+type XP = {
+	bar(): Promise<void>;
+};
+
+type Merged = X & XP;
+let x: Merged = {} as any;
+x.
