@@ -4216,7 +4216,7 @@ export type Exports = ParamServiceInterface | {};
 export namespace $exports {
 	type Distribute<T> = T extends any ? Promisify<T> : never;
 	export type Promisify<T> = {
-		[K in keyof T]: T[K] extends (...args: infer A) => infer R
+		[K in keyof T]-?: T[K] extends (...args: infer A) => infer R
 			? (...args: A) => Promise<R>
 			: T[K] extends object
 				? Distribute<T[K]>

@@ -6,7 +6,9 @@
 import * as uuid from 'uuid';
 
 import { $exports, $imports, Alignment, ComponentModelTrap, Memory, MemoryRange, ReadonlyMemoryRange, WasmContext, type Code, type JType, type MainConnection, type Options, type WasmType, type WorkerConnection, type WorldType } from './componentModel';
+import { CapturedPromise } from './promises';
 import RAL from './ral';
+import { Semaphore } from './semaphore';
 
 class ConnectionMemory implements Memory {
 
@@ -310,20 +312,23 @@ export abstract class BaseMainConnection extends Connection implements MainConne
 
 	private initializeCall: { resolve: () => void; reject: (error: any) => void } | undefined;
 	private readonly handlers: Map<string, (memory: Memory, params: WasmType[]) => WasmType | void | Promise<WasmType | void>>;
-	private readonly callQueue: CallInfo[];
-	private currentCall: CallInfo | undefined;
+	private readonly callQueue: Semaphore<JType>;
+	private currentCall: CapturedPromise<WasmType | void> | undefined;
 
 	constructor() {
 		super(new ConnectionMemory());
 		this.handlers = new Map();
-		this.callQueue = [];
+		this.callQueue = new Semaphore(1);
 		this.currentCall = undefined;
 	}
 
 	public dispose(): void {
 		this.handlers.clear();
-		this.callQueue.length = 0;
-		this.currentCall = undefined;
+		this.callQueue.dispose();
+	}
+
+	public callLocked(thunk: () => Promise<JType>) {
+		return this.callQueue.lock(thunk);
 	}
 
 	public getMemory(): Memory {
@@ -352,30 +357,19 @@ export abstract class BaseMainConnection extends Connection implements MainConne
 		});
 	}
 
-	public call(name: string, params: JType[], wasmParams: (memory: Memory, params: JType[]) => WasmType[]): Promise<WasmType | void> {
-		const result = new Promise<WasmType | void>((resolve, reject) => {
-			this.callQueue.push({ resolve, reject, name: name, params, wasmParams });
-		});
-		this.triggerNextCall();
-		return result;
-	}
-
-	private triggerNextCall(): void {
+	public call(name: string, params: WasmType[]): Promise<WasmType | void> {
 		if (this.currentCall !== undefined) {
-			throw new Error(`Current call in progress: ${this.currentCall.name}`);
+			throw new ComponentModelTrap('Call already in progress');
 		}
-		this.currentCall = this.callQueue.shift();
-		if (this.currentCall === undefined) {
-			return;
-		}
-		this.memory.reset();
+		this.currentCall = CapturedPromise.create();
 		const message: Connection.WorkerCallMessage = {
 			method: 'callWorker',
-			name: this.currentCall.name,
-			params: Connection.serializeParams(this.currentCall.wasmParams(this.memory, this.currentCall.params)),
+			name: name,
+			params: Connection.serializeParams(params),
 			memory: { buffer: this.memory.buffer, id: this.memory.id }
 		};
 		this.postMessage(message);
+		return this.currentCall.promise;
 	}
 
 	public on(id: string, handler: (memory: Memory, params: WasmType[]) => WasmType | void | Promise<WasmType | void>): void {
@@ -437,7 +431,6 @@ export abstract class BaseMainConnection extends Connection implements MainConne
 					this.currentCall.resolve(result);
 				}
 				this.currentCall = undefined;
-				this.triggerNextCall();
 			}
 		}
 	}

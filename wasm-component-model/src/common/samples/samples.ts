@@ -3,7 +3,7 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { ComponentModelType, EnumType, ListType, OptionType, RecordType, TupleType, VariantType, result, u32, u8, wstring } from '../componentModel';
+import { ComponentModelType, EnumType, ListType, OptionType, RecordType, TupleType, VariantType, result, u32, u8, wstring, type Resource } from '../componentModel';
 
 
 /****************************************************************************************
@@ -195,13 +195,52 @@ export enum TestEnum {
 }
 export const TestEnumType: ComponentModelType<TestEnum> = new EnumType<TestEnum>(['a', 'b', 'c']);
 
-type X = {
-	foo(): void;
-};
-type XP = {
-	bar(): Promise<void>;
+type Distribute<T> = T extends any ? Promisify<T> : never;
+export type Promisify<T> = {
+	[K in keyof T]-?: T[K] extends (...args: infer A) => infer R
+		? (...args: A) => Promise<R>
+		: T[K] extends object
+			? Distribute<T[K]>
+			: T[K];
 };
 
-type Merged = X & XP;
-let x: Merged = {} as any;
-x.
+
+export namespace Engine {
+	export interface Interface extends Resource {
+		pushOperand(operand: u32): void;
+
+		pushOperation(operation: string): void;
+
+		execute(): u32;
+	}
+	export type Statics = {
+		$new?(): Promisify<Interface>;
+	};
+	export type Class = Statics & {
+		new(): Interface;
+	};
+}
+export type Engine = Engine.Interface;
+
+export type Calculator = {
+	Engine: Engine.Class;
+};
+
+type CP = Promisify<Calculator>;
+
+type r = Required<CP>;
+
+async function foo() {
+	let c: Calculator = {} as any;
+	let cp: CP = {} as any;
+
+	new c.Engine();
+	c.Engine.$new!();
+
+	new cp.Engine();
+
+	let e = await cp.Engine.$new();
+	await e.pushOperand(42);
+
+}
+
