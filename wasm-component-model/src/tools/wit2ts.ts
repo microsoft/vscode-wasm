@@ -2170,6 +2170,18 @@ class WorldEmitter extends Emitter {
 		code.decreaseIndent();
 		code.push(`};`);
 
+		code.push(`export namespace Imports {`);
+		code.increaseIndent();
+		code.push(`export type Promisified = ${MetaModel.ImportPromisify}<Imports>`);
+		code.decreaseIndent();
+		code.push(`}`);
+
+		code.push(`export namespace imports {`);
+		code.increaseIndent();
+		code.push(`export type Promisify<T> = ${MetaModel.ImportPromisify}<T>;`);
+		code.decreaseIndent();
+		code.push(`}`);
+
 		if (this.exports.locals.interfaceEmitter.length > 0) {
 			code.push(`export namespace exports {`);
 			code.increaseIndent();
@@ -2199,6 +2211,17 @@ class WorldEmitter extends Emitter {
 		code.decreaseIndent();
 		code.push(`};`);
 
+		code.push(`export namespace Exports {`);
+		code.increaseIndent();
+		code.push(`export type Promisified = ${MetaModel.ExportPromisify}<Exports>`);
+		code.decreaseIndent();
+		code.push(`}`);
+
+		code.push(`export namespace exports {`);
+		code.increaseIndent();
+		code.push(`export type Promisify<T> = ${MetaModel.ExportPromisify}<T>;`);
+		code.decreaseIndent();
+		code.push(`}`);
 		code.decreaseIndent();
 		code.push('}');
 	}

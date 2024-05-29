@@ -3,8 +3,8 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 /* eslint-disable @typescript-eslint/ban-types */
-import type { i32, u32 } from '@vscode/wasm-component-model';
 import * as $wcm from '@vscode/wasm-component-model';
+import type { u32, i32 } from '@vscode/wasm-component-model';
 
 export namespace Types {
 	export type Operands = {
@@ -123,6 +123,9 @@ export namespace calculator {
 		log: (msg: string) => void;
 		types: Types;
 	};
+	export namespace Imports {
+		export type Promisified = $wcm.$imports.Promisify<Imports>
+	}
 	export namespace imports {
 		export type Promisify<T> = $wcm.$imports.Promisify<T>;
 	}
@@ -130,6 +133,9 @@ export namespace calculator {
 		calc: (o: Operation) => u32;
 		reverseNotation: ReverseNotation;
 	};
+	export namespace Exports {
+		export type Promisified = $wcm.$exports.Promisify<Exports>
+	}
 	export namespace exports {
 		export type Promisify<T> = $wcm.$exports.Promisify<T>;
 	}
