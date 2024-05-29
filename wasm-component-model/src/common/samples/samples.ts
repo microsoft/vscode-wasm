@@ -228,16 +228,12 @@ export type Calculator = {
 
 type CP = Promisify<Calculator>;
 
-type r = Required<CP>;
-
-async function foo() {
+export async function foo() {
 	let c: Calculator = {} as any;
 	let cp: CP = {} as any;
 
 	new c.Engine();
 	c.Engine.$new!();
-
-	new cp.Engine();
 
 	let e = await cp.Engine.$new();
 	await e.pushOperand(42);

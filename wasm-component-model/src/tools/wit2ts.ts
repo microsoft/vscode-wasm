@@ -3669,7 +3669,7 @@ namespace ResourceEmitter {
 
 		public emitStaticConstructorDeclaration(code: Code): void {
 			const [params] = this.getSignatureParts(0, true);
-			code.push(`$new(${params.join(', ')}): Interface;`);
+			code.push(`$new?(${params.join(', ')}): Promise<${MetaModel.ExportPromisify}<Interface>>;`);
 		}
 	}
 

@@ -237,7 +237,7 @@ export abstract class BaseWorkerConnection extends Connection implements WorkerC
 		this.memory.reset();
 	}
 
-	public call(name: string, params: WasmType[]): WasmType | void {
+	public callMain(name: string, params: WasmType[]): WasmType | void {
 		const buffer = this.memory.buffer;
 		const sync = new Int32Array(buffer, ConnectionMemory.Header.sync.offset, 1);
 		Atomics.store(sync, 0, 0);
@@ -300,14 +300,6 @@ export abstract class BaseWorkerConnection extends Connection implements WorkerC
 	public abstract listen(): void;
 }
 
-type CallInfo = {
-	resolve: (value: WasmType | undefined | void) => void;
-	reject: (error: any) => void;
-	name: string;
-	params: JType[];
-	wasmParams: (memory: Memory, params: JType[]) => WasmType[];
-};
-
 export abstract class BaseMainConnection extends Connection implements MainConnection {
 
 	private initializeCall: { resolve: () => void; reject: (error: any) => void } | undefined;
@@ -327,8 +319,12 @@ export abstract class BaseMainConnection extends Connection implements MainConne
 		this.callQueue.dispose();
 	}
 
-	public callLocked(thunk: () => Promise<JType>) {
+	public lock(thunk: () => Promise<JType>): Promise<JType> {
 		return this.callQueue.lock(thunk);
+	}
+
+	public prepareCall(): void {
+		this.memory.reset();
 	}
 
 	public getMemory(): Memory {
@@ -357,7 +353,7 @@ export abstract class BaseMainConnection extends Connection implements MainConne
 		});
 	}
 
-	public call(name: string, params: WasmType[]): Promise<WasmType | void> {
+	public callWorker(name: string, params: WasmType[]): Promise<WasmType | void> {
 		if (this.currentCall !== undefined) {
 			throw new ComponentModelTrap('Call already in progress');
 		}
@@ -405,6 +401,8 @@ export abstract class BaseMainConnection extends Connection implements MainConne
 					});
 				} else {
 					Connection.storeResult(buffer, result);
+					Atomics.store(sync, 0, 1);
+					Atomics.notify(sync, 0);
 				}
 			}
 		} else if (message.method === 'reportResult') {

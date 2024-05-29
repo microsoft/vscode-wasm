@@ -3091,7 +3091,7 @@ export interface WorkerConnection {
 	getMemory(): Memory;
 	on(id: string, callback: (memory: Memory, params: WasmType[]) => WasmType | void): void;
 	prepareCall(): void;
-	call(name: string, params: ReadonlyArray<WasmType>): WasmType | void;
+	callMain(name: string, params: ReadonlyArray<WasmType>): WasmType | void;
 	listen(): void;
 }
 
@@ -3101,7 +3101,9 @@ export interface MainConnection {
 	dispose(): void;
 	getMemory(): Memory;
 	on(id: string, callback: (memory: Memory, params: WasmType[]) => WasmType | void | Promise<WasmType | void>): void;
-	call(name: string, params: JType[], wasmParams: (memory: Memory, params: JType[]) => WasmType[]): Promise<WasmType | void>;
+	prepareCall(): void;
+	lock(thunk: () => Promise<JType>): Promise<JType>;
+	callWorker(name: string, params: ReadonlyArray<WasmType>): Promise<WasmType | void>;
 	listen(): void;
 }
 
@@ -3301,18 +3303,18 @@ class Callable {
 	}
 
 	/**
-	 * Calls a host function on the main thread from a wasm module.
+	 * Call a host function on the main thread from a wasm module.
 	 */
 	public callMain(connection: WorkerConnection, qualifier: string, params: WasmType[], context: WasmContext): WasmType | void {
 		connection.prepareCall();
 		const newParams: WasmType[] = [];
 		const resultStorage =  this.copyParamValues(newParams, connection.getMemory(), params, context.getMemory(), context);
-		const result = connection.call(`${qualifier}/${this.witName}`, newParams);
+		const result = connection.callMain(`${qualifier}#${this.witName}`, newParams);
 		return this.copyReturnValue(resultStorage, context.getMemory(), connection.getMemory(), result, context);
 	}
 
 	/**
-	 * Calls a wasm function from a worker thread
+	 * Call a wasm function from a worker thread.
 	 */
 	public callWasmFromWorker(transferMemory: Memory, func: WasmFunction, params: WasmType[], context: WasmContext): WasmType | void {
 		const newParams: WasmType[] = [];
@@ -3322,42 +3324,62 @@ class Callable {
 	}
 
 	/**
-	 * Calls the wasm function from the main thread.
+	 * Call a wasm method from a worker thread.
 	 */
-	public async callWorker(connection: MainConnection, qualifier: string, params: JType[], context: ComponentModelContext): Promise<JType | void> {
-		const memory = connection.getMemory();
-		const wasmValues = this.lowerParamValues(params, memory, context, undefined);
-		let resultRange: MemoryRange | undefined = undefined;
-		let result: WasmType | void;
-		if (this.returnType !== undefined && this.returnType.flatTypes.length > FunctionType.MAX_FLAT_RESULTS) {
-			resultRange = this.returnType.alloc(memory);
-			result = await connection.call(`${qualifier}/${this.witName}`, wasmValues.concat(resultRange.ptr));
-		} else {
-			result = await connection.call(`${qualifier}/${this.witName}`, wasmValues);
+	public callWasmMethodFromWorker(transferMemory: Memory, func: WasmFunction, params: WasmType[], context: WasmContext): WasmType | void {
+		const handle = params[0];
+		if (typeof handle !== 'number') {
+			throw new ComponentModelTrap(`Expected a number as handle, but got ${handle}`);
 		}
-
-		return this.liftReturnValue(result, resultRange?.ptr, memory, context);
+		const newParams: WasmType[] = [];
+		const resultStorage = this.copyParamValues(newParams, context.getMemory(), params.slice(1), transferMemory, context);
+		const result = func(handle, ...newParams);
+		return this.copyReturnValue(resultStorage, transferMemory, context.getMemory(), result, context);
 	}
 
 	/**
-	 * Calls a resource method inside a wasm module.
+	 * Call the wasm function from the main thread.
+	 */
+	public async callWorker(connection: MainConnection, qualifier: string, params: JType[], context: ComponentModelContext): Promise<JType | void> {
+		return connection.lock(async () => {
+			connection.prepareCall();
+			const memory = connection.getMemory();
+			const wasmValues = this.lowerParamValues(params, memory, context, undefined);
+			let resultRange: MemoryRange | undefined = undefined;
+			let result: WasmType | void;
+			if (this.returnType !== undefined && this.returnType.flatTypes.length > FunctionType.MAX_FLAT_RESULTS) {
+				resultRange = this.returnType.alloc(memory);
+				result = await connection.callWorker(`${qualifier}#${this.witName}`, wasmValues.concat(resultRange.ptr));
+			} else {
+				result = await connection.callWorker(`${qualifier}#${this.witName}`, wasmValues);
+			}
+
+			return this.liftReturnValue(result, resultRange?.ptr, memory, context);
+		});
+	}
+
+	/**
+	 * Call a resource method inside a wasm module.
 	 */
 	public async callWorkerMethod(connection: MainConnection, qualifier: string, obj: Resource & { $rep(): ResourceRepresentation}, params: JType[], context: ComponentModelContext): Promise<JType> {
-		const memory = connection.getMemory();
-		const handle = obj.$rep();
-		const wasmValues = this.lowerParamValues(params, memory, context, undefined).slice();
-		wasmValues.unshift(handle);
-		let resultRange: MemoryRange | undefined = undefined;
-		let result: WasmType | void;
-		if (this.returnType !== undefined && this.returnType.flatTypes.length > FunctionType.MAX_FLAT_RESULTS) {
-			resultRange = this.returnType.alloc(memory);
-			wasmValues.push(resultRange.ptr);
-			result = await connection.call(`${qualifier}/${this.witName}`, wasmValues);
-		} else {
-			result = await connection.call(`${qualifier}/${this.witName}`, wasmValues);
-		}
+		return connection.lock(async () => {
+			connection.prepareCall();
+			const memory = connection.getMemory();
+			const handle = obj.$rep();
+			const wasmValues = this.lowerParamValues(params, memory, context, undefined).slice();
+			wasmValues.unshift(handle);
+			let resultRange: MemoryRange | undefined = undefined;
+			let result: WasmType | void;
+			if (this.returnType !== undefined && this.returnType.flatTypes.length > FunctionType.MAX_FLAT_RESULTS) {
+				resultRange = this.returnType.alloc(memory);
+				wasmValues.push(resultRange.ptr);
+				result = await connection.callWorker(`${qualifier}#${this.witName}`, wasmValues);
+			} else {
+				result = await connection.callWorker(`${qualifier}#${this.witName}`, wasmValues);
+			}
 
-		return this.liftReturnValue(result, resultRange?.ptr, memory, context);
+			return this.liftReturnValue(result, resultRange?.ptr, memory, context);
+		});
 	}
 
 	protected getParamValuesForHostCall(params: WasmType[], memory: Memory, context: ComponentModelContext): [ReadonlyArray<JType>, ptr | undefined] {
@@ -3452,9 +3474,11 @@ export class ConstructorType<_T extends Function = Function> extends Callable {
 	}
 
 	public callWasmConstructorAsync(connection: MainConnection, qualifier: string, params: JType[], context: ComponentModelContext): Promise<ResourceHandle> {
-		const memory = connection.getMemory();
-		return connection.call(`${qualifier}/${this.witName}`, params, (memory: Memory, params: JType[]) => {
-			return this.lowerParamValues(params, memory, context, undefined);
+		return connection.lock(async () => {
+			connection.prepareCall();
+			const memory = connection.getMemory();
+			const wasmValues = this.lowerParamValues(params, memory, context, undefined);
+			return connection.callWorker(`${qualifier}#${this.witName}`, wasmValues);
 		}) as Promise<ResourceHandle>;
 	}
 }
@@ -4172,12 +4196,12 @@ export namespace $imports {
 							const exports = Object.create(null);
 							const qualifier = `[export]${packageName}/${iface.witName}`;
 							const newName = `[resource-new]${resource.witName}`;
-							exports[newName] = (rep: u32) => connection.call(`${qualifier}/${newName}`, [rep]);
+							exports[newName] = (rep: u32) => connection.callMain(`${qualifier}#${newName}`, [rep]);
 							const repName = `[resource-rep]${resource.witName}`;
-							exports[repName] = (handle: u32) => connection.call(`${qualifier}/${repName}`, [handle]);
+							exports[repName] = (handle: u32) => connection.callMain(`${qualifier}#${repName}`, [handle]);
 							const dropName = `[resource-drop]${resource.witName}`;
-							exports[dropName] = (handle: u32) => connection.call(`${qualifier}/${dropName}`, [handle]);
-							result[`[export]${packageName}/${iface.witName}`] = exports;
+							exports[dropName] = (handle: u32) => connection.callMain(`${qualifier}#${dropName}`, [handle]);
+							result[qualifier] = exports;
 						}
 					}
 				}
@@ -4290,7 +4314,7 @@ export namespace $exports {
 				doBind(connection, packageName, world.exports.functions, undefined, root, context);
 				if (world.exports.interfaces !== undefined) {
 					for (const iface of world.exports.interfaces.values()) {
-						doBind(connection, packageName, iface.functions, iface.resources, scoped[iface.id], context);
+						doBind(connection, `${packageName}/${iface.witName}`, iface.functions, iface.resources, scoped[iface.id], context);
 					}
 				}
 			}
@@ -4299,7 +4323,7 @@ export namespace $exports {
 		function doBind(connection: WorkerConnection, qualifier: string, functions: Map<string, FunctionType> | undefined, resources: Map<string, ResourceType> | undefined, wasm: ParamWasmInterface, context: WasmContext) : void {
 			if (functions !== undefined) {
 				for (const func of functions.values()) {
-					connection.on(`${qualifier}/${func.witName}`, (memory: Memory, params: WasmType[]) => {
+					connection.on(`${qualifier}#${func.witName}`, (memory: Memory, params: WasmType[]) => {
 						return func.callWasmFromWorker(memory, wasm[func.witName] as WasmFunction, params, context);
 					});
 				}
@@ -4307,9 +4331,15 @@ export namespace $exports {
 			if (resources !== undefined) {
 				for (const resource of resources.values()) {
 					for (const callable of resource.callables.values()) {
-						connection.on(`${qualifier}/${callable.witName}`, (memory, params: WasmType[]) => {
-							return callable.callWasmFromWorker(memory, wasm[callable.witName] as WasmFunction, params, context);
-						});
+						if (callable instanceof ConstructorType || callable instanceof StaticMethodType) {
+							connection.on(`${qualifier}#${callable.witName}`, (memory, params: WasmType[]) => {
+								return callable.callWasmFromWorker(memory, wasm[callable.witName] as WasmFunction, params, context);
+							});
+						} else {
+							connection.on(`${qualifier}#${callable.witName}`, (memory, params: WasmType[]) => {
+								return callable.callWasmMethodFromWorker(memory, wasm[callable.witName] as WasmFunction, params, context);
+							});
+						}
 					}
 				}
 			}
@@ -4463,7 +4493,7 @@ export namespace $main {
 			if (world.imports.interfaces !== undefined) {
 				for (const [name, iface] of world.imports.interfaces) {
 					const propName = `${name[0].toLowerCase()}${name.substring(1)}`;
-					doBindService(connection, packageName, iface.functions, iface.resources, service[propName] as ParamServiceInterface, context);
+					doBindService(connection, `${packageName}/${iface.witName}`, iface.functions, iface.resources, service[propName] as ParamServiceInterface, context);
 				}
 			}
 		}
@@ -4476,9 +4506,9 @@ export namespace $main {
 					const qualifier = `[export]${packageName}/${iface.witName}`;
 					for (const resource of iface.resources.values()) {
 						const manager = getResourceManager(resource, undefined, context);
-						connection.on(`${qualifier}/[resource-new]${resource.witName}`, (_memory: Memory, params: WasmType[]) => manager.newHandle(params[0] as u32));
-						connection.on(`${qualifier}/[resource-rep]${resource.witName}`, (_memory: Memory, params: WasmType[]) => manager.getRepresentation(params[0] as u32));
-						connection.on(`${qualifier}/[resource-drop]${resource.witName}`, (_memory: Memory, params: WasmType[]) => manager.dropHandle(params[0] as u32));
+						connection.on(`${qualifier}#[resource-new]${resource.witName}`, (_memory: Memory, params: WasmType[]) => manager.newHandle(params[0] as u32));
+						connection.on(`${qualifier}#[resource-rep]${resource.witName}`, (_memory: Memory, params: WasmType[]) => manager.getRepresentation(params[0] as u32));
+						connection.on(`${qualifier}#[resource-drop]${resource.witName}`, (_memory: Memory, params: WasmType[]) => manager.dropHandle(params[0] as u32));
 					}
 				}
 			}
@@ -4488,7 +4518,7 @@ export namespace $main {
 	function doBindService(connection: MainConnection, qualifier: string, functions: Map<string, FunctionType> | undefined, resources: Map<string, ResourceType> | undefined, service: any, context: ComponentModelContext): void {
 		if (functions !== undefined) {
 			for (const [funcName, func] of functions) {
-				connection.on(`${qualifier}/${func.witName}`, (memory: Memory, params: WasmType[]) => {
+				connection.on(`${qualifier}#${func.witName}`, (memory: Memory, params: WasmType[]) => {
 					return func.callServiceAsync(memory, service[funcName], params, context);
 				});
 			}
@@ -4499,19 +4529,19 @@ export namespace $main {
 				const resourceManager: ResourceManager = getResourceManager(resource, clazz, context);
 				for (const [callableName, callable] of resource.callables) {
 					if (callable instanceof ConstructorType) {
-						connection.on(`${qualifier}/${callable.witName}`, (memory: Memory, params: WasmType[]) => {
+						connection.on(`${qualifier}#${callable.witName}`, (memory: Memory, params: WasmType[]) => {
 							return callable.callServiceAsync(memory, clazz, params, context);
 						});
 					} else if (callable instanceof StaticMethodType) {
-						connection.on(`${qualifier}/${callable.witName}`, (memory: Memory, params: WasmType[]) => {
+						connection.on(`${qualifier}#${callable.witName}`, (memory: Memory, params: WasmType[]) => {
 							return callable.callServiceAsync(memory, (service[resourceName] as PromiseGenericClass)[callableName], params, context);
 						});
 					} else if (callable instanceof MethodType) {
-						connection.on(`${qualifier}/${callable.witName}`, (memory: Memory, params: WasmType[]) => {
+						connection.on(`${qualifier}#${callable.witName}`, (memory: Memory, params: WasmType[]) => {
 							return callable.callServiceAsync(memory, callableName, params, resourceManager, context);
 						});
 					} else if (callable instanceof DestructorType) {
-						connection.on(`${qualifier}/${callable.witName}`, (memory: Memory, params: WasmType[]) => {
+						connection.on(`${qualifier}#${callable.witName}`, (memory: Memory, params: WasmType[]) => {
 							return callable.callServiceAsync(memory, params, resourceManager);
 						});
 					}
@@ -4530,7 +4560,7 @@ export namespace $main {
 			if (world.exports.interfaces !== undefined) {
 				for (const [name, iface] of world.exports.interfaces) {
 					const propName = `${name[0].toLowerCase()}${name.substring(1)}`;
-					result[propName] = doBindApi(connection, packageName, iface.functions, iface.resources, context);
+					result[propName] = doBindApi(connection, `${packageName}/${iface.witName}`, iface.functions, iface.resources, context);
 				}
 			}
 		}
@@ -4551,7 +4581,7 @@ export namespace $main {
 				const resourceManager = getResourceManager(resource, undefined, context);
 				const cl =  clazz.createPromise(connection, qualifier, resource, context);
 				resourceManager.setProxyInfo(cl, (self: number) => {
-					connection.call(`${qualifier}/[dtor]${resource.witName}`, [self]).
+					connection.callWorker(`${qualifier}#[dtor]${resource.witName}`, [self]).
 						catch(() => {
 							RAL().console.error(`Failed to call destructor for ${resource.witName}`);
 						});
