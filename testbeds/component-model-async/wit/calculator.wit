@@ -13,6 +13,11 @@ interface types {
 		mul(operands),
 		div(operands)
 	}
+
+	resource channel {
+		constructor(level: u32);
+		send: func(msg: string);
+	}
 }
 
 interface reverse-notation {
@@ -34,6 +39,7 @@ interface reverse-notation {
 world calculator {
 	use types.{ operation };
 	import log: func(msg: string);
+	import types;
 
 	export reverse-notation;
 	export calc: func(o: operation) -> u32;

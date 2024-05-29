@@ -3,8 +3,8 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 /* eslint-disable @typescript-eslint/ban-types */
+import type { i32, u32 } from '@vscode/wasm-component-model';
 import * as $wcm from '@vscode/wasm-component-model';
-import type { u32, i32 } from '@vscode/wasm-component-model';
 
 export namespace Types {
 	export type Operands = {
@@ -71,8 +71,22 @@ export namespace Types {
 		}
 	}
 	export type Operation = Operation.Add | Operation.Sub | Operation.Mul | Operation.Div;
+
+	export namespace Channel {
+		export interface Interface extends $wcm.Resource {
+			send(msg: string): void;
+		}
+		export type Statics = {
+			$new?(level: u32): Interface;
+		};
+		export type Class = Statics & {
+			new(level: u32): Interface;
+		};
+	}
+	export type Channel = Channel.Interface;
 }
 export type Types = {
+	Channel: Types.Channel.Class;
 };
 
 export namespace ReverseNotation {
@@ -107,11 +121,18 @@ export namespace calculator {
 	export type Operation = Types.Operation;
 	export type Imports = {
 		log: (msg: string) => void;
+		types: Types;
 	};
+	export namespace imports {
+		export type Promisify<T> = $wcm.$imports.Promisify<T>;
+	}
 	export type Exports = {
 		calc: (o: Operation) => u32;
 		reverseNotation: ReverseNotation;
 	};
+	export namespace exports {
+		export type Promisify<T> = $wcm.$exports.Promisify<T>;
+	}
 }
 
 export namespace Types.$ {
@@ -120,16 +141,54 @@ export namespace Types.$ {
 		['right', $wcm.u32],
 	]);
 	export const Operation = new $wcm.VariantType<Types.Operation, Types.Operation._tt, Types.Operation._vt>([['add', Operands], ['sub', Operands], ['mul', Operands], ['div', Operands]], Types.Operation._ctor);
+	export const Channel = new $wcm.ResourceType<Types.Channel>('channel', 'vscode:example/types/channel');
+	export const Channel_Handle = new $wcm.ResourceHandleType('channel');
+	Channel.addDestructor('$drop', new $wcm.DestructorType('[resource-drop]channel', [['inst', Channel]]));
+	Channel.addConstructor('constructor', new $wcm.ConstructorType<Types.Channel.Class['constructor']>('[constructor]channel', [
+		['level', $wcm.u32],
+	], new $wcm.OwnType(Channel_Handle)));
+	Channel.addMethod('send', new $wcm.MethodType<Types.Channel.Interface['send']>('[method]channel.send', [
+		['msg', $wcm.wstring],
+	], undefined));
 }
 export namespace Types._ {
 	export const id = 'vscode:example/types' as const;
 	export const witName = 'types' as const;
+	export namespace Channel {
+		export type WasmInterface = {
+			'[constructor]channel': (level: i32) => i32;
+			'[method]channel.send': (self: i32, msg_ptr: i32, msg_len: i32) => void;
+		};
+		export namespace imports {
+			export type WasmInterface = Channel.WasmInterface & { '[resource-drop]channel': (self: i32) => void };
+		}
+		export namespace exports {
+			export type WasmInterface = Channel.WasmInterface & { '[dtor]channel': (self: i32) => void };
+		}
+	}
 	export const types: Map<string, $wcm.GenericComponentModelType> = new Map<string, $wcm.GenericComponentModelType>([
 		['Operands', $.Operands],
-		['Operation', $.Operation]
+		['Operation', $.Operation],
+		['Channel', $.Channel]
+	]);
+	export const resources: Map<string, $wcm.ResourceType> = new Map<string, $wcm.ResourceType>([
+		['Channel', $.Channel]
 	]);
 	export type WasmInterface = {
 	};
+	export namespace imports {
+		export type WasmInterface = _.WasmInterface & Channel.imports.WasmInterface;
+	}
+	export namespace exports {
+		export type WasmInterface = _.WasmInterface & Channel.exports.WasmInterface;
+		export namespace imports {
+			export type WasmInterface = {
+				'[resource-new]channel': (rep: i32) => i32;
+				'[resource-rep]channel': (handle: i32) => i32;
+				'[resource-drop]channel': (handle: i32) => void;
+			};
+		}
+	}
 }
 
 export namespace ReverseNotation.$ {
@@ -221,6 +280,7 @@ export namespace calculator._ {
 	}
 	export type Imports = {
 		'$root': $Root;
+		'vscode:example/types': Types._.imports.WasmInterface;
 		'[export]vscode:example/reverse-notation': ReverseNotation._.exports.imports.WasmInterface;
 	};
 	export namespace exports {

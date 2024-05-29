@@ -3419,9 +3419,9 @@ export class FunctionType<_T extends Function = Function> extends Callable  {
 	}
 
 	/**
-	 * Calls a host function from a wasm module.
+	 * Calls a service function from a wasm module.
 	 */
-	public callHost(func: JFunction, params: WasmType[], context: WasmContext): WasmType | void {
+	public callService(func: JFunction, params: WasmType[], context: WasmContext): WasmType | void {
 		const [jParams, out] = this.getParamValuesForHostCall(params, context.getMemory(), context);
 		const result: JType = func(...jParams);
 		return this.lowerReturnValue(result, context.getMemory(), context, out);
@@ -3440,7 +3440,7 @@ export class ConstructorType<_T extends Function = Function> extends Callable {
 		super(witName, params, returnType);
 	}
 
-	public callHost(clazz: GenericClass, params: WasmType[], _resourceManager: ResourceManager, context: WasmContext): WasmType | void {
+	public callService(clazz: GenericClass, params: WasmType[], context: WasmContext): WasmType | void {
 		// We currently only support 'lower' mode for results > MAX_FLAT_RESULTS.
 		const returnFlatTypes = this.returnType === undefined ? 0 : this.returnType.flatTypes.length;
 		if (returnFlatTypes !== 1) {
@@ -3489,7 +3489,7 @@ export class DestructorType<_T extends Function = Function> extends Callable {
 		super(witName, params);
 	}
 
-	public callHost(params: WasmType[], resourceManager: ResourceManager): void {
+	public callService(params: WasmType[], resourceManager: ResourceManager): void {
 		const handle = params[0];
 		if (typeof handle === 'bigint' || !$u32.valid(handle)) {
 			throw new ComponentModelTrap(`Object handle must be a number (u32), but got ${handle}.`);
@@ -3516,7 +3516,7 @@ export class StaticMethodType<_T extends Function = Function> extends Callable {
 		super(witName, params, returnType);
 	}
 
-	public callHost(func: JFunction, params: WasmType[], context: WasmContext): WasmType | void {
+	public callService(func: JFunction, params: WasmType[], context: WasmContext): WasmType | void {
 		const [jParams, out] = this.getParamValuesForHostCall(params, context.getMemory(), context);
 		const result: JType = func(...jParams);
 		return this.lowerReturnValue(result, context.getMemory(), context, out);
@@ -3535,7 +3535,7 @@ export class MethodType<_T extends Function = Function> extends Callable {
 		super(witName, params, returnType);
 	}
 
-	public callHost(methodName: string, params: WasmType[], resourceManager: ResourceManager, context: WasmContext): WasmType | void {
+	public callService(methodName: string, params: WasmType[], resourceManager: ResourceManager, context: WasmContext): WasmType | void {
 		if (params.length === 0) {
 			throw new ComponentModelTrap(`Method calls must have at least one parameter (the object pointer).`);
 		}
@@ -4008,14 +4008,24 @@ function getResourceManager(resource: ResourceType, clazz: GenericClass | Promis
 }
 
 export namespace $imports {
-	type Distribute<T> = T extends any ? Promisify<T> : never;
-	export type Promisify<T> = {
-		[K in keyof T]: T[K] extends (...args: infer A) => infer R
-			? (...args: A) => Promise<R> | R
+	type _Distribute<T> = T extends any ? _Promisify<T> : never;
+	type _Required<T> = {
+		[K in keyof T]-?: T[K] extends (...args: any[]) => any
+			? T[K]
 			: T[K] extends object
-				? Distribute<T[K]>
+				? _Required<T[K]>
+				: T[K]
+	};
+	type _Promisify<T> = {
+		[K in keyof T]: T[K] extends (...args: infer A) => infer R
+			? K extends '$handle'
+				? T[K]
+				: (...args: A) => Promise<R> | R
+			: T[K] extends object
+				? _Distribute<T[K]>
 				: T[K];
 	};
+	export type Promisify<T> = _Promisify<_Required<T>>;
 
 	export function create<T extends ParamWasmInterfaces>(world: WorldType, service: ParamWorldServiceInterface, context: WasmContext): T {
 		const packageName = world.id.substring(0, world.id.indexOf('/'));
@@ -4127,7 +4137,7 @@ export namespace $imports {
 				const resourceManager: ResourceManager = getResourceManager(resource, clazz, context);
 				for (const [callableName, callable] of resource.callables) {
 					if (callable instanceof ConstructorType) {
-						result[callable.witName] = createConstructorFunction(callable, clazz, resourceManager, context);
+						result[callable.witName] = createConstructorFunction(callable, clazz, context);
 					} else if (callable instanceof StaticMethodType) {
 						result[callable.witName] = createStaticMethodFunction(callable, (service[resourceName] as GenericClass)[callableName], context);
 					} else if (callable instanceof MethodType) {
@@ -4143,31 +4153,31 @@ export namespace $imports {
 
 	function createFunction(callable: FunctionType<JFunction>, serviceFunction: JFunction, context: WasmContext): WasmFunction {
 		return function (this: void, ...params: WasmType[]): number | bigint | void {
-			return callable.callHost(serviceFunction, params, context);
+			return callable.callService(serviceFunction, params, context);
 		};
 	}
 
-	function createConstructorFunction(callable: ConstructorType, clazz: GenericClass, manager: ResourceManager, context: WasmContext): WasmFunction {
+	function createConstructorFunction(callable: ConstructorType, clazz: GenericClass, context: WasmContext): WasmFunction {
 		return function (this: void, ...params: WasmType[]): number | bigint | void {
-			return callable.callHost(clazz, params, manager, context);
+			return callable.callService(clazz, params, context);
 		};
 	}
 
 	function createDestructorFunction(callable: DestructorType, manager: ResourceManager): WasmFunction {
 		return function (this: void, ...params: WasmType[]): number | bigint | void {
-			return callable.callHost(params, manager);
+			return callable.callService(params, manager);
 		};
 	}
 
 	function createStaticMethodFunction(callable: StaticMethodType, func: JFunction, context: WasmContext): WasmFunction {
 		return function (this: void, ...params: WasmType[]): number | bigint | void {
-			return callable.callHost(func, params, context);
+			return callable.callService(func, params, context);
 		};
 	}
 
 	function createMethodFunction(name: string, callable: MethodType, manager: ResourceManager, context: WasmContext): WasmFunction {
 		return function (this: void, ...params: WasmType[]): number | bigint | void {
-			return callable.callHost(name, params, manager, context);
+			return callable.callService(name, params, manager, context);
 		};
 	}
 

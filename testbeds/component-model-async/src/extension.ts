@@ -5,6 +5,7 @@
 import * as vscode from 'vscode';
 import { Worker } from 'worker_threads';
 
+import { Resource, ResourceManager, type u32 } from '@vscode/wasm-component-model';
 import { ReverseNotation, Types, calculator } from './calculator';
 
 export async function activate(context: vscode.ExtensionContext): Promise<void> {
@@ -16,10 +17,29 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
 	const log = vscode.window.createOutputChannel('Calculator - Log', { log: true });
 	context.subscriptions.push(log);
 
+	class ChannelImpl extends Resource.Default implements calculator.imports.Promisify<Types.Channel>  {
+		public static $resources: ResourceManager = new ResourceManager.Default<ChannelImpl>();
+		public static $new(level: u32): Promise<ChannelImpl> {
+			return Promise.resolve(new ChannelImpl(level));
+		}
+		private readonly level: u32;
+		constructor(level: u32) {
+			super(ChannelImpl.$resources);
+			this.level = level;
+		}
+		send(msg: string): Promise<void> {
+			channel.appendLine(msg);
+			return Promise.resolve();
+		}
+	}
+
 	// The implementation of the log function that is called from WASM
-	const service: calculator.Imports = {
+	const service: calculator.Imports.Promisified = {
 		log: (msg: string) => {
 			log.info(msg);
+		},
+		types: {
+			Channel: ChannelImpl
 		}
 	};
 
