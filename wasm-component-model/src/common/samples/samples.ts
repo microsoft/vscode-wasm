@@ -243,24 +243,3 @@ export async function foo() {
 	await e.pushOperand(42);
 
 }
-interface ExampleInterface {
-	id: number;
-	name: string;
-	greet: (message: string) => void;
-	calculate: (a: number, b: number) => number;
-}
-
-// Utility type to infer the arguments of an optional function
-type InferFunctionArgs<T, K extends keyof T> = T[K] extends (...args: infer A) => any ? A : never;
-
-// Utility type to infer the return type of an optional function
-type InferFunctionReturnType<T, K extends keyof T> = T[K] extends (...args: any[]) => infer R ? R : never;
-
-// Usage examples
-type GreetArgs = InferFunctionArgs<ExampleInterface, 'greet'>; // Expected to be [message: string]
-type GreetReturnType = InferFunctionReturnType<ExampleInterface, 'greet'>; // Expected to be void
-
-type CalculateArgs = InferFunctionArgs<ExampleInterface, 'calculate'>; // Expected to be [a: number, b: number]
-type CalculateReturnType = InferFunctionReturnType<ExampleInterface, 'calculate'>; // Expected to be number
-
-

@@ -3377,7 +3377,7 @@ class ResourceEmitter extends InterfaceMemberEmitter {
 
 	public emitNamespace(code: Code): void {
 		const type = this.resource;
-		const { nameProvider, options } = this.context;
+		const { nameProvider } = this.context;
 		const tsName = nameProvider.type.name(type);
 		const iName = `${tsName}.Interface`;
 		code.push(`export namespace ${tsName} {`);
