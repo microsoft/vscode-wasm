@@ -92,7 +92,7 @@ export namespace ReverseNotation {
 			execute(): u32;
 		}
 		export type Statics = {
-			$new?(): Promise<$wcm.$exports.Promisify<Interface>>;
+			$new?(): Interface;
 		};
 		export type Class = Statics & {
 			new(): Interface;

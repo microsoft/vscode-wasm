@@ -195,14 +195,18 @@ export enum TestEnum {
 }
 export const TestEnumType: ComponentModelType<TestEnum> = new EnumType<TestEnum>(['a', 'b', 'c']);
 
-type Distribute<T> = T extends any ? Promisify<T> : never;
-export type Promisify<T> = {
-	[K in keyof T]-?: T[K] extends (...args: infer A) => infer R
-		? (...args: A) => Promise<R>
+type _Distribute<T> = T extends any ? _Promisify<T> : never;
+type _Required<T> = { [K in keyof T]-?: T[K] extends object ? _Required<T[K]> : T[K] };
+type _Promisify<T> = {
+	[K in keyof T]: T[K] extends (...args: infer A) => infer R
+		? K extends '$new'
+			? (...arg: A) => Promise<_Promisify<R>>
+			: (...args: A) => Promise<R>
 		: T[K] extends object
-			? Distribute<T[K]>
+			? _Distribute<T[K]>
 			: T[K];
 };
+export type Promisify<T> = _Promisify<_Required<T>>;
 
 
 export namespace Engine {
@@ -214,7 +218,7 @@ export namespace Engine {
 		execute(): u32;
 	}
 	export type Statics = {
-		$new?(): Promisify<Interface>;
+		$new?(): Interface;
 	};
 	export type Class = Statics & {
 		new(): Interface;
@@ -239,4 +243,24 @@ export async function foo() {
 	await e.pushOperand(42);
 
 }
+interface ExampleInterface {
+	id: number;
+	name: string;
+	greet: (message: string) => void;
+	calculate: (a: number, b: number) => number;
+}
+
+// Utility type to infer the arguments of an optional function
+type InferFunctionArgs<T, K extends keyof T> = T[K] extends (...args: infer A) => any ? A : never;
+
+// Utility type to infer the return type of an optional function
+type InferFunctionReturnType<T, K extends keyof T> = T[K] extends (...args: any[]) => infer R ? R : never;
+
+// Usage examples
+type GreetArgs = InferFunctionArgs<ExampleInterface, 'greet'>; // Expected to be [message: string]
+type GreetReturnType = InferFunctionReturnType<ExampleInterface, 'greet'>; // Expected to be void
+
+type CalculateArgs = InferFunctionArgs<ExampleInterface, 'calculate'>; // Expected to be [a: number, b: number]
+type CalculateReturnType = InferFunctionReturnType<ExampleInterface, 'calculate'>; // Expected to be number
+
 

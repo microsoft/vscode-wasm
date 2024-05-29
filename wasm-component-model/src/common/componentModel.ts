@@ -4238,14 +4238,24 @@ interface WriteableServiceInterface {
 
 export type Exports = ParamServiceInterface | {};
 export namespace $exports {
-	type Distribute<T> = T extends any ? Promisify<T> : never;
-	export type Promisify<T> = {
-		[K in keyof T]-?: T[K] extends (...args: infer A) => infer R
-			? (...args: A) => Promise<R>
+	type _Distribute<T> = T extends any ? _Promisify<T> : never;
+	type _Required<T> = {
+		[K in keyof T]-?: T[K] extends (...args: any[]) => any
+			? T[K]
 			: T[K] extends object
-				? Distribute<T[K]>
+				? _Required<T[K]>
+				: T[K]
+	};
+	type _Promisify<T> = {
+		[K in keyof T]: T[K] extends (...args: infer A) => infer R
+			? K extends '$new'
+				? (...arg: A) => Promise<_Promisify<R>>
+				: (...args: A) => Promise<R>
+			: T[K] extends object
+				? _Distribute<T[K]>
 				: T[K];
 	};
+	export type Promisify<T> = _Promisify<_Required<T>>;
 
 	export function bind<T>(world: WorldType, exports: Record<string, ParamWasmFunction>, context: WasmContext): T {
 		const [root, scoped] = partition(exports);

@@ -3396,7 +3396,7 @@ class ResourceEmitter extends InterfaceMemberEmitter {
 
 		code.push(`export type Statics = {`);
 		code.increaseIndent();
-		if (this.conztructor !== undefined && options.worker) {
+		if (this.conztructor !== undefined) {
 			this.conztructor.emitStaticConstructorDeclaration(code);
 		}
 		for (const method of this.statics) {
@@ -3669,7 +3669,7 @@ namespace ResourceEmitter {
 
 		public emitStaticConstructorDeclaration(code: Code): void {
 			const [params] = this.getSignatureParts(0, true);
-			code.push(`$new?(${params.join(', ')}): Promise<${MetaModel.ExportPromisify}<Interface>>;`);
+			code.push(`$new?(${params.join(', ')}): Interface;`);
 		}
 	}
 
