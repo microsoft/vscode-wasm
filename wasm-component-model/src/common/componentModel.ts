@@ -3238,7 +3238,7 @@ class Callable {
 		} else {
 			const writer = out !== undefined ? memory.preAllocated(out, this.returnType.size) : this.returnType.alloc(memory);
 			this.returnType.store(writer, 0, value, context);
-			return;
+			return out !== undefined ? undefined : writer.ptr;
 		}
 	}
 
@@ -4074,7 +4074,7 @@ export namespace $imports {
 				const qualifier = `${ifaceName}#`;
 				for (const funcName of Object.keys(iface)) {
 					if (funcName.startsWith('[constructor]')) {
-						const managerId = `${ifaceName}/${funcName.substring(13 /* length of [method] */)}`;
+						const managerId = `${ifaceName}/${funcName.substring(13 /* length of [constructor] */)}`;
 						const resourceManager = context.resources.ensure(managerId);
 						result[`${qualifier}${funcName}`] = (...args: any[]) => {
 							const handle = (iface[funcName] as WasmFunction)(...args) as ResourceHandle;
