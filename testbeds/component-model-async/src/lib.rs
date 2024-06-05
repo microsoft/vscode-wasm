@@ -88,7 +88,8 @@ impl calculator::Guest for Implementation {
 		return result;
 	}
 	fn msg() -> String {
-		return "Hello from Rust".to_string();
+		calculator::generate()
+		// return "Hello from Rust".to_string();
 	}
 }
 

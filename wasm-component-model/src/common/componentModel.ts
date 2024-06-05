@@ -3166,7 +3166,7 @@ class Callable {
 		return this.isSingleParam ? [result] : result as JType[];
 	}
 
-	protected lowerParamValues(values: JType[], memory: Memory, context: ComponentModelContext, out: ptr | undefined): ReadonlyArray<WasmType> {
+	protected lowerParamValues(values: JType[], memory: Memory, context: ComponentModelContext): ReadonlyArray<WasmType> {
 		if (this.paramType === undefined) {
 			return Callable.EMPTY_WASM_TYPE;
 		}
@@ -3175,7 +3175,7 @@ class Callable {
 		}
 		const toLower = this.isSingleParam ? values[0] : values;
 		if (this.paramType.flatTypes.length > Callable.MAX_FLAT_PARAMS) {
-			const writer = out !== undefined ? memory.preAllocated(out, this.paramType.size) : this.paramType.alloc(memory);
+			const writer = this.paramType.alloc(memory);
 			this.paramType.store(writer, 0, toLower, context);
 			return [writer.ptr];
 		} else {
@@ -3276,7 +3276,7 @@ class Callable {
 	 */
 	public callWasm(params: JType[], wasmFunction: WasmFunction, context: WasmContext): JType {
 		const memory = context.getMemory();
-		const wasmValues = this.lowerParamValues(params, memory, context, undefined);
+		const wasmValues = this.lowerParamValues(params, memory, context);
 		const result: WasmType | void = wasmFunction(...wasmValues);
 		return this.liftReturnValue(result, memory, context);
 	}
@@ -3287,7 +3287,7 @@ class Callable {
 	public callWasmMethod(obj: Resource & { $rep(): ResourceRepresentation}, params: JType[], wasmFunction: WasmFunction, context: WasmContext): JType {
 		const memory = context.getMemory();
 		const handle = obj.$rep();
-		const wasmValues = this.lowerParamValues(params, memory, context, undefined);
+		const wasmValues = this.lowerParamValues(params, memory, context);
 		const result: WasmType | void = wasmFunction(handle, ...wasmValues);
 		return this.liftReturnValue(result, memory, context);
 	}
@@ -3334,7 +3334,7 @@ class Callable {
 		return connection.lock(async () => {
 			connection.prepareCall();
 			const memory = connection.getMemory();
-			const wasmValues = this.lowerParamValues(params, memory, context, undefined);
+			const wasmValues = this.lowerParamValues(params, memory, context);
 			let result: WasmType | void = await connection.callWorker(`${qualifier}#${this.witName}`, wasmValues);
 			return this.liftReturnValue(result, memory, context);
 		});
@@ -3348,7 +3348,7 @@ class Callable {
 			connection.prepareCall();
 			const memory = connection.getMemory();
 			const handle = obj.$rep();
-			const wasmValues = this.lowerParamValues(params, memory, context, undefined).slice();
+			const wasmValues = this.lowerParamValues(params, memory, context).slice();
 			wasmValues.unshift(handle);
 			const result: WasmType | void = await connection.callWorker(`${qualifier}#${this.witName}`, wasmValues);
 			return this.liftReturnValue(result, memory, context);
@@ -3442,7 +3442,7 @@ export class ConstructorType<_T extends Function = Function> extends Callable {
 
 	public callWasmConstructor(params: JType[], wasmFunction: WasmFunction, context: WasmContext): number {
 		const memory = context.getMemory();
-		const wasmValues = this.lowerParamValues(params, memory, context, undefined);
+		const wasmValues = this.lowerParamValues(params, memory, context);
 		const result: WasmType | void = wasmFunction(...wasmValues);
 		if (typeof result !== 'number') {
 			throw new ComponentModelTrap(`Expected a number (u32) as return value, but got ${result}.`);
@@ -3454,7 +3454,7 @@ export class ConstructorType<_T extends Function = Function> extends Callable {
 		return connection.lock(async () => {
 			connection.prepareCall();
 			const memory = connection.getMemory();
-			const wasmValues = this.lowerParamValues(params, memory, context, undefined);
+			const wasmValues = this.lowerParamValues(params, memory, context);
 			return connection.callWorker(`${qualifier}#${this.witName}`, wasmValues);
 		}) as Promise<ResourceHandle>;
 	}
