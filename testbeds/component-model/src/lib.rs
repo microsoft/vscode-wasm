@@ -1,9 +1,6 @@
-// Use a procedural macro to generate bindings for the world we specified in
-// `host.wit`
-wit_bindgen::generate!({
-	// the name of the world in the `*.wit` input file
-	world: "calculator",
-});
+mod calculator;
+use calculator::{Guest, Operation};
+
 
 struct MyType;
 
@@ -18,6 +15,10 @@ impl Guest for MyType {
 		};
 		return result;
 	}
+
+	fn msg() -> String {
+		return calculator::generate();
+	}
 }
 
-export!(MyType);
+calculator::export!(MyType with_types_in calculator);

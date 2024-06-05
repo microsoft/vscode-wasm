@@ -1519,8 +1519,7 @@ namespace $wstring {
 	export function copy(dest: MemoryRange, dest_offset: offset<[u32, u32]>, src: ReadonlyMemoryRange, src_offset: offset<[u32, u32]>, context: ComponentModelContext): void {
 		dest.assertAlignment(dest_offset, $wstring.alignment);
 		src.assertAlignment(src_offset, $wstring.alignment);
-		// Copy the data and codeUnits fields
-		src.copyBytes(src_offset, size, dest, dest_offset);
+
 		// Copy the actual string data
 		const data = src.getUint32(src_offset + offsets.data);
 		const codeUnits = src.getUint32(src_offset + offsets.codeUnits);
@@ -1528,6 +1527,10 @@ namespace $wstring {
 		const srcReader = src.memory.readonly(data, byteLength);
 		const destWriter = dest.memory.alloc(alignment, byteLength);
 		srcReader.copyBytes(0, byteLength, destWriter, 0);
+
+		// Store the new data pointer and code units
+		dest.setUint32(dest_offset + offsets.data, destWriter.ptr);
+		dest.setUint32(dest_offset + offsets.codeUnits, codeUnits);
 	}
 
 	export function copyFlat(result: WasmType[], dest: Memory, values: FlatValuesIter, src: Memory, context: ComponentModelContext): void {
@@ -1655,12 +1658,15 @@ export class ListType<T> implements ComponentModelType<T[]> {
 		dest.assertAlignment(dest_offset, this.alignment);
 		src.assertAlignment(src_offset, this.alignment);
 		const offsets = ListType.offsets;
-		src.copyBytes(src_offset, this.size, dest, dest_offset);
 		const data = src.getUint32(src_offset + offsets.data);
-		const byteLength = src.getUint32(src_offset + offsets.length) * this.elementType.size;
+		const length = src.getUint32(src_offset + offsets.length);
+		const byteLength = length * this.elementType.size;
 		const srcReader = src.memory.readonly(data, byteLength);
 		const destWriter = dest.memory.alloc(this.elementType.alignment, byteLength);
 		srcReader.copyBytes(0, byteLength, destWriter, 0);
+
+		dest.setUint32(dest_offset + offsets.data, destWriter.ptr);
+		dest.setUint32(dest_offset + offsets.length, length);
 	}
 
 	public copyFlat(result: WasmType[], dest: Memory, values: FlatValuesIter, src: Memory, _context: ComponentModelContext): void {
@@ -3271,16 +3277,8 @@ class Callable {
 	public callWasm(params: JType[], wasmFunction: WasmFunction, context: WasmContext): JType {
 		const memory = context.getMemory();
 		const wasmValues = this.lowerParamValues(params, memory, context, undefined);
-		let resultRange: MemoryRange | undefined = undefined;
-		let result: WasmType | void;
-		if (this.returnType !== undefined && this.returnType.flatTypes.length > FunctionType.MAX_FLAT_RESULTS) {
-			resultRange = this.returnType.alloc(memory);
-			result = wasmFunction(...wasmValues, resultRange.ptr);
-		} else {
-			result = wasmFunction(...wasmValues);
-		}
-
-		return this.liftReturnValue(result, resultRange?.ptr, memory, context);
+		const result: WasmType | void = wasmFunction(...wasmValues);
+		return this.liftReturnValue(result, memory, context);
 	}
 
 	/**
@@ -3290,16 +3288,8 @@ class Callable {
 		const memory = context.getMemory();
 		const handle = obj.$rep();
 		const wasmValues = this.lowerParamValues(params, memory, context, undefined);
-		let resultRange: MemoryRange | undefined = undefined;
-		let result: WasmType | void;
-		if (this.returnType !== undefined && this.returnType.flatTypes.length > FunctionType.MAX_FLAT_RESULTS) {
-			resultRange = this.returnType.alloc(memory);
-			result = wasmFunction(handle, ...wasmValues, resultRange.ptr);
-		} else {
-			result = wasmFunction(handle, ...wasmValues);
-		}
-
-		return this.liftReturnValue(result, resultRange?.ptr, memory, context);
+		const result: WasmType | void = wasmFunction(handle, ...wasmValues);
+		return this.liftReturnValue(result, memory, context);
 	}
 
 	/**
@@ -3345,16 +3335,8 @@ class Callable {
 			connection.prepareCall();
 			const memory = connection.getMemory();
 			const wasmValues = this.lowerParamValues(params, memory, context, undefined);
-			let resultRange: MemoryRange | undefined = undefined;
-			let result: WasmType | void;
-			if (this.returnType !== undefined && this.returnType.flatTypes.length > FunctionType.MAX_FLAT_RESULTS) {
-				resultRange = this.returnType.alloc(memory);
-				result = await connection.callWorker(`${qualifier}#${this.witName}`, wasmValues.concat(resultRange.ptr));
-			} else {
-				result = await connection.callWorker(`${qualifier}#${this.witName}`, wasmValues);
-			}
-
-			return this.liftReturnValue(result, resultRange?.ptr, memory, context);
+			let result: WasmType | void = await connection.callWorker(`${qualifier}#${this.witName}`, wasmValues);
+			return this.liftReturnValue(result, memory, context);
 		});
 	}
 
@@ -3368,23 +3350,18 @@ class Callable {
 			const handle = obj.$rep();
 			const wasmValues = this.lowerParamValues(params, memory, context, undefined).slice();
 			wasmValues.unshift(handle);
-			let resultRange: MemoryRange | undefined = undefined;
-			let result: WasmType | void;
-			if (this.returnType !== undefined && this.returnType.flatTypes.length > FunctionType.MAX_FLAT_RESULTS) {
-				resultRange = this.returnType.alloc(memory);
-				wasmValues.push(resultRange.ptr);
-				result = await connection.callWorker(`${qualifier}#${this.witName}`, wasmValues);
-			} else {
-				result = await connection.callWorker(`${qualifier}#${this.witName}`, wasmValues);
-			}
-
-			return this.liftReturnValue(result, resultRange?.ptr, memory, context);
+			const result: WasmType | void = await connection.callWorker(`${qualifier}#${this.witName}`, wasmValues);
+			return this.liftReturnValue(result, memory, context);
 		});
 	}
 
 	protected getParamValuesForHostCall(params: WasmType[], memory: Memory, context: ComponentModelContext): [ReadonlyArray<JType>, ptr | undefined] {
 		const returnFlatTypes = this.returnType === undefined ? 0 : this.returnType.flatTypes.length;
-		// We currently only support 'lower' mode for results > MAX_FLAT_RESULTS.
+		// We currently only support 'lower' mode for results > MAX_FLAT_RESULTS. From the spec:
+		// As an optimization, when lowering the return value of an imported function (via canon lower),
+		// the caller can have already allocated space for the return value (e.g., efficiently on the stack),
+		// passing in an i32 pointer as an parameter instead of returning an i32 as a return value.
+		// See https://github.com/WebAssembly/component-model/blob/main/design/mvp/CanonicalABI.md#flattening
 		let out: number | undefined;
 		if (returnFlatTypes > FunctionType.MAX_FLAT_RESULTS) {
 			const paramFlatTypes = this.paramType !== undefined ? this.paramType.flatTypes.length : 0;
@@ -3401,13 +3378,13 @@ class Callable {
 	}
 
 
-	protected liftReturnValue(value: WasmType | void, out: ptr | undefined, memory: Memory, context: ComponentModelContext): JType {
+	protected liftReturnValue(value: WasmType | void, memory: Memory, context: ComponentModelContext): JType {
 		if (this.returnType === undefined) {
 			return;
 		} else if (this.returnType.flatTypes.length <= Callable.MAX_FLAT_RESULTS) {
 			return this.returnType.liftFlat(memory, [value!].values(), context);
 		} else {
-			return this.returnType.load(memory.readonly(out as ptr, this.returnType.size), 0, context);
+			return this.returnType.load(memory.readonly(value as ptr, this.returnType.size), 0, context);
 		}
 	}
 }

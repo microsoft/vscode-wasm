@@ -39,8 +39,10 @@ interface reverse-notation {
 world calculator {
 	use types.{ operation };
 	import log: func(msg: string);
+	import generate: func() -> string;
 	import types;
 
 	export reverse-notation;
 	export calc: func(o: operation) -> u32;
+	export msg: func() -> string;
 }

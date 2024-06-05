@@ -4,7 +4,7 @@
  *--------------------------------------------------------------------------------------------*/
 /* eslint-disable @typescript-eslint/ban-types */
 import * as $wcm from '@vscode/wasm-component-model';
-import type { u32, i32 } from '@vscode/wasm-component-model';
+import type { u32, i32, ptr } from '@vscode/wasm-component-model';
 
 export namespace Types {
 	export type Operands = {
@@ -121,6 +121,7 @@ export namespace calculator {
 	export type Operation = Types.Operation;
 	export type Imports = {
 		log: (msg: string) => void;
+		generate: () => string;
 		types: Types;
 	};
 	export namespace Imports {
@@ -131,6 +132,7 @@ export namespace calculator {
 	}
 	export type Exports = {
 		calc: (o: Operation) => u32;
+		msg: () => string;
 		reverseNotation: ReverseNotation;
 	};
 	export namespace Exports {
@@ -257,11 +259,13 @@ export namespace calculator.$ {
 		export const log = new $wcm.FunctionType<calculator.Imports['log']>('log',[
 			['msg', $wcm.wstring],
 		], undefined);
+		export const generate = new $wcm.FunctionType<calculator.Imports['generate']>('generate', [], $wcm.wstring);
 	}
 	export namespace exports {
 		export const calc = new $wcm.FunctionType<calculator.Exports['calc']>('calc',[
 			['o', Operation],
 		], $wcm.u32);
+		export const msg = new $wcm.FunctionType<calculator.Exports['msg']>('msg', [], $wcm.wstring);
 	}
 }
 export namespace calculator._ {
@@ -269,10 +273,12 @@ export namespace calculator._ {
 	export const witName = 'calculator' as const;
 	export type $Root = {
 		'log': (msg_ptr: i32, msg_len: i32) => void;
+		'generate': (result: ptr<string>) => void;
 	};
 	export namespace imports {
 		export const functions: Map<string, $wcm.FunctionType> = new Map([
-			['log', $.imports.log]
+			['log', $.imports.log],
+			['generate', $.imports.generate]
 		]);
 		export const interfaces: Map<string, $wcm.InterfaceType> = new Map<string, $wcm.InterfaceType>([
 			['Types', Types._]
@@ -291,7 +297,8 @@ export namespace calculator._ {
 	};
 	export namespace exports {
 		export const functions: Map<string, $wcm.FunctionType> = new Map([
-			['calc', $.exports.calc]
+			['calc', $.exports.calc],
+			['msg', $.exports.msg]
 		]);
 		export const interfaces: Map<string, $wcm.InterfaceType> = new Map<string, $wcm.InterfaceType>([
 			['ReverseNotation', ReverseNotation._]
@@ -302,6 +309,7 @@ export namespace calculator._ {
 	}
 	export type Exports = {
 		'calc': (o_Operation_case: i32, o_Operation_0: i32, o_Operation_1: i32) => i32;
+		'msg': (result: ptr<string>) => void;
 		'vscode:example/reverse-notation#[constructor]engine': () => i32;
 		'vscode:example/reverse-notation#[method]engine.push-operand': (self: i32, operand: i32) => void;
 		'vscode:example/reverse-notation#[method]engine.push-operation': (self: i32, operation_Operation: i32) => void;

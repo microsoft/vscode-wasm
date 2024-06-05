@@ -6,7 +6,7 @@ import * as vscode from 'vscode';
 import { Worker } from 'worker_threads';
 
 import { Resource, ResourceManager, type u32 } from '@vscode/wasm-component-model';
-import { ReverseNotation, Types, calculator } from './calculator';
+import { Types, calculator } from './calculator';
 
 export async function activate(context: vscode.ExtensionContext): Promise<void> {
 	// The channel for printing the result.
@@ -38,6 +38,9 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
 		log: (msg: string) => {
 			log.info(msg);
 		},
+		generate: () => {
+			return "Hello from the Host";
+		},
 		types: {
 			Channel: ChannelImpl
 		}
@@ -50,18 +53,20 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
 	const worker = new Worker(vscode.Uri.joinPath(context.extensionUri, './out/worker.js').fsPath);
 	const api = await calculator._.bind(service, module, worker);
 	vscode.commands.registerCommand('testbed-component-model-async.run', async () => {
-		channel.appendLine(`Add ${await api.calc(Types.Operation.Add({ left: 1, right: 2 }))}`);
-		channel.appendLine(`Sub ${await api.calc(Types.Operation.Sub({ left: 10, right: 8 }))}`);
-		channel.appendLine(`Mul ${await api.calc(Types.Operation.Mul({ left: 3, right: 7 }))}`);
-		channel.appendLine(`Div ${await api.calc(Types.Operation.Div({ left: 10, right: 2 }))}`);
+		// channel.appendLine(`Add ${await api.calc(Types.Operation.Add({ left: 1, right: 2 }))}`);
+		// channel.appendLine(`Sub ${await api.calc(Types.Operation.Sub({ left: 10, right: 8 }))}`);
+		// channel.appendLine(`Mul ${await api.calc(Types.Operation.Mul({ left: 3, right: 7 }))}`);
+		// channel.appendLine(`Div ${await api.calc(Types.Operation.Div({ left: 10, right: 2 }))}`);
 
-		const calculator = await api.reverseNotation.Engine.$new();
-		await calculator.pushOperand(10);
-		await calculator.pushOperand(20);
-		await calculator.pushOperation(ReverseNotation.Operation.add);
+		// const calculator = await api.reverseNotation.Engine.$new();
+		// await calculator.pushOperand(10);
+		// await calculator.pushOperand(20);
+		// await calculator.pushOperation(ReverseNotation.Operation.add);
 
-		// Calculate the result
-		const result = await calculator.execute();
-		channel.appendLine(`Result: ${result}`);
+		// // Calculate the result
+		// const result = await calculator.execute();
+		// channel.appendLine(`Result: ${result}`);
+
+		channel.appendLine(`Message: ${await api.msg()}`);
 	});
 }

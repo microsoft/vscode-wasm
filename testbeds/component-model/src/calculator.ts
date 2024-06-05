@@ -4,7 +4,7 @@
  *--------------------------------------------------------------------------------------------*/
 /* eslint-disable @typescript-eslint/ban-types */
 import * as $wcm from '@vscode/wasm-component-model';
-import type { u32, i32 } from '@vscode/wasm-component-model';
+import type { u32, i32, ptr } from '@vscode/wasm-component-model';
 
 export namespace Types {
 	export type Operands = {
@@ -77,10 +77,24 @@ export type Types = {
 export namespace calculator {
 	export type Operation = Types.Operation;
 	export type Imports = {
+		generate: () => string;
 	};
+	export namespace Imports {
+		export type Promisified = $wcm.$imports.Promisify<Imports>
+	}
+	export namespace imports {
+		export type Promisify<T> = $wcm.$imports.Promisify<T>;
+	}
 	export type Exports = {
 		calc: (o: Operation) => u32;
+		msg: () => string;
 	};
+	export namespace Exports {
+		export type Promisified = $wcm.$exports.Promisify<Exports>
+	}
+	export namespace exports {
+		export type Promisify<T> = $wcm.$exports.Promisify<T>;
+	}
 }
 
 export namespace Types.$ {
@@ -102,16 +116,26 @@ export namespace Types._ {
 }
 export namespace calculator.$ {
 	export const Operation = Types.$.Operation;
+	export namespace imports {
+		export const generate = new $wcm.FunctionType<calculator.Imports['generate']>('generate', [], $wcm.wstring);
+	}
 	export namespace exports {
 		export const calc = new $wcm.FunctionType<calculator.Exports['calc']>('calc',[
 			['o', Operation],
 		], $wcm.u32);
+		export const msg = new $wcm.FunctionType<calculator.Exports['msg']>('msg', [], $wcm.wstring);
 	}
 }
 export namespace calculator._ {
 	export const id = 'vscode:example/calculator' as const;
 	export const witName = 'calculator' as const;
+	export type $Root = {
+		'generate': (result: ptr<string>) => void;
+	};
 	export namespace imports {
+		export const functions: Map<string, $wcm.FunctionType> = new Map([
+			['generate', $.imports.generate]
+		]);
 		export const interfaces: Map<string, $wcm.InterfaceType> = new Map<string, $wcm.InterfaceType>([
 			['Types', Types._]
 		]);
@@ -123,10 +147,12 @@ export namespace calculator._ {
 		}
 	}
 	export type Imports = {
+		'$root': $Root;
 	};
 	export namespace exports {
 		export const functions: Map<string, $wcm.FunctionType> = new Map([
-			['calc', $.exports.calc]
+			['calc', $.exports.calc],
+			['msg', $.exports.msg]
 		]);
 		export function bind(exports: Exports, context: $wcm.WasmContext): calculator.Exports {
 			return $wcm.$exports.bind<calculator.Exports>(_, exports, context);
@@ -134,6 +160,7 @@ export namespace calculator._ {
 	}
 	export type Exports = {
 		'calc': (o_Operation_case: i32, o_Operation_0: i32, o_Operation_1: i32) => i32;
+		'msg': (result: ptr<string>) => void;
 	};
 	export function bind(service: calculator.Imports, code: $wcm.Code, context?: $wcm.ComponentModelContext): Promise<calculator.Exports>;
 	export function bind(service: $wcm.$imports.Promisify<calculator.Imports>, code: $wcm.Code, port: $wcm.RAL.ConnectionPort, context?: $wcm.ComponentModelContext): Promise<$wcm.$exports.Promisify<calculator.Exports>>;

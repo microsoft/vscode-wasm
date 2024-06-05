@@ -20,6 +20,30 @@ pub fn log(msg: &str,){
     wit_import(ptr0.cast_mut(), len0);
   }
 }
+#[allow(unused_unsafe, clippy::all)]
+pub fn generate() -> _rt::String{
+  unsafe {
+    #[repr(align(4))]
+    struct RetArea([::core::mem::MaybeUninit::<u8>; 8]);
+    let mut ret_area = RetArea([::core::mem::MaybeUninit::uninit(); 8]);
+    let ptr0 = ret_area.0.as_mut_ptr().cast::<u8>();
+    #[cfg(target_arch = "wasm32")]
+    #[link(wasm_import_module = "$root")]
+    extern "C" {
+      #[link_name = "generate"]
+      fn wit_import(_: *mut u8, );
+    }
+
+    #[cfg(not(target_arch = "wasm32"))]
+    fn wit_import(_: *mut u8, ){ unreachable!() }
+    wit_import(ptr0);
+    let l1 = *ptr0.add(0).cast::<*mut u8>();
+    let l2 = *ptr0.add(4).cast::<usize>();
+    let len3 = l2;
+    let bytes3 = _rt::Vec::from_raw_parts(l1.cast(), len3, len3);
+    _rt::string_lift(bytes3)
+  }
+}
 #[doc(hidden)]
 #[allow(non_snake_case)]
 pub unsafe fn _export_calc_cabi<T: Guest>(arg0: i32,arg1: i32,arg2: i32,) -> i32 {#[cfg(target_arch="wasm32")]
@@ -58,8 +82,29 @@ let v0 = match arg0 {
 let result1 = T::calc(v0);
 _rt::as_i32(result1)
 }
+#[doc(hidden)]
+#[allow(non_snake_case)]
+pub unsafe fn _export_msg_cabi<T: Guest>() -> *mut u8 {#[cfg(target_arch="wasm32")]
+_rt::run_ctors_once();let result0 = T::msg();
+let ptr1 = _RET_AREA.0.as_mut_ptr().cast::<u8>();
+let vec2 = (result0.into_bytes()).into_boxed_slice();
+let ptr2 = vec2.as_ptr().cast::<u8>();
+let len2 = vec2.len();
+::core::mem::forget(vec2);
+*ptr1.add(4).cast::<usize>() = len2;
+*ptr1.add(0).cast::<*mut u8>() = ptr2.cast_mut();
+ptr1
+}
+#[doc(hidden)]
+#[allow(non_snake_case)]
+pub unsafe fn __post_return_msg<T: Guest>(arg0: *mut u8,) {
+  let l0 = *arg0.add(0).cast::<*mut u8>();
+  let l1 = *arg0.add(4).cast::<usize>();
+  _rt::cabi_dealloc(l0, l1, 1);
+}
 pub trait Guest {
   fn calc(o: Operation,) -> u32;
+  fn msg() -> _rt::String;
 }
 #[doc(hidden)]
 
@@ -70,10 +115,21 @@ macro_rules! __export_world_calculator_cabi{
     unsafe extern "C" fn export_calc(arg0: i32,arg1: i32,arg2: i32,) -> i32 {
       $($path_to_types)*::_export_calc_cabi::<$ty>(arg0, arg1, arg2)
     }
+    #[export_name = "msg"]
+    unsafe extern "C" fn export_msg() -> *mut u8 {
+      $($path_to_types)*::_export_msg_cabi::<$ty>()
+    }
+    #[export_name = "cabi_post_msg"]
+    unsafe extern "C" fn _post_return_msg(arg0: *mut u8,) {
+      $($path_to_types)*::__post_return_msg::<$ty>(arg0)
+    }
   };);
 }
 #[doc(hidden)]
 pub(crate) use __export_world_calculator_cabi;
+#[repr(align(4))]
+struct _RetArea([::core::mem::MaybeUninit::<u8>; 8]);
+static mut _RET_AREA: _RetArea = _RetArea([::core::mem::MaybeUninit::uninit(); 8]);
 #[allow(dead_code)]
 pub mod vscode {
   #[allow(dead_code)]
@@ -84,6 +140,7 @@ pub mod vscode {
       #[doc(hidden)]
       #[cfg(target_arch = "wasm32")]
       static __FORCE_SECTION_REF: fn() = super::super::super::__link_custom_section_describing_imports;
+      use super::super::super::_rt;
       #[repr(C)]
       #[derive(Clone, Copy)]
       pub struct Operands {
@@ -117,6 +174,92 @@ pub mod vscode {
             Operation::Div(e) => {
               f.debug_tuple("Operation::Div").field(e).finish()
             }
+          }
+        }
+      }
+
+      #[derive(Debug)]
+      #[repr(transparent)]
+      pub struct Channel{
+        handle: _rt::Resource<Channel>,
+      }
+
+      impl Channel{
+        #[doc(hidden)]
+        pub unsafe fn from_handle(handle: u32) -> Self {
+          Self {
+            handle: _rt::Resource::from_handle(handle),
+          }
+        }
+
+        #[doc(hidden)]
+        pub fn take_handle(&self) -> u32 {
+          _rt::Resource::take_handle(&self.handle)
+        }
+
+        #[doc(hidden)]
+        pub fn handle(&self) -> u32 {
+          _rt::Resource::handle(&self.handle)
+        }
+      }
+
+
+      unsafe impl _rt::WasmResource for Channel{
+        #[inline]
+        unsafe fn drop(_handle: u32) {
+          #[cfg(not(target_arch = "wasm32"))]
+          unreachable!();
+
+          #[cfg(target_arch = "wasm32")]
+          {
+            #[link(wasm_import_module = "vscode:example/types")]
+            extern "C" {
+              #[link_name = "[resource-drop]channel"]
+              fn drop(_: u32);
+            }
+
+            drop(_handle);
+          }
+        }
+      }
+
+      impl Channel {
+        #[allow(unused_unsafe, clippy::all)]
+        pub fn new(level: u32,) -> Self{
+          unsafe {
+
+            #[cfg(target_arch = "wasm32")]
+            #[link(wasm_import_module = "vscode:example/types")]
+            extern "C" {
+              #[link_name = "[constructor]channel"]
+              fn wit_import(_: i32, ) -> i32;
+            }
+
+            #[cfg(not(target_arch = "wasm32"))]
+            fn wit_import(_: i32, ) -> i32{ unreachable!() }
+            let ret = wit_import(_rt::as_i32(&level));
+            Channel::from_handle(ret as u32)
+          }
+        }
+      }
+      impl Channel {
+        #[allow(unused_unsafe, clippy::all)]
+        pub fn send(&self,msg: &str,){
+          unsafe {
+            let vec0 = msg;
+            let ptr0 = vec0.as_ptr().cast::<u8>();
+            let len0 = vec0.len();
+
+            #[cfg(target_arch = "wasm32")]
+            #[link(wasm_import_module = "vscode:example/types")]
+            extern "C" {
+              #[link_name = "[method]channel.send"]
+              fn wit_import(_: i32, _: *mut u8, _: usize, );
+            }
+
+            #[cfg(not(target_arch = "wasm32"))]
+            fn wit_import(_: i32, _: *mut u8, _: usize, ){ unreachable!() }
+            wit_import((self).handle() as i32, ptr0.cast_mut(), len0);
           }
         }
       }
@@ -446,81 +589,6 @@ pub(crate) use __export_vscode_example_reverse_notation_cabi;
 }
 mod _rt {
 
-  #[cfg(target_arch = "wasm32")]
-  pub fn run_ctors_once() {
-    wit_bindgen::rt::run_ctors_once();
-  }
-  
-  pub fn as_i32<T: AsI32>(t: T) -> i32 {
-    t.as_i32()
-  }
-
-  pub trait AsI32 {
-    fn as_i32(self) -> i32;
-  }
-
-  impl<'a, T: Copy + AsI32> AsI32 for &'a T {
-    fn as_i32(self) -> i32 {
-      (*self).as_i32()
-    }
-  }
-  
-  impl AsI32 for i32 {
-    #[inline]
-    fn as_i32(self) -> i32 {
-      self as i32
-    }
-  }
-  
-  impl AsI32 for u32 {
-    #[inline]
-    fn as_i32(self) -> i32 {
-      self as i32
-    }
-  }
-  
-  impl AsI32 for i16 {
-    #[inline]
-    fn as_i32(self) -> i32 {
-      self as i32
-    }
-  }
-  
-  impl AsI32 for u16 {
-    #[inline]
-    fn as_i32(self) -> i32 {
-      self as i32
-    }
-  }
-  
-  impl AsI32 for i8 {
-    #[inline]
-    fn as_i32(self) -> i32 {
-      self as i32
-    }
-  }
-  
-  impl AsI32 for u8 {
-    #[inline]
-    fn as_i32(self) -> i32 {
-      self as i32
-    }
-  }
-  
-  impl AsI32 for char {
-    #[inline]
-    fn as_i32(self) -> i32 {
-      self as i32
-    }
-  }
-  
-  impl AsI32 for usize {
-    #[inline]
-    fn as_i32(self) -> i32 {
-      self as i32
-    }
-  }
-  
 
   use core::fmt;
   use core::marker;
@@ -615,8 +683,100 @@ mod _rt {
       }
     }
   }
+  
+  pub fn as_i32<T: AsI32>(t: T) -> i32 {
+    t.as_i32()
+  }
+
+  pub trait AsI32 {
+    fn as_i32(self) -> i32;
+  }
+
+  impl<'a, T: Copy + AsI32> AsI32 for &'a T {
+    fn as_i32(self) -> i32 {
+      (*self).as_i32()
+    }
+  }
+  
+  impl AsI32 for i32 {
+    #[inline]
+    fn as_i32(self) -> i32 {
+      self as i32
+    }
+  }
+  
+  impl AsI32 for u32 {
+    #[inline]
+    fn as_i32(self) -> i32 {
+      self as i32
+    }
+  }
+  
+  impl AsI32 for i16 {
+    #[inline]
+    fn as_i32(self) -> i32 {
+      self as i32
+    }
+  }
+  
+  impl AsI32 for u16 {
+    #[inline]
+    fn as_i32(self) -> i32 {
+      self as i32
+    }
+  }
+  
+  impl AsI32 for i8 {
+    #[inline]
+    fn as_i32(self) -> i32 {
+      self as i32
+    }
+  }
+  
+  impl AsI32 for u8 {
+    #[inline]
+    fn as_i32(self) -> i32 {
+      self as i32
+    }
+  }
+  
+  impl AsI32 for char {
+    #[inline]
+    fn as_i32(self) -> i32 {
+      self as i32
+    }
+  }
+  
+  impl AsI32 for usize {
+    #[inline]
+    fn as_i32(self) -> i32 {
+      self as i32
+    }
+  }
+  pub use alloc_crate::string::String;
+  pub use alloc_crate::vec::Vec;
+  pub unsafe fn string_lift(bytes: Vec<u8>) -> String {
+    if cfg!(debug_assertions) {
+      String::from_utf8(bytes).unwrap()
+    } else {
+      String::from_utf8_unchecked(bytes)
+    }
+  }
+  
+  #[cfg(target_arch = "wasm32")]
+  pub fn run_ctors_once() {
+    wit_bindgen::rt::run_ctors_once();
+  }
+  pub unsafe fn cabi_dealloc(ptr: *mut u8, size: usize, align: usize) {
+    if size == 0 {
+      return;
+    }
+    let layout = alloc::Layout::from_size_align_unchecked(size, align);
+    alloc::dealloc(ptr as *mut u8, layout);
+  }
   pub use alloc_crate::boxed::Box;
   extern crate alloc as alloc_crate;
+  pub use alloc_crate::alloc;
 }
 
 /// Generates `#[no_mangle]` functions to export the specified type as the
@@ -651,21 +811,24 @@ pub(crate) use __export_calculator_impl as export;
 #[cfg(target_arch = "wasm32")]
 #[link_section = "component-type:wit-bindgen:0.24.0:calculator:encoded world"]
 #[doc(hidden)]
-pub static __WIT_BINDGEN_COMPONENT_TYPE: [u8; 598] = *b"\
-\0asm\x0d\0\x01\0\0\x19\x16wit-component-encoding\x04\0\x07\xd5\x03\x01A\x02\x01\
-A\x0a\x01B\x04\x01r\x02\x04lefty\x05righty\x04\0\x08operands\x03\0\0\x01q\x04\x03\
+pub static __WIT_BINDGEN_COMPONENT_TYPE: [u8; 720] = *b"\
+\0asm\x0d\0\x01\0\0\x19\x16wit-component-encoding\x04\0\x07\xcf\x04\x01A\x02\x01\
+A\x0d\x01B\x0b\x01r\x02\x04lefty\x05righty\x04\0\x08operands\x03\0\0\x01q\x04\x03\
 add\x01\x01\0\x03sub\x01\x01\0\x03mul\x01\x01\0\x03div\x01\x01\0\x04\0\x09operat\
-ion\x03\0\x02\x03\x01\x14vscode:example/types\x05\0\x02\x03\0\0\x09operation\x03\
-\0\x09operation\x03\0\x01\x01@\x01\x03msgs\x01\0\x03\0\x03log\x01\x03\x01@\x01\x01\
-o\x02\0y\x04\0\x04calc\x01\x04\x01B\x0d\x01m\x04\x03add\x03sub\x03mul\x03div\x04\
-\0\x09operation\x03\0\0\x04\0\x06engine\x03\x01\x01i\x02\x01@\0\0\x03\x04\0\x13[\
-constructor]engine\x01\x04\x01h\x02\x01@\x02\x04self\x05\x07operandy\x01\0\x04\0\
-\x1b[method]engine.push-operand\x01\x06\x01@\x02\x04self\x05\x09operation\x01\x01\
-\0\x04\0\x1d[method]engine.push-operation\x01\x07\x01@\x01\x04self\x05\0y\x04\0\x16\
-[method]engine.execute\x01\x08\x04\x01\x1fvscode:example/reverse-notation\x05\x05\
-\x04\x01\x19vscode:example/calculator\x04\0\x0b\x10\x01\0\x0acalculator\x03\0\0\0\
-G\x09producers\x01\x0cprocessed-by\x02\x0dwit-component\x070.202.0\x10wit-bindge\
-n-rust\x060.24.0";
+ion\x03\0\x02\x04\0\x07channel\x03\x01\x01i\x04\x01@\x01\x05levely\0\x05\x04\0\x14\
+[constructor]channel\x01\x06\x01h\x04\x01@\x02\x04self\x07\x03msgs\x01\0\x04\0\x14\
+[method]channel.send\x01\x08\x03\x01\x14vscode:example/types\x05\0\x02\x03\0\0\x09\
+operation\x03\0\x09operation\x03\0\x01\x01@\x01\x03msgs\x01\0\x03\0\x03log\x01\x03\
+\x01@\0\0s\x03\0\x08generate\x01\x04\x01@\x01\x01o\x02\0y\x04\0\x04calc\x01\x05\x04\
+\0\x03msg\x01\x04\x01B\x0d\x01m\x04\x03add\x03sub\x03mul\x03div\x04\0\x09operati\
+on\x03\0\0\x04\0\x06engine\x03\x01\x01i\x02\x01@\0\0\x03\x04\0\x13[constructor]e\
+ngine\x01\x04\x01h\x02\x01@\x02\x04self\x05\x07operandy\x01\0\x04\0\x1b[method]e\
+ngine.push-operand\x01\x06\x01@\x02\x04self\x05\x09operation\x01\x01\0\x04\0\x1d\
+[method]engine.push-operation\x01\x07\x01@\x01\x04self\x05\0y\x04\0\x16[method]e\
+ngine.execute\x01\x08\x04\x01\x1fvscode:example/reverse-notation\x05\x06\x04\x01\
+\x19vscode:example/calculator\x04\0\x0b\x10\x01\0\x0acalculator\x03\0\0\0G\x09pr\
+oducers\x01\x0cprocessed-by\x02\x0dwit-component\x070.202.0\x10wit-bindgen-rust\x06\
+0.24.0";
 
 #[inline(never)]
 #[doc(hidden)]

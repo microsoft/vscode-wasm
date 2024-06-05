@@ -87,6 +87,9 @@ impl calculator::Guest for Implementation {
 		calculator::log(&format!("Finished calculation: {:?}", op));
 		return result;
 	}
+	fn msg() -> String {
+		return "Hello from Rust".to_string();
+	}
 }
 
 calculator::export!(Implementation with_types_in calculator);
