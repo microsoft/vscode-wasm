@@ -3,8 +3,8 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 /* eslint-disable @typescript-eslint/ban-types */
+import type { i32, u32 } from '@vscode/wasm-component-model';
 import * as $wcm from '@vscode/wasm-component-model';
-import type { u32, i32 } from '@vscode/wasm-component-model';
 
 export namespace Types {
 	export enum OpCode {
@@ -124,7 +124,7 @@ export namespace Types._ {
 			export type WasmInterface = Engine.WasmInterface & { '[dtor]engine': (self: i32) => void };
 		}
 	}
-	export const types: Map<string, $wcm.GenericComponentModelType> = new Map<string, $wcm.GenericComponentModelType>([
+	export const types: Map<string, $wcm.AnyComponentModelType> = new Map<string, $wcm.AnyComponentModelType>([
 		['OpCode', $.OpCode],
 		['Operation', $.Operation],
 		['Engine', $.Engine]
@@ -162,7 +162,7 @@ export namespace Functions.$ {
 export namespace Functions._ {
 	export const id = 'vscode:example/functions' as const;
 	export const witName = 'functions' as const;
-	export const types: Map<string, $wcm.GenericComponentModelType> = new Map<string, $wcm.GenericComponentModelType>([
+	export const types: Map<string, $wcm.AnyComponentModelType> = new Map<string, $wcm.AnyComponentModelType>([
 		['Operation', $.Operation]
 	]);
 	export const functions: Map<string, $wcm.FunctionType> = new Map([

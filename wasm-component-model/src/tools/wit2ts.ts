@@ -2610,7 +2610,7 @@ class InterfaceEmitter extends Emitter {
 			qualifier = `${nameProvider.world.name(world)}.$.${this.iface.world.kind}.${nameProvider.iface.typeName(this.iface)}.`;
 		}
 		if (types.length > 0) {
-			code.push(`export const types: Map<string, ${MetaModel.qualifier}.GenericComponentModelType> = new Map<string, ${MetaModel.qualifier}.GenericComponentModelType>([`);
+			code.push(`export const types: Map<string, ${MetaModel.qualifier}.AnyComponentModelType> = new Map<string, ${MetaModel.qualifier}.AnyComponentModelType>([`);
 			code.increaseIndent();
 			for (let i = 0; i < types.length; i++) {
 				code.push(`['${types[i]}', ${qualifier}$.${types[i]}]${i < types.length - 1 ? ',' : ''}`);

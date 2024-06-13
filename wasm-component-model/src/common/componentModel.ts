@@ -5,10 +5,10 @@
 import * as uuid from 'uuid';
 import RAL from './ral';
 
-// Type arrays are store either little or big endian depending on the platform.
+// Type arrays are stored either little or big endian depending on the platform.
 // The component model requires little endian so we throw for now if the platform
 // is big endian. We can alternatively use data views in type arrays component
-// model types to support big endian platforms
+// model types to support big endian platforms.
 
 const isLittleEndian = new Uint8Array(new Uint16Array([1]).buffer)[0] === 1;
 if (!isLittleEndian) {
@@ -76,13 +76,11 @@ export interface Memory {
 	free?(range: MemoryRange): void;
 }
 
-export class MemoryError extends Error {
+export class MemoryError extends ComponentModelTrap {
 	constructor(message: string) {
 		super(message);
 	}
 }
-
-export type offset<_T = undefined> = u32;
 
 type ArrayClazz<T extends ArrayLike<number> & { set(array: ArrayLike<number>, offset?: number): void }> = {
 	new (buffer: ArrayBuffer, byteOffset: number, length: number): T;
@@ -95,6 +93,7 @@ type BigArrayClazz<T extends ArrayLike<bigint> & { set(array: ArrayLike<bigint>,
 	BYTES_PER_ELEMENT: number;
 };
 
+export type offset<_T = undefined> = u32;
 export abstract class BaseMemoryRange {
 
 	protected readonly _memory: Memory;
@@ -526,9 +525,9 @@ export namespace Memory {
 	}
 }
 
-export type encodings = 'utf-8' | 'utf-16' | 'latin1+utf-16';
+export type Encodings = 'utf-8' | 'utf-16' | 'latin1+utf-16';
 export interface Options {
-	encoding: encodings;
+	encoding: Encodings;
 	keepOption?: boolean;
 }
 export namespace Options {
@@ -636,6 +635,7 @@ namespace $f64 {
 	}
 }
 export const f64: FlatType<f64> = $f64;
+
 export type WasmType = i32 | i64 | f32 | f64;
 type GenericFlatType = FlatType<WasmType>;
 
@@ -839,7 +839,7 @@ export interface ComponentModelType<J> {
 	// copy a component model value from a flattened array to another
 	copyFlat(result: WasmType[], dest: Memory, values: FlatValuesIter, src: Memory, context: ComponentModelContext): void;
 }
-export type GenericComponentModelType = ComponentModelType<JType>;
+export type AnyComponentModelType = ComponentModelType<JType>;
 
 export type bool = number;
 export const bool: ComponentModelType<boolean> = {
@@ -1898,7 +1898,7 @@ export class Float64ArrayType extends TypeArrayType<Float64Array, float64> {
 }
 
 interface TypedField {
-	readonly type: GenericComponentModelType;
+	readonly type: AnyComponentModelType;
 }
 
 interface JRecord {
@@ -2020,14 +2020,14 @@ interface RecordField extends TypedField {
 }
 
 namespace RecordField {
-	export function create(name: string, type: GenericComponentModelType): RecordField {
+	export function create(name: string, type: AnyComponentModelType): RecordField {
 		return { name, type };
 	}
 }
 
 export class RecordType<T extends JRecord> extends BaseRecordType<T, RecordField> {
 
-	constructor(fields: [string, GenericComponentModelType][]) {
+	constructor(fields: [string, AnyComponentModelType][]) {
 		const recordFields: RecordField[] = [];
 		for (const [name, type] of fields) {
 			recordFields.push(RecordField.create(name, type));
@@ -2058,14 +2058,14 @@ export class RecordType<T extends JRecord> extends BaseRecordType<T, RecordField
 interface TupleField extends TypedField {
 }
 namespace TupleField {
-	export function create(type: GenericComponentModelType): TupleField {
+	export function create(type: AnyComponentModelType): TupleField {
 		return { type };
 	}
 }
 
 export class TupleType<T extends JTuple> extends BaseRecordType<T, TupleField> {
 
-	constructor(fields: GenericComponentModelType[]) {
+	constructor(fields: AnyComponentModelType[]) {
 		const tupleFields: TupleField[] = [];
 		for (const type of fields) {
 			tupleFields.push(TupleField.create(type));
@@ -2084,7 +2084,7 @@ export class TupleType<T extends JTuple> extends BaseRecordType<T, TupleField> {
 
 export class FlagsType<_T> implements ComponentModelType<u32 | bigint> {
 
-	public readonly type: GenericComponentModelType | undefined;
+	public readonly type: AnyComponentModelType | undefined;
 	private readonly arraySize: number;
 
 	public readonly kind: ComponentModelTypeKind;
@@ -2211,17 +2211,17 @@ export class FlagsType<_T> implements ComponentModelType<u32 | bigint> {
 interface VariantCase {
 	readonly index: u32;
 	readonly tag: string;
-	readonly type: GenericComponentModelType | undefined;
+	readonly type: AnyComponentModelType | undefined;
 	readonly wantFlatTypes: GenericFlatType[] | undefined;
 }
 
 namespace VariantCase {
-	export function create(index: number, tag: string, type: GenericComponentModelType | undefined): VariantCase {
+	export function create(index: number, tag: string, type: AnyComponentModelType | undefined): VariantCase {
 		return { index, tag, type, wantFlatTypes: type !== undefined ? [] : undefined };
 	}
 }
 
-export interface JVariantCase {
+interface JVariantCase {
 	readonly tag: string;
 	readonly value?: JType | undefined | void;
 }
@@ -2239,7 +2239,7 @@ export class VariantType<T extends JVariantCase, I, V extends JType> implements 
 	public readonly alignment: Alignment;
 	public readonly flatTypes: ReadonlyArray<GenericFlatType>;
 
-	constructor(variants: [string, (GenericComponentModelType | undefined)][], ctor: (caseIndex: I, value: V) => T, kind: ComponentModelTypeKind.variant | ComponentModelTypeKind.result = ComponentModelTypeKind.variant) {
+	constructor(variants: [string, (AnyComponentModelType | undefined)][], ctor: (caseIndex: I, value: V) => T, kind: ComponentModelTypeKind.variant | ComponentModelTypeKind.result = ComponentModelTypeKind.variant) {
 		const cases: VariantCase[] = [];
 		this.case2Index = new Map();
 		for (let i = 0; i < variants.length; i++) {
@@ -2388,17 +2388,17 @@ export class VariantType<T extends JVariantCase, I, V extends JType> implements 
 		}
 	}
 
-	private static size(discriminantType: GenericComponentModelType, cases: VariantCase[]): size {
+	private static size(discriminantType: AnyComponentModelType, cases: VariantCase[]): size {
 		let result = discriminantType.size;
 		result = align(result, this.maxCaseAlignment(cases));
 		return result + this.maxCaseSize(cases);
 	}
 
-	private static alignment(discriminantType: GenericComponentModelType, cases: VariantCase[]): Alignment {
+	private static alignment(discriminantType: AnyComponentModelType, cases: VariantCase[]): Alignment {
 		return Math.max(discriminantType.alignment, this.maxCaseAlignment(cases)) as Alignment;
 	}
 
-	private static flatTypes(discriminantType: GenericComponentModelType, cases: VariantCase[]): ReadonlyArray<GenericFlatType> {
+	private static flatTypes(discriminantType: AnyComponentModelType, cases: VariantCase[]): ReadonlyArray<GenericFlatType> {
 		const flat: GenericFlatType[] = [];
 		for (const c of cases) {
 			if (c.type === undefined) {
@@ -2462,7 +2462,6 @@ export class VariantType<T extends JVariantCase, I, V extends JType> implements 
 }
 
 export type JEnum = string;
-
 export class EnumType<T extends JEnum> implements ComponentModelType<T> {
 
 	private readonly discriminantType: ComponentModelType<u8> | ComponentModelType<u16> | ComponentModelType<u32>;
@@ -2602,7 +2601,7 @@ export namespace option {
 export type option<T extends JType> = option.None<T> | option.Some<T>;
 export class OptionType<T extends JType> implements ComponentModelType<T | option<T> | undefined> {
 
-	public readonly valueType: GenericComponentModelType;
+	public readonly valueType: AnyComponentModelType;
 
 	public readonly kind: ComponentModelTypeKind;
 	public readonly size: size;
@@ -2610,7 +2609,7 @@ export class OptionType<T extends JType> implements ComponentModelType<T | optio
 	public readonly flatTypes: readonly GenericFlatType[];
 
 
-	constructor(valueType: GenericComponentModelType) {
+	constructor(valueType: AnyComponentModelType) {
 		this.valueType = valueType;
 		this.kind = ComponentModelTypeKind.option;
 		this.size = this.computeSize();
@@ -2782,7 +2781,7 @@ export namespace result {
 }
 export type result<O extends JType, E extends JType = void> = result.Ok<O, E> | result.Error<O, E>;
 export class ResultType<O extends JType, E extends JType = void> extends VariantType<result<O, E>, 'ok' | 'error', O | E> {
-	constructor(okType: GenericComponentModelType | undefined, errorType: GenericComponentModelType | undefined) {
+	constructor(okType: AnyComponentModelType | undefined, errorType: AnyComponentModelType | undefined) {
 		super([['ok', okType], ['error', errorType]], result._ctor<O, E>, ComponentModelTypeKind.result);
 	}
 }
@@ -3075,20 +3074,19 @@ export namespace ResourceManagers {
 
 export type JType = number | bigint | string | boolean | JArray | JRecord | JVariantCase | JTuple | JEnum | Resource | option<any> | undefined | void | result<any, any> | Int8Array | Int16Array | Int32Array | BigInt64Array | Uint8Array | Uint16Array | Uint32Array | BigUint64Array | Float32Array | Float64Array;
 
-export type CallableParameter = [/* name */string, /* type */GenericComponentModelType];
+export type CallableParameter = [/* name */string, /* type */AnyComponentModelType];
 
 export type JFunction = (...params: JType[]) => JType;
-export type GenericClass = {
+export type JClass = {
 	new (...params: JType[]): Resource;
 	[key: string]: JFunction;
 };
 
 export type PromiseJFunction = (...params: JType[]) => Promise<JType> | JType;
-export type PromiseGenericClass = {
+export type PromiseJClass = {
 	$new(...params: JType[]): Promise<Resource>;
 	[key: string]: PromiseJFunction;
 };
-
 
 export type WasmFunction = (...params: WasmType[]) => WasmType | void;
 
@@ -3123,13 +3121,13 @@ class Callable {
 
 	public readonly witName: string;
 	public readonly params: CallableParameter[];
-	public readonly returnType: GenericComponentModelType | undefined;
+	public readonly returnType: AnyComponentModelType | undefined;
 
-	public readonly paramType: GenericComponentModelType | undefined;
+	public readonly paramType: AnyComponentModelType | undefined;
 	protected readonly isSingleParam: boolean;
 	protected readonly mode: 'lift' | 'lower';
 
-	constructor(witName: string, params: CallableParameter[], returnType?: GenericComponentModelType) {
+	constructor(witName: string, params: CallableParameter[], returnType?: AnyComponentModelType) {
 		this.witName = witName;
 		this.params = params;
 		this.returnType = returnType;
@@ -3391,7 +3389,7 @@ class Callable {
 
 export class FunctionType<_T extends Function = Function> extends Callable  {
 
-	constructor(witName: string, params: CallableParameter[], returnType?: GenericComponentModelType) {
+	constructor(witName: string, params: CallableParameter[], returnType?: AnyComponentModelType) {
 		super(witName, params, returnType);
 	}
 
@@ -3413,11 +3411,11 @@ export class FunctionType<_T extends Function = Function> extends Callable  {
 
 export class ConstructorType<_T extends Function = Function> extends Callable {
 
-	constructor(witName: string, params: CallableParameter[], returnType: GenericComponentModelType) {
+	constructor(witName: string, params: CallableParameter[], returnType: AnyComponentModelType) {
 		super(witName, params, returnType);
 	}
 
-	public callService(clazz: GenericClass, params: WasmType[], context: WasmContext): WasmType | void {
+	public callService(clazz: JClass, params: WasmType[], context: WasmContext): WasmType | void {
 		// We currently only support 'lower' mode for results > MAX_FLAT_RESULTS.
 		const returnFlatTypes = this.returnType === undefined ? 0 : this.returnType.flatTypes.length;
 		if (returnFlatTypes !== 1) {
@@ -3429,7 +3427,7 @@ export class ConstructorType<_T extends Function = Function> extends Callable {
 		return obj.$handle();
 	}
 
-	public async callServiceAsync(memory: Memory, clazz: PromiseGenericClass, params: WasmType[], context: ComponentModelContext): Promise<WasmType | void> {
+	public async callServiceAsync(memory: Memory, clazz: PromiseJClass, params: WasmType[], context: ComponentModelContext): Promise<WasmType | void> {
 		// We currently only support 'lower' mode for results > MAX_FLAT_RESULTS.
 		const returnFlatTypes = this.returnType === undefined ? 0 : this.returnType.flatTypes.length;
 		if (returnFlatTypes !== 1) {
@@ -3489,7 +3487,7 @@ export class DestructorType<_T extends Function = Function> extends Callable {
 
 export class StaticMethodType<_T extends Function = Function> extends Callable {
 
-	constructor(witName: string, params: CallableParameter[], returnType?: GenericComponentModelType) {
+	constructor(witName: string, params: CallableParameter[], returnType?: AnyComponentModelType) {
 		super(witName, params, returnType);
 	}
 
@@ -3508,7 +3506,7 @@ export class StaticMethodType<_T extends Function = Function> extends Callable {
 
 export class MethodType<_T extends Function = Function> extends Callable {
 
-	constructor(witName: string, params: CallableParameter[], returnType?: GenericComponentModelType) {
+	constructor(witName: string, params: CallableParameter[], returnType?: AnyComponentModelType) {
 		super(witName, params, returnType);
 	}
 
@@ -3732,149 +3730,10 @@ export class OwnType<T extends  NonNullable<JType>> extends  AbstractWrapperType
 	}
 }
 
-export interface ComponentModelTypeVisitor {
-	visitU8?(type: typeof $u8): void;
-	visitU16?(type: typeof $u16): void;
-	visitU32?(type: typeof $u32): void;
-	visitU64?(type: typeof $u64): void;
-	visitS8?(type: typeof $s8): void;
-	visitS16?(type: typeof $s16): void;
-	visitS32?(type: typeof $s32): void;
-	visitS64?(type: typeof $s64): void;
-	visitFloat32?(type: typeof $float32): void;
-	visitFloat64?(type: typeof $float64): void;
-	visitBool?(type: typeof bool): void;
-	visitString?(type: typeof $wstring): void;
-	visitBorrow?(type: BorrowType<any>): void;
-	visitOwn?(type: OwnType<any>): void;
-	visitResource?(type: ResourceType): void;
-	visitResourceHandle?(type: ResourceHandleType): void;
-	visitEnum?(type: EnumType<any>): void;
-	visitFlags?(type: FlagsType<any>): void;
-	visitList?(type: ListType<any>): boolean;
-	endVisitList?(type: ListType<any>): void;
-	visitRecord?(type: RecordType<any>): boolean;
-	endVisitRecord?(type: RecordType<any>): void;
-	visitTuple?(type: TupleType<any>): boolean;
-	endVisitTuple?(type: TupleType<any>): void;
-	visitVariant?(type: VariantType<any, any, any>): boolean;
-	endVisitVariant?(type: VariantType<any, any, any>): void;
-	visitOption?(type: OptionType<any>): boolean;
-	endVisitOption?(type: OptionType<any>): void;
-	visitResult?(type: ResultType<any, any>): boolean;
-	endVisitResult?(type: ResultType<any, any>): void;
-}
-export namespace ComponentModelTypeVisitor {
-	export function visit(type: GenericComponentModelType, visitor: ComponentModelTypeVisitor): void {
-		switch (type.kind) {
-			case ComponentModelTypeKind.u8:
-				visitor.visitU8 !== undefined && visitor.visitU8(type as typeof $u8);
-				break;
-			case ComponentModelTypeKind.u16:
-				visitor.visitU16 !== undefined && visitor.visitU16(type as typeof $u16);
-				break;
-			case ComponentModelTypeKind.u32:
-				visitor.visitU32 !== undefined && visitor.visitU32(type as typeof $u32);
-				break;
-			case ComponentModelTypeKind.u64:
-				visitor.visitU64 !== undefined && visitor.visitU64(type as typeof $u64);
-				break;
-			case ComponentModelTypeKind.s8:
-				visitor.visitS8 !== undefined && visitor.visitS8(type as typeof $s8);
-				break;
-			case ComponentModelTypeKind.s16:
-				visitor.visitS16 !== undefined && visitor.visitS16(type as typeof $s16);
-				break;
-			case ComponentModelTypeKind.s32:
-				visitor.visitS32 !== undefined && visitor.visitS32(type as typeof $s32);
-				break;
-			case ComponentModelTypeKind.s64:
-				visitor.visitS64 !== undefined && visitor.visitS64(type as typeof $s64);
-				break;
-			case ComponentModelTypeKind.float32:
-				visitor.visitFloat32 !== undefined && visitor.visitFloat32(type as typeof $float32);
-				break;
-			case ComponentModelTypeKind.float64:
-				visitor.visitFloat64 !== undefined && visitor.visitFloat64(type as typeof $float64);
-				break;
-			case ComponentModelTypeKind.bool:
-				visitor.visitBool !== undefined && visitor.visitBool(type as typeof bool);
-				break;
-			case ComponentModelTypeKind.string:
-				visitor.visitString !== undefined && visitor.visitString(type as typeof $wstring);
-				break;
-			case ComponentModelTypeKind.enum:
-				visitor.visitEnum !== undefined && visitor.visitEnum(type as EnumType<any>);
-				break;
-			case ComponentModelTypeKind.flags:
-				visitor.visitFlags !== undefined && visitor.visitFlags(type as FlagsType<any>);
-				break;
-			case ComponentModelTypeKind.borrow:
-				visitor.visitBorrow !== undefined && visitor.visitBorrow(type as BorrowType<any>);
-				break;
-			case ComponentModelTypeKind.own:
-				visitor.visitOwn !== undefined && visitor.visitOwn(type as OwnType<any>);
-				break;
-			case ComponentModelTypeKind.resource:
-				visitor.visitResource !== undefined && visitor.visitResource(type as ResourceType);
-				break;
-			case ComponentModelTypeKind.resourceHandle:
-				visitor.visitResourceHandle !== undefined && visitor.visitResourceHandle(type as ResourceHandleType);
-				break;
-			case ComponentModelTypeKind.list:
-				if (visitor.visitList !== undefined && visitor.visitList(type as ListType<any>)) {
-					visit((type as ListType<any>).elementType, visitor);
-				}
-				visitor.endVisitList !== undefined && visitor.endVisitList(type as ListType<any>);
-				break;
-			case ComponentModelTypeKind.record:
-				if ((visitor.visitRecord !== undefined && visitor.visitRecord(type as RecordType<any>) || visitor.visitRecord === undefined)) {
-					for (const field of (type as RecordType<any>).fields) {
-						visit(field.type, visitor);
-					}
-				}
-				visitor.endVisitRecord !== undefined && visitor.endVisitRecord(type as RecordType<any>);
-				break;
-			case ComponentModelTypeKind.tuple:
-				if ((visitor.visitTuple !== undefined && visitor.visitTuple(type as TupleType<any>) || visitor.visitTuple === undefined)) {
-					for (const field of (type as TupleType<any>).fields) {
-						visit(field.type, visitor);
-					}
-				}
-				visitor.endVisitTuple !== undefined && visitor.endVisitTuple(type as TupleType<any>);
-				break;
-			case ComponentModelTypeKind.variant:
-				if ((visitor.visitVariant !== undefined && visitor.visitVariant(type as VariantType<any, any, any>) || visitor.visitVariant === undefined)) {
-					for (const field of (type as VariantType<any, any, any>).cases) {
-						field.type !== undefined && visit(field.type, visitor);
-					}
-				}
-				visitor.endVisitVariant !== undefined && visitor.endVisitVariant(type as VariantType<any, any, any>);
-				break;
-			case ComponentModelTypeKind.option:
-				if ((visitor.visitOption !== undefined && visitor.visitOption(type as OptionType<any>) || visitor.visitOption === undefined)) {
-					visit((type as OptionType<any>).valueType, visitor);
-				}
-				visitor.endVisitOption !== undefined && visitor.endVisitOption(type as OptionType<any>);
-				break;
-			case ComponentModelTypeKind.result:
-				if ((visitor.visitResult !== undefined && visitor.visitResult(type as ResultType<any, any>) || visitor.visitResult === undefined)) {
-					for (const field of (type as ResultType<any, any>).cases) {
-						field.type !== undefined && visit(field.type, visitor);
-					}
-				}
-				visitor.endVisitResult !== undefined && visitor.endVisitResult(type as ResultType<any, any>);
-				break;
-			default:
-				throw new ComponentModelTrap(`Unknown type kind ${type.kind}`);
-		}
-	}
-}
-
 export type InterfaceType = {
 	readonly id: string;
 	readonly witName: string;
-	readonly types?: Map<string, GenericComponentModelType>;
+	readonly types?: Map<string, AnyComponentModelType>;
 	readonly functions?: Map<string, FunctionType<JFunction>>;
 	readonly resources?: Map<string, ResourceType>;
 };
@@ -3892,7 +3751,7 @@ type ParamWasmFunction = (...params: UnionWasmType[]) => WasmType | void;
 type ParamWasmInterface = Record<string, ParamWasmFunction>;
 type ParamWasmInterfaces = Record<string, ParamWasmInterface>;
 
-export type ServiceInterface = Record<string, JFunction | GenericClass>;
+export type ServiceInterface = Record<string, JFunction | JClass>;
 export type WorldServiceInterface = Record<string, JFunction | ServiceInterface>;
 
 type ParamServiceFunction = (...params: UnionJType[]) => JType;
@@ -3973,7 +3832,7 @@ export type UnionJType = number & bigint & string & boolean & JArray & JRecord &
 export type UnionWasmType = number & bigint;
 
 
-function getResourceManager(resource: ResourceType, clazz: GenericClass | PromiseGenericClass| undefined, context: ComponentModelContext): ResourceManager {
+function getResourceManager(resource: ResourceType, clazz: JClass | PromiseJClass| undefined, context: ComponentModelContext): ResourceManager {
 	let resourceManager: ResourceManager;
 	if (context.resources.has(resource.id)) {
 		resourceManager = context.resources.ensure(resource.id);
@@ -4110,13 +3969,13 @@ export namespace $imports {
 		}
 		if (resources !== undefined) {
 			for (const [resourceName, resource ] of resources) {
-				const clazz = service[resourceName] as GenericClass;
+				const clazz = service[resourceName] as JClass;
 				const resourceManager: ResourceManager = getResourceManager(resource, clazz, context);
 				for (const [callableName, callable] of resource.callables) {
 					if (callable instanceof ConstructorType) {
 						result[callable.witName] = createConstructorFunction(callable, clazz, context);
 					} else if (callable instanceof StaticMethodType) {
-						result[callable.witName] = createStaticMethodFunction(callable, (service[resourceName] as GenericClass)[callableName], context);
+						result[callable.witName] = createStaticMethodFunction(callable, (service[resourceName] as JClass)[callableName], context);
 					} else if (callable instanceof MethodType) {
 						result[callable.witName] = createMethodFunction(callableName, callable, resourceManager, context);
 					} else if (callable instanceof DestructorType) {
@@ -4134,7 +3993,7 @@ export namespace $imports {
 		};
 	}
 
-	function createConstructorFunction(callable: ConstructorType, clazz: GenericClass, context: WasmContext): WasmFunction {
+	function createConstructorFunction(callable: ConstructorType, clazz: JClass, context: WasmContext): WasmFunction {
 		return function (this: void, ...params: WasmType[]): number | bigint | void {
 			return callable.callService(clazz, params, context);
 		};
@@ -4522,7 +4381,7 @@ export namespace $main {
 		}
 		if (resources !== undefined) {
 			for (const [resourceName, resource] of resources) {
-				const clazz = service[resourceName] as PromiseGenericClass;
+				const clazz = service[resourceName] as PromiseJClass;
 				const resourceManager: ResourceManager = getResourceManager(resource, clazz, context);
 				for (const [callableName, callable] of resource.callables) {
 					if (callable instanceof ConstructorType) {
@@ -4531,7 +4390,7 @@ export namespace $main {
 						});
 					} else if (callable instanceof StaticMethodType) {
 						connection.on(`${qualifier}#${callable.witName}`, (memory: Memory, params: WasmType[]) => {
-							return callable.callServiceAsync(memory, (service[resourceName] as PromiseGenericClass)[callableName], params, context);
+							return callable.callServiceAsync(memory, (service[resourceName] as PromiseJClass)[callableName], params, context);
 						});
 					} else if (callable instanceof MethodType) {
 						connection.on(`${qualifier}#${callable.witName}`, (memory: Memory, params: WasmType[]) => {
