@@ -247,10 +247,10 @@ export namespace calculator._ {
 			['Functions', Functions._]
 		]);
 		export function create(service: calculator.Imports, context: $wcm.WasmContext): Imports {
-			return $wcm.$imports.create<Imports>(_, service, context) as Imports;
+			return $wcm.$imports.create<Imports>(_, service, context);
 		}
 		export function loop(service: calculator.Imports, context: $wcm.WasmContext): calculator.Imports {
-			return $wcm.$imports.loop(_, service, context) as calculator.Imports;
+			return $wcm.$imports.loop<calculator.Imports>(_, service, context);
 		}
 	}
 	export type Imports = {
