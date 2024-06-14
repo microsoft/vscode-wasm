@@ -3,8 +3,8 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 /* eslint-disable @typescript-eslint/ban-types */
+import type { i32, u32 } from '@vscode/wasm-component-model';
 import * as $wcm from '@vscode/wasm-component-model';
-import type { u32, i32 } from '@vscode/wasm-component-model';
 
 export namespace Types {
 	export enum OpCode {
@@ -247,10 +247,10 @@ export namespace calculator._ {
 			['Functions', Functions._]
 		]);
 		export function create(service: calculator.Imports, context: $wcm.WasmContext): Imports {
-			return $wcm.$imports.create<Imports>(_, service, context);
+			return $wcm.$imports.create<Imports>(_, service, context) as Imports;
 		}
 		export function loop(service: calculator.Imports, context: $wcm.WasmContext): calculator.Imports {
-			return $wcm.$imports.loop(_, service, context);
+			return $wcm.$imports.loop(_, service, context) as calculator.Imports;
 		}
 	}
 	export type Imports = {
@@ -303,4 +303,4 @@ export namespace calculator._ {
 	export function bind(service: calculator.Imports | calculator.Imports.Promisified, code: $wcm.Code, portOrContext?: $wcm.RAL.ConnectionPort | $wcm.ComponentModelContext, context?: $wcm.ComponentModelContext | undefined): Promise<calculator.Exports> | Promise<calculator.Exports.Promisified> {
 		return $wcm.$main.bind(_, service, code, portOrContext, context);
 	}
-} satisfies $wcm.WorldType;
+}
