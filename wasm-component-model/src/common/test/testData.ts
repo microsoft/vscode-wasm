@@ -176,6 +176,7 @@ export namespace Types {
 			add(): u32;
 		}
 		export type Statics = {
+			$new?(x: u32, y: u32): Interface;
 		};
 		export type Class = Statics & {
 			new(x: u32, y: u32): Interface;
@@ -210,6 +211,7 @@ export namespace Text {
 			character(): u32;
 		}
 		export type Statics = {
+			$new?(line: u32, character: u32): Interface;
 		};
 		export type Class = Statics & {
 			new(line: u32, character: u32): Interface;
@@ -225,10 +227,22 @@ export namespace testData {
 		foo: () => u32;
 		types: Types;
 	};
+	export namespace Imports {
+		export type Promisified = $wcm.$imports.Promisify<Imports>;
+	}
+	export namespace imports {
+		export type Promisify<T> = $wcm.$imports.Promisify<T>;
+	}
 	export type Exports = {
 		bar: () => u32;
 		text: Text;
 	};
+	export namespace Exports {
+		export type Promisified = $wcm.$exports.Promisify<Exports>;
+	}
+	export namespace exports {
+		export type Promisify<T> = $wcm.$exports.Promisify<T>;
+	}
 }
 
 export namespace Types.$ {
@@ -286,7 +300,7 @@ export namespace Types._ {
 			export type WasmInterface = PointResource.WasmInterface & { '[dtor]point-resource': (self: i32) => void };
 		}
 	}
-	export const types: Map<string, $wcm.GenericComponentModelType> = new Map<string, $wcm.GenericComponentModelType>([
+	export const types: Map<string, $wcm.AnyComponentModelType> = new Map<string, $wcm.AnyComponentModelType>([
 		['Point', $.Point],
 		['PointOption', $.PointOption],
 		['TestVariant', $.TestVariant],
@@ -353,7 +367,7 @@ export namespace Text._ {
 			export type WasmInterface = Position.WasmInterface & { '[dtor]position': (self: i32) => void };
 		}
 	}
-	export const types: Map<string, $wcm.GenericComponentModelType> = new Map<string, $wcm.GenericComponentModelType>([
+	export const types: Map<string, $wcm.AnyComponentModelType> = new Map<string, $wcm.AnyComponentModelType>([
 		['Position', $.Position]
 	]);
 	export const resources: Map<string, $wcm.ResourceType> = new Map<string, $wcm.ResourceType>([
@@ -426,8 +440,8 @@ export namespace testData._ {
 		'vscode:test-data/text#[method]position.character': (self: i32) => i32;
 	};
 	export function bind(service: testData.Imports, code: $wcm.Code, context?: $wcm.ComponentModelContext): Promise<testData.Exports>;
-	export function bind(service: $wcm.$imports.Promisify<testData.Imports>, code: $wcm.Code, port: $wcm.RAL.ConnectionPort, context?: $wcm.ComponentModelContext): Promise<$wcm.$exports.Promisify<testData.Exports>>;
-	export function bind(service: testData.Imports | $wcm.$imports.Promisify<testData.Imports>, code: $wcm.Code, portOrContext?: $wcm.RAL.ConnectionPort | $wcm.ComponentModelContext, context?: $wcm.ComponentModelContext | undefined): Promise<testData.Exports> | Promise<$wcm.$exports.Promisify<testData.Exports>> {
+	export function bind(service: testData.Imports.Promisified, code: $wcm.Code, port: $wcm.RAL.ConnectionPort, context?: $wcm.ComponentModelContext): Promise<testData.Exports.Promisified>;
+	export function bind(service: testData.Imports | testData.Imports.Promisified, code: $wcm.Code, portOrContext?: $wcm.RAL.ConnectionPort | $wcm.ComponentModelContext, context?: $wcm.ComponentModelContext | undefined): Promise<testData.Exports> | Promise<testData.Exports.Promisified> {
 		return $wcm.$main.bind(_, service, code, portOrContext, context);
 	}
 }

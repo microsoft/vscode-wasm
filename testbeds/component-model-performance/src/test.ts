@@ -28,9 +28,21 @@ export namespace test {
 	export type Imports = {
 		window: Window;
 	};
+	export namespace Imports {
+		export type Promisified = $wcm.$imports.Promisify<Imports>;
+	}
+	export namespace imports {
+		export type Promisify<T> = $wcm.$imports.Promisify<T>;
+	}
 	export type Exports = {
 		run: () => void;
 	};
+	export namespace Exports {
+		export type Promisified = $wcm.$exports.Promisify<Exports>;
+	}
+	export namespace exports {
+		export type Promisify<T> = $wcm.$exports.Promisify<T>;
+	}
 }
 
 export namespace Window.$ {
@@ -56,7 +68,7 @@ export namespace Window._ {
 			export type WasmInterface = TestResource.WasmInterface & { '[dtor]test-resource': (self: i32) => void };
 		}
 	}
-	export const types: Map<string, $wcm.GenericComponentModelType> = new Map<string, $wcm.GenericComponentModelType>([
+	export const types: Map<string, $wcm.AnyComponentModelType> = new Map<string, $wcm.AnyComponentModelType>([
 		['TestResource', $.TestResource]
 	]);
 	export const functions: Map<string, $wcm.FunctionType> = new Map([
@@ -116,8 +128,8 @@ export namespace test._ {
 		'run': () => void;
 	};
 	export function bind(service: test.Imports, code: $wcm.Code, context?: $wcm.ComponentModelContext): Promise<test.Exports>;
-	export function bind(service: $wcm.$imports.Promisify<test.Imports>, code: $wcm.Code, port: $wcm.RAL.ConnectionPort, context?: $wcm.ComponentModelContext): Promise<$wcm.$exports.Promisify<test.Exports>>;
-	export function bind(service: test.Imports | $wcm.$imports.Promisify<test.Imports>, code: $wcm.Code, portOrContext?: $wcm.RAL.ConnectionPort | $wcm.ComponentModelContext, context?: $wcm.ComponentModelContext | undefined): Promise<test.Exports> | Promise<$wcm.$exports.Promisify<test.Exports>> {
+	export function bind(service: test.Imports.Promisified, code: $wcm.Code, port: $wcm.RAL.ConnectionPort, context?: $wcm.ComponentModelContext): Promise<test.Exports.Promisified>;
+	export function bind(service: test.Imports | test.Imports.Promisified, code: $wcm.Code, portOrContext?: $wcm.RAL.ConnectionPort | $wcm.ComponentModelContext, context?: $wcm.ComponentModelContext | undefined): Promise<test.Exports> | Promise<test.Exports.Promisified> {
 		return $wcm.$main.bind(_, service, code, portOrContext, context);
 	}
 }

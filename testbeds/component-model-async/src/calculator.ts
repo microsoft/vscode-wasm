@@ -125,7 +125,7 @@ export namespace calculator {
 		types: Types;
 	};
 	export namespace Imports {
-		export type Promisified = $wcm.$imports.Promisify<Imports>
+		export type Promisified = $wcm.$imports.Promisify<Imports>;
 	}
 	export namespace imports {
 		export type Promisify<T> = $wcm.$imports.Promisify<T>;
@@ -136,7 +136,7 @@ export namespace calculator {
 		reverseNotation: ReverseNotation;
 	};
 	export namespace Exports {
-		export type Promisified = $wcm.$exports.Promisify<Exports>
+		export type Promisified = $wcm.$exports.Promisify<Exports>;
 	}
 	export namespace exports {
 		export type Promisify<T> = $wcm.$exports.Promisify<T>;
@@ -174,7 +174,7 @@ export namespace Types._ {
 			export type WasmInterface = Channel.WasmInterface & { '[dtor]channel': (self: i32) => void };
 		}
 	}
-	export const types: Map<string, $wcm.GenericComponentModelType> = new Map<string, $wcm.GenericComponentModelType>([
+	export const types: Map<string, $wcm.AnyComponentModelType> = new Map<string, $wcm.AnyComponentModelType>([
 		['Operands', $.Operands],
 		['Operation', $.Operation],
 		['Channel', $.Channel]
@@ -230,7 +230,7 @@ export namespace ReverseNotation._ {
 			export type WasmInterface = Engine.WasmInterface & { '[dtor]engine': (self: i32) => void };
 		}
 	}
-	export const types: Map<string, $wcm.GenericComponentModelType> = new Map<string, $wcm.GenericComponentModelType>([
+	export const types: Map<string, $wcm.AnyComponentModelType> = new Map<string, $wcm.AnyComponentModelType>([
 		['Operation', $.Operation],
 		['Engine', $.Engine]
 	]);
@@ -316,8 +316,8 @@ export namespace calculator._ {
 		'vscode:example/reverse-notation#[method]engine.execute': (self: i32) => i32;
 	};
 	export function bind(service: calculator.Imports, code: $wcm.Code, context?: $wcm.ComponentModelContext): Promise<calculator.Exports>;
-	export function bind(service: $wcm.$imports.Promisify<calculator.Imports>, code: $wcm.Code, port: $wcm.RAL.ConnectionPort, context?: $wcm.ComponentModelContext): Promise<$wcm.$exports.Promisify<calculator.Exports>>;
-	export function bind(service: calculator.Imports | $wcm.$imports.Promisify<calculator.Imports>, code: $wcm.Code, portOrContext?: $wcm.RAL.ConnectionPort | $wcm.ComponentModelContext, context?: $wcm.ComponentModelContext | undefined): Promise<calculator.Exports> | Promise<$wcm.$exports.Promisify<calculator.Exports>> {
+	export function bind(service: calculator.Imports.Promisified, code: $wcm.Code, port: $wcm.RAL.ConnectionPort, context?: $wcm.ComponentModelContext): Promise<calculator.Exports.Promisified>;
+	export function bind(service: calculator.Imports | calculator.Imports.Promisified, code: $wcm.Code, portOrContext?: $wcm.RAL.ConnectionPort | $wcm.ComponentModelContext, context?: $wcm.ComponentModelContext | undefined): Promise<calculator.Exports> | Promise<calculator.Exports.Promisified> {
 		return $wcm.$main.bind(_, service, code, portOrContext, context);
 	}
 }

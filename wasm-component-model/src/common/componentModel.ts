@@ -3747,21 +3747,8 @@ export namespace InterfaceType {
 export type WasmInterface = Record<string, WasmFunction>;
 export type WasmInterfaces = Record<string, WasmInterface>;
 
-type ParamWasmFunction = (...params: UnionWasmType[]) => WasmType | void;
-type ParamWasmInterface = Record<string, ParamWasmFunction>;
-type ParamWasmInterfaces = Record<string, ParamWasmInterface>;
-
 export type ServiceInterface = Record<string, JFunction | JClass>;
 export type WorldServiceInterface = Record<string, JFunction | ServiceInterface>;
-
-type ParamServiceFunction = (...params: UnionJType[]) => JType;
-type ParamGenericClass = {
-	new (...params: UnionJType[]): Resource;
-} | {
-	[key: string]: ParamServiceFunction;
-};
-type ParamServiceInterface = Record<string, ParamServiceFunction | ParamGenericClass>;
-type ParamWorldServiceInterface = Record<string, ParamServiceFunction | ParamServiceInterface>;
 
 export type WorldType = {
 	readonly id: string;
@@ -3769,8 +3756,8 @@ export type WorldType = {
 	readonly imports?: {
 		readonly functions?: Map<string, FunctionType<JFunction>>;
 		readonly interfaces?: Map<string, InterfaceType>;
-		create(service: any | ParamServiceInterface, context: WasmContext): any | WasmInterfaces;
-		loop(service: any | ParamServiceInterface, context: WasmContext): any | ServiceInterface;
+		create(service: any | ParamServiceInterface, context: WasmContext): WasmInterfaces;
+		loop(service: any | ParamServiceInterface, context: WasmContext): ServiceInterface;
 	};
 	readonly exports?: {
 		readonly functions?: Map<string, FunctionType<JFunction>>;
@@ -3828,10 +3815,6 @@ export namespace WasmContext {
 	}
 }
 
-export type UnionJType = number & bigint & string & boolean & JArray & JRecord & JVariantCase & JTuple & JEnum & Resource & option<any> & undefined & result<any, any> & Int8Array & Int16Array & Int32Array & BigInt64Array & Uint8Array & Uint16Array & Uint32Array & BigUint64Array & Float32Array & Float64Array;
-export type UnionWasmType = number & bigint;
-
-
 function getResourceManager(resource: ResourceType, clazz: JClass | PromiseJClass| undefined, context: ComponentModelContext): ResourceManager {
 	let resourceManager: ResourceManager;
 	if (context.resources.has(resource.id)) {
@@ -3865,7 +3848,7 @@ export namespace $imports {
 
 	export function create<T extends ParamWasmInterfaces>(world: WorldType, service: ParamWorldServiceInterface, context: WasmContext): T {
 		const packageName = world.id.substring(0, world.id.indexOf('/'));
-		const result: WasmInterfaces  = Object.create(null);
+		const result: WasmInterfaces = Object.create(null);
 		if (world.imports !== undefined) {
 			if (world.imports.functions !== undefined) {
 				result['$root'] = doCreate<WasmInterface>(world.imports.functions, undefined, service as ParamServiceInterface, context);

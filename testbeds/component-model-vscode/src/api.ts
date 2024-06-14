@@ -123,11 +123,23 @@ export namespace api {
 			commands: api.Commands;
 			window: api.Window;
 		};
+		export namespace Imports {
+			export type Promisified = $wcm.$imports.Promisify<Imports>;
+		}
+		export namespace imports {
+			export type Promisify<T> = $wcm.$imports.Promisify<T>;
+		}
 		export type Exports = {
 			activate: () => void;
 			deactivate: () => void;
 			callbacks: api.Callbacks;
 		};
+		export namespace Exports {
+			export type Promisified = $wcm.$exports.Promisify<Exports>;
+		}
+		export namespace exports {
+			export type Promisify<T> = $wcm.$exports.Promisify<T>;
+		}
 	}
 }
 
@@ -205,7 +217,7 @@ export namespace api {
 				export type WasmInterface = OutputChannel.WasmInterface & { '[dtor]output-channel': (self: i32) => void };
 			}
 		}
-		export const types: Map<string, $wcm.GenericComponentModelType> = new Map<string, $wcm.GenericComponentModelType>([
+		export const types: Map<string, $wcm.AnyComponentModelType> = new Map<string, $wcm.AnyComponentModelType>([
 			['Position', $.Position],
 			['Range', $.Range],
 			['TextDocumentContentChangeEvent', $.TextDocumentContentChangeEvent],
@@ -270,7 +282,7 @@ export namespace api {
 	export namespace Window._ {
 		export const id = 'host:api/window' as const;
 		export const witName = 'window' as const;
-		export const types: Map<string, $wcm.GenericComponentModelType> = new Map<string, $wcm.GenericComponentModelType>([
+		export const types: Map<string, $wcm.AnyComponentModelType> = new Map<string, $wcm.AnyComponentModelType>([
 			['OutputChannel', $.OutputChannel]
 		]);
 		export const functions: Map<string, $wcm.FunctionType> = new Map([
@@ -295,7 +307,7 @@ export namespace api {
 	export namespace Workspace._ {
 		export const id = 'host:api/workspace' as const;
 		export const witName = 'workspace' as const;
-		export const types: Map<string, $wcm.GenericComponentModelType> = new Map<string, $wcm.GenericComponentModelType>([
+		export const types: Map<string, $wcm.AnyComponentModelType> = new Map<string, $wcm.AnyComponentModelType>([
 			['TextDocument', $.TextDocument]
 		]);
 		export const functions: Map<string, $wcm.FunctionType> = new Map([
@@ -326,7 +338,7 @@ export namespace api {
 	export namespace Callbacks._ {
 		export const id = 'host:api/callbacks' as const;
 		export const witName = 'callbacks' as const;
-		export const types: Map<string, $wcm.GenericComponentModelType> = new Map<string, $wcm.GenericComponentModelType>([
+		export const types: Map<string, $wcm.AnyComponentModelType> = new Map<string, $wcm.AnyComponentModelType>([
 			['TextDocumentChangeEvent', $.TextDocumentChangeEvent]
 		]);
 		export const functions: Map<string, $wcm.FunctionType> = new Map([
@@ -392,8 +404,8 @@ export namespace api {
 			'host:api/callbacks#execute-command': (command_ptr: i32, command_len: i32) => void;
 		};
 		export function bind(service: all.Imports, code: $wcm.Code, context?: $wcm.ComponentModelContext): Promise<all.Exports>;
-		export function bind(service: $wcm.$imports.Promisify<all.Imports>, code: $wcm.Code, port: $wcm.RAL.ConnectionPort, context?: $wcm.ComponentModelContext): Promise<$wcm.$exports.Promisify<all.Exports>>;
-		export function bind(service: all.Imports | $wcm.$imports.Promisify<all.Imports>, code: $wcm.Code, portOrContext?: $wcm.RAL.ConnectionPort | $wcm.ComponentModelContext, context?: $wcm.ComponentModelContext | undefined): Promise<all.Exports> | Promise<$wcm.$exports.Promisify<all.Exports>> {
+		export function bind(service: all.Imports.Promisified, code: $wcm.Code, port: $wcm.RAL.ConnectionPort, context?: $wcm.ComponentModelContext): Promise<all.Exports.Promisified>;
+		export function bind(service: all.Imports | all.Imports.Promisified, code: $wcm.Code, portOrContext?: $wcm.RAL.ConnectionPort | $wcm.ComponentModelContext, context?: $wcm.ComponentModelContext | undefined): Promise<all.Exports> | Promise<all.Exports.Promisified> {
 			return $wcm.$main.bind(_, service, code, portOrContext, context);
 		}
 	}

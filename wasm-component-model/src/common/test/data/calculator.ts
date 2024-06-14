@@ -3,8 +3,8 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 /* eslint-disable @typescript-eslint/ban-types */
-import type { i32, u32 } from '@vscode/wasm-component-model';
 import * as $wcm from '@vscode/wasm-component-model';
+import type { u32, i32 } from '@vscode/wasm-component-model';
 
 export namespace Types {
 	export enum OpCode {
@@ -29,7 +29,7 @@ export namespace Types {
 			execute(): u32;
 		}
 		export type Statics = {
-			$new(): Interface;
+			$new?(): Interface;
 		};
 		export type Class = Statics & {
 			new(): Interface;
@@ -72,6 +72,12 @@ export namespace calculator {
 		functions: Functions;
 		iface: imports.Iface;
 	};
+	export namespace Imports {
+		export type Promisified = $wcm.$imports.Promisify<Imports>;
+	}
+	export namespace imports {
+		export type Promisify<T> = $wcm.$imports.Promisify<T>;
+	}
 	export namespace exports {
 		export namespace Iface {
 			export type foo = () => u32;
@@ -86,6 +92,12 @@ export namespace calculator {
 		types: Types;
 		iface: exports.Iface;
 	};
+	export namespace Exports {
+		export type Promisified = $wcm.$exports.Promisify<Exports>;
+	}
+	export namespace exports {
+		export type Promisify<T> = $wcm.$exports.Promisify<T>;
+	}
 }
 
 export namespace Types.$ {
@@ -240,11 +252,6 @@ export namespace calculator._ {
 		export function loop(service: calculator.Imports, context: $wcm.WasmContext): calculator.Imports {
 			return $wcm.$imports.loop(_, service, context);
 		}
-		export namespace worker {
-			export function create(connection: $wcm.WorkerConnection, context: $wcm.WasmContext): Imports {
-				return $wcm.$imports.worker.create<Imports>(connection, _, context);
-			}
-		}
 	}
 	export type Imports = {
 		'$root': $Root;
@@ -252,15 +259,6 @@ export namespace calculator._ {
 		'vscode:example/types': Types._.imports.WasmInterface;
 		'vscode:example/functions': Functions._.imports.WasmInterface;
 		'[export]vscode:example/types': Types._.exports.imports.WasmInterface;
-	};
-	export type Exports = {
-		'add': (a: i32, b: i32) => i32;
-		'calc': (o_Operation_code_OpCode: i32, o_Operation_a: i32, o_Operation_b: i32) => i32;
-		'vscode:example/iface#foo': () => i32;
-		'vscode:example/types#[constructor]engine': () => i32;
-		'vscode:example/types#[method]engine.push-operand': (self: i32, operand: i32) => void;
-		'vscode:example/types#[method]engine.push-operation': (self: i32, operation_code_OpCode: i32, operation_a: i32, operation_b: i32) => void;
-		'vscode:example/types#[method]engine.execute': (self: i32) => i32;
 	};
 	export namespace exports {
 		export namespace Iface._ {
@@ -290,10 +288,19 @@ export namespace calculator._ {
 		export function bind(exports: Exports, context: $wcm.WasmContext): calculator.Exports {
 			return $wcm.$exports.bind<calculator.Exports>(_, exports, context);
 		}
-		export namespace worker {
-			export function bind(connection: $wcm.WorkerConnection, exports: Exports, context: $wcm.WasmContext): void {
-				$wcm.$exports.worker.bind(connection, _, exports, context);
-			}
-		}
 	}
-}
+	export type Exports = {
+		'add': (a: i32, b: i32) => i32;
+		'calc': (o_Operation_code_OpCode: i32, o_Operation_a: i32, o_Operation_b: i32) => i32;
+		'vscode:example/iface#foo': () => i32;
+		'vscode:example/types#[constructor]engine': () => i32;
+		'vscode:example/types#[method]engine.push-operand': (self: i32, operand: i32) => void;
+		'vscode:example/types#[method]engine.push-operation': (self: i32, operation_code_OpCode: i32, operation_a: i32, operation_b: i32) => void;
+		'vscode:example/types#[method]engine.execute': (self: i32) => i32;
+	};
+	export function bind(service: calculator.Imports, code: $wcm.Code, context?: $wcm.ComponentModelContext): Promise<calculator.Exports>;
+	export function bind(service: calculator.Imports.Promisified, code: $wcm.Code, port: $wcm.RAL.ConnectionPort, context?: $wcm.ComponentModelContext): Promise<calculator.Exports.Promisified>;
+	export function bind(service: calculator.Imports | calculator.Imports.Promisified, code: $wcm.Code, portOrContext?: $wcm.RAL.ConnectionPort | $wcm.ComponentModelContext, context?: $wcm.ComponentModelContext | undefined): Promise<calculator.Exports> | Promise<calculator.Exports.Promisified> {
+		return $wcm.$main.bind(_, service, code, portOrContext, context);
+	}
+} satisfies $wcm.WorldType;

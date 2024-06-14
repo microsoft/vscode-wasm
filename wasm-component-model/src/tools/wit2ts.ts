@@ -2172,7 +2172,7 @@ class WorldEmitter extends Emitter {
 
 		code.push(`export namespace Imports {`);
 		code.increaseIndent();
-		code.push(`export type Promisified = ${MetaModel.ImportPromisify}<Imports>`);
+		code.push(`export type Promisified = ${MetaModel.ImportPromisify}<Imports>;`);
 		code.decreaseIndent();
 		code.push(`}`);
 
@@ -2213,7 +2213,7 @@ class WorldEmitter extends Emitter {
 
 		code.push(`export namespace Exports {`);
 		code.increaseIndent();
-		code.push(`export type Promisified = ${MetaModel.ExportPromisify}<Exports>`);
+		code.push(`export type Promisified = ${MetaModel.ExportPromisify}<Exports>;`);
 		code.decreaseIndent();
 		code.push(`}`);
 
@@ -2433,8 +2433,8 @@ class WorldEmitter extends Emitter {
 		}
 
 		code.push(`export function bind(service: ${name}.Imports, code: ${MetaModel.Code}, context?: ${MetaModel.ComponentModelContext}): Promise<${name}.Exports>;`);
-		code.push(`export function bind(service: ${MetaModel.ImportPromisify}<${name}.Imports>, code: ${MetaModel.Code}, port: ${MetaModel.ConnectionPort}, context?: ${MetaModel.ComponentModelContext}): Promise<${MetaModel.ExportPromisify}<${name}.Exports>>;`);
-		code.push(`export function bind(service: ${name}.Imports | ${MetaModel.ImportPromisify}<${name}.Imports>, code: ${MetaModel.Code}, portOrContext?: ${MetaModel.ConnectionPort} | ${MetaModel.ComponentModelContext}, context?: ${MetaModel.ComponentModelContext} | undefined): Promise<${name}.Exports> | Promise<${MetaModel.ExportPromisify}<${name}.Exports>> {`);
+		code.push(`export function bind(service: ${name}.Imports.Promisified, code: ${MetaModel.Code}, port: ${MetaModel.ConnectionPort}, context?: ${MetaModel.ComponentModelContext}): Promise<${name}.Exports.Promisified>;`);
+		code.push(`export function bind(service: ${name}.Imports | ${name}.Imports.Promisified, code: ${MetaModel.Code}, portOrContext?: ${MetaModel.ConnectionPort} | ${MetaModel.ComponentModelContext}, context?: ${MetaModel.ComponentModelContext} | undefined): Promise<${name}.Exports> | Promise<${name}.Exports.Promisified> {`);
 		code.increaseIndent();
 		code.push(`return ${MetaModel.bind}(_, service, code, portOrContext, context);`);
 		code.decreaseIndent();
