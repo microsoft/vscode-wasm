@@ -3753,9 +3753,9 @@ export type WorldServiceInterface = Record<string, JFunction | ServiceInterface>
 export type ServiceInterfaceAsync = Record<string, JFunctionAsync | JClassAsync>;
 export type WorldServiceInterfaceAsync = Record<string, JFunction | ServiceInterfaceAsync>;
 
-type ServiceInterfaceImplementation = Record<string, Function | { new (...params: any): Resource }>;
+type ServiceInterfaceImplementation = Record<string, Function | Record<string, Function> | { new (...params: any): Resource }>;
 type WorldServiceInterfaceImplementation = Record<string, Function | ServiceInterfaceImplementation>;
-type ServiceInterfaceImplementationAsync = Record<string, Function | { $new(...params: any): Promise<Resource> }>;
+type ServiceInterfaceImplementationAsync = Record<string, Function | Record<string, Function> | { $new(...params: any): Resource | Promise<Resource> }>;
 type WorldServiceInterfaceImplementationAsync = Record<string, Function | ServiceInterfaceImplementationAsync>;
 
 export type WorldType = {
@@ -3764,16 +3764,11 @@ export type WorldType = {
 	readonly imports?: {
 		readonly functions?: Map<string, FunctionType<JFunction>>;
 		readonly interfaces?: Map<string, InterfaceType>;
-		create(service: WorldServiceInterfaceImplementation, context: WasmContext): Record<string, Record<string, Function>>;
-		loop(service: WorldServiceInterfaceImplementation, context: WasmContext): Record<string, Function | Record<string, Function>>;
 	};
 	readonly exports?: {
 		readonly functions?: Map<string, FunctionType<JFunction>>;
 		readonly interfaces?: Map<string, InterfaceType>;
-		bind(exports: Record<string, Function>, context: WasmContext): Record<string, Function | Record<string, Function>>;
 	};
-	bind(service: WorldServiceInterfaceImplementation, code: Code, context: ComponentModelContext): Promise<Record<string, Function | Record<string, Function>>>;
-	bind(service: WorldServiceInterfaceImplementationAsync, code: Code, port: RAL.ConnectionPort, context: ComponentModelContext): Promise<Record<string, Function | Record<string, Function>>>;
 };
 
 export type PackageType = {
@@ -3891,7 +3886,7 @@ export namespace $imports {
 	}
 
 	export function loop<R>(world: WorldType, service: WorldServiceInterfaceImplementation, context: WasmContext): R {
-		const imports = create(world, service, context);
+		const imports = create<WasmImports>(world, service, context);
 		const wasmExports = asExports(imports, context);
 		const loop: WorldType = {
 			id: world.id,
@@ -3899,15 +3894,11 @@ export namespace $imports {
 			imports: world.exports !== undefined ? {
 				functions: world.exports.functions,
 				interfaces: world.exports.interfaces,
-				create: () => { throw new ComponentModelTrap('Illegal call to create in loop'); },
-				loop: () => { throw new ComponentModelTrap('Illegal call to loop in loop'); },
 			} : undefined,
 			exports: world.imports !== undefined ? {
 				functions: world.imports.functions,
 				interfaces: world.imports.interfaces,
-				// bind: () => { throw new ComponentModelTrap('Illegal call to bind in loop'); },
 			} : undefined,
-			// bind: () => { throw new ComponentModelTrap('Illegal call to bind in loop'); },
 		};
 		return $exports.bind(loop, wasmExports, context) as unknown as R;
 	}
@@ -4312,7 +4303,7 @@ export namespace $main {
 		} else {
 			module = code;
 		}
-		const imports = $imports.create(world, service, wasmContext);
+		const imports = $imports.create<WasmImports>(world, service, wasmContext);
 		if (memory !== undefined) {
 			(imports as any).env.memory = memory;
 		}

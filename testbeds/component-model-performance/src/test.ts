@@ -110,7 +110,7 @@ export namespace test._ {
 			return $wcm.$imports.create<Imports>(_, service, context);
 		}
 		export function loop(service: test.Imports, context: $wcm.WasmContext): test.Imports {
-			return $wcm.$imports.loop(_, service, context);
+			return $wcm.$imports.loop<test.Imports>(_, service, context);
 		}
 	}
 	export type Imports = {

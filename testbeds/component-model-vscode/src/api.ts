@@ -376,7 +376,7 @@ export namespace api {
 				return $wcm.$imports.create<Imports>(_, service, context);
 			}
 			export function loop(service: all.Imports, context: $wcm.WasmContext): all.Imports {
-				return $wcm.$imports.loop(_, service, context);
+				return $wcm.$imports.loop<all.Imports>(_, service, context);
 			}
 		}
 		export type Imports = {

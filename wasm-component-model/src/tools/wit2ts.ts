@@ -2344,7 +2344,7 @@ class WorldEmitter extends Emitter {
 
 			code.push(`export function loop(service: ${name}.Imports, context: ${MetaModel.WasmContext}): ${name}.Imports {`);
 			code.increaseIndent();
-			code.push(`return ${MetaModel.imports}.loop(_, service, context);`);
+			code.push(`return ${MetaModel.imports}.loop<${name}.Imports>(_, service, context);`);
 			code.decreaseIndent();
 			code.push('}');
 
@@ -2432,9 +2432,9 @@ class WorldEmitter extends Emitter {
 			code.push(`};`);
 		}
 
-		code.push(`export function bind(service: ${name}.Imports, code: ${MetaModel.Code}, context: ${MetaModel.ComponentModelContext}): Promise<${name}.Exports>;`);
-		code.push(`export function bind(service: ${name}.Imports.Promisified, code: ${MetaModel.Code}, port: ${MetaModel.ConnectionPort}, context: ${MetaModel.ComponentModelContext}): Promise<${name}.Exports.Promisified>;`);
-		code.push(`export function bind(service: ${name}.Imports | ${name}.Imports.Promisified, code: ${MetaModel.Code}, portOrContext: ${MetaModel.ConnectionPort} | ${MetaModel.ComponentModelContext}, context?: ${MetaModel.ComponentModelContext} | undefined): Promise<${name}.Exports> | Promise<${name}.Exports.Promisified> {`);
+		code.push(`export function bind(service: ${name}.Imports, code: ${MetaModel.Code}, context?: ${MetaModel.ComponentModelContext}): Promise<${name}.Exports>;`);
+		code.push(`export function bind(service: ${name}.Imports.Promisified, code: ${MetaModel.Code}, port: ${MetaModel.ConnectionPort}, context?: ${MetaModel.ComponentModelContext}): Promise<${name}.Exports.Promisified>;`);
+		code.push(`export function bind(service: ${name}.Imports | ${name}.Imports.Promisified, code: ${MetaModel.Code}, portOrContext?: ${MetaModel.ConnectionPort} | ${MetaModel.ComponentModelContext}, context?: ${MetaModel.ComponentModelContext} | undefined): Promise<${name}.Exports> | Promise<${name}.Exports.Promisified> {`);
 		code.increaseIndent();
 		code.push(`return ${MetaModel.bind}(_, service, code, portOrContext, context);`);
 		code.decreaseIndent();
