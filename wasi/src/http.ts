@@ -769,6 +769,7 @@ export namespace http {
 				clone(): own<Fields>;
 			}
 			export type Statics = {
+				$new?(): Interface;
 				fromList(entries: [FieldKey, FieldValue][]): result<own<Fields>, HeaderError>;
 			};
 			export type Class = Statics & {
@@ -901,6 +902,7 @@ export namespace http {
 				headers(): own<Headers>;
 			}
 			export type Statics = {
+				$new?(headers: own<Headers>): Interface;
 			};
 			export type Class = Statics & {
 				new(headers: own<Headers>): Interface;
@@ -946,6 +948,7 @@ export namespace http {
 				setBetweenBytesTimeout(duration: Duration | undefined): result<void, void>;
 			}
 			export type Statics = {
+				$new?(): Interface;
 			};
 			export type Class = Statics & {
 				new(): Interface;
@@ -1098,6 +1101,7 @@ export namespace http {
 				body(): result<own<OutgoingBody>, void>;
 			}
 			export type Statics = {
+				$new?(headers: own<Headers>): Interface;
 			};
 			export type Class = Statics & {
 				new(headers: own<Headers>): Interface;
@@ -1263,9 +1267,21 @@ export namespace http {
 			outgoingHandler: http.OutgoingHandler;
 			wallClock: clocks.WallClock;
 		};
+		export namespace Imports {
+			export type Promisified = $wcm.$imports.Promisify<Imports>;
+		}
+		export namespace imports {
+			export type Promisify<T> = $wcm.$imports.Promisify<T>;
+		}
 		export type Exports = {
 			incomingHandler: http.IncomingHandler;
 		};
+		export namespace Exports {
+			export type Promisified = $wcm.$exports.Promisify<Exports>;
+		}
+		export namespace exports {
+			export type Promisify<T> = $wcm.$exports.Promisify<T>;
+		}
 	}
 }
 
@@ -1589,7 +1605,7 @@ export namespace http {
 				export type WasmInterface = FutureIncomingResponse.WasmInterface & { '[dtor]future-incoming-response': (self: i32) => void };
 			}
 		}
-		export const types: Map<string, $wcm.GenericComponentModelType> = new Map<string, $wcm.GenericComponentModelType>([
+		export const types: Map<string, $wcm.AnyComponentModelType> = new Map<string, $wcm.AnyComponentModelType>([
 			['Duration', $.Duration],
 			['InputStream', $.InputStream],
 			['OutputStream', $.OutputStream],
@@ -1694,7 +1710,7 @@ export namespace http {
 	export namespace IncomingHandler._ {
 		export const id = 'wasi:http/incoming-handler@0.2.0' as const;
 		export const witName = 'incoming-handler' as const;
-		export const types: Map<string, $wcm.GenericComponentModelType> = new Map<string, $wcm.GenericComponentModelType>([
+		export const types: Map<string, $wcm.AnyComponentModelType> = new Map<string, $wcm.AnyComponentModelType>([
 			['IncomingRequest', $.IncomingRequest],
 			['ResponseOutparam', $.ResponseOutparam]
 		]);
@@ -1725,7 +1741,7 @@ export namespace http {
 	export namespace OutgoingHandler._ {
 		export const id = 'wasi:http/outgoing-handler@0.2.0' as const;
 		export const witName = 'outgoing-handler' as const;
-		export const types: Map<string, $wcm.GenericComponentModelType> = new Map<string, $wcm.GenericComponentModelType>([
+		export const types: Map<string, $wcm.AnyComponentModelType> = new Map<string, $wcm.AnyComponentModelType>([
 			['OutgoingRequest', $.OutgoingRequest],
 			['RequestOptions', $.RequestOptions],
 			['FutureIncomingResponse', $.FutureIncomingResponse],
@@ -1764,10 +1780,10 @@ export namespace http {
 				['clocks.WallClock', clocks.WallClock._]
 			]);
 			export function create(service: proxy.Imports, context: $wcm.WasmContext): Imports {
-				return $wcm.Imports.create<Imports>(_, service, context);
+				return $wcm.$imports.create<Imports>(_, service, context);
 			}
 			export function loop(service: proxy.Imports, context: $wcm.WasmContext): proxy.Imports {
-				return $wcm.Imports.loop(_, service, context);
+				return $wcm.$imports.loop<proxy.Imports>(_, service, context);
 			}
 		}
 		export type Imports = {
@@ -1783,16 +1799,21 @@ export namespace http {
 			'wasi:http/outgoing-handler@0.2.0': http.OutgoingHandler._.imports.WasmInterface;
 			'wasi:clocks/wall-clock@0.2.0': clocks.WallClock._.imports.WasmInterface;
 		};
-		export type Exports = {
-			'wasi:http/incoming-handler@0.2.0#handle': (request: i32, responseOut: i32) => void;
-		};
 		export namespace exports {
 			export const interfaces: Map<string, $wcm.InterfaceType> = new Map<string, $wcm.InterfaceType>([
 				['IncomingHandler', IncomingHandler._]
 			]);
 			export function bind(exports: Exports, context: $wcm.WasmContext): proxy.Exports {
-				return $wcm.Exports.bind<proxy.Exports>(_, exports, context);
+				return $wcm.$exports.bind<proxy.Exports>(_, exports, context);
 			}
+		}
+		export type Exports = {
+			'wasi:http/incoming-handler@0.2.0#handle': (request: i32, responseOut: i32) => void;
+		};
+		export function bind(service: proxy.Imports, code: $wcm.Code, context?: $wcm.ComponentModelContext): Promise<proxy.Exports>;
+		export function bind(service: proxy.Imports.Promisified, code: $wcm.Code, port: $wcm.RAL.ConnectionPort, context?: $wcm.ComponentModelContext): Promise<proxy.Exports.Promisified>;
+		export function bind(service: proxy.Imports | proxy.Imports.Promisified, code: $wcm.Code, portOrContext?: $wcm.RAL.ConnectionPort | $wcm.ComponentModelContext, context?: $wcm.ComponentModelContext | undefined): Promise<proxy.Exports> | Promise<proxy.Exports.Promisified> {
+			return $wcm.$main.bind(_, service, code, portOrContext, context);
 		}
 	}
 }

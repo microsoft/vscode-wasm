@@ -141,7 +141,7 @@ export namespace clocks {
 	export namespace MonotonicClock._ {
 		export const id = 'wasi:clocks/monotonic-clock@0.2.0' as const;
 		export const witName = 'monotonic-clock' as const;
-		export const types: Map<string, $wcm.GenericComponentModelType> = new Map<string, $wcm.GenericComponentModelType>([
+		export const types: Map<string, $wcm.AnyComponentModelType> = new Map<string, $wcm.AnyComponentModelType>([
 			['Pollable', $.Pollable],
 			['Instant', $.Instant],
 			['Duration', $.Duration]
@@ -177,7 +177,7 @@ export namespace clocks {
 	export namespace WallClock._ {
 		export const id = 'wasi:clocks/wall-clock@0.2.0' as const;
 		export const witName = 'wall-clock' as const;
-		export const types: Map<string, $wcm.GenericComponentModelType> = new Map<string, $wcm.GenericComponentModelType>([
+		export const types: Map<string, $wcm.AnyComponentModelType> = new Map<string, $wcm.AnyComponentModelType>([
 			['Datetime', $.Datetime]
 		]);
 		export const functions: Map<string, $wcm.FunctionType> = new Map([

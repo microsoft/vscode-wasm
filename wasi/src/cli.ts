@@ -211,9 +211,21 @@ export namespace cli {
 			insecure: random.Insecure;
 			insecureSeed: random.InsecureSeed;
 		};
+		export namespace Imports {
+			export type Promisified = $wcm.$imports.Promisify<Imports>;
+		}
+		export namespace imports {
+			export type Promisify<T> = $wcm.$imports.Promisify<T>;
+		}
 		export type Exports = {
 			run: cli.Run;
 		};
+		export namespace Exports {
+			export type Promisified = $wcm.$exports.Promisify<Exports>;
+		}
+		export namespace exports {
+			export type Promisify<T> = $wcm.$exports.Promisify<T>;
+		}
 	}
 }
 
@@ -293,7 +305,7 @@ export namespace cli {
 	export namespace Stdin._ {
 		export const id = 'wasi:cli/stdin@0.2.0' as const;
 		export const witName = 'stdin' as const;
-		export const types: Map<string, $wcm.GenericComponentModelType> = new Map<string, $wcm.GenericComponentModelType>([
+		export const types: Map<string, $wcm.AnyComponentModelType> = new Map<string, $wcm.AnyComponentModelType>([
 			['InputStream', $.InputStream]
 		]);
 		export const functions: Map<string, $wcm.FunctionType> = new Map([
@@ -317,7 +329,7 @@ export namespace cli {
 	export namespace Stdout._ {
 		export const id = 'wasi:cli/stdout@0.2.0' as const;
 		export const witName = 'stdout' as const;
-		export const types: Map<string, $wcm.GenericComponentModelType> = new Map<string, $wcm.GenericComponentModelType>([
+		export const types: Map<string, $wcm.AnyComponentModelType> = new Map<string, $wcm.AnyComponentModelType>([
 			['OutputStream', $.OutputStream]
 		]);
 		export const functions: Map<string, $wcm.FunctionType> = new Map([
@@ -341,7 +353,7 @@ export namespace cli {
 	export namespace Stderr._ {
 		export const id = 'wasi:cli/stderr@0.2.0' as const;
 		export const witName = 'stderr' as const;
-		export const types: Map<string, $wcm.GenericComponentModelType> = new Map<string, $wcm.GenericComponentModelType>([
+		export const types: Map<string, $wcm.AnyComponentModelType> = new Map<string, $wcm.AnyComponentModelType>([
 			['OutputStream', $.OutputStream]
 		]);
 		export const functions: Map<string, $wcm.FunctionType> = new Map([
@@ -376,7 +388,7 @@ export namespace cli {
 				export type WasmInterface = TerminalInput.WasmInterface & { '[dtor]terminal-input': (self: i32) => void };
 			}
 		}
-		export const types: Map<string, $wcm.GenericComponentModelType> = new Map<string, $wcm.GenericComponentModelType>([
+		export const types: Map<string, $wcm.AnyComponentModelType> = new Map<string, $wcm.AnyComponentModelType>([
 			['TerminalInput', $.TerminalInput]
 		]);
 		export const resources: Map<string, $wcm.ResourceType> = new Map<string, $wcm.ResourceType>([
@@ -417,7 +429,7 @@ export namespace cli {
 				export type WasmInterface = TerminalOutput.WasmInterface & { '[dtor]terminal-output': (self: i32) => void };
 			}
 		}
-		export const types: Map<string, $wcm.GenericComponentModelType> = new Map<string, $wcm.GenericComponentModelType>([
+		export const types: Map<string, $wcm.AnyComponentModelType> = new Map<string, $wcm.AnyComponentModelType>([
 			['TerminalOutput', $.TerminalOutput]
 		]);
 		export const resources: Map<string, $wcm.ResourceType> = new Map<string, $wcm.ResourceType>([
@@ -447,7 +459,7 @@ export namespace cli {
 	export namespace TerminalStdin._ {
 		export const id = 'wasi:cli/terminal-stdin@0.2.0' as const;
 		export const witName = 'terminal-stdin' as const;
-		export const types: Map<string, $wcm.GenericComponentModelType> = new Map<string, $wcm.GenericComponentModelType>([
+		export const types: Map<string, $wcm.AnyComponentModelType> = new Map<string, $wcm.AnyComponentModelType>([
 			['TerminalInput', $.TerminalInput]
 		]);
 		export const functions: Map<string, $wcm.FunctionType> = new Map([
@@ -471,7 +483,7 @@ export namespace cli {
 	export namespace TerminalStdout._ {
 		export const id = 'wasi:cli/terminal-stdout@0.2.0' as const;
 		export const witName = 'terminal-stdout' as const;
-		export const types: Map<string, $wcm.GenericComponentModelType> = new Map<string, $wcm.GenericComponentModelType>([
+		export const types: Map<string, $wcm.AnyComponentModelType> = new Map<string, $wcm.AnyComponentModelType>([
 			['TerminalOutput', $.TerminalOutput]
 		]);
 		export const functions: Map<string, $wcm.FunctionType> = new Map([
@@ -495,7 +507,7 @@ export namespace cli {
 	export namespace TerminalStderr._ {
 		export const id = 'wasi:cli/terminal-stderr@0.2.0' as const;
 		export const witName = 'terminal-stderr' as const;
-		export const types: Map<string, $wcm.GenericComponentModelType> = new Map<string, $wcm.GenericComponentModelType>([
+		export const types: Map<string, $wcm.AnyComponentModelType> = new Map<string, $wcm.AnyComponentModelType>([
 			['TerminalOutput', $.TerminalOutput]
 		]);
 		export const functions: Map<string, $wcm.FunctionType> = new Map([
@@ -547,10 +559,10 @@ export namespace cli {
 				['random.InsecureSeed', random.InsecureSeed._]
 			]);
 			export function create(service: command.Imports, context: $wcm.WasmContext): Imports {
-				return $wcm.Imports.create<Imports>(_, service, context);
+				return $wcm.$imports.create<Imports>(_, service, context);
 			}
 			export function loop(service: command.Imports, context: $wcm.WasmContext): command.Imports {
-				return $wcm.Imports.loop(_, service, context);
+				return $wcm.$imports.loop<command.Imports>(_, service, context);
 			}
 		}
 		export type Imports = {
@@ -582,16 +594,21 @@ export namespace cli {
 			'wasi:random/insecure@0.2.0': random.Insecure._.imports.WasmInterface;
 			'wasi:random/insecure-seed@0.2.0': random.InsecureSeed._.imports.WasmInterface;
 		};
-		export type Exports = {
-			'wasi:cli/run@0.2.0#run': () => i32;
-		};
 		export namespace exports {
 			export const interfaces: Map<string, $wcm.InterfaceType> = new Map<string, $wcm.InterfaceType>([
 				['Run', Run._]
 			]);
 			export function bind(exports: Exports, context: $wcm.WasmContext): command.Exports {
-				return $wcm.Exports.bind<command.Exports>(_, exports, context);
+				return $wcm.$exports.bind<command.Exports>(_, exports, context);
 			}
+		}
+		export type Exports = {
+			'wasi:cli/run@0.2.0#run': () => i32;
+		};
+		export function bind(service: command.Imports, code: $wcm.Code, context?: $wcm.ComponentModelContext): Promise<command.Exports>;
+		export function bind(service: command.Imports.Promisified, code: $wcm.Code, port: $wcm.RAL.ConnectionPort, context?: $wcm.ComponentModelContext): Promise<command.Exports.Promisified>;
+		export function bind(service: command.Imports | command.Imports.Promisified, code: $wcm.Code, portOrContext?: $wcm.RAL.ConnectionPort | $wcm.ComponentModelContext, context?: $wcm.ComponentModelContext | undefined): Promise<command.Exports> | Promise<command.Exports.Promisified> {
+			return $wcm.$main.bind(_, service, code, portOrContext, context);
 		}
 	}
 }

@@ -420,7 +420,7 @@ export namespace io {
 				export type WasmInterface = Error.WasmInterface & { '[dtor]error': (self: i32) => void };
 			}
 		}
-		export const types: Map<string, $wcm.GenericComponentModelType> = new Map<string, $wcm.GenericComponentModelType>([
+		export const types: Map<string, $wcm.AnyComponentModelType> = new Map<string, $wcm.AnyComponentModelType>([
 			['Error', $.Error]
 		]);
 		export const resources: Map<string, $wcm.ResourceType> = new Map<string, $wcm.ResourceType>([
@@ -468,7 +468,7 @@ export namespace io {
 				export type WasmInterface = Pollable.WasmInterface & { '[dtor]pollable': (self: i32) => void };
 			}
 		}
-		export const types: Map<string, $wcm.GenericComponentModelType> = new Map<string, $wcm.GenericComponentModelType>([
+		export const types: Map<string, $wcm.AnyComponentModelType> = new Map<string, $wcm.AnyComponentModelType>([
 			['Pollable', $.Pollable]
 		]);
 		export const functions: Map<string, $wcm.FunctionType> = new Map([
@@ -581,7 +581,7 @@ export namespace io {
 				export type WasmInterface = OutputStream.WasmInterface & { '[dtor]output-stream': (self: i32) => void };
 			}
 		}
-		export const types: Map<string, $wcm.GenericComponentModelType> = new Map<string, $wcm.GenericComponentModelType>([
+		export const types: Map<string, $wcm.AnyComponentModelType> = new Map<string, $wcm.AnyComponentModelType>([
 			['Error', $.Error],
 			['Pollable', $.Pollable],
 			['StreamError', $.StreamError],

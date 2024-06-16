@@ -1243,7 +1243,7 @@ export namespace sockets {
 				export type WasmInterface = Network.WasmInterface & { '[dtor]network': (self: i32) => void };
 			}
 		}
-		export const types: Map<string, $wcm.GenericComponentModelType> = new Map<string, $wcm.GenericComponentModelType>([
+		export const types: Map<string, $wcm.AnyComponentModelType> = new Map<string, $wcm.AnyComponentModelType>([
 			['ErrorCode', $.ErrorCode],
 			['IpAddressFamily', $.IpAddressFamily],
 			['Ipv4Address', $.Ipv4Address],
@@ -1281,7 +1281,7 @@ export namespace sockets {
 	export namespace InstanceNetwork._ {
 		export const id = 'wasi:sockets/instance-network@0.2.0' as const;
 		export const witName = 'instance-network' as const;
-		export const types: Map<string, $wcm.GenericComponentModelType> = new Map<string, $wcm.GenericComponentModelType>([
+		export const types: Map<string, $wcm.AnyComponentModelType> = new Map<string, $wcm.AnyComponentModelType>([
 			['Network', $.Network]
 		]);
 		export const functions: Map<string, $wcm.FunctionType> = new Map([
@@ -1328,7 +1328,7 @@ export namespace sockets {
 				export type WasmInterface = ResolveAddressStream.WasmInterface & { '[dtor]resolve-address-stream': (self: i32) => void };
 			}
 		}
-		export const types: Map<string, $wcm.GenericComponentModelType> = new Map<string, $wcm.GenericComponentModelType>([
+		export const types: Map<string, $wcm.AnyComponentModelType> = new Map<string, $wcm.AnyComponentModelType>([
 			['Pollable', $.Pollable],
 			['Network', $.Network],
 			['ErrorCode', $.ErrorCode],
@@ -1466,7 +1466,7 @@ export namespace sockets {
 				export type WasmInterface = TcpSocket.WasmInterface & { '[dtor]tcp-socket': (self: i32) => void };
 			}
 		}
-		export const types: Map<string, $wcm.GenericComponentModelType> = new Map<string, $wcm.GenericComponentModelType>([
+		export const types: Map<string, $wcm.AnyComponentModelType> = new Map<string, $wcm.AnyComponentModelType>([
 			['InputStream', $.InputStream],
 			['OutputStream', $.OutputStream],
 			['Pollable', $.Pollable],
@@ -1510,7 +1510,7 @@ export namespace sockets {
 	export namespace TcpCreateSocket._ {
 		export const id = 'wasi:sockets/tcp-create-socket@0.2.0' as const;
 		export const witName = 'tcp-create-socket' as const;
-		export const types: Map<string, $wcm.GenericComponentModelType> = new Map<string, $wcm.GenericComponentModelType>([
+		export const types: Map<string, $wcm.AnyComponentModelType> = new Map<string, $wcm.AnyComponentModelType>([
 			['Network', $.Network],
 			['ErrorCode', $.ErrorCode],
 			['IpAddressFamily', $.IpAddressFamily],
@@ -1638,7 +1638,7 @@ export namespace sockets {
 				export type WasmInterface = OutgoingDatagramStream.WasmInterface & { '[dtor]outgoing-datagram-stream': (self: i32) => void };
 			}
 		}
-		export const types: Map<string, $wcm.GenericComponentModelType> = new Map<string, $wcm.GenericComponentModelType>([
+		export const types: Map<string, $wcm.AnyComponentModelType> = new Map<string, $wcm.AnyComponentModelType>([
 			['Pollable', $.Pollable],
 			['Network', $.Network],
 			['ErrorCode', $.ErrorCode],
@@ -1690,7 +1690,7 @@ export namespace sockets {
 	export namespace UdpCreateSocket._ {
 		export const id = 'wasi:sockets/udp-create-socket@0.2.0' as const;
 		export const witName = 'udp-create-socket' as const;
-		export const types: Map<string, $wcm.GenericComponentModelType> = new Map<string, $wcm.GenericComponentModelType>([
+		export const types: Map<string, $wcm.AnyComponentModelType> = new Map<string, $wcm.AnyComponentModelType>([
 			['Network', $.Network],
 			['ErrorCode', $.ErrorCode],
 			['IpAddressFamily', $.IpAddressFamily],

@@ -1127,7 +1127,7 @@ export namespace filesystem {
 				export type WasmInterface = DirectoryEntryStream.WasmInterface & { '[dtor]directory-entry-stream': (self: i32) => void };
 			}
 		}
-		export const types: Map<string, $wcm.GenericComponentModelType> = new Map<string, $wcm.GenericComponentModelType>([
+		export const types: Map<string, $wcm.AnyComponentModelType> = new Map<string, $wcm.AnyComponentModelType>([
 			['InputStream', $.InputStream],
 			['OutputStream', $.OutputStream],
 			['Error', $.Error],
@@ -1182,7 +1182,7 @@ export namespace filesystem {
 	export namespace Preopens._ {
 		export const id = 'wasi:filesystem/preopens@0.2.0' as const;
 		export const witName = 'preopens' as const;
-		export const types: Map<string, $wcm.GenericComponentModelType> = new Map<string, $wcm.GenericComponentModelType>([
+		export const types: Map<string, $wcm.AnyComponentModelType> = new Map<string, $wcm.AnyComponentModelType>([
 			['Descriptor', $.Descriptor]
 		]);
 		export const functions: Map<string, $wcm.FunctionType> = new Map([
