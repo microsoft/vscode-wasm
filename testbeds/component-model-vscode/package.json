@@ -1,0 +1,37 @@
+{
+	"name": "testbed-component-model-vscode",
+	"private": "true",
+	"publisher": "ms-vscode",
+	"version": "0.0.1",
+	"description": "Component Model Example",
+	"author": "MS",
+	"license": "MIT",
+	"engines": {
+		"vscode": "^1.87.0"
+	},
+	"main": "./out/extension.js",
+	"activationEvents": [
+		"*"
+	],
+	"contributes": {
+		"commands": [
+			{
+				"command": "testbed-component-model-vscode.run",
+				"category": "wasm",
+				"title": "Run Wasm Extension Code"
+			}
+		]
+	},
+	"devDependencies": {
+		"@types/vscode": "1.87.0"
+	},
+	"scripts": {
+		"build": "npm run compile:ts && npm run build:rust",
+		"compile:ts": "node ../../node_modules/typescript/lib/tsc.js -b tsconfig.json",
+		"watch:ts": "node ../../node_modules/typescript/lib/tsc.js -b tsconfig.json -w",
+		"build:rust": "cargo build --target wasm32-unknown-unknown",
+		"generate:model": "node ../../wasm-component-model/lib/tools/main.js --structure=package --outDir ./src/ ./wit",
+		"generate:wat": "wasm-tools print ./target/wasm32-unknown-unknown/debug/example.wasm > ./target/wasm32-unknown-unknown/debug/example.wat",
+		"run": "npm run build:rust && npm run compile:ts && node ./out/main.js"
+	}
+}

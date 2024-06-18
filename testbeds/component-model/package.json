@@ -1,0 +1,38 @@
+{
+	"name": "testbed-component-model",
+	"private": "true",
+	"publisher": "ms-vscode",
+	"version": "0.0.1",
+	"description": "Component Model Example",
+	"author": "MS",
+	"license": "MIT",
+	"engines": {
+		"vscode": "^1.87.0"
+	},
+	"main": "./out/extension.js",
+	"activationEvents": [
+		"*"
+	],
+	"contributes": {
+		"commands": [
+			{
+				"command": "testbed-component-model.run",
+				"category": "wasm",
+				"title": "Run Calc Service"
+			}
+		]
+	},
+	"devDependencies": {
+		"@types/vscode": "1.87.0"
+	},
+	"scripts": {
+		"build": "npm run compile:ts && npm run build:rust",
+		"compile:ts": "node ../../node_modules/typescript/lib/tsc.js -b tsconfig.json",
+		"watch:ts": "node ../../node_modules/typescript/lib/tsc.js -b tsconfig.json -w",
+		"build:rust": "cargo build --target wasm32-unknown-unknown",
+		"generate:json": "wasm-tools component wit --json ./wit/ > ./wit/calculator.wit.json",
+		"generate:model": "node ../../wasm-component-model/lib/tools/main.js --outDir ./src/ ./wit && cd src && wit-bindgen rust ../wit && cd ..",
+		"generate:wat": "wasm-tools print ./target/wasm32-unknown-unknown/debug/calculator.wasm > ./target/wasm32-unknown-unknown/debug/calculator.wat",
+		"run": "npm run build:rust && npm run compile:ts && node ./out/main.js"
+	}
+}

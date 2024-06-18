@@ -6,17 +6,17 @@ import RIL from '../ril';
 RIL.install();
 
 import path from 'node:path';
-import {  MessagePort, Worker } from 'node:worker_threads';
+import { MessagePort, Worker } from 'node:worker_threads';
 
 import { glob } from 'glob';
 import Mocha from 'mocha';
 
-import { NodeServiceConnection } from '../process';
-import { createWorkspaceContent, createTmp, cleanupTmp, cleanupWorkspaceContent, createWasiService, WorkspaceContent } from '../../common/test/index';
 import { WorkerMessage } from '../../common/connection';
 import { CapturedPromise } from '../../common/promises';
 import { WasiService } from '../../common/service';
+import { WorkspaceContent, cleanupTmp, cleanupWorkspaceContent, createTmp, createWasiService, createWorkspaceContent } from '../../common/test/index';
 import { TestSetupMessage, TestsDoneMessage } from '../../common/test/messages';
+import { NodeServiceConnection } from '../process';
 
 class TestNodeServiceConnection extends NodeServiceConnection {
 

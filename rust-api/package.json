@@ -1,0 +1,45 @@
+{
+	"private": "true",
+	"name": "@vscode/rust-api",
+	"version": "0.1.0",
+	"description": "Rust VS Code API bindings",
+	"author": "Visual Studio Code Team",
+	"license": "MIT",
+	"keywords": [
+		"VSCode",
+		"Rust"
+	],
+	"repository": {
+		"type": "git",
+		"url": "git+https://github.com/microsoft/vscode-wasm.git"
+	},
+	"bugs": {
+		"url": "https://github.com/microsoft/vscode-wasm/issues"
+	},
+	"homepage": "https://github.com/microsoft/vscode-wasm#readme",
+	"engines": {
+		"vscode": "^1.87.0",
+		"node": ">=18.18.2"
+	},
+	"exports": {
+		".": {
+			"types": "./lib/main.d.ts",
+			"node": "./lib/main.js",
+			"browser": "./lib/main.js"
+		}
+	},
+	"devDependencies": {
+		"@types/vscode": "1.87.0"
+	},
+	"scripts": {
+		"build": "npm run compile:ts && npm run build:rust",
+		"compile:ts": "tsc -b tsconfig.json",
+		"watch:ts": "tsc -b tsconfig.json -w",
+		"build:rust": "cd rust && cargo build --target wasm32-unknown-unknown && cd ..",
+		"clean": "rimraf rust/target && rimraf lib",
+		"lint": "eslint --ext .ts ts/src",
+		"generate:model": "node ../wasm-component-model/lib/tools/main.js --structure=package --outDir ./ts/src/ ./rust/wit",
+		"generate:wat": "wasm-tools print ./target/wasm32-unknown-unknown/debug/vscode.wasm > ./target/wasm32-unknown-unknown/debug/vscode.wat",
+		"run": "npm run build:rust && npm run compile:ts && node ./out/main.js"
+	}
+}

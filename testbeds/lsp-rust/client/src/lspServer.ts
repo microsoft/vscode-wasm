@@ -4,17 +4,10 @@
  * ------------------------------------------------------------------------------------------ */
 
 import { WasmProcess, Readable, Writable } from '@vscode/wasm-wasi';
-import { Message, WriteableStreamMessageWriter, Disposable, Emitter, Event, ReadableStreamMessageReader, MessageTransports } from 'vscode-languageclient/node';
+import { Message, WriteableStreamMessageWriter, Disposable, Emitter, Event, ReadableStreamMessageReader, MessageTransports, RAL } from 'vscode-languageclient';
 
 
-interface ReadableStream {
-	onData(listener: (data: Uint8Array) => void): Disposable;
-	onClose(listener: () => void): Disposable;
-	onError(listener: (error: any) => void): Disposable;
-	onEnd(listener: () => void): Disposable;
-}
-
-class ReadableStreamImpl implements ReadableStream {
+class ReadableStreamImpl implements RAL.ReadableStream {
 
 	private readonly errorEmitter: Emitter<[Error, Message | undefined, number | undefined]>;
 	private readonly closeEmitter: Emitter<void>;
@@ -58,17 +51,9 @@ class ReadableStreamImpl implements ReadableStream {
 	}
 }
 
-type MessageBufferEncoding = 'ascii' | 'utf-8';
-interface WritableStream {
-	onClose(listener: () => void): Disposable;
-	onError(listener: (error: any) => void): Disposable;
-	onEnd(listener: () => void): Disposable;
-	write(data: Uint8Array): Promise<void>;
-	write(data: string, encoding: MessageBufferEncoding): Promise<void>;
-	end(): void;
-}
+type MessageBufferEncoding = RAL.MessageBufferEncoding;
 
-class WritableStreamImpl implements WritableStream {
+class WritableStreamImpl implements RAL.WritableStream {
 
 	private readonly errorEmitter: Emitter<[Error, Message | undefined, number | undefined]>;
 	private readonly closeEmitter: Emitter<void>;

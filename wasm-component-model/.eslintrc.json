@@ -5,9 +5,9 @@
 		"project": [
 			"./src/common/tsconfig.json",
 			"./src/common/test/tsconfig.json",
-			"./src/desktop/tsconfig.json",
-			"./src/desktop/test/tsconfig.json",
-			"./src/web/tsconfig.json",
+			"./src/node/tsconfig.json",
+			"./src/node/test/tsconfig.json",
+			"./src/browser/tsconfig.json",
 			"./src/tools/tsconfig.json"
 		]
 	},

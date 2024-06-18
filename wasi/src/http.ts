@@ -2,8 +2,11 @@
  *  Copyright (c) Microsoft Corporation. All rights reserved.
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
+/* eslint-disable @typescript-eslint/ban-types */
 import * as $wcm from '@vscode/wasm-component-model';
-import type { u16, u8, u32, u64, own, result, borrow, resource, option, i32, ptr, i64 } from '@vscode/wasm-component-model';
+import type { u16, u8, u32, u64, result, own, borrow, option, i32, ptr, i64 } from '@vscode/wasm-component-model';
+import { cli } from './cli';
+import { random } from './random';
 import { io } from './io';
 import { clocks } from './clocks';
 
@@ -14,18 +17,17 @@ export namespace http {
 	 * their headers, trailers, and bodies.
 	 */
 	export namespace Types {
-		
 		export type Duration = clocks.MonotonicClock.Duration;
-		
+
 		export type InputStream = io.Streams.InputStream;
-		
+
 		export type OutputStream = io.Streams.OutputStream;
-		
-		export type StreamError = io.Streams.Error;
-		
+
+		export type IoError = io.Error.Error;
+
 		export type Pollable = io.Poll.Pollable;
-		
-		
+
+
 		/**
 		 * This type corresponds to HTTP standard Methods.
 		 */
@@ -35,61 +37,61 @@ export namespace http {
 			export function Get(): Get {
 				return new VariantImpl(get, undefined) as Get;
 			}
-			
+
 			export const head = 'head' as const;
 			export type Head = { readonly tag: typeof head } & _common;
 			export function Head(): Head {
 				return new VariantImpl(head, undefined) as Head;
 			}
-			
+
 			export const post = 'post' as const;
 			export type Post = { readonly tag: typeof post } & _common;
 			export function Post(): Post {
 				return new VariantImpl(post, undefined) as Post;
 			}
-			
+
 			export const put = 'put' as const;
 			export type Put = { readonly tag: typeof put } & _common;
 			export function Put(): Put {
 				return new VariantImpl(put, undefined) as Put;
 			}
-			
-			export const delete_ = 'delete_' as const;
+
+			export const delete_ = 'delete' as const;
 			export type Delete = { readonly tag: typeof delete_ } & _common;
 			export function Delete(): Delete {
 				return new VariantImpl(delete_, undefined) as Delete;
 			}
-			
+
 			export const connect = 'connect' as const;
 			export type Connect = { readonly tag: typeof connect } & _common;
 			export function Connect(): Connect {
 				return new VariantImpl(connect, undefined) as Connect;
 			}
-			
+
 			export const options = 'options' as const;
 			export type Options = { readonly tag: typeof options } & _common;
 			export function Options(): Options {
 				return new VariantImpl(options, undefined) as Options;
 			}
-			
+
 			export const trace = 'trace' as const;
 			export type Trace = { readonly tag: typeof trace } & _common;
 			export function Trace(): Trace {
 				return new VariantImpl(trace, undefined) as Trace;
 			}
-			
+
 			export const patch = 'patch' as const;
 			export type Patch = { readonly tag: typeof patch } & _common;
 			export function Patch(): Patch {
 				return new VariantImpl(patch, undefined) as Patch;
 			}
-			
+
 			export const other = 'other' as const;
 			export type Other = { readonly tag: typeof other; readonly value: string } & _common;
 			export function Other(value: string): Other {
 				return new VariantImpl(other, value) as Other;
 			}
-			
+
 			export type _tt = typeof get | typeof head | typeof post | typeof put | typeof delete_ | typeof connect | typeof options | typeof trace | typeof patch | typeof other;
 			export type _vt = string | undefined;
 			type _common = Omit<VariantImpl, 'tag' | 'value'>;
@@ -142,8 +144,8 @@ export namespace http {
 			}
 		}
 		export type Method = Method.Get | Method.Head | Method.Post | Method.Put | Method.Delete | Method.Connect | Method.Options | Method.Trace | Method.Patch | Method.Other;
-		
-		
+
+
 		/**
 		 * This type corresponds to HTTP standard Related Schemes.
 		 */
@@ -153,19 +155,19 @@ export namespace http {
 			export function HTTP(): HTTP {
 				return new VariantImpl(http, undefined) as HTTP;
 			}
-			
+
 			export const https = 'HTTPS' as const;
 			export type HTTPS = { readonly tag: typeof https } & _common;
 			export function HTTPS(): HTTPS {
 				return new VariantImpl(https, undefined) as HTTPS;
 			}
-			
+
 			export const other = 'other' as const;
 			export type Other = { readonly tag: typeof other; readonly value: string } & _common;
 			export function Other(value: string): Other {
 				return new VariantImpl(other, value) as Other;
 			}
-			
+
 			export type _tt = typeof http | typeof https | typeof other;
 			export type _vt = string | undefined;
 			type _common = Omit<VariantImpl, 'tag' | 'value'>;
@@ -197,7 +199,7 @@ export namespace http {
 			}
 		}
 		export type Scheme = Scheme.HTTP | Scheme.HTTPS | Scheme.Other;
-		
+
 		/**
 		 * Defines the case payload type for `DNS-error` above:
 		 */
@@ -205,7 +207,7 @@ export namespace http {
 			rcode?: string | undefined;
 			infoCode?: u16 | undefined;
 		};
-		
+
 		/**
 		 * Defines the case payload type for `TLS-alert-received` above:
 		 */
@@ -213,7 +215,7 @@ export namespace http {
 			alertId?: u8 | undefined;
 			alertMessage?: string | undefined;
 		};
-		
+
 		/**
 		 * Defines the case payload type for `HTTP-response-{header,trailer}-size` above:
 		 */
@@ -221,8 +223,8 @@ export namespace http {
 			fieldName?: string | undefined;
 			fieldSize?: u32 | undefined;
 		};
-		
-		
+
+
 		/**
 		 * These cases are inspired by the IANA HTTP Proxy Error Types:
 		 * https://www.iana.org/assignments/http-proxy-status/http-proxy-status.xhtml#table-http-proxy-error-types
@@ -233,230 +235,230 @@ export namespace http {
 			export function DNSTimeout(): DNSTimeout {
 				return new VariantImpl(dNSTimeout, undefined) as DNSTimeout;
 			}
-			
+
 			export const dNSError = 'DNSError' as const;
 			export type DNSError = { readonly tag: typeof dNSError; readonly value: DNSErrorPayload } & _common;
 			export function DNSError(value: DNSErrorPayload): DNSError {
 				return new VariantImpl(dNSError, value) as DNSError;
 			}
-			
+
 			export const destinationNotFound = 'destinationNotFound' as const;
 			export type DestinationNotFound = { readonly tag: typeof destinationNotFound } & _common;
 			export function DestinationNotFound(): DestinationNotFound {
 				return new VariantImpl(destinationNotFound, undefined) as DestinationNotFound;
 			}
-			
+
 			export const destinationUnavailable = 'destinationUnavailable' as const;
 			export type DestinationUnavailable = { readonly tag: typeof destinationUnavailable } & _common;
 			export function DestinationUnavailable(): DestinationUnavailable {
 				return new VariantImpl(destinationUnavailable, undefined) as DestinationUnavailable;
 			}
-			
+
 			export const destinationIPProhibited = 'destinationIPProhibited' as const;
 			export type DestinationIPProhibited = { readonly tag: typeof destinationIPProhibited } & _common;
 			export function DestinationIPProhibited(): DestinationIPProhibited {
 				return new VariantImpl(destinationIPProhibited, undefined) as DestinationIPProhibited;
 			}
-			
+
 			export const destinationIPUnroutable = 'destinationIPUnroutable' as const;
 			export type DestinationIPUnroutable = { readonly tag: typeof destinationIPUnroutable } & _common;
 			export function DestinationIPUnroutable(): DestinationIPUnroutable {
 				return new VariantImpl(destinationIPUnroutable, undefined) as DestinationIPUnroutable;
 			}
-			
+
 			export const connectionRefused = 'connectionRefused' as const;
 			export type ConnectionRefused = { readonly tag: typeof connectionRefused } & _common;
 			export function ConnectionRefused(): ConnectionRefused {
 				return new VariantImpl(connectionRefused, undefined) as ConnectionRefused;
 			}
-			
+
 			export const connectionTerminated = 'connectionTerminated' as const;
 			export type ConnectionTerminated = { readonly tag: typeof connectionTerminated } & _common;
 			export function ConnectionTerminated(): ConnectionTerminated {
 				return new VariantImpl(connectionTerminated, undefined) as ConnectionTerminated;
 			}
-			
+
 			export const connectionTimeout = 'connectionTimeout' as const;
 			export type ConnectionTimeout = { readonly tag: typeof connectionTimeout } & _common;
 			export function ConnectionTimeout(): ConnectionTimeout {
 				return new VariantImpl(connectionTimeout, undefined) as ConnectionTimeout;
 			}
-			
+
 			export const connectionReadTimeout = 'connectionReadTimeout' as const;
 			export type ConnectionReadTimeout = { readonly tag: typeof connectionReadTimeout } & _common;
 			export function ConnectionReadTimeout(): ConnectionReadTimeout {
 				return new VariantImpl(connectionReadTimeout, undefined) as ConnectionReadTimeout;
 			}
-			
+
 			export const connectionWriteTimeout = 'connectionWriteTimeout' as const;
 			export type ConnectionWriteTimeout = { readonly tag: typeof connectionWriteTimeout } & _common;
 			export function ConnectionWriteTimeout(): ConnectionWriteTimeout {
 				return new VariantImpl(connectionWriteTimeout, undefined) as ConnectionWriteTimeout;
 			}
-			
+
 			export const connectionLimitReached = 'connectionLimitReached' as const;
 			export type ConnectionLimitReached = { readonly tag: typeof connectionLimitReached } & _common;
 			export function ConnectionLimitReached(): ConnectionLimitReached {
 				return new VariantImpl(connectionLimitReached, undefined) as ConnectionLimitReached;
 			}
-			
+
 			export const tLSProtocolError = 'TLSProtocolError' as const;
 			export type TLSProtocolError = { readonly tag: typeof tLSProtocolError } & _common;
 			export function TLSProtocolError(): TLSProtocolError {
 				return new VariantImpl(tLSProtocolError, undefined) as TLSProtocolError;
 			}
-			
+
 			export const tLSCertificateError = 'TLSCertificateError' as const;
 			export type TLSCertificateError = { readonly tag: typeof tLSCertificateError } & _common;
 			export function TLSCertificateError(): TLSCertificateError {
 				return new VariantImpl(tLSCertificateError, undefined) as TLSCertificateError;
 			}
-			
+
 			export const tLSAlertReceived = 'TLSAlertReceived' as const;
 			export type TLSAlertReceived = { readonly tag: typeof tLSAlertReceived; readonly value: TLSAlertReceivedPayload } & _common;
 			export function TLSAlertReceived(value: TLSAlertReceivedPayload): TLSAlertReceived {
 				return new VariantImpl(tLSAlertReceived, value) as TLSAlertReceived;
 			}
-			
+
 			export const hTTPRequestDenied = 'HTTPRequestDenied' as const;
 			export type HTTPRequestDenied = { readonly tag: typeof hTTPRequestDenied } & _common;
 			export function HTTPRequestDenied(): HTTPRequestDenied {
 				return new VariantImpl(hTTPRequestDenied, undefined) as HTTPRequestDenied;
 			}
-			
+
 			export const hTTPRequestLengthRequired = 'HTTPRequestLengthRequired' as const;
 			export type HTTPRequestLengthRequired = { readonly tag: typeof hTTPRequestLengthRequired } & _common;
 			export function HTTPRequestLengthRequired(): HTTPRequestLengthRequired {
 				return new VariantImpl(hTTPRequestLengthRequired, undefined) as HTTPRequestLengthRequired;
 			}
-			
+
 			export const hTTPRequestBodySize = 'HTTPRequestBodySize' as const;
 			export type HTTPRequestBodySize = { readonly tag: typeof hTTPRequestBodySize; readonly value: u64 | undefined } & _common;
 			export function HTTPRequestBodySize(value: u64 | undefined): HTTPRequestBodySize {
 				return new VariantImpl(hTTPRequestBodySize, value) as HTTPRequestBodySize;
 			}
-			
+
 			export const hTTPRequestMethodInvalid = 'HTTPRequestMethodInvalid' as const;
 			export type HTTPRequestMethodInvalid = { readonly tag: typeof hTTPRequestMethodInvalid } & _common;
 			export function HTTPRequestMethodInvalid(): HTTPRequestMethodInvalid {
 				return new VariantImpl(hTTPRequestMethodInvalid, undefined) as HTTPRequestMethodInvalid;
 			}
-			
+
 			export const hTTPRequestURIInvalid = 'HTTPRequestURIInvalid' as const;
 			export type HTTPRequestURIInvalid = { readonly tag: typeof hTTPRequestURIInvalid } & _common;
 			export function HTTPRequestURIInvalid(): HTTPRequestURIInvalid {
 				return new VariantImpl(hTTPRequestURIInvalid, undefined) as HTTPRequestURIInvalid;
 			}
-			
+
 			export const hTTPRequestURITooLong = 'HTTPRequestURITooLong' as const;
 			export type HTTPRequestURITooLong = { readonly tag: typeof hTTPRequestURITooLong } & _common;
 			export function HTTPRequestURITooLong(): HTTPRequestURITooLong {
 				return new VariantImpl(hTTPRequestURITooLong, undefined) as HTTPRequestURITooLong;
 			}
-			
+
 			export const hTTPRequestHeaderSectionSize = 'HTTPRequestHeaderSectionSize' as const;
 			export type HTTPRequestHeaderSectionSize = { readonly tag: typeof hTTPRequestHeaderSectionSize; readonly value: u32 | undefined } & _common;
 			export function HTTPRequestHeaderSectionSize(value: u32 | undefined): HTTPRequestHeaderSectionSize {
 				return new VariantImpl(hTTPRequestHeaderSectionSize, value) as HTTPRequestHeaderSectionSize;
 			}
-			
+
 			export const hTTPRequestHeaderSize = 'HTTPRequestHeaderSize' as const;
 			export type HTTPRequestHeaderSize = { readonly tag: typeof hTTPRequestHeaderSize; readonly value: FieldSizePayload | undefined } & _common;
 			export function HTTPRequestHeaderSize(value: FieldSizePayload | undefined): HTTPRequestHeaderSize {
 				return new VariantImpl(hTTPRequestHeaderSize, value) as HTTPRequestHeaderSize;
 			}
-			
+
 			export const hTTPRequestTrailerSectionSize = 'HTTPRequestTrailerSectionSize' as const;
 			export type HTTPRequestTrailerSectionSize = { readonly tag: typeof hTTPRequestTrailerSectionSize; readonly value: u32 | undefined } & _common;
 			export function HTTPRequestTrailerSectionSize(value: u32 | undefined): HTTPRequestTrailerSectionSize {
 				return new VariantImpl(hTTPRequestTrailerSectionSize, value) as HTTPRequestTrailerSectionSize;
 			}
-			
+
 			export const hTTPRequestTrailerSize = 'HTTPRequestTrailerSize' as const;
 			export type HTTPRequestTrailerSize = { readonly tag: typeof hTTPRequestTrailerSize; readonly value: FieldSizePayload } & _common;
 			export function HTTPRequestTrailerSize(value: FieldSizePayload): HTTPRequestTrailerSize {
 				return new VariantImpl(hTTPRequestTrailerSize, value) as HTTPRequestTrailerSize;
 			}
-			
+
 			export const hTTPResponseIncomplete = 'HTTPResponseIncomplete' as const;
 			export type HTTPResponseIncomplete = { readonly tag: typeof hTTPResponseIncomplete } & _common;
 			export function HTTPResponseIncomplete(): HTTPResponseIncomplete {
 				return new VariantImpl(hTTPResponseIncomplete, undefined) as HTTPResponseIncomplete;
 			}
-			
+
 			export const hTTPResponseHeaderSectionSize = 'HTTPResponseHeaderSectionSize' as const;
 			export type HTTPResponseHeaderSectionSize = { readonly tag: typeof hTTPResponseHeaderSectionSize; readonly value: u32 | undefined } & _common;
 			export function HTTPResponseHeaderSectionSize(value: u32 | undefined): HTTPResponseHeaderSectionSize {
 				return new VariantImpl(hTTPResponseHeaderSectionSize, value) as HTTPResponseHeaderSectionSize;
 			}
-			
+
 			export const hTTPResponseHeaderSize = 'HTTPResponseHeaderSize' as const;
 			export type HTTPResponseHeaderSize = { readonly tag: typeof hTTPResponseHeaderSize; readonly value: FieldSizePayload } & _common;
 			export function HTTPResponseHeaderSize(value: FieldSizePayload): HTTPResponseHeaderSize {
 				return new VariantImpl(hTTPResponseHeaderSize, value) as HTTPResponseHeaderSize;
 			}
-			
+
 			export const hTTPResponseBodySize = 'HTTPResponseBodySize' as const;
 			export type HTTPResponseBodySize = { readonly tag: typeof hTTPResponseBodySize; readonly value: u64 | undefined } & _common;
 			export function HTTPResponseBodySize(value: u64 | undefined): HTTPResponseBodySize {
 				return new VariantImpl(hTTPResponseBodySize, value) as HTTPResponseBodySize;
 			}
-			
+
 			export const hTTPResponseTrailerSectionSize = 'HTTPResponseTrailerSectionSize' as const;
 			export type HTTPResponseTrailerSectionSize = { readonly tag: typeof hTTPResponseTrailerSectionSize; readonly value: u32 | undefined } & _common;
 			export function HTTPResponseTrailerSectionSize(value: u32 | undefined): HTTPResponseTrailerSectionSize {
 				return new VariantImpl(hTTPResponseTrailerSectionSize, value) as HTTPResponseTrailerSectionSize;
 			}
-			
+
 			export const hTTPResponseTrailerSize = 'HTTPResponseTrailerSize' as const;
 			export type HTTPResponseTrailerSize = { readonly tag: typeof hTTPResponseTrailerSize; readonly value: FieldSizePayload } & _common;
 			export function HTTPResponseTrailerSize(value: FieldSizePayload): HTTPResponseTrailerSize {
 				return new VariantImpl(hTTPResponseTrailerSize, value) as HTTPResponseTrailerSize;
 			}
-			
+
 			export const hTTPResponseTransferCoding = 'HTTPResponseTransferCoding' as const;
 			export type HTTPResponseTransferCoding = { readonly tag: typeof hTTPResponseTransferCoding; readonly value: string | undefined } & _common;
 			export function HTTPResponseTransferCoding(value: string | undefined): HTTPResponseTransferCoding {
 				return new VariantImpl(hTTPResponseTransferCoding, value) as HTTPResponseTransferCoding;
 			}
-			
+
 			export const hTTPResponseContentCoding = 'HTTPResponseContentCoding' as const;
 			export type HTTPResponseContentCoding = { readonly tag: typeof hTTPResponseContentCoding; readonly value: string | undefined } & _common;
 			export function HTTPResponseContentCoding(value: string | undefined): HTTPResponseContentCoding {
 				return new VariantImpl(hTTPResponseContentCoding, value) as HTTPResponseContentCoding;
 			}
-			
+
 			export const hTTPResponseTimeout = 'HTTPResponseTimeout' as const;
 			export type HTTPResponseTimeout = { readonly tag: typeof hTTPResponseTimeout } & _common;
 			export function HTTPResponseTimeout(): HTTPResponseTimeout {
 				return new VariantImpl(hTTPResponseTimeout, undefined) as HTTPResponseTimeout;
 			}
-			
+
 			export const hTTPUpgradeFailed = 'HTTPUpgradeFailed' as const;
 			export type HTTPUpgradeFailed = { readonly tag: typeof hTTPUpgradeFailed } & _common;
 			export function HTTPUpgradeFailed(): HTTPUpgradeFailed {
 				return new VariantImpl(hTTPUpgradeFailed, undefined) as HTTPUpgradeFailed;
 			}
-			
+
 			export const hTTPProtocolError = 'HTTPProtocolError' as const;
 			export type HTTPProtocolError = { readonly tag: typeof hTTPProtocolError } & _common;
 			export function HTTPProtocolError(): HTTPProtocolError {
 				return new VariantImpl(hTTPProtocolError, undefined) as HTTPProtocolError;
 			}
-			
+
 			export const loopDetected = 'loopDetected' as const;
 			export type LoopDetected = { readonly tag: typeof loopDetected } & _common;
 			export function LoopDetected(): LoopDetected {
 				return new VariantImpl(loopDetected, undefined) as LoopDetected;
 			}
-			
+
 			export const configurationError = 'configurationError' as const;
 			export type ConfigurationError = { readonly tag: typeof configurationError } & _common;
 			export function ConfigurationError(): ConfigurationError {
 				return new VariantImpl(configurationError, undefined) as ConfigurationError;
 			}
-			
-			
+
+
 			/**
 			 * This is a catch-all error for anything that doesn't fit cleanly into a
 			 * more specific case. It also includes an optional string for an
@@ -469,7 +471,7 @@ export namespace http {
 			export function InternalError(value: string | undefined): InternalError {
 				return new VariantImpl(internalError, value) as InternalError;
 			}
-			
+
 			export type _tt = typeof dNSTimeout | typeof dNSError | typeof destinationNotFound | typeof destinationUnavailable | typeof destinationIPProhibited | typeof destinationIPUnroutable | typeof connectionRefused | typeof connectionTerminated | typeof connectionTimeout | typeof connectionReadTimeout | typeof connectionWriteTimeout | typeof connectionLimitReached | typeof tLSProtocolError | typeof tLSCertificateError | typeof tLSAlertReceived | typeof hTTPRequestDenied | typeof hTTPRequestLengthRequired | typeof hTTPRequestBodySize | typeof hTTPRequestMethodInvalid | typeof hTTPRequestURIInvalid | typeof hTTPRequestURITooLong | typeof hTTPRequestHeaderSectionSize | typeof hTTPRequestHeaderSize | typeof hTTPRequestTrailerSectionSize | typeof hTTPRequestTrailerSize | typeof hTTPResponseIncomplete | typeof hTTPResponseHeaderSectionSize | typeof hTTPResponseHeaderSize | typeof hTTPResponseBodySize | typeof hTTPResponseTrailerSectionSize | typeof hTTPResponseTrailerSize | typeof hTTPResponseTransferCoding | typeof hTTPResponseContentCoding | typeof hTTPResponseTimeout | typeof hTTPUpgradeFailed | typeof hTTPProtocolError | typeof loopDetected | typeof configurationError | typeof internalError;
 			export type _vt = DNSErrorPayload | TLSAlertReceivedPayload | u64 | undefined | u32 | undefined | FieldSizePayload | undefined | u32 | undefined | FieldSizePayload | u32 | undefined | FieldSizePayload | u64 | undefined | u32 | undefined | FieldSizePayload | string | undefined | string | undefined | string | undefined | undefined;
 			type _common = Omit<VariantImpl, 'tag' | 'value'>;
@@ -609,14 +611,14 @@ export namespace http {
 			}
 		}
 		export type ErrorCode = ErrorCode.DNSTimeout | ErrorCode.DNSError | ErrorCode.DestinationNotFound | ErrorCode.DestinationUnavailable | ErrorCode.DestinationIPProhibited | ErrorCode.DestinationIPUnroutable | ErrorCode.ConnectionRefused | ErrorCode.ConnectionTerminated | ErrorCode.ConnectionTimeout | ErrorCode.ConnectionReadTimeout | ErrorCode.ConnectionWriteTimeout | ErrorCode.ConnectionLimitReached | ErrorCode.TLSProtocolError | ErrorCode.TLSCertificateError | ErrorCode.TLSAlertReceived | ErrorCode.HTTPRequestDenied | ErrorCode.HTTPRequestLengthRequired | ErrorCode.HTTPRequestBodySize | ErrorCode.HTTPRequestMethodInvalid | ErrorCode.HTTPRequestURIInvalid | ErrorCode.HTTPRequestURITooLong | ErrorCode.HTTPRequestHeaderSectionSize | ErrorCode.HTTPRequestHeaderSize | ErrorCode.HTTPRequestTrailerSectionSize | ErrorCode.HTTPRequestTrailerSize | ErrorCode.HTTPResponseIncomplete | ErrorCode.HTTPResponseHeaderSectionSize | ErrorCode.HTTPResponseHeaderSize | ErrorCode.HTTPResponseBodySize | ErrorCode.HTTPResponseTrailerSectionSize | ErrorCode.HTTPResponseTrailerSize | ErrorCode.HTTPResponseTransferCoding | ErrorCode.HTTPResponseContentCoding | ErrorCode.HTTPResponseTimeout | ErrorCode.HTTPUpgradeFailed | ErrorCode.HTTPProtocolError | ErrorCode.LoopDetected | ErrorCode.ConfigurationError | ErrorCode.InternalError;
-		
-		
+
+
 		/**
 		 * This type enumerates the different kinds of errors that may occur when
 		 * setting or appending to a `fields` resource.
 		 */
 		export namespace HeaderError {
-			
+
 			/**
 			 * This error indicates that a `field-key` or `field-value` was
 			 * syntactically invalid when used with an operation that sets headers in a
@@ -627,8 +629,8 @@ export namespace http {
 			export function InvalidSyntax(): InvalidSyntax {
 				return new VariantImpl(invalidSyntax, undefined) as InvalidSyntax;
 			}
-			
-			
+
+
 			/**
 			 * This error indicates that a forbidden `field-key` was used when trying
 			 * to set a header in a `fields`.
@@ -638,8 +640,8 @@ export namespace http {
 			export function Forbidden(): Forbidden {
 				return new VariantImpl(forbidden, undefined) as Forbidden;
 			}
-			
-			
+
+
 			/**
 			 * This error indicates that the operation on the `fields` was not
 			 * permitted because the fields are immutable.
@@ -649,7 +651,7 @@ export namespace http {
 			export function Immutable(): Immutable {
 				return new VariantImpl(immutable, undefined) as Immutable;
 			}
-			
+
 			export type _tt = typeof invalidSyntax | typeof forbidden | typeof immutable;
 			export type _vt = undefined;
 			type _common = Omit<VariantImpl, 'tag' | 'value'>;
@@ -681,82 +683,74 @@ export namespace http {
 			}
 		}
 		export type HeaderError = HeaderError.InvalidSyntax | HeaderError.Forbidden | HeaderError.Immutable;
-		
+
 		/**
 		 * Field keys are always strings.
 		 */
 		export type FieldKey = string;
-		
+
 		/**
 		 * Field values should always be ASCII strings. However, in
 		 * reality, HTTP implementations often have to interpret malformed values,
 		 * so they are provided as a list of bytes.
 		 */
 		export type FieldValue = Uint8Array;
-		
+
 		/**
 		 * Headers is an alias for Fields.
 		 */
 		export type Headers = Fields;
-		
+
 		/**
 		 * Trailers is an alias for Fields.
 		 */
 		export type Trailers = Fields;
-		
+
 		/**
 		 * This type corresponds to the HTTP standard Status Code.
 		 */
 		export type StatusCode = u16;
-		
+
 		export namespace Fields {
-			export type Module = {
-				
+			export interface Interface extends $wcm.Resource {
 				/**
-				 * Construct an empty HTTP Fields.
+				 * Get all of the values corresponding to a key. If the key is not present
+				 * in this `fields`, an empty list is returned. However, if the key is
+				 * present but empty, this is represented by a list with one or more
+				 * empty field-values present.
 				 */
-				constructor(): own<Fields>;
-				
+				get(name: FieldKey): FieldValue[];
+
 				/**
-				 * Construct an HTTP Fields.
-				 * 
-				 * The list represents each key-value pair in the Fields. Keys
-				 * which have multiple values are represented by multiple entries in this
-				 * list with the same key.
-				 * 
-				 * The tuple is a pair of the field key, represented as a string, and
-				 * Value, represented as a list of bytes. In a valid Fields, all keys
-				 * and values are valid UTF-8 strings. However, values are not always
-				 * well-formed, so they are represented as a raw list of bytes.
-				 * 
-				 * An error result will be returned if any header or value was
-				 * syntactically invalid, or if a header was forbidden.
+				 * Returns `true` when the key is present in this `fields`. If the key is
+				 * syntactically invalid, `false` is returned.
 				 */
-				fromList(entries: [FieldKey, FieldValue][]): result<own<Fields>, HeaderError>;
-				
-				/**
-				 * Get all of the values corresponding to a key.
-				 */
-				get(self: borrow<Fields>, name: FieldKey): FieldValue[];
-				
+				has(name: FieldKey): boolean;
+
 				/**
 				 * Set all of the values for a key. Clears any existing values for that
 				 * key, if they have been set.
+				 * 
+				 * Fails with `header-error.immutable` if the `fields` are immutable.
 				 */
-				set(self: borrow<Fields>, name: FieldKey, value: FieldValue[]): result<void, HeaderError>;
-				
+				set(name: FieldKey, value: FieldValue[]): result<void, HeaderError>;
+
 				/**
 				 * Delete all values for a key. Does nothing if no values for the key
 				 * exist.
+				 * 
+				 * Fails with `header-error.immutable` if the `fields` are immutable.
 				 */
-				delete_(self: borrow<Fields>, name: FieldKey): result<void, HeaderError>;
-				
+				delete(name: FieldKey): result<void, HeaderError>;
+
 				/**
 				 * Append a value for a key. Does not change or delete any existing
 				 * values for that key.
+				 * 
+				 * Fails with `header-error.immutable` if the `fields` are immutable.
 				 */
-				append(self: borrow<Fields>, name: FieldKey, value: FieldValue): result<void, HeaderError>;
-				
+				append(name: FieldKey, value: FieldValue): result<void, HeaderError>;
+
 				/**
 				 * Retrieve the full set of keys and values in the Fields. Like the
 				 * constructor, the list represents each key-value pair.
@@ -765,301 +759,247 @@ export namespace http {
 				 * which have multiple values are represented by multiple entries in this
 				 * list with the same key.
 				 */
-				entries(self: borrow<Fields>): [FieldKey, FieldValue][];
-				
+				entries(): [FieldKey, FieldValue][];
+
 				/**
 				 * Make a deep copy of the Fields. Equivelant in behavior to calling the
-				 * `fields` constructor on the return value of `entries`
+				 * `fields` constructor on the return value of `entries`. The resulting
+				 * `fields` is mutable.
 				 */
-				clone(self: borrow<Fields>): own<Fields>;
-			};
-			export interface Interface {
-				get(name: FieldKey): FieldValue[];
-				set(name: FieldKey, value: FieldValue[]): result<void, HeaderError>;
-				delete_(name: FieldKey): result<void, HeaderError>;
-				append(name: FieldKey, value: FieldValue): result<void, HeaderError>;
-				entries(): [FieldKey, FieldValue][];
 				clone(): own<Fields>;
 			}
-			export type Constructor = {
-				new(): Interface;
+			export type Statics = {
+				$new?(): Interface;
 				fromList(entries: [FieldKey, FieldValue][]): result<own<Fields>, HeaderError>;
 			};
-			export type Manager = $wcm.ResourceManager<Interface>;
+			export type Class = Statics & {
+				new(): Interface;
+			};
 		}
-		export type Fields = resource;
-		
+		export type Fields = Fields.Interface;
+
 		export namespace IncomingRequest {
-			export type Module = {
-				
+			export interface Interface extends $wcm.Resource {
 				/**
 				 * Returns the method of the incoming request.
 				 */
-				method(self: borrow<IncomingRequest>): Method;
-				
+				method(): Method;
+
 				/**
 				 * Returns the path with query parameters from the request, as a string.
 				 */
-				pathWithQuery(self: borrow<IncomingRequest>): string | undefined;
-				
+				pathWithQuery(): string | undefined;
+
 				/**
 				 * Returns the protocol scheme from the request.
 				 */
-				scheme(self: borrow<IncomingRequest>): Scheme | undefined;
-				
+				scheme(): Scheme | undefined;
+
 				/**
 				 * Returns the authority from the request, if it was present.
 				 */
-				authority(self: borrow<IncomingRequest>): string | undefined;
-				
+				authority(): string | undefined;
+
 				/**
-				 * Returns the `headers` from the request.
+				 * Get the `headers` associated with the request.
+				 * 
+				 * The returned `headers` resource is immutable: `set`, `append`, and
+				 * `delete` operations will fail with `header-error.immutable`.
 				 * 
 				 * The `headers` returned are a child resource: it must be dropped before
 				 * the parent `incoming-request` is dropped. Dropping this
 				 * `incoming-request` before all children are dropped will trap.
 				 */
-				headers(self: borrow<IncomingRequest>): own<Headers>;
-				
+				headers(): own<Headers>;
+
 				/**
 				 * Gives the `incoming-body` associated with this request. Will only
 				 * return success at most once, and subsequent calls will return error.
 				 */
-				consume(self: borrow<IncomingRequest>): result<own<IncomingBody>, void>;
-			};
-			export interface Interface {
-				method(): Method;
-				pathWithQuery(): string | undefined;
-				scheme(): Scheme | undefined;
-				authority(): string | undefined;
-				headers(): own<Headers>;
 				consume(): result<own<IncomingBody>, void>;
 			}
-			export type Manager = $wcm.ResourceManager<Interface>;
+			export type Statics = {
+			};
+			export type Class = Statics & {
+			};
 		}
-		export type IncomingRequest = resource;
-		
+		export type IncomingRequest = IncomingRequest.Interface;
+
 		export namespace OutgoingRequest {
-			export type Module = {
-				
-				/**
-				 * Construct a new `outgoing-request` with a default `method` of `GET`, and
-				 * `none` values for `path-with-query`, `scheme`, and `authority`.
-				 * 
-				 * * `headers` is the HTTP Headers for the Request.
-				 * 
-				 * It is possible to construct, or manipulate with the accessor functions
-				 * below, an `outgoing-request` with an invalid combination of `scheme`
-				 * and `authority`, or `headers` which are not permitted to be sent.
-				 * It is the obligation of the `outgoing-handler.handle` implementation
-				 * to reject invalid constructions of `outgoing-request`.
-				 */
-				constructor(headers: own<Headers>): own<OutgoingRequest>;
-				
+			export interface Interface extends $wcm.Resource {
 				/**
 				 * Returns the resource corresponding to the outgoing Body for this
 				 * Request.
 				 * 
 				 * Returns success on the first call: the `outgoing-body` resource for
-				 * this `outgoing-response` can be retrieved at most once. Subsequent
+				 * this `outgoing-request` can be retrieved at most once. Subsequent
 				 * calls will return error.
 				 */
-				body(self: borrow<OutgoingRequest>): result<own<OutgoingBody>, void>;
-				
+				body(): result<own<OutgoingBody>, void>;
+
 				/**
 				 * Get the Method for the Request.
 				 */
-				method(self: borrow<OutgoingRequest>): Method;
-				
+				method(): Method;
+
 				/**
 				 * Set the Method for the Request. Fails if the string present in a
 				 * `method.other` argument is not a syntactically valid method.
 				 */
-				setMethod(self: borrow<OutgoingRequest>, method: Method): result<void, void>;
-				
+				setMethod(method: Method): result<void, void>;
+
 				/**
 				 * Get the combination of the HTTP Path and Query for the Request.
 				 * When `none`, this represents an empty Path and empty Query.
 				 */
-				pathWithQuery(self: borrow<OutgoingRequest>): string | undefined;
-				
+				pathWithQuery(): string | undefined;
+
 				/**
 				 * Set the combination of the HTTP Path and Query for the Request.
 				 * When `none`, this represents an empty Path and empty Query. Fails is the
 				 * string given is not a syntactically valid path and query uri component.
 				 */
-				setPathWithQuery(self: borrow<OutgoingRequest>, pathWithQuery: string | undefined): result<void, void>;
-				
+				setPathWithQuery(pathWithQuery: string | undefined): result<void, void>;
+
 				/**
 				 * Get the HTTP Related Scheme for the Request. When `none`, the
 				 * implementation may choose an appropriate default scheme.
 				 */
-				scheme(self: borrow<OutgoingRequest>): Scheme | undefined;
-				
+				scheme(): Scheme | undefined;
+
 				/**
 				 * Set the HTTP Related Scheme for the Request. When `none`, the
 				 * implementation may choose an appropriate default scheme. Fails if the
 				 * string given is not a syntactically valid uri scheme.
 				 */
-				setScheme(self: borrow<OutgoingRequest>, scheme: Scheme | undefined): result<void, void>;
-				
+				setScheme(scheme: Scheme | undefined): result<void, void>;
+
 				/**
 				 * Get the HTTP Authority for the Request. A value of `none` may be used
 				 * with Related Schemes which do not require an Authority. The HTTP and
 				 * HTTPS schemes always require an authority.
 				 */
-				authority(self: borrow<OutgoingRequest>): string | undefined;
-				
+				authority(): string | undefined;
+
 				/**
 				 * Set the HTTP Authority for the Request. A value of `none` may be used
 				 * with Related Schemes which do not require an Authority. The HTTP and
 				 * HTTPS schemes always require an authority. Fails if the string given is
 				 * not a syntactically valid uri authority.
 				 */
-				setAuthority(self: borrow<OutgoingRequest>, authority: string | undefined): result<void, void>;
-				
+				setAuthority(authority: string | undefined): result<void, void>;
+
 				/**
 				 * Get the headers associated with the Request.
+				 * 
+				 * The returned `headers` resource is immutable: `set`, `append`, and
+				 * `delete` operations will fail with `header-error.immutable`.
 				 * 
 				 * This headers resource is a child: it must be dropped before the parent
 				 * `outgoing-request` is dropped, or its ownership is transfered to
 				 * another component by e.g. `outgoing-handler.handle`.
 				 */
-				headers(self: borrow<OutgoingRequest>): own<Headers>;
-			};
-			export interface Interface {
-				body(): result<own<OutgoingBody>, void>;
-				method(): Method;
-				setMethod(method: Method): result<void, void>;
-				pathWithQuery(): string | undefined;
-				setPathWithQuery(pathWithQuery: string | undefined): result<void, void>;
-				scheme(): Scheme | undefined;
-				setScheme(scheme: Scheme | undefined): result<void, void>;
-				authority(): string | undefined;
-				setAuthority(authority: string | undefined): result<void, void>;
 				headers(): own<Headers>;
 			}
-			export type Constructor = {
+			export type Statics = {
+				$new?(headers: own<Headers>): Interface;
+			};
+			export type Class = Statics & {
 				new(headers: own<Headers>): Interface;
 			};
-			export type Manager = $wcm.ResourceManager<Interface>;
 		}
-		export type OutgoingRequest = resource;
-		
+		export type OutgoingRequest = OutgoingRequest.Interface;
+
 		export namespace RequestOptions {
-			export type Module = {
-				
-				/**
-				 * Construct a default `request-options` value.
-				 */
-				constructor(): own<RequestOptions>;
-				
+			export interface Interface extends $wcm.Resource {
 				/**
 				 * The timeout for the initial connect to the HTTP Server.
 				 */
-				connectTimeoutMs(self: borrow<RequestOptions>): Duration | undefined;
-				
+				connectTimeout(): Duration | undefined;
+
 				/**
 				 * Set the timeout for the initial connect to the HTTP Server. An error
 				 * return value indicates that this timeout is not supported.
 				 */
-				setConnectTimeoutMs(self: borrow<RequestOptions>, ms: Duration | undefined): result<void, void>;
-				
+				setConnectTimeout(duration: Duration | undefined): result<void, void>;
+
 				/**
 				 * The timeout for receiving the first byte of the Response body.
 				 */
-				firstByteTimeoutMs(self: borrow<RequestOptions>): Duration | undefined;
-				
+				firstByteTimeout(): Duration | undefined;
+
 				/**
 				 * Set the timeout for receiving the first byte of the Response body. An
 				 * error return value indicates that this timeout is not supported.
 				 */
-				setFirstByteTimeoutMs(self: borrow<RequestOptions>, ms: Duration | undefined): result<void, void>;
-				
+				setFirstByteTimeout(duration: Duration | undefined): result<void, void>;
+
 				/**
 				 * The timeout for receiving subsequent chunks of bytes in the Response
 				 * body stream.
 				 */
-				betweenBytesTimeoutMs(self: borrow<RequestOptions>): Duration | undefined;
-				
+				betweenBytesTimeout(): Duration | undefined;
+
 				/**
 				 * Set the timeout for receiving subsequent chunks of bytes in the Response
 				 * body stream. An error return value indicates that this timeout is not
 				 * supported.
 				 */
-				setBetweenBytesTimeoutMs(self: borrow<RequestOptions>, ms: Duration | undefined): result<void, void>;
-			};
-			export interface Interface {
-				connectTimeoutMs(): Duration | undefined;
-				setConnectTimeoutMs(ms: Duration | undefined): result<void, void>;
-				firstByteTimeoutMs(): Duration | undefined;
-				setFirstByteTimeoutMs(ms: Duration | undefined): result<void, void>;
-				betweenBytesTimeoutMs(): Duration | undefined;
-				setBetweenBytesTimeoutMs(ms: Duration | undefined): result<void, void>;
+				setBetweenBytesTimeout(duration: Duration | undefined): result<void, void>;
 			}
-			export type Constructor = {
+			export type Statics = {
+				$new?(): Interface;
+			};
+			export type Class = Statics & {
 				new(): Interface;
 			};
-			export type Manager = $wcm.ResourceManager<Interface>;
 		}
-		export type RequestOptions = resource;
-		
+		export type RequestOptions = RequestOptions.Interface;
+
 		export namespace ResponseOutparam {
-			export type Module = {
-				
-				/**
-				 * Set the value of the `response-outparam` to either send a response,
-				 * or indicate an error.
-				 * 
-				 * This method consumes the `response-outparam` to ensure that it is
-				 * called at most once. If it is never called, the implementation
-				 * will respond with an error.
-				 * 
-				 * The user may provide an `error` to `response` to allow the
-				 * implementation determine how to respond with an HTTP error response.
-				 */
-				set(param: own<ResponseOutparam>, response: result<own<OutgoingResponse>, ErrorCode>): void;
-			};
-			export interface Interface {
+			export interface Interface extends $wcm.Resource {
 			}
-			export type Constructor = {
+			export type Statics = {
 				set(param: own<ResponseOutparam>, response: result<own<OutgoingResponse>, ErrorCode>): void;
 			};
-			export type Manager = $wcm.ResourceManager<Interface>;
+			export type Class = Statics & {
+			};
 		}
-		export type ResponseOutparam = resource;
-		
+		export type ResponseOutparam = ResponseOutparam.Interface;
+
 		export namespace IncomingResponse {
-			export type Module = {
-				
+			export interface Interface extends $wcm.Resource {
 				/**
 				 * Returns the status code from the incoming response.
 				 */
-				status(self: borrow<IncomingResponse>): StatusCode;
-				
+				status(): StatusCode;
+
 				/**
 				 * Returns the headers from the incoming response.
+				 * 
+				 * The returned `headers` resource is immutable: `set`, `append`, and
+				 * `delete` operations will fail with `header-error.immutable`.
+				 * 
+				 * This headers resource is a child: it must be dropped before the parent
+				 * `incoming-response` is dropped.
 				 */
-				headers(self: borrow<IncomingResponse>): own<Headers>;
-				
+				headers(): own<Headers>;
+
 				/**
 				 * Returns the incoming body. May be called at most once. Returns error
 				 * if called additional times.
 				 */
-				consume(self: borrow<IncomingResponse>): result<own<IncomingBody>, void>;
-			};
-			export interface Interface {
-				status(): StatusCode;
-				headers(): own<Headers>;
 				consume(): result<own<IncomingBody>, void>;
 			}
-			export type Manager = $wcm.ResourceManager<Interface>;
+			export type Statics = {
+			};
+			export type Class = Statics & {
+			};
 		}
-		export type IncomingResponse = resource;
-		
+		export type IncomingResponse = IncomingResponse.Interface;
+
 		export namespace IncomingBody {
-			export type Module = {
-				
+			export interface Interface extends $wcm.Resource {
 				/**
 				 * Returns the contents of the body, as a stream of bytes.
 				 * 
@@ -1077,34 +1017,25 @@ export namespace http {
 				 * and for that backpressure to not inhibit delivery of the trailers if
 				 * the user does not read the entire body.
 				 */
-				stream(self: borrow<IncomingBody>): result<own<InputStream>, void>;
-				
-				/**
-				 * Takes ownership of `incoming-body`, and returns a `future-trailers`.
-				 * This function will trap if the `input-stream` child is still alive.
-				 */
-				finish(this_: own<IncomingBody>): own<FutureTrailers>;
-			};
-			export interface Interface {
 				stream(): result<own<InputStream>, void>;
 			}
-			export type Constructor = {
+			export type Statics = {
 				finish(this_: own<IncomingBody>): own<FutureTrailers>;
 			};
-			export type Manager = $wcm.ResourceManager<Interface>;
+			export type Class = Statics & {
+			};
 		}
-		export type IncomingBody = resource;
-		
+		export type IncomingBody = IncomingBody.Interface;
+
 		export namespace FutureTrailers {
-			export type Module = {
-				
+			export interface Interface extends $wcm.Resource {
 				/**
 				 * Returns a pollable which becomes ready when either the trailers have
 				 * been received, or an error has occured. When this pollable is ready,
 				 * the `get` method will return `some`.
 				 */
-				subscribe(self: borrow<FutureTrailers>): own<Pollable>;
-				
+				subscribe(): own<Pollable>;
+
 				/**
 				 * Returns the contents of the trailers, or an error which occured,
 				 * once the future is ready.
@@ -1112,53 +1043,54 @@ export namespace http {
 				 * The outer `option` represents future readiness. Users can wait on this
 				 * `option` to become `some` using the `subscribe` method.
 				 * 
-				 * The `result` represents that either the HTTP Request or Response body,
-				 * as well as any trailers, were received successfully, or that an error
-				 * occured receiving them. The optional `trailers` indicates whether or not
-				 * trailers were present in the body.
-				 */
-				get(self: borrow<FutureTrailers>): result<own<Trailers> | undefined, ErrorCode> | undefined;
-			};
-			export interface Interface {
-				subscribe(): own<Pollable>;
-				get(): result<own<Trailers> | undefined, ErrorCode> | undefined;
-			}
-			export type Manager = $wcm.ResourceManager<Interface>;
-		}
-		export type FutureTrailers = resource;
-		
-		export namespace OutgoingResponse {
-			export type Module = {
-				
-				/**
-				 * Construct an `outgoing-response`, with a default `status-code` of `200`.
-				 * If a different `status-code` is needed, it must be set via the
-				 * `set-status-code` method.
+				 * The outer `result` is used to retrieve the trailers or error at most
+				 * once. It will be success on the first call in which the outer option
+				 * is `some`, and error on subsequent calls.
 				 * 
-				 * * `headers` is the HTTP Headers for the Response.
+				 * The inner `result` represents that either the HTTP Request or Response
+				 * body, as well as any trailers, were received successfully, or that an
+				 * error occured receiving them. The optional `trailers` indicates whether
+				 * or not trailers were present in the body.
+				 * 
+				 * When some `trailers` are returned by this method, the `trailers`
+				 * resource is immutable, and a child. Use of the `set`, `append`, or
+				 * `delete` methods will return an error, and the resource must be
+				 * dropped before the parent `future-trailers` is dropped.
 				 */
-				constructor(headers: own<Headers>): own<OutgoingResponse>;
-				
+				get(): result<result<own<Trailers> | undefined, ErrorCode>, void> | undefined;
+			}
+			export type Statics = {
+			};
+			export type Class = Statics & {
+			};
+		}
+		export type FutureTrailers = FutureTrailers.Interface;
+
+		export namespace OutgoingResponse {
+			export interface Interface extends $wcm.Resource {
 				/**
 				 * Get the HTTP Status Code for the Response.
 				 */
-				statusCode(self: borrow<OutgoingResponse>): StatusCode;
-				
+				statusCode(): StatusCode;
+
 				/**
 				 * Set the HTTP Status Code for the Response. Fails if the status-code
 				 * given is not a valid http status code.
 				 */
-				setStatusCode(self: borrow<OutgoingResponse>, statusCode: StatusCode): result<void, void>;
-				
+				setStatusCode(statusCode: StatusCode): result<void, void>;
+
 				/**
 				 * Get the headers associated with the Request.
+				 * 
+				 * The returned `headers` resource is immutable: `set`, `append`, and
+				 * `delete` operations will fail with `header-error.immutable`.
 				 * 
 				 * This headers resource is a child: it must be dropped before the parent
 				 * `outgoing-request` is dropped, or its ownership is transfered to
 				 * another component by e.g. `outgoing-handler.handle`.
 				 */
-				headers(self: borrow<OutgoingResponse>): own<Headers>;
-				
+				headers(): own<Headers>;
+
 				/**
 				 * Returns the resource corresponding to the outgoing Body for this Response.
 				 * 
@@ -1166,24 +1098,19 @@ export namespace http {
 				 * this `outgoing-response` can be retrieved at most once. Subsequent
 				 * calls will return error.
 				 */
-				body(self: borrow<OutgoingResponse>): result<own<OutgoingBody>, void>;
-			};
-			export interface Interface {
-				statusCode(): StatusCode;
-				setStatusCode(statusCode: StatusCode): result<void, void>;
-				headers(): own<Headers>;
 				body(): result<own<OutgoingBody>, void>;
 			}
-			export type Constructor = {
+			export type Statics = {
+				$new?(headers: own<Headers>): Interface;
+			};
+			export type Class = Statics & {
 				new(headers: own<Headers>): Interface;
 			};
-			export type Manager = $wcm.ResourceManager<Interface>;
 		}
-		export type OutgoingResponse = resource;
-		
+		export type OutgoingResponse = OutgoingResponse.Interface;
+
 		export namespace OutgoingBody {
-			export type Module = {
-				
+			export interface Interface extends $wcm.Resource {
 				/**
 				 * Returns a stream for writing the body contents.
 				 * 
@@ -1195,36 +1122,25 @@ export namespace http {
 				 * this `outgoing-body` may be retrieved at most once. Subsequent calls
 				 * will return error.
 				 */
-				write(self: borrow<OutgoingBody>): result<own<OutputStream>, void>;
-				
-				/**
-				 * Finalize an outgoing body, optionally providing trailers. This must be
-				 * called to signal that the response is complete. If the `outgoing-body`
-				 * is dropped without calling `outgoing-body.finalize`, the implementation
-				 * should treat the body as corrupted.
-				 */
-				finish(this_: own<OutgoingBody>, trailers: own<Trailers> | undefined): void;
-			};
-			export interface Interface {
 				write(): result<own<OutputStream>, void>;
 			}
-			export type Constructor = {
-				finish(this_: own<OutgoingBody>, trailers: own<Trailers> | undefined): void;
+			export type Statics = {
+				finish(this_: own<OutgoingBody>, trailers: own<Trailers> | undefined): result<void, ErrorCode>;
 			};
-			export type Manager = $wcm.ResourceManager<Interface>;
+			export type Class = Statics & {
+			};
 		}
-		export type OutgoingBody = resource;
-		
+		export type OutgoingBody = OutgoingBody.Interface;
+
 		export namespace FutureIncomingResponse {
-			export type Module = {
-				
+			export interface Interface extends $wcm.Resource {
 				/**
 				 * Returns a pollable which becomes ready when either the Response has
 				 * been received, or an error has occured. When this pollable is ready,
 				 * the `get` method will return `some`.
 				 */
-				subscribe(self: borrow<FutureIncomingResponse>): own<Pollable>;
-				
+				subscribe(): own<Pollable>;
+
 				/**
 				 * Returns the incoming HTTP Response, or an error, once one is ready.
 				 * 
@@ -1241,55 +1157,54 @@ export namespace http {
 				 * but those will be reported by the `incoming-body` and its
 				 * `output-stream` child.
 				 */
-				get(self: borrow<FutureIncomingResponse>): result<result<own<IncomingResponse>, ErrorCode>, void> | undefined;
-			};
-			export interface Interface {
-				subscribe(): own<Pollable>;
 				get(): result<result<own<IncomingResponse>, ErrorCode>, void> | undefined;
 			}
-			export type Manager = $wcm.ResourceManager<Interface>;
+			export type Statics = {
+			};
+			export type Class = Statics & {
+			};
 		}
-		export type FutureIncomingResponse = resource;
-		
+		export type FutureIncomingResponse = FutureIncomingResponse.Interface;
+
 		/**
-		 * Attempts to extract a http-related `error` from the stream `error`
+		 * Attempts to extract a http-related `error` from the wasi:io `error`
 		 * provided.
 		 * 
-		 * Stream operations which return `stream-error::last-operation-failed` have
-		 * a payload with more information about the operation that failed. This
-		 * payload can be passed through to this function to see if there's
-		 * http-related information about the error to return.
+		 * Stream operations which return
+		 * `wasi:io/stream/stream-error::last-operation-failed` have a payload of
+		 * type `wasi:io/error/error` with more information about the operation
+		 * that failed. This payload can be passed through to this function to see
+		 * if there's http-related information about the error to return.
 		 * 
-		 * Note that this function is fallible because not all stream-related errors
-		 * are http-related errors.
+		 * Note that this function is fallible because not all io-errors are
+		 * http-related errors.
 		 */
-		export type httpErrorCode = (err: borrow<StreamError>) => ErrorCode | undefined;
+		export type httpErrorCode = (err: borrow<IoError>) => ErrorCode | undefined;
 	}
-	export type Types<F extends http.Types.Fields.Module | http.Types.Fields.Constructor | http.Types.Fields.Manager = http.Types.Fields.Module | http.Types.Fields.Constructor | http.Types.Fields.Manager, IR extends http.Types.IncomingRequest.Module | http.Types.IncomingRequest.Manager = http.Types.IncomingRequest.Module | http.Types.IncomingRequest.Manager, OR extends http.Types.OutgoingRequest.Module | http.Types.OutgoingRequest.Constructor | http.Types.OutgoingRequest.Manager = http.Types.OutgoingRequest.Module | http.Types.OutgoingRequest.Constructor | http.Types.OutgoingRequest.Manager, RO extends http.Types.RequestOptions.Module | http.Types.RequestOptions.Constructor | http.Types.RequestOptions.Manager = http.Types.RequestOptions.Module | http.Types.RequestOptions.Constructor | http.Types.RequestOptions.Manager, RO1 extends http.Types.ResponseOutparam.Module | http.Types.ResponseOutparam.Manager = http.Types.ResponseOutparam.Module | http.Types.ResponseOutparam.Manager, IR1 extends http.Types.IncomingResponse.Module | http.Types.IncomingResponse.Manager = http.Types.IncomingResponse.Module | http.Types.IncomingResponse.Manager, IB extends http.Types.IncomingBody.Module | http.Types.IncomingBody.Manager = http.Types.IncomingBody.Module | http.Types.IncomingBody.Manager, FT extends http.Types.FutureTrailers.Module | http.Types.FutureTrailers.Manager = http.Types.FutureTrailers.Module | http.Types.FutureTrailers.Manager, OR1 extends http.Types.OutgoingResponse.Module | http.Types.OutgoingResponse.Constructor | http.Types.OutgoingResponse.Manager = http.Types.OutgoingResponse.Module | http.Types.OutgoingResponse.Constructor | http.Types.OutgoingResponse.Manager, OB extends http.Types.OutgoingBody.Module | http.Types.OutgoingBody.Manager = http.Types.OutgoingBody.Module | http.Types.OutgoingBody.Manager, FIR extends http.Types.FutureIncomingResponse.Module | http.Types.FutureIncomingResponse.Manager = http.Types.FutureIncomingResponse.Module | http.Types.FutureIncomingResponse.Manager> = {
-		Fields: F;
-		IncomingRequest: IR;
-		OutgoingRequest: OR;
-		RequestOptions: RO;
-		ResponseOutparam: RO1;
-		IncomingResponse: IR1;
-		IncomingBody: IB;
-		FutureTrailers: FT;
-		OutgoingResponse: OR1;
-		OutgoingBody: OB;
-		FutureIncomingResponse: FIR;
+	export type Types = {
+		Fields: Types.Fields.Class;
+		IncomingRequest: Types.IncomingRequest.Class;
+		OutgoingRequest: Types.OutgoingRequest.Class;
+		RequestOptions: Types.RequestOptions.Class;
+		ResponseOutparam: Types.ResponseOutparam.Class;
+		IncomingResponse: Types.IncomingResponse.Class;
+		IncomingBody: Types.IncomingBody.Class;
+		FutureTrailers: Types.FutureTrailers.Class;
+		OutgoingResponse: Types.OutgoingResponse.Class;
+		OutgoingBody: Types.OutgoingBody.Class;
+		FutureIncomingResponse: Types.FutureIncomingResponse.Class;
 		httpErrorCode: Types.httpErrorCode;
 	};
-	
+
 	/**
 	 * This interface defines a handler of incoming HTTP Requests. It should
 	 * be exported by components which can respond to HTTP Requests.
 	 */
 	export namespace IncomingHandler {
-		
 		export type IncomingRequest = http.Types.IncomingRequest;
-		
+
 		export type ResponseOutparam = http.Types.ResponseOutparam;
-		
+
 		/**
 		 * This function is invoked with an incoming HTTP Request, and a resource
 		 * `response-outparam` which provides the capability to reply with an HTTP
@@ -1307,21 +1222,20 @@ export namespace http {
 	export type IncomingHandler = {
 		handle: IncomingHandler.handle;
 	};
-	
+
 	/**
 	 * This interface defines a handler of outgoing HTTP Requests. It should be
 	 * imported by components which wish to make HTTP Requests.
 	 */
 	export namespace OutgoingHandler {
-		
 		export type OutgoingRequest = http.Types.OutgoingRequest;
-		
+
 		export type RequestOptions = http.Types.RequestOptions;
-		
+
 		export type FutureIncomingResponse = http.Types.FutureIncomingResponse;
-		
+
 		export type ErrorCode = http.Types.ErrorCode;
-		
+
 		/**
 		 * This function is invoked with an outgoing HTTP Request, and it returns
 		 * a resource `future-incoming-response` which represents an HTTP Response
@@ -1339,22 +1253,46 @@ export namespace http {
 	export type OutgoingHandler = {
 		handle: OutgoingHandler.handle;
 	};
-	
+	export namespace proxy {
+		export type Imports = {
+			random: random.Random;
+			error: io.Error;
+			poll: io.Poll;
+			streams: io.Streams;
+			stdout: cli.Stdout;
+			stderr: cli.Stderr;
+			stdin: cli.Stdin;
+			monotonicClock: clocks.MonotonicClock;
+			types: http.Types;
+			outgoingHandler: http.OutgoingHandler;
+			wallClock: clocks.WallClock;
+		};
+		export namespace Imports {
+			export type Promisified = $wcm.$imports.Promisify<Imports>;
+		}
+		export namespace imports {
+			export type Promisify<T> = $wcm.$imports.Promisify<T>;
+		}
+		export type Exports = {
+			incomingHandler: http.IncomingHandler;
+		};
+		export namespace Exports {
+			export type Promisified = $wcm.$exports.Promisify<Exports>;
+		}
+		export namespace exports {
+			export type Promisify<T> = $wcm.$exports.Promisify<T>;
+		}
+	}
 }
-export type http<T extends http.Types = http.Types> = {
-	Types?: T;
-	IncomingHandler?: http.IncomingHandler;
-	OutgoingHandler?: http.OutgoingHandler;
-};
 
 export namespace http {
 	export namespace Types.$ {
 		export const Duration = clocks.MonotonicClock.$.Duration;
 		export const InputStream = io.Streams.$.InputStream;
 		export const OutputStream = io.Streams.$.OutputStream;
-		export const StreamError = io.Streams.$.Error;
+		export const IoError = io.Error.$.Error;
 		export const Pollable = io.Poll.$.Pollable;
-		export const Method = new $wcm.VariantType<http.Types.Method, http.Types.Method._tt, http.Types.Method._vt>([['get', undefined], ['head', undefined], ['post', undefined], ['put', undefined], ['delete_', undefined], ['connect', undefined], ['options', undefined], ['trace', undefined], ['patch', undefined], ['other', $wcm.wstring]], http.Types.Method._ctor);
+		export const Method = new $wcm.VariantType<http.Types.Method, http.Types.Method._tt, http.Types.Method._vt>([['get', undefined], ['head', undefined], ['post', undefined], ['put', undefined], ['delete', undefined], ['connect', undefined], ['options', undefined], ['trace', undefined], ['patch', undefined], ['other', $wcm.wstring]], http.Types.Method._ctor);
 		export const Scheme = new $wcm.VariantType<http.Types.Scheme, http.Types.Scheme._tt, http.Types.Scheme._vt>([['HTTP', undefined], ['HTTPS', undefined], ['other', $wcm.wstring]], http.Types.Scheme._ctor);
 		export const DNSErrorPayload = new $wcm.RecordType<http.Types.DNSErrorPayload>([
 			['rcode', new $wcm.OptionType<string>($wcm.wstring)],
@@ -1372,191 +1310,306 @@ export namespace http {
 		export const HeaderError = new $wcm.VariantType<http.Types.HeaderError, http.Types.HeaderError._tt, http.Types.HeaderError._vt>([['invalidSyntax', undefined], ['forbidden', undefined], ['immutable', undefined]], http.Types.HeaderError._ctor);
 		export const FieldKey = $wcm.wstring;
 		export const FieldValue = new $wcm.Uint8ArrayType();
-		export const Fields = new $wcm.ResourceType('fields');
+		export const Fields = new $wcm.ResourceType<http.Types.Fields>('fields', 'wasi:http@0.2.0/types/fields');
+		export const Fields_Handle = new $wcm.ResourceHandleType('fields');
 		export const Headers = Fields;
 		export const Trailers = Fields;
-		export const IncomingRequest = new $wcm.ResourceType('incoming-request');
-		export const OutgoingRequest = new $wcm.ResourceType('outgoing-request');
-		export const RequestOptions = new $wcm.ResourceType('request-options');
-		export const ResponseOutparam = new $wcm.ResourceType('response-outparam');
+		export const IncomingRequest = new $wcm.ResourceType<http.Types.IncomingRequest>('incoming-request', 'wasi:http@0.2.0/types/incoming-request');
+		export const IncomingRequest_Handle = new $wcm.ResourceHandleType('incoming-request');
+		export const OutgoingRequest = new $wcm.ResourceType<http.Types.OutgoingRequest>('outgoing-request', 'wasi:http@0.2.0/types/outgoing-request');
+		export const OutgoingRequest_Handle = new $wcm.ResourceHandleType('outgoing-request');
+		export const RequestOptions = new $wcm.ResourceType<http.Types.RequestOptions>('request-options', 'wasi:http@0.2.0/types/request-options');
+		export const RequestOptions_Handle = new $wcm.ResourceHandleType('request-options');
+		export const ResponseOutparam = new $wcm.ResourceType<http.Types.ResponseOutparam>('response-outparam', 'wasi:http@0.2.0/types/response-outparam');
+		export const ResponseOutparam_Handle = new $wcm.ResourceHandleType('response-outparam');
 		export const StatusCode = $wcm.u16;
-		export const IncomingResponse = new $wcm.ResourceType('incoming-response');
-		export const IncomingBody = new $wcm.ResourceType('incoming-body');
-		export const FutureTrailers = new $wcm.ResourceType('future-trailers');
-		export const OutgoingResponse = new $wcm.ResourceType('outgoing-response');
-		export const OutgoingBody = new $wcm.ResourceType('outgoing-body');
-		export const FutureIncomingResponse = new $wcm.ResourceType('future-incoming-response');
-		Fields.addFunction('constructor', new $wcm.FunctionType<http.Types.Fields.Module['constructor']>('[constructor]fields', [], new $wcm.OwnType<http.Types.Fields>(Fields)));
-		Fields.addFunction('fromList', new $wcm.FunctionType<http.Types.Fields.Module['fromList']>('[static]fields.from-list', [
+		export const IncomingResponse = new $wcm.ResourceType<http.Types.IncomingResponse>('incoming-response', 'wasi:http@0.2.0/types/incoming-response');
+		export const IncomingResponse_Handle = new $wcm.ResourceHandleType('incoming-response');
+		export const IncomingBody = new $wcm.ResourceType<http.Types.IncomingBody>('incoming-body', 'wasi:http@0.2.0/types/incoming-body');
+		export const IncomingBody_Handle = new $wcm.ResourceHandleType('incoming-body');
+		export const FutureTrailers = new $wcm.ResourceType<http.Types.FutureTrailers>('future-trailers', 'wasi:http@0.2.0/types/future-trailers');
+		export const FutureTrailers_Handle = new $wcm.ResourceHandleType('future-trailers');
+		export const OutgoingResponse = new $wcm.ResourceType<http.Types.OutgoingResponse>('outgoing-response', 'wasi:http@0.2.0/types/outgoing-response');
+		export const OutgoingResponse_Handle = new $wcm.ResourceHandleType('outgoing-response');
+		export const OutgoingBody = new $wcm.ResourceType<http.Types.OutgoingBody>('outgoing-body', 'wasi:http@0.2.0/types/outgoing-body');
+		export const OutgoingBody_Handle = new $wcm.ResourceHandleType('outgoing-body');
+		export const FutureIncomingResponse = new $wcm.ResourceType<http.Types.FutureIncomingResponse>('future-incoming-response', 'wasi:http@0.2.0/types/future-incoming-response');
+		export const FutureIncomingResponse_Handle = new $wcm.ResourceHandleType('future-incoming-response');
+		Fields.addDestructor('$drop', new $wcm.DestructorType('[resource-drop]fields', [['inst', Fields]]));
+		Fields.addConstructor('constructor', new $wcm.ConstructorType<http.Types.Fields.Class['constructor']>('[constructor]fields', [], new $wcm.OwnType(Fields_Handle)));
+		Fields.addStaticMethod('fromList', new $wcm.StaticMethodType<http.Types.Fields.Statics['fromList']>('[static]fields.from-list', [
 			['entries', new $wcm.ListType<[http.Types.FieldKey, Uint8Array]>(new $wcm.TupleType<[http.Types.FieldKey, Uint8Array]>([FieldKey, FieldValue]))],
 		], new $wcm.ResultType<own<http.Types.Fields>, http.Types.HeaderError>(new $wcm.OwnType<http.Types.Fields>(Fields), HeaderError)));
-		Fields.addFunction('get', new $wcm.FunctionType<http.Types.Fields.Module['get']>('[method]fields.get', [
-			['self', new $wcm.BorrowType<http.Types.Fields>(Fields)],
+		Fields.addMethod('get', new $wcm.MethodType<http.Types.Fields.Interface['get']>('[method]fields.get', [
 			['name', FieldKey],
 		], new $wcm.ListType<Uint8Array>(FieldValue)));
-		Fields.addFunction('set', new $wcm.FunctionType<http.Types.Fields.Module['set']>('[method]fields.set', [
-			['self', new $wcm.BorrowType<http.Types.Fields>(Fields)],
+		Fields.addMethod('has', new $wcm.MethodType<http.Types.Fields.Interface['has']>('[method]fields.has', [
+			['name', FieldKey],
+		], $wcm.bool));
+		Fields.addMethod('set', new $wcm.MethodType<http.Types.Fields.Interface['set']>('[method]fields.set', [
 			['name', FieldKey],
 			['value', new $wcm.ListType<Uint8Array>(FieldValue)],
 		], new $wcm.ResultType<void, http.Types.HeaderError>(undefined, HeaderError)));
-		Fields.addFunction('delete_', new $wcm.FunctionType<http.Types.Fields.Module['delete_']>('[method]fields.delete', [
-			['self', new $wcm.BorrowType<http.Types.Fields>(Fields)],
+		Fields.addMethod('delete', new $wcm.MethodType<http.Types.Fields.Interface['delete']>('[method]fields.delete', [
 			['name', FieldKey],
 		], new $wcm.ResultType<void, http.Types.HeaderError>(undefined, HeaderError)));
-		Fields.addFunction('append', new $wcm.FunctionType<http.Types.Fields.Module['append']>('[method]fields.append', [
-			['self', new $wcm.BorrowType<http.Types.Fields>(Fields)],
+		Fields.addMethod('append', new $wcm.MethodType<http.Types.Fields.Interface['append']>('[method]fields.append', [
 			['name', FieldKey],
 			['value', FieldValue],
 		], new $wcm.ResultType<void, http.Types.HeaderError>(undefined, HeaderError)));
-		Fields.addFunction('entries', new $wcm.FunctionType<http.Types.Fields.Module['entries']>('[method]fields.entries', [
-			['self', new $wcm.BorrowType<http.Types.Fields>(Fields)],
-		], new $wcm.ListType<[http.Types.FieldKey, Uint8Array]>(new $wcm.TupleType<[http.Types.FieldKey, Uint8Array]>([FieldKey, FieldValue]))));
-		Fields.addFunction('clone', new $wcm.FunctionType<http.Types.Fields.Module['clone']>('[method]fields.clone', [
-			['self', new $wcm.BorrowType<http.Types.Fields>(Fields)],
-		], new $wcm.OwnType<http.Types.Fields>(Fields)));
-		IncomingRequest.addFunction('method', new $wcm.FunctionType<http.Types.IncomingRequest.Module['method']>('[method]incoming-request.method', [
-			['self', new $wcm.BorrowType<http.Types.IncomingRequest>(IncomingRequest)],
-		], Method));
-		IncomingRequest.addFunction('pathWithQuery', new $wcm.FunctionType<http.Types.IncomingRequest.Module['pathWithQuery']>('[method]incoming-request.path-with-query', [
-			['self', new $wcm.BorrowType<http.Types.IncomingRequest>(IncomingRequest)],
-		], new $wcm.OptionType<string>($wcm.wstring)));
-		IncomingRequest.addFunction('scheme', new $wcm.FunctionType<http.Types.IncomingRequest.Module['scheme']>('[method]incoming-request.scheme', [
-			['self', new $wcm.BorrowType<http.Types.IncomingRequest>(IncomingRequest)],
-		], new $wcm.OptionType<http.Types.Scheme>(Scheme)));
-		IncomingRequest.addFunction('authority', new $wcm.FunctionType<http.Types.IncomingRequest.Module['authority']>('[method]incoming-request.authority', [
-			['self', new $wcm.BorrowType<http.Types.IncomingRequest>(IncomingRequest)],
-		], new $wcm.OptionType<string>($wcm.wstring)));
-		IncomingRequest.addFunction('headers', new $wcm.FunctionType<http.Types.IncomingRequest.Module['headers']>('[method]incoming-request.headers', [
-			['self', new $wcm.BorrowType<http.Types.IncomingRequest>(IncomingRequest)],
-		], new $wcm.OwnType<http.Types.Headers>(Headers)));
-		IncomingRequest.addFunction('consume', new $wcm.FunctionType<http.Types.IncomingRequest.Module['consume']>('[method]incoming-request.consume', [
-			['self', new $wcm.BorrowType<http.Types.IncomingRequest>(IncomingRequest)],
-		], new $wcm.ResultType<own<http.Types.IncomingBody>, void>(new $wcm.OwnType<http.Types.IncomingBody>(IncomingBody), undefined)));
-		OutgoingRequest.addFunction('constructor', new $wcm.FunctionType<http.Types.OutgoingRequest.Module['constructor']>('[constructor]outgoing-request', [
+		Fields.addMethod('entries', new $wcm.MethodType<http.Types.Fields.Interface['entries']>('[method]fields.entries', [], new $wcm.ListType<[http.Types.FieldKey, Uint8Array]>(new $wcm.TupleType<[http.Types.FieldKey, Uint8Array]>([FieldKey, FieldValue]))));
+		Fields.addMethod('clone', new $wcm.MethodType<http.Types.Fields.Interface['clone']>('[method]fields.clone', [], new $wcm.OwnType<http.Types.Fields>(Fields)));
+		IncomingRequest.addDestructor('$drop', new $wcm.DestructorType('[resource-drop]incoming-request', [['inst', IncomingRequest]]));
+		IncomingRequest.addMethod('method', new $wcm.MethodType<http.Types.IncomingRequest.Interface['method']>('[method]incoming-request.method', [], Method));
+		IncomingRequest.addMethod('pathWithQuery', new $wcm.MethodType<http.Types.IncomingRequest.Interface['pathWithQuery']>('[method]incoming-request.path-with-query', [], new $wcm.OptionType<string>($wcm.wstring)));
+		IncomingRequest.addMethod('scheme', new $wcm.MethodType<http.Types.IncomingRequest.Interface['scheme']>('[method]incoming-request.scheme', [], new $wcm.OptionType<http.Types.Scheme>(Scheme)));
+		IncomingRequest.addMethod('authority', new $wcm.MethodType<http.Types.IncomingRequest.Interface['authority']>('[method]incoming-request.authority', [], new $wcm.OptionType<string>($wcm.wstring)));
+		IncomingRequest.addMethod('headers', new $wcm.MethodType<http.Types.IncomingRequest.Interface['headers']>('[method]incoming-request.headers', [], new $wcm.OwnType<http.Types.Headers>(Headers)));
+		IncomingRequest.addMethod('consume', new $wcm.MethodType<http.Types.IncomingRequest.Interface['consume']>('[method]incoming-request.consume', [], new $wcm.ResultType<own<http.Types.IncomingBody>, void>(new $wcm.OwnType<http.Types.IncomingBody>(IncomingBody), undefined)));
+		OutgoingRequest.addDestructor('$drop', new $wcm.DestructorType('[resource-drop]outgoing-request', [['inst', OutgoingRequest]]));
+		OutgoingRequest.addConstructor('constructor', new $wcm.ConstructorType<http.Types.OutgoingRequest.Class['constructor']>('[constructor]outgoing-request', [
 			['headers', new $wcm.OwnType<http.Types.Headers>(Headers)],
-		], new $wcm.OwnType<http.Types.OutgoingRequest>(OutgoingRequest)));
-		OutgoingRequest.addFunction('body', new $wcm.FunctionType<http.Types.OutgoingRequest.Module['body']>('[method]outgoing-request.body', [
-			['self', new $wcm.BorrowType<http.Types.OutgoingRequest>(OutgoingRequest)],
-		], new $wcm.ResultType<own<http.Types.OutgoingBody>, void>(new $wcm.OwnType<http.Types.OutgoingBody>(OutgoingBody), undefined)));
-		OutgoingRequest.addFunction('method', new $wcm.FunctionType<http.Types.OutgoingRequest.Module['method']>('[method]outgoing-request.method', [
-			['self', new $wcm.BorrowType<http.Types.OutgoingRequest>(OutgoingRequest)],
-		], Method));
-		OutgoingRequest.addFunction('setMethod', new $wcm.FunctionType<http.Types.OutgoingRequest.Module['setMethod']>('[method]outgoing-request.set-method', [
-			['self', new $wcm.BorrowType<http.Types.OutgoingRequest>(OutgoingRequest)],
+		], new $wcm.OwnType(OutgoingRequest_Handle)));
+		OutgoingRequest.addMethod('body', new $wcm.MethodType<http.Types.OutgoingRequest.Interface['body']>('[method]outgoing-request.body', [], new $wcm.ResultType<own<http.Types.OutgoingBody>, void>(new $wcm.OwnType<http.Types.OutgoingBody>(OutgoingBody), undefined)));
+		OutgoingRequest.addMethod('method', new $wcm.MethodType<http.Types.OutgoingRequest.Interface['method']>('[method]outgoing-request.method', [], Method));
+		OutgoingRequest.addMethod('setMethod', new $wcm.MethodType<http.Types.OutgoingRequest.Interface['setMethod']>('[method]outgoing-request.set-method', [
 			['method', Method],
 		], new $wcm.ResultType<void, void>(undefined, undefined)));
-		OutgoingRequest.addFunction('pathWithQuery', new $wcm.FunctionType<http.Types.OutgoingRequest.Module['pathWithQuery']>('[method]outgoing-request.path-with-query', [
-			['self', new $wcm.BorrowType<http.Types.OutgoingRequest>(OutgoingRequest)],
-		], new $wcm.OptionType<string>($wcm.wstring)));
-		OutgoingRequest.addFunction('setPathWithQuery', new $wcm.FunctionType<http.Types.OutgoingRequest.Module['setPathWithQuery']>('[method]outgoing-request.set-path-with-query', [
-			['self', new $wcm.BorrowType<http.Types.OutgoingRequest>(OutgoingRequest)],
+		OutgoingRequest.addMethod('pathWithQuery', new $wcm.MethodType<http.Types.OutgoingRequest.Interface['pathWithQuery']>('[method]outgoing-request.path-with-query', [], new $wcm.OptionType<string>($wcm.wstring)));
+		OutgoingRequest.addMethod('setPathWithQuery', new $wcm.MethodType<http.Types.OutgoingRequest.Interface['setPathWithQuery']>('[method]outgoing-request.set-path-with-query', [
 			['pathWithQuery', new $wcm.OptionType<string>($wcm.wstring)],
 		], new $wcm.ResultType<void, void>(undefined, undefined)));
-		OutgoingRequest.addFunction('scheme', new $wcm.FunctionType<http.Types.OutgoingRequest.Module['scheme']>('[method]outgoing-request.scheme', [
-			['self', new $wcm.BorrowType<http.Types.OutgoingRequest>(OutgoingRequest)],
-		], new $wcm.OptionType<http.Types.Scheme>(Scheme)));
-		OutgoingRequest.addFunction('setScheme', new $wcm.FunctionType<http.Types.OutgoingRequest.Module['setScheme']>('[method]outgoing-request.set-scheme', [
-			['self', new $wcm.BorrowType<http.Types.OutgoingRequest>(OutgoingRequest)],
+		OutgoingRequest.addMethod('scheme', new $wcm.MethodType<http.Types.OutgoingRequest.Interface['scheme']>('[method]outgoing-request.scheme', [], new $wcm.OptionType<http.Types.Scheme>(Scheme)));
+		OutgoingRequest.addMethod('setScheme', new $wcm.MethodType<http.Types.OutgoingRequest.Interface['setScheme']>('[method]outgoing-request.set-scheme', [
 			['scheme', new $wcm.OptionType<http.Types.Scheme>(Scheme)],
 		], new $wcm.ResultType<void, void>(undefined, undefined)));
-		OutgoingRequest.addFunction('authority', new $wcm.FunctionType<http.Types.OutgoingRequest.Module['authority']>('[method]outgoing-request.authority', [
-			['self', new $wcm.BorrowType<http.Types.OutgoingRequest>(OutgoingRequest)],
-		], new $wcm.OptionType<string>($wcm.wstring)));
-		OutgoingRequest.addFunction('setAuthority', new $wcm.FunctionType<http.Types.OutgoingRequest.Module['setAuthority']>('[method]outgoing-request.set-authority', [
-			['self', new $wcm.BorrowType<http.Types.OutgoingRequest>(OutgoingRequest)],
+		OutgoingRequest.addMethod('authority', new $wcm.MethodType<http.Types.OutgoingRequest.Interface['authority']>('[method]outgoing-request.authority', [], new $wcm.OptionType<string>($wcm.wstring)));
+		OutgoingRequest.addMethod('setAuthority', new $wcm.MethodType<http.Types.OutgoingRequest.Interface['setAuthority']>('[method]outgoing-request.set-authority', [
 			['authority', new $wcm.OptionType<string>($wcm.wstring)],
 		], new $wcm.ResultType<void, void>(undefined, undefined)));
-		OutgoingRequest.addFunction('headers', new $wcm.FunctionType<http.Types.OutgoingRequest.Module['headers']>('[method]outgoing-request.headers', [
-			['self', new $wcm.BorrowType<http.Types.OutgoingRequest>(OutgoingRequest)],
-		], new $wcm.OwnType<http.Types.Headers>(Headers)));
-		RequestOptions.addFunction('constructor', new $wcm.FunctionType<http.Types.RequestOptions.Module['constructor']>('[constructor]request-options', [], new $wcm.OwnType<http.Types.RequestOptions>(RequestOptions)));
-		RequestOptions.addFunction('connectTimeoutMs', new $wcm.FunctionType<http.Types.RequestOptions.Module['connectTimeoutMs']>('[method]request-options.connect-timeout-ms', [
-			['self', new $wcm.BorrowType<http.Types.RequestOptions>(RequestOptions)],
-		], new $wcm.OptionType<http.Types.Duration>(Duration)));
-		RequestOptions.addFunction('setConnectTimeoutMs', new $wcm.FunctionType<http.Types.RequestOptions.Module['setConnectTimeoutMs']>('[method]request-options.set-connect-timeout-ms', [
-			['self', new $wcm.BorrowType<http.Types.RequestOptions>(RequestOptions)],
-			['ms', new $wcm.OptionType<http.Types.Duration>(Duration)],
+		OutgoingRequest.addMethod('headers', new $wcm.MethodType<http.Types.OutgoingRequest.Interface['headers']>('[method]outgoing-request.headers', [], new $wcm.OwnType<http.Types.Headers>(Headers)));
+		RequestOptions.addDestructor('$drop', new $wcm.DestructorType('[resource-drop]request-options', [['inst', RequestOptions]]));
+		RequestOptions.addConstructor('constructor', new $wcm.ConstructorType<http.Types.RequestOptions.Class['constructor']>('[constructor]request-options', [], new $wcm.OwnType(RequestOptions_Handle)));
+		RequestOptions.addMethod('connectTimeout', new $wcm.MethodType<http.Types.RequestOptions.Interface['connectTimeout']>('[method]request-options.connect-timeout', [], new $wcm.OptionType<http.Types.Duration>(Duration)));
+		RequestOptions.addMethod('setConnectTimeout', new $wcm.MethodType<http.Types.RequestOptions.Interface['setConnectTimeout']>('[method]request-options.set-connect-timeout', [
+			['duration', new $wcm.OptionType<http.Types.Duration>(Duration)],
 		], new $wcm.ResultType<void, void>(undefined, undefined)));
-		RequestOptions.addFunction('firstByteTimeoutMs', new $wcm.FunctionType<http.Types.RequestOptions.Module['firstByteTimeoutMs']>('[method]request-options.first-byte-timeout-ms', [
-			['self', new $wcm.BorrowType<http.Types.RequestOptions>(RequestOptions)],
-		], new $wcm.OptionType<http.Types.Duration>(Duration)));
-		RequestOptions.addFunction('setFirstByteTimeoutMs', new $wcm.FunctionType<http.Types.RequestOptions.Module['setFirstByteTimeoutMs']>('[method]request-options.set-first-byte-timeout-ms', [
-			['self', new $wcm.BorrowType<http.Types.RequestOptions>(RequestOptions)],
-			['ms', new $wcm.OptionType<http.Types.Duration>(Duration)],
+		RequestOptions.addMethod('firstByteTimeout', new $wcm.MethodType<http.Types.RequestOptions.Interface['firstByteTimeout']>('[method]request-options.first-byte-timeout', [], new $wcm.OptionType<http.Types.Duration>(Duration)));
+		RequestOptions.addMethod('setFirstByteTimeout', new $wcm.MethodType<http.Types.RequestOptions.Interface['setFirstByteTimeout']>('[method]request-options.set-first-byte-timeout', [
+			['duration', new $wcm.OptionType<http.Types.Duration>(Duration)],
 		], new $wcm.ResultType<void, void>(undefined, undefined)));
-		RequestOptions.addFunction('betweenBytesTimeoutMs', new $wcm.FunctionType<http.Types.RequestOptions.Module['betweenBytesTimeoutMs']>('[method]request-options.between-bytes-timeout-ms', [
-			['self', new $wcm.BorrowType<http.Types.RequestOptions>(RequestOptions)],
-		], new $wcm.OptionType<http.Types.Duration>(Duration)));
-		RequestOptions.addFunction('setBetweenBytesTimeoutMs', new $wcm.FunctionType<http.Types.RequestOptions.Module['setBetweenBytesTimeoutMs']>('[method]request-options.set-between-bytes-timeout-ms', [
-			['self', new $wcm.BorrowType<http.Types.RequestOptions>(RequestOptions)],
-			['ms', new $wcm.OptionType<http.Types.Duration>(Duration)],
+		RequestOptions.addMethod('betweenBytesTimeout', new $wcm.MethodType<http.Types.RequestOptions.Interface['betweenBytesTimeout']>('[method]request-options.between-bytes-timeout', [], new $wcm.OptionType<http.Types.Duration>(Duration)));
+		RequestOptions.addMethod('setBetweenBytesTimeout', new $wcm.MethodType<http.Types.RequestOptions.Interface['setBetweenBytesTimeout']>('[method]request-options.set-between-bytes-timeout', [
+			['duration', new $wcm.OptionType<http.Types.Duration>(Duration)],
 		], new $wcm.ResultType<void, void>(undefined, undefined)));
-		ResponseOutparam.addFunction('set', new $wcm.FunctionType<http.Types.ResponseOutparam.Module['set']>('[static]response-outparam.set', [
+		ResponseOutparam.addDestructor('$drop', new $wcm.DestructorType('[resource-drop]response-outparam', [['inst', ResponseOutparam]]));
+		ResponseOutparam.addStaticMethod('set', new $wcm.StaticMethodType<http.Types.ResponseOutparam.Statics['set']>('[static]response-outparam.set', [
 			['param', new $wcm.OwnType<http.Types.ResponseOutparam>(ResponseOutparam)],
 			['response', new $wcm.ResultType<own<http.Types.OutgoingResponse>, http.Types.ErrorCode>(new $wcm.OwnType<http.Types.OutgoingResponse>(OutgoingResponse), ErrorCode)],
 		], undefined));
-		IncomingResponse.addFunction('status', new $wcm.FunctionType<http.Types.IncomingResponse.Module['status']>('[method]incoming-response.status', [
-			['self', new $wcm.BorrowType<http.Types.IncomingResponse>(IncomingResponse)],
-		], StatusCode));
-		IncomingResponse.addFunction('headers', new $wcm.FunctionType<http.Types.IncomingResponse.Module['headers']>('[method]incoming-response.headers', [
-			['self', new $wcm.BorrowType<http.Types.IncomingResponse>(IncomingResponse)],
-		], new $wcm.OwnType<http.Types.Headers>(Headers)));
-		IncomingResponse.addFunction('consume', new $wcm.FunctionType<http.Types.IncomingResponse.Module['consume']>('[method]incoming-response.consume', [
-			['self', new $wcm.BorrowType<http.Types.IncomingResponse>(IncomingResponse)],
-		], new $wcm.ResultType<own<http.Types.IncomingBody>, void>(new $wcm.OwnType<http.Types.IncomingBody>(IncomingBody), undefined)));
-		IncomingBody.addFunction('stream', new $wcm.FunctionType<http.Types.IncomingBody.Module['stream']>('[method]incoming-body.stream', [
-			['self', new $wcm.BorrowType<http.Types.IncomingBody>(IncomingBody)],
-		], new $wcm.ResultType<own<http.Types.InputStream>, void>(new $wcm.OwnType<http.Types.InputStream>(InputStream), undefined)));
-		IncomingBody.addFunction('finish', new $wcm.FunctionType<http.Types.IncomingBody.Module['finish']>('[static]incoming-body.finish', [
+		IncomingResponse.addDestructor('$drop', new $wcm.DestructorType('[resource-drop]incoming-response', [['inst', IncomingResponse]]));
+		IncomingResponse.addMethod('status', new $wcm.MethodType<http.Types.IncomingResponse.Interface['status']>('[method]incoming-response.status', [], StatusCode));
+		IncomingResponse.addMethod('headers', new $wcm.MethodType<http.Types.IncomingResponse.Interface['headers']>('[method]incoming-response.headers', [], new $wcm.OwnType<http.Types.Headers>(Headers)));
+		IncomingResponse.addMethod('consume', new $wcm.MethodType<http.Types.IncomingResponse.Interface['consume']>('[method]incoming-response.consume', [], new $wcm.ResultType<own<http.Types.IncomingBody>, void>(new $wcm.OwnType<http.Types.IncomingBody>(IncomingBody), undefined)));
+		IncomingBody.addDestructor('$drop', new $wcm.DestructorType('[resource-drop]incoming-body', [['inst', IncomingBody]]));
+		IncomingBody.addMethod('stream', new $wcm.MethodType<http.Types.IncomingBody.Interface['stream']>('[method]incoming-body.stream', [], new $wcm.ResultType<own<http.Types.InputStream>, void>(new $wcm.OwnType<http.Types.InputStream>(InputStream), undefined)));
+		IncomingBody.addStaticMethod('finish', new $wcm.StaticMethodType<http.Types.IncomingBody.Statics['finish']>('[static]incoming-body.finish', [
 			['this_', new $wcm.OwnType<http.Types.IncomingBody>(IncomingBody)],
 		], new $wcm.OwnType<http.Types.FutureTrailers>(FutureTrailers)));
-		FutureTrailers.addFunction('subscribe', new $wcm.FunctionType<http.Types.FutureTrailers.Module['subscribe']>('[method]future-trailers.subscribe', [
-			['self', new $wcm.BorrowType<http.Types.FutureTrailers>(FutureTrailers)],
-		], new $wcm.OwnType<http.Types.Pollable>(Pollable)));
-		FutureTrailers.addFunction('get', new $wcm.FunctionType<http.Types.FutureTrailers.Module['get']>('[method]future-trailers.get', [
-			['self', new $wcm.BorrowType<http.Types.FutureTrailers>(FutureTrailers)],
-		], new $wcm.OptionType<result<option<own<http.Types.Trailers>>, http.Types.ErrorCode>>(new $wcm.ResultType<option<own<http.Types.Trailers>>, http.Types.ErrorCode>(new $wcm.OptionType<own<http.Types.Trailers>>(new $wcm.OwnType<http.Types.Trailers>(Trailers)), ErrorCode))));
-		OutgoingResponse.addFunction('constructor', new $wcm.FunctionType<http.Types.OutgoingResponse.Module['constructor']>('[constructor]outgoing-response', [
+		FutureTrailers.addDestructor('$drop', new $wcm.DestructorType('[resource-drop]future-trailers', [['inst', FutureTrailers]]));
+		FutureTrailers.addMethod('subscribe', new $wcm.MethodType<http.Types.FutureTrailers.Interface['subscribe']>('[method]future-trailers.subscribe', [], new $wcm.OwnType<http.Types.Pollable>(Pollable)));
+		FutureTrailers.addMethod('get', new $wcm.MethodType<http.Types.FutureTrailers.Interface['get']>('[method]future-trailers.get', [], new $wcm.OptionType<result<result<option<own<http.Types.Trailers>>, http.Types.ErrorCode>, void>>(new $wcm.ResultType<result<option<own<http.Types.Trailers>>, http.Types.ErrorCode>, void>(new $wcm.ResultType<option<own<http.Types.Trailers>>, http.Types.ErrorCode>(new $wcm.OptionType<own<http.Types.Trailers>>(new $wcm.OwnType<http.Types.Trailers>(Trailers)), ErrorCode), undefined))));
+		OutgoingResponse.addDestructor('$drop', new $wcm.DestructorType('[resource-drop]outgoing-response', [['inst', OutgoingResponse]]));
+		OutgoingResponse.addConstructor('constructor', new $wcm.ConstructorType<http.Types.OutgoingResponse.Class['constructor']>('[constructor]outgoing-response', [
 			['headers', new $wcm.OwnType<http.Types.Headers>(Headers)],
-		], new $wcm.OwnType<http.Types.OutgoingResponse>(OutgoingResponse)));
-		OutgoingResponse.addFunction('statusCode', new $wcm.FunctionType<http.Types.OutgoingResponse.Module['statusCode']>('[method]outgoing-response.status-code', [
-			['self', new $wcm.BorrowType<http.Types.OutgoingResponse>(OutgoingResponse)],
-		], StatusCode));
-		OutgoingResponse.addFunction('setStatusCode', new $wcm.FunctionType<http.Types.OutgoingResponse.Module['setStatusCode']>('[method]outgoing-response.set-status-code', [
-			['self', new $wcm.BorrowType<http.Types.OutgoingResponse>(OutgoingResponse)],
+		], new $wcm.OwnType(OutgoingResponse_Handle)));
+		OutgoingResponse.addMethod('statusCode', new $wcm.MethodType<http.Types.OutgoingResponse.Interface['statusCode']>('[method]outgoing-response.status-code', [], StatusCode));
+		OutgoingResponse.addMethod('setStatusCode', new $wcm.MethodType<http.Types.OutgoingResponse.Interface['setStatusCode']>('[method]outgoing-response.set-status-code', [
 			['statusCode', StatusCode],
 		], new $wcm.ResultType<void, void>(undefined, undefined)));
-		OutgoingResponse.addFunction('headers', new $wcm.FunctionType<http.Types.OutgoingResponse.Module['headers']>('[method]outgoing-response.headers', [
-			['self', new $wcm.BorrowType<http.Types.OutgoingResponse>(OutgoingResponse)],
-		], new $wcm.OwnType<http.Types.Headers>(Headers)));
-		OutgoingResponse.addFunction('body', new $wcm.FunctionType<http.Types.OutgoingResponse.Module['body']>('[method]outgoing-response.body', [
-			['self', new $wcm.BorrowType<http.Types.OutgoingResponse>(OutgoingResponse)],
-		], new $wcm.ResultType<own<http.Types.OutgoingBody>, void>(new $wcm.OwnType<http.Types.OutgoingBody>(OutgoingBody), undefined)));
-		OutgoingBody.addFunction('write', new $wcm.FunctionType<http.Types.OutgoingBody.Module['write']>('[method]outgoing-body.write', [
-			['self', new $wcm.BorrowType<http.Types.OutgoingBody>(OutgoingBody)],
-		], new $wcm.ResultType<own<http.Types.OutputStream>, void>(new $wcm.OwnType<http.Types.OutputStream>(OutputStream), undefined)));
-		OutgoingBody.addFunction('finish', new $wcm.FunctionType<http.Types.OutgoingBody.Module['finish']>('[static]outgoing-body.finish', [
+		OutgoingResponse.addMethod('headers', new $wcm.MethodType<http.Types.OutgoingResponse.Interface['headers']>('[method]outgoing-response.headers', [], new $wcm.OwnType<http.Types.Headers>(Headers)));
+		OutgoingResponse.addMethod('body', new $wcm.MethodType<http.Types.OutgoingResponse.Interface['body']>('[method]outgoing-response.body', [], new $wcm.ResultType<own<http.Types.OutgoingBody>, void>(new $wcm.OwnType<http.Types.OutgoingBody>(OutgoingBody), undefined)));
+		OutgoingBody.addDestructor('$drop', new $wcm.DestructorType('[resource-drop]outgoing-body', [['inst', OutgoingBody]]));
+		OutgoingBody.addMethod('write', new $wcm.MethodType<http.Types.OutgoingBody.Interface['write']>('[method]outgoing-body.write', [], new $wcm.ResultType<own<http.Types.OutputStream>, void>(new $wcm.OwnType<http.Types.OutputStream>(OutputStream), undefined)));
+		OutgoingBody.addStaticMethod('finish', new $wcm.StaticMethodType<http.Types.OutgoingBody.Statics['finish']>('[static]outgoing-body.finish', [
 			['this_', new $wcm.OwnType<http.Types.OutgoingBody>(OutgoingBody)],
 			['trailers', new $wcm.OptionType<own<http.Types.Trailers>>(new $wcm.OwnType<http.Types.Trailers>(Trailers))],
-		], undefined));
-		FutureIncomingResponse.addFunction('subscribe', new $wcm.FunctionType<http.Types.FutureIncomingResponse.Module['subscribe']>('[method]future-incoming-response.subscribe', [
-			['self', new $wcm.BorrowType<http.Types.FutureIncomingResponse>(FutureIncomingResponse)],
-		], new $wcm.OwnType<http.Types.Pollable>(Pollable)));
-		FutureIncomingResponse.addFunction('get', new $wcm.FunctionType<http.Types.FutureIncomingResponse.Module['get']>('[method]future-incoming-response.get', [
-			['self', new $wcm.BorrowType<http.Types.FutureIncomingResponse>(FutureIncomingResponse)],
-		], new $wcm.OptionType<result<result<own<http.Types.IncomingResponse>, http.Types.ErrorCode>, void>>(new $wcm.ResultType<result<own<http.Types.IncomingResponse>, http.Types.ErrorCode>, void>(new $wcm.ResultType<own<http.Types.IncomingResponse>, http.Types.ErrorCode>(new $wcm.OwnType<http.Types.IncomingResponse>(IncomingResponse), ErrorCode), undefined))));
+		], new $wcm.ResultType<void, http.Types.ErrorCode>(undefined, ErrorCode)));
+		FutureIncomingResponse.addDestructor('$drop', new $wcm.DestructorType('[resource-drop]future-incoming-response', [['inst', FutureIncomingResponse]]));
+		FutureIncomingResponse.addMethod('subscribe', new $wcm.MethodType<http.Types.FutureIncomingResponse.Interface['subscribe']>('[method]future-incoming-response.subscribe', [], new $wcm.OwnType<http.Types.Pollable>(Pollable)));
+		FutureIncomingResponse.addMethod('get', new $wcm.MethodType<http.Types.FutureIncomingResponse.Interface['get']>('[method]future-incoming-response.get', [], new $wcm.OptionType<result<result<own<http.Types.IncomingResponse>, http.Types.ErrorCode>, void>>(new $wcm.ResultType<result<own<http.Types.IncomingResponse>, http.Types.ErrorCode>, void>(new $wcm.ResultType<own<http.Types.IncomingResponse>, http.Types.ErrorCode>(new $wcm.OwnType<http.Types.IncomingResponse>(IncomingResponse), ErrorCode), undefined))));
 		export const httpErrorCode = new $wcm.FunctionType<http.Types.httpErrorCode>('http-error-code',[
-			['err', new $wcm.BorrowType<http.Types.StreamError>(StreamError)],
+			['err', new $wcm.BorrowType<http.Types.IoError>(IoError)],
 		], new $wcm.OptionType<http.Types.ErrorCode>(ErrorCode));
 	}
 	export namespace Types._ {
-		export const id = 'wasi:http/types' as const;
+		export const id = 'wasi:http/types@0.2.0' as const;
 		export const witName = 'types' as const;
-		export const types: Map<string, $wcm.GenericComponentModelType> = new Map<string, $wcm.GenericComponentModelType>([
+		export namespace Fields {
+			export type WasmInterface = {
+				'[constructor]fields': () => i32;
+				'[static]fields.from-list': (entries_ptr: i32, entries_len: i32, result: ptr<result<own<Fields>, HeaderError>>) => void;
+				'[method]fields.get': (self: i32, name_ptr: i32, name_len: i32, result: ptr<FieldValue[]>) => void;
+				'[method]fields.has': (self: i32, name_ptr: i32, name_len: i32) => i32;
+				'[method]fields.set': (self: i32, name_ptr: i32, name_len: i32, value_ptr: i32, value_len: i32, result: ptr<result<void, HeaderError>>) => void;
+				'[method]fields.delete': (self: i32, name_ptr: i32, name_len: i32, result: ptr<result<void, HeaderError>>) => void;
+				'[method]fields.append': (self: i32, name_ptr: i32, name_len: i32, value_ptr: i32, value_len: i32, result: ptr<result<void, HeaderError>>) => void;
+				'[method]fields.entries': (self: i32, result: ptr<[FieldKey, FieldValue][]>) => void;
+				'[method]fields.clone': (self: i32) => i32;
+			};
+			export namespace imports {
+				export type WasmInterface = Fields.WasmInterface & { '[resource-drop]fields': (self: i32) => void };
+			}
+			export namespace exports {
+				export type WasmInterface = Fields.WasmInterface & { '[dtor]fields': (self: i32) => void };
+			}
+		}
+		export namespace IncomingRequest {
+			export type WasmInterface = {
+				'[method]incoming-request.method': (self: i32, result: ptr<Method>) => void;
+				'[method]incoming-request.path-with-query': (self: i32, result: ptr<string | undefined>) => void;
+				'[method]incoming-request.scheme': (self: i32, result: ptr<Scheme | undefined>) => void;
+				'[method]incoming-request.authority': (self: i32, result: ptr<string | undefined>) => void;
+				'[method]incoming-request.headers': (self: i32) => i32;
+				'[method]incoming-request.consume': (self: i32, result: ptr<result<own<IncomingBody>, void>>) => void;
+			};
+			export namespace imports {
+				export type WasmInterface = IncomingRequest.WasmInterface & { '[resource-drop]incoming-request': (self: i32) => void };
+			}
+			export namespace exports {
+				export type WasmInterface = IncomingRequest.WasmInterface & { '[dtor]incoming-request': (self: i32) => void };
+			}
+		}
+		export namespace OutgoingRequest {
+			export type WasmInterface = {
+				'[constructor]outgoing-request': (headers: i32) => i32;
+				'[method]outgoing-request.body': (self: i32, result: ptr<result<own<OutgoingBody>, void>>) => void;
+				'[method]outgoing-request.method': (self: i32, result: ptr<Method>) => void;
+				'[method]outgoing-request.set-method': (self: i32, method_case: i32, method_0: i32, method_1: i32) => i32;
+				'[method]outgoing-request.path-with-query': (self: i32, result: ptr<string | undefined>) => void;
+				'[method]outgoing-request.set-path-with-query': (self: i32, pathWithQuery_case: i32, pathWithQuery_option_ptr: i32, pathWithQuery_option_len: i32) => i32;
+				'[method]outgoing-request.scheme': (self: i32, result: ptr<Scheme | undefined>) => void;
+				'[method]outgoing-request.set-scheme': (self: i32, scheme_case: i32, scheme_option_case: i32, scheme_option_0: i32, scheme_option_1: i32) => i32;
+				'[method]outgoing-request.authority': (self: i32, result: ptr<string | undefined>) => void;
+				'[method]outgoing-request.set-authority': (self: i32, authority_case: i32, authority_option_ptr: i32, authority_option_len: i32) => i32;
+				'[method]outgoing-request.headers': (self: i32) => i32;
+			};
+			export namespace imports {
+				export type WasmInterface = OutgoingRequest.WasmInterface & { '[resource-drop]outgoing-request': (self: i32) => void };
+			}
+			export namespace exports {
+				export type WasmInterface = OutgoingRequest.WasmInterface & { '[dtor]outgoing-request': (self: i32) => void };
+			}
+		}
+		export namespace RequestOptions {
+			export type WasmInterface = {
+				'[constructor]request-options': () => i32;
+				'[method]request-options.connect-timeout': (self: i32, result: ptr<Duration | undefined>) => void;
+				'[method]request-options.set-connect-timeout': (self: i32, duration_case: i32, duration_option_Duration: i64) => i32;
+				'[method]request-options.first-byte-timeout': (self: i32, result: ptr<Duration | undefined>) => void;
+				'[method]request-options.set-first-byte-timeout': (self: i32, duration_case: i32, duration_option_Duration: i64) => i32;
+				'[method]request-options.between-bytes-timeout': (self: i32, result: ptr<Duration | undefined>) => void;
+				'[method]request-options.set-between-bytes-timeout': (self: i32, duration_case: i32, duration_option_Duration: i64) => i32;
+			};
+			export namespace imports {
+				export type WasmInterface = RequestOptions.WasmInterface & { '[resource-drop]request-options': (self: i32) => void };
+			}
+			export namespace exports {
+				export type WasmInterface = RequestOptions.WasmInterface & { '[dtor]request-options': (self: i32) => void };
+			}
+		}
+		export namespace ResponseOutparam {
+			export type WasmInterface = {
+				'[static]response-outparam.set': (param: i32, response_case: i32, response_0: i32, response_1: i32, response_2: i64, response_3: i32, response_4: i32, response_5: i32, response_6: i32) => void;
+			};
+			export namespace imports {
+				export type WasmInterface = ResponseOutparam.WasmInterface & { '[resource-drop]response-outparam': (self: i32) => void };
+			}
+			export namespace exports {
+				export type WasmInterface = ResponseOutparam.WasmInterface & { '[dtor]response-outparam': (self: i32) => void };
+			}
+		}
+		export namespace IncomingResponse {
+			export type WasmInterface = {
+				'[method]incoming-response.status': (self: i32) => i32;
+				'[method]incoming-response.headers': (self: i32) => i32;
+				'[method]incoming-response.consume': (self: i32, result: ptr<result<own<IncomingBody>, void>>) => void;
+			};
+			export namespace imports {
+				export type WasmInterface = IncomingResponse.WasmInterface & { '[resource-drop]incoming-response': (self: i32) => void };
+			}
+			export namespace exports {
+				export type WasmInterface = IncomingResponse.WasmInterface & { '[dtor]incoming-response': (self: i32) => void };
+			}
+		}
+		export namespace IncomingBody {
+			export type WasmInterface = {
+				'[method]incoming-body.stream': (self: i32, result: ptr<result<own<InputStream>, void>>) => void;
+				'[static]incoming-body.finish': (this_: i32) => i32;
+			};
+			export namespace imports {
+				export type WasmInterface = IncomingBody.WasmInterface & { '[resource-drop]incoming-body': (self: i32) => void };
+			}
+			export namespace exports {
+				export type WasmInterface = IncomingBody.WasmInterface & { '[dtor]incoming-body': (self: i32) => void };
+			}
+		}
+		export namespace FutureTrailers {
+			export type WasmInterface = {
+				'[method]future-trailers.subscribe': (self: i32) => i32;
+				'[method]future-trailers.get': (self: i32, result: ptr<result<result<own<Trailers> | undefined, ErrorCode>, void> | undefined>) => void;
+			};
+			export namespace imports {
+				export type WasmInterface = FutureTrailers.WasmInterface & { '[resource-drop]future-trailers': (self: i32) => void };
+			}
+			export namespace exports {
+				export type WasmInterface = FutureTrailers.WasmInterface & { '[dtor]future-trailers': (self: i32) => void };
+			}
+		}
+		export namespace OutgoingResponse {
+			export type WasmInterface = {
+				'[constructor]outgoing-response': (headers: i32) => i32;
+				'[method]outgoing-response.status-code': (self: i32) => i32;
+				'[method]outgoing-response.set-status-code': (self: i32, statusCode: i32) => i32;
+				'[method]outgoing-response.headers': (self: i32) => i32;
+				'[method]outgoing-response.body': (self: i32, result: ptr<result<own<OutgoingBody>, void>>) => void;
+			};
+			export namespace imports {
+				export type WasmInterface = OutgoingResponse.WasmInterface & { '[resource-drop]outgoing-response': (self: i32) => void };
+			}
+			export namespace exports {
+				export type WasmInterface = OutgoingResponse.WasmInterface & { '[dtor]outgoing-response': (self: i32) => void };
+			}
+		}
+		export namespace OutgoingBody {
+			export type WasmInterface = {
+				'[method]outgoing-body.write': (self: i32, result: ptr<result<own<OutputStream>, void>>) => void;
+				'[static]outgoing-body.finish': (this_: i32, trailers_case: i32, trailers_option: i32, result: ptr<result<void, ErrorCode>>) => void;
+			};
+			export namespace imports {
+				export type WasmInterface = OutgoingBody.WasmInterface & { '[resource-drop]outgoing-body': (self: i32) => void };
+			}
+			export namespace exports {
+				export type WasmInterface = OutgoingBody.WasmInterface & { '[dtor]outgoing-body': (self: i32) => void };
+			}
+		}
+		export namespace FutureIncomingResponse {
+			export type WasmInterface = {
+				'[method]future-incoming-response.subscribe': (self: i32) => i32;
+				'[method]future-incoming-response.get': (self: i32, result: ptr<result<result<own<IncomingResponse>, ErrorCode>, void> | undefined>) => void;
+			};
+			export namespace imports {
+				export type WasmInterface = FutureIncomingResponse.WasmInterface & { '[resource-drop]future-incoming-response': (self: i32) => void };
+			}
+			export namespace exports {
+				export type WasmInterface = FutureIncomingResponse.WasmInterface & { '[dtor]future-incoming-response': (self: i32) => void };
+			}
+		}
+		export const types: Map<string, $wcm.AnyComponentModelType> = new Map<string, $wcm.AnyComponentModelType>([
 			['Duration', $.Duration],
 			['InputStream', $.InputStream],
 			['OutputStream', $.OutputStream],
-			['StreamError', $.StreamError],
+			['IoError', $.IoError],
 			['Pollable', $.Pollable],
 			['Method', $.Method],
 			['Scheme', $.Scheme],
@@ -1582,10 +1635,10 @@ export namespace http {
 			['OutgoingBody', $.OutgoingBody],
 			['FutureIncomingResponse', $.FutureIncomingResponse]
 		]);
-		export const functions: Map<string, $wcm.FunctionType<$wcm.ServiceFunction>> = new Map([
+		export const functions: Map<string, $wcm.FunctionType> = new Map([
 			['httpErrorCode', $.httpErrorCode]
 		]);
-		export const resources: Map<string, $wcm.ResourceType> = new Map([
+		export const resources: Map<string, $wcm.ResourceType> = new Map<string, $wcm.ResourceType>([
 			['Fields', $.Fields],
 			['IncomingRequest', $.IncomingRequest],
 			['OutgoingRequest', $.OutgoingRequest],
@@ -1598,356 +1651,54 @@ export namespace http {
 			['OutgoingBody', $.OutgoingBody],
 			['FutureIncomingResponse', $.FutureIncomingResponse]
 		]);
-		export namespace Fields {
-			export type WasmInterface = {
-				'[constructor]fields': () => i32;
-				'[static]fields.from-list': (entries_ptr: i32, entries_len: i32, result: ptr<[i32, i32]>) => void;
-				'[method]fields.get': (self: i32, name_ptr: i32, name_len: i32, result: ptr<[i32, i32]>) => void;
-				'[method]fields.set': (self: i32, name_ptr: i32, name_len: i32, value_ptr: i32, value_len: i32, result: ptr<[i32, i32]>) => void;
-				'[method]fields.delete': (self: i32, name_ptr: i32, name_len: i32, result: ptr<[i32, i32]>) => void;
-				'[method]fields.append': (self: i32, name_ptr: i32, name_len: i32, value_ptr: i32, value_len: i32, result: ptr<[i32, i32]>) => void;
-				'[method]fields.entries': (self: i32, result: ptr<[i32, i32]>) => void;
-				'[method]fields.clone': (self: i32) => i32;
-			};
-		}
-		export namespace IncomingRequest {
-			export type WasmInterface = {
-				'[method]incoming-request.method': (self: i32, result: ptr<[i32, i32, i32]>) => void;
-				'[method]incoming-request.path-with-query': (self: i32, result: ptr<[i32, i32, i32]>) => void;
-				'[method]incoming-request.scheme': (self: i32, result: ptr<[i32, i32, i32, i32]>) => void;
-				'[method]incoming-request.authority': (self: i32, result: ptr<[i32, i32, i32]>) => void;
-				'[method]incoming-request.headers': (self: i32) => i32;
-				'[method]incoming-request.consume': (self: i32, result: ptr<[i32, i32]>) => void;
-			};
-		}
-		export namespace OutgoingRequest {
-			export type WasmInterface = {
-				'[constructor]outgoing-request': (headers: i32) => i32;
-				'[method]outgoing-request.body': (self: i32, result: ptr<[i32, i32]>) => void;
-				'[method]outgoing-request.method': (self: i32, result: ptr<[i32, i32, i32]>) => void;
-				'[method]outgoing-request.set-method': (self: i32, method_case: i32, method_0: i32, method_1: i32) => i32;
-				'[method]outgoing-request.path-with-query': (self: i32, result: ptr<[i32, i32, i32]>) => void;
-				'[method]outgoing-request.set-path-with-query': (self: i32, pathWithQuery_case: i32, pathWithQuery_option_ptr: i32, pathWithQuery_option_len: i32) => i32;
-				'[method]outgoing-request.scheme': (self: i32, result: ptr<[i32, i32, i32, i32]>) => void;
-				'[method]outgoing-request.set-scheme': (self: i32, scheme_case: i32, scheme_option_case: i32, scheme_option_0: i32, scheme_option_1: i32) => i32;
-				'[method]outgoing-request.authority': (self: i32, result: ptr<[i32, i32, i32]>) => void;
-				'[method]outgoing-request.set-authority': (self: i32, authority_case: i32, authority_option_ptr: i32, authority_option_len: i32) => i32;
-				'[method]outgoing-request.headers': (self: i32) => i32;
-			};
-		}
-		export namespace RequestOptions {
-			export type WasmInterface = {
-				'[constructor]request-options': () => i32;
-				'[method]request-options.connect-timeout-ms': (self: i32, result: ptr<[i32, i64]>) => void;
-				'[method]request-options.set-connect-timeout-ms': (self: i32, ms_case: i32, ms_option_Duration: i64) => i32;
-				'[method]request-options.first-byte-timeout-ms': (self: i32, result: ptr<[i32, i64]>) => void;
-				'[method]request-options.set-first-byte-timeout-ms': (self: i32, ms_case: i32, ms_option_Duration: i64) => i32;
-				'[method]request-options.between-bytes-timeout-ms': (self: i32, result: ptr<[i32, i64]>) => void;
-				'[method]request-options.set-between-bytes-timeout-ms': (self: i32, ms_case: i32, ms_option_Duration: i64) => i32;
-			};
-		}
-		export namespace ResponseOutparam {
-			export type WasmInterface = {
-				'[static]response-outparam.set': (param: i32, response_case: i32, response_0: i32, response_1: i32, response_2: i64, response_3: i32, response_4: i32, response_5: i32, response_6: i32) => void;
-			};
-		}
-		export namespace IncomingResponse {
-			export type WasmInterface = {
-				'[method]incoming-response.status': (self: i32) => i32;
-				'[method]incoming-response.headers': (self: i32) => i32;
-				'[method]incoming-response.consume': (self: i32, result: ptr<[i32, i32]>) => void;
-			};
-		}
-		export namespace IncomingBody {
-			export type WasmInterface = {
-				'[method]incoming-body.stream': (self: i32, result: ptr<[i32, i32]>) => void;
-				'[static]incoming-body.finish': (this_: i32) => i32;
-			};
-		}
-		export namespace FutureTrailers {
-			export type WasmInterface = {
-				'[method]future-trailers.subscribe': (self: i32) => i32;
-				'[method]future-trailers.get': (self: i32, result: ptr<[i32, i32, i32, i32, i64, i32, i32, i32, i32]>) => void;
-			};
-		}
-		export namespace OutgoingResponse {
-			export type WasmInterface = {
-				'[constructor]outgoing-response': (headers: i32) => i32;
-				'[method]outgoing-response.status-code': (self: i32) => i32;
-				'[method]outgoing-response.set-status-code': (self: i32, statusCode: i32) => i32;
-				'[method]outgoing-response.headers': (self: i32) => i32;
-				'[method]outgoing-response.body': (self: i32, result: ptr<[i32, i32]>) => void;
-			};
-		}
-		export namespace OutgoingBody {
-			export type WasmInterface = {
-				'[method]outgoing-body.write': (self: i32, result: ptr<[i32, i32]>) => void;
-				'[static]outgoing-body.finish': (this_: i32, trailers_case: i32, trailers_option: i32) => void;
-			};
-		}
-		export namespace FutureIncomingResponse {
-			export type WasmInterface = {
-				'[method]future-incoming-response.subscribe': (self: i32) => i32;
-				'[method]future-incoming-response.get': (self: i32, result: ptr<[i32, i32, i32, i32, i32, i64, i32, i32, i32, i32]>) => void;
-			};
-		}
 		export type WasmInterface = {
-			'http-error-code': (err: i32, result: ptr<[i32, i32, i32, i64, i32, i32, i32, i32]>) => void;
-		} & Fields.WasmInterface & IncomingRequest.WasmInterface & OutgoingRequest.WasmInterface & RequestOptions.WasmInterface & ResponseOutparam.WasmInterface & IncomingResponse.WasmInterface & IncomingBody.WasmInterface & FutureTrailers.WasmInterface & OutgoingResponse.WasmInterface & OutgoingBody.WasmInterface & FutureIncomingResponse.WasmInterface;
-		export namespace Fields  {
-			export function Module(wasmInterface: WasmInterface, context: $wcm.Context): http.Types.Fields.Module {
-				return $wcm.Module.create<http.Types.Fields.Module>($.Fields, wasmInterface, context);
-			}
-			class Impl implements http.Types.Fields.Interface {
-				private readonly _handle: http.Types.Fields;
-				private readonly _module: http.Types.Fields.Module;
-				constructor(module: http.Types.Fields.Module) {
-					this._module = module;
-					this._handle = module.constructor();
-				}
-				public get(name: FieldKey): FieldValue[] {
-					return this._module.get(this._handle, name);
-				}
-				public set(name: FieldKey, value: FieldValue[]): result<void, HeaderError> {
-					return this._module.set(this._handle, name, value);
-				}
-				public delete_(name: FieldKey): result<void, HeaderError> {
-					return this._module.delete_(this._handle, name);
-				}
-				public append(name: FieldKey, value: FieldValue): result<void, HeaderError> {
-					return this._module.append(this._handle, name, value);
-				}
-				public entries(): [FieldKey, FieldValue][] {
-					return this._module.entries(this._handle);
-				}
-				public clone(): own<Fields> {
-					return this._module.clone(this._handle);
-				}
-			}
-			export function Class(wasmInterface: WasmInterface, context: $wcm.Context): http.Types.Fields.Constructor {
-				const module = Module(wasmInterface, context);
-				return class extends Impl {
-					constructor() {
-						super(module);
-					}
-					static fromList(entries: [FieldKey, FieldValue][]): result<own<Fields>, HeaderError> {
-						return module.fromList(entries);
-					}
+			'http-error-code': (err: i32, result: ptr<ErrorCode | undefined>) => void;
+		};
+		export namespace imports {
+			export type WasmInterface = _.WasmInterface & Fields.imports.WasmInterface & IncomingRequest.imports.WasmInterface & OutgoingRequest.imports.WasmInterface & RequestOptions.imports.WasmInterface & ResponseOutparam.imports.WasmInterface & IncomingResponse.imports.WasmInterface & IncomingBody.imports.WasmInterface & FutureTrailers.imports.WasmInterface & OutgoingResponse.imports.WasmInterface & OutgoingBody.imports.WasmInterface & FutureIncomingResponse.imports.WasmInterface;
+		}
+		export namespace exports {
+			export type WasmInterface = _.WasmInterface & Fields.exports.WasmInterface & IncomingRequest.exports.WasmInterface & OutgoingRequest.exports.WasmInterface & RequestOptions.exports.WasmInterface & ResponseOutparam.exports.WasmInterface & IncomingResponse.exports.WasmInterface & IncomingBody.exports.WasmInterface & FutureTrailers.exports.WasmInterface & OutgoingResponse.exports.WasmInterface & OutgoingBody.exports.WasmInterface & FutureIncomingResponse.exports.WasmInterface;
+			export namespace imports {
+				export type WasmInterface = {
+					'[resource-new]fields': (rep: i32) => i32;
+					'[resource-rep]fields': (handle: i32) => i32;
+					'[resource-drop]fields': (handle: i32) => void;
+					'[resource-new]incoming-request': (rep: i32) => i32;
+					'[resource-rep]incoming-request': (handle: i32) => i32;
+					'[resource-drop]incoming-request': (handle: i32) => void;
+					'[resource-new]outgoing-request': (rep: i32) => i32;
+					'[resource-rep]outgoing-request': (handle: i32) => i32;
+					'[resource-drop]outgoing-request': (handle: i32) => void;
+					'[resource-new]request-options': (rep: i32) => i32;
+					'[resource-rep]request-options': (handle: i32) => i32;
+					'[resource-drop]request-options': (handle: i32) => void;
+					'[resource-new]response-outparam': (rep: i32) => i32;
+					'[resource-rep]response-outparam': (handle: i32) => i32;
+					'[resource-drop]response-outparam': (handle: i32) => void;
+					'[resource-new]incoming-response': (rep: i32) => i32;
+					'[resource-rep]incoming-response': (handle: i32) => i32;
+					'[resource-drop]incoming-response': (handle: i32) => void;
+					'[resource-new]incoming-body': (rep: i32) => i32;
+					'[resource-rep]incoming-body': (handle: i32) => i32;
+					'[resource-drop]incoming-body': (handle: i32) => void;
+					'[resource-new]future-trailers': (rep: i32) => i32;
+					'[resource-rep]future-trailers': (handle: i32) => i32;
+					'[resource-drop]future-trailers': (handle: i32) => void;
+					'[resource-new]outgoing-response': (rep: i32) => i32;
+					'[resource-rep]outgoing-response': (handle: i32) => i32;
+					'[resource-drop]outgoing-response': (handle: i32) => void;
+					'[resource-new]outgoing-body': (rep: i32) => i32;
+					'[resource-rep]outgoing-body': (handle: i32) => i32;
+					'[resource-drop]outgoing-body': (handle: i32) => void;
+					'[resource-new]future-incoming-response': (rep: i32) => i32;
+					'[resource-rep]future-incoming-response': (handle: i32) => i32;
+					'[resource-drop]future-incoming-response': (handle: i32) => void;
 				};
-			}
-			export function Manager(): http.Types.Fields.Manager {
-				return new $wcm.ResourceManager<http.Types.Fields.Interface>();
-			}
-		}
-		export namespace IncomingRequest  {
-			export function Module(wasmInterface: WasmInterface, context: $wcm.Context): http.Types.IncomingRequest.Module {
-				return $wcm.Module.create<http.Types.IncomingRequest.Module>($.IncomingRequest, wasmInterface, context);
-			}
-			export function Manager(): http.Types.IncomingRequest.Manager {
-				return new $wcm.ResourceManager<http.Types.IncomingRequest.Interface>();
-			}
-		}
-		export namespace OutgoingRequest  {
-			export function Module(wasmInterface: WasmInterface, context: $wcm.Context): http.Types.OutgoingRequest.Module {
-				return $wcm.Module.create<http.Types.OutgoingRequest.Module>($.OutgoingRequest, wasmInterface, context);
-			}
-			class Impl implements http.Types.OutgoingRequest.Interface {
-				private readonly _handle: http.Types.OutgoingRequest;
-				private readonly _module: http.Types.OutgoingRequest.Module;
-				constructor(headers: own<Headers>, module: http.Types.OutgoingRequest.Module) {
-					this._module = module;
-					this._handle = module.constructor(headers);
-				}
-				public body(): result<own<OutgoingBody>, void> {
-					return this._module.body(this._handle);
-				}
-				public method(): Method {
-					return this._module.method(this._handle);
-				}
-				public setMethod(method: Method): result<void, void> {
-					return this._module.setMethod(this._handle, method);
-				}
-				public pathWithQuery(): string | undefined {
-					return this._module.pathWithQuery(this._handle);
-				}
-				public setPathWithQuery(pathWithQuery: string | undefined): result<void, void> {
-					return this._module.setPathWithQuery(this._handle, pathWithQuery);
-				}
-				public scheme(): Scheme | undefined {
-					return this._module.scheme(this._handle);
-				}
-				public setScheme(scheme: Scheme | undefined): result<void, void> {
-					return this._module.setScheme(this._handle, scheme);
-				}
-				public authority(): string | undefined {
-					return this._module.authority(this._handle);
-				}
-				public setAuthority(authority: string | undefined): result<void, void> {
-					return this._module.setAuthority(this._handle, authority);
-				}
-				public headers(): own<Headers> {
-					return this._module.headers(this._handle);
-				}
-			}
-			export function Class(wasmInterface: WasmInterface, context: $wcm.Context): http.Types.OutgoingRequest.Constructor {
-				const module = Module(wasmInterface, context);
-				return class extends Impl {
-					constructor(headers: own<Headers>) {
-						super(headers, module);
-					}
-				};
-			}
-			export function Manager(): http.Types.OutgoingRequest.Manager {
-				return new $wcm.ResourceManager<http.Types.OutgoingRequest.Interface>();
-			}
-		}
-		export namespace RequestOptions  {
-			export function Module(wasmInterface: WasmInterface, context: $wcm.Context): http.Types.RequestOptions.Module {
-				return $wcm.Module.create<http.Types.RequestOptions.Module>($.RequestOptions, wasmInterface, context);
-			}
-			class Impl implements http.Types.RequestOptions.Interface {
-				private readonly _handle: http.Types.RequestOptions;
-				private readonly _module: http.Types.RequestOptions.Module;
-				constructor(module: http.Types.RequestOptions.Module) {
-					this._module = module;
-					this._handle = module.constructor();
-				}
-				public connectTimeoutMs(): Duration | undefined {
-					return this._module.connectTimeoutMs(this._handle);
-				}
-				public setConnectTimeoutMs(ms: Duration | undefined): result<void, void> {
-					return this._module.setConnectTimeoutMs(this._handle, ms);
-				}
-				public firstByteTimeoutMs(): Duration | undefined {
-					return this._module.firstByteTimeoutMs(this._handle);
-				}
-				public setFirstByteTimeoutMs(ms: Duration | undefined): result<void, void> {
-					return this._module.setFirstByteTimeoutMs(this._handle, ms);
-				}
-				public betweenBytesTimeoutMs(): Duration | undefined {
-					return this._module.betweenBytesTimeoutMs(this._handle);
-				}
-				public setBetweenBytesTimeoutMs(ms: Duration | undefined): result<void, void> {
-					return this._module.setBetweenBytesTimeoutMs(this._handle, ms);
-				}
-			}
-			export function Class(wasmInterface: WasmInterface, context: $wcm.Context): http.Types.RequestOptions.Constructor {
-				const module = Module(wasmInterface, context);
-				return class extends Impl {
-					constructor() {
-						super(module);
-					}
-				};
-			}
-			export function Manager(): http.Types.RequestOptions.Manager {
-				return new $wcm.ResourceManager<http.Types.RequestOptions.Interface>();
-			}
-		}
-		export namespace ResponseOutparam  {
-			export function Module(wasmInterface: WasmInterface, context: $wcm.Context): http.Types.ResponseOutparam.Module {
-				return $wcm.Module.create<http.Types.ResponseOutparam.Module>($.ResponseOutparam, wasmInterface, context);
-			}
-			export function Manager(): http.Types.ResponseOutparam.Manager {
-				return new $wcm.ResourceManager<http.Types.ResponseOutparam.Interface>();
-			}
-		}
-		export namespace IncomingResponse  {
-			export function Module(wasmInterface: WasmInterface, context: $wcm.Context): http.Types.IncomingResponse.Module {
-				return $wcm.Module.create<http.Types.IncomingResponse.Module>($.IncomingResponse, wasmInterface, context);
-			}
-			export function Manager(): http.Types.IncomingResponse.Manager {
-				return new $wcm.ResourceManager<http.Types.IncomingResponse.Interface>();
-			}
-		}
-		export namespace IncomingBody  {
-			export function Module(wasmInterface: WasmInterface, context: $wcm.Context): http.Types.IncomingBody.Module {
-				return $wcm.Module.create<http.Types.IncomingBody.Module>($.IncomingBody, wasmInterface, context);
-			}
-			export function Manager(): http.Types.IncomingBody.Manager {
-				return new $wcm.ResourceManager<http.Types.IncomingBody.Interface>();
-			}
-		}
-		export namespace FutureTrailers  {
-			export function Module(wasmInterface: WasmInterface, context: $wcm.Context): http.Types.FutureTrailers.Module {
-				return $wcm.Module.create<http.Types.FutureTrailers.Module>($.FutureTrailers, wasmInterface, context);
-			}
-			export function Manager(): http.Types.FutureTrailers.Manager {
-				return new $wcm.ResourceManager<http.Types.FutureTrailers.Interface>();
-			}
-		}
-		export namespace OutgoingResponse  {
-			export function Module(wasmInterface: WasmInterface, context: $wcm.Context): http.Types.OutgoingResponse.Module {
-				return $wcm.Module.create<http.Types.OutgoingResponse.Module>($.OutgoingResponse, wasmInterface, context);
-			}
-			class Impl implements http.Types.OutgoingResponse.Interface {
-				private readonly _handle: http.Types.OutgoingResponse;
-				private readonly _module: http.Types.OutgoingResponse.Module;
-				constructor(headers: own<Headers>, module: http.Types.OutgoingResponse.Module) {
-					this._module = module;
-					this._handle = module.constructor(headers);
-				}
-				public statusCode(): StatusCode {
-					return this._module.statusCode(this._handle);
-				}
-				public setStatusCode(statusCode: StatusCode): result<void, void> {
-					return this._module.setStatusCode(this._handle, statusCode);
-				}
-				public headers(): own<Headers> {
-					return this._module.headers(this._handle);
-				}
-				public body(): result<own<OutgoingBody>, void> {
-					return this._module.body(this._handle);
-				}
-			}
-			export function Class(wasmInterface: WasmInterface, context: $wcm.Context): http.Types.OutgoingResponse.Constructor {
-				const module = Module(wasmInterface, context);
-				return class extends Impl {
-					constructor(headers: own<Headers>) {
-						super(headers, module);
-					}
-				};
-			}
-			export function Manager(): http.Types.OutgoingResponse.Manager {
-				return new $wcm.ResourceManager<http.Types.OutgoingResponse.Interface>();
-			}
-		}
-		export namespace OutgoingBody  {
-			export function Module(wasmInterface: WasmInterface, context: $wcm.Context): http.Types.OutgoingBody.Module {
-				return $wcm.Module.create<http.Types.OutgoingBody.Module>($.OutgoingBody, wasmInterface, context);
-			}
-			export function Manager(): http.Types.OutgoingBody.Manager {
-				return new $wcm.ResourceManager<http.Types.OutgoingBody.Interface>();
-			}
-		}
-		export namespace FutureIncomingResponse  {
-			export function Module(wasmInterface: WasmInterface, context: $wcm.Context): http.Types.FutureIncomingResponse.Module {
-				return $wcm.Module.create<http.Types.FutureIncomingResponse.Module>($.FutureIncomingResponse, wasmInterface, context);
-			}
-			export function Manager(): http.Types.FutureIncomingResponse.Manager {
-				return new $wcm.ResourceManager<http.Types.FutureIncomingResponse.Interface>();
-			}
-		}
-		export function createHost(service: http.Types, context: $wcm.Context): WasmInterface {
-			return $wcm.Host.create<WasmInterface>(functions, resources, service, context);
-		}
-		export type ClassService = http.Types<http.Types.Fields.Constructor, http.Types.IncomingRequest.Manager, http.Types.OutgoingRequest.Constructor, http.Types.RequestOptions.Constructor, http.Types.ResponseOutparam.Manager, http.Types.IncomingResponse.Manager, http.Types.IncomingBody.Manager, http.Types.FutureTrailers.Manager, http.Types.OutgoingResponse.Constructor, http.Types.OutgoingBody.Manager, http.Types.FutureIncomingResponse.Manager>;
-		export type ModuleService = http.Types<http.Types.Fields.Module, http.Types.IncomingRequest.Module, http.Types.OutgoingRequest.Module, http.Types.RequestOptions.Module, http.Types.ResponseOutparam.Module, http.Types.IncomingResponse.Module, http.Types.IncomingBody.Module, http.Types.FutureTrailers.Module, http.Types.OutgoingResponse.Module, http.Types.OutgoingBody.Module, http.Types.FutureIncomingResponse.Module>;
-		export function createService(wasmInterface: WasmInterface, context: $wcm.Context, kind?: $wcm.ResourceKind.class): ClassService;
-		export function createService(wasmInterface: WasmInterface, context: $wcm.Context, kind: $wcm.ResourceKind.module): ModuleService;
-		export function createService(wasmInterface: WasmInterface, context: $wcm.Context, kind: $wcm.ResourceKind): http.Types;
-		export function createService<F extends http.Types.Fields.Module | http.Types.Fields.Constructor | http.Types.Fields.Manager, IR extends http.Types.IncomingRequest.Module | http.Types.IncomingRequest.Manager, OR extends http.Types.OutgoingRequest.Module | http.Types.OutgoingRequest.Constructor | http.Types.OutgoingRequest.Manager, RO extends http.Types.RequestOptions.Module | http.Types.RequestOptions.Constructor | http.Types.RequestOptions.Manager, RO1 extends http.Types.ResponseOutparam.Module | http.Types.ResponseOutparam.Manager, IR1 extends http.Types.IncomingResponse.Module | http.Types.IncomingResponse.Manager, IB extends http.Types.IncomingBody.Module | http.Types.IncomingBody.Manager, FT extends http.Types.FutureTrailers.Module | http.Types.FutureTrailers.Manager, OR1 extends http.Types.OutgoingResponse.Module | http.Types.OutgoingResponse.Constructor | http.Types.OutgoingResponse.Manager, OB extends http.Types.OutgoingBody.Module | http.Types.OutgoingBody.Manager, FIR extends http.Types.FutureIncomingResponse.Module | http.Types.FutureIncomingResponse.Manager>(wasmInterface: WasmInterface, context: $wcm.Context, f: $wcm.ResourceTag<F>, ir: $wcm.ResourceTag<IR>, or: $wcm.ResourceTag<OR>, ro: $wcm.ResourceTag<RO>, ro1: $wcm.ResourceTag<RO1>, ir1: $wcm.ResourceTag<IR1>, ib: $wcm.ResourceTag<IB>, ft: $wcm.ResourceTag<FT>, or1: $wcm.ResourceTag<OR1>, ob: $wcm.ResourceTag<OB>, fir: $wcm.ResourceTag<FIR>): http.Types<F, IR, OR, RO, RO1, IR1, IB, FT, OR1, OB, FIR>;
-		export function createService(wasmInterface: WasmInterface, context: $wcm.Context, f?: $wcm.ResourceTag<any> | $wcm.ResourceKind, ir?: $wcm.ResourceTag<any>, or?: $wcm.ResourceTag<any>, ro?: $wcm.ResourceTag<any>, ro1?: $wcm.ResourceTag<any>, ir1?: $wcm.ResourceTag<any>, ib?: $wcm.ResourceTag<any>, ft?: $wcm.ResourceTag<any>, or1?: $wcm.ResourceTag<any>, ob?: $wcm.ResourceTag<any>, fir?: $wcm.ResourceTag<any>): http.Types {
-			f = f ?? $wcm.ResourceKind.class;
-			if (f === $wcm.ResourceKind.class) {
-				return $wcm.Service.create<ClassService>(functions, [['Fields', $.Fields, Fields.Class], ['IncomingRequest', $.IncomingRequest, IncomingRequest.Manager], ['OutgoingRequest', $.OutgoingRequest, OutgoingRequest.Class], ['RequestOptions', $.RequestOptions, RequestOptions.Class], ['ResponseOutparam', $.ResponseOutparam, ResponseOutparam.Manager], ['IncomingResponse', $.IncomingResponse, IncomingResponse.Manager], ['IncomingBody', $.IncomingBody, IncomingBody.Manager], ['FutureTrailers', $.FutureTrailers, FutureTrailers.Manager], ['OutgoingResponse', $.OutgoingResponse, OutgoingResponse.Class], ['OutgoingBody', $.OutgoingBody, OutgoingBody.Manager], ['FutureIncomingResponse', $.FutureIncomingResponse, FutureIncomingResponse.Manager]], wasmInterface, context);
-			} else if (f === $wcm.ResourceKind.module) {
-				return $wcm.Service.create<ModuleService>(functions, [['Fields', $.Fields, Fields.Module], ['IncomingRequest', $.IncomingRequest, IncomingRequest.Module], ['OutgoingRequest', $.OutgoingRequest, OutgoingRequest.Module], ['RequestOptions', $.RequestOptions, RequestOptions.Module], ['ResponseOutparam', $.ResponseOutparam, ResponseOutparam.Module], ['IncomingResponse', $.IncomingResponse, IncomingResponse.Module], ['IncomingBody', $.IncomingBody, IncomingBody.Module], ['FutureTrailers', $.FutureTrailers, FutureTrailers.Module], ['OutgoingResponse', $.OutgoingResponse, OutgoingResponse.Module], ['OutgoingBody', $.OutgoingBody, OutgoingBody.Module], ['FutureIncomingResponse', $.FutureIncomingResponse, FutureIncomingResponse.Module]], wasmInterface, context);
-			} else {
-				return $wcm.Service.create<http.Types>(functions, [['Fields', $.Fields, f!], ['IncomingRequest', $.IncomingRequest, ir!], ['OutgoingRequest', $.OutgoingRequest, or!], ['RequestOptions', $.RequestOptions, ro!], ['ResponseOutparam', $.ResponseOutparam, ro1!], ['IncomingResponse', $.IncomingResponse, ir1!], ['IncomingBody', $.IncomingBody, ib!], ['FutureTrailers', $.FutureTrailers, ft!], ['OutgoingResponse', $.OutgoingResponse, or1!], ['OutgoingBody', $.OutgoingBody, ob!], ['FutureIncomingResponse', $.FutureIncomingResponse, fir!]], wasmInterface, context);
 			}
 		}
 	}
-	
+
 	export namespace IncomingHandler.$ {
 		export const IncomingRequest = http.Types.$.IncomingRequest;
 		export const ResponseOutparam = http.Types.$.ResponseOutparam;
@@ -1957,28 +1708,26 @@ export namespace http {
 		], undefined);
 	}
 	export namespace IncomingHandler._ {
-		export const id = 'wasi:http/incoming-handler' as const;
+		export const id = 'wasi:http/incoming-handler@0.2.0' as const;
 		export const witName = 'incoming-handler' as const;
-		export const types: Map<string, $wcm.GenericComponentModelType> = new Map<string, $wcm.GenericComponentModelType>([
+		export const types: Map<string, $wcm.AnyComponentModelType> = new Map<string, $wcm.AnyComponentModelType>([
 			['IncomingRequest', $.IncomingRequest],
 			['ResponseOutparam', $.ResponseOutparam]
 		]);
-		export const functions: Map<string, $wcm.FunctionType<$wcm.ServiceFunction>> = new Map([
+		export const functions: Map<string, $wcm.FunctionType> = new Map([
 			['handle', $.handle]
-		]);
-		export const resources: Map<string, $wcm.ResourceType> = new Map([
 		]);
 		export type WasmInterface = {
 			'handle': (request: i32, responseOut: i32) => void;
 		};
-		export function createHost(service: http.IncomingHandler, context: $wcm.Context): WasmInterface {
-			return $wcm.Host.create<WasmInterface>(functions, resources, service, context);
+		export namespace imports {
+			export type WasmInterface = _.WasmInterface;
 		}
-		export function createService(wasmInterface: WasmInterface, context: $wcm.Context, _kind?: $wcm.ResourceKind): http.IncomingHandler {
-			return $wcm.Service.create<http.IncomingHandler>(functions, [], wasmInterface, context);
+		export namespace exports {
+			export type WasmInterface = _.WasmInterface;
 		}
 	}
-	
+
 	export namespace OutgoingHandler.$ {
 		export const OutgoingRequest = http.Types.$.OutgoingRequest;
 		export const RequestOptions = http.Types.$.RequestOptions;
@@ -1990,87 +1739,95 @@ export namespace http {
 		], new $wcm.ResultType<own<http.OutgoingHandler.FutureIncomingResponse>, http.OutgoingHandler.ErrorCode>(new $wcm.OwnType<http.OutgoingHandler.FutureIncomingResponse>(FutureIncomingResponse), ErrorCode));
 	}
 	export namespace OutgoingHandler._ {
-		export const id = 'wasi:http/outgoing-handler' as const;
+		export const id = 'wasi:http/outgoing-handler@0.2.0' as const;
 		export const witName = 'outgoing-handler' as const;
-		export const types: Map<string, $wcm.GenericComponentModelType> = new Map<string, $wcm.GenericComponentModelType>([
+		export const types: Map<string, $wcm.AnyComponentModelType> = new Map<string, $wcm.AnyComponentModelType>([
 			['OutgoingRequest', $.OutgoingRequest],
 			['RequestOptions', $.RequestOptions],
 			['FutureIncomingResponse', $.FutureIncomingResponse],
 			['ErrorCode', $.ErrorCode]
 		]);
-		export const functions: Map<string, $wcm.FunctionType<$wcm.ServiceFunction>> = new Map([
+		export const functions: Map<string, $wcm.FunctionType> = new Map([
 			['handle', $.handle]
 		]);
-		export const resources: Map<string, $wcm.ResourceType> = new Map([
-		]);
 		export type WasmInterface = {
-			'handle': (request: i32, options_case: i32, options_option: i32, result: ptr<[i32, i32, i32, i64, i32, i32, i32, i32]>) => void;
+			'handle': (request: i32, options_case: i32, options_option: i32, result: ptr<result<own<FutureIncomingResponse>, ErrorCode>>) => void;
 		};
-		export function createHost(service: http.OutgoingHandler, context: $wcm.Context): WasmInterface {
-			return $wcm.Host.create<WasmInterface>(functions, resources, service, context);
+		export namespace imports {
+			export type WasmInterface = _.WasmInterface;
 		}
-		export function createService(wasmInterface: WasmInterface, context: $wcm.Context, _kind?: $wcm.ResourceKind): http.OutgoingHandler {
-			return $wcm.Service.create<http.OutgoingHandler>(functions, [], wasmInterface, context);
+		export namespace exports {
+			export type WasmInterface = _.WasmInterface;
+		}
+	}
+	export namespace proxy.$ {
+	}
+	export namespace proxy._ {
+		export const id = 'wasi:http/proxy@0.2.0' as const;
+		export const witName = 'proxy' as const;
+		export namespace imports {
+			export const interfaces: Map<string, $wcm.InterfaceType> = new Map<string, $wcm.InterfaceType>([
+				['random.Random', random.Random._],
+				['io.Error', io.Error._],
+				['io.Poll', io.Poll._],
+				['io.Streams', io.Streams._],
+				['cli.Stdout', cli.Stdout._],
+				['cli.Stderr', cli.Stderr._],
+				['cli.Stdin', cli.Stdin._],
+				['clocks.MonotonicClock', clocks.MonotonicClock._],
+				['Types', Types._],
+				['OutgoingHandler', OutgoingHandler._],
+				['clocks.WallClock', clocks.WallClock._]
+			]);
+			export function create(service: proxy.Imports, context: $wcm.WasmContext): Imports {
+				return $wcm.$imports.create<Imports>(_, service, context);
+			}
+			export function loop(service: proxy.Imports, context: $wcm.WasmContext): proxy.Imports {
+				return $wcm.$imports.loop<proxy.Imports>(_, service, context);
+			}
+		}
+		export type Imports = {
+			'wasi:random/random@0.2.0': random.Random._.imports.WasmInterface;
+			'wasi:io/error@0.2.0': io.Error._.imports.WasmInterface;
+			'wasi:io/poll@0.2.0': io.Poll._.imports.WasmInterface;
+			'wasi:io/streams@0.2.0': io.Streams._.imports.WasmInterface;
+			'wasi:cli/stdout@0.2.0': cli.Stdout._.imports.WasmInterface;
+			'wasi:cli/stderr@0.2.0': cli.Stderr._.imports.WasmInterface;
+			'wasi:cli/stdin@0.2.0': cli.Stdin._.imports.WasmInterface;
+			'wasi:clocks/monotonic-clock@0.2.0': clocks.MonotonicClock._.imports.WasmInterface;
+			'wasi:http/types@0.2.0': http.Types._.imports.WasmInterface;
+			'wasi:http/outgoing-handler@0.2.0': http.OutgoingHandler._.imports.WasmInterface;
+			'wasi:clocks/wall-clock@0.2.0': clocks.WallClock._.imports.WasmInterface;
+		};
+		export namespace exports {
+			export const interfaces: Map<string, $wcm.InterfaceType> = new Map<string, $wcm.InterfaceType>([
+				['IncomingHandler', IncomingHandler._]
+			]);
+			export function bind(exports: Exports, context: $wcm.WasmContext): proxy.Exports {
+				return $wcm.$exports.bind<proxy.Exports>(_, exports, context);
+			}
+		}
+		export type Exports = {
+			'wasi:http/incoming-handler@0.2.0#handle': (request: i32, responseOut: i32) => void;
+		};
+		export function bind(service: proxy.Imports, code: $wcm.Code, context?: $wcm.ComponentModelContext): Promise<proxy.Exports>;
+		export function bind(service: proxy.Imports.Promisified, code: $wcm.Code, port: $wcm.RAL.ConnectionPort, context?: $wcm.ComponentModelContext): Promise<proxy.Exports.Promisified>;
+		export function bind(service: proxy.Imports | proxy.Imports.Promisified, code: $wcm.Code, portOrContext?: $wcm.RAL.ConnectionPort | $wcm.ComponentModelContext, context?: $wcm.ComponentModelContext | undefined): Promise<proxy.Exports> | Promise<proxy.Exports.Promisified> {
+			return $wcm.$main.bind(_, service, code, portOrContext, context);
 		}
 	}
 }
 
 export namespace http._ {
-	export const id = 'wasi:http' as const;
+	export const version = '0.2.0' as const;
+	export const id = 'wasi:http@0.2.0' as const;
 	export const witName = 'http' as const;
 	export const interfaces: Map<string, $wcm.InterfaceType> = new Map<string, $wcm.InterfaceType>([
 		['Types', Types._],
 		['IncomingHandler', IncomingHandler._],
 		['OutgoingHandler', OutgoingHandler._]
 	]);
-	export type WasmInterface = {
-		'wasi:http/types'?: Types._.WasmInterface;
-		'wasi:http/incoming-handler'?: IncomingHandler._.WasmInterface;
-		'wasi:http/outgoing-handler'?: OutgoingHandler._.WasmInterface;
-	};
-	export function createHost(service: http, context: $wcm.Context): WasmInterface {
-		const result: WasmInterface = Object.create(null);
-		if (service.Types !== undefined) {
-			result['wasi:http/types'] = Types._.createHost(service.Types, context);
-		}
-		if (service.IncomingHandler !== undefined) {
-			result['wasi:http/incoming-handler'] = IncomingHandler._.createHost(service.IncomingHandler, context);
-		}
-		if (service.OutgoingHandler !== undefined) {
-			result['wasi:http/outgoing-handler'] = OutgoingHandler._.createHost(service.OutgoingHandler, context);
-		}
-		return result;
-	}
-	export type ClassService = http<http.Types._.ClassService>;
-	export type ModuleService = http<http.Types._.ModuleService>;
-	export function createService(wasmInterface: WasmInterface, context: $wcm.Context, kind?: $wcm.ResourceKind.class): ClassService;
-	export function createService(wasmInterface: WasmInterface, context: $wcm.Context, kind: $wcm.ResourceKind.module): ModuleService;
-	export function createService(wasmInterface: WasmInterface, context: $wcm.Context, kind: $wcm.ResourceKind): http;
-	export function createService<T extends http.Types>(wasmInterface: WasmInterface, context: $wcm.Context, t: http.Types): http<T>;
-	export function createService(wasmInterface: WasmInterface, context: $wcm.Context, t?: http.Types | $wcm.ResourceKind): http {
-		const result: http = Object.create(null);
-		t = t ?? $wcm.ResourceKind.class;
-		if (t === $wcm.ResourceKind.class || t === $wcm.ResourceKind.module) {
-			if (wasmInterface['wasi:http/types'] !== undefined) {
-				result.Types = Types._.createService(wasmInterface['wasi:http/types'], context, t);
-			}
-			if (wasmInterface['wasi:http/incoming-handler'] !== undefined) {
-				result.IncomingHandler = IncomingHandler._.createService(wasmInterface['wasi:http/incoming-handler'], context, t);
-			}
-			if (wasmInterface['wasi:http/outgoing-handler'] !== undefined) {
-				result.OutgoingHandler = OutgoingHandler._.createService(wasmInterface['wasi:http/outgoing-handler'], context, t);
-			}
-		} else {
-			if (wasmInterface['wasi:http/types'] !== undefined) {
-				result.Types = t;
-			}
-			if (wasmInterface['wasi:http/incoming-handler'] !== undefined) {
-				result.IncomingHandler = IncomingHandler._.createService(wasmInterface['wasi:http/incoming-handler'], context);
-			}
-			if (wasmInterface['wasi:http/outgoing-handler'] !== undefined) {
-				result.OutgoingHandler = OutgoingHandler._.createService(wasmInterface['wasi:http/outgoing-handler'], context);
-			}
-		}
-		return result;
-	}
+	export const worlds: Map<string, $wcm.WorldType> = new Map<string, $wcm.WorldType>([
+		['proxy', proxy._],
+	]);
 }

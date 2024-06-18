@@ -5,12 +5,11 @@
 import RIL from '../ril';
 RIL.install();
 
-
-import { ConsoleMessage, TestSetupMessage, TestsDoneMessage } from '../../common/test/messages';
-import { createWorkspaceContent, createTmp, cleanupTmp, cleanupWorkspaceContent, createWasiService, WorkspaceContent } from '../../common/test/index';
-import { WasiService } from '../../common/service';
 import { WorkerMessage } from '../../common/connection';
 import { CapturedPromise } from '../../common/promises';
+import { WasiService } from '../../common/service';
+import { WorkspaceContent, cleanupTmp, cleanupWorkspaceContent, createTmp, createWasiService, createWorkspaceContent } from '../../common/test/index';
+import { ConsoleMessage, TestSetupMessage, TestsDoneMessage } from '../../common/test/messages';
 
 import { BrowserServiceConnection } from '../process';
 

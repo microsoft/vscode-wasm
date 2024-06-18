@@ -3,8 +3,8 @@
 	"version": "0.13.0-pre.1",
 	"description": "An API facade for the WASM WASI CORE VS Code extension",
 	"engines": {
-		"node": ">=16.17.1",
-		"vscode": "^1.78.0"
+		"node": ">=18.18.2",
+		"vscode": "^1.88.0"
 	},
 	"main": "./lib/api/main.js",
 	"typings": "./lib/api/main.d.ts",
@@ -29,21 +29,21 @@
 	],
 	"dependencies": {
 		"yargs": "^17.7.2",
-		"semver": "^7.5.4"
+		"semver": "^7.6.0"
 	},
 	"devDependencies": {
-		"@types/vscode": "1.78.0",
-		"@types/yargs": "^17.0.31",
-		"@types/semver": "^7.5.5"
+		"@types/vscode": "1.88.0",
+		"@types/yargs": "^17.0.32",
+		"@types/semver": "^7.5.8"
 	},
 	"scripts": {
 		"prepublishOnly": "echo \"⛔ Can only publish from a secure pipeline ⛔\" && node ../build/npm/fail",
 		"prepack": "npm run all:publish",
-		"compile": "node ../node_modules/typescript/lib/tsc.js -b ./tsconfig.json",
-		"compile:publish": "node ../node_modules/typescript/lib/tsc.js -b ./tsconfig.publish.json",
-		"watch": "node ../node_modules/typescript/lib/tsc.js -b ./tsconfig.watch.json -w",
-		"clean": "node ../node_modules/rimraf/bin.js lib",
-		"lint": "node ../node_modules/eslint/bin/eslint.js --ext ts src",
+		"compile": "tsc -b ./tsconfig.json",
+		"compile:publish": "tsc -b ./tsconfig.publish.json",
+		"watch": "tsc -b ./tsconfig.watch.json -w",
+		"clean": "rimraf lib",
+		"lint": "eslint --ext ts src",
 		"all": "npm run clean && npm run compile && npm run lint",
 		"all:publish": "git clean -xfd . && npm install && npm run update:version && npm run compile:publish && npm run lint",
 		"update:version": "node ./bin/updateVersion.mjs"

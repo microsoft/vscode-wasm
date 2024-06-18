@@ -1,0 +1,40 @@
+{
+    "compilerOptions": {
+        "types": [
+            "node",
+            "vscode",
+            "mocha"
+        ],
+        "module": "Node16",
+        "moduleResolution": "Node16",
+        "target": "es2022",
+        "lib": [
+            "es2022"
+        ],
+        "rootDir": ".",
+        "strict": true,
+        "noImplicitAny": true,
+        "noImplicitReturns": true,
+        "noImplicitThis": true,
+        "declaration": true,
+        "stripInternal": true,
+        "sourceMap": true,
+        "declarationMap": true,
+        "noUnusedLocals": true,
+        "noUnusedParameters": true,
+        "outDir": "../../../../lib/desktop/preview2/test",
+        "tsBuildInfoFile": "../../../../lib/desktop/preview2/test/compile.tsbuildInfo",
+        "incremental": true
+    },
+    "include": [
+        "."
+    ],
+    "references": [
+        {
+            "path": "../../tsconfig.json"
+        },
+        {
+            "path": "../../../common/preview2/test/tsconfig.json"
+        }
+    ]
+}

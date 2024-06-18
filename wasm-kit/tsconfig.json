@@ -1,0 +1,27 @@
+{
+    "compilerOptions": {
+        "incremental": true,
+        "composite": true
+    },
+    "files": [],
+    "references": [
+        {
+            "path": "../wasm-component-model/tsconfig.json"
+        },
+        {
+            "path": "./src/common/tsconfig.json"
+        },
+        {
+            "path": "./src/common/test/tsconfig.json"
+        },
+        {
+            "path": "./src/browser/tsconfig.json"
+        },
+        {
+            "path": "./src/node/tsconfig.json"
+        },
+        {
+            "path": "./src/node/test/tsconfig.json"
+        }
+    ]
+}

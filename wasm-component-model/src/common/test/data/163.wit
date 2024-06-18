@@ -1,0 +1,18 @@
+package wyatt-herkamp:archiveexplorer;
+
+interface types {
+	variant file-type {
+        file,
+        directory
+	}
+    record file{
+        name: string,
+        ftype: file-type,
+        size: u64
+    }
+}
+world archiveexplorer {
+	use types.{ file, file-type };
+
+	export open-archive: func(path: string) -> list<file>;
+}

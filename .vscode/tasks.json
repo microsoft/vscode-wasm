@@ -48,10 +48,80 @@
 			]
 		},
 		{
+			"label": "Build Component Model Example",
+			"type": "npm",
+			"script": "build",
+			"path": "testbeds/component-model",
+			"group": "build",
+			"presentation": {
+				"panel": "dedicated",
+				"reveal": "never"
+			},
+			"problemMatcher": [
+				"$tsc"
+			]
+		},
+		{
+			"label": "Build Component Model Async",
+			"type": "npm",
+			"script": "build",
+			"path": "testbeds/component-model-async",
+			"group": "build",
+			"presentation": {
+				"panel": "dedicated",
+				"reveal": "never"
+			},
+			"problemMatcher": [
+				"$tsc"
+			]
+		},
+		{
+			"label": "Build Component Model Performance",
+			"type": "npm",
+			"script": "build",
+			"path": "testbeds/component-model-performance",
+			"group": "build",
+			"presentation": {
+				"panel": "dedicated",
+				"reveal": "never"
+			},
+			"problemMatcher": [
+				"$tsc"
+			]
+		},
+		{
+			"label": "Build Component Model VSCode",
+			"type": "npm",
+			"script": "build",
+			"path": "testbeds/component-model-vscode",
+			"group": "build",
+			"presentation": {
+				"panel": "dedicated",
+				"reveal": "never"
+			},
+			"problemMatcher": [
+				"$tsc"
+			]
+		},
+		{
+			"label": "Build Component Model VSCode (2)",
+			"type": "npm",
+			"script": "build",
+			"path": "testbeds/component-model-vscode-2",
+			"group": "build",
+			"presentation": {
+				"panel": "dedicated",
+				"reveal": "never"
+			},
+			"problemMatcher": [
+				"$tsc"
+			]
+		},
+		{
 			"label": "Build LSP Example",
 			"type": "npm",
 			"script": "build",
-			"path": "testbeds/lsp-rust/client",
+			"path": "testbeds/lsp-rust",
 			"group": "build",
 			"presentation": {
 				"panel": "dedicated",

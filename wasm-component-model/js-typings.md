@@ -18,14 +18,14 @@ For the following Wit types the mapping is straight forward and captured in the 
 | s64 | bigint | type s64 = bigint; |
 | float32 | number | type float32 = number; |
 | float64 | number | type float64 = number; |
-| bool | | boolean |  boolean |
+| bool | boolean |  boolean |
 | string | string | string |
 | char | string[0] | string |
 | record | object literal | type declaration |
 | list\<T\> | [] | Array\<T\>|
 | tuple\<T1, T2\> | [] | [T1, T2] |
-| option\<T\> | variable | T \| undefined |
-| result\<ok, err\> | variant | result\<ok, err\> |
+| option\<T\> | variable | ? and (T \| undefined) |
+| result\<ok, err\> | ok & Error | ok & Error |
 
 Enums, variants and flags need some supporting JavaScript / TypeScript code since they are not natively supported in JavaScript. The proposed code should be aligned whenever possible with existing efforts to standardize these types in JavaScript.
 
@@ -191,7 +191,7 @@ if (accessType.tag === AccessType.access) {
 }
 ```
 
-If TypeScript code is generated the following definition can be used
+If TypeScript code is generated the following discriminated union definition can be used
 
 ```TypeScript
 export namespace AccessType {

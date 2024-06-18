@@ -9,7 +9,9 @@
 			"./ruby/tsconfig.json",
 			"./rust/tsconfig.json",
 			"./rust-threads/tsconfig.json",
-			"./threads/tsconfig.json"
+			"./threads/tsconfig.json",
+			"./malloc/tsconfig.json",
+			"./performance/tsconfig.json"
 		]
 	},
 	"rules": {

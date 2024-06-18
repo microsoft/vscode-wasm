@@ -1,0 +1,15 @@
+// wit/calculator.wit
+package vscode:example;
+
+interface window {
+	resource test-resource {
+		call: func(value: u32) -> u32;
+	}
+	create-test-resource: func() -> test-resource;
+}
+
+world test {
+	import window;
+
+	export run: func();
+}

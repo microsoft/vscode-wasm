@@ -26,7 +26,7 @@ fn main() {
     //     fs::read_to_string("/workspace/test.bat").expect("Something went wrong reading the file");
     // println!("Content:\n{}", contents);
 
-    for file in fs::read_dir("./workspace").unwrap() {
+    for file in fs::read_dir("/workspace").unwrap() {
         println!("{}", file.unwrap().path().display());
     }
 }

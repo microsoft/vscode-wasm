@@ -2,9 +2,9 @@
  * Copyright (c) Microsoft Corporation. All rights reserved.
  * Licensed under the MIT License. See License.txt in the project root for license information.
  * ------------------------------------------------------------------------------------------ */
-import { TextDecoder } from 'util';
-import * as path from 'path';
 import * as crypto from 'crypto';
+import * as path from 'path';
+import { TextDecoder } from 'util';
 
 import type { Disposable } from 'vscode';
 

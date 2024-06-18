@@ -20,6 +20,124 @@
                     ]
                 }
             ]
+        },
+        {
+            "language": "typescript",
+            "source": [
+                "{\n\tconst buffer = new ArrayBuffer(16);\n\tconst view = new DataView(buffer, 0, 4);\n\tview.getInt32(16);\n}"
+            ],
+            "outputs": [
+                {
+                    "items": [
+                        {
+                            "mime": "application/vnd.code.notebook.error",
+                            "value": {
+                                "name": "RangeError",
+                                "message": "Offset is outside the bounds of the DataView",
+                                "stack": "    at DataView.getInt32 (<anonymous>)\n    at <Cell 2> [4, 14]\n    at <Cell 2> [8, 46]\n    at Script.runInContext (node:vm:135:12)\n    at Script.runInNewContext (node:vm:140:17)\n    at Object.runInNewContext (node:vm:292:38)\n    at C (/home/dirkb/.vscode-server-insiders/extensions/donjayamanne.typescript-notebook-2.0.6/out/extension/server/index.js:2:113345)\n    at t.execCode (/home/dirkb/.vscode-server-insiders/extensions/donjayamanne.typescript-notebook-2.0.6/out/extension/server/index.js:2:114312)\n    at k.<anonymous> (/home/dirkb/.vscode-server-insiders/extensions/donjayamanne.typescript-notebook-2.0.6/out/extension/server/index.js:2:142156)\n    at k.emit (node:events:514:28)"
+                            }
+                        }
+                    ]
+                }
+            ]
+        },
+        {
+            "language": "typescript",
+            "source": [
+                "const ab = new ArrayBuffer(1024);\nconst ib = new Int32Array(ab, 256, 2);\nconsole.log(ib.byteOffset);\nconsole.log(ib.byteLength);"
+            ],
+            "outputs": [
+                {
+                    "items": [
+                        {
+                            "mime": "application/vnd.code.notebook.stdout",
+                            "value": [
+                                "256",
+                                "8",
+                                ""
+                            ]
+                        }
+                    ]
+                }
+            ]
+        },
+        {
+            "language": "typescript",
+            "source": [
+                "const buffer = new ArrayBuffer(4);\n\nconst array = new Uint32Array(buffer);\narray[0] = 305419896;\n\nconst bytes = new Uint8Array(buffer);\n\nfor (const byte of bytes) {\n\tconsole.log(byte.toString(16));\n}\n"
+            ],
+            "outputs": [
+                {
+                    "items": [
+                        {
+                            "mime": "application/vnd.code.notebook.stdout",
+                            "value": [
+                                "78",
+                                "56",
+                                "34",
+                                "12",
+                                ""
+                            ]
+                        }
+                    ]
+                }
+            ]
+        },
+        {
+            "language": "typescript",
+            "source": [
+                "Math.ceil( 7451 / 8) * 8;"
+            ],
+            "outputs": [
+                {
+                    "items": [
+                        {
+                            "mime": "text/plain",
+                            "value": [
+                                "\u001b[33m7456\u001b[39m"
+                            ]
+                        }
+                    ]
+                }
+            ]
+        },
+        {
+            "language": "typescript",
+            "source": [
+                "const sbuffer = new SharedArrayBuffer(1024);\nconst view = new DataView(sbuffer);\nconst p = { a: 305419896, b: 305419896, c: 305419896, d: 305419896 };\nconst start = Date.now();\nfor (let i = 0; i < 10000000; i++) {\n\tview.setUint32(0, p.a);\n\tview.setUint32(4, p.b);\n\tview.setUint32(8, p.c);\n\tview.setUint32(12, p.d);\n}\nconsole.log(Date.now() - start);"
+            ],
+            "outputs": [
+                {
+                    "items": [
+                        {
+                            "mime": "application/vnd.code.notebook.stdout",
+                            "value": [
+                                "5021",
+                                ""
+                            ]
+                        }
+                    ]
+                }
+            ]
+        },
+        {
+            "language": "typescript",
+            "source": [
+                "const param = { a: 305419896, b: 305419896, c: 305419896, d: 305419896, e: 'dirk' };\nconst start2 = Date.now();\nfor (let i = 0; i < 10000000; i++) {\n\tJSON.stringify(param);\n}\nconsole.log(Date.now() - start2);"
+            ],
+            "outputs": [
+                {
+                    "items": [
+                        {
+                            "mime": "application/vnd.code.notebook.stdout",
+                            "value": [
+                                "3655",
+                                ""
+                            ]
+                        }
+                    ]
+                }
+            ]
         }
     ]
 }

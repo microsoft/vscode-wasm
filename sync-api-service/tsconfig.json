@@ -6,9 +6,9 @@
         ],
         "module": "Node16",
         "moduleResolution": "Node16",
-        "target": "es2020",
+        "target": "es2022",
         "lib": [
-            "es2020"
+            "es2022"
         ],
         "rootDir": "./src",
         "strict": true,
@@ -18,6 +18,7 @@
         "declaration": true,
         "stripInternal": true,
         "sourceMap": true,
+        "declarationMap": true,
         "noUnusedLocals": true,
         "noUnusedParameters": true,
         "outDir": "./lib",

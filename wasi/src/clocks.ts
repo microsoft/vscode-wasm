@@ -2,6 +2,7 @@
  *  Copyright (c) Microsoft Corporation. All rights reserved.
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
+/* eslint-disable @typescript-eslint/ban-types */
 import * as $wcm from '@vscode/wasm-component-model';
 import type { u64, own, u32, i64, i32, ptr } from '@vscode/wasm-component-model';
 import { io } from './io';
@@ -20,21 +21,20 @@ export namespace clocks {
 	 * It is intended for measuring elapsed time.
 	 */
 	export namespace MonotonicClock {
-		
 		export type Pollable = io.Poll.Pollable;
-		
+
 		/**
 		 * An instant in time, in nanoseconds. An instant is relative to an
 		 * unspecified initial value, and can only be compared to instances from
 		 * the same monotonic-clock.
 		 */
 		export type Instant = u64;
-		
+
 		/**
 		 * A duration of time, in nanoseconds.
 		 */
 		export type Duration = u64;
-		
+
 		/**
 		 * Read the current value of the clock.
 		 * 
@@ -42,19 +42,19 @@ export namespace clocks {
 		 * produce a sequence of non-decreasing values.
 		 */
 		export type now = () => Instant;
-		
+
 		/**
 		 * Query the resolution of the clock. Returns the duration of time
 		 * corresponding to a clock tick.
 		 */
 		export type resolution = () => Duration;
-		
+
 		/**
 		 * Create a `pollable` which will resolve once the specified instant
 		 * occured.
 		 */
 		export type subscribeInstant = (when: Instant) => own<Pollable>;
-		
+
 		/**
 		 * Create a `pollable` which will resolve once the given duration has
 		 * elapsed, starting at the time at which this function was called.
@@ -68,7 +68,7 @@ export namespace clocks {
 		subscribeInstant: MonotonicClock.subscribeInstant;
 		subscribeDuration: MonotonicClock.subscribeDuration;
 	};
-	
+
 	/**
 	 * WASI Wall Clock is a clock API intended to let users query the current
 	 * time. The name "wall" makes an analogy to a "clock on the wall", which
@@ -86,7 +86,6 @@ export namespace clocks {
 	 * It is intended for reporting the current date and time for humans.
 	 */
 	export namespace WallClock {
-		
 		/**
 		 * A time and date in seconds plus nanoseconds.
 		 */
@@ -94,7 +93,7 @@ export namespace clocks {
 			seconds: u64;
 			nanoseconds: u32;
 		};
-		
+
 		/**
 		 * Read the current value of the clock.
 		 * 
@@ -111,7 +110,7 @@ export namespace clocks {
 		 * [Unix Time]: https://en.wikipedia.org/wiki/Unix_time
 		 */
 		export type now = () => Datetime;
-		
+
 		/**
 		 * Query the resolution of the clock.
 		 * 
@@ -123,12 +122,7 @@ export namespace clocks {
 		now: WallClock.now;
 		resolution: WallClock.resolution;
 	};
-	
 }
-export type clocks = {
-	MonotonicClock?: clocks.MonotonicClock;
-	WallClock?: clocks.WallClock;
-};
 
 export namespace clocks {
 	export namespace MonotonicClock.$ {
@@ -145,20 +139,18 @@ export namespace clocks {
 		], new $wcm.OwnType<clocks.MonotonicClock.Pollable>(Pollable));
 	}
 	export namespace MonotonicClock._ {
-		export const id = 'wasi:clocks/monotonic-clock' as const;
+		export const id = 'wasi:clocks/monotonic-clock@0.2.0' as const;
 		export const witName = 'monotonic-clock' as const;
-		export const types: Map<string, $wcm.GenericComponentModelType> = new Map<string, $wcm.GenericComponentModelType>([
+		export const types: Map<string, $wcm.AnyComponentModelType> = new Map<string, $wcm.AnyComponentModelType>([
 			['Pollable', $.Pollable],
 			['Instant', $.Instant],
 			['Duration', $.Duration]
 		]);
-		export const functions: Map<string, $wcm.FunctionType<$wcm.ServiceFunction>> = new Map([
+		export const functions: Map<string, $wcm.FunctionType> = new Map([
 			['now', $.now],
 			['resolution', $.resolution],
 			['subscribeInstant', $.subscribeInstant],
 			['subscribeDuration', $.subscribeDuration]
-		]);
-		export const resources: Map<string, $wcm.ResourceType> = new Map([
 		]);
 		export type WasmInterface = {
 			'now': () => i64;
@@ -166,14 +158,14 @@ export namespace clocks {
 			'subscribe-instant': (when: i64) => i32;
 			'subscribe-duration': (when: i64) => i32;
 		};
-		export function createHost(service: clocks.MonotonicClock, context: $wcm.Context): WasmInterface {
-			return $wcm.Host.create<WasmInterface>(functions, resources, service, context);
+		export namespace imports {
+			export type WasmInterface = _.WasmInterface;
 		}
-		export function createService(wasmInterface: WasmInterface, context: $wcm.Context, _kind?: $wcm.ResourceKind): clocks.MonotonicClock {
-			return $wcm.Service.create<clocks.MonotonicClock>(functions, [], wasmInterface, context);
+		export namespace exports {
+			export type WasmInterface = _.WasmInterface;
 		}
 	}
-	
+
 	export namespace WallClock.$ {
 		export const Datetime = new $wcm.RecordType<clocks.WallClock.Datetime>([
 			['seconds', $wcm.u64],
@@ -183,59 +175,34 @@ export namespace clocks {
 		export const resolution = new $wcm.FunctionType<clocks.WallClock.resolution>('resolution', [], Datetime);
 	}
 	export namespace WallClock._ {
-		export const id = 'wasi:clocks/wall-clock' as const;
+		export const id = 'wasi:clocks/wall-clock@0.2.0' as const;
 		export const witName = 'wall-clock' as const;
-		export const types: Map<string, $wcm.GenericComponentModelType> = new Map<string, $wcm.GenericComponentModelType>([
+		export const types: Map<string, $wcm.AnyComponentModelType> = new Map<string, $wcm.AnyComponentModelType>([
 			['Datetime', $.Datetime]
 		]);
-		export const functions: Map<string, $wcm.FunctionType<$wcm.ServiceFunction>> = new Map([
+		export const functions: Map<string, $wcm.FunctionType> = new Map([
 			['now', $.now],
 			['resolution', $.resolution]
 		]);
-		export const resources: Map<string, $wcm.ResourceType> = new Map([
-		]);
 		export type WasmInterface = {
-			'now': (result: ptr<[i64, i32]>) => void;
-			'resolution': (result: ptr<[i64, i32]>) => void;
+			'now': (result: ptr<Datetime>) => void;
+			'resolution': (result: ptr<Datetime>) => void;
 		};
-		export function createHost(service: clocks.WallClock, context: $wcm.Context): WasmInterface {
-			return $wcm.Host.create<WasmInterface>(functions, resources, service, context);
+		export namespace imports {
+			export type WasmInterface = _.WasmInterface;
 		}
-		export function createService(wasmInterface: WasmInterface, context: $wcm.Context, _kind?: $wcm.ResourceKind): clocks.WallClock {
-			return $wcm.Service.create<clocks.WallClock>(functions, [], wasmInterface, context);
+		export namespace exports {
+			export type WasmInterface = _.WasmInterface;
 		}
 	}
 }
 
 export namespace clocks._ {
-	export const id = 'wasi:clocks' as const;
+	export const version = '0.2.0' as const;
+	export const id = 'wasi:clocks@0.2.0' as const;
 	export const witName = 'clocks' as const;
 	export const interfaces: Map<string, $wcm.InterfaceType> = new Map<string, $wcm.InterfaceType>([
 		['MonotonicClock', MonotonicClock._],
 		['WallClock', WallClock._]
 	]);
-	export type WasmInterface = {
-		'wasi:clocks/monotonic-clock'?: MonotonicClock._.WasmInterface;
-		'wasi:clocks/wall-clock'?: WallClock._.WasmInterface;
-	};
-	export function createHost(service: clocks, context: $wcm.Context): WasmInterface {
-		const result: WasmInterface = Object.create(null);
-		if (service.MonotonicClock !== undefined) {
-			result['wasi:clocks/monotonic-clock'] = MonotonicClock._.createHost(service.MonotonicClock, context);
-		}
-		if (service.WallClock !== undefined) {
-			result['wasi:clocks/wall-clock'] = WallClock._.createHost(service.WallClock, context);
-		}
-		return result;
-	}
-	export function createService(wasmInterface: WasmInterface, context: $wcm.Context, kind?: $wcm.ResourceKind): clocks {
-		const result: clocks = Object.create(null);
-		if (wasmInterface['wasi:clocks/monotonic-clock'] !== undefined) {
-			result.MonotonicClock = MonotonicClock._.createService(wasmInterface['wasi:clocks/monotonic-clock'], context, kind);
-		}
-		if (wasmInterface['wasi:clocks/wall-clock'] !== undefined) {
-			result.WallClock = WallClock._.createService(wasmInterface['wasi:clocks/wall-clock'], context, kind);
-		}
-		return result;
-	}
 }

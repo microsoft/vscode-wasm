@@ -1,0 +1,51 @@
+{
+	"name": "@vscode/wasm-wasi-lsp",
+	"version": "0.1.0-pre.6",
+	"description": "A npm package to ease implementing language servers in WebAssembly with WASI.",
+	"author": "Visual Studio Code Team",
+	"license": "MIT",
+	"keywords": [
+		"VSCode",
+		"WASM",
+		"WASI",
+		"Language Server Protocol",
+		"LSP"
+	],
+	"repository": {
+		"type": "git",
+		"url": "git+https://github.com/microsoft/vscode-wasm.git"
+	},
+	"bugs": {
+		"url": "https://github.com/microsoft/vscode-wasm/issues"
+	},
+	"homepage": "https://github.com/microsoft/vscode-wasm#readme",
+	"engines": {
+		"node": ">=18.18.2"
+	},
+	"exports": {
+		".": {
+			"types": "./lib/main.d.ts",
+			"node": "./lib/main.js",
+			"browser": "./lib/main.js"
+		}
+	},
+	"peerDependencies": {
+		"vscode-languageclient": "10.0.0-next.7",
+		"@vscode/wasm-wasi": "0.13.0-pre.1"
+	},
+	"devDependencies": {
+		"@types/vscode": "1.89.0"
+	},
+
+	"scripts": {
+		"prepublishOnly": "echo \"⛔ Can only publish from a secure pipeline ⛔\" && node ../build/npm/fail",
+		"prepack": "npm run all:publish",
+		"compile": "tsc -b ./tsconfig.json",
+		"compile:publish": "tsc -b ./tsconfig.publish.json",
+		"watch": "tsc -b ./tsconfig.watch.json -w",
+		"clean": "rimraf lib && rimraf dist",
+		"lint": "eslint --ext ts src",
+		"all": "npm run clean && npm run compile && npm run lint",
+		"all:publish": "git clean -xfd . && npm install && npm run compile:publish && npm run lint"
+	}
+}

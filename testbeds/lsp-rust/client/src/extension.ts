@@ -3,33 +3,20 @@
  * Licensed under the MIT License. See License.txt in the project root for license information.
  * ------------------------------------------------------------------------------------------ */
 
-import { ExtensionContext, Uri, window, workspace } from 'vscode';
-import { LanguageClient, LanguageClientOptions, ServerOptions } from 'vscode-languageclient/node';
-import { Wasm, ProcessOptions, Stdio } from '@vscode/wasm-wasi';
-import { runServerProcess } from './lspServer';
-
+import { ExtensionContext, Uri, window, workspace, commands } from 'vscode';
+import { LanguageClient, LanguageClientOptions, ServerOptions, RequestType } from 'vscode-languageclient/node';
+import { Wasm, ProcessOptions } from '@vscode/wasm-wasi';
+import { createStdioOptions, startServer } from '@vscode/wasm-wasi-lsp';
 
 let client: LanguageClient;
-const channel = window.createOutputChannel('LSP Rust Server');
+const channel = window.createOutputChannel('LSP WASM Server');
 
 export async function activate(context: ExtensionContext) {
 	const wasm: Wasm = await Wasm.load();
 
 	const serverOptions: ServerOptions = async () => {
-		const stdio: Stdio = {
-			in: {
-				kind: 'pipeIn',
-			},
-			out: {
-				kind: 'pipeOut'
-			},
-			err: {
-				kind: 'pipeOut'
-			}
-		};
-
 		const options: ProcessOptions = {
-			stdio: stdio,
+			stdio: createStdioOptions(),
 			mountPoints: [
 				{ kind: 'workspaceFolder' },
 			]
@@ -44,13 +31,11 @@ export async function activate(context: ExtensionContext) {
 			channel.append(decoder.decode(data));
 		});
 
-		return runServerProcess(process);
+		return startServer(process);
 	};
 
 	const clientOptions: LanguageClientOptions = {
-		documentSelector: [
-			{ language: 'bat' }
-		],
+		documentSelector: [ { language: 'bat' } ],
 		outputChannel: channel,
 		diagnosticCollectionName: 'markers',
 	};
@@ -61,6 +46,13 @@ export async function activate(context: ExtensionContext) {
 	} catch (error) {
 		client.error(`Start failed`, error, 'force');
 	}
+
+	type CountFileParams = { dir: string };
+	const CountFilesRequest = new RequestType<CountFileParams, number, void>('wasm-language-server/countFilesInDirectory');
+	context.subscriptions.push(commands.registerCommand('vscode-samples.wasm-language-server.countFiles', async () => {
+		const result = await client.sendRequest(CountFilesRequest, { dir: '/workspace'});
+		void window.showInformationMessage(`The workspace contains ${result} files.`);
+	}));
 }
 
 export function deactivate() {

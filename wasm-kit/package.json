@@ -1,0 +1,57 @@
+{
+	"name": "@vscode/wasm-kit",
+	"version": "0.1.0-pre.1",
+	"description": "Utilities operating on shared memory to support the component model.",
+	"author": "Visual Studio Code Team",
+	"license": "MIT",
+	"keywords": [
+		"VSCode",
+		"WASM",
+		"WASI"
+	],
+	"repository": {
+		"type": "git",
+		"url": "git+https://github.com/microsoft/vscode-wasm.git"
+	},
+	"bugs": {
+		"url": "https://github.com/microsoft/vscode-wasm/issues"
+	},
+	"homepage": "https://github.com/microsoft/vscode-wasm#readme",
+	"engines": {
+		"node": ">=18.18.2"
+	},
+	"exports": {
+		".": {
+			"types": "./lib/common/api.d.ts",
+			"node": "./lib/node/main.js",
+			"browser": "./lib/browser/main.js"
+		},
+		"./node": {
+			"types": "./lib/node/main.d.ts",
+			"node": "./lib/node/main.js"
+		},
+		"./browser": {
+			"types": "./lib/browser/main.d.ts",
+			"browser": "./lib/browser/main.js"
+		}
+	},
+
+	"scripts": {
+		"compile:malloc": "../node_modules/.bin/make-dir ./lib/common && $WASI_SDK_PREFIX/bin/clang --target=wasm32-wasi-threads -pthread -O3 -flto -c src/common/malloc/malloc.c -o lib/common/malloc.o",
+		"link:malloc": "$WASI_SDK_PREFIX/bin/wasm-ld -s -m wasm32 -L$WASI_SDK_PREFIX/share/wasi-sysroot/lib/wasm32-wasi-threads --no-entry --export=malloc --export=free --export=aligned_alloc --import-memory --max-memory=524288 -lpthread --shared-memory -lc $WASI_SDK_PREFIX/lib/clang/17/lib/wasi/libclang_rt.builtins-wasm32.a lib/common/malloc.o -o lib/common/malloc.wasm",
+		"compile": "tsc -b ./tsconfig.json",
+		"watch": "tsc -b ./tsconfig.watch.json -w",
+		"clean": "rimraf lib",
+		"lint": "eslint --ext ts src",
+		"test": "npm run test:desktop",
+		"test:desktop": "mocha",
+		"simulation": "node ./lib/node/test/arrayMain.js"
+	},
+	"dependencies": {
+		"uuid": "^9.0.1",
+		"vscode-uri": "^3.0.8"
+	},
+	"devDependencies": {
+		"@types/uuid": "^9.0.8"
+	}
+}

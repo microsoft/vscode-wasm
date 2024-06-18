@@ -30,6 +30,11 @@ export namespace World {
 			&& typeof value.package === 'number';
 	}
 }
+export interface PackageNameParts {
+	namespace?: string | undefined;
+	name: string;
+	version?: string | undefined;
+}
 
 export interface Package {
 	name: string;
@@ -37,12 +42,24 @@ export interface Package {
 	interfaces: References;
 	worlds: References;
 }
+export namespace Package {
+	export function is(value: any): value is Package {
+		return typeof value === 'object'
+			&& typeof value.name === 'string'
+			&& typeof value.interfaces === 'object'
+			&& typeof value.worlds === 'object';
+	}
+}
 
 export interface Interface {
 	name: string;
 	docs?: Documentation;
 	types: References;
 	functions: NameMap<Callable>;
+	world?: {
+		ref: number;
+		kind: 'imports' | 'exports';
+	};
 	package: number;
 }
 export namespace Interface {

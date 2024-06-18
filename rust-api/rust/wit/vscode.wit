@@ -1,0 +1,102 @@
+// The naming is chosen to have good module names in the generated Rust code
+// It doesn't reflect the actual names on the VS Code side.
+package host:api;
+
+interface types {
+	record position {
+		line: u32,
+		character: u32
+	}
+
+	record range {
+		start: position,
+		end: position
+	}
+
+	record text-document-content-change-event {
+		range: range,
+		range-offset: u32,
+		range-length: u32,
+		text: string
+	}
+
+	resource text-document {
+		uri: func() -> string;
+		language-id: func() -> string;
+		version: func() -> u32;
+		get-text: func() -> string;
+	}
+
+	enum text-document-change-reason {
+		undo,
+		redo
+	}
+
+	resource text-document-change-event {
+		document: func() -> text-document;
+		content-changes: func() -> list<text-document-content-change-event>;
+		reason: func() -> option<text-document-change-reason>;
+	}
+
+	resource output-channel {
+		name: func() -> string;
+    	append: func(value: string);
+        append-line: func(value: string);
+        clear: func();
+		show: func();
+	}
+
+	variant glob-pattern {
+		pattern(string)
+	}
+
+	record document-filter {
+		language: option<string>,
+		scheme: option<string>,
+		notebook-type: option<string>,
+		pattern: option<glob-pattern>
+	}
+
+	variant document-selector {
+		many(list<document-filter>),
+		single(document-filter)
+	}
+}
+
+interface commands {
+	register-command: func(command: string);
+	unregister-command: func(command: string);
+}
+
+interface languages {
+	use types.{ document-selector, text-document };
+	match-selector: func(selector: document-selector, document: text-document) -> u32;
+}
+
+interface window {
+	use types.{ output-channel };
+	create-output-channel: func(name: string, language-id: option<string>) -> output-channel;
+}
+
+interface workspace {
+	use types.{ text-document };
+	text-documents: func() -> list<text-document>;
+	register-on-did-change-text-document: func();
+	unregister-on-did-change-text-document: func();
+}
+
+
+interface callbacks {
+	use types.{ text-document-change-event };
+	did-change-text-document: func(event: text-document-change-event);
+	execute-command: func(command: string);
+}
+
+world all {
+	import workspace;
+	import commands;
+	import window;
+	import languages;
+
+	export callbacks;
+}

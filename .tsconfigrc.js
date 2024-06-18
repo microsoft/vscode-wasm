@@ -37,8 +37,8 @@ const general = {
 	compilerOptions: {
 		module: "Node16",
 		moduleResolution: "Node16",
-		target: 'es2020',
-		lib: [ 'es2020' ],
+		target: 'es2022',
+		lib: [ 'es2022' ],
 	}
 };
 
@@ -106,7 +106,7 @@ const testbedOptions = {
 	compilerOptions: {
 		rootDir: ".",
 		skipLibCheck: true,
-		lib: [ "es2020", "webworker"],
+		lib: [ "es2022", "webworker"],
 		types: ["node", "vscode"],
 		module: "Node16",
 		moduleResolution: "Node16",
@@ -230,18 +230,18 @@ const wasm_component_model = {
 			references: [ '..' ]
 		},
 		{
-			path: './src/web',
+			path: './src/browser',
 			extends: [ browser ],
 			references: [ '../common' ]
 		},
 		{
-			path: './src/desktop',
+			path: './src/node',
 			extends: [ node ],
 			references: [ '../common' ],
 			exclude: [ 'test' ]
 		},
 		{
-			path: './src/desktop/test',
+			path: './src/node/test',
 			extends: [ node, testMixin],
 			references: [ '..', '../../common/test' ]
 		},
@@ -249,6 +249,88 @@ const wasm_component_model = {
 			path: './src/tools',
 			extends: [ node ],
 		}
+	]
+};
+
+/** @type ProjectDescription */
+const wasm_kit = {
+	name: 'wasm-kit',
+	path: './wasm-kit',
+	extends: [ common, referenced ],
+	out: {
+		dir: './lib',
+		buildInfoFile: '${buildInfoFile}.tsbuildInfo'
+	},
+	sourceFolders: [
+		{
+			path: './src/common',
+			extends: [ common ],
+			exclude: [ 'test', 'malloc' ]
+		},
+		{
+			path: './src/common/test',
+			extends: [ common, testMixin ],
+			references: [ '..' ]
+		},
+		{
+			path: './src/browser',
+			extends: [ browser ],
+			references: [ '../common' ]
+		},
+		{
+			path: './src/node',
+			extends: [ node ],
+			references: [ '../common' ],
+			exclude: [ 'test' ]
+		},
+		{
+			path: './src/node/test',
+			extends: [ node, testMixin ],
+			references: [ '..', '../../common/test' ]
+		}
+	],
+	references: [
+		'../wasm-component-model'
+	]
+};
+
+/** @type ProjectDescription */
+const wasm_wasi_lsp = {
+	name: 'wasm-wasi-lsp',
+	path: './wasm-wasi-lsp',
+	extends: [ common, referenced ],
+	out: {
+		dir: './lib',
+		buildInfoFile: '${buildInfoFile}.tsbuildInfo'
+	},
+	sourceFolders: [
+		{
+			path: './src',
+			extends: [ common ],
+		}
+	],
+	references: [
+		'../wasm-wasi-core'
+	]
+};
+
+/** @type ProjectDescription */
+const rust_api ={
+	name: 'rust-api',
+	path: './rust-api',
+	extends: [ common, referenced ],
+	out: {
+		dir: './lib',
+		buildInfoFile: '${buildInfoFile}.tsbuildInfo'
+	},
+	sourceFolders: [
+		{
+			path: './ts/src',
+			extends: [ common ]
+		}
+	],
+	references: [
+		'../wasm-component-model'
 	]
 };
 
@@ -285,12 +367,18 @@ const wasm_wasi_core = {
 			path: './src/common',
 			extends: [ common, vscodeMixin ],
 			exclude: [ 'test' ]
+			// exclude: [ 'test', 'preview2/test' ]
 		},
 		{
 			path: './src/common/test',
 			extends: [ common, vscodeMixin, testMixin ],
 			references: [ '..' ]
 		},
+		// {
+		// 	path: './src/common/preview2/test',
+		// 	extends: [ common, vscodeMixin, testMixin ],
+		// 	references: [ '../..' ]
+		// },
 		{
 			path: './src/web',
 			extends: [ browser, vscodeMixin ],
@@ -306,13 +394,22 @@ const wasm_wasi_core = {
 			path: './src/desktop',
 			extends: [ node, vscodeMixin ],
 			exclude: [ 'test' ],
+			// exclude: [ 'test', 'preview2/test' ],
 			references: [ '../common' ]
 		},
 		{
 			path: './src/desktop/test',
 			extends: [ node, vscodeMixin, testMixin],
 			references: [ '..', '../../common/test' ]
-		}
+		},
+		// {
+		// 	path: './src/desktop/preview2/test',
+		// 	extends: [ node, vscodeMixin, testMixin],
+		// 	references: [ '../..', '../../../common/preview2/test' ]
+		// }
+	],
+	references: [
+		// wasi, wasm_component_model, wasm_kit
 	]
 };
 
@@ -400,6 +497,16 @@ const testbed_python = {
 }
 
 /** @type ProjectDescription */
+const testbed_performance = {
+	name: "performance",
+	path: './testbeds/performance',
+	extends: [ node ],
+	out:  {
+		dir: './out'
+	}
+}
+
+/** @type ProjectDescription */
 const testbed_rust = {
 	name: "rust",
 	path: './testbeds/rust',
@@ -413,14 +520,14 @@ const testbed_rust = {
 const testbeds = {
 	name: 'testbeds',
 	path: './testbeds',
-	references: [ testbed_cpp, testbed_python, testbed_rust ]
+	references: [ testbed_cpp, testbed_python, testbed_rust, testbed_performance ]
 }
 
 /** @type ProjectDescription */
 const root = {
 	name: 'root',
 	path: './',
-	references: [ sync_api_common, sync_api_client, sync_api_service, sync_api_tests, wasm_component_model, wasm_wasi_core, wasm_wasi, webshell, tools ]
+	references: [ sync_api_common, sync_api_client, sync_api_service, sync_api_tests, wasm_component_model, wasm_kit, rust_api, wasm_wasi_core, wasm_wasi, webshell, wasm_wasi_lsp, tools ]
 };
 
 /** @type CompilerOptions */
@@ -436,6 +543,7 @@ const defaultCompilerOptions = {
 /** @type CompilerOptions */
 const compileCompilerOptions = CompilerOptions.assign(defaultCompilerOptions, {
 	sourceMap: true,
+	declarationMap: true,
 	noUnusedLocals: true,
 	noUnusedParameters: true,
 });
@@ -451,6 +559,7 @@ const compileProjectOptions = {
 /** @type CompilerOptions */
 const watchCompilerOptions = CompilerOptions.assign(defaultCompilerOptions, {
 	sourceMap: true,
+	declarationMap: true,
 	noUnusedLocals: false,
 	noUnusedParameters: false,
 	assumeChangesOnlyAffectDirectDependencies: true,
@@ -467,6 +576,7 @@ const watchProjectOptions = {
 /** @type CompilerOptions */
 const publishCompilerOptions = CompilerOptions.assign(defaultCompilerOptions, {
 	sourceMap: false,
+	declarationMap: false,
 	noUnusedLocals: true,
 	noUnusedParameters: true,
 });
@@ -499,11 +609,18 @@ const projects = [
 	[ createPublishProjectDescription(wasm_wasi), [ publishProjectOptions ] ],
 	[ webshell, [ compileProjectOptions, watchProjectOptions ] ],
 	[ createPublishProjectDescription(webshell), [ publishProjectOptions ] ],
+	[ wasm_kit, [ compileProjectOptions, watchProjectOptions ] ],
+	[ createPublishProjectDescription(wasm_kit), [ publishProjectOptions ] ],
+	[ wasm_wasi_lsp, [ compileProjectOptions, watchProjectOptions ] ],
+	[ createPublishProjectDescription(wasm_wasi_lsp), [ publishProjectOptions ] ],
+	[ rust_api, [ compileProjectOptions, watchProjectOptions ] ],
+	[ createPublishProjectDescription(rust_api), [ publishProjectOptions ] ],
 	[ tools, [ compileProjectOptions, watchProjectOptions ] ],
 	[ root, [compileProjectOptions, watchProjectOptions ] ],
 	[ testbed_cpp, [ compileProjectOptions ] ],
 	[ testbed_python, [ compileProjectOptions ] ],
 	[ testbed_rust, [ compileProjectOptions ] ],
+	[ testbed_performance, [ compileProjectOptions ] ],
 	[ testbeds, [ compileProjectOptions ] ]
 ];
 

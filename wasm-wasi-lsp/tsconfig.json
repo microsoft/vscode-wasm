@@ -1,0 +1,15 @@
+{
+    "compilerOptions": {
+        "incremental": true,
+        "composite": true
+    },
+    "files": [],
+    "references": [
+        {
+            "path": "../wasm-wasi-core/tsconfig.json"
+        },
+        {
+            "path": "./src/tsconfig.json"
+        }
+    ]
+}

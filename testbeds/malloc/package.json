@@ -1,0 +1,12 @@
+{
+	"name": "malloc",
+	"version": "0.0.1",
+	"description": "Malloc Library",
+	"author": "MS",
+	"license": "MIT",
+	"private": true,
+	"scripts": {
+		"compile": "../../node_modules/.bin/make-dir ./out && clang --target=wasm32-wasi-threads -pthread -c _malloc.c -o out/_malloc.o",
+		"link": "../../node_modules/.bin/make-dir ./out && wasm-ld -m wasm32 -L/home/dirkb/bin/wasi-sdk-20.0/share/wasi-sysroot/lib/wasm32-wasi-threads --no-entry --export=malloc --export=free --import-memory --max-memory=262144 -lpthread --shared-memory -lc /home/dirkb/bin/wasi-sdk-20.0/lib/clang/16/lib/wasi/libclang_rt.builtins-wasm32.a out/_malloc.o -o out/malloc.wasm"
+	}
+}

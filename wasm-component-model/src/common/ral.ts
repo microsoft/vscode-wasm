@@ -3,7 +3,8 @@
  * Licensed under the MIT License. See License.txt in the project root for license information.
  * ------------------------------------------------------------------------------------------ */
 
-import type { Disposable } from './disposable';
+import type { MainConnection, WorkerConnection, WorldType } from './componentModel';
+import type * as d from './disposable';
 
 interface _TextEncoder {
 	encode(input?: string): Uint8Array;
@@ -11,6 +12,12 @@ interface _TextEncoder {
 
 interface _TextDecoder {
 	decode(input?: Uint8Array): string;
+}
+
+interface _ConnectionPort {
+	postMessage(message: any, ...args: any[]): void;
+	on?(event: 'message', listener: (value: any) => void): this;
+	onmessage?: ((this: any, ev: any) => any) | null;
 }
 
 interface RAL {
@@ -31,9 +38,25 @@ interface RAL {
 	};
 
 	readonly timer: {
-		setTimeout(callback: (...args: any[]) => void, ms: number, ...args: any[]): Disposable;
-		setImmediate(callback: (...args: any[]) => void, ...args: any[]): Disposable;
-		setInterval(callback: (...args: any[]) => void, ms: number, ...args: any[]): Disposable;
+		setTimeout(callback: (...args: any[]) => void, ms: number, ...args: any[]): d.Disposable;
+		setImmediate(callback: (...args: any[]) => void, ...args: any[]): d.Disposable;
+		setInterval(callback: (...args: any[]) => void, ms: number, ...args: any[]): d.Disposable;
+	};
+
+	readonly Connection: {
+		createMain(port: RAL.ConnectionPort): Promise<MainConnection>;
+		createWorker(port: RAL.ConnectionPort | undefined, world: WorldType, timeout?: number): Promise<WorkerConnection>;
+	};
+
+	readonly Worker: {
+		getPort(): RAL.ConnectionPort;
+		getArgs(): string[];
+		exitCode: number | undefined;
+	};
+
+	readonly WebAssembly: {
+		compile(bytes: Uint8Array): Promise<WebAssembly_.Module>;
+		instantiate(module: WebAssembly_.Module, imports: WebAssembly_.Imports): Promise<WebAssembly_.Instance>;
 	};
 }
 
@@ -49,6 +72,8 @@ function RAL(): RAL {
 namespace RAL {
 	export type TextEncoder = _TextEncoder;
 	export type TextDecoder = _TextDecoder;
+	export type Disposable = d.Disposable;
+	export type ConnectionPort = _ConnectionPort;
 	export function install(ral: RAL): void {
 		if (ral === undefined) {
 			throw new Error(`No runtime abstraction layer provided`);

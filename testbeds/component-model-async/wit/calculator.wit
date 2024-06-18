@@ -1,0 +1,48 @@
+// wit/calculator.wit
+package vscode:example;
+
+interface types {
+	record operands {
+		left: u32,
+		right: u32
+	}
+
+	variant operation {
+		add(operands),
+		sub(operands),
+		mul(operands),
+		div(operands)
+	}
+
+	resource channel {
+		constructor(level: u32);
+		send: func(msg: string);
+	}
+}
+
+interface reverse-notation {
+
+	enum operation {
+		add,
+		sub,
+		mul,
+		div
+	}
+
+	resource engine {
+		constructor();
+		push-operand: func(operand: u32);
+		push-operation: func(operation: operation);
+		execute: func() -> u32;
+	}
+}
+world calculator {
+	use types.{ operation };
+	import log: func(msg: string);
+	import generate: func() -> string;
+	import types;
+
+	export reverse-notation;
+	export calc: func(o: operation) -> u32;
+	export msg: func() -> string;
+}
