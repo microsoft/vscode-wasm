@@ -93,7 +93,7 @@ async function main(): Promise<number> {
 	yargs.
 		parserConfiguration({ 'camel-case-expansion': false }).
 		exitProcess(false).
-		usage(`Tool to generate a TypeScript file from a WASM file.\nVersion: ${require('../package.json').version}\nUsage: wit2wasm [options] module.wasm`).
+		usage(`Tool to generate a TypeScript file from a WASM file.\nVersion: ${require('../package.json').version}\nUsage: wasm2ts [options] module.wasm`).
 		example(`wasm2ts module.wasm`, `Creates a TypeScript file module.ts for the given WASM file.`).
 		version(false).
 		wrap(Math.min(100, yargs.terminalWidth())).

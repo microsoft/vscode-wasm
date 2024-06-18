@@ -58,14 +58,6 @@ const webThreadWorkerOptions = {
 	...sharedWebOptions,
 };
 
-// /** @type BuildOptions */
-// const webWasiWorkerOptions = {
-// 	entryPoints: ['src/web/preview2/wasiWorker.ts'],
-// 	outfile: 'dist/web/preview2/wasiWorker.js',
-// 	format: 'iife',
-// 	...sharedWebOptions,
-// };
-
 /** @type BuildOptions */
 const webTestsIndexOptions = {
 	entryPoints: ['src/web/test/index.ts'],
@@ -123,26 +115,16 @@ const desktopThreadWorkerOptions = {
 	...sharedDesktopOptions,
 };
 
-// /** @type BuildOptions */
-// const desktopWasiWorkerOptions = {
-// 	entryPoints: ['src/desktop/preview2/wasiWorker.ts'],
-// 	outfile: 'dist/desktop/preview2/wasiWorker.js',
-// 	format: 'iife',
-// 	...sharedDesktopOptions,
-// };
-
 function createContexts() {
 	return Promise.all([
 		esbuild.context(webOptions),
 		esbuild.context(webMainWorkerOptions),
 		esbuild.context(webThreadWorkerOptions),
-		// esbuild.context(webWasiWorkerOptions),
 		esbuild.context(webTestsIndexOptions),
 		esbuild.context(webTestWorkerOptions),
 		esbuild.context(desktopOptions),
 		esbuild.context(desktopMainWorkerOptions),
 		esbuild.context(desktopThreadWorkerOptions),
-		// esbuild.context(desktopWasiWorkerOptions)
 	]);
 }
 

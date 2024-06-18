@@ -3,7 +3,6 @@
  * Licensed under the MIT License. See License.txt in the project root for license information.
  * ------------------------------------------------------------------------------------------ */
 import type { Disposable } from 'vscode';
-import { URI, Utils } from 'vscode-uri';
 
 import RAL from '../common/ral';
 import * as path from './path';
@@ -14,8 +13,6 @@ interface RIL extends RAL {
 // In Browser environments we can only encode / decode utf-8
 const encoder: RAL.TextEncoder = new TextEncoder();
 const decoder: RAL.TextDecoder = new TextDecoder();
-
-let _baseUri: URI | undefined;
 
 const _ril: RIL = Object.freeze<RIL>({
 	TextEncoder: Object.freeze({
@@ -79,27 +76,6 @@ const _ril: RIL = Object.freeze<RIL>({
 	path: path,
 	workbench: Object.freeze({
 		hasTrash: false
-	}),
-	Worker: Object.freeze({
-		setBaseUri(uri: RAL.UriComponents): void {
-			_baseUri = URI.revive(uri);
-		},
-		getWorkerUri(location: string): URI {
-			if (_baseUri === undefined) {
-				throw new Error('Environment.baseUri is not set.');
-			}
-			if (location.indexOf('/') !== 0) {
-				const parts = location.split('/');
-				if (parts[0] === 'common') {
-					parts.shift();
-					parts.unshift('web');
-					parts.unshift('dist');
-				}
-				return Utils.joinPath(_baseUri, ...parts);
-			} else {
-				return Utils.joinPath(_baseUri, 'dist', 'web', location);
-			}
-		}
 	})
 });
 

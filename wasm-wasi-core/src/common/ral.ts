@@ -4,16 +4,6 @@
  * ------------------------------------------------------------------------------------------ */
 
 import type { Disposable } from 'vscode';
-import { URI  } from 'vscode-uri';
-
-
-interface _UriComponents {
-	scheme: string;
-	authority: string;
-	path: string;
-	query: string;
-	fragment: string;
-}
 
 interface _TextEncoder {
 	encode(input?: string): Uint8Array;
@@ -74,11 +64,6 @@ interface RAL {
 	readonly workbench: {
 		readonly hasTrash: boolean;
 	};
-
-	readonly Worker: {
-		setBaseUri(uri: _UriComponents): void;
-		getWorkerUri(path: string): URI;
-	};
 }
 
 let _ral: RAL | undefined;
@@ -93,7 +78,6 @@ function RAL(): RAL {
 namespace RAL {
 	export type TextEncoder = _TextEncoder;
 	export type TextDecoder = _TextDecoder;
-	export type UriComponents = _UriComponents;
 	export function install(ral: RAL): void {
 		if (ral === undefined) {
 			throw new Error(`No runtime abstraction layer provided`);

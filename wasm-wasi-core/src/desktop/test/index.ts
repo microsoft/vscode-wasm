@@ -11,16 +11,12 @@ import { MessagePort, Worker } from 'node:worker_threads';
 import { glob } from 'glob';
 import Mocha from 'mocha';
 
-import { Uri } from 'vscode';
-const baseUri: Uri = Uri.file(path.join(__dirname, '..', '..', '..'));
-RIL().Worker.setBaseUri(baseUri);
-
-import { NodeServiceConnection } from '../process';
-import { createWorkspaceContent, createTmp, cleanupTmp, cleanupWorkspaceContent, createWasiService, WorkspaceContent } from '../../common/test/index';
 import { WorkerMessage } from '../../common/connection';
 import { CapturedPromise } from '../../common/promises';
 import { WasiService } from '../../common/service';
+import { WorkspaceContent, cleanupTmp, cleanupWorkspaceContent, createTmp, createWasiService, createWorkspaceContent } from '../../common/test/index';
 import { TestSetupMessage, TestsDoneMessage } from '../../common/test/messages';
+import { NodeServiceConnection } from '../process';
 
 class TestNodeServiceConnection extends NodeServiceConnection {
 

@@ -2,19 +2,16 @@
  * Copyright (c) Microsoft Corporation. All rights reserved.
  * Licensed under the MIT License. See License.txt in the project root for license information.
  * ------------------------------------------------------------------------------------------ */
-import { TextDecoder } from 'util';
-import * as path from 'path';
 import * as crypto from 'crypto';
+import * as path from 'path';
+import { TextDecoder } from 'util';
 
 import type { Disposable } from 'vscode';
-import { URI } from 'vscode-uri';
 
 import RAL from '../common/ral';
 
 interface RIL extends RAL {
 }
-
-let _baseUri: URI | undefined;
 
 const _ril: RIL = Object.freeze<RIL>({
 	TextEncoder: Object.freeze({
@@ -66,32 +63,6 @@ const _ril: RIL = Object.freeze<RIL>({
 	path: path.posix,
 	workbench: Object.freeze({
 		hasTrash: true
-	}),
-	Worker: Object.freeze({
-		setBaseUri(uri: RAL.UriComponents): void {
-			_baseUri = URI.revive(uri);
-		},
-		getWorkerUri(location: string): URI {
-			if (_baseUri === undefined) {
-				throw new Error('Environment.baseUri is not set.');
-			}
-			if (_baseUri.scheme !== 'file') {
-				throw new Error('Environment.baseUri must be a file URI.');
-			}
-			if (location.indexOf('/') !== 0) {
-				const bundledWorkers = process.env['WASM_WASI_BUNDLED_WORKERS'];
-				if (bundledWorkers === '0' || bundledWorkers === 'false') {
-					const parts = location.split('/');
-					parts[0] = 'desktop';
-					return URI.file(path.join(_baseUri.fsPath, 'lib', ...parts));
-				} else {
-					const basename = path.basename(location);
-					return URI.file(path.join(_baseUri.fsPath, 'dist', 'desktop', basename));
-				}
-			} else {
-				return URI.file(path.join(_baseUri.fsPath, 'dist', 'desktop', location));
-			}
-		}
 	})
 });
 
