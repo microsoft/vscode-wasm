@@ -74,13 +74,8 @@ export async function run(_testRoot: string): Promise<void> {
 		}
 	}
 
-	const preview1TestRoot = path.join(__dirname, '..', '..', 'common', 'test');
-	const preview1 = (await glob('**/**main.test.js', { cwd: preview1TestRoot })).map(f => path.resolve(preview1TestRoot, f));
-
-	const preview2TestRoot = path.join(__dirname, '..', '..', 'common', 'preview2', 'test');
-	const preview2 = (await glob('**/**main.test.js', { cwd: preview2TestRoot })).map(f => path.resolve(preview2TestRoot, f));
-
-	const files = [...preview1, ...preview2];
+	const commonTestRoot = path.join(__dirname, '..', '..', 'common', 'test');
+	const files = (await glob('**/**main.test.js', { cwd: commonTestRoot })).map(f => path.resolve(commonTestRoot, f));
 
 	// Create the mocha test
 	const mocha = new Mocha({

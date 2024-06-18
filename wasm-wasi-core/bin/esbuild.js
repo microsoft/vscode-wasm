@@ -124,7 +124,7 @@ function createContexts() {
 		esbuild.context(webTestWorkerOptions),
 		esbuild.context(desktopOptions),
 		esbuild.context(desktopMainWorkerOptions),
-		esbuild.context(desktopThreadWorkerOptions),
+		esbuild.context(desktopThreadWorkerOptions)
 	]);
 }
 
