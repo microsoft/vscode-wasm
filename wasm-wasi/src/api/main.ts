@@ -4,7 +4,7 @@
  *--------------------------------------------------------------------------------------------*/
 /// <reference path="../../typings/webAssemblyCommon.d.ts" />
 
-import { extensions as Extensions, Event, Pseudoterminal, Uri, ExtensionContext, Extension } from 'vscode';
+import { Event, Extension, ExtensionContext, extensions as Extensions, Pseudoterminal, Uri } from 'vscode';
 import version from './version';
 
 import semverParse = require('semver/functions/parse');
@@ -27,6 +27,9 @@ export interface TerminalOptions {
 	history?: boolean;
 }
 
+/**
+ * The state of a pseudo terminal.
+ */
 export enum PseudoterminalState {
 
 	/**
@@ -45,8 +48,19 @@ export enum PseudoterminalState {
 	busy = 3
 }
 
+/**
+ * An event describing the state change of a pseudo terminal.
+ */
 export interface PseudoterminalStateChangeEvent {
+
+	/**
+	 * The old state.
+	 */
 	old: PseudoterminalState;
+
+	/**
+	 * The new state.
+	 */
 	new: PseudoterminalState;
 }
 
@@ -397,22 +411,22 @@ export enum Filetype {
 	 * The type of the file descriptor or file is unknown or is different from
 	 * any of the other types specified.
 	 */
-	unknown,
+	unknown = 'unknown',
 
 	/**
 	 * The file descriptor or file refers to a directory.
 	 */
-	directory,
+	directory = 'directory',
 
 	/**
 	 * The file descriptor or file refers to a regular file.
 	 */
-	regular_file,
+	regularFile = 'regularFile',
 
 	/**
 	 * The file descriptor or file refers to a character device.
 	 */
-	character_device
+	characterDevice = 'characterDevice',
 }
 
 /**
@@ -514,9 +528,13 @@ export interface Wasm {
 	compile(source: Uri): Promise<WebAssembly.Module>;
 }
 
+interface APILoader {
+	load(apiVersion?: 1): Wasm;
+}
+
 export namespace Wasm {
 	let $api: Wasm | undefined | null= undefined;
-	let $promise: Promise<Wasm> | undefined | null = undefined;
+	let $promise: Promise<APILoader> | undefined | null = undefined;
 
 	function isOdd(value: number): boolean {
 		return value % 2 === 1;
@@ -532,20 +550,23 @@ export namespace Wasm {
 		return $api;
 	}
 
-	export async function load(): Promise<Wasm> {
+	export async function load(): Promise<Wasm>;
+	export async function load(apiVersion: 1): Promise<Wasm>;
+	export async function load(apiVersion?: 1): Promise<Wasm> {
 		if ($promise === null) {
 			throw new Error(`Unable to activate WASM WASI Core extension`);
 		}
 		if ($promise !== undefined) {
-			return $promise;
+			return $promise.then(loader => loader.load(apiVersion));
 		}
 		const wasiCoreExt = Extensions.getExtension('ms-vscode.wasm-wasi-core');
 		if (wasiCoreExt === undefined) {
 			throw new Error(`Unable to load WASM WASI Core extension.`);
 		}
 		try {
-			$promise = wasiCoreExt.activate() as Promise<Wasm>;
-			$promise.then((api) => {
+			$promise = wasiCoreExt.activate() as Promise<APILoader>;
+			try {
+				const api = (await $promise).load(apiVersion);
 				const extVersion = semverParse(api.version);
 				if (extVersion === null) {
 					throw new Error(`Unable to parse WASM WASI Core extension version: ${api.version}`);
@@ -569,11 +590,10 @@ export namespace Wasm {
 					throw new Error(`WASM WASI Core module version ${version} is not compatible with extension version ${api.version}`);
 				}
 				$api = api;
-			},
-			() => {
+			} catch {
 				$api = null;
-			});
-			return $promise;
+			}
+			return $promise.then(loader => loader.load(apiVersion));
 		} catch (err) {
 			$promise = null;
 			throw new Error(`Unable to activate WASM WASI Core extension: ${err}`);

@@ -3,7 +3,7 @@
 	"version": "0.13.0-pre.1",
 	"description": "An API facade for the WASM WASI CORE VS Code extension",
 	"engines": {
-		"node": ">=18.18.2",
+		"node": ">=20.9.0",
 		"vscode": "^1.88.0"
 	},
 	"main": "./lib/api/main.js",
@@ -29,7 +29,7 @@
 	],
 	"dependencies": {
 		"yargs": "^17.7.2",
-		"semver": "^7.6.0"
+		"semver": "^7.6.2"
 	},
 	"devDependencies": {
 		"@types/vscode": "1.88.0",
