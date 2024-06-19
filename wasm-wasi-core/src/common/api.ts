@@ -459,8 +459,15 @@ export interface Wasm {
 
 	/**
 	 * The version of the WASM API following semver semantics.
+	 *
+	 * @deprecated use versions instead.
 	 */
 	readonly version: string;
+
+	/**
+	 * The version of the WASM API and the extension version following semver semantics.
+	 */
+	readonly versions: { api: number; extension: string };
 
 	/**
 	 * Creates a new pseudoterminal.
@@ -544,6 +551,7 @@ namespace WasiCoreImpl {
 	): Wasm {
 		return {
 			version,
+			versions: { api: 1, extension: version },
 			createPseudoterminal(options?: TerminalOptions): WasmPseudoterminal {
 				return new WasmPseudoterminalImpl(options);
 			},

@@ -6,8 +6,16 @@
 		"node": ">=20.9.0",
 		"vscode": "^1.88.0"
 	},
-	"main": "./lib/api/main.js",
-	"typings": "./lib/api/main.d.ts",
+	"exports": {
+		".": {
+			"types": "./lib/api/deprecated.d.ts",
+			"default": "./lib/api/deprecated.js"
+		},
+		"./v1": {
+			"types": "./lib/api/v1.d.ts",
+			"default": "./lib/api/v1.js"
+		}
+	},
 	"bin": {
 		"dir-dump": "./bin/dir-dump"
 	},

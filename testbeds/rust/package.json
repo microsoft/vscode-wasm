@@ -26,6 +26,6 @@
 		"build": "npm run compile:ts && npm run build:rust",
 		"compile:ts": "node ../../node_modules/typescript/lib/tsc.js -b tsconfig.json",
 		"watch:ts": "node ../../node_modules/typescript/lib/tsc.js -b tsconfig.json -w",
-		"build:rust": "cargo build --target wasm32-wasi"
+		"build:rust": "cargo build --target wasm32-wasip1"
 	}
 }
