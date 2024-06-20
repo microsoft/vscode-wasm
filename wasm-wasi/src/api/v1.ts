@@ -590,7 +590,7 @@ export namespace Wasm {
 					throw new Error(`Unable to parse WASM WASI Core module version: ${version}`);
 				}
 
-				const extIsPrerelease = isOdd(extVersion.major) || isOdd(extVersion.minor) || isOdd(extVersion.patch);
+				const extIsPrerelease = isOdd(extVersion.minor) || isOdd(extVersion.patch);
 				if (moduleVersion.prerelease.length > 0) {
 					if (!extIsPrerelease) {
 						throw new Error(`WASM WASI Core extension version ${api.versions.extension} is a pre-release version but the module version ${version} is not.`);
