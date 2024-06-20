@@ -585,6 +585,7 @@ export namespace Wasm {
 				if (extVersion === null) {
 					throw new Error(`Unable to parse WASM WASI Core extension version: ${api.versions.extension}`);
 				}
+
 				const moduleVersion = semverParse(version);
 				if (moduleVersion === null) {
 					throw new Error(`Unable to parse WASM WASI Core module version: ${version}`);
