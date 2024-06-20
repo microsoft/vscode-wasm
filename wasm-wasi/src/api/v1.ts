@@ -4,6 +4,7 @@
  *--------------------------------------------------------------------------------------------*/
 /// <reference path="../../typings/webAssemblyCommon.d.ts" />
 
+import type { SemVer } from 'semver';
 import { Event, Extension, ExtensionContext, extensions as Extensions, Pseudoterminal, Uri } from 'vscode';
 import version from './version';
 
@@ -566,15 +567,21 @@ export namespace Wasm {
 		return $promise;
 	}
 
-	async function doLoad(wasiCoreExt: Extension<APILoader>): Promise<Wasm> {
+	async function doLoad(wasiCoreExt: Extension<APILoader | Wasm>): Promise<Wasm> {
 		try {
 			const loader = await wasiCoreExt.activate();
 			try {
-				if (typeof loader.load !== 'function') {
-					throw new Error(`Invalid WASM WASI Core extension API. Expected to find a 'load' function. The error might be caused by an old pre-release version of the WASM WASI Core extension.`);
+				let api: Wasm;
+				let extVersion: SemVer | null;
+				if (isAPILoader(loader)) {
+					api = loader.load(1);
+					extVersion = semverParse(api.versions.extension);
+				} else if (isWasmLiteral(loader)) {
+					api = ensureVersions(loader, 1);
+					extVersion = semverParse(api.versions.extension);
+				} else {
+					throw new Error(`Invalid WASM WASI Core extension API. Expected to find a 'load' function or a WASM namespace literal.`);
 				}
-				const api = loader.load(1);
-				const extVersion = semverParse(api.versions.extension);
 				if (extVersion === null) {
 					throw new Error(`Unable to parse WASM WASI Core extension version: ${api.versions.extension}`);
 				}
@@ -606,5 +613,25 @@ export namespace Wasm {
 			$promise = null;
 			throw new Error(`Unable to activate WASM WASI Core extension: ${err}`);
 		}
+	}
+
+	function isAPILoader(value: APILoader | Wasm): value is APILoader {
+		return typeof (value as APILoader).load === 'function';
+	}
+
+	function isWasmLiteral(value: APILoader | Wasm): value is Wasm {
+		return typeof (value as Wasm).createProcess === 'function';
+	}
+
+	function ensureVersions(wasm: Wasm, api: number): Wasm {
+		type InternalWasm = { version: string; versions: { api: number; extension: string } };
+		const value = wasm as unknown as InternalWasm;
+		if (value.versions === undefined) {
+			if (value.version === undefined) {
+				throw new Error(`Invalid WASM WASI Core API. Expected to find a 'version' property.`);
+			}
+			value.versions = { api: api, extension: value.version };
+		}
+		return wasm;
 	}
 }
