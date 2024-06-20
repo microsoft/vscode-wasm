@@ -6,8 +6,8 @@
 import fs from 'node:fs/promises';
 import path from 'node:path';
 
+import { ProcessOptions, Wasm } from '@vscode/wasm-wasi/v1';
 import { commands, ExtensionContext, window } from 'vscode';
-import { ProcessOptions, Wasm } from '@vscode/wasm-wasi';
 
 export async function activate(_context: ExtensionContext) {
 	const wasm: Wasm = await Wasm.load();

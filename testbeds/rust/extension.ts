@@ -6,15 +6,13 @@
 import fs from 'node:fs/promises';
 import path from 'node:path';
 
-import { Filetype, OpenFlags, ProcessOptions, Wasm } from '@vscode/wasm-wasi';
+import { ProcessOptions, Wasm } from '@vscode/wasm-wasi';
 import { ExtensionContext, commands, window } from 'vscode';
 
 
 export async function activate(_context: ExtensionContext) {
 	const wasm: Wasm = await Wasm.load();
 	commands.registerCommand('testbed-rust.run', async () => {
-		const ft: Filetype = Filetype.directory;
-		const flags: OpenFlags = OpenFlags.create | OpenFlags.directory;
 		const pty = wasm.createPseudoterminal();
 		const terminal = window.createTerminal({ name: 'Rust', pty, isTransient: true });
 		terminal.show(true);
