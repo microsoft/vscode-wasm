@@ -5,10 +5,10 @@
 
 import { ExtensionContext, commands } from 'vscode';
 
-import { Wasm } from '@vscode/wasm-wasi';
+import { Wasm } from '@vscode/wasm-wasi/v1';
 
-import { WebShell } from './webShell';
 import { CoreUtils } from './coreUtils';
+import { WebShell } from './webShell';
 import { WebShellContributions } from './webShellContributions';
 
 export async function activate(context: ExtensionContext): Promise<void> {
