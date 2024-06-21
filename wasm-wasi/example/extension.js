@@ -9,7 +9,7 @@ const v1_1 = require("@vscode/wasm-wasi/v1");
 const vscode_1 = require("vscode");
 async function activate(context) {
     // Load the WASM API
-    const wasm = await v1_1.Wasm.api();
+    const wasm = await v1_1.Wasm.load();
     // Register a command that runs the C example
     vscode_1.commands.registerCommand('wasm-wasi-c-example.run', async () => {
         // Create a pseudoterminal to provide stdio to the WASM process.

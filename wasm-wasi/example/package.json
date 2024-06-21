@@ -29,7 +29,7 @@
 		"@types/vscode": "1.77.0"
 	},
 	"dependencies": {
-		"@vscode/wasm-wasi": "1.0.0-pre.1"
+		"@vscode/wasm-wasi": "1.0.0-pre.2"
 	},
 	"scripts": {
 		"build": "npm run compile:ts && npm run build:wasi && npm run esbuild",
