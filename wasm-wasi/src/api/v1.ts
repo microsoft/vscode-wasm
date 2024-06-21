@@ -6,7 +6,6 @@
 
 import type { SemVer } from 'semver';
 import { Event, Extension, ExtensionContext, extensions as Extensions, Pseudoterminal, Uri } from 'vscode';
-import version from './version';
 
 import semverParse = require('semver/functions/parse');
 import semverSatisfies = require('semver/functions/satisfies');
@@ -538,10 +537,6 @@ export namespace Wasm {
 	let $api: Wasm | undefined | null = undefined;
 	let $promise: Promise<Wasm> | undefined | null = undefined;
 
-	function isOdd(value: number): boolean {
-		return value % 2 === 1;
-	}
-
 	export function api(): Wasm {
 		if ($api === null) {
 			throw new Error(`Unable to activate WASM WASI Core extension`);
@@ -585,26 +580,21 @@ export namespace Wasm {
 				if (extVersion === null) {
 					throw new Error(`Unable to parse WASM WASI Core extension version: ${api.versions.extension}`);
 				}
-				const moduleVersion = semverParse(version);
-				if (moduleVersion === null) {
-					throw new Error(`Unable to parse WASM WASI Core module version: ${version}`);
+
+				// The pre-release version of the WASM WASI Core extension is currently 0.13.3. This works with the v1 version of the API.
+				if (semverSatisfies(extVersion, '^0.13.3')) {
+					$api = api;
+					return $api;
 				}
 
-				const extIsPrerelease = isOdd(extVersion.minor) || isOdd(extVersion.patch);
-				if (moduleVersion.prerelease.length > 0) {
-					if (!extIsPrerelease) {
-						throw new Error(`WASM WASI Core extension version ${api.versions.extension} is a pre-release version but the module version ${version} is not.`);
-					}
-					if (moduleVersion.prerelease[0] !== 'pre' || moduleVersion.prerelease[1] !== 1) {
-						throw new Error(`WASM WASI Core extension version ${api.versions.extension} is a pre-release version but the module version ${version} is not a valid pre-release version`);
-					}
-					moduleVersion.prerelease = [];
+				// The release version of the WASM WASI Core extension starts with 1.0.0. This works with the v1 version of the API.
+				if (semverSatisfies(extVersion, '^1.0.0')) {
+					$api = api;
+					return $api;
 				}
-				if (!semverSatisfies(api.versions.extension, `^${moduleVersion.format()}`)) {
-					throw new Error(`WASM WASI Core module version ${version} is not compatible with extension version ${api.versions.extension}`);
-				}
-				$api = api;
-				return $api;
+
+				// We don't have a matching version of the extension.
+				throw new Error(`WASM WASI Core extension version ${api.versions.extension} is not compatible with this API version ${1}`);
 			} catch (error) {
 				$api = null;
 				throw error;

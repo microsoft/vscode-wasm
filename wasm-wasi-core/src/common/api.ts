@@ -13,7 +13,6 @@ import { MemoryFileSystem as MemoryFileSystemImpl } from './memoryFileSystemDriv
 import { WasiProcess as InternalWasiProcess } from './process';
 import { ReadableStream, WritableStream } from './streams';
 import { WasmPseudoterminalImpl } from './terminal';
-import version from './version';
 
 export interface Environment {
 	[key: string]: string;
@@ -549,6 +548,10 @@ namespace WasiCoreImpl {
 		processConstructor: ProcessConstructor,
 		compile: Compile,
 	): Wasm {
+		const version: string | undefined = context.extension.packageJSON?.version;
+		if (typeof version !== 'string') {
+			throw new Error(`Failed to determine extension version. Found ${version}`);
+		}
 		return {
 			version,
 			versions: { api: 1, extension: version },

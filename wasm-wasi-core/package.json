@@ -39,7 +39,7 @@
 		"find-process": "^1.4.7"
 	},
 	"scripts": {
-		"vscode:prepublish": "git clean -xfd . && npm install && npm run compile && npm run lint && npm run update:version && npm run esbuild",
+		"vscode:prepublish": "git clean -xfd . && npm install && npm run compile && npm run lint && npm run esbuild",
 		"build": "npm run compile",
 		"compile": "tsc -b tsconfig.json",
 		"watch": "tsc -b tsconfig.json -w",
@@ -49,7 +49,6 @@
 		"esbuild:watch": "node ./bin/esbuild.js --watch",
 		"test": "npm run test:desktop && npm run test:web",
 		"test:desktop": "node ./lib/desktop/test/runTests.js",
-		"test:web": "npm run esbuild && node ./lib/web/test/runTests.js",
-		"update:version": "node ./bin/updateVersion.mjs"
+		"test:web": "npm run esbuild && node ./lib/web/test/runTests.js"
 	}
 }
