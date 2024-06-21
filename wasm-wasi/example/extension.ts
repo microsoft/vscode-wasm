@@ -3,13 +3,13 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { Wasm } from '@vscode/wasm-wasi';
+import { Wasm } from '@vscode/wasm-wasi/v1';
 import { commands, ExtensionContext, Uri, window, workspace } from 'vscode';
 
 export async function activate(context: ExtensionContext) {
 
 	// Load the WASM API
-	const wasm: Wasm = await Wasm.api();
+	const wasm: Wasm = await Wasm.load();
 
 	// Register a command that runs the C example
 	commands.registerCommand('wasm-wasi-c-example.run', async () => {
