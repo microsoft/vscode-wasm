@@ -2,14 +2,14 @@
  *  Copyright (c) Microsoft Corporation. All rights reserved.
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
-import { window, Terminal, commands } from 'vscode';
+import { Terminal, commands, window } from 'vscode';
 
-import { ExtensionLocationDescriptor, MountPointDescriptor, MemoryFileSystem, Wasm, WasmPseudoterminal, Stdio, RootFileSystem, Filetype } from '@vscode/wasm-wasi';
+import { ExtensionLocationDescriptor, Filetype, MemoryFileSystem, MountPointDescriptor, RootFileSystem, Stdio, Wasm, WasmPseudoterminal } from '@vscode/wasm-wasi/v1';
 
 import RAL from './ral';
-const paths = RAL().path;
 import { CommandHandler } from './types';
 import { CommandMountPoint, WebShellContributions } from './webShellContributions';
+const paths = RAL().path;
 
 
 type CommandLine = {

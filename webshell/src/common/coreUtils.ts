@@ -4,9 +4,9 @@
  *--------------------------------------------------------------------------------------------*/
 import { ExtensionContext, Uri } from 'vscode';
 
+import { ProcessOptions, RootFileSystem, Stdio, Wasm } from '@vscode/wasm-wasi/v1';
 import RAL from './ral';
 import { HandlerTarget } from './types';
-import { ProcessOptions, Stdio, Wasm, RootFileSystem } from '@vscode/wasm-wasi';
 
 export class CoreUtils {
 
