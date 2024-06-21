@@ -6,13 +6,13 @@
 
 import { Event, Extension, ExtensionContext, Pseudoterminal, Uri } from 'vscode';
 
-import { WasmPseudoterminalImpl } from './terminal';
-import { WasiProcess as InternalWasiProcess } from './process';
-import { MemoryFileSystem as MemoryFileSystemImpl } from './memoryFileSystemDriver';
-import WasiKernel from './kernel';
 import { FileDescriptors } from './fileDescriptor';
-import { WritableStream, ReadableStream } from './streams';
 import { WasmRootFileSystemImpl } from './fileSystem';
+import WasiKernel from './kernel';
+import { MemoryFileSystem as MemoryFileSystemImpl } from './memoryFileSystemDriver';
+import { WasiProcess as InternalWasiProcess } from './process';
+import { ReadableStream, WritableStream } from './streams';
+import { WasmPseudoterminalImpl } from './terminal';
 import version from './version';
 
 export interface Environment {
@@ -459,8 +459,15 @@ export interface Wasm {
 
 	/**
 	 * The version of the WASM API following semver semantics.
+	 *
+	 * @deprecated use versions instead.
 	 */
 	readonly version: string;
+
+	/**
+	 * The version of the WASM API and the extension version following semver semantics.
+	 */
+	readonly versions: { api: number; extension: string };
 
 	/**
 	 * Creates a new pseudoterminal.
@@ -528,14 +535,23 @@ namespace MemoryDescriptor {
 	}
 }
 
-export namespace WasiCoreImpl {
+interface ProcessConstructor {
+	new (baseUri: Uri, programName: string, module: WebAssembly.Module | Promise<WebAssembly.Module>, memory: WebAssembly.Memory | WebAssembly.MemoryDescriptor | undefined, options: ProcessOptions | undefined): InternalWasiProcess;
+}
+
+interface Compile {
+	(source: Uri): Promise<WebAssembly.Module>;
+}
+
+namespace WasiCoreImpl {
 	export function create(
 		context: ExtensionContext,
-		processConstructor: new (baseUri: Uri, programName: string, module: WebAssembly.Module | Promise<WebAssembly.Module>, memory: WebAssembly.Memory | WebAssembly.MemoryDescriptor | undefined, options: ProcessOptions | undefined) => InternalWasiProcess,
-		compile: (source: Uri) => Promise<WebAssembly.Module>,
+		processConstructor: ProcessConstructor,
+		compile: Compile,
 	): Wasm {
 		return {
 			version,
+			versions: { api: 1, extension: version },
 			createPseudoterminal(options?: TerminalOptions): WasmPseudoterminal {
 				return new WasmPseudoterminalImpl(options);
 			},
@@ -570,5 +586,24 @@ export namespace WasiCoreImpl {
 			},
 			compile
 		};
+	}
+}
+
+export class APILoader {
+
+	private readonly context: ExtensionContext;
+	private readonly processConstructor: ProcessConstructor;
+	private readonly compile: Compile;
+
+	constructor(context: ExtensionContext, processConstructor: ProcessConstructor, compile: Compile) {
+		this.context = context;
+		this.processConstructor = processConstructor;
+		this.compile = compile;
+	}
+
+	load(): Wasm;
+	load(apiVersion: 1): Wasm;
+	load(_apiVersion?: number): Wasm {
+		return WasiCoreImpl.create(this.context, this.processConstructor, this.compile);
 	}
 }

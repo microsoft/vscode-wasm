@@ -3,11 +3,19 @@
 	"version": "0.13.0-pre.1",
 	"description": "An API facade for the WASM WASI CORE VS Code extension",
 	"engines": {
-		"node": ">=18.18.2",
+		"node": ">=20.9.0",
 		"vscode": "^1.88.0"
 	},
-	"main": "./lib/api/main.js",
-	"typings": "./lib/api/main.d.ts",
+	"exports": {
+		".": {
+			"types": "./lib/api/deprecated.d.ts",
+			"default": "./lib/api/deprecated.js"
+		},
+		"./v1": {
+			"types": "./lib/api/v1.d.ts",
+			"default": "./lib/api/v1.js"
+		}
+	},
 	"bin": {
 		"dir-dump": "./bin/dir-dump"
 	},
@@ -29,7 +37,7 @@
 	],
 	"dependencies": {
 		"yargs": "^17.7.2",
-		"semver": "^7.6.0"
+		"semver": "^7.6.2"
 	},
 	"devDependencies": {
 		"@types/vscode": "1.88.0",
