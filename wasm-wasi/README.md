@@ -12,7 +12,7 @@ With release version `0.11.0` the implementation details of the WASM support for
 
 ## Example
 
-The source code of the example can be found [here](https://github.com/microsoft/vscode-wasi/blob/dbaeumer/expected-baboon-red/wasm-wasi/example/package.json)
+The source code of the example can be found [here](https://github.com/microsoft/vscode-wasm/blob/main/wasm-wasi/example/package.json)
 
 First we need to define a `package.json` for the extension that wants to execute a WASM process:
 
