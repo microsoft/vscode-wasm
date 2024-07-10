@@ -13,11 +13,11 @@ export type Options = {
 	nameStyle: 'ts' | 'wit';
 	stdin: boolean;
 	structure: 'auto' | 'package' | 'namespace';
-	worker: boolean;
 	singleWorld: boolean;
+	keep?: { result: boolean; option: boolean; own: boolean; borrow: boolean };
 };
 
-export type ResolvedOptions = Required<Options> & { input: string; outDir: string };
+export type ResolvedOptions = Required<Options> & { input: string; outDir: string  };
 
 export namespace Options {
 	export const defaults: Options = {
@@ -30,7 +30,6 @@ export namespace Options {
 		nameStyle: 'ts',
 		stdin: false,
 		structure: 'auto',
-		worker: false,
 		singleWorld: false
 	};
 
@@ -42,6 +41,9 @@ export namespace Options {
 		if (!options.outDir) {
 			process.stderr.write('Missing outDir argument.\n');
 			return false;
+		}
+		if (!options.keep) {
+			options.keep = { result: false, option: false, own: false, borrow: false };
 		}
 		return true;
 	}

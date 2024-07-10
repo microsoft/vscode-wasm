@@ -2779,10 +2779,22 @@ export namespace result {
 		}
 	}
 }
+
+interface ErrorConstructor {
+	new(value: any): Error;
+}
 export type result<O extends JType, E extends JType = void> = result.Ok<O, E> | result.Error<O, E>;
 export class ResultType<O extends JType, E extends JType = void> extends VariantType<result<O, E>, 'ok' | 'error', O | E> {
-	constructor(okType: AnyComponentModelType | undefined, errorType: AnyComponentModelType | undefined) {
+
+	private readonly _errorClass: ErrorConstructor | undefined;
+
+	constructor(okType: AnyComponentModelType | undefined, errorType: AnyComponentModelType | undefined, errorClass?: ErrorConstructor) {
 		super([['ok', okType], ['error', errorType]], result._ctor<O, E>, ComponentModelTypeKind.result);
+		this._errorClass = errorClass;
+	}
+
+	get errorClass(): ErrorConstructor | undefined {
+		return this._errorClass;
 	}
 }
 

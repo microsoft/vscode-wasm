@@ -3,8 +3,10 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 /* eslint-disable @typescript-eslint/ban-types */
+import type { i32, i64, ptr, u64 } from '@vscode/wasm-component-model';
 import * as $wcm from '@vscode/wasm-component-model';
-import type { borrow, own, u64, result, i32, ptr, i64 } from '@vscode/wasm-component-model';
+
+const JavaScriptError = Error;
 
 export namespace io {
 	export namespace Error {
@@ -13,7 +15,7 @@ export namespace io {
 				/**
 				 * Returns a string that is suitable to assist humans in debugging
 				 * this error.
-				 * 
+				 *
 				 * WARNING: The returned string should not be consumed mechanically!
 				 * It may change across platforms, hosts, or other implementation
 				 * details. Parsing this string is a major platform-compatibility
@@ -41,7 +43,7 @@ export namespace io {
 			export interface Interface extends $wcm.Resource {
 				/**
 				 * Return the readiness of a pollable. This function never blocks.
-				 * 
+				 *
 				 * Returns `true` when the pollable is ready, and `false` otherwise.
 				 */
 				ready(): boolean;
@@ -49,7 +51,7 @@ export namespace io {
 				/**
 				 * `block` returns immediately if the pollable is ready, and otherwise
 				 * blocks until ready.
-				 * 
+				 *
 				 * This function is equivalent to calling `poll.poll` on a list
 				 * containing only this pollable.
 				 */
@@ -64,25 +66,25 @@ export namespace io {
 
 		/**
 		 * Poll for completion on a set of pollables.
-		 * 
+		 *
 		 * This function takes a list of pollables, which identify I/O sources of
 		 * interest, and waits until one or more of the events is ready for I/O.
-		 * 
+		 *
 		 * The result `list<u32>` contains one or more indices of handles in the
 		 * argument list that is ready for I/O.
-		 * 
+		 *
 		 * If the list contains more elements than can be indexed with a `u32`
 		 * value, this function traps.
-		 * 
+		 *
 		 * A timeout can be implemented by adding a pollable from the
 		 * wasi-clocks API to the list.
-		 * 
+		 *
 		 * This function does not return a `result`; polling in itself does not
 		 * do any I/O so it doesn't fail. If any of the I/O sources identified by
 		 * the pollables has an error, it is indicated by marking the source as
 		 * being reaedy for I/O.
 		 */
-		export type poll = (in_: borrow<Pollable>[]) => Uint32Array;
+		export type poll = (in_: Pollable[]) => Uint32Array;
 	}
 	export type Poll = {
 		Pollable: Poll.Pollable.Class;
@@ -92,7 +94,7 @@ export namespace io {
 	/**
 	 * WASI I/O is an I/O abstraction API which is currently focused on providing
 	 * stream types.
-	 * 
+	 *
 	 * In the future, the component model is expected to add built-in stream types;
 	 * when it does, they are expected to subsume this API.
 	 */
@@ -101,7 +103,6 @@ export namespace io {
 
 		export type Pollable = io.Poll.Pollable;
 
-
 		/**
 		 * An error for input-stream and output-stream operations.
 		 */
@@ -109,12 +110,12 @@ export namespace io {
 
 			/**
 			 * The last operation (a write or flush) failed before completion.
-			 * 
+			 *
 			 * More information is available in the `error` payload.
 			 */
 			export const lastOperationFailed = 'lastOperationFailed' as const;
-			export type LastOperationFailed = { readonly tag: typeof lastOperationFailed; readonly value: own<Error> } & _common;
-			export function LastOperationFailed(value: own<Error>): LastOperationFailed {
+			export type LastOperationFailed = { readonly tag: typeof lastOperationFailed; readonly value: Error } & _common;
+			export function LastOperationFailed(value: Error): LastOperationFailed {
 				return new VariantImpl(lastOperationFailed, value) as LastOperationFailed;
 			}
 
@@ -131,7 +132,7 @@ export namespace io {
 			}
 
 			export type _tt = typeof lastOperationFailed | typeof closed;
-			export type _vt = own<Error> | undefined;
+			export type _vt = Error | undefined;
 			type _common = Omit<VariantImpl, 'tag' | 'value'>;
 			export function _ctor(t: _tt, v: _vt): StreamError {
 				return new VariantImpl(t, v) as StreamError;
@@ -158,58 +159,67 @@ export namespace io {
 			}
 		}
 		export type StreamError = StreamError.LastOperationFailed | StreamError.Closed;
+		// export namespace StreamError {
+		// 	export class Error extends JavaScriptError {
+		// 		public readonly value: StreamError;
+		// 		constructor(value: StreamError) {
+		// 			super(`StreamError: ${value}`);
+		// 			this.value = value;
+		// 		}
+		// 	}
+		// }
 
 		export namespace InputStream {
 			export interface Interface extends $wcm.Resource {
 				/**
 				 * Perform a non-blocking read from the stream.
-				 * 
+				 *
 				 * When the source of a `read` is binary data, the bytes from the source
 				 * are returned verbatim. When the source of a `read` is known to the
 				 * implementation to be text, bytes containing the UTF-8 encoding of the
 				 * text are returned.
-				 * 
+				 *
 				 * This function returns a list of bytes containing the read data,
 				 * when successful. The returned list will contain up to `len` bytes;
 				 * it may return fewer than requested, but not more. The list is
 				 * empty when no bytes are available for reading at this time. The
 				 * pollable given by `subscribe` will be ready when more bytes are
 				 * available.
-				 * 
+				 *
 				 * This function fails with a `stream-error` when the operation
 				 * encounters an error, giving `last-operation-failed`, or when the
 				 * stream is closed, giving `closed`.
-				 * 
+				 *
 				 * When the caller gives a `len` of 0, it represents a request to
 				 * read 0 bytes. If the stream is still open, this call should
 				 * succeed and return an empty list, or otherwise fail with `closed`.
-				 * 
+				 *
 				 * The `len` parameter is a `u64`, which could represent a list of u8 which
 				 * is not possible to allocate in wasm32, or not desirable to allocate as
 				 * as a return value by the callee. The callee may return a list of bytes
 				 * less than `len` in size while more bytes are available for reading.
 				 */
-				read(len: u64): result<Uint8Array, StreamError>;
+				read(len: u64): Uint8Array;
 
 				/**
 				 * Read bytes from a stream, after blocking until at least one byte can
 				 * be read. Except for blocking, behavior is identical to `read`.
 				 */
-				blockingRead(len: u64): result<Uint8Array, StreamError>;
+				blockingRead(len: u64): Uint8Array;
 
 				/**
 				 * Skip bytes from a stream. Returns number of bytes skipped.
-				 * 
+				 *
 				 * Behaves identical to `read`, except instead of returning a list
 				 * of bytes, returns the number of bytes consumed from the stream.
 				 */
-				skip(len: u64): result<u64, StreamError>;
+				skip(len: u64): u64;
 
 				/**
 				 * Skip bytes from a stream, after blocking until at least one byte
 				 * can be skipped. Except for blocking behavior, identical to `skip`.
 				 */
-				blockingSkip(len: u64): result<u64, StreamError>;
+				blockingSkip(len: u64): u64;
 
 				/**
 				 * Create a `pollable` which will resolve once either the specified stream
@@ -219,7 +229,7 @@ export namespace io {
 				 * Implementations may trap if the `input-stream` is dropped before
 				 * all derived `pollable`s created with this function are dropped.
 				 */
-				subscribe(): own<Pollable>;
+				subscribe(): Pollable;
 			}
 			export type Statics = {
 			};
@@ -232,42 +242,42 @@ export namespace io {
 			export interface Interface extends $wcm.Resource {
 				/**
 				 * Check readiness for writing. This function never blocks.
-				 * 
+				 *
 				 * Returns the number of bytes permitted for the next call to `write`,
 				 * or an error. Calling `write` with more bytes than this function has
 				 * permitted will trap.
-				 * 
+				 *
 				 * When this function returns 0 bytes, the `subscribe` pollable will
 				 * become ready when this function will report at least 1 byte, or an
 				 * error.
 				 */
-				checkWrite(): result<u64, StreamError>;
+				checkWrite(): u64;
 
 				/**
 				 * Perform a write. This function never blocks.
-				 * 
+				 *
 				 * When the destination of a `write` is binary data, the bytes from
 				 * `contents` are written verbatim. When the destination of a `write` is
 				 * known to the implementation to be text, the bytes of `contents` are
 				 * transcoded from UTF-8 into the encoding of the destination and then
 				 * written.
-				 * 
+				 *
 				 * Precondition: check-write gave permit of Ok(n) and contents has a
 				 * length of less than or equal to n. Otherwise, this function will trap.
-				 * 
+				 *
 				 * returns Err(closed) without writing if the stream has closed since
 				 * the last call to check-write provided a permit.
 				 */
-				write(contents: Uint8Array): result<void, StreamError>;
+				write(contents: Uint8Array): void;
 
 				/**
 				 * Perform a write of up to 4096 bytes, and then flush the stream. Block
 				 * until all of these operations are complete, or an error occurs.
-				 * 
+				 *
 				 * This is a convenience wrapper around the use of `check-write`,
 				 * `subscribe`, `write`, and `flush`, and is implemented with the
 				 * following pseudo-code:
-				 * 
+				 *
 				 * ```text
 				 * let pollable = this.subscribe();
 				 * while !contents.is_empty() {
@@ -286,61 +296,61 @@ export namespace io {
 				 * let _ = this.check-write();         // eliding error handling
 				 * ```
 				 */
-				blockingWriteAndFlush(contents: Uint8Array): result<void, StreamError>;
+				blockingWriteAndFlush(contents: Uint8Array): void;
 
 				/**
 				 * Request to flush buffered output. This function never blocks.
-				 * 
+				 *
 				 * This tells the output-stream that the caller intends any buffered
 				 * output to be flushed. the output which is expected to be flushed
 				 * is all that has been passed to `write` prior to this call.
-				 * 
+				 *
 				 * Upon calling this function, the `output-stream` will not accept any
 				 * writes (`check-write` will return `ok(0)`) until the flush has
 				 * completed. The `subscribe` pollable will become ready when the
 				 * flush has completed and the stream can accept more writes.
 				 */
-				flush(): result<void, StreamError>;
+				flush(): void;
 
 				/**
 				 * Request to flush buffered output, and block until flush completes
 				 * and stream is ready for writing again.
 				 */
-				blockingFlush(): result<void, StreamError>;
+				blockingFlush(): void;
 
 				/**
 				 * Create a `pollable` which will resolve once the output-stream
 				 * is ready for more writing, or an error has occured. When this
 				 * pollable is ready, `check-write` will return `ok(n)` with n>0, or an
 				 * error.
-				 * 
+				 *
 				 * If the stream is closed, this pollable is always ready immediately.
-				 * 
+				 *
 				 * The created `pollable` is a child resource of the `output-stream`.
 				 * Implementations may trap if the `output-stream` is dropped before
 				 * all derived `pollable`s created with this function are dropped.
 				 */
-				subscribe(): own<Pollable>;
+				subscribe(): Pollable;
 
 				/**
 				 * Write zeroes to a stream.
-				 * 
+				 *
 				 * This should be used precisely like `write` with the exact same
 				 * preconditions (must use check-write first), but instead of
 				 * passing a list of bytes, you simply pass the number of zero-bytes
 				 * that should be written.
 				 */
-				writeZeroes(len: u64): result<void, StreamError>;
+				writeZeroes(len: u64): void;
 
 				/**
 				 * Perform a write of up to 4096 zeroes, and then flush the stream.
 				 * Block until all of these operations are complete, or an error
 				 * occurs.
-				 * 
+				 *
 				 * This is a convenience wrapper around the use of `check-write`,
 				 * `subscribe`, `write-zeroes`, and `flush`, and is implemented with
 				 * the following pseudo-code:
-				 * 
+				 *
 				 * ```text
 				 * let pollable = this.subscribe();
 				 * while num_zeroes != 0 {
@@ -358,33 +368,33 @@ export namespace io {
 				 * let _ = this.check-write();         // eliding error handling
 				 * ```
 				 */
-				blockingWriteZeroesAndFlush(len: u64): result<void, StreamError>;
+				blockingWriteZeroesAndFlush(len: u64): void;
 
 				/**
 				 * Read from one stream and write to another.
-				 * 
+				 *
 				 * The behavior of splice is equivelant to:
 				 * 1. calling `check-write` on the `output-stream`
 				 * 2. calling `read` on the `input-stream` with the smaller of the
 				 * `check-write` permitted length and the `len` provided to `splice`
 				 * 3. calling `write` on the `output-stream` with that read data.
-				 * 
+				 *
 				 * Any error reported by the call to `check-write`, `read`, or
 				 * `write` ends the splice and reports that error.
-				 * 
+				 *
 				 * This function returns the number of bytes transferred; it may be less
 				 * than `len`.
 				 */
-				splice(src: borrow<InputStream>, len: u64): result<u64, StreamError>;
+				splice(src: InputStream, len: u64): u64;
 
 				/**
 				 * Read from one stream and write to another, with blocking.
-				 * 
+				 *
 				 * This is similar to `splice`, except that it blocks until the
 				 * `output-stream` is ready for writing, and the `input-stream`
 				 * is ready for reading, before performing the `splice`.
 				 */
-				blockingSplice(src: borrow<InputStream>, len: u64): result<u64, StreamError>;
+				blockingSplice(src: InputStream, len: u64): u64;
 			}
 			export type Statics = {
 			};
@@ -450,7 +460,7 @@ export namespace io {
 		Pollable.addMethod('ready', new $wcm.MethodType<io.Poll.Pollable.Interface['ready']>('[method]pollable.ready', [], $wcm.bool));
 		Pollable.addMethod('block', new $wcm.MethodType<io.Poll.Pollable.Interface['block']>('[method]pollable.block', [], undefined));
 		export const poll = new $wcm.FunctionType<io.Poll.poll>('poll',[
-			['in_', new $wcm.ListType<borrow<io.Poll.Pollable>>(new $wcm.BorrowType<io.Poll.Pollable>(Pollable))],
+			['in_', new $wcm.ListType<io.Poll.Pollable>(new $wcm.BorrowType<io.Poll.Pollable>(Pollable))],
 		], new $wcm.Uint32ArrayType());
 	}
 	export namespace Poll._ {
@@ -506,52 +516,52 @@ export namespace io {
 		InputStream.addDestructor('$drop', new $wcm.DestructorType('[resource-drop]input-stream', [['inst', InputStream]]));
 		InputStream.addMethod('read', new $wcm.MethodType<io.Streams.InputStream.Interface['read']>('[method]input-stream.read', [
 			['len', $wcm.u64],
-		], new $wcm.ResultType<Uint8Array, io.Streams.StreamError>(new $wcm.Uint8ArrayType(), StreamError)));
+		], new $wcm.ResultType<Uint8Array, io.Streams.StreamError>(new $wcm.Uint8ArrayType(), StreamError, io.Streams.StreamError.Error)));
 		InputStream.addMethod('blockingRead', new $wcm.MethodType<io.Streams.InputStream.Interface['blockingRead']>('[method]input-stream.blocking-read', [
 			['len', $wcm.u64],
-		], new $wcm.ResultType<Uint8Array, io.Streams.StreamError>(new $wcm.Uint8ArrayType(), StreamError)));
+		], new $wcm.ResultType<Uint8Array, io.Streams.StreamError>(new $wcm.Uint8ArrayType(), StreamError, io.Streams.StreamError.Error)));
 		InputStream.addMethod('skip', new $wcm.MethodType<io.Streams.InputStream.Interface['skip']>('[method]input-stream.skip', [
 			['len', $wcm.u64],
-		], new $wcm.ResultType<u64, io.Streams.StreamError>($wcm.u64, StreamError)));
+		], new $wcm.ResultType<u64, io.Streams.StreamError>($wcm.u64, StreamError, io.Streams.StreamError.Error)));
 		InputStream.addMethod('blockingSkip', new $wcm.MethodType<io.Streams.InputStream.Interface['blockingSkip']>('[method]input-stream.blocking-skip', [
 			['len', $wcm.u64],
-		], new $wcm.ResultType<u64, io.Streams.StreamError>($wcm.u64, StreamError)));
+		], new $wcm.ResultType<u64, io.Streams.StreamError>($wcm.u64, StreamError, io.Streams.StreamError.Error)));
 		InputStream.addMethod('subscribe', new $wcm.MethodType<io.Streams.InputStream.Interface['subscribe']>('[method]input-stream.subscribe', [], new $wcm.OwnType<io.Streams.Pollable>(Pollable)));
 		OutputStream.addDestructor('$drop', new $wcm.DestructorType('[resource-drop]output-stream', [['inst', OutputStream]]));
-		OutputStream.addMethod('checkWrite', new $wcm.MethodType<io.Streams.OutputStream.Interface['checkWrite']>('[method]output-stream.check-write', [], new $wcm.ResultType<u64, io.Streams.StreamError>($wcm.u64, StreamError)));
+		OutputStream.addMethod('checkWrite', new $wcm.MethodType<io.Streams.OutputStream.Interface['checkWrite']>('[method]output-stream.check-write', [], new $wcm.ResultType<u64, io.Streams.StreamError>($wcm.u64, StreamError, io.Streams.StreamError.Error)));
 		OutputStream.addMethod('write', new $wcm.MethodType<io.Streams.OutputStream.Interface['write']>('[method]output-stream.write', [
 			['contents', new $wcm.Uint8ArrayType()],
-		], new $wcm.ResultType<void, io.Streams.StreamError>(undefined, StreamError)));
+		], new $wcm.ResultType<void, io.Streams.StreamError>(undefined, StreamError, io.Streams.StreamError.Error)));
 		OutputStream.addMethod('blockingWriteAndFlush', new $wcm.MethodType<io.Streams.OutputStream.Interface['blockingWriteAndFlush']>('[method]output-stream.blocking-write-and-flush', [
 			['contents', new $wcm.Uint8ArrayType()],
-		], new $wcm.ResultType<void, io.Streams.StreamError>(undefined, StreamError)));
-		OutputStream.addMethod('flush', new $wcm.MethodType<io.Streams.OutputStream.Interface['flush']>('[method]output-stream.flush', [], new $wcm.ResultType<void, io.Streams.StreamError>(undefined, StreamError)));
-		OutputStream.addMethod('blockingFlush', new $wcm.MethodType<io.Streams.OutputStream.Interface['blockingFlush']>('[method]output-stream.blocking-flush', [], new $wcm.ResultType<void, io.Streams.StreamError>(undefined, StreamError)));
+		], new $wcm.ResultType<void, io.Streams.StreamError>(undefined, StreamError, io.Streams.StreamError.Error)));
+		OutputStream.addMethod('flush', new $wcm.MethodType<io.Streams.OutputStream.Interface['flush']>('[method]output-stream.flush', [], new $wcm.ResultType<void, io.Streams.StreamError>(undefined, StreamError, io.Streams.StreamError.Error)));
+		OutputStream.addMethod('blockingFlush', new $wcm.MethodType<io.Streams.OutputStream.Interface['blockingFlush']>('[method]output-stream.blocking-flush', [], new $wcm.ResultType<void, io.Streams.StreamError>(undefined, StreamError, io.Streams.StreamError.Error)));
 		OutputStream.addMethod('subscribe', new $wcm.MethodType<io.Streams.OutputStream.Interface['subscribe']>('[method]output-stream.subscribe', [], new $wcm.OwnType<io.Streams.Pollable>(Pollable)));
 		OutputStream.addMethod('writeZeroes', new $wcm.MethodType<io.Streams.OutputStream.Interface['writeZeroes']>('[method]output-stream.write-zeroes', [
 			['len', $wcm.u64],
-		], new $wcm.ResultType<void, io.Streams.StreamError>(undefined, StreamError)));
+		], new $wcm.ResultType<void, io.Streams.StreamError>(undefined, StreamError, io.Streams.StreamError.Error)));
 		OutputStream.addMethod('blockingWriteZeroesAndFlush', new $wcm.MethodType<io.Streams.OutputStream.Interface['blockingWriteZeroesAndFlush']>('[method]output-stream.blocking-write-zeroes-and-flush', [
 			['len', $wcm.u64],
-		], new $wcm.ResultType<void, io.Streams.StreamError>(undefined, StreamError)));
+		], new $wcm.ResultType<void, io.Streams.StreamError>(undefined, StreamError, io.Streams.StreamError.Error)));
 		OutputStream.addMethod('splice', new $wcm.MethodType<io.Streams.OutputStream.Interface['splice']>('[method]output-stream.splice', [
 			['src', new $wcm.BorrowType<io.Streams.InputStream>(InputStream)],
 			['len', $wcm.u64],
-		], new $wcm.ResultType<u64, io.Streams.StreamError>($wcm.u64, StreamError)));
+		], new $wcm.ResultType<u64, io.Streams.StreamError>($wcm.u64, StreamError, io.Streams.StreamError.Error)));
 		OutputStream.addMethod('blockingSplice', new $wcm.MethodType<io.Streams.OutputStream.Interface['blockingSplice']>('[method]output-stream.blocking-splice', [
 			['src', new $wcm.BorrowType<io.Streams.InputStream>(InputStream)],
 			['len', $wcm.u64],
-		], new $wcm.ResultType<u64, io.Streams.StreamError>($wcm.u64, StreamError)));
+		], new $wcm.ResultType<u64, io.Streams.StreamError>($wcm.u64, StreamError, io.Streams.StreamError.Error)));
 	}
 	export namespace Streams._ {
 		export const id = 'wasi:io/streams@0.2.0' as const;
 		export const witName = 'streams' as const;
 		export namespace InputStream {
 			export type WasmInterface = {
-				'[method]input-stream.read': (self: i32, len: i64, result: ptr<result<Uint8Array, StreamError>>) => void;
-				'[method]input-stream.blocking-read': (self: i32, len: i64, result: ptr<result<Uint8Array, StreamError>>) => void;
-				'[method]input-stream.skip': (self: i32, len: i64, result: ptr<result<u64, StreamError>>) => void;
-				'[method]input-stream.blocking-skip': (self: i32, len: i64, result: ptr<result<u64, StreamError>>) => void;
+				'[method]input-stream.read': (self: i32, len: i64, result: ptr<Uint8Array>) => void;
+				'[method]input-stream.blocking-read': (self: i32, len: i64, result: ptr<Uint8Array>) => void;
+				'[method]input-stream.skip': (self: i32, len: i64, result: ptr<u64>) => void;
+				'[method]input-stream.blocking-skip': (self: i32, len: i64, result: ptr<u64>) => void;
 				'[method]input-stream.subscribe': (self: i32) => i32;
 			};
 			export namespace imports {
@@ -563,16 +573,16 @@ export namespace io {
 		}
 		export namespace OutputStream {
 			export type WasmInterface = {
-				'[method]output-stream.check-write': (self: i32, result: ptr<result<u64, StreamError>>) => void;
-				'[method]output-stream.write': (self: i32, contents_ptr: i32, contents_len: i32, result: ptr<result<void, StreamError>>) => void;
-				'[method]output-stream.blocking-write-and-flush': (self: i32, contents_ptr: i32, contents_len: i32, result: ptr<result<void, StreamError>>) => void;
-				'[method]output-stream.flush': (self: i32, result: ptr<result<void, StreamError>>) => void;
-				'[method]output-stream.blocking-flush': (self: i32, result: ptr<result<void, StreamError>>) => void;
+				'[method]output-stream.check-write': (self: i32, result: ptr<u64>) => void;
+				'[method]output-stream.write': (self: i32, contents_ptr: i32, contents_len: i32, result: ptr<void>) => void;
+				'[method]output-stream.blocking-write-and-flush': (self: i32, contents_ptr: i32, contents_len: i32, result: ptr<void>) => void;
+				'[method]output-stream.flush': (self: i32, result: ptr<void>) => void;
+				'[method]output-stream.blocking-flush': (self: i32, result: ptr<void>) => void;
 				'[method]output-stream.subscribe': (self: i32) => i32;
-				'[method]output-stream.write-zeroes': (self: i32, len: i64, result: ptr<result<void, StreamError>>) => void;
-				'[method]output-stream.blocking-write-zeroes-and-flush': (self: i32, len: i64, result: ptr<result<void, StreamError>>) => void;
-				'[method]output-stream.splice': (self: i32, src: i32, len: i64, result: ptr<result<u64, StreamError>>) => void;
-				'[method]output-stream.blocking-splice': (self: i32, src: i32, len: i64, result: ptr<result<u64, StreamError>>) => void;
+				'[method]output-stream.write-zeroes': (self: i32, len: i64, result: ptr<void>) => void;
+				'[method]output-stream.blocking-write-zeroes-and-flush': (self: i32, len: i64, result: ptr<void>) => void;
+				'[method]output-stream.splice': (self: i32, src: i32, len: i64, result: ptr<u64>) => void;
+				'[method]output-stream.blocking-splice': (self: i32, src: i32, len: i64, result: ptr<u64>) => void;
 			};
 			export namespace imports {
 				export type WasmInterface = OutputStream.WasmInterface & { '[resource-drop]output-stream': (self: i32) => void };

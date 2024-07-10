@@ -116,7 +116,7 @@ export interface Func extends AbstractCallable {
 	kind: 'freestanding';
 }
 
-export interface StaticMethod extends AbstractCallable{
+export interface StaticMethod extends AbstractCallable {
 	kind: {
 		static: number;
 	};
@@ -177,6 +177,9 @@ export namespace Type {
 	}
 	export function hasName(type: Type): type is Type & { name: string } {
 		return typeof type.name === 'string';
+	}
+	export function is(value: any): value is Type {
+		return isBaseType(value) || isReferenceType(value) || isListType(value) || isOptionType(value) || isTupleType(value) || isResultType(value) || isRecordType(value) || isEnumType(value) || isFlagsType(value) || isVariantType(value) || isResourceType(value) || isBorrowHandleType(value) || isOwnHandleType(value);
 	}
 }
 
@@ -455,4 +458,15 @@ export type References = NameMap<number>;
 
 export interface NameMap<T> {
 	[name: string]: T;
+}
+
+export namespace Member {
+	export function isCallable(member: Callable | Type): member is Callable {
+		const candidate = member as Callable;
+		return Callable.is(candidate);
+	}
+	export function isType(member: Callable | Type): member is Type {
+		const candidate = member as Type;
+		return Type.is(candidate);
+	}
 }

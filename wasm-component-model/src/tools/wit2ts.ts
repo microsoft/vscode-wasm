@@ -8,36 +8,10 @@ import * as path from 'node:path';
 
 import { ResolvedOptions } from './options';
 import {
-	AbstractType,
-	BaseType,
-	BorrowHandleType,
-	Callable,
-	Constructor,
-	Document, Documentation, EnumCase,
-	EnumType,
-	Field,
-	Flag,
-	FlagsType,
-	Func, Interface,
-	ListType,
-	Method,
-	ObjectKind,
-	OptionType,
-	OwnHandleType,
-	Owner, Package, Param,
-	RecordType,
-	ReferenceType,
-	ResourceType,
-	ResultType,
-	StaticMethod,
-	TupleType,
-	Type, TypeKind, TypeReference,
-	VariantCase,
-	VariantType,
-	World,
-	type InterfaceObject,
-	type PackageNameParts,
-	type TypeObject
+	AbstractType, BaseType, BorrowHandleType, Callable, Constructor, Document, Documentation, EnumCase, EnumType, Field, Flag,
+	FlagsType, Func, Interface, ListType, Member, Method, ObjectKind, OptionType, OwnHandleType, Owner, Package, Param,
+	RecordType, ReferenceType, ResourceType, ResultType, StaticMethod, TupleType, Type, TypeKind, TypeReference, VariantCase,
+	VariantType, World, type InterfaceObject, type PackageNameParts, type TypeObject
 } from './wit-json';
 
 export function processDocument(document: Document, options: ResolvedOptions): void {
@@ -147,8 +121,12 @@ class Code {
 		}
 	}
 
-	public toString(): string {
+	public toString(context?: EmitterContext): string {
 		this.source.unshift('');
+		if (context?.needsJavaScriptError) {
+			this.source.unshift(`const JavaScriptError = Error;`);
+			this.source.unshift('');
+		}
 		for (const [from, values] of this.imports) {
 			this.source.unshift(`import { ${Array.from(values).join(', ')} } from '${from}';`);
 		}
@@ -655,6 +633,7 @@ class SymbolTable {
 
 	private readonly document: Document;
 	private readonly methods: Map<AbstractType, (Method | StaticMethod | Constructor)[]>;
+	private readonly resultErrorTypes: Set<Type | string>;
 
 	public readonly worlds: Worlds;
 	public readonly	interfaces: Interfaces;
@@ -664,6 +643,7 @@ class SymbolTable {
 	constructor(document: Document, nameProvider: NameProvider, options: ResolvedOptions) {
 		this.document = document;
 		this.methods = new Map();
+		this.resultErrorTypes = new Set();
 		this.worlds = new Worlds(this, nameProvider, options);
 		this.interfaces = new Interfaces(this, nameProvider, options);
 		this.types = new Types(this, nameProvider);
@@ -678,12 +658,33 @@ class SymbolTable {
 					}
 					values.push(callable);
 				}
+				for (const result of Object.values(callable.results)) {
+					if (TypeReference.isNumber(result.type)) {
+						const type = this.getType(result.type);
+						if (TypeKind.isResult(type.kind)) {
+							if (type.kind.result.err !== null) {
+								if (TypeReference.isString(type.kind.result.err)) {
+									this.resultErrorTypes.add(type.kind.result.err);
+								} else {
+									this.resultErrorTypes.add(this.getType(type.kind.result.err));
+								}
+							}
+						}
+					}
+				}
 			}
 		}
 	}
 
 	public getType(ref: number): Type {
 		return this.document.types[ref];
+	}
+
+	public isErrorResultType(item: Type | string | number): boolean {
+		if (typeof item === 'number') {
+			item = this.getType(item);
+		}
+		return this.resultErrorTypes.has(item);
 	}
 
 	public getInterface(ref: number): Interface {
@@ -831,13 +832,12 @@ namespace MetaModel {
 	export class TypePrinter extends AbstractTypePrinter<TypeUsage | { usage: TypeUsage.function; replace: string }> {
 
 		private readonly nameProvider: NameProvider;
+		private readonly typeParamPrinter: TypeParamPrinter;
 
-		private typeParamPrinter: TypeParamPrinter;
-
-		constructor (symbols: SymbolTable, nameProvider: NameProvider, imports: Imports) {
+		constructor (symbols: SymbolTable, nameProvider: NameProvider, imports: Imports, options: ResolvedOptions) {
 			super(symbols);
 			this.nameProvider = nameProvider;
-			this.typeParamPrinter = new TypeParamPrinter(symbols, nameProvider, imports);
+			this.typeParamPrinter = new TypeParamPrinter(symbols, nameProvider, imports, options);
 		}
 
 		public perform(type: Type, usage: TypeUsage): string {
@@ -918,10 +918,14 @@ namespace MetaModel {
 				ok = this.printTypeReference(result.ok, usage);
 			}
 			let error: string = 'undefined';
+			let errorError: string | undefined = undefined;
 			if (result.err !== null) {
 				error = this.printTypeReference(result.err, usage);
+				if (this.symbols.isErrorResultType(result.err)) {
+					errorError = this.symbols.types.getFullyQualifiedName(result.err);
+				}
 			}
-			return `new ${qualifier}.ResultType<${this.typeParamPrinter.perform(type)}>(${ok}, ${error})`;
+			return `new ${qualifier}.ResultType<${this.typeParamPrinter.perform(type)}>(${ok}, ${error}${errorError !== undefined ? `, ${errorError}.Error` : ''})`;
 		}
 
 		public printBorrowHandle(type: BorrowHandleType, usage: TypeUsage): string {
@@ -991,12 +995,14 @@ namespace MetaModel {
 	class TypeParamPrinter extends AbstractTypePrinter<number> {
 
 		private readonly imports: Imports;
-		private typeScriptPrinter: TypeScript.TypePrinter;
+		private readonly options: ResolvedOptions;
+		private readonly typeScriptPrinter: TypeScript.TypePrinter;
 
-		constructor(symbols: SymbolTable, nameProvider: NameProvider, imports: Imports) {
+		constructor(symbols: SymbolTable, nameProvider: NameProvider, imports: Imports, options: ResolvedOptions) {
 			super(symbols);
 			this.imports = imports;
-			this.typeScriptPrinter = new TypeScript.TypePrinter(symbols, nameProvider, imports);
+			this.options = options;
+			this.typeScriptPrinter = new TypeScript.TypePrinter(symbols, nameProvider, imports, options);
 		}
 
 		public perform(type: Type): string {
@@ -1058,11 +1064,8 @@ namespace MetaModel {
 		}
 
 		public printOption(type: OptionType, depth: number): string {
-			if (depth > 0) {
-				this.imports.addBaseType('option');
-			}
 			const result = this.printTypeReference(type.kind.option, depth + 1);
-			return depth === 0 ? result : `option<${result}>`;
+			return depth === 0 ? result : `${result} | undefined`;
 		}
 
 		public printTuple(type: TupleType, depth: number): string {
@@ -1081,18 +1084,26 @@ namespace MetaModel {
 
 		public printBorrowHandle(type: BorrowHandleType, depth: number): string {
 			const borrowed = this.printTypeReference(type.kind.handle.borrow, depth + 1);
-			if (depth > 0) {
-				this.imports.addBaseType('borrow');
+			if (this.options.keep.borrow) {
+				if (depth > 0) {
+					this.imports.addBaseType('borrow');
+				}
+				return depth === 0 ? borrowed : `borrow<${borrowed}>`;
+			} else {
+				return borrowed;
 			}
-			return depth === 0 ? borrowed : `borrow<${borrowed}>`;
 		}
 
 		public printOwnHandle(type: OwnHandleType, depth: number): string {
 			const owned = this.printTypeReference(type.kind.handle.own, depth + 1);
-			if (depth > 0) {
-				this.imports.addBaseType('own');
+			if (this.options.keep.own) {
+				if (depth > 0) {
+					this.imports.addBaseType('own');
+				}
+				return depth === 0 ? owned : `own<${owned}>`;
+			} else {
+				return owned;
 			}
-			return depth === 0 ? owned : `own<${owned}>`;
 		}
 
 		public printRecord(type: RecordType, _depth: number): string {
@@ -1123,11 +1134,13 @@ namespace TypeScript {
 
 		private readonly nameProvider: NameProvider;
 		private readonly imports: Imports;
+		private readonly options: ResolvedOptions;
 
-		constructor (symbols: SymbolTable, nameProvider: NameProvider, imports: Imports) {
+		constructor (symbols: SymbolTable, nameProvider: NameProvider, imports: Imports, options: ResolvedOptions) {
 			super(symbols);
 			this.nameProvider = nameProvider;
 			this.imports = imports;
+			this.options = options;
 		}
 
 		public perform(type: Type, usage: TypeUsage): string {
@@ -1198,29 +1211,46 @@ namespace TypeScript {
 		}
 
 		public printResult(type: ResultType, usage: TypeUsage): string {
-			let ok: string = 'void';
-			const result = type.kind.result;
-			if (result.ok !== null) {
-				ok = this.printTypeReference(result.ok, usage);
+			if (usage === TypeUsage.function || !this.options.keep.result) {
+				let ok: string = 'void';
+				const result = type.kind.result;
+				if (result.ok !== null) {
+					ok = this.printTypeReference(result.ok, usage);
+				}
+				return ok;
+			} else {
+				let ok: string = 'void';
+				const result = type.kind.result;
+				if (result.ok !== null) {
+					ok = this.printTypeReference(result.ok, usage);
+				}
+				let error: string = 'void';
+				if (result.err !== null) {
+					error = this.printTypeReference(result.err, usage);
+				}
+				this.imports.addBaseType('result');
+				return `result<${ok}, ${error}>`;
 			}
-			let error: string = 'void';
-			if (result.err !== null) {
-				error = this.printTypeReference(result.err, usage);
-			}
-			this.imports.addBaseType('result');
-			return `result<${ok}, ${error}>`;
 		}
 
 		public printBorrowHandle(type: BorrowHandleType, usage: TypeUsage): string {
 			const borrowed = this.printTypeReference(type.kind.handle.borrow, usage);
-			this.imports.addBaseType('borrow');
-			return `borrow<${borrowed}>`;
+			if (this.options.keep.borrow) {
+				this.imports.addBaseType('borrow');
+				return `borrow<${borrowed}>`;
+			} else {
+				return borrowed;
+			}
 		}
 
 		public printOwnHandle(type: OwnHandleType, usage: TypeUsage): string {
 			const owned = this.printTypeReference(type.kind.handle.own, usage);
-			this.imports.addBaseType('own');
-			return `own<${owned}>`;
+			if (this.options.keep.own) {
+				this.imports.addBaseType('own');
+				return `own<${owned}>`;
+			} else {
+				return owned;
+			}
 		}
 
 		public printRecord(type: RecordType, _usage: TypeUsage): string {
@@ -1606,11 +1636,12 @@ type EmitterContext = {
 	readonly options: ResolvedOptions;
 	readonly ifaceEmitters: Map<Interface, InterfaceEmitter>;
 	readonly typeEmitters: Map<Type, TypeEmitter>;
+	needsJavaScriptError: boolean;
 };
 
 abstract class Emitter {
 
-	protected readonly context: EmitterContext;
+	public readonly context: EmitterContext;
 
 	constructor(context: EmitterContext) {
 		this.context = context;
@@ -1696,19 +1727,19 @@ class DocumentEmitter {
 		}
 		const ifaceEmitters: Map<Interface, InterfaceEmitter> = new Map();
 		const typeEmitters: Map<Type, TypeEmitter> = new Map();
+		const symbols = new SymbolTable(this.document, this.nameProvider, this.options);
 		for (const [index, pkg] of this.document.packages.entries()) {
 			if (regExp !== undefined && !regExp.test(pkg.name)) {
 				continue;
 			}
 
 			const code = new Code();
-			const symbols = new SymbolTable(this.document, this.nameProvider, this.options);
 			const printers: Printers = {
-				typeScript: new TypeScript.TypePrinter(symbols, this.nameProvider, code.imports),
-				metaModel: new MetaModel.TypePrinter(symbols, this.nameProvider, code.imports)
+				typeScript: new TypeScript.TypePrinter(symbols, this.nameProvider, code.imports, this.options),
+				metaModel: new MetaModel.TypePrinter(symbols, this.nameProvider, code.imports, this.options)
 			};
 			const typeFlattener = new TypeFlattener(symbols, this.nameProvider, code.imports);
-			const context: EmitterContext = { symbols, printers, nameProvider: this.nameProvider, typeFlattener, options: this.options, ifaceEmitters: ifaceEmitters, typeEmitters };
+			const context: EmitterContext = { symbols, printers, nameProvider: this.nameProvider, typeFlattener, options: this.options, ifaceEmitters: ifaceEmitters, typeEmitters, needsJavaScriptError: false };
 
 			const pkgEmitter = new PackageEmitter(pkg, package2Worlds.get(index) ?? [], context);
 			pkgEmitter.build();
@@ -1730,7 +1761,7 @@ class DocumentEmitter {
 			const world = emitter.getWorld(0);
 			const fileName = this.nameProvider.world.fileName(world.world);
 			emitter.emit(code);
-			fs.writeFileSync(path.join(this.options.outDir, fileName), code.toString());
+			fs.writeFileSync(path.join(this.options.outDir, fileName), code.toString(emitter.context));
 			return;
 		} else {
 			for (const { emitter, code } of this.packages) {
@@ -1738,7 +1769,7 @@ class DocumentEmitter {
 				emitter.emit(code);
 				this.exports.push(pkgName);
 				const fileName = this.nameProvider.pack.fileName(emitter.pkg);
-				fs.writeFileSync(path.join(this.options.outDir, fileName), code.toString());
+				fs.writeFileSync(path.join(this.options.outDir, fileName), code.toString(emitter.context));
 				this.mainCode.push(`import { ${pkgName} } from './${this.nameProvider.pack.importName(emitter.pkg)}';`);
 				typeDeclarations.push(`${pkgName}?: ${pkgName}`);
 			}
@@ -2845,6 +2876,29 @@ class MemberEmitter extends Emitter {
 		const { nameProvider } = this.context;
 		return Interface.is(this.container) ? nameProvider.iface.moduleName(this.container) : nameProvider.world.name(this.container);
 	}
+
+	protected emitErrorIfNecessary(code: Code): void {
+		const { symbols, nameProvider } = this.context;
+		if (Member.isType(this.member) && symbols.isErrorResultType(this.member)) {
+			this.context.needsJavaScriptError = true;
+			const name = nameProvider.type.name(this.member);
+			code.push(`export namespace ${name} {`);
+			code.increaseIndent();
+			code.push(`export class Error extends JavaScriptError {`);
+			code.increaseIndent();
+			code.push(`public readonly value: ${name};`);
+			code.push(`constructor(value: ${name}) {`);
+			code.increaseIndent();
+			code.push(`super(\`${name}: \${value}\`);`);
+			code.push(`this.value = value;`);
+			code.decreaseIndent();
+			code.push(`}`);
+			code.decreaseIndent();
+			code.push(`}`);
+			code.decreaseIndent();
+			code.push(`}`);
+		}
+	}
 }
 
 class FunctionEmitter extends MemberEmitter {
@@ -3121,7 +3175,7 @@ class VariantEmitter extends MemberEmitter {
 		const { nameProvider, printers } = this.context;
 		const variantName = nameProvider.type.name(this.type);
 
-		this.emitDocumentation(this.type, code, true);
+		this.emitDocumentation(this.type, code);
 		code.push(`export namespace ${variantName} {`);
 		code.increaseIndent();
 		const cases: { name: string; typeName: string; tagName: string; type: string | undefined }[] = [];
@@ -3215,6 +3269,8 @@ class VariantEmitter extends MemberEmitter {
 		code.push(`}`);
 
 		code.push(`export type ${variantName} = ${cases.map(value => `${variantName}.${value.typeName}`).join(' | ')};`);
+
+		this.emitErrorIfNecessary(code);
 	}
 
 	public emitMetaModel(code: Code): void {
@@ -3245,7 +3301,7 @@ class EnumEmitter extends MemberEmitter {
 		const { nameProvider } = this.context;
 		const kind = this.type.kind;
 		const enumName = nameProvider.type.name(this.type);
-		this.emitDocumentation(this.type, code, true);
+		this.emitDocumentation(this.type, code);
 		code.push(`export enum ${enumName} {`);
 		code.increaseIndent();
 		for (let i = 0; i < kind.enum.cases.length; i++) {
@@ -3256,6 +3312,8 @@ class EnumEmitter extends MemberEmitter {
 		}
 		code.decreaseIndent();
 		code.push(`}`);
+
+		this.emitErrorIfNecessary(code);
 	}
 
 	public emitMetaModel(code: Code): void {
@@ -3285,7 +3343,7 @@ class FlagsEmitter extends MemberEmitter {
 		const flagsName = nameProvider.type.name(this.type);
 		const flagSize = FlagsEmitter.getFlagSize(kind.flags.flags.length);
 
-		this.emitDocumentation(this.type, code, true);
+		this.emitDocumentation(this.type, code);
 		code.push(`export const ${flagsName} = Object.freeze({`);
 		code.increaseIndent();
 		for (let i = 0; i < kind.flags.flags.length; i++) {
