@@ -10,8 +10,6 @@ import { random } from './random';
 import { io } from './io';
 import { clocks } from './clocks';
 
-const JavaScriptError = Error;
-
 export namespace http {
 	/**
 	 * This interface defines all of the types and methods for implementing
@@ -611,11 +609,9 @@ export namespace http {
 		}
 		export type ErrorCode = ErrorCode.DNSTimeout | ErrorCode.DNSError | ErrorCode.DestinationNotFound | ErrorCode.DestinationUnavailable | ErrorCode.DestinationIPProhibited | ErrorCode.DestinationIPUnroutable | ErrorCode.ConnectionRefused | ErrorCode.ConnectionTerminated | ErrorCode.ConnectionTimeout | ErrorCode.ConnectionReadTimeout | ErrorCode.ConnectionWriteTimeout | ErrorCode.ConnectionLimitReached | ErrorCode.TLSProtocolError | ErrorCode.TLSCertificateError | ErrorCode.TLSAlertReceived | ErrorCode.HTTPRequestDenied | ErrorCode.HTTPRequestLengthRequired | ErrorCode.HTTPRequestBodySize | ErrorCode.HTTPRequestMethodInvalid | ErrorCode.HTTPRequestURIInvalid | ErrorCode.HTTPRequestURITooLong | ErrorCode.HTTPRequestHeaderSectionSize | ErrorCode.HTTPRequestHeaderSize | ErrorCode.HTTPRequestTrailerSectionSize | ErrorCode.HTTPRequestTrailerSize | ErrorCode.HTTPResponseIncomplete | ErrorCode.HTTPResponseHeaderSectionSize | ErrorCode.HTTPResponseHeaderSize | ErrorCode.HTTPResponseBodySize | ErrorCode.HTTPResponseTrailerSectionSize | ErrorCode.HTTPResponseTrailerSize | ErrorCode.HTTPResponseTransferCoding | ErrorCode.HTTPResponseContentCoding | ErrorCode.HTTPResponseTimeout | ErrorCode.HTTPUpgradeFailed | ErrorCode.HTTPProtocolError | ErrorCode.LoopDetected | ErrorCode.ConfigurationError | ErrorCode.InternalError;
 		export namespace ErrorCode {
-			export class Error extends JavaScriptError {
-				public readonly value: ErrorCode;
+			export class Error_ extends $wcm.ResultError<ErrorCode> {
 				constructor(value: ErrorCode) {
-					super(`ErrorCode: ${value}`);
-					this.value = value;
+					super(value, `ErrorCode: ${value}`);
 				}
 			}
 		}
@@ -691,11 +687,9 @@ export namespace http {
 		}
 		export type HeaderError = HeaderError.InvalidSyntax | HeaderError.Forbidden | HeaderError.Immutable;
 		export namespace HeaderError {
-			export class Error extends JavaScriptError {
-				public readonly value: HeaderError;
+			export class Error_ extends $wcm.ResultError<HeaderError> {
 				constructor(value: HeaderError) {
-					super(`HeaderError: ${value}`);
-					this.value = value;
+					super(value, `HeaderError: ${value}`);
 				}
 			}
 		}
@@ -1355,7 +1349,7 @@ export namespace http {
 		Fields.addConstructor('constructor', new $wcm.ConstructorType<http.Types.Fields.Class['constructor']>('[constructor]fields', [], new $wcm.OwnType(Fields_Handle)));
 		Fields.addStaticMethod('fromList', new $wcm.StaticMethodType<http.Types.Fields.Statics['fromList']>('[static]fields.from-list', [
 			['entries', new $wcm.ListType<[http.Types.FieldKey, Uint8Array]>(new $wcm.TupleType<[http.Types.FieldKey, Uint8Array]>([FieldKey, FieldValue]))],
-		], new $wcm.ResultType<http.Types.Fields, http.Types.HeaderError>(new $wcm.OwnType<http.Types.Fields>(Fields), HeaderError, http.Types.HeaderError.Error)));
+		], new $wcm.ResultType<http.Types.Fields, http.Types.HeaderError>(new $wcm.OwnType<http.Types.Fields>(Fields), HeaderError, http.Types.HeaderError.Error_)));
 		Fields.addMethod('get', new $wcm.MethodType<http.Types.Fields.Interface['get']>('[method]fields.get', [
 			['name', FieldKey],
 		], new $wcm.ListType<Uint8Array>(FieldValue)));
@@ -1365,14 +1359,14 @@ export namespace http {
 		Fields.addMethod('set', new $wcm.MethodType<http.Types.Fields.Interface['set']>('[method]fields.set', [
 			['name', FieldKey],
 			['value', new $wcm.ListType<Uint8Array>(FieldValue)],
-		], new $wcm.ResultType<void, http.Types.HeaderError>(undefined, HeaderError, http.Types.HeaderError.Error)));
+		], new $wcm.ResultType<void, http.Types.HeaderError>(undefined, HeaderError, http.Types.HeaderError.Error_)));
 		Fields.addMethod('delete', new $wcm.MethodType<http.Types.Fields.Interface['delete']>('[method]fields.delete', [
 			['name', FieldKey],
-		], new $wcm.ResultType<void, http.Types.HeaderError>(undefined, HeaderError, http.Types.HeaderError.Error)));
+		], new $wcm.ResultType<void, http.Types.HeaderError>(undefined, HeaderError, http.Types.HeaderError.Error_)));
 		Fields.addMethod('append', new $wcm.MethodType<http.Types.Fields.Interface['append']>('[method]fields.append', [
 			['name', FieldKey],
 			['value', FieldValue],
-		], new $wcm.ResultType<void, http.Types.HeaderError>(undefined, HeaderError, http.Types.HeaderError.Error)));
+		], new $wcm.ResultType<void, http.Types.HeaderError>(undefined, HeaderError, http.Types.HeaderError.Error_)));
 		Fields.addMethod('entries', new $wcm.MethodType<http.Types.Fields.Interface['entries']>('[method]fields.entries', [], new $wcm.ListType<[http.Types.FieldKey, Uint8Array]>(new $wcm.TupleType<[http.Types.FieldKey, Uint8Array]>([FieldKey, FieldValue]))));
 		Fields.addMethod('clone', new $wcm.MethodType<http.Types.Fields.Interface['clone']>('[method]fields.clone', [], new $wcm.OwnType<http.Types.Fields>(Fields)));
 		IncomingRequest.addDestructor('$drop', new $wcm.DestructorType('[resource-drop]incoming-request', [['inst', IncomingRequest]]));
@@ -1421,7 +1415,7 @@ export namespace http {
 		ResponseOutparam.addDestructor('$drop', new $wcm.DestructorType('[resource-drop]response-outparam', [['inst', ResponseOutparam]]));
 		ResponseOutparam.addStaticMethod('set', new $wcm.StaticMethodType<http.Types.ResponseOutparam.Statics['set']>('[static]response-outparam.set', [
 			['param', new $wcm.OwnType<http.Types.ResponseOutparam>(ResponseOutparam)],
-			['response', new $wcm.ResultType<http.Types.OutgoingResponse, http.Types.ErrorCode>(new $wcm.OwnType<http.Types.OutgoingResponse>(OutgoingResponse), ErrorCode, http.Types.ErrorCode.Error)],
+			['response', new $wcm.ResultType<http.Types.OutgoingResponse, http.Types.ErrorCode>(new $wcm.OwnType<http.Types.OutgoingResponse>(OutgoingResponse), ErrorCode, http.Types.ErrorCode.Error_)],
 		], undefined));
 		IncomingResponse.addDestructor('$drop', new $wcm.DestructorType('[resource-drop]incoming-response', [['inst', IncomingResponse]]));
 		IncomingResponse.addMethod('status', new $wcm.MethodType<http.Types.IncomingResponse.Interface['status']>('[method]incoming-response.status', [], StatusCode));
@@ -1434,7 +1428,7 @@ export namespace http {
 		], new $wcm.OwnType<http.Types.FutureTrailers>(FutureTrailers)));
 		FutureTrailers.addDestructor('$drop', new $wcm.DestructorType('[resource-drop]future-trailers', [['inst', FutureTrailers]]));
 		FutureTrailers.addMethod('subscribe', new $wcm.MethodType<http.Types.FutureTrailers.Interface['subscribe']>('[method]future-trailers.subscribe', [], new $wcm.OwnType<http.Types.Pollable>(Pollable)));
-		FutureTrailers.addMethod('get', new $wcm.MethodType<http.Types.FutureTrailers.Interface['get']>('[method]future-trailers.get', [], new $wcm.OptionType<result<result<http.Types.Trailers | undefined, http.Types.ErrorCode>, void>>(new $wcm.ResultType<result<http.Types.Trailers | undefined, http.Types.ErrorCode>, void>(new $wcm.ResultType<http.Types.Trailers | undefined, http.Types.ErrorCode>(new $wcm.OptionType<http.Types.Trailers>(new $wcm.OwnType<http.Types.Trailers>(Trailers)), ErrorCode, http.Types.ErrorCode.Error), undefined))));
+		FutureTrailers.addMethod('get', new $wcm.MethodType<http.Types.FutureTrailers.Interface['get']>('[method]future-trailers.get', [], new $wcm.OptionType<result<result<http.Types.Trailers | undefined, http.Types.ErrorCode>, void>>(new $wcm.ResultType<result<http.Types.Trailers | undefined, http.Types.ErrorCode>, void>(new $wcm.ResultType<http.Types.Trailers | undefined, http.Types.ErrorCode>(new $wcm.OptionType<http.Types.Trailers>(new $wcm.OwnType<http.Types.Trailers>(Trailers)), ErrorCode, http.Types.ErrorCode.Error_), undefined))));
 		OutgoingResponse.addDestructor('$drop', new $wcm.DestructorType('[resource-drop]outgoing-response', [['inst', OutgoingResponse]]));
 		OutgoingResponse.addConstructor('constructor', new $wcm.ConstructorType<http.Types.OutgoingResponse.Class['constructor']>('[constructor]outgoing-response', [
 			['headers', new $wcm.OwnType<http.Types.Headers>(Headers)],
@@ -1450,10 +1444,10 @@ export namespace http {
 		OutgoingBody.addStaticMethod('finish', new $wcm.StaticMethodType<http.Types.OutgoingBody.Statics['finish']>('[static]outgoing-body.finish', [
 			['this_', new $wcm.OwnType<http.Types.OutgoingBody>(OutgoingBody)],
 			['trailers', new $wcm.OptionType<http.Types.Trailers>(new $wcm.OwnType<http.Types.Trailers>(Trailers))],
-		], new $wcm.ResultType<void, http.Types.ErrorCode>(undefined, ErrorCode, http.Types.ErrorCode.Error)));
+		], new $wcm.ResultType<void, http.Types.ErrorCode>(undefined, ErrorCode, http.Types.ErrorCode.Error_)));
 		FutureIncomingResponse.addDestructor('$drop', new $wcm.DestructorType('[resource-drop]future-incoming-response', [['inst', FutureIncomingResponse]]));
 		FutureIncomingResponse.addMethod('subscribe', new $wcm.MethodType<http.Types.FutureIncomingResponse.Interface['subscribe']>('[method]future-incoming-response.subscribe', [], new $wcm.OwnType<http.Types.Pollable>(Pollable)));
-		FutureIncomingResponse.addMethod('get', new $wcm.MethodType<http.Types.FutureIncomingResponse.Interface['get']>('[method]future-incoming-response.get', [], new $wcm.OptionType<result<result<http.Types.IncomingResponse, http.Types.ErrorCode>, void>>(new $wcm.ResultType<result<http.Types.IncomingResponse, http.Types.ErrorCode>, void>(new $wcm.ResultType<http.Types.IncomingResponse, http.Types.ErrorCode>(new $wcm.OwnType<http.Types.IncomingResponse>(IncomingResponse), ErrorCode, http.Types.ErrorCode.Error), undefined))));
+		FutureIncomingResponse.addMethod('get', new $wcm.MethodType<http.Types.FutureIncomingResponse.Interface['get']>('[method]future-incoming-response.get', [], new $wcm.OptionType<result<result<http.Types.IncomingResponse, http.Types.ErrorCode>, void>>(new $wcm.ResultType<result<http.Types.IncomingResponse, http.Types.ErrorCode>, void>(new $wcm.ResultType<http.Types.IncomingResponse, http.Types.ErrorCode>(new $wcm.OwnType<http.Types.IncomingResponse>(IncomingResponse), ErrorCode, http.Types.ErrorCode.Error_), undefined))));
 		export const httpErrorCode = new $wcm.FunctionType<http.Types.httpErrorCode>('http-error-code',[
 			['err', new $wcm.BorrowType<http.Types.IoError>(IoError)],
 		], new $wcm.OptionType<http.Types.ErrorCode>(ErrorCode));
@@ -1752,7 +1746,7 @@ export namespace http {
 		export const handle = new $wcm.FunctionType<http.OutgoingHandler.handle>('handle',[
 			['request', new $wcm.OwnType<http.OutgoingHandler.OutgoingRequest>(OutgoingRequest)],
 			['options', new $wcm.OptionType<http.OutgoingHandler.RequestOptions>(new $wcm.OwnType<http.OutgoingHandler.RequestOptions>(RequestOptions))],
-		], new $wcm.ResultType<http.OutgoingHandler.FutureIncomingResponse, http.OutgoingHandler.ErrorCode>(new $wcm.OwnType<http.OutgoingHandler.FutureIncomingResponse>(FutureIncomingResponse), ErrorCode, http.OutgoingHandler.ErrorCode.Error));
+		], new $wcm.ResultType<http.OutgoingHandler.FutureIncomingResponse, http.OutgoingHandler.ErrorCode>(new $wcm.OwnType<http.OutgoingHandler.FutureIncomingResponse>(FutureIncomingResponse), ErrorCode));
 	}
 	export namespace OutgoingHandler._ {
 		export const id = 'wasi:http/outgoing-handler@0.2.0' as const;

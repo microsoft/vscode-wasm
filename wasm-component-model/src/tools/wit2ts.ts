@@ -121,12 +121,8 @@ class Code {
 		}
 	}
 
-	public toString(context?: EmitterContext): string {
+	public toString(): string {
 		this.source.unshift('');
-		if (context?.needsJavaScriptError) {
-			this.source.unshift(`const JavaScriptError = Error;`);
-			this.source.unshift('');
-		}
 		for (const [from, values] of this.imports) {
 			this.source.unshift(`import { ${Array.from(values).join(', ')} } from '${from}';`);
 		}
@@ -666,7 +662,11 @@ class SymbolTable {
 								if (TypeReference.isString(type.kind.result.err)) {
 									this.resultErrorTypes.add(type.kind.result.err);
 								} else {
-									this.resultErrorTypes.add(this.getType(type.kind.result.err));
+									let errorType = this.getType(type.kind.result.err);
+									while (TypeKind.isReference(errorType.kind)) {
+										errorType = this.getType(errorType.kind.type);
+									}
+									this.resultErrorTypes.add(errorType);
 								}
 							}
 						}
@@ -824,6 +824,7 @@ namespace MetaModel {
 	export const Code: string = `${qualifier}.Code`;
 	export const ConnectionPort = `${qualifier}.RAL.ConnectionPort`;
 	export const bind = `${qualifier}.$main.bind`;
+	export const ResultError = `${qualifier}.ResultError`;
 
 	export function qualify(name: string): string {
 		return `${qualifier}.${name}`;
@@ -925,7 +926,7 @@ namespace MetaModel {
 					errorError = this.symbols.types.getFullyQualifiedName(result.err);
 				}
 			}
-			return `new ${qualifier}.ResultType<${this.typeParamPrinter.perform(type)}>(${ok}, ${error}${errorError !== undefined ? `, ${errorError}.Error` : ''})`;
+			return `new ${qualifier}.ResultType<${this.typeParamPrinter.perform(type)}>(${ok}, ${error}${errorError !== undefined ? `, ${errorError}.Error_` : ''})`;
 		}
 
 		public printBorrowHandle(type: BorrowHandleType, usage: TypeUsage): string {
@@ -1636,7 +1637,6 @@ type EmitterContext = {
 	readonly options: ResolvedOptions;
 	readonly ifaceEmitters: Map<Interface, InterfaceEmitter>;
 	readonly typeEmitters: Map<Type, TypeEmitter>;
-	needsJavaScriptError: boolean;
 };
 
 abstract class Emitter {
@@ -1739,7 +1739,7 @@ class DocumentEmitter {
 				metaModel: new MetaModel.TypePrinter(symbols, this.nameProvider, code.imports, this.options)
 			};
 			const typeFlattener = new TypeFlattener(symbols, this.nameProvider, code.imports);
-			const context: EmitterContext = { symbols, printers, nameProvider: this.nameProvider, typeFlattener, options: this.options, ifaceEmitters: ifaceEmitters, typeEmitters, needsJavaScriptError: false };
+			const context: EmitterContext = { symbols, printers, nameProvider: this.nameProvider, typeFlattener, options: this.options, ifaceEmitters: ifaceEmitters, typeEmitters };
 
 			const pkgEmitter = new PackageEmitter(pkg, package2Worlds.get(index) ?? [], context);
 			pkgEmitter.build();
@@ -1761,7 +1761,7 @@ class DocumentEmitter {
 			const world = emitter.getWorld(0);
 			const fileName = this.nameProvider.world.fileName(world.world);
 			emitter.emit(code);
-			fs.writeFileSync(path.join(this.options.outDir, fileName), code.toString(emitter.context));
+			fs.writeFileSync(path.join(this.options.outDir, fileName), code.toString());
 			return;
 		} else {
 			for (const { emitter, code } of this.packages) {
@@ -1769,7 +1769,7 @@ class DocumentEmitter {
 				emitter.emit(code);
 				this.exports.push(pkgName);
 				const fileName = this.nameProvider.pack.fileName(emitter.pkg);
-				fs.writeFileSync(path.join(this.options.outDir, fileName), code.toString(emitter.context));
+				fs.writeFileSync(path.join(this.options.outDir, fileName), code.toString());
 				this.mainCode.push(`import { ${pkgName} } from './${this.nameProvider.pack.importName(emitter.pkg)}';`);
 				typeDeclarations.push(`${pkgName}?: ${pkgName}`);
 			}
@@ -2880,17 +2880,14 @@ class MemberEmitter extends Emitter {
 	protected emitErrorIfNecessary(code: Code): void {
 		const { symbols, nameProvider } = this.context;
 		if (Member.isType(this.member) && symbols.isErrorResultType(this.member)) {
-			this.context.needsJavaScriptError = true;
 			const name = nameProvider.type.name(this.member);
 			code.push(`export namespace ${name} {`);
 			code.increaseIndent();
-			code.push(`export class Error extends JavaScriptError {`);
+			code.push(`export class Error_ extends ${MetaModel.ResultError}<${name}> {`);
 			code.increaseIndent();
-			code.push(`public readonly value: ${name};`);
 			code.push(`constructor(value: ${name}) {`);
 			code.increaseIndent();
-			code.push(`super(\`${name}: \${value}\`);`);
-			code.push(`this.value = value;`);
+			code.push(`super(value, \`${name}: \${value}\`);`);
 			code.decreaseIndent();
 			code.push(`}`);
 			code.decreaseIndent();
@@ -3027,6 +3024,7 @@ class TypeReferenceEmitter extends MemberEmitter {
 		const tsName = nameProvider.type.name(this.type);
 		this.emitDocumentation(this.type, code);
 		code.push(`export type ${tsName} = ${referencedTypeName};`);
+		this.emitErrorIfNecessary(code);
 	}
 
 	public emitMetaModel(code: Code): void {
