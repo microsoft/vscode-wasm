@@ -4,7 +4,7 @@
  *--------------------------------------------------------------------------------------------*/
 /* eslint-disable @typescript-eslint/ban-types */
 import * as $wcm from '@vscode/wasm-component-model';
-import type { u16, u8, u32, u64, result, i32, ptr, i64 } from '@vscode/wasm-component-model';
+import type { u16, u8, u32, u64, returns, throws, result, i32, ptr, i64 } from '@vscode/wasm-component-model';
 import { cli } from './cli';
 import { random } from './random';
 import { io } from './io';
@@ -743,7 +743,7 @@ export namespace http {
 				 * 
 				 * Fails with `header-error.immutable` if the `fields` are immutable.
 				 */
-				set(name: FieldKey, value: FieldValue[]): void;
+				set(name: FieldKey, value: FieldValue[]): returns<void, throws<HeaderError.Error_>>;
 
 				/**
 				 * Delete all values for a key. Does nothing if no values for the key
@@ -751,7 +751,7 @@ export namespace http {
 				 * 
 				 * Fails with `header-error.immutable` if the `fields` are immutable.
 				 */
-				delete(name: FieldKey): void;
+				delete(name: FieldKey): returns<void, throws<HeaderError.Error_>>;
 
 				/**
 				 * Append a value for a key. Does not change or delete any existing
@@ -759,7 +759,7 @@ export namespace http {
 				 * 
 				 * Fails with `header-error.immutable` if the `fields` are immutable.
 				 */
-				append(name: FieldKey, value: FieldValue): void;
+				append(name: FieldKey, value: FieldValue): returns<void, throws<HeaderError.Error_>>;
 
 				/**
 				 * Retrieve the full set of keys and values in the Fields. Like the
@@ -780,7 +780,7 @@ export namespace http {
 			}
 			export type Statics = {
 				$new?(): Interface;
-				fromList(entries: [FieldKey, FieldValue][]): Fields;
+				fromList(entries: [FieldKey, FieldValue][]): returns<Fields, throws<HeaderError.Error_>>;
 			};
 			export type Class = Statics & {
 				new(): Interface;
@@ -970,7 +970,7 @@ export namespace http {
 			export interface Interface extends $wcm.Resource {
 			}
 			export type Statics = {
-				set(param: ResponseOutparam, response: OutgoingResponse): void;
+				set(param: ResponseOutparam, response: returns<OutgoingResponse, throws<ErrorCode.Error_>>): void;
 			};
 			export type Class = Statics & {
 			};
@@ -1067,7 +1067,7 @@ export namespace http {
 				 * `delete` methods will return an error, and the resource must be
 				 * dropped before the parent `future-trailers` is dropped.
 				 */
-				get(): Trailers | undefined | undefined;
+				get(): returns<Trailers | undefined, throws<ErrorCode.Error_>> | undefined;
 			}
 			export type Statics = {
 			};
@@ -1135,7 +1135,7 @@ export namespace http {
 				write(): OutputStream;
 			}
 			export type Statics = {
-				finish(this_: OutgoingBody, trailers: Trailers | undefined): void;
+				finish(this_: OutgoingBody, trailers: Trailers | undefined): returns<void, throws<ErrorCode.Error_>>;
 			};
 			export type Class = Statics & {
 			};
@@ -1167,7 +1167,7 @@ export namespace http {
 				 * but those will be reported by the `incoming-body` and its
 				 * `output-stream` child.
 				 */
-				get(): IncomingResponse | undefined;
+				get(): returns<IncomingResponse, throws<ErrorCode.Error_>> | undefined;
 			}
 			export type Statics = {
 			};
@@ -1259,7 +1259,7 @@ export namespace http {
 		 * or not allowed to be made. Otherwise, protocol errors are reported
 		 * through the `future-incoming-response`.
 		 */
-		export type handle = (request: OutgoingRequest, options: RequestOptions | undefined) => FutureIncomingResponse;
+		export type handle = (request: OutgoingRequest, options: RequestOptions | undefined) => returns<FutureIncomingResponse, throws<ErrorCode.Error_>>;
 	}
 	export type OutgoingHandler = {
 		handle: OutgoingHandler.handle;
@@ -1459,12 +1459,12 @@ export namespace http {
 		export namespace Fields {
 			export type WasmInterface = {
 				'[constructor]fields': () => i32;
-				'[static]fields.from-list': (entries_ptr: i32, entries_len: i32, result: ptr<Fields>) => void;
+				'[static]fields.from-list': (entries_ptr: i32, entries_len: i32, result: ptr<returns<Fields, throws<HeaderError.Error_>>>) => void;
 				'[method]fields.get': (self: i32, name_ptr: i32, name_len: i32, result: ptr<FieldValue[]>) => void;
 				'[method]fields.has': (self: i32, name_ptr: i32, name_len: i32) => i32;
-				'[method]fields.set': (self: i32, name_ptr: i32, name_len: i32, value_ptr: i32, value_len: i32, result: ptr<void>) => void;
-				'[method]fields.delete': (self: i32, name_ptr: i32, name_len: i32, result: ptr<void>) => void;
-				'[method]fields.append': (self: i32, name_ptr: i32, name_len: i32, value_ptr: i32, value_len: i32, result: ptr<void>) => void;
+				'[method]fields.set': (self: i32, name_ptr: i32, name_len: i32, value_ptr: i32, value_len: i32, result: ptr<returns<void, throws<HeaderError.Error_>>>) => void;
+				'[method]fields.delete': (self: i32, name_ptr: i32, name_len: i32, result: ptr<returns<void, throws<HeaderError.Error_>>>) => void;
+				'[method]fields.append': (self: i32, name_ptr: i32, name_len: i32, value_ptr: i32, value_len: i32, result: ptr<returns<void, throws<HeaderError.Error_>>>) => void;
 				'[method]fields.entries': (self: i32, result: ptr<[FieldKey, FieldValue][]>) => void;
 				'[method]fields.clone': (self: i32) => i32;
 			};
@@ -1568,7 +1568,7 @@ export namespace http {
 		export namespace FutureTrailers {
 			export type WasmInterface = {
 				'[method]future-trailers.subscribe': (self: i32) => i32;
-				'[method]future-trailers.get': (self: i32, result: ptr<Trailers | undefined | undefined>) => void;
+				'[method]future-trailers.get': (self: i32, result: ptr<returns<Trailers | undefined, throws<ErrorCode.Error_>> | undefined>) => void;
 			};
 			export namespace imports {
 				export type WasmInterface = FutureTrailers.WasmInterface & { '[resource-drop]future-trailers': (self: i32) => void };
@@ -1595,7 +1595,7 @@ export namespace http {
 		export namespace OutgoingBody {
 			export type WasmInterface = {
 				'[method]outgoing-body.write': (self: i32, result: ptr<OutputStream>) => void;
-				'[static]outgoing-body.finish': (this_: i32, trailers_case: i32, trailers_option: i32, result: ptr<void>) => void;
+				'[static]outgoing-body.finish': (this_: i32, trailers_case: i32, trailers_option: i32, result: ptr<returns<void, throws<ErrorCode.Error_>>>) => void;
 			};
 			export namespace imports {
 				export type WasmInterface = OutgoingBody.WasmInterface & { '[resource-drop]outgoing-body': (self: i32) => void };
@@ -1607,7 +1607,7 @@ export namespace http {
 		export namespace FutureIncomingResponse {
 			export type WasmInterface = {
 				'[method]future-incoming-response.subscribe': (self: i32) => i32;
-				'[method]future-incoming-response.get': (self: i32, result: ptr<IncomingResponse | undefined>) => void;
+				'[method]future-incoming-response.get': (self: i32, result: ptr<returns<IncomingResponse, throws<ErrorCode.Error_>> | undefined>) => void;
 			};
 			export namespace imports {
 				export type WasmInterface = FutureIncomingResponse.WasmInterface & { '[resource-drop]future-incoming-response': (self: i32) => void };
@@ -1762,7 +1762,7 @@ export namespace http {
 			['handle', $.handle]
 		]);
 		export type WasmInterface = {
-			'handle': (request: i32, options_case: i32, options_option: i32, result: ptr<FutureIncomingResponse>) => void;
+			'handle': (request: i32, options_case: i32, options_option: i32, result: ptr<returns<FutureIncomingResponse, throws<ErrorCode.Error_>>>) => void;
 		};
 		export namespace imports {
 			export type WasmInterface = _.WasmInterface;

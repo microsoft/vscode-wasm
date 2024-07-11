@@ -839,6 +839,11 @@ export interface ComponentModelType<J> {
 	// copy a component model value from a flattened array to another
 	copyFlat(result: WasmType[], dest: Memory, values: FlatValuesIter, src: Memory, context: ComponentModelContext): void;
 }
+namespace ComponentModelType {
+	export function satisfies<T extends JType>(_value: ComponentModelType<T> & { Error: ResultErrorConstructor<T> }): void {
+		// This is for pure Type checking.
+	}
+}
 export type AnyComponentModelType = ComponentModelType<JType>;
 
 export class ResultError<V extends JType> extends Error {
@@ -853,7 +858,7 @@ interface ResultErrorConstructor<V extends JType> {
 }
 
 export type bool = number;
-namespace $bool {
+export namespace bool {
 	export const kind: ComponentModelTypeKind = ComponentModelTypeKind.bool;
 	export const size: number = 1;
 	export const alignment: Alignment = Alignment.byte;
@@ -897,10 +902,10 @@ namespace $bool {
 		}
 	}
 }
-export const bool: ComponentModelType<boolean> & { Error: ResultErrorConstructor<boolean> } = $bool;
+ComponentModelType.satisfies(bool);
 
 export type u8 = number;
-namespace $u8 {
+export namespace u8 {
 	export const kind: ComponentModelTypeKind = ComponentModelTypeKind.u8;
 	export const size = 1;
 	export const alignment: Alignment = Alignment.byte;
@@ -950,10 +955,10 @@ namespace $u8 {
 		}
 	}
 }
-export const u8: ComponentModelType<number> & { Error: ResultErrorConstructor<u8> } = $u8;
+ComponentModelType.satisfies(u8);
 
 export type u16 = number;
-namespace $u16 {
+export namespace u16 {
 	export const kind: ComponentModelTypeKind = ComponentModelTypeKind.u16;
 	export const size = 2;
 	export const alignment: Alignment = Alignment.halfWord;
@@ -1004,10 +1009,10 @@ namespace $u16 {
 		}
 	}
 }
-export const u16: ComponentModelType<number> & { Error: ResultErrorConstructor<u16> } = $u16;
+ComponentModelType.satisfies(u16);
 
 export type u32 = number;
-namespace $u32 {
+export namespace u32 {
 	export const kind: ComponentModelTypeKind = ComponentModelTypeKind.u32;
 	export const size = 4;
 	export const alignment: Alignment = Alignment.word;
@@ -1063,10 +1068,10 @@ namespace $u32 {
 		}
 	}
 }
-export const u32: ComponentModelType<number> & { Error: ResultErrorConstructor<u16> } = $u32;
+ComponentModelType.satisfies(u32);
 
 export type u64 = bigint;
-namespace $u64 {
+export namespace u64 {
 	export const kind: ComponentModelTypeKind = ComponentModelTypeKind.u64;
 	export const size = 8;
 	export const alignment: Alignment = Alignment.doubleWord;
@@ -1118,10 +1123,10 @@ namespace $u64 {
 		}
 	}
 }
-export const u64: ComponentModelType<bigint> & { Error: ResultErrorConstructor<u64> } = $u64;
+ComponentModelType.satisfies(u64);
 
 export type s8 = number;
-namespace $s8 {
+export namespace s8 {
 	export const kind: ComponentModelTypeKind = ComponentModelTypeKind.s8;
 	export const size = 1;
 	export const alignment: Alignment = Alignment.byte;
@@ -1140,7 +1145,7 @@ namespace $s8 {
 		// values. So for signed values we need to convert them back. First
 		// we check if the value is in range of the corresponding unsigned
 		// value and the convert it to a signed value.
-		if (value < $u8.LOW_VALUE || value > $u8.HIGH_VALUE || !Number.isInteger(value)) {
+		if (value < LOW_VALUE || value > HIGH_VALUE || !Number.isInteger(value)) {
 			throw new ComponentModelTrap(`Invalid u8 value ${value}`);
 		}
 		if (value <= HIGH_VALUE) {
@@ -1181,10 +1186,10 @@ namespace $s8 {
 		}
 	}
 }
-export const s8: ComponentModelType<number> & { Error: ResultErrorConstructor<s8> } = $s8;
+ComponentModelType.satisfies(s8);
 
 export type s16 = number;
-namespace $s16 {
+export namespace s16 {
 	export const kind: ComponentModelTypeKind = ComponentModelTypeKind.s16;
 	export const size = 2;
 	export const alignment: Alignment = Alignment.halfWord;
@@ -1199,7 +1204,7 @@ namespace $s16 {
 
 	export function liftFlat(_memory: Memory, values: FlatValuesIter): s16 {
 		const value = values.next().value;
-		if (value < $u16.LOW_VALUE || value > $u16.HIGH_VALUE || !Number.isInteger(value)) {
+		if (value < LOW_VALUE || value > HIGH_VALUE || !Number.isInteger(value)) {
 			throw new ComponentModelTrap(`Invalid s16 value ${value}`);
 		}
 		return (value <= HIGH_VALUE) ? value as s16 : (value as u16) - 65536;
@@ -1236,10 +1241,10 @@ namespace $s16 {
 		}
 	}
 }
-export const s16: ComponentModelType<number> & { Error: ResultErrorConstructor<s16> } = $s16;
+ComponentModelType.satisfies(s16);
 
 export type s32 = number;
-namespace $s32 {
+export namespace s32 {
 	export const kind: ComponentModelTypeKind = ComponentModelTypeKind.s32;
 	export const size = 4;
 	export const alignment: Alignment = Alignment.word;
@@ -1254,7 +1259,7 @@ namespace $s32 {
 
 	export function liftFlat(_memory: Memory, values: FlatValuesIter): s32 {
 		const value = values.next().value;
-		if (value < $u32.LOW_VALUE || value > $u32.HIGH_VALUE || !Number.isInteger(value)) {
+		if (value < LOW_VALUE || value > HIGH_VALUE || !Number.isInteger(value)) {
 			throw new ComponentModelTrap(`Invalid s32 value ${value}`);
 		}
 		return (value <= HIGH_VALUE) ? value as s32 : (value as u32) - 4294967296;
@@ -1291,10 +1296,10 @@ namespace $s32 {
 		}
 	}
 }
-export const s32: ComponentModelType<number> & { Error: ResultErrorConstructor<s32> } = $s32;
+ComponentModelType.satisfies(s32);
 
 export type s64 = bigint;
-namespace $s64 {
+export namespace s64 {
 	export const kind: ComponentModelTypeKind = ComponentModelTypeKind.s64;
 	export const size = 8;
 	export const alignment: Alignment = Alignment.doubleWord;
@@ -1309,7 +1314,7 @@ namespace $s64 {
 
 	export function liftFlat(_memory: Memory, values: FlatValuesIter): s64 {
 		const value = values.next().value;
-		if (value < $u64.LOW_VALUE) {
+		if (value < LOW_VALUE) {
 			throw new ComponentModelTrap(`Invalid s64 value ${value}`);
 		}
 		return (value <= HIGH_VALUE) ? value as s64 : (value as u64) - 18446744073709551616n;
@@ -1346,10 +1351,10 @@ namespace $s64 {
 		}
 	}
 }
-export const s64: ComponentModelType<bigint> & { Error: ResultErrorConstructor<s64> } = $s64;
+ComponentModelType.satisfies(s64);
 
 export type float32 = number;
-namespace $float32 {
+export namespace float32 {
 	export const kind: ComponentModelTypeKind = ComponentModelTypeKind.float32;
 	export const size = 4;
 	export const alignment:Alignment = Alignment.word;
@@ -1402,10 +1407,10 @@ namespace $float32 {
 		}
 	}
 }
-export const float32: ComponentModelType<number> & { Error: ResultErrorConstructor<float32> } = $float32;
+ComponentModelType.satisfies(float32);
 
 export type float64 = number;
-namespace $float64 {
+export namespace float64 {
 	export const kind: ComponentModelTypeKind = ComponentModelTypeKind.float64;
 	export const size = 8;
 	export const alignment: Alignment = Alignment.doubleWord;
@@ -1458,7 +1463,7 @@ namespace $float64 {
 		}
 	}
 }
-export const float64: ComponentModelType<number> & { Error: ResultErrorConstructor<float64> } = $float64;
+ComponentModelType.satisfies(float64);
 
 export type byte = u8;
 export const byte: ComponentModelType<byte> = {
@@ -1508,30 +1513,30 @@ export const ptr: ComponentModelType<size> = {
 	copyFlat: u32.copyFlat
 };
 
-namespace $char {
+export namespace char {
 	export const kind: ComponentModelTypeKind = ComponentModelTypeKind.char;
 	export const size = 4;
 	export const alignment: Alignment = Alignment.word;
 	export const flatTypes: ReadonlyArray<GenericFlatType> = [$i32];
 
-	export function load(memory: ReadonlyMemoryRange, offset: offset<u32>, context: ComponentModelContext): string {
-		return fromCodePoint(u32.load(memory, offset, context));
+	export function load(memory: ReadonlyMemoryRange, offset: offset<u32>, _context: ComponentModelContext): string {
+		return fromCodePoint(u32.load(memory, offset));
 	}
 
-	export function liftFlat(memory: Memory, values: FlatValuesIter, context: ComponentModelContext): string {
-		return fromCodePoint(u32.liftFlat(memory, values, context));
+	export function liftFlat(memory: Memory, values: FlatValuesIter, _context: ComponentModelContext): string {
+		return fromCodePoint(u32.liftFlat(memory, values));
 	}
 
 	export function alloc(memory: Memory): MemoryRange {
 		return u32.alloc(memory);
 	}
 
-	export function store(memory: MemoryRange, offset: offset<u32>, value: string, context: ComponentModelContext): void {
-		u32.store(memory, offset, asCodePoint(value), context);
+	export function store(memory: MemoryRange, offset: offset<u32>, value: string, _context: ComponentModelContext): void {
+		u32.store(memory, offset, asCodePoint(value));
 	}
 
-	export function lowerFlat(result: WasmType[], memory: Memory, value: string, context: ComponentModelContext): void {
-		u32.lowerFlat(result, memory, asCodePoint(value), context);
+	export function lowerFlat(result: WasmType[], memory: Memory, value: string, _context: ComponentModelContext): void {
+		u32.lowerFlat(result, memory, asCodePoint(value));
 	}
 
 	export function copy(dest: MemoryRange, dest_offset: offset<u32>, src: ReadonlyMemoryRange, src_offset: offset<u32>): void {
@@ -1568,9 +1573,9 @@ namespace $char {
 		}
 	}
 }
-export const char: ComponentModelType<string> & { Error: ResultErrorConstructor<string> } = $char;
+ComponentModelType.satisfies(char);
 
-namespace $wstring {
+export namespace wstring {
 
 	const offsets = {
 		data: 0,
@@ -1609,8 +1614,8 @@ namespace $wstring {
 	}
 
 	export function copy(dest: MemoryRange, dest_offset: offset<[u32, u32]>, src: ReadonlyMemoryRange, src_offset: offset<[u32, u32]>, context: ComponentModelContext): void {
-		dest.assertAlignment(dest_offset, $wstring.alignment);
-		src.assertAlignment(src_offset, $wstring.alignment);
+		dest.assertAlignment(dest_offset, wstring.alignment);
+		src.assertAlignment(src_offset, wstring.alignment);
 
 		// Copy the actual string data
 		const data = src.getUint32(src_offset + offsets.data);
@@ -1696,7 +1701,7 @@ namespace $wstring {
 		}
 	}
 }
-export const wstring: ComponentModelType<string> & { getAlignmentAndByteLength: typeof $wstring.getAlignmentAndByteLength } & { Error: ResultErrorConstructor<string> } = $wstring;
+ComponentModelType.satisfies(wstring);
 
 export type JArray = JType[];
 export class ListType<T> implements ComponentModelType<T[]> {
@@ -1884,7 +1889,7 @@ abstract class TypeArrayType<T extends { length: number; byteLength: number }, E
 
 export class Int8ArrayType extends TypeArrayType<Int8Array, s8> {
 	constructor() {
-		super($s8);
+		super(s8);
 	}
 	protected loadFromRange(memory: ReadonlyMemoryRange, length: number): Int8Array {
 		return memory.getInt8Array(0, length);
@@ -1903,7 +1908,7 @@ export namespace Int8ArrayType {
 
 export class Int16ArrayType extends TypeArrayType<Int16Array, s16> {
 	constructor() {
-		super($s16);
+		super(s16);
 	}
 	protected loadFromRange(memory: ReadonlyMemoryRange, length: number): Int16Array {
 		return memory.getInt16Array(0, length);
@@ -1922,7 +1927,7 @@ export namespace Int16ArrayType {
 
 export class Int32ArrayType extends TypeArrayType<Int32Array, s32> {
 	constructor() {
-		super($s32);
+		super(s32);
 	}
 	protected loadFromRange(memory: ReadonlyMemoryRange, length: number): Int32Array {
 		return memory.getInt32Array(0, length);
@@ -1941,7 +1946,7 @@ export namespace Int32ArrayType {
 
 export class BigInt64ArrayType extends TypeArrayType<BigInt64Array, s64> {
 	constructor() {
-		super($s64);
+		super(s64);
 	}
 	protected loadFromRange(memory: ReadonlyMemoryRange, length: number): BigInt64Array {
 		return memory.getInt64Array(0, length);
@@ -1960,7 +1965,7 @@ export namespace BigInt64ArrayType {
 
 export class Uint8ArrayType extends TypeArrayType<Uint8Array, u8> {
 	constructor() {
-		super($u8);
+		super(u8);
 	}
 	protected loadFromRange(memory: ReadonlyMemoryRange, length: number): Uint8Array {
 		return memory.getUint8Array(0, length);
@@ -1979,7 +1984,7 @@ export namespace Uint8ArrayType {
 
 export class Uint16ArrayType extends TypeArrayType<Uint16Array, u16> {
 	constructor() {
-		super($u16);
+		super(u16);
 	}
 	protected loadFromRange(memory: ReadonlyMemoryRange, length: number): Uint16Array {
 		return memory.getUint16Array(0, length);
@@ -1998,7 +2003,7 @@ export namespace Uint16ArrayType {
 
 export class Uint32ArrayType extends TypeArrayType<Uint32Array, u32> {
 	constructor() {
-		super($u32);
+		super(u32);
 	}
 	protected loadFromRange(memory: ReadonlyMemoryRange, length: number): Uint32Array {
 		return memory.getUint32Array(0, length);
@@ -2017,7 +2022,7 @@ export namespace Uint32ArrayType {
 
 export class BigUint64ArrayType extends TypeArrayType<BigUint64Array, u64> {
 	constructor() {
-		super($u64);
+		super(u64);
 	}
 	protected loadFromRange(memory: ReadonlyMemoryRange, length: number): BigUint64Array {
 		return memory.getUint64Array(0, length);
@@ -2036,7 +2041,7 @@ export namespace BigUint64ArrayType {
 
 export class Float32ArrayType extends TypeArrayType<Float32Array, float32> {
 	constructor() {
-		super($float32);
+		super(float32);
 	}
 	protected loadFromRange(memory: ReadonlyMemoryRange, length: number): Float32Array {
 		return memory.getFloat32Array(0, length);
@@ -2055,7 +2060,7 @@ export namespace Float32ArrayType {
 
 export class Float64ArrayType extends TypeArrayType<Float64Array, float64> {
 	constructor() {
-		super($float64);
+		super(float64);
 	}
 	protected loadFromRange(memory: ReadonlyMemoryRange, length: number): Float64Array {
 		return memory.getFloat64Array(0, length);
@@ -2367,7 +2372,7 @@ export class FlagsType<_T> implements ComponentModelType<u32 | bigint> {
 		}
 	}
 
-	private static getType(numberOfFlags: number): typeof u32 | TupleType<any> | undefined {
+	private static getType(numberOfFlags: number): typeof u8 | typeof u16 | typeof u32 | TupleType<any> | undefined {
 		if (numberOfFlags === 0) {
 			return undefined;
 		} else if (numberOfFlags <= 8) {
@@ -2442,7 +2447,7 @@ export class VariantType<T extends JVariantCase, I, V extends JType> implements 
 	}
 
 	public load(memory: ReadonlyMemoryRange, offset: offset, context: ComponentModelContext): T {
-		const caseIndex = this.discriminantType.load(memory, offset, context);
+		const caseIndex = this.discriminantType.load(memory, offset);
 		const caseVariant = this.cases[caseIndex];
 		if (caseVariant.type === undefined) {
 			return this.ctor(caseVariant.tag as I, undefined as any);
@@ -2457,7 +2462,7 @@ export class VariantType<T extends JVariantCase, I, V extends JType> implements 
 	public liftFlat(memory: Memory, values: FlatValuesIter, context: ComponentModelContext): T {
 		// First one is the discriminant type. So skip it.
 		let valuesToReadOver = this.flatTypes.length - 1;
-		const caseIndex = this.discriminantType.liftFlat(memory, values, context);
+		const caseIndex = this.discriminantType.liftFlat(memory, values);
 		const caseVariant = this.cases[caseIndex];
 		let result: T;
 		if (caseVariant.type === undefined) {
@@ -2485,7 +2490,7 @@ export class VariantType<T extends JVariantCase, I, V extends JType> implements 
 		if (index === undefined) {
 			throw new ComponentModelTrap(`Variant case ${variantValue.tag} not found`);
 		}
-		this.discriminantType.store(memory, offset, index, context);
+		this.discriminantType.store(memory, offset, index);
 		offset += this.discriminantType.size;
 		const c = this.cases[index];
 		if (c.type !== undefined && variantValue.value !== undefined) {
@@ -2500,7 +2505,7 @@ export class VariantType<T extends JVariantCase, I, V extends JType> implements 
 		if (index === undefined) {
 			throw new ComponentModelTrap(`Variant case ${variantValue.tag} not found`);
 		}
-		this.discriminantType.lowerFlat(result, memory, index, context);
+		this.discriminantType.lowerFlat(result, memory, index);
 		const c = this.cases[index];
 		// First one is the discriminant type. So skip it.
 		let valuesToFill = this.flatTypes.length - 1;
@@ -2540,8 +2545,8 @@ export class VariantType<T extends JVariantCase, I, V extends JType> implements 
 	}
 
 	public copy(dest: MemoryRange, dest_offset: offset, src: ReadonlyMemoryRange, src_offset: offset, context: ComponentModelContext): void {
-		this.discriminantType.copy(dest, dest_offset, src, src_offset, context);
-		const caseIndex = this.discriminantType.load(src, src_offset, context);
+		this.discriminantType.copy(dest, dest_offset, src, src_offset);
+		const caseIndex = this.discriminantType.load(src, src_offset);
 		const caseVariant = this.cases[caseIndex];
 		if (caseVariant.type === undefined) {
 			return;
@@ -2555,7 +2560,7 @@ export class VariantType<T extends JVariantCase, I, V extends JType> implements 
 
 	public copyFlat(result: WasmType[], dest: Memory, values: FlatValuesIter, src: Memory, context: ComponentModelContext): void {
 		let valuesToCopy = this.flatTypes.length - 1;
-		this.discriminantType.copyFlat(result, dest, values, src, context);
+		this.discriminantType.copyFlat(result, dest, values, src);
 		const caseIndex = result[result.length - 1] as number;
 		const caseVariant = this.cases[caseIndex];
 		if (caseVariant.type !== undefined) {
@@ -2805,7 +2810,7 @@ export class OptionType<T extends JType> implements ComponentModelType<T | optio
 	}
 
 	public load(memory: ReadonlyMemoryRange, offset: offset, context: ComponentModelContext): T | option<T> | undefined {
-		const caseIndex = u8.load(memory, offset, context);
+		const caseIndex = u8.load(memory, offset);
 		if (caseIndex === 0) { // index 0 is none
 			return context.options.keepOption ? option._ctor<T>(option.none, undefined) : undefined;
 		} else {
@@ -2818,7 +2823,7 @@ export class OptionType<T extends JType> implements ComponentModelType<T | optio
 
 	public liftFlat(memory: Memory, values: FlatValuesIter, context: ComponentModelContext): T | option<T> | undefined {
 		// First one is the discriminant type. So skip it.
-		const caseIndex = u8.liftFlat(memory, values, context);
+		const caseIndex = u8.liftFlat(memory, values);
 		if (caseIndex === 0) { // Index 0 is none
 			// Read over the value params
 			for (let i = 0; i < this.valueType.flatTypes.length; i++) {
@@ -2838,7 +2843,7 @@ export class OptionType<T extends JType> implements ComponentModelType<T | optio
 	public store(memory: MemoryRange, offset: offset, value: T | option<T> | undefined, context: ComponentModelContext): void {
 		const optValue = this.asOptionValue(value, context.options);
 		const index = optValue.tag === option.none ? 0 : 1;
-		u8.store(memory, offset, index, context);
+		u8.store(memory, offset, index);
 		offset += u8.size;
 		if (optValue.tag === option.some) {
 			offset = align(offset, this.valueType.alignment);
@@ -2849,7 +2854,7 @@ export class OptionType<T extends JType> implements ComponentModelType<T | optio
 	public lowerFlat(result: WasmType[], memory: Memory, value: T | option<T> | undefined, context: ComponentModelContext): void {
 		const optValue = this.asOptionValue(value, context.options);
 		const index = optValue.tag === option.none ? 0 : 1;
-		u8.lowerFlat(result, memory, index, context);
+		u8.lowerFlat(result, memory, index);
 		if (optValue.tag === option.none) {
 			for (const type of this.valueType.flatTypes) {
 				if (type === $i64) {
@@ -2864,8 +2869,8 @@ export class OptionType<T extends JType> implements ComponentModelType<T | optio
 	}
 
 	public copy(dest: MemoryRange, dest_offset: offset, src: ReadonlyMemoryRange, src_offset: offset, context: ComponentModelContext): void {
-		u8.copy(dest, dest_offset, src, src_offset, context);
-		const caseIndex = u8.load(src, src_offset, context);
+		u8.copy(dest, dest_offset, src, src_offset);
+		const caseIndex = u8.load(src, src_offset);
 		if (caseIndex === 0) {
 			return;
 		} else {
@@ -2878,7 +2883,7 @@ export class OptionType<T extends JType> implements ComponentModelType<T | optio
 	}
 
 	public copyFlat(result: WasmType[], dest: Memory, values: FlatValuesIter, src: Memory, context: ComponentModelContext): void {
-		u8.copyFlat(result, dest, values, src, context);
+		u8.copyFlat(result, dest, values, src);
 		const caseIndex = result[result.length - 1] as number;
 		if (caseIndex === 0) {
 			for (const _type of this.valueType.flatTypes) {
@@ -2981,6 +2986,8 @@ export class ResultType<O extends JType, E extends JType = void> extends Variant
 		return this._errorClass;
 	}
 }
+export type throws<E extends Error> = E;
+export type returns<O extends JType, _E extends Error> = O;
 
 export interface Resource {
 	$handle(): ResourceHandle<this>;
@@ -3695,7 +3702,7 @@ export class DestructorType<_T extends Function = Function> extends Callable {
 
 	public callService(params: WasmType[], resourceManager: ResourceManager): void {
 		const handle = params[0];
-		if (typeof handle === 'bigint' || !$u32.valid(handle)) {
+		if (typeof handle === 'bigint' || !u32.valid(handle)) {
 			throw new ComponentModelTrap(`Object handle must be a number (u32), but got ${handle}.`);
 		}
 		const resource: any = resourceManager.getResource(handle);
@@ -3705,7 +3712,7 @@ export class DestructorType<_T extends Function = Function> extends Callable {
 
 	public async callServiceAsync(_memory: Memory, params: WasmType[], resourceManager: ResourceManager): Promise<void> {
 		const handle = params[0];
-		if (typeof handle === 'bigint' || !$u32.valid(handle)) {
+		if (typeof handle === 'bigint' || !u32.valid(handle)) {
 			throw new ComponentModelTrap(`Object handle must be a number (u32), but got ${handle}.`);
 		}
 		const resource: any = resourceManager.getResource(handle);
@@ -3807,32 +3814,32 @@ export class ResourceHandleType implements ComponentModelType<ResourceHandle> {
 		this.flatTypes = u32.flatTypes;
 	}
 
-	public load(memory: ReadonlyMemoryRange, offset: offset, context: ComponentModelContext): ResourceHandle {
-		return u32.load(memory, offset, context);
+	public load(memory: ReadonlyMemoryRange, offset: offset): ResourceHandle {
+		return u32.load(memory, offset);
 	}
 
-	public liftFlat(memory: Memory, values: FlatValuesIter, context: ComponentModelContext): ResourceHandle {
-		return u32.liftFlat(memory, values, context);
+	public liftFlat(memory: Memory, values: FlatValuesIter): ResourceHandle {
+		return u32.liftFlat(memory, values);
 	}
 
 	public alloc(memory: Memory): MemoryRange {
 		return u32.alloc(memory);
 	}
 
-	public store(memory: MemoryRange, offset: offset, value: ResourceHandle, context: ComponentModelContext): void {
-		u32.store(memory, offset, value, context);
+	public store(memory: MemoryRange, offset: offset, value: ResourceHandle): void {
+		u32.store(memory, offset, value);
 	}
 
-	public lowerFlat(result: WasmType[], memory: Memory, value: ResourceHandle, context: ComponentModelContext): void {
-		u32.lowerFlat(result, memory, value, context);
+	public lowerFlat(result: WasmType[], memory: Memory, value: ResourceHandle): void {
+		u32.lowerFlat(result, memory, value);
 	}
 
-	public copy(dest: MemoryRange, dest_offset: offset, src: ReadonlyMemoryRange, src_offset: offset, context: ComponentModelContext): void {
-		u32.copy(dest, dest_offset, src, src_offset, context);
+	public copy(dest: MemoryRange, dest_offset: offset, src: ReadonlyMemoryRange, src_offset: offset): void {
+		u32.copy(dest, dest_offset, src, src_offset);
 	}
 
-	public copyFlat(result: WasmType[], dest: Memory, values: FlatValuesIter, src: Memory, context: ComponentModelContext): void {
-		u32.copyFlat(result, dest, values, src, context);
+	public copyFlat(result: WasmType[], dest: Memory, values: FlatValuesIter, src: Memory): void {
+		u32.copyFlat(result, dest, values, src);
 	}
 }
 
@@ -3883,12 +3890,12 @@ export class ResourceType<T extends Resource = Resource> implements ComponentMod
 	}
 
 	public load(memory: ReadonlyMemoryRange, offset: offset, context: ComponentModelContext): T {
-		const handle = u32.load(memory, offset, context);
+		const handle = u32.load(memory, offset);
 		return context.resources.ensure(this.id).getResource(handle) as T;
 	}
 
 	public liftFlat(memory: Memory, values: FlatValuesIter, context: ComponentModelContext): T {
-		const handle = u32.liftFlat(memory, values, context);
+		const handle = u32.liftFlat(memory, values);
 		return context.resources.ensure(this.id).getResource(handle) as T;
 	}
 
@@ -3896,22 +3903,22 @@ export class ResourceType<T extends Resource = Resource> implements ComponentMod
 		return u32.alloc(memory);
 	}
 
-	public store(memory: MemoryRange, offset: offset, value: T, context: ComponentModelContext): void {
+	public store(memory: MemoryRange, offset: offset, value: T): void {
 		const handle = value.$handle();
-		u32.store(memory, offset, handle, context);
+		u32.store(memory, offset, handle);
 	}
 
-	public lowerFlat(result: WasmType[], memory: Memory, value: T, context: ComponentModelContext): void {
+	public lowerFlat(result: WasmType[], memory: Memory, value: T): void {
 		const handle = value.$handle();
-		u32.lowerFlat(result, memory, handle, context);
+		u32.lowerFlat(result, memory, handle);
 	}
 
-	public copy(dest: MemoryRange, dest_offset: offset, src: ReadonlyMemoryRange, src_offset: offset, context: ComponentModelContext): void {
-		u32.copy(dest, dest_offset, src, src_offset, context);
+	public copy(dest: MemoryRange, dest_offset: offset, src: ReadonlyMemoryRange, src_offset: offset): void {
+		u32.copy(dest, dest_offset, src, src_offset);
 	}
 
-	public copyFlat(result: WasmType[], dest: Memory, values: FlatValuesIter, src: Memory, context: ComponentModelContext): void {
-		u32.copyFlat(result, dest, values, src, context);
+	public copyFlat(result: WasmType[], dest: Memory, values: FlatValuesIter, src: Memory): void {
+		u32.copyFlat(result, dest, values, src);
 	}
 }
 

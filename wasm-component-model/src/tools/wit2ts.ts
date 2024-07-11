@@ -830,10 +830,18 @@ namespace MetaModel {
 		return `${qualifier}.${name}`;
 	}
 
-	class ErrorClassPrinter extends AbstractTypePrinter {
+	export enum ErrorClassUsage {
+		result = 'result',
+		metaModel = 'metaModel'
+	}
 
-		constructor(symbols: SymbolTable) {
+	export class ErrorClassPrinter extends AbstractTypePrinter<ErrorClassUsage> {
+
+		private readonly nameProvider: NameProvider;
+
+		constructor(symbols: SymbolTable, nameProvider: NameProvider) {
 			super(symbols);
+			this.nameProvider = nameProvider;
 		}
 
 		public printBaseReference(type: string): string {
@@ -885,20 +893,20 @@ namespace MetaModel {
 		public printResult(): string {
 			throw new Error('Can\'t use result type as an error result type.');
 		}
-		public printRecord(type: RecordType): string {
-			return this.printErrorType(type);
+		public printRecord(type: RecordType, usage: ErrorClassUsage): string {
+			return this.printErrorType(type, usage);
 		}
-		public printEnum(type: EnumType): string {
-			return this.printErrorType(type);
+		public printEnum(type: EnumType, usage: ErrorClassUsage): string {
+			return this.printErrorType(type, usage);
 		}
-		public printFlags(type: FlagsType): string {
-			return this.printErrorType(type);
+		public printFlags(type: FlagsType, usage: ErrorClassUsage): string {
+			return this.printErrorType(type, usage);
 		}
-		public printVariant(type: VariantType): string {
-			return this.printErrorType(type);
+		public printVariant(type: VariantType, usage: ErrorClassUsage): string {
+			return this.printErrorType(type, usage);
 		}
-		public printResource(type: ResourceType): string {
-			return this.printErrorType(type);
+		public printResource(type: ResourceType, usage: ErrorClassUsage): string {
+			return this.printErrorType(type, usage);
 		}
 		public printBorrowHandle(): string {
 			throw new Error('Can\'t use own type as an error result type.');
@@ -907,8 +915,12 @@ namespace MetaModel {
 			throw new Error('Can\'t use own type as an error result type.');
 		}
 
-		private printErrorType(type: Type): string {
-			return `${this.symbols.types.getFullyQualifiedName(type)}.Error_`;
+		private printErrorType(type: Type, usage: ErrorClassUsage): string {
+			if (usage === ErrorClassUsage.metaModel) {
+				return `${this.symbols.types.getFullyQualifiedName(type)}.Error_`;
+			} else {
+				return `${this.nameProvider.type.name(type)}.Error_`;
+			}
 		}
 	}
 
@@ -922,7 +934,7 @@ namespace MetaModel {
 			super(symbols);
 			this.nameProvider = nameProvider;
 			this.typeParamPrinter = new TypeParamPrinter(symbols, nameProvider, imports, options);
-			this.errorClassPrinter = new ErrorClassPrinter(symbols);
+			this.errorClassPrinter = new ErrorClassPrinter(symbols, nameProvider);
 		}
 
 		public perform(type: Type, usage: TypeUsage): string {
@@ -1007,10 +1019,10 @@ namespace MetaModel {
 			if (result.err !== null) {
 				error = this.printTypeReference(result.err, usage);
 				if (this.symbols.isErrorResultType(result.err)) {
-					errorError = this.errorClassPrinter.printTypeReference(result.err, undefined);
+					errorError = this.errorClassPrinter.printTypeReference(result.err, ErrorClassUsage.metaModel);
 				}
 			}
-			return `new ${qualifier}.ResultType<${this.typeParamPrinter.perform(type)}>(${ok}, ${error}${errorError !== undefined ? `, ${errorError}.Error_` : ''})`;
+			return `new ${qualifier}.ResultType<${this.typeParamPrinter.perform(type)}>(${ok}, ${error}${errorError !== undefined ? `, ${errorError}` : ''})`;
 		}
 
 		public printBorrowHandle(type: BorrowHandleType, usage: TypeUsage): string {
@@ -1222,12 +1234,14 @@ namespace TypeScript {
 		private readonly nameProvider: NameProvider;
 		private readonly imports: Imports;
 		private readonly options: ResolvedOptions;
+		private readonly errorClassPrinter: MetaModel.ErrorClassPrinter;
 
 		constructor (symbols: SymbolTable, nameProvider: NameProvider, imports: Imports, options: ResolvedOptions) {
 			super(symbols);
 			this.nameProvider = nameProvider;
 			this.imports = imports;
 			this.options = options;
+			this.errorClassPrinter = new MetaModel.ErrorClassPrinter(symbols, nameProvider);
 		}
 
 		public perform(type: Type, usage: TypeUsage): string {
@@ -1298,24 +1312,26 @@ namespace TypeScript {
 		}
 
 		public printResult(type: ResultType, usage: TypeUsage): string {
+			let ok: string = 'void';
+			const result = type.kind.result;
+			if (result.ok !== null) {
+				ok = this.printTypeReference(result.ok, usage);
+			}
 			if (usage === TypeUsage.function || !this.options.keep.result) {
-				let ok: string = 'void';
-				const result = type.kind.result;
-				if (result.ok !== null) {
-					ok = this.printTypeReference(result.ok, usage);
+				if (result.err !== null) {
+					this.imports.addBaseType('returns');
+					this.imports.addBaseType('throws');
+					const errorClass = this.errorClassPrinter.printTypeReference(result.err, MetaModel.ErrorClassUsage.result);
+					return `returns<${ok}, throws<${errorClass}>>`;
+				} else {
+					return ok;
 				}
-				return ok;
 			} else {
-				let ok: string = 'void';
-				const result = type.kind.result;
-				if (result.ok !== null) {
-					ok = this.printTypeReference(result.ok, usage);
-				}
+				this.imports.addBaseType('result');
 				let error: string = 'void';
 				if (result.err !== null) {
 					error = this.printTypeReference(result.err, usage);
 				}
-				this.imports.addBaseType('result');
 				return `result<${ok}, ${error}>`;
 			}
 		}

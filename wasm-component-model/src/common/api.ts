@@ -11,8 +11,8 @@ export {
 	JEnum, JType, ListType, MainConnection, Memory, MemoryError, MemoryExports, MemoryRange, MethodType, OptionType, Options, OwnType, PackageType,
 	ReadonlyMemoryRange, RecordType, Resource, ResourceCallable, ResourceHandle, ResourceHandleType, ResourceManager, ResourceManagers,
 	ResourceRepresentation, ResourceType, ResultError, ResultType, StaticMethodType, TupleType, Uint16ArrayType, Uint32ArrayType, Uint8ArrayType, VariantType,
-	WasmContext, WasmType, WorkerConnection, WorldType, bool, borrow, byte, char, f32, f64, float32, float64, i32, i64, offset, option, own, ptr, result, s16,
-	s32, s64, s8, size, u16, u32, u64, u8, wstring
+	WasmContext, WasmType, WorkerConnection, WorldType, bool, borrow, byte, char, f32, f64, float32, float64, i32, i64, offset, option, own, ptr, result, returns, s16,
+	s32, s64, s8, size, throws, u16, u32, u64, u8, wstring
 } from './componentModel';
 export { Connection } from './connection';
 export { RAL };

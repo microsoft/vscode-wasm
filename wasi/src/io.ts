@@ -4,7 +4,7 @@
  *--------------------------------------------------------------------------------------------*/
 /* eslint-disable @typescript-eslint/ban-types */
 import * as $wcm from '@vscode/wasm-component-model';
-import type { u64, i32, ptr, i64 } from '@vscode/wasm-component-model';
+import type { u64, returns, throws, i32, ptr, i64 } from '@vscode/wasm-component-model';
 
 export namespace io {
 	export namespace Error {
@@ -195,13 +195,13 @@ export namespace io {
 				 * as a return value by the callee. The callee may return a list of bytes
 				 * less than `len` in size while more bytes are available for reading.
 				 */
-				read(len: u64): Uint8Array;
+				read(len: u64): returns<Uint8Array, throws<StreamError.Error_>>;
 
 				/**
 				 * Read bytes from a stream, after blocking until at least one byte can
 				 * be read. Except for blocking, behavior is identical to `read`.
 				 */
-				blockingRead(len: u64): Uint8Array;
+				blockingRead(len: u64): returns<Uint8Array, throws<StreamError.Error_>>;
 
 				/**
 				 * Skip bytes from a stream. Returns number of bytes skipped.
@@ -209,13 +209,13 @@ export namespace io {
 				 * Behaves identical to `read`, except instead of returning a list
 				 * of bytes, returns the number of bytes consumed from the stream.
 				 */
-				skip(len: u64): u64;
+				skip(len: u64): returns<u64, throws<StreamError.Error_>>;
 
 				/**
 				 * Skip bytes from a stream, after blocking until at least one byte
 				 * can be skipped. Except for blocking behavior, identical to `skip`.
 				 */
-				blockingSkip(len: u64): u64;
+				blockingSkip(len: u64): returns<u64, throws<StreamError.Error_>>;
 
 				/**
 				 * Create a `pollable` which will resolve once either the specified stream
@@ -247,7 +247,7 @@ export namespace io {
 				 * become ready when this function will report at least 1 byte, or an
 				 * error.
 				 */
-				checkWrite(): u64;
+				checkWrite(): returns<u64, throws<StreamError.Error_>>;
 
 				/**
 				 * Perform a write. This function never blocks.
@@ -264,7 +264,7 @@ export namespace io {
 				 * returns Err(closed) without writing if the stream has closed since
 				 * the last call to check-write provided a permit.
 				 */
-				write(contents: Uint8Array): void;
+				write(contents: Uint8Array): returns<void, throws<StreamError.Error_>>;
 
 				/**
 				 * Perform a write of up to 4096 bytes, and then flush the stream. Block
@@ -292,7 +292,7 @@ export namespace io {
 				 * let _ = this.check-write();         // eliding error handling
 				 * ```
 				 */
-				blockingWriteAndFlush(contents: Uint8Array): void;
+				blockingWriteAndFlush(contents: Uint8Array): returns<void, throws<StreamError.Error_>>;
 
 				/**
 				 * Request to flush buffered output. This function never blocks.
@@ -306,13 +306,13 @@ export namespace io {
 				 * completed. The `subscribe` pollable will become ready when the
 				 * flush has completed and the stream can accept more writes.
 				 */
-				flush(): void;
+				flush(): returns<void, throws<StreamError.Error_>>;
 
 				/**
 				 * Request to flush buffered output, and block until flush completes
 				 * and stream is ready for writing again.
 				 */
-				blockingFlush(): void;
+				blockingFlush(): returns<void, throws<StreamError.Error_>>;
 
 				/**
 				 * Create a `pollable` which will resolve once the output-stream
@@ -336,7 +336,7 @@ export namespace io {
 				 * passing a list of bytes, you simply pass the number of zero-bytes
 				 * that should be written.
 				 */
-				writeZeroes(len: u64): void;
+				writeZeroes(len: u64): returns<void, throws<StreamError.Error_>>;
 
 				/**
 				 * Perform a write of up to 4096 zeroes, and then flush the stream.
@@ -364,7 +364,7 @@ export namespace io {
 				 * let _ = this.check-write();         // eliding error handling
 				 * ```
 				 */
-				blockingWriteZeroesAndFlush(len: u64): void;
+				blockingWriteZeroesAndFlush(len: u64): returns<void, throws<StreamError.Error_>>;
 
 				/**
 				 * Read from one stream and write to another.
@@ -381,7 +381,7 @@ export namespace io {
 				 * This function returns the number of bytes transferred; it may be less
 				 * than `len`.
 				 */
-				splice(src: InputStream, len: u64): u64;
+				splice(src: InputStream, len: u64): returns<u64, throws<StreamError.Error_>>;
 
 				/**
 				 * Read from one stream and write to another, with blocking.
@@ -390,7 +390,7 @@ export namespace io {
 				 * `output-stream` is ready for writing, and the `input-stream`
 				 * is ready for reading, before performing the `splice`.
 				 */
-				blockingSplice(src: InputStream, len: u64): u64;
+				blockingSplice(src: InputStream, len: u64): returns<u64, throws<StreamError.Error_>>;
 			}
 			export type Statics = {
 			};
@@ -554,10 +554,10 @@ export namespace io {
 		export const witName = 'streams' as const;
 		export namespace InputStream {
 			export type WasmInterface = {
-				'[method]input-stream.read': (self: i32, len: i64, result: ptr<Uint8Array>) => void;
-				'[method]input-stream.blocking-read': (self: i32, len: i64, result: ptr<Uint8Array>) => void;
-				'[method]input-stream.skip': (self: i32, len: i64, result: ptr<u64>) => void;
-				'[method]input-stream.blocking-skip': (self: i32, len: i64, result: ptr<u64>) => void;
+				'[method]input-stream.read': (self: i32, len: i64, result: ptr<returns<Uint8Array, throws<StreamError.Error_>>>) => void;
+				'[method]input-stream.blocking-read': (self: i32, len: i64, result: ptr<returns<Uint8Array, throws<StreamError.Error_>>>) => void;
+				'[method]input-stream.skip': (self: i32, len: i64, result: ptr<returns<u64, throws<StreamError.Error_>>>) => void;
+				'[method]input-stream.blocking-skip': (self: i32, len: i64, result: ptr<returns<u64, throws<StreamError.Error_>>>) => void;
 				'[method]input-stream.subscribe': (self: i32) => i32;
 			};
 			export namespace imports {
@@ -569,16 +569,16 @@ export namespace io {
 		}
 		export namespace OutputStream {
 			export type WasmInterface = {
-				'[method]output-stream.check-write': (self: i32, result: ptr<u64>) => void;
-				'[method]output-stream.write': (self: i32, contents_ptr: i32, contents_len: i32, result: ptr<void>) => void;
-				'[method]output-stream.blocking-write-and-flush': (self: i32, contents_ptr: i32, contents_len: i32, result: ptr<void>) => void;
-				'[method]output-stream.flush': (self: i32, result: ptr<void>) => void;
-				'[method]output-stream.blocking-flush': (self: i32, result: ptr<void>) => void;
+				'[method]output-stream.check-write': (self: i32, result: ptr<returns<u64, throws<StreamError.Error_>>>) => void;
+				'[method]output-stream.write': (self: i32, contents_ptr: i32, contents_len: i32, result: ptr<returns<void, throws<StreamError.Error_>>>) => void;
+				'[method]output-stream.blocking-write-and-flush': (self: i32, contents_ptr: i32, contents_len: i32, result: ptr<returns<void, throws<StreamError.Error_>>>) => void;
+				'[method]output-stream.flush': (self: i32, result: ptr<returns<void, throws<StreamError.Error_>>>) => void;
+				'[method]output-stream.blocking-flush': (self: i32, result: ptr<returns<void, throws<StreamError.Error_>>>) => void;
 				'[method]output-stream.subscribe': (self: i32) => i32;
-				'[method]output-stream.write-zeroes': (self: i32, len: i64, result: ptr<void>) => void;
-				'[method]output-stream.blocking-write-zeroes-and-flush': (self: i32, len: i64, result: ptr<void>) => void;
-				'[method]output-stream.splice': (self: i32, src: i32, len: i64, result: ptr<u64>) => void;
-				'[method]output-stream.blocking-splice': (self: i32, src: i32, len: i64, result: ptr<u64>) => void;
+				'[method]output-stream.write-zeroes': (self: i32, len: i64, result: ptr<returns<void, throws<StreamError.Error_>>>) => void;
+				'[method]output-stream.blocking-write-zeroes-and-flush': (self: i32, len: i64, result: ptr<returns<void, throws<StreamError.Error_>>>) => void;
+				'[method]output-stream.splice': (self: i32, src: i32, len: i64, result: ptr<returns<u64, throws<StreamError.Error_>>>) => void;
+				'[method]output-stream.blocking-splice': (self: i32, src: i32, len: i64, result: ptr<returns<u64, throws<StreamError.Error_>>>) => void;
 			};
 			export namespace imports {
 				export type WasmInterface = OutputStream.WasmInterface & { '[resource-drop]output-stream': (self: i32) => void };

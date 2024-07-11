@@ -4,7 +4,7 @@
  *--------------------------------------------------------------------------------------------*/
 /* eslint-disable @typescript-eslint/ban-types */
 import * as $wcm from '@vscode/wasm-component-model';
-import type { u64, u32, i32, i64, ptr } from '@vscode/wasm-component-model';
+import type { u64, u32, returns, throws, i32, i64, ptr } from '@vscode/wasm-component-model';
 import { clocks } from './clocks';
 import { io } from './io';
 
@@ -610,7 +610,7 @@ export namespace filesystem {
 				 * 
 				 * Note: This allows using `read-stream`, which is similar to `read` in POSIX.
 				 */
-				readViaStream(offset: Filesize): InputStream;
+				readViaStream(offset: Filesize): returns<InputStream, throws<ErrorCode.Error_>>;
 
 				/**
 				 * Return a stream for writing to a file, if available.
@@ -620,7 +620,7 @@ export namespace filesystem {
 				 * Note: This allows using `write-stream`, which is similar to `write` in
 				 * POSIX.
 				 */
-				writeViaStream(offset: Filesize): OutputStream;
+				writeViaStream(offset: Filesize): returns<OutputStream, throws<ErrorCode.Error_>>;
 
 				/**
 				 * Return a stream for appending to a file, if available.
@@ -630,14 +630,14 @@ export namespace filesystem {
 				 * Note: This allows using `write-stream`, which is similar to `write` with
 				 * `O_APPEND` in in POSIX.
 				 */
-				appendViaStream(): OutputStream;
+				appendViaStream(): returns<OutputStream, throws<ErrorCode.Error_>>;
 
 				/**
 				 * Provide file advisory information on a descriptor.
 				 * 
 				 * This is similar to `posix_fadvise` in POSIX.
 				 */
-				advise(offset: Filesize, length: Filesize, advice: Advice): void;
+				advise(offset: Filesize, length: Filesize, advice: Advice): returns<void, throws<ErrorCode.Error_>>;
 
 				/**
 				 * Synchronize the data of a file to disk.
@@ -647,7 +647,7 @@ export namespace filesystem {
 				 * 
 				 * Note: This is similar to `fdatasync` in POSIX.
 				 */
-				syncData(): void;
+				syncData(): returns<void, throws<ErrorCode.Error_>>;
 
 				/**
 				 * Get flags associated with a descriptor.
@@ -657,7 +657,7 @@ export namespace filesystem {
 				 * Note: This returns the value that was the `fs_flags` value returned
 				 * from `fdstat_get` in earlier versions of WASI.
 				 */
-				getFlags(): DescriptorFlags;
+				getFlags(): returns<DescriptorFlags, throws<ErrorCode.Error_>>;
 
 				/**
 				 * Get the dynamic type of a descriptor.
@@ -671,7 +671,7 @@ export namespace filesystem {
 				 * Note: This returns the value that was the `fs_filetype` value returned
 				 * from `fdstat_get` in earlier versions of WASI.
 				 */
-				getType(): DescriptorType;
+				getType(): returns<DescriptorType, throws<ErrorCode.Error_>>;
 
 				/**
 				 * Adjust the size of an open file. If this increases the file's size, the
@@ -679,7 +679,7 @@ export namespace filesystem {
 				 * 
 				 * Note: This was called `fd_filestat_set_size` in earlier versions of WASI.
 				 */
-				setSize(size: Filesize): void;
+				setSize(size: Filesize): returns<void, throws<ErrorCode.Error_>>;
 
 				/**
 				 * Adjust the timestamps of an open file or directory.
@@ -688,7 +688,7 @@ export namespace filesystem {
 				 * 
 				 * Note: This was called `fd_filestat_set_times` in earlier versions of WASI.
 				 */
-				setTimes(dataAccessTimestamp: NewTimestamp, dataModificationTimestamp: NewTimestamp): void;
+				setTimes(dataAccessTimestamp: NewTimestamp, dataModificationTimestamp: NewTimestamp): returns<void, throws<ErrorCode.Error_>>;
 
 				/**
 				 * Read from a descriptor, without using and updating the descriptor's offset.
@@ -703,7 +703,7 @@ export namespace filesystem {
 				 * 
 				 * Note: This is similar to `pread` in POSIX.
 				 */
-				read(length: Filesize, offset: Filesize): [Uint8Array, boolean];
+				read(length: Filesize, offset: Filesize): returns<[Uint8Array, boolean], throws<ErrorCode.Error_>>;
 
 				/**
 				 * Write to a descriptor, without using and updating the descriptor's offset.
@@ -716,7 +716,7 @@ export namespace filesystem {
 				 * 
 				 * Note: This is similar to `pwrite` in POSIX.
 				 */
-				write(buffer: Uint8Array, offset: Filesize): Filesize;
+				write(buffer: Uint8Array, offset: Filesize): returns<Filesize, throws<ErrorCode.Error_>>;
 
 				/**
 				 * Read directory entries from a directory.
@@ -729,7 +729,7 @@ export namespace filesystem {
 				 * directory. Multiple streams may be active on the same directory, and they
 				 * do not interfere with each other.
 				 */
-				readDirectory(): DirectoryEntryStream;
+				readDirectory(): returns<DirectoryEntryStream, throws<ErrorCode.Error_>>;
 
 				/**
 				 * Synchronize the data and metadata of a file to disk.
@@ -739,14 +739,14 @@ export namespace filesystem {
 				 * 
 				 * Note: This is similar to `fsync` in POSIX.
 				 */
-				sync(): void;
+				sync(): returns<void, throws<ErrorCode.Error_>>;
 
 				/**
 				 * Create a directory.
 				 * 
 				 * Note: This is similar to `mkdirat` in POSIX.
 				 */
-				createDirectoryAt(path: string): void;
+				createDirectoryAt(path: string): returns<void, throws<ErrorCode.Error_>>;
 
 				/**
 				 * Return the attributes of an open file or directory.
@@ -759,7 +759,7 @@ export namespace filesystem {
 				 * 
 				 * Note: This was called `fd_filestat_get` in earlier versions of WASI.
 				 */
-				stat(): DescriptorStat;
+				stat(): returns<DescriptorStat, throws<ErrorCode.Error_>>;
 
 				/**
 				 * Return the attributes of a file or directory.
@@ -770,7 +770,7 @@ export namespace filesystem {
 				 * 
 				 * Note: This was called `path_filestat_get` in earlier versions of WASI.
 				 */
-				statAt(pathFlags: PathFlags, path: string): DescriptorStat;
+				statAt(pathFlags: PathFlags, path: string): returns<DescriptorStat, throws<ErrorCode.Error_>>;
 
 				/**
 				 * Adjust the timestamps of a file or directory.
@@ -780,14 +780,14 @@ export namespace filesystem {
 				 * Note: This was called `path_filestat_set_times` in earlier versions of
 				 * WASI.
 				 */
-				setTimesAt(pathFlags: PathFlags, path: string, dataAccessTimestamp: NewTimestamp, dataModificationTimestamp: NewTimestamp): void;
+				setTimesAt(pathFlags: PathFlags, path: string, dataAccessTimestamp: NewTimestamp, dataModificationTimestamp: NewTimestamp): returns<void, throws<ErrorCode.Error_>>;
 
 				/**
 				 * Create a hard link.
 				 * 
 				 * Note: This is similar to `linkat` in POSIX.
 				 */
-				linkAt(oldPathFlags: PathFlags, oldPath: string, newDescriptor: Descriptor, newPath: string): void;
+				linkAt(oldPathFlags: PathFlags, oldPath: string, newDescriptor: Descriptor, newPath: string): returns<void, throws<ErrorCode.Error_>>;
 
 				/**
 				 * Open a file or directory.
@@ -809,7 +809,7 @@ export namespace filesystem {
 				 * 
 				 * Note: This is similar to `openat` in POSIX.
 				 */
-				openAt(pathFlags: PathFlags, path: string, openFlags: OpenFlags, flags: DescriptorFlags): Descriptor;
+				openAt(pathFlags: PathFlags, path: string, openFlags: OpenFlags, flags: DescriptorFlags): returns<Descriptor, throws<ErrorCode.Error_>>;
 
 				/**
 				 * Read the contents of a symbolic link.
@@ -819,7 +819,7 @@ export namespace filesystem {
 				 * 
 				 * Note: This is similar to `readlinkat` in POSIX.
 				 */
-				readlinkAt(path: string): string;
+				readlinkAt(path: string): returns<string, throws<ErrorCode.Error_>>;
 
 				/**
 				 * Remove a directory.
@@ -828,14 +828,14 @@ export namespace filesystem {
 				 * 
 				 * Note: This is similar to `unlinkat(fd, path, AT_REMOVEDIR)` in POSIX.
 				 */
-				removeDirectoryAt(path: string): void;
+				removeDirectoryAt(path: string): returns<void, throws<ErrorCode.Error_>>;
 
 				/**
 				 * Rename a filesystem object.
 				 * 
 				 * Note: This is similar to `renameat` in POSIX.
 				 */
-				renameAt(oldPath: string, newDescriptor: Descriptor, newPath: string): void;
+				renameAt(oldPath: string, newDescriptor: Descriptor, newPath: string): returns<void, throws<ErrorCode.Error_>>;
 
 				/**
 				 * Create a symbolic link (also known as a "symlink").
@@ -845,7 +845,7 @@ export namespace filesystem {
 				 * 
 				 * Note: This is similar to `symlinkat` in POSIX.
 				 */
-				symlinkAt(oldPath: string, newPath: string): void;
+				symlinkAt(oldPath: string, newPath: string): returns<void, throws<ErrorCode.Error_>>;
 
 				/**
 				 * Unlink a filesystem object that is not a directory.
@@ -853,7 +853,7 @@ export namespace filesystem {
 				 * Return `error-code::is-directory` if the path refers to a directory.
 				 * Note: This is similar to `unlinkat(fd, path, 0)` in POSIX.
 				 */
-				unlinkFileAt(path: string): void;
+				unlinkFileAt(path: string): returns<void, throws<ErrorCode.Error_>>;
 
 				/**
 				 * Test whether two descriptors refer to the same filesystem object.
@@ -886,7 +886,7 @@ export namespace filesystem {
 				 * 
 				 * However, none of these is required.
 				 */
-				metadataHash(): MetadataHashValue;
+				metadataHash(): returns<MetadataHashValue, throws<ErrorCode.Error_>>;
 
 				/**
 				 * Return a hash of the metadata associated with a filesystem object referred
@@ -894,7 +894,7 @@ export namespace filesystem {
 				 * 
 				 * This performs the same hash computation as `metadata-hash`.
 				 */
-				metadataHashAt(pathFlags: PathFlags, path: string): MetadataHashValue;
+				metadataHashAt(pathFlags: PathFlags, path: string): returns<MetadataHashValue, throws<ErrorCode.Error_>>;
 			}
 			export type Statics = {
 			};
@@ -908,7 +908,7 @@ export namespace filesystem {
 				/**
 				 * Read a single directory entry from a `directory-entry-stream`.
 				 */
-				readDirectoryEntry(): DirectoryEntry | undefined;
+				readDirectoryEntry(): returns<DirectoryEntry | undefined, throws<ErrorCode.Error_>>;
 			}
 			export type Statics = {
 			};
@@ -1081,33 +1081,33 @@ export namespace filesystem {
 		export const witName = 'types' as const;
 		export namespace Descriptor {
 			export type WasmInterface = {
-				'[method]descriptor.read-via-stream': (self: i32, offset: i64, result: ptr<InputStream>) => void;
-				'[method]descriptor.write-via-stream': (self: i32, offset: i64, result: ptr<OutputStream>) => void;
-				'[method]descriptor.append-via-stream': (self: i32, result: ptr<OutputStream>) => void;
-				'[method]descriptor.advise': (self: i32, offset: i64, length: i64, advice_Advice: i32, result: ptr<void>) => void;
-				'[method]descriptor.sync-data': (self: i32, result: ptr<void>) => void;
-				'[method]descriptor.get-flags': (self: i32, result: ptr<DescriptorFlags>) => void;
-				'[method]descriptor.get-type': (self: i32, result: ptr<DescriptorType>) => void;
-				'[method]descriptor.set-size': (self: i32, size: i64, result: ptr<void>) => void;
-				'[method]descriptor.set-times': (self: i32, dataAccessTimestamp_case: i32, dataAccessTimestamp_0: i64, dataAccessTimestamp_1: i32, dataModificationTimestamp_case: i32, dataModificationTimestamp_0: i64, dataModificationTimestamp_1: i32, result: ptr<void>) => void;
-				'[method]descriptor.read': (self: i32, length: i64, offset: i64, result: ptr<[Uint8Array, boolean]>) => void;
-				'[method]descriptor.write': (self: i32, buffer_ptr: i32, buffer_len: i32, offset: i64, result: ptr<Filesize>) => void;
-				'[method]descriptor.read-directory': (self: i32, result: ptr<DirectoryEntryStream>) => void;
-				'[method]descriptor.sync': (self: i32, result: ptr<void>) => void;
-				'[method]descriptor.create-directory-at': (self: i32, path_ptr: i32, path_len: i32, result: ptr<void>) => void;
-				'[method]descriptor.stat': (self: i32, result: ptr<DescriptorStat>) => void;
-				'[method]descriptor.stat-at': (self: i32, pathFlags: i32, path_ptr: i32, path_len: i32, result: ptr<DescriptorStat>) => void;
-				'[method]descriptor.set-times-at': (self: i32, pathFlags: i32, path_ptr: i32, path_len: i32, dataAccessTimestamp_case: i32, dataAccessTimestamp_0: i64, dataAccessTimestamp_1: i32, dataModificationTimestamp_case: i32, dataModificationTimestamp_0: i64, dataModificationTimestamp_1: i32, result: ptr<void>) => void;
-				'[method]descriptor.link-at': (self: i32, oldPathFlags: i32, oldPath_ptr: i32, oldPath_len: i32, newDescriptor: i32, newPath_ptr: i32, newPath_len: i32, result: ptr<void>) => void;
-				'[method]descriptor.open-at': (self: i32, pathFlags: i32, path_ptr: i32, path_len: i32, openFlags: i32, flags: i32, result: ptr<Descriptor>) => void;
-				'[method]descriptor.readlink-at': (self: i32, path_ptr: i32, path_len: i32, result: ptr<string>) => void;
-				'[method]descriptor.remove-directory-at': (self: i32, path_ptr: i32, path_len: i32, result: ptr<void>) => void;
-				'[method]descriptor.rename-at': (self: i32, oldPath_ptr: i32, oldPath_len: i32, newDescriptor: i32, newPath_ptr: i32, newPath_len: i32, result: ptr<void>) => void;
-				'[method]descriptor.symlink-at': (self: i32, oldPath_ptr: i32, oldPath_len: i32, newPath_ptr: i32, newPath_len: i32, result: ptr<void>) => void;
-				'[method]descriptor.unlink-file-at': (self: i32, path_ptr: i32, path_len: i32, result: ptr<void>) => void;
+				'[method]descriptor.read-via-stream': (self: i32, offset: i64, result: ptr<returns<InputStream, throws<ErrorCode.Error_>>>) => void;
+				'[method]descriptor.write-via-stream': (self: i32, offset: i64, result: ptr<returns<OutputStream, throws<ErrorCode.Error_>>>) => void;
+				'[method]descriptor.append-via-stream': (self: i32, result: ptr<returns<OutputStream, throws<ErrorCode.Error_>>>) => void;
+				'[method]descriptor.advise': (self: i32, offset: i64, length: i64, advice_Advice: i32, result: ptr<returns<void, throws<ErrorCode.Error_>>>) => void;
+				'[method]descriptor.sync-data': (self: i32, result: ptr<returns<void, throws<ErrorCode.Error_>>>) => void;
+				'[method]descriptor.get-flags': (self: i32, result: ptr<returns<DescriptorFlags, throws<ErrorCode.Error_>>>) => void;
+				'[method]descriptor.get-type': (self: i32, result: ptr<returns<DescriptorType, throws<ErrorCode.Error_>>>) => void;
+				'[method]descriptor.set-size': (self: i32, size: i64, result: ptr<returns<void, throws<ErrorCode.Error_>>>) => void;
+				'[method]descriptor.set-times': (self: i32, dataAccessTimestamp_case: i32, dataAccessTimestamp_0: i64, dataAccessTimestamp_1: i32, dataModificationTimestamp_case: i32, dataModificationTimestamp_0: i64, dataModificationTimestamp_1: i32, result: ptr<returns<void, throws<ErrorCode.Error_>>>) => void;
+				'[method]descriptor.read': (self: i32, length: i64, offset: i64, result: ptr<returns<[Uint8Array, boolean], throws<ErrorCode.Error_>>>) => void;
+				'[method]descriptor.write': (self: i32, buffer_ptr: i32, buffer_len: i32, offset: i64, result: ptr<returns<Filesize, throws<ErrorCode.Error_>>>) => void;
+				'[method]descriptor.read-directory': (self: i32, result: ptr<returns<DirectoryEntryStream, throws<ErrorCode.Error_>>>) => void;
+				'[method]descriptor.sync': (self: i32, result: ptr<returns<void, throws<ErrorCode.Error_>>>) => void;
+				'[method]descriptor.create-directory-at': (self: i32, path_ptr: i32, path_len: i32, result: ptr<returns<void, throws<ErrorCode.Error_>>>) => void;
+				'[method]descriptor.stat': (self: i32, result: ptr<returns<DescriptorStat, throws<ErrorCode.Error_>>>) => void;
+				'[method]descriptor.stat-at': (self: i32, pathFlags: i32, path_ptr: i32, path_len: i32, result: ptr<returns<DescriptorStat, throws<ErrorCode.Error_>>>) => void;
+				'[method]descriptor.set-times-at': (self: i32, pathFlags: i32, path_ptr: i32, path_len: i32, dataAccessTimestamp_case: i32, dataAccessTimestamp_0: i64, dataAccessTimestamp_1: i32, dataModificationTimestamp_case: i32, dataModificationTimestamp_0: i64, dataModificationTimestamp_1: i32, result: ptr<returns<void, throws<ErrorCode.Error_>>>) => void;
+				'[method]descriptor.link-at': (self: i32, oldPathFlags: i32, oldPath_ptr: i32, oldPath_len: i32, newDescriptor: i32, newPath_ptr: i32, newPath_len: i32, result: ptr<returns<void, throws<ErrorCode.Error_>>>) => void;
+				'[method]descriptor.open-at': (self: i32, pathFlags: i32, path_ptr: i32, path_len: i32, openFlags: i32, flags: i32, result: ptr<returns<Descriptor, throws<ErrorCode.Error_>>>) => void;
+				'[method]descriptor.readlink-at': (self: i32, path_ptr: i32, path_len: i32, result: ptr<returns<string, throws<ErrorCode.Error_>>>) => void;
+				'[method]descriptor.remove-directory-at': (self: i32, path_ptr: i32, path_len: i32, result: ptr<returns<void, throws<ErrorCode.Error_>>>) => void;
+				'[method]descriptor.rename-at': (self: i32, oldPath_ptr: i32, oldPath_len: i32, newDescriptor: i32, newPath_ptr: i32, newPath_len: i32, result: ptr<returns<void, throws<ErrorCode.Error_>>>) => void;
+				'[method]descriptor.symlink-at': (self: i32, oldPath_ptr: i32, oldPath_len: i32, newPath_ptr: i32, newPath_len: i32, result: ptr<returns<void, throws<ErrorCode.Error_>>>) => void;
+				'[method]descriptor.unlink-file-at': (self: i32, path_ptr: i32, path_len: i32, result: ptr<returns<void, throws<ErrorCode.Error_>>>) => void;
 				'[method]descriptor.is-same-object': (self: i32, other: i32) => i32;
-				'[method]descriptor.metadata-hash': (self: i32, result: ptr<MetadataHashValue>) => void;
-				'[method]descriptor.metadata-hash-at': (self: i32, pathFlags: i32, path_ptr: i32, path_len: i32, result: ptr<MetadataHashValue>) => void;
+				'[method]descriptor.metadata-hash': (self: i32, result: ptr<returns<MetadataHashValue, throws<ErrorCode.Error_>>>) => void;
+				'[method]descriptor.metadata-hash-at': (self: i32, pathFlags: i32, path_ptr: i32, path_len: i32, result: ptr<returns<MetadataHashValue, throws<ErrorCode.Error_>>>) => void;
 			};
 			export namespace imports {
 				export type WasmInterface = Descriptor.WasmInterface & { '[resource-drop]descriptor': (self: i32) => void };
@@ -1118,7 +1118,7 @@ export namespace filesystem {
 		}
 		export namespace DirectoryEntryStream {
 			export type WasmInterface = {
-				'[method]directory-entry-stream.read-directory-entry': (self: i32, result: ptr<DirectoryEntry | undefined>) => void;
+				'[method]directory-entry-stream.read-directory-entry': (self: i32, result: ptr<returns<DirectoryEntry | undefined, throws<ErrorCode.Error_>>>) => void;
 			};
 			export namespace imports {
 				export type WasmInterface = DirectoryEntryStream.WasmInterface & { '[resource-drop]directory-entry-stream': (self: i32) => void };

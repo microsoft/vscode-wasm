@@ -3,8 +3,8 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 /* eslint-disable @typescript-eslint/ban-types */
-import type { float32, float64, i32, i64, ptr, s32, s64, u32, u64 } from '@vscode/wasm-component-model';
 import * as $wcm from '@vscode/wasm-component-model';
+import type { u32, u64, s32, s64, float32, float64, returns, throws, i32, ptr, i64 } from '@vscode/wasm-component-model';
 
 export namespace Types {
 	export type Point = {
@@ -175,7 +175,7 @@ export namespace Types {
 
 			add(): u32;
 
-			check(): u32;
+			check(): returns<u32, throws<$wcm.bool.Error>>;
 		}
 		export type Statics = {
 			$new?(x: u32, y: u32): Interface;
@@ -295,7 +295,7 @@ export namespace Types._ {
 			'[method]point-resource.get-x': (self: i32) => i32;
 			'[method]point-resource.get-y': (self: i32) => i32;
 			'[method]point-resource.add': (self: i32) => i32;
-			'[method]point-resource.check': (self: i32, result: ptr<u32>) => void;
+			'[method]point-resource.check': (self: i32, result: ptr<returns<u32, throws<$wcm.bool.Error>>>) => void;
 		};
 		export namespace imports {
 			export type WasmInterface = PointResource.WasmInterface & { '[resource-drop]point-resource': (self: i32) => void };
