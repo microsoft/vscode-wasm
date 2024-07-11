@@ -1245,6 +1245,7 @@ export namespace http {
 		export type FutureIncomingResponse = http.Types.FutureIncomingResponse;
 
 		export type ErrorCode = http.Types.ErrorCode;
+		export const ErrorCode = http.Types.ErrorCode;
 
 		/**
 		 * This function is invoked with an outgoing HTTP Request, and it returns

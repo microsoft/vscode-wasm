@@ -830,15 +830,99 @@ namespace MetaModel {
 		return `${qualifier}.${name}`;
 	}
 
+	class ErrorClassPrinter extends AbstractTypePrinter {
+
+		constructor(symbols: SymbolTable) {
+			super(symbols);
+		}
+
+		public printBaseReference(type: string): string {
+			if (type === 'string') {
+				type = 'wstring';
+			}
+			return `${qualify(type)}.Error`;
+		}
+
+		public printList(type: ListType): string {
+			const base = type.kind.list;
+			if (TypeReference.isString(base)) {
+				switch (base) {
+					case 'u8':
+						return `${qualifier}.Uint8ArrayType.Error`;
+					case 'u16':
+						return `${qualifier}.Uint16ArrayType.Error`;
+					case 'u32':
+						return `${qualifier}.Uint32ArrayType.Error`;
+					case 'u64':
+						return `${qualifier}.BigUint64ArrayType.Error`;
+					case 's8':
+						return `${qualifier}.Int8ArrayType.Error`;
+					case 's16':
+						return `${qualifier}.Int16ArrayType.Error`;
+					case 's32':
+						return `${qualifier}.Int32ArrayType.Error`;
+					case 's64':
+						return `${qualifier}.BigInt64ArrayType.Error`;
+					case 'f32':
+					case 'float32':
+						return `${qualifier}.Float32ArrayType.Error`;
+					case 'f64':
+					case 'float64':
+						return `${qualifier}.Float64ArrayType.Error`;
+					default:
+						return `${qualifier}.list.Error`;
+				}
+			} else {
+				return `${qualifier}.list.Error`;
+			}
+		}
+		public printOption(): string {
+			return `${qualify('option')}.Error`;
+		}
+		public printTuple(): string {
+			return `${qualify('tuple')}.Error`;
+		}
+		public printResult(): string {
+			throw new Error('Can\'t use result type as an error result type.');
+		}
+		public printRecord(type: RecordType): string {
+			return this.printErrorType(type);
+		}
+		public printEnum(type: EnumType): string {
+			return this.printErrorType(type);
+		}
+		public printFlags(type: FlagsType): string {
+			return this.printErrorType(type);
+		}
+		public printVariant(type: VariantType): string {
+			return this.printErrorType(type);
+		}
+		public printResource(type: ResourceType): string {
+			return this.printErrorType(type);
+		}
+		public printBorrowHandle(): string {
+			throw new Error('Can\'t use own type as an error result type.');
+		}
+		public printOwnHandle(): string {
+			throw new Error('Can\'t use own type as an error result type.');
+		}
+
+		private printErrorType(type: Type): string {
+			return `${this.symbols.types.getFullyQualifiedName(type)}.Error_`;
+		}
+	}
+
 	export class TypePrinter extends AbstractTypePrinter<TypeUsage | { usage: TypeUsage.function; replace: string }> {
 
 		private readonly nameProvider: NameProvider;
 		private readonly typeParamPrinter: TypeParamPrinter;
+		private readonly errorClassPrinter: ErrorClassPrinter;
 
 		constructor (symbols: SymbolTable, nameProvider: NameProvider, imports: Imports, options: ResolvedOptions) {
 			super(symbols);
 			this.nameProvider = nameProvider;
 			this.typeParamPrinter = new TypeParamPrinter(symbols, nameProvider, imports, options);
+			this.errorClassPrinter = new ErrorClassPrinter(symbols);
 		}
 
 		public perform(type: Type, usage: TypeUsage): string {
@@ -923,7 +1007,7 @@ namespace MetaModel {
 			if (result.err !== null) {
 				error = this.printTypeReference(result.err, usage);
 				if (this.symbols.isErrorResultType(result.err)) {
-					errorError = this.symbols.types.getFullyQualifiedName(result.err);
+					errorError = this.errorClassPrinter.printTypeReference(result.err, undefined);
 				}
 			}
 			return `new ${qualifier}.ResultType<${this.typeParamPrinter.perform(type)}>(${ok}, ${error}${errorError !== undefined ? `, ${errorError}.Error_` : ''})`;
@@ -987,6 +1071,8 @@ namespace MetaModel {
 					return qualify('bool');
 				case 'string':
 					return qualify('wstring');
+				case 'char':
+					return qualify('char');
 				default:
 					throw new Error(`Unknown base type ${base}`);
 			}
@@ -3024,6 +3110,10 @@ class TypeReferenceEmitter extends MemberEmitter {
 		const tsName = nameProvider.type.name(this.type);
 		this.emitDocumentation(this.type, code);
 		code.push(`export type ${tsName} = ${referencedTypeName};`);
+		const final = this.getFinalReferencedType();
+		if (this.isReferencedTypeErrorResult() || Type.isEnumType(final) || Type.isVariantType(final) || Type.isFlagsType(final)) {
+			code.push(`export const ${tsName} = ${referencedTypeName};`);
+		}
 		this.emitErrorIfNecessary(code);
 	}
 
@@ -3053,6 +3143,30 @@ class TypeReferenceEmitter extends MemberEmitter {
 			return referenced;
 		}
 		throw new Error(`Cannot reference type ${JSON.stringify(referenced)} from ${JSON.stringify(this.container)}`);
+	}
+
+	private getFinalReferencedType(): Type {
+		if (!TypeKind.isReference(this.type.kind)) {
+			throw new Error('Expected reference type');
+		}
+		const { symbols } = this.context;
+		let referenced = symbols.getType(this.type.kind.type);
+		while (TypeKind.isReference(referenced.kind)) {
+			referenced = symbols.getType(referenced.kind.type);
+		}
+		return referenced;
+	}
+
+	private isReferencedTypeErrorResult(): boolean {
+		if (!Type.isReferenceType(this.type)) {
+			throw new Error('Expected reference type');
+		}
+		const { symbols } = this.context;
+		let type: Type = this.type;
+		while(!symbols.isErrorResultType(type) && Type.isReferenceType(type)) {
+			type = symbols.getType(type.kind.type);
+		}
+		return symbols.isErrorResultType(type);
 	}
 
 	private computeQualifier(code: Code, reference: Interface | World): string | undefined {

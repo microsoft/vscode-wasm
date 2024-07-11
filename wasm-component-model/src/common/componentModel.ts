@@ -841,38 +841,63 @@ export interface ComponentModelType<J> {
 }
 export type AnyComponentModelType = ComponentModelType<JType>;
 
+export class ResultError<V extends JType> extends Error {
+	public readonly value: V;
+	constructor(value: V, message: string) {
+		super(message);
+		this.value = value;
+	}
+}
+interface ResultErrorConstructor<V extends JType> {
+	new(value: V): ResultError<V>;
+}
+
 export type bool = number;
-export const bool: ComponentModelType<boolean> = {
-	kind: ComponentModelTypeKind.bool,
-	size: 1,
-	alignment: 1,
-	flatTypes: [$i32],
-	load(memory, offset): boolean {
+namespace $bool {
+	export const kind: ComponentModelTypeKind = ComponentModelTypeKind.bool;
+	export const size: number = 1;
+	export const alignment: Alignment = Alignment.byte;
+	export const flatTypes: ReadonlyArray<GenericFlatType> = [$i32];
+
+	export function load(memory: ReadonlyMemoryRange, offset: offset<bool>): boolean {
 		return memory.getUint8(offset) !== 0;
-	},
-	liftFlat(_memory, values): boolean {
+	}
+
+	export function liftFlat(_memory: Memory, values: FlatValuesIter): boolean {
 		const value = values.next().value;
 		if (value < 0) {
 			throw new ComponentModelTrap(`Invalid bool value ${value}`);
 		}
 		return value !== 0;
-	},
-	alloc(memory): MemoryRange {
-		return memory.alloc(bool.alignment, bool.size);
-	},
-	store(memory, offset, value: boolean): void {
+	}
+
+	export function alloc(memory: Memory): MemoryRange {
+		return memory.alloc(alignment, size);
+	}
+
+	export function store(memory: MemoryRange, offset: offset<bool>, value: boolean): void {
 		memory.setUint8(offset, value ? 1 : 0);
-	},
-	lowerFlat(result, _memory, value: boolean): void {
+	}
+
+	export function lowerFlat(result: WasmType[], _memory: Memory, value: boolean): void {
 		result.push(value ? 1 : 0);
-	},
-	copy(dest: MemoryRange, dest_offset: offset<bool>, src: ReadonlyMemoryRange, src_offset: offset<bool>): void {
+	}
+
+	export function copy(dest: MemoryRange, dest_offset: offset<bool>, src: ReadonlyMemoryRange, src_offset: offset<bool>): void {
 		src.copyBytes(src_offset, bool.size, dest, dest_offset);
-	},
-	copyFlat(result: WasmType[], _dest: Memory, values: FlatValuesIter, _src: Memory): void {
+	}
+
+	export function copyFlat(result: WasmType[], _dest: Memory, values: FlatValuesIter, _src: Memory): void {
 		result.push(values.next().value);
 	}
-};
+
+	export class Error extends ResultError<boolean> {
+		constructor(value: boolean) {
+			super(value, `Error value: ${value}`);
+		}
+	}
+}
+export const bool: ComponentModelType<boolean> & { Error: ResultErrorConstructor<boolean> } = $bool;
 
 export type u8 = number;
 namespace $u8 {
@@ -918,8 +943,14 @@ namespace $u8 {
 	export function copyFlat(result: WasmType[], _dest: Memory, values: FlatValuesIter, _src: Memory): void {
 		result.push(values.next().value);
 	}
+
+	export class Error extends ResultError<u8> {
+		constructor(value: u8) {
+			super(value, `Error value: ${value}`);
+		}
+	}
 }
-export const u8:ComponentModelType<number> = $u8;
+export const u8: ComponentModelType<number> & { Error: ResultErrorConstructor<u8> } = $u8;
 
 export type u16 = number;
 namespace $u16 {
@@ -966,8 +997,14 @@ namespace $u16 {
 	export function copyFlat(result: WasmType[], _dest: Memory, values: FlatValuesIter, _src: Memory): void {
 		result.push(values.next().value);
 	}
+
+	export class Error extends ResultError<u16> {
+		constructor(value: u16) {
+			super(value, `Error value: ${value}`);
+		}
+	}
 }
-export const u16: ComponentModelType<number> = $u16;
+export const u16: ComponentModelType<number> & { Error: ResultErrorConstructor<u16> } = $u16;
 
 export type u32 = number;
 namespace $u32 {
@@ -1019,8 +1056,14 @@ namespace $u32 {
 	export function copyFlat(result: WasmType[], _dest: Memory, values: FlatValuesIter, _src: Memory): void {
 		result.push(values.next().value);
 	}
+
+	export class Error extends ResultError<u32> {
+		constructor(value: u32) {
+			super(value, `Error value: ${value}`);
+		}
+	}
 }
-export const u32: ComponentModelType<number> = $u32;
+export const u32: ComponentModelType<number> & { Error: ResultErrorConstructor<u16> } = $u32;
 
 export type u64 = bigint;
 namespace $u64 {
@@ -1068,8 +1111,14 @@ namespace $u64 {
 	export function copyFlat(result: WasmType[], _dest: Memory, values: FlatValuesIter, _src: Memory): void {
 		result.push(values.next().value);
 	}
+
+	export class Error extends ResultError<u64> {
+		constructor(value: u64) {
+			super(value, `Error value: ${value}`);
+		}
+	}
 }
-export const u64: ComponentModelType<bigint> = $u64;
+export const u64: ComponentModelType<bigint> & { Error: ResultErrorConstructor<u64> } = $u64;
 
 export type s8 = number;
 namespace $s8 {
@@ -1125,8 +1174,14 @@ namespace $s8 {
 	export function copyFlat(result: WasmType[], _dest: Memory, values: FlatValuesIter, _src: Memory): void {
 		result.push(values.next().value);
 	}
+
+	export class Error extends ResultError<s8> {
+		constructor(value: s8) {
+			super(value, `Error value: ${value}`);
+		}
+	}
 }
-export const s8: ComponentModelType<number> = $s8;
+export const s8: ComponentModelType<number> & { Error: ResultErrorConstructor<s8> } = $s8;
 
 export type s16 = number;
 namespace $s16 {
@@ -1174,8 +1229,14 @@ namespace $s16 {
 	export function copyFlat(result: WasmType[], _dest: Memory, values: FlatValuesIter, _src: Memory): void {
 		result.push(values.next().value);
 	}
+
+	export class Error extends ResultError<s16> {
+		constructor(value: s16) {
+			super(value, `Error value: ${value}`);
+		}
+	}
 }
-export const s16: ComponentModelType<number> = $s16;
+export const s16: ComponentModelType<number> & { Error: ResultErrorConstructor<s16> } = $s16;
 
 export type s32 = number;
 namespace $s32 {
@@ -1223,8 +1284,14 @@ namespace $s32 {
 	export function copyFlat(result: WasmType[], _dest: Memory, values: FlatValuesIter, _src: Memory): void {
 		result.push(values.next().value);
 	}
+
+	export class Error extends ResultError<s32> {
+		constructor(value: s32) {
+			super(value, `Error value: ${value}`);
+		}
+	}
 }
-export const s32: ComponentModelType<number> = $s32;
+export const s32: ComponentModelType<number> & { Error: ResultErrorConstructor<s32> } = $s32;
 
 export type s64 = bigint;
 namespace $s64 {
@@ -1272,8 +1339,14 @@ namespace $s64 {
 	export function copyFlat(result: WasmType[], _dest: Memory, values: FlatValuesIter, _src: Memory): void {
 		result.push(values.next().value);
 	}
+
+	export class Error extends ResultError<s64> {
+		constructor(value: s64) {
+			super(value, `Error value: ${value}`);
+		}
+	}
 }
-export const s64: ComponentModelType<bigint> = $s64;
+export const s64: ComponentModelType<bigint> & { Error: ResultErrorConstructor<s64> } = $s64;
 
 export type float32 = number;
 namespace $float32 {
@@ -1322,8 +1395,14 @@ namespace $float32 {
 	export function copyFlat(result: WasmType[], _dest: Memory, values: FlatValuesIter, _src: Memory): void {
 		result.push(values.next().value);
 	}
+
+	export class Error extends ResultError<float32> {
+		constructor(value: float32) {
+			super(value, `Error value: ${value}`);
+		}
+	}
 }
-export const float32: ComponentModelType<number> = $float32;
+export const float32: ComponentModelType<number> & { Error: ResultErrorConstructor<float32> } = $float32;
 
 export type float64 = number;
 namespace $float64 {
@@ -1372,8 +1451,14 @@ namespace $float64 {
 	export function copyFlat(result: WasmType[], _dest: Memory, values: FlatValuesIter, _src: Memory): void {
 		result.push(values.next().value);
 	}
+
+	export class Error extends ResultError<float64> {
+		constructor(value: float64) {
+			super(value, `Error value: ${value}`);
+		}
+	}
 }
-export const float64: ComponentModelType<number> = $float64;
+export const float64: ComponentModelType<number> & { Error: ResultErrorConstructor<float64> } = $float64;
 
 export type byte = u8;
 export const byte: ComponentModelType<byte> = {
@@ -1422,7 +1507,8 @@ export const ptr: ComponentModelType<size> = {
 	copy: u32.copy,
 	copyFlat: u32.copyFlat
 };
-namespace $wchar {
+
+namespace $char {
 	export const kind: ComponentModelTypeKind = ComponentModelTypeKind.char;
 	export const size = 4;
 	export const alignment: Alignment = Alignment.word;
@@ -1475,8 +1561,14 @@ namespace $wchar {
 		}
 		return code;
 	}
+
+	export class Error extends ResultError<string> {
+		constructor(value: string) {
+			super(value, `Error value: ${value}`);
+		}
+	}
 }
-export const wchar: ComponentModelType<string> = $wchar;
+export const char: ComponentModelType<string> & { Error: ResultErrorConstructor<string> } = $char;
 
 namespace $wstring {
 
@@ -1597,8 +1689,14 @@ namespace $wstring {
 			throw new ComponentModelTrap('Unsupported encoding');
 		}
 	}
+
+	export class Error extends ResultError<string> {
+		constructor(value: string) {
+			super(value, `Error value: ${value}`);
+		}
+	}
 }
-export const wstring: ComponentModelType<string> & { getAlignmentAndByteLength: typeof $wstring.getAlignmentAndByteLength } = $wstring;
+export const wstring: ComponentModelType<string> & { getAlignmentAndByteLength: typeof $wstring.getAlignmentAndByteLength } & { Error: ResultErrorConstructor<string> } = $wstring;
 
 export type JArray = JType[];
 export class ListType<T> implements ComponentModelType<T[]> {
@@ -1697,6 +1795,13 @@ export class ListType<T> implements ComponentModelType<T[]> {
 		}
 	}
 }
+export namespace list {
+	export class Error extends ResultError<JType[]> {
+		constructor(value: JType[]) {
+			super(value, `Error value: ${JSON.stringify(value)}`);
+		}
+	}
+}
 
 abstract class TypeArrayType<T extends { length: number; byteLength: number }, ET> implements ComponentModelType<T> {
 
@@ -1788,6 +1893,13 @@ export class Int8ArrayType extends TypeArrayType<Int8Array, s8> {
 		memory.setInt8Array(0, value);
 	}
 }
+export namespace Int8ArrayType {
+	export class Error extends ResultError<Int8Array> {
+		constructor(value: Int8Array) {
+			super(value, `Error value: ${JSON.stringify(value)}`);
+		}
+	}
+}
 
 export class Int16ArrayType extends TypeArrayType<Int16Array, s16> {
 	constructor() {
@@ -1798,6 +1910,13 @@ export class Int16ArrayType extends TypeArrayType<Int16Array, s16> {
 	}
 	protected storeIntoRange(memory: MemoryRange, value: Int16Array): void {
 		memory.setInt16Array(0, value);
+	}
+}
+export namespace Int16ArrayType {
+	export class Error extends ResultError<Int16Array> {
+		constructor(value: Int16Array) {
+			super(value, `Error value: ${JSON.stringify(value)}`);
+		}
 	}
 }
 
@@ -1812,6 +1931,13 @@ export class Int32ArrayType extends TypeArrayType<Int32Array, s32> {
 		memory.setInt32Array(0, value);
 	}
 }
+export namespace Int32ArrayType {
+	export class Error extends ResultError<Int32Array> {
+		constructor(value: Int32Array) {
+			super(value, `Error value: ${JSON.stringify(value)}`);
+		}
+	}
+}
 
 export class BigInt64ArrayType extends TypeArrayType<BigInt64Array, s64> {
 	constructor() {
@@ -1822,6 +1948,13 @@ export class BigInt64ArrayType extends TypeArrayType<BigInt64Array, s64> {
 	}
 	protected storeIntoRange(memory: MemoryRange, value: BigInt64Array): void {
 		memory.setInt64Array(0, value);
+	}
+}
+export namespace BigInt64ArrayType {
+	export class Error extends ResultError<BigInt64Array> {
+		constructor(value: BigInt64Array) {
+			super(value, `Error value: ${JSON.stringify(value)}`);
+		}
 	}
 }
 
@@ -1836,6 +1969,13 @@ export class Uint8ArrayType extends TypeArrayType<Uint8Array, u8> {
 		memory.setUint8Array(0, value);
 	}
 }
+export namespace Uint8ArrayType {
+	export class Error extends ResultError<Uint8Array> {
+		constructor(value: Uint8Array) {
+			super(value, `Error value: ${JSON.stringify(value)}`);
+		}
+	}
+}
 
 export class Uint16ArrayType extends TypeArrayType<Uint16Array, u16> {
 	constructor() {
@@ -1846,6 +1986,13 @@ export class Uint16ArrayType extends TypeArrayType<Uint16Array, u16> {
 	}
 	protected storeIntoRange(memory: MemoryRange, value: Uint16Array): void {
 		memory.setUint16Array(0, value);
+	}
+}
+export namespace Uint16ArrayType {
+	export class Error extends ResultError<Uint16Array> {
+		constructor(value: Uint16Array) {
+			super(value, `Error value: ${JSON.stringify(value)}`);
+		}
 	}
 }
 
@@ -1860,6 +2007,13 @@ export class Uint32ArrayType extends TypeArrayType<Uint32Array, u32> {
 		memory.setUint32Array(0, value);
 	}
 }
+export namespace Uint32ArrayType {
+	export class Error extends ResultError<Uint32Array> {
+		constructor(value: Uint32Array) {
+			super(value, `Error value: ${JSON.stringify(value)}`);
+		}
+	}
+}
 
 export class BigUint64ArrayType extends TypeArrayType<BigUint64Array, u64> {
 	constructor() {
@@ -1870,6 +2024,13 @@ export class BigUint64ArrayType extends TypeArrayType<BigUint64Array, u64> {
 	}
 	protected storeIntoRange(memory: MemoryRange, value: BigUint64Array): void {
 		memory.setUint64Array(0, value);
+	}
+}
+export namespace BigUint64ArrayType {
+	export class Error extends ResultError<BigUint64Array> {
+		constructor(value: BigUint64Array) {
+			super(value, `Error value: ${JSON.stringify(value)}`);
+		}
 	}
 }
 
@@ -1884,6 +2045,13 @@ export class Float32ArrayType extends TypeArrayType<Float32Array, float32> {
 		memory.setFloat32Array(0, value);
 	}
 }
+export namespace Float32ArrayType {
+	export class Error extends ResultError<Float32Array> {
+		constructor(value: Float32Array) {
+			super(value, `Error value: ${JSON.stringify(value)}`);
+		}
+	}
+}
 
 export class Float64ArrayType extends TypeArrayType<Float64Array, float64> {
 	constructor() {
@@ -1894,6 +2062,13 @@ export class Float64ArrayType extends TypeArrayType<Float64Array, float64> {
 	}
 	protected storeIntoRange(memory: MemoryRange, value: Float64Array): void {
 		memory.setFloat64Array(0, value);
+	}
+}
+export namespace Float64ArrayType {
+	export class Error extends ResultError<Float64Array> {
+		constructor(value: Float64Array) {
+			super(value, `Error value: ${JSON.stringify(value)}`);
+		}
 	}
 }
 
@@ -2079,6 +2254,13 @@ export class TupleType<T extends JTuple> extends BaseRecordType<T, TupleField> {
 
 	protected elements(record: T, _fields: TupleField[]): JType[] {
 		return record;
+	}
+}
+export namespace tuple {
+	export class Error extends ResultError<JType[]> {
+		constructor(value: JType[]) {
+			super(value, `Error value: ${JSON.stringify(value)}`);
+		}
 	}
 }
 
@@ -2543,7 +2725,6 @@ export class EnumType<T extends JEnum> implements ComponentModelType<T> {
 	}
 }
 
-
 export namespace option {
 	export const none = 'none' as const;
 	export type None<T extends JType> = { readonly tag: typeof none } & _common<T>;
@@ -2596,6 +2777,12 @@ export namespace option {
 			return this._tag === option.some;
 		}
 
+	}
+
+	export class Error extends ResultError<JType> {
+		constructor(value: JType) {
+			super(value, `Error value: ${JSON.stringify(value)}`);
+		}
 	}
 }
 export type option<T extends JType> = option.None<T> | option.Some<T>;
@@ -2780,17 +2967,6 @@ export namespace result {
 	}
 }
 
-export class ResultError<V extends JType> extends Error {
-	public readonly value: V;
-	constructor(value: V, message: string) {
-		super(message);
-		this.value = value;
-	}
-}
-
-interface ResultErrorConstructor<V extends JType> {
-	new(value: V): ResultError<V>;
-}
 export type result<O extends JType, E extends JType = void> = result.Ok<O, E> | result.Error<O, E>;
 export class ResultType<O extends JType, E extends JType = void> extends VariantType<result<O, E>, 'ok' | 'error', O | E> {
 
@@ -3246,7 +3422,9 @@ class Callable {
 	protected lowerReturnValue(value: JType | void, memory: Memory, context: ComponentModelContext, out: ptr | undefined): WasmType | void {
 		if (this.returnType === undefined) {
 			return;
-		} else if (this.returnType.flatTypes.length <= Callable.MAX_FLAT_RESULTS) {
+		}
+
+		if (this.returnType.flatTypes.length <= Callable.MAX_FLAT_RESULTS) {
 			const result: WasmType[] = [];
 			this.returnType.lowerFlat(result, memory, value, context);
 			if (result.length !== this.returnType.flatTypes.length) {
@@ -3258,6 +3436,14 @@ class Callable {
 			this.returnType.store(writer, 0, value, context);
 			return out !== undefined ? undefined : writer.ptr;
 		}
+	}
+
+	protected handleError(error: any, memory: Memory, context: ComponentModelContext, out: ptr | undefined): WasmType | void {
+		if (!(this.returnType instanceof ResultType) || this.returnType.errorClass === undefined || !(error instanceof this.returnType.errorClass)) {
+			throw error;
+		}
+		const value = result.Error(error.value);
+		return this.lowerReturnValue(value, memory, context, out);
 	}
 
 	protected copyReturnValue(resultStorage: { originalResult: MemoryRange; transferResult: MemoryRange } | undefined, dest: Memory, src: Memory, value: WasmType | undefined | void, context: ComponentModelContext): WasmType | undefined {
@@ -3399,10 +3585,25 @@ class Callable {
 	protected liftReturnValue(value: WasmType | void, memory: Memory, context: ComponentModelContext): JType {
 		if (this.returnType === undefined) {
 			return;
-		} else if (this.returnType.flatTypes.length <= Callable.MAX_FLAT_RESULTS) {
-			return this.returnType.liftFlat(memory, [value!].values(), context);
+		}
+		let result: JType;
+		if (this.returnType.flatTypes.length <= Callable.MAX_FLAT_RESULTS) {
+			result = this.returnType.liftFlat(memory, [value!].values(), context);
 		} else {
-			return this.returnType.load(memory.readonly(value as ptr, this.returnType.size), 0, context);
+			result = this.returnType.load(memory.readonly(value as ptr, this.returnType.size), 0, context);
+		}
+		if (this.returnType instanceof ResultType) {
+			const resultValue = result as result<JType, JType>;
+			if (resultValue.isError()) {
+				if (this.returnType.errorClass === undefined) {
+					throw new ComponentModelTrap(`Received an error result, but no error class is defined.`);
+				}
+				throw new this.returnType.errorClass(resultValue.value);
+			} else {
+				return resultValue.value;
+			}
+		} else {
+			return result;
 		}
 	}
 }
@@ -3418,14 +3619,22 @@ export class FunctionType<_T extends Function = Function> extends Callable  {
 	 */
 	public callService(func: JFunction, params: WasmType[], context: WasmContext): WasmType | void {
 		const [jParams, out] = this.getParamValuesForHostCall(params, context.getMemory(), context);
-		const result: JType = func(...jParams);
-		return this.lowerReturnValue(result, context.getMemory(), context, out);
+		try {
+			const result: JType = func(...jParams);
+			return this.lowerReturnValue(result, context.getMemory(), context, out);
+		} catch (error) {
+			return this.handleError(error, context.getMemory(), context, out);
+		}
 	}
 
 	public async callServiceAsync(memory: Memory, func: JFunctionAsync, params: WasmType[], context: ComponentModelContext): Promise<WasmType | void> {
 		const [jParams, out] = this.getParamValuesForHostCall(params, memory, context);
-		const result: JType = await func(...jParams);
-		return this.lowerReturnValue(result, memory, context, out);
+		try {
+			const result: JType = await func(...jParams);
+			return this.lowerReturnValue(result, memory, context, out);
+		} catch (error) {
+			return this.handleError(error, memory, context, out);
+		}
 	}
 }
 
@@ -3513,14 +3722,22 @@ export class StaticMethodType<_T extends Function = Function> extends Callable {
 
 	public callService(func: JFunction, params: WasmType[], context: WasmContext): WasmType | void {
 		const [jParams, out] = this.getParamValuesForHostCall(params, context.getMemory(), context);
-		const result: JType = func(...jParams);
-		return this.lowerReturnValue(result, context.getMemory(), context, out);
+		try {
+			const result: JType = func(...jParams);
+			return this.lowerReturnValue(result, context.getMemory(), context, out);
+		} catch (error) {
+			return this.handleError(error, context.getMemory(), context, out);
+		}
 	}
 
 	public async callServiceAsync(memory: Memory, func: JFunctionAsync, params: WasmType[], context: ComponentModelContext): Promise<WasmType | void> {
 		const [jParams, out] = this.getParamValuesForHostCall(params, memory, context);
-		const result: JType = await func(...jParams);
-		return this.lowerReturnValue(result, memory, context, out);
+		try {
+			const result: JType = await func(...jParams);
+			return this.lowerReturnValue(result, memory, context, out);
+		} catch (error) {
+			return this.handleError(error, memory, context, out);
+		}
 	}
 }
 
@@ -3542,8 +3759,12 @@ export class MethodType<_T extends Function = Function> extends Callable {
 		const [jParams, out] = this.getParamValuesForHostCall(params, context.getMemory(), context);
 		const resource = resourceManager.getResource(handle);
 		const memory  = context.getMemory();
-		const result: JType = (resource as any)[methodName](...jParams);
-		return this.lowerReturnValue(result, memory, context, out);
+		try {
+			const result: JType = (resource as any)[methodName](...jParams);
+			return this.lowerReturnValue(result, memory, context, out);
+		} catch (error) {
+			return this.handleError(error, memory, context, out);
+		}
 	}
 
 	public async callServiceAsync(memory: Memory, methodName: string, params: WasmType[], resourceManager: ResourceManager, context: ComponentModelContext): Promise<WasmType | void> {
@@ -3557,8 +3778,12 @@ export class MethodType<_T extends Function = Function> extends Callable {
 		}
 		const [jParams, out] = this.getParamValuesForHostCall(params, memory, context);
 		const resource = resourceManager.getResource(handle);
-		const result: JType = await (resource as any)[methodName](...jParams);
-		return this.lowerReturnValue(result, memory, context, out);
+		try {
+			const result: JType = await (resource as any)[methodName](...jParams);
+			return this.lowerReturnValue(result, memory, context, out);
+		} catch (error) {
+			return this.handleError(error, memory, context, out);
+		}
 	}
 }
 

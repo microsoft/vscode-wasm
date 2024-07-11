@@ -17,6 +17,7 @@ interface types {
         get-x: func() -> u32;
         get-y: func() -> u32;
         add: func() -> u32;
+		check: func() -> result<u32, bool>;
 	}
 
 	record point-option {
