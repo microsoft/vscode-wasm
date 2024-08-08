@@ -1140,19 +1140,19 @@ export namespace s8 {
 	}
 
 	export function liftFlat(_memory: Memory, values: FlatValuesIter): s8 {
-		const value = values.next().value;
+		let value = values.next().value as number;
+		if (!Number.isInteger(value)) {
+			throw new ComponentModelTrap(`Invalid s8 value ${value}`);
+		}
 		// All int values in the component model are transferred as unsigned
-		// values. So for signed values we need to convert them back. First
-		// we check if the value is in range of the corresponding unsigned
-		// value and the convert it to a signed value.
-		if (value < LOW_VALUE || value > HIGH_VALUE || !Number.isInteger(value)) {
-			throw new ComponentModelTrap(`Invalid u8 value ${value}`);
+		// values. So for signed values we need to convert them back.
+		if (value > HIGH_VALUE) {
+			value = value - 256;
 		}
-		if (value <= HIGH_VALUE) {
-			return value as s8;
-		} else {
-			return (value as u8) - 256;
+		if (value < LOW_VALUE || value > HIGH_VALUE) {
+			throw new ComponentModelTrap(`Invalid s8 value ${value}`);
 		}
+		return value as s8;
 	}
 
 	export function alloc(memory: Memory): MemoryRange {
@@ -1203,11 +1203,18 @@ export namespace s16 {
 	}
 
 	export function liftFlat(_memory: Memory, values: FlatValuesIter): s16 {
-		const value = values.next().value;
-		if (value < LOW_VALUE || value > HIGH_VALUE || !Number.isInteger(value)) {
+		let value = values.next().value as number;
+		if (!Number.isInteger(value)) {
 			throw new ComponentModelTrap(`Invalid s16 value ${value}`);
 		}
-		return (value <= HIGH_VALUE) ? value as s16 : (value as u16) - 65536;
+		// See comment in s8.liftFlat
+		if (value > HIGH_VALUE) {
+			value = value - 65536;
+		}
+		if (value < LOW_VALUE || value > HIGH_VALUE) {
+			throw new ComponentModelTrap(`Invalid s16 value ${value}`);
+		}
+		return value as s16;
 	}
 
 	export function alloc(memory: Memory): MemoryRange {
@@ -1258,11 +1265,18 @@ export namespace s32 {
 	}
 
 	export function liftFlat(_memory: Memory, values: FlatValuesIter): s32 {
-		const value = values.next().value;
-		if (value < LOW_VALUE || value > HIGH_VALUE || !Number.isInteger(value)) {
+		let value = values.next().value as number;
+		if (!Number.isInteger(value)) {
 			throw new ComponentModelTrap(`Invalid s32 value ${value}`);
 		}
-		return (value <= HIGH_VALUE) ? value as s32 : (value as u32) - 4294967296;
+		// See comment in s8.liftFlat
+		if (value > HIGH_VALUE) {
+			value = (value as u32) - 4294967296;
+		}
+		if (value < LOW_VALUE || value > HIGH_VALUE) {
+			throw new ComponentModelTrap(`Invalid s32 value ${value}`);
+		}
+		return value;
 	}
 
 	export function alloc(memory: Memory): MemoryRange {
@@ -1313,11 +1327,18 @@ export namespace s64 {
 	}
 
 	export function liftFlat(_memory: Memory, values: FlatValuesIter): s64 {
-		const value = values.next().value;
-		if (value < LOW_VALUE) {
+		let value = values.next().value;
+		if (typeof value !== 'bigint') {
 			throw new ComponentModelTrap(`Invalid s64 value ${value}`);
 		}
-		return (value <= HIGH_VALUE) ? value as s64 : (value as u64) - 18446744073709551616n;
+		// See comment in s8.liftFlat
+		if (value > HIGH_VALUE) {
+			value = value - 18446744073709551616n;
+		}
+		if (value < LOW_VALUE || value > HIGH_VALUE) {
+			throw new ComponentModelTrap(`Invalid s64 value ${value}`);
+		}
+		return value;
 	}
 
 	export function alloc(memory: Memory): MemoryRange {
