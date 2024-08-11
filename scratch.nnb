@@ -138,6 +138,35 @@
                     ]
                 }
             ]
+        },
+        {
+            "language": "typescript",
+            "source": [
+                "try {\n\tthrow new Error(10);\n} catch (e) {\n\tconsole.log(e.stack);\n}"
+            ],
+            "outputs": [
+                {
+                    "items": [
+                        {
+                            "mime": "application/vnd.code.notebook.stdout",
+                            "value": [
+                                "Error: 10",
+                                "    at <Cell 8> [2, 7]",
+                                "    at <Cell 8> [9, 46]",
+                                "    at Script.runInContext (node:vm:148:12)",
+                                "    at Script.runInNewContext (node:vm:153:17)",
+                                "    at Object.runInNewContext (node:vm:309:38)",
+                                "    at C (/home/dirkb/.vscode-server-insiders/extensions/donjayamanne.typescript-notebook-2.0.6/out/extension/server/index.js:2:113345)",
+                                "    at t.execCode (/home/dirkb/.vscode-server-insiders/extensions/donjayamanne.typescript-notebook-2.0.6/out/extension/server/index.js:2:114312)",
+                                "    at k.<anonymous> (/home/dirkb/.vscode-server-insiders/extensions/donjayamanne.typescript-notebook-2.0.6/out/extension/server/index.js:2:142156)",
+                                "    at k.emit (node:events:519:28)",
+                                "    at k.emit (node:domain:488:12)",
+                                ""
+                            ]
+                        }
+                    ]
+                }
+            ]
         }
     ]
 }

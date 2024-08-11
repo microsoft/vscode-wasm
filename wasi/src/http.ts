@@ -4,7 +4,7 @@
  *--------------------------------------------------------------------------------------------*/
 /* eslint-disable @typescript-eslint/ban-types */
 import * as $wcm from '@vscode/wasm-component-model';
-import type { u16, u8, u32, u64, result, own, borrow, option, i32, ptr, i64 } from '@vscode/wasm-component-model';
+import type { u16, u8, u32, u64, result, i32, ptr, i64 } from '@vscode/wasm-component-model';
 import { cli } from './cli';
 import { random } from './random';
 import { io } from './io';
@@ -26,7 +26,6 @@ export namespace http {
 		export type IoError = io.Error.Error;
 
 		export type Pollable = io.Poll.Pollable;
-
 
 		/**
 		 * This type corresponds to HTTP standard Methods.
@@ -145,7 +144,6 @@ export namespace http {
 		}
 		export type Method = Method.Get | Method.Head | Method.Post | Method.Put | Method.Delete | Method.Connect | Method.Options | Method.Trace | Method.Patch | Method.Other;
 
-
 		/**
 		 * This type corresponds to HTTP standard Related Schemes.
 		 */
@@ -223,7 +221,6 @@ export namespace http {
 			fieldName?: string | undefined;
 			fieldSize?: u32 | undefined;
 		};
-
 
 		/**
 		 * These cases are inspired by the IANA HTTP Proxy Error Types:
@@ -611,7 +608,13 @@ export namespace http {
 			}
 		}
 		export type ErrorCode = ErrorCode.DNSTimeout | ErrorCode.DNSError | ErrorCode.DestinationNotFound | ErrorCode.DestinationUnavailable | ErrorCode.DestinationIPProhibited | ErrorCode.DestinationIPUnroutable | ErrorCode.ConnectionRefused | ErrorCode.ConnectionTerminated | ErrorCode.ConnectionTimeout | ErrorCode.ConnectionReadTimeout | ErrorCode.ConnectionWriteTimeout | ErrorCode.ConnectionLimitReached | ErrorCode.TLSProtocolError | ErrorCode.TLSCertificateError | ErrorCode.TLSAlertReceived | ErrorCode.HTTPRequestDenied | ErrorCode.HTTPRequestLengthRequired | ErrorCode.HTTPRequestBodySize | ErrorCode.HTTPRequestMethodInvalid | ErrorCode.HTTPRequestURIInvalid | ErrorCode.HTTPRequestURITooLong | ErrorCode.HTTPRequestHeaderSectionSize | ErrorCode.HTTPRequestHeaderSize | ErrorCode.HTTPRequestTrailerSectionSize | ErrorCode.HTTPRequestTrailerSize | ErrorCode.HTTPResponseIncomplete | ErrorCode.HTTPResponseHeaderSectionSize | ErrorCode.HTTPResponseHeaderSize | ErrorCode.HTTPResponseBodySize | ErrorCode.HTTPResponseTrailerSectionSize | ErrorCode.HTTPResponseTrailerSize | ErrorCode.HTTPResponseTransferCoding | ErrorCode.HTTPResponseContentCoding | ErrorCode.HTTPResponseTimeout | ErrorCode.HTTPUpgradeFailed | ErrorCode.HTTPProtocolError | ErrorCode.LoopDetected | ErrorCode.ConfigurationError | ErrorCode.InternalError;
-
+		export namespace ErrorCode {
+			export class Error_ extends $wcm.ResultError<ErrorCode> {
+				constructor(value: ErrorCode) {
+					super(value, `ErrorCode: ${value}`);
+				}
+			}
+		}
 
 		/**
 		 * This type enumerates the different kinds of errors that may occur when
@@ -683,6 +686,13 @@ export namespace http {
 			}
 		}
 		export type HeaderError = HeaderError.InvalidSyntax | HeaderError.Forbidden | HeaderError.Immutable;
+		export namespace HeaderError {
+			export class Error_ extends $wcm.ResultError<HeaderError> {
+				constructor(value: HeaderError) {
+					super(value, `HeaderError: ${value}`);
+				}
+			}
+		}
 
 		/**
 		 * Field keys are always strings.
@@ -732,24 +742,30 @@ export namespace http {
 				 * key, if they have been set.
 				 * 
 				 * Fails with `header-error.immutable` if the `fields` are immutable.
+				 *
+				 * @throws HeaderError.Error_
 				 */
-				set(name: FieldKey, value: FieldValue[]): result<void, HeaderError>;
+				set(name: FieldKey, value: FieldValue[]): void;
 
 				/**
 				 * Delete all values for a key. Does nothing if no values for the key
 				 * exist.
 				 * 
 				 * Fails with `header-error.immutable` if the `fields` are immutable.
+				 *
+				 * @throws HeaderError.Error_
 				 */
-				delete(name: FieldKey): result<void, HeaderError>;
+				delete(name: FieldKey): void;
 
 				/**
 				 * Append a value for a key. Does not change or delete any existing
 				 * values for that key.
 				 * 
 				 * Fails with `header-error.immutable` if the `fields` are immutable.
+				 *
+				 * @throws HeaderError.Error_
 				 */
-				append(name: FieldKey, value: FieldValue): result<void, HeaderError>;
+				append(name: FieldKey, value: FieldValue): void;
 
 				/**
 				 * Retrieve the full set of keys and values in the Fields. Like the
@@ -766,13 +782,37 @@ export namespace http {
 				 * `fields` constructor on the return value of `entries`. The resulting
 				 * `fields` is mutable.
 				 */
-				clone(): own<Fields>;
+				clone(): Fields;
 			}
 			export type Statics = {
 				$new?(): Interface;
-				fromList(entries: [FieldKey, FieldValue][]): result<own<Fields>, HeaderError>;
+				/**
+				 * Construct an HTTP Fields.
+				 * 
+				 * The resulting `fields` is mutable.
+				 * 
+				 * The list represents each key-value pair in the Fields. Keys
+				 * which have multiple values are represented by multiple entries in this
+				 * list with the same key.
+				 * 
+				 * The tuple is a pair of the field key, represented as a string, and
+				 * Value, represented as a list of bytes. In a valid Fields, all keys
+				 * and values are valid UTF-8 strings. However, values are not always
+				 * well-formed, so they are represented as a raw list of bytes.
+				 * 
+				 * An error result will be returned if any header or value was
+				 * syntactically invalid, or if a header was forbidden.
+				 *
+				 * @throws HeaderError.Error_
+				 */
+				fromList(entries: [FieldKey, FieldValue][]): Fields;
 			};
 			export type Class = Statics & {
+				/**
+				 * Construct an empty HTTP Fields.
+				 * 
+				 * The resulting `fields` is mutable.
+				 */
 				new(): Interface;
 			};
 		}
@@ -810,13 +850,13 @@ export namespace http {
 				 * the parent `incoming-request` is dropped. Dropping this
 				 * `incoming-request` before all children are dropped will trap.
 				 */
-				headers(): own<Headers>;
+				headers(): Headers;
 
 				/**
 				 * Gives the `incoming-body` associated with this request. Will only
 				 * return success at most once, and subsequent calls will return error.
 				 */
-				consume(): result<own<IncomingBody>, void>;
+				consume(): IncomingBody;
 			}
 			export type Statics = {
 			};
@@ -835,7 +875,7 @@ export namespace http {
 				 * this `outgoing-request` can be retrieved at most once. Subsequent
 				 * calls will return error.
 				 */
-				body(): result<own<OutgoingBody>, void>;
+				body(): OutgoingBody;
 
 				/**
 				 * Get the Method for the Request.
@@ -846,7 +886,7 @@ export namespace http {
 				 * Set the Method for the Request. Fails if the string present in a
 				 * `method.other` argument is not a syntactically valid method.
 				 */
-				setMethod(method: Method): result<void, void>;
+				setMethod(method: Method): void;
 
 				/**
 				 * Get the combination of the HTTP Path and Query for the Request.
@@ -859,7 +899,7 @@ export namespace http {
 				 * When `none`, this represents an empty Path and empty Query. Fails is the
 				 * string given is not a syntactically valid path and query uri component.
 				 */
-				setPathWithQuery(pathWithQuery: string | undefined): result<void, void>;
+				setPathWithQuery(pathWithQuery: string | undefined): void;
 
 				/**
 				 * Get the HTTP Related Scheme for the Request. When `none`, the
@@ -872,7 +912,7 @@ export namespace http {
 				 * implementation may choose an appropriate default scheme. Fails if the
 				 * string given is not a syntactically valid uri scheme.
 				 */
-				setScheme(scheme: Scheme | undefined): result<void, void>;
+				setScheme(scheme: Scheme | undefined): void;
 
 				/**
 				 * Get the HTTP Authority for the Request. A value of `none` may be used
@@ -887,7 +927,7 @@ export namespace http {
 				 * HTTPS schemes always require an authority. Fails if the string given is
 				 * not a syntactically valid uri authority.
 				 */
-				setAuthority(authority: string | undefined): result<void, void>;
+				setAuthority(authority: string | undefined): void;
 
 				/**
 				 * Get the headers associated with the Request.
@@ -899,13 +939,25 @@ export namespace http {
 				 * `outgoing-request` is dropped, or its ownership is transfered to
 				 * another component by e.g. `outgoing-handler.handle`.
 				 */
-				headers(): own<Headers>;
+				headers(): Headers;
 			}
 			export type Statics = {
-				$new?(headers: own<Headers>): Interface;
+				$new?(headers: Headers): Interface;
 			};
 			export type Class = Statics & {
-				new(headers: own<Headers>): Interface;
+				/**
+				 * Construct a new `outgoing-request` with a default `method` of `GET`, and
+				 * `none` values for `path-with-query`, `scheme`, and `authority`.
+				 * 
+				 * * `headers` is the HTTP Headers for the Request.
+				 * 
+				 * It is possible to construct, or manipulate with the accessor functions
+				 * below, an `outgoing-request` with an invalid combination of `scheme`
+				 * and `authority`, or `headers` which are not permitted to be sent.
+				 * It is the obligation of the `outgoing-handler.handle` implementation
+				 * to reject invalid constructions of `outgoing-request`.
+				 */
+				new(headers: Headers): Interface;
 			};
 		}
 		export type OutgoingRequest = OutgoingRequest.Interface;
@@ -921,7 +973,7 @@ export namespace http {
 				 * Set the timeout for the initial connect to the HTTP Server. An error
 				 * return value indicates that this timeout is not supported.
 				 */
-				setConnectTimeout(duration: Duration | undefined): result<void, void>;
+				setConnectTimeout(duration: Duration | undefined): void;
 
 				/**
 				 * The timeout for receiving the first byte of the Response body.
@@ -932,7 +984,7 @@ export namespace http {
 				 * Set the timeout for receiving the first byte of the Response body. An
 				 * error return value indicates that this timeout is not supported.
 				 */
-				setFirstByteTimeout(duration: Duration | undefined): result<void, void>;
+				setFirstByteTimeout(duration: Duration | undefined): void;
 
 				/**
 				 * The timeout for receiving subsequent chunks of bytes in the Response
@@ -945,12 +997,15 @@ export namespace http {
 				 * body stream. An error return value indicates that this timeout is not
 				 * supported.
 				 */
-				setBetweenBytesTimeout(duration: Duration | undefined): result<void, void>;
+				setBetweenBytesTimeout(duration: Duration | undefined): void;
 			}
 			export type Statics = {
 				$new?(): Interface;
 			};
 			export type Class = Statics & {
+				/**
+				 * Construct a default `request-options` value.
+				 */
 				new(): Interface;
 			};
 		}
@@ -960,7 +1015,18 @@ export namespace http {
 			export interface Interface extends $wcm.Resource {
 			}
 			export type Statics = {
-				set(param: own<ResponseOutparam>, response: result<own<OutgoingResponse>, ErrorCode>): void;
+				/**
+				 * Set the value of the `response-outparam` to either send a response,
+				 * or indicate an error.
+				 * 
+				 * This method consumes the `response-outparam` to ensure that it is
+				 * called at most once. If it is never called, the implementation
+				 * will respond with an error.
+				 * 
+				 * The user may provide an `error` to `response` to allow the
+				 * implementation determine how to respond with an HTTP error response.
+				 */
+				set(param: ResponseOutparam, response: result<OutgoingResponse, ErrorCode>): void;
 			};
 			export type Class = Statics & {
 			};
@@ -983,13 +1049,13 @@ export namespace http {
 				 * This headers resource is a child: it must be dropped before the parent
 				 * `incoming-response` is dropped.
 				 */
-				headers(): own<Headers>;
+				headers(): Headers;
 
 				/**
 				 * Returns the incoming body. May be called at most once. Returns error
 				 * if called additional times.
 				 */
-				consume(): result<own<IncomingBody>, void>;
+				consume(): IncomingBody;
 			}
 			export type Statics = {
 			};
@@ -1017,10 +1083,14 @@ export namespace http {
 				 * and for that backpressure to not inhibit delivery of the trailers if
 				 * the user does not read the entire body.
 				 */
-				stream(): result<own<InputStream>, void>;
+				stream(): InputStream;
 			}
 			export type Statics = {
-				finish(this_: own<IncomingBody>): own<FutureTrailers>;
+				/**
+				 * Takes ownership of `incoming-body`, and returns a `future-trailers`.
+				 * This function will trap if the `input-stream` child is still alive.
+				 */
+				finish(this_: IncomingBody): FutureTrailers;
 			};
 			export type Class = Statics & {
 			};
@@ -1034,7 +1104,7 @@ export namespace http {
 				 * been received, or an error has occured. When this pollable is ready,
 				 * the `get` method will return `some`.
 				 */
-				subscribe(): own<Pollable>;
+				subscribe(): Pollable;
 
 				/**
 				 * Returns the contents of the trailers, or an error which occured,
@@ -1056,8 +1126,10 @@ export namespace http {
 				 * resource is immutable, and a child. Use of the `set`, `append`, or
 				 * `delete` methods will return an error, and the resource must be
 				 * dropped before the parent `future-trailers` is dropped.
+				 *
+				 * @throws ErrorCode.Error_
 				 */
-				get(): result<result<own<Trailers> | undefined, ErrorCode>, void> | undefined;
+				get(): Trailers | undefined | undefined;
 			}
 			export type Statics = {
 			};
@@ -1077,7 +1149,7 @@ export namespace http {
 				 * Set the HTTP Status Code for the Response. Fails if the status-code
 				 * given is not a valid http status code.
 				 */
-				setStatusCode(statusCode: StatusCode): result<void, void>;
+				setStatusCode(statusCode: StatusCode): void;
 
 				/**
 				 * Get the headers associated with the Request.
@@ -1089,7 +1161,7 @@ export namespace http {
 				 * `outgoing-request` is dropped, or its ownership is transfered to
 				 * another component by e.g. `outgoing-handler.handle`.
 				 */
-				headers(): own<Headers>;
+				headers(): Headers;
 
 				/**
 				 * Returns the resource corresponding to the outgoing Body for this Response.
@@ -1098,13 +1170,20 @@ export namespace http {
 				 * this `outgoing-response` can be retrieved at most once. Subsequent
 				 * calls will return error.
 				 */
-				body(): result<own<OutgoingBody>, void>;
+				body(): OutgoingBody;
 			}
 			export type Statics = {
-				$new?(headers: own<Headers>): Interface;
+				$new?(headers: Headers): Interface;
 			};
 			export type Class = Statics & {
-				new(headers: own<Headers>): Interface;
+				/**
+				 * Construct an `outgoing-response`, with a default `status-code` of `200`.
+				 * If a different `status-code` is needed, it must be set via the
+				 * `set-status-code` method.
+				 * 
+				 * * `headers` is the HTTP Headers for the Response.
+				 */
+				new(headers: Headers): Interface;
 			};
 		}
 		export type OutgoingResponse = OutgoingResponse.Interface;
@@ -1122,10 +1201,23 @@ export namespace http {
 				 * this `outgoing-body` may be retrieved at most once. Subsequent calls
 				 * will return error.
 				 */
-				write(): result<own<OutputStream>, void>;
+				write(): OutputStream;
 			}
 			export type Statics = {
-				finish(this_: own<OutgoingBody>, trailers: own<Trailers> | undefined): result<void, ErrorCode>;
+				/**
+				 * Finalize an outgoing body, optionally providing trailers. This must be
+				 * called to signal that the response is complete. If the `outgoing-body`
+				 * is dropped without calling `outgoing-body.finalize`, the implementation
+				 * should treat the body as corrupted.
+				 * 
+				 * Fails if the body's `outgoing-request` or `outgoing-response` was
+				 * constructed with a Content-Length header, and the contents written
+				 * to the body (via `write`) does not match the value given in the
+				 * Content-Length.
+				 *
+				 * @throws ErrorCode.Error_
+				 */
+				finish(this_: OutgoingBody, trailers: Trailers | undefined): void;
 			};
 			export type Class = Statics & {
 			};
@@ -1139,7 +1231,7 @@ export namespace http {
 				 * been received, or an error has occured. When this pollable is ready,
 				 * the `get` method will return `some`.
 				 */
-				subscribe(): own<Pollable>;
+				subscribe(): Pollable;
 
 				/**
 				 * Returns the incoming HTTP Response, or an error, once one is ready.
@@ -1156,8 +1248,10 @@ export namespace http {
 				 * occured. Errors may also occur while consuming the response body,
 				 * but those will be reported by the `incoming-body` and its
 				 * `output-stream` child.
+				 *
+				 * @throws ErrorCode.Error_
 				 */
-				get(): result<result<own<IncomingResponse>, ErrorCode>, void> | undefined;
+				get(): IncomingResponse | undefined;
 			}
 			export type Statics = {
 			};
@@ -1179,7 +1273,7 @@ export namespace http {
 		 * Note that this function is fallible because not all io-errors are
 		 * http-related errors.
 		 */
-		export type httpErrorCode = (err: borrow<IoError>) => ErrorCode | undefined;
+		export type httpErrorCode = (err: IoError) => ErrorCode | undefined;
 	}
 	export type Types = {
 		Fields: Types.Fields.Class;
@@ -1217,7 +1311,7 @@ export namespace http {
 		 * `response-outparam` before returning, or else the caller will respond
 		 * with an error on its behalf.
 		 */
-		export type handle = (request: own<IncomingRequest>, responseOut: own<ResponseOutparam>) => void;
+		export type handle = (request: IncomingRequest, responseOut: ResponseOutparam) => void;
 	}
 	export type IncomingHandler = {
 		handle: IncomingHandler.handle;
@@ -1235,6 +1329,7 @@ export namespace http {
 		export type FutureIncomingResponse = http.Types.FutureIncomingResponse;
 
 		export type ErrorCode = http.Types.ErrorCode;
+		export const ErrorCode = http.Types.ErrorCode;
 
 		/**
 		 * This function is invoked with an outgoing HTTP Request, and it returns
@@ -1247,8 +1342,10 @@ export namespace http {
 		 * This function may return an error if the `outgoing-request` is invalid
 		 * or not allowed to be made. Otherwise, protocol errors are reported
 		 * through the `future-incoming-response`.
+		 *
+		 * @throws ErrorCode.Error_
 		 */
-		export type handle = (request: own<OutgoingRequest>, options: own<RequestOptions> | undefined) => result<own<FutureIncomingResponse>, ErrorCode>;
+		export type handle = (request: OutgoingRequest, options: RequestOptions | undefined) => FutureIncomingResponse;
 	}
 	export type OutgoingHandler = {
 		handle: OutgoingHandler.handle;
@@ -1339,7 +1436,7 @@ export namespace http {
 		Fields.addConstructor('constructor', new $wcm.ConstructorType<http.Types.Fields.Class['constructor']>('[constructor]fields', [], new $wcm.OwnType(Fields_Handle)));
 		Fields.addStaticMethod('fromList', new $wcm.StaticMethodType<http.Types.Fields.Statics['fromList']>('[static]fields.from-list', [
 			['entries', new $wcm.ListType<[http.Types.FieldKey, Uint8Array]>(new $wcm.TupleType<[http.Types.FieldKey, Uint8Array]>([FieldKey, FieldValue]))],
-		], new $wcm.ResultType<own<http.Types.Fields>, http.Types.HeaderError>(new $wcm.OwnType<http.Types.Fields>(Fields), HeaderError)));
+		], new $wcm.ResultType<http.Types.Fields, http.Types.HeaderError>(new $wcm.OwnType<http.Types.Fields>(Fields), HeaderError, http.Types.HeaderError.Error_)));
 		Fields.addMethod('get', new $wcm.MethodType<http.Types.Fields.Interface['get']>('[method]fields.get', [
 			['name', FieldKey],
 		], new $wcm.ListType<Uint8Array>(FieldValue)));
@@ -1349,14 +1446,14 @@ export namespace http {
 		Fields.addMethod('set', new $wcm.MethodType<http.Types.Fields.Interface['set']>('[method]fields.set', [
 			['name', FieldKey],
 			['value', new $wcm.ListType<Uint8Array>(FieldValue)],
-		], new $wcm.ResultType<void, http.Types.HeaderError>(undefined, HeaderError)));
+		], new $wcm.ResultType<void, http.Types.HeaderError>(undefined, HeaderError, http.Types.HeaderError.Error_)));
 		Fields.addMethod('delete', new $wcm.MethodType<http.Types.Fields.Interface['delete']>('[method]fields.delete', [
 			['name', FieldKey],
-		], new $wcm.ResultType<void, http.Types.HeaderError>(undefined, HeaderError)));
+		], new $wcm.ResultType<void, http.Types.HeaderError>(undefined, HeaderError, http.Types.HeaderError.Error_)));
 		Fields.addMethod('append', new $wcm.MethodType<http.Types.Fields.Interface['append']>('[method]fields.append', [
 			['name', FieldKey],
 			['value', FieldValue],
-		], new $wcm.ResultType<void, http.Types.HeaderError>(undefined, HeaderError)));
+		], new $wcm.ResultType<void, http.Types.HeaderError>(undefined, HeaderError, http.Types.HeaderError.Error_)));
 		Fields.addMethod('entries', new $wcm.MethodType<http.Types.Fields.Interface['entries']>('[method]fields.entries', [], new $wcm.ListType<[http.Types.FieldKey, Uint8Array]>(new $wcm.TupleType<[http.Types.FieldKey, Uint8Array]>([FieldKey, FieldValue]))));
 		Fields.addMethod('clone', new $wcm.MethodType<http.Types.Fields.Interface['clone']>('[method]fields.clone', [], new $wcm.OwnType<http.Types.Fields>(Fields)));
 		IncomingRequest.addDestructor('$drop', new $wcm.DestructorType('[resource-drop]incoming-request', [['inst', IncomingRequest]]));
@@ -1365,12 +1462,12 @@ export namespace http {
 		IncomingRequest.addMethod('scheme', new $wcm.MethodType<http.Types.IncomingRequest.Interface['scheme']>('[method]incoming-request.scheme', [], new $wcm.OptionType<http.Types.Scheme>(Scheme)));
 		IncomingRequest.addMethod('authority', new $wcm.MethodType<http.Types.IncomingRequest.Interface['authority']>('[method]incoming-request.authority', [], new $wcm.OptionType<string>($wcm.wstring)));
 		IncomingRequest.addMethod('headers', new $wcm.MethodType<http.Types.IncomingRequest.Interface['headers']>('[method]incoming-request.headers', [], new $wcm.OwnType<http.Types.Headers>(Headers)));
-		IncomingRequest.addMethod('consume', new $wcm.MethodType<http.Types.IncomingRequest.Interface['consume']>('[method]incoming-request.consume', [], new $wcm.ResultType<own<http.Types.IncomingBody>, void>(new $wcm.OwnType<http.Types.IncomingBody>(IncomingBody), undefined)));
+		IncomingRequest.addMethod('consume', new $wcm.MethodType<http.Types.IncomingRequest.Interface['consume']>('[method]incoming-request.consume', [], new $wcm.ResultType<http.Types.IncomingBody, void>(new $wcm.OwnType<http.Types.IncomingBody>(IncomingBody), undefined)));
 		OutgoingRequest.addDestructor('$drop', new $wcm.DestructorType('[resource-drop]outgoing-request', [['inst', OutgoingRequest]]));
 		OutgoingRequest.addConstructor('constructor', new $wcm.ConstructorType<http.Types.OutgoingRequest.Class['constructor']>('[constructor]outgoing-request', [
 			['headers', new $wcm.OwnType<http.Types.Headers>(Headers)],
 		], new $wcm.OwnType(OutgoingRequest_Handle)));
-		OutgoingRequest.addMethod('body', new $wcm.MethodType<http.Types.OutgoingRequest.Interface['body']>('[method]outgoing-request.body', [], new $wcm.ResultType<own<http.Types.OutgoingBody>, void>(new $wcm.OwnType<http.Types.OutgoingBody>(OutgoingBody), undefined)));
+		OutgoingRequest.addMethod('body', new $wcm.MethodType<http.Types.OutgoingRequest.Interface['body']>('[method]outgoing-request.body', [], new $wcm.ResultType<http.Types.OutgoingBody, void>(new $wcm.OwnType<http.Types.OutgoingBody>(OutgoingBody), undefined)));
 		OutgoingRequest.addMethod('method', new $wcm.MethodType<http.Types.OutgoingRequest.Interface['method']>('[method]outgoing-request.method', [], Method));
 		OutgoingRequest.addMethod('setMethod', new $wcm.MethodType<http.Types.OutgoingRequest.Interface['setMethod']>('[method]outgoing-request.set-method', [
 			['method', Method],
@@ -1405,20 +1502,20 @@ export namespace http {
 		ResponseOutparam.addDestructor('$drop', new $wcm.DestructorType('[resource-drop]response-outparam', [['inst', ResponseOutparam]]));
 		ResponseOutparam.addStaticMethod('set', new $wcm.StaticMethodType<http.Types.ResponseOutparam.Statics['set']>('[static]response-outparam.set', [
 			['param', new $wcm.OwnType<http.Types.ResponseOutparam>(ResponseOutparam)],
-			['response', new $wcm.ResultType<own<http.Types.OutgoingResponse>, http.Types.ErrorCode>(new $wcm.OwnType<http.Types.OutgoingResponse>(OutgoingResponse), ErrorCode)],
+			['response', new $wcm.ResultType<http.Types.OutgoingResponse, http.Types.ErrorCode>(new $wcm.OwnType<http.Types.OutgoingResponse>(OutgoingResponse), ErrorCode, http.Types.ErrorCode.Error_)],
 		], undefined));
 		IncomingResponse.addDestructor('$drop', new $wcm.DestructorType('[resource-drop]incoming-response', [['inst', IncomingResponse]]));
 		IncomingResponse.addMethod('status', new $wcm.MethodType<http.Types.IncomingResponse.Interface['status']>('[method]incoming-response.status', [], StatusCode));
 		IncomingResponse.addMethod('headers', new $wcm.MethodType<http.Types.IncomingResponse.Interface['headers']>('[method]incoming-response.headers', [], new $wcm.OwnType<http.Types.Headers>(Headers)));
-		IncomingResponse.addMethod('consume', new $wcm.MethodType<http.Types.IncomingResponse.Interface['consume']>('[method]incoming-response.consume', [], new $wcm.ResultType<own<http.Types.IncomingBody>, void>(new $wcm.OwnType<http.Types.IncomingBody>(IncomingBody), undefined)));
+		IncomingResponse.addMethod('consume', new $wcm.MethodType<http.Types.IncomingResponse.Interface['consume']>('[method]incoming-response.consume', [], new $wcm.ResultType<http.Types.IncomingBody, void>(new $wcm.OwnType<http.Types.IncomingBody>(IncomingBody), undefined)));
 		IncomingBody.addDestructor('$drop', new $wcm.DestructorType('[resource-drop]incoming-body', [['inst', IncomingBody]]));
-		IncomingBody.addMethod('stream', new $wcm.MethodType<http.Types.IncomingBody.Interface['stream']>('[method]incoming-body.stream', [], new $wcm.ResultType<own<http.Types.InputStream>, void>(new $wcm.OwnType<http.Types.InputStream>(InputStream), undefined)));
+		IncomingBody.addMethod('stream', new $wcm.MethodType<http.Types.IncomingBody.Interface['stream']>('[method]incoming-body.stream', [], new $wcm.ResultType<http.Types.InputStream, void>(new $wcm.OwnType<http.Types.InputStream>(InputStream), undefined)));
 		IncomingBody.addStaticMethod('finish', new $wcm.StaticMethodType<http.Types.IncomingBody.Statics['finish']>('[static]incoming-body.finish', [
 			['this_', new $wcm.OwnType<http.Types.IncomingBody>(IncomingBody)],
 		], new $wcm.OwnType<http.Types.FutureTrailers>(FutureTrailers)));
 		FutureTrailers.addDestructor('$drop', new $wcm.DestructorType('[resource-drop]future-trailers', [['inst', FutureTrailers]]));
 		FutureTrailers.addMethod('subscribe', new $wcm.MethodType<http.Types.FutureTrailers.Interface['subscribe']>('[method]future-trailers.subscribe', [], new $wcm.OwnType<http.Types.Pollable>(Pollable)));
-		FutureTrailers.addMethod('get', new $wcm.MethodType<http.Types.FutureTrailers.Interface['get']>('[method]future-trailers.get', [], new $wcm.OptionType<result<result<option<own<http.Types.Trailers>>, http.Types.ErrorCode>, void>>(new $wcm.ResultType<result<option<own<http.Types.Trailers>>, http.Types.ErrorCode>, void>(new $wcm.ResultType<option<own<http.Types.Trailers>>, http.Types.ErrorCode>(new $wcm.OptionType<own<http.Types.Trailers>>(new $wcm.OwnType<http.Types.Trailers>(Trailers)), ErrorCode), undefined))));
+		FutureTrailers.addMethod('get', new $wcm.MethodType<http.Types.FutureTrailers.Interface['get']>('[method]future-trailers.get', [], new $wcm.OptionType<result<result<http.Types.Trailers | undefined, http.Types.ErrorCode>, void>>(new $wcm.ResultType<result<http.Types.Trailers | undefined, http.Types.ErrorCode>, void>(new $wcm.ResultType<http.Types.Trailers | undefined, http.Types.ErrorCode>(new $wcm.OptionType<http.Types.Trailers>(new $wcm.OwnType<http.Types.Trailers>(Trailers)), ErrorCode, http.Types.ErrorCode.Error_), undefined))));
 		OutgoingResponse.addDestructor('$drop', new $wcm.DestructorType('[resource-drop]outgoing-response', [['inst', OutgoingResponse]]));
 		OutgoingResponse.addConstructor('constructor', new $wcm.ConstructorType<http.Types.OutgoingResponse.Class['constructor']>('[constructor]outgoing-response', [
 			['headers', new $wcm.OwnType<http.Types.Headers>(Headers)],
@@ -1428,16 +1525,16 @@ export namespace http {
 			['statusCode', StatusCode],
 		], new $wcm.ResultType<void, void>(undefined, undefined)));
 		OutgoingResponse.addMethod('headers', new $wcm.MethodType<http.Types.OutgoingResponse.Interface['headers']>('[method]outgoing-response.headers', [], new $wcm.OwnType<http.Types.Headers>(Headers)));
-		OutgoingResponse.addMethod('body', new $wcm.MethodType<http.Types.OutgoingResponse.Interface['body']>('[method]outgoing-response.body', [], new $wcm.ResultType<own<http.Types.OutgoingBody>, void>(new $wcm.OwnType<http.Types.OutgoingBody>(OutgoingBody), undefined)));
+		OutgoingResponse.addMethod('body', new $wcm.MethodType<http.Types.OutgoingResponse.Interface['body']>('[method]outgoing-response.body', [], new $wcm.ResultType<http.Types.OutgoingBody, void>(new $wcm.OwnType<http.Types.OutgoingBody>(OutgoingBody), undefined)));
 		OutgoingBody.addDestructor('$drop', new $wcm.DestructorType('[resource-drop]outgoing-body', [['inst', OutgoingBody]]));
-		OutgoingBody.addMethod('write', new $wcm.MethodType<http.Types.OutgoingBody.Interface['write']>('[method]outgoing-body.write', [], new $wcm.ResultType<own<http.Types.OutputStream>, void>(new $wcm.OwnType<http.Types.OutputStream>(OutputStream), undefined)));
+		OutgoingBody.addMethod('write', new $wcm.MethodType<http.Types.OutgoingBody.Interface['write']>('[method]outgoing-body.write', [], new $wcm.ResultType<http.Types.OutputStream, void>(new $wcm.OwnType<http.Types.OutputStream>(OutputStream), undefined)));
 		OutgoingBody.addStaticMethod('finish', new $wcm.StaticMethodType<http.Types.OutgoingBody.Statics['finish']>('[static]outgoing-body.finish', [
 			['this_', new $wcm.OwnType<http.Types.OutgoingBody>(OutgoingBody)],
-			['trailers', new $wcm.OptionType<own<http.Types.Trailers>>(new $wcm.OwnType<http.Types.Trailers>(Trailers))],
-		], new $wcm.ResultType<void, http.Types.ErrorCode>(undefined, ErrorCode)));
+			['trailers', new $wcm.OptionType<http.Types.Trailers>(new $wcm.OwnType<http.Types.Trailers>(Trailers))],
+		], new $wcm.ResultType<void, http.Types.ErrorCode>(undefined, ErrorCode, http.Types.ErrorCode.Error_)));
 		FutureIncomingResponse.addDestructor('$drop', new $wcm.DestructorType('[resource-drop]future-incoming-response', [['inst', FutureIncomingResponse]]));
 		FutureIncomingResponse.addMethod('subscribe', new $wcm.MethodType<http.Types.FutureIncomingResponse.Interface['subscribe']>('[method]future-incoming-response.subscribe', [], new $wcm.OwnType<http.Types.Pollable>(Pollable)));
-		FutureIncomingResponse.addMethod('get', new $wcm.MethodType<http.Types.FutureIncomingResponse.Interface['get']>('[method]future-incoming-response.get', [], new $wcm.OptionType<result<result<own<http.Types.IncomingResponse>, http.Types.ErrorCode>, void>>(new $wcm.ResultType<result<own<http.Types.IncomingResponse>, http.Types.ErrorCode>, void>(new $wcm.ResultType<own<http.Types.IncomingResponse>, http.Types.ErrorCode>(new $wcm.OwnType<http.Types.IncomingResponse>(IncomingResponse), ErrorCode), undefined))));
+		FutureIncomingResponse.addMethod('get', new $wcm.MethodType<http.Types.FutureIncomingResponse.Interface['get']>('[method]future-incoming-response.get', [], new $wcm.OptionType<result<result<http.Types.IncomingResponse, http.Types.ErrorCode>, void>>(new $wcm.ResultType<result<http.Types.IncomingResponse, http.Types.ErrorCode>, void>(new $wcm.ResultType<http.Types.IncomingResponse, http.Types.ErrorCode>(new $wcm.OwnType<http.Types.IncomingResponse>(IncomingResponse), ErrorCode, http.Types.ErrorCode.Error_), undefined))));
 		export const httpErrorCode = new $wcm.FunctionType<http.Types.httpErrorCode>('http-error-code',[
 			['err', new $wcm.BorrowType<http.Types.IoError>(IoError)],
 		], new $wcm.OptionType<http.Types.ErrorCode>(ErrorCode));
@@ -1448,7 +1545,7 @@ export namespace http {
 		export namespace Fields {
 			export type WasmInterface = {
 				'[constructor]fields': () => i32;
-				'[static]fields.from-list': (entries_ptr: i32, entries_len: i32, result: ptr<result<own<Fields>, HeaderError>>) => void;
+				'[static]fields.from-list': (entries_ptr: i32, entries_len: i32, result: ptr<result<Fields, HeaderError>>) => void;
 				'[method]fields.get': (self: i32, name_ptr: i32, name_len: i32, result: ptr<FieldValue[]>) => void;
 				'[method]fields.has': (self: i32, name_ptr: i32, name_len: i32) => i32;
 				'[method]fields.set': (self: i32, name_ptr: i32, name_len: i32, value_ptr: i32, value_len: i32, result: ptr<result<void, HeaderError>>) => void;
@@ -1471,7 +1568,7 @@ export namespace http {
 				'[method]incoming-request.scheme': (self: i32, result: ptr<Scheme | undefined>) => void;
 				'[method]incoming-request.authority': (self: i32, result: ptr<string | undefined>) => void;
 				'[method]incoming-request.headers': (self: i32) => i32;
-				'[method]incoming-request.consume': (self: i32, result: ptr<result<own<IncomingBody>, void>>) => void;
+				'[method]incoming-request.consume': (self: i32, result: ptr<result<IncomingBody, void>>) => void;
 			};
 			export namespace imports {
 				export type WasmInterface = IncomingRequest.WasmInterface & { '[resource-drop]incoming-request': (self: i32) => void };
@@ -1483,7 +1580,7 @@ export namespace http {
 		export namespace OutgoingRequest {
 			export type WasmInterface = {
 				'[constructor]outgoing-request': (headers: i32) => i32;
-				'[method]outgoing-request.body': (self: i32, result: ptr<result<own<OutgoingBody>, void>>) => void;
+				'[method]outgoing-request.body': (self: i32, result: ptr<result<OutgoingBody, void>>) => void;
 				'[method]outgoing-request.method': (self: i32, result: ptr<Method>) => void;
 				'[method]outgoing-request.set-method': (self: i32, method_case: i32, method_0: i32, method_1: i32) => i32;
 				'[method]outgoing-request.path-with-query': (self: i32, result: ptr<string | undefined>) => void;
@@ -1533,7 +1630,7 @@ export namespace http {
 			export type WasmInterface = {
 				'[method]incoming-response.status': (self: i32) => i32;
 				'[method]incoming-response.headers': (self: i32) => i32;
-				'[method]incoming-response.consume': (self: i32, result: ptr<result<own<IncomingBody>, void>>) => void;
+				'[method]incoming-response.consume': (self: i32, result: ptr<result<IncomingBody, void>>) => void;
 			};
 			export namespace imports {
 				export type WasmInterface = IncomingResponse.WasmInterface & { '[resource-drop]incoming-response': (self: i32) => void };
@@ -1544,7 +1641,7 @@ export namespace http {
 		}
 		export namespace IncomingBody {
 			export type WasmInterface = {
-				'[method]incoming-body.stream': (self: i32, result: ptr<result<own<InputStream>, void>>) => void;
+				'[method]incoming-body.stream': (self: i32, result: ptr<result<InputStream, void>>) => void;
 				'[static]incoming-body.finish': (this_: i32) => i32;
 			};
 			export namespace imports {
@@ -1557,7 +1654,7 @@ export namespace http {
 		export namespace FutureTrailers {
 			export type WasmInterface = {
 				'[method]future-trailers.subscribe': (self: i32) => i32;
-				'[method]future-trailers.get': (self: i32, result: ptr<result<result<own<Trailers> | undefined, ErrorCode>, void> | undefined>) => void;
+				'[method]future-trailers.get': (self: i32, result: ptr<result<result<Trailers | undefined, ErrorCode>, void> | undefined>) => void;
 			};
 			export namespace imports {
 				export type WasmInterface = FutureTrailers.WasmInterface & { '[resource-drop]future-trailers': (self: i32) => void };
@@ -1572,7 +1669,7 @@ export namespace http {
 				'[method]outgoing-response.status-code': (self: i32) => i32;
 				'[method]outgoing-response.set-status-code': (self: i32, statusCode: i32) => i32;
 				'[method]outgoing-response.headers': (self: i32) => i32;
-				'[method]outgoing-response.body': (self: i32, result: ptr<result<own<OutgoingBody>, void>>) => void;
+				'[method]outgoing-response.body': (self: i32, result: ptr<result<OutgoingBody, void>>) => void;
 			};
 			export namespace imports {
 				export type WasmInterface = OutgoingResponse.WasmInterface & { '[resource-drop]outgoing-response': (self: i32) => void };
@@ -1583,7 +1680,7 @@ export namespace http {
 		}
 		export namespace OutgoingBody {
 			export type WasmInterface = {
-				'[method]outgoing-body.write': (self: i32, result: ptr<result<own<OutputStream>, void>>) => void;
+				'[method]outgoing-body.write': (self: i32, result: ptr<result<OutputStream, void>>) => void;
 				'[static]outgoing-body.finish': (this_: i32, trailers_case: i32, trailers_option: i32, result: ptr<result<void, ErrorCode>>) => void;
 			};
 			export namespace imports {
@@ -1596,7 +1693,7 @@ export namespace http {
 		export namespace FutureIncomingResponse {
 			export type WasmInterface = {
 				'[method]future-incoming-response.subscribe': (self: i32) => i32;
-				'[method]future-incoming-response.get': (self: i32, result: ptr<result<result<own<IncomingResponse>, ErrorCode>, void> | undefined>) => void;
+				'[method]future-incoming-response.get': (self: i32, result: ptr<result<result<IncomingResponse, ErrorCode>, void> | undefined>) => void;
 			};
 			export namespace imports {
 				export type WasmInterface = FutureIncomingResponse.WasmInterface & { '[resource-drop]future-incoming-response': (self: i32) => void };
@@ -1735,8 +1832,8 @@ export namespace http {
 		export const ErrorCode = http.Types.$.ErrorCode;
 		export const handle = new $wcm.FunctionType<http.OutgoingHandler.handle>('handle',[
 			['request', new $wcm.OwnType<http.OutgoingHandler.OutgoingRequest>(OutgoingRequest)],
-			['options', new $wcm.OptionType<own<http.OutgoingHandler.RequestOptions>>(new $wcm.OwnType<http.OutgoingHandler.RequestOptions>(RequestOptions))],
-		], new $wcm.ResultType<own<http.OutgoingHandler.FutureIncomingResponse>, http.OutgoingHandler.ErrorCode>(new $wcm.OwnType<http.OutgoingHandler.FutureIncomingResponse>(FutureIncomingResponse), ErrorCode));
+			['options', new $wcm.OptionType<http.OutgoingHandler.RequestOptions>(new $wcm.OwnType<http.OutgoingHandler.RequestOptions>(RequestOptions))],
+		], new $wcm.ResultType<http.OutgoingHandler.FutureIncomingResponse, http.OutgoingHandler.ErrorCode>(new $wcm.OwnType<http.OutgoingHandler.FutureIncomingResponse>(FutureIncomingResponse), ErrorCode));
 	}
 	export namespace OutgoingHandler._ {
 		export const id = 'wasi:http/outgoing-handler@0.2.0' as const;
@@ -1751,7 +1848,7 @@ export namespace http {
 			['handle', $.handle]
 		]);
 		export type WasmInterface = {
-			'handle': (request: i32, options_case: i32, options_option: i32, result: ptr<result<own<FutureIncomingResponse>, ErrorCode>>) => void;
+			'handle': (request: i32, options_case: i32, options_option: i32, result: ptr<result<FutureIncomingResponse, ErrorCode>>) => void;
 		};
 		export namespace imports {
 			export type WasmInterface = _.WasmInterface;

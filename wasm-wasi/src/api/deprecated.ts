@@ -2,7 +2,7 @@
  *  Copyright (c) Microsoft Corporation. All rights reserved.
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
-/// <reference path="../../typings/webAssemblyCommon.d.ts" />
+/// <reference path="../../typings/webAssemblyCommon.d.ts" preserve="true"/>
 
 import * as v1 from './v1';
 

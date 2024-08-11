@@ -4,13 +4,12 @@
  *--------------------------------------------------------------------------------------------*/
 /* eslint-disable @typescript-eslint/ban-types */
 import * as $wcm from '@vscode/wasm-component-model';
-import type { u8, u16, u32, own, result, borrow, u64, i32, option, ptr, i64 } from '@vscode/wasm-component-model';
+import type { u8, u16, u32, u64, i32, ptr, result, i64 } from '@vscode/wasm-component-model';
 import { clocks } from './clocks';
 import { io } from './io';
 
 export namespace sockets {
 	export namespace Network {
-
 		/**
 		 * Error codes.
 		 * 
@@ -148,6 +147,13 @@ export namespace sockets {
 			 * A permanent failure in name resolution occurred.
 			 */
 			permanentResolverFailure = 'permanentResolverFailure'
+		}
+		export namespace ErrorCode {
+			export class Error_ extends $wcm.ResultError<ErrorCode> {
+				constructor(value: ErrorCode) {
+					super(value, `ErrorCode: ${value}`);
+				}
+			}
 		}
 
 		export enum IpAddressFamily {
@@ -309,7 +315,7 @@ export namespace sockets {
 		/**
 		 * Get a handle to the default network.
 		 */
-		export type instanceNetwork = () => own<Network>;
+		export type instanceNetwork = () => Network;
 	}
 	export type InstanceNetwork = {
 		instanceNetwork: InstanceNetwork.instanceNetwork;
@@ -321,8 +327,10 @@ export namespace sockets {
 		export type Network = sockets.Network.Network;
 
 		export type ErrorCode = sockets.Network.ErrorCode;
+		export const ErrorCode = sockets.Network.ErrorCode;
 
 		export type IpAddress = sockets.Network.IpAddress;
+		export const IpAddress = sockets.Network.IpAddress;
 
 		export namespace ResolveAddressStream {
 			export interface Interface extends $wcm.Resource {
@@ -340,8 +348,10 @@ export namespace sockets {
 				 * - `temporary-resolver-failure`: A temporary failure in name resolution occurred. (EAI_AGAIN)
 				 * - `permanent-resolver-failure`: A permanent failure in name resolution occurred. (EAI_FAIL)
 				 * - `would-block`:                A result is not available yet. (EWOULDBLOCK, EAGAIN)
+				 *
+				 * @throws ErrorCode.Error_
 				 */
-				resolveNextAddress(): result<IpAddress | undefined, ErrorCode>;
+				resolveNextAddress(): IpAddress | undefined;
 
 				/**
 				 * Create a `pollable` which will resolve once the stream is ready for I/O.
@@ -349,7 +359,7 @@ export namespace sockets {
 				 * Note: this function is here for WASI Preview2 only.
 				 * It's planned to be removed when `future` is natively supported in Preview3.
 				 */
-				subscribe(): own<Pollable>;
+				subscribe(): Pollable;
 			}
 			export type Statics = {
 			};
@@ -379,8 +389,10 @@ export namespace sockets {
 		 * - <https://man7.org/linux/man-pages/man3/getaddrinfo.3.html>
 		 * - <https://learn.microsoft.com/en-us/windows/win32/api/ws2tcpip/nf-ws2tcpip-getaddrinfo>
 		 * - <https://man.freebsd.org/cgi/man.cgi?query=getaddrinfo&sektion=3>
+		 *
+		 * @throws ErrorCode.Error_
 		 */
-		export type resolveAddresses = (network: borrow<Network>, name: string) => result<own<ResolveAddressStream>, ErrorCode>;
+		export type resolveAddresses = (network: Network, name: string) => ResolveAddressStream;
 	}
 	export type IpNameLookup = {
 		ResolveAddressStream: IpNameLookup.ResolveAddressStream.Class;
@@ -399,10 +411,13 @@ export namespace sockets {
 		export type Network = sockets.Network.Network;
 
 		export type ErrorCode = sockets.Network.ErrorCode;
+		export const ErrorCode = sockets.Network.ErrorCode;
 
 		export type IpSocketAddress = sockets.Network.IpSocketAddress;
+		export const IpSocketAddress = sockets.Network.IpSocketAddress;
 
 		export type IpAddressFamily = sockets.Network.IpAddressFamily;
+		export const IpAddressFamily = sockets.Network.IpAddressFamily;
 
 		export enum ShutdownType {
 
@@ -463,10 +478,15 @@ export namespace sockets {
 				 * - <https://man7.org/linux/man-pages/man2/bind.2.html>
 				 * - <https://learn.microsoft.com/en-us/windows/win32/api/winsock/nf-winsock-bind>
 				 * - <https://man.freebsd.org/cgi/man.cgi?query=bind&sektion=2&format=html>
+				 *
+				 * @throws ErrorCode.Error_
 				 */
-				startBind(network: borrow<Network>, localAddress: IpSocketAddress): result<void, ErrorCode>;
+				startBind(network: Network, localAddress: IpSocketAddress): void;
 
-				finishBind(): result<void, ErrorCode>;
+				/**
+				 * @throws ErrorCode.Error_
+				 */
+				finishBind(): void;
 
 				/**
 				 * Connect to a remote endpoint.
@@ -511,10 +531,15 @@ export namespace sockets {
 				 * - <https://man7.org/linux/man-pages/man2/connect.2.html>
 				 * - <https://learn.microsoft.com/en-us/windows/win32/api/winsock2/nf-winsock2-connect>
 				 * - <https://man.freebsd.org/cgi/man.cgi?connect>
+				 *
+				 * @throws ErrorCode.Error_
 				 */
-				startConnect(network: borrow<Network>, remoteAddress: IpSocketAddress): result<void, ErrorCode>;
+				startConnect(network: Network, remoteAddress: IpSocketAddress): void;
 
-				finishConnect(): result<[own<InputStream>, own<OutputStream>], ErrorCode>;
+				/**
+				 * @throws ErrorCode.Error_
+				 */
+				finishConnect(): [InputStream, OutputStream];
 
 				/**
 				 * Start listening for new connections.
@@ -542,10 +567,15 @@ export namespace sockets {
 				 * - <https://man7.org/linux/man-pages/man2/listen.2.html>
 				 * - <https://learn.microsoft.com/en-us/windows/win32/api/winsock2/nf-winsock2-listen>
 				 * - <https://man.freebsd.org/cgi/man.cgi?query=listen&sektion=2>
+				 *
+				 * @throws ErrorCode.Error_
 				 */
-				startListen(): result<void, ErrorCode>;
+				startListen(): void;
 
-				finishListen(): result<void, ErrorCode>;
+				/**
+				 * @throws ErrorCode.Error_
+				 */
+				finishListen(): void;
 
 				/**
 				 * Accept a new client socket.
@@ -574,8 +604,10 @@ export namespace sockets {
 				 * - <https://man7.org/linux/man-pages/man2/accept.2.html>
 				 * - <https://learn.microsoft.com/en-us/windows/win32/api/winsock2/nf-winsock2-accept>
 				 * - <https://man.freebsd.org/cgi/man.cgi?query=accept&sektion=2>
+				 *
+				 * @throws ErrorCode.Error_
 				 */
-				accept(): result<[own<TcpSocket>, own<InputStream>, own<OutputStream>], ErrorCode>;
+				accept(): [TcpSocket, InputStream, OutputStream];
 
 				/**
 				 * Get the bound local address.
@@ -594,8 +626,10 @@ export namespace sockets {
 				 * - <https://man7.org/linux/man-pages/man2/getsockname.2.html>
 				 * - <https://learn.microsoft.com/en-us/windows/win32/api/winsock/nf-winsock-getsockname>
 				 * - <https://man.freebsd.org/cgi/man.cgi?getsockname>
+				 *
+				 * @throws ErrorCode.Error_
 				 */
-				localAddress(): result<IpSocketAddress, ErrorCode>;
+				localAddress(): IpSocketAddress;
 
 				/**
 				 * Get the remote address.
@@ -608,8 +642,10 @@ export namespace sockets {
 				 * - <https://man7.org/linux/man-pages/man2/getpeername.2.html>
 				 * - <https://learn.microsoft.com/en-us/windows/win32/api/winsock/nf-winsock-getpeername>
 				 * - <https://man.freebsd.org/cgi/man.cgi?query=getpeername&sektion=2&n=1>
+				 *
+				 * @throws ErrorCode.Error_
 				 */
-				remoteAddress(): result<IpSocketAddress, ErrorCode>;
+				remoteAddress(): IpSocketAddress;
 
 				/**
 				 * Whether the socket is in the `listening` state.
@@ -635,8 +671,10 @@ export namespace sockets {
 				 * - `not-supported`:        (set) The platform does not support changing the backlog size after the initial listen.
 				 * - `invalid-argument`:     (set) The provided value was 0.
 				 * - `invalid-state`:        (set) The socket is in the `connect-in-progress` or `connected` state.
+				 *
+				 * @throws ErrorCode.Error_
 				 */
-				setListenBacklogSize(value: u64): result<void, ErrorCode>;
+				setListenBacklogSize(value: u64): void;
 
 				/**
 				 * Enables or disables keepalive.
@@ -648,10 +686,15 @@ export namespace sockets {
 				 * These properties can be configured while `keep-alive-enabled` is false, but only come into effect when `keep-alive-enabled` is true.
 				 * 
 				 * Equivalent to the SO_KEEPALIVE socket option.
+				 *
+				 * @throws ErrorCode.Error_
 				 */
-				keepAliveEnabled(): result<boolean, ErrorCode>;
+				keepAliveEnabled(): boolean;
 
-				setKeepAliveEnabled(value: boolean): result<void, ErrorCode>;
+				/**
+				 * @throws ErrorCode.Error_
+				 */
+				setKeepAliveEnabled(value: boolean): void;
 
 				/**
 				 * Amount of time the connection has to be idle before TCP starts sending keepalive packets.
@@ -664,10 +707,15 @@ export namespace sockets {
 				 * 
 				 * # Typical errors
 				 * - `invalid-argument`:     (set) The provided value was 0.
+				 *
+				 * @throws ErrorCode.Error_
 				 */
-				keepAliveIdleTime(): result<Duration, ErrorCode>;
+				keepAliveIdleTime(): Duration;
 
-				setKeepAliveIdleTime(value: Duration): result<void, ErrorCode>;
+				/**
+				 * @throws ErrorCode.Error_
+				 */
+				setKeepAliveIdleTime(value: Duration): void;
 
 				/**
 				 * The time between keepalive packets.
@@ -680,10 +728,15 @@ export namespace sockets {
 				 * 
 				 * # Typical errors
 				 * - `invalid-argument`:     (set) The provided value was 0.
+				 *
+				 * @throws ErrorCode.Error_
 				 */
-				keepAliveInterval(): result<Duration, ErrorCode>;
+				keepAliveInterval(): Duration;
 
-				setKeepAliveInterval(value: Duration): result<void, ErrorCode>;
+				/**
+				 * @throws ErrorCode.Error_
+				 */
+				setKeepAliveInterval(value: Duration): void;
 
 				/**
 				 * The maximum amount of keepalive packets TCP should send before aborting the connection.
@@ -696,10 +749,15 @@ export namespace sockets {
 				 * 
 				 * # Typical errors
 				 * - `invalid-argument`:     (set) The provided value was 0.
+				 *
+				 * @throws ErrorCode.Error_
 				 */
-				keepAliveCount(): result<u32, ErrorCode>;
+				keepAliveCount(): u32;
 
-				setKeepAliveCount(value: u32): result<void, ErrorCode>;
+				/**
+				 * @throws ErrorCode.Error_
+				 */
+				setKeepAliveCount(value: u32): void;
 
 				/**
 				 * Equivalent to the IP_TTL & IPV6_UNICAST_HOPS socket options.
@@ -708,10 +766,15 @@ export namespace sockets {
 				 * 
 				 * # Typical errors
 				 * - `invalid-argument`:     (set) The TTL value must be 1 or higher.
+				 *
+				 * @throws ErrorCode.Error_
 				 */
-				hopLimit(): result<u8, ErrorCode>;
+				hopLimit(): u8;
 
-				setHopLimit(value: u8): result<void, ErrorCode>;
+				/**
+				 * @throws ErrorCode.Error_
+				 */
+				setHopLimit(value: u8): void;
 
 				/**
 				 * The kernel buffer space reserved for sends/receives on this socket.
@@ -724,14 +787,25 @@ export namespace sockets {
 				 * 
 				 * # Typical errors
 				 * - `invalid-argument`:     (set) The provided value was 0.
+				 *
+				 * @throws ErrorCode.Error_
 				 */
-				receiveBufferSize(): result<u64, ErrorCode>;
+				receiveBufferSize(): u64;
 
-				setReceiveBufferSize(value: u64): result<void, ErrorCode>;
+				/**
+				 * @throws ErrorCode.Error_
+				 */
+				setReceiveBufferSize(value: u64): void;
 
-				sendBufferSize(): result<u64, ErrorCode>;
+				/**
+				 * @throws ErrorCode.Error_
+				 */
+				sendBufferSize(): u64;
 
-				setSendBufferSize(value: u64): result<void, ErrorCode>;
+				/**
+				 * @throws ErrorCode.Error_
+				 */
+				setSendBufferSize(value: u64): void;
 
 				/**
 				 * Create a `pollable` which can be used to poll for, or block on,
@@ -752,7 +826,7 @@ export namespace sockets {
 				 * Note: this function is here for WASI Preview2 only.
 				 * It's planned to be removed when `future` is natively supported in Preview3.
 				 */
-				subscribe(): own<Pollable>;
+				subscribe(): Pollable;
 
 				/**
 				 * Initiate a graceful shutdown.
@@ -778,8 +852,10 @@ export namespace sockets {
 				 * - <https://man7.org/linux/man-pages/man2/shutdown.2.html>
 				 * - <https://learn.microsoft.com/en-us/windows/win32/api/winsock/nf-winsock-shutdown>
 				 * - <https://man.freebsd.org/cgi/man.cgi?query=shutdown&sektion=2>
+				 *
+				 * @throws ErrorCode.Error_
 				 */
-				shutdown(shutdownType: ShutdownType): result<void, ErrorCode>;
+				shutdown(shutdownType: ShutdownType): void;
 			}
 			export type Statics = {
 			};
@@ -796,8 +872,10 @@ export namespace sockets {
 		export type Network = sockets.Network.Network;
 
 		export type ErrorCode = sockets.Network.ErrorCode;
+		export const ErrorCode = sockets.Network.ErrorCode;
 
 		export type IpAddressFamily = sockets.Network.IpAddressFamily;
+		export const IpAddressFamily = sockets.Network.IpAddressFamily;
 
 		export type TcpSocket = sockets.Tcp.TcpSocket;
 
@@ -822,8 +900,10 @@ export namespace sockets {
 		 * - <https://man7.org/linux/man-pages/man2/socket.2.html>
 		 * - <https://learn.microsoft.com/en-us/windows/win32/api/winsock2/nf-winsock2-wsasocketw>
 		 * - <https://man.freebsd.org/cgi/man.cgi?query=socket&sektion=2>
+		 *
+		 * @throws ErrorCode.Error_
 		 */
-		export type createTcpSocket = (addressFamily: IpAddressFamily) => result<own<TcpSocket>, ErrorCode>;
+		export type createTcpSocket = (addressFamily: IpAddressFamily) => TcpSocket;
 	}
 	export type TcpCreateSocket = {
 		createTcpSocket: TcpCreateSocket.createTcpSocket;
@@ -835,10 +915,13 @@ export namespace sockets {
 		export type Network = sockets.Network.Network;
 
 		export type ErrorCode = sockets.Network.ErrorCode;
+		export const ErrorCode = sockets.Network.ErrorCode;
 
 		export type IpSocketAddress = sockets.Network.IpSocketAddress;
+		export const IpSocketAddress = sockets.Network.IpSocketAddress;
 
 		export type IpAddressFamily = sockets.Network.IpAddressFamily;
+		export const IpAddressFamily = sockets.Network.IpAddressFamily;
 
 		/**
 		 * A received datagram.
@@ -913,10 +996,15 @@ export namespace sockets {
 				 * - <https://man7.org/linux/man-pages/man2/bind.2.html>
 				 * - <https://learn.microsoft.com/en-us/windows/win32/api/winsock/nf-winsock-bind>
 				 * - <https://man.freebsd.org/cgi/man.cgi?query=bind&sektion=2&format=html>
+				 *
+				 * @throws ErrorCode.Error_
 				 */
-				startBind(network: borrow<Network>, localAddress: IpSocketAddress): result<void, ErrorCode>;
+				startBind(network: Network, localAddress: IpSocketAddress): void;
 
-				finishBind(): result<void, ErrorCode>;
+				/**
+				 * @throws ErrorCode.Error_
+				 */
+				finishBind(): void;
 
 				/**
 				 * Set up inbound & outbound communication channels, optionally to a specific peer.
@@ -959,8 +1047,10 @@ export namespace sockets {
 				 * - <https://man7.org/linux/man-pages/man2/connect.2.html>
 				 * - <https://learn.microsoft.com/en-us/windows/win32/api/winsock2/nf-winsock2-connect>
 				 * - <https://man.freebsd.org/cgi/man.cgi?connect>
+				 *
+				 * @throws ErrorCode.Error_
 				 */
-				stream(remoteAddress: IpSocketAddress | undefined): result<[own<IncomingDatagramStream>, own<OutgoingDatagramStream>], ErrorCode>;
+				stream(remoteAddress: IpSocketAddress | undefined): [IncomingDatagramStream, OutgoingDatagramStream];
 
 				/**
 				 * Get the current bound address.
@@ -979,8 +1069,10 @@ export namespace sockets {
 				 * - <https://man7.org/linux/man-pages/man2/getsockname.2.html>
 				 * - <https://learn.microsoft.com/en-us/windows/win32/api/winsock/nf-winsock-getsockname>
 				 * - <https://man.freebsd.org/cgi/man.cgi?getsockname>
+				 *
+				 * @throws ErrorCode.Error_
 				 */
-				localAddress(): result<IpSocketAddress, ErrorCode>;
+				localAddress(): IpSocketAddress;
 
 				/**
 				 * Get the address the socket is currently streaming to.
@@ -993,8 +1085,10 @@ export namespace sockets {
 				 * - <https://man7.org/linux/man-pages/man2/getpeername.2.html>
 				 * - <https://learn.microsoft.com/en-us/windows/win32/api/winsock/nf-winsock-getpeername>
 				 * - <https://man.freebsd.org/cgi/man.cgi?query=getpeername&sektion=2&n=1>
+				 *
+				 * @throws ErrorCode.Error_
 				 */
-				remoteAddress(): result<IpSocketAddress, ErrorCode>;
+				remoteAddress(): IpSocketAddress;
 
 				/**
 				 * Whether this is a IPv4 or IPv6 socket.
@@ -1010,10 +1104,15 @@ export namespace sockets {
 				 * 
 				 * # Typical errors
 				 * - `invalid-argument`:     (set) The TTL value must be 1 or higher.
+				 *
+				 * @throws ErrorCode.Error_
 				 */
-				unicastHopLimit(): result<u8, ErrorCode>;
+				unicastHopLimit(): u8;
 
-				setUnicastHopLimit(value: u8): result<void, ErrorCode>;
+				/**
+				 * @throws ErrorCode.Error_
+				 */
+				setUnicastHopLimit(value: u8): void;
 
 				/**
 				 * The kernel buffer space reserved for sends/receives on this socket.
@@ -1026,14 +1125,25 @@ export namespace sockets {
 				 * 
 				 * # Typical errors
 				 * - `invalid-argument`:     (set) The provided value was 0.
+				 *
+				 * @throws ErrorCode.Error_
 				 */
-				receiveBufferSize(): result<u64, ErrorCode>;
+				receiveBufferSize(): u64;
 
-				setReceiveBufferSize(value: u64): result<void, ErrorCode>;
+				/**
+				 * @throws ErrorCode.Error_
+				 */
+				setReceiveBufferSize(value: u64): void;
 
-				sendBufferSize(): result<u64, ErrorCode>;
+				/**
+				 * @throws ErrorCode.Error_
+				 */
+				sendBufferSize(): u64;
 
-				setSendBufferSize(value: u64): result<void, ErrorCode>;
+				/**
+				 * @throws ErrorCode.Error_
+				 */
+				setSendBufferSize(value: u64): void;
 
 				/**
 				 * Create a `pollable` which will resolve once the socket is ready for I/O.
@@ -1041,7 +1151,7 @@ export namespace sockets {
 				 * Note: this function is here for WASI Preview2 only.
 				 * It's planned to be removed when `future` is natively supported in Preview3.
 				 */
-				subscribe(): own<Pollable>;
+				subscribe(): Pollable;
 			}
 			export type Statics = {
 			};
@@ -1076,8 +1186,10 @@ export namespace sockets {
 				 * - <https://learn.microsoft.com/en-us/windows/win32/api/winsock/nf-winsock-recvfrom>
 				 * - <https://learn.microsoft.com/en-us/previous-versions/windows/desktop/legacy/ms741687(v=vs.85)>
 				 * - <https://man.freebsd.org/cgi/man.cgi?query=recv&sektion=2>
+				 *
+				 * @throws ErrorCode.Error_
 				 */
-				receive(maxResults: u64): result<IncomingDatagram[], ErrorCode>;
+				receive(maxResults: u64): IncomingDatagram[];
 
 				/**
 				 * Create a `pollable` which will resolve once the stream is ready to receive again.
@@ -1085,7 +1197,7 @@ export namespace sockets {
 				 * Note: this function is here for WASI Preview2 only.
 				 * It's planned to be removed when `future` is natively supported in Preview3.
 				 */
-				subscribe(): own<Pollable>;
+				subscribe(): Pollable;
 			}
 			export type Statics = {
 			};
@@ -1108,8 +1220,10 @@ export namespace sockets {
 				 * error.
 				 * 
 				 * Never returns `would-block`.
+				 *
+				 * @throws ErrorCode.Error_
 				 */
-				checkSend(): result<u64, ErrorCode>;
+				checkSend(): u64;
 
 				/**
 				 * Send messages on the socket.
@@ -1146,8 +1260,10 @@ export namespace sockets {
 				 * - <https://learn.microsoft.com/en-us/windows/win32/api/winsock2/nf-winsock2-sendto>
 				 * - <https://learn.microsoft.com/en-us/windows/win32/api/winsock2/nf-winsock2-wsasendmsg>
 				 * - <https://man.freebsd.org/cgi/man.cgi?query=send&sektion=2>
+				 *
+				 * @throws ErrorCode.Error_
 				 */
-				send(datagrams: OutgoingDatagram[]): result<u64, ErrorCode>;
+				send(datagrams: OutgoingDatagram[]): u64;
 
 				/**
 				 * Create a `pollable` which will resolve once the stream is ready to send again.
@@ -1155,7 +1271,7 @@ export namespace sockets {
 				 * Note: this function is here for WASI Preview2 only.
 				 * It's planned to be removed when `future` is natively supported in Preview3.
 				 */
-				subscribe(): own<Pollable>;
+				subscribe(): Pollable;
 			}
 			export type Statics = {
 			};
@@ -1174,8 +1290,10 @@ export namespace sockets {
 		export type Network = sockets.Network.Network;
 
 		export type ErrorCode = sockets.Network.ErrorCode;
+		export const ErrorCode = sockets.Network.ErrorCode;
 
 		export type IpAddressFamily = sockets.Network.IpAddressFamily;
+		export const IpAddressFamily = sockets.Network.IpAddressFamily;
 
 		export type UdpSocket = sockets.Udp.UdpSocket;
 
@@ -1200,8 +1318,10 @@ export namespace sockets {
 		 * - <https://man7.org/linux/man-pages/man2/socket.2.html>
 		 * - <https://learn.microsoft.com/en-us/windows/win32/api/winsock2/nf-winsock2-wsasocketw>
 		 * - <https://man.freebsd.org/cgi/man.cgi?query=socket&sektion=2>
+		 *
+		 * @throws ErrorCode.Error_
 		 */
-		export type createUdpSocket = (addressFamily: IpAddressFamily) => result<own<UdpSocket>, ErrorCode>;
+		export type createUdpSocket = (addressFamily: IpAddressFamily) => UdpSocket;
 	}
 	export type UdpCreateSocket = {
 		createUdpSocket: UdpCreateSocket.createUdpSocket;
@@ -1306,12 +1426,12 @@ export namespace sockets {
 		export const ResolveAddressStream = new $wcm.ResourceType<sockets.IpNameLookup.ResolveAddressStream>('resolve-address-stream', 'wasi:sockets@0.2.0/ip-name-lookup/resolve-address-stream');
 		export const ResolveAddressStream_Handle = new $wcm.ResourceHandleType('resolve-address-stream');
 		ResolveAddressStream.addDestructor('$drop', new $wcm.DestructorType('[resource-drop]resolve-address-stream', [['inst', ResolveAddressStream]]));
-		ResolveAddressStream.addMethod('resolveNextAddress', new $wcm.MethodType<sockets.IpNameLookup.ResolveAddressStream.Interface['resolveNextAddress']>('[method]resolve-address-stream.resolve-next-address', [], new $wcm.ResultType<option<sockets.IpNameLookup.IpAddress>, sockets.IpNameLookup.ErrorCode>(new $wcm.OptionType<sockets.IpNameLookup.IpAddress>(IpAddress), ErrorCode)));
+		ResolveAddressStream.addMethod('resolveNextAddress', new $wcm.MethodType<sockets.IpNameLookup.ResolveAddressStream.Interface['resolveNextAddress']>('[method]resolve-address-stream.resolve-next-address', [], new $wcm.ResultType<sockets.IpNameLookup.IpAddress | undefined, sockets.IpNameLookup.ErrorCode>(new $wcm.OptionType<sockets.IpNameLookup.IpAddress>(IpAddress), ErrorCode)));
 		ResolveAddressStream.addMethod('subscribe', new $wcm.MethodType<sockets.IpNameLookup.ResolveAddressStream.Interface['subscribe']>('[method]resolve-address-stream.subscribe', [], new $wcm.OwnType<sockets.IpNameLookup.Pollable>(Pollable)));
 		export const resolveAddresses = new $wcm.FunctionType<sockets.IpNameLookup.resolveAddresses>('resolve-addresses',[
 			['network', new $wcm.BorrowType<sockets.IpNameLookup.Network>(Network)],
 			['name', $wcm.wstring],
-		], new $wcm.ResultType<own<sockets.IpNameLookup.ResolveAddressStream>, sockets.IpNameLookup.ErrorCode>(new $wcm.OwnType<sockets.IpNameLookup.ResolveAddressStream>(ResolveAddressStream), ErrorCode));
+		], new $wcm.ResultType<sockets.IpNameLookup.ResolveAddressStream, sockets.IpNameLookup.ErrorCode>(new $wcm.OwnType<sockets.IpNameLookup.ResolveAddressStream>(ResolveAddressStream), ErrorCode));
 	}
 	export namespace IpNameLookup._ {
 		export const id = 'wasi:sockets/ip-name-lookup@0.2.0' as const;
@@ -1342,7 +1462,7 @@ export namespace sockets {
 			['ResolveAddressStream', $.ResolveAddressStream]
 		]);
 		export type WasmInterface = {
-			'resolve-addresses': (network: i32, name_ptr: i32, name_len: i32, result: ptr<result<own<ResolveAddressStream>, ErrorCode>>) => void;
+			'resolve-addresses': (network: i32, name_ptr: i32, name_len: i32, result: ptr<result<ResolveAddressStream, ErrorCode>>) => void;
 		};
 		export namespace imports {
 			export type WasmInterface = _.WasmInterface & ResolveAddressStream.imports.WasmInterface;
@@ -1381,10 +1501,10 @@ export namespace sockets {
 			['network', new $wcm.BorrowType<sockets.Tcp.Network>(Network)],
 			['remoteAddress', IpSocketAddress],
 		], new $wcm.ResultType<void, sockets.Tcp.ErrorCode>(undefined, ErrorCode)));
-		TcpSocket.addMethod('finishConnect', new $wcm.MethodType<sockets.Tcp.TcpSocket.Interface['finishConnect']>('[method]tcp-socket.finish-connect', [], new $wcm.ResultType<[own<sockets.Tcp.InputStream>, own<sockets.Tcp.OutputStream>], sockets.Tcp.ErrorCode>(new $wcm.TupleType<[own<sockets.Tcp.InputStream>, own<sockets.Tcp.OutputStream>]>([new $wcm.OwnType<sockets.Tcp.InputStream>(InputStream), new $wcm.OwnType<sockets.Tcp.OutputStream>(OutputStream)]), ErrorCode)));
+		TcpSocket.addMethod('finishConnect', new $wcm.MethodType<sockets.Tcp.TcpSocket.Interface['finishConnect']>('[method]tcp-socket.finish-connect', [], new $wcm.ResultType<[sockets.Tcp.InputStream, sockets.Tcp.OutputStream], sockets.Tcp.ErrorCode>(new $wcm.TupleType<[sockets.Tcp.InputStream, sockets.Tcp.OutputStream]>([new $wcm.OwnType<sockets.Tcp.InputStream>(InputStream), new $wcm.OwnType<sockets.Tcp.OutputStream>(OutputStream)]), ErrorCode)));
 		TcpSocket.addMethod('startListen', new $wcm.MethodType<sockets.Tcp.TcpSocket.Interface['startListen']>('[method]tcp-socket.start-listen', [], new $wcm.ResultType<void, sockets.Tcp.ErrorCode>(undefined, ErrorCode)));
 		TcpSocket.addMethod('finishListen', new $wcm.MethodType<sockets.Tcp.TcpSocket.Interface['finishListen']>('[method]tcp-socket.finish-listen', [], new $wcm.ResultType<void, sockets.Tcp.ErrorCode>(undefined, ErrorCode)));
-		TcpSocket.addMethod('accept', new $wcm.MethodType<sockets.Tcp.TcpSocket.Interface['accept']>('[method]tcp-socket.accept', [], new $wcm.ResultType<[own<sockets.Tcp.TcpSocket>, own<sockets.Tcp.InputStream>, own<sockets.Tcp.OutputStream>], sockets.Tcp.ErrorCode>(new $wcm.TupleType<[own<sockets.Tcp.TcpSocket>, own<sockets.Tcp.InputStream>, own<sockets.Tcp.OutputStream>]>([new $wcm.OwnType<sockets.Tcp.TcpSocket>(TcpSocket), new $wcm.OwnType<sockets.Tcp.InputStream>(InputStream), new $wcm.OwnType<sockets.Tcp.OutputStream>(OutputStream)]), ErrorCode)));
+		TcpSocket.addMethod('accept', new $wcm.MethodType<sockets.Tcp.TcpSocket.Interface['accept']>('[method]tcp-socket.accept', [], new $wcm.ResultType<[sockets.Tcp.TcpSocket, sockets.Tcp.InputStream, sockets.Tcp.OutputStream], sockets.Tcp.ErrorCode>(new $wcm.TupleType<[sockets.Tcp.TcpSocket, sockets.Tcp.InputStream, sockets.Tcp.OutputStream]>([new $wcm.OwnType<sockets.Tcp.TcpSocket>(TcpSocket), new $wcm.OwnType<sockets.Tcp.InputStream>(InputStream), new $wcm.OwnType<sockets.Tcp.OutputStream>(OutputStream)]), ErrorCode)));
 		TcpSocket.addMethod('localAddress', new $wcm.MethodType<sockets.Tcp.TcpSocket.Interface['localAddress']>('[method]tcp-socket.local-address', [], new $wcm.ResultType<sockets.Tcp.IpSocketAddress, sockets.Tcp.ErrorCode>(IpSocketAddress, ErrorCode)));
 		TcpSocket.addMethod('remoteAddress', new $wcm.MethodType<sockets.Tcp.TcpSocket.Interface['remoteAddress']>('[method]tcp-socket.remote-address', [], new $wcm.ResultType<sockets.Tcp.IpSocketAddress, sockets.Tcp.ErrorCode>(IpSocketAddress, ErrorCode)));
 		TcpSocket.addMethod('isListening', new $wcm.MethodType<sockets.Tcp.TcpSocket.Interface['isListening']>('[method]tcp-socket.is-listening', [], $wcm.bool));
@@ -1433,10 +1553,10 @@ export namespace sockets {
 				'[method]tcp-socket.start-bind': (self: i32, network: i32, localAddress_IpSocketAddress_case: i32, localAddress_IpSocketAddress_0: i32, localAddress_IpSocketAddress_1: i32, localAddress_IpSocketAddress_2: i32, localAddress_IpSocketAddress_3: i32, localAddress_IpSocketAddress_4: i32, localAddress_IpSocketAddress_5: i32, localAddress_IpSocketAddress_6: i32, localAddress_IpSocketAddress_7: i32, localAddress_IpSocketAddress_8: i32, localAddress_IpSocketAddress_9: i32, localAddress_IpSocketAddress_10: i32, result: ptr<result<void, ErrorCode>>) => void;
 				'[method]tcp-socket.finish-bind': (self: i32, result: ptr<result<void, ErrorCode>>) => void;
 				'[method]tcp-socket.start-connect': (self: i32, network: i32, remoteAddress_IpSocketAddress_case: i32, remoteAddress_IpSocketAddress_0: i32, remoteAddress_IpSocketAddress_1: i32, remoteAddress_IpSocketAddress_2: i32, remoteAddress_IpSocketAddress_3: i32, remoteAddress_IpSocketAddress_4: i32, remoteAddress_IpSocketAddress_5: i32, remoteAddress_IpSocketAddress_6: i32, remoteAddress_IpSocketAddress_7: i32, remoteAddress_IpSocketAddress_8: i32, remoteAddress_IpSocketAddress_9: i32, remoteAddress_IpSocketAddress_10: i32, result: ptr<result<void, ErrorCode>>) => void;
-				'[method]tcp-socket.finish-connect': (self: i32, result: ptr<result<[own<InputStream>, own<OutputStream>], ErrorCode>>) => void;
+				'[method]tcp-socket.finish-connect': (self: i32, result: ptr<result<[InputStream, OutputStream], ErrorCode>>) => void;
 				'[method]tcp-socket.start-listen': (self: i32, result: ptr<result<void, ErrorCode>>) => void;
 				'[method]tcp-socket.finish-listen': (self: i32, result: ptr<result<void, ErrorCode>>) => void;
-				'[method]tcp-socket.accept': (self: i32, result: ptr<result<[own<TcpSocket>, own<InputStream>, own<OutputStream>], ErrorCode>>) => void;
+				'[method]tcp-socket.accept': (self: i32, result: ptr<result<[TcpSocket, InputStream, OutputStream], ErrorCode>>) => void;
 				'[method]tcp-socket.local-address': (self: i32, result: ptr<result<IpSocketAddress, ErrorCode>>) => void;
 				'[method]tcp-socket.remote-address': (self: i32, result: ptr<result<IpSocketAddress, ErrorCode>>) => void;
 				'[method]tcp-socket.is-listening': (self: i32) => i32;
@@ -1505,7 +1625,7 @@ export namespace sockets {
 		export const TcpSocket = sockets.Tcp.$.TcpSocket;
 		export const createTcpSocket = new $wcm.FunctionType<sockets.TcpCreateSocket.createTcpSocket>('create-tcp-socket',[
 			['addressFamily', IpAddressFamily],
-		], new $wcm.ResultType<own<sockets.TcpCreateSocket.TcpSocket>, sockets.TcpCreateSocket.ErrorCode>(new $wcm.OwnType<sockets.TcpCreateSocket.TcpSocket>(TcpSocket), ErrorCode));
+		], new $wcm.ResultType<sockets.TcpCreateSocket.TcpSocket, sockets.TcpCreateSocket.ErrorCode>(new $wcm.OwnType<sockets.TcpCreateSocket.TcpSocket>(TcpSocket), ErrorCode));
 	}
 	export namespace TcpCreateSocket._ {
 		export const id = 'wasi:sockets/tcp-create-socket@0.2.0' as const;
@@ -1520,7 +1640,7 @@ export namespace sockets {
 			['createTcpSocket', $.createTcpSocket]
 		]);
 		export type WasmInterface = {
-			'create-tcp-socket': (addressFamily_IpAddressFamily_IpAddressFamily: i32, result: ptr<result<own<TcpSocket>, ErrorCode>>) => void;
+			'create-tcp-socket': (addressFamily_IpAddressFamily_IpAddressFamily: i32, result: ptr<result<TcpSocket, ErrorCode>>) => void;
 		};
 		export namespace imports {
 			export type WasmInterface = _.WasmInterface;
@@ -1558,7 +1678,7 @@ export namespace sockets {
 		UdpSocket.addMethod('finishBind', new $wcm.MethodType<sockets.Udp.UdpSocket.Interface['finishBind']>('[method]udp-socket.finish-bind', [], new $wcm.ResultType<void, sockets.Udp.ErrorCode>(undefined, ErrorCode)));
 		UdpSocket.addMethod('stream', new $wcm.MethodType<sockets.Udp.UdpSocket.Interface['stream']>('[method]udp-socket.stream', [
 			['remoteAddress', new $wcm.OptionType<sockets.Udp.IpSocketAddress>(IpSocketAddress)],
-		], new $wcm.ResultType<[own<sockets.Udp.IncomingDatagramStream>, own<sockets.Udp.OutgoingDatagramStream>], sockets.Udp.ErrorCode>(new $wcm.TupleType<[own<sockets.Udp.IncomingDatagramStream>, own<sockets.Udp.OutgoingDatagramStream>]>([new $wcm.OwnType<sockets.Udp.IncomingDatagramStream>(IncomingDatagramStream), new $wcm.OwnType<sockets.Udp.OutgoingDatagramStream>(OutgoingDatagramStream)]), ErrorCode)));
+		], new $wcm.ResultType<[sockets.Udp.IncomingDatagramStream, sockets.Udp.OutgoingDatagramStream], sockets.Udp.ErrorCode>(new $wcm.TupleType<[sockets.Udp.IncomingDatagramStream, sockets.Udp.OutgoingDatagramStream]>([new $wcm.OwnType<sockets.Udp.IncomingDatagramStream>(IncomingDatagramStream), new $wcm.OwnType<sockets.Udp.OutgoingDatagramStream>(OutgoingDatagramStream)]), ErrorCode)));
 		UdpSocket.addMethod('localAddress', new $wcm.MethodType<sockets.Udp.UdpSocket.Interface['localAddress']>('[method]udp-socket.local-address', [], new $wcm.ResultType<sockets.Udp.IpSocketAddress, sockets.Udp.ErrorCode>(IpSocketAddress, ErrorCode)));
 		UdpSocket.addMethod('remoteAddress', new $wcm.MethodType<sockets.Udp.UdpSocket.Interface['remoteAddress']>('[method]udp-socket.remote-address', [], new $wcm.ResultType<sockets.Udp.IpSocketAddress, sockets.Udp.ErrorCode>(IpSocketAddress, ErrorCode)));
 		UdpSocket.addMethod('addressFamily', new $wcm.MethodType<sockets.Udp.UdpSocket.Interface['addressFamily']>('[method]udp-socket.address-family', [], IpAddressFamily));
@@ -1594,7 +1714,7 @@ export namespace sockets {
 			export type WasmInterface = {
 				'[method]udp-socket.start-bind': (self: i32, network: i32, localAddress_IpSocketAddress_case: i32, localAddress_IpSocketAddress_0: i32, localAddress_IpSocketAddress_1: i32, localAddress_IpSocketAddress_2: i32, localAddress_IpSocketAddress_3: i32, localAddress_IpSocketAddress_4: i32, localAddress_IpSocketAddress_5: i32, localAddress_IpSocketAddress_6: i32, localAddress_IpSocketAddress_7: i32, localAddress_IpSocketAddress_8: i32, localAddress_IpSocketAddress_9: i32, localAddress_IpSocketAddress_10: i32, result: ptr<result<void, ErrorCode>>) => void;
 				'[method]udp-socket.finish-bind': (self: i32, result: ptr<result<void, ErrorCode>>) => void;
-				'[method]udp-socket.stream': (self: i32, remoteAddress_case: i32, remoteAddress_option_IpSocketAddress_case: i32, remoteAddress_option_IpSocketAddress_0: i32, remoteAddress_option_IpSocketAddress_1: i32, remoteAddress_option_IpSocketAddress_2: i32, remoteAddress_option_IpSocketAddress_3: i32, remoteAddress_option_IpSocketAddress_4: i32, remoteAddress_option_IpSocketAddress_5: i32, remoteAddress_option_IpSocketAddress_6: i32, remoteAddress_option_IpSocketAddress_7: i32, remoteAddress_option_IpSocketAddress_8: i32, remoteAddress_option_IpSocketAddress_9: i32, remoteAddress_option_IpSocketAddress_10: i32, result: ptr<result<[own<IncomingDatagramStream>, own<OutgoingDatagramStream>], ErrorCode>>) => void;
+				'[method]udp-socket.stream': (self: i32, remoteAddress_case: i32, remoteAddress_option_IpSocketAddress_case: i32, remoteAddress_option_IpSocketAddress_0: i32, remoteAddress_option_IpSocketAddress_1: i32, remoteAddress_option_IpSocketAddress_2: i32, remoteAddress_option_IpSocketAddress_3: i32, remoteAddress_option_IpSocketAddress_4: i32, remoteAddress_option_IpSocketAddress_5: i32, remoteAddress_option_IpSocketAddress_6: i32, remoteAddress_option_IpSocketAddress_7: i32, remoteAddress_option_IpSocketAddress_8: i32, remoteAddress_option_IpSocketAddress_9: i32, remoteAddress_option_IpSocketAddress_10: i32, result: ptr<result<[IncomingDatagramStream, OutgoingDatagramStream], ErrorCode>>) => void;
 				'[method]udp-socket.local-address': (self: i32, result: ptr<result<IpSocketAddress, ErrorCode>>) => void;
 				'[method]udp-socket.remote-address': (self: i32, result: ptr<result<IpSocketAddress, ErrorCode>>) => void;
 				'[method]udp-socket.address-family': (self: i32) => i32;
@@ -1685,7 +1805,7 @@ export namespace sockets {
 		export const UdpSocket = sockets.Udp.$.UdpSocket;
 		export const createUdpSocket = new $wcm.FunctionType<sockets.UdpCreateSocket.createUdpSocket>('create-udp-socket',[
 			['addressFamily', IpAddressFamily],
-		], new $wcm.ResultType<own<sockets.UdpCreateSocket.UdpSocket>, sockets.UdpCreateSocket.ErrorCode>(new $wcm.OwnType<sockets.UdpCreateSocket.UdpSocket>(UdpSocket), ErrorCode));
+		], new $wcm.ResultType<sockets.UdpCreateSocket.UdpSocket, sockets.UdpCreateSocket.ErrorCode>(new $wcm.OwnType<sockets.UdpCreateSocket.UdpSocket>(UdpSocket), ErrorCode));
 	}
 	export namespace UdpCreateSocket._ {
 		export const id = 'wasi:sockets/udp-create-socket@0.2.0' as const;
@@ -1700,7 +1820,7 @@ export namespace sockets {
 			['createUdpSocket', $.createUdpSocket]
 		]);
 		export type WasmInterface = {
-			'create-udp-socket': (addressFamily_IpAddressFamily_IpAddressFamily: i32, result: ptr<result<own<UdpSocket>, ErrorCode>>) => void;
+			'create-udp-socket': (addressFamily_IpAddressFamily_IpAddressFamily: i32, result: ptr<result<UdpSocket, ErrorCode>>) => void;
 		};
 		export namespace imports {
 			export type WasmInterface = _.WasmInterface;

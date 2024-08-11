@@ -4,7 +4,7 @@
  *--------------------------------------------------------------------------------------------*/
 /* eslint-disable @typescript-eslint/ban-types */
 import * as $wcm from '@vscode/wasm-component-model';
-import type { u64, own, u32, i64, i32, ptr } from '@vscode/wasm-component-model';
+import type { u64, u32, i64, i32, ptr } from '@vscode/wasm-component-model';
 import { io } from './io';
 
 export namespace clocks {
@@ -53,14 +53,14 @@ export namespace clocks {
 		 * Create a `pollable` which will resolve once the specified instant
 		 * occured.
 		 */
-		export type subscribeInstant = (when: Instant) => own<Pollable>;
+		export type subscribeInstant = (when: Instant) => Pollable;
 
 		/**
 		 * Create a `pollable` which will resolve once the given duration has
 		 * elapsed, starting at the time at which this function was called.
 		 * occured.
 		 */
-		export type subscribeDuration = (when: Duration) => own<Pollable>;
+		export type subscribeDuration = (when: Duration) => Pollable;
 	}
 	export type MonotonicClock = {
 		now: MonotonicClock.now;

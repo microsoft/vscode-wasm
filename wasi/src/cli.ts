@@ -4,7 +4,7 @@
  *--------------------------------------------------------------------------------------------*/
 /* eslint-disable @typescript-eslint/ban-types */
 import * as $wcm from '@vscode/wasm-component-model';
-import type { result, own, i32, ptr } from '@vscode/wasm-component-model';
+import type { result, i32, ptr } from '@vscode/wasm-component-model';
 import { random } from './random';
 import { sockets } from './sockets';
 import { filesystem } from './filesystem';
@@ -56,7 +56,7 @@ export namespace cli {
 		/**
 		 * Run the program.
 		 */
-		export type run = () => result<void, void>;
+		export type run = () => void;
 	}
 	export type Run = {
 		run: Run.run;
@@ -65,7 +65,7 @@ export namespace cli {
 	export namespace Stdin {
 		export type InputStream = io.Streams.InputStream;
 
-		export type getStdin = () => own<InputStream>;
+		export type getStdin = () => InputStream;
 	}
 	export type Stdin = {
 		getStdin: Stdin.getStdin;
@@ -74,7 +74,7 @@ export namespace cli {
 	export namespace Stdout {
 		export type OutputStream = io.Streams.OutputStream;
 
-		export type getStdout = () => own<OutputStream>;
+		export type getStdout = () => OutputStream;
 	}
 	export type Stdout = {
 		getStdout: Stdout.getStdout;
@@ -83,7 +83,7 @@ export namespace cli {
 	export namespace Stderr {
 		export type OutputStream = io.Streams.OutputStream;
 
-		export type getStderr = () => own<OutputStream>;
+		export type getStderr = () => OutputStream;
 	}
 	export type Stderr = {
 		getStderr: Stderr.getStderr;
@@ -142,7 +142,7 @@ export namespace cli {
 		 * If stdin is connected to a terminal, return a `terminal-input` handle
 		 * allowing further interaction with it.
 		 */
-		export type getTerminalStdin = () => own<TerminalInput> | undefined;
+		export type getTerminalStdin = () => TerminalInput | undefined;
 	}
 	export type TerminalStdin = {
 		getTerminalStdin: TerminalStdin.getTerminalStdin;
@@ -159,7 +159,7 @@ export namespace cli {
 		 * If stdout is connected to a terminal, return a `terminal-output` handle
 		 * allowing further interaction with it.
 		 */
-		export type getTerminalStdout = () => own<TerminalOutput> | undefined;
+		export type getTerminalStdout = () => TerminalOutput | undefined;
 	}
 	export type TerminalStdout = {
 		getTerminalStdout: TerminalStdout.getTerminalStdout;
@@ -176,7 +176,7 @@ export namespace cli {
 		 * If stderr is connected to a terminal, return a `terminal-output` handle
 		 * allowing further interaction with it.
 		 */
-		export type getTerminalStderr = () => own<TerminalOutput> | undefined;
+		export type getTerminalStderr = () => TerminalOutput | undefined;
 	}
 	export type TerminalStderr = {
 		getTerminalStderr: TerminalStderr.getTerminalStderr;
@@ -454,7 +454,7 @@ export namespace cli {
 
 	export namespace TerminalStdin.$ {
 		export const TerminalInput = cli.TerminalInput.$.TerminalInput;
-		export const getTerminalStdin = new $wcm.FunctionType<cli.TerminalStdin.getTerminalStdin>('get-terminal-stdin', [], new $wcm.OptionType<own<cli.TerminalStdin.TerminalInput>>(new $wcm.OwnType<cli.TerminalStdin.TerminalInput>(TerminalInput)));
+		export const getTerminalStdin = new $wcm.FunctionType<cli.TerminalStdin.getTerminalStdin>('get-terminal-stdin', [], new $wcm.OptionType<cli.TerminalStdin.TerminalInput>(new $wcm.OwnType<cli.TerminalStdin.TerminalInput>(TerminalInput)));
 	}
 	export namespace TerminalStdin._ {
 		export const id = 'wasi:cli/terminal-stdin@0.2.0' as const;
@@ -466,7 +466,7 @@ export namespace cli {
 			['getTerminalStdin', $.getTerminalStdin]
 		]);
 		export type WasmInterface = {
-			'get-terminal-stdin': (result: ptr<own<TerminalInput> | undefined>) => void;
+			'get-terminal-stdin': (result: ptr<TerminalInput | undefined>) => void;
 		};
 		export namespace imports {
 			export type WasmInterface = _.WasmInterface;
@@ -478,7 +478,7 @@ export namespace cli {
 
 	export namespace TerminalStdout.$ {
 		export const TerminalOutput = cli.TerminalOutput.$.TerminalOutput;
-		export const getTerminalStdout = new $wcm.FunctionType<cli.TerminalStdout.getTerminalStdout>('get-terminal-stdout', [], new $wcm.OptionType<own<cli.TerminalStdout.TerminalOutput>>(new $wcm.OwnType<cli.TerminalStdout.TerminalOutput>(TerminalOutput)));
+		export const getTerminalStdout = new $wcm.FunctionType<cli.TerminalStdout.getTerminalStdout>('get-terminal-stdout', [], new $wcm.OptionType<cli.TerminalStdout.TerminalOutput>(new $wcm.OwnType<cli.TerminalStdout.TerminalOutput>(TerminalOutput)));
 	}
 	export namespace TerminalStdout._ {
 		export const id = 'wasi:cli/terminal-stdout@0.2.0' as const;
@@ -490,7 +490,7 @@ export namespace cli {
 			['getTerminalStdout', $.getTerminalStdout]
 		]);
 		export type WasmInterface = {
-			'get-terminal-stdout': (result: ptr<own<TerminalOutput> | undefined>) => void;
+			'get-terminal-stdout': (result: ptr<TerminalOutput | undefined>) => void;
 		};
 		export namespace imports {
 			export type WasmInterface = _.WasmInterface;
@@ -502,7 +502,7 @@ export namespace cli {
 
 	export namespace TerminalStderr.$ {
 		export const TerminalOutput = cli.TerminalOutput.$.TerminalOutput;
-		export const getTerminalStderr = new $wcm.FunctionType<cli.TerminalStderr.getTerminalStderr>('get-terminal-stderr', [], new $wcm.OptionType<own<cli.TerminalStderr.TerminalOutput>>(new $wcm.OwnType<cli.TerminalStderr.TerminalOutput>(TerminalOutput)));
+		export const getTerminalStderr = new $wcm.FunctionType<cli.TerminalStderr.getTerminalStderr>('get-terminal-stderr', [], new $wcm.OptionType<cli.TerminalStderr.TerminalOutput>(new $wcm.OwnType<cli.TerminalStderr.TerminalOutput>(TerminalOutput)));
 	}
 	export namespace TerminalStderr._ {
 		export const id = 'wasi:cli/terminal-stderr@0.2.0' as const;
@@ -514,7 +514,7 @@ export namespace cli {
 			['getTerminalStderr', $.getTerminalStderr]
 		]);
 		export type WasmInterface = {
-			'get-terminal-stderr': (result: ptr<own<TerminalOutput> | undefined>) => void;
+			'get-terminal-stderr': (result: ptr<TerminalOutput | undefined>) => void;
 		};
 		export namespace imports {
 			export type WasmInterface = _.WasmInterface;

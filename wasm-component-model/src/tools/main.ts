@@ -3,18 +3,18 @@
  * Licensed under the MIT License. See License.txt in the project root for license information.
  * ------------------------------------------------------------------------------------------ */
 
-import * as fs from 'node:fs/promises';
 import * as cp from 'node:child_process';
+import * as fs from 'node:fs/promises';
 
 import * as yargs from 'yargs';
 
 import semverParse = require('semver/functions/parse');
 import semverGte = require('semver/functions/gte');
 
+import path from 'node:path';
+import { Options } from './options';
 import { Document } from './wit-json';
 import { processDocument } from './wit2ts';
-import { Options } from './options';
-import path from 'node:path';
 
 async function run(options: Options): Promise<number> {
 	if (options.help) {
@@ -133,11 +133,6 @@ export async function main(): Promise<number> {
 			description: 'By default wit2ts only generate the structure necessary to make names unique. This options force wit2ts to generate the package and or namespace names, even if they are not necessary.',
 			enum: ['auto', 'package', 'namespace'],
 			default: 'auto'
-		}).
-		options('worker', {
-			description: 'Generate bindings for main and a worker.',
-			boolean: true,
-			default: false
 		}).
 		command('$0 [input]', 'Process the JSON file or WIT directory', (yargs) => {
 			yargs.positional('input', {

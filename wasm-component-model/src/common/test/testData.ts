@@ -4,7 +4,7 @@
  *--------------------------------------------------------------------------------------------*/
 /* eslint-disable @typescript-eslint/ban-types */
 import * as $wcm from '@vscode/wasm-component-model';
-import type { u32, u64, s32, s64, float32, float64, i32, ptr, i64 } from '@vscode/wasm-component-model';
+import type { u32, u64, s32, s64, float32, float64, i32, ptr, result, i64 } from '@vscode/wasm-component-model';
 
 export namespace Types {
 	export type Point = {
@@ -174,6 +174,11 @@ export namespace Types {
 			getY(): u32;
 
 			add(): u32;
+
+			/**
+			 * @throws $wcm.bool.Error
+			 */
+			check(): u32;
 		}
 		export type Statics = {
 			$new?(x: u32, y: u32): Interface;
@@ -267,6 +272,7 @@ export namespace Types.$ {
 	PointResource.addMethod('getX', new $wcm.MethodType<Types.PointResource.Interface['getX']>('[method]point-resource.get-x', [], $wcm.u32));
 	PointResource.addMethod('getY', new $wcm.MethodType<Types.PointResource.Interface['getY']>('[method]point-resource.get-y', [], $wcm.u32));
 	PointResource.addMethod('add', new $wcm.MethodType<Types.PointResource.Interface['add']>('[method]point-resource.add', [], $wcm.u32));
+	PointResource.addMethod('check', new $wcm.MethodType<Types.PointResource.Interface['check']>('[method]point-resource.check', [], new $wcm.ResultType<u32, boolean>($wcm.u32, $wcm.bool, $wcm.bool.Error)));
 	export const call = new $wcm.FunctionType<Types.call>('call',[
 		['point', Point],
 	], $wcm.u32);
@@ -292,6 +298,7 @@ export namespace Types._ {
 			'[method]point-resource.get-x': (self: i32) => i32;
 			'[method]point-resource.get-y': (self: i32) => i32;
 			'[method]point-resource.add': (self: i32) => i32;
+			'[method]point-resource.check': (self: i32, result: ptr<result<u32, boolean>>) => void;
 		};
 		export namespace imports {
 			export type WasmInterface = PointResource.WasmInterface & { '[resource-drop]point-resource': (self: i32) => void };
@@ -414,7 +421,7 @@ export namespace testData._ {
 			return $wcm.$imports.create<Imports>(_, service, context);
 		}
 		export function loop(service: testData.Imports, context: $wcm.WasmContext): testData.Imports {
-			return $wcm.$imports.loop(_, service, context);
+			return $wcm.$imports.loop<testData.Imports>(_, service, context);
 		}
 	}
 	export type Imports = {

@@ -4,7 +4,7 @@
  *--------------------------------------------------------------------------------------------*/
 import assert from 'assert';
 
-import { u32, Memory as IMemory, ptr, size, WasmContext, Alignment, Resource, ResourceManagers, MemoryRange, ReadonlyMemoryRange, ResourceManager } from '../componentModel';
+import { Alignment, Memory as IMemory, MemoryRange, ReadonlyMemoryRange, Resource, ResourceManager, ResourceManagers, WasmContext, bool, ptr, size, u32 } from '../componentModel';
 
 class Memory implements IMemory {
 
@@ -73,6 +73,13 @@ class PointResourceClass extends Resource.Default implements Types.PointResource
 
 	public add(): u32 {
 		return this.x + this.y;
+	}
+
+	public check(): u32 {
+		if (this.x + this.y === 10) {
+			return 10;
+		}
+		throw new bool.Error(false);
 	}
 }
 
@@ -167,6 +174,12 @@ suite ('point-resource', () => {
 		assert.strictEqual(point.getX(), 1);
 		assert.strictEqual(point.getY(), 2);
 		assert.strictEqual(point.add(), 3);
+		try {
+			point.check();
+			assert.fail('Expected an error');
+		} catch (error) {
+			assert.ok(error instanceof bool.Error);
+		}
 		if (typeof global?.gc === 'function') {
 			point = undefined;
 			global.gc();
