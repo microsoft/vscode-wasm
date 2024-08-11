@@ -2,18 +2,18 @@
  *  Copyright (c) Microsoft Corporation. All rights reserved.
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
-/// <reference path="../../typings/webAssemblyNode.d.ts" />
+/// <reference path="../../typings/webAssemblyNode.d.ts" preserve="true" />
 
 import { MessagePort, Worker } from 'node:worker_threads';
 
 import { LogOutputChannel, Uri } from 'vscode';
 
-import RAL from '../common/ral';
-import { ptr, u32 } from '../common/baseTypes';
-import { WasiProcess } from '../common/process';
-import { WasiService, ServiceConnection } from '../common/service';
-import type { ServiceMessage, StartMainMessage, StartThreadMessage, WorkerMessage } from '../common/connection';
 import { ProcessOptions } from '../common/api';
+import { ptr, u32 } from '../common/baseTypes';
+import type { ServiceMessage, StartMainMessage, StartThreadMessage, WorkerMessage } from '../common/connection';
+import { WasiProcess } from '../common/process';
+import RAL from '../common/ral';
+import { ServiceConnection, WasiService } from '../common/service';
 
 export class NodeServiceConnection extends ServiceConnection {
 

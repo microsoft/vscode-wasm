@@ -3007,8 +3007,6 @@ export class ResultType<O extends JType, E extends JType = void> extends Variant
 		return this._errorClass;
 	}
 }
-export type throws<E extends Error> = E;
-export type returns<O extends JType, _E extends Error> = O;
 
 export interface Resource {
 	$handle(): ResourceHandle<this>;

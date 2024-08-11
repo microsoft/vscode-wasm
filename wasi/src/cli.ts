@@ -4,7 +4,7 @@
  *--------------------------------------------------------------------------------------------*/
 /* eslint-disable @typescript-eslint/ban-types */
 import * as $wcm from '@vscode/wasm-component-model';
-import type { i32, ptr } from '@vscode/wasm-component-model';
+import type { result, i32, ptr } from '@vscode/wasm-component-model';
 import { random } from './random';
 import { sockets } from './sockets';
 import { filesystem } from './filesystem';
@@ -46,7 +46,7 @@ export namespace cli {
 		/**
 		 * Exit the current instance and any linked instances.
 		 */
-		export type exit = (status: void) => void;
+		export type exit = (status: result<void, void>) => void;
 	}
 	export type Exit = {
 		exit: Exit.exit;
