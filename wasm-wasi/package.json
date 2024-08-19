@@ -1,9 +1,9 @@
 {
 	"name": "@vscode/wasm-wasi",
-	"version": "1.0.0-pre.2",
+	"version": "1.0.0",
 	"description": "An API facade for the WASM WASI CORE VS Code extension",
 	"engines": {
-		"node": ">=20.9.0",
+		"node": ">=20.14.0",
 		"vscode": "^1.88.0"
 	},
 	"exports": {

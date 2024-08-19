@@ -6,6 +6,10 @@ This npm module implements an API facade for the WASM WASI Core VS Code extensio
 
 ## History
 
+### 1.0.0
+
+First stable version of the wasm-wasi Core API facade.
+
 ### 0.11.0
 
 With release version `0.11.0` the implementation details of the WASM support for VS Code has changed. This npm module is now a facade around the `wasm-wasi-core` VS Code extension.

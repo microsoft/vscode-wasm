@@ -2,9 +2,9 @@
 	"name": "wasm-wasi-core",
 	"private": "true",
 	"publisher": "ms-vscode",
-	"version": "0.13.3",
-	"displayName": "Experimental - WebAssembly Execution Engine",
-	"description": "Experimental support to execute WebAssemblies on top of the VS Code API.",
+	"version": "1.0.0",
+	"displayName": "WebAssembly Execution Engine",
+	"description": "Engine to execute WebAssemblies on top of the VS Code API.",
 	"author": "MS",
 	"license": "MIT",
 	"repository": {
@@ -28,12 +28,12 @@
 	"browser": "./dist/web/extension.js",
 	"activationEvents": [],
 	"dependencies": {
-		"uuid": "^9.0.1",
+		"uuid": "^10.0.0",
 		"vscode-uri": "^3.0.8"
 	},
 	"devDependencies": {
 		"@types/vscode": "1.88.0",
-		"@types/uuid": "^9.0.8",
+		"@types/uuid": "^10.0.0",
 		"@types/assert": "^1.5.10",
 		"assert": "^2.1.0",
 		"find-process": "^1.4.7"

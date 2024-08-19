@@ -11,7 +11,7 @@ The library extension supports the following WASI specifications:
 
 Please note that WASI is work in progress. As a result, newer versions of this extension might not be backwards compatible with older WASI standards.
 
-There is also an additional npm module `@vscode/wasm-wasi` that eases the API access to the extension.
+There is also an additional npm module `@vscode/wasm-wasi` that eases the API access to the extension and might provide some backwards compatibility in terms of the API used in VS Code.
 
 ## Example
 
