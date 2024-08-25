@@ -17,8 +17,6 @@ export namespace clocks {
 	 * 
 	 * A monotonic clock is a clock which has an unspecified initial value, and
 	 * successive reads of the clock will produce non-decreasing values.
-	 * 
-	 * It is intended for measuring elapsed time.
 	 */
 	export namespace MonotonicClock {
 		export type Pollable = io.Poll.Pollable;
@@ -51,14 +49,13 @@ export namespace clocks {
 
 		/**
 		 * Create a `pollable` which will resolve once the specified instant
-		 * occured.
+		 * has occurred.
 		 */
 		export type subscribeInstant = (when: Instant) => Pollable;
 
 		/**
-		 * Create a `pollable` which will resolve once the given duration has
-		 * elapsed, starting at the time at which this function was called.
-		 * occured.
+		 * Create a `pollable` that will resolve after the specified duration has
+		 * elapsed from the time this function is invoked.
 		 */
 		export type subscribeDuration = (when: Duration) => Pollable;
 	}
@@ -139,7 +136,7 @@ export namespace clocks {
 		], new $wcm.OwnType<clocks.MonotonicClock.Pollable>(Pollable));
 	}
 	export namespace MonotonicClock._ {
-		export const id = 'wasi:clocks/monotonic-clock@0.2.0' as const;
+		export const id = 'wasi:clocks/monotonic-clock@0.2.1' as const;
 		export const witName = 'monotonic-clock' as const;
 		export const types: Map<string, $wcm.AnyComponentModelType> = new Map<string, $wcm.AnyComponentModelType>([
 			['Pollable', $.Pollable],
@@ -175,7 +172,7 @@ export namespace clocks {
 		export const resolution = new $wcm.FunctionType<clocks.WallClock.resolution>('resolution', [], Datetime);
 	}
 	export namespace WallClock._ {
-		export const id = 'wasi:clocks/wall-clock@0.2.0' as const;
+		export const id = 'wasi:clocks/wall-clock@0.2.1' as const;
 		export const witName = 'wall-clock' as const;
 		export const types: Map<string, $wcm.AnyComponentModelType> = new Map<string, $wcm.AnyComponentModelType>([
 			['Datetime', $.Datetime]
@@ -198,8 +195,8 @@ export namespace clocks {
 }
 
 export namespace clocks._ {
-	export const version = '0.2.0' as const;
-	export const id = 'wasi:clocks@0.2.0' as const;
+	export const version = '0.2.1' as const;
+	export const id = 'wasi:clocks@0.2.1' as const;
 	export const witName = 'clocks' as const;
 	export const interfaces: Map<string, $wcm.InterfaceType> = new Map<string, $wcm.InterfaceType>([
 		['MonotonicClock', MonotonicClock._],

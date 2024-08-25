@@ -492,7 +492,7 @@ export namespace sockets {
 				 * Connect to a remote endpoint.
 				 * 
 				 * On success:
-				 * - the socket is transitioned into the `connection` state.
+				 * - the socket is transitioned into the `connected` state.
 				 * - a pair of streams is returned that can be used to read & write to the connection
 				 * 
 				 * After a failed connection attempt, the socket will be in the `closed`
@@ -820,8 +820,8 @@ export namespace sockets {
 				 * `subscribe` only has to be called once per socket and can then be
 				 * (re)used for the remainder of the socket's lifetime.
 				 * 
-				 * See <https://github.com/WebAssembly/wasi-sockets/TcpSocketOperationalSemantics.md#Pollable-readiness>
-				 * for a more information.
+				 * See <https://github.com/WebAssembly/wasi-sockets/blob/main/TcpSocketOperationalSemantics.md#pollable-readiness>
+				 * for more information.
 				 * 
 				 * Note: this function is here for WASI Preview2 only.
 				 * It's planned to be removed when `future` is natively supported in Preview3.
@@ -839,7 +839,7 @@ export namespace sockets {
 				 * associated with this socket will be closed and a FIN packet will be sent.
 				 * - `both`: Same effect as `receive` & `send` combined.
 				 * 
-				 * This function is idempotent. Shutting a down a direction more than once
+				 * This function is idempotent; shutting down a direction more than once
 				 * has no effect and returns `ok`.
 				 * 
 				 * The shutdown function does not close (drop) the socket.
@@ -1330,7 +1330,7 @@ export namespace sockets {
 
 export namespace sockets {
 	export namespace Network.$ {
-		export const Network = new $wcm.ResourceType<sockets.Network.Network>('network', 'wasi:sockets@0.2.0/network/network');
+		export const Network = new $wcm.ResourceType<sockets.Network.Network>('network', 'wasi:sockets@0.2.1/network/network');
 		export const Network_Handle = new $wcm.ResourceHandleType('network');
 		export const ErrorCode = new $wcm.EnumType<sockets.Network.ErrorCode>(['unknown', 'accessDenied', 'notSupported', 'invalidArgument', 'outOfMemory', 'timeout', 'concurrencyConflict', 'notInProgress', 'wouldBlock', 'invalidState', 'newSocketLimit', 'addressNotBindable', 'addressInUse', 'remoteUnreachable', 'connectionRefused', 'connectionReset', 'connectionAborted', 'datagramTooLarge', 'nameUnresolvable', 'temporaryResolverFailure', 'permanentResolverFailure']);
 		export const IpAddressFamily = new $wcm.EnumType<sockets.Network.IpAddressFamily>(['ipv4', 'ipv6']);
@@ -1351,7 +1351,7 @@ export namespace sockets {
 		Network.addDestructor('$drop', new $wcm.DestructorType('[resource-drop]network', [['inst', Network]]));
 	}
 	export namespace Network._ {
-		export const id = 'wasi:sockets/network@0.2.0' as const;
+		export const id = 'wasi:sockets/network@0.2.1' as const;
 		export const witName = 'network' as const;
 		export namespace Network {
 			export type WasmInterface = {
@@ -1399,7 +1399,7 @@ export namespace sockets {
 		export const instanceNetwork = new $wcm.FunctionType<sockets.InstanceNetwork.instanceNetwork>('instance-network', [], new $wcm.OwnType<sockets.InstanceNetwork.Network>(Network));
 	}
 	export namespace InstanceNetwork._ {
-		export const id = 'wasi:sockets/instance-network@0.2.0' as const;
+		export const id = 'wasi:sockets/instance-network@0.2.1' as const;
 		export const witName = 'instance-network' as const;
 		export const types: Map<string, $wcm.AnyComponentModelType> = new Map<string, $wcm.AnyComponentModelType>([
 			['Network', $.Network]
@@ -1423,7 +1423,7 @@ export namespace sockets {
 		export const Network = sockets.Network.$.Network;
 		export const ErrorCode = sockets.Network.$.ErrorCode;
 		export const IpAddress = sockets.Network.$.IpAddress;
-		export const ResolveAddressStream = new $wcm.ResourceType<sockets.IpNameLookup.ResolveAddressStream>('resolve-address-stream', 'wasi:sockets@0.2.0/ip-name-lookup/resolve-address-stream');
+		export const ResolveAddressStream = new $wcm.ResourceType<sockets.IpNameLookup.ResolveAddressStream>('resolve-address-stream', 'wasi:sockets@0.2.1/ip-name-lookup/resolve-address-stream');
 		export const ResolveAddressStream_Handle = new $wcm.ResourceHandleType('resolve-address-stream');
 		ResolveAddressStream.addDestructor('$drop', new $wcm.DestructorType('[resource-drop]resolve-address-stream', [['inst', ResolveAddressStream]]));
 		ResolveAddressStream.addMethod('resolveNextAddress', new $wcm.MethodType<sockets.IpNameLookup.ResolveAddressStream.Interface['resolveNextAddress']>('[method]resolve-address-stream.resolve-next-address', [], new $wcm.ResultType<sockets.IpNameLookup.IpAddress | undefined, sockets.IpNameLookup.ErrorCode>(new $wcm.OptionType<sockets.IpNameLookup.IpAddress>(IpAddress), ErrorCode)));
@@ -1434,7 +1434,7 @@ export namespace sockets {
 		], new $wcm.ResultType<sockets.IpNameLookup.ResolveAddressStream, sockets.IpNameLookup.ErrorCode>(new $wcm.OwnType<sockets.IpNameLookup.ResolveAddressStream>(ResolveAddressStream), ErrorCode));
 	}
 	export namespace IpNameLookup._ {
-		export const id = 'wasi:sockets/ip-name-lookup@0.2.0' as const;
+		export const id = 'wasi:sockets/ip-name-lookup@0.2.1' as const;
 		export const witName = 'ip-name-lookup' as const;
 		export namespace ResolveAddressStream {
 			export type WasmInterface = {
@@ -1489,7 +1489,7 @@ export namespace sockets {
 		export const IpSocketAddress = sockets.Network.$.IpSocketAddress;
 		export const IpAddressFamily = sockets.Network.$.IpAddressFamily;
 		export const ShutdownType = new $wcm.EnumType<sockets.Tcp.ShutdownType>(['receive', 'send', 'both']);
-		export const TcpSocket = new $wcm.ResourceType<sockets.Tcp.TcpSocket>('tcp-socket', 'wasi:sockets@0.2.0/tcp/tcp-socket');
+		export const TcpSocket = new $wcm.ResourceType<sockets.Tcp.TcpSocket>('tcp-socket', 'wasi:sockets@0.2.1/tcp/tcp-socket');
 		export const TcpSocket_Handle = new $wcm.ResourceHandleType('tcp-socket');
 		TcpSocket.addDestructor('$drop', new $wcm.DestructorType('[resource-drop]tcp-socket', [['inst', TcpSocket]]));
 		TcpSocket.addMethod('startBind', new $wcm.MethodType<sockets.Tcp.TcpSocket.Interface['startBind']>('[method]tcp-socket.start-bind', [
@@ -1546,7 +1546,7 @@ export namespace sockets {
 		], new $wcm.ResultType<void, sockets.Tcp.ErrorCode>(undefined, ErrorCode)));
 	}
 	export namespace Tcp._ {
-		export const id = 'wasi:sockets/tcp@0.2.0' as const;
+		export const id = 'wasi:sockets/tcp@0.2.1' as const;
 		export const witName = 'tcp' as const;
 		export namespace TcpSocket {
 			export type WasmInterface = {
@@ -1628,7 +1628,7 @@ export namespace sockets {
 		], new $wcm.ResultType<sockets.TcpCreateSocket.TcpSocket, sockets.TcpCreateSocket.ErrorCode>(new $wcm.OwnType<sockets.TcpCreateSocket.TcpSocket>(TcpSocket), ErrorCode));
 	}
 	export namespace TcpCreateSocket._ {
-		export const id = 'wasi:sockets/tcp-create-socket@0.2.0' as const;
+		export const id = 'wasi:sockets/tcp-create-socket@0.2.1' as const;
 		export const witName = 'tcp-create-socket' as const;
 		export const types: Map<string, $wcm.AnyComponentModelType> = new Map<string, $wcm.AnyComponentModelType>([
 			['Network', $.Network],
@@ -1664,11 +1664,11 @@ export namespace sockets {
 			['data', new $wcm.Uint8ArrayType()],
 			['remoteAddress', new $wcm.OptionType<sockets.Udp.IpSocketAddress>(IpSocketAddress)],
 		]);
-		export const UdpSocket = new $wcm.ResourceType<sockets.Udp.UdpSocket>('udp-socket', 'wasi:sockets@0.2.0/udp/udp-socket');
+		export const UdpSocket = new $wcm.ResourceType<sockets.Udp.UdpSocket>('udp-socket', 'wasi:sockets@0.2.1/udp/udp-socket');
 		export const UdpSocket_Handle = new $wcm.ResourceHandleType('udp-socket');
-		export const IncomingDatagramStream = new $wcm.ResourceType<sockets.Udp.IncomingDatagramStream>('incoming-datagram-stream', 'wasi:sockets@0.2.0/udp/incoming-datagram-stream');
+		export const IncomingDatagramStream = new $wcm.ResourceType<sockets.Udp.IncomingDatagramStream>('incoming-datagram-stream', 'wasi:sockets@0.2.1/udp/incoming-datagram-stream');
 		export const IncomingDatagramStream_Handle = new $wcm.ResourceHandleType('incoming-datagram-stream');
-		export const OutgoingDatagramStream = new $wcm.ResourceType<sockets.Udp.OutgoingDatagramStream>('outgoing-datagram-stream', 'wasi:sockets@0.2.0/udp/outgoing-datagram-stream');
+		export const OutgoingDatagramStream = new $wcm.ResourceType<sockets.Udp.OutgoingDatagramStream>('outgoing-datagram-stream', 'wasi:sockets@0.2.1/udp/outgoing-datagram-stream');
 		export const OutgoingDatagramStream_Handle = new $wcm.ResourceHandleType('outgoing-datagram-stream');
 		UdpSocket.addDestructor('$drop', new $wcm.DestructorType('[resource-drop]udp-socket', [['inst', UdpSocket]]));
 		UdpSocket.addMethod('startBind', new $wcm.MethodType<sockets.Udp.UdpSocket.Interface['startBind']>('[method]udp-socket.start-bind', [
@@ -1708,7 +1708,7 @@ export namespace sockets {
 		OutgoingDatagramStream.addMethod('subscribe', new $wcm.MethodType<sockets.Udp.OutgoingDatagramStream.Interface['subscribe']>('[method]outgoing-datagram-stream.subscribe', [], new $wcm.OwnType<sockets.Udp.Pollable>(Pollable)));
 	}
 	export namespace Udp._ {
-		export const id = 'wasi:sockets/udp@0.2.0' as const;
+		export const id = 'wasi:sockets/udp@0.2.1' as const;
 		export const witName = 'udp' as const;
 		export namespace UdpSocket {
 			export type WasmInterface = {
@@ -1808,7 +1808,7 @@ export namespace sockets {
 		], new $wcm.ResultType<sockets.UdpCreateSocket.UdpSocket, sockets.UdpCreateSocket.ErrorCode>(new $wcm.OwnType<sockets.UdpCreateSocket.UdpSocket>(UdpSocket), ErrorCode));
 	}
 	export namespace UdpCreateSocket._ {
-		export const id = 'wasi:sockets/udp-create-socket@0.2.0' as const;
+		export const id = 'wasi:sockets/udp-create-socket@0.2.1' as const;
 		export const witName = 'udp-create-socket' as const;
 		export const types: Map<string, $wcm.AnyComponentModelType> = new Map<string, $wcm.AnyComponentModelType>([
 			['Network', $.Network],
@@ -1832,8 +1832,8 @@ export namespace sockets {
 }
 
 export namespace sockets._ {
-	export const version = '0.2.0' as const;
-	export const id = 'wasi:sockets@0.2.0' as const;
+	export const version = '0.2.1' as const;
+	export const id = 'wasi:sockets@0.2.1' as const;
 	export const witName = 'sockets' as const;
 	export const interfaces: Map<string, $wcm.InterfaceType> = new Map<string, $wcm.InterfaceType>([
 		['Network', Network._],
