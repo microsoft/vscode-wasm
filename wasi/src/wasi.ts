@@ -11,7 +11,6 @@ import { filesystem } from './filesystem';
 import { sockets } from './sockets';
 import { random } from './random';
 import { cli } from './cli';
-import { http } from './http';
 
 namespace wasi._ {
 	export const packages: Map<string, $wcm.PackageType> =  new Map<string, $wcm.PackageType>([
@@ -21,8 +20,7 @@ namespace wasi._ {
 		['sockets', sockets._],
 		['random', random._],
 		['cli', cli._],
-		['http', http._],
 	]);
 }
-export { io, clocks, filesystem, sockets, random, cli, http };
+export { io, clocks, filesystem, sockets, random, cli };
 export default wasi;

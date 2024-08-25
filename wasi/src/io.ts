@@ -71,8 +71,9 @@ export namespace io {
 		 * The result `list<u32>` contains one or more indices of handles in the
 		 * argument list that is ready for I/O.
 		 * 
-		 * If the list contains more elements than can be indexed with a `u32`
-		 * value, this function traps.
+		 * This function traps if either:
+		 * - the list is empty, or:
+		 * - the list contains more elements than can be indexed with a `u32` value.
 		 * 
 		 * A timeout can be implemented by adding a pollable from the
 		 * wasi-clocks API to the list.
@@ -80,7 +81,7 @@ export namespace io {
 		 * This function does not return a `result`; polling in itself does not
 		 * do any I/O so it doesn't fail. If any of the I/O sources identified by
 		 * the pollables has an error, it is indicated by marking the source as
-		 * being reaedy for I/O.
+		 * being ready for I/O.
 		 */
 		export type poll = (in_: Pollable[]) => Uint32Array;
 	}
@@ -334,7 +335,7 @@ export namespace io {
 
 				/**
 				 * Create a `pollable` which will resolve once the output-stream
-				 * is ready for more writing, or an error has occured. When this
+				 * is ready for more writing, or an error has occurred. When this
 				 * pollable is ready, `check-write` will return `ok(n)` with n>0, or an
 				 * error.
 				 * 
@@ -391,7 +392,7 @@ export namespace io {
 				/**
 				 * Read from one stream and write to another.
 				 * 
-				 * The behavior of splice is equivelant to:
+				 * The behavior of splice is equivalent to:
 				 * 1. calling `check-write` on the `output-stream`
 				 * 2. calling `read` on the `input-stream` with the smaller of the
 				 * `check-write` permitted length and the `len` provided to `splice`
@@ -433,13 +434,13 @@ export namespace io {
 
 export namespace io {
 	export namespace Error.$ {
-		export const Error = new $wcm.ResourceType<io.Error.Error>('error', 'wasi:io@0.2.0/error/error');
+		export const Error = new $wcm.ResourceType<io.Error.Error>('error', 'wasi:io@0.2.1/error/error');
 		export const Error_Handle = new $wcm.ResourceHandleType('error');
 		Error.addDestructor('$drop', new $wcm.DestructorType('[resource-drop]error', [['inst', Error]]));
 		Error.addMethod('toDebugString', new $wcm.MethodType<io.Error.Error.Interface['toDebugString']>('[method]error.to-debug-string', [], $wcm.wstring));
 	}
 	export namespace Error._ {
-		export const id = 'wasi:io/error@0.2.0' as const;
+		export const id = 'wasi:io/error@0.2.1' as const;
 		export const witName = 'error' as const;
 		export namespace Error {
 			export type WasmInterface = {
@@ -476,7 +477,7 @@ export namespace io {
 	}
 
 	export namespace Poll.$ {
-		export const Pollable = new $wcm.ResourceType<io.Poll.Pollable>('pollable', 'wasi:io@0.2.0/poll/pollable');
+		export const Pollable = new $wcm.ResourceType<io.Poll.Pollable>('pollable', 'wasi:io@0.2.1/poll/pollable');
 		export const Pollable_Handle = new $wcm.ResourceHandleType('pollable');
 		Pollable.addDestructor('$drop', new $wcm.DestructorType('[resource-drop]pollable', [['inst', Pollable]]));
 		Pollable.addMethod('ready', new $wcm.MethodType<io.Poll.Pollable.Interface['ready']>('[method]pollable.ready', [], $wcm.bool));
@@ -486,7 +487,7 @@ export namespace io {
 		], new $wcm.Uint32ArrayType());
 	}
 	export namespace Poll._ {
-		export const id = 'wasi:io/poll@0.2.0' as const;
+		export const id = 'wasi:io/poll@0.2.1' as const;
 		export const witName = 'poll' as const;
 		export namespace Pollable {
 			export type WasmInterface = {
@@ -531,9 +532,9 @@ export namespace io {
 		export const Error = io.Error.$.Error;
 		export const Pollable = io.Poll.$.Pollable;
 		export const StreamError = new $wcm.VariantType<io.Streams.StreamError, io.Streams.StreamError._tt, io.Streams.StreamError._vt>([['lastOperationFailed', new $wcm.OwnType<io.Streams.Error>(Error)], ['closed', undefined]], io.Streams.StreamError._ctor);
-		export const InputStream = new $wcm.ResourceType<io.Streams.InputStream>('input-stream', 'wasi:io@0.2.0/streams/input-stream');
+		export const InputStream = new $wcm.ResourceType<io.Streams.InputStream>('input-stream', 'wasi:io@0.2.1/streams/input-stream');
 		export const InputStream_Handle = new $wcm.ResourceHandleType('input-stream');
-		export const OutputStream = new $wcm.ResourceType<io.Streams.OutputStream>('output-stream', 'wasi:io@0.2.0/streams/output-stream');
+		export const OutputStream = new $wcm.ResourceType<io.Streams.OutputStream>('output-stream', 'wasi:io@0.2.1/streams/output-stream');
 		export const OutputStream_Handle = new $wcm.ResourceHandleType('output-stream');
 		InputStream.addDestructor('$drop', new $wcm.DestructorType('[resource-drop]input-stream', [['inst', InputStream]]));
 		InputStream.addMethod('read', new $wcm.MethodType<io.Streams.InputStream.Interface['read']>('[method]input-stream.read', [
@@ -576,7 +577,7 @@ export namespace io {
 		], new $wcm.ResultType<u64, io.Streams.StreamError>($wcm.u64, StreamError, io.Streams.StreamError.Error_)));
 	}
 	export namespace Streams._ {
-		export const id = 'wasi:io/streams@0.2.0' as const;
+		export const id = 'wasi:io/streams@0.2.1' as const;
 		export const witName = 'streams' as const;
 		export namespace InputStream {
 			export type WasmInterface = {
@@ -646,8 +647,8 @@ export namespace io {
 }
 
 export namespace io._ {
-	export const version = '0.2.0' as const;
-	export const id = 'wasi:io@0.2.0' as const;
+	export const version = '0.2.1' as const;
+	export const id = 'wasi:io@0.2.1' as const;
 	export const witName = 'io' as const;
 	export const interfaces: Map<string, $wcm.InterfaceType> = new Map<string, $wcm.InterfaceType>([
 		['Error', Error._],

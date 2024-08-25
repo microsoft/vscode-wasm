@@ -138,7 +138,7 @@ export namespace filesystem {
 			dataIntegritySync: 1 << 3,
 
 			/**
-			 * Requests that reads be performed at the same level of integrety
+			 * Requests that reads be performed at the same level of integrity
 			 * requested for writes. This is similar to `O_RSYNC` in POSIX.
 			 * 
 			 * The precise semantics of this operation have not yet been defined for
@@ -1035,9 +1035,9 @@ export namespace filesystem {
 			['lower', $wcm.u64],
 			['upper', $wcm.u64],
 		]);
-		export const Descriptor = new $wcm.ResourceType<filesystem.Types.Descriptor>('descriptor', 'wasi:filesystem@0.2.0/types/descriptor');
+		export const Descriptor = new $wcm.ResourceType<filesystem.Types.Descriptor>('descriptor', 'wasi:filesystem@0.2.1/types/descriptor');
 		export const Descriptor_Handle = new $wcm.ResourceHandleType('descriptor');
-		export const DirectoryEntryStream = new $wcm.ResourceType<filesystem.Types.DirectoryEntryStream>('directory-entry-stream', 'wasi:filesystem@0.2.0/types/directory-entry-stream');
+		export const DirectoryEntryStream = new $wcm.ResourceType<filesystem.Types.DirectoryEntryStream>('directory-entry-stream', 'wasi:filesystem@0.2.1/types/directory-entry-stream');
 		export const DirectoryEntryStream_Handle = new $wcm.ResourceHandleType('directory-entry-stream');
 		Descriptor.addDestructor('$drop', new $wcm.DestructorType('[resource-drop]descriptor', [['inst', Descriptor]]));
 		Descriptor.addMethod('readViaStream', new $wcm.MethodType<filesystem.Types.Descriptor.Interface['readViaStream']>('[method]descriptor.read-via-stream', [
@@ -1131,7 +1131,7 @@ export namespace filesystem {
 		], new $wcm.OptionType<filesystem.Types.ErrorCode>(ErrorCode));
 	}
 	export namespace Types._ {
-		export const id = 'wasi:filesystem/types@0.2.0' as const;
+		export const id = 'wasi:filesystem/types@0.2.1' as const;
 		export const witName = 'types' as const;
 		export namespace Descriptor {
 			export type WasmInterface = {
@@ -1234,7 +1234,7 @@ export namespace filesystem {
 		export const getDirectories = new $wcm.FunctionType<filesystem.Preopens.getDirectories>('get-directories', [], new $wcm.ListType<[filesystem.Preopens.Descriptor, string]>(new $wcm.TupleType<[filesystem.Preopens.Descriptor, string]>([new $wcm.OwnType<filesystem.Preopens.Descriptor>(Descriptor), $wcm.wstring])));
 	}
 	export namespace Preopens._ {
-		export const id = 'wasi:filesystem/preopens@0.2.0' as const;
+		export const id = 'wasi:filesystem/preopens@0.2.1' as const;
 		export const witName = 'preopens' as const;
 		export const types: Map<string, $wcm.AnyComponentModelType> = new Map<string, $wcm.AnyComponentModelType>([
 			['Descriptor', $.Descriptor]
@@ -1255,8 +1255,8 @@ export namespace filesystem {
 }
 
 export namespace filesystem._ {
-	export const version = '0.2.0' as const;
-	export const id = 'wasi:filesystem@0.2.0' as const;
+	export const version = '0.2.1' as const;
+	export const id = 'wasi:filesystem@0.2.1' as const;
 	export const witName = 'filesystem' as const;
 	export const interfaces: Map<string, $wcm.InterfaceType> = new Map<string, $wcm.InterfaceType>([
 		['Types', Types._],
