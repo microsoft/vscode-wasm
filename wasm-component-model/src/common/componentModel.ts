@@ -4035,11 +4035,16 @@ export type WorldType = {
 	readonly imports?: {
 		readonly functions?: Map<string, FunctionType<JFunction>>;
 		readonly interfaces?: Map<string, InterfaceType>;
+		create?(service: any, context: WasmContext): any;
+		loop?(service: any, context: WasmContext): any;
 	};
 	readonly exports?: {
 		readonly functions?: Map<string, FunctionType<JFunction>>;
 		readonly interfaces?: Map<string, InterfaceType>;
+		bind?(service: any, context: WasmContext): any;
 	};
+	bind?(service: any, code: Code, context?: ComponentModelContext): Promise<any>;
+	bind?(service: any, code: Code, port: RAL.ConnectionPort, context?: ComponentModelContext): Promise<any>;
 };
 
 export type PackageType = {
