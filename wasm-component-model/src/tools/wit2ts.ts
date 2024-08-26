@@ -643,7 +643,38 @@ class SymbolTable {
 		this.worlds = new Worlds(this, nameProvider, options);
 		this.interfaces = new Interfaces(this, nameProvider, options);
 		this.types = new Types(this, nameProvider);
-		for (const iface of document.interfaces) {
+
+		const seenCallables: Set<Callable> = new Set();
+		const checkForResultError = (callable: Callable) => {
+			if (seenCallables.has(callable)) {
+				return;
+			}
+			for (const result of Object.values(callable.results)) {
+				if (TypeReference.isNumber(result.type)) {
+					const type = this.getType(result.type);
+					if (TypeKind.isResult(type.kind)) {
+						if (type.kind.result.err !== null) {
+							if (TypeReference.isString(type.kind.result.err)) {
+								this.resultErrorTypes.add(type.kind.result.err);
+							} else {
+								let errorType = this.getType(type.kind.result.err);
+								while (TypeKind.isReference(errorType.kind)) {
+									errorType = this.getType(errorType.kind.type);
+								}
+								this.resultErrorTypes.add(errorType);
+							}
+						}
+					}
+				}
+			}
+			seenCallables.add(callable);
+		};
+
+		const seenInterfaces: Set<Interface> = new Set();
+		const processInterface = (iface: Interface) => {
+			if (seenInterfaces.has(iface)) {
+				return;
+			}
 			for (const callable of Object.values(iface.functions)) {
 				if (Callable.isMethod(callable) || Callable.isStaticMethod(callable) || Callable.isConstructor(callable)) {
 					const type = this.getType(Callable.containingType(callable));
@@ -654,23 +685,20 @@ class SymbolTable {
 					}
 					values.push(callable);
 				}
-				for (const result of Object.values(callable.results)) {
-					if (TypeReference.isNumber(result.type)) {
-						const type = this.getType(result.type);
-						if (TypeKind.isResult(type.kind)) {
-							if (type.kind.result.err !== null) {
-								if (TypeReference.isString(type.kind.result.err)) {
-									this.resultErrorTypes.add(type.kind.result.err);
-								} else {
-									let errorType = this.getType(type.kind.result.err);
-									while (TypeKind.isReference(errorType.kind)) {
-										errorType = this.getType(errorType.kind.type);
-									}
-									this.resultErrorTypes.add(errorType);
-								}
-							}
-						}
-					}
+				checkForResultError(callable);
+			}
+			seenInterfaces.add(iface);
+		};
+
+		for (const iface of document.interfaces) {
+			processInterface(iface);
+		}
+		for (const world of document.worlds) {
+			for (const item of Object.values(world.exports)) {
+				if (ObjectKind.isFuncObject(item)) {
+					checkForResultError(item.function);
+				} else if (ObjectKind.isInterfaceObject(item)) {
+					processInterface(this.getInterface(item.interface));
 				}
 			}
 		}
@@ -683,6 +711,11 @@ class SymbolTable {
 	public isErrorResultType(item: Type | string | number): boolean {
 		if (typeof item === 'number') {
 			item = this.getType(item);
+		}
+		if (typeof item !== 'string') {
+			while (TypeKind.isReference(item.kind)) {
+				item = this.getType(item.kind.type);
+			}
 		}
 		return this.resultErrorTypes.has(item);
 	}
@@ -3166,7 +3199,6 @@ class TypeReferenceEmitter extends MemberEmitter {
 		if (this.isReferencedTypeErrorResult() || Type.isEnumType(final) || Type.isVariantType(final) || Type.isFlagsType(final)) {
 			code.push(`export const ${tsName} = ${referencedTypeName};`);
 		}
-		this.emitErrorIfNecessary(code);
 	}
 
 	public emitMetaModel(code: Code): void {
