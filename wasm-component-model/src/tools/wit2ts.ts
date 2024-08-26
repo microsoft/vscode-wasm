@@ -9,7 +9,7 @@ import * as path from 'node:path';
 import { ResolvedOptions } from './options';
 import {
 	AbstractType, BaseType, BorrowHandleType, Callable, Constructor, Document, Documentation, EnumCase, EnumType, Field, Flag,
-	FlagsType, Func, Interface, ListType, Member, Method, ObjectKind, OptionType, OwnHandleType, Owner, Package, Param,
+	FlagsType, Func, Interface, InterfaceObjectId, ListType, Member, Method, ObjectKind, OptionType, OwnHandleType, Owner, Package, Param,
 	RecordType, ReferenceType, ResourceType, ResultType, StaticMethod, TupleType, Type, TypeKind, TypeReference, VariantCase,
 	VariantType, World, type InterfaceObject, type PackageNameParts, type TypeObject
 } from './wit-json';
@@ -720,8 +720,14 @@ class SymbolTable {
 		return this.resultErrorTypes.has(item);
 	}
 
-	public getInterface(ref: number): Interface {
-		return this.document.interfaces[ref];
+	public getInterface(ref: InterfaceObjectId): Interface {
+		if (InterfaceObjectId.isNumber(ref)) {
+			return this.document.interfaces[ref];
+		} else if (InterfaceObjectId.isId(ref)) {
+			return this.document.interfaces[ref.id];
+		} else {
+			throw new Error(`Unknown interface object id ${JSON.stringify(ref)}`);
+		}
 	}
 
 	public getPackage(ref: number): Package {

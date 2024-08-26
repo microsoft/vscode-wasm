@@ -419,7 +419,7 @@ export namespace ObjectKind {
 		return typeof (kind as FuncObject).function === 'object';
 	}
 	export function isInterfaceObject(kind: ObjectKind): kind is InterfaceObject {
-		return typeof (kind as InterfaceObject).interface === 'number';
+		return InterfaceObjectId.is((kind as InterfaceObject).interface);
 	}
 }
 
@@ -431,8 +431,20 @@ export interface FuncObject {
 	function: Func;
 }
 
+export type InterfaceObjectId = number | { id: number};
+export namespace InterfaceObjectId {
+	export function isNumber(value: InterfaceObjectId): value is number {
+		return typeof value === 'number';
+	}
+	export function isId(value: InterfaceObjectId): value is { id: number } {
+		return typeof value === 'object' && typeof (value as { id: number }).id === 'number';
+	}
+	export function is(value: InterfaceObjectId): value is { id: number } {
+		return isNumber(value) || isId(value);
+	}
+}
 export interface InterfaceObject {
-	interface: number;
+	interface: InterfaceObjectId;
 }
 
 export type TypeReference = number | string;

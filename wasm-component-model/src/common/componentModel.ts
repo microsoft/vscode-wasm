@@ -4029,23 +4029,23 @@ type WorldServiceInterfaceImplementation = Record<string, Function | ServiceInte
 type ServiceInterfaceImplementationAsync = Record<string, Function | Record<string, Function> | { $new(...params: any): Resource | Promise<Resource> }>;
 type WorldServiceInterfaceImplementationAsync = Record<string, Function | ServiceInterfaceImplementationAsync>;
 
-export interface WorldType {
+export type WorldType = {
 	readonly id: string;
 	readonly witName: string;
 	readonly imports?: {
 		readonly functions?: Map<string, FunctionType<JFunction>>;
 		readonly interfaces?: Map<string, InterfaceType>;
-		readonly create?: (service: any, context: WasmContext) => any;
-		readonly loop?: (service: any, context: WasmContext) => any;
+		create?(service: any, context: WasmContext): any;
+		loop?(service: any, context: WasmContext): any;
 	};
 	readonly exports?: {
 		readonly functions?: Map<string, FunctionType<JFunction>>;
 		readonly interfaces?: Map<string, InterfaceType>;
-		readonly bind?: (service: any, context: WasmContext) => any;
+		bind?(service: any, context: WasmContext): any;
 	};
 	bind?(service: any, code: Code, context?: ComponentModelContext): Promise<any>;
 	bind?(service: any, code: Code, port: RAL.ConnectionPort, context?: ComponentModelContext): Promise<any>;
-}
+};
 
 export type PackageType = {
 	readonly id: string;
