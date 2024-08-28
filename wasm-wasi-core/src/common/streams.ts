@@ -4,9 +4,9 @@
  *--------------------------------------------------------------------------------------------*/
 import { Disposable, Event, EventEmitter } from 'vscode';
 
-import RAL from './ral';
 import type { Readable, Writable } from './api';
 import { CapturedPromise } from './promises';
+import RAL from './ral';
 
 export class DestroyError extends Error {
 	constructor() {
@@ -29,6 +29,10 @@ export abstract class Stream {
 		this.fillLevel = 0;
 		this.awaitForFillLevel = [];
 		this.awaitForData = [];
+	}
+
+	public get size(): number {
+		return this.fillLevel;
 	}
 
 	public async write(chunk: Uint8Array): Promise<void> {
@@ -135,9 +139,13 @@ export abstract class Stream {
 		for (const promise of this.awaitForData) {
 			promise.reject(error);
 		}
+		this.awaitForData = [];
 	}
 
 	private awaitFillLevel(targetFillLevel: number): Promise<void> {
+		if (this.awaitForFillLevel.length === 0 && this.fillLevel <= targetFillLevel) {
+			return Promise.resolve();
+		}
 		const result = CapturedPromise.create<void>();
 		this.awaitForFillLevel.push({ fillLevel: targetFillLevel, promise: result });
 		return result.promise;
@@ -251,6 +259,10 @@ export class ReadableStream extends Stream implements Readable {
 
 	public end(): void {
 		if (this.mode === ReadableStreamMode.flowing) {
+			if (this.timer !== undefined) {
+				this.timer.dispose();
+				this.timer = undefined;
+			}
 			this.emitAll();
 		}
 		return super.destroy();
@@ -277,6 +289,7 @@ export class ReadableStream extends Stream implements Readable {
 				}
 			}
 			this.chunks = [];
+			this.fillLevel = 0;
 		}
 	}
 
@@ -289,7 +302,7 @@ export class ReadableStream extends Stream implements Readable {
 		this.fillLevel -= chunk.byteLength;
 		this._onData.fire(chunk);
 		this.signalSpace();
-		if (this.chunks.length > 0) {
+		if (this.chunks.length > 0 && this.mode === ReadableStreamMode.flowing) {
 			this.timer = RAL().timer.setImmediate(() => this.triggerData());
 		}
 	}
