@@ -3062,9 +3062,9 @@ class MemberEmitter extends Emitter {
 			code.increaseIndent();
 			code.push(`export class Error_ extends ${MetaModel.ResultError}<${name}> {`);
 			code.increaseIndent();
-			code.push(`constructor(value: ${name}) {`);
+			code.push(`constructor(cause: ${name}) {`);
 			code.increaseIndent();
-			code.push(`super(value, \`${name}: \${value}\`);`);
+			code.push(`super(\`${name}: \${cause}\`, cause);`);
 			code.decreaseIndent();
 			code.push(`}`);
 			code.decreaseIndent();

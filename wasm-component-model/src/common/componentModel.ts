@@ -847,10 +847,10 @@ namespace ComponentModelType {
 export type AnyComponentModelType = ComponentModelType<JType>;
 
 export class ResultError<V extends JType> extends Error {
-	public readonly value: V;
-	constructor(value: V, message: string) {
-		super(message);
-		this.value = value;
+	public readonly cause: V;
+	constructor(message: string, cause: V) {
+		super(message, { cause: cause});
+		this.cause = cause;
 	}
 }
 interface ResultErrorConstructor<V extends JType> {
@@ -897,8 +897,8 @@ export namespace bool {
 	}
 
 	export class Error extends ResultError<boolean> {
-		constructor(value: boolean) {
-			super(value, `Error value: ${value}`);
+		constructor(cause: boolean) {
+			super(`Error value: ${cause}`, cause);
 		}
 	}
 }
@@ -950,8 +950,8 @@ export namespace u8 {
 	}
 
 	export class Error extends ResultError<u8> {
-		constructor(value: u8) {
-			super(value, `Error value: ${value}`);
+		constructor(cause: u8) {
+			super(`Error value: ${cause}`, cause);
 		}
 	}
 }
@@ -1004,8 +1004,8 @@ export namespace u16 {
 	}
 
 	export class Error extends ResultError<u16> {
-		constructor(value: u16) {
-			super(value, `Error value: ${value}`);
+		constructor(cause: u16) {
+			super(`Error value: ${cause}`, cause);
 		}
 	}
 }
@@ -1063,8 +1063,8 @@ export namespace u32 {
 	}
 
 	export class Error extends ResultError<u32> {
-		constructor(value: u32) {
-			super(value, `Error value: ${value}`);
+		constructor(cause: u32) {
+			super(`Error value: ${cause}`, cause);
 		}
 	}
 }
@@ -1118,8 +1118,8 @@ export namespace u64 {
 	}
 
 	export class Error extends ResultError<u64> {
-		constructor(value: u64) {
-			super(value, `Error value: ${value}`);
+		constructor(cause: u64) {
+			super(`Error value: ${cause}`, cause);
 		}
 	}
 }
@@ -1181,8 +1181,8 @@ export namespace s8 {
 	}
 
 	export class Error extends ResultError<s8> {
-		constructor(value: s8) {
-			super(value, `Error value: ${value}`);
+		constructor(cause: s8) {
+			super(`Error value: ${cause}`, cause);
 		}
 	}
 }
@@ -1243,8 +1243,8 @@ export namespace s16 {
 	}
 
 	export class Error extends ResultError<s16> {
-		constructor(value: s16) {
-			super(value, `Error value: ${value}`);
+		constructor(cause: s16) {
+			super(`Error value: ${cause}`, cause);
 		}
 	}
 }
@@ -1305,8 +1305,8 @@ export namespace s32 {
 	}
 
 	export class Error extends ResultError<s32> {
-		constructor(value: s32) {
-			super(value, `Error value: ${value}`);
+		constructor(cause: s32) {
+			super(`Error value: ${cause}`, cause);
 		}
 	}
 }
@@ -1367,8 +1367,8 @@ export namespace s64 {
 	}
 
 	export class Error extends ResultError<s64> {
-		constructor(value: s64) {
-			super(value, `Error value: ${value}`);
+		constructor(cause: s64) {
+			super(`Error value: ${cause}`, cause);
 		}
 	}
 }
@@ -1423,8 +1423,8 @@ export namespace float32 {
 	}
 
 	export class Error extends ResultError<float32> {
-		constructor(value: float32) {
-			super(value, `Error value: ${value}`);
+		constructor(cause: float32) {
+			super(`Error value: ${cause}`, cause);
 		}
 	}
 }
@@ -1479,8 +1479,8 @@ export namespace float64 {
 	}
 
 	export class Error extends ResultError<float64> {
-		constructor(value: float64) {
-			super(value, `Error value: ${value}`);
+		constructor(cause: float64) {
+			super(`Error value: ${cause}`, cause);
 		}
 	}
 }
@@ -1823,8 +1823,8 @@ export class ListType<T> implements ComponentModelType<T[]> {
 }
 export namespace list {
 	export class Error extends ResultError<JType[]> {
-		constructor(value: JType[]) {
-			super(value, `Error value: ${JSON.stringify(value)}`);
+		constructor(cause: JType[]) {
+			super(`Error value: ${JSON.stringify(cause)}`, cause);
 		}
 	}
 }
@@ -1921,8 +1921,8 @@ export class Int8ArrayType extends TypeArrayType<Int8Array, s8> {
 }
 export namespace Int8ArrayType {
 	export class Error extends ResultError<Int8Array> {
-		constructor(value: Int8Array) {
-			super(value, `Error value: ${JSON.stringify(value)}`);
+		constructor(cause: Int8Array) {
+			super(`Error value: ${JSON.stringify(cause)}`, cause);
 		}
 	}
 }
@@ -1940,8 +1940,8 @@ export class Int16ArrayType extends TypeArrayType<Int16Array, s16> {
 }
 export namespace Int16ArrayType {
 	export class Error extends ResultError<Int16Array> {
-		constructor(value: Int16Array) {
-			super(value, `Error value: ${JSON.stringify(value)}`);
+		constructor(cause: Int16Array) {
+			super(`Error value: ${JSON.stringify(cause)}`, cause);
 		}
 	}
 }
@@ -1959,8 +1959,8 @@ export class Int32ArrayType extends TypeArrayType<Int32Array, s32> {
 }
 export namespace Int32ArrayType {
 	export class Error extends ResultError<Int32Array> {
-		constructor(value: Int32Array) {
-			super(value, `Error value: ${JSON.stringify(value)}`);
+		constructor(cause: Int32Array) {
+			super(`Error value: ${JSON.stringify(cause)}`, cause);
 		}
 	}
 }
@@ -1978,8 +1978,8 @@ export class BigInt64ArrayType extends TypeArrayType<BigInt64Array, s64> {
 }
 export namespace BigInt64ArrayType {
 	export class Error extends ResultError<BigInt64Array> {
-		constructor(value: BigInt64Array) {
-			super(value, `Error value: ${JSON.stringify(value)}`);
+		constructor(cause: BigInt64Array) {
+			super(`Error value: ${JSON.stringify(cause)}`, cause);
 		}
 	}
 }
@@ -1997,8 +1997,8 @@ export class Uint8ArrayType extends TypeArrayType<Uint8Array, u8> {
 }
 export namespace Uint8ArrayType {
 	export class Error extends ResultError<Uint8Array> {
-		constructor(value: Uint8Array) {
-			super(value, `Error value: ${JSON.stringify(value)}`);
+		constructor(cause: Uint8Array) {
+			super(`Error value: ${JSON.stringify(cause)}`, cause);
 		}
 	}
 }
@@ -2016,8 +2016,8 @@ export class Uint16ArrayType extends TypeArrayType<Uint16Array, u16> {
 }
 export namespace Uint16ArrayType {
 	export class Error extends ResultError<Uint16Array> {
-		constructor(value: Uint16Array) {
-			super(value, `Error value: ${JSON.stringify(value)}`);
+		constructor(cause: Uint16Array) {
+			super(`Error value: ${JSON.stringify(cause)}`, cause);
 		}
 	}
 }
@@ -2035,8 +2035,8 @@ export class Uint32ArrayType extends TypeArrayType<Uint32Array, u32> {
 }
 export namespace Uint32ArrayType {
 	export class Error extends ResultError<Uint32Array> {
-		constructor(value: Uint32Array) {
-			super(value, `Error value: ${JSON.stringify(value)}`);
+		constructor(cause: Uint32Array) {
+			super(`Error value: ${JSON.stringify(cause)}`, cause);
 		}
 	}
 }
@@ -2054,8 +2054,8 @@ export class BigUint64ArrayType extends TypeArrayType<BigUint64Array, u64> {
 }
 export namespace BigUint64ArrayType {
 	export class Error extends ResultError<BigUint64Array> {
-		constructor(value: BigUint64Array) {
-			super(value, `Error value: ${JSON.stringify(value)}`);
+		constructor(cause: BigUint64Array) {
+			super(`Error value: ${JSON.stringify(cause)}`, cause);
 		}
 	}
 }
@@ -2073,8 +2073,8 @@ export class Float32ArrayType extends TypeArrayType<Float32Array, float32> {
 }
 export namespace Float32ArrayType {
 	export class Error extends ResultError<Float32Array> {
-		constructor(value: Float32Array) {
-			super(value, `Error value: ${JSON.stringify(value)}`);
+		constructor(cause: Float32Array) {
+			super(`Error value: ${JSON.stringify(cause)}`, cause);
 		}
 	}
 }
@@ -2092,8 +2092,8 @@ export class Float64ArrayType extends TypeArrayType<Float64Array, float64> {
 }
 export namespace Float64ArrayType {
 	export class Error extends ResultError<Float64Array> {
-		constructor(value: Float64Array) {
-			super(value, `Error value: ${JSON.stringify(value)}`);
+		constructor(cause: Float64Array) {
+			super(`Error value: ${JSON.stringify(cause)}`, cause);
 		}
 	}
 }
@@ -2284,8 +2284,8 @@ export class TupleType<T extends JTuple> extends BaseRecordType<T, TupleField> {
 }
 export namespace tuple {
 	export class Error extends ResultError<JType[]> {
-		constructor(value: JType[]) {
-			super(value, `Error value: ${JSON.stringify(value)}`);
+		constructor(cause: JType[]) {
+			super(`Error value: ${JSON.stringify(cause)}`, cause);
 		}
 	}
 }
@@ -2806,8 +2806,8 @@ export namespace option {
 	}
 
 	export class Error extends ResultError<JType> {
-		constructor(value: JType) {
-			super(value, `Error value: ${JSON.stringify(value)}`);
+		constructor(cause: JType) {
+			super(`Error value: ${JSON.stringify(cause)}`, cause);
 		}
 	}
 }
@@ -3468,7 +3468,7 @@ class Callable {
 		if (!(this.returnType instanceof ResultType) || this.returnType.errorClass === undefined || !(error instanceof this.returnType.errorClass)) {
 			throw error;
 		}
-		const value = result.Error(error.value);
+		const value = result.Error(error.cause);
 		return this.lowerReturnValue(value, memory, context, out);
 	}
 
