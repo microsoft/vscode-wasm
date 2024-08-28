@@ -1,0 +1,37 @@
+{
+	"name": "big-buffer-write",
+	"private": "true",
+	"publisher": "lambdageek",
+	"version": "0.0.1",
+	"description": "Demonstrate issue with big buffer writes in vscode-wasm-core",
+	"author": "lambdageek",
+	"license": "MIT",
+	"engines": {
+		"vscode": "^1.71.0"
+	},
+	"main": "./out/extension.js",
+	"browser": "./dist/web/extension.js",
+	"activationEvents": [],
+	"extensionDependencies": [
+		"ms-vscode.wasm-wasi-core"
+	],
+	"contributes": {
+		"commands": [
+			{
+				"command": "big-buffer-write.run",
+				"category": "wasi",
+				"title": "write a big buffer"
+			}
+		]
+	},
+	"scripts": {
+		"clean": "npx shx rm -rf dist out bin",
+		"compile:ts": "tsc -b tsconfig.json",
+		"build": "npm run build:wasi && npm run build:js",
+		"build:js": "npm run compile:ts && npm run build:esbuild",
+		"build:wasi": "make wasi",
+		"build:esbuild": "node ./scripts/esbuild.js",
+		"test-browser": "vscode-test-web --coi --extensionId ms-vscode.wasm-wasi-core@prerelease --extensionDevelopmentPath=. .",
+		"package": "vsce package --pre-release"
+	}
+}

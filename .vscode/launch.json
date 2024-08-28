@@ -239,6 +239,20 @@
 			],
 			"sourceMaps": true
 		},
+        {
+            "request": "launch",
+            "type": "extensionHost",
+            "name": "Big Buffer Write",
+            "args": [
+				"--extensionDevelopmentPath=${workspaceRoot}/testbeds/big-buffer-write",
+				"--extensionDevelopmentPath=${workspaceRoot}/wasm-wasi-core"
+            ],
+            "outFiles": [
+                "${workspaceFolder}/testbeds/big-buffer-write/out/**/*.js",
+				"${workspaceRoot}/wasm-wasi-core/lib/**/*.js"
+            ],
+			"sourceMaps": true
+        },
 		{
 			"type": "extensionHost",
 			"request": "launch",

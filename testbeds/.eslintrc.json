@@ -11,7 +11,8 @@
 			"./rust-threads/tsconfig.json",
 			"./threads/tsconfig.json",
 			"./malloc/tsconfig.json",
-			"./performance/tsconfig.json"
+			"./performance/tsconfig.json",
+			"./big-buffer-write/tsconfig.json"
 		]
 	},
 	"rules": {
