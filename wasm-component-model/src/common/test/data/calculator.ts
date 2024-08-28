@@ -79,8 +79,8 @@ export namespace Types {
 	}
 	export namespace ErrorCode {
 		export class Error_ extends $wcm.ResultError<ErrorCode> {
-			constructor(value: ErrorCode) {
-				super(value, `ErrorCode: ${value}`);
+			constructor(cause: ErrorCode) {
+				super(`ErrorCode: ${cause}`, cause);
 			}
 		}
 	}
