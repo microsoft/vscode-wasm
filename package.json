@@ -19,6 +19,7 @@
 	"homepage": "https://github.com/microsoft/vscode-wasi#readme",
 	"devDependencies": {
 		"@types/assert": "^1.5.10",
+		"assert": "^2.1.0",
 		"@types/node": "^18.14.6",
 		"@typescript-eslint/eslint-plugin": "^7.5.0",
 		"@typescript-eslint/parser": "^7.5.0",
@@ -28,7 +29,6 @@
 		"make-dir-cli": "^3.1.0",
 		"@types/mocha": "^10.0.6",
 		"mocha": "^10.4.0",
-		"node-polyfill-webpack-plugin": "^2.0.1",
 		"playwright": "^1.42.1",
 		"rimraf": "^5.0.5",
 		"shelljs": "^0.8.5",
