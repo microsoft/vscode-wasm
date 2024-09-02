@@ -2,9 +2,9 @@
 	"name": "wasm-wasi-core",
 	"private": "true",
 	"publisher": "ms-vscode",
-	"version": "0.13.3",
-	"displayName": "Experimental - WebAssembly Execution Engine",
-	"description": "Experimental support to execute WebAssemblies on top of the VS Code API.",
+	"version": "1.0.0",
+	"displayName": "WASI based WebAssembly Execution Engine",
+	"description": "Executes WebAssemblies compiled to WASI Preview 1 on top of the VS Code API.",
 	"author": "MS",
 	"license": "MIT",
 	"repository": {

@@ -10,7 +10,7 @@ steps:
 
 - task: NodeTool@0
   inputs:
-    versionSpec: '18.17.1'
+    versionSpec: '20.15.1'
   displayName: 'Install Node.js'
 
 - script: |

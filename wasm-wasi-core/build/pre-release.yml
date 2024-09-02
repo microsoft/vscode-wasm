@@ -20,7 +20,7 @@ parameters:
 extends:
   template: azure-pipelines/extension/pre-release.yml@templates
   parameters:
-    nodeVersion: 16.17.1
+    nodeVersion: 20.15.1
     buildSteps:
       - script: |
           npm ci
