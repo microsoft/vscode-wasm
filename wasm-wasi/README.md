@@ -6,6 +6,10 @@ This npm module implements an API facade for the WASM WASI Core VS Code extensio
 
 ## History
 
+### 1.0.1
+
+- Readme updates.
+
 ### 1.0.0
 
 The npm module now provides version specific import routes to support API migration in the future. The standard import `import { Wasm } from '@vscode/wasm-wasi'` still exists but points to deprecated code. Please switch to the new import route `import { Wasm } from '@vscode/wasm-wasi/v1`.
