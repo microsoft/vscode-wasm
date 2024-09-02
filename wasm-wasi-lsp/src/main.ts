@@ -4,7 +4,7 @@
  * ------------------------------------------------------------------------------------------ */
 import * as vscode from 'vscode';
 
-import { Readable, WasmProcess, Writable, type Stdio } from '@vscode/wasm-wasi';
+import { Readable, WasmProcess, Writable, type Stdio } from '@vscode/wasm-wasi/v1';
 import { Disposable, Emitter, Event, Message, MessageTransports, RAL, ReadableStreamMessageReader, WriteableStreamMessageWriter } from 'vscode-languageclient';
 
 class ReadableStreamImpl implements RAL.ReadableStream {
