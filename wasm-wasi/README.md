@@ -6,6 +6,10 @@ This npm module implements an API facade for the WASM WASI Core VS Code extensio
 
 ## History
 
+### 1.0.0
+
+The npm module now provides version specific import routes to support API migration in the future. The standard import `import { Wasm } from '@vscode/wasm-wasi'` still exists but points to deprecated code. Please switch to the new import route `import { Wasm } from '@vscode/wasm-wasi/v1`.
+
 ### 0.11.0
 
 With release version `0.11.0` the implementation details of the WASM support for VS Code has changed. This npm module is now a facade around the `wasm-wasi-core` VS Code extension.
@@ -36,7 +40,7 @@ The actual source code to execute a WASM process looks like this
 
 ```typescript
 // Load the WASM API
-const wasm: Wasm = await Wasm.api();
+const wasm: Wasm = await Wasm.load();
 
 // Create a pseudoterminal to provide stdio to the WASM process.
 const pty = wasm.createPseudoterminal();

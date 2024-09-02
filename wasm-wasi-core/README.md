@@ -2,7 +2,7 @@
 
 [![Build Status](https://dev.azure.com/vscode/vscode-wasm/_apis/build/status/microsoft.vscode-wasm?branchName=main)](https://dev.azure.com/vscode/vscode-wasm/_build/latest?definitionId=47&branchName=main)
 
-This VS Code library extension provides API to run [WASM](https://webassembly.org/) binaries in VS Code's extension host both in the desktop and the Web. The WASM file needs to be created with a [WASI](https://github.com/WebAssembly/WASI) compliant tool chain like the [WASI-SDK](https://github.com/WebAssembly/wasi-sdk) or [Rust](https://www.rust-lang.org/) using the `wasm32-wasi` target.
+This VS Code library extension provides API to run [WASM](https://webassembly.org/) binaries in VS Code's extension host both in the desktop and the Web. The WASM file needs to be created with a [WASI Preview 1](https://github.com/WebAssembly/WASI) compliant tool chain like the [WASI-SDK](https://github.com/WebAssembly/wasi-sdk) or [Rust](https://www.rust-lang.org/) using the `wasm32-wasip1` target.
 
 The library extension supports the following WASI specifications:
 
