@@ -108,14 +108,12 @@ export abstract class Stream {
 				if (resultSize + this.chunks[i].byteLength > maxBytes) {
 					break;
 				}
+				resultSize += this.chunks[i].byteLength;
 			}
 			const result = new Uint8Array(resultSize);
 			let offset = 0;
-			for (let i = 0; i < this.chunks.length; i++) {
+			while (offset < resultSize) {
 				const chunk = this.chunks.shift()!;
-				if (offset + chunk.byteLength > maxBytes) {
-					break;
-				}
 				result.set(chunk, offset);
 				offset += chunk.byteLength;
 				this.fillLevel -= chunk.byteLength;

@@ -25,7 +25,7 @@ class PipeFileDescriptor extends BaseFileDescriptor {
 }
 
 interface Stdin {
-	read(maxBytesToRead: size): Promise<Uint8Array>;
+	read(mode: 'max', maxBytesToRead: size): Promise<Uint8Array>;
 }
 
 interface Stdout {
@@ -82,7 +82,7 @@ export function create(deviceId: DeviceId, stdin: Stdin | undefined, stdout: Std
 			}
 
 	 		const maxBytesToRead = buffers.reduce<number>((prev, current) => prev + current.length, 0);
-	 		const result = await stdin.read(maxBytesToRead);
+			const result = await stdin.read('max', maxBytesToRead);
 	 		let offset = 0;
 	 		let totalBytesRead = 0;
 	 		for (const buffer of buffers) {
