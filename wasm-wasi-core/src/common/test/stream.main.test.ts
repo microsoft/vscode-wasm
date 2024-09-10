@@ -64,5 +64,25 @@ suite('Stream Tests', () => {
 		assert.strictEqual(received, 1054);
 	});
 
-
+	test('Stream read max (see #178)', async () => {
+		const encoder = RAL().TextEncoder.create();
+		const a = encoder.encode('a');
+		const success = encoder.encode('success');
+		const readable = new ReadableStream();
+		readable.pause();
+		for (let i = 0; i < 8190; i++) {
+			await readable.write(a);
+		}
+		await readable.write(success);
+		let data = await readable.read('max', 8192);
+		assert.strictEqual(data.byteLength, 8190);
+		for (let i = 0; i < 8190; i++) {
+			assert.strictEqual(data[i], a[0]);
+		}
+		data = await readable.read('max', 8192);
+		assert.strictEqual(data.byteLength, 7);
+		for (let i = 0; i < 5; i++) {
+			assert.strictEqual(data[i], success[i]);
+		}
+	});
 });
