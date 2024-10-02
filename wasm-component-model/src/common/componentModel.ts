@@ -1886,12 +1886,18 @@ abstract class TypeArrayType<T extends { length: number; byteLength: number }, E
 		dest.assertAlignment(dest_offset, this.alignment);
 		src.assertAlignment(src_offset, this.alignment);
 		const offsets = TypeArrayType.offsets;
-		src.copyBytes(src_offset, this.size, dest, dest_offset);
+		// read data pointer and length for the src data
 		const data = src.getUint32(src_offset + offsets.data);
-		const byteLength = src.getUint32(src_offset + offsets.length) * this.elementType.size;
+		const length = src.getUint32(src_offset + offsets.length);
+		const byteLength = length * this.elementType.size;
 		const srcReader = src.memory.readonly(data, byteLength);
+		// Allocate space in dest for the data
 		const destWriter = dest.memory.alloc(this.elementType.alignment, byteLength);
+		// Copy the byes over
 		srcReader.copyBytes(0, byteLength, destWriter, 0);
+		// Store the new data pointer and length in dest
+		dest.setUint32(dest_offset + offsets.data, destWriter.ptr);
+		dest.setUint32(dest_offset + offsets.length, length);
 	}
 
 	public copyFlat(result: WasmType[], dest: Memory, values: FlatValuesIter, src: Memory, _context: ComponentModelContext): void {
