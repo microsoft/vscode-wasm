@@ -14,27 +14,8 @@ import { DeviceDriverKind, DeviceId, FileSystemDeviceDriver, NoSysDeviceDriver, 
 import { BaseFileDescriptor, FdProvider, FileDescriptor } from '../common/fileDescriptor';
 import RAL from '../common/ral';
 import {
-	Errno,
-	errno,
-	fd,
-	fdflags,
-	Fdflags,
-	fdstat,
-	filesize,
-	filestat,
-	Filetype,
-	filetype,
-	fstflags,
-	Fstflags,
-	inode,
-	lookupflags,
-	Lookupflags,
-	oflags, Oflags,
-	Rights,
-	rights,
-	timestamp,
-	WasiError,
-	Whence
+	Errno, errno, fd, fdflags, Fdflags, fdstat, filesize, filestat, Filetype, filetype, fstflags, Fstflags, inode,
+	lookupflags, Lookupflags, oflags, Oflags, Rights, rights, timestamp, WasiError, Whence
 } from '../common/wasi';
 
 const _DirectoryBaseRights: rights = Rights.fd_fdstat_set_flags | Rights.path_create_directory |
