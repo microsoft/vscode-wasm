@@ -6,18 +6,17 @@ import { BigIntStats, Dir } from 'node:fs';
 import fs from 'node:fs/promises';
 import paths from 'node:path';
 
-import RAL from '../common/ral';
-import { u64, size } from '../common/baseTypes';
-import {
-	fdstat, filestat, Rights, fd, rights, fdflags, Filetype, WasiError, Errno, filetype, Whence,
-	lookupflags, timestamp, fstflags, oflags, Oflags, filesize, Fdflags, inode, Lookupflags, Fstflags, errno
-} from '../common/wasi';
-import { BigInts } from '../common/converter';
-import { BaseFileDescriptor, FdProvider, FileDescriptor } from '../common/fileDescriptor';
-import { NoSysDeviceDriver, ReaddirEntry, FileSystemDeviceDriver, DeviceId, DeviceDriverKind } from '../common/deviceDriver';
 import { Dirent } from 'node:fs';
 import { Uri } from 'vscode';
-import { WritePermDeniedDeviceDriver } from '../common/deviceDriver';
+import { size, u64 } from '../common/baseTypes';
+import { BigInts } from '../common/converter';
+import { DeviceDriverKind, DeviceId, FileSystemDeviceDriver, NoSysDeviceDriver, ReaddirEntry, WritePermDeniedDeviceDriver } from '../common/deviceDriver';
+import { BaseFileDescriptor, FdProvider, FileDescriptor } from '../common/fileDescriptor';
+import RAL from '../common/ral';
+import {
+	Errno, errno, fd, fdflags, Fdflags, fdstat, filesize, filestat, Filetype, filetype, fstflags, Fstflags, inode,
+	lookupflags, Lookupflags, oflags, Oflags, Rights, rights, timestamp, WasiError, Whence
+} from '../common/wasi';
 
 const _DirectoryBaseRights: rights = Rights.fd_fdstat_set_flags | Rights.path_create_directory |
 	Rights.path_create_file | Rights.path_link_source | Rights.path_link_target | Rights.path_open |
@@ -589,7 +588,7 @@ export function create(deviceId: DeviceId, basePath: string, readOnly: boolean =
 				assertDirectoryDescriptor(fileDescriptor);
 				await assertDirectoryExists(fileDescriptor);
 				const fullpath = paths.join(fileDescriptor.dir.path, path);
-				await fs.rmdir(fullpath);
+				await fs.rm(fullpath, { recursive: true });
 			} catch (error) {
 				throw handleError(error, Errno.notempty);
 			}

@@ -4,8 +4,8 @@
  * ------------------------------------------------------------------------------------------ */
 import { Event, EventEmitter } from 'vscode';
 
+import { PseudoterminalState, Stdio, WasmPseudoterminal } from './api';
 import RAL from './ral';
-import { Stdio, WasmPseudoterminal, PseudoterminalState } from './api';
 
 class LineBuffer {
 
@@ -252,6 +252,7 @@ export class WasmPseudoterminalImpl implements WasmPseudoterminal {
 	private writeBuffer: string[] | undefined;
 	private encoder: RAL.TextEncoder;
 	private decoder: RAL.TextDecoder;
+	private isStdInClosed: boolean;
 
 	constructor(options: Options = {}) {
 		this.options = options;
@@ -281,6 +282,7 @@ export class WasmPseudoterminalImpl implements WasmPseudoterminal {
 
 		this.encoder = RAL().TextEncoder.create();
 		this.decoder = RAL().TextDecoder.create();
+		this.isStdInClosed = false;
 
 		this.lines = [];
 		this.lineBuffer = new LineBuffer();
@@ -300,6 +302,11 @@ export class WasmPseudoterminalImpl implements WasmPseudoterminal {
 		const old = this.state;
 		this.state = state;
 		if (old !== state) {
+			if (state === PseudoterminalState.free || state === PseudoterminalState.idle) {
+				this.lineBuffer.clear();
+				this.lines = [];
+				this.isStdInClosed = false;
+			}
 			this._onDidChangeState.fire({ old, new: state });
 		}
 	}
@@ -335,6 +342,9 @@ export class WasmPseudoterminalImpl implements WasmPseudoterminal {
 	}
 
 	public async read(_maxBytesToRead: number): Promise<Uint8Array> {
+		if (this.isStdInClosed && this.lines.length === 0) {
+			return new Uint8Array(0);
+		}
 		const value = await this.readline();
 		return this.encoder.encode(value);
 	}
@@ -346,9 +356,13 @@ export class WasmPseudoterminalImpl implements WasmPseudoterminal {
 		if (this.lines.length > 0) {
 			return Promise.resolve(this.lines.shift()!);
 		}
-		return new Promise((resolve) => {
-			this.readlineCallback = resolve;
-		});
+		if (this.isStdInClosed) {
+			return Promise.resolve('');
+		} else {
+			return new Promise((resolve) => {
+				this.readlineCallback = resolve;
+			});
+		}
 	}
 
 	public write(content: string): Promise<void>;
@@ -388,6 +402,9 @@ export class WasmPseudoterminalImpl implements WasmPseudoterminal {
 		switch (data) {
 			case '\x03': // ctrl+C
 				this.handleInterrupt();
+				break;
+			case '\x04': // ctrl+D (end of transmission)
+				this.handleEOT(data);
 				break;
 			case '\x06': // ctrl+f
 			case '\x1b[C': // right
@@ -482,6 +499,20 @@ export class WasmPseudoterminalImpl implements WasmPseudoterminal {
 		}
 		if (this.readlineCallback !== undefined) {
 			const result = this.lines.shift()! + '\n';
+			this.readlineCallback(result);
+			this.readlineCallback = undefined;
+		}
+	}
+
+	private handleEOT(_data: string): void {
+		this.isStdInClosed = true;
+		const line = this.lineBuffer.getLine();
+		this.lineBuffer.clear();
+		if (line.length > 0) {
+			this.lines.push(line);
+		}
+		if (this.readlineCallback !== undefined && this.lines.length > 0) {
+			const result = this.lines.shift()!;
 			this.readlineCallback(result);
 			this.readlineCallback = undefined;
 		}

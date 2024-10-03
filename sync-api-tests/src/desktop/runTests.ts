@@ -3,9 +3,9 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import path from 'path';
 import fs from 'fs';
 import os from 'os';
+import path from 'path';
 import * as uuid from 'uuid';
 import find = require('find-process');
 
@@ -19,7 +19,7 @@ function rimraf(location: string) {
 				rimraf(path.join(location, dir));
 			}
 
-			fs.rmdirSync(location);
+			fs.rmSync(location, { recursive: true });
 		}
 		else {
 			fs.unlinkSync(location);
