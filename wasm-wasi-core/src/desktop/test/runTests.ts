@@ -2,12 +2,12 @@
  *  Copyright (c) Microsoft Corporation. All rights reserved.
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
-import * as path from 'node:path';
-import * as os from 'node:os';
 import * as fs from 'node:fs/promises';
+import * as os from 'node:os';
+import * as path from 'node:path';
 
-import * as uuid from 'uuid';
 import fp from 'find-process';
+import * as uuid from 'uuid';
 
 import { runTests } from '@vscode/test-electron';
 
@@ -64,7 +64,7 @@ async function main() {
 		process.exit(1);
 	} finally {
 		if (testDir !== undefined) {
-			await fs.rmdir(testDir, { recursive: true });
+			await fs.rm(testDir, { recursive: true });
 		}
 	}
 }
