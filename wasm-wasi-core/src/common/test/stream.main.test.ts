@@ -4,7 +4,7 @@
  *--------------------------------------------------------------------------------------------*/
 import assert from 'assert';
 import RAL from '../ral';
-import { ReadableStream, WritableStream } from '../streams';
+import { ReadableStream, WritableStream, WritableStreamEOT } from '../streams';
 
 suite('Stream Tests', () => {
 	test('Stream write 16k', async () => {
@@ -84,5 +84,54 @@ suite('Stream Tests', () => {
 		for (let i = 0; i < 5; i++) {
 			assert.strictEqual(data[i], success[i]);
 		}
+	});
+
+	test('Stream end', async () => {
+		const writeable = new WritableStream();
+		await writeable.write('Hello World');
+		const decoder = RAL().TextDecoder.create();
+		assert.strictEqual(decoder.decode(await writeable.read()), 'Hello World');
+		writeable.end();
+		const data = await writeable.read();
+		assert.strictEqual(data.byteLength, 0);
+	});
+
+	test('Stream end write throws', async () => {
+		const writeable = new WritableStream();
+		writeable.end();
+		await assert.rejects(async () => {
+			await writeable.write('Hello World');
+		});
+	});
+});
+
+suite('Stream EOT Tests', () => {
+	test('Stream write EOT after read', async () => {
+		const writeable = new WritableStreamEOT();
+		await writeable.write('Hello World');
+		const decoder = RAL().TextDecoder.create();
+		assert.strictEqual(decoder.decode(await writeable.read()), 'Hello World');
+		await writeable.write(new Uint8Array([0x04]));
+		const data = await writeable.read();
+		assert.strictEqual(data.byteLength, 0);
+	});
+
+	test('Stream write EOT before read', async () => {
+		const writeable = new WritableStreamEOT();
+		await writeable.write('Hello World');
+		await writeable.write(new Uint8Array([0x04]));
+		const decoder = RAL().TextDecoder.create();
+		assert.strictEqual(decoder.decode(await writeable.read()), 'Hello World');
+		const data = await writeable.read();
+		assert.strictEqual(data.byteLength, 0);
+	});
+
+	test('Stream write EOT embedded', async () => {
+		const writeable = new WritableStreamEOT();
+		await writeable.write('Hello World\u0004');
+		const decoder = RAL().TextDecoder.create();
+		assert.strictEqual(decoder.decode(await writeable.read()), 'Hello World');
+		const data = await writeable.read();
+		assert.strictEqual(data.byteLength, 0);
 	});
 });

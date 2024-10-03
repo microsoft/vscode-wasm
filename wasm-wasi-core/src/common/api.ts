@@ -11,7 +11,7 @@ import { WasmRootFileSystemImpl } from './fileSystem';
 import WasiKernel from './kernel';
 import { MemoryFileSystem as MemoryFileSystemImpl } from './memoryFileSystemDriver';
 import { WasiProcess as InternalWasiProcess } from './process';
-import { ReadableStream, WritableStream } from './streams';
+import { ReadableStream, WritableStream, WritableStreamEOT } from './streams';
 import { WasmPseudoterminalImpl } from './terminal';
 
 export interface Environment {
@@ -496,6 +496,12 @@ export interface Wasm {
 	createWritable(encoding?: 'utf-8'): Writable;
 
 	/**
+	 * Creates a new writable stream. If EOT is enabled the stream will
+	 * close if the EOT character is written to the stream.
+	 */
+	createWritable(options: { eot?: boolean; encoding?: 'utf-8' }): Writable;
+
+	/**
 	 * Creates a new WASM process.
 	 *
 	 * @param name The name of the process. Will be available as `argv[0]`.
@@ -571,8 +577,27 @@ namespace WasiCoreImpl {
 			createReadable() {
 				return new ReadableStream();
 			},
-			createWritable(encoding?: 'utf-8') {
-				return new WritableStream(encoding);
+			createWritable(optionsOrEncoding?: 'utf-8' | { eot?: boolean; encoding?: 'utf-8' }): Writable {
+				if (optionsOrEncoding === undefined) {
+					return new WritableStream();
+				}
+				let ctor: new (encoding?: 'utf-8') => Writable = WritableStream;
+				let encoding: 'utf-8' | undefined = undefined;
+				if (typeof optionsOrEncoding === 'string') {
+					if (optionsOrEncoding !== 'utf-8') {
+						throw new Error(`Unsupported encoding: ${optionsOrEncoding}`);
+					}
+					encoding = optionsOrEncoding;
+				} else {
+					if (optionsOrEncoding.encoding !== undefined && optionsOrEncoding.encoding !== 'utf-8') {
+						throw new Error(`Unsupported encoding: ${optionsOrEncoding.encoding}`);
+					}
+					encoding = optionsOrEncoding.encoding;
+					if (optionsOrEncoding.eot) {
+						ctor = WritableStreamEOT;
+					}
+				}
+				return new ctor(encoding);
 			},
 			async createProcess(name: string, module: WebAssembly.Module | Promise<WebAssembly.Module>, memoryOrOptions?: WebAssembly.MemoryDescriptor | WebAssembly.Memory | ProcessOptions, optionsOrMapWorkspaceFolders?: ProcessOptions | boolean): Promise<WasmProcess> {
 				let memory: WebAssembly.Memory | WebAssembly.MemoryDescriptor | undefined;
