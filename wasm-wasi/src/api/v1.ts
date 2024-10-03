@@ -501,6 +501,12 @@ export interface Wasm {
 	createWritable(encoding?: 'utf-8'): Writable;
 
 	/**
+	 * Creates a new writable stream. If EOT is enabled the stream will
+	 * close if the EOT character is written to the stream.
+	 */
+	createWritable(options: { eot?: boolean; encoding?: 'utf-8' }): Writable;
+
+	/**
 	 * Creates a new WASM process.
 	 *
 	 * @param name The name of the process. Will be available as `argv[0]`.

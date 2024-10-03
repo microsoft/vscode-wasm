@@ -10,7 +10,7 @@ interface _TextEncoder {
 }
 
 interface _TextDecoder {
-	decode(input?: Uint8Array): string;
+	decode(input?: Uint8Array, options?: { stream?: boolean | undefined }): string;
 }
 
 interface RAL {

@@ -36,6 +36,12 @@ export abstract class Stream {
 	}
 
 	public async write(chunk: Uint8Array): Promise<void> {
+		// We don't write chunks of size 0 since they would indicate the end of the stream
+		// on the receiving side. If we want to support closing a stream via a write we should
+		// support writing null.
+		if (chunk.byteLength === 0) {
+			return;
+		}
 		// We have enough space
 		if (this.fillLevel + chunk.byteLength <= Stream.BufferSize) {
 			this.chunks.push(chunk);
@@ -178,22 +184,85 @@ export abstract class Stream {
 
 }
 
+enum StreamState {
+	open = 'open',
+	closed = 'closed',
+}
+
 export class WritableStream extends Stream implements Writable {
 
 	private readonly encoding: 'utf-8';
 	private readonly encoder: RAL.TextEncoder;
+	protected streamState: StreamState;
 
 	constructor(encoding?: 'utf-8') {
 		super();
 		this.encoding = encoding ?? 'utf-8';
 		this.encoder = RAL().TextEncoder.create(this.encoding);
+		this.streamState = StreamState.open;
 	}
 
-	public async write(chunk: Uint8Array | string): Promise<void> {
+	public write(chunk: Uint8Array): Promise<void>;
+	public write(chunk: string, encoding?: 'utf-8'): Promise<void>;
+	public write(chunk: Uint8Array | string, _encoding?: 'utf-8'): Promise<void> {
+		if (this.streamState !== StreamState.open) {
+			return Promise.reject(new Error('Stream is closed'));
+		}
 		return super.write(typeof chunk === 'string' ? this.encoder.encode(chunk) : chunk);
 	}
 
+	public read(): Promise<Uint8Array>;
+	public read(mode: 'max', size: number): Promise<Uint8Array>;
+	public read(mode?: 'max', size?: number): Promise<Uint8Array> {
+		if (this.streamState === StreamState.closed && this.chunks.length === 0) {
+			return Promise.resolve(new Uint8Array(0));
+		}
+		return mode !== undefined ? super.read(mode, size!) : super.read();
+	}
+
 	public end(): void {
+		this.streamState = StreamState.closed;
+	}
+}
+
+export class WritableStreamEOT extends WritableStream {
+
+	constructor(encoding?: 'utf-8') {
+		super(encoding);
+	}
+
+	public async write(chunk: Uint8Array | string, encoding?: 'utf-8'): Promise<void> {
+		if (this.streamState !== StreamState.open) {
+			throw new Error('Stream is closed');
+		}
+		let eot:boolean = false;
+		try {
+			if (typeof chunk === 'string') {
+				if (chunk.length > 0 && chunk.charCodeAt(chunk.length - 1) === 0x04 /* EOT */) {
+					eot = true;
+					if (chunk.length >= 1) {
+						chunk = chunk.substring(0, chunk.length - 1);
+						await super.write(chunk, encoding);
+					}
+				} else {
+					await super.write(chunk, encoding);
+				}
+			} else {
+				if (chunk.length > 0 && chunk[chunk.length - 1] === 0x04 /* EOT */) {
+					eot = true;
+					if (chunk.length >= 1) {
+						chunk = chunk.subarray(0, chunk.length - 1);
+						await super.write(chunk);
+					}
+				} else {
+					await super.write(chunk);
+				}
+			}
+		} finally {
+			if (eot) {
+				this.streamState = StreamState.closed;
+			}
+		}
 	}
 }
 
@@ -248,6 +317,8 @@ export class ReadableStream extends Stream implements Readable {
 		}
 	}
 
+	public async read(): Promise<Uint8Array>;
+	public async read(mode: 'max', size: number): Promise<Uint8Array>;
 	public async read(mode?: 'max', size?: number): Promise<Uint8Array> {
 		if (this.mode === ReadableStreamMode.flowing) {
 			throw new Error('Cannot read from stream in flowing mode');
