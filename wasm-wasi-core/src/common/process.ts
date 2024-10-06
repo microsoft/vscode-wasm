@@ -275,11 +275,11 @@ export abstract class WasiProcess {
 		this._state = 'initialized';
 	}
 
-	public async run(): Promise<number> {
+	public async run(): Promise<exitcode> {
 		if (this._state !== 'initialized') {
 			throw new Error('WasiProcess is not initialized');
 		}
-		return new Promise<number>(async (resolve, reject) => {
+		return new Promise<exitcode>(async (resolve, reject) => {
 			this.resolveCallback = resolve;
 			const clock: Clock = Clock.create();
 			const wasiService: WasiService = Object.assign({},
@@ -298,7 +298,7 @@ export abstract class WasiProcess {
 
 	protected abstract procExit(): Promise<void>;
 
-	public abstract terminate(): Promise<number>;
+	public abstract terminate(exitCode?: exitcode): Promise<exitcode>;
 
 	protected async destroyStreams(): Promise<void> {
 		if (this._stdin !== undefined) {
