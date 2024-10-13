@@ -593,6 +593,18 @@ export namespace Wasm {
 					return $api;
 				}
 
+				const packageVersion = semverParse(packageJson.version);
+
+				if (packageVersion === null) {
+					throw new Error(`Unable to parse package version: ${packageJson.version}`);
+				}
+
+				if (semverSatisfies(packageVersion, '^1.0.0')) {
+					$api = api;
+					return $api;
+				}
+
+
 				// The release version of the WASM WASI Core extension starts with 1.0.0. This works with the v1 version of the API.
 				if (semverSatisfies(extVersion, '^1.0.0')) {
 					$api = api;
