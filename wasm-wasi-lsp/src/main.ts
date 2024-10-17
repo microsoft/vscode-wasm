@@ -149,8 +149,8 @@ export function createUriConverters(): { code2Protocol: (value: vscode.Uri) => s
 	const p2c: Map<string, string> = new Map();
 	if (folders.length === 1) {
 		const folder = folders[0];
-		c2p.set(folder.uri.toString(), 'file:///workspace');
-		p2c.set('file:///workspace', folder.uri.toString());
+		c2p.set(folder.uri.toString(), 'file:///workspace/');
+		p2c.set('file:///workspace/', folder.uri.toString());
 	} else {
 		for (const folder of folders) {
 			const uri = folder.uri.toString();
