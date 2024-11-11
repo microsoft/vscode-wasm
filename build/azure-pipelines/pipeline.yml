@@ -159,6 +159,7 @@ extends:
         workingDirectory: $(Build.SourcesDirectory)/wasm-wasi
 
       - name: wasm-component-model
+        dependsOn: wasm-wasi
         testPlatforms:
           - name: Linux
             nodeVersions:
@@ -185,6 +186,7 @@ extends:
         workingDirectory: $(Build.SourcesDirectory)/wasm-component-model
 
       - name: wasm-wasi-lsp
+        dependsOn: wasm-component-model
         testPlatforms:
           - name: Linux
             nodeVersions:
