@@ -78,6 +78,7 @@ extends:
         workingDirectory: $(Build.SourcesDirectory)/sync-api-common
 
       - name: sync-api-client
+        dependsOn: sync-api-common
         testPlatforms:
           - name: Linux
             nodeVersions:
@@ -104,6 +105,7 @@ extends:
         workingDirectory: $(Build.SourcesDirectory)/sync-api-client
 
       - name: sync-api-service
+        dependsOn: sync-api-client
         testPlatforms:
           - name: Linux
             nodeVersions:
@@ -130,6 +132,7 @@ extends:
         workingDirectory: $(Build.SourcesDirectory)/sync-api-service
 
       - name: wasm-wasi
+        dependsOn: sync-api-service
         testPlatforms:
           - name: Linux
             nodeVersions:
@@ -156,6 +159,7 @@ extends:
         workingDirectory: $(Build.SourcesDirectory)/wasm-wasi
 
       - name: wasm-component-model
+        dependsOn: wasm-wasi
         testPlatforms:
           - name: Linux
             nodeVersions:
@@ -182,6 +186,7 @@ extends:
         workingDirectory: $(Build.SourcesDirectory)/wasm-component-model
 
       - name: wasm-wasi-lsp
+        dependsOn: wasm-component-model
         testPlatforms:
           - name: Linux
             nodeVersions:
