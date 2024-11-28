@@ -73,7 +73,6 @@ extends:
         ghTagPrefix: release/sync-api-common/
         tag: ${{ parameters.quality }}
         preReleaseTag: next
-        preReleaseTagAddToLatest: true
         publishPackage: ${{ parameters.publishSyncApiCommon }}
         workingDirectory: $(Build.SourcesDirectory)/sync-api-common
 
@@ -100,7 +99,6 @@ extends:
         ghTagPrefix: release/sync-api-client/
         tag: ${{ parameters.quality }}
         preReleaseTag: next
-        preReleaseTagAddToLatest: true
         publishPackage: ${{ parameters.publishSyncApiClient }}
         workingDirectory: $(Build.SourcesDirectory)/sync-api-client
 
@@ -127,7 +125,6 @@ extends:
         ghTagPrefix: release/sync-api-service/
         tag: ${{ parameters.quality }}
         preReleaseTag: next
-        preReleaseTagAddToLatest: true
         publishPackage: ${{ parameters.publishSyncApiService }}
         workingDirectory: $(Build.SourcesDirectory)/sync-api-service
 
@@ -154,7 +151,6 @@ extends:
         ghTagPrefix: release/wasm-wasi/
         tag: ${{ parameters.quality }}
         preReleaseTag: next
-        preReleaseTagAddToLatest: true
         publishPackage: ${{ parameters.publishWasmWasi }}
         workingDirectory: $(Build.SourcesDirectory)/wasm-wasi
 
@@ -181,7 +177,6 @@ extends:
         ghTagPrefix: release/wasm-component-model/
         tag: ${{ parameters.quality }}
         preReleaseTag: next
-        preReleaseTagAddToLatest: true
         publishPackage: ${{ parameters.publishWasmComponentModel }}
         workingDirectory: $(Build.SourcesDirectory)/wasm-component-model
 
@@ -208,6 +203,5 @@ extends:
         ghTagPrefix: release/wasm-wasi-lsp/
         tag: ${{ parameters.quality }}
         preReleaseTag: next
-        preReleaseTagAddToLatest: true
         publishPackage: ${{ parameters.publishWasmWasiLsp }}
         workingDirectory: $(Build.SourcesDirectory)/wasm-wasi-lsp
