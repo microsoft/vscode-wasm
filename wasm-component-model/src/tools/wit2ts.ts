@@ -649,20 +649,19 @@ class SymbolTable {
 			if (seenCallables.has(callable)) {
 				return;
 			}
-			for (const result of Object.values(callable.results)) {
-				if (TypeReference.isNumber(result.type)) {
-					const type = this.getType(result.type);
-					if (TypeKind.isResult(type.kind)) {
-						if (type.kind.result.err !== null) {
-							if (TypeReference.isString(type.kind.result.err)) {
-								this.resultErrorTypes.add(type.kind.result.err);
-							} else {
-								let errorType = this.getType(type.kind.result.err);
-								while (TypeKind.isReference(errorType.kind)) {
-									errorType = this.getType(errorType.kind.type);
-								}
-								this.resultErrorTypes.add(errorType);
+			const result = callable.result;
+			if (result !== undefined && TypeReference.isNumber(result)) {
+				const type = this.getType(result);
+				if (TypeKind.isResult(type.kind)) {
+					if (type.kind.result.err !== null) {
+						if (TypeReference.isString(type.kind.result.err)) {
+							this.resultErrorTypes.add(type.kind.result.err);
+						} else {
+							let errorType = this.getType(type.kind.result.err);
+							while (TypeKind.isReference(errorType.kind)) {
+								errorType = this.getType(errorType.kind.type);
 							}
+							this.resultErrorTypes.add(errorType);
 						}
 					}
 				}
@@ -1517,12 +1516,10 @@ class TypeFlattener  {
 
 	public flattenResult(callable: Callable): string[] {
 		const result: string[] = [];
-		if (callable.results.length === 0) {
+		if (callable.result === undefined) {
 			result.push('void');
 		} else {
-			for (const r of callable.results) {
-				this.flattenResultType(result, r.type);
-			}
+			this.flattenResultType(result, callable.result);
 		}
 		return result;
 	}
@@ -3858,12 +3855,8 @@ namespace ResourceEmitter {
 			}
 			let returnType: string = 'void';
 			const context = TypeScript.TypePrinterContext.create(TypeUsage.witFunction);
-			if (this.method.results !== null && omitReturn === false) {
-				if (this.method.results.length === 1) {
-					returnType = printers.typeScript.printTypeReference(this.method.results[0].type, context);
-				} else if (this.method.results.length > 1) {
-					returnType = `[${this.method.results.map(r => printers.typeScript.printTypeReference(r.type, context)).join(', ')}]`;
-				}
+			if (this.method.result !== undefined && omitReturn === false) {
+				returnType = printers.typeScript.printTypeReference(this.method.result, context);
 			}
 			return [params, paramNames, returnType, context.errorClasses.length > 0 ? context.errorClasses : undefined];
 		}
@@ -4075,10 +4068,8 @@ function CallableEmitter<C extends Callable, P extends Interface | ResourceType 
 				const pName = nameProvider.type.name(this.parent as ResourceType);
 				metaReturnType = `new ${MetaModel.OwnType}(${pName}_Handle)`;
 			} else {
-				if (this.callable.results.length === 1) {
-					metaReturnType = this.context.printers.metaModel.printTypeReference(this.callable.results[0].type, TypeUsage.witFunction);
-				} else if (this.callable.results.length > 1) {
-					metaReturnType = `[${this.callable.results.map(r => this.context.printers.metaModel.printTypeReference(r.type, TypeUsage.witFunction)).join(', ')}]`;
+				if (this.callable.result !== undefined) {
+					metaReturnType = this.context.printers.metaModel.printTypeReference(this.callable.result, TypeUsage.witFunction);
 				}
 			}
 			return [metaDataParams, metaReturnType];
@@ -4140,10 +4131,8 @@ function CallableEmitter<C extends Callable, P extends Interface | ResourceType 
 			const result: { return: string | undefined; exceptions: string[] | undefined } = { return: undefined, exceptions: undefined };
 			const context = TypeScript.TypePrinterContext.create(usage);
 			let returnType: string | undefined = undefined;
-			if (this.callable.results.length === 1) {
-				returnType = this.context.printers.typeScript.printTypeReference(this.callable.results[0].type, context);
-			} else if (this.callable.results.length > 1) {
-				returnType = `[${this.callable.results.map(r => this.context.printers.typeScript.printTypeReference(r.type, context)).join(', ')}]`;
+			if (this.callable.result !== undefined) {
+				returnType = this.context.printers.typeScript.printTypeReference(this.callable.result, context);
 			}
 			result.return = returnType;
 			result.exceptions = context.errorClasses.length > 0 ? context.errorClasses : undefined;

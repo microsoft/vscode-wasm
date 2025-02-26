@@ -109,7 +109,7 @@ interface AbstractCallable {
 	name: string;
 	docs?: Documentation | undefined;
 	params: Param[];
-	results: TypeObject[];
+	result?: TypeReference | undefined;
 }
 
 export interface Func extends AbstractCallable {

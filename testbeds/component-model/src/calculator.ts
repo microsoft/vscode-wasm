@@ -76,6 +76,7 @@ export type Types = {
 };
 export namespace calculator {
 	export type Operation = Types.Operation;
+	export const Operation = Types.Operation;
 	export type Imports = {
 		generate: () => string;
 	};
