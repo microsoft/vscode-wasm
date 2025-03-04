@@ -55,8 +55,8 @@ async function run(options: Options): Promise<number> {
 					if (semVersion === null) {
 						process.stderr.write(`wasm-tools --version didn't provide a parsable version number. Output was ${output}.\n`);
 						return 1;
-					} else if (!semverGte(semVersion, '1.200.0')) {
-						process.stderr.write(`wit2ts required wasm-tools >= 1.200.0, but found version ${version}.\n`);
+					} else if (!semverGte(semVersion, '1.226.0')) {
+						process.stderr.write(`wit2ts required wasm-tools >= 1.226.0, but found version ${version}.\n`);
 						return 1;
 					}
 					let data: string;
