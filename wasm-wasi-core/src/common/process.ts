@@ -242,7 +242,7 @@ export abstract class WasiProcess {
 
 		this.environmentService = EnvironmentWasiService.create(
 			this.fileDescriptors, this.programName,
-			this.preOpenDirectories.entries(), options
+			Array.from(this.preOpenDirectories.entries()), options
 		);
 		this.processService = {
 			proc_exit: async (_memory, exitCode: exitcode) => {
