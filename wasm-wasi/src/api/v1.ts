@@ -10,6 +10,8 @@ import { Event, Extension, ExtensionContext, extensions as Extensions, Pseudoter
 import semverParse = require('semver/functions/parse');
 import semverSatisfies = require('semver/functions/satisfies');
 
+export type exitcode = number;
+
 export interface Environment {
 	[key: string]: string;
 }
@@ -397,12 +399,12 @@ export interface WasmProcess {
 	/**
 	 * Runs the Wasm process.
 	 */
-	run(): Promise<number>;
+	run(): Promise<exitcode>;
 
 	/**
 	 * Terminate the Wasm process.
 	 */
-	 terminate(): Promise<number>;
+	terminate(exitCode?: exitcode): Promise<exitcode>;
 }
 
 export enum Filetype {

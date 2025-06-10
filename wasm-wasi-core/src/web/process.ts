@@ -9,6 +9,7 @@ import RAL from '../common/ral';
 import { WasiProcess } from '../common/process';
 import { WasiService, ServiceConnection } from '../common/service';
 import type { ptr, u32 } from '../common/baseTypes';
+import type { exitcode } from '../common/wasi';
 import type { ServiceMessage, StartMainMessage, StartThreadMessage, WorkerMessage } from '../common/connection';
 import type { ProcessOptions } from '../common/api';
 
@@ -68,15 +69,14 @@ export class BrowserWasiProcess extends WasiProcess {
 		await this.cleanupFileDescriptors();
 	}
 
-	public async terminate(): Promise<number> {
-		const result = 0;
+	public async terminate(exitCode: exitcode = 0): Promise<exitcode> {
 		await this.procExit();
 
 		// when terminated, web workers silently exit, and there are no events
 		// to hook on to know when they are done. To ensure that the run promise resolves,
 		// we call it here so callers awaiting `process.run()` will get a result.
-		this.resolveRunPromise(result);
-		return result;
+		this.resolveRunPromise(exitCode);
+		return exitCode;
 	}
 
 	protected async startMain(wasiService: WasiService): Promise<void> {
