@@ -4,7 +4,7 @@
  *--------------------------------------------------------------------------------------------*/
 /* eslint-disable @typescript-eslint/ban-types */
 import * as $wcm from '@vscode/wasm-component-model';
-import type { u32, own, i32, ptr } from '@vscode/wasm-component-model';
+import type { u32, i32, ptr } from '@vscode/wasm-component-model';
 
 export namespace api {
 	export namespace Types {
@@ -31,7 +31,7 @@ export namespace api {
 		}
 
 		export type TextDocumentChangeEvent = {
-			document: own<TextDocument>;
+			document: TextDocument;
 			contentChanges: TextDocumentContentChangeEvent[];
 			reason?: TextDocumentChangeReason | undefined;
 		};
@@ -87,7 +87,7 @@ export namespace api {
 	export namespace Window {
 		export type OutputChannel = api.Types.OutputChannel;
 
-		export type createOutputChannel = (name: string, languageId: string | undefined) => own<OutputChannel>;
+		export type createOutputChannel = (name: string, languageId: string | undefined) => OutputChannel;
 	}
 	export type Window = {
 		createOutputChannel: Window.createOutputChannel;
@@ -96,7 +96,7 @@ export namespace api {
 	export namespace Workspace {
 		export type TextDocument = api.Types.TextDocument;
 
-		export type textDocuments = () => own<TextDocument>[];
+		export type textDocuments = () => TextDocument[];
 
 		export type registerOnDidChangeTextDocument = () => void;
 	}
@@ -301,7 +301,7 @@ export namespace api {
 
 	export namespace Workspace.$ {
 		export const TextDocument = api.Types.$.TextDocument;
-		export const textDocuments = new $wcm.FunctionType<api.Workspace.textDocuments>('text-documents', [], new $wcm.ListType<own<api.Workspace.TextDocument>>(new $wcm.OwnType<api.Workspace.TextDocument>(TextDocument)));
+		export const textDocuments = new $wcm.FunctionType<api.Workspace.textDocuments>('text-documents', [], new $wcm.ListType<api.Workspace.TextDocument>(new $wcm.OwnType<api.Workspace.TextDocument>(TextDocument)));
 		export const registerOnDidChangeTextDocument = new $wcm.FunctionType<api.Workspace.registerOnDidChangeTextDocument>('register-on-did-change-text-document', [], undefined);
 	}
 	export namespace Workspace._ {
@@ -315,7 +315,7 @@ export namespace api {
 			['registerOnDidChangeTextDocument', $.registerOnDidChangeTextDocument]
 		]);
 		export type WasmInterface = {
-			'text-documents': (result: ptr<own<TextDocument>[]>) => void;
+			'text-documents': (result: ptr<TextDocument[]>) => void;
 			'register-on-did-change-text-document': () => void;
 		};
 		export namespace imports {
