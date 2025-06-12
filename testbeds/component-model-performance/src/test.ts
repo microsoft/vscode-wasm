@@ -4,7 +4,7 @@
  *--------------------------------------------------------------------------------------------*/
 /* eslint-disable @typescript-eslint/ban-types */
 import * as $wcm from '@vscode/wasm-component-model';
-import type { u32, own, i32 } from '@vscode/wasm-component-model';
+import type { u32, i32 } from '@vscode/wasm-component-model';
 
 export namespace Window {
 	export namespace TestResource {
@@ -18,7 +18,7 @@ export namespace Window {
 	}
 	export type TestResource = TestResource.Interface;
 
-	export type createTestResource = () => own<TestResource>;
+	export type createTestResource = () => TestResource;
 }
 export type Window = {
 	TestResource: Window.TestResource.Class;

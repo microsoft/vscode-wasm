@@ -119,6 +119,7 @@ export type ReverseNotation = {
 };
 export namespace calculator {
 	export type Operation = Types.Operation;
+	export const Operation = Types.Operation;
 	export type Imports = {
 		log: (msg: string) => void;
 		generate: () => string;
