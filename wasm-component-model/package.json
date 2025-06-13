@@ -1,6 +1,6 @@
 {
 	"name": "@vscode/wasm-component-model",
-	"version": "1.0.1",
+	"version": "1.0.2",
 	"description": "A VS Code specific component model implementation",
 	"author": "Visual Studio Code Team",
 	"license": "MIT",
@@ -42,13 +42,13 @@
 	],
 	"dependencies": {
 		"yargs": "^17.7.2",
-		"semver": "^7.6.0",
-		"uuid": "^9.0.1"
+		"semver": "^7.7.2",
+		"uuid": "^11.1.0"
 	},
 	"devDependencies": {
-		"@types/yargs": "^17.0.31",
-		"@types/semver": "^7.5.8",
-		"@types/uuid": "^9.0.8"
+		"@types/yargs": "^17.0.33",
+		"@types/semver": "^7.7.0",
+		"@types/uuid": "^10.0.0"
 	},
 	"scripts": {
 		"prepublishOnly": "echo \"⛔ Can only publish from a secure pipeline ⛔\" && node ../build/npm/fail",
