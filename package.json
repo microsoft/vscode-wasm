@@ -29,7 +29,7 @@
 		"make-dir-cli": "^3.1.0",
 		"@types/mocha": "^10.0.10",
 		"mocha": "^11.6.0",
-		"playwright": "^1.42.1",
+		"playwright": "^1.56.1",
 		"rimraf": "^5.0.5",
 		"shelljs": "^0.8.5",
 		"shx": "^0.3.4",
@@ -44,7 +44,7 @@
 		"glob": "^10.3.12"
 	},
 	"scripts": {
-		"postinstall": "node ./build/bin/all.js install",
+		"postinstall": "node ./build/bin/all.js install && npx playwright install -- chromium",
 		"symlink": "node ./build/bin/symlink",
 		"symlink:desktop": "node ./build/bin/symlink-desktop",
 		"build": "node ./node_modules/typescript/lib/tsc.js -b tsconfig.json",
