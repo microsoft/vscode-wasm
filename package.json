@@ -41,7 +41,7 @@
 		"@vscode/test-electron": "^2.5.2",
 		"@vscode/test-web": "^0.0.70",
 		"@types/glob": "^8.1.0",
-		"glob": "^10.3.12"
+		"glob": "^11.1.0"
 	},
 	"scripts": {
 		"postinstall": "node ./build/bin/all.js install && npx playwright install -- chromium",
