@@ -242,7 +242,7 @@ suite(`Simple test - ${memoryQualifier}`, () => {
 });
 
 suite(`Filesystem - ${memoryQualifier}`, () => {
-	const rootFd: fd = 4;
+	const rootFd: fd = 3;
 	test(`fd_prestat`, () => {
 		const memory = createMemory();
 		const prestat = memory.allocStruct(Prestat);
@@ -252,7 +252,7 @@ suite(`Filesystem - ${memoryQualifier}`, () => {
 		errno = wasi.fd_prestat_dir_name(rootFd, buffer.$ptr, prestat.len);
 		assert.strictEqual(errno, Errno.success);
 		// We only have one prestat directory
-		errno = wasi.fd_prestat_get(5, prestat.$ptr);
+		errno = wasi.fd_prestat_get(rootFd + 1, prestat.$ptr);
 		assert.strictEqual(errno, Errno.badf);
 	});
 
@@ -262,7 +262,7 @@ suite(`Filesystem - ${memoryQualifier}`, () => {
 		const path = memory.allocString('fixture/read/helloWorld.txt');
 		let errno = wasi.path_open(rootFd, Lookupflags.none, path.$ptr, path.byteLength, Oflags.none, FileBaseRights, FileInheritingRights, Fdflags.none, fd.$ptr);
 		assert.strictEqual(errno, Errno.success);
-		assert.strictEqual(fd.value, 5);
+		assert.strictEqual(fd.value, rootFd + 1);
 		errno = wasi.fd_close(fd.value);
 		assert.strictEqual(errno, Errno.success);
 	});
