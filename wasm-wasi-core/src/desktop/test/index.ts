@@ -51,8 +51,6 @@ export async function run(_testRoot: string): Promise<void> {
 
 	try {
 		await doRunWorkerTests(workspaceContent, true);
-	} catch (error) {
-		console.error(error);
 	} finally {
 		try {
 			await cleanupTmp(workspaceContent);
@@ -64,8 +62,6 @@ export async function run(_testRoot: string): Promise<void> {
 	try {
 		await createTmp(workspaceContent);
 		await doRunWorkerTests(workspaceContent, false);
-	} catch (error) {
-		console.error(error);
 	} finally {
 		try {
 			await cleanupWorkspaceContent(workspaceContent);
