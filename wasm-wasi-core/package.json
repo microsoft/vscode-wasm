@@ -48,7 +48,7 @@
 		"esbuild": "node ./bin/esbuild.js",
 		"esbuild:watch": "node ./bin/esbuild.js --watch",
 		"test": "npm run test:desktop && npm run test:web",
-		"test:desktop": "node ./lib/desktop/test/runTests.js",
+		"test:desktop": "npm run esbuild && node ./lib/desktop/test/runTests.js",
 		"test:web": "npm run esbuild && node ./lib/web/test/runTests.js"
 	}
 }
