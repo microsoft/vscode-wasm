@@ -15,7 +15,7 @@
 		"@types/vscode": "1.88.0"
 	},
 	"dependencies": {
-		"vscode-languageclient": "10.0.0-next.5"
+		"vscode-languageclient": "10.0.0-next.20"
 	},
 	"scripts": {
 		"build": "npm run compile",

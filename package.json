@@ -39,7 +39,7 @@
 		"@types/path-browserify": "^1.0.2",
 		"path-browserify": "^1.0.1",
 		"@vscode/test-electron": "^2.5.2",
-		"@vscode/test-web": "^0.0.70",
+		"@vscode/test-web": "^0.0.79",
 		"@types/glob": "^8.1.0",
 		"glob": "^11.1.0"
 	},
