@@ -13,6 +13,7 @@ import { Errno, Fdflags, Filetype, Lookupflags, Oflags, Rights, WasiError, Whenc
 import { size, u64 } from './baseTypes';
 import { BigInts } from './converter';
 import * as fs from './fileSystem';
+import * as buffer from './buffer';
 import { ReadableStream, WritableStream } from './streams';
 
 const paths = RAL().path;
@@ -158,18 +159,18 @@ export class MemoryFileSystem extends fs.BaseFileSystem<DirectoryNode, FileNode,
 
 	public async readFile(node: FileNode, offset: bigint, buffers: Uint8Array[]): Promise<size> {
 		const content = await this.getContent(node);
-		return this.read(content, offset, buffers);
+		return buffer.read(content, BigInts.asNumber(offset), buffers);
 	}
 
 	public async readCharacterDevice(node: CharacterDeviceNode & { writable: WritableStream }, buffers: Uint8Array[]): Promise<size> {
 		const maxBytes = buffers.reduce((previousValue, current) => { return previousValue + current.byteLength; }, 0);
 		const content = await node.writable.read('max', maxBytes);
-		return this.read(content, 0n, buffers);
+		return buffer.read(content, 0, buffers);
 	}
 
 	public async writeFile(node: FileNode, offset: bigint, buffers: Uint8Array[]): Promise<size> {
 		const content = await this.getContent(node);
-		const [newContent, bytesWritten] = this.write(content, offset, buffers);
+		const [newContent, bytesWritten] = buffer.write(content, BigInts.asNumber(offset), buffers);
 		node.content = newContent;
 		return bytesWritten;
 	}
@@ -194,43 +195,6 @@ export class MemoryFileSystem extends fs.BaseFileSystem<DirectoryNode, FileNode,
 			(node as { content: Uint8Array}).content = result;
 			return result;
 		}
-	}
-
-	private read(content: Uint8Array, _offset: bigint, buffers: Uint8Array[]): size {
-		let offset = BigInts.asNumber(_offset);
-		let totalBytesRead = 0;
-		for (const buffer of buffers) {
-			const toRead = Math.min(buffer.length, content.byteLength - offset);
-			buffer.set(content.subarray(offset, offset + toRead));
-			totalBytesRead += toRead;
-			if (toRead < buffer.length) {
-				break;
-			}
-			offset += toRead;
-		}
-		return totalBytesRead;
-	}
-
-	private write(content: Uint8Array, _offset: bigint, buffers: Uint8Array[]): [Uint8Array, size] {
-		let offset = BigInts.asNumber(_offset);
-		let bytesToWrite: size = 0;
-		for (const bytes of buffers) {
-			bytesToWrite += bytes.byteLength;
-		}
-
-		// Do we need to increase the buffer
-		if (offset + bytesToWrite > content.byteLength) {
-			const newContent = new Uint8Array(offset + bytesToWrite);
-			newContent.set(content);
-			content = newContent;
-		}
-
-		for (const bytes of buffers) {
-			content.set(bytes, offset);
-			offset += bytes.length;
-		}
-
-		return [content, bytesToWrite];
 	}
 }
 
