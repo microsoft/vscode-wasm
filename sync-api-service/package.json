@@ -26,13 +26,12 @@
 		"fsChunks"
 	],
 	"dependencies": {
-		"uuid": "^14.0.0",
 		"vscode-uri": "^3.0.8",
 		"@vscode/sync-api-common": "0.9.0"
 	},
 	"devDependencies": {
-		"@types/vscode": "1.71.0",
-		"@types/uuid": "^9.0.7"
+		"@types/node": "^18.14.6",
+		"@types/vscode": "1.71.0"
 	},
 	"scripts": {
 		"prepublishOnly": "echo \"⛔ Can only publish from a secure pipeline ⛔\" && node ../build/npm/fail",
