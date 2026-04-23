@@ -5,10 +5,12 @@
 
 import { Event, EventEmitter, Pseudoterminal, Uri } from 'vscode';
 
-import * as uuid from 'uuid';
-
 import { RAL } from '@vscode/sync-api-common';
 import { CharacterDeviceDriver, FileDescriptorDescription } from './device';
+
+// uuid v14 is pure ESM; use require() which Node 22.12+ supports for synchronous ESM
+// eslint-disable-next-line @typescript-eslint/no-require-imports
+const { v4: uuidV4 } = require('uuid') as { v4: () => string };
 
 class LineBuffer {
 
@@ -232,7 +234,7 @@ class ServiceTerminalImpl implements ServicePseudoTerminal, CharacterDeviceDrive
 		this._onAnyKey = new EventEmitter<void>;
 		this.onAnyKey = this._onAnyKey.event;
 
-		const id = this.id = uuid.v4();
+		const id = this.id = uuidV4();
 		this.encoder = RAL().TextEncoder.create();
 		this.decoder = RAL().TextDecoder.create();
 
