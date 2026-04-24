@@ -230,7 +230,7 @@ class ServiceTerminalImpl implements ServicePseudoTerminal, CharacterDeviceDrive
 		this._onAnyKey = new EventEmitter<void>;
 		this.onAnyKey = this._onAnyKey.event;
 
-		const id = this.id = (globalThis as { crypto: { randomUUID(): string } }).crypto.randomUUID();
+		const id = this.id = (globalThis as unknown as { crypto: { randomUUID(): string } }).crypto.randomUUID();
 		this.encoder = RAL().TextEncoder.create();
 		this.decoder = RAL().TextDecoder.create();
 

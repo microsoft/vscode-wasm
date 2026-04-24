@@ -496,7 +496,7 @@ export namespace Memory {
 			if (exports.memory === undefined || exports.cabi_realloc === undefined) {
 				throw new MemoryError('The exports object must contain a memory object and a cabi_realloc function.');
 			}
-			this.id = id ?? (globalThis as { crypto: { randomUUID(): string } }).crypto.randomUUID();
+			this.id = id ?? (globalThis as unknown as { crypto: { randomUUID(): string } }).crypto.randomUUID();
 			this.memory = exports.memory;
 			this.cabi_realloc = exports.cabi_realloc;
 		}

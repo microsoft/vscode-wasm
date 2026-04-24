@@ -103,7 +103,7 @@ type Node = FileNode | DirectoryNode | CharacterDeviceNode;
 
 export class MemoryFileSystem extends fs.BaseFileSystem<DirectoryNode, FileNode, CharacterDeviceNode> implements ApiMemoryFileSystem {
 
-	public readonly uri: Uri = Uri.from({ scheme: 'wasi-memfs', authority: (globalThis as { crypto: { randomUUID(): string } }).crypto.randomUUID() });
+	public readonly uri: Uri = Uri.from({ scheme: 'wasi-memfs', authority: (globalThis as unknown as { crypto: { randomUUID(): string } }).crypto.randomUUID() });
 
 	constructor() {
 		super(DirectoryNode.create(undefined, 1n, '/', timeInNanoseconds(Date.now())));

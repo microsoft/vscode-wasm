@@ -33,7 +33,7 @@ class ConnectionMemory implements Memory {
 			sizeOrBuffer = 64 * 1024;
 		}
 		if (typeof sizeOrBuffer === 'number') {
-			this.id = (globalThis as { crypto: { randomUUID(): string } }).crypto.randomUUID();
+			this.id = (globalThis as unknown as { crypto: { randomUUID(): string } }).crypto.randomUUID();
 			this.buffer = new SharedArrayBuffer(sizeOrBuffer);
 			this.next = new Uint32Array(this.buffer, ConnectionMemory.Header.next.offset, 1);
 			this.next[0] = ConnectionMemory.Header.end.offset;

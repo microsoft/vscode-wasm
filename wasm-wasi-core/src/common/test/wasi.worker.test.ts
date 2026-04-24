@@ -26,7 +26,7 @@ const DirectoryBaseRights: rights = Rights.fd_fdstat_set_flags | Rights.path_cre
 const DirectoryInheritingRights: rights = DirectoryBaseRights | FileBaseRights;
 
 function generateUuid(): string {
-	return (globalThis as { crypto: { randomUUID(): string } }).crypto.randomUUID();
+	return (globalThis as unknown as { crypto: { randomUUID(): string } }).crypto.randomUUID();
 }
 
 

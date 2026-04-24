@@ -132,7 +132,7 @@ class MemoryImpl implements SharedMemory {
 	public constructor(module: WebAssembly_.Module, memory: WebAssembly_.Memory, exports: SharedMemory.Exports, size: u32);
 	public constructor(module: WebAssembly_.Module, memory: WebAssembly_.Memory, exports: SharedMemory.Exports, size: u32, id: string, counter: ptr);
 	public constructor(module: WebAssembly_.Module, memory: WebAssembly_.Memory, exports: SharedMemory.Exports, size: u32, id?: string, counter?: ptr) {
-		this.id = id ?? (globalThis as { crypto: { randomUUID(): string } }).crypto.randomUUID();
+		this.id = id ?? (globalThis as unknown as { crypto: { randomUUID(): string } }).crypto.randomUUID();
 		this.module = module;
 		this.memory = memory;
 		this.exports = exports;
