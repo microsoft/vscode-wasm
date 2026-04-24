@@ -48,7 +48,6 @@
 		"simulation": "node ./lib/node/test/arrayMain.js"
 	},
 	"dependencies": {
-		"uuid": "^14.0.0",
 		"vscode-uri": "^3.1.0"
 	},
 	"devDependencies": {

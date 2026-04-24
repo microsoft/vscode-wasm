@@ -28,7 +28,6 @@
 	"browser": "./dist/web/extension.js",
 	"activationEvents": [],
 	"dependencies": {
-		"uuid": "^14.0.0",
 		"vscode-uri": "^3.1.0"
 	},
 	"devDependencies": {

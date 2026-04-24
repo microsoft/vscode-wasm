@@ -5,9 +5,9 @@
 import * as fs from 'node:fs/promises';
 import * as os from 'node:os';
 import * as path from 'node:path';
+import { randomUUID } from 'node:crypto';
 
 import fp from 'find-process';
-import * as uuid from 'uuid';
 
 import { runTests } from '@vscode/test-electron';
 
@@ -18,7 +18,7 @@ async function main() {
 		const extensionDevelopmentPath = path.resolve(__dirname, '../../../');
 		const extensionTestsPath = path.resolve(__dirname, './index');
 
-		testDir = path.join(os.tmpdir(), uuid.v4());
+		testDir = path.join(os.tmpdir(), randomUUID());
 		await fs.mkdir(testDir, { recursive: true });
 		const userDataDir = path.join(testDir, 'userData');
 		await fs.mkdir(userDataDir);
