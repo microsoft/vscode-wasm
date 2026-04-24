@@ -3,7 +3,6 @@
  * Licensed under the MIT License. See License.txt in the project root for license information.
  * ------------------------------------------------------------------------------------------ */
 /// <reference path="../../typings/webAssemblyCommon.d.ts" preserve="true"/>
-import * as uuid from 'uuid';
 
 import { $exports, $imports, Alignment, ComponentModelTrap, Memory, MemoryRange, ReadonlyMemoryRange, WasmContext, type Code, type JType, type MainConnection, type Options, type WasmType, type WorkerConnection, type WorldType } from './componentModel';
 import { CapturedPromise } from './promises';
@@ -34,7 +33,7 @@ class ConnectionMemory implements Memory {
 			sizeOrBuffer = 64 * 1024;
 		}
 		if (typeof sizeOrBuffer === 'number') {
-			this.id = uuid.v4();
+			this.id = (globalThis as unknown as { crypto: { randomUUID(): string } }).crypto.randomUUID();
 			this.buffer = new SharedArrayBuffer(sizeOrBuffer);
 			this.next = new Uint32Array(this.buffer, ConnectionMemory.Header.next.offset, 1);
 			this.next[0] = ConnectionMemory.Header.end.offset;

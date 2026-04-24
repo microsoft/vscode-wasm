@@ -2,9 +2,7 @@
  *  Copyright (c) Microsoft Corporation. All rights reserved.
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
-import * as uuid from 'uuid';
 import { Uri } from 'vscode';
-
 import RAL from './ral';
 import { MemoryFileSystem as ApiMemoryFileSystem, Readable, Writable } from './api';
 import { DeviceDriverKind, DeviceId, FileSystemDeviceDriver, NoSysDeviceDriver, ReaddirEntry, ReadonlyFileSystemDeviceDriver, WritePermDeniedDeviceDriver } from './deviceDriver';
@@ -105,7 +103,7 @@ type Node = FileNode | DirectoryNode | CharacterDeviceNode;
 
 export class MemoryFileSystem extends fs.BaseFileSystem<DirectoryNode, FileNode, CharacterDeviceNode> implements ApiMemoryFileSystem {
 
-	public readonly uri: Uri = Uri.from({ scheme: 'wasi-memfs', authority: uuid.v4() });
+	public readonly uri: Uri = Uri.from({ scheme: 'wasi-memfs', authority: (globalThis as unknown as { crypto: { randomUUID(): string } }).crypto.randomUUID() });
 
 	constructor() {
 		super(DirectoryNode.create(undefined, 1n, '/', timeInNanoseconds(Date.now())));

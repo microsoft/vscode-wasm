@@ -5,7 +5,6 @@
 import RAL from '../ral';
 
 import assert from 'assert';
-import * as uuid from 'uuid';
 
 import { Clockid, Errno, Prestat, fd, Lookupflags, Oflags, Fdflags, rights, Rights, Filetype, Filestat, Ciovec, WasiError, Advise, fdstat, Fdstat, fdflags, Whence, Fstflags, Dirent } from '../wasi';
 import { Environment } from '../api';
@@ -25,6 +24,10 @@ const DirectoryBaseRights: rights = Rights.fd_fdstat_set_flags | Rights.path_cre
 		Rights.fd_filestat_get | Rights.fd_filestat_set_times | Rights.path_remove_directory | Rights.path_unlink_file |
 		Rights.path_symlink;
 const DirectoryInheritingRights: rights = DirectoryBaseRights | FileBaseRights;
+
+function generateUuid(): string {
+	return (globalThis as unknown as { crypto: { randomUUID(): string } }).crypto.randomUUID();
+}
 
 
 // namespace Timestamp {
@@ -342,7 +345,7 @@ suite(`Filesystem - ${memoryQualifier}`, () => {
 
 	test('fd_write - single ciovec', () => {
 		const memory = createMemory();
-		const filename = `/tmp/${uuid.v4()}`;
+		const filename = `/tmp/${generateUuid()}`;
 		const hw = 'Hello World';
 		const fd = FileSystem.createFile(memory, rootFd, filename);
 		const ciovecs = memory.allocStructArray(1, Ciovec);
@@ -362,7 +365,7 @@ suite(`Filesystem - ${memoryQualifier}`, () => {
 
 	test('path_open - truncate file', () => {
 		const memory = createMemory();
-		const filename = `/tmp/${uuid.v4()}`;
+		const filename = `/tmp/${generateUuid()}`;
 		FileSystem.close(FileSystem.createFile(memory, rootFd, filename, 'Hello World'));
 		const fd = memory.allocUint32();
 		const p = memory.allocString(filename);
@@ -376,7 +379,7 @@ suite(`Filesystem - ${memoryQualifier}`, () => {
 
 	test('path_open - fail if file exists', () => {
 		const memory = createMemory();
-		const filename = `/tmp/${uuid.v4()}`;
+		const filename = `/tmp/${generateUuid()}`;
 		FileSystem.close(FileSystem.createFile(memory, rootFd, filename, 'Hello World'));
 		const fd = memory.allocUint32(0);
 		const p = memory.allocString(filename);
@@ -386,7 +389,7 @@ suite(`Filesystem - ${memoryQualifier}`, () => {
 
 	test('path_open - fail if not directory', () => {
 		const memory = createMemory();
-		const filename = `/tmp/${uuid.v4()}`;
+		const filename = `/tmp/${generateUuid()}`;
 		FileSystem.close(FileSystem.createFile(memory, rootFd, filename, 'Hello World'));
 		const fd = memory.allocUint32(0);
 		const p = memory.allocString(filename);
@@ -407,7 +410,7 @@ suite(`Filesystem - ${memoryQualifier}`, () => {
 
 	test('path_open - append mode', () => {
 		const memory = createMemory();
-		const filename = `/tmp/${uuid.v4()}`;
+		const filename = `/tmp/${generateUuid()}`;
 		FileSystem.close(FileSystem.createFile(memory, rootFd, filename, 'Hello'));
 		const fd = memory.allocUint32(0);
 		const p = memory.allocString(filename);
@@ -421,7 +424,7 @@ suite(`Filesystem - ${memoryQualifier}`, () => {
 
 	test('fd_seek', () => {
 		const memory = createMemory();
-		const filename = `/tmp/${uuid.v4()}`;
+		const filename = `/tmp/${generateUuid()}`;
 		const hw = 'Hello World';
 		const fd = FileSystem.createFile(memory, rootFd, filename, hw);
 		const newOffset = memory.allocBigUint64();
@@ -442,7 +445,7 @@ suite(`Filesystem - ${memoryQualifier}`, () => {
 
 	test('fd_advise - sequential', () => {
 		const memory = createMemory();
-		const filename = `/tmp/${uuid.v4()}`;
+		const filename = `/tmp/${generateUuid()}`;
 		const fd = FileSystem.createFile(memory, rootFd, filename, 'Hello World');
 		// VS Code has no advise support. So all advises should result in success
 		const errno = wasi.fd_advise(fd, 0n, 3n, Advise.sequential);
@@ -452,7 +455,7 @@ suite(`Filesystem - ${memoryQualifier}`, () => {
 
 	test('fd_advise - random', () => {
 		const memory = createMemory();
-		const filename = `/tmp/${uuid.v4()}`;
+		const filename = `/tmp/${generateUuid()}`;
 		const fd = FileSystem.createFile(memory, rootFd, filename, 'Hello World');
 		// VS Code has no advise support. So all advises should result in success
 		const errno = wasi.fd_advise(fd, 0n, 3n, Advise.random);
@@ -462,7 +465,7 @@ suite(`Filesystem - ${memoryQualifier}`, () => {
 
 	test('fd_advise - willneed', () => {
 		const memory = createMemory();
-		const filename = `/tmp/${uuid.v4()}`;
+		const filename = `/tmp/${generateUuid()}`;
 		const fd = FileSystem.createFile(memory, rootFd, filename, 'Hello World');
 		// VS Code has no advise support. So all advises should result in success
 		const errno = wasi.fd_advise(fd, 0n, 3n, Advise.willneed);
@@ -472,7 +475,7 @@ suite(`Filesystem - ${memoryQualifier}`, () => {
 
 	test('fd_advise - dontneed', () => {
 		const memory = createMemory();
-		const filename = `/tmp/${uuid.v4()}`;
+		const filename = `/tmp/${generateUuid()}`;
 		const fd = FileSystem.createFile(memory, rootFd, filename, 'Hello World');
 		// VS Code has no advise support. So all advises should result in success
 		const errno = wasi.fd_advise(fd, 0n, 3n, Advise.dontneed);
@@ -482,7 +485,7 @@ suite(`Filesystem - ${memoryQualifier}`, () => {
 
 	test('fd_advise - noreuse', () => {
 		const memory = createMemory();
-		const filename = `/tmp/${uuid.v4()}`;
+		const filename = `/tmp/${generateUuid()}`;
 		const fd = FileSystem.createFile(memory, rootFd, filename, 'Hello World');
 		// VS Code has no advise support. So all advises should result in success
 		const errno = wasi.fd_advise(fd, 0n, 3n, Advise.noreuse);
@@ -492,7 +495,7 @@ suite(`Filesystem - ${memoryQualifier}`, () => {
 
 	test('fd_allocate - start', () => {
 		const memory = createMemory();
-		const filename = `/tmp/${uuid.v4()}`;
+		const filename = `/tmp/${generateUuid()}`;
 		FileSystem.createFileClose(memory, rootFd, filename, 'Hello World');
 		const fd = FileSystem.openFile(memory, rootFd, filename);
 		const before = FileSystem.stat(memory, fd);
@@ -510,7 +513,7 @@ suite(`Filesystem - ${memoryQualifier}`, () => {
 
 	test('fd_allocate - middle', () => {
 		const memory = createMemory();
-		const filename = `/tmp/${uuid.v4()}`;
+		const filename = `/tmp/${generateUuid()}`;
 		FileSystem.createFileClose(memory, rootFd, filename, 'Hello World');
 		const fd = FileSystem.openFile(memory, rootFd, filename);
 		const before = FileSystem.stat(memory, fd);
@@ -528,7 +531,7 @@ suite(`Filesystem - ${memoryQualifier}`, () => {
 
 	test('fd_allocate - end', () => {
 		const memory = createMemory();
-		const filename = `/tmp/${uuid.v4()}`;
+		const filename = `/tmp/${generateUuid()}`;
 		FileSystem.createFileClose(memory, rootFd, filename, 'Hello World');
 		const fd = FileSystem.openFile(memory, rootFd, filename);
 		const before = FileSystem.stat(memory, fd);
@@ -548,7 +551,7 @@ suite(`Filesystem - ${memoryQualifier}`, () => {
 		// In VS Code data sync writes `blindly` to disk since no other
 		// options are available.
 		const memory = createMemory();
-		const filename = `/tmp/${uuid.v4()}`;
+		const filename = `/tmp/${generateUuid()}`;
 		const fd = FileSystem.createFile(memory, rootFd, filename, 'Hello World');
 		const before = FileSystem.stat(memory, fd);
 		await new Promise(resolve => RAL().timer.setTimeout(resolve, 5));
@@ -562,7 +565,7 @@ suite(`Filesystem - ${memoryQualifier}`, () => {
 
 	test('fd_fdstat_get', () => {
 		const memory = createMemory();
-		const filename = `/tmp/${uuid.v4()}`;
+		const filename = `/tmp/${generateUuid()}`;
 		const fd = FileSystem.createFile(memory, rootFd, filename, 'Hello World');
 		const fdstat: fdstat = memory.allocStruct(Fdstat);
 		const errno = wasi.fd_fdstat_get(fd, fdstat.$ptr);
@@ -584,7 +587,7 @@ suite(`Filesystem - ${memoryQualifier}`, () => {
 			assert.notStrictEqual(fdstat.fs_flags & flags, 0);
 		}
 		const memory = createMemory();
-		const filename = `/tmp/${uuid.v4()}`;
+		const filename = `/tmp/${generateUuid()}`;
 		const fd = FileSystem.createFile(memory, rootFd, filename);
 		setFlags(memory, fd, Fdflags.dsync);
 		setFlags(memory, fd, Fdflags.nonblock);
@@ -595,7 +598,7 @@ suite(`Filesystem - ${memoryQualifier}`, () => {
 
 	test('fd_filestat_set_size', () => {
 		const memory = createMemory();
-		const filename = `/tmp/${uuid.v4()}`;
+		const filename = `/tmp/${generateUuid()}`;
 		const content = 'Hello World';
 		const fd = FileSystem.createFile(memory, rootFd, filename, content);
 		const stat = FileSystem.stat(memory, fd);
@@ -616,7 +619,7 @@ suite(`Filesystem - ${memoryQualifier}`, () => {
 
 	test('fd_filestat_set_times', () => {
 		const memory = createMemory();
-		const filename = `/tmp/${uuid.v4()}`;
+		const filename = `/tmp/${generateUuid()}`;
 		const content = 'Hello World';
 		const fd = FileSystem.createFile(memory, rootFd, filename, content);
 		const errno = wasi.fd_filestat_set_times(fd, 10n, 10n, Fstflags.atim | Fstflags.mtim);
@@ -626,7 +629,7 @@ suite(`Filesystem - ${memoryQualifier}`, () => {
 
 	test('fd_pread', () => {
 		const memory = createMemory();
-		const filename = `/tmp/${uuid.v4()}`;
+		const filename = `/tmp/${generateUuid()}`;
 		const content = 'Hello World';
 		FileSystem.createFileClose(memory, rootFd, filename, content);
 		const fd = FileSystem.openFile(memory, rootFd, filename);
@@ -645,7 +648,7 @@ suite(`Filesystem - ${memoryQualifier}`, () => {
 
 	test('path_create_directory', () => {
 		const memory = createMemory();
-		const folderName = `/tmp/${uuid.v4()}`;
+		const folderName = `/tmp/${generateUuid()}`;
 		const path = memory.allocString(folderName);
 		let errno = wasi.path_create_directory(rootFd, path.$ptr, path.byteLength);
 		assert.strictEqual(errno, Errno.success);
@@ -733,7 +736,7 @@ suite(`Filesystem - ${memoryQualifier}`, () => {
 
 	test('fd_sync', async () => {
 		const memory = createMemory();
-		const filename = `/tmp/${uuid.v4()}`;
+		const filename = `/tmp/${generateUuid()}`;
 		const content = 'Hello World';
 		const fd = FileSystem.createFile(memory, rootFd, filename, content);
 		const before = FileSystem.stat(memory, fd);
@@ -746,7 +749,7 @@ suite(`Filesystem - ${memoryQualifier}`, () => {
 
 	test('fd_tell', () => {
 		const memory = createMemory();
-		const filename = `/tmp/${uuid.v4()}`;
+		const filename = `/tmp/${generateUuid()}`;
 		const content = 'Hello World';
 		const fd = FileSystem.createFile(memory, rootFd, filename, content);
 		const newOffset = memory.allocBigUint64();
@@ -760,7 +763,7 @@ suite(`Filesystem - ${memoryQualifier}`, () => {
 
 	test('fd_write - multiple ciovec', () => {
 		const memory = createMemory();
-		const filename = `/tmp/${uuid.v4()}`;
+		const filename = `/tmp/${generateUuid()}`;
 		const hw = ['Hello ', 'World ', '!!!'];
 		const fd = FileSystem.createFile(memory, rootFd, filename);
 		const ciovecs = memory.allocStructArray(3, Ciovec);
@@ -799,7 +802,7 @@ suite(`Filesystem - ${memoryQualifier}`, () => {
 
 	test('path_filestat_set_times', () => {
 		const memory = createMemory();
-		const filename = `/tmp/${uuid.v4()}`;
+		const filename = `/tmp/${generateUuid()}`;
 		const content = 'Hello World';
 		const fd = FileSystem.createFile(memory, rootFd, filename, content);
 		FileSystem.close(fd);
@@ -810,19 +813,19 @@ suite(`Filesystem - ${memoryQualifier}`, () => {
 
 	test('path_link', () => {
 		const memory = createMemory();
-		const filename = `/tmp/${uuid.v4()}`;
+		const filename = `/tmp/${generateUuid()}`;
 		const content = 'Hello World';
 		const fd = FileSystem.createFile(memory, rootFd, filename, content);
 		FileSystem.close(fd);
 		const oldPath = memory.allocString(filename);
-		const newPath = memory.allocString(`/tmp/${uuid.v4()}`);
+		const newPath = memory.allocString(`/tmp/${generateUuid()}`);
 		const errno = wasi.path_link(rootFd, Lookupflags.none, oldPath.$ptr, oldPath.byteLength, rootFd, newPath.$ptr, newPath.byteLength);
 		assert.strictEqual(errno, Errno.nosys);
 	});
 
 	test('path_readlink', () => {
 		const memory = createMemory();
-		const filename = `/tmp/${uuid.v4()}`;
+		const filename = `/tmp/${generateUuid()}`;
 		const content = 'Hello World';
 		const fd = FileSystem.createFile(memory, rootFd, filename, content);
 		FileSystem.close(fd);
@@ -835,7 +838,7 @@ suite(`Filesystem - ${memoryQualifier}`, () => {
 
 	test('path_remove_directory', () => {
 		const memory = createMemory();
-		const foldername = `/tmp/${uuid.v4()}`;
+		const foldername = `/tmp/${generateUuid()}`;
 		FileSystem.createFolder(memory, rootFd, foldername);
 		const path = memory.allocString(foldername);
 		const filestat = memory.allocStruct(Filestat);
@@ -850,12 +853,12 @@ suite(`Filesystem - ${memoryQualifier}`, () => {
 
 	test('path_rename', () => {
 		const memory = createMemory();
-		const filename = `/tmp/${uuid.v4()}`;
+		const filename = `/tmp/${generateUuid()}`;
 		const content = 'Hello World';
 		const fd = FileSystem.createFile(memory, rootFd, filename, content);
 		FileSystem.close(fd);
 		const oldPath = memory.allocString(filename);
-		const newPath = memory.allocString(`/tmp/${uuid.v4()}`);
+		const newPath = memory.allocString(`/tmp/${generateUuid()}`);
 		let errno = wasi.path_rename(rootFd, oldPath.$ptr, oldPath.byteLength, rootFd, newPath.$ptr, newPath.byteLength);
 		assert.strictEqual(errno, Errno.success);
 		const filestat = memory.allocStruct(Filestat);
@@ -867,11 +870,11 @@ suite(`Filesystem - ${memoryQualifier}`, () => {
 
 	test('path_rename - open file descriptor', () => {
 		const memory = createMemory();
-		const filename = `/tmp/${uuid.v4()}`;
+		const filename = `/tmp/${generateUuid()}`;
 		const content = 'Hello World';
 		const fd = FileSystem.createFile(memory, rootFd, filename, content);
 		const oldPath = memory.allocString(filename);
-		const newPath = memory.allocString(`/tmp/${uuid.v4()}`);
+		const newPath = memory.allocString(`/tmp/${generateUuid()}`);
 		let errno = wasi.path_rename(rootFd, oldPath.$ptr, oldPath.byteLength, rootFd, newPath.$ptr, newPath.byteLength);
 		assert.strictEqual(errno, Errno.success);
 		const stat = FileSystem.stat(memory, fd);
@@ -883,15 +886,15 @@ suite(`Filesystem - ${memoryQualifier}`, () => {
 		// VS Code has no symlink support. So we can only test
 		// that the call is processed correctly.
 		const memory = createMemory();
-		const oldPath = memory.allocString(`/tmp/${uuid.v4()}`);
-		const newPath = memory.allocString(`/tmp/${uuid.v4()}`);
+		const oldPath = memory.allocString(`/tmp/${generateUuid()}`);
+		const newPath = memory.allocString(`/tmp/${generateUuid()}`);
 		const errno = wasi.path_symlink(oldPath.$ptr, oldPath.byteLength, rootFd, newPath.$ptr, newPath.byteLength);
 		assert.strictEqual(errno, Errno.nosys);
 	});
 
 	test('path_unlink_file', () => {
 		const memory = createMemory();
-		const filename = `/tmp/${uuid.v4()}`;
+		const filename = `/tmp/${generateUuid()}`;
 		const content = 'Hello World';
 		const fd = FileSystem.createFile(memory, rootFd, filename, content);
 		FileSystem.close(fd);
@@ -905,7 +908,7 @@ suite(`Filesystem - ${memoryQualifier}`, () => {
 
 	test('path_unlink_file - open file descriptor', () => {
 		const memory = createMemory();
-		const filename = `/tmp/${uuid.v4()}`;
+		const filename = `/tmp/${generateUuid()}`;
 		const content = 'Hello World';
 		const fd = FileSystem.createFile(memory, rootFd, filename, content);
 		const newOffset = memory.allocBigUint64();

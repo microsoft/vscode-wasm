@@ -2,7 +2,6 @@
  *  Copyright (c) Microsoft Corporation. All rights reserved.
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
-import * as uuid from 'uuid';
 import RAL from './ral';
 
 // Type arrays are stored either little or big endian depending on the platform.
@@ -497,7 +496,7 @@ export namespace Memory {
 			if (exports.memory === undefined || exports.cabi_realloc === undefined) {
 				throw new MemoryError('The exports object must contain a memory object and a cabi_realloc function.');
 			}
-			this.id = id ?? uuid.v4();
+			this.id = id ?? (globalThis as unknown as { crypto: { randomUUID(): string } }).crypto.randomUUID();
 			this.memory = exports.memory;
 			this.cabi_realloc = exports.cabi_realloc;
 		}
