@@ -3,6 +3,8 @@
  * Licensed under the MIT License. See License.txt in the project root for license information.
  * ------------------------------------------------------------------------------------------ */
 
+import { randomUUID } from 'node:crypto';
+
 import { Event, EventEmitter, Pseudoterminal, Uri } from 'vscode';
 
 import { RAL } from '@vscode/sync-api-common';
@@ -230,7 +232,7 @@ class ServiceTerminalImpl implements ServicePseudoTerminal, CharacterDeviceDrive
 		this._onAnyKey = new EventEmitter<void>;
 		this.onAnyKey = this._onAnyKey.event;
 
-		const id = this.id = (globalThis as unknown as { crypto: { randomUUID(): string } }).crypto.randomUUID();
+		const id = this.id = randomUUID();
 		this.encoder = RAL().TextEncoder.create();
 		this.decoder = RAL().TextDecoder.create();
 
