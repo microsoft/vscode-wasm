@@ -24,7 +24,7 @@ extends:
   template: azure-pipelines/extension/stable.yml@templates
   parameters:
     generateNotice: false
-    nodeVersion: 16.17.1
+    nodeVersion: 22.15.0
     buildSteps:
       - script: |
           npm ci

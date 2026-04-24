@@ -43,12 +43,11 @@
 	"dependencies": {
 		"yargs": "^17.7.2",
 		"semver": "^7.7.2",
-		"uuid": "^11.1.0"
+		"uuid": "^14.0.0"
 	},
 	"devDependencies": {
 		"@types/yargs": "^17.0.33",
-		"@types/semver": "^7.7.0",
-		"@types/uuid": "^10.0.0"
+		"@types/semver": "^7.7.0"
 	},
 	"scripts": {
 		"prepublishOnly": "echo \"⛔ Can only publish from a secure pipeline ⛔\" && node ../build/npm/fail",
