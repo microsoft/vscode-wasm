@@ -3,9 +3,9 @@
         "composite": true,
         "module": "Node16",
         "moduleResolution": "Node16",
-        "target": "es2022",
+        "target": "es2024",
         "lib": [
-            "es2022"
+            "es2024"
         ],
         "rootDir": "./src",
         "types": [],

@@ -36,7 +36,7 @@ const _ril: RIL = Object.freeze<RIL>(Object.assign({}, _RAL(), {
 		async createFrom(constructor: SharedMemory.Constructor, transferable: SharedMemory.Transferable): Promise<SharedMemory> {
 			const instance = new WebAssembly.Instance(transferable.module, {
 				env: {
-					memory: transferable.memory
+					memory: transferable.memory as any
 				},
 				wasi_snapshot_preview1: {
 					sched_yield: () => 0
@@ -69,15 +69,19 @@ const _ril: RIL = Object.freeze<RIL>(Object.assign({}, _RAL(), {
 		getArgs(): string[] {
 			return [];
 		},
-		get exitCode(): number | undefined {
+		get exitCode(): string | number | undefined | null {
 			return 0;
 		},
-		set exitCode(_value: number | undefined) {
+		set exitCode(_value: string | number | undefined | null) {
 		}
 	}),
 	WebAssembly: Object.freeze({
-		compile(bytes: ArrayBufferView | ArrayBuffer): Promise<WebAssembly.Module> {
-			return WebAssembly.compile(bytes);
+		compile(bytes: Uint8Array): Promise<WebAssembly.Module> {
+			if (bytes.buffer instanceof SharedArrayBuffer) {
+				return WebAssembly.compile(bytes.slice(0));
+			} else {
+				return WebAssembly.compile(bytes.buffer);
+			}
 		},
 		instantiate(module: WebAssembly.Module, imports: Record<string, any>): Promise<WebAssembly.Instance> {
 			return WebAssembly.instantiate(module, imports);

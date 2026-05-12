@@ -5,9 +5,9 @@
 import * as fs from 'node:fs/promises';
 import * as os from 'node:os';
 import * as path from 'node:path';
+import * as crypto from 'node:crypto';
 
 import fp from 'find-process';
-import * as uuid from 'uuid';
 
 import { runTests } from '@vscode/test-electron';
 
@@ -17,8 +17,7 @@ async function main() {
 		process.env['WASM_WASI_BUNDLED_WORKERS'] = 'false';
 		const extensionDevelopmentPath = path.resolve(__dirname, '../../../');
 		const extensionTestsPath = path.resolve(__dirname, './index');
-
-		testDir = path.join(os.tmpdir(), uuid.v4());
+		testDir = path.join(os.tmpdir(), crypto.randomUUID());
 		await fs.mkdir(testDir, { recursive: true });
 		const userDataDir = path.join(testDir, 'userData');
 		await fs.mkdir(userDataDir);

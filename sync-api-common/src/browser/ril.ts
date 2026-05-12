@@ -5,8 +5,8 @@
 
 import RAL from '../common/ral';
 
-import type { Disposable }  from '../common/disposable';
 import type { Params, RequestType } from '../common/connection';
+import type { Disposable } from '../common/disposable';
 import { ClientConnection, ServiceConnection } from './connection';
 
 interface RIL extends RAL {
@@ -56,6 +56,16 @@ const _ril: RIL = Object.freeze<RIL>({
 			const handle =  setInterval(callback, ms, ...args);
 			return { dispose: () => clearInterval(handle) };
 		},
+	}),
+	crypto: Object.freeze({
+		randomUUID(): string {
+			if (crypto.randomUUID) {
+				return crypto.randomUUID();
+			}
+			return '10000000-1000-4000-8000-100000000000'.replace(/[018]/g, c =>
+				(+c ^ crypto.getRandomValues(new Uint8Array(1))[0] & 15 >> +c / 4).toString(16)
+			);
+		}
 	}),
 	$testing: Object.freeze({
 		ClientConnection: Object.freeze({

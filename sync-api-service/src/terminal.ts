@@ -5,7 +5,6 @@
 
 import { Event, EventEmitter, Pseudoterminal, Uri } from 'vscode';
 
-import * as uuid from 'uuid';
 
 import { RAL } from '@vscode/sync-api-common';
 import { CharacterDeviceDriver, FileDescriptorDescription } from './device';
@@ -225,14 +224,14 @@ class ServiceTerminalImpl implements ServicePseudoTerminal, CharacterDeviceDrive
 		this.onDidClose = this._onDidClose.event;
 		this._onDidWrite = new EventEmitter<string>();
 		this.onDidWrite = this._onDidWrite.event;
-		this._onDidChangeName = new EventEmitter<string>;
+		this._onDidChangeName = new EventEmitter<string>();
 		this.onDidChangeName = this._onDidChangeName.event;
 		this._onDidCtrlC = new EventEmitter<void>;
 		this.onDidCtrlC = this._onDidCtrlC.event;
 		this._onAnyKey = new EventEmitter<void>;
 		this.onAnyKey = this._onAnyKey.event;
 
-		const id = this.id = uuid.v4();
+		const id = this.id = RAL().crypto.randomUUID();
 		this.encoder = RAL().TextEncoder.create();
 		this.decoder = RAL().TextDecoder.create();
 

@@ -23,7 +23,7 @@ export namespace wasi {
 
 export class Memory {
 
-	private readonly raw: ArrayBuffer;
+	private readonly raw: ArrayBufferLike;
 	private readonly dataView: DataView;
 	private index: number;
 	private readonly encoder: RAL.TextEncoder;
@@ -37,7 +37,7 @@ export class Memory {
 		this.decoder = RAL().TextDecoder.create();
 	}
 
-	get buffer(): ArrayBuffer {
+	get buffer(): ArrayBufferLike {
 		return this.raw;
 	}
 
@@ -45,7 +45,7 @@ export class Memory {
 		throw new WasiError(Errno.nosys);
 	}
 
-	public getRaw(): ArrayBuffer {
+	public getRaw(): ArrayBufferLike {
 		return this.raw;
 	}
 

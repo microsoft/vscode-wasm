@@ -3,6 +3,7 @@
  * Licensed under the MIT License. See License.txt in the project root for license information.
  * ------------------------------------------------------------------------------------------ */
 /// <reference path="../../typings/webAssemblyNode.d.ts" preserve="true"/>
+import * as crypto from 'node:crypto';
 import { TextDecoder } from 'util';
 import { Worker, parentPort } from 'worker_threads';
 
@@ -43,6 +44,11 @@ const _ril: RIL = Object.freeze<RIL>({
 			return { dispose: () => clearInterval(handle) };
 		}
 	}),
+	crypto: Object.freeze({
+		randomUUID(): string {
+			return crypto.randomUUID();
+		}
+	}),
 	Connection: Object.freeze({
 		async createWorker(port: unknown, world: WorldType, timeout?: number): Promise<WorkerConnection> {
 			if (port === undefined) {
@@ -69,15 +75,15 @@ const _ril: RIL = Object.freeze<RIL>({
 		getArgs(): string[] {
 			return process.argv.slice(2);
 		},
-		get exitCode(): number | undefined {
+		get exitCode(): number | string | null | undefined {
 			return process.exitCode;
 		},
-		set exitCode(value: number | undefined) {
+		set exitCode(value: number | string| null | undefined) {
 			process.exitCode = value;
 		}
 	}),
 	WebAssembly: Object.freeze({
-		compile(bytes: ArrayBufferView | ArrayBuffer): Promise<WebAssembly.Module> {
+		compile(bytes: Uint8Array): Promise<WebAssembly.Module> {
 			return WebAssembly.compile(bytes);
 		},
 		instantiate(module: WebAssembly.Module, imports: Record<string, any>): Promise<WebAssembly.Instance> {

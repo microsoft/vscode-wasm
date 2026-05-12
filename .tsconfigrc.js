@@ -37,8 +37,8 @@ const general = {
 	compilerOptions: {
 		module: "Node16",
 		moduleResolution: "Node16",
-		target: 'es2022',
-		lib: [ 'es2022' ],
+		target: 'es2024',
+		lib: [ 'es2024' ],
 	}
 };
 
@@ -106,7 +106,7 @@ const testbedOptions = {
 	compilerOptions: {
 		rootDir: ".",
 		skipLibCheck: true,
-		lib: [ "es2022", "webworker"],
+		lib: [ "es2024", "webworker"],
 		types: ["node", "vscode"],
 		module: "Node16",
 		moduleResolution: "Node16",

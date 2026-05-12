@@ -2,12 +2,13 @@
  * Copyright (c) Microsoft Corporation. All rights reserved.
  * Licensed under the MIT License. See License.txt in the project root for license information.
  * ------------------------------------------------------------------------------------------ */
+import * as crypto from 'crypto';
 import { TextDecoder } from 'util';
 import { parentPort, Worker } from 'worker_threads';
 
-import RAL from '../common/ral';
-import type { Disposable } from '../common/disposable';
 import type { Params, RequestType } from '../common/connection';
+import type { Disposable } from '../common/disposable';
+import RAL from '../common/ral';
 import { ClientConnection, ServiceConnection } from './connection';
 
 interface RIL extends RAL {
@@ -54,6 +55,11 @@ const _ril: RIL = Object.freeze<RIL>({
 		setInterval(callback: (...args: any[]) => void, ms: number, ...args: any[]): Disposable {
 			const handle = setInterval(callback, ms, ...args);
 			return { dispose: () => clearInterval(handle) };
+		}
+	}),
+	crypto: Object.freeze({
+		randomUUID(): string {
+			return crypto.randomUUID();
 		}
 	}),
 	$testing: Object.freeze({
