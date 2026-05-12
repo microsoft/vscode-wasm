@@ -3,8 +3,8 @@
  * Licensed under the MIT License. See License.txt in the project root for license information.
  * ------------------------------------------------------------------------------------------ */
 
+import type { ClientConnection, Params, RequestType, ServiceConnection } from './connection';
 import { Disposable } from './disposable';
-import type { RequestType, ClientConnection, ServiceConnection, Params } from './connection';
 
 interface _TextEncoder {
 	encode(input?: string): Uint8Array;
@@ -46,6 +46,10 @@ interface RAL {
 		setTimeout(callback: (...args: any[]) => void, ms: number, ...args: any[]): Disposable;
 		setImmediate(callback: (...args: any[]) => void, ...args: any[]): Disposable;
 		setInterval(callback: (...args: any[]) => void, ms: number, ...args: any[]): Disposable;
+	};
+
+	readonly crypto: {
+		randomUUID(): string;
 	};
 
 	readonly $testing: {

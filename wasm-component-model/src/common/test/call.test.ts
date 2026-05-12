@@ -10,7 +10,7 @@ class Memory implements IMemory {
 
 
 	public readonly id: string;
-	public readonly buffer: ArrayBuffer;
+	public readonly buffer: ArrayBufferLike;
 
 	private index: number;
 

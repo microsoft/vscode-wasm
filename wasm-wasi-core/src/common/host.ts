@@ -3,19 +3,61 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 import { cstring, ptr, size, u32, u64, u8 } from './baseTypes';
-import {
-	fd, errno, Errno, lookupflags, oflags, rights, fdflags, dircookie, filesize, advise, filedelta, whence, clockid, timestamp,
-	fstflags, exitcode, WasiError, event, subscription, riflags, siflags, sdflags, dirent, ciovec, iovec, fdstat, filestat, prestat,
-	args_sizes_get, args_get, clock_res_get, clock_time_get, environ_sizes_get, environ_get, fd_advise, fd_allocate, fd_close, fd_datasync,
-	fd_fdstat_set_flags, fd_fdstat_get, fd_filestat_get, fd_filestat_set_size, fd_filestat_set_times, fd_pread, fd_prestat_get, fd_prestat_dir_name,
-	fd_pwrite, fd_read, fd_readdir, fd_seek, fd_renumber, fd_sync, fd_tell, fd_write, path_create_directory, path_filestat_get, path_filestat_set_times,
-	path_link, path_open, path_readlink, path_remove_directory, path_rename, path_symlink, path_unlink_file, poll_oneoff, proc_exit, sched_yield,
-	random_get, sock_accept, sock_shutdown, thread_spawn, thread_exit
-} from './wasi';
-import { ParamKind, WasiFunctions, WasiFunctionSignature, WasiFunction, MemoryTransfer, ReverseTransfer } from './wasiMeta';
 import { Offsets, WorkerMessage } from './connection';
-import { WASI } from './wasi';
 import { TraceMessage } from './trace';
+import {
+	advise,
+	args_get,
+	args_sizes_get,
+	ciovec,
+	clock_res_get, clock_time_get,
+	clockid,
+	dircookie,
+	dirent,
+	environ_get,
+	environ_sizes_get,
+	errno, Errno,
+	event,
+	exitcode,
+	fd,
+	fd_advise, fd_allocate, fd_close, fd_datasync,
+	fd_fdstat_get,
+	fd_fdstat_set_flags,
+	fd_filestat_get, fd_filestat_set_size, fd_filestat_set_times, fd_pread,
+	fd_prestat_dir_name,
+	fd_prestat_get,
+	fd_pwrite, fd_read, fd_readdir,
+	fd_renumber,
+	fd_seek,
+	fd_sync, fd_tell, fd_write,
+	fdflags,
+	fdstat,
+	filedelta,
+	filesize,
+	filestat,
+	fstflags,
+	iovec,
+	lookupflags, oflags,
+	path_create_directory, path_filestat_get, path_filestat_set_times,
+	path_link, path_open, path_readlink, path_remove_directory, path_rename, path_symlink, path_unlink_file, poll_oneoff,
+	prestat,
+	proc_exit,
+	random_get,
+	riflags,
+	rights,
+	sched_yield,
+	sdflags,
+	siflags,
+	sock_accept, sock_shutdown,
+	subscription,
+	thread_exit,
+	thread_spawn,
+	timestamp,
+	WASI,
+	WasiError,
+	whence
+} from './wasi';
+import { MemoryTransfer, ParamKind, ReverseTransfer, WasiFunction, WasiFunctions, WasiFunctionSignature } from './wasiMeta';
 
 export abstract class HostConnection {
 
@@ -29,7 +71,7 @@ export abstract class HostConnection {
 
 	public abstract destroy(): void;
 
-	public call(func: WasiFunction, args: (number | bigint)[], wasmMemory: ArrayBuffer, transfers?: MemoryTransfer): errno {
+	public call(func: WasiFunction, args: (number | bigint)[], wasmMemory: ArrayBufferLike, transfers?: MemoryTransfer): errno {
 		const signature = func.signature;
 		if (signature.params.length !== args.length) {
 			throw new WasiError(Errno.inval);
@@ -89,7 +131,7 @@ export abstract class HostConnection {
 		return new Uint16Array(paramBuffer, Offsets.errno_index, 1)[0];
 	}
 
-	private createCallArrays(name: string, signature: WasiFunctionSignature, args: (number | bigint)[], wasmMemory: ArrayBuffer, transfer: MemoryTransfer | undefined): [SharedArrayBuffer, SharedArrayBuffer, ReverseTransfer | undefined] {
+	private createCallArrays(name: string, signature: WasiFunctionSignature, args: (number | bigint)[], wasmMemory: ArrayBufferLike, transfer: MemoryTransfer | undefined): [SharedArrayBuffer, SharedArrayBuffer, ReverseTransfer | undefined] {
 		const paramBuffer = new SharedArrayBuffer(Offsets.header_size + signature.memorySize);
 		const paramView = new DataView(paramBuffer);
 		paramView.setUint32(Offsets.method_index, WasiFunctions.getIndex(name), true);
@@ -154,7 +196,7 @@ declare namespace WebAssembly {
 		set(index: number, value?: any): void;
 	}
 	interface Memory {
-		readonly buffer: ArrayBuffer;
+		readonly buffer: ArrayBufferLike;
 		grow(delta: number): number;
 	}
 	type ExportValue = Function | Global | Memory | Table;
@@ -171,7 +213,7 @@ declare namespace WebAssembly {
 
 export interface WasiHost extends WASI {
 	initialize: (instOrMemory: WebAssembly.Instance | WebAssembly.Memory) => void;
-	memory: () => ArrayBuffer;
+	memory: () => ArrayBufferLike;
 	thread_exit: (tid: u32) => void;
 }
 
@@ -183,7 +225,7 @@ export namespace WasiHost {
 		const args_size = { count: 0, bufferSize: 0 };
 		const environ_size = { count: 0, bufferSize: 0 };
 
-		function memory(): ArrayBuffer {
+		function memory(): ArrayBufferLike {
 			if ($memory !== undefined) {
 				return $memory.buffer;
 			}
@@ -220,7 +262,7 @@ export namespace WasiHost {
 					$memory = instOrMemory;
 				}
 			},
-			memory: (): ArrayBuffer => {
+			memory: (): ArrayBufferLike => {
 				return memory();
 			},
 			args_sizes_get: (argvCount_ptr: ptr<u32>, argvBufSize_ptr: ptr<u32>): errno => {

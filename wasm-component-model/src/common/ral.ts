@@ -43,6 +43,10 @@ interface RAL {
 		setInterval(callback: (...args: any[]) => void, ms: number, ...args: any[]): d.Disposable;
 	};
 
+	readonly crypto: {
+		randomUUID(): string;
+	};
+
 	readonly Connection: {
 		createMain(port: RAL.ConnectionPort): Promise<MainConnection>;
 		createWorker(port: RAL.ConnectionPort | undefined, world: WorldType, timeout?: number): Promise<WorkerConnection>;
@@ -51,7 +55,7 @@ interface RAL {
 	readonly Worker: {
 		getPort(): RAL.ConnectionPort;
 		getArgs(): string[];
-		exitCode: number | undefined;
+		exitCode: number | string| undefined | null;
 	};
 
 	readonly WebAssembly: {

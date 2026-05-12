@@ -6,9 +6,9 @@
 import fs from 'fs';
 import os from 'os';
 import path from 'path';
-import * as uuid from 'uuid';
 import find = require('find-process');
 
+import { RAL } from '@vscode/sync-api-common';
 import { runTests } from '@vscode/test-electron';
 
 function rimraf(location: string) {
@@ -29,7 +29,7 @@ function rimraf(location: string) {
 
 
 async function go() {
-	const testDir = path.join(os.tmpdir(), uuid.v4());
+	const testDir = path.join(os.tmpdir(), RAL().crypto.randomUUID());
 	try {
 		const extensionDevelopmentPath = path.join(__dirname, '..', '..');
 		const extensionTestsPath = __dirname;

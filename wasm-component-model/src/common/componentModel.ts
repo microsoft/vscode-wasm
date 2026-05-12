@@ -2,7 +2,6 @@
  *  Copyright (c) Microsoft Corporation. All rights reserved.
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
-import * as uuid from 'uuid';
 import RAL from './ral';
 
 // Type arrays are stored either little or big endian depending on the platform.
@@ -68,7 +67,7 @@ const align = Alignment.align;
 
 export interface Memory {
 	readonly id: string;
-	readonly buffer: ArrayBuffer;
+	readonly buffer: ArrayBufferLike;
 	alloc(align: Alignment, size: size): MemoryRange;
 	realloc(range: MemoryRange, align: Alignment, newSize: size): MemoryRange;
 	preAllocated(ptr: ptr, size: size): MemoryRange;
@@ -83,12 +82,12 @@ export class MemoryError extends ComponentModelTrap {
 }
 
 type ArrayClazz<T extends ArrayLike<number> & { set(array: ArrayLike<number>, offset?: number): void }> = {
-	new (buffer: ArrayBuffer, byteOffset: number, length: number): T;
+	new (buffer: ArrayBufferLike, byteOffset: number, length: number): T;
 	new (length: number): T;
 	BYTES_PER_ELEMENT: number;
 };
 type BigArrayClazz<T extends ArrayLike<bigint> & { set(array: ArrayLike<bigint>, offset?: number): void }> = {
-	new (buffer: ArrayBuffer, byteOffset: number, length: number): T;
+	new (buffer: ArrayBufferLike, byteOffset: number, length: number): T;
 	new (length: number): T;
 	BYTES_PER_ELEMENT: number;
 };
@@ -497,7 +496,7 @@ export namespace Memory {
 			if (exports.memory === undefined || exports.cabi_realloc === undefined) {
 				throw new MemoryError('The exports object must contain a memory object and a cabi_realloc function.');
 			}
-			this.id = id ?? uuid.v4();
+			this.id = id ?? RAL().crypto.randomUUID();
 			this.memory = exports.memory;
 			this.cabi_realloc = exports.cabi_realloc;
 		}
@@ -745,9 +744,9 @@ namespace WasmTypes {
 	}
 }
 
-export type FlatValuesIter = Iterator<WasmType, WasmType>;
+export type FlatValuesIter = Iterator<WasmType>;
 
-class CoerceValueIter implements Iterator<WasmType, WasmType> {
+class CoerceValueIter implements Iterator<WasmType> {
 
 	private index: number;
 
@@ -758,7 +757,7 @@ class CoerceValueIter implements Iterator<WasmType, WasmType> {
 		this.index = 0;
 	}
 
-	next(): IteratorResult<WasmType, WasmType> {
+	next(): IteratorResult<WasmType> {
 		const value = this.values.next();
 		if (value.done) {
 			return value;

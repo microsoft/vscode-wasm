@@ -50,6 +50,7 @@ interface RAL {
 
 	readonly crypto: {
 		randomGet(size: number): Uint8Array;
+		randomUUID(): string;
 	};
 
 	readonly path: {

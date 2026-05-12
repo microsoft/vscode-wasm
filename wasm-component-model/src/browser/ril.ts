@@ -54,6 +54,16 @@ const _ril: RIL = Object.freeze<RIL>({
 			return { dispose: () => clearInterval(handle) };
 		},
 	}),
+	crypto: Object.freeze({
+		randomUUID(): string {
+			if (crypto.randomUUID) {
+				return crypto.randomUUID();
+			}
+			return '10000000-1000-4000-8000-100000000000'.replace(/[018]/g, c =>
+				(+c ^ crypto.getRandomValues(new Uint8Array(1))[0] & 15 >> +c / 4).toString(16)
+			);
+		}
+	}),
 	Connection: Object.freeze({
 		async createWorker(port: unknown, world: WorldType, timeout?: number): Promise<WorkerConnection> {
 			if (port === undefined) {
@@ -85,8 +95,12 @@ const _ril: RIL = Object.freeze<RIL>({
 		}
 	}),
 	WebAssembly: Object.freeze({
-		compile(bytes: ArrayBufferView | ArrayBuffer): Promise<WebAssembly.Module> {
-			return WebAssembly.compile(bytes);
+		compile(bytes: Uint8Array): Promise<WebAssembly.Module> {
+			if (bytes.buffer instanceof SharedArrayBuffer) {
+				return WebAssembly.compile(bytes.slice(0));
+			} else {
+				return WebAssembly.compile(bytes.buffer);
+			}
 		},
 		instantiate(module: WebAssembly.Module, imports: Record<string, any>): Promise<WebAssembly.Instance> {
 			return WebAssembly.instantiate(module, imports);

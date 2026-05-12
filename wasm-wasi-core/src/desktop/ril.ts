@@ -58,6 +58,9 @@ const _ril: RIL = Object.freeze<RIL>({
 			const result = new Uint8Array(size);
 			crypto.randomFillSync(result);
 			return result;
+		},
+		randomUUID(): string {
+			return crypto.randomUUID();
 		}
 	}),
 	path: path.posix,
