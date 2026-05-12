@@ -25,7 +25,7 @@ interface RAL extends _RAL {
 	readonly Worker: {
 		getPort(): ConnectionPort;
 		getArgs(): string[];
-		exitCode: number | undefined;
+		exitCode: string | number | undefined | null;
 	};
 	readonly WebAssembly: {
 		compile(bytes: Uint8Array): Promise<WebAssembly_.Module>;
