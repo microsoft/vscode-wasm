@@ -10,6 +10,7 @@ import { LogOutputChannel, Uri } from 'vscode';
 
 import { ProcessOptions } from '../common/api';
 import { ptr, u32 } from '../common/baseTypes';
+import type { exitcode } from '../common/wasi';
 import type { ServiceMessage, StartMainMessage, StartThreadMessage, WorkerMessage } from '../common/connection';
 import { WasiProcess } from '../common/process';
 import RAL from '../common/ral';
@@ -111,7 +112,7 @@ export class NodeWasiProcess extends WasiProcess {
 		await this.cleanupFileDescriptors();
 	}
 
-	public async terminate(): Promise<number> {
+	public async terminate(exitCode?: exitcode): Promise<exitcode> {
 		let result = 0;
 		if (this.mainWorker !== undefined) {
 			result = await this.mainWorker.terminate();
@@ -119,7 +120,7 @@ export class NodeWasiProcess extends WasiProcess {
 		await this.cleanUpWorkers();
 		await this.destroyStreams();
 		await this.cleanupFileDescriptors();
-		return result;
+		return exitCode ?? result;
 	}
 
 	private async cleanUpWorkers(): Promise<void> {

@@ -13,6 +13,7 @@ import { MemoryFileSystem as MemoryFileSystemImpl } from './memoryFileSystemDriv
 import { WasiProcess as InternalWasiProcess } from './process';
 import { ReadableStream, WritableStream, WritableStreamEOT } from './streams';
 import { WasmPseudoterminalImpl } from './terminal';
+import { exitcode } from './wasi';
 
 export interface Environment {
 	[key: string]: string;
@@ -386,12 +387,12 @@ export interface WasmProcess {
 	/**
 	 * Runs the Wasm process.
 	 */
-	run(): Promise<number>;
+	run(): Promise<exitcode>;
 
 	/**
 	 * Terminate the Wasm process.
 	 */
-	 terminate(): Promise<number>;
+	terminate(exitCode?: exitcode): Promise<exitcode>;
 }
 
 export enum Filetype {
