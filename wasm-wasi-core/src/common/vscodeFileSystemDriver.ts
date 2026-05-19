@@ -5,6 +5,7 @@
 import { FileStat, FileType, workspace, Uri } from 'vscode';
 
 import RAL from './ral';
+import * as buffer from './buffer';
 import { LRUCache } from './linkedMap';
 import { u64, size } from './baseTypes';
 import {
@@ -520,42 +521,6 @@ export function create(deviceId: DeviceId, baseUri: Uri, readOnly: boolean = fal
 		return BigInt(timeInMilliseconds) * 1000000n;
 	}
 
-	function read(content: Uint8Array, offset: number, buffers: Uint8Array[]): size {
-		let totalBytesRead = 0;
-		for (const buffer of buffers) {
-			const toRead = Math.min(buffer.length, content.byteLength - offset);
-			buffer.set(content.subarray(offset, offset + toRead));
-			totalBytesRead += toRead;
-			if (toRead < buffer.length) {
-				break;
-			}
-			offset += toRead;
-		}
-		return totalBytesRead;
-	}
-
-	function write(content: Uint8Array, offset: number, buffers: Uint8Array[]): [Uint8Array, size] {
-		let bytesToWrite: size = 0;
-		for (const bytes of buffers) {
-			bytesToWrite += bytes.byteLength;
-		}
-
-		// Do we need to increase the buffer
-		if (offset + bytesToWrite > content.byteLength) {
-			const newContent = new Uint8Array(offset + bytesToWrite);
-			newContent.set(content);
-			content = newContent;
-		}
-
-		for (const bytes of buffers) {
-			content.set(bytes, offset);
-			offset += bytes.length;
-		}
-
-		return [content, bytesToWrite];
-	}
-
-
 	async function createOrTruncate(fileDescriptor: FileFileDescriptor): Promise<void> {
 		const content = new Uint8Array(0);
 		const inode = fs.getNode(fileDescriptor.inode, NodeKind.File);
@@ -674,12 +639,12 @@ export function create(deviceId: DeviceId, baseUri: Uri, readOnly: boolean = fal
 		async fd_pread(fileDescriptor: FileDescriptor, _offset: filesize, buffers: Uint8Array[]): Promise<size> {
 			const offset = BigInts.asNumber(_offset);
 			const content = await fs.getContent(fs.getNode(fileDescriptor.inode, NodeKind.File), vscode_fs);
-			return read(content, offset, buffers);
+			return buffer.read(content, offset, buffers);
 		},
 		async fd_pwrite(fileDescriptor: FileDescriptor, _offset: filesize, buffers: Uint8Array[]): Promise<number> {
 			const offset = BigInts.asNumber(_offset);
 			const inode = fs.getNode(fileDescriptor.inode, NodeKind.File);
-			const [newContent, bytesWritten] = write(await fs.getContent(inode, vscode_fs), offset, buffers);
+			const [newContent, bytesWritten] = buffer.write(await fs.getContent(inode, vscode_fs), offset, buffers);
 			await writeContent(inode, newContent);
 			return bytesWritten;
 		},
@@ -691,7 +656,7 @@ export function create(deviceId: DeviceId, baseUri: Uri, readOnly: boolean = fal
 
 			const content = await fs.getContent(fs.getNode(fileDescriptor.inode, NodeKind.File), vscode_fs);
 			const offset = fileDescriptor.cursor;
-			const totalBytesRead = read(content, offset, buffers);
+			const totalBytesRead = buffer.read(content, offset, buffers);
 			fileDescriptor.cursor = fileDescriptor.cursor + totalBytesRead;
 			return totalBytesRead;
 		},
@@ -754,7 +719,7 @@ export function create(deviceId: DeviceId, baseUri: Uri, readOnly: boolean = fal
 			if (Fdflags.appendOn(fileDescriptor.fdflags)) {
 				fileDescriptor.cursor = content.byteLength;
 			}
-			const [newContent, bytesWritten] = write(content, fileDescriptor.cursor, buffers);
+			const [newContent, bytesWritten] = buffer.write(content, fileDescriptor.cursor, buffers);
 			await writeContent(inode,newContent);
 			fileDescriptor.cursor = fileDescriptor.cursor + bytesWritten;
 			return bytesWritten;
