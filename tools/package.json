@@ -24,9 +24,9 @@
 		"lint": "eslint --ext ts src"
 	},
 	"dependencies": {
-		"yargs": "^17.7.2"
+		"yargs": "^18.0.0"
 	},
 	"devDependencies": {
-		"@types/yargs": "^17.0.32"
+		"@types/yargs": "^17.0.35"
 	}
 }

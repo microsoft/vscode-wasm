@@ -196,7 +196,7 @@ const sync_api_service = {
 const sync_api_tests = {
 	name: 'sync-api-tests',
 	path: './sync-api-tests',
-	extends: [ common, vscodeMixin, testMixin ],
+	extends: [ node, vscodeMixin, testMixin ],
 	out: {
 		dir: './lib',
 		buildInfoFile: '${buildInfoFile}.tsbuildInfo'

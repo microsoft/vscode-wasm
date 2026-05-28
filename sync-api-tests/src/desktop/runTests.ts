@@ -6,7 +6,7 @@
 import fs from 'fs';
 import os from 'os';
 import path from 'path';
-import find = require('find-process');
+import find from 'find-process';
 
 import { RAL } from '@vscode/sync-api-common';
 import { runTests } from '@vscode/test-electron';
