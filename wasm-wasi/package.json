@@ -51,7 +51,7 @@
 		"compile:publish": "tsc -b ./tsconfig.publish.json",
 		"watch": "tsc -b ./tsconfig.watch.json -w",
 		"clean": "rimraf lib",
-		"lint": "eslint --ext ts src",
+		"lint": "eslint src",
 		"all": "npm run clean && npm run compile && npm run lint",
 		"all:publish": "git clean -xfd . && npm install && npm run compile:publish && npm run lint"
 	}

@@ -2,9 +2,8 @@
  *  Copyright (c) Microsoft Corporation. All rights reserved.
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
-/* eslint-disable @typescript-eslint/ban-types */
+import type { i32, own, ptr, u32 } from '@vscode/wasm-component-model';
 import * as $wcm from '@vscode/wasm-component-model';
-import type { u32, own, i32, ptr } from '@vscode/wasm-component-model';
 
 export namespace api {
 	export namespace Types {

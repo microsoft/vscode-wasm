@@ -47,13 +47,13 @@ namespace RAL {
 	export type TextDecoder = _RAL.TextDecoder;
 	export type Disposable = _RAL.Disposable;
 	export function install(ral: RAL): void {
-    	if (ral === undefined) {
-    		throw new Error(`No runtime abstraction layer provided`);
-    	}
-    	_ral = ral;
+		if (ral === undefined) {
+			throw new Error(`No runtime abstraction layer provided`);
+		}
+		_ral = ral;
 	}
 	export function isInstalled(): boolean {
-    	return _ral !== undefined;
+		return _ral !== undefined;
 	}
 }
 

@@ -3,8 +3,8 @@
  * Licensed under the MIT License. See License.txt in the project root for license information.
  * ------------------------------------------------------------------------------------------ */
 
-import RAL from './ral';
 import { Disposable } from './disposable';
+import RAL from './ral';
 
 export type u8 = number;
 export type u16 = number;
@@ -476,8 +476,8 @@ type LengthType<T extends TypedArray> =
 									: never;
 
 type _SendRequestSignatures<Requests extends RequestType> = UnionToIntersection<{
- 	[R in Requests as R['method']]: R['params'] extends null | undefined
-	 	? R['result'] extends null | undefined
+	[R in Requests as R['method']]: R['params'] extends null | undefined
+		? R['result'] extends null | undefined
 			? (method: R['method'], timeout?: number) => { errno: RPCErrno }
 			: R['result'] extends TypedArray
 				? (method: R['method'], resultKind: LengthType<R['result']>, timeout?: number) => { errno: 0; data: R['result'] } | { errno: RPCErrno }
@@ -729,7 +729,7 @@ export abstract class BaseClientConnection<Requests extends RequestType | undefi
 }
 
 type _HandleRequestSignatures<Requests extends RequestType> = UnionToIntersection<{
- 	[R in Requests as R['method']]: R['params'] extends null | undefined
+	[R in Requests as R['method']]: R['params'] extends null | undefined
 		? R['result'] extends null | undefined
 			? (method: R['method'], handler: () => { errno: RPCErrno } | Promise<{ errno: RPCErrno }>) => Disposable
 			: R['result'] extends TypedArray

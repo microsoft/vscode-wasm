@@ -206,8 +206,8 @@ declare namespace WebAssembly {
 	}
 
 	var Instance: {
-    	prototype: Instance;
-    	new(): Instance;
+		prototype: Instance;
+		new(): Instance;
 	};
 }
 

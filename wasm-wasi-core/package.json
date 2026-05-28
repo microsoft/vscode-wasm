@@ -42,7 +42,7 @@
 		"compile": "tsc -b tsconfig.json",
 		"watch": "tsc -b tsconfig.json -w",
 		"clean": "rimraf lib && rimraf dist",
-		"lint": "eslint --ext ts src",
+		"lint": "eslint src",
 		"esbuild": "node ./bin/esbuild.js",
 		"esbuild:watch": "node ./bin/esbuild.js --watch",
 		"test": "npm run test:desktop && npm run test:web",

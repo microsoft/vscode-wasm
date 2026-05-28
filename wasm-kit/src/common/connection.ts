@@ -118,27 +118,27 @@ type MethodKeys<Messages extends _MessageType> = {
 };
 
 type _AsyncCallSignatures<AsyncCalls extends _AsyncCallType, TLI = TransferItems> = UnionToIntersection<{
- 	[call in AsyncCalls as call['method']]: call['params'] extends object
+	[call in AsyncCalls as call['method']]: call['params'] extends object
 		? (method: call['method'], params: call['params'], transferList?: ReadonlyArray<TLI>) => Promise<call['result'] extends undefined | void ? void : call['result']>
-	 	: (method: call['method']) => Promise<call['result'] extends undefined | void ? void : call['result']>
+		: (method: call['method']) => Promise<call['result'] extends undefined | void ? void : call['result']>
 }[keyof MethodKeys<AsyncCalls>]>;
 
 type AsyncCallSignatures<AsyncCalls extends _AsyncCallType | undefined, TLI> = [AsyncCalls] extends [_AsyncCallType] ? _AsyncCallSignatures<AsyncCalls, TLI> : undefined;
 
 type _AsyncCallHandlerSignatures<AsyncCalls extends _AsyncCallType> = UnionToIntersection<{
- 	[call in AsyncCalls as call['method']]: call['params'] extends object
+	[call in AsyncCalls as call['method']]: call['params'] extends object
 		? (method: call['method'], handler: (params: call['params']) => HandlerResult<call['result'] extends undefined | void ? void : call['result']>) => void
-	 	: (method: call['method'], handler: () => HandlerResult<call['result'] extends undefined | void ? void : call['result']>) => void;
+		: (method: call['method'], handler: () => HandlerResult<call['result'] extends undefined | void ? void : call['result']>) => void;
 }[keyof MethodKeys<AsyncCalls>]>;
 
 type AsyncCallHandlerSignatures<AsyncCalls extends _AsyncCallType | undefined> = [AsyncCalls] extends [_AsyncCallType] ?_AsyncCallHandlerSignatures<AsyncCalls> : undefined;
 
 type _SyncCallSignatures<SyncCalls extends _SyncCallType, TLI = TransferItems> = UnionToIntersection<{
- 	[call in SyncCalls as call['method']]: call['params'] extends object
+	[call in SyncCalls as call['method']]: call['params'] extends object
 		? call['result'] extends _SharedObjectResult
 			? (method: call['method'], params: call['params'], resultDescriptor: _SharedObjectResult, timeout?: number | undefined, transferList?: ReadonlyArray<TLI>) => InstanceType<call['result']>
 			: (method: call['method'], params: call['params'], timeout?: number | undefined, transferList?: ReadonlyArray<TLI>) => void
-	 	: call['result'] extends _SharedObjectResult
+		: call['result'] extends _SharedObjectResult
 			? (method: call['method'], resultDescriptor: _SharedObjectResult, timeout?: number | undefined) => InstanceType<call['result']>
 			: (method: call['method'], timeout?: number | undefined) => void;
 }[keyof MethodKeys<SyncCalls>]>;
@@ -146,11 +146,11 @@ type _SyncCallSignatures<SyncCalls extends _SyncCallType, TLI = TransferItems> =
 type SyncCallSignatures<SyncCalls extends _SyncCallType | undefined, TLI= TransferItems> = [SyncCalls] extends [_SyncCallType] ? _SyncCallSignatures<SyncCalls, TLI> : undefined;
 
 type _SyncCallHandlerSignatures<SyncCalls extends _SyncCallType> = UnionToIntersection<{
- 	[call in SyncCalls as call['method']]: call['params'] extends object
+	[call in SyncCalls as call['method']]: call['params'] extends object
 		? call['result'] extends _SharedObjectResult
 			? (method: call['method'], handler: (params: call['params'], result: MemoryRange) => HandlerResult<number | void>) => void
 			: (method: call['method'], handler: (params: call['params']) => HandlerResult<number | void>) => void
-	 	: call['result'] extends _SharedObjectResult
+		: call['result'] extends _SharedObjectResult
 			? (method: call['method'], handler: (result: MemoryRange) => HandlerResult<number | void>) => void
 			: (method: call['method'], handler: () => HandlerResult<number | void>) => void;
 }[keyof MethodKeys<SyncCalls>]>;

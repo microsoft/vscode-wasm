@@ -2,12 +2,11 @@
  * Copyright (c) Microsoft Corporation. All rights reserved.
  * Licensed under the MIT License. See License.txt in the project root for license information.
  * ------------------------------------------------------------------------------------------ */
-/* eslint-disable no-console */
 
 import assert from 'assert';
 
-import { TestRequests, AssertionErrorData, ErrorData } from './tests';
 import { Cancellation, RAL, ServiceConnection } from '../api';
+import { AssertionErrorData, ErrorData, TestRequests } from './tests';
 
 let script: string = '';
 

@@ -42,7 +42,7 @@
 		"compile": "tsc -b ./tsconfig.json",
 		"watch": "tsc -b ./tsconfig.watch.json -w",
 		"clean": "rimraf lib",
-		"lint": "eslint --ext ts src",
+		"lint": "eslint src",
 		"test": "npm run test:desktop",
 		"test:desktop": "mocha",
 		"simulation": "node ./lib/node/test/arrayMain.js"

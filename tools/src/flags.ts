@@ -4,7 +4,7 @@
  * ------------------------------------------------------------------------------------------ */
 
 const flags: Map<string, bigint> = new Map([
- 	['fd_datasync', 1n << 0n],
+	['fd_datasync', 1n << 0n],
 	['fd_read', 1n << 1n],
 	['fd_seek', 1n << 2n],
 	['fd_fdstat_set_flags', 1n << 3n],

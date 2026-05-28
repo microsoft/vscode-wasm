@@ -384,7 +384,7 @@ class ServiceTerminalImpl implements ServicePseudoTerminal, CharacterDeviceDrive
 		}
 
 		const change = oldCursor - newCursor;
-	    const code = change > 0 ? 'D' : 'C';
+		const code = change > 0 ? 'D' : 'C';
 		const sequence = `\x1b[${code}`.repeat(Math.abs(change));
 		this._onDidWrite.fire(sequence);
 	}

@@ -402,7 +402,7 @@ export interface WasmProcess {
 	/**
 	 * Terminate the Wasm process.
 	 */
-	 terminate(): Promise<number>;
+	terminate(): Promise<number>;
 }
 
 export enum Filetype {

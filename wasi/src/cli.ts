@@ -2,19 +2,18 @@
  *  Copyright (c) Microsoft Corporation. All rights reserved.
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
-/* eslint-disable @typescript-eslint/ban-types */
+import type { i32, ptr, result } from '@vscode/wasm-component-model';
 import * as $wcm from '@vscode/wasm-component-model';
-import type { result, i32, ptr } from '@vscode/wasm-component-model';
 import { io } from './io';
 
 export namespace cli {
 	export namespace Environment {
 		/**
 		 * Get the POSIX-style environment variables.
-		 * 
+		 *
 		 * Each environment variable is provided as a pair of string variable names
 		 * and string value.
-		 * 
+		 *
 		 * Morally, these are a value import, but until value imports are available
 		 * in the component model, this import function should return the same
 		 * values each time it is called.
@@ -87,7 +86,7 @@ export namespace cli {
 
 	/**
 	 * Terminal input.
-	 * 
+	 *
 	 * In the future, this may include functions for disabling echoing,
 	 * disabling input buffering so that keyboard events are sent through
 	 * immediately, querying supported features, and so on.
@@ -108,7 +107,7 @@ export namespace cli {
 
 	/**
 	 * Terminal output.
-	 * 
+	 *
 	 * In the future, this may include functions for querying the terminal
 	 * size, being notified of terminal size changes, querying supported
 	 * features, and so on.
