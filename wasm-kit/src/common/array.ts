@@ -102,7 +102,7 @@ export class SharedArray<T> extends ObjectProperty {
 		memory.free(range);
 		access.next = next - 1;
 		return value;
- 	}
+	}
 
 	public *keys(): IterableIterator<number> {
 		const access = this.access;

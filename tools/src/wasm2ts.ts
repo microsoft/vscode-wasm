@@ -59,8 +59,8 @@ export async function run(options: Options): Promise<number> {
 	const buffer: string [] = [];
 	buffer.push(`/* --------------------------------------------------------------------------------------------`);
 	buffer.push(` * Copyright (c) Microsoft Corporation. All rights reserved.`);
- 	buffer.push(` * Licensed under the MIT License. See License.txt in the project root for license information.`);
- 	buffer.push(` * ------------------------------------------------------------------------------------------ */`);
+	buffer.push(` * Licensed under the MIT License. See License.txt in the project root for license information.`);
+	buffer.push(` * ------------------------------------------------------------------------------------------ */`);
 	buffer.push(``);
 	buffer.push(`const bytes = new Uint8Array([`);
 	let line: string[] = [];

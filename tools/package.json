@@ -21,12 +21,12 @@
 		"clean": "rimraf lib",
 		"compile": "tsc -b ./tsconfig.json",
 		"watch": "tsc -b ./tsconfig.watch.json -w",
-		"lint": "eslint --ext ts src"
+		"lint": "eslint src"
 	},
 	"dependencies": {
-		"yargs": "^17.7.2"
+		"yargs": "^18.0.0"
 	},
 	"devDependencies": {
-		"@types/yargs": "^17.0.32"
+		"@types/yargs": "^17.0.35"
 	}
 }

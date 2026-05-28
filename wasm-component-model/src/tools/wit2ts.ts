@@ -135,7 +135,7 @@ class Code {
 			this.source.unshift(`import * as ${starImports.get(from)} from '${from}';`);
 		}
 		this.source.unshift(`import * as $wcm from '@vscode/wasm-component-model';`);
-		this.source.unshift('/* eslint-disable @typescript-eslint/ban-types */');
+		this.source.unshift('/* eslint-disable @typescript-eslint/no-empty-object-type, @typescript-eslint/no-unsafe-function-type, @typescript-eslint/no-wrapper-object-types */');
 		this.source.unshift(' *--------------------------------------------------------------------------------------------*/');
 		this.source.unshift(' *  Licensed under the MIT License. See License.txt in the project root for license information.');
 		this.source.unshift(' *  Copyright (c) Microsoft Corporation. All rights reserved.');

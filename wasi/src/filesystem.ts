@@ -2,9 +2,8 @@
  *  Copyright (c) Microsoft Corporation. All rights reserved.
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
-/* eslint-disable @typescript-eslint/ban-types */
+import type { i32, i64, ptr, result, u32, u64 } from '@vscode/wasm-component-model';
 import * as $wcm from '@vscode/wasm-component-model';
-import type { u64, u32, i32, i64, ptr, result } from '@vscode/wasm-component-model';
 import { clocks } from './clocks';
 import { io } from './io';
 
@@ -13,26 +12,26 @@ export namespace filesystem {
 	 * WASI filesystem is a filesystem API primarily intended to let users run WASI
 	 * programs that access their files on their existing filesystems, without
 	 * significant overhead.
-	 * 
+	 *
 	 * It is intended to be roughly portable between Unix-family platforms and
 	 * Windows, though it does not hide many of the major differences.
-	 * 
+	 *
 	 * Paths are passed as interface-type `string`s, meaning they must consist of
 	 * a sequence of Unicode Scalar Values (USVs). Some filesystems may contain
 	 * paths which are not accessible by this API.
-	 * 
+	 *
 	 * The directory separator in WASI is always the forward-slash (`/`).
-	 * 
+	 *
 	 * All paths in WASI are relative paths, and are interpreted relative to a
 	 * `descriptor` referring to a base directory. If a `path` argument to any WASI
 	 * function starts with `/`, or if any step of resolving a `path`, including
 	 * `..` and symbolic link steps, reaches a directory outside of the base
 	 * directory, or reaches a symlink to an absolute or rooted path in the
 	 * underlying filesystem, the function fails with `error-code::not-permitted`.
-	 * 
+	 *
 	 * For more information about WASI path resolution and sandboxing, see
 	 * [WASI filesystem path resolution].
-	 * 
+	 *
 	 * [WASI filesystem path resolution]: https://github.com/WebAssembly/wasi-filesystem/blob/main/path-resolution.md
 	 */
 	export namespace Types {
@@ -51,7 +50,7 @@ export namespace filesystem {
 
 		/**
 		 * The type of a filesystem object referenced by a descriptor.
-		 * 
+		 *
 		 * Note: This was called `filetype` in earlier versions of WASI.
 		 */
 		export enum DescriptorType {
@@ -100,7 +99,7 @@ export namespace filesystem {
 
 		/**
 		 * Descriptor flags.
-		 * 
+		 *
 		 * Note: This was called `fdflags` in earlier versions of WASI.
 		 */
 		export const DescriptorFlags = Object.freeze({
@@ -119,7 +118,7 @@ export namespace filesystem {
 			 * Request that writes be performed according to synchronized I/O file
 			 * integrity completion. The data stored in the file and the file's
 			 * metadata are synchronized. This is similar to `O_SYNC` in POSIX.
-			 * 
+			 *
 			 * The precise semantics of this operation have not yet been defined for
 			 * WASI. At this time, it should be interpreted as a request, and not a
 			 * requirement.
@@ -130,7 +129,7 @@ export namespace filesystem {
 			 * Request that writes be performed according to synchronized I/O data
 			 * integrity completion. Only the data stored in the file is
 			 * synchronized. This is similar to `O_DSYNC` in POSIX.
-			 * 
+			 *
 			 * The precise semantics of this operation have not yet been defined for
 			 * WASI. At this time, it should be interpreted as a request, and not a
 			 * requirement.
@@ -140,7 +139,7 @@ export namespace filesystem {
 			/**
 			 * Requests that reads be performed at the same level of integrity
 			 * requested for writes. This is similar to `O_RSYNC` in POSIX.
-			 * 
+			 *
 			 * The precise semantics of this operation have not yet been defined for
 			 * WASI. At this time, it should be interpreted as a request, and not a
 			 * requirement.
@@ -149,13 +148,13 @@ export namespace filesystem {
 
 			/**
 			 * Mutating directories mode: Directory contents may be mutated.
-			 * 
+			 *
 			 * When this flag is unset on a descriptor, operations using the
 			 * descriptor which would create, rename, delete, modify the data or
 			 * metadata of filesystem objects, or obtain another handle which
 			 * would permit any of those, shall fail with `error-code::read-only` if
 			 * they would otherwise succeed.
-			 * 
+			 *
 			 * This may only be set on directories.
 			 */
 			mutateDirectory: 1 << 5,
@@ -209,7 +208,7 @@ export namespace filesystem {
 
 		/**
 		 * File attributes.
-		 * 
+		 *
 		 * Note: This was called `filestat` in earlier versions of WASI.
 		 */
 		export type DescriptorStat = {
@@ -232,7 +231,7 @@ export namespace filesystem {
 
 			/**
 			 * Last data access timestamp.
-			 * 
+			 *
 			 * If the `option` is none, the platform doesn't maintain an access
 			 * timestamp for this file.
 			 */
@@ -240,7 +239,7 @@ export namespace filesystem {
 
 			/**
 			 * Last data modification timestamp.
-			 * 
+			 *
 			 * If the `option` is none, the platform doesn't maintain a
 			 * modification timestamp for this file.
 			 */
@@ -248,7 +247,7 @@ export namespace filesystem {
 
 			/**
 			 * Last file status-change timestamp.
-			 * 
+			 *
 			 * If the `option` is none, the platform doesn't maintain a
 			 * status-change timestamp for this file.
 			 */
@@ -602,12 +601,12 @@ export namespace filesystem {
 			export interface Interface extends $wcm.Resource {
 				/**
 				 * Return a stream for reading from a file, if available.
-				 * 
+				 *
 				 * May fail with an error-code describing why the file cannot be read.
-				 * 
+				 *
 				 * Multiple read, write, and append streams may be active on the same open
 				 * file and they do not interfere with each other.
-				 * 
+				 *
 				 * Note: This allows using `read-stream`, which is similar to `read` in POSIX.
 				 *
 				 * @throws ErrorCode.Error_
@@ -616,9 +615,9 @@ export namespace filesystem {
 
 				/**
 				 * Return a stream for writing to a file, if available.
-				 * 
+				 *
 				 * May fail with an error-code describing why the file cannot be written.
-				 * 
+				 *
 				 * Note: This allows using `write-stream`, which is similar to `write` in
 				 * POSIX.
 				 *
@@ -628,9 +627,9 @@ export namespace filesystem {
 
 				/**
 				 * Return a stream for appending to a file, if available.
-				 * 
+				 *
 				 * May fail with an error-code describing why the file cannot be appended.
-				 * 
+				 *
 				 * Note: This allows using `write-stream`, which is similar to `write` with
 				 * `O_APPEND` in in POSIX.
 				 *
@@ -640,7 +639,7 @@ export namespace filesystem {
 
 				/**
 				 * Provide file advisory information on a descriptor.
-				 * 
+				 *
 				 * This is similar to `posix_fadvise` in POSIX.
 				 *
 				 * @throws ErrorCode.Error_
@@ -649,10 +648,10 @@ export namespace filesystem {
 
 				/**
 				 * Synchronize the data of a file to disk.
-				 * 
+				 *
 				 * This function succeeds with no effect if the file descriptor is not
 				 * opened for writing.
-				 * 
+				 *
 				 * Note: This is similar to `fdatasync` in POSIX.
 				 *
 				 * @throws ErrorCode.Error_
@@ -661,9 +660,9 @@ export namespace filesystem {
 
 				/**
 				 * Get flags associated with a descriptor.
-				 * 
+				 *
 				 * Note: This returns similar flags to `fcntl(fd, F_GETFL)` in POSIX.
-				 * 
+				 *
 				 * Note: This returns the value that was the `fs_flags` value returned
 				 * from `fdstat_get` in earlier versions of WASI.
 				 *
@@ -673,13 +672,13 @@ export namespace filesystem {
 
 				/**
 				 * Get the dynamic type of a descriptor.
-				 * 
+				 *
 				 * Note: This returns the same value as the `type` field of the `fd-stat`
 				 * returned by `stat`, `stat-at` and similar.
-				 * 
+				 *
 				 * Note: This returns similar flags to the `st_mode & S_IFMT` value provided
 				 * by `fstat` in POSIX.
-				 * 
+				 *
 				 * Note: This returns the value that was the `fs_filetype` value returned
 				 * from `fdstat_get` in earlier versions of WASI.
 				 *
@@ -690,7 +689,7 @@ export namespace filesystem {
 				/**
 				 * Adjust the size of an open file. If this increases the file's size, the
 				 * extra bytes are filled with zeros.
-				 * 
+				 *
 				 * Note: This was called `fd_filestat_set_size` in earlier versions of WASI.
 				 *
 				 * @throws ErrorCode.Error_
@@ -699,9 +698,9 @@ export namespace filesystem {
 
 				/**
 				 * Adjust the timestamps of an open file or directory.
-				 * 
+				 *
 				 * Note: This is similar to `futimens` in POSIX.
-				 * 
+				 *
 				 * Note: This was called `fd_filestat_set_times` in earlier versions of WASI.
 				 *
 				 * @throws ErrorCode.Error_
@@ -710,15 +709,15 @@ export namespace filesystem {
 
 				/**
 				 * Read from a descriptor, without using and updating the descriptor's offset.
-				 * 
+				 *
 				 * This function returns a list of bytes containing the data that was
 				 * read, along with a bool which, when true, indicates that the end of the
 				 * file was reached. The returned list will contain up to `length` bytes; it
 				 * may return fewer than requested, if the end of the file is reached or
 				 * if the I/O operation is interrupted.
-				 * 
+				 *
 				 * In the future, this may change to return a `stream<u8, error-code>`.
-				 * 
+				 *
 				 * Note: This is similar to `pread` in POSIX.
 				 *
 				 * @throws ErrorCode.Error_
@@ -727,13 +726,13 @@ export namespace filesystem {
 
 				/**
 				 * Write to a descriptor, without using and updating the descriptor's offset.
-				 * 
+				 *
 				 * It is valid to write past the end of a file; the file is extended to the
 				 * extent of the write, with bytes between the previous end and the start of
 				 * the write set to zero.
-				 * 
+				 *
 				 * In the future, this may change to take a `stream<u8, error-code>`.
-				 * 
+				 *
 				 * Note: This is similar to `pwrite` in POSIX.
 				 *
 				 * @throws ErrorCode.Error_
@@ -742,11 +741,11 @@ export namespace filesystem {
 
 				/**
 				 * Read directory entries from a directory.
-				 * 
+				 *
 				 * On filesystems where directories contain entries referring to themselves
 				 * and their parents, often named `.` and `..` respectively, these entries
 				 * are omitted.
-				 * 
+				 *
 				 * This always returns a new stream which starts at the beginning of the
 				 * directory. Multiple streams may be active on the same directory, and they
 				 * do not interfere with each other.
@@ -757,10 +756,10 @@ export namespace filesystem {
 
 				/**
 				 * Synchronize the data and metadata of a file to disk.
-				 * 
+				 *
 				 * This function succeeds with no effect if the file descriptor is not
 				 * opened for writing.
-				 * 
+				 *
 				 * Note: This is similar to `fsync` in POSIX.
 				 *
 				 * @throws ErrorCode.Error_
@@ -769,7 +768,7 @@ export namespace filesystem {
 
 				/**
 				 * Create a directory.
-				 * 
+				 *
 				 * Note: This is similar to `mkdirat` in POSIX.
 				 *
 				 * @throws ErrorCode.Error_
@@ -778,13 +777,13 @@ export namespace filesystem {
 
 				/**
 				 * Return the attributes of an open file or directory.
-				 * 
+				 *
 				 * Note: This is similar to `fstat` in POSIX, except that it does not return
 				 * device and inode information. For testing whether two descriptors refer to
 				 * the same underlying filesystem object, use `is-same-object`. To obtain
 				 * additional data that can be used do determine whether a file has been
 				 * modified, use `metadata-hash`.
-				 * 
+				 *
 				 * Note: This was called `fd_filestat_get` in earlier versions of WASI.
 				 *
 				 * @throws ErrorCode.Error_
@@ -793,11 +792,11 @@ export namespace filesystem {
 
 				/**
 				 * Return the attributes of a file or directory.
-				 * 
+				 *
 				 * Note: This is similar to `fstatat` in POSIX, except that it does not
 				 * return device and inode information. See the `stat` description for a
 				 * discussion of alternatives.
-				 * 
+				 *
 				 * Note: This was called `path_filestat_get` in earlier versions of WASI.
 				 *
 				 * @throws ErrorCode.Error_
@@ -806,9 +805,9 @@ export namespace filesystem {
 
 				/**
 				 * Adjust the timestamps of a file or directory.
-				 * 
+				 *
 				 * Note: This is similar to `utimensat` in POSIX.
-				 * 
+				 *
 				 * Note: This was called `path_filestat_set_times` in earlier versions of
 				 * WASI.
 				 *
@@ -818,7 +817,7 @@ export namespace filesystem {
 
 				/**
 				 * Create a hard link.
-				 * 
+				 *
 				 * Note: This is similar to `linkat` in POSIX.
 				 *
 				 * @throws ErrorCode.Error_
@@ -827,22 +826,22 @@ export namespace filesystem {
 
 				/**
 				 * Open a file or directory.
-				 * 
+				 *
 				 * The returned descriptor is not guaranteed to be the lowest-numbered
 				 * descriptor not currently open/ it is randomized to prevent applications
 				 * from depending on making assumptions about indexes, since this is
 				 * error-prone in multi-threaded contexts. The returned descriptor is
 				 * guaranteed to be less than 2**31.
-				 * 
+				 *
 				 * If `flags` contains `descriptor-flags::mutate-directory`, and the base
 				 * descriptor doesn't have `descriptor-flags::mutate-directory` set,
 				 * `open-at` fails with `error-code::read-only`.
-				 * 
+				 *
 				 * If `flags` contains `write` or `mutate-directory`, or `open-flags`
 				 * contains `truncate` or `create`, and the base descriptor doesn't have
 				 * `descriptor-flags::mutate-directory` set, `open-at` fails with
 				 * `error-code::read-only`.
-				 * 
+				 *
 				 * Note: This is similar to `openat` in POSIX.
 				 *
 				 * @throws ErrorCode.Error_
@@ -851,10 +850,10 @@ export namespace filesystem {
 
 				/**
 				 * Read the contents of a symbolic link.
-				 * 
+				 *
 				 * If the contents contain an absolute or rooted path in the underlying
 				 * filesystem, this function fails with `error-code::not-permitted`.
-				 * 
+				 *
 				 * Note: This is similar to `readlinkat` in POSIX.
 				 *
 				 * @throws ErrorCode.Error_
@@ -863,9 +862,9 @@ export namespace filesystem {
 
 				/**
 				 * Remove a directory.
-				 * 
+				 *
 				 * Return `error-code::not-empty` if the directory is not empty.
-				 * 
+				 *
 				 * Note: This is similar to `unlinkat(fd, path, AT_REMOVEDIR)` in POSIX.
 				 *
 				 * @throws ErrorCode.Error_
@@ -874,7 +873,7 @@ export namespace filesystem {
 
 				/**
 				 * Rename a filesystem object.
-				 * 
+				 *
 				 * Note: This is similar to `renameat` in POSIX.
 				 *
 				 * @throws ErrorCode.Error_
@@ -883,10 +882,10 @@ export namespace filesystem {
 
 				/**
 				 * Create a symbolic link (also known as a "symlink").
-				 * 
+				 *
 				 * If `old-path` starts with `/`, the function fails with
 				 * `error-code::not-permitted`.
-				 * 
+				 *
 				 * Note: This is similar to `symlinkat` in POSIX.
 				 *
 				 * @throws ErrorCode.Error_
@@ -895,7 +894,7 @@ export namespace filesystem {
 
 				/**
 				 * Unlink a filesystem object that is not a directory.
-				 * 
+				 *
 				 * Return `error-code::is-directory` if the path refers to a directory.
 				 * Note: This is similar to `unlinkat(fd, path, 0)` in POSIX.
 				 *
@@ -905,7 +904,7 @@ export namespace filesystem {
 
 				/**
 				 * Test whether two descriptors refer to the same filesystem object.
-				 * 
+				 *
 				 * In POSIX, this corresponds to testing whether the two descriptors have the
 				 * same device (`st_dev`) and inode (`st_ino` or `d_ino`) numbers.
 				 * wasi-filesystem does not expose device and inode numbers, so this function
@@ -916,22 +915,22 @@ export namespace filesystem {
 				/**
 				 * Return a hash of the metadata associated with a filesystem object referred
 				 * to by a descriptor.
-				 * 
+				 *
 				 * This returns a hash of the last-modification timestamp and file size, and
 				 * may also include the inode number, device number, birth timestamp, and
 				 * other metadata fields that may change when the file is modified or
 				 * replaced. It may also include a secret value chosen by the
 				 * implementation and not otherwise exposed.
-				 * 
+				 *
 				 * Implementations are encourated to provide the following properties:
-				 * 
+				 *
 				 * - If the file is not modified or replaced, the computed hash value should
 				 * usually not change.
 				 * - If the object is modified or replaced, the computed hash value should
 				 * usually change.
 				 * - The inputs to the hash should not be easily computable from the
 				 * computed hash.
-				 * 
+				 *
 				 * However, none of these is required.
 				 *
 				 * @throws ErrorCode.Error_
@@ -941,7 +940,7 @@ export namespace filesystem {
 				/**
 				 * Return a hash of the metadata associated with a filesystem object referred
 				 * to by a directory descriptor and a relative path.
-				 * 
+				 *
 				 * This performs the same hash computation as `metadata-hash`.
 				 *
 				 * @throws ErrorCode.Error_
@@ -974,12 +973,12 @@ export namespace filesystem {
 		/**
 		 * Attempts to extract a filesystem-related `error-code` from the stream
 		 * `error` provided.
-		 * 
+		 *
 		 * Stream operations which return `stream-error::last-operation-failed`
 		 * have a payload with more information about the operation that failed.
 		 * This payload can be passed through to this function to see if there's
 		 * filesystem-related information about the error to return.
-		 * 
+		 *
 		 * Note that this function is fallible because not all stream-related
 		 * errors are filesystem-related errors.
 		 */

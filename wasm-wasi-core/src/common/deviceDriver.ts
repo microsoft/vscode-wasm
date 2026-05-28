@@ -7,7 +7,7 @@ import { Uri } from 'vscode';
 import { size, u64 } from './baseTypes';
 import { FdProvider, FileDescriptor } from './fileDescriptor';
 import {
-	advise, Errno, fd, fdflags, fdstat,filedelta, filesize, filestat, filetype,
+	advise, Errno, fd, fdflags, fdstat, filedelta, filesize, filestat, filetype,
 	fstflags, lookupflags, oflags, rights, timestamp, WasiError, whence
 } from './wasi';
 
@@ -87,7 +87,7 @@ export interface CharacterDeviceDriver extends DeviceDriver {
 }
 
 export interface ReadonlyFileSystemDeviceDriver extends Pick<
-FileSystemDeviceDriver, 'kind' | 'joinPath' | 'createStdioFileDescriptor' | 'uri' | 'id' |
+	FileSystemDeviceDriver, 'kind' | 'joinPath' | 'createStdioFileDescriptor' | 'uri' | 'id' |
 'fd_advise' | 'fd_close' | 'fd_fdstat_get' | 'fd_filestat_get' | 'fd_pread' | 'fd_read' | 'fd_readdir' | 'fd_seek' |
 'fd_renumber' | 'fd_tell' | 'path_filestat_get' | 'path_open' | 'path_readlink' | 'fd_create_prestat_fd' | 'fd_bytesAvailable'
 > {

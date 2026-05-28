@@ -2,15 +2,14 @@
  *  Copyright (c) Microsoft Corporation. All rights reserved.
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
-/* eslint-disable @typescript-eslint/ban-types */
 import * as $wcm from '@vscode/wasm-component-model';
 
-import { io } from './io';
+import { cli } from './cli';
 import { clocks } from './clocks';
 import { filesystem } from './filesystem';
-import { sockets } from './sockets';
+import { io } from './io';
 import { random } from './random';
-import { cli } from './cli';
+import { sockets } from './sockets';
 
 namespace wasi._ {
 	export const packages: Map<string, $wcm.PackageType> =  new Map<string, $wcm.PackageType>([
@@ -22,5 +21,5 @@ namespace wasi._ {
 		['cli', cli._],
 	]);
 }
-export { io, clocks, filesystem, sockets, random, cli };
+export { cli, clocks, filesystem, io, random, sockets };
 export default wasi;

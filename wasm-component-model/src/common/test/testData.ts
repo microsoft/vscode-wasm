@@ -2,9 +2,8 @@
  *  Copyright (c) Microsoft Corporation. All rights reserved.
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
-/* eslint-disable @typescript-eslint/ban-types */
+import type { float32, float64, i32, i64, ptr, result, s32, s64, u32, u64 } from '@vscode/wasm-component-model';
 import * as $wcm from '@vscode/wasm-component-model';
-import type { u32, u64, s32, s64, float32, float64, i32, ptr, result, i64 } from '@vscode/wasm-component-model';
 
 export namespace Types {
 	export type Point = {

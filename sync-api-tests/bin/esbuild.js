@@ -11,7 +11,7 @@ const path_browserify = require.resolve('path-browserify');
 const pathResolvePlugin = {
 	name: 'Path Resolve',
 	setup(build) {
-		build.onResolve({ filter: /^path$/g }, args => {
+		build.onResolve({ filter: /^path$/ }, args => {
 			if (args.kind !== 'require-call') {
 				return { path: args.path };
 			}

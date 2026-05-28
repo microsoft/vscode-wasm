@@ -41,12 +41,12 @@
 	"enabledApiProposals": [
 	],
 	"dependencies": {
-		"yargs": "^17.7.2",
-		"semver": "^7.7.2"
+		"yargs": "^18.0.0",
+		"semver": "^7.8.1"
 	},
 	"devDependencies": {
-		"@types/yargs": "^17.0.33",
-		"@types/semver": "^7.7.0"
+		"@types/yargs": "^17.0.35",
+		"@types/semver": "^7.7.1"
 	},
 	"scripts": {
 		"prepublishOnly": "echo \"⛔ Can only publish from a secure pipeline ⛔\" && node ../build/npm/fail",
@@ -55,7 +55,7 @@
 		"compile:publish": "tsc -b ./tsconfig.publish.json",
 		"watch": "tsc -b ./tsconfig.watch.json -w",
 		"clean": "rimraf lib",
-		"lint": "eslint --ext ts src",
+		"lint": "eslint src",
 		"test": "npm run test:desktop",
 		"test:desktop": "mocha",
 		"all": "npm run clean && npm run compile && npm run lint",

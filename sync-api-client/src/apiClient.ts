@@ -5,7 +5,7 @@
 
 import { URI } from 'vscode-uri';
 
-import { ClientConnection, Requests, RequestResult, DTOs, VariableResult, RPCErrno, RPCError, RAL, Uint32Result } from '@vscode/sync-api-common';
+import { ClientConnection, DTOs, RAL, RequestResult, Requests, RPCErrno, RPCError, Uint32Result, VariableResult } from '@vscode/sync-api-common';
 
 import * as vscode from './vscode';
 
@@ -206,8 +206,8 @@ class FileSystemImpl implements FileSystem {
 		const requestResult = this.connection.sendRequest('fileSystem/readDirectory', { uri: uri.toJSON() }, new VariableResult<DTOs.DirectoryEntries>('json'));
 		if (RequestResult.hasData(requestResult)) {
 			return requestResult.data;
-		 }
-		 throw this.asFileSystemError(requestResult.errno, uri);
+		}
+		throw this.asFileSystemError(requestResult.errno, uri);
 	}
 
 	public createDirectory(uri: URI): void {

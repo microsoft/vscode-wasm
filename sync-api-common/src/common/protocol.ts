@@ -44,7 +44,7 @@ export namespace DTOs {
 		/**
          * Create an error to signal that a file is not a folder.
          */
-    	export const FileNotADirectory = FileExists + 1;
+		export const FileNotADirectory = FileExists + 1;
 
 		/**
          * Create an error to signal that a file is a folder.

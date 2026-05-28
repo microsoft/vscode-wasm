@@ -11,7 +11,7 @@ const browser_assert = path.resolve(__dirname, '../node_modules/assert/build/ass
 const assertResolvePlugin = {
 	name: 'Assert Resolve',
 	setup(build) {
-		build.onResolve({ filter: /^assert$/g }, args => {
+		build.onResolve({ filter: /^assert$/ }, args => {
 			if (args.kind === 'require-call' || args.kind === 'import-statement') {
 				return { path: browser_assert };
 			}

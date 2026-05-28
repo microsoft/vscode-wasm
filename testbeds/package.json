@@ -2,7 +2,7 @@
 	"name": "wasm-testbeds",
 	"private": true,
 	"dependencies": {
-		"vscode-uri": "3.0.3"
+		"vscode-uri": "3.1.0"
 	},
 	"devDependencies": {
 		"@types/vscode": "^1.92.0"
@@ -10,6 +10,6 @@
 	"scripts": {
 		"clean": "",
 		"postinstall": "cd .. && npm run symlink",
-		"lint": "node ../node_modules/eslint/bin/eslint.js --ext ts cpp python rust ruby php threads"
+		"lint": "node ../node_modules/eslint/bin/eslint.js cpp python rust ruby php threads"
 	}
 }

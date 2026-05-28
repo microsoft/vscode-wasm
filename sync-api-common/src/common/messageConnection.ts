@@ -74,16 +74,16 @@ type MethodKeys<Messages extends _MessageType> = {
 };
 
 type _SendRequestSignatures<Requests extends _RequestType, TLI> = UnionToIntersection<{
- 	[R in Requests as R['method']]: R['params'] extends null | undefined | void
-	 	? (method: R['method']) => Promise<R['result'] extends null | undefined ? void : R['result']>
+	[R in Requests as R['method']]: R['params'] extends null | undefined | void
+		? (method: R['method']) => Promise<R['result'] extends null | undefined ? void : R['result']>
 		: (method: R['method'], params: R['params'], transferList?: ReadonlyArray<TLI>) => Promise<R['result'] extends null | undefined ? void : R['result']>;
 }[keyof MethodKeys<Requests>]>;
 
 type SendRequestSignatures<Requests extends _RequestType | undefined, TLI> = [Requests] extends [_RequestType] ? _SendRequestSignatures<Requests, TLI> : undefined;
 
 type _HandleRequestSignatures<Requests extends _RequestType> = UnionToIntersection<{
- 	[R in Requests as R['method']]: R['params'] extends null | undefined | void
-	 	? (method: R['method'], handler: () => Promise<R['result'] extends null | undefined ? void : R['result']>) => void
+	[R in Requests as R['method']]: R['params'] extends null | undefined | void
+		? (method: R['method'], handler: () => Promise<R['result'] extends null | undefined ? void : R['result']>) => void
 		: (method: R['method'], handler: (params: R['params']) => Promise<R['result'] extends null | undefined ? void : R['result']>) => void;
 }[keyof MethodKeys<Requests>]>;
 

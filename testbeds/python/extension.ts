@@ -3,8 +3,8 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
+import { ProcessOptions, RootFileSystem, Stdio, Wasm } from '@vscode/wasm-wasi';
 import { commands, ExtensionContext, Uri, window, workspace } from 'vscode';
-import { Wasm, ProcessOptions, Stdio, RootFileSystem } from '@vscode/wasm-wasi';
 
 export async function activate(context: ExtensionContext) {
 	const wasm: Wasm = await Wasm.load();
@@ -21,8 +21,8 @@ export async function activate(context: ExtensionContext) {
 				{ kind: 'extensionLocation', extension: context, path: 'wasm/lib', mountPoint: '/usr/local/lib/python3.12' }
 			],
 			env: {
- 				PYTHONPATH: '/workspace'
- 			},
+				PYTHONPATH: '/workspace'
+			},
 			args: fileToRun !== undefined ? ['-B', '-X', 'utf8', fileToRun] : ['-B', '-X', 'utf8'],
 			trace: true
 		};
@@ -75,8 +75,8 @@ export async function activate(context: ExtensionContext) {
 			stdio,
 			rootFileSystem,
 			env: {
- 				PYTHONPATH: '/workspace'
- 			},
+				PYTHONPATH: '/workspace'
+			},
 			args: ['-B', '-X', 'utf8', ...args],
 			trace: true
 		};
