@@ -56,13 +56,13 @@ extends:
         testPlatforms:
           - name: Linux
             nodeVersions:
-              - 20.15.1
+              - 22.22.1
           - name: MacOS
             nodeVersions:
-              - 20.15.1
+              - 22.22.1
           - name: Windows
             nodeVersions:
-              - 20.15.1
+              - 22.22.1
         testSteps:
           - template: /build/azure-pipelines/templates/test-steps.yml@self
             parameters:
@@ -82,13 +82,13 @@ extends:
         testPlatforms:
           - name: Linux
             nodeVersions:
-              - 20.15.1
+              - 22.22.1
           - name: MacOS
             nodeVersions:
-              - 20.15.1
+              - 22.22.1
           - name: Windows
             nodeVersions:
-              - 20.15.1
+              - 22.22.1
         testSteps:
           - template: /build/azure-pipelines/templates/test-steps.yml@self
             parameters:
@@ -108,13 +108,13 @@ extends:
         testPlatforms:
           - name: Linux
             nodeVersions:
-              - 20.15.1
+              - 22.22.1
           - name: MacOS
             nodeVersions:
-              - 20.15.1
+              - 22.22.1
           - name: Windows
             nodeVersions:
-              - 20.15.1
+              - 22.22.1
         testSteps:
           - template: /build/azure-pipelines/templates/test-steps.yml@self
             parameters:
@@ -134,13 +134,13 @@ extends:
         testPlatforms:
           - name: Linux
             nodeVersions:
-              - 20.15.1
+              - 22.22.1
           - name: MacOS
             nodeVersions:
-              - 20.15.1
+              - 22.22.1
           - name: Windows
             nodeVersions:
-              - 20.15.1
+              - 22.22.1
         testSteps:
           - template: /build/azure-pipelines/templates/test-steps.yml@self
             parameters:
@@ -160,13 +160,13 @@ extends:
         testPlatforms:
           - name: Linux
             nodeVersions:
-              - 20.15.1
+              - 22.22.1
           - name: MacOS
             nodeVersions:
-              - 20.15.1
+              - 22.22.1
           - name: Windows
             nodeVersions:
-              - 20.15.1
+              - 22.22.1
         testSteps:
           - template: /build/azure-pipelines/templates/test-steps.yml@self
             parameters:
@@ -186,13 +186,13 @@ extends:
         testPlatforms:
           - name: Linux
             nodeVersions:
-              - 20.15.1
+              - 22.22.1
           - name: MacOS
             nodeVersions:
-              - 20.15.1
+              - 22.22.1
           - name: Windows
             nodeVersions:
-              - 20.15.1
+              - 22.22.1
         testSteps:
           - template: /build/azure-pipelines/templates/test-steps.yml@self
             parameters:
