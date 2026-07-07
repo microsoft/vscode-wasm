@@ -9,6 +9,12 @@ import { Event, EventEmitter, Pseudoterminal, Uri } from 'vscode';
 import { RAL } from '@vscode/sync-api-common';
 import { CharacterDeviceDriver, FileDescriptorDescription } from './device';
 
+type RALWithCrypto = ReturnType<typeof RAL> & {
+	crypto: {
+		randomUUID(): string;
+	};
+};
+
 class LineBuffer {
 
 	private cursor: number;
@@ -231,7 +237,7 @@ class ServiceTerminalImpl implements ServicePseudoTerminal, CharacterDeviceDrive
 		this._onAnyKey = new EventEmitter<void>;
 		this.onAnyKey = this._onAnyKey.event;
 
-		const id = this.id = RAL().crypto.randomUUID();
+		const id = this.id = (RAL() as RALWithCrypto).crypto.randomUUID();
 		this.encoder = RAL().TextEncoder.create();
 		this.decoder = RAL().TextDecoder.create();
 
