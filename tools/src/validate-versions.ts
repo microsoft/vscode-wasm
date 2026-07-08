@@ -43,19 +43,10 @@ const wasmWasi: Package = {
 	name: '@vscode/wasm-wasi',
 	location: './wasm-wasi',
 	dependsOn: [
-		{ kind: 'release', package: syncApiClient }
 	]
 };
 
-const wasmWasiTests: Package = {
-	name: '@vscode/wasm-wasi-tests',
-	location: './wasm-wasi-tests',
-	dependsOn: [
-		{ kind: 'release', package: syncApiClient }
-	]
-};
-
-const packages: Package[] = [syncApiCommon, syncApiClient, syncApiService, syncApiTests, wasmWasi, wasmWasiTests];
+const packages: Package[] = [syncApiCommon, syncApiClient, syncApiService, syncApiTests, wasmWasi];
 const root = path.join(__dirname, '..', '..');
 
 interface ValidationEntry {
