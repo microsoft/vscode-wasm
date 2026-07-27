@@ -1,0 +1,100 @@
+name: CI
+
+on:
+  push:
+    branches:
+      - '**'
+    tags:
+      - 'release/*/*'
+  pull_request:
+    branches:
+      - main
+      - 'release/**'
+
+jobs:
+  linux:
+    name: Linux
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install system dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libxkbfile-dev pkg-config libsecret-1-dev libxss1 dbus xvfb libgtk-3-0
+
+      - name: Start Xvfb
+        run: Xvfb :10 -screen 0 1024x768x24 &
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22.22.1'
+
+      - name: Install Dependencies
+        run: npm install
+
+      - name: Compile
+        run: npm run compile
+
+      - name: Hygiene Checks
+        run: npm run lint
+
+      - name: Unit Tests
+        run: npm run test
+        env:
+          DISPLAY: ':10'
+
+  windows:
+    name: Windows
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22.22.1'
+
+      - name: Install Dependencies
+        run: npm install
+
+      - name: Compile
+        run: npm run compile
+
+      - name: Hygiene Checks
+        run: npm run lint
+
+      - name: Unit Tests
+        run: npm run test
+        env:
+          PATHEXT: '.COM;.EXE;.BAT;.CMD'
+
+  macos:
+    name: macOS
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22.22.1'
+
+      - name: Install Dependencies
+        run: npm install
+
+      - name: Compile
+        run: npm run compile
+
+      - name: Hygiene Checks
+        run: npm run lint
+
+      - name: ESBuild API Test
+        run: npm run esbuild:apiTests
+
+      - name: Run API Tests
+        run: npm run test:apiWebTests
+
+      - name: Unit Tests
+        run: npm run test
