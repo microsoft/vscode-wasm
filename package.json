@@ -40,7 +40,7 @@
 		"serve": "^14.2.6",
 		"@types/path-browserify": "^1.0.3",
 		"path-browserify": "^1.0.1",
-		"@vscode/test-electron": "^2.5.2",
+		"@vscode/test-electron": "^3.1.0",
 		"@vscode/test-web": "^0.0.80",
 		"@types/glob": "^9.0.0",
 		"glob": "^13.0.6"
