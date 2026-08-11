@@ -22,10 +22,10 @@
 		"assert": "^2.1.0",
 		"@types/node": "^22.19.15",
 		"@stylistic/eslint-plugin": "^5.10.0",
-		"@typescript-eslint/eslint-plugin": "^8.60.0",
-		"@typescript-eslint/parser": "^8.60.0",
+		"@typescript-eslint/eslint-plugin": "^8.67.0",
+		"@typescript-eslint/parser": "^8.67.0",
 		"esbuild": "^0.28.1",
-		"eslint": "^10.4.0",
+		"eslint": "^10.8.1",
 		"globals": "^17.6.0",
 		"http-server": "^14.1.1",
 		"make-dir-cli": "^4.0.0",
@@ -42,7 +42,6 @@
 		"path-browserify": "^1.0.1",
 		"@vscode/test-electron": "^3.1.0",
 		"@vscode/test-web": "^0.0.80",
-		"@types/glob": "^9.0.0",
 		"glob": "^13.0.6"
 	},
 	"scripts": {
@@ -61,5 +60,9 @@
 		"validate:versions": "node ./tools/lib/validate-versions.js",
 		"update:lock": "git clean -xfd . && npm install",
 		"serve": "serve --cors -l 5000 --ssl-cert $HOME/certs/localhost.pem --ssl-key $HOME/certs/localhost-key.pem -c ./configs/serve.json ."
+	},
+	"allowScripts": {
+		"esbuild@0.28.1": true,
+		"@playwright/browser-chromium@1.58.2": true
 	}
 }
