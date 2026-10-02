@@ -82,7 +82,8 @@ export function create(deviceId: DeviceId, stdin: Stdin | undefined, stdout: Std
 			return Promise.resolve();
 		},
 		async fd_read(fileDescriptor: FileDescriptor, buffers: Uint8Array[]): Promise<size> {
-			if (buffers.length === 0) {
+			const maxBytesToRead = buffers.reduce<number>((prev, current) => prev + current.length, 0);
+			if (maxBytesToRead === 0) {
 				return 0;
 			}
 			if (stdin === undefined) {
@@ -92,7 +93,6 @@ export function create(deviceId: DeviceId, stdin: Stdin | undefined, stdout: Std
 				throw new WasiError(Errno.again);
 			}
 
-			const maxBytesToRead = buffers.reduce<number>((prev, current) => prev + current.length, 0);
 			const result = await stdin.read('max', maxBytesToRead);
 			let offset = 0;
 			let totalBytesRead = 0;

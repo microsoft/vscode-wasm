@@ -18,6 +18,8 @@ suite('Pipe Driver Tests', () => {
 		await driver.fd_fdstat_get(descriptor, stat);
 		assert.strictEqual(stat.fs_flags, Fdflags.nonblock);
 
+		assert.strictEqual(await driver.fd_read(descriptor, [new Uint8Array(0)]), 0);
+
 		await assert.rejects(
 			driver.fd_read(descriptor, [new Uint8Array(1)]),
 			(error: unknown) => error instanceof WasiError && error.errno === Errno.again
