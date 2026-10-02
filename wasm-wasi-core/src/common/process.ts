@@ -20,7 +20,7 @@ import * as tdd from './terminalDriver';
 import * as pdd from './pipeDriver';
 import { DeviceWasiService, ProcessWasiService, EnvironmentWasiService, WasiService, Clock, ClockWasiService, EnvironmentOptions } from './service';
 import WasiKernel, { DeviceDrivers } from './kernel';
-import { Errno, Lookupflags, exitcode } from './wasi';
+import { Errno, Fdflags, Lookupflags, exitcode } from './wasi';
 import { CharacterDeviceDriver } from './deviceDriver';
 import { WritableStream, ReadableStream } from './streams';
 import { WasmRootFileSystemImpl } from './fileSystem';
@@ -437,7 +437,8 @@ export abstract class WasiProcess {
 		if (this._stdin === undefined && this._stdout === undefined && this._stderr === undefined) {
 			return;
 		}
-		const pipeDevice = pdd.create(WasiKernel.nextDeviceId(), this._stdin as WritableStream | undefined, this._stdout as ReadableStream | undefined, this._stderr as ReadableStream | undefined);
+		const stdinFdflags = stdio.in.kind === 'pipeIn' && stdio.in.nonBlocking === true ? Fdflags.nonblock : Fdflags.none;
+		const pipeDevice = pdd.create(WasiKernel.nextDeviceId(), this._stdin as WritableStream | undefined, this._stdout as ReadableStream | undefined, this._stderr as ReadableStream | undefined, stdinFdflags);
 		if (this._stdin !== undefined) {
 			this.fileDescriptors.add(pipeDevice.createStdioFileDescriptor(0));
 		}
