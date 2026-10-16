@@ -7,7 +7,7 @@ import { Uri } from 'vscode';
 import { size } from './baseTypes';
 import { CharacterDeviceDriver, DeviceDriverKind, DeviceId, NoSysDeviceDriver } from './deviceDriver';
 import { BaseFileDescriptor, FileDescriptor } from './fileDescriptor';
-import { Errno, fd, fdflags, fdstat, filestat, Filetype, Rights, rights, WasiError } from './wasi';
+import { Errno, fd, Fdflags, fdflags, fdstat, filestat, Filetype, Rights, rights, WasiError } from './wasi';
 
 const PipeBaseRights: rights = Rights.fd_read | Rights.fd_fdstat_set_flags | Rights.fd_write |
 	Rights.fd_filestat_get | Rights.poll_fd_readwrite;
@@ -25,6 +25,8 @@ class PipeFileDescriptor extends BaseFileDescriptor {
 }
 
 interface Stdin {
+	readonly ended: boolean;
+	readonly size: number;
 	read(mode: 'max', maxBytesToRead: size): Promise<Uint8Array>;
 }
 
@@ -32,15 +34,16 @@ interface Stdout {
 	write(chunk: Uint8Array): Promise<void>;
 }
 
-export function create(deviceId: DeviceId, stdin: Stdin | undefined, stdout: Stdout | undefined, stderr: Stdout | undefined): CharacterDeviceDriver {
+export function create(deviceId: DeviceId, stdin: Stdin | undefined, stdout: Stdout | undefined, stderr: Stdout | undefined, stdinFdflags: fdflags = Fdflags.none): CharacterDeviceDriver {
 
 	let inodeCounter: bigint = 0n;
 
 	function createPipeFileDescriptor(fd: 0 | 1 | 2): PipeFileDescriptor {
-		return new PipeFileDescriptor(deviceId, fd, PipeBaseRights, PipeInheritingRights, 0, inodeCounter++);
+		const fdflags = fd === 0 ? stdinFdflags : Fdflags.none;
+		return new PipeFileDescriptor(deviceId, fd, PipeBaseRights, PipeInheritingRights, fdflags, inodeCounter++);
 	}
 
-	const deviceDriver: Pick<CharacterDeviceDriver, 'kind' | 'id' | 'uri' | 'createStdioFileDescriptor' | 'fd_fdstat_get' | 'fd_filestat_get' | 'fd_read' | 'fd_write'> = {
+	const deviceDriver: Pick<CharacterDeviceDriver, 'kind' | 'id' | 'uri' | 'createStdioFileDescriptor' | 'fd_fdstat_get' | 'fd_fdstat_set_flags' | 'fd_filestat_get' | 'fd_read' | 'fd_write'> = {
 		kind: DeviceDriverKind.character,
 		id: deviceId,
 		uri: Uri.from({ scheme: 'wasi-pipe', authority: deviceId.toString() }),
@@ -61,6 +64,11 @@ export function create(deviceId: DeviceId, stdin: Stdin | undefined, stdout: Std
 			result.fs_rights_inheriting = fileDescriptor.rights_inheriting;
 			return Promise.resolve();
 		},
+		fd_fdstat_set_flags(fileDescriptor: FileDescriptor, fdflags: fdflags): Promise<void> {
+			fileDescriptor.assertFdflags(fdflags);
+			fileDescriptor.fdflags = fdflags;
+			return Promise.resolve();
+		},
 		fd_filestat_get(fileDescriptor: FileDescriptor, result: filestat): Promise<void> {
 			result.dev = fileDescriptor.deviceId;
 			result.ino = fileDescriptor.inode;
@@ -73,15 +81,18 @@ export function create(deviceId: DeviceId, stdin: Stdin | undefined, stdout: Std
 			result.mtim = now;
 			return Promise.resolve();
 		},
-		async fd_read(_fileDescriptor: FileDescriptor, buffers: Uint8Array[]): Promise<size> {
-			if (buffers.length === 0) {
+		async fd_read(fileDescriptor: FileDescriptor, buffers: Uint8Array[]): Promise<size> {
+			const maxBytesToRead = buffers.reduce<number>((prev, current) => prev + current.length, 0);
+			if (maxBytesToRead === 0) {
 				return 0;
 			}
 			if (stdin === undefined) {
 				throw new WasiError(Errno.badf);
 			}
+			if (Fdflags.nonblockOn(fileDescriptor.fdflags) && stdin.size === 0 && !stdin.ended) {
+				throw new WasiError(Errno.again);
+			}
 
-			const maxBytesToRead = buffers.reduce<number>((prev, current) => prev + current.length, 0);
 			const result = await stdin.read('max', maxBytesToRead);
 			let offset = 0;
 			let totalBytesRead = 0;

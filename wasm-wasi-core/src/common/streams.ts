@@ -202,6 +202,10 @@ export class WritableStream extends Stream implements Writable {
 		this.streamState = StreamState.open;
 	}
 
+	public get ended(): boolean {
+		return this.streamState === StreamState.closed;
+	}
+
 	public write(chunk: Uint8Array): Promise<void>;
 	public write(chunk: string, encoding?: 'utf-8'): Promise<void>;
 	public write(chunk: Uint8Array | string, _encoding?: 'utf-8'): Promise<void> {
@@ -222,6 +226,11 @@ export class WritableStream extends Stream implements Writable {
 
 	public end(): void {
 		this.streamState = StreamState.closed;
+	}
+
+	public override destroy(): void {
+		this.streamState = StreamState.closed;
+		super.destroy();
 	}
 }
 

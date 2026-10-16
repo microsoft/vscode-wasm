@@ -242,6 +242,11 @@ export type StdioTerminalDescriptor = {
 export type StdioPipeInDescriptor = {
 	kind: 'pipeIn';
 	pipe?: Writable;
+	/**
+	 * Whether reads from an empty pipe fail with `EAGAIN` instead of waiting
+	 * for data. Defaults to `false`.
+	 */
+	nonBlocking?: boolean;
 };
 
 /**
