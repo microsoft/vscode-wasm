@@ -287,7 +287,7 @@
 			"request": "launch",
 			"type": "node",
 			"name": "test:common",
-			"program": "${workspaceRoot}/node_modules/mocha/bin/_mocha",
+			"program": "${workspaceRoot}/node_modules/mocha/bin/mocha",
 			"stopOnEntry": false,
 			"args": ["--timeout", "999999"],
 			"cwd": "${workspaceRoot}/sync-api-common",
