@@ -41,7 +41,7 @@
 		"@types/path-browserify": "^1.0.3",
 		"path-browserify": "^1.0.1",
 		"@vscode/test-electron": "^3.1.0",
-		"@vscode/test-web": "^0.0.80",
+		"@vscode/test-web": "^0.0.81",
 		"glob": "^13.0.6"
 	},
 	"scripts": {

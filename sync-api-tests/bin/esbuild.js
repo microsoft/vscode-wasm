@@ -5,7 +5,24 @@
 //@ts-check
 
 const esbuild = require('esbuild');
+const fs = require('fs');
 const path_browserify = require.resolve('path-browserify');
+
+/** @type esbuild.Plugin */
+const mochaResolvePlugin = {
+	name: 'Mocha Resolve',
+	setup(build) {
+		// Isolate Mocha's UMD bundle from its package's "type": "module".
+		build.onResolve({ filter: /^mocha\/mocha$/ }, () => ({
+			path: require.resolve('mocha/mocha'),
+			namespace: 'mocha-commonjs'
+		}));
+		build.onLoad({ filter: /.*/, namespace: 'mocha-commonjs' }, args => ({
+			contents: fs.readFileSync(args.path, 'utf8'),
+			loader: 'js'
+		}));
+	},
+};
 
 /** @type esbuild.Plugin */
 const pathResolvePlugin = {
@@ -50,7 +67,7 @@ const testFixture = esbuild.build({
 	bundle: true,
 	define: { process: '{"env":{}}' },
 	external: ['vscode'],
-	plugins: [ pathResolvePlugin ],
+	plugins: [ mochaResolvePlugin, pathResolvePlugin ],
 	format: 'cjs',
 	target: 'es2020',
 	platform: 'browser'
