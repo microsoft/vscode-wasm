@@ -91,7 +91,7 @@ export function createWasiService(workspaceContent: WorkspaceContent): WasiServi
 
 	const clock = Clock.create();
 	const fileSystemService = DeviceWasiService.create(deviceDrivers, fileDescriptors, clock, undefined, options);
-	const environmentService = EnvironmentWasiService.create(fileDescriptors, 'testApp', preOpenDirectories.entries(), options);
+	const environmentService = EnvironmentWasiService.create(fileDescriptors, 'testApp', Array.from(preOpenDirectories.entries()), options);
 	const clockService = ClockWasiService.create(clock);
 	const result: WasiService = Object.assign({}, NoSysWasiService, environmentService, clockService, fileSystemService);
 	return result;
