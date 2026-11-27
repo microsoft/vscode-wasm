@@ -6,6 +6,15 @@ name: $(Date:yyyyMMdd)$(Rev:.r)
 
 pr: none
 
+variables:
+  # Azure's eq/startsWith ignore case. replace matches Git ref casing, and ':' cannot occur in a ref.
+  skipAPIScan: >-
+    ${{ not(or(
+      eq(replace(variables['Build.SourceBranch'], 'refs/heads/main', ':'), ':'),
+      startsWith(replace(variables['Build.SourceBranch'], 'refs/heads/release/', ':'), ':'),
+      startsWith(replace(variables['Build.SourceBranch'], 'refs/tags/release/', ':'), ':')
+    )) }}
+
 resources:
   repositories:
     - repository: templates
@@ -53,6 +62,7 @@ extends:
     cgIgnoreDirectories: "$(Build.SourcesDirectory)/**/.vscode-test*"
     npmPackages:
       - name: sync-api-common
+        skipAPIScan: ${{ variables.skipAPIScan }}
         testPlatforms:
           - name: Linux
             nodeVersions:
@@ -78,6 +88,7 @@ extends:
         workingDirectory: $(Build.SourcesDirectory)/sync-api-common
 
       - name: sync-api-client
+        skipAPIScan: ${{ variables.skipAPIScan }}
         dependsOn: sync-api-common
         testPlatforms:
           - name: Linux
@@ -104,6 +115,7 @@ extends:
         workingDirectory: $(Build.SourcesDirectory)/sync-api-client
 
       - name: sync-api-service
+        skipAPIScan: ${{ variables.skipAPIScan }}
         dependsOn: sync-api-client
         testPlatforms:
           - name: Linux
@@ -130,6 +142,7 @@ extends:
         workingDirectory: $(Build.SourcesDirectory)/sync-api-service
 
       - name: wasm-wasi
+        skipAPIScan: ${{ variables.skipAPIScan }}
         dependsOn: sync-api-service
         testPlatforms:
           - name: Linux
@@ -156,6 +169,7 @@ extends:
         workingDirectory: $(Build.SourcesDirectory)/wasm-wasi
 
       - name: wasm-component-model
+        skipAPIScan: ${{ variables.skipAPIScan }}
         dependsOn: wasm-wasi
         testPlatforms:
           - name: Linux
@@ -182,6 +196,7 @@ extends:
         workingDirectory: $(Build.SourcesDirectory)/wasm-component-model
 
       - name: wasm-wasi-lsp
+        skipAPIScan: ${{ variables.skipAPIScan }}
         dependsOn: wasm-component-model
         testPlatforms:
           - name: Linux
